@@ -11,7 +11,7 @@ import (
 	"sublink/utils"
 )
 
-var Secret = []byte("sublink") // 秘钥
+var Secret = []byte(models.ReadConfig().JwtSecret) // 秘钥
 
 // JwtClaims jwt声明
 type JwtClaims struct {
