@@ -11,6 +11,7 @@ type Node struct {
 	DialerProxyName string
 	CreateDate      string
 	Source          string `gorm:"default:'manual'"`
+	SourceID        int
 }
 
 // Add 添加节点
@@ -40,8 +41,8 @@ func (node *Node) List() ([]Node, error) {
 
 // 删除节点
 func (node *Node) Del() error {
-	// 先清除节点与订阅的关联关系
-	if err := DB.Exec("DELETE FROM subcription_nodes WHERE node_id = ?", node.ID).Error; err != nil {
+	// 先清除节点与订阅的关联关系（通过节点名称）
+	if err := DB.Exec("DELETE FROM subcription_nodes WHERE node_name = ?", node.Name).Error; err != nil {
 		return err
 	}
 	// 再删除节点本身
@@ -57,6 +58,6 @@ func (node *Node) UpsertNode() error {
 }
 
 // DeleteAutoSubscriptionNodes 删除订阅节点
-func DeleteAutoSubscriptionNodes(subName string) error {
-	return DB.Where("source = ?", "sublinkE").Where("name like ?", subName+"%").Delete(&Node{}).Error
+func DeleteAutoSubscriptionNodes(sourceId int) error {
+	return DB.Where("source_id = ?", sourceId).Delete(&Node{}).Error
 }

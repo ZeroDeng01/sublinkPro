@@ -68,11 +68,11 @@ jobs:
           mkdir -p build
           
           # 构建不同平台的可执行文件，添加 -tags=prod 参数嵌入前端文件
-          GOOS=linux GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublink-linux-amd64 .
-          GOOS=linux GOARCH=arm64 go build -tags=prod -ldflags="-s -w" -o build/sublink-linux-arm64 .
-          GOOS=windows GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublink-windows-amd64.exe .
-          GOOS=darwin GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublink-darwin-amd64 .
-          GOOS=darwin GOARCH=arm64 go build -tags=prod -ldflags="-s -w" -o build/sublink-darwin-arm64 .
+          GOOS=linux GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-linux-amd64 .
+          GOOS=linux GOARCH=arm64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-linux-arm64 .
+          GOOS=windows GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-windows-amd64.exe .
+          GOOS=darwin GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-darwin-amd64 .
+          GOOS=darwin GOARCH=arm64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-darwin-arm64 .
 
       - name: Generate changelog
         id: changelog
@@ -100,11 +100,11 @@ jobs:
           
           echo "" >> changelog.md
           echo "### 📦 发布文件:" >> changelog.md
-          echo "- \`sublink-linux-amd64\` - Linux x64" >> changelog.md
-          echo "- \`sublink-linux-arm64\` - Linux ARM64" >> changelog.md
-          echo "- \`sublink-windows-amd64.exe\` - Windows x64" >> changelog.md
-          echo "- \`sublink-darwin-amd64\` - macOS x64" >> changelog.md
-          echo "- \`sublink-darwin-arm64\` - macOS ARM64 (Apple Silicon)" >> changelog.md
+          echo "- \`sublinkPro-linux-amd64\` - Linux x64" >> changelog.md
+          echo "- \`sublinkPro-linux-arm64\` - Linux ARM64" >> changelog.md
+          echo "- \`sublinkPro-windows-amd64.exe\` - Windows x64" >> changelog.md
+          echo "- \`sublinkPro-darwin-amd64\` - macOS x64" >> changelog.md
+          echo "- \`sublinkPro-darwin-arm64\` - macOS ARM64 (Apple Silicon)" >> changelog.md
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -122,8 +122,8 @@ jobs:
         run: |
           TAG=${GITHUB_REF#refs/tags/}
           docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64 \
-            -t eun1e/sublinke:${TAG} \
-            -t eun1e/sublinke:latest \
+            -t zerodeng/sublink-pro:${TAG} \
+            -t zerodeng/sublink-pro:latest \
             --push .
 
 
@@ -134,11 +134,11 @@ jobs:
           name: Release ${{ steps.changelog.outputs.current_tag }}
           body_path: changelog.md
           files: |
-            build/sublink-linux-amd64
-            build/sublink-linux-arm64
-            build/sublink-windows-amd64.exe
-            build/sublink-darwin-amd64
-            build/sublink-darwin-arm64
+            build/sublinkPro-linux-amd64
+            build/sublinkPro-linux-arm64
+            build/sublinkPro-windows-amd64.exe
+            build/sublinkPro-darwin-amd64
+            build/sublinkPro-darwin-arm64
           draft: false
           prerelease: false
         env:

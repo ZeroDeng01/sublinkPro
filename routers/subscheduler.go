@@ -13,5 +13,6 @@ func SubScheduler(r *gin.Engine) {
 		NodesGroup.DELETE("/delete/:id", api.SubSchedulerDel)
 		NodesGroup.GET("/get", api.SubSchedulerGet)
 		NodesGroup.PUT("/update", api.SubSchedulerUpdate)
+		NodesGroup.POST("/pull", api.PullClashConfigFromURL)
 	}
 }

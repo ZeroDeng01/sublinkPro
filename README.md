@@ -14,7 +14,7 @@
 
 # 项目简介
 
-`sublinkE` 是基于优秀的开源项目  [sublinkX](https://github.com/gooaclok819/sublinkX)  进行二次开发，仅在原项目基础上做了部分定制优化。建议用户优先参考和使用原项目，感谢原作者的付出与贡献。
+`sublinkPro` 是基于优秀的开源项目  [sublinkX](https://github.com/gooaclok819/sublinkX) /[sublinkE](https://github.com/eun1e/sublinkE)  进行二次开发，仅在原项目基础上做了部分定制优化。建议用户优先参考和使用原项目，感谢原作者的付出与贡献。
 
 - 前端基于 [vue3-element-admin](https://github.com/youlaitech/vue3-element-admin)；
 - 后端采用 Go + Gin + Gorm；
@@ -50,12 +50,12 @@ docker run --name sublinke -p 8000:8000 \
 -v $PWD/template:/app/template \
 -v $PWD/logs:/app/logs \
 -v $PWD/plugins:/app/plugins \
--d eun1e/sublinke 
+-d zerodeng/sublink-pro 
 ```
 
 ## 一键安装
 ```bash
-wget https://raw.githubusercontent.com/eun1e/sublinkE/refs/heads/main/install.sh   && sh install.sh
+wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh   && sh install.sh
 ```
 
 > ⚠ **注意**  
@@ -65,7 +65,7 @@ wget https://raw.githubusercontent.com/eun1e/sublinkE/refs/heads/main/install.sh
 
 # 插件说明
 
-`sublinkE` 提供了灵活的插件系统，允许开发者扩展系统功能而无需修改核心代码。
+`sublinkPro` 提供了灵活的插件系统，允许开发者扩展系统功能而无需修改核心代码。
 
 ## 插件开发指南
 
@@ -105,7 +105,7 @@ InterestedEvents() []plugins.EventType
 
 | 插件名称 | 功能描述 | 源代码 | 编译版本 |
 |---------|--------|-------|---------|
-| **邮件通知插件** | 监控登录事件并发送邮件通知 | [email_plugin.go](https://github.com/eun1e/sublinkE/blob/main/plugins_examples/email_plugin.go) | [下载 .so 文件](https://raw.githubusercontent.com/eun1e/sublinkE/main/plugins_examples/email_plugin.so) |
+| **邮件通知插件** | 监控登录事件并发送邮件通知 | [email_plugin.go](https://github.com/ZeroDeng01/sublinkPro/blob/main/plugins_examples/email_plugin.go) | [下载 .so 文件](https://raw.githubusercontent.com/ZeroDeng/sublinkPro/main/plugins_examples/email_plugin.so) |
 
 ### 插件配置与管理
 
@@ -126,7 +126,7 @@ InterestedEvents() []plugins.EventType
 
 ```bash
 # 编译插件
-wget https://raw.githubusercontent.com/eun1e/sublinkE/main/plugins_examples/build_plugin.sh
+wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/main/plugins_examples/build_plugin.sh
 chmod +x build_plugin.sh
 ./build_plugin.sh your_plugin.go
 # 将生成的 .so 文件复制到插件目录

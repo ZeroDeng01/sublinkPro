@@ -14,7 +14,7 @@
 
 # Project Introduction
 
-`sublinkE` is an open-source node subscription conversion and generation management system based on secondary development of [sublinkX](https://github.com/gooaclok819/sublinkX).It is recommended that users give priority to referring to and using the original project, and we sincerely thank the original author for their efforts and contributions.
+`sublinkE` is an open-source node subscription conversion and generation management system based on secondary development of  [sublinkX](https://github.com/gooaclok819/sublinkX) /[sublinkE](https://github.com/eun1e/sublinkE)  .It is recommended that users give priority to referring to and using the original project, and we sincerely thank the original author for their efforts and contributions.
 
 - Frontend based on [vue3-element-admin](https://github.com/youlaitech/vue3-element-admin);
 - Backend using Go + Gin + Gorm;
@@ -50,12 +50,12 @@ docker run --name sublinke -p 8000:8000 \
 -v $PWD/template:/app/template \
 -v $PWD/logs:/app/logs \
 -v $PWD/plugins:/app/plugins \
--d eun1e/sublinke 
+-d zerodeng/sublink-pro 
 ```
 
 ## ⚡ One-click Installation
 ```bash
-wget https://raw.githubusercontent.com/eun1e/sublinkE/refs/heads/main/install.sh   && sh install.sh
+wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh   && sh install.sh
 ```
 
 > ⚠ **Note**  
@@ -65,7 +65,7 @@ wget https://raw.githubusercontent.com/eun1e/sublinkE/refs/heads/main/install.sh
 
 # Plugin Description
 
-`sublinkE` provides a flexible plugin system, allowing developers to extend system functionality without modifying core code.
+`sublinkPro` provides a flexible plugin system, allowing developers to extend system functionality without modifying core code.
 
 ## Plugin Development Guide
 
@@ -105,7 +105,7 @@ The system includes the following example plugins for reference(May become inval
 
 | Plugin Name | Description | Source Code | Compiled Version |
 |-------------|-------------|------------|-----------------|
-| **Email Notification Plugin** | Monitors login events and sends email notifications | [email_plugin.go](https://github.com/eun1e/sublinkE/blob/main/plugins_examples/email_plugin.go) | [Download .so file](https://raw.githubusercontent.com/eun1e/sublinkE/main/plugins_examples/email_plugin.so) |
+| **Email Notification Plugin** | Monitors login events and sends email notifications | [email_plugin.go](https://github.com/ZeroDeng01/sublinkPro/blob/main/plugins_examples/email_plugin.go) | [Download .so file](https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/main/plugins_examples/email_plugin.so) |
 
 ### Plugin Configuration and Management
 
@@ -126,7 +126,7 @@ Custom plugin development workflow:
 
 ```bash
 # Compile plugin
-wget https://raw.githubusercontent.com/eun1e/sublinkE/main/plugins_examples/build_plugin.sh
+wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/main/plugins_examples/build_plugin.sh
 chmod +x build_plugin.sh
 ./build_plugin.sh your_plugin.go
 # Copy the generated .so file to the plugins directory

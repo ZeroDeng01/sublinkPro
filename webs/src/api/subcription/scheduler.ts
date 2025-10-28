@@ -43,6 +43,14 @@ export function updateSubScheduler(data: SubSchedulerRequest) {
   });
 }
 
+export function pullSubScheduler(data: SubSchedulerRequest) {
+  return request({
+    url: '/api/v1/sub_scheduler/pull',
+    method: 'post',
+    data
+  });
+}
+
 // 删除订阅调度器
 export function deleteSubScheduler(id: number) {
   return request({

@@ -186,7 +186,7 @@ func (sm *SchedulerManager) UpdateJob(schedulerID int, cronExpr string, enabled 
 func ExecuteSubscriptionTask(id int, url string, subName string) {
 
 	log.Printf("执行自动获取订阅任务 - ID: %d, Name: %s, URL: %s", id, subName, url)
-	node.LoadClashConfigFromURL(url, subName)
+	node.LoadClashConfigFromURL(id, url, subName)
 }
 
 // cleanCronExpression 清理Cron表达式中的多余空格

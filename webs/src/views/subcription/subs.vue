@@ -332,7 +332,7 @@ const clientradio = ref('1')
 
 // 新增排序相关变量
 const sortingSubscriptionId = ref<number | null>(null) // 当前正在排序的订阅ID
-const tempNodeSort = ref<{ID: number, Sort: number}[]>([]) // 临时存储排序数据
+const tempNodeSort = ref<{Name: string, Sort: number}[]>([]) // 临时存储排序数据（使用Name）
 const originalNodesOrder = ref<Node[]>([]) // 保存原始顺序，用于取消操作
 
 // 定义拖拽行为所需的变量
@@ -388,15 +388,15 @@ const handleDrop = (e: DragEvent, targetNodeId: number, subscriptionId: number) 
     subscription.Nodes.forEach((node, index) => {
       // 更新节点的Sort属性
       node.Sort = index + 1
-      
-      // 同步更新tempNodeSort中的排序数据
-      const sortItem = tempNodeSort.value.find(item => item.ID === node.ID)
+
+      // 同步更新tempNodeSort中的排序数据（使用Name）
+      const sortItem = tempNodeSort.value.find(item => item.Name === node.Name)
       if (sortItem) {
         sortItem.Sort = index + 1
       } else {
         // 如果不存在则添加
         tempNodeSort.value.push({
-          ID: node.ID,
+          Name: node.Name,
           Sort: index + 1
         })
       }
@@ -425,9 +425,9 @@ const handleStartSort = (row: any) => {
   // 保存原始节点顺序，以便取消时恢复
   originalNodesOrder.value = JSON.parse(JSON.stringify(row.Nodes))
   
-  // 初始化临时排序数据
+  // 初始化临时排序数据（使用 Name 而不是 ID）
   tempNodeSort.value = row.Nodes.map((node: any, index: number) => ({
-    ID: node.ID,
+    Name: node.Name,
     Sort: node.Sort !== undefined ? node.Sort : (index + 1)
   }))
 
@@ -441,14 +441,14 @@ const handleStartSort = (row: any) => {
 
 // 确定排序
 const handleConfirmSort = async (row: any) => {
-  // 根据当前节点顺序更新Sort值
+  // 根据当前节点顺序更新Sort值（使用Name）
   row.Nodes.forEach((node: Node, index: number) => {
-    const nodeSort = tempNodeSort.value.find(item => item.ID === node.ID)
+    const nodeSort = tempNodeSort.value.find(item => item.Name === node.Name)
     if (nodeSort) {
       nodeSort.Sort = index + 1
     } else {
       tempNodeSort.value.push({
-        ID: node.ID,
+        Name: node.Name,
         Sort: index + 1
       })
     }
@@ -594,6 +594,7 @@ const handleCancelSort = () => {
         <el-select
           v-model="value1"
           multiple
+          filterable
           placeholder="Select"
           style="width: 100%"
         >
@@ -643,9 +644,9 @@ const handleCancelSort = () => {
               }"
             >
               <el-tag type="success">
-                <!-- <template v-if="sortingSubscriptionId !== null && row.parentId === sortingSubscriptionId">
-                  <span class="drag-handle">⋮⋮</span>
-                </template> -->
+<!--                <template v-if="sortingSubscriptionId !== null && row.parentId === sortingSubscriptionId">-->
+<!--                  <span class="drag-handle">⋮⋮</span>-->
+<!--                </template>-->
                 {{row.Name}}
               </el-tag>
             </div>

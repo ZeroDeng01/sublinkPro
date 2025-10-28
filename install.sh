@@ -23,21 +23,21 @@ if [ ! -d "$INSTALL_DIR" ]; then
 fi
 
 # 获取最新的发行版标签
-latest_release=$(curl --silent "https://api.github.com/repos/eun1e/sublinkE/releases/latest" \
+latest_release=$(curl --silent "https://api.github.com/repos/ZeroDeng01/sublinkPro/releases/latest" \
     | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 printf "最新版本: %s\n" "$latest_release"
 
 # 检测机器类型
 machine_type=$(uname -m)
 case "$machine_type" in
-    x86_64) file_name="sublink-linux-amd64" ;;
-    aarch64) file_name="sublink-linux-arm64" ;;
+    x86_64) file_name="sublinkPro-linux-amd64" ;;
+    aarch64) file_name="sublinkPro-linux-arm64" ;;
     *) printf "不支持的机器类型: %s\n" "$machine_type"; exit 1 ;;
 esac
 
 # 下载文件
 cd ~ || exit 1
-curl -LO "https://github.com/eun1e/sublinkE/releases/download/$latest_release/$file_name"
+curl -LO "https://github.com/ZeroDeng01/sublinkPro/releases/download/$latest_release/$file_name"
 
 # 设置可执行
 chmod +x "$file_name"
@@ -94,5 +94,5 @@ printf "默认账号 admin 密码 123456 默认端口 8000\n"
 #printf "安装完成已经启动 输入 sublink 可以呼出菜单\n"
 # 下载 menu.sh 并设置权限
 #curl -o /usr/bin/sublink -H "Cache-Control: no-cache" -H "Pragma: no-cache" \
-#    https://raw.githubusercontent.com/eun1e/sublinkE/main/menu.sh
+#    https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/main/menu.sh
 #chmod 755 "/usr/bin/sublink"

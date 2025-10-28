@@ -9,16 +9,16 @@ type Subcription struct {
 	ID            int
 	Name          string
 	Config        string    `gorm:"embedded"`
-	Nodes         []Node    `gorm:"many2many:subcription_nodes;" json:"-"` // 多对多关系
-	SubLogs       []SubLogs `gorm:"foreignKey:SubcriptionID;"`             // 一对多关系 约束父表被删除子表记录跟着删除
+	Nodes         []Node    `gorm:"-" json:"-"`
+	SubLogs       []SubLogs `gorm:"foreignKey:SubcriptionID;"` // 一对多关系 约束父表被删除子表记录跟着删除
 	CreateDate    string
 	NodesWithSort []NodeWithSort `gorm:"-" json:"Nodes"`
 }
 
 type SubcriptionNode struct {
-	SubcriptionID int `gorm:"primaryKey"`
-	NodeID        int `gorm:"primaryKey"`
-	Sort          int `gorm:"default:0"`
+	SubcriptionID int    `gorm:"primaryKey"`
+	NodeName      string `gorm:"primaryKey"`
+	Sort          int    `gorm:"default:0"`
 }
 
 type NodeWithSort struct {
@@ -31,9 +31,20 @@ func (sub *Subcription) Add() error {
 	return DB.Create(sub).Error
 }
 
-// 添加节点列表建立多对多关系
+// 添加节点列表建立多对多关系（使用节点名称）
 func (sub *Subcription) AddNode() error {
-	return DB.Model(sub).Association("Nodes").Append(sub.Nodes)
+	// 手动插入中间表记录，使用节点名称
+	for i, node := range sub.Nodes {
+		subNode := SubcriptionNode{
+			SubcriptionID: sub.ID,
+			NodeName:      node.Name,
+			Sort:          i, // 按添加顺序设置排序
+		}
+		if err := DB.Create(&subNode).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // 更新订阅
@@ -41,9 +52,24 @@ func (sub *Subcription) Update() error {
 	return DB.Where("id = ? or name = ?", sub.ID, sub.Name).Updates(sub).Error
 }
 
-// 更新节点列表建立多对多关系
+// 更新节点列表建立多对多关系（使用节点名称）
 func (sub *Subcription) UpdateNodes() error {
-	return DB.Model(sub).Association("Nodes").Replace(sub.Nodes)
+	// 先删除旧的关联
+	if err := DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionNode{}).Error; err != nil {
+		return err
+	}
+	// 再添加新的关联
+	for i, node := range sub.Nodes {
+		subNode := SubcriptionNode{
+			SubcriptionID: sub.ID,
+			NodeName:      node.Name,
+			Sort:          i, // 按添加顺序设置排序
+		}
+		if err := DB.Create(&subNode).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // 查找订阅
@@ -58,9 +84,9 @@ func (sub *Subcription) GetSub() error {
 	// 	return err
 	// }
 	return DB.Table("nodes").
-		Joins("left join subcription_nodes ON subcription_nodes.node_id = nodes.id").
+		Joins("left join subcription_nodes ON subcription_nodes.node_name = nodes.name").
 		Where("subcription_nodes.subcription_id = ?", sub.ID).
-		Order("subcription_nodes.sort ASC, nodes.id ASC").Find(&sub.Nodes).Error
+		Order("subcription_nodes.sort ASC").Find(&sub.Nodes).Error
 }
 
 // 订阅列表
@@ -78,9 +104,9 @@ func (sub *Subcription) List() ([]Subcription, error) {
 		var nodesWithSort []NodeWithSort
 		err := DB.Table("nodes").
 			Select("nodes.*, subcription_nodes.sort").
-			Joins("LEFT JOIN subcription_nodes ON subcription_nodes.node_id = nodes.id").
+			Joins("LEFT JOIN subcription_nodes ON subcription_nodes.node_name = nodes.name").
 			Where("subcription_nodes.subcription_id = ?", subs[i].ID).
-			Order("subcription_nodes.sort ASC, nodes.id ASC").
+			Order("subcription_nodes.sort ASC").
 			Scan(&nodesWithSort).Error
 		if err != nil {
 			return nil, err
@@ -117,7 +143,7 @@ func (sub *Subcription) Sort(subNodeSort dto.SubcriptionNodeSortUpdate) error {
 	}
 	for _, item := range subNodeSort.NodeSort {
 		err := tx.Model(&SubcriptionNode{}).
-			Where("subcription_id = ? AND node_id = ?", subNodeSort.ID, item.ID).
+			Where("subcription_id = ? AND node_name = ?", subNodeSort.ID, item.Name).
 			Update("sort", item.Sort).Error
 
 		if err != nil {

@@ -61,12 +61,26 @@ func SubSchedulerAdd(c *gin.Context) {
 
 	// 立即执行一次任务
 	if req.Enabled {
-		go node.LoadClashConfigFromURL(req.URL, req.Name)
+		go node.LoadClashConfigFromURL(subS.ID, subS.URL, subS.Name)
 	}
 
 	c.JSON(200, gin.H{
 		"code": "00000",
 		"msg":  "添加成功",
+	})
+}
+
+func PullClashConfigFromURL(c *gin.Context) {
+	var req dto.SubSchedulerAddRequest
+	err := c.BindJSON(&req)
+	if err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误: " + err.Error()})
+		return
+	}
+	go node.LoadClashConfigFromURL(req.ID, req.URL, req.Name)
+	c.JSON(200, gin.H{
+		"code": "00000",
+		"msg":  "任务启动成功",
 	})
 }
 

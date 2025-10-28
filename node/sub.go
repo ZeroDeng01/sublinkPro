@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io"
 	"log"
 	"net/http"
@@ -14,13 +13,15 @@ import (
 	"sublink/models"
 	"sublink/utils"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 type ClashConfig struct {
 	Proxies []Proxy `yaml:"proxies"`
 }
 
-func LoadClashConfigFromURL(url string, subName string) {
+func LoadClashConfigFromURL(id int, url string, subName string) {
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Printf("URL %s，获取Clash配置失败:  %v", url, err)
@@ -38,13 +39,15 @@ func LoadClashConfigFromURL(url string, subName string) {
 		log.Printf("URL %s，解析Clash配置失败:  %v", url, err)
 		return
 	}
-	scheduleClashToNodeLinks(config.Proxies, subName)
+	scheduleClashToNodeLinks(id, config.Proxies, subName)
 }
 
-func scheduleClashToNodeLinks(proxys []Proxy, subName string) {
+func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 	successCount := 0
-	//_ = models.DeleteAutoSubscriptionNodes(subName)
-
+	err := models.DeleteAutoSubscriptionNodes(id)
+	if err != nil {
+		log.Printf("删除旧的订阅数据失败: %v", err)
+	}
 	for _, proxy := range proxys {
 		var node models.Node
 		var link string
@@ -392,7 +395,8 @@ func scheduleClashToNodeLinks(proxys []Proxy, subName string) {
 		}
 		node.Link = link
 		node.Name = proxy.Name
-		node.Source = "sublinkE"
+		node.Source = "subscription"
+		node.SourceID = id
 		node.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 		// 插入或更新节点，避免设置好的订阅节点丢失
 		_ = node.UpsertNode()
@@ -400,12 +404,15 @@ func scheduleClashToNodeLinks(proxys []Proxy, subName string) {
 	subS := models.SubScheduler{
 		Name: subName,
 	}
-	err := subS.Find()
+	err = subS.Find()
 	if err != nil {
 		log.Printf("获取订阅连接 %s 失败:  %v", subName, err)
 		return
 	}
 	subS.SuccessCount = successCount
+	// 当前时间
+	now := time.Now()
+	subS.LastRunTime = &now
 	err1 := subS.Update()
 	if err1 != nil {
 		return

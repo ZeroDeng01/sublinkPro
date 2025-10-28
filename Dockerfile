@@ -20,7 +20,7 @@ COPY . .
 # 把前端构建产物复制到 static 目录
 COPY --from=frontend-builder /frontend/webs/dist ./static
 
-RUN go build -tags=prod -o sublinkE
+RUN go build -tags=prod -o sublinkPro
 
 # 3. 运行镜像
 FROM debian:bookworm-slim
@@ -34,9 +34,9 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /app/db /app/logs /app/template /app/plugins && chmod 777 /app/db /app/logs /app/template /app/plugins
 
-COPY --from=backend-builder /app/sublinkE /app/sublinkE
+COPY --from=backend-builder /app/sublinkPro /app/sublinkPro
 COPY --from=backend-builder /app/static /app/static
 
 
 EXPOSE 8000
-CMD ["/app/sublinkE"]
+CMD ["/app/sublinkPro"]

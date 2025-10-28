@@ -14,7 +14,7 @@
             <div>
               <p>{{ greetings }}</p>
               <p class="text-sm text-gray">
-                今日天气晴朗，气温在15℃至25℃之间，东南风。
+                Keep Coding, Keep Growing!
               </p>
             </div>
           </div>
@@ -38,6 +38,61 @@
         </el-col>
       </el-row>
     </el-card>
+    
+    <el-card shadow="never" class="mt-5">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <span class="text-lg font-bold">📝 更新日志</span>
+          <el-button
+            link
+            type="primary"
+            @click="openGithubReleases"
+          >
+            查看全部
+          </el-button>
+        </div>
+      </template>
+      
+      <div v-loading="releaseLoading">
+        <div v-if="releases.length > 0">
+          <div
+            v-for="(release, index) in releases"
+            :key="release.id"
+            class="release-item"
+            :class="{ 'border-t': index > 0 }"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center">
+                <el-tag :type="index === 0 ? 'success' : 'info'" size="small">
+                  {{ release.tag_name }}
+                </el-tag>
+                <el-tag
+                  v-if="release.prerelease"
+                  type="warning"
+                  size="small"
+                  class="ml-2"
+                >
+                  Pre-release
+                </el-tag>
+                <span class="text-lg font-semibold ml-3">
+                  {{ release.name }}
+                </span>
+              </div>
+              <span class="text-sm text-gray">
+                {{ formatDate(release.published_at) }}
+              </span>
+            </div>
+            
+            <div class="release-body" v-html="formatMarkdown(release.body)"></div>
+          </div>
+        </div>
+        
+        <el-empty
+          v-else-if="!releaseLoading"
+          description="暂无更新日志"
+        />
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -49,10 +104,17 @@ defineOptions({
 
 import { useUserStore } from "@/store/modules/user";
 import { getSubTotal,getNodeTotal } from "@/api/total";
+import axios from "axios";
+
 const userStore = useUserStore();
 const date: Date = new Date();
 const subTotal = ref(0);
 const nodeTotal = ref(0);
+
+// 更新日志相关
+const releases = ref<any[]>([]);
+const releaseLoading = ref(false);
+
 // 右上角数量
 const statisticData = ref([
   {
@@ -68,24 +130,108 @@ const statisticData = ref([
     key: "upcoming",
   },
 ]);
+
 const getsubtotal = async () => {
   const { data } = await getSubTotal();
   subTotal.value = data;
   statisticData.value[0].value = data;
 };
+
 const getnodetotal = async () => {
   const { data } = await getNodeTotal();
   nodeTotal.value = data;
   statisticData.value[1].value = data;
 };
+
+// 获取 GitHub Releases
+const fetchGithubReleases = async () => {
+  releaseLoading.value = true;
+  try {
+    const response = await axios.get(
+      "https://api.github.com/repos/ZeroDeng01/sublinkPro/releases",
+      {
+        params: {
+          per_page: 5, // 只显示最近3个版本
+        },
+      }
+    );
+    releases.value = response.data;
+  } catch (error) {
+    console.error("获取更新日志失败:", error);
+    ElMessage.error("获取更新日志失败");
+  } finally {
+    releaseLoading.value = false;
+  }
+};
+
+// 打开 GitHub Releases 页面
+const openGithubReleases = () => {
+  window.open("https://github.com/ZeroDeng01/sublinkPro/releases", "_blank");
+};
+
+// 格式化日期
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  
+  if (days === 0) {
+    return "今天";
+  } else if (days === 1) {
+    return "昨天";
+  } else if (days < 7) {
+    return `${days} 天前`;
+  } else if (days < 30) {
+    return `${Math.floor(days / 7)} 周前`;
+  } else {
+    return date.toLocaleDateString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  }
+};
+
+// 简单的 Markdown 格式化（基础版本）
+const formatMarkdown = (markdown: string) => {
+  if (!markdown) return "";
+  
+  let html = markdown
+    // 标题
+    .replace(/^### (.*$)/gim, "<h3>$1</h3>")
+    .replace(/^## (.*$)/gim, "<h2>$1</h2>")
+    .replace(/^# (.*$)/gim, "<h1>$1</h1>")
+    // 粗体
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    // 斜体
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    // 列表
+    .replace(/^\* (.*$)/gim, "<li>$1</li>")
+    .replace(/^- (.*$)/gim, "<li>$1</li>")
+    // 链接
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+    // 代码块
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    // 换行
+    .replace(/\n/g, "<br>");
+  
+  // 包装列表项
+  html = html.replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>");
+  
+  return html;
+};
+
 onMounted(() => {
   getsubtotal();
   getnodetotal();
+  fetchGithubReleases();
 });
+
 const greetings = computed(() => {
   const hours = date.getHours();
   if (hours >= 6 && hours < 8) {
-    return "晨起披衣出草堂，轩窗已自喜微凉🌅！";
+    return "晨起披衣出草堂,轩窗已自喜微凉🌅！";
   } else if (hours >= 8 && hours < 12) {
     return "上午好，" + userStore.user.nickname + "！";
   } else if (hours >= 12 && hours < 18) {
@@ -96,10 +242,6 @@ const greetings = computed(() => {
     return "偷偷向银河要了一把碎星，只等你闭上眼睛撒入你的梦中，晚安🌛！";
   }
 });
-
-
-
-
 </script>
 
 <style lang="scss" scoped>
@@ -134,6 +276,74 @@ const greetings = computed(() => {
 
   .svg-icon {
     fill: currentcolor !important;
+  }
+
+  .release-item {
+    padding: 20px 0;
+
+    &:first-child {
+      padding-top: 0;
+    }
+
+    &:last-child {
+      padding-bottom: 0;
+    }
+
+    .release-body {
+      margin-top: 12px;
+      line-height: 1.8;
+      color: var(--el-text-color-regular);
+
+      :deep(h1),
+      :deep(h2),
+      :deep(h3) {
+        margin: 16px 0 8px;
+        font-weight: 600;
+      }
+
+      :deep(h1) {
+        font-size: 1.5em;
+      }
+
+      :deep(h2) {
+        font-size: 1.3em;
+      }
+
+      :deep(h3) {
+        font-size: 1.1em;
+      }
+
+      :deep(ul) {
+        margin: 8px 0;
+        padding-left: 20px;
+      }
+
+      :deep(li) {
+        margin: 4px 0;
+        list-style-type: disc;
+      }
+
+      :deep(code) {
+        padding: 2px 6px;
+        background-color: var(--el-fill-color-light);
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+        font-size: 0.9em;
+      }
+
+      :deep(a) {
+        color: var(--el-color-primary);
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      :deep(strong) {
+        font-weight: 600;
+      }
+    }
   }
 }
 </style>
