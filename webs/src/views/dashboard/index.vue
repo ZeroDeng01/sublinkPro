@@ -13,9 +13,7 @@
             />
             <div>
               <p>{{ greetings }}</p>
-              <p class="text-sm text-gray">
-                Keep Coding, Keep Growing!
-              </p>
+              <p class="text-sm text-gray">Keep Coding, Keep Growing!</p>
             </div>
           </div>
         </el-col>
@@ -38,21 +36,17 @@
         </el-col>
       </el-row>
     </el-card>
-    
+
     <el-card shadow="never" class="mt-5">
       <template #header>
         <div class="flex items-center justify-between">
           <span class="text-lg font-bold">📝 更新日志</span>
-          <el-button
-            link
-            type="primary"
-            @click="openGithubReleases"
-          >
+          <el-button link type="primary" @click="openGithubReleases">
             查看全部
           </el-button>
         </div>
       </template>
-      
+
       <div v-loading="releaseLoading">
         <div v-if="releases.length > 0">
           <div
@@ -82,15 +76,14 @@
                 {{ formatDate(release.published_at) }}
               </span>
             </div>
-            
-            <div class="release-body" v-html="formatMarkdown(release.body)"></div>
+            <div
+              class="release-body"
+              v-html="formatMarkdown(release.body)"
+            ></div>
           </div>
         </div>
-        
-        <el-empty
-          v-else-if="!releaseLoading"
-          description="暂无更新日志"
-        />
+
+        <el-empty v-else-if="!releaseLoading" description="暂无更新日志" />
       </div>
     </el-card>
   </div>
@@ -103,13 +96,15 @@ defineOptions({
 });
 
 import { useUserStore } from "@/store/modules/user";
-import { getSubTotal,getNodeTotal } from "@/api/total";
+import { getNodeTotal, getSubTotal } from "@/api/total";
+import MarkdownIt from "markdown-it";
 import axios from "axios";
 
 const userStore = useUserStore();
 const date: Date = new Date();
 const subTotal = ref(0);
 const nodeTotal = ref(0);
+const markdown = new MarkdownIt();
 
 // 更新日志相关
 const releases = ref<any[]>([]);
@@ -175,7 +170,7 @@ const formatDate = (dateString: string) => {
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  
+
   if (days === 0) {
     return "今天";
   } else if (days === 1) {
@@ -194,32 +189,9 @@ const formatDate = (dateString: string) => {
 };
 
 // 简单的 Markdown 格式化（基础版本）
-const formatMarkdown = (markdown: string) => {
-  if (!markdown) return "";
-  
-  let html = markdown
-    // 标题
-    .replace(/^### (.*$)/gim, "<h3>$1</h3>")
-    .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-    .replace(/^# (.*$)/gim, "<h1>$1</h1>")
-    // 粗体
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    // 斜体
-    .replace(/\*(.*?)\*/g, "<em>$1</em>")
-    // 列表
-    .replace(/^\* (.*$)/gim, "<li>$1</li>")
-    .replace(/^- (.*$)/gim, "<li>$1</li>")
-    // 链接
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
-    // 代码块
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    // 换行
-    .replace(/\n/g, "<br>");
-  
-  // 包装列表项
-  html = html.replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>");
-  
-  return html;
+const formatMarkdown = (md: string) => {
+  if (!md) return "";
+  return markdown.render(md);
 };
 
 onMounted(() => {
@@ -279,7 +251,7 @@ const greetings = computed(() => {
   }
 
   .release-item {
-    padding: 20px 0;
+    padding: 5px 0;
 
     &:first-child {
       padding-top: 0;
@@ -290,14 +262,14 @@ const greetings = computed(() => {
     }
 
     .release-body {
-      margin-top: 12px;
-      line-height: 1.8;
+      margin-top: 2px;
+      line-height: 1;
       color: var(--el-text-color-regular);
 
       :deep(h1),
       :deep(h2),
       :deep(h3) {
-        margin: 16px 0 8px;
+        margin: 12px 0 6px;
         font-weight: 600;
       }
 
@@ -314,12 +286,12 @@ const greetings = computed(() => {
       }
 
       :deep(ul) {
-        margin: 8px 0;
+        margin: 6px 0;
         padding-left: 20px;
       }
 
       :deep(li) {
-        margin: 4px 0;
+        margin: 2px 0;
         list-style-type: disc;
       }
 
