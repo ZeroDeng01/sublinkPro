@@ -223,7 +223,9 @@ const checkForUpdate = async () => {
           confirmButtonText: '确定',
           type: 'info'
         }
-      );
+      ).catch(() => {
+        // 用户点击取消或关闭，不做任何操作
+      });
     }
   } catch (error) {
     console.error("检查更新失败:", error);
@@ -234,7 +236,9 @@ const checkForUpdate = async () => {
         confirmButtonText: '确定',
         type: 'error'
       }
-    );
+    ).catch(() => {
+      // 用户点击取消或关闭，不做任何操作
+    });
   } finally {
     checkingUpdate.value = false;
   }

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sublink/middlewares"
 	"sublink/models"
 
@@ -79,7 +80,7 @@ func main() {
 	//读取VERSION文件获取版本
 	versionData, err := versionFile.ReadFile("VERSION")
 	if err == nil {
-		version = string(versionData)
+		version = strings.TrimSpace(string(versionData))
 		fmt.Println("版本信息：", version)
 	} else {
 		fmt.Println("版本信息获取失败：", err)
