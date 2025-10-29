@@ -15,7 +15,7 @@
     <el-card class="!border-none !bg-transparent !rounded-4% w-100 <sm:w-85">
       <div class="text-center relative">
         <h2>{{ defaultSettings.title }}</h2>
-        <el-tag class="ml-2 absolute-rt">{{ version }}</el-tag>
+        <el-tag class="ml-2 absolute-rt">{{ versionStore.version }}</el-tag>
       </div>
 
       <el-form
@@ -111,16 +111,9 @@ import { LocationQuery, LocationQueryValue, useRoute } from "vue-router";
 import router from "@/router";
 import defaultSettings from "@/settings";
 import { ThemeEnum } from "@/enums/ThemeEnum";
-// 获取版本号
-const version = ref('')  
-const fetchVersion = function(){
-  GetVersion().then((res) => {
-    console.log("Version fetched:", res.data); // 输出返回内容
-    version.value = res.data;
-  }).catch((error) => {
-    console.error("Error fetching version:", error);
-  });
-}() 
+import { useVersionStore } from "@/store/modules/version";
+
+const versionStore = useVersionStore();
 
 
 
@@ -235,11 +228,7 @@ const toggleTheme = () => {
  */
 
 watchEffect(() => {
-  if (height.value < 600) {
-    icpVisible.value = false;
-  } else {
-    icpVisible.value = true;
-  }
+  icpVisible.value = height.value >= 600;
 });
 
 /**
@@ -252,7 +241,8 @@ function checkCapslock(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
+
+onMounted(async () => {
   getCaptcha();
 });
 </script>

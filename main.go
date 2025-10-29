@@ -4,13 +4,14 @@ import (
 	"embed"
 	"flag"
 	"fmt"
-	"github.com/eun1e/sublinkE-plugins"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"sublink/middlewares"
 	"sublink/models"
+
+	"github.com/eun1e/sublinkE-plugins"
 
 	"sublink/routers"
 	"sublink/services"
@@ -22,6 +23,9 @@ import (
 
 //go:embed template
 var Template embed.FS
+
+//go:embed VERSION
+var versionFile embed.FS
 
 var version string
 
@@ -70,11 +74,20 @@ func main() {
 	config := models.ReadConfig() // 读取配置文件
 	var port = config.Port        // 读取端口号
 	// 获取版本号
-	var Isversion bool
-	version = "1.1.8.3"
-	flag.BoolVar(&Isversion, "version", false, "显示版本号")
+	var IsVersion bool
+	version = "unknown"
+	//读取VERSION文件获取版本
+	versionData, err := versionFile.ReadFile("VERSION")
+	if err == nil {
+		version = string(versionData)
+		fmt.Println("版本信息：", version)
+	} else {
+		fmt.Println("版本信息获取失败：", err)
+	}
+
+	flag.BoolVar(&IsVersion, "version", false, "显示版本号")
 	flag.Parse()
-	if Isversion {
+	if IsVersion {
 		fmt.Println(version)
 		return
 	}

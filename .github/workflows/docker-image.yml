@@ -61,7 +61,14 @@ jobs:
           rm -rf static
           mkdir -p static
           # 复制前端构建产物到 static 目录
-          cp -r webs/dist/* static/      
+          cp -r webs/dist/* static/  
+
+      - name: Write version to VERSION file
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "$TAG_NAME" > VERSION
+          echo "Written version $TAG_NAME to VERSION file"
+
       - name: Build Go binaries
         run: |
           # 创建构建目录

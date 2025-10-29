@@ -41,6 +41,21 @@
       <template #header>
         <div class="flex items-center justify-between">
           <span class="text-lg font-bold">📝 更新日志</span>
+          <el-badge
+            :is-dot="hasNewVersion"
+            type="danger"
+            class="version-badge"
+          >
+            <el-tag
+              @click="checkForUpdate"
+              type="success"
+              size="default"
+              class="ml-3"
+              effect="dark"
+            >
+              当前版本: {{ versionStore.version }}
+            </el-tag>
+          </el-badge>
           <el-button link type="primary" @click="openGithubReleases">
             查看全部
           </el-button>
@@ -57,6 +72,9 @@
           >
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center">
+                <span class="text-lg font-semibold ml-3 mr-2">
+                  {{ release.name }}
+                </span>
                 <el-tag :type="index === 0 ? 'success' : 'info'" size="small">
                   {{ release.tag_name }}
                 </el-tag>
@@ -68,9 +86,14 @@
                 >
                   Pre-release
                 </el-tag>
-                <span class="text-lg font-semibold ml-3">
-                  {{ release.name }}
-                </span>
+                <el-tag
+                  v-if="index === 0 && hasNewVersion"
+                  type="danger"
+                  size="small"
+                  class="ml-2"
+                >
+                  新版本
+                </el-tag>
               </div>
               <span class="text-sm text-gray">
                 {{ formatDate(release.published_at) }}
@@ -95,11 +118,13 @@ defineOptions({
   inheritAttrs: false,
 });
 
+import { useVersionStore } from "@/store/modules/version";
 import { useUserStore } from "@/store/modules/user";
 import { getNodeTotal, getSubTotal } from "@/api/total";
 import MarkdownIt from "markdown-it";
 import axios from "axios";
 
+const versionStore = useVersionStore();
 const userStore = useUserStore();
 const date: Date = new Date();
 const subTotal = ref(0);
@@ -109,6 +134,8 @@ const markdown = new MarkdownIt();
 // 更新日志相关
 const releases = ref<any[]>([]);
 const releaseLoading = ref(false);
+const checkingUpdate = ref(false);
+const hasNewVersion = ref(false);
 
 // 右上角数量
 const statisticData = ref([
@@ -151,11 +178,65 @@ const fetchGithubReleases = async () => {
       }
     );
     releases.value = response.data;
+    // 检查是否有新版本
+    checkVersionDifference();
   } catch (error) {
     console.error("获取更新日志失败:", error);
     ElMessage.error("获取更新日志失败");
   } finally {
     releaseLoading.value = false;
+  }
+};
+// 检查版本差异
+const checkVersionDifference = () => {
+  if (releases.value.length > 0) {
+    const latestVersion = releases.value[0].tag_name;
+    const currentVersion = versionStore.version;
+    hasNewVersion.value = latestVersion !== currentVersion;
+  }
+};
+
+// 检查更新
+const checkForUpdate = async () => {
+  checkingUpdate.value = true;
+  try {
+    await fetchGithubReleases();
+    if (hasNewVersion.value) {
+      ElMessageBox.confirm(
+        `新版本 ${releases.value[0].tag_name}，建议您及时更新以获得更好的体验！`,
+        '发现新版本',
+        {
+          confirmButtonText: '查看详情',
+          cancelButtonText: '取消',
+          type: 'success'
+        }
+      ).then(() => {
+        openGithubReleases();
+      }).catch(() => {
+        // 用户点击取消或关闭，不做任何操作
+      });
+    } else {
+      await ElMessageBox.alert(
+        '您当前使用的已是最新版本，无需更新。',
+        '版本检查',
+        {
+          confirmButtonText: '确定',
+          type: 'info'
+        }
+      );
+    }
+  } catch (error) {
+    console.error("检查更新失败:", error);
+    await ElMessageBox.alert(
+      '检查更新失败,请检查网络连接后重试。',
+      '错误',
+      {
+        confirmButtonText: '确定',
+        type: 'error'
+      }
+    );
+  } finally {
+    checkingUpdate.value = false;
   }
 };
 
@@ -263,7 +344,7 @@ const greetings = computed(() => {
 
     .release-body {
       margin-top: 2px;
-      line-height: 1;
+      line-height: 1.2;
       color: var(--el-text-color-regular);
 
       :deep(h1),
