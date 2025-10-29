@@ -30,6 +30,7 @@
 - [x] Support AnyTLS and Socks5 protocols
 - [x] Subscription node sorting
 - [x] Support plugin extensions (experimental)
+- [x] IP Blacklist/Whitelist Subscription Support
 - [ ] ...
 
 # Project Features
