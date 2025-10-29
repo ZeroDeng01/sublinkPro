@@ -12,6 +12,7 @@ import { getTemp } from "@/api/subcription/temp";
 import { getNodes } from "@/api/subcription/node";
 import QrcodeVue from "qrcode.vue";
 import md5 from "md5";
+import IPListInput from "@/views/subcription/components/IPListInput.vue";
 interface Sub {
   ID: number;
   Name: string;
@@ -19,6 +20,8 @@ interface Sub {
   Config: Config;
   Nodes: Node[];
   SubLogs: SubLogs[];
+  IPWhitelist: string;
+  IPBlacklist: string;
 }
 interface Node {
   ID: number;
@@ -47,6 +50,8 @@ interface Temp {
   CreateDate: string;
 }
 const tableData = ref<Sub[]>([]);
+const IPWhitelist = ref("");
+const IPBlacklist = ref("");
 const Clash = ref("");
 const Surge = ref("");
 const SubTitle = ref("");
@@ -82,15 +87,17 @@ onMounted(async () => {
 
 const addSubs = async () => {
   const config = JSON.stringify({
+    cert: checkList.value.includes("cert"),
     clash: Clash.value.trim(),
     surge: Surge.value.trim(),
-    udp: checkList.value.includes("udp") ? true : false,
-    cert: checkList.value.includes("cert") ? true : false,
+    udp: checkList.value.includes("udp"),
   });
   if (SubTitle.value === "添加订阅") {
     await AddSub({
       config: config,
       name: Subname.value.trim(),
+      IPWhitelist: IPWhitelist.value,
+      IPBlacklist: IPBlacklist.value,
       nodes: value1.value.join(","),
     });
     getsubs();
@@ -100,6 +107,8 @@ const addSubs = async () => {
       config: config,
       name: Subname.value.trim(),
       nodes: value1.value.join(","),
+      IPWhitelist: IPWhitelist.value,
+      IPBlacklist: IPBlacklist.value,
       oldname: oldSubname.value,
     });
     getsubs();
@@ -177,6 +186,8 @@ const handleAddSub = () => {
   Surge.value = "./template/surge.conf";
   dialogVisible.value = true;
   value1.value = [];
+  IPWhitelist.value = "";
+  IPBlacklist.value = "";
 };
 const handleEdit = (row: any) => {
   for (let i = 0; i < tableData.value.length; i++) {
@@ -200,6 +211,8 @@ const handleEdit = (row: any) => {
       }
       Clash.value = config.clash;
       Surge.value = config.surge;
+      IPWhitelist.value = tableData.value[i].IPWhitelist;
+      IPBlacklist.value = tableData.value[i].IPBlacklist;
       dialogVisible.value = true;
       value1.value = tableData.value[i].Nodes.map((item) => item.Name);
     }
@@ -645,6 +658,17 @@ const handleCancelSort = () => {
           />
         </el-select>
       </div>
+
+      <!--IP黑名单，一行一个，支撑CIDR-->
+      <IPListInput
+        v-model="IPBlacklist"
+        title="IP黑名单（优先级高于白名单）"
+        class="m-4"
+      />
+
+      <!--IP白名单，一行一个，支撑CIDR-->
+      <IPListInput v-model="IPWhitelist" title="IP白名单" class="m-4" />
+
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="dialogVisible = false">关闭</el-button>

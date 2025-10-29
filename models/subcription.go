@@ -13,6 +13,8 @@ type Subcription struct {
 	SubLogs       []SubLogs `gorm:"foreignKey:SubcriptionID;"` // 一对多关系 约束父表被删除子表记录跟着删除
 	CreateDate    string
 	NodesWithSort []NodeWithSort `gorm:"-" json:"Nodes"`
+	IPWhitelist   string         `json:"IPWhitelist"` //IP白名单
+	IPBlacklist   string         `json:"IPBlacklist"` //IP黑名单
 }
 
 type SubcriptionNode struct {
@@ -49,7 +51,15 @@ func (sub *Subcription) AddNode() error {
 
 // 更新订阅
 func (sub *Subcription) Update() error {
-	return DB.Where("id = ? or name = ?", sub.ID, sub.Name).Updates(sub).Error
+	// 使用 map 来更新,这样可以更新空字符串
+	updates := map[string]interface{}{
+		"name":         sub.Name,
+		"config":       sub.Config,
+		"create_date":  sub.CreateDate,
+		"ip_whitelist": sub.IPWhitelist,
+		"ip_blacklist": sub.IPBlacklist,
+	}
+	return DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 }
 
 // 更新节点列表建立多对多关系（使用节点名称）

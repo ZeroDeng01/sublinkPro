@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/big"
 	"math/rand"
+	"net"
 	"os"
 	"regexp"
 	"strings"
@@ -241,4 +242,36 @@ func RandString(number int) string {
 	}
 	Secret := string(randomString)
 	return Secret
+}
+
+// IsIpInCidr 判断IP是否在CIDR范围内
+func IsIpInCidr(cIP string, sIP string) bool {
+	ips := strings.Split(sIP, ",")
+	for _, ip := range ips {
+		if strings.Contains(ip, "/") {
+			_, ipNet, err := net.ParseCIDR(ip)
+			if err != nil {
+				return false
+			}
+			return ipNet.Contains(net.ParseIP(cIP))
+		} else {
+			return ip == cIP
+		}
+	}
+	return false
+}
+
+// IpFormatValidation IP格式检测
+func IpFormatValidation(ipString string) bool {
+	ips := strings.Split(ipString, ",")
+	for _, ip := range ips {
+		_, _, err := net.ParseCIDR(ip)
+		if err != nil {
+			parsedIP := net.ParseIP(ip)
+			if parsedIP == nil {
+				return false
+			}
+		}
+	}
+	return true
 }

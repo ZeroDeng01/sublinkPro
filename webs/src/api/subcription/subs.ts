@@ -1,12 +1,12 @@
 import request from "@/utils/request";
-export function getSubs(){
+export function getSubs() {
   return request({
     url: "/api/v1/subcription/get",
     method: "get",
-  }).then(response => {
+  }).then((response) => {
     // 确保每个订阅都有 SubLogs 数组
     if (response.data && Array.isArray(response.data)) {
-      response.data.forEach(sub => {
+      response.data.forEach((sub) => {
         // 如果 SubLogs 不存在或为空数组，添加一个默认空记录
         if (!sub.Nodes || sub.Nodes.length === 0) {
           sub.Nodes = [];
@@ -18,7 +18,7 @@ export function getSubs(){
   });
 }
 
-export function AddSub(data: any){
+export function AddSub(data: any) {
   return request({
     url: "/api/v1/subcription/add",
     method: "post",
@@ -28,7 +28,7 @@ export function AddSub(data: any){
     },
   });
 }
-export function DelSub(data: any){
+export function DelSub(data: any) {
   return request({
     url: "/api/v1/subcription/delete",
     method: "delete",
@@ -36,7 +36,7 @@ export function DelSub(data: any){
   });
 }
 
-export function UpdateSub(data: any){
+export function UpdateSub(data: any) {
   return request({
     url: "/api/v1/subcription/update",
     method: "post",
@@ -47,8 +47,7 @@ export function UpdateSub(data: any){
   });
 }
 
-
-export function SortSub(data: any){
+export function SortSub(data: any) {
   return request({
     url: "/api/v1/subcription/sort",
     method: "post",

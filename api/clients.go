@@ -45,6 +45,20 @@ func GetClient(c *gin.Context) {
 		SunName = sub.Name
 		//查找token的md5是否匹配并且转换成小写
 		if Md5(SunName) == strings.ToLower(token) {
+
+			if sub.IPBlacklist != "" && utils.IsIpInCidr(c.ClientIP(), sub.IPBlacklist) {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"msg": "IP受限(IP已被加入黑名单)",
+				})
+				return
+			}
+			if sub.IPWhitelist != "" && !utils.IsIpInCidr(c.ClientIP(), sub.IPWhitelist) {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"msg": "IP受限(您的IP不在允许访问列表)",
+				})
+				return
+			}
+
 			// 判断是否带客户端参数
 			switch ClientIndex {
 			case "clash":

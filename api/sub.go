@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sublink/dto"
 	"sublink/models"
+	"sublink/utils"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -50,12 +51,33 @@ func SubAdd(c *gin.Context) {
 	name := c.PostForm("name")
 	config := c.PostForm("config")
 	nodes := c.PostForm("nodes")
+	ipWhitelist := c.PostForm("IPWhitelist")
+	ipBlacklist := c.PostForm("IPBlacklist")
 	if name == "" || nodes == "" {
 		c.JSON(400, gin.H{
 			"msg": "订阅名称 or 节点不能为空",
 		})
 		return
 	}
+	if ipWhitelist != "" {
+		ok := utils.IpFormatValidation(ipWhitelist)
+		if !ok {
+			c.JSON(400, gin.H{
+				"msg": "IP白名单有误，请检查IP格式",
+			})
+			return
+		}
+	}
+	if ipBlacklist != "" {
+		ok := utils.IpFormatValidation(ipBlacklist)
+		if !ok {
+			c.JSON(400, gin.H{
+				"msg": "IP黑名单有误，请检查IP格式",
+			})
+			return
+		}
+	}
+
 	sub.Nodes = []models.Node{}
 	for _, v := range strings.Split(nodes, ",") {
 		var node models.Node
@@ -69,6 +91,8 @@ func SubAdd(c *gin.Context) {
 
 	sub.Config = config
 	sub.Name = name
+	sub.IPWhitelist = ipWhitelist
+	sub.IPBlacklist = ipBlacklist
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 
 	err := sub.Add()
@@ -98,11 +122,31 @@ func SubUpdate(c *gin.Context) {
 	oldname := c.PostForm("oldname")
 	config := c.PostForm("config")
 	nodes := c.PostForm("nodes")
+	ipWhitelist := c.PostForm("IPWhitelist")
+	ipBlacklist := c.PostForm("IPBlacklist")
 	if name == "" || nodes == "" {
 		c.JSON(400, gin.H{
 			"msg": "订阅名称 or 节点不能为空",
 		})
 		return
+	}
+	if ipWhitelist != "" {
+		ok := utils.IpFormatValidation(ipWhitelist)
+		if !ok {
+			c.JSON(400, gin.H{
+				"msg": "IP白名单有误，请检查IP格式",
+			})
+			return
+		}
+	}
+	if ipBlacklist != "" {
+		ok := utils.IpFormatValidation(ipBlacklist)
+		if !ok {
+			c.JSON(400, gin.H{
+				"msg": "IP黑名单有误，请检查IP格式",
+			})
+			return
+		}
 	}
 	// 查找旧节点
 	sub.Name = oldname
@@ -127,7 +171,8 @@ func SubUpdate(c *gin.Context) {
 		}
 		sub.Nodes = append(sub.Nodes, node)
 	}
-
+	sub.IPWhitelist = ipWhitelist
+	sub.IPBlacklist = ipBlacklist
 	err = sub.Update()
 	if err != nil {
 		c.JSON(400, gin.H{
