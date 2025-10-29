@@ -722,7 +722,7 @@ const formatDateTime = (dateTimeString: string) => {
             >导入订阅</el-button
           >
           <el-button type="success" :icon="Refresh" @click="getnodes"
-          >刷新</el-button
+            >刷新</el-button
           >
         </div>
       </template>
@@ -785,11 +785,11 @@ const formatDateTime = (dateTimeString: string) => {
           重新加载
         </el-button>
       </el-empty>
-      <div style="margin-top: 20px" />
+      <div style="margin-top: 20px"></div>
       <el-button type="info" @click="selectAll()">全选</el-button>
       <el-button type="warning" @click="toggleSelection()">取消选择</el-button>
       <el-button type="danger" @click="selectDel">批量删除</el-button>
-      <div style="margin-top: 20px" />
+      <div style="margin-top: 20px"></div>
       <el-pagination
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
@@ -798,8 +798,7 @@ const formatDateTime = (dateTimeString: string) => {
         layout="total, sizes, prev, pager, next, jumper"
         :page-sizes="[10, 20, 30, 40]"
         :total="filteredTableData.length"
-      >
-      </el-pagination>
+      />
     </el-card>
     <!-- 导入订阅对话框 -->
     <el-dialog
@@ -942,7 +941,7 @@ const formatDateTime = (dateTimeString: string) => {
           />
 
           <!-- Cron表达式格式说明 -->
-          <div style="font-size: 12px; color: #909399; margin-top: 5px">
+          <div style="margin-top: 5px; font-size: 12px; color: #909399">
             <div><strong>Cron表达式格式 (5字段):</strong> 分 时 日 月 周</div>
 
             <div style="margin-top: 8px">
@@ -951,7 +950,7 @@ const formatDateTime = (dateTimeString: string) => {
                   subSchedulerForm.cron_expr.trim() &&
                   cronValidationStatus.isValid
                 "
-                style="color: #67c23a; font-weight: bold; margin-bottom: 5px"
+                style="margin-bottom: 5px; font-weight: bold; color: #67c23a"
               >
                 ✓ {{ cronValidationStatus.message }}
               </div>
@@ -961,7 +960,7 @@ const formatDateTime = (dateTimeString: string) => {
                   subSchedulerForm.cron_expr.trim() &&
                   !cronValidationStatus.isValid
                 "
-                style="color: #f56c6c; font-weight: bold; margin-bottom: 5px"
+                style="margin-bottom: 5px; font-weight: bold; color: #f56c6c"
               >
                 ✗ {{ cronValidationStatus.message }}
               </div>
@@ -973,13 +972,13 @@ const formatDateTime = (dateTimeString: string) => {
                 !cronValidationStatus.isValid
               "
               style="
-                color: #f56c6c;
-                background-color: #fef0f0;
                 padding: 8px 12px;
-                border-radius: 4px;
-                border-left: 3px solid #f56c6c;
                 margin-top: 5px;
                 margin-bottom: 10px;
+                color: #f56c6c;
+                background-color: #fef0f0;
+                border-left: 3px solid #f56c6c;
+                border-radius: 4px;
               "
             >
               <strong>正确格式示例：</strong> 0 */6 * * * (每6小时执行一次)
@@ -987,11 +986,11 @@ const formatDateTime = (dateTimeString: string) => {
 
             <div
               style="
-                background-color: #f5f7fa;
                 padding: 8px;
-                border-radius: 4px;
                 margin-top: 5px;
                 line-height: 1.5;
+                background-color: #f5f7fa;
+                border-radius: 4px;
               "
             >
               <strong>常用示例:</strong>
@@ -1027,14 +1026,16 @@ const formatDateTime = (dateTimeString: string) => {
 .el-card {
   margin: 10px;
 }
+
 .el-input {
   margin-bottom: 10px;
 }
+
 .card-header {
   display: flex;
+  gap: 10px;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
 }
 
 /* 确保搜索框和按钮高度一致 */

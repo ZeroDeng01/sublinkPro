@@ -116,6 +116,7 @@
     "vite": "^5.2.7",
     "vite-plugin-mock-dev-server": "^1.4.7",
     "vite-plugin-svg-icons": "^2.0.1",
+    "vue-eslint-parser": "^10.2.0",
     "vue-tsc": "^2.0.6"
   },
   "repository": "https://gitee.com/youlaiorg/vue3-element-admin.git",

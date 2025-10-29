@@ -41,11 +41,7 @@
       <template #header>
         <div class="flex items-center justify-between">
           <span class="text-lg font-bold">📝 更新日志</span>
-          <el-badge
-            :is-dot="hasNewVersion"
-            type="danger"
-            class="version-badge"
-          >
+          <el-badge :is-dot="hasNewVersion" type="danger" class="version-badge">
             <el-tag
               @click="checkForUpdate"
               type="success"
@@ -204,24 +200,26 @@ const checkForUpdate = async () => {
     if (hasNewVersion.value) {
       ElMessageBox.confirm(
         `新版本 ${releases.value[0].tag_name}，建议您及时更新以获得更好的体验！`,
-        '发现新版本',
+        "发现新版本",
         {
-          confirmButtonText: '查看详情',
-          cancelButtonText: '取消',
-          type: 'success'
+          confirmButtonText: "查看详情",
+          cancelButtonText: "取消",
+          type: "success",
         }
-      ).then(() => {
-        openGithubReleases();
-      }).catch(() => {
-        // 用户点击取消或关闭，不做任何操作
-      });
+      )
+        .then(() => {
+          openGithubReleases();
+        })
+        .catch(() => {
+          // 用户点击取消或关闭，不做任何操作
+        });
     } else {
       await ElMessageBox.alert(
-        '您当前使用的已是最新版本，无需更新。',
-        '版本检查',
+        "您当前使用的已是最新版本，无需更新。",
+        "版本检查",
         {
-          confirmButtonText: '确定',
-          type: 'info'
+          confirmButtonText: "确定",
+          type: "info",
         }
       ).catch(() => {
         // 用户点击取消或关闭，不做任何操作
@@ -229,14 +227,10 @@ const checkForUpdate = async () => {
     }
   } catch (error) {
     console.error("检查更新失败:", error);
-    await ElMessageBox.alert(
-      '检查更新失败,请检查网络连接后重试。',
-      '错误',
-      {
-        confirmButtonText: '确定',
-        type: 'error'
-      }
-    ).catch(() => {
+    await ElMessageBox.alert("检查更新失败,请检查网络连接后重试。", "错误", {
+      confirmButtonText: "确定",
+      type: "error",
+    }).catch(() => {
       // 用户点击取消或关闭，不做任何操作
     });
   } finally {
@@ -371,8 +365,8 @@ const greetings = computed(() => {
       }
 
       :deep(ul) {
-        margin: 6px 0;
         padding-left: 20px;
+        margin: 6px 0;
       }
 
       :deep(li) {
@@ -382,10 +376,10 @@ const greetings = computed(() => {
 
       :deep(code) {
         padding: 2px 6px;
-        background-color: var(--el-fill-color-light);
-        border-radius: 4px;
         font-family: "Courier New", monospace;
         font-size: 0.9em;
+        background-color: var(--el-fill-color-light);
+        border-radius: 4px;
       }
 
       :deep(a) {
