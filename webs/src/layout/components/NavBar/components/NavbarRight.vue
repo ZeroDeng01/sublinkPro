@@ -33,11 +33,14 @@
       <template #dropdown>
         <el-dropdown-menu>
           <router-link to="/apikey/index">
-            <el-dropdown-item>{{ $t('apikey.manage') }}</el-dropdown-item>
+            <el-dropdown-item>{{ $t("apikey.manage") }}</el-dropdown-item>
           </router-link>
           <router-link to="/system/user/set">
             <el-dropdown-item>{{ $t("navbar.userset") }}</el-dropdown-item>
           </router-link>
+          <el-dropdown-item divided @click="backup">
+            {{ $t("navbar.backup") }}
+          </el-dropdown-item>
           <el-dropdown-item divided @click="logout">
             {{ $t("navbar.logout") }}
           </el-dropdown-item>
@@ -62,6 +65,8 @@ import {
 } from "@/store";
 import defaultSettings from "@/settings";
 import { DeviceEnum } from "@/enums/DeviceEnum";
+import request from "@/utils/request";
+import { ElLoading } from "element-plus";
 
 const appStore = useAppStore();
 const tagsViewStore = useTagsViewStore();
@@ -92,6 +97,89 @@ function logout() {
       })
       .then(() => {
         router.push(`/login?redirect=${route.fullPath}`);
+      });
+  });
+}
+
+/**
+ * 数据备份
+ */
+function backup() {
+  ElMessageBox.confirm(
+    "确定备份系统数据吗？数据备份文件存有您的机密信息，请妥善保管。",
+    "温馨提示",
+    {
+      confirmButtonText: "Yes！搞起！",
+      cancelButtonText: "No！我是随缘主义！",
+      type: "warning",
+      lockScroll: false,
+    }
+  ).then(() => {
+    // 1. 显示全屏加载
+    const loadingInstance = ElLoading.service({
+      lock: true,
+      text: "正在生成备份文件，请稍候...",
+      background: "rgba(0, 0, 0, 0.7)",
+    });
+
+    request({
+      url: "/api/v1/backup/download",
+      method: "get",
+      responseType: "blob",
+    })
+      .then((response) => {
+        const data = response.data;
+
+        // 1. 严格的类型守卫：检查返回的是否真的是 Blob
+        if (!(data instanceof Blob)) {
+          ElMessage.error("备份失败：服务器未返回有效的备份文件。");
+          console.error("Backup failed: response.data is not a Blob", data);
+          return;
+        }
+
+        // 2. 到这里， TypeScript 知道 'data' 100% 是 Blob
+        const blob: Blob = data;
+
+        // 3. 检查 Blob 大小 (现在类型安全了)
+        if (!blob || blob.size === 0) {
+          ElMessage.error("下载失败，获取到的文件为空");
+          return;
+        }
+
+        // --- 核心修改结束 ---
+
+        // 提取文件名 (你的逻辑)
+        let filename = `sublink-pro-backup.zip`;
+        if (response.headers && response.headers["content-disposition"]) {
+          const contentDisposition = response.headers["content-disposition"];
+          const match = contentDisposition.match(
+            /filename="?([^"]+)"?|filename\*=UTF-8''([^"]+)/
+          );
+          if (match && (match[1] || match[2])) {
+            filename = decodeURIComponent(match[2] || match[1]);
+          }
+        }
+
+        // 创建下载链接 (现在类型安全了)
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        ElMessage.success("备份文件已开始下载");
+      })
+      .catch((err) => {
+        // 网络层或请求配置错误
+        ElMessage.error("备份请求失败，请检查网络或服务器日志");
+        console.error("Backup request failed:", err);
+      })
+      .finally(() => {
+        // 3. 无论成功还是失败，都关闭 loading
+        loadingInstance.close();
       });
   });
 }

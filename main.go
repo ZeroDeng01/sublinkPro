@@ -187,6 +187,7 @@ func Run(port int) {
 	routers.Version(r, version)
 	routers.SubScheduler(r)
 	routers.Plugins(r)
+	routers.Backup(r)
 	// 启动服务
 	r.Run(fmt.Sprintf("0.0.0.0:%d", port))
 }

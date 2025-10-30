@@ -4,11 +4,11 @@ export default {
     dashboard: "Dashboard",
     document: "Document",
     userset: "ChangePassword",
-    system:"system management",
-    nodelist:"Node List",
-    sublist:"Subscription List",
-    subcription:"Subscription Management",
-    templatelist:"Template List",
+    system: "system management",
+    nodelist: "Node List",
+    sublist: "Subscription List",
+    subcription: "Subscription Management",
+    templatelist: "Template List",
     apikey: "API Key Management",
     plugin: "Plugin Management",
     pluginList: "Plugin List",
@@ -34,22 +34,23 @@ export default {
     },
   },
   // 重置密码页面国际化
-  userset:{
+  userset: {
     title: "Change Password",
     newUsername: "New Username",
     newPassword: "New Password",
     message: {
-      title:"Prompt",
-      xx1:"Username or password cannot be empty",
+      title: "Prompt",
+      xx1: "Username or password cannot be empty",
       xx2: "The password length cannot be less than 6 digits",
-      xx3:"Are you sure you want to reset the password",
-      xx4:"Password reset successful, new password is:",
+      xx3: "Are you sure you want to reset the password",
+      xx4: "Password reset successful, new password is:",
     },
   },
   // 导航栏国际化
   navbar: {
     dashboard: "Dashboard",
     logout: "Logout",
+    backup: "Backup System",
     userset: "ChangePassword",
   },
   sizeSelect: {
@@ -65,7 +66,8 @@ export default {
     message: {
       success: "Switch Language Successful!",
     },
-  },  settings: {
+  },
+  settings: {
     project: "Project Settings",
     theme: "Theme",
     interface: "Interface",
@@ -100,7 +102,7 @@ export default {
     iSavedIt: "I Saved It",
     search: "Search API Keys",
   },
-  
+
   // Plugin management internationalization
   plugin: {
     title: "Plugin Management",
@@ -129,6 +131,6 @@ export default {
       reloadFailed: "Failed to reload plugins",
       configSuccess: "Plugin configuration saved successfully",
       configFailed: "Failed to save plugin configuration",
-    }
+    },
   },
 };

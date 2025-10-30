@@ -4,11 +4,11 @@ export default {
     dashboard: "首页",
     document: "项目文档",
     userset: "修改密码",
-    system:"系统管理",
-    nodelist:"节点列表",
-    sublist:"订阅列表",
-    subcription:"订阅管理",
-    templatelist:"模板列表",
+    system: "系统管理",
+    nodelist: "节点列表",
+    sublist: "订阅列表",
+    subcription: "订阅管理",
+    templatelist: "模板列表",
     apikey: "API密钥管理",
     plugin: "插件管理",
     PluginList: "插件列表",
@@ -33,23 +33,24 @@ export default {
       },
     },
   },
-    // 重置密码页面国际化
-    userset:{
-      title: "修改密码",
-      newUsername: "新账号",
-      newPassword: "新密码",
-      message: {
-        title:"提示",
-        xx1:"账号或密码不能为空",
-        xx2: "密码长度不能小于6位",
-        xx3:"你确定要重置密码吗",
-        xx4:"密码重置成功，新密码是：",
-      },
+  // 重置密码页面国际化
+  userset: {
+    title: "修改密码",
+    newUsername: "新账号",
+    newPassword: "新密码",
+    message: {
+      title: "提示",
+      xx1: "账号或密码不能为空",
+      xx2: "密码长度不能小于6位",
+      xx3: "你确定要重置密码吗",
+      xx4: "密码重置成功，新密码是：",
     },
+  },
   // 导航栏国际化
   navbar: {
     dashboard: "首页",
     logout: "注销登出",
+    backup: "系统备份",
     userset: "修改密码",
   },
   sizeSelect: {
@@ -65,7 +66,8 @@ export default {
     message: {
       success: "切换语言成功！",
     },
-  },  settings: {
+  },
+  settings: {
     project: "项目配置",
     theme: "主题设置",
     interface: "界面设置",
@@ -112,7 +114,7 @@ export default {
     copyFailed: "复制失败，请手动复制",
     manage: "管理API密钥",
   },
-  
+
   // 插件管理页面国际化
   plugin: {
     title: "插件管理",
@@ -141,6 +143,6 @@ export default {
       reloadFailed: "插件重新加载失败",
       configSuccess: "插件配置保存成功",
       configFailed: "插件配置保存失败",
-    }
-  }
+    },
+  },
 };
