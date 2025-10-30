@@ -93,18 +93,14 @@
           @click.prevent="handleLogin"
           >{{ $t("login.login") }}
         </el-button>
-
-      
       </el-form>
     </el-card>
-
-  
   </div>
 </template>
 
 <script setup lang="ts">
 import { useSettingsStore, useUserStore } from "@/store";
-import { getCaptchaApi , GetVersion } from "@/api/auth";
+import { getCaptchaApi, GetVersion } from "@/api/auth";
 import { LoginData } from "@/api/auth/types";
 import { Sunny, Moon } from "@element-plus/icons-vue";
 import { LocationQuery, LocationQueryValue, useRoute } from "vue-router";
@@ -114,8 +110,6 @@ import { ThemeEnum } from "@/enums/ThemeEnum";
 import { useVersionStore } from "@/store/modules/version";
 
 const versionStore = useVersionStore();
-
-
 
 // Stores
 const userStore = useUserStore();
@@ -240,7 +234,6 @@ function checkCapslock(event: KeyboardEvent) {
     isCapslock.value = event.getModifierState("CapsLock");
   }
 }
-
 
 onMounted(async () => {
   getCaptcha();

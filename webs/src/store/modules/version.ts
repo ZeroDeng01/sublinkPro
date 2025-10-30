@@ -1,4 +1,3 @@
-
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { Ref } from "vue";
@@ -70,7 +69,7 @@ export const useVersionStore = defineStore("version", () => {
     // 方法
     getVersion,
     clearVersion,
-    restoreVersion
+    restoreVersion,
   };
 });
 

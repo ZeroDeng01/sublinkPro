@@ -1,13 +1,13 @@
 import request from "@/utils/request";
 
-export function getTemp(){
+export function getTemp() {
   return request({
     url: "/api/v1/template/get",
     method: "get",
   });
 }
 
-export function AddTemp(data: any){
+export function AddTemp(data: any) {
   return request({
     url: "/api/v1/template/add",
     method: "post",
@@ -17,7 +17,7 @@ export function AddTemp(data: any){
     },
   });
 }
-export function UpdateTemp(data: any){
+export function UpdateTemp(data: any) {
   return request({
     url: "/api/v1/template/update",
     method: "post",
@@ -27,7 +27,7 @@ export function UpdateTemp(data: any){
     },
   });
 }
-export function DelTemp(data: any){
+export function DelTemp(data: any) {
   return request({
     url: "/api/v1/template/delete",
     method: "post",

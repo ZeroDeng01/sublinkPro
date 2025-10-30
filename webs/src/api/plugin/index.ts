@@ -1,5 +1,5 @@
-import request from '@/utils/request';
-import type { PluginInfo, PluginConfigRequest } from './types';
+import request from "@/utils/request";
+import type { PluginInfo, PluginConfigRequest } from "./types";
 
 // API响应类型
 interface ApiResponse<T> {
@@ -14,8 +14,8 @@ interface ApiResponse<T> {
  */
 export const getPluginsApi = () => {
   return request<ApiResponse<PluginInfo[]>>({
-    url: '/api/v1/plugins/get',
-    method: 'get'
+    url: "/api/v1/plugins/get",
+    method: "get",
   });
 };
 
@@ -27,7 +27,7 @@ export const getPluginsApi = () => {
 export const enablePluginApi = (name: string) => {
   return request<ApiResponse<null>>({
     url: `/api/v1/plugins/enable/${name}`,
-    method: 'post'
+    method: "post",
   });
 };
 
@@ -39,7 +39,7 @@ export const enablePluginApi = (name: string) => {
 export const disablePluginApi = (name: string) => {
   return request<ApiResponse<null>>({
     url: `/api/v1/plugins/disable/${name}`,
-    method: 'post'
+    method: "post",
   });
 };
 
@@ -51,7 +51,7 @@ export const disablePluginApi = (name: string) => {
 export const getPluginConfigApi = (name: string) => {
   return request<ApiResponse<Record<string, any>>>({
     url: `/api/v1/plugins/config/${name}`,
-    method: 'get'
+    method: "get",
   });
 };
 
@@ -63,8 +63,8 @@ export const getPluginConfigApi = (name: string) => {
 export const updatePluginConfigApi = (data: PluginConfigRequest) => {
   return request<ApiResponse<null>>({
     url: `/api/v1/plugins/config`,
-    method: 'put',
-    data: data
+    method: "put",
+    data: data,
   });
 };
 
@@ -74,7 +74,7 @@ export const updatePluginConfigApi = (data: PluginConfigRequest) => {
  */
 export const reloadPluginsApi = () => {
   return request<ApiResponse<null>>({
-    url: '/api/v1/plugins/reload',
-    method: 'post'
+    url: "/api/v1/plugins/reload",
+    method: "post",
   });
 };

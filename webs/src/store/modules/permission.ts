@@ -42,12 +42,13 @@ const filterAsyncRoutes = (routes: RouteRecordRaw[], roles: string[]) => {
     const tmpRoute = { ...route }; // ES6扩展运算符复制新对象
     if (!route.name) {
       tmpRoute.name = route.path;
-    }    // 判断用户(角色)是否有该路由的访问权限
-    if (hasPermission(roles, tmpRoute)) {      if (tmpRoute.component?.toString() == "Layout") {
+    } // 判断用户(角色)是否有该路由的访问权限
+    if (hasPermission(roles, tmpRoute)) {
+      if (tmpRoute.component?.toString() == "Layout") {
         tmpRoute.component = Layout;
       } else {
         const componentPath = `../../views/${tmpRoute.component}.vue`;
-        
+
         const component = modules[componentPath];
         if (component) {
           tmpRoute.component = component;
@@ -56,9 +57,9 @@ const filterAsyncRoutes = (routes: RouteRecordRaw[], roles: string[]) => {
           const alternativePaths = [
             `../../views/${tmpRoute.component}/index.vue`,
             `../../views/apikey/index.vue`,
-            `../../views/error-page/404.vue`
+            `../../views/error-page/404.vue`,
           ];
-          
+
           let found = false;
           for (const altPath of alternativePaths) {
             if (modules[altPath]) {
@@ -67,7 +68,7 @@ const filterAsyncRoutes = (routes: RouteRecordRaw[], roles: string[]) => {
               break;
             }
           }
-          
+
           if (!found) {
             tmpRoute.component = modules[`../../views/error-page/404.vue`];
           }

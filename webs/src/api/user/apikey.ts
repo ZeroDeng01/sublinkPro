@@ -25,12 +25,10 @@ export function getAPIKeys(userId: number) {
   });
 }
 
-
-
 /**
  * 创建新的API密钥
  */
-export function createAPIKey(data: CreateAPIKeyParams){
+export function createAPIKey(data: CreateAPIKeyParams) {
   return request({
     url: "/api/v1/apikey/add",
     method: "post",

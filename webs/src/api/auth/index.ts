@@ -1,6 +1,6 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
-import { CaptchaResult, LoginData, LoginResult , VersionResult } from "./types";
+import { CaptchaResult, LoginData, LoginResult, VersionResult } from "./types";
 
 /**
  * 登录API

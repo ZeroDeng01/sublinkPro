@@ -1,4 +1,4 @@
-import request from '@/utils/request';
+import request from "@/utils/request";
 
 // 订阅调度器接口定义
 export interface SubScheduler {
@@ -20,34 +20,34 @@ export interface SubSchedulerRequest {
 // 获取订阅调度器列表
 export function getSubSchedulers() {
   return request({
-    url: '/api/v1/sub_scheduler/get',
-    method: 'get'
+    url: "/api/v1/sub_scheduler/get",
+    method: "get",
   });
 }
 
 // 添加订阅调度器
 export function addSubScheduler(data: SubSchedulerRequest) {
   return request({
-    url: '/api/v1/sub_scheduler/add',
-    method: 'post',
-    data
+    url: "/api/v1/sub_scheduler/add",
+    method: "post",
+    data,
   });
 }
 
 // 更新订阅调度器
 export function updateSubScheduler(data: SubSchedulerRequest) {
   return request({
-    url: '/api/v1/sub_scheduler/update',
-    method: 'put',
-    data
+    url: "/api/v1/sub_scheduler/update",
+    method: "put",
+    data,
   });
 }
 
 export function pullSubScheduler(data: SubSchedulerRequest) {
   return request({
-    url: '/api/v1/sub_scheduler/pull',
-    method: 'post',
-    data
+    url: "/api/v1/sub_scheduler/pull",
+    method: "post",
+    data,
   });
 }
 
@@ -55,6 +55,6 @@ export function pullSubScheduler(data: SubSchedulerRequest) {
 export function deleteSubScheduler(id: number) {
   return request({
     url: `/api/v1/sub_scheduler/delete/${id}`,
-    method: 'delete'
+    method: "delete",
   });
 }
