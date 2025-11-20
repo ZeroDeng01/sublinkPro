@@ -9,9 +9,10 @@ type SubcriptionNodeSortUpdate struct {
 }
 
 type NodeSortItem struct {
-	ID   int    `json:"ID"`
-	Name string `json:"Name"`
-	Sort int    `json:"Sort"`
+	ID      int    `json:"ID"`
+	Name    string `json:"Name"`
+	Sort    int    `json:"Sort"`
+	IsGroup *bool  `json:"IsGroup"` // 标识是否为分组，使用指针以区分false和未设置
 }
 
 // UserAccessKey 用户访问密钥请求体结构

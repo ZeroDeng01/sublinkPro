@@ -13,6 +13,7 @@ func Nodes(r *gin.Engine) {
 		NodesGroup.DELETE("/delete", api.NodeDel)
 		NodesGroup.GET("/get", api.NodeGet)
 		NodesGroup.POST("/update", api.NodeUpdadte)
+		NodesGroup.GET("/groups", api.GetGroups)
 	}
 
 }

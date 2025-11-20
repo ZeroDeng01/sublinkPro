@@ -20,9 +20,14 @@ interface Sub {
   CreateDate: string;
   Config: Config;
   Nodes: Node[];
+  Groups: GroupWithSort[]; // 修改为带Sort的分组列表
   SubLogs: SubLogs[];
   IPWhitelist: string;
   IPBlacklist: string;
+}
+interface GroupWithSort {
+  Name: string;
+  Sort: number;
 }
 interface Node {
   ID: number;
@@ -70,6 +75,8 @@ const qrcode = ref("");
 const templist = ref<Temp[]>([]);
 const selectedGroup = ref<string>("all"); // 当前选中的分组
 const nodeSearchQuery = ref(""); // 节点搜索关键词
+const selectionMode = ref<string>("nodes"); // 选择模式: 'nodes' 或 'groups'
+const selectedGroups = ref<string[]>([]); // 选中的分组列表
 async function getsubs() {
   const { data } = await getSubs();
   tableData.value = data;
@@ -96,25 +103,35 @@ const addSubs = async () => {
     surge: Surge.value.trim(),
     udp: checkList.value.includes("udp"),
   });
+
+  // 根据选择模式决定提交的数据
+  const requestData: any = {
+    config: config,
+    name: Subname.value.trim(),
+    IPWhitelist: IPWhitelist.value,
+    IPBlacklist: IPBlacklist.value,
+  };
+
+  if (selectionMode.value === "nodes") {
+    requestData.nodes = value1.value.join(",");
+    requestData.groups = "";
+  } else if (selectionMode.value === "groups") {
+    requestData.nodes = "";
+    requestData.groups = selectedGroups.value.join(",");
+  } else {
+    // 混合模式
+    requestData.nodes = value1.value.join(",");
+    requestData.groups = selectedGroups.value.join(",");
+  }
+
   if (SubTitle.value === "添加订阅") {
-    await AddSub({
-      config: config,
-      name: Subname.value.trim(),
-      IPWhitelist: IPWhitelist.value,
-      IPBlacklist: IPBlacklist.value,
-      nodes: value1.value.join(","),
-    });
+    requestData.oldname = undefined;
+    await AddSub(requestData);
     getsubs();
     ElMessage.success("添加成功");
   } else {
-    await UpdateSub({
-      config: config,
-      name: Subname.value.trim(),
-      nodes: value1.value.join(","),
-      IPWhitelist: IPWhitelist.value,
-      IPBlacklist: IPBlacklist.value,
-      oldname: oldSubname.value,
-    });
+    requestData.oldname = oldSubname.value;
+    await UpdateSub(requestData);
     getsubs();
     ElMessage.success("更新成功");
   }
@@ -145,7 +162,9 @@ const handleIplogs = (row: any) => {
 // 为树形表格提供唯一的行键，避免子节点与父节点ID冲突，错误的行键会子节点也显示可以展开
 const getRowKey = function (row: any): string {
   if (row.Nodes) {
-    return row.ID;
+    return "sub_" + row.ID;
+  } else if (row.isGroup) {
+    return "group_" + row.Name;
   } else {
     return "node_" + row.ID;
   }
@@ -190,6 +209,8 @@ const handleAddSub = () => {
   Surge.value = "./template/surge.conf";
   dialogVisible.value = true;
   value1.value = [];
+  selectedGroups.value = [];
+  selectionMode.value = "nodes";
   IPWhitelist.value = "";
   IPBlacklist.value = "";
   selectedGroup.value = "all";
@@ -221,6 +242,18 @@ const handleEdit = (row: any) => {
       IPBlacklist.value = tableData.value[i].IPBlacklist;
       dialogVisible.value = true;
       value1.value = tableData.value[i].Nodes.map((item) => item.Name);
+      // 从GroupWithSort中提取分组名称
+      selectedGroups.value = (tableData.value[i].Groups || []).map((g) =>
+        typeof g === 'string' ? g : g.Name
+      );
+      // 根据是否有节点和分组来设置选择模式
+      if (value1.value.length > 0 && selectedGroups.value.length > 0) {
+        selectionMode.value = "mixed";
+      } else if (selectedGroups.value.length > 0) {
+        selectionMode.value = "groups";
+      } else {
+        selectionMode.value = "nodes";
+      }
       selectedGroup.value = "all";
       nodeSearchQuery.value = "";
     }
@@ -280,16 +313,6 @@ const handleSizeChange = (val: number) => {
 const handleCurrentChange = (val: number) => {
   currentPage.value = val;
 };
-// 表格数据静态化
-const currentTableData = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
-
-  // 复制表格数据，避免直接修改原始数据
-  let data: Sub[] = JSON.parse(JSON.stringify(tableData.value));
-
-  return data.slice(start, end);
-});
 
 // 复制链接
 const copyUrl = (url: string) => {
@@ -352,24 +375,25 @@ const clientradio = ref("1");
 
 // 新增排序相关变量
 const sortingSubscriptionId = ref<number | null>(null); // 当前正在排序的订阅ID
-const tempNodeSort = ref<{ Name: string; Sort: number }[]>([]); // 临时存储排序数据（使用Name）
+const tempNodeSort = ref<{ Name: string; Sort: number; IsGroup?: boolean }[]>([]); // 临时存储排序数据（使用Name），添加IsGroup标识
 const originalNodesOrder = ref<Node[]>([]); // 保存原始顺序，用于取消操作
+const originalGroupsOrder = ref<GroupWithSort[]>([]); // 保存原始分组顺序
 
 // 定义拖拽行为所需的变量
-const dragSource = ref<number | null>(null);
-const dragTarget = ref<number | null>(null);
+const dragSource = ref<string | null>(null); // 改为string以支持分组名称
+const dragTarget = ref<string | null>(null);
 
 // 开始拖拽处理
-const handleDragStart = (e: DragEvent, nodeId: number) => {
+const handleDragStart = (e: DragEvent, identifier: string) => {
   if (e.dataTransfer) {
     e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", nodeId.toString());
-    dragSource.value = nodeId;
+    e.dataTransfer.setData("text/plain", identifier);
+    dragSource.value = identifier;
   }
 };
 
 // 拖拽进入目标区域
-const handleDragOver = (e: DragEvent, nodeId: number) => {
+const handleDragOver = (e: DragEvent, identifier: string) => {
   if (e.preventDefault) {
     e.preventDefault();
   }
@@ -377,7 +401,7 @@ const handleDragOver = (e: DragEvent, nodeId: number) => {
     e.dataTransfer.dropEffect = "move";
   }
 
-  dragTarget.value = nodeId;
+  dragTarget.value = identifier;
 
   return false;
 };
@@ -385,7 +409,7 @@ const handleDragOver = (e: DragEvent, nodeId: number) => {
 // 拖拽放置
 const handleDrop = (
   e: DragEvent,
-  targetNodeId: number,
+  targetIdentifier: string,
   subscriptionId: number
 ) => {
   e.stopPropagation();
@@ -393,45 +417,29 @@ const handleDrop = (
   // 如果不是在排序模式，或者不是当前被排序的订阅，则忽略
   if (sortingSubscriptionId.value !== subscriptionId) return;
 
-  // 获取被拖动的节点ID
-  const sourceNodeId = parseInt(e.dataTransfer?.getData("text/plain") || "0");
-  if (sourceNodeId === targetNodeId) return;
+  // 获取被拖动的标识符（节点名或分组名）
+  const sourceIdentifier = e.dataTransfer?.getData("text/plain") || "";
+  if (sourceIdentifier === targetIdentifier) return;
 
-  // 在当前排序的订阅中重新排序节点
-  const subscription = tableData.value.find((sub) => sub.ID === subscriptionId);
-  if (!subscription || !subscription.Nodes) return;
+  // 更新tempNodeSort中的排序顺序
+  const sourceIndex = tempNodeSort.value.findIndex(
+    (item) => item.Name === sourceIdentifier
+  );
+  const targetIndex = tempNodeSort.value.findIndex(
+    (item) => item.Name === targetIdentifier
+  );
 
-  const sourceIndex = subscription.Nodes.findIndex(
-    (node) => node.ID === sourceNodeId
-  );
-  const targetIndex = subscription.Nodes.findIndex(
-    (node) => node.ID === targetNodeId
-  );
   if (sourceIndex > -1 && targetIndex > -1) {
-    // 移动节点
-    const [movedNode] = subscription.Nodes.splice(sourceIndex, 1);
-    subscription.Nodes.splice(targetIndex, 0, movedNode);
+    // 移动项目
+    const [movedItem] = tempNodeSort.value.splice(sourceIndex, 1);
+    tempNodeSort.value.splice(targetIndex, 0, movedItem);
 
-    // 更新排序字段和临时排序数据
-    subscription.Nodes.forEach((node, index) => {
-      // 更新节点的Sort属性
-      node.Sort = index + 1;
-
-      // 同步更新tempNodeSort中的排序数据（使用Name）
-      const sortItem = tempNodeSort.value.find(
-        (item) => item.Name === node.Name
-      );
-      if (sortItem) {
-        sortItem.Sort = index + 1;
-      } else {
-        // 如果不存在则添加
-        tempNodeSort.value.push({
-          Name: node.Name,
-          Sort: index + 1,
-        });
-      }
+    // 重新分配Sort值（从0开始，保持连续）
+    tempNodeSort.value.forEach((item, index) => {
+      item.Sort = index;
     });
   }
+
   // 重置拖拽状态
   dragSource.value = null;
   dragTarget.value = null;
@@ -440,8 +448,8 @@ const handleDrop = (
 };
 
 // 拖放进入目标元素
-const handleDragEnter = (e: DragEvent, nodeId: number) => {
-  dragTarget.value = nodeId;
+const handleDragEnter = (e: DragEvent, identifier: string) => {
+  dragTarget.value = identifier;
 };
 
 // 拖放离开目标元素
@@ -454,34 +462,47 @@ const handleStartSort = (row: any) => {
   sortingSubscriptionId.value = row.ID;
   // 保存原始节点顺序，以便取消时恢复
   originalNodesOrder.value = JSON.parse(JSON.stringify(row.Nodes));
+  originalGroupsOrder.value = JSON.parse(JSON.stringify(row.Groups || []));
 
-  // 初始化临时排序数据（使用 Name 而不是 ID）
-  tempNodeSort.value = row.Nodes.map((node: any, index: number) => ({
-    Name: node.Name,
-    Sort: node.Sort !== undefined ? node.Sort : index + 1,
-  }));
+  // 初始化临时排序数据（包含节点和分组）
+  tempNodeSort.value = [];
+
+  // 添加节点
+  row.Nodes.forEach((node: any) => {
+    tempNodeSort.value.push({
+      Name: node.Name,
+      Sort: node.Sort !== undefined ? node.Sort : 0,
+      IsGroup: false,
+    });
+  });
+
+  // 添加分组（如果有）
+  if (row.Groups && row.Groups.length > 0) {
+    row.Groups.forEach((group: GroupWithSort) => {
+      tempNodeSort.value.push({
+        Name: group.Name,
+        Sort: group.Sort !== undefined ? group.Sort : 0,
+        IsGroup: true,
+      });
+    });
+  }
+
+  // 按Sort排序（这是关键！确保初始显示顺序正确）
+  tempNodeSort.value.sort((a, b) => a.Sort - b.Sort);
 
   // 提示用户进入排序模式
   ElMessage({
     type: "info",
-    message: "已进入排序模式，可拖动节点进行排序",
+    message: "已进入排序模式，可拖动节点和分组进行排序",
     duration: 3000,
   });
 };
 
 // 确定排序
 const handleConfirmSort = async (row: any) => {
-  // 根据当前节点顺序更新Sort值（使用Name）
-  row.Nodes.forEach((node: Node, index: number) => {
-    const nodeSort = tempNodeSort.value.find((item) => item.Name === node.Name);
-    if (nodeSort) {
-      nodeSort.Sort = index + 1;
-    } else {
-      tempNodeSort.value.push({
-        Name: node.Name,
-        Sort: index + 1,
-      });
-    }
+  // 重新分配Sort值，确保是连续的（从0开始）
+  tempNodeSort.value.forEach((item, index) => {
+    item.Sort = index;
   });
 
   // 打印排序结果，格式为后端需要的格式
@@ -494,7 +515,7 @@ const handleConfirmSort = async (row: any) => {
     await SortSub(request);
     ElMessage({
       type: "success",
-      message: "节点排序已更新",
+      message: "排序已更新",
       duration: 2000,
     });
 
@@ -502,6 +523,7 @@ const handleConfirmSort = async (row: any) => {
     sortingSubscriptionId.value = null;
     tempNodeSort.value = [];
     originalNodesOrder.value = [];
+    originalGroupsOrder.value = [];
 
     // 刷新数据
     await getsubs();
@@ -513,11 +535,6 @@ const handleConfirmSort = async (row: any) => {
     });
     console.error("排序保存失败:", error);
   }
-
-  // 重置排序状态
-  sortingSubscriptionId.value = null;
-  tempNodeSort.value = [];
-  originalNodesOrder.value = [];
 };
 
 // 取消排序
@@ -528,6 +545,9 @@ const handleCancelSort = () => {
       if (tableData.value[i].ID === sortingSubscriptionId.value) {
         tableData.value[i].Nodes = JSON.parse(
           JSON.stringify(originalNodesOrder.value)
+        );
+        tableData.value[i].Groups = JSON.parse(
+          JSON.stringify(originalGroupsOrder.value)
         );
         break;
       }
@@ -544,6 +564,7 @@ const handleCancelSort = () => {
   sortingSubscriptionId.value = null;
   tempNodeSort.value = [];
   originalNodesOrder.value = [];
+  originalGroupsOrder.value = [];
 };
 
 // 获取所有分组列表
@@ -604,6 +625,48 @@ const groupNodeCounts = computed(() => {
     counts[group] = (counts[group] || 0) + 1;
   });
   return counts;
+});
+
+// 动态获取表格数据（在排序模式下修改子节点显示）
+const displayTableData = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+
+  // 复制表格数据，避免直接修改原始数据
+  let data: Sub[] = JSON.parse(JSON.stringify(tableData.value));
+
+  // 为所有节点添加 parentId
+  data.forEach((subscription) => {
+    if (subscription.Nodes) {
+      subscription.Nodes.forEach((node) => {
+        (node as any).parentId = subscription.ID;
+      });
+    }
+  });
+
+  // 如果正在排序，替换对应订阅的Nodes为排序项列表
+  if (sortingSubscriptionId.value !== null) {
+    data = data.map((sub) => {
+      if (sub.ID === sortingSubscriptionId.value) {
+        // 生成虚拟的节点列表用于显示
+        const sortItems = tempNodeSort.value.map((item) => ({
+          ID: item.IsGroup ? -Math.random() :
+              sub.Nodes.find((n: Node) => n.Name === item.Name)?.ID || 0,
+          Name: item.Name,
+          Link: "",
+          CreateDate: "",
+          Sort: item.Sort,
+          Group: item.IsGroup ? "GROUP_ITEM" : undefined,
+          parentId: sub.ID,
+          isGroup: item.IsGroup || false,
+        }));
+        return { ...sub, Nodes: sortItems as any };
+      }
+      return sub;
+    });
+  }
+
+  return data.slice(start, end);
 });
 </script>
 
@@ -712,72 +775,124 @@ const groupNodeCounts = computed(() => {
       <div class="m-4">
         <p style="margin-bottom: 10px; font-weight: 500">选择节点</p>
 
-        <!-- 分组过滤和搜索 -->
-        <el-row :gutter="10" style="margin-bottom: 15px">
-          <el-col :span="8">
-            <el-select
-              v-model="selectedGroup"
-              placeholder="选择分组"
-              style="width: 100%"
-              clearable
-            >
-              <el-option label="全部分组" value="all">
-                <span>全部分组</span>
-                <span style="float: right; color: #8492a6; font-size: 13px">
-                  {{ NodesList.length }}
-                </span>
-              </el-option>
-              <el-option
-                v-for="group in groupsList"
-                :key="group"
-                :label="group"
-                :value="group"
+        <!-- 选择模式切换 -->
+        <el-row style="margin-bottom: 15px">
+          <el-col>
+            <el-radio-group v-model="selectionMode">
+              <el-radio value="nodes">手动选择节点</el-radio>
+              <el-radio value="groups">动态选择分组</el-radio>
+              <el-radio value="mixed">混合模式</el-radio>
+            </el-radio-group>
+            <div style="margin-top: 5px; color: #909399; font-size: 12px">
+              <span v-if="selectionMode === 'nodes'"
+                >手动选择具体节点，节点不会随分组变化自动更新</span
               >
-                <span>{{ group }}</span>
-                <span style="float: right; color: #8492a6; font-size: 13px">
-                  {{ groupNodeCounts[group] || 0 }}
-                </span>
-              </el-option>
-            </el-select>
-          </el-col>
-          <el-col :span="16">
-            <el-input
-              v-model="nodeSearchQuery"
-              placeholder="搜索节点名称或分组"
-              clearable
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-            </el-input>
+              <span v-else-if="selectionMode === 'groups'"
+                >选择分组，自动包含该分组下的所有节点，节点会随分组变化自动更新</span
+              >
+              <span v-else>同时支持手动选择节点和动态选择分组</span>
+            </div>
           </el-col>
         </el-row>
 
-        <!-- Transfer 穿梭框 -->
-        <el-transfer
-          v-model="value1"
-          :data="transferData"
-          :titles="['可选节点', '已选节点']"
-          :button-texts="['移除', '添加']"
-          filterable
-          :filter-placeholder="'搜索节点'"
-          style="text-align: left; display: inline-block"
+        <!-- 动态分组选择 -->
+        <div
+          v-if="selectionMode === 'groups' || selectionMode === 'mixed'"
+          style="margin-bottom: 15px"
         >
-          <template #default="{ option }">
-            <span>{{ option.label }}</span>
-          </template>
-        </el-transfer>
+          <el-tag type="primary" style="margin-bottom: 10px"
+            >选择分组（动态）</el-tag
+          >
+          <el-select
+            v-model="selectedGroups"
+            multiple
+            placeholder="请选择分组"
+            style="width: 100%"
+            clearable
+          >
+            <el-option
+              v-for="group in groupsList"
+              :key="group"
+              :label="`${group} (${groupNodeCounts[group] || 0}个节点)`"
+              :value="group"
+            />
+          </el-select>
+          <div style="margin-top: 5px; color: #67c23a; font-size: 12px">
+            已选择
+            <span style="font-weight: bold">{{ selectedGroups.length }}</span>
+            个分组
+          </div>
+        </div>
 
-        <div style="margin-top: 10px; color: #909399; font-size: 12px">
-          已选择
-          <span style="color: #409eff; font-weight: bold">{{
-            value1.length
-          }}</span>
-          个节点， 当前显示
-          <span style="color: #67c23a; font-weight: bold">{{
-            filteredNodesList.length
-          }}</span>
-          个节点
+        <!-- 手动节点选择 -->
+        <div v-if="selectionMode === 'nodes' || selectionMode === 'mixed'">
+          <!-- 分组过滤和搜索 -->
+          <el-row :gutter="10" style="margin-bottom: 15px">
+            <el-col :span="8">
+              <el-select
+                v-model="selectedGroup"
+                placeholder="选择分组"
+                style="width: 100%"
+                clearable
+              >
+                <el-option label="全部分组" value="all">
+                  <span>全部分组</span>
+                  <span style="float: right; color: #8492a6; font-size: 13px">
+                    {{ NodesList.length }}
+                  </span>
+                </el-option>
+                <el-option
+                  v-for="group in groupsList"
+                  :key="group"
+                  :label="group"
+                  :value="group"
+                >
+                  <span>{{ group }}</span>
+                  <span style="float: right; color: #8492a6; font-size: 13px">
+                    {{ groupNodeCounts[group] || 0 }}
+                  </span>
+                </el-option>
+              </el-select>
+            </el-col>
+            <el-col :span="16">
+              <el-input
+                v-model="nodeSearchQuery"
+                placeholder="搜索节点名称或分组"
+                clearable
+              >
+                <template #prefix>
+                  <el-icon><Search /></el-icon>
+                </template>
+              </el-input>
+            </el-col>
+          </el-row>
+
+          <!-- Transfer 穿梭框 -->
+          <el-transfer
+            v-model="value1"
+            :data="transferData"
+            :titles="['可选节点', '已选节点']"
+            :button-texts="['移除', '添加']"
+            filterable
+            :filter-placeholder="'搜索节点'"
+            style="text-align: left; display: inline-block"
+          >
+            <template #default="{ option }">
+              <span>{{ option.label }}</span>
+            </template>
+          </el-transfer>
+
+          <div style="margin-top: 10px; color: #909399; font-size: 12px">
+            已选择
+            <span style="color: #409eff; font-weight: bold">{{
+              value1.length
+            }}</span>
+            个节点， 当前显示
+            <span style="color: #67c23a; font-weight: bold">{{
+              filteredNodesList.length
+            }}</span>
+            个节点
+          </div>
         </div>
       </div>
 
@@ -803,7 +918,7 @@ const groupNodeCounts = computed(() => {
       <div style="margin-bottom: 10px"></div>
       <el-table
         ref="table"
-        :data="currentTableData"
+        :data="displayTableData"
         style="width: 100%"
         stripe
         @selection-change="handleSelectionChange"
@@ -811,7 +926,7 @@ const groupNodeCounts = computed(() => {
         :tree-props="{ children: 'Nodes' }"
       >
         <el-table-column type="selection" fixed prop="ID" label="id" />
-        <el-table-column prop="Name" label="订阅名称 / 节点">
+        <el-table-column prop="Name" label="订阅名称 / 节点 / 分组">
           <template #default="{ row }">
             <!-- 父节点（订阅） -->
             <el-tag v-if="row.Nodes" type="primary">
@@ -823,31 +938,32 @@ const groupNodeCounts = computed(() => {
                 (正在排序)</span
               >
             </el-tag>
-            <!-- 子节点（可排序） -->
+            <!-- 子节点（可能是节点或分组） -->
             <div
               v-else
               :draggable="
                 sortingSubscriptionId !== null &&
                 row.parentId === sortingSubscriptionId
               "
-              @dragstart="(e) => handleDragStart(e, row.ID)"
-              @dragover="(e) => handleDragOver(e, row.ID)"
-              @drop="(e) => handleDrop(e, row.ID, row.parentId)"
-              @dragenter="(e) => handleDragEnter(e, row.ID)"
+              @dragstart="(e) => handleDragStart(e, row.Name)"
+              @dragover="(e) => handleDragOver(e, row.Name)"
+              @drop="(e) => handleDrop(e, row.Name, row.parentId)"
+              @dragenter="(e) => handleDragEnter(e, row.Name)"
               @dragleave="handleDragLeave"
               :class="{
-                dragging: dragSource === row.ID,
-                'drag-over': dragTarget === row.ID,
+                dragging: dragSource === row.Name,
+                'drag-over': dragTarget === row.Name,
                 'sortable-draggable':
                   sortingSubscriptionId !== null &&
                   row.parentId === sortingSubscriptionId,
               }"
             >
-              <el-tag type="success" effect="plain">
-                <!--                <template v-if="sortingSubscriptionId !== null && row.parentId === sortingSubscriptionId">-->
-                <!--                  <span class="drag-handle">⋮⋮</span>-->
-                <!--                </template>-->
-                {{ row.Name }}
+              <el-tag
+                :type="row.isGroup ? 'warning' : 'success'"
+                effect="plain"
+              >
+                <span v-if="row.isGroup">📁 {{ row.Name }} (分组)</span>
+                <span v-else>{{ row.Name }}</span>
               </el-tag>
             </div>
           </template>

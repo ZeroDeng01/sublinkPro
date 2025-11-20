@@ -51,11 +51,12 @@ func SubAdd(c *gin.Context) {
 	name := c.PostForm("name")
 	config := c.PostForm("config")
 	nodes := c.PostForm("nodes")
+	groups := c.PostForm("groups") // 新增：分组列表
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
-	if name == "" || nodes == "" {
+	if name == "" || (nodes == "" && groups == "") {
 		c.JSON(400, gin.H{
-			"msg": "订阅名称 or 节点不能为空",
+			"msg": "订阅名称不能为空，且节点或分组至少选择一项",
 		})
 		return
 	}
@@ -79,14 +80,16 @@ func SubAdd(c *gin.Context) {
 	}
 
 	sub.Nodes = []models.Node{}
-	for _, v := range strings.Split(nodes, ",") {
-		var node models.Node
-		node.Name = v
-		err := node.Find()
-		if err != nil {
-			continue
+	if nodes != "" {
+		for _, v := range strings.Split(nodes, ",") {
+			var node models.Node
+			node.Name = v
+			err := node.Find()
+			if err != nil {
+				continue
+			}
+			sub.Nodes = append(sub.Nodes, node)
 		}
-		sub.Nodes = append(sub.Nodes, node)
 	}
 
 	sub.Config = config
@@ -102,13 +105,29 @@ func SubAdd(c *gin.Context) {
 		})
 		return
 	}
-	err = sub.AddNode() //创建多对多关系
-	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": err.Error(),
-		})
-		return
+
+	// 添加节点关系
+	if len(sub.Nodes) > 0 {
+		err = sub.AddNode()
+		if err != nil {
+			c.JSON(400, gin.H{
+				"msg": err.Error(),
+			})
+			return
+		}
 	}
+
+	// 添加分组关系
+	if groups != "" {
+		err = sub.AddGroups(strings.Split(groups, ","))
+		if err != nil {
+			c.JSON(400, gin.H{
+				"msg": err.Error(),
+			})
+			return
+		}
+	}
+
 	c.JSON(200, gin.H{
 		"code": "00000",
 		"msg":  "添加成功",
@@ -122,11 +141,12 @@ func SubUpdate(c *gin.Context) {
 	oldname := c.PostForm("oldname")
 	config := c.PostForm("config")
 	nodes := c.PostForm("nodes")
+	groups := c.PostForm("groups") // 新增：分组列表
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
-	if name == "" || nodes == "" {
+	if name == "" || (nodes == "" && groups == "") {
 		c.JSON(400, gin.H{
-			"msg": "订阅名称 or 节点不能为空",
+			"msg": "订阅名称不能为空，且节点或分组至少选择一项",
 		})
 		return
 	}
@@ -162,14 +182,16 @@ func SubUpdate(c *gin.Context) {
 	sub.Name = name
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 	sub.Nodes = []models.Node{}
-	for _, v := range strings.Split(nodes, ",") {
-		var node models.Node
-		node.Name = v
-		err := node.Find()
-		if err != nil {
-			continue
+	if nodes != "" {
+		for _, v := range strings.Split(nodes, ",") {
+			var node models.Node
+			node.Name = v
+			err := node.Find()
+			if err != nil {
+				continue
+			}
+			sub.Nodes = append(sub.Nodes, node)
 		}
-		sub.Nodes = append(sub.Nodes, node)
 	}
 	sub.IPWhitelist = ipWhitelist
 	sub.IPBlacklist = ipBlacklist
@@ -181,13 +203,28 @@ func SubUpdate(c *gin.Context) {
 		return
 	}
 
-	err = sub.UpdateNodes() //更新多对多关系
+	// 更新节点关系
+	err = sub.UpdateNodes()
 	if err != nil {
 		c.JSON(400, gin.H{
 			"msg": err.Error(),
 		})
 		return
 	}
+
+	// 更新分组关系
+	if groups != "" {
+		err = sub.UpdateGroups(strings.Split(groups, ","))
+	} else {
+		err = sub.UpdateGroups([]string{})
+	}
+	if err != nil {
+		c.JSON(400, gin.H{
+			"msg": err.Error(),
+		})
+		return
+	}
+
 	c.JSON(200, gin.H{
 		"code": "00000",
 		"msg":  "更新成功",

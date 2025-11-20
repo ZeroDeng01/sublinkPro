@@ -12,11 +12,12 @@ var DB *gorm.DB
 var isInitialized bool
 
 // migrateSubcriptionNodeTable 迁移 subcription_nodes 表，将 node_id 转换为 node_name
-func migrateSubcriptionNodeTable(db *gorm.DB) {
+// 返回 true 表示执行了完整的手动迁移，false 表示跳过了迁移或表不存在
+func migrateSubcriptionNodeTable(db *gorm.DB) bool {
 	// 检查表是否存在
 	if !db.Migrator().HasTable("subcription_nodes") {
 		log.Println("subcription_nodes 表不存在，跳过迁移")
-		return
+		return false
 	}
 
 	// 检查是否存在 node_id 列
@@ -25,7 +26,7 @@ func migrateSubcriptionNodeTable(db *gorm.DB) {
 
 	if !hasNodeID {
 		log.Println("subcription_nodes 表已迁移（不存在 node_id 列），跳过迁移")
-		return
+		return false
 	}
 
 	log.Println("开始迁移 subcription_nodes 表：将 node_id 转换为 node_name")
@@ -34,7 +35,7 @@ func migrateSubcriptionNodeTable(db *gorm.DB) {
 	if !hasNodeName {
 		if err := db.Migrator().AddColumn(&SubcriptionNode{}, "node_name"); err != nil {
 			log.Printf("添加 node_name 列失败: %v", err)
-			return
+			return false
 		}
 		log.Println("成功添加 node_name 列")
 	}
@@ -51,7 +52,7 @@ func migrateSubcriptionNodeTable(db *gorm.DB) {
 
 	if result.Error != nil {
 		log.Printf("更新 node_name 失败: %v", result.Error)
-		return
+		return false
 	}
 
 	log.Printf("成功转换 %d 条记录的 node_id 为 node_name", result.RowsAffected)
@@ -76,7 +77,7 @@ func migrateSubcriptionNodeTable(db *gorm.DB) {
 	`
 	if err := db.Exec(createNewTableSQL).Error; err != nil {
 		log.Printf("创建新表失败: %v", err)
-		return
+		return false
 	}
 	log.Println("成功创建新表 subcription_nodes_new")
 
@@ -92,25 +93,26 @@ func migrateSubcriptionNodeTable(db *gorm.DB) {
 		log.Printf("复制数据到新表失败: %v", copyResult.Error)
 		// 清理新表
 		db.Exec("DROP TABLE IF EXISTS subcription_nodes_new")
-		return
+		return false
 	}
 	log.Printf("成功复制 %d 条记录到新表", copyResult.RowsAffected)
 
 	// 删除旧表
 	if err := db.Exec("DROP TABLE subcription_nodes").Error; err != nil {
 		log.Printf("删除旧表失败: %v", err)
-		return
+		return false
 	}
 	log.Println("成功删除旧表 subcription_nodes")
 
 	// 重命名新表
 	if err := db.Exec("ALTER TABLE subcription_nodes_new RENAME TO subcription_nodes").Error; err != nil {
 		log.Printf("重命名新表失败: %v", err)
-		return
+		return false
 	}
 	log.Println("成功重命名新表为 subcription_nodes")
 
 	log.Println("subcription_nodes 表迁移完成")
+	return true
 }
 
 func InitSqlite() {
@@ -133,9 +135,38 @@ func InitSqlite() {
 		return
 	}
 	// 执行数据迁移：将 node_id 转换为 node_name
-	migrateSubcriptionNodeTable(db)
+	migrated := migrateSubcriptionNodeTable(db)
 
-	err = db.AutoMigrate(&User{}, &Subcription{}, &Node{}, &SubLogs{}, &AccessKey{}, &SubScheduler{}, &SubcriptionNode{}, &Plugin{})
+	// 在 AutoMigrate 之前清理 subcription_nodes 表中的空数据
+	if db.Migrator().HasTable("subcription_nodes") {
+		result := db.Exec("DELETE FROM subcription_nodes WHERE node_name IS NULL OR node_name = ''")
+		if result.Error != nil {
+			log.Printf("清理 subcription_nodes 空数据失败: %v", result.Error)
+		} else if result.RowsAffected > 0 {
+			log.Printf("清理了 %d 条 node_name 为空的记录", result.RowsAffected)
+		}
+	}
+
+	// 分别迁移表，对于已经正确迁移的 SubcriptionNode 表跳过
+	err = db.AutoMigrate(&User{}, &Subcription{}, &Node{}, &SubLogs{}, &AccessKey{}, &SubScheduler{}, &Plugin{})
+	if err != nil {
+		log.Println("数据表迁移失败:", err)
+	}
+
+	// SubcriptionNode 表：只有在手动迁移成功完成时才跳过 AutoMigrate
+	// 如果没有执行手动迁移（表不存在或已迁移），让 GORM 管理表结构
+	if migrated {
+		log.Println("SubcriptionNode 表已通过手动迁移完成，跳过 AutoMigrate")
+	} else {
+		// 表不存在或已经迁移过，使用 GORM AutoMigrate 管理表结构
+		err = db.AutoMigrate(&SubcriptionNode{})
+		if err != nil {
+			log.Println("SubcriptionNode 表迁移失败:", err)
+		}
+	}
+
+	// 创建 SubcriptionGroup 表
+	err = db.AutoMigrate(&SubcriptionGroup{})
 	if err != nil {
 		log.Println("数据表迁移失败")
 	}

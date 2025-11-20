@@ -219,3 +219,20 @@ func NodesTotal(c *gin.Context) {
 		"msg":  "取得节点统计",
 	})
 }
+
+// 获取所有分组列表
+func GetGroups(c *gin.Context) {
+	var node models.Node
+	groups, err := node.GetAllGroups()
+	if err != nil {
+		c.JSON(500, gin.H{
+			"msg": "获取分组列表失败",
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"code": "00000",
+		"data": groups,
+		"msg":  "获取分组列表成功",
+	})
+}

@@ -62,3 +62,13 @@ func (node *Node) UpsertNode() error {
 func DeleteAutoSubscriptionNodes(sourceId int) error {
 	return DB.Where("source_id = ?", sourceId).Delete(&Node{}).Error
 }
+
+// GetAllGroups 获取所有分组
+func (node *Node) GetAllGroups() ([]string, error) {
+	var groups []string
+	err := DB.Model(&Node{}).
+		Where("`group` IS NOT NULL AND `group` != ''").
+		Distinct("`group`").
+		Pluck("`group`", &groups).Error
+	return groups, err
+}
