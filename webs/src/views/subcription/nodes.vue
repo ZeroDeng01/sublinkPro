@@ -168,23 +168,34 @@ const handleSelectionChange = (val: Node[]) => {
 
 // 搜索功能
 const searchQuery = ref("");
+const groupSearchQuery = ref("");
 const handleSearch = () => {
   // filteredTableData 是计算属性，会自动更新
 };
 
 // 过滤后的节点列表
 const filteredTableData = computed(() => {
-  if (!searchQuery.value) {
-    return tableData.value;
+  let result = tableData.value;
+
+  // 先按分组过滤
+  if (groupSearchQuery.value) {
+    const groupQuery = groupSearchQuery.value.toLowerCase();
+    result = result.filter((node) =>
+      node.Group.toLowerCase().includes(groupQuery)
+    );
   }
 
-  const query = searchQuery.value.toLowerCase();
-  return tableData.value.filter(
-    (node) =>
-      node.Name.toLowerCase().includes(query) ||
-      node.Link.toLowerCase().includes(query) ||
-      node.Group.toLowerCase().includes(query)
-  );
+  // 再按节点内容过滤
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    result = result.filter(
+      (node) =>
+        node.Name.toLowerCase().includes(query) ||
+        node.Link.toLowerCase().includes(query)
+    );
+  }
+
+  return result;
 });
 const selectAll = () => {
   nextTick(() => {
@@ -743,24 +754,39 @@ const formatDateTime = (dateTimeString: string) => {
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
-          <el-input
-            v-model="searchQuery"
-            placeholder="搜索节点备注或链接"
-            style="width: 200px"
-            clearable
-            @input="handleSearch"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-          <el-button type="primary" @click="handleAddNode">添加节点</el-button>
-          <el-button type="warning" @click="handleImportSubscription"
-            >导入订阅</el-button
-          >
-          <el-button type="success" :icon="Refresh" @click="getnodes"
-            >刷新</el-button
-          >
+          <div class="search-group">
+            <el-input
+              v-model="groupSearchQuery"
+              placeholder="搜索分组"
+              style="width: 160px"
+              clearable
+              @input="handleSearch"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+            <el-input
+              v-model="searchQuery"
+              placeholder="搜索节点备注或链接"
+              style="width: 200px"
+              clearable
+              @input="handleSearch"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+          </div>
+          <div class="button-group">
+            <el-button type="primary" @click="handleAddNode">添加节点</el-button>
+            <el-button type="warning" @click="handleImportSubscription"
+              >导入订阅</el-button
+            >
+            <el-button type="success" :icon="Refresh" @click="getnodes"
+              >刷新</el-button
+            >
+          </div>
         </div>
       </template>
       <div style="margin-bottom: 10px"></div>
@@ -770,33 +796,70 @@ const formatDateTime = (dateTimeString: string) => {
         :data="currentTableData"
         style="width: 100%"
         @selection-change="handleSelectionChange"
+        stripe
+        :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
       >
-        <el-table-column type="selection" fixed prop="ID" label="id" />
-        <el-table-column prop="Name" label="备注">
+        <el-table-column type="selection" fixed width="55" />
+        <el-table-column prop="Name" label="备注" min-width="150">
           <template #default="scope">
-            <el-tag type="success">{{ scope.row.Name }}</el-tag>
+            <el-tag type="success" effect="plain">{{ scope.row.Name }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="Group" label="分组">
+        <el-table-column prop="Group" label="分组" width="140">
           <template #default="scope">
-            <el-tag v-if="scope.row.Group" type="info">{{
+            <el-tag v-if="scope.row.Group" type="warning" effect="plain">{{
               scope.row.Group
             }}</el-tag>
-            <span v-else style="color: #909399">-</span>
+            <span v-else style="color: #c0c4cc; font-size: 12px">未分组</span>
           </template>
         </el-table-column>
         <el-table-column
           prop="Link"
-          label="节点"
+          label="节点链接"
           sortable
+          min-width="250"
           :show-overflow-tooltip="true"
-        />
-        <el-table-column prop="CreateDate" label="创建时间" sortable />
-        <el-table-column fixed="right" label="操作" width="120">
+        >
+          <template #default="scope">
+            <span style="font-size: 13px; color: #606266">{{
+              scope.row.Link
+            }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="DialerProxyName"
+          label="前置代理"
+          width="120"
+          :show-overflow-tooltip="true"
+        >
+          <template #default="scope">
+            <el-tag
+              v-if="scope.row.DialerProxyName"
+              type="info"
+              effect="plain"
+              size="small"
+              >{{ scope.row.DialerProxyName }}</el-tag
+            >
+            <span v-else style="color: #c0c4cc; font-size: 12px">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="CreateDate"
+          label="创建时间"
+          width="180"
+          sortable
+        >
+          <template #default="scope">
+            <span style="font-size: 13px; color: #909399">{{
+              scope.row.CreateDate
+            }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column fixed="right" label="操作" width="200">
           <template #default="scope">
             <el-button
               link
-              type="primary"
+              type="success"
               size="small"
               @click="copyInfo(scope.row)"
               >复制</el-button
@@ -810,7 +873,7 @@ const formatDateTime = (dateTimeString: string) => {
             >
             <el-button
               link
-              type="primary"
+              type="danger"
               size="small"
               @click="handleDel(scope.row)"
               >删除</el-button
@@ -1107,9 +1170,22 @@ const formatDateTime = (dateTimeString: string) => {
 
 .card-header {
   display: flex;
+  gap: 15px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.search-group {
+  display: flex;
   gap: 10px;
   align-items: center;
-  justify-content: flex-start;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 /* 确保搜索框和按钮高度一致 */
@@ -1123,5 +1199,25 @@ const formatDateTime = (dateTimeString: string) => {
 
 .card-header .el-button {
   height: 32px;
+}
+
+/* 响应式布局优化 */
+@media (max-width: 768px) {
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-group,
+  .button-group {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .search-group .el-input,
+  .button-group .el-button {
+    flex: 1;
+    min-width: 120px;
+  }
 }
 </style>

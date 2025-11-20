@@ -769,8 +769,15 @@ const groupNodeCounts = computed(() => {
         </el-transfer>
 
         <div style="margin-top: 10px; color: #909399; font-size: 12px">
-          已选择 <span style="color: #409eff; font-weight: bold">{{ value1.length }}</span> 个节点，
-          当前显示 <span style="color: #67c23a; font-weight: bold">{{ filteredNodesList.length }}</span> 个节点
+          已选择
+          <span style="color: #409eff; font-weight: bold">{{
+            value1.length
+          }}</span>
+          个节点， 当前显示
+          <span style="color: #67c23a; font-weight: bold">{{
+            filteredNodesList.length
+          }}</span>
+          个节点
         </div>
       </div>
 
@@ -836,7 +843,7 @@ const groupNodeCounts = computed(() => {
                   row.parentId === sortingSubscriptionId,
               }"
             >
-              <el-tag type="success">
+              <el-tag type="success" effect="plain">
                 <!--                <template v-if="sortingSubscriptionId !== null && row.parentId === sortingSubscriptionId">-->
                 <!--                  <span class="drag-handle">⋮⋮</span>-->
                 <!--                </template>-->
