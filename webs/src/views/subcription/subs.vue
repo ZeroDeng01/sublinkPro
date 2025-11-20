@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, nextTick } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { Search } from "@element-plus/icons-vue";
 import {
   getSubs,
   AddSub,
@@ -29,6 +30,7 @@ interface Node {
   Link: string;
   CreateDate: string;
   Sort?: number; // 添加排序字段，可选
+  Group?: string; // 分组字段
 }
 interface Config {
   clash: string;
@@ -66,6 +68,8 @@ const iplogsdialog = ref(false);
 const IplogsList = ref<SubLogs[]>([]);
 const qrcode = ref("");
 const templist = ref<Temp[]>([]);
+const selectedGroup = ref<string>("all"); // 当前选中的分组
+const nodeSearchQuery = ref(""); // 节点搜索关键词
 async function getsubs() {
   const { data } = await getSubs();
   tableData.value = data;
@@ -188,6 +192,8 @@ const handleAddSub = () => {
   value1.value = [];
   IPWhitelist.value = "";
   IPBlacklist.value = "";
+  selectedGroup.value = "all";
+  nodeSearchQuery.value = "";
 };
 const handleEdit = (row: any) => {
   for (let i = 0; i < tableData.value.length; i++) {
@@ -215,6 +221,8 @@ const handleEdit = (row: any) => {
       IPBlacklist.value = tableData.value[i].IPBlacklist;
       dialogVisible.value = true;
       value1.value = tableData.value[i].Nodes.map((item) => item.Name);
+      selectedGroup.value = "all";
+      nodeSearchQuery.value = "";
     }
   }
 };
@@ -537,6 +545,66 @@ const handleCancelSort = () => {
   tempNodeSort.value = [];
   originalNodesOrder.value = [];
 };
+
+// 获取所有分组列表
+const groupsList = computed(() => {
+  const groups = new Set<string>();
+  NodesList.value.forEach((node) => {
+    if (node.Group && node.Group.trim() !== "") {
+      groups.add(node.Group);
+    }
+  });
+  return Array.from(groups).sort();
+});
+
+// 根据分组和搜索过滤节点
+const filteredNodesList = computed(() => {
+  let nodes = NodesList.value;
+
+  // 按分组过滤
+  if (selectedGroup.value !== "all") {
+    nodes = nodes.filter((node) => node.Group === selectedGroup.value);
+  }
+
+  // 按搜索关键词过滤
+  if (nodeSearchQuery.value.trim() !== "") {
+    const query = nodeSearchQuery.value.toLowerCase();
+    nodes = nodes.filter(
+      (node) =>
+        node.Name.toLowerCase().includes(query) ||
+        (node.Group && node.Group.toLowerCase().includes(query))
+    );
+  }
+
+  return nodes;
+});
+
+// 格式化节点显示（带分组信息）
+const formatNodeLabel = (node: Node) => {
+  if (node.Group && node.Group.trim() !== "") {
+    return `${node.Name} [${node.Group}]`;
+  }
+  return node.Name;
+};
+
+// Transfer穿梭框的数据源
+const transferData = computed(() => {
+  return filteredNodesList.value.map((node) => ({
+    key: node.Name,
+    label: formatNodeLabel(node),
+    disabled: false,
+  }));
+});
+
+// 按分组统计节点数量
+const groupNodeCounts = computed(() => {
+  const counts: Record<string, number> = {};
+  NodesList.value.forEach((node) => {
+    const group = node.Group || "未分组";
+    counts[group] = (counts[group] || 0) + 1;
+  });
+  return counts;
+});
 </script>
 
 <template>
@@ -642,21 +710,68 @@ const handleCancelSort = () => {
         </el-checkbox-group>
       </el-row>
       <div class="m-4">
-        <p>选择已有的节点列表</p>
-        <el-select
+        <p style="margin-bottom: 10px; font-weight: 500">选择节点</p>
+
+        <!-- 分组过滤和搜索 -->
+        <el-row :gutter="10" style="margin-bottom: 15px">
+          <el-col :span="8">
+            <el-select
+              v-model="selectedGroup"
+              placeholder="选择分组"
+              style="width: 100%"
+              clearable
+            >
+              <el-option label="全部分组" value="all">
+                <span>全部分组</span>
+                <span style="float: right; color: #8492a6; font-size: 13px">
+                  {{ NodesList.length }}
+                </span>
+              </el-option>
+              <el-option
+                v-for="group in groupsList"
+                :key="group"
+                :label="group"
+                :value="group"
+              >
+                <span>{{ group }}</span>
+                <span style="float: right; color: #8492a6; font-size: 13px">
+                  {{ groupNodeCounts[group] || 0 }}
+                </span>
+              </el-option>
+            </el-select>
+          </el-col>
+          <el-col :span="16">
+            <el-input
+              v-model="nodeSearchQuery"
+              placeholder="搜索节点名称或分组"
+              clearable
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+          </el-col>
+        </el-row>
+
+        <!-- Transfer 穿梭框 -->
+        <el-transfer
           v-model="value1"
-          multiple
+          :data="transferData"
+          :titles="['可选节点', '已选节点']"
+          :button-texts="['移除', '添加']"
           filterable
-          placeholder="Select"
-          style="width: 100%"
+          :filter-placeholder="'搜索节点'"
+          style="text-align: left; display: inline-block"
         >
-          <el-option
-            v-for="item in NodesList"
-            :key="item.Name"
-            :label="item.Name"
-            :value="item.Name"
-          />
-        </el-select>
+          <template #default="{ option }">
+            <span>{{ option.label }}</span>
+          </template>
+        </el-transfer>
+
+        <div style="margin-top: 10px; color: #909399; font-size: 12px">
+          已选择 <span style="color: #409eff; font-weight: bold">{{ value1.length }}</span> 个节点，
+          当前显示 <span style="color: #67c23a; font-weight: bold">{{ filteredNodesList.length }}</span> 个节点
+        </div>
       </div>
 
       <!--IP黑名单，一行一个，支撑CIDR-->
@@ -1030,5 +1145,31 @@ const handleCancelSort = () => {
   100% {
     opacity: 0.6;
   }
+}
+
+/* Transfer 穿梭框样式优化 */
+.el-transfer {
+  --el-transfer-panel-width: 300px;
+}
+
+.el-transfer-panel {
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgb(0 0 0 / 10%);
+}
+
+.el-transfer-panel__header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px 8px 0 0;
+  font-weight: 500;
+}
+
+.el-transfer-panel__header .el-checkbox__label {
+  color: white;
+}
+
+/* 节点选择区域优化 */
+.m-4 {
+  margin: 16px 0;
 }
 </style>

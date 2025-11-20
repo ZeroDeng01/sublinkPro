@@ -36,6 +36,7 @@ func SubSchedulerAdd(c *gin.Context) {
 		URL:      req.URL,
 		CronExpr: req.CronExpr,
 		Enabled:  req.Enabled,
+		Group:    req.Group,
 	}
 
 	err = subS.Find()
@@ -166,6 +167,7 @@ func SubSchedulerUpdate(c *gin.Context) {
 	subS.ID = req.ID
 	subS.CronExpr = req.CronExpr
 	subS.Enabled = req.Enabled
+	subS.Group = req.Group
 	err = subS.Update()
 
 	if err != nil {

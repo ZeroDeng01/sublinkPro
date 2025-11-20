@@ -19,6 +19,7 @@ func NodeUpdadte(c *gin.Context) {
 	oldlink := c.PostForm("oldlink")
 	link := c.PostForm("link")
 	dialerProxyName := c.PostForm("dialerProxyName")
+	group := c.PostForm("group")
 	if name == "" || link == "" {
 		c.JSON(400, gin.H{
 			"msg": "节点名称 or 备注不能为空",
@@ -38,6 +39,7 @@ func NodeUpdadte(c *gin.Context) {
 	node.Name = name
 	node.Link = link
 	node.DialerProxyName = dialerProxyName
+	node.Group = group
 	err = node.Update()
 	if err != nil {
 		c.JSON(400, gin.H{
@@ -74,6 +76,7 @@ func NodeAdd(c *gin.Context) {
 	link := c.PostForm("link")
 	name := c.PostForm("name")
 	dialerProxyName := c.PostForm("dialerProxyName")
+	group := c.PostForm("group")
 	if link == "" {
 		c.JSON(400, gin.H{
 			"msg": "link  不能为空",
@@ -154,6 +157,7 @@ func NodeAdd(c *gin.Context) {
 	}
 	Node.Link = link
 	Node.DialerProxyName = dialerProxyName
+	Node.Group = group
 	Node.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 	err := Node.Find()
 	// 如果找到记录说明重复

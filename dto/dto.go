@@ -28,4 +28,5 @@ type SubSchedulerAddRequest struct {
 	URL      string `json:"url" binding:"required,url"`
 	CronExpr string `json:"cron_expr" binding:"required"`
 	Enabled  bool   `json:"enabled"`
+	Group    string `json:"group"`
 }

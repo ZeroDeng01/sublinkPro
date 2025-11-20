@@ -12,6 +12,7 @@ type Node struct {
 	CreateDate      string
 	Source          string `gorm:"default:'manual'"`
 	SourceID        int
+	Group           string
 }
 
 // Add 添加节点
@@ -21,7 +22,7 @@ func (node *Node) Add() error {
 
 // 更新节点
 func (node *Node) Update() error {
-	return DB.Model(node).Select("Name", "Link", "DialerProxyName").Updates(node).Error
+	return DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group").Updates(node).Error
 }
 
 // 查找节点是否重复
@@ -53,7 +54,7 @@ func (node *Node) Del() error {
 func (node *Node) UpsertNode() error {
 	return DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "name"}},
-		DoUpdates: clause.AssignmentColumns([]string{"link", "create_date", "source"}),
+		DoUpdates: clause.AssignmentColumns([]string{"link", "create_date", "source", "group"}),
 	}).Create(node).Error
 }
 

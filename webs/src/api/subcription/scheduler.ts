@@ -7,6 +7,7 @@ export interface SubScheduler {
   URL: string;
   CronExpr: string;
   Enabled: boolean;
+  Group: string;
 }
 
 export interface SubSchedulerRequest {
@@ -15,6 +16,7 @@ export interface SubSchedulerRequest {
   url: string;
   cron_expr: string;
   enabled: boolean;
+  group?: string;
 }
 
 // 获取订阅调度器列表

@@ -48,6 +48,12 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 	if err != nil {
 		log.Printf("删除旧的订阅数据失败: %v", err)
 	}
+	// 获取订阅的Group信息
+	subS := models.SubScheduler{}
+	err = subS.GetByID(id)
+	if err != nil {
+		log.Printf("获取订阅连接 %s 的Group失败:  %v", subName, err)
+	}
 	for _, proxy := range proxys {
 		var node models.Node
 		var link string
@@ -397,11 +403,13 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 		node.Name = proxy.Name
 		node.Source = "subscription"
 		node.SourceID = id
+		node.Group = subS.Group
 		node.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 		// 插入或更新节点，避免设置好的订阅节点丢失
 		_ = node.UpsertNode()
 	}
-	subS := models.SubScheduler{
+	// 重新查找订阅以获取最新信息
+	subS = models.SubScheduler{
 		Name: subName,
 	}
 	err = subS.Find()

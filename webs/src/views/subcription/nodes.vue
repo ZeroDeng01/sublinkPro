@@ -23,6 +23,7 @@ interface Node {
   Link: string;
   DialerProxyName: string;
   CreateDate: string;
+  Group: string;
 }
 const tableData = ref<Node[]>([]);
 const loading = ref(false);
@@ -31,10 +32,12 @@ const NodeOldlink = ref("");
 const Nodename = ref("");
 const NodeOldname = ref("");
 const DialerProxyName = ref("");
+const NodeGroup = ref("");
 const dialogVisible = ref(false);
 const table = ref();
 const NodeTitle = ref("");
 const radio1 = ref("1");
+const groupOptions = ref<string[]>([]);
 
 // 订阅相关变量
 const subSchedulerData = ref<SubScheduler[]>([]);
@@ -45,6 +48,7 @@ const subSchedulerForm = ref<SubSchedulerRequest>({
   url: "",
   cron_expr: "",
   enabled: true,
+  group: "",
 });
 const subSchedulerFormTitle = ref("");
 const subSchedulerTable = ref();
@@ -75,6 +79,14 @@ async function getnodes() {
   try {
     const { data } = await getNodes();
     tableData.value = data;
+    // 提取所有已存在的分组
+    const groups = new Set<string>();
+    data.forEach((node: Node) => {
+      if (node.Group && node.Group.trim() !== "") {
+        groups.add(node.Group);
+      }
+    });
+    groupOptions.value = Array.from(groups).sort();
   } catch (error) {
     console.error("获取节点列表失败:", error);
   } finally {
@@ -90,6 +102,7 @@ const handleAddNode = () => {
   Nodename.value = "";
   radio1.value = "1";
   DialerProxyName.value = "";
+  NodeGroup.value = "";
   dialogVisible.value = true;
 };
 
@@ -113,6 +126,7 @@ const addnodes = async () => {
           link: processedLink,
           name: Nodename.value.trim(),
           dialerProxyName: DialerProxyName.value.trim(),
+          group: NodeGroup.value.trim(),
         });
       }
     } else {
@@ -121,6 +135,7 @@ const addnodes = async () => {
           link: nodelinks[i],
           name: "",
           dialerProxyName: DialerProxyName.value.trim(),
+          group: NodeGroup.value.trim(),
         });
       }
     }
@@ -135,12 +150,14 @@ const addnodes = async () => {
       link: processedLink,
       name: Nodename.value.trim(),
       dialerProxyName: DialerProxyName.value.trim(),
+      group: NodeGroup.value.trim(),
     });
     ElMessage.success("更新成功");
   }
   getnodes();
   Nodelink.value = "";
   Nodename.value = "";
+  NodeGroup.value = "";
   dialogVisible.value = false;
 };
 
@@ -165,7 +182,8 @@ const filteredTableData = computed(() => {
   return tableData.value.filter(
     (node) =>
       node.Name.toLowerCase().includes(query) ||
-      node.Link.toLowerCase().includes(query)
+      node.Link.toLowerCase().includes(query) ||
+      node.Group.toLowerCase().includes(query)
   );
 });
 const selectAll = () => {
@@ -185,6 +203,7 @@ const handleEdit = (row: any) => {
       Nodelink.value = tableData.value[i].Link.split(",").join("\n");
       NodeOldlink.value = Nodelink.value;
       DialerProxyName.value = tableData.value[i].DialerProxyName;
+      NodeGroup.value = tableData.value[i].Group || "";
       dialogVisible.value = true;
       // value1.value = tableData.value[i].Nodes.map((item) => item.Name)
     }
@@ -310,6 +329,7 @@ const handleAddSubScheduler = () => {
     url: "",
     cron_expr: "",
     enabled: true,
+    group: "",
   };
   subSchedulerFormVisible.value = true;
 };
@@ -322,6 +342,7 @@ const handleEditSubScheduler = (row: SubScheduler) => {
     url: row.URL,
     cron_expr: row.CronExpr,
     enabled: row.Enabled,
+    group: row.Group || "",
   };
   subSchedulerFormVisible.value = true;
 };
@@ -339,6 +360,7 @@ const handlePullSubScheduler = (row: SubScheduler) => {
         url: row.URL,
         cron_expr: row.CronExpr,
         enabled: row.Enabled,
+        group: row.Group || "",
       };
       const response = await pullSubScheduler(subSchedulerForm.value);
       if (response) {
@@ -696,6 +718,21 @@ const formatDateTime = (dateTimeString: string) => {
         v-model="DialerProxyName"
         placeholder="请输入前置代理节点名称或策略组名称(仅Clash-Meta内核可用)"
       />
+      <el-select
+        v-model="NodeGroup"
+        filterable
+        allow-create
+        default-first-option
+        placeholder="请选择或输入分组名称"
+        style="width: 100%"
+      >
+        <el-option
+          v-for="group in groupOptions"
+          :key="group"
+          :label="group"
+          :value="group"
+        />
+      </el-select>
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="dialogVisible = false">关闭</el-button>
@@ -738,6 +775,14 @@ const formatDateTime = (dateTimeString: string) => {
         <el-table-column prop="Name" label="备注">
           <template #default="scope">
             <el-tag type="success">{{ scope.row.Name }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="Group" label="分组">
+          <template #default="scope">
+            <el-tag v-if="scope.row.Group" type="info">{{
+              scope.row.Group
+            }}</el-tag>
+            <span v-else style="color: #909399">-</span>
           </template>
         </el-table-column>
         <el-table-column
@@ -837,6 +882,14 @@ const formatDateTime = (dateTimeString: string) => {
           :show-overflow-tooltip="true"
         />
         <el-table-column prop="CronExpr" label="Cron表达式" min-width="120" />
+        <el-table-column prop="Group" label="分组" min-width="100">
+          <template #default="scope">
+            <el-tag v-if="scope.row.Group" type="info">{{
+              scope.row.Group
+            }}</el-tag>
+            <span v-else style="color: #909399">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="SuccessCount" label="节点数量" min-width="120" />
         <el-table-column prop="LastRunTime" label="上次运行" min-width="160">
           <template #default="scope">
@@ -999,6 +1052,27 @@ const formatDateTime = (dateTimeString: string) => {
               <div>• 0 */2 * * * - 每2小时执行</div>
               <div>• 0 0 * * 1 - 每周一执行</div>
             </div>
+          </div>
+        </el-form-item>
+        <el-form-item label="分组">
+          <el-select
+            v-model="subSchedulerForm.group"
+            filterable
+            allow-create
+            default-first-option
+            placeholder="请选择或输入分组名称"
+            clearable
+            style="width: 100%"
+          >
+            <el-option
+              v-for="group in groupOptions"
+              :key="group"
+              :label="group"
+              :value="group"
+            />
+          </el-select>
+          <div style="margin-top: 5px; font-size: 12px; color: #909399">
+            设置分组后，从此订阅导入的所有节点将自动归属到此分组
           </div>
         </el-form-item>
         <el-form-item label="启用状态">

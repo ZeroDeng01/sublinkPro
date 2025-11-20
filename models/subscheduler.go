@@ -15,6 +15,7 @@ type SubScheduler struct {
 	NextRunTime  *time.Time `gorm:"type:datetime"`
 	CreatedAt    time.Time  `gorm:"autoCreateTime"`
 	UpdatedAt    time.Time  `gorm:"autoUpdateTime"`
+	Group        string
 }
 
 // Add 添加订阅调度
@@ -24,7 +25,7 @@ func (ss *SubScheduler) Add() error {
 
 // Update 更新订阅调度
 func (ss *SubScheduler) Update() error {
-	return DB.Model(ss).Select("Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime", "SuccessCount").Updates(ss).Error
+	return DB.Model(ss).Select("Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime", "SuccessCount", "Group").Updates(ss).Error
 }
 
 // 查找节点是否重复
