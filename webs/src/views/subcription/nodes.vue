@@ -247,7 +247,7 @@ const selectDel = () => {
   if (multipleSelection.value.length === 0) {
     return;
   }
-  ElMessageBox.confirm(`你是否要删除选中这些 ?`, "提示", {
+  ElMessageBox.confirm(`你是否要删除选中这些，总计数量${multipleSelection.value.length} ?`, "提示", {
     confirmButtonText: "OK",
     cancelButtonText: "Cancel",
     type: "warning",
@@ -1045,7 +1045,7 @@ const formatDateTime = (dateTimeString: string) => {
         <el-form-item label="订阅地址" required>
           <el-input
             v-model="subSchedulerForm.url"
-            placeholder="请输入订阅URL地址"
+            placeholder="请输入订阅URL地址（支持clash订阅地址和通用base64订阅地址）"
             clearable
           />
         </el-form-item>
@@ -1110,10 +1110,10 @@ const formatDateTime = (dateTimeString: string) => {
               "
             >
               <strong>常用示例:</strong>
-              <div>• 0 */6 * * * - 每6小时执行</div>
-              <div>• 0 0 * * * - 每天0点执行</div>
-              <div>• 0 */2 * * * - 每2小时执行</div>
-              <div>• 0 0 * * 1 - 每周一执行</div>
+              <div>0 */6 * * * - 每6小时执行</div>
+              <div>0 0 * * * - 每天0点执行</div>
+              <div>0 */2 * * * - 每2小时执行</div>
+              <div>0 0 * * 1 - 每周一执行</div>
             </div>
           </div>
         </el-form-item>

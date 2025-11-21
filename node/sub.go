@@ -21,6 +21,11 @@ type ClashConfig struct {
 	Proxies []Proxy `yaml:"proxies"`
 }
 
+// LoadClashConfigFromURL 从指定 URL 加载 Clash 配置
+// 支持 YAML 格式和 Base64 编码的订阅链接
+// id: 订阅ID
+// url: 订阅链接
+// subName: 订阅名称
 func LoadClashConfigFromURL(id int, url string, subName string) {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -34,14 +39,46 @@ func LoadClashConfigFromURL(id int, url string, subName string) {
 		return
 	}
 	var config ClashConfig
-	err = yaml.Unmarshal(data, &config)
-	if err != nil {
-		log.Printf("URL %s，解析Clash配置失败:  %v", url, err)
+	// 尝试解析 YAML
+	errYaml := yaml.Unmarshal(data, &config)
+
+	// 如果 YAML 解析失败或没有代理节点，尝试 Base64 解码
+	if errYaml != nil || len(config.Proxies) == 0 {
+		// 尝试标准 Base64 解码
+		decodedBytes, errB64 := base64.StdEncoding.DecodeString(strings.TrimSpace(string(data)))
+		if errB64 != nil {
+			// 尝试 Raw Base64 (无填充) 解码
+			decodedBytes, errB64 = base64.RawStdEncoding.DecodeString(strings.TrimSpace(string(data)))
+		}
+
+		if errB64 == nil {
+			// Base64 解码成功，按行解析
+			lines := strings.Split(string(decodedBytes), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line == "" {
+					continue
+				}
+				proxy, errP := LinkToProxy(Urls{Url: line}, utils.SqlConfig{})
+				if errP == nil {
+					config.Proxies = append(config.Proxies, proxy)
+				}
+			}
+		}
+	}
+
+	if len(config.Proxies) == 0 {
+		log.Printf("URL %s，解析失败或未找到节点 (YAML error: %v)", url, errYaml)
 		return
 	}
+
 	scheduleClashToNodeLinks(id, config.Proxies, subName)
 }
 
+// scheduleClashToNodeLinks 将 Clash 代理配置转换为节点链接并保存到数据库
+// id: 订阅ID
+// proxys: 代理节点列表
+// subName: 订阅名称
 func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 	successCount := 0
 	err := models.DeleteAutoSubscriptionNodes(id)
