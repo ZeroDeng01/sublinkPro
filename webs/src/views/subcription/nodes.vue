@@ -173,16 +173,32 @@ const handleSearch = () => {
   // filteredTableData 是计算属性，会自动更新
 };
 
+const resetSearch = () => {
+  searchQuery.value = "";
+  groupSearchQuery.value = "";
+};
+
+// 搜索分组选项
+const searchGroupOptions = computed(() => {
+  return ["未分组", ...groupOptions.value];
+});
+
 // 过滤后的节点列表
 const filteredTableData = computed(() => {
   let result = tableData.value;
 
   // 先按分组过滤
   if (groupSearchQuery.value) {
-    const groupQuery = groupSearchQuery.value.toLowerCase();
-    result = result.filter((node) =>
-      node.Group.toLowerCase().includes(groupQuery)
-    );
+    if (groupSearchQuery.value === "未分组") {
+      result = result.filter(
+        (node) => !node.Group || node.Group.trim() === ""
+      );
+    } else {
+      const groupQuery = groupSearchQuery.value.toLowerCase();
+      result = result.filter((node) =>
+        node.Group.toLowerCase().includes(groupQuery)
+      );
+    }
   }
 
   // 再按节点内容过滤
@@ -755,17 +771,21 @@ const formatDateTime = (dateTimeString: string) => {
       <template #header>
         <div class="card-header">
           <div class="search-group">
-            <el-input
+            <el-select
               v-model="groupSearchQuery"
               placeholder="搜索分组"
               style="width: 160px"
               clearable
-              @input="handleSearch"
+              filterable
+              @change="handleSearch"
             >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-            </el-input>
+              <el-option
+                v-for="group in searchGroupOptions"
+                :key="group"
+                :label="group"
+                :value="group"
+              />
+            </el-select>
             <el-input
               v-model="searchQuery"
               placeholder="搜索节点备注或链接"
@@ -777,6 +797,7 @@ const formatDateTime = (dateTimeString: string) => {
                 <el-icon><Search /></el-icon>
               </template>
             </el-input>
+            <el-button @click="resetSearch">重置</el-button>
           </div>
           <div class="button-group">
             <el-button type="primary" @click="handleAddNode">添加节点</el-button>
