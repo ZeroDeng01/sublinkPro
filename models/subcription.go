@@ -20,6 +20,7 @@ type Subcription struct {
 	GroupsWithSort []GroupWithSort `gorm:"-" json:"Groups"` // 订阅关联的分组列表（带Sort）
 	IPWhitelist    string          `json:"IPWhitelist"`     //IP白名单
 	IPBlacklist    string          `json:"IPBlacklist"`     //IP黑名单
+	SpeedLimit     int             `json:"SpeedLimit"`      // 速度限制(ms)
 	CreatedAt      time.Time       `json:"CreatedAt"`
 	UpdatedAt      time.Time       `json:"UpdatedAt"`
 	DeletedAt      gorm.DeletedAt  `gorm:"index" json:"DeletedAt"`
@@ -96,6 +97,7 @@ func (sub *Subcription) Update() error {
 		"create_date":  sub.CreateDate,
 		"ip_whitelist": sub.IPWhitelist,
 		"ip_blacklist": sub.IPBlacklist,
+		"speed_limit":  sub.SpeedLimit,
 	}
 	return DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 }
@@ -256,6 +258,17 @@ func (sub *Subcription) GetSub() error {
 				nodeMap[item.Node.Name] = true
 			}
 		}
+	}
+
+	// 过滤速度不达标的节点
+	if sub.SpeedLimit > 0 {
+		var filteredNodes []Node
+		for _, node := range sub.Nodes {
+			if node.Speed > 0 && node.Speed <= sub.SpeedLimit {
+				filteredNodes = append(filteredNodes, node)
+			}
+		}
+		sub.Nodes = filteredNodes
 	}
 
 	return nil

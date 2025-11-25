@@ -24,6 +24,7 @@ interface Sub {
   SubLogs: SubLogs[];
   IPWhitelist: string;
   IPBlacklist: string;
+  SpeedLimit: number;
 }
 interface GroupWithSort {
   Name: string;
@@ -59,6 +60,7 @@ interface Temp {
 const tableData = ref<Sub[]>([]);
 const IPWhitelist = ref("");
 const IPBlacklist = ref("");
+const SpeedLimit = ref(0);
 const Clash = ref("");
 const Surge = ref("");
 const SubTitle = ref("");
@@ -110,6 +112,7 @@ const addSubs = async () => {
     name: Subname.value.trim(),
     IPWhitelist: IPWhitelist.value,
     IPBlacklist: IPBlacklist.value,
+    SpeedLimit: SpeedLimit.value,
   };
 
   if (selectionMode.value === "nodes") {
@@ -213,6 +216,7 @@ const handleAddSub = () => {
   selectionMode.value = "nodes";
   IPWhitelist.value = "";
   IPBlacklist.value = "";
+  SpeedLimit.value = 0;
   selectedGroup.value = "all";
   nodeSearchQuery.value = "";
 };
@@ -240,11 +244,12 @@ const handleEdit = (row: any) => {
       Surge.value = config.surge;
       IPWhitelist.value = tableData.value[i].IPWhitelist;
       IPBlacklist.value = tableData.value[i].IPBlacklist;
+      SpeedLimit.value = tableData.value[i].SpeedLimit || 0;
       dialogVisible.value = true;
       value1.value = tableData.value[i].Nodes.map((item) => item.Name);
       // 从GroupWithSort中提取分组名称
       selectedGroups.value = (tableData.value[i].Groups || []).map((g) =>
-        typeof g === 'string' ? g : g.Name
+        typeof g === "string" ? g : g.Name
       );
       // 根据是否有节点和分组来设置选择模式
       if (value1.value.length > 0 && selectedGroups.value.length > 0) {
@@ -375,7 +380,9 @@ const clientradio = ref("1");
 
 // 新增排序相关变量
 const sortingSubscriptionId = ref<number | null>(null); // 当前正在排序的订阅ID
-const tempNodeSort = ref<{ Name: string; Sort: number; IsGroup?: boolean }[]>([]); // 临时存储排序数据（使用Name），添加IsGroup标识
+const tempNodeSort = ref<{ Name: string; Sort: number; IsGroup?: boolean }[]>(
+  []
+); // 临时存储排序数据（使用Name），添加IsGroup标识
 const originalNodesOrder = ref<Node[]>([]); // 保存原始顺序，用于取消操作
 const originalGroupsOrder = ref<GroupWithSort[]>([]); // 保存原始分组顺序
 
@@ -650,8 +657,9 @@ const displayTableData = computed(() => {
       if (sub.ID === sortingSubscriptionId.value) {
         // 生成虚拟的节点列表用于显示
         const sortItems = tempNodeSort.value.map((item) => ({
-          ID: item.IsGroup ? -Math.random() :
-              sub.Nodes.find((n: Node) => n.Name === item.Name)?.ID || 0,
+          ID: item.IsGroup
+            ? -Math.random()
+            : sub.Nodes.find((n: Node) => n.Name === item.Name)?.ID || 0,
           Name: item.Name,
           Link: "",
           CreateDate: "",
@@ -723,7 +731,6 @@ const displayTableData = computed(() => {
     </el-dialog>
     <el-dialog v-model="dialogVisible" :title="SubTitle">
       <el-input v-model="Subname" placeholder="请输入订阅名称" />
-
       <el-row>
         <el-tag type="primary">clash模版选择</el-tag>
         <el-radio-group v-model="clientradio" class="ml-4">
@@ -897,6 +904,25 @@ const displayTableData = computed(() => {
           </div>
         </div>
       </div>
+
+      <el-row style="margin-top: 10px">
+        <el-col :span="24">
+          <el-input-number
+            v-model="SpeedLimit"
+            :min="0"
+            :step="100"
+            placeholder="最大延迟(ms)"
+            style="width: 100%"
+          >
+            <template #prefix>
+              <span>最大延迟(ms)</span>
+            </template>
+          </el-input-number>
+          <div style="font-size: 12px; color: #999; margin-top: 5px">
+            设置筛选节点的延迟阈值，0表示不限制。只有测速结果小于该值的节点会被返回。
+          </div>
+        </el-col>
+      </el-row>
 
       <!--IP黑名单，一行一个，支撑CIDR-->
       <IPListInput

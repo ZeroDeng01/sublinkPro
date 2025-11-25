@@ -42,6 +42,8 @@ func SubAdd(c *gin.Context) {
 	groups := c.PostForm("groups") // 新增：分组列表
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
+	speedLimitStr := c.PostForm("SpeedLimit")
+	speedLimit, _ := strconv.Atoi(speedLimitStr)
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
 		return
@@ -86,6 +88,7 @@ func SubAdd(c *gin.Context) {
 	sub.Name = name
 	sub.IPWhitelist = ipWhitelist
 	sub.IPBlacklist = ipBlacklist
+	sub.SpeedLimit = speedLimit
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 
 	err := sub.Add()
@@ -125,6 +128,8 @@ func SubUpdate(c *gin.Context) {
 	groups := c.PostForm("groups") // 新增：分组列表
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
+	speedLimitStr := c.PostForm("SpeedLimit")
+	speedLimit, _ := strconv.Atoi(speedLimitStr)
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
 		return
@@ -179,6 +184,7 @@ func SubUpdate(c *gin.Context) {
 	}
 	sub.IPWhitelist = ipWhitelist
 	sub.IPBlacklist = ipBlacklist
+	sub.SpeedLimit = speedLimit
 	err = sub.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")
