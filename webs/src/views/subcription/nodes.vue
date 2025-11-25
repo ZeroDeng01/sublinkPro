@@ -6,6 +6,9 @@ import {
   AddNodes,
   DelNode,
   UpdateNode,
+  getSpeedTestConfig,
+  updateSpeedTestConfig,
+  runSpeedTest,
 } from "@/api/subcription/node";
 import {
   getSubSchedulers,
@@ -24,6 +27,8 @@ interface Node {
   DialerProxyName: string;
   CreateDate: string;
   Group: string;
+  Speed: number;
+  LastCheck: string;
 }
 const tableData = ref<Node[]>([]);
 const loading = ref(false);
@@ -718,6 +723,58 @@ const formatDateTime = (dateTimeString: string) => {
     return "-";
   }
 };
+
+// 测速配置相关
+const speedTestDialogVisible = ref(false);
+const speedTestForm = ref({
+  cron: "",
+  enabled: false,
+});
+
+const handleSpeedTestSettings = async () => {
+  try {
+    const { data } = await getSpeedTestConfig();
+    speedTestForm.value = data;
+    speedTestDialogVisible.value = true;
+  } catch (error) {
+    console.error("获取测速配置失败:", error);
+    ElMessage.error("获取测速配置失败");
+  }
+};
+
+const submitSpeedTestSettings = async () => {
+  if (speedTestForm.value.enabled && !speedTestForm.value.cron) {
+    ElMessage.warning("启用时Cron表达式不能为空");
+    return;
+  }
+  // 简单验证Cron
+  if (
+    speedTestForm.value.enabled &&
+    !validateCronExpression(speedTestForm.value.cron)
+  ) {
+    ElMessage.error("Cron表达式格式不正确");
+    return;
+  }
+
+  try {
+    await updateSpeedTestConfig(speedTestForm.value);
+    ElMessage.success("保存成功");
+    speedTestDialogVisible.value = false;
+  } catch (error) {
+    console.error("保存测速配置失败:", error);
+    ElMessage.error("保存测速配置失败");
+  }
+};
+
+const handleRunSpeedTest = async () => {
+  try {
+    await runSpeedTest();
+    ElMessage.success("测速任务已在后台启动，请稍后刷新查看结果");
+  } catch (error) {
+    console.error("启动测速任务失败:", error);
+    ElMessage.error("启动测速任务失败");
+  }
+};
 </script>
 
 <template>
@@ -808,6 +865,9 @@ const formatDateTime = (dateTimeString: string) => {
             <el-button type="warning" @click="handleImportSubscription"
               >导入订阅</el-button
             >
+            <el-button type="info" @click="handleSpeedTestSettings"
+              >测速设置</el-button
+            >
             <el-button type="success" :icon="Refresh" @click="getnodes"
               >刷新</el-button
             >
@@ -878,6 +938,42 @@ const formatDateTime = (dateTimeString: string) => {
             <span style="font-size: 13px; color: #909399">{{
               scope.row.CreateDate
             }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="Speed" label="测速" width="100" sortable>
+          <template #default="scope">
+            <el-tag
+              v-if="scope.row.Speed > 0"
+              :type="
+                scope.row.Speed < 100
+                  ? 'success'
+                  : scope.row.Speed < 500
+                    ? 'warning'
+                    : 'danger'
+              "
+              effect="plain"
+            >
+              {{ scope.row.Speed }}ms
+            </el-tag>
+            <el-tag
+              v-else-if="scope.row.Speed === -1"
+              type="danger"
+              effect="plain"
+              >超时</el-tag
+            >
+            <el-tag
+              v-else-if="scope.row.Speed === 0"
+              type="danger"
+              effect="plain"
+              >失败</el-tag
+            >
+            <span v-else style="color: #c0c4cc">-</span>
+            <div
+              v-if="scope.row.LastCheck"
+              style="font-size: 10px; color: #909399; margin-top: 2px"
+            >
+              {{ formatDateTime(scope.row.LastCheck).split(" ")[1] }}
+            </div>
           </template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="200">
@@ -1177,6 +1273,44 @@ const formatDateTime = (dateTimeString: string) => {
           <el-button @click="subSchedulerFormVisible = false">取消</el-button>
           <el-button type="primary" @click="submitSubSchedulerForm"
             >确定</el-button
+          >
+        </div>
+      </template>
+    </el-dialog>
+    <!-- 测速配置对话框 -->
+    <el-dialog
+      v-model="speedTestDialogVisible"
+      title="节点测速设置"
+      width="500px"
+    >
+      <el-form :model="speedTestForm" label-width="120px">
+        <el-form-item label="启用自动测速">
+          <el-switch
+            v-model="speedTestForm.enabled"
+            active-text="启用"
+            inactive-text="禁用"
+          />
+        </el-form-item>
+        <el-form-item label="Cron表达式" required>
+          <el-input
+            v-model="speedTestForm.cron"
+            placeholder="例如: 0 */1 * * *"
+          />
+          <div style="font-size: 12px; color: #909399">
+            格式: 分 时 日 月 周 (例如: 0 */1 * * * 表示每小时执行一次)
+          </div>
+        </el-form-item>
+      </el-form>
+      <div style="margin-top: 20px; text-align: center">
+        <el-button type="primary" @click="handleRunSpeedTest"
+          >立即执行一次测速</el-button
+        >
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="speedTestDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitSpeedTestSettings"
+            >保存</el-button
           >
         </div>
       </template>

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sublink/models"
 	"sublink/node"
+	"sublink/services"
 	"sublink/utils"
 	"time"
 
@@ -193,4 +194,69 @@ func GetGroups(c *gin.Context) {
 		return
 	}
 	utils.OkDetailed(c, "获取分组列表成功", groups)
+}
+
+// GetSpeedTestConfig 获取测速配置
+func GetSpeedTestConfig(c *gin.Context) {
+	cron, _ := models.GetSetting("speed_test_cron")
+	enabledStr, _ := models.GetSetting("speed_test_enabled")
+	enabled := enabledStr == "true"
+
+	utils.OkDetailed(c, "获取成功", gin.H{
+		"cron":    cron,
+		"enabled": enabled,
+	})
+}
+
+// UpdateSpeedTestConfig 更新测速配置
+func UpdateSpeedTestConfig(c *gin.Context) {
+	var req struct {
+		Cron    string `json:"cron"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+
+	// 验证 Cron 表达式
+	if req.Cron != "" {
+		// 这里简单验证一下，或者依赖 scheduler 的验证
+		// 暂时跳过严格验证，直接保存
+	}
+
+	err := models.SetSetting("speed_test_cron", req.Cron)
+	if err != nil {
+		utils.FailWithMsg(c, "保存Cron配置失败")
+		return
+	}
+	err = models.SetSetting("speed_test_enabled", strconv.FormatBool(req.Enabled))
+	if err != nil {
+		utils.FailWithMsg(c, "保存启用状态失败")
+		return
+	}
+
+	// 更新定时任务
+	scheduler := services.GetSchedulerManager()
+	if req.Enabled {
+		if req.Cron == "" {
+			utils.FailWithMsg(c, "启用时Cron表达式不能为空")
+			return
+		}
+		err = scheduler.StartNodeSpeedTestTask(req.Cron)
+		if err != nil {
+			utils.FailWithMsg(c, "启动定时任务失败: "+err.Error())
+			return
+		}
+	} else {
+		scheduler.StopNodeSpeedTestTask()
+	}
+
+	utils.OkWithMsg(c, "保存成功")
+}
+
+// RunSpeedTest 手动执行测速
+func RunSpeedTest(c *gin.Context) {
+	go services.ExecuteNodeSpeedTestTask()
+	utils.OkWithMsg(c, "测速任务已在后台启动")
 }

@@ -33,3 +33,25 @@ export function DelNode(data: any) {
     params: data,
   });
 }
+
+export function getSpeedTestConfig() {
+  return request({
+    url: "/api/v1/nodes/speed-test/config",
+    method: "get",
+  });
+}
+
+export function updateSpeedTestConfig(data: any) {
+  return request({
+    url: "/api/v1/nodes/speed-test/config",
+    method: "post",
+    data,
+  });
+}
+
+export function runSpeedTest() {
+  return request({
+    url: "/api/v1/nodes/speed-test/run",
+    method: "post",
+  });
+}

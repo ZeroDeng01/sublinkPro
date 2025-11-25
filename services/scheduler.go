@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sublink/models"
 	"sublink/node"
+	"sublink/utils"
 	"sync"
 	"time"
 
@@ -230,4 +231,109 @@ func (sm *SchedulerManager) updateRunTime(schedulerID int, lastRun, nextRun *tim
 			log.Printf("更新运行时间失败 - ID: %d, Error: %v", schedulerID, err)
 		}
 	}()
+}
+
+// StartNodeSpeedTestTask 启动节点测速定时任务
+func (sm *SchedulerManager) StartNodeSpeedTestTask(cronExpr string) error {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+
+	// 使用 -1 作为测速任务的 ID
+	const speedTestTaskID = -100
+
+	// 清理Cron表达式
+	cleanCronExpr := cleanCronExpression(cronExpr)
+
+	// 如果任务已存在，先删除
+	if entryID, exists := sm.jobs[speedTestTaskID]; exists {
+		sm.cron.Remove(entryID)
+		delete(sm.jobs, speedTestTaskID)
+	}
+
+	// 添加新任务
+	entryID, err := sm.cron.AddFunc(cleanCronExpr, func() {
+		ExecuteNodeSpeedTestTask()
+	})
+
+	if err != nil {
+		log.Printf("添加节点测速任务失败 - Cron: %s, Error: %v", cleanCronExpr, err)
+		return err
+	}
+
+	// 存储任务映射
+	sm.jobs[speedTestTaskID] = entryID
+	log.Printf("成功添加节点测速任务 - Cron: %s", cleanCronExpr)
+	return nil
+}
+
+// StopNodeSpeedTestTask 停止节点测速定时任务
+func (sm *SchedulerManager) StopNodeSpeedTestTask() {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+
+	const speedTestTaskID = -1
+	if entryID, exists := sm.jobs[speedTestTaskID]; exists {
+		sm.cron.Remove(entryID)
+		delete(sm.jobs, speedTestTaskID)
+		log.Println("成功停止节点测速任务")
+	}
+}
+
+// ExecuteNodeSpeedTestTask 执行节点测速任务
+func ExecuteNodeSpeedTestTask() {
+	log.Println("开始执行节点测速任务...")
+	nodes, err := new(models.Node).List()
+	if err != nil {
+		log.Printf("获取节点列表失败: %v", err)
+		return
+	}
+
+	var wg sync.WaitGroup
+	// 限制并发数，避免同时发起过多连接
+	sem := make(chan struct{}, 10)
+
+	for i := range nodes {
+		wg.Add(1)
+		go func(n *models.Node) {
+			defer wg.Done()
+			sem <- struct{}{}        // 获取信号量
+			defer func() { <-sem }() // 释放信号量
+
+			// 解析链接获取 host 和 port
+			host, port, err := utils.ParseNodeLink(n.Link)
+			if err != nil {
+				// 解析失败，跳过测速，但可以更新 LastCheck
+				n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+				n.UpdateSpeed()
+				return
+			}
+
+			// 解析IP以进行调试
+			realIP, err := utils.ResolveIP(host)
+			if err != nil {
+				log.Printf("解析域名失败: %s, Error: %v", host, err)
+				// 解析失败，跳过测速
+				n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+				n.UpdateSpeed()
+				return
+			}
+
+			log.Printf("开始测速节点: %s (%s:%d) [Real IP: %s]", n.Name, host, port, realIP)
+
+			// 执行测速
+			speed, err := utils.TcpPing(realIP, port, 3*time.Second)
+			if err != nil {
+				// 测速失败（超时或连接错误），Speed 设为 -1 或 0 表示不可达
+				n.Speed = -1
+				log.Printf("节点测速失败: %s, Error: %v", n.Name, err)
+			} else {
+				n.Speed = speed
+				log.Printf("节点测速完成: %s, 延迟: %dms", n.Name, speed)
+			}
+			n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+			n.UpdateSpeed()
+		}(&nodes[i])
+	}
+	wg.Wait()
+	log.Println("节点测速任务执行完成")
 }

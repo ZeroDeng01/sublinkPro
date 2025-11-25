@@ -14,6 +14,9 @@ func Nodes(r *gin.Engine) {
 		NodesGroup.GET("/get", api.NodeGet)
 		NodesGroup.POST("/update", api.NodeUpdadte)
 		NodesGroup.GET("/groups", api.GetGroups)
+		NodesGroup.GET("/speed-test/config", api.GetSpeedTestConfig)
+		NodesGroup.POST("/speed-test/config", api.UpdateSpeedTestConfig)
+		NodesGroup.POST("/speed-test/run", api.RunSpeedTest)
 	}
 
 }
