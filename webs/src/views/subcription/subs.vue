@@ -729,7 +729,7 @@ const displayTableData = computed(() => {
         </div>
       </template>
     </el-dialog>
-    <el-dialog v-model="dialogVisible" :title="SubTitle">
+    <el-dialog v-model="dialogVisible" :title="SubTitle" width="80%">
       <el-input v-model="Subname" placeholder="请输入订阅名称" />
       <el-row>
         <el-tag type="primary">clash模版选择</el-tag>
@@ -906,18 +906,15 @@ const displayTableData = computed(() => {
       </div>
 
       <el-row style="margin-top: 10px">
-        <el-col :span="24">
+        <el-col :span="12">
+          <p style="margin-bottom: 10px; font-weight: 500">最大延迟(ms)</p>
           <el-input-number
             v-model="SpeedLimit"
             :min="0"
             :step="100"
-            placeholder="最大延迟(ms)"
-            style="width: 100%"
-          >
-            <template #prefix>
-              <span>最大延迟(ms)</span>
-            </template>
-          </el-input-number>
+            placeholder="毫秒(ms)"
+            width="150px"
+          />
           <div style="font-size: 12px; color: #999; margin-top: 5px">
             设置筛选节点的延迟阈值，0表示不限制。只有测速结果小于该值的节点会被返回。
           </div>
