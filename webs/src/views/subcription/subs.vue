@@ -868,19 +868,21 @@ const displayTableData = computed(() => {
           </el-row>
 
           <!-- Transfer 穿梭框 -->
-          <el-transfer
-            v-model="value1"
-            :data="transferData"
-            :titles="['可选节点', '已选节点']"
-            :button-texts="['移除', '添加']"
-            filterable
-            :filter-placeholder="'搜索节点'"
-            style="text-align: left; display: inline-block"
-          >
-            <template #default="{ option }">
-              <span>{{ option.label }}</span>
-            </template>
-          </el-transfer>
+          <div class="transfer-container">
+            <el-transfer
+              v-model="value1"
+              :data="transferData"
+              :titles="['可选节点', '已选节点']"
+              :button-texts="['', '']"
+              filterable
+              :filter-placeholder="'搜索节点'"
+              class="custom-transfer"
+            >
+              <template #default="{ option }">
+                <span :title="option.label">{{ option.label }}</span>
+              </template>
+            </el-transfer>
+          </div>
 
           <div style="margin-top: 10px; color: #909399; font-size: 12px">
             已选择
@@ -1294,5 +1296,106 @@ const displayTableData = computed(() => {
 /* 节点选择区域优化 */
 .m-4 {
   margin: 16px 0;
+}
+
+/* Transfer 穿梭框响应式优化 */
+.transfer-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.custom-transfer {
+  --el-transfer-panel-width: 280px;
+  --el-transfer-panel-header-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+:deep(.custom-transfer .el-transfer-panel) {
+  width: var(--el-transfer-panel-width);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.custom-transfer .el-transfer-panel__body) {
+  height: 350px;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.custom-transfer .el-transfer-panel__list.is-filterable) {
+  height: 100%;
+  padding-top: 0;
+}
+
+:deep(.custom-transfer .el-transfer__buttons) {
+  display: flex;
+  flex-direction: column;
+  padding: 0 15px;
+}
+
+:deep(.custom-transfer .el-transfer__button) {
+  margin: 8px 0 !important;
+  padding: 10px;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:deep(.custom-transfer .el-transfer__button i),
+:deep(.custom-transfer .el-transfer__button span) {
+  display: none;
+}
+
+:deep(.custom-transfer .el-transfer__button:first-child)::after {
+  content: "←";
+  font-size: 18px;
+  font-weight: bold;
+}
+
+:deep(.custom-transfer .el-transfer__button:last-child)::after {
+  content: "→";
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .custom-transfer {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  :deep(.custom-transfer .el-transfer-panel) {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  :deep(.custom-transfer .el-transfer__buttons) {
+    flex-direction: row;
+    justify-content: center;
+    padding: 10px 0;
+  }
+
+  :deep(.custom-transfer .el-transfer__button) {
+    margin: 0 15px !important;
+  }
+
+  /* 移动端上下布局：左按钮(移除)变为向上，右按钮(添加)变为向下 */
+  :deep(.custom-transfer .el-transfer__button:first-child)::after {
+    content: "↑";
+  }
+
+  :deep(.custom-transfer .el-transfer__button:last-child)::after {
+    content: "↓";
+  }
 }
 </style>
