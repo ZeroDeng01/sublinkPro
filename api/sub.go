@@ -61,6 +61,14 @@ func SubAdd(c *gin.Context) {
 		}
 	}
 
+	// 检查订阅名称是否重复
+	var checkSub models.Subcription
+	checkSub.Name = name
+	if err := checkSub.Find(); err == nil {
+		utils.FailWithMsg(c, "订阅名称不能重复")
+		return
+	}
+
 	sub.Nodes = []models.Node{}
 	if nodes != "" {
 		for _, v := range strings.Split(nodes, ",") {
@@ -135,6 +143,17 @@ func SubUpdate(c *gin.Context) {
 			return
 		}
 	}
+
+	// 检查订阅名称是否重复
+	if name != oldname {
+		var checkSub models.Subcription
+		checkSub.Name = name
+		if err := checkSub.Find(); err == nil {
+			utils.FailWithMsg(c, "订阅名称不能重复")
+			return
+		}
+	}
+
 	// 查找旧节点
 	sub.Name = oldname
 	err := sub.Find()
