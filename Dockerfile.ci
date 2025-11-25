@@ -1,0 +1,32 @@
+# CI-specific Dockerfile
+# Assumes binaries and static files are already built and available in the context
+
+FROM debian:bookworm-slim
+
+ARG TARGETARCH
+
+WORKDIR /app
+
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends tzdata ca-certificates && \
+    ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Create directories
+RUN mkdir -p /app/db /app/logs /app/template /app/plugins && \
+    chmod 777 /app/db /app/logs /app/template /app/plugins
+
+# Copy static files (frontend)
+COPY static /app/static
+
+# Copy the specific binary for the target architecture
+# The workflow must ensure these files exist in the build context
+COPY build/sublinkPro-linux-${TARGETARCH} /app/sublinkPro
+
+RUN chmod +x /app/sublinkPro
+
+EXPOSE 8000
+
+CMD ["/app/sublinkPro"]
