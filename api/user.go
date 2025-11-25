@@ -1,9 +1,11 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
 	"log"
 	"sublink/models"
+	"sublink/utils"
+
+	"github.com/gin-gonic/gin"
 )
 
 type User struct {
@@ -25,7 +27,7 @@ func UserAdd(c *gin.Context) {
 	if err != nil {
 		log.Println("创建用户失败")
 	}
-	c.String(200, "创建用户成功")
+	utils.OkWithMsg(c, "创建用户成功")
 }
 
 // 获取用户信息
@@ -36,31 +38,24 @@ func UserMe(c *gin.Context) {
 	user := &models.User{Username: username.(string)}
 	err := user.Find()
 	if err != nil {
-		c.JSON(400, gin.H{
-			"code": "00000",
-			"msg":  err,
-		})
+		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"data": gin.H{
-			"avatar":   "static/avatar.gif",
-			"nickname": user.Nickname,
-			"userId":   user.ID,
-			"username": user.Username,
-			"roles":    []string{"ADMIN"},
-			// "perms": []string{
-			// 	"sys:menu:delete", "sys:dept:edit", "sys:dict_type:add",
-			// 	"sys:dict:edit", "sys:dict:delete", "sys:dict_type:edit",
-			// 	"sys:menu:add", "sys:user:add", "sys:role:edit",
-			// 	"sys:dept:delete", "sys:user:password_reset", "sys:user:edit",
-			// 	"sys:user:delete", "sys:dept:add", "sys:role:delete",
-			// 	"sys:dict_type:delete", "sys:menu:edit", "sys:dict:add",
-			// 	"sys:role:add",
-			// },
-		},
-		"msg": "获取用户信息成功",
+	utils.OkDetailed(c, "获取用户信息成功", gin.H{
+		"avatar":   "static/avatar.gif",
+		"nickname": user.Nickname,
+		"userId":   user.ID,
+		"username": user.Username,
+		"roles":    []string{"ADMIN"},
+		// "perms": []string{
+		// 	"sys:menu:delete", "sys:dept:edit", "sys:dict_type:add",
+		// 	"sys:dict:edit", "sys:dict:delete", "sys:dict_type:edit",
+		// 	"sys:menu:add", "sys:user:add", "sys:role:edit",
+		// 	"sys:dept:delete", "sys:user:password_reset", "sys:user:edit",
+		// 	"sys:user:delete", "sys:dept:add", "sys:role:delete",
+		// 	"sys:dict_type:delete", "sys:menu:edit", "sys:dict:add",
+		// 	"sys:role:add",
+		// },
 	})
 }
 
@@ -83,12 +78,8 @@ func UserPages(c *gin.Context) {
 			Avatar:   "static/avatar.gif",
 		})
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"data": gin.H{
-			"list": list,
-		},
-		"msg": "获取用户信息成功",
+	utils.OkDetailed(c, "获取用户信息成功", gin.H{
+		"list": list,
 	})
 }
 
@@ -99,10 +90,7 @@ func UserSet(c *gin.Context) {
 	NewPassword := c.PostForm("password")
 	log.Println(NewUsername, NewPassword)
 	if NewUsername == "" || NewPassword == "" {
-		c.JSON(400, gin.H{
-			"code": "00001",
-			"msg":  "用户名或密码不能为空",
-		})
+		utils.FailWithMsg(c, "用户名或密码不能为空")
 		return
 	}
 	username, _ := c.Get("username")
@@ -113,16 +101,10 @@ func UserSet(c *gin.Context) {
 	})
 	if err != nil {
 		log.Println(err)
-		c.JSON(400, gin.H{
-			"code": "00000",
-			"msg":  err,
-		})
+		utils.FailWithMsg(c, err.Error())
 		return
 	}
 	// 修改成功
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"msg":  "修改成功",
-	})
+	utils.OkWithMsg(c, "修改成功")
 
 }

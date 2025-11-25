@@ -1,24 +1,26 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
 	"log"
 	"strconv"
 	"sublink/dto"
 	"sublink/models"
+	"sublink/utils"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func GenerateAPIKey(c *gin.Context) {
 	var userAccessKey dto.UserAccessKey
 	if err := c.BindJSON(&userAccessKey); err != nil {
-		c.JSON(500, gin.H{"msg": "参数错误"})
+		utils.FailWithMsg(c, "参数错误")
 		return
 	}
 	user := &models.User{Username: userAccessKey.UserName}
 	err := user.Find()
 	if err != nil {
-		c.JSON(400, gin.H{"msg": "用户不存在"})
+		utils.FailWithMsg(c, "用户不存在")
 		return
 	}
 
@@ -32,21 +34,17 @@ func GenerateAPIKey(c *gin.Context) {
 	apiKey, err := accessKey.GenerateAPIKey()
 	if err != nil {
 		log.Println(err)
-		c.JSON(500, gin.H{"msg": "生成API Key失败"})
+		utils.FailWithMsg(c, "生成API Key失败")
 		return
 	}
 	err = accessKey.Generate()
 	if err != nil {
 		log.Println(err)
-		c.JSON(500, gin.H{"msg": "生成API Key失败"})
+		utils.FailWithMsg(c, "生成API Key失败")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"data": map[string]string{
-			"accessKey": apiKey,
-		},
-		"msg": "API Key生成成功",
+	utils.OkDetailed(c, "API Key生成成功", map[string]string{
+		"accessKey": apiKey,
 	})
 }
 
@@ -54,50 +52,43 @@ func DeleteAPIKey(c *gin.Context) {
 
 	apiKeyIDParam := c.Param("apiKeyId")
 	if apiKeyIDParam == "" {
-		c.JSON(400, gin.H{"msg": "缺少API Key ID"})
+		utils.FailWithMsg(c, "缺少API Key ID")
 		return
 	}
 
 	var accessKey models.AccessKey
 	apiKeyID, err := strconv.Atoi(apiKeyIDParam)
 	if err != nil {
-		c.JSON(500, gin.H{"msg": "删除API Key失败"})
+		utils.FailWithMsg(c, "删除API Key失败")
 		return
 	}
 	accessKey.ID = apiKeyID
 	err = accessKey.Delete()
 	if err != nil {
-		c.JSON(500, gin.H{"msg": "删除API Key失败"})
+		utils.FailWithMsg(c, "删除API Key失败")
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"msg":  "删除API Key成功",
-	})
+	utils.OkWithMsg(c, "删除API Key成功")
 
 }
 
 func GetAPIKey(c *gin.Context) {
 	userIDParam := c.Param("userId")
 	if userIDParam == "" {
-		c.JSON(400, gin.H{"msg": "缺少User ID"})
+		utils.FailWithMsg(c, "缺少User ID")
 		return
 	}
 
 	userID, err := strconv.Atoi(userIDParam)
 	if err != nil {
-		c.JSON(500, gin.H{"msg": "删除API Key失败"})
+		utils.FailWithMsg(c, "删除API Key失败")
 		return
 	}
 	apiKeys, err := models.FindValidAccessKeys(userID)
 	if err != nil {
-		c.JSON(500, gin.H{"msg": "查询API Key失败"})
+		utils.FailWithMsg(c, "查询API Key失败")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"data": apiKeys,
-		"msg":  "查询API Key成功",
-	})
+	utils.OkDetailed(c, "查询API Key成功", apiKeys)
 }

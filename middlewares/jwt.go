@@ -3,12 +3,12 @@ package middlewares
 import (
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v4"
-	"net/http"
 	"strings"
 	"sublink/models"
 	"sublink/utils"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 var Secret = []byte(models.ReadConfig().JwtSecret) // 秘钥
@@ -42,7 +42,7 @@ func AuthToken(c *gin.Context) {
 	if accessKey != "" {
 		username, bool, err := validApiKey(accessKey)
 		if err != nil || !bool {
-			c.JSON(400, gin.H{"msg": err.Error()})
+			utils.FailWithMsg(c, err.Error())
 			c.Abort()
 			return
 		}
@@ -53,13 +53,13 @@ func AuthToken(c *gin.Context) {
 
 	token := c.Request.Header.Get("Authorization")
 	if token == "" {
-		c.JSON(400, gin.H{"msg": "请求未携带token"})
+		utils.FailWithMsg(c, "请求未携带token")
 		c.Abort()
 		return
 	}
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		c.JSON(400, gin.H{"msg": "token格式错误"})
+		utils.FailWithMsg(c, "token格式错误")
 		c.Abort()
 		return
 	}
@@ -67,10 +67,7 @@ func AuthToken(c *gin.Context) {
 	token = strings.Replace(token, "Bearer ", "", -1)
 	mc, err := ParseToken(token)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"code": 401,
-			"msg":  err.Error(),
-		})
+		utils.FailWithCode(c, 401, err.Error())
 		c.Abort()
 		return
 	}

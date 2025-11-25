@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sublink/models"
 	"sublink/node"
+	"sublink/utils"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,9 +22,7 @@ func NodeUpdadte(c *gin.Context) {
 	dialerProxyName := c.PostForm("dialerProxyName")
 	group := c.PostForm("group")
 	if name == "" || link == "" {
-		c.JSON(400, gin.H{
-			"msg": "节点名称 or 备注不能为空",
-		})
+		utils.FailWithMsg(c, "节点名称 or 备注不能为空")
 		return
 	}
 	// 查找旧节点
@@ -31,9 +30,7 @@ func NodeUpdadte(c *gin.Context) {
 	node.Link = oldlink
 	err := node.Find()
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": err.Error(),
-		})
+		utils.FailWithMsg(c, err.Error())
 		return
 	}
 	node.Name = name
@@ -42,15 +39,10 @@ func NodeUpdadte(c *gin.Context) {
 	node.Group = group
 	err = node.Update()
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": "更新失败",
-		})
+		utils.FailWithMsg(c, "更新失败")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"msg":  "更新成功",
-	})
+	utils.OkWithMsg(c, "更新成功")
 }
 
 // 获取节点列表
@@ -58,16 +50,10 @@ func NodeGet(c *gin.Context) {
 	var Node models.Node
 	nodes, err := Node.List()
 	if err != nil {
-		c.JSON(500, gin.H{
-			"msg": "node list error",
-		})
+		utils.FailWithMsg(c, "node list error")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"data": nodes,
-		"msg":  "node get",
-	})
+	utils.OkDetailed(c, "node get", nodes)
 }
 
 // 添加节点
@@ -78,15 +64,11 @@ func NodeAdd(c *gin.Context) {
 	dialerProxyName := c.PostForm("dialerProxyName")
 	group := c.PostForm("group")
 	if link == "" {
-		c.JSON(400, gin.H{
-			"msg": "link  不能为空",
-		})
+		utils.FailWithMsg(c, "link  不能为空")
 		return
 	}
 	if !strings.Contains(link, "://") {
-		c.JSON(400, gin.H{
-			"msg": "link 必须包含 ://",
-		})
+		utils.FailWithMsg(c, "link 必须包含 ://")
 		return
 	}
 	Node.Name = name
@@ -166,15 +148,10 @@ func NodeAdd(c *gin.Context) {
 	}
 	err = Node.Add()
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": "添加失败检查一下是否节点重复",
-		})
+		utils.FailWithMsg(c, "添加失败检查一下是否节点重复")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"msg":  "添加成功",
-	})
+	utils.OkWithMsg(c, "添加成功")
 }
 
 // 删除节点
@@ -182,24 +159,17 @@ func NodeDel(c *gin.Context) {
 	var Node models.Node
 	id := c.Query("id")
 	if id == "" {
-		c.JSON(400, gin.H{
-			"msg": "id 不能为空",
-		})
+		utils.FailWithMsg(c, "id 不能为空")
 		return
 	}
 	x, _ := strconv.Atoi(id)
 	Node.ID = x
 	err := Node.Del()
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": "删除失败",
-		})
+		utils.FailWithMsg(c, "删除失败")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"msg":  "删除成功",
-	})
+	utils.OkWithMsg(c, "删除成功")
 }
 
 // 节点统计
@@ -208,16 +178,10 @@ func NodesTotal(c *gin.Context) {
 	nodes, err := Node.List()
 	count := len(nodes)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"msg": "获取不到节点统计",
-		})
+		utils.FailWithMsg(c, "获取不到节点统计")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"data": count,
-		"msg":  "取得节点统计",
-	})
+	utils.OkDetailed(c, "取得节点统计", count)
 }
 
 // 获取所有分组列表
@@ -225,14 +189,8 @@ func GetGroups(c *gin.Context) {
 	var node models.Node
 	groups, err := node.GetAllGroups()
 	if err != nil {
-		c.JSON(500, gin.H{
-			"msg": "获取分组列表失败",
-		})
+		utils.FailWithMsg(c, "获取分组列表失败")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"data": groups,
-		"msg":  "获取分组列表成功",
-	})
+	utils.OkDetailed(c, "获取分组列表成功", groups)
 }

@@ -37,20 +37,36 @@ service.interceptors.response.use(
     const { code, msg } = response.data;
 
     // 3. 处理业务成功
-    if (code === "00000") {
+    if (code === 200) {
       return response.data;
     }
 
-    // 4. 处理业务失败
+    // 4. 处理 token 过期
+    if (code === 401) {
+      ElMessageBox.confirm("当前页面已失效，请重新登录", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+        lockScroll: false,
+      }).then(() => {
+        const userStore = useUserStoreHook();
+        userStore.resetToken().then(() => {
+          location.reload();
+        });
+      });
+      return Promise.reject(new Error(msg || "Token Expired"));
+    }
+
+    // 5. 处理业务失败
     ElMessage.error(msg || "系统出错");
     return Promise.reject(new Error(msg || "Error"));
   },
   (error: any) => {
-    // 5. 处理 HTTP 错误
-    if (error.response.data) {
+    // 6. 处理 HTTP 错误
+    if (error.response && error.response.data) {
       const { code, msg } = error.response.data;
-      // token 过期，重新登录
-      if (code === "A0230") {
+      // token 过期，重新登录 (保留以防万一)
+      if (code === 401 || code === "A0230") {
         ElMessageBox.confirm("当前页面已失效，请重新登录", "提示", {
           confirmButtonText: "确定",
           cancelButtonText: "取消",
@@ -62,7 +78,11 @@ service.interceptors.response.use(
             location.reload();
           });
         });
+      } else {
+        ElMessage.error(msg || "系统接口异常");
       }
+    } else {
+      ElMessage.error("网络连接异常");
     }
     return Promise.reject(error);
   }

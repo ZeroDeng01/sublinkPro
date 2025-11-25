@@ -16,16 +16,10 @@ func SubTotal(c *gin.Context) {
 	subs, err := Sub.List()
 	count := len(subs)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"msg": "取得订阅总数失败",
-		})
+		utils.FailWithMsg(c, "取得订阅总数失败")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"data": count,
-		"msg":  "取得订阅总数",
-	})
+	utils.OkDetailed(c, "取得订阅总数", count)
 }
 
 // 获取订阅列表
@@ -33,16 +27,10 @@ func SubGet(c *gin.Context) {
 	var Sub models.Subcription
 	Subs, err := Sub.List()
 	if err != nil {
-		c.JSON(500, gin.H{
-			"msg": "node list error",
-		})
+		utils.FailWithMsg(c, "node list error")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"data": Subs,
-		"msg":  "node get",
-	})
+	utils.OkDetailed(c, "node get", Subs)
 }
 
 // 添加节点
@@ -55,26 +43,20 @@ func SubAdd(c *gin.Context) {
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
 	if name == "" || (nodes == "" && groups == "") {
-		c.JSON(400, gin.H{
-			"msg": "订阅名称不能为空，且节点或分组至少选择一项",
-		})
+		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
 		return
 	}
 	if ipWhitelist != "" {
 		ok := utils.IpFormatValidation(ipWhitelist)
 		if !ok {
-			c.JSON(400, gin.H{
-				"msg": "IP白名单有误，请检查IP格式",
-			})
+			utils.FailWithMsg(c, "IP白名单有误，请检查IP格式")
 			return
 		}
 	}
 	if ipBlacklist != "" {
 		ok := utils.IpFormatValidation(ipBlacklist)
 		if !ok {
-			c.JSON(400, gin.H{
-				"msg": "IP黑名单有误，请检查IP格式",
-			})
+			utils.FailWithMsg(c, "IP黑名单有误，请检查IP格式")
 			return
 		}
 	}
@@ -100,9 +82,7 @@ func SubAdd(c *gin.Context) {
 
 	err := sub.Add()
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": "添加失败",
-		})
+		utils.FailWithMsg(c, "添加失败")
 		return
 	}
 
@@ -110,9 +90,7 @@ func SubAdd(c *gin.Context) {
 	if len(sub.Nodes) > 0 {
 		err = sub.AddNode()
 		if err != nil {
-			c.JSON(400, gin.H{
-				"msg": err.Error(),
-			})
+			utils.FailWithMsg(c, err.Error())
 			return
 		}
 	}
@@ -121,17 +99,12 @@ func SubAdd(c *gin.Context) {
 	if groups != "" {
 		err = sub.AddGroups(strings.Split(groups, ","))
 		if err != nil {
-			c.JSON(400, gin.H{
-				"msg": err.Error(),
-			})
+			utils.FailWithMsg(c, err.Error())
 			return
 		}
 	}
 
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"msg":  "添加成功",
-	})
+	utils.OkWithMsg(c, "添加成功")
 }
 
 // 更新节点
@@ -145,26 +118,20 @@ func SubUpdate(c *gin.Context) {
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
 	if name == "" || (nodes == "" && groups == "") {
-		c.JSON(400, gin.H{
-			"msg": "订阅名称不能为空，且节点或分组至少选择一项",
-		})
+		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
 		return
 	}
 	if ipWhitelist != "" {
 		ok := utils.IpFormatValidation(ipWhitelist)
 		if !ok {
-			c.JSON(400, gin.H{
-				"msg": "IP白名单有误，请检查IP格式",
-			})
+			utils.FailWithMsg(c, "IP白名单有误，请检查IP格式")
 			return
 		}
 	}
 	if ipBlacklist != "" {
 		ok := utils.IpFormatValidation(ipBlacklist)
 		if !ok {
-			c.JSON(400, gin.H{
-				"msg": "IP黑名单有误，请检查IP格式",
-			})
+			utils.FailWithMsg(c, "IP黑名单有误，请检查IP格式")
 			return
 		}
 	}
@@ -172,9 +139,7 @@ func SubUpdate(c *gin.Context) {
 	sub.Name = oldname
 	err := sub.Find()
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": err.Error(),
-		})
+		utils.FailWithMsg(c, err.Error())
 		return
 	}
 	// 更新节点
@@ -197,18 +162,14 @@ func SubUpdate(c *gin.Context) {
 	sub.IPBlacklist = ipBlacklist
 	err = sub.Update()
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": "更新失败",
-		})
+		utils.FailWithMsg(c, "更新失败")
 		return
 	}
 
 	// 更新节点关系
 	err = sub.UpdateNodes()
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": err.Error(),
-		})
+		utils.FailWithMsg(c, err.Error())
 		return
 	}
 
@@ -219,16 +180,11 @@ func SubUpdate(c *gin.Context) {
 		err = sub.UpdateGroups([]string{})
 	}
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": err.Error(),
-		})
+		utils.FailWithMsg(c, err.Error())
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"msg":  "更新成功",
-	})
+	utils.OkWithMsg(c, "更新成功")
 }
 
 // 删除节点
@@ -236,38 +192,29 @@ func SubDel(c *gin.Context) {
 	var sub models.Subcription
 	id := c.Query("id")
 	if id == "" {
-		c.JSON(400, gin.H{
-			"msg": "id 不能为空",
-		})
+		utils.FailWithMsg(c, "id 不能为空")
 		return
 	}
 	x, _ := strconv.Atoi(id)
 	sub.ID = x
 	err := sub.Find()
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": "查找失败",
-		})
+		utils.FailWithMsg(c, "查找失败")
 		return
 	}
 	err = sub.Del()
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": "删除失败",
-		})
+		utils.FailWithMsg(c, "删除失败")
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"msg":  "删除成功",
-	})
+	utils.OkWithMsg(c, "删除成功")
 }
 
 func SubSort(c *gin.Context) {
 	var subNodeSort dto.SubcriptionNodeSortUpdate
 	err := c.BindJSON(&subNodeSort)
 	if err != nil {
-		c.JSON(400, gin.H{"msg": "参数错误: " + err.Error()})
+		utils.FailWithMsg(c, "参数错误: "+err.Error())
 		return
 	}
 
@@ -276,13 +223,8 @@ func SubSort(c *gin.Context) {
 	err = sub.Sort(subNodeSort)
 
 	if err != nil {
-		c.JSON(400, gin.H{
-			"msg": err.Error(),
-		})
+		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"msg":  "更新排序成功",
-	})
+	utils.OkWithMsg(c, "更新排序成功")
 }

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"sublink/utils"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -159,9 +161,5 @@ func GetMenus(c *gin.Context) {
 			},
 		},
 	}
-	c.JSON(200, gin.H{
-		"code": "00000",
-		"data": menus,
-		"msg":  "获取成功",
-	})
+	utils.OkDetailed(c, "获取成功", menus)
 }

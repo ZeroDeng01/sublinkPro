@@ -190,9 +190,7 @@ const filteredTableData = computed(() => {
   // 先按分组过滤
   if (groupSearchQuery.value) {
     if (groupSearchQuery.value === "未分组") {
-      result = result.filter(
-        (node) => !node.Group || node.Group.trim() === ""
-      );
+      result = result.filter((node) => !node.Group || node.Group.trim() === "");
     } else {
       const groupQuery = groupSearchQuery.value.toLowerCase();
       result = result.filter((node) =>
@@ -263,11 +261,15 @@ const selectDel = () => {
   if (multipleSelection.value.length === 0) {
     return;
   }
-  ElMessageBox.confirm(`你是否要删除选中这些，总计数量${multipleSelection.value.length} ?`, "提示", {
-    confirmButtonText: "OK",
-    cancelButtonText: "Cancel",
-    type: "warning",
-  }).then(() => {
+  ElMessageBox.confirm(
+    `你是否要删除选中这些，总计数量${multipleSelection.value.length} ?`,
+    "提示",
+    {
+      confirmButtonText: "OK",
+      cancelButtonText: "Cancel",
+      type: "warning",
+    }
+  ).then(() => {
     for (let i = 0; i < multipleSelection.value.length; i++) {
       DelNode({
         id: multipleSelection.value[i].ID,
@@ -800,7 +802,9 @@ const formatDateTime = (dateTimeString: string) => {
             <el-button @click="resetSearch">重置</el-button>
           </div>
           <div class="button-group">
-            <el-button type="primary" @click="handleAddNode">添加节点</el-button>
+            <el-button type="primary" @click="handleAddNode"
+              >添加节点</el-button
+            >
             <el-button type="warning" @click="handleImportSubscription"
               >导入订阅</el-button
             >

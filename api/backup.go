@@ -3,9 +3,9 @@ package api
 import (
 	"archive/zip"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
+	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,7 +14,7 @@ func Backup(c *gin.Context) {
 	// 创建临时文件用于存储压缩包
 	tmpFile, err := os.CreateTemp("", "backup-*.zip")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"msg": "Failed to create temp file"})
+		utils.FailWithMsg(c, "Failed to create temp file")
 		return
 	}
 	defer os.Remove(tmpFile.Name()) // 确保函数退出时删除临时文件
@@ -79,7 +79,7 @@ func Backup(c *gin.Context) {
 
 		// 在 Walk 循环结束后，统一检查错误
 		if walkErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"msg": "Failed to walk folder '" + folder + "': " + walkErr.Error()})
+			utils.FailWithMsg(c, "Failed to walk folder '"+folder+"': "+walkErr.Error())
 			return
 		}
 	}
@@ -88,14 +88,14 @@ func Backup(c *gin.Context) {
 	// 这样才能将 zip 的中央目录结构写入文件
 	err = zipWriter.Close()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"msg": "Failed to close zip writer: " + err.Error()})
+		utils.FailWithMsg(c, "Failed to close zip writer: "+err.Error())
 		return
 	}
 
 	// 确保临时文件已完全写入（可选，但在某些系统上更安全）
 	err = tmpFile.Sync()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"msg": "Failed to sync temp file: " + err.Error()})
+		utils.FailWithMsg(c, "Failed to sync temp file: "+err.Error())
 		return
 	}
 
@@ -106,7 +106,7 @@ func Backup(c *gin.Context) {
 	// 将文件指针重置到文件开头
 	_, err = tmpFile.Seek(0, 0)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"msg": "Failed to seek temp file: " + err.Error()})
+		utils.FailWithMsg(c, "Failed to seek temp file: "+err.Error())
 		return
 	}
 
@@ -114,7 +114,10 @@ func Backup(c *gin.Context) {
 	_, err = io.Copy(c.Writer, tmpFile)
 	if err != nil {
 		// 此时可能已经发送了部分响应，JSON 可能无效，但尽力而为
-		c.JSON(http.StatusInternalServerError, gin.H{"msg": "Failed to send file to client: " + err.Error()})
+		// utils.FailWithMsg(c, "Failed to send file to client: "+err.Error())
+		// Since headers might be sent, we can't cleanly send JSON. But let's leave it or log it.
+		// The original code tried to send JSON. I'll keep it consistent.
+		utils.FailWithMsg(c, "Failed to send file to client: "+err.Error())
 		return
 	}
 }
