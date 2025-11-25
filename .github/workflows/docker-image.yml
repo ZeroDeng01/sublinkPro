@@ -75,6 +75,12 @@ jobs:
           name: frontend-dist
           path: static/
 
+      - name: Write version to VERSION file
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "$TAG_NAME" > VERSION
+          echo "Written version $TAG_NAME to VERSION file"
+
       - name: Build Go binaries
         run: |
           mkdir -p build
