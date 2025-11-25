@@ -775,6 +775,17 @@ const handleRunSpeedTest = async () => {
     ElMessage.error("启动测速任务失败");
   }
 };
+
+// Cron表达式选项
+const cronOptions = [
+  { label: "每小时 (0 * * * *)", value: "0 * * * *" },
+  { label: "每2小时 (0 */2 * * *)", value: "0 */2 * * *" },
+  { label: "每6小时 (0 */6 * * *)", value: "0 */6 * * *" },
+  { label: "每12小时 (0 */12 * * *)", value: "0 */12 * * *" },
+  { label: "每天0点 (0 0 * * *)", value: "0 0 * * *" },
+  { label: "每天3点 (0 3 * * *)", value: "0 3 * * *" },
+  { label: "每周一 (0 0 * * 1)", value: "0 0 * * 1" },
+];
 </script>
 
 <template>
@@ -1171,11 +1182,21 @@ const handleRunSpeedTest = async () => {
           />
         </el-form-item>
         <el-form-item label="Cron表达式" required>
-          <el-input
+          <el-select
             v-model="subSchedulerForm.cron_expr"
-            placeholder="请输入5字段Cron表达式，例如: 0 */6 * * *"
-            clearable
-          />
+            filterable
+            allow-create
+            default-first-option
+            placeholder="请选择或输入5字段Cron表达式"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in cronOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
 
           <!-- Cron表达式格式说明 -->
           <div style="margin-top: 5px; font-size: 12px; color: #909399">
@@ -1292,10 +1313,21 @@ const handleRunSpeedTest = async () => {
           />
         </el-form-item>
         <el-form-item label="Cron表达式" required>
-          <el-input
+          <el-select
             v-model="speedTestForm.cron"
-            placeholder="例如: 0 */1 * * *"
-          />
+            filterable
+            allow-create
+            default-first-option
+            placeholder="请选择或输入Cron表达式"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in cronOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
           <div style="font-size: 12px; color: #909399">
             格式: 分 时 日 月 周 (例如: 0 */1 * * * 表示每小时执行一次)
           </div>
