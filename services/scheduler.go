@@ -57,7 +57,6 @@ func (sm *SchedulerManager) LoadFromDatabase() error {
 		log.Printf("从数据库加载定时任务失败: %v", err)
 		return err
 	}
-
 	// 添加所有启用的任务
 	for _, scheduler := range schedulers {
 		err := sm.AddJob(scheduler.ID, scheduler.CronExpr, func(id int, url string, subName string) {
@@ -70,6 +69,23 @@ func (sm *SchedulerManager) LoadFromDatabase() error {
 			log.Printf("成功添加定时任务 - ID: %d, Name: %s, Cron: %s",
 				scheduler.ID, scheduler.Name, scheduler.CronExpr)
 		}
+	}
+
+	speedTestEnable, err := models.GetSetting("speed_test_enabled")
+	if err != nil {
+		log.Printf("从数据库加载测速定时任务失败: %v", err)
+		return err
+	}
+	if speedTestEnable == "true" {
+		speedTestCron, err := models.GetSetting("speed_test_cron")
+		if err != nil {
+			log.Printf("从数据库加载测速定时任务失败: %v", err)
+		}
+		err = sm.StartNodeSpeedTestTask(speedTestCron)
+		if err != nil {
+			log.Printf("创建测速定时任务失败: %v", err)
+		}
+
 	}
 
 	return nil
@@ -262,6 +278,7 @@ func (sm *SchedulerManager) StartNodeSpeedTestTask(cronExpr string) error {
 
 	// 存储任务映射
 	sm.jobs[speedTestTaskID] = entryID
+	log.Printf("成功添加节点测速任务 - speedTestTaskID: %d", speedTestTaskID)
 	log.Printf("成功添加节点测速任务 - Cron: %s", cleanCronExpr)
 	return nil
 }
