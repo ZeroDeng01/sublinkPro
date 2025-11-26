@@ -15,8 +15,8 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create directories
-RUN mkdir -p /app/db /app/logs /app/template /app/plugins && \
-    chmod 777 /app/db /app/logs /app/template /app/plugins
+RUN mkdir -p /app/db /app/logs /app/template && \
+    chmod 777 /app/db /app/logs /app/template
 
 # Copy static files (frontend)
 COPY static /app/static

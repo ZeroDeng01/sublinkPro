@@ -29,7 +29,6 @@
 - [x] 导入、定时更新订阅链接中的节点
 - [x] 支持AnyTLS、Socks5协议
 - [x] 订阅节点排序
-- [x] 支持插件扩展（实验性）
 - [x] 支持订阅的IP黑/白名单功能
 - [x] 支持节点测速功能
 - [x] 支持按照测速结果作为条件筛选返回的节点
@@ -52,7 +51,6 @@ docker run --name sublinke -p 8000:8000 \
 -v $PWD/db:/app/db \
 -v $PWD/template:/app/template \
 -v $PWD/logs:/app/logs \
--v $PWD/plugins:/app/plugins \
 -d zerodeng/sublink-pro 
 ```
 
@@ -65,78 +63,6 @@ wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/ins
 > 在 **Alpine Linux** 上运行一键安装脚本时，由于 Alpine 使用 `musl` 而非 `glibc`，插件模块无法正常工作。 
 > 推荐优先使用 **Docker 部署** 以获得最佳兼容性，或可选择 **Debian / Ubuntu** 等发行版。
 
-
-# 插件说明
-
-`sublinkPro` 提供了灵活的插件系统，允许开发者扩展系统功能而无需修改核心代码。
-
-## 插件开发指南
-
-### 基本步骤
-
-1. **创建插件文件**：参照 `plugins_examples/email_plugin.go` 编写自定义插件
-2. **编译插件**：使用 `plugins_examples/build_plugin.sh email_plugin.go` 编译成 `.so` 文件
-3. **部署插件**：将编译好的 `.so` 文件放入 `plugins` 目录
-
-### 插件接口实现
-
-所有插件必须实现 `plugins.Plugin` 接口，包含以下核心方法：
-
-```go
-// 必须实现的方法
-Name() string                           // 插件名称
-Version() string                        // 插件版本
-Description() string                    // 插件描述
-DefaultConfig() map[string]interface{}  // 默认配置
-SetConfig(map[string]interface{})       // 设置配置
-Init() error                            // 初始化
-Close() error                           // 关闭清理
-
-// 事件处理方法 (API 事件监听)
-OnAPIEvent(ctx *gin.Context, event plugins.EventType, path string, 
-           statusCode int, requestBody interface{}, 
-           responseBody interface{}) error
-
-// 声明插件关注的 API 路径和事件类型
-InterestedAPIs() []string
-InterestedEvents() []plugins.EventType
-```
-
-### 插件示例
-
-系统内置以下示例插件，供开发者参考学习(版本更新可能失效，建议自己编译)：
-
-| 插件名称 | 功能描述 | 源代码 | 编译版本 |
-|---------|--------|-------|---------|
-| **邮件通知插件** | 监控登录事件并发送邮件通知 | [email_plugin.go](https://github.com/ZeroDeng01/sublinkPro/blob/main/plugins_examples/email_plugin.go) | [下载 .so 文件](https://raw.githubusercontent.com/ZeroDeng/sublinkPro/main/plugins_examples/email_plugin.so) |
-
-### 插件配置与管理
-
-可通过 Web 界面管理插件：
-- 启用/禁用插件
-- 配置插件参数
-- 查看插件状态
-
-## 开发自定义插件
-
-自定义插件开发流程：
-
-1. 创建插件 Go 文件，实现 `plugins.Plugin` 接口
-2. 导出 `GetPlugin()` 函数，返回插件实例
-3. 定义插件关心的 API 路径和事件类型
-4. 实现事件处理逻辑
-5. 使用构建脚本编译插件
-
-```bash
-# 编译插件
-wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/main/plugins_examples/build_plugin.sh
-chmod +x build_plugin.sh
-./build_plugin.sh your_plugin.go
-# 将生成的 .so 文件复制到插件目录
-cp your_plugin.so ../plugins/
-```
-
-更多高级功能和详细 API 文档，请参阅代码示例。
 
 
 # 项目预览

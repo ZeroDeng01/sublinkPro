@@ -32,7 +32,7 @@ RUN apt-get update && \
     ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     echo "Asia/Shanghai" > /etc/timezone && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
-RUN mkdir -p /app/db /app/logs /app/template /app/plugins && chmod 777 /app/db /app/logs /app/template /app/plugins
+RUN mkdir -p /app/db /app/logs /app/template && chmod 777 /app/db /app/logs /app/template
 
 COPY --from=backend-builder /app/sublinkPro /app/sublinkPro
 COPY --from=backend-builder /app/static /app/static

@@ -12,8 +12,6 @@ import (
 	"sublink/middlewares"
 	"sublink/models"
 
-	"github.com/eun1e/sublinkE-plugins"
-
 	"sublink/routers"
 	"sublink/services"
 	"sublink/settings"
@@ -94,8 +92,6 @@ func main() {
 	}
 	// 初始化数据库
 	models.InitSqlite()
-	// 初始化插件存储适配器
-	initPluginStorage()
 	// 获取命令行参数
 	args := os.Args
 	// 如果长度小于2则没有接收到任何参数
@@ -136,13 +132,6 @@ func Run(port int) {
 	// 初始化模板
 	Templateinit()
 
-	// 初始化插件系统
-	pluginManager := plugins.GetManager()
-	err := pluginManager.LoadPlugins()
-	if err != nil {
-		log.Printf("加载插件失败: %v", err)
-	}
-
 	// 启动 AccessKey 清理定时任务
 	models.StartAccessKeyCleanupScheduler()
 
@@ -150,13 +139,12 @@ func Run(port int) {
 	scheduler := services.GetSchedulerManager()
 	scheduler.Start()
 	// 从数据库加载定时任务
-	err = scheduler.LoadFromDatabase()
+	err := scheduler.LoadFromDatabase()
 	if err != nil {
 		log.Printf("加载定时任务失败: %v", err)
 	}
 	// 安装中间件
-	r.Use(middlewares.AuthToken)          // jwt验证token
-	r.Use(middlewares.PluginMiddleware()) // 插件中间件
+	r.Use(middlewares.AuthToken) // jwt验证token
 	// 设置静态资源路径
 	// 生产环境才启用内嵌静态文件服务
 	if StaticFiles != nil {
@@ -186,7 +174,6 @@ func Run(port int) {
 	routers.Templates(r)
 	routers.Version(r, version)
 	routers.SubScheduler(r)
-	routers.Plugins(r)
 	routers.Backup(r)
 	// 启动服务
 	r.Run(fmt.Sprintf("0.0.0.0:%d", port))

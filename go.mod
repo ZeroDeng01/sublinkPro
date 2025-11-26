@@ -3,7 +3,6 @@ module sublink
 go 1.24.3
 
 require (
-	github.com/eun1e/sublinkE-plugins v1.0.2
 	github.com/gin-gonic/gin v1.10.1
 	github.com/glebarez/sqlite v1.11.0
 	github.com/golang-jwt/jwt/v4 v4.5.2
