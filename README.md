@@ -14,7 +14,9 @@
 
 # 项目简介
 
-`sublinkPro` 是基于优秀的开源项目  [sublinkX](https://github.com/gooaclok819/sublinkX) /[sublinkE](https://github.com/eun1e/sublinkE)  进行二次开发，仅在原项目基础上做了部分定制优化。建议用户优先参考和使用原项目，感谢原作者的付出与贡献。
+`sublinkPro` 是基于优秀的开源项目  [sublinkX](https://github.com/gooaclok819/sublinkX) /[sublinkE](https://github.com/eun1e/sublinkE)  进行二次开发，在原项目基础上做了部分定制优化。建议用户优先参考和使用原项目，感谢原作者的付出与贡献。
+
+**⚠️本项目和原项目数据库不兼容，请不要混用。**
 
 - 前端基于 [vue3-element-admin](https://github.com/youlaitech/vue3-element-admin)；
 - 后端采用 Go + Gin + Gorm；
