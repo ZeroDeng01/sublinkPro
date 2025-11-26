@@ -160,8 +160,15 @@ func GetV2ray(c *gin.Context) {
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	//TODO:执行脚本 function main(node,clientType) 返回值为baselist
-
+	// 执行脚本
+	for _, script := range sub.ScriptsWithSort {
+		res, err := utils.RunScript(script.Content, baselist, "v2ray")
+		if err != nil {
+			log.Printf("Script execution failed: %v", err)
+			continue
+		}
+		baselist = res
+	}
 	c.Writer.WriteString(utils.Base64Encode(baselist))
 }
 func GetClash(c *gin.Context) {
@@ -234,7 +241,15 @@ func GetClash(c *gin.Context) {
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	//TODO:执行脚本 function main(node,clientType) 返回值为DecodeClash
+	// 执行脚本
+	for _, script := range sub.ScriptsWithSort {
+		res, err := utils.RunScript(script.Content, string(DecodeClash), "clash")
+		if err != nil {
+			log.Printf("Script execution failed: %v", err)
+			continue
+		}
+		DecodeClash = []byte(res)
+	}
 	c.Writer.WriteString(string(DecodeClash))
 }
 func GetSurge(c *gin.Context) {
@@ -304,6 +319,14 @@ func GetSurge(c *gin.Context) {
 	}
 	// 否则就插入头部更新信息
 	interval := fmt.Sprintf("#!MANAGED-CONFIG %s interval=86400 strict=false", host+url)
-	//TODO:执行脚本 function main(node,clientType) 返回值为DecodeClash
+	// 执行脚本
+	for _, script := range sub.ScriptsWithSort {
+		res, err := utils.RunScript(script.Content, DecodeClash, "surge")
+		if err != nil {
+			log.Printf("Script execution failed: %v", err)
+			continue
+		}
+		DecodeClash = res
+	}
 	c.Writer.WriteString(string(interval + "\n" + DecodeClash))
 }

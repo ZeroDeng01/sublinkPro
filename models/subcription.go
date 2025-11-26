@@ -320,6 +320,19 @@ func (sub *Subcription) GetSub() error {
 		sub.Nodes = filteredNodes
 	}
 
+	// 获取脚本信息及其排序
+	var scriptsWithSort []ScriptWithSort
+	err = DB.Table("scripts").
+		Select("scripts.*, subcription_scripts.sort").
+		Joins("LEFT JOIN subcription_scripts ON subcription_scripts.script_id = scripts.id").
+		Where("subcription_scripts.subcription_id = ?", sub.ID).
+		Order("subcription_scripts.sort ASC").
+		Scan(&scriptsWithSort).Error
+	if err != nil {
+		return err
+	}
+	sub.ScriptsWithSort = scriptsWithSort
+
 	return nil
 }
 
