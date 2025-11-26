@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+
 	"github.com/dop251/goja"
 )
 
@@ -25,9 +26,9 @@ func RunScript(scriptContent string, input string, clientType string) (string, e
 	}
 
 	// Get the main function
-	mainFn, ok := goja.AssertFunction(vm.Get("main"))
+	mainFn, ok := goja.AssertFunction(vm.Get("subMod"))
 	if !ok {
-		return "", fmt.Errorf("main function not found in script")
+		return "", fmt.Errorf("subMod function not found in script")
 	}
 
 	// Call the main function

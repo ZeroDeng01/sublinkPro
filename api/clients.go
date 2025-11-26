@@ -131,6 +131,7 @@ func GetV2ray(c *gin.Context) {
 		return
 	}
 	baselist := ""
+	//TODO：执行函数function filterNode(nodes,nodeType)返回Nodes 进行节点过滤
 	for _, v := range sub.Nodes {
 		switch {
 		// 如果包含多条节点
@@ -187,6 +188,7 @@ func GetClash(c *gin.Context) {
 		return
 	}
 	var urls []node.Urls
+	//TODO：执行函数function filterNode(nodes,nodeType)返回Nodes 进行节点过滤
 	for _, v := range sub.Nodes {
 		switch {
 		// 如果包含多条节点
@@ -268,6 +270,7 @@ func GetSurge(c *gin.Context) {
 		return
 	}
 	urls := []string{}
+	//TODO：执行函数function filterNode(nodes,nodeType)返回Nodes 进行节点过滤
 	for _, v := range sub.Nodes {
 		switch {
 		// 如果包含多条节点
