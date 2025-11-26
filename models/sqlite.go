@@ -148,7 +148,7 @@ func InitSqlite() {
 	}
 
 	// 分别迁移表，对于已经正确迁移的 SubcriptionNode 表跳过
-	err = db.AutoMigrate(&User{}, &Subcription{}, &Node{}, &SubLogs{}, &AccessKey{}, &SubScheduler{}, &SystemSetting{})
+	err = db.AutoMigrate(&User{}, &Subcription{}, &Node{}, &SubLogs{}, &AccessKey{}, &SubScheduler{}, &SystemSetting{}, &Script{})
 	if err != nil {
 		log.Println("数据表迁移失败:", err)
 	}

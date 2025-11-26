@@ -53,6 +53,8 @@
     "lodash-es": "^4.17.21",
     "markdown-it": "^14.1.0",
     "md5": "^2.3.0",
+    "monaco-editor": "^0.55.1",
+    "monaco-editor-vue3": "^1.0.4",
     "net": "^1.0.2",
     "nprogress": "^0.2.0",
     "path-browserify": "^1.0.1",

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from "vue";
 import { getTemp, AddTemp, UpdateTemp, DelTemp } from "@/api/subcription/temp";
+import MonacoEditor from "@/components/MonacoEditor/index.vue";
+import { ElMessage, ElMessageBox } from "element-plus";
+
 interface Temp {
   file: string;
   text: string;
@@ -141,11 +144,10 @@ const currentTableData = computed(() => {
 <template>
   <div>
     <el-dialog v-model="dialogVisible" :title="TempTitle" width="80%">
-      <el-input
+      <MonacoEditor
         v-model="TempText"
-        placeholder="模版内容"
-        :rows="10"
-        type="textarea"
+        language="yaml"
+        height="400px"
         style="margin-bottom: 10px"
       />
       <el-input v-model="Tempname" placeholder="模版文件名" />
@@ -163,7 +165,7 @@ const currentTableData = computed(() => {
       <el-table
         ref="table"
         :data="currentTableData"
-        style="width: 100%"
+        :style="{ width: '100%' }"
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" fixed prop="ID" label="id" />

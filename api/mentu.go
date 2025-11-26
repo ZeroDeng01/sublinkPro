@@ -134,6 +134,32 @@ func GetMenus(c *gin.Context) {
 				},
 			},
 		},
+		{
+			Path:      "/plugin",
+			Component: "Layout",
+			Redirect:  "/plugin/script",
+			Name:      "Plugin",
+			Meta: Meta{
+				Title:  "plugin",
+				Icon:   "system",
+				Hidden: false,
+				Roles:  []string{"ADMIN"},
+			},
+			Children: []Child{
+				{
+					Path:      "script",
+					Component: "script/index",
+					Name:      "Script",
+					Meta: Meta{
+						Title:     "scriptManagement",
+						Icon:      "system",
+						Hidden:    false,
+						Roles:     []string{"ADMIN"},
+						KeepAlive: true,
+					},
+				},
+			},
+		},
 	}
 	utils.OkDetailed(c, "获取成功", menus)
 }

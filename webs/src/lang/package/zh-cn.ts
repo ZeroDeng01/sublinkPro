@@ -11,7 +11,7 @@ export default {
     templatelist: "模板列表",
     apikey: "API密钥管理",
     plugin: "插件管理",
-    PluginList: "插件列表",
+    scriptManagement: "脚本列表",
   },
   // 登录页面国际化
   login: {
