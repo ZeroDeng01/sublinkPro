@@ -9,6 +9,7 @@ import {
   UpdateSub,
   SortSub,
 } from "@/api/subcription/subs";
+import { getScriptList } from "@/api/script";
 import { getTemp } from "@/api/subcription/temp";
 import { getNodes } from "@/api/subcription/node";
 import QrcodeVue from "qrcode.vue";
@@ -21,6 +22,7 @@ interface Sub {
   Config: Config;
   Nodes: Node[];
   Groups: GroupWithSort[]; // 修改为带Sort的分组列表
+  Scripts: ScriptWithSort[]; // 关联的脚本列表
   SubLogs: SubLogs[];
   IPWhitelist: string;
   IPBlacklist: string;
@@ -28,6 +30,12 @@ interface Sub {
 }
 interface GroupWithSort {
   Name: string;
+  Sort: number;
+}
+interface ScriptWithSort {
+  id: number;
+  name: string;
+  version: string;
   Sort: number;
 }
 interface Node {
@@ -79,6 +87,8 @@ const selectedGroup = ref<string>("all"); // 当前选中的分组
 const nodeSearchQuery = ref(""); // 节点搜索关键词
 const selectionMode = ref<string>("nodes"); // 选择模式: 'nodes' 或 'groups'
 const selectedGroups = ref<string[]>([]); // 选中的分组列表
+const scriptList = ref<any[]>([]); // 脚本列表
+const selectedScripts = ref<number[]>([]); // 选中的脚本ID列表
 async function getsubs() {
   const { data } = await getSubs();
   tableData.value = data;
@@ -89,9 +99,14 @@ async function gettemps() {
   templist.value = data;
   //console.log(templist.value);
 }
+async function getscripts() {
+  const { data } = await getScriptList();
+  scriptList.value = data;
+}
 onMounted(() => {
   getsubs();
   gettemps();
+  getscripts();
 });
 onMounted(async () => {
   const { data } = await getNodes();
@@ -113,6 +128,7 @@ const addSubs = async () => {
     IPWhitelist: IPWhitelist.value,
     IPBlacklist: IPBlacklist.value,
     SpeedLimit: SpeedLimit.value,
+    scripts: selectedScripts.value.join(","),
   };
 
   if (selectionMode.value === "nodes") {
@@ -213,6 +229,7 @@ const handleAddSub = () => {
   dialogVisible.value = true;
   value1.value = [];
   selectedGroups.value = [];
+  selectedScripts.value = [];
   selectionMode.value = "nodes";
   IPWhitelist.value = "";
   IPBlacklist.value = "";
@@ -250,6 +267,10 @@ const handleEdit = (row: any) => {
       // 从GroupWithSort中提取分组名称
       selectedGroups.value = (tableData.value[i].Groups || []).map((g) =>
         typeof g === "string" ? g : g.Name
+      );
+      // 提取脚本ID
+      selectedScripts.value = (tableData.value[i].Scripts || []).map(
+        (s) => s.id
       );
       // 根据是否有节点和分组来设置选择模式
       if (value1.value.length > 0 && selectedGroups.value.length > 0) {
@@ -919,6 +940,27 @@ const displayTableData = computed(() => {
             设置筛选节点的延迟阈值，0表示不限制。只有测速结果小于该值的节点会被返回。
           </div>
         </el-col>
+      </el-row>
+
+      <el-row>
+        <p style="margin-bottom: 10px; font-weight: 500">数据处理脚本</p>
+        <el-select
+          v-model="selectedScripts"
+          multiple
+          placeholder="请选择数据处理脚本"
+          style="width: 100%; margin-top: 5px"
+          clearable
+        >
+          <el-option
+            v-for="script in scriptList"
+            :key="script.id"
+            :label="`${script.name} (${script.version})`"
+            :value="script.id"
+          />
+        </el-select>
+        <div style="font-size: 12px; color: #999; margin-top: 5px">
+          数据库查询到节点数据后会运行本脚本。可以对节点进行过滤、排序、重命名等，多个脚本按照先后顺序执行。
+        </div>
       </el-row>
 
       <!--IP黑名单，一行一个，支撑CIDR-->

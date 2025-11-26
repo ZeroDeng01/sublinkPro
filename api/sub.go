@@ -39,7 +39,8 @@ func SubAdd(c *gin.Context) {
 	name := c.PostForm("name")
 	config := c.PostForm("config")
 	nodes := c.PostForm("nodes")
-	groups := c.PostForm("groups") // 新增：分组列表
+	groups := c.PostForm("groups")   // 新增：分组列表
+	scripts := c.PostForm("scripts") // 新增：脚本列表
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
 	speedLimitStr := c.PostForm("SpeedLimit")
@@ -115,6 +116,24 @@ func SubAdd(c *gin.Context) {
 		}
 	}
 
+	// 添加脚本关系
+	if scripts != "" {
+		scriptIDs := make([]int, 0)
+		for _, s := range strings.Split(scripts, ",") {
+			id, err := strconv.Atoi(s)
+			if err == nil {
+				scriptIDs = append(scriptIDs, id)
+			}
+		}
+		if len(scriptIDs) > 0 {
+			err = sub.AddScripts(scriptIDs)
+			if err != nil {
+				utils.FailWithMsg(c, err.Error())
+				return
+			}
+		}
+	}
+
 	utils.OkWithMsg(c, "添加成功")
 }
 
@@ -125,7 +144,8 @@ func SubUpdate(c *gin.Context) {
 	oldname := c.PostForm("oldname")
 	config := c.PostForm("config")
 	nodes := c.PostForm("nodes")
-	groups := c.PostForm("groups") // 新增：分组列表
+	groups := c.PostForm("groups")   // 新增：分组列表
+	scripts := c.PostForm("scripts") // 新增：脚本列表
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
 	speedLimitStr := c.PostForm("SpeedLimit")
@@ -203,6 +223,24 @@ func SubUpdate(c *gin.Context) {
 		err = sub.UpdateGroups(strings.Split(groups, ","))
 	} else {
 		err = sub.UpdateGroups([]string{})
+	}
+	if err != nil {
+		utils.FailWithMsg(c, err.Error())
+		return
+	}
+
+	// 更新脚本关系
+	if scripts != "" {
+		scriptIDs := make([]int, 0)
+		for _, s := range strings.Split(scripts, ",") {
+			id, err := strconv.Atoi(s)
+			if err == nil {
+				scriptIDs = append(scriptIDs, id)
+			}
+		}
+		err = sub.UpdateScripts(scriptIDs)
+	} else {
+		err = sub.UpdateScripts([]int{})
 	}
 	if err != nil {
 		utils.FailWithMsg(c, err.Error())

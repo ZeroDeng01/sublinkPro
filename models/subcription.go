@@ -9,26 +9,33 @@ import (
 )
 
 type Subcription struct {
-	ID             int
-	Name           string
-	Config         string    `gorm:"embedded"`
-	Nodes          []Node    `gorm:"-" json:"-"`
-	SubLogs        []SubLogs `gorm:"foreignKey:SubcriptionID;"` // 一对多关系 约束父表被删除子表记录跟着删除
-	CreateDate     string
-	NodesWithSort  []NodeWithSort  `gorm:"-" json:"Nodes"`
-	Groups         []string        `gorm:"-" json:"-"`      // 内部使用，不返回给前端
-	GroupsWithSort []GroupWithSort `gorm:"-" json:"Groups"` // 订阅关联的分组列表（带Sort）
-	IPWhitelist    string          `json:"IPWhitelist"`     //IP白名单
-	IPBlacklist    string          `json:"IPBlacklist"`     //IP黑名单
-	SpeedLimit     int             `json:"SpeedLimit"`      // 速度限制(ms)
-	CreatedAt      time.Time       `json:"CreatedAt"`
-	UpdatedAt      time.Time       `json:"UpdatedAt"`
-	DeletedAt      gorm.DeletedAt  `gorm:"index" json:"DeletedAt"`
+	ID              int
+	Name            string
+	Config          string    `gorm:"embedded"`
+	Nodes           []Node    `gorm:"-" json:"-"`
+	SubLogs         []SubLogs `gorm:"foreignKey:SubcriptionID;"` // 一对多关系 约束父表被删除子表记录跟着删除
+	CreateDate      string
+	NodesWithSort   []NodeWithSort   `gorm:"-" json:"Nodes"`
+	Groups          []string         `gorm:"-" json:"-"`      // 内部使用，不返回给前端
+	GroupsWithSort  []GroupWithSort  `gorm:"-" json:"Groups"` // 订阅关联的分组列表（带Sort）
+	Scripts         []Script         `gorm:"-" json:"-"`      // 内部使用
+	ScriptsWithSort []ScriptWithSort `gorm:"-" json:"Scripts"`
+	IPWhitelist     string           `json:"IPWhitelist"` //IP白名单
+	IPBlacklist     string           `json:"IPBlacklist"` //IP黑名单
+	SpeedLimit      int              `json:"SpeedLimit"`  // 速度限制(ms)
+	CreatedAt       time.Time        `json:"CreatedAt"`
+	UpdatedAt       time.Time        `json:"UpdatedAt"`
+	DeletedAt       gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
 }
 
 type GroupWithSort struct {
 	Name string `json:"Name"`
 	Sort int    `json:"Sort"`
+}
+
+type ScriptWithSort struct {
+	Script
+	Sort int `json:"Sort"`
 }
 
 type SubcriptionNode struct {
@@ -42,6 +49,13 @@ type SubcriptionGroup struct {
 	SubcriptionID int    `gorm:"primaryKey"`
 	GroupName     string `gorm:"primaryKey"`
 	Sort          int    `gorm:"default:0"`
+}
+
+// SubcriptionScript 订阅与脚本关联表
+type SubcriptionScript struct {
+	SubcriptionID int `gorm:"primaryKey"`
+	ScriptID      int `gorm:"primaryKey"`
+	Sort          int `gorm:"default:0"`
 }
 
 type NodeWithSort struct {
@@ -82,6 +96,21 @@ func (sub *Subcription) AddGroups(groups []string) error {
 			Sort:          i,
 		}
 		if err := DB.Create(&subGroup).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// AddScripts 添加脚本关联
+func (sub *Subcription) AddScripts(scriptIDs []int) error {
+	for i, scriptID := range scriptIDs {
+		subScript := SubcriptionScript{
+			SubcriptionID: sub.ID,
+			ScriptID:      scriptID,
+			Sort:          i,
+		}
+		if err := DB.Create(&subScript).Error; err != nil {
 			return err
 		}
 	}
@@ -139,6 +168,26 @@ func (sub *Subcription) UpdateGroups(groups []string) error {
 			Sort:          i,
 		}
 		if err := DB.Create(&subGroup).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// UpdateScripts 更新脚本关联
+func (sub *Subcription) UpdateScripts(scriptIDs []int) error {
+	// 先删除旧的关联
+	if err := DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionScript{}).Error; err != nil {
+		return err
+	}
+	// 再添加新的关联
+	for i, scriptID := range scriptIDs {
+		subScript := SubcriptionScript{
+			SubcriptionID: sub.ID,
+			ScriptID:      scriptID,
+			Sort:          i,
+		}
+		if err := DB.Create(&subScript).Error; err != nil {
 			return err
 		}
 	}
@@ -314,6 +363,19 @@ func (sub *Subcription) List() ([]Subcription, error) {
 			})
 		}
 
+		// 查询订阅关联的脚本（带Sort字段）
+		var scriptsWithSort []ScriptWithSort
+		err = DB.Table("scripts").
+			Select("scripts.*, subcription_scripts.sort").
+			Joins("LEFT JOIN subcription_scripts ON subcription_scripts.script_id = scripts.id").
+			Where("subcription_scripts.subcription_id = ?", subs[i].ID).
+			Order("subcription_scripts.sort ASC").
+			Scan(&scriptsWithSort).Error
+		if err != nil {
+			return nil, err
+		}
+		subs[i].ScriptsWithSort = scriptsWithSort
+
 		// 查询日志
 		err = DB.Model(&subs[i]).Association("SubLogs").Find(&subs[i].SubLogs)
 		if err != nil {
@@ -336,6 +398,10 @@ func (sub *Subcription) Del() error {
 	}
 	// 删除关联的分组关系
 	if err := DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionGroup{}).Error; err != nil {
+		return err
+	}
+	// 删除关联的脚本关系
+	if err := DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionScript{}).Error; err != nil {
 		return err
 	}
 	// 硬删除订阅本身（Unscoped 绕过软删除）
