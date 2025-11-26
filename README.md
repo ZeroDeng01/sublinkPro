@@ -73,3 +73,53 @@ wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/ins
 ![预览4](webs/src/assets/4.png)
 ![预览5](webs/src/assets/5.png)
 ![预览6](webs/src/assets/6.png)
+
+# 脚本功能说明
+
+SublinkPro 支持使用 JavaScript 脚本对订阅内容进行自定义处理。脚本可以包含以下两个主要函数：
+
+## 1. 节点过滤 (filterNode)
+
+`filterNode` 函数在生成订阅内容之前执行，用于对节点列表进行过滤或修改。
+
+**函数签名:**
+```javascript
+function filterNode(nodes, clientType) {
+    // nodes: 节点对象数组
+    // clientType: 客户端类型 (v2ray, clash, surge)
+    // 返回值: 修改后的节点对象数组
+    return nodes;
+}
+```
+
+**示例:**
+```javascript
+function filterNode(nodes, clientType) {
+    // 过滤掉名称包含 "测试" 的节点
+    var newNodes = [];
+    for (var i = 0; i < nodes.length; i++) {
+        if (nodes[i].Name.indexOf("测试") === -1) {
+            newNodes.push(nodes[i]);
+        }
+    }
+    return newNodes;
+}
+```
+
+## 2. 内容后处理 (subMod)
+
+`subMod` 函数在生成最终订阅内容之后执行，用于对最终的文本内容进行修改。
+
+**函数签名:**
+```javascript
+function subMod( input, clientType) {
+    // input: 原始输入内容
+    // clientType: 客户端类型
+    // 返回值: 修改后的内容字符串
+    return input; // 注意：此处示例仅为示意，实际应返回处理后的字符串
+}
+```
+
+**注意:**
+- 脚本中可以使用 `console.log()` 输出日志到后台。
+- 多个脚本会按照排序顺序依次执行。

@@ -131,7 +131,23 @@ func GetV2ray(c *gin.Context) {
 		return
 	}
 	baselist := ""
-	//TODO：执行函数function filterNode(nodes,nodeType)返回Nodes 进行节点过滤
+	// 执行节点过滤脚本
+	nodesJSON, _ := json.Marshal(sub.Nodes)
+	for _, script := range sub.ScriptsWithSort {
+		resJSON, err := utils.RunNodeFilterScript(script.Content, nodesJSON, "v2ray")
+		if err != nil {
+			log.Printf("Node filter script execution failed: %v", err)
+			continue
+		}
+		var newNodes []models.Node
+		if err := json.Unmarshal(resJSON, &newNodes); err != nil {
+			log.Printf("Failed to unmarshal filtered nodes: %v", err)
+			continue
+		}
+		sub.Nodes = newNodes
+		nodesJSON = resJSON
+	}
+
 	for _, v := range sub.Nodes {
 		switch {
 		// 如果包含多条节点
@@ -188,7 +204,22 @@ func GetClash(c *gin.Context) {
 		return
 	}
 	var urls []node.Urls
-	//TODO：执行函数function filterNode(nodes,nodeType)返回Nodes 进行节点过滤
+	// 执行节点过滤脚本
+	nodesJSON, _ := json.Marshal(sub.Nodes)
+	for _, script := range sub.ScriptsWithSort {
+		resJSON, err := utils.RunNodeFilterScript(script.Content, nodesJSON, "clash")
+		if err != nil {
+			log.Printf("Node filter script execution failed: %v", err)
+			continue
+		}
+		var newNodes []models.Node
+		if err := json.Unmarshal(resJSON, &newNodes); err != nil {
+			log.Printf("Failed to unmarshal filtered nodes: %v", err)
+			continue
+		}
+		sub.Nodes = newNodes
+		nodesJSON = resJSON
+	}
 	for _, v := range sub.Nodes {
 		switch {
 		// 如果包含多条节点
@@ -270,7 +301,23 @@ func GetSurge(c *gin.Context) {
 		return
 	}
 	urls := []string{}
-	//TODO：执行函数function filterNode(nodes,nodeType)返回Nodes 进行节点过滤
+	// 执行节点过滤脚本
+	nodesJSON, _ := json.Marshal(sub.Nodes)
+	for _, script := range sub.ScriptsWithSort {
+		resJSON, err := utils.RunNodeFilterScript(script.Content, nodesJSON, "surge")
+		if err != nil {
+			log.Printf("Node filter script execution failed: %v", err)
+			continue
+		}
+		var newNodes []models.Node
+		if err := json.Unmarshal(resJSON, &newNodes); err != nil {
+			log.Printf("Failed to unmarshal filtered nodes: %v", err)
+			continue
+		}
+		sub.Nodes = newNodes
+		nodesJSON = resJSON
+	}
+
 	for _, v := range sub.Nodes {
 		switch {
 		// 如果包含多条节点
