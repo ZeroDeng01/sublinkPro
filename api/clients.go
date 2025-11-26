@@ -154,11 +154,14 @@ func GetV2ray(c *gin.Context) {
 			baselist += v.Link + "\n"
 		}
 	}
+
 	c.Set("subname", SunName)
 	filename := fmt.Sprintf("%s.txt", SunName)
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+	//TODO:执行脚本 function main(node,clientType) 返回值为baselist
+
 	c.Writer.WriteString(utils.Base64Encode(baselist))
 }
 func GetClash(c *gin.Context) {
@@ -231,6 +234,7 @@ func GetClash(c *gin.Context) {
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	//TODO:执行脚本 function main(node,clientType) 返回值为DecodeClash
 	c.Writer.WriteString(string(DecodeClash))
 }
 func GetSurge(c *gin.Context) {
@@ -300,5 +304,6 @@ func GetSurge(c *gin.Context) {
 	}
 	// 否则就插入头部更新信息
 	interval := fmt.Sprintf("#!MANAGED-CONFIG %s interval=86400 strict=false", host+url)
+	//TODO:执行脚本 function main(node,clientType) 返回值为DecodeClash
 	c.Writer.WriteString(string(interval + "\n" + DecodeClash))
 }

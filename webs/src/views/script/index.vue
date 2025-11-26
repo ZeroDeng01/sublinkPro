@@ -42,6 +42,25 @@ const dataForm = ref();
 const table = ref();
 const multipleSelection = ref<Script[]>([]);
 
+const searchQuery = reactive({
+  name: "",
+  version: "",
+});
+
+const formatDate = (dateStr: string | undefined) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+};
+
 // Pagination
 const currentPage = ref(1);
 const pageSize = ref(10);
@@ -160,9 +179,23 @@ const handleCurrentChange = (val: number) => {
 };
 
 const currentTableData = computed(() => {
+  let filteredList = list.value;
+
+  if (searchQuery.name) {
+    filteredList = filteredList.filter((item) =>
+      item.name.toLowerCase().includes(searchQuery.name.toLowerCase())
+    );
+  }
+
+  if (searchQuery.version) {
+    filteredList = filteredList.filter((item) =>
+      item.version.toLowerCase().includes(searchQuery.version.toLowerCase())
+    );
+  }
+
   const start = (currentPage.value - 1) * pageSize.value;
   const end = start + pageSize.value;
-  return list.value.slice(start, end);
+  return filteredList.slice(start, end);
 });
 
 onMounted(() => {
@@ -213,8 +246,23 @@ onMounted(() => {
     </el-dialog>
 
     <el-card>
-      <el-button type="primary" @click="handleCreate"> 添加脚本 </el-button>
-      <div style="margin-bottom: 10px"></div>
+      <div class="filter-container" style="margin-bottom: 20px">
+        <el-input
+          v-model="searchQuery.name"
+          placeholder="脚本名称"
+          style="width: 200px; margin-right: 10px"
+          class="filter-item"
+          clearable
+        />
+        <el-input
+          v-model="searchQuery.version"
+          placeholder="版本"
+          style="width: 200px; margin-right: 10px"
+          class="filter-item"
+          clearable
+        />
+        <el-button type="primary" @click="handleCreate"> 添加脚本 </el-button>
+      </div>
 
       <el-table
         ref="table"
@@ -236,12 +284,12 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="创建时间" align="center">
           <template #default="{ row }">
-            <span>{{ row.created_at }}</span>
+            <span>{{ formatDate(row.created_at) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="更新时间" align="center">
           <template #default="{ row }">
-            <span>{{ row.updated_at }}</span>
+            <span>{{ formatDate(row.updated_at) }}</span>
           </template>
         </el-table-column>
         <el-table-column
