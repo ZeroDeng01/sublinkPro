@@ -78,7 +78,21 @@ const resetTemp = () => {
     id: undefined,
     name: "",
     version: "0.0.0",
-    content: "",
+    content:
+      "//修改节点列表\n" +
+      "function filterNode(nodes, clientType) {\n" +
+      "    // nodes: 节点列表\n" +
+      "    // clientType: 客户端类型\n" +
+      "    // 返回值: 修改后节点列表\n" +
+      "    return nodes;\n" +
+      "}\n" +
+      "//修改订阅文件\n" +
+      "function subMod( input, clientType) {\n" +
+      "    // input: 原始输入内容,不同客户端订阅文件也不一样\n" +
+      "    // clientType: 客户端类型\n" +
+      "    // 返回值: 修改后的内容字符串\n" +
+      "    return input; // 注意：此处示例仅为示意，实际应返回处理后的字符串\n" +
+      "}",
   });
 };
 
