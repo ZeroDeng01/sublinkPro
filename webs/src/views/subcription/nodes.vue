@@ -909,9 +909,9 @@ const cronOptions = [
             <span v-else style="color: #c0c4cc; font-size: 12px">未分组</span>
           </template>
         </el-table-column>
-        <el-table-column prop="LinkName" label="节点名称" min-width="200">
+        <el-table-column prop="LinkName" label="节点名称" min-width="250">
           <template #default="scope">
-            <el-tag type="success" effect="plain">{{
+            <el-tag type="success" effect="plain" v-if="scope.row.LinkName">{{
               scope.row.LinkName
             }}</el-tag>
           </template>
@@ -932,21 +932,24 @@ const cronOptions = [
         </el-table-column>
         <el-table-column prop="LinkAddress" label="LinkAddress" min-width="250">
           <template #default="scope">
-            <el-tag type="success" effect="plain">{{
-              scope.row.LinkAddress
-            }}</el-tag>
+            <el-tag
+              type="success"
+              effect="plain"
+              v-if="scope.row.LinkAddress"
+              >{{ scope.row.LinkAddress }}</el-tag
+            >
           </template>
         </el-table-column>
         <el-table-column prop="LinkHost" label="LinkHost" min-width="150">
           <template #default="scope">
-            <el-tag type="success" effect="plain">{{
+            <el-tag type="success" effect="plain" v-if="scope.row.LinkHost">{{
               scope.row.LinkHost
             }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="LinkPort" label="LinkPort" min-width="150">
           <template #default="scope">
-            <el-tag type="success" effect="plain">{{
+            <el-tag type="success" effect="plain" v-if="scope.row.LinkPort">{{
               scope.row.LinkPort
             }}</el-tag>
           </template>
