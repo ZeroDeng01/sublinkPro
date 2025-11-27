@@ -7,6 +7,7 @@ import {
   deleteScript,
 } from "@/api/script";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { QuestionFilled } from "@element-plus/icons-vue";
 import MonacoEditor from "@/components/MonacoEditor/index.vue";
 
 interface Script {
@@ -272,11 +273,30 @@ onMounted(() => {
         <el-form-item label="版本" prop="version">
           <el-input v-model="temp.version" placeholder="默认 0.0.0" />
         </el-form-item>
-        <el-form-item label="脚本代码" prop="content">
+        <div style="margin-bottom: 10px; display: flex; align-items: center">
+          <span
+            style="
+              font-size: 14px;
+              color: #606266;
+              font-weight: 700;
+              margin-right: 10px;
+            "
+            >脚本代码</span
+          >
+          <a
+            href="https://github.com/ZeroDeng01/sublinkPro/blob/main/docs/script_support.md"
+            target="_blank"
+            style="color: #409eff"
+          >
+            <el-icon style="vertical-align: middle"><QuestionFilled /></el-icon>
+            使用说明
+          </a>
+        </div>
+        <el-form-item prop="content" label-width="0px">
           <MonacoEditor
             v-model="temp.content"
             language="javascript"
-            height="400px"
+            style="height: 400px; resize: vertical; overflow: hidden"
           />
         </el-form-item>
       </el-form>
