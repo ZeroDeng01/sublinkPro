@@ -10,6 +10,7 @@ import IconsResolver from "unplugin-icons/resolver";
 
 import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
 import mockDevServerPlugin from "vite-plugin-mock-dev-server";
+import monacoEditorPlugin from "vite-plugin-monaco-editor";
 
 import UnoCSS from "unocss/vite";
 import { resolve } from "path";
@@ -33,7 +34,7 @@ const isDevelopment = process.env.NODE_ENV
 export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
   const env = loadEnv(mode, process.cwd());
   return {
-    base: isDevelopment == 'development' ? "/":"/static/",
+    base: isDevelopment == 'development' ? "/" : "/static/",
     resolve: {
       alias: {
         "@": pathSrc,
@@ -75,6 +76,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       vueJsx(),
       // MOCK 服务
       env.VITE_MOCK_DEV_SERVER === "true" ? mockDevServerPlugin() : null,
+      (monacoEditorPlugin as any).default({}),
       UnoCSS({
         hmrTopLevelAwait: false,
       }),
