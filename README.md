@@ -123,6 +123,8 @@ function subMod( input, clientType) {
 }
 ```
 
+**脚本支持的函数请查看【[脚本文档](docs/script_support.md)】**
+
 **注意:**
 - 脚本中可以使用 `console.log()` 输出日志到后台。
 - 多个脚本会按照排序顺序依次执行。

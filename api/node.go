@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"log"
 	"net/url"
 	"strconv"
@@ -15,7 +16,7 @@ import (
 )
 
 func NodeUpdadte(c *gin.Context) {
-	var node models.Node
+	var Node models.Node
 	name := c.PostForm("name")
 	oldname := c.PostForm("oldname")
 	oldlink := c.PostForm("oldlink")
@@ -27,18 +28,117 @@ func NodeUpdadte(c *gin.Context) {
 		return
 	}
 	// 查找旧节点
-	node.Name = oldname
-	node.Link = oldlink
-	err := node.Find()
+	Node.Name = oldname
+	Node.Link = oldlink
+	err := Node.Find()
 	if err != nil {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	node.Name = name
-	node.Link = link
-	node.DialerProxyName = dialerProxyName
-	node.Group = group
-	err = node.Update()
+	Node.Name = name
+
+	//更新构造节点元数据
+	u, err := url.Parse(link)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	switch {
+	case u.Scheme == "ss":
+		ss, err := node.DecodeSSURL(link)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		Node.Name = ss.Name
+		Node.LinkName = ss.Name
+		Node.LinkAddress = ss.Server + ":" + strconv.Itoa(ss.Port)
+		Node.LinkHost = ss.Server
+		Node.LinkPort = strconv.Itoa(ss.Port)
+	case u.Scheme == "ssr":
+		ssr, err := node.DecodeSSRURL(link)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		Node.Name = ssr.Qurey.Remarks
+		Node.LinkName = ssr.Qurey.Remarks
+		Node.LinkAddress = ssr.Server + ":" + strconv.Itoa(ssr.Port)
+		Node.LinkHost = ssr.Server
+		Node.LinkPort = strconv.Itoa(ssr.Port)
+	case u.Scheme == "trojan":
+		trojan, err := node.DecodeTrojanURL(link)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		Node.Name = trojan.Name
+		Node.LinkName = trojan.Name
+		Node.LinkAddress = trojan.Hostname + ":" + strconv.Itoa(trojan.Port)
+		Node.LinkHost = trojan.Hostname
+		Node.LinkPort = strconv.Itoa(trojan.Port)
+	case u.Scheme == "vmess":
+		vmess, err := node.DecodeVMESSURL(link)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		Node.Name = vmess.Ps
+		Node.LinkName = vmess.Ps
+		prot := fmt.Sprintf("%v", vmess.Port)
+		Node.LinkAddress = vmess.Add + ":" + prot
+		Node.LinkHost = vmess.Host
+		Node.LinkPort = prot
+	case u.Scheme == "vless":
+		vless, err := node.DecodeVLESSURL(link)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		Node.Name = vless.Name
+		Node.LinkName = vless.Name
+		Node.LinkAddress = vless.Server + ":" + strconv.Itoa(vless.Port)
+		Node.LinkHost = vless.Server
+		Node.LinkPort = strconv.Itoa(vless.Port)
+	case u.Scheme == "hy" || u.Scheme == "hysteria":
+		hy, err := node.DecodeHYURL(link)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		Node.Name = hy.Name
+		Node.LinkName = hy.Name
+		Node.LinkAddress = hy.Host + ":" + strconv.Itoa(hy.Port)
+		Node.LinkHost = hy.Host
+		Node.LinkPort = strconv.Itoa(hy.Port)
+	case u.Scheme == "hy2" || u.Scheme == "hysteria2":
+		hy2, err := node.DecodeHY2URL(link)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		Node.Name = hy2.Name
+		Node.LinkName = hy2.Name
+		Node.LinkAddress = hy2.Host + ":" + strconv.Itoa(hy2.Port)
+		Node.LinkHost = hy2.Host
+		Node.LinkPort = strconv.Itoa(hy2.Port)
+	case u.Scheme == "tuic":
+		tuic, err := node.DecodeTuicURL(link)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		Node.Name = tuic.Name
+		Node.LinkName = tuic.Name
+		Node.LinkAddress = tuic.Host + ":" + strconv.Itoa(tuic.Port)
+		Node.LinkHost = tuic.Host
+		Node.LinkPort = strconv.Itoa(tuic.Port)
+	}
+
+	Node.Link = link
+	Node.DialerProxyName = dialerProxyName
+	Node.Group = group
+	err = Node.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")
 		return
@@ -87,6 +187,10 @@ func NodeAdd(c *gin.Context) {
 				return
 			}
 			Node.Name = ss.Name
+			Node.LinkName = ss.Name
+			Node.LinkAddress = ss.Server + ":" + strconv.Itoa(ss.Port)
+			Node.LinkHost = ss.Server
+			Node.LinkPort = strconv.Itoa(ss.Port)
 		case u.Scheme == "ssr":
 			ssr, err := node.DecodeSSRURL(link)
 			if err != nil {
@@ -94,6 +198,10 @@ func NodeAdd(c *gin.Context) {
 				return
 			}
 			Node.Name = ssr.Qurey.Remarks
+			Node.LinkName = ssr.Qurey.Remarks
+			Node.LinkAddress = ssr.Server + ":" + strconv.Itoa(ssr.Port)
+			Node.LinkHost = ssr.Server
+			Node.LinkPort = strconv.Itoa(ssr.Port)
 		case u.Scheme == "trojan":
 			trojan, err := node.DecodeTrojanURL(link)
 			if err != nil {
@@ -101,6 +209,10 @@ func NodeAdd(c *gin.Context) {
 				return
 			}
 			Node.Name = trojan.Name
+			Node.LinkName = trojan.Name
+			Node.LinkAddress = trojan.Hostname + ":" + strconv.Itoa(trojan.Port)
+			Node.LinkHost = trojan.Hostname
+			Node.LinkPort = strconv.Itoa(trojan.Port)
 		case u.Scheme == "vmess":
 			vmess, err := node.DecodeVMESSURL(link)
 			if err != nil {
@@ -108,6 +220,10 @@ func NodeAdd(c *gin.Context) {
 				return
 			}
 			Node.Name = vmess.Ps
+			Node.LinkName = vmess.Ps
+			Node.LinkAddress = vmess.Add + ":" + vmess.Port.(string)
+			Node.LinkHost = vmess.Host
+			Node.LinkPort = vmess.Port.(string)
 		case u.Scheme == "vless":
 			vless, err := node.DecodeVLESSURL(link)
 			if err != nil {
@@ -115,6 +231,10 @@ func NodeAdd(c *gin.Context) {
 				return
 			}
 			Node.Name = vless.Name
+			Node.LinkName = vless.Name
+			Node.LinkAddress = vless.Server + ":" + strconv.Itoa(vless.Port)
+			Node.LinkHost = vless.Server
+			Node.LinkPort = strconv.Itoa(vless.Port)
 		case u.Scheme == "hy" || u.Scheme == "hysteria":
 			hy, err := node.DecodeHYURL(link)
 			if err != nil {
@@ -122,6 +242,10 @@ func NodeAdd(c *gin.Context) {
 				return
 			}
 			Node.Name = hy.Name
+			Node.LinkName = hy.Name
+			Node.LinkAddress = hy.Host + ":" + strconv.Itoa(hy.Port)
+			Node.LinkHost = hy.Host
+			Node.LinkPort = strconv.Itoa(hy.Port)
 		case u.Scheme == "hy2" || u.Scheme == "hysteria2":
 			hy2, err := node.DecodeHY2URL(link)
 			if err != nil {
@@ -129,6 +253,10 @@ func NodeAdd(c *gin.Context) {
 				return
 			}
 			Node.Name = hy2.Name
+			Node.LinkName = hy2.Name
+			Node.LinkAddress = hy2.Host + ":" + strconv.Itoa(hy2.Port)
+			Node.LinkHost = hy2.Host
+			Node.LinkPort = strconv.Itoa(hy2.Port)
 		case u.Scheme == "tuic":
 			tuic, err := node.DecodeTuicURL(link)
 			if err != nil {
@@ -136,6 +264,21 @@ func NodeAdd(c *gin.Context) {
 				return
 			}
 			Node.Name = tuic.Name
+			Node.LinkName = tuic.Name
+			Node.LinkAddress = tuic.Host + ":" + strconv.Itoa(tuic.Port)
+			Node.LinkHost = tuic.Host
+			Node.LinkPort = strconv.Itoa(tuic.Port)
+		case u.Scheme == "socks5":
+			socks5, err := node.DecodeSocks5URL(link)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			Node.Name = socks5.Name
+			Node.LinkName = socks5.Name
+			Node.LinkAddress = socks5.Server + ":" + strconv.Itoa(socks5.Port)
+			Node.LinkHost = socks5.Server
+			Node.LinkPort = strconv.Itoa(socks5.Port)
 		}
 	}
 	Node.Link = link

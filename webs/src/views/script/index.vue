@@ -82,6 +82,40 @@ const resetTemp = () => {
       "//修改节点列表\n" +
       "function filterNode(nodes, clientType) {\n" +
       "    // nodes: 节点列表\n" +
+      "    // 数据结构如下\n" +
+      "    // [\n" +
+      "    //     {\n" +
+      '    //         "ID": 1,\n' +
+      '    //         "Link": "vmess://4564564646",\n' +
+      '    //         "Name": "xx订阅_US-CDN-SSL",\n' +
+      '    //         "LinkName": "US-CDN-SSL",\n' +
+      '    //         "LinkAddress": "xxxxxxxxx.net:443",\n' +
+      '    //         "LinkHost": "xxxxxxxxx.net",\n' +
+      '    //         "LinkPort": "443",\n' +
+      '    //         "DialerProxyName": "",\n' +
+      '    //         "CreateDate": "",\n' +
+      '    //         "Source": "manual",\n' +
+      '    //         "SourceID": 0,\n' +
+      '    //         "Group": "自用",\n' +
+      '    //         "Speed": 110,\n' +
+      '    //         "LastCheck": "2025-11-26 23:49:58"\n' +
+      "    //     }, {\n" +
+      '    //         "ID": 2,\n' +
+      '    //         "Link": "vmess://456456464611111",\n' +
+      '    //         "Name": "xx订阅_US-CDN-SSL1",\n' +
+      '    //         "LinkName": "US-CDN-SSL1",\n' +
+      '    //         "LinkAddress": "xxxxxxxxx1.net:443",\n' +
+      '    //         "LinkHost": "xxxxxxxxx1.net",\n' +
+      '    //         "LinkPort": "443",\n' +
+      '    //         "DialerProxyName": "",\n' +
+      '    //         "CreateDate": "",\n' +
+      '    //         "Source": "manual",\n' +
+      '    //         "SourceID": 0,\n' +
+      '    //         "Group": "自用",\n' +
+      '    //         "Speed": 100,\n' +
+      '    //         "LastCheck": "2025-11-26 23:49:58"\n' +
+      "    //     }\n" +
+      "    // ]\n" +
       "    // clientType: 客户端类型\n" +
       "    // 返回值: 修改后节点列表\n" +
       "    return nodes;\n" +

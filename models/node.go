@@ -5,9 +5,13 @@ import (
 )
 
 type Node struct {
-	ID              int `gorm:"primaryKey"`
-	Link            string
-	Name            string `gorm:"uniqueIndex:idx_name_id"`
+	ID              int    `gorm:"primaryKey"`
+	Link            string //出站代理原始连接
+	Name            string `gorm:"uniqueIndex:idx_name_id"` //系统内节点名称
+	LinkName        string //节点原始名称
+	LinkAddress     string //节点原始地址
+	LinkHost        string //节点原始Host
+	LinkPort        string //节点原始端口
 	DialerProxyName string
 	CreateDate      string
 	Source          string `gorm:"default:'manual'"`
@@ -24,7 +28,7 @@ func (node *Node) Add() error {
 
 // 更新节点
 func (node *Node) Update() error {
-	return DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group").Updates(node).Error
+	return DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort").Updates(node).Error
 }
 
 // UpdateSpeed 更新节点测速结果
@@ -61,7 +65,7 @@ func (node *Node) Del() error {
 func (node *Node) UpsertNode() error {
 	return DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "name"}},
-		DoUpdates: clause.AssignmentColumns([]string{"link", "create_date", "source", "group"}),
+		DoUpdates: clause.AssignmentColumns([]string{"link", "link_name", "link_address", "link_host", "link_port", "create_date", "source", "group"}),
 	}).Create(node).Error
 }
 

@@ -896,7 +896,7 @@ const cronOptions = [
         :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
       >
         <el-table-column type="selection" fixed width="55" />
-        <el-table-column prop="Name" label="备注" min-width="150">
+        <el-table-column prop="Name" label="备注" min-width="250">
           <template #default="scope">
             <el-tag type="success" effect="plain">{{ scope.row.Name }}</el-tag>
           </template>
@@ -909,17 +909,46 @@ const cronOptions = [
             <span v-else style="color: #c0c4cc; font-size: 12px">未分组</span>
           </template>
         </el-table-column>
+        <el-table-column prop="LinkName" label="节点名称" min-width="200">
+          <template #default="scope">
+            <el-tag type="success" effect="plain">{{
+              scope.row.LinkName
+            }}</el-tag>
+          </template>
+        </el-table-column>
+
         <el-table-column
           prop="Link"
           label="节点链接"
           sortable
-          min-width="250"
+          min-width="150"
           :show-overflow-tooltip="true"
         >
           <template #default="scope">
             <span style="font-size: 13px; color: #606266">{{
               scope.row.Link
             }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="LinkAddress" label="LinkAddress" min-width="250">
+          <template #default="scope">
+            <el-tag type="success" effect="plain">{{
+              scope.row.LinkAddress
+            }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="LinkHost" label="LinkHost" min-width="150">
+          <template #default="scope">
+            <el-tag type="success" effect="plain">{{
+              scope.row.LinkHost
+            }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="LinkPort" label="LinkPort" min-width="150">
+          <template #default="scope">
+            <el-tag type="success" effect="plain">{{
+              scope.row.LinkPort
+            }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column
