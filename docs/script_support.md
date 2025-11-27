@@ -79,6 +79,25 @@ function subMod(input, clientType) {
 }
 ```
 
+### 根据 LinkAddress 去重
+
+```javascript
+function filterNode(nodes, clientType) {
+    // 使用 Set 存储已存在的 LinkAddress
+    const seen = new Set();
+    
+    return nodes.filter(node => {
+        // 如果 LinkAddress 已经存在，则过滤掉
+        if (seen.has(node.LinkAddress)) {
+            return false;
+        }
+        // 否则添加到 Set 中并保留
+        seen.add(node.LinkAddress);
+        return true;
+    });
+}
+```
+
 ### 使用 Map 存储键值对
 
 ```javascript
