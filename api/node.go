@@ -133,6 +133,17 @@ func NodeUpdadte(c *gin.Context) {
 		Node.LinkAddress = tuic.Host + ":" + strconv.Itoa(tuic.Port)
 		Node.LinkHost = tuic.Host
 		Node.LinkPort = strconv.Itoa(tuic.Port)
+	case u.Scheme == "socks5":
+		socks5, err := node.DecodeSocks5URL(link)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		Node.Name = socks5.Name
+		Node.LinkName = socks5.Name
+		Node.LinkAddress = socks5.Server + ":" + strconv.Itoa(socks5.Port)
+		Node.LinkHost = socks5.Server
+		Node.LinkPort = strconv.Itoa(socks5.Port)
 	}
 
 	Node.Link = link
