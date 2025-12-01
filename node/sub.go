@@ -109,7 +109,6 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 			name := proxy.Name
 			encoded := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", method, password)))
 			link = fmt.Sprintf("ss://%s@%s:%d#%s", encoded, server, port, name)
-			successCount++
 		case "ssr":
 			// ssr://server:port:protocol:method:obfs:base64(password)/?remarks=base64(remarks)&obfsparam=base64(obfsparam)
 			server := proxy.Server
@@ -129,7 +128,6 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 			}
 			data := fmt.Sprintf("%s:%d:%s:%s:%s:%s/?%s", server, port, protocol, method, obfs, password, params)
 			link = fmt.Sprintf("ssr://%s", base64.StdEncoding.EncodeToString([]byte(data)))
-			successCount++
 
 		case "trojan":
 			// trojan://password@server:port?参数#name
@@ -205,7 +203,6 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 			} else {
 				link = fmt.Sprintf("trojan://%s@%s:%d#%s", password, server, port, name)
 			}
-			successCount++
 
 		case "vmess":
 			// vmess://base64(json)
@@ -241,7 +238,7 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 			}
 			jsonData, _ := json.Marshal(vmessObj)
 			link = fmt.Sprintf("vmess://%s", base64.StdEncoding.EncodeToString(jsonData))
-			successCount++
+
 		case "vless":
 			// vless://uuid@server:port?参数#name
 			uuid := proxy.Uuid
@@ -327,7 +324,7 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 			} else {
 				link = fmt.Sprintf("vless://%s@%s:%d#%s", uuid, server, port, name)
 			}
-			successCount++
+
 		case "hysteria":
 			// hysteria://server:port?protocol=udp&auth=auth&peer=peer&insecure=1&upmbps=up&downmbps=down&alpn=alpn#name
 			server := proxy.Server
@@ -354,7 +351,7 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 				query.Set("alpn", strings.Join(proxy.Alpn, ","))
 			}
 			link = fmt.Sprintf("hysteria://%s:%d?%s#%s", server, port, query.Encode(), name)
-			successCount++
+
 		case "hysteria2":
 			// hysteria2://auth@server:port?sni=sni&insecure=1&obfs=obfs&obfs-password=obfs-password#name
 			server := proxy.Server
@@ -378,7 +375,7 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 				query.Set("alpn", strings.Join(proxy.Alpn, ","))
 			}
 			link = fmt.Sprintf("hysteria2://%s@%s:%d?%s#%s", auth, server, port, query.Encode(), name)
-			successCount++
+
 		case "tuic":
 			// tuic://uuid:password@server:port?sni=sni&congestion_control=congestion_control&alpn=alpn#name
 			uuid := proxy.Uuid
@@ -403,7 +400,7 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 				query.Set("disable_sni", "1")
 			}
 			link = fmt.Sprintf("tuic://%s:%s@%s:%d?%s#%s", uuid, password, server, port, query.Encode(), name)
-			successCount++
+
 		case "anytls":
 			// anytls://password@server:port?sni=sni&insecure=1&fp=chrome#anytls_name
 
@@ -423,7 +420,7 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 			}
 
 			link = fmt.Sprintf("anytls://%s@%s:%d?%s#%s", password, server, port, query.Encode(), name)
-			successCount++
+
 		case "socks5":
 			// socks5://username:password@server:port#name
 			username := proxy.Username
@@ -436,7 +433,6 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 			} else {
 				link = fmt.Sprintf("socks5://%s:%d#%s", server, port, name)
 			}
-			successCount++
 
 		}
 		Node.Link = link
@@ -453,9 +449,12 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 		err = Node.UpsertNode()
 		if err != nil {
 			log.Printf("❌节点存储失败【%s】：%v", proxy.Name, err)
+		} else {
+			successCount++
+			log.Printf("✅节点存储成功【%s】：%v", proxy.Name)
 		}
-		log.Printf("✅节点存储成功【%s】：%v", proxy.Name)
 	}
+	log.Printf("✅订阅【%s】节点拉取完成，总节点【%d】个，成功存储【%d】个", subName, len(proxys), successCount)
 	// 重新查找订阅以获取最新信息
 	subS = models.SubScheduler{
 		Name: subName,
