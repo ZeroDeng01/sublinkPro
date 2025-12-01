@@ -91,7 +91,9 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 	if err != nil {
 		log.Printf("获取订阅连接 %s 的Group失败:  %v", subName, err)
 	}
+	log.Printf("📄订阅【%s】获取到订阅数量【%d】", subName, len(proxys))
 	for _, proxy := range proxys {
+		log.Printf("💾准备存储节点【%s】", proxy.Name)
 		var Node models.Node
 		var link string
 		//var systemNodeName = subName + "_" + strings.TrimSpace(proxy.Name) //系统节点名称
@@ -448,7 +450,11 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 		Node.Group = subS.Group
 		Node.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 		// 插入或更新节点，避免设置好的订阅节点丢失
-		_ = Node.UpsertNode()
+		err = Node.UpsertNode()
+		if err != nil {
+			log.Printf("❌节点存储失败【%s】：%v", proxy.Name, err)
+		}
+		log.Printf("✅节点存储成功【%s】：%v", proxy.Name)
 	}
 	// 重新查找订阅以获取最新信息
 	subS = models.SubScheduler{

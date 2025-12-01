@@ -6,8 +6,8 @@ import (
 
 type Node struct {
 	ID              int    `gorm:"primaryKey"`
-	Link            string //出站代理原始连接
-	Name            string `gorm:"uniqueIndex:idx_name_id"` //系统内节点名称
+	Link            string `gorm:"uniqueIndex:idx_link_id"` //出站代理原始连接
+	Name            string //系统内节点名称
 	LinkName        string //节点原始名称
 	LinkAddress     string //节点原始地址
 	LinkHost        string //节点原始Host
@@ -65,7 +65,7 @@ func (node *Node) Del() error {
 func (node *Node) UpsertNode() error {
 	return DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "link"}},
-		DoUpdates: clause.AssignmentColumns([]string{"name", "link_name", "link_address", "link_host", "link_port", "create_date", "source", "group"}),
+		DoUpdates: clause.AssignmentColumns([]string{"name", "link_name", "link_address", "link_host", "link_port", "create_date", "source", "source_id", "group"}),
 	}).Create(node).Error
 }
 
