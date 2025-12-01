@@ -68,6 +68,8 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.24.3'
+          cache: true
+          cache-dependency-path: go.sum
 
       - name: Download frontend artifacts
         uses: actions/download-artifact@v4
