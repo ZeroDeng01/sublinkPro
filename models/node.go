@@ -64,8 +64,8 @@ func (node *Node) Del() error {
 // UpsertNode 插入或更新节点
 func (node *Node) UpsertNode() error {
 	return DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "name"}},
-		DoUpdates: clause.AssignmentColumns([]string{"link", "link_name", "link_address", "link_host", "link_port", "create_date", "source", "group"}),
+		Columns:   []clause.Column{{Name: "link"}},
+		DoUpdates: clause.AssignmentColumns([]string{"name", "link_name", "link_address", "link_host", "link_port", "create_date", "source", "group"}),
 	}).Create(node).Error
 }
 
