@@ -94,7 +94,8 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 	for _, proxy := range proxys {
 		var Node models.Node
 		var link string
-		proxy.Name = subName + "_" + strings.TrimSpace(proxy.Name) // 某些机场的节点名称可能包含空格
+		//var systemNodeName = subName + "_" + strings.TrimSpace(proxy.Name) //系统节点名称
+		proxy.Name = strings.TrimSpace(proxy.Name) // 某些机场的节点名称可能包含空格
 		proxy.Server = utils.WrapIPv6Host(proxy.Server)
 		switch strings.ToLower(proxy.Type) {
 		case "ss":
@@ -442,7 +443,7 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 		Node.LinkAddress = proxy.Server + ":" + strconv.Itoa(proxy.Port)
 		Node.LinkHost = proxy.Server
 		Node.LinkPort = strconv.Itoa(proxy.Port)
-		Node.Source = "subscription"
+		Node.Source = subName
 		Node.SourceID = id
 		Node.Group = subS.Group
 		Node.CreateDate = time.Now().Format("2006-01-02 15:04:05")

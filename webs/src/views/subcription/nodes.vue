@@ -29,6 +29,7 @@ interface Node {
   Group: string;
   Speed: number;
   LastCheck: string;
+  Source: string;
 }
 const tableData = ref<Node[]>([]);
 const loading = ref(false);
@@ -173,6 +174,7 @@ const handleSelectionChange = (val: Node[]) => {
 
 // 搜索功能
 const searchQuery = ref("");
+const searchSourceQuery = ref("");
 const groupSearchQuery = ref("");
 const handleSearch = () => {
   // filteredTableData 是计算属性，会自动更新
@@ -180,6 +182,7 @@ const handleSearch = () => {
 
 const resetSearch = () => {
   searchQuery.value = "";
+  searchSourceQuery.value = "";
   groupSearchQuery.value = "";
 };
 
@@ -200,6 +203,19 @@ const filteredTableData = computed(() => {
       const groupQuery = groupSearchQuery.value.toLowerCase();
       result = result.filter((node) =>
         node.Group.toLowerCase().includes(groupQuery)
+      );
+    }
+  }
+
+  if (searchSourceQuery.value) {
+    if (searchSourceQuery.value === "手动添加") {
+      result = result.filter(
+        (node) => !node.Source || node.Source.trim() === "manual"
+      );
+    } else {
+      const sourceQuery = searchSourceQuery.value.toLowerCase();
+      result = result.filter((node) =>
+        node.Source.toLowerCase().includes(sourceQuery)
       );
     }
   }
@@ -867,6 +883,17 @@ const cronOptions = [
                 <el-icon><Search /></el-icon>
               </template>
             </el-input>
+            <el-input
+              v-model="searchSourceQuery"
+              placeholder="搜索来源"
+              style="width: 200px"
+              clearable
+              @input="handleSearch"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
             <el-button @click="resetSearch">重置</el-button>
           </div>
           <div class="button-group">
@@ -907,6 +934,22 @@ const cronOptions = [
               scope.row.Group
             }}</el-tag>
             <span v-else style="color: #c0c4cc; font-size: 12px">未分组</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="Source" label="来源" min-width="250">
+          <template #default="scope">
+            <el-tag
+              type="success"
+              effect="plain"
+              v-if="scope.row.Source === 'manual'"
+              >手动添加</el-tag
+            >
+            <el-tag
+              type="warning"
+              effect="plain"
+              v-if="scope.row.Source !== 'manual'"
+              >{{ scope.row.Source }}</el-tag
+            >
           </template>
         </el-table-column>
         <el-table-column prop="LinkName" label="节点名称" min-width="250">
