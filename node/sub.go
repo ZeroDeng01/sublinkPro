@@ -451,7 +451,7 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 			log.Printf("❌节点存储失败【%s】：%v", proxy.Name, err)
 		} else {
 			successCount++
-			log.Printf("✅节点存储成功【%s】：%v", proxy.Name)
+			log.Printf("✅节点存储成功【%s", proxy.Name)
 		}
 	}
 	log.Printf("✅订阅【%s】节点拉取完成，总节点【%d】个，成功存储【%d】个", subName, len(proxys), successCount)
