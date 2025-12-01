@@ -1,0 +1,60 @@
+name: Bug Report / Bug 报告
+description: Create a report to help us improve / 提交报告帮助我们改进
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+        感谢您抽出时间填写此 Bug 报告！
+  - type: input
+    id: version
+    attributes:
+      label: Version / 版本
+      description: What version of the software are you running? / 您运行的软件版本是多少？
+      placeholder: e.g. v1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method / 部署方式
+      description: How are you deploying the application? / 您是如何部署应用程序的？
+      options:
+        - Docker
+        - Linux
+        - Windows
+        - macOS
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description / Bug 描述
+      description: A clear and concise description of what the bug is. / 请清晰简洁地描述 Bug 是什么。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps / 复现步骤
+      description: |
+        Steps to reproduce the behavior / 复现步骤:
+        1. Go to '...' / 前往 '...'
+        2. Click on '...' / 点击 '...'
+        3. Scroll down to '...' / 滚动到 '...'
+        4. See error / 看到错误
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / 截图
+      description: If applicable, add screenshots to help explain your problem. / 如果适用，请添加截图以帮助说明您的问题。
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / 日志
+      description: Please copy and paste any relevant log output. / 请复制并粘贴任何相关的日志输出。
+      render: shell
