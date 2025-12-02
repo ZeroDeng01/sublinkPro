@@ -1075,7 +1075,7 @@ const currentSpeedTestUrlOptions = computed(() => {
             }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="DelayTime" label="延迟" width="100" sortable fixed="right">
+        <el-table-column prop="DelayTime" label="延迟" width="120" sortable fixed="right">
           <template #default="scope">
             <el-tag
               v-if="scope.row.DelayTime > 0"
@@ -1105,7 +1105,7 @@ const currentSpeedTestUrlOptions = computed(() => {
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="Speed" label="速度" width="100" sortable fixed="right">
+        <el-table-column prop="Speed" label="速度" width="120" sortable fixed="right">
           <template #default="scope">
             <el-tag
               v-if="scope.row.Speed > 0"
