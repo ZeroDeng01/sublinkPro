@@ -977,7 +977,7 @@ const currentSpeedTestUrlOptions = computed(() => {
             <el-tag type="success" effect="plain">{{ scope.row.Name }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="Group" label="分组" width="140">
+        <el-table-column prop="Group" label="分组" width="100">
           <template #default="scope">
             <el-tag v-if="scope.row.Group" type="warning" effect="plain">{{
               scope.row.Group
@@ -985,7 +985,7 @@ const currentSpeedTestUrlOptions = computed(() => {
             <span v-else style="color: #c0c4cc; font-size: 12px">未分组</span>
           </template>
         </el-table-column>
-        <el-table-column prop="Source" label="来源" min-width="250">
+        <el-table-column prop="Source" label="来源" min-width="150">
           <template #default="scope">
             <el-tag
               type="success"
@@ -1001,7 +1001,7 @@ const currentSpeedTestUrlOptions = computed(() => {
             >
           </template>
         </el-table-column>
-        <el-table-column prop="LinkName" label="节点名称" min-width="250">
+        <el-table-column prop="LinkName" label="节点名称" min-width="200">
           <template #default="scope">
             <el-tag type="success" effect="plain" v-if="scope.row.LinkName">{{
               scope.row.LinkName
@@ -1075,7 +1075,7 @@ const currentSpeedTestUrlOptions = computed(() => {
             }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="DelayTime" label="延迟" width="100" sortable>
+        <el-table-column prop="DelayTime" label="延迟" width="100" sortable fixed="right">
           <template #default="scope">
             <el-tag
               v-if="scope.row.DelayTime > 0"
@@ -1094,7 +1094,7 @@ const currentSpeedTestUrlOptions = computed(() => {
               v-else-if="scope.row.DelayTime === -1"
               type="danger"
               effect="plain"
-              >超时</el-tag
+              >未通过</el-tag
             >
             <span v-else style="color: #c0c4cc">-</span>
             <div
@@ -1105,7 +1105,7 @@ const currentSpeedTestUrlOptions = computed(() => {
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="Speed" label="速度" width="100" sortable>
+        <el-table-column prop="Speed" label="速度" width="100" sortable fixed="right">
           <template #default="scope">
             <el-tag
               v-if="scope.row.Speed > 0"
@@ -1166,7 +1166,7 @@ const currentSpeedTestUrlOptions = computed(() => {
         :current-page="currentPage"
         :page-size="pageSize"
         layout="total, sizes, prev, pager, next, jumper"
-        :page-sizes="[10, 20, 30, 40]"
+        :page-sizes="[10, 30, 50, 100]"
         :total="filteredTableData.length"
       />
     </el-card>
