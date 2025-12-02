@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"time"
 )
 
@@ -24,7 +25,7 @@ func RunAutoMigrate(migrationID string, dst ...interface{}) error {
 		// 已经执行过，跳过
 		return nil
 	}
-
+	log.Printf("执行数据库升级任务：%s", migrationID)
 	// 执行迁移
 	if err := DB.AutoMigrate(dst...); err != nil {
 		return err
@@ -52,6 +53,7 @@ func RunCustomMigration(migrationID string, action func() error) error {
 		// 已经执行过，跳过
 		return nil
 	}
+	log.Printf("执行数据库升级任务：%s", migrationID)
 
 	// 执行自定义迁移逻辑
 	if err := action(); err != nil {
