@@ -70,18 +70,60 @@ func InitSqlite() {
 		log.Printf("SubcriptionGroup 表迁移失败: %v", err)
 	}
 
+	// 0005_hash_passwords
+	if err := RunCustomMigration("0005_hash_passwords", func() error {
+		var users []User
+		if err := db.Find(&users).Error; err != nil {
+			return err
+		}
+		for _, user := range users {
+			hashedPassword, err := HashPassword(user.Password)
+			if err != nil {
+				log.Printf("Failed to hash password for user %s: %v", user.Username, err)
+				continue
+			}
+			user.Password = hashedPassword
+			if err := db.Save(&user).Error; err != nil {
+				log.Printf("Failed to save hashed password for user %s: %v", user.Username, err)
+			} else {
+				log.Printf("Upgraded password for user %s", user.Username)
+			}
+		}
+		return nil
+	}); err != nil {
+		log.Printf("执行迁移 0005_hash_passwords 失败: %v", err)
+	}
+
 	// 初始化用户数据
 	err = db.First(&User{}).Error
 	if err == gorm.ErrRecordNotFound {
+		adminPassword := "123456"
+		if envPass := os.Getenv("SUBLINK_ADMIN_PASSWORD"); envPass != "" {
+			adminPassword = envPass
+		}
 		admin := &User{
 			Username: "admin",
-			Password: "123456",
+			Password: adminPassword,
 			Role:     "admin",
 			Nickname: "管理员",
 		}
 		err = admin.Create()
 		if err != nil {
 			log.Println("初始化添加用户数据失败")
+		}
+	} else {
+		// Check if we need to update admin password from env
+		if envPass := os.Getenv("SUBLINK_ADMIN_PASSWORD"); envPass != "" {
+			var admin User
+			if err := db.Where("username = ?", "admin").First(&admin).Error; err == nil {
+				// Update admin password
+				updateUser := &User{Password: envPass}
+				if err := admin.Set(updateUser); err != nil {
+					log.Printf("Failed to update admin password from env: %v", err)
+				} else {
+					log.Println("Admin password updated from environment variable")
+				}
+			}
 		}
 	}
 	// 设置初始化标志为 true
