@@ -405,6 +405,13 @@ func GetSpeedTestConfig(c *gin.Context) {
 		timeoutStr = "5"
 	}
 	timeout, _ := strconv.Atoi(timeoutStr)
+	groupsStr, _ := models.GetSetting("speed_test_groups")
+	var groups []string
+	if groupsStr != "" {
+		groups = strings.Split(groupsStr, ",")
+	} else {
+		groups = []string{}
+	}
 
 	utils.OkDetailed(c, "获取成功", gin.H{
 		"cron":    cron,
@@ -412,6 +419,7 @@ func GetSpeedTestConfig(c *gin.Context) {
 		"mode":    mode,
 		"url":     url,
 		"timeout": timeout,
+		"groups":  groups,
 	})
 }
 
@@ -423,6 +431,7 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		Mode    string      `json:"mode"`
 		Url     string      `json:"url"`
 		Timeout interface{} `json:"timeout"`
+		Groups  []string    `json:"groups"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -453,6 +462,13 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 	err = models.SetSetting("speed_test_url", req.Url)
 	if err != nil {
 		utils.FailWithMsg(c, "保存URL配置失败")
+		return
+	}
+
+	groupsStr := strings.Join(req.Groups, ",")
+	err = models.SetSetting("speed_test_groups", groupsStr)
+	if err != nil {
+		utils.FailWithMsg(c, "保存分组配置失败")
 		return
 	}
 

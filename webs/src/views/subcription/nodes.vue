@@ -748,6 +748,7 @@ const speedTestForm = ref({
   mode: "tcp",
   url: "",
   timeout: 5,
+  groups: [] as string[],
 });
 
 const handleSpeedTestSettings = async () => {
@@ -1437,6 +1438,25 @@ const speedTestUrlOptions = [
         </el-form-item>
         <el-form-item label="超时时间(秒)">
           <el-input-number v-model="speedTestForm.timeout" :min="1" :max="60" />
+        </el-form-item>
+        <el-form-item label="测速分组">
+          <el-select
+            v-model="speedTestForm.groups"
+            multiple
+            filterable
+            placeholder="请选择测速分组(留空则测速所有节点)"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="group in groupOptions"
+              :key="group"
+              :label="group"
+              :value="group"
+            />
+          </el-select>
+          <div style="font-size: 12px; color: #909399">
+            选择要进行测速的节点分组，不选则默认对所有节点进行测速
+          </div>
         </el-form-item>
         <el-form-item label="Cron表达式" required>
           <el-select

@@ -52,6 +52,16 @@ func (node *Node) List() ([]Node, error) {
 	return nodes, nil
 }
 
+// ListByGroups 根据分组获取节点列表
+func (node *Node) ListByGroups(groups []string) ([]Node, error) {
+	var nodes []Node
+	err := DB.Where("`group` IN ?", groups).Find(&nodes).Error
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
 // 删除节点
 func (node *Node) Del() error {
 	// 先清除节点与订阅的关联关系（通过节点名称）

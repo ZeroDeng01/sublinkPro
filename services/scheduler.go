@@ -297,10 +297,23 @@ func (sm *SchedulerManager) StopNodeSpeedTestTask() {
 }
 
 // ExecuteNodeSpeedTestTask 执行节点测速任务
-// ExecuteNodeSpeedTestTask 执行节点测速任务
 func ExecuteNodeSpeedTestTask() {
 	log.Println("开始执行节点测速任务...")
-	nodes, err := new(models.Node).List()
+
+	// 获取测速分组配置
+	speedTestGroupsStr, _ := models.GetSetting("speed_test_groups")
+	var nodes []models.Node
+	var err error
+
+	if speedTestGroupsStr != "" {
+		groups := strings.Split(speedTestGroupsStr, ",")
+		nodes, err = new(models.Node).ListByGroups(groups)
+		log.Printf("根据分组测速: %v", groups)
+	} else {
+		nodes, err = new(models.Node).List()
+		log.Println("全量测速")
+	}
+
 	if err != nil {
 		log.Printf("获取节点列表失败: %v", err)
 		return
