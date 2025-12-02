@@ -31,32 +31,45 @@ func InitSqlite() {
 		return
 	}
 
-	tables := []interface{}{
-		&User{}, &Subcription{}, &Node{}, &SubLogs{}, &AccessKey{},
-		&SubScheduler{}, &SystemSetting{}, &Script{},
+	// 检查并删除 idx_name_id 索引
+	// 0000_drop_idx_name_id
+	if err := RunCustomMigration("0000_drop_idx_name_id", func() error {
+		if db.Migrator().HasIndex(&Node{}, "idx_name_id") {
+			if err := db.Migrator().DropIndex(&Node{}, "idx_name_id"); err != nil {
+				log.Printf("删除索引 idx_name_id 失败: %v", err)
+				return err
+			} else {
+				log.Println("成功删除索引 idx_name_id")
+			}
+		}
+		return nil
+	}); err != nil {
+		log.Printf("执行迁移 0000_drop_idx_name_id 失败: %v", err)
 	}
 
-	for _, table := range tables {
-		if err := db.AutoMigrate(table); err != nil {
-			log.Printf("数据表迁移失败: %T, %v", table, err)
-		}
+	// 0001_initial_tables
+	if err := RunAutoMigrate("0001_initial_tables", &User{}, &Subcription{}, &Node{}, &SubLogs{}, &AccessKey{}, &SubScheduler{}, &SystemSetting{}, &Script{}); err != nil {
+		log.Printf("基础数据表迁移失败: %v", err)
 	}
 
 	// SubcriptionNode 可能会因为手动迁移逻辑导致问题，单独处理
-	if err := db.AutoMigrate(&SubcriptionNode{}); err != nil {
+	// 0002_subcription_node
+	if err := RunAutoMigrate("0002_subcription_node", &SubcriptionNode{}); err != nil {
 		log.Printf("SubcriptionNode 表迁移失败: %v", err)
 	}
 
 	// SubcriptionScript 单独处理
-	if err := db.AutoMigrate(&SubcriptionScript{}); err != nil {
+	// 0003_subcription_script
+	if err := RunAutoMigrate("0003_subcription_script", &SubcriptionScript{}); err != nil {
 		log.Printf("SubcriptionScript 表迁移失败: %v", err)
 	}
 
 	// 创建 SubcriptionGroup 表
-	err = db.AutoMigrate(&SubcriptionGroup{})
-	if err != nil {
-		log.Println("数据表迁移失败")
+	// 0004_subcription_group
+	if err := RunAutoMigrate("0004_subcription_group", &SubcriptionGroup{}); err != nil {
+		log.Printf("SubcriptionGroup 表迁移失败: %v", err)
 	}
+
 	// 初始化用户数据
 	err = db.First(&User{}).Error
 	if err == gorm.ErrRecordNotFound {
