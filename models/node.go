@@ -17,7 +17,7 @@ type Node struct {
 	Source          string `gorm:"default:'manual'"`
 	SourceID        int
 	Group           string
-	Speed           int    `gorm:"default:0"` // 测速结果(MB/s)
+	Speed           float64 `gorm:"default:0"` // 测速结果(MB/s)
 	DelayTime       int    `gorm:"default:0"` // 延迟时间(ms)
 	LastCheck       string // 最后检测时间
 }

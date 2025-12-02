@@ -950,7 +950,7 @@ const displayTableData = computed(() => {
           <el-input-number
             v-model="MinSpeed"
             :min="0"
-            :step="1"
+            :step="0.1"
             placeholder="MB/s"
             width="150px"
           />

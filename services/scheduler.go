@@ -353,7 +353,7 @@ func ExecuteNodeSpeedTestTask() {
 				} else {
 					n.Speed = speed
 					n.DelayTime = latency
-					log.Printf("节点测速完成: %s, 速度: %dMB/s, 延迟: %dms", n.Name, speed, latency)
+					log.Printf("节点测速完成: %s, 速度: %.2fMB/s, 延迟: %dms", n.Name, speed, latency)
 				}
 			} else {
 				// TCP Ping 模式

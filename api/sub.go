@@ -46,7 +46,7 @@ func SubAdd(c *gin.Context) {
 	delayTimeStr := c.PostForm("DelayTime")
 	delayTime, _ := strconv.Atoi(delayTimeStr)
 	minSpeedStr := c.PostForm("MinSpeed")
-	minSpeed, _ := strconv.Atoi(minSpeedStr)
+	minSpeed, _ := strconv.ParseFloat(minSpeedStr, 64)
 
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
@@ -155,7 +155,7 @@ func SubUpdate(c *gin.Context) {
 	delayTimeStr := c.PostForm("DelayTime")
 	delayTime, _ := strconv.Atoi(delayTimeStr)
 	minSpeedStr := c.PostForm("MinSpeed")
-	minSpeed, _ := strconv.Atoi(minSpeedStr)
+	minSpeed, _ := strconv.ParseFloat(minSpeedStr, 64)
 
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")

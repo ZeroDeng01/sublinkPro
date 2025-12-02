@@ -23,7 +23,7 @@ type Subcription struct {
 	IPWhitelist     string           `json:"IPWhitelist"` //IP白名单
 	IPBlacklist     string           `json:"IPBlacklist"` //IP黑名单
 	DelayTime       int              `json:"DelayTime"`   // 最大延迟(ms)
-	MinSpeed        int              `json:"MinSpeed"`    // 最小速度(MB/s)
+	MinSpeed        float64          `json:"MinSpeed"`    // 最小速度(MB/s)
 	CreatedAt       time.Time        `json:"CreatedAt"`
 	UpdatedAt       time.Time        `json:"UpdatedAt"`
 	DeletedAt       gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`

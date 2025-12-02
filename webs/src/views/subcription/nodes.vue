@@ -1083,7 +1083,7 @@ const speedTestUrlOptions = [
               type="success"
               effect="plain"
             >
-              {{ scope.row.Speed }}MB/s
+              {{ scope.row.Speed.toFixed(2) }}MB/s
             </el-tag>
             <span v-else style="color: #c0c4cc">-</span>
           </template>

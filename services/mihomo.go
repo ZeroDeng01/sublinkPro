@@ -20,7 +20,7 @@ import (
 
 // MihomoSpeedTest performs a true speed test using Mihomo adapter
 // Returns speed in MB/s and latency in ms
-func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (int, int, error) {
+func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (float64, int, error) {
 	// 1. Parse node link to Proxy struct
 	// We use a default SqlConfig as we only need the proxy connection info
 	sqlConfig := utils.SqlConfig{
@@ -159,13 +159,28 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (in
 			if err == io.EOF {
 				break
 			}
+			// If context deadline exceeded (timeout), we consider it a successful test completion
+			// because we want to measure speed over a fixed duration.
+			if ctx.Err() == context.DeadlineExceeded || err == context.DeadlineExceeded || (err != nil && err.Error() == "context deadline exceeded") {
+				break
+			}
+			// Check if it's a net.Error timeout
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				break
+			}
 			return 0, int(latency), fmt.Errorf("read body error: %v", err)
 		}
-		// Check timeout
-		if time.Since(start) > timeout {
-			break
+		// Check timeout explicitly via context
+		select {
+		case <-ctx.Done():
+			// Timeout reached, break loop to calculate speed
+			goto CalculateSpeed
+		default:
+			// Continue reading
 		}
 	}
+
+CalculateSpeed:
 
 	duration := time.Since(readStart)
 	if duration.Seconds() == 0 {
@@ -175,5 +190,5 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (in
 	// Speed in MB/s
 	speed := float64(totalRead) / 1024 / 1024 / duration.Seconds()
 
-	return int(speed), int(latency), nil
+	return speed, int(latency), nil
 }
