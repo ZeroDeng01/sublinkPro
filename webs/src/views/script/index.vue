@@ -102,7 +102,8 @@ const resetTemp = () => {
       "    //         \"Source\": \"manual\",\n" +
       "    //         \"SourceID\": 0,\n" +
       "    //         \"Group\": \"自用\",\n" +
-      "    //         \"Speed\": 110,\n" +
+      "    //         \"DelayTime\": 110,\n" +
+      "    //         \"Speed\": 10,\n" +
       "    //         \"LastCheck\": \"2025-11-26 23:49:58\"\n" +
       "    //     }\n" +
       "    // ]\n" +

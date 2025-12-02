@@ -745,6 +745,9 @@ const speedTestDialogVisible = ref(false);
 const speedTestForm = ref({
   cron: "",
   enabled: false,
+  mode: "tcp",
+  url: "",
+  timeout: 5,
 });
 
 const handleSpeedTestSettings = async () => {
@@ -801,6 +804,22 @@ const cronOptions = [
   { label: "每天0点 (0 0 * * *)", value: "0 0 * * *" },
   { label: "每天3点 (0 3 * * *)", value: "0 3 * * *" },
   { label: "每周一 (0 0 * * 1)", value: "0 0 * * 1" },
+];
+
+// 测速URL选项
+const speedTestUrlOptions = [
+  {
+    label: "10MB (Cloudflare)",
+    value: "https://speed.cloudflare.com/__down?bytes=10000000",
+  },
+  {
+    label: "50MB (Cloudflare)",
+    value: "https://speed.cloudflare.com/__down?bytes=50000000",
+  },
+  {
+    label: "100MB (Cloudflare)",
+    value: "https://speed.cloudflare.com/__down?bytes=100000000",
+  },
 ];
 </script>
 
@@ -1026,32 +1045,26 @@ const cronOptions = [
             }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="Speed" label="测速" width="100" sortable>
+        <el-table-column prop="DelayTime" label="延迟" width="100" sortable>
           <template #default="scope">
             <el-tag
-              v-if="scope.row.Speed > 0"
+              v-if="scope.row.DelayTime > 0"
               :type="
-                scope.row.Speed < 100
+                scope.row.DelayTime < 100
                   ? 'success'
-                  : scope.row.Speed < 500
+                  : scope.row.DelayTime < 500
                     ? 'warning'
                     : 'danger'
               "
               effect="plain"
             >
-              {{ scope.row.Speed }}ms
+              {{ scope.row.DelayTime }}ms
             </el-tag>
             <el-tag
-              v-else-if="scope.row.Speed === -1"
+              v-else-if="scope.row.DelayTime === -1"
               type="danger"
               effect="plain"
               >超时</el-tag
-            >
-            <el-tag
-              v-else-if="scope.row.Speed === 0"
-              type="danger"
-              effect="plain"
-              >失败</el-tag
             >
             <span v-else style="color: #c0c4cc">-</span>
             <div
@@ -1060,6 +1073,18 @@ const cronOptions = [
             >
               {{ formatDateTime(scope.row.LastCheck).split(" ")[1] }}
             </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="Speed" label="速度" width="100" sortable>
+          <template #default="scope">
+            <el-tag
+              v-if="scope.row.Speed > 0"
+              type="success"
+              effect="plain"
+            >
+              {{ scope.row.Speed }}MB/s
+            </el-tag>
+            <span v-else style="color: #c0c4cc">-</span>
           </template>
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="200">
@@ -1386,6 +1411,32 @@ const cronOptions = [
             active-text="启用"
             inactive-text="禁用"
           />
+        </el-form-item>
+        <el-form-item label="测速模式">
+          <el-radio-group v-model="speedTestForm.mode">
+            <el-radio label="tcp" value="tcp">TCP Ping</el-radio>
+            <el-radio label="mihomo" value="mihomo">真速度 (Mihomo)</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="测速URL" v-if="speedTestForm.mode === 'mihomo'">
+          <el-select
+            v-model="speedTestForm.url"
+            filterable
+            allow-create
+            default-first-option
+            placeholder="请选择或输入下载测速URL"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in speedTestUrlOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="超时时间(秒)">
+          <el-input-number v-model="speedTestForm.timeout" :min="1" :max="60" />
         </el-form-item>
         <el-form-item label="Cron表达式" required>
           <el-select

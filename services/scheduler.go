@@ -297,12 +297,25 @@ func (sm *SchedulerManager) StopNodeSpeedTestTask() {
 }
 
 // ExecuteNodeSpeedTestTask 执行节点测速任务
+// ExecuteNodeSpeedTestTask 执行节点测速任务
 func ExecuteNodeSpeedTestTask() {
 	log.Println("开始执行节点测速任务...")
 	nodes, err := new(models.Node).List()
 	if err != nil {
 		log.Printf("获取节点列表失败: %v", err)
 		return
+	}
+
+	// 获取测速配置
+	speedTestMode, _ := models.GetSetting("speed_test_mode")
+	speedTestURL, _ := models.GetSetting("speed_test_url")
+	speedTestTimeoutStr, _ := models.GetSetting("speed_test_timeout")
+
+	timeout := 5 * time.Second
+	if speedTestTimeoutStr != "" {
+		if t, err := time.ParseDuration(speedTestTimeoutStr + "s"); err == nil {
+			timeout = t
+		}
 	}
 
 	var wg sync.WaitGroup
@@ -316,36 +329,53 @@ func ExecuteNodeSpeedTestTask() {
 			sem <- struct{}{}        // 获取信号量
 			defer func() { <-sem }() // 释放信号量
 
-			// 解析链接获取 host 和 port
-			host, port, err := utils.ParseNodeLink(n.Link)
-			if err != nil {
-				// 解析失败，跳过测速，但可以更新 LastCheck
-				n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
-				n.UpdateSpeed()
-				return
-			}
-
-			// 解析IP以进行调试
-			realIP, err := utils.ResolveIP(host)
-			if err != nil {
-				log.Printf("解析域名失败: %s, Error: %v", host, err)
-				// 解析失败，跳过测速
-				n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
-				n.UpdateSpeed()
-				return
-			}
-
-			log.Printf("开始测速节点: %s (%s:%d) [Real IP: %s]", n.Name, host, port, realIP)
-
-			// 执行测速
-			speed, err := utils.TcpPing(realIP, port, 3*time.Second)
-			if err != nil {
-				// 测速失败（超时或连接错误），Speed 设为 -1 或 0 表示不可达
-				n.Speed = -1
-				log.Printf("节点测速失败: %s, Error: %v", n.Name, err)
+			if speedTestMode == "mihomo" {
+				// Mihomo 真速度测速
+				log.Printf("开始真速度测速节点: %s", n.Name)
+				speed, latency, err := MihomoSpeedTest(n.Link, speedTestURL, timeout)
+				if err != nil {
+					n.Speed = 0
+					n.DelayTime = -1
+					log.Printf("节点真速度测速失败: %s, Error: %v", n.Name, err)
+				} else {
+					n.Speed = speed
+					n.DelayTime = latency
+					log.Printf("节点测速完成: %s, 速度: %dMB/s, 延迟: %dms", n.Name, speed, latency)
+				}
 			} else {
-				n.Speed = speed
-				log.Printf("节点测速完成: %s, 延迟: %dms", n.Name, speed)
+				// TCP Ping 模式
+				// 解析链接获取 host 和 port
+				host, port, err := utils.ParseNodeLink(n.Link)
+				if err != nil {
+					// 解析失败，跳过测速，但可以更新 LastCheck
+					n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+					n.UpdateSpeed()
+					return
+				}
+
+				// 解析IP以进行调试
+				realIP, err := utils.ResolveIP(host)
+				if err != nil {
+					log.Printf("解析域名失败: %s, Error: %v", host, err)
+					// 解析失败，跳过测速
+					n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+					n.UpdateSpeed()
+					return
+				}
+
+				log.Printf("开始测速节点: %s (%s:%d) [Real IP: %s]", n.Name, host, port, realIP)
+
+				latency, err := utils.TcpPing(realIP, port, 3*time.Second)
+				if err != nil {
+					// 测速失败（超时或连接错误），DelayTime 设为 -1 表示不可达
+					n.DelayTime = -1
+					n.Speed = 0
+					log.Printf("节点测速失败: %s, Error: %v", n.Name, err)
+				} else {
+					n.DelayTime = latency
+					n.Speed = 0
+					log.Printf("节点测速完成: %s, 延迟: %dms", n.Name, latency)
+				}
 			}
 			n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
 			n.UpdateSpeed()

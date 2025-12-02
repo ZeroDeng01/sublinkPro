@@ -43,8 +43,11 @@ func SubAdd(c *gin.Context) {
 	scripts := c.PostForm("scripts") // 新增：脚本列表
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
-	speedLimitStr := c.PostForm("SpeedLimit")
-	speedLimit, _ := strconv.Atoi(speedLimitStr)
+	delayTimeStr := c.PostForm("DelayTime")
+	delayTime, _ := strconv.Atoi(delayTimeStr)
+	minSpeedStr := c.PostForm("MinSpeed")
+	minSpeed, _ := strconv.Atoi(minSpeedStr)
+
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
 		return
@@ -89,7 +92,8 @@ func SubAdd(c *gin.Context) {
 	sub.Name = name
 	sub.IPWhitelist = ipWhitelist
 	sub.IPBlacklist = ipBlacklist
-	sub.SpeedLimit = speedLimit
+	sub.DelayTime = delayTime
+	sub.MinSpeed = minSpeed
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 
 	err := sub.Add()
@@ -148,8 +152,11 @@ func SubUpdate(c *gin.Context) {
 	scripts := c.PostForm("scripts") // 新增：脚本列表
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
-	speedLimitStr := c.PostForm("SpeedLimit")
-	speedLimit, _ := strconv.Atoi(speedLimitStr)
+	delayTimeStr := c.PostForm("DelayTime")
+	delayTime, _ := strconv.Atoi(delayTimeStr)
+	minSpeedStr := c.PostForm("MinSpeed")
+	minSpeed, _ := strconv.Atoi(minSpeedStr)
+
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
 		return
@@ -204,7 +211,8 @@ func SubUpdate(c *gin.Context) {
 	}
 	sub.IPWhitelist = ipWhitelist
 	sub.IPBlacklist = ipBlacklist
-	sub.SpeedLimit = speedLimit
+	sub.DelayTime = delayTime
+	sub.MinSpeed = minSpeed
 	err = sub.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")

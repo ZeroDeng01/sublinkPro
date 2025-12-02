@@ -395,18 +395,34 @@ func GetSpeedTestConfig(c *gin.Context) {
 	cron, _ := models.GetSetting("speed_test_cron")
 	enabledStr, _ := models.GetSetting("speed_test_enabled")
 	enabled := enabledStr == "true"
+	mode, _ := models.GetSetting("speed_test_mode")
+	if mode == "" {
+		mode = "tcp"
+	}
+	url, _ := models.GetSetting("speed_test_url")
+	timeoutStr, _ := models.GetSetting("speed_test_timeout")
+	if timeoutStr == "" {
+		timeoutStr = "5"
+	}
+	timeout, _ := strconv.Atoi(timeoutStr)
 
 	utils.OkDetailed(c, "获取成功", gin.H{
 		"cron":    cron,
 		"enabled": enabled,
+		"mode":    mode,
+		"url":     url,
+		"timeout": timeout,
 	})
 }
 
 // UpdateSpeedTestConfig 更新测速配置
 func UpdateSpeedTestConfig(c *gin.Context) {
 	var req struct {
-		Cron    string `json:"cron"`
-		Enabled bool   `json:"enabled"`
+		Cron    string      `json:"cron"`
+		Enabled bool        `json:"enabled"`
+		Mode    string      `json:"mode"`
+		Url     string      `json:"url"`
+		Timeout interface{} `json:"timeout"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -427,6 +443,34 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 	err = models.SetSetting("speed_test_enabled", strconv.FormatBool(req.Enabled))
 	if err != nil {
 		utils.FailWithMsg(c, "保存启用状态失败")
+		return
+	}
+	err = models.SetSetting("speed_test_mode", req.Mode)
+	if err != nil {
+		utils.FailWithMsg(c, "保存模式配置失败")
+		return
+	}
+	err = models.SetSetting("speed_test_url", req.Url)
+	if err != nil {
+		utils.FailWithMsg(c, "保存URL配置失败")
+		return
+	}
+
+	var timeoutStr string
+	switch v := req.Timeout.(type) {
+	case float64:
+		timeoutStr = strconv.Itoa(int(v))
+	case string:
+		timeoutStr = v
+	case int:
+		timeoutStr = strconv.Itoa(v)
+	default:
+		timeoutStr = "5"
+	}
+
+	err = models.SetSetting("speed_test_timeout", timeoutStr)
+	if err != nil {
+		utils.FailWithMsg(c, "保存超时配置失败")
 		return
 	}
 

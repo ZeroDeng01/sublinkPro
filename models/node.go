@@ -17,7 +17,8 @@ type Node struct {
 	Source          string `gorm:"default:'manual'"`
 	SourceID        int
 	Group           string
-	Speed           int    `gorm:"default:0"` // 测速结果(ms)
+	Speed           int    `gorm:"default:0"` // 测速结果(MB/s)
+	DelayTime       int    `gorm:"default:0"` // 延迟时间(ms)
 	LastCheck       string // 最后检测时间
 }
 
@@ -33,7 +34,7 @@ func (node *Node) Update() error {
 
 // UpdateSpeed 更新节点测速结果
 func (node *Node) UpdateSpeed() error {
-	return DB.Model(node).Select("Speed", "LastCheck").Updates(node).Error
+	return DB.Model(node).Select("Speed", "DelayTime", "LastCheck").Updates(node).Error
 }
 
 // 查找节点是否重复

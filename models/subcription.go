@@ -22,7 +22,8 @@ type Subcription struct {
 	ScriptsWithSort []ScriptWithSort `gorm:"-" json:"Scripts"`
 	IPWhitelist     string           `json:"IPWhitelist"` //IP白名单
 	IPBlacklist     string           `json:"IPBlacklist"` //IP黑名单
-	SpeedLimit      int              `json:"SpeedLimit"`  // 速度限制(ms)
+	DelayTime       int              `json:"DelayTime"`   // 最大延迟(ms)
+	MinSpeed        int              `json:"MinSpeed"`    // 最小速度(MB/s)
 	CreatedAt       time.Time        `json:"CreatedAt"`
 	UpdatedAt       time.Time        `json:"UpdatedAt"`
 	DeletedAt       gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
@@ -126,7 +127,8 @@ func (sub *Subcription) Update() error {
 		"create_date":  sub.CreateDate,
 		"ip_whitelist": sub.IPWhitelist,
 		"ip_blacklist": sub.IPBlacklist,
-		"speed_limit":  sub.SpeedLimit,
+		"delay_time":   sub.DelayTime,
+		"min_speed":    sub.MinSpeed,
 	}
 	return DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 }
@@ -309,13 +311,27 @@ func (sub *Subcription) GetSub() error {
 		}
 	}
 
-	// 过滤速度不达标的节点
-	if sub.SpeedLimit > 0 {
+	// 过滤节点
+	if sub.DelayTime > 0 || sub.MinSpeed > 0 {
 		var filteredNodes []Node
 		for _, node := range sub.Nodes {
-			if node.Speed > 0 && node.Speed <= sub.SpeedLimit {
-				filteredNodes = append(filteredNodes, node)
+			// 检查延迟 (DelayTime)
+			if sub.DelayTime > 0 {
+				// 如果节点没有测速数据(DelayTime=0)或者延迟超过限制，则跳过
+				if node.DelayTime <= 0 || node.DelayTime > sub.DelayTime {
+					continue
+				}
 			}
+
+			// 检查速度 (MinSpeed)
+			if sub.MinSpeed > 0 {
+				// 如果节点没有测速数据(Speed=0)或者速度小于限制，则跳过
+				if node.Speed < sub.MinSpeed {
+					continue
+				}
+			}
+
+			filteredNodes = append(filteredNodes, node)
 		}
 		sub.Nodes = filteredNodes
 	}

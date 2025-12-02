@@ -26,7 +26,8 @@ interface Sub {
   SubLogs: SubLogs[];
   IPWhitelist: string;
   IPBlacklist: string;
-  SpeedLimit: number;
+  DelayTime: number;
+  MinSpeed: number;
 }
 interface GroupWithSort {
   Name: string;
@@ -68,7 +69,8 @@ interface Temp {
 const tableData = ref<Sub[]>([]);
 const IPWhitelist = ref("");
 const IPBlacklist = ref("");
-const SpeedLimit = ref(0);
+const DelayTime = ref(0);
+const MinSpeed = ref(0);
 const Clash = ref("");
 const Surge = ref("");
 const SubTitle = ref("");
@@ -127,7 +129,8 @@ const addSubs = async () => {
     name: Subname.value.trim(),
     IPWhitelist: IPWhitelist.value,
     IPBlacklist: IPBlacklist.value,
-    SpeedLimit: SpeedLimit.value,
+    DelayTime: DelayTime.value,
+    MinSpeed: MinSpeed.value,
     scripts: selectedScripts.value.join(","),
   };
 
@@ -233,7 +236,8 @@ const handleAddSub = () => {
   selectionMode.value = "nodes";
   IPWhitelist.value = "";
   IPBlacklist.value = "";
-  SpeedLimit.value = 0;
+  DelayTime.value = 0;
+  MinSpeed.value = 0;
   selectedGroup.value = "all";
   nodeSearchQuery.value = "";
 };
@@ -261,7 +265,8 @@ const handleEdit = (row: any) => {
       Surge.value = config.surge;
       IPWhitelist.value = tableData.value[i].IPWhitelist;
       IPBlacklist.value = tableData.value[i].IPBlacklist;
-      SpeedLimit.value = tableData.value[i].SpeedLimit || 0;
+      DelayTime.value = tableData.value[i].DelayTime || 0;
+      MinSpeed.value = tableData.value[i].MinSpeed || 0;
       dialogVisible.value = true;
       value1.value = tableData.value[i].Nodes.map((item) => item.Name);
       // 从GroupWithSort中提取分组名称
@@ -930,7 +935,7 @@ const displayTableData = computed(() => {
         <el-col :span="12">
           <p style="margin-bottom: 10px; font-weight: 500">最大延迟(ms)</p>
           <el-input-number
-            v-model="SpeedLimit"
+            v-model="DelayTime"
             :min="0"
             :step="100"
             placeholder="毫秒(ms)"
@@ -938,6 +943,19 @@ const displayTableData = computed(() => {
           />
           <div style="font-size: 12px; color: #999; margin-top: 5px">
             设置筛选节点的延迟阈值，0表示不限制。只有测速结果小于该值的节点会被返回。
+          </div>
+        </el-col>
+        <el-col :span="12">
+          <p style="margin-bottom: 10px; font-weight: 500">最小速度(MB/s)</p>
+          <el-input-number
+            v-model="MinSpeed"
+            :min="0"
+            :step="1"
+            placeholder="MB/s"
+            width="150px"
+          />
+          <div style="font-size: 12px; color: #999; margin-top: 5px">
+            设置筛选节点的最小真实下载速度，0表示不限制。只有测速结果大于该值的节点会被返回。
           </div>
         </el-col>
       </el-row>
