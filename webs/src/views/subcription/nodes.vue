@@ -808,7 +808,8 @@ const cronOptions = [
 ];
 
 // 测速URL选项
-const speedTestUrlOptions = [
+// 测速URL选项 - 真速度测试 (下载)
+const speedTestDownloadOptions = [
   {
     label: "10MB (Cloudflare)",
     value: "https://speed.cloudflare.com/__down?bytes=10000000",
@@ -822,6 +823,34 @@ const speedTestUrlOptions = [
     value: "https://speed.cloudflare.com/__down?bytes=100000000",
   },
 ];
+
+// 测速URL选项 - 延迟测试 (204)
+const speedTest204Options = [
+  {
+    label: "Cloudflare (cp.cloudflare.com)",
+    value: "http://cp.cloudflare.com/generate_204",
+  },
+  {
+    label: "Google (clients3.google.com)",
+    value: "http://clients3.google.com/generate_204",
+  },
+  {
+    label: "Google (android.clients.google.com)",
+    value: "http://android.clients.google.com/generate_204",
+  },
+  {
+    label: "Gstatic (www.gstatic.com)",
+    value: "http://www.gstatic.com/generate_204",
+  },
+];
+
+// 根据模式动态获取测速URL选项
+const currentSpeedTestUrlOptions = computed(() => {
+  if (speedTestForm.value.mode === "mihomo") {
+    return speedTestDownloadOptions;
+  }
+  return speedTest204Options;
+});
 </script>
 
 <template>
@@ -1415,26 +1444,42 @@ const speedTestUrlOptions = [
         </el-form-item>
         <el-form-item label="测速模式">
           <el-radio-group v-model="speedTestForm.mode">
-            <el-radio label="tcp" value="tcp">TCP Ping</el-radio>
-            <el-radio label="mihomo" value="mihomo">真速度 (Mihomo)</el-radio>
+            <el-radio label="tcp" value="tcp">仅延迟测试</el-radio>
+            <el-radio label="mihomo" value="mihomo">真速度测试</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="测速URL" v-if="speedTestForm.mode === 'mihomo'">
+        <el-form-item label="测速URL">
           <el-select
             v-model="speedTestForm.url"
             filterable
             allow-create
             default-first-option
-            placeholder="请选择或输入下载测速URL"
+            :placeholder="
+              speedTestForm.mode === 'mihomo'
+                ? '请选择或输入下载测速URL'
+                : '请选择或输入204测速URL'
+            "
             style="width: 100%"
           >
             <el-option
-              v-for="item in speedTestUrlOptions"
+              v-for="item in currentSpeedTestUrlOptions"
               :key="item.value"
               :label="item.label"
               :value="item.value"
             />
           </el-select>
+          <div style="font-size: 12px; color: #909399">
+            可以自定义测速URL
+            <br />
+            <span v-if="speedTestForm.mode === 'mihomo'">
+              真速度测试使用可下载资源地址，例如:
+              https://speed.cloudflare.com/__down?bytes=10000000
+            </span>
+            <span v-else>
+              延迟测试使用更轻量的204测试地址，例如:
+              http://cp.cloudflare.com/generate_204
+            </span>
+          </div>
         </el-form-item>
         <el-form-item label="超时时间(秒)">
           <el-input-number v-model="speedTestForm.timeout" :min="1" :max="60" />

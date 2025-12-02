@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sublink/models"
 	"sublink/node"
-	"sublink/utils"
 	"sync"
 	"time"
 
@@ -356,31 +355,15 @@ func ExecuteNodeSpeedTestTask() {
 					log.Printf("节点测速完成: %s, 速度: %.2fMB/s, 延迟: %dms", n.Name, speed, latency)
 				}
 			} else {
-				// TCP Ping 模式
-				// 解析链接获取 host 和 port
-				host, port, err := utils.ParseNodeLink(n.Link)
-				if err != nil {
-					// 解析失败，跳过测速，但可以更新 LastCheck
-					n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
-					n.UpdateSpeed()
-					return
-				}
+				// TCP Ping 模式 (改为使用 Mihomo Adapter 的 Connect Latency，即 0-RTT/握手延迟)
+				// 这种方式支持所有协议 (VMess, Hysteria2 等)，并且更准确
+				log.Printf("开始测速节点 (Connect Latency): %s", n.Name)
 
-				// 解析IP以进行调试
-				realIP, err := utils.ResolveIP(host)
+				// 使用 MihomoDelay 进行测速
+				// 如果 speedTestURL 为空，MihomoDelay 会使用默认的 generate_204 URL
+				latency, err := MihomoDelay(n.Link, speedTestURL, timeout)
 				if err != nil {
-					log.Printf("解析域名失败: %s, Error: %v", host, err)
-					// 解析失败，跳过测速
-					n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
-					n.UpdateSpeed()
-					return
-				}
-
-				log.Printf("开始测速节点: %s (%s:%d) [Real IP: %s]", n.Name, host, port, realIP)
-
-				latency, err := utils.TcpPing(realIP, port, 3*time.Second)
-				if err != nil {
-					// 测速失败（超时或连接错误），DelayTime 设为 -1 表示不可达
+					// 测速失败
 					n.DelayTime = -1
 					n.Speed = 0
 					log.Printf("节点测速失败: %s, Error: %v", n.Name, err)

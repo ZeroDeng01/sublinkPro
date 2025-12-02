@@ -18,9 +18,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// MihomoSpeedTest performs a true speed test using Mihomo adapter
-// Returns speed in MB/s and latency in ms
-func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (float64, int, error) {
+// GetMihomoAdapter creates a Mihomo Proxy Adapter from a node link
+func GetMihomoAdapter(nodeLink string) (constant.Proxy, error) {
 	// 1. Parse node link to Proxy struct
 	// We use a default SqlConfig as we only need the proxy connection info
 	sqlConfig := utils.SqlConfig{
@@ -32,33 +31,96 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (fl
 	// We need to construct a Urls struct
 	_, err := url.Parse(nodeLink)
 	if err != nil {
-		return 0, 0, fmt.Errorf("parse link error: %v", err)
+		return nil, fmt.Errorf("parse link error: %v", err)
 	}
 
 	// We need to handle the case where ParseNodeLink might be better, but LinkToProxy expects Urls struct
 	// LinkToProxy handles various protocols
 	proxyStruct, err := node.LinkToProxy(node.Urls{Url: nodeLink}, sqlConfig)
 	if err != nil {
-		return 0, 0, fmt.Errorf("convert link to proxy error: %v", err)
+		return nil, fmt.Errorf("convert link to proxy error: %v", err)
 	}
 
 	// 2. Convert Proxy struct to map[string]interface{} via YAML
 	// This is because adapter.ParseProxy expects a map
 	yamlBytes, err := yaml.Marshal(proxyStruct)
 	if err != nil {
-		return 0, 0, fmt.Errorf("marshal proxy error: %v", err)
+		return nil, fmt.Errorf("marshal proxy error: %v", err)
 	}
 
 	var proxyMap map[string]interface{}
 	err = yaml.Unmarshal(yamlBytes, &proxyMap)
 	if err != nil {
-		return 0, 0, fmt.Errorf("unmarshal proxy map error: %v", err)
+		return nil, fmt.Errorf("unmarshal proxy map error: %v", err)
 	}
 
 	// 3. Create Mihomo Proxy Adapter
 	proxyAdapter, err := adapter.ParseProxy(proxyMap)
 	if err != nil {
-		return 0, 0, fmt.Errorf("create mihomo adapter error: %v", err)
+		return nil, fmt.Errorf("create mihomo adapter error: %v", err)
+	}
+
+	return proxyAdapter, nil
+}
+
+// MihomoDelay performs a latency test using Mihomo adapter (Protocol-aware)
+// Returns latency in ms
+func MihomoDelay(nodeLink string, testUrl string, timeout time.Duration) (int, error) {
+	proxyAdapter, err := GetMihomoAdapter(nodeLink)
+	if err != nil {
+		return 0, err
+	}
+
+	if testUrl == "" {
+		testUrl = "http://cp.cloudflare.com/generate_204"
+	}
+
+	parsedUrl, err := url.Parse(testUrl)
+	if err != nil {
+		return 0, fmt.Errorf("parse test url error: %v", err)
+	}
+
+	portStr := parsedUrl.Port()
+	if portStr == "" {
+		if parsedUrl.Scheme == "https" {
+			portStr = "443"
+		} else {
+			portStr = "80"
+		}
+	}
+
+	portInt, err := strconv.Atoi(portStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid port: %v", err)
+	}
+	port := uint16(portInt)
+
+	metadata := &constant.Metadata{
+		Host:    parsedUrl.Hostname(),
+		DstPort: port,
+		Type:    constant.HTTP,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	start := time.Now()
+	conn, err := proxyAdapter.DialContext(ctx, metadata)
+	if err != nil {
+		return 0, fmt.Errorf("dial error: %v", err)
+	}
+	defer conn.Close()
+
+	latency := time.Since(start).Milliseconds()
+	return int(latency), nil
+}
+
+// MihomoSpeedTest performs a true speed test using Mihomo adapter
+// Returns speed in MB/s and latency in ms
+func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (float64, int, error) {
+	proxyAdapter, err := GetMihomoAdapter(nodeLink)
+	if err != nil {
+		return 0, 0, err
 	}
 
 	// 4. Perform Speed Test
