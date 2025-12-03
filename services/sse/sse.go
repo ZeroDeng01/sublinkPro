@@ -194,11 +194,30 @@ func SendWebhook(config map[string]string, event string, payload NotificationPay
 		jsonBytes, _ := json.Marshal(data)
 		bodyStr = string(jsonBytes)
 	} else {
+		// Determine escape function based on content type
+		var escapeFunc func(string) string
+		contentType := strings.ToLower(config["contentType"])
+
+		if strings.Contains(contentType, "application/json") {
+			escapeFunc = func(s string) string {
+				b, _ := json.Marshal(s)
+				// Remove surrounding quotes
+				if len(b) >= 2 {
+					return string(b[1 : len(b)-1])
+				}
+				return string(b)
+			}
+		} else if strings.Contains(contentType, "application/x-www-form-urlencoded") {
+			escapeFunc = url.QueryEscape
+		} else {
+			escapeFunc = func(s string) string { return s }
+		}
+
 		// 简单模板替换
-		bodyStr = strings.ReplaceAll(bodyStr, "{{title}}", payload.Title)
-		bodyStr = strings.ReplaceAll(bodyStr, "{{message}}", payload.Message)
-		bodyStr = strings.ReplaceAll(bodyStr, "{{event}}", event)
-		bodyStr = strings.ReplaceAll(bodyStr, "{{time}}", payload.Time)
+		bodyStr = strings.ReplaceAll(bodyStr, "{{title}}", escapeFunc(payload.Title))
+		bodyStr = strings.ReplaceAll(bodyStr, "{{message}}", escapeFunc(payload.Message))
+		bodyStr = strings.ReplaceAll(bodyStr, "{{event}}", escapeFunc(event))
+		bodyStr = strings.ReplaceAll(bodyStr, "{{time}}", escapeFunc(payload.Time))
 
 		// 支持 {{json .}} 替换为完整 JSON
 		if strings.Contains(bodyStr, "{{json .}}") {
