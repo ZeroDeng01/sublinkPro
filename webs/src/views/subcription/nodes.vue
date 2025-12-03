@@ -834,8 +834,8 @@ const handleBatchSpeedTest = async () => {
     ElMessage.warning("请选择要测速的节点");
     return;
   }
-  
-  const ids = multipleSelection.value.map(node => node.ID);
+
+  const ids = multipleSelection.value.map((node) => node.ID);
   try {
     await runSpeedTest(ids);
     ElMessage.success(`已启动 ${ids.length} 个节点的测速任务`);
@@ -1005,9 +1005,7 @@ const currentSpeedTestUrlOptions = computed(() => {
               type="number"
               @input="handleSearch"
             >
-              <template #append>
-                ms
-              </template>
+              <template #append> ms </template>
             </el-input>
             <el-input
               v-model.number="searchSpeedQuery"
@@ -1017,9 +1015,7 @@ const currentSpeedTestUrlOptions = computed(() => {
               type="number"
               @input="handleSearch"
             >
-              <template #append>
-                MB/s
-              </template>
+              <template #append> MB/s </template>
             </el-input>
             <el-button @click="resetSearch">重置</el-button>
           </div>
@@ -1030,11 +1026,11 @@ const currentSpeedTestUrlOptions = computed(() => {
             <el-button type="warning" @click="handleImportSubscription"
               >导入订阅</el-button
             >
-            <el-button type="primary" @click="handleBatchSpeedTest"
-              >批量测速</el-button
-            >
             <el-button type="info" @click="handleSpeedTestSettings"
               >测速设置</el-button
+            >
+            <el-button type="primary" @click="handleBatchSpeedTest"
+              >批量测速</el-button
             >
             <el-button type="success" :icon="Refresh" @click="getnodes"
               >刷新</el-button
@@ -1156,7 +1152,13 @@ const currentSpeedTestUrlOptions = computed(() => {
             }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="DelayTime" label="延迟" width="120" sortable fixed="right">
+        <el-table-column
+          prop="DelayTime"
+          label="延迟"
+          width="120"
+          sortable
+          fixed="right"
+        >
           <template #default="scope">
             <el-tag
               v-if="scope.row.DelayTime > 0"
@@ -1186,13 +1188,15 @@ const currentSpeedTestUrlOptions = computed(() => {
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="Speed" label="速度" width="120" sortable fixed="right">
+        <el-table-column
+          prop="Speed"
+          label="速度"
+          width="120"
+          sortable
+          fixed="right"
+        >
           <template #default="scope">
-            <el-tag
-              v-if="scope.row.Speed > 0"
-              type="success"
-              effect="plain"
-            >
+            <el-tag v-if="scope.row.Speed > 0" type="success" effect="plain">
               {{ scope.row.Speed.toFixed(2) }}MB/s
             </el-tag>
             <span v-else style="color: #c0c4cc">-</span>

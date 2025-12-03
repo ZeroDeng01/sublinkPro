@@ -46,6 +46,7 @@ interface Node {
   CreateDate: string;
   Sort?: number; // 添加排序字段，可选
   Group?: string; // 分组字段
+  Source?: string; // 来源字段
 }
 interface Config {
   clash: string;
@@ -86,6 +87,7 @@ const IplogsList = ref<SubLogs[]>([]);
 const qrcode = ref("");
 const templist = ref<Temp[]>([]);
 const selectedGroup = ref<string>("all"); // 当前选中的分组
+const selectedSource = ref<string>("all"); // 当前选中的来源
 const nodeSearchQuery = ref(""); // 节点搜索关键词
 const selectionMode = ref<string>("nodes"); // 选择模式: 'nodes' 或 'groups'
 const selectedGroups = ref<string[]>([]); // 选中的分组列表
@@ -239,6 +241,7 @@ const handleAddSub = () => {
   DelayTime.value = 0;
   MinSpeed.value = 0;
   selectedGroup.value = "all";
+  selectedSource.value = "all";
   nodeSearchQuery.value = "";
 };
 const handleEdit = (row: any) => {
@@ -286,6 +289,7 @@ const handleEdit = (row: any) => {
         selectionMode.value = "nodes";
       }
       selectedGroup.value = "all";
+      selectedSource.value = "all";
       nodeSearchQuery.value = "";
     }
   }
@@ -611,6 +615,17 @@ const groupsList = computed(() => {
   return Array.from(groups).sort();
 });
 
+// 获取所有来源列表
+const sourcesList = computed(() => {
+  const sources = new Set<string>();
+  NodesList.value.forEach((node) => {
+    if (node.Source && node.Source.trim() !== "") {
+      sources.add(node.Source);
+    }
+  });
+  return Array.from(sources).sort();
+});
+
 // 根据分组和搜索过滤节点
 const filteredNodesList = computed(() => {
   let nodes = NodesList.value;
@@ -618,6 +633,11 @@ const filteredNodesList = computed(() => {
   // 按分组过滤
   if (selectedGroup.value !== "all") {
     nodes = nodes.filter((node) => node.Group === selectedGroup.value);
+  }
+
+  // 按来源过滤
+  if (selectedSource.value !== "all") {
+    nodes = nodes.filter((node) => node.Source === selectedSource.value);
   }
 
   // 按搜索关键词过滤
@@ -887,7 +907,27 @@ const displayTableData = computed(() => {
                 </el-option>
               </el-select>
             </el-col>
-            <el-col :span="16">
+            <el-col :span="8">
+              <el-select
+                v-model="selectedSource"
+                placeholder="选择来源"
+                style="width: 100%"
+                clearable
+              >
+                <el-option label="全部来源" value="all">
+                  <span>全部来源</span>
+                </el-option>
+                <el-option
+                  v-for="source in sourcesList"
+                  :key="source"
+                  :label="source"
+                  :value="source"
+                >
+                  <span>{{ source }}</span>
+                </el-option>
+              </el-select>
+            </el-col>
+            <el-col :span="8">
               <el-input
                 v-model="nodeSearchQuery"
                 placeholder="搜索节点名称或分组"
