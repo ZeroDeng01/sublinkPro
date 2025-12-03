@@ -23,6 +23,10 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  placeholder: {
+    type: String,
+    default: "",
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "change"]);
@@ -121,6 +125,9 @@ const onChange = (val: string) => {
       @change="onChange"
       class="editor"
     />
+    <div v-if="!modelValue && placeholder" class="editor-placeholder">
+      {{ placeholder }}
+    </div>
   </div>
 </template>
 
@@ -131,10 +138,24 @@ const onChange = (val: string) => {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   overflow: hidden;
+  position: relative;
 }
 
 .editor {
   width: 100%;
   height: 100%;
+}
+
+.editor-placeholder {
+  position: absolute;
+  top: 0;
+  left: 20px;
+  padding: 10px 20px;
+  color: #c3c7cd;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 14px;
+  pointer-events: none;
+  white-space: pre-wrap;
+  z-index: 10;
 }
 </style>

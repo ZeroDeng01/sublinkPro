@@ -74,7 +74,7 @@ onMounted(async () => {
   profileForm.username = userinfo.value.username;
   profileForm.nickname = userinfo.value.nickname || "";
   profileForm.nickname = userinfo.value.nickname || "";
-  
+
   getWebhookConfig();
 });
 
@@ -207,7 +207,8 @@ async function getWebhookConfig() {
     });
     webhookForm.webhookUrl = data.webhookUrl || "";
     webhookForm.webhookMethod = data.webhookMethod || "POST";
-    webhookForm.webhookContentType = data.webhookContentType || "application/json";
+    webhookForm.webhookContentType =
+      data.webhookContentType || "application/json";
     webhookForm.webhookHeaders = data.webhookHeaders || "";
     webhookForm.webhookBody = data.webhookBody || "";
     webhookForm.webhookEnabled = data.webhookEnabled || false;
@@ -219,7 +220,7 @@ async function getWebhookConfig() {
 
 async function handleTestWebhook() {
   if (!webhookFormRef.value) return;
-  
+
   await webhookFormRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true;
@@ -231,7 +232,9 @@ async function handleTestWebhook() {
         });
         ElMessage.success("Webhook 测试发送成功");
       } catch (error: any) {
-        ElMessage.error("测试失败：" + (error.response?.data?.message || error.message));
+        ElMessage.error(
+          "测试失败：" + (error.response?.data?.message || error.message)
+        );
       } finally {
         loading.value = false;
       }
@@ -241,7 +244,7 @@ async function handleTestWebhook() {
 
 async function handleUpdateWebhook() {
   if (!webhookFormRef.value) return;
-  
+
   await webhookFormRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true;
@@ -253,14 +256,15 @@ async function handleUpdateWebhook() {
         });
         ElMessage.success("Webhook 设置保存成功");
       } catch (error: any) {
-        ElMessage.error("保存失败：" + (error.response?.data?.message || error.message));
+        ElMessage.error(
+          "保存失败：" + (error.response?.data?.message || error.message)
+        );
       } finally {
         loading.value = false;
       }
     }
   });
 }
-
 </script>
 
 <template>
@@ -424,7 +428,10 @@ async function handleUpdateWebhook() {
             </el-form-item>
 
             <el-form-item label="请求方法" prop="webhookMethod">
-              <el-select v-model="webhookForm.webhookMethod" placeholder="Select">
+              <el-select
+                v-model="webhookForm.webhookMethod"
+                placeholder="Select"
+              >
                 <el-option label="POST" value="POST" />
                 <el-option label="GET" value="GET" />
               </el-select>
@@ -444,31 +451,63 @@ async function handleUpdateWebhook() {
             </el-form-item>
 
             <el-form-item label="Headers (JSON)" prop="webhookHeaders">
-              <el-input
+              <MonacoEditor
                 v-model="webhookForm.webhookHeaders"
-                type="textarea"
-                :rows="3"
-                placeholder='{"Authorization": "Bearer token"}'
+                language="json"
+                height="400px"
+                style="margin-bottom: 10px"
+                placeholder='{
+  "Authorization": "Bearer your-token",
+  "Custom-Header": "value"
+}'
               />
             </el-form-item>
 
-            <el-form-item label="Body Template" prop="webhookBody">
-              <el-input
+            <el-form-item label="Body Template（JSON）" prop="webhookBody">
+              <MonacoEditor
                 v-model="webhookForm.webhookBody"
-                type="textarea"
-                :rows="5"
-                placeholder='{"title": "{{title}}", "content": "{{message}}"}'
+                language="json"
+                height="400px"
+                style="margin-bottom: 10px"
+                placeholder='{
+  "title": "{{title}}",
+  "body": "{{message}}",
+  "url": "https://example.com",
+  "event": "{{event}}",
+  "time": "{{time}}"
+}'
               />
               <div class="form-tip" v-pre>
-                <p>支持在 <strong>URL</strong> 和 <strong>Body</strong> 中使用以下变量:</p>
+                <p>
+                  支持在 <strong>URL</strong> 和
+                  <strong>Body</strong> 中使用以下变量:
+                </p>
                 <ul>
-                  <li><code>{{title}}</code>: 消息标题</li>
-                  <li><code>{{message}}</code>: 消息内容</li>
-                  <li><code>{{event}}</code>: 事件类型 (e.g., sub_update, speed_test)</li>
-                  <li><code>{{time}}</code>: 事件时间 (yyyy-MM-dd HH:mm:ss)</li>
-                  <li><code>{{json .}}</code>: 完整 JSON 数据 (仅支持 Body)</li>
+                  <li>
+                    <code>{{ title }}</code
+                    >: 消息标题
+                  </li>
+                  <li>
+                    <code>{{ message }}</code
+                    >: 消息内容
+                  </li>
+                  <li>
+                    <code>{{ event }}</code
+                    >: 事件类型 (e.g., sub_update, speed_test)
+                  </li>
+                  <li>
+                    <code>{{ time }}</code
+                    >: 事件时间 (yyyy-MM-dd HH:mm:ss)
+                  </li>
+                  <li>
+                    <code>{{json .}}</code
+                    >: 完整 JSON 数据 (仅支持 Body)
+                  </li>
                 </ul>
-                <p>例如 Bark URL: <code>https://api.day.app/key/{{title}}/{{message}}</code></p>
+                <p>
+                  例如 Bark URL:
+                  <code>https://api.day.app/key/{{ title }}/{{ message }}</code>
+                </p>
               </div>
             </el-form-item>
 
@@ -490,7 +529,6 @@ async function handleUpdateWebhook() {
             </el-form-item>
           </el-form>
         </el-card>
-
       </el-col>
     </el-row>
   </div>
