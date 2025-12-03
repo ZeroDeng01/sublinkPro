@@ -11,10 +11,9 @@ import (
 	"strings"
 	"sublink/middlewares"
 	"sublink/models"
-	"sublink/services/sse"
-
 	"sublink/routers"
 	"sublink/services"
+	"sublink/services/sse"
 	"sublink/settings"
 	"sublink/utils"
 
@@ -136,11 +135,19 @@ func Run(port int) {
 	// 启动 AccessKey 清理定时任务
 	models.StartAccessKeyCleanupScheduler()
 
-	// 初始化并启动定时任务管理器
-	scheduler := services.GetSchedulerManager()
 	// 启动SSE服务
 	go sse.GetSSEBroker().Listen()
+
+	// 初始化并启动定时任务管理器
+	scheduler := services.GetSchedulerManager()
 	scheduler.Start()
+
+	if err := models.InitNodeCache(); err != nil {
+		log.Println("加载节点到缓存失败: %v", err)
+	}
+	if err := models.InitSettingCache(); err != nil {
+		log.Println("加载系统设置到缓存失败: %v", err)
+	}
 	// 从数据库加载定时任务
 	err := scheduler.LoadFromDatabase()
 	if err != nil {
