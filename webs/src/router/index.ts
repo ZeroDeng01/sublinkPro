@@ -54,6 +54,25 @@ export const constantRoutes: RouteRecordRaw[] = [
     ],
   },
 
+  // Personal Center
+  {
+    path: "/personal",
+    component: Layout,
+    meta: { hidden: true },
+    children: [
+      {
+        path: "center",
+        component: () => import("@/views/personal/center.vue"),
+        name: "PersonalCenter",
+        meta: {
+          title: "personalCenter",
+          icon: "user",
+          hidden: true,
+        },
+      },
+    ],
+  },
+
   // 外部链接
   // {
   //   path: "/external-link",

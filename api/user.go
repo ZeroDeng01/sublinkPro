@@ -108,3 +108,92 @@ func UserSet(c *gin.Context) {
 	utils.OkWithMsg(c, "修改成功")
 
 }
+
+// 修改密码
+func UserChangePassword(c *gin.Context) {
+	type ChangePasswordRequest struct {
+		OldPassword     string `json:"oldPassword" binding:"required"`
+		NewPassword     string `json:"newPassword" binding:"required"`
+		ConfirmPassword string `json:"confirmPassword" binding:"required"`
+	}
+
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// 验证两次密码是否一致
+	if req.NewPassword != req.ConfirmPassword {
+		utils.FailWithMsg(c, "两次密码输入不一致")
+		return
+	}
+
+	// 验证密码长度
+	if len(req.NewPassword) < 6 {
+		utils.FailWithMsg(c, "密码长度不能小于6位")
+		return
+	}
+
+	// 获取当前用户
+	username, _ := c.Get("username")
+	user := &models.User{
+		Username: username.(string),
+		Password: req.OldPassword,
+	}
+
+	// 验证旧密码是否正确
+	if err := user.Verify(); err != nil {
+		utils.FailWithMsg(c, "当前密码错误")
+		return
+	}
+
+	// 更新密码
+	updateUser := &models.User{Password: req.NewPassword}
+	if err := user.Set(updateUser); err != nil {
+		log.Println("密码修改失败:", err)
+		utils.FailWithMsg(c, "密码修改失败")
+		return
+	}
+
+	utils.OkWithMsg(c, "密码修改成功")
+}
+
+// 更新个人资料（用户名、昵称）
+func UserUpdateProfile(c *gin.Context) {
+	type UpdateProfileRequest struct {
+		Username string `json:"username"`
+		Nickname string `json:"nickname"`
+	}
+
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// 验证用户名不能为空
+	if req.Username == "" {
+		utils.FailWithMsg(c, "用户名不能为空")
+		return
+	}
+
+	// 获取当前用户
+	username, _ := c.Get("username")
+	user := &models.User{Username: username.(string)}
+
+	// 使用 map 更新字段，避免 GORM 忽略零值
+	// 这样可以更新 nickname 为空字符串
+	updates := map[string]interface{}{
+		"username": req.Username,
+		"nickname": req.Nickname,
+	}
+	
+	if err := models.DB.Where("username = ?", user.Username).Model(&models.User{}).Updates(updates).Error; err != nil {
+		log.Println("个人资料更新失败:", err)
+		utils.FailWithMsg(c, "个人资料更新失败: "+err.Error())
+		return
+	}
+
+	utils.OkWithMsg(c, "个人资料更新成功")
+}

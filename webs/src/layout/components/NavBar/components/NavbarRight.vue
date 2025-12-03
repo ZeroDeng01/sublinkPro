@@ -24,7 +24,6 @@
     <!-- 通知 -->
     <Notify />
 
-
     <!-- 用户头像 -->
     <el-dropdown class="setting-item" trigger="click">
       <div class="flex-center h100% p10px">
@@ -39,8 +38,10 @@
           <router-link to="/apikey/index">
             <el-dropdown-item>{{ $t("apikey.manage") }}</el-dropdown-item>
           </router-link>
-          <router-link to="/system/user/set">
-            <el-dropdown-item>{{ $t("navbar.userset") }}</el-dropdown-item>
+          <router-link to="/personal/center">
+            <el-dropdown-item>{{
+              $t("navbar.personalCenter")
+            }}</el-dropdown-item>
           </router-link>
           <el-dropdown-item divided @click="backup">
             {{ $t("navbar.backup") }}
@@ -63,7 +64,6 @@
 <script setup lang="ts">
 import Notify from "./Notify.vue";
 import {
-
   useAppStore,
   useTagsViewStore,
   useUserStore,

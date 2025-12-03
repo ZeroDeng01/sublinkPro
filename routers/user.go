@@ -18,6 +18,8 @@ func User(r *gin.Engine) {
 		userGroup.GET("/me", api.UserMe)
 		userGroup.GET("/page", api.UserPages)
 		userGroup.POST("/update", api.UserSet)
+		userGroup.POST("/update-profile", api.UserUpdateProfile)
+		userGroup.POST("/change-password", api.UserChangePassword)
 
 	}
 }
