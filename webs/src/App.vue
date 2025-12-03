@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { useAppStore, useSettingsStore } from "@/store";
+import { useAppStore, useSettingsStore, useUserStore } from "@/store";
 import defaultSettings from "@/settings";
 import { ThemeEnum } from "@/enums/ThemeEnum";
 import { SizeEnum } from "@/enums/SizeEnum";
@@ -23,6 +23,7 @@ import { useVersionStore } from "@/store/modules/version";
 
 const appStore = useAppStore();
 const settingsStore = useSettingsStore();
+const userStore = useUserStore();
 
 const locale = computed(() => appStore.locale);
 const size = computed(() => appStore.size as SizeEnum);
@@ -41,6 +42,7 @@ async function fetchVersion() {
 }
 onMounted(async () => {
   await fetchVersion();
+  userStore.connectSSE();
 });
 // 明亮/暗黑主题水印字体颜色适配
 const fontColor = computed(() => {

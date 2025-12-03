@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sublink/middlewares"
 	"sublink/models"
+	"sublink/services/sse"
 
 	"sublink/routers"
 	"sublink/services"
@@ -137,6 +138,8 @@ func Run(port int) {
 
 	// 初始化并启动定时任务管理器
 	scheduler := services.GetSchedulerManager()
+	// 启动SSE服务
+	go sse.GetSSEBroker().Listen()
 	scheduler.Start()
 	// 从数据库加载定时任务
 	err := scheduler.LoadFromDatabase()
@@ -176,6 +179,7 @@ func Run(port int) {
 	routers.SubScheduler(r)
 	routers.Backup(r)
 	routers.Script(r)
+	routers.SSE(r)
 	// 启动服务
 	r.Run(fmt.Sprintf("0.0.0.0:%d", port))
 }

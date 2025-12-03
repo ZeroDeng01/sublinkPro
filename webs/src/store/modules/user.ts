@@ -1,7 +1,9 @@
 import { loginApi, logoutApi } from "@/api/auth";
 import { getUserInfoApi } from "@/api/user";
 import { resetRouter } from "@/router";
-import { store } from "@/store";
+import { store, useNoticeStore } from "@/store";
+
+
 
 import { LoginData } from "@/api/auth/types";
 import { UserInfo } from "@/api/user/types";
@@ -11,6 +13,58 @@ export const useUserStore = defineStore("user", () => {
     roles: [],
     perms: [],
   });
+
+  const eventSource = ref<EventSource | null>(null);
+
+  function connectSSE() {
+    if (eventSource.value) return;
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+
+    // Extract the actual token string if it has "Bearer " prefix
+    const tokenStr = token.replace("Bearer ", "");
+
+    eventSource.value = new EventSource(
+      `${import.meta.env.VITE_APP_BASE_API}/api/sse?token=${tokenStr}`
+    );
+
+    eventSource.value.onopen = () => {
+      console.log("SSE Connected");
+    };
+
+    eventSource.value.addEventListener("task_update", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        const type = data.status === "success" ? "success" : "error";
+        const message = data.message;
+
+        // Add to notice store
+        const noticeStore = useNoticeStore();
+        noticeStore.addNotification({
+          title: data.status === "success" ? "成功" : "失败",
+          message: message,
+          type: type,
+        });
+      } catch (e) {
+        console.error("Failed to parse SSE message", e);
+      }
+    });
+
+
+    eventSource.value.onerror = (err) => {
+      console.error("SSE Error:", err);
+      eventSource.value?.close();
+      eventSource.value = null;
+    };
+  }
+
+  function disconnectSSE() {
+    if (eventSource.value) {
+      eventSource.value.close();
+      eventSource.value = null;
+    }
+  }
 
   /**
    * 登录
@@ -24,6 +78,7 @@ export const useUserStore = defineStore("user", () => {
         .then((response) => {
           const { tokenType, accessToken } = response.data;
           localStorage.setItem("accessToken", tokenType + " " + accessToken); // Bearer eyJhbGciOiJIUzI1NiJ9.xxx.xxx
+          connectSSE();
           resolve();
         })
         .catch((error) => {
@@ -60,6 +115,7 @@ export const useUserStore = defineStore("user", () => {
       logoutApi()
         .then(() => {
           localStorage.setItem("accessToken", "");
+          disconnectSSE();
           location.reload(); // 清空路由
           resolve();
         })
@@ -85,6 +141,8 @@ export const useUserStore = defineStore("user", () => {
     getUserInfo,
     logout,
     resetToken,
+    connectSSE,
+    disconnectSSE,
   };
 });
 

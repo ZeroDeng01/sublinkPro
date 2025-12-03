@@ -1,11 +1,13 @@
 package services
 
 import (
+	"fmt"
 	"log"
 	"regexp"
 	"strings"
 	"sublink/models"
 	"sublink/node"
+	"sublink/services/sse"
 	"sync"
 	"time"
 
@@ -202,7 +204,24 @@ func (sm *SchedulerManager) UpdateJob(schedulerID int, cronExpr string, enabled 
 func ExecuteSubscriptionTask(id int, url string, subName string) {
 
 	log.Printf("执行自动获取订阅任务 - ID: %d, Name: %s, URL: %s", id, subName, url)
-	node.LoadClashConfigFromURL(id, url, subName)
+	err := node.LoadClashConfigFromURL(id, url, subName)
+	if err != nil {
+		sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
+			"type":    "sub_update",
+			"id":      id,
+			"name":    subName,
+			"status":  "error",
+			"message": fmt.Sprintf("订阅更新失败: %v", err),
+		})
+	} else {
+		sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
+			"type":    "sub_update",
+			"id":      id,
+			"name":    subName,
+			"status":  "success",
+			"message": "订阅更新成功",
+		})
+	}
 }
 
 // cleanCronExpression 清理Cron表达式中的多余空格
@@ -408,5 +427,11 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 		}(&nodes[i])
 	}
 	wg.Wait()
+	wg.Wait()
 	log.Println("节点测速任务执行完成")
+	sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
+		"type":    "speed_test",
+		"status":  "success",
+		"message": "节点测速任务执行完成,请刷新列表查看测速结果",
+	})
 }

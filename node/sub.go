@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sublink/models"
+	"sublink/services/sse"
 	"sublink/utils"
 	"time"
 
@@ -26,17 +27,17 @@ type ClashConfig struct {
 // id: 订阅ID
 // url: 订阅链接
 // subName: 订阅名称
-func LoadClashConfigFromURL(id int, url string, subName string) {
+func LoadClashConfigFromURL(id int, url string, subName string) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Printf("URL %s，获取Clash配置失败:  %v", url, err)
-		return
+		return err
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("URL %s，读取Clash配置失败:  %v", url, err)
-		return
+		return err
 	}
 	var config ClashConfig
 	// 尝试解析 YAML
@@ -69,17 +70,17 @@ func LoadClashConfigFromURL(id int, url string, subName string) {
 
 	if len(config.Proxies) == 0 {
 		log.Printf("URL %s，解析失败或未找到节点 (YAML error: %v)", url, errYaml)
-		return
+		return fmt.Errorf("解析失败 or 未找到节点")
 	}
 
-	scheduleClashToNodeLinks(id, config.Proxies, subName)
+	return scheduleClashToNodeLinks(id, config.Proxies, subName)
 }
 
 // scheduleClashToNodeLinks 将 Clash 代理配置转换为节点链接并保存到数据库
 // id: 订阅ID
 // proxys: 代理节点列表
 // subName: 订阅名称
-func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
+func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) error {
 	successCount := 0
 	err := models.DeleteAutoSubscriptionNodes(id)
 	if err != nil {
@@ -462,7 +463,7 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 	err = subS.Find()
 	if err != nil {
 		log.Printf("获取订阅连接 %s 失败:  %v", subName, err)
-		return
+		return err
 	}
 	subS.SuccessCount = successCount
 	// 当前时间
@@ -470,7 +471,13 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) {
 	subS.LastRunTime = &now
 	err1 := subS.Update()
 	if err1 != nil {
-		return
+		return err1
 	}
+	sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
+		"type":    "sub_pull",
+		"status":  "success",
+		"message": fmt.Sprintf("✅订阅【%s】节点拉取完成，总节点【%d】个，成功存储【%d】个", subName, len(proxys), successCount),
+	})
+	return nil
 
 }

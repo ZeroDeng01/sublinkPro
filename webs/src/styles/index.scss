@@ -13,7 +13,7 @@
   box-shadow: var(--el-box-shadow-light);
 }
 
-.table-container > .el-card__header {
+.table-container>.el-card__header {
   padding: calc(var(--el-card-padding) - 8px) var(--el-card-padding);
 }
 

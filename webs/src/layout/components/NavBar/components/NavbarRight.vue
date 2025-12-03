@@ -21,6 +21,10 @@
       <lang-select class="setting-item" />
     </template>
 
+    <!-- 通知 -->
+    <Notify />
+
+
     <!-- 用户头像 -->
     <el-dropdown class="setting-item" trigger="click">
       <div class="flex-center h100% p10px">
@@ -57,7 +61,9 @@
   </div>
 </template>
 <script setup lang="ts">
+import Notify from "./Notify.vue";
 import {
+
   useAppStore,
   useTagsViewStore,
   useUserStore,

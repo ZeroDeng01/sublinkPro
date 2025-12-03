@@ -9,7 +9,9 @@ export function setupStore(app: App<Element>) {
 }
 
 export * from "./modules/app";
+export * from "./modules/notice";
 export * from "./modules/permission";
+
 export * from "./modules/settings";
 export * from "./modules/tagsView";
 export * from "./modules/user";

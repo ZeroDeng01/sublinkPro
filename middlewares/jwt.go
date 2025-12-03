@@ -53,6 +53,9 @@ func AuthToken(c *gin.Context) {
 
 	token := c.Request.Header.Get("Authorization")
 	if token == "" {
+		token = c.Query("token")
+	}
+	if token == "" {
 		utils.FailWithMsg(c, "请求未携带token")
 		c.Abort()
 		return
