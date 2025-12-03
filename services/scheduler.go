@@ -400,6 +400,9 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 		}
 	}
 
+	// 获取测速模式
+	speedTestMode, _ := models.GetSetting("speed_test_mode")
+
 	// 并发控制
 	concurrency := 10 // 默认并发数
 	sem := make(chan struct{}, concurrency)
@@ -424,8 +427,18 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 				defer wg.Done()
 				defer func() { <-sem }()
 
-				// 执行测速
-				speed, latency, err := MihomoSpeedTest(n.Link, speedTestUrl, speedTestTimeout)
+				var speed float64
+				var latency int
+				var err error
+
+				if speedTestMode == "tcp" {
+					// 仅测试延迟
+					latency, err = MihomoDelay(n.Link, speedTestUrl, speedTestTimeout)
+					speed = 0
+				} else {
+					// 测试延迟和速度 (默认 mihomo)
+					speed, latency, err = MihomoSpeedTest(n.Link, speedTestUrl, speedTestTimeout)
+				}
 
 				mu.Lock()
 				defer mu.Unlock()
