@@ -121,7 +121,12 @@ func MihomoDelay(nodeLink string, testUrl string, timeout time.Duration) (latenc
 	if err != nil {
 		return 0, fmt.Errorf("dial error: %v", err)
 	}
-	defer conn.Close()
+	// Close connection asynchronously to avoid blocking if it hangs
+	defer func() {
+		go func() {
+			_ = conn.Close()
+		}()
+	}()
 
 	latency = int(time.Since(start).Milliseconds())
 	return latency, nil
