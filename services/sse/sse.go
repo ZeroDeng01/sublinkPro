@@ -1,10 +1,15 @@
 package sse
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"strings"
+	"sublink/models"
 	"sync"
+	"time"
 )
 
 // SSEBroker manages Server-Sent Events clients and broadcasting
@@ -100,6 +105,9 @@ func (broker *SSEBroker) Broadcast(message string) {
 // BroadcastEvent sends a JSON message to all clients
 // You can use this to send structured data
 func (broker *SSEBroker) BroadcastEvent(event string, payload interface{}) {
+	// Trigger Webhook
+	go TriggerWebhook(event, payload)
+
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("Error marshaling SSE payload: %v", err)
@@ -107,4 +115,114 @@ func (broker *SSEBroker) BroadcastEvent(event string, payload interface{}) {
 	}
 	msg := fmt.Sprintf("event: %s\ndata: %s\n\n", event, jsonData)
 	broker.Notifier <- []byte(msg)
+}
+
+// TriggerWebhook sends a webhook notification// TriggerWebhook 触发 Webhook 通知
+func TriggerWebhook(event string, payload interface{}) {
+	// 获取系统设置中的 Webhook 配置
+	webhookUrl, _ := models.GetSetting("webhook_url")
+	webhookEnabledStr, _ := models.GetSetting("webhook_enabled")
+
+	if webhookUrl == "" || webhookEnabledStr != "true" {
+		return
+	}
+
+	webhookMethod, _ := models.GetSetting("webhook_method")
+	if webhookMethod == "" {
+		webhookMethod = "POST"
+	}
+	webhookContentType, _ := models.GetSetting("webhook_content_type")
+	if webhookContentType == "" {
+		webhookContentType = "application/json"
+	}
+	webhookHeaders, _ := models.GetSetting("webhook_headers")
+	webhookBody, _ := models.GetSetting("webhook_body")
+
+	// 构造配置对象
+	config := map[string]string{
+		"url":         webhookUrl,
+		"method":      webhookMethod,
+		"contentType": webhookContentType,
+		"headers":     webhookHeaders,
+		"body":        webhookBody,
+	}
+
+	go SendWebhook(config, event, payload)
+}
+
+// SendWebhook sends a webhook notification synchronously and returns error
+func SendWebhook(config map[string]string, event string, payload interface{}) error {
+	// 准备模板数据
+	data := map[string]interface{}{
+		"event": event,
+		"data":  payload,
+	}
+	// 尝试从 payload 中提取 title 和 message
+	if p, ok := payload.(map[string]interface{}); ok {
+		if title, ok := p["title"]; ok {
+			data["title"] = title
+		}
+		if message, ok := p["message"]; ok {
+			data["message"] = message
+		}
+		// 兼容 text 字段
+		if text, ok := p["text"]; ok {
+			data["text"] = text
+		}
+	}
+
+	// 处理 Body
+	bodyStr := config["body"]
+	if bodyStr == "" {
+		// 默认 Body
+		jsonBytes, _ := json.Marshal(data)
+		bodyStr = string(jsonBytes)
+	} else {
+		// 简单模板替换
+		bodyStr = strings.ReplaceAll(bodyStr, "{{title}}", fmt.Sprintf("%v", data["title"]))
+		bodyStr = strings.ReplaceAll(bodyStr, "{{message}}", fmt.Sprintf("%v", data["message"]))
+		bodyStr = strings.ReplaceAll(bodyStr, "{{text}}", fmt.Sprintf("%v", data["text"]))
+		bodyStr = strings.ReplaceAll(bodyStr, "{{event}}", event)
+
+		// 支持 {{json .}} 替换为完整 JSON
+		if strings.Contains(bodyStr, "{{json .}}") {
+			jsonBytes, _ := json.Marshal(data)
+			bodyStr = strings.ReplaceAll(bodyStr, "{{json .}}", string(jsonBytes))
+		}
+	}
+
+	req, err := http.NewRequest(config["method"], config["url"], bytes.NewBuffer([]byte(bodyStr)))
+	if err != nil {
+		log.Printf("创建 Webhook 请求失败: %v", err)
+		return err
+	}
+
+	req.Header.Set("Content-Type", config["contentType"])
+	req.Header.Set("User-Agent", "Sublink-Webhook/1.0")
+
+	// 处理 Headers
+	if config["headers"] != "" {
+		var headers map[string]string
+		if err := json.Unmarshal([]byte(config["headers"]), &headers); err == nil {
+			for k, v := range headers {
+				req.Header.Set(k, v)
+			}
+		}
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("发送 Webhook 失败: %v", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		log.Printf("Webhook 发送失败，状态码: %d", resp.StatusCode)
+		return fmt.Errorf("HTTP status %d", resp.StatusCode)
+	} else {
+		log.Printf("Webhook sent successfully to %s", config["url"])
+	}
+	return nil
 }

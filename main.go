@@ -180,6 +180,7 @@ func Run(port int) {
 	routers.Backup(r)
 	routers.Script(r)
 	routers.SSE(r)
+	routers.Settings(r)
 	// 启动服务
 	r.Run(fmt.Sprintf("0.0.0.0:%d", port))
 }

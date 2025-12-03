@@ -73,6 +73,9 @@ onMounted(async () => {
   userinfo.value = await userStore.getUserInfo();
   profileForm.username = userinfo.value.username;
   profileForm.nickname = userinfo.value.nickname || "";
+  profileForm.nickname = userinfo.value.nickname || "";
+  
+  getWebhookConfig();
 });
 
 /** Change password */
@@ -178,6 +181,86 @@ async function handleUpdateProfile() {
     loading.value = false;
   }
 }
+
+// Webhook form
+const webhookFormRef = ref<FormInstance>();
+const webhookForm = reactive({
+  webhookUrl: "",
+  webhookMethod: "POST",
+  webhookContentType: "application/json",
+  webhookHeaders: "",
+  webhookBody: "",
+  webhookEnabled: false,
+});
+
+const webhookRules = {
+  webhookUrl: [
+    { required: true, message: "请输入 Webhook URL", trigger: "blur" },
+  ],
+};
+
+async function getWebhookConfig() {
+  try {
+    const { data } = await request({
+      url: "/api/v1/settings/webhook",
+      method: "get",
+    });
+    webhookForm.webhookUrl = data.webhookUrl || "";
+    webhookForm.webhookMethod = data.webhookMethod || "POST";
+    webhookForm.webhookContentType = data.webhookContentType || "application/json";
+    webhookForm.webhookHeaders = data.webhookHeaders || "";
+    webhookForm.webhookBody = data.webhookBody || "";
+    webhookForm.webhookEnabled = data.webhookEnabled || false;
+  } catch (error: any) {
+    // Silent error or log
+    console.error("Failed to fetch webhook config", error);
+  }
+}
+
+async function handleTestWebhook() {
+  if (!webhookFormRef.value) return;
+  
+  await webhookFormRef.value.validate(async (valid) => {
+    if (valid) {
+      loading.value = true;
+      try {
+        await request({
+          url: "/api/v1/settings/webhook/test",
+          method: "post",
+          data: webhookForm,
+        });
+        ElMessage.success("Webhook 测试发送成功");
+      } catch (error: any) {
+        ElMessage.error("测试失败：" + (error.response?.data?.message || error.message));
+      } finally {
+        loading.value = false;
+      }
+    }
+  });
+}
+
+async function handleUpdateWebhook() {
+  if (!webhookFormRef.value) return;
+  
+  await webhookFormRef.value.validate(async (valid) => {
+    if (valid) {
+      loading.value = true;
+      try {
+        await request({
+          url: "/api/v1/settings/webhook",
+          method: "post",
+          data: webhookForm,
+        });
+        ElMessage.success("Webhook 设置保存成功");
+      } catch (error: any) {
+        ElMessage.error("保存失败：" + (error.response?.data?.message || error.message));
+      } finally {
+        loading.value = false;
+      }
+    }
+  });
+}
+
 </script>
 
 <template>
@@ -312,6 +395,94 @@ async function handleUpdateProfile() {
             </el-form-item>
           </el-form>
         </el-card>
+
+        <!-- Webhook Settings -->
+        <el-card style="margin-top: 20px">
+          <template #header>
+            <div class="card-header">
+              <span>Webhook 设置</span>
+              <el-switch
+                v-model="webhookForm.webhookEnabled"
+                active-text="启用"
+                inactive-text="禁用"
+              />
+            </div>
+          </template>
+
+          <el-form
+            ref="webhookFormRef"
+            :model="webhookForm"
+            :rules="webhookRules"
+            label-width="140px"
+            class="webhook-form"
+          >
+            <el-form-item label="Webhook URL" prop="webhookUrl">
+              <el-input
+                v-model="webhookForm.webhookUrl"
+                placeholder="https://example.com/webhook"
+              />
+            </el-form-item>
+
+            <el-form-item label="请求方法" prop="webhookMethod">
+              <el-select v-model="webhookForm.webhookMethod" placeholder="Select">
+                <el-option label="POST" value="POST" />
+                <el-option label="GET" value="GET" />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="Content-Type" prop="webhookContentType">
+              <el-select
+                v-model="webhookForm.webhookContentType"
+                placeholder="Select"
+              >
+                <el-option label="application/json" value="application/json" />
+                <el-option
+                  label="application/x-www-form-urlencoded"
+                  value="application/x-www-form-urlencoded"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="Headers (JSON)" prop="webhookHeaders">
+              <el-input
+                v-model="webhookForm.webhookHeaders"
+                type="textarea"
+                :rows="3"
+                placeholder='{"Authorization": "Bearer token"}'
+              />
+            </el-form-item>
+
+            <el-form-item label="Body Template" prop="webhookBody">
+              <el-input
+                v-model="webhookForm.webhookBody"
+                type="textarea"
+                :rows="5"
+                placeholder='{"title": "{{title}}", "content": "{{message}}"}'
+              />
+              <div class="form-tip" v-pre>
+                支持变量: {{title}}, {{message}}, {{event}}, {{json .}}
+              </div>
+            </el-form-item>
+
+            <el-form-item>
+              <el-button
+                type="success"
+                @click="handleTestWebhook"
+                :loading="loading"
+              >
+                测试 Webhook
+              </el-button>
+              <el-button
+                type="primary"
+                @click="handleUpdateWebhook"
+                :loading="loading"
+              >
+                保存 Webhook 设置
+              </el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+
       </el-col>
     </el-row>
   </div>
@@ -374,5 +545,11 @@ async function handleUpdateProfile() {
       margin-left: 0 !important;
     }
   }
+}
+
+.form-tip {
+  margin-top: 5px;
+  color: #909399;
+  font-size: 12px;
 }
 </style>

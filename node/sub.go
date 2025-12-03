@@ -475,6 +475,7 @@ func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) error {
 	}
 	sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
 		"type":    "sub_pull",
+		"title":   "节点拉取完成",
 		"status":  "success",
 		"message": fmt.Sprintf("✅订阅【%s】节点拉取完成，总节点【%d】个，成功存储【%d】个", subName, len(proxys), successCount),
 	})

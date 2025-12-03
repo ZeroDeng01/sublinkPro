@@ -208,6 +208,7 @@ func ExecuteSubscriptionTask(id int, url string, subName string) {
 	if err != nil {
 		sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
 			"type":    "sub_update",
+			"title":   "订阅更新失败",
 			"id":      id,
 			"name":    subName,
 			"status":  "error",
@@ -216,6 +217,7 @@ func ExecuteSubscriptionTask(id int, url string, subName string) {
 	} else {
 		sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
 			"type":    "sub_update",
+			"title":   "订阅更新成功",
 			"id":      id,
 			"name":    subName,
 			"status":  "success",
@@ -375,6 +377,7 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 			log.Printf("测速任务执行过程中发生严重错误: %v", r)
 			sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
 				"type":    "speed_test",
+				"title":   "测速任务异常",
 				"status":  "error",
 				"message": fmt.Sprintf("测速任务执行异常: %v", r),
 			})
@@ -489,6 +492,7 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 		log.Printf("节点测速任务执行完成 - 总计: %d, 成功: %d, 失败: %d", len(nodes), successCount, failCount)
 		sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
 			"type":    "speed_test",
+			"title":   "节点测速完成",
 			"status":  "success",
 			"message": fmt.Sprintf("节点测速任务执行完成 (成功: %d, 失败: %d)，请刷新列表查看测速结果", successCount, failCount),
 		})
@@ -497,6 +501,7 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 		log.Printf("节点测速任务执行超时 - 超时时间: %v, 已完成: 成功 %d, 失败 %d", overallTimeout, successCount, failCount)
 		sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
 			"type":    "speed_test",
+			"title":   "节点测速超时",
 			"status":  "warning",
 			"message": fmt.Sprintf("节点测速任务执行超时 (已完成: %d/%d)，请刷新列表查看部分结果", successCount+failCount, len(nodes)),
 		})
