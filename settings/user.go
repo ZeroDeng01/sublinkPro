@@ -28,8 +28,6 @@ func ResetUser(username string, password string) {
 		user.Del()
 	}
 
-	//打印输出
-	log.Printf("账号%s,密码%s", username, password)
 	User = &models.User{Username: username, Password: password, Role: "admin", Nickname: "管理员"}
 	User.Create()
 }

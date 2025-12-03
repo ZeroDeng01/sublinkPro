@@ -88,7 +88,6 @@ func UserPages(c *gin.Context) {
 func UserSet(c *gin.Context) {
 	NewUsername := c.PostForm("username")
 	NewPassword := c.PostForm("password")
-	log.Println(NewUsername, NewPassword)
 	if NewUsername == "" || NewPassword == "" {
 		utils.FailWithMsg(c, "用户名或密码不能为空")
 		return
@@ -188,7 +187,7 @@ func UserUpdateProfile(c *gin.Context) {
 		"username": req.Username,
 		"nickname": req.Nickname,
 	}
-	
+
 	if err := models.DB.Where("username = ?", user.Username).Model(&models.User{}).Updates(updates).Error; err != nil {
 		log.Println("个人资料更新失败:", err)
 		utils.FailWithMsg(c, "个人资料更新失败: "+err.Error())
