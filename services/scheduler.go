@@ -410,10 +410,10 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	var mu sync.Mutex
 
 	// 总体超时控制
-	overallTimeout := time.Duration(len(nodes)) * speedTestTimeout / time.Duration(concurrency) * 2
-	if overallTimeout < 30*time.Second {
-		overallTimeout = 30 * time.Second
-	}
+	// overallTimeout := time.Duration(len(nodes)) * speedTestTimeout / time.Duration(concurrency) * 2
+	// if overallTimeout < 30*time.Second {
+	// 	overallTimeout = 30 * time.Second
+	// }
 	done := make(chan struct{})
 
 	go func() {
@@ -432,14 +432,16 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 
 				if err != nil {
 					failCount++
-					log.Printf("节点 %s 测速失败: %v", n.Name, err)
+					log.Printf("节点 [%s] 测速失败: %v", n.Name, err)
 					// 更新节点状态为失败 (可选)
 				} else {
 					successCount++
+					log.Printf("节点 [%s] 测速成功: 速度 %.2f MB/s, 延迟 %d ms", n.Name, speed, latency)
 					// 更新节点测速结果
 					n.Speed = speed
 					n.DelayTime = latency
-					if err := n.Update(); err != nil {
+					n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+					if err := n.UpdateSpeed(); err != nil {
 						log.Printf("更新节点 %s 测速结果失败: %v", n.Name, err)
 					}
 				}
@@ -449,34 +451,18 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 		close(done)
 	}()
 
-	select {
-	case <-done:
-		// 完成
-		log.Printf("节点测速任务执行完成 - 成功: %d, 失败: %d", successCount, failCount)
-		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
-			Event:   "speed_test",
-			Title:   "节点测速完成",
-			Message: fmt.Sprintf("节点测速完成 (成功: %d, 失败: %d)", successCount, failCount),
-			Data: map[string]interface{}{
-				"status":  "success",
-				"success": successCount,
-				"fail":    failCount,
-				"total":   len(nodes),
-			},
-		})
-	case <-time.After(overallTimeout):
-		// 超时
-		log.Printf("节点测速任务执行超时 - 超时时间: %v, 已完成: 成功 %d, 失败 %d", overallTimeout, successCount, failCount)
-		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
-			Event:   "speed_test",
-			Title:   "节点测速超时",
-			Message: fmt.Sprintf("节点测速任务执行超时 (已完成: %d/%d)，请刷新列表查看部分结果", successCount+failCount, len(nodes)),
-			Data: map[string]interface{}{
-				"status":  "warning",
-				"success": successCount,
-				"fail":    failCount,
-				"total":   len(nodes),
-			},
-		})
-	}
+	<-done
+	// 完成
+	log.Printf("节点测速任务执行完成 - 成功: %d, 失败: %d", successCount, failCount)
+	sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
+		Event:   "speed_test",
+		Title:   "节点测速完成",
+		Message: fmt.Sprintf("节点测速完成 (成功: %d, 失败: %d)", successCount, failCount),
+		Data: map[string]interface{}{
+			"status":  "success",
+			"success": successCount,
+			"fail":    failCount,
+			"total":   len(nodes),
+		},
+	})
 }
