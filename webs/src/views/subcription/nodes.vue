@@ -30,6 +30,7 @@ interface Node {
   Speed: number;
   LastCheck: string;
   Source: string;
+  DelayTime: number;
 }
 const tableData = ref<Node[]>([]);
 const loading = ref(false);
@@ -44,6 +45,7 @@ const table = ref();
 const NodeTitle = ref("");
 const radio1 = ref("1");
 const groupOptions = ref<string[]>([]);
+const sourceOptions = ref<string[]>([]);
 
 // 订阅相关变量
 const subSchedulerData = ref<SubScheduler[]>([]);
@@ -87,12 +89,17 @@ async function getnodes() {
     tableData.value = data;
     // 提取所有已存在的分组
     const groups = new Set<string>();
+    const sources = new Set<string>();
     data.forEach((node: Node) => {
       if (node.Group && node.Group.trim() !== "") {
         groups.add(node.Group);
       }
+      if (node.Source && node.Source.trim() !== "") {
+        sources.add(node.Source);
+      }
     });
     groupOptions.value = Array.from(groups).sort();
+    sourceOptions.value = Array.from(sources).sort();
   } catch (error) {
     console.error("获取节点列表失败:", error);
   } finally {
@@ -176,6 +183,8 @@ const handleSelectionChange = (val: Node[]) => {
 const searchQuery = ref("");
 const searchSourceQuery = ref("");
 const groupSearchQuery = ref("");
+const searchDelayQuery = ref<number | undefined>(undefined);
+const searchSpeedQuery = ref<number | undefined>(undefined);
 const handleSearch = () => {
   // filteredTableData 是计算属性，会自动更新
 };
@@ -184,6 +193,8 @@ const resetSearch = () => {
   searchQuery.value = "";
   searchSourceQuery.value = "";
   groupSearchQuery.value = "";
+  searchDelayQuery.value = undefined;
+  searchSpeedQuery.value = undefined;
 };
 
 // 搜索分组选项
@@ -218,6 +229,18 @@ const filteredTableData = computed(() => {
         node.Source.toLowerCase().includes(sourceQuery)
       );
     }
+  }
+
+  // 按延迟过滤 (<= 指定值)
+  if (searchDelayQuery.value !== undefined && searchDelayQuery.value !== null) {
+    result = result.filter(
+      (node) => node.DelayTime > 0 && node.DelayTime <= searchDelayQuery.value!
+    );
+  }
+
+  // 按速度过滤 (> 指定值)
+  if (searchSpeedQuery.value !== undefined && searchSpeedQuery.value !== null) {
+    result = result.filter((node) => node.Speed > searchSpeedQuery.value!);
   }
 
   // 再按节点内容过滤
@@ -932,15 +955,44 @@ const currentSpeedTestUrlOptions = computed(() => {
                 <el-icon><Search /></el-icon>
               </template>
             </el-input>
-            <el-input
+            <el-select
               v-model="searchSourceQuery"
               placeholder="搜索来源"
+              style="width: 160px"
+              clearable
+              filterable
+              @change="handleSearch"
+            >
+              <el-option label="手动添加" value="手动添加" />
+              <el-option
+                v-for="source in sourceOptions"
+                :key="source"
+                :label="source === 'manual' ? '手动添加' : source"
+                :value="source"
+              />
+            </el-select>
+            <el-input
+              v-model.number="searchDelayQuery"
+              placeholder="最大延迟"
               style="width: 200px"
               clearable
+              type="number"
               @input="handleSearch"
             >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
+              <template #append>
+                ms
+              </template>
+            </el-input>
+            <el-input
+              v-model.number="searchSpeedQuery"
+              placeholder="最低速度"
+              style="width: 200px"
+              clearable
+              type="number"
+              @input="handleSearch"
+            >
+              <template #append>
+                MB/s
               </template>
             </el-input>
             <el-button @click="resetSearch">重置</el-button>
