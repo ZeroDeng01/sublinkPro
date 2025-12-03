@@ -367,6 +367,20 @@ func ExecuteSpecificNodeSpeedTestTask(nodeIDs []int) {
 
 // RunSpeedTestOnNodes 对指定节点列表执行测速
 func RunSpeedTestOnNodes(nodes []models.Node) {
+	log.Printf("开始执行节点测速，总节点数: %d", len(nodes))
+
+	// 确保函数最后一定会执行日志和通知
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("测速任务执行过程中发生严重错误: %v", r)
+			sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
+				"type":    "speed_test",
+				"status":  "error",
+				"message": fmt.Sprintf("测速任务执行异常: %v", r),
+			})
+		}
+	}()
+
 	// 获取测速配置
 	speedTestMode, _ := models.GetSetting("speed_test_mode")
 	speedTestURL, _ := models.GetSetting("speed_test_url")
@@ -383,10 +397,25 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	// 限制并发数，避免同时发起过多连接
 	sem := make(chan struct{}, 10)
 
+	// 用于统计测速结果
+	successCount := 0
+	failCount := 0
+	var countMutex sync.Mutex
+
 	for i := range nodes {
 		wg.Add(1)
 		go func(n *models.Node) {
-			defer wg.Done()
+			// 确保 wg.Done() 一定会被调用
+			defer func() {
+				wg.Done()
+				if r := recover(); r != nil {
+					log.Printf("节点 %s 测速过程中发生 panic: %v", n.Name, r)
+					countMutex.Lock()
+					failCount++
+					countMutex.Unlock()
+				}
+			}()
+
 			sem <- struct{}{}        // 获取信号量
 			defer func() { <-sem }() // 释放信号量
 
@@ -398,10 +427,16 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 					n.Speed = 0
 					n.DelayTime = -1
 					log.Printf("节点真速度测速失败: %s, Error: %v", n.Name, err)
+					countMutex.Lock()
+					failCount++
+					countMutex.Unlock()
 				} else {
 					n.Speed = speed
 					n.DelayTime = latency
 					log.Printf("节点测速完成: %s, 速度: %.2fMB/s, 延迟: %dms", n.Name, speed, latency)
+					countMutex.Lock()
+					successCount++
+					countMutex.Unlock()
 				}
 			} else {
 				// TCP Ping 模式 (改为使用 Mihomo Adapter 的 Connect Latency，即 0-RTT/握手延迟)
@@ -416,22 +451,54 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 					n.DelayTime = -1
 					n.Speed = 0
 					log.Printf("节点测速失败: %s, Error: %v", n.Name, err)
+					countMutex.Lock()
+					failCount++
+					countMutex.Unlock()
 				} else {
 					n.DelayTime = latency
 					n.Speed = 0
 					log.Printf("节点测速完成: %s, 延迟: %dms", n.Name, latency)
+					countMutex.Lock()
+					successCount++
+					countMutex.Unlock()
 				}
 			}
 			n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
-			n.UpdateSpeed()
+
+			// 保护数据库更新操作
+			if err := n.UpdateSpeed(); err != nil {
+				log.Printf("更新节点 %s 的测速结果失败: %v", n.Name, err)
+			}
 		}(&nodes[i])
 	}
-	wg.Wait()
-	wg.Wait()
-	log.Println("节点测速任务执行完成")
-	sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
-		"type":    "speed_test",
-		"status":  "success",
-		"message": "节点测速任务执行完成,请刷新列表查看测速结果",
-	})
+
+	// 使用带超时的等待机制，防止永久阻塞
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	// 设置整体超时时间为所有节点的最大可能耗时 + 缓冲时间
+	// 计算: (单个节点超时 * 节点数 / 并发数) + 30秒缓冲
+	overallTimeout := time.Duration(len(nodes)/10+1)*timeout + 30*time.Second
+
+	select {
+	case <-done:
+		// 正常完成
+		log.Printf("节点测速任务执行完成 - 总计: %d, 成功: %d, 失败: %d", len(nodes), successCount, failCount)
+		sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
+			"type":    "speed_test",
+			"status":  "success",
+			"message": fmt.Sprintf("节点测速任务执行完成 (成功: %d, 失败: %d)，请刷新列表查看测速结果", successCount, failCount),
+		})
+	case <-time.After(overallTimeout):
+		// 超时
+		log.Printf("节点测速任务执行超时 - 超时时间: %v, 已完成: 成功 %d, 失败 %d", overallTimeout, successCount, failCount)
+		sse.GetSSEBroker().BroadcastEvent("task_update", map[string]interface{}{
+			"type":    "speed_test",
+			"status":  "warning",
+			"message": fmt.Sprintf("节点测速任务执行超时 (已完成: %d/%d)，请刷新列表查看部分结果", successCount+failCount, len(nodes)),
+		})
+	}
 }
