@@ -13,9 +13,34 @@ export const useUserStore = defineStore("user", () => {
   });
 
   const eventSource = ref<EventSource | null>(null);
+  const reconnectTimeout = ref<NodeJS.Timeout | null>(null);
+  const heartbeatTimeout = ref<NodeJS.Timeout | null>(null);
+
+  function resetHeartbeat() {
+    if (heartbeatTimeout.value) clearTimeout(heartbeatTimeout.value);
+    heartbeatTimeout.value = setTimeout(() => {
+      console.warn("SSE Heartbeat timeout, reconnecting...");
+      eventSource.value?.close();
+      eventSource.value = null;
+      connectSSE();
+    }, 15000); // 15s timeout (backend sends heartbeat every 10s)
+  }
+
+  function handleReconnect() {
+    if (eventSource.value) {
+      eventSource.value.close();
+      eventSource.value = null;
+    }
+    if (reconnectTimeout.value) clearTimeout(reconnectTimeout.value);
+
+    console.log("Attempting to reconnect SSE in 5s...");
+    reconnectTimeout.value = setTimeout(() => {
+      connectSSE();
+    }, 5000);
+  }
 
   function connectSSE() {
-    if (eventSource.value) return;
+    if (eventSource.value?.readyState === 1) return; // Already connected
 
     const token = localStorage.getItem("accessToken");
     if (!token) return;
@@ -30,13 +55,26 @@ export const useUserStore = defineStore("user", () => {
     ) {
       url = import.meta.env.VITE_APP_BASE_API + url;
     }
+
+    // Close existing connection if any
+    if (eventSource.value) {
+      eventSource.value.close();
+    }
+
     eventSource.value = new EventSource(url);
 
     eventSource.value.onopen = () => {
       console.log("SSE Connected");
+      resetHeartbeat();
     };
 
+    eventSource.value.addEventListener("heartbeat", () => {
+      console.log("SSE Heartbeat received");
+      resetHeartbeat();
+    });
+
     eventSource.value.addEventListener("task_update", (event) => {
+      resetHeartbeat();
       try {
         const data = JSON.parse(event.data);
         const type = data.status === "success" ? "success" : "error";
@@ -56,8 +94,7 @@ export const useUserStore = defineStore("user", () => {
 
     eventSource.value.onerror = (err) => {
       console.error("SSE Error:", err);
-      eventSource.value?.close();
-      eventSource.value = null;
+      handleReconnect();
     };
   }
 
@@ -66,6 +103,8 @@ export const useUserStore = defineStore("user", () => {
       eventSource.value.close();
       eventSource.value = null;
     }
+    if (reconnectTimeout.value) clearTimeout(reconnectTimeout.value);
+    if (heartbeatTimeout.value) clearTimeout(heartbeatTimeout.value);
   }
 
   /**

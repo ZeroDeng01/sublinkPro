@@ -51,6 +51,9 @@ func GetSSEBroker() *SSEBroker {
 
 // Listen starts the broker to listen for incoming and closing clients
 func (broker *SSEBroker) Listen() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case s := <-broker.newClients:
@@ -79,6 +82,21 @@ func (broker *SSEBroker) Listen() {
 					// If the client's channel is blocked, remove the client
 					// This prevents one slow client from blocking the entire broadcast
 					log.Println("Client channel blocked, removing client")
+					delete(broker.clients, clientMessageChan)
+					close(clientMessageChan)
+				}
+			}
+			broker.mutex.Unlock()
+
+		case <-ticker.C:
+			// Send heartbeat to all clients
+			broker.mutex.Lock()
+			heartbeatMsg := []byte("event: heartbeat\ndata: ping\n\n")
+			for clientMessageChan := range broker.clients {
+				select {
+				case clientMessageChan <- heartbeatMsg:
+				default:
+					log.Println("Client channel blocked during heartbeat, removing client")
 					delete(broker.clients, clientMessageChan)
 					close(clientMessageChan)
 				}
