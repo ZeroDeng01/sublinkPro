@@ -900,6 +900,15 @@ const currentSpeedTestUrlOptions = computed(() => {
   }
   return speedTest204Options;
 });
+
+const handleSpeedModeChange = (val: string | number | boolean | undefined) => {
+  if (val === "mihomo") {
+    speedTestForm.value.url = speedTestDownloadOptions[0].value;
+  } else {
+    speedTestForm.value.url = speedTest204Options[0].value;
+  }
+};
+
 </script>
 
 <template>
@@ -1535,7 +1544,10 @@ const currentSpeedTestUrlOptions = computed(() => {
           />
         </el-form-item>
         <el-form-item label="测速模式">
-          <el-radio-group v-model="speedTestForm.mode">
+          <el-radio-group
+            v-model="speedTestForm.mode"
+            @change="handleSpeedModeChange"
+          >
             <el-radio label="tcp" value="tcp">仅延迟测试</el-radio>
             <el-radio label="mihomo" value="mihomo">真速度测试</el-radio>
           </el-radio-group>
