@@ -460,7 +460,15 @@ async function handleUpdateWebhook() {
                 placeholder='{"title": "{{title}}", "content": "{{message}}"}'
               />
               <div class="form-tip" v-pre>
-                支持变量: {{title}}, {{message}}, {{event}}, {{json .}}
+                <p>支持在 <strong>URL</strong> 和 <strong>Body</strong> 中使用以下变量:</p>
+                <ul>
+                  <li><code>{{title}}</code>: 消息标题</li>
+                  <li><code>{{message}}</code>: 消息内容</li>
+                  <li><code>{{event}}</code>: 事件类型 (e.g., sub_update, speed_test)</li>
+                  <li><code>{{time}}</code>: 事件时间 (yyyy-MM-dd HH:mm:ss)</li>
+                  <li><code>{{json .}}</code>: 完整 JSON 数据 (仅支持 Body)</li>
+                </ul>
+                <p>例如 Bark URL: <code>https://api.day.app/key/{{title}}/{{message}}</code></p>
               </div>
             </el-form-item>
 
@@ -551,5 +559,18 @@ async function handleUpdateWebhook() {
   margin-top: 5px;
   color: #909399;
   font-size: 12px;
+  line-height: 1.5;
+
+  ul {
+    padding-left: 20px;
+    margin: 5px 0;
+  }
+
+  code {
+    background-color: #f4f4f5;
+    padding: 2px 4px;
+    border-radius: 4px;
+    color: #c0392b;
+  }
 }
 </style>

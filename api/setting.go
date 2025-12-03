@@ -117,11 +117,13 @@ func TestWebhookConfig(c *gin.Context) {
 	}
 
 	// 构造测试 Payload
-	payload := map[string]interface{}{
-		"title":   "Webhook 测试",
-		"message": "这是一条测试消息，用于验证 Webhook 配置是否正确。",
-		"event":   "test_webhook",
-		"time":    "2023-01-01 12:00:00",
+	payload := sse.NotificationPayload{
+		Event:   "test_webhook",
+		Title:   "Sublink Pro Webhook 测试",
+		Message: "这是一条Sublink Pro测试消息，用于验证 Webhook 配置是否正确。",
+		Data: map[string]interface{}{
+			"test": true,
+		},
 	}
 
 	if err := sse.SendWebhook(config, "test_webhook", payload); err != nil {

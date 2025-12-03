@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"sublink/models"
 	"sync"
@@ -102,9 +103,27 @@ func (broker *SSEBroker) Broadcast(message string) {
 	broker.Notifier <- []byte(message)
 }
 
+// NotificationPayload defines the standard payload for notifications
+type NotificationPayload struct {
+	Event   string      `json:"event"`
+	Title   string      `json:"title"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+	Time    string      `json:"time"`
+}
+
 // BroadcastEvent sends a JSON message to all clients
 // You can use this to send structured data
-func (broker *SSEBroker) BroadcastEvent(event string, payload interface{}) {
+func (broker *SSEBroker) BroadcastEvent(event string, payload NotificationPayload) {
+	// Ensure time is set
+	if payload.Time == "" {
+		payload.Time = time.Now().Format("2006-01-02 15:04:05")
+	}
+	// Ensure event is set in payload
+	if payload.Event == "" {
+		payload.Event = event
+	}
+
 	// Trigger Webhook
 	go TriggerWebhook(event, payload)
 
@@ -118,7 +137,7 @@ func (broker *SSEBroker) BroadcastEvent(event string, payload interface{}) {
 }
 
 // TriggerWebhook sends a webhook notification// TriggerWebhook 触发 Webhook 通知
-func TriggerWebhook(event string, payload interface{}) {
+func TriggerWebhook(event string, payload NotificationPayload) {
 	// 获取系统设置中的 Webhook 配置
 	webhookUrl, _ := models.GetSetting("webhook_url")
 	webhookEnabledStr, _ := models.GetSetting("webhook_enabled")
@@ -151,25 +170,22 @@ func TriggerWebhook(event string, payload interface{}) {
 }
 
 // SendWebhook sends a webhook notification synchronously and returns error
-func SendWebhook(config map[string]string, event string, payload interface{}) error {
-	// 准备模板数据
+func SendWebhook(config map[string]string, event string, payload NotificationPayload) error {
+	// 准备数据用于替换
 	data := map[string]interface{}{
-		"event": event,
-		"data":  payload,
+		"event":   event,
+		"title":   payload.Title,
+		"message": payload.Message,
+		"time":    payload.Time,
+		"data":    payload.Data,
 	}
-	// 尝试从 payload 中提取 title 和 message
-	if p, ok := payload.(map[string]interface{}); ok {
-		if title, ok := p["title"]; ok {
-			data["title"] = title
-		}
-		if message, ok := p["message"]; ok {
-			data["message"] = message
-		}
-		// 兼容 text 字段
-		if text, ok := p["text"]; ok {
-			data["text"] = text
-		}
-	}
+
+	// 替换 URL 中的变量
+	urlStr := config["url"]
+	urlStr = strings.ReplaceAll(urlStr, "{{title}}", url.QueryEscape(payload.Title))
+	urlStr = strings.ReplaceAll(urlStr, "{{message}}", url.QueryEscape(payload.Message))
+	urlStr = strings.ReplaceAll(urlStr, "{{event}}", url.QueryEscape(event))
+	urlStr = strings.ReplaceAll(urlStr, "{{time}}", url.QueryEscape(payload.Time))
 
 	// 处理 Body
 	bodyStr := config["body"]
@@ -179,10 +195,10 @@ func SendWebhook(config map[string]string, event string, payload interface{}) er
 		bodyStr = string(jsonBytes)
 	} else {
 		// 简单模板替换
-		bodyStr = strings.ReplaceAll(bodyStr, "{{title}}", fmt.Sprintf("%v", data["title"]))
-		bodyStr = strings.ReplaceAll(bodyStr, "{{message}}", fmt.Sprintf("%v", data["message"]))
-		bodyStr = strings.ReplaceAll(bodyStr, "{{text}}", fmt.Sprintf("%v", data["text"]))
+		bodyStr = strings.ReplaceAll(bodyStr, "{{title}}", payload.Title)
+		bodyStr = strings.ReplaceAll(bodyStr, "{{message}}", payload.Message)
 		bodyStr = strings.ReplaceAll(bodyStr, "{{event}}", event)
+		bodyStr = strings.ReplaceAll(bodyStr, "{{time}}", payload.Time)
 
 		// 支持 {{json .}} 替换为完整 JSON
 		if strings.Contains(bodyStr, "{{json .}}") {
@@ -191,7 +207,7 @@ func SendWebhook(config map[string]string, event string, payload interface{}) er
 		}
 	}
 
-	req, err := http.NewRequest(config["method"], config["url"], bytes.NewBuffer([]byte(bodyStr)))
+	req, err := http.NewRequest(config["method"], urlStr, bytes.NewBuffer([]byte(bodyStr)))
 	if err != nil {
 		log.Printf("创建 Webhook 请求失败: %v", err)
 		return err
@@ -222,7 +238,7 @@ func SendWebhook(config map[string]string, event string, payload interface{}) er
 		log.Printf("Webhook 发送失败，状态码: %d", resp.StatusCode)
 		return fmt.Errorf("HTTP status %d", resp.StatusCode)
 	} else {
-		log.Printf("Webhook sent successfully to %s", config["url"])
+		log.Printf("Webhook sent successfully to %s", urlStr)
 	}
 	return nil
 }
