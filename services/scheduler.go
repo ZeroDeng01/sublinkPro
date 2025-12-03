@@ -433,7 +433,15 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 				if err != nil {
 					failCount++
 					log.Printf("节点 [%s] 测速失败: %v", n.Name, err)
-					// 更新节点状态为失败 (可选)
+					speed = -1
+					latency = -1
+					// 更新节点状态为失败
+					n.Speed = speed
+					n.DelayTime = latency
+					n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+					if err := n.UpdateSpeed(); err != nil {
+						log.Printf("更新节点 %s 测速结果失败: %v", n.Name, err)
+					}
 				} else {
 					successCount++
 					log.Printf("节点 [%s] 测速成功: 速度 %.2f MB/s, 延迟 %d ms", n.Name, speed, latency)
