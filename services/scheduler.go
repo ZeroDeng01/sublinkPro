@@ -318,6 +318,36 @@ func ExecuteNodeSpeedTestTask() {
 		return
 	}
 
+	RunSpeedTestOnNodes(nodes)
+}
+
+// ExecuteSpecificNodeSpeedTestTask 执行指定节点测速任务
+func ExecuteSpecificNodeSpeedTestTask(nodeIDs []int) {
+	log.Printf("开始执行指定节点测速任务: %v", nodeIDs)
+	if len(nodeIDs) == 0 {
+		return
+	}
+
+	// 获取指定节点
+	var nodes []models.Node
+	for _, id := range nodeIDs {
+		var n models.Node
+		n.ID = id
+		if err := n.GetByID(); err == nil {
+			nodes = append(nodes, n)
+		}
+	}
+
+	if len(nodes) == 0 {
+		log.Println("未找到指定节点")
+		return
+	}
+
+	RunSpeedTestOnNodes(nodes)
+}
+
+// RunSpeedTestOnNodes 对指定节点列表执行测速
+func RunSpeedTestOnNodes(nodes []models.Node) {
 	// 获取测速配置
 	speedTestMode, _ := models.GetSetting("speed_test_mode")
 	speedTestURL, _ := models.GetSetting("speed_test_url")

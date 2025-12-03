@@ -819,6 +819,32 @@ const handleRunSpeedTest = async () => {
   }
 };
 
+const handleSingleSpeedTest = async (row: Node) => {
+  try {
+    await runSpeedTest([row.ID]);
+    ElMessage.success(`节点 ${row.Name} 测速任务已启动`);
+  } catch (error) {
+    console.error("启动测速任务失败:", error);
+    ElMessage.error("启动测速任务失败");
+  }
+};
+
+const handleBatchSpeedTest = async () => {
+  if (multipleSelection.value.length === 0) {
+    ElMessage.warning("请选择要测速的节点");
+    return;
+  }
+  
+  const ids = multipleSelection.value.map(node => node.ID);
+  try {
+    await runSpeedTest(ids);
+    ElMessage.success(`已启动 ${ids.length} 个节点的测速任务`);
+  } catch (error) {
+    console.error("启动批量测速任务失败:", error);
+    ElMessage.error("启动批量测速任务失败");
+  }
+};
+
 // Cron表达式选项
 const cronOptions = [
   { label: "每小时 (0 * * * *)", value: "0 * * * *" },
@@ -1004,6 +1030,9 @@ const currentSpeedTestUrlOptions = computed(() => {
             <el-button type="warning" @click="handleImportSubscription"
               >导入订阅</el-button
             >
+            <el-button type="primary" @click="handleBatchSpeedTest"
+              >批量测速</el-button
+            >
             <el-button type="info" @click="handleSpeedTestSettings"
               >测速设置</el-button
             >
@@ -1177,6 +1206,13 @@ const currentSpeedTestUrlOptions = computed(() => {
               size="small"
               @click="copyInfo(scope.row)"
               >复制</el-button
+            >
+            <el-button
+              link
+              type="warning"
+              size="small"
+              @click="handleSingleSpeedTest(scope.row)"
+              >测速</el-button
             >
             <el-button
               link

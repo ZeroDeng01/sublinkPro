@@ -511,6 +511,17 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 
 // RunSpeedTest 手动执行测速
 func RunSpeedTest(c *gin.Context) {
-	go services.ExecuteNodeSpeedTestTask()
-	utils.OkWithMsg(c, "测速任务已在后台启动")
+	var req struct {
+		IDs []int `json:"ids"`
+	}
+	// 尝试绑定 JSON，如果失败（例如没有 body），则忽略错误继续执行全量测速
+	_ = c.ShouldBindJSON(&req)
+
+	if len(req.IDs) > 0 {
+		go services.ExecuteSpecificNodeSpeedTestTask(req.IDs)
+		utils.OkWithMsg(c, "指定节点测速任务已在后台启动")
+	} else {
+		go services.ExecuteNodeSpeedTestTask()
+		utils.OkWithMsg(c, "测速任务已在后台启动")
+	}
 }

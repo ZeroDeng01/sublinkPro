@@ -42,6 +42,11 @@ func (node *Node) Find() error {
 	return DB.Where("link = ? or name = ?", node.Link, node.Name).First(node).Error
 }
 
+// GetByID 根据ID查找节点
+func (node *Node) GetByID() error {
+	return DB.First(node, node.ID).Error
+}
+
 // 节点列表
 func (node *Node) List() ([]Node, error) {
 	var nodes []Node

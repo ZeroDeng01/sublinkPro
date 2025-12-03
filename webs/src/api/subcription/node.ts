@@ -49,9 +49,10 @@ export function updateSpeedTestConfig(data: any) {
   });
 }
 
-export function runSpeedTest() {
+export function runSpeedTest(ids?: number[]) {
   return request({
     url: "/api/v1/nodes/speed-test/run",
     method: "post",
+    data: { ids },
   });
 }
