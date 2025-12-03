@@ -3,8 +3,6 @@ import { getUserInfoApi } from "@/api/user";
 import { resetRouter } from "@/router";
 import { store, useNoticeStore } from "@/store";
 
-
-
 import { LoginData } from "@/api/auth/types";
 import { UserInfo } from "@/api/user/types";
 
@@ -25,9 +23,14 @@ export const useUserStore = defineStore("user", () => {
     // Extract the actual token string if it has "Bearer " prefix
     const tokenStr = token.replace("Bearer ", "");
 
-    eventSource.value = new EventSource(
-      `${import.meta.env.VITE_APP_BASE_API}/api/sse?token=${tokenStr}`
-    );
+    let url = "/api/sse?token=" + tokenStr;
+    if (
+      import.meta.env.VITE_APP_BASE_API &&
+      import.meta.env.VITE_APP_BASE_API !== undefined
+    ) {
+      url = import.meta.env.VITE_APP_BASE_API + url;
+    }
+    eventSource.value = new EventSource(url);
 
     eventSource.value.onopen = () => {
       console.log("SSE Connected");
@@ -50,7 +53,6 @@ export const useUserStore = defineStore("user", () => {
         console.error("Failed to parse SSE message", e);
       }
     });
-
 
     eventSource.value.onerror = (err) => {
       console.error("SSE Error:", err);
