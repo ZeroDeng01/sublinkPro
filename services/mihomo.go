@@ -188,7 +188,12 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 	if err != nil {
 		return 0, 0, fmt.Errorf("dial error: %v", err)
 	}
-	defer conn.Close()
+	// Close connection asynchronously to avoid blocking if it hangs
+	defer func() {
+		go func() {
+			_ = conn.Close()
+		}()
+	}()
 
 	// Calculate latency
 	latency = int(time.Since(start).Milliseconds())
@@ -218,12 +223,12 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 				if splitErr != nil {
 					return nil, fmt.Errorf("split host port error: %v", splitErr)
 				}
-				
+
 				pInt, atoiErr := strconv.Atoi(pStr)
 				if atoiErr != nil {
 					return nil, fmt.Errorf("invalid port string: %v", atoiErr)
 				}
-				
+
 				// Validate port range
 				if pInt < 0 || pInt > 65535 {
 					return nil, fmt.Errorf("port out of range: %d", pInt)
