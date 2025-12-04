@@ -33,11 +33,13 @@ func SubSchedulerAdd(c *gin.Context) {
 	}
 
 	subS := models.SubScheduler{
-		Name:     req.Name,
-		URL:      req.URL,
-		CronExpr: req.CronExpr,
-		Enabled:  req.Enabled,
-		Group:    req.Group,
+		Name:              req.Name,
+		URL:               req.URL,
+		CronExpr:          req.CronExpr,
+		Enabled:           req.Enabled,
+		Group:             req.Group,
+		DownloadWithProxy: req.DownloadWithProxy,
+		ProxyLink:         req.ProxyLink,
 	}
 
 	err = subS.Find()
@@ -63,7 +65,7 @@ func SubSchedulerAdd(c *gin.Context) {
 
 	// 立即执行一次任务
 	if req.Enabled {
-		go node.LoadClashConfigFromURL(subS.ID, subS.URL, subS.Name)
+		go node.LoadClashConfigFromURL(subS.ID, subS.URL, subS.Name, subS.DownloadWithProxy, subS.ProxyLink)
 	}
 
 	utils.OkWithMsg(c, "添加成功")
@@ -76,7 +78,7 @@ func PullClashConfigFromURL(c *gin.Context) {
 		utils.FailWithMsg(c, "参数错误: "+err.Error())
 		return
 	}
-	go node.LoadClashConfigFromURL(req.ID, req.URL, req.Name)
+	go node.LoadClashConfigFromURL(req.ID, req.URL, req.Name, req.DownloadWithProxy, req.ProxyLink)
 	utils.OkWithMsg(c, "任务启动成功")
 }
 

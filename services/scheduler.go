@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sublink/models"
 	"sublink/node"
+	"sublink/services/mihomo"
 	"sublink/services/sse"
 	"sync"
 	"time"
@@ -204,7 +205,20 @@ func (sm *SchedulerManager) UpdateJob(schedulerID int, cronExpr string, enabled 
 func ExecuteSubscriptionTask(id int, url string, subName string) {
 
 	log.Printf("执行自动获取订阅任务 - ID: %d, Name: %s, URL: %s", id, subName, url)
-	err := node.LoadClashConfigFromURL(id, url, subName)
+
+	// 获取最新的订阅配置，以便使用最新的代理设置
+	var subS models.SubScheduler
+	var downloadWithProxy bool
+	var proxyLink string
+
+	if err := subS.GetByID(id); err != nil {
+		log.Printf("获取订阅配置失败 ID: %d, 使用默认设置: %v", id, err)
+	} else {
+		downloadWithProxy = subS.DownloadWithProxy
+		proxyLink = subS.ProxyLink
+	}
+
+	err := node.LoadClashConfigFromURL(id, url, subName, downloadWithProxy, proxyLink)
 	if err != nil {
 		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
 			Event:   "sub_update",
@@ -433,11 +447,11 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 
 				if speedTestMode == "tcp" {
 					// 仅测试延迟
-					latency, err = MihomoDelay(n.Link, speedTestUrl, speedTestTimeout)
+					latency, err = mihomo.MihomoDelay(n.Link, speedTestUrl, speedTestTimeout)
 					speed = 0
 				} else {
 					// 测试延迟和速度 (默认 mihomo)
-					speed, latency, err = MihomoSpeedTest(n.Link, speedTestUrl, speedTestTimeout)
+					speed, latency, err = mihomo.MihomoSpeedTest(n.Link, speedTestUrl, speedTestTimeout)
 				}
 
 				mu.Lock()

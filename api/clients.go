@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"sublink/models"
-	"sublink/node"
+	"sublink/node/protocol"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
@@ -203,7 +203,7 @@ func GetClash(c *gin.Context) {
 		c.Writer.WriteString("读取错误")
 		return
 	}
-	var urls []node.Urls
+	var urls []protocol.Urls
 	// 执行节点过滤脚本
 	nodesJSON, _ := json.Marshal(sub.Nodes)
 	for _, script := range sub.ScriptsWithSort {
@@ -226,7 +226,7 @@ func GetClash(c *gin.Context) {
 		case strings.Contains(v.Link, ","):
 			links := strings.Split(v.Link, ",")
 			for _, link := range links {
-				urls = append(urls, node.Urls{
+				urls = append(urls, protocol.Urls{
 					Url:             link,
 					DialerProxyName: strings.TrimSpace(v.DialerProxyName),
 				})
@@ -244,14 +244,14 @@ func GetClash(c *gin.Context) {
 			nodes := utils.Base64Decode(string(body))
 			links := strings.Split(nodes, "\n")
 			for _, link := range links {
-				urls = append(urls, node.Urls{
+				urls = append(urls, protocol.Urls{
 					Url:             link,
 					DialerProxyName: strings.TrimSpace(v.DialerProxyName),
 				})
 			}
 		// 默认
 		default:
-			urls = append(urls, node.Urls{
+			urls = append(urls, protocol.Urls{
 				Url:             v.Link,
 				DialerProxyName: strings.TrimSpace(v.DialerProxyName),
 			})
@@ -264,7 +264,7 @@ func GetClash(c *gin.Context) {
 		c.Writer.WriteString("配置读取错误")
 		return
 	}
-	DecodeClash, err := node.EncodeClash(urls, configs)
+	DecodeClash, err := protocol.EncodeClash(urls, configs)
 	if err != nil {
 		c.Writer.WriteString(err.Error())
 		return
@@ -350,7 +350,7 @@ func GetSurge(c *gin.Context) {
 		return
 	}
 	// log.Println("surge路径:", configs)
-	DecodeClash, err := node.EncodeSurge(urls, configs)
+	DecodeClash, err := protocol.EncodeSurge(urls, configs)
 	if err != nil {
 		c.Writer.WriteString(err.Error())
 		return

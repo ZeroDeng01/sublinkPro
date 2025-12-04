@@ -5,17 +5,19 @@ import (
 )
 
 type SubScheduler struct {
-	ID           int `gorm:"primaryKey;autoIncrement"`
-	Name         string
-	URL          string
-	CronExpr     string
-	Enabled      bool
-	SuccessCount int        `gorm:"column:success_count"`
-	LastRunTime  *time.Time `gorm:"type:datetime"`
-	NextRunTime  *time.Time `gorm:"type:datetime"`
-	CreatedAt    time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt    time.Time  `gorm:"autoUpdateTime"`
-	Group        string
+	ID                int `gorm:"primaryKey;autoIncrement"`
+	Name              string
+	URL               string
+	CronExpr          string
+	Enabled           bool
+	SuccessCount      int        `gorm:"column:success_count"`
+	LastRunTime       *time.Time `gorm:"type:datetime"`
+	NextRunTime       *time.Time `gorm:"type:datetime"`
+	CreatedAt         time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt         time.Time  `gorm:"autoUpdateTime"`
+	Group             string
+	DownloadWithProxy bool   `gorm:"default:false"`
+	ProxyLink         string `gorm:"default:''"`
 }
 
 // Add 添加订阅调度
@@ -25,7 +27,7 @@ func (ss *SubScheduler) Add() error {
 
 // Update 更新订阅调度
 func (ss *SubScheduler) Update() error {
-	return DB.Model(ss).Select("Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime", "SuccessCount", "Group").Updates(ss).Error
+	return DB.Model(ss).Select("Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime", "SuccessCount", "Group", "DownloadWithProxy", "ProxyLink").Updates(ss).Error
 }
 
 // 查找节点是否重复

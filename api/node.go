@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sublink/models"
-	"sublink/node"
+	"sublink/node/protocol"
 	"sublink/services"
 	"sublink/utils"
 	"time"
@@ -45,7 +45,7 @@ func NodeUpdadte(c *gin.Context) {
 	}
 	switch {
 	case u.Scheme == "ss":
-		ss, err := node.DecodeSSURL(link)
+		ss, err := protocol.DecodeSSURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -58,7 +58,7 @@ func NodeUpdadte(c *gin.Context) {
 		Node.LinkHost = ss.Server
 		Node.LinkPort = strconv.Itoa(ss.Port)
 	case u.Scheme == "ssr":
-		ssr, err := node.DecodeSSRURL(link)
+		ssr, err := protocol.DecodeSSRURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -71,7 +71,7 @@ func NodeUpdadte(c *gin.Context) {
 		Node.LinkHost = ssr.Server
 		Node.LinkPort = strconv.Itoa(ssr.Port)
 	case u.Scheme == "trojan":
-		trojan, err := node.DecodeTrojanURL(link)
+		trojan, err := protocol.DecodeTrojanURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -85,7 +85,7 @@ func NodeUpdadte(c *gin.Context) {
 		Node.LinkHost = trojan.Hostname
 		Node.LinkPort = strconv.Itoa(trojan.Port)
 	case u.Scheme == "vmess":
-		vmess, err := node.DecodeVMESSURL(link)
+		vmess, err := protocol.DecodeVMESSURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -99,7 +99,7 @@ func NodeUpdadte(c *gin.Context) {
 		Node.LinkHost = vmess.Host
 		Node.LinkPort = prot
 	case u.Scheme == "vless":
-		vless, err := node.DecodeVLESSURL(link)
+		vless, err := protocol.DecodeVLESSURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -112,7 +112,7 @@ func NodeUpdadte(c *gin.Context) {
 		Node.LinkHost = vless.Server
 		Node.LinkPort = strconv.Itoa(vless.Port)
 	case u.Scheme == "hy" || u.Scheme == "hysteria":
-		hy, err := node.DecodeHYURL(link)
+		hy, err := protocol.DecodeHYURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -125,7 +125,7 @@ func NodeUpdadte(c *gin.Context) {
 		Node.LinkHost = hy.Host
 		Node.LinkPort = strconv.Itoa(hy.Port)
 	case u.Scheme == "hy2" || u.Scheme == "hysteria2":
-		hy2, err := node.DecodeHY2URL(link)
+		hy2, err := protocol.DecodeHY2URL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -138,7 +138,7 @@ func NodeUpdadte(c *gin.Context) {
 		Node.LinkHost = hy2.Host
 		Node.LinkPort = strconv.Itoa(hy2.Port)
 	case u.Scheme == "tuic":
-		tuic, err := node.DecodeTuicURL(link)
+		tuic, err := protocol.DecodeTuicURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -151,7 +151,7 @@ func NodeUpdadte(c *gin.Context) {
 		Node.LinkHost = tuic.Host
 		Node.LinkPort = strconv.Itoa(tuic.Port)
 	case u.Scheme == "socks5":
-		socks5, err := node.DecodeSocks5URL(link)
+		socks5, err := protocol.DecodeSocks5URL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -210,7 +210,7 @@ func NodeAdd(c *gin.Context) {
 	}
 	switch {
 	case u.Scheme == "ss":
-		ss, err := node.DecodeSSURL(link)
+		ss, err := protocol.DecodeSSURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -223,7 +223,7 @@ func NodeAdd(c *gin.Context) {
 		Node.LinkHost = ss.Server
 		Node.LinkPort = strconv.Itoa(ss.Port)
 	case u.Scheme == "ssr":
-		ssr, err := node.DecodeSSRURL(link)
+		ssr, err := protocol.DecodeSSRURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -236,7 +236,7 @@ func NodeAdd(c *gin.Context) {
 		Node.LinkHost = ssr.Server
 		Node.LinkPort = strconv.Itoa(ssr.Port)
 	case u.Scheme == "trojan":
-		trojan, err := node.DecodeTrojanURL(link)
+		trojan, err := protocol.DecodeTrojanURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -249,7 +249,7 @@ func NodeAdd(c *gin.Context) {
 		Node.LinkHost = trojan.Hostname
 		Node.LinkPort = strconv.Itoa(trojan.Port)
 	case u.Scheme == "vmess":
-		vmess, err := node.DecodeVMESSURL(link)
+		vmess, err := protocol.DecodeVMESSURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -262,7 +262,7 @@ func NodeAdd(c *gin.Context) {
 		Node.LinkHost = vmess.Host
 		Node.LinkPort = vmess.Port.(string)
 	case u.Scheme == "vless":
-		vless, err := node.DecodeVLESSURL(link)
+		vless, err := protocol.DecodeVLESSURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -276,7 +276,7 @@ func NodeAdd(c *gin.Context) {
 		Node.LinkHost = vless.Server
 		Node.LinkPort = strconv.Itoa(vless.Port)
 	case u.Scheme == "hy" || u.Scheme == "hysteria":
-		hy, err := node.DecodeHYURL(link)
+		hy, err := protocol.DecodeHYURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -290,7 +290,7 @@ func NodeAdd(c *gin.Context) {
 		Node.LinkHost = hy.Host
 		Node.LinkPort = strconv.Itoa(hy.Port)
 	case u.Scheme == "hy2" || u.Scheme == "hysteria2":
-		hy2, err := node.DecodeHY2URL(link)
+		hy2, err := protocol.DecodeHY2URL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -304,7 +304,7 @@ func NodeAdd(c *gin.Context) {
 		Node.LinkHost = hy2.Host
 		Node.LinkPort = strconv.Itoa(hy2.Port)
 	case u.Scheme == "tuic":
-		tuic, err := node.DecodeTuicURL(link)
+		tuic, err := protocol.DecodeTuicURL(link)
 		if err != nil {
 			log.Println(err)
 			return
@@ -318,7 +318,7 @@ func NodeAdd(c *gin.Context) {
 		Node.LinkHost = tuic.Host
 		Node.LinkPort = strconv.Itoa(tuic.Port)
 	case u.Scheme == "socks5":
-		socks5, err := node.DecodeSocks5URL(link)
+		socks5, err := protocol.DecodeSocks5URL(link)
 		if err != nil {
 			log.Println(err)
 			return

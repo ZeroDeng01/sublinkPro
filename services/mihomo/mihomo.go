@@ -1,4 +1,4 @@
-package services
+package mihomo
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"sublink/node"
+	"sublink/node/protocol"
 	"sublink/utils"
 	"time"
 
@@ -36,7 +36,7 @@ func GetMihomoAdapter(nodeLink string) (constant.Proxy, error) {
 
 	// We need to handle the case where ParseNodeLink might be better, but LinkToProxy expects Urls struct
 	// LinkToProxy handles various protocols
-	proxyStruct, err := node.LinkToProxy(node.Urls{Url: nodeLink}, sqlConfig)
+	proxyStruct, err := protocol.LinkToProxy(protocol.Urls{Url: nodeLink}, sqlConfig)
 	if err != nil {
 		return nil, fmt.Errorf("convert link to proxy error: %v", err)
 	}

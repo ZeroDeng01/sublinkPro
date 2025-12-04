@@ -70,6 +70,11 @@ func InitSqlite() {
 		log.Printf("SubcriptionGroup 表迁移失败: %v", err)
 	}
 
+	// 0006_subscheduler_proxy
+	if err := RunAutoMigrate("0006_subscheduler_proxy", &SubScheduler{}); err != nil {
+		log.Printf("SubScheduler 表新增代理字段迁移失败: %v", err)
+	}
+
 	// 0005_hash_passwords
 	if err := RunCustomMigration("0005_hash_passwords", func() error {
 		var users []User

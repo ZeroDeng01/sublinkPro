@@ -403,6 +403,8 @@ const handleAddSubScheduler = () => {
     cron_expr: "",
     enabled: true,
     group: "",
+    download_with_proxy: false,
+    proxy_link: "",
   };
   subSchedulerFormVisible.value = true;
 };
@@ -416,6 +418,8 @@ const handleEditSubScheduler = (row: SubScheduler) => {
     cron_expr: row.CronExpr,
     enabled: row.Enabled,
     group: row.Group || "",
+    download_with_proxy: row.DownloadWithProxy || false,
+    proxy_link: row.ProxyLink || "",
   };
   subSchedulerFormVisible.value = true;
 };
@@ -434,6 +438,8 @@ const handlePullSubScheduler = (row: SubScheduler) => {
         cron_expr: row.CronExpr,
         enabled: row.Enabled,
         group: row.Group || "",
+        download_with_proxy: row.DownloadWithProxy || false,
+        proxy_link: row.ProxyLink || "",
       };
       const response = await pullSubScheduler(subSchedulerForm.value);
       if (response) {
@@ -908,7 +914,6 @@ const handleSpeedModeChange = (val: string | number | boolean | undefined) => {
     speedTestForm.value.url = speedTest204Options[0].value;
   }
 };
-
 </script>
 
 <template>
@@ -1511,7 +1516,47 @@ const handleSpeedModeChange = (val: string | number | boolean | undefined) => {
             设置分组后，从此订阅导入的所有节点将自动归属到此分组
           </div>
         </el-form-item>
-        <el-form-item label="启用状态">
+        <el-form-item label="下载代理">
+          <el-switch
+            v-model="subSchedulerForm.download_with_proxy"
+            active-text="启用"
+            inactive-text="禁用"
+          />
+        </el-form-item>
+        <el-form-item
+          label="选择代理"
+          v-if="subSchedulerForm.download_with_proxy"
+        >
+          <el-select
+            v-model="subSchedulerForm.proxy_link"
+            filterable
+            placeholder="请选择代理节点（留空则自动选择最佳节点）"
+            style="width: 100%"
+            clearable
+          >
+            <el-option
+              v-for="node in tableData"
+              :key="node.ID"
+              :label="node.Name"
+              :value="node.Link"
+            >
+              <span style="float: left">{{ node.Name }}</span>
+              <span
+                style="
+                  float: right;
+                  color: #8492a6;
+                  font-size: 13px;
+                  margin-left: 10px;
+                "
+                >{{ node.Group || "未分组" }}</span
+              >
+            </el-option>
+          </el-select>
+          <div style="font-size: 12px; color: #909399; margin-top: 5px">
+            如果未选择具体代理，系统将自动选择延迟最低且速度最快的节点作为下载代理。
+          </div>
+        </el-form-item>
+        <el-form-item label="状态">
           <el-switch
             v-model="subSchedulerForm.enabled"
             active-text="启用"

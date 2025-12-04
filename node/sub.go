@@ -1,25 +1,31 @@
 package node
 
 import (
+	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"sublink/models"
+	"sublink/node/protocol"
+	"sublink/services/mihomo"
 	"sublink/services/sse"
 	"sublink/utils"
 	"time"
 
+	"github.com/metacubex/mihomo/constant"
 	"gopkg.in/yaml.v3"
 )
 
 type ClashConfig struct {
-	Proxies []Proxy `yaml:"proxies"`
+	Proxies []protocol.Proxy `yaml:"proxies"`
 }
 
 // LoadClashConfigFromURL 从指定 URL 加载 Clash 配置
@@ -27,16 +33,84 @@ type ClashConfig struct {
 // id: 订阅ID
 // url: 订阅链接
 // subName: 订阅名称
-func LoadClashConfigFromURL(id int, url string, subName string) error {
-	resp, err := http.Get(url)
+// downloadWithProxy: 是否使用代理下载
+// proxyLink: 代理链接 (可选)
+func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string) error {
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	if downloadWithProxy {
+		var proxyNodeLink string
+
+		if proxyLink != "" {
+			// 使用指定的代理链接
+			proxyNodeLink = proxyLink
+			log.Printf("使用指定代理下载订阅")
+		} else {
+			// 如果没有指定代理，尝试自动选择最佳代理
+			var nodes []models.Node
+			// 获取最近测速成功的节点（延迟最低且速度大于0）
+			if err := models.DB.Where("delay_time > 0 AND speed > 0").Order("delay_time ASC").Limit(1).Find(&nodes).Error; err == nil && len(nodes) > 0 {
+				bestNode := nodes[0]
+				log.Printf("自动选择最佳代理节点: %s 节点延迟：%dms  节点速度：%2fMB/s", bestNode.Name, bestNode.DelayTime, bestNode.Speed)
+				proxyNodeLink = bestNode.Link
+			}
+		}
+
+		if proxyNodeLink != "" {
+			// 使用 mihomo 内核创建代理适配器
+			proxyAdapter, err := mihomo.GetMihomoAdapter(proxyNodeLink)
+			if err != nil {
+				log.Printf("创建 mihomo 代理适配器失败: %v，将直接下载", err)
+			} else {
+				log.Printf("使用 mihomo 内核代理下载订阅")
+				// 创建自定义 Transport，使用 mihomo adapter 进行代理连接
+				client.Transport = &http.Transport{
+					DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+						// 解析地址获取主机和端口
+						host, portStr, splitErr := net.SplitHostPort(addr)
+						if splitErr != nil {
+							return nil, fmt.Errorf("split host port error: %v", splitErr)
+						}
+
+						portInt, atoiErr := strconv.Atoi(portStr)
+						if atoiErr != nil {
+							return nil, fmt.Errorf("invalid port: %v", atoiErr)
+						}
+
+						// 验证端口范围
+						if portInt < 0 || portInt > 65535 {
+							return nil, fmt.Errorf("port out of range: %d", portInt)
+						}
+
+						// 创建 mihomo metadata
+						metadata := &constant.Metadata{
+							Host:    host,
+							DstPort: uint16(portInt),
+							Type:    constant.HTTP,
+						}
+
+						// 使用 mihomo adapter 建立连接
+						return proxyAdapter.DialContext(ctx, metadata)
+					},
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				}
+			}
+		} else {
+			log.Println("未找到可用代理，将直接下载")
+		}
+	}
+
+	resp, err := client.Get(urlStr)
 	if err != nil {
-		log.Printf("URL %s，获取Clash配置失败:  %v", url, err)
+		log.Printf("URL %s，获取Clash配置失败:  %v", urlStr, err)
 		return err
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("URL %s，读取Clash配置失败:  %v", url, err)
+		log.Printf("URL %s，读取Clash配置失败:  %v", urlStr, err)
 		return err
 	}
 	var config ClashConfig
@@ -60,7 +134,7 @@ func LoadClashConfigFromURL(id int, url string, subName string) error {
 				if line == "" {
 					continue
 				}
-				proxy, errP := LinkToProxy(Urls{Url: line}, utils.SqlConfig{})
+				proxy, errP := protocol.LinkToProxy(protocol.Urls{Url: line}, utils.SqlConfig{})
 				if errP == nil {
 					config.Proxies = append(config.Proxies, proxy)
 				}
@@ -69,7 +143,7 @@ func LoadClashConfigFromURL(id int, url string, subName string) error {
 	}
 
 	if len(config.Proxies) == 0 {
-		log.Printf("URL %s，解析失败或未找到节点 (YAML error: %v)", url, errYaml)
+		log.Printf("URL %s，解析失败或未找到节点 (YAML error: %v)", urlStr, errYaml)
 		return fmt.Errorf("解析失败 or 未找到节点")
 	}
 
@@ -80,7 +154,7 @@ func LoadClashConfigFromURL(id int, url string, subName string) error {
 // id: 订阅ID
 // proxys: 代理节点列表
 // subName: 订阅名称
-func scheduleClashToNodeLinks(id int, proxys []Proxy, subName string) error {
+func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) error {
 	successCount := 0
 	err := models.DeleteAutoSubscriptionNodes(id)
 	if err != nil {

@@ -8,6 +8,8 @@ export interface SubScheduler {
   CronExpr: string;
   Enabled: boolean;
   Group: string;
+  DownloadWithProxy: boolean;
+  ProxyLink: string;
 }
 
 export interface SubSchedulerRequest {
@@ -17,6 +19,8 @@ export interface SubSchedulerRequest {
   cron_expr: string;
   enabled: boolean;
   group?: string;
+  download_with_proxy?: boolean;
+  proxy_link?: string;
 }
 
 // 获取订阅调度器列表
