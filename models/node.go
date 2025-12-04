@@ -289,3 +289,60 @@ func (node *Node) GetAllGroups() ([]string, error) {
 	}
 	return groups, nil
 }
+
+// GetBestProxyNode 获取最佳代理节点（延迟最低且速度大于0）
+func GetBestProxyNode() (*Node, error) {
+	nodeLock.RLock()
+	defer nodeLock.RUnlock()
+
+	var bestNode *Node
+	for _, n := range nodeCache {
+		if n.DelayTime > 0 && n.Speed > 0 {
+			if bestNode == nil || n.DelayTime < bestNode.DelayTime {
+				nodeCopy := n
+				bestNode = &nodeCopy
+			}
+		}
+	}
+
+	if bestNode != nil {
+		return bestNode, nil
+	}
+
+	// 缓存中没有符合条件的节点，从数据库查询
+	var nodes []Node
+	if err := DB.Where("delay_time > 0 AND speed > 0").Order("delay_time ASC").Limit(1).Find(&nodes).Error; err != nil {
+		return nil, err
+	}
+
+	if len(nodes) == 0 {
+		return nil, nil
+	}
+
+	return &nodes[0], nil
+}
+
+// ListBySourceID 根据订阅ID查询节点列表
+func ListBySourceID(sourceID int) ([]Node, error) {
+	nodeLock.RLock()
+	defer nodeLock.RUnlock()
+
+	var nodes []Node
+	for _, n := range nodeCache {
+		if n.SourceID == sourceID {
+			nodes = append(nodes, n)
+		}
+	}
+
+	// 如果缓存中有数据，直接返回
+	if len(nodes) > 0 {
+		return nodes, nil
+	}
+
+	// 缓存中没有数据，从数据库查询
+	if err := DB.Where("source_id = ?", sourceID).Find(&nodes).Error; err != nil {
+		return nil, err
+	}
+
+	return nodes, nil
+}

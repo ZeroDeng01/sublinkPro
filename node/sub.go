@@ -49,10 +49,8 @@ func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithP
 			log.Printf("使用指定代理下载订阅")
 		} else {
 			// 如果没有指定代理，尝试自动选择最佳代理
-			var nodes []models.Node
 			// 获取最近测速成功的节点（延迟最低且速度大于0）
-			if err := models.DB.Where("delay_time > 0 AND speed > 0").Order("delay_time ASC").Limit(1).Find(&nodes).Error; err == nil && len(nodes) > 0 {
-				bestNode := nodes[0]
+			if bestNode, err := models.GetBestProxyNode(); err == nil && bestNode != nil {
 				log.Printf("自动选择最佳代理节点: %s 节点延迟：%dms  节点速度：%2fMB/s", bestNode.Name, bestNode.DelayTime, bestNode.Speed)
 				proxyNodeLink = bestNode.Link
 			}
@@ -165,9 +163,10 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 	}
 
 	// 1. 获取该订阅当前在数据库中的所有节点
-	var existingNodes []models.Node
-	if err := models.DB.Where("source_id = ?", id).Find(&existingNodes).Error; err != nil {
+	existingNodes, err := models.ListBySourceID(id)
+	if err != nil {
 		log.Printf("获取订阅【%s】现有节点失败: %v", subName, err)
+		existingNodes = []models.Node{} // 确保后续逻辑不会panic
 	}
 
 	// 创建现有节点的映射表（以Link为键）
