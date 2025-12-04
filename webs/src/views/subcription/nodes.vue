@@ -1353,6 +1353,13 @@ const handleSpeedModeChange = (val: string | number | boolean | undefined) => {
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="DownloadWithProxy" label="使用代理" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.DownloadWithProxy ? 'success' : 'danger'">
+              {{ scope.row.DownloadWithProxy ? "使用" : "禁止" }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <el-button

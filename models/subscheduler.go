@@ -10,7 +10,7 @@ type SubScheduler struct {
 	URL               string
 	CronExpr          string
 	Enabled           bool
-	SuccessCount      int        `gorm:"column:success_count"`
+	SuccessCount      int        `gorm:"default:0"`
 	LastRunTime       *time.Time `gorm:"type:datetime"`
 	NextRunTime       *time.Time `gorm:"type:datetime"`
 	CreatedAt         time.Time  `gorm:"autoCreateTime"`

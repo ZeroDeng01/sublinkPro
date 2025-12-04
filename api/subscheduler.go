@@ -155,6 +155,8 @@ func SubSchedulerUpdate(c *gin.Context) {
 	subS.CronExpr = req.CronExpr
 	subS.Enabled = req.Enabled
 	subS.Group = req.Group
+	subS.DownloadWithProxy = req.DownloadWithProxy
+	subS.ProxyLink = req.ProxyLink
 	err = subS.Update()
 
 	if err != nil {
