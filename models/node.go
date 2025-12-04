@@ -68,6 +68,9 @@ func (node *Node) Add() error {
 
 // 更新节点
 func (node *Node) Update() error {
+	if node.Name == "" {
+		node.Name = node.LinkName
+	}
 	err := DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort").Updates(node).Error
 	if err != nil {
 		return err

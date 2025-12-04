@@ -541,19 +541,21 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 
 		// 判断节点是否已存在
 		if existingNode, exists := existingNodeMap[link]; exists {
-			// 节点已存在，更新节点信息
-			Node.ID = existingNode.ID
-			// 保留测速数据
-			Node.Speed = existingNode.Speed
-			Node.DelayTime = existingNode.DelayTime
-			Node.LastCheck = existingNode.LastCheck
-			err = Node.Update()
-			if err != nil {
-				log.Printf("❌节点更新失败【%s】：%v", proxy.Name, err)
-			} else {
-				updateSuccessCount++
-				log.Printf("🔄节点更新成功【%s】", proxy.Name)
-			}
+			//// 节点已存在，更新节点信息
+			//Node.ID = existingNode.ID
+			//// 保留测速数据
+			//Node.Speed = existingNode.Speed
+			//Node.DelayTime = existingNode.DelayTime
+			//Node.LastCheck = existingNode.LastCheck
+			//err = Node.Update()
+			//if err != nil {
+			//	log.Printf("❌节点更新失败【%s】：%v", proxy.Name, err)
+			//} else {
+			//	updateSuccessCount++
+			//	log.Printf("🔄节点更新成功【%s】", proxy.Name)
+			//}
+			updateSuccessCount++
+			log.Printf("⚠️节点【%s】已存在，不进行任何处理", existingNode.Name)
 		} else {
 			// 节点不存在，插入新节点
 			err = Node.Add()
@@ -581,7 +583,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 		}
 	}
 
-	log.Printf("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，更新节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+updateSuccessCount, addSuccessCount, updateSuccessCount, deleteCount)
+	log.Printf("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+updateSuccessCount, addSuccessCount, updateSuccessCount, deleteCount)
 	// 重新查找订阅以获取最新信息
 	subS = models.SubScheduler{
 		Name: subName,
@@ -602,7 +604,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 	sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
 		Event:   "sub_update",
 		Title:   "订阅更新完成",
-		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，更新节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+updateSuccessCount, addSuccessCount, updateSuccessCount, deleteCount),
+		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+updateSuccessCount, addSuccessCount, updateSuccessCount, deleteCount),
 		Data: map[string]interface{}{
 			"id":      id,
 			"name":    subName,
