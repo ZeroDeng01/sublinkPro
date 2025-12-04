@@ -28,7 +28,7 @@
 - [x] 修复部分页面BUG
 - [x] 支持 Clash `dialer-proxy` 属性
 - [x] 允许添加并使用 API KEY 访问 API
-- [x] 导入、定时更新订阅链接中的节点
+- [x] 导入、定时更新订阅链接中的节点（可以通过前置代理订阅）
 - [x] 支持AnyTLS、Socks5协议
 - [x] 订阅节点排序
 - [x] 支持订阅的IP黑/白名单功能
@@ -77,6 +77,10 @@ wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/ins
 ![预览4](webs/src/assets/4.png)
 ![预览5](webs/src/assets/5.png)
 ![预览6](webs/src/assets/6.png)
+![预览7](webs/src/assets/7.jpg)
+![预览8](webs/src/assets/8.jpg)
+![预览9](webs/src/assets/9.jpg)
+![预览10](webs/src/assets/10.jpg)
 
 # 脚本功能说明
 
