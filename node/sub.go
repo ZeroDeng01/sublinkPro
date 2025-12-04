@@ -155,18 +155,33 @@ func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithP
 // proxys: 代理节点列表
 // subName: 订阅名称
 func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) error {
-	successCount := 0
-	err := models.DeleteAutoSubscriptionNodes(id)
-	if err != nil {
-		log.Printf("删除旧的订阅数据失败: %v", err)
-	}
+	addSuccessCount := 0
+	updateSuccessCount := 0
 	// 获取订阅的Group信息
 	subS := models.SubScheduler{}
-	err = subS.GetByID(id)
+	err := subS.GetByID(id)
 	if err != nil {
 		log.Printf("获取订阅连接 %s 的Group失败:  %v", subName, err)
 	}
-	log.Printf("📄订阅【%s】获取到订阅数量【%d】", subName, len(proxys))
+
+	// 1. 获取该订阅当前在数据库中的所有节点
+	var existingNodes []models.Node
+	if err := models.DB.Where("source_id = ?", id).Find(&existingNodes).Error; err != nil {
+		log.Printf("获取订阅【%s】现有节点失败: %v", subName, err)
+	}
+
+	// 创建现有节点的映射表（以Link为键）
+	existingNodeMap := make(map[string]models.Node)
+	for _, node := range existingNodes {
+		existingNodeMap[node.Link] = node
+	}
+
+	log.Printf("📄订阅【%s】获取到订阅数量【%d】，现有节点数量【%d】", subName, len(proxys), len(existingNodes))
+
+	// 记录本次获取到的节点Link
+	currentLinks := make(map[string]bool)
+
+	// 2. 遍历新获取的节点，插入或更新
 	for _, proxy := range proxys {
 		log.Printf("💾准备存储节点【%s】", proxy.Name)
 		var Node models.Node
@@ -520,16 +535,53 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 		Node.SourceID = id
 		Node.Group = subS.Group
 		Node.CreateDate = time.Now().Format("2006-01-02 15:04:05")
-		// 插入或更新节点，避免设置好的订阅节点丢失
-		err = Node.UpsertNode()
-		if err != nil {
-			log.Printf("❌节点存储失败【%s】：%v", proxy.Name, err)
+
+		// 记录本次获取到的节点
+		currentLinks[link] = true
+
+		// 判断节点是否已存在
+		if existingNode, exists := existingNodeMap[link]; exists {
+			// 节点已存在，更新节点信息
+			Node.ID = existingNode.ID
+			// 保留测速数据
+			Node.Speed = existingNode.Speed
+			Node.DelayTime = existingNode.DelayTime
+			Node.LastCheck = existingNode.LastCheck
+			err = Node.Update()
+			if err != nil {
+				log.Printf("❌节点更新失败【%s】：%v", proxy.Name, err)
+			} else {
+				updateSuccessCount++
+				log.Printf("🔄节点更新成功【%s】", proxy.Name)
+			}
 		} else {
-			successCount++
-			log.Printf("✅节点存储成功【%s", proxy.Name)
+			// 节点不存在，插入新节点
+			err = Node.Add()
+			if err != nil {
+				log.Printf("❌节点插入失败【%s】：%v", proxy.Name, err)
+			} else {
+				addSuccessCount++
+				log.Printf("✅节点插入成功【%s】", proxy.Name)
+			}
 		}
 	}
-	log.Printf("✅订阅【%s】节点拉取完成，总节点【%d】个，成功存储【%d】个", subName, len(proxys), successCount)
+
+	// 3. 删除本次订阅没有获取到但数据库中存在的节点
+	deleteCount := 0
+	for link, existingNode := range existingNodeMap {
+		if !currentLinks[link] {
+			// 该节点不在本次订阅中，需要删除
+			nodeToDelete := models.Node{ID: existingNode.ID}
+			if err := nodeToDelete.Del(); err != nil {
+				log.Printf("❌删除失效节点失败【%s】：%v", existingNode.Name, err)
+			} else {
+				deleteCount++
+				log.Printf("🗑️删除失效节点【%s】", existingNode.Name)
+			}
+		}
+	}
+
+	log.Printf("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，更新节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+updateSuccessCount, addSuccessCount, updateSuccessCount, deleteCount)
 	// 重新查找订阅以获取最新信息
 	subS = models.SubScheduler{
 		Name: subName,
@@ -539,7 +591,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 		log.Printf("获取订阅连接 %s 失败:  %v", subName, err)
 		return err
 	}
-	subS.SuccessCount = successCount
+	subS.SuccessCount = addSuccessCount + updateSuccessCount
 	// 当前时间
 	now := time.Now()
 	subS.LastRunTime = &now
@@ -550,12 +602,12 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 	sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
 		Event:   "sub_update",
 		Title:   "订阅更新完成",
-		Message: fmt.Sprintf("订阅 [%s] 更新完成 (成功: %d)", subName, successCount),
+		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，更新节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+updateSuccessCount, addSuccessCount, updateSuccessCount, deleteCount),
 		Data: map[string]interface{}{
 			"id":      id,
 			"name":    subName,
 			"status":  "success",
-			"success": successCount,
+			"success": addSuccessCount + updateSuccessCount,
 		},
 	})
 	return nil
