@@ -1,16 +1,12 @@
 package middlewares
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"sublink/models"
+	"sublink/services/geoip"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/text/encoding/simplifiedchinese"
 )
 
 func GetIp(c *gin.Context) {
@@ -19,23 +15,13 @@ func GetIp(c *gin.Context) {
 		subname, _ := c.Get("subname")
 
 		ip := c.ClientIP()
-		resp, err := http.Get(fmt.Sprintf("https://whois.pconline.com.cn/ipJson.jsp?ip=%s&json=true", ip))
+
+		// Get location from local GeoIP database
+		addr, err := geoip.GetLocation(ip)
+		//addr, err := geoip.GetLocation(ip)
 		if err != nil {
-			log.Println(err)
-			return
-		}
-		defer resp.Body.Close()
-		body, _ := io.ReadAll(resp.Body)
-		utf8Body, _ := simplifiedchinese.GBK.NewDecoder().Bytes(body)
-		type IpInfo struct {
-			Addr string `json:"addr"`
-			Ip   string `json:"ip"`
-		}
-		ipinfo := IpInfo{}
-		err = json.Unmarshal(utf8Body, &ipinfo)
-		if err != nil {
-			log.Println(err)
-			return
+			log.Printf("Failed to get location for IP %s: %v", ip, err)
+			addr = "Unknown"
 		}
 		var sub models.Subcription
 		if subname, ok := subname.(string); ok {
@@ -51,23 +37,19 @@ func GetIp(c *gin.Context) {
 		err = iplog.Find(sub.ID)
 		// 如果没有找到记录
 		if err != nil {
-			iploga := []models.SubLogs{
-				{IP: ip,
-					Addr:          ipinfo.Addr,
-					SubcriptionID: sub.ID,
-					Date:          time.Now().Format("2006-01-02 15:04:05"),
-					Count:         1,
-				},
-			}
-			sub.SubLogs = iploga
-			err = sub.Update()
+			iplog.Addr = addr
+			iplog.SubcriptionID = sub.ID
+			iplog.Date = time.Now().Format("2006-01-02 15:04:05")
+			iplog.Count = 1
+			err = iplog.Add()
 			if err != nil {
-				log.Println(err)
+				log.Printf("Failed to add new IP log: %v", err)
 				return
 			}
 		} else {
 			// 更新访问次数
 			iplog.Count++
+			iplog.Addr = addr
 			iplog.Date = time.Now().Format("2006-01-02 15:04:05")
 			err = iplog.Update()
 			if err != nil {

@@ -13,6 +13,7 @@ import (
 	"sublink/models"
 	"sublink/routers"
 	"sublink/services"
+	"sublink/services/geoip"
 	"sublink/services/sse"
 	"sublink/settings"
 	"sublink/utils"
@@ -131,6 +132,11 @@ func Run(port int) {
 	utils.Loginit()
 	// 初始化模板
 	Templateinit()
+
+	// 初始化 GeoIP 数据库
+	if err := geoip.InitGeoIP(); err != nil {
+		log.Printf("初始化 GeoIP 数据库失败: %v", err)
+	}
 
 	// 启动 AccessKey 清理定时任务
 	models.StartAccessKeyCleanupScheduler()
