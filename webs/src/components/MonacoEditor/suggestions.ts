@@ -37,8 +37,7 @@ export const getSuggestions = (
       insertText: "console.log(${1:message})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation:
-        "向服务器控制台输出调试消息。",
+      documentation: "向服务器控制台输出调试消息。",
       detail: "console.log(...args: any[]): void",
       range: range,
     },
@@ -102,8 +101,7 @@ export const getSuggestions = (
       insertText: "includes(${1:searchString})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation:
-        "判断一个字符串是否包含另一个字符串，返回 true 或 false。",
+      documentation: "判断一个字符串是否包含另一个字符串，返回 true 或 false。",
       detail:
         "String.prototype.includes(searchString: string, position?: number): boolean",
       range: range,
@@ -114,8 +112,7 @@ export const getSuggestions = (
       insertText: "startsWith(${1:searchString})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation:
-        "判断字符串是否以指定字符串开头，返回 true 或 false。",
+      documentation: "判断字符串是否以指定字符串开头，返回 true 或 false。",
       detail:
         "String.prototype.startsWith(searchString: string, position?: number): boolean",
       range: range,
@@ -126,8 +123,7 @@ export const getSuggestions = (
       insertText: "endsWith(${1:searchString})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation:
-        "判断字符串是否以指定字符串结尾，返回 true 或 false。",
+      documentation: "判断字符串是否以指定字符串结尾，返回 true 或 false。",
       detail:
         "String.prototype.endsWith(searchString: string, length?: number): boolean",
       range: range,
@@ -138,8 +134,7 @@ export const getSuggestions = (
       insertText: "padStart(${1:targetLength}, ${2:padString})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation:
-        "用另一个字符串从开头填充当前字符串，直到达到给定长度。",
+      documentation: "用另一个字符串从开头填充当前字符串，直到达到给定长度。",
       detail:
         "String.prototype.padStart(targetLength: number, padString?: string): string",
       range: range,
@@ -150,8 +145,7 @@ export const getSuggestions = (
       insertText: "padEnd(${1:targetLength}, ${2:padString})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation:
-        "用给定字符串从末尾填充当前字符串，直到达到给定长度。",
+      documentation: "用给定字符串从末尾填充当前字符串，直到达到给定长度。",
       detail:
         "String.prototype.padEnd(targetLength: number, padString?: string): string",
       range: range,
@@ -176,8 +170,7 @@ export const getSuggestions = (
       insertText: "findIndex(${1:callback})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation:
-        "返回数组中满足测试函数的第一个元素的索引，否则返回 -1。",
+      documentation: "返回数组中满足测试函数的第一个元素的索引，否则返回 -1。",
       detail:
         "Array.prototype.findIndex(callback: (value: T, index: number, array: T[]) => boolean): number",
       range: range,
@@ -188,8 +181,7 @@ export const getSuggestions = (
       insertText: "filter(${1:callback})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation:
-        "创建一个新数组，包含所有通过测试函数的元素。",
+      documentation: "创建一个新数组，包含所有通过测试函数的元素。",
       detail:
         "Array.prototype.filter(callback: (value: T, index: number, array: T[]) => boolean): T[]",
       range: range,
@@ -225,8 +217,7 @@ export const getSuggestions = (
       insertText: "Object.values(${1:obj})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation:
-        "返回对象自有可枚举属性值的数组。",
+      documentation: "返回对象自有可枚举属性值的数组。",
       detail: "Object.values(obj: any): any[]",
       range: range,
     },
@@ -236,8 +227,7 @@ export const getSuggestions = (
       insertText: "Object.entries(${1:obj})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation:
-        "返回对象自有可枚举字符串键属性的 [键, 值] 对数组。",
+      documentation: "返回对象自有可枚举字符串键属性的 [键, 值] 对数组。",
       detail: "Object.entries(obj: any): [string, any][]",
       range: range,
     },
@@ -247,8 +237,7 @@ export const getSuggestions = (
       insertText: "Object.keys(${1:obj})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation:
-        "返回对象自有可枚举属性名的数组。",
+      documentation: "返回对象自有可枚举属性名的数组。",
       detail: "Object.keys(obj: any): string[]",
       range: range,
     },
