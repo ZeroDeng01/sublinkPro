@@ -4,6 +4,7 @@ import (
 	"log"
 	"sort"
 	"sync"
+	"time"
 
 	"gorm.io/gorm/clause"
 )
@@ -17,13 +18,14 @@ type Node struct {
 	LinkHost        string //节点原始Host
 	LinkPort        string //节点原始端口
 	DialerProxyName string
-	CreateDate      string
 	Source          string `gorm:"default:'manual'"`
 	SourceID        int
 	Group           string
-	Speed           float64 `gorm:"default:0"` // 测速结果(MB/s)
-	DelayTime       int     `gorm:"default:0"` // 延迟时间(ms)
-	LastCheck       string  // 最后检测时间
+	Speed           float64   `gorm:"default:0"` // 测速结果(MB/s)
+	DelayTime       int       `gorm:"default:0"` // 延迟时间(ms)
+	LastCheck       string    // 最后检测时间
+	CreatedAt       time.Time `gorm:"autoCreateTime" json:"CreatedAt"` // 创建时间
+	UpdatedAt       time.Time `gorm:"autoUpdateTime" json:"UpdatedAt"` // 更新时间
 }
 
 var (
@@ -71,7 +73,8 @@ func (node *Node) Update() error {
 	if node.Name == "" {
 		node.Name = node.LinkName
 	}
-	err := DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort").Updates(node).Error
+	node.UpdatedAt = time.Now()
+	err := DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "UpdatedAt").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -93,6 +96,7 @@ func (node *Node) Update() error {
 		cachedNode.LinkAddress = node.LinkAddress
 		cachedNode.LinkHost = node.LinkHost
 		cachedNode.LinkPort = node.LinkPort
+		cachedNode.UpdatedAt = node.UpdatedAt
 		nodeCache[node.ID] = cachedNode
 	} else {
 		// 如果缓存中没有，可能是新加的或者缓存未同步，尝试从 DB 读

@@ -2,12 +2,14 @@ package routers
 
 import (
 	"sublink/api"
+	"sublink/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
 
 func Nodes(r *gin.Engine) {
 	NodesGroup := r.Group("/api/v1/nodes")
+	NodesGroup.Use(middlewares.AuthToken)
 	{
 		NodesGroup.POST("/add", api.NodeAdd)
 		NodesGroup.DELETE("/delete", api.NodeDel)

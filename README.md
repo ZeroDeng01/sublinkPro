@@ -1,24 +1,22 @@
 <div align="center">
-<img src="webs/src/assets/logo.png" width="150px" height="150px" />
+<img src="webs/src/assets/images/logo.svg" width="150px" height="150px" />
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Vue-5.0.8-brightgreen.svg"/>
   <img src="https://img.shields.io/badge/Go-1.24.3-green.svg"/>
-  <img src="https://img.shields.io/badge/Element%20Plus-2.6.1-blue.svg"/>
   <img src="https://img.shields.io/badge/license-MIT-green.svg"/>
-  <div align="center"> 中文 | <a href="README.en-US.md">English</div>
+
 
 
 </div>
 
 # 项目简介
 
-`sublinkPro` 是基于优秀的开源项目  [sublinkX](https://github.com/gooaclok819/sublinkX) /[sublinkE](https://github.com/eun1e/sublinkE)  进行二次开发，在原项目基础上做了部分定制优化。建议用户优先参考和使用原项目，感谢原作者的付出与贡献。
+`sublinkPro` 是基于优秀的开源项目  [sublinkX](https://github.com/gooaclok819/sublinkX) /[sublinkE](https://github.com/eun1e/sublinkE)  进行二次开发，在原项目基础上做了部分定制优化。感谢原作者的付出与贡献。
 
 **⚠️本项目和原项目数据库不兼容，请不要混用。**
 
-- 前端基于 [vue3-element-admin](https://github.com/youlaitech/vue3-element-admin)；
+- 前端基于 [Berry Free React Material UI Admin Template](https://github.com/codedthemes/berry-free-react-admin-template)；
 - 后端采用 Go + Gin + Gorm；
 - 默认账号：admin 密码：123456，请安装后务必自行修改；
 
@@ -71,16 +69,16 @@ wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/ins
 
 # 项目预览
 
-![预览1](webs/src/assets/1.png)
-![预览2](webs/src/assets/2.png)
-![预览3](webs/src/assets/3.png)
-![预览4](webs/src/assets/4.png)
-![预览5](webs/src/assets/5.png)
-![预览6](webs/src/assets/6.png)
-![预览7](webs/src/assets/7.jpg)
-![预览8](webs/src/assets/8.jpg)
-![预览9](webs/src/assets/9.jpg)
-![预览10](webs/src/assets/10.jpg)
+![预览1](docs/images/1.jpg)
+![预览2](docs/images/2.jpg)
+![预览3](docs/images/3.jpg)
+![预览4](docs/images/4.jpg)
+![预览5](docs/images/5.jpg)
+![预览6](docs/images/6.jpg)
+![预览7](docs/images/7.jpg)
+![预览8](docs/images/8.jpg)
+![预览9](docs/images/9.jpg)
+![预览10](docs/images/10.jpg)
 
 # 脚本功能说明
 

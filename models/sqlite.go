@@ -75,6 +75,19 @@ func InitSqlite() {
 		log.Printf("SubScheduler 表新增代理字段迁移失败: %v", err)
 	}
 
+	// 0008_node_created_at_fill - 补全空的 CreatedAt 字段
+	if err := RunCustomMigration("0008_node_created_at_fill", func() error {
+		// 查找所有 CreatedAt 为零值的节点并设置为当前时间
+		result := db.Exec("UPDATE nodes SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL OR created_at = '' OR created_at = '0001-01-01 00:00:00+00:00'")
+		if result.Error != nil {
+			return result.Error
+		}
+		log.Printf("已补全 %d 个节点的创建时间", result.RowsAffected)
+		return nil
+	}); err != nil {
+		log.Printf("执行迁移 0008_node_created_at_fill 失败: %v", err)
+	}
+
 	// 0005_hash_passwords
 	if err := RunCustomMigration("0005_hash_passwords", func() error {
 		var users []User

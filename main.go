@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sublink/middlewares"
 	"sublink/models"
 	"sublink/routers"
 	"sublink/services"
@@ -75,7 +74,7 @@ func main() {
 	var port = config.Port        // 读取端口号
 	// 获取版本号
 	var IsVersion bool
-	version = "unknown"
+	version = "dev"
 	//读取VERSION文件获取版本
 	versionData, err := versionFile.ReadFile("VERSION")
 	if err == nil {
@@ -160,7 +159,7 @@ func Run(port int) {
 		log.Printf("加载定时任务失败: %v", err)
 	}
 	// 安装中间件
-	r.Use(middlewares.AuthToken) // jwt验证token
+
 	// 设置静态资源路径
 	// 生产环境才启用内嵌静态文件服务
 	if StaticFiles != nil {
@@ -168,7 +167,12 @@ func Run(port int) {
 		if err != nil {
 			log.Println(err)
 		} else {
-			r.StaticFS("/static", http.FS(staticFiles))
+			// 增加assets目录的静态服务
+			assetsFiles, _ := fs.Sub(staticFiles, "assets")
+			r.StaticFS("/assets", http.FS(assetsFiles))
+			r.GET("/favicon.svg", func(c *gin.Context) {
+				c.FileFromFS("favicon.svg", http.FS(staticFiles))
+			})
 			r.GET("/", func(c *gin.Context) {
 				data, err := fs.ReadFile(staticFiles, "index.html")
 				if err != nil {
@@ -181,8 +185,7 @@ func Run(port int) {
 	}
 	// 注册路由
 	routers.User(r)
-	routers.APIKey(r)
-	routers.Mentus(r)
+	routers.AccessKey(r)
 	routers.Subcription(r)
 	routers.Nodes(r)
 	routers.Clients(r)
@@ -194,6 +197,36 @@ func Run(port int) {
 	routers.Script(r)
 	routers.SSE(r)
 	routers.Settings(r)
+
+	// 处理前端路由 (SPA History Mode)
+	// 必须在所有 backend 路由注册之后注册
+	r.NoRoute(func(c *gin.Context) {
+		// 如果是 API 请求，返回 404
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			c.JSON(404, gin.H{"error": "API route not found"})
+			return
+		}
+
+		// 否则返回 index.html
+		if StaticFiles != nil {
+			// 从 embed 文件系统中读取
+			staticFiles, err := fs.Sub(StaticFiles, "static")
+			if err != nil {
+				c.String(404, "Internal Server Error")
+				return
+			}
+			data, err := fs.ReadFile(staticFiles, "index.html")
+			if err != nil {
+				c.String(404, "Index file not found")
+				return
+			}
+			c.Data(200, "text/html", data)
+		} else {
+			// 本地开发环境 fallback (假设 static 目录在当前路径)
+			c.File("./static/index.html")
+		}
+	})
+
 	// 启动服务
 	r.Run(fmt.Sprintf("0.0.0.0:%d", port))
 }

@@ -2,6 +2,7 @@ package routers
 
 import (
 	"io"
+	"sublink/middlewares"
 	"sublink/services/sse"
 
 	"github.com/gin-gonic/gin"
@@ -9,7 +10,7 @@ import (
 
 // SSE registers the Server-Sent Events route
 func SSE(r *gin.Engine) {
-	r.GET("/api/sse", func(c *gin.Context) {
+	r.GET("/api/sse", middlewares.AuthToken, func(c *gin.Context) {
 		broker := sse.GetSSEBroker()
 
 		// Create a new channel for this client

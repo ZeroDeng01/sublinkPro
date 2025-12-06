@@ -2,12 +2,14 @@ package routers
 
 import (
 	"sublink/api"
+	"sublink/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
 
 func Settings(r *gin.Engine) {
 	SettingsGroup := r.Group("/api/v1/settings")
+	SettingsGroup.Use(middlewares.AuthToken)
 	{
 		SettingsGroup.GET("/webhook", api.GetWebhookConfig)
 		SettingsGroup.POST("/webhook", api.UpdateWebhookConfig)

@@ -1,13 +1,13 @@
 # 1. 构建前端
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 WORKDIR /frontend
 COPY webs ./webs
 
-# 安装 pnpm
-RUN npm install -g pnpm
+# Enable Corepack for Yarn
+RUN corepack enable
 
-# 使用 pnpm 安装依赖并构建
-RUN cd webs && pnpm install && pnpm run build
+# 使用 Yarn 安装依赖并构建
+RUN cd webs && yarn install && yarn run build
 
 
 # 2. 构建后端

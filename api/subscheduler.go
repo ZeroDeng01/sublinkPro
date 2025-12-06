@@ -116,6 +116,14 @@ func SubSchedulerGet(c *gin.Context) {
 		utils.FailWithMsg(c, "获取订阅任务列表失败: "+err.Error())
 		return
 	}
+
+	for i := range subSs {
+		nodes, err := models.ListBySourceID(subSs[i].ID)
+		if err == nil {
+			subSs[i].NodeCount = len(nodes)
+		}
+	}
+
 	utils.OkDetailed(c, "获取成功", subSs)
 }
 

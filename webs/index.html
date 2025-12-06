@@ -1,58 +1,34 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sublink-Pro节点订阅管理系统</title>
-  </head>
 
-  <body>
-    <div id="app">
-      <div class="loader"></div>
-    </div>
-  </body>
-  <script type="module" src="/src/main.ts"></script>
+<head>
+  <title>Sublink Pro - 支持更多协议和高度自定义的开源订阅转换管理工具</title>
+  <link rel="icon" href="/favicon.svg" />
+  <!-- Meta Tags-->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#2296f3" />
+  <meta name="title" content="Sublink Pro - 支持更多协议和高度自定义的开源订阅转换管理工具。" />
+  <meta name="description" content="支持更多协议和高度自定义的开源订阅转换管理工具。" />
+  <meta name="keywords" content="支持更多协议和高度自定义的开源订阅转换管理工具。" />
+  <meta name="author" content="CodedThemes" />
+  <script defer src="https://fomo.codedthemes.com/pixel/jAgJNY0WuNyOO0aM7ql1AqLRKRH5d737"></script>
+</head>
 
-  <style>
-    html,
-    body,
-    #app {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 100%;
-    }
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  <!--
+          This HTML file is a template.
+          If you open it directly in the browser, you will see an empty page.
 
-    .loader {
-      position: relative;
-      width: 40px;
-      aspect-ratio: 0.577;
-      overflow: hidden;
-      clip-path: polygon(0 0, 100% 100%, 0 100%, 100% 0);
-      animation: l19 2s infinite linear;
-    }
+          You can add webfonts, meta tags, or analytics to this file.
+          The build step will place the bundled scripts into the <body> tag.
 
-    .loader::before {
-      position: absolute;
-      inset: -150%;
-      content: "";
-      background: repeating-conic-gradient(
-        from 30deg,
-        #ffabab 0 60deg,
-        #abe4ff 0 120deg,
-        #ff7373 0 180deg
-      );
-      animation: inherit;
-      animation-direction: reverse;
-    }
+          To begin the development, run `npm start` or `yarn start`.
+          To create a production bundle, use `npm run build` or `yarn build`.
+        -->
+  <script type="module" src="/src/index.jsx"></script>
+</body>
 
-    @keyframes l19 {
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-  </style>
 </html>

@@ -335,7 +335,6 @@ func NodeAdd(c *gin.Context) {
 	Node.Link = link
 	Node.DialerProxyName = dialerProxyName
 	Node.Group = group
-	Node.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 	err = Node.Find()
 	// 如果找到记录说明重复
 	if err == nil {

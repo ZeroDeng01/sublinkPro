@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GenerateAPIKey(c *gin.Context) {
+func GenerateAccessKey(c *gin.Context) {
 	var userAccessKey dto.UserAccessKey
 	if err := c.BindJSON(&userAccessKey); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -48,32 +48,32 @@ func GenerateAPIKey(c *gin.Context) {
 	})
 }
 
-func DeleteAPIKey(c *gin.Context) {
+func DeleteAccessKey(c *gin.Context) {
 
-	apiKeyIDParam := c.Param("apiKeyId")
-	if apiKeyIDParam == "" {
-		utils.FailWithMsg(c, "缺少API Key ID")
+	accessKeyIDParam := c.Param("accessKeyId")
+	if accessKeyIDParam == "" {
+		utils.FailWithMsg(c, "缺少Access Key ID")
 		return
 	}
 
 	var accessKey models.AccessKey
-	apiKeyID, err := strconv.Atoi(apiKeyIDParam)
+	accessKeyID, err := strconv.Atoi(accessKeyIDParam)
 	if err != nil {
-		utils.FailWithMsg(c, "删除API Key失败")
+		utils.FailWithMsg(c, "删除Access Key失败")
 		return
 	}
-	accessKey.ID = apiKeyID
+	accessKey.ID = accessKeyID
 	err = accessKey.Delete()
 	if err != nil {
-		utils.FailWithMsg(c, "删除API Key失败")
+		utils.FailWithMsg(c, "删除Access Key失败")
 		return
 	}
 
-	utils.OkWithMsg(c, "删除API Key成功")
+	utils.OkWithMsg(c, "删除Access Key成功")
 
 }
 
-func GetAPIKey(c *gin.Context) {
+func GetAccessKey(c *gin.Context) {
 	userIDParam := c.Param("userId")
 	if userIDParam == "" {
 		utils.FailWithMsg(c, "缺少User ID")
@@ -82,13 +82,13 @@ func GetAPIKey(c *gin.Context) {
 
 	userID, err := strconv.Atoi(userIDParam)
 	if err != nil {
-		utils.FailWithMsg(c, "删除API Key失败")
+		utils.FailWithMsg(c, "查询Access Key失败")
 		return
 	}
-	apiKeys, err := models.FindValidAccessKeys(userID)
+	accessKeys, err := models.FindValidAccessKeys(userID)
 	if err != nil {
-		utils.FailWithMsg(c, "查询API Key失败")
+		utils.FailWithMsg(c, "查询Access Key失败")
 		return
 	}
-	utils.OkDetailed(c, "查询API Key成功", apiKeys)
+	utils.OkDetailed(c, "查询Access Key成功", accessKeys)
 }

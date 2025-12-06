@@ -533,7 +533,6 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 		Node.Source = subName
 		Node.SourceID = id
 		Node.Group = subS.Group
-		Node.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 
 		// 记录本次获取到的节点
 		currentLinks[link] = true

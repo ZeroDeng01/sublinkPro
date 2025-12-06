@@ -8,9 +8,7 @@ import (
 	"io/fs"
 )
 
-//go:embed static/js/*
-//go:embed static/css/*
-//go:embed static/img/*
+//go:embed static/assets/*
 //go:embed static/*
 var embeddedFiles embed.FS
 

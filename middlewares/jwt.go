@@ -21,21 +21,6 @@ type JwtClaims struct {
 
 // AuthToken 验证token中间件
 func AuthToken(c *gin.Context) {
-	// 定义白名单
-	list := []string{"/static", "/api/v1/auth/login", "/api/v1/auth/captcha", "/c/", "/api/v1/version"}
-	// 如果是首页直接跳过
-	if c.Request.URL.Path == "/" {
-		c.Next()
-		return
-	}
-	// 如果是白名单直接跳过
-	for _, v := range list {
-		if strings.HasPrefix(c.Request.URL.Path, v) {
-			c.Next()
-			return
-		}
-	}
-
 	// 检查api key
 	accessKey := c.GetHeader("X-API-Key")
 

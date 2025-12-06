@@ -2,6 +2,7 @@ package routers
 
 import (
 	"sublink/api"
+	"sublink/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,6 +15,7 @@ func User(r *gin.Engine) {
 		authGroup.GET("/captcha", api.GetCaptcha)
 	}
 	userGroup := r.Group("/api/v1/users")
+	userGroup.Use(middlewares.AuthToken)
 	{
 		userGroup.GET("/me", api.UserMe)
 		userGroup.GET("/page", api.UserPages)

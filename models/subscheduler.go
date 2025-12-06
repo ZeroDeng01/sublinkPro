@@ -18,6 +18,7 @@ type SubScheduler struct {
 	Group             string
 	DownloadWithProxy bool   `gorm:"default:false"`
 	ProxyLink         string `gorm:"default:''"`
+	NodeCount         int    `gorm:"-" json:"node_count"`
 }
 
 // Add 添加订阅调度
