@@ -18,7 +18,6 @@ func GetIp(c *gin.Context) {
 
 		// Get location from local GeoIP database
 		addr, err := geoip.GetLocation(ip)
-		//addr, err := geoip.GetLocation(ip)
 		if err != nil {
 			log.Printf("Failed to get location for IP %s: %v", ip, err)
 			addr = "Unknown"

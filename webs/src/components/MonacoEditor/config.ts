@@ -1,11 +1,11 @@
 import * as monaco from "monaco-editor";
 
-// Global flag to ensure configuration only runs once
+// 全局标志，确保配置只运行一次
 let isConfigured = false;
 
 /**
- * Configure Monaco Editor global settings
- * This should be called before any editor instance is created
+ * 配置 Monaco Editor 全局设置
+ * 应在创建任何编辑器实例之前调用
  */
 export const configureMonacoEditor = () => {
   if (isConfigured) {
@@ -17,68 +17,70 @@ export const configureMonacoEditor = () => {
   const javascriptDefaults = (monaco.languages.typescript as any)
     .javascriptDefaults;
 
-  // Enable diagnostics for syntax checking
+  // 启用语法检查诊断
   javascriptDefaults.setDiagnosticsOptions({
-    noSemanticValidation: false, // Enable semantic validation
-    noSyntaxValidation: false, // Enable syntax validation
-    diagnosticCodesToIgnore: [1108], // Ignore "return statement can only be used within a function body"
+    noSemanticValidation: false, // 启用语义验证
+    noSyntaxValidation: false, // 启用语法验证
+    diagnosticCodesToIgnore: [1108], // 忽略 "return 语句只能在函数体内使用"
   });
 
-  // Configure compiler options
+  // 配置编译器选项
   javascriptDefaults.setCompilerOptions({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     target: (monaco.languages.typescript as any).ScriptTarget.ES2020,
     allowNonTsExtensions: true,
     allowJs: true,
-    checkJs: true, // Enable type checking for JavaScript
+    checkJs: true, // 为 JavaScript 启用类型检查
   });
 
-  // Enable eager model sync for better IntelliSense
+  // 启用即时模型同步以获得更好的智能提示
   javascriptDefaults.setEagerModelSync(true);
 
-  // Inject custom type definitions
+  // 注入自定义类型定义
   javascriptDefaults.addExtraLib(
     `
     /**
-     * Represents a node in the subscription system.
+     * 表示订阅系统中的节点
      */
     interface Node {
-      /** Unique identifier for the node */
+      /** 节点的唯一标识符 */
       ID: number;
-      /** Full link string */
+      /** 完整链接字符串 */
       Link: string;
-      /** Display name of the node */
+      /** 节点显示名称 */
       Name: string;
-      /** Link identifier name */
+      /** 链接标识名称 */
       LinkName: string;
-      /** Link address */
+      /** 链接地址 */
       LinkAddress: string;
-      /** Link host */
+      /** 链接主机 */
       LinkHost: string;
-      /** Link port */
+      /** 链接端口 */
       LinkPort: string;
-      /** Dialer proxy name */
+      /** 拨号代理名称 */
       DialerProxyName: string;
-      /** Creation date */
+      /** 创建日期 */
       CreateDate: string;
-      /** Source identifier */
+      /** 来源标识符 */
       Source: string;
-      /** Source ID number */
+      /** 来源 ID 编号 */
       SourceID: number;
-      /** Node group */
+      /** 节点分组 */
       Group: string;
-      /** Connection speed */
+      /** 节点速度MB/s */
       Speed: number;
-      /** Last check timestamp */
+      /** 节点延迟ms */
+      DelayTime: number;
+      /** 最后检查时间戳 */
       LastCheck: string;
     }
 
     /**
-     * Filter nodes based on custom logic.
-     * This is the main entry point for node filtering scripts.
-     * @param nodes - Array of nodes to filter
-     * @param clientType - The type of client (e.g., "v2ray", "clash", "surge")
-     * @returns Filtered array of nodes
+     * 基于自定义逻辑过滤节点
+     * 这是节点过滤脚本的主入口函数
+     * @param nodes - 要过滤的节点数组
+     * @param clientType - 客户端类型（例如："v2ray"、"clash"、"surge"）
+     * @returns 过滤后的节点数组
      * @example
      * function filterNode(nodes, clientType) {
      *   return nodes.filter(node => node.Speed > 100);
@@ -87,11 +89,11 @@ export const configureMonacoEditor = () => {
     declare function filterNode(nodes: Node[], clientType: string): Node[];
 
     /**
-     * Modify the subscription content.
-     * This is the main entry point for subscription modification scripts.
-     * @param input - The original subscription content as a string
-     * @param clientType - The type of client (e.g., "v2ray", "clash", "surge")
-     * @returns Modified subscription content
+     * 修改订阅内容
+     * 这是订阅修改脚本的主入口函数
+     * @param input - 原始订阅内容字符串
+     * @param clientType - 客户端类型（例如："v2ray"、"clash"、"surge"）
+     * @returns 修改后的订阅内容
      * @example
      * function subMod(input, clientType) {
      *   return input.replace(/old/g, 'new');
@@ -100,16 +102,16 @@ export const configureMonacoEditor = () => {
     declare function subMod(input: string, clientType: string): string;
 
     /**
-     * Console object for logging. Available in the script execution environment.
+     * 用于日志记录的 Console 对象。在脚本执行环境中可用。
      */
     declare const console: {
-      /** Log a message */
+      /** 记录一条消息 */
       log(...args: any[]): void;
-      /** Log an info message */
+      /** 记录一条信息消息 */
       info(...args: any[]): void;
-      /** Log a warning message */
+      /** 记录一条警告消息 */
       warn(...args: any[]): void;
-      /** Log an error message */
+      /** 记录一条错误消息 */
       error(...args: any[]): void;
     };
     `,
@@ -117,5 +119,5 @@ export const configureMonacoEditor = () => {
   );
 };
 
-// Auto-configure when module is imported
+// 模块导入时自动配置
 configureMonacoEditor();

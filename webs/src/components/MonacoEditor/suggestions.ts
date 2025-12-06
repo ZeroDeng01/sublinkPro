@@ -4,16 +4,16 @@ export const getSuggestions = (
   range: monaco.IRange
 ): monaco.languages.CompletionItem[] => {
   const suggestions: monaco.languages.CompletionItem[] = [
-    // Main Entry Functions
+    // 主入口函数
     {
       label: "subMod",
       kind: monaco.languages.CompletionItemKind.Function,
       insertText:
-        "function subMod(input, clientType) {\n\t${1:// Modify subscription content}\n\treturn input;\n}",
+        "function subMod(input, clientType) {\n\t${1:// 修改订阅内容}\n\treturn input;\n}",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Main entry point for subscription modification scripts. This function is called by the system to modify subscription content.",
+        "订阅修改脚本的主入口函数。系统会调用此函数来修改订阅内容。",
       detail: "function subMod(input: string, clientType: string): string",
       range: range,
     },
@@ -21,16 +21,16 @@ export const getSuggestions = (
       label: "filterNode",
       kind: monaco.languages.CompletionItemKind.Function,
       insertText:
-        "function filterNode(nodes, clientType) {\n\t${1:// Filter nodes based on your criteria}\n\treturn nodes;\n}",
+        "function filterNode(nodes, clientType) {\n\t${1:// 根据条件过滤节点}\n\treturn nodes;\n}",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Main entry point for node filtering scripts. This function is called by the system to filter the list of nodes.",
+        "节点过滤脚本的主入口函数。系统会调用此函数来过滤节点列表。",
       detail: "function filterNode(nodes: Node[], clientType: string): Node[]",
       range: range,
     },
 
-    // Console Methods
+    // 控制台方法
     {
       label: "console.log",
       kind: monaco.languages.CompletionItemKind.Method,
@@ -38,7 +38,7 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Output a message to the server console for debugging purposes.",
+        "向服务器控制台输出调试消息。",
       detail: "console.log(...args: any[]): void",
       range: range,
     },
@@ -48,7 +48,7 @@ export const getSuggestions = (
       insertText: "console.info(${1:message})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation: "Output an informational message to the server console.",
+      documentation: "向服务器控制台输出信息消息。",
       detail: "console.info(...args: any[]): void",
       range: range,
     },
@@ -58,7 +58,7 @@ export const getSuggestions = (
       insertText: "console.warn(${1:message})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation: "Output a warning message to the server console.",
+      documentation: "向服务器控制台输出警告消息。",
       detail: "console.warn(...args: any[]): void",
       range: range,
     },
@@ -68,19 +68,19 @@ export const getSuggestions = (
       insertText: "console.error(${1:message})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation: "Output an error message to the server console.",
+      documentation: "向服务器控制台输出错误消息。",
       detail: "console.error(...args: any[]): void",
       range: range,
     },
 
-    // ES6+ Features
+    // ES6+ 特性
     {
       label: "Set",
       kind: monaco.languages.CompletionItemKind.Class,
       insertText: "new Set(${1:iterable})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation: "Create a new Set object for storing unique values.",
+      documentation: "创建一个新的 Set 对象，用于存储唯一值。",
       detail: "new Set(iterable?: any[])",
       range: range,
     },
@@ -90,12 +90,12 @@ export const getSuggestions = (
       insertText: "new Map(${1:iterable})",
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      documentation: "Create a new Map object for storing key-value pairs.",
+      documentation: "创建一个新的 Map 对象，用于存储键值对。",
       detail: "new Map(iterable?: any[])",
       range: range,
     },
 
-    // String Methods
+    // 字符串方法
     {
       label: "includes",
       kind: monaco.languages.CompletionItemKind.Method,
@@ -103,7 +103,7 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Determines whether one string may be found within another string, returning true or false as appropriate.",
+        "判断一个字符串是否包含另一个字符串，返回 true 或 false。",
       detail:
         "String.prototype.includes(searchString: string, position?: number): boolean",
       range: range,
@@ -115,7 +115,7 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Determines whether a string begins with the characters of a specified string, returning true or false as appropriate.",
+        "判断字符串是否以指定字符串开头，返回 true 或 false。",
       detail:
         "String.prototype.startsWith(searchString: string, position?: number): boolean",
       range: range,
@@ -127,7 +127,7 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Determines whether a string ends with the characters of a specified string, returning true or false as appropriate.",
+        "判断字符串是否以指定字符串结尾，返回 true 或 false。",
       detail:
         "String.prototype.endsWith(searchString: string, length?: number): boolean",
       range: range,
@@ -139,7 +139,7 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Pads the current string with another string until the resulting string reaches the given length. The padding is applied from the start of the current string.",
+        "用另一个字符串从开头填充当前字符串，直到达到给定长度。",
       detail:
         "String.prototype.padStart(targetLength: number, padString?: string): string",
       range: range,
@@ -151,13 +151,13 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Pads the current string with a given string until the resulting string reaches the given length. The padding is applied from the end of the current string.",
+        "用给定字符串从末尾填充当前字符串，直到达到给定长度。",
       detail:
         "String.prototype.padEnd(targetLength: number, padString?: string): string",
       range: range,
     },
 
-    // Array Methods
+    // 数组方法
     {
       label: "find",
       kind: monaco.languages.CompletionItemKind.Method,
@@ -165,7 +165,7 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Returns the value of the first element in the array that satisfies the provided testing function. Otherwise undefined is returned.",
+        "返回数组中满足测试函数的第一个元素的值，否则返回 undefined。",
       detail:
         "Array.prototype.find(callback: (value: T, index: number, array: T[]) => boolean): T | undefined",
       range: range,
@@ -177,7 +177,7 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Returns the index of the first element in the array that satisfies the provided testing function. Otherwise, -1 is returned.",
+        "返回数组中满足测试函数的第一个元素的索引，否则返回 -1。",
       detail:
         "Array.prototype.findIndex(callback: (value: T, index: number, array: T[]) => boolean): number",
       range: range,
@@ -189,7 +189,7 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Creates a new array with all elements that pass the test implemented by the provided function.",
+        "创建一个新数组，包含所有通过测试函数的元素。",
       detail:
         "Array.prototype.filter(callback: (value: T, index: number, array: T[]) => boolean): T[]",
       range: range,
@@ -201,13 +201,13 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Creates a new array populated with the results of calling a provided function on every element in the calling array.",
+        "创建一个新数组，包含对原数组每个元素调用提供的函数后的结果。",
       detail:
         "Array.prototype.map(callback: (value: T, index: number, array: T[]) => U): U[]",
       range: range,
     },
 
-    // Object Methods
+    // 对象方法
     {
       label: "Object.assign",
       kind: monaco.languages.CompletionItemKind.Method,
@@ -215,7 +215,7 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Copies all enumerable own properties from one or more source objects to a target object. It returns the modified target object.",
+        "将所有可枚举的自有属性从一个或多个源对象复制到目标对象。返回修改后的目标对象。",
       detail: "Object.assign(target: any, ...sources: any[]): any",
       range: range,
     },
@@ -226,7 +226,7 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Returns an array of a given object's own enumerable property values.",
+        "返回对象自有可枚举属性值的数组。",
       detail: "Object.values(obj: any): any[]",
       range: range,
     },
@@ -237,7 +237,7 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Returns an array of a given object's own enumerable string-keyed property [key, value] pairs.",
+        "返回对象自有可枚举字符串键属性的 [键, 值] 对数组。",
       detail: "Object.entries(obj: any): [string, any][]",
       range: range,
     },
@@ -248,17 +248,17 @@ export const getSuggestions = (
       insertTextRules:
         monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       documentation:
-        "Returns an array of a given object's own enumerable property names.",
+        "返回对象自有可枚举属性名的数组。",
       detail: "Object.keys(obj: any): string[]",
       range: range,
     },
 
-    // Node Interface Properties (for autocomplete when typing 'node.')
+    // Node 接口属性（输入 'node.' 时自动补全）
     {
       label: "ID",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "ID",
-      documentation: "Unique identifier for the node",
+      documentation: "节点的唯一标识符",
       detail: "number",
       range: range,
     },
@@ -266,7 +266,7 @@ export const getSuggestions = (
       label: "Link",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "Link",
-      documentation: "Full link string",
+      documentation: "完整链接字符串",
       detail: "string",
       range: range,
     },
@@ -274,7 +274,7 @@ export const getSuggestions = (
       label: "Name",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "Name",
-      documentation: "Display name of the node",
+      documentation: "节点显示名称",
       detail: "string",
       range: range,
     },
@@ -282,7 +282,7 @@ export const getSuggestions = (
       label: "LinkName",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "LinkName",
-      documentation: "Link identifier name",
+      documentation: "链接标识名称",
       detail: "string",
       range: range,
     },
@@ -290,7 +290,7 @@ export const getSuggestions = (
       label: "LinkAddress",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "LinkAddress",
-      documentation: "Link address",
+      documentation: "链接地址",
       detail: "string",
       range: range,
     },
@@ -298,7 +298,7 @@ export const getSuggestions = (
       label: "LinkHost",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "LinkHost",
-      documentation: "Link host",
+      documentation: "链接主机",
       detail: "string",
       range: range,
     },
@@ -306,7 +306,7 @@ export const getSuggestions = (
       label: "LinkPort",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "LinkPort",
-      documentation: "Link port",
+      documentation: "链接端口",
       detail: "string",
       range: range,
     },
@@ -314,7 +314,7 @@ export const getSuggestions = (
       label: "DialerProxyName",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "DialerProxyName",
-      documentation: "Dialer proxy name",
+      documentation: "拨号代理名称",
       detail: "string",
       range: range,
     },
@@ -322,7 +322,7 @@ export const getSuggestions = (
       label: "CreateDate",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "CreateDate",
-      documentation: "Creation date",
+      documentation: "创建日期",
       detail: "string",
       range: range,
     },
@@ -330,7 +330,7 @@ export const getSuggestions = (
       label: "Source",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "Source",
-      documentation: "Source identifier",
+      documentation: "节点来源",
       detail: "string",
       range: range,
     },
@@ -338,7 +338,7 @@ export const getSuggestions = (
       label: "SourceID",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "SourceID",
-      documentation: "Source ID number",
+      documentation: "节点来源ID",
       detail: "number",
       range: range,
     },
@@ -346,15 +346,23 @@ export const getSuggestions = (
       label: "Group",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "Group",
-      documentation: "Node group",
+      documentation: "节点所属分组",
       detail: "string",
+      range: range,
+    },
+    {
+      label: "DelayTime",
+      kind: monaco.languages.CompletionItemKind.Property,
+      insertText: "DelayTime",
+      documentation: "节点延迟（ms）",
+      detail: "number",
       range: range,
     },
     {
       label: "Speed",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "Speed",
-      documentation: "Connection speed",
+      documentation: "节点速度（MB/s）",
       detail: "number",
       range: range,
     },
@@ -362,7 +370,7 @@ export const getSuggestions = (
       label: "LastCheck",
       kind: monaco.languages.CompletionItemKind.Property,
       insertText: "LastCheck",
-      documentation: "Last check timestamp",
+      documentation: "最后测试时间",
       detail: "string",
       range: range,
     },
