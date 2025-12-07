@@ -16,6 +16,8 @@
 
 **⚠️本项目和原项目数据库不兼容，请不要混用。**
 
+**⚠️请不要使用本项目以及任何本项目的衍生项目进行违反您以及您所服务用户的所在地法律法规的活动。本项目仅供个人开发和学习交流使用。**
+
 - 前端基于 [Berry Free React Material UI Admin Template](https://github.com/codedthemes/berry-free-react-admin-template)；
 - 后端采用 Go + Gin + Gorm；
 - 默认账号：admin 密码：123456，请安装后务必自行修改；
@@ -48,12 +50,36 @@
 # 安装说明
 
 ## Docker 运行
+### 稳定版
 ```bash
 docker run --name sublinke -p 8000:8000 \
 -v $PWD/db:/app/db \
 -v $PWD/template:/app/template \
 -v $PWD/logs:/app/logs \
--d zerodeng/sublink-pro 
+-d zerodeng/sublink-pro
+```
+### 开发版（功能尝鲜使用）
+```bash
+docker run --name sublinke -p 8000:8000 \
+-v $PWD/db:/app/db \
+-v $PWD/template:/app/template \
+-v $PWD/logs:/app/logs \
+-d zerodeng/sublink-pro:dev
+```
+## Docker Compose 运行
+```yaml
+services:
+  sublinkx:
+    # image: zerodeng/sublink-pro:dev # 开发版（功能尝鲜使用）
+    image: zerodeng/sublink-pro # 稳定版
+    container_name: sublinkx
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./db:/app/db"
+      - "./template:/app/template"
+      - "./logs:/app/logs"
+    restart: unless-stopped
 ```
 
 ## 一键安装
