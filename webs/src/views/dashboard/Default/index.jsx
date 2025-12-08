@@ -27,9 +27,13 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SpeedIcon from '@mui/icons-material/Speed';
 import TimerIcon from '@mui/icons-material/Timer';
 
+// icons for protocols
+import PublicIcon from '@mui/icons-material/Public';
+import SecurityIcon from '@mui/icons-material/Security';
+
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
-import { getSubTotal, getNodeTotal, getFastestSpeedNode, getLowestDelayNode } from 'api/total';
+import { getSubTotal, getNodeTotal, getFastestSpeedNode, getLowestDelayNode, getCountryStats, getProtocolStats } from 'api/total';
 
 // ==============================|| 动画定义 ||============================== //
 
@@ -568,6 +572,8 @@ export default function DashboardDefault() {
   const [nodeAvailable, setNodeAvailable] = useState(0);
   const [fastestNode, setFastestNode] = useState(null);
   const [lowestDelayNode, setLowestDelayNode] = useState(null);
+  const [countryStats, setCountryStats] = useState({});
+  const [protocolStats, setProtocolStats] = useState({});
   const [releases, setReleases] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingReleases, setLoadingReleases] = useState(true);
@@ -584,11 +590,13 @@ export default function DashboardDefault() {
   const fetchStats = async () => {
     try {
       setLoadingStats(true);
-      const [subRes, nodeRes, fastestRes, lowestDelayRes] = await Promise.all([
+      const [subRes, nodeRes, fastestRes, lowestDelayRes, countryRes, protocolRes] = await Promise.all([
         getSubTotal(),
         getNodeTotal(),
         getFastestSpeedNode(),
-        getLowestDelayNode()
+        getLowestDelayNode(),
+        getCountryStats(),
+        getProtocolStats()
       ]);
       setSubTotal(subRes.data || 0);
       // nodeRes.data 现在返回 { total, available }
@@ -601,6 +609,8 @@ export default function DashboardDefault() {
       }
       setFastestNode(fastestRes.data || null);
       setLowestDelayNode(lowestDelayRes.data || null);
+      setCountryStats(countryRes.data || {});
+      setProtocolStats(protocolRes.data || {});
     } catch (error) {
       console.error('获取统计数据失败:', error);
     } finally {
@@ -693,6 +703,197 @@ export default function DashboardDefault() {
             />
           </Grid>
         ))}
+      </Grid>
+
+      {/* 国家和协议统计 */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* 国家统计卡片 */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card
+            sx={{
+              borderRadius: 4,
+              background: isDark
+                ? `linear-gradient(145deg, ${alpha('#6366f1', 0.12)} 0%, ${alpha('#8b5cf6', 0.06)} 100%)`
+                : `linear-gradient(145deg, ${alpha('#6366f1', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${isDark ? alpha('#6366f1', 0.2) : alpha('#6366f1', 0.12)}`,
+              overflow: 'hidden',
+              position: 'relative'
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                  }}
+                >
+                  <PublicIcon sx={{ color: '#fff', fontSize: 22 }} />
+                </Box>
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  节点国家分布
+                </Typography>
+              </Box>
+
+              {loadingStats ? (
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} variant="rounded" width={80} height={36} sx={{ borderRadius: 2 }} />
+                  ))}
+                </Box>
+              ) : Object.keys(countryStats).length > 0 ? (
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                  {Object.entries(countryStats)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([country, count]) => {
+                      // 国家代码转国旗 emoji
+                      const getFlagEmoji = (code) => {
+                        if (!code || code === '未知') return '🌐';
+                        const codePoints = code
+                          .toUpperCase()
+                          .split('')
+                          .map(char => 127397 + char.charCodeAt(0));
+                        return String.fromCodePoint(...codePoints);
+                      };
+                      return (
+                        <Chip
+                          key={country}
+                          label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Typography sx={{ fontSize: '1rem' }}>{getFlagEmoji(country)}</Typography>
+                              <Typography sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{country}</Typography>
+                              <Typography sx={{ color: 'text.secondary', fontSize: '0.75rem', ml: 0.5 }}>({count})</Typography>
+                            </Box>
+                          }
+                          sx={{
+                            bgcolor: isDark ? alpha('#6366f1', 0.15) : alpha('#6366f1', 0.08),
+                            border: `1px solid ${alpha('#6366f1', 0.2)}`,
+                            borderRadius: 2,
+                            height: 36,
+                            '&:hover': {
+                              bgcolor: isDark ? alpha('#6366f1', 0.25) : alpha('#6366f1', 0.15)
+                            }
+                          }}
+                        />
+                      );
+                    })}
+                </Box>
+              ) : (
+                <Typography color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                  暂无国家统计数据
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 协议统计卡片 */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card
+            sx={{
+              borderRadius: 4,
+              background: isDark
+                ? `linear-gradient(145deg, ${alpha('#10b981', 0.12)} 0%, ${alpha('#059669', 0.06)} 100%)`
+                : `linear-gradient(145deg, ${alpha('#10b981', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${isDark ? alpha('#10b981', 0.2) : alpha('#10b981', 0.12)}`,
+              overflow: 'hidden',
+              position: 'relative'
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                  }}
+                >
+                  <SecurityIcon sx={{ color: '#fff', fontSize: 22 }} />
+                </Box>
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  节点协议分布
+                </Typography>
+              </Box>
+
+              {loadingStats ? (
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                  {[1, 2, 3, 4].map((i) => (
+                    <Skeleton key={i} variant="rounded" width={100} height={36} sx={{ borderRadius: 2 }} />
+                  ))}
+                </Box>
+              ) : Object.keys(protocolStats).length > 0 ? (
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                  {Object.entries(protocolStats)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([protocol, count]) => {
+                      // 协议颜色映射
+                      const protocolColors = {
+                        'Shadowsocks': ['#3b82f6', '#2563eb'],
+                        'ShadowsocksR': ['#6366f1', '#4f46e5'],
+                        'VMess': ['#8b5cf6', '#7c3aed'],
+                        'VLESS': ['#10b981', '#059669'],
+                        'Trojan': ['#ef4444', '#dc2626'],
+                        'Hysteria': ['#06b6d4', '#0891b2'],
+                        'Hysteria2': ['#14b8a6', '#0d9488'],
+                        'TUIC': ['#f59e0b', '#d97706'],
+                        'WireGuard': ['#84cc16', '#65a30d'],
+                        'NaiveProxy': ['#ec4899', '#db2777'],
+                        'SOCKS5': ['#64748b', '#475569'],
+                        'HTTP': ['#94a3b8', '#64748b'],
+                        'HTTPS': ['#22c55e', '#16a34a']
+                      };
+                      const colors = protocolColors[protocol] || ['#6b7280', '#4b5563'];
+
+                      return (
+                        <Chip
+                          key={protocol}
+                          label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Box
+                                sx={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  background: `linear-gradient(135deg, ${colors[0]} 0%, ${colors[1]} 100%)`
+                                }}
+                              />
+                              <Typography sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{protocol}</Typography>
+                              <Typography sx={{ color: 'text.secondary', fontSize: '0.75rem', ml: 0.5 }}>({count})</Typography>
+                            </Box>
+                          }
+                          sx={{
+                            bgcolor: isDark ? alpha(colors[0], 0.15) : alpha(colors[0], 0.08),
+                            border: `1px solid ${alpha(colors[0], 0.25)}`,
+                            borderRadius: 2,
+                            height: 36,
+                            '&:hover': {
+                              bgcolor: isDark ? alpha(colors[0], 0.25) : alpha(colors[0], 0.15)
+                            }
+                          }}
+                        />
+                      );
+                    })}
+                </Box>
+              ) : (
+                <Typography color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                  暂无协议统计数据
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
 
       {/* 更新日志 */}

@@ -15,6 +15,8 @@ func Total(r *gin.Engine) {
 		TotalGroup.GET("/node", api.NodesTotal)
 		TotalGroup.GET("/fastest-speed", api.FastestSpeedNode)
 		TotalGroup.GET("/lowest-delay", api.LowestDelayNode)
+		TotalGroup.GET("/country-stats", api.NodeCountryStats)
+		TotalGroup.GET("/protocol-stats", api.NodeProtocolStats)
 	}
 
 }

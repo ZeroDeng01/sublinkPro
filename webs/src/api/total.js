@@ -31,3 +31,19 @@ export function getLowestDelayNode() {
     method: 'get'
   });
 }
+
+// 获取国家统计
+export function getCountryStats() {
+  return request({
+    url: '/v1/total/country-stats',
+    method: 'get'
+  });
+}
+
+// 获取协议统计
+export function getProtocolStats() {
+  return request({
+    url: '/v1/total/protocol-stats',
+    method: 'get'
+  });
+}

@@ -563,3 +563,15 @@ func GetNodeCountries(c *gin.Context) {
 	countries := models.GetAllCountries()
 	utils.OkDetailed(c, "获取国家代码成功", countries)
 }
+
+// NodeCountryStats 获取按国家统计的节点数量
+func NodeCountryStats(c *gin.Context) {
+	stats := models.GetNodeCountryStats()
+	utils.OkDetailed(c, "获取国家统计成功", stats)
+}
+
+// NodeProtocolStats 获取按协议统计的节点数量
+func NodeProtocolStats(c *gin.Context) {
+	stats := models.GetNodeProtocolStats()
+	utils.OkDetailed(c, "获取协议统计成功", stats)
+}

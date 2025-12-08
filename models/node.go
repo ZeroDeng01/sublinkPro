@@ -408,3 +408,65 @@ func GetAllCountries() []string {
 	}
 	return countries
 }
+
+// GetNodeCountryStats 获取按国家统计的节点数量
+func GetNodeCountryStats() map[string]int {
+	nodeLock.RLock()
+	defer nodeLock.RUnlock()
+
+	stats := make(map[string]int)
+	for _, n := range nodeCache {
+		country := n.LinkCountry
+		if country == "" {
+			country = "未知"
+		}
+		stats[country]++
+	}
+	return stats
+}
+
+// GetNodeProtocolStats 获取按协议统计的节点数量
+func GetNodeProtocolStats() map[string]int {
+	nodeLock.RLock()
+	defer nodeLock.RUnlock()
+
+	stats := make(map[string]int)
+	for _, n := range nodeCache {
+		protocol := parseProtocolFromLink(n.Link)
+		stats[protocol]++
+	}
+	return stats
+}
+
+// parseProtocolFromLink 从节点链接中解析协议类型
+func parseProtocolFromLink(link string) string {
+	if link == "" {
+		return "未知"
+	}
+	// 常见协议前缀映射
+	protocolPrefixes := map[string]string{
+		"ss://":        "Shadowsocks",
+		"ssr://":       "ShadowsocksR",
+		"vmess://":     "VMess",
+		"vless://":     "VLESS",
+		"trojan://":    "Trojan",
+		"hysteria://":  "Hysteria",
+		"hysteria2://": "Hysteria2",
+		"hy2://":       "Hysteria2",
+		"tuic://":      "TUIC",
+		"wg://":        "WireGuard",
+		"wireguard://": "WireGuard",
+		"naive://":     "NaiveProxy",
+		"http://":      "HTTP",
+		"https://":     "HTTPS",
+		"socks://":     "SOCKS",
+		"socks5://":    "SOCKS5",
+	}
+
+	for prefix, name := range protocolPrefixes {
+		if len(link) >= len(prefix) && link[:len(prefix)] == prefix {
+			return name
+		}
+	}
+	return "其他"
+}
