@@ -370,12 +370,23 @@ func NodeDel(c *gin.Context) {
 func NodesTotal(c *gin.Context) {
 	var Node models.Node
 	nodes, err := Node.List()
-	count := len(nodes)
 	if err != nil {
 		utils.FailWithMsg(c, "获取不到节点统计")
 		return
 	}
-	utils.OkDetailed(c, "取得节点统计", count)
+	
+	total := len(nodes)
+	available := 0
+	for _, n := range nodes {
+		if n.Speed > 0 && n.DelayTime > 0 {
+			available++
+		}
+	}
+	
+	utils.OkDetailed(c, "取得节点统计", gin.H{
+		"total":     total,
+		"available": available,
+	})
 }
 
 // 获取所有分组列表

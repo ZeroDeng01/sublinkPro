@@ -565,6 +565,7 @@ export default function DashboardDefault() {
   const isDark = theme.palette.mode === 'dark';
   const [subTotal, setSubTotal] = useState(0);
   const [nodeTotal, setNodeTotal] = useState(0);
+  const [nodeAvailable, setNodeAvailable] = useState(0);
   const [fastestNode, setFastestNode] = useState(null);
   const [lowestDelayNode, setLowestDelayNode] = useState(null);
   const [releases, setReleases] = useState([]);
@@ -590,7 +591,14 @@ export default function DashboardDefault() {
         getLowestDelayNode()
       ]);
       setSubTotal(subRes.data || 0);
-      setNodeTotal(nodeRes.data || 0);
+      // nodeRes.data 现在返回 { total, available }
+      if (nodeRes.data && typeof nodeRes.data === 'object') {
+        setNodeTotal(nodeRes.data.total || 0);
+        setNodeAvailable(nodeRes.data.available || 0);
+      } else {
+        setNodeTotal(nodeRes.data || 0);
+        setNodeAvailable(0);
+      }
       setFastestNode(fastestRes.data || null);
       setLowestDelayNode(lowestDelayRes.data || null);
     } catch (error) {
@@ -631,11 +639,13 @@ export default function DashboardDefault() {
       accentColor: '#6366f1'
     },
     {
-      title: '节点总数',
-      value: nodeTotal,
+      title: '节点统计',
+      value: `${nodeAvailable} / ${nodeTotal}`,
+      subValue: '测速通过 / 总节点',
       icon: CloudQueueIcon,
       gradientColors: ['#06b6d4', '#0891b2'],
-      accentColor: '#06b6d4'
+      accentColor: '#06b6d4',
+      isNodeStat: true
     },
     {
       title: '最快速度',
