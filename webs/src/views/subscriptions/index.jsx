@@ -49,6 +49,7 @@ import Grid from '@mui/material/Grid';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Fade from '@mui/material/Fade';
+import ButtonGroup from '@mui/material/ButtonGroup';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
@@ -67,9 +68,12 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import SearchIcon from '@mui/icons-material/Search';
+import BuildIcon from '@mui/icons-material/Build';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
+import NodeRenameBuilder from './NodeRenameBuilder';
 import { getSubscriptions, addSubscription, updateSubscription, deleteSubscription, sortSubscription } from 'api/subscriptions';
 import { getNodes, getNodeCountries } from 'api/nodes';
 import { getTemplates } from 'api/templates';
@@ -78,8 +82,9 @@ import { getScripts } from 'api/scripts';
 // ISO国家代码转换为国旗emoji
 const isoToFlag = (isoCode) => {
   if (!isoCode || isoCode.length !== 2) return '';
-  const codePoints = isoCode
-    .toUpperCase()
+  // TW 使用 CN 国旗
+  const code = isoCode.toUpperCase() === 'TW' ? 'CN' : isoCode.toUpperCase();
+  const codePoints = code
     .split('')
     .map((char) => 0x1f1e6 + char.charCodeAt(0) - 65);
   return String.fromCodePoint(...codePoints);
@@ -200,6 +205,7 @@ export default function SubscriptionList() {
   const [checkedSelected, setCheckedSelected] = useState([]);
   const [mobileTab, setMobileTab] = useState(0);
   const [selectedNodeSearch, setSelectedNodeSearch] = useState('');
+  const [namingMode, setNamingMode] = useState('builder'); // 'manual' or 'builder'
 
   // 分页
   const [page, setPage] = useState(0);
@@ -1819,33 +1825,65 @@ export default function SubscriptionList() {
 
             {/* 节点命名规则 */}
             <Box>
-              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                节点命名规则
-              </Typography>
-              <TextField
-                fullWidth
-                label="命名规则模板"
-                value={formData.nodeNameRule}
-                onChange={(e) => setFormData({ ...formData, nodeNameRule: e.target.value })}
-                placeholder="例如: $LinkCountry - $LinkName ($Speed)"
-                helperText="留空则使用原始名称，仅在访问订阅链接时生效"
-              />
-              <Box sx={{ mt: 1, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-                <Typography variant="caption" color="textSecondary" component="div">
-                  <strong>可用变量：</strong>
-                  <br />• <code>$Name</code> - 系统备注名称 &nbsp;&nbsp; • <code>$LinkName</code> - 原始节点名称
-                  <br />• <code>$LinkCountry</code> - 落地IP国家代码 &nbsp;&nbsp; • <code>$Speed</code> - 下载速度
-                  <br />• <code>$Delay</code> - 延迟 &nbsp;&nbsp; • <code>$Group</code> - 分组名称
-                  <br />• <code>$Source</code> - 来源 &nbsp;&nbsp; • <code>$Index</code> - 序号 &nbsp;&nbsp; • <code>$Protocol</code> -
-                  协议类型
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  节点命名规则
                 </Typography>
-              </Box>
-              {formData.nodeNameRule && (
-                <Alert severity="info" sx={{ mt: 1 }}>
-                  <Typography variant="body2">
-                    <strong>预览：</strong> {previewNodeName(formData.nodeNameRule)}
-                  </Typography>
-                </Alert>
+                <ButtonGroup size="small" variant="outlined">
+                  <Tooltip title="可视化构建器 - 拖拽添加变量">
+                    <Button
+                      onClick={() => setNamingMode('builder')}
+                      variant={namingMode === 'builder' ? 'contained' : 'outlined'}
+                      startIcon={<BuildIcon />}
+                    >
+                      {matchDownMd ? '' : '构建器'}
+                    </Button>
+                  </Tooltip>
+                  <Tooltip title="手动输入模式">
+                    <Button
+                      onClick={() => setNamingMode('manual')}
+                      variant={namingMode === 'manual' ? 'contained' : 'outlined'}
+                      startIcon={<EditNoteIcon />}
+                    >
+                      {matchDownMd ? '' : '手动'}
+                    </Button>
+                  </Tooltip>
+                </ButtonGroup>
+              </Stack>
+
+              {namingMode === 'builder' ? (
+                <NodeRenameBuilder
+                  value={formData.nodeNameRule}
+                  onChange={(rule) => setFormData({ ...formData, nodeNameRule: rule })}
+                />
+              ) : (
+                <>
+                  <TextField
+                    fullWidth
+                    label="命名规则模板"
+                    value={formData.nodeNameRule}
+                    onChange={(e) => setFormData({ ...formData, nodeNameRule: e.target.value })}
+                    placeholder="例如: [$Protocol]$LinkCountry-$Name"
+                    helperText="留空则使用原始名称，仅在访问订阅链接时生效"
+                  />
+                  <Box sx={{ mt: 1, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
+                    <Typography variant="caption" color="textSecondary" component="div">
+                      <strong>可用变量：</strong>
+                      <br />• <code>$Name</code> - 系统备注名称 &nbsp;&nbsp; • <code>$LinkName</code> - 原始节点名称
+                      <br />• <code>$LinkCountry</code> - 落地IP国家代码 &nbsp;&nbsp; • <code>$Speed</code> - 下载速度
+                      <br />• <code>$Delay</code> - 延迟 &nbsp;&nbsp; • <code>$Group</code> - 分组名称
+                      <br />• <code>$Source</code> - 来源 &nbsp;&nbsp; • <code>$Index</code> - 序号 &nbsp;&nbsp; • <code>$Protocol</code> -
+                      协议类型
+                    </Typography>
+                  </Box>
+                  {formData.nodeNameRule && (
+                    <Alert severity="info" sx={{ mt: 1 }}>
+                      <Typography variant="body2">
+                        <strong>预览：</strong> {previewNodeName(formData.nodeNameRule)}
+                      </Typography>
+                    </Alert>
+                  )}
+                </>
               )}
             </Box>
 

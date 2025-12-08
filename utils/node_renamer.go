@@ -20,6 +20,38 @@ type NodeInfo struct {
 	Protocol    string  // 协议类型
 }
 
+// ISOToFlag 将国家ISO代码转换为国旗emoji
+// isoCode: 两位ISO国家代码 (如 "CN", "US", "HK")
+// TW会转换为中国国旗，未知/无效代码返回白旗 🏳️
+func ISOToFlag(isoCode string) string {
+	if isoCode == "" || len(isoCode) != 2 {
+		return "🏳️" // 未知国旗使用白旗
+	}
+
+	code := strings.ToUpper(isoCode)
+
+	// TW使用中国国旗
+	if code == "TW" {
+		code = "CN"
+	}
+
+	// 检查是否为有效的字母代码
+	for _, c := range code {
+		if c < 'A' || c > 'Z' {
+			return "🏳️"
+		}
+	}
+
+	// 将字母转换为区域指示符号 (Regional Indicator Symbol)
+	// 'A' 对应 U+1F1E6
+	flag := ""
+	for _, c := range code {
+		flag += string(rune(0x1F1E6 + int(c) - 'A'))
+	}
+
+	return flag
+}
+
 // RenameNode 根据规则重命名节点
 // rule: 命名规则，如 "$LinkCountry - $Name ($Speed)"
 // info: 节点信息
@@ -31,11 +63,18 @@ func RenameNode(rule string, info NodeInfo) string {
 
 	result := rule
 
+	// 如果国家代码为空，使用"未知"
+	linkCountry := info.LinkCountry
+	if linkCountry == "" {
+		linkCountry = "未知"
+	}
+
 	// 替换所有支持的变量
 	replacements := map[string]string{
 		"$Name":        info.Name,
 		"$LinkName":    info.LinkName,
-		"$LinkCountry": info.LinkCountry,
+		"$LinkCountry": linkCountry,
+		"$Flag":        ISOToFlag(info.LinkCountry),
 		"$Speed":       FormatSpeed(info.Speed),
 		"$Delay":       FormatDelay(info.DelayTime),
 		"$Group":       info.Group,

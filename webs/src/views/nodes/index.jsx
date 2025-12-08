@@ -107,8 +107,8 @@ const formatDateTime = (dateTimeString) => {
 // ISO国家代码转换为国旗emoji
 const isoToFlag = (isoCode) => {
   if (!isoCode || isoCode.length !== 2) return '';
-  const codePoints = isoCode
-    .toUpperCase()
+  const code = isoCode.toUpperCase() === 'TW' ? 'CN' : isoCode.toUpperCase();
+  const codePoints = code
     .split('')
     .map((char) => 0x1f1e6 + char.charCodeAt(0) - 65);
   return String.fromCodePoint(...codePoints);
@@ -838,6 +838,23 @@ export default function NodeList() {
             value={countryFilter}
             onChange={(e, newValue) => setCountryFilter(newValue)}
             sx={{ minWidth: 150 }}
+            getOptionLabel={(option) => `${isoToFlag(option)} ${option}`}
+            renderOption={(props, option) => {
+              const { key, ...otherProps } = props;
+              return (
+                <li key={key} {...otherProps}>
+                  {isoToFlag(option)} {option}
+                </li>
+              );
+            }}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => {
+                const { key, ...tagProps } = getTagProps({ index });
+                return (
+                  <Chip key={key} label={`${isoToFlag(option)} ${option}`} size="small" {...tagProps} />
+                );
+              })
+            }
             renderInput={(params) => <TextField {...params} label="国家代码" placeholder="选择国家" />}
           />
         )}
