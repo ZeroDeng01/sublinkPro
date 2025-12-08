@@ -92,12 +92,12 @@ jobs:
       - name: Build Go binaries
         run: |
           mkdir -p build
-          # Build binaries with embedded frontend
-          GOOS=linux GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-linux-amd64 .
-          GOOS=linux GOARCH=arm64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-linux-arm64 .
-          GOOS=windows GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-windows-amd64.exe .
-          GOOS=darwin GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-darwin-amd64 .
-          GOOS=darwin GOARCH=arm64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-darwin-arm64 .
+          # Build binaries with embedded frontend (CGO_ENABLED=0 for static linking with Alpine)
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-linux-amd64 .
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-linux-arm64 .
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-windows-amd64.exe .
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-darwin-amd64 .
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-darwin-arm64 .
 
       - name: Upload binary artifacts
         uses: actions/upload-artifact@v4

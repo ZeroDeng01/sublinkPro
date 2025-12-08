@@ -1,18 +1,16 @@
 # CI-specific Dockerfile
 # Assumes binaries and static files are already built and available in the context
 
-FROM debian:bookworm-slim
+FROM alpine:latest
 
 ARG TARGETARCH
 
 WORKDIR /app
 
 # Install dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends tzdata ca-certificates && \
-    ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
-    echo "Asia/Shanghai" > /etc/timezone && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache tzdata ca-certificates && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
 
 # Create directories
 RUN mkdir -p /app/db /app/logs /app/template && \

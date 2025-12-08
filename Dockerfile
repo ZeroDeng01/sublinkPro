@@ -20,18 +20,16 @@ COPY . .
 # 把前端构建产物复制到 static 目录
 COPY --from=frontend-builder /frontend/webs/dist ./static
 
-RUN go build -tags=prod -o sublinkPro
+RUN CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
 
 # 3. 运行镜像
-FROM debian:bookworm-slim
+FROM alpine:latest
 WORKDIR /app
 
 # 安装 tzdata 和 ca-certificates，并设置时区
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends tzdata ca-certificates && \
-    ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
-    echo "Asia/Shanghai" > /etc/timezone && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache tzdata ca-certificates && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
 RUN mkdir -p /app/db /app/logs /app/template && chmod 777 /app/db /app/logs /app/template
 
 COPY --from=backend-builder /app/sublinkPro /app/sublinkPro
