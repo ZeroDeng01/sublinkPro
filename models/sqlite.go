@@ -75,6 +75,11 @@ func InitSqlite() {
 		log.Printf("SubScheduler 表新增代理字段迁移失败: %v", err)
 	}
 
+	// 0007_node_timestamps - 确保 Node 表有 created_at 和 updated_at 列
+	if err := RunAutoMigrate("0007_node_add_created_at_and_updated_at", &Node{}); err != nil {
+		log.Printf("Node 表时间戳字段迁移失败: %v", err)
+	}
+
 	// 0008_node_created_at_fill - 补全空的 CreatedAt 字段
 	if err := RunCustomMigration("0008_node_created_at_fill", func() error {
 		// 查找所有 CreatedAt 为零值的节点并设置为当前时间
