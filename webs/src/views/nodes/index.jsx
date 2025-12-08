@@ -59,6 +59,7 @@ import {
   addNodes,
   updateNode,
   deleteNode,
+  deleteNodesBatch,
   getSpeedTestConfig,
   updateSpeedTestConfig,
   runSpeedTest,
@@ -421,9 +422,8 @@ export default function NodeList() {
     }
     openConfirm('批量删除', `确定要删除选中的 ${selectedNodes.length} 个节点吗？`, async () => {
       try {
-        for (const node of selectedNodes) {
-          await deleteNode({ id: node.ID });
-        }
+        const ids = selectedNodes.map((node) => node.ID);
+        await deleteNodesBatch(ids);
         showMessage(`成功删除 ${selectedNodes.length} 个节点`);
         setSelectedNodes([]);
         fetchNodes();
@@ -526,11 +526,12 @@ export default function NodeList() {
   };
 
   const handleDeleteScheduler = async (scheduler) => {
-    openConfirm('删除订阅', `确定要删除订阅 "${scheduler.Name}" 吗？`, async () => {
+    openConfirm('删除订阅', `确定要删除订阅 "${scheduler.Name}" 及其关联的 ${scheduler.node_count || 0} 个节点吗？`, async () => {
       try {
         await deleteSubScheduler(scheduler.ID);
         showMessage('删除成功');
         fetchSchedulers();
+        fetchNodes();
       } catch (error) {
         showMessage('删除失败', 'error');
       }
@@ -1342,6 +1343,7 @@ export default function NodeList() {
               options={groupOptions}
               value={schedulerForm.group}
               onChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, group: newValue || '' })}
+              onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, group: newValue || '' })}
               renderInput={(params) => (
                 <TextField {...params} label="分组" helperText="设置分组后，从此订阅导入的所有节点将自动归属到此分组" />
               )}

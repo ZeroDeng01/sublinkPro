@@ -96,6 +96,14 @@ func SubSchedulerDel(c *gin.Context) {
 		utils.FailWithMsg(c, "删除失败")
 		return
 	}
+
+	// 先删除关联的节点
+	err = models.DeleteAutoSubscriptionNodes(ssID)
+	if err != nil {
+		utils.FailWithMsg(c, "删除关联节点失败")
+		return
+	}
+
 	subS.ID = ssID
 	err = subS.Del()
 	if err != nil {

@@ -425,6 +425,27 @@ func NodesTotal(c *gin.Context) {
 	})
 }
 
+// NodeBatchDel 批量删除节点
+func NodeBatchDel(c *gin.Context) {
+	var req struct {
+		IDs []int `json:"ids"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+	if len(req.IDs) == 0 {
+		utils.FailWithMsg(c, "请选择要删除的节点")
+		return
+	}
+	err := models.BatchDel(req.IDs)
+	if err != nil {
+		utils.FailWithMsg(c, "批量删除失败")
+		return
+	}
+	utils.OkWithMsg(c, "批量删除成功")
+}
+
 // 获取所有分组列表
 func GetGroups(c *gin.Context) {
 	var node models.Node

@@ -406,6 +406,24 @@ func (node *Node) UpsertNode() error {
 
 // DeleteAutoSubscriptionNodes 删除订阅节点
 func DeleteAutoSubscriptionNodes(sourceId int) error {
+	// 先获取要删除的节点名称列表，用于清理订阅关联
+	nodeLock.RLock()
+	nodeNames := make([]string, 0)
+	for _, n := range nodeCache {
+		if n.SourceID == sourceId {
+			nodeNames = append(nodeNames, n.Name)
+		}
+	}
+	nodeLock.RUnlock()
+
+	// 清除节点与订阅的关联关系
+	if len(nodeNames) > 0 {
+		if err := DB.Exec("DELETE FROM subcription_nodes WHERE node_name IN ?", nodeNames).Error; err != nil {
+			return err
+		}
+	}
+
+	// 删除节点
 	err := DB.Where("source_id = ?", sourceId).Delete(&Node{}).Error
 	if err != nil {
 		return err
@@ -420,6 +438,44 @@ func DeleteAutoSubscriptionNodes(sourceId int) error {
 			delete(nodeCache, id)
 		}
 	}
+	return nil
+}
+
+// BatchDel 批量删除节点
+func BatchDel(ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	// 获取节点名称列表，用于删除订阅关联
+	nodeLock.RLock()
+	nodeNames := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if n, ok := nodeCache[id]; ok {
+			nodeNames = append(nodeNames, n.Name)
+		}
+	}
+	nodeLock.RUnlock()
+
+	// 先清除节点与订阅的关联关系
+	if len(nodeNames) > 0 {
+		if err := DB.Exec("DELETE FROM subcription_nodes WHERE node_name IN ?", nodeNames).Error; err != nil {
+			return err
+		}
+	}
+
+	// 批量删除节点
+	if err := DB.Where("id IN ?", ids).Delete(&Node{}).Error; err != nil {
+		return err
+	}
+
+	// 更新缓存
+	nodeLock.Lock()
+	defer nodeLock.Unlock()
+	for _, id := range ids {
+		delete(nodeCache, id)
+	}
+
 	return nil
 }
 

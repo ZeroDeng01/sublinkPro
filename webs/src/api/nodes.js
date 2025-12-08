@@ -54,6 +54,15 @@ export function deleteNode(data) {
   });
 }
 
+// 批量删除节点
+export function deleteNodesBatch(ids) {
+  return request({
+    url: '/v1/nodes/batch-delete',
+    method: 'delete',
+    data: { ids }
+  });
+}
+
 // 获取测速配置
 export function getSpeedTestConfig() {
   return request({
