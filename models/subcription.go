@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"strings"
 	"sublink/dto"
 	"time"
 
@@ -9,24 +10,26 @@ import (
 )
 
 type Subcription struct {
-	ID              int
-	Name            string
-	Config          string    `gorm:"embedded"`
-	Nodes           []Node    `gorm:"-" json:"-"`
-	SubLogs         []SubLogs `gorm:"foreignKey:SubcriptionID;"` // 一对多关系 约束父表被删除子表记录跟着删除
-	CreateDate      string
-	NodesWithSort   []NodeWithSort   `gorm:"-" json:"Nodes"`
-	Groups          []string         `gorm:"-" json:"-"`      // 内部使用，不返回给前端
-	GroupsWithSort  []GroupWithSort  `gorm:"-" json:"Groups"` // 订阅关联的分组列表（带Sort）
-	Scripts         []Script         `gorm:"-" json:"-"`      // 内部使用
-	ScriptsWithSort []ScriptWithSort `gorm:"-" json:"Scripts"`
-	IPWhitelist     string           `json:"IPWhitelist"` //IP白名单
-	IPBlacklist     string           `json:"IPBlacklist"` //IP黑名单
-	DelayTime       int              `json:"DelayTime"`   // 最大延迟(ms)
-	MinSpeed        float64          `json:"MinSpeed"`    // 最小速度(MB/s)
-	CreatedAt       time.Time        `json:"CreatedAt"`
-	UpdatedAt       time.Time        `json:"UpdatedAt"`
-	DeletedAt       gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
+	ID               int
+	Name             string
+	Config           string    `gorm:"embedded"`
+	Nodes            []Node    `gorm:"-" json:"-"`
+	SubLogs          []SubLogs `gorm:"foreignKey:SubcriptionID;"` // 一对多关系 约束父表被删除子表记录跟着删除
+	CreateDate       string
+	NodesWithSort    []NodeWithSort   `gorm:"-" json:"Nodes"`
+	Groups           []string         `gorm:"-" json:"-"`      // 内部使用，不返回给前端
+	GroupsWithSort   []GroupWithSort  `gorm:"-" json:"Groups"` // 订阅关联的分组列表（带Sort）
+	Scripts          []Script         `gorm:"-" json:"-"`      // 内部使用
+	ScriptsWithSort  []ScriptWithSort `gorm:"-" json:"Scripts"`
+	IPWhitelist      string           `json:"IPWhitelist"`      //IP白名单
+	IPBlacklist      string           `json:"IPBlacklist"`      //IP黑名单
+	DelayTime        int              `json:"DelayTime"`        // 最大延迟(ms)
+	MinSpeed         float64          `json:"MinSpeed"`         // 最小速度(MB/s)
+	CountryWhitelist string           `json:"CountryWhitelist"` // 国家白名单（逗号分隔）
+	CountryBlacklist string           `json:"CountryBlacklist"` // 国家黑名单（逗号分隔）
+	CreatedAt        time.Time        `json:"CreatedAt"`
+	UpdatedAt        time.Time        `json:"UpdatedAt"`
+	DeletedAt        gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
 }
 
 type GroupWithSort struct {
@@ -122,13 +125,15 @@ func (sub *Subcription) AddScripts(scriptIDs []int) error {
 func (sub *Subcription) Update() error {
 	// 使用 map 来更新,这样可以更新空字符串
 	updates := map[string]interface{}{
-		"name":         sub.Name,
-		"config":       sub.Config,
-		"create_date":  sub.CreateDate,
-		"ip_whitelist": sub.IPWhitelist,
-		"ip_blacklist": sub.IPBlacklist,
-		"delay_time":   sub.DelayTime,
-		"min_speed":    sub.MinSpeed,
+		"name":              sub.Name,
+		"config":            sub.Config,
+		"create_date":       sub.CreateDate,
+		"ip_whitelist":      sub.IPWhitelist,
+		"ip_blacklist":      sub.IPBlacklist,
+		"delay_time":        sub.DelayTime,
+		"min_speed":         sub.MinSpeed,
+		"country_whitelist": sub.CountryWhitelist,
+		"country_blacklist": sub.CountryBlacklist,
 	}
 	return DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 }
@@ -329,6 +334,49 @@ func (sub *Subcription) GetSub() error {
 				if node.Speed < sub.MinSpeed {
 					continue
 				}
+			}
+
+			filteredNodes = append(filteredNodes, node)
+		}
+		sub.Nodes = filteredNodes
+	}
+
+	// 国家代码过滤
+	if sub.CountryWhitelist != "" || sub.CountryBlacklist != "" {
+		// 解析白名单和黑名单
+		whitelistMap := make(map[string]bool)
+		blacklistMap := make(map[string]bool)
+
+		if sub.CountryWhitelist != "" {
+			for _, c := range strings.Split(sub.CountryWhitelist, ",") {
+				c = strings.TrimSpace(c)
+				if c != "" {
+					whitelistMap[strings.ToUpper(c)] = true
+				}
+			}
+		}
+
+		if sub.CountryBlacklist != "" {
+			for _, c := range strings.Split(sub.CountryBlacklist, ",") {
+				c = strings.TrimSpace(c)
+				if c != "" {
+					blacklistMap[strings.ToUpper(c)] = true
+				}
+			}
+		}
+
+		var filteredNodes []Node
+		for _, node := range sub.Nodes {
+			country := strings.ToUpper(node.LinkCountry)
+
+			// 黑名单优先：如果在黑名单中则排除
+			if len(blacklistMap) > 0 && blacklistMap[country] {
+				continue
+			}
+
+			// 白名单：如果设置了白名单但节点不在白名单中，则排除
+			if len(whitelistMap) > 0 && !whitelistMap[country] {
+				continue
 			}
 
 			filteredNodes = append(filteredNodes, node)

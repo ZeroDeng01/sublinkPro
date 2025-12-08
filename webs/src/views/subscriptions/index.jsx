@@ -71,9 +71,26 @@ import SearchIcon from '@mui/icons-material/Search';
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import { getSubscriptions, addSubscription, updateSubscription, deleteSubscription, sortSubscription } from 'api/subscriptions';
-import { getNodes } from 'api/nodes';
+import { getNodes, getNodeCountries } from 'api/nodes';
 import { getTemplates } from 'api/templates';
 import { getScripts } from 'api/scripts';
+
+// ISO国家代码转换为国旗emoji
+const isoToFlag = (isoCode) => {
+  if (!isoCode || isoCode.length !== 2) return '';
+  const codePoints = isoCode
+    .toUpperCase()
+    .split('')
+    .map((char) => 0x1f1e6 + char.charCodeAt(0) - 65);
+  return String.fromCodePoint(...codePoints);
+};
+
+// 格式化国家显示 (国旗emoji + 代码)
+const formatCountry = (linkCountry) => {
+  if (!linkCountry) return '';
+  const flag = isoToFlag(linkCountry);
+  return flag ? `${flag}${linkCountry}` : linkCountry;
+};
 
 // ==============================|| 订阅管理 ||============================== //
 
@@ -130,13 +147,17 @@ export default function SubscriptionList() {
     IPWhitelist: '',
     IPBlacklist: '',
     DelayTime: 0,
-    MinSpeed: 0
+    MinSpeed: 0,
+    CountryWhitelist: [],
+    CountryBlacklist: []
   });
 
   // 节点过滤
   const [nodeGroupFilter, setNodeGroupFilter] = useState('all');
   const [nodeSourceFilter, setNodeSourceFilter] = useState('all');
   const [nodeSearchQuery, setNodeSearchQuery] = useState('');
+  const [nodeCountryFilter, setNodeCountryFilter] = useState([]);
+  const [countryOptions, setCountryOptions] = useState([]);
 
   // QR码对话框
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
@@ -209,9 +230,15 @@ export default function SubscriptionList() {
           return false;
         }
       }
+      // 国家代码过滤
+      if (nodeCountryFilter.length > 0) {
+        if (!node.LinkCountry || !nodeCountryFilter.includes(node.LinkCountry)) {
+          return false;
+        }
+      }
       return true;
     });
-  }, [allNodes, nodeGroupFilter, nodeSourceFilter, nodeSearchQuery]);
+  }, [allNodes, nodeGroupFilter, nodeSourceFilter, nodeSearchQuery, nodeCountryFilter]);
 
   // 可选节点（排除已选）
   const availableNodes = useMemo(() => {
@@ -227,16 +254,18 @@ export default function SubscriptionList() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [subRes, nodesRes, templatesRes, scriptsRes] = await Promise.all([
+      const [subRes, nodesRes, templatesRes, scriptsRes, countriesRes] = await Promise.all([
         getSubscriptions(),
         getNodes(),
         getTemplates(),
-        getScripts()
+        getScripts(),
+        getNodeCountries()
       ]);
       setSubscriptions(subRes.data || []);
       setAllNodes(nodesRes.data || []);
       setTemplates(templatesRes.data || []);
       setScripts(scriptsRes.data || []);
+      setCountryOptions(countriesRes.data || []);
     } catch (error) {
       showMessage('获取数据失败', 'error');
     } finally {
@@ -278,11 +307,14 @@ export default function SubscriptionList() {
       IPWhitelist: '',
       IPBlacklist: '',
       DelayTime: 0,
-      MinSpeed: 0
+      MinSpeed: 0,
+      CountryWhitelist: [],
+      CountryBlacklist: []
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
     setNodeSearchQuery('');
+    setNodeCountryFilter([]);
     setDialogOpen(true);
   };
 
@@ -317,11 +349,14 @@ export default function SubscriptionList() {
       IPWhitelist: sub.IPWhitelist || '',
       IPBlacklist: sub.IPBlacklist || '',
       DelayTime: sub.DelayTime || 0,
-      MinSpeed: sub.MinSpeed || 0
+      MinSpeed: sub.MinSpeed || 0,
+      CountryWhitelist: sub.CountryWhitelist ? sub.CountryWhitelist.split(',').filter(c => c.trim()) : [],
+      CountryBlacklist: sub.CountryBlacklist ? sub.CountryBlacklist.split(',').filter(c => c.trim()) : []
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
     setNodeSearchQuery('');
+    setNodeCountryFilter([]);
     setDialogOpen(true);
   };
 
@@ -358,7 +393,9 @@ export default function SubscriptionList() {
         IPBlacklist: formData.IPBlacklist,
         DelayTime: formData.DelayTime,
         MinSpeed: formData.MinSpeed,
-        scripts: formData.selectedScripts.join(',')
+        scripts: formData.selectedScripts.join(','),
+        CountryWhitelist: formData.CountryWhitelist.join(','),
+        CountryBlacklist: formData.CountryBlacklist.join(',')
       };
 
       if (formData.selectionMode === 'nodes') {
@@ -989,7 +1026,7 @@ export default function SubscriptionList() {
             {(formData.selectionMode === 'nodes' || formData.selectionMode === 'mixed') && (
               <>
                 <Grid container spacing={2}>
-                  <Grid item xs={4}>
+                  <Grid item xs={3}>
                     <FormControl fullWidth size="small">
                       <InputLabel>分组过滤</InputLabel>
                       <Select value={nodeGroupFilter} label="分组过滤" onChange={(e) => setNodeGroupFilter(e.target.value)}>
@@ -1002,7 +1039,7 @@ export default function SubscriptionList() {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid item xs={3}>
                     <FormControl fullWidth size="small">
                       <InputLabel>来源过滤</InputLabel>
                       <Select value={nodeSourceFilter} label="来源过滤" onChange={(e) => setNodeSourceFilter(e.target.value)}>
@@ -1015,7 +1052,24 @@ export default function SubscriptionList() {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid item xs={3}>
+                    <Autocomplete
+                      multiple
+                      size="small"
+                      options={countryOptions}
+                      value={nodeCountryFilter}
+                      onChange={(e, newValue) => setNodeCountryFilter(newValue)}
+                      getOptionLabel={(option) => formatCountry(option)}
+                      renderInput={(params) => <TextField {...params} label="国家过滤" />}
+                      renderOption={(props, option) => (
+                        <li {...props}>
+                          {formatCountry(option)}
+                        </li>
+                      )}
+                      limitTags={2}
+                    />
+                  </Grid>
+                  <Grid item xs={3}>
                     <TextField
                       fullWidth
                       size="small"
@@ -1690,6 +1744,52 @@ export default function SubscriptionList() {
                   onChange={(e) => setFormData({ ...formData, MinSpeed: Number(e.target.value) })}
                   InputProps={{ endAdornment: <InputAdornment position="end">MB/s</InputAdornment> }}
                   helperText="设置筛选节点的最小下载速度，0表示不限制"
+                />
+              </Grid>
+            </Grid>
+
+            {/* 落地IP国家过滤 */}
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Autocomplete
+                  multiple
+                  options={countryOptions}
+                  value={formData.CountryWhitelist}
+                  onChange={(e, newValue) => setFormData({ ...formData, CountryWhitelist: newValue })}
+                  getOptionLabel={(option) => formatCountry(option)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="落地IP国家白名单"
+                      helperText="只保留这些国家的节点，不选则不限制"
+                    />
+                  )}
+                  renderOption={(props, option) => (
+                    <li {...props}>
+                      {formatCountry(option)}
+                    </li>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <Autocomplete
+                  multiple
+                  options={countryOptions}
+                  value={formData.CountryBlacklist}
+                  onChange={(e, newValue) => setFormData({ ...formData, CountryBlacklist: newValue })}
+                  getOptionLabel={(option) => formatCountry(option)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="落地IP国家黑名单"
+                      helperText="排除这些国家的节点（优先级高于白名单）"
+                    />
+                  )}
+                  renderOption={(props, option) => (
+                    <li {...props}>
+                      {formatCountry(option)}
+                    </li>
+                  )}
                 />
               </Grid>
             </Grid>
