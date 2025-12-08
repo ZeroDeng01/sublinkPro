@@ -524,3 +524,15 @@ func RunSpeedTest(c *gin.Context) {
 		utils.OkWithMsg(c, "测速任务已在后台启动")
 	}
 }
+
+// FastestSpeedNode 获取最快速度节点
+func FastestSpeedNode(c *gin.Context) {
+	node := models.GetFastestSpeedNode()
+	utils.OkDetailed(c, "获取最快速度节点成功", node)
+}
+
+// LowestDelayNode 获取最低延迟节点
+func LowestDelayNode(c *gin.Context) {
+	node := models.GetLowestDelayNode()
+	utils.OkDetailed(c, "获取最低延迟节点成功", node)
+}

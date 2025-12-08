@@ -350,3 +350,39 @@ func ListBySourceID(sourceID int) ([]Node, error) {
 
 	return nodes, nil
 }
+
+// GetFastestSpeedNode 获取最快速度节点
+func GetFastestSpeedNode() *Node {
+	nodeLock.RLock()
+	defer nodeLock.RUnlock()
+
+	var fastest *Node
+	for _, n := range nodeCache {
+		if n.Speed > 0 {
+			if fastest == nil || n.Speed > fastest.Speed {
+				nodeCopy := n
+				fastest = &nodeCopy
+			}
+		}
+	}
+
+	return fastest
+}
+
+// GetLowestDelayNode 获取最低延迟节点
+func GetLowestDelayNode() *Node {
+	nodeLock.RLock()
+	defer nodeLock.RUnlock()
+
+	var lowest *Node
+	for _, n := range nodeCache {
+		if n.DelayTime > 0 {
+			if lowest == nil || n.DelayTime < lowest.DelayTime {
+				nodeCopy := n
+				lowest = &nodeCopy
+			}
+		}
+	}
+
+	return lowest
+}

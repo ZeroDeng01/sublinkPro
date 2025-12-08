@@ -15,3 +15,19 @@ export function getNodeTotal() {
     method: 'get'
   });
 }
+
+// 获取最快速度节点
+export function getFastestSpeedNode() {
+  return request({
+    url: '/v1/total/fastest-speed',
+    method: 'get'
+  });
+}
+
+// 获取最低延迟节点
+export function getLowestDelayNode() {
+  return request({
+    url: '/v1/total/lowest-delay',
+    method: 'get'
+  });
+}

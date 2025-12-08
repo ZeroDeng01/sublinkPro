@@ -14,6 +14,8 @@ import Skeleton from '@mui/material/Skeleton';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import LinearProgress from '@mui/material/LinearProgress';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 
 // icons
 import SubscriptionsIcon from '@mui/icons-material/Subscriptions';
@@ -22,10 +24,12 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import SpeedIcon from '@mui/icons-material/Speed';
+import TimerIcon from '@mui/icons-material/Timer';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
-import { getSubTotal, getNodeTotal } from 'api/total';
+import { getSubTotal, getNodeTotal, getFastestSpeedNode, getLowestDelayNode } from 'api/total';
 
 // ==============================|| 动画定义 ||============================== //
 
@@ -86,12 +90,23 @@ const getGreeting = () => {
 
 // ==============================|| 高级统计卡片组件 ||============================== //
 
-const PremiumStatCard = ({ title, value, loading, icon: Icon, gradientColors, accentColor, index }) => {
+const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradientColors, accentColor, index, isNodeStat, copyLink, onCopy }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
+  const handleClick = () => {
+    if (isNodeStat && copyLink && onCopy) {
+      navigator.clipboard.writeText(copyLink).then(() => {
+        onCopy('节点链接已复制到剪贴板', 'success');
+      }).catch(() => {
+        onCopy('复制失败', 'error');
+      });
+    }
+  };
+
   return (
     <Card
+      onClick={handleClick}
       sx={{
         position: 'relative',
         overflow: 'hidden',
@@ -104,6 +119,7 @@ const PremiumStatCard = ({ title, value, loading, icon: Icon, gradientColors, ac
         transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         animation: `${float} 6s ease-in-out infinite`,
         animationDelay: `${index * 0.3}s`,
+        cursor: isNodeStat && copyLink ? 'pointer' : 'default',
         '&:hover': {
           transform: 'translateY(-8px) scale(1.02)',
           boxShadow: `0 20px 40px ${alpha(gradientColors[0], 0.25)}`,
@@ -138,15 +154,15 @@ const PremiumStatCard = ({ title, value, loading, icon: Icon, gradientColors, ac
         }
       }}
     >
-      <CardContent sx={{ position: 'relative', zIndex: 1, p: 3 }}>
+      <CardContent sx={{ position: 'relative', zIndex: 1, p: 2.5 }}>
         {/* 背景装饰圆 */}
         <Box
           sx={{
             position: 'absolute',
             top: -30,
             right: -30,
-            width: 120,
-            height: 120,
+            width: 100,
+            height: 100,
             borderRadius: '50%',
             background: `radial-gradient(circle, ${alpha(gradientColors[0], 0.15)} 0%, transparent 70%)`
           }}
@@ -156,21 +172,21 @@ const PremiumStatCard = ({ title, value, loading, icon: Icon, gradientColors, ac
             position: 'absolute',
             bottom: -20,
             left: -20,
-            width: 80,
-            height: 80,
+            width: 60,
+            height: 60,
             borderRadius: '50%',
             background: `radial-gradient(circle, ${alpha(gradientColors[1], 0.1)} 0%, transparent 70%)`
           }}
         />
 
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
             {/* 标题 */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
               <Box
                 sx={{
-                  width: 8,
-                  height: 8,
+                  width: 6,
+                  height: 6,
                   borderRadius: '50%',
                   background: `linear-gradient(135deg, ${gradientColors[0]} 0%, ${gradientColors[1]} 100%)`,
                   animation: `${pulse} 2s ease-in-out infinite`
@@ -182,8 +198,8 @@ const PremiumStatCard = ({ title, value, loading, icon: Icon, gradientColors, ac
                   fontWeight: 500,
                   color: isDark ? alpha('#fff', 0.7) : theme.palette.text.secondary,
                   textTransform: 'uppercase',
-                  letterSpacing: 1.2,
-                  fontSize: '0.75rem'
+                  letterSpacing: 1,
+                  fontSize: '0.7rem'
                 }}
               >
                 {title}
@@ -196,7 +212,7 @@ const PremiumStatCard = ({ title, value, loading, icon: Icon, gradientColors, ac
               variant="h1"
               sx={{
                 fontWeight: 700,
-                fontSize: '2.75rem',
+                fontSize: isNodeStat ? '1.75rem' : '2.25rem',
                 background: `linear-gradient(135deg, ${gradientColors[0]} 0%, ${gradientColors[1]} 100%)`,
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
@@ -205,21 +221,44 @@ const PremiumStatCard = ({ title, value, loading, icon: Icon, gradientColors, ac
                 lineHeight: 1.2
               }}
             >
-              {loading ? <Skeleton width={80} sx={{ bgcolor: alpha(gradientColors[0], 0.2) }} /> : value.toLocaleString()}
+              {loading ? <Skeleton width={60} sx={{ bgcolor: alpha(gradientColors[0], 0.2) }} /> : (typeof value === 'number' ? value.toLocaleString() : value)}
             </Typography>
 
-            {/* 趋势指示器 */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5 }}>
-              <TrendingUpIcon sx={{ fontSize: 16, color: theme.palette.success.main }} />
-              <Typography
-                variant="caption"
-                sx={{
-                  color: theme.palette.success.main,
-                  fontWeight: 600
-                }}
-              >
-                运行中
-              </Typography>
+            {/* 节点名称/趋势指示器 */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+              {isNodeStat && subValue ? (
+                <Tooltip title={subValue} arrow placement="bottom">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary,
+                      fontWeight: 500,
+                      fontSize: '0.7rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: '100%',
+                      display: 'block'
+                    }}
+                  >
+                    📍 {subValue}
+                  </Typography>
+                </Tooltip>
+              ) : (
+                <>
+                  <TrendingUpIcon sx={{ fontSize: 14, color: theme.palette.success.main }} />
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: theme.palette.success.main,
+                      fontWeight: 600,
+                      fontSize: '0.7rem'
+                    }}
+                  >
+                    运行中
+                  </Typography>
+                </>
+              )}
             </Box>
           </Box>
 
@@ -227,20 +266,21 @@ const PremiumStatCard = ({ title, value, loading, icon: Icon, gradientColors, ac
           <Box
             className="stat-icon"
             sx={{
-              width: 72,
-              height: 72,
-              borderRadius: 3,
+              width: 56,
+              height: 56,
+              borderRadius: 2.5,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               background: `linear-gradient(145deg, ${alpha(gradientColors[0], 0.2)} 0%, ${alpha(gradientColors[1], 0.1)} 100%)`,
               border: `1px solid ${alpha(gradientColors[0], 0.2)}`,
-              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              flexShrink: 0
             }}
           >
             <Icon
               sx={{
-                fontSize: 36,
+                fontSize: 28,
                 color: gradientColors[0]
               }}
             />
@@ -248,16 +288,16 @@ const PremiumStatCard = ({ title, value, loading, icon: Icon, gradientColors, ac
         </Box>
 
         {/* 底部进度条装饰 */}
-        <Box sx={{ mt: 2.5 }}>
+        <Box sx={{ mt: 2 }}>
           <LinearProgress
             variant="determinate"
             value={loading ? 0 : 100}
             sx={{
-              height: 4,
-              borderRadius: 2,
+              height: 3,
+              borderRadius: 1.5,
               bgcolor: alpha(gradientColors[0], 0.1),
               '& .MuiLinearProgress-bar': {
-                borderRadius: 2,
+                borderRadius: 1.5,
                 background: `linear-gradient(90deg, ${gradientColors[0]} 0%, ${gradientColors[1]} 100%)`
               }
             }}
@@ -525,19 +565,34 @@ export default function DashboardDefault() {
   const isDark = theme.palette.mode === 'dark';
   const [subTotal, setSubTotal] = useState(0);
   const [nodeTotal, setNodeTotal] = useState(0);
+  const [fastestNode, setFastestNode] = useState(null);
+  const [lowestDelayNode, setLowestDelayNode] = useState(null);
   const [releases, setReleases] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingReleases, setLoadingReleases] = useState(true);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const greeting = useMemo(() => getGreeting(), []);
+
+  // 显示提示消息
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
   // 获取统计数据
   const fetchStats = async () => {
     try {
       setLoadingStats(true);
-      const [subRes, nodeRes] = await Promise.all([getSubTotal(), getNodeTotal()]);
+      const [subRes, nodeRes, fastestRes, lowestDelayRes] = await Promise.all([
+        getSubTotal(),
+        getNodeTotal(),
+        getFastestSpeedNode(),
+        getLowestDelayNode()
+      ]);
       setSubTotal(subRes.data || 0);
       setNodeTotal(nodeRes.data || 0);
+      setFastestNode(fastestRes.data || null);
+      setLowestDelayNode(lowestDelayRes.data || null);
     } catch (error) {
       console.error('获取统计数据失败:', error);
     } finally {
@@ -581,6 +636,26 @@ export default function DashboardDefault() {
       icon: CloudQueueIcon,
       gradientColors: ['#06b6d4', '#0891b2'],
       accentColor: '#06b6d4'
+    },
+    {
+      title: '最快速度',
+      value: fastestNode?.Speed ? `${fastestNode.Speed.toFixed(2)} MB/s` : '--',
+      subValue: fastestNode?.Name || '暂无数据',
+      icon: SpeedIcon,
+      gradientColors: ['#10b981', '#059669'],
+      accentColor: '#10b981',
+      isNodeStat: true,
+      copyLink: fastestNode?.Link
+    },
+    {
+      title: '最低延迟',
+      value: lowestDelayNode?.DelayTime ? `${lowestDelayNode.DelayTime} ms` : '--',
+      subValue: lowestDelayNode?.Name || '暂无数据',
+      icon: TimerIcon,
+      gradientColors: ['#f59e0b', '#d97706'],
+      accentColor: '#f59e0b',
+      isNodeStat: true,
+      copyLink: lowestDelayNode?.Link
     }
   ];
 
@@ -592,15 +667,19 @@ export default function DashboardDefault() {
       {/* 统计卡片 */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {statsConfig.map((stat, index) => (
-          <Grid key={stat.title} size={{ xs: 12, sm: 6, md: 4 }}>
+          <Grid key={stat.title} size={{ xs: 12, sm: 6, md: 3 }}>
             <PremiumStatCard
               title={stat.title}
               value={stat.value}
+              subValue={stat.subValue}
               loading={loadingStats}
               icon={stat.icon}
               gradientColors={stat.gradientColors}
               accentColor={stat.accentColor}
               index={index}
+              isNodeStat={stat.isNodeStat}
+              copyLink={stat.copyLink}
+              onCopy={showSnackbar}
             />
           </Grid>
         ))}
@@ -697,6 +776,18 @@ export default function DashboardDefault() {
           </Box>
         )}
       </MainCard>
+
+      {/* 复制成功提示 */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={2000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

@@ -203,14 +203,14 @@ export default function ProfileSection() {
         icon={
           <Avatar
             src={user?.avatar}
-            alt={(user?.username?.[0] || 'U').toUpperCase()}
+            alt={!user?.avatar && (user?.username?.[0] || user?.nickname?.[0] || 'U').toUpperCase()}
             sx={{ typography: 'mediumAvatar', margin: '8px 0 8px 8px !important', cursor: 'pointer' }}
             ref={anchorRef}
             aria-controls={open ? 'menu-list-grow' : undefined}
             aria-haspopup="true"
             color="inherit"
           >
-            {!user?.avatar && (user?.nickname?.[0] || user?.username?.[0] || 'U').toUpperCase()}
+            {!user?.avatar && (user?.username?.[0] || user?.nickname?.[0] || 'U').toUpperCase()}
           </Avatar>
         }
         label={<IconSettings stroke={1.5} size="24px" />}
@@ -275,10 +275,10 @@ export default function ProfileSection() {
                             </Avatar>
                             <Box>
                               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                  {user?.username || '未知用户'}
+                                {user?.username || '未知用户'}
                               </Typography>
                               <Typography variant="caption" color="textSecondary">
-                                  {user?.nickname || user?.username || '用户'}
+                                {user?.nickname || user?.username || '用户'}
                               </Typography>
                             </Box>
                           </Stack>
