@@ -6,4 +6,5 @@ db
 logs
 README.md
 README.en-US.md
+docs
 *.sh
