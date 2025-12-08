@@ -14,7 +14,7 @@ export default function Footer() {
   return (
     <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 3, mt: 'auto' }}>
       <Typography variant="caption">
-        &copy; All rights reserved{' '}
+        &copy;{' '}
         <Typography
           component={RouterLink}
           to="https://github.com/ZeroDeng01/sublinkPro"
@@ -44,6 +44,16 @@ export default function Footer() {
           color="text.primary"
         >
           License
+        </Link>
+        <Link
+          component={RouterLink}
+          to="https://github.com/ZeroDeng01/sublinkPro/issues"
+          underline="hover"
+          target="_blank"
+          variant="caption"
+          color="text.primary"
+        >
+          问题反馈
         </Link>
       </Stack>
     </Stack>

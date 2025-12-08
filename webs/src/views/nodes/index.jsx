@@ -1570,12 +1570,7 @@ export default function NodeList() {
       </Dialog>
 
       {/* 删除订阅对话框 */}
-      <Dialog
-        open={deleteSchedulerDialogOpen}
-        onClose={() => setDeleteSchedulerDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={deleteSchedulerDialogOpen} onClose={() => setDeleteSchedulerDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>删除订阅</DialogTitle>
         <DialogContent>
           <Typography variant="body1" gutterBottom>
@@ -1587,12 +1582,7 @@ export default function NodeList() {
                 该订阅关联了 {deleteSchedulerTarget?.node_count || 0} 个节点
               </Typography>
               <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={deleteSchedulerWithNodes}
-                    onChange={(e) => setDeleteSchedulerWithNodes(e.target.checked)}
-                  />
-                }
+                control={<Checkbox checked={deleteSchedulerWithNodes} onChange={(e) => setDeleteSchedulerWithNodes(e.target.checked)} />}
                 label="同时删除关联的节点"
               />
               {!deleteSchedulerWithNodes && (

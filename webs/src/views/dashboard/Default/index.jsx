@@ -26,6 +26,10 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SpeedIcon from '@mui/icons-material/Speed';
 import TimerIcon from '@mui/icons-material/Timer';
+import StarIcon from '@mui/icons-material/Star';
+import GitHubIcon from '@mui/icons-material/GitHub';
+import BugReportIcon from '@mui/icons-material/BugReport';
+import FavoriteIcon from '@mui/icons-material/Favorite';
 
 // icons for protocols
 import PublicIcon from '@mui/icons-material/Public';
@@ -327,6 +331,156 @@ const PremiumStatCard = ({
               }
             }}
           />
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ==============================|| Star 提醒卡片组件 ||============================== //
+
+const StarReminderCard = () => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  const handleStar = () => {
+    window.open('https://github.com/ZeroDeng01/sublinkPro', '_blank');
+  };
+
+  const handleFeedback = () => {
+    window.open('https://github.com/ZeroDeng01/sublinkPro/issues', '_blank');
+  };
+
+  return (
+    <Card
+      sx={{
+        mb: 3,
+        borderRadius: 3,
+        background: isDark
+          ? `linear-gradient(135deg, ${alpha('#fbbf24', 0.15)} 0%, ${alpha('#f59e0b', 0.1)} 50%, ${alpha('#d97706', 0.05)} 100%)`
+          : `linear-gradient(135deg, ${alpha('#fef3c7', 0.9)} 0%, ${alpha('#fde68a', 0.6)} 50%, ${alpha('#fcd34d', 0.3)} 100%)`,
+        border: `1px solid ${isDark ? alpha('#fbbf24', 0.25) : alpha('#f59e0b', 0.3)}`,
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: `0 8px 24px ${alpha('#fbbf24', 0.25)}`
+        }
+      }}
+    >
+      {/* 背景装饰 */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: -20,
+          right: -20,
+          width: 100,
+          height: 100,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${alpha('#fbbf24', 0.2)} 0%, transparent 70%)`
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: -30,
+          left: '30%',
+          width: 80,
+          height: 80,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${alpha('#f59e0b', 0.15)} 0%, transparent 70%)`
+        }}
+      />
+
+      <CardContent sx={{ py: 2.5, px: 3, position: 'relative' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 2
+          }}
+        >
+          {/* 左侧内容 */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 280 }}>
+            <Box
+              sx={{
+                width: 48,
+                height: 48,
+                borderRadius: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: `linear-gradient(135deg, ${alpha('#fbbf24', 0.3)} 0%, ${alpha('#f59e0b', 0.2)} 100%)`,
+                border: `1px solid ${alpha('#fbbf24', 0.4)}`,
+                flexShrink: 0
+              }}
+            >
+              <StarIcon sx={{ fontSize: 28, color: '#f59e0b' }} />
+            </Box>
+            <Box>
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  fontWeight: 600,
+                  color: isDark ? '#fcd34d' : '#b45309',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5
+                }}
+              >
+                喜欢这个项目吗？
+                <FavoriteIcon sx={{ fontSize: 16, color: '#ef4444' }} />
+              </Typography>
+              <Typography variant="body2" sx={{ color: isDark ? alpha('#fff', 0.7) : '#92400e' }}>
+                如果觉得不错，请给我们一个 Star 支持一下！
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* 右侧按钮 */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
+            <Tooltip title="问题反馈" arrow>
+              <IconButton
+                onClick={handleFeedback}
+                size="small"
+                sx={{
+                  bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#f59e0b', 0.15),
+                  color: isDark ? '#fcd34d' : '#b45309',
+                  '&:hover': {
+                    bgcolor: isDark ? alpha('#fff', 0.15) : alpha('#f59e0b', 0.25)
+                  }
+                }}
+              >
+                <BugReportIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Chip
+              icon={<GitHubIcon sx={{ fontSize: 18, color: 'inherit !important' }} />}
+              label="Star"
+              onClick={handleStar}
+              sx={{
+                fontWeight: 600,
+                px: 1,
+                height: 36,
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                color: '#78350f',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  transform: 'scale(1.05)'
+                },
+                '& .MuiChip-icon': {
+                  color: '#78350f'
+                }
+              }}
+            />
+          </Box>
         </Box>
       </CardContent>
     </Card>
@@ -704,6 +858,9 @@ export default function DashboardDefault() {
     <Box sx={{ pb: 3 }}>
       {/* 欢迎横幅 */}
       <WelcomeBanner greeting={greeting} />
+
+      {/* Star 提醒卡片 */}
+      <StarReminderCard />
 
       {/* 统计卡片 */}
       <Grid container spacing={3} sx={{ mb: 4 }}>

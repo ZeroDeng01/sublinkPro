@@ -41,11 +41,5 @@ export default function ErrorBoundary() {
   }
 
   // Handle non-HTTP errors (JavaScript errors, etc.)
-  return (
-    <ErrorPage
-      statusCode={500}
-      customTitle="应用程序错误"
-      customDescription="应用程序遇到了问题，请刷新页面或稍后再试。"
-    />
-  );
+  return <ErrorPage statusCode={500} customTitle="应用程序错误" customDescription="应用程序遇到了问题，请刷新页面或稍后再试。" />;
 }

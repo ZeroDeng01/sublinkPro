@@ -13,6 +13,7 @@ import Footer from './Footer';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import MainContentStyled from './MainContentStyled';
+import StarGuideDialog from 'ui-component/StarGuideDialog';
 
 import Loader from 'ui-component/Loader';
 import Breadcrumbs from 'ui-component/extended/Breadcrumbs';
@@ -46,6 +47,9 @@ export default function MainLayout() {
 
   return (
     <Box sx={{ display: 'flex' }}>
+      {/* Star 引导弹窗 */}
+      <StarGuideDialog />
+
       {/* header */}
       <AppBar enableColorOnDark position="fixed" color="inherit" elevation={0} sx={{ bgcolor: 'background.default' }}>
         <Toolbar sx={{ p: 2 }}>
