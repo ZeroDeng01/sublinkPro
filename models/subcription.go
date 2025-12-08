@@ -27,6 +27,7 @@ type Subcription struct {
 	MinSpeed         float64          `json:"MinSpeed"`         // 最小速度(MB/s)
 	CountryWhitelist string           `json:"CountryWhitelist"` // 国家白名单（逗号分隔）
 	CountryBlacklist string           `json:"CountryBlacklist"` // 国家黑名单（逗号分隔）
+	NodeNameRule     string           `json:"NodeNameRule"`     // 节点命名规则模板
 	CreatedAt        time.Time        `json:"CreatedAt"`
 	UpdatedAt        time.Time        `json:"UpdatedAt"`
 	DeletedAt        gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
@@ -134,6 +135,7 @@ func (sub *Subcription) Update() error {
 		"min_speed":         sub.MinSpeed,
 		"country_whitelist": sub.CountryWhitelist,
 		"country_blacklist": sub.CountryBlacklist,
+		"node_name_rule":    sub.NodeNameRule,
 	}
 	return DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 }

@@ -149,8 +149,24 @@ export default function SubscriptionList() {
     DelayTime: 0,
     MinSpeed: 0,
     CountryWhitelist: [],
-    CountryBlacklist: []
+    CountryBlacklist: [],
+    nodeNameRule: ''
   });
+
+  // 预览节点名称
+  const previewNodeName = (rule) => {
+    if (!rule) return '';
+    return rule
+      .replace(/\$Name/g, '香港节点-备注')
+      .replace(/\$LinkName/g, '香港01')
+      .replace(/\$LinkCountry/g, 'HK')
+      .replace(/\$Speed/g, '1.50MB/s')
+      .replace(/\$Delay/g, '125ms')
+      .replace(/\$Group/g, 'Premium')
+      .replace(/\$Source/g, '机场A')
+      .replace(/\$Index/g, '1')
+      .replace(/\$Protocol/g, 'VMess');
+  };
 
   // 节点过滤
   const [nodeGroupFilter, setNodeGroupFilter] = useState('all');
@@ -309,7 +325,8 @@ export default function SubscriptionList() {
       DelayTime: 0,
       MinSpeed: 0,
       CountryWhitelist: [],
-      CountryBlacklist: []
+      CountryBlacklist: [],
+      nodeNameRule: ''
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -350,8 +367,9 @@ export default function SubscriptionList() {
       IPBlacklist: sub.IPBlacklist || '',
       DelayTime: sub.DelayTime || 0,
       MinSpeed: sub.MinSpeed || 0,
-      CountryWhitelist: sub.CountryWhitelist ? sub.CountryWhitelist.split(',').filter(c => c.trim()) : [],
-      CountryBlacklist: sub.CountryBlacklist ? sub.CountryBlacklist.split(',').filter(c => c.trim()) : []
+      CountryWhitelist: sub.CountryWhitelist ? sub.CountryWhitelist.split(',').filter((c) => c.trim()) : [],
+      CountryBlacklist: sub.CountryBlacklist ? sub.CountryBlacklist.split(',').filter((c) => c.trim()) : [],
+      nodeNameRule: sub.NodeNameRule || ''
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -395,7 +413,8 @@ export default function SubscriptionList() {
         MinSpeed: formData.MinSpeed,
         scripts: formData.selectedScripts.join(','),
         CountryWhitelist: formData.CountryWhitelist.join(','),
-        CountryBlacklist: formData.CountryBlacklist.join(',')
+        CountryBlacklist: formData.CountryBlacklist.join(','),
+        NodeNameRule: formData.nodeNameRule
       };
 
       if (formData.selectionMode === 'nodes') {
@@ -1061,11 +1080,7 @@ export default function SubscriptionList() {
                       onChange={(e, newValue) => setNodeCountryFilter(newValue)}
                       getOptionLabel={(option) => formatCountry(option)}
                       renderInput={(params) => <TextField {...params} label="国家过滤" />}
-                      renderOption={(props, option) => (
-                        <li {...props}>
-                          {formatCountry(option)}
-                        </li>
-                      )}
+                      renderOption={(props, option) => <li {...props}>{formatCountry(option)}</li>}
                       limitTags={2}
                     />
                   </Grid>
@@ -1758,17 +1773,9 @@ export default function SubscriptionList() {
                   onChange={(e, newValue) => setFormData({ ...formData, CountryWhitelist: newValue })}
                   getOptionLabel={(option) => formatCountry(option)}
                   renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="落地IP国家白名单"
-                      helperText="只保留这些国家的节点，不选则不限制"
-                    />
+                    <TextField {...params} label="落地IP国家白名单" helperText="只保留这些国家的节点，不选则不限制" />
                   )}
-                  renderOption={(props, option) => (
-                    <li {...props}>
-                      {formatCountry(option)}
-                    </li>
-                  )}
+                  renderOption={(props, option) => <li {...props}>{formatCountry(option)}</li>}
                 />
               </Grid>
               <Grid item xs={6}>
@@ -1779,17 +1786,9 @@ export default function SubscriptionList() {
                   onChange={(e, newValue) => setFormData({ ...formData, CountryBlacklist: newValue })}
                   getOptionLabel={(option) => formatCountry(option)}
                   renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="落地IP国家黑名单"
-                      helperText="排除这些国家的节点（优先级高于白名单）"
-                    />
+                    <TextField {...params} label="落地IP国家黑名单" helperText="排除这些国家的节点（优先级高于白名单）" />
                   )}
-                  renderOption={(props, option) => (
-                    <li {...props}>
-                      {formatCountry(option)}
-                    </li>
-                  )}
+                  renderOption={(props, option) => <li {...props}>{formatCountry(option)}</li>}
                 />
               </Grid>
             </Grid>
@@ -1815,6 +1814,42 @@ export default function SubscriptionList() {
                 </li>
               )}
             />
+
+            <Divider />
+
+            {/* 节点命名规则 */}
+            <Box>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                节点命名规则
+              </Typography>
+              <TextField
+                fullWidth
+                label="命名规则模板"
+                value={formData.nodeNameRule}
+                onChange={(e) => setFormData({ ...formData, nodeNameRule: e.target.value })}
+                placeholder="例如: $LinkCountry - $LinkName ($Speed)"
+                helperText="留空则使用原始名称，仅在访问订阅链接时生效"
+              />
+              <Box sx={{ mt: 1, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
+                <Typography variant="caption" color="textSecondary" component="div">
+                  <strong>可用变量：</strong>
+                  <br />• <code>$Name</code> - 系统备注名称 &nbsp;&nbsp; • <code>$LinkName</code> - 原始节点名称
+                  <br />• <code>$LinkCountry</code> - 落地IP国家代码 &nbsp;&nbsp; • <code>$Speed</code> - 下载速度
+                  <br />• <code>$Delay</code> - 延迟 &nbsp;&nbsp; • <code>$Group</code> - 分组名称
+                  <br />• <code>$Source</code> - 来源 &nbsp;&nbsp; • <code>$Index</code> - 序号 &nbsp;&nbsp; • <code>$Protocol</code> -
+                  协议类型
+                </Typography>
+              </Box>
+              {formData.nodeNameRule && (
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  <Typography variant="body2">
+                    <strong>预览：</strong> {previewNodeName(formData.nodeNameRule)}
+                  </Typography>
+                </Alert>
+              )}
+            </Box>
+
+            <Divider />
 
             {/* IP 白名单/黑名单 */}
             <TextField

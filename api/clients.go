@@ -148,11 +148,44 @@ func GetV2ray(c *gin.Context) {
 		nodesJSON = resJSON
 	}
 
-	for _, v := range sub.Nodes {
+	for idx, v := range sub.Nodes {
+		// 应用重命名规则
+		nodeLink := v.Link
+		if sub.NodeNameRule != "" {
+			newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
+				Name:        v.Name,
+				LinkName:    v.LinkName,
+				LinkCountry: v.LinkCountry,
+				Speed:       v.Speed,
+				DelayTime:   v.DelayTime,
+				Group:       v.Group,
+				Source:      v.Source,
+				Index:       idx + 1,
+				Protocol:    utils.GetProtocolFromLink(v.Link),
+			})
+			nodeLink = utils.RenameNodeLink(v.Link, newName)
+		}
 		switch {
 		// 如果包含多条节点
 		case strings.Contains(v.Link, ","):
 			links := strings.Split(v.Link, ",")
+			// 对每个链接应用重命名
+			if sub.NodeNameRule != "" {
+				for i, link := range links {
+					newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
+						Name:        v.Name,
+						LinkName:    v.LinkName,
+						LinkCountry: v.LinkCountry,
+						Speed:       v.Speed,
+						DelayTime:   v.DelayTime,
+						Group:       v.Group,
+						Source:      v.Source,
+						Index:       idx + 1,
+						Protocol:    utils.GetProtocolFromLink(link),
+					})
+					links[i] = utils.RenameNodeLink(link, newName)
+				}
+			}
 			baselist += strings.Join(links, "\n") + "\n"
 			continue
 		//如果是订阅转换
@@ -168,7 +201,7 @@ func GetV2ray(c *gin.Context) {
 			baselist += nodes + "\n"
 		// 默认
 		default:
-			baselist += v.Link + "\n"
+			baselist += nodeLink + "\n"
 		}
 	}
 
@@ -220,14 +253,46 @@ func GetClash(c *gin.Context) {
 		sub.Nodes = newNodes
 		nodesJSON = resJSON
 	}
-	for _, v := range sub.Nodes {
+	for idx, v := range sub.Nodes {
+		// 应用重命名规则
+		nodeLink := v.Link
+		if sub.NodeNameRule != "" {
+			newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
+				Name:        v.Name,
+				LinkName:    v.LinkName,
+				LinkCountry: v.LinkCountry,
+				Speed:       v.Speed,
+				DelayTime:   v.DelayTime,
+				Group:       v.Group,
+				Source:      v.Source,
+				Index:       idx + 1,
+				Protocol:    utils.GetProtocolFromLink(v.Link),
+			})
+			nodeLink = utils.RenameNodeLink(v.Link, newName)
+		}
 		switch {
 		// 如果包含多条节点
 		case strings.Contains(v.Link, ","):
 			links := strings.Split(v.Link, ",")
-			for _, link := range links {
+			for i, link := range links {
+				renamedLink := link
+				if sub.NodeNameRule != "" {
+					newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
+						Name:        v.Name,
+						LinkName:    v.LinkName,
+						LinkCountry: v.LinkCountry,
+						Speed:       v.Speed,
+						DelayTime:   v.DelayTime,
+						Group:       v.Group,
+						Source:      v.Source,
+						Index:       idx + 1,
+						Protocol:    utils.GetProtocolFromLink(link),
+					})
+					renamedLink = utils.RenameNodeLink(link, newName)
+				}
+				links[i] = renamedLink
 				urls = append(urls, protocol.Urls{
-					Url:             link,
+					Url:             renamedLink,
 					DialerProxyName: strings.TrimSpace(v.DialerProxyName),
 				})
 			}
@@ -252,7 +317,7 @@ func GetClash(c *gin.Context) {
 		// 默认
 		default:
 			urls = append(urls, protocol.Urls{
-				Url:             v.Link,
+				Url:             nodeLink,
 				DialerProxyName: strings.TrimSpace(v.DialerProxyName),
 			})
 		}
@@ -318,11 +383,43 @@ func GetSurge(c *gin.Context) {
 		nodesJSON = resJSON
 	}
 
-	for _, v := range sub.Nodes {
+	for idx, v := range sub.Nodes {
+		// 应用重命名规则
+		nodeLink := v.Link
+		if sub.NodeNameRule != "" {
+			newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
+				Name:        v.Name,
+				LinkName:    v.LinkName,
+				LinkCountry: v.LinkCountry,
+				Speed:       v.Speed,
+				DelayTime:   v.DelayTime,
+				Group:       v.Group,
+				Source:      v.Source,
+				Index:       idx + 1,
+				Protocol:    utils.GetProtocolFromLink(v.Link),
+			})
+			nodeLink = utils.RenameNodeLink(v.Link, newName)
+		}
 		switch {
 		// 如果包含多条节点
 		case strings.Contains(v.Link, ","):
 			links := strings.Split(v.Link, ",")
+			for i, link := range links {
+				if sub.NodeNameRule != "" {
+					newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
+						Name:        v.Name,
+						LinkName:    v.LinkName,
+						LinkCountry: v.LinkCountry,
+						Speed:       v.Speed,
+						DelayTime:   v.DelayTime,
+						Group:       v.Group,
+						Source:      v.Source,
+						Index:       idx + 1,
+						Protocol:    utils.GetProtocolFromLink(link),
+					})
+					links[i] = utils.RenameNodeLink(link, newName)
+				}
+			}
 			urls = append(urls, links...)
 			continue
 		//如果是订阅转换
@@ -339,7 +436,7 @@ func GetSurge(c *gin.Context) {
 			urls = append(urls, links...)
 		// 默认
 		default:
-			urls = append(urls, v.Link)
+			urls = append(urls, nodeLink)
 		}
 	}
 

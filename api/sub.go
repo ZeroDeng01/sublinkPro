@@ -49,6 +49,7 @@ func SubAdd(c *gin.Context) {
 	minSpeed, _ := strconv.ParseFloat(minSpeedStr, 64)
 	countryWhitelist := c.PostForm("CountryWhitelist")
 	countryBlacklist := c.PostForm("CountryBlacklist")
+	nodeNameRule := c.PostForm("NodeNameRule")
 
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
@@ -98,6 +99,7 @@ func SubAdd(c *gin.Context) {
 	sub.MinSpeed = minSpeed
 	sub.CountryWhitelist = countryWhitelist
 	sub.CountryBlacklist = countryBlacklist
+	sub.NodeNameRule = nodeNameRule
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 
 	err := sub.Add()
@@ -162,6 +164,7 @@ func SubUpdate(c *gin.Context) {
 	minSpeed, _ := strconv.ParseFloat(minSpeedStr, 64)
 	countryWhitelist := c.PostForm("CountryWhitelist")
 	countryBlacklist := c.PostForm("CountryBlacklist")
+	nodeNameRule := c.PostForm("NodeNameRule")
 
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
@@ -221,6 +224,7 @@ func SubUpdate(c *gin.Context) {
 	sub.MinSpeed = minSpeed
 	sub.CountryWhitelist = countryWhitelist
 	sub.CountryBlacklist = countryBlacklist
+	sub.NodeNameRule = nodeNameRule
 	err = sub.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")

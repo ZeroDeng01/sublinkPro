@@ -59,7 +59,11 @@ func InitSqlite() {
 
 	// 0001_subcription_add_country 订阅添加国家过滤字段
 	if err := RunAutoMigrate("0001_subcription_add_country", &Subcription{}); err != nil {
-		log.Printf("Nodes 表迁移失败: %v", err)
+		log.Printf("Subcription 表迁移失败: %v", err)
+	}
+	// 增加节点重命名相关字段
+	if err := RunAutoMigrate("0001_subcription_add_rename", &Subcription{}); err != nil {
+		log.Printf("Subcription 表迁移失败: %v", err)
 	}
 
 	if err := RunAutoMigrate("0002_subcription_node", &SubcriptionNode{}); err != nil {
