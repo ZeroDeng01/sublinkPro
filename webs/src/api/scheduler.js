@@ -36,9 +36,10 @@ export function pullSubScheduler(data) {
 }
 
 // 删除订阅调度器
-export function deleteSubScheduler(id) {
+export function deleteSubScheduler(id, deleteNodes = false) {
   return request({
     url: `/v1/sub_scheduler/delete/${id}`,
-    method: 'delete'
+    method: 'delete',
+    params: { deleteNodes }
   });
 }

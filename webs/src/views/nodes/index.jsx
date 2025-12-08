@@ -242,6 +242,11 @@ export default function NodeList() {
     proxy_link: ''
   });
 
+  // 订阅删除对话框状态
+  const [deleteSchedulerDialogOpen, setDeleteSchedulerDialogOpen] = useState(false);
+  const [deleteSchedulerTarget, setDeleteSchedulerTarget] = useState(null);
+  const [deleteSchedulerWithNodes, setDeleteSchedulerWithNodes] = useState(true);
+
   // 测速配置
   const [speedTestDialogOpen, setSpeedTestDialogOpen] = useState(false);
   const [speedTestForm, setSpeedTestForm] = useState({
@@ -525,17 +530,24 @@ export default function NodeList() {
     setSchedulerFormOpen(true);
   };
 
-  const handleDeleteScheduler = async (scheduler) => {
-    openConfirm('删除订阅', `确定要删除订阅 "${scheduler.Name}" 及其关联的 ${scheduler.node_count || 0} 个节点吗？`, async () => {
-      try {
-        await deleteSubScheduler(scheduler.ID);
-        showMessage('删除成功');
-        fetchSchedulers();
-        fetchNodes();
-      } catch (error) {
-        showMessage('删除失败', 'error');
-      }
-    });
+  const handleDeleteScheduler = (scheduler) => {
+    setDeleteSchedulerTarget(scheduler);
+    setDeleteSchedulerWithNodes(true);
+    setDeleteSchedulerDialogOpen(true);
+  };
+
+  const handleConfirmDeleteScheduler = async () => {
+    if (!deleteSchedulerTarget) return;
+    try {
+      await deleteSubScheduler(deleteSchedulerTarget.ID, deleteSchedulerWithNodes);
+      showMessage(deleteSchedulerWithNodes ? '已删除订阅及关联节点' : '已删除订阅（保留节点）');
+      fetchSchedulers();
+      fetchNodes();
+    } catch (error) {
+      showMessage('删除失败', 'error');
+    }
+    setDeleteSchedulerDialogOpen(false);
+    setDeleteSchedulerTarget(null);
   };
 
   const handlePullScheduler = async (scheduler) => {
@@ -1553,6 +1565,48 @@ export default function NodeList() {
           <Button onClick={handleConfirmClose}>取消</Button>
           <Button onClick={handleConfirmAction} color="primary" autoFocus>
             确定
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 删除订阅对话框 */}
+      <Dialog
+        open={deleteSchedulerDialogOpen}
+        onClose={() => setDeleteSchedulerDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>删除订阅</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            确定要删除订阅 "{deleteSchedulerTarget?.Name}" 吗？
+          </Typography>
+          {(deleteSchedulerTarget?.node_count || 0) > 0 && (
+            <>
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                该订阅关联了 {deleteSchedulerTarget?.node_count || 0} 个节点
+              </Typography>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={deleteSchedulerWithNodes}
+                    onChange={(e) => setDeleteSchedulerWithNodes(e.target.checked)}
+                  />
+                }
+                label="同时删除关联的节点"
+              />
+              {!deleteSchedulerWithNodes && (
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  保留的节点将变为手动添加的节点，不再与此订阅关联
+                </Alert>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteSchedulerDialogOpen(false)}>取消</Button>
+          <Button onClick={handleConfirmDeleteScheduler} color="error" variant="contained">
+            确认删除
           </Button>
         </DialogActions>
       </Dialog>
