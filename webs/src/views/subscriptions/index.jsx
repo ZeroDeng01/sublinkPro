@@ -1819,7 +1819,7 @@ export default function SubscriptionList() {
             {/* IP 白名单/黑名单 */}
             <TextField
               fullWidth
-              label="IP 黑名单（优先级高于白名单）"
+              label="IP 黑名单（优先级高于白名单），不允许指定IP访问订阅链接"
               multiline
               rows={2}
               value={formData.IPBlacklist}
@@ -1828,7 +1828,7 @@ export default function SubscriptionList() {
             />
             <TextField
               fullWidth
-              label="IP 白名单"
+              label="IP 白名单，只允许指定IP访问订阅链接"
               multiline
               rows={2}
               value={formData.IPWhitelist}
