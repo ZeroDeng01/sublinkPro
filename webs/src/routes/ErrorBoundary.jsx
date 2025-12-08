@@ -1,7 +1,7 @@
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
 
-// material-ui
-import Alert from '@mui/material/Alert';
+// project imports
+import ErrorPage from 'views/pages/errors/ErrorPage';
 
 // ==============================|| ELEMENT ERROR - COMMON ||============================== //
 
@@ -9,22 +9,43 @@ export default function ErrorBoundary() {
   const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
+    // Handle specific HTTP error codes
     if (error.status === 404) {
-      return <Alert severity="error">Error 404 - This page doesn't exist!</Alert>;
+      return <ErrorPage statusCode={404} />;
     }
 
     if (error.status === 401) {
-      return <Alert severity="error">Error 401 - You aren't authorized to see this</Alert>;
+      return <ErrorPage statusCode={401} />;
+    }
+
+    if (error.status === 403) {
+      return <ErrorPage statusCode={403} />;
+    }
+
+    if (error.status === 500) {
+      return <ErrorPage statusCode={500} />;
     }
 
     if (error.status === 503) {
-      return <Alert severity="error">Error 503 - Looks like our API is down</Alert>;
+      return <ErrorPage statusCode={503} />;
     }
 
-    if (error.status === 418) {
-      return <Alert severity="error">Error 418 - Contact administrator</Alert>;
-    }
+    // Handle other error codes with custom message
+    return (
+      <ErrorPage
+        statusCode={error.status}
+        customTitle={`错误 ${error.status}`}
+        customDescription={error.statusText || '发生了未知错误，请稍后再试。'}
+      />
+    );
   }
 
-  return <Alert severity="error">Under Maintenance</Alert>;
+  // Handle non-HTTP errors (JavaScript errors, etc.)
+  return (
+    <ErrorPage
+      statusCode={500}
+      customTitle="应用程序错误"
+      customDescription="应用程序遇到了问题，请刷新页面或稍后再试。"
+    />
+  );
 }
