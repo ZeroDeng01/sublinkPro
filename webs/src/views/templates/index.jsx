@@ -86,6 +86,7 @@ export default function TemplateList() {
       const response = await getTemplates();
       setTemplates(response.data || []);
     } catch (error) {
+      console.log(error);
       showMessage('获取模板列表失败', 'error');
     } finally {
       setLoading(false);
@@ -121,6 +122,7 @@ export default function TemplateList() {
         showMessage('删除成功');
         fetchTemplates();
       } catch (error) {
+        console.log(error);
         showMessage('删除失败', 'error');
       }
     });
@@ -145,6 +147,7 @@ export default function TemplateList() {
       setDialogOpen(false);
       fetchTemplates();
     } catch (error) {
+      console.log(error);
       showMessage(isEdit ? '更新失败' : '添加失败', 'error');
     }
   };
@@ -184,7 +187,9 @@ export default function TemplateList() {
               <Box p={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
                   <Chip label={template.file} color="success" variant="outlined" />
-                  <Typography variant="caption" color="textSecondary">{template.create_date || '-'}</Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    {template.create_date || '-'}
+                  </Typography>
                 </Stack>
 
                 <Divider sx={{ my: 1 }} />
@@ -298,9 +303,7 @@ export default function TemplateList() {
       >
         <DialogTitle id="alert-dialog-title">{confirmInfo.title}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            {confirmInfo.content}
-          </DialogContentText>
+          <DialogContentText id="alert-dialog-description">{confirmInfo.content}</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleConfirmClose}>取消</Button>

@@ -32,7 +32,10 @@ export function ConfigProvider({ children }) {
     fetchVersion();
   }, []);
 
-  const memoizedValue = useMemo(() => ({ state, setState, setField, resetState, version }), [state, setField, setState, resetState, version]);
+  const memoizedValue = useMemo(
+    () => ({ state, setState, setField, resetState, version }),
+    [state, setField, setState, resetState, version]
+  );
 
   return <ConfigContext.Provider value={memoizedValue}>{children}</ConfigContext.Provider>;
 }

@@ -227,7 +227,9 @@ export default function ScriptList() {
               <Box p={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
                   <Chip label={script.name} color="success" size="small" />
-                  <Typography variant="caption" color="textSecondary">v{script.version}</Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    v{script.version}
+                  </Typography>
                 </Stack>
 
                 <Typography variant="caption" color="textSecondary" display="block">
@@ -357,9 +359,7 @@ export default function ScriptList() {
       >
         <DialogTitle id="alert-dialog-title">{confirmInfo.title}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            {confirmInfo.content}
-          </DialogContentText>
+          <DialogContentText id="alert-dialog-description">{confirmInfo.content}</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleConfirmClose}>取消</Button>

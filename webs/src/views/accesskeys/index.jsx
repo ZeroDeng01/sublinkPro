@@ -375,9 +375,7 @@ export default function ApiKeyList() {
       >
         <DialogTitle id="alert-dialog-title">{confirmInfo.title}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            {confirmInfo.content}
-          </DialogContentText>
+          <DialogContentText id="alert-dialog-description">{confirmInfo.content}</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleConfirmClose}>取消</Button>
@@ -386,6 +384,6 @@ export default function ApiKeyList() {
           </Button>
         </DialogActions>
       </Dialog>
-    </MainCard >
+    </MainCard>
   );
 }

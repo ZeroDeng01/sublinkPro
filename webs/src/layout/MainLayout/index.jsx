@@ -65,7 +65,6 @@ export default function MainLayout() {
           <Footer />
         </Box>
       </MainContentStyled>
-
     </Box>
   );
 }

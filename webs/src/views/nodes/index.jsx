@@ -291,9 +291,7 @@ export default function NodeList() {
           if (!aValid) return 1;
           if (!bValid) return -1;
           // 按数值排序
-          return sortOrder === 'asc'
-            ? a.DelayTime - b.DelayTime
-            : b.DelayTime - a.DelayTime;
+          return sortOrder === 'asc' ? a.DelayTime - b.DelayTime : b.DelayTime - a.DelayTime;
         } else if (sortBy === 'speed') {
           const aValid = a.Speed > 0;
           const bValid = b.Speed > 0;
@@ -302,9 +300,7 @@ export default function NodeList() {
           if (!aValid) return 1;
           if (!bValid) return -1;
           // 按数值排序
-          return sortOrder === 'asc'
-            ? a.Speed - b.Speed
-            : b.Speed - a.Speed;
+          return sortOrder === 'asc' ? a.Speed - b.Speed : b.Speed - a.Speed;
         }
         return 0;
       });
@@ -720,10 +716,24 @@ export default function NodeList() {
       {/* 移动端顶部额外按钮栏 */}
       {matchDownMd && (
         <Stack direction="row" spacing={1} sx={{ mb: 2, overflowX: 'auto', pb: 1 }} className="hide-scrollbar">
-          <Button size="small" variant="outlined" color="primary" startIcon={<DownloadIcon />} onClick={handleOpenSchedulerDialog} sx={{ whiteSpace: 'nowrap' }}>
+          <Button
+            size="small"
+            variant="outlined"
+            color="primary"
+            startIcon={<DownloadIcon />}
+            onClick={handleOpenSchedulerDialog}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
             导入
           </Button>
-          <Button size="small" variant="outlined" color="info" startIcon={<SettingsIcon />} onClick={handleOpenSpeedTest} sx={{ whiteSpace: 'nowrap' }}>
+          <Button
+            size="small"
+            variant="outlined"
+            color="info"
+            startIcon={<SettingsIcon />}
+            onClick={handleOpenSpeedTest}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
             测速设置
           </Button>
           <Button size="small" variant="outlined" startIcon={<SpeedIcon />} onClick={handleBatchSpeedTest} sx={{ whiteSpace: 'nowrap' }}>
@@ -814,11 +824,7 @@ export default function NodeList() {
                 {/* Header: Checkbox, Name, Delay */}
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
-                    <Checkbox
-                      checked={isSelected(node)}
-                      onChange={() => handleSelectNode(node)}
-                      sx={{ p: 0.5, flexShrink: 0 }}
-                    />
+                    <Checkbox checked={isSelected(node)} onChange={() => handleSelectNode(node)} sx={{ p: 0.5, flexShrink: 0 }} />
                     <Tooltip title={node.Name} placement="top">
                       <Typography
                         variant="subtitle1"
@@ -859,7 +865,7 @@ export default function NodeList() {
                   </Tooltip>
                   <Chip
                     icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📡</span>}
-                    label={node.Source === 'manual' ? '手动添加' : (node.Source || '未知')}
+                    label={node.Source === 'manual' ? '手动添加' : node.Source || '未知'}
                     color={node.Source === 'manual' ? 'success' : 'info'}
                     variant="outlined"
                     size="small"
@@ -889,19 +895,25 @@ export default function NodeList() {
                 <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 1, mb: 1.5 }}>
                   <Stack spacing={0.5}>
                     <Box>
-                      <Typography variant="caption" color="textSecondary" display="block">创建时间</Typography>
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        创建时间
+                      </Typography>
                       <Typography variant="caption" fontWeight="medium">
                         {node.CreatedAt ? formatDateTime(node.CreatedAt) : '-'}
                       </Typography>
                     </Box>
                     <Box>
-                      <Typography variant="caption" color="textSecondary" display="block">更新时间</Typography>
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        更新时间
+                      </Typography>
                       <Typography variant="caption" fontWeight="medium">
                         {node.UpdatedAt ? formatDateTime(node.UpdatedAt) : '-'}
                       </Typography>
                     </Box>
                     <Box>
-                      <Typography variant="caption" color="textSecondary" display="block">最后测速</Typography>
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        最后测速
+                      </Typography>
                       <Typography variant="caption" fontWeight="medium" color="primary">
                         {node.LastCheck ? formatDateTime(node.LastCheck) : '-'}
                       </Typography>
@@ -1050,14 +1062,10 @@ export default function NodeList() {
                   </TableCell>
                   <TableCell>{node.Speed > 0 ? `${node.Speed.toFixed(2)}MB/s` : '-'}</TableCell>
                   <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>
-                    <Typography variant="caption">
-                      {formatDateTime(node.CreatedAt)}
-                    </Typography>
+                    <Typography variant="caption">{formatDateTime(node.CreatedAt)}</Typography>
                   </TableCell>
                   <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>
-                    <Typography variant="caption">
-                      {formatDateTime(node.UpdatedAt)}
-                    </Typography>
+                    <Typography variant="caption">{formatDateTime(node.UpdatedAt)}</Typography>
                   </TableCell>
                   <TableCell align="right" sx={{ minWidth: 160 }}>
                     <Tooltip title="测速">
@@ -1459,9 +1467,7 @@ export default function NodeList() {
       >
         <DialogTitle id="alert-dialog-title">{confirmInfo.title}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            {confirmInfo.content}
-          </DialogContentText>
+          <DialogContentText id="alert-dialog-description">{confirmInfo.content}</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleConfirmClose}>取消</Button>

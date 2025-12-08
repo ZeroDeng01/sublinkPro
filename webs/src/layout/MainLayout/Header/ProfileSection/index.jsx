@@ -32,7 +32,6 @@ import useConfig from 'hooks/useConfig';
 import { useAuth } from 'contexts/AuthContext';
 
 // assets
-import User1 from 'assets/images/users/user-round.svg';
 import { IconLogout, IconUser, IconKey, IconDatabaseExport, IconSettings } from '@tabler/icons-react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
@@ -272,14 +271,14 @@ export default function ProfileSection() {
                         <CardContent>
                           <Stack direction="row" sx={{ alignItems: 'center', gap: 2 }}>
                             <Avatar src={user?.avatar} alt={(user?.username?.[0] || 'U').toUpperCase()} sx={{ width: 56, height: 56 }}>
-                              {!user?.avatar && (user?.nickname?.[0] || user?.username?.[0] || 'U').toUpperCase()}
+                              {!user?.avatar && (user?.username?.[0] || user?.nickname?.[0] || 'U').toUpperCase()}
                             </Avatar>
                             <Box>
                               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                {user?.nickname || user?.username || '用户'}
+                                  {user?.username || '未知用户'}
                               </Typography>
                               <Typography variant="caption" color="textSecondary">
-                                {user?.username || '未知用户'}
+                                  {user?.nickname || user?.username || '用户'}
                               </Typography>
                             </Box>
                           </Stack>

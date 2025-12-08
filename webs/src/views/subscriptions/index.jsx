@@ -390,12 +390,12 @@ export default function SubscriptionList() {
   // 节点选择操作
   const handleAddNode = (nodeName) => {
     setFormData({ ...formData, selectedNodes: [...formData.selectedNodes, nodeName] });
-    setCheckedAvailable(checkedAvailable.filter(n => n !== nodeName));
+    setCheckedAvailable(checkedAvailable.filter((n) => n !== nodeName));
   };
 
   const handleRemoveNode = (nodeName) => {
     setFormData({ ...formData, selectedNodes: formData.selectedNodes.filter((n) => n !== nodeName) });
-    setCheckedSelected(checkedSelected.filter(n => n !== nodeName));
+    setCheckedSelected(checkedSelected.filter((n) => n !== nodeName));
   };
 
   const handleAddAllVisible = () => {
@@ -412,7 +412,7 @@ export default function SubscriptionList() {
   // 多选操作
   const handleToggleAvailable = (nodeName) => {
     if (checkedAvailable.includes(nodeName)) {
-      setCheckedAvailable(checkedAvailable.filter(n => n !== nodeName));
+      setCheckedAvailable(checkedAvailable.filter((n) => n !== nodeName));
     } else {
       setCheckedAvailable([...checkedAvailable, nodeName]);
     }
@@ -420,7 +420,7 @@ export default function SubscriptionList() {
 
   const handleToggleSelected = (nodeName) => {
     if (checkedSelected.includes(nodeName)) {
-      setCheckedSelected(checkedSelected.filter(n => n !== nodeName));
+      setCheckedSelected(checkedSelected.filter((n) => n !== nodeName));
     } else {
       setCheckedSelected([...checkedSelected, nodeName]);
     }
@@ -433,7 +433,7 @@ export default function SubscriptionList() {
   };
 
   const handleRemoveChecked = () => {
-    const newNodes = formData.selectedNodes.filter(n => !checkedSelected.includes(n));
+    const newNodes = formData.selectedNodes.filter((n) => !checkedSelected.includes(n));
     setFormData({ ...formData, selectedNodes: newNodes });
     setCheckedSelected([]);
   };
@@ -442,7 +442,7 @@ export default function SubscriptionList() {
     if (checkedAvailable.length === availableNodes.length) {
       setCheckedAvailable([]);
     } else {
-      setCheckedAvailable(availableNodes.map(n => n.Name));
+      setCheckedAvailable(availableNodes.map((n) => n.Name));
     }
   };
 
@@ -450,7 +450,7 @@ export default function SubscriptionList() {
     if (checkedSelected.length === selectedNodesList.length) {
       setCheckedSelected([]);
     } else {
-      setCheckedSelected(selectedNodesList.map(n => n.Name));
+      setCheckedSelected(selectedNodesList.map((n) => n.Name));
     }
   };
 
@@ -458,12 +458,8 @@ export default function SubscriptionList() {
   const filteredSelectedNodes = useMemo(() => {
     if (!selectedNodeSearch) return selectedNodesList;
     const query = selectedNodeSearch.toLowerCase();
-    return selectedNodesList.filter(node =>
-      node.Name?.toLowerCase().includes(query) ||
-      node.Group?.toLowerCase().includes(query)
-    );
+    return selectedNodesList.filter((node) => node.Name?.toLowerCase().includes(query) || node.Group?.toLowerCase().includes(query));
   }, [selectedNodesList, selectedNodeSearch]);
-
 
   // === 客户端/QR码 ===
   const handleClient = (name) => {
@@ -622,7 +618,9 @@ export default function SubscriptionList() {
                 <Divider sx={{ my: 1 }} />
 
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="caption" color="textSecondary">{sub.CreateDate}</Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    {sub.CreateDate}
+                  </Typography>
                   <Stack direction="row" spacing={0}>
                     <IconButton size="small" onClick={() => handleClient(sub.Name)}>
                       <QrCode2Icon fontSize="small" />
@@ -637,15 +635,35 @@ export default function SubscriptionList() {
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                     {sortingSubId !== sub.ID ? (
-                      <IconButton size="small" color="warning" onClick={(e) => { e.stopPropagation(); handleStartSort(sub); }}>
+                      <IconButton
+                        size="small"
+                        color="warning"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartSort(sub);
+                        }}
+                      >
                         <SortIcon fontSize="small" />
                       </IconButton>
                     ) : (
                       <>
-                        <IconButton size="small" color="success" onClick={(e) => { e.stopPropagation(); handleConfirmSort(sub); }}>
+                        <IconButton
+                          size="small"
+                          color="success"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleConfirmSort(sub);
+                          }}
+                        >
                           <CheckIcon fontSize="small" />
                         </IconButton>
-                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCancelSort(); }}>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCancelSort();
+                          }}
+                        >
                           <CloseIcon fontSize="small" />
                         </IconButton>
                       </>
@@ -725,7 +743,6 @@ export default function SubscriptionList() {
           ))}
         </Stack>
       ) : (
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -856,13 +873,7 @@ export default function SubscriptionList() {
                                     onClick={() => copyToClipboard(item.Link)}
                                   />
                                 ) : (
-                                  <Chip
-                                    key={item._type + idx}
-                                    label={`📁 ${item.Name}`}
-                                    size="small"
-                                    variant="outlined"
-                                    color="warning"
-                                  />
+                                  <Chip key={item._type + idx} label={`📁 ${item.Name}`} size="small" variant="outlined" color="warning" />
                                 )
                               )}
                             </Stack>
@@ -876,8 +887,7 @@ export default function SubscriptionList() {
             </TableBody>
           </Table>
         </TableContainer>
-      )
-      }
+      )}
 
       <TablePagination
         component="div"
@@ -1029,24 +1039,16 @@ export default function SubscriptionList() {
                           fontWeight: 600,
                           borderRadius: 2,
                           mx: 0.5,
-                          transition: 'all 0.2s',
+                          transition: 'all 0.2s'
                         },
                         '& .Mui-selected': {
                           bgcolor: 'primary.light',
-                          color: 'primary.contrastText',
+                          color: 'primary.contrastText'
                         }
                       }}
                     >
-                      <Tab
-                        label={`可选节点 (${availableNodes.length})`}
-                        icon={<ChevronRightIcon />}
-                        iconPosition="end"
-                      />
-                      <Tab
-                        label={`已选节点 (${formData.selectedNodes.length})`}
-                        icon={<ChevronLeftIcon />}
-                        iconPosition="start"
-                      />
+                      <Tab label={`可选节点 (${availableNodes.length})`} icon={<ChevronRightIcon />} iconPosition="end" />
+                      <Tab label={`已选节点 (${formData.selectedNodes.length})`} icon={<ChevronLeftIcon />} iconPosition="start" />
                     </Tabs>
 
                     {/* 可选节点面板 */}
@@ -1061,7 +1063,7 @@ export default function SubscriptionList() {
                             background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a1a2e' : '#f8f9fa'} 0%, ${theme.palette.mode === 'dark' ? '#16213e' : '#ffffff'} 100%)`,
                             border: '1px solid',
                             borderColor: 'divider',
-                            borderRadius: 3,
+                            borderRadius: 3
                           }}
                         >
                           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
@@ -1074,7 +1076,11 @@ export default function SubscriptionList() {
                                   size="small"
                                 />
                               }
-                              label={<Typography variant="body2" fontWeight={600}>全选</Typography>}
+                              label={
+                                <Typography variant="body2" fontWeight={600}>
+                                  全选
+                                </Typography>
+                              }
                             />
                             <Chip
                               label={availableNodes.length > 100 ? `显示前100/${availableNodes.length}` : `${availableNodes.length}个`}
@@ -1098,7 +1104,7 @@ export default function SubscriptionList() {
                                   transition: 'all 0.15s ease-in-out',
                                   '&:hover': {
                                     bgcolor: 'action.hover',
-                                    transform: 'translateX(4px)',
+                                    transform: 'translateX(4px)'
                                   }
                                 }}
                                 secondaryAction={
@@ -1127,7 +1133,12 @@ export default function SubscriptionList() {
                                 <ListItemText
                                   primary={node.Name}
                                   secondary={
-                                    <Chip label={node.Group || '未分组'} size="small" variant="outlined" sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }} />
+                                    <Chip
+                                      label={node.Group || '未分组'}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
+                                    />
                                   }
                                   primaryTypographyProps={{
                                     noWrap: true,
@@ -1150,7 +1161,7 @@ export default function SubscriptionList() {
                             display: 'flex',
                             gap: 1,
                             justifyContent: 'center',
-                            background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                            background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
                           }}
                         >
                           <Button
@@ -1200,7 +1211,11 @@ export default function SubscriptionList() {
                           value={selectedNodeSearch}
                           onChange={(e) => setSelectedNodeSearch(e.target.value)}
                           InputProps={{
-                            startAdornment: <InputAdornment position="start"><SearchIcon color="action" /></InputAdornment>
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <SearchIcon color="action" />
+                              </InputAdornment>
+                            )
                           }}
                           sx={{ mb: 2 }}
                         />
@@ -1213,7 +1228,7 @@ export default function SubscriptionList() {
                             background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1e3a2f' : '#f0fff4'} 0%, ${theme.palette.mode === 'dark' ? '#1a3330' : '#ffffff'} 100%)`,
                             border: '1px solid',
                             borderColor: 'success.light',
-                            borderRadius: 3,
+                            borderRadius: 3
                           }}
                         >
                           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
@@ -1227,13 +1242,13 @@ export default function SubscriptionList() {
                                   color="success"
                                 />
                               }
-                              label={<Typography variant="body2" fontWeight={600}>全选</Typography>}
+                              label={
+                                <Typography variant="body2" fontWeight={600}>
+                                  全选
+                                </Typography>
+                              }
                             />
-                            <Chip
-                              label={`${formData.selectedNodes.length}个已选`}
-                              size="small"
-                              color="success"
-                            />
+                            <Chip label={`${formData.selectedNodes.length}个已选`} size="small" color="success" />
                           </Stack>
                           <List dense sx={{ pt: 0 }}>
                             {filteredSelectedNodes.map((node) => (
@@ -1250,7 +1265,7 @@ export default function SubscriptionList() {
                                   transition: 'all 0.15s ease-in-out',
                                   '&:hover': {
                                     bgcolor: 'action.hover',
-                                    transform: 'translateX(-4px)',
+                                    transform: 'translateX(-4px)'
                                   }
                                 }}
                                 secondaryAction={
@@ -1280,7 +1295,13 @@ export default function SubscriptionList() {
                                 <ListItemText
                                   primary={node.Name}
                                   secondary={
-                                    <Chip label={node.Group || '未分组'} size="small" color="success" variant="outlined" sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }} />
+                                    <Chip
+                                      label={node.Group || '未分组'}
+                                      size="small"
+                                      color="success"
+                                      variant="outlined"
+                                      sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
+                                    />
                                   }
                                   primaryTypographyProps={{
                                     noWrap: true,
@@ -1308,7 +1329,7 @@ export default function SubscriptionList() {
                             display: 'flex',
                             gap: 1,
                             justifyContent: 'center',
-                            background: `linear-gradient(90deg, ${theme.palette.error.main} 0%, ${theme.palette.error.dark} 100%)`,
+                            background: `linear-gradient(90deg, ${theme.palette.error.main} 0%, ${theme.palette.error.dark} 100%)`
                           }}
                         >
                           <Button
@@ -1368,7 +1389,7 @@ export default function SubscriptionList() {
                           transition: 'all 0.3s ease',
                           '&:hover': {
                             borderColor: 'primary.main',
-                            boxShadow: `0 4px 20px ${theme.palette.primary.main}20`,
+                            boxShadow: `0 4px 20px ${theme.palette.primary.main}20`
                           }
                         }}
                       >
@@ -1414,7 +1435,7 @@ export default function SubscriptionList() {
                                   '&:hover': {
                                     bgcolor: 'action.hover',
                                     transform: 'translateX(4px)',
-                                    borderColor: 'primary.light',
+                                    borderColor: 'primary.light'
                                   }
                                 }}
                                 onClick={() => handleToggleAvailable(node.Name)}
@@ -1435,11 +1456,11 @@ export default function SubscriptionList() {
                                   primaryTypographyProps={{
                                     noWrap: true,
                                     fontSize: '0.875rem',
-                                    fontWeight: 500,
+                                    fontWeight: 500
                                   }}
                                   secondaryTypographyProps={{
                                     noWrap: true,
-                                    fontSize: '0.75rem',
+                                    fontSize: '0.75rem'
                                   }}
                                 />
                               </ListItem>
@@ -1455,7 +1476,11 @@ export default function SubscriptionList() {
                     </Grid>
 
                     {/* 中间操作按钮 */}
-                    <Grid item xs={2} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                    <Grid
+                      item
+                      xs={2}
+                      sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}
+                    >
                       <Button
                         variant="contained"
                         size="small"
@@ -1471,7 +1496,7 @@ export default function SubscriptionList() {
                           textShadow: '0 1px 2px rgba(0,0,0,0.2)',
                           '&:disabled': {
                             background: '#ccc',
-                            color: '#888',
+                            color: '#888'
                           }
                         }}
                       >
@@ -1513,7 +1538,7 @@ export default function SubscriptionList() {
                           textShadow: '0 1px 2px rgba(0,0,0,0.2)',
                           '&:disabled': {
                             background: '#ccc',
-                            color: '#888',
+                            color: '#888'
                           }
                         }}
                       >
@@ -1538,7 +1563,7 @@ export default function SubscriptionList() {
                           transition: 'all 0.3s ease',
                           '&:hover': {
                             borderColor: 'success.main',
-                            boxShadow: `0 4px 20px ${theme.palette.success.main}20`,
+                            boxShadow: `0 4px 20px ${theme.palette.success.main}20`
                           }
                         }}
                       >
@@ -1561,11 +1586,7 @@ export default function SubscriptionList() {
                               已选节点
                             </Typography>
                           </Stack>
-                          <Chip
-                            label={formData.selectedNodes.length}
-                            size="small"
-                            color="success"
-                          />
+                          <Chip label={formData.selectedNodes.length} size="small" color="success" />
                         </Stack>
                         <TextField
                           fullWidth
@@ -1574,7 +1595,11 @@ export default function SubscriptionList() {
                           value={selectedNodeSearch}
                           onChange={(e) => setSelectedNodeSearch(e.target.value)}
                           InputProps={{
-                            startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" color="action" /></InputAdornment>
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <SearchIcon fontSize="small" color="action" />
+                              </InputAdornment>
+                            )
                           }}
                           sx={{ mb: 1, flexShrink: 0, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                         />
@@ -1596,7 +1621,7 @@ export default function SubscriptionList() {
                                   '&:hover': {
                                     bgcolor: 'action.hover',
                                     transform: 'translateX(-4px)',
-                                    borderColor: 'error.light',
+                                    borderColor: 'error.light'
                                   }
                                 }}
                                 onClick={() => handleToggleSelected(node.Name)}
@@ -1618,11 +1643,11 @@ export default function SubscriptionList() {
                                   primaryTypographyProps={{
                                     noWrap: true,
                                     fontSize: '0.875rem',
-                                    fontWeight: 500,
+                                    fontWeight: 500
                                   }}
                                   secondaryTypographyProps={{
                                     noWrap: true,
-                                    fontSize: '0.75rem',
+                                    fontSize: '0.75rem'
                                   }}
                                 />
                               </ListItem>
@@ -1812,9 +1837,7 @@ export default function SubscriptionList() {
       >
         <DialogTitle id="alert-dialog-title">{confirmInfo.title}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            {confirmInfo.content}
-          </DialogContentText>
+          <DialogContentText id="alert-dialog-description">{confirmInfo.content}</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleConfirmClose}>取消</Button>
@@ -1823,6 +1846,6 @@ export default function SubscriptionList() {
           </Button>
         </DialogActions>
       </Dialog>
-    </MainCard >
+    </MainCard>
   );
 }

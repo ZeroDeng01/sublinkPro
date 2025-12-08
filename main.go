@@ -170,6 +170,9 @@ func Run(port int) {
 			// 增加assets目录的静态服务
 			assetsFiles, _ := fs.Sub(staticFiles, "assets")
 			r.StaticFS("/assets", http.FS(assetsFiles))
+			// 增加images目录的静态服务 (public文件夹)
+			imagesFiles, _ := fs.Sub(staticFiles, "images")
+			r.StaticFS("/images", http.FS(imagesFiles))
 			r.GET("/favicon.svg", func(c *gin.Context) {
 				c.FileFromFS("favicon.svg", http.FS(staticFiles))
 			})

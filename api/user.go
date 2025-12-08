@@ -42,20 +42,11 @@ func UserMe(c *gin.Context) {
 		return
 	}
 	utils.OkDetailed(c, "获取用户信息成功", gin.H{
-		"avatar":   "static/avatar.gif",
+		"avatar":   "",
 		"nickname": user.Nickname,
 		"userId":   user.ID,
 		"username": user.Username,
 		"roles":    []string{"ADMIN"},
-		// "perms": []string{
-		// 	"sys:menu:delete", "sys:dept:edit", "sys:dict_type:add",
-		// 	"sys:dict:edit", "sys:dict:delete", "sys:dict_type:edit",
-		// 	"sys:menu:add", "sys:user:add", "sys:role:edit",
-		// 	"sys:dept:delete", "sys:user:password_reset", "sys:user:edit",
-		// 	"sys:user:delete", "sys:dept:add", "sys:role:delete",
-		// 	"sys:dict_type:delete", "sys:menu:edit", "sys:dict:add",
-		// 	"sys:role:add",
-		// },
 	})
 }
 
@@ -75,7 +66,7 @@ func UserPages(c *gin.Context) {
 			ID:       users[i].ID,
 			Username: users[i].Username,
 			Nickname: users[i].Nickname,
-			Avatar:   "static/avatar.gif",
+			Avatar:   "",
 		})
 	}
 	utils.OkDetailed(c, "获取用户信息成功", gin.H{
