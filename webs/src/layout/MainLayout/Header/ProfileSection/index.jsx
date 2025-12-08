@@ -204,7 +204,7 @@ export default function ProfileSection() {
         icon={
           <Avatar
             src={user?.avatar}
-            alt="用户头像"
+            alt={(user?.username?.[0] || 'U').toUpperCase()}
             sx={{ typography: 'mediumAvatar', margin: '8px 0 8px 8px !important', cursor: 'pointer' }}
             ref={anchorRef}
             aria-controls={open ? 'menu-list-grow' : undefined}
@@ -271,7 +271,7 @@ export default function ProfileSection() {
                       <Card sx={{ bgcolor: 'primary.light', mb: 2 }}>
                         <CardContent>
                           <Stack direction="row" sx={{ alignItems: 'center', gap: 2 }}>
-                            <Avatar src={user?.avatar} alt="用户头像" sx={{ width: 56, height: 56 }}>
+                            <Avatar src={user?.avatar} alt={(user?.username?.[0] || 'U').toUpperCase()} sx={{ width: 56, height: 56 }}>
                               {!user?.avatar && (user?.nickname?.[0] || user?.username?.[0] || 'U').toUpperCase()}
                             </Avatar>
                             <Box>
@@ -279,7 +279,7 @@ export default function ProfileSection() {
                                 {user?.nickname || user?.username || '用户'}
                               </Typography>
                               <Typography variant="caption" color="textSecondary">
-                                {user?.email || '未设置邮箱'}
+                                {user?.username || '未知用户'}
                               </Typography>
                             </Box>
                           </Stack>
@@ -299,19 +299,28 @@ export default function ProfileSection() {
                           <ListItemIcon>
                             <IconKey stroke={1.5} size="20px" />
                           </ListItemIcon>
-                          <ListItemText primaryTypographyProps={{ component: 'div' }} primary={<Typography variant="body2">管理API密钥</Typography>} />
+                          <ListItemText
+                            primaryTypographyProps={{ component: 'div' }}
+                            primary={<Typography variant="body2">管理API密钥</Typography>}
+                          />
                         </ListItemButton>
                         <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={handlePersonalCenter}>
                           <ListItemIcon>
                             <IconUser stroke={1.5} size="20px" />
                           </ListItemIcon>
-                          <ListItemText primaryTypographyProps={{ component: 'div' }} primary={<Typography variant="body2">个人中心</Typography>} />
+                          <ListItemText
+                            primaryTypographyProps={{ component: 'div' }}
+                            primary={<Typography variant="body2">个人中心</Typography>}
+                          />
                         </ListItemButton>
                         <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={handleBackup}>
                           <ListItemIcon>
                             <IconDatabaseExport stroke={1.5} size="20px" />
                           </ListItemIcon>
-                          <ListItemText primaryTypographyProps={{ component: 'div' }} primary={<Typography variant="body2">系统备份</Typography>} />
+                          <ListItemText
+                            primaryTypographyProps={{ component: 'div' }}
+                            primary={<Typography variant="body2">系统备份</Typography>}
+                          />
                         </ListItemButton>
                         <Divider sx={{ my: 1 }} />
                         <ListItemButton
@@ -375,9 +384,7 @@ export default function ProfileSection() {
       >
         <DialogTitle id="alert-dialog-title">{confirmInfo.title}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            {confirmInfo.content}
-          </DialogContentText>
+          <DialogContentText id="alert-dialog-description">{confirmInfo.content}</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleConfirmClose}>取消</Button>
