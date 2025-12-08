@@ -776,6 +776,7 @@ export default function DashboardDefault() {
                       // 国家代码转国旗 emoji
                       const getFlagEmoji = (code) => {
                         if (!code || code === '未知') return '🌐';
+                        code = code.toUpperCase() === 'TW' ? 'CN' : code;
                         const codePoints = code
                           .toUpperCase()
                           .split('')
