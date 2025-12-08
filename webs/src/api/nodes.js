@@ -1,10 +1,11 @@
 import request from './request';
 
-// 获取节点列表
-export function getNodes() {
+// 获取节点列表（支持过滤参数）
+export function getNodes(params = {}) {
   return request({
     url: '/v1/nodes/get',
-    method: 'get'
+    method: 'get',
+    params
   });
 }
 

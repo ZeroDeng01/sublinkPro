@@ -3,6 +3,7 @@ package models
 import (
 	"log"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -193,6 +194,150 @@ func (node *Node) List() ([]Node, error) {
 	sort.Slice(nodes, func(i, j int) bool {
 		return nodes[i].ID < nodes[j].ID
 	})
+
+	return nodes, nil
+}
+
+// NodeFilter 节点过滤参数
+type NodeFilter struct {
+	Search    string   // 搜索关键词（匹配节点名称或链接）
+	Group     string   // 分组过滤
+	Source    string   // 来源过滤
+	MaxDelay  int      // 最大延迟(ms)，只显示延迟在此值以下的节点
+	MinSpeed  float64  // 最低速度(MB/s)，只显示速度在此值以上的节点
+	Countries []string // 国家代码过滤
+	SortBy    string   // 排序字段: "delay" 或 "speed"
+	SortOrder string   // 排序顺序: "asc" 或 "desc"
+}
+
+// ListWithFilters 根据过滤条件获取节点列表
+func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
+	nodeLock.RLock()
+	defer nodeLock.RUnlock()
+
+	// 预处理搜索关键词
+	searchLower := strings.ToLower(filter.Search)
+
+	// 创建国家代码映射，加速查找
+	countryMap := make(map[string]bool)
+	for _, c := range filter.Countries {
+		countryMap[c] = true
+	}
+
+	// 过滤节点
+	nodes := make([]Node, 0, len(nodeCache))
+	for _, n := range nodeCache {
+		// 搜索过滤
+		if searchLower != "" {
+			nameLower := strings.ToLower(n.Name)
+			linkLower := strings.ToLower(n.Link)
+			if !strings.Contains(nameLower, searchLower) && !strings.Contains(linkLower, searchLower) {
+				continue
+			}
+		}
+
+		// 分组过滤
+		if filter.Group != "" {
+			if filter.Group == "未分组" {
+				if n.Group != "" {
+					continue
+				}
+			} else {
+				groupLower := strings.ToLower(n.Group)
+				filterGroupLower := strings.ToLower(filter.Group)
+				if !strings.Contains(groupLower, filterGroupLower) {
+					continue
+				}
+			}
+		}
+
+		// 来源过滤
+		if filter.Source != "" {
+			if filter.Source == "手动添加" {
+				if n.Source != "" && n.Source != "manual" {
+					continue
+				}
+			} else {
+				sourceLower := strings.ToLower(n.Source)
+				filterSourceLower := strings.ToLower(filter.Source)
+				if !strings.Contains(sourceLower, filterSourceLower) {
+					continue
+				}
+			}
+		}
+
+		// 最大延迟过滤 - 只过滤延迟大于0的节点
+		if filter.MaxDelay > 0 {
+			if n.DelayTime <= 0 || n.DelayTime > filter.MaxDelay {
+				continue
+			}
+		}
+
+		// 最低速度过滤
+		if filter.MinSpeed > 0 {
+			if n.Speed <= filter.MinSpeed {
+				continue
+			}
+		}
+
+		// 国家代码过滤
+		if len(countryMap) > 0 {
+			if n.LinkCountry == "" || !countryMap[n.LinkCountry] {
+				continue
+			}
+		}
+
+		nodes = append(nodes, n)
+	}
+
+	// 排序
+	if filter.SortBy != "" {
+		sort.Slice(nodes, func(i, j int) bool {
+			switch filter.SortBy {
+			case "delay":
+				// 没有有效延迟的节点始终放最后
+				aValid := nodes[i].DelayTime > 0
+				bValid := nodes[j].DelayTime > 0
+				if !aValid && !bValid {
+					return nodes[i].ID < nodes[j].ID // 都无效时按ID排序
+				}
+				if !aValid {
+					return false
+				}
+				if !bValid {
+					return true
+				}
+				if filter.SortOrder == "desc" {
+					return nodes[i].DelayTime > nodes[j].DelayTime
+				}
+				return nodes[i].DelayTime < nodes[j].DelayTime
+			case "speed":
+				// 没有有效速度的节点始终放最后
+				aValid := nodes[i].Speed > 0
+				bValid := nodes[j].Speed > 0
+				if !aValid && !bValid {
+					return nodes[i].ID < nodes[j].ID // 都无效时按ID排序
+				}
+				if !aValid {
+					return false
+				}
+				if !bValid {
+					return true
+				}
+				if filter.SortOrder == "desc" {
+					return nodes[i].Speed > nodes[j].Speed
+				}
+				return nodes[i].Speed < nodes[j].Speed
+			default:
+				return nodes[i].ID < nodes[j].ID
+			}
+		})
+	} else {
+		// 默认按 ID 升序排序
+		sort.Slice(nodes, func(i, j int) bool {
+			return nodes[i].ID < nodes[j].ID
+		})
+	}
 
 	return nodes, nil
 }

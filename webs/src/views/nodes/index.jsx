@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -276,79 +276,30 @@ export default function NodeList() {
     return Array.from(sources).sort();
   }, [nodes]);
 
-  // 过滤后的节点
-  const filteredNodes = useMemo(() => {
-    let result = nodes.filter((node) => {
-      // 分组过滤
-      if (groupFilter) {
-        if (groupFilter === '未分组') {
-          if (node.Group && node.Group.trim() !== '') return false;
-        } else if (!node.Group?.toLowerCase().includes(groupFilter.toLowerCase())) {
-          return false;
-        }
-      }
-      // 来源过滤
-      if (sourceFilter) {
-        if (sourceFilter === '手动添加') {
-          if (node.Source && node.Source !== 'manual') return false;
-        } else if (!node.Source?.toLowerCase().includes(sourceFilter.toLowerCase())) {
-          return false;
-        }
-      }
-      // 最大延迟过滤 - 只过滤延迟大于0的节点
-      if (maxDelay && (node.DelayTime <= 0 || node.DelayTime > Number(maxDelay))) return false;
-      // 最低速度过滤
-      if (minSpeed && node.Speed <= Number(minSpeed)) return false;
-      // 搜索过滤
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        if (!node.Name?.toLowerCase().includes(query) && !node.Link?.toLowerCase().includes(query)) {
-          return false;
-        }
-      }
-      // 国家代码过滤
-      if (countryFilter.length > 0) {
-        if (!node.LinkCountry || !countryFilter.includes(node.LinkCountry)) {
-          return false;
-        }
-      }
-      return true;
-    });
+  // 后端已完成过滤和排序，直接使用 nodes 数组
+  const filteredNodes = nodes;
 
-    // 排序
-    if (sortBy) {
-      result = [...result].sort((a, b) => {
-        if (sortBy === 'delay') {
-          const aValid = a.DelayTime > 0;
-          const bValid = b.DelayTime > 0;
-          // 没有有效延迟的节点始终放最后
-          if (!aValid && !bValid) return 0;
-          if (!aValid) return 1;
-          if (!bValid) return -1;
-          // 按数值排序
-          return sortOrder === 'asc' ? a.DelayTime - b.DelayTime : b.DelayTime - a.DelayTime;
-        } else if (sortBy === 'speed') {
-          const aValid = a.Speed > 0;
-          const bValid = b.Speed > 0;
-          // 没有有效速度的节点始终放最后
-          if (!aValid && !bValid) return 0;
-          if (!aValid) return 1;
-          if (!bValid) return -1;
-          // 按数值排序
-          return sortOrder === 'asc' ? a.Speed - b.Speed : b.Speed - a.Speed;
-        }
-        return 0;
-      });
-    }
+  // 防抖定时器引用
+  const debounceTimerRef = useRef(null);
 
-    return result;
-  }, [nodes, groupFilter, sourceFilter, maxDelay, minSpeed, searchQuery, countryFilter, sortBy, sortOrder]);
-
-  // 获取节点列表
-  const fetchNodes = useCallback(async () => {
+  // 获取节点列表（支持过滤参数）
+  const fetchNodes = useCallback(async (filterParams = {}) => {
     setLoading(true);
     try {
-      const response = await getNodes();
+      // 构建过滤参数
+      const params = {};
+      if (filterParams.search) params.search = filterParams.search;
+      if (filterParams.group) params.group = filterParams.group;
+      if (filterParams.source) params.source = filterParams.source;
+      if (filterParams.maxDelay) params.maxDelay = filterParams.maxDelay;
+      if (filterParams.minSpeed) params.minSpeed = filterParams.minSpeed;
+      if (filterParams.countries && filterParams.countries.length > 0) {
+        params['countries[]'] = filterParams.countries;
+      }
+      if (filterParams.sortBy) params.sortBy = filterParams.sortBy;
+      if (filterParams.sortOrder) params.sortOrder = filterParams.sortOrder;
+
+      const response = await getNodes(params);
       setNodes(response.data || []);
     } catch (error) {
       showMessage('获取节点列表失败', 'error');
@@ -367,6 +318,7 @@ export default function NodeList() {
     }
   }, []);
 
+  // 初始化加载
   useEffect(() => {
     fetchNodes();
     // 请求国家代码列表
@@ -375,7 +327,38 @@ export default function NodeList() {
         setCountryOptions(res.data || []);
       })
       .catch(console.error);
-  }, [fetchNodes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 监听过滤条件变化，带防抖发送请求到后端
+  useEffect(() => {
+    // 清除之前的定时器
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // 设置防抖延迟
+    debounceTimerRef.current = setTimeout(() => {
+      const filterParams = {
+        search: searchQuery,
+        group: groupFilter,
+        source: sourceFilter,
+        maxDelay: maxDelay,
+        minSpeed: minSpeed,
+        countries: countryFilter,
+        sortBy: sortBy,
+        sortOrder: sortOrder
+      };
+      fetchNodes(filterParams);
+    }, 300); // 300ms 防抖延迟
+
+    // 清理函数
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchQuery, groupFilter, sourceFilter, maxDelay, minSpeed, countryFilter, sortBy, sortOrder, fetchNodes]);
 
   const showMessage = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -394,6 +377,8 @@ export default function NodeList() {
     setMaxDelay('');
     setMinSpeed('');
     setCountryFilter([]);
+    setSortBy('');
+    setSortOrder('asc');
   };
 
   // === 节点操作 ===

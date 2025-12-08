@@ -179,7 +179,43 @@ func NodeUpdadte(c *gin.Context) {
 // 获取节点列表
 func NodeGet(c *gin.Context) {
 	var Node models.Node
-	nodes, err := Node.List()
+
+	// 解析过滤参数
+	filter := models.NodeFilter{
+		Search:    c.Query("search"),
+		Group:     c.Query("group"),
+		Source:    c.Query("source"),
+		SortBy:    c.Query("sortBy"),
+		SortOrder: c.Query("sortOrder"),
+	}
+
+	// 安全解析数值参数
+	if maxDelayStr := c.Query("maxDelay"); maxDelayStr != "" {
+		if maxDelay, err := strconv.Atoi(maxDelayStr); err == nil && maxDelay > 0 {
+			filter.MaxDelay = maxDelay
+		}
+	}
+
+	if minSpeedStr := c.Query("minSpeed"); minSpeedStr != "" {
+		if minSpeed, err := strconv.ParseFloat(minSpeedStr, 64); err == nil && minSpeed > 0 {
+			filter.MinSpeed = minSpeed
+		}
+	}
+
+	// 解析国家代码数组
+	filter.Countries = c.QueryArray("countries[]")
+
+	// 验证排序字段（白名单）
+	if filter.SortBy != "" && filter.SortBy != "delay" && filter.SortBy != "speed" {
+		filter.SortBy = "" // 无效排序字段，忽略
+	}
+
+	// 验证排序顺序
+	if filter.SortOrder != "" && filter.SortOrder != "asc" && filter.SortOrder != "desc" {
+		filter.SortOrder = "asc" // 默认升序
+	}
+
+	nodes, err := Node.ListWithFilters(filter)
 	if err != nil {
 		utils.FailWithMsg(c, "node list error")
 		return
