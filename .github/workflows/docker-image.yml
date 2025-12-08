@@ -207,7 +207,7 @@ jobs:
               -t zerodeng/sublink-pro:${TAG} \
               -t zerodeng/sublink-pro:latest \
               --push .
-          elif [[ $GITHUB_REF == refs/heads/main ]]; then
+          elif [[ $GITHUB_REF == refs/heads/dev ]]; then
             docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64 \
               -f Dockerfile.ci \
               -t zerodeng/sublink-pro:dev \
