@@ -78,3 +78,11 @@ export function runSpeedTest(ids) {
     data: { ids }
   });
 }
+
+// 获取节点国家代码列表
+export function getNodeCountries() {
+  return request({
+    url: '/v1/nodes/countries',
+    method: 'get'
+  });
+}

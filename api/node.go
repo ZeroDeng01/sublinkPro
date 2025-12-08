@@ -374,7 +374,7 @@ func NodesTotal(c *gin.Context) {
 		utils.FailWithMsg(c, "获取不到节点统计")
 		return
 	}
-	
+
 	total := len(nodes)
 	available := 0
 	for _, n := range nodes {
@@ -382,7 +382,7 @@ func NodesTotal(c *gin.Context) {
 			available++
 		}
 	}
-	
+
 	utils.OkDetailed(c, "取得节点统计", gin.H{
 		"total":     total,
 		"available": available,
@@ -422,26 +422,30 @@ func GetSpeedTestConfig(c *gin.Context) {
 	} else {
 		groups = []string{}
 	}
+	detectCountryStr, _ := models.GetSetting("speed_test_detect_country")
+	detectCountry := detectCountryStr == "true"
 
 	utils.OkDetailed(c, "获取成功", gin.H{
-		"cron":    cron,
-		"enabled": enabled,
-		"mode":    mode,
-		"url":     url,
-		"timeout": timeout,
-		"groups":  groups,
+		"cron":           cron,
+		"enabled":        enabled,
+		"mode":           mode,
+		"url":            url,
+		"timeout":        timeout,
+		"groups":         groups,
+		"detect_country": detectCountry,
 	})
 }
 
 // UpdateSpeedTestConfig 更新测速配置
 func UpdateSpeedTestConfig(c *gin.Context) {
 	var req struct {
-		Cron    string      `json:"cron"`
-		Enabled bool        `json:"enabled"`
-		Mode    string      `json:"mode"`
-		Url     string      `json:"url"`
-		Timeout interface{} `json:"timeout"`
-		Groups  []string    `json:"groups"`
+		Cron          string      `json:"cron"`
+		Enabled       bool        `json:"enabled"`
+		Mode          string      `json:"mode"`
+		Url           string      `json:"url"`
+		Timeout       interface{} `json:"timeout"`
+		Groups        []string    `json:"groups"`
+		DetectCountry bool        `json:"detect_country"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -500,6 +504,12 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		return
 	}
 
+	err = models.SetSetting("speed_test_detect_country", strconv.FormatBool(req.DetectCountry))
+	if err != nil {
+		utils.FailWithMsg(c, "保存落地IP检测配置失败")
+		return
+	}
+
 	// 更新定时任务
 	scheduler := services.GetSchedulerManager()
 	if req.Enabled {
@@ -546,4 +556,10 @@ func FastestSpeedNode(c *gin.Context) {
 func LowestDelayNode(c *gin.Context) {
 	node := models.GetLowestDelayNode()
 	utils.OkDetailed(c, "获取最低延迟节点成功", node)
+}
+
+// GetNodeCountries 获取所有节点的国家代码列表
+func GetNodeCountries(c *gin.Context) {
+	countries := models.GetAllCountries()
+	utils.OkDetailed(c, "获取国家代码成功", countries)
 }

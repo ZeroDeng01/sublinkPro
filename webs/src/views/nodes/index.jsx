@@ -54,7 +54,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
-import { getNodes, addNodes, updateNode, deleteNode, getSpeedTestConfig, updateSpeedTestConfig, runSpeedTest } from 'api/nodes';
+import { getNodes, addNodes, updateNode, deleteNode, getSpeedTestConfig, updateSpeedTestConfig, runSpeedTest, getNodeCountries } from 'api/nodes';
 import { getSubSchedulers, addSubScheduler, updateSubScheduler, deleteSubScheduler, pullSubScheduler } from 'api/scheduler';
 
 // Cron 表达式预设 - 包含友好的说明
@@ -102,6 +102,23 @@ const formatDateTime = (dateTimeString) => {
   } catch (error) {
     return '-';
   }
+};
+
+// ISO国家代码转换为国旗emoji
+const isoToFlag = (isoCode) => {
+  if (!isoCode || isoCode.length !== 2) return '';
+  const codePoints = isoCode
+    .toUpperCase()
+    .split('')
+    .map((char) => 0x1f1e6 + char.charCodeAt(0) - 65);
+  return String.fromCodePoint(...codePoints);
+};
+
+// 格式化国家显示 (国旗emoji + 代码)
+const formatCountry = (linkCountry) => {
+  if (!linkCountry) return null;
+  const flag = isoToFlag(linkCountry);
+  return flag ? `${flag}${linkCountry}` : linkCountry;
 };
 
 // Cron 表达式验证
@@ -225,8 +242,13 @@ export default function NodeList() {
     mode: 'tcp',
     url: '',
     timeout: 5,
-    groups: []
+    groups: [],
+    detect_country: false
   });
+
+  // 国家筛选
+  const [countryFilter, setCountryFilter] = useState([]);
+  const [countryOptions, setCountryOptions] = useState([]);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -277,6 +299,12 @@ export default function NodeList() {
           return false;
         }
       }
+      // 国家代码过滤
+      if (countryFilter.length > 0) {
+        if (!node.LinkCountry || !countryFilter.includes(node.LinkCountry)) {
+          return false;
+        }
+      }
       return true;
     });
 
@@ -307,7 +335,7 @@ export default function NodeList() {
     }
 
     return result;
-  }, [nodes, groupFilter, sourceFilter, maxDelay, minSpeed, searchQuery, sortBy, sortOrder]);
+  }, [nodes, groupFilter, sourceFilter, maxDelay, minSpeed, searchQuery, countryFilter, sortBy, sortOrder]);
 
   // 获取节点列表
   const fetchNodes = useCallback(async () => {
@@ -334,6 +362,12 @@ export default function NodeList() {
 
   useEffect(() => {
     fetchNodes();
+    // 请求国家代码列表
+    getNodeCountries()
+      .then((res) => {
+        setCountryOptions(res.data || []);
+      })
+      .catch(console.error);
   }, [fetchNodes]);
 
   const showMessage = (message, severity = 'success') => {
@@ -352,6 +386,7 @@ export default function NodeList() {
     setSourceFilter('');
     setMaxDelay('');
     setMinSpeed('');
+    setCountryFilter([]);
   };
 
   // === 节点操作 ===
@@ -795,6 +830,17 @@ export default function NodeList() {
           sx={{ width: 130 }}
           InputProps={{ endAdornment: <InputAdornment position="end">MB/s</InputAdornment> }}
         />
+        {countryOptions.length > 0 && (
+          <Autocomplete
+            multiple
+            size="small"
+            options={countryOptions}
+            value={countryFilter}
+            onChange={(e, newValue) => setCountryFilter(newValue)}
+            sx={{ minWidth: 150 }}
+            renderInput={(params) => <TextField {...params} label="国家代码" placeholder="选择国家" />}
+          />
+        )}
         <Button onClick={resetFilters}>重置</Button>
       </Stack>
 
@@ -886,6 +932,16 @@ export default function NodeList() {
                         variant="outlined"
                         size="small"
                         sx={{ maxWidth: '100px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                      />
+                    </Tooltip>
+                  )}
+                  {node.LinkCountry && (
+                    <Tooltip title={`国家: ${node.LinkCountry}`}>
+                      <Chip
+                        label={formatCountry(node.LinkCountry)}
+                        color="secondary"
+                        variant="outlined"
+                        size="small"
                       />
                     </Tooltip>
                   )}
@@ -983,6 +1039,7 @@ export default function NodeList() {
                     速度
                   </TableSortLabel>
                 </TableCell>
+                <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>国家</TableCell>
                 <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>创建时间</TableCell>
                 <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>更新时间</TableCell>
                 <TableCell align="right">操作</TableCell>
@@ -1061,6 +1118,13 @@ export default function NodeList() {
                     </Box>
                   </TableCell>
                   <TableCell>{node.Speed > 0 ? `${node.Speed.toFixed(2)}MB/s` : '-'}</TableCell>
+                  <TableCell>
+                    {node.LinkCountry ? (
+                      <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
                   <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>
                     <Typography variant="caption">{formatDateTime(node.CreatedAt)}</Typography>
                   </TableCell>
@@ -1378,7 +1442,7 @@ export default function NodeList() {
             <FormControl fullWidth>
               <InputLabel>测速模式</InputLabel>
               <Select value={speedTestForm.mode} label="测速模式" onChange={(e) => handleSpeedModeChange(e.target.value)}>
-                <MenuItem value="tcp">TCP - 仅延迟测试 (更快)</MenuItem>
+                <MenuItem value="tcp">Mihomo - 仅延迟测试 (更快)</MenuItem>
                 <MenuItem value="mihomo">Mihomo - 真速度测试 (延迟+下载速度)</MenuItem>
               </Select>
             </FormControl>
@@ -1434,6 +1498,18 @@ export default function NodeList() {
               onChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, groups: newValue })}
               renderInput={(params) => <TextField {...params} label="测速分组" placeholder="留空则测试全部分组" />}
             />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={speedTestForm.detect_country}
+                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, detect_country: e.target.checked })}
+                />
+              }
+              label="检测落地IP国家"
+            />
+            <Typography variant="caption" color="textSecondary" sx={{ mt: -1 }}>
+              开启后，测速时会通过代理获取落地IP并解析对应的国家代码，会降低测速效率。IP通过https://api.ip.sb/ip获取。
+            </Typography>
             <Button variant="outlined" startIcon={<PlayArrowIcon />} onClick={handleRunSpeedTest}>
               立即测速
             </Button>

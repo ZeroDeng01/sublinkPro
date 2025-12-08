@@ -112,6 +112,7 @@ export default function ScriptList() {
       const response = await getScripts();
       setScripts(response.data || []);
     } catch (error) {
+      console.error(error);
       showMessage('获取脚本列表失败', 'error');
     } finally {
       setLoading(false);
@@ -147,6 +148,7 @@ export default function ScriptList() {
         showMessage('删除成功');
         fetchScripts();
       } catch (error) {
+        console.error(error);
         showMessage('删除失败', 'error');
       }
     });
@@ -164,6 +166,7 @@ export default function ScriptList() {
       setDialogOpen(false);
       fetchScripts();
     } catch (error) {
+      console.error(error);
       showMessage(isEdit ? '更新失败' : '添加失败', 'error');
     }
   };

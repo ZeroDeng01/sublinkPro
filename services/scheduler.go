@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sublink/models"
 	"sublink/node"
+	"sublink/services/geoip"
 	"sublink/services/mihomo"
 	"sublink/services/sse"
 	"sync"
@@ -417,6 +418,10 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	// 获取测速模式
 	speedTestMode, _ := models.GetSetting("speed_test_mode")
 
+	// 获取是否检测落地IP国家
+	detectCountryStr, _ := models.GetSetting("speed_test_detect_country")
+	detectCountry := detectCountryStr == "true"
+
 	// 并发控制
 	concurrency := 10 // 默认并发数
 	sem := make(chan struct{}, concurrency)
@@ -476,6 +481,23 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 					n.Speed = speed
 					n.DelayTime = latency
 					n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+
+					// 如果开启落地IP检测，通过代理获取落地IP并查询国家
+					if detectCountry {
+						landingIP, countryErr := mihomo.FetchLandingIP(n.Link, speedTestTimeout)
+						if countryErr == nil && landingIP != "" {
+							countryCode, geoErr := geoip.GetCountryISOCode(landingIP)
+							if geoErr == nil && countryCode != "" {
+								n.LinkCountry = countryCode
+								log.Printf("节点 [%s] 落地IP: %s, 国家: %s", n.Name, landingIP, countryCode)
+							} else {
+								log.Printf("节点 [%s] 获取国家代码失败: %v", n.Name, geoErr)
+							}
+						} else {
+							log.Printf("节点 [%s] 获取落地IP失败: %v", n.Name, countryErr)
+						}
+					}
+
 					if err := n.UpdateSpeed(); err != nil {
 						log.Printf("更新节点 %s 测速结果失败: %v", n.Name, err)
 					}

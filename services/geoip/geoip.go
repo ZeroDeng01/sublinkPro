@@ -99,6 +99,28 @@ func ISOCodeToFlag(isoCode string) string {
 	return flag
 }
 
+// GetCountryISOCode returns only the ISO country code (e.g., "US", "CN", "JP") for the given IP address
+func GetCountryISOCode(ipStr string) (string, error) {
+	if geoIP == nil {
+		if err := InitGeoIP(); err != nil {
+			return "", err
+		}
+	}
+	ip, err := netip.ParseAddr(ipStr)
+	if err != nil {
+		return "", fmt.Errorf("invalid IP address: %s", ipStr)
+	}
+
+	geoCountry, err := geoIP.Country(ip)
+	if err != nil {
+		return "", fmt.Errorf("failed to get country: %v", err)
+	}
+	if geoCountry.Country.HasData() {
+		return geoCountry.Country.ISOCode, nil
+	}
+	return "", nil
+}
+
 // Close closes the GeoIP reader
 func Close() error {
 	if geoIP != nil {

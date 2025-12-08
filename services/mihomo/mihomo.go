@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sublink/node/protocol"
 	"sublink/utils"
 	"time"
@@ -303,4 +304,101 @@ CalculateSpeed:
 	speed = float64(totalRead) / 1024 / 1024 / duration.Seconds()
 
 	return speed, latency, nil
+}
+
+// FetchLandingIP fetches the landing IP address through the proxy by accessing https://api.ip.sb/ip
+// Returns the IP address as a string
+func FetchLandingIP(nodeLink string, timeout time.Duration) (string, error) {
+	// Recover from any panics and return error
+	defer func() {
+		if r := recover(); r != nil {
+			// Don't do anything, just return from the function
+		}
+	}()
+
+	proxyAdapter, err := GetMihomoAdapter(nodeLink)
+	if err != nil {
+		return "", err
+	}
+
+	testUrl := "https://api.ip.sb/ip"
+	parsedUrl, err := url.Parse(testUrl)
+	if err != nil {
+		return "", fmt.Errorf("parse test url error: %v", err)
+	}
+
+	port := uint16(443)
+
+	metadata := &constant.Metadata{
+		Host:    parsedUrl.Hostname(),
+		DstPort: port,
+		Type:    constant.HTTP,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	conn, err := proxyAdapter.DialContext(ctx, metadata)
+	if err != nil {
+		return "", fmt.Errorf("dial error: %v", err)
+	}
+	defer func() {
+		go func() {
+			_ = conn.Close()
+		}()
+	}()
+
+	// Create HTTP client with the proxy transport
+	client := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				defer func() {
+					if r := recover(); r != nil {
+						err = fmt.Errorf("panic in DialContext: %v", r)
+					}
+				}()
+
+				h, pStr, splitErr := net.SplitHostPort(addr)
+				if splitErr != nil {
+					return nil, fmt.Errorf("split host port error: %v", splitErr)
+				}
+
+				pInt, atoiErr := strconv.Atoi(pStr)
+				if atoiErr != nil {
+					return nil, fmt.Errorf("invalid port string: %v", atoiErr)
+				}
+
+				if pInt < 0 || pInt > 65535 {
+					return nil, fmt.Errorf("port out of range: %d", pInt)
+				}
+				p := uint16(pInt)
+
+				md := &constant.Metadata{
+					Host:    h,
+					DstPort: p,
+					Type:    constant.HTTP,
+				}
+				return proxyAdapter.DialContext(ctx, md)
+			},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+		Timeout: timeout,
+	}
+
+	resp, err := client.Get(testUrl)
+	if err != nil {
+		return "", fmt.Errorf("http get error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Read the response body (should be just the IP address)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read body error: %v", err)
+	}
+
+	// Trim whitespace and newlines
+	ip := strings.TrimSpace(string(body))
+
+	return ip, nil
 }

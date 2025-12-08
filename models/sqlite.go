@@ -52,8 +52,11 @@ func InitSqlite() {
 		log.Printf("基础数据表迁移失败: %v", err)
 	}
 
-	// SubcriptionNode 可能会因为手动迁移逻辑导致问题，单独处理
-	// 0002_subcription_node
+	// 0001_node_add_country 添加国家字段
+	if err := RunAutoMigrate("0001_node_add_country", &Node{}); err != nil {
+		log.Printf("Nodes 表迁移失败: %v", err)
+	}
+
 	if err := RunAutoMigrate("0002_subcription_node", &SubcriptionNode{}); err != nil {
 		log.Printf("SubcriptionNode 表迁移失败: %v", err)
 	}

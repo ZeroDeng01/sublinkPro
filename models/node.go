@@ -17,6 +17,7 @@ type Node struct {
 	LinkAddress     string //节点原始地址
 	LinkHost        string //节点原始Host
 	LinkPort        string //节点原始端口
+	LinkCountry     string //节点所属国家、落地IP国家
 	DialerProxyName string
 	Source          string `gorm:"default:'manual'"`
 	SourceID        int
@@ -74,7 +75,7 @@ func (node *Node) Update() error {
 		node.Name = node.LinkName
 	}
 	node.UpdatedAt = time.Now()
-	err := DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "UpdatedAt").Updates(node).Error
+	err := DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "LinkCountry", "UpdatedAt").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -96,6 +97,7 @@ func (node *Node) Update() error {
 		cachedNode.LinkAddress = node.LinkAddress
 		cachedNode.LinkHost = node.LinkHost
 		cachedNode.LinkPort = node.LinkPort
+		cachedNode.LinkCountry = node.LinkCountry
 		cachedNode.UpdatedAt = node.UpdatedAt
 		nodeCache[node.ID] = cachedNode
 	} else {
@@ -110,7 +112,7 @@ func (node *Node) Update() error {
 
 // UpdateSpeed 更新节点测速结果
 func (node *Node) UpdateSpeed() error {
-	err := DB.Model(node).Select("Speed", "DelayTime", "LastCheck").Updates(node).Error
+	err := DB.Model(node).Select("Speed", "LinkCountry", "DelayTime", "LastCheck").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -122,6 +124,7 @@ func (node *Node) UpdateSpeed() error {
 		cachedNode.Speed = node.Speed
 		cachedNode.DelayTime = node.DelayTime
 		cachedNode.LastCheck = node.LastCheck
+		cachedNode.LinkCountry = node.LinkCountry
 		nodeCache[node.ID] = cachedNode
 	}
 	return nil
@@ -236,7 +239,7 @@ func (node *Node) Del() error {
 func (node *Node) UpsertNode() error {
 	err := DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "link"}},
-		DoUpdates: clause.AssignmentColumns([]string{"name", "link_name", "link_address", "link_host", "link_port", "create_date", "source", "source_id", "group"}),
+		DoUpdates: clause.AssignmentColumns([]string{"name", "link_name", "link_address", "link_host", "link_port", "link_country", "source", "source_id", "group"}),
 	}).Create(node).Error
 	if err != nil {
 		return err
@@ -385,4 +388,23 @@ func GetLowestDelayNode() *Node {
 	}
 
 	return lowest
+}
+
+// GetAllCountries 获取所有唯一的国家代码
+func GetAllCountries() []string {
+	nodeLock.RLock()
+	defer nodeLock.RUnlock()
+
+	countryMap := make(map[string]bool)
+	for _, n := range nodeCache {
+		if n.LinkCountry != "" {
+			countryMap[n.LinkCountry] = true
+		}
+	}
+
+	countries := make([]string, 0, len(countryMap))
+	for c := range countryMap {
+		countries = append(countries, c)
+	}
+	return countries
 }
