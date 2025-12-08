@@ -84,9 +84,7 @@ const isoToFlag = (isoCode) => {
   if (!isoCode || isoCode.length !== 2) return '';
   // TW 使用 CN 国旗
   const code = isoCode.toUpperCase() === 'TW' ? 'CN' : isoCode.toUpperCase();
-  const codePoints = code
-    .split('')
-    .map((char) => 0x1f1e6 + char.charCodeAt(0) - 65);
+  const codePoints = code.split('').map((char) => 0x1f1e6 + char.charCodeAt(0) - 65);
   return String.fromCodePoint(...codePoints);
 };
 
@@ -1852,10 +1850,7 @@ export default function SubscriptionList() {
               </Stack>
 
               {namingMode === 'builder' ? (
-                <NodeRenameBuilder
-                  value={formData.nodeNameRule}
-                  onChange={(rule) => setFormData({ ...formData, nodeNameRule: rule })}
-                />
+                <NodeRenameBuilder value={formData.nodeNameRule} onChange={(rule) => setFormData({ ...formData, nodeNameRule: rule })} />
               ) : (
                 <>
                   <TextField

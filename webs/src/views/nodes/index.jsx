@@ -54,7 +54,16 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
-import { getNodes, addNodes, updateNode, deleteNode, getSpeedTestConfig, updateSpeedTestConfig, runSpeedTest, getNodeCountries } from 'api/nodes';
+import {
+  getNodes,
+  addNodes,
+  updateNode,
+  deleteNode,
+  getSpeedTestConfig,
+  updateSpeedTestConfig,
+  runSpeedTest,
+  getNodeCountries
+} from 'api/nodes';
 import { getSubSchedulers, addSubScheduler, updateSubScheduler, deleteSubScheduler, pullSubScheduler } from 'api/scheduler';
 
 // Cron 表达式预设 - 包含友好的说明
@@ -108,9 +117,7 @@ const formatDateTime = (dateTimeString) => {
 const isoToFlag = (isoCode) => {
   if (!isoCode || isoCode.length !== 2) return '';
   const code = isoCode.toUpperCase() === 'TW' ? 'CN' : isoCode.toUpperCase();
-  const codePoints = code
-    .split('')
-    .map((char) => 0x1f1e6 + char.charCodeAt(0) - 65);
+  const codePoints = code.split('').map((char) => 0x1f1e6 + char.charCodeAt(0) - 65);
   return String.fromCodePoint(...codePoints);
 };
 
@@ -850,9 +857,7 @@ export default function NodeList() {
             renderTags={(value, getTagProps) =>
               value.map((option, index) => {
                 const { key, ...tagProps } = getTagProps({ index });
-                return (
-                  <Chip key={key} label={`${isoToFlag(option)} ${option}`} size="small" {...tagProps} />
-                );
+                return <Chip key={key} label={`${isoToFlag(option)} ${option}`} size="small" {...tagProps} />;
               })
             }
             renderInput={(params) => <TextField {...params} label="国家代码" placeholder="选择国家" />}
@@ -954,12 +959,7 @@ export default function NodeList() {
                   )}
                   {node.LinkCountry && (
                     <Tooltip title={`国家: ${node.LinkCountry}`}>
-                      <Chip
-                        label={formatCountry(node.LinkCountry)}
-                        color="secondary"
-                        variant="outlined"
-                        size="small"
-                      />
+                      <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />
                     </Tooltip>
                   )}
                 </Stack>

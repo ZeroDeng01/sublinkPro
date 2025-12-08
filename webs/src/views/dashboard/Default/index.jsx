@@ -94,17 +94,32 @@ const getGreeting = () => {
 
 // ==============================|| 高级统计卡片组件 ||============================== //
 
-const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradientColors, accentColor, index, isNodeStat, copyLink, onCopy }) => {
+const PremiumStatCard = ({
+  title,
+  value,
+  subValue,
+  loading,
+  icon: Icon,
+  gradientColors,
+  accentColor,
+  index,
+  isNodeStat,
+  copyLink,
+  onCopy
+}) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
   const handleClick = () => {
     if (isNodeStat && copyLink && onCopy) {
-      navigator.clipboard.writeText(copyLink).then(() => {
-        onCopy('节点链接已复制到剪贴板', 'success');
-      }).catch(() => {
-        onCopy('复制失败', 'error');
-      });
+      navigator.clipboard
+        .writeText(copyLink)
+        .then(() => {
+          onCopy('节点链接已复制到剪贴板', 'success');
+        })
+        .catch(() => {
+          onCopy('复制失败', 'error');
+        });
     }
   };
 
@@ -225,7 +240,13 @@ const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradient
                 lineHeight: 1.2
               }}
             >
-              {loading ? <Skeleton width={60} sx={{ bgcolor: alpha(gradientColors[0], 0.2) }} /> : (typeof value === 'number' ? value.toLocaleString() : value)}
+              {loading ? (
+                <Skeleton width={60} sx={{ bgcolor: alpha(gradientColors[0], 0.2) }} />
+              ) : typeof value === 'number' ? (
+                value.toLocaleString()
+              ) : (
+                value
+              )}
             </Typography>
 
             {/* 节点名称/趋势指示器 */}
@@ -758,7 +779,7 @@ export default function DashboardDefault() {
                         const codePoints = code
                           .toUpperCase()
                           .split('')
-                          .map(char => 127397 + char.charCodeAt(0));
+                          .map((char) => 127397 + char.charCodeAt(0));
                         return String.fromCodePoint(...codePoints);
                       };
                       return (
@@ -840,19 +861,19 @@ export default function DashboardDefault() {
                     .map(([protocol, count]) => {
                       // 协议颜色映射
                       const protocolColors = {
-                        'Shadowsocks': ['#3b82f6', '#2563eb'],
-                        'ShadowsocksR': ['#6366f1', '#4f46e5'],
-                        'VMess': ['#8b5cf6', '#7c3aed'],
-                        'VLESS': ['#10b981', '#059669'],
-                        'Trojan': ['#ef4444', '#dc2626'],
-                        'Hysteria': ['#06b6d4', '#0891b2'],
-                        'Hysteria2': ['#14b8a6', '#0d9488'],
-                        'TUIC': ['#f59e0b', '#d97706'],
-                        'WireGuard': ['#84cc16', '#65a30d'],
-                        'NaiveProxy': ['#ec4899', '#db2777'],
-                        'SOCKS5': ['#64748b', '#475569'],
-                        'HTTP': ['#94a3b8', '#64748b'],
-                        'HTTPS': ['#22c55e', '#16a34a']
+                        Shadowsocks: ['#3b82f6', '#2563eb'],
+                        ShadowsocksR: ['#6366f1', '#4f46e5'],
+                        VMess: ['#8b5cf6', '#7c3aed'],
+                        VLESS: ['#10b981', '#059669'],
+                        Trojan: ['#ef4444', '#dc2626'],
+                        Hysteria: ['#06b6d4', '#0891b2'],
+                        Hysteria2: ['#14b8a6', '#0d9488'],
+                        TUIC: ['#f59e0b', '#d97706'],
+                        WireGuard: ['#84cc16', '#65a30d'],
+                        NaiveProxy: ['#ec4899', '#db2777'],
+                        SOCKS5: ['#64748b', '#475569'],
+                        HTTP: ['#94a3b8', '#64748b'],
+                        HTTPS: ['#22c55e', '#16a34a']
                       };
                       const colors = protocolColors[protocol] || ['#6b7280', '#4b5563'];
 
