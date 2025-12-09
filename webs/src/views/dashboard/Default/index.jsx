@@ -344,6 +344,22 @@ const PremiumStatCard = ({
 const StarReminderCard = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const [starCount, setStarCount] = useState(null);
+
+  useEffect(() => {
+    const fetchStarCount = async () => {
+      try {
+        const response = await fetch("https://api.github.com/repos/ZeroDeng01/sublinkPro");
+        if (response.ok) {
+          const data = await response.json();
+          setStarCount(data.stargazers_count);
+        }
+      } catch (error) {
+        console.error("获取Star数量失败:", error);
+      }
+    };
+    fetchStarCount();
+  }, []);
 
   const handleStar = () => {
     window.open('https://github.com/ZeroDeng01/sublinkPro', '_blank');
@@ -461,7 +477,7 @@ const StarReminderCard = () => {
             </Tooltip>
             <Chip
               icon={<GitHubIcon sx={{ fontSize: 18, color: 'inherit !important' }} />}
-              label="Star"
+              label={starCount !== null ? `Star ${starCount >= 1000 ? `${(starCount / 1000).toFixed(1)}k` : starCount}` : "Star"}
               onClick={handleStar}
               sx={{
                 fontWeight: 600,
