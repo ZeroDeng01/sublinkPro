@@ -135,6 +135,7 @@ const PremiumStatCard = ({
         position: 'relative',
         overflow: 'hidden',
         borderRadius: 4,
+        height: '100%',
         background: isDark
           ? `linear-gradient(145deg, ${alpha(gradientColors[0], 0.15)} 0%, ${alpha(gradientColors[1], 0.08)} 100%)`
           : `linear-gradient(145deg, ${alpha(gradientColors[0], 0.08)} 0%, ${alpha('#fff', 0.95)} 100%)`,
