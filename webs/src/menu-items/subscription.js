@@ -1,5 +1,5 @@
 // assets
-import { IconNetwork, IconList, IconTemplate, IconScript, IconKey, IconSettings } from '@tabler/icons-react';
+import { IconNetwork, IconList, IconTemplate, IconScript, IconKey, IconSettings, IconDeviceDesktopAnalytics } from '@tabler/icons-react';
 
 // ==============================|| SUBSCRIPTION MENU ITEMS ||============================== //
 
@@ -79,6 +79,14 @@ const system = {
   type: 'group',
   children: [
     {
+      id: 'monitor',
+      title: '系统监控',
+      type: 'item',
+      url: '/system/monitor',
+      icon: IconDeviceDesktopAnalytics,
+      breadcrumbs: true
+    },
+    {
       id: 'user',
       title: '用户设置',
       type: 'item',
@@ -90,3 +98,4 @@ const system = {
 };
 
 export { subscription, script, accesskey, system };
+

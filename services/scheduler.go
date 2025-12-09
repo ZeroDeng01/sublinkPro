@@ -221,6 +221,8 @@ func ExecuteSubscriptionTask(id int, url string, subName string) {
 
 	err := node.LoadClashConfigFromURL(id, url, subName, downloadWithProxy, proxyLink)
 	if err != nil {
+		// 仅在失败时发送通知，成功通知由 node/sub.go 中的 scheduleClashToNodeLinks 发送
+		// 这样可以避免重复通知，且成功通知包含更详细的节点统计信息
 		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
 			Event:   "sub_update",
 			Title:   "订阅更新失败",
@@ -231,18 +233,9 @@ func ExecuteSubscriptionTask(id int, url string, subName string) {
 				"status": "error",
 			},
 		})
-	} else {
-		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
-			Event:   "sub_update",
-			Title:   "订阅更新成功",
-			Message: fmt.Sprintf("订阅 [%s] 更新成功", subName),
-			Data: map[string]interface{}{
-				"id":     id,
-				"name":   subName,
-				"status": "success",
-			},
-		})
 	}
+	// 成功时不在这里发送通知，因为 node/sub.go 的 scheduleClashToNodeLinks 函数
+	// 会发送包含详细节点统计信息的 "订阅更新完成" 通知
 }
 
 // cleanCronExpression 清理Cron表达式中的多余空格

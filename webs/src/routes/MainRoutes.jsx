@@ -16,8 +16,9 @@ const TemplateList = Loadable(lazy(() => import('views/templates')));
 const ScriptList = Loadable(lazy(() => import('views/scripts')));
 const AccessKeyList = Loadable(lazy(() => import('views/accesskeys')));
 const UserSettings = Loadable(lazy(() => import('views/settings')));
+const SystemMonitor = Loadable(lazy(() => import('views/monitor')));
 
-// ==============================|| MAIN ROUTING ||============================== //
+// ==============================|| MAIN ROUTING ||==============================  //
 
 const MainRoutes = {
   path: '/',
@@ -70,6 +71,10 @@ const MainRoutes = {
         {
           path: 'user',
           element: <UserSettings />
+        },
+        {
+          path: 'monitor',
+          element: <SystemMonitor />
         }
       ]
     }
@@ -77,3 +82,4 @@ const MainRoutes = {
 };
 
 export default MainRoutes;
+
