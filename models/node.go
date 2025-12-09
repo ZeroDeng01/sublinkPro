@@ -498,6 +498,25 @@ func (node *Node) GetAllGroups() ([]string, error) {
 	return groups, nil
 }
 
+// GetAllSources 获取所有来源
+func (node *Node) GetAllSources() ([]string, error) {
+	nodeLock.RLock()
+	defer nodeLock.RUnlock()
+
+	sourceMap := make(map[string]bool)
+	for _, n := range nodeCache {
+		if n.Source != "" {
+			sourceMap[n.Source] = true
+		}
+	}
+
+	sources := make([]string, 0, len(sourceMap))
+	for s := range sourceMap {
+		sources = append(sources, s)
+	}
+	return sources, nil
+}
+
 // GetBestProxyNode 获取最佳代理节点（延迟最低且速度大于0）
 func GetBestProxyNode() (*Node, error) {
 	nodeLock.RLock()

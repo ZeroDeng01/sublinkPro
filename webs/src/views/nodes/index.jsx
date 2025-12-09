@@ -61,7 +61,9 @@ import {
   getSpeedTestConfig,
   updateSpeedTestConfig,
   runSpeedTest,
-  getNodeCountries
+  getNodeCountries,
+  getNodeGroups,
+  getNodeSources
 } from 'api/nodes';
 import { getSubSchedulers, addSubScheduler, updateSubScheduler, deleteSubScheduler, pullSubScheduler } from 'api/scheduler';
 
@@ -261,25 +263,11 @@ export default function NodeList() {
   // 国家筛选
   const [countryFilter, setCountryFilter] = useState([]);
   const [countryOptions, setCountryOptions] = useState([]);
+  // 从后端获取的分组和来源选项
+  const [groupOptions, setGroupOptions] = useState([]);
+  const [sourceOptions, setSourceOptions] = useState([]);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-
-  // 获取所有分组和来源
-  const groupOptions = useMemo(() => {
-    const groups = new Set();
-    nodes.forEach((node) => {
-      if (node.Group) groups.add(node.Group);
-    });
-    return Array.from(groups).sort();
-  }, [nodes]);
-
-  const sourceOptions = useMemo(() => {
-    const sources = new Set();
-    nodes.forEach((node) => {
-      if (node.Source) sources.add(node.Source);
-    });
-    return Array.from(sources).sort();
-  }, [nodes]);
 
   // 后端已完成过滤和排序，直接使用 nodes 数组
   const filteredNodes = nodes;
@@ -331,6 +319,18 @@ export default function NodeList() {
     getNodeCountries()
       .then((res) => {
         setCountryOptions(res.data || []);
+      })
+      .catch(console.error);
+    // 请求分组列表
+    getNodeGroups()
+      .then((res) => {
+        setGroupOptions((res.data || []).sort());
+      })
+      .catch(console.error);
+    // 请求来源列表
+    getNodeSources()
+      .then((res) => {
+        setSourceOptions((res.data || []).sort());
       })
       .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -385,6 +385,23 @@ export default function NodeList() {
     setCountryFilter([]);
     setSortBy('');
     setSortOrder('asc');
+  };
+
+  // 获取当前过滤参数
+  const getCurrentFilters = () => ({
+    search: searchQuery,
+    group: groupFilter,
+    source: sourceFilter,
+    maxDelay: maxDelay,
+    minSpeed: minSpeed,
+    countries: countryFilter,
+    sortBy: sortBy,
+    sortOrder: sortOrder
+  });
+
+  // 手动刷新（保留搜索条件）
+  const handleRefresh = () => {
+    fetchNodes(getCurrentFilters());
   };
 
   // === 节点操作 ===
@@ -757,8 +774,17 @@ export default function NodeList() {
             <Button variant="outlined" startIcon={<SpeedIcon />} onClick={handleBatchSpeedTest}>
               批量测速
             </Button>
-            <IconButton onClick={fetchNodes} disabled={loading}>
-              <RefreshIcon />
+            <IconButton onClick={handleRefresh} disabled={loading}>
+              <RefreshIcon
+                sx={
+                  loading
+                    ? {
+                      animation: "spin 1s linear infinite",
+                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                    }
+                    : {}
+                }
+              />
             </IconButton>
           </Stack>
         )
@@ -790,8 +816,17 @@ export default function NodeList() {
           <Button size="small" variant="outlined" startIcon={<SpeedIcon />} onClick={handleBatchSpeedTest} sx={{ whiteSpace: 'nowrap' }}>
             批量测速
           </Button>
-          <IconButton size="small" onClick={fetchNodes} disabled={loading}>
-            <RefreshIcon />
+          <IconButton size="small" onClick={handleRefresh} disabled={loading}>
+            <RefreshIcon
+              sx={
+                loading
+                  ? {
+                    animation: "spin 1s linear infinite",
+                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                  }
+                  : {}
+              }
+            />
           </IconButton>
         </Stack>
       )}
@@ -836,7 +871,7 @@ export default function NodeList() {
           type="number"
           value={maxDelay}
           onChange={(e) => setMaxDelay(e.target.value)}
-          sx={{ width: 120 }}
+          sx={{ width: 150 }}
           InputProps={{ endAdornment: <InputAdornment position="end">ms</InputAdornment> }}
         />
         <TextField
@@ -845,7 +880,7 @@ export default function NodeList() {
           type="number"
           value={minSpeed}
           onChange={(e) => setMinSpeed(e.target.value)}
-          sx={{ width: 130 }}
+          sx={{ width: 150 }}
           InputProps={{ endAdornment: <InputAdornment position="end">MB/s</InputAdornment> }}
         />
         {countryOptions.length > 0 && (

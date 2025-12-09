@@ -166,7 +166,16 @@ export default function TemplateList() {
               添加模板
             </Button>
             <IconButton onClick={fetchTemplates} disabled={loading}>
-              <RefreshIcon />
+              <RefreshIcon
+                sx={
+                  loading
+                    ? {
+                      animation: "spin 1s linear infinite",
+                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                    }
+                    : {}
+                }
+              />
             </IconButton>
           </Stack>
         )
@@ -175,7 +184,16 @@ export default function TemplateList() {
       {matchDownMd && (
         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
           <IconButton onClick={fetchTemplates} disabled={loading} size="small">
-            <RefreshIcon />
+            <RefreshIcon
+              sx={
+                loading
+                  ? {
+                    animation: "spin 1s linear infinite",
+                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                  }
+                  : {}
+              }
+            />
           </IconButton>
         </Stack>
       )}

@@ -457,6 +457,17 @@ func GetGroups(c *gin.Context) {
 	utils.OkDetailed(c, "获取分组列表成功", groups)
 }
 
+// GetSources 获取所有来源列表
+func GetSources(c *gin.Context) {
+	var node models.Node
+	sources, err := node.GetAllSources()
+	if err != nil {
+		utils.FailWithMsg(c, "获取来源列表失败")
+		return
+	}
+	utils.OkDetailed(c, "获取来源列表成功", sources)
+}
+
 // GetSpeedTestConfig 获取测速配置
 func GetSpeedTestConfig(c *gin.Context) {
 	cron, _ := models.GetSetting("speed_test_cron")

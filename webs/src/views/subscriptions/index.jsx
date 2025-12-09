@@ -75,7 +75,7 @@ import EditNoteIcon from '@mui/icons-material/EditNote';
 import MainCard from 'ui-component/cards/MainCard';
 import NodeRenameBuilder from './NodeRenameBuilder';
 import { getSubscriptions, addSubscription, updateSubscription, deleteSubscription, sortSubscription } from 'api/subscriptions';
-import { getNodes, getNodeCountries } from 'api/nodes';
+import { getNodes, getNodeCountries, getNodeGroups, getNodeSources } from "api/nodes";
 import { getTemplates } from 'api/templates';
 import { getScripts } from 'api/scripts';
 
@@ -212,23 +212,9 @@ export default function SubscriptionList() {
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // 获取分组列表
-  const groupOptions = useMemo(() => {
-    const groups = new Set();
-    allNodes.forEach((node) => {
-      if (node.Group) groups.add(node.Group);
-    });
-    return Array.from(groups).sort();
-  }, [allNodes]);
-
-  // 获取来源列表
-  const sourceOptions = useMemo(() => {
-    const sources = new Set();
-    allNodes.forEach((node) => {
-      if (node.Source) sources.add(node.Source);
-    });
-    return Array.from(sources).sort();
-  }, [allNodes]);
+  // 从后端获取的分组和来源选项
+  const [groupOptions, setGroupOptions] = useState([]);
+  const [sourceOptions, setSourceOptions] = useState([]);
 
   // 按分组统计节点数量
   const groupNodeCounts = useMemo(() => {
@@ -275,18 +261,22 @@ export default function SubscriptionList() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [subRes, nodesRes, templatesRes, scriptsRes, countriesRes] = await Promise.all([
+      const [subRes, nodesRes, templatesRes, scriptsRes, countriesRes, groupsRes, sourcesRes] = await Promise.all([
         getSubscriptions(),
         getNodes(),
         getTemplates(),
         getScripts(),
-        getNodeCountries()
+        getNodeCountries(),
+        getNodeGroups(),
+        getNodeSources()
       ]);
       setSubscriptions(subRes.data || []);
       setAllNodes(nodesRes.data || []);
       setTemplates(templatesRes.data || []);
       setScripts(scriptsRes.data || []);
       setCountryOptions(countriesRes.data || []);
+      setGroupOptions((groupsRes.data || []).sort());
+      setSourceOptions((sourcesRes.data || []).sort());
     } catch (error) {
       console.error(error);
       showMessage('获取数据失败', 'error');
@@ -649,7 +639,16 @@ export default function SubscriptionList() {
               添加订阅
             </Button>
             <IconButton onClick={fetchData} disabled={loading}>
-              <RefreshIcon />
+              <RefreshIcon
+                sx={
+                  loading
+                    ? {
+                      animation: "spin 1s linear infinite",
+                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                    }
+                    : {}
+                }
+              />
             </IconButton>
           </Stack>
         )
@@ -658,7 +657,16 @@ export default function SubscriptionList() {
       {matchDownMd && (
         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
           <IconButton onClick={fetchData} disabled={loading} size="small">
-            <RefreshIcon />
+            <RefreshIcon
+              sx={
+                loading
+                  ? {
+                    animation: "spin 1s linear infinite",
+                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                  }
+                  : {}
+              }
+            />
           </IconButton>
         </Stack>
       )}
