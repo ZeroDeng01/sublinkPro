@@ -161,6 +161,7 @@ export default function SubscriptionList() {
     if (!rule) return '';
     return rule
       .replace(/\$Name/g, '香港节点-备注')
+      .replace(/\$Flag/g, '🇭🇰')
       .replace(/\$LinkName/g, '香港01')
       .replace(/\$LinkCountry/g, 'HK')
       .replace(/\$Speed/g, '1.50MB/s')
@@ -287,6 +288,7 @@ export default function SubscriptionList() {
       setScripts(scriptsRes.data || []);
       setCountryOptions(countriesRes.data || []);
     } catch (error) {
+      console.error(error);
       showMessage('获取数据失败', 'error');
     } finally {
       setLoading(false);
@@ -389,6 +391,7 @@ export default function SubscriptionList() {
         showMessage('删除成功');
         fetchData();
       } catch (error) {
+        console.error(error);
         showMessage('删除失败', 'error');
       }
     });
@@ -443,6 +446,7 @@ export default function SubscriptionList() {
       setDialogOpen(false);
       fetchData();
     } catch (error) {
+      console.error(error);
       showMessage(isEdit ? '更新失败' : '添加失败', 'error');
     }
   };
@@ -585,6 +589,7 @@ export default function SubscriptionList() {
       setTempSortData([]);
       fetchData();
     } catch (error) {
+      console.error(error);
       showMessage('排序保存失败', 'error');
     }
   };
@@ -978,7 +983,12 @@ export default function SubscriptionList() {
               <Grid item xs={6}>
                 <FormControl fullWidth>
                   <InputLabel>Clash 模板</InputLabel>
-                  <Select value={formData.clash} label="Clash 模板" onChange={(e) => setFormData({ ...formData, clash: e.target.value })}>
+                  <Select
+                    variant={'outlined'}
+                    value={formData.clash}
+                    label="Clash 模板"
+                    onChange={(e) => setFormData({ ...formData, clash: e.target.value })}
+                  >
                     {templates.map((t) => (
                       <MenuItem key={t.file} value={`./template/${t.file}`}>
                         {t.file}

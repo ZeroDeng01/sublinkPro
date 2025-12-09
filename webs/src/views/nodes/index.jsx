@@ -38,8 +38,6 @@ import Typography from '@mui/material/Typography';
 import Autocomplete from '@mui/material/Autocomplete';
 import Tooltip from '@mui/material/Tooltip';
 import InputAdornment from '@mui/material/InputAdornment';
-import Grid from '@mui/material/Grid';
-import Divider from '@mui/material/Divider';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
@@ -110,6 +108,7 @@ const formatDateTime = (dateTimeString) => {
       second: '2-digit'
     });
   } catch (error) {
+    console.error(error);
     return '-';
   }
 };
@@ -308,6 +307,7 @@ export default function NodeList() {
       const response = await getNodes(params);
       setNodes(response.data || []);
     } catch (error) {
+      console.error(error);
       showMessage('获取节点列表失败', 'error');
     } finally {
       setLoading(false);
@@ -415,6 +415,7 @@ export default function NodeList() {
         showMessage('删除成功');
         fetchNodes();
       } catch (error) {
+        console.error(error);
         showMessage('删除失败', 'error');
       }
     });
@@ -433,6 +434,7 @@ export default function NodeList() {
         setSelectedNodes([]);
         fetchNodes();
       } catch (error) {
+        console.error(error);
         showMessage('批量删除失败', 'error');
       }
     });
@@ -491,6 +493,7 @@ export default function NodeList() {
       setNodeDialogOpen(false);
       fetchNodes();
     } catch (error) {
+      console.error(error);
       showMessage(isEditNode ? '更新失败' : '添加失败', 'error');
     }
   };
@@ -544,6 +547,7 @@ export default function NodeList() {
       fetchSchedulers();
       fetchNodes();
     } catch (error) {
+      console.error(error);
       showMessage('删除失败', 'error');
     }
     setDeleteSchedulerDialogOpen(false);
@@ -567,6 +571,7 @@ export default function NodeList() {
         fetchSchedulers();
         fetchNodes();
       } catch (error) {
+        console.error(error);
         showMessage('提交更新任务失败', 'error');
       }
     });
@@ -607,6 +612,7 @@ export default function NodeList() {
       setSchedulerFormOpen(false);
       fetchSchedulers();
     } catch (error) {
+      console.error(error);
       showMessage(isEditScheduler ? '更新失败' : '添加失败', 'error');
     }
   };
@@ -618,6 +624,7 @@ export default function NodeList() {
       setSpeedTestForm(response.data || { cron: '', enabled: false, mode: 'tcp', url: '', timeout: 5, groups: [] });
       setSpeedTestDialogOpen(true);
     } catch (error) {
+      console.error(error);
       showMessage('获取测速配置失败', 'error');
     }
   };
@@ -641,6 +648,7 @@ export default function NodeList() {
       showMessage('保存成功');
       setSpeedTestDialogOpen(false);
     } catch (error) {
+      console.error(error);
       showMessage('保存测速配置失败', 'error');
     }
   };
@@ -650,6 +658,7 @@ export default function NodeList() {
       await runSpeedTest();
       showMessage('测速任务已在后台启动，请稍后刷新查看结果');
     } catch (error) {
+      console.error(error);
       showMessage('启动测速任务失败', 'error');
     }
   };
@@ -664,6 +673,7 @@ export default function NodeList() {
       await runSpeedTest(ids);
       showMessage(`已启动 ${ids.length} 个节点的测速任务`);
     } catch (error) {
+      console.error(error);
       showMessage('启动批量测速任务失败', 'error');
     }
   };
@@ -673,6 +683,7 @@ export default function NodeList() {
       await runSpeedTest([node.ID]);
       showMessage(`节点 ${node.Name} 测速任务已启动`);
     } catch (error) {
+      console.error(error);
       showMessage('启动测速任务失败', 'error');
     }
   };
@@ -788,7 +799,8 @@ export default function NodeList() {
       <Stack direction="row" spacing={2} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>分组</InputLabel>
-          <Select value={groupFilter} label="分组" onChange={(e) => setGroupFilter(e.target.value)}>
+          <Select value={groupFilter} label="分组" onChange={(e) => setGroupFilter(e.target.value)}
+                  variant={"outlined"}>
             <MenuItem value="">全部</MenuItem>
             <MenuItem value="未分组">未分组</MenuItem>
             {groupOptions.map((group) => (
@@ -807,7 +819,8 @@ export default function NodeList() {
         />
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>来源</InputLabel>
-          <Select value={sourceFilter} label="来源" onChange={(e) => setSourceFilter(e.target.value)}>
+          <Select value={sourceFilter} label="来源" onChange={(e) => setSourceFilter(e.target.value)}
+                  variant={"outlined"}>
             <MenuItem value="">全部</MenuItem>
             <MenuItem value="手动添加">手动添加</MenuItem>
             {sourceOptions.map((source) => (
@@ -1457,7 +1470,12 @@ export default function NodeList() {
             />
             <FormControl fullWidth>
               <InputLabel>测速模式</InputLabel>
-              <Select value={speedTestForm.mode} label="测速模式" onChange={(e) => handleSpeedModeChange(e.target.value)}>
+              <Select
+                variant={"outlined"}
+                value={speedTestForm.mode}
+                label="测速模式"
+                onChange={(e) => handleSpeedModeChange(e.target.value)}
+              >
                 <MenuItem value="tcp">Mihomo - 仅延迟测试 (更快)</MenuItem>
                 <MenuItem value="mihomo">Mihomo - 真速度测试 (延迟+下载速度)</MenuItem>
               </Select>
