@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -18,6 +19,50 @@ type NodeInfo struct {
 	Source      string  // 来源（手动添加/订阅名称）
 	Index       int     // 序号 (从1开始)
 	Protocol    string  // 协议类型
+}
+
+// PreprocessRule 原名预处理规则结构体
+type PreprocessRule struct {
+	MatchMode   string `json:"matchMode"`   // 匹配模式: "text" 或 "regex"
+	Pattern     string `json:"pattern"`     // 匹配模式字符串
+	Replacement string `json:"replacement"` // 替换内容
+	Enabled     bool   `json:"enabled"`     // 是否启用
+}
+
+// PreprocessNodeName 应用预处理规则处理节点原名
+// rulesJSON: JSON格式的预处理规则数组
+// linkName: 原始节点名称
+// 返回处理后的名称
+func PreprocessNodeName(rulesJSON string, linkName string) string {
+	if rulesJSON == "" || linkName == "" {
+		return linkName
+	}
+
+	var rules []PreprocessRule
+	if err := json.Unmarshal([]byte(rulesJSON), &rules); err != nil {
+		return linkName
+	}
+
+	result := linkName
+	for _, rule := range rules {
+		if !rule.Enabled || rule.Pattern == "" {
+			continue
+		}
+
+		if rule.MatchMode == "regex" {
+			// 正则表达式匹配
+			re, err := regexp.Compile(rule.Pattern)
+			if err != nil {
+				continue // 跳过无效的正则表达式
+			}
+			result = re.ReplaceAllString(result, rule.Replacement)
+		} else {
+			// 纯文本匹配 (默认)
+			result = strings.ReplaceAll(result, rule.Pattern, rule.Replacement)
+		}
+	}
+
+	return result
 }
 
 // ISOToFlag 将国家ISO代码转换为国旗emoji

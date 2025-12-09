@@ -74,6 +74,7 @@ import EditNoteIcon from '@mui/icons-material/EditNote';
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import NodeRenameBuilder from './NodeRenameBuilder';
+import NodeNamePreprocessor from "./NodeNamePreprocessor";
 import { getSubscriptions, addSubscription, updateSubscription, deleteSubscription, sortSubscription } from 'api/subscriptions';
 import { getNodes, getNodeCountries, getNodeGroups, getNodeSources } from "api/nodes";
 import { getTemplates } from 'api/templates';
@@ -153,7 +154,8 @@ export default function SubscriptionList() {
     MinSpeed: 0,
     CountryWhitelist: [],
     CountryBlacklist: [],
-    nodeNameRule: ''
+    nodeNameRule: "",
+    nodeNamePreprocess: ""
   });
 
   // 预览节点名称
@@ -322,7 +324,8 @@ export default function SubscriptionList() {
       MinSpeed: 0,
       CountryWhitelist: [],
       CountryBlacklist: [],
-      nodeNameRule: ''
+      nodeNameRule: "",
+      nodeNamePreprocess: ""
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -365,7 +368,8 @@ export default function SubscriptionList() {
       MinSpeed: sub.MinSpeed || 0,
       CountryWhitelist: sub.CountryWhitelist ? sub.CountryWhitelist.split(',').filter((c) => c.trim()) : [],
       CountryBlacklist: sub.CountryBlacklist ? sub.CountryBlacklist.split(',').filter((c) => c.trim()) : [],
-      nodeNameRule: sub.NodeNameRule || ''
+      nodeNameRule: sub.NodeNameRule || "",
+      nodeNamePreprocess: sub.NodeNamePreprocess || ""
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -411,7 +415,8 @@ export default function SubscriptionList() {
         scripts: formData.selectedScripts.join(','),
         CountryWhitelist: formData.CountryWhitelist.join(','),
         CountryBlacklist: formData.CountryBlacklist.join(','),
-        NodeNameRule: formData.nodeNameRule
+        NodeNameRule: formData.nodeNameRule,
+        NodeNamePreprocess: formData.nodeNamePreprocess
       };
 
       if (formData.selectionMode === 'nodes') {
@@ -1838,6 +1843,12 @@ export default function SubscriptionList() {
             />
 
             <Divider />
+
+            {/* 原名预处理 */}
+            <NodeNamePreprocessor
+              value={formData.nodeNamePreprocess}
+              onChange={(rules) => setFormData({ ...formData, nodeNamePreprocess: rules })}
+            />
 
             {/* 节点命名规则 */}
             <Box>

@@ -65,6 +65,10 @@ func InitSqlite() {
 	if err := RunAutoMigrate("0001_subcription_add_rename", &Subcription{}); err != nil {
 		log.Printf("Subcription 表迁移失败: %v", err)
 	}
+	// 增加节点命名替换规则
+	if err := RunAutoMigrate("0001_subcription_add_nodeNamePreprocess", &Subcription{}); err != nil {
+		log.Printf("Subcription 表迁移失败: %v", err)
+	}
 
 	if err := RunAutoMigrate("0002_subcription_node", &SubcriptionNode{}); err != nil {
 		log.Printf("SubcriptionNode 表迁移失败: %v", err)

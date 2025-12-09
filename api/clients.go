@@ -149,12 +149,14 @@ func GetV2ray(c *gin.Context) {
 	}
 
 	for idx, v := range sub.Nodes {
+		// 应用预处理规则到 LinkName
+		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
 		// 应用重命名规则
 		nodeLink := v.Link
 		if sub.NodeNameRule != "" {
 			newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
 				Name:        v.Name,
-				LinkName:    v.LinkName,
+				LinkName:    processedLinkName,
 				LinkCountry: v.LinkCountry,
 				Speed:       v.Speed,
 				DelayTime:   v.DelayTime,
@@ -174,7 +176,7 @@ func GetV2ray(c *gin.Context) {
 				for i, link := range links {
 					newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
 						Name:        v.Name,
-						LinkName:    v.LinkName,
+						LinkName:    processedLinkName,
 						LinkCountry: v.LinkCountry,
 						Speed:       v.Speed,
 						DelayTime:   v.DelayTime,
@@ -254,12 +256,14 @@ func GetClash(c *gin.Context) {
 		nodesJSON = resJSON
 	}
 	for idx, v := range sub.Nodes {
+		// 应用预处理规则到 LinkName
+		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
 		// 应用重命名规则
 		nodeLink := v.Link
 		if sub.NodeNameRule != "" {
 			newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
 				Name:        v.Name,
-				LinkName:    v.LinkName,
+				LinkName:    processedLinkName,
 				LinkCountry: v.LinkCountry,
 				Speed:       v.Speed,
 				DelayTime:   v.DelayTime,
@@ -279,7 +283,7 @@ func GetClash(c *gin.Context) {
 				if sub.NodeNameRule != "" {
 					newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
 						Name:        v.Name,
-						LinkName:    v.LinkName,
+						LinkName:    processedLinkName,
 						LinkCountry: v.LinkCountry,
 						Speed:       v.Speed,
 						DelayTime:   v.DelayTime,
@@ -384,12 +388,14 @@ func GetSurge(c *gin.Context) {
 	}
 
 	for idx, v := range sub.Nodes {
+		// 应用预处理规则到 LinkName
+		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
 		// 应用重命名规则
 		nodeLink := v.Link
 		if sub.NodeNameRule != "" {
 			newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
 				Name:        v.Name,
-				LinkName:    v.LinkName,
+				LinkName:    processedLinkName,
 				LinkCountry: v.LinkCountry,
 				Speed:       v.Speed,
 				DelayTime:   v.DelayTime,
@@ -408,7 +414,7 @@ func GetSurge(c *gin.Context) {
 				if sub.NodeNameRule != "" {
 					newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
 						Name:        v.Name,
-						LinkName:    v.LinkName,
+						LinkName:    processedLinkName,
 						LinkCountry: v.LinkCountry,
 						Speed:       v.Speed,
 						DelayTime:   v.DelayTime,

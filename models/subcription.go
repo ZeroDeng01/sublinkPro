@@ -27,7 +27,8 @@ type Subcription struct {
 	MinSpeed         float64          `json:"MinSpeed"`         // 最小速度(MB/s)
 	CountryWhitelist string           `json:"CountryWhitelist"` // 国家白名单（逗号分隔）
 	CountryBlacklist string           `json:"CountryBlacklist"` // 国家黑名单（逗号分隔）
-	NodeNameRule     string           `json:"NodeNameRule"`     // 节点命名规则模板
+	NodeNameRule       string           `json:"NodeNameRule"`       // 节点命名规则模板
+	NodeNamePreprocess string           `json:"NodeNamePreprocess"` // 原名预处理规则 (JSON数组)
 	CreatedAt        time.Time        `json:"CreatedAt"`
 	UpdatedAt        time.Time        `json:"UpdatedAt"`
 	DeletedAt        gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
@@ -124,18 +125,18 @@ func (sub *Subcription) AddScripts(scriptIDs []int) error {
 
 // 更新订阅
 func (sub *Subcription) Update() error {
-	// 使用 map 来更新,这样可以更新空字符串
 	updates := map[string]interface{}{
-		"name":              sub.Name,
-		"config":            sub.Config,
-		"create_date":       sub.CreateDate,
-		"ip_whitelist":      sub.IPWhitelist,
-		"ip_blacklist":      sub.IPBlacklist,
-		"delay_time":        sub.DelayTime,
-		"min_speed":         sub.MinSpeed,
-		"country_whitelist": sub.CountryWhitelist,
-		"country_blacklist": sub.CountryBlacklist,
-		"node_name_rule":    sub.NodeNameRule,
+		"name":                 sub.Name,
+		"config":               sub.Config,
+		"create_date":          sub.CreateDate,
+		"ip_whitelist":         sub.IPWhitelist,
+		"ip_blacklist":         sub.IPBlacklist,
+		"delay_time":           sub.DelayTime,
+		"min_speed":            sub.MinSpeed,
+		"country_whitelist":    sub.CountryWhitelist,
+		"country_blacklist":    sub.CountryBlacklist,
+		"node_name_rule":       sub.NodeNameRule,
+		"node_name_preprocess": sub.NodeNamePreprocess,
 	}
 	return DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 }
