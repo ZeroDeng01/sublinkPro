@@ -40,7 +40,7 @@ var (
 func GetSSEBroker() *SSEBroker {
 	sseOnce.Do(func() {
 		sseBroker = &SSEBroker{
-			Notifier:       make(chan []byte, 1),
+			Notifier:       make(chan []byte, 100), // Buffer increased for rapid progress events
 			newClients:     make(chan chan []byte),
 			closingClients: make(chan chan []byte),
 			clients:        make(map[chan []byte]bool),
@@ -79,11 +79,9 @@ func (broker *SSEBroker) Listen() {
 				select {
 				case clientMessageChan <- event:
 				default:
-					// If the client's channel is blocked, remove the client
-					// This prevents one slow client from blocking the entire broadcast
-					log.Println("Client channel blocked, removing client")
-					delete(broker.clients, clientMessageChan)
-					close(clientMessageChan)
+					// If the client's channel buffer is full, just skip this message
+					// The client will catch up with later messages
+					// Don't disconnect - they might just be temporarily slow
 				}
 			}
 			broker.mutex.Unlock()
@@ -96,9 +94,7 @@ func (broker *SSEBroker) Listen() {
 				select {
 				case clientMessageChan <- heartbeatMsg:
 				default:
-					log.Println("Client channel blocked during heartbeat, removing client")
-					delete(broker.clients, clientMessageChan)
-					close(clientMessageChan)
+					// Client buffer full, skip heartbeat (they're probably processing messages)
 				}
 			}
 			broker.mutex.Unlock()
@@ -151,6 +147,38 @@ func (broker *SSEBroker) BroadcastEvent(event string, payload NotificationPayloa
 		return
 	}
 	msg := fmt.Sprintf("event: %s\ndata: %s\n\n", event, jsonData)
+	broker.Notifier <- []byte(msg)
+}
+
+// ProgressPayload defines the payload for progress updates
+// This is separate from NotificationPayload to avoid webhook triggers
+type ProgressPayload struct {
+	TaskID      string      `json:"taskId"`      // 任务唯一标识
+	TaskType    string      `json:"taskType"`    // 任务类型: speed_test, sub_update
+	TaskName    string      `json:"taskName"`    // 任务名称（如订阅名称）
+	Status      string      `json:"status"`      // started, progress, completed, error
+	Current     int         `json:"current"`     // 当前进度
+	Total       int         `json:"total"`       // 总数
+	CurrentItem string      `json:"currentItem"` // 当前处理的项目名称
+	Result      interface{} `json:"result"`      // 当前项目的结果
+	Message     string      `json:"message"`     // 可选的消息
+	Time        string      `json:"time"`        // 时间戳
+}
+
+// BroadcastProgress sends a progress update to all clients
+// This does NOT trigger webhooks, unlike BroadcastEvent
+func (broker *SSEBroker) BroadcastProgress(payload ProgressPayload) {
+	// Ensure time is set
+	if payload.Time == "" {
+		payload.Time = time.Now().Format("2006-01-02 15:04:05")
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error marshaling SSE progress payload: %v", err)
+		return
+	}
+	msg := fmt.Sprintf("event: task_progress\ndata: %s\n\n", jsonData)
 	broker.Notifier <- []byte(msg)
 }
 

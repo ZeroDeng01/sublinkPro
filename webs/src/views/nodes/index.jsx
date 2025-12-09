@@ -52,6 +52,8 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
+import TaskProgressPanel from 'components/TaskProgressPanel';
+import { useTaskProgress } from 'contexts/TaskProgressContext';
 import {
   getNodes,
   addNodes,
@@ -172,6 +174,9 @@ const validateCronExpression = (cron) => {
 export default function NodeList() {
   const theme = useTheme();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
+
+  // Task progress for auto-refresh
+  const { registerOnComplete, unregisterOnComplete } = useTaskProgress();
 
   const [nodes, setNodes] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -400,9 +405,23 @@ export default function NodeList() {
   });
 
   // 手动刷新（保留搜索条件）
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     fetchNodes(getCurrentFilters());
-  };
+  }, [fetchNodes, searchQuery, groupFilter, sourceFilter, maxDelay, minSpeed, countryFilter, sortBy, sortOrder]);
+
+  // 监听任务完成，自动刷新节点列表
+  useEffect(() => {
+    const onTaskComplete = ({ taskType, status }) => {
+      // 当测速或订阅更新任务完成时，自动刷新列表
+      if (status === 'completed' && (taskType === 'speed_test' || taskType === 'sub_update')) {
+        handleRefresh();
+      }
+    };
+    registerOnComplete(onTaskComplete);
+    return () => {
+      unregisterOnComplete(onTaskComplete);
+    };
+  }, [registerOnComplete, unregisterOnComplete, handleRefresh]);
 
   // === 节点操作 ===
   const handleAddNode = () => {
@@ -779,9 +798,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: "spin 1s linear infinite",
-                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -790,6 +809,9 @@ export default function NodeList() {
         )
       }
     >
+      {/* 任务进度显示 */}
+      <TaskProgressPanel />
+
       {/* 移动端顶部额外按钮栏 */}
       {matchDownMd && (
         <Stack direction="row" spacing={1} sx={{ mb: 2, overflowX: 'auto', pb: 1 }} className="hide-scrollbar">
@@ -821,9 +843,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: "spin 1s linear infinite",
-                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -834,8 +856,7 @@ export default function NodeList() {
       <Stack direction="row" spacing={2} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>分组</InputLabel>
-          <Select value={groupFilter} label="分组" onChange={(e) => setGroupFilter(e.target.value)}
-                  variant={"outlined"}>
+          <Select value={groupFilter} label="分组" onChange={(e) => setGroupFilter(e.target.value)} variant={'outlined'}>
             <MenuItem value="">全部</MenuItem>
             <MenuItem value="未分组">未分组</MenuItem>
             {groupOptions.map((group) => (
@@ -854,8 +875,7 @@ export default function NodeList() {
         />
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>来源</InputLabel>
-          <Select value={sourceFilter} label="来源" onChange={(e) => setSourceFilter(e.target.value)}
-                  variant={"outlined"}>
+          <Select value={sourceFilter} label="来源" onChange={(e) => setSourceFilter(e.target.value)} variant={'outlined'}>
             <MenuItem value="">全部</MenuItem>
             <MenuItem value="手动添加">手动添加</MenuItem>
             {sourceOptions.map((source) => (
@@ -1506,7 +1526,7 @@ export default function NodeList() {
             <FormControl fullWidth>
               <InputLabel>测速模式</InputLabel>
               <Select
-                variant={"outlined"}
+                variant={'outlined'}
                 value={speedTestForm.mode}
                 label="测速模式"
                 onChange={(e) => handleSpeedModeChange(e.target.value)}

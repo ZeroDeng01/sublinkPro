@@ -100,15 +100,15 @@ export function getNodeCountries() {
 // 获取节点分组列表
 export function getNodeGroups() {
   return request({
-    url: "/v1/nodes/groups",
-    method: "get"
+    url: '/v1/nodes/groups',
+    method: 'get'
   });
 }
 
 // 获取节点来源列表
 export function getNodeSources() {
   return request({
-    url: "/v1/nodes/sources",
-    method: "get"
+    url: '/v1/nodes/sources',
+    method: 'get'
   });
 }

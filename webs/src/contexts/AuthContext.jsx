@@ -98,6 +98,18 @@ export function AuthProvider({ children }) {
       }
     });
 
+    // 监听任务进度事件 (用于实时进度显示，不产生通知)
+    eventSource.addEventListener('task_progress', (event) => {
+      resetHeartbeat();
+      try {
+        const data = JSON.parse(event.data);
+        // 使用 CustomEvent 分发进度数据，让 TaskProgressContext 接收
+        window.dispatchEvent(new CustomEvent('task_progress', { detail: data }));
+      } catch (e) {
+        console.error('解析 SSE task_progress 消息失败', e);
+      }
+    });
+
     // 监听通用消息
     eventSource.onmessage = (event) => {
       resetHeartbeat();

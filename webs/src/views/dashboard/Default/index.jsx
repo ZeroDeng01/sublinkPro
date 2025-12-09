@@ -37,6 +37,7 @@ import SecurityIcon from '@mui/icons-material/Security';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
+import TaskProgressPanel from 'components/TaskProgressPanel';
 import { getSubTotal, getNodeTotal, getFastestSpeedNode, getLowestDelayNode, getCountryStats, getProtocolStats } from 'api/total';
 
 // ==============================|| 动画定义 ||============================== //
@@ -861,6 +862,9 @@ export default function DashboardDefault() {
 
       {/* Star 提醒卡片 */}
       <StarReminderCard />
+
+      {/* 任务进度面板 */}
+      <TaskProgressPanel />
 
       {/* 统计卡片 */}
       <Grid container spacing={3} sx={{ mb: 4 }}>

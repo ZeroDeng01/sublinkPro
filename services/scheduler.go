@@ -390,10 +390,33 @@ func ExecuteSpecificNodeSpeedTestTask(nodeIDs []int) {
 func RunSpeedTestOnNodes(nodes []models.Node) {
 	log.Printf("开始执行节点测速，总节点数: %d", len(nodes))
 
+	// 生成唯一任务ID
+	taskID := fmt.Sprintf("speed_test_%d", time.Now().UnixNano())
+	totalNodes := len(nodes)
+
+	// 广播任务开始事件
+	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+		TaskID:   taskID,
+		TaskType: "speed_test",
+		TaskName: "节点测速",
+		Status:   "started",
+		Current:  0,
+		Total:    totalNodes,
+		Message:  fmt.Sprintf("开始测速 %d 个节点", totalNodes),
+	})
+
 	// 确保函数最后一定会执行日志和通知
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("测速任务执行过程中发生严重错误: %v", r)
+			// 广播错误进度
+			sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+				TaskID:   taskID,
+				TaskType: "speed_test",
+				TaskName: "节点测速",
+				Status:   "error",
+				Message:  fmt.Sprintf("测速任务执行异常: %v", r),
+			})
 			sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
 				Event:   "speed_test",
 				Title:   "测速任务异常",
@@ -427,15 +450,10 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	sem := make(chan struct{}, concurrency)
 	var wg sync.WaitGroup
 
-	// 结果统计
-	var successCount, failCount int32
+	// 结果统计 - 使用原子操作
+	var successCount, failCount, completedCount int32
 	var mu sync.Mutex
 
-	// 总体超时控制
-	// overallTimeout := time.Duration(len(nodes)) * speedTestTimeout / time.Duration(concurrency) * 2
-	// if overallTimeout < 30*time.Second {
-	// 	overallTimeout = 30 * time.Second
-	// }
 	done := make(chan struct{})
 
 	go func() {
@@ -462,11 +480,24 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 				mu.Lock()
 				defer mu.Unlock()
 
+				// 更新完成计数
+				currentCompleted := int(completedCount) + 1
+				completedCount++
+
+				var resultStatus string
+				var resultData map[string]interface{}
+
 				if err != nil {
 					failCount++
 					log.Printf("节点 [%s] 测速失败: %v", n.Name, err)
 					speed = -1
 					latency = -1
+					resultStatus = "failed"
+					resultData = map[string]interface{}{
+						"speed":   speed,
+						"latency": latency,
+						"error":   err.Error(),
+					}
 					// 更新节点状态为失败
 					n.Speed = speed
 					n.DelayTime = latency
@@ -477,6 +508,11 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 				} else {
 					successCount++
 					log.Printf("节点 [%s] 测速成功: 速度 %.2f MB/s, 延迟 %d ms", n.Name, speed, latency)
+					resultStatus = "success"
+					resultData = map[string]interface{}{
+						"speed":   speed,
+						"latency": latency,
+					}
 					// 更新节点测速结果
 					n.Speed = speed
 					n.DelayTime = latency
@@ -502,6 +538,24 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 						log.Printf("更新节点 %s 测速结果失败: %v", n.Name, err)
 					}
 				}
+
+				// 广播进度
+				sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+					TaskID:      taskID,
+					TaskType:    "speed_test",
+					TaskName:    "节点测速",
+					Status:      "progress",
+					Current:     currentCompleted,
+					Total:       totalNodes,
+					CurrentItem: n.Name,
+					Result: map[string]interface{}{
+						"status":  resultStatus,
+						"speed":   speed,
+						"latency": latency,
+						"data":    resultData,
+					},
+					Message: fmt.Sprintf("已完成 %d/%d", currentCompleted, totalNodes),
+				})
 			}(node)
 		}
 		wg.Wait()
@@ -509,7 +563,23 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	}()
 
 	<-done
-	// 完成
+
+	// 广播完成进度
+	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+		TaskID:   taskID,
+		TaskType: "speed_test",
+		TaskName: "节点测速",
+		Status:   "completed",
+		Current:  totalNodes,
+		Total:    totalNodes,
+		Message:  fmt.Sprintf("测速完成 (成功: %d, 失败: %d)", successCount, failCount),
+		Result: map[string]interface{}{
+			"success": successCount,
+			"fail":    failCount,
+		},
+	})
+
+	// 完成 (触发webhook)
 	log.Printf("节点测速任务执行完成 - 成功: %d, 失败: %d", successCount, failCount)
 	sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
 		Event:   "speed_test",

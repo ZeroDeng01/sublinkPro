@@ -13,8 +13,8 @@ func SSE(r *gin.Engine) {
 	r.GET("/api/sse", middlewares.AuthToken, func(c *gin.Context) {
 		broker := sse.GetSSEBroker()
 
-		// Create a new channel for this client
-		clientChan := make(chan []byte)
+		// Create a buffered channel for this client to handle rapid progress updates
+		clientChan := make(chan []byte, 50)
 
 		// Register this client
 		broker.AddClient(clientChan)
@@ -22,7 +22,16 @@ func SSE(r *gin.Engine) {
 		defer func() {
 			// Unregister client when connection closes
 			broker.RemoveClient(clientChan)
-			close(clientChan)
+			// Safely close the channel - it may already be closed by the broker
+			// if it was blocked during a broadcast
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						// Channel was already closed by the broker, ignore
+					}
+				}()
+				close(clientChan)
+			}()
 		}()
 
 		// Set headers for SSE

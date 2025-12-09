@@ -155,6 +155,23 @@ func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithP
 func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) error {
 	addSuccessCount := 0
 	updateSuccessCount := 0
+	processedCount := 0
+	totalNodes := len(proxys)
+
+	// 生成唯一任务ID
+	taskID := fmt.Sprintf("sub_update_%d_%d", id, time.Now().UnixNano())
+
+	// 广播任务开始事件
+	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+		TaskID:   taskID,
+		TaskType: "sub_update",
+		TaskName: subName,
+		Status:   "started",
+		Current:  0,
+		Total:    totalNodes,
+		Message:  fmt.Sprintf("开始更新订阅 [%s]，共 %d 个节点", subName, totalNodes),
+	})
+
 	// 获取订阅的Group信息
 	subS := models.SubScheduler{}
 	err := subS.GetByID(id)
@@ -538,31 +555,43 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 		currentLinks[link] = true
 
 		// 判断节点是否已存在
+		var nodeStatus string
 		if existingNode, exists := existingNodeMap[link]; exists {
-			//// 节点已存在，更新节点信息
-			//Node.ID = existingNode.ID
-			//// 保留测速数据
-			//Node.Speed = existingNode.Speed
-			//Node.DelayTime = existingNode.DelayTime
-			//Node.LastCheck = existingNode.LastCheck
-			//err = Node.Update()
-			//if err != nil {
-			//	log.Printf("❌节点更新失败【%s】：%v", proxy.Name, err)
-			//} else {
-			//	updateSuccessCount++
-			//	log.Printf("🔄节点更新成功【%s】", proxy.Name)
-			//}
 			updateSuccessCount++
+			nodeStatus = "skipped"
 			log.Printf("⚠️节点【%s】已存在，不进行任何处理", existingNode.Name)
 		} else {
 			// 节点不存在，插入新节点
 			err = Node.Add()
 			if err != nil {
+				nodeStatus = "failed"
 				log.Printf("❌节点插入失败【%s】：%v", proxy.Name, err)
 			} else {
 				addSuccessCount++
+				nodeStatus = "added"
 				log.Printf("✅节点插入成功【%s】", proxy.Name)
 			}
+		}
+
+		// 更新进度并广播 (节流：超过50个节点时每10个节点广播一次)
+		processedCount++
+		shouldBroadcast := totalNodes <= 50 || processedCount%10 == 0 || processedCount == totalNodes
+		if shouldBroadcast {
+			sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+				TaskID:      taskID,
+				TaskType:    "sub_update",
+				TaskName:    subName,
+				Status:      "progress",
+				Current:     processedCount,
+				Total:       totalNodes,
+				CurrentItem: proxy.Name,
+				Result: map[string]interface{}{
+					"status": nodeStatus,
+					"added":  addSuccessCount,
+					"exists": updateSuccessCount,
+				},
+				Message: fmt.Sprintf("处理节点 %d/%d", processedCount, totalNodes),
+			})
 		}
 	}
 
@@ -599,6 +628,23 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 	if err1 != nil {
 		return err1
 	}
+	// 广播完成进度
+	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+		TaskID:   taskID,
+		TaskType: "sub_update",
+		TaskName: subName,
+		Status:   "completed",
+		Current:  totalNodes,
+		Total:    totalNodes,
+		Message:  fmt.Sprintf("订阅更新完成 (新增: %d, 已存在: %d, 删除: %d)", addSuccessCount, updateSuccessCount, deleteCount),
+		Result: map[string]interface{}{
+			"added":   addSuccessCount,
+			"exists":  updateSuccessCount,
+			"deleted": deleteCount,
+		},
+	})
+
+	// 触发webhook的完成事件
 	sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
 		Event:   "sub_update",
 		Title:   "订阅更新完成",
