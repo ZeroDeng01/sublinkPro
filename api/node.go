@@ -446,6 +446,50 @@ func NodeBatchDel(c *gin.Context) {
 	utils.OkWithMsg(c, "批量删除成功")
 }
 
+// NodeBatchUpdateGroup 批量更新节点分组
+func NodeBatchUpdateGroup(c *gin.Context) {
+	var req struct {
+		IDs   []int  `json:"ids"`
+		Group string `json:"group"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+	if len(req.IDs) == 0 {
+		utils.FailWithMsg(c, "请选择要修改的节点")
+		return
+	}
+	err := models.BatchUpdateGroup(req.IDs, req.Group)
+	if err != nil {
+		utils.FailWithMsg(c, "批量更新分组失败")
+		return
+	}
+	utils.OkWithMsg(c, "批量更新分组成功")
+}
+
+// NodeBatchUpdateDialerProxy 批量更新节点前置代理
+func NodeBatchUpdateDialerProxy(c *gin.Context) {
+	var req struct {
+		IDs             []int  `json:"ids"`
+		DialerProxyName string `json:"dialerProxyName"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+	if len(req.IDs) == 0 {
+		utils.FailWithMsg(c, "请选择要修改的节点")
+		return
+	}
+	err := models.BatchUpdateDialerProxy(req.IDs, req.DialerProxyName)
+	if err != nil {
+		utils.FailWithMsg(c, "批量更新前置代理失败")
+		return
+	}
+	utils.OkWithMsg(c, "批量更新前置代理成功")
+}
+
 // 获取所有分组列表
 func GetGroups(c *gin.Context) {
 	var node models.Node

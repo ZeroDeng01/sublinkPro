@@ -479,6 +479,56 @@ func BatchDel(ids []int) error {
 	return nil
 }
 
+// BatchUpdateGroup 批量更新节点分组
+func BatchUpdateGroup(ids []int, group string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	// 更新数据库
+	if err := DB.Model(&Node{}).Where("id IN ?", ids).Update("group", group).Error; err != nil {
+		return err
+	}
+
+	// 更新缓存
+	nodeLock.Lock()
+	defer nodeLock.Unlock()
+
+	for _, id := range ids {
+		if n, ok := nodeCache[id]; ok {
+			n.Group = group
+			nodeCache[id] = n
+		}
+	}
+
+	return nil
+}
+
+// BatchUpdateDialerProxy 批量更新节点前置代理
+func BatchUpdateDialerProxy(ids []int, dialerProxyName string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	// 更新数据库
+	if err := DB.Model(&Node{}).Where("id IN ?", ids).Update("dialer_proxy_name", dialerProxyName).Error; err != nil {
+		return err
+	}
+
+	// 更新缓存
+	nodeLock.Lock()
+	defer nodeLock.Unlock()
+
+	for _, id := range ids {
+		if n, ok := nodeCache[id]; ok {
+			n.DialerProxyName = dialerProxyName
+			nodeCache[id] = n
+		}
+	}
+
+	return nil
+}
+
 // GetAllGroups 获取所有分组
 func (node *Node) GetAllGroups() ([]string, error) {
 	nodeLock.RLock()

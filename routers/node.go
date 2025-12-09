@@ -14,6 +14,8 @@ func Nodes(r *gin.Engine) {
 		NodesGroup.POST("/add", api.NodeAdd)
 		NodesGroup.DELETE("/delete", api.NodeDel)
 		NodesGroup.DELETE("/batch-delete", api.NodeBatchDel)
+		NodesGroup.POST("/batch-update-group", api.NodeBatchUpdateGroup)
+		NodesGroup.POST("/batch-update-dialer-proxy", api.NodeBatchUpdateDialerProxy)
 		NodesGroup.GET("/get", api.NodeGet)
 		NodesGroup.POST("/update", api.NodeUpdadte)
 		NodesGroup.GET("/groups", api.GetGroups)

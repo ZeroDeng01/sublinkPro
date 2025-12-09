@@ -65,7 +65,9 @@ import {
   runSpeedTest,
   getNodeCountries,
   getNodeGroups,
-  getNodeSources
+  getNodeSources,
+  batchUpdateNodeGroup,
+  batchUpdateNodeDialerProxy
 } from 'api/nodes';
 import { getSubSchedulers, addSubScheduler, updateSubScheduler, deleteSubScheduler, pullSubScheduler } from 'api/scheduler';
 
@@ -278,6 +280,14 @@ export default function NodeList() {
   // 代理节点选择 - 从后端获取的完整节点列表
   const [proxyNodeOptions, setProxyNodeOptions] = useState([]);
   const [loadingProxyNodes, setLoadingProxyNodes] = useState(false);
+
+  // 批量修改分组
+  const [batchGroupDialogOpen, setBatchGroupDialogOpen] = useState(false);
+  const [batchGroupValue, setBatchGroupValue] = useState("");
+
+  // 批量修改前置代理
+  const [batchDialerProxyDialogOpen, setBatchDialerProxyDialogOpen] = useState(false);
+  const [batchDialerProxyValue, setBatchDialerProxyValue] = useState("");
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -495,6 +505,59 @@ export default function NodeList() {
         showMessage('批量删除失败', 'error');
       }
     });
+  };
+
+  // 批量修改分组
+  const handleBatchGroup = () => {
+    if (selectedNodes.length === 0) {
+      showMessage("请选择要修改的节点", "warning");
+      return;
+    }
+    setBatchGroupValue("");
+    setBatchGroupDialogOpen(true);
+  };
+
+  const handleSubmitBatchGroup = async () => {
+    try {
+      const ids = selectedNodes.map((node) => node.ID);
+      await batchUpdateNodeGroup(ids, batchGroupValue);
+      showMessage(`成功修改 ${selectedNodes.length} 个节点的分组`);
+      setSelectedNodes([]);
+      setBatchGroupDialogOpen(false);
+      fetchNodes(getCurrentFilters());
+      // 刷新分组选项
+      getNodeGroups().then((res) => {
+        setGroupOptions((res.data || []).sort());
+      });
+    } catch (error) {
+      console.error(error);
+      showMessage("批量修改分组失败", "error");
+    }
+  };
+
+  // 批量修改前置代理
+  const handleBatchDialerProxy = () => {
+    if (selectedNodes.length === 0) {
+      showMessage("请选择要修改的节点", "warning");
+      return;
+    }
+    setBatchDialerProxyValue("");
+    fetchProxyNodes();
+    setBatchDialerProxyDialogOpen(true);
+  };
+
+  const handleSubmitBatchDialerProxy = async () => {
+    try {
+      const ids = selectedNodes.map((node) => node.ID);
+      await batchUpdateNodeDialerProxy(ids, batchDialerProxyValue);
+      showMessage(`成功修改 ${selectedNodes.length} 个节点的前置代理`);
+      setSelectedNodes([]);
+      setBatchDialerProxyDialogOpen(false);
+      fetchNodes(getCurrentFilters());
+    } catch (error) {
+      console.error(error);
+      showMessage("批量修改前置代理失败", "error");
+    }
   };
 
   const handleSubmitNode = async () => {
@@ -823,9 +886,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: "spin 1s linear infinite",
+                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                    }
                     : {}
                 }
               />
@@ -868,9 +931,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: "spin 1s linear infinite",
+                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                  }
                   : {}
               }
             />
@@ -965,6 +1028,12 @@ export default function NodeList() {
           </Typography>
           <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={handleBatchDelete}>
             批量删除
+          </Button>
+          <Button size="small" color="primary" variant="outlined" onClick={handleBatchGroup}>
+            修改分组
+          </Button>
+          <Button size="small" color="primary" variant="outlined" onClick={handleBatchDialerProxy}>
+            修改前置代理
           </Button>
         </Stack>
       )}
@@ -1311,12 +1380,22 @@ export default function NodeList() {
                 onChange={(e) => setNodeForm({ ...nodeForm, name: e.target.value })}
               />
             )}
-            <TextField
-              fullWidth
-              label="前置代理节点名称或策略组名称"
+            <Autocomplete
+              freeSolo
+              options={proxyNodeOptions.map((node) => node.Name)}
+              loading={loadingProxyNodes}
               value={nodeForm.dialerProxyName}
-              onChange={(e) => setNodeForm({ ...nodeForm, dialerProxyName: e.target.value })}
-              helperText="仅Clash-Meta内核可用"
+              onChange={(e, newValue) => setNodeForm({ ...nodeForm, dialerProxyName: newValue || "" })}
+              onInputChange={(e, newInputValue) => setNodeForm({ ...nodeForm, dialerProxyName: newInputValue })}
+              onFocus={fetchProxyNodes}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="前置代理节点名称或策略组名称"
+                  placeholder="选择或输入节点名称/策略组名称"
+                  helperText="仅Clash-Meta内核可用，留空则不使用前置代理"
+                />
+              )}
             />
             <Autocomplete
               freeSolo
@@ -1657,6 +1736,74 @@ export default function NodeList() {
           <Button onClick={() => setSpeedTestDialogOpen(false)}>取消</Button>
           <Button variant="contained" onClick={handleSubmitSpeedTest}>
             保存
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 批量修改分组对话框 */}
+      <Dialog open={batchGroupDialogOpen} onClose={() => setBatchGroupDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>批量修改分组</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            将为选中的 {selectedNodes.length} 个节点设置相同的分组
+          </Typography>
+          <Autocomplete
+            freeSolo
+            options={groupOptions}
+            value={batchGroupValue}
+            onChange={(e, newValue) => setBatchGroupValue(newValue || "")}
+            onInputChange={(e, newInputValue) => setBatchGroupValue(newInputValue)}
+            renderInput={(params) => (
+              <TextField {...params} label="分组名称" placeholder="输入或选择分组名称，留空则清空分组" fullWidth />
+            )}
+          />
+          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: "block" }}>
+            提示：留空将清除所选节点的分组设置
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBatchGroupDialogOpen(false)}>取消</Button>
+          <Button variant="contained" onClick={handleSubmitBatchGroup}>
+            确认修改
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 批量修改前置代理对话框 */}
+      <Dialog open={batchDialerProxyDialogOpen} onClose={() => setBatchDialerProxyDialogOpen(false)} maxWidth="sm"
+              fullWidth>
+        <DialogTitle>批量修改前置代理</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            将为选中的 {selectedNodes.length} 个节点设置相同的前置代理
+          </Typography>
+          <Autocomplete
+            freeSolo
+            options={proxyNodeOptions.map((node) => node.Name)}
+            loading={loadingProxyNodes}
+            value={batchDialerProxyValue}
+            onChange={(e, newValue) => setBatchDialerProxyValue(newValue || "")}
+            onInputChange={(e, newInputValue) => setBatchDialerProxyValue(newInputValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="前置代理节点"
+                placeholder="选择或输入代理节点名称/策略组名称，留空则清空前置代理"
+                fullWidth
+              />
+            )}
+          />
+          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: "block" }}>
+            提示：前置代理节点用于链式代理，流量将先经过此节点再转发。留空将清除前置代理设置。
+          </Typography>
+          <Alert severity="warning" sx={{ mt: 1 }}>
+            前置代理仅 Clash-Meta 内核可用
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBatchDialerProxyDialogOpen(false)}>取消</Button>
+          <Button variant="contained" onClick={handleSubmitBatchDialerProxy}>
+            确认修改
           </Button>
         </DialogActions>
       </Dialog>
