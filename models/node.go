@@ -574,6 +574,32 @@ func ListBySourceID(sourceID int) ([]Node, error) {
 	return nodes, nil
 }
 
+// UpdateNodesBySourceID 根据订阅ID批量更新节点的来源名称和分组
+func UpdateNodesBySourceID(sourceID int, sourceName string, group string) error {
+	// 更新数据库中的节点
+	updateFields := map[string]interface{}{
+		"source": sourceName,
+		"group":  group,
+	}
+	if err := DB.Model(&Node{}).Where("source_id = ?", sourceID).Updates(updateFields).Error; err != nil {
+		return err
+	}
+
+	// 更新缓存中的节点
+	nodeLock.Lock()
+	defer nodeLock.Unlock()
+
+	for id, n := range nodeCache {
+		if n.SourceID == sourceID {
+			n.Source = sourceName
+			n.Group = group
+			nodeCache[id] = n
+		}
+	}
+
+	return nil
+}
+
 // GetFastestSpeedNode 获取最快速度节点
 func GetFastestSpeedNode() *Node {
 	nodeLock.RLock()

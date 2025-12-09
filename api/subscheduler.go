@@ -183,6 +183,12 @@ func SubSchedulerUpdate(c *gin.Context) {
 		return
 	}
 
+	// 同步更新关联节点的来源名称和分组
+	if err := models.UpdateNodesBySourceID(req.ID, req.Name, req.Group); err != nil {
+		// 记录错误但不阻断流程，因为订阅本身已更新成功
+		// 可根据需要决定是否返回错误
+	}
+
 	// 更新定时任务
 	scheduler := services.GetSchedulerManager()
 	_ = scheduler.UpdateJob(req.ID, req.CronExpr, req.Enabled, req.URL, req.Name)
