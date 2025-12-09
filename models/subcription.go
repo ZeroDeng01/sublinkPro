@@ -4,34 +4,37 @@ import (
 	"fmt"
 	"strings"
 	"sublink/dto"
+	"sublink/utils"
 	"time"
 
 	"gorm.io/gorm"
 )
 
 type Subcription struct {
-	ID               int
-	Name             string
-	Config           string    `gorm:"embedded"`
-	Nodes            []Node    `gorm:"-" json:"-"`
-	SubLogs          []SubLogs `gorm:"foreignKey:SubcriptionID;"` // 一对多关系 约束父表被删除子表记录跟着删除
-	CreateDate       string
-	NodesWithSort    []NodeWithSort   `gorm:"-" json:"Nodes"`
-	Groups           []string         `gorm:"-" json:"-"`      // 内部使用，不返回给前端
-	GroupsWithSort   []GroupWithSort  `gorm:"-" json:"Groups"` // 订阅关联的分组列表（带Sort）
-	Scripts          []Script         `gorm:"-" json:"-"`      // 内部使用
-	ScriptsWithSort  []ScriptWithSort `gorm:"-" json:"Scripts"`
-	IPWhitelist      string           `json:"IPWhitelist"`      //IP白名单
-	IPBlacklist      string           `json:"IPBlacklist"`      //IP黑名单
-	DelayTime        int              `json:"DelayTime"`        // 最大延迟(ms)
-	MinSpeed         float64          `json:"MinSpeed"`         // 最小速度(MB/s)
-	CountryWhitelist string           `json:"CountryWhitelist"` // 国家白名单（逗号分隔）
-	CountryBlacklist string           `json:"CountryBlacklist"` // 国家黑名单（逗号分隔）
+	ID                 int
+	Name               string
+	Config             string    `gorm:"embedded"`
+	Nodes              []Node    `gorm:"-" json:"-"`
+	SubLogs            []SubLogs `gorm:"foreignKey:SubcriptionID;"` // 一对多关系 约束父表被删除子表记录跟着删除
+	CreateDate         string
+	NodesWithSort      []NodeWithSort   `gorm:"-" json:"Nodes"`
+	Groups             []string         `gorm:"-" json:"-"`      // 内部使用，不返回给前端
+	GroupsWithSort     []GroupWithSort  `gorm:"-" json:"Groups"` // 订阅关联的分组列表（带Sort）
+	Scripts            []Script         `gorm:"-" json:"-"`      // 内部使用
+	ScriptsWithSort    []ScriptWithSort `gorm:"-" json:"Scripts"`
+	IPWhitelist        string           `json:"IPWhitelist"`        //IP白名单
+	IPBlacklist        string           `json:"IPBlacklist"`        //IP黑名单
+	DelayTime          int              `json:"DelayTime"`          // 最大延迟(ms)
+	MinSpeed           float64          `json:"MinSpeed"`           // 最小速度(MB/s)
+	CountryWhitelist   string           `json:"CountryWhitelist"`   // 国家白名单（逗号分隔）
+	CountryBlacklist   string           `json:"CountryBlacklist"`   // 国家黑名单（逗号分隔）
 	NodeNameRule       string           `json:"NodeNameRule"`       // 节点命名规则模板
 	NodeNamePreprocess string           `json:"NodeNamePreprocess"` // 原名预处理规则 (JSON数组)
-	CreatedAt        time.Time        `json:"CreatedAt"`
-	UpdatedAt        time.Time        `json:"UpdatedAt"`
-	DeletedAt        gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
+	NodeNameWhitelist  string           `json:"NodeNameWhitelist"`  // 节点名称白名单 (JSON数组)
+	NodeNameBlacklist  string           `json:"NodeNameBlacklist"`  // 节点名称黑名单 (JSON数组)
+	CreatedAt          time.Time        `json:"CreatedAt"`
+	UpdatedAt          time.Time        `json:"UpdatedAt"`
+	DeletedAt          gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
 }
 
 type GroupWithSort struct {
@@ -137,6 +140,8 @@ func (sub *Subcription) Update() error {
 		"country_blacklist":    sub.CountryBlacklist,
 		"node_name_rule":       sub.NodeNameRule,
 		"node_name_preprocess": sub.NodeNamePreprocess,
+		"node_name_whitelist":  sub.NodeNameWhitelist,
+		"node_name_blacklist":  sub.NodeNameBlacklist,
 	}
 	return DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 }
@@ -379,6 +384,29 @@ func (sub *Subcription) GetSub() error {
 
 			// 白名单：如果设置了白名单但节点不在白名单中，则排除
 			if len(whitelistMap) > 0 && !whitelistMap[country] {
+				continue
+			}
+
+			filteredNodes = append(filteredNodes, node)
+		}
+		sub.Nodes = filteredNodes
+	}
+
+	// 节点名称过滤 (基于原始节点名称 LinkName)
+	// 使用 HasActiveNodeNameFilter 检查是否有有效规则，避免空数组 "[]" 导致过滤异常
+	hasWhitelistRules := utils.HasActiveNodeNameFilter(sub.NodeNameWhitelist)
+	hasBlacklistRules := utils.HasActiveNodeNameFilter(sub.NodeNameBlacklist)
+
+	if hasWhitelistRules || hasBlacklistRules {
+		var filteredNodes []Node
+		for _, node := range sub.Nodes {
+			// 黑名单优先：如果匹配黑名单则排除
+			if hasBlacklistRules && utils.MatchesNodeNameFilter(sub.NodeNameBlacklist, node.LinkName) {
+				continue
+			}
+
+			// 白名单：如果设置了白名单但不匹配白名单，则排除
+			if hasWhitelistRules && !utils.MatchesNodeNameFilter(sub.NodeNameWhitelist, node.LinkName) {
 				continue
 			}
 

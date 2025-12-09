@@ -65,6 +65,74 @@ func PreprocessNodeName(rulesJSON string, linkName string) string {
 	return result
 }
 
+// NodeNameFilterRule 节点名称过滤规则结构体
+type NodeNameFilterRule struct {
+	MatchMode string `json:"matchMode"` // 匹配模式: "text" 或 "regex"
+	Pattern   string `json:"pattern"`   // 匹配模式字符串
+	Enabled   bool   `json:"enabled"`   // 是否启用
+}
+
+// MatchesNodeNameFilter 检查节点名称是否匹配任意过滤规则
+// rulesJSON: JSON格式的过滤规则数组
+// nodeName: 节点名称
+// 返回 true 如果匹配任意一条启用的规则
+func MatchesNodeNameFilter(rulesJSON string, nodeName string) bool {
+	if rulesJSON == "" || nodeName == "" {
+		return false
+	}
+
+	var rules []NodeNameFilterRule
+	if err := json.Unmarshal([]byte(rulesJSON), &rules); err != nil {
+		return false
+	}
+
+	for _, rule := range rules {
+		if !rule.Enabled || rule.Pattern == "" {
+			continue
+		}
+
+		if rule.MatchMode == "regex" {
+			// 正则表达式匹配
+			re, err := regexp.Compile(rule.Pattern)
+			if err != nil {
+				continue // 跳过无效的正则表达式
+			}
+			if re.MatchString(nodeName) {
+				return true
+			}
+		} else {
+			// 纯文本匹配 (默认) - 检查是否包含关键字
+			if strings.Contains(nodeName, rule.Pattern) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// HasActiveNodeNameFilter 检查规则JSON是否包含至少一条有效的启用规则
+// rulesJSON: JSON格式的过滤规则数组
+// 返回 true 如果存在至少一条启用且有pattern的规则
+func HasActiveNodeNameFilter(rulesJSON string) bool {
+	if rulesJSON == "" || rulesJSON == "[]" {
+		return false
+	}
+
+	var rules []NodeNameFilterRule
+	if err := json.Unmarshal([]byte(rulesJSON), &rules); err != nil {
+		return false
+	}
+
+	for _, rule := range rules {
+		if rule.Enabled && rule.Pattern != "" {
+			return true
+		}
+	}
+
+	return false
+}
+
 // ISOToFlag 将国家ISO代码转换为国旗emoji
 // isoCode: 两位ISO国家代码 (如 "CN", "US", "HK")
 // TW会转换为中国国旗，未知/无效代码返回白旗 🏳️

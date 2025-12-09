@@ -74,9 +74,10 @@ import EditNoteIcon from '@mui/icons-material/EditNote';
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import NodeRenameBuilder from './NodeRenameBuilder';
-import NodeNamePreprocessor from "./NodeNamePreprocessor";
+import NodeNamePreprocessor from './NodeNamePreprocessor';
+import NodeNameFilter from './NodeNameFilter';
 import { getSubscriptions, addSubscription, updateSubscription, deleteSubscription, sortSubscription } from 'api/subscriptions';
-import { getNodes, getNodeCountries, getNodeGroups, getNodeSources } from "api/nodes";
+import { getNodes, getNodeCountries, getNodeGroups, getNodeSources } from 'api/nodes';
 import { getTemplates } from 'api/templates';
 import { getScripts } from 'api/scripts';
 
@@ -154,8 +155,10 @@ export default function SubscriptionList() {
     MinSpeed: 0,
     CountryWhitelist: [],
     CountryBlacklist: [],
-    nodeNameRule: "",
-    nodeNamePreprocess: ""
+    nodeNameRule: '',
+    nodeNamePreprocess: '',
+    nodeNameWhitelist: '',
+    nodeNameBlacklist: ''
   });
 
   // 预览节点名称
@@ -324,8 +327,10 @@ export default function SubscriptionList() {
       MinSpeed: 0,
       CountryWhitelist: [],
       CountryBlacklist: [],
-      nodeNameRule: "",
-      nodeNamePreprocess: ""
+      nodeNameRule: '',
+      nodeNamePreprocess: '',
+      nodeNameWhitelist: '',
+      nodeNameBlacklist: ''
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -368,8 +373,10 @@ export default function SubscriptionList() {
       MinSpeed: sub.MinSpeed || 0,
       CountryWhitelist: sub.CountryWhitelist ? sub.CountryWhitelist.split(',').filter((c) => c.trim()) : [],
       CountryBlacklist: sub.CountryBlacklist ? sub.CountryBlacklist.split(',').filter((c) => c.trim()) : [],
-      nodeNameRule: sub.NodeNameRule || "",
-      nodeNamePreprocess: sub.NodeNamePreprocess || ""
+      nodeNameRule: sub.NodeNameRule || '',
+      nodeNamePreprocess: sub.NodeNamePreprocess || '',
+      nodeNameWhitelist: sub.NodeNameWhitelist || '',
+      nodeNameBlacklist: sub.NodeNameBlacklist || ''
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -416,7 +423,9 @@ export default function SubscriptionList() {
         CountryWhitelist: formData.CountryWhitelist.join(','),
         CountryBlacklist: formData.CountryBlacklist.join(','),
         NodeNameRule: formData.nodeNameRule,
-        NodeNamePreprocess: formData.nodeNamePreprocess
+        NodeNamePreprocess: formData.nodeNamePreprocess,
+        NodeNameWhitelist: formData.nodeNameWhitelist,
+        NodeNameBlacklist: formData.nodeNameBlacklist
       };
 
       if (formData.selectionMode === 'nodes') {
@@ -648,9 +657,9 @@ export default function SubscriptionList() {
                 sx={
                   loading
                     ? {
-                      animation: "spin 1s linear infinite",
-                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -666,9 +675,9 @@ export default function SubscriptionList() {
               sx={
                 loading
                   ? {
-                    animation: "spin 1s linear infinite",
-                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -1819,6 +1828,14 @@ export default function SubscriptionList() {
                 />
               </Grid>
             </Grid>
+
+            {/* 节点名称过滤 */}
+            <NodeNameFilter
+              whitelistValue={formData.nodeNameWhitelist}
+              blacklistValue={formData.nodeNameBlacklist}
+              onWhitelistChange={(rules) => setFormData({ ...formData, nodeNameWhitelist: rules })}
+              onBlacklistChange={(rules) => setFormData({ ...formData, nodeNameBlacklist: rules })}
+            />
 
             {/* 脚本选择 */}
             <Autocomplete

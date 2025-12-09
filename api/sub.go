@@ -7,7 +7,7 @@ import (
 	"sublink/models"
 	"sublink/utils"
 	"time"
-	
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -51,7 +51,9 @@ func SubAdd(c *gin.Context) {
 	countryBlacklist := c.PostForm("CountryBlacklist")
 	nodeNameRule := c.PostForm("NodeNameRule")
 	nodeNamePreprocess := c.PostForm("NodeNamePreprocess")
-	
+	nodeNameWhitelist := c.PostForm("NodeNameWhitelist")
+	nodeNameBlacklist := c.PostForm("NodeNameBlacklist")
+
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
 		return
@@ -70,7 +72,7 @@ func SubAdd(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	// 检查订阅名称是否重复
 	var checkSub models.Subcription
 	checkSub.Name = name
@@ -78,7 +80,7 @@ func SubAdd(c *gin.Context) {
 		utils.FailWithMsg(c, "订阅名称不能重复")
 		return
 	}
-	
+
 	sub.Nodes = []models.Node{}
 	if nodes != "" {
 		for _, v := range strings.Split(nodes, ",") {
@@ -91,7 +93,7 @@ func SubAdd(c *gin.Context) {
 			sub.Nodes = append(sub.Nodes, node)
 		}
 	}
-	
+
 	sub.Config = config
 	sub.Name = name
 	sub.IPWhitelist = ipWhitelist
@@ -102,14 +104,16 @@ func SubAdd(c *gin.Context) {
 	sub.CountryBlacklist = countryBlacklist
 	sub.NodeNameRule = nodeNameRule
 	sub.NodeNamePreprocess = nodeNamePreprocess
+	sub.NodeNameWhitelist = nodeNameWhitelist
+	sub.NodeNameBlacklist = nodeNameBlacklist
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
-	
+
 	err := sub.Add()
 	if err != nil {
 		utils.FailWithMsg(c, "添加失败")
 		return
 	}
-	
+
 	// 添加节点关系
 	if len(sub.Nodes) > 0 {
 		err = sub.AddNode()
@@ -118,7 +122,7 @@ func SubAdd(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	// 添加分组关系
 	if groups != "" {
 		err = sub.AddGroups(strings.Split(groups, ","))
@@ -127,7 +131,7 @@ func SubAdd(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	// 添加脚本关系
 	if scripts != "" {
 		scriptIDs := make([]int, 0)
@@ -145,7 +149,7 @@ func SubAdd(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	utils.OkWithMsg(c, "添加成功")
 }
 
@@ -168,7 +172,9 @@ func SubUpdate(c *gin.Context) {
 	countryBlacklist := c.PostForm("CountryBlacklist")
 	nodeNameRule := c.PostForm("NodeNameRule")
 	nodeNamePreprocess := c.PostForm("NodeNamePreprocess")
-	
+	nodeNameWhitelist := c.PostForm("NodeNameWhitelist")
+	nodeNameBlacklist := c.PostForm("NodeNameBlacklist")
+
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
 		return
@@ -187,7 +193,7 @@ func SubUpdate(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	// 检查订阅名称是否重复
 	if name != oldname {
 		var checkSub models.Subcription
@@ -197,7 +203,7 @@ func SubUpdate(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	// 查找旧节点
 	sub.Name = oldname
 	err := sub.Find()
@@ -229,19 +235,21 @@ func SubUpdate(c *gin.Context) {
 	sub.CountryBlacklist = countryBlacklist
 	sub.NodeNameRule = nodeNameRule
 	sub.NodeNamePreprocess = nodeNamePreprocess
+	sub.NodeNameWhitelist = nodeNameWhitelist
+	sub.NodeNameBlacklist = nodeNameBlacklist
 	err = sub.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")
 		return
 	}
-	
+
 	// 更新节点关系
 	err = sub.UpdateNodes()
 	if err != nil {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	
+
 	// 更新分组关系
 	if groups != "" {
 		err = sub.UpdateGroups(strings.Split(groups, ","))
@@ -252,7 +260,7 @@ func SubUpdate(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	
+
 	// 更新脚本关系
 	if scripts != "" {
 		scriptIDs := make([]int, 0)
@@ -270,7 +278,7 @@ func SubUpdate(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	
+
 	utils.OkWithMsg(c, "更新成功")
 }
 
@@ -304,11 +312,11 @@ func SubSort(c *gin.Context) {
 		utils.FailWithMsg(c, "参数错误: "+err.Error())
 		return
 	}
-	
+
 	var sub models.Subcription
 	sub.ID = subNodeSort.ID
 	err = sub.Sort(subNodeSort)
-	
+
 	if err != nil {
 		utils.FailWithMsg(c, err.Error())
 		return
