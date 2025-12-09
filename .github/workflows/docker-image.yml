@@ -99,6 +99,26 @@ jobs:
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-darwin-amd64 .
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-darwin-arm64 .
 
+      - name: Compress binaries with UPX
+        run: |
+          # Install UPX
+          sudo apt-get update && sudo apt-get install -y upx
+          
+          # Show original sizes
+          echo "=== Original binary sizes ==="
+          ls -lh build/
+          
+          # Compress Linux binaries (best compression)
+          upx --best --lzma build/sublinkPro-linux-amd64 || true
+          upx --best --lzma build/sublinkPro-linux-arm64 || true
+          
+          # Note: Windows exe compression may trigger antivirus false positives
+          # Note: macOS binaries are not compressed due to code signing issues
+          
+          # Show compressed sizes
+          echo "=== Compressed binary sizes ==="
+          ls -lh build/
+
       - name: Upload binary artifacts
         uses: actions/upload-artifact@v4
         with:
