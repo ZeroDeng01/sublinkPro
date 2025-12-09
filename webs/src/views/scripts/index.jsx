@@ -334,7 +334,7 @@ export default function ScriptList() {
               onChange={(value) => setFormData({ ...formData, content: value || '' })}
               theme="vs-dark"
               options={{
-                minimap: { enabled: false },
+                minimap: { enabled: true },
                 fontSize: 14
               }}
             />

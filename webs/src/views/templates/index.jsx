@@ -293,7 +293,7 @@ export default function TemplateList() {
               onChange={(value) => setFormData({ ...formData, text: value || '' })}
               theme="vs-dark"
               options={{
-                minimap: { enabled: false },
+                minimap: { enabled: true },
                 fontSize: 14
               }}
             />
