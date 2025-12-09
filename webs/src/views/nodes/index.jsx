@@ -232,7 +232,7 @@ export default function NodeList() {
   // 分页
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() => {
-    const saved = localStorage.getItem("nodes_rowsPerPage");
+    const saved = localStorage.getItem('nodes_rowsPerPage');
     return saved ? parseInt(saved, 10) : 10;
   });
 
@@ -274,6 +274,10 @@ export default function NodeList() {
   // 从后端获取的分组和来源选项
   const [groupOptions, setGroupOptions] = useState([]);
   const [sourceOptions, setSourceOptions] = useState([]);
+
+  // 代理节点选择 - 从后端获取的完整节点列表
+  const [proxyNodeOptions, setProxyNodeOptions] = useState([]);
+  const [loadingProxyNodes, setLoadingProxyNodes] = useState(false);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -319,6 +323,20 @@ export default function NodeList() {
       console.error('获取订阅调度器失败:', error);
     }
   }, []);
+
+  // 获取代理节点选项（用于订阅下载代理选择）
+  const fetchProxyNodes = useCallback(async () => {
+    if (proxyNodeOptions.length > 0) return; // 已加载过则不重复加载
+    setLoadingProxyNodes(true);
+    try {
+      const response = await getNodes({});
+      setProxyNodeOptions(response.data || []);
+    } catch (error) {
+      console.error('获取代理节点列表失败:', error);
+    } finally {
+      setLoadingProxyNodes(false);
+    }
+  }, [proxyNodeOptions.length]);
 
   // 初始化加载
   useEffect(() => {
@@ -569,6 +587,10 @@ export default function NodeList() {
       download_with_proxy: scheduler.DownloadWithProxy || false,
       proxy_link: scheduler.ProxyLink || ''
     });
+    // 如果启用了代理下载，需要加载代理节点列表
+    if (scheduler.DownloadWithProxy) {
+      fetchProxyNodes();
+    }
     setSchedulerFormOpen(true);
   };
 
@@ -801,9 +823,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: "spin 1s linear infinite",
-                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -846,9 +868,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: "spin 1s linear infinite",
-                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -1255,7 +1277,7 @@ export default function NodeList() {
         onRowsPerPageChange={(e) => {
           const newValue = parseInt(e.target.value, 10);
           setRowsPerPage(newValue);
-          localStorage.setItem("nodes_rowsPerPage", newValue);
+          localStorage.setItem('nodes_rowsPerPage', newValue);
           setPage(0);
         }}
         labelRowsPerPage="每页行数:"
@@ -1446,7 +1468,13 @@ export default function NodeList() {
               control={
                 <Switch
                   checked={schedulerForm.download_with_proxy}
-                  onChange={(e) => setSchedulerForm({ ...schedulerForm, download_with_proxy: e.target.checked })}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setSchedulerForm({ ...schedulerForm, download_with_proxy: checked });
+                    if (checked) {
+                      fetchProxyNodes();
+                    }
+                  }}
                 />
               }
               label="使用代理下载"
@@ -1454,9 +1482,10 @@ export default function NodeList() {
             {schedulerForm.download_with_proxy && (
               <Box>
                 <Autocomplete
-                  options={nodes}
+                  options={proxyNodeOptions}
+                  loading={loadingProxyNodes}
                   getOptionLabel={(option) => option.Name || ''}
-                  value={nodes.find((n) => n.Link === schedulerForm.proxy_link) || null}
+                  value={proxyNodeOptions.find((n) => n.Link === schedulerForm.proxy_link) || null}
                   onChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, proxy_link: newValue?.Link || '' })}
                   renderOption={(props, option) => (
                     <Box component="li" {...props} key={option.ID}>
@@ -1468,7 +1497,22 @@ export default function NodeList() {
                       </Box>
                     </Box>
                   )}
-                  renderInput={(params) => <TextField {...params} label="选择代理节点" placeholder="留空则自动选择最佳节点" />}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="选择代理节点"
+                      placeholder="留空则自动选择最佳节点"
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingProxyNodes ? <Typography variant="caption">加载中...</Typography> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        )
+                      }}
+                    />
+                  )}
                 />
                 <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
                   如果未选择具体代理，系统将自动选择延迟最低且速度最快的节点作为下载代理
