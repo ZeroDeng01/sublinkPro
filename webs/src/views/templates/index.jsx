@@ -54,7 +54,10 @@ export default function TemplateList() {
   const [formData, setFormData] = useState({ filename: '', text: '' });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(() => {
+    const saved = localStorage.getItem("templates_rowsPerPage");
+    return saved ? parseInt(saved, 10) : 10;
+  });
 
   // 确认对话框
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -170,9 +173,9 @@ export default function TemplateList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: "spin 1s linear infinite",
+                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                    }
                     : {}
                 }
               />
@@ -188,9 +191,9 @@ export default function TemplateList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: "spin 1s linear infinite",
+                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                  }
                   : {}
               }
             />
@@ -263,7 +266,9 @@ export default function TemplateList() {
         onPageChange={(e, newPage) => setPage(newPage)}
         rowsPerPage={rowsPerPage}
         onRowsPerPageChange={(e) => {
-          setRowsPerPage(parseInt(e.target.value, 10));
+          const newValue = parseInt(e.target.value, 10);
+          setRowsPerPage(newValue);
+          localStorage.setItem("templates_rowsPerPage", newValue);
           setPage(0);
         }}
         labelRowsPerPage="每页行数:"

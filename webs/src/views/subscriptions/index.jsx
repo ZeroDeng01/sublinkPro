@@ -213,7 +213,10 @@ export default function SubscriptionList() {
 
   // 分页
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(() => {
+    const saved = localStorage.getItem("subscriptions_rowsPerPage");
+    return saved ? parseInt(saved, 10) : 10;
+  });
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -657,9 +660,9 @@ export default function SubscriptionList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: "spin 1s linear infinite",
+                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                    }
                     : {}
                 }
               />
@@ -675,9 +678,9 @@ export default function SubscriptionList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: "spin 1s linear infinite",
+                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                  }
                   : {}
               }
             />
@@ -983,7 +986,9 @@ export default function SubscriptionList() {
         onPageChange={(e, newPage) => setPage(newPage)}
         rowsPerPage={rowsPerPage}
         onRowsPerPageChange={(e) => {
-          setRowsPerPage(parseInt(e.target.value, 10));
+          const newValue = parseInt(e.target.value, 10);
+          setRowsPerPage(newValue);
+          localStorage.setItem("subscriptions_rowsPerPage", newValue);
           setPage(0);
         }}
         labelRowsPerPage="每页行数:"

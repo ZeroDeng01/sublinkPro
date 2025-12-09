@@ -231,7 +231,10 @@ export default function NodeList() {
 
   // 分页
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(() => {
+    const saved = localStorage.getItem("nodes_rowsPerPage");
+    return saved ? parseInt(saved, 10) : 10;
+  });
 
   // 订阅调度器
   const [schedulers, setSchedulers] = useState([]);
@@ -798,9 +801,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: "spin 1s linear infinite",
+                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                    }
                     : {}
                 }
               />
@@ -843,9 +846,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: "spin 1s linear infinite",
+                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                  }
                   : {}
               }
             />
@@ -1250,7 +1253,9 @@ export default function NodeList() {
         onPageChange={(e, newPage) => setPage(newPage)}
         rowsPerPage={rowsPerPage}
         onRowsPerPageChange={(e) => {
-          setRowsPerPage(parseInt(e.target.value, 10));
+          const newValue = parseInt(e.target.value, 10);
+          setRowsPerPage(newValue);
+          localStorage.setItem("nodes_rowsPerPage", newValue);
           setPage(0);
         }}
         labelRowsPerPage="每页行数:"

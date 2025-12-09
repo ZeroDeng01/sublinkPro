@@ -80,7 +80,10 @@ export default function ScriptList() {
   const [formData, setFormData] = useState({ name: '', version: '0.0.0', content: DEFAULT_SCRIPT });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(() => {
+    const saved = localStorage.getItem("scripts_rowsPerPage");
+    return saved ? parseInt(saved, 10) : 10;
+  });
 
   // 确认对话框
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -296,7 +299,9 @@ export default function ScriptList() {
         onPageChange={(e, newPage) => setPage(newPage)}
         rowsPerPage={rowsPerPage}
         onRowsPerPageChange={(e) => {
-          setRowsPerPage(parseInt(e.target.value, 10));
+          const newValue = parseInt(e.target.value, 10);
+          setRowsPerPage(newValue);
+          localStorage.setItem("scripts_rowsPerPage", newValue);
           setPage(0);
         }}
         labelRowsPerPage="每页行数:"
