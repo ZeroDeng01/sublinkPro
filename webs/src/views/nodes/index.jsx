@@ -283,11 +283,11 @@ export default function NodeList() {
 
   // 批量修改分组
   const [batchGroupDialogOpen, setBatchGroupDialogOpen] = useState(false);
-  const [batchGroupValue, setBatchGroupValue] = useState("");
+  const [batchGroupValue, setBatchGroupValue] = useState('');
 
   // 批量修改前置代理
   const [batchDialerProxyDialogOpen, setBatchDialerProxyDialogOpen] = useState(false);
-  const [batchDialerProxyValue, setBatchDialerProxyValue] = useState("");
+  const [batchDialerProxyValue, setBatchDialerProxyValue] = useState('');
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -510,10 +510,10 @@ export default function NodeList() {
   // 批量修改分组
   const handleBatchGroup = () => {
     if (selectedNodes.length === 0) {
-      showMessage("请选择要修改的节点", "warning");
+      showMessage('请选择要修改的节点', 'warning');
       return;
     }
-    setBatchGroupValue("");
+    setBatchGroupValue('');
     setBatchGroupDialogOpen(true);
   };
 
@@ -531,17 +531,17 @@ export default function NodeList() {
       });
     } catch (error) {
       console.error(error);
-      showMessage("批量修改分组失败", "error");
+      showMessage('批量修改分组失败', 'error');
     }
   };
 
   // 批量修改前置代理
   const handleBatchDialerProxy = () => {
     if (selectedNodes.length === 0) {
-      showMessage("请选择要修改的节点", "warning");
+      showMessage('请选择要修改的节点', 'warning');
       return;
     }
-    setBatchDialerProxyValue("");
+    setBatchDialerProxyValue('');
     fetchProxyNodes();
     setBatchDialerProxyDialogOpen(true);
   };
@@ -556,7 +556,7 @@ export default function NodeList() {
       fetchNodes(getCurrentFilters());
     } catch (error) {
       console.error(error);
-      showMessage("批量修改前置代理失败", "error");
+      showMessage('批量修改前置代理失败', 'error');
     }
   };
 
@@ -886,9 +886,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: "spin 1s linear infinite",
-                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -931,9 +931,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: "spin 1s linear infinite",
-                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -1385,7 +1385,7 @@ export default function NodeList() {
               options={proxyNodeOptions.map((node) => node.Name)}
               loading={loadingProxyNodes}
               value={nodeForm.dialerProxyName}
-              onChange={(e, newValue) => setNodeForm({ ...nodeForm, dialerProxyName: newValue || "" })}
+              onChange={(e, newValue) => setNodeForm({ ...nodeForm, dialerProxyName: newValue || '' })}
               onInputChange={(e, newInputValue) => setNodeForm({ ...nodeForm, dialerProxyName: newInputValue })}
               onFocus={fetchProxyNodes}
               renderInput={(params) => (
@@ -1751,13 +1751,11 @@ export default function NodeList() {
             freeSolo
             options={groupOptions}
             value={batchGroupValue}
-            onChange={(e, newValue) => setBatchGroupValue(newValue || "")}
+            onChange={(e, newValue) => setBatchGroupValue(newValue || '')}
             onInputChange={(e, newInputValue) => setBatchGroupValue(newInputValue)}
-            renderInput={(params) => (
-              <TextField {...params} label="分组名称" placeholder="输入或选择分组名称，留空则清空分组" fullWidth />
-            )}
+            renderInput={(params) => <TextField {...params} label="分组名称" placeholder="输入或选择分组名称，留空则清空分组" fullWidth />}
           />
-          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: "block" }}>
+          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
             提示：留空将清除所选节点的分组设置
           </Typography>
         </DialogContent>
@@ -1770,8 +1768,7 @@ export default function NodeList() {
       </Dialog>
 
       {/* 批量修改前置代理对话框 */}
-      <Dialog open={batchDialerProxyDialogOpen} onClose={() => setBatchDialerProxyDialogOpen(false)} maxWidth="sm"
-              fullWidth>
+      <Dialog open={batchDialerProxyDialogOpen} onClose={() => setBatchDialerProxyDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>批量修改前置代理</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
@@ -1782,18 +1779,13 @@ export default function NodeList() {
             options={proxyNodeOptions.map((node) => node.Name)}
             loading={loadingProxyNodes}
             value={batchDialerProxyValue}
-            onChange={(e, newValue) => setBatchDialerProxyValue(newValue || "")}
+            onChange={(e, newValue) => setBatchDialerProxyValue(newValue || '')}
             onInputChange={(e, newInputValue) => setBatchDialerProxyValue(newInputValue)}
             renderInput={(params) => (
-              <TextField
-                {...params}
-                label="前置代理节点"
-                placeholder="选择或输入代理节点名称/策略组名称，留空则清空前置代理"
-                fullWidth
-              />
+              <TextField {...params} label="前置代理节点" placeholder="选择或输入代理节点名称/策略组名称，留空则清空前置代理" fullWidth />
             )}
           />
-          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: "block" }}>
+          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
             提示：前置代理节点用于链式代理，流量将先经过此节点再转发。留空将清除前置代理设置。
           </Typography>
           <Alert severity="warning" sx={{ mt: 1 }}>
@@ -1815,7 +1807,21 @@ export default function NodeList() {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert severity={snackbar.severity} variant="filled" sx={{ width: '100%' }}>
+        <Alert
+          severity={snackbar.severity}
+          variant="standard"
+          sx={{
+            width: '100%',
+            boxShadow: 3,
+            borderRadius: 2,
+            backdropFilter: 'blur(8px)',
+            bgcolor: (theme) =>
+              theme.palette.mode === 'dark'
+                ? `${theme.palette[snackbar.severity]?.dark || theme.palette.primary.dark}15`
+                : `${theme.palette[snackbar.severity]?.light || theme.palette.primary.light}`,
+            border: (theme) => `1px solid ${theme.palette[snackbar.severity]?.main || theme.palette.primary.main}`
+          }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>

@@ -153,16 +153,17 @@ func (broker *SSEBroker) BroadcastEvent(event string, payload NotificationPayloa
 // ProgressPayload defines the payload for progress updates
 // This is separate from NotificationPayload to avoid webhook triggers
 type ProgressPayload struct {
-	TaskID      string      `json:"taskId"`      // 任务唯一标识
-	TaskType    string      `json:"taskType"`    // 任务类型: speed_test, sub_update
-	TaskName    string      `json:"taskName"`    // 任务名称（如订阅名称）
-	Status      string      `json:"status"`      // started, progress, completed, error
-	Current     int         `json:"current"`     // 当前进度
-	Total       int         `json:"total"`       // 总数
-	CurrentItem string      `json:"currentItem"` // 当前处理的项目名称
-	Result      interface{} `json:"result"`      // 当前项目的结果
-	Message     string      `json:"message"`     // 可选的消息
-	Time        string      `json:"time"`        // 时间戳
+	TaskID      string      `json:"taskId"`              // 任务唯一标识
+	TaskType    string      `json:"taskType"`            // 任务类型: speed_test, sub_update
+	TaskName    string      `json:"taskName"`            // 任务名称（如订阅名称）
+	Status      string      `json:"status"`              // started, progress, completed, error
+	Current     int         `json:"current"`             // 当前进度
+	Total       int         `json:"total"`               // 总数
+	CurrentItem string      `json:"currentItem"`         // 当前处理的项目名称
+	Result      interface{} `json:"result"`              // 当前项目的结果
+	Message     string      `json:"message"`             // 可选的消息
+	Time        string      `json:"time"`                // 时间戳
+	StartTime   int64       `json:"startTime,omitempty"` // 任务开始时间戳(毫秒)
 }
 
 // BroadcastProgress sends a progress update to all clients

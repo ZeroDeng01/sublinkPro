@@ -116,8 +116,8 @@ export function getNodeSources() {
 // 批量更新节点分组
 export function batchUpdateNodeGroup(ids, group) {
   return request({
-    url: "/v1/nodes/batch-update-group",
-    method: "post",
+    url: '/v1/nodes/batch-update-group',
+    method: 'post',
     data: { ids, group }
   });
 }
@@ -125,8 +125,8 @@ export function batchUpdateNodeGroup(ids, group) {
 // 批量更新节点前置代理
 export function batchUpdateNodeDialerProxy(ids, dialerProxyName) {
   return request({
-    url: "/v1/nodes/batch-update-dialer-proxy",
-    method: "post",
+    url: '/v1/nodes/batch-update-dialer-proxy',
+    method: 'post',
     data: { ids, dialerProxyName }
   });
 }

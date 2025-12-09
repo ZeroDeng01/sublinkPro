@@ -55,7 +55,7 @@ export default function TemplateList() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() => {
-    const saved = localStorage.getItem("templates_rowsPerPage");
+    const saved = localStorage.getItem('templates_rowsPerPage');
     return saved ? parseInt(saved, 10) : 10;
   });
 
@@ -173,9 +173,9 @@ export default function TemplateList() {
                 sx={
                   loading
                     ? {
-                      animation: "spin 1s linear infinite",
-                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -191,9 +191,9 @@ export default function TemplateList() {
               sx={
                 loading
                   ? {
-                    animation: "spin 1s linear infinite",
-                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -268,7 +268,7 @@ export default function TemplateList() {
         onRowsPerPageChange={(e) => {
           const newValue = parseInt(e.target.value, 10);
           setRowsPerPage(newValue);
-          localStorage.setItem("templates_rowsPerPage", newValue);
+          localStorage.setItem('templates_rowsPerPage', newValue);
           setPage(0);
         }}
         labelRowsPerPage="每页行数:"

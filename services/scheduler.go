@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"log"
+	"math"
 	"regexp"
 	"strings"
 	"sublink/models"
@@ -386,16 +387,19 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	// 生成唯一任务ID
 	taskID := fmt.Sprintf("speed_test_%d", time.Now().UnixNano())
 	totalNodes := len(nodes)
+	startTime := time.Now()
+	startTimeMs := startTime.UnixMilli()
 
 	// 广播任务开始事件
 	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-		TaskID:   taskID,
-		TaskType: "speed_test",
-		TaskName: "节点测速",
-		Status:   "started",
-		Current:  0,
-		Total:    totalNodes,
-		Message:  fmt.Sprintf("开始测速 %d 个节点", totalNodes),
+		TaskID:    taskID,
+		TaskType:  "speed_test",
+		TaskName:  "节点测速",
+		Status:    "started",
+		Current:   0,
+		Total:     totalNodes,
+		Message:   fmt.Sprintf("开始测速 %d 个节点", totalNodes),
+		StartTime: startTimeMs,
 	})
 
 	// 确保函数最后一定会执行日志和通知
@@ -547,7 +551,8 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 						"latency": latency,
 						"data":    resultData,
 					},
-					Message: fmt.Sprintf("已完成 %d/%d", currentCompleted, totalNodes),
+					Message:   fmt.Sprintf("已完成 %d/%d", currentCompleted, totalNodes),
+					StartTime: startTimeMs,
 				})
 			}(node)
 		}
@@ -573,16 +578,30 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	})
 
 	// 完成 (触发webhook)
-	log.Printf("节点测速任务执行完成 - 成功: %d, 失败: %d", successCount, failCount)
+	duration := time.Since(startTime)
+	durationStr := formatDuration(duration)
+	log.Printf("节点测速任务执行完成 - 成功: %d, 失败: %d, 耗时: %s", successCount, failCount, durationStr)
 	sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
 		Event:   "speed_test",
 		Title:   "节点测速完成",
-		Message: fmt.Sprintf("节点测速完成 (成功: %d, 失败: %d)", successCount, failCount),
+		Message: fmt.Sprintf("节点测速完成，耗时 %s (成功: %d, 失败: %d)", durationStr, successCount, failCount),
 		Data: map[string]interface{}{
-			"status":  "success",
-			"success": successCount,
-			"fail":    failCount,
-			"total":   len(nodes),
+			"status":   "success",
+			"success":  successCount,
+			"fail":     failCount,
+			"total":    len(nodes),
+			"duration": duration.Milliseconds(),
 		},
 	})
+}
+
+// formatDuration 格式化时长为人类可读字符串
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%.0f秒", d.Seconds())
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%.0f分%.0f秒", d.Minutes(), math.Mod(d.Seconds(), 60))
+	}
+	return fmt.Sprintf("%.0f时%.0f分", d.Hours(), math.Mod(d.Minutes(), 60))
 }

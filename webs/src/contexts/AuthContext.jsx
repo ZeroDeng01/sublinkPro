@@ -20,7 +20,23 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [notifications, setNotifications] = useState([]);
+  // 从 localStorage 初始化通知，处理 Date 反序列化
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem('app_notifications');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 恢复 timestamp 为 Date 对象
+        return parsed.map((n) => ({
+          ...n,
+          timestamp: n.timestamp ? new Date(n.timestamp) : new Date()
+        }));
+      }
+    } catch (e) {
+      console.error('Failed to parse saved notifications:', e);
+    }
+    return [];
+  });
   const navigate = useNavigate();
 
   // 重置心跳计时器
@@ -153,6 +169,11 @@ export function AuthProvider({ children }) {
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
     if (heartbeatTimeout) clearTimeout(heartbeatTimeout);
   }, []);
+
+  // 通知变化时保存到 localStorage
+  useEffect(() => {
+    localStorage.setItem('app_notifications', JSON.stringify(notifications));
+  }, [notifications]);
 
   // 初始化 - 检查 token 并获取用户信息
   useEffect(() => {

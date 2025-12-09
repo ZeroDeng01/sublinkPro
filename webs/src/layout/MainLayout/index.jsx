@@ -14,6 +14,7 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import MainContentStyled from './MainContentStyled';
 import StarGuideDialog from 'ui-component/StarGuideDialog';
+import TaskProgressFab from 'components/TaskProgressFab';
 
 import Loader from 'ui-component/Loader';
 import Breadcrumbs from 'ui-component/extended/Breadcrumbs';
@@ -69,6 +70,9 @@ export default function MainLayout() {
           <Footer />
         </Box>
       </MainContentStyled>
+
+      {/* 任务进度悬浮按钮 */}
+      <TaskProgressFab />
     </Box>
   );
 }

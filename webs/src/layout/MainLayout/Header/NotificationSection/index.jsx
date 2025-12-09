@@ -52,6 +52,7 @@ export default function NotificationSection() {
 
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState(new Set());
+  const [expandedIds, setExpandedIds] = useState(new Set()); // 追踪展开的通知
   const anchorRef = useRef(null);
 
   // 计算未读数
@@ -80,7 +81,22 @@ export default function NotificationSection() {
   const handleClearAll = () => {
     clearAllNotifications();
     setReadIds(new Set());
+    setExpandedIds(new Set());
     setOpen(false);
+  };
+
+  // 展开/收起通知
+  const handleToggleExpand = (id, e) => {
+    e.stopPropagation();
+    setExpandedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   const prevOpen = useRef(open);
@@ -242,18 +258,34 @@ export default function NotificationSection() {
                                           variant="body2"
                                           color="textSecondary"
                                           sx={{
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 2,
-                                            WebkitBoxOrient: 'vertical',
-                                            overflow: 'hidden',
+                                            ...(expandedIds.has(notification.id)
+                                              ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' }
+                                              : {
+                                                  display: '-webkit-box',
+                                                  WebkitLineClamp: 2,
+                                                  WebkitBoxOrient: 'vertical',
+                                                  overflow: 'hidden'
+                                                }),
                                             mb: 0.5
                                           }}
                                         >
                                           {notification.message}
                                         </Typography>
-                                        <Typography variant="caption" color="textSecondary">
-                                          {notification.timestamp?.toLocaleString('zh-CN') || '刚刚'}
-                                        </Typography>
+                                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                          <Typography variant="caption" color="textSecondary">
+                                            {notification.timestamp?.toLocaleString('zh-CN') || '刚刚'}
+                                          </Typography>
+                                          {notification.message && notification.message.length > 50 && (
+                                            <Typography
+                                              variant="caption"
+                                              color="primary"
+                                              sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                                              onClick={(e) => handleToggleExpand(notification.id, e)}
+                                            >
+                                              {expandedIds.has(notification.id) ? '收起' : '展开'}
+                                            </Typography>
+                                          )}
+                                        </Stack>
                                       </>
                                     }
                                   />

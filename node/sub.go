@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -160,16 +161,19 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 
 	// 生成唯一任务ID
 	taskID := fmt.Sprintf("sub_update_%d_%d", id, time.Now().UnixNano())
+	startTime := time.Now()
+	startTimeMs := startTime.UnixMilli()
 
 	// 广播任务开始事件
 	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-		TaskID:   taskID,
-		TaskType: "sub_update",
-		TaskName: subName,
-		Status:   "started",
-		Current:  0,
-		Total:    totalNodes,
-		Message:  fmt.Sprintf("开始更新订阅 [%s]，共 %d 个节点", subName, totalNodes),
+		TaskID:    taskID,
+		TaskType:  "sub_update",
+		TaskName:  subName,
+		Status:    "started",
+		Current:   0,
+		Total:     totalNodes,
+		Message:   fmt.Sprintf("开始更新订阅 [%s]，共 %d 个节点", subName, totalNodes),
+		StartTime: startTimeMs,
 	})
 
 	// 获取订阅的Group信息
@@ -590,7 +594,8 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 					"added":  addSuccessCount,
 					"exists": updateSuccessCount,
 				},
-				Message: fmt.Sprintf("处理节点 %d/%d", processedCount, totalNodes),
+				Message:   fmt.Sprintf("处理节点 %d/%d", processedCount, totalNodes),
+				StartTime: startTimeMs,
 			})
 		}
 	}
@@ -645,17 +650,31 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 	})
 
 	// 触发webhook的完成事件
+	duration := time.Since(startTime)
+	durationStr := formatDurationSub(duration)
 	sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
 		Event:   "sub_update",
 		Title:   "订阅更新完成",
-		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+updateSuccessCount, addSuccessCount, updateSuccessCount, deleteCount),
+		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，耗时 %s，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, durationStr, len(proxys), addSuccessCount+updateSuccessCount, addSuccessCount, updateSuccessCount, deleteCount),
 		Data: map[string]interface{}{
-			"id":      id,
-			"name":    subName,
-			"status":  "success",
-			"success": addSuccessCount + updateSuccessCount,
+			"id":       id,
+			"name":     subName,
+			"status":   "success",
+			"success":  addSuccessCount + updateSuccessCount,
+			"duration": duration.Milliseconds(),
 		},
 	})
 	return nil
 
+}
+
+// formatDurationSub 格式化时长为人类可读字符串
+func formatDurationSub(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%.0f秒", d.Seconds())
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%.0f分%.0f秒", d.Minutes(), math.Mod(d.Seconds(), 60))
+	}
+	return fmt.Sprintf("%.0f时%.0f分", d.Hours(), math.Mod(d.Minutes(), 60))
 }

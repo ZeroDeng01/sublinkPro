@@ -81,7 +81,7 @@ export default function ScriptList() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() => {
-    const saved = localStorage.getItem("scripts_rowsPerPage");
+    const saved = localStorage.getItem('scripts_rowsPerPage');
     return saved ? parseInt(saved, 10) : 10;
   });
 
@@ -301,7 +301,7 @@ export default function ScriptList() {
         onRowsPerPageChange={(e) => {
           const newValue = parseInt(e.target.value, 10);
           setRowsPerPage(newValue);
-          localStorage.setItem("scripts_rowsPerPage", newValue);
+          localStorage.setItem('scripts_rowsPerPage', newValue);
           setPage(0);
         }}
         labelRowsPerPage="每页行数:"

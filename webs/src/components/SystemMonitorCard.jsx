@@ -43,17 +43,17 @@ const rotate = keyframes`
 
 // 格式化字节数
 const formatBytes = (bytes, decimals = 2) => {
-  if (!bytes || bytes === 0) return "0 B";
+  if (!bytes || bytes === 0) return '0 B';
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 };
 
 // 格式化运行时间
 const formatUptime = (seconds) => {
-  if (!seconds) return "0秒";
+  if (!seconds) return '0秒';
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -69,7 +69,7 @@ const formatUptime = (seconds) => {
 
 const MetricCard = ({ title, value, subValue, icon: Icon, color, progress, children }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
+  const isDark = theme.palette.mode === 'dark';
 
   return (
     <Box
@@ -78,33 +78,33 @@ const MetricCard = ({ title, value, subValue, icon: Icon, color, progress, child
         borderRadius: 3,
         background: isDark ? alpha(color, 0.08) : alpha(color, 0.04),
         border: `1px solid ${alpha(color, 0.15)}`,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column"
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
       {/* 标题行 */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
         <Box
           sx={{
             width: 32,
             height: 32,
             borderRadius: 1.5,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             background: `linear-gradient(135deg, ${color} 0%, ${alpha(color, 0.7)} 100%)`
           }}
         >
-          <Icon sx={{ fontSize: 18, color: "#fff" }} />
+          <Icon sx={{ fontSize: 18, color: '#fff' }} />
         </Box>
         <Typography
           variant="body2"
           sx={{
             fontWeight: 600,
-            color: isDark ? alpha("#fff", 0.7) : theme.palette.text.secondary,
-            fontSize: "0.75rem",
-            textTransform: "uppercase",
+            color: isDark ? alpha('#fff', 0.7) : theme.palette.text.secondary,
+            fontSize: '0.75rem',
+            textTransform: 'uppercase',
             letterSpacing: 0.5
           }}
         >
@@ -119,7 +119,7 @@ const MetricCard = ({ title, value, subValue, icon: Icon, color, progress, child
           fontWeight: 700,
           color: color,
           mb: 0.5,
-          fontSize: "1.5rem"
+          fontSize: '1.5rem'
         }}
       >
         {value}
@@ -130,8 +130,8 @@ const MetricCard = ({ title, value, subValue, icon: Icon, color, progress, child
         <Typography
           variant="caption"
           sx={{
-            color: isDark ? alpha("#fff", 0.5) : theme.palette.text.secondary,
-            fontSize: "0.7rem",
+            color: isDark ? alpha('#fff', 0.5) : theme.palette.text.secondary,
+            fontSize: '0.7rem',
             mb: 1
           }}
         >
@@ -141,7 +141,7 @@ const MetricCard = ({ title, value, subValue, icon: Icon, color, progress, child
 
       {/* 进度条 */}
       {progress !== undefined && (
-        <Box sx={{ mt: "auto" }}>
+        <Box sx={{ mt: 'auto' }}>
           <LinearProgress
             variant="determinate"
             value={Math.min(progress, 100)}
@@ -149,7 +149,7 @@ const MetricCard = ({ title, value, subValue, icon: Icon, color, progress, child
               height: 6,
               borderRadius: 3,
               bgcolor: alpha(color, 0.15),
-              "& .MuiLinearProgress-bar": {
+              '& .MuiLinearProgress-bar': {
                 borderRadius: 3,
                 background: `linear-gradient(90deg, ${color} 0%, ${alpha(color, 0.7)} 100%)`
               }
@@ -158,11 +158,11 @@ const MetricCard = ({ title, value, subValue, icon: Icon, color, progress, child
           <Typography
             variant="caption"
             sx={{
-              color: isDark ? alpha("#fff", 0.5) : theme.palette.text.secondary,
-              fontSize: "0.65rem",
+              color: isDark ? alpha('#fff', 0.5) : theme.palette.text.secondary,
+              fontSize: '0.65rem',
               mt: 0.5,
-              display: "block",
-              textAlign: "right"
+              display: 'block',
+              textAlign: 'right'
             }}
           >
             {progress.toFixed(1)}%
@@ -180,14 +180,13 @@ const MetricCard = ({ title, value, subValue, icon: Icon, color, progress, child
 
 const CircularMetric = ({ value, maxValue, label, color, size = 80 }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
+  const isDark = theme.palette.mode === 'dark';
   const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
 
   return (
-    <Box sx={{ position: "relative", display: "inline-flex", flexDirection: "column", alignItems: "center" }}>
-      <Box sx={{ position: "relative" }}>
-        <CircularProgress variant="determinate" value={100} size={size} thickness={4}
-                          sx={{ color: alpha(color, 0.15) }} />
+    <Box sx={{ position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+      <Box sx={{ position: 'relative' }}>
+        <CircularProgress variant="determinate" value={100} size={size} thickness={4} sx={{ color: alpha(color, 0.15) }} />
         <CircularProgress
           variant="determinate"
           value={Math.min(percentage, 100)}
@@ -195,23 +194,23 @@ const CircularMetric = ({ value, maxValue, label, color, size = 80 }) => {
           thickness={4}
           sx={{
             color: color,
-            position: "absolute",
+            position: 'absolute',
             left: 0,
-            "& .MuiCircularProgress-circle": {
-              strokeLinecap: "round"
+            '& .MuiCircularProgress-circle': {
+              strokeLinecap: 'round'
             }
           }}
         />
         <Box
           sx={{
-            position: "absolute",
+            position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
           <Typography
@@ -230,9 +229,9 @@ const CircularMetric = ({ value, maxValue, label, color, size = 80 }) => {
         variant="caption"
         sx={{
           mt: 1,
-          color: isDark ? alpha("#fff", 0.6) : theme.palette.text.secondary,
-          fontSize: "0.65rem",
-          textAlign: "center"
+          color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary,
+          fontSize: '0.65rem',
+          textAlign: 'center'
         }}
       >
         {label}
@@ -245,7 +244,7 @@ const CircularMetric = ({ value, maxValue, label, color, size = 80 }) => {
 
 const SystemMonitorCard = () => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
+  const isDark = theme.palette.mode === 'dark';
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -261,7 +260,7 @@ const SystemMonitorCard = () => {
         setStats(res.data);
       }
     } catch (error) {
-      console.error("获取系统状态失败:", error);
+      console.error('获取系统状态失败:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -297,11 +296,11 @@ const SystemMonitorCard = () => {
 
   // 颜色定义
   const colors = {
-    memory: "#6366f1",
-    cpu: "#10b981",
-    goroutine: "#f59e0b",
-    uptime: "#06b6d4",
-    gc: "#ec4899"
+    memory: '#6366f1',
+    cpu: '#10b981',
+    goroutine: '#f59e0b',
+    uptime: '#06b6d4',
+    gc: '#ec4899'
   };
 
   return (
@@ -310,12 +309,12 @@ const SystemMonitorCard = () => {
         mb: 3,
         borderRadius: 4,
         background: isDark
-          ? `linear-gradient(145deg, ${alpha("#1e1e2e", 0.95)} 0%, ${alpha("#2d2d3f", 0.9)} 100%)`
-          : `linear-gradient(145deg, ${alpha("#fff", 0.98)} 0%, ${alpha("#f8fafc", 0.95)} 100%)`,
-        backdropFilter: "blur(20px)",
-        border: `1px solid ${isDark ? alpha("#fff", 0.08) : alpha("#000", 0.06)}`,
-        overflow: "hidden",
-        position: "relative"
+          ? `linear-gradient(145deg, ${alpha('#1e1e2e', 0.95)} 0%, ${alpha('#2d2d3f', 0.9)} 100%)`
+          : `linear-gradient(145deg, ${alpha('#fff', 0.98)} 0%, ${alpha('#f8fafc', 0.95)} 100%)`,
+        backdropFilter: 'blur(20px)',
+        border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
+        overflow: 'hidden',
+        position: 'relative'
       }}
     >
       {/* 顶部装饰条 */}
@@ -328,33 +327,33 @@ const SystemMonitorCard = () => {
 
       <CardContent sx={{ p: 3 }}>
         {/* 标题栏 */}
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box
               sx={{
                 width: 40,
                 height: 40,
                 borderRadius: 2,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 background: `linear-gradient(135deg, ${colors.memory} 0%, ${colors.cpu} 100%)`
               }}
             >
-              <ComputerIcon sx={{ color: "#fff", fontSize: 22 }} />
+              <ComputerIcon sx={{ color: '#fff', fontSize: 22 }} />
             </Box>
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 600 }}>
                 系统监控
               </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {stats && (
                   <Chip
                     size="small"
                     label={`${stats.goos} / ${stats.goarch}`}
                     sx={{
                       height: 20,
-                      fontSize: "0.65rem",
+                      fontSize: '0.65rem',
                       bgcolor: alpha(colors.cpu, 0.1),
                       color: colors.cpu,
                       border: `1px solid ${alpha(colors.cpu, 0.2)}`
@@ -367,7 +366,7 @@ const SystemMonitorCard = () => {
                     label={stats.go_version}
                     sx={{
                       height: 20,
-                      fontSize: "0.65rem",
+                      fontSize: '0.65rem',
                       bgcolor: alpha(colors.memory, 0.1),
                       color: colors.memory,
                       border: `1px solid ${alpha(colors.memory, 0.2)}`
@@ -379,16 +378,16 @@ const SystemMonitorCard = () => {
           </Box>
 
           {/* 控制按钮 */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {/* 自动刷新指示器 */}
-            <Tooltip title={autoRefresh ? "关闭自动刷新" : "开启自动刷新 (5秒)"} arrow>
+            <Tooltip title={autoRefresh ? '关闭自动刷新' : '开启自动刷新 (5秒)'} arrow>
               <IconButton
                 onClick={toggleAutoRefresh}
                 size="small"
                 sx={{
-                  bgcolor: autoRefresh ? alpha(colors.cpu, 0.1) : "transparent",
+                  bgcolor: autoRefresh ? alpha(colors.cpu, 0.1) : 'transparent',
                   color: autoRefresh ? colors.cpu : theme.palette.text.secondary,
-                  "&:hover": {
+                  '&:hover': {
                     bgcolor: alpha(colors.cpu, 0.15)
                   }
                 }}
@@ -396,7 +395,7 @@ const SystemMonitorCard = () => {
                 <AutorenewIcon
                   sx={{
                     fontSize: 20,
-                    animation: autoRefresh ? `${rotate} 3s linear infinite` : "none"
+                    animation: autoRefresh ? `${rotate} 3s linear infinite` : 'none'
                   }}
                 />
               </IconButton>
@@ -410,11 +409,11 @@ const SystemMonitorCard = () => {
                 size="small"
                 sx={{
                   bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  "&:hover": {
+                  '&:hover': {
                     bgcolor: alpha(theme.palette.primary.main, 0.15),
-                    transform: "rotate(180deg)"
+                    transform: 'rotate(180deg)'
                   },
-                  transition: "all 0.3s ease"
+                  transition: 'all 0.3s ease'
                 }}
               >
                 {refreshing ? <CircularProgress size={20} /> : <RefreshIcon sx={{ fontSize: 20 }} />}
@@ -488,13 +487,13 @@ const SystemMonitorCard = () => {
               sx={{
                 p: 2,
                 borderRadius: 3,
-                background: isDark ? alpha("#fff", 0.03) : alpha("#000", 0.02),
-                border: `1px solid ${isDark ? alpha("#fff", 0.06) : alpha("#000", 0.04)}`
+                background: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+                border: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04)}`
               }}
             >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <StorageIcon sx={{ fontSize: 18, color: colors.gc }} />
-                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: "0.8rem" }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
                   运行时详情
                 </Typography>
               </Box>
@@ -502,18 +501,16 @@ const SystemMonitorCard = () => {
               <Grid container spacing={2}>
                 {/* 内存详情 */}
                 <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                  <Box sx={{ display: "flex", justifyContent: "center", gap: 3, flexWrap: "wrap" }}>
-                    <CircularMetric value={stats.heap_inuse} maxValue={stats.sys} label="堆内存使用"
-                                    color={colors.memory} size={70} />
-                    <CircularMetric value={stats.stack_inuse} maxValue={stats.sys} label="栈内存使用" color={colors.cpu}
-                                    size={70} />
+                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
+                    <CircularMetric value={stats.heap_inuse} maxValue={stats.sys} label="堆内存使用" color={colors.memory} size={70} />
+                    <CircularMetric value={stats.stack_inuse} maxValue={stats.sys} label="栈内存使用" color={colors.cpu} size={70} />
                   </Box>
                 </Grid>
 
                 {/* GC统计 */}
                 <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                         GC 次数
                       </Typography>
@@ -521,7 +518,7 @@ const SystemMonitorCard = () => {
                         {stats.num_gc}
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                         GC 暂停时间
                       </Typography>
@@ -529,7 +526,7 @@ const SystemMonitorCard = () => {
                         {(stats.pause_total_ns / 1e6).toFixed(2)} ms
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                         GC CPU 占用
                       </Typography>
@@ -542,8 +539,8 @@ const SystemMonitorCard = () => {
 
                 {/* 内存分配 */}
                 <Grid size={{ xs: 12, sm: 12, md: 4 }}>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                         系统内存获取
                       </Typography>
@@ -551,7 +548,7 @@ const SystemMonitorCard = () => {
                         {formatBytes(stats.sys)}
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                         累计分配内存
                       </Typography>
@@ -559,7 +556,7 @@ const SystemMonitorCard = () => {
                         {formatBytes(stats.total_alloc)}
                       </Typography>
                     </Box>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                         栈内存使用
                       </Typography>
@@ -573,7 +570,7 @@ const SystemMonitorCard = () => {
             </Box>
           </>
         ) : (
-          <Box sx={{ textAlign: "center", py: 4 }}>
+          <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography color="textSecondary">无法获取系统状态</Typography>
           </Box>
         )}

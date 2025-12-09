@@ -98,4 +98,3 @@ const system = {
 };
 
 export { subscription, script, accesskey, system };
-

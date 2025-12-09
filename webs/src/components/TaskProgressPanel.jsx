@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTheme, alpha, keyframes } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -11,6 +11,7 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 
 // ==============================|| ANIMATIONS ||============================== //
@@ -35,9 +36,23 @@ const slideIn = keyframes`
   }
 `;
 
+// ==============================|| TIME FORMATTING HELPER ||============================== //
+
+const formatTime = (ms) => {
+  if (ms < 0) return '--';
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds}秒`;
+  const minutes = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (minutes < 60) return `${minutes}分${secs}秒`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}时${mins}分`;
+};
+
 // ==============================|| TASK PROGRESS ITEM ||============================== //
 
-const TaskProgressItem = ({ task }) => {
+const TaskProgressItem = ({ task, currentTime }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
@@ -68,6 +83,25 @@ const TaskProgressItem = ({ task }) => {
   const Icon = taskConfig.icon;
   const isCompleted = task.status === 'completed';
   const isError = task.status === 'error';
+
+  // Calculate time info
+  const timeInfo = useMemo(() => {
+    if (!task.startTime || isCompleted || isError) return null;
+
+    const elapsed = currentTime - task.startTime;
+    const progressRatio = task.total > 0 ? task.current / task.total : 0;
+
+    const elapsedStr = formatTime(elapsed);
+
+    // Estimated remaining time (only show when progress > 2%)
+    let remainingStr = null;
+    if (progressRatio > 0.02 && progressRatio < 1) {
+      const remaining = (elapsed / progressRatio) * (1 - progressRatio);
+      remainingStr = formatTime(remaining);
+    }
+
+    return { elapsedStr, remainingStr };
+  }, [task.startTime, task.current, task.total, currentTime, isCompleted, isError]);
 
   // Format result display
   const resultDisplay = useMemo(() => {
@@ -220,17 +254,69 @@ const TaskProgressItem = ({ task }) => {
                 </Typography>
               )}
 
-              {/* Progress info */}
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                <Typography
-                  variant="caption"
+              {/* Progress info and time display */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: { xs: 0.5, sm: 1 },
+                  rowGap: 0.5
+                }}
+              >
+                <Box
                   sx={{
-                    color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary,
-                    fontSize: '0.75rem'
+                    display: 'flex',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: { xs: 0.5, sm: 1.5 },
+                    rowGap: 0.5
                   }}
                 >
-                  {task.current || 0} / {task.total || 0}
-                </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary,
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {task.current || 0} / {task.total || 0}
+                  </Typography>
+
+                  {/* Time display */}
+                  {timeInfo && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: isDark ? alpha('#fff', 0.5) : theme.palette.text.secondary,
+                          fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.3,
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <AccessTimeIcon sx={{ fontSize: { xs: 10, sm: 12 } }} />
+                        {timeInfo.elapsedStr}
+                      </Typography>
+                      {timeInfo.remainingStr && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: isDark ? alpha('#fff', 0.5) : theme.palette.text.secondary,
+                            fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          · 剩余 ~{timeInfo.remainingStr}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </Box>
 
                 {/* Result display */}
                 {resultDisplay && (
@@ -238,8 +324,9 @@ const TaskProgressItem = ({ task }) => {
                     variant="caption"
                     sx={{
                       color: isDark ? alpha('#fff', 0.7) : theme.palette.text.secondary,
-                      fontSize: '0.75rem',
-                      fontWeight: 500
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      fontWeight: 500,
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     {resultDisplay}
@@ -260,6 +347,14 @@ const TaskProgressPanel = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { taskList, hasActiveTasks } = useTaskProgress();
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Update currentTime every second when there are active tasks
+  useEffect(() => {
+    if (!hasActiveTasks) return;
+    const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [hasActiveTasks]);
 
   return (
     <Collapse in={hasActiveTasks} unmountOnExit timeout={300}>
@@ -310,7 +405,7 @@ const TaskProgressPanel = () => {
           {/* Task list */}
           <Box>
             {taskList.map((task) => (
-              <TaskProgressItem key={task.taskId} task={task} />
+              <TaskProgressItem key={task.taskId} task={task} currentTime={currentTime} />
             ))}
           </Box>
         </CardContent>

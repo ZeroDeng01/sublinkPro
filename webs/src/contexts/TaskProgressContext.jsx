@@ -25,6 +25,8 @@ export function TaskProgressProvider({ children }) {
       newTasks.set(taskId, {
         ...existing,
         ...taskData,
+        // Preserve existing startTime unless new one is provided
+        startTime: taskData.startTime || existing.startTime,
         lastUpdate: Date.now()
       });
       return newTasks;
@@ -48,7 +50,7 @@ export function TaskProgressProvider({ children }) {
   // Handle incoming progress event from SSE
   const handleProgressEvent = useCallback(
     (data) => {
-      const { taskId, taskType, taskName, status, current, total, currentItem, result, message } = data;
+      const { taskId, taskType, taskName, status, current, total, currentItem, result, message, startTime } = data;
 
       if (!taskId) return;
 
@@ -90,7 +92,9 @@ export function TaskProgressProvider({ children }) {
           total,
           currentItem,
           result,
-          message
+          message,
+          // Always pass startTime from event (every progress event now includes it)
+          startTime
         });
       }
     },
