@@ -30,6 +30,62 @@ func InitSqlite() {
 		log.Println("数据库已经初始化，无需重复初始化")
 		return
 	}
+	//基础数据库初始化
+	if err := DB.AutoMigrate(&User{}); err != nil {
+		log.Printf("基础数据表User迁移失败: %v", err)
+	} else {
+		log.Printf("数据表User创建成功")
+	}
+	if err := DB.AutoMigrate(&Subcription{}); err != nil {
+		log.Printf("基础数据表Subcription迁移失败: %v", err)
+	} else {
+		log.Printf("数据表Subcription创建成功")
+	}
+	if err := DB.AutoMigrate(&Node{}); err != nil {
+		log.Printf("基础数据表Node迁移失败: %v", err)
+	} else {
+		log.Printf("数据表Node创建成功")
+	}
+	if err := DB.AutoMigrate(&SubLogs{}); err != nil {
+		log.Printf("基础数据表SubLogs迁移失败: %v", err)
+	} else {
+		log.Printf("数据表SubLogs创建成功")
+	}
+	if err := DB.AutoMigrate(&AccessKey{}); err != nil {
+		log.Printf("基础数据表AccessKey迁移失败: %v", err)
+	} else {
+		log.Printf("数据表AccessKey创建成功")
+	}
+	if err := DB.AutoMigrate(&SubScheduler{}); err != nil {
+		log.Printf("基础数据表SubScheduler迁移失败: %v", err)
+	} else {
+		log.Printf("数据表SubScheduler创建成功")
+	}
+	if err := DB.AutoMigrate(&SystemSetting{}); err != nil {
+		log.Printf("基础数据表SystemSetting迁移失败: %v", err)
+	} else {
+		log.Printf("数据表SystemSetting创建成功")
+	}
+	if err := DB.AutoMigrate(&Script{}); err != nil {
+		log.Printf("基础数据表Script迁移失败: %v", err)
+	} else {
+		log.Printf("数据表Script创建成功")
+	}
+	if err := DB.AutoMigrate(&SubcriptionGroup{}); err != nil {
+		log.Printf("基础数据表SubcriptionGroup迁移失败: %v", err)
+	} else {
+		log.Printf("数据表SubcriptionGroup创建成功")
+	}
+	if err := DB.AutoMigrate(&SubcriptionNode{}); err != nil {
+		log.Printf("基础数据表SubcriptionNode迁移失败: %v", err)
+	} else {
+		log.Printf("数据表SubcriptionNode创建成功")
+	}
+	if err := DB.AutoMigrate(&SubcriptionScript{}); err != nil {
+		log.Printf("基础数据表SubcriptionScript迁移失败: %v", err)
+	} else {
+		log.Printf("数据表SubcriptionScript创建成功")
+	}
 
 	// 检查并删除 idx_name_id 索引
 	// 0000_drop_idx_name_id
@@ -45,55 +101,6 @@ func InitSqlite() {
 		return nil
 	}); err != nil {
 		log.Printf("执行迁移 0000_drop_idx_name_id 失败: %v", err)
-	}
-
-	// 0001_initial_tables
-	if err := RunAutoMigrate("0001_initial_tables", &User{}, &Subcription{}, &Node{}, &SubLogs{}, &AccessKey{}, &SubScheduler{}, &SystemSetting{}, &Script{}); err != nil {
-		log.Printf("基础数据表迁移失败: %v", err)
-	}
-
-	// 0001_node_add_country 添加国家字段
-	if err := RunAutoMigrate("0001_node_add_country", &Node{}); err != nil {
-		log.Printf("Nodes 表迁移失败: %v", err)
-	}
-
-	// 0001_subcription_add_country 订阅添加国家过滤字段
-	if err := RunAutoMigrate("0001_subcription_add_country", &Subcription{}); err != nil {
-		log.Printf("Subcription 表迁移失败: %v", err)
-	}
-	// 增加节点重命名相关字段
-	if err := RunAutoMigrate("0001_subcription_add_rename", &Subcription{}); err != nil {
-		log.Printf("Subcription 表迁移失败: %v", err)
-	}
-	// 增加节点命名替换规则
-	if err := RunAutoMigrate("0001_subcription_add_nodeNamePreprocess", &Subcription{}); err != nil {
-		log.Printf("Subcription 表迁移失败: %v", err)
-	}
-
-	if err := RunAutoMigrate("0002_subcription_node", &SubcriptionNode{}); err != nil {
-		log.Printf("SubcriptionNode 表迁移失败: %v", err)
-	}
-
-	// SubcriptionScript 单独处理
-	// 0003_subcription_script
-	if err := RunAutoMigrate("0003_subcription_script", &SubcriptionScript{}); err != nil {
-		log.Printf("SubcriptionScript 表迁移失败: %v", err)
-	}
-
-	// 创建 SubcriptionGroup 表
-	// 0004_subcription_group
-	if err := RunAutoMigrate("0004_subcription_group", &SubcriptionGroup{}); err != nil {
-		log.Printf("SubcriptionGroup 表迁移失败: %v", err)
-	}
-
-	// 0006_subscheduler_proxy
-	if err := RunAutoMigrate("0006_subscheduler_proxy", &SubScheduler{}); err != nil {
-		log.Printf("SubScheduler 表新增代理字段迁移失败: %v", err)
-	}
-
-	// 0007_node_timestamps - 确保 Node 表有 created_at 和 updated_at 列
-	if err := RunAutoMigrate("0007_node_add_created_at_and_updated_at", &Node{}); err != nil {
-		log.Printf("Node 表时间戳字段迁移失败: %v", err)
 	}
 
 	// 0008_node_created_at_fill - 补全空的 CreatedAt 字段
