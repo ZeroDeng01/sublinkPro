@@ -181,6 +181,17 @@ func RenameNode(rule string, info NodeInfo) string {
 	if linkCountry == "" {
 		linkCountry = "未知"
 	}
+	// 如果来源为manual则替换为手动
+	linkSource := info.Source
+	if linkSource == "manual" {
+		linkSource = "手动"
+	}
+
+	// 如果分组为空 则返回未分组
+	linkGroup := info.Group
+	if linkGroup == "" {
+		linkGroup = "未分组"
+	}
 
 	// 替换所有支持的变量
 	replacements := map[string]string{
@@ -190,8 +201,8 @@ func RenameNode(rule string, info NodeInfo) string {
 		"$Flag":        ISOToFlag(info.LinkCountry),
 		"$Speed":       FormatSpeed(info.Speed),
 		"$Delay":       FormatDelay(info.DelayTime),
-		"$Group":       info.Group,
-		"$Source":      info.Source,
+		"$Group":       linkGroup,
+		"$Source":      linkSource,
 		"$Index":       fmt.Sprintf("%d", info.Index),
 		"$Protocol":    info.Protocol,
 	}
