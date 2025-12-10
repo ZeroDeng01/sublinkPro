@@ -446,6 +446,8 @@ export default function NodeList() {
   // 手动刷新（保留搜索条件）
   const handleRefresh = useCallback(() => {
     fetchNodes(getCurrentFilters());
+    getNodeGroups();
+    getNodeSources();
   }, [fetchNodes, searchQuery, groupFilter, sourceFilter, maxDelay, minSpeed, countryFilter, sortBy, sortOrder]);
 
   // 监听任务完成，自动刷新节点列表
@@ -897,8 +899,8 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: "spin 1s linear infinite",
-                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
                     }
                     : {}
                 }
@@ -942,8 +944,8 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: "spin 1s linear infinite",
-                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
                   }
                   : {}
               }
@@ -1427,11 +1429,25 @@ export default function NodeList() {
 
       {/* 订阅调度器对话框 */}
       <Dialog open={schedulerDialogOpen} onClose={() => setSchedulerDialogOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           导入订阅
-          <Button sx={{ ml: 2 }} variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAddScheduler}>
-            添加订阅
-          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAddScheduler}>
+              添加订阅
+            </Button>
+            <IconButton onClick={fetchSchedulers} disabled={loading}>
+              <RefreshIcon
+                sx={
+                  loading
+                    ? {
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
+                    : {}
+                }
+              />
+            </IconButton>
+          </Box>
         </DialogTitle>
         <DialogContent>
           <TableContainer>
@@ -1497,12 +1513,14 @@ export default function NodeList() {
               fullWidth
               label="名称"
               value={schedulerForm.Name}
+              helperText="订阅名称不能重复，名称将作为节点来源"
               onChange={(e) => setSchedulerForm({ ...schedulerForm, Name: e.target.value })}
             />
             <TextField
               fullWidth
               label="URL"
               value={schedulerForm.URL}
+              helperText="目前仅支持clash协议的yaml订阅和v2ray的base64以及非base64订阅"
               onChange={(e) => setSchedulerForm({ ...schedulerForm, URL: e.target.value })}
             />
             <Autocomplete
@@ -1637,7 +1655,7 @@ export default function NodeList() {
                   )}
                 />
                 <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
-                  如果未选择具体代理，系统将自动选择延迟最低且速度最快的节点作为下载代理
+                  如果未选择具体代理，系统将自动选择延迟最低且速度最快的节点作为下载代理，你也可以输入外部代理地址
                 </Typography>
               </Box>
             )}

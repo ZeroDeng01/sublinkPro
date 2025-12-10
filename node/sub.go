@@ -155,7 +155,7 @@ func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithP
 	// 尝试解析 YAML
 	errYaml := yaml.Unmarshal(data, &config)
 
-	// 如果 YAML 解析失败或没有代理节点，尝试 Base64 解码
+	// 如果 YAML 解析失败或没有代理节点，尝试 Base64 解码 兼容base64订阅
 	if errYaml != nil || len(config.Proxies) == 0 {
 		// 尝试标准 Base64 解码
 		decodedBytes, errB64 := base64.StdEncoding.DecodeString(strings.TrimSpace(string(data)))
@@ -167,6 +167,21 @@ func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithP
 		if errB64 == nil {
 			// Base64 解码成功，按行解析
 			lines := strings.Split(string(decodedBytes), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line == "" {
+					continue
+				}
+				proxy, errP := protocol.LinkToProxy(protocol.Urls{Url: line}, utils.SqlConfig{})
+				if errP == nil {
+					config.Proxies = append(config.Proxies, proxy)
+				}
+			}
+		}
+		// 兼容非base64的v2ray配置文件
+		if len(config.Proxies) == 0 {
+			// Base64 解码成功，按行解析
+			lines := strings.Split(string(data), "\n")
 			for _, line := range lines {
 				line = strings.TrimSpace(line)
 				if line == "" {
@@ -619,12 +634,19 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 			// 节点不存在，插入新节点
 			err = Node.Add()
 			if err != nil {
-				nodeStatus = "failed"
-				log.Printf("❌节点插入失败【%s】：%v", proxy.Name, err)
+				//如果err为constraint failed: UNIQUE constraint failed: nodes.link (2067)则错误信息为节点链接已存在
+				if strings.Contains(err.Error(), "constraint failed: UNIQUE constraint failed: nodes.link") {
+					nodeStatus = "skipped"
+					updateSuccessCount++
+					log.Printf("⚠️节点【%s】已存在，不进行任何处理", existingNode.Name)
+				} else {
+					log.Printf("❌节点插入失败【%s】：%v", proxy.Name, err)
+					nodeStatus = "failed"
+				}
 			} else {
 				addSuccessCount++
 				nodeStatus = "added"
-				log.Printf("✅节点插入成功【%s】", proxy.Name)
+				//log.Printf("✅节点插入成功【%s】", proxy.Name)
 			}
 		}
 
