@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gopkg.in/yaml.v3"
 )
 
 // ConvertRulesRequest 规则转换请求
@@ -37,11 +36,12 @@ type ACLRuleset struct {
 
 // ACLProxyGroup ACL 代理组定义
 type ACLProxyGroup struct {
-	Name     string   // 组名
-	Type     string   // 类型: select, url-test, fallback, load-balance
-	Proxies  []string // 代理列表
-	URL      string   // 测速 URL (url-test 类型)
-	Interval int      // 测速间隔
+	Name      string   // 组名
+	Type      string   // 类型: select, url-test, fallback, load-balance
+	Proxies   []string // 代理列表
+	URL       string   // 测速 URL (url-test 类型)
+	Interval  int      // 测速间隔
+	Tolerance int      // 容差 (url-test 类型)
 }
 
 // ConvertRules 规则转换 API
@@ -164,7 +164,7 @@ func parseACLConfig(content string) ([]ACLRuleset, []ACLProxyGroup) {
 }
 
 // parseProxyGroup 解析代理组定义
-// 格式: name`type`proxy1`proxy2`...`url`interval
+// 格式: name`type`proxy1`proxy2`...`url`interval,,tolerance
 func parseProxyGroup(line string) ACLProxyGroup {
 	parts := strings.Split(line, "`")
 	if len(parts) < 2 {
@@ -186,9 +186,24 @@ func parseProxyGroup(line string) ACLProxyGroup {
 			continue
 		}
 
-		// 检测数字 (interval)
-		if matched, _ := regexp.MatchString(`^\d+$`, part); matched {
-			fmt.Sscanf(part, "%d", &pg.Interval)
+		// 检测数字格式 interval,,tolerance 或 interval
+		if matched, _ := regexp.MatchString(`^\d+`, part); matched {
+			// 检查是否有 ,, 分隔符 (interval,,tolerance)
+			if strings.Contains(part, ",") {
+				numParts := strings.Split(part, ",")
+				if len(numParts) >= 1 && numParts[0] != "" {
+					fmt.Sscanf(numParts[0], "%d", &pg.Interval)
+				}
+				// tolerance 在最后一个非空元素
+				for j := len(numParts) - 1; j >= 0; j-- {
+					if numParts[j] != "" && j > 0 {
+						fmt.Sscanf(numParts[j], "%d", &pg.Tolerance)
+						break
+					}
+				}
+			} else {
+				fmt.Sscanf(part, "%d", &pg.Interval)
+			}
 			continue
 		}
 
@@ -211,50 +226,51 @@ func parseProxyGroup(line string) ACLProxyGroup {
 
 // generateClashProxyGroups 生成 Clash 格式的代理组
 func generateClashProxyGroups(groups []ACLProxyGroup) string {
-	var result []map[string]interface{}
+	var lines []string
+	lines = append(lines, "proxy-groups:")
 
 	for _, g := range groups {
-		group := map[string]interface{}{
-			"name":    g.Name,
-			"type":    g.Type,
-			"proxies": g.Proxies,
-		}
+		lines = append(lines, fmt.Sprintf("  - name: %s", g.Name))
+		lines = append(lines, fmt.Sprintf("    type: %s", g.Type))
 
 		if g.Type == "url-test" || g.Type == "fallback" {
-			if g.URL != "" {
-				group["url"] = g.URL
-			} else {
-				group["url"] = "http://www.gstatic.com/generate_204"
+			url := g.URL
+			if url == "" {
+				url = "http://www.gstatic.com/generate_204"
 			}
-			if g.Interval > 0 {
-				group["interval"] = g.Interval
-			} else {
-				group["interval"] = 300
+			lines = append(lines, fmt.Sprintf("    url: %s", url))
+
+			interval := g.Interval
+			if interval <= 0 {
+				interval = 300
+			}
+			lines = append(lines, fmt.Sprintf("    interval: %d", interval))
+
+			if g.Tolerance > 0 {
+				lines = append(lines, fmt.Sprintf("    tolerance: %d", g.Tolerance))
 			}
 		}
 
-		result = append(result, group)
+		lines = append(lines, "    proxies:")
+		for _, proxy := range g.Proxies {
+			lines = append(lines, fmt.Sprintf("      - %s", proxy))
+		}
 	}
 
-	// 转换为 YAML
-	yamlBytes, err := yaml.Marshal(map[string]interface{}{
-		"proxy-groups": result,
-	})
-	if err != nil {
-		return ""
-	}
-	return string(yamlBytes)
+	return strings.Join(lines, "\n")
 }
 
 // generateClashRules 生成 Clash 格式的规则
 func generateClashRules(rulesets []ACLRuleset, expand bool) (string, error) {
 	var rules []string
+	var providers []string // rule-providers
+	providerIndex := make(map[string]bool)
 
 	if expand {
 		// 并发获取所有规则列表
 		rules = expandRulesParallel(rulesets)
 	} else {
-		// 生成 RULE-SET 引用
+		// 生成 RULE-SET 引用 + rule-providers
 		for _, rs := range rulesets {
 			if strings.HasPrefix(rs.RuleURL, "[]") {
 				// 内联规则
@@ -270,20 +286,75 @@ func generateClashRules(rulesets []ACLRuleset, expand bool) (string, error) {
 					rules = append(rules, fmt.Sprintf("%s,%s", rule, rs.Group))
 				}
 			} else if strings.HasPrefix(rs.RuleURL, "http") {
-				// 远程规则，使用 RULE-SET
-				rules = append(rules, fmt.Sprintf("RULE-SET,%s,%s", rs.RuleURL, rs.Group))
+				// 远程规则，解析出名称和类型
+				providerName, behavior := parseProviderInfo(rs.RuleURL)
+
+				// 生成两个 provider: Domain 和 IP-CIDR
+				domainName := providerName + " (Domain)"
+				ipcidrName := providerName + " (IP-CIDR)"
+
+				// 添加 Domain 规则
+				rules = append(rules, fmt.Sprintf("RULE-SET,%s,%s", domainName, rs.Group))
+				// 添加 IP-CIDR 规则
+				rules = append(rules, fmt.Sprintf("RULE-SET,%s,%s,no-resolve", ipcidrName, rs.Group))
+
+				// 添加 provider 定义（避免重复）
+				if !providerIndex[domainName] {
+					providerIndex[domainName] = true
+					providers = append(providers, generateProvider(domainName, rs.RuleURL, "domain", behavior))
+				}
+				if !providerIndex[ipcidrName] {
+					providerIndex[ipcidrName] = true
+					providers = append(providers, generateProvider(ipcidrName, rs.RuleURL, "ipcidr", behavior))
+				}
 			}
 		}
 	}
 
-	// 转换为 YAML 格式
-	yamlBytes, err := yaml.Marshal(map[string]interface{}{
-		"rules": rules,
-	})
-	if err != nil {
-		return "", err
+	// 生成 rules 部分
+	var lines []string
+	lines = append(lines, "rules:")
+	for _, rule := range rules {
+		lines = append(lines, fmt.Sprintf("  - %s", rule))
 	}
-	return string(yamlBytes), nil
+
+	// 如果有 providers，添加 rule-providers 部分
+	if len(providers) > 0 {
+		lines = append(lines, "")
+		lines = append(lines, "rule-providers:")
+		for _, p := range providers {
+			lines = append(lines, p)
+		}
+	}
+
+	return strings.Join(lines, "\n"), nil
+}
+
+// parseProviderInfo 从 URL 解析 provider 名称和行为类型
+func parseProviderInfo(url string) (name string, behavior string) {
+	// 从 URL 提取文件名
+	parts := strings.Split(url, "/")
+	filename := parts[len(parts)-1]
+
+	// 去掉 .list 扩展名
+	name = strings.TrimSuffix(filename, ".list")
+
+	// 默认行为类型
+	behavior = "classical"
+
+	return name, behavior
+}
+
+// generateProvider 生成单个 provider 的 YAML
+func generateProvider(name, url, ruleType, behavior string) string {
+	var lines []string
+	lines = append(lines, fmt.Sprintf("  %s:", name))
+	lines = append(lines, "    type: http")
+	lines = append(lines, fmt.Sprintf("    behavior: %s", ruleType))
+	lines = append(lines, fmt.Sprintf("    url: %s", url))
+	lines = append(lines, "    path: ./providers/"+strings.ReplaceAll(name, " ", "_")+".yaml")
+	lines = append(lines, "    interval: 86400")
+	return strings.Join(lines, "\n")
 }
 
 // expandRulesParallel 并发展开规则
@@ -430,36 +501,59 @@ func mergeToTemplate(template, proxyGroups, rules, category string) string {
 }
 
 // mergeClashTemplate 合并 Clash 模板
+// 使用字符串替换方式，避免 yaml.Marshal 转义 emoji
 func mergeClashTemplate(template, proxyGroups, rules string) string {
-	// 解析现有模板
-	var templateData map[string]interface{}
-	if err := yaml.Unmarshal([]byte(template), &templateData); err != nil {
-		// 模板解析失败，直接追加
-		return template + "\n\n# ========== 转换生成的配置 ==========\n\n" + proxyGroups + "\n" + rules
+	if strings.TrimSpace(template) == "" {
+		// 模板为空，直接返回生成的内容
+		return proxyGroups + "\n\n" + rules
 	}
 
-	// 解析生成的代理组
-	var proxyGroupsData map[string]interface{}
-	if err := yaml.Unmarshal([]byte(proxyGroups), &proxyGroupsData); err == nil {
-		if pg, ok := proxyGroupsData["proxy-groups"]; ok {
-			templateData["proxy-groups"] = pg
+	lines := strings.Split(template, "\n")
+	var result []string
+	skipSection := ""
+	sectionsToReplace := map[string]bool{
+		"proxy-groups:": true,
+		"rules:":        true,
+	}
+
+	for i, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+
+		// 检查是否进入需要替换的 section
+		if sectionsToReplace[trimmedLine] {
+			skipSection = trimmedLine
+			continue
 		}
-	}
 
-	// 解析生成的规则
-	var rulesData map[string]interface{}
-	if err := yaml.Unmarshal([]byte(rules), &rulesData); err == nil {
-		if r, ok := rulesData["rules"]; ok {
-			templateData["rules"] = r
+		// 如果当前在需要跳过的 section 中
+		if skipSection != "" {
+			// 检查是否到了新的顶级 key（不以空格开头且以 : 结尾）
+			if trimmedLine != "" && !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
+				// 检查下一行是否是列表或嵌套内容
+				if strings.HasSuffix(trimmedLine, ":") || (i+1 < len(lines) && strings.HasPrefix(strings.TrimSpace(lines[i+1]), "-")) {
+					skipSection = ""
+					result = append(result, line)
+					continue
+				}
+				skipSection = ""
+				result = append(result, line)
+				continue
+			}
+			// 仍在需要跳过的 section 中，跳过此行
+			continue
 		}
+
+		result = append(result, line)
 	}
 
-	// 重新生成 YAML
-	result, err := yaml.Marshal(templateData)
-	if err != nil {
-		return template + "\n\n# ========== 转换生成的配置 ==========\n\n" + proxyGroups + "\n" + rules
-	}
-	return string(result)
+	// 组合结果
+	resultStr := strings.Join(result, "\n")
+	resultStr = strings.TrimRight(resultStr, "\n")
+
+	// 添加生成的代理组和规则
+	resultStr += "\n\n" + proxyGroups + "\n\n" + rules
+
+	return resultStr
 }
 
 // mergeSurgeTemplate 合并 Surge 模板
