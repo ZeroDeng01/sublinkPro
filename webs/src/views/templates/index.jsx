@@ -26,10 +26,12 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Autocomplete from '@mui/material/Autocomplete';
+import Switch from '@mui/material/Switch';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
@@ -42,8 +44,10 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
+import SearchableNodeSelect from 'components/SearchableNodeSelect';
 import { getTemplates, addTemplate, updateTemplate, deleteTemplate, getACL4SSRPresets, convertRules } from 'api/templates';
 import { getBaseTemplates, updateBaseTemplate } from 'api/settings';
+import { getNodes } from 'api/nodes';
 
 // Monaco Editor
 import Editor from '@monaco-editor/react';
@@ -85,6 +89,12 @@ export default function TemplateList() {
   const [baseTemplateContent, setBaseTemplateContent] = useState('');
   const [baseTemplateLoading, setBaseTemplateLoading] = useState(false);
   const [baseTemplateSaving, setBaseTemplateSaving] = useState(false);
+
+  // 代理设置
+  const [useProxy, setUseProxy] = useState(false);
+  const [proxyLink, setProxyLink] = useState('');
+  const [proxyNodeOptions, setProxyNodeOptions] = useState([]);
+  const [loadingProxyNodes, setLoadingProxyNodes] = useState(false);
 
   const openConfirm = (title, content, action) => {
     setConfirmInfo({ title, content, action });
@@ -143,6 +153,8 @@ export default function TemplateList() {
     setIsEdit(false);
     setCurrentTemplate(null);
     setFormData({ filename: '', text: '', category: 'clash', ruleSource: '' });
+    setUseProxy(false);
+    setProxyLink('');
     setDialogOpen(true);
   };
 
@@ -155,6 +167,8 @@ export default function TemplateList() {
       category: template.category || 'clash',
       ruleSource: template.ruleSource || ''
     });
+    setUseProxy(false);
+    setProxyLink('');
     setDialogOpen(true);
   };
 
@@ -233,6 +247,22 @@ export default function TemplateList() {
     }
   };
 
+  // 获取代理节点列表
+  const fetchProxyNodes = async () => {
+    setLoadingProxyNodes(true);
+    try {
+      const res = await getNodes({ minSpeed: 0.01, pageSize: 100 }); // 获取有速度的节点
+      if (res.data) {
+        const items = res.data.items || res.data || [];
+        setProxyNodeOptions(items);
+      }
+    } catch (error) {
+      console.error('获取代理节点失败:', error);
+    } finally {
+      setLoadingProxyNodes(false);
+    }
+  };
+
   return (
     <MainCard
       title="模板管理"
@@ -257,9 +287,9 @@ export default function TemplateList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -275,9 +305,9 @@ export default function TemplateList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
@@ -435,6 +465,41 @@ export default function TemplateList() {
                 </li>
               )}
             />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={useProxy}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setUseProxy(checked);
+                    if (checked) {
+                      fetchProxyNodes();
+                    }
+                  }}
+                />
+              }
+              label="使用代理下载远程规则"
+            />
+            {useProxy && (
+              <Box>
+                <SearchableNodeSelect
+                  nodes={proxyNodeOptions}
+                  loading={loadingProxyNodes}
+                  value={
+                    proxyNodeOptions.find((n) => n.Link === proxyLink) ||
+                    (proxyLink ? { Link: proxyLink, Name: '', ID: 0 } : null)
+                  }
+                  onChange={(newValue) => setProxyLink(newValue?.Link || '')}
+                  displayField="Name"
+                  valueField="Link"
+                  label="选择代理节点"
+                  placeholder="留空则自动选择最佳节点"
+                  helperText="如果未选择具体代理，系统将自动选择延迟最低且速度最快的节点"
+                  freeSolo={true}
+                  limit={50}
+                />
+              </Box>
+            )}
             <Stack direction="row" spacing={1}>
               <Button
                 variant="outlined"
@@ -447,7 +512,9 @@ export default function TemplateList() {
                       ruleSource: formData.ruleSource,
                       category: formData.category,
                       expand: false,
-                      template: formData.text
+                      template: formData.text,
+                      useProxy: useProxy,
+                      proxyLink: proxyLink
                     });
                     if (res.code === 200 && res.data && res.data.content) {
                       setFormData({ ...formData, text: res.data.content });
@@ -485,7 +552,9 @@ export default function TemplateList() {
                       ruleSource: formData.ruleSource,
                       category: formData.category,
                       expand: true,
-                      template: formData.text
+                      template: formData.text,
+                      useProxy: useProxy,
+                      proxyLink: proxyLink
                     });
                     if (res.code === 200 && res.data && res.data.content) {
                       setFormData({ ...formData, text: res.data.content });

@@ -3,9 +3,7 @@ package api
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"regexp"
 	"strings"
 	"sublink/models"
@@ -22,6 +20,8 @@ type ConvertRulesRequest struct {
 	Category   string `json:"category"`   // clash / surge
 	Expand     bool   `json:"expand"`     // 是否展开规则
 	Template   string `json:"template"`   // 当前模板内容
+	UseProxy   bool   `json:"useProxy"`   // 是否使用代理
+	ProxyLink  string `json:"proxyLink"`  // 代理节点链接（可选）
 }
 
 // ConvertRulesResponse 规则转换响应
@@ -75,7 +75,7 @@ func ConvertRules(c *gin.Context) {
 	}
 
 	// 获取远程 ACL 配置
-	aclContent, err := fetchRemoteContent(req.RuleSource)
+	aclContent, err := fetchRemoteContent(req.RuleSource, req.UseProxy, req.ProxyLink)
 	if err != nil {
 		utils.FailWithMsg(c, "获取远程配置失败: "+err.Error())
 		return
@@ -88,10 +88,10 @@ func ConvertRules(c *gin.Context) {
 	var proxyGroupsStr, rulesStr string
 	if req.Category == "surge" {
 		proxyGroupsStr = generateSurgeProxyGroups(proxyGroups)
-		rulesStr, err = generateSurgeRules(rulesets, req.Expand)
+		rulesStr, err = generateSurgeRules(rulesets, req.Expand, req.UseProxy, req.ProxyLink)
 	} else {
 		proxyGroupsStr = generateClashProxyGroups(proxyGroups)
-		rulesStr, err = generateClashRules(rulesets, req.Expand)
+		rulesStr, err = generateClashRules(rulesets, req.Expand, req.UseProxy, req.ProxyLink)
 	}
 
 	if err != nil {
@@ -108,23 +108,13 @@ func ConvertRules(c *gin.Context) {
 }
 
 // fetchRemoteContent 获取远程内容
-func fetchRemoteContent(url string) (string, error) {
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Get(url)
+// 支持使用代理节点下载
+func fetchRemoteContent(url string, useProxy bool, proxyLink string) (string, error) {
+	data, err := utils.FetchWithProxy(url, useProxy, proxyLink, 30*time.Second, "")
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("HTTP %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-	return string(body), nil
+	return string(data), nil
 }
 
 // parseACLConfig 解析 ACL 配置
@@ -262,14 +252,14 @@ func generateClashProxyGroups(groups []ACLProxyGroup) string {
 }
 
 // generateClashRules 生成 Clash 格式的规则
-func generateClashRules(rulesets []ACLRuleset, expand bool) (string, error) {
+func generateClashRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxyLink string) (string, error) {
 	var rules []string
 	var providers []string // rule-providers
 	providerIndex := make(map[string]bool)
 
 	if expand {
 		// 并发获取所有规则列表
-		rules = expandRulesParallel(rulesets)
+		rules = expandRulesParallel(rulesets, useProxy, proxyLink)
 	} else {
 		// 生成 RULE-SET 引用 + rule-providers
 		for _, rs := range rulesets {
@@ -359,7 +349,7 @@ func generateProvider(name, url, ruleType, behavior string) string {
 }
 
 // expandRulesParallel 并发展开规则
-func expandRulesParallel(rulesets []ACLRuleset) []string {
+func expandRulesParallel(rulesets []ACLRuleset, useProxy bool, proxyLink string) []string {
 	type ruleResult struct {
 		index int
 		rules []string
@@ -389,7 +379,7 @@ func expandRulesParallel(rulesets []ACLRuleset) []string {
 				}
 			} else if strings.HasPrefix(ruleset.RuleURL, "http") {
 				// 获取远程规则
-				content, err := fetchRemoteContent(ruleset.RuleURL)
+				content, err := fetchRemoteContent(ruleset.RuleURL, useProxy, proxyLink)
 				if err != nil {
 					log.Printf("获取规则失败 %s: %v", ruleset.RuleURL, err)
 					results <- ruleResult{idx, rules}
@@ -457,13 +447,13 @@ func generateSurgeProxyGroups(groups []ACLProxyGroup) string {
 }
 
 // generateSurgeRules 生成 Surge 格式的规则
-func generateSurgeRules(rulesets []ACLRuleset, expand bool) (string, error) {
+func generateSurgeRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxyLink string) (string, error) {
 	var lines []string
 	lines = append(lines, "[Rule]")
 
 	if expand {
 		// 展开规则
-		rules := expandRulesParallel(rulesets)
+		rules := expandRulesParallel(rulesets, useProxy, proxyLink)
 		for _, rule := range rules {
 			// 转换 Clash 格式到 Surge 格式
 			// MATCH -> FINAL

@@ -13,11 +13,13 @@ import (
 	"sublink/routers"
 	"sublink/services"
 	"sublink/services/geoip"
+	"sublink/services/mihomo"
 	"sublink/services/sse"
 	"sublink/settings"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/metacubex/mihomo/constant"
 )
 
 //go:embed template
@@ -131,6 +133,21 @@ func Run(port int) {
 	utils.Loginit()
 	// 初始化模板
 	Templateinit()
+
+	// 初始化代理客户端函数
+	utils.GetMihomoAdapterFunc = func(nodeLink string) (constant.Proxy, error) {
+		return mihomo.GetMihomoAdapter(nodeLink)
+	}
+	utils.GetBestProxyNodeFunc = func() (string, string, error) {
+		node, err := models.GetBestProxyNode()
+		if err != nil {
+			return "", "", err
+		}
+		if node == nil {
+			return "", "", nil
+		}
+		return node.Link, node.Name, nil
+	}
 
 	// 初始化 GeoIP 数据库
 	if err := geoip.InitGeoIP(); err != nil {
