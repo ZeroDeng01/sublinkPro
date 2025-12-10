@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sublink/models"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,8 @@ import (
 type Temp struct {
 	File       string `json:"file"`
 	Text       string `json:"text"`
+	Category   string `json:"category"`
+	RuleSource string `json:"ruleSource"`
 	CreateDate string `json:"create_date"`
 }
 
@@ -133,9 +136,20 @@ func GetTempS(c *gin.Context) {
 			continue // 跳过无法读取的文件
 		}
 
+		// 从数据库获取模板元数据
+		var tmplMeta models.Template
+		category := "clash"
+		ruleSource := ""
+		if err := tmplMeta.FindByName(file.Name()); err == nil {
+			category = tmplMeta.Category
+			ruleSource = tmplMeta.RuleSource
+		}
+
 		temp := Temp{
 			File:       file.Name(),
 			Text:       string(text),
+			Category:   category,
+			RuleSource: ruleSource,
 			CreateDate: modTime,
 		}
 		temps = append(temps, temp)
@@ -160,7 +174,7 @@ func GetTempS(c *gin.Context) {
 		total := int64(len(temps))
 		offset := (page - 1) * pageSize
 		end := offset + pageSize
-		
+
 		var pagedTemps []Temp
 		if offset < len(temps) {
 			if end > len(temps) {
@@ -196,10 +210,17 @@ func UpdateTemp(c *gin.Context) {
 	filename := c.PostForm("filename")
 	oldname := c.PostForm("oldname")
 	text := c.PostForm("text")
+	category := c.PostForm("category")
+	ruleSource := c.PostForm("ruleSource")
 
 	if filename == "" || oldname == "" || text == "" {
 		utils.FailWithMsg(c, "文件名或内容不能为空")
 		return
+	}
+
+	// 默认类别为 clash
+	if category == "" {
+		category = "clash"
 	}
 
 	// 验证旧文件名以防止目录遍历
@@ -249,11 +270,33 @@ func UpdateTemp(c *gin.Context) {
 	}
 
 	// 写入文件内容到新的安全路径
-	err = os.WriteFile(newFullPath, []byte(text), 0666) // 确保写入到新的安全路径
+	err = os.WriteFile(newFullPath, []byte(text), 0666)
 	if err != nil {
 		log.Println("修改文件内容失败:", err)
 		utils.FailWithMsg(c, "修改失败")
 		return
+	}
+
+	// 更新数据库中的模板元数据
+	var tmpl models.Template
+	if err := tmpl.FindByName(oldname); err != nil {
+		// 如果数据库中不存在，创建新记录
+		tmpl = models.Template{
+			Name:       filename,
+			Category:   category,
+			RuleSource: ruleSource,
+		}
+		if err := tmpl.Add(); err != nil {
+			log.Printf("创建模板元数据失败: %v", err)
+		}
+	} else {
+		// 更新现有记录
+		tmpl.Name = filename
+		tmpl.Category = category
+		tmpl.RuleSource = ruleSource
+		if err := tmpl.Update(); err != nil {
+			log.Printf("更新模板元数据失败: %v", err)
+		}
 	}
 
 	utils.OkWithMsg(c, "修改成功")
@@ -261,10 +304,17 @@ func UpdateTemp(c *gin.Context) {
 func AddTemp(c *gin.Context) {
 	filename := c.PostForm("filename")
 	text := c.PostForm("text")
+	category := c.PostForm("category")
+	ruleSource := c.PostForm("ruleSource")
 
 	if filename == "" || text == "" {
 		utils.FailWithMsg(c, "文件名或内容不能为空")
 		return
+	}
+
+	// 默认类别为 clash
+	if category == "" {
+		category = "clash"
 	}
 
 	// 确保模板目录存在
@@ -288,7 +338,6 @@ func AddTemp(c *gin.Context) {
 		utils.FailWithMsg(c, "文件已存在")
 		return
 	} else if !os.IsNotExist(err) {
-		// 除了文件不存在的错误，其他都是内部错误
 		log.Println("检查文件存在性失败:", err)
 		utils.FailWithMsg(c, "服务器错误：检查文件失败")
 		return
@@ -300,6 +349,16 @@ func AddTemp(c *gin.Context) {
 		log.Println("写入文件失败:", err)
 		utils.FailWithMsg(c, "上传失败")
 		return
+	}
+
+	// 创建数据库记录
+	tmpl := models.Template{
+		Name:       filename,
+		Category:   category,
+		RuleSource: ruleSource,
+	}
+	if err := tmpl.Add(); err != nil {
+		log.Printf("创建模板元数据失败: %v", err)
 	}
 
 	utils.OkWithMsg(c, "上传成功")
@@ -338,5 +397,57 @@ func DelTemp(c *gin.Context) {
 		return
 	}
 
+	// 删除数据库记录
+	var tmpl models.Template
+	if err := tmpl.FindByName(filename); err == nil {
+		if err := tmpl.Delete(); err != nil {
+			log.Printf("删除模板元数据失败: %v", err)
+		}
+	}
+
 	utils.OkWithMsg(c, "删除成功")
+}
+
+// ACL4SSRPreset ACL4SSR 规则预设
+type ACL4SSRPreset struct {
+	Name  string `json:"name"`
+	URL   string `json:"url"`
+	Label string `json:"label"`
+}
+
+// GetACL4SSRPresets 获取 ACL4SSR 规则预设列表
+func GetACL4SSRPresets(c *gin.Context) {
+	presets := []ACL4SSRPreset{
+		{
+			Name:  "ACL4SSR_Online",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini",
+			Label: "默认版 - 分组比较全",
+		},
+		{
+			Name:  "ACL4SSR_Online_Full",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full.ini",
+			Label: "全分组版 - 与其他大佬分组",
+		},
+		{
+			Name:  "ACL4SSR_Online_Full_NoAuto",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_NoAuto.ini",
+			Label: "全分组版 - 无自动测速",
+		},
+		{
+			Name:  "ACL4SSR_Online_Mini",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini.ini",
+			Label: "精简版 - 少量分组",
+		},
+		{
+			Name:  "ACL4SSR_Online_Mini_NoAuto",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_NoAuto.ini",
+			Label: "精简版 - 无自动测速",
+		},
+		{
+			Name:  "ACL4SSR_Online_Full_AdblockPlus",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_AdblockPlus.ini",
+			Label: "全分组版 - 带广告拦截",
+		},
+	}
+	utils.OkDetailed(c, "ok", presets)
 }

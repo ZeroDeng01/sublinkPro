@@ -64,3 +64,20 @@ export function deleteTemplate(data) {
     }
   });
 }
+
+// 获取 ACL4SSR 规则预设列表
+export function getACL4SSRPresets() {
+  return request({
+    url: '/v1/template/presets',
+    method: 'get'
+  });
+}
+
+// 转换规则
+export function convertRules(data) {
+  return request({
+    url: '/v1/template/convert',
+    method: 'post',
+    data
+  });
+}

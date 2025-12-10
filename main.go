@@ -171,6 +171,9 @@ func Run(port int) {
 	if err := models.InitSubcriptionCache(); err != nil {
 		log.Println("加载订阅到缓存失败: %v", err)
 	}
+	if err := models.InitTemplateCache(); err != nil {
+		log.Println("加载模板到缓存失败: %v", err)
+	}
 
 	// 从数据库加载定时任务
 	err := scheduler.LoadFromDatabase()

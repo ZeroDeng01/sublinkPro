@@ -86,6 +86,11 @@ func InitSqlite() {
 	} else {
 		log.Printf("数据表SubcriptionScript创建成功")
 	}
+	if err := DB.AutoMigrate(&Template{}); err != nil {
+		log.Printf("基础数据表Template迁移失败: %v", err)
+	} else {
+		log.Printf("数据表Template创建成功")
+	}
 
 	// 检查并删除 idx_name_id 索引
 	// 0000_drop_idx_name_id
@@ -160,7 +165,14 @@ func InitSqlite() {
 		}
 		return nil
 	}); err != nil {
-		log.Printf("执行迁移 0000_drop_idx_name_id 失败: %v", err)
+		log.Printf("执行迁移 0007_add_script_demo 失败: %v", err)
+	}
+
+	// 0009_migrate_template_files - 迁移现有模板文件到数据库
+	if err := RunCustomMigration("0009_migrate_template_files", func() error {
+		return MigrateTemplatesFromFiles("./template")
+	}); err != nil {
+		log.Printf("执行迁移 0009_migrate_template_files 失败: %v", err)
 	}
 
 	// 初始化用户数据

@@ -15,6 +15,8 @@ func Templates(r *gin.Engine) {
 		TempsGroup.POST("/delete", api.DelTemp)
 		TempsGroup.GET("/get", api.GetTempS)
 		TempsGroup.POST("/update", api.UpdateTemp)
+		TempsGroup.GET("/presets", api.GetACL4SSRPresets)
+		TempsGroup.POST("/convert", api.ConvertRules)
 	}
 
 }
