@@ -419,34 +419,174 @@ type ACL4SSRPreset struct {
 func GetACL4SSRPresets(c *gin.Context) {
 	presets := []ACL4SSRPreset{
 		{
+			Name:  "作者自用",
+			URL:   "https://raw.githubusercontent.com/ZeroDeng01/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_NoCountry.ini",
+			Label: "作者自用 - 不区分国家",
+		},
+		{
+			Name:  "ACL4SSR",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR.ini",
+			Label: "标准版 - 典型分组",
+		},
+		{
+			Name:  "ACL4SSR_AdblockPlus",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_AdblockPlus.ini",
+			Label: "标准版 - 典型分组+去广告",
+		},
+		{
+			Name:  "ACL4SSR_BackCN",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_BackCN.ini",
+			Label: "回国版 - 回国专用",
+		},
+		{
+			Name:  "ACL4SSR_Mini",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Mini.ini",
+			Label: "精简版 - 少量分组",
+		},
+		{
+			Name:  "ACL4SSR_Mini_Fallback",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Mini_Fallback.ini",
+			Label: "精简版 - 故障转移",
+		},
+		{
+			Name:  "ACL4SSR_Mini_MultiMode",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Mini_MultiMode.ini",
+			Label: "精简版 - 多模式 (自动/手动)",
+		},
+		{
+			Name:  "ACL4SSR_Mini_NoAuto",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Mini_NoAuto.ini",
+			Label: "精简版 - 无自动测速",
+		},
+		{
+			Name:  "ACL4SSR_NoApple",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_NoApple.ini",
+			Label: "无苹果 - 无苹果分流",
+		},
+		{
+			Name:  "ACL4SSR_NoAuto",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_NoAuto.ini",
+			Label: "无测速 - 无自动测速",
+		},
+		{
+			Name:  "ACL4SSR_NoAuto_NoApple",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_NoAuto_NoApple.ini",
+			Label: "无测速&苹果 - 无测速&无苹果分流",
+		},
+		{
+			Name:  "ACL4SSR_NoAuto_NoApple_NoMicrosoft",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_NoAuto_NoApple_NoMicrosoft.ini",
+			Label: "无测速&苹果&微软 - 无测速&无苹果&无微软分流",
+		},
+		{
+			Name:  "ACL4SSR_NoMicrosoft",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_NoMicrosoft.ini",
+			Label: "无微软 - 无微软分流",
+		},
+		{
 			Name:  "ACL4SSR_Online",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini",
-			Label: "默认版 - 分组比较全",
+			Label: "在线版 - 典型分组",
+		},
+		{
+			Name:  "ACL4SSR_Online_AdblockPlus",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_AdblockPlus.ini",
+			Label: "在线版 - 典型分组+去广告",
 		},
 		{
 			Name:  "ACL4SSR_Online_Full",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full.ini",
-			Label: "全分组版 - 与其他大佬分组",
-		},
-		{
-			Name:  "ACL4SSR_Online_Full_NoAuto",
-			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_NoAuto.ini",
-			Label: "全分组版 - 无自动测速",
-		},
-		{
-			Name:  "ACL4SSR_Online_Mini",
-			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini.ini",
-			Label: "精简版 - 少量分组",
-		},
-		{
-			Name:  "ACL4SSR_Online_Mini_NoAuto",
-			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_NoAuto.ini",
-			Label: "精简版 - 无自动测速",
+			Label: "在线全分组 - 比较全",
 		},
 		{
 			Name:  "ACL4SSR_Online_Full_AdblockPlus",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_AdblockPlus.ini",
-			Label: "全分组版 - 带广告拦截",
+			Label: "在线全分组 - 带广告拦截",
+		},
+		{
+			Name:  "ACL4SSR_Online_Full_Google",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_Google.ini",
+			Label: "在线全分组 - 谷歌分流",
+		},
+		{
+			Name:  "ACL4SSR_Online_Full_MultiMode",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_MultiMode.ini",
+			Label: "在线全分组 - 多模式",
+		},
+		{
+			Name:  "ACL4SSR_Online_Full_Netflix",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_Netflix.ini",
+			Label: "在线全分组 - 奈飞分流",
+		},
+		{
+			Name:  "ACL4SSR_Online_Full_NoAuto",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_NoAuto.ini",
+			Label: "在线全分组 - 无自动测速",
+		},
+		{
+			Name:  "ACL4SSR_Online_Mini",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini.ini",
+			Label: "在线精简版 - 少量分组",
+		},
+		{
+			Name:  "ACL4SSR_Online_Mini_AdblockPlus",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_AdblockPlus.ini",
+			Label: "在线精简版 - 带广告拦截",
+		},
+		{
+			Name:  "ACL4SSR_Online_Mini_Ai",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_Ai.ini",
+			Label: "在线精简版 - AI",
+		},
+		{
+			Name:  "ACL4SSR_Online_Mini_Fallback",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_Fallback.ini",
+			Label: "在线精简版 - 故障转移",
+		},
+		{
+			Name:  "ACL4SSR_Online_Mini_MultiCountry",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_MultiCountry.ini",
+			Label: "在线精简版 - 多国家",
+		},
+		{
+			Name:  "ACL4SSR_Online_Mini_MultiMode",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_MultiMode.ini",
+			Label: "在线精简版 - 多模式",
+		},
+		{
+			Name:  "ACL4SSR_Online_Mini_NoAuto",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_NoAuto.ini",
+			Label: "在线精简版 - 无自动测速",
+		},
+		{
+			Name:  "ACL4SSR_Online_MultiCountry",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_MultiCountry.ini",
+			Label: "在线版 - 多国家",
+		},
+		{
+			Name:  "ACL4SSR_Online_NoAuto",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_NoAuto.ini",
+			Label: "在线版 - 无自动测速",
+		},
+		{
+			Name:  "ACL4SSR_Online_NoReject",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_NoReject.ini",
+			Label: "在线版 - 无拒绝规则",
+		},
+		{
+			Name:  "ACL4SSR_WithChinaIp",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_WithChinaIp.ini",
+			Label: "特殊版 - 包含回国IP",
+		},
+		{
+			Name:  "ACL4SSR_WithChinaIp_WithGFW",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_WithChinaIp_WithGFW.ini",
+			Label: "特殊版 - 包含回国IP&GFW列表",
+		},
+		{
+			Name:  "ACL4SSR_WithGFW",
+			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_WithGFW.ini",
+			Label: "特殊版 - 包含GFW列表",
 		},
 	}
 	utils.OkDetailed(c, "ok", presets)

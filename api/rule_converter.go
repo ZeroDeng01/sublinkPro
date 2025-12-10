@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sublink/models"
 	"sublink/utils"
 	"sync"
 	"time"
@@ -622,7 +623,15 @@ func detectTemplateType(template string) string {
 }
 
 // getDefaultTemplate 获取默认模板内容
+// 优先从系统设置读取，如果未配置则返回硬编码默认值
 func getDefaultTemplate(category string) string {
+	settingKey := "base_template_" + category
+	template, err := models.GetSetting(settingKey)
+	if err == nil && strings.TrimSpace(template) != "" {
+		return template
+	}
+
+	// 回退到硬编码默认值
 	if category == "surge" {
 		return `[General]
 loglevel = notify

@@ -43,6 +43,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
 import { getTemplates, addTemplate, updateTemplate, deleteTemplate, getACL4SSRPresets, convertRules } from 'api/templates';
+import { getBaseTemplates, updateBaseTemplate } from 'api/settings';
 
 // Monaco Editor
 import Editor from '@monaco-editor/react';
@@ -77,6 +78,13 @@ export default function TemplateList() {
     content: '',
     action: null
   });
+
+  // 基础模板编辑对话框
+  const [baseTemplateDialogOpen, setBaseTemplateDialogOpen] = useState(false);
+  const [baseTemplateCategory, setBaseTemplateCategory] = useState('clash');
+  const [baseTemplateContent, setBaseTemplateContent] = useState('');
+  const [baseTemplateLoading, setBaseTemplateLoading] = useState(false);
+  const [baseTemplateSaving, setBaseTemplateSaving] = useState(false);
 
   const openConfirm = (title, content, action) => {
     setConfirmInfo({ title, content, action });
@@ -191,6 +199,40 @@ export default function TemplateList() {
     }
   };
 
+  // 打开基础模板编辑对话框
+  const handleOpenBaseTemplate = async (category) => {
+    setBaseTemplateCategory(category);
+    setBaseTemplateDialogOpen(true);
+    setBaseTemplateLoading(true);
+    try {
+      const res = await getBaseTemplates();
+      if (res.data) {
+        const content = category === 'clash' ? res.data.clashTemplate : res.data.surgeTemplate;
+        setBaseTemplateContent(content || '');
+      }
+    } catch (error) {
+      console.error(error);
+      showMessage('获取基础模板失败', 'error');
+    } finally {
+      setBaseTemplateLoading(false);
+    }
+  };
+
+  // 保存基础模板
+  const handleSaveBaseTemplate = async () => {
+    setBaseTemplateSaving(true);
+    try {
+      await updateBaseTemplate(baseTemplateCategory, baseTemplateContent);
+      showMessage(`${baseTemplateCategory === 'clash' ? 'Clash' : 'Surge'} 基础模板保存成功`);
+      setBaseTemplateDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      showMessage('保存基础模板失败', 'error');
+    } finally {
+      setBaseTemplateSaving(false);
+    }
+  };
+
   return (
     <MainCard
       title="模板管理"
@@ -201,6 +243,12 @@ export default function TemplateList() {
           </Button>
         ) : (
           <Stack direction="row" spacing={1}>
+            <Button variant="outlined" size="small" onClick={() => handleOpenBaseTemplate('clash')}>
+              Clash 基础模板
+            </Button>
+            <Button variant="outlined" size="small" color="secondary" onClick={() => handleOpenBaseTemplate('surge')}>
+              Surge 基础模板
+            </Button>
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
               添加模板
             </Button>
@@ -559,6 +607,45 @@ export default function TemplateList() {
         <DialogActions>
           <Button variant="contained" onClick={() => setErrorDialog({ ...errorDialog, open: false })} autoFocus>
             知道了
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 基础模板编辑对话框 */}
+      <Dialog open={baseTemplateDialogOpen} onClose={() => setBaseTemplateDialogOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>{baseTemplateCategory === 'clash' ? 'Clash' : 'Surge'} 基础模板配置</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            基础模板用于规则转换时，当模板内容为空时自动填充的默认配置。修改后将影响所有使用默认模板的规则转换操作。
+          </Typography>
+          {baseTemplateLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Editor
+              height="400px"
+              language={baseTemplateCategory === 'surge' ? 'ini' : 'yaml'}
+              value={baseTemplateContent}
+              onChange={(value) => setBaseTemplateContent(value || '')}
+              theme="vs-dark"
+              options={{
+                minimap: { enabled: true },
+                fontSize: 14,
+                readOnly: baseTemplateSaving
+              }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBaseTemplateDialogOpen(false)}>取消</Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveBaseTemplate}
+            disabled={baseTemplateLoading || baseTemplateSaving}
+            startIcon={baseTemplateSaving ? <CircularProgress size={18} /> : null}
+          >
+            保存
           </Button>
         </DialogActions>
       </Dialog>

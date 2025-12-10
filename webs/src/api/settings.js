@@ -25,3 +25,20 @@ export function testWebhook(data) {
     data
   });
 }
+
+// 获取基础模板配置
+export function getBaseTemplates() {
+  return request({
+    url: '/v1/settings/base-templates',
+    method: 'get'
+  });
+}
+
+// 更新基础模板配置
+export function updateBaseTemplate(category, content) {
+  return request({
+    url: '/v1/settings/base-templates',
+    method: 'post',
+    data: { category, content }
+  });
+}

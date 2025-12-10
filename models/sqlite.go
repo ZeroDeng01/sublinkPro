@@ -175,6 +175,66 @@ func InitSqlite() {
 		log.Printf("执行迁移 0009_migrate_template_files 失败: %v", err)
 	}
 
+	// 0010_add_default_base_templates - 添加默认基础模板到系统设置
+	if err := RunCustomMigration("0010_add_default_base_templates", func() error {
+		// 默认 Clash 模板
+		clashTemplate := `port: 7890
+socks-port: 7891
+allow-lan: true
+mode: Rule
+log-level: info
+external-controller: :9090
+dns:
+  enabled: true
+  nameserver:
+    - 119.29.29.29
+    - 223.5.5.5
+  fallback:
+    - 8.8.8.8
+    - 8.8.4.4
+    - tls://1.0.0.1:853
+    - tls://dns.google:853
+proxies: ~
+
+`
+		// 默认 Surge 模板
+		surgeTemplate := `[General]
+loglevel = notify
+bypass-system = true
+skip-proxy = 127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,100.64.0.0/10,localhost,*.local,e.crashlytics.com,captive.apple.com,::ffff:0:0:0:0/1,::ffff:128:0:0:0/1
+bypass-tun = 192.168.0.0/16,10.0.0.0/8,172.16.0.0/12
+dns-server = 119.29.29.29,223.5.5.5,218.30.19.40,61.134.1.4
+external-controller-access = password@0.0.0.0:6170
+http-api = password@0.0.0.0:6171
+test-timeout = 5
+http-api-web-dashboard = true
+exclude-simple-hostnames = true
+allow-wifi-access = true
+http-listen = 0.0.0.0:6152
+socks5-listen = 0.0.0.0:6153
+wifi-access-http-port = 6152
+wifi-access-socks5-port = 6153
+
+[Proxy]
+DIRECT = direct
+
+`
+		// 插入 Clash 模板
+		if err := SetSetting("base_template_clash", clashTemplate); err != nil {
+			log.Printf("插入 Clash 基础模板失败: %v", err)
+			return err
+		}
+		// 插入 Surge 模板
+		if err := SetSetting("base_template_surge", surgeTemplate); err != nil {
+			log.Printf("插入 Surge 基础模板失败: %v", err)
+			return err
+		}
+		log.Println("已添加默认 Clash 和 Surge 基础模板")
+		return nil
+	}); err != nil {
+		log.Printf("执行迁移 0010_add_default_base_templates 失败: %v", err)
+	}
+
 	// 初始化用户数据
 	err = db.First(&User{}).Error
 	if err == gorm.ErrRecordNotFound {

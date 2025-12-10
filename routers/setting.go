@@ -14,5 +14,7 @@ func Settings(r *gin.Engine) {
 		SettingsGroup.GET("/webhook", api.GetWebhookConfig)
 		SettingsGroup.POST("/webhook", api.UpdateWebhookConfig)
 		SettingsGroup.POST("/webhook/test", api.TestWebhookConfig)
+		SettingsGroup.GET("/base-templates", api.GetBaseTemplates)
+		SettingsGroup.POST("/base-templates", api.UpdateBaseTemplate)
 	}
 }

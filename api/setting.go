@@ -133,3 +133,39 @@ func TestWebhookConfig(c *gin.Context) {
 
 	utils.OkWithMsg(c, "测试发送成功")
 }
+
+// GetBaseTemplates 获取基础模板配置
+func GetBaseTemplates(c *gin.Context) {
+	clashTemplate, _ := models.GetSetting("base_template_clash")
+	surgeTemplate, _ := models.GetSetting("base_template_surge")
+
+	utils.OkDetailed(c, "获取成功", gin.H{
+		"clashTemplate": clashTemplate,
+		"surgeTemplate": surgeTemplate,
+	})
+}
+
+// UpdateBaseTemplate 更新基础模板配置
+func UpdateBaseTemplate(c *gin.Context) {
+	var req struct {
+		Category string `json:"category" binding:"required,oneof=clash surge"`
+		Content  string `json:"content"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误：category 必须为 clash 或 surge")
+		return
+	}
+
+	key := "base_template_" + req.Category
+	if err := models.SetSetting(key, req.Content); err != nil {
+		utils.FailWithMsg(c, "保存模板失败: "+err.Error())
+		return
+	}
+
+	categoryName := "Clash"
+	if req.Category == "surge" {
+		categoryName = "Surge"
+	}
+	utils.OkWithMsg(c, categoryName+" 基础模板保存成功")
+}
