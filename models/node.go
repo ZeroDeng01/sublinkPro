@@ -1,10 +1,12 @@
 package models
 
 import (
+	"fmt"
 	"log"
 	"sort"
+	"strconv"
 	"strings"
-	"sync"
+	"sublink/cache"
 	"time"
 
 	"gorm.io/gorm/clause"
@@ -30,10 +32,19 @@ type Node struct {
 	UpdatedAt       time.Time `gorm:"autoUpdateTime" json:"UpdatedAt"` // 更新时间
 }
 
-var (
-	nodeCache = make(map[int]Node)
-	nodeLock  sync.RWMutex
-)
+// nodeCache 使用新的泛型缓存，支持二级索引
+var nodeCache *cache.MapCache[int, Node]
+
+func init() {
+	// 初始化节点缓存，主键为 ID
+	nodeCache = cache.NewMapCache(func(n Node) int { return n.ID })
+	// 添加二级索引
+	nodeCache.AddIndex("group", func(n Node) string { return n.Group })
+	nodeCache.AddIndex("source", func(n Node) string { return n.Source })
+	nodeCache.AddIndex("country", func(n Node) string { return n.LinkCountry })
+	nodeCache.AddIndex("sourceID", func(n Node) string { return fmt.Sprintf("%d", n.SourceID) })
+	nodeCache.AddIndex("name", func(n Node) string { return n.Name })
+}
 
 // InitNodeCache 初始化节点缓存
 func InitNodeCache() error {
@@ -43,53 +54,40 @@ func InitNodeCache() error {
 		return err
 	}
 
-	nodeLock.Lock()
-	defer nodeLock.Unlock()
+	// 使用批量加载方式初始化缓存
+	nodeCache.LoadAll(nodes)
+	log.Printf("节点缓存初始化完成，共加载 %d 个节点", nodeCache.Count())
 
-	// 清空旧缓存
-	nodeCache = make(map[int]Node)
-
-	for _, n := range nodes {
-		nodeCache[n.ID] = n
-		log.Printf("加载节点【%s】到缓存成功", n.Name)
-	}
-	log.Printf("节点缓存初始化完成，共加载 %d 个节点", len(nodes))
+	// 注册到缓存管理器
+	cache.Manager.Register("node", nodeCache)
 	return nil
 }
 
 // Add 添加节点
 func (node *Node) Add() error {
+	// Write-Through: 先写数据库
 	err := DB.Create(node).Error
 	if err != nil {
 		return err
 	}
-	// 更新缓存
-	nodeLock.Lock()
-	nodeCache[node.ID] = *node
-	nodeLock.Unlock()
+	// 再更新缓存
+	nodeCache.Set(node.ID, *node)
 	return nil
 }
 
-// 更新节点
+// Update 更新节点
 func (node *Node) Update() error {
 	if node.Name == "" {
 		node.Name = node.LinkName
 	}
 	node.UpdatedAt = time.Now()
+	// Write-Through: 先写数据库
 	err := DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "LinkCountry", "UpdatedAt").Updates(node).Error
 	if err != nil {
 		return err
 	}
-	// 更新缓存：先获取完整节点信息，或者只更新变动字段。
-	// 为简单起见，这里假设 Update 调用者已经设置了 node 的 ID。
-	// 但 Updates 只更新了部分字段，内存中的 node 可能不完整。
-	// 最稳妥的方式是重新从 DB 读取一次，或者只更新缓存中的对应字段。
-	// 这里选择更新缓存中的对应字段。
-
-	nodeLock.Lock()
-	defer nodeLock.Unlock()
-
-	if cachedNode, ok := nodeCache[node.ID]; ok {
+	// 更新缓存：获取完整节点后更新
+	if cachedNode, ok := nodeCache.Get(node.ID); ok {
 		cachedNode.Name = node.Name
 		cachedNode.Link = node.Link
 		cachedNode.DialerProxyName = node.DialerProxyName
@@ -100,12 +98,12 @@ func (node *Node) Update() error {
 		cachedNode.LinkPort = node.LinkPort
 		cachedNode.LinkCountry = node.LinkCountry
 		cachedNode.UpdatedAt = node.UpdatedAt
-		nodeCache[node.ID] = cachedNode
+		nodeCache.Set(node.ID, cachedNode)
 	} else {
-		// 如果缓存中没有，可能是新加的或者缓存未同步，尝试从 DB 读
+		// 缓存未命中，从 DB 读取完整数据
 		var fullNode Node
 		if err := DB.First(&fullNode, node.ID).Error; err == nil {
-			nodeCache[node.ID] = fullNode
+			nodeCache.Set(node.ID, fullNode)
 		}
 	}
 	return nil
@@ -118,31 +116,26 @@ func (node *Node) UpdateSpeed() error {
 		return err
 	}
 
-	nodeLock.Lock()
-	defer nodeLock.Unlock()
-
-	if cachedNode, ok := nodeCache[node.ID]; ok {
+	if cachedNode, ok := nodeCache.Get(node.ID); ok {
 		cachedNode.Speed = node.Speed
 		cachedNode.DelayTime = node.DelayTime
 		cachedNode.LastCheck = node.LastCheck
 		cachedNode.LinkCountry = node.LinkCountry
-		nodeCache[node.ID] = cachedNode
+		nodeCache.Set(node.ID, cachedNode)
 	}
 	return nil
 }
 
-// 查找节点是否重复
+// Find 查找节点是否重复
 func (node *Node) Find() error {
 	// 优先查缓存
-	nodeLock.RLock()
-	for _, n := range nodeCache {
-		if n.Link == node.Link || n.Name == node.Name {
-			*node = n
-			nodeLock.RUnlock()
-			return nil
-		}
+	results := nodeCache.Filter(func(n Node) bool {
+		return n.Link == node.Link || n.Name == node.Name
+	})
+	if len(results) > 0 {
+		*node = results[0]
+		return nil
 	}
-	nodeLock.RUnlock()
 
 	// 缓存未命中，查 DB
 	err := DB.Where("link = ? or name = ?", node.Link, node.Name).First(node).Error
@@ -151,50 +144,34 @@ func (node *Node) Find() error {
 	}
 
 	// 更新缓存
-	nodeLock.Lock()
-	nodeCache[node.ID] = *node
-	nodeLock.Unlock()
-
+	nodeCache.Set(node.ID, *node)
 	return nil
 }
 
 // GetByID 根据ID查找节点
 func (node *Node) GetByID() error {
-	nodeLock.RLock()
-	if cachedNode, ok := nodeCache[node.ID]; ok {
+	if cachedNode, ok := nodeCache.Get(node.ID); ok {
 		*node = cachedNode
-		nodeLock.RUnlock()
 		return nil
 	}
-	nodeLock.RUnlock()
 
+	// 缓存未命中，查 DB
 	err := DB.First(node, node.ID).Error
 	if err != nil {
 		return err
 	}
 
-	nodeLock.Lock()
-	nodeCache[node.ID] = *node
-	nodeLock.Unlock()
-
+	// 更新缓存
+	nodeCache.Set(node.ID, *node)
 	return nil
 }
 
-// 节点列表
+// List 节点列表
 func (node *Node) List() ([]Node, error) {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
-
-	nodes := make([]Node, 0, len(nodeCache))
-	for _, n := range nodeCache {
-		nodes = append(nodes, n)
-	}
-
-	// 按 ID 升序排序
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].ID < nodes[j].ID
+	// 使用 GetAllSorted 获取排序的节点列表
+	nodes := nodeCache.GetAllSorted(func(a, b Node) bool {
+		return a.ID < b.ID
 	})
-
 	return nodes, nil
 }
 
@@ -212,9 +189,6 @@ type NodeFilter struct {
 
 // ListWithFilters 根据过滤条件获取节点列表
 func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
-
 	// 预处理搜索关键词
 	searchLower := strings.ToLower(filter.Search)
 
@@ -224,15 +198,14 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 		countryMap[c] = true
 	}
 
-	// 过滤节点
-	nodes := make([]Node, 0, len(nodeCache))
-	for _, n := range nodeCache {
+	// 使用缓存的 Filter 方法
+	nodes := nodeCache.Filter(func(n Node) bool {
 		// 搜索过滤
 		if searchLower != "" {
 			nameLower := strings.ToLower(n.Name)
 			linkLower := strings.ToLower(n.Link)
 			if !strings.Contains(nameLower, searchLower) && !strings.Contains(linkLower, searchLower) {
-				continue
+				return false
 			}
 		}
 
@@ -240,13 +213,13 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 		if filter.Group != "" {
 			if filter.Group == "未分组" {
 				if n.Group != "" {
-					continue
+					return false
 				}
 			} else {
 				groupLower := strings.ToLower(n.Group)
 				filterGroupLower := strings.ToLower(filter.Group)
 				if !strings.Contains(groupLower, filterGroupLower) {
-					continue
+					return false
 				}
 			}
 		}
@@ -255,51 +228,50 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 		if filter.Source != "" {
 			if filter.Source == "手动添加" {
 				if n.Source != "" && n.Source != "manual" {
-					continue
+					return false
 				}
 			} else {
 				sourceLower := strings.ToLower(n.Source)
 				filterSourceLower := strings.ToLower(filter.Source)
 				if !strings.Contains(sourceLower, filterSourceLower) {
-					continue
+					return false
 				}
 			}
 		}
 
-		// 最大延迟过滤 - 只过滤延迟大于0的节点
+		// 最大延迟过滤
 		if filter.MaxDelay > 0 {
 			if n.DelayTime <= 0 || n.DelayTime > filter.MaxDelay {
-				continue
+				return false
 			}
 		}
 
 		// 最低速度过滤
 		if filter.MinSpeed > 0 {
 			if n.Speed <= filter.MinSpeed {
-				continue
+				return false
 			}
 		}
 
 		// 国家代码过滤
 		if len(countryMap) > 0 {
 			if n.LinkCountry == "" || !countryMap[n.LinkCountry] {
-				continue
+				return false
 			}
 		}
 
-		nodes = append(nodes, n)
-	}
+		return true
+	})
 
 	// 排序
 	if filter.SortBy != "" {
 		sort.Slice(nodes, func(i, j int) bool {
 			switch filter.SortBy {
 			case "delay":
-				// 没有有效延迟的节点始终放最后
 				aValid := nodes[i].DelayTime > 0
 				bValid := nodes[j].DelayTime > 0
 				if !aValid && !bValid {
-					return nodes[i].ID < nodes[j].ID // 都无效时按ID排序
+					return nodes[i].ID < nodes[j].ID
 				}
 				if !aValid {
 					return false
@@ -312,11 +284,10 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 				}
 				return nodes[i].DelayTime < nodes[j].DelayTime
 			case "speed":
-				// 没有有效速度的节点始终放最后
 				aValid := nodes[i].Speed > 0
 				bValid := nodes[j].Speed > 0
 				if !aValid && !bValid {
-					return nodes[i].ID < nodes[j].ID // 都无效时按ID排序
+					return nodes[i].ID < nodes[j].ID
 				}
 				if !aValid {
 					return false
@@ -333,7 +304,6 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 			}
 		})
 	} else {
-		// 默认按 ID 升序排序
 		sort.Slice(nodes, func(i, j int) bool {
 			return nodes[i].ID < nodes[j].ID
 		})
@@ -387,44 +357,37 @@ func (node *Node) GetFilteredNodeIDs(filter NodeFilter) ([]int, error) {
 
 // ListByGroups 根据分组获取节点列表
 func (node *Node) ListByGroups(groups []string) ([]Node, error) {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
-
-	var nodes []Node
 	groupMap := make(map[string]bool)
 	for _, g := range groups {
 		groupMap[g] = true
 	}
 
-	for _, n := range nodeCache {
-		if groupMap[n.Group] {
-			nodes = append(nodes, n)
-		}
-	}
+	// 使用缓存的 Filter 方法
+	nodes := nodeCache.Filter(func(n Node) bool {
+		return groupMap[n.Group]
+	})
 	return nodes, nil
 }
 
-// 删除节点
+// Del 删除节点
 func (node *Node) Del() error {
-	// 先清除节点与订阅的关联关系（通过节点名称）
+	// 先清除节点与订阅的关联关系
 	if err := DB.Exec("DELETE FROM subcription_nodes WHERE node_name = ?", node.Name).Error; err != nil {
 		return err
 	}
-	// 再删除节点本身
+	// Write-Through: 先删除数据库
 	err := DB.Delete(node).Error
 	if err != nil {
 		return err
 	}
-
-	nodeLock.Lock()
-	delete(nodeCache, node.ID)
-	nodeLock.Unlock()
-
+	// 再更新缓存
+	nodeCache.Delete(node.ID)
 	return nil
 }
 
 // UpsertNode 插入或更新节点
 func (node *Node) UpsertNode() error {
+	// Write-Through: 先写数据库
 	err := DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "link"}},
 		DoUpdates: clause.AssignmentColumns([]string{"name", "link_name", "link_address", "link_host", "link_port", "link_country", "source", "source_id", "group"}),
@@ -433,31 +396,23 @@ func (node *Node) UpsertNode() error {
 		return err
 	}
 
-	// Upsert 后 ID 可能变了（如果是插入），或者 ID 没变（如果是更新）
-	// 最简单的是重新根据 Link 查一次，或者直接重新加载所有缓存（开销大）
-	// 这里尝试查询更新后的节点
+	// 查询更新后的节点并更新缓存
 	var updatedNode Node
 	if err := DB.Where("link = ?", node.Link).First(&updatedNode).Error; err == nil {
-		nodeLock.Lock()
-		nodeCache[updatedNode.ID] = updatedNode
-		nodeLock.Unlock()
-		*node = updatedNode // 更新传入的 node 对象
+		nodeCache.Set(updatedNode.ID, updatedNode)
+		*node = updatedNode
 	}
-
 	return nil
 }
 
 // DeleteAutoSubscriptionNodes 删除订阅节点
 func DeleteAutoSubscriptionNodes(sourceId int) error {
-	// 先获取要删除的节点名称列表，用于清理订阅关联
-	nodeLock.RLock()
-	nodeNames := make([]string, 0)
-	for _, n := range nodeCache {
-		if n.SourceID == sourceId {
-			nodeNames = append(nodeNames, n.Name)
-		}
+	// 使用二级索引获取要删除的节点
+	nodesToDelete := nodeCache.GetByIndex("sourceID", strconv.Itoa(sourceId))
+	nodeNames := make([]string, 0, len(nodesToDelete))
+	for _, n := range nodesToDelete {
+		nodeNames = append(nodeNames, n.Name)
 	}
-	nodeLock.RUnlock()
 
 	// 清除节点与订阅的关联关系
 	if len(nodeNames) > 0 {
@@ -466,20 +421,15 @@ func DeleteAutoSubscriptionNodes(sourceId int) error {
 		}
 	}
 
-	// 删除节点
+	// Write-Through: 先删除数据库
 	err := DB.Where("source_id = ?", sourceId).Delete(&Node{}).Error
 	if err != nil {
 		return err
 	}
 
-	nodeLock.Lock()
-	defer nodeLock.Unlock()
-
-	// 遍历删除缓存中对应的节点
-	for id, n := range nodeCache {
-		if n.SourceID == sourceId {
-			delete(nodeCache, id)
-		}
+	// 再更新缓存
+	for _, n := range nodesToDelete {
+		nodeCache.Delete(n.ID)
 	}
 	return nil
 }
@@ -490,15 +440,13 @@ func BatchDel(ids []int) error {
 		return nil
 	}
 
-	// 获取节点名称列表，用于删除订阅关联
-	nodeLock.RLock()
+	// 获取节点名称列表
 	nodeNames := make([]string, 0, len(ids))
 	for _, id := range ids {
-		if n, ok := nodeCache[id]; ok {
+		if n, ok := nodeCache.Get(id); ok {
 			nodeNames = append(nodeNames, n.Name)
 		}
 	}
-	nodeLock.RUnlock()
 
 	// 先清除节点与订阅的关联关系
 	if len(nodeNames) > 0 {
@@ -507,18 +455,15 @@ func BatchDel(ids []int) error {
 		}
 	}
 
-	// 批量删除节点
+	// Write-Through: 先删除数据库
 	if err := DB.Where("id IN ?", ids).Delete(&Node{}).Error; err != nil {
 		return err
 	}
 
-	// 更新缓存
-	nodeLock.Lock()
-	defer nodeLock.Unlock()
+	// 再更新缓存
 	for _, id := range ids {
-		delete(nodeCache, id)
+		nodeCache.Delete(id)
 	}
-
 	return nil
 }
 
@@ -528,22 +473,18 @@ func BatchUpdateGroup(ids []int, group string) error {
 		return nil
 	}
 
-	// 更新数据库
+	// Write-Through: 先更新数据库
 	if err := DB.Model(&Node{}).Where("id IN ?", ids).Update("group", group).Error; err != nil {
 		return err
 	}
 
-	// 更新缓存
-	nodeLock.Lock()
-	defer nodeLock.Unlock()
-
+	// 再更新缓存
 	for _, id := range ids {
-		if n, ok := nodeCache[id]; ok {
+		if n, ok := nodeCache.Get(id); ok {
 			n.Group = group
-			nodeCache[id] = n
+			nodeCache.Set(id, n)
 		}
 	}
-
 	return nil
 }
 
@@ -553,75 +494,45 @@ func BatchUpdateDialerProxy(ids []int, dialerProxyName string) error {
 		return nil
 	}
 
-	// 更新数据库
+	// Write-Through: 先更新数据库
 	if err := DB.Model(&Node{}).Where("id IN ?", ids).Update("dialer_proxy_name", dialerProxyName).Error; err != nil {
 		return err
 	}
 
-	// 更新缓存
-	nodeLock.Lock()
-	defer nodeLock.Unlock()
-
+	// 再更新缓存
 	for _, id := range ids {
-		if n, ok := nodeCache[id]; ok {
+		if n, ok := nodeCache.Get(id); ok {
 			n.DialerProxyName = dialerProxyName
-			nodeCache[id] = n
+			nodeCache.Set(id, n)
 		}
 	}
-
 	return nil
 }
 
 // GetAllGroups 获取所有分组
 func (node *Node) GetAllGroups() ([]string, error) {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
-
-	groupMap := make(map[string]bool)
-	for _, n := range nodeCache {
-		if n.Group != "" {
-			groupMap[n.Group] = true
-		}
-	}
-
-	groups := make([]string, 0, len(groupMap))
-	for g := range groupMap {
-		groups = append(groups, g)
-	}
-	return groups, nil
+	// 使用二级索引获取所有不同的分组值
+	return nodeCache.GetDistinctIndexValues("group"), nil
 }
 
 // GetAllSources 获取所有来源
 func (node *Node) GetAllSources() ([]string, error) {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
-
-	sourceMap := make(map[string]bool)
-	for _, n := range nodeCache {
-		if n.Source != "" {
-			sourceMap[n.Source] = true
-		}
-	}
-
-	sources := make([]string, 0, len(sourceMap))
-	for s := range sourceMap {
-		sources = append(sources, s)
-	}
-	return sources, nil
+	// 使用二级索引获取所有不同的来源值
+	return nodeCache.GetDistinctIndexValues("source"), nil
 }
 
 // GetBestProxyNode 获取最佳代理节点（延迟最低且速度大于0）
 func GetBestProxyNode() (*Node, error) {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
+	// 使用缓存的 Filter 方法
+	nodes := nodeCache.Filter(func(n Node) bool {
+		return n.DelayTime > 0 && n.Speed > 0
+	})
 
 	var bestNode *Node
-	for _, n := range nodeCache {
-		if n.DelayTime > 0 && n.Speed > 0 {
-			if bestNode == nil || n.DelayTime < bestNode.DelayTime {
-				nodeCopy := n
-				bestNode = &nodeCopy
-			}
+	for _, n := range nodes {
+		if bestNode == nil || n.DelayTime < bestNode.DelayTime {
+			nodeCopy := n
+			bestNode = &nodeCopy
 		}
 	}
 
@@ -630,29 +541,22 @@ func GetBestProxyNode() (*Node, error) {
 	}
 
 	// 缓存中没有符合条件的节点，从数据库查询
-	var nodes []Node
-	if err := DB.Where("delay_time > 0 AND speed > 0").Order("delay_time ASC").Limit(1).Find(&nodes).Error; err != nil {
+	var dbNodes []Node
+	if err := DB.Where("delay_time > 0 AND speed > 0").Order("delay_time ASC").Limit(1).Find(&dbNodes).Error; err != nil {
 		return nil, err
 	}
 
-	if len(nodes) == 0 {
+	if len(dbNodes) == 0 {
 		return nil, nil
 	}
 
-	return &nodes[0], nil
+	return &dbNodes[0], nil
 }
 
 // ListBySourceID 根据订阅ID查询节点列表
 func ListBySourceID(sourceID int) ([]Node, error) {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
-
-	var nodes []Node
-	for _, n := range nodeCache {
-		if n.SourceID == sourceID {
-			nodes = append(nodes, n)
-		}
-	}
+	// 使用二级索引查询
+	nodes := nodeCache.GetByIndex("sourceID", strconv.Itoa(sourceID))
 
 	// 如果缓存中有数据，直接返回
 	if len(nodes) > 0 {
@@ -663,13 +567,12 @@ func ListBySourceID(sourceID int) ([]Node, error) {
 	if err := DB.Where("source_id = ?", sourceID).Find(&nodes).Error; err != nil {
 		return nil, err
 	}
-
 	return nodes, nil
 }
 
 // UpdateNodesBySourceID 根据订阅ID批量更新节点的来源名称和分组
 func UpdateNodesBySourceID(sourceID int, sourceName string, group string) error {
-	// 更新数据库中的节点
+	// Write-Through: 先更新数据库
 	updateFields := map[string]interface{}{
 		"source": sourceName,
 		"group":  group,
@@ -678,83 +581,59 @@ func UpdateNodesBySourceID(sourceID int, sourceName string, group string) error 
 		return err
 	}
 
-	// 更新缓存中的节点
-	nodeLock.Lock()
-	defer nodeLock.Unlock()
-
-	for id, n := range nodeCache {
-		if n.SourceID == sourceID {
-			n.Source = sourceName
-			n.Group = group
-			nodeCache[id] = n
-		}
+	// 再更新缓存
+	nodesToUpdate := nodeCache.GetByIndex("sourceID", strconv.Itoa(sourceID))
+	for _, n := range nodesToUpdate {
+		n.Source = sourceName
+		n.Group = group
+		nodeCache.Set(n.ID, n)
 	}
-
 	return nil
 }
 
 // GetFastestSpeedNode 获取最快速度节点
 func GetFastestSpeedNode() *Node {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
+	nodes := nodeCache.Filter(func(n Node) bool {
+		return n.Speed > 0
+	})
 
 	var fastest *Node
-	for _, n := range nodeCache {
-		if n.Speed > 0 {
-			if fastest == nil || n.Speed > fastest.Speed {
-				nodeCopy := n
-				fastest = &nodeCopy
-			}
+	for _, n := range nodes {
+		if fastest == nil || n.Speed > fastest.Speed {
+			nodeCopy := n
+			fastest = &nodeCopy
 		}
 	}
-
 	return fastest
 }
 
 // GetLowestDelayNode 获取最低延迟节点
 func GetLowestDelayNode() *Node {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
+	nodes := nodeCache.Filter(func(n Node) bool {
+		return n.DelayTime > 0
+	})
 
 	var lowest *Node
-	for _, n := range nodeCache {
-		if n.DelayTime > 0 {
-			if lowest == nil || n.DelayTime < lowest.DelayTime {
-				nodeCopy := n
-				lowest = &nodeCopy
-			}
+	for _, n := range nodes {
+		if lowest == nil || n.DelayTime < lowest.DelayTime {
+			nodeCopy := n
+			lowest = &nodeCopy
 		}
 	}
-
 	return lowest
 }
 
 // GetAllCountries 获取所有唯一的国家代码
 func GetAllCountries() []string {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
-
-	countryMap := make(map[string]bool)
-	for _, n := range nodeCache {
-		if n.LinkCountry != "" {
-			countryMap[n.LinkCountry] = true
-		}
-	}
-
-	countries := make([]string, 0, len(countryMap))
-	for c := range countryMap {
-		countries = append(countries, c)
-	}
-	return countries
+	// 使用二级索引获取所有不同的国家值
+	return nodeCache.GetDistinctIndexValues("country")
 }
 
 // GetNodeCountryStats 获取按国家统计的节点数量
 func GetNodeCountryStats() map[string]int {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
-
 	stats := make(map[string]int)
-	for _, n := range nodeCache {
+	allNodes := nodeCache.GetAll()
+	for _, n := range allNodes {
 		country := n.LinkCountry
 		if country == "" {
 			country = "未知"
@@ -766,11 +645,9 @@ func GetNodeCountryStats() map[string]int {
 
 // GetNodeProtocolStats 获取按协议统计的节点数量
 func GetNodeProtocolStats() map[string]int {
-	nodeLock.RLock()
-	defer nodeLock.RUnlock()
-
 	stats := make(map[string]int)
-	for _, n := range nodeCache {
+	allNodes := nodeCache.GetAll()
+	for _, n := range allNodes {
 		protocol := parseProtocolFromLink(n.Link)
 		stats[protocol]++
 	}
@@ -808,4 +685,13 @@ func parseProtocolFromLink(link string) string {
 		}
 	}
 	return "其他"
+}
+
+// GetNodeByName 根据节点名称获取节点
+func GetNodeByName(name string) (*Node, bool) {
+	nodes := nodeCache.GetByIndex("name", name)
+	if len(nodes) > 0 {
+		return &nodes[0], true
+	}
+	return nil, false
 }

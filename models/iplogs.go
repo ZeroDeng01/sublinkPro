@@ -1,5 +1,11 @@
 package models
 
+import (
+	"log"
+	"strconv"
+	"sublink/cache"
+)
+
 type SubLogs struct {
 	ID            int
 	IP            string
@@ -9,32 +15,82 @@ type SubLogs struct {
 	SubcriptionID int
 }
 
-// Add 添加IP
-func (iplog *SubLogs) Add() error {
-	return DB.Create(iplog).Error
+// subLogsCache 使用新的泛型缓存
+var subLogsCache *cache.MapCache[int, SubLogs]
+
+func init() {
+	subLogsCache = cache.NewMapCache(func(sl SubLogs) int { return sl.ID })
+	subLogsCache.AddIndex("subcriptionID", func(sl SubLogs) string { return strconv.Itoa(sl.SubcriptionID) })
 }
 
-// 查找IP
+// InitSubLogsCache 初始化订阅日志缓存
+func InitSubLogsCache() error {
+	log.Printf("开始加载订阅日志到缓存")
+	var sublogs []SubLogs
+	if err := DB.Find(&sublogs).Error; err != nil {
+		return err
+	}
+
+	subLogsCache.LoadAll(sublogs)
+	log.Printf("订阅日志缓存初始化完成，共加载 %d 条记录", subLogsCache.Count())
+
+	cache.Manager.Register("sublogs", subLogsCache)
+	return nil
+}
+
+// Add 添加IP (Write-Through)
+func (iplog *SubLogs) Add() error {
+	err := DB.Create(iplog).Error
+	if err != nil {
+		return err
+	}
+	subLogsCache.Set(iplog.ID, *iplog)
+	return nil
+}
+
+// Find 查找IP
 func (iplog *SubLogs) Find(id int) error {
+	// 先从缓存查找
+	logs := subLogsCache.GetByIndex("subcriptionID", strconv.Itoa(id))
+	for _, l := range logs {
+		if l.IP == iplog.IP {
+			*iplog = l
+			return nil
+		}
+	}
 	return DB.Where("ip = ? and subcription_id  = ?", iplog.IP, id).First(iplog).Error
 }
 
-// Update 更新IP
+// Update 更新IP (Write-Through)
 func (iplog *SubLogs) Update() error {
-	return DB.Where("id = ? or ip = ?", iplog.ID, iplog.IP).Updates(iplog).Error
+	err := DB.Where("id = ? or ip = ?", iplog.ID, iplog.IP).Updates(iplog).Error
+	if err != nil {
+		return err
+	}
+	// 从DB读取更新后的数据
+	var updated SubLogs
+	if err := DB.First(&updated, iplog.ID).Error; err == nil {
+		subLogsCache.Set(updated.ID, updated)
+	}
+	return nil
 }
 
 // List 获取IP列表
 func (iplog *SubLogs) List() ([]SubLogs, error) {
-	var iplogs []SubLogs
-	err := DB.Find(&iplogs).Error
-	if err != nil {
-		return nil, err
-	}
-	return iplogs, nil
+	return subLogsCache.GetAll(), nil
 }
 
-// Del 删除IP
+// GetBySubcriptionID 根据订阅ID获取日志列表
+func GetSubLogsBySubcriptionID(subcriptionID int) []SubLogs {
+	return subLogsCache.GetByIndex("subcriptionID", strconv.Itoa(subcriptionID))
+}
+
+// Del 删除IP (Write-Through)
 func (iplog *SubLogs) Del() error {
-	return DB.Delete(iplog).Error
+	err := DB.Delete(iplog).Error
+	if err != nil {
+		return err
+	}
+	subLogsCache.Delete(iplog.ID)
+	return nil
 }

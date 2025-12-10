@@ -2,7 +2,7 @@ package models
 
 import (
 	"log"
-	"sync"
+	"sublink/cache"
 
 	"gorm.io/gorm/clause"
 )
@@ -12,40 +12,36 @@ type SystemSetting struct {
 	Value string
 }
 
-var (
-	settingCache = make(map[string]string)
-	settingLock  sync.RWMutex
-)
+// settingCache 使用新的泛型缓存，主键为 Key
+var settingCache *cache.MapCache[string, SystemSetting]
+
+func init() {
+	settingCache = cache.NewMapCache(func(s SystemSetting) string { return s.Key })
+}
 
 // InitSettingCache 初始化设置缓存
 func InitSettingCache() error {
-	log.Printf("开始加载系统设置到缓存成功")
+	log.Printf("开始加载系统设置到缓存")
 	var settings []SystemSetting
 	if err := DB.Find(&settings).Error; err != nil {
 		return err
 	}
 
-	settingLock.Lock()
-	defer settingLock.Unlock()
+	// 使用批量加载方式初始化缓存
+	settingCache.LoadAll(settings)
+	log.Printf("系统设置缓存初始化完成，共加载 %d 个设置", settingCache.Count())
 
-	for _, s := range settings {
-		settingCache[s.Key] = s.Value
-		log.Printf("加载系统设置【%s】到缓存成功", s.Key)
-	}
-	log.Printf("开始加载系统设置到缓存结束")
-
+	// 注册到缓存管理器
+	cache.Manager.Register("system_setting", settingCache)
 	return nil
 }
 
 // GetSetting 获取设置
 func GetSetting(key string) (string, error) {
 	// 先从缓存读取
-	settingLock.RLock()
-	if val, ok := settingCache[key]; ok {
-		settingLock.RUnlock()
-		return val, nil
+	if setting, ok := settingCache.Get(key); ok {
+		return setting.Value, nil
 	}
-	settingLock.RUnlock()
 
 	// 缓存不存在，从数据库读取
 	var setting SystemSetting
@@ -55,19 +51,17 @@ func GetSetting(key string) (string, error) {
 	}
 
 	// 更新缓存
-	settingLock.Lock()
-	settingCache[key] = setting.Value
-	settingLock.Unlock()
-
+	settingCache.Set(key, setting)
 	return setting.Value, nil
 }
 
-// SetSetting 保存设置
+// SetSetting 保存设置 (Write-Through)
 func SetSetting(key string, value string) error {
 	setting := SystemSetting{
 		Key:   key,
 		Value: value,
 	}
+	// Write-Through: 先写数据库
 	err := DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "key"}},
 		DoUpdates: clause.AssignmentColumns([]string{"value"}),
@@ -77,10 +71,17 @@ func SetSetting(key string, value string) error {
 		return err
 	}
 
-	// 更新缓存
-	settingLock.Lock()
-	settingCache[key] = value
-	settingLock.Unlock()
-
+	// 再更新缓存
+	settingCache.Set(key, setting)
 	return nil
+}
+
+// GetAllSettings 获取所有设置
+func GetAllSettings() map[string]string {
+	result := make(map[string]string)
+	allSettings := settingCache.GetAll()
+	for _, s := range allSettings {
+		result[s.Key] = s.Value
+	}
+	return result
 }

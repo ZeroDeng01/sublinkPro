@@ -1,6 +1,9 @@
 package models
 
 import (
+	"log"
+	"sublink/cache"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -11,6 +14,29 @@ type User struct {
 	Password string
 	Role     string
 	Nickname string
+}
+
+// userCache 使用新的泛型缓存
+var userCache *cache.MapCache[int, User]
+
+func init() {
+	userCache = cache.NewMapCache(func(u User) int { return u.ID })
+	userCache.AddIndex("username", func(u User) string { return u.Username })
+}
+
+// InitUserCache 初始化用户缓存
+func InitUserCache() error {
+	log.Printf("开始加载用户到缓存")
+	var users []User
+	if err := DB.Find(&users).Error; err != nil {
+		return err
+	}
+
+	userCache.LoadAll(users)
+	log.Printf("用户缓存初始化完成，共加载 %d 个用户", userCache.Count())
+
+	cache.Manager.Register("user", userCache)
+	return nil
 }
 
 // HashPassword hashes the password using bcrypt
@@ -25,16 +51,23 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func (user *User) Create() error { // 创建用户
+// Create 创建用户 (Write-Through)
+func (user *User) Create() error {
 	hashedPassword, err := HashPassword(user.Password)
 	if err != nil {
 		return err
 	}
 	user.Password = hashedPassword
-	return DB.Create(user).Error
+	err = DB.Create(user).Error
+	if err != nil {
+		return err
+	}
+	userCache.Set(user.ID, *user)
+	return nil
 }
 
-func (user *User) Set(UpdateUser *User) error { // 设置用户
+// Set 设置用户 (Write-Through)
+func (user *User) Set(UpdateUser *User) error {
 	if UpdateUser.Password != "" {
 		hashedPassword, err := HashPassword(UpdateUser.Password)
 		if err != nil {
@@ -42,50 +75,69 @@ func (user *User) Set(UpdateUser *User) error { // 设置用户
 		}
 		UpdateUser.Password = hashedPassword
 	}
-	return DB.Where("username = ?", user.Username).Updates(UpdateUser).Error
-}
-
-func (user *User) Verify() error { // 验证用户
-	// First find the user by username
-	var dbUser User
-	if err := DB.Where("username = ?", user.Username).First(&dbUser).Error; err != nil {
+	err := DB.Where("username = ?", user.Username).Updates(UpdateUser).Error
+	if err != nil {
 		return err
 	}
+	// 更新缓存
+	var updated User
+	if err := DB.Where("username = ?", user.Username).First(&updated).Error; err == nil {
+		userCache.Set(updated.ID, updated)
+	}
+	return nil
+}
 
-	// Check if the stored password is a hash (bcrypt hashes start with $2a$, $2b$, $2x$, $2y$)
-	// If it's not a hash (legacy plaintext), compare directly
-	// Note: This is a temporary fallback for the transition period, but ideally we should migrate all users.
-	// However, since we are adding migration logic in sqlite.go, we can assume here we might encounter both
-	// if the migration hasn't run yet or failed.
-	// But for security, let's stick to the plan: Verify should check hash.
-	// If we want to support auto-upgrade on login, we could do it here, but the plan said migration in InitSqlite.
+// Verify 验证用户
+func (user *User) Verify() error {
+	// 先从缓存查找用户
+	users := userCache.GetByIndex("username", user.Username)
+	var dbUser User
+	if len(users) > 0 {
+		dbUser = users[0]
+	} else {
+		// 缓存未命中，从数据库查询
+		if err := DB.Where("username = ?", user.Username).First(&dbUser).Error; err != nil {
+			return err
+		}
+		userCache.Set(dbUser.ID, dbUser)
+	}
 
 	if CheckPasswordHash(user.Password, dbUser.Password) {
-		*user = dbUser // Update the user object with DB data
+		*user = dbUser
 		return nil
 	}
 
-	// Fallback for legacy plaintext passwords (optional, but good for robustness if migration fails)
-	// If the stored password doesn't look like a bcrypt hash, try direct comparison
-	// A simple check is length. Bcrypt hashes are 60 chars.
+	// Fallback for legacy plaintext passwords
 	if len(dbUser.Password) < 60 && dbUser.Password == user.Password {
 		*user = dbUser
 		return nil
 	}
 
-	return gorm.ErrRecordNotFound // Or a specific "invalid password" error
+	return gorm.ErrRecordNotFound
 }
 
-func (user *User) Find() error { // 查找用户
+// Find 查找用户
+func (user *User) Find() error {
+	// 先从缓存查找
+	users := userCache.GetByIndex("username", user.Username)
+	if len(users) > 0 {
+		*user = users[0]
+		return nil
+	}
 	return DB.Where("username = ? ", user.Username).First(user).Error
 }
 
-func (user *User) All() ([]User, error) { // 获取所有用户
-	var users []User
-	err := DB.Find(&users).Error
-	return users, err
+// All 获取所有用户
+func (user *User) All() ([]User, error) {
+	return userCache.GetAll(), nil
 }
 
-func (user *User) Del() error { // 删除用户
-	return DB.Delete(user).Error
+// Del 删除用户 (Write-Through)
+func (user *User) Del() error {
+	err := DB.Delete(user).Error
+	if err != nil {
+		return err
+	}
+	userCache.Delete(user.ID)
+	return nil
 }

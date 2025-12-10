@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"strconv"
+	"sublink/cache"
 	"sublink/utils"
 	"time"
 
@@ -15,59 +17,85 @@ type AccessKey struct {
 	ID            int        `gorm:"primaryKey"`
 	UserID        int        `gorm:"not null;index"`
 	Username      string     `gorm:"not null;index"`
-	AccessKeyHash string     `gorm:"type:varchar(255);not null;uniqueIndex" json:"-"` // API Key 哈希值，不返回给前端
+	AccessKeyHash string     `gorm:"type:varchar(255);not null;uniqueIndex" json:"-"`
 	CreatedAt     time.Time  `gorm:""`
 	ExpiredAt     *time.Time `gorm:"index"`
 	Description   string     `gorm:"type:varchar(255)"`
 }
 
-// Generate 保存 AccessKey
+// accessKeyCache 使用新的泛型缓存
+var accessKeyCache *cache.MapCache[int, AccessKey]
+
+func init() {
+	accessKeyCache = cache.NewMapCache(func(ak AccessKey) int { return ak.ID })
+	accessKeyCache.AddIndex("userID", func(ak AccessKey) string { return strconv.Itoa(ak.UserID) })
+}
+
+// InitAccessKeyCache 初始化AccessKey缓存
+func InitAccessKeyCache() error {
+	log.Printf("开始加载AccessKey到缓存")
+	var accessKeys []AccessKey
+	if err := DB.Find(&accessKeys).Error; err != nil {
+		return err
+	}
+
+	accessKeyCache.LoadAll(accessKeys)
+	log.Printf("AccessKey缓存初始化完成，共加载 %d 个AccessKey", accessKeyCache.Count())
+
+	cache.Manager.Register("accesskey", accessKeyCache)
+	return nil
+}
+
+// Generate 保存 AccessKey (Write-Through)
 func (accessKey *AccessKey) Generate() error {
-	return DB.Create(accessKey).Error
+	err := DB.Create(accessKey).Error
+	if err != nil {
+		return err
+	}
+	accessKeyCache.Set(accessKey.ID, *accessKey)
+	return nil
 }
 
 // FindValidAccessKeys 查找未过期的 AccessKey
 func FindValidAccessKeys(userID int) ([]AccessKey, error) {
-	var accessKeys []AccessKey
-	err := DB.Where("user_id = ?", userID).
-		Where("expired_at IS NULL OR expired_at > ?", time.Now()).
-		Find(&accessKeys).Error
-	return accessKeys, err
+	// 使用二级索引获取用户的所有 key
+	allKeys := accessKeyCache.GetByIndex("userID", strconv.Itoa(userID))
+	now := time.Now()
+
+	validKeys := make([]AccessKey, 0)
+	for _, key := range allKeys {
+		if key.ExpiredAt == nil || key.ExpiredAt.After(now) {
+			validKeys = append(validKeys, key)
+		}
+	}
+	return validKeys, nil
 }
 
 // FindValidAccessKeysPaginated 分页查找未过期的 AccessKey
 func FindValidAccessKeysPaginated(userID, page, pageSize int) ([]AccessKey, int64, error) {
-	var accessKeys []AccessKey
-	var total int64
+	validKeys, _ := FindValidAccessKeys(userID)
+	total := int64(len(validKeys))
 
-	query := DB.Where("user_id = ?", userID).
-		Where("expired_at IS NULL OR expired_at > ?", time.Now())
-
-	// 获取总数
-	if err := query.Model(&AccessKey{}).Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	// 如果不需要分页，返回全部
 	if page <= 0 || pageSize <= 0 {
-		if err := query.Find(&accessKeys).Error; err != nil {
-			return nil, 0, err
-		}
-		return accessKeys, total, nil
+		return validKeys, total, nil
 	}
 
-	// 分页查询
 	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Find(&accessKeys).Error; err != nil {
-		return nil, 0, err
+	if offset >= len(validKeys) {
+		return []AccessKey{}, total, nil
 	}
 
-	return accessKeys, total, nil
+	end := offset + pageSize
+	if end > len(validKeys) {
+		end = len(validKeys)
+	}
+
+	return validKeys[offset:end], total, nil
 }
 
-// Delete 删除 AccessKey (物理删除)
+// Delete 删除 AccessKey (Write-Through)
 func (accessKey *AccessKey) Delete() error {
-	// 先从数据库获取完整的 AccessKey 信息（包括 Username）
+	// 先从数据库获取完整的 AccessKey 信息
 	var fullAccessKey AccessKey
 	err := DB.First(&fullAccessKey, accessKey.ID).Error
 	if err != nil {
@@ -80,6 +108,8 @@ func (accessKey *AccessKey) Delete() error {
 		return err
 	}
 
+	// 更新缓存
+	accessKeyCache.Delete(accessKey.ID)
 	return nil
 }
 

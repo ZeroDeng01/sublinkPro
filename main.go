@@ -153,6 +153,25 @@ func Run(port int) {
 	if err := models.InitSettingCache(); err != nil {
 		log.Println("加载系统设置到缓存失败: %v", err)
 	}
+	if err := models.InitUserCache(); err != nil {
+		log.Println("加载用户到缓存失败: %v", err)
+	}
+	if err := models.InitScriptCache(); err != nil {
+		log.Println("加载脚本到缓存失败: %v", err)
+	}
+	if err := models.InitSubSchedulerCache(); err != nil {
+		log.Println("加载订阅调度到缓存失败: %v", err)
+	}
+	if err := models.InitAccessKeyCache(); err != nil {
+		log.Println("加载AccessKey到缓存失败: %v", err)
+	}
+	if err := models.InitSubLogsCache(); err != nil {
+		log.Println("加载订阅日志到缓存失败: %v", err)
+	}
+	if err := models.InitSubcriptionCache(); err != nil {
+		log.Println("加载订阅到缓存失败: %v", err)
+	}
+
 	// 从数据库加载定时任务
 	err := scheduler.LoadFromDatabase()
 	if err != nil {

@@ -2,13 +2,24 @@ package models
 
 import (
 	"fmt"
+	"log"
+	"sort"
 	"strings"
+	"sublink/cache"
 	"sublink/dto"
 	"sublink/utils"
 	"time"
 
 	"gorm.io/gorm"
 )
+
+// subcriptionCache 使用新的泛型缓存
+var subcriptionCache *cache.MapCache[int, Subcription]
+
+func init() {
+	subcriptionCache = cache.NewMapCache(func(s Subcription) int { return s.ID })
+	subcriptionCache.AddIndex("name", func(s Subcription) string { return s.Name })
+}
 
 type Subcription struct {
 	ID                 int
@@ -72,9 +83,29 @@ type NodeWithSort struct {
 	Sort int `json:"Sort"`
 }
 
-// Add 添加订阅
+// InitSubcriptionCache 初始化订阅缓存
+func InitSubcriptionCache() error {
+	log.Printf("开始加载订阅到缓存")
+	var subs []Subcription
+	if err := DB.Find(&subs).Error; err != nil {
+		return err
+	}
+
+	subcriptionCache.LoadAll(subs)
+	log.Printf("订阅缓存初始化完成，共加载 %d 个订阅", subcriptionCache.Count())
+
+	cache.Manager.Register("subcription", subcriptionCache)
+	return nil
+}
+
+// Add 添加订阅 (Write-Through)
 func (sub *Subcription) Add() error {
-	return DB.Create(sub).Error
+	err := DB.Create(sub).Error
+	if err != nil {
+		return err
+	}
+	subcriptionCache.Set(sub.ID, *sub)
+	return nil
 }
 
 // 添加节点列表建立多对多关系（使用节点名称）
@@ -126,7 +157,7 @@ func (sub *Subcription) AddScripts(scriptIDs []int) error {
 	return nil
 }
 
-// 更新订阅
+// 更新订阅 (Write-Through)
 func (sub *Subcription) Update() error {
 	updates := map[string]interface{}{
 		"name":                 sub.Name,
@@ -143,7 +174,16 @@ func (sub *Subcription) Update() error {
 		"node_name_whitelist":  sub.NodeNameWhitelist,
 		"node_name_blacklist":  sub.NodeNameBlacklist,
 	}
-	return DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
+	err := DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
+	if err != nil {
+		return err
+	}
+	// 更新缓存：从数据库读取完整数据后更新
+	var updated Subcription
+	if err := DB.First(&updated, sub.ID).Error; err == nil {
+		subcriptionCache.Set(sub.ID, updated)
+	}
+	return nil
 }
 
 // 更新节点列表建立多对多关系（使用节点名称）
@@ -209,9 +249,30 @@ func (sub *Subcription) UpdateScripts(scriptIDs []int) error {
 	return nil
 }
 
-// 查找订阅
+// 查找订阅（优先从缓存查找）
 func (sub *Subcription) Find() error {
-	return DB.Where("id = ? or name = ?", sub.ID, sub.Name).First(sub).Error
+	// 优先从缓存查找
+	if sub.ID > 0 {
+		if cached, ok := subcriptionCache.Get(sub.ID); ok {
+			*sub = cached
+			return nil
+		}
+	}
+	if sub.Name != "" {
+		subs := subcriptionCache.GetByIndex("name", sub.Name)
+		if len(subs) > 0 {
+			*sub = subs[0]
+			return nil
+		}
+	}
+	// 缓存未命中，查数据库
+	err := DB.Where("id = ? or name = ?", sub.ID, sub.Name).First(sub).Error
+	if err != nil {
+		return err
+	}
+	// 更新缓存
+	subcriptionCache.Set(sub.ID, *sub)
+	return nil
 }
 
 // 读取订阅
@@ -431,151 +492,185 @@ func (sub *Subcription) GetSub() error {
 	return nil
 }
 
-// 订阅列表
+// 订阅列表（从缓存获取，批量加载关联数据解决 N+1）
 
 func (sub *Subcription) List() ([]Subcription, error) {
-	var subs []Subcription
-	// 先查所有订阅
-	err := DB.Find(&subs).Error
-	if err != nil {
-		return nil, err
+	// 从缓存获取所有订阅
+	subs := subcriptionCache.GetAllSorted(func(a, b Subcription) bool {
+		return a.ID < b.ID
+	})
+
+	if len(subs) == 0 {
+		return subs, nil
 	}
 
-	for i := range subs {
-		// 查询订阅对应的节点和sort字段，按sort和node.id排序
-		var nodesWithSort []NodeWithSort
-		err := DB.Table("nodes").
-			Select("nodes.*, subcription_nodes.sort").
-			Joins("LEFT JOIN subcription_nodes ON subcription_nodes.node_name = nodes.name").
-			Where("subcription_nodes.subcription_id = ?", subs[i].ID).
-			Order("subcription_nodes.sort ASC").
-			Scan(&nodesWithSort).Error
-		if err != nil {
-			return nil, err
-		}
-		subs[i].NodesWithSort = nodesWithSort
-
-		// 查询订阅关联的分组（带Sort字段）
-		var groups []SubcriptionGroup
-		err = DB.Where("subcription_id = ?", subs[i].ID).
-			Order("sort ASC").
-			Find(&groups).Error
-		if err != nil {
-			return nil, err
-		}
-		subs[i].GroupsWithSort = make([]GroupWithSort, 0, len(groups))
-		for _, g := range groups {
-			subs[i].GroupsWithSort = append(subs[i].GroupsWithSort, GroupWithSort{
-				Name: g.GroupName,
-				Sort: g.Sort,
-			})
-		}
-
-		// 查询订阅关联的脚本（带Sort字段）
-		var scriptsWithSort []ScriptWithSort
-		err = DB.Table("scripts").
-			Select("scripts.*, subcription_scripts.sort").
-			Joins("LEFT JOIN subcription_scripts ON subcription_scripts.script_id = scripts.id").
-			Where("subcription_scripts.subcription_id = ?", subs[i].ID).
-			Order("subcription_scripts.sort ASC").
-			Scan(&scriptsWithSort).Error
-		if err != nil {
-			return nil, err
-		}
-		subs[i].ScriptsWithSort = scriptsWithSort
-
-		// 查询日志
-		err = DB.Model(&subs[i]).Association("SubLogs").Find(&subs[i].SubLogs)
-		if err != nil {
-			return nil, err
-		}
+	// 批量加载关联数据
+	if err := batchLoadSubcriptionRelations(subs); err != nil {
+		return nil, err
 	}
 
 	return subs, nil
 }
 
-// ListPaginated 分页获取订阅列表
+// ListPaginated 分页获取订阅列表（从缓存分页，批量加载关联数据）
 func (sub *Subcription) ListPaginated(page, pageSize int) ([]Subcription, int64, error) {
-	var subs []Subcription
-	var total int64
-
-	// 获取总数
-	if err := DB.Model(&Subcription{}).Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
+	// 从缓存获取所有订阅并排序
+	allSubs := subcriptionCache.GetAllSorted(func(a, b Subcription) bool {
+		return a.ID < b.ID
+	})
+	total := int64(len(allSubs))
 
 	// 如果不需要分页，返回全部
 	if page <= 0 || pageSize <= 0 {
-		list, err := sub.List()
-		return list, total, err
+		if err := batchLoadSubcriptionRelations(allSubs); err != nil {
+			return nil, 0, err
+		}
+		return allSubs, total, nil
 	}
 
-	// 分页查询基础订阅数据
+	// 分页
 	offset := (page - 1) * pageSize
-	err := DB.Offset(offset).Limit(pageSize).Find(&subs).Error
-	if err != nil {
+	if offset >= len(allSubs) {
+		return []Subcription{}, total, nil
+	}
+
+	end := offset + pageSize
+	if end > len(allSubs) {
+		end = len(allSubs)
+	}
+
+	subs := allSubs[offset:end]
+
+	// 批量加载关联数据
+	if err := batchLoadSubcriptionRelations(subs); err != nil {
 		return nil, 0, err
 	}
 
-	// 为每个订阅加载关联数据
+	return subs, total, nil
+}
+
+// batchLoadSubcriptionRelations 批量加载订阅的关联数据（解决 N+1 问题）
+func batchLoadSubcriptionRelations(subs []Subcription) error {
+	if len(subs) == 0 {
+		return nil
+	}
+
+	// 收集所有订阅 ID
+	subIDs := make([]int, len(subs))
+	subIDMap := make(map[int]int) // subID -> index in subs
+	for i, s := range subs {
+		subIDs[i] = s.ID
+		subIDMap[s.ID] = i
+	}
+
+	// 1. 批量查询所有订阅的节点关联
+	var subNodes []SubcriptionNode
+	if err := DB.Where("subcription_id IN ?", subIDs).Order("sort ASC").Find(&subNodes).Error; err != nil {
+		return err
+	}
+
+	// 按订阅 ID 分组节点名称
+	subNodeNames := make(map[int][]struct {
+		Name string
+		Sort int
+	})
+	for _, sn := range subNodes {
+		subNodeNames[sn.SubcriptionID] = append(subNodeNames[sn.SubcriptionID], struct {
+			Name string
+			Sort int
+		}{sn.NodeName, sn.Sort})
+	}
+
+	// 使用节点缓存获取节点详情
 	for i := range subs {
-		// 查询订阅对应的节点和sort字段
-		var nodesWithSort []NodeWithSort
-		err := DB.Table("nodes").
-			Select("nodes.*, subcription_nodes.sort").
-			Joins("LEFT JOIN subcription_nodes ON subcription_nodes.node_name = nodes.name").
-			Where("subcription_nodes.subcription_id = ?", subs[i].ID).
-			Order("subcription_nodes.sort ASC").
-			Scan(&nodesWithSort).Error
-		if err != nil {
-			return nil, 0, err
+		nodeInfos := subNodeNames[subs[i].ID]
+		nodesWithSort := make([]NodeWithSort, 0, len(nodeInfos))
+		for _, ni := range nodeInfos {
+			if node, ok := GetNodeByName(ni.Name); ok {
+				nodesWithSort = append(nodesWithSort, NodeWithSort{
+					Node: *node,
+					Sort: ni.Sort,
+				})
+			}
 		}
+		// 按 Sort 排序
+		sort.Slice(nodesWithSort, func(a, b int) bool {
+			return nodesWithSort[a].Sort < nodesWithSort[b].Sort
+		})
 		subs[i].NodesWithSort = nodesWithSort
+	}
 
-		// 查询订阅关联的分组（带Sort字段）
-		var groups []SubcriptionGroup
-		err = DB.Where("subcription_id = ?", subs[i].ID).
-			Order("sort ASC").
-			Find(&groups).Error
-		if err != nil {
-			return nil, 0, err
-		}
-		subs[i].GroupsWithSort = make([]GroupWithSort, 0, len(groups))
-		for _, g := range groups {
-			subs[i].GroupsWithSort = append(subs[i].GroupsWithSort, GroupWithSort{
-				Name: g.GroupName,
-				Sort: g.Sort,
-			})
-		}
+	// 2. 批量查询所有订阅的分组关联
+	var subGroups []SubcriptionGroup
+	if err := DB.Where("subcription_id IN ?", subIDs).Order("sort ASC").Find(&subGroups).Error; err != nil {
+		return err
+	}
 
-		// 查询订阅关联的脚本（带Sort字段）
-		var scriptsWithSort []ScriptWithSort
-		err = DB.Table("scripts").
-			Select("scripts.*, subcription_scripts.sort").
-			Joins("LEFT JOIN subcription_scripts ON subcription_scripts.script_id = scripts.id").
-			Where("subcription_scripts.subcription_id = ?", subs[i].ID).
-			Order("subcription_scripts.sort ASC").
-			Scan(&scriptsWithSort).Error
-		if err != nil {
-			return nil, 0, err
-		}
-		subs[i].ScriptsWithSort = scriptsWithSort
-
-		// 查询日志
-		err = DB.Model(&subs[i]).Association("SubLogs").Find(&subs[i].SubLogs)
-		if err != nil {
-			return nil, 0, err
+	// 按订阅 ID 分组
+	subGroupMap := make(map[int][]GroupWithSort)
+	for _, sg := range subGroups {
+		subGroupMap[sg.SubcriptionID] = append(subGroupMap[sg.SubcriptionID], GroupWithSort{
+			Name: sg.GroupName,
+			Sort: sg.Sort,
+		})
+	}
+	for i := range subs {
+		subs[i].GroupsWithSort = subGroupMap[subs[i].ID]
+		if subs[i].GroupsWithSort == nil {
+			subs[i].GroupsWithSort = []GroupWithSort{}
 		}
 	}
 
-	return subs, total, nil
+	// 3. 批量查询所有订阅的脚本关联
+	var subScripts []SubcriptionScript
+	if err := DB.Where("subcription_id IN ?", subIDs).Order("sort ASC").Find(&subScripts).Error; err != nil {
+		return err
+	}
+
+	// 按订阅 ID 分组脚本 ID
+	subScriptIDs := make(map[int][]struct {
+		ScriptID int
+		Sort     int
+	})
+	for _, ss := range subScripts {
+		subScriptIDs[ss.SubcriptionID] = append(subScriptIDs[ss.SubcriptionID], struct {
+			ScriptID int
+			Sort     int
+		}{ss.ScriptID, ss.Sort})
+	}
+
+	// 使用脚本缓存获取脚本详情
+	for i := range subs {
+		scriptInfos := subScriptIDs[subs[i].ID]
+		scriptsWithSort := make([]ScriptWithSort, 0, len(scriptInfos))
+		for _, si := range scriptInfos {
+			if script, err := GetScriptByID(si.ScriptID); err == nil {
+				scriptsWithSort = append(scriptsWithSort, ScriptWithSort{
+					Script: *script,
+					Sort:   si.Sort,
+				})
+			}
+		}
+		// 按 Sort 排序
+		sort.Slice(scriptsWithSort, func(a, b int) bool {
+			return scriptsWithSort[a].Sort < scriptsWithSort[b].Sort
+		})
+		subs[i].ScriptsWithSort = scriptsWithSort
+	}
+
+	// 4. 批量获取日志（使用缓存）
+	for i := range subs {
+		subs[i].SubLogs = GetSubLogsBySubcriptionID(subs[i].ID)
+	}
+
+	return nil
 }
 
 func (sub *Subcription) IPlogUpdate() error {
 	return DB.Model(sub).Association("SubLogs").Replace(&sub.SubLogs)
 }
 
-// 删除订阅（硬删除）
+// 删除订阅（硬删除，Write-Through）
 func (sub *Subcription) Del() error {
 	// 先删除关联的节点关系
 	if err := DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionNode{}).Error; err != nil {
@@ -590,7 +685,13 @@ func (sub *Subcription) Del() error {
 		return err
 	}
 	// 硬删除订阅本身（Unscoped 绕过软删除）
-	return DB.Unscoped().Delete(sub).Error
+	err := DB.Unscoped().Delete(sub).Error
+	if err != nil {
+		return err
+	}
+	// 从缓存中删除
+	subcriptionCache.Delete(sub.ID)
+	return nil
 }
 
 func (sub *Subcription) Sort(subNodeSort dto.SubcriptionNodeSortUpdate) error {

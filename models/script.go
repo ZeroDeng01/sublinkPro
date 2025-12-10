@@ -1,6 +1,9 @@
 package models
 
 import (
+	"log"
+	"sort"
+	"sublink/cache"
 	"time"
 )
 
@@ -13,58 +16,119 @@ type Script struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// Add 添加脚本
+// scriptCache 使用新的泛型缓存
+var scriptCache *cache.MapCache[int, Script]
+
+func init() {
+	scriptCache = cache.NewMapCache(func(s Script) int { return s.ID })
+	scriptCache.AddIndex("name", func(s Script) string { return s.Name })
+}
+
+// InitScriptCache 初始化脚本缓存
+func InitScriptCache() error {
+	log.Printf("开始加载脚本到缓存")
+	var scripts []Script
+	if err := DB.Find(&scripts).Error; err != nil {
+		return err
+	}
+
+	scriptCache.LoadAll(scripts)
+	log.Printf("脚本缓存初始化完成，共加载 %d 个脚本", scriptCache.Count())
+
+	cache.Manager.Register("script", scriptCache)
+	return nil
+}
+
+// Add 添加脚本 (Write-Through)
 func (s *Script) Add() error {
-	return DB.Create(s).Error
+	err := DB.Create(s).Error
+	if err != nil {
+		return err
+	}
+	scriptCache.Set(s.ID, *s)
+	return nil
 }
 
-// Update 更新脚本
+// Update 更新脚本 (Write-Through)
 func (s *Script) Update() error {
-	return DB.Model(s).Updates(s).Error
+	err := DB.Model(s).Updates(s).Error
+	if err != nil {
+		return err
+	}
+	// 从DB读取完整数据后更新缓存
+	var updated Script
+	if err := DB.First(&updated, s.ID).Error; err == nil {
+		scriptCache.Set(s.ID, updated)
+	}
+	return nil
 }
 
-// Del 删除脚本
+// Del 删除脚本 (Write-Through)
 func (s *Script) Del() error {
-	return DB.Delete(s).Error
+	err := DB.Delete(s).Error
+	if err != nil {
+		return err
+	}
+	scriptCache.Delete(s.ID)
+	return nil
 }
 
 // List 获取脚本列表
 func (s *Script) List() ([]Script, error) {
-	var scripts []Script
-	err := DB.Find(&scripts).Error
-	return scripts, err
+	scripts := scriptCache.GetAllSorted(func(a, b Script) bool {
+		return a.ID < b.ID
+	})
+	return scripts, nil
 }
 
 // ListPaginated 分页获取脚本列表
 func (s *Script) ListPaginated(page, pageSize int) ([]Script, int64, error) {
-	var scripts []Script
-	var total int64
+	allScripts := scriptCache.GetAllSorted(func(a, b Script) bool {
+		return a.ID < b.ID
+	})
+	total := int64(len(allScripts))
 
-	// 获取总数
-	if err := DB.Model(&Script{}).Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	// 如果不需要分页，返回全部
 	if page <= 0 || pageSize <= 0 {
-		if err := DB.Find(&scripts).Error; err != nil {
-			return nil, 0, err
-		}
-		return scripts, total, nil
+		return allScripts, total, nil
 	}
 
-	// 分页查询
 	offset := (page - 1) * pageSize
-	if err := DB.Offset(offset).Limit(pageSize).Find(&scripts).Error; err != nil {
-		return nil, 0, err
+	if offset >= len(allScripts) {
+		return []Script{}, total, nil
 	}
 
-	return scripts, total, nil
+	end := offset + pageSize
+	if end > len(allScripts) {
+		end = len(allScripts)
+	}
+
+	return allScripts[offset:end], total, nil
 }
 
 // CheckNameVersion 检查名称和版本是否重复
 func (s *Script) CheckNameVersion() bool {
-	var count int64
-	DB.Model(&Script{}).Where("name = ? AND version = ? AND id != ?", s.Name, s.Version, s.ID).Count(&count)
-	return count > 0
+	// 使用缓存查询
+	scripts := scriptCache.GetByIndex("name", s.Name)
+	for _, script := range scripts {
+		if script.Version == s.Version && script.ID != s.ID {
+			return true
+		}
+	}
+	return false
 }
+
+// GetScriptByID 根据ID获取脚本
+func GetScriptByID(id int) (*Script, error) {
+	if script, ok := scriptCache.Get(id); ok {
+		return &script, nil
+	}
+	var script Script
+	if err := DB.First(&script, id).Error; err != nil {
+		return nil, err
+	}
+	scriptCache.Set(script.ID, script)
+	return &script, nil
+}
+
+// Ensure sort is used
+var _ = sort.Slice
