@@ -85,6 +85,43 @@ func GetAccessKey(c *gin.Context) {
 		utils.FailWithMsg(c, "查询Access Key失败")
 		return
 	}
+
+	// 解析分页参数
+	page := 0
+	pageSize := 0
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if pageSizeStr := c.Query("pageSize"); pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 {
+			pageSize = ps
+		}
+	}
+
+	// 如果提供了分页参数，返回分页响应
+	if page > 0 && pageSize > 0 {
+		accessKeys, total, err := models.FindValidAccessKeysPaginated(userID, page, pageSize)
+		if err != nil {
+			utils.FailWithMsg(c, "查询Access Key失败")
+			return
+		}
+		totalPages := 0
+		if pageSize > 0 {
+			totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
+		}
+		utils.OkDetailed(c, "查询Access Key成功", gin.H{
+			"items":      accessKeys,
+			"total":      total,
+			"page":       page,
+			"pageSize":   pageSize,
+			"totalPages": totalPages,
+		})
+		return
+	}
+
+	// 不带分页参数，返回全部（向后兼容）
 	accessKeys, err := models.FindValidAccessKeys(userID)
 	if err != nil {
 		utils.FailWithMsg(c, "查询Access Key失败")

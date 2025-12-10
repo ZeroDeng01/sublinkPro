@@ -2,14 +2,15 @@ import PropTypes from "prop-types";
 
 // material-ui
 import Alert from "@mui/material/Alert";
-import Autocomplete from "@mui/material/Autocomplete";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
-import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+
+// project imports
+import SearchableNodeSelect from "components/SearchableNodeSelect";
 
 /**
  * 批量修改前置代理对话框
@@ -31,21 +32,22 @@ export default function BatchDialerProxyDialog({
         <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
           将为选中的 {selectedCount} 个节点设置相同的前置代理
         </Typography>
-        <Autocomplete
-          freeSolo
-          options={proxyNodeOptions.map((node) => node.Name)}
+        <SearchableNodeSelect
+          nodes={proxyNodeOptions}
           loading={loadingProxyNodes}
           value={value}
-          onChange={(e, newValue) => setValue(newValue || "")}
-          onInputChange={(e, newInputValue) => setValue(newInputValue)}
-          renderInput={(params) => (
-            <TextField {...params} label="前置代理节点"
-                       placeholder="选择或输入代理节点名称/策略组名称，留空则清空前置代理" fullWidth />
-          )}
+          onChange={(newValue) => {
+            const name = typeof newValue === "string" ? newValue : newValue?.Name || "";
+            setValue(name);
+          }}
+          displayField="Name"
+          valueField="Name"
+          label="前置代理节点"
+          placeholder="选择或输入代理节点名称/策略组名称，留空则清空前置代理"
+          helperText="提示：前置代理节点用于链式代理，流量将先经过此节点再转发。留空将清除前置代理设置。"
+          freeSolo={true}
+          limit={50}
         />
-        <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: "block" }}>
-          提示：前置代理节点用于链式代理，流量将先经过此节点再转发。留空将清除前置代理设置。
-        </Typography>
         <Alert severity="warning" sx={{ mt: 1 }}>
           前置代理仅 Clash-Meta 内核可用
         </Alert>

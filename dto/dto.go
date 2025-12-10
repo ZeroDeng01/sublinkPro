@@ -17,9 +17,9 @@ type NodeSortItem struct {
 
 // UserAccessKey 用户访问密钥请求体结构
 type UserAccessKey struct {
-	UserName    string `binding:"required"`
-	ExpiredAt   *time.Time
-	Description string
+	UserName    string `json:"username" binding:"required"`
+	ExpiredAt   *time.Time `json:"expiredAt"`
+	Description string `json:"description"`
 }
 
 // SubSchedulerAddRequest 订阅调度添加请求体结构

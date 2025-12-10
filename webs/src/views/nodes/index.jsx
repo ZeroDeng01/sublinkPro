@@ -9,7 +9,6 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Snackbar from "@mui/material/Snackbar";
 import Stack from '@mui/material/Stack';
-import TablePagination from "@mui/material/TablePagination";
 import Tooltip from '@mui/material/Tooltip';
 
 // icons
@@ -24,10 +23,12 @@ import MainCard from 'ui-component/cards/MainCard';
 import TaskProgressPanel from 'components/TaskProgressPanel';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 import ConfirmDialog from "components/ConfirmDialog";
+import Pagination from "components/Pagination";
 
 // api
 import {
   getNodes,
+  getNodeIds,
   addNodes,
   updateNode,
   deleteNode,
@@ -125,8 +126,9 @@ export default function NodeList() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() => {
     const saved = localStorage.getItem('nodes_rowsPerPage');
-    return saved ? parseInt(saved, 10) : 10;
+    return saved ? parseInt(saved, 10) : 20;
   });
+  const [totalItems, setTotalItems] = useState(0);
 
   // 订阅调度器
   const [schedulers, setSchedulers] = useState([]);
@@ -188,7 +190,8 @@ export default function NodeList() {
   // 防抖定时器引用
   const debounceTimerRef = useRef(null);
 
-  // 获取节点列表（支持过滤参数）
+  // 获取节点列表（支持过滤和分页参数）
+  // 注意：不依赖 page/rowsPerPage，而是通过参数传递，避免触发 filter useEffect 循环
   const fetchNodes = useCallback(async (filterParams = {}) => {
     setLoading(true);
     try {
@@ -205,15 +208,27 @@ export default function NodeList() {
       if (filterParams.sortBy) params.sortBy = filterParams.sortBy;
       if (filterParams.sortOrder) params.sortOrder = filterParams.sortOrder;
 
+      // 分页参数必须通过 filterParams 传递
+      params.page = (filterParams.page ?? 0) + 1; // 后端是1-indexed
+      params.pageSize = filterParams.pageSize ?? 20;
+
       const response = await getNodes(params);
-      setNodes(response.data || []);
+      // 处理分页响应
+      if (response.data && response.data.items !== undefined) {
+        setNodes(response.data.items || []);
+        setTotalItems(response.data.total || 0);
+      } else {
+        // 向后兼容：老格式直接返回数组
+        setNodes(response.data || []);
+        setTotalItems((response.data || []).length);
+      }
     } catch (error) {
       console.error(error);
       showMessage('获取节点列表失败', 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // 空依赖，避免循环
 
   // 获取订阅调度器列表
   const fetchSchedulers = useCallback(async () => {
@@ -241,7 +256,7 @@ export default function NodeList() {
 
   // 初始化加载
   useEffect(() => {
-    fetchNodes();
+    fetchNodes({ page: 0, pageSize: rowsPerPage });
     // 请求国家代码列表
     getNodeCountries()
       .then((res) => {
@@ -280,8 +295,11 @@ export default function NodeList() {
         minSpeed: minSpeed,
         countries: countryFilter,
         sortBy: sortBy,
-        sortOrder: sortOrder
+        sortOrder: sortOrder,
+        page: 0, // 筛选条件变化时重置到第一页
+        pageSize: rowsPerPage
       };
+      setPage(0); // 重置分页
       fetchNodes(filterParams);
     }, 300); // 300ms 防抖延迟
 
@@ -708,10 +726,33 @@ export default function NodeList() {
     }
   };
 
-  // 选择所有
-  const handleSelectAll = (event) => {
+  // 选择所有（获取符合当前筛选条件的所有节点ID）
+  const handleSelectAll = async (event) => {
     if (event.target.checked) {
-      setSelectedNodes(filteredNodes);
+      try {
+        // 从后端获取所有符合筛选条件的节点ID
+        const params = {};
+        if (searchQuery) params.search = searchQuery;
+        if (groupFilter) params.group = groupFilter;
+        if (sourceFilter) params.source = sourceFilter;
+        if (maxDelay) params.maxDelay = maxDelay;
+        if (minSpeed) params.minSpeed = minSpeed;
+        if (countryFilter && countryFilter.length > 0) {
+          params["countries[]"] = countryFilter;
+        }
+
+        const response = await getNodeIds(params);
+        const allIds = response.data || [];
+
+        // 将ID转换为节点对象（只包含ID，用于后续操作）
+        const selectedObjs = allIds.map((id) => ({ ID: id }));
+        setSelectedNodes(selectedObjs);
+        showMessage(`已选择所有符合条件的 ${allIds.length} 个节点`);
+      } catch (error) {
+        console.error("获取所有节点ID失败:", error);
+        // 回退方案：只选择当前页
+        setSelectedNodes(filteredNodes);
+      }
     } else {
       setSelectedNodes([]);
     }
@@ -886,19 +927,24 @@ export default function NodeList() {
         />
       )}
 
-      <TablePagination
-        component="div"
-        count={filteredNodes.length}
+      <Pagination
         page={page}
-        onPageChange={(e, newPage) => setPage(newPage)}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={(e) => {
+        pageSize={rowsPerPage}
+        totalItems={totalItems}
+        onPageChange={(e, newPage) => {
+          setPage(newPage);
+          // 触发数据重新加载
+          fetchNodes({ ...getCurrentFilters(), page: newPage, pageSize: rowsPerPage });
+        }}
+        onPageSizeChange={(e) => {
           const newValue = parseInt(e.target.value, 10);
           setRowsPerPage(newValue);
           localStorage.setItem('nodes_rowsPerPage', newValue);
           setPage(0);
+          // 触发数据重新加载
+          fetchNodes({ ...getCurrentFilters(), page: 0, pageSize: newValue });
         }}
-        labelRowsPerPage="每页行数:"
+        pageSizeOptions={[10, 20, 50, 100]}
       />
 
       {/* 添加/编辑节点对话框 */}

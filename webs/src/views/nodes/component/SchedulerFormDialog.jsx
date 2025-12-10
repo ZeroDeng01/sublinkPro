@@ -14,6 +14,9 @@ import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
+// project imports
+import SearchableNodeSelect from "components/SearchableNodeSelect";
+
 // constants
 import { CRON_OPTIONS, USER_AGENT_OPTIONS } from "../utils";
 
@@ -143,46 +146,22 @@ export default function SchedulerFormDialog({
           />
           {schedulerForm.DownloadWithProxy && (
             <Box>
-              <Autocomplete
-                options={proxyNodeOptions}
+              <SearchableNodeSelect
+                nodes={proxyNodeOptions}
                 loading={loadingProxyNodes}
-                getOptionLabel={(option) => option.Name || (option.Link ? `未知节点 (${option.Link.substring(0, 30)}...)` : "")}
                 value={
                   proxyNodeOptions.find((n) => n.Link === schedulerForm.ProxyLink) ||
                   (schedulerForm.ProxyLink ? { Link: schedulerForm.ProxyLink, Name: "", ID: 0 } : null)
                 }
-                isOptionEqualToValue={(option, value) => option.Link === value.Link}
-                onChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, ProxyLink: newValue?.Link || "" })}
-                renderOption={(props, option) => (
-                  <Box component="li" {...props} key={option.ID}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
-                      <Typography variant="body2">{option.Name}</Typography>
-                      <Typography variant="caption" color="textSecondary" sx={{ ml: 2 }}>
-                        {option.Group || "未分组"}
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="选择代理节点"
-                    placeholder="留空则自动选择最佳节点"
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {loadingProxyNodes ? <Typography variant="caption">加载中...</Typography> : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      )
-                    }}
-                  />
-                )}
+                onChange={(newValue) => setSchedulerForm({ ...schedulerForm, ProxyLink: newValue?.Link || "" })}
+                displayField="Name"
+                valueField="Link"
+                label="选择代理节点"
+                placeholder="留空则自动选择最佳节点"
+                helperText="如果未选择具体代理，系统将自动选择延迟最低且速度最快的节点作为下载代理，你也可以输入外部代理地址"
+                freeSolo={true}
+                limit={50}
               />
-              <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: "block" }}>
-                如果未选择具体代理，系统将自动选择延迟最低且速度最快的节点作为下载代理，你也可以输入外部代理地址
-              </Typography>
             </Box>
           )}
         </Stack>

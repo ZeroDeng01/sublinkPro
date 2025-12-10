@@ -44,7 +44,8 @@ export default function NodeTable({
                                     onDelete
                                   }) {
   const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
-  const paginatedNodes = nodes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  // 后端分页：nodes 已经是当前页数据，无需客户端切片
+  // const paginatedNodes = nodes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
     <TableContainer component={Paper}>
@@ -54,7 +55,7 @@ export default function NodeTable({
             <TableCell padding="checkbox">
               <Checkbox
                 indeterminate={selectedNodes.length > 0 && selectedNodes.length < nodes.length}
-                checked={nodes.length > 0 && selectedNodes.length === nodes.length}
+                checked={nodes.length > 0 && selectedNodes.length >= nodes.length}
                 onChange={onSelectAll}
               />
             </TableCell>
@@ -88,7 +89,7 @@ export default function NodeTable({
           </TableRow>
         </TableHead>
         <TableBody>
-          {paginatedNodes.map((node) => (
+          {nodes.map((node) => (
             <TableRow key={node.ID} hover selected={isSelected(node)}>
               <TableCell padding="checkbox">
                 <Checkbox checked={isSelected(node)} onChange={() => onSelect(node)} />
@@ -139,13 +140,15 @@ export default function NodeTable({
               </TableCell>
               <TableCell>
                 <Tooltip title={node.DialerProxyName || ""}>
-                  <Typography sx={{
-                    minWidth: 100,
-                    maxWidth: 150,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis"
-                  }}>
+                  <Typography
+                    sx={{
+                      minWidth: 100,
+                      maxWidth: 150,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis"
+                    }}
+                  >
                     {node.DialerProxyName || "-"}
                   </Typography>
                 </Tooltip>

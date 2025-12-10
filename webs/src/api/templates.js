@@ -1,10 +1,13 @@
 import request from './request';
 
-// 获取模板列表
-export function getTemplates() {
+// 获取模板列表（支持分页参数）
+// params: { page, pageSize }
+// 带page/pageSize时返回 { items, total, page, pageSize, totalPages }
+export function getTemplates(params = {}) {
   return request({
     url: '/v1/template/get',
-    method: 'get'
+    method: "get",
+    params
   });
 }
 

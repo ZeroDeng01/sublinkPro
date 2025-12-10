@@ -17,7 +17,6 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import TablePagination from '@mui/material/TablePagination';
 import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
@@ -33,8 +32,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
-// project imports
 import MainCard from 'ui-component/cards/MainCard';
+import Pagination from "components/Pagination";
 import { getTemplates, addTemplate, updateTemplate, deleteTemplate } from 'api/templates';
 
 // Monaco Editor
@@ -58,6 +57,7 @@ export default function TemplateList() {
     const saved = localStorage.getItem('templates_rowsPerPage');
     return saved ? parseInt(saved, 10) : 10;
   });
+  const [totalItems, setTotalItems] = useState(0);
 
   // 确认对话框
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -83,11 +83,19 @@ export default function TemplateList() {
     setConfirmOpen(false);
   };
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = async (currentPage, currentPageSize) => {
     setLoading(true);
     try {
-      const response = await getTemplates();
-      setTemplates(response.data || []);
+      const response = await getTemplates({ page: currentPage + 1, pageSize: currentPageSize });
+      // 处理分页响应
+      if (response.data && response.data.items !== undefined) {
+        setTemplates(response.data.items || []);
+        setTotalItems(response.data.total || 0);
+      } else {
+        // 向后兼容：老格式直接返回数组
+        setTemplates(response.data || []);
+        setTotalItems((response.data || []).length);
+      }
     } catch (error) {
       console.log(error);
       showMessage('获取模板列表失败', 'error');
@@ -97,8 +105,8 @@ export default function TemplateList() {
   };
 
   useEffect(() => {
-    fetchTemplates();
-  }, []);
+    fetchTemplates(0, rowsPerPage);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showMessage = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -123,7 +131,7 @@ export default function TemplateList() {
       try {
         await deleteTemplate({ filename: template.file });
         showMessage('删除成功');
-        fetchTemplates();
+        fetchTemplates(page, rowsPerPage);
       } catch (error) {
         console.log(error);
         showMessage('删除失败', 'error');
@@ -148,7 +156,7 @@ export default function TemplateList() {
         showMessage('添加成功');
       }
       setDialogOpen(false);
-      fetchTemplates();
+      fetchTemplates(page, rowsPerPage);
     } catch (error) {
       console.log(error);
       showMessage(isEdit ? '更新失败' : '添加失败', 'error');
@@ -168,7 +176,7 @@ export default function TemplateList() {
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
               添加模板
             </Button>
-            <IconButton onClick={fetchTemplates} disabled={loading}>
+            <IconButton onClick={() => fetchTemplates(page, rowsPerPage)} disabled={loading}>
               <RefreshIcon
                 sx={
                   loading
@@ -186,7 +194,7 @@ export default function TemplateList() {
     >
       {matchDownMd && (
         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-          <IconButton onClick={fetchTemplates} disabled={loading} size="small">
+          <IconButton onClick={() => fetchTemplates(page, rowsPerPage)} disabled={loading} size="small">
             <RefreshIcon
               sx={
                 loading
@@ -203,7 +211,7 @@ export default function TemplateList() {
 
       {matchDownMd ? (
         <Stack spacing={2}>
-          {templates.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((template) => (
+          {templates.map((template) => (
             <MainCard key={template.file} content={false} border shadow={theme.shadows[1]}>
               <Box p={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
@@ -238,7 +246,7 @@ export default function TemplateList() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {templates.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((template) => (
+              {templates.map((template) => (
                 <TableRow key={template.file} hover>
                   <TableCell>
                     <Chip label={template.file} color="success" variant="outlined" size="small" />
@@ -259,19 +267,22 @@ export default function TemplateList() {
         </TableContainer>
       )}
 
-      <TablePagination
-        component="div"
-        count={templates.length}
+      <Pagination
         page={page}
-        onPageChange={(e, newPage) => setPage(newPage)}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={(e) => {
+        pageSize={rowsPerPage}
+        totalItems={totalItems}
+        onPageChange={(e, newPage) => {
+          setPage(newPage);
+          fetchTemplates(newPage, rowsPerPage);
+        }}
+        onPageSizeChange={(e) => {
           const newValue = parseInt(e.target.value, 10);
           setRowsPerPage(newValue);
           localStorage.setItem('templates_rowsPerPage', newValue);
           setPage(0);
+          fetchTemplates(0, newValue);
         }}
-        labelRowsPerPage="每页行数:"
+        pageSizeOptions={[10, 20, 50, 100]}
       />
 
       {/* 添加/编辑对话框 */}

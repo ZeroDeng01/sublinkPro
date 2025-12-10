@@ -25,6 +25,43 @@ func SubTotal(c *gin.Context) {
 // 获取订阅列表
 func SubGet(c *gin.Context) {
 	var Sub models.Subcription
+
+	// 解析分页参数
+	page := 0
+	pageSize := 0
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if pageSizeStr := c.Query("pageSize"); pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 {
+			pageSize = ps
+		}
+	}
+
+	// 如果提供了分页参数，返回分页响应
+	if page > 0 && pageSize > 0 {
+		subs, total, err := Sub.ListPaginated(page, pageSize)
+		if err != nil {
+			utils.FailWithMsg(c, "获取订阅列表失败")
+			return
+		}
+		totalPages := 0
+		if pageSize > 0 {
+			totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
+		}
+		utils.OkDetailed(c, "获取成功", gin.H{
+			"items":      subs,
+			"total":      total,
+			"page":       page,
+			"pageSize":   pageSize,
+			"totalPages": totalPages,
+		})
+		return
+	}
+
+	// 不带分页参数，返回全部（向后兼容）
 	Subs, err := Sub.List()
 	if err != nil {
 		utils.FailWithMsg(c, "node list error")

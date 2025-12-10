@@ -1,10 +1,13 @@
 import request from './request';
 
-// 获取 Access Key 列表
-export function getAccessKeys(userId) {
+// 获取 Access Key 列表（支持分页参数）
+// params: { page, pageSize }
+// 带page/pageSize时返回 { items, total, page, pageSize, totalPages }
+export function getAccessKeys(userId, params = {}) {
   return request({
     url: `/v1/accesskey/get/${userId}`,
-    method: 'get'
+    method: "get",
+    params
   });
 }
 

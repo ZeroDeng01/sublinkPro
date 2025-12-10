@@ -1,4 +1,3 @@
-import { useState } from "react";
 import PropTypes from "prop-types";
 
 // material-ui
@@ -13,6 +12,9 @@ import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+
+// project imports
+import SearchableNodeSelect from "components/SearchableNodeSelect";
 
 /**
  * 添加/编辑节点对话框
@@ -54,22 +56,22 @@ export default function NodeDialog({
             <TextField fullWidth label="备注" value={nodeForm.name}
                        onChange={(e) => setNodeForm({ ...nodeForm, name: e.target.value })} />
           )}
-          <Autocomplete
-            freeSolo
-            options={proxyNodeOptions.map((node) => node.Name)}
+          <SearchableNodeSelect
+            nodes={proxyNodeOptions}
             loading={loadingProxyNodes}
             value={nodeForm.dialerProxyName}
-            onChange={(e, newValue) => setNodeForm({ ...nodeForm, dialerProxyName: newValue || "" })}
-            onInputChange={(e, newInputValue) => setNodeForm({ ...nodeForm, dialerProxyName: newInputValue })}
+            onChange={(newValue) => {
+              const name = typeof newValue === "string" ? newValue : newValue?.Name || "";
+              setNodeForm({ ...nodeForm, dialerProxyName: name });
+            }}
+            displayField="Name"
+            valueField="Name"
+            label="前置代理节点名称或策略组名称"
+            placeholder="选择或输入节点名称/策略组名称"
+            helperText="仅Clash-Meta内核可用，留空则不使用前置代理"
+            freeSolo={true}
+            limit={50}
             onFocus={onFetchProxyNodes}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="前置代理节点名称或策略组名称"
-                placeholder="选择或输入节点名称/策略组名称"
-                helperText="仅Clash-Meta内核可用，留空则不使用前置代理"
-              />
-            )}
           />
           <Autocomplete
             freeSolo

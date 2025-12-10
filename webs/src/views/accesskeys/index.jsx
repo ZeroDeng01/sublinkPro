@@ -37,8 +37,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
-// project imports
 import MainCard from 'ui-component/cards/MainCard';
+import Pagination from "components/Pagination";
 import { getAccessKeys, createAccessKey, deleteAccessKey } from 'api/accesskeys';
 import { useAuth } from 'contexts/AuthContext';
 
@@ -60,6 +60,14 @@ export default function ApiKeyList() {
     expiredAt: null
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  // 分页
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(() => {
+    const saved = localStorage.getItem("accesskeys_rowsPerPage");
+    return saved ? parseInt(saved, 10) : 10;
+  });
+  const [totalItems, setTotalItems] = useState(0);
 
   // 确认对话框
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -85,12 +93,20 @@ export default function ApiKeyList() {
     setConfirmOpen(false);
   };
 
-  const fetchAccessKeys = async () => {
+  const fetchAccessKeys = async (currentPage, currentPageSize) => {
     if (!user?.userId) return;
     setLoading(true);
     try {
-      const response = await getAccessKeys(user.userId);
-      setAccessKeys(response.data || []);
+      const response = await getAccessKeys(user.userId, { page: currentPage + 1, pageSize: currentPageSize });
+      // 处理分页响应
+      if (response.data && response.data.items !== undefined) {
+        setAccessKeys(response.data.items || []);
+        setTotalItems(response.data.total || 0);
+      } else {
+        // 向后兼容：老格式直接返回数组
+        setAccessKeys(response.data || []);
+        setTotalItems((response.data || []).length);
+      }
     } catch (error) {
       showMessage('获取 API 密钥列表失败', 'error');
     } finally {
@@ -99,8 +115,10 @@ export default function ApiKeyList() {
   };
 
   useEffect(() => {
-    fetchAccessKeys();
-  }, [user]);
+    if (user?.userId) {
+      fetchAccessKeys(0, rowsPerPage);
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showMessage = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -114,9 +132,9 @@ export default function ApiKeyList() {
   const handleDelete = async (accessKey) => {
     openConfirm('删除 API 密钥', '确定要删除此 API 密钥吗？此操作不可恢复！', async () => {
       try {
-        await deleteAccessKey(accessKey.id);
+        await deleteAccessKey(accessKey.ID);
         showMessage('删除成功');
-        fetchAccessKeys();
+        fetchAccessKeys(page, rowsPerPage);
       } catch (error) {
         showMessage('删除失败', 'error');
       }
@@ -147,7 +165,7 @@ export default function ApiKeyList() {
       setNewKey(response.data.accessKey);
       setDialogOpen(false);
       setShowKeyDialog(true);
-      fetchAccessKeys();
+      fetchAccessKeys(page, rowsPerPage);
     } catch (error) {
       showMessage('创建失败', 'error');
     }
@@ -165,10 +183,10 @@ export default function ApiKeyList() {
   };
 
   const getExpirationStatus = (apiKey) => {
-    if (!apiKey.expiredAt) {
+    if (!apiKey.ExpiredAt) {
       return <Chip label="永不过期" color="success" size="small" variant="outlined" />;
     }
-    const expireDate = new Date(apiKey.expiredAt);
+    const expireDate = new Date(apiKey.ExpiredAt);
     const now = new Date();
     if (expireDate < now) {
       return <Chip label="已过期" color="error" size="small" variant="outlined" />;
@@ -177,7 +195,7 @@ export default function ApiKeyList() {
     if (diffDays <= 7) {
       return <Chip label={`${diffDays}天后过期`} color="warning" size="small" variant="outlined" />;
     }
-    return <Chip label={formatDate(apiKey.expiredAt)} color="info" size="small" variant="outlined" />;
+    return <Chip label={formatDate(apiKey.ExpiredAt)} color="info" size="small" variant="outlined" />;
   };
 
   return (
@@ -193,7 +211,7 @@ export default function ApiKeyList() {
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
               创建密钥
             </Button>
-            <IconButton onClick={fetchAccessKeys} disabled={loading}>
+            <IconButton onClick={() => fetchAccessKeys(page, rowsPerPage)} disabled={loading}>
               <RefreshIcon />
             </IconButton>
           </Stack>
@@ -202,7 +220,7 @@ export default function ApiKeyList() {
     >
       {matchDownMd && (
         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-          <IconButton onClick={fetchAccessKeys} disabled={loading} size="small">
+          <IconButton onClick={() => fetchAccessKeys(page, rowsPerPage)} disabled={loading} size="small">
             <RefreshIcon />
           </IconButton>
         </Stack>
@@ -211,17 +229,17 @@ export default function ApiKeyList() {
       {matchDownMd ? (
         <Stack spacing={2}>
           {accessKeys.map((accessKey) => (
-            <MainCard key={accessKey.id} content={false} border shadow={theme.shadows[1]}>
+            <MainCard key={accessKey.ID} content={false} border shadow={theme.shadows[1]}>
               <Box p={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Typography variant="subtitle1">{accessKey.description || '无描述'}</Typography>
+                  <Typography variant="subtitle1">{accessKey.Description || "无描述"}</Typography>
                   {getExpirationStatus(accessKey)}
                 </Stack>
                 <Typography variant="caption" color="textSecondary" display="block" gutterBottom>
-                  ID: {accessKey.id}
+                  ID: {accessKey.ID}
                 </Typography>
                 <Typography variant="caption" color="textSecondary" display="block" gutterBottom>
-                  创建时间: {formatDate(accessKey.createdAt)}
+                  创建时间: {formatDate(accessKey.CreatedAt)}
                 </Typography>
                 <Divider sx={{ my: 1 }} />
                 <Stack direction="row" justifyContent="flex-end">
@@ -247,10 +265,10 @@ export default function ApiKeyList() {
             </TableHead>
             <TableBody>
               {accessKeys.map((accessKey) => (
-                <TableRow key={accessKey.id} hover>
-                  <TableCell>{accessKey.id}</TableCell>
-                  <TableCell>{accessKey.description}</TableCell>
-                  <TableCell>{formatDate(accessKey.createdAt)}</TableCell>
+                <TableRow key={accessKey.ID} hover>
+                  <TableCell>{accessKey.ID}</TableCell>
+                  <TableCell>{accessKey.Description}</TableCell>
+                  <TableCell>{formatDate(accessKey.CreatedAt)}</TableCell>
                   <TableCell>{getExpirationStatus(accessKey)}</TableCell>
                   <TableCell align="right">
                     <IconButton size="small" color="error" onClick={() => handleDelete(accessKey)}>
@@ -269,6 +287,24 @@ export default function ApiKeyList() {
           <Typography color="textSecondary">暂无 API 密钥</Typography>
         </Box>
       )}
+
+      <Pagination
+        page={page}
+        pageSize={rowsPerPage}
+        totalItems={totalItems}
+        onPageChange={(e, newPage) => {
+          setPage(newPage);
+          fetchAccessKeys(newPage, rowsPerPage);
+        }}
+        onPageSizeChange={(e) => {
+          const newValue = parseInt(e.target.value, 10);
+          setRowsPerPage(newValue);
+          localStorage.setItem("accesskeys_rowsPerPage", newValue);
+          setPage(0);
+          fetchAccessKeys(0, newValue);
+        }}
+        pageSizeOptions={[10, 20, 50, 100]}
+      />
 
       {/* 创建对话框 */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>

@@ -17,7 +17,6 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import TablePagination from '@mui/material/TablePagination';
 import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
@@ -35,8 +34,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
-// project imports
 import MainCard from 'ui-component/cards/MainCard';
+import Pagination from "components/Pagination";
 import { getScripts, addScript, updateScript, deleteScript } from 'api/scripts';
 
 // Monaco Editor
@@ -84,6 +83,7 @@ export default function ScriptList() {
     const saved = localStorage.getItem('scripts_rowsPerPage');
     return saved ? parseInt(saved, 10) : 10;
   });
+  const [totalItems, setTotalItems] = useState(0);
 
   // 确认对话框
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -109,11 +109,19 @@ export default function ScriptList() {
     setConfirmOpen(false);
   };
 
-  const fetchScripts = async () => {
+  const fetchScripts = async (currentPage, currentPageSize) => {
     setLoading(true);
     try {
-      const response = await getScripts();
-      setScripts(response.data || []);
+      const response = await getScripts({ page: currentPage + 1, pageSize: currentPageSize });
+      // 处理分页响应
+      if (response.data && response.data.items !== undefined) {
+        setScripts(response.data.items || []);
+        setTotalItems(response.data.total || 0);
+      } else {
+        // 向后兼容：老格式直接返回数组
+        setScripts(response.data || []);
+        setTotalItems((response.data || []).length);
+      }
     } catch (error) {
       console.error(error);
       showMessage('获取脚本列表失败', 'error');
@@ -123,8 +131,8 @@ export default function ScriptList() {
   };
 
   useEffect(() => {
-    fetchScripts();
-  }, []);
+    fetchScripts(0, rowsPerPage);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showMessage = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -149,7 +157,7 @@ export default function ScriptList() {
       try {
         await deleteScript(script);
         showMessage('删除成功');
-        fetchScripts();
+        fetchScripts(page, rowsPerPage);
       } catch (error) {
         console.error(error);
         showMessage('删除失败', 'error');
@@ -167,7 +175,7 @@ export default function ScriptList() {
         showMessage('添加成功');
       }
       setDialogOpen(false);
-      fetchScripts();
+      fetchScripts(page, rowsPerPage);
     } catch (error) {
       console.error(error);
       showMessage(isEdit ? '更新失败' : '添加失败', 'error');
@@ -202,7 +210,7 @@ export default function ScriptList() {
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
               添加脚本
             </Button>
-            <IconButton onClick={fetchScripts} disabled={loading}>
+            <IconButton onClick={() => fetchScripts(page, rowsPerPage)} disabled={loading}>
               <RefreshIcon />
             </IconButton>
           </Stack>
@@ -220,7 +228,7 @@ export default function ScriptList() {
             <HelpOutlineIcon sx={{ mr: 0.5 }} fontSize="small" />
             使用说明
           </Link>
-          <IconButton onClick={fetchScripts} disabled={loading} size="small">
+          <IconButton onClick={() => fetchScripts(page, rowsPerPage)} disabled={loading} size="small">
             <RefreshIcon />
           </IconButton>
         </Stack>
@@ -228,7 +236,7 @@ export default function ScriptList() {
 
       {matchDownMd ? (
         <Stack spacing={2}>
-          {scripts.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((script) => (
+          {scripts.map((script) => (
             <MainCard key={script.id} content={false} border shadow={theme.shadows[1]}>
               <Box p={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
@@ -269,7 +277,7 @@ export default function ScriptList() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {scripts.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((script) => (
+              {scripts.map((script) => (
                 <TableRow key={script.id} hover>
                   <TableCell>
                     <Chip label={script.name} color="success" size="small" />
@@ -292,19 +300,22 @@ export default function ScriptList() {
         </TableContainer>
       )}
 
-      <TablePagination
-        component="div"
-        count={scripts.length}
+      <Pagination
         page={page}
-        onPageChange={(e, newPage) => setPage(newPage)}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={(e) => {
+        pageSize={rowsPerPage}
+        totalItems={totalItems}
+        onPageChange={(e, newPage) => {
+          setPage(newPage);
+          fetchScripts(newPage, rowsPerPage);
+        }}
+        onPageSizeChange={(e) => {
           const newValue = parseInt(e.target.value, 10);
           setRowsPerPage(newValue);
           localStorage.setItem('scripts_rowsPerPage', newValue);
           setPage(0);
+          fetchScripts(0, newValue);
         }}
-        labelRowsPerPage="每页行数:"
+        pageSizeOptions={[10, 20, 50, 100]}
       />
 
       {/* 添加/编辑对话框 */}

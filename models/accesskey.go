@@ -12,13 +12,13 @@ import (
 )
 
 type AccessKey struct {
-	ID            int        `gorm:"primaryKey" json:"id"`
-	UserID        int        `gorm:"not null;index" json:"userID"` // 关联到用户的外键
-	Username      string     `gorm:"not null;index" json:"username"`
+	ID            int        `gorm:"primaryKey"`
+	UserID        int        `gorm:"not null;index"`
+	Username      string     `gorm:"not null;index"`
 	AccessKeyHash string     `gorm:"type:varchar(255);not null;uniqueIndex" json:"-"` // API Key 哈希值，不返回给前端
-	CreatedAt     time.Time  `gorm:"" json:"createdAt"`
-	ExpiredAt     *time.Time `gorm:"index" json:"expiredAt"`               // 过期时间（可选）
-	Description   string     `gorm:"type:varchar(255)" json:"description"` // 备注
+	CreatedAt     time.Time  `gorm:""`
+	ExpiredAt     *time.Time `gorm:"index"`
+	Description   string     `gorm:"type:varchar(255)"`
 }
 
 // Generate 保存 AccessKey
@@ -33,6 +33,36 @@ func FindValidAccessKeys(userID int) ([]AccessKey, error) {
 		Where("expired_at IS NULL OR expired_at > ?", time.Now()).
 		Find(&accessKeys).Error
 	return accessKeys, err
+}
+
+// FindValidAccessKeysPaginated 分页查找未过期的 AccessKey
+func FindValidAccessKeysPaginated(userID, page, pageSize int) ([]AccessKey, int64, error) {
+	var accessKeys []AccessKey
+	var total int64
+
+	query := DB.Where("user_id = ?", userID).
+		Where("expired_at IS NULL OR expired_at > ?", time.Now())
+
+	// 获取总数
+	if err := query.Model(&AccessKey{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 如果不需要分页，返回全部
+	if page <= 0 || pageSize <= 0 {
+		if err := query.Find(&accessKeys).Error; err != nil {
+			return nil, 0, err
+		}
+		return accessKeys, total, nil
+	}
+
+	// 分页查询
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Find(&accessKeys).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return accessKeys, total, nil
 }
 
 // Delete 删除 AccessKey (物理删除)

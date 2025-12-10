@@ -1,10 +1,13 @@
 import request from './request';
 
-// 获取脚本列表
-export function getScripts() {
+// 获取脚本列表（支持分页参数）
+// params: { page, pageSize }
+// 带page/pageSize时返回 { items, total, page, pageSize, totalPages }
+export function getScripts(params = {}) {
   return request({
     url: '/v1/script/list',
-    method: 'get'
+    method: "get",
+    params
   });
 }
 

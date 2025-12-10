@@ -1,10 +1,22 @@
 import request from './request';
 
-// 获取节点列表（支持过滤参数）
+// 获取节点列表（支持过滤和分页参数）
+// params: { search, group, source, maxDelay, minSpeed, countries[], sortBy, sortOrder, page, pageSize }
+// 带page/pageSize时返回 { items, total, page, pageSize, totalPages }
+// 不带分页参数时返回节点数组（向后兼容）
 export function getNodes(params = {}) {
   return request({
     url: '/v1/nodes/get',
     method: 'get',
+    params
+  });
+}
+
+// 获取符合过滤条件的所有节点ID（用于全选操作）
+export function getNodeIds(params = {}) {
+  return request({
+    url: "/v1/nodes/ids",
+    method: "get",
     params
   });
 }

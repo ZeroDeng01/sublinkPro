@@ -342,6 +342,49 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 	return nodes, nil
 }
 
+// ListWithFiltersPaginated 根据过滤条件获取分页节点列表
+func (node *Node) ListWithFiltersPaginated(filter NodeFilter, page, pageSize int) ([]Node, int64, error) {
+	// 先获取全部过滤结果
+	allNodes, err := node.ListWithFilters(filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total := int64(len(allNodes))
+
+	// 如果不需要分页，返回全部
+	if page <= 0 || pageSize <= 0 {
+		return allNodes, total, nil
+	}
+
+	// 计算分页
+	offset := (page - 1) * pageSize
+	if offset >= len(allNodes) {
+		return []Node{}, total, nil
+	}
+
+	end := offset + pageSize
+	if end > len(allNodes) {
+		end = len(allNodes)
+	}
+
+	return allNodes[offset:end], total, nil
+}
+
+// GetFilteredNodeIDs 获取符合过滤条件的所有节点ID（用于全选操作）
+func (node *Node) GetFilteredNodeIDs(filter NodeFilter) ([]int, error) {
+	allNodes, err := node.ListWithFilters(filter)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]int, len(allNodes))
+	for i, n := range allNodes {
+		ids[i] = n.ID
+	}
+	return ids, nil
+}
+
 // ListByGroups 根据分组获取节点列表
 func (node *Node) ListByGroups(groups []string) ([]Node, error) {
 	nodeLock.RLock()

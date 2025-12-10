@@ -35,6 +35,33 @@ func (s *Script) List() ([]Script, error) {
 	return scripts, err
 }
 
+// ListPaginated 分页获取脚本列表
+func (s *Script) ListPaginated(page, pageSize int) ([]Script, int64, error) {
+	var scripts []Script
+	var total int64
+
+	// 获取总数
+	if err := DB.Model(&Script{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 如果不需要分页，返回全部
+	if page <= 0 || pageSize <= 0 {
+		if err := DB.Find(&scripts).Error; err != nil {
+			return nil, 0, err
+		}
+		return scripts, total, nil
+	}
+
+	// 分页查询
+	offset := (page - 1) * pageSize
+	if err := DB.Offset(offset).Limit(pageSize).Find(&scripts).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return scripts, total, nil
+}
+
 // CheckNameVersion 检查名称和版本是否重复
 func (s *Script) CheckNameVersion() bool {
 	var count int64

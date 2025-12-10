@@ -6,7 +6,6 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import TablePagination from '@mui/material/TablePagination';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
@@ -18,6 +17,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
+import Pagination from "components/Pagination";
 import { getSubscriptions, addSubscription, updateSubscription, deleteSubscription, sortSubscription } from 'api/subscriptions';
 import { getNodes, getNodeCountries, getNodeGroups, getNodeSources } from 'api/nodes';
 import { getTemplates } from 'api/templates';
@@ -138,6 +138,7 @@ export default function SubscriptionList() {
     const saved = localStorage.getItem('subscriptions_rowsPerPage');
     return saved ? parseInt(saved, 10) : 10;
   });
+  const [totalItems, setTotalItems] = useState(0);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -145,12 +146,32 @@ export default function SubscriptionList() {
   const [groupOptions, setGroupOptions] = useState([]);
   const [sourceOptions, setSourceOptions] = useState([]);
 
-  // 获取数据
-  const fetchData = useCallback(async () => {
+  // 获取订阅列表（分页）
+  const fetchSubscriptions = async (currentPage, currentPageSize) => {
     setLoading(true);
     try {
-      const [subRes, nodesRes, templatesRes, scriptsRes, countriesRes, groupsRes, sourcesRes] = await Promise.all([
-        getSubscriptions(),
+      const response = await getSubscriptions({ page: currentPage + 1, pageSize: currentPageSize });
+      // 处理分页响应
+      if (response.data && response.data.items !== undefined) {
+        setSubscriptions(response.data.items || []);
+        setTotalItems(response.data.total || 0);
+      } else {
+        // 向后兼容：老格式直接返回数组
+        setSubscriptions(response.data || []);
+        setTotalItems((response.data || []).length);
+      }
+    } catch (error) {
+      console.error(error);
+      showMessage("获取订阅列表失败", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 获取其他数据（不分页）
+  const fetchOtherData = useCallback(async () => {
+    try {
+      const [nodesRes, templatesRes, scriptsRes, countriesRes, groupsRes, sourcesRes] = await Promise.all([
         getNodes(),
         getTemplates(),
         getScripts(),
@@ -158,7 +179,6 @@ export default function SubscriptionList() {
         getNodeGroups(),
         getNodeSources()
       ]);
-      setSubscriptions(subRes.data || []);
       setAllNodes(nodesRes.data || []);
       setTemplates(templatesRes.data || []);
       setScripts(scriptsRes.data || []);
@@ -167,15 +187,14 @@ export default function SubscriptionList() {
       setSourceOptions((sourcesRes.data || []).sort());
     } catch (error) {
       console.error(error);
-      showMessage('获取数据失败', 'error');
-    } finally {
-      setLoading(false);
     }
   }, []);
 
+  // 初始加载
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchSubscriptions(0, rowsPerPage);
+    fetchOtherData();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showMessage = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -271,7 +290,7 @@ export default function SubscriptionList() {
       try {
         await deleteSubscription({ id: sub.ID });
         showMessage('删除成功');
-        fetchData();
+        fetchSubscriptions(page, rowsPerPage);
       } catch (error) {
         console.error(error);
         showMessage('删除失败', 'error');
@@ -329,7 +348,7 @@ export default function SubscriptionList() {
         showMessage('添加成功');
       }
       setDialogOpen(false);
-      fetchData();
+      fetchSubscriptions(page, rowsPerPage);
     } catch (error) {
       console.error(error);
       showMessage(isEdit ? '更新失败' : '添加失败', 'error');
@@ -493,7 +512,7 @@ export default function SubscriptionList() {
       showMessage('排序已更新');
       setSortingSubId(null);
       setTempSortData([]);
-      fetchData();
+      fetchSubscriptions(page, rowsPerPage);
     } catch (error) {
       console.error(error);
       showMessage('排序保存失败', 'error');
@@ -554,7 +573,7 @@ export default function SubscriptionList() {
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
               添加订阅
             </Button>
-            <IconButton onClick={fetchData} disabled={loading}>
+            <IconButton onClick={() => fetchSubscriptions(page, rowsPerPage)} disabled={loading}>
               <RefreshIcon
                 sx={
                   loading
@@ -572,7 +591,7 @@ export default function SubscriptionList() {
     >
       {matchDownMd && (
         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-          <IconButton onClick={fetchData} disabled={loading} size="small">
+          <IconButton onClick={() => fetchSubscriptions(page, rowsPerPage)} disabled={loading} size="small">
             <RefreshIcon
               sx={
                 loading
@@ -630,19 +649,22 @@ export default function SubscriptionList() {
         />
       )}
 
-      <TablePagination
-        component="div"
-        count={subscriptions.length}
+      <Pagination
         page={page}
-        onPageChange={(e, newPage) => setPage(newPage)}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={(e) => {
+        pageSize={rowsPerPage}
+        totalItems={totalItems}
+        onPageChange={(e, newPage) => {
+          setPage(newPage);
+          fetchSubscriptions(newPage, rowsPerPage);
+        }}
+        onPageSizeChange={(e) => {
           const newValue = parseInt(e.target.value, 10);
           setRowsPerPage(newValue);
           localStorage.setItem('subscriptions_rowsPerPage', newValue);
           setPage(0);
+          fetchSubscriptions(0, newValue);
         }}
-        labelRowsPerPage="每页行数:"
+        pageSizeOptions={[10, 20, 50, 100]}
       />
 
       {/* 添加/编辑对话框 */}

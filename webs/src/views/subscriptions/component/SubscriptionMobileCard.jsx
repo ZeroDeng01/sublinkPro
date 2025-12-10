@@ -46,7 +46,7 @@ export default function SubscriptionMobileCard({
                                                }) {
   return (
     <Stack spacing={2}>
-      {subscriptions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((sub) => (
+      {subscriptions.map((sub) => (
         <MainCard key={sub.ID} content={false} border shadow={theme.shadows[1]}>
           <Box p={2}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}

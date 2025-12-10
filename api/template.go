@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sublink/utils"
 
@@ -140,6 +141,51 @@ func GetTempS(c *gin.Context) {
 		temps = append(temps, temp)
 	}
 
+	// 解析分页参数
+	page := 0
+	pageSize := 0
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if pageSizeStr := c.Query("pageSize"); pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 {
+			pageSize = ps
+		}
+	}
+
+	// 如果提供了分页参数，返回分页响应
+	if page > 0 && pageSize > 0 {
+		total := int64(len(temps))
+		offset := (page - 1) * pageSize
+		end := offset + pageSize
+		
+		var pagedTemps []Temp
+		if offset < len(temps) {
+			if end > len(temps) {
+				end = len(temps)
+			}
+			pagedTemps = temps[offset:end]
+		} else {
+			pagedTemps = []Temp{}
+		}
+
+		totalPages := 0
+		if pageSize > 0 {
+			totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
+		}
+		utils.OkDetailed(c, "ok", gin.H{
+			"items":      pagedTemps,
+			"total":      total,
+			"page":       page,
+			"pageSize":   pageSize,
+			"totalPages": totalPages,
+		})
+		return
+	}
+
+	// 不带分页参数，返回全部（向后兼容）
 	if len(temps) == 0 {
 		utils.OkDetailed(c, "ok", []Temp{})
 		return

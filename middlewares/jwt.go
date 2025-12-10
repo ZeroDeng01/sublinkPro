@@ -3,6 +3,7 @@ package middlewares
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"sublink/models"
 	"sublink/utils"
@@ -27,7 +28,7 @@ func AuthToken(c *gin.Context) {
 	if accessKey != "" {
 		username, bool, err := validApiKey(accessKey)
 		if err != nil || !bool {
-			utils.FailWithMsg(c, err.Error())
+			utils.FailWithCode(c, http.StatusForbidden, err.Error())
 			c.Abort()
 			return
 		}
@@ -41,13 +42,13 @@ func AuthToken(c *gin.Context) {
 		token = c.Query("token")
 	}
 	if token == "" {
-		utils.FailWithMsg(c, "请求未携带token")
+		utils.FailWithCode(c, http.StatusForbidden, "请求未携带token")
 		c.Abort()
 		return
 	}
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		utils.FailWithMsg(c, "token格式错误")
+		utils.FailWithCode(c, http.StatusForbidden, "token格式错误")
 		c.Abort()
 		return
 	}

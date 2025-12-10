@@ -63,7 +63,7 @@ export default function SubscriptionTable({
           </TableRow>
         </TableHead>
         <TableBody>
-          {subscriptions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((sub) => (
+          {subscriptions.map((sub) => (
             <Fragment key={sub.ID}>
               <TableRow hover>
                 <TableCell>

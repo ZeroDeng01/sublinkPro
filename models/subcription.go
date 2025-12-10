@@ -494,6 +494,83 @@ func (sub *Subcription) List() ([]Subcription, error) {
 	return subs, nil
 }
 
+// ListPaginated 分页获取订阅列表
+func (sub *Subcription) ListPaginated(page, pageSize int) ([]Subcription, int64, error) {
+	var subs []Subcription
+	var total int64
+
+	// 获取总数
+	if err := DB.Model(&Subcription{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 如果不需要分页，返回全部
+	if page <= 0 || pageSize <= 0 {
+		list, err := sub.List()
+		return list, total, err
+	}
+
+	// 分页查询基础订阅数据
+	offset := (page - 1) * pageSize
+	err := DB.Offset(offset).Limit(pageSize).Find(&subs).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 为每个订阅加载关联数据
+	for i := range subs {
+		// 查询订阅对应的节点和sort字段
+		var nodesWithSort []NodeWithSort
+		err := DB.Table("nodes").
+			Select("nodes.*, subcription_nodes.sort").
+			Joins("LEFT JOIN subcription_nodes ON subcription_nodes.node_name = nodes.name").
+			Where("subcription_nodes.subcription_id = ?", subs[i].ID).
+			Order("subcription_nodes.sort ASC").
+			Scan(&nodesWithSort).Error
+		if err != nil {
+			return nil, 0, err
+		}
+		subs[i].NodesWithSort = nodesWithSort
+
+		// 查询订阅关联的分组（带Sort字段）
+		var groups []SubcriptionGroup
+		err = DB.Where("subcription_id = ?", subs[i].ID).
+			Order("sort ASC").
+			Find(&groups).Error
+		if err != nil {
+			return nil, 0, err
+		}
+		subs[i].GroupsWithSort = make([]GroupWithSort, 0, len(groups))
+		for _, g := range groups {
+			subs[i].GroupsWithSort = append(subs[i].GroupsWithSort, GroupWithSort{
+				Name: g.GroupName,
+				Sort: g.Sort,
+			})
+		}
+
+		// 查询订阅关联的脚本（带Sort字段）
+		var scriptsWithSort []ScriptWithSort
+		err = DB.Table("scripts").
+			Select("scripts.*, subcription_scripts.sort").
+			Joins("LEFT JOIN subcription_scripts ON subcription_scripts.script_id = scripts.id").
+			Where("subcription_scripts.subcription_id = ?", subs[i].ID).
+			Order("subcription_scripts.sort ASC").
+			Scan(&scriptsWithSort).Error
+		if err != nil {
+			return nil, 0, err
+		}
+		subs[i].ScriptsWithSort = scriptsWithSort
+
+		// 查询日志
+		err = DB.Model(&subs[i]).Association("SubLogs").Find(&subs[i].SubLogs)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
+	return subs, total, nil
+}
+
 func (sub *Subcription) IPlogUpdate() error {
 	return DB.Model(sub).Association("SubLogs").Replace(&sub.SubLogs)
 }

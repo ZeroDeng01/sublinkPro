@@ -11,27 +11,27 @@ import NodeCard from "./NodeCard";
  * 移动端节点卡片列表
  */
 export default function NodeMobileList({
-                                         nodes,
-                                         page,
-                                         rowsPerPage,
-                                         selectedNodes,
-                                         onSelect,
-                                         onSpeedTest,
-                                         onCopy,
-                                         onEdit,
-                                         onDelete
-                                       }) {
+  nodes,
+  page,
+  rowsPerPage,
+  selectedNodes,
+  onSelect,
+  onSpeedTest,
+  onCopy,
+  onEdit,
+  onDelete
+}) {
   const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
-  const paginatedNodes = nodes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  // 后端分页：nodes 已经是当前页数据，无需客户端切片
 
   return (
     <Stack spacing={2}>
-      {paginatedNodes.length === 0 && (
+      {nodes.length === 0 && (
         <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 3 }}>
           暂无节点
         </Typography>
       )}
-      {paginatedNodes.map((node) => (
+      {nodes.map((node) => (
         <NodeCard
           key={node.ID}
           node={node}

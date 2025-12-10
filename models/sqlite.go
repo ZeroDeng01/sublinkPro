@@ -182,9 +182,9 @@ func InitSqlite() {
 		}
 	} else {
 		// Check if we need to update admin password from env
-		if envPass := os.Getenv("SUBLINK_ADMIN_PASSWORD"); envPass != "" {
+		if envPass := os.Getenv("SUBLINK_ADMIN_PASSWORD_REST"); envPass != "" {
 			var admin User
-			if err := db.Where("username = ?", "admin").First(&admin).Error; err == nil {
+			if err := db.First(&admin).Error; err == nil {
 				// Update admin password
 				updateUser := &User{Password: envPass}
 				if err := admin.Set(updateUser); err != nil {

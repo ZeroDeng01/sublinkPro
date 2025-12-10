@@ -54,6 +54,7 @@ export const formatDateTime = (dateTimeString) => {
 // ISO国家代码转换为国旗emoji
 export const isoToFlag = (isoCode) => {
   if (!isoCode || isoCode.length !== 2) return "";
+  isoCode = isoCode.toUpperCase() === "TW" ? "CN" : isoCode;
   const codePoints = isoCode
     .toUpperCase()
     .split("")

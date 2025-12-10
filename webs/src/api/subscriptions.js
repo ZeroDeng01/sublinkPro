@@ -1,18 +1,29 @@
 import request from './request';
 
-// 获取订阅列表
-export function getSubscriptions() {
+// 获取订阅列表（支持分页参数）
+// params: { page, pageSize }
+// 带page/pageSize时返回 { items, total, page, pageSize, totalPages }
+export function getSubscriptions(params = {}) {
   return request({
     url: '/v1/subcription/get',
-    method: 'get'
+    method: "get",
+    params
   }).then((response) => {
+    // 处理分页响应
+    const data = response.data?.items || response.data;
     // 确保每个订阅都有 Nodes 数组
-    if (response.data && Array.isArray(response.data)) {
-      response.data.forEach((sub) => {
+    if (data && Array.isArray(data)) {
+      data.forEach((sub) => {
         if (!sub.Nodes || sub.Nodes.length === 0) {
           sub.Nodes = [];
         }
       });
+    }
+    // 如果是分页响应，保持原结构
+    if (response.data?.items !== undefined) {
+      response.data.items = data;
+    } else {
+      response.data = data;
     }
     return response;
   });

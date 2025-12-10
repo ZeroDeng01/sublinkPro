@@ -47,6 +47,33 @@ func (ss *SubScheduler) List() ([]SubScheduler, error) {
 	return schedulers, nil
 }
 
+// ListPaginated 分页获取订阅调度列表
+func (ss *SubScheduler) ListPaginated(page, pageSize int) ([]SubScheduler, int64, error) {
+	var schedulers []SubScheduler
+	var total int64
+
+	// 获取总数
+	if err := DB.Model(&SubScheduler{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 如果不需要分页，返回全部
+	if page <= 0 || pageSize <= 0 {
+		if err := DB.Find(&schedulers).Error; err != nil {
+			return nil, 0, err
+		}
+		return schedulers, total, nil
+	}
+
+	// 分页查询
+	offset := (page - 1) * pageSize
+	if err := DB.Offset(offset).Limit(pageSize).Find(&schedulers).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return schedulers, total, nil
+}
+
 // ListEnabled 获取所有启用的订阅调度
 func ListEnabled() ([]SubScheduler, error) {
 	var schedulers []SubScheduler
