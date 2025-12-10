@@ -38,7 +38,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 import MainCard from 'ui-component/cards/MainCard';
-import Pagination from "components/Pagination";
+import Pagination from 'components/Pagination';
 import { getAccessKeys, createAccessKey, deleteAccessKey } from 'api/accesskeys';
 import { useAuth } from 'contexts/AuthContext';
 
@@ -64,7 +64,7 @@ export default function ApiKeyList() {
   // 分页
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() => {
-    const saved = localStorage.getItem("accesskeys_rowsPerPage");
+    const saved = localStorage.getItem('accesskeys_rowsPerPage');
     return saved ? parseInt(saved, 10) : 10;
   });
   const [totalItems, setTotalItems] = useState(0);
@@ -232,7 +232,7 @@ export default function ApiKeyList() {
             <MainCard key={accessKey.ID} content={false} border shadow={theme.shadows[1]}>
               <Box p={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Typography variant="subtitle1">{accessKey.Description || "无描述"}</Typography>
+                  <Typography variant="subtitle1">{accessKey.Description || '无描述'}</Typography>
                   {getExpirationStatus(accessKey)}
                 </Stack>
                 <Typography variant="caption" color="textSecondary" display="block" gutterBottom>
@@ -299,7 +299,7 @@ export default function ApiKeyList() {
         onPageSizeChange={(e) => {
           const newValue = parseInt(e.target.value, 10);
           setRowsPerPage(newValue);
-          localStorage.setItem("accesskeys_rowsPerPage", newValue);
+          localStorage.setItem('accesskeys_rowsPerPage', newValue);
           setPage(0);
           fetchAccessKeys(0, newValue);
         }}

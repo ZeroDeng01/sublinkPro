@@ -1,26 +1,16 @@
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types';
 
 // material-ui
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 
 // components
-import NodeCard from "./NodeCard";
+import NodeCard from './NodeCard';
 
 /**
  * 移动端节点卡片列表
  */
-export default function NodeMobileList({
-  nodes,
-  page,
-  rowsPerPage,
-  selectedNodes,
-  onSelect,
-  onSpeedTest,
-  onCopy,
-  onEdit,
-  onDelete
-}) {
+export default function NodeMobileList({ nodes, page, rowsPerPage, selectedNodes, onSelect, onSpeedTest, onCopy, onEdit, onDelete }) {
   const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
   // 后端分页：nodes 已经是当前页数据，无需客户端切片
 

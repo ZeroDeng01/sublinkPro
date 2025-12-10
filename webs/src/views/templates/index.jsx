@@ -41,7 +41,7 @@ import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import MainCard from 'ui-component/cards/MainCard';
-import Pagination from "components/Pagination";
+import Pagination from 'components/Pagination';
 import { getTemplates, addTemplate, updateTemplate, deleteTemplate, getACL4SSRPresets, convertRules } from 'api/templates';
 
 // Monaco Editor
@@ -118,11 +118,13 @@ export default function TemplateList() {
   useEffect(() => {
     fetchTemplates(0, rowsPerPage);
     // 获取 ACL4SSR 预设列表
-    getACL4SSRPresets().then(res => {
-      if (res.data) {
-        setAclPresets(res.data);
-      }
-    }).catch(err => console.log('获取预设列表失败:', err));
+    getACL4SSRPresets()
+      .then((res) => {
+        if (res.data) {
+          setAclPresets(res.data);
+        }
+      })
+      .catch((err) => console.log('获取预设列表失败:', err));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showMessage = (message, severity = 'success') => {
@@ -207,9 +209,9 @@ export default function TemplateList() {
                 sx={
                   loading
                     ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -225,9 +227,9 @@ export default function TemplateList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -340,11 +342,7 @@ export default function TemplateList() {
               />
               <FormControl sx={{ minWidth: 120 }}>
                 <InputLabel>类别</InputLabel>
-                <Select
-                  value={formData.category}
-                  label="类别"
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                >
+                <Select value={formData.category} label="类别" onChange={(e) => setFormData({ ...formData, category: e.target.value })}>
                   <MenuItem value="clash">Clash</MenuItem>
                   <MenuItem value="surge">Surge</MenuItem>
                 </Select>
@@ -405,20 +403,20 @@ export default function TemplateList() {
                     });
                     if (res.code === 200 && res.data && res.data.content) {
                       setFormData({ ...formData, text: res.data.content });
-                      showMessage('规则转换成功');
+                      showMessage('规则生成/转换成功');
                     } else {
                       setErrorDialog({
                         open: true,
-                        title: '规则转换失败',
-                        message: res.msg || '转换过程中发生错误'
+                        title: '规则生成/转换失败',
+                        message: res.msg || '生成/转换过程中发生错误'
                       });
                     }
                   } catch (error) {
                     console.error(error);
-                    const errorMsg = error.response?.data?.msg || error.message || '规则转换失败';
+                    const errorMsg = error.response?.data?.msg || error.message || '规则生成/转换失败';
                     setErrorDialog({
                       open: true,
-                      title: '规则转换失败',
+                      title: '规则生成/转换失败',
                       message: errorMsg
                     });
                   } finally {
@@ -426,7 +424,7 @@ export default function TemplateList() {
                   }
                 }}
               >
-                规则转换
+                规则生成/转换
               </Button>
               <Button
                 variant="outlined"
@@ -443,20 +441,20 @@ export default function TemplateList() {
                     });
                     if (res.code === 200 && res.data && res.data.content) {
                       setFormData({ ...formData, text: res.data.content });
-                      showMessage('规则转换并展开成功');
+                      showMessage('规则生成/转换并展开成功');
                     } else {
                       setErrorDialog({
                         open: true,
-                        title: '规则转换失败',
+                        title: '规则生成/转换失败',
                         message: res.msg || '转换过程中发生错误'
                       });
                     }
                   } catch (error) {
                     console.error(error);
-                    const errorMsg = error.response?.data?.msg || error.message || '规则转换失败';
+                    const errorMsg = error.response?.data?.msg || error.message || '规则生成/转换失败';
                     setErrorDialog({
                       open: true,
-                      title: '规则转换失败',
+                      title: '规则生成/转换失败',
                       message: errorMsg
                     });
                   } finally {
@@ -464,7 +462,7 @@ export default function TemplateList() {
                   }
                 }}
               >
-                规则转换并展开
+                规则生成/转换（远程规则展开模式）
               </Button>
             </Stack>
             <Box sx={{ position: 'relative' }}>
@@ -559,11 +557,7 @@ export default function TemplateList() {
           </Alert>
         </DialogContent>
         <DialogActions>
-          <Button
-            variant="contained"
-            onClick={() => setErrorDialog({ ...errorDialog, open: false })}
-            autoFocus
-          >
+          <Button variant="contained" onClick={() => setErrorDialog({ ...errorDialog, open: false })} autoFocus>
             知道了
           </Button>
         </DialogActions>

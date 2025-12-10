@@ -1,35 +1,35 @@
-import { useState, useCallback, useEffect } from "react";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
-import Typography from "@mui/material/Typography";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import IconButton from "@mui/material/IconButton";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import Alert from "@mui/material/Alert";
-import Tooltip from "@mui/material/Tooltip";
-import Fade from "@mui/material/Fade";
-import Switch from "@mui/material/Switch";
-import Collapse from "@mui/material/Collapse";
-import Divider from "@mui/material/Divider";
-import Chip from "@mui/material/Chip";
-import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import FilterAltIcon from "@mui/icons-material/FilterAlt";
-import BlockIcon from "@mui/icons-material/Block";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import { useState, useCallback, useEffect } from 'react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Alert from '@mui/material/Alert';
+import Tooltip from '@mui/material/Tooltip';
+import Fade from '@mui/material/Fade';
+import Switch from '@mui/material/Switch';
+import Collapse from '@mui/material/Collapse';
+import Divider from '@mui/material/Divider';
+import Chip from '@mui/material/Chip';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import BlockIcon from '@mui/icons-material/Block';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
 // 示例节点名称用于预览
-const PREVIEW_NODE_NAMES = ["香港节点-01-Premium", "美国-测试节点-02", "日本-Tokyo-03", "新加坡节点-04", "台湾-Premium-05"];
+const PREVIEW_NODE_NAMES = ['香港节点-01-Premium', '美国-测试节点-02', '日本-Tokyo-03', '新加坡节点-04', '台湾-Premium-05'];
 
 /**
  * 节点名称过滤规则编辑器
@@ -37,7 +37,7 @@ const PREVIEW_NODE_NAMES = ["香港节点-01-Premium", "美国-测试节点-02",
  */
 export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhitelistChange, onBlacklistChange }) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [whitelistRules, setWhitelistRules] = useState([]);
   const [blacklistRules, setBlacklistRules] = useState([]);
@@ -100,8 +100,8 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
   const handleAddWhitelistRule = () => {
     const newRule = {
       id: `whitelist-${whitelistIdCounter}`,
-      matchMode: "text",
-      pattern: "",
+      matchMode: 'text',
+      pattern: '',
       enabled: true
     };
     const newRules = [...whitelistRules, newRule];
@@ -114,8 +114,8 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
   const handleAddBlacklistRule = () => {
     const newRule = {
       id: `blacklist-${blacklistIdCounter}`,
-      matchMode: "text",
-      pattern: "",
+      matchMode: 'text',
+      pattern: '',
       enabled: true
     };
     const newRules = [...blacklistRules, newRule];
@@ -127,7 +127,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
 
   // 更新规则
   const handleUpdateRule = (listType, id, field, val) => {
-    if (listType === "whitelist") {
+    if (listType === 'whitelist') {
       const newRules = whitelistRules.map((rule) => (rule.id === id ? { ...rule, [field]: val } : rule));
       setWhitelistRules(newRules);
       syncWhitelistRules(newRules);
@@ -140,7 +140,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
 
   // 删除规则
   const handleDeleteRule = (listType, id) => {
-    if (listType === "whitelist") {
+    if (listType === 'whitelist') {
       const newRules = whitelistRules.filter((rule) => rule.id !== id);
       setWhitelistRules(newRules);
       syncWhitelistRules(newRules);
@@ -154,9 +154,9 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
   // 拖拽结束
   const onDragEnd = (listType) => (result) => {
     if (!result.destination) return;
-    const rules = listType === "whitelist" ? whitelistRules : blacklistRules;
-    const setRules = listType === "whitelist" ? setWhitelistRules : setBlacklistRules;
-    const syncRules = listType === "whitelist" ? syncWhitelistRules : syncBlacklistRules;
+    const rules = listType === 'whitelist' ? whitelistRules : blacklistRules;
+    const setRules = listType === 'whitelist' ? setWhitelistRules : setBlacklistRules;
+    const syncRules = listType === 'whitelist' ? syncWhitelistRules : syncBlacklistRules;
 
     const items = Array.from(rules);
     const [reorderedItem] = items.splice(result.source.index, 1);
@@ -170,7 +170,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
     for (const rule of rules) {
       if (!rule.enabled || !rule.pattern) continue;
       try {
-        if (rule.matchMode === "regex") {
+        if (rule.matchMode === 'regex') {
           const regex = new RegExp(rule.pattern);
           if (regex.test(nodeName)) return true;
         } else {
@@ -194,13 +194,13 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
 
       // 黑名单优先
       if (hasBlacklist && inBlacklist) {
-        return { name, status: "excluded", reason: "黑名单" };
+        return { name, status: 'excluded', reason: '黑名单' };
       }
       // 白名单检查
       if (hasWhitelist && !inWhitelist) {
-        return { name, status: "excluded", reason: "不在白名单" };
+        return { name, status: 'excluded', reason: '不在白名单' };
       }
-      return { name, status: "included", reason: "" };
+      return { name, status: 'included', reason: '' };
     });
   };
 
@@ -214,7 +214,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
   const hasAnyRules = hasWhitelistRules || hasBlacklistRules;
   const hasAnyActiveRules = hasActiveWhitelist || hasActiveBlacklist;
   const filteredPreview = getFilteredNodes();
-  const includedCount = filteredPreview.filter((n) => n.status === "included").length;
+  const includedCount = filteredPreview.filter((n) => n.status === 'included').length;
 
   // 渲染规则列表
   const renderRuleList = (listType, rules, title, icon, color) => (
@@ -225,14 +225,13 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
           {title}
         </Typography>
         {rules.length > 0 && (
-          <Chip label={`${rules.filter((r) => r.enabled).length}/${rules.length}`} size="small" color={color}
-                variant="outlined" />
+          <Chip label={`${rules.filter((r) => r.enabled).length}/${rules.length}`} size="small" color={color} variant="outlined" />
         )}
         <Box sx={{ flex: 1 }} />
         <Button
           size="small"
           startIcon={<AddIcon />}
-          onClick={listType === "whitelist" ? handleAddWhitelistRule : handleAddBlacklistRule}
+          onClick={listType === 'whitelist' ? handleAddWhitelistRule : handleAddBlacklistRule}
           color={color}
         >
           添加
@@ -255,24 +254,23 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
                           sx={{
                             p: isMobile ? 1.5 : 1,
                             mb: 1,
-                            border: "1px solid",
-                            borderColor: rule.enabled ? `${color}.light` : "divider",
+                            border: '1px solid',
+                            borderColor: rule.enabled ? `${color}.light` : 'divider',
                             borderRadius: 1.5,
-                            bgcolor: snapshot.isDragging ? "action.selected" : rule.enabled ? "transparent" : "action.disabledBackground",
+                            bgcolor: snapshot.isDragging ? 'action.selected' : rule.enabled ? 'transparent' : 'action.disabledBackground',
                             opacity: rule.enabled ? 1 : 0.6,
-                            transition: "all 0.2s ease"
+                            transition: 'all 0.2s ease'
                           }}
                         >
-                          <Stack direction={isMobile ? "column" : "row"} spacing={1}
-                                 alignItems={isMobile ? "stretch" : "center"}>
+                          <Stack direction={isMobile ? 'column' : 'row'} spacing={1} alignItems={isMobile ? 'stretch' : 'center'}>
                             {/* 拖拽手柄 */}
                             <Box
                               {...provided.dragHandleProps}
                               sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                cursor: "grab",
-                                color: "text.secondary"
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'grab',
+                                color: 'text.secondary'
                               }}
                             >
                               <DragIndicatorIcon fontSize="small" />
@@ -282,15 +280,15 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
                             <Switch
                               size="small"
                               checked={rule.enabled}
-                              onChange={(e) => handleUpdateRule(listType, rule.id, "enabled", e.target.checked)}
+                              onChange={(e) => handleUpdateRule(listType, rule.id, 'enabled', e.target.checked)}
                               color={color}
                             />
 
                             {/* 匹配模式 */}
-                            <FormControl size="small" sx={{ minWidth: isMobile ? "100%" : 80 }}>
+                            <FormControl size="small" sx={{ minWidth: isMobile ? '100%' : 80 }}>
                               <Select
                                 value={rule.matchMode}
-                                onChange={(e) => handleUpdateRule(listType, rule.id, "matchMode", e.target.value)}
+                                onChange={(e) => handleUpdateRule(listType, rule.id, 'matchMode', e.target.value)}
                               >
                                 <MenuItem value="text">文本</MenuItem>
                                 <MenuItem value="regex">正则</MenuItem>
@@ -300,12 +298,12 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
                             {/* 匹配内容 */}
                             <TextField
                               size="small"
-                              placeholder={rule.matchMode === "regex" ? "正则表达式" : "关键字"}
+                              placeholder={rule.matchMode === 'regex' ? '正则表达式' : '关键字'}
                               value={rule.pattern}
-                              onChange={(e) => handleUpdateRule(listType, rule.id, "pattern", e.target.value)}
-                              sx={{ flex: 1, minWidth: isMobile ? "100%" : 150 }}
+                              onChange={(e) => handleUpdateRule(listType, rule.id, 'pattern', e.target.value)}
+                              sx={{ flex: 1, minWidth: isMobile ? '100%' : 150 }}
                               error={
-                                rule.matchMode === "regex" &&
+                                rule.matchMode === 'regex' &&
                                 rule.pattern &&
                                 (() => {
                                   try {
@@ -317,14 +315,14 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
                                 })()
                               }
                               helperText={
-                                rule.matchMode === "regex" &&
+                                rule.matchMode === 'regex' &&
                                 rule.pattern &&
                                 (() => {
                                   try {
                                     new RegExp(rule.pattern);
                                     return null;
                                   } catch {
-                                    return "无效正则";
+                                    return '无效正则';
                                   }
                                 })()
                               }
@@ -332,8 +330,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
 
                             {/* 删除按钮 */}
                             <Tooltip title="删除规则">
-                              <IconButton size="small" color="error"
-                                          onClick={() => handleDeleteRule(listType, rule.id)}>
+                              <IconButton size="small" color="error" onClick={() => handleDeleteRule(listType, rule.id)}>
                                 <DeleteOutlineIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
@@ -349,7 +346,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
           </Droppable>
         </DragDropContext>
       ) : (
-        <Typography variant="body2" color="textSecondary" sx={{ py: 1, textAlign: "center" }}>
+        <Typography variant="body2" color="textSecondary" sx={{ py: 1, textAlign: 'center' }}>
           暂无{title}规则
         </Typography>
       )}
@@ -361,23 +358,23 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
       elevation={0}
       sx={{
         mb: 2,
-        border: "1px solid",
-        borderColor: "divider",
+        border: '1px solid',
+        borderColor: 'divider',
         borderRadius: 2,
-        overflow: "hidden"
+        overflow: 'hidden'
       }}
     >
       {/* 标题栏 */}
       <Box
         sx={{
           p: 1.5,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: `linear-gradient(145deg, ${theme.palette.mode === "dark" ? "#1a2027" : "#f5f5f5"} 0%, ${theme.palette.mode === "dark" ? "#121417" : "#fafafa"} 100%)`,
-          cursor: "pointer",
-          "&:hover": {
-            bgcolor: "action.hover"
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a2027' : '#f5f5f5'} 0%, ${theme.palette.mode === 'dark' ? '#121417' : '#fafafa'} 100%)`,
+          cursor: 'pointer',
+          '&:hover': {
+            bgcolor: 'action.hover'
           }
         }}
         onClick={() => setExpanded(!expanded)}
@@ -408,25 +405,24 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
           </Alert>
 
           {/* 白名单 */}
-          {renderRuleList("whitelist", whitelistRules, "白名单", <CheckCircleOutlineIcon color="success"
-                                                                                         fontSize="small" />, "success")}
+          {renderRuleList('whitelist', whitelistRules, '白名单', <CheckCircleOutlineIcon color="success" fontSize="small" />, 'success')}
 
           <Divider sx={{ my: 2 }} />
 
           {/* 黑名单 */}
-          {renderRuleList("blacklist", blacklistRules, "黑名单", <BlockIcon color="error" fontSize="small" />, "error")}
+          {renderRuleList('blacklist', blacklistRules, '黑名单', <BlockIcon color="error" fontSize="small" />, 'error')}
 
           {/* 实时预览 */}
           {hasAnyActiveRules && (
             <Fade in>
-              <Alert severity={includedCount < PREVIEW_NODE_NAMES.length ? "warning" : "success"} sx={{ mt: 2 }}>
+              <Alert severity={includedCount < PREVIEW_NODE_NAMES.length ? 'warning' : 'success'} sx={{ mt: 2 }}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   <strong>预览效果</strong>（{includedCount}/{PREVIEW_NODE_NAMES.length} 个示例节点通过过滤）
                 </Typography>
                 <Stack spacing={0.5}>
                   {filteredPreview.map((node, idx) => (
                     <Stack key={idx} direction="row" alignItems="center" spacing={1}>
-                      {node.status === "included" ? (
+                      {node.status === 'included' ? (
                         <CheckCircleOutlineIcon fontSize="small" color="success" />
                       ) : (
                         <BlockIcon fontSize="small" color="error" />
@@ -434,8 +430,8 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
                       <Typography
                         variant="body2"
                         sx={{
-                          textDecoration: node.status === "excluded" ? "line-through" : "none",
-                          color: node.status === "excluded" ? "text.disabled" : "text.primary"
+                          textDecoration: node.status === 'excluded' ? 'line-through' : 'none',
+                          color: node.status === 'excluded' ? 'text.disabled' : 'text.primary'
                         }}
                       >
                         {node.name}

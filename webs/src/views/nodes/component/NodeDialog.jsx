@@ -1,39 +1,39 @@
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types';
 
 // material-ui
-import Autocomplete from "@mui/material/Autocomplete";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Radio from "@mui/material/Radio";
-import RadioGroup from "@mui/material/RadioGroup";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
+import Autocomplete from '@mui/material/Autocomplete';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 
 // project imports
-import SearchableNodeSelect from "components/SearchableNodeSelect";
+import SearchableNodeSelect from 'components/SearchableNodeSelect';
 
 /**
  * 添加/编辑节点对话框
  */
 export default function NodeDialog({
-                                     open,
-                                     isEdit,
-                                     nodeForm,
-                                     setNodeForm,
-                                     groupOptions,
-                                     proxyNodeOptions,
-                                     loadingProxyNodes,
-                                     onClose,
-                                     onSubmit,
-                                     onFetchProxyNodes
-                                   }) {
+  open,
+  isEdit,
+  nodeForm,
+  setNodeForm,
+  groupOptions,
+  proxyNodeOptions,
+  loadingProxyNodes,
+  onClose,
+  onSubmit,
+  onFetchProxyNodes
+}) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>{isEdit ? "编辑节点" : "添加节点"}</DialogTitle>
+      <DialogTitle>{isEdit ? '编辑节点' : '添加节点'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <TextField
@@ -46,22 +46,20 @@ export default function NodeDialog({
             placeholder="请输入节点，多行使用回车或逗号分开，支持base64格式的url订阅"
           />
           {!isEdit && (
-            <RadioGroup row value={nodeForm.mergeMode}
-                        onChange={(e) => setNodeForm({ ...nodeForm, mergeMode: e.target.value })}>
+            <RadioGroup row value={nodeForm.mergeMode} onChange={(e) => setNodeForm({ ...nodeForm, mergeMode: e.target.value })}>
               <FormControlLabel value="1" control={<Radio />} label="合并" />
               <FormControlLabel value="2" control={<Radio />} label="分开" />
             </RadioGroup>
           )}
-          {(isEdit || nodeForm.mergeMode === "1") && (
-            <TextField fullWidth label="备注" value={nodeForm.name}
-                       onChange={(e) => setNodeForm({ ...nodeForm, name: e.target.value })} />
+          {(isEdit || nodeForm.mergeMode === '1') && (
+            <TextField fullWidth label="备注" value={nodeForm.name} onChange={(e) => setNodeForm({ ...nodeForm, name: e.target.value })} />
           )}
           <SearchableNodeSelect
             nodes={proxyNodeOptions}
             loading={loadingProxyNodes}
             value={nodeForm.dialerProxyName}
             onChange={(newValue) => {
-              const name = typeof newValue === "string" ? newValue : newValue?.Name || "";
+              const name = typeof newValue === 'string' ? newValue : newValue?.Name || '';
               setNodeForm({ ...nodeForm, dialerProxyName: name });
             }}
             displayField="Name"
@@ -77,8 +75,8 @@ export default function NodeDialog({
             freeSolo
             options={groupOptions}
             value={nodeForm.group}
-            onChange={(e, newValue) => setNodeForm({ ...nodeForm, group: newValue || "" })}
-            onInputChange={(e, newValue) => setNodeForm({ ...nodeForm, group: newValue || "" })}
+            onChange={(e, newValue) => setNodeForm({ ...nodeForm, group: newValue || '' })}
+            onInputChange={(e, newValue) => setNodeForm({ ...nodeForm, group: newValue || '' })}
             renderInput={(params) => <TextField {...params} label="分组" placeholder="请选择或输入分组名称" />}
           />
         </Stack>

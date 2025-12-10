@@ -1,33 +1,33 @@
-import { useState, useEffect, useMemo } from "react";
-import PropTypes from "prop-types";
+import { useState, useEffect, useMemo } from 'react';
+import PropTypes from 'prop-types';
 
 // material-ui
-import Autocomplete from "@mui/material/Autocomplete";
-import TextField from "@mui/material/TextField";
-import CircularProgress from "@mui/material/CircularProgress";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
+import Autocomplete from '@mui/material/Autocomplete';
+import TextField from '@mui/material/TextField';
+import CircularProgress from '@mui/material/CircularProgress';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 
 /**
  * 可搜索的节点选择组件
  * 初始只加载前N个节点，其他需通过搜索查找
  */
 export default function SearchableNodeSelect({
-                                               nodes = [],
-                                               loading = false,
-                                               value = null,
-                                               onChange,
-                                               displayField = "Name",
-                                               valueField = "Link",
-                                               label = "选择节点",
-                                               placeholder = "搜索节点...",
-                                               helperText = "",
-                                               freeSolo = false,
-                                               limit = 50,
-                                               disabled = false,
-                                               ...props
-                                             }) {
-  const [inputValue, setInputValue] = useState("");
+  nodes = [],
+  loading = false,
+  value = null,
+  onChange,
+  displayField = 'Name',
+  valueField = 'Link',
+  label = '选择节点',
+  placeholder = '搜索节点...',
+  helperText = '',
+  freeSolo = false,
+  limit = 50,
+  disabled = false,
+  ...props
+}) {
+  const [inputValue, setInputValue] = useState('');
 
   // 获取初始显示的节点（前N个）
   const limitedNodes = useMemo(() => {
@@ -42,9 +42,9 @@ export default function SearchableNodeSelect({
 
     const searchLower = inputValue.toLowerCase();
     const filtered = nodes.filter((node) => {
-      const name = (node[displayField] || "").toLowerCase();
-      const link = (node.Link || "").toLowerCase();
-      const group = (node.Group || "").toLowerCase();
+      const name = (node[displayField] || '').toLowerCase();
+      const link = (node.Link || '').toLowerCase();
+      const group = (node.Group || '').toLowerCase();
       return name.includes(searchLower) || link.includes(searchLower) || group.includes(searchLower);
     });
 
@@ -57,17 +57,17 @@ export default function SearchableNodeSelect({
     if (!value) return filteredOptions;
 
     // 检查当前值是否已在选项中
-    const isInOptions = filteredOptions.some((opt) => opt[valueField] === (typeof value === "string" ? value : value[valueField]));
+    const isInOptions = filteredOptions.some((opt) => opt[valueField] === (typeof value === 'string' ? value : value[valueField]));
 
     if (isInOptions) return filteredOptions;
 
     // 如果当前值不在选项中，将其添加到开头
-    if (typeof value === "object" && value !== null) {
+    if (typeof value === 'object' && value !== null) {
       return [value, ...filteredOptions];
     }
 
     // 如果是字符串值，创建一个临时对象
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       const nodeFromFull = nodes.find((n) => n[valueField] === value);
       if (nodeFromFull) {
         return [nodeFromFull, ...filteredOptions];
@@ -88,8 +88,8 @@ export default function SearchableNodeSelect({
       loading={loading}
       disabled={disabled}
       getOptionLabel={(option) => {
-        if (typeof option === "string") return option;
-        return option[displayField] || option[valueField] || "";
+        if (typeof option === 'string') return option;
+        return option[displayField] || option[valueField] || '';
       }}
       value={value}
       inputValue={inputValue}
@@ -101,21 +101,21 @@ export default function SearchableNodeSelect({
       }}
       isOptionEqualToValue={(option, value) => {
         if (!option || !value) return false;
-        if (typeof option === "string" || typeof value === "string") {
+        if (typeof option === 'string' || typeof value === 'string') {
           return option === value;
         }
         return option[valueField] === value[valueField];
       }}
-      noOptionsText={inputValue ? "未找到匹配的节点" : "输入关键词搜索节点"}
+      noOptionsText={inputValue ? '未找到匹配的节点' : '输入关键词搜索节点'}
       ListboxProps={{
         sx: {
           maxHeight: 300,
-          "& .MuiAutocomplete-option:last-child":
+          '& .MuiAutocomplete-option:last-child':
             hasMoreNodes && !inputValue
               ? {
-                borderTop: "1px dashed",
-                borderColor: "divider"
-              }
+                  borderTop: '1px dashed',
+                  borderColor: 'divider'
+                }
               : {}
         }
       }}
@@ -124,12 +124,12 @@ export default function SearchableNodeSelect({
         return (
           <>
             <Box component="li" {...props} key={option.ID || option[valueField]}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
-                <Typography variant="body2" noWrap sx={{ maxWidth: "60%" }}>
-                  {option[displayField] || "未知"}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                <Typography variant="body2" noWrap sx={{ maxWidth: '60%' }}>
+                  {option[displayField] || '未知'}
                 </Typography>
                 <Typography variant="caption" color="textSecondary" sx={{ ml: 2 }}>
-                  {option.Group || "未分组"}
+                  {option.Group || '未分组'}
                 </Typography>
               </Box>
             </Box>
@@ -139,10 +139,10 @@ export default function SearchableNodeSelect({
                 sx={{
                   px: 2,
                   py: 1.5,
-                  bgcolor: "action.hover",
-                  borderTop: "1px solid",
-                  borderColor: "divider",
-                  textAlign: "center"
+                  bgcolor: 'action.hover',
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
+                  textAlign: 'center'
                 }}
               >
                 <Typography variant="caption" color="primary" sx={{ fontWeight: 500 }}>
@@ -165,7 +165,7 @@ export default function SearchableNodeSelect({
                 ⚠️ 仅显示前 {limit} 个节点（共 {nodes.length} 个），输入关键词搜索更多
               </Typography>
             ) : (
-              ""
+              ''
             ))
           }
           InputProps={{

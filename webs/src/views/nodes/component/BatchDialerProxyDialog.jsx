@@ -1,30 +1,30 @@
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types';
 
 // material-ui
-import Alert from "@mui/material/Alert";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import Typography from "@mui/material/Typography";
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Typography from '@mui/material/Typography';
 
 // project imports
-import SearchableNodeSelect from "components/SearchableNodeSelect";
+import SearchableNodeSelect from 'components/SearchableNodeSelect';
 
 /**
  * 批量修改前置代理对话框
  */
 export default function BatchDialerProxyDialog({
-                                                 open,
-                                                 selectedCount,
-                                                 value,
-                                                 setValue,
-                                                 proxyNodeOptions,
-                                                 loadingProxyNodes,
-                                                 onClose,
-                                                 onSubmit
-                                               }) {
+  open,
+  selectedCount,
+  value,
+  setValue,
+  proxyNodeOptions,
+  loadingProxyNodes,
+  onClose,
+  onSubmit
+}) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>批量修改前置代理</DialogTitle>
@@ -37,7 +37,7 @@ export default function BatchDialerProxyDialog({
           loading={loadingProxyNodes}
           value={value}
           onChange={(newValue) => {
-            const name = typeof newValue === "string" ? newValue : newValue?.Name || "";
+            const name = typeof newValue === 'string' ? newValue : newValue?.Name || '';
             setValue(name);
           }}
           displayField="Name"

@@ -1,65 +1,65 @@
-import { useMemo } from "react";
-import { useTheme } from "@mui/material/styles";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import IconButton from "@mui/material/IconButton";
-import Paper from "@mui/material/Paper";
-import Chip from "@mui/material/Chip";
-import Stack from "@mui/material/Stack";
-import Checkbox from "@mui/material/Checkbox";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Typography from "@mui/material/Typography";
-import InputAdornment from "@mui/material/InputAdornment";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import Divider from "@mui/material/Divider";
-import Grid from "@mui/material/Grid";
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
-import Fade from "@mui/material/Fade";
+import { useMemo } from 'react';
+import { useTheme } from '@mui/material/styles';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
+import Paper from '@mui/material/Paper';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Typography from '@mui/material/Typography';
+import InputAdornment from '@mui/material/InputAdornment';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import Divider from '@mui/material/Divider';
+import Grid from '@mui/material/Grid';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import Fade from '@mui/material/Fade';
 
 // icons
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import SearchIcon from "@mui/icons-material/Search";
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import SearchIcon from '@mui/icons-material/Search';
 
 /**
  * 节点穿梭框组件
  * 支持移动端Tab模式和桌面端双栏布局
  */
 export default function NodeTransferBox({
-                                          // 数据
-                                          availableNodes,
-                                          selectedNodes,
-                                          selectedNodesList,
-                                          allNodes,
-                                          // 选中状态
-                                          checkedAvailable,
-                                          checkedSelected,
-                                          // 搜索
-                                          selectedNodeSearch,
-                                          onSelectedNodeSearchChange,
-                                          // 移动端Tab
-                                          mobileTab,
-                                          onMobileTabChange,
-                                          matchDownMd,
-                                          // 操作回调
-                                          onAddNode,
-                                          onRemoveNode,
-                                          onAddAllVisible,
-                                          onRemoveAll,
-                                          onToggleAvailable,
-                                          onToggleSelected,
-                                          onAddChecked,
-                                          onRemoveChecked,
-                                          onToggleAllAvailable,
-                                          onToggleAllSelected
-                                        }) {
+  // 数据
+  availableNodes,
+  selectedNodes,
+  selectedNodesList,
+  allNodes,
+  // 选中状态
+  checkedAvailable,
+  checkedSelected,
+  // 搜索
+  selectedNodeSearch,
+  onSelectedNodeSearchChange,
+  // 移动端Tab
+  mobileTab,
+  onMobileTabChange,
+  matchDownMd,
+  // 操作回调
+  onAddNode,
+  onRemoveNode,
+  onAddAllVisible,
+  onRemoveAll,
+  onToggleAvailable,
+  onToggleSelected,
+  onAddChecked,
+  onRemoveChecked,
+  onToggleAllAvailable,
+  onToggleAllSelected
+}) {
   const theme = useTheme();
 
   // 筛选已选节点
@@ -79,15 +79,15 @@ export default function NodeTransferBox({
           variant="fullWidth"
           sx={{
             mb: 2,
-            "& .MuiTab-root": {
+            '& .MuiTab-root': {
               fontWeight: 600,
               borderRadius: 2,
               mx: 0.5,
-              transition: "all 0.2s"
+              transition: 'all 0.2s'
             },
-            "& .Mui-selected": {
-              bgcolor: "primary.light",
-              color: "primary.contrastText"
+            '& .Mui-selected': {
+              bgcolor: 'primary.light',
+              color: 'primary.contrastText'
             }
           }}
         >
@@ -97,16 +97,16 @@ export default function NodeTransferBox({
 
         {/* 可选节点面板 */}
         <Fade in={mobileTab === 0}>
-          <Box sx={{ display: mobileTab === 0 ? "block" : "none" }}>
+          <Box sx={{ display: mobileTab === 0 ? 'block' : 'none' }}>
             <Paper
               elevation={0}
               sx={{
                 p: 2,
                 maxHeight: 350,
-                overflow: "auto",
-                background: `linear-gradient(145deg, ${theme.palette.mode === "dark" ? "#1a1a2e" : "#f8f9fa"} 0%, ${theme.palette.mode === "dark" ? "#16213e" : "#ffffff"} 100%)`,
-                border: "1px solid",
-                borderColor: "divider",
+                overflow: 'auto',
+                background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a1a2e' : '#f8f9fa'} 0%, ${theme.palette.mode === 'dark' ? '#16213e' : '#ffffff'} 100%)`,
+                border: '1px solid',
+                borderColor: 'divider',
                 borderRadius: 3
               }}
             >
@@ -142,13 +142,13 @@ export default function NodeTransferBox({
                       px: 1,
                       mb: 0.5,
                       borderRadius: 2,
-                      bgcolor: checkedAvailable.includes(node.Name) ? "action.selected" : "transparent",
-                      border: "1px solid",
-                      borderColor: checkedAvailable.includes(node.Name) ? "primary.main" : "transparent",
-                      transition: "all 0.15s ease-in-out",
-                      "&:hover": {
-                        bgcolor: "action.hover",
-                        transform: "translateX(4px)"
+                      bgcolor: checkedAvailable.includes(node.Name) ? 'action.selected' : 'transparent',
+                      border: '1px solid',
+                      borderColor: checkedAvailable.includes(node.Name) ? 'primary.main' : 'transparent',
+                      transition: 'all 0.15s ease-in-out',
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                        transform: 'translateX(4px)'
                       }
                     }}
                     secondaryAction={
@@ -157,9 +157,9 @@ export default function NodeTransferBox({
                         color="primary"
                         onClick={() => onAddNode(node.Name)}
                         sx={{
-                          bgcolor: "primary.main",
-                          color: "white",
-                          "&:hover": { bgcolor: "primary.dark" }
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          '&:hover': { bgcolor: 'primary.dark' }
                         }}
                       >
                         <AddIcon fontSize="small" />
@@ -178,16 +178,16 @@ export default function NodeTransferBox({
                       primary={node.Name}
                       secondary={
                         <Chip
-                          label={node.Group || "未分组"}
+                          label={node.Group || '未分组'}
                           size="small"
                           variant="outlined"
-                          sx={{ mt: 0.5, height: 20, fontSize: "0.7rem" }}
+                          sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
                         />
                       }
                       primaryTypographyProps={{
                         noWrap: true,
                         fontWeight: 500,
-                        sx: { maxWidth: "calc(100% - 60px)" }
+                        sx: { maxWidth: 'calc(100% - 60px)' }
                       }}
                     />
                   </ListItem>
@@ -202,9 +202,9 @@ export default function NodeTransferBox({
                 mt: 2,
                 p: 1.5,
                 borderRadius: 2,
-                display: "flex",
+                display: 'flex',
                 gap: 1,
-                justifyContent: "center",
+                justifyContent: 'center',
                 background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
               }}
             >
@@ -216,12 +216,12 @@ export default function NodeTransferBox({
                 onClick={onAddChecked}
                 disabled={checkedAvailable.length === 0}
                 sx={{
-                  bgcolor: "white",
-                  color: "primary.dark",
+                  bgcolor: 'white',
+                  color: 'primary.dark',
                   fontWeight: 700,
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-                  "&:hover": { bgcolor: "#f5f5f5" },
-                  "&:disabled": { bgcolor: "#e0e0e0", color: "#999" }
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  '&:hover': { bgcolor: '#f5f5f5' },
+                  '&:disabled': { bgcolor: '#e0e0e0', color: '#999' }
                 }}
               >
                 添加选中 ({checkedAvailable.length})
@@ -231,12 +231,12 @@ export default function NodeTransferBox({
                 size="small"
                 onClick={onAddAllVisible}
                 sx={{
-                  borderColor: "white",
+                  borderColor: 'white',
                   borderWidth: 2,
-                  color: "white",
+                  color: 'white',
                   fontWeight: 700,
-                  textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                  "&:hover": { bgcolor: "rgba(255,255,255,0.15)", borderColor: "white" }
+                  textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', borderColor: 'white' }
                 }}
               >
                 全部添加
@@ -247,7 +247,7 @@ export default function NodeTransferBox({
 
         {/* 已选节点面板 */}
         <Fade in={mobileTab === 1}>
-          <Box sx={{ display: mobileTab === 1 ? "block" : "none" }}>
+          <Box sx={{ display: mobileTab === 1 ? 'block' : 'none' }}>
             <TextField
               fullWidth
               size="small"
@@ -268,10 +268,10 @@ export default function NodeTransferBox({
               sx={{
                 p: 2,
                 maxHeight: 350,
-                overflow: "auto",
-                background: `linear-gradient(145deg, ${theme.palette.mode === "dark" ? "#1e3a2f" : "#f0fff4"} 0%, ${theme.palette.mode === "dark" ? "#1a3330" : "#ffffff"} 100%)`,
-                border: "1px solid",
-                borderColor: "success.light",
+                overflow: 'auto',
+                background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1e3a2f' : '#f0fff4'} 0%, ${theme.palette.mode === 'dark' ? '#1a3330' : '#ffffff'} 100%)`,
+                border: '1px solid',
+                borderColor: 'success.light',
                 borderRadius: 3
               }}
             >
@@ -303,13 +303,13 @@ export default function NodeTransferBox({
                       px: 1,
                       mb: 0.5,
                       borderRadius: 2,
-                      bgcolor: checkedSelected.includes(node.Name) ? "error.lighter" : "transparent",
-                      border: "1px solid",
-                      borderColor: checkedSelected.includes(node.Name) ? "error.main" : "transparent",
-                      transition: "all 0.15s ease-in-out",
-                      "&:hover": {
-                        bgcolor: "action.hover",
-                        transform: "translateX(-4px)"
+                      bgcolor: checkedSelected.includes(node.Name) ? 'error.lighter' : 'transparent',
+                      border: '1px solid',
+                      borderColor: checkedSelected.includes(node.Name) ? 'error.main' : 'transparent',
+                      transition: 'all 0.15s ease-in-out',
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                        transform: 'translateX(-4px)'
                       }
                     }}
                     secondaryAction={
@@ -318,9 +318,9 @@ export default function NodeTransferBox({
                         color="error"
                         onClick={() => onRemoveNode(node.Name)}
                         sx={{
-                          bgcolor: "error.main",
-                          color: "white",
-                          "&:hover": { bgcolor: "error.dark" }
+                          bgcolor: 'error.main',
+                          color: 'white',
+                          '&:hover': { bgcolor: 'error.dark' }
                         }}
                       >
                         <DeleteIcon fontSize="small" />
@@ -340,17 +340,17 @@ export default function NodeTransferBox({
                       primary={node.Name}
                       secondary={
                         <Chip
-                          label={node.Group || "未分组"}
+                          label={node.Group || '未分组'}
                           size="small"
                           color="success"
                           variant="outlined"
-                          sx={{ mt: 0.5, height: 20, fontSize: "0.7rem" }}
+                          sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
                         />
                       }
                       primaryTypographyProps={{
                         noWrap: true,
                         fontWeight: 500,
-                        sx: { maxWidth: "calc(100% - 60px)" }
+                        sx: { maxWidth: 'calc(100% - 60px)' }
                       }}
                     />
                   </ListItem>
@@ -358,7 +358,7 @@ export default function NodeTransferBox({
               </List>
               {filteredSelectedNodes.length === 0 && (
                 <Typography color="textSecondary" align="center" sx={{ py: 4 }}>
-                  {selectedNodeSearch ? "未找到匹配的节点" : "暂无已选节点"}
+                  {selectedNodeSearch ? '未找到匹配的节点' : '暂无已选节点'}
                 </Typography>
               )}
             </Paper>
@@ -370,9 +370,9 @@ export default function NodeTransferBox({
                 mt: 2,
                 p: 1.5,
                 borderRadius: 2,
-                display: "flex",
+                display: 'flex',
                 gap: 1,
-                justifyContent: "center",
+                justifyContent: 'center',
                 background: `linear-gradient(90deg, ${theme.palette.error.main} 0%, ${theme.palette.error.dark} 100%)`
               }}
             >
@@ -384,12 +384,12 @@ export default function NodeTransferBox({
                 onClick={onRemoveChecked}
                 disabled={checkedSelected.length === 0}
                 sx={{
-                  bgcolor: "white",
-                  color: "error.dark",
+                  bgcolor: 'white',
+                  color: 'error.dark',
                   fontWeight: 700,
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-                  "&:hover": { bgcolor: "#f5f5f5" },
-                  "&:disabled": { bgcolor: "#e0e0e0", color: "#999" }
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  '&:hover': { bgcolor: '#f5f5f5' },
+                  '&:disabled': { bgcolor: '#e0e0e0', color: '#999' }
                 }}
               >
                 移除选中 ({checkedSelected.length})
@@ -399,12 +399,12 @@ export default function NodeTransferBox({
                 size="small"
                 onClick={onRemoveAll}
                 sx={{
-                  borderColor: "white",
+                  borderColor: 'white',
                   borderWidth: 2,
-                  color: "white",
+                  color: 'white',
                   fontWeight: 700,
-                  textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                  "&:hover": { bgcolor: "rgba(255,255,255,0.15)", borderColor: "white" }
+                  textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', borderColor: 'white' }
                 }}
               >
                 全部移除
@@ -426,16 +426,16 @@ export default function NodeTransferBox({
           sx={{
             p: 2,
             height: 380,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            background: `linear-gradient(145deg, ${theme.palette.mode === "dark" ? "#1a1a2e" : "#f8f9fa"} 0%, ${theme.palette.mode === "dark" ? "#16213e" : "#ffffff"} 100%)`,
-            border: "2px solid",
-            borderColor: "primary.light",
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a1a2e' : '#f8f9fa'} 0%, ${theme.palette.mode === 'dark' ? '#16213e' : '#ffffff'} 100%)`,
+            border: '2px solid',
+            borderColor: 'primary.light',
             borderRadius: 3,
-            transition: "all 0.3s ease",
-            "&:hover": {
-              borderColor: "primary.main",
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              borderColor: 'primary.main',
               boxShadow: `0 4px 20px ${theme.palette.primary.main}20`
             }
           }}
@@ -464,7 +464,7 @@ export default function NodeTransferBox({
               color="primary"
             />
           </Stack>
-          <Box sx={{ flexGrow: 1, overflow: "auto", pr: 1 }}>
+          <Box sx={{ flexGrow: 1, overflow: 'auto', pr: 1 }}>
             <List dense>
               {availableNodes.slice(0, 100).map((node) => (
                 <ListItem
@@ -474,42 +474,40 @@ export default function NodeTransferBox({
                     px: 1,
                     mb: 0.5,
                     borderRadius: 2,
-                    cursor: "pointer",
-                    bgcolor: checkedAvailable.includes(node.Name) ? "primary.lighter" : "transparent",
-                    border: "1px solid",
-                    borderColor: checkedAvailable.includes(node.Name) ? "primary.main" : "divider",
-                    transition: "all 0.15s ease-in-out",
-                    "&:hover": {
-                      bgcolor: "action.hover",
-                      transform: "translateX(4px)",
-                      borderColor: "primary.light"
+                    cursor: 'pointer',
+                    bgcolor: checkedAvailable.includes(node.Name) ? 'primary.lighter' : 'transparent',
+                    border: '1px solid',
+                    borderColor: checkedAvailable.includes(node.Name) ? 'primary.main' : 'divider',
+                    transition: 'all 0.15s ease-in-out',
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                      transform: 'translateX(4px)',
+                      borderColor: 'primary.light'
                     }
                   }}
                   onClick={() => onToggleAvailable(node.Name)}
                   onDoubleClick={() => onAddNode(node.Name)}
                 >
                   <ListItemIcon sx={{ minWidth: 32 }}>
-                    <Checkbox edge="start" checked={checkedAvailable.includes(node.Name)} tabIndex={-1} disableRipple
-                              size="small" />
+                    <Checkbox edge="start" checked={checkedAvailable.includes(node.Name)} tabIndex={-1} disableRipple size="small" />
                   </ListItemIcon>
                   <ListItemText
                     primary={node.Name}
                     secondary={node.Group}
                     primaryTypographyProps={{
                       noWrap: true,
-                      fontSize: "0.875rem",
+                      fontSize: '0.875rem',
                       fontWeight: 500
                     }}
                     secondaryTypographyProps={{
                       noWrap: true,
-                      fontSize: "0.75rem"
+                      fontSize: '0.75rem'
                     }}
                   />
                 </ListItem>
               ))}
               {availableNodes.length > 100 && (
-                <Typography variant="caption" color="textSecondary"
-                            sx={{ display: "block", textAlign: "center", py: 1 }}>
+                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textAlign: 'center', py: 1 }}>
                   还有 {availableNodes.length - 100} 个节点未显示
                 </Typography>
               )}
@@ -519,8 +517,7 @@ export default function NodeTransferBox({
       </Grid>
 
       {/* 中间操作按钮 */}
-      <Grid item xs={2}
-            sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
+      <Grid item xs={2} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
         <Button
           variant="contained"
           size="small"
@@ -529,14 +526,14 @@ export default function NodeTransferBox({
           endIcon={<ChevronRightIcon />}
           sx={{
             minWidth: 120,
-            background: "linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)",
-            boxShadow: "0 3px 5px 2px rgba(33, 150, 243, .3)",
-            color: "#fff",
+            background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+            boxShadow: '0 3px 5px 2px rgba(33, 150, 243, .3)',
+            color: '#fff',
             fontWeight: 700,
-            textShadow: "0 1px 2px rgba(0,0,0,0.2)",
-            "&:disabled": {
-              background: "#ccc",
-              color: "#888"
+            textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+            '&:disabled': {
+              background: '#ccc',
+              color: '#888'
             }
           }}
         >
@@ -551,7 +548,7 @@ export default function NodeTransferBox({
         >
           全部添加
         </Button>
-        <Divider sx={{ width: "60%", my: 1 }} />
+        <Divider sx={{ width: '60%', my: 1 }} />
         <Button
           variant="outlined"
           size="small"
@@ -571,14 +568,14 @@ export default function NodeTransferBox({
           startIcon={<ChevronLeftIcon />}
           sx={{
             minWidth: 120,
-            background: "linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)",
-            boxShadow: "0 3px 5px 2px rgba(254, 107, 139, .3)",
-            color: "#fff",
+            background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
+            boxShadow: '0 3px 5px 2px rgba(254, 107, 139, .3)',
+            color: '#fff',
             fontWeight: 700,
-            textShadow: "0 1px 2px rgba(0,0,0,0.2)",
-            "&:disabled": {
-              background: "#ccc",
-              color: "#888"
+            textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+            '&:disabled': {
+              background: '#ccc',
+              color: '#888'
             }
           }}
         >
@@ -593,16 +590,16 @@ export default function NodeTransferBox({
           sx={{
             p: 2,
             height: 380,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            background: `linear-gradient(145deg, ${theme.palette.mode === "dark" ? "#1e3a2f" : "#f0fff4"} 0%, ${theme.palette.mode === "dark" ? "#1a3330" : "#ffffff"} 100%)`,
-            border: "2px solid",
-            borderColor: "success.light",
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1e3a2f' : '#f0fff4'} 0%, ${theme.palette.mode === 'dark' ? '#1a3330' : '#ffffff'} 100%)`,
+            border: '2px solid',
+            borderColor: 'success.light',
             borderRadius: 3,
-            transition: "all 0.3s ease",
-            "&:hover": {
-              borderColor: "success.main",
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              borderColor: 'success.main',
               boxShadow: `0 4px 20px ${theme.palette.success.main}20`
             }
           }}
@@ -641,9 +638,9 @@ export default function NodeTransferBox({
                 </InputAdornment>
               )
             }}
-            sx={{ mb: 1, flexShrink: 0, "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+            sx={{ mb: 1, flexShrink: 0, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
           />
-          <Box sx={{ flexGrow: 1, overflow: "auto", pr: 1 }}>
+          <Box sx={{ flexGrow: 1, overflow: 'auto', pr: 1 }}>
             <List dense>
               {filteredSelectedNodes.map((node) => (
                 <ListItem
@@ -653,15 +650,15 @@ export default function NodeTransferBox({
                     px: 1,
                     mb: 0.5,
                     borderRadius: 2,
-                    cursor: "pointer",
-                    bgcolor: checkedSelected.includes(node.Name) ? "error.lighter" : "transparent",
-                    border: "1px solid",
-                    borderColor: checkedSelected.includes(node.Name) ? "error.main" : "divider",
-                    transition: "all 0.15s ease-in-out",
-                    "&:hover": {
-                      bgcolor: "action.hover",
-                      transform: "translateX(-4px)",
-                      borderColor: "error.light"
+                    cursor: 'pointer',
+                    bgcolor: checkedSelected.includes(node.Name) ? 'error.lighter' : 'transparent',
+                    border: '1px solid',
+                    borderColor: checkedSelected.includes(node.Name) ? 'error.main' : 'divider',
+                    transition: 'all 0.15s ease-in-out',
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                      transform: 'translateX(-4px)',
+                      borderColor: 'error.light'
                     }
                   }}
                   onClick={() => onToggleSelected(node.Name)}
@@ -682,12 +679,12 @@ export default function NodeTransferBox({
                     secondary={node.Group}
                     primaryTypographyProps={{
                       noWrap: true,
-                      fontSize: "0.875rem",
+                      fontSize: '0.875rem',
                       fontWeight: 500
                     }}
                     secondaryTypographyProps={{
                       noWrap: true,
-                      fontSize: "0.75rem"
+                      fontSize: '0.75rem'
                     }}
                   />
                 </ListItem>
@@ -695,7 +692,7 @@ export default function NodeTransferBox({
             </List>
             {filteredSelectedNodes.length === 0 && (
               <Typography color="textSecondary" align="center" sx={{ py: 4 }}>
-                {selectedNodeSearch ? "未找到匹配的节点" : "暂无已选节点"}
+                {selectedNodeSearch ? '未找到匹配的节点' : '暂无已选节点'}
               </Typography>
             )}
           </Box>

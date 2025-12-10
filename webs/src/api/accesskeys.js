@@ -6,7 +6,7 @@ import request from './request';
 export function getAccessKeys(userId, params = {}) {
   return request({
     url: `/v1/accesskey/get/${userId}`,
-    method: "get",
+    method: 'get',
     params
   });
 }

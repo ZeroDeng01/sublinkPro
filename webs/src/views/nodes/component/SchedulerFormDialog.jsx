@@ -1,43 +1,43 @@
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types';
 
 // material-ui
-import Autocomplete from "@mui/material/Autocomplete";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Stack from "@mui/material/Stack";
-import Switch from "@mui/material/Switch";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
+import Autocomplete from '@mui/material/Autocomplete';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 
 // project imports
-import SearchableNodeSelect from "components/SearchableNodeSelect";
+import SearchableNodeSelect from 'components/SearchableNodeSelect';
 
 // constants
-import { CRON_OPTIONS, USER_AGENT_OPTIONS } from "../utils";
+import { CRON_OPTIONS, USER_AGENT_OPTIONS } from '../utils';
 
 /**
  * 添加/编辑订阅表单对话框
  */
 export default function SchedulerFormDialog({
-                                              open,
-                                              isEdit,
-                                              schedulerForm,
-                                              setSchedulerForm,
-                                              groupOptions,
-                                              proxyNodeOptions,
-                                              loadingProxyNodes,
-                                              onClose,
-                                              onSubmit,
-                                              onFetchProxyNodes
-                                            }) {
+  open,
+  isEdit,
+  schedulerForm,
+  setSchedulerForm,
+  groupOptions,
+  proxyNodeOptions,
+  loadingProxyNodes,
+  onClose,
+  onSubmit,
+  onFetchProxyNodes
+}) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEdit ? "编辑订阅" : "添加订阅"}</DialogTitle>
+      <DialogTitle>{isEdit ? '编辑订阅' : '添加订阅'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <TextField
@@ -57,13 +57,13 @@ export default function SchedulerFormDialog({
           <Autocomplete
             freeSolo
             options={CRON_OPTIONS}
-            getOptionLabel={(option) => (typeof option === "string" ? option : option.value)}
+            getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
             value={schedulerForm.CronExpr}
             onChange={(e, newValue) => {
-              const value = typeof newValue === "string" ? newValue : newValue?.value || "";
+              const value = typeof newValue === 'string' ? newValue : newValue?.value || '';
               setSchedulerForm({ ...schedulerForm, CronExpr: value });
             }}
-            onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, CronExpr: newValue || "" })}
+            onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, CronExpr: newValue || '' })}
             renderOption={(props, option) => (
               <Box component="li" {...props} key={option.value}>
                 <Box>
@@ -87,8 +87,8 @@ export default function SchedulerFormDialog({
             freeSolo
             options={groupOptions}
             value={schedulerForm.Group}
-            onChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, Group: newValue || "" })}
-            onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, Group: newValue || "" })}
+            onChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, Group: newValue || '' })}
+            onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, Group: newValue || '' })}
             renderInput={(params) => (
               <TextField {...params} label="分组" helperText="设置分组后，从此订阅导入的所有节点将自动归属到此分组" />
             )}
@@ -96,13 +96,13 @@ export default function SchedulerFormDialog({
           <Autocomplete
             freeSolo
             options={USER_AGENT_OPTIONS}
-            getOptionLabel={(option) => (typeof option === "string" ? option : option.value)}
+            getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
             value={schedulerForm.UserAgent}
             onChange={(e, newValue) => {
-              const value = typeof newValue === "string" ? newValue : newValue?.value || "Clash";
+              const value = typeof newValue === 'string' ? newValue : newValue?.value || 'Clash';
               setSchedulerForm({ ...schedulerForm, UserAgent: value });
             }}
-            onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, UserAgent: newValue || "Clash" })}
+            onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, UserAgent: newValue || 'Clash' })}
             renderOption={(props, option) => (
               <Box component="li" {...props} key={option.value}>
                 <Box>
@@ -124,8 +124,7 @@ export default function SchedulerFormDialog({
           />
           <FormControlLabel
             control={
-              <Switch checked={schedulerForm.Enabled}
-                      onChange={(e) => setSchedulerForm({ ...schedulerForm, Enabled: e.target.checked })} />
+              <Switch checked={schedulerForm.Enabled} onChange={(e) => setSchedulerForm({ ...schedulerForm, Enabled: e.target.checked })} />
             }
             label="启用"
           />
@@ -151,9 +150,9 @@ export default function SchedulerFormDialog({
                 loading={loadingProxyNodes}
                 value={
                   proxyNodeOptions.find((n) => n.Link === schedulerForm.ProxyLink) ||
-                  (schedulerForm.ProxyLink ? { Link: schedulerForm.ProxyLink, Name: "", ID: 0 } : null)
+                  (schedulerForm.ProxyLink ? { Link: schedulerForm.ProxyLink, Name: '', ID: 0 } : null)
                 }
-                onChange={(newValue) => setSchedulerForm({ ...schedulerForm, ProxyLink: newValue?.Link || "" })}
+                onChange={(newValue) => setSchedulerForm({ ...schedulerForm, ProxyLink: newValue?.Link || '' })}
                 displayField="Name"
                 valueField="Link"
                 label="选择代理节点"

@@ -1,8 +1,8 @@
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import Chip from "@mui/material/Chip";
-import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import Chip from '@mui/material/Chip';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 
 /**
  * 可拖拽排序的节点/分组列表
@@ -21,17 +21,17 @@ export default function SortableNodeList({ items, onDragEnd }) {
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
                     sx={{
-                      bgcolor: snapshot.isDragging ? "action.selected" : "background.paper",
-                      border: "1px solid",
-                      borderColor: "divider",
+                      bgcolor: snapshot.isDragging ? 'action.selected' : 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
                       borderRadius: 1,
                       mb: 0.5
                     }}
                   >
-                    <DragIndicatorIcon sx={{ mr: 1, color: "text.secondary" }} />
+                    <DragIndicatorIcon sx={{ mr: 1, color: 'text.secondary' }} />
                     <Chip
                       label={item.IsGroup ? `📁 ${item.Name} (分组)` : item.Name}
-                      color={item.IsGroup ? "warning" : "success"}
+                      color={item.IsGroup ? 'warning' : 'success'}
                       variant="outlined"
                       size="small"
                     />

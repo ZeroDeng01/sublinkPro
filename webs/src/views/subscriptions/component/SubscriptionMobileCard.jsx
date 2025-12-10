@@ -1,56 +1,55 @@
-import { Fragment } from "react";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import Chip from "@mui/material/Chip";
-import Typography from "@mui/material/Typography";
-import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
-import Collapse from "@mui/material/Collapse";
-import Tooltip from "@mui/material/Tooltip";
-import MainCard from "ui-component/cards/MainCard";
-import SortableNodeList from "./SortableNodeList";
+import { Fragment } from 'react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Chip from '@mui/material/Chip';
+import Typography from '@mui/material/Typography';
+import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
+import Collapse from '@mui/material/Collapse';
+import Tooltip from '@mui/material/Tooltip';
+import MainCard from 'ui-component/cards/MainCard';
+import SortableNodeList from './SortableNodeList';
 
 // icons
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import QrCode2Icon from "@mui/icons-material/QrCode2";
-import HistoryIcon from "@mui/icons-material/History";
-import SortIcon from "@mui/icons-material/Sort";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
+import HistoryIcon from '@mui/icons-material/History';
+import SortIcon from '@mui/icons-material/Sort';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
 /**
  * 移动端订阅卡片组件
  */
 export default function SubscriptionMobileCard({
-                                                 subscriptions,
-                                                 page,
-                                                 rowsPerPage,
-                                                 expandedRows,
-                                                 sortingSubId,
-                                                 tempSortData,
-                                                 theme,
-                                                 onToggleRow,
-                                                 onClient,
-                                                 onLogs,
-                                                 onEdit,
-                                                 onDelete,
-                                                 onStartSort,
-                                                 onConfirmSort,
-                                                 onCancelSort,
-                                                 onDragEnd,
-                                                 onCopyToClipboard,
-                                                 getSortedItems
-                                               }) {
+  subscriptions,
+  page,
+  rowsPerPage,
+  expandedRows,
+  sortingSubId,
+  tempSortData,
+  theme,
+  onToggleRow,
+  onClient,
+  onLogs,
+  onEdit,
+  onDelete,
+  onStartSort,
+  onConfirmSort,
+  onCancelSort,
+  onDragEnd,
+  onCopyToClipboard,
+  getSortedItems
+}) {
   return (
     <Stack spacing={2}>
       {subscriptions.map((sub) => (
         <MainCard key={sub.ID} content={false} border shadow={theme.shadows[1]}>
           <Box p={2}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}
-                   onClick={() => onToggleRow(sub.ID)}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1} onClick={() => onToggleRow(sub.ID)}>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Chip label={sub.Name} color="primary" />
                 {sortingSubId === sub.ID && <Chip label="排序中" color="warning" size="small" />}
@@ -126,7 +125,7 @@ export default function SubscriptionMobileCard({
                 ) : (
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     {getSortedItems(sub).map((item, idx) =>
-                      item._type === "node" ? (
+                      item._type === 'node' ? (
                         <Chip
                           key={item._type + item.ID}
                           label={item.Name}

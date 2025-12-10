@@ -6,7 +6,7 @@ import request from './request';
 export function getTemplates(params = {}) {
   return request({
     url: '/v1/template/get',
-    method: "get",
+    method: 'get',
     params
   });
 }

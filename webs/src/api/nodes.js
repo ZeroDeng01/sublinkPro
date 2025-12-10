@@ -15,8 +15,8 @@ export function getNodes(params = {}) {
 // 获取符合过滤条件的所有节点ID（用于全选操作）
 export function getNodeIds(params = {}) {
   return request({
-    url: "/v1/nodes/ids",
-    method: "get",
+    url: '/v1/nodes/ids',
+    method: 'get',
     params
   });
 }

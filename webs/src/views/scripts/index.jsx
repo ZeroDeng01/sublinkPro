@@ -35,7 +35,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 import MainCard from 'ui-component/cards/MainCard';
-import Pagination from "components/Pagination";
+import Pagination from 'components/Pagination';
 import { getScripts, addScript, updateScript, deleteScript } from 'api/scripts';
 
 // Monaco Editor

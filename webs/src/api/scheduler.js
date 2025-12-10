@@ -6,7 +6,7 @@ import request from './request';
 export function getSubSchedulers(params = {}) {
   return request({
     url: '/v1/sub_scheduler/get',
-    method: "get",
+    method: 'get',
     params
   });
 }

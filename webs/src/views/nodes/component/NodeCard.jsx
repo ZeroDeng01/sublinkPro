@@ -1,26 +1,26 @@
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types';
 
 // material-ui
-import { useTheme } from "@mui/material/styles";
-import Box from "@mui/material/Box";
-import Checkbox from "@mui/material/Checkbox";
-import Chip from "@mui/material/Chip";
-import IconButton from "@mui/material/IconButton";
-import Stack from "@mui/material/Stack";
-import Tooltip from "@mui/material/Tooltip";
-import Typography from "@mui/material/Typography";
+import { useTheme } from '@mui/material/styles';
+import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
+import Chip from '@mui/material/Chip';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 
 // icons
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-import SpeedIcon from "@mui/icons-material/Speed";
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import SpeedIcon from '@mui/icons-material/Speed';
 
 // project imports
-import MainCard from "ui-component/cards/MainCard";
+import MainCard from 'ui-component/cards/MainCard';
 
 // utils
-import { formatDateTime, formatCountry, getDelayColor } from "../utils";
+import { formatDateTime, formatCountry, getDelayColor } from '../utils';
 
 /**
  * 移动端节点卡片组件
@@ -40,10 +40,10 @@ export default function NodeCard({ node, isSelected, onSelect, onSpeedTest, onCo
                 variant="subtitle1"
                 fontWeight="bold"
                 sx={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  maxWidth: "200px"
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '200px'
                 }}
               >
                 {node.Name}
@@ -63,39 +63,39 @@ export default function NodeCard({ node, isSelected, onSelect, onSpeedTest, onCo
 
         {/* Info Section: Chips for Group, Source, Speed */}
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
-          <Tooltip title={`分组: ${node.Group || "未分组"}`}>
+          <Tooltip title={`分组: ${node.Group || '未分组'}`}>
             <Chip
-              icon={<span style={{ fontSize: "12px", marginLeft: "8px" }}>📁</span>}
-              label={node.Group || "未分组"}
+              icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📁</span>}
+              label={node.Group || '未分组'}
               color="warning"
               variant="outlined"
               size="small"
-              sx={{ maxWidth: "120px", "& .MuiChip-label": { overflow: "hidden", textOverflow: "ellipsis" } }}
+              sx={{ maxWidth: '120px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
             />
           </Tooltip>
           <Chip
-            icon={<span style={{ fontSize: "12px", marginLeft: "8px" }}>📡</span>}
-            label={node.Source === "manual" ? "手动添加" : node.Source || "未知"}
-            color={node.Source === "manual" ? "success" : "info"}
+            icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📡</span>}
+            label={node.Source === 'manual' ? '手动添加' : node.Source || '未知'}
+            color={node.Source === 'manual' ? 'success' : 'info'}
             variant="outlined"
             size="small"
-            sx={{ maxWidth: "100px", "& .MuiChip-label": { overflow: "hidden", textOverflow: "ellipsis" } }}
+            sx={{ maxWidth: '100px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
           />
           <Chip
-            icon={<span style={{ fontSize: "12px", marginLeft: "8px" }}>⚡</span>}
-            label={node.Speed > 0 ? `${node.Speed.toFixed(2)}MB/s` : "未测速"}
-            color={node.Speed > 0 ? "primary" : "default"}
-            variant={node.Speed > 0 ? "filled" : "outlined"}
+            icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>⚡</span>}
+            label={node.Speed > 0 ? `${node.Speed.toFixed(2)}MB/s` : '未测速'}
+            color={node.Speed > 0 ? 'primary' : 'default'}
+            variant={node.Speed > 0 ? 'filled' : 'outlined'}
             size="small"
           />
           {node.DialerProxyName && (
             <Tooltip title={`前置代理: ${node.DialerProxyName}`}>
               <Chip
-                icon={<span style={{ fontSize: "12px", marginLeft: "8px" }}>🔗</span>}
+                icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>🔗</span>}
                 label={node.DialerProxyName}
                 variant="outlined"
                 size="small"
-                sx={{ maxWidth: "100px", "& .MuiChip-label": { overflow: "hidden", textOverflow: "ellipsis" } }}
+                sx={{ maxWidth: '100px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
               />
             </Tooltip>
           )}
@@ -107,14 +107,14 @@ export default function NodeCard({ node, isSelected, onSelect, onSpeedTest, onCo
         </Stack>
 
         {/* Time Info Section */}
-        <Box sx={{ bgcolor: "action.hover", borderRadius: 1, p: 1, mb: 1.5 }}>
+        <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 1, mb: 1.5 }}>
           <Stack spacing={0.5}>
             <Box>
               <Typography variant="caption" color="textSecondary" display="block">
                 创建时间
               </Typography>
               <Typography variant="caption" fontWeight="medium">
-                {node.CreatedAt ? formatDateTime(node.CreatedAt) : "-"}
+                {node.CreatedAt ? formatDateTime(node.CreatedAt) : '-'}
               </Typography>
             </Box>
             <Box>
@@ -122,7 +122,7 @@ export default function NodeCard({ node, isSelected, onSelect, onSpeedTest, onCo
                 更新时间
               </Typography>
               <Typography variant="caption" fontWeight="medium">
-                {node.UpdatedAt ? formatDateTime(node.UpdatedAt) : "-"}
+                {node.UpdatedAt ? formatDateTime(node.UpdatedAt) : '-'}
               </Typography>
             </Box>
             <Box>
@@ -130,7 +130,7 @@ export default function NodeCard({ node, isSelected, onSelect, onSpeedTest, onCo
                 最后测速
               </Typography>
               <Typography variant="caption" fontWeight="medium" color="primary">
-                {node.LastCheck ? formatDateTime(node.LastCheck) : "-"}
+                {node.LastCheck ? formatDateTime(node.LastCheck) : '-'}
               </Typography>
             </Box>
           </Stack>

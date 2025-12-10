@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import md5 from 'md5';
 
 // material-ui
@@ -17,7 +17,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
-import Pagination from "components/Pagination";
+import Pagination from 'components/Pagination';
 import { getSubscriptions, addSubscription, updateSubscription, deleteSubscription, sortSubscription } from 'api/subscriptions';
 import { getNodes, getNodeCountries, getNodeGroups, getNodeSources } from 'api/nodes';
 import { getTemplates } from 'api/templates';
@@ -32,7 +32,7 @@ import {
   SubscriptionMobileCard,
   SubscriptionTable,
   SubscriptionFormDialog
-} from "./component";
+} from './component';
 
 // ==============================|| 订阅管理 ||============================== //
 
@@ -82,7 +82,7 @@ export default function SubscriptionList() {
     surge: './template/surge.conf',
     udp: false,
     cert: false,
-    selectionMode: "nodes",
+    selectionMode: 'nodes',
     selectedNodes: [],
     selectedGroups: [],
     selectedScripts: [],
@@ -130,7 +130,7 @@ export default function SubscriptionList() {
   const [checkedSelected, setCheckedSelected] = useState([]);
   const [mobileTab, setMobileTab] = useState(0);
   const [selectedNodeSearch, setSelectedNodeSearch] = useState('');
-  const [namingMode, setNamingMode] = useState("builder");
+  const [namingMode, setNamingMode] = useState('builder');
 
   // 分页
   const [page, setPage] = useState(0);
@@ -162,7 +162,7 @@ export default function SubscriptionList() {
       }
     } catch (error) {
       console.error(error);
-      showMessage("获取订阅列表失败", "error");
+      showMessage('获取订阅列表失败', 'error');
     } finally {
       setLoading(false);
     }
@@ -369,8 +369,8 @@ export default function SubscriptionList() {
   // 过滤后的节点
   const filteredNodes = useMemo(() => {
     return allNodes.filter((node) => {
-      if (nodeGroupFilter !== "all" && node.Group !== nodeGroupFilter) return false;
-      if (nodeSourceFilter !== "all" && node.Source !== nodeSourceFilter) return false;
+      if (nodeGroupFilter !== 'all' && node.Group !== nodeGroupFilter) return false;
+      if (nodeSourceFilter !== 'all' && node.Source !== nodeSourceFilter) return false;
       if (nodeSearchQuery) {
         const query = nodeSearchQuery.toLowerCase();
         if (!node.Name?.toLowerCase().includes(query) && !node.Group?.toLowerCase().includes(query)) {
@@ -719,8 +719,7 @@ export default function SubscriptionList() {
       />
 
       {/* QR码对话框 */}
-      <QrCodeDialog open={qrDialogOpen} title={qrTitle} url={qrUrl} onClose={() => setQrDialogOpen(false)}
-                    onCopy={copyToClipboard} />
+      <QrCodeDialog open={qrDialogOpen} title={qrTitle} url={qrUrl} onClose={() => setQrDialogOpen(false)} onCopy={copyToClipboard} />
 
       {/* 访问记录对话框 */}
       <AccessLogsDialog open={logsDialogOpen} logs={currentLogs} onClose={() => setLogsDialogOpen(false)} />

@@ -1,46 +1,46 @@
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types';
 
 // material-ui
-import Autocomplete from "@mui/material/Autocomplete";
-import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
-import FormControl from "@mui/material/FormControl";
-import InputAdornment from "@mui/material/InputAdornment";
-import InputLabel from "@mui/material/InputLabel";
-import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
+import Autocomplete from '@mui/material/Autocomplete';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import FormControl from '@mui/material/FormControl';
+import InputAdornment from '@mui/material/InputAdornment';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 
 // utils
-import { isoToFlag } from "../utils";
+import { isoToFlag } from '../utils';
 
 /**
  * 节点过滤器工具栏
  */
 export default function NodeFilters({
-                                      searchQuery,
-                                      setSearchQuery,
-                                      groupFilter,
-                                      setGroupFilter,
-                                      sourceFilter,
-                                      setSourceFilter,
-                                      maxDelay,
-                                      setMaxDelay,
-                                      minSpeed,
-                                      setMinSpeed,
-                                      countryFilter,
-                                      setCountryFilter,
-                                      groupOptions,
-                                      sourceOptions,
-                                      countryOptions,
-                                      onReset
-                                    }) {
+  searchQuery,
+  setSearchQuery,
+  groupFilter,
+  setGroupFilter,
+  sourceFilter,
+  setSourceFilter,
+  maxDelay,
+  setMaxDelay,
+  minSpeed,
+  setMinSpeed,
+  countryFilter,
+  setCountryFilter,
+  groupOptions,
+  sourceOptions,
+  countryOptions,
+  onReset
+}) {
   return (
     <Stack direction="row" spacing={2} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
       <FormControl size="small" sx={{ minWidth: 120 }}>
         <InputLabel>分组</InputLabel>
-        <Select value={groupFilter} label="分组" onChange={(e) => setGroupFilter(e.target.value)} variant={"outlined"}>
+        <Select value={groupFilter} label="分组" onChange={(e) => setGroupFilter(e.target.value)} variant={'outlined'}>
           <MenuItem value="">全部</MenuItem>
           <MenuItem value="未分组">未分组</MenuItem>
           {groupOptions.map((group) => (
@@ -59,12 +59,11 @@ export default function NodeFilters({
       />
       <FormControl size="small" sx={{ minWidth: 120 }}>
         <InputLabel>来源</InputLabel>
-        <Select value={sourceFilter} label="来源" onChange={(e) => setSourceFilter(e.target.value)}
-                variant={"outlined"}>
+        <Select value={sourceFilter} label="来源" onChange={(e) => setSourceFilter(e.target.value)} variant={'outlined'}>
           <MenuItem value="">全部</MenuItem>
           {sourceOptions.map((source) => (
             <MenuItem key={source} value={source}>
-              {source === "manual" ? "手动添加" : source}
+              {source === 'manual' ? '手动添加' : source}
             </MenuItem>
           ))}
         </Select>

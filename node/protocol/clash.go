@@ -463,17 +463,46 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 		if proxyGroup["type"] == "relay" {
 			break
 		}
-		// 清除 nil 值
+
+		// 检查是否包含正则模式
+		hasRegexPattern := false
+		for _, p := range proxyGroup["proxies"].([]interface{}) {
+			if p == nil {
+				continue
+			}
+			proxyStr, ok := p.(string)
+			if ok && utils.IsRegexProxyPattern(proxyStr) {
+				hasRegexPattern = true
+				break
+			}
+		}
+
+		// 处理代理列表
 		var validProxies []interface{}
 		for _, p := range proxyGroup["proxies"].([]interface{}) {
-			if p != nil {
+			if p == nil {
+				continue
+			}
+			proxyStr, ok := p.(string)
+			if ok && utils.IsRegexProxyPattern(proxyStr) {
+				// 处理正则模式，匹配节点名称
+				matchedNodes := utils.MatchNodesByRegexPattern(proxyStr, ProxiesNameList)
+				for _, nodeName := range matchedNodes {
+					validProxies = append(validProxies, nodeName)
+				}
+			} else {
 				validProxies = append(validProxies, p)
 			}
 		}
-		// 添加新代理
-		for _, newProxy := range ProxiesNameList {
-			validProxies = append(validProxies, newProxy)
+
+		// 只有当组中没有正则模式时，才添加所有新代理
+		// 如果有正则模式，则只使用匹配的节点，不添加全部节点
+		if !hasRegexPattern {
+			for _, newProxy := range ProxiesNameList {
+				validProxies = append(validProxies, newProxy)
+			}
 		}
+
 		proxyGroup["proxies"] = validProxies
 		proxyGroups[i] = proxyGroup
 	}

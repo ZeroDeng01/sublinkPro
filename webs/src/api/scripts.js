@@ -6,7 +6,7 @@ import request from './request';
 export function getScripts(params = {}) {
   return request({
     url: '/v1/script/list',
-    method: "get",
+    method: 'get',
     params
   });
 }

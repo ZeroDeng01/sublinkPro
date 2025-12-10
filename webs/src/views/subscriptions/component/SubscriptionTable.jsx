@@ -1,53 +1,53 @@
-import { Fragment } from "react";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import Chip from "@mui/material/Chip";
-import Typography from "@mui/material/Typography";
-import IconButton from "@mui/material/IconButton";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
-import Collapse from "@mui/material/Collapse";
-import Tooltip from "@mui/material/Tooltip";
-import SortableNodeList from "./SortableNodeList";
+import { Fragment } from 'react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Chip from '@mui/material/Chip';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import Collapse from '@mui/material/Collapse';
+import Tooltip from '@mui/material/Tooltip';
+import SortableNodeList from './SortableNodeList';
 
 // icons
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import QrCode2Icon from "@mui/icons-material/QrCode2";
-import HistoryIcon from "@mui/icons-material/History";
-import SortIcon from "@mui/icons-material/Sort";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
+import HistoryIcon from '@mui/icons-material/History';
+import SortIcon from '@mui/icons-material/Sort';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
 /**
  * 桌面端订阅表格组件
  */
 export default function SubscriptionTable({
-                                            subscriptions,
-                                            page,
-                                            rowsPerPage,
-                                            expandedRows,
-                                            sortingSubId,
-                                            tempSortData,
-                                            onToggleRow,
-                                            onClient,
-                                            onLogs,
-                                            onEdit,
-                                            onDelete,
-                                            onStartSort,
-                                            onConfirmSort,
-                                            onCancelSort,
-                                            onDragEnd,
-                                            onCopyToClipboard,
-                                            getSortedItems
-                                          }) {
+  subscriptions,
+  page,
+  rowsPerPage,
+  expandedRows,
+  sortingSubId,
+  tempSortData,
+  onToggleRow,
+  onClient,
+  onLogs,
+  onEdit,
+  onDelete,
+  onStartSort,
+  onConfirmSort,
+  onCancelSort,
+  onDragEnd,
+  onCopyToClipboard,
+  getSortedItems
+}) {
   return (
     <TableContainer component={Paper}>
       <Table>
@@ -135,7 +135,7 @@ export default function SubscriptionTable({
                       ) : (
                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                           {getSortedItems(sub).map((item, idx) =>
-                            item._type === "node" ? (
+                            item._type === 'node' ? (
                               <Chip
                                 key={item._type + item.ID}
                                 label={item.Name}
@@ -145,8 +145,7 @@ export default function SubscriptionTable({
                                 onClick={() => onCopyToClipboard(item.Link)}
                               />
                             ) : (
-                              <Chip key={item._type + idx} label={`📁 ${item.Name}`} size="small" variant="outlined"
-                                    color="warning" />
+                              <Chip key={item._type + idx} label={`📁 ${item.Name}`} size="small" variant="outlined" color="warning" />
                             )
                           )}
                         </Stack>

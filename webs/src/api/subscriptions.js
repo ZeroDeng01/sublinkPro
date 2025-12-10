@@ -6,7 +6,7 @@ import request from './request';
 export function getSubscriptions(params = {}) {
   return request({
     url: '/v1/subcription/get',
-    method: "get",
+    method: 'get',
     params
   }).then((response) => {
     // 处理分页响应

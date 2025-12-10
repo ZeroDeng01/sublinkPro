@@ -170,15 +170,44 @@ func DecodeSurge(proxys, groups []string, file string) (string, error) {
 	groupPart := groupReg.ReplaceAllStringFunc(proxyPart, func(s string) string {
 		lines := strings.Split(s, "\n")
 		grouplist := strings.Join(groups, ",")
-		for i, line := range lines {
+		// 正则模式检测器
+		regexPattern := regexp.MustCompile(`\([^)]+\|[^)]+\)`)
 
+		for i, line := range lines {
 			if strings.Contains(line, "=") {
-				lines[i] = strings.TrimSpace(line) + ", " + grouplist
-				// lines[i] = line + "," + grouplist
+				// 检查这一行是否包含正则模式
+				hasRegex := regexPattern.MatchString(line)
+
+				if hasRegex {
+					// 处理行中的正则模式，替换为匹配的节点
+					processedLine := processRegexPatternsInLine(line, groups)
+					// 如果有正则模式，只使用匹配的节点，不追加全部节点
+					lines[i] = strings.TrimSpace(processedLine)
+				} else {
+					// 没有正则模式，追加所有节点
+					lines[i] = strings.TrimSpace(line) + ", " + grouplist
+				}
 			}
 		}
 		return strings.Join(lines, "\n") + s[len("[Proxy Group]"):]
 	})
 
 	return groupPart, nil
+}
+
+// processRegexPatternsInLine 处理 Surge proxy group 行中的正则模式
+func processRegexPatternsInLine(line string, nodeNames []string) string {
+	// 查找所有 (x|y|z) 形式的模式
+	regexPattern := regexp.MustCompile(`\([^)]+\|[^)]+\)`)
+
+	return regexPattern.ReplaceAllStringFunc(line, func(pattern string) string {
+		if utils.IsRegexProxyPattern(pattern) {
+			matchedNodes := utils.MatchNodesByRegexPattern(pattern, nodeNames)
+			if len(matchedNodes) > 0 {
+				return strings.Join(matchedNodes, ", ")
+			}
+			return "" // 没有匹配则删除
+		}
+		return pattern
+	})
 }
