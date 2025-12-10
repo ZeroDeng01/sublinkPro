@@ -36,7 +36,8 @@ type ClashConfig struct {
 // subName: 订阅名称
 // downloadWithProxy: 是否使用代理下载
 // proxyLink: 代理链接 (可选)
-func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string) error {
+// userAgent: 请求的 User-Agent (可选，默认 Clash)
+func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string) error {
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -101,7 +102,21 @@ func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithP
 		}
 	}
 
-	resp, err := client.Get(urlStr)
+	// 创建请求并设置 User-Agent
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		log.Printf("URL %s，创建请求失败:  %v", urlStr, err)
+		return err
+	}
+
+	// 设置 User-Agent
+	if userAgent != "" {
+		req.Header.Set("User-Agent", userAgent)
+	} else {
+		req.Header.Set("User-Agent", "Clash")
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("URL %s，获取Clash配置失败:  %v", urlStr, err)
 		return err

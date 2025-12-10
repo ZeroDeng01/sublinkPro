@@ -24,12 +24,13 @@ type UserAccessKey struct {
 
 // SubSchedulerAddRequest 订阅调度添加请求体结构
 type SubSchedulerAddRequest struct {
-	ID                int    `json:"id"`
-	Name              string `json:"name" binding:"required"`
-	URL               string `json:"url" binding:"required,url"`
-	CronExpr          string `json:"cron_expr" binding:"required"`
-	Enabled           bool   `json:"enabled"`
-	Group             string `json:"group"`
-	DownloadWithProxy bool   `gorm:"default:false" json:"download_with_proxy"`
-	ProxyLink         string `gorm:"default:''" json:"proxy_link"`
+	ID                int    `json:"ID"`
+	Name              string `json:"Name" binding:"required"`
+	URL               string `json:"URL" binding:"required,url"`
+	CronExpr          string `json:"CronExpr" binding:"required"`
+	Enabled           bool   `json:"Enabled"`
+	Group             string `json:"Group"`
+	DownloadWithProxy bool   `json:"DownloadWithProxy"`
+	ProxyLink         string `json:"ProxyLink"`
+	UserAgent         string `json:"UserAgent"`
 }

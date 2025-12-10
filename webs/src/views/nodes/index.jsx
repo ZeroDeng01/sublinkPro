@@ -97,6 +97,13 @@ const SPEED_TEST_MIHOMO_OPTIONS = [
   { label: '100MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=100000000' }
 ];
 
+// User-Agent 预设选项
+const USER_AGENT_OPTIONS = [
+  { label: 'Clash (默认)', value: 'Clash' },
+  { label: 'clash.meta', value: 'clash.meta' },
+  { label: 'clash-verge/v1.5.1', value: 'clash-verge/v1.5.1' }
+];
+
 // 格式化日期时间
 const formatDateTime = (dateTimeString) => {
   if (!dateTimeString) return '-';
@@ -244,13 +251,14 @@ export default function NodeList() {
   const [schedulerFormOpen, setSchedulerFormOpen] = useState(false);
   const [isEditScheduler, setIsEditScheduler] = useState(false);
   const [schedulerForm, setSchedulerForm] = useState({
-    name: '',
-    url: '',
-    cron_expr: '',
-    enabled: true,
-    group: '',
-    download_with_proxy: false,
-    proxy_link: ''
+    Name: '',
+    URL: '',
+    CronExpr: '',
+    Enabled: true,
+    Group: '',
+    DownloadWithProxy: false,
+    ProxyLink: '',
+    UserAgent: 'Clash'
   });
 
   // 订阅删除对话框状态
@@ -627,13 +635,14 @@ export default function NodeList() {
   const handleAddScheduler = () => {
     setIsEditScheduler(false);
     setSchedulerForm({
-      name: '',
-      url: '',
-      cron_expr: '',
-      enabled: true,
-      group: '',
-      download_with_proxy: false,
-      proxy_link: ''
+      Name: '',
+      URL: '',
+      CronExpr: '',
+      Enabled: true,
+      Group: '',
+      DownloadWithProxy: false,
+      ProxyLink: '',
+      UserAgent: 'Clash'
     });
     setSchedulerFormOpen(true);
   };
@@ -641,14 +650,15 @@ export default function NodeList() {
   const handleEditScheduler = (scheduler) => {
     setIsEditScheduler(true);
     setSchedulerForm({
-      id: scheduler.ID,
-      name: scheduler.Name,
-      url: scheduler.URL,
-      cron_expr: scheduler.CronExpr,
-      enabled: scheduler.Enabled,
-      group: scheduler.Group || '',
-      download_with_proxy: scheduler.DownloadWithProxy || false,
-      proxy_link: scheduler.ProxyLink || ''
+      ID: scheduler.ID,
+      Name: scheduler.Name,
+      URL: scheduler.URL,
+      CronExpr: scheduler.CronExpr,
+      Enabled: scheduler.Enabled,
+      Group: scheduler.Group || '',
+      DownloadWithProxy: scheduler.DownloadWithProxy || false,
+      ProxyLink: scheduler.ProxyLink || '',
+      UserAgent: scheduler.UserAgent || 'Clash'
     });
     // 如果启用了代理下载，需要加载代理节点列表
     if (scheduler.DownloadWithProxy) {
@@ -682,14 +692,15 @@ export default function NodeList() {
     openConfirm('立即更新', `确定要立即更新订阅 "${scheduler.Name}" 吗？`, async () => {
       try {
         await pullSubScheduler({
-          id: scheduler.ID,
-          name: scheduler.Name,
-          url: scheduler.URL,
-          cron_expr: scheduler.CronExpr,
-          enabled: scheduler.Enabled,
-          group: scheduler.Group,
-          download_with_proxy: scheduler.DownloadWithProxy,
-          proxy_link: scheduler.ProxyLink
+          ID: scheduler.ID,
+          Name: scheduler.Name,
+          URL: scheduler.URL,
+          CronExpr: scheduler.CronExpr,
+          Enabled: scheduler.Enabled,
+          Group: scheduler.Group,
+          DownloadWithProxy: scheduler.DownloadWithProxy,
+          ProxyLink: scheduler.ProxyLink,
+          UserAgent: scheduler.UserAgent || 'Clash'
         });
         showMessage('提交更新任务成功，请稍后刷新查看结果');
         fetchSchedulers();
@@ -702,25 +713,25 @@ export default function NodeList() {
   };
 
   const handleSubmitScheduler = async () => {
-    if (!schedulerForm.name.trim()) {
+    if (!schedulerForm.Name.trim()) {
       showMessage('请输入名称', 'warning');
       return;
     }
-    if (!schedulerForm.url.trim()) {
+    if (!schedulerForm.URL.trim()) {
       showMessage('请输入URL', 'warning');
       return;
     }
     // Simple URL validation regex
     const urlPattern = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
-    if (!urlPattern.test(schedulerForm.url.trim())) {
+    if (!urlPattern.test(schedulerForm.URL.trim())) {
       showMessage('请输入有效的URL', 'warning');
       return;
     }
-    if (!schedulerForm.cron_expr.trim()) {
+    if (!schedulerForm.CronExpr.trim()) {
       showMessage('请输入Cron表达式', 'warning');
       return;
     }
-    if (!validateCronExpression(schedulerForm.cron_expr.trim())) {
+    if (!validateCronExpression(schedulerForm.CronExpr.trim())) {
       showMessage('Cron表达式格式不正确，格式为：分 时 日 月 周', 'error');
       return;
     }
@@ -886,9 +897,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -931,9 +942,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
@@ -965,7 +976,6 @@ export default function NodeList() {
           <InputLabel>来源</InputLabel>
           <Select value={sourceFilter} label="来源" onChange={(e) => setSourceFilter(e.target.value)} variant={'outlined'}>
             <MenuItem value="">全部</MenuItem>
-            <MenuItem value="手动添加">手动添加</MenuItem>
             {sourceOptions.map((source) => (
               <MenuItem key={source} value={source}>
                 {source === 'manual' ? '手动添加' : source}
@@ -1445,7 +1455,7 @@ export default function NodeList() {
                     <TableCell>{scheduler.Name}</TableCell>
                     <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{scheduler.URL}</TableCell>
                     <TableCell>
-                      <Chip label={scheduler.node_count || 0} color="primary" variant="outlined" size="small" />
+                      <Chip label={scheduler.NodeCount || 0} color="primary" variant="outlined" size="small" />
                     </TableCell>
                     <TableCell>{formatDateTime(scheduler.LastRunTime)}</TableCell>
                     <TableCell>{formatDateTime(scheduler.NextRunTime)}</TableCell>
@@ -1486,25 +1496,25 @@ export default function NodeList() {
             <TextField
               fullWidth
               label="名称"
-              value={schedulerForm.name}
-              onChange={(e) => setSchedulerForm({ ...schedulerForm, name: e.target.value })}
+              value={schedulerForm.Name}
+              onChange={(e) => setSchedulerForm({ ...schedulerForm, Name: e.target.value })}
             />
             <TextField
               fullWidth
               label="URL"
-              value={schedulerForm.url}
-              onChange={(e) => setSchedulerForm({ ...schedulerForm, url: e.target.value })}
+              value={schedulerForm.URL}
+              onChange={(e) => setSchedulerForm({ ...schedulerForm, URL: e.target.value })}
             />
             <Autocomplete
               freeSolo
               options={CRON_OPTIONS}
               getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
-              value={schedulerForm.cron_expr}
+              value={schedulerForm.CronExpr}
               onChange={(e, newValue) => {
                 const value = typeof newValue === 'string' ? newValue : newValue?.value || '';
-                setSchedulerForm({ ...schedulerForm, cron_expr: value });
+                setSchedulerForm({ ...schedulerForm, CronExpr: value });
               }}
-              onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, cron_expr: newValue || '' })}
+              onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, CronExpr: newValue || '' })}
               renderOption={(props, option) => (
                 <Box component="li" {...props} key={option.value}>
                   <Box>
@@ -1527,18 +1537,47 @@ export default function NodeList() {
             <Autocomplete
               freeSolo
               options={groupOptions}
-              value={schedulerForm.group}
-              onChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, group: newValue || '' })}
-              onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, group: newValue || '' })}
+              value={schedulerForm.Group}
+              onChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, Group: newValue || '' })}
+              onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, Group: newValue || '' })}
               renderInput={(params) => (
                 <TextField {...params} label="分组" helperText="设置分组后，从此订阅导入的所有节点将自动归属到此分组" />
+              )}
+            />
+            <Autocomplete
+              freeSolo
+              options={USER_AGENT_OPTIONS}
+              getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
+              value={schedulerForm.UserAgent}
+              onChange={(e, newValue) => {
+                const value = typeof newValue === 'string' ? newValue : newValue?.value || 'Clash';
+                setSchedulerForm({ ...schedulerForm, UserAgent: value });
+              }}
+              onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, UserAgent: newValue || 'Clash' })}
+              renderOption={(props, option) => (
+                <Box component="li" {...props} key={option.value}>
+                  <Box>
+                    <Typography variant="body2">{option.label}</Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      {option.value}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="User-Agent"
+                  placeholder="选择或输入 User-Agent"
+                  helperText="拉取订阅时使用的 User-Agent，默认为 Clash"
+                />
               )}
             />
             <FormControlLabel
               control={
                 <Switch
-                  checked={schedulerForm.enabled}
-                  onChange={(e) => setSchedulerForm({ ...schedulerForm, enabled: e.target.checked })}
+                  checked={schedulerForm.Enabled}
+                  onChange={(e) => setSchedulerForm({ ...schedulerForm, Enabled: e.target.checked })}
                 />
               }
               label="启用"
@@ -1546,10 +1585,10 @@ export default function NodeList() {
             <FormControlLabel
               control={
                 <Switch
-                  checked={schedulerForm.download_with_proxy}
+                  checked={schedulerForm.DownloadWithProxy}
                   onChange={(e) => {
                     const checked = e.target.checked;
-                    setSchedulerForm({ ...schedulerForm, download_with_proxy: checked });
+                    setSchedulerForm({ ...schedulerForm, DownloadWithProxy: checked });
                     if (checked) {
                       fetchProxyNodes();
                     }
@@ -1558,14 +1597,18 @@ export default function NodeList() {
               }
               label="使用代理下载"
             />
-            {schedulerForm.download_with_proxy && (
+            {schedulerForm.DownloadWithProxy && (
               <Box>
                 <Autocomplete
                   options={proxyNodeOptions}
                   loading={loadingProxyNodes}
-                  getOptionLabel={(option) => option.Name || ''}
-                  value={proxyNodeOptions.find((n) => n.Link === schedulerForm.proxy_link) || null}
-                  onChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, proxy_link: newValue?.Link || '' })}
+                  getOptionLabel={(option) => option.Name || (option.Link ? `未知节点 (${option.Link.substring(0, 30)}...)` : '')}
+                  value={
+                    proxyNodeOptions.find((n) => n.Link === schedulerForm.ProxyLink) ||
+                    (schedulerForm.ProxyLink ? { Link: schedulerForm.ProxyLink, Name: '', ID: 0 } : null)
+                  }
+                  isOptionEqualToValue={(option, value) => option.Link === value.Link}
+                  onChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, ProxyLink: newValue?.Link || '' })}
                   renderOption={(props, option) => (
                     <Box component="li" {...props} key={option.ID}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
@@ -1851,10 +1894,10 @@ export default function NodeList() {
           <Typography variant="body1" gutterBottom>
             确定要删除订阅 "{deleteSchedulerTarget?.Name}" 吗？
           </Typography>
-          {(deleteSchedulerTarget?.node_count || 0) > 0 && (
+          {(deleteSchedulerTarget?.NodeCount || 0) > 0 && (
             <>
               <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                该订阅关联了 {deleteSchedulerTarget?.node_count || 0} 个节点
+                该订阅关联了 {deleteSchedulerTarget?.NodeCount || 0} 个节点
               </Typography>
               <FormControlLabel
                 control={<Checkbox checked={deleteSchedulerWithNodes} onChange={(e) => setDeleteSchedulerWithNodes(e.target.checked)} />}

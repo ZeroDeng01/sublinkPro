@@ -18,7 +18,8 @@ type SubScheduler struct {
 	Group             string
 	DownloadWithProxy bool   `gorm:"default:false"`
 	ProxyLink         string `gorm:"default:''"`
-	NodeCount         int    `gorm:"-" json:"node_count"`
+	UserAgent         string `gorm:"default:'Clash'"`
+	NodeCount         int    `gorm:"-"`
 }
 
 // Add 添加订阅调度
@@ -28,7 +29,7 @@ func (ss *SubScheduler) Add() error {
 
 // Update 更新订阅调度
 func (ss *SubScheduler) Update() error {
-	return DB.Model(ss).Select("Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime", "SuccessCount", "Group", "DownloadWithProxy", "ProxyLink").Updates(ss).Error
+	return DB.Model(ss).Select("Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime", "SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent").Updates(ss).Error
 }
 
 // 查找节点是否重复

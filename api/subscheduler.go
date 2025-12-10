@@ -40,6 +40,7 @@ func SubSchedulerAdd(c *gin.Context) {
 		Group:             req.Group,
 		DownloadWithProxy: req.DownloadWithProxy,
 		ProxyLink:         req.ProxyLink,
+		UserAgent:         req.UserAgent,
 	}
 
 	err = subS.Find()
@@ -65,7 +66,7 @@ func SubSchedulerAdd(c *gin.Context) {
 
 	// 立即执行一次任务
 	if req.Enabled {
-		go node.LoadClashConfigFromURL(subS.ID, subS.URL, subS.Name, subS.DownloadWithProxy, subS.ProxyLink)
+		go node.LoadClashConfigFromURL(subS.ID, subS.URL, subS.Name, subS.DownloadWithProxy, subS.ProxyLink, subS.UserAgent)
 	}
 
 	utils.OkWithMsg(c, "添加成功")
@@ -78,7 +79,7 @@ func PullClashConfigFromURL(c *gin.Context) {
 		utils.FailWithMsg(c, "参数错误: "+err.Error())
 		return
 	}
-	go node.LoadClashConfigFromURL(req.ID, req.URL, req.Name, req.DownloadWithProxy, req.ProxyLink)
+	go node.LoadClashConfigFromURL(req.ID, req.URL, req.Name, req.DownloadWithProxy, req.ProxyLink, req.UserAgent)
 	utils.OkWithMsg(c, "任务启动成功")
 }
 
@@ -176,6 +177,7 @@ func SubSchedulerUpdate(c *gin.Context) {
 	subS.Group = req.Group
 	subS.DownloadWithProxy = req.DownloadWithProxy
 	subS.ProxyLink = req.ProxyLink
+	subS.UserAgent = req.UserAgent
 	err = subS.Update()
 
 	if err != nil {
