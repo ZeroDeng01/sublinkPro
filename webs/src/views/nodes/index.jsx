@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Alert from "@mui/material/Alert";
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Snackbar from "@mui/material/Snackbar";
@@ -91,14 +90,6 @@ export default function NodeList() {
   const handleConfirmClose = () => {
     setConfirmOpen(false);
   };
-
-  const handleConfirmAction = async () => {
-    if (confirmInfo.action) {
-      await confirmInfo.action();
-    }
-    setConfirmOpen(false);
-  };
-
   // 节点表单
   const [nodeDialogOpen, setNodeDialogOpen] = useState(false);
   const [isEditNode, setIsEditNode] = useState(false);
@@ -891,6 +882,9 @@ export default function NodeList() {
       {/* 批量操作 */}
       <BatchActions
         selectedCount={selectedNodes.length}
+        totalCount={totalItems}
+        onSelectAll={handleSelectAll}
+        onClearSelection={() => setSelectedNodes([])}
         onDelete={handleBatchDelete}
         onGroup={handleBatchGroup}
         onDialerProxy={handleBatchDialerProxy}
