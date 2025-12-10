@@ -1,30 +1,30 @@
-import { useState, useCallback, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
-import Typography from '@mui/material/Typography';
-import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import Alert from '@mui/material/Alert';
-import Tooltip from '@mui/material/Tooltip';
-import Fade from '@mui/material/Fade';
-import Switch from '@mui/material/Switch';
-import Collapse from '@mui/material/Collapse';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { useState, useCallback, useEffect } from "react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import Alert from "@mui/material/Alert";
+import Tooltip from "@mui/material/Tooltip";
+import Fade from "@mui/material/Fade";
+import Switch from "@mui/material/Switch";
+import Collapse from "@mui/material/Collapse";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 
 // 示例原名用于预览
-const PREVIEW_LINK_NAME = 'github-香港节点-01-Premium';
+const PREVIEW_LINK_NAME = "github-香港节点-01-Premium";
 
 /**
  * 原名预处理规则编辑器
@@ -32,7 +32,7 @@ const PREVIEW_LINK_NAME = 'github-香港节点-01-Premium';
  */
 export default function NodeNamePreprocessor({ value, onChange }) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const [rules, setRules] = useState([]);
   const [expanded, setExpanded] = useState(true);
@@ -72,9 +72,9 @@ export default function NodeNamePreprocessor({ value, onChange }) {
   const handleAddRule = () => {
     const newRule = {
       id: `rule-${idCounter}`,
-      matchMode: 'text',
-      pattern: '',
-      replacement: '',
+      matchMode: "text",
+      pattern: "",
+      replacement: "",
       enabled: true
     };
     const newRules = [...rules, newRule];
@@ -113,8 +113,8 @@ export default function NodeNamePreprocessor({ value, onChange }) {
     for (const rule of rules) {
       if (!rule.enabled || !rule.pattern) continue;
       try {
-        if (rule.matchMode === 'regex') {
-          const regex = new RegExp(rule.pattern, 'g');
+        if (rule.matchMode === "regex") {
+          const regex = new RegExp(rule.pattern, "g");
           result = result.replace(regex, rule.replacement);
         } else {
           result = result.replaceAll(rule.pattern, rule.replacement);
@@ -135,23 +135,23 @@ export default function NodeNamePreprocessor({ value, onChange }) {
       elevation={0}
       sx={{
         mb: 2,
-        border: '1px solid',
-        borderColor: 'divider',
+        border: "1px solid",
+        borderColor: "divider",
         borderRadius: 2,
-        overflow: 'hidden'
+        overflow: "hidden"
       }}
     >
       {/* 标题栏 */}
       <Box
         sx={{
           p: 1.5,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a2027' : '#f5f5f5'} 0%, ${theme.palette.mode === 'dark' ? '#121417' : '#fafafa'} 100%)`,
-          cursor: 'pointer',
-          '&:hover': {
-            bgcolor: 'action.hover'
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: `linear-gradient(145deg, ${theme.palette.mode === "dark" ? "#1a2027" : "#f5f5f5"} 0%, ${theme.palette.mode === "dark" ? "#121417" : "#fafafa"} 100%)`,
+          cursor: "pointer",
+          "&:hover": {
+            bgcolor: "action.hover"
           }
         }}
         onClick={() => setExpanded(!expanded)}
@@ -203,27 +203,28 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                               sx={{
                                 p: isMobile ? 1.5 : 1,
                                 mb: 1,
-                                border: '1px solid',
-                                borderColor: rule.enabled ? 'primary.light' : 'divider',
+                                border: "1px solid",
+                                borderColor: rule.enabled ? "primary.light" : "divider",
                                 borderRadius: 1.5,
                                 bgcolor: snapshot.isDragging
-                                  ? 'action.selected'
+                                  ? "action.selected"
                                   : rule.enabled
-                                    ? 'transparent'
-                                    : 'action.disabledBackground',
+                                    ? "transparent"
+                                    : "action.disabledBackground",
                                 opacity: rule.enabled ? 1 : 0.6,
-                                transition: 'all 0.2s ease'
+                                transition: "all 0.2s ease"
                               }}
                             >
-                              <Stack direction={isMobile ? 'column' : 'row'} spacing={1} alignItems={isMobile ? 'stretch' : 'center'}>
+                              <Stack direction={isMobile ? "column" : "row"} spacing={1}
+                                     alignItems={isMobile ? "stretch" : "center"}>
                                 {/* 拖拽手柄 */}
                                 <Box
                                   {...provided.dragHandleProps}
                                   sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    cursor: 'grab',
-                                    color: 'text.secondary'
+                                    display: "flex",
+                                    alignItems: "center",
+                                    cursor: "grab",
+                                    color: "text.secondary"
                                   }}
                                 >
                                   <DragIndicatorIcon fontSize="small" />
@@ -233,12 +234,13 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                 <Switch
                                   size="small"
                                   checked={rule.enabled}
-                                  onChange={(e) => handleUpdateRule(rule.id, 'enabled', e.target.checked)}
+                                  onChange={(e) => handleUpdateRule(rule.id, "enabled", e.target.checked)}
                                 />
 
                                 {/* 匹配模式 */}
-                                <FormControl size="small" sx={{ minWidth: isMobile ? '100%' : 80 }}>
-                                  <Select value={rule.matchMode} onChange={(e) => handleUpdateRule(rule.id, 'matchMode', e.target.value)}>
+                                <FormControl size="small" sx={{ minWidth: isMobile ? "100%" : 80 }}>
+                                  <Select value={rule.matchMode}
+                                          onChange={(e) => handleUpdateRule(rule.id, "matchMode", e.target.value)}>
                                     <MenuItem value="text">文本</MenuItem>
                                     <MenuItem value="regex">正则</MenuItem>
                                   </Select>
@@ -247,12 +249,12 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                 {/* 查找内容 */}
                                 <TextField
                                   size="small"
-                                  placeholder={rule.matchMode === 'regex' ? '正则表达式' : '查找文本'}
+                                  placeholder={rule.matchMode === "regex" ? "正则表达式" : "查找文本"}
                                   value={rule.pattern}
-                                  onChange={(e) => handleUpdateRule(rule.id, 'pattern', e.target.value)}
-                                  sx={{ flex: 1, minWidth: isMobile ? '100%' : 120 }}
+                                  onChange={(e) => handleUpdateRule(rule.id, "pattern", e.target.value)}
+                                  sx={{ flex: 1, minWidth: isMobile ? "100%" : 120 }}
                                   error={
-                                    rule.matchMode === 'regex' &&
+                                    rule.matchMode === "regex" &&
                                     rule.pattern &&
                                     (() => {
                                       try {
@@ -264,21 +266,21 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                     })()
                                   }
                                   helperText={
-                                    rule.matchMode === 'regex' &&
+                                    rule.matchMode === "regex" &&
                                     rule.pattern &&
                                     (() => {
                                       try {
                                         new RegExp(rule.pattern);
                                         return null;
                                       } catch {
-                                        return '无效正则';
+                                        return "无效正则";
                                       }
                                     })()
                                   }
                                 />
 
                                 {/* 箭头 */}
-                                <Typography color="textSecondary" sx={{ display: isMobile ? 'none' : 'block' }}>
+                                <Typography color="textSecondary" sx={{ display: isMobile ? "none" : "block" }}>
                                   →
                                 </Typography>
 
@@ -287,8 +289,8 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                   size="small"
                                   placeholder="替换为 (留空删除)"
                                   value={rule.replacement}
-                                  onChange={(e) => handleUpdateRule(rule.id, 'replacement', e.target.value)}
-                                  sx={{ flex: 1, minWidth: isMobile ? '100%' : 100 }}
+                                  onChange={(e) => handleUpdateRule(rule.id, "replacement", e.target.value)}
+                                  sx={{ flex: 1, minWidth: isMobile ? "100%" : 100 }}
                                 />
 
                                 {/* 删除按钮 */}
@@ -312,11 +314,11 @@ export default function NodeNamePreprocessor({ value, onChange }) {
             <Box
               sx={{
                 py: 3,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
                 gap: 1,
-                color: 'text.secondary'
+                color: "text.secondary"
               }}
             >
               <Typography variant="body2">暂无预处理规则</Typography>
@@ -329,7 +331,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
           {/* 实时预览 */}
           {hasRules && (
             <Fade in>
-              <Alert severity={hasChanges ? 'success' : 'info'} sx={{ mt: 1 }}>
+              <Alert severity={hasChanges ? "success" : "info"} sx={{ mt: 1 }}>
                 <Stack spacing={0.5}>
                   <Typography variant="body2">
                     <strong>原名：</strong>
@@ -340,11 +342,11 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                     <code
                       style={{
                         marginLeft: 4,
-                        color: hasChanges ? theme.palette.success.main : 'inherit',
+                        color: hasChanges ? theme.palette.success.main : "inherit",
                         fontWeight: hasChanges ? 600 : 400
                       }}
                     >
-                      {previewResult || '(空)'}
+                      {previewResult || "(空)"}
                     </code>
                   </Typography>
                 </Stack>

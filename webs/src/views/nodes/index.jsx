@@ -3,57 +3,29 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 // material-ui
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import Alert from "@mui/material/Alert";
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogActions from '@mui/material/DialogActions';
-import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import TablePagination from '@mui/material/TablePagination';
-import TableSortLabel from '@mui/material/TableSortLabel';
-import Paper from '@mui/material/Paper';
-import Chip from '@mui/material/Chip';
+import Snackbar from "@mui/material/Snackbar";
 import Stack from '@mui/material/Stack';
-import Alert from '@mui/material/Alert';
-import Snackbar from '@mui/material/Snackbar';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
-import Switch from '@mui/material/Switch';
-import Typography from '@mui/material/Typography';
-import Autocomplete from '@mui/material/Autocomplete';
+import TablePagination from "@mui/material/TablePagination";
 import Tooltip from '@mui/material/Tooltip';
-import InputAdornment from '@mui/material/InputAdornment';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DownloadIcon from "@mui/icons-material/Download";
 import RefreshIcon from '@mui/icons-material/Refresh';
-import SpeedIcon from '@mui/icons-material/Speed';
 import SettingsIcon from '@mui/icons-material/Settings';
-import DownloadIcon from '@mui/icons-material/Download';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SpeedIcon from "@mui/icons-material/Speed";
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import TaskProgressPanel from 'components/TaskProgressPanel';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
+import ConfirmDialog from "components/ConfirmDialog";
+
+// api
 import {
   getNodes,
   addNodes,
@@ -71,112 +43,23 @@ import {
 } from 'api/nodes';
 import { getSubSchedulers, addSubScheduler, updateSubScheduler, deleteSubScheduler, pullSubScheduler } from 'api/scheduler';
 
-// Cron 表达式预设 - 包含友好的说明
-const CRON_OPTIONS = [
-  { label: '每小时 - 每个整点执行', value: '0 * * * *', description: '每小时0分执行' },
-  { label: '每2小时 - 每隔2小时执行', value: '0 */2 * * *', description: '0点、2点、4点...' },
-  { label: '每6小时 - 每隔6小时执行', value: '0 */6 * * *', description: '0点、6点、12点、18点' },
-  { label: '每12小时 - 每天2次', value: '0 */12 * * *', description: '0点、12点' },
-  { label: '每天0点 - 每天凌晨执行', value: '0 0 * * *', description: '每天午夜0点整' },
-  { label: '每天3点 - 每天凌晨3点执行', value: '0 3 * * *', description: '每天凌晨3点' },
-  { label: '每周一 - 每周一凌晨执行', value: '0 0 * * 1', description: '每周一凌晨0点' }
-];
+// local components
+import {
+  NodeDialog,
+  SchedulerDialog,
+  SchedulerFormDialog,
+  DeleteSchedulerDialog,
+  SpeedTestDialog,
+  BatchGroupDialog,
+  BatchDialerProxyDialog,
+  NodeFilters,
+  BatchActions,
+  NodeMobileList,
+  NodeTable
+} from "./component";
 
-// 测速URL选项 - TCP模式 (延迟测试用204响应)
-const SPEED_TEST_TCP_OPTIONS = [
-  { label: 'Cloudflare (cp.cloudflare.com)', value: 'http://cp.cloudflare.com/generate_204' },
-  { label: 'Google (clients3.google.com)', value: 'http://clients3.google.com/generate_204' },
-  { label: 'Google (android.clients.google.com)', value: 'http://android.clients.google.com/generate_204' },
-  { label: 'Gstatic (www.gstatic.com)', value: 'http://www.gstatic.com/generate_204' }
-];
-
-// 测速URL选项 - Mihomo模式 (真速度测试用下载)
-const SPEED_TEST_MIHOMO_OPTIONS = [
-  { label: '10MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=10000000' },
-  { label: '50MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=50000000' },
-  { label: '100MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=100000000' }
-];
-
-// User-Agent 预设选项
-const USER_AGENT_OPTIONS = [
-  { label: 'Clash (默认)', value: 'Clash' },
-  { label: 'clash.meta', value: 'clash.meta' },
-  { label: 'clash-verge/v1.5.1', value: 'clash-verge/v1.5.1' }
-];
-
-// 格式化日期时间
-const formatDateTime = (dateTimeString) => {
-  if (!dateTimeString) return '-';
-  try {
-    const date = new Date(dateTimeString);
-    if (isNaN(date.getTime())) return '-';
-    // 检测 Go 零时间 (0001-01-01) 或无效日期
-    if (date.getFullYear() <= 1) return '-';
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  } catch (error) {
-    console.error(error);
-    return '-';
-  }
-};
-
-// ISO国家代码转换为国旗emoji
-const isoToFlag = (isoCode) => {
-  if (!isoCode || isoCode.length !== 2) return '';
-  const code = isoCode.toUpperCase() === 'TW' ? 'CN' : isoCode.toUpperCase();
-  const codePoints = code.split('').map((char) => 0x1f1e6 + char.charCodeAt(0) - 65);
-  return String.fromCodePoint(...codePoints);
-};
-
-// 格式化国家显示 (国旗emoji + 代码)
-const formatCountry = (linkCountry) => {
-  if (!linkCountry) return null;
-  const flag = isoToFlag(linkCountry);
-  return flag ? `${flag}${linkCountry}` : linkCountry;
-};
-
-// Cron 表达式验证
-const validateCronExpression = (cron) => {
-  if (!cron) return false;
-  const parts = cron.trim().split(/\s+/);
-  if (parts.length !== 5) return false;
-  const ranges = [59, 23, 31, 12, 6];
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    const maxVal = ranges[i];
-    if (part === '*' || part === '?') continue;
-    if (part.includes('-')) {
-      const [start, end] = part.split('-').map(Number);
-      if (isNaN(start) || isNaN(end) || start < 0 || end > maxVal || start > end) return false;
-      continue;
-    }
-    if (part.includes('/')) {
-      const [base, step] = part.split('/');
-      if (isNaN(Number(step)) || Number(step) <= 0) return false;
-      if (base !== '*' && !base.includes('-')) {
-        const num = Number(base);
-        if (isNaN(num) || num < 0 || num > maxVal) return false;
-      }
-      continue;
-    }
-    if (part.includes(',')) {
-      const values = part.split(',').map(Number);
-      for (const val of values) {
-        if (isNaN(val) || val < 0 || val > maxVal) return false;
-      }
-      continue;
-    }
-    const num = Number(part);
-    if (isNaN(num) || num < 0 || num > maxVal) return false;
-  }
-  return true;
-};
+// utils
+import { validateCronExpression, SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS } from "./utils";
 
 // ==============================|| 节点管理 ||============================== //
 
@@ -825,14 +708,6 @@ export default function NodeList() {
     }
   };
 
-  // 延迟颜色
-  const getDelayColor = (delay) => {
-    if (delay <= 0) return 'default';
-    if (delay < 100) return 'success';
-    if (delay < 500) return 'warning';
-    return 'error';
-  };
-
   // 选择所有
   const handleSelectAll = (event) => {
     if (event.target.checked) {
@@ -850,8 +725,6 @@ export default function NodeList() {
       setSelectedNodes([...selectedNodes, node]);
     }
   };
-
-  const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
 
   // 排序处理
   const handleSort = (field) => {
@@ -899,8 +772,8 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      animation: "spin 1s linear infinite",
+                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
                     }
                     : {}
                 }
@@ -944,8 +817,8 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    animation: "spin 1s linear infinite",
+                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
                   }
                   : {}
               }
@@ -953,400 +826,64 @@ export default function NodeList() {
           </IconButton>
         </Stack>
       )}
+
       {/* 过滤器 */}
-      <Stack direction="row" spacing={2} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>分组</InputLabel>
-          <Select value={groupFilter} label="分组" onChange={(e) => setGroupFilter(e.target.value)} variant={'outlined'}>
-            <MenuItem value="">全部</MenuItem>
-            <MenuItem value="未分组">未分组</MenuItem>
-            {groupOptions.map((group) => (
-              <MenuItem key={group} value={group}>
-                {group}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TextField
-          size="small"
-          placeholder="搜索节点备注或链接"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          sx={{ minWidth: 200 }}
-        />
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>来源</InputLabel>
-          <Select value={sourceFilter} label="来源" onChange={(e) => setSourceFilter(e.target.value)} variant={'outlined'}>
-            <MenuItem value="">全部</MenuItem>
-            {sourceOptions.map((source) => (
-              <MenuItem key={source} value={source}>
-                {source === 'manual' ? '手动添加' : source}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TextField
-          size="small"
-          placeholder="最大延迟"
-          type="number"
-          value={maxDelay}
-          onChange={(e) => setMaxDelay(e.target.value)}
-          sx={{ width: 150 }}
-          InputProps={{ endAdornment: <InputAdornment position="end">ms</InputAdornment> }}
-        />
-        <TextField
-          size="small"
-          placeholder="最低速度"
-          type="number"
-          value={minSpeed}
-          onChange={(e) => setMinSpeed(e.target.value)}
-          sx={{ width: 150 }}
-          InputProps={{ endAdornment: <InputAdornment position="end">MB/s</InputAdornment> }}
-        />
-        {countryOptions.length > 0 && (
-          <Autocomplete
-            multiple
-            size="small"
-            options={countryOptions}
-            value={countryFilter}
-            onChange={(e, newValue) => setCountryFilter(newValue)}
-            sx={{ minWidth: 150 }}
-            getOptionLabel={(option) => `${isoToFlag(option)} ${option}`}
-            renderOption={(props, option) => {
-              const { key, ...otherProps } = props;
-              return (
-                <li key={key} {...otherProps}>
-                  {isoToFlag(option)} {option}
-                </li>
-              );
-            }}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => {
-                const { key, ...tagProps } = getTagProps({ index });
-                return <Chip key={key} label={`${isoToFlag(option)} ${option}`} size="small" {...tagProps} />;
-              })
-            }
-            renderInput={(params) => <TextField {...params} label="国家代码" placeholder="选择国家" />}
-          />
-        )}
-        <Button onClick={resetFilters}>重置</Button>
-      </Stack>
+      <NodeFilters
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        groupFilter={groupFilter}
+        setGroupFilter={setGroupFilter}
+        sourceFilter={sourceFilter}
+        setSourceFilter={setSourceFilter}
+        maxDelay={maxDelay}
+        setMaxDelay={setMaxDelay}
+        minSpeed={minSpeed}
+        setMinSpeed={setMinSpeed}
+        countryFilter={countryFilter}
+        setCountryFilter={setCountryFilter}
+        groupOptions={groupOptions}
+        sourceOptions={sourceOptions}
+        countryOptions={countryOptions}
+        onReset={resetFilters}
+      />
 
       {/* 批量操作 */}
-      {selectedNodes.length > 0 && (
-        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-          <Typography variant="body2" sx={{ alignSelf: 'center' }}>
-            已选择 {selectedNodes.length} 个节点
-          </Typography>
-          <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={handleBatchDelete}>
-            批量删除
-          </Button>
-          <Button size="small" color="primary" variant="outlined" onClick={handleBatchGroup}>
-            修改分组
-          </Button>
-          <Button size="small" color="primary" variant="outlined" onClick={handleBatchDialerProxy}>
-            修改前置代理
-          </Button>
-        </Stack>
-      )}
+      <BatchActions
+        selectedCount={selectedNodes.length}
+        onDelete={handleBatchDelete}
+        onGroup={handleBatchGroup}
+        onDialerProxy={handleBatchDialerProxy}
+      />
 
       {/* 节点列表 */}
       {matchDownMd ? (
-        <Stack spacing={2}>
-          {filteredNodes.length === 0 && (
-            <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 3 }}>
-              暂无节点
-            </Typography>
-          )}
-          {filteredNodes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((node) => (
-            <MainCard key={node.ID} content={false} border shadow={theme.shadows[1]}>
-              <Box p={2}>
-                {/* Header: Checkbox, Name, Delay */}
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
-                    <Checkbox checked={isSelected(node)} onChange={() => handleSelectNode(node)} sx={{ p: 0.5, flexShrink: 0 }} />
-                    <Tooltip title={node.Name} placement="top">
-                      <Typography
-                        variant="subtitle1"
-                        fontWeight="bold"
-                        sx={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: '200px'
-                        }}
-                      >
-                        {node.Name}
-                      </Typography>
-                    </Tooltip>
-                  </Stack>
-                  <Box sx={{ flexShrink: 0, ml: 1 }}>
-                    {node.DelayTime > 0 ? (
-                      <Chip label={`${node.DelayTime}ms`} color={getDelayColor(node.DelayTime)} size="small" />
-                    ) : node.DelayTime === -1 ? (
-                      <Chip label="超时" color="error" size="small" />
-                    ) : (
-                      <Chip label="未测速" variant="outlined" size="small" />
-                    )}
-                  </Box>
-                </Stack>
-
-                {/* Info Section: Chips for Group, Source, Speed */}
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
-                  <Tooltip title={`分组: ${node.Group || '未分组'}`}>
-                    <Chip
-                      icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📁</span>}
-                      label={node.Group || '未分组'}
-                      color="warning"
-                      variant="outlined"
-                      size="small"
-                      sx={{ maxWidth: '120px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-                    />
-                  </Tooltip>
-                  <Chip
-                    icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📡</span>}
-                    label={node.Source === 'manual' ? '手动添加' : node.Source || '未知'}
-                    color={node.Source === 'manual' ? 'success' : 'info'}
-                    variant="outlined"
-                    size="small"
-                    sx={{ maxWidth: '100px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-                  />
-                  <Chip
-                    icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>⚡</span>}
-                    label={node.Speed > 0 ? `${node.Speed.toFixed(2)}MB/s` : '未测速'}
-                    color={node.Speed > 0 ? 'primary' : 'default'}
-                    variant={node.Speed > 0 ? 'filled' : 'outlined'}
-                    size="small"
-                  />
-                  {node.DialerProxyName && (
-                    <Tooltip title={`前置代理: ${node.DialerProxyName}`}>
-                      <Chip
-                        icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>🔗</span>}
-                        label={node.DialerProxyName}
-                        variant="outlined"
-                        size="small"
-                        sx={{ maxWidth: '100px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-                      />
-                    </Tooltip>
-                  )}
-                  {node.LinkCountry && (
-                    <Tooltip title={`国家: ${node.LinkCountry}`}>
-                      <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />
-                    </Tooltip>
-                  )}
-                </Stack>
-
-                {/* Time Info Section */}
-                <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 1, mb: 1.5 }}>
-                  <Stack spacing={0.5}>
-                    <Box>
-                      <Typography variant="caption" color="textSecondary" display="block">
-                        创建时间
-                      </Typography>
-                      <Typography variant="caption" fontWeight="medium">
-                        {node.CreatedAt ? formatDateTime(node.CreatedAt) : '-'}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" color="textSecondary" display="block">
-                        更新时间
-                      </Typography>
-                      <Typography variant="caption" fontWeight="medium">
-                        {node.UpdatedAt ? formatDateTime(node.UpdatedAt) : '-'}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" color="textSecondary" display="block">
-                        最后测速
-                      </Typography>
-                      <Typography variant="caption" fontWeight="medium" color="primary">
-                        {node.LastCheck ? formatDateTime(node.LastCheck) : '-'}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Box>
-
-                {/* Action Buttons */}
-                <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                  <Tooltip title="测速">
-                    <IconButton size="small" onClick={() => handleSingleSpeedTest(node)}>
-                      <SpeedIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="复制链接">
-                    <IconButton size="small" onClick={() => copyToClipboard(node.Link)}>
-                      <ContentCopyIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="编辑">
-                    <IconButton size="small" onClick={() => handleEditNode(node)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="删除">
-                    <IconButton size="small" color="error" onClick={() => handleDeleteNode(node)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-              </Box>
-            </MainCard>
-          ))}
-        </Stack>
+        <NodeMobileList
+          nodes={filteredNodes}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          selectedNodes={selectedNodes}
+          onSelect={handleSelectNode}
+          onSpeedTest={handleSingleSpeedTest}
+          onCopy={copyToClipboard}
+          onEdit={handleEditNode}
+          onDelete={handleDeleteNode}
+        />
       ) : (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell padding="checkbox">
-                  <Checkbox
-                    indeterminate={selectedNodes.length > 0 && selectedNodes.length < filteredNodes.length}
-                    checked={filteredNodes.length > 0 && selectedNodes.length === filteredNodes.length}
-                    onChange={handleSelectAll}
-                  />
-                </TableCell>
-                <TableCell>备注</TableCell>
-                <TableCell>分组</TableCell>
-                <TableCell>来源</TableCell>
-                <TableCell>节点名称</TableCell>
-                <TableCell>前置代理</TableCell>
-                <TableCell sortDirection={sortBy === 'delay' ? sortOrder : false}>
-                  <TableSortLabel
-                    active={sortBy === 'delay'}
-                    direction={sortBy === 'delay' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('delay')}
-                  >
-                    延迟
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sortDirection={sortBy === 'speed' ? sortOrder : false}>
-                  <TableSortLabel
-                    active={sortBy === 'speed'}
-                    direction={sortBy === 'speed' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('speed')}
-                  >
-                    速度
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>国家</TableCell>
-                <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>创建时间</TableCell>
-                <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>更新时间</TableCell>
-                <TableCell align="right">操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredNodes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((node) => (
-                <TableRow key={node.ID} hover selected={isSelected(node)}>
-                  <TableCell padding="checkbox">
-                    <Checkbox checked={isSelected(node)} onChange={() => handleSelectNode(node)} />
-                  </TableCell>
-                  <TableCell>
-                    <Tooltip title={node.Name}>
-                      <Chip
-                        label={node.Name}
-                        color="success"
-                        variant="outlined"
-                        size="small"
-                        sx={{ maxWidth: '150px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-                      />
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>
-                    {node.Group ? (
-                      <Tooltip title={node.Group}>
-                        <Chip
-                          label={node.Group}
-                          color="warning"
-                          variant="outlined"
-                          size="small"
-                          sx={{ maxWidth: '120px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-                        />
-                      </Tooltip>
-                    ) : (
-                      <Typography variant="caption" color="textSecondary">
-                        未分组
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={node.Source === 'manual' ? '手动添加' : node.Source}
-                      color={node.Source === 'manual' ? 'success' : 'warning'}
-                      variant="outlined"
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Tooltip title={node.LinkName || ''}>
-                      <Typography sx={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {node.LinkName || '-'}
-                      </Typography>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>
-                    <Tooltip title={node.DialerProxyName || ''}>
-                      <Typography sx={{ minWidth: 100, maxWidth: 150, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {node.DialerProxyName || '-'}
-                      </Typography>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>
-                    <Box>
-                      {node.DelayTime > 0 ? (
-                        <Chip label={`${node.DelayTime}ms`} color={getDelayColor(node.DelayTime)} size="small" />
-                      ) : node.DelayTime === -1 ? (
-                        <Chip label="超时" color="error" size="small" />
-                      ) : (
-                        <Chip label="未测速" variant="outlined" size="small" />
-                      )}
-                      {node.LastCheck && (
-                        <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '10px', mt: 0.5 }}>
-                          {formatDateTime(node.LastCheck)}
-                        </Typography>
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell>{node.Speed > 0 ? `${node.Speed.toFixed(2)}MB/s` : '-'}</TableCell>
-                  <TableCell>
-                    {node.LinkCountry ? (
-                      <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>
-                    <Typography variant="caption">{formatDateTime(node.CreatedAt)}</Typography>
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>
-                    <Typography variant="caption">{formatDateTime(node.UpdatedAt)}</Typography>
-                  </TableCell>
-                  <TableCell align="right" sx={{ minWidth: 160 }}>
-                    <Tooltip title="测速">
-                      <IconButton size="small" onClick={() => handleSingleSpeedTest(node)}>
-                        <SpeedIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="复制链接">
-                      <IconButton size="small" onClick={() => copyToClipboard(node.Link)}>
-                        <ContentCopyIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="编辑">
-                      <IconButton size="small" onClick={() => handleEditNode(node)}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="删除">
-                      <IconButton size="small" color="error" onClick={() => handleDeleteNode(node)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <NodeTable
+          nodes={filteredNodes}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          selectedNodes={selectedNodes}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSelectAll={handleSelectAll}
+          onSelect={handleSelectNode}
+          onSort={handleSort}
+          onSpeedTest={handleSingleSpeedTest}
+          onCopy={copyToClipboard}
+          onEdit={handleEditNode}
+          onDelete={handleDeleteNode}
+        />
       )}
 
       <TablePagination
@@ -1365,501 +902,90 @@ export default function NodeList() {
       />
 
       {/* 添加/编辑节点对话框 */}
-      <Dialog open={nodeDialogOpen} onClose={() => setNodeDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>{isEditNode ? '编辑节点' : '添加节点'}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              label="节点链接"
-              value={nodeForm.link}
-              onChange={(e) => setNodeForm({ ...nodeForm, link: e.target.value })}
-              placeholder="请输入节点，多行使用回车或逗号分开，支持base64格式的url订阅"
-            />
-            {!isEditNode && (
-              <RadioGroup row value={nodeForm.mergeMode} onChange={(e) => setNodeForm({ ...nodeForm, mergeMode: e.target.value })}>
-                <FormControlLabel value="1" control={<Radio />} label="合并" />
-                <FormControlLabel value="2" control={<Radio />} label="分开" />
-              </RadioGroup>
-            )}
-            {(isEditNode || nodeForm.mergeMode === '1') && (
-              <TextField
-                fullWidth
-                label="备注"
-                value={nodeForm.name}
-                onChange={(e) => setNodeForm({ ...nodeForm, name: e.target.value })}
-              />
-            )}
-            <Autocomplete
-              freeSolo
-              options={proxyNodeOptions.map((node) => node.Name)}
-              loading={loadingProxyNodes}
-              value={nodeForm.dialerProxyName}
-              onChange={(e, newValue) => setNodeForm({ ...nodeForm, dialerProxyName: newValue || '' })}
-              onInputChange={(e, newInputValue) => setNodeForm({ ...nodeForm, dialerProxyName: newInputValue })}
-              onFocus={fetchProxyNodes}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="前置代理节点名称或策略组名称"
-                  placeholder="选择或输入节点名称/策略组名称"
-                  helperText="仅Clash-Meta内核可用，留空则不使用前置代理"
-                />
-              )}
-            />
-            <Autocomplete
-              freeSolo
-              options={groupOptions}
-              value={nodeForm.group}
-              onChange={(e, newValue) => setNodeForm({ ...nodeForm, group: newValue || '' })}
-              onInputChange={(e, newValue) => setNodeForm({ ...nodeForm, group: newValue || '' })}
-              renderInput={(params) => <TextField {...params} label="分组" placeholder="请选择或输入分组名称" />}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNodeDialogOpen(false)}>关闭</Button>
-          <Button variant="contained" onClick={handleSubmitNode}>
-            确定
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <NodeDialog
+        open={nodeDialogOpen}
+        isEdit={isEditNode}
+        nodeForm={nodeForm}
+        setNodeForm={setNodeForm}
+        groupOptions={groupOptions}
+        proxyNodeOptions={proxyNodeOptions}
+        loadingProxyNodes={loadingProxyNodes}
+        onClose={() => setNodeDialogOpen(false)}
+        onSubmit={handleSubmitNode}
+        onFetchProxyNodes={fetchProxyNodes}
+      />
 
       {/* 订阅调度器对话框 */}
-      <Dialog open={schedulerDialogOpen} onClose={() => setSchedulerDialogOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          导入订阅
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAddScheduler}>
-              添加订阅
-            </Button>
-            <IconButton onClick={fetchSchedulers} disabled={loading}>
-              <RefreshIcon
-                sx={
-                  loading
-                    ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
-                    : {}
-                }
-              />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>名称</TableCell>
-                  <TableCell>URL</TableCell>
-                  <TableCell>节点数量</TableCell>
-                  <TableCell>上次运行</TableCell>
-                  <TableCell>下次运行</TableCell>
-                  <TableCell>Cron表达式</TableCell>
-                  <TableCell>分组</TableCell>
-                  <TableCell>状态</TableCell>
-                  <TableCell align="right">操作</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {schedulers.map((scheduler) => (
-                  <TableRow key={scheduler.ID}>
-                    <TableCell>{scheduler.Name}</TableCell>
-                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{scheduler.URL}</TableCell>
-                    <TableCell>
-                      <Chip label={scheduler.NodeCount || 0} color="primary" variant="outlined" size="small" />
-                    </TableCell>
-                    <TableCell>{formatDateTime(scheduler.LastRunTime)}</TableCell>
-                    <TableCell>{formatDateTime(scheduler.NextRunTime)}</TableCell>
-                    <TableCell>{scheduler.CronExpr}</TableCell>
-                    <TableCell>{scheduler.Group || '-'}</TableCell>
-                    <TableCell>
-                      <Chip label={scheduler.Enabled ? '启用' : '禁用'} color={scheduler.Enabled ? 'success' : 'default'} size="small" />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="立即拉取">
-                        <IconButton size="small" onClick={() => handlePullScheduler(scheduler)}>
-                          <PlayArrowIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <IconButton size="small" onClick={() => handleEditScheduler(scheduler)}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" color="error" onClick={() => handleDeleteScheduler(scheduler)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSchedulerDialogOpen(false)}>关闭</Button>
-        </DialogActions>
-      </Dialog>
+      <SchedulerDialog
+        open={schedulerDialogOpen}
+        schedulers={schedulers}
+        loading={loading}
+        onClose={() => setSchedulerDialogOpen(false)}
+        onRefresh={fetchSchedulers}
+        onAdd={handleAddScheduler}
+        onEdit={handleEditScheduler}
+        onDelete={handleDeleteScheduler}
+        onPull={handlePullScheduler}
+      />
 
       {/* 添加/编辑订阅表单对话框 */}
-      <Dialog open={schedulerFormOpen} onClose={() => setSchedulerFormOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{isEditScheduler ? '编辑订阅' : '添加订阅'}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              fullWidth
-              label="名称"
-              value={schedulerForm.Name}
-              helperText="订阅名称不能重复，名称将作为节点来源"
-              onChange={(e) => setSchedulerForm({ ...schedulerForm, Name: e.target.value })}
-            />
-            <TextField
-              fullWidth
-              label="URL"
-              value={schedulerForm.URL}
-              helperText="目前仅支持clash协议的yaml订阅和v2ray的base64以及非base64订阅"
-              onChange={(e) => setSchedulerForm({ ...schedulerForm, URL: e.target.value })}
-            />
-            <Autocomplete
-              freeSolo
-              options={CRON_OPTIONS}
-              getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
-              value={schedulerForm.CronExpr}
-              onChange={(e, newValue) => {
-                const value = typeof newValue === 'string' ? newValue : newValue?.value || '';
-                setSchedulerForm({ ...schedulerForm, CronExpr: value });
-              }}
-              onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, CronExpr: newValue || '' })}
-              renderOption={(props, option) => (
-                <Box component="li" {...props} key={option.value}>
-                  <Box>
-                    <Typography variant="body2">{option.label}</Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      {option.value}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Cron表达式"
-                  placeholder="分 时 日 月 周"
-                  helperText="格式: 分 时 日 月 周，如 0 */6 * * * 表示每6小时"
-                />
-              )}
-            />
-            <Autocomplete
-              freeSolo
-              options={groupOptions}
-              value={schedulerForm.Group}
-              onChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, Group: newValue || '' })}
-              onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, Group: newValue || '' })}
-              renderInput={(params) => (
-                <TextField {...params} label="分组" helperText="设置分组后，从此订阅导入的所有节点将自动归属到此分组" />
-              )}
-            />
-            <Autocomplete
-              freeSolo
-              options={USER_AGENT_OPTIONS}
-              getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
-              value={schedulerForm.UserAgent}
-              onChange={(e, newValue) => {
-                const value = typeof newValue === 'string' ? newValue : newValue?.value || 'Clash';
-                setSchedulerForm({ ...schedulerForm, UserAgent: value });
-              }}
-              onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, UserAgent: newValue || 'Clash' })}
-              renderOption={(props, option) => (
-                <Box component="li" {...props} key={option.value}>
-                  <Box>
-                    <Typography variant="body2">{option.label}</Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      {option.value}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="User-Agent"
-                  placeholder="选择或输入 User-Agent"
-                  helperText="拉取订阅时使用的 User-Agent，默认为 Clash"
-                />
-              )}
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={schedulerForm.Enabled}
-                  onChange={(e) => setSchedulerForm({ ...schedulerForm, Enabled: e.target.checked })}
-                />
-              }
-              label="启用"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={schedulerForm.DownloadWithProxy}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setSchedulerForm({ ...schedulerForm, DownloadWithProxy: checked });
-                    if (checked) {
-                      fetchProxyNodes();
-                    }
-                  }}
-                />
-              }
-              label="使用代理下载"
-            />
-            {schedulerForm.DownloadWithProxy && (
-              <Box>
-                <Autocomplete
-                  options={proxyNodeOptions}
-                  loading={loadingProxyNodes}
-                  getOptionLabel={(option) => option.Name || (option.Link ? `未知节点 (${option.Link.substring(0, 30)}...)` : '')}
-                  value={
-                    proxyNodeOptions.find((n) => n.Link === schedulerForm.ProxyLink) ||
-                    (schedulerForm.ProxyLink ? { Link: schedulerForm.ProxyLink, Name: '', ID: 0 } : null)
-                  }
-                  isOptionEqualToValue={(option, value) => option.Link === value.Link}
-                  onChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, ProxyLink: newValue?.Link || '' })}
-                  renderOption={(props, option) => (
-                    <Box component="li" {...props} key={option.ID}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                        <Typography variant="body2">{option.Name}</Typography>
-                        <Typography variant="caption" color="textSecondary" sx={{ ml: 2 }}>
-                          {option.Group || '未分组'}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  )}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="选择代理节点"
-                      placeholder="留空则自动选择最佳节点"
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {loadingProxyNodes ? <Typography variant="caption">加载中...</Typography> : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        )
-                      }}
-                    />
-                  )}
-                />
-                <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
-                  如果未选择具体代理，系统将自动选择延迟最低且速度最快的节点作为下载代理，你也可以输入外部代理地址
-                </Typography>
-              </Box>
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSchedulerFormOpen(false)}>取消</Button>
-          <Button variant="contained" onClick={handleSubmitScheduler}>
-            确定
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <SchedulerFormDialog
+        open={schedulerFormOpen}
+        isEdit={isEditScheduler}
+        schedulerForm={schedulerForm}
+        setSchedulerForm={setSchedulerForm}
+        groupOptions={groupOptions}
+        proxyNodeOptions={proxyNodeOptions}
+        loadingProxyNodes={loadingProxyNodes}
+        onClose={() => setSchedulerFormOpen(false)}
+        onSubmit={handleSubmitScheduler}
+        onFetchProxyNodes={fetchProxyNodes}
+      />
+
+      {/* 删除订阅对话框 */}
+      <DeleteSchedulerDialog
+        open={deleteSchedulerDialogOpen}
+        scheduler={deleteSchedulerTarget}
+        withNodes={deleteSchedulerWithNodes}
+        setWithNodes={setDeleteSchedulerWithNodes}
+        onClose={() => setDeleteSchedulerDialogOpen(false)}
+        onConfirm={handleConfirmDeleteScheduler}
+      />
 
       {/* 测速设置对话框 */}
-      <Dialog open={speedTestDialogOpen} onClose={() => setSpeedTestDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>测速设置</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={speedTestForm.enabled}
-                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, enabled: e.target.checked })}
-                />
-              }
-              label="启用自动测速"
-            />
-            <Autocomplete
-              freeSolo
-              options={CRON_OPTIONS}
-              getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
-              value={speedTestForm.cron}
-              onChange={(e, newValue) => {
-                const value = typeof newValue === 'string' ? newValue : newValue?.value || '';
-                setSpeedTestForm({ ...speedTestForm, cron: value });
-              }}
-              onInputChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, cron: newValue || '' })}
-              renderOption={(props, option) => (
-                <Box component="li" {...props} key={option.value}>
-                  <Box>
-                    <Typography variant="body2">{option.label}</Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      {option.value}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Cron表达式"
-                  placeholder="分 时 日 月 周"
-                  helperText="格式: 分 时 日 月 周 (例如: 0 */1 * * * 表示每小时执行一次)"
-                />
-              )}
-            />
-            <FormControl fullWidth>
-              <InputLabel>测速模式</InputLabel>
-              <Select
-                variant={'outlined'}
-                value={speedTestForm.mode}
-                label="测速模式"
-                onChange={(e) => handleSpeedModeChange(e.target.value)}
-              >
-                <MenuItem value="tcp">Mihomo - 仅延迟测试 (更快)</MenuItem>
-                <MenuItem value="mihomo">Mihomo - 真速度测试 (延迟+下载速度)</MenuItem>
-              </Select>
-            </FormControl>
-            <Box>
-              <Autocomplete
-                freeSolo
-                options={speedTestForm.mode === 'mihomo' ? SPEED_TEST_MIHOMO_OPTIONS : SPEED_TEST_TCP_OPTIONS}
-                getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
-                value={speedTestForm.url}
-                onChange={(e, newValue) => {
-                  const value = typeof newValue === 'string' ? newValue : newValue?.value || '';
-                  setSpeedTestForm({ ...speedTestForm, url: value });
-                }}
-                onInputChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, url: newValue || '' })}
-                renderOption={(props, option) => (
-                  <Box component="li" {...props} key={option.value}>
-                    <Box>
-                      <Typography variant="body2">{option.label}</Typography>
-                      <Typography variant="caption" color="textSecondary" sx={{ wordBreak: 'break-all' }}>
-                        {option.value}
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="测速URL"
-                    placeholder={speedTestForm.mode === 'mihomo' ? '请选择或输入下载测速URL' : '请选择或输入204测速URL'}
-                  />
-                )}
-              />
-              <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
-                可以自定义测速URL。
-                {speedTestForm.mode === 'mihomo'
-                  ? '真速度测试使用可下载资源地址，例如: https://speed.cloudflare.com/__down?bytes=10000000'
-                  : '延迟测试使用更轻量的204测试地址，例如: http://cp.cloudflare.com/generate_204'}
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              label="超时时间"
-              type="number"
-              value={speedTestForm.timeout}
-              onChange={(e) => setSpeedTestForm({ ...speedTestForm, timeout: Number(e.target.value) })}
-              InputProps={{ endAdornment: <InputAdornment position="end">秒</InputAdornment> }}
-            />
-            <Autocomplete
-              multiple
-              freeSolo
-              options={groupOptions}
-              value={speedTestForm.groups || []}
-              onChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, groups: newValue })}
-              renderInput={(params) => <TextField {...params} label="测速分组" placeholder="留空则测试全部分组" />}
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={speedTestForm.detect_country}
-                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, detect_country: e.target.checked })}
-                />
-              }
-              label="检测落地IP国家"
-            />
-            <Typography variant="caption" color="textSecondary" sx={{ mt: -1 }}>
-              开启后，测速时会通过代理获取落地IP并解析对应的国家代码，会降低测速效率。IP通过https://api.ip.sb/ip获取。
-            </Typography>
-            <Button variant="outlined" startIcon={<PlayArrowIcon />} onClick={handleRunSpeedTest}>
-              立即测速
-            </Button>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSpeedTestDialogOpen(false)}>取消</Button>
-          <Button variant="contained" onClick={handleSubmitSpeedTest}>
-            保存
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <SpeedTestDialog
+        open={speedTestDialogOpen}
+        speedTestForm={speedTestForm}
+        setSpeedTestForm={setSpeedTestForm}
+        groupOptions={groupOptions}
+        onClose={() => setSpeedTestDialogOpen(false)}
+        onSubmit={handleSubmitSpeedTest}
+        onRunSpeedTest={handleRunSpeedTest}
+        onModeChange={handleSpeedModeChange}
+      />
 
       {/* 批量修改分组对话框 */}
-      <Dialog open={batchGroupDialogOpen} onClose={() => setBatchGroupDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>批量修改分组</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-            将为选中的 {selectedNodes.length} 个节点设置相同的分组
-          </Typography>
-          <Autocomplete
-            freeSolo
-            options={groupOptions}
-            value={batchGroupValue}
-            onChange={(e, newValue) => setBatchGroupValue(newValue || '')}
-            onInputChange={(e, newInputValue) => setBatchGroupValue(newInputValue)}
-            renderInput={(params) => <TextField {...params} label="分组名称" placeholder="输入或选择分组名称，留空则清空分组" fullWidth />}
-          />
-          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-            提示：留空将清除所选节点的分组设置
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBatchGroupDialogOpen(false)}>取消</Button>
-          <Button variant="contained" onClick={handleSubmitBatchGroup}>
-            确认修改
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <BatchGroupDialog
+        open={batchGroupDialogOpen}
+        selectedCount={selectedNodes.length}
+        value={batchGroupValue}
+        setValue={setBatchGroupValue}
+        groupOptions={groupOptions}
+        onClose={() => setBatchGroupDialogOpen(false)}
+        onSubmit={handleSubmitBatchGroup}
+      />
 
       {/* 批量修改前置代理对话框 */}
-      <Dialog open={batchDialerProxyDialogOpen} onClose={() => setBatchDialerProxyDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>批量修改前置代理</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-            将为选中的 {selectedNodes.length} 个节点设置相同的前置代理
-          </Typography>
-          <Autocomplete
-            freeSolo
-            options={proxyNodeOptions.map((node) => node.Name)}
-            loading={loadingProxyNodes}
-            value={batchDialerProxyValue}
-            onChange={(e, newValue) => setBatchDialerProxyValue(newValue || '')}
-            onInputChange={(e, newInputValue) => setBatchDialerProxyValue(newInputValue)}
-            renderInput={(params) => (
-              <TextField {...params} label="前置代理节点" placeholder="选择或输入代理节点名称/策略组名称，留空则清空前置代理" fullWidth />
-            )}
-          />
-          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-            提示：前置代理节点用于链式代理，流量将先经过此节点再转发。留空将清除前置代理设置。
-          </Typography>
-          <Alert severity="warning" sx={{ mt: 1 }}>
-            前置代理仅 Clash-Meta 内核可用
-          </Alert>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBatchDialerProxyDialogOpen(false)}>取消</Button>
-          <Button variant="contained" onClick={handleSubmitBatchDialerProxy}>
-            确认修改
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <BatchDialerProxyDialog
+        open={batchDialerProxyDialogOpen}
+        selectedCount={selectedNodes.length}
+        value={batchDialerProxyValue}
+        setValue={setBatchDialerProxyValue}
+        proxyNodeOptions={proxyNodeOptions}
+        loadingProxyNodes={loadingProxyNodes}
+        onClose={() => setBatchDialerProxyDialogOpen(false)}
+        onSubmit={handleSubmitBatchDialerProxy}
+      />
 
       {/* 提示消息 */}
       <Snackbar
@@ -1886,56 +1012,15 @@ export default function NodeList() {
           {snackbar.message}
         </Alert>
       </Snackbar>
-      {/* 确认对话框 */}
-      <Dialog
-        open={confirmOpen}
-        onClose={handleConfirmClose}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">{confirmInfo.title}</DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">{confirmInfo.content}</DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleConfirmClose}>取消</Button>
-          <Button onClick={handleConfirmAction} color="primary" autoFocus>
-            确定
-          </Button>
-        </DialogActions>
-      </Dialog>
 
-      {/* 删除订阅对话框 */}
-      <Dialog open={deleteSchedulerDialogOpen} onClose={() => setDeleteSchedulerDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>删除订阅</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" gutterBottom>
-            确定要删除订阅 "{deleteSchedulerTarget?.Name}" 吗？
-          </Typography>
-          {(deleteSchedulerTarget?.NodeCount || 0) > 0 && (
-            <>
-              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                该订阅关联了 {deleteSchedulerTarget?.NodeCount || 0} 个节点
-              </Typography>
-              <FormControlLabel
-                control={<Checkbox checked={deleteSchedulerWithNodes} onChange={(e) => setDeleteSchedulerWithNodes(e.target.checked)} />}
-                label="同时删除关联的节点"
-              />
-              {!deleteSchedulerWithNodes && (
-                <Alert severity="info" sx={{ mt: 1 }}>
-                  保留的节点将变为手动添加的节点，不再与此订阅关联
-                </Alert>
-              )}
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteSchedulerDialogOpen(false)}>取消</Button>
-          <Button onClick={handleConfirmDeleteScheduler} color="error" variant="contained">
-            确认删除
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* 确认对话框 */}
+      <ConfirmDialog
+        open={confirmOpen}
+        title={confirmInfo.title}
+        content={confirmInfo.content}
+        onClose={handleConfirmClose}
+        onConfirm={confirmInfo.action}
+      />
     </MainCard>
   );
 }
