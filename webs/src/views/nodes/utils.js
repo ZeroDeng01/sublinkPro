@@ -1,70 +1,70 @@
 // Cron 表达式预设 - 包含友好的说明
 export const CRON_OPTIONS = [
-  { label: "每30分钟", value: "*/30 * * * *" },
-  { label: "每1小时", value: "0 * * * *" },
-  { label: "每6小时", value: "0 */6 * * *" },
-  { label: "每12小时", value: "0 */12 * * *" },
-  { label: "每天", value: "0 0 * * *" },
-  { label: "每周一", value: "0 0 * * 1" }
+  { label: '每30分钟', value: '*/30 * * * *' },
+  { label: '每1小时', value: '0 * * * *' },
+  { label: '每6小时', value: '0 */6 * * *' },
+  { label: '每12小时', value: '0 */12 * * *' },
+  { label: '每天', value: '0 0 * * *' },
+  { label: '每周一', value: '0 0 * * 1' }
 ];
 
 // 测速URL选项 - TCP模式 (204轻量)
 export const SPEED_TEST_TCP_OPTIONS = [
-  { label: "Cloudflare (cp.cloudflare.com)", value: "http://cp.cloudflare.com/generate_204" },
-  { label: "Apple (captive.apple.com)", value: "http://captive.apple.com/generate_204" },
-  { label: "Gstatic (www.gstatic.com)", value: "http://www.gstatic.com/generate_204" }
+  { label: 'Cloudflare (cp.cloudflare.com)', value: 'http://cp.cloudflare.com/generate_204' },
+  { label: 'Apple (captive.apple.com)', value: 'http://captive.apple.com/generate_204' },
+  { label: 'Gstatic (www.gstatic.com)', value: 'http://www.gstatic.com/generate_204' }
 ];
 
 // 测速URL选项 - Mihomo模式 (真速度测试用下载)
 export const SPEED_TEST_MIHOMO_OPTIONS = [
-  { label: "10MB (Cloudflare)", value: "https://speed.cloudflare.com/__down?bytes=10000000" },
-  { label: "50MB (Cloudflare)", value: "https://speed.cloudflare.com/__down?bytes=50000000" },
-  { label: "100MB (Cloudflare)", value: "https://speed.cloudflare.com/__down?bytes=100000000" }
+  { label: '10MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=10000000' },
+  { label: '50MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=50000000' },
+  { label: '100MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=100000000' }
 ];
 
 // User-Agent 预设选项
 export const USER_AGENT_OPTIONS = [
-  { label: "Clash (默认)", value: "Clash" },
-  { label: "clash.meta", value: "clash.meta" },
-  { label: "clash-verge/v1.5.1", value: "clash-verge/v1.5.1" }
+  { label: 'Clash (默认)', value: 'Clash' },
+  { label: 'clash.meta', value: 'clash.meta' },
+  { label: 'clash-verge/v1.5.1', value: 'clash-verge/v1.5.1' }
 ];
 
 // 格式化日期时间
 export const formatDateTime = (dateTimeString) => {
-  if (!dateTimeString || dateTimeString === "0001-01-01T00:00:00Z") {
-    return "-";
+  if (!dateTimeString || dateTimeString === '0001-01-01T00:00:00Z') {
+    return '-';
   }
   try {
     const date = new Date(dateTimeString);
     if (isNaN(date.getTime())) {
-      return "-";
+      return '-';
     }
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    const seconds = String(date.getSeconds()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   } catch {
-    return "-";
+    return '-';
   }
 };
 
 // ISO国家代码转换为国旗emoji
 export const isoToFlag = (isoCode) => {
-  if (!isoCode || isoCode.length !== 2) return "";
-  isoCode = isoCode.toUpperCase() === "TW" ? "CN" : isoCode;
+  if (!isoCode || isoCode.length !== 2) return '';
+  isoCode = isoCode.toUpperCase() === 'TW' ? 'CN' : isoCode;
   const codePoints = isoCode
     .toUpperCase()
-    .split("")
+    .split('')
     .map((char) => 127397 + char.charCodeAt(0));
   return String.fromCodePoint(...codePoints);
 };
 
 // 格式化国家显示 (国旗emoji + 代码)
 export const formatCountry = (linkCountry) => {
-  if (!linkCountry) return "";
+  if (!linkCountry) return '';
   const flag = isoToFlag(linkCountry);
   return flag ? `${flag} ${linkCountry}` : linkCountry;
 };
@@ -116,8 +116,8 @@ export const validateCronExpression = (cron) => {
 
 // 延迟颜色
 export const getDelayColor = (delay) => {
-  if (delay <= 0) return "default";
-  if (delay < 100) return "success";
-  if (delay < 500) return "warning";
-  return "error";
+  if (delay <= 0) return 'default';
+  if (delay < 100) return 'success';
+  if (delay < 500) return 'warning';
+  return 'error';
 };

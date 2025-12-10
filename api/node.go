@@ -610,6 +610,12 @@ func GetSpeedTestConfig(c *gin.Context) {
 	detectCountryStr, _ := models.GetSetting("speed_test_detect_country")
 	detectCountry := detectCountryStr == "true"
 
+	concurrencyStr, _ := models.GetSetting("speed_test_concurrency")
+	concurrency := 0
+	if concurrencyStr != "" {
+		concurrency, _ = strconv.Atoi(concurrencyStr)
+	}
+
 	utils.OkDetailed(c, "获取成功", gin.H{
 		"cron":           cron,
 		"enabled":        enabled,
@@ -618,6 +624,7 @@ func GetSpeedTestConfig(c *gin.Context) {
 		"timeout":        timeout,
 		"groups":         groups,
 		"detect_country": detectCountry,
+		"concurrency":    concurrency,
 	})
 }
 
@@ -631,6 +638,7 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		Timeout       interface{} `json:"timeout"`
 		Groups        []string    `json:"groups"`
 		DetectCountry bool        `json:"detect_country"`
+		Concurrency   int         `json:"concurrency"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -692,6 +700,12 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 	err = models.SetSetting("speed_test_detect_country", strconv.FormatBool(req.DetectCountry))
 	if err != nil {
 		utils.FailWithMsg(c, "保存落地IP检测配置失败")
+		return
+	}
+
+	err = models.SetSetting("speed_test_concurrency", strconv.Itoa(req.Concurrency))
+	if err != nil {
+		utils.FailWithMsg(c, "保存并发数配置失败")
 		return
 	}
 

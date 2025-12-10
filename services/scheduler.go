@@ -5,6 +5,8 @@ import (
 	"log"
 	"math"
 	"regexp"
+	"runtime"
+	"strconv"
 	"strings"
 	"sublink/models"
 	"sublink/node"
@@ -444,8 +446,30 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	detectCountryStr, _ := models.GetSetting("speed_test_detect_country")
 	detectCountry := detectCountryStr == "true"
 
-	// 并发控制
+	// 并发控制 - 从配置读取，如果为空或0则自动根据CPU核数设置
 	concurrency := 10 // 默认并发数
+	concurrencyStr, _ := models.GetSetting("speed_test_concurrency")
+	if concurrencyStr != "" {
+		if c, err := strconv.Atoi(concurrencyStr); err == nil && c > 0 {
+			concurrency = c
+		} else {
+			// 配置为空或为0，自动根据CPU核数设置
+			cpuCount := runtime.NumCPU()
+			concurrency = cpuCount * 2
+			if concurrency < 2 {
+				concurrency = 2
+			}
+			log.Printf("自动设置测速并发数: %d (基于 %d CPU核心)", concurrency, cpuCount)
+		}
+	} else {
+		// 未设置配置，自动根据CPU核数设置
+		cpuCount := runtime.NumCPU()
+		concurrency = cpuCount * 2
+		if concurrency < 2 {
+			concurrency = 2
+		}
+		log.Printf("自动设置测速并发数: %d (基于 %d CPU核心)", concurrency, cpuCount)
+	}
 	sem := make(chan struct{}, concurrency)
 	var wg sync.WaitGroup
 

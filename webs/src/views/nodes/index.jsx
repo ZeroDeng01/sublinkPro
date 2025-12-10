@@ -1,28 +1,28 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import Alert from "@mui/material/Alert";
+import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import Snackbar from "@mui/material/Snackbar";
+import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
-import DownloadIcon from "@mui/icons-material/Download";
+import DownloadIcon from '@mui/icons-material/Download';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SettingsIcon from '@mui/icons-material/Settings';
-import SpeedIcon from "@mui/icons-material/Speed";
+import SpeedIcon from '@mui/icons-material/Speed';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import TaskProgressPanel from 'components/TaskProgressPanel';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
-import ConfirmDialog from "components/ConfirmDialog";
-import Pagination from "components/Pagination";
+import ConfirmDialog from 'components/ConfirmDialog';
+import Pagination from 'components/Pagination';
 
 // api
 import {
@@ -56,10 +56,10 @@ import {
   BatchActions,
   NodeMobileList,
   NodeTable
-} from "./component";
+} from './component';
 
 // utils
-import { validateCronExpression, SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS } from "./utils";
+import { validateCronExpression, SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS } from './utils';
 
 // ==============================|| 节点管理 ||============================== //
 
@@ -151,7 +151,8 @@ export default function NodeList() {
     url: '',
     timeout: 5,
     groups: [],
-    detect_country: false
+    detect_country: false,
+    concurrency: 0
   });
 
   // 国家筛选
@@ -650,7 +651,7 @@ export default function NodeList() {
   const handleOpenSpeedTest = async () => {
     try {
       const response = await getSpeedTestConfig();
-      setSpeedTestForm(response.data || { cron: '', enabled: false, mode: 'tcp', url: '', timeout: 5, groups: [] });
+      setSpeedTestForm(response.data || { cron: '', enabled: false, mode: 'tcp', url: '', timeout: 5, groups: [], concurrency: 0 });
       setSpeedTestDialogOpen(true);
     } catch (error) {
       console.error(error);
@@ -729,7 +730,7 @@ export default function NodeList() {
         if (maxDelay) params.maxDelay = maxDelay;
         if (minSpeed) params.minSpeed = minSpeed;
         if (countryFilter && countryFilter.length > 0) {
-          params["countries[]"] = countryFilter;
+          params['countries[]'] = countryFilter;
         }
 
         const response = await getNodeIds(params);
@@ -740,7 +741,7 @@ export default function NodeList() {
         setSelectedNodes(selectedObjs);
         showMessage(`已选择所有符合条件的 ${allIds.length} 个节点`);
       } catch (error) {
-        console.error("获取所有节点ID失败:", error);
+        console.error('获取所有节点ID失败:', error);
         // 回退方案：只选择当前页
         setSelectedNodes(filteredNodes);
       }
@@ -804,9 +805,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: "spin 1s linear infinite",
-                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -849,9 +850,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: "spin 1s linear infinite",
-                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
