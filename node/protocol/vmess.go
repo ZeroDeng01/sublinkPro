@@ -68,7 +68,7 @@ func DecodeVMESSURL(s string) (Vmess, error) {
 	var vmess Vmess
 	err := json.Unmarshal([]byte(param), &vmess)
 	if err != nil {
-		log.Println(err)
+		log.Printf("❌节点解析错误：%v  【节点：%s】", err, param)
 		return Vmess{}, fmt.Errorf("json格式化失败:%s", param)
 	}
 	vmess.Add = utils.UnwrapIPv6Host(vmess.Add)

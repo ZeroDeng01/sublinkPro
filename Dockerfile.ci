@@ -7,6 +7,8 @@ ARG TARGETARCH
 
 WORKDIR /app
 
+ENV GIN_MODE=release
+
 # Install dependencies
 RUN apk add --no-cache tzdata ca-certificates && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \

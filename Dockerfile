@@ -26,6 +26,8 @@ RUN CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
 FROM alpine:latest
 WORKDIR /app
 
+ENV GIN_MODE=release
+
 # 安装 tzdata 和 ca-certificates，并设置时区
 RUN apk add --no-cache tzdata ca-certificates && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
