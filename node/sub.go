@@ -119,12 +119,36 @@ func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithP
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("URL %s，获取Clash配置失败:  %v", urlStr, err)
+		// 发送请求失败通知
+		sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
+			Event:   "sub_update",
+			Title:   "订阅更新失败",
+			Message: fmt.Sprintf("❌订阅【%s】请求失败: %v", subName, err),
+			Data: map[string]interface{}{
+				"id":     id,
+				"name":   subName,
+				"status": "failed",
+				"error":  err.Error(),
+			},
+		})
 		return err
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("URL %s，读取Clash配置失败:  %v", urlStr, err)
+		// 发送读取失败通知
+		sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
+			Event:   "sub_update",
+			Title:   "订阅更新失败",
+			Message: fmt.Sprintf("❌订阅【%s】读取响应失败: %v", subName, err),
+			Data: map[string]interface{}{
+				"id":     id,
+				"name":   subName,
+				"status": "failed",
+				"error":  err.Error(),
+			},
+		})
 		return err
 	}
 	var config ClashConfig
@@ -158,6 +182,18 @@ func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithP
 
 	if len(config.Proxies) == 0 {
 		log.Printf("URL %s，解析失败或未找到节点 (YAML error: %v)", urlStr, errYaml)
+		// 发送解析失败通知
+		sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
+			Event:   "sub_update",
+			Title:   "订阅更新失败",
+			Message: fmt.Sprintf("❌订阅【%s】解析失败或未找到节点", subName),
+			Data: map[string]interface{}{
+				"id":     id,
+				"name":   subName,
+				"status": "failed",
+				"error":  "解析失败或未找到节点",
+			},
+		})
 		return fmt.Errorf("解析失败 or 未找到节点")
 	}
 
