@@ -56,6 +56,8 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 			Title:   "自动标签完成",
 			Message: "自动标签规则执行完成",
 			Data: map[string]interface{}{
+				"status":      "success",
+				"error":       "自动标签规则执行完成",
 				"triggerType": triggerType,
 				"taggedCount": taggedCount,
 			},
