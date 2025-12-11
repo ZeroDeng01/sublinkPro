@@ -30,6 +30,7 @@ type Node struct {
 	LastCheck       string    // 最后检测时间
 	CreatedAt       time.Time `gorm:"autoCreateTime" json:"CreatedAt"` // 创建时间
 	UpdatedAt       time.Time `gorm:"autoUpdateTime" json:"UpdatedAt"` // 更新时间
+	Tags            string    // 标签ID，逗号分隔，如 "1,3,5"
 }
 
 // nodeCache 使用新的泛型缓存，支持二级索引

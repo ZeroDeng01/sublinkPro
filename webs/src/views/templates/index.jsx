@@ -287,9 +287,9 @@ export default function TemplateList() {
                 sx={
                   loading
                     ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -305,9 +305,9 @@ export default function TemplateList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -485,10 +485,7 @@ export default function TemplateList() {
                 <SearchableNodeSelect
                   nodes={proxyNodeOptions}
                   loading={loadingProxyNodes}
-                  value={
-                    proxyNodeOptions.find((n) => n.Link === proxyLink) ||
-                    (proxyLink ? { Link: proxyLink, Name: '', ID: 0 } : null)
-                  }
+                  value={proxyNodeOptions.find((n) => n.Link === proxyLink) || (proxyLink ? { Link: proxyLink, Name: '', ID: 0 } : null)}
                   onChange={(newValue) => setProxyLink(newValue?.Link || '')}
                   displayField="Name"
                   valueField="Link"

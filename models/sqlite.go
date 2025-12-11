@@ -91,6 +91,16 @@ func InitSqlite() {
 	} else {
 		log.Printf("数据表Template创建成功")
 	}
+	if err := DB.AutoMigrate(&Tag{}); err != nil {
+		log.Printf("基础数据表Tag迁移失败: %v", err)
+	} else {
+		log.Printf("数据表Tag创建成功")
+	}
+	if err := DB.AutoMigrate(&TagRule{}); err != nil {
+		log.Printf("基础数据表TagRule迁移失败: %v", err)
+	} else {
+		log.Printf("数据表TagRule创建成功")
+	}
 
 	// 检查并删除 idx_name_id 索引
 	// 0000_drop_idx_name_id

@@ -62,6 +62,7 @@ export default function NodeTable({
             <TableCell>备注</TableCell>
             <TableCell>分组</TableCell>
             <TableCell>来源</TableCell>
+            <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>标签</TableCell>
             <TableCell>节点名称</TableCell>
             <TableCell>前置代理</TableCell>
             <TableCell sortDirection={sortBy === 'delay' ? sortOrder : false}>
@@ -129,6 +130,29 @@ export default function NodeTable({
                   variant="outlined"
                   size="small"
                 />
+              </TableCell>
+              <TableCell>
+                {node.Tags ? (
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 150 }}>
+                    {node.Tags.split(',')
+                      .filter((t) => t.trim())
+                      .slice(0, 3)
+                      .map((tag, idx) => (
+                        <Chip key={idx} label={tag.trim()} size="small" sx={{ fontSize: '10px', height: 20 }} />
+                      ))}
+                    {node.Tags.split(',').filter((t) => t.trim()).length > 3 && (
+                      <Chip
+                        label={`+${node.Tags.split(',').filter((t) => t.trim()).length - 3}`}
+                        size="small"
+                        sx={{ fontSize: '10px', height: 20 }}
+                      />
+                    )}
+                  </Box>
+                ) : (
+                  <Typography variant="caption" color="textSecondary">
+                    -
+                  </Typography>
+                )}
               </TableCell>
               <TableCell>
                 <Tooltip title={node.LinkName || ''}>

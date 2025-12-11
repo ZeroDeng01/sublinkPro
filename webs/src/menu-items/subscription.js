@@ -1,5 +1,14 @@
 // assets
-import { IconNetwork, IconList, IconTemplate, IconScript, IconKey, IconSettings, IconDeviceDesktopAnalytics } from '@tabler/icons-react';
+import {
+  IconNetwork,
+  IconList,
+  IconTemplate,
+  IconScript,
+  IconKey,
+  IconSettings,
+  IconDeviceDesktopAnalytics,
+  IconTags
+} from '@tabler/icons-react';
 
 // ==============================|| SUBSCRIPTION MENU ITEMS ||============================== //
 
@@ -30,6 +39,14 @@ const subscription = {
       type: 'item',
       url: '/subscription/templates',
       icon: IconTemplate,
+      breadcrumbs: true
+    },
+    {
+      id: 'tags',
+      title: '标签管理',
+      type: 'item',
+      url: '/subscription/tags',
+      icon: IconTags,
       breadcrumbs: true
     }
   ]

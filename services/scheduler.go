@@ -238,9 +238,16 @@ func ExecuteSubscriptionTask(id int, url string, subName string) {
 				"status": "error",
 			},
 		})
+		return
 	}
-	// 成功时不在这里发送通知，因为 node/sub.go 的 scheduleClashToNodeLinks 函数
-	// 会发送包含详细节点统计信息的 "订阅更新完成" 通知
+
+	// 订阅更新成功后，应用自动标签规则
+	go func() {
+		updatedNodes, err := models.ListBySourceID(id)
+		if err == nil && len(updatedNodes) > 0 {
+			ApplyAutoTagRules(updatedNodes, "subscription_update")
+		}
+	}()
 }
 
 // cleanCronExpression 清理Cron表达式中的多余空格
@@ -626,6 +633,11 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 			"duration": duration.Milliseconds(),
 		},
 	})
+
+	// 应用自动标签规则 - 测速完成后触发
+	go func() {
+		ApplyAutoTagRules(nodes, "speed_test")
+	}()
 }
 
 // formatDuration 格式化时长为人类可读字符串

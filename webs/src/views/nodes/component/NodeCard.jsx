@@ -104,6 +104,12 @@ export default function NodeCard({ node, isSelected, onSelect, onSpeedTest, onCo
               <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />
             </Tooltip>
           )}
+          {node.Tags &&
+            node.Tags.split(',')
+              .filter((t) => t.trim())
+              .map((tag, idx) => (
+                <Chip key={`tag-${idx}`} label={tag.trim()} size="small" color="primary" sx={{ fontSize: '10px', height: 20 }} />
+              ))}
         </Stack>
 
         {/* Time Info Section */}
