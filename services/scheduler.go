@@ -447,6 +447,8 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	detectCountry := detectCountryStr == "true"
 
 	// 并发控制 - 从配置读取，如果为空或0则自动根据CPU核数设置
+	// 设置并发数上限，防止恶意或错误配置导致内存耗尽
+	const maxConcurrency = 1000
 	concurrency := 10 // 默认并发数
 	concurrencyStr, _ := models.GetSetting("speed_test_concurrency")
 	if concurrencyStr != "" {
@@ -469,6 +471,11 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 			concurrency = 2
 		}
 		log.Printf("自动设置测速并发数: %d (基于 %d CPU核心)", concurrency, cpuCount)
+	}
+	// 确保并发数不超过安全上限
+	if concurrency > maxConcurrency {
+		log.Printf("警告: 配置的并发数 %d 超过最大限制，已调整为 %d", concurrency, maxConcurrency)
+		concurrency = maxConcurrency
 	}
 	sem := make(chan struct{}, concurrency)
 	var wg sync.WaitGroup
