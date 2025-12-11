@@ -24,8 +24,10 @@ export const SPEED_TEST_MIHOMO_OPTIONS = [
 
 // User-Agent 预设选项
 export const USER_AGENT_OPTIONS = [
-  { label: 'Clash (默认)', value: 'Clash' },
+  { label: '无 (空)', value: '' },
   { label: 'clash.meta', value: 'clash.meta' },
+  { label: 'clash', value: 'clash' },
+  { label: 'v2ray', value: 'v2ray' },
   { label: 'clash-verge/v1.5.1', value: 'clash-verge/v1.5.1' }
 ];
 

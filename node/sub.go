@@ -112,8 +112,6 @@ func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithP
 	// 设置 User-Agent
 	if userAgent != "" {
 		req.Header.Set("User-Agent", userAgent)
-	} else {
-		req.Header.Set("User-Agent", "Clash")
 	}
 
 	resp, err := client.Do(req)

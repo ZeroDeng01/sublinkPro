@@ -21,8 +21,8 @@ type SubScheduler struct {
 	Group             string
 	DownloadWithProxy bool   `gorm:"default:false"`
 	ProxyLink         string `gorm:"default:''"`
-	UserAgent         string `gorm:"default:'Clash'"`
-	NodeCount         int    `gorm:"-"`
+	UserAgent         string
+	NodeCount         int `gorm:"-"`
 }
 
 // subSchedulerCache 使用新的泛型缓存

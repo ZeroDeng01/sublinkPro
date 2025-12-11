@@ -138,7 +138,7 @@ export default function NodeList() {
     Group: '',
     DownloadWithProxy: false,
     ProxyLink: '',
-    UserAgent: 'Clash'
+    UserAgent: ''
   });
 
   // 订阅删除对话框状态
@@ -635,7 +635,7 @@ export default function NodeList() {
       Group: '',
       DownloadWithProxy: false,
       ProxyLink: '',
-      UserAgent: 'Clash'
+      UserAgent: ''
     });
     setSchedulerFormOpen(true);
   };
@@ -651,7 +651,7 @@ export default function NodeList() {
       Group: scheduler.Group || '',
       DownloadWithProxy: scheduler.DownloadWithProxy || false,
       ProxyLink: scheduler.ProxyLink || '',
-      UserAgent: scheduler.UserAgent || 'Clash'
+      UserAgent: scheduler.UserAgent ?? ''
     });
     // 如果启用了代理下载，需要加载代理节点列表
     if (scheduler.DownloadWithProxy) {
@@ -693,7 +693,7 @@ export default function NodeList() {
           Group: scheduler.Group,
           DownloadWithProxy: scheduler.DownloadWithProxy,
           ProxyLink: scheduler.ProxyLink,
-          UserAgent: scheduler.UserAgent || 'Clash'
+          UserAgent: scheduler.UserAgent ?? ''
         });
         showMessage('提交更新任务成功，请稍后刷新查看结果');
         fetchSchedulers();

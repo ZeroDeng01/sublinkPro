@@ -99,10 +99,10 @@ export default function SchedulerFormDialog({
             getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
             value={schedulerForm.UserAgent}
             onChange={(e, newValue) => {
-              const value = typeof newValue === 'string' ? newValue : newValue?.value || 'Clash';
+              const value = typeof newValue === 'string' ? newValue : (newValue?.value ?? '');
               setSchedulerForm({ ...schedulerForm, UserAgent: value });
             }}
-            onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, UserAgent: newValue || 'Clash' })}
+            onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, UserAgent: newValue ?? '' })}
             renderOption={(props, option) => (
               <Box component="li" {...props} key={option.value}>
                 <Box>
@@ -118,7 +118,7 @@ export default function SchedulerFormDialog({
                 {...params}
                 label="User-Agent"
                 placeholder="选择或输入 User-Agent"
-                helperText="拉取订阅时使用的 User-Agent，默认为 Clash"
+                helperText="拉取订阅时使用的 User-Agent，可留空"
               />
             )}
           />
