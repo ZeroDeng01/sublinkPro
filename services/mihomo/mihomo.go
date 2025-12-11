@@ -65,7 +65,7 @@ func GetMihomoAdapter(nodeLink string) (constant.Proxy, error) {
 }
 
 // MihomoDelay performs a latency test using Mihomo adapter (Protocol-aware)
-// Returns latency in ms
+// Returns latency in ms by measuring actual HTTP request round-trip time
 func MihomoDelay(nodeLink string, testUrl string, timeout time.Duration) (latency int, err error) {
 	// Recover from any panics and return error with zero latency
 	defer func() {
@@ -84,52 +84,77 @@ func MihomoDelay(nodeLink string, testUrl string, timeout time.Duration) (latenc
 		testUrl = "http://cp.cloudflare.com/generate_204"
 	}
 
-	parsedUrl, err := url.Parse(testUrl)
-	if err != nil {
-		return 0, fmt.Errorf("parse test url error: %v", err)
-	}
-
-	portStr := parsedUrl.Port()
-	if portStr == "" {
-		if parsedUrl.Scheme == "https" {
-			portStr = "443"
-		} else {
-			portStr = "80"
-		}
-	}
-
-	portInt, err := strconv.Atoi(portStr)
-	if err != nil {
-		return 0, fmt.Errorf("invalid port: %v", err)
-	}
-	// Validate port range to prevent overflow
-	if portInt < 0 || portInt > 65535 {
-		return 0, fmt.Errorf("port out of range: %d", portInt)
-	}
-	port := uint16(portInt)
-
-	metadata := &constant.Metadata{
-		Host:    parsedUrl.Hostname(),
-		DstPort: port,
-		Type:    constant.HTTP,
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	start := time.Now()
-	conn, err := proxyAdapter.DialContext(ctx, metadata)
-	if err != nil {
-		return 0, fmt.Errorf("dial error: %v", err)
+	// Create HTTP client with custom transport that uses the proxy adapter
+	client := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				// Recover from panics in DialContext
+				defer func() {
+					if r := recover(); r != nil {
+						err = fmt.Errorf("panic in DialContext: %v", r)
+					}
+				}()
+
+				// Parse addr to get host and port for metadata
+				h, pStr, splitErr := net.SplitHostPort(addr)
+				if splitErr != nil {
+					return nil, fmt.Errorf("split host port error: %v", splitErr)
+				}
+
+				pInt, atoiErr := strconv.Atoi(pStr)
+				if atoiErr != nil {
+					return nil, fmt.Errorf("invalid port string: %v", atoiErr)
+				}
+
+				// Validate port range
+				if pInt < 0 || pInt > 65535 {
+					return nil, fmt.Errorf("port out of range: %d", pInt)
+				}
+				p := uint16(pInt)
+
+				md := &constant.Metadata{
+					Host:    h,
+					DstPort: p,
+					Type:    constant.HTTP,
+				}
+				return proxyAdapter.DialContext(ctx, md)
+			},
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+			DisableKeepAlives: true, // Ensure fresh connection for accurate measurement
+		},
+		Timeout: timeout,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse // Don't follow redirects for latency test
+		},
 	}
-	// Close connection asynchronously to avoid blocking if it hangs
+
+	// Use HEAD request for minimal data transfer, more accurate latency measurement
+	req, err := http.NewRequestWithContext(ctx, "HEAD", testUrl, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create request error: %v", err)
+	}
+
+	// Measure actual HTTP round-trip time
+	start := time.Now()
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("http request error: %v", err)
+	}
+	latency = int(time.Since(start).Milliseconds())
+
+	// Clean up response body
 	defer func() {
-		go func() {
-			_ = conn.Close()
-		}()
+		if resp != nil && resp.Body != nil {
+			go func() {
+				_, _ = io.Copy(io.Discard, resp.Body)
+				_ = resp.Body.Close()
+			}()
+		}
 	}()
 
-	latency = int(time.Since(start).Milliseconds())
 	return latency, nil
 }
 
