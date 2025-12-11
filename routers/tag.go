@@ -28,6 +28,7 @@ func Tag(r *gin.Engine) {
 		tagGroup.POST("/node/add", api.NodeAddTag)
 		tagGroup.POST("/node/remove", api.NodeRemoveTag)
 		tagGroup.POST("/node/batch-add", api.NodeBatchAddTag)
+		tagGroup.POST("/node/batch-set", api.NodeBatchSetTags)
 		tagGroup.GET("/node/tags", api.GetNodeTags)
 	}
 }

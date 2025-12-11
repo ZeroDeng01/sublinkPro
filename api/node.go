@@ -205,6 +205,9 @@ func NodeGet(c *gin.Context) {
 	// 解析国家代码数组
 	filter.Countries = c.QueryArray("countries[]")
 
+	// 解析标签数组
+	filter.Tags = c.QueryArray("tags[]")
+
 	// 验证排序字段（白名单）
 	if filter.SortBy != "" && filter.SortBy != "delay" && filter.SortBy != "speed" {
 		filter.SortBy = "" // 无效排序字段，忽略
@@ -287,6 +290,9 @@ func NodeGetIDs(c *gin.Context) {
 
 	// 解析国家代码数组
 	filter.Countries = c.QueryArray("countries[]")
+
+	// 解析标签数组
+	filter.Tags = c.QueryArray("tags[]")
 
 	ids, err := Node.GetFilteredNodeIDs(filter)
 	if err != nil {

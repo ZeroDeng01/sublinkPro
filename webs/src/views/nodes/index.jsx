@@ -42,6 +42,7 @@ import {
   batchUpdateNodeDialerProxy
 } from 'api/nodes';
 import { getSubSchedulers, addSubScheduler, updateSubScheduler, deleteSubScheduler, pullSubScheduler } from 'api/scheduler';
+import { getTags, batchSetNodeTags } from 'api/tags';
 
 // local components
 import {
@@ -52,6 +53,7 @@ import {
   SpeedTestDialog,
   BatchGroupDialog,
   BatchDialerProxyDialog,
+  BatchTagDialog,
   NodeFilters,
   BatchActions,
   NodeMobileList,
@@ -174,6 +176,13 @@ export default function NodeList() {
   const [batchDialerProxyDialogOpen, setBatchDialerProxyDialogOpen] = useState(false);
   const [batchDialerProxyValue, setBatchDialerProxyValue] = useState('');
 
+  // 标签相关状态
+  const [tagFilter, setTagFilter] = useState([]);
+  const [tagOptions, setTagOptions] = useState([]);
+  const [tagColorMap, setTagColorMap] = useState({});
+  const [batchTagDialogOpen, setBatchTagDialogOpen] = useState(false);
+  const [batchTagValue, setBatchTagValue] = useState([]);
+
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // 后端已完成过滤和排序，直接使用 nodes 数组
@@ -196,6 +205,9 @@ export default function NodeList() {
       if (filterParams.minSpeed) params.minSpeed = filterParams.minSpeed;
       if (filterParams.countries && filterParams.countries.length > 0) {
         params['countries[]'] = filterParams.countries;
+      }
+      if (filterParams.tags && filterParams.tags.length > 0) {
+        params['tags[]'] = filterParams.tags.map((t) => t.name || t);
       }
       if (filterParams.sortBy) params.sortBy = filterParams.sortBy;
       if (filterParams.sortOrder) params.sortOrder = filterParams.sortOrder;
@@ -267,6 +279,19 @@ export default function NodeList() {
         setSourceOptions((res.data || []).sort());
       })
       .catch(console.error);
+    // 请求标签列表
+    getTags()
+      .then((res) => {
+        const tags = res.data || [];
+        setTagOptions(tags);
+        // 构建标签颜色映射
+        const colorMap = {};
+        tags.forEach((tag) => {
+          colorMap[tag.name] = tag.color || '#1976d2';
+        });
+        setTagColorMap(colorMap);
+      })
+      .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -286,6 +311,7 @@ export default function NodeList() {
         maxDelay: maxDelay,
         minSpeed: minSpeed,
         countries: countryFilter,
+        tags: tagFilter,
         sortBy: sortBy,
         sortOrder: sortOrder,
         page: 0, // 筛选条件变化时重置到第一页
@@ -301,7 +327,7 @@ export default function NodeList() {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [searchQuery, groupFilter, sourceFilter, maxDelay, minSpeed, countryFilter, sortBy, sortOrder, fetchNodes]);
+  }, [searchQuery, groupFilter, sourceFilter, maxDelay, minSpeed, countryFilter, tagFilter, sortBy, sortOrder, fetchNodes]);
 
   const showMessage = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -312,7 +338,6 @@ export default function NodeList() {
     showMessage('已复制到剪贴板');
   };
 
-  // 重置过滤
   const resetFilters = () => {
     setSearchQuery('');
     setGroupFilter('');
@@ -320,11 +345,11 @@ export default function NodeList() {
     setMaxDelay('');
     setMinSpeed('');
     setCountryFilter([]);
+    setTagFilter([]);
     setSortBy('');
     setSortOrder('asc');
   };
 
-  // 获取当前过滤参数
   const getCurrentFilters = () => ({
     search: searchQuery,
     group: groupFilter,
@@ -332,16 +357,16 @@ export default function NodeList() {
     maxDelay: maxDelay,
     minSpeed: minSpeed,
     countries: countryFilter,
+    tags: tagFilter,
     sortBy: sortBy,
     sortOrder: sortOrder
   });
 
-  // 手动刷新（保留搜索条件）
   const handleRefresh = useCallback(() => {
     fetchNodes(getCurrentFilters());
     getNodeGroups();
     getNodeSources();
-  }, [fetchNodes, searchQuery, groupFilter, sourceFilter, maxDelay, minSpeed, countryFilter, sortBy, sortOrder]);
+  }, [fetchNodes, searchQuery, groupFilter, sourceFilter, maxDelay, minSpeed, countryFilter, tagFilter, sortBy, sortOrder]);
 
   // 监听任务完成，自动刷新节点列表
   useEffect(() => {
@@ -460,6 +485,32 @@ export default function NodeList() {
     } catch (error) {
       console.error(error);
       showMessage('批量修改前置代理失败', 'error');
+    }
+  };
+
+  // 批量设置标签
+  const handleBatchTag = () => {
+    if (selectedNodes.length === 0) {
+      showMessage('请选择要设置标签的节点', 'warning');
+      return;
+    }
+    setBatchTagValue([]);
+    setBatchTagDialogOpen(true);
+  };
+
+  const handleSubmitBatchTag = async () => {
+    try {
+      const ids = selectedNodes.map((node) => node.ID);
+      const tagNames = batchTagValue.map((t) => t.name || t);
+      // 使用新的批量设置标签API（覆盖模式）
+      await batchSetNodeTags({ nodeIds: ids, tagNames: tagNames });
+      showMessage(`成功为 ${selectedNodes.length} 个节点设置标签`);
+      setSelectedNodes([]);
+      setBatchTagDialogOpen(false);
+      fetchNodes(getCurrentFilters());
+    } catch (error) {
+      console.error(error);
+      showMessage('批量设置标签失败', 'error');
     }
   };
 
@@ -860,7 +911,6 @@ export default function NodeList() {
         </Stack>
       )}
 
-      {/* 过滤器 */}
       <NodeFilters
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -874,9 +924,12 @@ export default function NodeList() {
         setMinSpeed={setMinSpeed}
         countryFilter={countryFilter}
         setCountryFilter={setCountryFilter}
+        tagFilter={tagFilter}
+        setTagFilter={setTagFilter}
         groupOptions={groupOptions}
         sourceOptions={sourceOptions}
         countryOptions={countryOptions}
+        tagOptions={tagOptions}
         onReset={resetFilters}
       />
 
@@ -889,6 +942,7 @@ export default function NodeList() {
         onDelete={handleBatchDelete}
         onGroup={handleBatchGroup}
         onDialerProxy={handleBatchDialerProxy}
+        onTag={handleBatchTag}
       />
 
       {/* 节点列表 */}
@@ -898,6 +952,7 @@ export default function NodeList() {
           page={page}
           rowsPerPage={rowsPerPage}
           selectedNodes={selectedNodes}
+          tagColorMap={tagColorMap}
           onSelect={handleSelectNode}
           onSpeedTest={handleSingleSpeedTest}
           onCopy={copyToClipboard}
@@ -912,6 +967,7 @@ export default function NodeList() {
           selectedNodes={selectedNodes}
           sortBy={sortBy}
           sortOrder={sortOrder}
+          tagColorMap={tagColorMap}
           onSelectAll={handleSelectAll}
           onSelect={handleSelectNode}
           onSort={handleSort}
@@ -1026,6 +1082,17 @@ export default function NodeList() {
         loadingProxyNodes={loadingProxyNodes}
         onClose={() => setBatchDialerProxyDialogOpen(false)}
         onSubmit={handleSubmitBatchDialerProxy}
+      />
+
+      {/* 批量设置标签对话框 */}
+      <BatchTagDialog
+        open={batchTagDialogOpen}
+        selectedCount={selectedNodes.length}
+        value={batchTagValue}
+        setValue={setBatchTagValue}
+        tagOptions={tagOptions}
+        onClose={() => setBatchTagDialogOpen(false)}
+        onSubmit={handleSubmitBatchTag}
       />
 
       {/* 提示消息 */}

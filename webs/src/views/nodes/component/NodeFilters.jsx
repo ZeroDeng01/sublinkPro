@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 
 // material-ui
 import Autocomplete from '@mui/material/Autocomplete';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import FormControl from '@mui/material/FormControl';
@@ -31,9 +32,12 @@ export default function NodeFilters({
   setMinSpeed,
   countryFilter,
   setCountryFilter,
+  tagFilter,
+  setTagFilter,
   groupOptions,
   sourceOptions,
   countryOptions,
+  tagOptions,
   onReset
 }) {
   return (
@@ -112,6 +116,55 @@ export default function NodeFilters({
           renderInput={(params) => <TextField {...params} label="国家代码" placeholder="选择国家" />}
         />
       )}
+      {tagOptions && tagOptions.length > 0 && (
+        <Autocomplete
+          multiple
+          size="small"
+          options={tagOptions}
+          value={tagFilter}
+          onChange={(e, newValue) => setTagFilter(newValue)}
+          sx={{ minWidth: 150 }}
+          getOptionLabel={(option) => option.name || option}
+          isOptionEqualToValue={(option, value) => option.name === (value.name || value)}
+          renderOption={(props, option) => {
+            const { key, ...otherProps } = props;
+            return (
+              <li key={key} {...otherProps}>
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    backgroundColor: option.color || '#1976d2',
+                    mr: 1,
+                    flexShrink: 0
+                  }}
+                />
+                {option.name}
+              </li>
+            );
+          }}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => {
+              const { key, ...tagProps } = getTagProps({ index });
+              return (
+                <Chip
+                  key={key}
+                  label={option.name || option}
+                  size="small"
+                  sx={{
+                    backgroundColor: option.color || '#1976d2',
+                    color: '#fff',
+                    '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
+                  }}
+                  {...tagProps}
+                />
+              );
+            })
+          }
+          renderInput={(params) => <TextField {...params} label="标签" placeholder="选择标签" />}
+        />
+      )}
       <Button onClick={onReset}>重置</Button>
     </Stack>
   );
@@ -130,8 +183,11 @@ NodeFilters.propTypes = {
   setMinSpeed: PropTypes.func.isRequired,
   countryFilter: PropTypes.array.isRequired,
   setCountryFilter: PropTypes.func.isRequired,
+  tagFilter: PropTypes.array.isRequired,
+  setTagFilter: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,
   sourceOptions: PropTypes.array.isRequired,
   countryOptions: PropTypes.array.isRequired,
+  tagOptions: PropTypes.array.isRequired,
   onReset: PropTypes.func.isRequired
 };

@@ -25,7 +25,7 @@ import { formatDateTime, formatCountry, getDelayColor } from '../utils';
 /**
  * 移动端节点卡片组件
  */
-export default function NodeCard({ node, isSelected, onSelect, onSpeedTest, onCopy, onEdit, onDelete }) {
+export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSpeedTest, onCopy, onEdit, onDelete }) {
   const theme = useTheme();
 
   return (
@@ -107,9 +107,23 @@ export default function NodeCard({ node, isSelected, onSelect, onSpeedTest, onCo
           {node.Tags &&
             node.Tags.split(',')
               .filter((t) => t.trim())
-              .map((tag, idx) => (
-                <Chip key={`tag-${idx}`} label={tag.trim()} size="small" color="primary" sx={{ fontSize: '10px', height: 20 }} />
-              ))}
+              .map((tag, idx) => {
+                const tagName = tag.trim();
+                const tagColor = tagColorMap?.[tagName] || '#1976d2';
+                return (
+                  <Chip
+                    key={`tag-${idx}`}
+                    label={tagName}
+                    size="small"
+                    sx={{
+                      fontSize: '10px',
+                      height: 20,
+                      backgroundColor: tagColor,
+                      color: '#fff'
+                    }}
+                  />
+                );
+              })}
         </Stack>
 
         {/* Time Info Section */}
@@ -183,9 +197,11 @@ NodeCard.propTypes = {
     LinkCountry: PropTypes.string,
     CreatedAt: PropTypes.string,
     UpdatedAt: PropTypes.string,
-    LastCheck: PropTypes.string
+    LastCheck: PropTypes.string,
+    Tags: PropTypes.string
   }).isRequired,
   isSelected: PropTypes.bool.isRequired,
+  tagColorMap: PropTypes.object,
   onSelect: PropTypes.func.isRequired,
   onSpeedTest: PropTypes.func.isRequired,
   onCopy: PropTypes.func.isRequired,

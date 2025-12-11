@@ -42,5 +42,8 @@ export const removeNodeTag = (data) => request.post('/v1/tags/node/remove', data
 // 批量给节点添加标签
 export const batchAddNodeTag = (data) => request.post('/v1/tags/node/batch-add', data);
 
+// 批量设置节点标签（覆盖模式）
+export const batchSetNodeTags = (data) => request.post('/v1/tags/node/batch-set', data);
+
 // 获取节点的标签
 export const getNodeTags = (nodeId) => request.get(`/v1/tags/node/tags?nodeId=${nodeId}`);

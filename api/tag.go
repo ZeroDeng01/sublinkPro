@@ -259,6 +259,23 @@ func NodeBatchAddTag(c *gin.Context) {
 	c.JSON(200, gin.H{"code": 200, "msg": "success"})
 }
 
+// NodeBatchSetTags 批量设置节点标签（覆盖模式）
+func NodeBatchSetTags(c *gin.Context) {
+	var req struct {
+		NodeIDs  []int    `json:"nodeIds"`
+		TagNames []string `json:"tagNames"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": 400, "msg": "参数错误"})
+		return
+	}
+	if err := models.BatchSetTagsForNodes(req.NodeIDs, req.TagNames); err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "批量设置标签失败"})
+		return
+	}
+	c.JSON(200, gin.H{"code": 200, "msg": "success"})
+}
+
 // GetNodeTags 获取节点的标签
 func GetNodeTags(c *gin.Context) {
 	nodeIDStr := c.Query("nodeId")

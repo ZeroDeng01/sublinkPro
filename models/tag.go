@@ -493,6 +493,21 @@ func BatchAddTagToNodes(nodeIDs []int, tagName string) error {
 	return nil
 }
 
+// BatchSetTagsForNodes 批量设置节点标签（覆盖模式）
+func BatchSetTagsForNodes(nodeIDs []int, tagNames []string) error {
+	for _, nodeID := range nodeIDs {
+		var node Node
+		node.ID = nodeID
+		if err := node.GetByID(); err != nil {
+			continue
+		}
+		if err := node.SetTagNames(tagNames); err != nil {
+			log.Printf("为节点 %d 设置标签失败: %v", nodeID, err)
+		}
+	}
+	return nil
+}
+
 // GetTagsByNode 获取节点的所有标签对象
 func GetTagsByNode(node Node) []Tag {
 	tagNames := node.GetTagNames()

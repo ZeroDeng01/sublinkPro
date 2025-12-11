@@ -35,6 +35,7 @@ export default function NodeTable({
   selectedNodes,
   sortBy,
   sortOrder,
+  tagColorMap,
   onSelectAll,
   onSelect,
   onSort,
@@ -137,9 +138,23 @@ export default function NodeTable({
                     {node.Tags.split(',')
                       .filter((t) => t.trim())
                       .slice(0, 3)
-                      .map((tag, idx) => (
-                        <Chip key={idx} label={tag.trim()} size="small" sx={{ fontSize: '10px', height: 20 }} />
-                      ))}
+                      .map((tag, idx) => {
+                        const tagName = tag.trim();
+                        const tagColor = tagColorMap?.[tagName] || '#1976d2';
+                        return (
+                          <Chip
+                            key={idx}
+                            label={tagName}
+                            size="small"
+                            sx={{
+                              fontSize: '10px',
+                              height: 20,
+                              backgroundColor: tagColor,
+                              color: '#fff'
+                            }}
+                          />
+                        );
+                      })}
                     {node.Tags.split(',').filter((t) => t.trim()).length > 3 && (
                       <Chip
                         label={`+${node.Tags.split(',').filter((t) => t.trim()).length - 3}`}
@@ -243,6 +258,7 @@ NodeTable.propTypes = {
   selectedNodes: PropTypes.array.isRequired,
   sortBy: PropTypes.string.isRequired,
   sortOrder: PropTypes.string.isRequired,
+  tagColorMap: PropTypes.object,
   onSelectAll: PropTypes.func.isRequired,
   onSelect: PropTypes.func.isRequired,
   onSort: PropTypes.func.isRequired,

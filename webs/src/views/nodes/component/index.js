@@ -6,6 +6,7 @@ export { default as DeleteSchedulerDialog } from './DeleteSchedulerDialog';
 export { default as SpeedTestDialog } from './SpeedTestDialog';
 export { default as BatchGroupDialog } from './BatchGroupDialog';
 export { default as BatchDialerProxyDialog } from './BatchDialerProxyDialog';
+export { default as BatchTagDialog } from './BatchTagDialog';
 
 // List view components
 export { default as NodeFilters } from './NodeFilters';

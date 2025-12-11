@@ -176,7 +176,6 @@ func (node *Node) List() ([]Node, error) {
 	return nodes, nil
 }
 
-// NodeFilter 节点过滤参数
 type NodeFilter struct {
 	Search    string   // 搜索关键词（匹配节点名称或链接）
 	Group     string   // 分组过滤
@@ -184,6 +183,7 @@ type NodeFilter struct {
 	MaxDelay  int      // 最大延迟(ms)，只显示延迟在此值以下的节点
 	MinSpeed  float64  // 最低速度(MB/s)，只显示速度在此值以上的节点
 	Countries []string // 国家代码过滤
+	Tags      []string // 标签过滤（匹配任一标签的节点）
 	SortBy    string   // 排序字段: "delay" 或 "speed"
 	SortOrder string   // 排序顺序: "asc" 或 "desc"
 }
@@ -197,6 +197,12 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 	countryMap := make(map[string]bool)
 	for _, c := range filter.Countries {
 		countryMap[c] = true
+	}
+
+	// 创建标签映射，加速查找
+	tagMap := make(map[string]bool)
+	for _, t := range filter.Tags {
+		tagMap[t] = true
 	}
 
 	// 使用缓存的 Filter 方法
@@ -257,6 +263,22 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 		// 国家代码过滤
 		if len(countryMap) > 0 {
 			if n.LinkCountry == "" || !countryMap[n.LinkCountry] {
+				return false
+			}
+		}
+
+		// 标签过滤：节点需要包含至少一个所选标签
+		if len(tagMap) > 0 {
+			nodeTags := strings.Split(n.Tags, ",")
+			hasMatchingTag := false
+			for _, tag := range nodeTags {
+				tag = strings.TrimSpace(tag)
+				if tag != "" && tagMap[tag] {
+					hasMatchingTag = true
+					break
+				}
+			}
+			if !hasMatchingTag {
 				return false
 			}
 		}

@@ -15,7 +15,16 @@ import SelectAllIcon from '@mui/icons-material/SelectAll';
 /**
  * 批量操作栏
  */
-export default function BatchActions({ selectedCount, totalCount, onSelectAll, onClearSelection, onDelete, onGroup, onDialerProxy }) {
+export default function BatchActions({
+  selectedCount,
+  totalCount,
+  onSelectAll,
+  onClearSelection,
+  onDelete,
+  onGroup,
+  onDialerProxy,
+  onTag
+}) {
   // 是否全选（当前页全选或所有符合条件节点全选）
   const isAllSelected = selectedCount > 0 && selectedCount >= totalCount;
   const isIndeterminate = selectedCount > 0 && selectedCount < totalCount;
@@ -69,6 +78,9 @@ export default function BatchActions({ selectedCount, totalCount, onSelectAll, o
           <Button size="small" color="primary" variant="outlined" onClick={onDialerProxy} sx={{ whiteSpace: 'nowrap' }}>
             修改前置代理
           </Button>
+          <Button size="small" color="secondary" variant="outlined" onClick={onTag} sx={{ whiteSpace: 'nowrap' }}>
+            设置标签
+          </Button>
         </>
       )}
     </Stack>
@@ -82,5 +94,6 @@ BatchActions.propTypes = {
   onClearSelection: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onGroup: PropTypes.func.isRequired,
-  onDialerProxy: PropTypes.func.isRequired
+  onDialerProxy: PropTypes.func.isRequired,
+  onTag: PropTypes.func.isRequired
 };
