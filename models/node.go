@@ -29,7 +29,8 @@ type Node struct {
 	Group           string
 	Speed           float64   `gorm:"default:0"` // 测速结果(MB/s)
 	DelayTime       int       `gorm:"default:0"` // 延迟时间(ms)
-	LastCheck       string    // 最后检测时间
+	LatencyCheckAt  string    // 延迟测试时间
+	SpeedCheckAt    string    // 测速时间
 	CreatedAt       time.Time `gorm:"autoCreateTime" json:"CreatedAt"` // 创建时间
 	UpdatedAt       time.Time `gorm:"autoUpdateTime" json:"UpdatedAt"` // 更新时间
 	Tags            string    // 标签ID，逗号分隔，如 "1,3,5"
@@ -114,7 +115,7 @@ func (node *Node) Update() error {
 
 // UpdateSpeed 更新节点测速结果
 func (node *Node) UpdateSpeed() error {
-	err := database.DB.Model(node).Select("Speed", "LinkCountry", "DelayTime", "LastCheck").Updates(node).Error
+	err := database.DB.Model(node).Select("Speed", "LinkCountry", "DelayTime", "LatencyCheckAt", "SpeedCheckAt").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -122,7 +123,8 @@ func (node *Node) UpdateSpeed() error {
 	if cachedNode, ok := nodeCache.Get(node.ID); ok {
 		cachedNode.Speed = node.Speed
 		cachedNode.DelayTime = node.DelayTime
-		cachedNode.LastCheck = node.LastCheck
+		cachedNode.LatencyCheckAt = node.LatencyCheckAt
+		cachedNode.SpeedCheckAt = node.SpeedCheckAt
 		cachedNode.LinkCountry = node.LinkCountry
 		nodeCache.Set(node.ID, cachedNode)
 	}

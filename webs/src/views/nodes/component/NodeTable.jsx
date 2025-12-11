@@ -200,14 +200,27 @@ export default function NodeTable({
                   ) : (
                     <Chip label="未测速" variant="outlined" size="small" />
                   )}
-                  {node.LastCheck && (
+                  {node.LatencyCheckAt && (
                     <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '10px', mt: 0.5 }}>
-                      {formatDateTime(node.LastCheck)}
+                      {formatDateTime(node.LatencyCheckAt)}
                     </Typography>
                   )}
                 </Box>
               </TableCell>
-              <TableCell>{node.Speed > 0 ? `${node.Speed.toFixed(2)}MB/s` : '-'}</TableCell>
+              <TableCell>
+                <Box>
+                  {node.Speed > 0 ? (
+                    <Typography>{node.Speed.toFixed(2)}MB/s</Typography>
+                  ) : (
+                    <Typography>-</Typography>
+                  )}
+                  {node.SpeedCheckAt && node.Speed > 0 && (
+                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '10px', mt: 0.5 }}>
+                      {formatDateTime(node.SpeedCheckAt)}
+                    </Typography>
+                  )}
+                </Box>
+              </TableCell>
               <TableCell>
                 {node.LinkCountry ? (
                   <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />

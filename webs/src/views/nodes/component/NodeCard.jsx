@@ -147,10 +147,18 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSp
             </Box>
             <Box>
               <Typography variant="caption" color="textSecondary" display="block">
-                最后测速
+                延迟测试
               </Typography>
               <Typography variant="caption" fontWeight="medium" color="primary">
-                {node.LastCheck ? formatDateTime(node.LastCheck) : '-'}
+                {node.LatencyCheckAt ? formatDateTime(node.LatencyCheckAt) : '-'}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="textSecondary" display="block">
+                速度测试
+              </Typography>
+              <Typography variant="caption" fontWeight="medium" color="primary">
+                {node.SpeedCheckAt ? formatDateTime(node.SpeedCheckAt) : '-'}
               </Typography>
             </Box>
           </Stack>
@@ -197,7 +205,8 @@ NodeCard.propTypes = {
     LinkCountry: PropTypes.string,
     CreatedAt: PropTypes.string,
     UpdatedAt: PropTypes.string,
-    LastCheck: PropTypes.string,
+    LatencyCheckAt: PropTypes.string,
+    SpeedCheckAt: PropTypes.string,
     Tags: PropTypes.string
   }).isRequired,
   isSelected: PropTypes.bool.isRequired,

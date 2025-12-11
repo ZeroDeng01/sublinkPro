@@ -118,7 +118,8 @@ function filterNode(nodes, clientType) {
     //         "SourceID": 0,
     //         "Group": "自用",
     //         "Speed": 110,
-    //         "LastCheck": "2025-11-26 23:49:58"
+    //         "LatencyCheckAt": "2025-11-26 23:49:58",
+    //         "SpeedCheckAt": "2025-11-26 23:50:15"
     //     }, {
     //         "ID": 2,
     //         "Link": "vmess://456456464611111",
@@ -133,7 +134,8 @@ function filterNode(nodes, clientType) {
     //         "SourceID": 0,
     //         "Group": "自用",
     //         "Speed": 100,
-    //         "LastCheck": "2025-11-26 23:49:58"
+    //         "LatencyCheckAt": "2025-11-26 23:49:58",
+    //         "SpeedCheckAt": "2025-11-26 23:50:20"
     //     }
     // ]
     // 使用 Map 统计每个组的节点数量

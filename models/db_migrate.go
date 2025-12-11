@@ -276,6 +276,31 @@ DIRECT = direct
 		log.Printf("执行迁移 0011_migrate_speed_test_concurrency 失败: %v", err)
 	}
 
+	// 0012_migrate_last_check_to_separate_fields - 将 LastCheck 字段迁移到 LatencyCheckAt 和 SpeedCheckAt
+	if err := database.RunCustomMigration("0012_migrate_last_check_to_separate_fields", func() error {
+		// 检查 last_check 列是否存在
+		if db.Migrator().HasColumn(&Node{}, "last_check") {
+			// 将 last_check 数据复制到 latency_check_at 和 speed_check_at
+			result := db.Exec("UPDATE nodes SET latency_check_at = last_check, speed_check_at = last_check WHERE last_check IS NOT NULL AND last_check != ''")
+			if result.Error != nil {
+				log.Printf("迁移 last_check 数据失败: %v", result.Error)
+				return result.Error
+			}
+			log.Printf("已将 %d 条 last_check 数据迁移到新字段", result.RowsAffected)
+
+			// 删除 last_check 列
+			if err := db.Exec("ALTER TABLE nodes DROP COLUMN last_check").Error; err != nil {
+				log.Printf("删除 last_check 列失败: %v", err)
+				// 不返回错误，因为某些数据库可能不支持 DROP COLUMN
+			} else {
+				log.Println("成功删除 last_check 列")
+			}
+		}
+		return nil
+	}); err != nil {
+		log.Printf("执行迁移 0012_migrate_last_check_to_separate_fields 失败: %v", err)
+	}
+
 	// 初始化用户数据
 	err := db.First(&User{}).Error
 	if err == gorm.ErrRecordNotFound {

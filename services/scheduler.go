@@ -570,7 +570,7 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 					n.Speed = 0 // TCP模式不测速度
 					n.DelayTime = latency
 				}
-				n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+				n.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
 				if updateErr := n.UpdateSpeed(); updateErr != nil {
 					log.Printf("更新节点 %s 测速结果失败: %v", n.Name, updateErr)
 				}
@@ -630,7 +630,7 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 				completedCount++
 				nr.node.Speed = -1
 				nr.node.DelayTime = -1
-				nr.node.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+				nr.node.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
 				if updateErr := nr.node.UpdateSpeed(); updateErr != nil {
 					log.Printf("更新节点 %s 测速结果失败: %v", nr.node.Name, updateErr)
 				}
@@ -695,7 +695,8 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 					}
 				}
 
-				result.node.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+				result.node.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
+				result.node.SpeedCheckAt = time.Now().Format("2006-01-02 15:04:05")
 				if updateErr := result.node.UpdateSpeed(); updateErr != nil {
 					log.Printf("更新节点 %s 测速结果失败: %v", result.node.Name, updateErr)
 				}
