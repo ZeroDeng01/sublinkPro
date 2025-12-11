@@ -42,7 +42,18 @@ import RuleIcon from '@mui/icons-material/Rule';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
-import { getTags, addTag, updateTag, deleteTag, getTagRules, addTagRule, updateTagRule, deleteTagRule, triggerTagRule } from 'api/tags';
+import {
+  getTags,
+  addTag,
+  updateTag,
+  deleteTag,
+  getTagRules,
+  addTagRule,
+  updateTagRule,
+  deleteTagRule,
+  triggerTagRule,
+  getTagGroups
+} from 'api/tags';
 
 // components
 import TagDialog from './component/TagDialog';
@@ -54,6 +65,7 @@ export default function TagManagement() {
   const [tabValue, setTabValue] = useState(0);
   const [tags, setTags] = useState([]);
   const [rules, setRules] = useState([]);
+  const [existingGroups, setExistingGroups] = useState([]);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -86,9 +98,21 @@ export default function TagManagement() {
     }
   };
 
+  const fetchGroups = async () => {
+    try {
+      const res = await getTagGroups();
+      if (res.code === 200) {
+        setExistingGroups(res.data || []);
+      }
+    } catch (error) {
+      // Silent fail for groups
+    }
+  };
+
   useEffect(() => {
     fetchTags();
     fetchRules();
+    fetchGroups();
   }, []);
 
   const showMessage = (message, severity = 'success') => {
@@ -253,6 +277,9 @@ export default function TagManagement() {
                         </IconButton>
                       </Box>
                     </Box>
+                    {tag.groupName && (
+                      <Chip label={`组: ${tag.groupName}`} size="small" variant="outlined" sx={{ mt: 1, fontSize: '0.7rem' }} />
+                    )}
                     {tag.description && (
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                         {tag.description}
@@ -345,7 +372,13 @@ export default function TagManagement() {
       )}
 
       {/* Dialogs */}
-      <TagDialog open={tagDialogOpen} onClose={() => setTagDialogOpen(false)} onSave={handleSaveTag} editingTag={editingTag} />
+      <TagDialog
+        open={tagDialogOpen}
+        onClose={() => setTagDialogOpen(false)}
+        onSave={handleSaveTag}
+        editingTag={editingTag}
+        existingGroups={existingGroups}
+      />
       <RuleDialog
         open={ruleDialogOpen}
         onClose={() => setRuleDialogOpen(false)}

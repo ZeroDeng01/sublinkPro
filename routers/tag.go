@@ -13,6 +13,7 @@ func Tag(r *gin.Engine) {
 	{
 		// 标签管理
 		tagGroup.GET("/list", api.TagGet)
+		tagGroup.GET("/groups", api.TagGroupList)
 		tagGroup.POST("/add", api.TagAdd)
 		tagGroup.POST("/update", api.TagUpdate)
 		tagGroup.DELETE("/delete", api.TagDelete)

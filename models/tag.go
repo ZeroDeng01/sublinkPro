@@ -14,6 +14,7 @@ import (
 // Tag 标签模型 - 使用Name作为主键
 type Tag struct {
 	Name        string    `gorm:"primaryKey;size:100" json:"name"` // 标签名称（主键）
+	GroupName   string    `gorm:"size:100;index" json:"groupName"` // 标签组（同组标签互斥）
 	Color       string    `gorm:"default:'#1976d2'" json:"color"`  // 标签颜色(HEX)
 	Description string    `json:"description"`                     // 标签描述
 	CreatedAt   time.Time `gorm:"autoCreateTime" json:"createdAt"`
@@ -105,10 +106,11 @@ func (t *Tag) Add() error {
 	return nil
 }
 
-// Update 更新标签（只能更新颜色和描述，不能修改名称）
+// Update 更新标签（可更新颜色、描述和标签组，不能修改名称）
 func (t *Tag) Update() error {
 	t.UpdatedAt = time.Now()
 	if err := DB.Model(t).Where("name = ?", t.Name).Updates(map[string]interface{}{
+		"group_name":  t.GroupName,
 		"color":       t.Color,
 		"description": t.Description,
 		"updated_at":  t.UpdatedAt,
@@ -176,6 +178,42 @@ func (t *Tag) List() ([]Tag, error) {
 		tagCache.Set(tag.Name, tag)
 	}
 	return tags, nil
+}
+
+// GetTagsInSameGroup 获取与指定标签同组的其他标签名称列表
+// 用于实现标签互斥逻辑
+func GetTagsInSameGroup(tagName string) []string {
+	tag, ok := tagCache.Get(tagName)
+	if !ok || tag.GroupName == "" {
+		return nil
+	}
+
+	// 从缓存获取同组所有标签
+	allTags := tagCache.GetAll()
+	sameGroupTags := make([]string, 0)
+	for _, t := range allTags {
+		if t.GroupName == tag.GroupName && t.Name != tagName {
+			sameGroupTags = append(sameGroupTags, t.Name)
+		}
+	}
+	return sameGroupTags
+}
+
+// GetExistingGroups 获取所有已存在的标签组名称（用于前端自动补全）
+func GetExistingGroups() []string {
+	allTags := tagCache.GetAll()
+	groupSet := make(map[string]bool)
+	for _, t := range allTags {
+		if t.GroupName != "" {
+			groupSet[t.GroupName] = true
+		}
+	}
+
+	groups := make([]string, 0, len(groupSet))
+	for g := range groupSet {
+		groups = append(groups, g)
+	}
+	return groups
 }
 
 // ========== TagRule CRUD ==========
@@ -421,13 +459,34 @@ func (n *Node) HasTagName(tagName string) bool {
 }
 
 // AddTagByName 添加标签到节点（按名称）
+// 如果标签属于某个组，会自动移除该节点上同组的其他标签（互斥逻辑）
 func (n *Node) AddTagByName(tagName string) error {
 	if n.HasTagName(tagName) {
 		return nil // 已有此标签
 	}
+
+	// 获取同组的互斥标签
+	sameGroupTags := GetTagsInSameGroup(tagName)
 	tagNames := n.GetTagNames()
-	tagNames = append(tagNames, tagName)
-	return n.SetTagNames(tagNames)
+
+	// 过滤掉同组的互斥标签
+	newTagNames := make([]string, 0, len(tagNames))
+	for _, name := range tagNames {
+		isSameGroup := false
+		for _, sgt := range sameGroupTags {
+			if name == sgt {
+				isSameGroup = true
+				break
+			}
+		}
+		if !isSameGroup {
+			newTagNames = append(newTagNames, name)
+		}
+	}
+
+	// 添加新标签
+	newTagNames = append(newTagNames, tagName)
+	return n.SetTagNames(newTagNames)
 }
 
 // RemoveTagByName 从节点移除标签（按名称）

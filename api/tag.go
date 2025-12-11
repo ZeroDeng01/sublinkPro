@@ -84,6 +84,12 @@ func TagDelete(c *gin.Context) {
 	c.JSON(200, gin.H{"code": 200, "msg": "success"})
 }
 
+// TagGroupList 获取所有标签组名称（用于前端自动补全）
+func TagGroupList(c *gin.Context) {
+	groups := models.GetExistingGroups()
+	c.JSON(200, gin.H{"code": 200, "msg": "success", "data": groups})
+}
+
 // ========== TagRule API ==========
 
 // TagRuleGet 获取规则列表

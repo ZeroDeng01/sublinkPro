@@ -14,6 +14,9 @@ export const updateTag = (data) => request.post('/v1/tags/update', data);
 // 删除标签
 export const deleteTag = (name) => request.delete(`/v1/tags/delete?name=${encodeURIComponent(name)}`);
 
+// 获取标签组列表
+export const getTagGroups = () => request.get('/v1/tags/groups');
+
 // ========== 标签规则管理 ==========
 
 // 获取规则列表
