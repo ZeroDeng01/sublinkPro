@@ -552,6 +552,21 @@ func BatchAddTagToNodes(nodeIDs []int, tagName string) error {
 	return nil
 }
 
+// BatchRemoveTagFromNodes 批量从节点移除单个标签（按名称）
+func BatchRemoveTagFromNodes(nodeIDs []int, tagName string) error {
+	for _, nodeID := range nodeIDs {
+		var node Node
+		node.ID = nodeID
+		if err := node.GetByID(); err != nil {
+			continue
+		}
+		if err := node.RemoveTagByName(tagName); err != nil {
+			log.Printf("为节点 %d 移除标签 %s 失败: %v", nodeID, tagName, err)
+		}
+	}
+	return nil
+}
+
 // BatchSetTagsForNodes 批量设置节点标签（覆盖模式）- 优化版本使用单条SQL
 func BatchSetTagsForNodes(nodeIDs []int, tagNames []string) error {
 	if len(nodeIDs) == 0 {

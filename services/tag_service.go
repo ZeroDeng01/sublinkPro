@@ -36,9 +36,13 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 
 		// 评估每个节点
 		matchedNodeIDs := make([]int, 0)
+		unmatchedNodeIDs := make([]int, 0)
 		for _, node := range nodes {
 			if conditions.EvaluateNode(node) {
 				matchedNodeIDs = append(matchedNodeIDs, node.ID)
+			} else if node.HasTagName(rule.TagName) {
+				// 节点不满足条件但有此标签，需要移除
+				unmatchedNodeIDs = append(unmatchedNodeIDs, node.ID)
 			}
 		}
 
@@ -49,6 +53,14 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 				log.Printf("批量打标签失败: %v", err)
 			} else {
 				taggedCount += len(matchedNodeIDs)
+			}
+		}
+
+		// 批量移除不满足条件的标签
+		if len(unmatchedNodeIDs) > 0 {
+			log.Printf("规则 [%s] 移除 %d 个不满足条件的节点标签: %s", rule.Name, len(unmatchedNodeIDs), rule.TagName)
+			if err := models.BatchRemoveTagFromNodes(unmatchedNodeIDs, rule.TagName); err != nil {
+				log.Printf("批量移除标签失败: %v", err)
 			}
 		}
 	}
@@ -125,6 +137,7 @@ func TriggerTagRule(ruleID int) error {
 
 	// 评估并打标签 (使用标签名称)
 	matchedCount := 0
+	removedCount := 0
 	for i, n := range nodes {
 		matched := conditions.EvaluateNode(n)
 		resultStatus := "skipped"
@@ -133,6 +146,14 @@ func TriggerTagRule(ruleID int) error {
 			if err := n.AddTagByName(rule.TagName); err == nil {
 				matchedCount++
 				resultStatus = "tagged"
+			} else {
+				resultStatus = "error"
+			}
+		} else if n.HasTagName(rule.TagName) {
+			// 不满足条件但有此标签，移除它
+			if err := n.RemoveTagByName(rule.TagName); err == nil {
+				removedCount++
+				resultStatus = "untagged"
 			} else {
 				resultStatus = "error"
 			}
@@ -163,14 +184,15 @@ func TriggerTagRule(ruleID int) error {
 		Status:   "completed",
 		Current:  totalNodes,
 		Total:    totalNodes,
-		Message:  fmt.Sprintf("规则执行完成: 匹配 %d 个节点", matchedCount),
+		Message:  fmt.Sprintf("规则执行完成: 匹配 %d 个节点, 移除 %d 个节点标签", matchedCount, removedCount),
 		Result: map[string]interface{}{
 			"matchedCount": matchedCount,
+			"removedCount": removedCount,
 			"totalCount":   totalNodes,
 		},
 		StartTime: startTimeMs,
 	})
 
-	log.Printf("手动触发规则 [%s] 完成: 匹配 %d 个节点", rule.Name, matchedCount)
+	log.Printf("手动触发规则 [%s] 完成: 匹配 %d 个节点, 移除 %d 个节点标签", rule.Name, matchedCount, removedCount)
 	return nil
 }
