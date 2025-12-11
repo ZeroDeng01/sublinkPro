@@ -173,6 +173,25 @@ func NodeUpdadte(c *gin.Context) {
 		utils.FailWithMsg(c, "更新失败")
 		return
 	}
+
+	// 处理标签
+	tags := c.PostForm("tags")
+	if tags != "" {
+		tagNames := strings.Split(tags, ",")
+		// 过滤空字符串
+		var validTagNames []string
+		for _, t := range tagNames {
+			t = strings.TrimSpace(t)
+			if t != "" {
+				validTagNames = append(validTagNames, t)
+			}
+		}
+		_ = Node.SetTagNames(validTagNames)
+	} else {
+		// 如果 tags 参数为空，清除标签
+		_ = Node.SetTagNames([]string{})
+	}
+
 	utils.OkWithMsg(c, "更新成功")
 }
 
@@ -460,6 +479,22 @@ func NodeAdd(c *gin.Context) {
 		utils.FailWithMsg(c, "添加失败检查一下是否节点重复")
 		return
 	}
+
+	// 处理标签
+	tags := c.PostForm("tags")
+	if tags != "" {
+		tagNames := strings.Split(tags, ",")
+		// 过滤空字符串
+		var validTagNames []string
+		for _, t := range tagNames {
+			t = strings.TrimSpace(t)
+			if t != "" {
+				validTagNames = append(validTagNames, t)
+			}
+		}
+		_ = Node.SetTagNames(validTagNames)
+	}
+
 	utils.OkWithMsg(c, "添加成功")
 }
 

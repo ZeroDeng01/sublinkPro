@@ -101,7 +101,8 @@ export default function NodeList() {
     link: '',
     dialerProxyName: '',
     group: '',
-    mergeMode: '1' // 1=合并, 2=分开
+    mergeMode: '1', // 1=合并, 2=分开
+    tags: [] // 标签列表
   });
 
   // 过滤器
@@ -386,19 +387,29 @@ export default function NodeList() {
   const handleAddNode = () => {
     setIsEditNode(false);
     setCurrentNode(null);
-    setNodeForm({ name: '', link: '', dialerProxyName: '', group: '', mergeMode: '1' });
+    setNodeForm({ name: '', link: '', dialerProxyName: '', group: '', mergeMode: '1', tags: [] });
     setNodeDialogOpen(true);
   };
 
   const handleEditNode = (node) => {
     setIsEditNode(true);
     setCurrentNode(node);
+    // 解析节点的标签，将字符串转换为标签对象数组
+    let nodeTags = [];
+    if (node.Tags) {
+      const tagNames = node.Tags.split(',').map((t) => t.trim()).filter((t) => t);
+      nodeTags = tagNames.map((name) => {
+        const found = tagOptions.find((t) => t.name === name);
+        return found || { name, color: '#1976d2' };
+      });
+    }
     setNodeForm({
       name: node.Name,
       link: node.Link?.split(',').join('\n') || '',
       dialerProxyName: node.DialerProxyName || '',
       group: node.Group || '',
-      mergeMode: '1'
+      mergeMode: '1',
+      tags: nodeTags
     });
     setNodeDialogOpen(true);
   };
@@ -525,6 +536,9 @@ export default function NodeList() {
       return;
     }
 
+    // 提取标签名称
+    const tagNames = (nodeForm.tags || []).map((t) => t.name || t).join(',');
+
     try {
       if (isEditNode) {
         const processedLink = nodeLinks.join(',');
@@ -534,7 +548,8 @@ export default function NodeList() {
           link: processedLink,
           name: nodeForm.name.trim(),
           dialerProxyName: nodeForm.dialerProxyName.trim(),
-          group: nodeForm.group.trim()
+          group: nodeForm.group.trim(),
+          tags: tagNames
         });
         showMessage('更新成功');
       } else {
@@ -549,7 +564,8 @@ export default function NodeList() {
             link: processedLink,
             name: nodeForm.name.trim(),
             dialerProxyName: nodeForm.dialerProxyName.trim(),
-            group: nodeForm.group.trim()
+            group: nodeForm.group.trim(),
+            tags: tagNames
           });
         } else {
           // 分开模式
@@ -558,7 +574,8 @@ export default function NodeList() {
               link,
               name: '',
               dialerProxyName: nodeForm.dialerProxyName.trim(),
-              group: nodeForm.group.trim()
+              group: nodeForm.group.trim(),
+              tags: tagNames
             });
           }
         }
@@ -856,9 +873,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -901,9 +918,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
@@ -1007,6 +1024,7 @@ export default function NodeList() {
         groupOptions={groupOptions}
         proxyNodeOptions={proxyNodeOptions}
         loadingProxyNodes={loadingProxyNodes}
+        tagOptions={tagOptions}
         onClose={() => setNodeDialogOpen(false)}
         onSubmit={handleSubmitNode}
         onFetchProxyNodes={fetchProxyNodes}

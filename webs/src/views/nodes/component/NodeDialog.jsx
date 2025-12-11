@@ -2,7 +2,9 @@ import PropTypes from 'prop-types';
 
 // material-ui
 import Autocomplete from '@mui/material/Autocomplete';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -27,6 +29,7 @@ export default function NodeDialog({
   groupOptions,
   proxyNodeOptions,
   loadingProxyNodes,
+  tagOptions,
   onClose,
   onSubmit,
   onFetchProxyNodes
@@ -79,6 +82,52 @@ export default function NodeDialog({
             onInputChange={(e, newValue) => setNodeForm({ ...nodeForm, group: newValue || '' })}
             renderInput={(params) => <TextField {...params} label="分组" placeholder="请选择或输入分组名称" />}
           />
+          {/* 标签选择 */}
+          <Autocomplete
+            multiple
+            options={tagOptions || []}
+            value={nodeForm.tags || []}
+            onChange={(e, newValue) => setNodeForm({ ...nodeForm, tags: newValue })}
+            getOptionLabel={(option) => option.name || option}
+            isOptionEqualToValue={(option, val) => option.name === (val.name || val)}
+            renderOption={(props, option) => {
+              const { key, ...otherProps } = props;
+              return (
+                <li key={key} {...otherProps}>
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: option.color || '#1976d2',
+                      mr: 1,
+                      flexShrink: 0
+                    }}
+                  />
+                  {option.name}
+                </li>
+              );
+            }}
+            renderTags={(val, getTagProps) =>
+              val.map((option, index) => {
+                const { key, ...tagProps } = getTagProps({ index });
+                return (
+                  <Chip
+                    key={key}
+                    label={option.name || option}
+                    size="small"
+                    sx={{
+                      backgroundColor: option.color || '#1976d2',
+                      color: '#fff',
+                      '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
+                    }}
+                    {...tagProps}
+                  />
+                );
+              })
+            }
+            renderInput={(params) => <TextField {...params} label="标签" placeholder="选择要设置的标签" />}
+          />
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -99,13 +148,16 @@ NodeDialog.propTypes = {
     link: PropTypes.string,
     dialerProxyName: PropTypes.string,
     group: PropTypes.string,
-    mergeMode: PropTypes.string
+    mergeMode: PropTypes.string,
+    tags: PropTypes.array
   }).isRequired,
   setNodeForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,
   proxyNodeOptions: PropTypes.array.isRequired,
   loadingProxyNodes: PropTypes.bool.isRequired,
+  tagOptions: PropTypes.array,
   onClose: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
   onFetchProxyNodes: PropTypes.func.isRequired
 };
+
