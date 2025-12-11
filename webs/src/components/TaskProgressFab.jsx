@@ -12,6 +12,7 @@ import Grow from '@mui/material/Grow';
 import ClickAwayListener from '@mui/material/ClickAwayListener';
 import SpeedIcon from '@mui/icons-material/Speed';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -128,6 +129,14 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
         accentColor: theme.palette.success.main
       };
     }
+    if (task.taskType === 'tag_rule') {
+      return {
+        icon: LocalOfferIcon,
+        gradientColors: ['#f59e0b', '#d97706'],
+        label: '标签规则',
+        accentColor: '#f59e0b'
+      };
+    }
     return {
       icon: CloudSyncIcon,
       gradientColors: [theme.palette.primary.main, theme.palette.primary.dark],
@@ -182,6 +191,13 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
       if (exists !== undefined) parts.push(`已存在 ${exists}`);
       if (deleted !== undefined) parts.push(`删除 ${deleted}`);
       return parts.length > 0 ? parts.join(' · ') : null;
+    }
+
+    if (task.taskType === 'tag_rule') {
+      const { matchedCount, totalCount } = task.result;
+      if (matchedCount !== undefined && totalCount !== undefined) {
+        return `匹配 ${matchedCount} / ${totalCount} 节点`;
+      }
     }
 
     return null;
@@ -267,7 +283,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                   >
                     {taskConfig.label}
                   </Typography>
-                  {task.taskName && task.taskType === 'sub_update' && (
+                  {task.taskName && (task.taskType === 'sub_update' || task.taskType === 'tag_rule') && (
                     <Chip
                       label={task.taskName}
                       size="small"
@@ -451,6 +467,15 @@ const TaskProgressFab = () => {
         main: theme.palette.success.main,
         dark: theme.palette.success.dark,
         glow: alpha(theme.palette.success.main, 0.5)
+      };
+    }
+    // Check if any tag rule is running
+    const hasTagRule = taskList.some((task) => task.taskType === 'tag_rule' && task.status !== 'completed' && task.status !== 'error');
+    if (hasTagRule) {
+      return {
+        main: '#f59e0b',
+        dark: '#d97706',
+        glow: alpha('#f59e0b', 0.5)
       };
     }
     return {

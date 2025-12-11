@@ -50,7 +50,7 @@ const AVAILABLE_VARIABLES = [
   { key: '$Group', label: '分组', color: '#795548', description: '分组名称' },
   { key: '$Source', label: '来源', color: '#607d8b', description: '节点来源' },
   { key: '$Index', label: '序号', color: '#9e9e9e', description: '节点序号' },
-  { key: '$Tags', label: '标签', color: '#673ab7', description: '所有标签(逗号分隔)' },
+  { key: '$Tags', label: '标签', color: '#673ab7', description: '所有标签(竖线｜分隔)' },
   { key: '$Tag', label: '首标签', color: '#8bc34a', description: '第一个标签' }
 ];
 

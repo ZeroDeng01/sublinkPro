@@ -5,6 +5,7 @@ import (
 	"log"
 	"sublink/models"
 	"sublink/services/sse"
+	"time"
 )
 
 // ApplyAutoTagRules 对节点应用自动标签规则
@@ -22,7 +23,10 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 	log.Printf("开始应用自动标签规则: 触发类型=%s, 节点数=%d, 规则数=%d", triggerType, len(nodes), len(rules))
 
 	taggedCount := 0
+	// 规则名称
+	ruleNames := make([]string, 0)
 	for _, rule := range rules {
+		ruleNames = append(ruleNames, rule.Name)
 		// 解析条件
 		conditions, err := models.ParseConditions(rule.Conditions)
 		if err != nil {
@@ -55,7 +59,7 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
 			Event:   "auto_tag",
 			Title:   "自动标签完成",
-			Message: "自动标签规则执行完成",
+			Message: fmt.Sprintf("自动标签规则【%s】应用完成，执行规则【%s】: 共标记 %d 个节点", triggerType, ruleNames, taggedCount),
 			Data: map[string]interface{}{
 				"status":      "success",
 				"error":       fmt.Sprintf("自动标签规则【%s】应用完成: 共标记 %d 个节点", triggerType, taggedCount),
@@ -80,21 +84,92 @@ func TriggerTagRule(ruleID int) error {
 		return err
 	}
 
+	totalNodes := len(nodes)
+	if totalNodes == 0 {
+		return nil
+	}
+
+	// 生成唯一任务ID
+	taskID := fmt.Sprintf("tag_rule_%d_%d", ruleID, time.Now().UnixNano())
+	startTime := time.Now()
+	startTimeMs := startTime.UnixMilli()
+
+	// 广播任务开始事件
+	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+		TaskID:    taskID,
+		TaskType:  "tag_rule",
+		TaskName:  rule.Name,
+		Status:    "started",
+		Current:   0,
+		Total:     totalNodes,
+		Message:   fmt.Sprintf("开始执行标签规则: %s", rule.Name),
+		StartTime: startTimeMs,
+	})
+
 	// 解析条件
 	conditions, err := models.ParseConditions(rule.Conditions)
 	if err != nil {
+		// 广播错误事件
+		sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+			TaskID:    taskID,
+			TaskType:  "tag_rule",
+			TaskName:  rule.Name,
+			Status:    "error",
+			Current:   0,
+			Total:     totalNodes,
+			Message:   fmt.Sprintf("规则条件解析失败: %v", err),
+			StartTime: startTimeMs,
+		})
 		return err
 	}
 
 	// 评估并打标签 (使用标签名称)
 	matchedCount := 0
-	for _, n := range nodes {
-		if conditions.EvaluateNode(n) {
+	for i, n := range nodes {
+		matched := conditions.EvaluateNode(n)
+		resultStatus := "skipped"
+
+		if matched {
 			if err := n.AddTagByName(rule.TagName); err == nil {
 				matchedCount++
+				resultStatus = "tagged"
+			} else {
+				resultStatus = "error"
 			}
 		}
+
+		// 广播进度更新
+		sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+			TaskID:      taskID,
+			TaskType:    "tag_rule",
+			TaskName:    rule.Name,
+			Status:      "progress",
+			Current:     i + 1,
+			Total:       totalNodes,
+			CurrentItem: n.Name,
+			Result: map[string]interface{}{
+				"status":  resultStatus,
+				"matched": matched,
+			},
+			StartTime: startTimeMs,
+		})
 	}
+
+	// 广播任务完成事件
+	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+		TaskID:   taskID,
+		TaskType: "tag_rule",
+		TaskName: rule.Name,
+		Status:   "completed",
+		Current:  totalNodes,
+		Total:    totalNodes,
+		Message:  fmt.Sprintf("规则执行完成: 匹配 %d 个节点", matchedCount),
+		Result: map[string]interface{}{
+			"matchedCount": matchedCount,
+			"totalCount":   totalNodes,
+		},
+		StartTime: startTimeMs,
+	})
 
 	log.Printf("手动触发规则 [%s] 完成: 匹配 %d 个节点", rule.Name, matchedCount)
 	return nil

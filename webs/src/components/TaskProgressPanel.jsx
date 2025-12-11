@@ -9,6 +9,7 @@ import Chip from '@mui/material/Chip';
 import Collapse from '@mui/material/Collapse';
 import SpeedIcon from '@mui/icons-material/Speed';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -72,6 +73,14 @@ const TaskProgressItem = ({ task, currentTime }) => {
         accentColor: '#10b981'
       };
     }
+    if (task.taskType === 'tag_rule') {
+      return {
+        icon: LocalOfferIcon,
+        gradientColors: ['#f59e0b', '#d97706'],
+        label: '标签规则',
+        accentColor: '#f59e0b'
+      };
+    }
     return {
       icon: CloudSyncIcon,
       gradientColors: ['#6366f1', '#8b5cf6'],
@@ -126,6 +135,13 @@ const TaskProgressItem = ({ task, currentTime }) => {
       if (exists !== undefined) parts.push(`已存在 ${exists}`);
       if (deleted !== undefined) parts.push(`删除 ${deleted}`);
       return parts.length > 0 ? parts.join(' · ') : null;
+    }
+
+    if (task.taskType === 'tag_rule') {
+      const { matchedCount, totalCount } = task.result;
+      if (matchedCount !== undefined && totalCount !== undefined) {
+        return `匹配 ${matchedCount} / ${totalCount} 节点`;
+      }
     }
 
     return null;
@@ -210,7 +226,7 @@ const TaskProgressItem = ({ task, currentTime }) => {
                   >
                     {taskConfig.label}
                   </Typography>
-                  {task.taskName && task.taskType === 'sub_update' && (
+                  {task.taskName && (task.taskType === 'sub_update' || task.taskType === 'tag_rule') && (
                     <Chip
                       label={task.taskName}
                       size="small"
