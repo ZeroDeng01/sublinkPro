@@ -772,3 +772,83 @@ func GetNodeByName(name string) (*Node, bool) {
 	}
 	return nil, false
 }
+
+// TagStat 标签统计结构
+type TagStat struct {
+	Name  string `json:"name"`
+	Color string `json:"color"`
+	Count int    `json:"count"`
+}
+
+// GetNodeTagStats 获取按标签统计的节点数量
+func GetNodeTagStats() []TagStat {
+	allNodes := nodeCache.GetAll()
+	tagCounts := make(map[string]int)
+	noTagCount := 0
+
+	for _, n := range allNodes {
+		tagNames := n.GetTagNames()
+		if len(tagNames) == 0 {
+			noTagCount++
+		} else {
+			for _, tagName := range tagNames {
+				tagCounts[tagName]++
+			}
+		}
+	}
+
+	// 构建结果，包含标签颜色
+	result := make([]TagStat, 0, len(tagCounts)+1)
+
+	// 先添加"无标签"统计
+	if noTagCount > 0 {
+		result = append(result, TagStat{
+			Name:  "无标签",
+			Color: "#9e9e9e",
+			Count: noTagCount,
+		})
+	}
+
+	// 添加各标签统计
+	for tagName, count := range tagCounts {
+		color := "#1976d2" // 默认颜色
+		if tag, ok := tagCache.Get(tagName); ok {
+			color = tag.Color
+		}
+		result = append(result, TagStat{
+			Name:  tagName,
+			Color: color,
+			Count: count,
+		})
+	}
+
+	return result
+}
+
+// GetNodeGroupStats 获取按分组统计的节点数量
+func GetNodeGroupStats() map[string]int {
+	stats := make(map[string]int)
+	allNodes := nodeCache.GetAll()
+	for _, n := range allNodes {
+		group := n.Group
+		if group == "" {
+			group = "未分组"
+		}
+		stats[group]++
+	}
+	return stats
+}
+
+// GetNodeSourceStats 获取按来源统计的节点数量
+func GetNodeSourceStats() map[string]int {
+	stats := make(map[string]int)
+	allNodes := nodeCache.GetAll()
+	for _, n := range allNodes {
+		source := n.Source
+		if source == "" || source == "manual" {
+			source = "手动添加"
+		}
+		stats[source]++
+	}
+	return stats
+}

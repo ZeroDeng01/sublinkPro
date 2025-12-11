@@ -33,12 +33,25 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 
 // icons for protocols
 import PublicIcon from '@mui/icons-material/Public';
+import FolderIcon from '@mui/icons-material/Folder';
+import SourceIcon from '@mui/icons-material/Input';
+import LabelIcon from '@mui/icons-material/Label';
 import SecurityIcon from '@mui/icons-material/Security';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import TaskProgressPanel from 'components/TaskProgressPanel';
-import { getSubTotal, getNodeTotal, getFastestSpeedNode, getLowestDelayNode, getCountryStats, getProtocolStats } from 'api/total';
+import {
+  getSubTotal,
+  getNodeTotal,
+  getFastestSpeedNode,
+  getLowestDelayNode,
+  getCountryStats,
+  getProtocolStats,
+  getTagStats,
+  getGroupStats,
+  getSourceStats
+} from 'api/total';
 
 // ==============================|| 动画定义 ||============================== //
 
@@ -767,6 +780,9 @@ export default function DashboardDefault() {
   const [lowestDelayNode, setLowestDelayNode] = useState(null);
   const [countryStats, setCountryStats] = useState({});
   const [protocolStats, setProtocolStats] = useState({});
+  const [tagStats, setTagStats] = useState([]);
+  const [groupStats, setGroupStats] = useState({});
+  const [sourceStats, setSourceStats] = useState({});
   const [releases, setReleases] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingReleases, setLoadingReleases] = useState(true);
@@ -783,13 +799,16 @@ export default function DashboardDefault() {
   const fetchStats = async () => {
     try {
       setLoadingStats(true);
-      const [subRes, nodeRes, fastestRes, lowestDelayRes, countryRes, protocolRes] = await Promise.all([
+      const [subRes, nodeRes, fastestRes, lowestDelayRes, countryRes, protocolRes, tagRes, groupRes, sourceRes] = await Promise.all([
         getSubTotal(),
         getNodeTotal(),
         getFastestSpeedNode(),
         getLowestDelayNode(),
         getCountryStats(),
-        getProtocolStats()
+        getProtocolStats(),
+        getTagStats(),
+        getGroupStats(),
+        getSourceStats()
       ]);
       setSubTotal(subRes.data || 0);
       // nodeRes.data 现在返回 { total, available }
@@ -804,6 +823,9 @@ export default function DashboardDefault() {
       setLowestDelayNode(lowestDelayRes.data || null);
       setCountryStats(countryRes.data || {});
       setProtocolStats(protocolRes.data || {});
+      setTagStats(tagRes.data || []);
+      setGroupStats(groupRes.data || {});
+      setSourceStats(sourceRes.data || {});
     } catch (error) {
       console.error('获取统计数据失败:', error);
     } finally {
@@ -905,12 +927,13 @@ export default function DashboardDefault() {
       </Grid>
 
       {/* 国家和协议统计 */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
         {/* 国家统计卡片 */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Card
             sx={{
               borderRadius: 4,
+              height: '100%',
               background: isDark
                 ? `linear-gradient(145deg, ${alpha('#6366f1', 0.12)} 0%, ${alpha('#8b5cf6', 0.06)} 100%)`
                 : `linear-gradient(145deg, ${alpha('#6366f1', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
@@ -998,6 +1021,7 @@ export default function DashboardDefault() {
           <Card
             sx={{
               borderRadius: 4,
+              height: '100%',
               background: isDark
                 ? `linear-gradient(145deg, ${alpha('#10b981', 0.12)} 0%, ${alpha('#059669', 0.06)} 100%)`
                 : `linear-gradient(145deg, ${alpha('#10b981', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
@@ -1089,6 +1113,242 @@ export default function DashboardDefault() {
               ) : (
                 <Typography color="text.secondary" sx={{ fontSize: '0.875rem' }}>
                   暂无协议统计数据
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* 标签、分组、来源统计 */}
+      <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
+        {/* 标签统计卡片 */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card
+            sx={{
+              borderRadius: 4,
+              height: '100%',
+              background: isDark
+                ? `linear-gradient(145deg, ${alpha('#ec4899', 0.12)} 0%, ${alpha('#db2777', 0.06)} 100%)`
+                : `linear-gradient(145deg, ${alpha('#ec4899', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${isDark ? alpha('#ec4899', 0.2) : alpha('#ec4899', 0.12)}`,
+              overflow: 'hidden',
+              position: 'relative'
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)'
+                  }}
+                >
+                  <LabelIcon sx={{ color: '#fff', fontSize: 22 }} />
+                </Box>
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  标签统计
+                </Typography>
+              </Box>
+
+              {loadingStats ? (
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} variant="rounded" width={80} height={36} sx={{ borderRadius: 2 }} />
+                  ))}
+                </Box>
+              ) : tagStats.length > 0 ? (
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                  {tagStats
+                    .sort((a, b) => b.count - a.count)
+                    .map((tag) => (
+                      <Chip
+                        key={tag.name}
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Box
+                              sx={{
+                                width: 10,
+                                height: 10,
+                                borderRadius: '50%',
+                                bgcolor: tag.color
+                              }}
+                            />
+                            <Typography sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{tag.name}</Typography>
+                            <Typography sx={{ color: 'text.secondary', fontSize: '0.75rem', ml: 0.5 }}>({tag.count})</Typography>
+                          </Box>
+                        }
+                        sx={{
+                          bgcolor: isDark ? alpha(tag.color, 0.15) : alpha(tag.color, 0.1),
+                          border: `1px solid ${alpha(tag.color, 0.3)}`,
+                          borderRadius: 2,
+                          height: 36,
+                          '&:hover': {
+                            bgcolor: isDark ? alpha(tag.color, 0.25) : alpha(tag.color, 0.2)
+                          }
+                        }}
+                      />
+                    ))}
+                </Box>
+              ) : (
+                <Typography color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                  暂无标签统计数据
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 分组统计卡片 */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card
+            sx={{
+              borderRadius: 4,
+              height: '100%',
+              background: isDark
+                ? `linear-gradient(145deg, ${alpha('#8b5cf6', 0.12)} 0%, ${alpha('#7c3aed', 0.06)} 100%)`
+                : `linear-gradient(145deg, ${alpha('#8b5cf6', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${isDark ? alpha('#8b5cf6', 0.2) : alpha('#8b5cf6', 0.12)}`,
+              overflow: 'hidden',
+              position: 'relative'
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
+                  }}
+                >
+                  <FolderIcon sx={{ color: '#fff', fontSize: 22 }} />
+                </Box>
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  分组统计
+                </Typography>
+              </Box>
+
+              {loadingStats ? (
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} variant="rounded" width={80} height={36} sx={{ borderRadius: 2 }} />
+                  ))}
+                </Box>
+              ) : Object.keys(groupStats).length > 0 ? (
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                  {Object.entries(groupStats)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([group, count]) => (
+                      <Chip
+                        key={group}
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{group}</Typography>
+                            <Typography sx={{ color: 'text.secondary', fontSize: '0.75rem', ml: 0.5 }}>({count})</Typography>
+                          </Box>
+                        }
+                        sx={{
+                          bgcolor: isDark ? alpha('#8b5cf6', 0.15) : alpha('#8b5cf6', 0.08),
+                          border: `1px solid ${alpha('#8b5cf6', 0.2)}`,
+                          borderRadius: 2,
+                          height: 36,
+                          '&:hover': {
+                            bgcolor: isDark ? alpha('#8b5cf6', 0.25) : alpha('#8b5cf6', 0.15)
+                          }
+                        }}
+                      />
+                    ))}
+                </Box>
+              ) : (
+                <Typography color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                  暂无分组统计数据
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 来源统计卡片 */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card
+            sx={{
+              borderRadius: 4,
+              height: '100%',
+              background: isDark
+                ? `linear-gradient(145deg, ${alpha('#f97316', 0.12)} 0%, ${alpha('#ea580c', 0.06)} 100%)`
+                : `linear-gradient(145deg, ${alpha('#f97316', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${isDark ? alpha('#f97316', 0.2) : alpha('#f97316', 0.12)}`,
+              overflow: 'hidden',
+              position: 'relative'
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)'
+                  }}
+                >
+                  <SourceIcon sx={{ color: '#fff', fontSize: 22 }} />
+                </Box>
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  来源统计
+                </Typography>
+              </Box>
+
+              {loadingStats ? (
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} variant="rounded" width={80} height={36} sx={{ borderRadius: 2 }} />
+                  ))}
+                </Box>
+              ) : Object.keys(sourceStats).length > 0 ? (
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                  {Object.entries(sourceStats)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([source, count]) => (
+                      <Chip
+                        key={source}
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{source}</Typography>
+                            <Typography sx={{ color: 'text.secondary', fontSize: '0.75rem', ml: 0.5 }}>({count})</Typography>
+                          </Box>
+                        }
+                        sx={{
+                          bgcolor: isDark ? alpha('#f97316', 0.15) : alpha('#f97316', 0.08),
+                          border: `1px solid ${alpha('#f97316', 0.2)}`,
+                          borderRadius: 2,
+                          height: 36,
+                          '&:hover': {
+                            bgcolor: isDark ? alpha('#f97316', 0.25) : alpha('#f97316', 0.15)
+                          }
+                        }}
+                      />
+                    ))}
+                </Box>
+              ) : (
+                <Typography color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                  暂无来源统计数据
                 </Typography>
               )}
             </CardContent>

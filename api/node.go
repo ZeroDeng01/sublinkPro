@@ -833,3 +833,21 @@ func NodeProtocolStats(c *gin.Context) {
 	stats := models.GetNodeProtocolStats()
 	utils.OkDetailed(c, "获取协议统计成功", stats)
 }
+
+// NodeTagStats 获取按标签统计的节点数量
+func NodeTagStats(c *gin.Context) {
+	stats := models.GetNodeTagStats()
+	utils.OkDetailed(c, "获取标签统计成功", stats)
+}
+
+// NodeGroupStats 获取按分组统计的节点数量
+func NodeGroupStats(c *gin.Context) {
+	stats := models.GetNodeGroupStats()
+	utils.OkDetailed(c, "获取分组统计成功", stats)
+}
+
+// NodeSourceStats 获取按来源统计的节点数量
+func NodeSourceStats(c *gin.Context) {
+	stats := models.GetNodeSourceStats()
+	utils.OkDetailed(c, "获取来源统计成功", stats)
+}
