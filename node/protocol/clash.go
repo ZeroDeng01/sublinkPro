@@ -503,6 +503,11 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 			}
 		}
 
+		// 如果代理组的节点列表为空，插入 DIRECT 作为后备
+		// 这样可以避免 Clash 客户端因空代理组而报错
+		if len(validProxies) == 0 {
+			validProxies = append(validProxies, "DIRECT")
+		}
 		proxyGroup["proxies"] = validProxies
 		proxyGroups[i] = proxyGroup
 	}

@@ -187,6 +187,9 @@ func DecodeSurge(proxys, groups []string, file string) (string, error) {
 					// 没有正则模式，追加所有节点
 					lines[i] = strings.TrimSpace(line) + ", " + grouplist
 				}
+				// 检查处理后的行是否需要 DIRECT 后备
+				// 如果代理组没有有效节点，插入 DIRECT 避免客户端报错
+				lines[i] = ensureProxyGroupHasProxies(lines[i])
 			}
 		}
 		return strings.Join(lines, "\n") + s[len("[Proxy Group]"):]
@@ -210,4 +213,37 @@ func processRegexPatternsInLine(line string, nodeNames []string) string {
 		}
 		return pattern
 	})
+}
+
+// ensureProxyGroupHasProxies 检查 Surge 代理组行是否有有效节点
+// 如果没有有效节点，追加 DIRECT 作为后备
+// 格式: GroupName = type, proxy1, proxy2, ...
+func ensureProxyGroupHasProxies(line string) string {
+	// 分割行，检查 = 后面的内容
+	parts := strings.SplitN(line, "=", 2)
+	if len(parts) != 2 {
+		return line
+	}
+	afterEquals := strings.TrimSpace(parts[1])
+
+	// 找到类型后的第一个逗号
+	commaIndex := strings.Index(afterEquals, ",")
+	if commaIndex == -1 {
+		// 只有类型，没有任何代理
+		return line + ", DIRECT"
+	}
+
+	// 检查逗号后是否有有效内容
+	afterType := strings.TrimSpace(afterEquals[commaIndex+1:])
+
+	// 处理末尾多余的逗号和空格
+	afterType = strings.TrimRight(afterType, ", ")
+
+	if afterType == "" {
+		// 清理末尾的逗号和空格，然后追加 DIRECT
+		cleanLine := strings.TrimRight(line, ", ")
+		return cleanLine + ", DIRECT"
+	}
+
+	return line
 }
