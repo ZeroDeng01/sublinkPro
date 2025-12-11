@@ -23,7 +23,8 @@ export default function BatchActions({
   onDelete,
   onGroup,
   onDialerProxy,
-  onTag
+  onTag,
+  onRemoveTag
 }) {
   // 是否全选（当前页全选或所有符合条件节点全选）
   const isAllSelected = selectedCount > 0 && selectedCount >= totalCount;
@@ -81,6 +82,9 @@ export default function BatchActions({
           <Button size="small" color="secondary" variant="outlined" onClick={onTag} sx={{ whiteSpace: 'nowrap' }}>
             设置标签
           </Button>
+          <Button size="small" color="error" variant="outlined" onClick={onRemoveTag} sx={{ whiteSpace: 'nowrap' }}>
+            删除标签
+          </Button>
         </>
       )}
     </Stack>
@@ -95,5 +99,6 @@ BatchActions.propTypes = {
   onDelete: PropTypes.func.isRequired,
   onGroup: PropTypes.func.isRequired,
   onDialerProxy: PropTypes.func.isRequired,
-  onTag: PropTypes.func.isRequired
+  onTag: PropTypes.func.isRequired,
+  onRemoveTag: PropTypes.func.isRequired
 };

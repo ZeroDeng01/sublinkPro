@@ -7,6 +7,7 @@ export { default as SpeedTestDialog } from './SpeedTestDialog';
 export { default as BatchGroupDialog } from './BatchGroupDialog';
 export { default as BatchDialerProxyDialog } from './BatchDialerProxyDialog';
 export { default as BatchTagDialog } from './BatchTagDialog';
+export { default as BatchRemoveTagDialog } from './BatchRemoveTagDialog';
 
 // List view components
 export { default as NodeFilters } from './NodeFilters';

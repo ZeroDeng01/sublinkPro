@@ -42,7 +42,7 @@ import {
   batchUpdateNodeDialerProxy
 } from 'api/nodes';
 import { getSubSchedulers, addSubScheduler, updateSubScheduler, deleteSubScheduler, pullSubScheduler } from 'api/scheduler';
-import { getTags, batchSetNodeTags } from 'api/tags';
+import { getTags, batchSetNodeTags, batchRemoveNodeTags } from 'api/tags';
 
 // local components
 import {
@@ -54,6 +54,7 @@ import {
   BatchGroupDialog,
   BatchDialerProxyDialog,
   BatchTagDialog,
+  BatchRemoveTagDialog,
   NodeFilters,
   BatchActions,
   NodeMobileList,
@@ -183,6 +184,8 @@ export default function NodeList() {
   const [tagColorMap, setTagColorMap] = useState({});
   const [batchTagDialogOpen, setBatchTagDialogOpen] = useState(false);
   const [batchTagValue, setBatchTagValue] = useState([]);
+  const [batchRemoveTagDialogOpen, setBatchRemoveTagDialogOpen] = useState(false);
+  const [batchRemoveTagValue, setBatchRemoveTagValue] = useState([]);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -524,6 +527,31 @@ export default function NodeList() {
     } catch (error) {
       console.error(error);
       showMessage('批量设置标签失败', 'error');
+    }
+  };
+
+  // 批量移除标签
+  const handleBatchRemoveTag = () => {
+    if (selectedNodes.length === 0) {
+      showMessage('请选择要移除标签的节点', 'warning');
+      return;
+    }
+    setBatchRemoveTagValue([]);
+    setBatchRemoveTagDialogOpen(true);
+  };
+
+  const handleSubmitBatchRemoveTag = async () => {
+    try {
+      const ids = selectedNodes.map((node) => node.ID);
+      const tagNames = batchRemoveTagValue.map((t) => t.name || t);
+      await batchRemoveNodeTags({ nodeIds: ids, tagNames: tagNames });
+      showMessage(`成功从 ${selectedNodes.length} 个节点移除标签`);
+      setSelectedNodes([]);
+      setBatchRemoveTagDialogOpen(false);
+      fetchNodes(getCurrentFilters());
+    } catch (error) {
+      console.error(error);
+      showMessage('批量移除标签失败', 'error');
     }
   };
 
@@ -964,6 +992,7 @@ export default function NodeList() {
         onGroup={handleBatchGroup}
         onDialerProxy={handleBatchDialerProxy}
         onTag={handleBatchTag}
+        onRemoveTag={handleBatchRemoveTag}
       />
 
       {/* 节点列表 */}
@@ -1116,6 +1145,17 @@ export default function NodeList() {
         tagOptions={tagOptions}
         onClose={() => setBatchTagDialogOpen(false)}
         onSubmit={handleSubmitBatchTag}
+      />
+
+      {/* 批量移除标签对话框 */}
+      <BatchRemoveTagDialog
+        open={batchRemoveTagDialogOpen}
+        selectedCount={selectedNodes.length}
+        value={batchRemoveTagValue}
+        setValue={setBatchRemoveTagValue}
+        tagOptions={tagOptions}
+        onClose={() => setBatchRemoveTagDialogOpen(false)}
+        onSubmit={handleSubmitBatchRemoveTag}
       />
 
       {/* 提示消息 */}

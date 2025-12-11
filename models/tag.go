@@ -567,6 +567,37 @@ func BatchSetTagsForNodes(nodeIDs []int, tagNames []string) error {
 	return nil
 }
 
+// BatchRemoveTagsFromNodes 批量从节点移除指定标签
+func BatchRemoveTagsFromNodes(nodeIDs []int, tagNames []string) error {
+	// 创建要删除的标签集合
+	removeSet := make(map[string]bool)
+	for _, t := range tagNames {
+		removeSet[t] = true
+	}
+
+	for _, nodeID := range nodeIDs {
+		var node Node
+		node.ID = nodeID
+		if err := node.GetByID(); err != nil {
+			continue
+		}
+		// 获取当前标签列表
+		currentTags := node.GetTagNames()
+		// 过滤掉要删除的标签
+		newTags := make([]string, 0, len(currentTags))
+		for _, t := range currentTags {
+			if !removeSet[t] {
+				newTags = append(newTags, t)
+			}
+		}
+		// 更新节点标签
+		if err := node.SetTagNames(newTags); err != nil {
+			log.Printf("为节点 %d 移除标签失败: %v", nodeID, err)
+		}
+	}
+	return nil
+}
+
 // GetTagsByNode 获取节点的所有标签对象
 func GetTagsByNode(node Node) []Tag {
 	tagNames := node.GetTagNames()

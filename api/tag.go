@@ -283,6 +283,27 @@ func NodeBatchSetTags(c *gin.Context) {
 	utils.Ok(c)
 }
 
+// NodeBatchRemoveTags 批量从节点移除指定标签
+func NodeBatchRemoveTags(c *gin.Context) {
+	var req struct {
+		NodeIDs  []int    `json:"nodeIds"`
+		TagNames []string `json:"tagNames"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+	if len(req.TagNames) == 0 {
+		utils.FailWithMsg(c, "请选择要删除的标签")
+		return
+	}
+	if err := models.BatchRemoveTagsFromNodes(req.NodeIDs, req.TagNames); err != nil {
+		utils.FailWithMsg(c, "批量移除标签失败")
+		return
+	}
+	utils.Ok(c)
+}
+
 // GetNodeTags 获取节点的标签
 func GetNodeTags(c *gin.Context) {
 	nodeIDStr := c.Query("nodeId")
