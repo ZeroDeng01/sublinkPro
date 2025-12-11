@@ -823,14 +823,18 @@ export default function NodeList() {
     if (event.target.checked) {
       try {
         // 从后端获取所有符合筛选条件的节点ID
+        const filters = getCurrentFilters();
         const params = {};
-        if (searchQuery) params.search = searchQuery;
-        if (groupFilter) params.group = groupFilter;
-        if (sourceFilter) params.source = sourceFilter;
-        if (maxDelay) params.maxDelay = maxDelay;
-        if (minSpeed) params.minSpeed = minSpeed;
-        if (countryFilter && countryFilter.length > 0) {
-          params['countries[]'] = countryFilter;
+        if (filters.search) params.search = filters.search;
+        if (filters.group) params.group = filters.group;
+        if (filters.source) params.source = filters.source;
+        if (filters.maxDelay) params.maxDelay = filters.maxDelay;
+        if (filters.minSpeed) params.minSpeed = filters.minSpeed;
+        if (filters.countries && filters.countries.length > 0) {
+          params['countries[]'] = filters.countries;
+        }
+        if (filters.tags && filters.tags.length > 0) {
+          params['tags[]'] = filters.tags.map((t) => t.name || t);
         }
 
         const response = await getNodeIds(params);
@@ -905,9 +909,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -950,9 +954,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
