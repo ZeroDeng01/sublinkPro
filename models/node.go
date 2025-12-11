@@ -392,6 +392,60 @@ func (node *Node) ListByGroups(groups []string) ([]Node, error) {
 	return nodes, nil
 }
 
+// ListByTags 根据标签获取节点列表（匹配任意标签）
+func (node *Node) ListByTags(tags []string) ([]Node, error) {
+	tagMap := make(map[string]bool)
+	for _, t := range tags {
+		t = strings.TrimSpace(t)
+		if t != "" {
+			tagMap[t] = true
+		}
+	}
+
+	if len(tagMap) == 0 {
+		return []Node{}, nil
+	}
+
+	// 使用缓存的 Filter 方法
+	nodes := nodeCache.Filter(func(n Node) bool {
+		nodeTags := n.GetTagNames()
+		for _, nt := range nodeTags {
+			if tagMap[nt] {
+				return true
+			}
+		}
+		return false
+	})
+	return nodes, nil
+}
+
+// FilterNodesByTags 从已有节点列表中按标签过滤（用于分组+标签组合过滤）
+func FilterNodesByTags(nodes []Node, tags []string) []Node {
+	tagMap := make(map[string]bool)
+	for _, t := range tags {
+		t = strings.TrimSpace(t)
+		if t != "" {
+			tagMap[t] = true
+		}
+	}
+
+	if len(tagMap) == 0 {
+		return nodes
+	}
+
+	var filtered []Node
+	for _, n := range nodes {
+		nodeTags := n.GetTagNames()
+		for _, nt := range nodeTags {
+			if tagMap[nt] {
+				filtered = append(filtered, n)
+				break
+			}
+		}
+	}
+	return filtered
+}
+
 // Del 删除节点
 func (node *Node) Del() error {
 	// 先清除节点与订阅的关联关系

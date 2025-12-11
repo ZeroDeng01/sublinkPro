@@ -9,5 +9,6 @@ export { default as SubscriptionTable } from './SubscriptionTable';
 export { default as NodeTransferBox } from './NodeTransferBox';
 export { default as SubscriptionFormDialog } from './SubscriptionFormDialog';
 export { default as NodeNameFilter } from './NodeNameFilter';
+export { default as NodeTagFilter } from './NodeTagFilter';
 export { default as NodeNamePreprocessor } from './NodeNamePreprocessor';
 export { default as NodeRenameBuilder } from './NodeRenameBuilder';

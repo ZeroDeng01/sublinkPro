@@ -43,6 +43,8 @@ type Subcription struct {
 	NodeNamePreprocess string           `json:"NodeNamePreprocess"` // 原名预处理规则 (JSON数组)
 	NodeNameWhitelist  string           `json:"NodeNameWhitelist"`  // 节点名称白名单 (JSON数组)
 	NodeNameBlacklist  string           `json:"NodeNameBlacklist"`  // 节点名称黑名单 (JSON数组)
+	TagWhitelist       string           `json:"TagWhitelist"`       // 标签白名单（逗号分隔）
+	TagBlacklist       string           `json:"TagBlacklist"`       // 标签黑名单（逗号分隔）
 	CreatedAt          time.Time        `json:"CreatedAt"`
 	UpdatedAt          time.Time        `json:"UpdatedAt"`
 	DeletedAt          gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
@@ -173,6 +175,8 @@ func (sub *Subcription) Update() error {
 		"node_name_preprocess": sub.NodeNamePreprocess,
 		"node_name_whitelist":  sub.NodeNameWhitelist,
 		"node_name_blacklist":  sub.NodeNameBlacklist,
+		"tag_whitelist":        sub.TagWhitelist,
+		"tag_blacklist":        sub.TagBlacklist,
 	}
 	err := DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 	if err != nil {
@@ -446,6 +450,67 @@ func (sub *Subcription) GetSub() error {
 			// 白名单：如果设置了白名单但节点不在白名单中，则排除
 			if len(whitelistMap) > 0 && !whitelistMap[country] {
 				continue
+			}
+
+			filteredNodes = append(filteredNodes, node)
+		}
+		sub.Nodes = filteredNodes
+	}
+
+	// 标签过滤（在节点名称过滤之前）
+	if sub.TagWhitelist != "" || sub.TagBlacklist != "" {
+		// 解析白名单和黑名单标签
+		whitelistTags := make(map[string]bool)
+		blacklistTags := make(map[string]bool)
+
+		if sub.TagWhitelist != "" {
+			for _, t := range strings.Split(sub.TagWhitelist, ",") {
+				t = strings.TrimSpace(t)
+				if t != "" {
+					whitelistTags[t] = true
+				}
+			}
+		}
+
+		if sub.TagBlacklist != "" {
+			for _, t := range strings.Split(sub.TagBlacklist, ",") {
+				t = strings.TrimSpace(t)
+				if t != "" {
+					blacklistTags[t] = true
+				}
+			}
+		}
+
+		var filteredNodes []Node
+		for _, node := range sub.Nodes {
+			nodeTags := node.GetTagNames()
+
+			// 黑名单优先：如果节点任一标签在黑名单中，则排除
+			if len(blacklistTags) > 0 {
+				isBlacklisted := false
+				for _, nt := range nodeTags {
+					if blacklistTags[nt] {
+						isBlacklisted = true
+						break
+					}
+				}
+				if isBlacklisted {
+					continue
+				}
+			}
+
+			// 白名单：如果设置了白名单，节点必须包含至少一个白名单标签
+			if len(whitelistTags) > 0 {
+				isWhitelisted := false
+				for _, nt := range nodeTags {
+					if whitelistTags[nt] {
+						isWhitelisted = true
+						break
+					}
+				}
+				if !isWhitelisted {
+					continue
+				}
 			}
 
 			filteredNodes = append(filteredNodes, node)

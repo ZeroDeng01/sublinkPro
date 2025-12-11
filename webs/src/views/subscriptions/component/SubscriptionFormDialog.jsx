@@ -31,6 +31,7 @@ import EditNoteIcon from '@mui/icons-material/EditNote';
 import NodeRenameBuilder from './NodeRenameBuilder';
 import NodeNamePreprocessor from './NodeNamePreprocessor';
 import NodeNameFilter from './NodeNameFilter';
+import NodeTagFilter from './NodeTagFilter';
 import NodeTransferBox from './NodeTransferBox';
 
 // ISO国家代码转换为国旗emoji
@@ -78,6 +79,7 @@ export default function SubscriptionFormDialog({
   groupOptions,
   sourceOptions,
   countryOptions,
+  tagOptions,
   // 节点过滤
   nodeGroupFilter,
   setNodeGroupFilter,
@@ -385,6 +387,15 @@ export default function SubscriptionFormDialog({
               />
             </Grid>
           </Grid>
+
+          {/* 节点标签过滤 */}
+          <NodeTagFilter
+            tagOptions={tagOptions}
+            whitelistValue={formData.tagWhitelist}
+            blacklistValue={formData.tagBlacklist}
+            onWhitelistChange={(tags) => setFormData({ ...formData, tagWhitelist: tags })}
+            onBlacklistChange={(tags) => setFormData({ ...formData, tagBlacklist: tags })}
+          />
 
           {/* 节点名称过滤 */}
           <NodeNameFilter

@@ -160,4 +160,3 @@ NodeDialog.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   onFetchProxyNodes: PropTypes.func.isRequired
 };
-

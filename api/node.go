@@ -648,6 +648,14 @@ func GetSpeedTestConfig(c *gin.Context) {
 	} else {
 		groups = []string{}
 	}
+	// 获取标签配置
+	tagsStr, _ := models.GetSetting("speed_test_tags")
+	var tags []string
+	if tagsStr != "" {
+		tags = strings.Split(tagsStr, ",")
+	} else {
+		tags = []string{}
+	}
 	detectCountryStr, _ := models.GetSetting("speed_test_detect_country")
 	detectCountry := detectCountryStr == "true"
 
@@ -664,6 +672,7 @@ func GetSpeedTestConfig(c *gin.Context) {
 		"url":            url,
 		"timeout":        timeout,
 		"groups":         groups,
+		"tags":           tags,
 		"detect_country": detectCountry,
 		"concurrency":    concurrency,
 	})
@@ -678,6 +687,7 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		Url           string      `json:"url"`
 		Timeout       interface{} `json:"timeout"`
 		Groups        []string    `json:"groups"`
+		Tags          []string    `json:"tags"`
 		DetectCountry bool        `json:"detect_country"`
 		Concurrency   int         `json:"concurrency"`
 	}
@@ -717,6 +727,14 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 	err = models.SetSetting("speed_test_groups", groupsStr)
 	if err != nil {
 		utils.FailWithMsg(c, "保存分组配置失败")
+		return
+	}
+
+	// 保存标签配置
+	tagsStr := strings.Join(req.Tags, ",")
+	err = models.SetSetting("speed_test_tags", tagsStr)
+	if err != nil {
+		utils.FailWithMsg(c, "保存标签配置失败")
 		return
 	}
 

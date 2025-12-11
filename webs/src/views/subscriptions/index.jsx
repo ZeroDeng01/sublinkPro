@@ -22,6 +22,7 @@ import { getSubscriptions, addSubscription, updateSubscription, deleteSubscripti
 import { getNodes, getNodeCountries, getNodeGroups, getNodeSources } from 'api/nodes';
 import { getTemplates } from 'api/templates';
 import { getScripts } from 'api/scripts';
+import { getTags } from 'api/tags';
 
 // components
 import {
@@ -95,7 +96,9 @@ export default function SubscriptionList() {
     nodeNameRule: '',
     nodeNamePreprocess: '',
     nodeNameWhitelist: '',
-    nodeNameBlacklist: ''
+    nodeNameBlacklist: '',
+    tagWhitelist: '',
+    tagBlacklist: ''
   });
 
   // 节点过滤
@@ -145,6 +148,7 @@ export default function SubscriptionList() {
   // 从后端获取的分组和来源选项
   const [groupOptions, setGroupOptions] = useState([]);
   const [sourceOptions, setSourceOptions] = useState([]);
+  const [tagOptions, setTagOptions] = useState([]);
 
   // 获取订阅列表（分页）
   const fetchSubscriptions = async (currentPage, currentPageSize) => {
@@ -171,13 +175,14 @@ export default function SubscriptionList() {
   // 获取其他数据（不分页）
   const fetchOtherData = useCallback(async () => {
     try {
-      const [nodesRes, templatesRes, scriptsRes, countriesRes, groupsRes, sourcesRes] = await Promise.all([
+      const [nodesRes, templatesRes, scriptsRes, countriesRes, groupsRes, sourcesRes, tagsRes] = await Promise.all([
         getNodes(),
         getTemplates(),
         getScripts(),
         getNodeCountries(),
         getNodeGroups(),
-        getNodeSources()
+        getNodeSources(),
+        getTags()
       ]);
       setAllNodes(nodesRes.data || []);
       setTemplates(templatesRes.data || []);
@@ -185,6 +190,7 @@ export default function SubscriptionList() {
       setCountryOptions(countriesRes.data || []);
       setGroupOptions((groupsRes.data || []).sort());
       setSourceOptions((sourcesRes.data || []).sort());
+      setTagOptions(tagsRes.data || []);
     } catch (error) {
       console.error(error);
     }
@@ -232,7 +238,9 @@ export default function SubscriptionList() {
       nodeNameRule: '',
       nodeNamePreprocess: '',
       nodeNameWhitelist: '',
-      nodeNameBlacklist: ''
+      nodeNameBlacklist: '',
+      tagWhitelist: '',
+      tagBlacklist: ''
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -276,7 +284,9 @@ export default function SubscriptionList() {
       nodeNameRule: sub.NodeNameRule || '',
       nodeNamePreprocess: sub.NodeNamePreprocess || '',
       nodeNameWhitelist: sub.NodeNameWhitelist || '',
-      nodeNameBlacklist: sub.NodeNameBlacklist || ''
+      nodeNameBlacklist: sub.NodeNameBlacklist || '',
+      tagWhitelist: sub.TagWhitelist || '',
+      tagBlacklist: sub.TagBlacklist || ''
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -325,7 +335,9 @@ export default function SubscriptionList() {
         NodeNameRule: formData.nodeNameRule,
         NodeNamePreprocess: formData.nodeNamePreprocess,
         NodeNameWhitelist: formData.nodeNameWhitelist,
-        NodeNameBlacklist: formData.nodeNameBlacklist
+        NodeNameBlacklist: formData.nodeNameBlacklist,
+        TagWhitelist: formData.tagWhitelist,
+        TagBlacklist: formData.tagBlacklist
       };
 
       if (formData.selectionMode === 'nodes') {
@@ -679,6 +691,7 @@ export default function SubscriptionList() {
         groupOptions={groupOptions}
         sourceOptions={sourceOptions}
         countryOptions={countryOptions}
+        tagOptions={tagOptions}
         nodeGroupFilter={nodeGroupFilter}
         setNodeGroupFilter={setNodeGroupFilter}
         nodeSourceFilter={nodeSourceFilter}

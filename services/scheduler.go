@@ -344,15 +344,31 @@ func (sm *SchedulerManager) StopNodeSpeedTestTask() {
 func ExecuteNodeSpeedTestTask() {
 	log.Println("开始执行节点测速任务...")
 
-	// 获取测速分组配置
+	// 获取测速分组和标签配置
 	speedTestGroupsStr, _ := models.GetSetting("speed_test_groups")
+	speedTestTagsStr, _ := models.GetSetting("speed_test_tags")
 	var nodes []models.Node
 	var err error
 
+	// 分组优先级高于标签：
+	// 1. 如果选了分组，先按分组筛选，再按标签过滤
+	// 2. 如果只选了标签，直接按标签筛选
+	// 3. 都不选则测全部
 	if speedTestGroupsStr != "" {
 		groups := strings.Split(speedTestGroupsStr, ",")
 		nodes, err = new(models.Node).ListByGroups(groups)
 		log.Printf("根据分组测速: %v", groups)
+
+		// 在分组基础上按标签继续筛选
+		if err == nil && speedTestTagsStr != "" {
+			tags := strings.Split(speedTestTagsStr, ",")
+			nodes = models.FilterNodesByTags(nodes, tags)
+			log.Printf("在分组基础上按标签过滤: %v, 剩余节点: %d", tags, len(nodes))
+		}
+	} else if speedTestTagsStr != "" {
+		tags := strings.Split(speedTestTagsStr, ",")
+		nodes, err = new(models.Node).ListByTags(tags)
+		log.Printf("根据标签测速: %v", tags)
 	} else {
 		nodes, err = new(models.Node).List()
 		log.Println("全量测速")

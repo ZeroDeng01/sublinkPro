@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -33,6 +34,7 @@ export default function SpeedTestDialog({
   speedTestForm,
   setSpeedTestForm,
   groupOptions,
+  tagOptions,
   onClose,
   onSubmit,
   onRunSpeedTest,
@@ -151,6 +153,51 @@ export default function SpeedTestDialog({
             onChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, groups: newValue })}
             renderInput={(params) => <TextField {...params} label="测速分组" placeholder="留空则测试全部分组" />}
           />
+          <Autocomplete
+            multiple
+            options={tagOptions || []}
+            getOptionLabel={(option) => option.name || option}
+            value={speedTestForm.tags || []}
+            onChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, tags: newValue.map((t) => t.name || t) })}
+            isOptionEqualToValue={(option, value) => (option.name || option) === value}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => {
+                const tagObj = (tagOptions || []).find((t) => t.name === option);
+                const { key, ...tagProps } = getTagProps({ index });
+                return (
+                  <Chip
+                    key={key}
+                    label={option}
+                    size="small"
+                    sx={{
+                      backgroundColor: tagObj?.color || '#1976d2',
+                      color: '#fff',
+                      '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
+                    }}
+                    {...tagProps}
+                  />
+                );
+              })
+            }
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={option.name}>
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    backgroundColor: option.color || '#1976d2',
+                    mr: 1
+                  }}
+                />
+                {option.name}
+              </Box>
+            )}
+            renderInput={(params) => <TextField {...params} label="测速标签" placeholder="留空则不按标签过滤" />}
+          />
+          <Typography variant="caption" color="textSecondary" sx={{ mt: -1 }}>
+            分组优先级高于标签：选了分组则先按分组筛选，再按标签过滤；只选标签则直接按标签筛选；都不选则测全部。
+          </Typography>
           <FormControlLabel
             control={
               <Switch
@@ -187,11 +234,13 @@ SpeedTestDialog.propTypes = {
     url: PropTypes.string,
     timeout: PropTypes.number,
     groups: PropTypes.array,
+    tags: PropTypes.array,
     detect_country: PropTypes.bool,
     concurrency: PropTypes.number
   }).isRequired,
   setSpeedTestForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,
+  tagOptions: PropTypes.array,
   onClose: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
   onRunSpeedTest: PropTypes.func.isRequired,

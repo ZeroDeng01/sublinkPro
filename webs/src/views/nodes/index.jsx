@@ -397,7 +397,9 @@ export default function NodeList() {
     // 解析节点的标签，将字符串转换为标签对象数组
     let nodeTags = [];
     if (node.Tags) {
-      const tagNames = node.Tags.split(',').map((t) => t.trim()).filter((t) => t);
+      const tagNames = node.Tags.split(',')
+        .map((t) => t.trim())
+        .filter((t) => t);
       nodeTags = tagNames.map((name) => {
         const found = tagOptions.find((t) => t.name === name);
         return found || { name, color: '#1976d2' };
@@ -719,7 +721,9 @@ export default function NodeList() {
   const handleOpenSpeedTest = async () => {
     try {
       const response = await getSpeedTestConfig();
-      setSpeedTestForm(response.data || { cron: '', enabled: false, mode: 'tcp', url: '', timeout: 5, groups: [], concurrency: 0 });
+      setSpeedTestForm(
+        response.data || { cron: '', enabled: false, mode: 'tcp', url: '', timeout: 5, groups: [], tags: [], concurrency: 0 }
+      );
       setSpeedTestDialogOpen(true);
     } catch (error) {
       console.error(error);
@@ -873,9 +877,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -918,9 +922,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -1073,6 +1077,7 @@ export default function NodeList() {
         speedTestForm={speedTestForm}
         setSpeedTestForm={setSpeedTestForm}
         groupOptions={groupOptions}
+        tagOptions={tagOptions}
         onClose={() => setSpeedTestDialogOpen(false)}
         onSubmit={handleSubmitSpeedTest}
         onRunSpeedTest={handleRunSpeedTest}

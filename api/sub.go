@@ -90,6 +90,8 @@ func SubAdd(c *gin.Context) {
 	nodeNamePreprocess := c.PostForm("NodeNamePreprocess")
 	nodeNameWhitelist := c.PostForm("NodeNameWhitelist")
 	nodeNameBlacklist := c.PostForm("NodeNameBlacklist")
+	tagWhitelist := c.PostForm("TagWhitelist")
+	tagBlacklist := c.PostForm("TagBlacklist")
 
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
@@ -143,6 +145,8 @@ func SubAdd(c *gin.Context) {
 	sub.NodeNamePreprocess = nodeNamePreprocess
 	sub.NodeNameWhitelist = nodeNameWhitelist
 	sub.NodeNameBlacklist = nodeNameBlacklist
+	sub.TagWhitelist = tagWhitelist
+	sub.TagBlacklist = tagBlacklist
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 
 	err := sub.Add()
@@ -211,6 +215,8 @@ func SubUpdate(c *gin.Context) {
 	nodeNamePreprocess := c.PostForm("NodeNamePreprocess")
 	nodeNameWhitelist := c.PostForm("NodeNameWhitelist")
 	nodeNameBlacklist := c.PostForm("NodeNameBlacklist")
+	tagWhitelist := c.PostForm("TagWhitelist")
+	tagBlacklist := c.PostForm("TagBlacklist")
 
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
@@ -274,6 +280,8 @@ func SubUpdate(c *gin.Context) {
 	sub.NodeNamePreprocess = nodeNamePreprocess
 	sub.NodeNameWhitelist = nodeNameWhitelist
 	sub.NodeNameBlacklist = nodeNameBlacklist
+	sub.TagWhitelist = tagWhitelist
+	sub.TagBlacklist = tagBlacklist
 	err = sub.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")
