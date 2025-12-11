@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"sublink/dto"
 	"sublink/models"
-	"sublink/node"
 	"sublink/services"
 	"sublink/utils"
 
@@ -64,9 +63,9 @@ func SubSchedulerAdd(c *gin.Context) {
 		}, subS.ID, req.URL, req.Name)
 	}
 
-	// 立即执行一次任务
+	// 立即执行一次任务（使用 ExecuteSubscriptionTask 确保与定时任务行为一致）
 	if req.Enabled {
-		go node.LoadClashConfigFromURL(subS.ID, subS.URL, subS.Name, subS.DownloadWithProxy, subS.ProxyLink, subS.UserAgent)
+		go services.ExecuteSubscriptionTask(subS.ID, subS.URL, subS.Name)
 	}
 
 	utils.OkWithMsg(c, "添加成功")
@@ -79,7 +78,9 @@ func PullClashConfigFromURL(c *gin.Context) {
 		utils.FailWithMsg(c, "参数错误: "+err.Error())
 		return
 	}
-	go node.LoadClashConfigFromURL(req.ID, req.URL, req.Name, req.DownloadWithProxy, req.ProxyLink, req.UserAgent)
+	// 使用 ExecuteSubscriptionTask 确保手动拉取与定时任务行为一致
+	// 包括订阅更新后自动触发 tag 规则等后续处理
+	go services.ExecuteSubscriptionTask(req.ID, req.URL, req.Name)
 	utils.OkWithMsg(c, "任务启动成功")
 }
 
