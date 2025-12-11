@@ -138,6 +138,13 @@ func TriggerTagRule(ruleID int) error {
 	// 评估并打标签 (使用标签名称)
 	matchedCount := 0
 	removedCount := 0
+	// 计算进度广播间隔（避免大量节点时消息阻塞）
+	broadcastInterval := 1
+	if totalNodes > 500 {
+		broadcastInterval = 100
+	} else if totalNodes > 50 {
+		broadcastInterval = 50
+	}
 	for i, n := range nodes {
 		matched := conditions.EvaluateNode(n)
 		resultStatus := "skipped"
@@ -159,21 +166,25 @@ func TriggerTagRule(ruleID int) error {
 			}
 		}
 
-		// 广播进度更新
-		sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-			TaskID:      taskID,
-			TaskType:    "tag_rule",
-			TaskName:    rule.Name,
-			Status:      "progress",
-			Current:     i + 1,
-			Total:       totalNodes,
-			CurrentItem: n.Name,
-			Result: map[string]interface{}{
-				"status":  resultStatus,
-				"matched": matched,
-			},
-			StartTime: startTimeMs,
-		})
+		// 广播进度更新（降低频率防止消息阻塞）
+		currentProgress := i + 1
+		shouldBroadcast := currentProgress%broadcastInterval == 0 || currentProgress == totalNodes
+		if shouldBroadcast {
+			sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+				TaskID:      taskID,
+				TaskType:    "tag_rule",
+				TaskName:    rule.Name,
+				Status:      "progress",
+				Current:     currentProgress,
+				Total:       totalNodes,
+				CurrentItem: n.Name,
+				Result: map[string]interface{}{
+					"status":  resultStatus,
+					"matched": matched,
+				},
+				StartTime: startTimeMs,
+			})
+		}
 	}
 
 	// 广播任务完成事件
@@ -191,6 +202,19 @@ func TriggerTagRule(ruleID int) error {
 			"totalCount":   totalNodes,
 		},
 		StartTime: startTimeMs,
+	})
+
+	// 广播通知消息，让用户在通知中心看到完成通知
+	sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
+		Event:   "tag_rule",
+		Title:   "标签规则执行完成",
+		Message: fmt.Sprintf("规则【%s】执行完成: 匹配 %d 个节点, 移除 %d 个节点标签", rule.Name, matchedCount, removedCount),
+		Data: map[string]interface{}{
+			"status":       "success",
+			"matchedCount": matchedCount,
+			"removedCount": removedCount,
+			"totalCount":   totalNodes,
+		},
 	})
 
 	log.Printf("手动触发规则 [%s] 完成: 匹配 %d 个节点, 移除 %d 个节点标签", rule.Name, matchedCount, removedCount)
