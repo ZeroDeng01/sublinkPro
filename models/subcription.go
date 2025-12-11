@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"sublink/cache"
+	"sublink/database"
 	"sublink/dto"
 	"sublink/utils"
 	"time"
@@ -89,7 +90,7 @@ type NodeWithSort struct {
 func InitSubcriptionCache() error {
 	log.Printf("开始加载订阅到缓存")
 	var subs []Subcription
-	if err := DB.Find(&subs).Error; err != nil {
+	if err := database.DB.Find(&subs).Error; err != nil {
 		return err
 	}
 
@@ -102,7 +103,7 @@ func InitSubcriptionCache() error {
 
 // Add 添加订阅 (Write-Through)
 func (sub *Subcription) Add() error {
-	err := DB.Create(sub).Error
+	err := database.DB.Create(sub).Error
 	if err != nil {
 		return err
 	}
@@ -119,7 +120,7 @@ func (sub *Subcription) AddNode() error {
 			NodeName:      node.Name,
 			Sort:          i, // 按添加顺序设置排序
 		}
-		if err := DB.Create(&subNode).Error; err != nil {
+		if err := database.DB.Create(&subNode).Error; err != nil {
 			return err
 		}
 	}
@@ -137,7 +138,7 @@ func (sub *Subcription) AddGroups(groups []string) error {
 			GroupName:     groupName,
 			Sort:          i,
 		}
-		if err := DB.Create(&subGroup).Error; err != nil {
+		if err := database.DB.Create(&subGroup).Error; err != nil {
 			return err
 		}
 	}
@@ -152,7 +153,7 @@ func (sub *Subcription) AddScripts(scriptIDs []int) error {
 			ScriptID:      scriptID,
 			Sort:          i,
 		}
-		if err := DB.Create(&subScript).Error; err != nil {
+		if err := database.DB.Create(&subScript).Error; err != nil {
 			return err
 		}
 	}
@@ -178,13 +179,13 @@ func (sub *Subcription) Update() error {
 		"tag_whitelist":        sub.TagWhitelist,
 		"tag_blacklist":        sub.TagBlacklist,
 	}
-	err := DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
+	err := database.DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 	if err != nil {
 		return err
 	}
 	// 更新缓存：从数据库读取完整数据后更新
 	var updated Subcription
-	if err := DB.First(&updated, sub.ID).Error; err == nil {
+	if err := database.DB.First(&updated, sub.ID).Error; err == nil {
 		subcriptionCache.Set(sub.ID, updated)
 	}
 	return nil
@@ -193,7 +194,7 @@ func (sub *Subcription) Update() error {
 // 更新节点列表建立多对多关系（使用节点名称）
 func (sub *Subcription) UpdateNodes() error {
 	// 先删除旧的关联
-	if err := DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionNode{}).Error; err != nil {
+	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionNode{}).Error; err != nil {
 		return err
 	}
 	// 再添加新的关联
@@ -203,7 +204,7 @@ func (sub *Subcription) UpdateNodes() error {
 			NodeName:      node.Name,
 			Sort:          i, // 按添加顺序设置排序
 		}
-		if err := DB.Create(&subNode).Error; err != nil {
+		if err := database.DB.Create(&subNode).Error; err != nil {
 			return err
 		}
 	}
@@ -213,7 +214,7 @@ func (sub *Subcription) UpdateNodes() error {
 // 更新分组列表
 func (sub *Subcription) UpdateGroups(groups []string) error {
 	// 先删除旧的关联
-	if err := DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionGroup{}).Error; err != nil {
+	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionGroup{}).Error; err != nil {
 		return err
 	}
 	// 再添加新的关联
@@ -226,7 +227,7 @@ func (sub *Subcription) UpdateGroups(groups []string) error {
 			GroupName:     groupName,
 			Sort:          i,
 		}
-		if err := DB.Create(&subGroup).Error; err != nil {
+		if err := database.DB.Create(&subGroup).Error; err != nil {
 			return err
 		}
 	}
@@ -236,7 +237,7 @@ func (sub *Subcription) UpdateGroups(groups []string) error {
 // UpdateScripts 更新脚本关联
 func (sub *Subcription) UpdateScripts(scriptIDs []int) error {
 	// 先删除旧的关联
-	if err := DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionScript{}).Error; err != nil {
+	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionScript{}).Error; err != nil {
 		return err
 	}
 	// 再添加新的关联
@@ -246,7 +247,7 @@ func (sub *Subcription) UpdateScripts(scriptIDs []int) error {
 			ScriptID:      scriptID,
 			Sort:          i,
 		}
-		if err := DB.Create(&subScript).Error; err != nil {
+		if err := database.DB.Create(&subScript).Error; err != nil {
 			return err
 		}
 	}
@@ -270,7 +271,7 @@ func (sub *Subcription) Find() error {
 		}
 	}
 	// 缓存未命中，查数据库
-	err := DB.Where("id = ? or name = ?", sub.ID, sub.Name).First(sub).Error
+	err := database.DB.Where("id = ? or name = ?", sub.ID, sub.Name).First(sub).Error
 	if err != nil {
 		return err
 	}
@@ -290,7 +291,7 @@ func (sub *Subcription) GetSub() error {
 
 	// 获取直接选择的节点及其排序
 	var directNodeItems []NodeSortItem
-	err := DB.Table("nodes").
+	err := database.DB.Table("nodes").
 		Select("nodes.*, subcription_nodes.sort, 0 as is_group").
 		Joins("left join subcription_nodes ON subcription_nodes.node_name = nodes.name").
 		Where("subcription_nodes.subcription_id = ?", sub.ID).
@@ -304,7 +305,7 @@ func (sub *Subcription) GetSub() error {
 		GroupName string
 		Sort      int
 	}
-	err = DB.Table("subcription_groups").
+	err = database.DB.Table("subcription_groups").
 		Select("group_name, sort").
 		Where("subcription_id = ?", sub.ID).
 		Scan(&groups).Error
@@ -316,7 +317,7 @@ func (sub *Subcription) GetSub() error {
 	groupNodeMap := make(map[string][]Node) // groupName -> nodes
 	for _, group := range groups {
 		var groupNodes []Node
-		err = DB.Table("nodes").
+		err = database.DB.Table("nodes").
 			Where("nodes.`group` = ?", group.GroupName).
 			Order("nodes.id ASC").
 			Find(&groupNodes).Error
@@ -543,7 +544,7 @@ func (sub *Subcription) GetSub() error {
 
 	// 获取脚本信息及其排序
 	var scriptsWithSort []ScriptWithSort
-	err = DB.Table("scripts").
+	err = database.DB.Table("scripts").
 		Select("scripts.*, subcription_scripts.sort").
 		Joins("LEFT JOIN subcription_scripts ON subcription_scripts.script_id = scripts.id").
 		Where("subcription_scripts.subcription_id = ?", sub.ID).
@@ -630,7 +631,7 @@ func batchLoadSubcriptionRelations(subs []Subcription) error {
 
 	// 1. 批量查询所有订阅的节点关联
 	var subNodes []SubcriptionNode
-	if err := DB.Where("subcription_id IN ?", subIDs).Order("sort ASC").Find(&subNodes).Error; err != nil {
+	if err := database.DB.Where("subcription_id IN ?", subIDs).Order("sort ASC").Find(&subNodes).Error; err != nil {
 		return err
 	}
 
@@ -667,7 +668,7 @@ func batchLoadSubcriptionRelations(subs []Subcription) error {
 
 	// 2. 批量查询所有订阅的分组关联
 	var subGroups []SubcriptionGroup
-	if err := DB.Where("subcription_id IN ?", subIDs).Order("sort ASC").Find(&subGroups).Error; err != nil {
+	if err := database.DB.Where("subcription_id IN ?", subIDs).Order("sort ASC").Find(&subGroups).Error; err != nil {
 		return err
 	}
 
@@ -688,7 +689,7 @@ func batchLoadSubcriptionRelations(subs []Subcription) error {
 
 	// 3. 批量查询所有订阅的脚本关联
 	var subScripts []SubcriptionScript
-	if err := DB.Where("subcription_id IN ?", subIDs).Order("sort ASC").Find(&subScripts).Error; err != nil {
+	if err := database.DB.Where("subcription_id IN ?", subIDs).Order("sort ASC").Find(&subScripts).Error; err != nil {
 		return err
 	}
 
@@ -732,25 +733,25 @@ func batchLoadSubcriptionRelations(subs []Subcription) error {
 }
 
 func (sub *Subcription) IPlogUpdate() error {
-	return DB.Model(sub).Association("SubLogs").Replace(&sub.SubLogs)
+	return database.DB.Model(sub).Association("SubLogs").Replace(&sub.SubLogs)
 }
 
 // 删除订阅（硬删除，Write-Through）
 func (sub *Subcription) Del() error {
 	// 先删除关联的节点关系
-	if err := DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionNode{}).Error; err != nil {
+	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionNode{}).Error; err != nil {
 		return err
 	}
 	// 删除关联的分组关系
-	if err := DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionGroup{}).Error; err != nil {
+	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionGroup{}).Error; err != nil {
 		return err
 	}
 	// 删除关联的脚本关系
-	if err := DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionScript{}).Error; err != nil {
+	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionScript{}).Error; err != nil {
 		return err
 	}
 	// 硬删除订阅本身（Unscoped 绕过软删除）
-	err := DB.Unscoped().Delete(sub).Error
+	err := database.DB.Unscoped().Delete(sub).Error
 	if err != nil {
 		return err
 	}
@@ -760,7 +761,7 @@ func (sub *Subcription) Del() error {
 }
 
 func (sub *Subcription) Sort(subNodeSort dto.SubcriptionNodeSortUpdate) error {
-	tx := DB.Begin()
+	tx := database.DB.Begin()
 	if tx.Error != nil {
 		return fmt.Errorf("开启事务失败: %w", tx.Error)
 	}

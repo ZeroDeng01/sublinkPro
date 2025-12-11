@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"sublink/cache"
+	"sublink/database"
 	"sublink/utils"
 	"time"
 
@@ -35,7 +36,7 @@ func init() {
 func InitAccessKeyCache() error {
 	log.Printf("开始加载AccessKey到缓存")
 	var accessKeys []AccessKey
-	if err := DB.Find(&accessKeys).Error; err != nil {
+	if err := database.DB.Find(&accessKeys).Error; err != nil {
 		return err
 	}
 
@@ -48,7 +49,7 @@ func InitAccessKeyCache() error {
 
 // Generate 保存 AccessKey (Write-Through)
 func (accessKey *AccessKey) Generate() error {
-	err := DB.Create(accessKey).Error
+	err := database.DB.Create(accessKey).Error
 	if err != nil {
 		return err
 	}
@@ -97,13 +98,13 @@ func FindValidAccessKeysPaginated(userID, page, pageSize int) ([]AccessKey, int6
 func (accessKey *AccessKey) Delete() error {
 	// 先从数据库获取完整的 AccessKey 信息
 	var fullAccessKey AccessKey
-	err := DB.First(&fullAccessKey, accessKey.ID).Error
+	err := database.DB.First(&fullAccessKey, accessKey.ID).Error
 	if err != nil {
 		return fmt.Errorf("获取 AccessKey 信息失败: %w", err)
 	}
 
 	// 删除数据库记录
-	err = DB.Unscoped().Delete(accessKey).Error
+	err = database.DB.Unscoped().Delete(accessKey).Error
 	if err != nil {
 		return err
 	}
@@ -155,7 +156,7 @@ func CleanupExpiredAccessKeys() error {
 
 	// 查找所有过期的 AccessKey
 	var expiredKeys []AccessKey
-	err := DB.Where("expired_at IS NOT NULL AND expired_at < ?", time.Now()).Find(&expiredKeys).Error
+	err := database.DB.Where("expired_at IS NOT NULL AND expired_at < ?", time.Now()).Find(&expiredKeys).Error
 	if err != nil {
 		log.Printf("查询过期 AccessKey 失败: %v", err)
 		return fmt.Errorf("查询过期 AccessKey 失败: %w", err)

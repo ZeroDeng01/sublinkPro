@@ -2,6 +2,7 @@ package api
 
 import (
 	"log"
+	"sublink/database"
 	"sublink/models"
 	"sublink/utils"
 
@@ -179,7 +180,7 @@ func UserUpdateProfile(c *gin.Context) {
 		"nickname": req.Nickname,
 	}
 
-	if err := models.DB.Where("username = ?", user.Username).Model(&models.User{}).Updates(updates).Error; err != nil {
+	if err := database.DB.Where("username = ?", user.Username).Model(&models.User{}).Updates(updates).Error; err != nil {
 		log.Println("个人资料更新失败:", err)
 		utils.FailWithMsg(c, "个人资料更新失败: "+err.Error())
 		return

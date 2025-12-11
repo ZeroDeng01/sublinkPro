@@ -3,6 +3,7 @@ package models
 import (
 	"log"
 	"sublink/cache"
+	"sublink/database"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -28,7 +29,7 @@ func init() {
 func InitUserCache() error {
 	log.Printf("开始加载用户到缓存")
 	var users []User
-	if err := DB.Find(&users).Error; err != nil {
+	if err := database.DB.Find(&users).Error; err != nil {
 		return err
 	}
 
@@ -58,7 +59,7 @@ func (user *User) Create() error {
 		return err
 	}
 	user.Password = hashedPassword
-	err = DB.Create(user).Error
+	err = database.DB.Create(user).Error
 	if err != nil {
 		return err
 	}
@@ -75,13 +76,13 @@ func (user *User) Set(UpdateUser *User) error {
 		}
 		UpdateUser.Password = hashedPassword
 	}
-	err := DB.Where("username = ?", user.Username).Updates(UpdateUser).Error
+	err := database.DB.Where("username = ?", user.Username).Updates(UpdateUser).Error
 	if err != nil {
 		return err
 	}
 	// 更新缓存
 	var updated User
-	if err := DB.Where("username = ?", user.Username).First(&updated).Error; err == nil {
+	if err := database.DB.Where("username = ?", user.Username).First(&updated).Error; err == nil {
 		userCache.Set(updated.ID, updated)
 	}
 	return nil
@@ -96,7 +97,7 @@ func (user *User) Verify() error {
 		dbUser = users[0]
 	} else {
 		// 缓存未命中，从数据库查询
-		if err := DB.Where("username = ?", user.Username).First(&dbUser).Error; err != nil {
+		if err := database.DB.Where("username = ?", user.Username).First(&dbUser).Error; err != nil {
 			return err
 		}
 		userCache.Set(dbUser.ID, dbUser)
@@ -124,7 +125,7 @@ func (user *User) Find() error {
 		*user = users[0]
 		return nil
 	}
-	return DB.Where("username = ? ", user.Username).First(user).Error
+	return database.DB.Where("username = ? ", user.Username).First(user).Error
 }
 
 // All 获取所有用户
@@ -134,7 +135,7 @@ func (user *User) All() ([]User, error) {
 
 // Del 删除用户 (Write-Through)
 func (user *User) Del() error {
-	err := DB.Delete(user).Error
+	err := database.DB.Delete(user).Error
 	if err != nil {
 		return err
 	}

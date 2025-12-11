@@ -3,6 +3,7 @@ package models
 import (
 	"log"
 	"sublink/cache"
+	"sublink/database"
 
 	"gorm.io/gorm/clause"
 )
@@ -23,7 +24,7 @@ func init() {
 func InitSettingCache() error {
 	log.Printf("开始加载系统设置到缓存")
 	var settings []SystemSetting
-	if err := DB.Find(&settings).Error; err != nil {
+	if err := database.DB.Find(&settings).Error; err != nil {
 		return err
 	}
 
@@ -45,7 +46,7 @@ func GetSetting(key string) (string, error) {
 
 	// 缓存不存在，从数据库读取
 	var setting SystemSetting
-	err := DB.Where("key = ?", key).First(&setting).Error
+	err := database.DB.Where("key = ?", key).First(&setting).Error
 	if err != nil {
 		return "", err
 	}
@@ -62,7 +63,7 @@ func SetSetting(key string, value string) error {
 		Value: value,
 	}
 	// Write-Through: 先写数据库
-	err := DB.Clauses(clause.OnConflict{
+	err := database.DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "key"}},
 		DoUpdates: clause.AssignmentColumns([]string{"value"}),
 	}).Create(&setting).Error

@@ -7,8 +7,10 @@ import (
 	"strconv"
 	"strings"
 	"sublink/cache"
+	"sublink/database"
 	"time"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -51,7 +53,7 @@ func init() {
 func InitNodeCache() error {
 	log.Printf("加载节点列表到缓存")
 	var nodes []Node
-	if err := DB.Find(&nodes).Error; err != nil {
+	if err := database.DB.Find(&nodes).Error; err != nil {
 		return err
 	}
 
@@ -67,7 +69,7 @@ func InitNodeCache() error {
 // Add 添加节点
 func (node *Node) Add() error {
 	// Write-Through: 先写数据库
-	err := DB.Create(node).Error
+	err := database.DB.Create(node).Error
 	if err != nil {
 		return err
 	}
@@ -83,7 +85,7 @@ func (node *Node) Update() error {
 	}
 	node.UpdatedAt = time.Now()
 	// Write-Through: 先写数据库
-	err := DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "LinkCountry", "UpdatedAt").Updates(node).Error
+	err := database.DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "LinkCountry", "UpdatedAt").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -103,7 +105,7 @@ func (node *Node) Update() error {
 	} else {
 		// 缓存未命中，从 DB 读取完整数据
 		var fullNode Node
-		if err := DB.First(&fullNode, node.ID).Error; err == nil {
+		if err := database.DB.First(&fullNode, node.ID).Error; err == nil {
 			nodeCache.Set(node.ID, fullNode)
 		}
 	}
@@ -112,7 +114,7 @@ func (node *Node) Update() error {
 
 // UpdateSpeed 更新节点测速结果
 func (node *Node) UpdateSpeed() error {
-	err := DB.Model(node).Select("Speed", "LinkCountry", "DelayTime", "LastCheck").Updates(node).Error
+	err := database.DB.Model(node).Select("Speed", "LinkCountry", "DelayTime", "LastCheck").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -139,7 +141,7 @@ func (node *Node) Find() error {
 	}
 
 	// 缓存未命中，查 DB
-	err := DB.Where("link = ? or name = ?", node.Link, node.Name).First(node).Error
+	err := database.DB.Where("link = ? or name = ?", node.Link, node.Name).First(node).Error
 	if err != nil {
 		return err
 	}
@@ -157,7 +159,7 @@ func (node *Node) GetByID() error {
 	}
 
 	// 缓存未命中，查 DB
-	err := DB.First(node, node.ID).Error
+	err := database.DB.First(node, node.ID).Error
 	if err != nil {
 		return err
 	}
@@ -449,11 +451,11 @@ func FilterNodesByTags(nodes []Node, tags []string) []Node {
 // Del 删除节点
 func (node *Node) Del() error {
 	// 先清除节点与订阅的关联关系
-	if err := DB.Exec("DELETE FROM subcription_nodes WHERE node_name = ?", node.Name).Error; err != nil {
+	if err := database.DB.Exec("DELETE FROM subcription_nodes WHERE node_name = ?", node.Name).Error; err != nil {
 		return err
 	}
 	// Write-Through: 先删除数据库
-	err := DB.Delete(node).Error
+	err := database.DB.Delete(node).Error
 	if err != nil {
 		return err
 	}
@@ -465,7 +467,7 @@ func (node *Node) Del() error {
 // UpsertNode 插入或更新节点
 func (node *Node) UpsertNode() error {
 	// Write-Through: 先写数据库
-	err := DB.Clauses(clause.OnConflict{
+	err := database.DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "link"}},
 		DoUpdates: clause.AssignmentColumns([]string{"name", "link_name", "link_address", "link_host", "link_port", "link_country", "source", "source_id", "group"}),
 	}).Create(node).Error
@@ -475,7 +477,7 @@ func (node *Node) UpsertNode() error {
 
 	// 查询更新后的节点并更新缓存
 	var updatedNode Node
-	if err := DB.Where("link = ?", node.Link).First(&updatedNode).Error; err == nil {
+	if err := database.DB.Where("link = ?", node.Link).First(&updatedNode).Error; err == nil {
 		nodeCache.Set(updatedNode.ID, updatedNode)
 		*node = updatedNode
 	}
@@ -493,13 +495,13 @@ func DeleteAutoSubscriptionNodes(sourceId int) error {
 
 	// 清除节点与订阅的关联关系
 	if len(nodeNames) > 0 {
-		if err := DB.Exec("DELETE FROM subcription_nodes WHERE node_name IN ?", nodeNames).Error; err != nil {
+		if err := database.DB.Exec("DELETE FROM subcription_nodes WHERE node_name IN ?", nodeNames).Error; err != nil {
 			return err
 		}
 	}
 
 	// Write-Through: 先删除数据库
-	err := DB.Where("source_id = ?", sourceId).Delete(&Node{}).Error
+	err := database.DB.Where("source_id = ?", sourceId).Delete(&Node{}).Error
 	if err != nil {
 		return err
 	}
@@ -511,7 +513,7 @@ func DeleteAutoSubscriptionNodes(sourceId int) error {
 	return nil
 }
 
-// BatchDel 批量删除节点
+// BatchDel 批量删除节点 - 使用事务保证原子性
 func BatchDel(ids []int) error {
 	if len(ids) == 0 {
 		return nil
@@ -525,37 +527,49 @@ func BatchDel(ids []int) error {
 		}
 	}
 
-	// 先清除节点与订阅的关联关系
-	if len(nodeNames) > 0 {
-		if err := DB.Exec("DELETE FROM subcription_nodes WHERE node_name IN ?", nodeNames).Error; err != nil {
+	// 使用事务原子删除
+	err := database.WithTransaction(func(tx *gorm.DB) error {
+		// 先清除节点与订阅的关联关系
+		if len(nodeNames) > 0 {
+			if err := tx.Exec("DELETE FROM subcription_nodes WHERE node_name IN ?", nodeNames).Error; err != nil {
+				return err
+			}
+		}
+
+		// 删除节点
+		if err := tx.Where("id IN ?", ids).Delete(&Node{}).Error; err != nil {
 			return err
 		}
-	}
+		return nil
+	})
 
-	// Write-Through: 先删除数据库
-	if err := DB.Where("id IN ?", ids).Delete(&Node{}).Error; err != nil {
+	if err != nil {
 		return err
 	}
 
-	// 再更新缓存
+	// 事务成功后更新缓存
 	for _, id := range ids {
 		nodeCache.Delete(id)
 	}
 	return nil
 }
 
-// BatchUpdateGroup 批量更新节点分组
+// BatchUpdateGroup 批量更新节点分组 - 使用事务保证原子性
 func BatchUpdateGroup(ids []int, group string) error {
 	if len(ids) == 0 {
 		return nil
 	}
 
-	// Write-Through: 先更新数据库
-	if err := DB.Model(&Node{}).Where("id IN ?", ids).Update("group", group).Error; err != nil {
+	// 使用事务更新
+	err := database.WithTransaction(func(tx *gorm.DB) error {
+		return tx.Model(&Node{}).Where("id IN ?", ids).Update("group", group).Error
+	})
+
+	if err != nil {
 		return err
 	}
 
-	// 再更新缓存
+	// 事务成功后更新缓存
 	for _, id := range ids {
 		if n, ok := nodeCache.Get(id); ok {
 			n.Group = group
@@ -565,18 +579,22 @@ func BatchUpdateGroup(ids []int, group string) error {
 	return nil
 }
 
-// BatchUpdateDialerProxy 批量更新节点前置代理
+// BatchUpdateDialerProxy 批量更新节点前置代理 - 使用事务保证原子性
 func BatchUpdateDialerProxy(ids []int, dialerProxyName string) error {
 	if len(ids) == 0 {
 		return nil
 	}
 
-	// Write-Through: 先更新数据库
-	if err := DB.Model(&Node{}).Where("id IN ?", ids).Update("dialer_proxy_name", dialerProxyName).Error; err != nil {
+	// 使用事务更新
+	err := database.WithTransaction(func(tx *gorm.DB) error {
+		return tx.Model(&Node{}).Where("id IN ?", ids).Update("dialer_proxy_name", dialerProxyName).Error
+	})
+
+	if err != nil {
 		return err
 	}
 
-	// 再更新缓存
+	// 事务成功后更新缓存
 	for _, id := range ids {
 		if n, ok := nodeCache.Get(id); ok {
 			n.DialerProxyName = dialerProxyName
@@ -619,7 +637,7 @@ func GetBestProxyNode() (*Node, error) {
 
 	// 缓存中没有符合条件的节点，从数据库查询
 	var dbNodes []Node
-	if err := DB.Where("delay_time > 0 AND speed > 0").Order("delay_time ASC").Limit(1).Find(&dbNodes).Error; err != nil {
+	if err := database.DB.Where("delay_time > 0 AND speed > 0").Order("delay_time ASC").Limit(1).Find(&dbNodes).Error; err != nil {
 		return nil, err
 	}
 
@@ -641,7 +659,7 @@ func ListBySourceID(sourceID int) ([]Node, error) {
 	}
 
 	// 缓存中没有数据，从数据库查询
-	if err := DB.Where("source_id = ?", sourceID).Find(&nodes).Error; err != nil {
+	if err := database.DB.Where("source_id = ?", sourceID).Find(&nodes).Error; err != nil {
 		return nil, err
 	}
 	return nodes, nil
@@ -654,7 +672,7 @@ func UpdateNodesBySourceID(sourceID int, sourceName string, group string) error 
 		"source": sourceName,
 		"group":  group,
 	}
-	if err := DB.Model(&Node{}).Where("source_id = ?", sourceID).Updates(updateFields).Error; err != nil {
+	if err := database.DB.Model(&Node{}).Where("source_id = ?", sourceID).Updates(updateFields).Error; err != nil {
 		return err
 	}
 

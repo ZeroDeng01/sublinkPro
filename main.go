@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sublink/database"
 	"sublink/models"
 	"sublink/routers"
 	"sublink/services"
@@ -93,7 +94,9 @@ func main() {
 		return
 	}
 	// 初始化数据库
-	models.InitSqlite()
+	database.InitSqlite()
+	// 执行数据库迁移
+	models.RunMigrations()
 	// 获取命令行参数
 	args := os.Args
 	// 如果长度小于2则没有接收到任何参数

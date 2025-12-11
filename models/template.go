@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sublink/cache"
+	"sublink/database"
 	"time"
 )
 
@@ -34,7 +35,7 @@ func InitTemplateCache() error {
 	templateCache.AddIndex("name", func(t Template) string { return t.Name })
 
 	var templates []Template
-	if err := DB.Find(&templates).Error; err != nil {
+	if err := database.DB.Find(&templates).Error; err != nil {
 		return err
 	}
 
@@ -47,7 +48,7 @@ func InitTemplateCache() error {
 
 // Add 添加模板
 func (t *Template) Add() error {
-	if err := DB.Create(t).Error; err != nil {
+	if err := database.DB.Create(t).Error; err != nil {
 		return err
 	}
 	templateCache.Set(t.ID, *t)
@@ -56,7 +57,7 @@ func (t *Template) Add() error {
 
 // Update 更新模板
 func (t *Template) Update() error {
-	if err := DB.Save(t).Error; err != nil {
+	if err := database.DB.Save(t).Error; err != nil {
 		return err
 	}
 	templateCache.Set(t.ID, *t)
@@ -65,7 +66,7 @@ func (t *Template) Update() error {
 
 // Delete 删除模板
 func (t *Template) Delete() error {
-	if err := DB.Delete(t).Error; err != nil {
+	if err := database.DB.Delete(t).Error; err != nil {
 		return err
 	}
 	templateCache.Delete(t.ID)
@@ -82,7 +83,7 @@ func (t *Template) FindByName(name string) error {
 	}
 
 	// 缓存未命中，从数据库查找
-	if err := DB.Where("name = ?", name).First(t).Error; err != nil {
+	if err := database.DB.Where("name = ?", name).First(t).Error; err != nil {
 		return err
 	}
 
@@ -98,7 +99,7 @@ func (t *Template) FindByID(id int) error {
 		return nil
 	}
 
-	if err := DB.First(t, id).Error; err != nil {
+	if err := database.DB.First(t, id).Error; err != nil {
 		return err
 	}
 
@@ -115,7 +116,7 @@ func (t *Template) List() ([]Template, error) {
 
 	// 从数据库获取
 	var templates []Template
-	if err := DB.Find(&templates).Error; err != nil {
+	if err := database.DB.Find(&templates).Error; err != nil {
 		return nil, err
 	}
 
@@ -150,7 +151,7 @@ func MigrateTemplatesFromFiles(templateDir string) error {
 
 		// 检查是否已存在
 		var existing Template
-		if err := DB.Where("name = ?", fileName).First(&existing).Error; err == nil {
+		if err := database.DB.Where("name = ?", fileName).First(&existing).Error; err == nil {
 			// 已存在，跳过
 			continue
 		}
@@ -169,7 +170,7 @@ func MigrateTemplatesFromFiles(templateDir string) error {
 			RuleSource: "",
 		}
 
-		if err := DB.Create(&template).Error; err != nil {
+		if err := database.DB.Create(&template).Error; err != nil {
 			log.Printf("迁移模板失败 %s: %v", fileName, err)
 			continue
 		}

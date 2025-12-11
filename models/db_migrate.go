@@ -3,100 +3,93 @@ package models
 import (
 	"log"
 	"os"
+	"sublink/database"
 
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
-var isInitialized bool
+// RunMigrations 执行所有数据库迁移
+// 此函数必须在 database.InitSqlite() 之后调用
+func RunMigrations() {
+	db := database.DB
+	if db == nil {
+		log.Println("数据库未初始化，无法执行迁移")
+		return
+	}
 
-func InitSqlite() {
-	// 检查目录是否创建
-	_, err := os.Stat("./db")
-	if err != nil {
-		if os.IsNotExist(err) {
-			os.Mkdir("./db", os.ModePerm)
-		}
-	}
-	// 连接数据库
-	db, err := gorm.Open(sqlite.Open("./db/sublink.db"), &gorm.Config{})
-	if err != nil {
-		log.Println("连接数据库失败")
-	}
-	DB = db
 	// 检查是否已经初始化
-	if isInitialized {
+	if database.IsInitialized {
 		log.Println("数据库已经初始化，无需重复初始化")
 		return
 	}
-	//基础数据库初始化
-	if err := DB.AutoMigrate(&User{}); err != nil {
+
+	// 基础数据库初始化
+	if err := db.AutoMigrate(&User{}); err != nil {
 		log.Printf("基础数据表User迁移失败: %v", err)
 	} else {
 		log.Printf("数据表User创建成功")
 	}
-	if err := DB.AutoMigrate(&Subcription{}); err != nil {
+	if err := db.AutoMigrate(&Subcription{}); err != nil {
 		log.Printf("基础数据表Subcription迁移失败: %v", err)
 	} else {
 		log.Printf("数据表Subcription创建成功")
 	}
-	if err := DB.AutoMigrate(&Node{}); err != nil {
+	if err := db.AutoMigrate(&Node{}); err != nil {
 		log.Printf("基础数据表Node迁移失败: %v", err)
 	} else {
 		log.Printf("数据表Node创建成功")
 	}
-	if err := DB.AutoMigrate(&SubLogs{}); err != nil {
+	if err := db.AutoMigrate(&SubLogs{}); err != nil {
 		log.Printf("基础数据表SubLogs迁移失败: %v", err)
 	} else {
 		log.Printf("数据表SubLogs创建成功")
 	}
-	if err := DB.AutoMigrate(&AccessKey{}); err != nil {
+	if err := db.AutoMigrate(&AccessKey{}); err != nil {
 		log.Printf("基础数据表AccessKey迁移失败: %v", err)
 	} else {
 		log.Printf("数据表AccessKey创建成功")
 	}
-	if err := DB.AutoMigrate(&SubScheduler{}); err != nil {
+	if err := db.AutoMigrate(&SubScheduler{}); err != nil {
 		log.Printf("基础数据表SubScheduler迁移失败: %v", err)
 	} else {
 		log.Printf("数据表SubScheduler创建成功")
 	}
-	if err := DB.AutoMigrate(&SystemSetting{}); err != nil {
+	if err := db.AutoMigrate(&SystemSetting{}); err != nil {
 		log.Printf("基础数据表SystemSetting迁移失败: %v", err)
 	} else {
 		log.Printf("数据表SystemSetting创建成功")
 	}
-	if err := DB.AutoMigrate(&Script{}); err != nil {
+	if err := db.AutoMigrate(&Script{}); err != nil {
 		log.Printf("基础数据表Script迁移失败: %v", err)
 	} else {
 		log.Printf("数据表Script创建成功")
 	}
-	if err := DB.AutoMigrate(&SubcriptionGroup{}); err != nil {
+	if err := db.AutoMigrate(&SubcriptionGroup{}); err != nil {
 		log.Printf("基础数据表SubcriptionGroup迁移失败: %v", err)
 	} else {
 		log.Printf("数据表SubcriptionGroup创建成功")
 	}
-	if err := DB.AutoMigrate(&SubcriptionNode{}); err != nil {
+	if err := db.AutoMigrate(&SubcriptionNode{}); err != nil {
 		log.Printf("基础数据表SubcriptionNode迁移失败: %v", err)
 	} else {
 		log.Printf("数据表SubcriptionNode创建成功")
 	}
-	if err := DB.AutoMigrate(&SubcriptionScript{}); err != nil {
+	if err := db.AutoMigrate(&SubcriptionScript{}); err != nil {
 		log.Printf("基础数据表SubcriptionScript迁移失败: %v", err)
 	} else {
 		log.Printf("数据表SubcriptionScript创建成功")
 	}
-	if err := DB.AutoMigrate(&Template{}); err != nil {
+	if err := db.AutoMigrate(&Template{}); err != nil {
 		log.Printf("基础数据表Template迁移失败: %v", err)
 	} else {
 		log.Printf("数据表Template创建成功")
 	}
-	if err := DB.AutoMigrate(&Tag{}); err != nil {
+	if err := db.AutoMigrate(&Tag{}); err != nil {
 		log.Printf("基础数据表Tag迁移失败: %v", err)
 	} else {
 		log.Printf("数据表Tag创建成功")
 	}
-	if err := DB.AutoMigrate(&TagRule{}); err != nil {
+	if err := db.AutoMigrate(&TagRule{}); err != nil {
 		log.Printf("基础数据表TagRule迁移失败: %v", err)
 	} else {
 		log.Printf("数据表TagRule创建成功")
@@ -104,7 +97,7 @@ func InitSqlite() {
 
 	// 检查并删除 idx_name_id 索引
 	// 0000_drop_idx_name_id
-	if err := RunCustomMigration("0000_drop_idx_name_id", func() error {
+	if err := database.RunCustomMigration("0000_drop_idx_name_id", func() error {
 		if db.Migrator().HasIndex(&Node{}, "idx_name_id") {
 			if err := db.Migrator().DropIndex(&Node{}, "idx_name_id"); err != nil {
 				log.Printf("删除索引 idx_name_id 失败: %v", err)
@@ -119,7 +112,7 @@ func InitSqlite() {
 	}
 
 	// 0008_node_created_at_fill - 补全空的 CreatedAt 字段
-	if err := RunCustomMigration("0008_node_created_at_fill", func() error {
+	if err := database.RunCustomMigration("0008_node_created_at_fill", func() error {
 		// 查找所有 CreatedAt 为零值的节点并设置为当前时间
 		result := db.Exec("UPDATE nodes SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL OR created_at = '' OR created_at = '0001-01-01 00:00:00+00:00'")
 		if result.Error != nil {
@@ -132,7 +125,7 @@ func InitSqlite() {
 	}
 
 	// 0005_hash_passwords
-	if err := RunCustomMigration("0005_hash_passwords", func() error {
+	if err := database.RunCustomMigration("0005_hash_passwords", func() error {
 		var users []User
 		if err := db.Find(&users).Error; err != nil {
 			return err
@@ -157,7 +150,7 @@ func InitSqlite() {
 
 	// 添加脚本demo
 	// 0007_add_script_demo
-	if err := RunCustomMigration("0007_add_script_demo", func() error {
+	if err := database.RunCustomMigration("0007_add_script_demo", func() error {
 		script := &Script{}
 		script.Name = "[系统DEMO]按测速结果筛选节点"
 		script.Content = "" +
@@ -166,7 +159,7 @@ func InitSqlite() {
 		if script.CheckNameVersion() {
 			return nil
 		}
-		err = db.First(&Script{}).Error
+		err := db.First(&Script{}).Error
 		if err == gorm.ErrRecordNotFound {
 			err := script.Add()
 			if err != nil {
@@ -179,14 +172,14 @@ func InitSqlite() {
 	}
 
 	// 0009_migrate_template_files - 迁移现有模板文件到数据库
-	if err := RunCustomMigration("0009_migrate_template_files", func() error {
+	if err := database.RunCustomMigration("0009_migrate_template_files", func() error {
 		return MigrateTemplatesFromFiles("./template")
 	}); err != nil {
 		log.Printf("执行迁移 0009_migrate_template_files 失败: %v", err)
 	}
 
 	// 0010_add_default_base_templates - 添加默认基础模板到系统设置
-	if err := RunCustomMigration("0010_add_default_base_templates", func() error {
+	if err := database.RunCustomMigration("0010_add_default_base_templates", func() error {
 		// 默认 Clash 模板
 		clashTemplate := `port: 7890
 socks-port: 7891
@@ -246,7 +239,7 @@ DIRECT = direct
 	}
 
 	// 初始化用户数据
-	err = db.First(&User{}).Error
+	err := db.First(&User{}).Error
 	if err == gorm.ErrRecordNotFound {
 		adminPassword := "123456"
 		if envPass := os.Getenv("SUBLINK_ADMIN_PASSWORD"); envPass != "" {
@@ -277,7 +270,8 @@ DIRECT = direct
 			}
 		}
 	}
+
 	// 设置初始化标志为 true
-	isInitialized = true
-	log.Println("数据库初始化成功") // 只有在没有任何错误时才会打印这个日志
+	database.IsInitialized = true
+	log.Println("数据库初始化成功")
 }

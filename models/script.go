@@ -4,6 +4,7 @@ import (
 	"log"
 	"sort"
 	"sublink/cache"
+	"sublink/database"
 	"time"
 )
 
@@ -28,7 +29,7 @@ func init() {
 func InitScriptCache() error {
 	log.Printf("开始加载脚本到缓存")
 	var scripts []Script
-	if err := DB.Find(&scripts).Error; err != nil {
+	if err := database.DB.Find(&scripts).Error; err != nil {
 		return err
 	}
 
@@ -41,7 +42,7 @@ func InitScriptCache() error {
 
 // Add 添加脚本 (Write-Through)
 func (s *Script) Add() error {
-	err := DB.Create(s).Error
+	err := database.DB.Create(s).Error
 	if err != nil {
 		return err
 	}
@@ -51,13 +52,13 @@ func (s *Script) Add() error {
 
 // Update 更新脚本 (Write-Through)
 func (s *Script) Update() error {
-	err := DB.Model(s).Updates(s).Error
+	err := database.DB.Model(s).Updates(s).Error
 	if err != nil {
 		return err
 	}
 	// 从DB读取完整数据后更新缓存
 	var updated Script
-	if err := DB.First(&updated, s.ID).Error; err == nil {
+	if err := database.DB.First(&updated, s.ID).Error; err == nil {
 		scriptCache.Set(s.ID, updated)
 	}
 	return nil
@@ -65,7 +66,7 @@ func (s *Script) Update() error {
 
 // Del 删除脚本 (Write-Through)
 func (s *Script) Del() error {
-	err := DB.Delete(s).Error
+	err := database.DB.Delete(s).Error
 	if err != nil {
 		return err
 	}
@@ -123,7 +124,7 @@ func GetScriptByID(id int) (*Script, error) {
 		return &script, nil
 	}
 	var script Script
-	if err := DB.First(&script, id).Error; err != nil {
+	if err := database.DB.First(&script, id).Error; err != nil {
 		return nil, err
 	}
 	scriptCache.Set(script.ID, script)

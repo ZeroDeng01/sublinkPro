@@ -4,6 +4,7 @@ import (
 	"log"
 	"strconv"
 	"sublink/cache"
+	"sublink/database"
 )
 
 type SubLogs struct {
@@ -27,7 +28,7 @@ func init() {
 func InitSubLogsCache() error {
 	log.Printf("开始加载订阅日志到缓存")
 	var sublogs []SubLogs
-	if err := DB.Find(&sublogs).Error; err != nil {
+	if err := database.DB.Find(&sublogs).Error; err != nil {
 		return err
 	}
 
@@ -40,7 +41,7 @@ func InitSubLogsCache() error {
 
 // Add 添加IP (Write-Through)
 func (iplog *SubLogs) Add() error {
-	err := DB.Create(iplog).Error
+	err := database.DB.Create(iplog).Error
 	if err != nil {
 		return err
 	}
@@ -58,18 +59,18 @@ func (iplog *SubLogs) Find(id int) error {
 			return nil
 		}
 	}
-	return DB.Where("ip = ? and subcription_id  = ?", iplog.IP, id).First(iplog).Error
+	return database.DB.Where("ip = ? and subcription_id  = ?", iplog.IP, id).First(iplog).Error
 }
 
 // Update 更新IP (Write-Through)
 func (iplog *SubLogs) Update() error {
-	err := DB.Where("id = ? or ip = ?", iplog.ID, iplog.IP).Updates(iplog).Error
+	err := database.DB.Where("id = ? or ip = ?", iplog.ID, iplog.IP).Updates(iplog).Error
 	if err != nil {
 		return err
 	}
 	// 从DB读取更新后的数据
 	var updated SubLogs
-	if err := DB.First(&updated, iplog.ID).Error; err == nil {
+	if err := database.DB.First(&updated, iplog.ID).Error; err == nil {
 		subLogsCache.Set(updated.ID, updated)
 	}
 	return nil
@@ -87,7 +88,7 @@ func GetSubLogsBySubcriptionID(subcriptionID int) []SubLogs {
 
 // Del 删除IP (Write-Through)
 func (iplog *SubLogs) Del() error {
-	err := DB.Delete(iplog).Error
+	err := database.DB.Delete(iplog).Error
 	if err != nil {
 		return err
 	}

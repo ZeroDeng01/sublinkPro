@@ -4,6 +4,7 @@ import (
 	"log"
 	"strconv"
 	"sublink/cache"
+	"sublink/database"
 	"time"
 )
 
@@ -37,7 +38,7 @@ func init() {
 func InitSubSchedulerCache() error {
 	log.Printf("开始加载订阅调度到缓存")
 	var schedulers []SubScheduler
-	if err := DB.Find(&schedulers).Error; err != nil {
+	if err := database.DB.Find(&schedulers).Error; err != nil {
 		return err
 	}
 
@@ -50,7 +51,7 @@ func InitSubSchedulerCache() error {
 
 // Add 添加订阅调度 (Write-Through)
 func (ss *SubScheduler) Add() error {
-	err := DB.Create(ss).Error
+	err := database.DB.Create(ss).Error
 	if err != nil {
 		return err
 	}
@@ -60,13 +61,13 @@ func (ss *SubScheduler) Add() error {
 
 // Update 更新订阅调度 (Write-Through)
 func (ss *SubScheduler) Update() error {
-	err := DB.Model(ss).Select("Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime", "SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent").Updates(ss).Error
+	err := database.DB.Model(ss).Select("Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime", "SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent").Updates(ss).Error
 	if err != nil {
 		return err
 	}
 	// 从DB读取完整数据后更新缓存
 	var updated SubScheduler
-	if err := DB.First(&updated, ss.ID).Error; err == nil {
+	if err := database.DB.First(&updated, ss.ID).Error; err == nil {
 		subSchedulerCache.Set(ss.ID, updated)
 	}
 	return nil
@@ -82,7 +83,7 @@ func (ss *SubScheduler) Find() error {
 		*ss = results[0]
 		return nil
 	}
-	return DB.Where("url = ? or name = ?", ss.URL, ss.Name).First(ss).Error
+	return database.DB.Where("url = ? or name = ?", ss.URL, ss.Name).First(ss).Error
 }
 
 // List 获取所有订阅调度
@@ -125,7 +126,7 @@ func ListEnabled() ([]SubScheduler, error) {
 
 // Del 删除订阅调度 (Write-Through)
 func (ss *SubScheduler) Del() error {
-	err := DB.Delete(ss).Error
+	err := database.DB.Delete(ss).Error
 	if err != nil {
 		return err
 	}
@@ -135,7 +136,7 @@ func (ss *SubScheduler) Del() error {
 
 // UpdateRunTime 更新运行时间 (Write-Through)
 func (ss *SubScheduler) UpdateRunTime(lastRun, nextRun *time.Time) error {
-	err := DB.Model(ss).Select("LastRunTime", "NextRunTime").Updates(map[string]interface{}{
+	err := database.DB.Model(ss).Select("LastRunTime", "NextRunTime").Updates(map[string]interface{}{
 		"LastRunTime": lastRun,
 		"NextRunTime": nextRun,
 	}).Error
@@ -157,5 +158,5 @@ func (ss *SubScheduler) GetByID(id int) error {
 		*ss = cached
 		return nil
 	}
-	return DB.Where("id = ?", id).First(ss).Error
+	return database.DB.Where("id = ?", id).First(ss).Error
 }
