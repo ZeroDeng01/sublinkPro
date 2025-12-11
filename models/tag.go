@@ -552,47 +552,92 @@ func BatchAddTagToNodes(nodeIDs []int, tagName string) error {
 	return nil
 }
 
-// BatchSetTagsForNodes 批量设置节点标签（覆盖模式）
+// BatchSetTagsForNodes 批量设置节点标签（覆盖模式）- 优化版本使用单条SQL
 func BatchSetTagsForNodes(nodeIDs []int, tagNames []string) error {
-	for _, nodeID := range nodeIDs {
-		var node Node
-		node.ID = nodeID
-		if err := node.GetByID(); err != nil {
-			continue
+	if len(nodeIDs) == 0 {
+		return nil
+	}
+
+	// 去重并生成标签字符串
+	seen := make(map[string]bool)
+	uniqueNames := make([]string, 0, len(tagNames))
+	for _, name := range tagNames {
+		name = strings.TrimSpace(name)
+		if name != "" && !seen[name] {
+			uniqueNames = append(uniqueNames, name)
+			seen[name] = true
 		}
-		if err := node.SetTagNames(tagNames); err != nil {
-			log.Printf("为节点 %d 设置标签失败: %v", nodeID, err)
+	}
+	tagsString := strings.Join(uniqueNames, ",")
+
+	// 单条SQL批量更新所有节点
+	if err := DB.Model(&Node{}).Where("id IN ?", nodeIDs).Update("tags", tagsString).Error; err != nil {
+		return err
+	}
+
+	// 批量更新缓存
+	for _, nodeID := range nodeIDs {
+		if cachedNode, ok := nodeCache.Get(nodeID); ok {
+			cachedNode.Tags = tagsString
+			nodeCache.Set(nodeID, cachedNode)
 		}
 	}
 	return nil
 }
 
-// BatchRemoveTagsFromNodes 批量从节点移除指定标签
+// BatchRemoveTagsFromNodes 批量从节点移除指定标签 - 优化版本按结果分组批量更新
 func BatchRemoveTagsFromNodes(nodeIDs []int, tagNames []string) error {
+	if len(nodeIDs) == 0 || len(tagNames) == 0 {
+		return nil
+	}
+
 	// 创建要删除的标签集合
 	removeSet := make(map[string]bool)
 	for _, t := range tagNames {
 		removeSet[t] = true
 	}
 
+	// 按结果标签分组节点ID（相同结果的节点可以用一条SQL更新）
+	resultGroups := make(map[string][]int) // key: 新标签字符串, value: 节点ID列表
+
 	for _, nodeID := range nodeIDs {
-		var node Node
-		node.ID = nodeID
-		if err := node.GetByID(); err != nil {
-			continue
+		node, ok := nodeCache.Get(nodeID)
+		if !ok {
+			// 从数据库获取
+			var dbNode Node
+			dbNode.ID = nodeID
+			if err := dbNode.GetByID(); err != nil {
+				continue
+			}
+			node = dbNode
 		}
-		// 获取当前标签列表
+
+		// 计算移除标签后的新标签列表
 		currentTags := node.GetTagNames()
-		// 过滤掉要删除的标签
 		newTags := make([]string, 0, len(currentTags))
 		for _, t := range currentTags {
 			if !removeSet[t] {
 				newTags = append(newTags, t)
 			}
 		}
-		// 更新节点标签
-		if err := node.SetTagNames(newTags); err != nil {
-			log.Printf("为节点 %d 移除标签失败: %v", nodeID, err)
+		newTagsString := strings.Join(newTags, ",")
+
+		// 按结果分组
+		resultGroups[newTagsString] = append(resultGroups[newTagsString], nodeID)
+	}
+
+	// 对每个分组执行一次批量更新
+	for newTagsString, ids := range resultGroups {
+		if err := DB.Model(&Node{}).Where("id IN ?", ids).Update("tags", newTagsString).Error; err != nil {
+			log.Printf("批量移除标签失败: %v", err)
+			continue
+		}
+		// 更新缓存
+		for _, id := range ids {
+			if cachedNode, ok := nodeCache.Get(id); ok {
+				cachedNode.Tags = newTagsString
+				nodeCache.Set(id, cachedNode)
+			}
 		}
 	}
 	return nil
