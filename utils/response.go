@@ -17,8 +17,8 @@ const (
 	ERROR   = 500
 )
 
-func Result(c *gin.Context, code int, msg string, data interface{}) {
-	c.JSON(http.StatusOK, Response{
+func Result(c *gin.Context, httpCode int, code int, msg string, data interface{}) {
+	c.JSON(httpCode, Response{
 		Code: code,
 		Msg:  msg,
 		Data: data,
@@ -26,29 +26,33 @@ func Result(c *gin.Context, code int, msg string, data interface{}) {
 }
 
 func Ok(c *gin.Context) {
-	Result(c, SUCCESS, "操作成功", nil)
+	Result(c, http.StatusOK, SUCCESS, "操作成功", nil)
 }
 
 func OkWithData(c *gin.Context, data interface{}) {
-	Result(c, SUCCESS, "操作成功", data)
+	Result(c, http.StatusOK, SUCCESS, "操作成功", data)
 }
 
 func OkWithMsg(c *gin.Context, msg string) {
-	Result(c, SUCCESS, msg, nil)
+	Result(c, http.StatusOK, SUCCESS, msg, nil)
 }
 
 func OkDetailed(c *gin.Context, msg string, data interface{}) {
-	Result(c, SUCCESS, msg, data)
+	Result(c, http.StatusOK, SUCCESS, msg, data)
 }
 
 func Fail(c *gin.Context) {
-	Result(c, ERROR, "操作失败", nil)
+	Result(c, http.StatusOK, ERROR, "操作失败", nil)
 }
 
 func FailWithMsg(c *gin.Context, msg string) {
-	Result(c, ERROR, msg, nil)
+	Result(c, http.StatusOK, ERROR, msg, nil)
 }
 
 func FailWithCode(c *gin.Context, code int, msg string) {
-	Result(c, code, msg, nil)
+	Result(c, http.StatusOK, code, msg, nil)
+}
+
+func Forbidden(c *gin.Context, msg string) {
+	Result(c, http.StatusForbidden, http.StatusForbidden, msg, nil)
 }
