@@ -2,6 +2,7 @@ package api
 
 import (
 	"sublink/services/monitor"
+	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,9 +17,5 @@ import (
 // @Router /api/v1/total/system-stats [get]
 func GetSystemStats(c *gin.Context) {
 	stats := monitor.GetSystemStats()
-	c.JSON(200, gin.H{
-		"code": 200,
-		"msg":  "success",
-		"data": stats,
-	})
+	utils.OkWithData(c, stats)
 }

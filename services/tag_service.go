@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"log"
 	"sublink/models"
 	"sublink/services/sse"
@@ -57,7 +58,7 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 			Message: "自动标签规则执行完成",
 			Data: map[string]interface{}{
 				"status":      "success",
-				"error":       "自动标签规则执行完成",
+				"error":       fmt.Printf("自动标签规则【%s】应用完成: 共标记 %d 个节点", triggerType, taggedCount),
 				"triggerType": triggerType,
 				"taggedCount": taggedCount,
 			},
