@@ -238,6 +238,44 @@ DIRECT = direct
 		log.Printf("执行迁移 0010_add_default_base_templates 失败: %v", err)
 	}
 
+	// 0011_migrate_speed_test_concurrency - 迁移旧的并发数配置到新的分离配置
+	if err := database.RunCustomMigration("0011_migrate_speed_test_concurrency", func() error {
+		// 读取旧的 speed_test_concurrency 配置
+		oldConcurrency, _ := GetSetting("speed_test_concurrency")
+		if oldConcurrency != "" {
+			// 将旧配置迁移到 latency_concurrency
+			if err := SetSetting("speed_test_latency_concurrency", oldConcurrency); err != nil {
+				log.Printf("迁移 latency_concurrency 失败: %v", err)
+				return err
+			}
+			log.Printf("已将 speed_test_concurrency=%s 迁移到 speed_test_latency_concurrency", oldConcurrency)
+		}
+
+		// 设置默认的 speed_concurrency 为 1（如果不存在）
+		existingSpeedConcurrency, _ := GetSetting("speed_test_speed_concurrency")
+		if existingSpeedConcurrency == "" {
+			if err := SetSetting("speed_test_speed_concurrency", "1"); err != nil {
+				log.Printf("设置默认 speed_concurrency 失败: %v", err)
+				return err
+			}
+			log.Println("已设置默认 speed_test_speed_concurrency=1")
+		}
+
+		// 设置默认的 latency_samples 为 3（如果不存在）
+		existingLatencySamples, _ := GetSetting("speed_test_latency_samples")
+		if existingLatencySamples == "" {
+			if err := SetSetting("speed_test_latency_samples", "3"); err != nil {
+				log.Printf("设置默认 latency_samples 失败: %v", err)
+				return err
+			}
+			log.Println("已设置默认 speed_test_latency_samples=3")
+		}
+
+		return nil
+	}); err != nil {
+		log.Printf("执行迁移 0011_migrate_speed_test_concurrency 失败: %v", err)
+	}
+
 	// 初始化用户数据
 	err := db.First(&User{}).Error
 	if err == gorm.ErrRecordNotFound {

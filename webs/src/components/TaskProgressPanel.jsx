@@ -240,6 +240,27 @@ const TaskProgressItem = ({ task, currentTime }) => {
                       }}
                     />
                   )}
+                  {/* Speed test phase indicator */}
+                  {task.taskType === 'speed_test' && task.result?.phase && !isCompleted && !isError && (
+                    <Chip
+                      label={task.result.phase === 'latency' ? '延迟测试' : '速度测试'}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.7rem',
+                        fontWeight: 500,
+                        bgcolor: task.result.phase === 'latency'
+                          ? alpha('#06b6d4', 0.15)
+                          : alpha('#f59e0b', 0.15),
+                        color: task.result.phase === 'latency'
+                          ? (isDark ? '#22d3ee' : '#0891b2')
+                          : (isDark ? '#fbbf24' : '#d97706'),
+                        border: `1px solid ${task.result.phase === 'latency'
+                          ? alpha('#06b6d4', 0.3)
+                          : alpha('#f59e0b', 0.3)}`
+                      }}
+                    />
+                  )}
                 </Box>
                 <Typography
                   variant="caption"
@@ -253,7 +274,7 @@ const TaskProgressItem = ({ task, currentTime }) => {
                 </Typography>
               </Box>
 
-              {/* Current item */}
+              {/* Current item with phase info */}
               {task.currentItem && !isCompleted && (
                 <Typography
                   variant="body2"

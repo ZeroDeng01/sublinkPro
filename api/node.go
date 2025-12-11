@@ -659,37 +659,62 @@ func GetSpeedTestConfig(c *gin.Context) {
 	detectCountryStr, _ := models.GetSetting("speed_test_detect_country")
 	detectCountry := detectCountryStr == "true"
 
-	concurrencyStr, _ := models.GetSetting("speed_test_concurrency")
-	concurrency := 0
-	if concurrencyStr != "" {
-		concurrency, _ = strconv.Atoi(concurrencyStr)
+	// 获取延迟测试并发数（向后兼容旧配置）
+	latencyConcurrencyStr, _ := models.GetSetting("speed_test_latency_concurrency")
+	latencyConcurrency := 0
+	if latencyConcurrencyStr != "" {
+		latencyConcurrency, _ = strconv.Atoi(latencyConcurrencyStr)
+	} else {
+		// 向后兼容：如果新配置为空，读取旧配置
+		oldConcurrencyStr, _ := models.GetSetting("speed_test_concurrency")
+		if oldConcurrencyStr != "" {
+			latencyConcurrency, _ = strconv.Atoi(oldConcurrencyStr)
+		}
+	}
+
+	// 获取速度测试并发数
+	speedConcurrencyStr, _ := models.GetSetting("speed_test_speed_concurrency")
+	speedConcurrency := 1 // 默认为1
+	if speedConcurrencyStr != "" {
+		speedConcurrency, _ = strconv.Atoi(speedConcurrencyStr)
+	}
+
+	// 获取延迟采样次数
+	latencySamplesStr, _ := models.GetSetting("speed_test_latency_samples")
+	latencySamples := 3 // 默认为3
+	if latencySamplesStr != "" {
+		latencySamples, _ = strconv.Atoi(latencySamplesStr)
 	}
 
 	utils.OkDetailed(c, "获取成功", gin.H{
-		"cron":           cron,
-		"enabled":        enabled,
-		"mode":           mode,
-		"url":            url,
-		"timeout":        timeout,
-		"groups":         groups,
-		"tags":           tags,
-		"detect_country": detectCountry,
-		"concurrency":    concurrency,
+		"cron":                cron,
+		"enabled":             enabled,
+		"mode":                mode,
+		"url":                 url,
+		"timeout":             timeout,
+		"groups":              groups,
+		"tags":                tags,
+		"detect_country":      detectCountry,
+		"latency_concurrency": latencyConcurrency,
+		"speed_concurrency":   speedConcurrency,
+		"latency_samples":     latencySamples,
 	})
 }
 
 // UpdateSpeedTestConfig 更新测速配置
 func UpdateSpeedTestConfig(c *gin.Context) {
 	var req struct {
-		Cron          string      `json:"cron"`
-		Enabled       bool        `json:"enabled"`
-		Mode          string      `json:"mode"`
-		Url           string      `json:"url"`
-		Timeout       interface{} `json:"timeout"`
-		Groups        []string    `json:"groups"`
-		Tags          []string    `json:"tags"`
-		DetectCountry bool        `json:"detect_country"`
-		Concurrency   int         `json:"concurrency"`
+		Cron               string      `json:"cron"`
+		Enabled            bool        `json:"enabled"`
+		Mode               string      `json:"mode"`
+		Url                string      `json:"url"`
+		Timeout            interface{} `json:"timeout"`
+		Groups             []string    `json:"groups"`
+		Tags               []string    `json:"tags"`
+		DetectCountry      bool        `json:"detect_country"`
+		LatencyConcurrency int         `json:"latency_concurrency"`
+		SpeedConcurrency   int         `json:"speed_concurrency"`
+		LatencySamples     int         `json:"latency_samples"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -762,9 +787,24 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		return
 	}
 
-	err = models.SetSetting("speed_test_concurrency", strconv.Itoa(req.Concurrency))
+	// 保存延迟测试并发数
+	err = models.SetSetting("speed_test_latency_concurrency", strconv.Itoa(req.LatencyConcurrency))
 	if err != nil {
-		utils.FailWithMsg(c, "保存并发数配置失败")
+		utils.FailWithMsg(c, "保存延迟并发数配置失败")
+		return
+	}
+
+	// 保存速度测试并发数
+	err = models.SetSetting("speed_test_speed_concurrency", strconv.Itoa(req.SpeedConcurrency))
+	if err != nil {
+		utils.FailWithMsg(c, "保存速度并发数配置失败")
+		return
+	}
+
+	// 保存延迟采样次数
+	err = models.SetSetting("speed_test_latency_samples", strconv.Itoa(req.LatencySamples))
+	if err != nil {
+		utils.FailWithMsg(c, "保存延迟采样次数配置失败")
 		return
 	}
 

@@ -19,6 +19,7 @@ import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
 
 // icons
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -131,20 +132,53 @@ export default function SpeedTestDialog({
             onChange={(e) => setSpeedTestForm({ ...speedTestForm, timeout: Number(e.target.value) })}
             InputProps={{ endAdornment: <InputAdornment position="end">秒</InputAdornment> }}
           />
-          <Box>
-            <TextField
-              fullWidth
-              label="并发数"
-              type="number"
-              value={speedTestForm.concurrency || ''}
-              placeholder="留空自动设置"
-              onChange={(e) => setSpeedTestForm({ ...speedTestForm, concurrency: e.target.value === '' ? 0 : Number(e.target.value) })}
-              inputProps={{ min: 0, max: 100 }}
-            />
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
-              设置测速并发数量。留空或设为0时，系统将根据CPU核心数自动设置（2倍核心数，最小2，最大建议不超过核心数的2倍，可以自行按需调整）。
-            </Typography>
-          </Box>
+
+          {/* 并发与采样配置 */}
+          <Typography variant="subtitle2" color="textSecondary" sx={{ mt: 1 }}>
+            并发与采样配置
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item size={{ xs: 12, sm: 4 }}>
+              <TextField
+                fullWidth
+                label="延迟测试并发"
+                type="number"
+                value={speedTestForm.latency_concurrency || ''}
+                placeholder="自动"
+                onChange={(e) =>
+                  setSpeedTestForm({ ...speedTestForm, latency_concurrency: e.target.value === '' ? 0 : Number(e.target.value) })
+                }
+                inputProps={{ min: 0, max: 1000 }}
+                helperText="0=自动"
+              />
+            </Grid>
+            <Grid item size={{ xs: 12, sm: 4 }}>
+              <TextField
+                fullWidth
+                label="速度测试并发"
+                type="number"
+                value={speedTestForm.speed_concurrency || 1}
+                onChange={(e) => setSpeedTestForm({ ...speedTestForm, speed_concurrency: Math.max(1, Number(e.target.value) || 1) })}
+                inputProps={{ min: 1, max: 128 }}
+                helperText="建议1-3"
+              />
+            </Grid>
+            <Grid item size={{ xs: 12, sm: 4 }}>
+              <TextField
+                fullWidth
+                label="延迟采样次数"
+                type="number"
+                value={speedTestForm.latency_samples || 3}
+                onChange={(e) => setSpeedTestForm({ ...speedTestForm, latency_samples: Math.max(1, Number(e.target.value) || 3) })}
+                inputProps={{ min: 1, max: 10 }}
+                helperText="建议3次"
+              />
+            </Grid>
+          </Grid>
+          <Typography variant="caption" color="textSecondary" sx={{ mt: -1 }}>
+            测速分两阶段：先并发测延迟（多次采样取平均），再低并发测速度。速度并发建议设为1以获得准确结果。
+          </Typography>
+
           <Autocomplete
             multiple
             freeSolo
@@ -236,7 +270,9 @@ SpeedTestDialog.propTypes = {
     groups: PropTypes.array,
     tags: PropTypes.array,
     detect_country: PropTypes.bool,
-    concurrency: PropTypes.number
+    latency_concurrency: PropTypes.number,
+    speed_concurrency: PropTypes.number,
+    latency_samples: PropTypes.number
   }).isRequired,
   setSpeedTestForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,

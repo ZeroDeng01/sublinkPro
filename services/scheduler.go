@@ -408,6 +408,7 @@ func ExecuteSpecificNodeSpeedTestTask(nodeIDs []int) {
 }
 
 // RunSpeedTestOnNodes 对指定节点列表执行测速
+// 采用两阶段测试策略：阶段一并发测延迟，阶段二低并发测速度
 func RunSpeedTestOnNodes(nodes []models.Node) {
 	log.Printf("开始执行节点测速，总节点数: %d", len(nodes))
 
@@ -469,71 +470,186 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	detectCountryStr, _ := models.GetSetting("speed_test_detect_country")
 	detectCountry := detectCountryStr == "true"
 
-	// 并发控制 - 从配置读取，如果为空或0则自动根据CPU核数设置
-	// 设置并发数上限，防止恶意或错误配置导致内存耗尽
-	const maxConcurrency = 1000
-	concurrency := 10 // 默认并发数
-	concurrencyStr, _ := models.GetSetting("speed_test_concurrency")
-	if concurrencyStr != "" {
-		if c, err := strconv.Atoi(concurrencyStr); err == nil && c > 0 {
-			concurrency = c
-		} else {
-			// 配置为空或为0，自动根据CPU核数设置
-			cpuCount := runtime.NumCPU()
-			concurrency = cpuCount * 2
-			if concurrency < 2 {
-				concurrency = 2
-			}
-			log.Printf("自动设置测速并发数: %d (基于 %d CPU核心)", concurrency, cpuCount)
+	// 获取延迟采样次数
+	latencySamplesStr, _ := models.GetSetting("speed_test_latency_samples")
+	latencySamples := 3 // 默认3次采样
+	if latencySamplesStr != "" {
+		if s, err := strconv.Atoi(latencySamplesStr); err == nil && s > 0 {
+			latencySamples = s
 		}
-	} else {
-		// 未设置配置，自动根据CPU核数设置
-		cpuCount := runtime.NumCPU()
-		concurrency = cpuCount * 2
-		if concurrency < 2 {
-			concurrency = 2
-		}
-		log.Printf("自动设置测速并发数: %d (基于 %d CPU核心)", concurrency, cpuCount)
 	}
-	// 确保并发数不超过安全上限
-	if concurrency > maxConcurrency {
-		log.Printf("警告: 配置的并发数 %d 超过最大限制，已调整为 %d", concurrency, maxConcurrency)
-		concurrency = maxConcurrency
-	}
-	sem := make(chan struct{}, concurrency)
-	var wg sync.WaitGroup
 
-	// 结果统计 - 使用原子操作
-	var successCount, failCount, completedCount int32
+	// 获取延迟测试并发数
+	const maxConcurrency = 1000
+	latencyConcurrency := 10 // 默认延迟测试并发数
+	latencyConcurrencyStr, _ := models.GetSetting("speed_test_latency_concurrency")
+	if latencyConcurrencyStr != "" {
+		if c, err := strconv.Atoi(latencyConcurrencyStr); err == nil && c > 0 {
+			latencyConcurrency = c
+		}
+	}
+	// 向后兼容：如果新配置为空，尝试读取旧配置
+	if latencyConcurrencyStr == "" {
+		oldConcurrencyStr, _ := models.GetSetting("speed_test_concurrency")
+		if oldConcurrencyStr != "" {
+			if c, err := strconv.Atoi(oldConcurrencyStr); err == nil && c > 0 {
+				latencyConcurrency = c
+			}
+		}
+	}
+	// 自动设置（如果为0）
+	if latencyConcurrency <= 0 {
+		cpuCount := runtime.NumCPU()
+		latencyConcurrency = cpuCount * 2
+		if latencyConcurrency < 2 {
+			latencyConcurrency = 2
+		}
+		log.Printf("自动设置延迟测试并发数: %d (基于 %d CPU核心)", latencyConcurrency, cpuCount)
+	}
+	if latencyConcurrency > maxConcurrency {
+		log.Printf("警告: 延迟并发数 %d 超过最大限制，已调整为 %d", latencyConcurrency, maxConcurrency)
+		latencyConcurrency = maxConcurrency
+	}
+
+	// 获取速度测试并发数
+	speedConcurrency := 1 // 默认速度测试并发数为1（串行）
+	speedConcurrencyStr, _ := models.GetSetting("speed_test_speed_concurrency")
+	if speedConcurrencyStr != "" {
+		if c, err := strconv.Atoi(speedConcurrencyStr); err == nil && c > 0 {
+			speedConcurrency = c
+		}
+	}
+	if speedConcurrency > 128 {
+		log.Printf("警告: 速度并发数 %d 超过建议值，已调整为 128", speedConcurrency)
+		speedConcurrency = 128 // 速度测试并发数上限较低，避免带宽竞争
+	}
+
+	// 结果统计
+	var successCount, failCount int32
+	var completedCount int32
 	var mu sync.Mutex
 
-	done := make(chan struct{})
+	// 节点结果存储（用于阶段二）
+	type nodeResult struct {
+		node    models.Node
+		latency int
+		err     error
+	}
+	nodeResults := make([]nodeResult, len(nodes))
 
-	go func() {
-		for _, node := range nodes {
-			wg.Add(1)
-			sem <- struct{}{}
-			go func(n models.Node) {
-				defer wg.Done()
-				defer func() { <-sem }()
+	// ========== 阶段一：延迟测试 ==========
+	log.Printf("阶段一：开始延迟测试，并发数: %d，采样次数: %d", latencyConcurrency, latencySamples)
+	latencySem := make(chan struct{}, latencyConcurrency)
+	var latencyWg sync.WaitGroup
 
-				var speed float64
-				var latency int
-				var err error
+	for i, node := range nodes {
+		latencyWg.Add(1)
+		latencySem <- struct{}{}
+		go func(idx int, n models.Node) {
+			defer latencyWg.Done()
+			defer func() { <-latencySem }()
 
-				if speedTestMode == "tcp" {
-					// 仅测试延迟
-					latency, err = mihomo.MihomoDelay(n.Link, speedTestUrl, speedTestTimeout)
-					speed = 0
+			// 使用多次采样测量延迟
+			latency, err := mihomo.MihomoDelayWithSamples(n.Link, speedTestUrl, speedTestTimeout, latencySamples)
+
+			mu.Lock()
+			nodeResults[idx] = nodeResult{node: n, latency: latency, err: err}
+			currentCompleted := int(completedCount) + 1
+			completedCount++
+
+			// TCP模式下直接更新结果
+			if speedTestMode == "tcp" {
+				if err != nil {
+					failCount++
+					log.Printf("节点 [%s] 延迟测试失败: %v", n.Name, err)
+					n.Speed = -1
+					n.DelayTime = -1
 				} else {
-					// 测试延迟和速度 (默认 mihomo)
-					speed, latency, err = mihomo.MihomoSpeedTest(n.Link, speedTestUrl, speedTestTimeout)
+					successCount++
+					log.Printf("节点 [%s] 延迟测试成功: %d ms", n.Name, latency)
+					n.Speed = 0 // TCP模式不测速度
+					n.DelayTime = latency
 				}
+				n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+				if updateErr := n.UpdateSpeed(); updateErr != nil {
+					log.Printf("更新节点 %s 测速结果失败: %v", n.Name, updateErr)
+				}
+			}
+			mu.Unlock()
+
+			// 广播进度
+			var resultStatus string
+			if err != nil {
+				resultStatus = "failed"
+			} else {
+				resultStatus = "success"
+			}
+			// TCP模式: 进度即为实际完成数; mihomo模式: 延迟测试占前50%
+			progressCurrent := currentCompleted
+			progressTotal := totalNodes
+			if speedTestMode != "tcp" {
+				// mihomo模式下，延迟测试占前半部分
+				progressTotal = totalNodes * 2
+			}
+			sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
+				TaskID:      taskID,
+				TaskType:    "speed_test",
+				TaskName:    "节点测速",
+				Status:      "progress",
+				Current:     progressCurrent,
+				Total:       progressTotal,
+				CurrentItem: n.Name,
+				Result: map[string]interface{}{
+					"status":  resultStatus,
+					"phase":   "latency",
+					"latency": latency,
+				},
+				Message:   fmt.Sprintf("【延迟测试】 %d/%d", currentCompleted, totalNodes),
+				StartTime: startTimeMs,
+			})
+		}(i, node)
+	}
+	latencyWg.Wait()
+	log.Printf("阶段一完成：延迟测试结束")
+
+	// ========== 阶段二：速度测试（仅 mihomo 模式）==========
+	if speedTestMode != "tcp" {
+		log.Printf("阶段二：开始速度测试，并发数: %d", speedConcurrency)
+
+		// 重置进度计数器用于阶段二
+		completedCount = 0
+		speedSem := make(chan struct{}, speedConcurrency)
+		var speedWg sync.WaitGroup
+
+		for i := range nodeResults {
+			nr := &nodeResults[i]
+			// 跳过延迟测试失败的节点
+			if nr.err != nil {
+				mu.Lock()
+				failCount++
+				completedCount++
+				nr.node.Speed = -1
+				nr.node.DelayTime = -1
+				nr.node.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+				if updateErr := nr.node.UpdateSpeed(); updateErr != nil {
+					log.Printf("更新节点 %s 测速结果失败: %v", nr.node.Name, updateErr)
+				}
+				mu.Unlock()
+				continue
+			}
+
+			speedWg.Add(1)
+			speedSem <- struct{}{}
+			go func(result *nodeResult) {
+				defer speedWg.Done()
+				defer func() { <-speedSem }()
+
+				// 速度测试（延迟已在阶段一获取）
+				speed, _, err := mihomo.MihomoSpeedTest(result.node.Link, speedTestUrl, speedTestTimeout)
 
 				mu.Lock()
 				defer mu.Unlock()
 
-				// 更新完成计数
 				currentCompleted := int(completedCount) + 1
 				completedCount++
 
@@ -542,81 +658,72 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 
 				if err != nil {
 					failCount++
-					log.Printf("节点 [%s] 测速失败: %v", n.Name, err)
-					speed = -1
-					latency = -1
+					log.Printf("节点 [%s] 速度测试失败: %v (延迟: %d ms)", result.node.Name, err, result.latency)
+					result.node.Speed = -1
+					result.node.DelayTime = result.latency // 保留延迟测试结果
 					resultStatus = "failed"
 					resultData = map[string]interface{}{
-						"speed":   speed,
-						"latency": latency,
+						"speed":   -1,
+						"latency": result.latency,
 						"error":   err.Error(),
-					}
-					// 更新节点状态为失败
-					n.Speed = speed
-					n.DelayTime = latency
-					n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
-					if err := n.UpdateSpeed(); err != nil {
-						log.Printf("更新节点 %s 测速结果失败: %v", n.Name, err)
 					}
 				} else {
 					successCount++
-					log.Printf("节点 [%s] 测速成功: 速度 %.2f MB/s, 延迟 %d ms", n.Name, speed, latency)
+					log.Printf("节点 [%s] 测速成功: 速度 %.2f MB/s, 延迟 %d ms", result.node.Name, speed, result.latency)
+					result.node.Speed = speed
+					result.node.DelayTime = result.latency
 					resultStatus = "success"
 					resultData = map[string]interface{}{
 						"speed":   speed,
-						"latency": latency,
+						"latency": result.latency,
 					}
-					// 更新节点测速结果
-					n.Speed = speed
-					n.DelayTime = latency
-					n.LastCheck = time.Now().Format("2006-01-02 15:04:05")
 
-					// 如果开启落地IP检测，通过代理获取落地IP并查询国家
+					// 如果开启落地IP检测
 					if detectCountry {
-						landingIP, countryErr := mihomo.FetchLandingIP(n.Link, speedTestTimeout)
+						landingIP, countryErr := mihomo.FetchLandingIP(result.node.Link, speedTestTimeout)
 						if countryErr == nil && landingIP != "" {
 							countryCode, geoErr := geoip.GetCountryISOCode(landingIP)
 							if geoErr == nil && countryCode != "" {
-								n.LinkCountry = countryCode
-								log.Printf("节点 [%s] 落地IP: %s, 国家: %s", n.Name, landingIP, countryCode)
+								result.node.LinkCountry = countryCode
+								log.Printf("节点 [%s] 落地IP: %s, 国家: %s", result.node.Name, landingIP, countryCode)
 							} else {
-								log.Printf("节点 [%s] 获取国家代码失败: %v", n.Name, geoErr)
+								log.Printf("节点 [%s] 获取国家代码失败: %v", result.node.Name, geoErr)
 							}
 						} else {
-							log.Printf("节点 [%s] 获取落地IP失败: %v", n.Name, countryErr)
+							log.Printf("节点 [%s] 获取落地IP失败: %v", result.node.Name, countryErr)
 						}
-					}
-
-					if err := n.UpdateSpeed(); err != nil {
-						log.Printf("更新节点 %s 测速结果失败: %v", n.Name, err)
 					}
 				}
 
-				// 广播进度
+				result.node.LastCheck = time.Now().Format("2006-01-02 15:04:05")
+				if updateErr := result.node.UpdateSpeed(); updateErr != nil {
+					log.Printf("更新节点 %s 测速结果失败: %v", result.node.Name, updateErr)
+				}
+
+				// 广播进度（速度测试占后50%）
 				sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
 					TaskID:      taskID,
 					TaskType:    "speed_test",
 					TaskName:    "节点测速",
 					Status:      "progress",
-					Current:     currentCompleted,
-					Total:       totalNodes,
-					CurrentItem: n.Name,
+					Current:     totalNodes + currentCompleted, // 进度从50%开始
+					Total:       totalNodes * 2,
+					CurrentItem: result.node.Name,
 					Result: map[string]interface{}{
 						"status":  resultStatus,
-						"speed":   speed,
-						"latency": latency,
+						"phase":   "speed",
+						"speed":   result.node.Speed,
+						"latency": result.latency,
 						"data":    resultData,
 					},
-					Message:   fmt.Sprintf("已完成 %d/%d", currentCompleted, totalNodes),
+					Message:   fmt.Sprintf("【速度测试】 %d/%d", currentCompleted, totalNodes),
 					StartTime: startTimeMs,
 				})
-			}(node)
+			}(nr)
 		}
-		wg.Wait()
-		close(done)
-	}()
-
-	<-done
+		speedWg.Wait()
+		log.Printf("阶段二完成：速度测试结束")
+	}
 
 	// 广播完成进度
 	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{

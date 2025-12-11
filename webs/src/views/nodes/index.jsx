@@ -156,7 +156,9 @@ export default function NodeList() {
     timeout: 5,
     groups: [],
     detect_country: false,
-    concurrency: 0
+    latency_concurrency: 0,
+    speed_concurrency: 1,
+    latency_samples: 3
   });
 
   // 国家筛选
@@ -750,7 +752,7 @@ export default function NodeList() {
     try {
       const response = await getSpeedTestConfig();
       setSpeedTestForm(
-        response.data || { cron: '', enabled: false, mode: 'tcp', url: '', timeout: 5, groups: [], tags: [], concurrency: 0 }
+        response.data || { cron: '', enabled: false, mode: 'tcp', url: '', timeout: 5, groups: [], tags: [], latency_concurrency: 0, speed_concurrency: 1, latency_samples: 3 }
       );
       setSpeedTestDialogOpen(true);
     } catch (error) {

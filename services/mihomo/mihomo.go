@@ -133,6 +133,68 @@ func MihomoDelay(nodeLink string, testUrl string, timeout time.Duration) (latenc
 	return latency, nil
 }
 
+// MihomoDelayWithSamples performs multiple latency tests and returns the average
+// It removes the highest outlier to improve accuracy
+// samples: number of samples to take (minimum 1, recommended 3)
+func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Duration, samples int) (latency int, err error) {
+	// Recover from any panics
+	defer func() {
+		if r := recover(); r != nil {
+			latency = 0
+			err = fmt.Errorf("panic in MihomoDelayWithSamples: %v", r)
+		}
+	}()
+
+	if samples < 1 {
+		samples = 1
+	}
+	if samples > 10 {
+		samples = 10 // Cap at 10 to prevent abuse
+	}
+
+	var results []int
+	var lastErr error
+
+	for i := 0; i < samples; i++ {
+		lat, sampleErr := MihomoDelay(nodeLink, testUrl, timeout)
+		if sampleErr != nil {
+			lastErr = sampleErr
+			continue
+		}
+		results = append(results, lat)
+	}
+
+	if len(results) == 0 {
+		if lastErr != nil {
+			return 0, lastErr
+		}
+		return 0, fmt.Errorf("all samples failed")
+	}
+
+	// If only one result, return it directly
+	if len(results) == 1 {
+		return results[0], nil
+	}
+
+	// Remove highest outlier if we have more than 2 samples
+	if len(results) > 2 {
+		maxIdx := 0
+		for i, v := range results {
+			if v > results[maxIdx] {
+				maxIdx = i
+			}
+		}
+		results = append(results[:maxIdx], results[maxIdx+1:]...)
+	}
+
+	// Calculate average
+	sum := 0
+	for _, v := range results {
+		sum += v
+	}
+	return sum / len(results), nil
+}
+
 // MihomoSpeedTest performs a true speed test using Mihomo adapter
 // Returns speed in MB/s and latency in ms
 func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (speed float64, latency int, err error) {
