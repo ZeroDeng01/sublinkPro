@@ -26,7 +26,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 
 // 节点字段选项
 const nodeFields = [
-  { value: 'name', label: '节点名称' },
+  { value: 'name', label: '备注' },
   { value: 'link_name', label: '原始名称' },
   { value: 'link_country', label: '国家代码' },
   { value: 'source', label: '来源' },

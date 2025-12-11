@@ -49,7 +49,9 @@ const AVAILABLE_VARIABLES = [
   { key: '$Delay', label: '延迟', color: '#00bcd4', description: '延迟时间' },
   { key: '$Group', label: '分组', color: '#795548', description: '分组名称' },
   { key: '$Source', label: '来源', color: '#607d8b', description: '节点来源' },
-  { key: '$Index', label: '序号', color: '#9e9e9e', description: '节点序号' }
+  { key: '$Index', label: '序号', color: '#9e9e9e', description: '节点序号' },
+  { key: '$Tags', label: '标签', color: '#673ab7', description: '所有标签(逗号分隔)' },
+  { key: '$Tag', label: '首标签', color: '#8bc34a', description: '第一个标签' }
 ];
 
 // 快捷分隔符
@@ -75,7 +77,9 @@ const PREVIEW_DATA = {
   $Group: 'Premium',
   $Source: '机场A',
   $Index: '1',
-  $Protocol: 'VMess'
+  $Protocol: 'VMess',
+  $Tags: '速度优秀|香港节点',
+  $Tag: '速度优秀'
 };
 
 /**
@@ -89,7 +93,7 @@ const parseRule = (rule) => {
   let id = 0;
 
   // 变量正则
-  const varRegex = /\$(Name|LinkName|LinkCountry|Flag|Speed|Delay|Group|Source|Index|Protocol)/g;
+  const varRegex = /\$(Name|LinkName|LinkCountry|Flag|Speed|Delay|Group|Source|Index|Protocol|Tags|Tag)/g;
 
   let match;
   let lastIndex = 0;

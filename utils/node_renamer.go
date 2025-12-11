@@ -19,6 +19,7 @@ type NodeInfo struct {
 	Source      string  // 来源（手动添加/订阅名称）
 	Index       int     // 序号 (从1开始)
 	Protocol    string  // 协议类型
+	Tags        string  // 节点标签（逗号分隔）
 }
 
 // PreprocessRule 原名预处理规则结构体
@@ -193,6 +194,23 @@ func RenameNode(rule string, info NodeInfo) string {
 		linkGroup = "未分组"
 	}
 
+	// 处理标签
+	tags := info.Tags
+	if tags == "" {
+		tags = ""
+	} else {
+		// 将逗号分隔转换为竖线分隔
+		tags = strings.ReplaceAll(tags, ",", "|")
+	}
+	// 获取第一个标签
+	firstTag := ""
+	if info.Tags != "" {
+		parts := strings.Split(info.Tags, ",")
+		if len(parts) > 0 {
+			firstTag = strings.TrimSpace(parts[0])
+		}
+	}
+
 	// 替换所有支持的变量
 	replacements := map[string]string{
 		"$Name":        info.Name,
@@ -205,6 +223,8 @@ func RenameNode(rule string, info NodeInfo) string {
 		"$Source":      linkSource,
 		"$Index":       fmt.Sprintf("%d", info.Index),
 		"$Protocol":    info.Protocol,
+		"$Tags":        tags,     // 所有标签（竖线｜分隔）
+		"$Tag":         firstTag, // 第一个标签
 	}
 
 	for variable, value := range replacements {

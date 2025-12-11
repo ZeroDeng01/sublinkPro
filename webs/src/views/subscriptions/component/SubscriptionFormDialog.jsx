@@ -62,7 +62,9 @@ const previewNodeName = (rule) => {
     .replace(/\$Group/g, 'Premium')
     .replace(/\$Source/g, '机场A')
     .replace(/\$Index/g, '1')
-    .replace(/\$Protocol/g, 'VMess');
+    .replace(/\$Protocol/g, 'VMess')
+    .replace(/\$Tags/g, '速度优秀|香港节点')
+    .replace(/\$Tag/g, '速度优秀');
 };
 
 /**
@@ -483,6 +485,7 @@ export default function SubscriptionFormDialog({
                     <br />• <code>$Delay</code> - 延迟 &nbsp;&nbsp; • <code>$Group</code> - 分组名称
                     <br />• <code>$Source</code> - 来源 &nbsp;&nbsp; • <code>$Index</code> - 序号 &nbsp;&nbsp; • <code>$Protocol</code> -
                     协议类型
+                    <br />• <code>$Tags</code> - 所有标签(逗号分隔) &nbsp;&nbsp; • <code>$Tag</code> - 第一个标签
                   </Typography>
                 </Box>
                 {formData.nodeNameRule && (

@@ -164,6 +164,7 @@ func GetV2ray(c *gin.Context) {
 				Source:      v.Source,
 				Index:       idx + 1,
 				Protocol:    utils.GetProtocolFromLink(v.Link),
+				Tags:        v.Tags,
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
 		}
@@ -184,6 +185,7 @@ func GetV2ray(c *gin.Context) {
 						Source:      v.Source,
 						Index:       idx + 1,
 						Protocol:    utils.GetProtocolFromLink(link),
+						Tags:        v.Tags,
 					})
 					links[i] = utils.RenameNodeLink(link, newName)
 				}
@@ -271,6 +273,7 @@ func GetClash(c *gin.Context) {
 				Source:      v.Source,
 				Index:       idx + 1,
 				Protocol:    utils.GetProtocolFromLink(v.Link),
+				Tags:        v.Tags,
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
 		}
@@ -291,6 +294,7 @@ func GetClash(c *gin.Context) {
 						Source:      v.Source,
 						Index:       idx + 1,
 						Protocol:    utils.GetProtocolFromLink(link),
+						Tags:        v.Tags,
 					})
 					renamedLink = utils.RenameNodeLink(link, newName)
 				}
@@ -403,6 +407,7 @@ func GetSurge(c *gin.Context) {
 				Source:      v.Source,
 				Index:       idx + 1,
 				Protocol:    utils.GetProtocolFromLink(v.Link),
+				Tags:        v.Tags,
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
 		}
@@ -422,6 +427,7 @@ func GetSurge(c *gin.Context) {
 						Source:      v.Source,
 						Index:       idx + 1,
 						Protocol:    utils.GetProtocolFromLink(link),
+						Tags:        v.Tags,
 					})
 					links[i] = utils.RenameNodeLink(link, newName)
 				}

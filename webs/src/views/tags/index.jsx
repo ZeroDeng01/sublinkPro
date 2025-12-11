@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 // material-ui
 import Box from '@mui/material/Box';
@@ -9,28 +11,21 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Chip from '@mui/material/Chip';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import TextField from '@mui/material/TextField';
+import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import Stack from '@mui/material/Stack';
+import Divider from '@mui/material/Divider';
+import Paper from '@mui/material/Paper';
+import Tooltip from '@mui/material/Tooltip';
+import CircularProgress from '@mui/material/CircularProgress';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
-import Switch from '@mui/material/Switch';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import Alert from '@mui/material/Alert';
-import Snackbar from '@mui/material/Snackbar';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import Divider from '@mui/material/Divider';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
@@ -39,6 +34,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import RuleIcon from '@mui/icons-material/Rule';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -62,11 +58,15 @@ import RuleDialog from './component/RuleDialog';
 // ==============================|| TAG MANAGEMENT ||============================== //
 
 export default function TagManagement() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
   const [tabValue, setTabValue] = useState(0);
   const [tags, setTags] = useState([]);
   const [rules, setRules] = useState([]);
   const [existingGroups, setExistingGroups] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // Dialog states
@@ -76,7 +76,8 @@ export default function TagManagement() {
   const [editingRule, setEditingRule] = useState(null);
 
   // Fetch data
-  const fetchTags = async () => {
+  const fetchTags = async (showRefreshing = false) => {
+    if (showRefreshing) setRefreshing(true);
     try {
       const res = await getTags();
       if (res.code === 200) {
@@ -84,10 +85,13 @@ export default function TagManagement() {
       }
     } catch (error) {
       showMessage('获取标签列表失败', 'error');
+    } finally {
+      if (showRefreshing) setRefreshing(false);
     }
   };
 
-  const fetchRules = async () => {
+  const fetchRules = async (showRefreshing = false) => {
+    if (showRefreshing) setRefreshing(true);
     try {
       const res = await getTagRules();
       if (res.code === 200) {
@@ -95,6 +99,8 @@ export default function TagManagement() {
       }
     } catch (error) {
       showMessage('获取规则列表失败', 'error');
+    } finally {
+      if (showRefreshing) setRefreshing(false);
     }
   };
 
@@ -117,6 +123,24 @@ export default function TagManagement() {
 
   const showMessage = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
+  };
+
+  // Refresh handler
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (tabValue === 0) {
+        await fetchTags();
+        await fetchGroups();
+      } else {
+        await fetchRules();
+      }
+      showMessage('刷新成功');
+    } catch (error) {
+      showMessage('刷新失败', 'error');
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Tag operations
@@ -229,58 +253,141 @@ export default function TagManagement() {
     return tags.find((t) => t.name === tagName);
   };
 
+  // 移动端规则卡片
+  const MobileRuleCard = ({ rule }) => {
+    const tag = getTagByName(rule.tagName);
+    return (
+      <Card
+        variant="outlined"
+        sx={{
+          mb: 1.5,
+          borderRadius: 2,
+          transition: 'all 0.2s ease',
+          '&:hover': { boxShadow: 2 }
+        }}
+      >
+        <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+          <Stack spacing={1.5}>
+            {/* 规则名称和操作按钮 */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="subtitle1" fontWeight={600}>
+                {rule.name}
+              </Typography>
+              <Stack direction="row" spacing={0.5}>
+                <Tooltip title="手动执行">
+                  <IconButton size="small" onClick={() => handleTriggerRule(rule)} color="primary">
+                    <PlayArrowIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="编辑">
+                  <IconButton size="small" onClick={() => handleEditRule(rule)}>
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="删除">
+                  <IconButton size="small" color="error" onClick={() => handleDeleteRule(rule)}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            </Box>
+
+            <Divider />
+
+            {/* 标签、触发时机、状态 */}
+            <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+              {tag ? (
+                <Chip label={tag.name} size="small" sx={{ backgroundColor: tag.color, color: '#fff' }} />
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  未知标签
+                </Typography>
+              )}
+              <Chip label={rule.triggerType === 'subscription_update' ? '订阅更新后' : '测速完成后'} size="small" variant="outlined" />
+              <Chip label={rule.enabled ? '启用' : '禁用'} size="small" color={rule.enabled ? 'success' : 'default'} />
+            </Stack>
+          </Stack>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <MainCard title="标签管理">
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
-          <Tab icon={<LocalOfferIcon sx={{ mr: 1 }} />} iconPosition="start" label="标签列表" />
-          <Tab icon={<RuleIcon sx={{ mr: 1 }} />} iconPosition="start" label="自动规则" />
-        </Tabs>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
+            <Tab icon={<LocalOfferIcon sx={{ mr: isMobile ? 0 : 1 }} />} iconPosition="start" label={isMobile ? '' : '标签列表'} />
+            <Tab icon={<RuleIcon sx={{ mr: isMobile ? 0 : 1 }} />} iconPosition="start" label={isMobile ? '' : '自动规则'} />
+          </Tabs>
+          <Tooltip title="刷新">
+            <IconButton onClick={handleRefresh} disabled={refreshing} color="primary">
+              {refreshing ? <CircularProgress size={20} /> : <RefreshIcon />}
+            </IconButton>
+          </Tooltip>
+        </Stack>
       </Box>
 
       {/* 标签列表 */}
       {tabValue === 0 && (
         <Box>
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddTag}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddTag} size={isMobile ? 'small' : 'medium'}>
               添加标签
             </Button>
           </Box>
-          <Grid container spacing={2}>
+          <Grid container spacing={isMobile ? 1.5 : 2}>
             {tags.map((tag) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={tag.name}>
+              <Grid item xs={6} sm={6} md={4} lg={3} key={tag.name}>
                 <Card
                   sx={{
                     borderLeft: `4px solid ${tag.color}`,
+                    transition: 'all 0.2s ease',
                     '&:hover': { boxShadow: 3 }
                   }}
                 >
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CardContent sx={{ py: isMobile ? 1.5 : 2, px: isMobile ? 1.5 : 2, '&:last-child': { pb: isMobile ? 1.5 : 2 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
                         <Box
                           sx={{
-                            width: 16,
-                            height: 16,
+                            width: isMobile ? 12 : 16,
+                            height: isMobile ? 12 : 16,
                             borderRadius: '50%',
-                            backgroundColor: tag.color
+                            backgroundColor: tag.color,
+                            flexShrink: 0
                           }}
                         />
-                        <Typography variant="h5">{tag.name}</Typography>
+                        <Typography
+                          variant={isMobile ? 'body1' : 'h5'}
+                          sx={{
+                            fontWeight: 600,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {tag.name}
+                        </Typography>
                       </Box>
-                      <Box>
-                        <IconButton size="small" onClick={() => handleEditTag(tag)}>
+                      <Box sx={{ flexShrink: 0, ml: 0.5 }}>
+                        <IconButton size="small" onClick={() => handleEditTag(tag)} sx={{ p: isMobile ? 0.5 : 1 }}>
                           <EditIcon fontSize="small" />
                         </IconButton>
-                        <IconButton size="small" color="error" onClick={() => handleDeleteTag(tag)}>
+                        <IconButton size="small" color="error" onClick={() => handleDeleteTag(tag)} sx={{ p: isMobile ? 0.5 : 1 }}>
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Box>
                     </Box>
                     {tag.groupName && (
-                      <Chip label={`组: ${tag.groupName}`} size="small" variant="outlined" sx={{ mt: 1, fontSize: '0.7rem' }} />
+                      <Chip
+                        label={`组: ${tag.groupName}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ mt: 1, fontSize: isMobile ? '0.65rem' : '0.7rem', height: isMobile ? 20 : 24 }}
+                      />
                     )}
-                    {tag.description && (
+                    {tag.description && !isMobile && (
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                         {tag.description}
                       </Typography>
@@ -304,7 +411,13 @@ export default function TagManagement() {
       {tabValue === 1 && (
         <Box>
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddRule} disabled={tags.length === 0}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAddRule}
+              disabled={tags.length === 0}
+              size={isMobile ? 'small' : 'medium'}
+            >
               添加规则
             </Button>
           </Box>
@@ -313,61 +426,76 @@ export default function TagManagement() {
               请先创建标签后再添加自动规则
             </Alert>
           )}
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>规则名称</TableCell>
-                  <TableCell>关联标签</TableCell>
-                  <TableCell>触发时机</TableCell>
-                  <TableCell>状态</TableCell>
-                  <TableCell align="right">操作</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rules.map((rule) => {
-                  const tag = getTagByName(rule.tagName);
-                  return (
-                    <TableRow key={rule.id}>
-                      <TableCell>{rule.name}</TableCell>
-                      <TableCell>
-                        {tag ? (
-                          <Chip label={tag.name} size="small" sx={{ backgroundColor: tag.color, color: '#fff' }} />
-                        ) : (
-                          <Typography color="text.secondary">未知标签</Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {rule.triggerType === 'subscription_update' && '订阅更新后'}
-                        {rule.triggerType === 'speed_test' && '测速完成后'}
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={rule.enabled ? '启用' : '禁用'} size="small" color={rule.enabled ? 'success' : 'default'} />
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small" onClick={() => handleTriggerRule(rule)} title="手动执行">
-                          <PlayArrowIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => handleEditRule(rule)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" color="error" onClick={() => handleDeleteRule(rule)}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+
+          {/* 移动端使用卡片，桌面端使用表格 */}
+          {isMobile ? (
+            <Box>
+              {rules.map((rule) => (
+                <MobileRuleCard key={rule.id} rule={rule} />
+              ))}
+              {rules.length === 0 && (
+                <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
+                  暂无自动规则
+                </Typography>
+              )}
+            </Box>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>规则名称</TableCell>
+                    <TableCell>关联标签</TableCell>
+                    <TableCell>触发时机</TableCell>
+                    <TableCell>状态</TableCell>
+                    <TableCell align="right">操作</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rules.map((rule) => {
+                    const tag = getTagByName(rule.tagName);
+                    return (
+                      <TableRow key={rule.id}>
+                        <TableCell>{rule.name}</TableCell>
+                        <TableCell>
+                          {tag ? (
+                            <Chip label={tag.name} size="small" sx={{ backgroundColor: tag.color, color: '#fff' }} />
+                          ) : (
+                            <Typography color="text.secondary">未知标签</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {rule.triggerType === 'subscription_update' && '订阅更新后'}
+                          {rule.triggerType === 'speed_test' && '测速完成后'}
+                        </TableCell>
+                        <TableCell>
+                          <Chip label={rule.enabled ? '启用' : '禁用'} size="small" color={rule.enabled ? 'success' : 'default'} />
+                        </TableCell>
+                        <TableCell align="right">
+                          <IconButton size="small" onClick={() => handleTriggerRule(rule)} title="手动执行">
+                            <PlayArrowIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => handleEditRule(rule)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" color="error" onClick={() => handleDeleteRule(rule)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {rules.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                        <Typography color="text.secondary">暂无自动规则</Typography>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-                {rules.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                      <Typography color="text.secondary">暂无自动规则</Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </Box>
       )}
 
