@@ -17,6 +17,9 @@ export const SPEED_TEST_TCP_OPTIONS = [
 
 // 测速URL选项 - Mihomo模式 (真速度测试用下载)
 export const SPEED_TEST_MIHOMO_OPTIONS = [
+  { label: '1MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=1000000' },
+  { label: '3MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=3000000' },
+  { label: '5MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=5000000' },
   { label: '10MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=10000000' },
   { label: '50MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=50000000' },
   { label: '100MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=100000000' }
