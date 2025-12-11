@@ -438,8 +438,35 @@ func generateSurgeProxyGroups(groups []ACLProxyGroup) string {
 	lines = append(lines, "[Proxy Group]")
 
 	for _, g := range groups {
-		proxies := strings.Join(g.Proxies, ",")
-		line := fmt.Sprintf("%s = %s,%s", g.Name, g.Type, proxies)
+		// 如果代理列表为空，使用 DIRECT 作为后备
+		proxies := g.Proxies
+		if len(proxies) == 0 {
+			proxies = []string{"DIRECT"}
+		}
+		proxiesStr := strings.Join(proxies, ", ")
+		var line string
+
+		if g.Type == "url-test" || g.Type == "fallback" {
+			// url-test 和 fallback 类型需要添加测速参数
+			// 格式: name = url-test, proxy1, proxy2, url = xxx, interval = xxx, timeout = 5, tolerance = xxx
+			url := g.URL
+			if url == "" {
+				url = "http://www.gstatic.com/generate_204"
+			}
+			interval := g.Interval
+			if interval <= 0 {
+				interval = 600
+			}
+			tolerance := g.Tolerance
+			if tolerance <= 0 {
+				tolerance = 200
+			}
+			line = fmt.Sprintf("%s = %s, %s, url = %s, interval = %d, timeout = 5, tolerance = %d",
+				g.Name, g.Type, proxiesStr, url, interval, tolerance)
+		} else {
+			// select, load-balance 等类型
+			line = fmt.Sprintf("%s = %s, %s", g.Name, g.Type, proxiesStr)
+		}
 		lines = append(lines, line)
 	}
 
