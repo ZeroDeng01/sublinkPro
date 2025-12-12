@@ -63,9 +63,9 @@ func SubSchedulerAdd(c *gin.Context) {
 		}, subS.ID, req.URL, req.Name)
 	}
 
-	// 立即执行一次任务（使用 ExecuteSubscriptionTask 确保与定时任务行为一致）
+	// 立即执行一次任务（使用 ExecuteSubscriptionTaskWithTrigger 确保与定时任务行为一致，但标记为手动触发）
 	if req.Enabled {
-		go services.ExecuteSubscriptionTask(subS.ID, subS.URL, subS.Name)
+		go services.ExecuteSubscriptionTaskWithTrigger(subS.ID, subS.URL, subS.Name, models.TaskTriggerManual)
 	}
 
 	utils.OkWithMsg(c, "添加成功")
@@ -78,9 +78,9 @@ func PullClashConfigFromURL(c *gin.Context) {
 		utils.FailWithMsg(c, "参数错误: "+err.Error())
 		return
 	}
-	// 使用 ExecuteSubscriptionTask 确保手动拉取与定时任务行为一致
+	// 使用 ExecuteSubscriptionTaskWithTrigger 确保手动拉取标记为手动触发
 	// 包括订阅更新后自动触发 tag 规则等后续处理
-	go services.ExecuteSubscriptionTask(req.ID, req.URL, req.Name)
+	go services.ExecuteSubscriptionTaskWithTrigger(req.ID, req.URL, req.Name, models.TaskTriggerManual)
 	utils.OkWithMsg(c, "任务启动成功")
 }
 

@@ -7,7 +7,8 @@ import {
   IconKey,
   IconSettings,
   IconDeviceDesktopAnalytics,
-  IconTags
+  IconTags,
+  IconListCheck
 } from '@tabler/icons-react';
 
 // ==============================|| SUBSCRIPTION MENU ITEMS ||============================== //
@@ -95,6 +96,14 @@ const system = {
   title: '系统设置',
   type: 'group',
   children: [
+    {
+      id: 'tasks',
+      title: '任务管理',
+      type: 'item',
+      url: '/system/tasks',
+      icon: IconListCheck,
+      breadcrumbs: true
+    },
     {
       id: 'monitor',
       title: '系统监控',

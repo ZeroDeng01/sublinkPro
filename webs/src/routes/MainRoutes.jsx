@@ -18,6 +18,7 @@ const AccessKeyList = Loadable(lazy(() => import('views/accesskeys')));
 const UserSettings = Loadable(lazy(() => import('views/settings')));
 const SystemMonitor = Loadable(lazy(() => import('views/monitor')));
 const TagList = Loadable(lazy(() => import('views/tags')));
+const TaskList = Loadable(lazy(() => import('views/tasks')));
 
 // ==============================|| MAIN ROUTING ||==============================  //
 
@@ -80,6 +81,10 @@ const MainRoutes = {
         {
           path: 'monitor',
           element: <SystemMonitor />
+        },
+        {
+          path: 'tasks',
+          element: <TaskList />
         }
       ]
     }

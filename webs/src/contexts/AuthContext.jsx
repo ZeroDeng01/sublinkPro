@@ -84,7 +84,7 @@ export function AuthProvider({ children }) {
         const data = JSON.parse(event.data);
         const status = data.status || data.data?.status;
         const notification = {
-          id: Date.now(),
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           type: status === 'success' ? 'success' : 'error',
           title: data.title || (status === 'success' ? '成功' : '失败'),
           message: data.message,
@@ -102,7 +102,7 @@ export function AuthProvider({ children }) {
         const data = JSON.parse(event.data);
         const status = data.status || data.data?.status;
         const notification = {
-          id: Date.now(),
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           type: status === 'success' ? 'success' : 'error',
           title: data.title || (status === 'success' ? '订阅更新成功' : '订阅更新失败'),
           message: data.message,
@@ -134,7 +134,7 @@ export function AuthProvider({ children }) {
         if (data.type === 'heartbeat' || data.type === 'ping') return;
 
         const notification = {
-          id: Date.now(),
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           type: data.type || 'info',
           title: data.title || '通知',
           message: data.message || JSON.stringify(data),
@@ -142,6 +142,7 @@ export function AuthProvider({ children }) {
         };
         setNotifications((prev) => [notification, ...prev].slice(0, 50));
       } catch (e) {
+        console.error(e);
         // 忽略非JSON格式的心跳或其他数据
       }
     };

@@ -200,6 +200,12 @@ func Run(port int) {
 	if err := models.InitTagRuleCache(); err != nil {
 		log.Println("加载标签规则到缓存失败: %v", err)
 	}
+	if err := models.InitTaskCache(); err != nil {
+		log.Println("加载任务到缓存失败: %v", err)
+	}
+
+	// 初始化任务管理器
+	services.InitTaskManager()
 
 	// 从数据库加载定时任务
 	err := scheduler.LoadFromDatabase()
@@ -249,6 +255,7 @@ func Run(port int) {
 	routers.SSE(r)
 	routers.Settings(r)
 	routers.Tag(r)
+	routers.Tasks(r)
 
 	// 处理前端路由 (SPA History Mode)
 	// 必须在所有 backend 路由注册之后注册

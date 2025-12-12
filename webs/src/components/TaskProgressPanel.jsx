@@ -7,12 +7,17 @@ import Typography from '@mui/material/Typography';
 import LinearProgress from '@mui/material/LinearProgress';
 import Chip from '@mui/material/Chip';
 import Collapse from '@mui/material/Collapse';
+import IconButton from '@mui/material/IconButton';
+import CircularProgress from '@mui/material/CircularProgress';
+import Tooltip from '@mui/material/Tooltip';
 import SpeedIcon from '@mui/icons-material/Speed';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import StopIcon from '@mui/icons-material/Stop';
+import CancelIcon from '@mui/icons-material/Cancel';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 
 // ==============================|| ANIMATIONS ||============================== //
@@ -53,7 +58,7 @@ const formatTime = (ms) => {
 
 // ==============================|| TASK PROGRESS ITEM ||============================== //
 
-const TaskProgressItem = ({ task, currentTime }) => {
+const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
@@ -70,7 +75,8 @@ const TaskProgressItem = ({ task, currentTime }) => {
         icon: SpeedIcon,
         gradientColors: ['#10b981', '#059669'],
         label: '节点测速',
-        accentColor: '#10b981'
+        accentColor: '#10b981',
+        canStop: true // speed_test can be stopped
       };
     }
     if (task.taskType === 'tag_rule') {
@@ -78,24 +84,29 @@ const TaskProgressItem = ({ task, currentTime }) => {
         icon: LocalOfferIcon,
         gradientColors: ['#f59e0b', '#d97706'],
         label: '标签规则',
-        accentColor: '#f59e0b'
+        accentColor: '#f59e0b',
+        canStop: false
       };
     }
     return {
       icon: CloudSyncIcon,
       gradientColors: ['#6366f1', '#8b5cf6'],
       label: '订阅更新',
-      accentColor: '#6366f1'
+      accentColor: '#6366f1',
+      canStop: false
     };
   }, [task.taskType]);
 
   const Icon = taskConfig.icon;
   const isCompleted = task.status === 'completed';
   const isError = task.status === 'error';
+  const isCancelled = task.status === 'cancelled';
+  const isCancelling = task.status === 'cancelling' || isStopping;
+  const isActive = !isCompleted && !isError && !isCancelled;
 
   // Calculate time info
   const timeInfo = useMemo(() => {
-    if (!task.startTime || isCompleted || isError) return null;
+    if (!task.startTime || isCompleted || isError || isCancelled) return null;
 
     const elapsed = currentTime - task.startTime;
     const progressRatio = task.total > 0 ? task.current / task.total : 0;
@@ -110,7 +121,7 @@ const TaskProgressItem = ({ task, currentTime }) => {
     }
 
     return { elapsedStr, remainingStr };
-  }, [task.startTime, task.current, task.total, currentTime, isCompleted, isError]);
+  }, [task.startTime, task.current, task.total, currentTime, isCompleted, isError, isCancelled]);
 
   // Format result display
   const resultDisplay = useMemo(() => {
@@ -168,7 +179,7 @@ const TaskProgressItem = ({ task, currentTime }) => {
         }}
       >
         {/* Progress bar at top */}
-        {!isCompleted && !isError && (
+        {isActive && !isCancelling && (
           <LinearProgress
             variant="determinate"
             value={progress}
@@ -177,6 +188,17 @@ const TaskProgressItem = ({ task, currentTime }) => {
               backgroundColor: alpha(taskConfig.accentColor, 0.1),
               '& .MuiLinearProgress-bar': {
                 background: `linear-gradient(90deg, ${taskConfig.gradientColors[0]} 0%, ${taskConfig.gradientColors[1]} 100%)`
+              }
+            }}
+          />
+        )}
+        {isCancelling && (
+          <LinearProgress
+            sx={{
+              height: 3,
+              backgroundColor: alpha('#f59e0b', 0.1),
+              '& .MuiLinearProgress-bar': {
+                background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'
               }
             }}
           />
@@ -197,15 +219,21 @@ const TaskProgressItem = ({ task, currentTime }) => {
                   ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                   : isError
                     ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                    : `linear-gradient(135deg, ${taskConfig.gradientColors[0]} 0%, ${taskConfig.gradientColors[1]} 100%)`,
+                    : isCancelled
+                      ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                      : isCancelling
+                        ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                        : `linear-gradient(135deg, ${taskConfig.gradientColors[0]} 0%, ${taskConfig.gradientColors[1]} 100%)`,
                 flexShrink: 0,
-                animation: !isCompleted && !isError ? `${pulse} 2s ease-in-out infinite` : 'none'
+                animation: isActive && !isCancelling ? `${pulse} 2s ease-in-out infinite` : 'none'
               }}
             >
               {isCompleted ? (
                 <CheckCircleIcon sx={{ color: '#fff', fontSize: 22 }} />
               ) : isError ? (
                 <ErrorIcon sx={{ color: '#fff', fontSize: 22 }} />
+              ) : isCancelled || isCancelling ? (
+                <CancelIcon sx={{ color: '#fff', fontSize: 22 }} />
               ) : (
                 <Icon sx={{ color: '#fff', fontSize: 22 }} />
               )}
@@ -241,7 +269,7 @@ const TaskProgressItem = ({ task, currentTime }) => {
                     />
                   )}
                   {/* Speed test phase indicator */}
-                  {task.taskType === 'speed_test' && task.result?.phase && !isCompleted && !isError && (
+                  {task.taskType === 'speed_test' && task.result?.phase && isActive && !isCancelling && (
                     <Chip
                       label={task.result.phase === 'latency' ? '延迟测试' : '速度测试'}
                       size="small"
@@ -256,16 +284,48 @@ const TaskProgressItem = ({ task, currentTime }) => {
                     />
                   )}
                 </Box>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontWeight: 600,
-                    color: isCompleted ? '#10b981' : isError ? '#ef4444' : taskConfig.accentColor,
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {isCompleted ? '完成' : isError ? '失败' : `${progress}%`}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  {/* Status text */}
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: 600,
+                      color: isCompleted
+                        ? '#10b981'
+                        : isError
+                          ? '#ef4444'
+                          : isCancelled
+                            ? '#f59e0b'
+                            : isCancelling
+                              ? '#f59e0b'
+                              : taskConfig.accentColor,
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {isCompleted ? '完成' : isError ? '失败' : isCancelled ? '已取消' : isCancelling ? '停止中...' : `${progress}%`}
+                  </Typography>
+                  {/* Stop button for active tasks */}
+                  {isActive && taskConfig.canStop && onStopTask && (
+                    <Tooltip title={isCancelling ? '正在停止...' : '停止任务'} arrow>
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={() => onStopTask(task.taskId)}
+                          disabled={isCancelling}
+                          sx={{
+                            p: 0.5,
+                            color: isCancelling ? alpha('#f59e0b', 0.5) : '#ef4444',
+                            '&:hover': {
+                              bgcolor: alpha('#ef4444', 0.1)
+                            }
+                          }}
+                        >
+                          {isCancelling ? <CircularProgress size={16} color="inherit" /> : <StopIcon sx={{ fontSize: 18 }} />}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  )}
+                </Box>
               </Box>
 
               {/* Current item with phase info */}
@@ -377,7 +437,7 @@ const TaskProgressItem = ({ task, currentTime }) => {
 const TaskProgressPanel = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const { taskList, hasActiveTasks } = useTaskProgress();
+  const { taskList, hasActiveTasks, stopTask, isTaskStopping } = useTaskProgress();
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   // Update currentTime every second when there are active tasks
@@ -436,7 +496,13 @@ const TaskProgressPanel = () => {
           {/* Task list */}
           <Box>
             {taskList.map((task) => (
-              <TaskProgressItem key={task.taskId} task={task} currentTime={currentTime} />
+              <TaskProgressItem
+                key={task.taskId}
+                task={task}
+                currentTime={currentTime}
+                onStopTask={stopTask}
+                isStopping={isTaskStopping(task.taskId)}
+              />
             ))}
           </Box>
         </CardContent>

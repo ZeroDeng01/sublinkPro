@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { stopTask as stopTaskApi } from 'api/tasks';
 
 // ==============================|| TASK PROGRESS CONTEXT ||============================== //
 
@@ -13,6 +14,9 @@ const COMPLETED_TASK_CLEANUP_DELAY = 3000;
 export function TaskProgressProvider({ children }) {
   // Map of taskId -> taskData
   const [tasks, setTasks] = useState(new Map());
+
+  // Track tasks that are being stopped
+  const [stoppingTasks, setStoppingTasks] = useState(new Set());
 
   // Callbacks to invoke when a task completes
   const onCompleteCallbacksRef = useRef(new Set());
@@ -40,12 +44,52 @@ export function TaskProgressProvider({ children }) {
       newTasks.delete(taskId);
       return newTasks;
     });
+    // Also remove from stopping set
+    setStoppingTasks((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(taskId);
+      return newSet;
+    });
   }, []);
 
   // Clear all tasks
   const clearAll = useCallback(() => {
     setTasks(new Map());
+    setStoppingTasks(new Set());
   }, []);
+
+  // Stop a task
+  const stopTask = useCallback(
+    async (taskId) => {
+      // Mark as stopping
+      setStoppingTasks((prev) => new Set(prev).add(taskId));
+
+      try {
+        await stopTaskApi(taskId);
+        // The actual status update will come via SSE
+        // Update local state optimistically
+        updateTask(taskId, { status: 'cancelling' });
+      } catch (error) {
+        console.error('Failed to stop task:', error);
+        // Remove from stopping set on error
+        setStoppingTasks((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(taskId);
+          return newSet;
+        });
+        throw error;
+      }
+    },
+    [updateTask]
+  );
+
+  // Check if a task is being stopped
+  const isTaskStopping = useCallback(
+    (taskId) => {
+      return stoppingTasks.has(taskId);
+    },
+    [stoppingTasks]
+  );
 
   // Handle incoming progress event from SSE
   const handleProgressEvent = useCallback(
@@ -54,8 +98,8 @@ export function TaskProgressProvider({ children }) {
 
       if (!taskId) return;
 
-      if (status === 'completed' || status === 'error') {
-        // Update task with completed status, then schedule removal
+      if (status === 'completed' || status === 'error' || status === 'cancelled') {
+        // Update task with completed/cancelled status, then schedule removal
         updateTask(taskId, {
           taskId,
           taskType,
@@ -138,9 +182,25 @@ export function TaskProgressProvider({ children }) {
       clearAll,
       handleProgressEvent,
       registerOnComplete,
-      unregisterOnComplete
+      unregisterOnComplete,
+      stopTask,
+      isTaskStopping,
+      stoppingTasks
     }),
-    [tasks, taskList, hasActiveTasks, updateTask, removeTask, clearAll, handleProgressEvent, registerOnComplete, unregisterOnComplete]
+    [
+      tasks,
+      taskList,
+      hasActiveTasks,
+      updateTask,
+      removeTask,
+      clearAll,
+      handleProgressEvent,
+      registerOnComplete,
+      unregisterOnComplete,
+      stopTask,
+      isTaskStopping,
+      stoppingTasks
+    ]
   );
 
   return <TaskProgressContext.Provider value={value}>{children}</TaskProgressContext.Provider>;

@@ -208,8 +208,12 @@ func (sm *SchedulerManager) UpdateJob(schedulerID int, cronExpr string, enabled 
 
 // ExecuteSubscriptionTask 执行订阅任务的具体业务逻辑
 func ExecuteSubscriptionTask(id int, url string, subName string) {
+	ExecuteSubscriptionTaskWithTrigger(id, url, subName, models.TaskTriggerScheduled)
+}
 
-	log.Printf("执行自动获取订阅任务 - ID: %d, Name: %s, URL: %s", id, subName, url)
+// ExecuteSubscriptionTaskWithTrigger 执行订阅任务（带触发类型）
+func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trigger models.TaskTrigger) {
+	log.Printf("执行自动获取订阅任务 - ID: %d, Name: %s, URL: %s, Trigger: %s", id, subName, url, trigger)
 
 	// 获取最新的订阅配置，以便使用最新的代理设置
 	var subS models.SubScheduler
@@ -225,10 +229,28 @@ func ExecuteSubscriptionTask(id int, url string, subName string) {
 		userAgent = subS.UserAgent
 	}
 
-	err := node.LoadClashConfigFromURL(id, url, subName, downloadWithProxy, proxyLink, userAgent)
+	// 创建 TaskManager 任务和报告器
+	tm := GetTaskManager()
+	task, _, createErr := tm.CreateTask(models.TaskTypeSubUpdate, subName, trigger, 0)
+
+	var reporter node.TaskReporter
+	if createErr != nil {
+		log.Printf("创建订阅更新任务失败: %v，将使用降级模式", createErr)
+		reporter = nil // 使用 nil，将在 sub.go 中降级为 NoOpTaskReporter
+	} else {
+		reporter = &TaskManagerReporter{
+			tm:     tm,
+			taskID: task.ID,
+		}
+	}
+
+	err := node.LoadClashConfigFromURLWithReporter(id, url, subName, downloadWithProxy, proxyLink, userAgent, reporter)
 	if err != nil {
 		// 仅在失败时发送通知，成功通知由 node/sub.go 中的 scheduleClashToNodeLinks 发送
 		// 这样可以避免重复通知，且成功通知包含更详细的节点统计信息
+		if reporter != nil {
+			reporter.ReportFail(err.Error())
+		}
 		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
 			Event:   "sub_update",
 			Title:   "订阅更新失败",
@@ -249,6 +271,28 @@ func ExecuteSubscriptionTask(id int, url string, subName string) {
 			ApplyAutoTagRules(updatedNodes, "subscription_update")
 		}
 	}()
+}
+
+// TaskManagerReporter 实现 node.TaskReporter 接口，用于将任务进度报告给 TaskManager
+type TaskManagerReporter struct {
+	tm     *TaskManager
+	taskID string
+}
+
+func (r *TaskManagerReporter) UpdateTotal(total int) {
+	r.tm.UpdateTotal(r.taskID, total)
+}
+
+func (r *TaskManagerReporter) ReportProgress(current int, currentItem string, result interface{}) {
+	r.tm.UpdateProgress(r.taskID, current, currentItem, result)
+}
+
+func (r *TaskManagerReporter) ReportComplete(message string, result interface{}) {
+	r.tm.CompleteTask(r.taskID, message, result)
+}
+
+func (r *TaskManagerReporter) ReportFail(errMsg string) {
+	r.tm.FailTask(r.taskID, errMsg)
 }
 
 // cleanCronExpression 清理Cron表达式中的多余空格
@@ -380,7 +424,8 @@ func ExecuteNodeSpeedTestTask() {
 		return
 	}
 
-	RunSpeedTestOnNodes(nodes)
+	// 使用 TaskManager 创建任务（定时触发）
+	RunSpeedTestOnNodesWithTrigger(nodes, models.TaskTriggerScheduled)
 }
 
 // ExecuteSpecificNodeSpeedTestTask 执行指定节点测速任务
@@ -405,54 +450,50 @@ func ExecuteSpecificNodeSpeedTestTask(nodeIDs []int) {
 		return
 	}
 
-	RunSpeedTestOnNodes(nodes)
+	// 使用 TaskManager 创建任务（手动触发）
+	RunSpeedTestOnNodesWithTrigger(nodes, models.TaskTriggerManual)
 }
 
-// RunSpeedTestOnNodes 对指定节点列表执行测速
+// RunSpeedTestOnNodes 对指定节点列表执行测速（向后兼容，默认手动触发）
 // 采用两阶段测试策略：阶段一并发测延迟，阶段二低并发测速度
 func RunSpeedTestOnNodes(nodes []models.Node) {
-	log.Printf("开始执行节点测速，总节点数: %d", len(nodes))
+	RunSpeedTestOnNodesWithTrigger(nodes, models.TaskTriggerManual)
+}
 
-	// 生成唯一任务ID
-	taskID := fmt.Sprintf("speed_test_%d", time.Now().UnixNano())
+// RunSpeedTestOnNodesWithTrigger 对指定节点列表执行测速（带触发类型）
+// 采用两阶段测试策略：阶段一并发测延迟，阶段二低并发测速度
+// 支持通过 TaskManager 进行任务取消
+func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrigger) {
+	if len(nodes) == 0 {
+		log.Println("没有要测速的节点")
+		return
+	}
+
 	totalNodes := len(nodes)
-	startTime := time.Now()
-	startTimeMs := startTime.UnixMilli()
+	log.Printf("开始执行节点测速，总节点数: %d, 触发类型: %s", totalNodes, trigger)
 
-	// 广播任务开始事件
-	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-		TaskID:    taskID,
-		TaskType:  "speed_test",
-		TaskName:  "节点测速",
-		Status:    "started",
-		Current:   0,
-		Total:     totalNodes,
-		Message:   fmt.Sprintf("开始测速 %d 个节点", totalNodes),
-		StartTime: startTimeMs,
-	})
+	// 使用 TaskManager 创建任务
+	tm := GetTaskManager()
+	task, ctx, err := tm.CreateTask(models.TaskTypeSpeedTest, "节点测速", trigger, totalNodes)
+	if err != nil {
+		log.Printf("创建测速任务失败: %v", err)
+		return
+	}
+	taskID := task.ID
 
-	// 确保函数最后一定会执行日志和通知
+	// 确保任务结束时清理
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("测速任务执行过程中发生严重错误: %v", r)
-			// 广播错误进度
-			sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-				TaskID:   taskID,
-				TaskType: "speed_test",
-				TaskName: "节点测速",
-				Status:   "error",
-				Message:  fmt.Sprintf("测速任务执行异常: %v", r),
-			})
-			sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
-				Event:   "speed_test",
-				Title:   "测速任务异常",
-				Message: fmt.Sprintf("测速任务执行异常: %v", r),
-				Data: map[string]interface{}{
-					"status": "error",
-				},
-			})
+			tm.FailTask(taskID, fmt.Sprintf("任务执行异常: %v", r))
 		}
 	}()
+
+	// 检查是否已被取消
+	if ctx.Err() != nil {
+		log.Printf("任务已被取消: %s", taskID)
+		return
+	}
 
 	// 获取测速配置
 	speedTestUrl, _ := models.GetSetting("speed_test_url")
@@ -533,6 +574,7 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	// 结果统计
 	var successCount, failCount int32
 	var completedCount int32
+	var cancelled bool
 	var mu sync.Mutex
 
 	// 节点结果存储（用于阶段二）
@@ -549,16 +591,45 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	var latencyWg sync.WaitGroup
 
 	for i, node := range nodes {
+		// 检查任务是否被取消
+		select {
+		case <-ctx.Done():
+			mu.Lock()
+			cancelled = true
+			mu.Unlock()
+			log.Printf("任务被取消，停止新的延迟测试")
+			break
+		default:
+		}
+
+		if cancelled {
+			break
+		}
+
 		latencyWg.Add(1)
 		latencySem <- struct{}{}
 		go func(idx int, n models.Node) {
 			defer latencyWg.Done()
 			defer func() { <-latencySem }()
 
+			// 在 goroutine 内再次检查取消状态
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
 			// 使用多次采样测量延迟
 			latency, err := mihomo.MihomoDelayWithSamples(n.Link, latencyTestUrl, speedTestTimeout, latencySamples)
 
 			mu.Lock()
+			defer mu.Unlock()
+
+			// 再次检查取消状态
+			if cancelled {
+				return
+			}
+
 			nodeResults[idx] = nodeResult{node: n, latency: latency, err: err}
 			currentCompleted := int(completedCount) + 1
 			completedCount++
@@ -585,9 +656,8 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 					log.Printf("更新节点 %s 测速结果失败: %v", n.Name, updateErr)
 				}
 			}
-			mu.Unlock()
 
-			// 广播进度
+			// 更新任务进度
 			var resultStatus string
 			if err != nil {
 				resultStatus = "failed"
@@ -601,26 +671,28 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 				// mihomo模式下，延迟测试占前半部分
 				progressTotal = totalNodes * 2
 			}
-			sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-				TaskID:      taskID,
-				TaskType:    "speed_test",
-				TaskName:    "节点测速",
-				Status:      "progress",
-				Current:     progressCurrent,
-				Total:       progressTotal,
-				CurrentItem: n.Name,
-				Result: map[string]interface{}{
-					"status":  resultStatus,
-					"phase":   "latency",
-					"latency": latency,
-				},
-				Message:   fmt.Sprintf("【延迟测试】 %d/%d", currentCompleted, totalNodes),
-				StartTime: startTimeMs,
+			tm.UpdateProgress(taskID, progressCurrent, n.Name, map[string]interface{}{
+				"status":  resultStatus,
+				"phase":   "latency",
+				"latency": latency,
 			})
+
+			// 同时更新任务的 Total（如果是 mihomo 模式）
+			if speedTestMode != "tcp" && idx == 0 {
+				tm.UpdateTotal(taskID, progressTotal)
+			}
 		}(i, node)
 	}
 	latencyWg.Wait()
 	log.Printf("阶段一完成：延迟测试结束")
+
+	// 检查是否被取消
+	if cancelled || ctx.Err() != nil {
+		log.Printf("任务被取消，跳过阶段二 (已完成: %d/%d)", completedCount, totalNodes)
+		tm.UpdateProgress(taskID, int(completedCount), "已取消", nil)
+		// 任务已被 CancelTask 标记为取消，无需再次更新
+		goto applyTags
+	}
 
 	// ========== 阶段二：速度测试（仅 mihomo 模式）==========
 	if speedTestMode != "tcp" {
@@ -632,6 +704,21 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 		var speedWg sync.WaitGroup
 
 		for i := range nodeResults {
+			// 检查任务是否被取消
+			select {
+			case <-ctx.Done():
+				mu.Lock()
+				cancelled = true
+				mu.Unlock()
+				log.Printf("任务被取消，停止新的速度测试")
+				break
+			default:
+			}
+
+			if cancelled {
+				break
+			}
+
 			nr := &nodeResults[i]
 			// 跳过延迟测试失败的节点
 			if nr.err != nil {
@@ -656,11 +743,23 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 				defer speedWg.Done()
 				defer func() { <-speedSem }()
 
+				// 在 goroutine 内检查取消状态
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
 				// 速度测试（延迟已在阶段一获取）
 				speed, _, err := mihomo.MihomoSpeedTest(result.node.Link, speedTestUrl, speedTestTimeout)
 
 				mu.Lock()
 				defer mu.Unlock()
+
+				// 再次检查取消状态
+				if cancelled {
+					return
+				}
 
 				currentCompleted := int(completedCount) + 1
 				completedCount++
@@ -717,24 +816,13 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 					log.Printf("更新节点 %s 测速结果失败: %v", result.node.Name, updateErr)
 				}
 
-				// 广播进度（速度测试占后50%）
-				sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-					TaskID:      taskID,
-					TaskType:    "speed_test",
-					TaskName:    "节点测速",
-					Status:      "progress",
-					Current:     totalNodes + currentCompleted, // 进度从50%开始
-					Total:       totalNodes * 2,
-					CurrentItem: result.node.Name,
-					Result: map[string]interface{}{
-						"status":  resultStatus,
-						"phase":   "speed",
-						"speed":   result.node.Speed,
-						"latency": result.latency,
-						"data":    resultData,
-					},
-					Message:   fmt.Sprintf("【速度测试】 %d/%d", currentCompleted, totalNodes),
-					StartTime: startTimeMs,
+				// 更新任务进度（速度测试占后50%）
+				tm.UpdateProgress(taskID, totalNodes+currentCompleted, result.node.Name, map[string]interface{}{
+					"status":  resultStatus,
+					"phase":   "speed",
+					"speed":   result.node.Speed,
+					"latency": result.latency,
+					"data":    resultData,
 				})
 			}(nr)
 		}
@@ -742,38 +830,23 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 		log.Printf("阶段二完成：速度测试结束")
 	}
 
-	// 广播完成进度
-	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-		TaskID:   taskID,
-		TaskType: "speed_test",
-		TaskName: "节点测速",
-		Status:   "completed",
-		Current:  totalNodes,
-		Total:    totalNodes,
-		Message:  fmt.Sprintf("测速完成 (成功: %d, 失败: %d)", successCount, failCount),
-		Result: map[string]interface{}{
+	// 检查最终是否被取消
+	if cancelled || ctx.Err() != nil {
+		log.Printf("任务被取消")
+		goto applyTags
+	}
+
+	// 完成任务
+	{
+		resultData := map[string]interface{}{
 			"success": successCount,
 			"fail":    failCount,
-		},
-	})
+			"total":   totalNodes,
+		}
+		tm.CompleteTask(taskID, fmt.Sprintf("测速完成 (成功: %d, 失败: %d)", successCount, failCount), resultData)
+	}
 
-	// 完成 (触发webhook)
-	duration := time.Since(startTime)
-	durationStr := formatDuration(duration)
-	log.Printf("节点测速任务执行完成 - 成功: %d, 失败: %d, 耗时: %s", successCount, failCount, durationStr)
-	sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
-		Event:   "speed_test",
-		Title:   "节点测速完成",
-		Message: fmt.Sprintf("节点测速完成，耗时 %s (成功: %d, 失败: %d)", durationStr, successCount, failCount),
-		Data: map[string]interface{}{
-			"status":   "success",
-			"success":  successCount,
-			"fail":     failCount,
-			"total":    len(nodes),
-			"duration": duration.Milliseconds(),
-		},
-	})
-
+applyTags:
 	// 应用自动标签规则 - 测速完成后触发
 	// 重新获取已测速节点的最新数据（包含更新后的速度/延迟值）
 	go func() {

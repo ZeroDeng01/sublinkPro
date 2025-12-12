@@ -5,10 +5,10 @@ import (
 	"log"
 	"sublink/models"
 	"sublink/services/sse"
-	"time"
 )
 
 // ApplyAutoTagRules 对节点应用自动标签规则
+// 注意：此函数通过 TaskManager 创建任务记录，以便在任务列表中显示
 func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 	if len(nodes) == 0 {
 		return
@@ -22,7 +22,20 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 
 	log.Printf("开始应用自动标签规则: 触发类型=%s, 节点数=%d, 规则数=%d", triggerType, len(nodes), len(rules))
 
+	// 使用 TaskManager 创建任务（自动触发）
+	tm := GetTaskManager()
+	taskName := fmt.Sprintf("自动标签规则 (%s)", triggerType)
+	task, _, createErr := tm.CreateTask(models.TaskTypeTagRule, taskName, models.TaskTriggerScheduled, len(nodes))
+	var taskID string
+	if createErr != nil {
+		log.Printf("创建自动标签任务失败: %v，继续执行但不追踪任务", createErr)
+	} else {
+		taskID = task.ID
+	}
+
 	taggedCount := 0
+	removedCount := 0
+	processedCount := 0
 	// 规则名称
 	ruleNames := make([]string, 0)
 	for _, rule := range rules {
@@ -61,22 +74,46 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 			log.Printf("规则 [%s] 移除 %d 个不满足条件的节点标签: %s", rule.Name, len(unmatchedNodeIDs), rule.TagName)
 			if err := models.BatchRemoveTagFromNodes(unmatchedNodeIDs, rule.TagName); err != nil {
 				log.Printf("批量移除标签失败: %v", err)
+			} else {
+				removedCount += len(unmatchedNodeIDs)
 			}
+		}
+
+		processedCount += len(matchedNodeIDs) + len(unmatchedNodeIDs)
+
+		// 更新进度（仅SSE广播，不写数据库）
+		if taskID != "" {
+			tm.UpdateProgress(taskID, processedCount, rule.Name, map[string]interface{}{
+				"matched": len(matchedNodeIDs),
+				"removed": len(unmatchedNodeIDs),
+			})
 		}
 	}
 
-	if taggedCount > 0 {
-		log.Printf("自动标签规则应用完成: 共标记 %d 个节点", taggedCount)
+	// 完成任务
+	if taskID != "" {
+		message := fmt.Sprintf("自动标签完成: 标记 %d 个节点, 移除 %d 个标签", taggedCount, removedCount)
+		tm.CompleteTask(taskID, message, map[string]interface{}{
+			"taggedCount":  taggedCount,
+			"removedCount": removedCount,
+			"totalNodes":   len(nodes),
+			"triggerType":  triggerType,
+		})
+	}
+
+	if taggedCount > 0 || removedCount > 0 {
+		log.Printf("自动标签规则应用完成: 共标记 %d 个节点, 移除 %d 个标签", taggedCount, removedCount)
 		// 广播事件
 		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
 			Event:   "auto_tag",
 			Title:   "自动标签完成",
 			Message: fmt.Sprintf("自动标签规则【%s】应用完成，执行规则【%s】: 共标记 %d 个节点", triggerType, ruleNames, taggedCount),
 			Data: map[string]interface{}{
-				"status":      "success",
-				"error":       fmt.Sprintf("自动标签规则【%s】应用完成: 共标记 %d 个节点", triggerType, taggedCount),
-				"triggerType": triggerType,
-				"taggedCount": taggedCount,
+				"status":       "success",
+				"error":        fmt.Sprintf("自动标签规则【%s】应用完成: 共标记 %d 个节点", triggerType, taggedCount),
+				"triggerType":  triggerType,
+				"taggedCount":  taggedCount,
+				"removedCount": removedCount,
 			},
 		})
 	}
@@ -101,50 +138,26 @@ func TriggerTagRule(ruleID int) error {
 		return nil
 	}
 
-	// 生成唯一任务ID
-	taskID := fmt.Sprintf("tag_rule_%d_%d", ruleID, time.Now().UnixNano())
-	startTime := time.Now()
-	startTimeMs := startTime.UnixMilli()
-
-	// 广播任务开始事件
-	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-		TaskID:    taskID,
-		TaskType:  "tag_rule",
-		TaskName:  rule.Name,
-		Status:    "started",
-		Current:   0,
-		Total:     totalNodes,
-		Message:   fmt.Sprintf("开始执行标签规则: %s", rule.Name),
-		StartTime: startTimeMs,
-	})
+	// 使用 TaskManager 创建任务
+	tm := GetTaskManager()
+	task, _, createErr := tm.CreateTask(models.TaskTypeTagRule, rule.Name, models.TaskTriggerManual, totalNodes)
+	if createErr != nil {
+		log.Printf("创建标签规则任务失败: %v", createErr)
+		return createErr
+	}
+	taskID := task.ID
 
 	// 解析条件
 	conditions, err := models.ParseConditions(rule.Conditions)
 	if err != nil {
-		// 广播错误事件
-		sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-			TaskID:    taskID,
-			TaskType:  "tag_rule",
-			TaskName:  rule.Name,
-			Status:    "error",
-			Current:   0,
-			Total:     totalNodes,
-			Message:   fmt.Sprintf("规则条件解析失败: %v", err),
-			StartTime: startTimeMs,
-		})
+		// 使用 TaskManager 报告失败
+		tm.FailTask(taskID, fmt.Sprintf("规则条件解析失败: %v", err))
 		return err
 	}
 
 	// 评估并打标签 (使用标签名称)
 	matchedCount := 0
 	removedCount := 0
-	// 计算进度广播间隔（避免大量节点时消息阻塞）
-	broadcastInterval := 1
-	if totalNodes > 500 {
-		broadcastInterval = 100
-	} else if totalNodes > 50 {
-		broadcastInterval = 50
-	}
 	for i, n := range nodes {
 		matched := conditions.EvaluateNode(n)
 		resultStatus := "skipped"
@@ -166,42 +179,19 @@ func TriggerTagRule(ruleID int) error {
 			}
 		}
 
-		// 广播进度更新（降低频率防止消息阻塞）
+		// 更新进度（TaskManager 内置节流策略）
 		currentProgress := i + 1
-		shouldBroadcast := currentProgress%broadcastInterval == 0 || currentProgress == totalNodes
-		if shouldBroadcast {
-			sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-				TaskID:      taskID,
-				TaskType:    "tag_rule",
-				TaskName:    rule.Name,
-				Status:      "progress",
-				Current:     currentProgress,
-				Total:       totalNodes,
-				CurrentItem: n.Name,
-				Result: map[string]interface{}{
-					"status":  resultStatus,
-					"matched": matched,
-				},
-				StartTime: startTimeMs,
-			})
-		}
+		tm.UpdateProgress(taskID, currentProgress, n.Name, map[string]interface{}{
+			"status":  resultStatus,
+			"matched": matched,
+		})
 	}
 
-	// 广播任务完成事件
-	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-		TaskID:   taskID,
-		TaskType: "tag_rule",
-		TaskName: rule.Name,
-		Status:   "completed",
-		Current:  totalNodes,
-		Total:    totalNodes,
-		Message:  fmt.Sprintf("规则执行完成: 匹配 %d 个节点, 移除 %d 个节点标签", matchedCount, removedCount),
-		Result: map[string]interface{}{
-			"matchedCount": matchedCount,
-			"removedCount": removedCount,
-			"totalCount":   totalNodes,
-		},
-		StartTime: startTimeMs,
+	// 使用 TaskManager 完成任务
+	tm.CompleteTask(taskID, fmt.Sprintf("规则执行完成: 匹配 %d 个节点, 移除 %d 个节点标签", matchedCount, removedCount), map[string]interface{}{
+		"matchedCount": matchedCount,
+		"removedCount": removedCount,
+		"totalCount":   totalNodes,
 	})
 
 	// 广播通知消息，让用户在通知中心看到完成通知

@@ -25,6 +25,27 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// TaskReporter 任务报告接口，用于解耦任务管理
+// 由 scheduler 传入实现，避免 node 包导入 services 包导致的循环依赖
+type TaskReporter interface {
+	// UpdateTotal 更新任务总数（在解析完订阅后调用）
+	UpdateTotal(total int)
+	// ReportProgress 报告任务进度
+	ReportProgress(current int, currentItem string, result interface{})
+	// ReportComplete 报告任务完成
+	ReportComplete(message string, result interface{})
+	// ReportFail 报告任务失败
+	ReportFail(errMsg string)
+}
+
+// NoOpTaskReporter 空实现，当没有传入reporter时使用
+type NoOpTaskReporter struct{}
+
+func (n *NoOpTaskReporter) UpdateTotal(total int)                                              {}
+func (n *NoOpTaskReporter) ReportProgress(current int, currentItem string, result interface{}) {}
+func (n *NoOpTaskReporter) ReportComplete(message string, result interface{})                  {}
+func (n *NoOpTaskReporter) ReportFail(errMsg string)                                           {}
+
 type ClashConfig struct {
 	Proxies []protocol.Proxy `yaml:"proxies"`
 }
@@ -38,6 +59,12 @@ type ClashConfig struct {
 // proxyLink: 代理链接 (可选)
 // userAgent: 请求的 User-Agent (可选，默认 Clash)
 func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string) error {
+	return LoadClashConfigFromURLWithReporter(id, urlStr, subName, downloadWithProxy, proxyLink, userAgent, nil)
+}
+
+// LoadClashConfigFromURLWithReporter 从指定 URL 加载 Clash 配置（带任务报告器）
+// reporter: 任务进度报告器，用于TaskManager集成
+func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string, reporter TaskReporter) error {
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -210,35 +237,31 @@ func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithP
 		return fmt.Errorf("解析失败 or 未找到节点")
 	}
 
-	return scheduleClashToNodeLinks(id, config.Proxies, subName)
+	return scheduleClashToNodeLinks(id, config.Proxies, subName, reporter)
 }
 
 // scheduleClashToNodeLinks 将 Clash 代理配置转换为节点链接并保存到数据库
 // id: 订阅ID
 // proxys: 代理节点列表
 // subName: 订阅名称
-func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) error {
+// reporter: 任务报告器（可为nil，用于解耦循环依赖）
+func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, reporter TaskReporter) error {
+	if reporter == nil {
+		reporter = &NoOpTaskReporter{}
+	}
+
 	addSuccessCount := 0
 	updateSuccessCount := 0
 	processedCount := 0
-	totalNodes := len(proxys)
+	startTime := time.Now() // 记录开始时间用于计算耗时
 
-	// 生成唯一任务ID
-	taskID := fmt.Sprintf("sub_update_%d_%d", id, time.Now().UnixNano())
-	startTime := time.Now()
-	startTimeMs := startTime.UnixMilli()
-
-	// 广播任务开始事件
-	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-		TaskID:    taskID,
-		TaskType:  "sub_update",
-		TaskName:  subName,
-		Status:    "started",
-		Current:   0,
-		Total:     totalNodes,
-		Message:   fmt.Sprintf("开始更新订阅 [%s]，共 %d 个节点", subName, totalNodes),
-		StartTime: startTimeMs,
-	})
+	// 确保任务结束时处理异常
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("订阅更新任务执行过程中发生严重错误: %v", r)
+			reporter.ReportFail(fmt.Sprintf("任务异常: %v", r))
+		}
+	}()
 
 	// 获取订阅的Group信息
 	subS := models.SubScheduler{}
@@ -261,6 +284,9 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 	}
 
 	log.Printf("📄订阅【%s】获取到订阅数量【%d】，现有节点数量【%d】", subName, len(proxys), len(existingNodes))
+
+	// 更新任务总数（此时已知道需要处理的节点数量）
+	reporter.UpdateTotal(len(proxys))
 
 	// 记录本次获取到的节点Link
 	currentLinks := make(map[string]bool)
@@ -648,27 +674,13 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 			}
 		}
 
-		// 更新进度并广播 (节流：超过50个节点时每10个节点广播一次)
+		// 更新进度（通过 reporter 报告）
 		processedCount++
-		shouldBroadcast := totalNodes <= 50 || processedCount%10 == 0 || processedCount == totalNodes
-		if shouldBroadcast {
-			sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-				TaskID:      taskID,
-				TaskType:    "sub_update",
-				TaskName:    subName,
-				Status:      "progress",
-				Current:     processedCount,
-				Total:       totalNodes,
-				CurrentItem: proxy.Name,
-				Result: map[string]interface{}{
-					"status": nodeStatus,
-					"added":  addSuccessCount,
-					"exists": updateSuccessCount,
-				},
-				Message:   fmt.Sprintf("处理节点 %d/%d", processedCount, totalNodes),
-				StartTime: startTimeMs,
-			})
-		}
+		reporter.ReportProgress(processedCount, proxy.Name, map[string]interface{}{
+			"status": nodeStatus,
+			"added":  addSuccessCount,
+			"exists": updateSuccessCount,
+		})
 	}
 
 	// 3. 删除本次订阅没有获取到但数据库中存在的节点
@@ -704,20 +716,11 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string) e
 	if err1 != nil {
 		return err1
 	}
-	// 广播完成进度
-	sse.GetSSEBroker().BroadcastProgress(sse.ProgressPayload{
-		TaskID:   taskID,
-		TaskType: "sub_update",
-		TaskName: subName,
-		Status:   "completed",
-		Current:  totalNodes,
-		Total:    totalNodes,
-		Message:  fmt.Sprintf("订阅更新完成 (新增: %d, 已存在: %d, 删除: %d)", addSuccessCount, updateSuccessCount, deleteCount),
-		Result: map[string]interface{}{
-			"added":   addSuccessCount,
-			"exists":  updateSuccessCount,
-			"deleted": deleteCount,
-		},
+	// 通过 reporter 报告任务完成
+	reporter.ReportComplete(fmt.Sprintf("订阅更新完成 (新增: %d, 已存在: %d, 删除: %d)", addSuccessCount, updateSuccessCount, deleteCount), map[string]interface{}{
+		"added":   addSuccessCount,
+		"exists":  updateSuccessCount,
+		"deleted": deleteCount,
 	})
 
 	// 触发webhook的完成事件

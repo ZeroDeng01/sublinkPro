@@ -94,6 +94,11 @@ func RunMigrations() {
 	} else {
 		log.Printf("数据表TagRule创建成功")
 	}
+	if err := db.AutoMigrate(&Task{}); err != nil {
+		log.Printf("基础数据表Task迁移失败: %v", err)
+	} else {
+		log.Printf("数据表Task创建成功")
+	}
 
 	// 检查并删除 idx_name_id 索引
 	// 0000_drop_idx_name_id
