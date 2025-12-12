@@ -130,7 +130,7 @@ export const validateCronExpression = (cron) => {
 // 延迟颜色
 export const getDelayColor = (delay) => {
   if (delay <= 0) return 'default';
-  if (delay < 100) return 'success';
+  if (delay < 200) return 'success';
   if (delay < 500) return 'warning';
   return 'error';
 };
