@@ -155,36 +155,52 @@ func TriggerTagRule(ruleID int) error {
 		return err
 	}
 
-	// 评估并打标签 (使用标签名称)
-	matchedCount := 0
-	removedCount := 0
+	// 评估节点并收集需要操作的节点ID（稍后批量写入）
+	matchedNodeIDs := make([]int, 0)
+	unmatchedNodeIDs := make([]int, 0)
+
 	for i, n := range nodes {
 		matched := conditions.EvaluateNode(n)
 		resultStatus := "skipped"
 
-		if matched {
-			if err := n.AddTagByName(rule.TagName); err == nil {
-				matchedCount++
-				resultStatus = "tagged"
-			} else {
-				resultStatus = "error"
-			}
-		} else if n.HasTagName(rule.TagName) {
-			// 不满足条件但有此标签，移除它
-			if err := n.RemoveTagByName(rule.TagName); err == nil {
-				removedCount++
-				resultStatus = "untagged"
-			} else {
-				resultStatus = "error"
-			}
+		if matched && !n.HasTagName(rule.TagName) {
+			// 匹配条件但没有此标签，需要添加
+			matchedNodeIDs = append(matchedNodeIDs, n.ID)
+			resultStatus = "tagged"
+		} else if !matched && n.HasTagName(rule.TagName) {
+			// 不满足条件但有此标签，需要移除
+			unmatchedNodeIDs = append(unmatchedNodeIDs, n.ID)
+			resultStatus = "untagged"
 		}
 
-		// 更新进度（TaskManager 内置节流策略）
+		// 更新进度（TaskManager 内置节流策略）- 基于内存计数，保持实时性
 		currentProgress := i + 1
 		tm.UpdateProgress(taskID, currentProgress, n.Name, map[string]interface{}{
 			"status":  resultStatus,
 			"matched": matched,
 		})
+	}
+
+	// 批量写入数据库（一次性操作，减少数据库I/O）
+	matchedCount := 0
+	removedCount := 0
+
+	if len(matchedNodeIDs) > 0 {
+		if err := models.BatchAddTagToNodes(matchedNodeIDs, rule.TagName); err != nil {
+			log.Printf("❌批量添加标签失败：%v", err)
+		} else {
+			matchedCount = len(matchedNodeIDs)
+			log.Printf("✅批量添加标签到 %d 个节点", matchedCount)
+		}
+	}
+
+	if len(unmatchedNodeIDs) > 0 {
+		if err := models.BatchRemoveTagFromNodes(unmatchedNodeIDs, rule.TagName); err != nil {
+			log.Printf("❌批量移除标签失败：%v", err)
+		} else {
+			removedCount = len(unmatchedNodeIDs)
+			log.Printf("✅批量移除 %d 个节点的标签", removedCount)
+		}
 	}
 
 	// 使用 TaskManager 完成任务

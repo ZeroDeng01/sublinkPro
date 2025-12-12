@@ -597,6 +597,9 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	}
 	nodeResults := make([]nodeResult, len(nodes))
 
+	// 批量收集：测速结果列表（任务完成后批量写入数据库）
+	speedTestResults := make([]models.SpeedTestResult, 0, len(nodes))
+
 	// ========== 阶段一：延迟测试 ==========
 	log.Printf("阶段一：开始延迟测试，并发数: %d，采样次数: %d", latencyConcurrency, latencySamples)
 	latencySem := make(chan struct{}, latencyConcurrency)
@@ -646,7 +649,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 			currentCompleted := int(completedCount) + 1
 			completedCount++
 
-			// TCP模式下直接更新结果
+			// TCP模式下收集结果（稍后批量写入）
 			if speedTestMode == "tcp" {
 				if err != nil {
 					failCount++
@@ -664,9 +667,17 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 					n.DelayStatus = constants.StatusSuccess
 				}
 				n.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
-				if updateErr := n.UpdateSpeed(); updateErr != nil {
-					log.Printf("更新节点 %s 测速结果失败: %v", n.Name, updateErr)
-				}
+				// 收集结果到批量更新列表（不再立即写数据库）
+				speedTestResults = append(speedTestResults, models.SpeedTestResult{
+					NodeID:         n.ID,
+					Speed:          n.Speed,
+					SpeedStatus:    n.SpeedStatus,
+					DelayTime:      n.DelayTime,
+					DelayStatus:    n.DelayStatus,
+					LatencyCheckAt: n.LatencyCheckAt,
+					SpeedCheckAt:   "",
+					LinkCountry:    n.LinkCountry,
+				})
 			}
 
 			// 更新任务进度
@@ -742,9 +753,17 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 				nr.node.DelayTime = -1
 				nr.node.DelayStatus = constants.StatusTimeout
 				nr.node.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
-				if updateErr := nr.node.UpdateSpeed(); updateErr != nil {
-					log.Printf("更新节点 %s 测速结果失败: %v", nr.node.Name, updateErr)
-				}
+				// 收集结果到批量更新列表（不再立即写数据库）
+				speedTestResults = append(speedTestResults, models.SpeedTestResult{
+					NodeID:         nr.node.ID,
+					Speed:          nr.node.Speed,
+					SpeedStatus:    nr.node.SpeedStatus,
+					DelayTime:      nr.node.DelayTime,
+					DelayStatus:    nr.node.DelayStatus,
+					LatencyCheckAt: nr.node.LatencyCheckAt,
+					SpeedCheckAt:   "",
+					LinkCountry:    nr.node.LinkCountry,
+				})
 				mu.Unlock()
 				continue
 			}
@@ -845,9 +864,17 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 
 				result.node.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
 				result.node.SpeedCheckAt = time.Now().Format("2006-01-02 15:04:05")
-				if updateErr := result.node.UpdateSpeed(); updateErr != nil {
-					log.Printf("更新节点 %s 测速结果失败: %v", result.node.Name, updateErr)
-				}
+				// 收集结果到批量更新列表（不再立即写数据库）
+				speedTestResults = append(speedTestResults, models.SpeedTestResult{
+					NodeID:         result.node.ID,
+					Speed:          result.node.Speed,
+					SpeedStatus:    result.node.SpeedStatus,
+					DelayTime:      result.node.DelayTime,
+					DelayStatus:    result.node.DelayStatus,
+					LatencyCheckAt: result.node.LatencyCheckAt,
+					SpeedCheckAt:   result.node.SpeedCheckAt,
+					LinkCountry:    result.node.LinkCountry,
+				})
 
 				// 获取当前流量统计（用于实时显示）
 				trafficAcc.mutex.Lock()
@@ -877,6 +904,15 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	if cancelled || ctx.Err() != nil {
 		log.Printf("任务被取消")
 		goto applyTags
+	}
+
+	// 批量写入所有测速结果到数据库（一次性操作，减少数据库I/O）
+	if len(speedTestResults) > 0 {
+		if err := models.BatchUpdateSpeedResults(speedTestResults); err != nil {
+			log.Printf("❌批量更新测速结果失败：%v", err)
+		} else {
+			log.Printf("✅批量更新 %d 个节点测速结果成功", len(speedTestResults))
+		}
 	}
 
 	// 完成任务

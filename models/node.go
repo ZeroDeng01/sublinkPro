@@ -135,6 +135,110 @@ func (node *Node) UpdateSpeed() error {
 	return nil
 }
 
+// SpeedTestResult 测速结果结构（用于批量更新）
+type SpeedTestResult struct {
+	NodeID         int
+	Speed          float64
+	SpeedStatus    string
+	DelayTime      int
+	DelayStatus    string
+	LatencyCheckAt string
+	SpeedCheckAt   string
+	LinkCountry    string
+}
+
+// BatchAddNodes 批量添加节点（事务+分块）
+func BatchAddNodes(nodes []Node) error {
+	if len(nodes) == 0 {
+		return nil
+	}
+
+	// 使用事务批量插入
+	err := database.WithTransaction(func(tx *gorm.DB) error {
+		// 分块处理，避免 SQLite 变量限制
+		chunks := chunkNodes(nodes, database.BatchSize)
+		for _, chunk := range chunks {
+			if err := tx.Create(&chunk).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// 事务成功后批量更新缓存
+	for _, node := range nodes {
+		nodeCache.Set(node.ID, node)
+	}
+
+	return nil
+}
+
+// BatchUpdateSpeedResults 批量更新测速结果（事务+分块）
+func BatchUpdateSpeedResults(results []SpeedTestResult) error {
+	if len(results) == 0 {
+		return nil
+	}
+
+	// 使用事务批量更新
+	err := database.WithTransaction(func(tx *gorm.DB) error {
+		for _, r := range results {
+			if err := tx.Model(&Node{}).Where("id = ?", r.NodeID).Updates(map[string]interface{}{
+				"speed":            r.Speed,
+				"speed_status":     r.SpeedStatus,
+				"delay_time":       r.DelayTime,
+				"delay_status":     r.DelayStatus,
+				"latency_check_at": r.LatencyCheckAt,
+				"speed_check_at":   r.SpeedCheckAt,
+				"link_country":     r.LinkCountry,
+			}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// 事务成功后批量更新缓存
+	for _, r := range results {
+		if cachedNode, ok := nodeCache.Get(r.NodeID); ok {
+			cachedNode.Speed = r.Speed
+			cachedNode.SpeedStatus = r.SpeedStatus
+			cachedNode.DelayTime = r.DelayTime
+			cachedNode.DelayStatus = r.DelayStatus
+			cachedNode.LatencyCheckAt = r.LatencyCheckAt
+			cachedNode.SpeedCheckAt = r.SpeedCheckAt
+			cachedNode.LinkCountry = r.LinkCountry
+			nodeCache.Set(r.NodeID, cachedNode)
+		}
+	}
+
+	return nil
+}
+
+// chunkNodes 将节点切片分块
+func chunkNodes(nodes []Node, chunkSize int) [][]Node {
+	if chunkSize <= 0 {
+		chunkSize = database.BatchSize
+	}
+
+	var chunks [][]Node
+	for i := 0; i < len(nodes); i += chunkSize {
+		end := i + chunkSize
+		if end > len(nodes) {
+			end = len(nodes)
+		}
+		chunks = append(chunks, nodes[i:end])
+	}
+	return chunks
+}
+
 // Find 查找节点是否重复
 func (node *Node) Find() error {
 	// 优先查缓存

@@ -251,7 +251,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	}
 
 	addSuccessCount := 0
-	updateSuccessCount := 0
+	skipCount := 0 // 已存在的节点数量（跳过）
 	processedCount := 0
 	startTime := time.Now() // 记录开始时间用于计算耗时
 
@@ -290,6 +290,9 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 
 	// 记录本次获取到的节点Link
 	currentLinks := make(map[string]bool)
+
+	// 批量收集：新增节点列表（稍后批量写入）
+	nodesToAdd := make([]models.Node, 0)
 
 	// 2. 遍历新获取的节点，插入或更新
 	for _, proxy := range proxys {
@@ -648,57 +651,61 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		// 记录本次获取到的节点
 		currentLinks[link] = true
 
-		// 判断节点是否已存在
+		// 判断节点是否已存在 - 收集到内存，稍后批量写入
 		var nodeStatus string
-		if existingNode, exists := existingNodeMap[link]; exists {
-			updateSuccessCount++
+		if _, exists := existingNodeMap[link]; exists {
+			skipCount++
 			nodeStatus = "skipped"
-			log.Printf("⚠️节点【%s】已存在，不进行任何处理", existingNode.Name)
+			// 已存在的节点跳过，不做任何处理
 		} else {
-			// 节点不存在，插入新节点
-			err = Node.Add()
-			if err != nil {
-				//如果err为constraint failed: UNIQUE constraint failed: nodes.link (2067)则错误信息为节点链接已存在
-				if strings.Contains(err.Error(), "constraint failed: UNIQUE constraint failed: nodes.link") {
-					nodeStatus = "skipped"
-					updateSuccessCount++
-					log.Printf("⚠️节点【%s】已存在，不进行任何处理", existingNode.Name)
-				} else {
-					log.Printf("❌节点插入失败【%s】：%v", proxy.Name, err)
-					nodeStatus = "failed"
-				}
-			} else {
-				addSuccessCount++
-				nodeStatus = "added"
-				//log.Printf("✅节点插入成功【%s】", proxy.Name)
-			}
+			// 节点不存在，收集到待添加列表
+			nodesToAdd = append(nodesToAdd, Node)
+			addSuccessCount++
+			nodeStatus = "added"
 		}
 
-		// 更新进度（通过 reporter 报告）
+		// 更新进度（通过 reporter 报告）- 基于内存计数，保持实时性
 		processedCount++
 		reporter.ReportProgress(processedCount, proxy.Name, map[string]interface{}{
-			"status": nodeStatus,
-			"added":  addSuccessCount,
-			"exists": updateSuccessCount,
+			"status":  nodeStatus,
+			"added":   addSuccessCount,
+			"skipped": skipCount,
 		})
 	}
 
-	// 3. 删除本次订阅没有获取到但数据库中存在的节点
-	deleteCount := 0
+	// 3. 收集需要删除的节点ID（本次订阅没有获取到但数据库中存在的节点）
+	nodeIDsToDelete := make([]int, 0)
 	for link, existingNode := range existingNodeMap {
 		if !currentLinks[link] {
 			// 该节点不在本次订阅中，需要删除
-			nodeToDelete := models.Node{ID: existingNode.ID}
-			if err := nodeToDelete.Del(); err != nil {
-				log.Printf("❌删除失效节点失败【%s】：%v", existingNode.Name, err)
-			} else {
-				deleteCount++
-				log.Printf("🗑️删除失效节点【%s】", existingNode.Name)
-			}
+			nodeIDsToDelete = append(nodeIDsToDelete, existingNode.ID)
 		}
 	}
 
-	log.Printf("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+updateSuccessCount, addSuccessCount, updateSuccessCount, deleteCount)
+	// 4. 批量写入数据库（一次性操作，减少数据库I/O）
+	// 批量添加新节点
+	if len(nodesToAdd) > 0 {
+		if err := models.BatchAddNodes(nodesToAdd); err != nil {
+			log.Printf("❌批量添加节点失败：%v", err)
+			// 重置计数，因为添加失败
+			addSuccessCount = 0
+		} else {
+			log.Printf("✅批量添加 %d 个节点成功", len(nodesToAdd))
+		}
+	}
+
+	// 批量删除失效节点
+	deleteCount := 0
+	if len(nodeIDsToDelete) > 0 {
+		if err := models.BatchDel(nodeIDsToDelete); err != nil {
+			log.Printf("❌批量删除节点失败：%v", err)
+		} else {
+			deleteCount = len(nodeIDsToDelete)
+			log.Printf("🗑️批量删除 %d 个失效节点", deleteCount)
+		}
+	}
+
+	log.Printf("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+skipCount, addSuccessCount, skipCount, deleteCount)
 	// 重新查找订阅以获取最新信息
 	subS = models.SubScheduler{
 		Name: subName,
@@ -708,7 +715,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		log.Printf("获取订阅连接 %s 失败:  %v", subName, err)
 		return err
 	}
-	subS.SuccessCount = addSuccessCount + updateSuccessCount
+	subS.SuccessCount = addSuccessCount + skipCount
 	// 当前时间
 	now := time.Now()
 	subS.LastRunTime = &now
@@ -717,9 +724,9 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		return err1
 	}
 	// 通过 reporter 报告任务完成
-	reporter.ReportComplete(fmt.Sprintf("订阅更新完成 (新增: %d, 已存在: %d, 删除: %d)", addSuccessCount, updateSuccessCount, deleteCount), map[string]interface{}{
+	reporter.ReportComplete(fmt.Sprintf("订阅更新完成 (新增: %d, 已存在: %d, 删除: %d)", addSuccessCount, skipCount, deleteCount), map[string]interface{}{
 		"added":   addSuccessCount,
-		"exists":  updateSuccessCount,
+		"skipped": skipCount,
 		"deleted": deleteCount,
 	})
 
@@ -729,12 +736,12 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
 		Event:   "sub_update",
 		Title:   "订阅更新完成",
-		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，耗时 %s，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, durationStr, len(proxys), addSuccessCount+updateSuccessCount, addSuccessCount, updateSuccessCount, deleteCount),
+		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，耗时 %s，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, durationStr, len(proxys), addSuccessCount+skipCount, addSuccessCount, skipCount, deleteCount),
 		Data: map[string]interface{}{
 			"id":       id,
 			"name":     subName,
 			"status":   "success",
-			"success":  addSuccessCount + updateSuccessCount,
+			"success":  addSuccessCount + skipCount,
 			"duration": duration.Milliseconds(),
 		},
 	})
