@@ -209,11 +209,7 @@ export default function NodeTable({
               </TableCell>
               <TableCell>
                 <Box>
-                  {node.Speed > 0 ? (
-                    <Typography>{node.Speed.toFixed(2)}MB/s</Typography>
-                  ) : (
-                    <Typography>-</Typography>
-                  )}
+                  {node.Speed > 0 ? <Typography>{node.Speed.toFixed(2)}MB/s</Typography> : <Typography>-</Typography>}
                   {node.SpeedCheckAt && node.Speed > 0 && (
                     <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '10px', mt: 0.5 }}>
                       {formatDateTime(node.SpeedCheckAt)}

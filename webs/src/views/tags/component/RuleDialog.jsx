@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 // material-ui
 import Dialog from '@mui/material/Dialog';
@@ -19,6 +21,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import Divider from '@mui/material/Divider';
 import Chip from '@mui/material/Chip';
+import Card from "@mui/material/Card";
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
@@ -57,6 +60,9 @@ const operators = [
 const numericFields = ['speed', 'delay_time'];
 
 export default function RuleDialog({ open, onClose, onSave, editingRule, tags }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   const [name, setName] = useState('');
   const [tagName, setTagName] = useState('');
   const [enabled, setEnabled] = useState(true);
@@ -138,14 +144,14 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
       <DialogTitle>{editingRule ? '编辑规则' : '添加规则'}</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {/* 基本信息 */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 2 }}>
             <TextField label="规则名称" value={name} onChange={(e) => setName(e.target.value)} fullWidth required />
-            <FormControl sx={{ minWidth: 150 }}>
+            <FormControl sx={{ minWidth: isMobile ? "100%" : 150 }} fullWidth={isMobile}>
               <InputLabel>关联标签</InputLabel>
               <Select value={tagName} label="关联标签" onChange={(e) => setTagName(e.target.value)}>
                 {tags.map((tag) => (
@@ -160,8 +166,13 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
             </FormControl>
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <FormControl sx={{ minWidth: 150 }}>
+          <Box sx={{
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",
+            gap: 2,
+            alignItems: isMobile ? "stretch" : "center"
+          }}>
+            <FormControl sx={{ minWidth: isMobile ? "100%" : 150 }} fullWidth={isMobile}>
               <InputLabel>触发时机</InputLabel>
               <Select value={triggerType} label="触发时机" onChange={(e) => setTriggerType(e.target.value)}>
                 <MenuItem value="subscription_update">订阅更新后</MenuItem>
@@ -175,8 +186,15 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
 
           {/* 条件配置 */}
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 2,
+              flexWrap: "wrap",
+              gap: 1
+            }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                 <Typography variant="subtitle1">匹配条件</Typography>
                 <Chip
                   label={logic === 'and' ? '全部满足 (AND)' : '任一满足 (OR)'}
@@ -190,42 +208,97 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
               </Button>
             </Box>
 
-            {conditions.map((cond, index) => (
-              <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1.5, alignItems: 'center' }}>
-                <FormControl size="small" sx={{ minWidth: 140 }}>
-                  <InputLabel>字段</InputLabel>
-                  <Select value={cond.field} label="字段" onChange={(e) => handleConditionChange(index, 'field', e.target.value)}>
-                    {nodeFields.map((f) => (
-                      <MenuItem key={f.value} value={f.value}>
-                        {f.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>操作符</InputLabel>
-                  <Select value={cond.operator} label="操作符" onChange={(e) => handleConditionChange(index, 'operator', e.target.value)}>
-                    {getAvailableOperators(cond.field).map((op) => (
-                      <MenuItem key={op.value} value={op.value}>
-                        {op.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <TextField
-                  size="small"
-                  label="值"
-                  value={cond.value}
-                  onChange={(e) => handleConditionChange(index, 'value', e.target.value)}
-                  sx={{ flex: 1 }}
-                  type={numericFields.includes(cond.field) ? 'number' : 'text'}
-                  placeholder={cond.operator === 'regex' ? '正则表达式' : ''}
-                />
-                <IconButton size="small" color="error" onClick={() => handleRemoveCondition(index)} disabled={conditions.length === 1}>
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            ))}
+            {conditions.map((cond, index) =>
+              isMobile ? (
+                // 移动端：卡片式布局
+                <Card key={index} variant="outlined" sx={{ mb: 1.5, p: 1.5, position: "relative" }}>
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => handleRemoveCondition(index)}
+                    disabled={conditions.length === 1}
+                    sx={{ position: "absolute", top: 8, right: 8 }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, pr: 4 }}>
+                    <FormControl size="small" fullWidth>
+                      <InputLabel>字段</InputLabel>
+                      <Select value={cond.field} label="字段"
+                              onChange={(e) => handleConditionChange(index, "field", e.target.value)}>
+                        {nodeFields.map((f) => (
+                          <MenuItem key={f.value} value={f.value}>
+                            {f.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" fullWidth>
+                      <InputLabel>操作符</InputLabel>
+                      <Select
+                        value={cond.operator}
+                        label="操作符"
+                        onChange={(e) => handleConditionChange(index, "operator", e.target.value)}
+                      >
+                        {getAvailableOperators(cond.field).map((op) => (
+                          <MenuItem key={op.value} value={op.value}>
+                            {op.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <TextField
+                      size="small"
+                      label="值"
+                      value={cond.value}
+                      onChange={(e) => handleConditionChange(index, "value", e.target.value)}
+                      fullWidth
+                      type={numericFields.includes(cond.field) ? "number" : "text"}
+                      placeholder={cond.operator === "regex" ? "正则表达式" : ""}
+                    />
+                  </Box>
+                </Card>
+              ) : (
+                // 桌面端：水平布局
+                <Box key={index} sx={{ display: "flex", gap: 1, mb: 1.5, alignItems: "center" }}>
+                  <FormControl size="small" sx={{ minWidth: 140 }}>
+                    <InputLabel>字段</InputLabel>
+                    <Select value={cond.field} label="字段"
+                            onChange={(e) => handleConditionChange(index, "field", e.target.value)}>
+                      {nodeFields.map((f) => (
+                        <MenuItem key={f.value} value={f.value}>
+                          {f.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>操作符</InputLabel>
+                    <Select value={cond.operator} label="操作符"
+                            onChange={(e) => handleConditionChange(index, "operator", e.target.value)}>
+                      {getAvailableOperators(cond.field).map((op) => (
+                        <MenuItem key={op.value} value={op.value}>
+                          {op.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    size="small"
+                    label="值"
+                    value={cond.value}
+                    onChange={(e) => handleConditionChange(index, "value", e.target.value)}
+                    sx={{ flex: 1 }}
+                    type={numericFields.includes(cond.field) ? "number" : "text"}
+                    placeholder={cond.operator === "regex" ? "正则表达式" : ""}
+                  />
+                  <IconButton size="small" color="error" onClick={() => handleRemoveCondition(index)}
+                              disabled={conditions.length === 1}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              )
+            )}
 
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
               示例：国家代码 等于 CN — 匹配所有中国节点

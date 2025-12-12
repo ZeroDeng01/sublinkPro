@@ -17,7 +17,6 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
-import Divider from '@mui/material/Divider';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
@@ -45,15 +44,19 @@ export default function AccessLogsDialog({ open, logs, onClose }) {
     >
       <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
         <Stack spacing={1}>
-          {/* IP 地址 */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* 第一行: IP 地址和访问次数 */}
+          <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1 }}>
             <Typography
               variant="subtitle2"
               sx={{
                 fontFamily: 'monospace',
-                fontSize: '0.9rem',
+                fontSize: "0.85rem",
                 fontWeight: 600,
-                color: 'primary.main'
+                color: "primary.main",
+                wordBreak: "break-all",
+                lineHeight: 1.4,
+                flex: 1,
+                minWidth: 0
               }}
             >
               {log.IP}
@@ -64,35 +67,37 @@ export default function AccessLogsDialog({ open, logs, onClose }) {
               color="primary"
               variant="outlined"
               icon={<TouchAppIcon sx={{ fontSize: 14 }} />}
-              sx={{ height: 24, '& .MuiChip-label': { px: 1 } }}
+              sx={{
+                height: 24,
+                "& .MuiChip-label": { px: 1 },
+                flexShrink: 0
+              }}
             />
           </Box>
 
-          <Divider sx={{ my: 0.5 }} />
+          {/* 第二行: 来源地区 */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <LocationOnIcon sx={{ fontSize: 16, color: "text.secondary", flexShrink: 0 }} />
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}
+            >
+              {log.Addr || "未知来源"}
+            </Typography>
+          </Box>
 
-          {/* 来源和时间 */}
-          <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flex: 1 }}>
-              <LocationOnIcon sx={{ fontSize: 16, color: 'text.secondary', flexShrink: 0 }} />
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {log.Addr || '未知来源'}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-              <AccessTimeIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-              <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                {log.Date}
-              </Typography>
-            </Box>
-          </Stack>
+          {/* 第三行: 访问时间 */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <AccessTimeIcon sx={{ fontSize: 16, color: "text.secondary", flexShrink: 0 }} />
+            <Typography variant="body2" color="text.secondary">
+              {log.Date}
+            </Typography>
+          </Box>
         </Stack>
       </CardContent>
     </Card>

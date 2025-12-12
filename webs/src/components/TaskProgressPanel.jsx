@@ -249,15 +249,9 @@ const TaskProgressItem = ({ task, currentTime }) => {
                         height: 20,
                         fontSize: '0.7rem',
                         fontWeight: 500,
-                        bgcolor: task.result.phase === 'latency'
-                          ? alpha('#06b6d4', 0.15)
-                          : alpha('#f59e0b', 0.15),
-                        color: task.result.phase === 'latency'
-                          ? (isDark ? '#22d3ee' : '#0891b2')
-                          : (isDark ? '#fbbf24' : '#d97706'),
-                        border: `1px solid ${task.result.phase === 'latency'
-                          ? alpha('#06b6d4', 0.3)
-                          : alpha('#f59e0b', 0.3)}`
+                        bgcolor: task.result.phase === "latency" ? alpha("#06b6d4", 0.15) : alpha("#f59e0b", 0.15),
+                        color: task.result.phase === "latency" ? (isDark ? "#22d3ee" : "#0891b2") : isDark ? "#fbbf24" : "#d97706",
+                        border: `1px solid ${task.result.phase === "latency" ? alpha("#06b6d4", 0.3) : alpha("#f59e0b", 0.3)}`
                       }}
                     />
                   )}

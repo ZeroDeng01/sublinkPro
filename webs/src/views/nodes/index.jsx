@@ -752,7 +752,18 @@ export default function NodeList() {
     try {
       const response = await getSpeedTestConfig();
       setSpeedTestForm(
-        response.data || { cron: '', enabled: false, mode: 'tcp', url: '', timeout: 5, groups: [], tags: [], latency_concurrency: 0, speed_concurrency: 1, latency_samples: 3 }
+        response.data || {
+          cron: "",
+          enabled: false,
+          mode: "tcp",
+          url: "",
+          timeout: 5,
+          groups: [],
+          tags: [],
+          latency_concurrency: 0,
+          speed_concurrency: 1,
+          latency_samples: 3
+        }
       );
       setSpeedTestDialogOpen(true);
     } catch (error) {
@@ -911,8 +922,8 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      animation: "spin 1s linear infinite",
+                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
                     }
                     : {}
                 }
@@ -956,8 +967,8 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    animation: "spin 1s linear infinite",
+                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
                   }
                   : {}
               }
