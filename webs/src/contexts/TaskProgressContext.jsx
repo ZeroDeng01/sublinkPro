@@ -94,7 +94,7 @@ export function TaskProgressProvider({ children }) {
   // Handle incoming progress event from SSE
   const handleProgressEvent = useCallback(
     (data) => {
-      const { taskId, taskType, taskName, status, current, total, currentItem, result, message, startTime } = data;
+      const { taskId, taskType, taskName, status, current, total, currentItem, result, message, startTime, traffic } = data;
 
       if (!taskId) return;
 
@@ -109,7 +109,8 @@ export function TaskProgressProvider({ children }) {
           total,
           currentItem,
           result,
-          message
+          message,
+          traffic
         });
 
         // Notify all registered callbacks that a task has completed
@@ -138,7 +139,8 @@ export function TaskProgressProvider({ children }) {
           result,
           message,
           // Always pass startTime from event (every progress event now includes it)
-          startTime
+          startTime,
+          traffic
         });
       }
     },

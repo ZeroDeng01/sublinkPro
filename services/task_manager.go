@@ -154,8 +154,12 @@ func (tm *TaskManager) CompleteTask(taskID string, message string, result interf
 		log.Printf("同步任务最终状态失败: %v", err)
 	}
 
-	// 广播完成
+	// 广播完成进度（前端用）
 	tm.broadcastProgressWithResult(running.Task, "completed", result)
+
+	// 注意：不在此处广播通知事件，由各任务类型自行发送详细的通知
+	// 这样可以避免重复通知，且各任务类型可以发送更具体的信息
+	// 例如：速测任务发送成功/失败数量，订阅任务发送新增/删除数量
 
 	// 取消 context（确保所有 goroutine 退出）
 	running.Cancel()
@@ -194,8 +198,11 @@ func (tm *TaskManager) FailTask(taskID string, errMsg string) error {
 		log.Printf("同步任务最终状态失败: %v", err)
 	}
 
-	// 广播错误
+	// 广播错误进度（前端用）
 	tm.broadcastProgress(running.Task, "error")
+
+	// 注意：不在此处广播通知事件，由各任务类型自行发送详细的错误通知
+	// 这样可以避免重复通知，且各任务类型可以提供更具体的错误上下文
 
 	// 取消 context
 	running.Cancel()

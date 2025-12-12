@@ -261,9 +261,8 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 					return false
 				}
 			} else {
-				groupLower := strings.ToLower(n.Group)
-				filterGroupLower := strings.ToLower(filter.Group)
-				if !strings.Contains(groupLower, filterGroupLower) {
+				// 精确匹配分组（不区分大小写）
+				if !strings.EqualFold(n.Group, filter.Group) {
 					return false
 				}
 			}
@@ -276,9 +275,8 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 					return false
 				}
 			} else {
-				sourceLower := strings.ToLower(n.Source)
-				filterSourceLower := strings.ToLower(filter.Source)
-				if !strings.Contains(sourceLower, filterSourceLower) {
+				// 精确匹配来源（不区分大小写）
+				if !strings.EqualFold(n.Source, filter.Source) {
 					return false
 				}
 			}

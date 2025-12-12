@@ -328,9 +328,28 @@ const TaskMobileCard = ({ task, isDark, onStop, canStop }) => {
             <Typography variant="caption" color="textSecondary">
               进度
             </Typography>
-            <Typography variant="caption" fontWeight={500}>
-              {task.progress}/{task.total}
-            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              {/* Traffic Display for Speed Test */}
+              {task.type === 'speed_test' &&
+                (() => {
+                  try {
+                    const result = typeof task.result === 'string' ? JSON.parse(task.result) : task.result;
+                    if (result?.traffic?.totalFormatted) {
+                      return (
+                        <Typography variant="caption" fontWeight={500} color="primary.main">
+                          {result.traffic.totalFormatted}
+                        </Typography>
+                      );
+                    }
+                  } catch (e) {
+                    // ignore parse error
+                  }
+                  return null;
+                })()}
+              <Typography variant="caption" fontWeight={500}>
+                {task.progress}/{task.total}
+              </Typography>
+            </Stack>
           </Stack>
           <LinearProgress
             variant="determinate"
@@ -370,6 +389,8 @@ const TaskMobileCard = ({ task, isDark, onStop, canStop }) => {
   );
 };
 
+import TrafficStatsDialog from './TrafficStatsDialog';
+
 // ==============================|| TASK LIST ||============================== //
 
 export default function TaskList() {
@@ -385,6 +406,10 @@ export default function TaskList() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+
+  // Traffic Stats Dialog
+  const [trafficDialogOpen, setTrafficDialogOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
 
   const { taskList: runningTasks, stopTask: stopRunningTask, isTaskStopping, registerOnComplete, unregisterOnComplete } = useTaskProgress();
 
@@ -485,6 +510,12 @@ export default function TaskList() {
     setPage(0);
   };
 
+  // Handle opening traffic stats
+  const handleOpenTrafficStats = (task) => {
+    setSelectedTask(task);
+    setTrafficDialogOpen(true);
+  };
+
   return (
     <MainCard
       title="任务管理"
@@ -563,6 +594,18 @@ export default function TaskList() {
                   value={task.total > 0 ? (task.current / task.total) * 100 : 0}
                   sx={{ height: 6, borderRadius: 1 }}
                 />
+                {/* Traffic Display for Running Task */}
+                {task.traffic?.totalFormatted && (
+                  <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography variant="caption" color="textSecondary">
+                      实时流量:
+                    </Typography>
+                    <Typography variant="caption" fontWeight={500} color="primary.main">
+                      {task.traffic.totalFormatted}
+                    </Typography>
+                    {/* Note: Running task usually doesn't have breakdown yet or it's partial, so no detail dialog here usually */}
+                  </Box>
+                )}
               </Box>
             ))}
           </CardContent>
@@ -596,13 +639,25 @@ export default function TaskList() {
             </Box>
           ) : (
             tasks.map((task) => (
-              <TaskMobileCard
-                key={task.id}
-                task={task}
-                isDark={isDark}
-                onStop={handleStopTask}
-                canStop={task.status === 'running' && task.type === 'speed_test'}
-              />
+              <Box key={task.id}>
+                <TaskMobileCard
+                  task={task}
+                  isDark={isDark}
+                  onStop={handleStopTask}
+                  canStop={task.status === 'running' && task.type === 'speed_test'}
+                />
+                {/* Add a invisible click handler or a button to open details if it has traffic */}
+                {task.type === 'speed_test' && task.result && task.status === 'completed' && (
+                  <Button
+                    size="small"
+                    fullWidth
+                    sx={{ mt: -1.5, mb: 1.5, borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
+                    onClick={() => handleOpenTrafficStats(task)}
+                  >
+                    查看流量详情
+                  </Button>
+                )}
+              </Box>
             ))
           )}
           <TablePagination
@@ -630,6 +685,7 @@ export default function TaskList() {
                 <TableCell>触发方式</TableCell>
                 <TableCell>状态</TableCell>
                 <TableCell>进度</TableCell>
+                <TableCell>流量</TableCell>
                 <TableCell>创建时间</TableCell>
                 <TableCell>耗时</TableCell>
                 {hasStoppableTasks && <TableCell>操作</TableCell>}
@@ -638,7 +694,7 @@ export default function TaskList() {
             <TableBody>
               {tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={hasStoppableTasks ? 8 : 7} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={hasStoppableTasks ? 9 : 8} align="center" sx={{ py: 4 }}>
                     <Typography color="textSecondary">暂无任务记录</Typography>
                   </TableCell>
                 </TableRow>
@@ -675,6 +731,40 @@ export default function TaskList() {
                       <Typography variant="body2">
                         {task.progress}/{task.total}
                       </Typography>
+                    </TableCell>
+                    <TableCell>
+                      {task.type === 'speed_test'
+                        ? (() => {
+                            try {
+                              const result = typeof task.result === 'string' ? JSON.parse(task.result) : task.result;
+                              const hasTraffic = result?.traffic?.totalFormatted;
+
+                              if (!hasTraffic) return '-';
+
+                              return (
+                                <Box
+                                  sx={{
+                                    cursor: 'pointer',
+                                    display: 'inline-block',
+                                    '&:hover': { opacity: 0.8 }
+                                  }}
+                                  onClick={() => handleOpenTrafficStats(task)}
+                                >
+                                  <Typography
+                                    variant="body2"
+                                    color="primary.main"
+                                    fontWeight={500}
+                                    sx={{ textDecoration: 'underline', textUnderlineOffset: 2 }}
+                                  >
+                                    {result.traffic.totalFormatted}
+                                  </Typography>
+                                </Box>
+                              );
+                            } catch (e) {
+                              return '-';
+                            }
+                          })()
+                        : '-'}
                     </TableCell>
                     <TableCell>
                       <Tooltip title={task.createdAt ? new Date(task.createdAt).toLocaleString('zh-CN') : ''}>
@@ -728,6 +818,9 @@ export default function TaskList() {
 
       {/* Clear History Dialog */}
       <ClearHistoryDialog open={clearDialogOpen} onClose={() => setClearDialogOpen(false)} onConfirm={handleClearHistory} />
+
+      {/* Traffic Stats Dialog */}
+      <TrafficStatsDialog open={trafficDialogOpen} onClose={() => setTrafficDialogOpen(false)} task={selectedTask} />
     </MainCard>
   );
 }

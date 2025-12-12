@@ -221,20 +221,21 @@ func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Durati
 }
 
 // MihomoSpeedTest performs a true speed test using Mihomo adapter
-// Returns speed in MB/s and latency in ms
-func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (speed float64, latency int, err error) {
+// Returns speed in MB/s, latency in ms, and bytes downloaded
+func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (speed float64, latency int, bytesDownloaded int64, err error) {
 	// Recover from any panics and return error with zero values
 	defer func() {
 		if r := recover(); r != nil {
 			speed = 0
 			latency = 0
+			bytesDownloaded = 0
 			err = fmt.Errorf("panic in MihomoSpeedTest: %v", r)
 		}
 	}()
 
 	proxyAdapter, err := GetMihomoAdapter(nodeLink)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	// 4. Perform Speed Test
@@ -245,7 +246,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 
 	parsedUrl, err := url.Parse(testUrl)
 	if err != nil {
-		return 0, 0, fmt.Errorf("parse test url error: %v", err)
+		return 0, 0, 0, fmt.Errorf("parse test url error: %v", err)
 	}
 
 	portStr := parsedUrl.Port()
@@ -259,11 +260,11 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 
 	portInt, err := strconv.Atoi(portStr)
 	if err != nil {
-		return 0, 0, fmt.Errorf("invalid port: %v", err)
+		return 0, 0, 0, fmt.Errorf("invalid port: %v", err)
 	}
 	// Validate port range to prevent overflow
 	if portInt < 0 || portInt > 65535 {
-		return 0, 0, fmt.Errorf("port out of range: %d", portInt)
+		return 0, 0, 0, fmt.Errorf("port out of range: %d", portInt)
 	}
 	port := uint16(portInt)
 
@@ -279,7 +280,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 	start := time.Now()
 	conn, err := proxyAdapter.DialContext(ctx, metadata)
 	if err != nil {
-		return 0, 0, fmt.Errorf("dial error: %v", err)
+		return 0, 0, 0, fmt.Errorf("dial error: %v", err)
 	}
 	// Close connection asynchronously to avoid blocking if it hangs
 	defer func() {
@@ -294,7 +295,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 	// Create HTTP request
 	req, err := http.NewRequest("GET", testUrl, nil)
 	if err != nil {
-		return 0, latency, fmt.Errorf("create request error: %v", err)
+		return 0, latency, 0, fmt.Errorf("create request error: %v", err)
 	}
 	req = req.WithContext(ctx)
 
@@ -342,19 +343,19 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 
 	resp, err := client.Get(testUrl)
 	if err != nil {
-		return 0, latency, fmt.Errorf("http get error: %v", err)
+		return 0, latency, 0, fmt.Errorf("http get error: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// Read body to measure speed
 	// We can read up to N bytes or until EOF
 	buf := make([]byte, 32*1024)
-	totalRead := 0
+	var totalRead int64 // Changed to int64 to avoid overflow for large downloads
 	readStart := time.Now()
 
 	for {
 		n, err := resp.Body.Read(buf)
-		totalRead += n
+		totalRead += int64(n)
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -368,7 +369,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 				break
 			}
-			return 0, latency, fmt.Errorf("read body error: %v", err)
+			return 0, latency, totalRead, fmt.Errorf("read body error: %v", err)
 		}
 		// Check timeout explicitly via context
 		select {
@@ -384,13 +385,13 @@ CalculateSpeed:
 
 	duration := time.Since(readStart)
 	if duration.Seconds() == 0 {
-		return 0, latency, nil
+		return 0, latency, totalRead, nil
 	}
 
 	// Speed in MB/s
 	speed = float64(totalRead) / 1024 / 1024 / duration.Seconds()
 
-	return speed, latency, nil
+	return speed, latency, totalRead, nil
 }
 
 // FetchLandingIP fetches the landing IP address through the proxy by accessing https://api.ip.sb/ip

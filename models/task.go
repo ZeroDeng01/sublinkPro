@@ -239,10 +239,15 @@ func CleanupOldTasks(before time.Time) (int64, error) {
 	if result.Error != nil {
 		return 0, result.Error
 	}
-	// 刷新缓存
-	go func() {
-		_ = InitTaskCache()
-	}()
+
+	// 只有当清理范围与缓存范围（7天内）有交集时才刷新缓存
+	// 缓存只保存最近7天的任务，如果清理的是7天之前的任务，则无需刷新
+	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
+	if result.RowsAffected > 0 && before.After(sevenDaysAgo) {
+		go func() {
+			_ = InitTaskCache()
+		}()
+	}
 	return result.RowsAffected, nil
 }
 

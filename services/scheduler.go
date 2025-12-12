@@ -577,6 +577,18 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	var cancelled bool
 	var mu sync.Mutex
 
+	// 流量统计累加器（内存累计，测速结束时写入数据库）
+	type trafficAccumulator struct {
+		totalBytes  int64
+		groupBytes  map[string]int64 // 按分组统计
+		sourceBytes map[string]int64 // 按来源统计
+		mutex       sync.Mutex
+	}
+	trafficAcc := &trafficAccumulator{
+		groupBytes:  make(map[string]int64),
+		sourceBytes: make(map[string]int64),
+	}
+
 	// 节点结果存储（用于阶段二）
 	type nodeResult struct {
 		node    models.Node
@@ -751,7 +763,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 				}
 
 				// 速度测试（延迟已在阶段一获取）
-				speed, _, err := mihomo.MihomoSpeedTest(result.node.Link, speedTestUrl, speedTestTimeout)
+				speed, _, bytesDownloaded, err := mihomo.MihomoSpeedTest(result.node.Link, speedTestUrl, speedTestTimeout)
 
 				mu.Lock()
 				defer mu.Unlock()
@@ -759,6 +771,27 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 				// 再次检查取消状态
 				if cancelled {
 					return
+				}
+
+				// 累计流量统计（仅速度测试阶段）
+				if bytesDownloaded > 0 {
+					trafficAcc.mutex.Lock()
+					trafficAcc.totalBytes += bytesDownloaded
+
+					// 按分组统计
+					group := result.node.Group
+					if group == "" {
+						group = "未分组"
+					}
+					trafficAcc.groupBytes[group] += bytesDownloaded
+
+					// 按来源统计
+					source := result.node.Source
+					if source == "" || source == "manual" {
+						source = "手动添加"
+					}
+					trafficAcc.sourceBytes[source] += bytesDownloaded
+					trafficAcc.mutex.Unlock()
 				}
 
 				currentCompleted := int(completedCount) + 1
@@ -816,6 +849,12 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 					log.Printf("更新节点 %s 测速结果失败: %v", result.node.Name, updateErr)
 				}
 
+				// 获取当前流量统计（用于实时显示）
+				trafficAcc.mutex.Lock()
+				currentTrafficTotal := trafficAcc.totalBytes
+				currentTrafficFormatted := formatBytes(currentTrafficTotal)
+				trafficAcc.mutex.Unlock()
+
 				// 更新任务进度（速度测试占后50%）
 				tm.UpdateProgress(taskID, totalNodes+currentCompleted, result.node.Name, map[string]interface{}{
 					"status":  resultStatus,
@@ -823,6 +862,10 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 					"speed":   result.node.Speed,
 					"latency": result.latency,
 					"data":    resultData,
+					"traffic": map[string]interface{}{
+						"totalBytes":     currentTrafficTotal,
+						"totalFormatted": currentTrafficFormatted,
+					},
 				})
 			}(nr)
 		}
@@ -838,12 +881,51 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 
 	// 完成任务
 	{
+		// 格式化流量统计数据
+		trafficAcc.mutex.Lock()
+		formattedGroupStats := make(map[string]map[string]interface{})
+		for group, bytes := range trafficAcc.groupBytes {
+			formattedGroupStats[group] = map[string]interface{}{
+				"bytes":     bytes,
+				"formatted": formatBytes(bytes),
+			}
+		}
+		formattedSourceStats := make(map[string]map[string]interface{})
+		for source, bytes := range trafficAcc.sourceBytes {
+			formattedSourceStats[source] = map[string]interface{}{
+				"bytes":     bytes,
+				"formatted": formatBytes(bytes),
+			}
+		}
+		trafficTotal := trafficAcc.totalBytes
+		trafficAcc.mutex.Unlock()
+
 		resultData := map[string]interface{}{
 			"success": successCount,
 			"fail":    failCount,
 			"total":   totalNodes,
+			"traffic": map[string]interface{}{
+				"totalBytes":     trafficTotal,
+				"totalFormatted": formatBytes(trafficTotal),
+				"byGroup":        formattedGroupStats,
+				"bySource":       formattedSourceStats,
+			},
 		}
-		tm.CompleteTask(taskID, fmt.Sprintf("测速完成 (成功: %d, 失败: %d)", successCount, failCount), resultData)
+		tm.CompleteTask(taskID, fmt.Sprintf("测速完成 (成功: %d, 失败: %d, 流量: %s)", successCount, failCount, formatBytes(trafficTotal)), resultData)
+
+		// 广播测速完成通知（让用户在通知中心看到）
+		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
+			Event:   "speed_test",
+			Title:   "节点测速完成",
+			Message: fmt.Sprintf("测速完成: 成功 %d 个, 失败 %d 个, 消耗流量 %s", successCount, failCount, formatBytes(trafficTotal)),
+			Data: map[string]interface{}{
+				"status":  "success",
+				"success": successCount,
+				"fail":    failCount,
+				"total":   totalNodes,
+				"traffic": formatBytes(trafficTotal),
+			},
+		})
 	}
 
 applyTags:
@@ -878,4 +960,33 @@ func formatDuration(d time.Duration) string {
 		return fmt.Sprintf("%.0f分%.0f秒", d.Minutes(), math.Mod(d.Seconds(), 60))
 	}
 	return fmt.Sprintf("%.0f时%.0f分", d.Hours(), math.Mod(d.Minutes(), 60))
+}
+
+// formatBytes 格式化字节数为人类可读格式
+func formatBytes(bytes int64) string {
+	if bytes == 0 {
+		return "0 B"
+	}
+	if bytes < 0 {
+		return "N/A"
+	}
+
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+
+	// B, KB, MB, GB, TB
+	units := []string{"B", "KB", "MB", "GB", "TB"}
+	if exp >= len(units)-1 {
+		exp = len(units) - 2
+	}
+
+	return fmt.Sprintf("%.2f %s", float64(bytes)/float64(div), units[exp+1])
 }
