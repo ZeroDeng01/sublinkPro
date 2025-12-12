@@ -389,8 +389,12 @@ func getNodeFieldValue(node Node, field string) interface{} {
 		return node.Group
 	case "speed":
 		return node.Speed
+	case "speed_status":
+		return node.SpeedStatus
 	case "delay_time":
 		return node.DelayTime
+	case "delay_status":
+		return node.DelayStatus
 	case "dialer_proxy_name":
 		return node.DialerProxyName
 	case "link":

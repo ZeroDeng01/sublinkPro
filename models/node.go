@@ -27,8 +27,10 @@ type Node struct {
 	Source          string `gorm:"default:'manual'"`
 	SourceID        int
 	Group           string
-	Speed           float64   `gorm:"default:0"` // 测速结果(MB/s)
-	DelayTime       int       `gorm:"default:0"` // 延迟时间(ms)
+	Speed           float64   `gorm:"default:0"`          // 测速结果(MB/s)
+	DelayTime       int       `gorm:"default:0"`          // 延迟时间(ms)
+	SpeedStatus     string    `gorm:"default:'untested'"` // 速度测试状态: untested, success, timeout, error
+	DelayStatus     string    `gorm:"default:'untested'"` // 延迟测试状态: untested, success, timeout, error
 	LatencyCheckAt  string    // 延迟测试时间
 	SpeedCheckAt    string    // 测速时间
 	CreatedAt       time.Time `gorm:"autoCreateTime" json:"CreatedAt"` // 创建时间
@@ -115,14 +117,16 @@ func (node *Node) Update() error {
 
 // UpdateSpeed 更新节点测速结果
 func (node *Node) UpdateSpeed() error {
-	err := database.DB.Model(node).Select("Speed", "LinkCountry", "DelayTime", "LatencyCheckAt", "SpeedCheckAt").Updates(node).Error
+	err := database.DB.Model(node).Select("Speed", "SpeedStatus", "LinkCountry", "DelayTime", "DelayStatus", "LatencyCheckAt", "SpeedCheckAt").Updates(node).Error
 	if err != nil {
 		return err
 	}
 
 	if cachedNode, ok := nodeCache.Get(node.ID); ok {
 		cachedNode.Speed = node.Speed
+		cachedNode.SpeedStatus = node.SpeedStatus
 		cachedNode.DelayTime = node.DelayTime
+		cachedNode.DelayStatus = node.DelayStatus
 		cachedNode.LatencyCheckAt = node.LatencyCheckAt
 		cachedNode.SpeedCheckAt = node.SpeedCheckAt
 		cachedNode.LinkCountry = node.LinkCountry
@@ -181,15 +185,17 @@ func (node *Node) List() ([]Node, error) {
 }
 
 type NodeFilter struct {
-	Search    string   // 搜索关键词（匹配节点名称或链接）
-	Group     string   // 分组过滤
-	Source    string   // 来源过滤
-	MaxDelay  int      // 最大延迟(ms)，只显示延迟在此值以下的节点
-	MinSpeed  float64  // 最低速度(MB/s)，只显示速度在此值以上的节点
-	Countries []string // 国家代码过滤
-	Tags      []string // 标签过滤（匹配任一标签的节点）
-	SortBy    string   // 排序字段: "delay" 或 "speed"
-	SortOrder string   // 排序顺序: "asc" 或 "desc"
+	Search      string   // 搜索关键词（匹配节点名称或链接）
+	Group       string   // 分组过滤
+	Source      string   // 来源过滤
+	MaxDelay    int      // 最大延迟(ms)，只显示延迟在此值以下的节点
+	MinSpeed    float64  // 最低速度(MB/s)，只显示速度在此值以上的节点
+	SpeedStatus string   // 速度状态过滤: untested, success, timeout, error
+	DelayStatus string   // 延迟状态过滤: untested, success, timeout, error
+	Countries   []string // 国家代码过滤
+	Tags        []string // 标签过滤（匹配任一标签的节点）
+	SortBy      string   // 排序字段: "delay" 或 "speed"
+	SortOrder   string   // 排序顺序: "asc" 或 "desc"
 }
 
 // ListWithFilters 根据过滤条件获取节点列表
@@ -283,6 +289,20 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 				}
 			}
 			if !hasMatchingTag {
+				return false
+			}
+		}
+
+		// 速度状态过滤
+		if filter.SpeedStatus != "" {
+			if n.SpeedStatus != filter.SpeedStatus {
+				return false
+			}
+		}
+
+		// 延迟状态过滤
+		if filter.DelayStatus != "" {
+			if n.DelayStatus != filter.DelayStatus {
 				return false
 			}
 		}

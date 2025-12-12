@@ -301,6 +301,50 @@ DIRECT = direct
 		log.Printf("执行迁移 0012_migrate_last_check_to_separate_fields 失败: %v", err)
 	}
 
+	// 0013_migrate_node_status_fields - 根据已有数据设置 SpeedStatus 和 DelayStatus 字段
+	if err := database.RunCustomMigration("0013_migrate_node_status_fields", func() error {
+		// DelayTime > 0 且有记录 => DelayStatus = 'success'
+		if result := db.Exec("UPDATE nodes SET delay_status = 'success' WHERE delay_time > 0 AND (delay_status IS NULL OR delay_status = '' OR delay_status = 'untested')"); result.Error != nil {
+			log.Printf("迁移 DelayStatus (success) 失败: %v", result.Error)
+		} else {
+			log.Printf("已设置 %d 个节点 DelayStatus 为 success", result.RowsAffected)
+		}
+
+		// DelayTime = -1 => DelayStatus = 'timeout'
+		if result := db.Exec("UPDATE nodes SET delay_status = 'timeout' WHERE delay_time = -1 AND (delay_status IS NULL OR delay_status = '' OR delay_status = 'untested')"); result.Error != nil {
+			log.Printf("迁移 DelayStatus (timeout) 失败: %v", result.Error)
+		} else {
+			log.Printf("已设置 %d 个节点 DelayStatus 为 timeout", result.RowsAffected)
+		}
+
+		// Speed > 0 => SpeedStatus = 'success'
+		if result := db.Exec("UPDATE nodes SET speed_status = 'success' WHERE speed > 0 AND (speed_status IS NULL OR speed_status = '' OR speed_status = 'untested')"); result.Error != nil {
+			log.Printf("迁移 SpeedStatus (success) 失败: %v", result.Error)
+		} else {
+			log.Printf("已设置 %d 个节点 SpeedStatus 为 success", result.RowsAffected)
+		}
+
+		// Speed = -1 => SpeedStatus = 'error'
+		if result := db.Exec("UPDATE nodes SET speed_status = 'error' WHERE speed = -1 AND (speed_status IS NULL OR speed_status = '' OR speed_status = 'untested')"); result.Error != nil {
+			log.Printf("迁移 SpeedStatus (error) 失败: %v", result.Error)
+		} else {
+			log.Printf("已设置 %d 个节点 SpeedStatus 为 error", result.RowsAffected)
+		}
+
+		// 所有其他情况 => 'untested'
+		if result := db.Exec("UPDATE nodes SET speed_status = 'untested' WHERE speed_status IS NULL OR speed_status = ''"); result.Error != nil {
+			log.Printf("迁移 SpeedStatus (untested) 失败: %v", result.Error)
+		}
+		if result := db.Exec("UPDATE nodes SET delay_status = 'untested' WHERE delay_status IS NULL OR delay_status = ''"); result.Error != nil {
+			log.Printf("迁移 DelayStatus (untested) 失败: %v", result.Error)
+		}
+
+		log.Println("节点状态字段迁移完成")
+		return nil
+	}); err != nil {
+		log.Printf("执行迁移 0013_migrate_node_status_fields 失败: %v", err)
+	}
+
 	// 初始化用户数据
 	err := db.First(&User{}).Error
 	if err == gorm.ErrRecordNotFound {

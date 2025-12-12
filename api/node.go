@@ -201,11 +201,13 @@ func NodeGet(c *gin.Context) {
 
 	// 解析过滤参数
 	filter := models.NodeFilter{
-		Search:    c.Query("search"),
-		Group:     c.Query("group"),
-		Source:    c.Query("source"),
-		SortBy:    c.Query("sortBy"),
-		SortOrder: c.Query("sortOrder"),
+		Search:      c.Query("search"),
+		Group:       c.Query("group"),
+		Source:      c.Query("source"),
+		SpeedStatus: c.Query("speedStatus"),
+		DelayStatus: c.Query("delayStatus"),
+		SortBy:      c.Query("sortBy"),
+		SortOrder:   c.Query("sortOrder"),
 	}
 
 	// 安全解析数值参数
@@ -287,11 +289,13 @@ func NodeGetIDs(c *gin.Context) {
 
 	// 解析过滤参数
 	filter := models.NodeFilter{
-		Search:    c.Query("search"),
-		Group:     c.Query("group"),
-		Source:    c.Query("source"),
-		SortBy:    c.Query("sortBy"),
-		SortOrder: c.Query("sortOrder"),
+		Search:      c.Query("search"),
+		Group:       c.Query("group"),
+		Source:      c.Query("source"),
+		SpeedStatus: c.Query("speedStatus"),
+		DelayStatus: c.Query("delayStatus"),
+		SortBy:      c.Query("sortBy"),
+		SortOrder:   c.Query("sortOrder"),
 	}
 
 	// 安全解析数值参数

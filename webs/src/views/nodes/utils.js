@@ -134,3 +134,61 @@ export const getDelayColor = (delay) => {
   if (delay < 500) return 'warning';
   return 'error';
 };
+
+// ========== 节点测试状态常量 (与后端 models/status_constants.go 保持同步) ==========
+export const NODE_STATUS = {
+  UNTESTED: 'untested', // 未测试
+  SUCCESS: 'success', // 成功
+  TIMEOUT: 'timeout', // 超时
+  ERROR: 'error' // 错误
+};
+
+// 状态选择器选项 (用于过滤器下拉框)
+export const STATUS_OPTIONS = [
+  { value: '', label: '全部' },
+  { value: NODE_STATUS.UNTESTED, label: '未测速', color: 'default' },
+  { value: NODE_STATUS.SUCCESS, label: '成功', color: 'success' },
+  { value: NODE_STATUS.TIMEOUT, label: '超时', color: 'warning' },
+  { value: NODE_STATUS.ERROR, label: '失败', color: 'error' }
+];
+
+// 速度颜色 (基于数值)
+export const getSpeedColor = (speed) => {
+  if (speed === -1) return 'error';
+  if (speed <= 0) return 'default';
+  if (speed >= 5) return 'success';
+  if (speed >= 1) return 'warning';
+  return 'error';
+};
+
+// 速度状态显示 - 统一处理所有速度显示逻辑
+export const getSpeedDisplay = (speed, speedStatus) => {
+  // 优先根据状态判断
+  if (speedStatus === NODE_STATUS.TIMEOUT) {
+    return { label: '超时', color: 'warning', variant: 'filled' };
+  }
+  if (speedStatus === NODE_STATUS.ERROR || speed === -1) {
+    return { label: '失败', color: 'error', variant: 'filled' };
+  }
+  if (speedStatus === NODE_STATUS.UNTESTED || (!speedStatus && speed <= 0)) {
+    return { label: '未测速', color: 'default', variant: 'outlined' };
+  }
+  // 成功状态，显示具体速度值
+  return { label: `${speed.toFixed(2)}MB/s`, color: getSpeedColor(speed), variant: 'filled' };
+};
+
+// 延迟状态显示 - 统一处理所有延迟显示逻辑
+export const getDelayDisplay = (delay, delayStatus) => {
+  // 优先根据状态判断
+  if (delayStatus === NODE_STATUS.TIMEOUT || delay === -1) {
+    return { label: '超时', color: 'error', variant: 'filled' };
+  }
+  if (delayStatus === NODE_STATUS.ERROR) {
+    return { label: '失败', color: 'error', variant: 'filled' };
+  }
+  if (delayStatus === NODE_STATUS.UNTESTED || (!delayStatus && delay <= 0)) {
+    return { label: '未测速', color: 'default', variant: 'outlined' };
+  }
+  // 成功状态，显示具体延迟值
+  return { label: `${delay}ms`, color: getDelayColor(delay), variant: 'filled' };
+};

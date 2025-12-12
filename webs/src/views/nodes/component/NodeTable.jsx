@@ -23,7 +23,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import SpeedIcon from '@mui/icons-material/Speed';
 
 // utils
-import { formatDateTime, formatCountry, getDelayColor } from '../utils';
+import { formatDateTime, formatCountry, getDelayDisplay, getSpeedDisplay } from '../utils';
 
 /**
  * 桌面端节点表格
@@ -193,13 +193,10 @@ export default function NodeTable({
               </TableCell>
               <TableCell>
                 <Box>
-                  {node.DelayTime > 0 ? (
-                    <Chip label={`${node.DelayTime}ms`} color={getDelayColor(node.DelayTime)} size="small" />
-                  ) : node.DelayTime === -1 ? (
-                    <Chip label="超时" color="error" size="small" />
-                  ) : (
-                    <Chip label="未测速" variant="outlined" size="small" />
-                  )}
+                  {(() => {
+                    const d = getDelayDisplay(node.DelayTime, node.DelayStatus);
+                    return <Chip label={d.label} color={d.color} variant={d.variant} size="small" />;
+                  })()}
                   {node.LatencyCheckAt && (
                     <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '10px', mt: 0.5 }}>
                       {formatDateTime(node.LatencyCheckAt)}
@@ -209,7 +206,10 @@ export default function NodeTable({
               </TableCell>
               <TableCell>
                 <Box>
-                  {node.Speed > 0 ? <Typography>{node.Speed.toFixed(2)}MB/s</Typography> : <Typography>-</Typography>}
+                  {(() => {
+                    const s = getSpeedDisplay(node.Speed, node.SpeedStatus);
+                    return <Chip label={s.label} color={s.color} variant={s.variant} size="small" />;
+                  })()}
                   {node.SpeedCheckAt && node.Speed > 0 && (
                     <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '10px', mt: 0.5 }}>
                       {formatDateTime(node.SpeedCheckAt)}

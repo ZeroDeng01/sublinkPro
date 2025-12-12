@@ -14,7 +14,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 
 // utils
-import { isoToFlag } from '../utils';
+import { isoToFlag, STATUS_OPTIONS } from '../utils';
 
 /**
  * 节点过滤器工具栏
@@ -30,6 +30,10 @@ export default function NodeFilters({
   setMaxDelay,
   minSpeed,
   setMinSpeed,
+  speedStatusFilter,
+  setSpeedStatusFilter,
+  delayStatusFilter,
+  setDelayStatusFilter,
   countryFilter,
   setCountryFilter,
   tagFilter,
@@ -68,6 +72,26 @@ export default function NodeFilters({
           {sourceOptions.map((source) => (
             <MenuItem key={source} value={source}>
               {source === 'manual' ? '手动添加' : source}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <FormControl size="small" sx={{ minWidth: 100 }}>
+        <InputLabel>延迟状态</InputLabel>
+        <Select value={delayStatusFilter} label="延迟状态" onChange={(e) => setDelayStatusFilter(e.target.value)}>
+          {STATUS_OPTIONS.map((opt) => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <FormControl size="small" sx={{ minWidth: 100 }}>
+        <InputLabel>速度状态</InputLabel>
+        <Select value={speedStatusFilter} label="速度状态" onChange={(e) => setSpeedStatusFilter(e.target.value)}>
+          {STATUS_OPTIONS.map((opt) => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
             </MenuItem>
           ))}
         </Select>
@@ -181,6 +205,10 @@ NodeFilters.propTypes = {
   setMaxDelay: PropTypes.func.isRequired,
   minSpeed: PropTypes.string.isRequired,
   setMinSpeed: PropTypes.func.isRequired,
+  speedStatusFilter: PropTypes.string.isRequired,
+  setSpeedStatusFilter: PropTypes.func.isRequired,
+  delayStatusFilter: PropTypes.string.isRequired,
+  setDelayStatusFilter: PropTypes.func.isRequired,
   countryFilter: PropTypes.array.isRequired,
   setCountryFilter: PropTypes.func.isRequired,
   tagFilter: PropTypes.array.isRequired,

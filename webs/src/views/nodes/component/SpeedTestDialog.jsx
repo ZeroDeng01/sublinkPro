@@ -148,11 +148,7 @@ export default function SpeedTestDialog({
                   </Box>
                 )}
                 renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="延迟测试URL"
-                    placeholder="用于延迟测试的轻量级URL（留空使用速度测试URL）"
-                  />
+                  <TextField {...params} label="延迟测试URL" placeholder="用于延迟测试的轻量级URL（留空使用速度测试URL）" />
                 )}
               />
               <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>

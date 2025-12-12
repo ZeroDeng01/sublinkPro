@@ -112,6 +112,8 @@ export default function NodeList() {
   const [sourceFilter, setSourceFilter] = useState('');
   const [maxDelay, setMaxDelay] = useState('');
   const [minSpeed, setMinSpeed] = useState('');
+  const [speedStatusFilter, setSpeedStatusFilter] = useState('');
+  const [delayStatusFilter, setDelayStatusFilter] = useState('');
 
   // 排序
   const [sortBy, setSortBy] = useState(''); // 'delay' | 'speed' | ''
@@ -209,6 +211,8 @@ export default function NodeList() {
       if (filterParams.source) params.source = filterParams.source;
       if (filterParams.maxDelay) params.maxDelay = filterParams.maxDelay;
       if (filterParams.minSpeed) params.minSpeed = filterParams.minSpeed;
+      if (filterParams.speedStatus) params.speedStatus = filterParams.speedStatus;
+      if (filterParams.delayStatus) params.delayStatus = filterParams.delayStatus;
       if (filterParams.countries && filterParams.countries.length > 0) {
         params['countries[]'] = filterParams.countries;
       }
@@ -316,6 +320,8 @@ export default function NodeList() {
         source: sourceFilter,
         maxDelay: maxDelay,
         minSpeed: minSpeed,
+        speedStatus: speedStatusFilter,
+        delayStatus: delayStatusFilter,
         countries: countryFilter,
         tags: tagFilter,
         sortBy: sortBy,
@@ -333,7 +339,20 @@ export default function NodeList() {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [searchQuery, groupFilter, sourceFilter, maxDelay, minSpeed, countryFilter, tagFilter, sortBy, sortOrder, fetchNodes]);
+  }, [
+    searchQuery,
+    groupFilter,
+    sourceFilter,
+    maxDelay,
+    minSpeed,
+    speedStatusFilter,
+    delayStatusFilter,
+    countryFilter,
+    tagFilter,
+    sortBy,
+    sortOrder,
+    fetchNodes
+  ]);
 
   const showMessage = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -350,6 +369,8 @@ export default function NodeList() {
     setSourceFilter('');
     setMaxDelay('');
     setMinSpeed('');
+    setSpeedStatusFilter('');
+    setDelayStatusFilter('');
     setCountryFilter([]);
     setTagFilter([]);
     setSortBy('');
@@ -362,6 +383,8 @@ export default function NodeList() {
     source: sourceFilter,
     maxDelay: maxDelay,
     minSpeed: minSpeed,
+    speedStatus: speedStatusFilter,
+    delayStatus: delayStatusFilter,
     countries: countryFilter,
     tags: tagFilter,
     sortBy: sortBy,
@@ -372,7 +395,20 @@ export default function NodeList() {
     fetchNodes(getCurrentFilters());
     getNodeGroups();
     getNodeSources();
-  }, [fetchNodes, searchQuery, groupFilter, sourceFilter, maxDelay, minSpeed, countryFilter, tagFilter, sortBy, sortOrder]);
+  }, [
+    fetchNodes,
+    searchQuery,
+    groupFilter,
+    sourceFilter,
+    maxDelay,
+    minSpeed,
+    speedStatusFilter,
+    delayStatusFilter,
+    countryFilter,
+    tagFilter,
+    sortBy,
+    sortOrder
+  ]);
 
   // 监听任务完成，自动刷新节点列表
   useEffect(() => {
@@ -753,11 +789,11 @@ export default function NodeList() {
       const response = await getSpeedTestConfig();
       setSpeedTestForm(
         response.data || {
-          cron: "",
+          cron: '',
           enabled: false,
-          mode: "tcp",
-          url: "",
-          latency_url: "",
+          mode: 'tcp',
+          url: '',
+          latency_url: '',
           timeout: 5,
           groups: [],
           tags: [],
@@ -844,6 +880,8 @@ export default function NodeList() {
         if (filters.source) params.source = filters.source;
         if (filters.maxDelay) params.maxDelay = filters.maxDelay;
         if (filters.minSpeed) params.minSpeed = filters.minSpeed;
+        if (filters.speedStatus) params.speedStatus = filters.speedStatus;
+        if (filters.delayStatus) params.delayStatus = filters.delayStatus;
         if (filters.countries && filters.countries.length > 0) {
           params['countries[]'] = filters.countries;
         }
@@ -923,9 +961,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: "spin 1s linear infinite",
-                      "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -968,9 +1006,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: "spin 1s linear infinite",
-                    "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -989,6 +1027,10 @@ export default function NodeList() {
         setMaxDelay={setMaxDelay}
         minSpeed={minSpeed}
         setMinSpeed={setMinSpeed}
+        speedStatusFilter={speedStatusFilter}
+        setSpeedStatusFilter={setSpeedStatusFilter}
+        delayStatusFilter={delayStatusFilter}
+        setDelayStatusFilter={setDelayStatusFilter}
         countryFilter={countryFilter}
         setCountryFilter={setCountryFilter}
         tagFilter={tagFilter}

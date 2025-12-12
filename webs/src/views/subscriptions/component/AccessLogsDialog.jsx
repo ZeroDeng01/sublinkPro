@@ -45,15 +45,15 @@ export default function AccessLogsDialog({ open, logs, onClose }) {
       <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
         <Stack spacing={1}>
           {/* 第一行: IP 地址和访问次数 */}
-          <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
             <Typography
               variant="subtitle2"
               sx={{
                 fontFamily: 'monospace',
-                fontSize: "0.85rem",
+                fontSize: '0.85rem',
                 fontWeight: 600,
-                color: "primary.main",
-                wordBreak: "break-all",
+                color: 'primary.main',
+                wordBreak: 'break-all',
                 lineHeight: 1.4,
                 flex: 1,
                 minWidth: 0
@@ -69,31 +69,31 @@ export default function AccessLogsDialog({ open, logs, onClose }) {
               icon={<TouchAppIcon sx={{ fontSize: 14 }} />}
               sx={{
                 height: 24,
-                "& .MuiChip-label": { px: 1 },
+                '& .MuiChip-label': { px: 1 },
                 flexShrink: 0
               }}
             />
           </Box>
 
           {/* 第二行: 来源地区 */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <LocationOnIcon sx={{ fontSize: 16, color: "text.secondary", flexShrink: 0 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <LocationOnIcon sx={{ fontSize: 16, color: 'text.secondary', flexShrink: 0 }} />
             <Typography
               variant="body2"
               color="text.secondary"
               sx={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap"
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
               }}
             >
-              {log.Addr || "未知来源"}
+              {log.Addr || '未知来源'}
             </Typography>
           </Box>
 
           {/* 第三行: 访问时间 */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <AccessTimeIcon sx={{ fontSize: 16, color: "text.secondary", flexShrink: 0 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <AccessTimeIcon sx={{ fontSize: 16, color: 'text.secondary', flexShrink: 0 }} />
             <Typography variant="body2" color="text.secondary">
               {log.Date}
             </Typography>

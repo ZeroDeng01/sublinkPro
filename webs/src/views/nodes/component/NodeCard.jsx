@@ -20,7 +20,7 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import MainCard from 'ui-component/cards/MainCard';
 
 // utils
-import { formatDateTime, formatCountry, getDelayColor } from '../utils';
+import { formatDateTime, formatCountry, getDelayDisplay, getSpeedDisplay } from '../utils';
 
 /**
  * 移动端节点卡片组件
@@ -51,13 +51,10 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSp
             </Tooltip>
           </Stack>
           <Box sx={{ flexShrink: 0, ml: 1 }}>
-            {node.DelayTime > 0 ? (
-              <Chip label={`${node.DelayTime}ms`} color={getDelayColor(node.DelayTime)} size="small" />
-            ) : node.DelayTime === -1 ? (
-              <Chip label="超时" color="error" size="small" />
-            ) : (
-              <Chip label="未测速" variant="outlined" size="small" />
-            )}
+            {(() => {
+              const d = getDelayDisplay(node.DelayTime, node.DelayStatus);
+              return <Chip label={d.label} color={d.color} variant={d.variant} size="small" />;
+            })()}
           </Box>
         </Stack>
 
@@ -81,13 +78,18 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSp
             size="small"
             sx={{ maxWidth: '100px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
           />
-          <Chip
-            icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>⚡</span>}
-            label={node.Speed > 0 ? `${node.Speed.toFixed(2)}MB/s` : '未测速'}
-            color={node.Speed > 0 ? 'primary' : 'default'}
-            variant={node.Speed > 0 ? 'filled' : 'outlined'}
-            size="small"
-          />
+          {(() => {
+            const s = getSpeedDisplay(node.Speed, node.SpeedStatus);
+            return (
+              <Chip
+                icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>⚡</span>}
+                label={s.label}
+                color={s.color}
+                variant={s.variant}
+                size="small"
+              />
+            );
+          })()}
           {node.DialerProxyName && (
             <Tooltip title={`前置代理: ${node.DialerProxyName}`}>
               <Chip

@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sublink/constants"
 	"sublink/models"
 	"sublink/node"
 	"sublink/services/geoip"
@@ -568,12 +569,16 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 					failCount++
 					log.Printf("节点 [%s] 延迟测试失败: %v", n.Name, err)
 					n.Speed = -1
+					n.SpeedStatus = constants.StatusUntested // TCP模式不测速度
 					n.DelayTime = -1
+					n.DelayStatus = constants.StatusTimeout
 				} else {
 					successCount++
 					log.Printf("节点 [%s] 延迟测试成功: %d ms", n.Name, latency)
 					n.Speed = 0 // TCP模式不测速度
+					n.SpeedStatus = constants.StatusUntested
 					n.DelayTime = latency
+					n.DelayStatus = constants.StatusSuccess
 				}
 				n.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
 				if updateErr := n.UpdateSpeed(); updateErr != nil {
@@ -634,7 +639,9 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 				failCount++
 				completedCount++
 				nr.node.Speed = -1
+				nr.node.SpeedStatus = constants.StatusError // 因延迟失败无法测速
 				nr.node.DelayTime = -1
+				nr.node.DelayStatus = constants.StatusTimeout
 				nr.node.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
 				if updateErr := nr.node.UpdateSpeed(); updateErr != nil {
 					log.Printf("更新节点 %s 测速结果失败: %v", nr.node.Name, updateErr)
@@ -665,7 +672,9 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 					failCount++
 					log.Printf("节点 [%s] 速度测试失败: %v (延迟: %d ms)", result.node.Name, err, result.latency)
 					result.node.Speed = -1
-					result.node.DelayTime = result.latency // 保留延迟测试结果
+					result.node.SpeedStatus = constants.StatusError
+					result.node.DelayTime = result.latency            // 保留延迟测试结果
+					result.node.DelayStatus = constants.StatusSuccess // 延迟测试是成功的
 					resultStatus = "failed"
 					resultData = map[string]interface{}{
 						"speed":   -1,
@@ -676,7 +685,9 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 					successCount++
 					log.Printf("节点 [%s] 测速成功: 速度 %.2f MB/s, 延迟 %d ms", result.node.Name, speed, result.latency)
 					result.node.Speed = speed
+					result.node.SpeedStatus = constants.StatusSuccess
 					result.node.DelayTime = result.latency
+					result.node.DelayStatus = constants.StatusSuccess
 					resultStatus = "success"
 					resultData = map[string]interface{}{
 						"speed":   speed,
