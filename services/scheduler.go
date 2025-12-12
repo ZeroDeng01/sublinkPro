@@ -802,7 +802,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 
 				if err != nil {
 					failCount++
-					log.Printf("节点 [%s] 速度测试失败: %v (延迟: %d ms)", result.node.Name, err, result.latency)
+					log.Printf("节点 [%s] 速度测试失败: %v (延迟: %d ms, 已下载: %s)", result.node.Name, err, result.latency, formatBytes(bytesDownloaded))
 					result.node.Speed = -1
 					result.node.SpeedStatus = constants.StatusError
 					result.node.DelayTime = result.latency            // 保留延迟测试结果
@@ -815,7 +815,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 					}
 				} else {
 					successCount++
-					log.Printf("节点 [%s] 测速成功: 速度 %.2f MB/s, 延迟 %d ms", result.node.Name, speed, result.latency)
+					log.Printf("节点 [%s] 测速成功: 速度 %.2f MB/s, 延迟 %d ms, 流量消耗: %s", result.node.Name, speed, result.latency, formatBytes(bytesDownloaded))
 					result.node.Speed = speed
 					result.node.SpeedStatus = constants.StatusSuccess
 					result.node.DelayTime = result.latency
