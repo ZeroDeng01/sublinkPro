@@ -24,8 +24,11 @@ import Grid from '@mui/material/Grid';
 // icons
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
+// project imports
+import CronExpressionGenerator from 'components/CronExpressionGenerator';
+
 // constants
-import { CRON_OPTIONS, SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS, LATENCY_TEST_URL_OPTIONS } from '../utils';
+import { SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS, LATENCY_TEST_URL_OPTIONS } from '../utils';
 
 /**
  * 测速设置对话框
@@ -52,34 +55,10 @@ export default function SpeedTestDialog({
             }
             label="启用自动测速"
           />
-          <Autocomplete
-            freeSolo
-            options={CRON_OPTIONS}
-            getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
+          <CronExpressionGenerator
             value={speedTestForm.cron}
-            onChange={(e, newValue) => {
-              const value = typeof newValue === 'string' ? newValue : newValue?.value || '';
-              setSpeedTestForm({ ...speedTestForm, cron: value });
-            }}
-            onInputChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, cron: newValue || '' })}
-            renderOption={(props, option) => (
-              <Box component="li" {...props} key={option.value}>
-                <Box>
-                  <Typography variant="body2">{option.label}</Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    {option.value}
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Cron表达式"
-                placeholder="分 时 日 月 周"
-                helperText="格式: 分 时 日 月 周 (例如: 0 */1 * * * 表示每小时执行一次)"
-              />
-            )}
+            onChange={(value) => setSpeedTestForm({ ...speedTestForm, cron: value })}
+            label="定时测速设置"
           />
           <FormControl fullWidth>
             <InputLabel>测速模式</InputLabel>

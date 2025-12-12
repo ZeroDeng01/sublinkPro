@@ -1,7 +1,6 @@
 import PropTypes from 'prop-types';
 
 // material-ui
-import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -12,13 +11,15 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
+import Autocomplete from '@mui/material/Autocomplete';
 import Typography from '@mui/material/Typography';
 
 // project imports
 import SearchableNodeSelect from 'components/SearchableNodeSelect';
+import CronExpressionGenerator from 'components/CronExpressionGenerator';
 
 // constants
-import { CRON_OPTIONS, USER_AGENT_OPTIONS } from '../utils';
+import { USER_AGENT_OPTIONS } from '../utils';
 
 /**
  * 添加/编辑订阅表单对话框
@@ -54,34 +55,10 @@ export default function SchedulerFormDialog({
             helperText="目前仅支持clash协议的yaml订阅和v2ray的base64以及非base64订阅"
             onChange={(e) => setSchedulerForm({ ...schedulerForm, URL: e.target.value })}
           />
-          <Autocomplete
-            freeSolo
-            options={CRON_OPTIONS}
-            getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
+          <CronExpressionGenerator
             value={schedulerForm.CronExpr}
-            onChange={(e, newValue) => {
-              const value = typeof newValue === 'string' ? newValue : newValue?.value || '';
-              setSchedulerForm({ ...schedulerForm, CronExpr: value });
-            }}
-            onInputChange={(e, newValue) => setSchedulerForm({ ...schedulerForm, CronExpr: newValue || '' })}
-            renderOption={(props, option) => (
-              <Box component="li" {...props} key={option.value}>
-                <Box>
-                  <Typography variant="body2">{option.label}</Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    {option.value}
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Cron表达式"
-                placeholder="分 时 日 月 周"
-                helperText="格式: 分 时 日 月 周，如 0 */6 * * * 表示每6小时"
-              />
-            )}
+            onChange={(value) => setSchedulerForm({ ...schedulerForm, CronExpr: value })}
+            label="定时更新设置"
           />
           <Autocomplete
             freeSolo

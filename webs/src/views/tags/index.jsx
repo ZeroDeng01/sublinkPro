@@ -508,12 +508,7 @@ export default function TagManagement() {
               justifyContent="space-between"
             >
               {/* 搜索和筛选 */}
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1}
-                sx={{ flex: 1 }}
-                flexWrap="wrap"
-              >
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ flex: 1 }} flexWrap="wrap">
                 {/* 名称搜索 */}
                 <TextField
                   placeholder="搜索规则名称..."
@@ -539,11 +534,7 @@ export default function TagManagement() {
 
                 {/* 标签筛选 */}
                 <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <Select
-                    value={ruleTagFilter}
-                    onChange={(e) => setRuleTagFilter(e.target.value)}
-                    displayEmpty
-                  >
+                  <Select value={ruleTagFilter} onChange={(e) => setRuleTagFilter(e.target.value)} displayEmpty>
                     <MenuItem value="">全部标签</MenuItem>
                     {usedTagNames.map((tagName) => {
                       const tag = getTagByName(tagName);
@@ -568,11 +559,7 @@ export default function TagManagement() {
 
                 {/* 触发时机筛选 */}
                 <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <Select
-                    value={ruleTriggerFilter}
-                    onChange={(e) => setRuleTriggerFilter(e.target.value)}
-                    displayEmpty
-                  >
+                  <Select value={ruleTriggerFilter} onChange={(e) => setRuleTriggerFilter(e.target.value)} displayEmpty>
                     <MenuItem value="">全部时机</MenuItem>
                     <MenuItem value="subscription_update">订阅更新后</MenuItem>
                     <MenuItem value="speed_test">测速完成后</MenuItem>
@@ -581,11 +568,7 @@ export default function TagManagement() {
 
                 {/* 状态筛选 */}
                 <FormControl size="small" sx={{ minWidth: 100 }}>
-                  <Select
-                    value={ruleStatusFilter}
-                    onChange={(e) => setRuleStatusFilter(e.target.value)}
-                    displayEmpty
-                  >
+                  <Select value={ruleStatusFilter} onChange={(e) => setRuleStatusFilter(e.target.value)} displayEmpty>
                     <MenuItem value="">全部状态</MenuItem>
                     <MenuItem value="enabled">启用</MenuItem>
                     <MenuItem value="disabled">禁用</MenuItem>
