@@ -775,9 +775,25 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 	})
 
 	// 应用自动标签规则 - 测速完成后触发
+	// 重新获取已测速节点的最新数据（包含更新后的速度/延迟值）
 	go func() {
-		ApplyAutoTagRules(nodes, "speed_test")
+		// 收集测速节点的ID
+		testedNodeIDs := make([]int, 0, len(nodes))
+		for _, n := range nodes {
+			testedNodeIDs = append(testedNodeIDs, n.ID)
+		}
+
+		// 从数据库/缓存获取最新的节点数据
+		updatedNodes, err := models.GetNodesByIDs(testedNodeIDs)
+		if err != nil {
+			log.Printf("获取测速节点最新数据失败: %v, 使用原始数据", err)
+			ApplyAutoTagRules(nodes, "speed_test")
+			return
+		}
+
+		ApplyAutoTagRules(updatedNodes, "speed_test")
 	}()
+
 }
 
 // formatDuration 格式化时长为人类可读字符串

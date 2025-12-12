@@ -175,6 +175,34 @@ func (node *Node) GetByID() error {
 	return nil
 }
 
+// GetNodesByIDs 根据ID列表批量获取节点
+func GetNodesByIDs(ids []int) ([]Node, error) {
+	if len(ids) == 0 {
+		return []Node{}, nil
+	}
+
+	nodes := make([]Node, 0, len(ids))
+
+	// 优先从缓存获取
+	for _, id := range ids {
+		if n, found := nodeCache.Get(id); found {
+			nodes = append(nodes, n)
+		}
+	}
+
+	// 如果缓存命中率100%，直接返回
+	if len(nodes) == len(ids) {
+		return nodes, nil
+	}
+
+	// 否则从数据库获取全部（确保数据一致性）
+	nodes = make([]Node, 0, len(ids))
+	if err := database.DB.Where("id IN ?", ids).Find(&nodes).Error; err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
 // List 节点列表
 func (node *Node) List() ([]Node, error) {
 	// 使用 GetAllSorted 获取排序的节点列表
