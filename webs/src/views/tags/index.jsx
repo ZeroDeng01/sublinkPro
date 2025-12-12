@@ -25,6 +25,11 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import FormControl from '@mui/material/FormControl';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
 
 // icons
@@ -35,6 +40,8 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import RuleIcon from '@mui/icons-material/Rule';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -74,6 +81,13 @@ export default function TagManagement() {
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
   const [editingTag, setEditingTag] = useState(null);
   const [editingRule, setEditingRule] = useState(null);
+
+  // Search/Filter states
+  const [tagSearch, setTagSearch] = useState('');
+  const [ruleSearch, setRuleSearch] = useState('');
+  const [ruleTagFilter, setRuleTagFilter] = useState('');
+  const [ruleTriggerFilter, setRuleTriggerFilter] = useState('');
+  const [ruleStatusFilter, setRuleStatusFilter] = useState('');
 
   // Fetch data
   const fetchTags = async (showRefreshing = false) => {
@@ -253,6 +267,44 @@ export default function TagManagement() {
     return tags.find((t) => t.name === tagName);
   };
 
+  // 过滤标签
+  const filteredTags = tags.filter((tag) => {
+    if (!tagSearch) return true;
+    const search = tagSearch.toLowerCase();
+    return (
+      tag.name.toLowerCase().includes(search) ||
+      (tag.groupName && tag.groupName.toLowerCase().includes(search)) ||
+      (tag.description && tag.description.toLowerCase().includes(search))
+    );
+  });
+
+  // 过滤规则
+  const filteredRules = rules.filter((rule) => {
+    // 名称搜索
+    if (ruleSearch && !rule.name.toLowerCase().includes(ruleSearch.toLowerCase())) {
+      return false;
+    }
+    // 标签筛选
+    if (ruleTagFilter && rule.tagName !== ruleTagFilter) {
+      return false;
+    }
+    // 触发时机筛选
+    if (ruleTriggerFilter && rule.triggerType !== ruleTriggerFilter) {
+      return false;
+    }
+    // 状态筛选
+    if (ruleStatusFilter !== '') {
+      const isEnabled = ruleStatusFilter === 'enabled';
+      if (rule.enabled !== isEnabled) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // 获取规则中使用的标签列表（去重）
+  const usedTagNames = [...new Set(rules.map((r) => r.tagName))];
+
   // 移动端规则卡片
   const MobileRuleCard = ({ rule }) => {
     const tag = getTagByName(rule.tagName);
@@ -331,13 +383,43 @@ export default function TagManagement() {
       {/* 标签列表 */}
       {tabValue === 0 && (
         <Box>
-          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          {/* 搜索和添加按钮 */}
+          <Box sx={{ mb: 2, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+            <TextField
+              placeholder="搜索标签名称、分组、描述..."
+              value={tagSearch}
+              onChange={(e) => setTagSearch(e.target.value)}
+              size="small"
+              sx={{ minWidth: { xs: '100%', sm: 280 }, flex: { xs: '1 1 100%', sm: '0 1 auto' } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" fontSize="small" />
+                  </InputAdornment>
+                ),
+                endAdornment: tagSearch && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setTagSearch('')}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddTag} size={isMobile ? 'small' : 'medium'}>
               添加标签
             </Button>
           </Box>
+
+          {/* 搜索结果统计 */}
+          {tagSearch && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              找到 {filteredTags.length} 个匹配的标签
+            </Typography>
+          )}
+
           <Grid container spacing={isMobile ? 1.5 : 2}>
-            {tags.map((tag) => (
+            {filteredTags.map((tag) => (
               <Grid item xs={6} sm={6} md={4} lg={3} key={tag.name}>
                 <Card
                   sx={{
@@ -396,6 +478,13 @@ export default function TagManagement() {
                 </Card>
               </Grid>
             ))}
+            {filteredTags.length === 0 && tags.length > 0 && (
+              <Grid item xs={12}>
+                <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
+                  没有找到匹配的标签
+                </Typography>
+              </Grid>
+            )}
             {tags.length === 0 && (
               <Grid item xs={12}>
                 <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
@@ -410,17 +499,121 @@ export default function TagManagement() {
       {/* 自动规则 */}
       {tabValue === 1 && (
         <Box>
-          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleAddRule}
-              disabled={tags.length === 0}
-              size={isMobile ? 'small' : 'medium'}
+          {/* 搜索、筛选和添加按钮 */}
+          <Box sx={{ mb: 2 }}>
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1.5}
+              alignItems={{ xs: 'stretch', md: 'center' }}
+              justifyContent="space-between"
             >
-              添加规则
-            </Button>
+              {/* 搜索和筛选 */}
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                sx={{ flex: 1 }}
+                flexWrap="wrap"
+              >
+                {/* 名称搜索 */}
+                <TextField
+                  placeholder="搜索规则名称..."
+                  value={ruleSearch}
+                  onChange={(e) => setRuleSearch(e.target.value)}
+                  size="small"
+                  sx={{ minWidth: { xs: '100%', sm: 160 } }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon color="action" fontSize="small" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: ruleSearch && (
+                      <InputAdornment position="end">
+                        <IconButton size="small" onClick={() => setRuleSearch('')}>
+                          <ClearIcon fontSize="small" />
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }}
+                />
+
+                {/* 标签筛选 */}
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <Select
+                    value={ruleTagFilter}
+                    onChange={(e) => setRuleTagFilter(e.target.value)}
+                    displayEmpty
+                  >
+                    <MenuItem value="">全部标签</MenuItem>
+                    {usedTagNames.map((tagName) => {
+                      const tag = getTagByName(tagName);
+                      return (
+                        <MenuItem key={tagName} value={tagName}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                              sx={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: '50%',
+                                backgroundColor: tag?.color || '#ccc'
+                              }}
+                            />
+                            {tagName}
+                          </Box>
+                        </MenuItem>
+                      );
+                    })}
+                  </Select>
+                </FormControl>
+
+                {/* 触发时机筛选 */}
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <Select
+                    value={ruleTriggerFilter}
+                    onChange={(e) => setRuleTriggerFilter(e.target.value)}
+                    displayEmpty
+                  >
+                    <MenuItem value="">全部时机</MenuItem>
+                    <MenuItem value="subscription_update">订阅更新后</MenuItem>
+                    <MenuItem value="speed_test">测速完成后</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {/* 状态筛选 */}
+                <FormControl size="small" sx={{ minWidth: 100 }}>
+                  <Select
+                    value={ruleStatusFilter}
+                    onChange={(e) => setRuleStatusFilter(e.target.value)}
+                    displayEmpty
+                  >
+                    <MenuItem value="">全部状态</MenuItem>
+                    <MenuItem value="enabled">启用</MenuItem>
+                    <MenuItem value="disabled">禁用</MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+
+              {/* 添加按钮 */}
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleAddRule}
+                disabled={tags.length === 0}
+                size={isMobile ? 'small' : 'medium'}
+                sx={{ flexShrink: 0 }}
+              >
+                添加规则
+              </Button>
+            </Stack>
+
+            {/* 筛选结果统计 */}
+            {(ruleSearch || ruleTagFilter || ruleTriggerFilter || ruleStatusFilter) && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                找到 {filteredRules.length} 条匹配的规则
+              </Typography>
+            )}
           </Box>
+
           {tags.length === 0 && (
             <Alert severity="info" sx={{ mb: 2 }}>
               请先创建标签后再添加自动规则
@@ -430,9 +623,14 @@ export default function TagManagement() {
           {/* 移动端使用卡片，桌面端使用表格 */}
           {isMobile ? (
             <Box>
-              {rules.map((rule) => (
+              {filteredRules.map((rule) => (
                 <MobileRuleCard key={rule.id} rule={rule} />
               ))}
+              {filteredRules.length === 0 && rules.length > 0 && (
+                <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
+                  没有找到匹配的规则
+                </Typography>
+              )}
               {rules.length === 0 && (
                 <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
                   暂无自动规则
@@ -452,7 +650,7 @@ export default function TagManagement() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {rules.map((rule) => {
+                  {filteredRules.map((rule) => {
                     const tag = getTagByName(rule.tagName);
                     return (
                       <TableRow key={rule.id}>
@@ -485,6 +683,13 @@ export default function TagManagement() {
                       </TableRow>
                     );
                   })}
+                  {filteredRules.length === 0 && rules.length > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                        <Typography color="text.secondary">没有找到匹配的规则</Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
                   {rules.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} align="center" sx={{ py: 4 }}>

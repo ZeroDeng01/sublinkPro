@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 
 // material-ui
@@ -14,6 +14,12 @@ import Autocomplete from '@mui/material/Autocomplete';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import InputAdornment from '@mui/material/InputAdornment';
+
+// icons
+import ColorLensIcon from '@mui/icons-material/ColorLens';
 
 // Color presets
 const colorPresets = [
@@ -43,6 +49,22 @@ export default function TagDialog({ open, onClose, onSave, editingTag, existingG
   const [color, setColor] = useState('#1976d2');
   const [description, setDescription] = useState('');
   const [groupName, setGroupName] = useState('');
+  const colorPickerRef = useRef(null);
+
+  // 处理颜色输入，支持带或不带#的hex值
+  const handleColorInput = (value) => {
+    let newColor = value.trim();
+    // 如果输入不以#开头且看起来像hex值，自动添加#
+    if (newColor && !newColor.startsWith('#') && /^[0-9A-Fa-f]{3,6}$/.test(newColor)) {
+      newColor = '#' + newColor;
+    }
+    setColor(newColor);
+  };
+
+  // 验证颜色格式
+  const isValidColor = (c) => {
+    return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(c);
+  };
 
   // 合并预设组和已有组
   const allGroupOptions = [...new Set([...presetGroups.map((g) => g.value), ...existingGroups])];
@@ -154,49 +176,106 @@ export default function TagDialog({ open, onClose, onSave, editingTag, existingG
 
           {/* 颜色选择 */}
           <Box>
-            <Typography variant="body2" sx={{ mb: 1 }}>
+            <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
               标签颜色
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+
+            {/* 预设颜色 + 颜色选择器按钮 */}
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
               {colorPresets.map((c) => (
                 <Box
                   key={c}
                   onClick={() => setColor(c)}
                   sx={{
-                    width: 32,
-                    height: 32,
+                    width: { xs: 36, sm: 32 },
+                    height: { xs: 36, sm: 32 },
                     borderRadius: '50%',
                     backgroundColor: c,
                     cursor: 'pointer',
-                    border: color === c ? '3px solid #000' : '2px solid transparent',
+                    border: color.toLowerCase() === c.toLowerCase() ? '3px solid #000' : '2px solid rgba(0,0,0,0.1)',
                     transition: 'all 0.2s',
+                    boxShadow: color.toLowerCase() === c.toLowerCase() ? '0 0 0 2px rgba(0,0,0,0.1)' : 'none',
                     '&:hover': {
-                      transform: 'scale(1.1)'
+                      transform: 'scale(1.15)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                    },
+                    '&:active': {
+                      transform: 'scale(0.95)'
                     }
                   }}
                 />
               ))}
+
+              {/* 颜色选择器按钮 */}
+              <Tooltip title="打开颜色选择器">
+                <IconButton
+                  onClick={() => colorPickerRef.current?.click()}
+                  sx={{
+                    width: { xs: 36, sm: 32 },
+                    height: { xs: 36, sm: 32 },
+                    border: '2px dashed',
+                    borderColor: 'divider',
+                    backgroundColor: 'background.paper',
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                      borderColor: 'primary.main'
+                    }
+                  }}
+                >
+                  <ColorLensIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+
+              {/* 隐藏的原生颜色选择器 */}
+              <input
+                ref={colorPickerRef}
+                type="color"
+                value={isValidColor(color) ? color : '#1976d2'}
+                onChange={(e) => setColor(e.target.value)}
+                style={{
+                  position: 'absolute',
+                  opacity: 0,
+                  width: 0,
+                  height: 0,
+                  pointerEvents: 'none'
+                }}
+              />
             </Box>
-            <TextField
-              label="自定义颜色 (HEX)"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              size="small"
-              sx={{ mt: 1.5, width: 150 }}
-              InputProps={{
-                startAdornment: (
-                  <Box
-                    sx={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: '4px',
-                      backgroundColor: color,
-                      mr: 1
-                    }}
-                  />
-                )
-              }}
-            />
+
+            {/* 自定义颜色输入 */}
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+              <TextField
+                label="自定义颜色 (HEX)"
+                value={color}
+                onChange={(e) => handleColorInput(e.target.value)}
+                size="small"
+                error={color && !isValidColor(color)}
+                helperText={color && !isValidColor(color) ? '请输入有效的HEX颜色值 (如 #FF5733)' : ''}
+                sx={{ width: { xs: '100%', sm: 180 } }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Box
+                        onClick={() => colorPickerRef.current?.click()}
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '4px',
+                          backgroundColor: isValidColor(color) ? color : '#ccc',
+                          cursor: 'pointer',
+                          border: '1px solid rgba(0,0,0,0.1)',
+                          transition: 'all 0.2s',
+                          '&:hover': {
+                            transform: 'scale(1.1)',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          }
+                        }}
+                      />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Box>
           </Box>
           <TextField
             label="描述 (可选)"
