@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
 
 // material-ui
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -9,6 +11,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import Fab from '@mui/material/Fab';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -18,6 +21,7 @@ import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 
@@ -44,9 +48,45 @@ export default function SpeedTestDialog({
   onRunSpeedTest,
   onModeChange
 }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>测速设置</DialogTitle>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        测速设置
+        {/* 标题栏快捷测速按钮 */}
+        <Tooltip title="使用当前配置立即开始测速" placement="left">
+          <Fab
+            color="primary"
+            size={isMobile ? 'small' : 'medium'}
+            onClick={() => {
+              onRunSpeedTest();
+              onClose();
+            }}
+            sx={{
+              background: isDark
+                ? 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)'
+                : 'linear-gradient(135deg, #66bb6a 0%, #43a047 100%)',
+              boxShadow: isDark ? '0 4px 14px rgba(76, 175, 80, 0.4)' : '0 4px 14px rgba(76, 175, 80, 0.3)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                background: isDark
+                  ? 'linear-gradient(135deg, #66bb6a 0%, #388e3c 100%)'
+                  : 'linear-gradient(135deg, #81c784 0%, #66bb6a 100%)',
+                transform: 'scale(1.08)',
+                boxShadow: isDark ? '0 6px 20px rgba(76, 175, 80, 0.5)' : '0 6px 20px rgba(76, 175, 80, 0.4)'
+              },
+              '&:active': {
+                transform: 'scale(0.98)'
+              }
+            }}
+          >
+            <PlayArrowIcon />
+          </Fab>
+        </Tooltip>
+      </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <FormControlLabel
@@ -255,9 +295,6 @@ export default function SpeedTestDialog({
           <Typography variant="caption" color="textSecondary" sx={{ mt: -1 }}>
             开启后，测速时会通过代理获取落地IP并解析对应的国家代码，会降低测速效率。IP通过https://api.ip.sb/ip获取。
           </Typography>
-          <Button variant="outlined" startIcon={<PlayArrowIcon />} onClick={onRunSpeedTest}>
-            立即测速
-          </Button>
         </Stack>
       </DialogContent>
       <DialogActions>
