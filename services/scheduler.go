@@ -455,6 +455,11 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 
 	// 获取测速配置
 	speedTestUrl, _ := models.GetSetting("speed_test_url")
+	latencyTestUrl, _ := models.GetSetting("speed_test_latency_url")
+	// 向后兼容：如果未配置延迟URL，使用速度URL
+	if latencyTestUrl == "" {
+		latencyTestUrl = speedTestUrl
+	}
 	speedTestTimeoutStr, _ := models.GetSetting("speed_test_timeout")
 	speedTestTimeout := 5 * time.Second
 	if speedTestTimeoutStr != "" {
@@ -550,7 +555,7 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 			defer func() { <-latencySem }()
 
 			// 使用多次采样测量延迟
-			latency, err := mihomo.MihomoDelayWithSamples(n.Link, speedTestUrl, speedTestTimeout, latencySamples)
+			latency, err := mihomo.MihomoDelayWithSamples(n.Link, latencyTestUrl, speedTestTimeout, latencySamples)
 
 			mu.Lock()
 			nodeResults[idx] = nodeResult{node: n, latency: latency, err: err}

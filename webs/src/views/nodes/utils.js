@@ -25,6 +25,14 @@ export const SPEED_TEST_MIHOMO_OPTIONS = [
   { label: '100MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=100000000' }
 ];
 
+// 延迟测试URL选项 (用于Mihomo模式的阶段一)
+export const LATENCY_TEST_URL_OPTIONS = [
+  { label: 'Cloudflare 204 (推荐)', value: 'http://cp.cloudflare.com/generate_204' },
+  { label: 'Apple 204', value: 'http://captive.apple.com/generate_204' },
+  { label: 'Gstatic 204', value: 'http://www.gstatic.com/generate_204' },
+  { label: 'Cloudflare 0.5MB', value: 'https://speed.cloudflare.com/__down?bytes=500000' }
+];
+
 // User-Agent 预设选项
 export const USER_AGENT_OPTIONS = [
   { label: '无 (空)', value: '' },

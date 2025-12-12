@@ -757,6 +757,7 @@ export default function NodeList() {
           enabled: false,
           mode: "tcp",
           url: "",
+          latency_url: "",
           timeout: 5,
           groups: [],
           tags: [],

@@ -25,7 +25,7 @@ import Grid from '@mui/material/Grid';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 // constants
-import { CRON_OPTIONS, SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS } from '../utils';
+import { CRON_OPTIONS, SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS, LATENCY_TEST_URL_OPTIONS } from '../utils';
 
 /**
  * 测速设置对话框
@@ -124,6 +124,42 @@ export default function SpeedTestDialog({
                 : '延迟测试使用更轻量的204测试地址，例如: http://cp.cloudflare.com/generate_204'}
             </Typography>
           </Box>
+          {/* 延迟测试URL - 仅在Mihomo模式显示 */}
+          {speedTestForm.mode === 'mihomo' && (
+            <Box>
+              <Autocomplete
+                freeSolo
+                options={LATENCY_TEST_URL_OPTIONS}
+                getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
+                value={speedTestForm.latency_url || ''}
+                onChange={(e, newValue) => {
+                  const value = typeof newValue === 'string' ? newValue : newValue?.value || '';
+                  setSpeedTestForm({ ...speedTestForm, latency_url: value });
+                }}
+                onInputChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, latency_url: newValue || '' })}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props} key={option.value}>
+                    <Box>
+                      <Typography variant="body2">{option.label}</Typography>
+                      <Typography variant="caption" color="textSecondary" sx={{ wordBreak: 'break-all' }}>
+                        {option.value}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="延迟测试URL"
+                    placeholder="用于延迟测试的轻量级URL（留空使用速度测试URL）"
+                  />
+                )}
+              />
+              <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
+                延迟测试阶段使用。推荐使用204轻量地址以获得更准确的延迟测量。留空则使用速度测试URL。
+              </Typography>
+            </Box>
+          )}
           <TextField
             fullWidth
             label="超时时间"
@@ -266,6 +302,7 @@ SpeedTestDialog.propTypes = {
     enabled: PropTypes.bool,
     mode: PropTypes.string,
     url: PropTypes.string,
+    latency_url: PropTypes.string,
     timeout: PropTypes.number,
     groups: PropTypes.array,
     tags: PropTypes.array,

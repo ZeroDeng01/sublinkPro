@@ -636,6 +636,7 @@ func GetSpeedTestConfig(c *gin.Context) {
 		mode = "tcp"
 	}
 	url, _ := models.GetSetting("speed_test_url")
+	latencyUrl, _ := models.GetSetting("speed_test_latency_url")
 	timeoutStr, _ := models.GetSetting("speed_test_timeout")
 	if timeoutStr == "" {
 		timeoutStr = "5"
@@ -691,6 +692,7 @@ func GetSpeedTestConfig(c *gin.Context) {
 		"enabled":             enabled,
 		"mode":                mode,
 		"url":                 url,
+		"latency_url":         latencyUrl,
 		"timeout":             timeout,
 		"groups":              groups,
 		"tags":                tags,
@@ -708,6 +710,7 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		Enabled            bool        `json:"enabled"`
 		Mode               string      `json:"mode"`
 		Url                string      `json:"url"`
+		LatencyUrl         string      `json:"latency_url"`
 		Timeout            interface{} `json:"timeout"`
 		Groups             []string    `json:"groups"`
 		Tags               []string    `json:"tags"`
@@ -745,6 +748,11 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 	err = models.SetSetting("speed_test_url", req.Url)
 	if err != nil {
 		utils.FailWithMsg(c, "保存URL配置失败")
+		return
+	}
+	err = models.SetSetting("speed_test_latency_url", req.LatencyUrl)
+	if err != nil {
+		utils.FailWithMsg(c, "保存延迟测试URL配置失败")
 		return
 	}
 
