@@ -306,6 +306,10 @@ func generateClashRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxy
 	var lines []string
 	lines = append(lines, "rules:")
 	for _, rule := range rules {
+		// 跳过 Clash 不支持的规则类型
+		if isUnsupportedClashRule(rule) {
+			continue
+		}
 		lines = append(lines, fmt.Sprintf("  - %s", rule))
 	}
 
@@ -440,6 +444,31 @@ func parseRuleList(content string, group string) []string {
 	}
 
 	return rules
+}
+
+// isUnsupportedClashRule 检查是否为 Clash 不支持的规则类型
+// Surge 特有的规则类型在 Clash 中不可用，需要过滤
+func isUnsupportedClashRule(rule string) bool {
+	// Clash 不支持的规则类型前缀
+	unsupportedPrefixes := []string{
+		"URL-REGEX,",  // URL 正则匹配
+		"USER-AGENT,", // User-Agent 匹配
+		//"PROCESS-NAME,", // 进程名匹配（部分 Clash 版本不支持）
+		"DEST-PORT,", // 目标端口（Clash 使用 DST-PORT）
+		"SRC-PORT,",  // 源端口（Clash 使用 SRC-PORT 但格式可能不同）
+		"IN-PORT,",   // 入站端口
+		"PROTOCOL,",  // 协议匹配
+		"SCRIPT,",    // 脚本规则
+		"SUBNET,",    // 子网匹配
+		"RULE-SET,",  // RULE-SET 在展开模式下不应出现
+	}
+
+	for _, prefix := range unsupportedPrefixes {
+		if strings.HasPrefix(rule, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 // generateSurgeProxyGroups 生成 Surge 格式的代理组
