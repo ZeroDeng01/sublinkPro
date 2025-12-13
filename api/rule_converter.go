@@ -413,6 +413,7 @@ func expandRulesParallel(rulesets []ACLRuleset, useProxy bool, proxyLink string)
 }
 
 // parseRuleList 解析规则列表文件
+// 正确处理 no-resolve 参数位置：IP-CIDR,地址,策略组,no-resolve
 func parseRuleList(content string, group string) []string {
 	var rules []string
 	scanner := bufio.NewScanner(strings.NewReader(content))
@@ -425,8 +426,17 @@ func parseRuleList(content string, group string) []string {
 			continue
 		}
 
-		// 添加目标组
-		rules = append(rules, fmt.Sprintf("%s,%s", line, group))
+		// 检查是否包含 no-resolve 参数
+		// ACL4SSR 格式: IP-CIDR,地址,no-resolve
+		// Clash 正确格式: IP-CIDR,地址,策略组,no-resolve
+		if strings.HasSuffix(line, ",no-resolve") {
+			// 移除末尾的 no-resolve，添加策略组后再加回去
+			lineWithoutNoResolve := strings.TrimSuffix(line, ",no-resolve")
+			rules = append(rules, fmt.Sprintf("%s,%s,no-resolve", lineWithoutNoResolve, group))
+		} else {
+			// 普通规则，直接添加策略组
+			rules = append(rules, fmt.Sprintf("%s,%s", line, group))
+		}
 	}
 
 	return rules
