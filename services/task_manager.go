@@ -416,3 +416,8 @@ func InitTaskManager() {
 
 	_ = tm // 确保初始化
 }
+
+// CancelTask 取消任务的包装函数
+func CancelTask(taskID string) error {
+	return GetTaskManager().CancelTask(taskID)
+}

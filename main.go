@@ -16,6 +16,7 @@ import (
 	"sublink/services/geoip"
 	"sublink/services/mihomo"
 	"sublink/services/sse"
+	"sublink/services/telegram"
 	"sublink/settings"
 	"sublink/utils"
 
@@ -206,6 +207,18 @@ func Run(port int) {
 
 	// 初始化任务管理器
 	services.InitTaskManager()
+
+	// 初始化 Telegram 机器人 (异步)
+	go func() {
+		log.Println("正在异步初始化 Telegram 机器人...")
+		if err := telegram.InitBot(); err != nil {
+			log.Printf("初始化 Telegram 机器人失败: %v", err)
+		}
+	}()
+
+	// 设置 Telegram 服务包装器和 SSE 通知函数
+	services.InitTelegramWrapper()
+	sse.TelegramNotifier = telegram.SendNotification
 
 	// 从数据库加载定时任务
 	err := scheduler.LoadFromDatabase()

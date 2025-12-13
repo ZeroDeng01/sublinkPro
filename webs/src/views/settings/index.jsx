@@ -10,11 +10,13 @@ import Snackbar from '@mui/material/Snackbar';
 // icons
 import PersonIcon from '@mui/icons-material/Person';
 import WebhookIcon from '@mui/icons-material/Webhook';
+import TelegramIcon from '@mui/icons-material/Telegram';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import ProfileSettings from './components/ProfileSettings';
 import WebhookSettings from './components/WebhookSettings';
+import TelegramSettings from './components/TelegramSettings';
 
 // ==============================|| Tab Panel ||============================== //
 
@@ -66,6 +68,12 @@ export default function UserSettings() {
         >
           <Tab icon={<PersonIcon sx={{ mr: 1 }} />} iconPosition="start" label="个人设置" {...a11yProps(0)} />
           <Tab icon={<WebhookIcon sx={{ mr: 1 }} />} iconPosition="start" label="Webhook 设置" {...a11yProps(1)} />
+          <Tab
+            icon={<TelegramIcon sx={{ mr: 1, color: tabValue === 2 ? '#0088cc' : 'inherit' }} />}
+            iconPosition="start"
+            label="Telegram 机器人"
+            {...a11yProps(2)}
+          />
         </Tabs>
       </Box>
 
@@ -75,6 +83,10 @@ export default function UserSettings() {
 
       <TabPanel value={tabValue} index={1}>
         <WebhookSettings showMessage={showMessage} loading={loading} setLoading={setLoading} />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={2}>
+        <TelegramSettings showMessage={showMessage} loading={loading} setLoading={setLoading} />
       </TabPanel>
 
       {/* 提示消息 */}

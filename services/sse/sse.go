@@ -141,6 +141,9 @@ func (broker *SSEBroker) BroadcastEvent(event string, payload NotificationPayloa
 	// Trigger Webhook
 	go TriggerWebhook(event, payload)
 
+	// Trigger Telegram notification
+	go TriggerTelegram(event, payload)
+
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("Error marshaling SSE payload: %v", err)
@@ -307,4 +310,14 @@ func SendWebhook(config map[string]string, event string, payload NotificationPay
 		log.Printf("Webhook sent successfully to %s", urlStr)
 	}
 	return nil
+}
+
+// TelegramNotifier 用于发送 Telegram 通知的函数类型
+var TelegramNotifier func(event string, payload NotificationPayload)
+
+// TriggerTelegram 触发 Telegram 通知
+func TriggerTelegram(event string, payload NotificationPayload) {
+	if TelegramNotifier != nil {
+		TelegramNotifier(event, payload)
+	}
 }
