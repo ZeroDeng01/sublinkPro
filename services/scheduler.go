@@ -534,6 +534,10 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 		}
 	}
 
+	// 获取是否包含握手时间（默认true，测量完整连接时间；false则预热后测量纯RTT）
+	includeHandshakeStr, _ := models.GetSetting("speed_test_include_handshake")
+	includeHandshake := includeHandshakeStr != "false" // 默认包含握手时间
+
 	// 获取延迟测试并发数
 	const maxConcurrency = 1000
 	latencyConcurrency := 10 // 默认延迟测试并发数
@@ -651,7 +655,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 			}
 
 			// 使用多次采样测量延迟
-			latency, err := mihomo.MihomoDelayWithSamples(n.Link, latencyTestUrl, speedTestTimeout, latencySamples)
+			latency, err := mihomo.MihomoDelayWithSamples(n.Link, latencyTestUrl, speedTestTimeout, latencySamples, includeHandshake)
 
 			mu.Lock()
 			defer mu.Unlock()

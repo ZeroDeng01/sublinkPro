@@ -66,19 +66,25 @@ func GetMihomoAdapter(nodeLink string) (constant.Proxy, error) {
 
 // MihomoDelay performs a latency test using Mihomo adapter (Protocol-aware)
 // Returns latency in ms by measuring actual HTTP request round-trip time
+// This is the legacy function that includes handshake time by default
 func MihomoDelay(nodeLink string, testUrl string, timeout time.Duration) (latency int, err error) {
-	// Recover from any panics and return error with zero latency
-	defer func() {
-		if r := recover(); r != nil {
-			latency = 0
-			err = fmt.Errorf("panic in MihomoDelay: %v", r)
-		}
-	}()
-
 	proxyAdapter, err := GetMihomoAdapter(nodeLink)
 	if err != nil {
 		return 0, err
 	}
+	return MihomoDelayWithAdapter(proxyAdapter, testUrl, timeout)
+}
+
+// MihomoDelayWithAdapter performs latency test with an existing adapter (avoids repeated adapter creation)
+// Returns latency in ms by measuring actual HTTP request round-trip time including handshake
+func MihomoDelayWithAdapter(proxyAdapter constant.Proxy, testUrl string, timeout time.Duration) (latency int, err error) {
+	// Recover from any panics and return error with zero latency
+	defer func() {
+		if r := recover(); r != nil {
+			latency = 0
+			err = fmt.Errorf("panic in MihomoDelayWithAdapter: %v", r)
+		}
+	}()
 
 	if testUrl == "" {
 		testUrl = "http://cp.cloudflare.com/generate_204"
@@ -88,13 +94,45 @@ func MihomoDelay(nodeLink string, testUrl string, timeout time.Duration) (latenc
 	defer cancel()
 
 	// Create HTTP client with custom transport that uses the proxy adapter
-	client := &http.Client{
+	// DisableKeepAlives: true ensures fresh connection for accurate measurement
+	client := createHTTPClientWithAdapter(proxyAdapter, timeout, true)
+
+	// Use HEAD request for minimal data transfer, more accurate latency measurement
+	req, err := http.NewRequestWithContext(ctx, "HEAD", testUrl, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create request error: %v", err)
+	}
+
+	// Measure actual HTTP round-trip time
+	start := time.Now()
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("http request error: %v", err)
+	}
+	latency = int(time.Since(start).Milliseconds())
+
+	// Clean up response body
+	if resp != nil && resp.Body != nil {
+		go func() {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
+		}()
+	}
+
+	return latency, nil
+}
+
+// createHTTPClientWithAdapter creates an HTTP client using the proxy adapter
+// disableKeepAlives: true for measuring full connection time, false for reusing connections
+func createHTTPClientWithAdapter(proxyAdapter constant.Proxy, timeout time.Duration, disableKeepAlives bool) *http.Client {
+	return &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 				// Recover from panics in DialContext
+				var dialErr error
 				defer func() {
 					if r := recover(); r != nil {
-						err = fmt.Errorf("panic in DialContext: %v", r)
+						dialErr = fmt.Errorf("panic in DialContext: %v", r)
 					}
 				}()
 
@@ -120,48 +158,27 @@ func MihomoDelay(nodeLink string, testUrl string, timeout time.Duration) (latenc
 					DstPort: p,
 					Type:    constant.HTTP,
 				}
-				return proxyAdapter.DialContext(ctx, md)
+				conn, err := proxyAdapter.DialContext(ctx, md)
+				if dialErr != nil {
+					return nil, dialErr
+				}
+				return conn, err
 			},
 			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
-			DisableKeepAlives: true, // Ensure fresh connection for accurate measurement
+			DisableKeepAlives: disableKeepAlives,
 		},
 		Timeout: timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse // Don't follow redirects for latency test
 		},
 	}
-
-	// Use HEAD request for minimal data transfer, more accurate latency measurement
-	req, err := http.NewRequestWithContext(ctx, "HEAD", testUrl, nil)
-	if err != nil {
-		return 0, fmt.Errorf("create request error: %v", err)
-	}
-
-	// Measure actual HTTP round-trip time
-	start := time.Now()
-	resp, err := client.Do(req)
-	if err != nil {
-		return 0, fmt.Errorf("http request error: %v", err)
-	}
-	latency = int(time.Since(start).Milliseconds())
-
-	// Clean up response body
-	defer func() {
-		if resp != nil && resp.Body != nil {
-			go func() {
-				_, _ = io.Copy(io.Discard, resp.Body)
-				_ = resp.Body.Close()
-			}()
-		}
-	}()
-
-	return latency, nil
 }
 
 // MihomoDelayWithSamples performs multiple latency tests and returns the average
 // It removes the highest outlier to improve accuracy
 // samples: number of samples to take (minimum 1, recommended 3)
-func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Duration, samples int) (latency int, err error) {
+// includeHandshake: if true, measure full connection time; if false, warmup first then measure pure RTT
+func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Duration, samples int, includeHandshake bool) (latency int, err error) {
 	// Recover from any panics
 	defer func() {
 		if r := recover(); r != nil {
@@ -177,16 +194,77 @@ func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Durati
 		samples = 10 // Cap at 10 to prevent abuse
 	}
 
+	if testUrl == "" {
+		testUrl = "http://cp.cloudflare.com/generate_204"
+	}
+
+	// Create adapter once and reuse for all samples (CPU optimization)
+	proxyAdapter, err := GetMihomoAdapter(nodeLink)
+	if err != nil {
+		return 0, err
+	}
+
 	var results []int
 	var lastErr error
 
-	for i := 0; i < samples; i++ {
-		lat, sampleErr := MihomoDelay(nodeLink, testUrl, timeout)
-		if sampleErr != nil {
-			lastErr = sampleErr
-			continue
+	if includeHandshake {
+		// Mode 1: Include handshake time - each sample uses fresh connection
+		for i := 0; i < samples; i++ {
+			lat, sampleErr := MihomoDelayWithAdapter(proxyAdapter, testUrl, timeout)
+			if sampleErr != nil {
+				lastErr = sampleErr
+				continue
+			}
+			results = append(results, lat)
 		}
-		results = append(results, lat)
+	} else {
+		// Mode 2: Exclude handshake - warmup first, then measure pure RTT
+		// Create client with keep-alive enabled for connection reuse
+		client := createHTTPClientWithAdapter(proxyAdapter, timeout, false)
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		// Warmup request - establish connection (don't measure this)
+		warmupReq, err := http.NewRequestWithContext(ctx, "HEAD", testUrl, nil)
+		if err != nil {
+			return 0, fmt.Errorf("create warmup request error: %v", err)
+		}
+		warmupResp, warmupErr := client.Do(warmupReq)
+		if warmupErr != nil {
+			// Warmup failed - node is unreachable, return immediately
+			return 0, fmt.Errorf("warmup connection failed: %v", warmupErr)
+		}
+		if warmupResp != nil && warmupResp.Body != nil {
+			_, _ = io.Copy(io.Discard, warmupResp.Body)
+			_ = warmupResp.Body.Close()
+		}
+
+		// Now measure pure RTT using the warmed-up connection
+		for i := 0; i < samples; i++ {
+			sampleCtx, sampleCancel := context.WithTimeout(context.Background(), timeout)
+			req, reqErr := http.NewRequestWithContext(sampleCtx, "HEAD", testUrl, nil)
+			if reqErr != nil {
+				sampleCancel()
+				lastErr = reqErr
+				continue
+			}
+
+			start := time.Now()
+			resp, doErr := client.Do(req)
+			lat := int(time.Since(start).Milliseconds())
+			sampleCancel()
+
+			if doErr != nil {
+				lastErr = doErr
+				continue
+			}
+			if resp != nil && resp.Body != nil {
+				_, _ = io.Copy(io.Discard, resp.Body)
+				_ = resp.Body.Close()
+			}
+			results = append(results, lat)
+		}
 	}
 
 	if len(results) == 0 {

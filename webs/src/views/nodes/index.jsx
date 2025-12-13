@@ -163,7 +163,8 @@ export default function NodeList() {
     latency_samples: 3,
     traffic_by_group: true,
     traffic_by_source: true,
-    traffic_by_node: false
+    traffic_by_node: false,
+    include_handshake: true
   });
 
   // 国家筛选
@@ -802,7 +803,8 @@ export default function NodeList() {
           tags: [],
           latency_concurrency: 0,
           speed_concurrency: 1,
-          latency_samples: 3
+          latency_samples: 3,
+          include_handshake: true
         }
       );
       setSpeedTestDialogOpen(true);

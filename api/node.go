@@ -699,6 +699,10 @@ func GetSpeedTestConfig(c *gin.Context) {
 	trafficByNodeStr, _ := models.GetSetting("speed_test_traffic_by_node")
 	trafficByNode := trafficByNodeStr == "true" // 默认关闭
 
+	// 获取是否包含握手时间
+	includeHandshakeStr, _ := models.GetSetting("speed_test_include_handshake")
+	includeHandshake := includeHandshakeStr != "false" // 默认包含
+
 	utils.OkDetailed(c, "获取成功", gin.H{
 		"cron":                cron,
 		"enabled":             enabled,
@@ -715,6 +719,7 @@ func GetSpeedTestConfig(c *gin.Context) {
 		"traffic_by_group":    trafficByGroup,
 		"traffic_by_source":   trafficBySource,
 		"traffic_by_node":     trafficByNode,
+		"include_handshake":   includeHandshake,
 	})
 }
 
@@ -736,6 +741,7 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		TrafficByGroup     *bool       `json:"traffic_by_group"`
 		TrafficBySource    *bool       `json:"traffic_by_source"`
 		TrafficByNode      *bool       `json:"traffic_by_node"`
+		IncludeHandshake   *bool       `json:"include_handshake"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -853,6 +859,15 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		err = models.SetSetting("speed_test_traffic_by_node", strconv.FormatBool(*req.TrafficByNode))
 		if err != nil {
 			utils.FailWithMsg(c, "保存流量统计配置失败")
+			return
+		}
+	}
+
+	// 保存是否包含握手时间
+	if req.IncludeHandshake != nil {
+		err = models.SetSetting("speed_test_include_handshake", strconv.FormatBool(*req.IncludeHandshake))
+		if err != nil {
+			utils.FailWithMsg(c, "保存握手时间配置失败")
 			return
 		}
 	}
