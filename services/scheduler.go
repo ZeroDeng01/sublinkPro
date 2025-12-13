@@ -5,7 +5,6 @@ import (
 	"log"
 	"math"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sublink/constants"
@@ -543,7 +542,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	latencyConcurrency := 10 // 默认延迟测试并发数
 	latencyConcurrencyStr, _ := models.GetSetting("speed_test_latency_concurrency")
 	if latencyConcurrencyStr != "" {
-		if c, err := strconv.Atoi(latencyConcurrencyStr); err == nil && c > 0 {
+		if c, err := strconv.Atoi(latencyConcurrencyStr); err == nil && c >= 0 {
 			latencyConcurrency = c
 		}
 	}
@@ -551,36 +550,47 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	if latencyConcurrencyStr == "" {
 		oldConcurrencyStr, _ := models.GetSetting("speed_test_concurrency")
 		if oldConcurrencyStr != "" {
-			if c, err := strconv.Atoi(oldConcurrencyStr); err == nil && c > 0 {
+			if c, err := strconv.Atoi(oldConcurrencyStr); err == nil && c >= 0 {
 				latencyConcurrency = c
 			}
 		}
 	}
-	// 自动设置（如果为0）
-	if latencyConcurrency <= 0 {
-		cpuCount := runtime.NumCPU()
-		latencyConcurrency = cpuCount * 2
-		if latencyConcurrency < 2 {
-			latencyConcurrency = 2
+
+	// 标记是否使用动态并发
+	useAdaptiveLatency := latencyConcurrency == 0
+	var latencyController *AdaptiveConcurrencyController
+	if useAdaptiveLatency {
+		latencyController = NewAdaptiveConcurrencyController(AdaptiveTypeLatency, totalNodes)
+		latencyConcurrency = latencyController.GetCurrentConcurrency()
+	} else {
+		if latencyConcurrency > maxConcurrency {
+			log.Printf("警告: 延迟并发数 %d 超过最大限制，已调整为 %d", latencyConcurrency, maxConcurrency)
+			latencyConcurrency = maxConcurrency
 		}
-		log.Printf("自动设置延迟测试并发数: %d (基于 %d CPU核心)", latencyConcurrency, cpuCount)
-	}
-	if latencyConcurrency > maxConcurrency {
-		log.Printf("警告: 延迟并发数 %d 超过最大限制，已调整为 %d", latencyConcurrency, maxConcurrency)
-		latencyConcurrency = maxConcurrency
 	}
 
 	// 获取速度测试并发数
 	speedConcurrency := 1 // 默认速度测试并发数为1（串行）
 	speedConcurrencyStr, _ := models.GetSetting("speed_test_speed_concurrency")
 	if speedConcurrencyStr != "" {
-		if c, err := strconv.Atoi(speedConcurrencyStr); err == nil && c > 0 {
+		if c, err := strconv.Atoi(speedConcurrencyStr); err == nil && c >= 0 {
 			speedConcurrency = c
 		}
 	}
-	if speedConcurrency > 128 {
-		log.Printf("警告: 速度并发数 %d 超过建议值，已调整为 128", speedConcurrency)
-		speedConcurrency = 128 // 速度测试并发数上限较低，避免带宽竞争
+
+	// 标记是否使用动态并发
+	useAdaptiveSpeed := speedConcurrency == 0
+	var speedController *AdaptiveConcurrencyController
+	if useAdaptiveSpeed {
+		speedController = NewAdaptiveConcurrencyController(AdaptiveTypeSpeed, totalNodes)
+		speedConcurrency = speedController.GetCurrentConcurrency()
+	} else {
+		// 硬性并发上限：速度测试不应超过8以避免带宽竞争
+		const maxSpeedConcurrency = 32
+		if speedConcurrency > maxSpeedConcurrency {
+			log.Printf("警告: 速度并发数 %d 超过安全上限，已调整为 %d", speedConcurrency, maxSpeedConcurrency)
+			speedConcurrency = maxSpeedConcurrency
+		}
 	}
 
 	// 结果统计
@@ -621,8 +631,13 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	speedTestResults := make([]models.SpeedTestResult, 0, len(nodes))
 
 	// ========== 阶段一：延迟测试 ==========
-	log.Printf("阶段一：开始延迟测试，并发数: %d，采样次数: %d", latencyConcurrency, latencySamples)
-	latencySem := make(chan struct{}, latencyConcurrency)
+	log.Printf("阶段一：开始延迟测试，并发数: %d（动态: %v），采样次数: %d", latencyConcurrency, useAdaptiveLatency, latencySamples)
+
+	// 固定并发模式的 semaphore（仅在非动态模式下使用）
+	var latencySem chan struct{}
+	if !useAdaptiveLatency {
+		latencySem = make(chan struct{}, latencyConcurrency)
+	}
 	var latencyWg sync.WaitGroup
 
 	for i, node := range nodes {
@@ -642,10 +657,24 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 		}
 
 		latencyWg.Add(1)
-		latencySem <- struct{}{}
+
+		// 根据是否使用动态并发选择不同的获取方式
+		if useAdaptiveLatency && latencyController != nil {
+			// 使用带延迟的获取方式，平滑任务启动
+			latencyController.AcquireWithDelay()
+		} else {
+			latencySem <- struct{}{}
+		}
+
 		go func(idx int, n models.Node) {
 			defer latencyWg.Done()
-			defer func() { <-latencySem }()
+			defer func() {
+				if useAdaptiveLatency && latencyController != nil {
+					latencyController.ReleaseDynamic()
+				} else {
+					<-latencySem
+				}
+			}()
 
 			// 在 goroutine 内再次检查取消状态
 			select {
@@ -668,6 +697,19 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 			nodeResults[idx] = nodeResult{node: n, latency: latency, err: err}
 			currentCompleted := int(completedCount) + 1
 			completedCount++
+
+			// 向自适应控制器报告结果
+			if useAdaptiveLatency && latencyController != nil {
+				if err != nil {
+					latencyController.ReportFailure()
+				} else {
+					latencyController.ReportSuccess(latency)
+				}
+				// 每N个任务检查一次是否需要调整
+				if currentCompleted%LatencyAdjustCheckInterval == 0 {
+					latencyController.MaybeAdjust()
+				}
+			}
 
 			// TCP模式下收集结果（稍后批量写入）
 			if speedTestMode == "tcp" {
@@ -739,11 +781,16 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 
 	// ========== 阶段二：速度测试（仅 mihomo 模式）==========
 	if speedTestMode != "tcp" {
-		log.Printf("阶段二：开始速度测试，并发数: %d", speedConcurrency)
+		log.Printf("阶段二：开始速度测试，并发数: %d（动态: %v）", speedConcurrency, useAdaptiveSpeed)
 
 		// 重置进度计数器用于阶段二
 		completedCount = 0
-		speedSem := make(chan struct{}, speedConcurrency)
+
+		// 固定并发模式的 semaphore（仅在非动态模式下使用）
+		var speedSem chan struct{}
+		if !useAdaptiveSpeed {
+			speedSem = make(chan struct{}, speedConcurrency)
+		}
 		var speedWg sync.WaitGroup
 
 		for i := range nodeResults {
@@ -789,10 +836,24 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 			}
 
 			speedWg.Add(1)
-			speedSem <- struct{}{}
+
+			// 根据是否使用动态并发选择不同的获取方式
+			if useAdaptiveSpeed && speedController != nil {
+				// 使用带延迟的获取方式，平滑任务启动
+				speedController.AcquireWithDelay()
+			} else {
+				speedSem <- struct{}{}
+			}
+
 			go func(result *nodeResult) {
 				defer speedWg.Done()
-				defer func() { <-speedSem }()
+				defer func() {
+					if useAdaptiveSpeed && speedController != nil {
+						speedController.ReleaseDynamic()
+					} else {
+						<-speedSem
+					}
+				}()
 
 				// 在 goroutine 内检查取消状态
 				select {
@@ -844,6 +905,19 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 
 				currentCompleted := int(completedCount) + 1
 				completedCount++
+
+				// 向自适应控制器报告结果
+				if useAdaptiveSpeed && speedController != nil {
+					if err != nil {
+						speedController.ReportFailure()
+					} else {
+						speedController.ReportSuccess(int(speed * 100)) // 速度转换为整数以便统计
+					}
+					// 每N个任务检查一次是否需要调整（速度测试调整更频繁）
+					if currentCompleted%SpeedAdjustCheckInterval == 0 {
+						speedController.MaybeAdjust()
+					}
+				}
 
 				var resultStatus string
 				var resultData map[string]interface{}

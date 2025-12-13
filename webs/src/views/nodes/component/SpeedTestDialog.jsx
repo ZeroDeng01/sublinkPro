@@ -352,7 +352,7 @@ export default function SpeedTestDialog({
                     setSpeedTestForm({ ...speedTestForm, latency_concurrency: e.target.value === '' ? 0 : Number(e.target.value) })
                   }
                   inputProps={{ min: 0, max: 1000 }}
-                  helperText="0=自动"
+                  helperText="0=智能动态"
                 />
               </Grid>
               <Grid item size={{ xs: 12, sm: 4 }}>
@@ -361,10 +361,13 @@ export default function SpeedTestDialog({
                   size="small"
                   label="速度测试并发"
                   type="number"
-                  value={speedTestForm.speed_concurrency || 1}
-                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, speed_concurrency: Math.max(1, Number(e.target.value) || 1) })}
-                  inputProps={{ min: 1, max: 128 }}
-                  helperText="建议1-3"
+                  value={speedTestForm.speed_concurrency || ''}
+                  placeholder="自动"
+                  onChange={(e) =>
+                    setSpeedTestForm({ ...speedTestForm, speed_concurrency: e.target.value === '' ? 0 : Number(e.target.value) })
+                  }
+                  inputProps={{ min: 0, max: 128 }}
+                  helperText="0=智能动态"
                 />
               </Grid>
               <Grid item size={{ xs: 12, sm: 4 }}>
