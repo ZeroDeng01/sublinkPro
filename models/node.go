@@ -147,66 +147,69 @@ type SpeedTestResult struct {
 	LinkCountry    string
 }
 
-// BatchAddNodes 批量添加节点（事务+分块）
+// BatchAddNodes 批量添加节点（跳过重复节点）
+// 使用 ON CONFLICT DO NOTHING 跳过已存在的节点，不会因为重复而失败
 func BatchAddNodes(nodes []Node) error {
 	if len(nodes) == 0 {
 		return nil
 	}
 
-	// 使用事务批量插入
-	err := database.WithTransaction(func(tx *gorm.DB) error {
-		// 分块处理，避免 SQLite 变量限制
-		chunks := chunkNodes(nodes, database.BatchSize)
-		for _, chunk := range chunks {
-			if err := tx.Create(&chunk).Error; err != nil {
-				return err
-			}
+	// 分块处理，避免 SQLite 变量限制
+	// 使用 ON CONFLICT DO NOTHING 跳过重复的 link，不中断批量插入
+	chunks := chunkNodes(nodes, database.BatchSize)
+	insertedCount := 0
+
+	for _, chunk := range chunks {
+		result := database.DB.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "link"}},
+			DoNothing: true,
+		}).Create(&chunk)
+
+		if result.Error != nil {
+			log.Printf("批量插入节点块失败: %v", result.Error)
+			// 继续处理下一个块，不中断
+			continue
 		}
-		return nil
-	})
-
-	if err != nil {
-		return err
+		insertedCount += int(result.RowsAffected)
 	}
 
-	// 事务成功后批量更新缓存
+	// 批量更新缓存（只更新成功插入的，有ID的节点）
 	for _, node := range nodes {
-		nodeCache.Set(node.ID, node)
+		if node.ID > 0 {
+			nodeCache.Set(node.ID, node)
+		}
 	}
 
+	log.Printf("批量添加节点完成: 尝试 %d 个，实际插入 %d 个（跳过已存在）", len(nodes), insertedCount)
 	return nil
 }
 
-// BatchUpdateSpeedResults 批量更新测速结果（事务+分块）
+// BatchUpdateSpeedResults 批量更新测速结果（允许部分失败）
+// 单个节点更新失败不会影响其他节点的更新
 func BatchUpdateSpeedResults(results []SpeedTestResult) error {
 	if len(results) == 0 {
 		return nil
 	}
 
-	// 使用事务批量更新
-	err := database.WithTransaction(func(tx *gorm.DB) error {
-		for _, r := range results {
-			if err := tx.Model(&Node{}).Where("id = ?", r.NodeID).Updates(map[string]interface{}{
-				"speed":            r.Speed,
-				"speed_status":     r.SpeedStatus,
-				"delay_time":       r.DelayTime,
-				"delay_status":     r.DelayStatus,
-				"latency_check_at": r.LatencyCheckAt,
-				"speed_check_at":   r.SpeedCheckAt,
-				"link_country":     r.LinkCountry,
-			}).Error; err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	// 事务成功后批量更新缓存
+	// 逐个更新，失败时记录日志但继续处理
+	successCount := 0
 	for _, r := range results {
+		if err := database.DB.Model(&Node{}).Where("id = ?", r.NodeID).Updates(map[string]interface{}{
+			"speed":            r.Speed,
+			"speed_status":     r.SpeedStatus,
+			"delay_time":       r.DelayTime,
+			"delay_status":     r.DelayStatus,
+			"latency_check_at": r.LatencyCheckAt,
+			"speed_check_at":   r.SpeedCheckAt,
+			"link_country":     r.LinkCountry,
+		}).Error; err != nil {
+			log.Printf("更新节点 %d 测速结果失败: %v", r.NodeID, err)
+			// 继续处理下一个，不中断
+			continue
+		}
+		successCount++
+
+		// 更新缓存
 		if cachedNode, ok := nodeCache.Get(r.NodeID); ok {
 			cachedNode.Speed = r.Speed
 			cachedNode.SpeedStatus = r.SpeedStatus
@@ -219,6 +222,7 @@ func BatchUpdateSpeedResults(results []SpeedTestResult) error {
 		}
 	}
 
+	log.Printf("批量更新测速结果完成: 尝试 %d 个，成功 %d 个", len(results), successCount)
 	return nil
 }
 
