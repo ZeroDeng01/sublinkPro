@@ -159,43 +159,51 @@ func DecodeSurge(proxys, groups []string, file string) (string, error) {
 		}
 	}
 
-	proxyReg := regexp.MustCompile(`(?s)\[Proxy\](.*?)\[*]`)
-	groupReg := regexp.MustCompile(`(?s)\[Proxy Group\](.*?)\[*]`)
+	// 按行处理模板文件，避免正则匹配错误
+	lines := strings.Split(string(surge), "\n")
+	var result []string
+	currentSection := ""
+	grouplist := strings.Join(groups, ", ")
+	regexPattern := regexp.MustCompile(`\([^)]+\|[^)]+\)`)
 
-	proxyPart := proxyReg.ReplaceAllStringFunc(string(surge), func(s string) string {
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
 
-		text := strings.Join(proxys, "\n")
-		return "[Proxy]\n" + text + s[len("[Proxy]"):]
-	})
-	groupPart := groupReg.ReplaceAllStringFunc(proxyPart, func(s string) string {
-		lines := strings.Split(s, "\n")
-		grouplist := strings.Join(groups, ",")
-		// 正则模式检测器
-		regexPattern := regexp.MustCompile(`\([^)]+\|[^)]+\)`)
+		// 检测 section 标记
+		if strings.HasPrefix(trimmedLine, "[") && strings.HasSuffix(trimmedLine, "]") {
+			currentSection = trimmedLine
+			result = append(result, line)
 
-		for i, line := range lines {
-			if strings.Contains(line, "=") {
-				// 检查这一行是否包含正则模式
-				hasRegex := regexPattern.MatchString(line)
-
-				if hasRegex {
-					// 处理行中的正则模式，替换为匹配的节点
-					processedLine := processRegexPatternsInLine(line, groups)
-					// 如果有正则模式，只使用匹配的节点，不追加全部节点
-					lines[i] = strings.TrimSpace(processedLine)
-				} else {
-					// 没有正则模式，追加所有节点
-					lines[i] = strings.TrimSpace(line) + ", " + grouplist
+			// 在 [Proxy] section 后立即插入所有节点
+			if currentSection == "[Proxy]" {
+				for _, proxy := range proxys {
+					result = append(result, proxy)
 				}
-				// 检查处理后的行是否需要 DIRECT 后备
-				// 如果代理组没有有效节点，插入 DIRECT 避免客户端报错
-				lines[i] = ensureProxyGroupHasProxies(lines[i])
 			}
+			continue
 		}
-		return strings.Join(lines, "\n") + s[len("[Proxy Group]"):]
-	})
 
-	return groupPart, nil
+		// 处理 [Proxy Group] section 中的代理组行
+		if currentSection == "[Proxy Group]" && strings.Contains(line, "=") && trimmedLine != "" {
+			// 检查这一行是否包含正则模式
+			hasRegex := regexPattern.MatchString(line)
+
+			if hasRegex {
+				// 处理行中的正则模式，替换为匹配的节点
+				processedLine := processRegexPatternsInLine(line, groups)
+				line = strings.TrimSpace(processedLine)
+			} else {
+				// 没有正则模式，追加所有节点
+				line = strings.TrimSpace(line) + ", " + grouplist
+			}
+			// 确保代理组有有效节点
+			line = ensureProxyGroupHasProxies(line)
+		}
+
+		result = append(result, line)
+	}
+
+	return strings.Join(result, "\n"), nil
 }
 
 // processRegexPatternsInLine 处理 Surge proxy group 行中的正则模式
