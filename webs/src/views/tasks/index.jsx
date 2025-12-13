@@ -30,6 +30,9 @@ import FormControl from '@mui/material/FormControl';
 import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Radio from '@mui/material/Radio';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import InputLabel from '@mui/material/InputLabel';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SpeedIcon from '@mui/icons-material/Speed';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
@@ -43,7 +46,6 @@ import AutoModeIcon from '@mui/icons-material/AutoMode';
 import StopIcon from '@mui/icons-material/Stop';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 import MainCard from 'ui-component/cards/MainCard';
 import { getTasks, getTaskStats, stopTask, clearTaskHistory } from 'api/tasks';
@@ -342,6 +344,7 @@ const TaskMobileCard = ({ task, isDark, onStop, canStop }) => {
                       );
                     }
                   } catch (e) {
+                    console.error(e)
                     // ignore parse error
                   }
                   return null;
@@ -402,6 +405,8 @@ export default function TaskList() {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
+  const [typeFilter, setTypeFilter] = useState('');
+  const [triggerFilter, setTriggerFilter] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
@@ -430,6 +435,8 @@ export default function TaskList() {
       setLoading(true);
       const res = await getTasks({
         status: getStatusFilter(),
+        type: typeFilter,
+        trigger: triggerFilter,
         page: page + 1,
         pageSize: rowsPerPage
       });
@@ -442,7 +449,7 @@ export default function TaskList() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, tabValue]);
+  }, [page, rowsPerPage, tabValue, typeFilter, triggerFilter]);
 
   // Load stats
   const loadStats = useCallback(async () => {
@@ -507,6 +514,18 @@ export default function TaskList() {
   // Handle tab change
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+    setPage(0);
+  };
+
+  // Handle type filter change
+  const handleTypeFilterChange = (event) => {
+    setTypeFilter(event.target.value);
+    setPage(0);
+  };
+
+  // Handle trigger filter change
+  const handleTriggerFilterChange = (event) => {
+    setTriggerFilter(event.target.value);
     setPage(0);
   };
 
@@ -626,6 +645,81 @@ export default function TaskList() {
         <Tab label="已取消" />
         <Tab label="失败" />
       </Tabs>
+
+      {/* Filters */}
+      <Stack direction={isMobile ? 'column' : 'row'} spacing={2} sx={{ mb: 2 }} alignItems={isMobile ? 'stretch' : 'center'}>
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel id="type-filter-label">任务类型</InputLabel>
+          <Select
+            labelId="type-filter-label"
+            value={typeFilter}
+            label="任务类型"
+            onChange={handleTypeFilterChange}
+            sx={{
+              borderRadius: 2,
+              '& .MuiSelect-select': { display: 'flex', alignItems: 'center', gap: 1 }
+            }}
+          >
+            <MenuItem value="">
+              <em>全部类型</em>
+            </MenuItem>
+            <MenuItem value="speed_test">
+              <SpeedIcon sx={{ fontSize: 16, mr: 1, color: '#10b981' }} />
+              节点测速
+            </MenuItem>
+            <MenuItem value="sub_update">
+              <CloudSyncIcon sx={{ fontSize: 16, mr: 1, color: '#6366f1' }} />
+              订阅更新
+            </MenuItem>
+            <MenuItem value="tag_rule">
+              <LocalOfferIcon sx={{ fontSize: 16, mr: 1, color: '#f59e0b' }} />
+              标签规则
+            </MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel id="trigger-filter-label">触发方式</InputLabel>
+          <Select
+            labelId="trigger-filter-label"
+            value={triggerFilter}
+            label="触发方式"
+            onChange={handleTriggerFilterChange}
+            sx={{
+              borderRadius: 2,
+              '& .MuiSelect-select': { display: 'flex', alignItems: 'center', gap: 1 }
+            }}
+          >
+            <MenuItem value="">
+              <em>全部方式</em>
+            </MenuItem>
+            <MenuItem value="manual">
+              <PersonIcon sx={{ fontSize: 16, mr: 1, color: '#8b5cf6' }} />
+              手动
+            </MenuItem>
+            <MenuItem value="scheduled">
+              <AutoModeIcon sx={{ fontSize: 16, mr: 1, color: '#06b6d4' }} />
+              定时
+            </MenuItem>
+          </Select>
+        </FormControl>
+
+        {/* Show clear filters button when filters are active */}
+        {(typeFilter || triggerFilter) && (
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => {
+              setTypeFilter('');
+              setTriggerFilter('');
+              setPage(0);
+            }}
+            sx={{ borderRadius: 2, textTransform: 'none' }}
+          >
+            清除筛选
+          </Button>
+        )}
+      </Stack>
 
       {/* Loading indicator */}
       {loading && <LinearProgress sx={{ mb: 1 }} />}
@@ -761,6 +855,7 @@ export default function TaskList() {
                                 </Box>
                               );
                             } catch (e) {
+                              console.error(e)
                               return '-';
                             }
                           })()
