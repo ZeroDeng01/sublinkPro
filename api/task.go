@@ -1,7 +1,10 @@
 package api
 
 import (
+	"encoding/json"
+	"sort"
 	"strconv"
+	"strings"
 	"sublink/models"
 	"sublink/services"
 	"sublink/utils"
@@ -177,4 +180,196 @@ func ClearTaskHistory(c *gin.Context) {
 		"affected": affected,
 		"clearAll": clearAll,
 	})
+}
+
+// GetTaskTrafficDetails 获取任务流量明细（支持分组/来源过滤、搜索、分页）
+// GET /api/v1/tasks/:id/traffic?group=xxx&source=xxx&search=xxx&page=1&pageSize=50
+func GetTaskTrafficDetails(c *gin.Context) {
+	taskID := c.Param("id")
+	if taskID == "" {
+		utils.FailWithMsg(c, "任务ID不能为空")
+		return
+	}
+
+	// 获取任务
+	var task models.Task
+	if err := task.GetByID(taskID); err != nil {
+		utils.FailWithMsg(c, "任务不存在")
+		return
+	}
+
+	// 解析任务结果
+	if task.Result == "" {
+		utils.OkDetailed(c, "无流量数据", gin.H{"nodes": []interface{}{}, "total": 0})
+		return
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(task.Result), &result); err != nil {
+		utils.FailWithMsg(c, "解析任务结果失败")
+		return
+	}
+
+	trafficData, ok := result["traffic"].(map[string]interface{})
+	if !ok {
+		utils.OkDetailed(c, "无流量数据", gin.H{"nodes": []interface{}{}, "total": 0})
+		return
+	}
+
+	// 获取byNode数据
+	byNodeRaw, hasNodeData := trafficData["byNode"]
+	if !hasNodeData {
+		utils.OkDetailed(c, "未开启节点流量统计", gin.H{"nodes": []interface{}{}, "total": 0, "enabled": false})
+		return
+	}
+
+	// 解析节点流量数据 (nodeID -> bytes)
+	byNode := make(map[int]int64)
+	switch v := byNodeRaw.(type) {
+	case map[string]interface{}:
+		for key, val := range v {
+			nodeID, _ := strconv.Atoi(key)
+			switch b := val.(type) {
+			case float64:
+				byNode[nodeID] = int64(b)
+			case int64:
+				byNode[nodeID] = b
+			}
+		}
+	}
+
+	if len(byNode) == 0 {
+		utils.OkDetailed(c, "无节点流量数据", gin.H{"nodes": []interface{}{}, "total": 0, "enabled": true})
+		return
+	}
+
+	// 获取所有节点ID
+	nodeIDs := make([]int, 0, len(byNode))
+	for id := range byNode {
+		nodeIDs = append(nodeIDs, id)
+	}
+
+	// 从数据库查询节点详情
+	nodes, err := models.GetNodesByIDs(nodeIDs)
+	if err != nil {
+		utils.FailWithMsg(c, "获取节点信息失败")
+		return
+	}
+
+	// 构建节点ID到节点的映射
+	nodeMap := make(map[int]models.Node)
+	for _, n := range nodes {
+		nodeMap[n.ID] = n
+	}
+
+	// 获取过滤参数
+	groupFilter := c.Query("group")
+	sourceFilter := c.Query("source")
+	search := c.Query("search")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 200 {
+		pageSize = 50
+	}
+
+	// 构建节点流量列表并过滤
+	type nodeTraffic struct {
+		NodeID     int    `json:"nodeId"`
+		Name       string `json:"name"`
+		OriginName string `json:"originName"`
+		Group      string `json:"group"`
+		Source     string `json:"source"`
+		Bytes      int64  `json:"bytes"`
+		Formatted  string `json:"formatted"`
+	}
+
+	allNodes := make([]nodeTraffic, 0, len(byNode))
+	for nodeID, bytes := range byNode {
+		node, exists := nodeMap[nodeID]
+		if !exists {
+			// 节点可能已被删除
+			continue
+		}
+
+		// 分组过滤
+		if groupFilter != "" && node.Group != groupFilter {
+			continue
+		}
+
+		// 来源过滤
+		sourceDisplay := node.Source
+		if sourceDisplay == "" || sourceDisplay == "manual" {
+			sourceDisplay = "手动添加"
+		}
+		if sourceFilter != "" && sourceDisplay != sourceFilter && node.Source != sourceFilter {
+			continue
+		}
+
+		// 搜索过滤（名称或原始名称）
+		if search != "" {
+			searchLower := strings.ToLower(search)
+			nameLower := strings.ToLower(node.Name)
+			originNameLower := strings.ToLower(node.LinkName)
+			if !strings.Contains(nameLower, searchLower) && !strings.Contains(originNameLower, searchLower) {
+				continue
+			}
+		}
+
+		allNodes = append(allNodes, nodeTraffic{
+			NodeID:     nodeID,
+			Name:       node.Name,
+			OriginName: node.LinkName,
+			Group:      node.Group,
+			Source:     sourceDisplay,
+			Bytes:      bytes,
+			Formatted:  formatBytesAPI(bytes),
+		})
+	}
+
+	// 按流量降序排序
+	sort.Slice(allNodes, func(i, j int) bool {
+		return allNodes[i].Bytes > allNodes[j].Bytes
+	})
+
+	// 分页
+	total := len(allNodes)
+	start := (page - 1) * pageSize
+	end := start + pageSize
+	if start > total {
+		start = total
+	}
+	if end > total {
+		end = total
+	}
+	pagedNodes := allNodes[start:end]
+
+	utils.OkDetailed(c, "获取成功", gin.H{
+		"nodes":    pagedNodes,
+		"total":    total,
+		"page":     page,
+		"pageSize": pageSize,
+		"enabled":  true,
+	})
+}
+
+// formatBytesAPI 格式化字节数
+func formatBytesAPI(bytes int64) string {
+	const (
+		KB = 1024
+		MB = 1024 * KB
+		GB = 1024 * MB
+	)
+	switch {
+	case bytes >= GB:
+		return strconv.FormatFloat(float64(bytes)/float64(GB), 'f', 2, 64) + " GB"
+	case bytes >= MB:
+		return strconv.FormatFloat(float64(bytes)/float64(MB), 'f', 2, 64) + " MB"
+	case bytes >= KB:
+		return strconv.FormatFloat(float64(bytes)/float64(KB), 'f', 2, 64) + " KB"
+	default:
+		return strconv.FormatInt(bytes, 10) + " B"
+	}
 }

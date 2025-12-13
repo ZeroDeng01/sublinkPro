@@ -295,6 +295,59 @@ export default function SpeedTestDialog({
           <Typography variant="caption" color="textSecondary" sx={{ mt: -1 }}>
             开启后，测速时会通过代理获取落地IP并解析对应的国家代码，会降低测速效率。IP通过https://api.ip.sb/ip获取。
           </Typography>
+
+          {/* 流量统计设置 */}
+          <Typography variant="subtitle2" color="textSecondary" sx={{ mt: 2 }}>
+            流量统计设置
+          </Typography>
+          <Box sx={{ pl: 1 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={speedTestForm.traffic_by_group ?? true}
+                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, traffic_by_group: e.target.checked })}
+                  size="small"
+                />
+              }
+              label="按分组统计流量"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={speedTestForm.traffic_by_source ?? true}
+                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, traffic_by_source: e.target.checked })}
+                  size="small"
+                />
+              }
+              label="按来源统计流量"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={speedTestForm.traffic_by_node ?? false}
+                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, traffic_by_node: e.target.checked })}
+                  size="small"
+                  color="error"
+                />
+              }
+              label={
+                <Box component="span">
+                  按节点统计流量
+                  <Typography component="span" variant="caption" color="error.main" sx={{ ml: 0.5 }}>
+                    (大数据量)
+                  </Typography>
+                </Box>
+              }
+            />
+          </Box>
+          <Typography variant="caption" color="textSecondary" sx={{ mt: -1 }}>
+            开启对应开关后，测速完成时可在任务详情中查看按维度分类的流量消耗统计。
+          </Typography>
+          {speedTestForm.traffic_by_node && (
+            <Typography variant="caption" color="error.main" sx={{ mt: 0.5, display: 'block' }}>
+              ⚠️ 按节点统计会记录每个节点的流量消耗，节点数量过万时会增加约1-2MB存储空间。可在任务详情中按分组/来源钻取查看。
+            </Typography>
+          )}
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -321,7 +374,10 @@ SpeedTestDialog.propTypes = {
     detect_country: PropTypes.bool,
     latency_concurrency: PropTypes.number,
     speed_concurrency: PropTypes.number,
-    latency_samples: PropTypes.number
+    latency_samples: PropTypes.number,
+    traffic_by_group: PropTypes.bool,
+    traffic_by_source: PropTypes.bool,
+    traffic_by_node: PropTypes.bool
   }).isRequired,
   setSpeedTestForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,

@@ -691,6 +691,14 @@ func GetSpeedTestConfig(c *gin.Context) {
 		latencySamples, _ = strconv.Atoi(latencySamplesStr)
 	}
 
+	// 获取流量统计开关
+	trafficByGroupStr, _ := models.GetSetting("speed_test_traffic_by_group")
+	trafficByGroup := trafficByGroupStr != "false" // 默认开启
+	trafficBySourceStr, _ := models.GetSetting("speed_test_traffic_by_source")
+	trafficBySource := trafficBySourceStr != "false" // 默认开启
+	trafficByNodeStr, _ := models.GetSetting("speed_test_traffic_by_node")
+	trafficByNode := trafficByNodeStr == "true" // 默认关闭
+
 	utils.OkDetailed(c, "获取成功", gin.H{
 		"cron":                cron,
 		"enabled":             enabled,
@@ -704,6 +712,9 @@ func GetSpeedTestConfig(c *gin.Context) {
 		"latency_concurrency": latencyConcurrency,
 		"speed_concurrency":   speedConcurrency,
 		"latency_samples":     latencySamples,
+		"traffic_by_group":    trafficByGroup,
+		"traffic_by_source":   trafficBySource,
+		"traffic_by_node":     trafficByNode,
 	})
 }
 
@@ -722,6 +733,9 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		LatencyConcurrency int         `json:"latency_concurrency"`
 		SpeedConcurrency   int         `json:"speed_concurrency"`
 		LatencySamples     int         `json:"latency_samples"`
+		TrafficByGroup     *bool       `json:"traffic_by_group"`
+		TrafficBySource    *bool       `json:"traffic_by_source"`
+		TrafficByNode      *bool       `json:"traffic_by_node"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -818,6 +832,29 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 	if err != nil {
 		utils.FailWithMsg(c, "保存延迟采样次数配置失败")
 		return
+	}
+
+	// 保存流量统计开关
+	if req.TrafficByGroup != nil {
+		err = models.SetSetting("speed_test_traffic_by_group", strconv.FormatBool(*req.TrafficByGroup))
+		if err != nil {
+			utils.FailWithMsg(c, "保存流量统计配置失败")
+			return
+		}
+	}
+	if req.TrafficBySource != nil {
+		err = models.SetSetting("speed_test_traffic_by_source", strconv.FormatBool(*req.TrafficBySource))
+		if err != nil {
+			utils.FailWithMsg(c, "保存流量统计配置失败")
+			return
+		}
+	}
+	if req.TrafficByNode != nil {
+		err = models.SetSetting("speed_test_traffic_by_node", strconv.FormatBool(*req.TrafficByNode))
+		if err != nil {
+			utils.FailWithMsg(c, "保存流量统计配置失败")
+			return
+		}
 	}
 
 	// 更新定时任务

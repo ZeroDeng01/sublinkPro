@@ -49,3 +49,12 @@ export function clearTaskHistory(params) {
     data: params
   });
 }
+
+// 获取任务流量明细（支持分组/来源过滤、搜索、分页）
+export function getTaskTrafficDetails(taskId, params) {
+  return request({
+    url: `/v1/tasks/${taskId}/traffic`,
+    method: 'get',
+    params
+  });
+}

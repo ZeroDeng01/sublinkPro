@@ -344,7 +344,7 @@ const TaskMobileCard = ({ task, isDark, onStop, canStop }) => {
                       );
                     }
                   } catch (e) {
-                    console.error(e)
+                    console.error(e);
                     // ignore parse error
                   }
                   return null;
@@ -855,7 +855,7 @@ export default function TaskList() {
                                 </Box>
                               );
                             } catch (e) {
-                              console.error(e)
+                              console.error(e);
                               return '-';
                             }
                           })()

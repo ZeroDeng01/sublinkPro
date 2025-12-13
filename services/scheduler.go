@@ -517,6 +517,14 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	detectCountryStr, _ := models.GetSetting("speed_test_detect_country")
 	detectCountry := detectCountryStr == "true"
 
+	// 获取流量统计开关设置
+	trafficByGroupStr, _ := models.GetSetting("speed_test_traffic_by_group")
+	trafficByGroup := trafficByGroupStr != "false" // 默认开启
+	trafficBySourceStr, _ := models.GetSetting("speed_test_traffic_by_source")
+	trafficBySource := trafficBySourceStr != "false" // 默认开启
+	trafficByNodeStr, _ := models.GetSetting("speed_test_traffic_by_node")
+	trafficByNode := trafficByNodeStr == "true" // 默认关闭
+
 	// 获取延迟采样次数
 	latencySamplesStr, _ := models.GetSetting("speed_test_latency_samples")
 	latencySamples := 3 // 默认3次采样
@@ -579,14 +587,22 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 
 	// 流量统计累加器（内存累计，测速结束时写入数据库）
 	type trafficAccumulator struct {
-		totalBytes  int64
-		groupBytes  map[string]int64 // 按分组统计
-		sourceBytes map[string]int64 // 按来源统计
-		mutex       sync.Mutex
+		totalBytes   int64
+		groupBytes   map[string]int64 // 按分组统计（可选）
+		sourceBytes  map[string]int64 // 按来源统计（可选）
+		nodeBytes    map[int]int64    // 按节点统计（可选，nodeID -> bytes）
+		enableGroup  bool
+		enableSource bool
+		enableNode   bool
+		mutex        sync.Mutex
 	}
 	trafficAcc := &trafficAccumulator{
-		groupBytes:  make(map[string]int64),
-		sourceBytes: make(map[string]int64),
+		groupBytes:   make(map[string]int64),
+		sourceBytes:  make(map[string]int64),
+		nodeBytes:    make(map[int]int64),
+		enableGroup:  trafficByGroup,
+		enableSource: trafficBySource,
+		enableNode:   trafficByNode,
 	}
 
 	// 节点结果存储（用于阶段二）
@@ -792,24 +808,33 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 					return
 				}
 
-				// 累计流量统计（仅速度测试阶段）
+				// 累计流量统计（仅速度测试阶段，根据开关控制）
 				if bytesDownloaded > 0 {
 					trafficAcc.mutex.Lock()
 					trafficAcc.totalBytes += bytesDownloaded
 
-					// 按分组统计
-					group := result.node.Group
-					if group == "" {
-						group = "未分组"
+					// 按分组统计（可选）
+					if trafficAcc.enableGroup {
+						group := result.node.Group
+						if group == "" {
+							group = "未分组"
+						}
+						trafficAcc.groupBytes[group] += bytesDownloaded
 					}
-					trafficAcc.groupBytes[group] += bytesDownloaded
 
-					// 按来源统计
-					source := result.node.Source
-					if source == "" || source == "manual" {
-						source = "手动添加"
+					// 按来源统计（可选）
+					if trafficAcc.enableSource {
+						source := result.node.Source
+						if source == "" || source == "manual" {
+							source = "手动添加"
+						}
+						trafficAcc.sourceBytes[source] += bytesDownloaded
 					}
-					trafficAcc.sourceBytes[source] += bytesDownloaded
+
+					// 按节点统计（可选）
+					if trafficAcc.enableNode {
+						trafficAcc.nodeBytes[result.node.ID] += bytesDownloaded
+					}
 					trafficAcc.mutex.Unlock()
 				}
 
@@ -919,20 +944,41 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	{
 		// 格式化流量统计数据
 		trafficAcc.mutex.Lock()
-		formattedGroupStats := make(map[string]map[string]interface{})
-		for group, bytes := range trafficAcc.groupBytes {
-			formattedGroupStats[group] = map[string]interface{}{
-				"bytes":     bytes,
-				"formatted": formatBytes(bytes),
-			}
+		// 构建流量统计对象
+		trafficData := map[string]interface{}{
+			"totalBytes":     trafficAcc.totalBytes,
+			"totalFormatted": formatBytes(trafficAcc.totalBytes),
 		}
-		formattedSourceStats := make(map[string]map[string]interface{})
-		for source, bytes := range trafficAcc.sourceBytes {
-			formattedSourceStats[source] = map[string]interface{}{
-				"bytes":     bytes,
-				"formatted": formatBytes(bytes),
+
+		// 按分组统计（仅开关开启时包含）
+		if trafficAcc.enableGroup && len(trafficAcc.groupBytes) > 0 {
+			formattedGroupStats := make(map[string]map[string]interface{})
+			for group, bytes := range trafficAcc.groupBytes {
+				formattedGroupStats[group] = map[string]interface{}{
+					"bytes":     bytes,
+					"formatted": formatBytes(bytes),
+				}
 			}
+			trafficData["byGroup"] = formattedGroupStats
 		}
+
+		// 按来源统计（仅开关开启时包含）
+		if trafficAcc.enableSource && len(trafficAcc.sourceBytes) > 0 {
+			formattedSourceStats := make(map[string]map[string]interface{})
+			for source, bytes := range trafficAcc.sourceBytes {
+				formattedSourceStats[source] = map[string]interface{}{
+					"bytes":     bytes,
+					"formatted": formatBytes(bytes),
+				}
+			}
+			trafficData["bySource"] = formattedSourceStats
+		}
+
+		// 按节点统计（仅开关开启时包含，只存nodeID和bytes减少数据量）
+		if trafficAcc.enableNode && len(trafficAcc.nodeBytes) > 0 {
+			trafficData["byNode"] = trafficAcc.nodeBytes
+		}
+
 		trafficTotal := trafficAcc.totalBytes
 		trafficAcc.mutex.Unlock()
 
@@ -940,12 +986,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 			"success": successCount,
 			"fail":    failCount,
 			"total":   totalNodes,
-			"traffic": map[string]interface{}{
-				"totalBytes":     trafficTotal,
-				"totalFormatted": formatBytes(trafficTotal),
-				"byGroup":        formattedGroupStats,
-				"bySource":       formattedSourceStats,
-			},
+			"traffic": trafficData,
 		}
 		tm.CompleteTask(taskID, fmt.Sprintf("测速完成 (成功: %d, 失败: %d, 流量: %s)", successCount, failCount, formatBytes(trafficTotal)), resultData)
 
