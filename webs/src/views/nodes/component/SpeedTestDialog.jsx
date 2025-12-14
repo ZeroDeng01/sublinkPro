@@ -268,9 +268,21 @@ export default function SpeedTestDialog({
               fullWidth
               size="small"
               label="超时时间"
-              type="number"
+              type="text"
+              inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
               value={speedTestForm.timeout}
-              onChange={(e) => setSpeedTestForm({ ...speedTestForm, timeout: Number(e.target.value) })}
+              onChange={(e) => {
+                const val = e.target.value;
+                // 允许空字符串和纯数字
+                if (val === '' || /^\d+$/.test(val)) {
+                  setSpeedTestForm({ ...speedTestForm, timeout: val === '' ? '' : Number(val) });
+                }
+              }}
+              onBlur={(e) => {
+                // 失焦时确保有合法值，默认5秒
+                const val = Number(e.target.value) || 5;
+                setSpeedTestForm({ ...speedTestForm, timeout: val });
+              }}
               InputProps={{ endAdornment: <InputAdornment position="end">秒</InputAdornment> }}
             />
 
@@ -294,16 +306,22 @@ export default function SpeedTestDialog({
                     fullWidth
                     size="small"
                     label="峰值采样间隔"
-                    type="number"
-                    value={speedTestForm.peak_sample_interval || 100}
-                    onChange={(e) =>
-                      setSpeedTestForm({
-                        ...speedTestForm,
-                        peak_sample_interval: Math.min(200, Math.max(50, Number(e.target.value) || 100))
-                      })
-                    }
+                    type="text"
+                    inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                    value={speedTestForm.peak_sample_interval ?? 100}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // 允许空字符串和纯数字
+                      if (val === '' || /^\d+$/.test(val)) {
+                        setSpeedTestForm({ ...speedTestForm, peak_sample_interval: val === '' ? '' : Number(val) });
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // 失焦时强制限制范围50-200，默认100
+                      const val = Math.min(200, Math.max(50, Number(e.target.value) || 100));
+                      setSpeedTestForm({ ...speedTestForm, peak_sample_interval: val });
+                    }}
                     InputProps={{ endAdornment: <InputAdornment position="end">毫秒</InputAdornment> }}
-                    inputProps={{ min: 50, max: 200 }}
                     helperText="采样间隔范围：50-200毫秒"
                   />
                 )}
@@ -405,13 +423,20 @@ export default function SpeedTestDialog({
                   fullWidth
                   size="small"
                   label="延迟测试并发"
-                  type="number"
+                  type="text"
+                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                   value={speedTestForm.latency_concurrency || ''}
                   placeholder="自动"
-                  onChange={(e) =>
-                    setSpeedTestForm({ ...speedTestForm, latency_concurrency: e.target.value === '' ? 0 : Number(e.target.value) })
-                  }
-                  inputProps={{ min: 0, max: 1000 }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d+$/.test(val)) {
+                      setSpeedTestForm({ ...speedTestForm, latency_concurrency: val === '' ? 0 : Number(val) });
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = Math.min(1000, Math.max(0, Number(e.target.value) || 0));
+                    setSpeedTestForm({ ...speedTestForm, latency_concurrency: val });
+                  }}
                   helperText="0=智能动态"
                 />
               </Grid>
@@ -420,13 +445,20 @@ export default function SpeedTestDialog({
                   fullWidth
                   size="small"
                   label="速度测试并发"
-                  type="number"
+                  type="text"
+                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                   value={speedTestForm.speed_concurrency || ''}
                   placeholder="自动"
-                  onChange={(e) =>
-                    setSpeedTestForm({ ...speedTestForm, speed_concurrency: e.target.value === '' ? 0 : Number(e.target.value) })
-                  }
-                  inputProps={{ min: 0, max: 128 }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d+$/.test(val)) {
+                      setSpeedTestForm({ ...speedTestForm, speed_concurrency: val === '' ? 0 : Number(val) });
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = Math.min(128, Math.max(0, Number(e.target.value) || 0));
+                    setSpeedTestForm({ ...speedTestForm, speed_concurrency: val });
+                  }}
                   helperText="0=智能动态"
                 />
               </Grid>
@@ -435,10 +467,21 @@ export default function SpeedTestDialog({
                   fullWidth
                   size="small"
                   label="延迟采样次数"
-                  type="number"
-                  value={speedTestForm.latency_samples || 3}
-                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, latency_samples: Math.max(1, Number(e.target.value) || 3) })}
-                  inputProps={{ min: 1, max: 10 }}
+                  type="text"
+                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                  value={speedTestForm.latency_samples ?? 3}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // 允许空字符串和纯数字
+                    if (val === '' || /^\d+$/.test(val)) {
+                      setSpeedTestForm({ ...speedTestForm, latency_samples: val === '' ? '' : Number(val) });
+                    }
+                  }}
+                  onBlur={(e) => {
+                    // 失焦时限制范围1-10，默认3
+                    const val = Math.min(10, Math.max(1, Number(e.target.value) || 3));
+                    setSpeedTestForm({ ...speedTestForm, latency_samples: val });
+                  }}
                   helperText="多次取平均"
                 />
               </Grid>

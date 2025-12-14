@@ -342,9 +342,19 @@ export default function SubscriptionFormDialog({
               <TextField
                 fullWidth
                 label="最大延迟"
-                type="number"
+                type="text"
+                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                 value={formData.DelayTime}
-                onChange={(e) => setFormData({ ...formData, DelayTime: Number(e.target.value) })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d+$/.test(val)) {
+                    setFormData({ ...formData, DelayTime: val === '' ? '' : Number(val) });
+                  }
+                }}
+                onBlur={(e) => {
+                  const val = Math.max(0, Number(e.target.value) || 0);
+                  setFormData({ ...formData, DelayTime: val });
+                }}
                 InputProps={{ endAdornment: <InputAdornment position="end">ms</InputAdornment> }}
                 helperText="设置筛选节点的延迟阈值，0表示不限制"
               />
@@ -353,9 +363,20 @@ export default function SubscriptionFormDialog({
               <TextField
                 fullWidth
                 label="最小速度"
-                type="number"
+                type="text"
+                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*\\.?[0-9]*' }}
                 value={formData.MinSpeed}
-                onChange={(e) => setFormData({ ...formData, MinSpeed: Number(e.target.value) })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  // 允许空字符串、整数和小数
+                  if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                    setFormData({ ...formData, MinSpeed: val === '' ? '' : val });
+                  }
+                }}
+                onBlur={(e) => {
+                  const val = Math.max(0, parseFloat(e.target.value) || 0);
+                  setFormData({ ...formData, MinSpeed: val });
+                }}
                 InputProps={{ endAdornment: <InputAdornment position="end">MB/s</InputAdornment> }}
                 helperText="设置筛选节点的最小下载速度，0表示不限制"
               />
