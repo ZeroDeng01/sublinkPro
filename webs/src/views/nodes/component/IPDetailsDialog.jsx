@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
 // material-ui
@@ -13,6 +13,7 @@ import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
+import Tooltip from '@mui/material/Tooltip';
 
 // icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -21,27 +22,98 @@ import PublicIcon from '@mui/icons-material/Public';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import BusinessIcon from '@mui/icons-material/Business';
 import DnsIcon from '@mui/icons-material/Dns';
+import CachedIcon from '@mui/icons-material/Cached';
+
+// localStorage 缓存键名
+const IP_CACHE_KEY = 'sublink_ip_info_cache';
+
+// 缓存有效期：7天
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * 从 localStorage 读取 IP 缓存
+ */
+const getIPCache = () => {
+  try {
+    const cached = localStorage.getItem(IP_CACHE_KEY);
+    return cached ? JSON.parse(cached) : {};
+  } catch {
+    return {};
+  }
+};
+
+/**
+ * 将 IP 缓存写入 localStorage
+ */
+const setIPCache = (cache) => {
+  try {
+    localStorage.setItem(IP_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // localStorage 满了或不可用时静默失败
+  }
+};
+
+/**
+ * 获取指定 IP 的缓存数据
+ */
+const getCachedIPInfo = (ip) => {
+  const cache = getIPCache();
+  const entry = cache[ip];
+  if (!entry) return null;
+  // 检查是否过期
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    // 清理过期缓存
+    delete cache[ip];
+    setIPCache(cache);
+    return null;
+  }
+  return entry.data;
+};
+
+/**
+ * 缓存 IP 信息
+ */
+const cacheIPInfo = (ip, data) => {
+  const cache = getIPCache();
+  cache[ip] = { data, timestamp: Date.now() };
+  // 限制缓存数量，防止 localStorage 膨胀（最多保留100条）
+  const keys = Object.keys(cache);
+  if (keys.length > 100) {
+    // 删除最早的缓存
+    const sortedKeys = keys.sort((a, b) => cache[a].timestamp - cache[b].timestamp);
+    sortedKeys.slice(0, keys.length - 100).forEach((key) => delete cache[key]);
+  }
+  setIPCache(cache);
+};
 
 /**
  * IP详情弹窗组件
- * 通过第三方API查询IP详细信息
+ * 通过第三方API查询IP详细信息，支持缓存避免重复请求
  */
 export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [ipInfo, setIpInfo] = useState(null);
+  const [fromCache, setFromCache] = useState(false);
 
-  useEffect(() => {
-    if (open && ip) {
-      fetchIPDetails();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, ip]);
-
-  const fetchIPDetails = async () => {
+  const fetchIPDetails = useCallback(async () => {
     if (!ip) return;
+
+    // 检查 localStorage 缓存
+    const cachedData = getCachedIPInfo(ip);
+    if (cachedData) {
+      setIpInfo(cachedData);
+      setFromCache(true);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    // 缓存未命中或已过期，发起请求
     setLoading(true);
     setError(null);
+    setFromCache(false);
+
     try {
       // 使用 ip-api.com 的 JSON API (免费，支持CORS)
       const response = await fetch(
@@ -49,6 +121,8 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
       );
       const data = await response.json();
       if (data.status === 'success') {
+        // 缓存成功结果到 localStorage
+        cacheIPInfo(ip, data);
         setIpInfo(data);
       } else {
         setError(data.message || '查询IP信息失败');
@@ -58,7 +132,13 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ip]);
+
+  useEffect(() => {
+    if (open && ip) {
+      fetchIPDetails();
+    }
+  }, [open, ip, fetchIPDetails]);
 
   const handleCopy = () => {
     if (ip && onCopy) {
@@ -82,6 +162,31 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
         <Stack direction="row" spacing={1} alignItems="center">
           <PublicIcon color="primary" />
           <Typography variant="h6">IP 详情</Typography>
+          {/* 缓存状态指示 */}
+          {fromCache && ipInfo && (
+            <Tooltip title="数据来自缓存，点击刷新获取最新信息">
+              <Chip
+                icon={<CachedIcon sx={{ fontSize: '14px !important' }} />}
+                label="已缓存"
+                size="small"
+                variant="outlined"
+                color="success"
+                onClick={() => {
+                  // 清除当前IP的缓存并重新获取
+                  const cache = getIPCache();
+                  delete cache[ip];
+                  setIPCache(cache);
+                  fetchIPDetails();
+                }}
+                sx={{
+                  height: 22,
+                  fontSize: 11,
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: 'success.lighter' }
+                }}
+              />
+            </Tooltip>
+          )}
         </Stack>
         <IconButton aria-label="close" onClick={onClose} size="small">
           <CloseIcon />

@@ -56,6 +56,7 @@ import {
   BatchTagDialog,
   BatchRemoveTagDialog,
   IPDetailsDialog,
+  NodeDetailsPanel,
   NodeFilters,
   BatchActions,
   NodeMobileList,
@@ -200,6 +201,10 @@ export default function NodeList() {
   // IP详情弹窗
   const [ipDialogOpen, setIpDialogOpen] = useState(false);
   const [selectedIP, setSelectedIP] = useState('');
+
+  // 节点详情面板
+  const [detailsPanelOpen, setDetailsPanelOpen] = useState(false);
+  const [detailsNode, setDetailsNode] = useState(null);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -1077,13 +1082,9 @@ export default function NodeList() {
           selectedNodes={selectedNodes}
           tagColorMap={tagColorMap}
           onSelect={handleSelectNode}
-          onSpeedTest={handleSingleSpeedTest}
-          onCopy={copyToClipboard}
-          onEdit={handleEditNode}
-          onDelete={handleDeleteNode}
-          onIPClick={(ip) => {
-            setSelectedIP(ip);
-            setIpDialogOpen(true);
+          onViewDetails={(node) => {
+            setDetailsNode(node);
+            setDetailsPanelOpen(true);
           }}
         />
       ) : (
@@ -1102,9 +1103,9 @@ export default function NodeList() {
           onCopy={copyToClipboard}
           onEdit={handleEditNode}
           onDelete={handleDeleteNode}
-          onIPClick={(ip) => {
-            setSelectedIP(ip);
-            setIpDialogOpen(true);
+          onViewDetails={(node) => {
+            setDetailsNode(node);
+            setDetailsPanelOpen(true);
           }}
         />
       )}
@@ -1241,6 +1242,22 @@ export default function NodeList() {
 
       {/* IP详情弹窗 */}
       <IPDetailsDialog open={ipDialogOpen} onClose={() => setIpDialogOpen(false)} ip={selectedIP} onCopy={copyToClipboard} />
+
+      {/* 节点详情面板 */}
+      <NodeDetailsPanel
+        open={detailsPanelOpen}
+        node={detailsNode}
+        tagColorMap={tagColorMap}
+        onClose={() => setDetailsPanelOpen(false)}
+        onSpeedTest={handleSingleSpeedTest}
+        onCopy={copyToClipboard}
+        onEdit={handleEditNode}
+        onDelete={handleDeleteNode}
+        onIPClick={(ip) => {
+          setSelectedIP(ip);
+          setIpDialogOpen(true);
+        }}
+      />
 
       {/* 提示消息 */}
       <Snackbar

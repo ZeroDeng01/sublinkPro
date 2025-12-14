@@ -10,19 +10,7 @@ import NodeCard from './NodeCard';
 /**
  * 移动端节点卡片列表
  */
-export default function NodeMobileList({
-  nodes,
-  page,
-  rowsPerPage,
-  selectedNodes,
-  tagColorMap,
-  onSelect,
-  onSpeedTest,
-  onCopy,
-  onEdit,
-  onDelete,
-  onIPClick
-}) {
+export default function NodeMobileList({ nodes, page, rowsPerPage, selectedNodes, tagColorMap, onSelect, onViewDetails }) {
   const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
   // 后端分页：nodes 已经是当前页数据，无需客户端切片
 
@@ -40,11 +28,7 @@ export default function NodeMobileList({
           isSelected={isSelected(node)}
           tagColorMap={tagColorMap}
           onSelect={onSelect}
-          onSpeedTest={onSpeedTest}
-          onCopy={onCopy}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onIPClick={onIPClick}
+          onViewDetails={onViewDetails}
         />
       ))}
     </Stack>
@@ -58,9 +42,5 @@ NodeMobileList.propTypes = {
   selectedNodes: PropTypes.array.isRequired,
   tagColorMap: PropTypes.object,
   onSelect: PropTypes.func.isRequired,
-  onSpeedTest: PropTypes.func.isRequired,
-  onCopy: PropTypes.func.isRequired,
-  onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired,
-  onIPClick: PropTypes.func
+  onViewDetails: PropTypes.func.isRequired
 };

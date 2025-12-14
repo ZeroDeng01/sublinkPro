@@ -21,12 +21,14 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SpeedIcon from '@mui/icons-material/Speed';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 // utils
 import { formatDateTime, formatCountry, getDelayDisplay, getSpeedDisplay } from '../utils';
 
 /**
- * 桌面端节点表格
+ * 桌面端节点表格（精简版）
+ * 只显示核心信息，详细信息通过详情面板查看
  */
 export default function NodeTable({
   nodes,
@@ -43,11 +45,9 @@ export default function NodeTable({
   onCopy,
   onEdit,
   onDelete,
-  onIPClick
+  onViewDetails
 }) {
   const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
-  // 后端分页：nodes 已经是当前页数据，无需客户端切片
-  // const paginatedNodes = nodes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
     <TableContainer component={Paper}>
@@ -61,12 +61,9 @@ export default function NodeTable({
                 onChange={onSelectAll}
               />
             </TableCell>
-            <TableCell>备注</TableCell>
-            <TableCell>分组</TableCell>
-            <TableCell>来源</TableCell>
+            <TableCell sx={{ minWidth: 150 }}>备注</TableCell>
+            <TableCell sx={{ minWidth: 100 }}>分组</TableCell>
             <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>标签</TableCell>
-            <TableCell>节点名称</TableCell>
-            <TableCell>前置代理</TableCell>
             <TableCell sortDirection={sortBy === 'delay' ? sortOrder : false}>
               <TableSortLabel
                 active={sortBy === 'delay'}
@@ -85,28 +82,42 @@ export default function NodeTable({
                 速度
               </TableSortLabel>
             </TableCell>
-            <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>国家</TableCell>
-            <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>落地IP</TableCell>
-            <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>创建时间</TableCell>
-            <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>更新时间</TableCell>
-            <TableCell align="right">操作</TableCell>
+            <TableCell sx={{ minWidth: 80, whiteSpace: 'nowrap' }}>国家</TableCell>
+            <TableCell align="right" sx={{ minWidth: 180 }}>
+              操作
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {nodes.map((node) => (
-            <TableRow key={node.ID} hover selected={isSelected(node)}>
+            <TableRow
+              key={node.ID}
+              hover
+              selected={isSelected(node)}
+              sx={{ cursor: 'pointer' }}
+              onClick={(e) => {
+                // 点击复选框或操作按钮时不触发详情
+                if (e.target.closest('button') || e.target.closest('input[type="checkbox"]')) return;
+                onViewDetails(node);
+              }}
+            >
               <TableCell padding="checkbox">
                 <Checkbox checked={isSelected(node)} onChange={() => onSelect(node)} />
               </TableCell>
               <TableCell>
                 <Tooltip title={node.Name}>
-                  <Chip
-                    label={node.Name}
-                    color="success"
-                    variant="outlined"
-                    size="small"
-                    sx={{ maxWidth: '150px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-                  />
+                  <Typography
+                    variant="body2"
+                    fontWeight="medium"
+                    sx={{
+                      maxWidth: '200px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {node.Name}
+                  </Typography>
                 </Tooltip>
               </TableCell>
               <TableCell>
@@ -127,19 +138,10 @@ export default function NodeTable({
                 )}
               </TableCell>
               <TableCell>
-                <Chip
-                  label={node.Source === 'manual' ? '手动添加' : node.Source}
-                  color={node.Source === 'manual' ? 'success' : 'warning'}
-                  variant="outlined"
-                  size="small"
-                />
-              </TableCell>
-              <TableCell>
                 {node.Tags ? (
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 150 }}>
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 200 }}>
                     {node.Tags.split(',')
                       .filter((t) => t.trim())
-                      .slice(0, 3)
                       .map((tag, idx) => {
                         const tagName = tag.trim();
                         const tagColor = tagColorMap?.[tagName] || '#1976d2';
@@ -157,41 +159,12 @@ export default function NodeTable({
                           />
                         );
                       })}
-                    {node.Tags.split(',').filter((t) => t.trim()).length > 3 && (
-                      <Chip
-                        label={`+${node.Tags.split(',').filter((t) => t.trim()).length - 3}`}
-                        size="small"
-                        sx={{ fontSize: '10px', height: 20 }}
-                      />
-                    )}
                   </Box>
                 ) : (
                   <Typography variant="caption" color="textSecondary">
                     -
                   </Typography>
                 )}
-              </TableCell>
-              <TableCell>
-                <Tooltip title={node.LinkName || ''}>
-                  <Typography sx={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {node.LinkName || '-'}
-                  </Typography>
-                </Tooltip>
-              </TableCell>
-              <TableCell>
-                <Tooltip title={node.DialerProxyName || ''}>
-                  <Typography
-                    sx={{
-                      minWidth: 100,
-                      maxWidth: 150,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}
-                  >
-                    {node.DialerProxyName || '-'}
-                  </Typography>
-                </Tooltip>
               </TableCell>
               <TableCell>
                 <Box>
@@ -226,38 +199,12 @@ export default function NodeTable({
                   '-'
                 )}
               </TableCell>
-              <TableCell>
-                {node.LandingIP ? (
-                  <Tooltip title={node.LandingIP}>
-                    <Chip
-                      label={
-                        node.LandingIP.includes(':') && node.LandingIP.length > 16
-                          ? node.LandingIP.substring(0, 13) + '...'
-                          : node.LandingIP
-                      }
-                      size="small"
-                      variant="outlined"
-                      onClick={() => onIPClick && onIPClick(node.LandingIP)}
-                      sx={{
-                        cursor: onIPClick ? 'pointer' : 'default',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                        maxWidth: '120px',
-                        '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' }
-                      }}
-                    />
-                  </Tooltip>
-                ) : (
-                  '-'
-                )}
-              </TableCell>
-              <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>
-                <Typography variant="caption">{formatDateTime(node.CreatedAt)}</Typography>
-              </TableCell>
-              <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>
-                <Typography variant="caption">{formatDateTime(node.UpdatedAt)}</Typography>
-              </TableCell>
-              <TableCell align="right" sx={{ minWidth: 160 }}>
+              <TableCell align="right">
+                <Tooltip title="详情">
+                  <IconButton size="small" onClick={() => onViewDetails(node)} color="info">
+                    <InfoOutlinedIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
                 <Tooltip title="测速">
                   <IconButton size="small" onClick={() => onSpeedTest(node)}>
                     <SpeedIcon fontSize="small" />
@@ -302,5 +249,5 @@ NodeTable.propTypes = {
   onCopy: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
-  onIPClick: PropTypes.func
+  onViewDetails: PropTypes.func.isRequired
 };

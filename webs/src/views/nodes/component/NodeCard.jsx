@@ -5,36 +5,54 @@ import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
-import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-
-// icons
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import SpeedIcon from '@mui/icons-material/Speed';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 
 // utils
-import { formatDateTime, formatCountry, getDelayDisplay, getSpeedDisplay } from '../utils';
+import { getDelayDisplay, getSpeedDisplay, formatCountry } from '../utils';
 
 /**
- * 移动端节点卡片组件
+ * 移动端节点卡片组件（精简版）
+ * 只显示核心信息，点击卡片打开详情面板
  */
-export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSpeedTest, onCopy, onEdit, onDelete, onIPClick }) {
+export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onViewDetails }) {
   const theme = useTheme();
 
   return (
-    <MainCard content={false} border shadow={theme.shadows[1]}>
+    <MainCard
+      content={false}
+      border
+      shadow={theme.shadows[1]}
+      sx={{
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        '&:hover': {
+          boxShadow: theme.shadows[4],
+          transform: 'translateY(-2px)'
+        }
+      }}
+      onClick={(e) => {
+        // 点击复选框时不触发详情
+        if (e.target.closest('input[type="checkbox"]')) return;
+        onViewDetails(node);
+      }}
+    >
       <Box p={2}>
-        {/* Header: Checkbox, Name, Delay */}
+        {/* 头部: 勾选框 + 名称 + 延迟 */}
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
-            <Checkbox checked={isSelected} onChange={() => onSelect(node)} sx={{ p: 0.5, flexShrink: 0 }} />
+            <Checkbox
+              checked={isSelected}
+              onChange={(e) => {
+                e.stopPropagation();
+                onSelect(node);
+              }}
+              sx={{ p: 0.5, flexShrink: 0 }}
+            />
             <Tooltip title={node.Name} placement="top">
               <Typography
                 variant="subtitle1"
@@ -43,7 +61,7 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSp
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  maxWidth: '200px'
+                  maxWidth: '180px'
                 }}
               >
                 {node.Name}
@@ -58,26 +76,20 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSp
           </Box>
         </Stack>
 
-        {/* Info Section: Chips for Group, Source, Speed */}
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
-          <Tooltip title={`分组: ${node.Group || '未分组'}`}>
-            <Chip
-              icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📁</span>}
-              label={node.Group || '未分组'}
-              color="warning"
-              variant="outlined"
-              size="small"
-              sx={{ maxWidth: '120px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-            />
-          </Tooltip>
-          <Chip
-            icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📡</span>}
-            label={node.Source === 'manual' ? '手动添加' : node.Source || '未知'}
-            color={node.Source === 'manual' ? 'success' : 'info'}
-            variant="outlined"
-            size="small"
-            sx={{ maxWidth: '100px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-          />
+        {/* 信息区: 分组 + 速度 + 国家 */}
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+          {node.Group && (
+            <Tooltip title={`分组: ${node.Group}`}>
+              <Chip
+                icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📁</span>}
+                label={node.Group}
+                color="warning"
+                variant="outlined"
+                size="small"
+                sx={{ maxWidth: '100px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+              />
+            </Tooltip>
+          )}
           {(() => {
             const s = getSpeedDisplay(node.Speed, node.SpeedStatus);
             return (
@@ -90,43 +102,13 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSp
               />
             );
           })()}
-          {node.DialerProxyName && (
-            <Tooltip title={`前置代理: ${node.DialerProxyName}`}>
-              <Chip
-                icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>🔗</span>}
-                label={node.DialerProxyName}
-                variant="outlined"
-                size="small"
-                sx={{ maxWidth: '100px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-              />
-            </Tooltip>
-          )}
-          {node.LinkCountry && (
-            <Tooltip title={`国家: ${node.LinkCountry}`}>
-              <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />
-            </Tooltip>
-          )}
-          {node.LandingIP && (
-            <Tooltip title={`落地IP: ${node.LandingIP}`}>
-              <Chip
-                icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>🌐</span>}
-                label={
-                  node.LandingIP.includes(':') && node.LandingIP.length > 16 ? node.LandingIP.substring(0, 13) + '...' : node.LandingIP
-                }
-                variant="outlined"
-                size="small"
-                onClick={() => onIPClick && onIPClick(node.LandingIP)}
-                sx={{
-                  cursor: onIPClick ? 'pointer' : 'default',
-                  fontFamily: 'monospace',
-                  maxWidth: '130px',
-                  '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' }
-                }}
-              />
-            </Tooltip>
-          )}
-          {node.Tags &&
-            node.Tags.split(',')
+          {node.LinkCountry && <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />}
+        </Stack>
+
+        {/* 标签区 */}
+        {node.Tags && (
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+            {node.Tags.split(',')
               .filter((t) => t.trim())
               .map((tag, idx) => {
                 const tagName = tag.trim();
@@ -145,69 +127,22 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSp
                   />
                 );
               })}
-        </Stack>
-
-        {/* Time Info Section */}
-        <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 1, mb: 1.5 }}>
-          <Stack spacing={0.5}>
-            <Box>
-              <Typography variant="caption" color="textSecondary" display="block">
-                创建时间
-              </Typography>
-              <Typography variant="caption" fontWeight="medium">
-                {node.CreatedAt ? formatDateTime(node.CreatedAt) : '-'}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="textSecondary" display="block">
-                更新时间
-              </Typography>
-              <Typography variant="caption" fontWeight="medium">
-                {node.UpdatedAt ? formatDateTime(node.UpdatedAt) : '-'}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="textSecondary" display="block">
-                延迟测试
-              </Typography>
-              <Typography variant="caption" fontWeight="medium" color="primary">
-                {node.LatencyCheckAt ? formatDateTime(node.LatencyCheckAt) : '-'}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="textSecondary" display="block">
-                速度测试
-              </Typography>
-              <Typography variant="caption" fontWeight="medium" color="primary">
-                {node.SpeedCheckAt ? formatDateTime(node.SpeedCheckAt) : '-'}
-              </Typography>
-            </Box>
           </Stack>
-        </Box>
+        )}
 
-        {/* Action Buttons */}
-        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-          <Tooltip title="测速">
-            <IconButton size="small" onClick={() => onSpeedTest(node)}>
-              <SpeedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="复制链接">
-            <IconButton size="small" onClick={() => onCopy(node.Link)}>
-              <ContentCopyIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="编辑">
-            <IconButton size="small" onClick={() => onEdit(node)}>
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="删除">
-            <IconButton size="small" color="error" onClick={() => onDelete(node)}>
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
+        {/* 点击提示 */}
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{
+            display: 'block',
+            mt: 1.5,
+            textAlign: 'center',
+            opacity: 0.6
+          }}
+        >
+          点击查看详情
+        </Typography>
       </Box>
     </MainCard>
   );
@@ -221,7 +156,9 @@ NodeCard.propTypes = {
     Group: PropTypes.string,
     Source: PropTypes.string,
     DelayTime: PropTypes.number,
+    DelayStatus: PropTypes.number,
     Speed: PropTypes.number,
+    SpeedStatus: PropTypes.number,
     DialerProxyName: PropTypes.string,
     LinkCountry: PropTypes.string,
     LandingIP: PropTypes.string,
@@ -234,9 +171,5 @@ NodeCard.propTypes = {
   isSelected: PropTypes.bool.isRequired,
   tagColorMap: PropTypes.object,
   onSelect: PropTypes.func.isRequired,
-  onSpeedTest: PropTypes.func.isRequired,
-  onCopy: PropTypes.func.isRequired,
-  onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired,
-  onIPClick: PropTypes.func
+  onViewDetails: PropTypes.func.isRequired
 };
