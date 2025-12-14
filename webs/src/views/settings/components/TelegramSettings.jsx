@@ -17,6 +17,10 @@ import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import Collapse from '@mui/material/Collapse';
 import Divider from '@mui/material/Divider';
+import Tooltip from '@mui/material/Tooltip';
+
+// qrcode
+import { QRCodeSVG } from 'qrcode.react';
 
 // icons
 import TelegramIcon from '@mui/icons-material/Telegram';
@@ -45,7 +49,7 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
     systemDomain: '' // 新增: 系统域名
   });
   const [showToken, setShowToken] = useState(false);
-  const [status, setStatus] = useState({ connected: false, error: '' });
+  const [status, setStatus] = useState({ connected: false, error: '', botUsername: '', botId: 0 });
 
   // 代理节点选择
   const [proxyNodes, setProxyNodes] = useState([]);
@@ -83,7 +87,9 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
         });
         setStatus({
           connected: response.data.connected || false,
-          error: response.data.lastError || ''
+          error: response.data.lastError || '',
+          botUsername: response.data.botUsername || '',
+          botId: response.data.botId || 0
         });
 
         // 如果有已保存的代理链接，设置为选中值
@@ -212,9 +218,104 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
         <Stack spacing={2.5}>
           <Alert severity="info">
             <Typography variant="body2">
-              使用 <strong>@BotFather</strong> 创建机器人并获取 Token。 首次发送 /start 命令后，机器人会自动绑定您的 Chat ID。
+              使用{' '}
+              <a
+                href="https://t.me/BotFather"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#0088cc', fontWeight: 600, textDecoration: 'none' }}
+              >
+                @BotFather
+              </a>
+              {' '}创建机器人并获取 Token。 首次发送 /start 命令后，机器人会自动绑定您的 Chat ID。
             </Typography>
           </Alert>
+
+          {/* 机器人连接信息 */}
+          {status.connected && status.botUsername && (
+            <Box
+              sx={{
+                backgroundColor: 'rgba(0, 136, 204, 0.08)',
+                borderColor: 'rgba(0, 136, 204, 0.3)',
+                border: '1px solid',
+                borderRadius: 1,
+                p: 2
+              }}
+            >
+              <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
+                <TelegramIcon sx={{ color: '#0088cc' }} />
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  机器人已连接:
+                </Typography>
+                <Chip
+                  label={`@${status.botUsername}`}
+                  size="small"
+                  clickable
+                  component="a"
+                  href={`https://t.me/${status.botUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{
+                    backgroundColor: '#0088cc',
+                    color: 'white',
+                    fontWeight: 600,
+                    '&:hover': {
+                      backgroundColor: '#006699'
+                    }
+                  }}
+                />
+                <Typography variant="caption" color="textSecondary">
+                  ID: {status.botId}
+                </Typography>
+              </Stack>
+
+              {/* 二维码区域 */}
+              <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                <Tooltip title="使用手机扫描二维码打开机器人" placement="top">
+                  <Box
+                    component="a"
+                    href={`https://t.me/${status.botUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{
+                      display: 'inline-block',
+                      p: 1.5,
+                      bgcolor: 'white',
+                      borderRadius: 1,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      '&:hover': {
+                        transform: 'scale(1.02)',
+                        boxShadow: '0 4px 16px rgba(0,136,204,0.3)'
+                      }
+                    }}
+                  >
+                    <QRCodeSVG
+                      value={`https://t.me/${status.botUsername}`}
+                      size={100}
+                      level="M"
+                      bgColor="#ffffff"
+                      fgColor="#0088cc"
+                      imageSettings={{
+                        src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwODhjYyI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTQuNjQgNi44bC0xLjY0IDcuNzNjLS4xMi41NC0uNDQuNjctLjktLjQybC0yLjQ4LTEuODMtMS4yIDEuMTVjLS4xMy4xMy0uMjQuMjQtLjUtLjI0bC0uMjgtMi44LTQuNzItMS41N2MtMS4wMy0uMzItMS4wNS0xLjAzLjIyLTEuNTNsOS40My0zLjY0Yy44Ni0uMzIgMS42LjIxIDEuMzIgMS4zOHoiLz48L3N2Zz4=',
+                        height: 24,
+                        width: 24,
+                        excavate: true
+                      }}
+                    />
+                  </Box>
+                </Tooltip>
+                <Box>
+                  <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                    扫描二维码打开机器人
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    或点击上方机器人名称直接跳转
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          )}
 
           <TextField
             fullWidth

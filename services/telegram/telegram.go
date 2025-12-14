@@ -34,6 +34,8 @@ type TelegramBot struct {
 	connected     bool
 	lastError     string
 	updateOffset  int64
+	botUsername   string // 机器人用户名
+	botID         int64  // 机器人ID
 }
 
 // Config Telegram 配置
@@ -206,6 +208,10 @@ func (b *TelegramBot) validateToken() error {
 	}
 
 	log.Printf("Telegram 机器人验证成功: @%s", result.Result.Username)
+	b.mutex.Lock()
+	b.botUsername = result.Result.Username
+	b.botID = result.Result.ID
+	b.mutex.Unlock()
 	b.setConnected(true)
 	return nil
 }
@@ -535,16 +541,25 @@ func GetStatus() map[string]interface{} {
 	bot := GetBot()
 	if bot == nil {
 		return map[string]interface{}{
-			"enabled":   false,
-			"connected": false,
-			"error":     "",
+			"enabled":     false,
+			"connected":   false,
+			"error":       "",
+			"botUsername": "",
+			"botId":       int64(0),
 		}
 	}
 
+	bot.mutex.RLock()
+	username := bot.botUsername
+	botID := bot.botID
+	bot.mutex.RUnlock()
+
 	return map[string]interface{}{
-		"enabled":   true,
-		"connected": bot.IsConnected(),
-		"error":     bot.GetLastError(),
+		"enabled":     true,
+		"connected":   bot.IsConnected(),
+		"error":       bot.GetLastError(),
+		"botUsername": username,
+		"botId":       botID,
 	}
 }
 

@@ -33,6 +33,8 @@ func GetTelegramConfig(c *gin.Context) {
 		"systemDomain": systemDomain,
 		"connected":    status["connected"],
 		"lastError":    status["error"],
+		"botUsername":  status["botUsername"],
+		"botId":        status["botId"],
 	})
 }
 
