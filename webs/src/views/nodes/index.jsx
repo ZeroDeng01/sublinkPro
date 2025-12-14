@@ -158,6 +158,7 @@ export default function NodeList() {
     timeout: 5,
     groups: [],
     detect_country: false,
+    landing_ip_url: '',
     latency_concurrency: 0,
     speed_concurrency: 1,
     latency_samples: 3,
@@ -801,6 +802,8 @@ export default function NodeList() {
           timeout: 5,
           groups: [],
           tags: [],
+          detect_country: false,
+          landing_ip_url: '',
           latency_concurrency: 0,
           speed_concurrency: 1,
           latency_samples: 3,
@@ -966,9 +969,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -1011,9 +1014,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />

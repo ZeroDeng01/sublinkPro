@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -174,15 +175,18 @@ func createHTTPClientWithAdapter(proxyAdapter constant.Proxy, timeout time.Durat
 	}
 }
 
-// MihomoDelayWithSamples performs multiple latency tests and returns the average
-// It removes the highest outlier to improve accuracy
-// samples: number of samples to take (minimum 1, recommended 3)
-// includeHandshake: if true, measure full connection time; if false, warmup first then measure pure RTT
-func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Duration, samples int, includeHandshake bool) (latency int, err error) {
+// MihomoDelayWithSamples 执行多次延迟测试并返回平均值，可选检测落地IP
+// samples: 采样次数（最小1，建议3）
+// includeHandshake: true测量完整连接时间，false则预热后测量纯RTT
+// detectLandingIP: 是否检测落地IP
+// landingIPUrl: IP查询服务URL，空则使用默认值
+// 返回: latency(ms), landingIP(若未检测或失败则为空), error
+func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Duration, samples int, includeHandshake bool, detectLandingIP bool, landingIPUrl string) (latency int, landingIP string, err error) {
 	// Recover from any panics
 	defer func() {
 		if r := recover(); r != nil {
 			latency = 0
+			landingIP = ""
 			err = fmt.Errorf("panic in MihomoDelayWithSamples: %v", r)
 		}
 	}()
@@ -201,7 +205,7 @@ func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Durati
 	// Create adapter once and reuse for all samples (CPU optimization)
 	proxyAdapter, err := GetMihomoAdapter(nodeLink)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 
 	var results []int
@@ -228,12 +232,12 @@ func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Durati
 		// Warmup request - establish connection (don't measure this)
 		warmupReq, err := http.NewRequestWithContext(ctx, "HEAD", testUrl, nil)
 		if err != nil {
-			return 0, fmt.Errorf("create warmup request error: %v", err)
+			return 0, "", fmt.Errorf("create warmup request error: %v", err)
 		}
 		warmupResp, warmupErr := client.Do(warmupReq)
 		if warmupErr != nil {
 			// Warmup failed - node is unreachable, return immediately
-			return 0, fmt.Errorf("warmup connection failed: %v", warmupErr)
+			return 0, "", fmt.Errorf("warmup connection failed: %v", warmupErr)
 		}
 		if warmupResp != nil && warmupResp.Body != nil {
 			_, _ = io.Copy(io.Discard, warmupResp.Body)
@@ -269,14 +273,18 @@ func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Durati
 
 	if len(results) == 0 {
 		if lastErr != nil {
-			return 0, lastErr
+			return 0, "", lastErr
 		}
-		return 0, fmt.Errorf("all samples failed")
+		return 0, "", fmt.Errorf("all samples failed")
 	}
 
 	// If only one result, return it directly
 	if len(results) == 1 {
-		return results[0], nil
+		// 延迟测试成功后，如果需要检测落地IP
+		if detectLandingIP {
+			landingIP = fetchLandingIPWithAdapter(proxyAdapter, landingIPUrl)
+		}
+		return results[0], landingIP, nil
 	}
 
 	// Remove highest outlier if we have more than 2 samples
@@ -295,25 +303,35 @@ func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Durati
 	for _, v := range results {
 		sum += v
 	}
-	return sum / len(results), nil
+	latency = sum / len(results)
+
+	// 延迟测试成功后，如果需要检测落地IP
+	if detectLandingIP {
+		landingIP = fetchLandingIPWithAdapter(proxyAdapter, landingIPUrl)
+	}
+
+	return latency, landingIP, nil
 }
 
-// MihomoSpeedTest performs a true speed test using Mihomo adapter
-// Returns speed in MB/s, latency in ms, and bytes downloaded
-func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (speed float64, latency int, bytesDownloaded int64, err error) {
+// MihomoSpeedTest 执行速度测试，可选检测落地IP
+// detectLandingIP: 是否检测落地IP
+// landingIPUrl: IP查询服务URL，空则使用默认值 https://api.ipify.org
+// 返回: speed(MB/s), latency(ms), bytesDownloaded, landingIP(若未检测或失败则为空), error
+func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, detectLandingIP bool, landingIPUrl string) (speed float64, latency int, bytesDownloaded int64, landingIP string, err error) {
 	// Recover from any panics and return error with zero values
 	defer func() {
 		if r := recover(); r != nil {
 			speed = 0
 			latency = 0
 			bytesDownloaded = 0
+			landingIP = ""
 			err = fmt.Errorf("panic in MihomoSpeedTest: %v", r)
 		}
 	}()
 
 	proxyAdapter, err := GetMihomoAdapter(nodeLink)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, "", err
 	}
 
 	// 4. Perform Speed Test
@@ -324,7 +342,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 
 	parsedUrl, err := url.Parse(testUrl)
 	if err != nil {
-		return 0, 0, 0, fmt.Errorf("parse test url error: %v", err)
+		return 0, 0, 0, "", fmt.Errorf("parse test url error: %v", err)
 	}
 
 	portStr := parsedUrl.Port()
@@ -338,11 +356,11 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 
 	portInt, err := strconv.Atoi(portStr)
 	if err != nil {
-		return 0, 0, 0, fmt.Errorf("invalid port: %v", err)
+		return 0, 0, 0, "", fmt.Errorf("invalid port: %v", err)
 	}
 	// Validate port range to prevent overflow
 	if portInt < 0 || portInt > 65535 {
-		return 0, 0, 0, fmt.Errorf("port out of range: %d", portInt)
+		return 0, 0, 0, "", fmt.Errorf("port out of range: %d", portInt)
 	}
 	port := uint16(portInt)
 
@@ -358,7 +376,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 	start := time.Now()
 	conn, err := proxyAdapter.DialContext(ctx, metadata)
 	if err != nil {
-		return 0, 0, 0, fmt.Errorf("dial error: %v", err)
+		return 0, 0, 0, "", fmt.Errorf("dial error: %v", err)
 	}
 	// Close connection asynchronously to avoid blocking if it hangs
 	defer func() {
@@ -373,7 +391,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 	// Create HTTP request
 	req, err := http.NewRequest("GET", testUrl, nil)
 	if err != nil {
-		return 0, latency, 0, fmt.Errorf("create request error: %v", err)
+		return 0, latency, 0, "", fmt.Errorf("create request error: %v", err)
 	}
 	req = req.WithContext(ctx)
 
@@ -421,7 +439,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 
 	resp, err := client.Get(testUrl)
 	if err != nil {
-		return 0, latency, 0, fmt.Errorf("http get error: %v", err)
+		return 0, latency, 0, "", fmt.Errorf("http get error: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -447,7 +465,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration) (sp
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 				break
 			}
-			return 0, latency, totalRead, fmt.Errorf("read body error: %v", err)
+			return 0, latency, totalRead, "", fmt.Errorf("read body error: %v", err)
 		}
 		// Check timeout explicitly via context
 		select {
@@ -463,108 +481,100 @@ CalculateSpeed:
 
 	duration := time.Since(readStart)
 	if duration.Seconds() == 0 {
-		return 0, latency, totalRead, nil
+		return 0, latency, totalRead, "", nil
 	}
 
 	// Speed in MB/s
 	speed = float64(totalRead) / 1024 / 1024 / duration.Seconds()
 
-	return speed, latency, totalRead, nil
+	// 速度测试成功后，如果需要检测落地IP
+	if detectLandingIP && speed > 0 {
+		landingIP = fetchLandingIPWithAdapter(proxyAdapter, landingIPUrl)
+	}
+
+	return speed, latency, totalRead, landingIP, nil
 }
 
-// FetchLandingIP fetches the landing IP address through the proxy by accessing https://api.ip.sb/ip
-// Returns the IP address as a string
-func FetchLandingIP(nodeLink string, timeout time.Duration) (string, error) {
-	// Recover from any panics and return error
+// fetchLandingIPWithAdapter 使用已有adapter获取落地IP（内部辅助函数）
+// 固定1秒超时，失败静默返回空字符串不影响主流程
+func fetchLandingIPWithAdapter(proxyAdapter constant.Proxy, ipUrl string) string {
+	// Recover from any panics
 	defer func() {
 		if r := recover(); r != nil {
-			// Don't do anything, just return from the function
+			// 静默处理，不影响主流程
 		}
 	}()
 
-	proxyAdapter, err := GetMihomoAdapter(nodeLink)
-	if err != nil {
-		return "", err
+	// 默认IP查询接口
+	if ipUrl == "" {
+		ipUrl = "https://api.ipify.org"
 	}
 
-	testUrl := "https://api.ip.sb/ip"
-	parsedUrl, err := url.Parse(testUrl)
-	if err != nil {
-		return "", fmt.Errorf("parse test url error: %v", err)
-	}
-
-	port := uint16(443)
-
-	metadata := &constant.Metadata{
-		Host:    parsedUrl.Hostname(),
-		DstPort: port,
-		Type:    constant.HTTP,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	// 固定1秒超时
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	conn, err := proxyAdapter.DialContext(ctx, metadata)
-	if err != nil {
-		return "", fmt.Errorf("dial error: %v", err)
-	}
-	defer func() {
-		go func() {
-			_ = conn.Close()
-		}()
-	}()
-
-	// Create HTTP client with the proxy transport
+	// 复用proxyAdapter创建HTTP client
 	client := &http.Client{
 		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				defer func() {
-					if r := recover(); r != nil {
-						err = fmt.Errorf("panic in DialContext: %v", r)
-					}
-				}()
-
+			DialContext: func(dialCtx context.Context, network, addr string) (net.Conn, error) {
 				h, pStr, splitErr := net.SplitHostPort(addr)
 				if splitErr != nil {
-					return nil, fmt.Errorf("split host port error: %v", splitErr)
+					return nil, splitErr
 				}
 
 				pInt, atoiErr := strconv.Atoi(pStr)
 				if atoiErr != nil {
-					return nil, fmt.Errorf("invalid port string: %v", atoiErr)
+					return nil, atoiErr
 				}
 
 				if pInt < 0 || pInt > 65535 {
 					return nil, fmt.Errorf("port out of range: %d", pInt)
 				}
-				p := uint16(pInt)
 
 				md := &constant.Metadata{
 					Host:    h,
-					DstPort: p,
+					DstPort: uint16(pInt),
 					Type:    constant.HTTP,
 				}
-				return proxyAdapter.DialContext(ctx, md)
+				return proxyAdapter.DialContext(dialCtx, md)
 			},
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
-		Timeout: timeout,
+		Timeout: 1 * time.Second,
 	}
 
-	resp, err := client.Get(testUrl)
+	req, err := http.NewRequestWithContext(ctx, "GET", ipUrl, nil)
 	if err != nil {
-		return "", fmt.Errorf("http get error: %v", err)
+		log.Printf("落地IP检测: 创建请求失败: %v", err)
+		return ""
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("落地IP检测: 请求失败: %v (URL: %s)", err, ipUrl)
+		return ""
 	}
 	defer resp.Body.Close()
 
-	// Read the response body (should be just the IP address)
-	body, err := io.ReadAll(resp.Body)
+	// 限制读取最多64字节（IP地址不会超过这个长度）
+	body := make([]byte, 64)
+	n, _ := resp.Body.Read(body)
+
+	return strings.TrimSpace(string(body[:n]))
+}
+
+// FetchLandingIP 获取落地IP（向后兼容函数，建议使用 MihomoSpeedTest 的内置检测）
+// Deprecated: 此函数需要独立创建adapter，建议在速度测试时通过 detectLandingIP 参数复用连接
+func FetchLandingIP(nodeLink string, timeout time.Duration) (string, error) {
+	proxyAdapter, err := GetMihomoAdapter(nodeLink)
 	if err != nil {
-		return "", fmt.Errorf("read body error: %v", err)
+		return "", err
 	}
 
-	// Trim whitespace and newlines
-	ip := strings.TrimSpace(string(body))
-
+	ip := fetchLandingIPWithAdapter(proxyAdapter, "https://api.ipify.org")
+	if ip == "" {
+		return "", fmt.Errorf("failed to fetch landing IP")
+	}
 	return ip, nil
 }

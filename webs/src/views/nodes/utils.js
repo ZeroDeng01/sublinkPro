@@ -33,6 +33,16 @@ export const LATENCY_TEST_URL_OPTIONS = [
   { label: 'Cloudflare 0.5MB', value: 'https://speed.cloudflare.com/__down?bytes=500000' }
 ];
 
+// 落地IP查询接口选项
+export const LANDING_IP_URL_OPTIONS = [
+  { label: 'ipify.org (推荐)', value: 'https://api.ipify.org' },
+  { label: 'ip-api.com', value: 'http://ip-api.com/line/?fields=query' },
+  { label: 'ip.sb', value: 'https://api.ip.sb/ip' },
+  { label: 'ifconfig.me', value: 'https://ifconfig.me/ip' },
+  { label: 'icanhazip.com', value: 'https://icanhazip.com' },
+  { label: 'ipinfo.io', value: 'https://ipinfo.io/ip' }
+];
+
 // User-Agent 预设选项
 export const USER_AGENT_OPTIONS = [
   { label: '无 (空)', value: '' },

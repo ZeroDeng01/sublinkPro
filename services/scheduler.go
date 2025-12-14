@@ -516,6 +516,12 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	detectCountryStr, _ := models.GetSetting("speed_test_detect_country")
 	detectCountry := detectCountryStr == "true"
 
+	// 获取落地IP查询接口URL
+	landingIPUrl, _ := models.GetSetting("speed_test_landing_ip_url")
+	if landingIPUrl == "" {
+		landingIPUrl = "https://api.ipify.org" // 默认使用ipify
+	}
+
 	// 获取流量统计开关设置
 	trafficByGroupStr, _ := models.GetSetting("speed_test_traffic_by_group")
 	trafficByGroup := trafficByGroupStr != "false" // 默认开启
@@ -684,7 +690,9 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 			}
 
 			// 使用多次采样测量延迟
-			latency, err := mihomo.MihomoDelayWithSamples(n.Link, latencyTestUrl, speedTestTimeout, latencySamples, includeHandshake)
+			// TCP模式下需要检测IP（因为没有速度测试阶段），mihomo模式在速度阶段检测
+			detectIPInLatency := detectCountry && speedTestMode == "tcp"
+			latency, landingIP, err := mihomo.MihomoDelayWithSamples(n.Link, latencyTestUrl, speedTestTimeout, latencySamples, includeHandshake, detectIPInLatency, landingIPUrl)
 
 			mu.Lock()
 			defer mu.Unlock()
@@ -727,6 +735,15 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 					n.SpeedStatus = constants.StatusUntested
 					n.DelayTime = latency
 					n.DelayStatus = constants.StatusSuccess
+
+					// TCP模式下处理落地IP检测结果
+					if landingIP != "" {
+						countryCode, geoErr := geoip.GetCountryISOCode(landingIP)
+						if geoErr == nil && countryCode != "" {
+							n.LinkCountry = countryCode
+							log.Printf("节点 [%s] 落地IP: %s, 国家: %s", n.Name, landingIP, countryCode)
+						}
+					}
 				}
 				n.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
 				// 收集结果到批量更新列表（不再立即写数据库）
@@ -862,8 +879,8 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 				default:
 				}
 
-				// 速度测试（延迟已在阶段一获取）
-				speed, _, bytesDownloaded, err := mihomo.MihomoSpeedTest(result.node.Link, speedTestUrl, speedTestTimeout)
+				// 速度测试（延迟已在阶段一获取，同时可选检测落地IP）
+				speed, _, bytesDownloaded, landingIP, err := mihomo.MihomoSpeedTest(result.node.Link, speedTestUrl, speedTestTimeout, detectCountry, landingIPUrl)
 
 				mu.Lock()
 				defer mu.Unlock()
@@ -948,19 +965,12 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 						"latency": result.latency,
 					}
 
-					// 如果开启落地IP检测
-					if detectCountry {
-						landingIP, countryErr := mihomo.FetchLandingIP(result.node.Link, speedTestTimeout)
-						if countryErr == nil && landingIP != "" {
-							countryCode, geoErr := geoip.GetCountryISOCode(landingIP)
-							if geoErr == nil && countryCode != "" {
-								result.node.LinkCountry = countryCode
-								log.Printf("节点 [%s] 落地IP: %s, 国家: %s", result.node.Name, landingIP, countryCode)
-							} else {
-								log.Printf("节点 [%s] 获取国家代码失败: %v", result.node.Name, geoErr)
-							}
-						} else {
-							log.Printf("节点 [%s] 获取落地IP失败: %v", result.node.Name, countryErr)
+					// 处理落地IP检测结果（已由MihomoSpeedTest内部完成）
+					if landingIP != "" {
+						countryCode, geoErr := geoip.GetCountryISOCode(landingIP)
+						if geoErr == nil && countryCode != "" {
+							result.node.LinkCountry = countryCode
+							log.Printf("节点 [%s] 落地IP: %s, 国家: %s", result.node.Name, landingIP, countryCode)
 						}
 					}
 				}

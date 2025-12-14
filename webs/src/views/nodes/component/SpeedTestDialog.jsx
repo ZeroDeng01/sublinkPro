@@ -43,7 +43,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
 
 // constants
-import { SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS, LATENCY_TEST_URL_OPTIONS } from '../utils';
+import { SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS, LATENCY_TEST_URL_OPTIONS, LANDING_IP_URL_OPTIONS } from '../utils';
 
 // hooks
 import { useState } from 'react';
@@ -287,11 +287,27 @@ export default function SpeedTestDialog({
                 <Typography variant="body2">
                   检测落地IP国家
                   <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
-                    (测速时顺便获取节点出口国家，会降低测速效率)
+                    (测速时顺便获取节点出口国家)
                   </Typography>
                 </Typography>
               }
             />
+            {speedTestForm.detect_country && (
+              <FormControl fullWidth size="small">
+                <InputLabel>IP查询接口</InputLabel>
+                <Select
+                  value={speedTestForm.landing_ip_url || 'https://api.ipify.org'}
+                  label="IP查询接口"
+                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, landing_ip_url: e.target.value })}
+                >
+                  {LANDING_IP_URL_OPTIONS.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
           </Stack>
         </ConfigSection>
 
