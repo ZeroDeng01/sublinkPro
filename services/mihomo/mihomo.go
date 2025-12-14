@@ -224,17 +224,19 @@ func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Durati
 	} else {
 		// Mode 2: Exclude handshake - warmup first, then measure pure RTT
 		// Create client with keep-alive enabled for connection reuse
+		// 注意：client的Timeout在这里不生效，因为每个请求都使用独立的context
 		client := createHTTPClientWithAdapter(proxyAdapter, timeout, false)
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-
-		// Warmup request - establish connection (don't measure this)
-		warmupReq, err := http.NewRequestWithContext(ctx, "HEAD", testUrl, nil)
+		// 预热阶段：使用独立的超时时间（完整的用户配置超时）
+		// 预热不应挤占后续实际测量时间
+		warmupCtx, warmupCancel := context.WithTimeout(context.Background(), timeout)
+		warmupReq, err := http.NewRequestWithContext(warmupCtx, "HEAD", testUrl, nil)
 		if err != nil {
+			warmupCancel()
 			return 0, "", fmt.Errorf("create warmup request error: %v", err)
 		}
 		warmupResp, warmupErr := client.Do(warmupReq)
+		warmupCancel() // 立即释放预热context
 		if warmupErr != nil {
 			// Warmup failed - node is unreachable, return immediately
 			return 0, "", fmt.Errorf("warmup connection failed: %v", warmupErr)
@@ -244,7 +246,8 @@ func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Durati
 			_ = warmupResp.Body.Close()
 		}
 
-		// Now measure pure RTT using the warmed-up connection
+		// 每次采样使用独立的超时时间（完整的用户配置超时）
+		// 这样避免多次采样共享超时导致后续采样时间不足
 		for i := 0; i < samples; i++ {
 			sampleCtx, sampleCancel := context.WithTimeout(context.Background(), timeout)
 			req, reqErr := http.NewRequestWithContext(sampleCtx, "HEAD", testUrl, nil)
