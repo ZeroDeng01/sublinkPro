@@ -279,7 +279,15 @@ export default function SpeedTestDialog({
               control={
                 <Switch
                   checked={speedTestForm.detect_country}
-                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, detect_country: e.target.checked })}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setSpeedTestForm({
+                      ...speedTestForm,
+                      detect_country: checked,
+                      // 开启时自动设置默认URL
+                      landing_ip_url: checked && !speedTestForm.landing_ip_url ? 'https://api.ipify.org' : speedTestForm.landing_ip_url
+                    });
+                  }}
                   size="small"
                 />
               }

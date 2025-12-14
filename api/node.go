@@ -664,6 +664,9 @@ func GetSpeedTestConfig(c *gin.Context) {
 	detectCountryStr, _ := models.GetSetting("speed_test_detect_country")
 	detectCountry := detectCountryStr == "true"
 
+	// 获取落地IP查询接口URL
+	landingIPUrl, _ := models.GetSetting("speed_test_landing_ip_url")
+
 	// 获取延迟测试并发数（向后兼容旧配置）
 	latencyConcurrencyStr, _ := models.GetSetting("speed_test_latency_concurrency")
 	latencyConcurrency := 0
@@ -713,6 +716,7 @@ func GetSpeedTestConfig(c *gin.Context) {
 		"groups":              groups,
 		"tags":                tags,
 		"detect_country":      detectCountry,
+		"landing_ip_url":      landingIPUrl,
 		"latency_concurrency": latencyConcurrency,
 		"speed_concurrency":   speedConcurrency,
 		"latency_samples":     latencySamples,
@@ -735,6 +739,7 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		Groups             []string    `json:"groups"`
 		Tags               []string    `json:"tags"`
 		DetectCountry      bool        `json:"detect_country"`
+		LandingIPUrl       string      `json:"landing_ip_url"`
 		LatencyConcurrency int         `json:"latency_concurrency"`
 		SpeedConcurrency   int         `json:"speed_concurrency"`
 		LatencySamples     int         `json:"latency_samples"`
@@ -816,6 +821,13 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 	err = models.SetSetting("speed_test_detect_country", strconv.FormatBool(req.DetectCountry))
 	if err != nil {
 		utils.FailWithMsg(c, "保存落地IP检测配置失败")
+		return
+	}
+
+	// 保存落地IP查询接口URL
+	err = models.SetSetting("speed_test_landing_ip_url", req.LandingIPUrl)
+	if err != nil {
+		utils.FailWithMsg(c, "保存落地IP查询接口配置失败")
 		return
 	}
 

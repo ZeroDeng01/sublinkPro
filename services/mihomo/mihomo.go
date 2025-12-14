@@ -510,8 +510,8 @@ func fetchLandingIPWithAdapter(proxyAdapter constant.Proxy, ipUrl string) string
 		ipUrl = "https://api.ipify.org"
 	}
 
-	// 固定1秒超时
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	// 固定3秒超时（慢速节点需要更长时间）
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	// 复用proxyAdapter创建HTTP client
@@ -541,7 +541,7 @@ func fetchLandingIPWithAdapter(proxyAdapter constant.Proxy, ipUrl string) string
 			},
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
-		Timeout: 1 * time.Second,
+		Timeout: 3 * time.Second,
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", ipUrl, nil)
