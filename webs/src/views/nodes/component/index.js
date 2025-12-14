@@ -8,6 +8,7 @@ export { default as BatchGroupDialog } from './BatchGroupDialog';
 export { default as BatchDialerProxyDialog } from './BatchDialerProxyDialog';
 export { default as BatchTagDialog } from './BatchTagDialog';
 export { default as BatchRemoveTagDialog } from './BatchRemoveTagDialog';
+export { default as IPDetailsDialog } from './IPDetailsDialog';
 
 // List view components
 export { default as NodeFilters } from './NodeFilters';

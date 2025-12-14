@@ -123,9 +123,9 @@ export default function SearchableNodeSelect({
           '& .MuiAutocomplete-option:last-child':
             hasMoreNodes && !inputValue
               ? {
-                borderTop: '1px dashed',
-                borderColor: 'divider'
-              }
+                  borderTop: '1px dashed',
+                  borderColor: 'divider'
+                }
               : {}
         }
       }}

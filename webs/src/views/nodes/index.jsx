@@ -55,6 +55,7 @@ import {
   BatchDialerProxyDialog,
   BatchTagDialog,
   BatchRemoveTagDialog,
+  IPDetailsDialog,
   NodeFilters,
   BatchActions,
   NodeMobileList,
@@ -195,6 +196,10 @@ export default function NodeList() {
   const [batchTagValue, setBatchTagValue] = useState([]);
   const [batchRemoveTagDialogOpen, setBatchRemoveTagDialogOpen] = useState(false);
   const [batchRemoveTagValue, setBatchRemoveTagValue] = useState([]);
+
+  // IP详情弹窗
+  const [ipDialogOpen, setIpDialogOpen] = useState(false);
+  const [selectedIP, setSelectedIP] = useState('');
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -969,9 +974,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -1014,9 +1019,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -1076,6 +1081,10 @@ export default function NodeList() {
           onCopy={copyToClipboard}
           onEdit={handleEditNode}
           onDelete={handleDeleteNode}
+          onIPClick={(ip) => {
+            setSelectedIP(ip);
+            setIpDialogOpen(true);
+          }}
         />
       ) : (
         <NodeTable
@@ -1093,6 +1102,10 @@ export default function NodeList() {
           onCopy={copyToClipboard}
           onEdit={handleEditNode}
           onDelete={handleDeleteNode}
+          onIPClick={(ip) => {
+            setSelectedIP(ip);
+            setIpDialogOpen(true);
+          }}
         />
       )}
 
@@ -1225,6 +1238,9 @@ export default function NodeList() {
         onClose={() => setBatchRemoveTagDialogOpen(false)}
         onSubmit={handleSubmitBatchRemoveTag}
       />
+
+      {/* IP详情弹窗 */}
+      <IPDetailsDialog open={ipDialogOpen} onClose={() => setIpDialogOpen(false)} ip={selectedIP} onCopy={copyToClipboard} />
 
       {/* 提示消息 */}
       <Snackbar

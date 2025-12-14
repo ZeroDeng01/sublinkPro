@@ -25,7 +25,7 @@ import { formatDateTime, formatCountry, getDelayDisplay, getSpeedDisplay } from 
 /**
  * 移动端节点卡片组件
  */
-export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSpeedTest, onCopy, onEdit, onDelete }) {
+export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSpeedTest, onCopy, onEdit, onDelete, onIPClick }) {
   const theme = useTheme();
 
   return (
@@ -104,6 +104,25 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onSp
           {node.LinkCountry && (
             <Tooltip title={`国家: ${node.LinkCountry}`}>
               <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />
+            </Tooltip>
+          )}
+          {node.LandingIP && (
+            <Tooltip title={`落地IP: ${node.LandingIP}`}>
+              <Chip
+                icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>🌐</span>}
+                label={
+                  node.LandingIP.includes(':') && node.LandingIP.length > 16 ? node.LandingIP.substring(0, 13) + '...' : node.LandingIP
+                }
+                variant="outlined"
+                size="small"
+                onClick={() => onIPClick && onIPClick(node.LandingIP)}
+                sx={{
+                  cursor: onIPClick ? 'pointer' : 'default',
+                  fontFamily: 'monospace',
+                  maxWidth: '130px',
+                  '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' }
+                }}
+              />
             </Tooltip>
           )}
           {node.Tags &&
@@ -205,6 +224,7 @@ NodeCard.propTypes = {
     Speed: PropTypes.number,
     DialerProxyName: PropTypes.string,
     LinkCountry: PropTypes.string,
+    LandingIP: PropTypes.string,
     CreatedAt: PropTypes.string,
     UpdatedAt: PropTypes.string,
     LatencyCheckAt: PropTypes.string,
@@ -217,5 +237,6 @@ NodeCard.propTypes = {
   onSpeedTest: PropTypes.func.isRequired,
   onCopy: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired
+  onDelete: PropTypes.func.isRequired,
+  onIPClick: PropTypes.func
 };

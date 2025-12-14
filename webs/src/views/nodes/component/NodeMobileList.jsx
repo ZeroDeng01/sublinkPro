@@ -20,7 +20,8 @@ export default function NodeMobileList({
   onSpeedTest,
   onCopy,
   onEdit,
-  onDelete
+  onDelete,
+  onIPClick
 }) {
   const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
   // 后端分页：nodes 已经是当前页数据，无需客户端切片
@@ -43,6 +44,7 @@ export default function NodeMobileList({
           onCopy={onCopy}
           onEdit={onEdit}
           onDelete={onDelete}
+          onIPClick={onIPClick}
         />
       ))}
     </Stack>
@@ -59,5 +61,6 @@ NodeMobileList.propTypes = {
   onSpeedTest: PropTypes.func.isRequired,
   onCopy: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired
+  onDelete: PropTypes.func.isRequired,
+  onIPClick: PropTypes.func
 };

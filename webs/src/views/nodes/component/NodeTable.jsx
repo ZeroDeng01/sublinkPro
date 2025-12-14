@@ -42,7 +42,8 @@ export default function NodeTable({
   onSpeedTest,
   onCopy,
   onEdit,
-  onDelete
+  onDelete,
+  onIPClick
 }) {
   const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
   // 后端分页：nodes 已经是当前页数据，无需客户端切片
@@ -85,6 +86,7 @@ export default function NodeTable({
               </TableSortLabel>
             </TableCell>
             <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>国家</TableCell>
+            <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>落地IP</TableCell>
             <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>创建时间</TableCell>
             <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>更新时间</TableCell>
             <TableCell align="right">操作</TableCell>
@@ -224,6 +226,31 @@ export default function NodeTable({
                   '-'
                 )}
               </TableCell>
+              <TableCell>
+                {node.LandingIP ? (
+                  <Tooltip title={node.LandingIP}>
+                    <Chip
+                      label={
+                        node.LandingIP.includes(':') && node.LandingIP.length > 16
+                          ? node.LandingIP.substring(0, 13) + '...'
+                          : node.LandingIP
+                      }
+                      size="small"
+                      variant="outlined"
+                      onClick={() => onIPClick && onIPClick(node.LandingIP)}
+                      sx={{
+                        cursor: onIPClick ? 'pointer' : 'default',
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        maxWidth: '120px',
+                        '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' }
+                      }}
+                    />
+                  </Tooltip>
+                ) : (
+                  '-'
+                )}
+              </TableCell>
               <TableCell sx={{ minWidth: 160, whiteSpace: 'nowrap' }}>
                 <Typography variant="caption">{formatDateTime(node.CreatedAt)}</Typography>
               </TableCell>
@@ -274,5 +301,6 @@ NodeTable.propTypes = {
   onSpeedTest: PropTypes.func.isRequired,
   onCopy: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired
+  onDelete: PropTypes.func.isRequired,
+  onIPClick: PropTypes.func
 };

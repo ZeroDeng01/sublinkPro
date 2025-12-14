@@ -226,8 +226,8 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
                 style={{ color: '#0088cc', fontWeight: 600, textDecoration: 'none' }}
               >
                 @BotFather
-              </a>
-              {' '}创建机器人并获取 Token。 首次发送 /start 命令后，机器人会自动绑定您的 Chat ID。
+              </a>{' '}
+              创建机器人并获取 Token。 首次发送 /start 命令后，机器人会自动绑定您的 Chat ID。
             </Typography>
           </Alert>
 

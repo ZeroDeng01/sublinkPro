@@ -738,6 +738,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 
 					// TCP模式下处理落地IP检测结果
 					if landingIP != "" {
+						n.LandingIP = landingIP
 						countryCode, geoErr := geoip.GetCountryISOCode(landingIP)
 						if geoErr == nil && countryCode != "" {
 							n.LinkCountry = countryCode
@@ -756,6 +757,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 					LatencyCheckAt: n.LatencyCheckAt,
 					SpeedCheckAt:   "",
 					LinkCountry:    n.LinkCountry,
+					LandingIP:      n.LandingIP,
 				})
 			}
 
@@ -847,6 +849,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 					LatencyCheckAt: nr.node.LatencyCheckAt,
 					SpeedCheckAt:   "",
 					LinkCountry:    nr.node.LinkCountry,
+					LandingIP:      nr.node.LandingIP,
 				})
 				mu.Unlock()
 				continue
@@ -967,6 +970,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 
 					// 处理落地IP检测结果（已由MihomoSpeedTest内部完成）
 					if landingIP != "" {
+						result.node.LandingIP = landingIP
 						countryCode, geoErr := geoip.GetCountryISOCode(landingIP)
 						if geoErr == nil && countryCode != "" {
 							result.node.LinkCountry = countryCode
@@ -987,6 +991,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 					LatencyCheckAt: result.node.LatencyCheckAt,
 					SpeedCheckAt:   result.node.SpeedCheckAt,
 					LinkCountry:    result.node.LinkCountry,
+					LandingIP:      result.node.LandingIP,
 				})
 
 				// 获取当前流量统计（用于实时显示）

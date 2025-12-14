@@ -23,6 +23,7 @@ type Node struct {
 	LinkHost        string //节点原始Host
 	LinkPort        string //节点原始端口
 	LinkCountry     string //节点所属国家、落地IP国家
+	LandingIP       string //落地IP地址
 	DialerProxyName string
 	Source          string `gorm:"default:'manual'"`
 	SourceID        int
@@ -117,7 +118,7 @@ func (node *Node) Update() error {
 
 // UpdateSpeed 更新节点测速结果
 func (node *Node) UpdateSpeed() error {
-	err := database.DB.Model(node).Select("Speed", "SpeedStatus", "LinkCountry", "DelayTime", "DelayStatus", "LatencyCheckAt", "SpeedCheckAt").Updates(node).Error
+	err := database.DB.Model(node).Select("Speed", "SpeedStatus", "LinkCountry", "LandingIP", "DelayTime", "DelayStatus", "LatencyCheckAt", "SpeedCheckAt").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -130,6 +131,7 @@ func (node *Node) UpdateSpeed() error {
 		cachedNode.LatencyCheckAt = node.LatencyCheckAt
 		cachedNode.SpeedCheckAt = node.SpeedCheckAt
 		cachedNode.LinkCountry = node.LinkCountry
+		cachedNode.LandingIP = node.LandingIP
 		nodeCache.Set(node.ID, cachedNode)
 	}
 	return nil
@@ -145,6 +147,7 @@ type SpeedTestResult struct {
 	LatencyCheckAt string
 	SpeedCheckAt   string
 	LinkCountry    string
+	LandingIP      string
 }
 
 // BatchAddNodes 批量添加节点（跳过重复节点）
@@ -202,6 +205,7 @@ func BatchUpdateSpeedResults(results []SpeedTestResult) error {
 			"latency_check_at": r.LatencyCheckAt,
 			"speed_check_at":   r.SpeedCheckAt,
 			"link_country":     r.LinkCountry,
+			"landing_ip":       r.LandingIP,
 		}).Error; err != nil {
 			log.Printf("更新节点 %d 测速结果失败: %v", r.NodeID, err)
 			// 继续处理下一个，不中断
@@ -218,6 +222,7 @@ func BatchUpdateSpeedResults(results []SpeedTestResult) error {
 			cachedNode.LatencyCheckAt = r.LatencyCheckAt
 			cachedNode.SpeedCheckAt = r.SpeedCheckAt
 			cachedNode.LinkCountry = r.LinkCountry
+			cachedNode.LandingIP = r.LandingIP
 			nodeCache.Set(r.NodeID, cachedNode)
 		}
 	}
