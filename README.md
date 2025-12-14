@@ -527,13 +527,13 @@ cd webs
 yarn install
 
 # 启动开发服务器
-yarn dev
+yarn run run start
 ```
 
 #### 4. 构建生产版本
 ```bash
 # 构建前端
-cd webs && yarn build
+cd webs && yarn run build
 
 # 构建后端（嵌入前端资源）
 go build -o sublinkpro main.go

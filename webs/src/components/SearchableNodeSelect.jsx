@@ -99,6 +99,16 @@ export default function SearchableNodeSelect({
       onChange={(event, newValue) => {
         onChange?.(newValue);
       }}
+      onBlur={() => {
+        // freeSolo 模式下，失焦时如果 inputValue 与当前 value 不同，则同步给父组件
+        if (freeSolo) {
+          const currentValueStr = typeof value === 'string' ? value : value?.[displayField] || '';
+          if (inputValue !== currentValueStr) {
+            // 如果 inputValue 为空，传递空字符串；否则传递输入的内容
+            onChange?.(inputValue || '');
+          }
+        }
+      }}
       isOptionEqualToValue={(option, value) => {
         if (!option || !value) return false;
         if (typeof option === 'string' || typeof value === 'string') {
@@ -113,9 +123,9 @@ export default function SearchableNodeSelect({
           '& .MuiAutocomplete-option:last-child':
             hasMoreNodes && !inputValue
               ? {
-                  borderTop: '1px dashed',
-                  borderColor: 'divider'
-                }
+                borderTop: '1px dashed',
+                borderColor: 'divider'
+              }
               : {}
         }
       }}
