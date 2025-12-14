@@ -319,8 +319,10 @@ func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Durati
 // MihomoSpeedTest 执行速度测试，可选检测落地IP
 // detectLandingIP: 是否检测落地IP
 // landingIPUrl: IP查询服务URL，空则使用默认值 https://api.ipify.org
+// speedRecordMode: 速度记录模式 "average"=平均速度, "peak"=峰值速度
+// peakSampleInterval: 峰值采样间隔（毫秒），仅在peak模式下生效，范围50-200
 // 返回: speed(MB/s), latency(ms), bytesDownloaded, landingIP(若未检测或失败则为空), error
-func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, detectLandingIP bool, landingIPUrl string) (speed float64, latency int, bytesDownloaded int64, landingIP string, err error) {
+func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, detectLandingIP bool, landingIPUrl string, speedRecordMode string, peakSampleInterval int) (speed float64, latency int, bytesDownloaded int64, landingIP string, err error) {
 	// Recover from any panics and return error with zero values
 	defer func() {
 		if r := recover(); r != nil {
@@ -331,6 +333,16 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 			err = fmt.Errorf("panic in MihomoSpeedTest: %v", r)
 		}
 	}()
+
+	// 默认值处理
+	if speedRecordMode == "" {
+		speedRecordMode = "average"
+	}
+	if peakSampleInterval < 50 {
+		peakSampleInterval = 50
+	} else if peakSampleInterval > 200 {
+		peakSampleInterval = 200
+	}
 
 	proxyAdapter, err := GetMihomoAdapter(nodeLink)
 	if err != nil {
@@ -452,6 +464,46 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 	var totalRead int64 // Changed to int64 to avoid overflow for large downloads
 	readStart := time.Now()
 
+	// 峰值速度采样相关变量
+	var peakSpeed float64
+	var lastSampleBytes int64
+	var lastSampleTime time.Time
+	var sampleTicker *time.Ticker
+	var sampleDone chan struct{}
+
+	if speedRecordMode == "peak" {
+		lastSampleTime = readStart
+		lastSampleBytes = 0
+		sampleTicker = time.NewTicker(time.Duration(peakSampleInterval) * time.Millisecond)
+		sampleDone = make(chan struct{})
+
+		// 采样协程：按固定间隔计算瞬时速度
+		go func() {
+			defer sampleTicker.Stop()
+			for {
+				select {
+				case <-sampleTicker.C:
+					now := time.Now()
+					currentBytes := totalRead
+					elapsed := now.Sub(lastSampleTime).Seconds()
+					if elapsed > 0 {
+						// 计算瞬时速度 (MB/s)
+						instantSpeed := float64(currentBytes-lastSampleBytes) / 1024 / 1024 / elapsed
+						if instantSpeed > peakSpeed {
+							peakSpeed = instantSpeed
+						}
+					}
+					lastSampleBytes = currentBytes
+					lastSampleTime = now
+				case <-sampleDone:
+					return
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	}
+
 	for {
 		n, err := resp.Body.Read(buf)
 		totalRead += int64(n)
@@ -468,6 +520,9 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 				break
 			}
+			if sampleDone != nil {
+				close(sampleDone)
+			}
 			return 0, latency, totalRead, "", fmt.Errorf("read body error: %v", err)
 		}
 		// Check timeout explicitly via context
@@ -482,13 +537,24 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 
 CalculateSpeed:
 
+	// 停止采样协程
+	if sampleDone != nil {
+		close(sampleDone)
+	}
+
 	duration := time.Since(readStart)
 	if duration.Seconds() == 0 {
 		return 0, latency, totalRead, "", nil
 	}
 
-	// Speed in MB/s
-	speed = float64(totalRead) / 1024 / 1024 / duration.Seconds()
+	// 根据模式选择返回值
+	if speedRecordMode == "peak" && peakSpeed > 0 {
+		// 使用峰值速度
+		speed = peakSpeed
+	} else {
+		// 使用平均速度 (MB/s)
+		speed = float64(totalRead) / 1024 / 1024 / duration.Seconds()
+	}
 
 	// 速度测试成功后，如果需要检测落地IP
 	if detectLandingIP && speed > 0 {

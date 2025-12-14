@@ -706,24 +706,41 @@ func GetSpeedTestConfig(c *gin.Context) {
 	includeHandshakeStr, _ := models.GetSetting("speed_test_include_handshake")
 	includeHandshake := includeHandshakeStr != "false" // 默认包含
 
+	// 获取速度记录模式（average=平均速度, peak=峰值速度）
+	speedRecordMode, _ := models.GetSetting("speed_test_speed_record_mode")
+	if speedRecordMode == "" {
+		speedRecordMode = "average"
+	}
+
+	// 获取峰值采样间隔（毫秒）
+	peakSampleIntervalStr, _ := models.GetSetting("speed_test_peak_sample_interval")
+	peakSampleInterval := 100 // 默认100ms
+	if peakSampleIntervalStr != "" {
+		if v, err := strconv.Atoi(peakSampleIntervalStr); err == nil && v >= 50 && v <= 200 {
+			peakSampleInterval = v
+		}
+	}
+
 	utils.OkDetailed(c, "获取成功", gin.H{
-		"cron":                cron,
-		"enabled":             enabled,
-		"mode":                mode,
-		"url":                 url,
-		"latency_url":         latencyUrl,
-		"timeout":             timeout,
-		"groups":              groups,
-		"tags":                tags,
-		"detect_country":      detectCountry,
-		"landing_ip_url":      landingIPUrl,
-		"latency_concurrency": latencyConcurrency,
-		"speed_concurrency":   speedConcurrency,
-		"latency_samples":     latencySamples,
-		"traffic_by_group":    trafficByGroup,
-		"traffic_by_source":   trafficBySource,
-		"traffic_by_node":     trafficByNode,
-		"include_handshake":   includeHandshake,
+		"cron":                 cron,
+		"enabled":              enabled,
+		"mode":                 mode,
+		"url":                  url,
+		"latency_url":          latencyUrl,
+		"timeout":              timeout,
+		"groups":               groups,
+		"tags":                 tags,
+		"detect_country":       detectCountry,
+		"landing_ip_url":       landingIPUrl,
+		"latency_concurrency":  latencyConcurrency,
+		"speed_concurrency":    speedConcurrency,
+		"latency_samples":      latencySamples,
+		"traffic_by_group":     trafficByGroup,
+		"traffic_by_source":    trafficBySource,
+		"traffic_by_node":      trafficByNode,
+		"include_handshake":    includeHandshake,
+		"speed_record_mode":    speedRecordMode,
+		"peak_sample_interval": peakSampleInterval,
 	})
 }
 
@@ -747,6 +764,8 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		TrafficBySource    *bool       `json:"traffic_by_source"`
 		TrafficByNode      *bool       `json:"traffic_by_node"`
 		IncludeHandshake   *bool       `json:"include_handshake"`
+		SpeedRecordMode    string      `json:"speed_record_mode"`
+		PeakSampleInterval int         `json:"peak_sample_interval"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -880,6 +899,35 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		err = models.SetSetting("speed_test_include_handshake", strconv.FormatBool(*req.IncludeHandshake))
 		if err != nil {
 			utils.FailWithMsg(c, "保存握手时间配置失败")
+			return
+		}
+	}
+
+	// 保存速度记录模式
+	if req.SpeedRecordMode != "" {
+		// 验证模式值
+		if req.SpeedRecordMode != "average" && req.SpeedRecordMode != "peak" {
+			req.SpeedRecordMode = "average"
+		}
+		err = models.SetSetting("speed_test_speed_record_mode", req.SpeedRecordMode)
+		if err != nil {
+			utils.FailWithMsg(c, "保存速度记录模式配置失败")
+			return
+		}
+	}
+
+	// 保存峰值采样间隔
+	if req.PeakSampleInterval > 0 {
+		// 验证范围
+		interval := req.PeakSampleInterval
+		if interval < 50 {
+			interval = 50
+		} else if interval > 200 {
+			interval = 200
+		}
+		err = models.SetSetting("speed_test_peak_sample_interval", strconv.Itoa(interval))
+		if err != nil {
+			utils.FailWithMsg(c, "保存峰值采样间隔配置失败")
 			return
 		}
 	}

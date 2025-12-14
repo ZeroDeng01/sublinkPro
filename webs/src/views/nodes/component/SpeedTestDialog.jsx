@@ -274,6 +274,42 @@ export default function SpeedTestDialog({
               InputProps={{ endAdornment: <InputAdornment position="end">秒</InputAdornment> }}
             />
 
+            {/* 速度记录模式 - 仅在Mihomo模式下显示 */}
+            {speedTestForm.mode === 'mihomo' && (
+              <>
+                <FormControl fullWidth size="small">
+                  <InputLabel>速度记录模式</InputLabel>
+                  <Select
+                    value={speedTestForm.speed_record_mode || 'average'}
+                    label="速度记录模式"
+                    onChange={(e) => setSpeedTestForm({ ...speedTestForm, speed_record_mode: e.target.value })}
+                  >
+                    <MenuItem value="average">平均速度 (推荐)</MenuItem>
+                    <MenuItem value="peak">峰值速度</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {speedTestForm.speed_record_mode === 'peak' && (
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="峰值采样间隔"
+                    type="number"
+                    value={speedTestForm.peak_sample_interval || 100}
+                    onChange={(e) =>
+                      setSpeedTestForm({
+                        ...speedTestForm,
+                        peak_sample_interval: Math.min(200, Math.max(50, Number(e.target.value) || 100))
+                      })
+                    }
+                    InputProps={{ endAdornment: <InputAdornment position="end">毫秒</InputAdornment> }}
+                    inputProps={{ min: 50, max: 200 }}
+                    helperText="采样间隔范围：50-200毫秒"
+                  />
+                )}
+              </>
+            )}
+
             {/* 落地IP检测 - 测速时的附加功能 */}
             <FormControlLabel
               control={
@@ -552,7 +588,9 @@ SpeedTestDialog.propTypes = {
     traffic_by_group: PropTypes.bool,
     traffic_by_source: PropTypes.bool,
     traffic_by_node: PropTypes.bool,
-    include_handshake: PropTypes.bool
+    include_handshake: PropTypes.bool,
+    speed_record_mode: PropTypes.string,
+    peak_sample_interval: PropTypes.number
   }).isRequired,
   setSpeedTestForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,

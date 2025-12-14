@@ -543,6 +543,21 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	includeHandshakeStr, _ := models.GetSetting("speed_test_include_handshake")
 	includeHandshake := includeHandshakeStr != "false" // 默认包含握手时间
 
+	// 获取速度记录模式（average=平均速度, peak=峰值速度）
+	speedRecordMode, _ := models.GetSetting("speed_test_speed_record_mode")
+	if speedRecordMode == "" {
+		speedRecordMode = "average"
+	}
+
+	// 获取峰值采样间隔（毫秒）
+	peakSampleIntervalStr, _ := models.GetSetting("speed_test_peak_sample_interval")
+	peakSampleInterval := 100 // 默认100ms
+	if peakSampleIntervalStr != "" {
+		if v, err := strconv.Atoi(peakSampleIntervalStr); err == nil && v >= 50 && v <= 200 {
+			peakSampleInterval = v
+		}
+	}
+
 	// 获取延迟测试并发数
 	const maxConcurrency = 1000
 	latencyConcurrency := 10 // 默认延迟测试并发数
@@ -883,7 +898,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 				}
 
 				// 速度测试（延迟已在阶段一获取，同时可选检测落地IP）
-				speed, _, bytesDownloaded, landingIP, err := mihomo.MihomoSpeedTest(result.node.Link, speedTestUrl, speedTestTimeout, detectCountry, landingIPUrl)
+				speed, _, bytesDownloaded, landingIP, err := mihomo.MihomoSpeedTest(result.node.Link, speedTestUrl, speedTestTimeout, detectCountry, landingIPUrl, speedRecordMode, peakSampleInterval)
 
 				mu.Lock()
 				defer mu.Unlock()
