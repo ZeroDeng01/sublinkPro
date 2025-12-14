@@ -967,3 +967,42 @@ func NodeSourceStats(c *gin.Context) {
 	stats := models.GetNodeSourceStats()
 	utils.OkDetailed(c, "获取来源统计成功", stats)
 }
+
+// GetIPDetails 获取IP详细信息
+// GET /api/v1/nodes/ip-info?ip=xxx.xxx.xxx.xxx
+func GetIPDetails(c *gin.Context) {
+	ip := c.Query("ip")
+	if ip == "" {
+		utils.FailWithMsg(c, "IP地址不能为空")
+		return
+	}
+
+	// 调用模型层获取IP信息（多级缓存）
+	ipInfo, err := models.GetIPInfo(ip)
+	if err != nil {
+		utils.FailWithMsg(c, "查询IP信息失败: "+err.Error())
+		return
+	}
+
+	utils.OkDetailed(c, "获取成功", ipInfo)
+}
+
+// GetIPCacheStats 获取IP缓存统计
+// GET /api/v1/nodes/ip-cache/stats
+func GetIPCacheStats(c *gin.Context) {
+	count := models.GetIPInfoCount()
+	utils.OkDetailed(c, "获取成功", gin.H{
+		"count": count,
+	})
+}
+
+// ClearIPCache 清除所有IP缓存
+// DELETE /api/v1/nodes/ip-cache
+func ClearIPCache(c *gin.Context) {
+	err := models.ClearAllIPInfo()
+	if err != nil {
+		utils.FailWithMsg(c, "清除失败: "+err.Error())
+		return
+	}
+	utils.OkWithMsg(c, "IP缓存已清除")
+}

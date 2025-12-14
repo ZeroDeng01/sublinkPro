@@ -32,7 +32,7 @@ import useConfig from 'hooks/useConfig';
 import { useAuth } from 'contexts/AuthContext';
 
 // assets
-import { IconLogout, IconUser, IconKey, IconDatabaseExport, IconSettings } from '@tabler/icons-react';
+import { IconLogout, IconUser, IconKey, IconDatabaseExport, IconSettings, IconDatabaseOff } from '@tabler/icons-react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import Backdrop from '@mui/material/Backdrop';
@@ -70,6 +70,8 @@ export default function ProfileSection() {
 
   const [open, setOpen] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
+  const [ipCacheCount, setIpCacheCount] = useState(0);
+  const [ipCacheLoading, setIpCacheLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const anchorRef = useRef(null);
   const greeting = getGreeting();
@@ -178,6 +180,48 @@ export default function ProfileSection() {
     });
   };
 
+  // 获取IP缓存统计
+  const fetchIPCacheStats = async () => {
+    try {
+      const { getIPCacheStats } = await import('api/nodes');
+      const response = await getIPCacheStats();
+      if (response.code === 200 && response.data) {
+        setIpCacheCount(response.data.count || 0);
+      }
+    } catch (error) {
+      console.error('获取IP缓存统计失败:', error);
+    }
+  };
+
+  // 清除IP缓存
+  const handleClearIPCache = async () => {
+    setOpen(false);
+    openConfirm('清除IP缓存', `确定要清除所有IP缓存数据吗？当前共有 ${ipCacheCount} 条缓存记录。`, async () => {
+      setIpCacheLoading(true);
+      try {
+        const { clearIPCache } = await import('api/nodes');
+        const response = await clearIPCache();
+        if (response.code === 200) {
+          setSnackbar({ open: true, message: 'IP缓存已清除', severity: 'success' });
+          setIpCacheCount(0);
+          // 同时清除前端 localStorage 中的IP缓存
+          try {
+            localStorage.removeItem('sublink_ip_info_cache');
+          } catch (e) {
+            // 忽略 localStorage 错误
+          }
+        } else {
+          setSnackbar({ open: true, message: response.msg || '清除失败', severity: 'error' });
+        }
+      } catch (error) {
+        console.error('清除IP缓存失败:', error);
+        setSnackbar({ open: true, message: '清除请求失败', severity: 'error' });
+      } finally {
+        setIpCacheLoading(false);
+      }
+    });
+  };
+
   const prevOpen = useRef(open);
   useEffect(() => {
     if (prevOpen.current === true && open === false) {
@@ -185,6 +229,11 @@ export default function ProfileSection() {
     }
     prevOpen.current = open;
   }, [open]);
+
+  // 组件挂载时获取IP缓存统计
+  useEffect(() => {
+    fetchIPCacheStats();
+  }, []);
 
   return (
     <>
@@ -319,6 +368,20 @@ export default function ProfileSection() {
                           <ListItemText
                             primaryTypographyProps={{ component: 'div' }}
                             primary={<Typography variant="body2">系统备份</Typography>}
+                          />
+                        </ListItemButton>
+                        <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={handleClearIPCache} disabled={ipCacheLoading}>
+                          <ListItemIcon>
+                            <IconDatabaseOff stroke={1.5} size="20px" />
+                          </ListItemIcon>
+                          <ListItemText
+                            primaryTypographyProps={{ component: 'div' }}
+                            primary={<Typography variant="body2">清除IP缓存</Typography>}
+                            secondary={
+                              <Typography variant="caption" color="textSecondary">
+                                当前缓存 {ipCacheCount} 条
+                              </Typography>
+                            }
                           />
                         </ListItemButton>
                         <Divider sx={{ my: 1 }} />

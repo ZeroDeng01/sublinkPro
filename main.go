@@ -204,6 +204,9 @@ func Run(port int) {
 	if err := models.InitTaskCache(); err != nil {
 		log.Println("加载任务到缓存失败: %v", err)
 	}
+	if err := models.InitIPInfoCache(); err != nil {
+		log.Println("加载IP信息到缓存失败: %v", err)
+	}
 
 	// 初始化任务管理器
 	services.InitTaskManager()

@@ -25,6 +25,9 @@ func Nodes(r *gin.Engine) {
 		NodesGroup.GET("/speed-test/config", api.GetSpeedTestConfig)
 		NodesGroup.POST("/speed-test/config", api.UpdateSpeedTestConfig)
 		NodesGroup.POST("/speed-test/run", api.RunSpeedTest)
+		NodesGroup.GET("/ip-info", api.GetIPDetails)
+		NodesGroup.GET("/ip-cache/stats", api.GetIPCacheStats)
+		NodesGroup.DELETE("/ip-cache", api.ClearIPCache)
 	}
 
 }

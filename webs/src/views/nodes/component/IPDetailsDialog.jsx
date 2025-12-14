@@ -109,26 +109,44 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
       return;
     }
 
-    // 缓存未命中或已过期，发起请求
+    // 缓存未命中或已过期，发起后端请求
     setLoading(true);
     setError(null);
     setFromCache(false);
 
     try {
-      // 使用 ip-api.com 的 JSON API (免费，支持CORS)
-      const response = await fetch(
-        `http://ip-api.com/json/${ip}?lang=zh-CN&fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query`
-      );
-      const data = await response.json();
-      if (data.status === 'success') {
+      // 调用后端API（后端会处理多级缓存和第三方API调用）
+      const { getIPDetails } = await import('api/nodes');
+      const response = await getIPDetails(ip);
+
+      if (response.code === 200 && response.data) {
+        const data = response.data;
+        // 转换为前端需要的格式（保持字段名一致性）
+        const ipData = {
+          status: 'success',
+          query: data.ip,
+          country: data.country,
+          countryCode: data.countryCode,
+          region: data.region,
+          regionName: data.regionName,
+          city: data.city,
+          zip: data.zip,
+          lat: data.lat,
+          lon: data.lon,
+          timezone: data.timezone,
+          isp: data.isp,
+          org: data.org,
+          as: data.as,
+          provider: data.provider
+        };
         // 缓存成功结果到 localStorage
-        cacheIPInfo(ip, data);
-        setIpInfo(data);
+        cacheIPInfo(ip, ipData);
+        setIpInfo(ipData);
       } else {
-        setError(data.message || '查询IP信息失败');
+        setError(response.msg || '查询IP信息失败');
       }
     } catch (err) {
-      setError('网络请求失败: ' + err.message);
+      setError('网络请求失败: ' + (err.message || '未知错误'));
     } finally {
       setLoading(false);
     }

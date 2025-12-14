@@ -142,3 +142,28 @@ export function batchUpdateNodeDialerProxy(ids, dialerProxyName) {
     data: { ids, dialerProxyName }
   });
 }
+
+// 获取IP详细信息
+export function getIPDetails(ip) {
+  return request({
+    url: '/v1/nodes/ip-info',
+    method: 'get',
+    params: { ip }
+  });
+}
+
+// 获取IP缓存统计
+export function getIPCacheStats() {
+  return request({
+    url: '/v1/nodes/ip-cache/stats',
+    method: 'get'
+  });
+}
+
+// 清除所有IP缓存
+export function clearIPCache() {
+  return request({
+    url: '/v1/nodes/ip-cache',
+    method: 'delete'
+  });
+}
