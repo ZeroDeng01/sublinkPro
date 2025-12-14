@@ -94,7 +94,7 @@ const loadPosition = () => {
         return pos;
       }
     }
-  } catch (e) {
+  } catch {
     // ignore
   }
   return DEFAULT_POSITION;
@@ -103,7 +103,7 @@ const loadPosition = () => {
 const savePosition = (position) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(position));
-  } catch (e) {
+  } catch {
     // ignore
   }
 };
@@ -114,9 +114,11 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
   const isDark = theme.palette.mode === 'dark';
 
   // Calculate progress percentage
+  // 使用 task.current 保持组件响应式，不依赖 task 引用
   const progress = useMemo(() => {
     if (!task.total || task.total === 0) return 0;
     return Math.round((task.current / task.total) * 100);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task.current, task.total]);
 
   // Get task icon and colors based on type - using theme colors
@@ -166,6 +168,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
     }
 
     return { elapsedStr, remainingStr };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task.startTime, task.current, task.total, currentTime, isCompleted, isError]);
 
   // Format result display

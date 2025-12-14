@@ -66,6 +66,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
   const progress = useMemo(() => {
     if (!task.total || task.total === 0) return 0;
     return Math.round((task.current / task.total) * 100);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task.current, task.total]);
 
   // Get task icon and colors based on type
@@ -121,6 +122,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
     }
 
     return { elapsedStr, remainingStr };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task.startTime, task.current, task.total, currentTime, isCompleted, isError, isCancelled]);
 
   // Format result display

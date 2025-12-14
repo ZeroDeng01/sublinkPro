@@ -72,7 +72,6 @@ export default function TagManagement() {
   const [tags, setTags] = useState([]);
   const [rules, setRules] = useState([]);
   const [existingGroups, setExistingGroups] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -97,7 +96,7 @@ export default function TagManagement() {
       if (res.code === 200) {
         setTags(res.data || []);
       }
-    } catch (error) {
+    } catch {
       showMessage('获取标签列表失败', 'error');
     } finally {
       if (showRefreshing) setRefreshing(false);
@@ -111,7 +110,7 @@ export default function TagManagement() {
       if (res.code === 200) {
         setRules(res.data || []);
       }
-    } catch (error) {
+    } catch {
       showMessage('获取规则列表失败', 'error');
     } finally {
       if (showRefreshing) setRefreshing(false);
@@ -124,7 +123,7 @@ export default function TagManagement() {
       if (res.code === 200) {
         setExistingGroups(res.data || []);
       }
-    } catch (error) {
+    } catch {
       // Silent fail for groups
     }
   };
@@ -133,6 +132,7 @@ export default function TagManagement() {
     fetchTags();
     fetchRules();
     fetchGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const showMessage = (message, severity = 'success') => {
@@ -150,7 +150,7 @@ export default function TagManagement() {
         await fetchRules();
       }
       showMessage('刷新成功');
-    } catch (error) {
+    } catch {
       showMessage('刷新失败', 'error');
     } finally {
       setRefreshing(false);
@@ -179,7 +179,7 @@ export default function TagManagement() {
       } else {
         showMessage(res.msg || '删除失败', 'error');
       }
-    } catch (error) {
+    } catch {
       showMessage('删除失败', 'error');
     }
   };
@@ -199,7 +199,7 @@ export default function TagManagement() {
       } else {
         showMessage(res.msg || '操作失败', 'error');
       }
-    } catch (error) {
+    } catch {
       showMessage('操作失败', 'error');
     }
   };
@@ -225,7 +225,7 @@ export default function TagManagement() {
       } else {
         showMessage(res.msg || '删除失败', 'error');
       }
-    } catch (error) {
+    } catch {
       showMessage('删除失败', 'error');
     }
   };
@@ -245,7 +245,7 @@ export default function TagManagement() {
       } else {
         showMessage(res.msg || '操作失败', 'error');
       }
-    } catch (error) {
+    } catch {
       showMessage('操作失败', 'error');
     }
   };
@@ -258,7 +258,7 @@ export default function TagManagement() {
       } else {
         showMessage(res.msg || '执行失败', 'error');
       }
-    } catch (error) {
+    } catch {
       showMessage('执行失败', 'error');
     }
   };

@@ -29,11 +29,6 @@ import { getSystemStats } from 'api/monitor';
 
 // ==============================|| 动画定义 ||============================== //
 
-const pulse = keyframes`
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-`;
-
 const rotate = keyframes`
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

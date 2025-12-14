@@ -48,7 +48,7 @@ const getNotificationIcon = (type) => {
 export default function NotificationSection() {
   const theme = useTheme();
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
-  const { notifications, clearNotification, clearAllNotifications } = useAuth();
+  const { notifications, clearAllNotifications } = useAuth();
 
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState(new Set());

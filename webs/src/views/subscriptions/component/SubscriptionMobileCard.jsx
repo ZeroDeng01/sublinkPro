@@ -1,4 +1,3 @@
-import { Fragment } from 'react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
@@ -6,7 +5,7 @@ import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import Collapse from '@mui/material/Collapse';
-import Tooltip from '@mui/material/Tooltip';
+
 import MainCard from 'ui-component/cards/MainCard';
 import SortableNodeList from './SortableNodeList';
 

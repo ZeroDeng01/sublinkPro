@@ -366,7 +366,8 @@ export default function NodeList() {
     tagFilter,
     sortBy,
     sortOrder,
-    fetchNodes
+    fetchNodes,
+    rowsPerPage
   ]);
 
   const showMessage = (message, severity = 'success') => {
@@ -410,6 +411,7 @@ export default function NodeList() {
     fetchNodes(getCurrentFilters());
     getNodeGroups();
     getNodeSources();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     fetchNodes,
     searchQuery,

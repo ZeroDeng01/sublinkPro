@@ -65,6 +65,7 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
     if (form.useProxy && proxyNodes.length === 0) {
       fetchProxyNodes();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.useProxy]);
 
   const fetchConfig = async () => {

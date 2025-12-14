@@ -356,12 +356,6 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
     }
   };
 
-  // 应用自定义配置
-  const applyCustomConfig = () => {
-    const newCron = generateCronFromConfig();
-    onChange(newCron);
-  };
-
   // 当自定义配置变化时自动更新
   useEffect(() => {
     if (showCustom && !showAdvanced) {

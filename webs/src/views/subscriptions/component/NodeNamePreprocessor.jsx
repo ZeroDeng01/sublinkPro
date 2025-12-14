@@ -56,6 +56,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
         setRules([]);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 同步规则到父组件

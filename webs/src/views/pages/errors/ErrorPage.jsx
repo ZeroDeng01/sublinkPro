@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import { useTheme } from '@mui/material/styles';
 
 // Icons
 import HomeIcon from '@mui/icons-material/Home';

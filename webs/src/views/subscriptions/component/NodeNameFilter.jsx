@@ -77,6 +77,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
         setBlacklistRules([]);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 同步规则到父组件

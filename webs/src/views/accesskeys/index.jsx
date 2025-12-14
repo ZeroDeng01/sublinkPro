@@ -107,7 +107,7 @@ export default function ApiKeyList() {
         setAccessKeys(response.data || []);
         setTotalItems((response.data || []).length);
       }
-    } catch (error) {
+    } catch {
       showMessage('获取 API 密钥列表失败', 'error');
     } finally {
       setLoading(false);
@@ -135,7 +135,7 @@ export default function ApiKeyList() {
         await deleteAccessKey(accessKey.ID);
         showMessage('删除成功');
         fetchAccessKeys(page, rowsPerPage);
-      } catch (error) {
+      } catch {
         showMessage('删除失败', 'error');
       }
     });
@@ -166,7 +166,7 @@ export default function ApiKeyList() {
       setDialogOpen(false);
       setShowKeyDialog(true);
       fetchAccessKeys(page, rowsPerPage);
-    } catch (error) {
+    } catch {
       showMessage('创建失败', 'error');
     }
   };

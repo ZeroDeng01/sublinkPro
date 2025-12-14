@@ -207,7 +207,7 @@ export default function ProfileSection() {
           // 同时清除前端 localStorage 中的IP缓存
           try {
             localStorage.removeItem('sublink_ip_info_cache');
-          } catch (e) {
+          } catch {
             // 忽略 localStorage 错误
           }
         } else {

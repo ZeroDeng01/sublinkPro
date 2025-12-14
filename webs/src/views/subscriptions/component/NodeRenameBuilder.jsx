@@ -140,6 +140,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
     const items = parseRule(value);
     setRuleItems(items);
     setIdCounter(items.length + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 同步规则到父组件

@@ -53,6 +53,7 @@ export function AuthProvider({ children }) {
       }
       connectSSE();
     }, 15000); // 15s 超时 (后端每10s发送心跳)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // SSE 连接
@@ -205,6 +206,7 @@ export function AuthProvider({ children }) {
     };
 
     initAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectSSE]);
 
   // 尝试使用记住密码令牌自动登录
@@ -311,6 +313,7 @@ export function AuthProvider({ children }) {
       clearNotification,
       clearAllNotifications
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [user, isAuthenticated, isInitialized, notifications]
   );
 
