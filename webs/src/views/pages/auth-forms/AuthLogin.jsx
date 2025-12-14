@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 
 // material-ui
 import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@mui/material/CircularProgress';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import InputLabel from '@mui/material/InputLabel';
@@ -37,6 +39,7 @@ export default function AuthLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
 
   // 获取验证码
   const fetchCaptcha = async () => {
@@ -88,12 +91,13 @@ export default function AuthLogin() {
     setLoading(true);
 
     try {
-      const result = await login(username, password, captchaKey, captchaCode);
+      // 传递 rememberMe 参数给 login 函数，由后端生成安全令牌
+      const result = await login(username, password, captchaKey, captchaCode, rememberMe);
       if (result.success) {
         navigate('/dashboard');
       } else {
         setError(result.message || '登录失败');
-        // 登录失败刷新验证码
+        // 登录失败时刷新验证码
         fetchCaptcha();
         setCaptchaCode('');
       }
@@ -190,7 +194,13 @@ export default function AuthLogin() {
         />
       </CustomFormControl>
 
-      <Box sx={{ mt: 2 }}>
+      <FormControlLabel
+        control={<Checkbox checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} name="rememberMe" color="secondary" />}
+        label="记住密码"
+        sx={{ mt: 1, mb: 1, ml: 0 }}
+      />
+
+      <Box sx={{ mt: 1 }}>
         <AnimateButton>
           <Button
             color="secondary"

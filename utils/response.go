@@ -49,6 +49,11 @@ func FailWithMsg(c *gin.Context, msg string) {
 	Result(c, http.StatusOK, ERROR, msg, nil)
 }
 
+// FailWithData 返回失败响应并携带额外数据
+func FailWithData(c *gin.Context, msg string, data interface{}) {
+	Result(c, http.StatusOK, ERROR, msg, data)
+}
+
 func FailWithCode(c *gin.Context, code int, msg string) {
 	Result(c, http.StatusOK, code, msg, nil)
 }

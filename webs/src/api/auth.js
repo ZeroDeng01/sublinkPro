@@ -15,6 +15,7 @@ export function login(data) {
   formData.append('password', data.password);
   formData.append('captchaKey', data.captchaKey || '');
   formData.append('captchaCode', data.captchaCode || '');
+  formData.append('rememberMe', data.rememberMe ? 'true' : 'false');
 
   return request({
     url: '/v1/auth/login',
@@ -26,10 +27,26 @@ export function login(data) {
   });
 }
 
-// 登出
-export function logout() {
+// 使用令牌自动登录
+export function rememberLogin(rememberToken) {
+  const formData = new FormData();
+  formData.append('rememberToken', rememberToken);
+
   return request({
-    url: '/v1/auth/logout',
+    url: '/v1/auth/remember-login',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+}
+
+// 登出
+export function logout(rememberToken) {
+  const params = rememberToken ? `?rememberToken=${encodeURIComponent(rememberToken)}` : '';
+  return request({
+    url: `/v1/auth/logout${params}`,
     method: 'delete'
   });
 }

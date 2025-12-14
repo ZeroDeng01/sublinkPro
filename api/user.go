@@ -147,6 +147,12 @@ func UserChangePassword(c *gin.Context) {
 		return
 	}
 
+	// 删除该用户的所有记住密码令牌，强制重新登录
+	if err := models.DeleteUserRememberTokens(user.ID); err != nil {
+		log.Println("清除记住密码令牌失败:", err)
+		// 不影响密码修改成功的返回
+	}
+
 	utils.OkWithMsg(c, "密码修改成功")
 }
 

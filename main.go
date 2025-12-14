@@ -208,6 +208,9 @@ func Run(port int) {
 		log.Println("加载IP信息到缓存失败: %v", err)
 	}
 
+	// 启动时清理过期的记住密码令牌
+	models.CleanAllExpiredTokens()
+
 	// 初始化任务管理器
 	services.InitTaskManager()
 
