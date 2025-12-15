@@ -1,58 +1,173 @@
 package geoip
 
 import (
-	"embed"
 	"fmt"
 	"log"
 	"net/netip"
+	"os"
+	"sublink/config"
 	"sync"
+	"time"
 
 	"github.com/oschwald/geoip2-golang/v2"
 )
 
-//go:embed database/GeoLite2.mmdb
-var geoIPDatabase embed.FS
-
 var (
-	geoIP *geoip2.Reader
-	once  sync.Once
+	geoIP     *geoip2.Reader
+	mu        sync.RWMutex
+	dbPath    string    // 当前加载的数据库路径
+	available bool      // 数据库是否可用
+	dbInfo    *DBInfo   // 数据库信息
+	initOnce  sync.Once // 确保只初始化一次
 )
 
-// InitGeoIP initializes the GeoIP database
-func InitGeoIP() error {
-	var err error
-	once.Do(func() {
-		data, readErr := geoIPDatabase.ReadFile("database/GeoLite2.mmdb")
-		if readErr != nil {
-			err = readErr
-			log.Printf("Failed to read GeoIP database: %v", readErr)
-			return
-		}
-
-		geoIP, err = geoip2.OpenBytes(data)
-		if err != nil {
-			log.Printf("Failed to initialize GeoIP reader: %v", err)
-			return
-		}
-		log.Println("GeoIP database initialized successfully")
-	})
-	return err
+// DBInfo 数据库信息
+type DBInfo struct {
+	Path      string    `json:"path"`      // 文件路径
+	Size      int64     `json:"size"`      // 文件大小（字节）
+	ModTime   time.Time `json:"modTime"`   // 最后修改时间
+	Available bool      `json:"available"` // 是否可用
 }
 
-// GetLocation returns the location information for the given IP address
-func GetLocation(ipStr string) (string, error) {
-	if geoIP == nil {
-		if err := InitGeoIP(); err != nil {
-			return "", err
+// InitGeoIP 初始化 GeoIP 数据库
+// 如果文件不存在，不会阻止系统启动，只是标记为不可用
+func InitGeoIP() error {
+	var initErr error
+	initOnce.Do(func() {
+		initErr = loadDatabase()
+	})
+	return initErr
+}
+
+// loadDatabase 加载数据库文件
+func loadDatabase() error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	// 获取配置的路径
+	path := config.GetGeoIPPath()
+	dbPath = path
+
+	// 检查文件是否存在
+	fileInfo, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		available = false
+		dbInfo = &DBInfo{
+			Path:      path,
+			Available: false,
 		}
+		log.Printf("GeoIP 数据库文件不存在: %s，相关功能将不可用", path)
+		return nil // 不返回错误，允许系统继续启动
 	}
+	if err != nil {
+		available = false
+		dbInfo = &DBInfo{
+			Path:      path,
+			Available: false,
+		}
+		log.Printf("检查 GeoIP 数据库文件失败: %v", err)
+		return nil
+	}
+
+	// 打开数据库
+	reader, err := geoip2.Open(path)
+	if err != nil {
+		available = false
+		dbInfo = &DBInfo{
+			Path:      path,
+			Size:      fileInfo.Size(),
+			ModTime:   fileInfo.ModTime(),
+			Available: false,
+		}
+		log.Printf("打开 GeoIP 数据库失败: %v", err)
+		return err
+	}
+
+	// 关闭旧的 reader
+	if geoIP != nil {
+		geoIP.Close()
+	}
+
+	geoIP = reader
+	available = true
+	dbInfo = &DBInfo{
+		Path:      path,
+		Size:      fileInfo.Size(),
+		ModTime:   fileInfo.ModTime(),
+		Available: true,
+	}
+
+	log.Printf("GeoIP 数据库加载成功: %s (%.2f MB)", path, float64(fileInfo.Size())/1024/1024)
+	return nil
+}
+
+// Reload 重新加载 GeoIP 数据库
+func Reload() error {
+	// 重置 initOnce 以允许重新初始化
+	initOnce = sync.Once{}
+	return loadDatabase()
+}
+
+// IsAvailable 检查 GeoIP 数据库是否可用
+func IsAvailable() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+	return available
+}
+
+// GetDBInfo 获取数据库信息
+func GetDBInfo() *DBInfo {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if dbInfo != nil {
+		return dbInfo
+	}
+
+	// 返回默认信息
+	path := config.GetGeoIPPath()
+	info := &DBInfo{
+		Path:      path,
+		Available: false,
+	}
+
+	// 尝试获取文件信息
+	if fileInfo, err := os.Stat(path); err == nil {
+		info.Size = fileInfo.Size()
+		info.ModTime = fileInfo.ModTime()
+	}
+
+	return info
+}
+
+// GetDBPath 获取当前数据库路径
+func GetDBPath() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	if dbPath != "" {
+		return dbPath
+	}
+	return config.GetGeoIPPath()
+}
+
+// GetLocation 返回给定 IP 地址的位置信息
+func GetLocation(ipStr string) (string, error) {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if !available || geoIP == nil {
+		return "", fmt.Errorf("GeoIP 数据库不可用")
+	}
+
 	ip, err := netip.ParseAddr(ipStr)
 	if err != nil {
 		return "Unknown", nil
 	}
+
 	country := ""
 	city := ""
 	isocode := ""
+
 	geoCountry, err := geoIP.Country(ip)
 	if err != nil {
 		log.Printf("Failed to get Country: %v", err)
@@ -67,6 +182,7 @@ func GetLocation(ipStr string) (string, error) {
 			country = fmt.Sprintf("(%s)%s", isocode, country)
 		}
 	}
+
 	getCity, err := geoIP.City(ip)
 	if err != nil {
 		log.Printf("Failed to get City: %v", err)
@@ -74,46 +190,47 @@ func GetLocation(ipStr string) (string, error) {
 	if getCity.City.HasData() {
 		city = getCity.City.Names.SimplifiedChinese
 	}
+
 	return fmt.Sprintf("%s%s", country, city), nil
 }
 
-// ISOCodeToFlag converts an ISO 3166-1 alpha-2 country code to a flag emoji
-// Example: "CN" -> 🇨🇳, "US" -> 🇺🇸
+// ISOCodeToFlag 将 ISO 3166-1 alpha-2 国家代码转换为国旗 emoji
+// 示例: "CN" -> 🇨🇳, "US" -> 🇺🇸
 func ISOCodeToFlag(isoCode string) string {
 	if len(isoCode) != 2 {
 		return ""
 	}
 
-	// Convert each letter to its corresponding Regional Indicator Symbol
-	// Regional Indicator Symbols range from U+1F1E6 (A) to U+1F1FF (Z)
+	// 将每个字母转换为对应的区域指示符号
+	// 区域指示符号范围从 U+1F1E6 (A) 到 U+1F1FF (Z)
 	flag := ""
 	for _, char := range isoCode {
 		if char >= 'A' && char <= 'Z' {
-			// Convert A-Z to Regional Indicator Symbol
 			flag += string(rune(0x1F1E6 + (char - 'A')))
 		} else if char >= 'a' && char <= 'z' {
-			// Convert a-z to Regional Indicator Symbol
 			flag += string(rune(0x1F1E6 + (char - 'a')))
 		}
 	}
 	return flag
 }
 
-// GetCountryISOCode returns only the ISO country code (e.g., "US", "CN", "JP") for the given IP address
+// GetCountryISOCode 返回给定 IP 地址的 ISO 国家代码 (例如 "US", "CN", "JP")
 func GetCountryISOCode(ipStr string) (string, error) {
-	if geoIP == nil {
-		if err := InitGeoIP(); err != nil {
-			return "", err
-		}
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if !available || geoIP == nil {
+		return "", fmt.Errorf("GeoIP 数据库不可用")
 	}
+
 	ip, err := netip.ParseAddr(ipStr)
 	if err != nil {
-		return "", fmt.Errorf("invalid IP address: %s", ipStr)
+		return "", fmt.Errorf("无效的 IP 地址: %s", ipStr)
 	}
 
 	geoCountry, err := geoIP.Country(ip)
 	if err != nil {
-		return "", fmt.Errorf("failed to get country: %v", err)
+		return "", fmt.Errorf("获取国家信息失败: %v", err)
 	}
 	if geoCountry.Country.HasData() {
 		return geoCountry.Country.ISOCode, nil
@@ -121,10 +238,16 @@ func GetCountryISOCode(ipStr string) (string, error) {
 	return "", nil
 }
 
-// Close closes the GeoIP reader
+// Close 关闭 GeoIP reader
 func Close() error {
+	mu.Lock()
+	defer mu.Unlock()
+
 	if geoIP != nil {
-		return geoIP.Close()
+		err := geoIP.Close()
+		geoIP = nil
+		available = false
+		return err
 	}
 	return nil
 }

@@ -32,12 +32,13 @@ import useConfig from 'hooks/useConfig';
 import { useAuth } from 'contexts/AuthContext';
 
 // assets
-import { IconLogout, IconUser, IconKey, IconDatabaseExport, IconSettings, IconDatabaseOff } from '@tabler/icons-react';
+import { IconLogout, IconUser, IconKey, IconDatabaseExport, IconSettings, IconDatabaseOff, IconWorld } from '@tabler/icons-react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
 import request from 'api/request';
+import GeoIPSettingsDialog from 'views/settings/components/GeoIPSettingsDialog';
 
 // ==============================|| 问候语计算 ||============================== //
 
@@ -73,6 +74,7 @@ export default function ProfileSection() {
   const [ipCacheCount, setIpCacheCount] = useState(0);
   const [ipCacheLoading, setIpCacheLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [geoipDialogOpen, setGeoipDialogOpen] = useState(false);
   const anchorRef = useRef(null);
   const greeting = getGreeting();
 
@@ -384,6 +386,15 @@ export default function ProfileSection() {
                             }
                           />
                         </ListItemButton>
+                        <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={() => { setOpen(false); setGeoipDialogOpen(true); }}>
+                          <ListItemIcon>
+                            <IconWorld stroke={1.5} size="20px" />
+                          </ListItemIcon>
+                          <ListItemText
+                            primaryTypographyProps={{ component: 'div' }}
+                            primary={<Typography variant="body2">GeoIP 数据库</Typography>}
+                          />
+                        </ListItemButton>
                         <Divider sx={{ my: 1 }} />
                         <ListItemButton
                           sx={{
@@ -455,6 +466,13 @@ export default function ProfileSection() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* GeoIP 设置对话框 */}
+      <GeoIPSettingsDialog
+        open={geoipDialogOpen}
+        onClose={() => setGeoipDialogOpen(false)}
+        showMessage={(msg, severity = 'success') => setSnackbar({ open: true, message: msg, severity })}
+      />
     </>
   );
 }

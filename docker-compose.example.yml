@@ -54,6 +54,12 @@ services:
       # API 加密密钥
       # - SUBLINK_API_ENCRYPTION_KEY=your-encryption-key-at-least-32-characters
       
+      # ---------- GeoIP 配置（可选） ----------
+      # GeoIP 数据库路径，默认为 ./db/GeoLite2-City.mmdb
+      # 系统启动时会自动检测并下载 GeoIP 数据库，无需手动配置
+      # 如需自定义路径，请取消注释以下配置
+      # - SUBLINK_GEOIP_PATH=/app/db/GeoLite2-City.mmdb
+      
       # ---------- 管理员配置 ----------
       # 初始管理员密码（仅首次启动时生效）
       # - SUBLINK_ADMIN_PASSWORD=your-admin-password

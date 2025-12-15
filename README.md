@@ -281,6 +281,17 @@ SublinkPro 提供专业级的节点测速功能，采用科学的测试方法确
 - ✅ 订阅更新通知
 - ✅ 测速完成通知
 
+### 🌍 GeoIP 数据库
+
+- ✅ IP 地理位置查询
+- ✅ 节点落地国家/地区检测
+- ✅ 登录位置信息显示
+- ✅ 支持代理下载数据库
+- ✅ 可通过界面配置下载地址
+
+> [!NOTE]
+> GeoIP 数据库不再内置在程序中，系统首次启动时会引导用户下载。数据库必须是 MaxMind 的 mmdb 格式且包含 city 数据 (GeoLite2-City)。
+
 ---
 
 ## 🔧 快速安装
@@ -512,6 +523,7 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 | `SUBLINK_LOGIN_FAIL_COUNT` | 登录失败次数限制 | 5        |
 | `SUBLINK_LOGIN_FAIL_WINDOW` | 登录失败窗口(分钟) | 1        |
 | `SUBLINK_LOGIN_BAN_DURATION` | 登录封禁时间(分钟) | 10       |
+| `SUBLINK_GEOIP_PATH` | GeoIP数据库路径 | ./db/GeoLite2-City.mmdb |
 | `SUBLINK_ADMIN_PASSWORD` | 初始管理员密码 | 123456   |
 | `SUBLINK_ADMIN_PASSWORD_REST` | 重置管理员密码 | 输入新管理员密码 |
 
@@ -561,6 +573,8 @@ services:
       - SUBLINK_PORT=8000
       - SUBLINK_EXPIRE_DAYS=14
       - SUBLINK_LOGIN_FAIL_COUNT=5
+      # GeoIP 数据库路径（可选，默认为 ./db/GeoLite2-City.mmdb）
+      # - SUBLINK_GEOIP_PATH=/app/db/GeoLite2-City.mmdb
       # 敏感配置（可选，不设置则自动生成）
       # - SUBLINK_JWT_SECRET=your-secret-key
       # - SUBLINK_API_ENCRYPTION_KEY=your-encryption-key

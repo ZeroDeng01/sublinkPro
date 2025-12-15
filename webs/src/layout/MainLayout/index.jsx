@@ -14,6 +14,7 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import MainContentStyled from './MainContentStyled';
 import StarGuideDialog from 'ui-component/StarGuideDialog';
+import GeoIPWarningDialog from 'ui-component/GeoIPWarningDialog';
 import TaskProgressFab from 'components/TaskProgressFab';
 
 import Loader from 'ui-component/Loader';
@@ -50,6 +51,9 @@ export default function MainLayout() {
     <Box sx={{ display: 'flex' }}>
       {/* Star 引导弹窗 */}
       <StarGuideDialog />
+
+      {/* GeoIP 缺失提示 */}
+      <GeoIPWarningDialog />
 
       {/* header */}
       <AppBar enableColorOnDark position="fixed" color="inherit" elevation={0} sx={{ bgcolor: 'background.default' }}>

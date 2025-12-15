@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sublink/api"
 	"sublink/config"
 	"sublink/database"
 	"sublink/models"
@@ -278,6 +279,11 @@ func Run() {
 		log.Printf("初始化 GeoIP 数据库失败: %v", err)
 	}
 
+	// 如果 GeoIP 数据库不可用，异步尝试自动下载
+	if !geoip.IsAvailable() {
+		go api.AutoDownloadGeoIP()
+	}
+
 	// 启动 AccessKey 清理定时任务
 	models.StartAccessKeyCleanupScheduler()
 
@@ -399,6 +405,7 @@ func Run() {
 	routers.Settings(r)
 	routers.Tag(r)
 	routers.Tasks(r)
+	routers.GeoIP(r)
 
 	// 处理前端路由 (SPA History Mode)
 	// 必须在所有 backend 路由注册之后注册

@@ -37,6 +37,7 @@ type AppConfig struct {
 	LoginBanDuration int    `yaml:"login_ban_duration"` // 登录失败封禁时间(分钟)
 	DBPath           string `yaml:"db_path"`            // 数据库目录
 	LogPath          string `yaml:"log_path"`           // 日志目录
+	GeoIPPath        string `yaml:"geoip_path"`         // GeoIP数据库路径
 }
 
 // CommandLineConfig 命令行配置（仅存储用户指定的值）
@@ -104,6 +105,30 @@ func GetLogPath() string {
 	}
 	// 默认值
 	return DefaultLogPath
+}
+
+// GetGeoIPPath 获取 GeoIP 数据库路径（在初始化前可用）
+func GetGeoIPPath() string {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	// 如果已加载配置，从配置中获取
+	if globalConfig != nil && globalConfig.GeoIPPath != "" {
+		return globalConfig.GeoIPPath
+	}
+	// 命令行参数优先（暂不支持命令行设置 GeoIPPath）
+	// 环境变量次之
+	if geoipPath := os.Getenv(envPrefix + "GEOIP_PATH"); geoipPath != "" {
+		return geoipPath
+	}
+	// 默认使用 DBPath + /GeoLite2-City.mmdb
+	dbPath := DefaultDBPath
+	if cmdConfig != nil && cmdConfig.DBPath != "" {
+		dbPath = cmdConfig.DBPath
+	} else if envPath := os.Getenv(envPrefix + "DB_PATH"); envPath != "" {
+		dbPath = envPath
+	}
+	return dbPath + "/GeoLite2-City.mmdb"
 }
 
 // GetConfigFilePath 获取配置文件完整路径
@@ -231,6 +256,7 @@ func applyDefaults(cfg *AppConfig) {
 	cfg.LoginBanDuration = DefaultLoginBanDuration
 	cfg.DBPath = DefaultDBPath
 	cfg.LogPath = DefaultLogPath
+	cfg.GeoIPPath = "" // 默认为空，运行时通过 GetGeoIPPath() 计算
 }
 
 // loadFromFileInternal 从配置文件加载（内部使用，不获取锁）
@@ -314,6 +340,9 @@ func loadFromEnvInternal(cfg *AppConfig) {
 	}
 	if logPath := os.Getenv(envPrefix + "LOG_PATH"); logPath != "" {
 		cfg.LogPath = logPath
+	}
+	if geoipPath := os.Getenv(envPrefix + "GEOIP_PATH"); geoipPath != "" {
+		cfg.GeoIPPath = geoipPath
 	}
 	// 敏感配置
 	if secret := os.Getenv(envPrefix + "JWT_SECRET"); secret != "" {
