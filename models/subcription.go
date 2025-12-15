@@ -280,6 +280,153 @@ func (sub *Subcription) Find() error {
 	return nil
 }
 
+// ApplyFilters 对节点列表应用过滤条件
+// 抽取共用的过滤逻辑，供 GetSub 和 PreviewSub 调用
+// 返回过滤后的节点列表
+func (sub *Subcription) ApplyFilters(nodes []Node) []Node {
+	result := nodes
+
+	// 1. 延迟和速度过滤
+	if sub.DelayTime > 0 || sub.MinSpeed > 0 {
+		var filteredNodes []Node
+		for _, node := range result {
+			if sub.DelayTime > 0 {
+				if node.DelayTime <= 0 || node.DelayTime > sub.DelayTime {
+					continue
+				}
+			}
+			if sub.MinSpeed > 0 {
+				if node.Speed < sub.MinSpeed {
+					continue
+				}
+			}
+			filteredNodes = append(filteredNodes, node)
+		}
+		result = filteredNodes
+	}
+
+	// 2. 国家代码过滤
+	if sub.CountryWhitelist != "" || sub.CountryBlacklist != "" {
+		whitelistMap := make(map[string]bool)
+		blacklistMap := make(map[string]bool)
+
+		if sub.CountryWhitelist != "" {
+			for _, c := range strings.Split(sub.CountryWhitelist, ",") {
+				c = strings.TrimSpace(c)
+				if c != "" {
+					whitelistMap[strings.ToUpper(c)] = true
+				}
+			}
+		}
+
+		if sub.CountryBlacklist != "" {
+			for _, c := range strings.Split(sub.CountryBlacklist, ",") {
+				c = strings.TrimSpace(c)
+				if c != "" {
+					blacklistMap[strings.ToUpper(c)] = true
+				}
+			}
+		}
+
+		var filteredNodes []Node
+		for _, node := range result {
+			country := strings.ToUpper(node.LinkCountry)
+			// 黑名单优先
+			if len(blacklistMap) > 0 && blacklistMap[country] {
+				continue
+			}
+			// 白名单
+			if len(whitelistMap) > 0 && !whitelistMap[country] {
+				continue
+			}
+			filteredNodes = append(filteredNodes, node)
+		}
+		result = filteredNodes
+	}
+
+	// 3. 标签过滤
+	if sub.TagWhitelist != "" || sub.TagBlacklist != "" {
+		whitelistTags := make(map[string]bool)
+		blacklistTags := make(map[string]bool)
+
+		if sub.TagWhitelist != "" {
+			for _, t := range strings.Split(sub.TagWhitelist, ",") {
+				t = strings.TrimSpace(t)
+				if t != "" {
+					whitelistTags[t] = true
+				}
+			}
+		}
+
+		if sub.TagBlacklist != "" {
+			for _, t := range strings.Split(sub.TagBlacklist, ",") {
+				t = strings.TrimSpace(t)
+				if t != "" {
+					blacklistTags[t] = true
+				}
+			}
+		}
+
+		var filteredNodes []Node
+		for _, node := range result {
+			nodeTags := node.GetTagNames()
+
+			// 黑名单优先
+			if len(blacklistTags) > 0 {
+				isBlacklisted := false
+				for _, nt := range nodeTags {
+					if blacklistTags[nt] {
+						isBlacklisted = true
+						break
+					}
+				}
+				if isBlacklisted {
+					continue
+				}
+			}
+
+			// 白名单
+			if len(whitelistTags) > 0 {
+				isWhitelisted := false
+				for _, nt := range nodeTags {
+					if whitelistTags[nt] {
+						isWhitelisted = true
+						break
+					}
+				}
+				if !isWhitelisted {
+					continue
+				}
+			}
+
+			filteredNodes = append(filteredNodes, node)
+		}
+		result = filteredNodes
+	}
+
+	// 4. 节点名称过滤
+	hasWhitelistRules := utils.HasActiveNodeNameFilter(sub.NodeNameWhitelist)
+	hasBlacklistRules := utils.HasActiveNodeNameFilter(sub.NodeNameBlacklist)
+
+	if hasWhitelistRules || hasBlacklistRules {
+		var filteredNodes []Node
+		for _, node := range result {
+			// 黑名单优先
+			if hasBlacklistRules && utils.MatchesNodeNameFilter(sub.NodeNameBlacklist, node.LinkName) {
+				continue
+			}
+			// 白名单
+			if hasWhitelistRules && !utils.MatchesNodeNameFilter(sub.NodeNameWhitelist, node.LinkName) {
+				continue
+			}
+			filteredNodes = append(filteredNodes, node)
+		}
+		result = filteredNodes
+	}
+
+	return result
+}
+
 // 读取订阅
 func (sub *Subcription) GetSub() error {
 	// 定义节点排序项结构
@@ -390,157 +537,8 @@ func (sub *Subcription) GetSub() error {
 		}
 	}
 
-	// 过滤节点
-	if sub.DelayTime > 0 || sub.MinSpeed > 0 {
-		var filteredNodes []Node
-		for _, node := range sub.Nodes {
-			// 检查延迟 (DelayTime)
-			if sub.DelayTime > 0 {
-				// 如果节点没有测速数据(DelayTime=0)或者延迟超过限制，则跳过
-				if node.DelayTime <= 0 || node.DelayTime > sub.DelayTime {
-					continue
-				}
-			}
-
-			// 检查速度 (MinSpeed)
-			if sub.MinSpeed > 0 {
-				// 如果节点没有测速数据(Speed=0)或者速度小于限制，则跳过
-				if node.Speed < sub.MinSpeed {
-					continue
-				}
-			}
-
-			filteredNodes = append(filteredNodes, node)
-		}
-		sub.Nodes = filteredNodes
-	}
-
-	// 国家代码过滤
-	if sub.CountryWhitelist != "" || sub.CountryBlacklist != "" {
-		// 解析白名单和黑名单
-		whitelistMap := make(map[string]bool)
-		blacklistMap := make(map[string]bool)
-
-		if sub.CountryWhitelist != "" {
-			for _, c := range strings.Split(sub.CountryWhitelist, ",") {
-				c = strings.TrimSpace(c)
-				if c != "" {
-					whitelistMap[strings.ToUpper(c)] = true
-				}
-			}
-		}
-
-		if sub.CountryBlacklist != "" {
-			for _, c := range strings.Split(sub.CountryBlacklist, ",") {
-				c = strings.TrimSpace(c)
-				if c != "" {
-					blacklistMap[strings.ToUpper(c)] = true
-				}
-			}
-		}
-
-		var filteredNodes []Node
-		for _, node := range sub.Nodes {
-			country := strings.ToUpper(node.LinkCountry)
-
-			// 黑名单优先：如果在黑名单中则排除
-			if len(blacklistMap) > 0 && blacklistMap[country] {
-				continue
-			}
-
-			// 白名单：如果设置了白名单但节点不在白名单中，则排除
-			if len(whitelistMap) > 0 && !whitelistMap[country] {
-				continue
-			}
-
-			filteredNodes = append(filteredNodes, node)
-		}
-		sub.Nodes = filteredNodes
-	}
-
-	// 标签过滤（在节点名称过滤之前）
-	if sub.TagWhitelist != "" || sub.TagBlacklist != "" {
-		// 解析白名单和黑名单标签
-		whitelistTags := make(map[string]bool)
-		blacklistTags := make(map[string]bool)
-
-		if sub.TagWhitelist != "" {
-			for _, t := range strings.Split(sub.TagWhitelist, ",") {
-				t = strings.TrimSpace(t)
-				if t != "" {
-					whitelistTags[t] = true
-				}
-			}
-		}
-
-		if sub.TagBlacklist != "" {
-			for _, t := range strings.Split(sub.TagBlacklist, ",") {
-				t = strings.TrimSpace(t)
-				if t != "" {
-					blacklistTags[t] = true
-				}
-			}
-		}
-
-		var filteredNodes []Node
-		for _, node := range sub.Nodes {
-			nodeTags := node.GetTagNames()
-
-			// 黑名单优先：如果节点任一标签在黑名单中，则排除
-			if len(blacklistTags) > 0 {
-				isBlacklisted := false
-				for _, nt := range nodeTags {
-					if blacklistTags[nt] {
-						isBlacklisted = true
-						break
-					}
-				}
-				if isBlacklisted {
-					continue
-				}
-			}
-
-			// 白名单：如果设置了白名单，节点必须包含至少一个白名单标签
-			if len(whitelistTags) > 0 {
-				isWhitelisted := false
-				for _, nt := range nodeTags {
-					if whitelistTags[nt] {
-						isWhitelisted = true
-						break
-					}
-				}
-				if !isWhitelisted {
-					continue
-				}
-			}
-
-			filteredNodes = append(filteredNodes, node)
-		}
-		sub.Nodes = filteredNodes
-	}
-
-	// 节点名称过滤 (基于原始节点名称 LinkName)
-	// 使用 HasActiveNodeNameFilter 检查是否有有效规则，避免空数组 "[]" 导致过滤异常
-	hasWhitelistRules := utils.HasActiveNodeNameFilter(sub.NodeNameWhitelist)
-	hasBlacklistRules := utils.HasActiveNodeNameFilter(sub.NodeNameBlacklist)
-
-	if hasWhitelistRules || hasBlacklistRules {
-		var filteredNodes []Node
-		for _, node := range sub.Nodes {
-			// 黑名单优先：如果匹配黑名单则排除
-			if hasBlacklistRules && utils.MatchesNodeNameFilter(sub.NodeNameBlacklist, node.LinkName) {
-				continue
-			}
-
-			// 白名单：如果设置了白名单但不匹配白名单，则排除
-			if hasWhitelistRules && !utils.MatchesNodeNameFilter(sub.NodeNameWhitelist, node.LinkName) {
-				continue
-			}
-
-			filteredNodes = append(filteredNodes, node)
-		}
-		sub.Nodes = filteredNodes
-	}
+	// 调用共用的过滤方法
+	sub.Nodes = sub.ApplyFilters(sub.Nodes)
 
 	// 获取脚本信息及其排序
 	var scriptsWithSort []ScriptWithSort
@@ -797,4 +795,78 @@ func (sub *Subcription) Sort(subNodeSort dto.SubcriptionNodeSortUpdate) error {
 		return fmt.Errorf("提交事务失败: %w", err)
 	}
 	return nil
+}
+
+// PreviewNode 预览节点信息结构体
+type PreviewNode struct {
+	Node
+	OriginalName string `json:"OriginalName"` // 原始名称（处理前）
+	PreviewName  string `json:"PreviewName"`  // 预览名称（应用规则后）
+	PreviewLink  string `json:"PreviewLink"`  // 预览链接（应用重命名后）
+	Protocol     string `json:"Protocol"`     // 协议类型
+	CountryFlag  string `json:"CountryFlag"`  // 国旗 emoji
+}
+
+// PreviewResult 预览结果结构体
+type PreviewResult struct {
+	Nodes         []PreviewNode `json:"Nodes"`
+	TotalCount    int           `json:"TotalCount"`    // 原始节点总数
+	FilteredCount int           `json:"FilteredCount"` // 过滤后节点数
+}
+
+// PreviewSub 预览订阅节点
+// 该方法调用共用的 ApplyFilters 方法应用过滤逻辑，同时应用重命名规则生成预览信息
+// 注意：调用前需要先设置 sub.Nodes 为待预览的节点列表
+func (sub *Subcription) PreviewSub() (*PreviewResult, error) {
+	// 记录原始节点数
+	totalCount := len(sub.Nodes)
+
+	// 调用共用的过滤方法（与 GetSub 共用逻辑）
+	sub.Nodes = sub.ApplyFilters(sub.Nodes)
+
+	// 记录过滤后的节点数
+	filteredCount := len(sub.Nodes)
+
+	// 构建预览节点列表
+	previewNodes := make([]PreviewNode, 0, filteredCount)
+
+	for idx, node := range sub.Nodes {
+		// 应用预处理规则到 LinkName
+		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, node.LinkName)
+
+		// 计算预览名称
+		previewName := node.Name
+		previewLink := node.Link
+
+		if sub.NodeNameRule != "" {
+			previewName = utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
+				Name:        node.Name,
+				LinkName:    processedLinkName,
+				LinkCountry: node.LinkCountry,
+				Speed:       node.Speed,
+				DelayTime:   node.DelayTime,
+				Group:       node.Group,
+				Source:      node.Source,
+				Index:       idx + 1,
+				Protocol:    utils.GetProtocolFromLink(node.Link),
+				Tags:        node.Tags,
+			})
+			previewLink = utils.RenameNodeLink(node.Link, previewName)
+		}
+
+		previewNodes = append(previewNodes, PreviewNode{
+			Node:         node,
+			OriginalName: node.LinkName,
+			PreviewName:  previewName,
+			PreviewLink:  previewLink,
+			Protocol:     utils.GetProtocolFromLink(node.Link),
+			CountryFlag:  utils.ISOToFlag(node.LinkCountry),
+		})
+	}
+
+	return &PreviewResult{
+		Nodes:         previewNodes,
+		TotalCount:    totalCount,
+		FilteredCount: filteredCount,
+	}, nil
 }

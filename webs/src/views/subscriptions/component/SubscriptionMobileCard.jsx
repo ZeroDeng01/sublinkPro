@@ -19,14 +19,13 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 /**
  * 移动端订阅卡片组件
  */
 export default function SubscriptionMobileCard({
   subscriptions,
-  page,
-  rowsPerPage,
   expandedRows,
   sortingSubId,
   tempSortData,
@@ -36,6 +35,7 @@ export default function SubscriptionMobileCard({
   onLogs,
   onEdit,
   onDelete,
+  onPreview,
   onStartSort,
   onConfirmSort,
   onCancelSort,
@@ -75,6 +75,9 @@ export default function SubscriptionMobileCard({
                 </IconButton>
                 <IconButton size="small" onClick={() => onEdit(sub)}>
                   <EditIcon fontSize="small" />
+                </IconButton>
+                <IconButton size="small" color="info" onClick={() => onPreview(sub)}>
+                  <VisibilityIcon fontSize="small" />
                 </IconButton>
                 <IconButton size="small" color="error" onClick={() => onDelete(sub)}>
                   <DeleteIcon fontSize="small" />

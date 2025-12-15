@@ -38,6 +38,7 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 import SecurityIcon from '@mui/icons-material/Security';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 import NodeRenameBuilder from './NodeRenameBuilder';
 import NodeNamePreprocessor from './NodeNamePreprocessor';
@@ -115,6 +116,8 @@ export default function SubscriptionFormDialog({
   // 操作回调
   onClose,
   onSubmit,
+  onPreview,
+  previewLoading,
   onAddNode,
   onRemoveNode,
   onAddAllVisible,
@@ -708,11 +711,23 @@ export default function SubscriptionFormDialog({
           </Accordion>
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>关闭</Button>
-        <Button variant="contained" onClick={onSubmit}>
-          确定
-        </Button>
+      <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Stack direction="row" spacing={2} sx={{ width: '100%', justifyContent: 'space-between' }}>
+          <Button
+            variant="outlined"
+            startIcon={<VisibilityIcon />}
+            onClick={onPreview}
+            disabled={previewLoading || (formData.selectedNodes.length === 0 && formData.selectedGroups.length === 0)}
+          >
+            {previewLoading ? '加载中...' : '预览节点'}
+          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button onClick={onClose}>关闭</Button>
+            <Button variant="contained" onClick={onSubmit}>
+              确定
+            </Button>
+          </Stack>
+        </Stack>
       </DialogActions>
     </Dialog>
   );

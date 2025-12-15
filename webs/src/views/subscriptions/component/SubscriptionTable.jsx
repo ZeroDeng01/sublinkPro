@@ -25,14 +25,13 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 /**
  * 桌面端订阅表格组件
  */
 export default function SubscriptionTable({
   subscriptions,
-  page,
-  rowsPerPage,
   expandedRows,
   sortingSubId,
   tempSortData,
@@ -41,6 +40,7 @@ export default function SubscriptionTable({
   onLogs,
   onEdit,
   onDelete,
+  onPreview,
   onStartSort,
   onConfirmSort,
   onCancelSort,
@@ -96,6 +96,11 @@ export default function SubscriptionTable({
                     <Tooltip title="编辑">
                       <IconButton size="small" onClick={() => onEdit(sub)}>
                         <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="预览节点">
+                      <IconButton size="small" color="info" onClick={() => onPreview(sub)}>
+                        <VisibilityIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="删除">

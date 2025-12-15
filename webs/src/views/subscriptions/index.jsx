@@ -18,7 +18,14 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
-import { getSubscriptions, addSubscription, updateSubscription, deleteSubscription, sortSubscription } from 'api/subscriptions';
+import {
+  getSubscriptions,
+  addSubscription,
+  updateSubscription,
+  deleteSubscription,
+  sortSubscription,
+  previewSubscriptionNodes
+} from 'api/subscriptions';
 import { getNodes, getNodeCountries, getNodeGroups, getNodeSources } from 'api/nodes';
 import { getTemplates } from 'api/templates';
 import { getScripts } from 'api/scripts';
@@ -32,7 +39,8 @@ import {
   AccessLogsDialog,
   SubscriptionMobileCard,
   SubscriptionTable,
-  SubscriptionFormDialog
+  SubscriptionFormDialog,
+  NodePreviewDialog
 } from './component';
 
 // ==============================|| 订阅管理 ||============================== //
@@ -134,6 +142,11 @@ export default function SubscriptionList() {
   const [mobileTab, setMobileTab] = useState(0);
   const [selectedNodeSearch, setSelectedNodeSearch] = useState('');
   const [namingMode, setNamingMode] = useState('builder');
+
+  // 预览状态
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
 
   // 分页
   const [page, setPage] = useState(0);
@@ -464,6 +477,82 @@ export default function SubscriptionList() {
     }
   };
 
+  // 预览节点
+  const handlePreview = async () => {
+    setPreviewLoading(true);
+    try {
+      // 构建预览请求数据
+      const previewRequest = {
+        Nodes: formData.selectionMode !== 'groups' ? formData.selectedNodes : [],
+        Groups: formData.selectionMode !== 'nodes' ? formData.selectedGroups : [],
+        Scripts: formData.selectedScripts || [],
+        DelayTime: formData.DelayTime || 0,
+        MinSpeed: formData.MinSpeed || 0,
+        CountryWhitelist: formData.CountryWhitelist.join(','),
+        CountryBlacklist: formData.CountryBlacklist.join(','),
+        TagWhitelist: formData.tagWhitelist || '',
+        TagBlacklist: formData.tagBlacklist || '',
+        NodeNameWhitelist: formData.nodeNameWhitelist || '',
+        NodeNameBlacklist: formData.nodeNameBlacklist || '',
+        NodeNamePreprocess: formData.nodeNamePreprocess || '',
+        NodeNameRule: formData.nodeNameRule || ''
+      };
+
+      const response = await previewSubscriptionNodes(previewRequest);
+      // axios 拦截器返回的是 response.data，所以直接使用 response.code
+      if (response.code === 200) {
+        setPreviewData(response.data);
+        setPreviewOpen(true);
+      } else {
+        showMessage(response.msg || '预览失败', 'error');
+      }
+    } catch (error) {
+      console.error(error);
+      showMessage('预览请求失败', 'error');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  // 预览已保存的订阅（从列表触发）
+  const handlePreviewSubscription = async (sub) => {
+    setPreviewLoading(true);
+    try {
+      // 解析订阅配置
+      const nodes = sub.Nodes?.map((n) => n.Name) || [];
+      const groups = (sub.Groups || []).map((g) => (typeof g === 'string' ? g : g.Name));
+
+      const previewRequest = {
+        Nodes: nodes,
+        Groups: groups,
+        Scripts: (sub.Scripts || []).map((s) => s.id),
+        DelayTime: sub.DelayTime || 0,
+        MinSpeed: sub.MinSpeed || 0,
+        CountryWhitelist: sub.CountryWhitelist || '',
+        CountryBlacklist: sub.CountryBlacklist || '',
+        TagWhitelist: sub.TagWhitelist || '',
+        TagBlacklist: sub.TagBlacklist || '',
+        NodeNameWhitelist: sub.NodeNameWhitelist || '',
+        NodeNameBlacklist: sub.NodeNameBlacklist || '',
+        NodeNamePreprocess: sub.NodeNamePreprocess || '',
+        NodeNameRule: sub.NodeNameRule || ''
+      };
+
+      const response = await previewSubscriptionNodes(previewRequest);
+      if (response.code === 200) {
+        setPreviewData(response.data);
+        setPreviewOpen(true);
+      } else {
+        showMessage(response.msg || '预览失败', 'error');
+      }
+    } catch (error) {
+      console.error(error);
+      showMessage('预览请求失败', 'error');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   // === 客户端/QR码 ===
   const handleClient = (name) => {
     const serverUrl = getServerUrl();
@@ -632,6 +721,7 @@ export default function SubscriptionList() {
           onLogs={handleLogs}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onPreview={handlePreviewSubscription}
           onStartSort={handleStartSort}
           onConfirmSort={handleConfirmSort}
           onCancelSort={handleCancelSort}
@@ -652,6 +742,7 @@ export default function SubscriptionList() {
           onLogs={handleLogs}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onPreview={handlePreviewSubscription}
           onStartSort={handleStartSort}
           onConfirmSort={handleConfirmSort}
           onCancelSort={handleCancelSort}
@@ -720,6 +811,8 @@ export default function SubscriptionList() {
         onRemoveChecked={handleRemoveChecked}
         onToggleAllAvailable={handleToggleAllAvailable}
         onToggleAllSelected={handleToggleAllSelected}
+        onPreview={handlePreview}
+        previewLoading={previewLoading}
       />
 
       {/* 客户端对话框 */}
@@ -754,6 +847,18 @@ export default function SubscriptionList() {
         content={confirmInfo.content}
         onClose={handleConfirmClose}
         onConfirm={handleConfirmAction}
+      />
+
+      {/* 节点预览对话框 */}
+      <NodePreviewDialog
+        open={previewOpen}
+        loading={previewLoading}
+        data={previewData}
+        tagColorMap={tagOptions.reduce((acc, tag) => {
+          acc[tag.Name] = tag.Color;
+          return acc;
+        }, {})}
+        onClose={() => setPreviewOpen(false)}
       />
     </MainCard>
   );

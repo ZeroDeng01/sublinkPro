@@ -296,6 +296,11 @@ export default function NodeDetailsPanel({ open, node, tagColorMap, onClose, onS
                   ms
                 </Typography>
               </Typography>
+              {node.LatencyCheckAt && (
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 10, display: 'block', mt: 0.5 }}>
+                  {formatDateTime(node.LatencyCheckAt)}
+                </Typography>
+              )}
             </Box>
 
             <Box
@@ -323,6 +328,11 @@ export default function NodeDetailsPanel({ open, node, tagColorMap, onClose, onS
                   MB/s
                 </Typography>
               </Typography>
+              {node.SpeedCheckAt && (
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 10, display: 'block', mt: 0.5 }}>
+                  {formatDateTime(node.SpeedCheckAt)}
+                </Typography>
+              )}
             </Box>
           </Stack>
         </Box>

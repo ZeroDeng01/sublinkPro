@@ -12,3 +12,7 @@ export { default as NodeNameFilter } from './NodeNameFilter';
 export { default as NodeTagFilter } from './NodeTagFilter';
 export { default as NodeNamePreprocessor } from './NodeNamePreprocessor';
 export { default as NodeRenameBuilder } from './NodeRenameBuilder';
+// 节点预览相关组件
+export { default as NodePreviewCard } from './NodePreviewCard';
+export { default as NodePreviewDialog } from './NodePreviewDialog';
+export { default as NodePreviewDetailsPanel } from './NodePreviewDetailsPanel';

@@ -85,3 +85,16 @@ export function sortSubscription(data) {
     }
   });
 }
+
+// 预览订阅节点
+// data: { Nodes, Groups, DelayTime, MinSpeed, CountryWhitelist, ... }
+export function previewSubscriptionNodes(data) {
+  return request({
+    url: '/v1/subcription/preview',
+    method: 'post',
+    data,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+}
