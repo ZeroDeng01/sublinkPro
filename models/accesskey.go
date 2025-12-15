@@ -116,8 +116,11 @@ func (accessKey *AccessKey) Delete() error {
 
 // GenerateAPIKey 生成一个新的 API Key,单用户系统直接全随机不编码用户信息
 func (accessKey *AccessKey) GenerateAPIKey() (string, error) {
-	config := ReadConfig()
-	encryptionKey := config.APIEncryptionKey
+	// 优先使用 config 包获取加密密钥
+	encryptionKey := ""
+	cfg := ReadConfig()
+	encryptionKey = cfg.APIEncryptionKey
+
 	encryptedID, err := utils.EncryptUserIDCompact(accessKey.UserID, []byte(encryptionKey))
 	if err != nil {
 		log.Println("加密用户ID失败:", err)

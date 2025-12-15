@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sublink/config"
 	"sublink/database"
 	"sublink/models"
 	"sublink/node/protocol"
@@ -74,64 +75,182 @@ func Templateinit() {
 }
 
 func main() {
-	models.ConfigInit()
-	config := models.ReadConfig() // 读取配置文件
-	var port = config.Port        // 读取端口号
+	// 定义命令行参数
+	var (
+		showVersion bool
+		port        int
+		dbPath      string
+		logPath     string
+		configFile  string
+	)
+
+	// 全局参数
+	flag.BoolVar(&showVersion, "version", false, "显示版本号")
+	flag.BoolVar(&showVersion, "v", false, "显示版本号 (简写)")
+	flag.IntVar(&port, "port", 0, "服务端口 (覆盖配置文件和环境变量)")
+	flag.IntVar(&port, "p", 0, "服务端口 (简写)")
+	flag.StringVar(&dbPath, "db", "", "数据库目录路径")
+	flag.StringVar(&logPath, "log", "", "日志目录路径")
+	flag.StringVar(&configFile, "config", "", "配置文件名 (相对于数据库目录)")
+	flag.StringVar(&configFile, "c", "", "配置文件名 (简写)")
+
 	// 获取版本号
-	var IsVersion bool
 	version = "dev"
-	//读取VERSION文件获取版本
 	versionData, err := versionFile.ReadFile("VERSION")
 	if err == nil {
 		version = strings.TrimSpace(string(versionData))
-		fmt.Println("版本信息：", version)
-	} else {
-		fmt.Println("版本信息获取失败：", err)
 	}
 
-	flag.BoolVar(&IsVersion, "version", false, "显示版本号")
+	// 处理子命令
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "setting":
+			// 用户设置子命令
+			settingCmd := flag.NewFlagSet("setting", flag.ExitOnError)
+			var username, password string
+			settingCmd.StringVar(&username, "username", "", "设置账号")
+			settingCmd.StringVar(&password, "password", "", "设置密码")
+			settingCmd.Parse(os.Args[2:])
+
+			// 初始化数据库目录和数据库
+			initDatabase(dbPath, logPath, configFile, port)
+
+			fmt.Println(username, password)
+			settings.ResetUser(username, password)
+			return
+
+		case "run":
+			// 运行子命令
+			runCmd := flag.NewFlagSet("run", flag.ExitOnError)
+			runCmd.IntVar(&port, "port", 0, "服务端口")
+			runCmd.IntVar(&port, "p", 0, "服务端口 (简写)")
+			runCmd.StringVar(&dbPath, "db", "", "数据库目录路径")
+			runCmd.StringVar(&logPath, "log", "", "日志目录路径")
+			runCmd.StringVar(&configFile, "config", "", "配置文件名")
+			runCmd.StringVar(&configFile, "c", "", "配置文件名 (简写)")
+			runCmd.Parse(os.Args[2:])
+
+			initDatabase(dbPath, logPath, configFile, port)
+			Run()
+			return
+
+		case "version", "-version", "--version", "-v":
+			fmt.Println(version)
+			return
+
+		case "help", "-help", "--help", "-h":
+			printHelp()
+			return
+		}
+	}
+
+	// 解析全局参数
 	flag.Parse()
-	if IsVersion {
+
+	if showVersion {
 		fmt.Println(version)
 		return
 	}
+
+	// 默认运行模式
+	initDatabase(dbPath, logPath, configFile, port)
+	Run()
+}
+
+// initDatabase 初始化数据库和配置
+func initDatabase(dbPath, logPath, configFile string, port int) {
+	// 设置命令行配置
+	cmdCfg := &config.CommandLineConfig{
+		Port:       port,
+		DBPath:     dbPath,
+		LogPath:    logPath,
+		ConfigFile: configFile,
+	}
+	config.SetCommandLineConfig(cmdCfg)
+
+	// 确保目录存在
+	ensureDir(config.GetDBPath())
+	ensureDir(config.GetLogPath())
+
+	// 初始化旧配置文件（向后兼容）
+	models.ConfigInit()
+
 	// 初始化数据库
 	database.InitSqlite()
+
 	// 执行数据库迁移
 	models.RunMigrations()
-	// 获取命令行参数
-	args := os.Args
-	// 如果长度小于2则没有接收到任何参数
-	if len(args) < 2 {
-		Run(port)
-		return
-	}
-	// 命令行参数选择
-	settingCmd := flag.NewFlagSet("setting", flag.ExitOnError)
-	var username, password string
-	settingCmd.StringVar(&username, "username", "", "设置账号")
-	settingCmd.StringVar(&password, "password", "", "设置密码")
-	settingCmd.IntVar(&port, "port", 8000, "修改端口")
-	switch args[1] {
-	// 解析setting命令标志
-	case "setting":
-		settingCmd.Parse(args[2:])
-		fmt.Println(username, password)
-		settings.ResetUser(username, password)
-		return
-	case "run":
-		settingCmd.Parse(args[2:])
-		models.SetConfig(models.Config{
-			Port: port,
-		}) // 设置端口
-		Run(port)
-	default:
-		return
 
+	// 初始化敏感配置访问器
+	models.InitSecretAccessors()
+
+	// 迁移旧配置中的敏感数据到数据库
+	config.MigrateFromOldConfig()
+
+	// 加载完整配置
+	config.Load()
+}
+
+// ensureDir 确保目录存在
+func ensureDir(path string) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.MkdirAll(path, 0755); err != nil {
+			log.Printf("创建目录失败 %s: %v", path, err)
+		}
 	}
 }
 
-func Run(port int) {
+// printHelp 打印帮助信息
+func printHelp() {
+	fmt.Println(`SublinkPro - 代理订阅管理与转换工具
+
+使用方法:
+  sublinkpro [命令] [选项]
+
+命令:
+  run           启动服务
+  setting       用户设置
+  version       显示版本号
+  help          显示帮助信息
+
+全局选项:
+  -p, --port    服务端口 (默认: 8000)
+  -db           数据库目录路径 (默认: ./db)
+  -log          日志目录路径 (默认: ./logs)
+  -c, --config  配置文件名 (默认: config.yaml)
+  -v, --version 显示版本号
+
+环境变量:
+  SUBLINK_PORT              服务端口
+  SUBLINK_DB_PATH           数据库目录路径
+  SUBLINK_LOG_PATH          日志目录路径
+  SUBLINK_JWT_SECRET        JWT签名密钥 (可选，自动生成)
+  SUBLINK_API_ENCRYPTION_KEY API加密密钥 (可选，自动生成)
+  SUBLINK_EXPIRE_DAYS       Token过期天数 (默认: 14)
+  SUBLINK_LOGIN_FAIL_COUNT  登录失败次数限制 (默认: 5)
+  SUBLINK_LOGIN_FAIL_WINDOW  登录失败窗口时间(分钟) (默认: 1)
+  SUBLINK_LOGIN_BAN_DURATION 登录封禁时间(分钟) (默认: 10)
+  SUBLINK_ADMIN_PASSWORD    初始管理员密码 (首次启动时设置)
+
+配置优先级:
+  命令行参数 > 环境变量 > 配置文件 > 数据库 > 默认值
+
+示例:
+  sublinkpro                       # 使用默认配置启动
+  sublinkpro run -p 9000           # 指定端口启动
+  sublinkpro run --db /data/db     # 指定数据库目录
+  sublinkpro setting -username admin -password newpass  # 重置用户
+`)
+}
+
+func Run() {
+	// 获取配置
+	cfg := config.Get()
+	port := cfg.Port
+
+	// 打印版本信息
+	fmt.Println("版本信息：", version)
+
 	// 初始化gin框架
 	r := gin.Default()
 	// 初始化日志配置

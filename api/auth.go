@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"log"
+	"sublink/config"
 	"sublink/middlewares"
 	"sublink/models"
 	"sublink/services/geoip"
@@ -26,7 +27,7 @@ func GetToken(username string) (string, error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, c)
-	return token.SignedString(middlewares.Secret)
+	return token.SignedString([]byte(config.GetJwtSecret()))
 }
 
 // 获取captcha图形验证码
@@ -101,7 +102,9 @@ func UserLogin(c *gin.Context) {
 		if err != nil {
 			location = "未知位置"
 		}
-
+		if location == "" {
+			location = "未知位置"
+		}
 		timeStr := time.Now().Format("2006-01-02 15:04:05")
 
 		payload := sse.NotificationPayload{

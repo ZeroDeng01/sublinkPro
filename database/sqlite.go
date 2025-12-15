@@ -3,6 +3,7 @@ package database
 import (
 	"log"
 	"os"
+	"sublink/config"
 	"time"
 
 	"github.com/glebarez/sqlite"
@@ -16,11 +17,14 @@ var DB *gorm.DB
 var IsInitialized bool
 
 func InitSqlite() {
+	// 获取数据库路径
+	dbPath := config.GetDBPath()
+
 	// 检查目录是否创建
-	_, err := os.Stat("./db")
+	_, err := os.Stat(dbPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			os.Mkdir("./db", os.ModePerm)
+			os.MkdirAll(dbPath, os.ModePerm)
 		}
 	}
 
@@ -30,7 +34,7 @@ func InitSqlite() {
 	// _synchronous: NORMAL 模式平衡性能和数据安全
 	// _cache_size: 负数表示 KB，-64000 = 64MB 缓存
 	// _foreign_keys: 启用外键约束
-	dsn := "./db/sublink.db?_busy_timeout=5000&_journal_mode=WAL&_synchronous=NORMAL&_cache_size=-64000&_foreign_keys=ON"
+	dsn := dbPath + "/sublink.db?_busy_timeout=5000&_journal_mode=WAL&_synchronous=NORMAL&_cache_size=-64000&_foreign_keys=ON"
 
 	// 配置 GORM，减少日志噪音
 	gormConfig := &gorm.Config{
@@ -61,5 +65,5 @@ func InitSqlite() {
 	}
 
 	DB = db
-	log.Println("数据库已启用 WAL 模式和高性能配置")
+	log.Printf("数据库已初始化: %s (WAL模式)", dsn)
 }

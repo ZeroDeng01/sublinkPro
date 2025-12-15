@@ -1,0 +1,88 @@
+# SublinkPro Docker Compose 配置模板
+# ============================================
+# 复制此文件为 docker-compose.yml 并根据需要修改
+# 使用方法: docker-compose up -d
+# ============================================
+
+services:
+  sublinkpro:
+    # 镜像选择
+    # image: zerodeng/sublink-pro:dev    # 开发版（功能尝鲜）
+    image: zerodeng/sublink-pro:latest   # 稳定版（推荐）
+    
+    container_name: sublinkpro
+    
+    # 端口映射
+    ports:
+      - "8000:8000"
+    
+    # 数据持久化
+    volumes:
+      - "./db:/app/db"           # 数据库目录
+      - "./template:/app/template" # 模板目录
+      - "./logs:/app/logs"       # 日志目录
+    
+    # ============================================
+    # 环境变量配置
+    # ============================================
+    environment:
+      # ---------- 基础配置 ----------
+      # 服务端口（容器内部端口）
+      - SUBLINK_PORT=8000
+      
+      # Token 过期天数
+      - SUBLINK_EXPIRE_DAYS=14
+      
+      # ---------- 登录安全配置 ----------
+      # 登录失败次数限制
+      - SUBLINK_LOGIN_FAIL_COUNT=5
+      
+      # 登录失败统计窗口（分钟）
+      - SUBLINK_LOGIN_FAIL_WINDOW=1
+      
+      # 登录封禁时间（分钟）
+      - SUBLINK_LOGIN_BAN_DURATION=10
+      
+      # ---------- 敏感配置（可选） ----------
+      # 以下配置如不设置，系统会自动生成并存储到数据库
+      # 如果设置了环境变量，值会自动同步到数据库，方便迁移部署
+      # 多实例部署时请务必设置相同的值以保持一致性
+      
+      # JWT 签名密钥
+      # - SUBLINK_JWT_SECRET=your-secret-key-at-least-32-characters
+      
+      # API 加密密钥
+      # - SUBLINK_API_ENCRYPTION_KEY=your-encryption-key-at-least-32-characters
+      
+      # ---------- 管理员配置 ----------
+      # 初始管理员密码（仅首次启动时生效）
+      # - SUBLINK_ADMIN_PASSWORD=your-admin-password
+      
+      # 重置管理员密码（每次启动时检查并重置）
+      # - SUBLINK_ADMIN_PASSWORD_REST=new-admin-password
+    
+    # 重启策略
+    restart: unless-stopped
+    
+    # 健康检查（可选）
+    # healthcheck:
+    #   test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/api/version"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 10s
+
+# ============================================
+# 使用说明
+# ============================================
+# 1. 复制此文件: cp docker-compose.example.yml docker-compose.yml
+# 2. 根据需要修改配置
+# 3. 启动服务: docker-compose up -d
+# 4. 查看日志: docker-compose logs -f
+# 5. 停止服务: docker-compose down
+#
+# 默认账号密码: admin / 123456
+# 请登录后立即修改密码！
+#
+# 配置优先级说明:
+# 环境变量 > 配置文件(db/config.yaml) > 数据库 > 默认值

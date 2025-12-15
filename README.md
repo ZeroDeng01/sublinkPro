@@ -341,6 +341,91 @@ wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/ins
 
 ---
 
+## ⚙️ 配置说明
+
+### 配置优先级
+
+SublinkPro 支持多种配置方式，优先级从高到低为：
+
+1. **命令行参数** - 适用于临时覆盖，如 `--port 9000`
+2. **环境变量** - 推荐用于 Docker 部署
+3. **配置文件** - `db/config.yaml`
+4. **数据库存储** - 敏感配置自动存储
+5. **默认值** - 程序内置默认配置
+
+### 环境变量列表
+
+| 环境变量 | 说明 | 默认值      |
+|----------|------|----------|
+| `SUBLINK_PORT` | 服务端口 | 8000     |
+| `SUBLINK_DB_PATH` | 数据库目录 | ./db     |
+| `SUBLINK_LOG_PATH` | 日志目录 | ./logs   |
+| `SUBLINK_JWT_SECRET` | JWT签名密钥 | (自动生成)   |
+| `SUBLINK_API_ENCRYPTION_KEY` | API加密密钥 | (自动生成)   |
+| `SUBLINK_EXPIRE_DAYS` | Token过期天数 | 14       |
+| `SUBLINK_LOGIN_FAIL_COUNT` | 登录失败次数限制 | 5        |
+| `SUBLINK_LOGIN_FAIL_WINDOW` | 登录失败窗口(分钟) | 1        |
+| `SUBLINK_LOGIN_BAN_DURATION` | 登录封禁时间(分钟) | 10       |
+| `SUBLINK_ADMIN_PASSWORD` | 初始管理员密码 | 123456   |
+| `SUBLINK_ADMIN_PASSWORD_REST` | 重置管理员密码 | 输入新管理员密码 |
+
+### 命令行参数
+
+```bash
+# 查看帮助
+./sublinkpro help
+
+# 指定端口启动
+./sublinkpro run --port 9000
+
+# 指定数据库目录
+./sublinkpro run --db /data/db
+
+# 重置管理员密码
+./sublinkpro setting -username admin -password newpass
+```
+
+### 敏感配置说明
+
+> [!TIP]
+> **JWT Secret** 和 **API 加密密钥** 是敏感配置，系统会按以下方式处理：
+> 1. 优先从环境变量读取
+> 2. 如未设置环境变量，从数据库读取
+> 3. 如数据库也没有，自动生成随机密钥并存储到数据库
+> 
+> **特别说明**：如果您通过环境变量设置了这些值，系统会自动同步到数据库。这样即使后续忘记设置环境变量，系统也能从数据库恢复，方便迁移部署。
+
+> [!WARNING]
+> 如果您需要**多实例部署**或**集群部署**，请务必通过环境变量设置相同的 `SUBLINK_JWT_SECRET` 和 `SUBLINK_API_ENCRYPTION_KEY`，以确保各实例间的登录状态和 API Key 一致。
+
+### Docker 部署示例（带环境变量）
+
+```yaml
+services:
+  sublinkpro:
+    image: zerodeng/sublink-pro:latest
+    container_name: sublinkpro
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./db:/app/db"
+      - "./template:/app/template"
+      - "./logs:/app/logs"
+    environment:
+      - SUBLINK_PORT=8000
+      - SUBLINK_EXPIRE_DAYS=14
+      - SUBLINK_LOGIN_FAIL_COUNT=5
+      # 敏感配置（可选，不设置则自动生成）
+      # - SUBLINK_JWT_SECRET=your-secret-key
+      # - SUBLINK_API_ENCRYPTION_KEY=your-encryption-key
+    restart: unless-stopped
+```
+
+> [!NOTE]
+> 完整的 Docker Compose 模板请参考项目根目录的 `docker-compose.example.yml` 文件。
+
+---
+
 ## 🖼️ 项目预览
 
 <details open>
