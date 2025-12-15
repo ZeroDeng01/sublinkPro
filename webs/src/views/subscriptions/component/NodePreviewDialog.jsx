@@ -28,6 +28,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import NodePreviewCard from './NodePreviewCard';
 import NodePreviewDetailsPanel from './NodePreviewDetailsPanel';
 import { IPDetailsDialog } from '../../nodes/component';
+import Alert from '@mui/material/Alert';
+import { AlertTitle } from "@mui/material";
 
 // 每次加载的卡片数量
 const BATCH_SIZE = 100;
@@ -185,6 +187,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
           <Stack direction="row" alignItems="center" spacing={2}>
             <Typography variant="h5" fontWeight="bold">
               节点预览
+              <Chip size="small" label="Beta" color="error" variant="outlined" sx={{ ml: 1 }} />
             </Typography>
             {!loading && data && (
               <Stack direction="row" alignItems="center" spacing={1}>
@@ -204,6 +207,22 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
         </DialogTitle>
 
         <DialogContent sx={{ p: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <Box
+            sx={{
+              px: 3,
+              py: 2,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              bgcolor: alpha(theme.palette.background.paper, 0.5),
+              flexShrink: 0
+            }}
+          >
+            <Alert severity="error">
+              <AlertTitle>温馨提示</AlertTitle>
+              本功能为测试版功能还不稳定。
+              预览数据仅供参考，以客户端获取到的实际结果为准，目前部分客户端不支持相关协议的节点，所以节点数量会有出入。
+            </Alert>
+          </Box>
           {/* 搜索栏 */}
           <Box
             sx={{

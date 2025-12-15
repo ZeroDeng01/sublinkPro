@@ -574,6 +574,7 @@ export default function SubscriptionFormDialog({
               <FilterAltIcon color="primary" />
               <Typography variant="subtitle1" fontWeight={600}>
                 节点去重
+                <Chip size="small" label="Beta" color="error" variant="outlined" sx={{ ml: 1 }} />
               </Typography>
               {!expandedPanels.dedup && formData.deduplicationRule && (
                 <Chip size="small" label="已配置" color="success" variant="outlined" sx={{ ml: 1 }} />
@@ -742,6 +743,7 @@ export default function SubscriptionFormDialog({
             disabled={previewLoading || (formData.selectedNodes.length === 0 && formData.selectedGroups.length === 0)}
           >
             {previewLoading ? '加载中...' : '预览节点'}
+            <Chip size="small" label="Beta" color="error" variant="outlined" sx={{ ml: 1 }} />
           </Button>
           <Stack direction="row" spacing={1}>
             <Button onClick={onClose}>关闭</Button>
