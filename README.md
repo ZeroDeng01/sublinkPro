@@ -336,6 +336,15 @@ services:
 wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh && sh install.sh
 ```
 
+### 🗑️ 一键卸载脚本
+
+```bash
+wget https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/uninstall.sh && sh uninstall.sh
+```
+
+> [!NOTE]
+> 卸载脚本会询问是否保留数据目录（db、logs、template），选择保留可用于后续重新安装时恢复数据。
+
 > [!TIP]
 > 推荐优先使用 **Docker 部署** 以获得最佳兼容性，或可选择 **Debian / Ubuntu** 等发行版。
 
