@@ -21,11 +21,17 @@ type Config struct {
 	APIEncryptionKey string `yaml:"api_encryption_key"` // API加密密钥
 	ExpireDays       int    `yaml:"expire_days"`        // 过期天数
 	Port             int    `yaml:"port"`               // 端口号
+	LoginFailCount   int    `yaml:"login_fail_count"`   // 登录失败次数限制
+	LoginFailWindow  int    `yaml:"login_fail_window"`  // 登录失败窗口时间(分钟)
+	LoginBanDuration int    `yaml:"login_ban_duration"` // 登录失败封禁时间(分钟)
 }
 
 var comment string = `# jwt_secret: JWT密钥
 # expire_days: token 过期天数
 # port: 启动端口
+# login_fail_count: 登录失败次数限制 (默认5)
+# login_fail_window: 登录失败统计窗口时间(分钟, 默认1)
+# login_ban_duration: 登录失败封禁时间(分钟, 默认10)
 `
 
 // 初始化配置
@@ -39,6 +45,9 @@ func ConfigInit() {
 			APIEncryptionKey: utils.RandString(31), // 生成随机API加密密钥
 			ExpireDays:       14,
 			Port:             8000, // 默认端口
+			LoginFailCount:   5,    // 默认5次
+			LoginFailWindow:  1,    // 默认1分钟
+			LoginBanDuration: 10,   // 默认封禁10分钟
 		}
 
 		// 生成yaml文件
@@ -65,6 +74,18 @@ func ReadConfig() Config {
 	}
 	cfg := Config{}
 	yaml.Unmarshal(file, &cfg)
+
+	// Set defaults if missing (for existing configs)
+	if cfg.LoginFailCount == 0 {
+		cfg.LoginFailCount = 5
+	}
+	if cfg.LoginFailWindow == 0 {
+		cfg.LoginFailWindow = 1
+	}
+	if cfg.LoginBanDuration == 0 {
+		cfg.LoginBanDuration = 10
+	}
+
 	return cfg
 }
 
@@ -83,6 +104,15 @@ func SetConfig(newCfg Config) {
 	}
 	if newCfg.Port != 0 {
 		oldCfg.Port = newCfg.Port
+	}
+	if newCfg.LoginFailCount != 0 {
+		oldCfg.LoginFailCount = newCfg.LoginFailCount
+	}
+	if newCfg.LoginFailWindow != 0 {
+		oldCfg.LoginFailWindow = newCfg.LoginFailWindow
+	}
+	if newCfg.LoginBanDuration != 0 {
+		oldCfg.LoginBanDuration = newCfg.LoginBanDuration
 	}
 	// 写入文件
 	data, err := yaml.Marshal(&oldCfg)

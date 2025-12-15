@@ -1,9 +1,12 @@
 package api
 
 import (
+	"fmt"
 	"log"
 	"sublink/middlewares"
 	"sublink/models"
+	"sublink/services/geoip"
+	"sublink/services/sse"
 	"sublink/utils"
 	"time"
 
@@ -47,6 +50,15 @@ func UserLogin(c *gin.Context) {
 	captchaCode := c.PostForm("captchaCode")
 	captchaKey := c.PostForm("captchaKey")
 	rememberMe := c.PostForm("rememberMe") == "true"
+	ip := c.ClientIP()
+
+	// 0. 检查IP是否被封禁
+	limiter := GetLoginLimiter()
+	if isBanned, banUntil := limiter.CheckBan(ip); isBanned {
+		minutes := int(time.Until(banUntil).Minutes()) + 1
+		utils.FailWithMsg(c, fmt.Sprintf("由于多次登录失败，IP已被封禁，请 %d 分钟后再试", minutes))
+		return
+	}
 
 	// 验证验证码
 	if !utils.VerifyCaptcha(captchaKey, captchaCode) {
@@ -58,9 +70,12 @@ func UserLogin(c *gin.Context) {
 	err := user.Verify()
 	if err != nil {
 		log.Println("账号或者密码错误")
+		limiter.RecordFailure(ip) // 记录失败
 		utils.FailWithData(c, "用户名或密码错误", gin.H{"errorType": "credentials"})
 		return
 	}
+	// 登录成功，清除失败记录
+	limiter.ClearFailures(ip)
 	// 生成token
 	token, err := GetToken(username)
 	if err != nil {
@@ -79,6 +94,33 @@ func UserLogin(c *gin.Context) {
 			// 不影响正常登录，只是不返回 rememberToken
 		}
 	}
+
+	// 异步发送登录通知
+	go func(username, ip string) {
+		location, err := geoip.GetLocation(ip)
+		if err != nil {
+			location = "未知位置"
+		}
+
+		timeStr := time.Now().Format("2006-01-02 15:04:05")
+
+		payload := sse.NotificationPayload{
+			Event:   "user_login",
+			Title:   "用户登录通知",
+			Message: fmt.Sprintf("用户 %s 已登录\nIP: %s (%s)\n时间: %s", username, ip, location, timeStr),
+			Data: map[string]interface{}{
+				"username": username,
+				"ip":       ip,
+				"location": location,
+				"time":     timeStr,
+			},
+			Time: timeStr,
+		}
+
+		// 触发 Telegram 和 Webhook
+		sse.TriggerTelegram("user_login", payload)
+		sse.TriggerWebhook("user_login", payload)
+	}(username, ip)
 
 	// 登录成功返回token
 	utils.OkDetailed(c, "登录成功", gin.H{
