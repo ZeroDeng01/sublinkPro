@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sublink/database"
 	"sublink/models"
+	"sublink/node/protocol"
 	"sublink/routers"
 	"sublink/services"
 	"sublink/services/geoip"
@@ -207,6 +208,10 @@ func Run(port int) {
 	if err := models.InitIPInfoCache(); err != nil {
 		log.Println("加载IP信息到缓存失败: %v", err)
 	}
+
+	// 初始化去重字段元数据缓存（通过反射扫描协议结构体和Node模型）
+	protocol.InitProtocolMeta()
+	models.InitNodeFieldsMeta()
 
 	// 启动时清理过期的记住密码令牌
 	models.CleanAllExpiredTokens()

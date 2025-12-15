@@ -106,7 +106,8 @@ export default function SubscriptionList() {
     nodeNameWhitelist: '',
     nodeNameBlacklist: '',
     tagWhitelist: '',
-    tagBlacklist: ''
+    tagBlacklist: '',
+    deduplicationRule: ''
   });
 
   // 节点过滤
@@ -253,7 +254,8 @@ export default function SubscriptionList() {
       nodeNameWhitelist: '',
       nodeNameBlacklist: '',
       tagWhitelist: '',
-      tagBlacklist: ''
+      tagBlacklist: '',
+      deduplicationRule: ''
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -299,7 +301,8 @@ export default function SubscriptionList() {
       nodeNameWhitelist: sub.NodeNameWhitelist || '',
       nodeNameBlacklist: sub.NodeNameBlacklist || '',
       tagWhitelist: sub.TagWhitelist || '',
-      tagBlacklist: sub.TagBlacklist || ''
+      tagBlacklist: sub.TagBlacklist || '',
+      deduplicationRule: sub.DeduplicationRule || ''
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -350,7 +353,8 @@ export default function SubscriptionList() {
         NodeNameWhitelist: formData.nodeNameWhitelist,
         NodeNameBlacklist: formData.nodeNameBlacklist,
         TagWhitelist: formData.tagWhitelist,
-        TagBlacklist: formData.tagBlacklist
+        TagBlacklist: formData.tagBlacklist,
+        DeduplicationRule: formData.deduplicationRule || ''
       };
 
       if (formData.selectionMode === 'nodes') {
@@ -495,7 +499,8 @@ export default function SubscriptionList() {
         NodeNameWhitelist: formData.nodeNameWhitelist || '',
         NodeNameBlacklist: formData.nodeNameBlacklist || '',
         NodeNamePreprocess: formData.nodeNamePreprocess || '',
-        NodeNameRule: formData.nodeNameRule || ''
+        NodeNameRule: formData.nodeNameRule || '',
+        DeduplicationRule: formData.deduplicationRule || ''
       };
 
       const response = await previewSubscriptionNodes(previewRequest);
@@ -535,7 +540,8 @@ export default function SubscriptionList() {
         NodeNameWhitelist: sub.NodeNameWhitelist || '',
         NodeNameBlacklist: sub.NodeNameBlacklist || '',
         NodeNamePreprocess: sub.NodeNamePreprocess || '',
-        NodeNameRule: sub.NodeNameRule || ''
+        NodeNameRule: sub.NodeNameRule || '',
+        DeduplicationRule: sub.DeduplicationRule || ''
       };
 
       const response = await previewSubscriptionNodes(previewRequest);
@@ -679,9 +685,9 @@ export default function SubscriptionList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -697,9 +703,9 @@ export default function SubscriptionList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />

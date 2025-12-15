@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -1030,4 +1031,101 @@ func GetNodeSourceStats() map[string]int {
 		stats[source]++
 	}
 	return stats
+}
+
+// ========== 节点字段元数据反射 ==========
+
+// NodeFieldMeta 节点字段元数据
+type NodeFieldMeta struct {
+	Name  string `json:"name"`  // 字段名称
+	Label string `json:"label"` // 显示标签
+	Type  string `json:"type"`  // 字段类型
+}
+
+// 全局缓存
+var nodeFieldsMetaCache []NodeFieldMeta
+
+// InitNodeFieldsMeta 系统启动时调用，通过反射扫描Node结构体
+func InitNodeFieldsMeta() {
+	// 跳过不适合去重的字段
+	skipFields := map[string]bool{
+		"ID": true, "Link": true, "CreatedAt": true, "UpdatedAt": true,
+		"Tags": true, "SpeedCheckAt": true, "LatencyCheckAt": true,
+		"Speed": true, "DelayTime": true, "SpeedStatus": true, "DelayStatus": true,
+	}
+
+	// 字段中文标签映射
+	labelMap := map[string]string{
+		"Name":            "系统名称",
+		"LinkName":        "原始名称",
+		"LinkAddress":     "完整地址",
+		"LinkHost":        "服务器地址",
+		"LinkPort":        "端口",
+		"LinkCountry":     "国家代码",
+		"LandingIP":       "落地IP",
+		"DialerProxyName": "前置代理",
+		"Source":          "来源",
+		"SourceID":        "来源ID",
+		"Group":           "分组",
+	}
+
+	t := reflect.TypeOf(Node{})
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+
+		// 跳过不适合去重的字段
+		if skipFields[field.Name] {
+			continue
+		}
+
+		kind := field.Type.Kind()
+		// 只提取string和int类型字段用于去重
+		if kind != reflect.String && kind != reflect.Int {
+			continue
+		}
+
+		// 获取中文标签
+		label := labelMap[field.Name]
+		if label == "" {
+			label = field.Name
+		}
+
+		fieldType := "string"
+		if kind == reflect.Int {
+			fieldType = "int"
+		}
+
+		nodeFieldsMetaCache = append(nodeFieldsMetaCache, NodeFieldMeta{
+			Name:  field.Name,
+			Label: label,
+			Type:  fieldType,
+		})
+	}
+
+	log.Printf("节点字段元数据初始化完成，共 %d 个字段可用于去重", len(nodeFieldsMetaCache))
+}
+
+// GetNodeFieldsMeta 获取缓存的节点字段元数据
+func GetNodeFieldsMeta() []NodeFieldMeta {
+	return nodeFieldsMetaCache
+}
+
+// GetFieldValue 根据字段名获取节点字段值（使用反射）
+func (node *Node) GetFieldValue(fieldName string) string {
+	v := reflect.ValueOf(*node)
+	f := v.FieldByName(fieldName)
+	if !f.IsValid() {
+		return ""
+	}
+	switch f.Kind() {
+	case reflect.String:
+		return f.String()
+	case reflect.Int, reflect.Int64:
+		return fmt.Sprintf("%d", f.Int())
+	default:
+		return ""
+	}
 }

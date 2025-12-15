@@ -45,6 +45,8 @@ import NodeNamePreprocessor from './NodeNamePreprocessor';
 import NodeNameFilter from './NodeNameFilter';
 import NodeTagFilter from './NodeTagFilter';
 import NodeTransferBox from './NodeTransferBox';
+import DeduplicationConfig from './DeduplicationConfig';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 
 // ISO国家代码转换为国旗emoji
 const isoToFlag = (isoCode) => {
@@ -137,6 +139,7 @@ export default function SubscriptionFormDialog({
     basic: true,
     nodes: true,
     filter: false,
+    dedup: false,
     naming: false,
     advanced: false
   });
@@ -562,6 +565,25 @@ export default function SubscriptionFormDialog({
                   onBlacklistChange={(rules) => setFormData({ ...formData, nodeNameBlacklist: rules })}
                 />
               </Stack>
+            </AccordionDetails>
+          </Accordion>
+
+          {/* ========== 节点去重 ========== */}
+          <Accordion expanded={expandedPanels.dedup} onChange={handlePanelChange('dedup')} sx={accordionSx}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
+              <FilterAltIcon color="primary" />
+              <Typography variant="subtitle1" fontWeight={600}>
+                节点去重
+              </Typography>
+              {!expandedPanels.dedup && formData.deduplicationRule && (
+                <Chip size="small" label="已配置" color="success" variant="outlined" sx={{ ml: 1 }} />
+              )}
+            </AccordionSummary>
+            <AccordionDetails>
+              <DeduplicationConfig
+                value={formData.deduplicationRule || ''}
+                onChange={(rule) => setFormData({ ...formData, deduplicationRule: rule })}
+              />
             </AccordionDetails>
           </Accordion>
 

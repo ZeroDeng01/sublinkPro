@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sublink/dto"
 	"sublink/models"
+	"sublink/node/protocol"
 	"sublink/utils"
 	"time"
 
@@ -92,6 +93,7 @@ func SubAdd(c *gin.Context) {
 	nodeNameBlacklist := c.PostForm("NodeNameBlacklist")
 	tagWhitelist := c.PostForm("TagWhitelist")
 	tagBlacklist := c.PostForm("TagBlacklist")
+	deduplicationRule := c.PostForm("DeduplicationRule")
 
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
@@ -147,6 +149,7 @@ func SubAdd(c *gin.Context) {
 	sub.NodeNameBlacklist = nodeNameBlacklist
 	sub.TagWhitelist = tagWhitelist
 	sub.TagBlacklist = tagBlacklist
+	sub.DeduplicationRule = deduplicationRule
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 
 	err := sub.Add()
@@ -217,6 +220,7 @@ func SubUpdate(c *gin.Context) {
 	nodeNameBlacklist := c.PostForm("NodeNameBlacklist")
 	tagWhitelist := c.PostForm("TagWhitelist")
 	tagBlacklist := c.PostForm("TagBlacklist")
+	deduplicationRule := c.PostForm("DeduplicationRule")
 
 	if name == "" || (nodes == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
@@ -282,6 +286,7 @@ func SubUpdate(c *gin.Context) {
 	sub.NodeNameBlacklist = nodeNameBlacklist
 	sub.TagWhitelist = tagWhitelist
 	sub.TagBlacklist = tagBlacklist
+	sub.DeduplicationRule = deduplicationRule
 	err = sub.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")
@@ -367,4 +372,16 @@ func SubSort(c *gin.Context) {
 		return
 	}
 	utils.OkWithMsg(c, "更新排序成功")
+}
+
+// GetProtocolMeta 获取协议元数据（协议列表及其可用字段）
+func GetProtocolMeta(c *gin.Context) {
+	meta := protocol.GetAllProtocolMeta()
+	utils.OkDetailed(c, "获取成功", meta)
+}
+
+// GetNodeFieldsMeta 获取节点通用字段元数据
+func GetNodeFieldsMeta(c *gin.Context) {
+	meta := models.GetNodeFieldsMeta()
+	utils.OkDetailed(c, "获取成功", meta)
 }

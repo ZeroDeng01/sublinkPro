@@ -25,6 +25,7 @@ type PreviewRequest struct {
 	NodeNameBlacklist  string   `json:"NodeNameBlacklist"`  // 节点名称黑名单
 	NodeNamePreprocess string   `json:"NodeNamePreprocess"` // 原名预处理规则
 	NodeNameRule       string   `json:"NodeNameRule"`       // 节点命名规则模板
+	DeduplicationRule  string   `json:"DeduplicationRule"`  // 去重规则配置
 }
 
 // PreviewSubscriptionNodes 预览订阅节点
@@ -60,6 +61,7 @@ func PreviewSubscriptionNodes(c *gin.Context) {
 		NodeNameBlacklist:  req.NodeNameBlacklist,
 		NodeNamePreprocess: req.NodeNamePreprocess,
 		NodeNameRule:       req.NodeNameRule,
+		DeduplicationRule:  req.DeduplicationRule,
 	}
 
 	// 获取节点列表

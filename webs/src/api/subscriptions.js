@@ -98,3 +98,19 @@ export function previewSubscriptionNodes(data) {
     }
   });
 }
+
+// 获取协议元数据（协议列表及其可用字段）
+export function getProtocolMeta() {
+  return request({
+    url: '/v1/subcription/protocol-meta',
+    method: 'get'
+  });
+}
+
+// 获取节点通用字段元数据
+export function getNodeFieldsMeta() {
+  return request({
+    url: '/v1/subcription/node-fields-meta',
+    method: 'get'
+  });
+}

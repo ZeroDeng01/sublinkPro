@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"sort"
@@ -8,6 +9,7 @@ import (
 	"sublink/cache"
 	"sublink/database"
 	"sublink/dto"
+	"sublink/node/protocol"
 	"sublink/utils"
 	"time"
 
@@ -46,6 +48,7 @@ type Subcription struct {
 	NodeNameBlacklist  string           `json:"NodeNameBlacklist"`  // 节点名称黑名单 (JSON数组)
 	TagWhitelist       string           `json:"TagWhitelist"`       // 标签白名单（逗号分隔）
 	TagBlacklist       string           `json:"TagBlacklist"`       // 标签黑名单（逗号分隔）
+	DeduplicationRule  string           `json:"DeduplicationRule"`  // 去重规则配置(JSON)
 	CreatedAt          time.Time        `json:"CreatedAt"`
 	UpdatedAt          time.Time        `json:"UpdatedAt"`
 	DeletedAt          gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
@@ -178,6 +181,7 @@ func (sub *Subcription) Update() error {
 		"node_name_blacklist":  sub.NodeNameBlacklist,
 		"tag_whitelist":        sub.TagWhitelist,
 		"tag_blacklist":        sub.TagBlacklist,
+		"deduplication_rule":   sub.DeduplicationRule,
 	}
 	err := database.DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 	if err != nil {
@@ -423,6 +427,9 @@ func (sub *Subcription) ApplyFilters(nodes []Node) []Node {
 		}
 		result = filteredNodes
 	}
+
+	// 5. 应用去重规则
+	result = sub.ApplyDeduplication(result)
 
 	return result
 }
@@ -869,4 +876,180 @@ func (sub *Subcription) PreviewSub() (*PreviewResult, error) {
 		TotalCount:    totalCount,
 		FilteredCount: filteredCount,
 	}, nil
+}
+
+// ========== 去重规则配置结构 ==========
+
+// DeduplicationConfig 去重规则配置
+type DeduplicationConfig struct {
+	Mode          string              `json:"mode"`          // 去重模式: none, common, protocol
+	CommonFields  []string            `json:"commonFields"`  // 通用字段列表
+	ProtocolRules map[string][]string `json:"protocolRules"` // 协议特定规则
+}
+
+// ApplyDeduplication 应用去重规则
+func (sub *Subcription) ApplyDeduplication(nodes []Node) []Node {
+	// 如果没有配置去重规则，直接返回
+	if sub.DeduplicationRule == "" {
+		return nodes
+	}
+
+	// 解析去重配置
+	var config DeduplicationConfig
+	if err := json.Unmarshal([]byte(sub.DeduplicationRule), &config); err != nil {
+		log.Printf("解析去重规则失败: %v", err)
+		return nodes
+	}
+
+	// 根据模式应用去重
+	switch config.Mode {
+	case "common":
+		return deduplicateByCommonFields(nodes, config.CommonFields)
+	case "protocol":
+		return deduplicateByProtocol(nodes, config.ProtocolRules)
+	default:
+		return nodes
+	}
+}
+
+// deduplicateByCommonFields 根据通用字段去重
+func deduplicateByCommonFields(nodes []Node, fields []string) []Node {
+	if len(fields) == 0 {
+		return nodes
+	}
+
+	seen := make(map[string]bool)
+	var result []Node
+
+	for _, node := range nodes {
+		// 生成去重Key
+		key := generateNodeKey(&node, fields)
+		if key == "" {
+			// 如果无法生成Key，保留该节点
+			result = append(result, node)
+			continue
+		}
+
+		if !seen[key] {
+			seen[key] = true
+			result = append(result, node)
+		}
+	}
+
+	log.Printf("通用字段去重: 原%d个 -> %d个", len(nodes), len(result))
+	return result
+}
+
+// generateNodeKey 根据指定字段生成节点的去重Key
+func generateNodeKey(node *Node, fields []string) string {
+	var parts []string
+	for _, field := range fields {
+		value := node.GetFieldValue(field)
+		parts = append(parts, field+":"+value)
+	}
+	return strings.Join(parts, "|")
+}
+
+// deduplicateByProtocol 根据协议特定字段去重
+func deduplicateByProtocol(nodes []Node, protocolRules map[string][]string) []Node {
+	if len(protocolRules) == 0 {
+		return nodes
+	}
+
+	seen := make(map[string]bool)
+	var result []Node
+
+	for _, node := range nodes {
+		// 获取协议类型
+		protoType := getProtocolType(node.Link)
+
+		// 获取该协议的去重字段
+		fields, exists := protocolRules[protoType]
+		if !exists || len(fields) == 0 {
+			// 没有配置该协议的去重规则，保留节点
+			result = append(result, node)
+			continue
+		}
+
+		// 生成去重Key
+		key := generateProtocolKey(node.Link, protoType, fields)
+		if key == "" {
+			result = append(result, node)
+			continue
+		}
+
+		// 加上协议类型前缀，避免不同协议间Key冲突
+		fullKey := protoType + ":" + key
+		if !seen[fullKey] {
+			seen[fullKey] = true
+			result = append(result, node)
+		}
+	}
+
+	log.Printf("协议字段去重: 原%d个 -> %d个", len(nodes), len(result))
+	return result
+}
+
+// getProtocolType 从节点链接中提取协议类型
+func getProtocolType(link string) string {
+	if link == "" {
+		return ""
+	}
+	if idx := strings.Index(link, "://"); idx > 0 {
+		proto := strings.ToLower(link[:idx])
+		// hysteria2 和 hy2 统一处理
+		if proto == "hy2" {
+			return "hysteria2"
+		}
+		if proto == "hy" {
+			return "hysteria"
+		}
+		return proto
+	}
+	return ""
+}
+
+// generateProtocolKey 根据协议解析结果生成去重Key
+func generateProtocolKey(link string, protoType string, fields []string) string {
+	var protoObj interface{}
+	var err error
+
+	// 根据协议类型解析节点
+	switch protoType {
+	case "vmess":
+		protoObj, err = protocol.DecodeVMESSURL(link)
+	case "vless":
+		protoObj, err = protocol.DecodeVLESSURL(link)
+	case "trojan":
+		protoObj, err = protocol.DecodeTrojanURL(link)
+	case "ss":
+		protoObj, err = protocol.DecodeSSURL(link)
+	case "ssr":
+		protoObj, err = protocol.DecodeSSRURL(link)
+	case "hysteria":
+		protoObj, err = protocol.DecodeHYURL(link)
+	case "hysteria2":
+		protoObj, err = protocol.DecodeHY2URL(link)
+	case "tuic":
+		protoObj, err = protocol.DecodeTuicURL(link)
+	case "anytls":
+		protoObj, err = protocol.DecodeAnyTLSURL(link)
+	case "socks5":
+		protoObj, err = protocol.DecodeSocks5URL(link)
+	default:
+		return ""
+	}
+
+	if err != nil {
+		return ""
+	}
+
+	// 根据字段列表提取值并生成Key
+	var parts []string
+	for _, field := range fields {
+		value := protocol.GetProtocolFieldValue(protoObj, field)
+		parts = append(parts, field+":"+value)
+	}
+
+	return strings.Join(parts, "|")
 }
