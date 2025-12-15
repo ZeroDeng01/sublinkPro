@@ -1056,7 +1056,7 @@ func InitNodeFieldsMeta() {
 
 	// 字段中文标签映射
 	labelMap := map[string]string{
-		"Name":            "系统名称",
+		"Name":            "备注",
 		"LinkName":        "原始名称",
 		"LinkAddress":     "完整地址",
 		"LinkHost":        "服务器地址",
