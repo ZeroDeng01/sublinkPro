@@ -212,23 +212,30 @@ func RenameNode(rule string, info NodeInfo) string {
 	}
 
 	// 替换所有支持的变量
-	replacements := map[string]string{
-		"$Name":        info.Name,
-		"$LinkName":    info.LinkName,
-		"$LinkCountry": linkCountry,
-		"$Flag":        ISOToFlag(info.LinkCountry),
-		"$Speed":       FormatSpeed(info.Speed),
-		"$Delay":       FormatDelay(info.DelayTime),
-		"$Group":       linkGroup,
-		"$Source":      linkSource,
-		"$Index":       fmt.Sprintf("%d", info.Index),
-		"$Protocol":    info.Protocol,
-		"$Tags":        tags,     // 所有标签（竖线｜分隔）
-		"$Tag":         firstTag, // 第一个标签
+	// 使用有序切片代替 map，确保长变量名优先替换
+	// 这避免了如 $Tag 先于 $Tags 替换导致的问题
+	type replacement struct {
+		variable string
+		value    string
+	}
+	// 按变量名长度降序排列，长的变量名优先替换
+	replacements := []replacement{
+		{"$LinkCountry", linkCountry},
+		{"$LinkName", info.LinkName},
+		{"$Protocol", info.Protocol},
+		{"$Source", linkSource},
+		{"$Speed", FormatSpeed(info.Speed)},
+		{"$Delay", FormatDelay(info.DelayTime)},
+		{"$Group", linkGroup},
+		{"$Index", fmt.Sprintf("%d", info.Index)},
+		{"$Name", info.Name},
+		{"$Flag", ISOToFlag(info.LinkCountry)},
+		{"$Tags", tags},    // 所有标签（竖线｜分隔），必须在 $Tag 之前
+		{"$Tag", firstTag}, // 第一个标签
 	}
 
-	for variable, value := range replacements {
-		result = strings.ReplaceAll(result, variable, value)
+	for _, r := range replacements {
+		result = strings.ReplaceAll(result, r.variable, r.value)
 	}
 
 	// 清理连续空格和首尾空格
