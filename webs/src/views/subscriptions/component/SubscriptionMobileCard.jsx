@@ -67,20 +67,17 @@ export default function SubscriptionMobileCard({
                 {sub.CreateDate}
               </Typography>
               <Stack direction="row" spacing={0}>
+                <IconButton size="small" color="info" onClick={() => onPreview(sub)}>
+                  <VisibilityIcon fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={() => onEdit(sub)}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
                 <IconButton size="small" onClick={() => onClient(sub.Name)}>
                   <QrCode2Icon fontSize="small" />
                 </IconButton>
                 <IconButton size="small" onClick={() => onLogs(sub)}>
                   <HistoryIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={() => onEdit(sub)}>
-                  <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" color="info" onClick={() => onPreview(sub)}>
-                  <VisibilityIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" color="error" onClick={() => onDelete(sub)}>
-                  <DeleteIcon fontSize="small" />
                 </IconButton>
                 {sortingSubId !== sub.ID ? (
                   <IconButton
@@ -116,6 +113,9 @@ export default function SubscriptionMobileCard({
                     </IconButton>
                   </>
                 )}
+                <IconButton size="small" color="error" onClick={() => onDelete(sub)}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
               </Stack>
             </Stack>
 

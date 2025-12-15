@@ -83,6 +83,16 @@ export default function SubscriptionTable({
                 <TableCell>{sub.CreateDate}</TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                    <Tooltip title="预览节点">
+                      <IconButton size="small" color="info" onClick={() => onPreview(sub)}>
+                        <VisibilityIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="编辑">
+                      <IconButton size="small" onClick={() => onEdit(sub)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="客户端">
                       <IconButton size="small" onClick={() => onClient(sub.Name)}>
                         <QrCode2Icon fontSize="small" />
@@ -91,21 +101,6 @@ export default function SubscriptionTable({
                     <Tooltip title="访问记录">
                       <IconButton size="small" onClick={() => onLogs(sub)}>
                         <HistoryIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="编辑">
-                      <IconButton size="small" onClick={() => onEdit(sub)}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="预览节点">
-                      <IconButton size="small" color="info" onClick={() => onPreview(sub)}>
-                        <VisibilityIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="删除">
-                      <IconButton size="small" color="error" onClick={() => onDelete(sub)}>
-                        <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     {sortingSubId !== sub.ID ? (
@@ -128,6 +123,11 @@ export default function SubscriptionTable({
                         </Tooltip>
                       </>
                     )}
+                    <Tooltip title="删除">
+                      <IconButton size="small" color="error" onClick={() => onDelete(sub)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </Stack>
                 </TableCell>
               </TableRow>
