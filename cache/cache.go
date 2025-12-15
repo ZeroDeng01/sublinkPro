@@ -212,6 +212,18 @@ func (c *MapCache[K, V]) Filter(predicate func(V) bool) []V {
 	return result
 }
 
+// FilterSorted 根据自定义条件过滤实体并排序
+// 注意：由于 map 迭代顺序是随机的，涉及去重等顺序敏感操作时应使用此方法
+func (c *MapCache[K, V]) FilterSorted(predicate func(V) bool, less func(a, b V) bool) []V {
+	result := c.Filter(predicate)
+	if len(result) > 1 {
+		sort.Slice(result, func(i, j int) bool {
+			return less(result[i], result[j])
+		})
+	}
+	return result
+}
+
 // FilterWithLimit 根据条件过滤并限制返回数量
 func (c *MapCache[K, V]) FilterWithLimit(predicate func(V) bool, limit int) []V {
 	c.lock.RLock()

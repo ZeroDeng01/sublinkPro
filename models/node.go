@@ -543,20 +543,27 @@ func (node *Node) GetFilteredNodeIDs(filter NodeFilter) ([]int, error) {
 }
 
 // ListByGroups 根据分组获取节点列表
+// 返回按节点 ID 排序的结果，确保顺序稳定（用于去重等顺序敏感操作）
 func (node *Node) ListByGroups(groups []string) ([]Node, error) {
 	groupMap := make(map[string]bool)
 	for _, g := range groups {
 		groupMap[g] = true
 	}
 
-	// 使用缓存的 Filter 方法
-	nodes := nodeCache.Filter(func(n Node) bool {
-		return groupMap[n.Group]
-	})
+	// 使用 FilterSorted 确保返回顺序稳定
+	nodes := nodeCache.FilterSorted(
+		func(n Node) bool {
+			return groupMap[n.Group]
+		},
+		func(a, b Node) bool {
+			return a.ID < b.ID
+		},
+	)
 	return nodes, nil
 }
 
 // ListByTags 根据标签获取节点列表（匹配任意标签）
+// 返回按节点 ID 排序的结果，确保顺序稳定
 func (node *Node) ListByTags(tags []string) ([]Node, error) {
 	tagMap := make(map[string]bool)
 	for _, t := range tags {
@@ -570,16 +577,21 @@ func (node *Node) ListByTags(tags []string) ([]Node, error) {
 		return []Node{}, nil
 	}
 
-	// 使用缓存的 Filter 方法
-	nodes := nodeCache.Filter(func(n Node) bool {
-		nodeTags := n.GetTagNames()
-		for _, nt := range nodeTags {
-			if tagMap[nt] {
-				return true
+	// 使用 FilterSorted 确保返回顺序稳定
+	nodes := nodeCache.FilterSorted(
+		func(n Node) bool {
+			nodeTags := n.GetTagNames()
+			for _, nt := range nodeTags {
+				if tagMap[nt] {
+					return true
+				}
 			}
-		}
-		return false
-	})
+			return false
+		},
+		func(a, b Node) bool {
+			return a.ID < b.ID
+		},
+	)
 	return nodes, nil
 }
 
