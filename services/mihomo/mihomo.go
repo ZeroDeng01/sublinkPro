@@ -65,20 +65,10 @@ func GetMihomoAdapter(nodeLink string) (constant.Proxy, error) {
 	return proxyAdapter, nil
 }
 
-// MihomoDelay performs a latency test using Mihomo adapter (Protocol-aware)
-// Returns latency in ms by measuring actual HTTP request round-trip time
-// This is the legacy function that includes handshake time by default
-func MihomoDelay(nodeLink string, testUrl string, timeout time.Duration) (latency int, err error) {
-	proxyAdapter, err := GetMihomoAdapter(nodeLink)
-	if err != nil {
-		return 0, err
-	}
-	return MihomoDelayWithAdapter(proxyAdapter, testUrl, timeout)
-}
-
-// MihomoDelayWithAdapter performs latency test with an existing adapter (avoids repeated adapter creation)
-// Returns latency in ms by measuring actual HTTP request round-trip time including handshake
-func MihomoDelayWithAdapter(proxyAdapter constant.Proxy, testUrl string, timeout time.Duration) (latency int, err error) {
+// MihomoDelayWithAdapter 使用 Mihomo 内置 URLTest 进行延迟测试
+// 这是内部函数，直接调用 adapter 的 URLTest 方法
+// includeHandshake: true 测量完整连接时间，false 使用 UnifiedDelay 模式排除握手
+func MihomoDelayWithAdapter(proxyAdapter constant.Proxy, testUrl string, timeout time.Duration, includeHandshake bool) (latency int, err error) {
 	// Recover from any panics and return error with zero latency
 	defer func() {
 		if r := recover(); r != nil {
@@ -88,225 +78,57 @@ func MihomoDelayWithAdapter(proxyAdapter constant.Proxy, testUrl string, timeout
 	}()
 
 	if testUrl == "" {
-		testUrl = "http://cp.cloudflare.com/generate_204"
+		testUrl = "https://cp.cloudflare.com/generate_204"
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	// Create HTTP client with custom transport that uses the proxy adapter
-	// DisableKeepAlives: true ensures fresh connection for accurate measurement
-	client := createHTTPClientWithAdapter(proxyAdapter, timeout, true)
+	// 设置 UnifiedDelay 模式：
+	// - includeHandshake=true -> UnifiedDelay=false（包含握手，单次请求）
+	// - includeHandshake=false -> UnifiedDelay=true（排除握手，发两次请求取第二次）
+	adapter.UnifiedDelay.Store(!includeHandshake)
 
-	// Use HEAD request for minimal data transfer, more accurate latency measurement
-	req, err := http.NewRequestWithContext(ctx, "HEAD", testUrl, nil)
+	// 使用 Mihomo 内置的 URLTest 方法
+	// expectedStatus 传 nil 表示接受任何成功状态码
+	delay, err := proxyAdapter.URLTest(ctx, testUrl, nil)
 	if err != nil {
-		return 0, fmt.Errorf("create request error: %v", err)
+		return 0, err
 	}
 
-	// Measure actual HTTP round-trip time
-	start := time.Now()
-	resp, err := client.Do(req)
-	if err != nil {
-		return 0, fmt.Errorf("http request error: %v", err)
-	}
-	latency = int(time.Since(start).Milliseconds())
-
-	// Clean up response body
-	if resp != nil && resp.Body != nil {
-		go func() {
-			_, _ = io.Copy(io.Discard, resp.Body)
-			_ = resp.Body.Close()
-		}()
-	}
-
-	return latency, nil
+	return int(delay), nil
 }
 
-// createHTTPClientWithAdapter creates an HTTP client using the proxy adapter
-// disableKeepAlives: true for measuring full connection time, false for reusing connections
-func createHTTPClientWithAdapter(proxyAdapter constant.Proxy, timeout time.Duration, disableKeepAlives bool) *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				// Recover from panics in DialContext
-				var dialErr error
-				defer func() {
-					if r := recover(); r != nil {
-						dialErr = fmt.Errorf("panic in DialContext: %v", r)
-					}
-				}()
-
-				// Parse addr to get host and port for metadata
-				h, pStr, splitErr := net.SplitHostPort(addr)
-				if splitErr != nil {
-					return nil, fmt.Errorf("split host port error: %v", splitErr)
-				}
-
-				pInt, atoiErr := strconv.Atoi(pStr)
-				if atoiErr != nil {
-					return nil, fmt.Errorf("invalid port string: %v", atoiErr)
-				}
-
-				// Validate port range
-				if pInt < 0 || pInt > 65535 {
-					return nil, fmt.Errorf("port out of range: %d", pInt)
-				}
-				p := uint16(pInt)
-
-				md := &constant.Metadata{
-					Host:    h,
-					DstPort: p,
-					Type:    constant.HTTP,
-				}
-				conn, err := proxyAdapter.DialContext(ctx, md)
-				if dialErr != nil {
-					return nil, dialErr
-				}
-				return conn, err
-			},
-			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
-			DisableKeepAlives: disableKeepAlives,
-		},
-		Timeout: timeout,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse // Don't follow redirects for latency test
-		},
-	}
-}
-
-// MihomoDelayWithSamples 执行多次延迟测试并返回平均值，可选检测落地IP
-// samples: 采样次数（最小1，建议3）
-// includeHandshake: true测量完整连接时间，false则预热后测量纯RTT
+// MihomoDelayTest 执行延迟测试，可选检测落地IP
+// includeHandshake: true 测量完整连接时间，false 使用 UnifiedDelay 模式排除握手
 // detectLandingIP: 是否检测落地IP
-// landingIPUrl: IP查询服务URL，空则使用默认值
+// landingIPUrl: IP查询服务URL，空则使用默认值 https://api.ipify.org
 // 返回: latency(ms), landingIP(若未检测或失败则为空), error
-func MihomoDelayWithSamples(nodeLink string, testUrl string, timeout time.Duration, samples int, includeHandshake bool, detectLandingIP bool, landingIPUrl string) (latency int, landingIP string, err error) {
+func MihomoDelayTest(nodeLink string, testUrl string, timeout time.Duration, includeHandshake bool, detectLandingIP bool, landingIPUrl string) (latency int, landingIP string, err error) {
 	// Recover from any panics
 	defer func() {
 		if r := recover(); r != nil {
 			latency = 0
 			landingIP = ""
-			err = fmt.Errorf("panic in MihomoDelayWithSamples: %v", r)
+			err = fmt.Errorf("panic in MihomoDelayTest: %v", r)
 		}
 	}()
-
-	if samples < 1 {
-		samples = 1
-	}
-	if samples > 10 {
-		samples = 10 // Cap at 10 to prevent abuse
-	}
 
 	if testUrl == "" {
 		testUrl = "http://cp.cloudflare.com/generate_204"
 	}
 
-	// Create adapter once and reuse for all samples (CPU optimization)
+	// 创建 adapter
 	proxyAdapter, err := GetMihomoAdapter(nodeLink)
 	if err != nil {
 		return 0, "", err
 	}
 
-	var results []int
-	var lastErr error
-
-	if includeHandshake {
-		// Mode 1: Include handshake time - each sample uses fresh connection
-		for i := 0; i < samples; i++ {
-			lat, sampleErr := MihomoDelayWithAdapter(proxyAdapter, testUrl, timeout)
-			if sampleErr != nil {
-				lastErr = sampleErr
-				continue
-			}
-			results = append(results, lat)
-		}
-	} else {
-		// Mode 2: Exclude handshake - warmup first, then measure pure RTT
-		// Create client with keep-alive enabled for connection reuse
-		// 注意：client的Timeout在这里不生效，因为每个请求都使用独立的context
-		client := createHTTPClientWithAdapter(proxyAdapter, timeout, false)
-
-		// 预热阶段：使用独立的超时时间（完整的用户配置超时）
-		// 预热不应挤占后续实际测量时间
-		warmupCtx, warmupCancel := context.WithTimeout(context.Background(), timeout)
-		warmupReq, err := http.NewRequestWithContext(warmupCtx, "HEAD", testUrl, nil)
-		if err != nil {
-			warmupCancel()
-			return 0, "", fmt.Errorf("create warmup request error: %v", err)
-		}
-		warmupResp, warmupErr := client.Do(warmupReq)
-		warmupCancel() // 立即释放预热context
-		if warmupErr != nil {
-			// Warmup failed - node is unreachable, return immediately
-			return 0, "", fmt.Errorf("warmup connection failed: %v", warmupErr)
-		}
-		if warmupResp != nil && warmupResp.Body != nil {
-			_, _ = io.Copy(io.Discard, warmupResp.Body)
-			_ = warmupResp.Body.Close()
-		}
-
-		// 每次采样使用独立的超时时间（完整的用户配置超时）
-		// 这样避免多次采样共享超时导致后续采样时间不足
-		for i := 0; i < samples; i++ {
-			sampleCtx, sampleCancel := context.WithTimeout(context.Background(), timeout)
-			req, reqErr := http.NewRequestWithContext(sampleCtx, "HEAD", testUrl, nil)
-			if reqErr != nil {
-				sampleCancel()
-				lastErr = reqErr
-				continue
-			}
-
-			start := time.Now()
-			resp, doErr := client.Do(req)
-			lat := int(time.Since(start).Milliseconds())
-			sampleCancel()
-
-			if doErr != nil {
-				lastErr = doErr
-				continue
-			}
-			if resp != nil && resp.Body != nil {
-				_, _ = io.Copy(io.Discard, resp.Body)
-				_ = resp.Body.Close()
-			}
-			results = append(results, lat)
-		}
+	// 执行延迟测试（使用 URLTest）
+	latency, err = MihomoDelayWithAdapter(proxyAdapter, testUrl, timeout, includeHandshake)
+	if err != nil {
+		return 0, "", err
 	}
-
-	if len(results) == 0 {
-		if lastErr != nil {
-			return 0, "", lastErr
-		}
-		return 0, "", fmt.Errorf("all samples failed")
-	}
-
-	// If only one result, return it directly
-	if len(results) == 1 {
-		// 延迟测试成功后，如果需要检测落地IP
-		if detectLandingIP {
-			landingIP = fetchLandingIPWithAdapter(proxyAdapter, landingIPUrl)
-		}
-		return results[0], landingIP, nil
-	}
-
-	// Remove highest outlier if we have more than 2 samples
-	if len(results) > 2 {
-		maxIdx := 0
-		for i, v := range results {
-			if v > results[maxIdx] {
-				maxIdx = i
-			}
-		}
-		results = append(results[:maxIdx], results[maxIdx+1:]...)
-	}
-
-	// Calculate average
-	sum := 0
-	for _, v := range results {
-		sum += v
-	}
-	latency = sum / len(results)
 
 	// 延迟测试成功后，如果需要检测落地IP
 	if detectLandingIP {
@@ -631,19 +453,4 @@ func fetchLandingIPWithAdapter(proxyAdapter constant.Proxy, ipUrl string) string
 	n, _ := resp.Body.Read(body)
 
 	return strings.TrimSpace(string(body[:n]))
-}
-
-// FetchLandingIP 获取落地IP（向后兼容函数，建议使用 MihomoSpeedTest 的内置检测）
-// Deprecated: 此函数需要独立创建adapter，建议在速度测试时通过 detectLandingIP 参数复用连接
-func FetchLandingIP(nodeLink string, timeout time.Duration) (string, error) {
-	proxyAdapter, err := GetMihomoAdapter(nodeLink)
-	if err != nil {
-		return "", err
-	}
-
-	ip := fetchLandingIPWithAdapter(proxyAdapter, "https://api.ipify.org")
-	if ip == "" {
-		return "", fmt.Errorf("failed to fetch landing IP")
-	}
-	return ip, nil
 }

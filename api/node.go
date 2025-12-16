@@ -687,13 +687,6 @@ func GetSpeedTestConfig(c *gin.Context) {
 		speedConcurrency, _ = strconv.Atoi(speedConcurrencyStr)
 	}
 
-	// 获取延迟采样次数
-	latencySamplesStr, _ := models.GetSetting("speed_test_latency_samples")
-	latencySamples := 3 // 默认为3
-	if latencySamplesStr != "" {
-		latencySamples, _ = strconv.Atoi(latencySamplesStr)
-	}
-
 	// 获取流量统计开关
 	trafficByGroupStr, _ := models.GetSetting("speed_test_traffic_by_group")
 	trafficByGroup := trafficByGroupStr != "false" // 默认开启
@@ -734,7 +727,6 @@ func GetSpeedTestConfig(c *gin.Context) {
 		"landing_ip_url":       landingIPUrl,
 		"latency_concurrency":  latencyConcurrency,
 		"speed_concurrency":    speedConcurrency,
-		"latency_samples":      latencySamples,
 		"traffic_by_group":     trafficByGroup,
 		"traffic_by_source":    trafficBySource,
 		"traffic_by_node":      trafficByNode,
@@ -759,7 +751,6 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		LandingIPUrl       string      `json:"landing_ip_url"`
 		LatencyConcurrency int         `json:"latency_concurrency"`
 		SpeedConcurrency   int         `json:"speed_concurrency"`
-		LatencySamples     int         `json:"latency_samples"`
 		TrafficByGroup     *bool       `json:"traffic_by_group"`
 		TrafficBySource    *bool       `json:"traffic_by_source"`
 		TrafficByNode      *bool       `json:"traffic_by_node"`
@@ -861,13 +852,6 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 	err = models.SetSetting("speed_test_speed_concurrency", strconv.Itoa(req.SpeedConcurrency))
 	if err != nil {
 		utils.FailWithMsg(c, "保存速度并发数配置失败")
-		return
-	}
-
-	// 保存延迟采样次数
-	err = models.SetSetting("speed_test_latency_samples", strconv.Itoa(req.LatencySamples))
-	if err != nil {
-		utils.FailWithMsg(c, "保存延迟采样次数配置失败")
 		return
 	}
 

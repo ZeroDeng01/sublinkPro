@@ -386,7 +386,13 @@ export default function ProfileSection() {
                             }
                           />
                         </ListItemButton>
-                        <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={() => { setOpen(false); setGeoipDialogOpen(true); }}>
+                        <ListItemButton
+                          sx={{ borderRadius: `${borderRadius}px` }}
+                          onClick={() => {
+                            setOpen(false);
+                            setGeoipDialogOpen(true);
+                          }}
+                        >
                           <ListItemIcon>
                             <IconWorld stroke={1.5} size="20px" />
                           </ListItemIcon>

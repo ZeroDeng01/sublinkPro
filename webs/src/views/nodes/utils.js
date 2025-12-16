@@ -10,9 +10,9 @@ export const CRON_OPTIONS = [
 
 // 测速URL选项 - TCP模式 (204轻量)
 export const SPEED_TEST_TCP_OPTIONS = [
-  { label: 'Cloudflare (cp.cloudflare.com)', value: 'http://cp.cloudflare.com/generate_204' },
-  { label: 'Apple (captive.apple.com)', value: 'http://captive.apple.com/generate_204' },
-  { label: 'Gstatic (www.gstatic.com)', value: 'http://www.gstatic.com/generate_204' }
+  { label: 'Cloudflare (cp.cloudflare.com)', value: 'https://cp.cloudflare.com/generate_204' },
+  { label: 'Apple (captive.apple.com)', value: 'https://captive.apple.com/generate_204' },
+  { label: 'Gstatic (www.gstatic.com)', value: 'https://www.gstatic.com/generate_204' }
 ];
 
 // 测速URL选项 - Mihomo模式 (真速度测试用下载)
@@ -27,16 +27,14 @@ export const SPEED_TEST_MIHOMO_OPTIONS = [
 
 // 延迟测试URL选项 (用于Mihomo模式的阶段一)
 export const LATENCY_TEST_URL_OPTIONS = [
-  { label: 'Cloudflare 204 (推荐)', value: 'http://cp.cloudflare.com/generate_204' },
-  { label: 'Apple 204', value: 'http://captive.apple.com/generate_204' },
-  { label: 'Gstatic 204', value: 'http://www.gstatic.com/generate_204' },
-  { label: 'Cloudflare 0.5MB', value: 'https://speed.cloudflare.com/__down?bytes=500000' }
+  { label: 'Cloudflare 204 (推荐)', value: 'https://cp.cloudflare.com/generate_204' },
+  { label: 'Apple 204', value: 'https://captive.apple.com/generate_204' },
+  { label: 'Gstatic 204', value: 'https://www.gstatic.com/generate_204' },
 ];
 
 // 落地IP查询接口选项
 export const LANDING_IP_URL_OPTIONS = [
   { label: 'ipify.org (推荐)', value: 'https://api.ipify.org' },
-  { label: 'ip-api.com', value: 'http://ip-api.com/line/?fields=query' },
   { label: 'ip.sb', value: 'https://api.ip.sb/ip' },
   { label: 'ifconfig.me', value: 'https://ifconfig.me/ip' },
   { label: 'icanhazip.com', value: 'https://icanhazip.com' },

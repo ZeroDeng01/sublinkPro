@@ -29,7 +29,7 @@ import NodePreviewCard from './NodePreviewCard';
 import NodePreviewDetailsPanel from './NodePreviewDetailsPanel';
 import { IPDetailsDialog } from '../../nodes/component';
 import Alert from '@mui/material/Alert';
-import { AlertTitle } from "@mui/material";
+import { AlertTitle } from '@mui/material';
 
 // 每次加载的卡片数量
 const BATCH_SIZE = 100;

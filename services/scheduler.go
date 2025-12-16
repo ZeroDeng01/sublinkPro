@@ -530,16 +530,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	trafficByNodeStr, _ := models.GetSetting("speed_test_traffic_by_node")
 	trafficByNode := trafficByNodeStr == "true" // 默认关闭
 
-	// 获取延迟采样次数
-	latencySamplesStr, _ := models.GetSetting("speed_test_latency_samples")
-	latencySamples := 3 // 默认3次采样
-	if latencySamplesStr != "" {
-		if s, err := strconv.Atoi(latencySamplesStr); err == nil && s > 0 {
-			latencySamples = s
-		}
-	}
-
-	// 获取是否包含握手时间（默认true，测量完整连接时间；false则预热后测量纯RTT）
+	// 获取是否包含握手时间（默认true，测量完整连接时间；false则使用 UnifiedDelay 模式排除握手）
 	includeHandshakeStr, _ := models.GetSetting("speed_test_include_handshake")
 	includeHandshake := includeHandshakeStr != "false" // 默认包含握手时间
 
@@ -652,7 +643,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	speedTestResults := make([]models.SpeedTestResult, 0, len(nodes))
 
 	// ========== 阶段一：延迟测试 ==========
-	log.Printf("阶段一：开始延迟测试，并发数: %d（动态: %v），采样次数: %d", latencyConcurrency, useAdaptiveLatency, latencySamples)
+	log.Printf("阶段一：开始延迟测试，并发数: %d（动态: %v），UnifiedDelay: %v", latencyConcurrency, useAdaptiveLatency, !includeHandshake)
 
 	// 固定并发模式的 semaphore（仅在非动态模式下使用）
 	var latencySem chan struct{}
@@ -704,10 +695,10 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 			default:
 			}
 
-			// 使用多次采样测量延迟
+			// 使用 Mihomo URLTest 测量延迟
 			// TCP模式下需要检测IP（因为没有速度测试阶段），mihomo模式在速度阶段检测
 			detectIPInLatency := detectCountry && speedTestMode == "tcp"
-			latency, landingIP, err := mihomo.MihomoDelayWithSamples(n.Link, latencyTestUrl, speedTestTimeout, latencySamples, includeHandshake, detectIPInLatency, landingIPUrl)
+			latency, landingIP, err := mihomo.MihomoDelayTest(n.Link, latencyTestUrl, speedTestTimeout, includeHandshake, detectIPInLatency, landingIPUrl)
 
 			mu.Lock()
 			defer mu.Unlock()

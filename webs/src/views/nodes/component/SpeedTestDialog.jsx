@@ -418,7 +418,7 @@ export default function SpeedTestDialog({
             </Alert>
 
             <Grid container spacing={2}>
-              <Grid item size={{ xs: 12, sm: 4 }}>
+              <Grid item size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -440,7 +440,7 @@ export default function SpeedTestDialog({
                   helperText="0=智能动态"
                 />
               </Grid>
-              <Grid item size={{ xs: 12, sm: 4 }}>
+              <Grid item size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -460,29 +460,6 @@ export default function SpeedTestDialog({
                     setSpeedTestForm({ ...speedTestForm, speed_concurrency: val });
                   }}
                   helperText="0=智能动态"
-                />
-              </Grid>
-              <Grid item size={{ xs: 12, sm: 4 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="延迟采样次数"
-                  type="text"
-                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                  value={speedTestForm.latency_samples ?? 3}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    // 允许空字符串和纯数字
-                    if (val === '' || /^\d+$/.test(val)) {
-                      setSpeedTestForm({ ...speedTestForm, latency_samples: val === '' ? '' : Number(val) });
-                    }
-                  }}
-                  onBlur={(e) => {
-                    // 失焦时限制范围1-10，默认3
-                    const val = Math.min(10, Math.max(1, Number(e.target.value) || 3));
-                    setSpeedTestForm({ ...speedTestForm, latency_samples: val });
-                  }}
-                  helperText="多次取平均"
                 />
               </Grid>
             </Grid>
@@ -627,7 +604,6 @@ SpeedTestDialog.propTypes = {
     detect_country: PropTypes.bool,
     latency_concurrency: PropTypes.number,
     speed_concurrency: PropTypes.number,
-    latency_samples: PropTypes.number,
     traffic_by_group: PropTypes.bool,
     traffic_by_source: PropTypes.bool,
     traffic_by_node: PropTypes.bool,

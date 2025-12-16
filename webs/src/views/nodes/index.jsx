@@ -163,7 +163,7 @@ export default function NodeList() {
     landing_ip_url: '',
     latency_concurrency: 0,
     speed_concurrency: 1,
-    latency_samples: 3,
+
     traffic_by_group: true,
     traffic_by_source: true,
     traffic_by_node: false,
@@ -818,7 +818,7 @@ export default function NodeList() {
           landing_ip_url: '',
           latency_concurrency: 0,
           speed_concurrency: 1,
-          latency_samples: 3,
+
           include_handshake: true
         }
       );
