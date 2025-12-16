@@ -258,6 +258,16 @@ func Run() {
 	// 初始化日志系统
 	utils.InitLogger(cfg.LogPath, cfg.LogLevel)
 
+	// 演示模式启动提示
+	if models.IsDemoMode() {
+		utils.Info("🎭 ================================================")
+		utils.Info("🎭 系统正在演示模式下运行")
+		utils.Info("🎭 数据库: 内存模式（重启后数据丢失）")
+		utils.Info("🎭 定时任务: 已禁用")
+		utils.Info("🎭 敏感操作: 已禁用")
+		utils.Info("🎭 ================================================")
+	}
+
 	// 打印版本信息
 	utils.Info("启动 SublinkPro 版本: %s", version)
 	utils.Info("日志等级: %s", utils.GetLogLevel())
@@ -298,9 +308,12 @@ func Run() {
 	// 启动SSE服务
 	go sse.GetSSEBroker().Listen()
 
-	// 初始化并启动定时任务管理器
-	scheduler := services.GetSchedulerManager()
-	scheduler.Start()
+	// 初始化并启动定时任务管理器（演示模式下跳过）
+	var scheduler *services.SchedulerManager
+	if !models.IsDemoMode() {
+		scheduler = services.GetSchedulerManager()
+		scheduler.Start()
+	}
 
 	if err := models.InitNodeCache(); err != nil {
 		utils.Error("加载节点到缓存失败: %v", err)
@@ -364,10 +377,17 @@ func Run() {
 	services.InitTelegramWrapper()
 	sse.TelegramNotifier = telegram.SendNotification
 
-	// 从数据库加载定时任务
-	err := scheduler.LoadFromDatabase()
-	if err != nil {
-		utils.Error("加载定时任务失败: %v", err)
+	// 从数据库加载定时任务（演示模式下跳过）
+	if !models.IsDemoMode() && scheduler != nil {
+		err := scheduler.LoadFromDatabase()
+		if err != nil {
+			utils.Error("加载定时任务失败: %v", err)
+		}
+	}
+
+	// 演示模式：初始化演示数据
+	if models.IsDemoMode() {
+		models.InitDemoData()
 	}
 	// 安装中间件
 

@@ -11,8 +11,9 @@ func AccessKey(r *gin.Engine) {
 	accessKeyGroup := r.Group("/api/v1/accesskey")
 	accessKeyGroup.Use(middlewares.AuthToken)
 	{
-		accessKeyGroup.POST("/add", api.GenerateAccessKey)
-		accessKeyGroup.DELETE("/delete/:accessKeyId", api.DeleteAccessKey)
+		// 演示模式下禁止创建/删除 AccessKey
+		accessKeyGroup.POST("/add", middlewares.DemoModeRestrict, api.GenerateAccessKey)
+		accessKeyGroup.DELETE("/delete/:accessKeyId", middlewares.DemoModeRestrict, api.DeleteAccessKey)
 		accessKeyGroup.GET("/get/:userId", api.GetAccessKey)
 	}
 }

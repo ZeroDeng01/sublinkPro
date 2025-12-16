@@ -11,7 +11,8 @@ func Backup(r *gin.Engine) {
 	BackupGroup := r.Group("/api/v1/backup")
 	BackupGroup.Use(middlewares.AuthToken)
 	{
-		BackupGroup.GET("/download", api.Backup)
+		// 演示模式下禁止备份
+		BackupGroup.GET("/download", middlewares.DemoModeRestrict, api.Backup)
 	}
 
 }

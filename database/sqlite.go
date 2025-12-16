@@ -2,6 +2,7 @@ package database
 
 import (
 	"os"
+	"strings"
 	"sublink/config"
 	"sublink/utils"
 	"time"
@@ -16,7 +17,19 @@ var DB *gorm.DB
 // IsInitialized 标记数据库是否已初始化迁移
 var IsInitialized bool
 
+// isDemoMode 判断是否为演示模式（避免循环导入）
+func isDemoMode() bool {
+	val := os.Getenv("SUBLINK_DEMO_MODE")
+	return strings.EqualFold(val, "true") || val == "1"
+}
+
 func InitSqlite() {
+	// 演示模式使用内存数据库
+	if isDemoMode() {
+		initMemorySqlite()
+		return
+	}
+
 	// 获取数据库路径
 	dbPath := config.GetDBPath()
 
@@ -66,4 +79,35 @@ func InitSqlite() {
 
 	DB = db
 	utils.Info("数据库已初始化: %s (WAL模式)", dsn)
+}
+
+// initMemorySqlite 初始化内存数据库（演示模式专用）
+func initMemorySqlite() {
+	// 使用 file::memory:?cache=shared 确保多个连接共享同一内存数据库
+	dsn := "file::memory:?cache=shared&_foreign_keys=ON"
+
+	// 配置 GORM
+	gormConfig := &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Warn),
+	}
+
+	// 连接数据库
+	db, err := gorm.Open(sqlite.Open(dsn), gormConfig)
+	if err != nil {
+		utils.Error("连接内存数据库失败: %v", err)
+		return
+	}
+
+	// 配置连接池 - 内存数据库需要保持连接活跃
+	sqlDB, err := db.DB()
+	if err != nil {
+		utils.Error("获取底层数据库连接失败: %v", err)
+	} else {
+		sqlDB.SetMaxIdleConns(1)
+		sqlDB.SetMaxOpenConns(1)
+		sqlDB.SetConnMaxLifetime(0) // 不过期
+	}
+
+	DB = db
+	utils.Info("🎭 演示模式：使用内存数据库")
 }
