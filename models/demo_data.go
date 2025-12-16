@@ -25,7 +25,7 @@ func InitDemoData() {
 	initDemoTags()
 
 	// 创建演示订阅
-	initDemoSubscriptions()
+	//initDemoSubscriptions()
 
 	// 刷新缓存
 	refreshDemoCaches()

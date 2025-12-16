@@ -43,6 +43,7 @@
 - 🎨 **前端框架**：基于 [Berry Free React Material UI Admin Template](https://github.com/codedthemes/berry-free-react-admin-template)
 - ⚡ **后端技术**：Go + Gin + Gorm
 - 🔐 **默认账号**：`admin` / `123456`（请安装后务必修改）
+- 💻 **演示系统**: [https://sublink-pro-demo.zeabur.app](https://sublink-pro-demo.zeabur.app/) 用户名：admin 密码：123456
 
 > [!WARNING]
 > ⚠️ 本项目和原项目数据库不兼容，请不要混用。
