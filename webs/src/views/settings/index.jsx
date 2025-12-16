@@ -57,6 +57,9 @@ export default function UserSettings() {
           value={tabValue}
           onChange={handleTabChange}
           aria-label="settings tabs"
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{
             '& .MuiTab-root': {
               minHeight: 48,
