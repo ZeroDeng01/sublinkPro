@@ -3,9 +3,9 @@ package models
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"sublink/cache"
 	"sublink/database"
+	"sublink/utils"
 	"time"
 )
 
@@ -73,7 +73,7 @@ func init() {
 
 // InitTaskCache 初始化任务缓存
 func InitTaskCache() error {
-	log.Printf("开始加载任务到缓存")
+	utils.Info("开始加载任务到缓存")
 	var tasks []Task
 	// 只加载最近7天的任务到缓存
 	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
@@ -82,7 +82,7 @@ func InitTaskCache() error {
 	}
 
 	taskCache.LoadAll(tasks)
-	log.Printf("任务缓存初始化完成，共加载 %d 个任务", taskCache.Count())
+	utils.Info("任务缓存初始化完成，共加载 %d 个任务", taskCache.Count())
 
 	cache.Manager.Register("task", taskCache)
 	return nil

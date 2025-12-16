@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"sublink/cache"
 	"sublink/database"
+	"sublink/utils"
 	"sync"
 	"time"
 )
@@ -50,7 +50,7 @@ func init() {
 
 // InitIPInfoCache 初始化IP信息缓存
 func InitIPInfoCache() error {
-	log.Printf("开始加载IP信息到缓存")
+	utils.Info("开始加载IP信息到缓存")
 
 	// 只加载7天内的有效数据到缓存
 	var ipInfoList []IPInfo
@@ -60,7 +60,7 @@ func InitIPInfoCache() error {
 	}
 
 	ipInfoCache.LoadAll(ipInfoList)
-	log.Printf("IP信息缓存初始化完成，共加载 %d 条记录", ipInfoCache.Count())
+	utils.Info("IP信息缓存初始化完成，共加载 %d 条记录", ipInfoCache.Count())
 
 	// 注册到缓存管理器
 	cache.Manager.Register("ipinfo", ipInfoCache)
@@ -84,7 +84,7 @@ func ClearAllIPInfo() error {
 	// 清除内存缓存
 	ipInfoCache.Clear()
 
-	log.Printf("已清除所有IP信息缓存")
+	utils.Info("已清除所有IP信息缓存")
 	return nil
 }
 
@@ -143,12 +143,12 @@ func GetIPInfo(ip string) (*IPInfo, error) {
 		// 更新现有记录
 		info.ID = dbInfo.ID
 		if err := database.DB.Save(info).Error; err != nil {
-			log.Printf("更新IP信息失败: %v", err)
+			utils.Error("更新IP信息失败: %v", err)
 		}
 	} else {
 		// 插入新记录
 		if err := database.DB.Create(info).Error; err != nil {
-			log.Printf("保存IP信息失败: %v", err)
+			utils.Error("保存IP信息失败: %v", err)
 		}
 	}
 

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -85,7 +84,7 @@ func connectionMonitor() {
 func checkAndStart() {
 	config, err := LoadConfig()
 	if err != nil {
-		log.Printf("[Telegram] 加载配置失败: %v", err)
+		utils.Error("[Telegram] 加载配置失败: %v", err)
 		return
 	}
 
@@ -93,18 +92,18 @@ func checkAndStart() {
 	if !config.Enabled || config.BotToken == "" {
 		if GetBot() != nil {
 			StopBot()
-			log.Println("[Telegram] 机器人已禁用，停止运行")
+			utils.Info("[Telegram] 机器人已禁用，停止运行")
 		}
 		return
 	}
 
 	// 如果启用但未运行，尝试启动
 	if GetBot() == nil {
-		log.Println("[Telegram] 检测到机器人未运行，尝试启动...")
+		utils.Info("[Telegram] 检测到机器人未运行，尝试启动...")
 		if err := StartBot(config); err != nil {
-			log.Printf("[Telegram] 启动失败: %v", err)
+			utils.Error("[Telegram] 启动失败: %v", err)
 		} else {
-			log.Println("[Telegram] 启动成功")
+			utils.Info("[Telegram] 启动成功")
 		}
 	}
 }
@@ -183,7 +182,7 @@ func StartBot(config *Config) error {
 	}
 
 	if config.UseProxy {
-		log.Printf("[Telegram] 使用代理连接: %s", usedProxy)
+		utils.Info("[Telegram] 使用代理连接: %s", usedProxy)
 	}
 
 	bot := &TelegramBot{
@@ -203,7 +202,7 @@ func StartBot(config *Config) error {
 
 	// 设置命令菜单
 	if err := bot.SetCommands(); err != nil {
-		log.Printf("设置命令菜单失败: %v", err)
+		utils.Warn("设置命令菜单失败: %v", err)
 	}
 
 	globalBot = bot
@@ -211,7 +210,7 @@ func StartBot(config *Config) error {
 	// 启动长轮询
 	go bot.startPolling()
 
-	log.Printf("Telegram 机器人已启动")
+	utils.Info("Telegram 机器人已启动")
 	return nil
 }
 
@@ -249,7 +248,7 @@ func (b *TelegramBot) validateToken() error {
 		return fmt.Errorf("Token 无效")
 	}
 
-	log.Printf("Telegram 机器人验证成功: @%s", result.Result.Username)
+	utils.Info("Telegram 机器人验证成功: @%s", result.Result.Username)
 	b.mutex.Lock()
 	b.botUsername = result.Result.Username
 	b.botID = result.Result.ID
@@ -328,7 +327,7 @@ func (b *TelegramBot) startPolling() {
 	b.pollingActive = true
 	b.mutex.Unlock()
 
-	log.Println("Telegram 长轮询已启动")
+	utils.Info("Telegram 长轮询已启动")
 
 	retryCount := 0
 	maxRetry := 5
@@ -336,17 +335,17 @@ func (b *TelegramBot) startPolling() {
 	for {
 		select {
 		case <-b.stopChan:
-			log.Println("Telegram 长轮询已停止")
+			utils.Info("Telegram 长轮询已停止")
 			return
 		default:
 			updates, err := b.getUpdates()
 			if err != nil {
 				retryCount++
 				b.setError(err.Error())
-				log.Printf("获取更新失败 (%d/%d): %v", retryCount, maxRetry, err)
+				utils.Warn("获取更新失败 (%d/%d): %v", retryCount, maxRetry, err)
 
 				if retryCount >= maxRetry {
-					log.Println("Telegram 连接失败次数过多，等待 30 秒后重试")
+					utils.Warn("Telegram 连接失败次数过多，等待 30 秒后重试")
 					time.Sleep(30 * time.Second)
 					retryCount = 0
 				} else {
@@ -397,11 +396,11 @@ func (b *TelegramBot) getUpdates() ([]Update, error) {
 
 // handleUpdate 处理更新
 func (b *TelegramBot) handleUpdate(update Update) {
-	log.Printf("[Telegram] 收到更新 ID: %d", update.UpdateID)
+	utils.Debug("[Telegram] 收到更新 ID: %d", update.UpdateID)
 
 	// 处理消息
 	if update.Message != nil {
-		log.Printf("[Telegram] 收到消息 - ChatID: %d, From: %s, Text: %s",
+		utils.Debug("[Telegram] 收到消息 - ChatID: %d, From: %s, Text: %s",
 			update.Message.Chat.ID,
 			update.Message.From.Username,
 			update.Message.Text)
@@ -411,7 +410,7 @@ func (b *TelegramBot) handleUpdate(update Update) {
 
 	// 处理回调
 	if update.CallbackQuery != nil {
-		log.Printf("[Telegram] 收到回调 - Data: %s", update.CallbackQuery.Data)
+		utils.Debug("[Telegram] 收到回调 - Data: %s", update.CallbackQuery.Data)
 		b.handleCallback(update.CallbackQuery)
 		return
 	}
@@ -419,11 +418,11 @@ func (b *TelegramBot) handleUpdate(update Update) {
 
 // handleMessage 处理消息
 func (b *TelegramBot) handleMessage(message *Message) {
-	log.Printf("[Telegram] 处理消息 - ChatID: %d, 已配置ChatID: %d", message.Chat.ID, b.ChatID)
+	utils.Debug("[Telegram] 处理消息 - ChatID: %d, 已配置ChatID: %d", message.Chat.ID, b.ChatID)
 
 	// 验证 Chat ID（如果已配置）
 	if b.ChatID != 0 && message.Chat.ID != b.ChatID {
-		log.Printf("[Telegram] 忽略来自未授权聊天的消息: %d (预期: %d)", message.Chat.ID, b.ChatID)
+		utils.Debug("[Telegram] 忽略来自未授权聊天的消息: %d (预期: %d)", message.Chat.ID, b.ChatID)
 		return
 	}
 
@@ -431,7 +430,7 @@ func (b *TelegramBot) handleMessage(message *Message) {
 	if b.ChatID == 0 && strings.HasPrefix(message.Text, "/start") {
 		b.ChatID = message.Chat.ID
 		models.SetSetting("telegram_chat_id", strconv.FormatInt(message.Chat.ID, 10))
-		log.Printf("[Telegram] 自动绑定 Chat ID: %d", message.Chat.ID)
+		utils.Info("[Telegram] 自动绑定 Chat ID: %d", message.Chat.ID)
 	}
 
 	// 处理命令
@@ -440,19 +439,19 @@ func (b *TelegramBot) handleMessage(message *Message) {
 		command := strings.TrimPrefix(parts[0], "/")
 		command = strings.Split(command, "@")[0] // 移除 @botname
 
-		log.Printf("[Telegram] 处理命令: /%s", command)
+		utils.Debug("[Telegram] 处理命令: /%s", command)
 
 		handler := GetHandler(command)
 		if handler != nil {
-			log.Printf("[Telegram] 找到处理器: %s", handler.Description())
+			utils.Debug("[Telegram] 找到处理器: %s", handler.Description())
 			if err := handler.Handle(b, message); err != nil {
-				log.Printf("[Telegram] 处理命令 /%s 失败: %v", command, err)
+				utils.Warn("[Telegram] 处理命令 /%s 失败: %v", command, err)
 				b.SendMessage(message.Chat.ID, "❌ 命令执行失败: "+err.Error(), "")
 			} else {
-				log.Printf("[Telegram] 命令 /%s 执行成功", command)
+				utils.Debug("[Telegram] 命令 /%s 执行成功", command)
 			}
 		} else {
-			log.Printf("[Telegram] 未找到命令处理器: /%s", command)
+			utils.Debug("[Telegram] 未找到命令处理器: /%s", command)
 			b.SendMessage(message.Chat.ID, "❓ 未知命令，使用 /help 查看帮助", "")
 		}
 	}
@@ -466,7 +465,7 @@ func (b *TelegramBot) handleCallback(callback *CallbackQuery) {
 	}
 
 	if err := HandleCallbackQuery(b, callback); err != nil {
-		log.Printf("处理回调失败: %v", err)
+		utils.Warn("处理回调失败: %v", err)
 	}
 
 	// 应答回调

@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -40,14 +39,14 @@ func NodeUpdadte(c *gin.Context) {
 	//更新构造节点元数据
 	u, err := url.Parse(link)
 	if err != nil {
-		log.Println(err)
+		utils.Error("解析节点链接失败: %v", err)
 		return
 	}
 	switch {
 	case u.Scheme == "ss":
 		ss, err := protocol.DecodeSSURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if Node.Name == "" {
@@ -60,7 +59,7 @@ func NodeUpdadte(c *gin.Context) {
 	case u.Scheme == "ssr":
 		ssr, err := protocol.DecodeSSRURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if Node.Name == "" {
@@ -73,7 +72,7 @@ func NodeUpdadte(c *gin.Context) {
 	case u.Scheme == "trojan":
 		trojan, err := protocol.DecodeTrojanURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 
@@ -87,7 +86,7 @@ func NodeUpdadte(c *gin.Context) {
 	case u.Scheme == "vmess":
 		vmess, err := protocol.DecodeVMESSURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if Node.Name == "" {
@@ -101,7 +100,7 @@ func NodeUpdadte(c *gin.Context) {
 	case u.Scheme == "vless":
 		vless, err := protocol.DecodeVLESSURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if Node.Name == "" {
@@ -114,7 +113,7 @@ func NodeUpdadte(c *gin.Context) {
 	case u.Scheme == "hy" || u.Scheme == "hysteria":
 		hy, err := protocol.DecodeHYURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if Node.Name == "" {
@@ -127,7 +126,7 @@ func NodeUpdadte(c *gin.Context) {
 	case u.Scheme == "hy2" || u.Scheme == "hysteria2":
 		hy2, err := protocol.DecodeHY2URL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if Node.Name == "" {
@@ -140,7 +139,7 @@ func NodeUpdadte(c *gin.Context) {
 	case u.Scheme == "tuic":
 		tuic, err := protocol.DecodeTuicURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if Node.Name == "" {
@@ -153,7 +152,7 @@ func NodeUpdadte(c *gin.Context) {
 	case u.Scheme == "socks5":
 		socks5, err := protocol.DecodeSocks5URL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if Node.Name == "" {
@@ -343,14 +342,14 @@ func NodeAdd(c *gin.Context) {
 	Node.Name = name
 	u, err := url.Parse(link)
 	if err != nil {
-		log.Println(err)
+		utils.Error("解析节点链接失败: %v", err)
 		return
 	}
 	switch {
 	case u.Scheme == "ss":
 		ss, err := protocol.DecodeSSURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if Node.Name == "" {
@@ -363,7 +362,7 @@ func NodeAdd(c *gin.Context) {
 	case u.Scheme == "ssr":
 		ssr, err := protocol.DecodeSSRURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if name == "" {
@@ -376,7 +375,7 @@ func NodeAdd(c *gin.Context) {
 	case u.Scheme == "trojan":
 		trojan, err := protocol.DecodeTrojanURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if name == "" {
@@ -389,7 +388,7 @@ func NodeAdd(c *gin.Context) {
 	case u.Scheme == "vmess":
 		vmess, err := protocol.DecodeVMESSURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 		if name == "" {
@@ -402,7 +401,7 @@ func NodeAdd(c *gin.Context) {
 	case u.Scheme == "vless":
 		vless, err := protocol.DecodeVLESSURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 
@@ -416,7 +415,7 @@ func NodeAdd(c *gin.Context) {
 	case u.Scheme == "hy" || u.Scheme == "hysteria":
 		hy, err := protocol.DecodeHYURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 
@@ -430,7 +429,7 @@ func NodeAdd(c *gin.Context) {
 	case u.Scheme == "hy2" || u.Scheme == "hysteria2":
 		hy2, err := protocol.DecodeHY2URL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 
@@ -444,7 +443,7 @@ func NodeAdd(c *gin.Context) {
 	case u.Scheme == "tuic":
 		tuic, err := protocol.DecodeTuicURL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 
@@ -458,7 +457,7 @@ func NodeAdd(c *gin.Context) {
 	case u.Scheme == "socks5":
 		socks5, err := protocol.DecodeSocks5URL(link)
 		if err != nil {
-			log.Println(err)
+			utils.Error("解析节点链接失败: %v", err)
 			return
 		}
 

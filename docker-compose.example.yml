@@ -30,6 +30,10 @@ services:
       # 服务端口（容器内部端口）
       - SUBLINK_PORT=8000
       
+      # 日志等级 (debug/info/warn/error/fatal)
+      # debug: 调试信息 | info: 一般信息(默认) | warn: 警告 | error: 错误
+      - SUBLINK_LOG_LEVEL=info
+      
       # Token 过期天数
       - SUBLINK_EXPIRE_DAYS=14
       

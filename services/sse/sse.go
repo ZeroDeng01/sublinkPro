@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"sublink/models"
+	"sublink/utils"
 	"sync"
 	"time"
 )
@@ -62,14 +62,14 @@ func (broker *SSEBroker) Listen() {
 			broker.mutex.Lock()
 			broker.clients[s] = true
 			broker.mutex.Unlock()
-			log.Printf("Client added. %d registered clients", len(broker.clients))
+			utils.Info("Client added. %d registered clients", len(broker.clients))
 
 		case s := <-broker.closingClients:
 			// A client has detached and we want to stop sending them messages.
 			broker.mutex.Lock()
 			delete(broker.clients, s)
 			broker.mutex.Unlock()
-			log.Printf("Removed client. %d registered clients", len(broker.clients))
+			utils.Info("Removed client. %d registered clients", len(broker.clients))
 
 		case event := <-broker.Notifier:
 			// We got a new event from the outside!
@@ -146,7 +146,7 @@ func (broker *SSEBroker) BroadcastEvent(event string, payload NotificationPayloa
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("Error marshaling SSE payload: %v", err)
+		utils.Error("Error marshaling SSE payload: %v", err)
 		return
 	}
 	msg := fmt.Sprintf("event: %s\ndata: %s\n\n", event, jsonData)
@@ -179,7 +179,7 @@ func (broker *SSEBroker) BroadcastProgress(payload ProgressPayload) {
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("Error marshaling SSE progress payload: %v", err)
+		utils.Error("Error marshaling SSE progress payload: %v", err)
 		return
 	}
 	msg := fmt.Sprintf("event: task_progress\ndata: %s\n\n", jsonData)
@@ -278,7 +278,7 @@ func SendWebhook(config map[string]string, event string, payload NotificationPay
 
 	req, err := http.NewRequest(config["method"], urlStr, bytes.NewBuffer([]byte(bodyStr)))
 	if err != nil {
-		log.Printf("创建 Webhook 请求失败: %v", err)
+		utils.Error("创建 Webhook 请求失败: %v", err)
 		return err
 	}
 
@@ -298,16 +298,16 @@ func SendWebhook(config map[string]string, event string, payload NotificationPay
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("发送 Webhook 失败: %v", err)
+		utils.Error("发送 Webhook 失败: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		log.Printf("Webhook 发送失败，状态码: %d", resp.StatusCode)
+		utils.Warn("Webhook 发送失败，状态码: %d", resp.StatusCode)
 		return fmt.Errorf("HTTP status %d", resp.StatusCode)
 	} else {
-		log.Printf("Webhook sent successfully to %s", urlStr)
+		utils.Info("Webhook sent successfully to %s", urlStr)
 	}
 	return nil
 }

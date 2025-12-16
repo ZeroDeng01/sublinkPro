@@ -3,7 +3,6 @@ package models
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 	"sublink/cache"
@@ -91,14 +90,14 @@ type NodeWithSort struct {
 
 // InitSubcriptionCache 初始化订阅缓存
 func InitSubcriptionCache() error {
-	log.Printf("开始加载订阅到缓存")
+	utils.Info("开始加载订阅到缓存")
 	var subs []Subcription
 	if err := database.DB.Find(&subs).Error; err != nil {
 		return err
 	}
 
 	subcriptionCache.LoadAll(subs)
-	log.Printf("订阅缓存初始化完成，共加载 %d 个订阅", subcriptionCache.Count())
+	utils.Info("订阅缓存初始化完成，共加载 %d 个订阅", subcriptionCache.Count())
 
 	cache.Manager.Register("subcription", subcriptionCache)
 	return nil
@@ -897,7 +896,7 @@ func (sub *Subcription) ApplyDeduplication(nodes []Node) []Node {
 	// 解析去重配置
 	var config DeduplicationConfig
 	if err := json.Unmarshal([]byte(sub.DeduplicationRule), &config); err != nil {
-		log.Printf("解析去重规则失败: %v", err)
+		utils.Warn("解析去重规则失败: %v", err)
 		return nodes
 	}
 
@@ -936,7 +935,7 @@ func deduplicateByCommonFields(nodes []Node, fields []string) []Node {
 		}
 	}
 
-	log.Printf("通用字段去重: 原%d个 -> %d个", len(nodes), len(result))
+	utils.Info("通用字段去重: 原%d个 -> %d个", len(nodes), len(result))
 	return result
 }
 
@@ -986,7 +985,7 @@ func deduplicateByProtocol(nodes []Node, protocolRules map[string][]string) []No
 		}
 	}
 
-	log.Printf("协议字段去重: 原%d个 -> %d个", len(nodes), len(result))
+	utils.Info("协议字段去重: 原%d个 -> %d个", len(nodes), len(result))
 	return result
 }
 

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log"
 	"sublink/database"
 	"sublink/models"
 	"sublink/utils"
@@ -26,7 +25,7 @@ func UserAdd(c *gin.Context) {
 	}
 	err := user.Create()
 	if err != nil {
-		log.Println("创建用户失败")
+		utils.Error("创建用户失败: %v", err)
 	}
 	utils.OkWithMsg(c, "创建用户成功")
 }
@@ -59,7 +58,7 @@ func UserPages(c *gin.Context) {
 	user := &models.User{Username: username.(string)}
 	users, err := user.All()
 	if err != nil {
-		log.Println("获取用户信息失败")
+		utils.Error("获取用户信息失败: %v", err)
 	}
 	list := []*User{}
 	for i := range users {
@@ -91,7 +90,7 @@ func UserSet(c *gin.Context) {
 		Password: NewPassword,
 	})
 	if err != nil {
-		log.Println(err)
+		utils.Error("修改密码失败: %v", err)
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
@@ -142,14 +141,14 @@ func UserChangePassword(c *gin.Context) {
 	// 更新密码
 	updateUser := &models.User{Password: req.NewPassword}
 	if err := user.Set(updateUser); err != nil {
-		log.Println("密码修改失败:", err)
+		utils.Error("密码修改失败: %v", err)
 		utils.FailWithMsg(c, "密码修改失败")
 		return
 	}
 
 	// 删除该用户的所有记住密码令牌，强制重新登录
 	if err := models.DeleteUserRememberTokens(user.ID); err != nil {
-		log.Println("清除记住密码令牌失败:", err)
+		utils.Error("清除记住密码令牌失败: %v", err)
 		// 不影响密码修改成功的返回
 	}
 
@@ -187,7 +186,7 @@ func UserUpdateProfile(c *gin.Context) {
 	}
 
 	if err := database.DB.Where("username = ?", user.Username).Model(&models.User{}).Updates(updates).Error; err != nil {
-		log.Println("个人资料更新失败:", err)
+		utils.Error("个人资料更新失败: %v", err)
 		utils.FailWithMsg(c, "个人资料更新失败: "+err.Error())
 		return
 	}

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log"
 	"strconv"
 	"sublink/models"
 	"sublink/services/telegram"
@@ -57,7 +56,7 @@ func UpdateTelegramConfig(c *gin.Context) {
 	// 保存系统域名
 	if req.SystemDomain != "" {
 		if err := models.SetSetting("system_domain", req.SystemDomain); err != nil {
-			log.Printf("保存系统域名失败: %v", err)
+			utils.Error("保存系统域名失败: %v", err)
 		}
 	}
 

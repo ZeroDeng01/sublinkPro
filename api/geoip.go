@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -181,7 +180,7 @@ func DownloadGeoIP(c *gin.Context) {
 			downloadMu.Lock()
 			downloadError = err.Error()
 			downloadMu.Unlock()
-			log.Printf("下载 GeoIP 数据库失败: %v", err)
+			utils.Error("下载 GeoIP 数据库失败: %v", err)
 			return
 		}
 
@@ -200,7 +199,7 @@ func DownloadGeoIP(c *gin.Context) {
 		downloadProgress = 100
 		downloadMu.Unlock()
 
-		log.Println("GeoIP 数据库下载并加载成功")
+		utils.Info("GeoIP 数据库下载并加载成功")
 	}()
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "开始下载"})
@@ -241,7 +240,7 @@ func downloadGeoIPFile(url string, useProxy bool, proxyLink string) error {
 	}
 
 	// 发起请求
-	log.Printf("开始下载 GeoIP 数据库: %s", url)
+	utils.Info("开始下载 GeoIP 数据库: %s", url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %v", err)
@@ -317,7 +316,7 @@ func downloadGeoIPFile(url string, useProxy bool, proxyLink string) error {
 		}
 	}
 
-	log.Printf("GeoIP 数据库下载完成: %s (%.2f MB)", targetPath, float64(fileInfo.Size())/1024/1024)
+	utils.Info("GeoIP 数据库下载完成: %s (%.2f MB)", targetPath, float64(fileInfo.Size())/1024/1024)
 	return nil
 }
 
@@ -379,7 +378,7 @@ func AutoDownloadGeoIP() {
 	stopDownload = make(chan struct{})
 	downloadMu.Unlock()
 
-	log.Println("[GeoIP] 数据库不存在，开始自动下载...")
+	utils.Info("[GeoIP] 数据库不存在，开始自动下载...")
 
 	go func() {
 		defer func() {
@@ -403,8 +402,8 @@ func AutoDownloadGeoIP() {
 			downloadMu.Lock()
 			downloadError = err.Error()
 			downloadMu.Unlock()
-			log.Printf("[GeoIP] 自动下载失败: %v", err)
-			log.Println("[GeoIP] 请在系统右上角菜单 -> GeoIP 数据库中手动配置下载")
+			utils.Error("[GeoIP] 自动下载失败: %v", err)
+			utils.Info("[GeoIP] 请在系统右上角菜单 -> GeoIP 数据库中手动配置下载")
 			return
 		}
 
@@ -416,7 +415,7 @@ func AutoDownloadGeoIP() {
 			downloadMu.Lock()
 			downloadError = "数据库加载失败: " + err.Error()
 			downloadMu.Unlock()
-			log.Printf("[GeoIP] 数据库加载失败: %v", err)
+			utils.Error("[GeoIP] 数据库加载失败: %v", err)
 			return
 		}
 
@@ -424,7 +423,7 @@ func AutoDownloadGeoIP() {
 		downloadProgress = 100
 		downloadMu.Unlock()
 
-		log.Println("[GeoIP] 数据库自动下载并加载成功")
+		utils.Info("[GeoIP] 数据库自动下载并加载成功")
 	}()
 }
 
@@ -446,7 +445,7 @@ func downloadGeoIPFileWithProgress(url string, useProxy bool, proxyLink string, 
 
 	// 发起请求
 	if showConsoleProgress {
-		log.Printf("[GeoIP] 下载地址: %s", url)
+		utils.Debug("[GeoIP] 下载地址: %s", url)
 	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -512,7 +511,7 @@ func downloadGeoIPFileWithProgress(url string, useProxy bool, proxyLink string, 
 
 				// 控制台进度显示（每 10% 显示一次）
 				if showConsoleProgress && progress/10 > lastPrintProgress/10 {
-					log.Printf("[GeoIP] 下载进度: %d%% (%.1f MB / %.1f MB)",
+					utils.Debug("[GeoIP] 下载进度: %d%% (%.1f MB / %.1f MB)",
 						progress,
 						float64(downloaded)/1024/1024,
 						float64(totalSize)/1024/1024)
@@ -545,7 +544,7 @@ func downloadGeoIPFileWithProgress(url string, useProxy bool, proxyLink string, 
 	}
 
 	if showConsoleProgress {
-		log.Printf("[GeoIP] 下载完成: %s (%.2f MB)", targetPath, float64(fileInfo.Size())/1024/1024)
+		utils.Info("[GeoIP] 下载完成: %s (%.2f MB)", targetPath, float64(fileInfo.Size())/1024/1024)
 	}
 	return nil
 }

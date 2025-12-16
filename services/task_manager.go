@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"sublink/models"
 	"sublink/services/sse"
+	"sublink/utils"
 	"sync"
 	"time"
 )
@@ -79,7 +79,7 @@ func (tm *TaskManager) CreateTask(taskType models.TaskType, name string, trigger
 	// 广播任务开始
 	tm.broadcastProgress(task, "started")
 
-	log.Printf("任务创建成功: ID=%s, Type=%s, Name=%s, Trigger=%s", task.ID, task.Type, task.Name, task.Trigger)
+	utils.Info("任务创建成功: ID=%s, Type=%s, Name=%s, Trigger=%s", task.ID, task.Type, task.Name, task.Trigger)
 
 	return task, ctx, nil
 }
@@ -151,7 +151,7 @@ func (tm *TaskManager) CompleteTask(taskID string, message string, result interf
 
 	// 同步最终状态到数据库（任务结束时一次性写入）
 	if err := running.Task.SyncFinalStatus(); err != nil {
-		log.Printf("同步任务最终状态失败: %v", err)
+		utils.Error("同步任务最终状态失败: %v", err)
 	}
 
 	// 广播完成进度（前端用）
@@ -172,7 +172,7 @@ func (tm *TaskManager) CompleteTask(taskID string, message string, result interf
 		tm.mutex.Unlock()
 	}()
 
-	log.Printf("任务完成: ID=%s, Message=%s", taskID, message)
+	utils.Info("任务完成: ID=%s, Message=%s", taskID, message)
 
 	return nil
 }
@@ -195,7 +195,7 @@ func (tm *TaskManager) FailTask(taskID string, errMsg string) error {
 
 	// 同步最终状态到数据库（任务结束时一次性写入）
 	if err := running.Task.SyncFinalStatus(); err != nil {
-		log.Printf("同步任务最终状态失败: %v", err)
+		utils.Error("同步任务最终状态失败: %v", err)
 	}
 
 	// 广播错误进度（前端用）
@@ -215,7 +215,7 @@ func (tm *TaskManager) FailTask(taskID string, errMsg string) error {
 		tm.mutex.Unlock()
 	}()
 
-	log.Printf("任务失败: ID=%s, Error=%s", taskID, errMsg)
+	utils.Warn("任务失败: ID=%s, Error=%s", taskID, errMsg)
 
 	return nil
 }
@@ -251,7 +251,7 @@ func (tm *TaskManager) CancelTask(taskID string) error {
 
 	// 同步最终状态到数据库（任务结束时一次性写入）
 	if err := running.Task.SyncFinalStatus(); err != nil {
-		log.Printf("同步任务最终状态失败: %v", err)
+		utils.Error("同步任务最终状态失败: %v", err)
 	}
 
 	// 广播取消
@@ -268,7 +268,7 @@ func (tm *TaskManager) CancelTask(taskID string) error {
 		tm.mutex.Unlock()
 	}()
 
-	log.Printf("任务已取消: ID=%s", taskID)
+	utils.Info("任务已取消: ID=%s", taskID)
 
 	return nil
 }
@@ -397,20 +397,20 @@ func getTaskStatusTitle(status models.TaskStatus) string {
 // InitTaskManager 初始化任务管理器（服务启动时调用）
 func InitTaskManager() {
 	tm := GetTaskManager()
-	log.Println("任务管理器初始化完成")
+	utils.Info("任务管理器初始化完成")
 
 	// 将所有运行中的任务标记为错误（防止服务重启后状态不一致）
 	if err := models.MarkRunningTasksAsError(); err != nil {
-		log.Printf("标记运行中任务为错误失败: %v", err)
+		utils.Error("标记运行中任务为错误失败: %v", err)
 	}
 
 	// 清理过期任务（保留最近30天）
 	go func() {
 		thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
 		if affected, err := models.CleanupOldTasks(thirtyDaysAgo); err != nil {
-			log.Printf("清理过期任务失败: %v", err)
+			utils.Error("清理过期任务失败: %v", err)
 		} else if affected > 0 {
-			log.Printf("已清理 %d 个过期任务", affected)
+			utils.Info("已清理 %d 个过期任务", affected)
 		}
 	}()
 

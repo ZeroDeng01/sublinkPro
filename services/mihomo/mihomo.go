@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -437,13 +436,13 @@ func fetchLandingIPWithAdapter(proxyAdapter constant.Proxy, ipUrl string) string
 
 	req, err := http.NewRequestWithContext(ctx, "GET", ipUrl, nil)
 	if err != nil {
-		log.Printf("落地IP检测: 创建请求失败: %v", err)
+		utils.Error("落地IP检测: 创建请求失败: %v", err)
 		return ""
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("落地IP检测: 请求失败: %v (URL: %s)", err, ipUrl)
+		utils.Error("落地IP检测: 请求失败: %v (URL: %s)", err, ipUrl)
 		return ""
 	}
 	defer resp.Body.Close()

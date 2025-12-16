@@ -1,9 +1,9 @@
 package database
 
 import (
-	"log"
 	"os"
 	"sublink/config"
+	"sublink/utils"
 	"time"
 
 	"github.com/glebarez/sqlite"
@@ -44,14 +44,14 @@ func InitSqlite() {
 	// 连接数据库
 	db, err := gorm.Open(sqlite.Open(dsn), gormConfig)
 	if err != nil {
-		log.Printf("连接数据库失败: %v", err)
+		utils.Error("连接数据库失败: %v", err)
 		return
 	}
 
 	// 配置连接池
 	sqlDB, err := db.DB()
 	if err != nil {
-		log.Printf("获取底层数据库连接失败: %v", err)
+		utils.Error("获取底层数据库连接失败: %v", err)
 	} else {
 		// SQLite 推荐设置
 		// MaxIdleConns: 保持的空闲连接数，减少连接开销
@@ -61,9 +61,9 @@ func InitSqlite() {
 		sqlDB.SetMaxIdleConns(10)
 		sqlDB.SetMaxOpenConns(100)
 		sqlDB.SetConnMaxLifetime(time.Hour)
-		log.Println("数据库连接池配置完成: MaxIdle=10, MaxOpen=100, MaxLifetime=1h")
+		utils.Info("数据库连接池配置完成: MaxIdle=10, MaxOpen=100, MaxLifetime=1h")
 	}
 
 	DB = db
-	log.Printf("数据库已初始化: %s (WAL模式)", dsn)
+	utils.Info("数据库已初始化: %s (WAL模式)", dsn)
 }

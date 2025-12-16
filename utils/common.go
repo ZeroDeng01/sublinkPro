@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math/big"
 	"math/rand"
 	"net"
@@ -97,13 +96,13 @@ func DecryptUserIDCompact(encrypted string, key []byte) (int, error) {
 	// Base62解码
 	encryptedBytes, err := FromBase62(encrypted)
 	if err != nil {
-		log.Println("Base62解码失败:", err)
+		Error("Base62解码失败: %v", err)
 		return 0, fmt.Errorf("Base62解码失败: %w", err)
 	}
 
 	// 确保长度不超过4字节
 	if len(encryptedBytes) > 4 {
-		log.Println("解码后数据长度超过4字节:", len(encryptedBytes))
+		Error("解码后数据长度超过4字节: %d", len(encryptedBytes))
 		return 0, fmt.Errorf("解码后数据长度超过4字节: %d", len(encryptedBytes))
 	}
 

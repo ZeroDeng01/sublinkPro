@@ -1,9 +1,9 @@
 package middlewares
 
 import (
-	"log"
 	"sublink/models"
 	"sublink/services/geoip"
+	"sublink/utils"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +19,7 @@ func GetIp(c *gin.Context) {
 		// Get location from local GeoIP database
 		addr, err := geoip.GetLocation(ip)
 		if err != nil {
-			log.Printf("Failed to get location for IP %s: %v", ip, err)
+			utils.Error("Failed to get location for IP %s: %v", ip, err)
 			addr = "Unknown"
 		}
 		var sub models.Subcription
@@ -28,7 +28,7 @@ func GetIp(c *gin.Context) {
 		}
 		err = sub.Find()
 		if err != nil {
-			log.Println(err)
+			utils.Error(err.Error())
 			return
 		}
 		var iplog models.SubLogs
@@ -42,7 +42,7 @@ func GetIp(c *gin.Context) {
 			iplog.Count = 1
 			err = iplog.Add()
 			if err != nil {
-				log.Printf("Failed to add new IP log: %v", err)
+				utils.Error("Failed to add new IP log: %v", err)
 				return
 			}
 		} else {
@@ -52,7 +52,7 @@ func GetIp(c *gin.Context) {
 			iplog.Date = time.Now().Format("2006-01-02 15:04:05")
 			err = iplog.Update()
 			if err != nil {
-				log.Println(err)
+				utils.Error(err.Error())
 				return
 			}
 		}

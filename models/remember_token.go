@@ -3,8 +3,8 @@ package models
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"log"
 	"sublink/database"
+	"sublink/utils"
 	"time"
 
 	"gorm.io/gorm"
@@ -99,7 +99,7 @@ func cleanUserTokens(userID int) {
 	// 1. 删除过期的令牌
 	result := database.DB.Where("user_id = ? AND expires_at < ?", userID, time.Now()).Delete(&RememberToken{})
 	if result.RowsAffected > 0 {
-		log.Printf("清理了用户 %d 的 %d 个过期令牌", userID, result.RowsAffected)
+		utils.Info("清理了用户 %d 的 %d 个过期令牌", userID, result.RowsAffected)
 	}
 
 	// 2. 检查令牌数量，删除超出限制的（保留最新的 10 个）
@@ -116,7 +116,7 @@ func cleanUserTokens(userID int) {
 		for _, t := range tokensToDelete {
 			database.DB.Delete(&t)
 		}
-		log.Printf("用户 %d 的令牌数量超过限制，删除了 %d 个最早的令牌", userID, len(tokensToDelete))
+		utils.Info("用户 %d 的令牌数量超过限制，删除了 %d 个最早的令牌", userID, len(tokensToDelete))
 	}
 }
 
@@ -124,6 +124,6 @@ func cleanUserTokens(userID int) {
 func CleanAllExpiredTokens() {
 	result := database.DB.Where("expires_at < ?", time.Now()).Delete(&RememberToken{})
 	if result.RowsAffected > 0 {
-		log.Printf("清理了 %d 个过期的记住密码令牌", result.RowsAffected)
+		utils.Info("清理了 %d 个过期的记住密码令牌", result.RowsAffected)
 	}
 }

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"net"
 	"net/http"
@@ -75,12 +74,12 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 		if proxyLink != "" {
 			// 使用指定的代理链接
 			proxyNodeLink = proxyLink
-			log.Printf("使用指定代理下载订阅")
+			utils.Info("使用指定代理下载订阅")
 		} else {
 			// 如果没有指定代理，尝试自动选择最佳代理
 			// 获取最近测速成功的节点（延迟最低且速度大于0）
 			if bestNode, err := models.GetBestProxyNode(); err == nil && bestNode != nil {
-				log.Printf("自动选择最佳代理节点: %s 节点延迟：%dms  节点速度：%2fMB/s", bestNode.Name, bestNode.DelayTime, bestNode.Speed)
+				utils.Info("自动选择最佳代理节点: %s 节点延迟：%dms  节点速度：%2fMB/s", bestNode.Name, bestNode.DelayTime, bestNode.Speed)
 				proxyNodeLink = bestNode.Link
 			}
 		}
@@ -89,9 +88,9 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 			// 使用 mihomo 内核创建代理适配器
 			proxyAdapter, err := mihomo.GetMihomoAdapter(proxyNodeLink)
 			if err != nil {
-				log.Printf("创建 mihomo 代理适配器失败: %v，将直接下载", err)
+				utils.Error("创建 mihomo 代理适配器失败: %v，将直接下载", err)
 			} else {
-				log.Printf("使用 mihomo 内核代理下载订阅")
+				utils.Info("使用 mihomo 内核代理下载订阅")
 				// 创建自定义 Transport，使用 mihomo adapter 进行代理连接
 				client.Transport = &http.Transport{
 					DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -125,14 +124,14 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 				}
 			}
 		} else {
-			log.Println("未找到可用代理，将直接下载")
+			utils.Warn("未找到可用代理，将直接下载")
 		}
 	}
 
 	// 创建请求并设置 User-Agent
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
-		log.Printf("URL %s，创建请求失败:  %v", urlStr, err)
+		utils.Error("URL %s，创建请求失败:  %v", urlStr, err)
 		return err
 	}
 
@@ -143,7 +142,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("URL %s，获取Clash配置失败:  %v", urlStr, err)
+		utils.Error("URL %s，获取Clash配置失败:  %v", urlStr, err)
 		// 发送请求失败通知
 		sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
 			Event:   "sub_update",
@@ -161,7 +160,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("URL %s，读取Clash配置失败:  %v", urlStr, err)
+		utils.Error("URL %s，读取Clash配置失败:  %v", urlStr, err)
 		// 发送读取失败通知
 		sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
 			Event:   "sub_update",
@@ -221,7 +220,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 	}
 
 	if len(config.Proxies) == 0 {
-		log.Printf("URL %s，解析失败或未找到节点 (YAML error: %v)", urlStr, errYaml)
+		utils.Error("URL %s，解析失败或未找到节点 (YAML error: %v)", urlStr, errYaml)
 		// 发送解析失败通知
 		sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
 			Event:   "sub_update",
@@ -258,7 +257,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	// 确保任务结束时处理异常
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("订阅更新任务执行过程中发生严重错误: %v", r)
+			utils.Error("订阅更新任务执行过程中发生严重错误: %v", r)
 			reporter.ReportFail(fmt.Sprintf("任务异常: %v", r))
 		}
 	}()
@@ -267,13 +266,13 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	subS := models.SubScheduler{}
 	err := subS.GetByID(id)
 	if err != nil {
-		log.Printf("获取订阅连接 %s 的Group失败:  %v", subName, err)
+		utils.Error("获取订阅连接 %s 的Group失败:  %v", subName, err)
 	}
 
 	// 1. 获取该订阅当前在数据库中的所有节点
 	existingNodes, err := models.ListBySourceID(id)
 	if err != nil {
-		log.Printf("获取订阅【%s】现有节点失败: %v", subName, err)
+		utils.Info("获取订阅【%s】现有节点失败: %v", subName, err)
 		existingNodes = []models.Node{} // 确保后续逻辑不会panic
 	}
 
@@ -283,7 +282,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		existingNodeMap[node.Link] = node
 	}
 
-	log.Printf("📄订阅【%s】获取到订阅数量【%d】，现有节点数量【%d】", subName, len(proxys), len(existingNodes))
+	utils.Info("📄订阅【%s】获取到订阅数量【%d】，现有节点数量【%d】", subName, len(proxys), len(existingNodes))
 
 	// 更新任务总数（此时已知道需要处理的节点数量）
 	reporter.UpdateTotal(len(proxys))
@@ -296,7 +295,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 
 	// 2. 遍历新获取的节点，插入或更新
 	for _, proxy := range proxys {
-		log.Printf("💾准备存储节点【%s】", proxy.Name)
+		utils.Info("💾准备存储节点【%s】", proxy.Name)
 		var Node models.Node
 		var link string
 		//var systemNodeName = subName + "_" + strings.TrimSpace(proxy.Name) //系统节点名称
@@ -686,11 +685,11 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	// 批量添加新节点
 	if len(nodesToAdd) > 0 {
 		if err := models.BatchAddNodes(nodesToAdd); err != nil {
-			log.Printf("❌批量添加节点失败：%v", err)
+			utils.Error("❌批量添加节点失败：%v", err)
 			// 重置计数，因为添加失败
 			addSuccessCount = 0
 		} else {
-			log.Printf("✅批量添加 %d 个节点成功", len(nodesToAdd))
+			utils.Info("✅批量添加 %d 个节点成功", len(nodesToAdd))
 		}
 	}
 
@@ -698,21 +697,21 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	deleteCount := 0
 	if len(nodeIDsToDelete) > 0 {
 		if err := models.BatchDel(nodeIDsToDelete); err != nil {
-			log.Printf("❌批量删除节点失败：%v", err)
+			utils.Error("❌批量删除节点失败：%v", err)
 		} else {
 			deleteCount = len(nodeIDsToDelete)
-			log.Printf("🗑️批量删除 %d 个失效节点", deleteCount)
+			utils.Info("🗑️批量删除 %d 个失效节点", deleteCount)
 		}
 	}
 
-	log.Printf("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+skipCount, addSuccessCount, skipCount, deleteCount)
+	utils.Info("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+skipCount, addSuccessCount, skipCount, deleteCount)
 	// 重新查找订阅以获取最新信息
 	subS = models.SubScheduler{
 		Name: subName,
 	}
 	err = subS.Find()
 	if err != nil {
-		log.Printf("获取订阅连接 %s 失败:  %v", subName, err)
+		utils.Error("获取订阅连接 %s 失败:  %v", subName, err)
 		return err
 	}
 	subS.SuccessCount = addSuccessCount + skipCount

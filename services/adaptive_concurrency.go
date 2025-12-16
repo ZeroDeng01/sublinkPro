@@ -2,8 +2,8 @@ package services
 
 import (
 	"fmt"
-	"log"
 	"runtime"
+	"sublink/utils"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -302,7 +302,7 @@ func NewAdaptiveConcurrencyController(adaptiveType AdaptiveType, totalTasks int)
 		typeName = "速度测试"
 	}
 
-	log.Printf("[动态并发] 初始化%s控制器: 并发=%d, 范围=[%d, %d], CPU核心=%d",
+	utils.Info("[动态并发] 初始化%s控制器: 并发=%d, 范围=[%d, %d], CPU核心=%d",
 		typeName, initialC, minC, maxC, numCPU)
 
 	return controller
@@ -488,7 +488,7 @@ func (acc *AdaptiveConcurrencyController) MaybeAdjust() bool {
 		typeName = "速度"
 	}
 
-	log.Printf("[动态并发] %s测试调整: %d→%d (%s) [CPU: %.0f%%, 内存: %.0f%%, 成功率: %.0f%%]",
+	utils.Info("[动态并发] %s测试调整: %d→%d (%s) [CPU: %.0f%%, 内存: %.0f%%, 成功率: %.0f%%]",
 		typeName, currentC, newC, reason,
 		metrics.CPUUsage*100, metrics.MemoryUsage*100, successRate*100)
 

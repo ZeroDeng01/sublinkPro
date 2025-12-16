@@ -2,9 +2,9 @@ package services
 
 import (
 	"fmt"
-	"log"
 	"sublink/models"
 	"sublink/services/sse"
+	"sublink/utils"
 )
 
 // ApplyAutoTagRules 对节点应用自动标签规则
@@ -20,7 +20,7 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 		return
 	}
 
-	log.Printf("开始应用自动标签规则: 触发类型=%s, 节点数=%d, 规则数=%d", triggerType, len(nodes), len(rules))
+	utils.Info("开始应用自动标签规则: 触发类型=%s, 节点数=%d, 规则数=%d", triggerType, len(nodes), len(rules))
 
 	// 使用 TaskManager 创建任务（自动触发）
 	tm := GetTaskManager()
@@ -28,7 +28,7 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 	task, _, createErr := tm.CreateTask(models.TaskTypeTagRule, taskName, models.TaskTriggerScheduled, len(nodes))
 	var taskID string
 	if createErr != nil {
-		log.Printf("创建自动标签任务失败: %v，继续执行但不追踪任务", createErr)
+		utils.Error("创建自动标签任务失败: %v，继续执行但不追踪任务", createErr)
 	} else {
 		taskID = task.ID
 	}
@@ -43,7 +43,7 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 		// 解析条件
 		conditions, err := models.ParseConditions(rule.Conditions)
 		if err != nil {
-			log.Printf("规则 %s 条件解析失败: %v", rule.Name, err)
+			utils.Error("规则 %s 条件解析失败: %v", rule.Name, err)
 			continue
 		}
 
@@ -61,9 +61,9 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 
 		// 批量打标签 (使用标签名称)
 		if len(matchedNodeIDs) > 0 {
-			log.Printf("规则 [%s] 匹配 %d 个节点, 打标签: %s", rule.Name, len(matchedNodeIDs), rule.TagName)
+			utils.Info("规则 [%s] 匹配 %d 个节点, 打标签: %s", rule.Name, len(matchedNodeIDs), rule.TagName)
 			if err := models.BatchAddTagToNodes(matchedNodeIDs, rule.TagName); err != nil {
-				log.Printf("批量打标签失败: %v", err)
+				utils.Error("批量打标签失败: %v", err)
 			} else {
 				taggedCount += len(matchedNodeIDs)
 			}
@@ -71,9 +71,9 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 
 		// 批量移除不满足条件的标签
 		if len(unmatchedNodeIDs) > 0 {
-			log.Printf("规则 [%s] 移除 %d 个不满足条件的节点标签: %s", rule.Name, len(unmatchedNodeIDs), rule.TagName)
+			utils.Info("规则 [%s] 移除 %d 个不满足条件的节点标签: %s", rule.Name, len(unmatchedNodeIDs), rule.TagName)
 			if err := models.BatchRemoveTagFromNodes(unmatchedNodeIDs, rule.TagName); err != nil {
-				log.Printf("批量移除标签失败: %v", err)
+				utils.Error("批量移除标签失败: %v", err)
 			} else {
 				removedCount += len(unmatchedNodeIDs)
 			}
@@ -102,7 +102,7 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 	}
 
 	if taggedCount > 0 || removedCount > 0 {
-		log.Printf("自动标签规则应用完成: 共标记 %d 个节点, 移除 %d 个标签", taggedCount, removedCount)
+		utils.Info("自动标签规则应用完成: 共标记 %d 个节点, 移除 %d 个标签", taggedCount, removedCount)
 		// 广播事件
 		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
 			Event:   "auto_tag",
@@ -142,7 +142,7 @@ func TriggerTagRule(ruleID int) error {
 	tm := GetTaskManager()
 	task, _, createErr := tm.CreateTask(models.TaskTypeTagRule, rule.Name, models.TaskTriggerManual, totalNodes)
 	if createErr != nil {
-		log.Printf("创建标签规则任务失败: %v", createErr)
+		utils.Error("创建标签规则任务失败: %v", createErr)
 		return createErr
 	}
 	taskID := task.ID
@@ -187,19 +187,19 @@ func TriggerTagRule(ruleID int) error {
 
 	if len(matchedNodeIDs) > 0 {
 		if err := models.BatchAddTagToNodes(matchedNodeIDs, rule.TagName); err != nil {
-			log.Printf("❌批量添加标签失败：%v", err)
+			utils.Error("❌批量添加标签失败：%v", err)
 		} else {
 			matchedCount = len(matchedNodeIDs)
-			log.Printf("✅批量添加标签到 %d 个节点", matchedCount)
+			utils.Info("✅批量添加标签到 %d 个节点", matchedCount)
 		}
 	}
 
 	if len(unmatchedNodeIDs) > 0 {
 		if err := models.BatchRemoveTagFromNodes(unmatchedNodeIDs, rule.TagName); err != nil {
-			log.Printf("❌批量移除标签失败：%v", err)
+			utils.Error("❌批量移除标签失败：%v", err)
 		} else {
 			removedCount = len(unmatchedNodeIDs)
-			log.Printf("✅批量移除 %d 个节点的标签", removedCount)
+			utils.Info("✅批量移除 %d 个节点的标签", removedCount)
 		}
 	}
 
@@ -223,6 +223,6 @@ func TriggerTagRule(ruleID int) error {
 		},
 	})
 
-	log.Printf("手动触发规则 [%s] 完成: 匹配 %d 个节点, 移除 %d 个节点标签", rule.Name, matchedCount, removedCount)
+	utils.Info("手动触发规则 [%s] 完成: 匹配 %d 个节点, 移除 %d 个节点标签", rule.Name, matchedCount, removedCount)
 	return nil
 }

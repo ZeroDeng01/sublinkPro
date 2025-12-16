@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"log"
+	"sublink/utils"
 	"sync"
 )
 
@@ -26,7 +26,7 @@ func (m *CacheManager) Register(name string, cache interface{}) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.caches[name] = cache
-	log.Printf("缓存模块注册成功: %s", name)
+	utils.Info("缓存模块注册成功: %s", name)
 }
 
 // RegisterWithInit 注册模块缓存及其初始化函数
@@ -38,7 +38,7 @@ func (m *CacheManager) RegisterWithInit(name string, cache interface{}, initFunc
 	defer m.lock.Unlock()
 	m.caches[name] = cache
 	m.initializers[name] = initFunc
-	log.Printf("缓存模块注册成功（含初始化器）: %s", name)
+	utils.Info("缓存模块注册成功（含初始化器）: %s", name)
 }
 
 // Get 获取指定模块的缓存
@@ -54,16 +54,16 @@ func (m *CacheManager) InitAll() error {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	log.Println("开始初始化所有缓存模块...")
+	utils.Info("开始初始化所有缓存模块...")
 	for name, initFunc := range m.initializers {
-		log.Printf("正在初始化缓存: %s", name)
+		utils.Info("正在初始化缓存: %s", name)
 		if err := initFunc(); err != nil {
-			log.Printf("缓存初始化失败 [%s]: %v", name, err)
+			utils.Error("缓存初始化失败 [%s]: %v", name, err)
 			return err
 		}
-		log.Printf("缓存初始化成功: %s", name)
+		utils.Info("缓存初始化成功: %s", name)
 	}
-	log.Println("所有缓存模块初始化完成")
+	utils.Info("所有缓存模块初始化完成")
 	return nil
 }
 

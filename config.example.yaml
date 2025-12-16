@@ -14,6 +14,15 @@
 # 环境变量: SUBLINK_PORT
 port: 8000
 
+# 日志等级 (debug/info/warn/error/fatal)
+# debug: 调试信息，开发时使用
+# info: 一般信息，正常运行状态（默认）
+# warn: 警告信息，潜在问题
+# error: 错误信息，操作失败
+# fatal: 致命错误，程序无法继续运行
+# 环境变量: SUBLINK_LOG_LEVEL
+log_level: info
+
 # Token 过期天数
 # 环境变量: SUBLINK_EXPIRE_DAYS
 expire_days: 14

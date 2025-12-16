@@ -1,9 +1,9 @@
 package models
 
 import (
-	"log"
 	"os"
 	"sublink/database"
+	"sublink/utils"
 
 	"gorm.io/gorm"
 )
@@ -13,101 +13,101 @@ import (
 func RunMigrations() {
 	db := database.DB
 	if db == nil {
-		log.Println("数据库未初始化，无法执行迁移")
+		utils.Error("数据库未初始化，无法执行迁移")
 		return
 	}
 
 	// 检查是否已经初始化
 	if database.IsInitialized {
-		log.Println("数据库已经初始化，无需重复初始化")
+		utils.Info("数据库已经初始化，无需重复初始化")
 		return
 	}
 
 	// 基础数据库初始化
 	if err := db.AutoMigrate(&User{}); err != nil {
-		log.Printf("基础数据表User迁移失败: %v", err)
+		utils.Error("基础数据表User迁移失败: %v", err)
 	} else {
-		log.Printf("数据表User创建成功")
+		utils.Info("数据表User创建成功")
 	}
 	if err := db.AutoMigrate(&Subcription{}); err != nil {
-		log.Printf("基础数据表Subcription迁移失败: %v", err)
+		utils.Error("基础数据表Subcription迁移失败: %v", err)
 	} else {
-		log.Printf("数据表Subcription创建成功")
+		utils.Info("数据表Subcription创建成功")
 	}
 	if err := db.AutoMigrate(&Node{}); err != nil {
-		log.Printf("基础数据表Node迁移失败: %v", err)
+		utils.Error("基础数据表Node迁移失败: %v", err)
 	} else {
-		log.Printf("数据表Node创建成功")
+		utils.Info("数据表Node创建成功")
 	}
 	if err := db.AutoMigrate(&SubLogs{}); err != nil {
-		log.Printf("基础数据表SubLogs迁移失败: %v", err)
+		utils.Error("基础数据表SubLogs迁移失败: %v", err)
 	} else {
-		log.Printf("数据表SubLogs创建成功")
+		utils.Info("数据表SubLogs创建成功")
 	}
 	if err := db.AutoMigrate(&AccessKey{}); err != nil {
-		log.Printf("基础数据表AccessKey迁移失败: %v", err)
+		utils.Error("基础数据表AccessKey迁移失败: %v", err)
 	} else {
-		log.Printf("数据表AccessKey创建成功")
+		utils.Info("数据表AccessKey创建成功")
 	}
 	if err := db.AutoMigrate(&SubScheduler{}); err != nil {
-		log.Printf("基础数据表SubScheduler迁移失败: %v", err)
+		utils.Error("基础数据表SubScheduler迁移失败: %v", err)
 	} else {
-		log.Printf("数据表SubScheduler创建成功")
+		utils.Info("数据表SubScheduler创建成功")
 	}
 	if err := db.AutoMigrate(&SystemSetting{}); err != nil {
-		log.Printf("基础数据表SystemSetting迁移失败: %v", err)
+		utils.Error("基础数据表SystemSetting迁移失败: %v", err)
 	} else {
-		log.Printf("数据表SystemSetting创建成功")
+		utils.Info("数据表SystemSetting创建成功")
 	}
 	if err := db.AutoMigrate(&Script{}); err != nil {
-		log.Printf("基础数据表Script迁移失败: %v", err)
+		utils.Error("基础数据表Script迁移失败: %v", err)
 	} else {
-		log.Printf("数据表Script创建成功")
+		utils.Info("数据表Script创建成功")
 	}
 	if err := db.AutoMigrate(&SubcriptionGroup{}); err != nil {
-		log.Printf("基础数据表SubcriptionGroup迁移失败: %v", err)
+		utils.Error("基础数据表SubcriptionGroup迁移失败: %v", err)
 	} else {
-		log.Printf("数据表SubcriptionGroup创建成功")
+		utils.Info("数据表SubcriptionGroup创建成功")
 	}
 	if err := db.AutoMigrate(&SubcriptionNode{}); err != nil {
-		log.Printf("基础数据表SubcriptionNode迁移失败: %v", err)
+		utils.Error("基础数据表SubcriptionNode迁移失败: %v", err)
 	} else {
-		log.Printf("数据表SubcriptionNode创建成功")
+		utils.Info("数据表SubcriptionNode创建成功")
 	}
 	if err := db.AutoMigrate(&SubcriptionScript{}); err != nil {
-		log.Printf("基础数据表SubcriptionScript迁移失败: %v", err)
+		utils.Error("基础数据表SubcriptionScript迁移失败: %v", err)
 	} else {
-		log.Printf("数据表SubcriptionScript创建成功")
+		utils.Info("数据表SubcriptionScript创建成功")
 	}
 	if err := db.AutoMigrate(&Template{}); err != nil {
-		log.Printf("基础数据表Template迁移失败: %v", err)
+		utils.Error("基础数据表Template迁移失败: %v", err)
 	} else {
-		log.Printf("数据表Template创建成功")
+		utils.Info("数据表Template创建成功")
 	}
 	if err := db.AutoMigrate(&Tag{}); err != nil {
-		log.Printf("基础数据表Tag迁移失败: %v", err)
+		utils.Error("基础数据表Tag迁移失败: %v", err)
 	} else {
-		log.Printf("数据表Tag创建成功")
+		utils.Info("数据表Tag创建成功")
 	}
 	if err := db.AutoMigrate(&TagRule{}); err != nil {
-		log.Printf("基础数据表TagRule迁移失败: %v", err)
+		utils.Error("基础数据表TagRule迁移失败: %v", err)
 	} else {
-		log.Printf("数据表TagRule创建成功")
+		utils.Info("数据表TagRule创建成功")
 	}
 	if err := db.AutoMigrate(&Task{}); err != nil {
-		log.Printf("基础数据表Task迁移失败: %v", err)
+		utils.Error("基础数据表Task迁移失败: %v", err)
 	} else {
-		log.Printf("数据表Task创建成功")
+		utils.Info("数据表Task创建成功")
 	}
 	if err := db.AutoMigrate(&IPInfo{}); err != nil {
-		log.Printf("基础数据表IPInfo迁移失败: %v", err)
+		utils.Error("基础数据表IPInfo迁移失败: %v", err)
 	} else {
-		log.Printf("数据表IPInfo创建成功")
+		utils.Info("数据表IPInfo创建成功")
 	}
 	if err := db.AutoMigrate(&RememberToken{}); err != nil {
-		log.Printf("基础数据表RememberToken迁移失败: %v", err)
+		utils.Error("基础数据表RememberToken迁移失败: %v", err)
 	} else {
-		log.Printf("数据表RememberToken创建成功")
+		utils.Info("数据表RememberToken创建成功")
 	}
 
 	// 检查并删除 idx_name_id 索引
@@ -115,15 +115,15 @@ func RunMigrations() {
 	if err := database.RunCustomMigration("0000_drop_idx_name_id", func() error {
 		if db.Migrator().HasIndex(&Node{}, "idx_name_id") {
 			if err := db.Migrator().DropIndex(&Node{}, "idx_name_id"); err != nil {
-				log.Printf("删除索引 idx_name_id 失败: %v", err)
+				utils.Error("删除索引 idx_name_id 失败: %v", err)
 				return err
 			} else {
-				log.Println("成功删除索引 idx_name_id")
+				utils.Info("成功删除索引 idx_name_id")
 			}
 		}
 		return nil
 	}); err != nil {
-		log.Printf("执行迁移 0000_drop_idx_name_id 失败: %v", err)
+		utils.Error("执行迁移 0000_drop_idx_name_id 失败: %v", err)
 	}
 
 	// 0008_node_created_at_fill - 补全空的 CreatedAt 字段
@@ -133,10 +133,10 @@ func RunMigrations() {
 		if result.Error != nil {
 			return result.Error
 		}
-		log.Printf("已补全 %d 个节点的创建时间", result.RowsAffected)
+		utils.Info("已补全 %d 个节点的创建时间", result.RowsAffected)
 		return nil
 	}); err != nil {
-		log.Printf("执行迁移 0008_node_created_at_fill 失败: %v", err)
+		utils.Error("执行迁移 0008_node_created_at_fill 失败: %v", err)
 	}
 
 	// 0005_hash_passwords
@@ -148,19 +148,19 @@ func RunMigrations() {
 		for _, user := range users {
 			hashedPassword, err := HashPassword(user.Password)
 			if err != nil {
-				log.Printf("Failed to hash password for user %s: %v", user.Username, err)
+				utils.Error("Failed to hash password for user %s: %v", user.Username, err)
 				continue
 			}
 			user.Password = hashedPassword
 			if err := db.Save(&user).Error; err != nil {
-				log.Printf("Failed to save hashed password for user %s: %v", user.Username, err)
+				utils.Error("Failed to save hashed password for user %s: %v", user.Username, err)
 			} else {
-				log.Printf("Upgraded password for user %s", user.Username)
+				utils.Info("Upgraded password for user %s", user.Username)
 			}
 		}
 		return nil
 	}); err != nil {
-		log.Printf("执行迁移 0005_hash_passwords 失败: %v", err)
+		utils.Error("执行迁移 0005_hash_passwords 失败: %v", err)
 	}
 
 	// 添加脚本demo
@@ -178,19 +178,19 @@ func RunMigrations() {
 		if err == gorm.ErrRecordNotFound {
 			err := script.Add()
 			if err != nil {
-				log.Printf("增加脚本demo失败: %v", err)
+				utils.Error("增加脚本demo失败: %v", err)
 			}
 		}
 		return nil
 	}); err != nil {
-		log.Printf("执行迁移 0007_add_script_demo 失败: %v", err)
+		utils.Error("执行迁移 0007_add_script_demo 失败: %v", err)
 	}
 
 	// 0009_migrate_template_files - 迁移现有模板文件到数据库
 	if err := database.RunCustomMigration("0009_migrate_template_files", func() error {
 		return MigrateTemplatesFromFiles("./template")
 	}); err != nil {
-		log.Printf("执行迁移 0009_migrate_template_files 失败: %v", err)
+		utils.Error("执行迁移 0009_migrate_template_files 失败: %v", err)
 	}
 
 	// 0010_add_default_base_templates - 添加默认基础模板到系统设置
@@ -239,18 +239,18 @@ DIRECT = direct
 `
 		// 插入 Clash 模板
 		if err := SetSetting("base_template_clash", clashTemplate); err != nil {
-			log.Printf("插入 Clash 基础模板失败: %v", err)
+			utils.Error("插入 Clash 基础模板失败: %v", err)
 			return err
 		}
 		// 插入 Surge 模板
 		if err := SetSetting("base_template_surge", surgeTemplate); err != nil {
-			log.Printf("插入 Surge 基础模板失败: %v", err)
+			utils.Error("插入 Surge 基础模板失败: %v", err)
 			return err
 		}
-		log.Println("已添加默认 Clash 和 Surge 基础模板")
+		utils.Info("已添加默认 Clash 和 Surge 基础模板")
 		return nil
 	}); err != nil {
-		log.Printf("执行迁移 0010_add_default_base_templates 失败: %v", err)
+		utils.Error("执行迁移 0010_add_default_base_templates 失败: %v", err)
 	}
 
 	// 0011_migrate_speed_test_concurrency - 迁移旧的并发数配置到新的分离配置
@@ -260,35 +260,35 @@ DIRECT = direct
 		if oldConcurrency != "" {
 			// 将旧配置迁移到 latency_concurrency
 			if err := SetSetting("speed_test_latency_concurrency", oldConcurrency); err != nil {
-				log.Printf("迁移 latency_concurrency 失败: %v", err)
+				utils.Error("迁移 latency_concurrency 失败: %v", err)
 				return err
 			}
-			log.Printf("已将 speed_test_concurrency=%s 迁移到 speed_test_latency_concurrency", oldConcurrency)
+			utils.Info("已将 speed_test_concurrency=%s 迁移到 speed_test_latency_concurrency", oldConcurrency)
 		}
 
 		// 设置默认的 speed_concurrency 为 1（如果不存在）
 		existingSpeedConcurrency, _ := GetSetting("speed_test_speed_concurrency")
 		if existingSpeedConcurrency == "" {
 			if err := SetSetting("speed_test_speed_concurrency", "1"); err != nil {
-				log.Printf("设置默认 speed_concurrency 失败: %v", err)
+				utils.Error("设置默认 speed_concurrency 失败: %v", err)
 				return err
 			}
-			log.Println("已设置默认 speed_test_speed_concurrency=1")
+			utils.Info("已设置默认 speed_test_speed_concurrency=1")
 		}
 
 		// 设置默认的 latency_samples 为 3（如果不存在）
 		existingLatencySamples, _ := GetSetting("speed_test_latency_samples")
 		if existingLatencySamples == "" {
 			if err := SetSetting("speed_test_latency_samples", "3"); err != nil {
-				log.Printf("设置默认 latency_samples 失败: %v", err)
+				utils.Error("设置默认 latency_samples 失败: %v", err)
 				return err
 			}
-			log.Println("已设置默认 speed_test_latency_samples=3")
+			utils.Info("已设置默认 speed_test_latency_samples=3")
 		}
 
 		return nil
 	}); err != nil {
-		log.Printf("执行迁移 0011_migrate_speed_test_concurrency 失败: %v", err)
+		utils.Error("执行迁移 0011_migrate_speed_test_concurrency 失败: %v", err)
 	}
 
 	// 0012_migrate_last_check_to_separate_fields - 将 LastCheck 字段迁移到 LatencyCheckAt 和 SpeedCheckAt
@@ -298,66 +298,66 @@ DIRECT = direct
 			// 将 last_check 数据复制到 latency_check_at 和 speed_check_at
 			result := db.Exec("UPDATE nodes SET latency_check_at = last_check, speed_check_at = last_check WHERE last_check IS NOT NULL AND last_check != ''")
 			if result.Error != nil {
-				log.Printf("迁移 last_check 数据失败: %v", result.Error)
+				utils.Error("迁移 last_check 数据失败: %v", result.Error)
 				return result.Error
 			}
-			log.Printf("已将 %d 条 last_check 数据迁移到新字段", result.RowsAffected)
+			utils.Info("已将 %d 条 last_check 数据迁移到新字段", result.RowsAffected)
 
 			// 删除 last_check 列
 			if err := db.Exec("ALTER TABLE nodes DROP COLUMN last_check").Error; err != nil {
-				log.Printf("删除 last_check 列失败: %v", err)
+				utils.Error("删除 last_check 列失败: %v", err)
 				// 不返回错误，因为某些数据库可能不支持 DROP COLUMN
 			} else {
-				log.Println("成功删除 last_check 列")
+				utils.Info("成功删除 last_check 列")
 			}
 		}
 		return nil
 	}); err != nil {
-		log.Printf("执行迁移 0012_migrate_last_check_to_separate_fields 失败: %v", err)
+		utils.Error("执行迁移 0012_migrate_last_check_to_separate_fields 失败: %v", err)
 	}
 
 	// 0013_migrate_node_status_fields - 根据已有数据设置 SpeedStatus 和 DelayStatus 字段
 	if err := database.RunCustomMigration("0013_migrate_node_status_fields", func() error {
 		// DelayTime > 0 且有记录 => DelayStatus = 'success'
 		if result := db.Exec("UPDATE nodes SET delay_status = 'success' WHERE delay_time > 0 AND (delay_status IS NULL OR delay_status = '' OR delay_status = 'untested')"); result.Error != nil {
-			log.Printf("迁移 DelayStatus (success) 失败: %v", result.Error)
+			utils.Error("迁移 DelayStatus (success) 失败: %v", result.Error)
 		} else {
-			log.Printf("已设置 %d 个节点 DelayStatus 为 success", result.RowsAffected)
+			utils.Info("已设置 %d 个节点 DelayStatus 为 success", result.RowsAffected)
 		}
 
 		// DelayTime = -1 => DelayStatus = 'timeout'
 		if result := db.Exec("UPDATE nodes SET delay_status = 'timeout' WHERE delay_time = -1 AND (delay_status IS NULL OR delay_status = '' OR delay_status = 'untested')"); result.Error != nil {
-			log.Printf("迁移 DelayStatus (timeout) 失败: %v", result.Error)
+			utils.Error("迁移 DelayStatus (timeout) 失败: %v", result.Error)
 		} else {
-			log.Printf("已设置 %d 个节点 DelayStatus 为 timeout", result.RowsAffected)
+			utils.Info("已设置 %d 个节点 DelayStatus 为 timeout", result.RowsAffected)
 		}
 
 		// Speed > 0 => SpeedStatus = 'success'
 		if result := db.Exec("UPDATE nodes SET speed_status = 'success' WHERE speed > 0 AND (speed_status IS NULL OR speed_status = '' OR speed_status = 'untested')"); result.Error != nil {
-			log.Printf("迁移 SpeedStatus (success) 失败: %v", result.Error)
+			utils.Error("迁移 SpeedStatus (success) 失败: %v", result.Error)
 		} else {
-			log.Printf("已设置 %d 个节点 SpeedStatus 为 success", result.RowsAffected)
+			utils.Info("已设置 %d 个节点 SpeedStatus 为 success", result.RowsAffected)
 		}
 
 		// Speed = -1 => SpeedStatus = 'error'
 		if result := db.Exec("UPDATE nodes SET speed_status = 'error' WHERE speed = -1 AND (speed_status IS NULL OR speed_status = '' OR speed_status = 'untested')"); result.Error != nil {
-			log.Printf("迁移 SpeedStatus (error) 失败: %v", result.Error)
+			utils.Error("迁移 SpeedStatus (error) 失败: %v", result.Error)
 		} else {
-			log.Printf("已设置 %d 个节点 SpeedStatus 为 error", result.RowsAffected)
+			utils.Info("已设置 %d 个节点 SpeedStatus 为 error", result.RowsAffected)
 		}
 
 		// 所有其他情况 => 'untested'
 		if result := db.Exec("UPDATE nodes SET speed_status = 'untested' WHERE speed_status IS NULL OR speed_status = ''"); result.Error != nil {
-			log.Printf("迁移 SpeedStatus (untested) 失败: %v", result.Error)
+			utils.Error("迁移 SpeedStatus (untested) 失败: %v", result.Error)
 		}
 		if result := db.Exec("UPDATE nodes SET delay_status = 'untested' WHERE delay_status IS NULL OR delay_status = ''"); result.Error != nil {
-			log.Printf("迁移 DelayStatus (untested) 失败: %v", result.Error)
+			utils.Error("迁移 DelayStatus (untested) 失败: %v", result.Error)
 		}
 
-		log.Println("节点状态字段迁移完成")
+		utils.Info("节点状态字段迁移完成")
 		return nil
 	}); err != nil {
-		log.Printf("执行迁移 0013_migrate_node_status_fields 失败: %v", err)
+		utils.Error("执行迁移 0013_migrate_node_status_fields 失败: %v", err)
 	}
 
 	// 初始化用户数据
@@ -375,7 +375,7 @@ DIRECT = direct
 		}
 		err = admin.Create()
 		if err != nil {
-			log.Println("初始化添加用户数据失败")
+			utils.Error("初始化添加用户数据失败")
 		}
 	} else {
 		// Check if we need to update admin password from env
@@ -385,9 +385,9 @@ DIRECT = direct
 				// Update admin password
 				updateUser := &User{Password: envPass}
 				if err := admin.Set(updateUser); err != nil {
-					log.Printf("Failed to update admin password from env: %v", err)
+					utils.Error("Failed to update admin password from env: %v", err)
 				} else {
-					log.Println("Admin password updated from environment variable")
+					utils.Info("Admin password updated from environment variable")
 				}
 			}
 		}
@@ -395,5 +395,5 @@ DIRECT = direct
 
 	// 设置初始化标志为 true
 	database.IsInitialized = true
-	log.Println("数据库初始化成功")
+	utils.Info("数据库初始化成功")
 }

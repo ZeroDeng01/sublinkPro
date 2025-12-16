@@ -1,8 +1,8 @@
 package api
 
 import (
-	"log"
 	"sublink/models"
+	"sublink/utils"
 	"sync"
 	"time"
 )
@@ -81,7 +81,7 @@ func (m *LimitManager) RecordFailure(ip string) {
 		// 如果配置允许1次就封禁（虽然不常见）
 		if failCountLimit <= 1 {
 			m.attempts[ip].BanUntil = now.Add(banDuration)
-			log.Printf("IP %s 因登录失败被封禁至 %v", ip, m.attempts[ip].BanUntil)
+			utils.Warn("IP %s 因登录失败被封禁至 %v", ip, m.attempts[ip].BanUntil)
 		}
 		return
 	}
@@ -102,7 +102,7 @@ func (m *LimitManager) RecordFailure(ip string) {
 		info.Count++
 		if info.Count >= failCountLimit {
 			info.BanUntil = now.Add(banDuration)
-			log.Printf("IP %s 因 %d 分钟内失败 %d 次被封禁至 %v", ip, config.LoginFailWindow, info.Count, info.BanUntil)
+			utils.Warn("IP %s 因 %d 分钟内失败 %d 次被封禁至 %v", ip, config.LoginFailWindow, info.Count, info.BanUntil)
 		}
 	}
 }

@@ -2,10 +2,10 @@ package geoip
 
 import (
 	"fmt"
-	"log"
 	"net/netip"
 	"os"
 	"sublink/config"
+	"sublink/utils"
 	"sync"
 	"time"
 
@@ -56,7 +56,7 @@ func loadDatabase() error {
 			Path:      path,
 			Available: false,
 		}
-		log.Printf("GeoIP 数据库文件不存在: %s，相关功能将不可用", path)
+		utils.Warn("GeoIP 数据库文件不存在: %s，相关功能将不可用", path)
 		return nil // 不返回错误，允许系统继续启动
 	}
 	if err != nil {
@@ -65,7 +65,7 @@ func loadDatabase() error {
 			Path:      path,
 			Available: false,
 		}
-		log.Printf("检查 GeoIP 数据库文件失败: %v", err)
+		utils.Error("检查 GeoIP 数据库文件失败: %v", err)
 		return nil
 	}
 
@@ -79,7 +79,7 @@ func loadDatabase() error {
 			ModTime:   fileInfo.ModTime(),
 			Available: false,
 		}
-		log.Printf("打开 GeoIP 数据库失败: %v", err)
+		utils.Error("打开 GeoIP 数据库失败: %v", err)
 		return err
 	}
 
@@ -97,7 +97,7 @@ func loadDatabase() error {
 		Available: true,
 	}
 
-	log.Printf("GeoIP 数据库加载成功: %s (%.2f MB)", path, float64(fileInfo.Size())/1024/1024)
+	utils.Info("GeoIP 数据库加载成功: %s (%.2f MB)", path, float64(fileInfo.Size())/1024/1024)
 	return nil
 }
 
@@ -170,7 +170,7 @@ func GetLocation(ipStr string) (string, error) {
 
 	geoCountry, err := geoIP.Country(ip)
 	if err != nil {
-		log.Printf("Failed to get Country: %v", err)
+		utils.Error("Failed to get Country: %v", err)
 	}
 	if geoCountry.Country.HasData() {
 		country = geoCountry.Country.Names.SimplifiedChinese
@@ -185,7 +185,7 @@ func GetLocation(ipStr string) (string, error) {
 
 	getCity, err := geoIP.City(ip)
 	if err != nil {
-		log.Printf("Failed to get City: %v", err)
+		utils.Error("Failed to get City: %v", err)
 	}
 	if getCity.City.HasData() {
 		city = getCity.City.Names.SimplifiedChinese

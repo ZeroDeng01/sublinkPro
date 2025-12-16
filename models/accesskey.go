@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"strconv"
 	"sublink/cache"
 	"sublink/database"
@@ -34,14 +33,14 @@ func init() {
 
 // InitAccessKeyCache 初始化AccessKey缓存
 func InitAccessKeyCache() error {
-	log.Printf("开始加载AccessKey到缓存")
+	utils.Info("开始加载AccessKey到缓存")
 	var accessKeys []AccessKey
 	if err := database.DB.Find(&accessKeys).Error; err != nil {
 		return err
 	}
 
 	accessKeyCache.LoadAll(accessKeys)
-	log.Printf("AccessKey缓存初始化完成，共加载 %d 个AccessKey", accessKeyCache.Count())
+	utils.Info("AccessKey缓存初始化完成，共加载 %d 个AccessKey", accessKeyCache.Count())
 
 	cache.Manager.Register("accesskey", accessKeyCache)
 	return nil
@@ -123,13 +122,13 @@ func (accessKey *AccessKey) GenerateAPIKey() (string, error) {
 
 	encryptedID, err := utils.EncryptUserIDCompact(accessKey.UserID, []byte(encryptionKey))
 	if err != nil {
-		log.Println("加密用户ID失败:", err)
+		utils.Error("加密用户ID失败: %v", err)
 		return "", fmt.Errorf("加密用户ID失败: %w", err)
 	}
 	randomBytes := make([]byte, 18)
 	_, err = rand.Read(randomBytes)
 	if err != nil {
-		log.Println(err)
+		utils.Error("生成随机数据失败: %v", err)
 		return "", fmt.Errorf("生成随机数据失败: %w", err)
 	}
 
@@ -139,7 +138,7 @@ func (accessKey *AccessKey) GenerateAPIKey() (string, error) {
 
 	hashedKey, err := bcrypt.GenerateFromPassword([]byte(apiKey), bcrypt.DefaultCost)
 	if err != nil {
-		log.Println(err)
+		utils.Error("哈希API密钥失败: %v", err)
 		return "", fmt.Errorf("哈希API密钥失败: %w", err)
 	}
 	accessKey.AccessKeyHash = string(hashedKey)
@@ -155,35 +154,35 @@ func (accessKey *AccessKey) VerifyKey(providedKey string) bool {
 
 // CleanupExpiredAccessKeys 清理过期的 AccessKey
 func CleanupExpiredAccessKeys() error {
-	log.Println("开始清理过期的 AccessKey")
+	utils.Info("开始清理过期的 AccessKey")
 
 	// 查找所有过期的 AccessKey
 	var expiredKeys []AccessKey
 	err := database.DB.Where("expired_at IS NOT NULL AND expired_at < ?", time.Now()).Find(&expiredKeys).Error
 	if err != nil {
-		log.Printf("查询过期 AccessKey 失败: %v", err)
+		utils.Error("查询过期 AccessKey 失败: %v", err)
 		return fmt.Errorf("查询过期 AccessKey 失败: %w", err)
 	}
 
-	log.Printf("发现 %d 个过期的 AccessKey，准备清理", len(expiredKeys))
+	utils.Info("发现 %d 个过期的 AccessKey，准备清理", len(expiredKeys))
 
 	// 批量删除过期的 AccessKey
 	for _, key := range expiredKeys {
 		err := key.Delete()
 		if err != nil {
-			log.Printf("删除过期 AccessKey 失败，ID: %d, 错误: %v", key.ID, err)
+			utils.Error("删除过期 AccessKey 失败，ID: %d, 错误: %v", key.ID, err)
 			continue
 		}
-		log.Printf("成功删除过期 AccessKey，ID: %d, Username: %s", key.ID, key.Username)
+		utils.Info("成功删除过期 AccessKey，ID: %d, Username: %s", key.ID, key.Username)
 	}
 
-	log.Printf("过期 AccessKey 清理完成，共处理 %d 个", len(expiredKeys))
+	utils.Info("过期 AccessKey 清理完成，共处理 %d 个", len(expiredKeys))
 	return nil
 }
 
 // StartAccessKeyCleanupScheduler 启动 AccessKey 清理定时任务
 func StartAccessKeyCleanupScheduler() {
-	log.Println("启动 AccessKey 清理定时任务")
+	utils.Info("启动 AccessKey 清理定时任务")
 	// 每小时执行一次清理
 	ticker := time.NewTicker(1 * time.Hour)
 
@@ -193,7 +192,7 @@ func StartAccessKeyCleanupScheduler() {
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Printf("AccessKey 清理任务异常: %v", r)
+						utils.Error("AccessKey 清理任务异常: %v", r)
 					}
 				}()
 				CleanupExpiredAccessKeys()
@@ -205,7 +204,7 @@ func StartAccessKeyCleanupScheduler() {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("AccessKey 初始清理任务异常: %v", r)
+				utils.Error("AccessKey 初始清理任务异常: %v", r)
 			}
 		}()
 		CleanupExpiredAccessKeys()

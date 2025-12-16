@@ -4,11 +4,11 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 	"sublink/models"
 	"sublink/services/monitor"
+	"sublink/utils"
 	"sync"
 )
 
@@ -584,7 +584,7 @@ func RunSpeedTest(scope string) error {
 		if servicesWrapper != nil {
 			go servicesWrapper.ExecuteScheduledSpeedTest()
 		}
-		log.Printf("Telegram 触发定时测速任务")
+		utils.Info("Telegram 触发定时测速任务")
 		return nil
 
 	case "untested":
@@ -607,7 +607,7 @@ func RunSpeedTest(scope string) error {
 		if servicesWrapper != nil {
 			go servicesWrapper.RunSpeedTestOnNodes(nodes)
 		}
-		log.Printf("Telegram 触发未测速节点测速: %d 个节点", len(nodes))
+		utils.Info("Telegram 触发未测速节点测速: %d 个节点", len(nodes))
 		return nil
 
 	default:
@@ -626,7 +626,7 @@ func PullSubscription(subID int) error {
 	if servicesWrapper != nil {
 		go servicesWrapper.ExecuteSubscriptionTaskWithTrigger(sub.ID, sub.URL, sub.Name, models.TaskTriggerManual)
 	}
-	log.Printf("Telegram 触发订阅更新: %s", sub.Name)
+	utils.Info("Telegram 触发订阅更新: %s", sub.Name)
 
 	return nil
 }
@@ -643,7 +643,7 @@ func ApplyAllTagRules() error {
 	if servicesWrapper != nil {
 		go servicesWrapper.ApplyAutoTagRules(nodes, "telegram_manual")
 	}
-	log.Printf("Telegram 触发标签规则应用: %d 个节点", len(nodes))
+	utils.Info("Telegram 触发标签规则应用: %d 个节点", len(nodes))
 
 	return nil
 }

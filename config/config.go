@@ -23,6 +23,7 @@ const (
 	DefaultLoginBanDuration = 10
 	DefaultDBPath           = "./db"
 	DefaultLogPath          = "./logs"
+	DefaultLogLevel         = "info"
 	DefaultConfigFile       = "config.yaml"
 )
 
@@ -37,6 +38,7 @@ type AppConfig struct {
 	LoginBanDuration int    `yaml:"login_ban_duration"` // 登录失败封禁时间(分钟)
 	DBPath           string `yaml:"db_path"`            // 数据库目录
 	LogPath          string `yaml:"log_path"`           // 日志目录
+	LogLevel         string `yaml:"log_level"`          // 日志等级 (debug/info/warn/error/fatal)
 	GeoIPPath        string `yaml:"geoip_path"`         // GeoIP数据库路径
 }
 
@@ -45,6 +47,7 @@ type CommandLineConfig struct {
 	Port       int
 	DBPath     string
 	LogPath    string
+	LogLevel   string
 	ConfigFile string
 }
 
@@ -256,6 +259,7 @@ func applyDefaults(cfg *AppConfig) {
 	cfg.LoginBanDuration = DefaultLoginBanDuration
 	cfg.DBPath = DefaultDBPath
 	cfg.LogPath = DefaultLogPath
+	cfg.LogLevel = DefaultLogLevel
 	cfg.GeoIPPath = "" // 默认为空，运行时通过 GetGeoIPPath() 计算
 }
 
@@ -299,6 +303,9 @@ func loadFromFileInternal(cfg *AppConfig, configPath string) {
 	if fileCfg.LogPath != "" {
 		cfg.LogPath = fileCfg.LogPath
 	}
+	if fileCfg.LogLevel != "" {
+		cfg.LogLevel = fileCfg.LogLevel
+	}
 	// 敏感配置也从文件读取（用于迁移）
 	if fileCfg.JwtSecret != "" {
 		cfg.JwtSecret = fileCfg.JwtSecret
@@ -341,6 +348,9 @@ func loadFromEnvInternal(cfg *AppConfig) {
 	if logPath := os.Getenv(envPrefix + "LOG_PATH"); logPath != "" {
 		cfg.LogPath = logPath
 	}
+	if logLevel := os.Getenv(envPrefix + "LOG_LEVEL"); logLevel != "" {
+		cfg.LogLevel = logLevel
+	}
 	if geoipPath := os.Getenv(envPrefix + "GEOIP_PATH"); geoipPath != "" {
 		cfg.GeoIPPath = geoipPath
 	}
@@ -366,6 +376,9 @@ func loadFromCmdLineInternal(cfg *AppConfig) {
 	}
 	if cmdConfig.LogPath != "" {
 		cfg.LogPath = cmdConfig.LogPath
+	}
+	if cmdConfig.LogLevel != "" {
+		cfg.LogLevel = cmdConfig.LogLevel
 	}
 }
 

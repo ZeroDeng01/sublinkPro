@@ -2,9 +2,9 @@ package telegram
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
+	"sublink/utils"
 )
 
 // HandleCallbackQuery 处理回调查询
@@ -17,7 +17,7 @@ func HandleCallbackQuery(bot *TelegramBot, callback *CallbackQuery) error {
 		param = parts[1]
 	}
 
-	log.Printf("处理回调: action=%s, param=%s", action, param)
+	utils.Debug("处理回调: action=%s, param=%s", action, param)
 
 	switch action {
 	// 导航回调
@@ -51,7 +51,7 @@ func HandleCallbackQuery(bot *TelegramBot, callback *CallbackQuery) error {
 		return handleTaskCancelCallback(bot, callback, param)
 
 	default:
-		log.Printf("未知回调: %s", data)
+		utils.Debug("未知回调: %s", data)
 		return nil
 	}
 }

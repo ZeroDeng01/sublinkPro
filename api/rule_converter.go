@@ -3,7 +3,6 @@ package api
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 	"sublink/models"
@@ -385,7 +384,7 @@ func expandRulesParallel(rulesets []ACLRuleset, useProxy bool, proxyLink string)
 				// 获取远程规则
 				content, err := fetchRemoteContent(ruleset.RuleURL, useProxy, proxyLink)
 				if err != nil {
-					log.Printf("获取规则失败 %s: %v", ruleset.RuleURL, err)
+					utils.Error("获取规则失败 %s: %v", ruleset.RuleURL, err)
 					results <- ruleResult{idx, rules}
 					return
 				}

@@ -2,8 +2,8 @@ package telegram
 
 import (
 	"fmt"
-	"log"
 	"sublink/services/sse"
+	"sublink/utils"
 )
 
 // SendNotification 发送通知到 Telegram
@@ -38,7 +38,7 @@ func SendNotification(event string, payload sse.NotificationPayload) {
 	}
 
 	if err := bot.SendMessage(bot.ChatID, text, "Markdown"); err != nil {
-		log.Printf("发送 Telegram 通知失败: %v", err)
+		utils.Warn("发送 Telegram 通知失败: %v", err)
 	}
 }
 

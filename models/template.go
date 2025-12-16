@@ -1,12 +1,12 @@
 package models
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sublink/cache"
 	"sublink/database"
+	"sublink/utils"
 	"time"
 )
 
@@ -29,7 +29,7 @@ func init() {
 
 // InitTemplateCache 初始化模板缓存
 func InitTemplateCache() error {
-	log.Printf("开始加载模板到缓存")
+	utils.Info("开始加载模板到缓存")
 
 	// 添加 Name 二级索引
 	templateCache.AddIndex("name", func(t Template) string { return t.Name })
@@ -40,7 +40,7 @@ func InitTemplateCache() error {
 	}
 
 	templateCache.LoadAll(templates)
-	log.Printf("模板缓存初始化完成，共加载 %d 个模板", templateCache.Count())
+	utils.Info("模板缓存初始化完成，共加载 %d 个模板", templateCache.Count())
 
 	cache.Manager.Register("template", templateCache)
 	return nil
@@ -132,7 +132,7 @@ func (t *Template) List() ([]Template, error) {
 func MigrateTemplatesFromFiles(templateDir string) error {
 	// 检查目录是否存在
 	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-		log.Printf("模板目录不存在，跳过迁移: %s", templateDir)
+		utils.Warn("模板目录不存在，跳过迁移: %s", templateDir)
 		return nil
 	}
 
@@ -171,16 +171,16 @@ func MigrateTemplatesFromFiles(templateDir string) error {
 		}
 
 		if err := database.DB.Create(&template).Error; err != nil {
-			log.Printf("迁移模板失败 %s: %v", fileName, err)
+			utils.Error("迁移模板失败 %s: %v", fileName, err)
 			continue
 		}
 
 		migratedCount++
-		log.Printf("已迁移模板: %s (类别: %s)", fileName, category)
+		utils.Info("已迁移模板: %s (类别: %s)", fileName, category)
 	}
 
 	if migratedCount > 0 {
-		log.Printf("模板迁移完成，共迁移 %d 个模板", migratedCount)
+		utils.Info("模板迁移完成，共迁移 %d 个模板", migratedCount)
 	}
 
 	return nil

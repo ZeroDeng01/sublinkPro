@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -40,36 +39,36 @@ func Templateinit() {
 	// 检查目录是否创建
 	subFS, err := fs.Sub(Template, "template")
 	if err != nil {
-		log.Println(err)
-		return // 如果出错，直接返回
+		utils.Error("加载内嵌模板失败: %v", err)
+		return
 	}
 	entries, err := fs.ReadDir(subFS, ".")
 	if err != nil {
-		log.Println(err)
-		return // 如果出错，直接返回
+		utils.Error("读取模板目录失败: %v", err)
+		return
 	}
 	// 创建template目录
 	_, err = os.Stat("./template")
 	if os.IsNotExist(err) {
 		err = os.Mkdir("./template", 0666)
 		if err != nil {
-			log.Println(err)
+			utils.Error("创建模板目录失败: %v", err)
 			return
 		}
 	}
 	// 写入默认模板
 	for _, entry := range entries {
 		_, err := os.Stat("./template/" + entry.Name())
-		//如果文件不存在则写入默认模板
+		// 如果文件不存在则写入默认模板
 		if os.IsNotExist(err) {
 			data, err := fs.ReadFile(subFS, entry.Name())
 			if err != nil {
-				log.Println(err)
+				utils.Error("读取模板文件失败: %v", err)
 				continue
 			}
 			err = os.WriteFile("./template/"+entry.Name(), data, 0666)
 			if err != nil {
-				log.Println(err)
+				utils.Error("写入模板文件失败: %v", err)
 			}
 		}
 	}
@@ -82,6 +81,7 @@ func main() {
 		port        int
 		dbPath      string
 		logPath     string
+		logLevel    string
 		configFile  string
 	)
 
@@ -92,6 +92,7 @@ func main() {
 	flag.IntVar(&port, "p", 0, "服务端口 (简写)")
 	flag.StringVar(&dbPath, "db", "", "数据库目录路径")
 	flag.StringVar(&logPath, "log", "", "日志目录路径")
+	flag.StringVar(&logLevel, "log-level", "", "日志等级 (debug/info/warn/error/fatal)")
 	flag.StringVar(&configFile, "config", "", "配置文件名 (相对于数据库目录)")
 	flag.StringVar(&configFile, "c", "", "配置文件名 (简写)")
 
@@ -114,9 +115,9 @@ func main() {
 			settingCmd.Parse(os.Args[2:])
 
 			// 初始化数据库目录和数据库
-			initDatabase(dbPath, logPath, configFile, port)
+			initDatabase(dbPath, logPath, logLevel, configFile, port)
 
-			fmt.Println(username, password)
+			utils.Info("重置用户: %s", username)
 			settings.ResetUser(username, password)
 			return
 
@@ -127,11 +128,12 @@ func main() {
 			runCmd.IntVar(&port, "p", 0, "服务端口 (简写)")
 			runCmd.StringVar(&dbPath, "db", "", "数据库目录路径")
 			runCmd.StringVar(&logPath, "log", "", "日志目录路径")
+			runCmd.StringVar(&logLevel, "log-level", "", "日志等级 (debug/info/warn/error/fatal)")
 			runCmd.StringVar(&configFile, "config", "", "配置文件名")
 			runCmd.StringVar(&configFile, "c", "", "配置文件名 (简写)")
 			runCmd.Parse(os.Args[2:])
 
-			initDatabase(dbPath, logPath, configFile, port)
+			initDatabase(dbPath, logPath, logLevel, configFile, port)
 			Run()
 			return
 
@@ -154,17 +156,18 @@ func main() {
 	}
 
 	// 默认运行模式
-	initDatabase(dbPath, logPath, configFile, port)
+	initDatabase(dbPath, logPath, logLevel, configFile, port)
 	Run()
 }
 
 // initDatabase 初始化数据库和配置
-func initDatabase(dbPath, logPath, configFile string, port int) {
+func initDatabase(dbPath, logPath, logLevel, configFile string, port int) {
 	// 设置命令行配置
 	cmdCfg := &config.CommandLineConfig{
 		Port:       port,
 		DBPath:     dbPath,
 		LogPath:    logPath,
+		LogLevel:   logLevel,
 		ConfigFile: configFile,
 	}
 	config.SetCommandLineConfig(cmdCfg)
@@ -196,7 +199,7 @@ func initDatabase(dbPath, logPath, configFile string, port int) {
 func ensureDir(path string) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if err := os.MkdirAll(path, 0755); err != nil {
-			log.Printf("创建目录失败 %s: %v", path, err)
+			utils.Error("创建目录失败 %s: %v", path, err)
 		}
 	}
 }
@@ -215,31 +218,34 @@ func printHelp() {
   help          显示帮助信息
 
 全局选项:
-  -p, --port    服务端口 (默认: 8000)
-  -db           数据库目录路径 (默认: ./db)
-  -log          日志目录路径 (默认: ./logs)
-  -c, --config  配置文件名 (默认: config.yaml)
-  -v, --version 显示版本号
+  -p, --port      服务端口 (默认: 8000)
+  -db             数据库目录路径 (默认: ./db)
+  -log            日志目录路径 (默认: ./logs)
+  --log-level     日志等级 (debug/info/warn/error/fatal, 默认: info)
+  -c, --config    配置文件名 (默认: config.yaml)
+  -v, --version   显示版本号
 
 环境变量:
-  SUBLINK_PORT              服务端口
-  SUBLINK_DB_PATH           数据库目录路径
-  SUBLINK_LOG_PATH          日志目录路径
-  SUBLINK_JWT_SECRET        JWT签名密钥 (可选，自动生成)
+  SUBLINK_PORT               服务端口
+  SUBLINK_DB_PATH            数据库目录路径
+  SUBLINK_LOG_PATH           日志目录路径
+  SUBLINK_LOG_LEVEL          日志等级 (debug/info/warn/error/fatal)
+  SUBLINK_JWT_SECRET         JWT签名密钥 (可选，自动生成)
   SUBLINK_API_ENCRYPTION_KEY API加密密钥 (可选，自动生成)
-  SUBLINK_EXPIRE_DAYS       Token过期天数 (默认: 14)
-  SUBLINK_LOGIN_FAIL_COUNT  登录失败次数限制 (默认: 5)
+  SUBLINK_EXPIRE_DAYS        Token过期天数 (默认: 14)
+  SUBLINK_LOGIN_FAIL_COUNT   登录失败次数限制 (默认: 5)
   SUBLINK_LOGIN_FAIL_WINDOW  登录失败窗口时间(分钟) (默认: 1)
   SUBLINK_LOGIN_BAN_DURATION 登录封禁时间(分钟) (默认: 10)
-  SUBLINK_ADMIN_PASSWORD    初始管理员密码 (首次启动时设置)
+  SUBLINK_ADMIN_PASSWORD     初始管理员密码 (首次启动时设置)
 
 配置优先级:
   命令行参数 > 环境变量 > 配置文件 > 数据库 > 默认值
 
 示例:
-  sublinkpro                       # 使用默认配置启动
-  sublinkpro run -p 9000           # 指定端口启动
-  sublinkpro run --db /data/db     # 指定数据库目录
+  sublinkpro                           # 使用默认配置启动
+  sublinkpro run -p 9000               # 指定端口启动
+  sublinkpro run --log-level debug     # 开启调试日志
+  sublinkpro run --db /data/db         # 指定数据库目录
   sublinkpro setting -username admin -password newpass  # 重置用户
 `)
 }
@@ -249,13 +255,15 @@ func Run() {
 	cfg := config.Get()
 	port := cfg.Port
 
+	// 初始化日志系统
+	utils.InitLogger(cfg.LogPath, cfg.LogLevel)
+
 	// 打印版本信息
-	fmt.Println("版本信息：", version)
+	utils.Info("启动 SublinkPro 版本: %s", version)
+	utils.Info("日志等级: %s", utils.GetLogLevel())
 
 	// 初始化gin框架
 	r := gin.Default()
-	// 初始化日志配置
-	utils.Loginit()
 	// 初始化模板
 	Templateinit()
 
@@ -276,7 +284,7 @@ func Run() {
 
 	// 初始化 GeoIP 数据库
 	if err := geoip.InitGeoIP(); err != nil {
-		log.Printf("初始化 GeoIP 数据库失败: %v", err)
+		utils.Warn("初始化 GeoIP 数据库失败: %v", err)
 	}
 
 	// 如果 GeoIP 数据库不可用，异步尝试自动下载
@@ -295,43 +303,43 @@ func Run() {
 	scheduler.Start()
 
 	if err := models.InitNodeCache(); err != nil {
-		log.Println("加载节点到缓存失败: %v", err)
+		utils.Error("加载节点到缓存失败: %v", err)
 	}
 	if err := models.InitSettingCache(); err != nil {
-		log.Println("加载系统设置到缓存失败: %v", err)
+		utils.Error("加载系统设置到缓存失败: %v", err)
 	}
 	if err := models.InitUserCache(); err != nil {
-		log.Println("加载用户到缓存失败: %v", err)
+		utils.Error("加载用户到缓存失败: %v", err)
 	}
 	if err := models.InitScriptCache(); err != nil {
-		log.Println("加载脚本到缓存失败: %v", err)
+		utils.Error("加载脚本到缓存失败: %v", err)
 	}
 	if err := models.InitSubSchedulerCache(); err != nil {
-		log.Println("加载订阅调度到缓存失败: %v", err)
+		utils.Error("加载订阅调度到缓存失败: %v", err)
 	}
 	if err := models.InitAccessKeyCache(); err != nil {
-		log.Println("加载AccessKey到缓存失败: %v", err)
+		utils.Error("加载AccessKey到缓存失败: %v", err)
 	}
 	if err := models.InitSubLogsCache(); err != nil {
-		log.Println("加载订阅日志到缓存失败: %v", err)
+		utils.Error("加载订阅日志到缓存失败: %v", err)
 	}
 	if err := models.InitSubcriptionCache(); err != nil {
-		log.Println("加载订阅到缓存失败: %v", err)
+		utils.Error("加载订阅到缓存失败: %v", err)
 	}
 	if err := models.InitTemplateCache(); err != nil {
-		log.Println("加载模板到缓存失败: %v", err)
+		utils.Error("加载模板到缓存失败: %v", err)
 	}
 	if err := models.InitTagCache(); err != nil {
-		log.Println("加载标签到缓存失败: %v", err)
+		utils.Error("加载标签到缓存失败: %v", err)
 	}
 	if err := models.InitTagRuleCache(); err != nil {
-		log.Println("加载标签规则到缓存失败: %v", err)
+		utils.Error("加载标签规则到缓存失败: %v", err)
 	}
 	if err := models.InitTaskCache(); err != nil {
-		log.Println("加载任务到缓存失败: %v", err)
+		utils.Error("加载任务到缓存失败: %v", err)
 	}
 	if err := models.InitIPInfoCache(); err != nil {
-		log.Println("加载IP信息到缓存失败: %v", err)
+		utils.Error("加载IP信息到缓存失败: %v", err)
 	}
 
 	// 初始化去重字段元数据缓存（通过反射扫描协议结构体和Node模型）
@@ -346,9 +354,9 @@ func Run() {
 
 	// 初始化 Telegram 机器人 (异步)
 	go func() {
-		log.Println("正在异步初始化 Telegram 机器人...")
+		utils.Debug("正在异步初始化 Telegram 机器人...")
 		if err := telegram.InitBot(); err != nil {
-			log.Printf("初始化 Telegram 机器人失败: %v", err)
+			utils.Warn("初始化 Telegram 机器人失败: %v", err)
 		}
 	}()
 
@@ -359,7 +367,7 @@ func Run() {
 	// 从数据库加载定时任务
 	err := scheduler.LoadFromDatabase()
 	if err != nil {
-		log.Printf("加载定时任务失败: %v", err)
+		utils.Error("加载定时任务失败: %v", err)
 	}
 	// 安装中间件
 
@@ -368,7 +376,7 @@ func Run() {
 	if StaticFiles != nil {
 		staticFiles, err := fs.Sub(StaticFiles, "static")
 		if err != nil {
-			log.Println(err)
+			utils.Error("加载静态文件失败: %v", err)
 		} else {
 			// 增加assets目录的静态服务
 			assetsFiles, _ := fs.Sub(staticFiles, "assets")

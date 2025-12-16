@@ -1,10 +1,10 @@
 package models
 
 import (
-	"log"
 	"sort"
 	"sublink/cache"
 	"sublink/database"
+	"sublink/utils"
 	"time"
 )
 
@@ -27,14 +27,14 @@ func init() {
 
 // InitScriptCache 初始化脚本缓存
 func InitScriptCache() error {
-	log.Printf("开始加载脚本到缓存")
+	utils.Info("开始加载脚本到缓存")
 	var scripts []Script
 	if err := database.DB.Find(&scripts).Error; err != nil {
 		return err
 	}
 
 	scriptCache.LoadAll(scripts)
-	log.Printf("脚本缓存初始化完成，共加载 %d 个脚本", scriptCache.Count())
+	utils.Info("脚本缓存初始化完成，共加载 %d 个脚本", scriptCache.Count())
 
 	cache.Manager.Register("script", scriptCache)
 	return nil

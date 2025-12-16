@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log"
 	"strconv"
 	"sublink/dto"
 	"sublink/models"
@@ -33,13 +32,13 @@ func GenerateAccessKey(c *gin.Context) {
 
 	apiKey, err := accessKey.GenerateAPIKey()
 	if err != nil {
-		log.Println(err)
+		utils.Error("生成 API Key 失败: %v", err)
 		utils.FailWithMsg(c, "生成API Key失败")
 		return
 	}
 	err = accessKey.Generate()
 	if err != nil {
-		log.Println(err)
+		utils.Error("生成 API Key 失败: %v", err)
 		utils.FailWithMsg(c, "生成API Key失败")
 		return
 	}

@@ -1,9 +1,9 @@
 package models
 
 import (
-	"log"
 	"sublink/cache"
 	"sublink/database"
+	"sublink/utils"
 
 	"gorm.io/gorm/clause"
 )
@@ -22,7 +22,7 @@ func init() {
 
 // InitSettingCache 初始化设置缓存
 func InitSettingCache() error {
-	log.Printf("开始加载系统设置到缓存")
+	utils.Info("开始加载系统设置到缓存")
 	var settings []SystemSetting
 	if err := database.DB.Find(&settings).Error; err != nil {
 		return err
@@ -30,7 +30,7 @@ func InitSettingCache() error {
 
 	// 使用批量加载方式初始化缓存
 	settingCache.LoadAll(settings)
-	log.Printf("系统设置缓存初始化完成，共加载 %d 个设置", settingCache.Count())
+	utils.Info("系统设置缓存初始化完成，共加载 %d 个设置", settingCache.Count())
 
 	// 注册到缓存管理器
 	cache.Manager.Register("system_setting", settingCache)

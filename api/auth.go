@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"sublink/config"
 	"sublink/middlewares"
 	"sublink/models"
@@ -34,7 +33,7 @@ func GetToken(username string) (string, error) {
 func GetCaptcha(c *gin.Context) {
 	id, bs4, _, err := utils.GetCaptcha()
 	if err != nil {
-		log.Println("获取验证码失败")
+		utils.Error("获取验证码失败: %v", err)
 		utils.FailWithMsg(c, "获取验证码失败")
 		return
 	}
@@ -63,14 +62,14 @@ func UserLogin(c *gin.Context) {
 
 	// 验证验证码
 	if !utils.VerifyCaptcha(captchaKey, captchaCode) {
-		log.Println("验证码错误")
+		utils.Warn("验证码错误")
 		utils.FailWithData(c, "验证码错误", gin.H{"errorType": "captcha"})
 		return
 	}
 	user := &models.User{Username: username, Password: password}
 	err := user.Verify()
 	if err != nil {
-		log.Println("账号或者密码错误")
+		utils.Warn("账号或者密码错误: %v", err)
 		limiter.RecordFailure(ip) // 记录失败
 		utils.FailWithData(c, "用户名或密码错误", gin.H{"errorType": "credentials"})
 		return
@@ -80,7 +79,7 @@ func UserLogin(c *gin.Context) {
 	// 生成token
 	token, err := GetToken(username)
 	if err != nil {
-		log.Println("获取token失败")
+		utils.Error("获取token失败: %v", err)
 		utils.FailWithMsg(c, "获取token失败")
 		return
 	}
@@ -91,7 +90,7 @@ func UserLogin(c *gin.Context) {
 		userAgent := c.GetHeader("User-Agent")
 		rememberToken, err = models.GenerateRememberToken(user.ID, userAgent)
 		if err != nil {
-			log.Println("生成记住密码令牌失败:", err)
+			utils.Error("生成记住密码令牌失败: %v", err)
 			// 不影响正常登录，只是不返回 rememberToken
 		}
 	}
@@ -146,7 +145,7 @@ func RememberLogin(c *gin.Context) {
 	// 验证令牌并获取用户
 	user, err := models.VerifyAndGetUserByToken(rememberToken)
 	if err != nil {
-		log.Println("记住密码令牌验证失败:", err)
+		utils.Warn("记住密码令牌验证失败: %v", err)
 		utils.FailWithMsg(c, "登录令牌已过期，请重新登录")
 		return
 	}
@@ -154,7 +153,7 @@ func RememberLogin(c *gin.Context) {
 	// 生成新的 JWT token
 	token, err := GetToken(user.Username)
 	if err != nil {
-		log.Println("获取token失败")
+		utils.Error("获取token失败: %v", err)
 		utils.FailWithMsg(c, "获取token失败")
 		return
 	}
@@ -179,7 +178,7 @@ func UserOut(c *gin.Context) {
 		}
 		if rememberToken != "" {
 			if err := models.DeleteRememberToken(rememberToken); err != nil {
-				log.Println("删除记住密码令牌失败:", err)
+				utils.Error("删除记住密码令牌失败: %v", err)
 			}
 		}
 		utils.OkWithMsg(c, "退出成功")

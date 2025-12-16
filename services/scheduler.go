@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"regexp"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 	"sublink/services/geoip"
 	"sublink/services/mihomo"
 	"sublink/services/sse"
+	"sublink/utils"
 	"sync"
 	"time"
 
@@ -46,13 +46,13 @@ func GetSchedulerManager() *SchedulerManager {
 // Start 启动定时任务管理器
 func (sm *SchedulerManager) Start() {
 	sm.cron.Start()
-	log.Println("定时任务管理器已启动")
+	utils.Info("定时任务管理器已启动")
 }
 
 // Stop 停止定时任务管理器
 func (sm *SchedulerManager) Stop() {
 	sm.cron.Stop()
-	log.Println("定时任务管理器已停止")
+	utils.Info("定时任务管理器已停止")
 }
 
 // LoadFromDatabase 从数据库加载所有启用的定时任务
@@ -60,7 +60,7 @@ func (sm *SchedulerManager) LoadFromDatabase() error {
 
 	schedulers, err := models.ListEnabled()
 	if err != nil {
-		log.Printf("从数据库加载定时任务失败: %v", err)
+		utils.Error("从数据库加载定时任务失败: %v", err)
 		return err
 	}
 	// 添加所有启用的任务
@@ -70,26 +70,26 @@ func (sm *SchedulerManager) LoadFromDatabase() error {
 		}, scheduler.ID, scheduler.URL, scheduler.Name)
 
 		if err != nil {
-			log.Printf("添加定时任务失败 - ID: %d, Error: %v", scheduler.ID, err)
+			utils.Error("添加定时任务失败 - ID: %d, Error: %v", scheduler.ID, err)
 		} else {
-			log.Printf("成功添加定时任务 - ID: %d, Name: %s, Cron: %s",
+			utils.Info("成功添加定时任务 - ID: %d, Name: %s, Cron: %s",
 				scheduler.ID, scheduler.Name, scheduler.CronExpr)
 		}
 	}
 
 	speedTestEnable, err := models.GetSetting("speed_test_enabled")
 	if err != nil {
-		log.Printf("从数据库加载测速定时任务失败: %v", err)
+		utils.Error("从数据库加载测速定时任务失败: %v", err)
 		return err
 	}
 	if speedTestEnable == "true" {
 		speedTestCron, err := models.GetSetting("speed_test_cron")
 		if err != nil {
-			log.Printf("从数据库加载测速定时任务失败: %v", err)
+			utils.Error("从数据库加载测速定时任务失败: %v", err)
 		}
 		err = sm.StartNodeSpeedTestTask(speedTestCron)
 		if err != nil {
-			log.Printf("创建测速定时任务失败: %v", err)
+			utils.Error("创建测速定时任务失败: %v", err)
 		}
 
 	}
@@ -127,7 +127,7 @@ func (sm *SchedulerManager) AddJob(schedulerID int, cronExpr string, jobFunc fun
 	})
 
 	if err != nil {
-		log.Printf("添加定时任务失败 - ID: %d, Cron: %s, Error: %v", schedulerID, cleanCronExpr, err)
+		utils.Error("添加定时任务失败 - ID: %d, Cron: %s, Error: %v", schedulerID, cleanCronExpr, err)
 		return err
 	}
 
@@ -138,7 +138,7 @@ func (sm *SchedulerManager) AddJob(schedulerID int, cronExpr string, jobFunc fun
 	nextTime := sm.getNextRunTime(cleanCronExpr)
 	sm.updateRunTime(schedulerID, nil, nextTime)
 
-	log.Printf("成功添加定时任务 - ID: %d, Cron: %s, 下次运行: %v", schedulerID, cleanCronExpr, nextTime)
+	utils.Info("成功添加定时任务 - ID: %d, Cron: %s, 下次运行: %v", schedulerID, cleanCronExpr, nextTime)
 
 	return nil
 }
@@ -151,7 +151,7 @@ func (sm *SchedulerManager) RemoveJob(schedulerID int) {
 	if entryID, exists := sm.jobs[schedulerID]; exists {
 		sm.cron.Remove(entryID)
 		delete(sm.jobs, schedulerID)
-		log.Printf("成功删除定时任务 - ID: %d", schedulerID)
+		utils.Info("成功删除定时任务 - ID: %d", schedulerID)
 	}
 }
 
@@ -185,7 +185,7 @@ func (sm *SchedulerManager) UpdateJob(schedulerID int, cronExpr string, enabled 
 		})
 
 		if err != nil {
-			log.Printf("更新定时任务失败 - ID: %d, Cron: %s, Error: %v", schedulerID, cleanCronExpr, err)
+			utils.Error("更新定时任务失败 - ID: %d, Cron: %s, Error: %v", schedulerID, cleanCronExpr, err)
 			return err
 		}
 
@@ -195,11 +195,11 @@ func (sm *SchedulerManager) UpdateJob(schedulerID int, cronExpr string, enabled 
 		nextTime := sm.getNextRunTime(cleanCronExpr)
 		sm.updateRunTime(schedulerID, nil, nextTime)
 
-		log.Printf("成功更新定时任务 - ID: %d, Cron: %s, 下次运行: %v", schedulerID, cleanCronExpr, nextTime)
+		utils.Info("成功更新定时任务 - ID: %d, Cron: %s, 下次运行: %v", schedulerID, cleanCronExpr, nextTime)
 	} else {
 		// 如果禁用，清除下次运行时间
 		sm.updateRunTime(schedulerID, nil, nil)
-		log.Printf("任务已禁用 - ID: %d", schedulerID)
+		utils.Info("任务已禁用 - ID: %d", schedulerID)
 	}
 
 	return nil
@@ -212,7 +212,7 @@ func ExecuteSubscriptionTask(id int, url string, subName string) {
 
 // ExecuteSubscriptionTaskWithTrigger 执行订阅任务（带触发类型）
 func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trigger models.TaskTrigger) {
-	log.Printf("执行自动获取订阅任务 - ID: %d, Name: %s, URL: %s, Trigger: %s", id, subName, url, trigger)
+	utils.Info("执行自动获取订阅任务 - ID: %d, Name: %s, URL: %s, Trigger: %s", id, subName, url, trigger)
 
 	// 获取最新的订阅配置，以便使用最新的代理设置
 	var subS models.SubScheduler
@@ -221,7 +221,7 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 	var userAgent string
 
 	if err := subS.GetByID(id); err != nil {
-		log.Printf("获取订阅配置失败 ID: %d, 使用默认设置: %v", id, err)
+		utils.Warn("获取订阅配置失败 ID: %d, 使用默认设置: %v", id, err)
 	} else {
 		downloadWithProxy = subS.DownloadWithProxy
 		proxyLink = subS.ProxyLink
@@ -234,7 +234,7 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 
 	var reporter node.TaskReporter
 	if createErr != nil {
-		log.Printf("创建订阅更新任务失败: %v，将使用降级模式", createErr)
+		utils.Warn("创建订阅更新任务失败: %v，将使用降级模式", createErr)
 		reporter = nil // 使用 nil，将在 sub.go 中降级为 NoOpTaskReporter
 	} else {
 		reporter = &TaskManagerReporter{
@@ -312,7 +312,7 @@ func (sm *SchedulerManager) getNextRunTime(cronExpr string) *time.Time {
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	schedule, err := parser.Parse(cleanCronExpr)
 	if err != nil {
-		log.Printf("解析Cron表达式失败: %s, Error: %v", cleanCronExpr, err)
+		utils.Warn("解析Cron表达式失败: %s, Error: %v", cleanCronExpr, err)
 		return nil
 	}
 
@@ -326,13 +326,13 @@ func (sm *SchedulerManager) updateRunTime(schedulerID int, lastRun, nextRun *tim
 		var subS models.SubScheduler
 		err := subS.GetByID(schedulerID)
 		if err != nil {
-			log.Printf("获取订阅调度失败 - ID: %d, Error: %v", schedulerID, err)
+			utils.Error("获取订阅调度失败 - ID: %d, Error: %v", schedulerID, err)
 			return
 		}
 
 		err = subS.UpdateRunTime(lastRun, nextRun)
 		if err != nil {
-			log.Printf("更新运行时间失败 - ID: %d, Error: %v", schedulerID, err)
+			utils.Error("更新运行时间失败 - ID: %d, Error: %v", schedulerID, err)
 		}
 	}()
 }
@@ -360,14 +360,14 @@ func (sm *SchedulerManager) StartNodeSpeedTestTask(cronExpr string) error {
 	})
 
 	if err != nil {
-		log.Printf("添加节点测速任务失败 - Cron: %s, Error: %v", cleanCronExpr, err)
+		utils.Error("添加节点测速任务失败 - Cron: %s, Error: %v", cleanCronExpr, err)
 		return err
 	}
 
 	// 存储任务映射
 	sm.jobs[speedTestTaskID] = entryID
-	log.Printf("成功添加节点测速任务 - speedTestTaskID: %d", speedTestTaskID)
-	log.Printf("成功添加节点测速任务 - Cron: %s", cleanCronExpr)
+	utils.Info("成功添加节点测速任务 - speedTestTaskID: %d", speedTestTaskID)
+	utils.Info("成功添加节点测速任务 - Cron: %s", cleanCronExpr)
 	return nil
 }
 
@@ -380,13 +380,13 @@ func (sm *SchedulerManager) StopNodeSpeedTestTask() {
 	if entryID, exists := sm.jobs[speedTestTaskID]; exists {
 		sm.cron.Remove(entryID)
 		delete(sm.jobs, speedTestTaskID)
-		log.Println("成功停止节点测速任务")
+		utils.Info("成功停止节点测速任务")
 	}
 }
 
 // ExecuteNodeSpeedTestTask 执行节点测速任务
 func ExecuteNodeSpeedTestTask() {
-	log.Println("开始执行节点测速任务...")
+	utils.Info("开始执行节点测速任务...")
 
 	// 获取测速分组和标签配置
 	speedTestGroupsStr, _ := models.GetSetting("speed_test_groups")
@@ -401,25 +401,25 @@ func ExecuteNodeSpeedTestTask() {
 	if speedTestGroupsStr != "" {
 		groups := strings.Split(speedTestGroupsStr, ",")
 		nodes, err = new(models.Node).ListByGroups(groups)
-		log.Printf("根据分组测速: %v", groups)
+		utils.Debug("根据分组测速: %v", groups)
 
 		// 在分组基础上按标签继续筛选
 		if err == nil && speedTestTagsStr != "" {
 			tags := strings.Split(speedTestTagsStr, ",")
 			nodes = models.FilterNodesByTags(nodes, tags)
-			log.Printf("在分组基础上按标签过滤: %v, 剩余节点: %d", tags, len(nodes))
+			utils.Debug("在分组基础上按标签过滤: %v, 剩余节点: %d", tags, len(nodes))
 		}
 	} else if speedTestTagsStr != "" {
 		tags := strings.Split(speedTestTagsStr, ",")
 		nodes, err = new(models.Node).ListByTags(tags)
-		log.Printf("根据标签测速: %v", tags)
+		utils.Debug("根据标签测速: %v", tags)
 	} else {
 		nodes, err = new(models.Node).List()
-		log.Println("全量测速")
+		utils.Debug("全量测速")
 	}
 
 	if err != nil {
-		log.Printf("获取节点列表失败: %v", err)
+		utils.Error("获取节点列表失败: %v", err)
 		return
 	}
 
@@ -429,7 +429,7 @@ func ExecuteNodeSpeedTestTask() {
 
 // ExecuteSpecificNodeSpeedTestTask 执行指定节点测速任务
 func ExecuteSpecificNodeSpeedTestTask(nodeIDs []int) {
-	log.Printf("开始执行指定节点测速任务: %v", nodeIDs)
+	utils.Debug("开始执行指定节点测速任务: %v", nodeIDs)
 	if len(nodeIDs) == 0 {
 		return
 	}
@@ -445,7 +445,7 @@ func ExecuteSpecificNodeSpeedTestTask(nodeIDs []int) {
 	}
 
 	if len(nodes) == 0 {
-		log.Println("未找到指定节点")
+		utils.Warn("未找到指定节点")
 		return
 	}
 
@@ -464,18 +464,18 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 // 支持通过 TaskManager 进行任务取消
 func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrigger) {
 	if len(nodes) == 0 {
-		log.Println("没有要测速的节点")
+		utils.Warn("没有要测速的节点")
 		return
 	}
 
 	totalNodes := len(nodes)
-	log.Printf("开始执行节点测速，总节点数: %d, 触发类型: %s", totalNodes, trigger)
+	utils.Info("开始执行节点测速，总节点数: %d, 触发类型: %s", totalNodes, trigger)
 
 	// 使用 TaskManager 创建任务
 	tm := GetTaskManager()
 	task, ctx, err := tm.CreateTask(models.TaskTypeSpeedTest, "节点测速", trigger, totalNodes)
 	if err != nil {
-		log.Printf("创建测速任务失败: %v", err)
+		utils.Error("创建测速任务失败: %v", err)
 		return
 	}
 	taskID := task.ID
@@ -483,14 +483,14 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	// 确保任务结束时清理
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("测速任务执行过程中发生严重错误: %v", r)
+			utils.Error("测速任务执行过程中发生严重错误: %v", r)
 			tm.FailTask(taskID, fmt.Sprintf("任务执行异常: %v", r))
 		}
 	}()
 
 	// 检查是否已被取消
 	if ctx.Err() != nil {
-		log.Printf("任务已被取消: %s", taskID)
+		utils.Info("任务已被取消: %s", taskID)
 		return
 	}
 
@@ -576,7 +576,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 		latencyConcurrency = latencyController.GetCurrentConcurrency()
 	} else {
 		if latencyConcurrency > maxConcurrency {
-			log.Printf("警告: 延迟并发数 %d 超过最大限制，已调整为 %d", latencyConcurrency, maxConcurrency)
+			utils.Warn("警告: 延迟并发数 %d 超过最大限制，已调整为 %d", latencyConcurrency, maxConcurrency)
 			latencyConcurrency = maxConcurrency
 		}
 	}
@@ -600,7 +600,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 		// 硬性并发上限：速度测试不应超过8以避免带宽竞争
 		const maxSpeedConcurrency = 32
 		if speedConcurrency > maxSpeedConcurrency {
-			log.Printf("警告: 速度并发数 %d 超过安全上限，已调整为 %d", speedConcurrency, maxSpeedConcurrency)
+			utils.Warn("警告: 速度并发数 %d 超过安全上限，已调整为 %d", speedConcurrency, maxSpeedConcurrency)
 			speedConcurrency = maxSpeedConcurrency
 		}
 	}
@@ -643,7 +643,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 	speedTestResults := make([]models.SpeedTestResult, 0, len(nodes))
 
 	// ========== 阶段一：延迟测试 ==========
-	log.Printf("阶段一：开始延迟测试，并发数: %d（动态: %v），UnifiedDelay: %v", latencyConcurrency, useAdaptiveLatency, !includeHandshake)
+	utils.Info("阶段一：开始延迟测试，并发数: %d（动态: %v），UnifiedDelay: %v", latencyConcurrency, useAdaptiveLatency, !includeHandshake)
 
 	// 固定并发模式的 semaphore（仅在非动态模式下使用）
 	var latencySem chan struct{}
@@ -659,7 +659,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 			mu.Lock()
 			cancelled = true
 			mu.Unlock()
-			log.Printf("任务被取消，停止新的延迟测试")
+			utils.Debug("任务被取消，停止新的延迟测试")
 			break
 		default:
 		}
@@ -729,14 +729,14 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 			if speedTestMode == "tcp" {
 				if err != nil {
 					failCount++
-					log.Printf("节点 [%s] 延迟测试失败: %v", n.Name, err)
+					utils.Debug("节点 [%s] 延迟测试失败: %v", n.Name, err)
 					n.Speed = -1
 					n.SpeedStatus = constants.StatusUntested // TCP模式不测速度
 					n.DelayTime = -1
 					n.DelayStatus = constants.StatusTimeout
 				} else {
 					successCount++
-					log.Printf("节点 [%s] 延迟测试成功: %d ms", n.Name, latency)
+					utils.Debug("节点 [%s] 延迟测试成功: %d ms", n.Name, latency)
 					n.Speed = 0 // TCP模式不测速度
 					n.SpeedStatus = constants.StatusUntested
 					n.DelayTime = latency
@@ -748,7 +748,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 						countryCode, geoErr := geoip.GetCountryISOCode(landingIP)
 						if geoErr == nil && countryCode != "" {
 							n.LinkCountry = countryCode
-							log.Printf("节点 [%s] 落地IP: %s, 国家: %s", n.Name, landingIP, countryCode)
+							utils.Debug("节点 [%s] 落地IP: %s, 国家: %s", n.Name, landingIP, countryCode)
 						}
 					}
 				}
@@ -794,11 +794,11 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 		}(i, node)
 	}
 	latencyWg.Wait()
-	log.Printf("阶段一完成：延迟测试结束")
+	utils.Info("阶段一完成：延迟测试结束")
 
 	// 检查是否被取消
 	if cancelled || ctx.Err() != nil {
-		log.Printf("任务被取消，跳过阶段二 (已完成: %d/%d)", completedCount, totalNodes)
+		utils.Info("任务被取消，跳过阶段二 (已完成: %d/%d)", completedCount, totalNodes)
 		tm.UpdateProgress(taskID, int(completedCount), "已取消", nil)
 		// 任务已被 CancelTask 标记为取消，无需再次更新
 		goto applyTags
@@ -806,7 +806,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 
 	// ========== 阶段二：速度测试（仅 mihomo 模式）==========
 	if speedTestMode != "tcp" {
-		log.Printf("阶段二：开始速度测试，并发数: %d（动态: %v）", speedConcurrency, useAdaptiveSpeed)
+		utils.Info("阶段二：开始速度测试，并发数: %d（动态: %v）", speedConcurrency, useAdaptiveSpeed)
 
 		// 重置进度计数器用于阶段二
 		completedCount = 0
@@ -825,7 +825,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 				mu.Lock()
 				cancelled = true
 				mu.Unlock()
-				log.Printf("任务被取消，停止新的速度测试")
+				utils.Debug("任务被取消，停止新的速度测试")
 				break
 			default:
 			}
@@ -950,7 +950,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 
 				if err != nil {
 					failCount++
-					log.Printf("节点 [%s] 速度测试失败: %v (延迟: %d ms, 已下载: %s)", result.node.Name, err, result.latency, formatBytes(bytesDownloaded))
+					utils.Debug("节点 [%s] 速度测试失败: %v (延迟: %d ms, 已下载: %s)", result.node.Name, err, result.latency, formatBytes(bytesDownloaded))
 					result.node.Speed = -1
 					result.node.SpeedStatus = constants.StatusError
 					result.node.DelayTime = result.latency            // 保留延迟测试结果
@@ -963,7 +963,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 					}
 				} else {
 					successCount++
-					log.Printf("节点 [%s] 测速成功: 速度 %.2f MB/s, 延迟 %d ms, 流量消耗: %s", result.node.Name, speed, result.latency, formatBytes(bytesDownloaded))
+					utils.Debug("节点 [%s] 测速成功: 速度 %.2f MB/s, 延迟 %d ms, 流量消耗: %s", result.node.Name, speed, result.latency, formatBytes(bytesDownloaded))
 					result.node.Speed = speed
 					result.node.SpeedStatus = constants.StatusSuccess
 					result.node.DelayTime = result.latency
@@ -980,7 +980,7 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 						countryCode, geoErr := geoip.GetCountryISOCode(landingIP)
 						if geoErr == nil && countryCode != "" {
 							result.node.LinkCountry = countryCode
-							log.Printf("节点 [%s] 落地IP: %s, 国家: %s", result.node.Name, landingIP, countryCode)
+							utils.Debug("节点 [%s] 落地IP: %s, 国家: %s", result.node.Name, landingIP, countryCode)
 						}
 					}
 				}
@@ -1021,21 +1021,21 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 			}(nr)
 		}
 		speedWg.Wait()
-		log.Printf("阶段二完成：速度测试结束")
+		utils.Info("阶段二完成：速度测试结束")
 	}
 
 	// 检查最终是否被取消
 	if cancelled || ctx.Err() != nil {
-		log.Printf("任务被取消")
+		utils.Info("任务被取消")
 		goto applyTags
 	}
 
 	// 批量写入所有测速结果到数据库（一次性操作，减少数据库I/O）
 	if len(speedTestResults) > 0 {
 		if err := models.BatchUpdateSpeedResults(speedTestResults); err != nil {
-			log.Printf("❌批量更新测速结果失败：%v", err)
+			utils.Error("批量更新测速结果失败: %v", err)
 		} else {
-			log.Printf("✅批量更新 %d 个节点测速结果成功", len(speedTestResults))
+			utils.Debug("批量更新测速结果成功，共 %d 条记录", len(speedTestResults))
 		}
 	}
 
@@ -1087,6 +1087,9 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 			"total":   totalNodes,
 			"traffic": trafficData,
 		}
+		// The instruction for this line was malformed. Assuming the intent was to add a utils.Info log before completing the task.
+		// The original `fmt.Sprintf` for `tm.CompleteTask`'s message is preserved.
+		utils.Info("测速任务完成 - 总计: %d, 成功: %d, 失败: %d, 流量: %s", totalNodes, successCount, failCount, formatBytes(trafficTotal))
 		tm.CompleteTask(taskID, fmt.Sprintf("测速完成 (成功: %d, 失败: %d, 流量: %s)", successCount, failCount, formatBytes(trafficTotal)), resultData)
 
 		// 广播测速完成通知（让用户在通知中心看到）
@@ -1117,7 +1120,7 @@ applyTags:
 		// 从数据库/缓存获取最新的节点数据
 		updatedNodes, err := models.GetNodesByIDs(testedNodeIDs)
 		if err != nil {
-			log.Printf("获取测速节点最新数据失败: %v, 使用原始数据", err)
+			utils.Warn("获取测速节点最新数据失败: %v, 使用原始数据", err)
 			ApplyAutoTagRules(nodes, "speed_test")
 			return
 		}

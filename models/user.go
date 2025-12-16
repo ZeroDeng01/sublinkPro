@@ -1,9 +1,9 @@
 package models
 
 import (
-	"log"
 	"sublink/cache"
 	"sublink/database"
+	"sublink/utils"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -27,14 +27,14 @@ func init() {
 
 // InitUserCache 初始化用户缓存
 func InitUserCache() error {
-	log.Printf("开始加载用户到缓存")
+	utils.Info("开始加载用户到缓存")
 	var users []User
 	if err := database.DB.Find(&users).Error; err != nil {
 		return err
 	}
 
 	userCache.LoadAll(users)
-	log.Printf("用户缓存初始化完成，共加载 %d 个用户", userCache.Count())
+	utils.Info("用户缓存初始化完成，共加载 %d 个用户", userCache.Count())
 
 	cache.Manager.Register("user", userCache)
 	return nil

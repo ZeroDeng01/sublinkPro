@@ -1,10 +1,10 @@
 package models
 
 import (
-	"log"
 	"strconv"
 	"sublink/cache"
 	"sublink/database"
+	"sublink/utils"
 )
 
 type SubLogs struct {
@@ -26,14 +26,14 @@ func init() {
 
 // InitSubLogsCache 初始化订阅日志缓存
 func InitSubLogsCache() error {
-	log.Printf("开始加载订阅日志到缓存")
+	utils.Info("开始加载订阅日志到缓存")
 	var sublogs []SubLogs
 	if err := database.DB.Find(&sublogs).Error; err != nil {
 		return err
 	}
 
 	subLogsCache.LoadAll(sublogs)
-	log.Printf("订阅日志缓存初始化完成，共加载 %d 条记录", subLogsCache.Count())
+	utils.Info("订阅日志缓存初始化完成，共加载 %d 条记录", subLogsCache.Count())
 
 	cache.Manager.Register("sublogs", subLogsCache)
 	return nil

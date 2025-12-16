@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -31,7 +30,7 @@ func GetClient(c *gin.Context) {
 	token := c.Query("token")
 	ClientIndex := c.Query("client") // 客户端标识
 	if token == "" {
-		log.Println("token为空")
+		utils.Warn("token为空")
 		c.Writer.WriteString("token为空")
 		return
 	}
@@ -136,12 +135,12 @@ func GetV2ray(c *gin.Context) {
 	for _, script := range sub.ScriptsWithSort {
 		resJSON, err := utils.RunNodeFilterScript(script.Content, nodesJSON, "v2ray")
 		if err != nil {
-			log.Printf("Node filter script execution failed: %v", err)
+			utils.Error("Node filter script execution failed: %v", err)
 			continue
 		}
 		var newNodes []models.Node
 		if err := json.Unmarshal(resJSON, &newNodes); err != nil {
-			log.Printf("Failed to unmarshal filtered nodes: %v", err)
+			utils.Error("Failed to unmarshal filtered nodes: %v", err)
 			continue
 		}
 		sub.Nodes = newNodes
@@ -196,7 +195,7 @@ func GetV2ray(c *gin.Context) {
 		case strings.Contains(v.Link, "http://") || strings.Contains(v.Link, "https://"):
 			resp, err := http.Get(v.Link)
 			if err != nil {
-				log.Println(err)
+				utils.Error("Error getting link: %v", err)
 				return
 			}
 			defer resp.Body.Close()
@@ -218,7 +217,7 @@ func GetV2ray(c *gin.Context) {
 	for _, script := range sub.ScriptsWithSort {
 		res, err := utils.RunScript(script.Content, baselist, "v2ray")
 		if err != nil {
-			log.Printf("Script execution failed: %v", err)
+			utils.Error("Script execution failed: %v", err)
 			continue
 		}
 		baselist = res
@@ -246,12 +245,12 @@ func GetClash(c *gin.Context) {
 	for _, script := range sub.ScriptsWithSort {
 		resJSON, err := utils.RunNodeFilterScript(script.Content, nodesJSON, "clash")
 		if err != nil {
-			log.Printf("Node filter script execution failed: %v", err)
+			utils.Error("Node filter script execution failed: %v", err)
 			continue
 		}
 		var newNodes []models.Node
 		if err := json.Unmarshal(resJSON, &newNodes); err != nil {
-			log.Printf("Failed to unmarshal filtered nodes: %v", err)
+			utils.Error("Failed to unmarshal filtered nodes: %v", err)
 			continue
 		}
 		sub.Nodes = newNodes
@@ -309,7 +308,7 @@ func GetClash(c *gin.Context) {
 		case strings.Contains(v.Link, "http://") || strings.Contains(v.Link, "https://"):
 			resp, err := http.Get(v.Link)
 			if err != nil {
-				log.Println(err)
+				utils.Error("获取包含链接失败: %v", err)
 				continue
 			}
 			defer resp.Body.Close()
@@ -351,7 +350,7 @@ func GetClash(c *gin.Context) {
 	for _, script := range sub.ScriptsWithSort {
 		res, err := utils.RunScript(script.Content, string(DecodeClash), "clash")
 		if err != nil {
-			log.Printf("Script execution failed: %v", err)
+			utils.Error("Script execution failed: %v", err)
 			continue
 		}
 		DecodeClash = []byte(res)
@@ -379,12 +378,12 @@ func GetSurge(c *gin.Context) {
 	for _, script := range sub.ScriptsWithSort {
 		resJSON, err := utils.RunNodeFilterScript(script.Content, nodesJSON, "surge")
 		if err != nil {
-			log.Printf("Node filter script execution failed: %v", err)
+			utils.Error("Node filter script execution failed: %v", err)
 			continue
 		}
 		var newNodes []models.Node
 		if err := json.Unmarshal(resJSON, &newNodes); err != nil {
-			log.Printf("Failed to unmarshal filtered nodes: %v", err)
+			utils.Error("Failed to unmarshal filtered nodes: %v", err)
 			continue
 		}
 		sub.Nodes = newNodes
@@ -438,7 +437,7 @@ func GetSurge(c *gin.Context) {
 		case strings.Contains(v.Link, "http://") || strings.Contains(v.Link, "https://"):
 			resp, err := http.Get(v.Link)
 			if err != nil {
-				log.Println(err)
+				utils.Error("Error getting link: %v", err)
 				return
 			}
 			defer resp.Body.Close()
@@ -482,7 +481,7 @@ func GetSurge(c *gin.Context) {
 	for _, script := range sub.ScriptsWithSort {
 		res, err := utils.RunScript(script.Content, DecodeClash, "surge")
 		if err != nil {
-			log.Printf("Script execution failed: %v", err)
+			utils.Error("Script execution failed: %v", err)
 			continue
 		}
 		DecodeClash = res

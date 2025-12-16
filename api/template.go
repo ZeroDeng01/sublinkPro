@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -31,24 +30,24 @@ func init() {
 	// 当您在项目根目录运行 `go run main.go` 时，这将是项目根目录
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("无法获取当前工作目录: %v", err)
+		utils.Fatal("无法获取当前工作目录: %v", err)
 	}
 
 	// 将 "template" 路径解析为相对于当前工作目录的绝对路径
 	absPath, err := filepath.Abs(filepath.Join(cwd, "template"))
 	if err != nil {
-		log.Fatalf("无法解析 template 目录的绝对路径: %v", err)
+		utils.Fatal("无法解析 template 目录的绝对路径: %v", err)
 	}
 	baseTemplateDir = absPath
-	log.Printf("基础模板目录已初始化为: %s (基于当前工作目录)", baseTemplateDir)
+	utils.Info("基础模板目录已初始化为: %s (基于当前工作目录)", baseTemplateDir)
 	// === 修改点结束 ===
 
 	// 确保基础模板目录存在，如果不存在则创建
 	if _, err := os.Stat(baseTemplateDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(baseTemplateDir, 0755); err != nil {
-			log.Fatalf("无法创建基础模板目录 %s: %v", baseTemplateDir, err)
+			utils.Fatal("无法创建基础模板目录 %s: %v", baseTemplateDir, err)
 		}
-		log.Printf("已创建基础模板目录: %s", baseTemplateDir)
+		utils.Info("已创建基础模板目录: %s", baseTemplateDir)
 	}
 }
 
@@ -102,7 +101,7 @@ func GetTempS(c *gin.Context) {
 	// 由于 init() 函数已经确保了 baseTemplateDir 的存在，这里无需再次检查和创建。
 	files, err := os.ReadDir(baseTemplateDir)
 	if err != nil {
-		log.Printf("读取模板目录失败: %v", err)
+		utils.Error("读取模板目录失败: %v", err)
 		utils.FailWithMsg(c, "服务器错误：无法读取模板文件")
 		return
 	}
@@ -118,13 +117,13 @@ func GetTempS(c *gin.Context) {
 		// 这可以防止通过符号链接（symlink）进行的目录遍历，从而避免信息泄露。
 		fullPathToRead, err := safeFilePath(file.Name())
 		if err != nil {
-			log.Printf("跳过不安全或非法文件 (读取): %s, 错误: %v", file.Name(), err)
+			utils.Warn("跳过不安全或非法文件 (读取): %s, 错误: %v", file.Name(), err)
 			continue // 跳过不安全的文件
 		}
 
 		info, err := file.Info()
 		if err != nil {
-			log.Printf("获取文件信息失败: %s, 错误: %v", file.Name(), err)
+			utils.Warn("获取文件信息失败: %s, 错误: %v", file.Name(), err)
 			continue
 		}
 		modTime := info.ModTime().Format("2006-01-02 15:04:05")
@@ -132,7 +131,7 @@ func GetTempS(c *gin.Context) {
 		// 使用经过安全验证的完整路径来读取文件内容
 		text, err := os.ReadFile(fullPathToRead)
 		if err != nil {
-			log.Printf("读取文件内容失败: %s, 错误: %v", fullPathToRead, err)
+			utils.Error("读取文件内容失败: %s, 错误: %v", fullPathToRead, err)
 			continue // 跳过无法读取的文件
 		}
 
@@ -242,7 +241,7 @@ func UpdateTemp(c *gin.Context) {
 		utils.FailWithMsg(c, "旧文件不存在")
 		return
 	} else if err != nil {
-		log.Println("检查旧文件存在性失败:", err)
+		utils.Error("检查旧文件存在性失败: %v", err)
 		utils.FailWithMsg(c, "服务器错误：检查旧文件失败")
 		return
 	}
@@ -253,7 +252,7 @@ func UpdateTemp(c *gin.Context) {
 			utils.FailWithMsg(c, "新文件名已存在，请选择其他名称")
 			return
 		} else if !os.IsNotExist(err) {
-			log.Println("检查新文件存在性失败:", err)
+			utils.Error("检查新文件存在性失败: %v", err)
 			utils.FailWithMsg(c, "服务器错误：检查新文件失败")
 			return
 		}
@@ -263,7 +262,7 @@ func UpdateTemp(c *gin.Context) {
 	if oldFullPath != newFullPath {
 		err = os.Rename(oldFullPath, newFullPath)
 		if err != nil {
-			log.Println("文件改名失败:", err)
+			utils.Error("文件改名失败: %v", err)
 			utils.FailWithMsg(c, "改名失败")
 			return
 		}
@@ -272,7 +271,7 @@ func UpdateTemp(c *gin.Context) {
 	// 写入文件内容到新的安全路径
 	err = os.WriteFile(newFullPath, []byte(text), 0666)
 	if err != nil {
-		log.Println("修改文件内容失败:", err)
+		utils.Error("修改文件内容失败: %v", err)
 		utils.FailWithMsg(c, "修改失败")
 		return
 	}
@@ -287,7 +286,7 @@ func UpdateTemp(c *gin.Context) {
 			RuleSource: ruleSource,
 		}
 		if err := tmpl.Add(); err != nil {
-			log.Printf("创建模板元数据失败: %v", err)
+			utils.Error("创建模板元数据失败: %v", err)
 		}
 	} else {
 		// 更新现有记录
@@ -295,7 +294,7 @@ func UpdateTemp(c *gin.Context) {
 		tmpl.Category = category
 		tmpl.RuleSource = ruleSource
 		if err := tmpl.Update(); err != nil {
-			log.Printf("更新模板元数据失败: %v", err)
+			utils.Error("更新模板元数据失败: %v", err)
 		}
 	}
 
@@ -320,7 +319,7 @@ func AddTemp(c *gin.Context) {
 	// 确保模板目录存在
 	if _, err := os.Stat(baseTemplateDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(baseTemplateDir, 0755); err != nil {
-			log.Println("创建模板目录失败:", err)
+			utils.Error("创建模板目录失败: %v", err)
 			utils.FailWithMsg(c, "服务器错误：无法创建模板目录")
 			return
 		}
@@ -338,7 +337,7 @@ func AddTemp(c *gin.Context) {
 		utils.FailWithMsg(c, "文件已存在")
 		return
 	} else if !os.IsNotExist(err) {
-		log.Println("检查文件存在性失败:", err)
+		utils.Error("检查文件存在性失败: %v", err)
 		utils.FailWithMsg(c, "服务器错误：检查文件失败")
 		return
 	}
@@ -346,7 +345,7 @@ func AddTemp(c *gin.Context) {
 	// 写入文件
 	err = os.WriteFile(fullPath, []byte(text), 0666)
 	if err != nil {
-		log.Println("写入文件失败:", err)
+		utils.Error("写入文件失败: %v", err)
 		utils.FailWithMsg(c, "上传失败")
 		return
 	}
@@ -358,7 +357,7 @@ func AddTemp(c *gin.Context) {
 		RuleSource: ruleSource,
 	}
 	if err := tmpl.Add(); err != nil {
-		log.Printf("创建模板元数据失败: %v", err)
+		utils.Error("创建模板元数据失败: %v", err)
 	}
 
 	utils.OkWithMsg(c, "上传成功")
@@ -384,7 +383,7 @@ func DelTemp(c *gin.Context) {
 		utils.FailWithMsg(c, "文件不存在")
 		return
 	} else if err != nil {
-		log.Println("检查文件存在性失败:", err)
+		utils.Error("检查文件存在性失败: %v", err)
 		utils.FailWithMsg(c, "服务器错误：检查文件失败")
 		return
 	}
@@ -392,7 +391,7 @@ func DelTemp(c *gin.Context) {
 	// 删除文件
 	err = os.Remove(fullPath)
 	if err != nil {
-		log.Println("删除文件失败:", err)
+		utils.Error("删除文件失败: %v", err)
 		utils.FailWithMsg(c, "删除失败")
 		return
 	}
@@ -401,7 +400,7 @@ func DelTemp(c *gin.Context) {
 	var tmpl models.Template
 	if err := tmpl.FindByName(filename); err == nil {
 		if err := tmpl.Delete(); err != nil {
-			log.Printf("删除模板元数据失败: %v", err)
+			utils.Error("删除模板元数据失败: %v", err)
 		}
 	}
 

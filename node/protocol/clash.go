@@ -3,7 +3,6 @@ package protocol
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -388,7 +387,7 @@ func EncodeClash(urls []Urls, sqlconfig utils.SqlConfig) ([]byte, error) {
 	for _, link := range urls {
 		proxy, err := LinkToProxy(link, sqlconfig)
 		if err != nil {
-			log.Println(err)
+			utils.Error(err.Error())
 			continue
 		}
 		proxys = append(proxys, proxy)
@@ -407,19 +406,19 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 	if strings.Contains(yamlfile, "://") {
 		resp, err := http.Get(yamlfile)
 		if err != nil {
-			log.Println("http.Get error", err)
+			utils.Error("http.Get error: %v", err)
 			return nil, err
 		}
 		defer resp.Body.Close()
 		data, err = io.ReadAll(resp.Body)
 		if err != nil {
-			log.Printf("error: %v", err)
+			utils.Error("error: %v", err)
 			return nil, err
 		}
 	} else {
 		data, err = os.ReadFile(yamlfile)
 		if err != nil {
-			log.Printf("error: %v", err)
+			utils.Error("error: %v", err)
 			return nil, err
 		}
 	}
@@ -427,7 +426,7 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 	config := make(map[interface{}]interface{})
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
-		log.Printf("error: %v", err)
+		utils.Error("error: %v", err)
 		return nil, err
 	}
 
@@ -517,7 +516,7 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 	// 将修改后的内容写回文件
 	newData, err := yaml.Marshal(config)
 	if err != nil {
-		log.Printf("error: %v", err)
+		utils.Error("error: %v", err)
 	}
 	return newData, nil
 }

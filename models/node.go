@@ -2,13 +2,13 @@ package models
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"sublink/cache"
 	"sublink/database"
+	"sublink/utils"
 	"time"
 
 	"gorm.io/gorm"
@@ -56,7 +56,7 @@ func init() {
 
 // InitNodeCache 初始化节点缓存
 func InitNodeCache() error {
-	log.Printf("加载节点列表到缓存")
+	utils.Info("加载节点列表到缓存")
 	var nodes []Node
 	if err := database.DB.Find(&nodes).Error; err != nil {
 		return err
@@ -64,7 +64,7 @@ func InitNodeCache() error {
 
 	// 使用批量加载方式初始化缓存
 	nodeCache.LoadAll(nodes)
-	log.Printf("节点缓存初始化完成，共加载 %d 个节点", nodeCache.Count())
+	utils.Info("节点缓存初始化完成，共加载 %d 个节点", nodeCache.Count())
 
 	// 注册到缓存管理器
 	cache.Manager.Register("node", nodeCache)
@@ -170,7 +170,7 @@ func BatchAddNodes(nodes []Node) error {
 		}).Create(&chunk)
 
 		if result.Error != nil {
-			log.Printf("批量插入节点块失败: %v", result.Error)
+			utils.Error("批量插入节点块失败: %v", result.Error)
 			// 继续处理下一个块，不中断
 			continue
 		}
@@ -184,7 +184,7 @@ func BatchAddNodes(nodes []Node) error {
 		}
 	}
 
-	log.Printf("批量添加节点完成: 尝试 %d 个，实际插入 %d 个（跳过已存在）", len(nodes), insertedCount)
+	utils.Info("批量添加节点完成: 尝试 %d 个，实际插入 %d 个（跳过已存在）", len(nodes), insertedCount)
 	return nil
 }
 
@@ -208,7 +208,7 @@ func BatchUpdateSpeedResults(results []SpeedTestResult) error {
 			"link_country":     r.LinkCountry,
 			"landing_ip":       r.LandingIP,
 		}).Error; err != nil {
-			log.Printf("更新节点 %d 测速结果失败: %v", r.NodeID, err)
+			utils.Error("更新节点 %d 测速结果失败: %v", r.NodeID, err)
 			// 继续处理下一个，不中断
 			continue
 		}
@@ -228,7 +228,7 @@ func BatchUpdateSpeedResults(results []SpeedTestResult) error {
 		}
 	}
 
-	log.Printf("批量更新测速结果完成: 尝试 %d 个，成功 %d 个", len(results), successCount)
+	utils.Info("批量更新测速结果完成: 尝试 %d 个，成功 %d 个", len(results), successCount)
 	return nil
 }
 
@@ -1117,7 +1117,7 @@ func InitNodeFieldsMeta() {
 		})
 	}
 
-	log.Printf("节点字段元数据初始化完成，共 %d 个字段可用于去重", len(nodeFieldsMetaCache))
+	utils.Info("节点字段元数据初始化完成，共 %d 个字段可用于去重", len(nodeFieldsMetaCache))
 }
 
 // GetNodeFieldsMeta 获取缓存的节点字段元数据

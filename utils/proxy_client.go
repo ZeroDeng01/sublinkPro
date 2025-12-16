@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -41,34 +40,34 @@ func CreateProxyHTTPClient(useProxy bool, proxyLink string, timeout time.Duratio
 	if proxyLink != "" {
 		// 使用指定的代理链接
 		proxyNodeLink = proxyLink
-		log.Printf("使用指定代理下载")
+		Info("使用指定代理下载")
 	} else if GetBestProxyNodeFunc != nil {
 		// 如果没有指定代理，尝试自动选择最佳代理
 		link, name, err := GetBestProxyNodeFunc()
 		if err == nil && link != "" {
-			log.Printf("自动选择最佳代理节点: %s", name)
+			Info("自动选择最佳代理节点: %s", name)
 			proxyNodeLink = link
 		}
 	}
 
 	if proxyNodeLink == "" {
-		log.Println("未找到可用代理，将直接下载")
+		Warn("未找到可用代理，将直接下载")
 		return client, "", nil
 	}
 
 	if GetMihomoAdapterFunc == nil {
-		log.Println("Mihomo 适配器未初始化，将直接下载")
+		Warn("Mihomo 适配器未初始化，将直接下载")
 		return client, "", nil
 	}
 
 	// 使用 mihomo 内核创建代理适配器
 	proxyAdapter, err := GetMihomoAdapterFunc(proxyNodeLink)
 	if err != nil {
-		log.Printf("创建 mihomo 代理适配器失败: %v，将直接下载", err)
+		Error("创建 mihomo 代理适配器失败: %v，将直接下载", err)
 		return client, "", nil
 	}
 
-	log.Printf("使用 mihomo 内核代理下载")
+	Info("使用 mihomo 内核代理下载")
 	// 创建自定义 Transport，使用 mihomo adapter 进行代理连接
 	client.Transport = &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
