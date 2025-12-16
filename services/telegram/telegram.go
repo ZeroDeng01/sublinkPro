@@ -63,17 +63,50 @@ func GetBot() *TelegramBot {
 
 // InitBot 初始化 Telegram 机器人
 func InitBot() error {
+	// 启动后台监控协程
+	go connectionMonitor()
+	return nil
+}
+
+// connectionMonitor Telegram 状态监控
+func connectionMonitor() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	// 首次立即执行
+	checkAndStart()
+
+	for range ticker.C {
+		checkAndStart()
+	}
+}
+
+// checkAndStart 检查并启动机器人
+func checkAndStart() {
 	config, err := LoadConfig()
 	if err != nil {
-		return fmt.Errorf("加载 Telegram 配置失败: %v", err)
+		log.Printf("[Telegram] 加载配置失败: %v", err)
+		return
 	}
 
+	// 如果未启用，确保机器人停止
 	if !config.Enabled || config.BotToken == "" {
-		log.Println("Telegram 机器人未启用或未配置 Token")
-		return nil
+		if GetBot() != nil {
+			StopBot()
+			log.Println("[Telegram] 机器人已禁用，停止运行")
+		}
+		return
 	}
 
-	return StartBot(config)
+	// 如果启用但未运行，尝试启动
+	if GetBot() == nil {
+		log.Println("[Telegram] 检测到机器人未运行，尝试启动...")
+		if err := StartBot(config); err != nil {
+			log.Printf("[Telegram] 启动失败: %v", err)
+		} else {
+			log.Println("[Telegram] 启动成功")
+		}
+	}
 }
 
 // LoadConfig 从数据库加载配置
@@ -139,9 +172,18 @@ func StartBot(config *Config) error {
 	}
 
 	// 创建 HTTP 客户端（可能带代理）
-	client, _, err := utils.CreateProxyHTTPClient(config.UseProxy, config.ProxyLink, 60*time.Second)
+	client, usedProxy, err := utils.CreateProxyHTTPClient(config.UseProxy, config.ProxyLink, 60*time.Second)
 	if err != nil {
 		return fmt.Errorf("创建 HTTP 客户端失败: %v", err)
+	}
+
+	// Telegram 必须通过代理访问（国内用户），如果配置了代理但未能获取则返回错误
+	if config.UseProxy && usedProxy == "" {
+		return fmt.Errorf("配置了使用代理但未能获取代理链接，请确保已配置代理节点或有可用的测速通过节点")
+	}
+
+	if config.UseProxy {
+		log.Printf("[Telegram] 使用代理连接: %s", usedProxy)
 	}
 
 	bot := &TelegramBot{
@@ -337,8 +379,9 @@ func (b *TelegramBot) getUpdates() ([]Update, error) {
 	}
 
 	var result struct {
-		OK     bool     `json:"ok"`
-		Result []Update `json:"result"`
+		OK          bool     `json:"ok"`
+		Result      []Update `json:"result"`
+		Description string   `json:"description"`
 	}
 
 	if err := json.Unmarshal(resp, &result); err != nil {
@@ -346,7 +389,7 @@ func (b *TelegramBot) getUpdates() ([]Update, error) {
 	}
 
 	if !result.OK {
-		return nil, fmt.Errorf("获取更新失败")
+		return nil, fmt.Errorf("获取更新失败: %s", result.Description)
 	}
 
 	return result.Result, nil
