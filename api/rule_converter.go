@@ -276,26 +276,17 @@ func generateClashRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxy
 					rules = append(rules, fmt.Sprintf("%s,%s", rule, rs.Group))
 				}
 			} else if strings.HasPrefix(rs.RuleURL, "http") {
-				// 远程规则，解析出名称和类型
+				// 远程规则，解析出名称
+				// ACL4SSR 的 .list 文件是 classical 类型，包含混合规则
 				providerName, behavior := parseProviderInfo(rs.RuleURL)
 
-				// 生成两个 provider: Domain 和 IP-CIDR
-				domainName := providerName + " (Domain)"
-				ipcidrName := providerName + " (IP-CIDR)"
-
-				// 添加 Domain 规则
-				rules = append(rules, fmt.Sprintf("RULE-SET,%s,%s", domainName, rs.Group))
-				// 添加 IP-CIDR 规则
-				rules = append(rules, fmt.Sprintf("RULE-SET,%s,%s,no-resolve", ipcidrName, rs.Group))
+				// 添加 RULE-SET 引用
+				rules = append(rules, fmt.Sprintf("RULE-SET,%s,%s", providerName, rs.Group))
 
 				// 添加 provider 定义（避免重复）
-				if !providerIndex[domainName] {
-					providerIndex[domainName] = true
-					providers = append(providers, generateProvider(domainName, rs.RuleURL, "domain", behavior))
-				}
-				if !providerIndex[ipcidrName] {
-					providerIndex[ipcidrName] = true
-					providers = append(providers, generateProvider(ipcidrName, rs.RuleURL, "ipcidr", behavior))
+				if !providerIndex[providerName] {
+					providerIndex[providerName] = true
+					providers = append(providers, generateProvider(providerName, rs.RuleURL, behavior, behavior))
 				}
 			}
 		}
