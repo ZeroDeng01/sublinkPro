@@ -59,9 +59,34 @@ jobs:
           path: webs/dist/
           retention-days: 1
 
+  # 使用矩阵策略并发构建不同架构的二进制文件
   build-go-binaries:
     needs: build-frontend
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false  # 允许其他架构继续构建，即使某个失败
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            output: sublinkPro-linux-amd64
+            upx: true
+          - goos: linux
+            goarch: arm64
+            output: sublinkPro-linux-arm64
+            upx: true
+          - goos: windows
+            goarch: amd64
+            output: sublinkPro-windows-amd64.exe
+            upx: false
+          - goos: darwin
+            goarch: amd64
+            output: sublinkPro-darwin-amd64
+            upx: false
+          - goos: darwin
+            goarch: arm64
+            output: sublinkPro-darwin-arm64
+            upx: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -89,37 +114,81 @@ jobs:
           echo "$TAG_NAME" > VERSION
           echo "Written version $TAG_NAME to VERSION file"
 
-      - name: Build Go binaries
+      - name: Build Go binary for ${{ matrix.goos }}/${{ matrix.goarch }}
         run: |
           mkdir -p build
-          # Build binaries with embedded frontend (CGO_ENABLED=0 for static linking with Alpine)
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-linux-amd64 .
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-linux-arm64 .
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-windows-amd64.exe .
-          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-darwin-amd64 .
-          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -tags=prod -ldflags="-s -w" -o build/sublinkPro-darwin-arm64 .
+          echo "Building ${{ matrix.output }} for ${{ matrix.goos }}/${{ matrix.goarch }}..."
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -tags=prod -ldflags="-s -w" -o build/${{ matrix.output }} .
+          echo "Build completed. Binary size:"
+          ls -lh build/${{ matrix.output }}
 
-      - name: Compress binaries with UPX
+      - name: Compress binary with UPX
+        if: matrix.upx
         run: |
-          # Install UPX
+          # 安装 UPX
           sudo apt-get update && sudo apt-get install -y upx
           
-          # Show original sizes
-          echo "=== Original binary sizes ==="
-          ls -lh build/
+          echo "=== Original binary size ==="
+          ls -lh build/${{ matrix.output }}
           
-          # Compress Linux binaries (best compression)
-          upx --best --lzma build/sublinkPro-linux-amd64 || true
-          upx --best --lzma build/sublinkPro-linux-arm64 || true
+          # 使用最佳压缩率压缩 Linux 二进制文件
+          upx --best --lzma build/${{ matrix.output }} || true
           
-          # Note: Windows exe compression may trigger antivirus false positives
-          # Note: macOS binaries are not compressed due to code signing issues
-          
-          # Show compressed sizes
-          echo "=== Compressed binary sizes ==="
-          ls -lh build/
+          echo "=== Compressed binary size ==="
+          ls -lh build/${{ matrix.output }}
 
-      - name: Upload binary artifacts
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build/${{ matrix.output }}
+          retention-days: 1
+
+  # 合并所有架构的二进制文件
+  merge-binaries:
+    needs: build-go-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: build/
+          merge-multiple: true
+
+      - name: Verify all binaries
+        run: |
+          echo "=== All binary files ==="
+          ls -lh build/
+          
+          # 验证所有必需的二进制文件都存在
+          REQUIRED_FILES=(
+            "sublinkPro-linux-amd64"
+            "sublinkPro-linux-arm64"
+            "sublinkPro-windows-amd64.exe"
+            "sublinkPro-darwin-amd64"
+            "sublinkPro-darwin-arm64"
+          )
+          
+          MISSING=0
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "build/$file" ]; then
+              echo "ERROR: Missing required binary: $file"
+              MISSING=1
+            else
+              echo "OK: $file exists"
+            fi
+          done
+          
+          if [ $MISSING -eq 1 ]; then
+            echo "ERROR: Some required binaries are missing!"
+            exit 1
+          fi
+          
+          echo "=== All binaries verified successfully ==="
+
+      - name: Upload merged binaries
         uses: actions/upload-artifact@v4
         with:
           name: go-binaries
@@ -128,7 +197,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: build-go-binaries
+    needs: merge-binaries
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -188,7 +257,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-docker:
-    needs: [build-frontend, build-go-binaries]
+    needs: [build-frontend, merge-binaries]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
