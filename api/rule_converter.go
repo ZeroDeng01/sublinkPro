@@ -331,13 +331,15 @@ func parseProviderInfo(url string) (name string, behavior string) {
 }
 
 // generateProvider 生成单个 provider 的 YAML
+// 生成 rule-providers 配置，使用 text 格式
 func generateProvider(name, url, ruleType, behavior string) string {
 	var lines []string
 	lines = append(lines, fmt.Sprintf("  %s:", name))
 	lines = append(lines, "    type: http")
 	lines = append(lines, fmt.Sprintf("    behavior: %s", ruleType))
 	lines = append(lines, fmt.Sprintf("    url: %s", url))
-	lines = append(lines, "    path: ./providers/"+strings.ReplaceAll(name, " ", "_")+".yaml")
+	lines = append(lines, "    format: text")
+	lines = append(lines, "    path: ./providers/"+strings.ReplaceAll(name, " ", "_")+".txt")
 	lines = append(lines, "    interval: 86400")
 	return strings.Join(lines, "\n")
 }
