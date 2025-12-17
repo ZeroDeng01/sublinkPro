@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sublink/cache"
 	"sublink/utils"
@@ -169,12 +168,11 @@ func DecodeSurge(proxys, groups []string, file string) (string, error) {
 		}
 	}
 
-	// 按行处理模板文件，避免正则匹配错误
+	// 按行处理模板文件
 	lines := strings.Split(string(surge), "\n")
 	var result []string
 	currentSection := ""
 	grouplist := strings.Join(groups, ", ")
-	regexPattern := regexp.MustCompile(`\([^)]+\|[^)]+\)`)
 
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
@@ -195,17 +193,14 @@ func DecodeSurge(proxys, groups []string, file string) (string, error) {
 
 		// 处理 [Proxy Group] section 中的代理组行
 		if currentSection == "[Proxy Group]" && strings.Contains(line, "=") && trimmedLine != "" {
-			// 检查这一行是否包含正则模式
-			hasRegex := regexPattern.MatchString(line)
-
-			if hasRegex {
-				// 处理行中的正则模式，替换为匹配的节点
-				processedLine := processRegexPatternsInLine(line, groups)
-				line = strings.TrimSpace(processedLine)
-			} else {
-				// 没有正则模式，追加所有节点
-				line = strings.TrimSpace(line) + ", " + grouplist
+			// 如果已有 include-all-proxies，说明使用 filter 模式，跳过节点插入
+			if strings.Contains(line, "include-all-proxies") {
+				result = append(result, line)
+				continue
 			}
+
+			// 没有 include-all-proxies，追加所有节点
+			line = strings.TrimSpace(line) + ", " + grouplist
 			// 确保代理组有有效节点
 			line = ensureProxyGroupHasProxies(line)
 		}
@@ -214,23 +209,6 @@ func DecodeSurge(proxys, groups []string, file string) (string, error) {
 	}
 
 	return strings.Join(result, "\n"), nil
-}
-
-// processRegexPatternsInLine 处理 Surge proxy group 行中的正则模式
-func processRegexPatternsInLine(line string, nodeNames []string) string {
-	// 查找所有 (x|y|z) 形式的模式
-	regexPattern := regexp.MustCompile(`\([^)]+\|[^)]+\)`)
-
-	return regexPattern.ReplaceAllStringFunc(line, func(pattern string) string {
-		if utils.IsRegexProxyPattern(pattern) {
-			matchedNodes := utils.MatchNodesByRegexPattern(pattern, nodeNames)
-			if len(matchedNodes) > 0 {
-				return strings.Join(matchedNodes, ", ")
-			}
-			return "" // 没有匹配则删除
-		}
-		return pattern
-	})
 }
 
 // ensureProxyGroupHasProxies 检查 Surge 代理组行是否有有效节点

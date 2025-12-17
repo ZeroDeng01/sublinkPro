@@ -215,6 +215,7 @@ func parseProxyGroup(line string) ACLProxyGroup {
 }
 
 // generateClashProxyGroups 生成 Clash 格式的代理组
+// 支持 mihomo 内核的 include-all + filter 参数
 func generateClashProxyGroups(groups []ACLProxyGroup) string {
 	var lines []string
 	lines = append(lines, "proxy-groups:")
@@ -236,18 +237,67 @@ func generateClashProxyGroups(groups []ACLProxyGroup) string {
 			}
 			lines = append(lines, fmt.Sprintf("    interval: %d", interval))
 
-			if g.Tolerance > 0 {
-				lines = append(lines, fmt.Sprintf("    tolerance: %d", g.Tolerance))
+			tolerance := g.Tolerance
+			if tolerance <= 0 {
+				tolerance = 150
+			}
+			lines = append(lines, fmt.Sprintf("    tolerance: %d", tolerance))
+		}
+
+		// 分离正则模式和策略组引用
+		var regexFilters []string
+		var normalProxies []string
+		for _, proxy := range g.Proxies {
+			if isRegexProxyPattern(proxy) {
+				regexFilters = append(regexFilters, proxy)
+			} else {
+				normalProxies = append(normalProxies, proxy)
 			}
 		}
 
-		lines = append(lines, "    proxies:")
-		for _, proxy := range g.Proxies {
-			lines = append(lines, fmt.Sprintf("      - %s", proxy))
+		// 如果有正则模式，使用 include-all + filter
+		if len(regexFilters) > 0 {
+			lines = append(lines, "    include-all: true")
+			// 合并多个正则为一个 filter（用 | 连接内部内容）
+			lines = append(lines, fmt.Sprintf("    filter: %s", mergeRegexFilters(regexFilters)))
+		}
+
+		// 输出 proxies（策略组引用或空）
+		if len(normalProxies) > 0 {
+			lines = append(lines, "    proxies:")
+			for _, proxy := range normalProxies {
+				lines = append(lines, fmt.Sprintf("      - %s", proxy))
+			}
 		}
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// isRegexProxyPattern 检测是否是正则代理模式
+// 格式: (选项1|选项2|选项3)
+func isRegexProxyPattern(proxy string) bool {
+	proxy = strings.TrimSpace(proxy)
+	if len(proxy) < 3 {
+		return false
+	}
+	return strings.HasPrefix(proxy, "(") && strings.HasSuffix(proxy, ")") && strings.Contains(proxy, "|")
+}
+
+// mergeRegexFilters 合并多个正则过滤器
+// 输入: ["(香港|HK)", "(日本|JP)"]
+// 输出: "(香港|HK|日本|JP)"
+func mergeRegexFilters(filters []string) string {
+	if len(filters) == 1 {
+		return filters[0]
+	}
+	var allOptions []string
+	for _, f := range filters {
+		// 去除首尾括号，提取内部选项
+		inner := strings.TrimPrefix(strings.TrimSuffix(f, ")"), "(")
+		allOptions = append(allOptions, inner)
+	}
+	return "(" + strings.Join(allOptions, "|") + ")"
 }
 
 // generateClashRules 生成 Clash 格式的规则
@@ -469,44 +519,95 @@ func isUnsupportedClashRule(rule string, expand bool) bool {
 }
 
 // generateSurgeProxyGroups 生成 Surge 格式的代理组
+// 支持 policy-regex-filter 和 include-all-proxies 参数
 func generateSurgeProxyGroups(groups []ACLProxyGroup) string {
 	var lines []string
 	lines = append(lines, "[Proxy Group]")
 
 	for _, g := range groups {
-		// 如果代理列表为空，使用 DIRECT 作为后备
-		proxies := g.Proxies
-		if len(proxies) == 0 {
-			proxies = []string{"DIRECT"}
+		// 分离正则模式和策略组引用
+		var regexFilters []string
+		var normalProxies []string
+		for _, proxy := range g.Proxies {
+			if isRegexProxyPattern(proxy) {
+				regexFilters = append(regexFilters, proxy)
+			} else {
+				normalProxies = append(normalProxies, proxy)
+			}
 		}
-		proxiesStr := strings.Join(proxies, ", ")
+
 		var line string
 
 		if g.Type == "url-test" || g.Type == "fallback" {
-			// url-test 和 fallback 类型需要添加测速参数
-			// 格式: name = url-test, proxy1, proxy2, url = xxx, interval = xxx, timeout = 5, tolerance = xxx
 			url := g.URL
 			if url == "" {
 				url = "http://www.gstatic.com/generate_204"
 			}
 			interval := g.Interval
 			if interval <= 0 {
-				interval = 600
+				interval = 300
 			}
 			tolerance := g.Tolerance
 			if tolerance <= 0 {
-				tolerance = 200
+				tolerance = 150
 			}
-			line = fmt.Sprintf("%s = %s, %s, url = %s, interval = %d, timeout = 5, tolerance = %d",
-				g.Name, g.Type, proxiesStr, url, interval, tolerance)
+
+			// 如果有正则模式，使用 include-all-proxies + policy-regex-filter
+			if len(regexFilters) > 0 {
+				filter := extractSurgeRegexFilter(regexFilters)
+				if len(normalProxies) > 0 {
+					// 有策略组引用时也输出
+					line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d, policy-regex-filter=%s, include-all-proxies=1",
+						g.Name, g.Type, strings.Join(normalProxies, ", "), url, interval, tolerance, filter)
+				} else {
+					line = fmt.Sprintf("%s = %s, url=%s, interval=%d, timeout=5, tolerance=%d, policy-regex-filter=%s, include-all-proxies=1",
+						g.Name, g.Type, url, interval, tolerance, filter)
+				}
+			} else {
+				// 无正则模式，使用普通格式
+				proxies := normalProxies
+				if len(proxies) == 0 {
+					proxies = []string{"DIRECT"}
+				}
+				line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d",
+					g.Name, g.Type, strings.Join(proxies, ", "), url, interval, tolerance)
+			}
 		} else {
 			// select, load-balance 等类型
-			line = fmt.Sprintf("%s = %s, %s", g.Name, g.Type, proxiesStr)
+			if len(regexFilters) > 0 {
+				filter := extractSurgeRegexFilter(regexFilters)
+				if len(normalProxies) > 0 {
+					line = fmt.Sprintf("%s = %s, %s, policy-regex-filter=%s, include-all-proxies=1",
+						g.Name, g.Type, strings.Join(normalProxies, ", "), filter)
+				} else {
+					line = fmt.Sprintf("%s = %s, policy-regex-filter=%s, include-all-proxies=1",
+						g.Name, g.Type, filter)
+				}
+			} else {
+				proxies := normalProxies
+				if len(proxies) == 0 {
+					proxies = []string{"DIRECT"}
+				}
+				line = fmt.Sprintf("%s = %s, %s", g.Name, g.Type, strings.Join(proxies, ", "))
+			}
 		}
 		lines = append(lines, line)
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// extractSurgeRegexFilter 从正则模式列表中提取 Surge 格式的 filter
+// 输入: ["(香港|HK)", "(日本|JP)"]
+// 输出: "香港|HK|日本|JP"
+func extractSurgeRegexFilter(filters []string) string {
+	var allOptions []string
+	for _, f := range filters {
+		// 去除首尾括号，提取内部选项
+		inner := strings.TrimPrefix(strings.TrimSuffix(f, ")"), "(")
+		allOptions = append(allOptions, inner)
+	}
+	return strings.Join(allOptions, "|")
 }
 
 // generateSurgeRules 生成 Surge 格式的规则

@@ -456,67 +456,45 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 	// proxies = append(proxies, newProxy)
 	config["proxies"] = proxies
 	// 往ProxyGroup中插入代理列表
-	// ProxiesNameList := []string{"newProxy", "ceshi"}
 	proxyGroups := config["proxy-groups"].([]interface{})
 	for i, pg := range proxyGroups {
 		proxyGroup, ok := pg.(map[string]interface{})
 		if !ok {
 			continue
 		}
-		// 如果 proxyGroup["proxies"] 是 nil，初始化它为一个空的切片
-		if proxyGroup["proxies"] == nil {
-			proxyGroup["proxies"] = []interface{}{}
-		}
-		// 如果为链式代理的话则不插入返回
-		// log.Print("代理类型为:", proxyGroup["type"])
+
+		// 链式代理不处理
 		if proxyGroup["type"] == "relay" {
-			break
+			continue
 		}
 
-		// 检查是否包含正则模式
-		hasRegexPattern := false
-		for _, p := range proxyGroup["proxies"].([]interface{}) {
-			if p == nil {
-				continue
-			}
-			proxyStr, ok := p.(string)
-			if ok && utils.IsRegexProxyPattern(proxyStr) {
-				hasRegexPattern = true
-				break
-			}
+		// 如果已有 include-all: true，说明使用 filter 模式，跳过节点插入
+		if includeAll, ok := proxyGroup["include-all"].(bool); ok && includeAll {
+			continue
 		}
 
-		// 处理代理列表
+		// 获取现有的 proxies 列表
+		var existingProxies []interface{}
+		if proxyGroup["proxies"] != nil {
+			existingProxies, _ = proxyGroup["proxies"].([]interface{})
+		}
+
+		// 合并现有代理和新节点
 		var validProxies []interface{}
-		for _, p := range proxyGroup["proxies"].([]interface{}) {
-			if p == nil {
-				continue
-			}
-			proxyStr, ok := p.(string)
-			if ok && utils.IsRegexProxyPattern(proxyStr) {
-				// 处理正则模式，匹配节点名称
-				matchedNodes := utils.MatchNodesByRegexPattern(proxyStr, ProxiesNameList)
-				for _, nodeName := range matchedNodes {
-					validProxies = append(validProxies, nodeName)
-				}
-			} else {
+		for _, p := range existingProxies {
+			if p != nil {
 				validProxies = append(validProxies, p)
 			}
 		}
-
-		// 只有当组中没有正则模式时，才添加所有新代理
-		// 如果有正则模式，则只使用匹配的节点，不添加全部节点
-		if !hasRegexPattern {
-			for _, newProxy := range ProxiesNameList {
-				validProxies = append(validProxies, newProxy)
-			}
+		for _, newProxy := range ProxiesNameList {
+			validProxies = append(validProxies, newProxy)
 		}
 
-		// 如果代理组的节点列表为空，插入 DIRECT 作为后备
-		// 这样可以避免 Clash 客户端因空代理组而报错
+		// 如果代理组为空，插入 DIRECT 作为后备
 		if len(validProxies) == 0 {
 			validProxies = append(validProxies, "DIRECT")
 		}
+
 		proxyGroup["proxies"] = validProxies
 		proxyGroups[i] = proxyGroup
 	}
