@@ -368,6 +368,12 @@ CalculateSpeed:
 		return 0, latency, totalRead, "", nil
 	}
 
+	// 最小有效下载量校验（10KB），避免因下载量过小导致速度虚高
+	const minValidBytes int64 = 10 * 1024 // 10KB
+	if totalRead < minValidBytes {
+		return 0, latency, totalRead, "", fmt.Errorf("下载量过小 (%d 字节 < %d 字节)，结果不可靠", totalRead, minValidBytes)
+	}
+
 	// 根据模式选择返回值
 	if speedRecordMode == "peak" && peakSpeed > 0 {
 		// 使用峰值速度
