@@ -296,8 +296,8 @@ func generateClashRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxy
 	var lines []string
 	lines = append(lines, "rules:")
 	for _, rule := range rules {
-		// 跳过 Clash 不支持的规则类型
-		if isUnsupportedClashRule(rule) {
+		// 跳过 Clash 不支持的规则类型（expand 模式下才过滤 RULE-SET）
+		if isUnsupportedClashRule(rule, expand) {
 			continue
 		}
 		lines = append(lines, fmt.Sprintf("  - %s", rule))
@@ -438,7 +438,8 @@ func parseRuleList(content string, group string) []string {
 
 // isUnsupportedClashRule 检查是否为 Clash 不支持的规则类型
 // Surge 特有的规则类型在 Clash 中不可用，需要过滤
-func isUnsupportedClashRule(rule string) bool {
+// expand 参数控制是否过滤 RULE-SET（只在展开模式下过滤）
+func isUnsupportedClashRule(rule string, expand bool) bool {
 	// Clash 不支持的规则类型前缀
 	unsupportedPrefixes := []string{
 		"URL-REGEX,",  // URL 正则匹配
@@ -450,7 +451,11 @@ func isUnsupportedClashRule(rule string) bool {
 		"PROTOCOL,",  // 协议匹配
 		"SCRIPT,",    // 脚本规则
 		"SUBNET,",    // 子网匹配
-		"RULE-SET,",  // RULE-SET 在展开模式下不应出现
+	}
+
+	// RULE-SET 只在展开模式下过滤（展开后不应有 RULE-SET 引用）
+	if expand {
+		unsupportedPrefixes = append(unsupportedPrefixes, "RULE-SET,")
 	}
 
 	for _, prefix := range unsupportedPrefixes {
