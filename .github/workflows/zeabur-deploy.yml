@@ -1,0 +1,61 @@
+# Zeabur 自动部署 Workflow
+# 当 Build and Release Multi-Platform 完成 Docker 镜像推送后，自动触发 Zeabur 部署
+# 使用 Zeabur 官方 CLI 工具: https://github.com/zeabur/cli
+name: Deploy to Zeabur
+
+on:
+  workflow_run:
+    workflows: ["Build and Release Multi-Platform"]
+    types:
+      - completed
+
+# 显式声明权限，遵循最小权限原则
+# 此工作流仅需要读取权限，不需要写入仓库任何内容
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    # 仅在上游 workflow 成功完成时运行
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Wait for Docker image availability
+        run: |
+          echo "等待 Docker 镜像在 Docker Hub 上可用..."
+          sleep 30
+
+      - name: Deploy to Zeabur using CLI
+        run: |
+          echo "使用 Zeabur CLI 触发重新部署..."
+          
+          # 需要在 GitHub Secrets 中配置:
+          # - ZEABUR_TOKEN: 在 https://dash.zeabur.com/account/developer 获取
+          # - ZEABUR_PROJECT_ID: 项目 ID（从 Zeabur 控制台 URL 获取，格式: /projects/<project-id>/...）
+          # - ZEABUR_ENV_ID: 环境 ID（从 Zeabur 控制台 URL 获取）
+          # - ZEABUR_SERVICE_ID: 服务 ID（从 Zeabur 控制台 URL 获取，格式: /projects/<project-id>/services/<service-id>）
+          
+          # 使用 token 登录（非交互模式）
+          npx zeabur auth login --token "${{ secrets.ZEABUR_TOKEN }}"
+          
+          # 设置 project context（必须）
+          npx zeabur context set project --id "${{ secrets.ZEABUR_PROJECT_ID }}"
+          
+          # 重启服务以触发重新部署
+          npx zeabur service restart -i=false \
+            --env-id "${{ secrets.ZEABUR_ENV_ID }}" \
+            --id "${{ secrets.ZEABUR_SERVICE_ID }}"
+          
+          echo "✅ Zeabur 部署触发成功！"
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Zeabur 部署摘要" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**触发 Workflow**: ${{ github.event.workflow_run.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**部署时间**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
