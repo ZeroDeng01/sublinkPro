@@ -24,6 +24,7 @@ import {
   updateSubscription,
   deleteSubscription,
   sortSubscription,
+  copySubscription,
   previewSubscriptionNodes
 } from 'api/subscriptions';
 import { getNodes, getNodeCountries, getNodeGroups, getNodeSources } from 'api/nodes';
@@ -320,6 +321,20 @@ export default function SubscriptionList() {
       } catch (error) {
         console.error(error);
         showMessage('删除失败', 'error');
+      }
+    });
+  };
+
+  // 复制订阅
+  const handleCopy = async (sub) => {
+    openConfirm('复制订阅', `确定要复制订阅 "${sub.Name}" 吗？`, async () => {
+      try {
+        await copySubscription(sub.ID);
+        showMessage('复制成功');
+        fetchSubscriptions(page, rowsPerPage);
+      } catch (error) {
+        console.error(error);
+        showMessage('复制失败', 'error');
       }
     });
   };
@@ -727,6 +742,7 @@ export default function SubscriptionList() {
           onLogs={handleLogs}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onCopy={handleCopy}
           onPreview={handlePreviewSubscription}
           onStartSort={handleStartSort}
           onConfirmSort={handleConfirmSort}
@@ -748,6 +764,7 @@ export default function SubscriptionList() {
           onLogs={handleLogs}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onCopy={handleCopy}
           onPreview={handlePreviewSubscription}
           onStartSort={handleStartSort}
           onConfirmSort={handleConfirmSort}

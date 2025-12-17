@@ -86,6 +86,15 @@ export function sortSubscription(data) {
   });
 }
 
+// 复制订阅
+export function copySubscription(id) {
+  return request({
+    url: '/v1/subcription/copy',
+    method: 'post',
+    params: { id }
+  });
+}
+
 // 预览订阅节点
 // data: { Nodes, Groups, DelayTime, MinSpeed, CountryWhitelist, ... }
 export function previewSubscriptionNodes(data) {

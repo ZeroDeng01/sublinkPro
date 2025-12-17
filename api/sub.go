@@ -355,6 +355,36 @@ func SubDel(c *gin.Context) {
 	utils.OkWithMsg(c, "删除成功")
 }
 
+// SubCopy 复制订阅
+func SubCopy(c *gin.Context) {
+	var sub models.Subcription
+	id := c.Query("id")
+	if id == "" {
+		utils.FailWithMsg(c, "id 不能为空")
+		return
+	}
+	x, err := strconv.Atoi(id)
+	if err != nil {
+		utils.FailWithMsg(c, "id 格式错误")
+		return
+	}
+	sub.ID = x
+	err = sub.Find()
+	if err != nil {
+		utils.FailWithMsg(c, "订阅不存在")
+		return
+	}
+
+	// 执行复制
+	newSub, err := sub.Copy()
+	if err != nil {
+		utils.FailWithMsg(c, "复制失败: "+err.Error())
+		return
+	}
+
+	utils.OkDetailed(c, "复制成功", newSub)
+}
+
 func SubSort(c *gin.Context) {
 	var subNodeSort dto.SubcriptionNodeSortUpdate
 	err := c.BindJSON(&subNodeSort)

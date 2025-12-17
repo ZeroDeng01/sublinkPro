@@ -12,6 +12,7 @@ import SortableNodeList from './SortableNodeList';
 // icons
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import HistoryIcon from '@mui/icons-material/History';
 import SortIcon from '@mui/icons-material/Sort';
@@ -35,6 +36,7 @@ export default function SubscriptionMobileCard({
   onLogs,
   onEdit,
   onDelete,
+  onCopy,
   onPreview,
   onStartSort,
   onConfirmSort,
@@ -113,6 +115,9 @@ export default function SubscriptionMobileCard({
                     </IconButton>
                   </>
                 )}
+                <IconButton size="small" color="secondary" onClick={() => onCopy(sub)}>
+                  <ContentCopyIcon fontSize="small" />
+                </IconButton>
                 <IconButton size="small" color="error" onClick={() => onDelete(sub)}>
                   <DeleteIcon fontSize="small" />
                 </IconButton>

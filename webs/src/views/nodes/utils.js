@@ -29,7 +29,7 @@ export const SPEED_TEST_MIHOMO_OPTIONS = [
 export const LATENCY_TEST_URL_OPTIONS = [
   { label: 'Cloudflare 204 (推荐)', value: 'https://cp.cloudflare.com/generate_204' },
   { label: 'Apple 204', value: 'https://captive.apple.com/generate_204' },
-  { label: 'Gstatic 204', value: 'https://www.gstatic.com/generate_204' },
+  { label: 'Gstatic 204', value: 'https://www.gstatic.com/generate_204' }
 ];
 
 // 落地IP查询接口选项

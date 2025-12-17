@@ -214,10 +214,10 @@ export default function WebhookSettings({ showMessage, loading, setLoading }) {
             </Paper>
             <Alert severity="info" sx={{ mt: 1 }}>
               <Typography variant="caption">
-                支持变量: {"{{title}}"} 消息标题, {"{{message}}"} 消息内容, {"{{event}}"} 事件类型, {"{{time}}"} 事件时间, {"{{json .}}"}{" "}
+                支持变量: {'{{title}}'} 消息标题, {'{{message}}'} 消息内容, {'{{event}}'} 事件类型, {'{{time}}'} 事件时间, {'{{json .}}'}{' '}
                 原始json数据
                 <br />
-                例如 Bark URL: https://api.day.app/key/{"{{title}}"}/{"{{message}}"}
+                例如 Bark URL: https://api.day.app/key/{'{{title}}'}/{'{{message}}'}
               </Typography>
             </Alert>
           </Box>

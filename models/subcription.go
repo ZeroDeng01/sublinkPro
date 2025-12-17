@@ -764,6 +764,106 @@ func (sub *Subcription) Del() error {
 	return nil
 }
 
+// Copy 复制订阅及其关联数据（节点、分组、脚本）
+// 新订阅名称为：原名称_复制
+func (sub *Subcription) Copy() (*Subcription, error) {
+	// 创建新订阅对象，复制所有配置字段
+	newSub := &Subcription{
+		Name:               sub.Name + "_复制",
+		Config:             sub.Config,
+		CreateDate:         time.Now().Format("2006-01-02 15:04:05"),
+		IPWhitelist:        sub.IPWhitelist,
+		IPBlacklist:        sub.IPBlacklist,
+		DelayTime:          sub.DelayTime,
+		MinSpeed:           sub.MinSpeed,
+		CountryWhitelist:   sub.CountryWhitelist,
+		CountryBlacklist:   sub.CountryBlacklist,
+		NodeNameRule:       sub.NodeNameRule,
+		NodeNamePreprocess: sub.NodeNamePreprocess,
+		NodeNameWhitelist:  sub.NodeNameWhitelist,
+		NodeNameBlacklist:  sub.NodeNameBlacklist,
+		TagWhitelist:       sub.TagWhitelist,
+		TagBlacklist:       sub.TagBlacklist,
+		DeduplicationRule:  sub.DeduplicationRule,
+	}
+
+	// 使用事务确保数据一致性
+	tx := database.DB.Begin()
+	if tx.Error != nil {
+		return nil, fmt.Errorf("开启事务失败: %w", tx.Error)
+	}
+
+	// 创建新订阅
+	if err := tx.Create(newSub).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("创建订阅失败: %w", err)
+	}
+
+	// 复制节点关联
+	var nodes []SubcriptionNode
+	if err := database.DB.Where("subcription_id = ?", sub.ID).Find(&nodes).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("查询节点关联失败: %w", err)
+	}
+	for _, node := range nodes {
+		newNode := SubcriptionNode{
+			SubcriptionID: newSub.ID,
+			NodeName:      node.NodeName,
+			Sort:          node.Sort,
+		}
+		if err := tx.Create(&newNode).Error; err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("复制节点关联失败: %w", err)
+		}
+	}
+
+	// 复制分组关联
+	var groups []SubcriptionGroup
+	if err := database.DB.Where("subcription_id = ?", sub.ID).Find(&groups).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("查询分组关联失败: %w", err)
+	}
+	for _, group := range groups {
+		newGroup := SubcriptionGroup{
+			SubcriptionID: newSub.ID,
+			GroupName:     group.GroupName,
+			Sort:          group.Sort,
+		}
+		if err := tx.Create(&newGroup).Error; err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("复制分组关联失败: %w", err)
+		}
+	}
+
+	// 复制脚本关联
+	var scripts []SubcriptionScript
+	if err := database.DB.Where("subcription_id = ?", sub.ID).Find(&scripts).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("查询脚本关联失败: %w", err)
+	}
+	for _, script := range scripts {
+		newScript := SubcriptionScript{
+			SubcriptionID: newSub.ID,
+			ScriptID:      script.ScriptID,
+			Sort:          script.Sort,
+		}
+		if err := tx.Create(&newScript).Error; err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("复制脚本关联失败: %w", err)
+		}
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("提交事务失败: %w", err)
+	}
+
+	// 更新缓存
+	subcriptionCache.Set(newSub.ID, *newSub)
+
+	return newSub, nil
+}
+
 func (sub *Subcription) Sort(subNodeSort dto.SubcriptionNodeSortUpdate) error {
 	tx := database.DB.Begin()
 	if tx.Error != nil {
