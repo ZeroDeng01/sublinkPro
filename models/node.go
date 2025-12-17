@@ -151,36 +151,41 @@ type SpeedTestResult struct {
 	LandingIP      string
 }
 
-// BatchAddNodes 批量添加节点（跳过重复节点）
-// 使用 ON CONFLICT DO NOTHING 跳过已存在的节点，不会因为重复而失败
+// BatchAddNodes 批量添加节点（高效 + 容错）
+// 优化策略：
+// 1. 分块处理避免 SQLite 变量限制
+// 2. 使用 ON CONFLICT DO NOTHING 跳过已存在的节点
+// 3. 批量插入失败时，降级到逐条插入以保证容错性
+// 4. 单条失败只记录日志，不影响其他节点
 func BatchAddNodes(nodes []Node) error {
 	if len(nodes) == 0 {
 		return nil
 	}
 
-	// 分块处理，避免 SQLite 变量限制
-	// 使用 ON CONFLICT DO NOTHING 跳过重复的 link，不中断批量插入
+	// 分块处理
 	chunks := chunkNodes(nodes, database.BatchSize)
 	insertedCount := 0
 
-	for _, chunk := range chunks {
+	for chunkIdx, chunk := range chunks {
+		// 尝试批量插入
 		result := database.DB.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "link"}},
 			DoNothing: true,
 		}).Create(&chunk)
 
 		if result.Error != nil {
-			utils.Error("批量插入节点块失败: %v", result.Error)
-			// 继续处理下一个块，不中断
-			continue
-		}
-		insertedCount += int(result.RowsAffected)
-	}
-
-	// 批量更新缓存（只更新成功插入的，有ID的节点）
-	for _, node := range nodes {
-		if node.ID > 0 {
-			nodeCache.Set(node.ID, node)
+			// 批量插入失败，降级到逐条插入
+			utils.Warn("分块 %d 批量插入失败，降级到逐条插入: %v", chunkIdx, result.Error)
+			individualInserted := fallbackToIndividualNodeInsert(chunk)
+			insertedCount += individualInserted
+		} else {
+			insertedCount += int(result.RowsAffected)
+			// 批量更新缓存（只更新成功插入的，有ID的节点）
+			for i := range chunk {
+				if chunk[i].ID > 0 {
+					nodeCache.Set(chunk[i].ID, chunk[i])
+				}
+			}
 		}
 	}
 
@@ -188,11 +193,38 @@ func BatchAddNodes(nodes []Node) error {
 	return nil
 }
 
-// BatchUpdateSpeedResults 批量更新测速结果（允许部分失败）
+// fallbackToIndividualNodeInsert 降级到逐条插入节点（容错）
+func fallbackToIndividualNodeInsert(nodes []Node) int {
+	insertedCount := 0
+	for i := range nodes {
+		// 使用 ON CONFLICT DO NOTHING 跳过已存在的节点
+		result := database.DB.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "link"}},
+			DoNothing: true,
+		}).Create(&nodes[i])
+
+		if result.Error != nil {
+			utils.Error("节点 [%s] 插入失败: %v", nodes[i].Name, result.Error)
+			continue
+		}
+
+		if result.RowsAffected > 0 {
+			insertedCount++
+			// 更新缓存
+			if nodes[i].ID > 0 {
+				nodeCache.Set(nodes[i].ID, nodes[i])
+			}
+		}
+	}
+	return insertedCount
+}
+
+// BatchUpdateSpeedResults 批量更新测速结果（高效 + 容错）
 // 优化策略：
 // 1. 分块处理避免 SQLite 变量限制和长时间锁定
-// 2. 每个分块使用独立事务，分块失败不阻塞其他分块
-// 3. 单条更新失败只记录日志，继续处理其他条目
+// 2. 每块使用 CASE WHEN 批量更新（一条 SQL 更新多条记录）
+// 3. 批量更新失败时，降级到逐条更新以保证容错性
+// 4. 单条失败只记录日志，不影响其他记录
 func BatchUpdateSpeedResults(results []SpeedTestResult) error {
 	if len(results) == 0 {
 		return nil
@@ -203,52 +235,142 @@ func BatchUpdateSpeedResults(results []SpeedTestResult) error {
 	totalAttempts := len(results)
 
 	for chunkIdx, chunk := range chunks {
-		// 每个分块使用独立事务，减少单次事务的锁持有时间
-		chunkSuccess := 0
-		err := database.WithTransaction(func(tx *gorm.DB) error {
-			for _, r := range chunk {
-				if err := tx.Model(&Node{}).Where("id = ?", r.NodeID).Updates(map[string]interface{}{
-					"speed":            r.Speed,
-					"speed_status":     r.SpeedStatus,
-					"delay_time":       r.DelayTime,
-					"delay_status":     r.DelayStatus,
-					"latency_check_at": r.LatencyCheckAt,
-					"speed_check_at":   r.SpeedCheckAt,
-					"link_country":     r.LinkCountry,
-					"landing_ip":       r.LandingIP,
-				}).Error; err != nil {
-					// 单条失败记录日志但不中断事务
-					utils.Error("更新节点 %d 测速结果失败: %v", r.NodeID, err)
-					continue
-				}
-				chunkSuccess++
-
-				// 即时更新缓存
-				if cachedNode, ok := nodeCache.Get(r.NodeID); ok {
-					cachedNode.Speed = r.Speed
-					cachedNode.SpeedStatus = r.SpeedStatus
-					cachedNode.DelayTime = r.DelayTime
-					cachedNode.DelayStatus = r.DelayStatus
-					cachedNode.LatencyCheckAt = r.LatencyCheckAt
-					cachedNode.SpeedCheckAt = r.SpeedCheckAt
-					cachedNode.LinkCountry = r.LinkCountry
-					cachedNode.LandingIP = r.LandingIP
-					nodeCache.Set(r.NodeID, cachedNode)
-				}
-			}
-			return nil // 事务始终提交成功的部分
-		})
-
-		if err != nil {
-			utils.Error("批量更新分块 %d 事务失败: %v", chunkIdx, err)
-			// 继续处理下一个分块
+		// 尝试使用 CASE WHEN 批量更新
+		batchSuccess, batchErr := tryBatchUpdateWithCaseWhen(chunk)
+		if batchErr == nil {
+			successCount += batchSuccess
+			// 批量更新成功，批量更新缓存
+			batchUpdateNodeCache(chunk)
 		} else {
-			successCount += chunkSuccess
+			// 批量更新失败，降级到逐条更新
+			utils.Warn("分块 %d 批量更新失败，降级到逐条更新: %v", chunkIdx, batchErr)
+			individualSuccess := fallbackToIndividualSpeedUpdate(chunk)
+			successCount += individualSuccess
 		}
 	}
 
 	utils.Info("批量更新测速结果完成: 尝试 %d 个，成功 %d 个，分 %d 块处理", totalAttempts, successCount, len(chunks))
 	return nil
+}
+
+// speedResultField 定义测速结果字段的映射关系
+type speedResultField struct {
+	column    string                         // 数据库列名
+	valueFunc func(r SpeedTestResult) string // 获取值的函数
+}
+
+// speedResultFields 测速结果字段映射表（新增字段只需在此处添加）
+var speedResultFields = []speedResultField{
+	{"speed", func(r SpeedTestResult) string { return fmt.Sprintf("%f", r.Speed) }},
+	{"speed_status", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.SpeedStatus)) }},
+	{"delay_time", func(r SpeedTestResult) string { return fmt.Sprintf("%d", r.DelayTime) }},
+	{"delay_status", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.DelayStatus)) }},
+	{"latency_check_at", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.LatencyCheckAt)) }},
+	{"speed_check_at", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.SpeedCheckAt)) }},
+	{"link_country", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.LinkCountry)) }},
+	{"landing_ip", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.LandingIP)) }},
+}
+
+// tryBatchUpdateWithCaseWhen 使用 CASE WHEN 批量更新（高效）
+// 生成形如: UPDATE nodes SET speed = CASE id WHEN 1 THEN 100.5 WHEN 2 THEN 200.3 END, ... WHERE id IN (1,2)
+func tryBatchUpdateWithCaseWhen(chunk []SpeedTestResult) (int, error) {
+	if len(chunk) == 0 {
+		return 0, nil
+	}
+
+	var sb strings.Builder
+	sb.WriteString("UPDATE nodes SET ")
+
+	// 遍历字段映射表，生成 CASE WHEN 语句
+	for i, field := range speedResultFields {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(field.column)
+		sb.WriteString(" = CASE id ")
+		for _, r := range chunk {
+			sb.WriteString(fmt.Sprintf("WHEN %d THEN %s ", r.NodeID, field.valueFunc(r)))
+		}
+		sb.WriteString("END")
+	}
+
+	// WHERE 子句
+	sb.WriteString(" WHERE id IN (")
+	for i, r := range chunk {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(fmt.Sprintf("%d", r.NodeID))
+	}
+	sb.WriteString(")")
+
+	// 执行 SQL
+	result := database.DB.Exec(sb.String())
+
+	if result.Error != nil {
+		return 0, result.Error
+	}
+
+	return int(result.RowsAffected), nil
+}
+
+// escapeSQL 转义 SQL 字符串中的特殊字符，防止 SQL 注入
+func escapeSQL(s string) string {
+	return strings.ReplaceAll(s, "'", "''")
+}
+
+// batchUpdateNodeCache 批量更新节点缓存
+func batchUpdateNodeCache(chunk []SpeedTestResult) {
+	for _, r := range chunk {
+		if cachedNode, ok := nodeCache.Get(r.NodeID); ok {
+			cachedNode.Speed = r.Speed
+			cachedNode.SpeedStatus = r.SpeedStatus
+			cachedNode.DelayTime = r.DelayTime
+			cachedNode.DelayStatus = r.DelayStatus
+			cachedNode.LatencyCheckAt = r.LatencyCheckAt
+			cachedNode.SpeedCheckAt = r.SpeedCheckAt
+			cachedNode.LinkCountry = r.LinkCountry
+			cachedNode.LandingIP = r.LandingIP
+			nodeCache.Set(r.NodeID, cachedNode)
+		}
+	}
+}
+
+// fallbackToIndividualSpeedUpdate 降级到逐条更新（容错）
+func fallbackToIndividualSpeedUpdate(chunk []SpeedTestResult) int {
+	successCount := 0
+	for _, r := range chunk {
+		err := database.DB.Model(&Node{}).Where("id = ?", r.NodeID).Updates(map[string]interface{}{
+			"speed":            r.Speed,
+			"speed_status":     r.SpeedStatus,
+			"delay_time":       r.DelayTime,
+			"delay_status":     r.DelayStatus,
+			"latency_check_at": r.LatencyCheckAt,
+			"speed_check_at":   r.SpeedCheckAt,
+			"link_country":     r.LinkCountry,
+			"landing_ip":       r.LandingIP,
+		}).Error
+
+		if err != nil {
+			utils.Error("节点 ID=%d 更新失败: %v", r.NodeID, err)
+			continue
+		}
+		successCount++
+
+		// 逐条更新缓存
+		if cachedNode, ok := nodeCache.Get(r.NodeID); ok {
+			cachedNode.Speed = r.Speed
+			cachedNode.SpeedStatus = r.SpeedStatus
+			cachedNode.DelayTime = r.DelayTime
+			cachedNode.DelayStatus = r.DelayStatus
+			cachedNode.LatencyCheckAt = r.LatencyCheckAt
+			cachedNode.SpeedCheckAt = r.SpeedCheckAt
+			cachedNode.LinkCountry = r.LinkCountry
+			cachedNode.LandingIP = r.LandingIP
+			nodeCache.Set(r.NodeID, cachedNode)
+		}
+	}
+	return successCount
 }
 
 // chunkSpeedResults 将测速结果切片分块
