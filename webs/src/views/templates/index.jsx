@@ -433,7 +433,18 @@ export default function TemplateList() {
                 if (typeof option === 'string') return option;
                 return option.label || option.url || '';
               }}
-              value={formData.ruleSource}
+              isOptionEqualToValue={(option, value) => {
+                // 如果 value 是字符串，比较 URL
+                if (typeof value === 'string') {
+                  return option.url === value;
+                }
+                // 如果 value 是对象，比较 URL
+                return option.url === value?.url;
+              }}
+              value={
+                // 如果 ruleSource 匹配某个预设的 URL，返回该预设对象
+                aclPresets.find((preset) => preset.url === formData.ruleSource) || formData.ruleSource
+              }
               onChange={(event, newValue) => {
                 if (typeof newValue === 'string') {
                   setFormData({ ...formData, ruleSource: newValue });
