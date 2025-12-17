@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"sublink/api"
+	"sublink/cache"
 	"sublink/config"
 	"sublink/database"
 	"sublink/models"
@@ -342,6 +343,8 @@ func Run() {
 	if err := models.InitTemplateCache(); err != nil {
 		utils.Error("加载模板到缓存失败: %v", err)
 	}
+	// 初始化模板内容缓存
+	cache.InitTemplateContentCache()
 	if err := models.InitTagCache(); err != nil {
 		utils.Error("加载标签到缓存失败: %v", err)
 	}

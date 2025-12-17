@@ -6,8 +6,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"sublink/cache"
 	"sublink/utils"
 )
 
@@ -152,10 +154,18 @@ func DecodeSurge(proxys, groups []string, file string) (string, error) {
 			return "", err
 		}
 	} else {
-		surge, err = os.ReadFile(file)
-		if err != nil {
-			log.Println(err)
-			return "", err
+		// 优先从缓存读取模板内容（本地文件使用缓存）
+		filename := filepath.Base(file)
+		if cached, ok := cache.GetTemplateContent(filename); ok {
+			surge = []byte(cached)
+		} else {
+			surge, err = os.ReadFile(file)
+			if err != nil {
+				log.Println(err)
+				return "", err
+			}
+			// 写入缓存
+			cache.SetTemplateContent(filename, string(surge))
 		}
 	}
 

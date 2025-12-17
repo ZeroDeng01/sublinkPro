@@ -781,7 +781,9 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 				// mihomo模式下，延迟测试占前半部分
 				progressTotal = totalNodes * 2
 			}
-			tm.UpdateProgress(taskID, progressCurrent, n.Name, map[string]interface{}{
+			// 格式化节点显示项（包含分组和来源信息，方便手机端查看）
+			currentItemDisplay := formatNodeDisplayItem(n.Name, n.Group, n.Source)
+			tm.UpdateProgress(taskID, progressCurrent, currentItemDisplay, map[string]interface{}{
 				"status":  resultStatus,
 				"phase":   "latency",
 				"latency": latency,
@@ -1007,7 +1009,9 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 				trafficAcc.mutex.Unlock()
 
 				// 更新任务进度（速度测试占后50%）
-				tm.UpdateProgress(taskID, totalNodes+currentCompleted, result.node.Name, map[string]interface{}{
+				// 格式化节点显示项（包含分组和来源信息，方便手机端查看）
+				currentItemDisplay := formatNodeDisplayItem(result.node.Name, result.node.Group, result.node.Source)
+				tm.UpdateProgress(taskID, totalNodes+currentCompleted, currentItemDisplay, map[string]interface{}{
 					"status":  resultStatus,
 					"phase":   "speed",
 					"speed":   result.node.Speed,
@@ -1168,4 +1172,25 @@ func formatBytes(bytes int64) string {
 	}
 
 	return fmt.Sprintf("%.2f %s", float64(bytes)/float64(div), units[exp+1])
+}
+
+// formatNodeDisplayItem 格式化节点进度显示项（包含分组和来源信息）
+// 格式: 节点名称 · 分组 · 来源（移动端友好的紧凑格式）
+func formatNodeDisplayItem(name, group, source string) string {
+	parts := []string{name}
+
+	if group != "" {
+		parts = append(parts, group)
+	}
+
+	// 来源处理：manual 显示为"手动添加"，空时不显示
+	if source != "" {
+		if source == "manual" {
+			parts = append(parts, "手动添加")
+		} else {
+			parts = append(parts, source)
+		}
+	}
+
+	return strings.Join(parts, " · ")
 }

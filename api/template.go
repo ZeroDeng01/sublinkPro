@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sublink/cache"
 	"sublink/models"
 	"sublink/utils"
 
@@ -128,11 +129,20 @@ func GetTempS(c *gin.Context) {
 		}
 		modTime := info.ModTime().Format("2006-01-02 15:04:05")
 
-		// 使用经过安全验证的完整路径来读取文件内容
-		text, err := os.ReadFile(fullPathToRead)
-		if err != nil {
-			utils.Error("读取文件内容失败: %s, 错误: %v", fullPathToRead, err)
-			continue // 跳过无法读取的文件
+		// 优先从缓存读取模板内容
+		var textContent string
+		if cached, ok := cache.GetTemplateContent(file.Name()); ok {
+			textContent = cached
+		} else {
+			// 缓存未命中，从文件读取并写入缓存
+			textBytes, readErr := os.ReadFile(fullPathToRead)
+			if readErr != nil {
+				utils.Error("读取文件内容失败: %s, 错误: %v", fullPathToRead, readErr)
+				continue // 跳过无法读取的文件
+			}
+			textContent = string(textBytes)
+			// 写入缓存
+			cache.SetTemplateContent(file.Name(), textContent)
 		}
 
 		// 从数据库获取模板元数据
@@ -146,7 +156,7 @@ func GetTempS(c *gin.Context) {
 
 		temp := Temp{
 			File:       file.Name(),
-			Text:       string(text),
+			Text:       textContent,
 			Category:   category,
 			RuleSource: ruleSource,
 			CreateDate: modTime,
@@ -276,6 +286,13 @@ func UpdateTemp(c *gin.Context) {
 		return
 	}
 
+	// 同步更新模板内容缓存
+	if oldname != filename {
+		// 文件名变更，先删除旧缓存
+		cache.InvalidateTemplateContent(oldname)
+	}
+	cache.SetTemplateContent(filename, text)
+
 	// 更新数据库中的模板元数据
 	var tmpl models.Template
 	if err := tmpl.FindByName(oldname); err != nil {
@@ -350,6 +367,9 @@ func AddTemp(c *gin.Context) {
 		return
 	}
 
+	// 写入模板内容缓存
+	cache.SetTemplateContent(filename, text)
+
 	// 创建数据库记录
 	tmpl := models.Template{
 		Name:       filename,
@@ -395,6 +415,9 @@ func DelTemp(c *gin.Context) {
 		utils.FailWithMsg(c, "删除失败")
 		return
 	}
+
+	// 清除模板内容缓存
+	cache.InvalidateTemplateContent(filename)
 
 	// 删除数据库记录
 	var tmpl models.Template

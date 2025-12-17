@@ -189,47 +189,83 @@ func BatchAddNodes(nodes []Node) error {
 }
 
 // BatchUpdateSpeedResults 批量更新测速结果（允许部分失败）
-// 单个节点更新失败不会影响其他节点的更新
+// 优化策略：
+// 1. 分块处理避免 SQLite 变量限制和长时间锁定
+// 2. 每个分块使用独立事务，分块失败不阻塞其他分块
+// 3. 单条更新失败只记录日志，继续处理其他条目
 func BatchUpdateSpeedResults(results []SpeedTestResult) error {
 	if len(results) == 0 {
 		return nil
 	}
 
-	// 逐个更新，失败时记录日志但继续处理
+	chunks := chunkSpeedResults(results, database.BatchSize)
 	successCount := 0
-	for _, r := range results {
-		if err := database.DB.Model(&Node{}).Where("id = ?", r.NodeID).Updates(map[string]interface{}{
-			"speed":            r.Speed,
-			"speed_status":     r.SpeedStatus,
-			"delay_time":       r.DelayTime,
-			"delay_status":     r.DelayStatus,
-			"latency_check_at": r.LatencyCheckAt,
-			"speed_check_at":   r.SpeedCheckAt,
-			"link_country":     r.LinkCountry,
-			"landing_ip":       r.LandingIP,
-		}).Error; err != nil {
-			utils.Error("更新节点 %d 测速结果失败: %v", r.NodeID, err)
-			// 继续处理下一个，不中断
-			continue
-		}
-		successCount++
+	totalAttempts := len(results)
 
-		// 更新缓存
-		if cachedNode, ok := nodeCache.Get(r.NodeID); ok {
-			cachedNode.Speed = r.Speed
-			cachedNode.SpeedStatus = r.SpeedStatus
-			cachedNode.DelayTime = r.DelayTime
-			cachedNode.DelayStatus = r.DelayStatus
-			cachedNode.LatencyCheckAt = r.LatencyCheckAt
-			cachedNode.SpeedCheckAt = r.SpeedCheckAt
-			cachedNode.LinkCountry = r.LinkCountry
-			cachedNode.LandingIP = r.LandingIP
-			nodeCache.Set(r.NodeID, cachedNode)
+	for chunkIdx, chunk := range chunks {
+		// 每个分块使用独立事务，减少单次事务的锁持有时间
+		chunkSuccess := 0
+		err := database.WithTransaction(func(tx *gorm.DB) error {
+			for _, r := range chunk {
+				if err := tx.Model(&Node{}).Where("id = ?", r.NodeID).Updates(map[string]interface{}{
+					"speed":            r.Speed,
+					"speed_status":     r.SpeedStatus,
+					"delay_time":       r.DelayTime,
+					"delay_status":     r.DelayStatus,
+					"latency_check_at": r.LatencyCheckAt,
+					"speed_check_at":   r.SpeedCheckAt,
+					"link_country":     r.LinkCountry,
+					"landing_ip":       r.LandingIP,
+				}).Error; err != nil {
+					// 单条失败记录日志但不中断事务
+					utils.Error("更新节点 %d 测速结果失败: %v", r.NodeID, err)
+					continue
+				}
+				chunkSuccess++
+
+				// 即时更新缓存
+				if cachedNode, ok := nodeCache.Get(r.NodeID); ok {
+					cachedNode.Speed = r.Speed
+					cachedNode.SpeedStatus = r.SpeedStatus
+					cachedNode.DelayTime = r.DelayTime
+					cachedNode.DelayStatus = r.DelayStatus
+					cachedNode.LatencyCheckAt = r.LatencyCheckAt
+					cachedNode.SpeedCheckAt = r.SpeedCheckAt
+					cachedNode.LinkCountry = r.LinkCountry
+					cachedNode.LandingIP = r.LandingIP
+					nodeCache.Set(r.NodeID, cachedNode)
+				}
+			}
+			return nil // 事务始终提交成功的部分
+		})
+
+		if err != nil {
+			utils.Error("批量更新分块 %d 事务失败: %v", chunkIdx, err)
+			// 继续处理下一个分块
+		} else {
+			successCount += chunkSuccess
 		}
 	}
 
-	utils.Info("批量更新测速结果完成: 尝试 %d 个，成功 %d 个", len(results), successCount)
+	utils.Info("批量更新测速结果完成: 尝试 %d 个，成功 %d 个，分 %d 块处理", totalAttempts, successCount, len(chunks))
 	return nil
+}
+
+// chunkSpeedResults 将测速结果切片分块
+func chunkSpeedResults(results []SpeedTestResult, chunkSize int) [][]SpeedTestResult {
+	if chunkSize <= 0 {
+		chunkSize = database.BatchSize
+	}
+
+	var chunks [][]SpeedTestResult
+	for i := 0; i < len(results); i += chunkSize {
+		end := i + chunkSize
+		if end > len(results) {
+			end = len(results)
+		}
+		chunks = append(chunks, results[i:end])
+	}
+	return chunks
 }
 
 // chunkNodes 将节点切片分块

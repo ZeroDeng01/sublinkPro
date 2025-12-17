@@ -5,8 +5,10 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sublink/cache"
 	"sublink/utils"
 
 	"gopkg.in/yaml.v3"
@@ -416,10 +418,18 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 			return nil, err
 		}
 	} else {
-		data, err = os.ReadFile(yamlfile)
-		if err != nil {
-			utils.Error("error: %v", err)
-			return nil, err
+		// 优先从缓存读取模板内容（本地文件使用缓存）
+		filename := filepath.Base(yamlfile)
+		if cached, ok := cache.GetTemplateContent(filename); ok {
+			data = []byte(cached)
+		} else {
+			data, err = os.ReadFile(yamlfile)
+			if err != nil {
+				utils.Error("error: %v", err)
+				return nil, err
+			}
+			// 写入缓存
+			cache.SetTemplateContent(filename, string(data))
 		}
 	}
 	// 解析 YAML 文件
