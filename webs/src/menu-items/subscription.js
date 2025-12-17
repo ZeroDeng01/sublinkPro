@@ -1,4 +1,3 @@
-// assets
 import {
   IconNetwork,
   IconList,
@@ -8,7 +7,8 @@ import {
   IconSettings,
   IconDeviceDesktopAnalytics,
   IconTags,
-  IconListCheck
+  IconListCheck,
+  IconWorld
 } from '@tabler/icons-react';
 
 // ==============================|| SUBSCRIPTION MENU ITEMS ||============================== //
@@ -102,6 +102,14 @@ const system = {
       type: 'item',
       url: '/system/tasks',
       icon: IconListCheck,
+      breadcrumbs: true
+    },
+    {
+      id: 'hosts',
+      title: 'Host管理',
+      type: 'item',
+      url: '/system/hosts',
+      icon: IconWorld,
       breadcrumbs: true
     },
     {

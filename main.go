@@ -357,6 +357,9 @@ func Run() {
 	if err := models.InitIPInfoCache(); err != nil {
 		utils.Error("加载IP信息到缓存失败: %v", err)
 	}
+	if err := models.InitHostCache(); err != nil {
+		utils.Error("加载Host到缓存失败: %v", err)
+	}
 
 	// 初始化去重字段元数据缓存（通过反射扫描协议结构体和Node模型）
 	protocol.InitProtocolMeta()
@@ -437,6 +440,7 @@ func Run() {
 	routers.Tag(r)
 	routers.Tasks(r)
 	routers.GeoIP(r)
+	routers.Host(r)
 
 	// 处理前端路由 (SPA History Mode)
 	// 必须在所有 backend 路由注册之后注册
