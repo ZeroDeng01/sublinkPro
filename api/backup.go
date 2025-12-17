@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sublink/config"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
@@ -24,13 +25,38 @@ func Backup(c *gin.Context) {
 	zipWriter := zip.NewWriter(tmpFile)
 	// defer zipWriter.Close() // 不在这里 defer，我们需要在发送文件前手动 Close
 
-	// 需要备份的文件夹列表
-	folders := []string{"db", "template"}
+	// 获取配置的数据库目录路径
+	dbPath := config.GetDBPath()
+
+	// 获取模板目录路径（基于当前工作目录）
+	templatePath := "template"
+	if cwd, err := os.Getwd(); err == nil {
+		templatePath = filepath.Join(cwd, "template")
+	}
+
+	// 备份目录配置：源路径 -> zip 内的目录名
+	type backupFolder struct {
+		sourcePath string // 实际文件系统路径
+		zipName    string // zip 中的目录名称
+	}
+	folders := []backupFolder{
+		{sourcePath: dbPath, zipName: "db"},
+		{sourcePath: templatePath, zipName: "template"},
+	}
 
 	// 遍历文件夹并添加到zip文件中
 	for _, folder := range folders {
+		baseDir := folder.sourcePath
+		zipPrefix := folder.zipName
+
 		// filepath.Walk 会遍历所有子文件和子目录
-		walkErr := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+		walkErr := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			// 计算相对路径
+			relPath, err := filepath.Rel(baseDir, path)
 			if err != nil {
 				return err
 			}
@@ -41,8 +67,12 @@ func Backup(c *gin.Context) {
 				return err
 			}
 
-			// 保持文件夹结构
-			header.Name = path // 使用相对路径
+			// 构建 zip 中的路径：zipPrefix + 相对路径
+			if relPath == "." {
+				header.Name = zipPrefix
+			} else {
+				header.Name = filepath.ToSlash(filepath.Join(zipPrefix, relPath))
+			}
 
 			// 如果是目录，需要以/结尾
 			if info.IsDir() {
@@ -79,7 +109,7 @@ func Backup(c *gin.Context) {
 
 		// 在 Walk 循环结束后，统一检查错误
 		if walkErr != nil {
-			utils.FailWithMsg(c, "Failed to walk folder '"+folder+"': "+walkErr.Error())
+			utils.FailWithMsg(c, "备份目录 '"+zipPrefix+"' 失败: "+walkErr.Error())
 			return
 		}
 	}

@@ -25,7 +25,7 @@ func InitDemoData() {
 	initDemoTags()
 
 	// 创建演示订阅
-	//initDemoSubscriptions()
+	initDemoSubscriptions()
 
 	// 刷新缓存
 	refreshDemoCaches()
@@ -219,9 +219,13 @@ func initDemoTags() {
 
 // initDemoSubscriptions 创建演示订阅
 func initDemoSubscriptions() {
+	// 默认订阅配置 JSON（包含模板路径和选项）
+	defaultConfig := `{"clash":"./template/clash.yaml","surge":"./template/surge.conf","udp":false,"cert":false}`
+
 	// 创建一个基础订阅
 	sub := &Subcription{
-		Name: "演示订阅-综合",
+		Name:   "演示订阅-综合",
+		Config: defaultConfig,
 	}
 	if err := sub.Add(); err != nil {
 		utils.Error("创建演示订阅失败: %v", err)
@@ -237,7 +241,8 @@ func initDemoSubscriptions() {
 
 	// 创建欧洲订阅
 	subEurope := &Subcription{
-		Name: "演示订阅-欧洲",
+		Name:   "演示订阅-欧洲",
+		Config: defaultConfig,
 	}
 	if err := subEurope.Add(); err != nil {
 		utils.Error("创建演示订阅失败: %v", err)
@@ -281,7 +286,7 @@ func ResetDemoData() {
 	database.DB.Exec("DELETE FROM subcription_nodes")
 	database.DB.Exec("DELETE FROM subcription_scripts")
 	database.DB.Exec("DELETE FROM users")
-	database.DB.Exec("DELETE FROM node_tags")
+	database.DB.Exec("DELETE FROM subcription_tags")
 
 	// 重新初始化演示数据
 	InitDemoData()
