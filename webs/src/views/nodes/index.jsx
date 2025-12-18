@@ -23,6 +23,7 @@ import TaskProgressPanel from 'components/TaskProgressPanel';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 import ConfirmDialog from 'components/ConfirmDialog';
 import Pagination from 'components/Pagination';
+import IPDetailsDialog from 'components/IPDetailsDialog';
 
 // api
 import {
@@ -55,7 +56,6 @@ import {
   BatchDialerProxyDialog,
   BatchTagDialog,
   BatchRemoveTagDialog,
-  IPDetailsDialog,
   NodeDetailsPanel,
   NodeFilters,
   BatchActions,
@@ -984,9 +984,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -1029,9 +1029,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />

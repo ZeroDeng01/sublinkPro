@@ -813,14 +813,15 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 						hostInfo := mihomo.GetProxyServerFromLink(n.Link)
 						// 只处理域名，跳过已是IP的地址
 						if hostInfo.Server != "" && !hostInfo.IsIP {
-							if resolvedIP := mihomo.ResolveProxyHost(hostInfo.Server); resolvedIP != "" {
+							if resolvedIP, dnsSource := mihomo.ResolveProxyHost(hostInfo.Server); resolvedIP != "" {
 								hostMu.Lock()
 								hostMappings = append(hostMappings, models.HostMappingInfo{
-									Hostname: hostInfo.Server,
-									IP:       resolvedIP,
-									NodeName: n.Name,
-									Group:    n.Group,
-									Source:   n.Source,
+									Hostname:  hostInfo.Server,
+									IP:        resolvedIP,
+									NodeName:  n.Name,
+									Group:     n.Group,
+									Source:    n.Source,
+									DNSSource: dnsSource,
 								})
 								hostMu.Unlock()
 							}
@@ -1066,14 +1067,15 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 						hostInfo := mihomo.GetProxyServerFromLink(result.node.Link)
 						// 只处理域名，跳过已是IP的地址
 						if hostInfo.Server != "" && !hostInfo.IsIP {
-							if resolvedIP := mihomo.ResolveProxyHost(hostInfo.Server); resolvedIP != "" {
+							if resolvedIP, dnsSource := mihomo.ResolveProxyHost(hostInfo.Server); resolvedIP != "" {
 								hostMu.Lock()
 								hostMappings = append(hostMappings, models.HostMappingInfo{
-									Hostname: hostInfo.Server,
-									IP:       resolvedIP,
-									NodeName: result.node.Name,
-									Group:    result.node.Group,
-									Source:   result.node.Source,
+									Hostname:  hostInfo.Server,
+									IP:        resolvedIP,
+									NodeName:  result.node.Name,
+									Group:     result.node.Group,
+									Source:    result.node.Source,
+									DNSSource: dnsSource,
 								})
 								hostMu.Unlock()
 							}

@@ -4,9 +4,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 
 // material-ui
 import Box from '@mui/material/Box';
-import Autocomplete from '@mui/material/Autocomplete';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
+
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
@@ -32,14 +30,6 @@ import DialogActions from '@mui/material/DialogActions';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Chip from '@mui/material/Chip';
-import Collapse from '@mui/material/Collapse';
-import Divider from '@mui/material/Divider';
-import FormControl from '@mui/material/FormControl';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import Switch from '@mui/material/Switch';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
@@ -54,28 +44,16 @@ import SaveIcon from '@mui/icons-material/Save';
 import UndoIcon from '@mui/icons-material/Undo';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SettingsIcon from '@mui/icons-material/Settings';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
-import {
-  getHosts,
-  addHost,
-  updateHost,
-  deleteHost,
-  batchDeleteHosts,
-  exportHosts,
-  syncHosts,
-  getHostSettings,
-  updateHostSettings,
-  pinHost
-} from 'api/hosts';
-import { getNodes } from 'api/nodes';
-import SearchableNodeSelect from '../../components/SearchableNodeSelect';
-import FormHelperText from '@mui/material/FormHelperText';
+import { getHosts, addHost, updateHost, deleteHost, batchDeleteHosts, exportHosts, syncHosts, pinHost } from 'api/hosts';
+
+import HostSettingsDialog from './component/HostSettingsDialog';
+import ConfirmDialog from 'components/ConfirmDialog';
+import IPDetailsDialog from 'components/IPDetailsDialog';
 
 // ==============================|| HOST MANAGEMENT ||============================== //
 
@@ -101,20 +79,30 @@ export default function HostManagement() {
   const [originalText, setOriginalText] = useState('');
   const [syncing, setSyncing] = useState(false);
 
-  // 模块设置相关状态
-  const [settingsExpanded, setSettingsExpanded] = useState(false);
-  const [settings, setSettings] = useState({
-    persist_host: false,
-    dns_server: '',
-    dns_presets: [],
-    expire_hours: 0,
-    dns_use_proxy: false,
-    dns_proxy_strategy: 'auto',
-    dns_proxy_node_id: 0
+  // 模块设置弹窗
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 确认对话框
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmInfo, setConfirmInfo] = useState({
+    title: '',
+    content: '',
+    onConfirm: null
   });
-  const [settingsLoading, setSettingsLoading] = useState(false);
-  const [proxyNodes, setProxyNodes] = useState([]); // 代理节点列表
-  const [loadingNodes, setLoadingNodes] = useState(false);
+
+  const openConfirm = (title, content, onConfirm) => {
+    setConfirmInfo({ title, content, onConfirm });
+    setConfirmOpen(true);
+  };
+
+  // IP详情弹窗
+  const [ipDialogOpen, setIpDialogOpen] = useState(false);
+  const [selectedIP, setSelectedIP] = useState('');
+
+  const handleIPClick = (ip) => {
+    setSelectedIP(ip);
+    setIpDialogOpen(true);
+  };
 
   // 获取 Host 列表
   const fetchHosts = async (showRefreshing = false) => {
@@ -128,23 +116,6 @@ export default function HostManagement() {
       showMessage('获取 Host 列表失败', 'error');
     } finally {
       if (showRefreshing) setRefreshing(false);
-    }
-  };
-
-  // 获取所有节点（用于代理选择）
-  const fetchAllNodes = async () => {
-    if (proxyNodes.length > 0) return; // 已加载则跳过
-    setLoadingNodes(true);
-    try {
-      // 不带分页参数获取所有节点
-      const res = await getNodes();
-      if (res.code === 200) {
-        setProxyNodes(res.data || []);
-      }
-    } catch {
-      showMessage('获取节点列表失败', 'error');
-    } finally {
-      setLoadingNodes(false);
     }
   };
 
@@ -164,31 +135,6 @@ export default function HostManagement() {
 
   useEffect(() => {
     fetchHosts();
-    // 加载模块设置
-    const loadSettings = async () => {
-      try {
-        const res = await getHostSettings();
-        if (res.code === 200) {
-          setSettings({
-            persist_host: res.data?.persist_host || false,
-            dns_server: res.data?.dns_server || '',
-            dns_presets: res.data?.dns_presets || [],
-            expire_hours: res.data?.expire_hours || 0,
-            dns_use_proxy: res.data?.dns_use_proxy || false,
-            dns_proxy_strategy: res.data?.dns_proxy_strategy || 'auto',
-            dns_proxy_node_id: res.data?.dns_proxy_node_id || 0
-          });
-
-          // 如果当前策略是手动，预加载节点列表
-          if (res.data?.dns_proxy_strategy === 'manual') {
-            fetchAllNodes();
-          }
-        }
-      } catch {
-        // 静默失败
-      }
-    };
-    loadSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -245,35 +191,37 @@ export default function HostManagement() {
   };
 
   const handleDelete = async (host) => {
-    if (!window.confirm(`确定删除 "${host.hostname}" 吗？`)) return;
-    try {
-      const res = await deleteHost(host.id);
-      if (res.code === 200) {
-        showMessage('删除成功');
-        fetchHosts();
-      } else {
-        showMessage(res.msg || '删除失败', 'error');
+    openConfirm('确定删除', `确定删除 "${host.hostname}" 吗？`, async () => {
+      try {
+        const res = await deleteHost(host.id);
+        if (res.code === 200) {
+          showMessage('删除成功');
+          fetchHosts();
+        } else {
+          showMessage(res.msg || '删除失败', 'error');
+        }
+      } catch {
+        showMessage('删除失败', 'error');
       }
-    } catch {
-      showMessage('删除失败', 'error');
-    }
+    });
   };
 
   const handleBatchDelete = async () => {
     if (selectedIds.length === 0) return;
-    if (!window.confirm(`确定删除选中的 ${selectedIds.length} 条记录吗？`)) return;
-    try {
-      const res = await batchDeleteHosts(selectedIds);
-      if (res.code === 200) {
-        showMessage('批量删除成功');
-        setSelectedIds([]);
-        fetchHosts();
-      } else {
-        showMessage(res.msg || '批量删除失败', 'error');
+    openConfirm('批量删除', `确定删除选中的 ${selectedIds.length} 条记录吗？`, async () => {
+      try {
+        const res = await batchDeleteHosts(selectedIds);
+        if (res.code === 200) {
+          showMessage('批量删除成功');
+          setSelectedIds([]);
+          fetchHosts();
+        } else {
+          showMessage(res.msg || '批量删除失败', 'error');
+        }
+      } catch {
+        showMessage('批量删除失败', 'error');
       }
-    } catch {
-      showMessage('批量删除失败', 'error');
-    }
+    });
   };
 
   const handleSave = async () => {
@@ -416,36 +364,47 @@ export default function HostManagement() {
 
   // 移动端 Host 卡片
   const MobileHostCard = ({ host }) => (
-    <Card
-      variant="outlined"
+    <MainCard
+      content={false}
+      border={false}
       sx={{
-        mb: 1.5,
-        borderRadius: 2,
+        mb: 2,
+        borderRadius: 3,
         transition: 'all 0.2s ease',
+        border: '1px solid',
+        borderColor: selectedIds.includes(host.id) ? theme.palette.primary.main : theme.palette.divider,
         borderLeft: selectedIds.includes(host.id)
           ? `4px solid ${theme.palette.primary.main}`
           : host.pinned
             ? `4px solid ${theme.palette.warning.main}`
-            : undefined,
-        '&:hover': { boxShadow: 2 }
+            : `1px solid ${theme.palette.divider}`,
+        '&:hover': {
+          boxShadow: theme.shadows[4],
+          transform: 'translateY(-2px)'
+        }
       }}
     >
-      <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-        <Stack spacing={1}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Checkbox size="small" checked={selectedIds.includes(host.id)} onChange={() => handleSelectOne(host.id)} />
-              <Typography variant="subtitle1" fontWeight={600} sx={{ wordBreak: 'break-all' }}>
-                {host.hostname}
-              </Typography>
-              {host.pinned && <PushPinIcon fontSize="small" color="warning" />}
+      <Box sx={{ p: 2 }}>
+        <Stack spacing={1.5}>
+          {/* 顶部：勾选 + 域名 + 操作 */}
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+              <Checkbox
+                size="small"
+                checked={selectedIds.includes(host.id)}
+                onChange={() => handleSelectOne(host.id)}
+                sx={{ p: 0.5, mt: -0.5 }}
+              />
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography variant="subtitle1" fontWeight={700} sx={{ wordBreak: 'break-all', lineHeight: 1.3 }}>
+                  {host.hostname}
+                </Typography>
+              </Box>
+              {host.pinned && <PushPinIcon fontSize="small" color="warning" sx={{ flexShrink: 0 }} />}
             </Box>
-            <Stack direction="row" spacing={0.5}>
-              <Tooltip title={host.pinned ? '取消固定' : '固定'}>
-                <IconButton size="small" onClick={() => handlePinHost(host)} color={host.pinned ? 'warning' : 'default'}>
-                  {host.pinned ? <PushPinIcon fontSize="small" /> : <PushPinOutlinedIcon fontSize="small" />}
-                </IconButton>
-              </Tooltip>
+
+            {/* 操作按钮 */}
+            <Stack direction="row" spacing={0} sx={{ mt: -0.5, mr: -1 }}>
               <Tooltip title="编辑">
                 <IconButton size="small" onClick={() => handleEdit(host)}>
                   <EditIcon fontSize="small" />
@@ -458,29 +417,69 @@ export default function HostManagement() {
               </Tooltip>
             </Stack>
           </Box>
-          <Box sx={{ pl: 4.5 }}>
-            <Chip label={host.ip} size="small" variant="outlined" sx={{ fontFamily: 'monospace', mb: 0.5 }} />
-            {host.remark && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                {host.remark}
-              </Typography>
-            )}
-            <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-              <Typography variant="caption" color="text.disabled">
-                更新于 {formatDate(host.updatedAt)}
-              </Typography>
+
+          {/* 信息区 */}
+          <Box>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1.5 }}>
+              {/* IP Chip - Clickable */}
+              <Chip
+                label={host.ip}
+                size="small"
+                color="primary"
+                variant="outlined"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleIPClick(host.ip);
+                }}
+                sx={{ fontFamily: 'monospace', fontWeight: 500, cursor: 'pointer' }}
+              />
+
+              {/* Source Chip */}
+              {host.source && (
+                <Chip
+                  label={host.source}
+                  size="small"
+                  variant="outlined"
+                  color={host.source === '手动添加' || host.source === '手动导入' ? 'default' : 'info'}
+                  sx={{ height: 24, borderRadius: 1 }}
+                />
+              )}
+
+              {/* Expire Chip */}
               <Chip
                 label={formatExpireTime(host)}
                 size="small"
                 variant="outlined"
                 color={isExpiringSoon(host) ? 'warning' : host.pinned ? 'warning' : 'default'}
-                sx={{ height: 20, fontSize: '0.7rem' }}
+                sx={{ height: 24, borderRadius: 1 }}
               />
             </Box>
+
+            {host.remark && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  mb: 1.5,
+                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : theme.palette.grey[50],
+                  p: 1,
+                  borderRadius: 1
+                }}
+              >
+                {host.remark}
+              </Typography>
+            )}
+
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Box />
+              <Typography variant="caption" color="text.disabled">
+                更新于 {formatDate(host.updatedAt)}
+              </Typography>
+            </Stack>
           </Box>
         </Stack>
-      </CardContent>
-    </Card>
+      </Box>
+    </MainCard>
   );
 
   return (
@@ -523,6 +522,11 @@ export default function HostManagement() {
             {hosts.length > 0 && (
               <Chip label={`总数: ${hosts.length}`} size="small" variant="outlined" color="primary" sx={{ mr: 1, fontWeight: 500 }} />
             )}
+            <Tooltip title="模块设置">
+              <IconButton onClick={() => setSettingsOpen(true)} color="primary" size="small">
+                <SettingsIcon />
+              </IconButton>
+            </Tooltip>
             <Tooltip title="刷新">
               <IconButton onClick={handleRefresh} disabled={refreshing} color="primary" size="small">
                 {refreshing ? <CircularProgress size={18} /> : <RefreshIcon />}
@@ -532,272 +536,17 @@ export default function HostManagement() {
         </Stack>
       </Box>
 
-      {/* 模块设置（可折叠） */}
-      <Paper
-        elevation={0}
-        sx={{
-          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
-          borderRadius: 2,
-          overflow: 'hidden',
-          mb: 2
-        }}
-      >
-        <Box
-          onClick={() => setSettingsExpanded(!settingsExpanded)}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            p: 1.5,
-            cursor: 'pointer',
-            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-            '&:hover': {
-              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
-            },
-            transition: 'background-color 0.2s'
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <SettingsIcon fontSize="small" color="action" />
-            <Typography variant="subtitle2" fontWeight={600}>
-              模块设置
-            </Typography>
-          </Box>
-          {settingsExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-        </Box>
-        <Collapse in={settingsExpanded}>
-          <Divider />
-          <Box sx={{ p: 2 }}>
-            <Stack spacing={2}>
-              {/* 1. 持久化与有效期设置 */}
-              <Box>
-                <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems={isMobile ? 'start' : 'center'}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.persist_host}
-                        disabled={settingsLoading}
-                        onChange={async (e) => {
-                          const newValue = e.target.checked;
-                          setSettings({ ...settings, persist_host: newValue });
-                          setSettingsLoading(true);
-                          try {
-                            const res = await updateHostSettings({ persist_host: newValue });
-                            if (res.code === 200) showMessage('设置已保存');
-                            else showMessage(res.msg || '保存失败', 'error');
-                          } catch {
-                            showMessage('保存失败', 'error');
-                          } finally {
-                            setSettingsLoading(false);
-                          }
-                        }}
-                        size="small"
-                      />
-                    }
-                    label={
-                      <Typography variant="body2">
-                        持久化节点Host
-                        <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
-                          (测速成功时保存域名→IP)
-                        </Typography>
-                      </Typography>
-                    }
-                  />
+      <HostSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TextField
-                      label="有效期"
-                      type="number"
-                      size="small"
-                      value={settings.expire_hours}
-                      disabled={settingsLoading || !settings.persist_host}
-                      onChange={async (e) => {
-                        const newValue = Math.max(0, parseInt(e.target.value) || 0);
-                        setSettings({ ...settings, expire_hours: newValue });
-                        setSettingsLoading(true);
-                        try {
-                          const res = await updateHostSettings({ expire_hours: newValue });
-                          if (res.code === 200) showMessage('设置已保存');
-                          else showMessage(res.msg || '保存失败', 'error');
-                        } catch {
-                          showMessage('保存失败', 'error');
-                        } finally {
-                          setSettingsLoading(false);
-                        }
-                      }}
-                      sx={{ width: isMobile ? 120 : 100 }}
-                      InputProps={{ inputProps: { min: 0 } }}
-                    />
-                    <Typography variant="body2" color="textSecondary">
-                      小时 {settings.expire_hours === 0 && '(永不过期)'}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Box>
+      <ConfirmDialog
+        open={confirmOpen}
+        title={confirmInfo.title}
+        content={confirmInfo.content}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={confirmInfo.onConfirm}
+      />
 
-              <Divider sx={{ borderStyle: 'dashed' }} />
-
-              {/* 2. DNS 解析设置 */}
-              <Typography variant="subtitle2" color="primary">
-                DNS 解析设置
-              </Typography>
-
-              <Stack spacing={2}>
-                <Autocomplete
-                  freeSolo
-                  fullWidth
-                  size="small"
-                  options={settings.dns_presets || []}
-                  disabled={settingsLoading}
-                  getOptionLabel={(option) => {
-                    if (typeof option === 'string') return option;
-                    return option.label ? `${option.label} (${option.value})` : option.value || '';
-                  }}
-                  value={settings.dns_presets?.find((p) => p.value === settings.dns_server) || settings.dns_server}
-                  onChange={async (event, newValue) => {
-                    const val = typeof newValue === 'string' ? newValue : newValue?.value || '';
-                    setSettings({ ...settings, dns_server: val });
-
-                    setSettingsLoading(true);
-                    try {
-                      const res = await updateHostSettings({ dns_server: val });
-                      if (res.code === 200) showMessage('设置已保存');
-                      else showMessage(res.msg || '保存失败', 'error');
-                    } catch {
-                      showMessage('保存失败', 'error');
-                    } finally {
-                      setSettingsLoading(false);
-                    }
-                  }}
-                  onInputChange={(event, newInputValue, reason) => {
-                    // 对于 freeSolo，clear 也会触发 onInputChange (reason='clear')
-                    if (reason === 'clear') {
-                      setSettings({ ...settings, dns_server: '' });
-                      updateHostSettings({ dns_server: '' });
-                    }
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="DNS 解析服务器"
-                      placeholder="留空（使用系统 DNS）"
-                      helperText="支持 DoH (https://...) 或 UDP (IP)。IP格式（UDP协议）将始终直连不走代理。"
-                    />
-                  )}
-                />
-
-                {/* 代理设置 */}
-                <Box>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.dns_use_proxy}
-                        disabled={settingsLoading || !settings.dns_server}
-                        onChange={async (e) => {
-                          const newValue = e.target.checked;
-                          setSettings({ ...settings, dns_use_proxy: newValue });
-                          setSettingsLoading(true);
-
-                          // 如果开启代理且当前是手动模式，加载节点
-                          if (newValue && settings.dns_proxy_strategy === 'manual') {
-                            fetchAllNodes();
-                          }
-
-                          try {
-                            const res = await updateHostSettings({ dns_use_proxy: newValue });
-                            if (res.code === 200) showMessage('设置已保存');
-                            else showMessage(res.msg || '保存失败', 'error');
-                          } catch {
-                            showMessage('保存失败', 'error');
-                          } finally {
-                            setSettingsLoading(false);
-                          }
-                        }}
-                        size="small"
-                      />
-                    }
-                    label="使用代理连接 DNS (仅支持 DoH)"
-                  />
-
-                  <Collapse in={settings.dns_use_proxy && !!settings.dns_server}>
-                    <Paper
-                      variant="outlined"
-                      sx={{ mt: 1, p: 2, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}
-                    >
-                      <Stack spacing={2}>
-                        <Stack direction="row" alignItems="center" spacing={2}>
-                          <Typography variant="body2">代理策略:</Typography>
-                          <ToggleButtonGroup
-                            value={settings.dns_proxy_strategy}
-                            exclusive
-                            onChange={async (e, newValue) => {
-                              if (!newValue) return;
-                              setSettings({ ...settings, dns_proxy_strategy: newValue });
-
-                              if (newValue === 'manual') {
-                                fetchAllNodes();
-                              }
-
-                              setSettingsLoading(true);
-                              try {
-                                const res = await updateHostSettings({ dns_proxy_strategy: newValue });
-                                if (res.code === 200) showMessage('设置已保存');
-                                else showMessage(res.msg || '保存失败', 'error');
-                              } catch {
-                                showMessage('保存失败', 'error');
-                              } finally {
-                                setSettingsLoading(false);
-                              }
-                            }}
-                            size="small"
-                            color="primary"
-                          >
-                            <ToggleButton value="auto">自动选择 (推荐)</ToggleButton>
-                            <ToggleButton value="manual">手动指定</ToggleButton>
-                          </ToggleButtonGroup>
-                        </Stack>
-
-                        {settings.dns_proxy_strategy === 'manual' && (
-                          <SearchableNodeSelect
-                            nodes={proxyNodes}
-                            loading={loadingNodes}
-                            value={proxyNodes.find((n) => n.ID === settings.dns_proxy_node_id) || null}
-                            onChange={async (newValue) => {
-                              const newID = newValue ? newValue.ID : 0;
-                              setSettings({ ...settings, dns_proxy_node_id: newID });
-
-                              // 立即保存
-                              setSettingsLoading(true);
-                              try {
-                                const res = await updateHostSettings({ dns_proxy_node_id: newID });
-                                if (res.code === 200) showMessage('设置已保存');
-                                else showMessage(res.msg || '保存失败', 'error');
-                              } catch {
-                                showMessage('保存失败', 'error');
-                              } finally {
-                                setSettingsLoading(false);
-                              }
-                            }}
-                            label="选择代理节点"
-                            displayField="Name"
-                            valueField="ID"
-                          />
-                        )}
-
-                        <Typography variant="caption" color="textSecondary">
-                          {settings.dns_proxy_strategy === 'auto'
-                            ? '系统将自动选择最近一次测速中延迟最低且无丢包的节点。'
-                            : '指定一个节点用于建立 DNS 连接。注意：仅 DoH (https) 协议支持通过代理连接。'}
-                        </Typography>
-                      </Stack>
-                    </Paper>
-                  </Collapse>
-                </Box>
-              </Stack>
-            </Stack>
-          </Box>
-        </Collapse>
-      </Paper>
+      <IPDetailsDialog open={ipDialogOpen} onClose={() => setIpDialogOpen(false)} ip={selectedIP} />
 
       {/* 表单模式 */}
 
@@ -885,6 +634,7 @@ export default function HostManagement() {
                     </TableCell>
                     <TableCell>域名</TableCell>
                     <TableCell>IP 地址</TableCell>
+                    <TableCell>来源</TableCell>
                     <TableCell>备注</TableCell>
                     <TableCell>状态</TableCell>
                     <TableCell>更新时间</TableCell>
@@ -909,16 +659,36 @@ export default function HostManagement() {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Chip label={host.ip} size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
+                        <Chip
+                          label={host.ip}
+                          size="small"
+                          variant="outlined"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleIPClick(host.ip);
+                          }}
+                          sx={{ fontFamily: 'monospace', cursor: 'pointer' }}
+                        />
                       </TableCell>
                       <TableCell>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        >
-                          {host.remark || '-'}
-                        </Typography>
+                        <Chip
+                          label={host.source || '-'}
+                          size="small"
+                          variant="outlined"
+                          color={host.source === '手动添加' || host.source === '手动导入' ? 'default' : 'info'}
+                          sx={{ height: 22, fontSize: '0.75rem' }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={host.remark || ''} placement="top-start">
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                          >
+                            {host.remark || '-'}
+                          </Typography>
+                        </Tooltip>
                       </TableCell>
                       <TableCell>
                         <Chip
@@ -935,7 +705,7 @@ export default function HostManagement() {
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
-                        <Tooltip title={host.pinned ? '取消固定' : '固定'}>
+                        <Tooltip title={host.pinned ? '取消固定' : '固定 (pin住的host不受过期时间影响)'}>
                           <IconButton size="small" onClick={() => handlePinHost(host)} color={host.pinned ? 'warning' : 'default'}>
                             {host.pinned ? <PushPinIcon fontSize="small" /> : <PushPinOutlinedIcon fontSize="small" />}
                           </IconButton>
@@ -951,7 +721,7 @@ export default function HostManagement() {
                   ))}
                   {filteredHosts.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                      <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary">
                           {hosts.length === 0 ? '暂无 Host 记录，点击"添加"创建' : '没有找到匹配的结果'}
                         </Typography>

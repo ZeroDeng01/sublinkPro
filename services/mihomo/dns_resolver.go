@@ -32,6 +32,8 @@ var DNSPresets = []struct {
 	{"腾讯DNSPod (DoH)", "https://doh.pub/dns-query"},
 	{"Cloudflare (DoH)", "https://cloudflare-dns.com/dns-query"},
 	{"Google (DoH)", "https://dns.google/dns-query"},
+	{"Cloudflare IP (DoH)", "https://1.1.1.1/dns-query"},
+	{"Google IP(DoH)", "https://8.8.8.8/dns-query"},
 	{"阿里DNS", "223.5.5.5"},
 	{"腾讯DNS", "119.29.29.29"},
 	{"Cloudflare", "1.1.1.1"},
@@ -71,23 +73,23 @@ func GetProxyServerFromLink(nodeLink string) HostInfo {
 	}
 }
 
-// ResolveProxyHost 解析代理服务器域名，返回第一个可用IP
+// ResolveProxyHost 解析代理服务器域名，返回第一个可用IP和解析来源
 // 优先级：Host缓存 > mihomo resolver > 用户配置的DNS > 系统DNS
 // 这样可以避免测速时重复DNS解析
-func ResolveProxyHost(host string) string {
+func ResolveProxyHost(host string) (string, string) {
 	if host == "" {
-		return ""
+		return "", ""
 	}
 
 	// 如果已经是IP地址，直接返回
 	if net.ParseIP(host) != nil {
-		return host
+		return host, "IP地址"
 	}
 
 	// 1. 先检查Host缓存是否已有（避免重复解析）
 	if cachedHost, err := models.GetHostByHostname(host); err == nil && cachedHost != nil {
 		utils.Debug("[DNS] %s -> %s (Host缓存)", host, cachedHost.IP)
-		return cachedHost.IP
+		return cachedHost.IP, "Host缓存"
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 增加超时时间以容纳代理连接
@@ -104,7 +106,7 @@ func ResolveProxyHost(host string) string {
 		if err == nil && len(ips) > 0 {
 			ip := ips[0].String()
 			utils.Debug("[DNS] %s -> %s (mihomo resolver)", host, ip)
-			return ip
+			return ip, "mihomo resolver"
 		}
 		// 如果是默认resolver失败，这很正常，继续尝试其他方式
 		// utils.Debug("[DNS] mihomo resolver失败: %s, %v", host, err)
@@ -155,7 +157,7 @@ func ResolveProxyHost(host string) string {
 				proxyInfo = " (通过代理)"
 			}
 			utils.Info("[DNS] %s -> %s (服务器: %s%s)", host, ip, dnsServer, proxyInfo)
-			return ip
+			return ip, dnsServer
 		}
 	}
 
@@ -164,16 +166,16 @@ func ResolveProxyHost(host string) string {
 	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 	if err != nil {
 		utils.Warn("[DNS] 所有解析方式失败: %s", host)
-		return ""
+		return "", ""
 	}
 
 	if len(addrs) > 0 {
 		ip := addrs[0].IP.String()
 		utils.Info("[DNS] %s -> %s (系统DNS)", host, ip)
-		return ip
+		return ip, "系统DNS"
 	}
 
-	return ""
+	return "", ""
 }
 
 // resolveWithCustomDNS 使用自定义DNS服务器解析域名

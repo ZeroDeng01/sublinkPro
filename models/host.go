@@ -21,6 +21,7 @@ type Host struct {
 	Hostname  string     `json:"hostname" gorm:"size:255;uniqueIndex;not null"` // 域名
 	IP        string     `json:"ip" gorm:"size:45;not null"`                    // IP 地址 (支持 IPv6)
 	Remark    string     `json:"remark" gorm:"size:255"`                        // 备注
+	Source    string     `json:"source" gorm:"size:255;default:'手动添加'"`         // 来源: 手动添加/DNS服务器地址
 	ExpireAt  *time.Time `json:"expireAt" gorm:"index"`                         // 过期时间，nil 表示永不过期
 	Pinned    bool       `json:"pinned" gorm:"default:false"`                   // 是否固定，固定后不会被过期删除
 	CreatedAt time.Time  `json:"createdAt"`
@@ -317,6 +318,7 @@ func parseHostText(text string) []Host {
 		if len(matches) > 3 && matches[3] != "" {
 			host.Remark = strings.TrimSpace(matches[3])
 		}
+		host.Source = "手动导入"
 
 		// 简单验证
 		if host.Hostname != "" && host.IP != "" {
@@ -350,11 +352,12 @@ var _ = sort.Slice
 
 // HostMappingInfo 用于批量保存Host时传递节点信息
 type HostMappingInfo struct {
-	Hostname string // 代理服务器域名（从link解析得到）
-	IP       string // DNS解析得到的IP
-	NodeName string // 节点名称
-	Group    string // 节点分组
-	Source   string // 节点来源
+	Hostname  string // 代理服务器域名（从link解析得到）
+	IP        string // DNS解析得到的IP
+	NodeName  string // 节点名称
+	Group     string // 节点分组
+	Source    string // 节点来源
+	DNSSource string // DNS来源
 }
 
 // BatchUpsertHosts 批量添加或更新Host映射（测速专用）
@@ -382,6 +385,7 @@ func BatchUpsertHosts(mappings []HostMappingInfo) (int, error) {
 			Hostname:  m.Hostname,
 			IP:        m.IP,
 			Remark:    formatHostRemark(m.NodeName, m.Group, m.Source),
+			Source:    m.DNSSource,
 			ExpireAt:  expireAt,
 			CreatedAt: now,
 			UpdatedAt: now,
@@ -399,7 +403,7 @@ func BatchUpsertHosts(mappings []HostMappingInfo) (int, error) {
 		// 使用 ON CONFLICT 实现 upsert：已存在则更新 ip/remark/expire_at/updated_at
 		result := database.DB.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "hostname"}},
-			DoUpdates: clause.AssignmentColumns([]string{"ip", "remark", "expire_at", "updated_at"}),
+			DoUpdates: clause.AssignmentColumns([]string{"ip", "remark", "source", "expire_at", "updated_at"}),
 		}).Create(&chunk)
 
 		if result.Error != nil {
@@ -440,6 +444,7 @@ func upsertSingleHost(h Host) error {
 		return database.DB.Model(&existing).Updates(map[string]interface{}{
 			"ip":         h.IP,
 			"remark":     h.Remark,
+			"source":     h.Source,
 			"expire_at":  h.ExpireAt,
 			"updated_at": h.UpdatedAt,
 		}).Error

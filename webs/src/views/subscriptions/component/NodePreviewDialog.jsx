@@ -27,7 +27,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 // project imports
 import NodePreviewCard from './NodePreviewCard';
 import NodePreviewDetailsPanel from './NodePreviewDetailsPanel';
-import { IPDetailsDialog } from '../../nodes/component';
+import IPDetailsDialog from 'components/IPDetailsDialog';
 import Alert from '@mui/material/Alert';
 import { AlertTitle } from '@mui/material';
 

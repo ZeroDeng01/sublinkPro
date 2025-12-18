@@ -21,6 +21,10 @@ func HostAdd(c *gin.Context) {
 		return
 	}
 
+	if data.Source == "" {
+		data.Source = "手动添加"
+	}
+
 	if err := data.Add(); err != nil {
 		utils.FailWithMsg(c, err.Error())
 		return

@@ -373,7 +373,6 @@ export default function SpeedTestDialog({
           </Stack>
         </ConfigSection>
 
-
         {/* ========== 延迟测量设置 ========== */}
         <ConfigSection title="延迟测量设置" icon={<TuneIcon fontSize="small" color="action" />} defaultExpanded={true}>
           <Stack spacing={2}>
