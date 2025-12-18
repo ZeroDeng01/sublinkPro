@@ -26,5 +26,8 @@ func Host(r *gin.Engine) {
 		// 模块设置
 		hostGroup.GET("/settings", api.GetHostSettings)
 		hostGroup.POST("/settings", api.UpdateHostSettings)
+
+		// Pin 固定
+		hostGroup.POST("/pin", api.HostSetPinned)
 	}
 }

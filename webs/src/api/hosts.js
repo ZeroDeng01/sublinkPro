@@ -31,3 +31,6 @@ export const getHostSettings = () => request.get('/v1/hosts/settings');
 // 更新模块设置
 export const updateHostSettings = (data) => request.post('/v1/hosts/settings', data);
 
+// 设置 Host 固定状态
+export const pinHost = (id, pinned) => request.post('/v1/hosts/pin', { id, pinned });
+

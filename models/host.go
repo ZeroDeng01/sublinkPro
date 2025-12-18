@@ -17,12 +17,14 @@ import (
 
 // Host 自定义 Host 映射模型
 type Host struct {
-	ID        int       `json:"id" gorm:"primaryKey"`
-	Hostname  string    `json:"hostname" gorm:"size:255;uniqueIndex;not null"` // 域名
-	IP        string    `json:"ip" gorm:"size:45;not null"`                    // IP 地址 (支持 IPv6)
-	Remark    string    `json:"remark" gorm:"size:255"`                        // 备注
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID        int        `json:"id" gorm:"primaryKey"`
+	Hostname  string     `json:"hostname" gorm:"size:255;uniqueIndex;not null"` // 域名
+	IP        string     `json:"ip" gorm:"size:45;not null"`                    // IP 地址 (支持 IPv6)
+	Remark    string     `json:"remark" gorm:"size:255"`                        // 备注
+	ExpireAt  *time.Time `json:"expireAt" gorm:"index"`                         // 过期时间，nil 表示永不过期
+	Pinned    bool       `json:"pinned" gorm:"default:false"`                   // 是否固定，固定后不会被过期删除
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
 }
 
 // hostCache 使用泛型缓存
@@ -367,6 +369,9 @@ func BatchUpsertHosts(mappings []HostMappingInfo) (int, error) {
 	now := time.Now()
 	successCount := 0
 
+	// 计算过期时间（测速自动持久化的Host会设置过期时间）
+	expireAt := CalculateExpireTime()
+
 	// 预处理：生成Host记录，跳过无效数据
 	hosts := make([]Host, 0, len(mappings))
 	for _, m := range mappings {
@@ -377,6 +382,7 @@ func BatchUpsertHosts(mappings []HostMappingInfo) (int, error) {
 			Hostname:  m.Hostname,
 			IP:        m.IP,
 			Remark:    formatHostRemark(m.NodeName, m.Group, m.Source),
+			ExpireAt:  expireAt,
 			CreatedAt: now,
 			UpdatedAt: now,
 		})
@@ -390,10 +396,10 @@ func BatchUpsertHosts(mappings []HostMappingInfo) (int, error) {
 	chunks := chunkHosts(hosts, database.BatchSize)
 
 	for _, chunk := range chunks {
-		// 使用 ON CONFLICT 实现 upsert：已存在则更新 ip/remark/updated_at
+		// 使用 ON CONFLICT 实现 upsert：已存在则更新 ip/remark/expire_at/updated_at
 		result := database.DB.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "hostname"}},
-			DoUpdates: clause.AssignmentColumns([]string{"ip", "remark", "updated_at"}),
+			DoUpdates: clause.AssignmentColumns([]string{"ip", "remark", "expire_at", "updated_at"}),
 		}).Create(&chunk)
 
 		if result.Error != nil {
@@ -434,6 +440,7 @@ func upsertSingleHost(h Host) error {
 		return database.DB.Model(&existing).Updates(map[string]interface{}{
 			"ip":         h.IP,
 			"remark":     h.Remark,
+			"expire_at":  h.ExpireAt,
 			"updated_at": h.UpdatedAt,
 		}).Error
 	}
@@ -488,4 +495,93 @@ func formatHostRemark(nodeName, group, source string) string {
 	}
 
 	return strings.Join(parts, " | ")
+}
+
+// ========== 有效期管理 ==========
+
+// SetHostPinned 设置 Host 的固定状态
+// pinned=true 时，该 Host 不会被过期清理
+func SetHostPinned(id int, pinned bool) error {
+	host, ok := hostCache.Get(id)
+	if !ok {
+		return fmt.Errorf("host ID %d 不存在", id)
+	}
+
+	if err := database.DB.Model(&Host{}).Where("id = ?", id).Update("pinned", pinned).Error; err != nil {
+		return err
+	}
+
+	// 更新缓存
+	host.Pinned = pinned
+	hostCache.Set(id, host)
+	return nil
+}
+
+// CleanExpiredHosts 清理过期的 Host
+// 删除条件：ExpireAt 不为空 且 ExpireAt < 当前时间 且 Pinned = false
+// 返回删除的数量
+func CleanExpiredHosts() (int, error) {
+	now := time.Now()
+
+	// 先查询要删除的 ID（用于更新缓存）
+	var expiredHosts []Host
+	if err := database.DB.Where("expire_at IS NOT NULL AND expire_at < ? AND pinned = ?", now, false).Find(&expiredHosts).Error; err != nil {
+		return 0, err
+	}
+
+	if len(expiredHosts) == 0 {
+		return 0, nil
+	}
+
+	// 执行删除
+	result := database.DB.Where("expire_at IS NOT NULL AND expire_at < ? AND pinned = ?", now, false).Delete(&Host{})
+	if result.Error != nil {
+		return 0, result.Error
+	}
+
+	deletedCount := int(result.RowsAffected)
+
+	// 更新缓存
+	for _, h := range expiredHosts {
+		hostCache.Delete(h.ID)
+	}
+
+	// 有变更时通知外部模块同步
+	if deletedCount > 0 {
+		utils.Info("[Host清理] 已删除 %d 条过期Host记录", deletedCount)
+		notifyHostChanged()
+	}
+
+	return deletedCount, nil
+}
+
+// GetHostExpireHours 获取 Host 有效期设置（小时）
+// 返回 0 表示永不过期
+func GetHostExpireHours() int {
+	hoursStr, err := GetSetting("host_expire_hours")
+	if err != nil || hoursStr == "" {
+		return 0
+	}
+	hours := 0
+	fmt.Sscanf(hoursStr, "%d", &hours)
+	if hours < 0 {
+		return 0
+	}
+	return hours
+}
+
+// CalculateExpireTime 根据有效期设置计算过期时间
+// 返回 nil 表示永不过期
+func CalculateExpireTime() *time.Time {
+	hours := GetHostExpireHours()
+	if hours <= 0 {
+		return nil
+	}
+	expireAt := time.Now().Add(time.Duration(hours) * time.Hour)
+	return &expireAt
+}
+
+// MigrateHostExpireFields 执行 Host 有效期字段迁移
+func MigrateHostExpireFields() error {
+	return database.RunAutoMigrate("add_host_expire_fields_v1", &Host{})
 }

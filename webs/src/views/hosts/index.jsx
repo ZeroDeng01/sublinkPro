@@ -55,10 +55,12 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import PushPinIcon from '@mui/icons-material/PushPin';
+import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
-import { getHosts, addHost, updateHost, deleteHost, batchDeleteHosts, exportHosts, syncHosts, getHostSettings, updateHostSettings } from 'api/hosts';
+import { getHosts, addHost, updateHost, deleteHost, batchDeleteHosts, exportHosts, syncHosts, getHostSettings, updateHostSettings, pinHost } from 'api/hosts';
 
 // ==============================|| HOST MANAGEMENT ||============================== //
 
@@ -86,7 +88,7 @@ export default function HostManagement() {
 
   // 模块设置相关状态
   const [settingsExpanded, setSettingsExpanded] = useState(false);
-  const [settings, setSettings] = useState({ persist_host: false, dns_server: '', dns_presets: [] });
+  const [settings, setSettings] = useState({ persist_host: false, dns_server: '', dns_presets: [], expire_hours: 0 });
   const [settingsLoading, setSettingsLoading] = useState(false);
 
   // 获取 Host 列表
@@ -128,7 +130,8 @@ export default function HostManagement() {
           setSettings({
             persist_host: res.data?.persist_host || false,
             dns_server: res.data?.dns_server || '',
-            dns_presets: res.data?.dns_presets || []
+            dns_presets: res.data?.dns_presets || [],
+            expire_hours: res.data?.expire_hours || 0
           });
         }
       } catch {
@@ -264,6 +267,52 @@ export default function HostManagement() {
     }
   };
 
+  // Pin/Unpin Host
+  const handlePinHost = async (host) => {
+    const newPinned = !host.pinned;
+    try {
+      const res = await pinHost(host.id, newPinned);
+      if (res.code === 200) {
+        showMessage(newPinned ? '已固定' : '已取消固定');
+        fetchHosts();
+      } else {
+        showMessage(res.msg || '操作失败', 'error');
+      }
+    } catch {
+      showMessage('操作失败', 'error');
+    }
+  };
+
+  // 格式化过期时间显示
+  const formatExpireTime = (host) => {
+    if (host.pinned) return '已固定';
+    if (!host.expireAt) return '永不过期';
+    try {
+      const expireDate = new Date(host.expireAt);
+      const now = new Date();
+      if (expireDate <= now) return '已过期';
+      const diffHours = Math.ceil((expireDate - now) / (1000 * 60 * 60));
+      if (diffHours <= 24) return `${diffHours}小时后过期`;
+      const diffDays = Math.ceil(diffHours / 24);
+      return `${diffDays}天后过期`;
+    } catch {
+      return '-';
+    }
+  };
+
+  // 检查是否即将过期（24小时内）
+  const isExpiringSoon = (host) => {
+    if (host.pinned || !host.expireAt) return false;
+    try {
+      const expireDate = new Date(host.expireAt);
+      const now = new Date();
+      const diffHours = (expireDate - now) / (1000 * 60 * 60);
+      return diffHours > 0 && diffHours <= 24;
+    } catch {
+      return false;
+    }
+  };
+
   // ========== 文本编辑模式操作 ==========
 
   const handleTextSync = async () => {
@@ -324,7 +373,8 @@ export default function HostManagement() {
         mb: 1.5,
         borderRadius: 2,
         transition: 'all 0.2s ease',
-        borderLeft: selectedIds.includes(host.id) ? `4px solid ${theme.palette.primary.main}` : undefined,
+        borderLeft: selectedIds.includes(host.id) ? `4px solid ${theme.palette.primary.main}` :
+          host.pinned ? `4px solid ${theme.palette.warning.main}` : undefined,
         '&:hover': { boxShadow: 2 }
       }}
     >
@@ -336,8 +386,18 @@ export default function HostManagement() {
               <Typography variant="subtitle1" fontWeight={600} sx={{ wordBreak: 'break-all' }}>
                 {host.hostname}
               </Typography>
+              {host.pinned && <PushPinIcon fontSize="small" color="warning" />}
             </Box>
             <Stack direction="row" spacing={0.5}>
+              <Tooltip title={host.pinned ? '取消固定' : '固定'}>
+                <IconButton
+                  size="small"
+                  onClick={() => handlePinHost(host)}
+                  color={host.pinned ? 'warning' : 'default'}
+                >
+                  {host.pinned ? <PushPinIcon fontSize="small" /> : <PushPinOutlinedIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
               <Tooltip title="编辑">
                 <IconButton size="small" onClick={() => handleEdit(host)}>
                   <EditIcon fontSize="small" />
@@ -357,9 +417,18 @@ export default function HostManagement() {
                 {host.remark}
               </Typography>
             )}
-            <Typography variant="caption" color="text.disabled" display="block" sx={{ mt: 1 }}>
-              更新于 {formatDate(host.updatedAt)}
-            </Typography>
+            <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Typography variant="caption" color="text.disabled">
+                更新于 {formatDate(host.updatedAt)}
+              </Typography>
+              <Chip
+                label={formatExpireTime(host)}
+                size="small"
+                variant="outlined"
+                color={isExpiringSoon(host) ? 'warning' : host.pinned ? 'warning' : 'default'}
+                sx={{ height: 20, fontSize: '0.7rem' }}
+              />
+            </Box>
           </Box>
         </Stack>
       </CardContent>
@@ -451,42 +520,50 @@ export default function HostManagement() {
         <Collapse in={settingsExpanded}>
           <Divider />
           <Box sx={{ p: 2 }}>
-            <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems={isMobile ? 'stretch' : 'center'}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={settings.persist_host}
-                    disabled={settingsLoading}
-                    onChange={async (e) => {
-                      const newValue = e.target.checked;
-                      setSettings({ ...settings, persist_host: newValue });
-                      setSettingsLoading(true);
-                      try {
-                        const res = await updateHostSettings({ persist_host: newValue });
-                        if (res.code === 200) {
-                          showMessage('设置已保存');
-                        } else {
-                          showMessage(res.msg || '保存失败', 'error');
-                        }
-                      } catch {
-                        showMessage('保存失败', 'error');
-                      } finally {
-                        setSettingsLoading(false);
+            {/* 第一行：持久化开关 */}
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={settings.persist_host}
+                  disabled={settingsLoading}
+                  onChange={async (e) => {
+                    const newValue = e.target.checked;
+                    setSettings({ ...settings, persist_host: newValue });
+                    setSettingsLoading(true);
+                    try {
+                      const res = await updateHostSettings({ persist_host: newValue });
+                      if (res.code === 200) {
+                        showMessage('设置已保存');
+                      } else {
+                        showMessage(res.msg || '保存失败', 'error');
                       }
-                    }}
-                    size="small"
-                  />
-                }
-                label={
-                  <Typography variant="body2">
-                    持久化节点Host
-                    <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
-                      (测速成功时保存域名→IP)
-                    </Typography>
+                    } catch {
+                      showMessage('保存失败', 'error');
+                    } finally {
+                      setSettingsLoading(false);
+                    }
+                  }}
+                  size="small"
+                />
+              }
+              label={
+                <Typography variant="body2">
+                  持久化节点Host
+                  <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
+                    (测速成功时保存域名→IP)
                   </Typography>
-                }
-              />
-              <FormControl size="small" sx={{ minWidth: isMobile ? '100%' : 220 }}>
+                </Typography>
+              }
+            />
+
+            {/* 第二行：DNS + 有效期 */}
+            <Stack
+              direction={isMobile ? 'column' : 'row'}
+              spacing={isMobile ? 1.5 : 2}
+              alignItems={isMobile ? 'stretch' : 'center'}
+              sx={{ mt: 1.5 }}
+            >
+              <FormControl size="small" sx={{ minWidth: isMobile ? '100%' : 200 }}>
                 <InputLabel>DNS解析服务器</InputLabel>
                 <Select
                   value={settings.dns_server}
@@ -517,10 +594,44 @@ export default function HostManagement() {
                   ))}
                 </Select>
               </FormControl>
-              {settingsLoading && <CircularProgress size={20} />}
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TextField
+                  label="有效期"
+                  type="number"
+                  size="small"
+                  value={settings.expire_hours}
+                  disabled={settingsLoading || !settings.persist_host}
+                  onChange={async (e) => {
+                    const newValue = Math.max(0, parseInt(e.target.value) || 0);
+                    setSettings({ ...settings, expire_hours: newValue });
+                    setSettingsLoading(true);
+                    try {
+                      const res = await updateHostSettings({ expire_hours: newValue });
+                      if (res.code === 200) {
+                        showMessage('设置已保存');
+                      } else {
+                        showMessage(res.msg || '保存失败', 'error');
+                      }
+                    } catch {
+                      showMessage('保存失败', 'error');
+                    } finally {
+                      setSettingsLoading(false);
+                    }
+                  }}
+                  sx={{ width: isMobile ? 100 : 80 }}
+                  InputProps={{ inputProps: { min: 0 } }}
+                />
+                <Typography variant="body2" color="textSecondary" sx={{ whiteSpace: 'nowrap' }}>
+                  小时 {settings.expire_hours === 0 && '(永不过期)'}
+                </Typography>
+              </Box>
+
+              {settingsLoading && <CircularProgress size={18} />}
             </Stack>
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-              Host 模块可被测速、订阅导入等功能使用，为代理服务器域名提供自定义 DNS 解析。
+
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 1.5, display: 'block' }}>
+              测速自动添加的 Host 受有效期控制，可通过固定(Pin)使其不被过期删除。
             </Typography>
           </Box>
         </Collapse>
@@ -613,7 +724,7 @@ export default function HostManagement() {
                     <TableCell>域名</TableCell>
                     <TableCell>IP 地址</TableCell>
                     <TableCell>备注</TableCell>
-                    <TableCell>创建时间</TableCell>
+                    <TableCell>状态</TableCell>
                     <TableCell>更新时间</TableCell>
                     <TableCell align="right">操作</TableCell>
                   </TableRow>
@@ -629,19 +740,28 @@ export default function HostManagement() {
                       <TableCell padding="checkbox">
                         <Checkbox size="small" checked={selectedIds.includes(host.id)} onChange={() => handleSelectOne(host.id)} />
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 500 }}>{host.hostname}</TableCell>
+                      <TableCell sx={{ fontWeight: 500 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          {host.hostname}
+                          {host.pinned && <PushPinIcon fontSize="small" color="warning" sx={{ fontSize: 14 }} />}
+                        </Box>
+                      </TableCell>
                       <TableCell>
                         <Chip label={host.ip} size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {host.remark || '-'}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                          {formatDate(host.createdAt)}
-                        </Typography>
+                        <Chip
+                          label={formatExpireTime(host)}
+                          size="small"
+                          variant="outlined"
+                          color={isExpiringSoon(host) ? 'warning' : host.pinned ? 'warning' : 'default'}
+                          sx={{ height: 22 }}
+                        />
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
@@ -649,6 +769,15 @@ export default function HostManagement() {
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
+                        <Tooltip title={host.pinned ? '取消固定' : '固定'}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handlePinHost(host)}
+                            color={host.pinned ? 'warning' : 'default'}
+                          >
+                            {host.pinned ? <PushPinIcon fontSize="small" /> : <PushPinOutlinedIcon fontSize="small" />}
+                          </IconButton>
+                        </Tooltip>
                         <IconButton size="small" onClick={() => handleEdit(host)}>
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -660,7 +789,7 @@ export default function HostManagement() {
                   ))}
                   {filteredHosts.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary">
                           {hosts.length === 0 ? '暂无 Host 记录，点击"添加"创建' : '没有找到匹配的结果'}
                         </Typography>

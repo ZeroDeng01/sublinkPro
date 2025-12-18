@@ -145,10 +145,14 @@ func GetHostSettings(c *gin.Context) {
 		dnsServer = mihomo.DefaultDNSServer
 	}
 
+	// 获取有效期设置
+	expireHours := models.GetHostExpireHours()
+
 	utils.OkDetailed(c, "获取成功", gin.H{
 		"persist_host": persistHost,
 		"dns_server":   dnsServer,
 		"dns_presets":  mihomo.GetDNSPresets(),
+		"expire_hours": expireHours,
 	})
 }
 
@@ -157,6 +161,7 @@ func UpdateHostSettings(c *gin.Context) {
 	var req struct {
 		PersistHost *bool  `json:"persist_host"`
 		DNSServer   string `json:"dns_server"`
+		ExpireHours *int   `json:"expire_hours"` // 有效期（小时），0表示永不过期
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -177,5 +182,39 @@ func UpdateHostSettings(c *gin.Context) {
 		}
 	}
 
+	if req.ExpireHours != nil {
+		hours := *req.ExpireHours
+		if hours < 0 {
+			hours = 0
+		}
+		if err := models.SetSetting("host_expire_hours", strconv.Itoa(hours)); err != nil {
+			utils.FailWithMsg(c, "保存有效期配置失败")
+			return
+		}
+	}
+
 	utils.OkWithMsg(c, "保存成功")
+}
+
+// HostSetPinned 设置 Host 的固定状态
+func HostSetPinned(c *gin.Context) {
+	var req struct {
+		ID     int  `json:"id"`
+		Pinned bool `json:"pinned"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+	if req.ID == 0 {
+		utils.FailWithMsg(c, "ID不能为空")
+		return
+	}
+
+	if err := models.SetHostPinned(req.ID, req.Pinned); err != nil {
+		utils.FailWithMsg(c, err.Error())
+		return
+	}
+
+	utils.OkWithMsg(c, "设置成功")
 }

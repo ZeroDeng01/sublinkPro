@@ -94,6 +94,11 @@ func (sm *SchedulerManager) LoadFromDatabase() error {
 
 	}
 
+	// 启动 Host 过期清理任务
+	if err := sm.StartHostCleanupTask(); err != nil {
+		utils.Error("创建Host过期清理任务失败: %v", err)
+	}
+
 	return nil
 }
 
@@ -381,6 +386,49 @@ func (sm *SchedulerManager) StopNodeSpeedTestTask() {
 		sm.cron.Remove(entryID)
 		delete(sm.jobs, speedTestTaskID)
 		utils.Info("成功停止节点测速任务")
+	}
+}
+
+// StartHostCleanupTask 启动 Host 过期清理定时任务
+// 每10分钟执行一次，静默清理过期的 Host
+func (sm *SchedulerManager) StartHostCleanupTask() error {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+
+	// 使用 -101 作为 Host 清理任务的 ID
+	const hostCleanupTaskID = -101
+	const hostCleanupCron = "*/10 * * * *" // 每10分钟执行一次
+
+	// 如果任务已存在，先删除
+	if entryID, exists := sm.jobs[hostCleanupTaskID]; exists {
+		sm.cron.Remove(entryID)
+		delete(sm.jobs, hostCleanupTaskID)
+	}
+
+	// 添加清理任务
+	entryID, err := sm.cron.AddFunc(hostCleanupCron, func() {
+		ExecuteHostCleanupTask()
+	})
+
+	if err != nil {
+		utils.Error("添加Host过期清理任务失败 - Cron: %s, Error: %v", hostCleanupCron, err)
+		return err
+	}
+
+	sm.jobs[hostCleanupTaskID] = entryID
+	utils.Info("成功添加Host过期清理任务 - Cron: %s", hostCleanupCron)
+	return nil
+}
+
+// ExecuteHostCleanupTask 执行 Host 过期清理任务
+func ExecuteHostCleanupTask() {
+	deleted, err := models.CleanExpiredHosts()
+	if err != nil {
+		utils.Error("Host过期清理任务执行失败: %v", err)
+		return
+	}
+	if deleted > 0 {
+		utils.Debug("Host过期清理完成，删除 %d 条记录", deleted)
 	}
 }
 

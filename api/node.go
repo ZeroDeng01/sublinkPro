@@ -8,7 +8,6 @@ import (
 	"sublink/models"
 	"sublink/node/protocol"
 	"sublink/services"
-	"sublink/services/mihomo"
 	"sublink/utils"
 	"time"
 
@@ -714,16 +713,6 @@ func GetSpeedTestConfig(c *gin.Context) {
 		}
 	}
 
-	// 获取是否持久化Host（测速成功时自动保存域名->IP映射）
-	persistHostStr, _ := models.GetSetting("speed_test_persist_host")
-	persistHost := persistHostStr == "true"
-
-	// 获取自定义DNS服务器
-	dnsServer, _ := models.GetSetting("dns_server")
-	if dnsServer == "" {
-		dnsServer = mihomo.DefaultDNSServer
-	}
-
 	utils.OkDetailed(c, "获取成功", gin.H{
 		"cron":                 cron,
 		"enabled":              enabled,
@@ -743,9 +732,6 @@ func GetSpeedTestConfig(c *gin.Context) {
 		"include_handshake":    includeHandshake,
 		"speed_record_mode":    speedRecordMode,
 		"peak_sample_interval": peakSampleInterval,
-		"persist_host":         persistHost,
-		"dns_server":           dnsServer,
-		"dns_presets":          mihomo.GetDNSPresets(),
 	})
 }
 
@@ -770,8 +756,6 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		IncludeHandshake   *bool       `json:"include_handshake"`
 		SpeedRecordMode    string      `json:"speed_record_mode"`
 		PeakSampleInterval int         `json:"peak_sample_interval"`
-		PersistHost        *bool       `json:"persist_host"`
-		DNSServer          string      `json:"dns_server"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -931,25 +915,8 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 		}
 	}
 
-	// 保存持久化Host配置
-	if req.PersistHost != nil {
-		err = models.SetSetting("speed_test_persist_host", strconv.FormatBool(*req.PersistHost))
-		if err != nil {
-			utils.FailWithMsg(c, "保存持久化Host配置失败")
-			return
-		}
-	}
-
-	// 保存DNS服务器配置
-	if req.DNSServer != "" {
-		err = models.SetSetting("dns_server", req.DNSServer)
-		if err != nil {
-			utils.FailWithMsg(c, "保存DNS服务器配置失败")
-			return
-		}
-	}
-
 	// 更新定时任务
+
 	scheduler := services.GetSchedulerManager()
 	if req.Enabled {
 		if req.Cron == "" {
