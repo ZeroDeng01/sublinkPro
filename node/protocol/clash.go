@@ -394,6 +394,16 @@ func EncodeClash(urls []Urls, sqlconfig utils.SqlConfig) ([]byte, error) {
 		}
 		proxys = append(proxys, proxy)
 	}
+
+	// 根据配置执行 Host 替换
+	if sqlconfig.ReplaceServerWithHost && len(sqlconfig.HostMap) > 0 {
+		for i := range proxys {
+			if ip, exists := sqlconfig.HostMap[proxys[i].Server]; exists {
+				proxys[i].Server = ip
+			}
+		}
+	}
+
 	// 生成Clash配置文件
 	return DecodeClash(proxys, sqlconfig.Clash)
 }

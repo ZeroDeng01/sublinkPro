@@ -14,6 +14,17 @@ import (
 
 func EncodeSurge(urls []string, sqlconfig utils.SqlConfig) (string, error) {
 	var proxys, groups []string
+
+	// 辅助函数：根据 HostMap 替换服务器地址
+	replaceHost := func(server string) string {
+		if sqlconfig.ReplaceServerWithHost && len(sqlconfig.HostMap) > 0 {
+			if ip, exists := sqlconfig.HostMap[server]; exists {
+				return ip
+			}
+		}
+		return server
+	}
+
 	for _, link := range urls {
 		Scheme := strings.Split(link, "://")[0]
 		switch {
@@ -23,9 +34,10 @@ func EncodeSurge(urls []string, sqlconfig utils.SqlConfig) (string, error) {
 				log.Println(err)
 				continue
 			}
+			server := replaceHost(ss.Server)
 			proxy := map[string]interface{}{
 				"name":     ss.Name,
-				"server":   ss.Server,
+				"server":   server,
 				"port":     ss.Port,
 				"cipher":   ss.Param.Cipher,
 				"password": ss.Param.Password,
@@ -46,9 +58,10 @@ func EncodeSurge(urls []string, sqlconfig utils.SqlConfig) (string, error) {
 				tls = true
 			}
 			port, _ := convertToInt(vmess.Port)
+			server := replaceHost(vmess.Add)
 			proxy := map[string]interface{}{
 				"name":             vmess.Ps,
-				"server":           vmess.Add,
+				"server":           server,
 				"port":             port,
 				"uuid":             vmess.Id,
 				"tls":              tls,
@@ -77,9 +90,10 @@ func EncodeSurge(urls []string, sqlconfig utils.SqlConfig) (string, error) {
 				log.Println(err)
 				continue
 			}
+			server := replaceHost(trojan.Hostname)
 			proxy := map[string]interface{}{
 				"name":             trojan.Name,
-				"server":           trojan.Hostname,
+				"server":           server,
 				"port":             trojan.Port,
 				"password":         trojan.Password,
 				"udp":              sqlconfig.Udp,
@@ -99,9 +113,10 @@ func EncodeSurge(urls []string, sqlconfig utils.SqlConfig) (string, error) {
 				log.Println(err)
 				continue
 			}
+			server := replaceHost(hy2.Host)
 			proxy := map[string]interface{}{
 				"name":             hy2.Name,
-				"server":           hy2.Host,
+				"server":           server,
 				"port":             hy2.Port,
 				"password":         hy2.Password,
 				"udp":              sqlconfig.Udp,
@@ -121,9 +136,10 @@ func EncodeSurge(urls []string, sqlconfig utils.SqlConfig) (string, error) {
 				log.Println(err)
 				continue
 			}
+			server := replaceHost(tuic.Host)
 			proxy := map[string]interface{}{
 				"name":             tuic.Name,
-				"server":           tuic.Host,
+				"server":           server,
 				"port":             tuic.Port,
 				"password":         tuic.Password,
 				"udp":              sqlconfig.Udp,

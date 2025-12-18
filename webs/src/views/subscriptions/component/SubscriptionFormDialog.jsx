@@ -318,6 +318,17 @@ export default function SubscriptionFormDialog({
                     control={<Checkbox checked={formData.cert} onChange={(e) => setFormData({ ...formData, cert: e.target.checked })} />}
                     label="跳过证书验证"
                   />
+                  <Tooltip title="根据系统 Host 配置，将节点服务器地址替换为对应的 IP 地址" placement="top" arrow>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={formData.replaceServerWithHost}
+                          onChange={(e) => setFormData({ ...formData, replaceServerWithHost: e.target.checked })}
+                        />
+                      }
+                      label="替换服务器地址为 Host"
+                    />
+                  </Tooltip>
                 </Stack>
               </Stack>
             </AccordionDetails>

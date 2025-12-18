@@ -124,10 +124,12 @@ func DecryptUserIDCompact(encrypted string, key []byte) (int, error) {
 }
 
 type SqlConfig struct {
-	Clash string `json:"clash"`
-	Surge string `json:"surge"`
-	Udp   bool   `json:"udp"`
-	Cert  bool   `json:"cert"`
+	Clash                 string            `json:"clash"`
+	Surge                 string            `json:"surge"`
+	Udp                   bool              `json:"udp"`
+	Cert                  bool              `json:"cert"`
+	ReplaceServerWithHost bool              `json:"replaceServerWithHost"` // 是否使用 Host 替换服务器地址
+	HostMap               map[string]string `json:"-"`                     // 运行时填充的 Host 映射，不序列化
 }
 
 // ipv6地址匹配规则

@@ -336,6 +336,12 @@ func GetClash(c *gin.Context) {
 		c.Writer.WriteString("配置读取错误")
 		return
 	}
+
+	// 如果启用 Host 替换，填充 HostMap
+	if configs.ReplaceServerWithHost {
+		configs.HostMap = models.GetHostMap()
+	}
+
 	DecodeClash, err := protocol.EncodeClash(urls, configs)
 	if err != nil {
 		c.Writer.WriteString(err.Error())
@@ -457,6 +463,12 @@ func GetSurge(c *gin.Context) {
 		c.Writer.WriteString("配置读取错误")
 		return
 	}
+
+	// 如果启用 Host 替换，填充 HostMap
+	if configs.ReplaceServerWithHost {
+		configs.HostMap = models.GetHostMap()
+	}
+
 	// log.Println("surge路径:", configs)
 	DecodeClash, err := protocol.EncodeSurge(urls, configs)
 	if err != nil {

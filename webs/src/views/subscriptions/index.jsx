@@ -92,6 +92,7 @@ export default function SubscriptionList() {
     surge: './template/surge.conf',
     udp: false,
     cert: false,
+    replaceServerWithHost: false,
     selectionMode: 'nodes',
     selectedNodes: [],
     selectedGroups: [],
@@ -240,6 +241,7 @@ export default function SubscriptionList() {
       surge: './template/surge.conf',
       udp: false,
       cert: false,
+      replaceServerWithHost: false,
       selectionMode: 'nodes',
       selectedNodes: [],
       selectedGroups: [],
@@ -287,6 +289,7 @@ export default function SubscriptionList() {
       surge: config?.surge || './template/surge.conf',
       udp: config?.udp || false,
       cert: config?.cert || false,
+      replaceServerWithHost: config?.replaceServerWithHost || false,
       selectionMode: mode,
       selectedNodes: nodes,
       selectedGroups: groups,
@@ -350,7 +353,8 @@ export default function SubscriptionList() {
         clash: formData.clash,
         surge: formData.surge,
         udp: formData.udp,
-        cert: formData.cert
+        cert: formData.cert,
+        replaceServerWithHost: formData.replaceServerWithHost
       });
 
       const requestData = {
@@ -700,9 +704,9 @@ export default function SubscriptionList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -718,9 +722,9 @@ export default function SubscriptionList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
