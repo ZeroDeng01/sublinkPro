@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sublink/models"
 	"sublink/node/protocol"
-	"sublink/services"
+	"sublink/services/scheduler"
 	"sublink/utils"
 	"time"
 
@@ -917,19 +917,19 @@ func UpdateSpeedTestConfig(c *gin.Context) {
 
 	// 更新定时任务
 
-	scheduler := services.GetSchedulerManager()
+	sch := scheduler.GetSchedulerManager()
 	if req.Enabled {
 		if req.Cron == "" {
 			utils.FailWithMsg(c, "启用时Cron表达式不能为空")
 			return
 		}
-		err = scheduler.StartNodeSpeedTestTask(req.Cron)
+		err = sch.StartNodeSpeedTestTask(req.Cron)
 		if err != nil {
 			utils.FailWithMsg(c, "启动定时任务失败: "+err.Error())
 			return
 		}
 	} else {
-		scheduler.StopNodeSpeedTestTask()
+		sch.StopNodeSpeedTestTask()
 	}
 
 	utils.OkWithMsg(c, "保存成功")
@@ -944,10 +944,10 @@ func RunSpeedTest(c *gin.Context) {
 	_ = c.ShouldBindJSON(&req)
 
 	if len(req.IDs) > 0 {
-		go services.ExecuteSpecificNodeSpeedTestTask(req.IDs)
+		go scheduler.ExecuteSpecificNodeSpeedTestTask(req.IDs)
 		utils.OkWithMsg(c, "指定节点测速任务已在后台启动")
 	} else {
-		go services.ExecuteNodeSpeedTestTask()
+		go scheduler.ExecuteNodeSpeedTestTask()
 		utils.OkWithMsg(c, "测速任务已在后台启动")
 	}
 }

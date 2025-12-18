@@ -2,6 +2,7 @@ package services
 
 import (
 	"sublink/models"
+	"sublink/services/scheduler"
 	"sublink/services/telegram"
 )
 
@@ -10,15 +11,15 @@ import (
 type telegramServicesWrapper struct{}
 
 func (w *telegramServicesWrapper) RunSpeedTestOnNodes(nodes []models.Node) {
-	RunSpeedTestOnNodes(nodes)
+	scheduler.RunSpeedTestOnNodes(nodes)
 }
 
 func (w *telegramServicesWrapper) ExecuteScheduledSpeedTest() {
-	ExecuteNodeSpeedTestTask()
+	scheduler.ExecuteNodeSpeedTestTask()
 }
 
 func (w *telegramServicesWrapper) ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trigger models.TaskTrigger) {
-	ExecuteSubscriptionTaskWithTrigger(id, url, subName, trigger)
+	scheduler.ExecuteSubscriptionTaskWithTrigger(id, url, subName, trigger)
 }
 
 func (w *telegramServicesWrapper) ApplyAutoTagRules(nodes []models.Node, triggerSource string) {

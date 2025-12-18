@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"sublink/dto"
 	"sublink/models"
-	"sublink/services"
+	"sublink/services/scheduler"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
@@ -57,15 +57,15 @@ func SubSchedulerAdd(c *gin.Context) {
 
 	// 添加定时任务
 	if req.Enabled {
-		scheduler := services.GetSchedulerManager()
-		_ = scheduler.AddJob(subS.ID, req.CronExpr, func(id int, url string, subName string) {
-			services.ExecuteSubscriptionTask(id, url, subName)
+		sch := scheduler.GetSchedulerManager()
+		_ = sch.AddJob(subS.ID, req.CronExpr, func(id int, url string, subName string) {
+			scheduler.ExecuteSubscriptionTask(id, url, subName)
 		}, subS.ID, req.URL, req.Name)
 	}
 
 	// 立即执行一次任务（使用 ExecuteSubscriptionTaskWithTrigger 确保与定时任务行为一致，但标记为手动触发）
 	if req.Enabled {
-		go services.ExecuteSubscriptionTaskWithTrigger(subS.ID, subS.URL, subS.Name, models.TaskTriggerManual)
+		go scheduler.ExecuteSubscriptionTaskWithTrigger(subS.ID, subS.URL, subS.Name, models.TaskTriggerManual)
 	}
 
 	utils.OkWithMsg(c, "添加成功")
@@ -80,7 +80,7 @@ func PullClashConfigFromURL(c *gin.Context) {
 	}
 	// 使用 ExecuteSubscriptionTaskWithTrigger 确保手动拉取标记为手动触发
 	// 包括订阅更新后自动触发 tag 规则等后续处理
-	go services.ExecuteSubscriptionTaskWithTrigger(req.ID, req.URL, req.Name, models.TaskTriggerManual)
+	go scheduler.ExecuteSubscriptionTaskWithTrigger(req.ID, req.URL, req.Name, models.TaskTriggerManual)
 	utils.OkWithMsg(c, "任务启动成功")
 }
 
@@ -117,8 +117,8 @@ func SubSchedulerDel(c *gin.Context) {
 	}
 
 	// 删除定时任务
-	scheduler := services.GetSchedulerManager()
-	scheduler.RemoveJob(ssID)
+	sch := scheduler.GetSchedulerManager()
+	sch.RemoveJob(ssID)
 
 	utils.OkWithMsg(c, "删除成功")
 }
@@ -237,8 +237,8 @@ func SubSchedulerUpdate(c *gin.Context) {
 	}
 
 	// 更新定时任务
-	scheduler := services.GetSchedulerManager()
-	_ = scheduler.UpdateJob(req.ID, req.CronExpr, req.Enabled, req.URL, req.Name)
+	sch := scheduler.GetSchedulerManager()
+	_ = sch.UpdateJob(req.ID, req.CronExpr, req.Enabled, req.URL, req.Name)
 
 	utils.OkWithMsg(c, "更新成功")
 

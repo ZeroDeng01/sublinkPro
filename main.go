@@ -18,6 +18,7 @@ import (
 	"sublink/services"
 	"sublink/services/geoip"
 	"sublink/services/mihomo"
+	"sublink/services/scheduler"
 	"sublink/services/sse"
 	"sublink/services/telegram"
 	"sublink/settings"
@@ -310,10 +311,10 @@ func Run() {
 	go sse.GetSSEBroker().Listen()
 
 	// 初始化并启动定时任务管理器（演示模式下跳过）
-	var scheduler *services.SchedulerManager
+	var sch *scheduler.SchedulerManager
 	if !models.IsDemoMode() {
-		scheduler = services.GetSchedulerManager()
-		scheduler.Start()
+		sch = scheduler.GetSchedulerManager()
+		sch.Start()
 	}
 
 	if err := models.InitNodeCache(); err != nil {
@@ -383,6 +384,9 @@ func Run() {
 	// 初始化任务管理器
 	services.InitTaskManager()
 
+	// 初始化 scheduler 包的依赖（必须在 InitTaskManager 之后）
+	services.InitSchedulerDependencies()
+
 	// 初始化 Telegram 机器人 (异步)
 	go func() {
 		utils.Debug("正在异步初始化 Telegram 机器人...")
@@ -396,8 +400,8 @@ func Run() {
 	sse.TelegramNotifier = telegram.SendNotification
 
 	// 从数据库加载定时任务（演示模式下跳过）
-	if !models.IsDemoMode() && scheduler != nil {
-		err := scheduler.LoadFromDatabase()
+	if !models.IsDemoMode() && sch != nil {
+		err := sch.LoadFromDatabase()
 		if err != nil {
 			utils.Error("加载定时任务失败: %v", err)
 		}
