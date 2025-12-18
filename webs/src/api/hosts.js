@@ -22,3 +22,12 @@ export const exportHosts = () => request.get('/v1/hosts/export');
 
 // 从文本同步 Host
 export const syncHosts = (text) => request.post('/v1/hosts/sync', { text });
+
+// ========== Host 模块设置 ==========
+
+// 获取模块设置
+export const getHostSettings = () => request.get('/v1/hosts/settings');
+
+// 更新模块设置
+export const updateHostSettings = (data) => request.post('/v1/hosts/settings', data);
+

@@ -22,5 +22,9 @@ func Host(r *gin.Engine) {
 		// 文本模式
 		hostGroup.GET("/export", api.HostExport)
 		hostGroup.POST("/sync", api.HostSync)
+
+		// 模块设置
+		hostGroup.GET("/settings", api.GetHostSettings)
+		hostGroup.POST("/settings", api.UpdateHostSettings)
 	}
 }

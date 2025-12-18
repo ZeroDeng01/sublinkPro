@@ -31,6 +31,14 @@ import DialogActions from '@mui/material/DialogActions';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Chip from '@mui/material/Chip';
+import Collapse from '@mui/material/Collapse';
+import Divider from '@mui/material/Divider';
+import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+import Switch from '@mui/material/Switch';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
@@ -44,10 +52,13 @@ import CodeIcon from '@mui/icons-material/Code';
 import SaveIcon from '@mui/icons-material/Save';
 import UndoIcon from '@mui/icons-material/Undo';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import SettingsIcon from '@mui/icons-material/Settings';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
-import { getHosts, addHost, updateHost, deleteHost, batchDeleteHosts, exportHosts, syncHosts } from 'api/hosts';
+import { getHosts, addHost, updateHost, deleteHost, batchDeleteHosts, exportHosts, syncHosts, getHostSettings, updateHostSettings } from 'api/hosts';
 
 // ==============================|| HOST MANAGEMENT ||============================== //
 
@@ -72,6 +83,11 @@ export default function HostManagement() {
   const [textContent, setTextContent] = useState('');
   const [originalText, setOriginalText] = useState('');
   const [syncing, setSyncing] = useState(false);
+
+  // 模块设置相关状态
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [settings, setSettings] = useState({ persist_host: false, dns_server: '', dns_presets: [] });
+  const [settingsLoading, setSettingsLoading] = useState(false);
 
   // 获取 Host 列表
   const fetchHosts = async (showRefreshing = false) => {
@@ -104,8 +120,25 @@ export default function HostManagement() {
 
   useEffect(() => {
     fetchHosts();
+    // 加载模块设置
+    const loadSettings = async () => {
+      try {
+        const res = await getHostSettings();
+        if (res.code === 200) {
+          setSettings({
+            persist_host: res.data?.persist_host || false,
+            dns_server: res.data?.dns_server || '',
+            dns_presets: res.data?.dns_presets || []
+          });
+        }
+      } catch {
+        // 静默失败
+      }
+    };
+    loadSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   // 切换到文本模式时加载内容
   useEffect(() => {
@@ -382,7 +415,119 @@ export default function HostManagement() {
         </Stack>
       </Box>
 
+      {/* 模块设置（可折叠） */}
+      <Paper
+        elevation={0}
+        sx={{
+          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+          borderRadius: 2,
+          overflow: 'hidden',
+          mb: 2
+        }}
+      >
+        <Box
+          onClick={() => setSettingsExpanded(!settingsExpanded)}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            p: 1.5,
+            cursor: 'pointer',
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
+            },
+            transition: 'background-color 0.2s'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <SettingsIcon fontSize="small" color="action" />
+            <Typography variant="subtitle2" fontWeight={600}>
+              模块设置
+            </Typography>
+          </Box>
+          {settingsExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+        </Box>
+        <Collapse in={settingsExpanded}>
+          <Divider />
+          <Box sx={{ p: 2 }}>
+            <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems={isMobile ? 'stretch' : 'center'}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={settings.persist_host}
+                    disabled={settingsLoading}
+                    onChange={async (e) => {
+                      const newValue = e.target.checked;
+                      setSettings({ ...settings, persist_host: newValue });
+                      setSettingsLoading(true);
+                      try {
+                        const res = await updateHostSettings({ persist_host: newValue });
+                        if (res.code === 200) {
+                          showMessage('设置已保存');
+                        } else {
+                          showMessage(res.msg || '保存失败', 'error');
+                        }
+                      } catch {
+                        showMessage('保存失败', 'error');
+                      } finally {
+                        setSettingsLoading(false);
+                      }
+                    }}
+                    size="small"
+                  />
+                }
+                label={
+                  <Typography variant="body2">
+                    持久化节点Host
+                    <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
+                      (测速成功时保存域名→IP)
+                    </Typography>
+                  </Typography>
+                }
+              />
+              <FormControl size="small" sx={{ minWidth: isMobile ? '100%' : 220 }}>
+                <InputLabel>DNS解析服务器</InputLabel>
+                <Select
+                  value={settings.dns_server}
+                  label="DNS解析服务器"
+                  disabled={settingsLoading}
+                  onChange={async (e) => {
+                    const newValue = e.target.value;
+                    setSettings({ ...settings, dns_server: newValue });
+                    setSettingsLoading(true);
+                    try {
+                      const res = await updateHostSettings({ dns_server: newValue });
+                      if (res.code === 200) {
+                        showMessage('设置已保存');
+                      } else {
+                        showMessage(res.msg || '保存失败', 'error');
+                      }
+                    } catch {
+                      showMessage('保存失败', 'error');
+                    } finally {
+                      setSettingsLoading(false);
+                    }
+                  }}
+                >
+                  {settings.dns_presets.map((preset) => (
+                    <MenuItem key={preset.value} value={preset.value}>
+                      {preset.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              {settingsLoading && <CircularProgress size={20} />}
+            </Stack>
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+              Host 模块可被测速、订阅导入等功能使用，为代理服务器域名提供自定义 DNS 解析。
+            </Typography>
+          </Box>
+        </Collapse>
+      </Paper>
+
       {/* 表单模式 */}
+
       {viewMode === 'table' && (
         <Box>
           {/* 搜索和操作栏 */}

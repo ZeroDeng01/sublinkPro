@@ -370,46 +370,9 @@ export default function SpeedTestDialog({
                 </Select>
               </FormControl>
             )}
-
-            {/* 持久化Host - 测速成功时自动保存域名->IP映射 */}
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={speedTestForm.persist_host ?? false}
-                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, persist_host: e.target.checked })}
-                  size="small"
-                />
-              }
-              label={
-                <Typography variant="body2">
-                  持久化节点Host
-                  <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
-                    (测速成功时保存域名→IP映射到Host模块)
-                  </Typography>
-                </Typography>
-              }
-            />
-            {speedTestForm.persist_host && (
-              <FormControl fullWidth size="small">
-                <InputLabel>DNS解析服务器</InputLabel>
-                <Select
-                  value={speedTestForm.dns_server || 'https://dns.alidns.com/dns-query'}
-                  label="DNS解析服务器"
-                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, dns_server: e.target.value })}
-                >
-                  {(speedTestForm.dns_presets || []).map((preset) => (
-                    <MenuItem key={preset.value} value={preset.value}>
-                      {preset.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-                <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5 }}>
-                  支持DoH(https://)和普通DNS(IP地址)
-                </Typography>
-              </FormControl>
-            )}
           </Stack>
         </ConfigSection>
+
 
         {/* ========== 延迟测量设置 ========== */}
         <ConfigSection title="延迟测量设置" icon={<TuneIcon fontSize="small" color="action" />} defaultExpanded={true}>
@@ -648,11 +611,9 @@ SpeedTestDialog.propTypes = {
     include_handshake: PropTypes.bool,
     speed_record_mode: PropTypes.string,
     peak_sample_interval: PropTypes.number,
-    landing_ip_url: PropTypes.string,
-    persist_host: PropTypes.bool,
-    dns_server: PropTypes.string,
-    dns_presets: PropTypes.array
+    landing_ip_url: PropTypes.string
   }).isRequired,
+
   setSpeedTestForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,
   tagOptions: PropTypes.array,

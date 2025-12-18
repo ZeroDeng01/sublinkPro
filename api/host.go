@@ -3,6 +3,7 @@ package api
 import (
 	"strconv"
 	"sublink/models"
+	"sublink/services/mihomo"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
@@ -132,4 +133,49 @@ func HostSync(c *gin.Context) {
 		"updated": updated,
 		"deleted": deleted,
 	})
+}
+
+// GetHostSettings 获取 Host 模块设置
+func GetHostSettings(c *gin.Context) {
+	persistHostStr, _ := models.GetSetting("speed_test_persist_host")
+	persistHost := persistHostStr == "true"
+
+	dnsServer, _ := models.GetSetting("dns_server")
+	if dnsServer == "" {
+		dnsServer = mihomo.DefaultDNSServer
+	}
+
+	utils.OkDetailed(c, "获取成功", gin.H{
+		"persist_host": persistHost,
+		"dns_server":   dnsServer,
+		"dns_presets":  mihomo.GetDNSPresets(),
+	})
+}
+
+// UpdateHostSettings 更新 Host 模块设置
+func UpdateHostSettings(c *gin.Context) {
+	var req struct {
+		PersistHost *bool  `json:"persist_host"`
+		DNSServer   string `json:"dns_server"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+
+	if req.PersistHost != nil {
+		if err := models.SetSetting("speed_test_persist_host", strconv.FormatBool(*req.PersistHost)); err != nil {
+			utils.FailWithMsg(c, "保存持久化Host配置失败")
+			return
+		}
+	}
+
+	if req.DNSServer != "" {
+		if err := models.SetSetting("dns_server", req.DNSServer); err != nil {
+			utils.FailWithMsg(c, "保存DNS服务器配置失败")
+			return
+		}
+	}
+
+	utils.OkWithMsg(c, "保存成功")
 }
