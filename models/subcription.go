@@ -64,9 +64,9 @@ type ScriptWithSort struct {
 }
 
 type SubcriptionNode struct {
-	SubcriptionID int    `gorm:"primaryKey"`
-	NodeName      string `gorm:"primaryKey"`
-	Sort          int    `gorm:"default:0"`
+	SubcriptionID int `gorm:"primaryKey"`
+	NodeID        int `gorm:"primaryKey"` // 使用节点 ID 关联
+	Sort          int `gorm:"default:0"`
 }
 
 // SubcriptionGroup 订阅与分组关联表
@@ -113,13 +113,13 @@ func (sub *Subcription) Add() error {
 	return nil
 }
 
-// 添加节点列表建立多对多关系（使用节点名称）
+// 添加节点列表建立多对多关系（使用节点 ID）
 func (sub *Subcription) AddNode() error {
-	// 手动插入中间表记录，使用节点名称
+	// 手动插入中间表记录，使用节点 ID
 	for i, node := range sub.Nodes {
 		subNode := SubcriptionNode{
 			SubcriptionID: sub.ID,
-			NodeName:      node.Name,
+			NodeID:        node.ID,
 			Sort:          i, // 按添加顺序设置排序
 		}
 		if err := database.DB.Create(&subNode).Error; err != nil {
@@ -194,7 +194,7 @@ func (sub *Subcription) Update() error {
 	return nil
 }
 
-// 更新节点列表建立多对多关系（使用节点名称）
+// 更新节点列表建立多对多关系（使用节点 ID）
 func (sub *Subcription) UpdateNodes() error {
 	// 先删除旧的关联
 	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionNode{}).Error; err != nil {
@@ -204,7 +204,7 @@ func (sub *Subcription) UpdateNodes() error {
 	for i, node := range sub.Nodes {
 		subNode := SubcriptionNode{
 			SubcriptionID: sub.ID,
-			NodeName:      node.Name,
+			NodeID:        node.ID,
 			Sort:          i, // 按添加顺序设置排序
 		}
 		if err := database.DB.Create(&subNode).Error; err != nil {
@@ -446,7 +446,7 @@ func (sub *Subcription) GetSub() error {
 	var directNodeItems []NodeSortItem
 	err := database.DB.Table("nodes").
 		Select("nodes.*, subcription_nodes.sort, 0 as is_group").
-		Joins("left join subcription_nodes ON subcription_nodes.node_name = nodes.name").
+		Joins("left join subcription_nodes ON subcription_nodes.node_id = nodes.id").
 		Where("subcription_nodes.subcription_id = ?", sub.ID).
 		Scan(&directNodeItems).Error
 	if err != nil {
@@ -639,26 +639,26 @@ func batchLoadSubcriptionRelations(subs []Subcription) error {
 		return err
 	}
 
-	// 按订阅 ID 分组节点名称
-	subNodeNames := make(map[int][]struct {
-		Name string
+	// 按订阅 ID 分组节点 ID
+	subNodeIDs := make(map[int][]struct {
+		ID   int
 		Sort int
 	})
 	for _, sn := range subNodes {
-		subNodeNames[sn.SubcriptionID] = append(subNodeNames[sn.SubcriptionID], struct {
-			Name string
+		subNodeIDs[sn.SubcriptionID] = append(subNodeIDs[sn.SubcriptionID], struct {
+			ID   int
 			Sort int
-		}{sn.NodeName, sn.Sort})
+		}{sn.NodeID, sn.Sort})
 	}
 
 	// 使用节点缓存获取节点详情
 	for i := range subs {
-		nodeInfos := subNodeNames[subs[i].ID]
+		nodeInfos := subNodeIDs[subs[i].ID]
 		nodesWithSort := make([]NodeWithSort, 0, len(nodeInfos))
 		for _, ni := range nodeInfos {
-			if node, ok := GetNodeByName(ni.Name); ok {
+			if node, ok := nodeCache.Get(ni.ID); ok {
 				nodesWithSort = append(nodesWithSort, NodeWithSort{
-					Node: *node,
+					Node: node,
 					Sort: ni.Sort,
 				})
 			}
@@ -808,7 +808,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 	for _, node := range nodes {
 		newNode := SubcriptionNode{
 			SubcriptionID: newSub.ID,
-			NodeName:      node.NodeName,
+			NodeID:        node.NodeID,
 			Sort:          node.Sort,
 		}
 		if err := tx.Create(&newNode).Error; err != nil {
@@ -887,7 +887,7 @@ func (sub *Subcription) Sort(subNodeSort dto.SubcriptionNodeSortUpdate) error {
 		} else {
 			// 更新节点排序
 			err := tx.Model(&SubcriptionNode{}).
-				Where("subcription_id = ? AND node_name = ?", subNodeSort.ID, item.Name).
+				Where("subcription_id = ? AND node_id = ?", subNodeSort.ID, item.ID).
 				Update("sort", item.Sort).Error
 
 			if err != nil {

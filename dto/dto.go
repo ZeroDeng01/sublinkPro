@@ -9,7 +9,7 @@ type SubcriptionNodeSortUpdate struct {
 }
 
 type NodeSortItem struct {
-	ID      int    `json:"ID"`
+	ID      int    `json:"ID"` // 节点ID（非分组时必需）
 	Name    string `json:"Name"`
 	Sort    int    `json:"Sort"`
 	IsGroup *bool  `json:"IsGroup"` // 标识是否为分组，使用指针以区分false和未设置
@@ -17,9 +17,9 @@ type NodeSortItem struct {
 
 // UserAccessKey 用户访问密钥请求体结构
 type UserAccessKey struct {
-	UserName    string `json:"username" binding:"required"`
+	UserName    string     `json:"username" binding:"required"`
 	ExpiredAt   *time.Time `json:"expiredAt"`
-	Description string `json:"description"`
+	Description string     `json:"description"`
 }
 
 // SubSchedulerAddRequest 订阅调度添加请求体结构

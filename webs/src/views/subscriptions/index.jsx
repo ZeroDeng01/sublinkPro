@@ -610,6 +610,7 @@ export default function SubscriptionList() {
     const sortData = [];
     (sub.Nodes || []).forEach((node, idx) => {
       sortData.push({
+        ID: node.ID,
         Name: node.Name,
         Sort: node.Sort !== undefined ? node.Sort : idx,
         IsGroup: false
@@ -618,6 +619,7 @@ export default function SubscriptionList() {
     (sub.Groups || []).forEach((group, idx) => {
       const g = typeof group === 'string' ? { Name: group, Sort: sub.Nodes?.length + idx } : group;
       sortData.push({
+        ID: 0,
         Name: g.Name,
         Sort: g.Sort !== undefined ? g.Sort : sub.Nodes?.length + idx,
         IsGroup: true
@@ -704,9 +706,9 @@ export default function SubscriptionList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -722,9 +724,9 @@ export default function SubscriptionList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />

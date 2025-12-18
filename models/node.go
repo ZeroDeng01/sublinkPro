@@ -788,7 +788,7 @@ func FilterNodesByTags(nodes []Node, tags []string) []Node {
 // Del 删除节点
 func (node *Node) Del() error {
 	// 先清除节点与订阅的关联关系
-	if err := database.DB.Exec("DELETE FROM subcription_nodes WHERE node_name = ?", node.Name).Error; err != nil {
+	if err := database.DB.Exec("DELETE FROM subcription_nodes WHERE node_id = ?", node.ID).Error; err != nil {
 		return err
 	}
 	// Write-Through: 先删除数据库
@@ -825,14 +825,14 @@ func (node *Node) UpsertNode() error {
 func DeleteAutoSubscriptionNodes(sourceId int) error {
 	// 使用二级索引获取要删除的节点
 	nodesToDelete := nodeCache.GetByIndex("sourceID", strconv.Itoa(sourceId))
-	nodeNames := make([]string, 0, len(nodesToDelete))
+	nodeIDs := make([]int, 0, len(nodesToDelete))
 	for _, n := range nodesToDelete {
-		nodeNames = append(nodeNames, n.Name)
+		nodeIDs = append(nodeIDs, n.ID)
 	}
 
 	// 清除节点与订阅的关联关系
-	if len(nodeNames) > 0 {
-		if err := database.DB.Exec("DELETE FROM subcription_nodes WHERE node_name IN ?", nodeNames).Error; err != nil {
+	if len(nodeIDs) > 0 {
+		if err := database.DB.Exec("DELETE FROM subcription_nodes WHERE node_id IN ?", nodeIDs).Error; err != nil {
 			return err
 		}
 	}
@@ -856,19 +856,11 @@ func BatchDel(ids []int) error {
 		return nil
 	}
 
-	// 获取节点名称列表
-	nodeNames := make([]string, 0, len(ids))
-	for _, id := range ids {
-		if n, ok := nodeCache.Get(id); ok {
-			nodeNames = append(nodeNames, n.Name)
-		}
-	}
-
 	// 使用事务原子删除
 	err := database.WithTransaction(func(tx *gorm.DB) error {
 		// 先清除节点与订阅的关联关系
-		if len(nodeNames) > 0 {
-			if err := tx.Exec("DELETE FROM subcription_nodes WHERE node_name IN ?", nodeNames).Error; err != nil {
+		if len(ids) > 0 {
+			if err := tx.Exec("DELETE FROM subcription_nodes WHERE node_id IN ?", ids).Error; err != nil {
 				return err
 			}
 		}
