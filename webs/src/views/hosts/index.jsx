@@ -266,6 +266,23 @@ export default function HostManagement() {
 
   const hasTextChanged = textContent !== originalText;
 
+  // 格式化日期
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   // 移动端 Host 卡片
   const MobileHostCard = ({ host }) => (
     <Card
@@ -301,12 +318,15 @@ export default function HostManagement() {
             </Stack>
           </Box>
           <Box sx={{ pl: 4.5 }}>
-            <Chip label={host.ip} size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
+            <Chip label={host.ip} size="small" variant="outlined" sx={{ fontFamily: 'monospace', mb: 0.5 }} />
             {host.remark && (
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 {host.remark}
               </Typography>
             )}
+            <Typography variant="caption" color="text.disabled" display="block" sx={{ mt: 1 }}>
+              更新于 {formatDate(host.updatedAt)}
+            </Typography>
           </Box>
         </Stack>
       </CardContent>
@@ -349,11 +369,16 @@ export default function HostManagement() {
             </ToggleButton>
           </ToggleButtonGroup>
 
-          <Tooltip title="刷新">
-            <IconButton onClick={handleRefresh} disabled={refreshing} color="primary" size="small">
-              {refreshing ? <CircularProgress size={18} /> : <RefreshIcon />}
-            </IconButton>
-          </Tooltip>
+          <Stack direction="row" spacing={1} alignItems="center">
+            {hosts.length > 0 && (
+              <Chip label={`总数: ${hosts.length}`} size="small" variant="outlined" color="primary" sx={{ mr: 1, fontWeight: 500 }} />
+            )}
+            <Tooltip title="刷新">
+              <IconButton onClick={handleRefresh} disabled={refreshing} color="primary" size="small">
+                {refreshing ? <CircularProgress size={18} /> : <RefreshIcon />}
+              </IconButton>
+            </Tooltip>
+          </Stack>
         </Stack>
       </Box>
 
@@ -443,6 +468,8 @@ export default function HostManagement() {
                     <TableCell>域名</TableCell>
                     <TableCell>IP 地址</TableCell>
                     <TableCell>备注</TableCell>
+                    <TableCell>创建时间</TableCell>
+                    <TableCell>更新时间</TableCell>
                     <TableCell align="right">操作</TableCell>
                   </TableRow>
                 </TableHead>
@@ -464,6 +491,16 @@ export default function HostManagement() {
                       <TableCell>
                         <Typography variant="body2" color="text.secondary">
                           {host.remark || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                          {formatDate(host.createdAt)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                          {formatDate(host.updatedAt)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
