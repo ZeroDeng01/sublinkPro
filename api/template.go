@@ -18,6 +18,8 @@ type Temp struct {
 	Text       string `json:"text"`
 	Category   string `json:"category"`
 	RuleSource string `json:"ruleSource"`
+	UseProxy   bool   `json:"useProxy"`
+	ProxyLink  string `json:"proxyLink"`
 	CreateDate string `json:"create_date"`
 }
 
@@ -149,9 +151,13 @@ func GetTempS(c *gin.Context) {
 		var tmplMeta models.Template
 		category := "clash"
 		ruleSource := ""
+		useProxy := false
+		proxyLink := ""
 		if err := tmplMeta.FindByName(file.Name()); err == nil {
 			category = tmplMeta.Category
 			ruleSource = tmplMeta.RuleSource
+			useProxy = tmplMeta.UseProxy
+			proxyLink = tmplMeta.ProxyLink
 		}
 
 		temp := Temp{
@@ -159,6 +165,8 @@ func GetTempS(c *gin.Context) {
 			Text:       textContent,
 			Category:   category,
 			RuleSource: ruleSource,
+			UseProxy:   useProxy,
+			ProxyLink:  proxyLink,
 			CreateDate: modTime,
 		}
 		temps = append(temps, temp)
@@ -221,6 +229,8 @@ func UpdateTemp(c *gin.Context) {
 	text := c.PostForm("text")
 	category := c.PostForm("category")
 	ruleSource := c.PostForm("ruleSource")
+	useProxy := c.PostForm("useProxy") == "true"
+	proxyLink := c.PostForm("proxyLink")
 
 	if filename == "" || oldname == "" || text == "" {
 		utils.FailWithMsg(c, "文件名或内容不能为空")
@@ -301,6 +311,8 @@ func UpdateTemp(c *gin.Context) {
 			Name:       filename,
 			Category:   category,
 			RuleSource: ruleSource,
+			UseProxy:   useProxy,
+			ProxyLink:  proxyLink,
 		}
 		if err := tmpl.Add(); err != nil {
 			utils.Error("创建模板元数据失败: %v", err)
@@ -310,6 +322,8 @@ func UpdateTemp(c *gin.Context) {
 		tmpl.Name = filename
 		tmpl.Category = category
 		tmpl.RuleSource = ruleSource
+		tmpl.UseProxy = useProxy
+		tmpl.ProxyLink = proxyLink
 		if err := tmpl.Update(); err != nil {
 			utils.Error("更新模板元数据失败: %v", err)
 		}
@@ -322,6 +336,8 @@ func AddTemp(c *gin.Context) {
 	text := c.PostForm("text")
 	category := c.PostForm("category")
 	ruleSource := c.PostForm("ruleSource")
+	useProxy := c.PostForm("useProxy") == "true"
+	proxyLink := c.PostForm("proxyLink")
 
 	if filename == "" || text == "" {
 		utils.FailWithMsg(c, "文件名或内容不能为空")
@@ -375,6 +391,8 @@ func AddTemp(c *gin.Context) {
 		Name:       filename,
 		Category:   category,
 		RuleSource: ruleSource,
+		UseProxy:   useProxy,
+		ProxyLink:  proxyLink,
 	}
 	if err := tmpl.Add(); err != nil {
 		utils.Error("创建模板元数据失败: %v", err)

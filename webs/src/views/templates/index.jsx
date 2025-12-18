@@ -167,8 +167,13 @@ export default function TemplateList() {
       category: template.category || 'clash',
       ruleSource: template.ruleSource || ''
     });
-    setUseProxy(false);
-    setProxyLink('');
+    // 从模板数据加载代理设置
+    setUseProxy(template.useProxy || false);
+    setProxyLink(template.proxyLink || '');
+    // 如果之前保存了使用代理，预加载节点列表
+    if (template.useProxy) {
+      fetchProxyNodes();
+    }
     setDialogOpen(true);
   };
 
@@ -193,7 +198,9 @@ export default function TemplateList() {
           filename: formData.filename,
           text: formData.text,
           category: formData.category,
-          ruleSource: formData.ruleSource
+          ruleSource: formData.ruleSource,
+          useProxy: useProxy,
+          proxyLink: proxyLink
         });
         showMessage('更新成功');
       } else {
@@ -201,7 +208,9 @@ export default function TemplateList() {
           filename: formData.filename,
           text: formData.text,
           category: formData.category,
-          ruleSource: formData.ruleSource
+          ruleSource: formData.ruleSource,
+          useProxy: useProxy,
+          proxyLink: proxyLink
         });
         showMessage('添加成功');
       }
@@ -287,9 +296,9 @@ export default function TemplateList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -305,9 +314,9 @@ export default function TemplateList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
@@ -589,6 +598,19 @@ export default function TemplateList() {
               >
                 规则生成/转换（远程规则展开模式）
               </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                disabled={!formData.text || converting}
+                onClick={() => {
+                  openConfirm('清空内容', '确定要清空编辑器中的所有内容吗？', () => {
+                    setFormData({ ...formData, text: '' });
+                    showMessage('已清空内容');
+                  });
+                }}
+              >
+                清空内容
+              </Button>
             </Stack>
             <Box sx={{ position: 'relative' }}>
               {converting && (
@@ -620,9 +642,15 @@ export default function TemplateList() {
                 onChange={(value) => setFormData({ ...formData, text: value || '' })}
                 theme="vs-dark"
                 options={{
-                  minimap: { enabled: true },
-                  fontSize: 14,
-                  readOnly: converting
+                  minimap: { enabled: !matchDownMd },
+                  fontSize: matchDownMd ? 12 : 14,
+                  readOnly: converting,
+                  wordWrap: 'on',
+                  contextmenu: true,
+                  selectOnLineNumbers: true,
+                  automaticLayout: true,
+                  scrollBeyondLastLine: false,
+                  lineNumbers: matchDownMd ? 'off' : 'on'
                 }}
               />
             </Box>
@@ -707,9 +735,15 @@ export default function TemplateList() {
               onChange={(value) => setBaseTemplateContent(value || '')}
               theme="vs-dark"
               options={{
-                minimap: { enabled: true },
-                fontSize: 14,
-                readOnly: baseTemplateSaving
+                minimap: { enabled: !matchDownMd },
+                fontSize: matchDownMd ? 12 : 14,
+                readOnly: baseTemplateSaving,
+                wordWrap: 'on',
+                contextmenu: true,
+                selectOnLineNumbers: true,
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                lineNumbers: matchDownMd ? 'off' : 'on'
               }}
             />
           )}
