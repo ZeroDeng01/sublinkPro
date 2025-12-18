@@ -9,6 +9,7 @@ import (
 	"sublink/cache"
 	"sublink/database"
 	"sublink/utils"
+	"sync"
 	"time"
 )
 
@@ -24,6 +25,32 @@ type Host struct {
 
 // hostCache 使用泛型缓存
 var hostCache *cache.MapCache[int, Host]
+
+// Host变更回调函数，用于通知外部模块（如mihomo resolver）同步数据
+var (
+	hostChangeCallbackMu sync.RWMutex
+	hostChangeCallbacks  []func()
+)
+
+// RegisterHostChangeCallback 注册Host变更回调函数
+// 当Host数据发生变更（增删改）时会调用已注册的回调
+func RegisterHostChangeCallback(callback func()) {
+	hostChangeCallbackMu.Lock()
+	defer hostChangeCallbackMu.Unlock()
+	hostChangeCallbacks = append(hostChangeCallbacks, callback)
+}
+
+// notifyHostChanged 通知所有注册的回调函数
+func notifyHostChanged() {
+	hostChangeCallbackMu.RLock()
+	callbacks := make([]func(), len(hostChangeCallbacks))
+	copy(callbacks, hostChangeCallbacks)
+	hostChangeCallbackMu.RUnlock()
+
+	for _, cb := range callbacks {
+		cb()
+	}
+}
 
 func init() {
 	hostCache = cache.NewMapCache(func(h Host) int { return h.ID })
@@ -59,6 +86,7 @@ func (h *Host) Add() error {
 		return err
 	}
 	hostCache.Set(h.ID, *h)
+	notifyHostChanged() // 通知外部模块同步
 	return nil
 }
 
@@ -82,11 +110,12 @@ func (h *Host) Update() error {
 	if err != nil {
 		return err
 	}
-	// 从DB读取完整数据后更新缓存
+	// 从数据库读取完整数据后更新缓存
 	var updated Host
 	if err := database.DB.First(&updated, h.ID).Error; err == nil {
 		hostCache.Set(h.ID, updated)
 	}
+	notifyHostChanged() // 通知外部模块同步
 	return nil
 }
 
@@ -97,6 +126,7 @@ func (h *Host) Delete() error {
 		return err
 	}
 	hostCache.Delete(h.ID)
+	notifyHostChanged() // 通知外部模块同步
 	return nil
 }
 
@@ -146,6 +176,7 @@ func BatchDeleteHosts(ids []int) error {
 	for _, id := range ids {
 		hostCache.Delete(id)
 	}
+	notifyHostChanged() // 通知外部模块同步
 	return nil
 }
 
@@ -241,6 +272,11 @@ func SyncHostsFromText(text string) (added, updated, deleted int, err error) {
 
 	if err := tx.Commit().Error; err != nil {
 		return 0, 0, 0, err
+	}
+
+	// 有变更时通知外部模块同步
+	if added > 0 || updated > 0 || deleted > 0 {
+		notifyHostChanged()
 	}
 
 	return added, updated, deleted, nil

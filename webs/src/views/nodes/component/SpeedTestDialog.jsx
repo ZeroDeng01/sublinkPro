@@ -609,7 +609,8 @@ SpeedTestDialog.propTypes = {
     traffic_by_node: PropTypes.bool,
     include_handshake: PropTypes.bool,
     speed_record_mode: PropTypes.string,
-    peak_sample_interval: PropTypes.number
+    peak_sample_interval: PropTypes.number,
+    landing_ip_url: PropTypes.string
   }).isRequired,
   setSpeedTestForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,

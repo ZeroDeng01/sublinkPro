@@ -361,6 +361,18 @@ func Run() {
 		utils.Error("加载Host到缓存失败: %v", err)
 	}
 
+	// 注册Host变更回调：当Host模块数据变更时自动同步到mihomo resolver
+	// 这样所有使用代理的功能（测速、订阅导入、Telegram等）都遵循Host设置
+	models.RegisterHostChangeCallback(func() {
+		if err := mihomo.SyncHostsFromDB(); err != nil {
+			utils.Warn("Host变更同步到mihomo失败: %v", err)
+		}
+	})
+	// 首次同步Host配置到mihomo resolver
+	if err := mihomo.SyncHostsFromDB(); err != nil {
+		utils.Warn("初始化Host同步到mihomo失败: %v", err)
+	}
+
 	// 初始化去重字段元数据缓存（通过反射扫描协议结构体和Node模型）
 	protocol.InitProtocolMeta()
 	models.InitNodeFieldsMeta()
