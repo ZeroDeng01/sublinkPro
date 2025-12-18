@@ -6,7 +6,6 @@ out
 sublink_amd64 
 sublink_arm64
 sublink.exe
-*_test.go
 .idea/
 static
 sublinkPro.exe

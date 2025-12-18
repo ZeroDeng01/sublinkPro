@@ -248,8 +248,7 @@ func printHelp() {
   sublinkpro run -p 9000               # 指定端口启动
   sublinkpro run --log-level debug     # 开启调试日志
   sublinkpro run --db /data/db         # 指定数据库目录
-  sublinkpro setting -username admin -password newpass  # 重置用户
-`)
+  sublinkpro setting -username admin -password newpass  # 重置用户`)
 }
 
 func Run() {

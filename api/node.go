@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sublink/models"
 	"sublink/node/protocol"
+	"sublink/services"
 	"sublink/services/scheduler"
 	"sublink/utils"
 	"time"
@@ -605,6 +606,55 @@ func NodeBatchUpdateDialerProxy(c *gin.Context) {
 		return
 	}
 	utils.OkWithMsg(c, "批量更新前置代理成功")
+}
+
+// NodeBatchUpdateSource 批量更新节点来源
+func NodeBatchUpdateSource(c *gin.Context) {
+	var req struct {
+		IDs    []int  `json:"ids"`
+		Source string `json:"source"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+	if len(req.IDs) == 0 {
+		utils.FailWithMsg(c, "请选择要修改的节点")
+		return
+	}
+	err := models.BatchUpdateSource(req.IDs, req.Source)
+	if err != nil {
+		utils.FailWithMsg(c, "批量更新来源失败")
+		return
+	}
+	utils.OkWithMsg(c, "批量更新来源成功")
+}
+
+// UpdateNodeLinkNameAPI 修改节点原始名称 API
+func UpdateNodeLinkNameAPI(c *gin.Context) {
+	var req struct {
+		ID          int    `json:"id"`
+		NewLinkName string `json:"newLinkName"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+	if req.ID <= 0 {
+		utils.FailWithMsg(c, "节点ID无效")
+		return
+	}
+	if req.NewLinkName == "" {
+		utils.FailWithMsg(c, "新名称不能为空")
+		return
+	}
+
+	// 调用服务层更新
+	if err := services.UpdateNodeLinkName(req.ID, req.NewLinkName); err != nil {
+		utils.FailWithMsg(c, err.Error())
+		return
+	}
+	utils.OkWithMsg(c, "修改成功")
 }
 
 // 获取所有分组列表

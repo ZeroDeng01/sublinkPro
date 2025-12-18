@@ -79,7 +79,6 @@ func EncodeVLESSURL(v VLESS) string {
 	q.Set("headerType", v.Query.HeaderType)
 	q.Set("path", v.Query.Path)
 	q.Set("host", v.Query.Host)
-	u.Fragment = v.Name
 	// 检查query是否有空值，有的话删除
 	for k, v := range q {
 		if v[0] == "" {
@@ -89,8 +88,10 @@ func EncodeVLESSURL(v VLESS) string {
 	}
 	u.RawQuery = q.Encode()
 	// 如果没有name则用服务器加端口
-	if v.Name != "" {
+	if v.Name == "" {
 		u.Fragment = v.Server + ":" + strconv.Itoa(v.Port)
+	} else {
+		u.Fragment = v.Name
 	}
 	return u.String()
 }

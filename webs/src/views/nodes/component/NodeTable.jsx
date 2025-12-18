@@ -63,6 +63,7 @@ export default function NodeTable({
             </TableCell>
             <TableCell sx={{ minWidth: 150 }}>备注</TableCell>
             <TableCell sx={{ minWidth: 100 }}>分组</TableCell>
+            <TableCell sx={{ minWidth: 100 }}>来源</TableCell>
             <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>标签</TableCell>
             <TableCell sortDirection={sortBy === 'delay' ? sortOrder : false}>
               <TableSortLabel
@@ -134,6 +135,23 @@ export default function NodeTable({
                 ) : (
                   <Typography variant="caption" color="textSecondary">
                     未分组
+                  </Typography>
+                )}
+              </TableCell>
+              <TableCell>
+                {node.Source ? (
+                  <Tooltip title={node.Source === 'manual' ? '手动添加' : node.Source}>
+                    <Chip
+                      label={node.Source === 'manual' ? '手动添加' : node.Source}
+                      color="info"
+                      variant="outlined"
+                      size="small"
+                      sx={{ maxWidth: '120px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                    />
+                  </Tooltip>
+                ) : (
+                  <Typography variant="caption" color="textSecondary">
+                    手动添加
                   </Typography>
                 )}
               </TableCell>

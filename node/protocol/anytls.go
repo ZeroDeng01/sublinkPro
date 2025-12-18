@@ -60,3 +60,29 @@ func DecodeAnyTLSURL(s string) (AnyTLS, error) {
 	}
 	return anyTLS, nil
 }
+
+// EncodeAnyTLSURL anytls 编码
+func EncodeAnyTLSURL(a AnyTLS) string {
+	u := url.URL{
+		Scheme:   "anytls",
+		User:     url.User(a.Password),
+		Host:     fmt.Sprintf("%s:%d", a.Server, a.Port),
+		Fragment: a.Name,
+	}
+	q := u.Query()
+	if a.SkipCertVerify {
+		q.Set("insecure", "1")
+	}
+	if a.SNI != "" {
+		q.Set("sni", a.SNI)
+	}
+	if a.ClientFingerprint != "" {
+		q.Set("fp", a.ClientFingerprint)
+	}
+	u.RawQuery = q.Encode()
+	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
+	if a.Name == "" {
+		u.Fragment = fmt.Sprintf("%s:%d", a.Server, a.Port)
+	}
+	return u.String()
+}

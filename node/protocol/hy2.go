@@ -58,12 +58,13 @@ func EncodeHY2URL(hy2 HY2) string {
 	q.Set("auth", hy2.Auth)
 	q.Set("upmbps", strconv.Itoa(hy2.UpMbps))
 	q.Set("downmbps", strconv.Itoa(hy2.DownMbps))
-	// q.Set("alpn", hy2.ALPN)
+	q.Set("sni", hy2.Sni)
+	q.Set("obfs", hy2.Obfs)
+	q.Set("obfs-password", hy2.ObfsPassword)
 	// 检查query是否有空值，有的话删除
 	for k, v := range q {
-		if v[0] == "" {
+		if v[0] == "" || v[0] == "0" {
 			delete(q, k)
-			// fmt.Printf("k: %v, v: %v\n", k, v)
 		}
 	}
 	u.RawQuery = q.Encode()

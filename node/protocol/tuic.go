@@ -76,3 +76,40 @@ func DecodeTuicURL(s string) (Tuic, error) {
 		Disable_sni:        Disablesni,
 	}, nil
 }
+
+// EncodeTuicURL tuic 编码
+func EncodeTuicURL(t Tuic) string {
+	u := url.URL{
+		Scheme:   "tuic",
+		Host:     fmt.Sprintf("%s:%d", t.Host, t.Port),
+		Fragment: t.Name,
+	}
+	// 设置用户信息：uuid:password
+	if t.Password != "" {
+		u.User = url.UserPassword(t.Uuid, t.Password)
+	} else {
+		u.User = url.User(t.Uuid)
+	}
+	q := u.Query()
+	if t.Congestion_control != "" {
+		q.Set("Congestion_control", t.Congestion_control)
+	}
+	if len(t.Alpn) > 0 {
+		q.Set("alpn", strings.Join(t.Alpn, ","))
+	}
+	if t.Sni != "" {
+		q.Set("sni", t.Sni)
+	}
+	if t.Udp_relay_mode != "" {
+		q.Set("Udp_relay_mode", t.Udp_relay_mode)
+	}
+	if t.Disable_sni != 0 {
+		q.Set("Disable_sni", strconv.Itoa(t.Disable_sni))
+	}
+	u.RawQuery = q.Encode()
+	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
+	if t.Name == "" {
+		u.Fragment = fmt.Sprintf("%s:%d", t.Host, t.Port)
+	}
+	return u.String()
+}

@@ -40,7 +40,8 @@ import {
   getNodeGroups,
   getNodeSources,
   batchUpdateNodeGroup,
-  batchUpdateNodeDialerProxy
+  batchUpdateNodeDialerProxy,
+  batchUpdateNodeSource
 } from 'api/nodes';
 import { getSubSchedulers, addSubScheduler, updateSubScheduler, deleteSubScheduler, pullSubScheduler } from 'api/scheduler';
 import { getTags, batchSetNodeTags, batchRemoveNodeTags } from 'api/tags';
@@ -56,6 +57,8 @@ import {
   BatchDialerProxyDialog,
   BatchTagDialog,
   BatchRemoveTagDialog,
+  BatchSourceDialog,
+  EditLinkNameDialog,
   NodeDetailsPanel,
   NodeFilters,
   BatchActions,
@@ -192,6 +195,10 @@ export default function NodeList() {
   const [batchDialerProxyDialogOpen, setBatchDialerProxyDialogOpen] = useState(false);
   const [batchDialerProxyValue, setBatchDialerProxyValue] = useState('');
 
+  // 批量修改来源
+  const [batchSourceDialogOpen, setBatchSourceDialogOpen] = useState(false);
+  const [batchSourceValue, setBatchSourceValue] = useState('');
+
   // 标签相关状态
   const [tagFilter, setTagFilter] = useState([]);
   const [tagOptions, setTagOptions] = useState([]);
@@ -208,6 +215,10 @@ export default function NodeList() {
   // 节点详情面板
   const [detailsPanelOpen, setDetailsPanelOpen] = useState(false);
   const [detailsNode, setDetailsNode] = useState(null);
+
+  // 编辑原始名称对话框
+  const [editLinkNameDialogOpen, setEditLinkNameDialogOpen] = useState(false);
+  const [editLinkNameNode, setEditLinkNameNode] = useState(null);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -597,6 +608,36 @@ export default function NodeList() {
     } catch (error) {
       console.error(error);
       showMessage('批量修改前置代理失败', 'error');
+    }
+  };
+
+  // 批量修改来源
+  const handleBatchSource = () => {
+    if (selectedNodes.length === 0) {
+      showMessage('请选择要修改的节点', 'warning');
+      return;
+    }
+    setBatchSourceValue('');
+    setBatchSourceDialogOpen(true);
+  };
+
+  const handleSubmitBatchSource = async () => {
+    try {
+      const ids = selectedNodes.map((node) => node.ID);
+      // 如果值为空，设置为 manual
+      const source = batchSourceValue.trim() || 'manual';
+      await batchUpdateNodeSource(ids, source);
+      showMessage(`成功修改 ${selectedNodes.length} 个节点的来源`);
+      setSelectedNodes([]);
+      setBatchSourceDialogOpen(false);
+      fetchNodes(getCurrentFilters());
+      // 刷新来源选项
+      getNodeSources().then((res) => {
+        setSourceOptions((res.data || []).sort());
+      });
+    } catch (error) {
+      console.error(error);
+      showMessage('批量修改来源失败', 'error');
     }
   };
 
@@ -1111,6 +1152,7 @@ export default function NodeList() {
         onClearSelection={() => setSelectedNodes([])}
         onDelete={handleBatchDelete}
         onGroup={handleBatchGroup}
+        onSource={handleBatchSource}
         onDialerProxy={handleBatchDialerProxy}
         onTag={handleBatchTag}
         onRemoveTag={handleBatchRemoveTag}
@@ -1283,6 +1325,17 @@ export default function NodeList() {
         onSubmit={handleSubmitBatchRemoveTag}
       />
 
+      {/* 批量修改来源对话框 */}
+      <BatchSourceDialog
+        open={batchSourceDialogOpen}
+        selectedCount={selectedNodes.length}
+        value={batchSourceValue}
+        setValue={setBatchSourceValue}
+        sourceOptions={sourceOptions}
+        onClose={() => setBatchSourceDialogOpen(false)}
+        onSubmit={handleSubmitBatchSource}
+      />
+
       {/* IP详情弹窗 */}
       <IPDetailsDialog open={ipDialogOpen} onClose={() => setIpDialogOpen(false)} ip={selectedIP} onCopy={copyToClipboard} />
 
@@ -1299,6 +1352,29 @@ export default function NodeList() {
         onIPClick={(ip) => {
           setSelectedIP(ip);
           setIpDialogOpen(true);
+        }}
+        onEditLinkName={(node) => {
+          setEditLinkNameNode(node);
+          setEditLinkNameDialogOpen(true);
+        }}
+      />
+
+      {/* 编辑原始名称对话框 */}
+      <EditLinkNameDialog
+        open={editLinkNameDialogOpen}
+        node={editLinkNameNode}
+        onClose={() => {
+          setEditLinkNameDialogOpen(false);
+          setEditLinkNameNode(null);
+        }}
+        onSuccess={() => {
+          showMessage('修改原始名称成功');
+          fetchNodes(getCurrentFilters());
+          // 刷新详情面板节点数据
+          if (editLinkNameNode) {
+            setDetailsNode(null);
+            setDetailsPanelOpen(false);
+          }
         }}
       />
 

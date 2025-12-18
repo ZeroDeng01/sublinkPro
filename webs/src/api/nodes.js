@@ -143,6 +143,24 @@ export function batchUpdateNodeDialerProxy(ids, dialerProxyName) {
   });
 }
 
+// 批量更新节点来源
+export function batchUpdateNodeSource(ids, source) {
+  return request({
+    url: '/v1/nodes/batch-update-source',
+    method: 'post',
+    data: { ids, source }
+  });
+}
+
+// 修改节点原始名称
+export function updateNodeLinkName(id, newLinkName) {
+  return request({
+    url: '/v1/nodes/update-link-name',
+    method: 'post',
+    data: { id, newLinkName }
+  });
+}
+
 // 获取IP详细信息
 export function getIPDetails(ip) {
   return request({

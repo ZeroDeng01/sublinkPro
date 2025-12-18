@@ -76,7 +76,7 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
           </Box>
         </Stack>
 
-        {/* 信息区: 分组 + 速度 + 国家 */}
+        {/* 信息区: 分组 + 来源 + 速度 + 国家 */}
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
           {node.Group && (
             <Tooltip title={`分组: ${node.Group}`}>
@@ -84,6 +84,18 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
                 icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📁</span>}
                 label={node.Group}
                 color="warning"
+                variant="outlined"
+                size="small"
+                sx={{ maxWidth: '100px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+              />
+            </Tooltip>
+          )}
+          {node.Source && node.Source !== 'manual' && (
+            <Tooltip title={`来源: ${node.Source}`}>
+              <Chip
+                icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📥</span>}
+                label={node.Source}
+                color="info"
                 variant="outlined"
                 size="small"
                 sx={{ maxWidth: '100px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}

@@ -71,6 +71,11 @@ func InitNodeCache() error {
 	return nil
 }
 
+// UpdateNodeCache 更新节点缓存（供外部包使用）
+func UpdateNodeCache(id int, node Node) {
+	nodeCache.Set(id, node)
+}
+
 // Add 添加节点
 func (node *Node) Add() error {
 	// Write-Through: 先写数据库
@@ -930,6 +935,31 @@ func BatchUpdateDialerProxy(ids []int, dialerProxyName string) error {
 	for _, id := range ids {
 		if n, ok := nodeCache.Get(id); ok {
 			n.DialerProxyName = dialerProxyName
+			nodeCache.Set(id, n)
+		}
+	}
+	return nil
+}
+
+// BatchUpdateSource 批量更新节点来源 - 使用事务保证原子性
+func BatchUpdateSource(ids []int, source string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	// 使用事务更新
+	err := database.WithTransaction(func(tx *gorm.DB) error {
+		return tx.Model(&Node{}).Where("id IN ?", ids).Update("source", source).Error
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// 事务成功后更新缓存
+	for _, id := range ids {
+		if n, ok := nodeCache.Get(id); ok {
+			n.Source = source
 			nodeCache.Set(id, n)
 		}
 	}

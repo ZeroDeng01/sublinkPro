@@ -47,3 +47,24 @@ func DecodeSocks5URL(s string) (Socks5, error) {
 	}
 	return socks5, nil
 }
+
+// EncodeSocks5URL socks5 编码
+func EncodeSocks5URL(s Socks5) string {
+	u := url.URL{
+		Scheme:   "socks5",
+		Host:     fmt.Sprintf("%s:%d", s.Server, s.Port),
+		Fragment: s.Name,
+	}
+	if s.Username != "" {
+		if s.Password != "" {
+			u.User = url.UserPassword(s.Username, s.Password)
+		} else {
+			u.User = url.User(s.Username)
+		}
+	}
+	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
+	if s.Name == "" {
+		u.Fragment = fmt.Sprintf("%s:%d", s.Server, s.Port)
+	}
+	return u.String()
+}

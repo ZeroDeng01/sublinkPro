@@ -170,7 +170,7 @@ const DetailItem = ({ icon, label, value, isLink, onClick, secondary, noBorder }
 /**
  * 节点详情面板组件
  */
-export default function NodeDetailsPanel({ open, node, tagColorMap, onClose, onSpeedTest, onCopy, onEdit, onDelete, onIPClick }) {
+export default function NodeDetailsPanel({ open, node, tagColorMap, onClose, onSpeedTest, onCopy, onEdit, onDelete, onIPClick, onEditLinkName }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -341,12 +341,51 @@ export default function NodeDetailsPanel({ open, node, tagColorMap, onClose, onS
       {/* 滚动详情区域 */}
       <Box sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2 }}>
         <List disablePadding sx={{ mb: 3 }}>
-          <DetailItem
-            icon={<RouterIcon fontSize="small" />}
-            label="原始名称"
-            value={node.LinkName || '-'}
-            secondary={node.LinkName === node.Name ? '通过订阅获取的名称一致' : null}
-          />
+          <ListItem disablePadding sx={{ py: 1.5, borderBottom: '1px dashed', borderColor: 'divider', display: 'block' }}>
+            <Stack direction="row" alignItems="flex-start" spacing={2} width="100%">
+              <Avatar
+                sx={{
+                  width: 36,
+                  height: 36,
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                  color: 'primary.main',
+                  borderRadius: 2,
+                  mt: 0.5
+                }}
+              >
+                <RouterIcon fontSize="small" />
+              </Avatar>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+                  原始名称
+                </Typography>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography
+                    variant="body2"
+                    sx={{ wordBreak: 'break-word', flex: 1 }}
+                  >
+                    {node.LinkName || '-'}
+                  </Typography>
+                  {onEditLinkName && (
+                    <Tooltip title="修改原始名称">
+                      <IconButton
+                        size="small"
+                        onClick={() => onEditLinkName(node)}
+                        sx={{ color: 'primary.main' }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+                {node.LinkName === node.Name && (
+                  <Typography variant="caption" color="text.secondary" display="block" mt={0.3}>
+                    通过订阅获取的名称一致
+                  </Typography>
+                )}
+              </Box>
+            </Stack>
+          </ListItem>
           <DetailItem icon={<SourceIcon fontSize="small" />} label="来源" value={node.Source === 'manual' ? '手动添加' : node.Source} />
           {node.DialerProxyName && <DetailItem icon={<LinkIcon fontSize="small" />} label="前置代理" value={node.DialerProxyName} />}
           {node.Tags && (
@@ -516,5 +555,6 @@ NodeDetailsPanel.propTypes = {
   onCopy: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
-  onIPClick: PropTypes.func
+  onIPClick: PropTypes.func,
+  onEditLinkName: PropTypes.func
 };

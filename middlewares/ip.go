@@ -28,7 +28,7 @@ func GetIp(c *gin.Context) {
 		}
 		err = sub.Find()
 		if err != nil {
-			utils.Error(err.Error())
+			utils.Error("查找订阅失败: %s", err.Error())
 			return
 		}
 		var iplog models.SubLogs
@@ -52,7 +52,7 @@ func GetIp(c *gin.Context) {
 			iplog.Date = time.Now().Format("2006-01-02 15:04:05")
 			err = iplog.Update()
 			if err != nil {
-				utils.Error(err.Error())
+				utils.Error("更新IP日志失败: %s", err.Error())
 				return
 			}
 		}

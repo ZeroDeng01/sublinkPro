@@ -389,7 +389,7 @@ func EncodeClash(urls []Urls, config OutputConfig) ([]byte, error) {
 	for _, link := range urls {
 		proxy, err := LinkToProxy(link, config)
 		if err != nil {
-			utils.Error(err.Error())
+			utils.Error("链接转换失败: %s", err.Error())
 			continue
 		}
 		proxys = append(proxys, proxy)
