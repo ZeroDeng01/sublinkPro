@@ -272,7 +272,7 @@ export default function SubscriptionList() {
     setCurrentSub(sub);
     const config = typeof sub.Config === 'string' ? JSON.parse(sub.Config) : sub.Config;
 
-    const nodes = sub.Nodes?.map((n) => n.Name) || [];
+    const nodes = sub.Nodes?.map((n) => n.ID) || [];
     const groups = (sub.Groups || []).map((g) => (typeof g === 'string' ? g : g.Name));
     const scriptIds = (sub.Scripts || []).map((s) => s.id);
 
@@ -377,13 +377,13 @@ export default function SubscriptionList() {
       };
 
       if (formData.selectionMode === 'nodes') {
-        requestData.nodes = formData.selectedNodes.join(',');
+        requestData.nodeIds = formData.selectedNodes.join(',');
         requestData.groups = '';
       } else if (formData.selectionMode === 'groups') {
-        requestData.nodes = '';
+        requestData.nodeIds = '';
         requestData.groups = formData.selectedGroups.join(',');
       } else {
-        requestData.nodes = formData.selectedNodes.join(',');
+        requestData.nodeIds = formData.selectedNodes.join(',');
         requestData.groups = formData.selectedGroups.join(',');
       }
 
@@ -403,15 +403,15 @@ export default function SubscriptionList() {
     }
   };
 
-  // 节点选择操作
-  const handleAddNode = (nodeName) => {
-    setFormData({ ...formData, selectedNodes: [...formData.selectedNodes, nodeName] });
-    setCheckedAvailable(checkedAvailable.filter((n) => n !== nodeName));
+  // 节点选择操作（使用 node.ID）
+  const handleAddNode = (nodeId) => {
+    setFormData({ ...formData, selectedNodes: [...formData.selectedNodes, nodeId] });
+    setCheckedAvailable(checkedAvailable.filter((id) => id !== nodeId));
   };
 
-  const handleRemoveNode = (nodeName) => {
-    setFormData({ ...formData, selectedNodes: formData.selectedNodes.filter((n) => n !== nodeName) });
-    setCheckedSelected(checkedSelected.filter((n) => n !== nodeName));
+  const handleRemoveNode = (nodeId) => {
+    setFormData({ ...formData, selectedNodes: formData.selectedNodes.filter((id) => id !== nodeId) });
+    setCheckedSelected(checkedSelected.filter((id) => id !== nodeId));
   };
 
   // 过滤后的节点
@@ -434,13 +434,13 @@ export default function SubscriptionList() {
     });
   }, [allNodes, nodeGroupFilter, nodeSourceFilter, nodeSearchQuery, nodeCountryFilter]);
 
-  // 可选节点
+  // 可选节点（使用 ID 过滤）
   const availableNodes = useMemo(() => {
-    return filteredNodes.filter((node) => !formData.selectedNodes.includes(node.Name));
+    return filteredNodes.filter((node) => !formData.selectedNodes.includes(node.ID));
   }, [filteredNodes, formData.selectedNodes]);
 
   const handleAddAllVisible = () => {
-    const newNodes = [...formData.selectedNodes, ...availableNodes.map((n) => n.Name)];
+    const newNodes = [...formData.selectedNodes, ...availableNodes.map((n) => n.ID)];
     setFormData({ ...formData, selectedNodes: newNodes });
     setCheckedAvailable([]);
   };
@@ -450,20 +450,20 @@ export default function SubscriptionList() {
     setCheckedSelected([]);
   };
 
-  // 多选操作
-  const handleToggleAvailable = (nodeName) => {
-    if (checkedAvailable.includes(nodeName)) {
-      setCheckedAvailable(checkedAvailable.filter((n) => n !== nodeName));
+  // 多选操作（使用 node.ID）
+  const handleToggleAvailable = (nodeId) => {
+    if (checkedAvailable.includes(nodeId)) {
+      setCheckedAvailable(checkedAvailable.filter((id) => id !== nodeId));
     } else {
-      setCheckedAvailable([...checkedAvailable, nodeName]);
+      setCheckedAvailable([...checkedAvailable, nodeId]);
     }
   };
 
-  const handleToggleSelected = (nodeName) => {
-    if (checkedSelected.includes(nodeName)) {
-      setCheckedSelected(checkedSelected.filter((n) => n !== nodeName));
+  const handleToggleSelected = (nodeId) => {
+    if (checkedSelected.includes(nodeId)) {
+      setCheckedSelected(checkedSelected.filter((id) => id !== nodeId));
     } else {
-      setCheckedSelected([...checkedSelected, nodeName]);
+      setCheckedSelected([...checkedSelected, nodeId]);
     }
   };
 
@@ -474,7 +474,7 @@ export default function SubscriptionList() {
   };
 
   const handleRemoveChecked = () => {
-    const newNodes = formData.selectedNodes.filter((n) => !checkedSelected.includes(n));
+    const newNodes = formData.selectedNodes.filter((id) => !checkedSelected.includes(id));
     setFormData({ ...formData, selectedNodes: newNodes });
     setCheckedSelected([]);
   };
@@ -483,20 +483,20 @@ export default function SubscriptionList() {
     if (checkedAvailable.length === availableNodes.length) {
       setCheckedAvailable([]);
     } else {
-      setCheckedAvailable(availableNodes.map((n) => n.Name));
+      setCheckedAvailable(availableNodes.map((n) => n.ID));
     }
   };
 
-  // 已选节点列表
+  // 已选节点列表（使用 ID 过滤）
   const selectedNodesList = useMemo(() => {
-    return allNodes.filter((node) => formData.selectedNodes.includes(node.Name));
+    return allNodes.filter((node) => formData.selectedNodes.includes(node.ID));
   }, [allNodes, formData.selectedNodes]);
 
   const handleToggleAllSelected = () => {
     if (checkedSelected.length === selectedNodesList.length) {
       setCheckedSelected([]);
     } else {
-      setCheckedSelected(selectedNodesList.map((n) => n.Name));
+      setCheckedSelected(selectedNodesList.map((n) => n.ID));
     }
   };
 
@@ -706,9 +706,9 @@ export default function SubscriptionList() {
                 sx={
                   loading
                     ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -724,9 +724,9 @@ export default function SubscriptionList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />

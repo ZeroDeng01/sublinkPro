@@ -191,14 +191,14 @@ export default function SubscriptionFormDialog({
     });
   }, [allNodes, nodeGroupFilter, nodeSourceFilter, nodeSearchQuery, nodeCountryFilter]);
 
-  // 可选节点（排除已选）
+  // 可选节点（排除已选，使用 ID 匹配）
   const availableNodes = useMemo(() => {
-    return filteredNodes.filter((node) => !formData.selectedNodes.includes(node.Name));
+    return filteredNodes.filter((node) => !formData.selectedNodes.includes(node.ID));
   }, [filteredNodes, formData.selectedNodes]);
 
-  // 已选节点
+  // 已选节点（使用 ID 匹配）
   const selectedNodesList = useMemo(() => {
-    return allNodes.filter((node) => formData.selectedNodes.includes(node.Name));
+    return allNodes.filter((node) => formData.selectedNodes.includes(node.ID));
   }, [allNodes, formData.selectedNodes]);
 
   // 计算过滤规则数量

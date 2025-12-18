@@ -142,9 +142,9 @@ export default function NodeTransferBox({
                       px: 1,
                       mb: 0.5,
                       borderRadius: 2,
-                      bgcolor: checkedAvailable.includes(node.Name) ? 'action.selected' : 'transparent',
+                      bgcolor: checkedAvailable.includes(node.ID) ? 'action.selected' : 'transparent',
                       border: '1px solid',
-                      borderColor: checkedAvailable.includes(node.Name) ? 'primary.main' : 'transparent',
+                      borderColor: checkedAvailable.includes(node.ID) ? 'primary.main' : 'transparent',
                       transition: 'all 0.15s ease-in-out',
                       '&:hover': {
                         bgcolor: 'action.hover',
@@ -155,7 +155,7 @@ export default function NodeTransferBox({
                       <IconButton
                         size="small"
                         color="primary"
-                        onClick={() => onAddNode(node.Name)}
+                        onClick={() => onAddNode(node.ID)}
                         sx={{
                           bgcolor: 'primary.main',
                           color: 'white',
@@ -169,8 +169,8 @@ export default function NodeTransferBox({
                     <ListItemIcon sx={{ minWidth: 36 }}>
                       <Checkbox
                         edge="start"
-                        checked={checkedAvailable.includes(node.Name)}
-                        onChange={() => onToggleAvailable(node.Name)}
+                        checked={checkedAvailable.includes(node.ID)}
+                        onChange={() => onToggleAvailable(node.ID)}
                         size="small"
                       />
                     </ListItemIcon>
@@ -303,9 +303,9 @@ export default function NodeTransferBox({
                       px: 1,
                       mb: 0.5,
                       borderRadius: 2,
-                      bgcolor: checkedSelected.includes(node.Name) ? 'error.lighter' : 'transparent',
+                      bgcolor: checkedSelected.includes(node.ID) ? 'error.lighter' : 'transparent',
                       border: '1px solid',
-                      borderColor: checkedSelected.includes(node.Name) ? 'error.main' : 'transparent',
+                      borderColor: checkedSelected.includes(node.ID) ? 'error.main' : 'transparent',
                       transition: 'all 0.15s ease-in-out',
                       '&:hover': {
                         bgcolor: 'action.hover',
@@ -316,7 +316,7 @@ export default function NodeTransferBox({
                       <IconButton
                         size="small"
                         color="error"
-                        onClick={() => onRemoveNode(node.Name)}
+                        onClick={() => onRemoveNode(node.ID)}
                         sx={{
                           bgcolor: 'error.main',
                           color: 'white',
@@ -330,8 +330,8 @@ export default function NodeTransferBox({
                     <ListItemIcon sx={{ minWidth: 36 }}>
                       <Checkbox
                         edge="start"
-                        checked={checkedSelected.includes(node.Name)}
-                        onChange={() => onToggleSelected(node.Name)}
+                        checked={checkedSelected.includes(node.ID)}
+                        onChange={() => onToggleSelected(node.ID)}
                         size="small"
                         color="error"
                       />
@@ -475,9 +475,9 @@ export default function NodeTransferBox({
                     mb: 0.5,
                     borderRadius: 2,
                     cursor: 'pointer',
-                    bgcolor: checkedAvailable.includes(node.Name) ? 'primary.lighter' : 'transparent',
+                    bgcolor: checkedAvailable.includes(node.ID) ? 'primary.lighter' : 'transparent',
                     border: '1px solid',
-                    borderColor: checkedAvailable.includes(node.Name) ? 'primary.main' : 'divider',
+                    borderColor: checkedAvailable.includes(node.ID) ? 'primary.main' : 'divider',
                     transition: 'all 0.15s ease-in-out',
                     '&:hover': {
                       bgcolor: 'action.hover',
@@ -485,11 +485,11 @@ export default function NodeTransferBox({
                       borderColor: 'primary.light'
                     }
                   }}
-                  onClick={() => onToggleAvailable(node.Name)}
-                  onDoubleClick={() => onAddNode(node.Name)}
+                  onClick={() => onToggleAvailable(node.ID)}
+                  onDoubleClick={() => onAddNode(node.ID)}
                 >
                   <ListItemIcon sx={{ minWidth: 32 }}>
-                    <Checkbox edge="start" checked={checkedAvailable.includes(node.Name)} tabIndex={-1} disableRipple size="small" />
+                    <Checkbox edge="start" checked={checkedAvailable.includes(node.ID)} tabIndex={-1} disableRipple size="small" />
                   </ListItemIcon>
                   <ListItemText
                     primary={node.Name}
@@ -651,9 +651,9 @@ export default function NodeTransferBox({
                     mb: 0.5,
                     borderRadius: 2,
                     cursor: 'pointer',
-                    bgcolor: checkedSelected.includes(node.Name) ? 'error.lighter' : 'transparent',
+                    bgcolor: checkedSelected.includes(node.ID) ? 'error.lighter' : 'transparent',
                     border: '1px solid',
-                    borderColor: checkedSelected.includes(node.Name) ? 'error.main' : 'divider',
+                    borderColor: checkedSelected.includes(node.ID) ? 'error.main' : 'divider',
                     transition: 'all 0.15s ease-in-out',
                     '&:hover': {
                       bgcolor: 'action.hover',
@@ -661,13 +661,13 @@ export default function NodeTransferBox({
                       borderColor: 'error.light'
                     }
                   }}
-                  onClick={() => onToggleSelected(node.Name)}
-                  onDoubleClick={() => onRemoveNode(node.Name)}
+                  onClick={() => onToggleSelected(node.ID)}
+                  onDoubleClick={() => onRemoveNode(node.ID)}
                 >
                   <ListItemIcon sx={{ minWidth: 32 }}>
                     <Checkbox
                       edge="start"
-                      checked={checkedSelected.includes(node.Name)}
+                      checked={checkedSelected.includes(node.ID)}
                       tabIndex={-1}
                       disableRipple
                       size="small"

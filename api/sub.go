@@ -76,7 +76,7 @@ func SubAdd(c *gin.Context) {
 	var sub models.Subcription
 	name := c.PostForm("name")
 	config := c.PostForm("config")
-	nodes := c.PostForm("nodes")
+	nodeIds := c.PostForm("nodeIds") // 改为接收节点ID列表
 	groups := c.PostForm("groups")   // 新增：分组列表
 	scripts := c.PostForm("scripts") // 新增：脚本列表
 	ipWhitelist := c.PostForm("IPWhitelist")
@@ -95,7 +95,7 @@ func SubAdd(c *gin.Context) {
 	tagBlacklist := c.PostForm("TagBlacklist")
 	deduplicationRule := c.PostForm("DeduplicationRule")
 
-	if name == "" || (nodes == "" && groups == "") {
+	if name == "" || (nodeIds == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
 		return
 	}
@@ -123,15 +123,28 @@ func SubAdd(c *gin.Context) {
 	}
 
 	sub.Nodes = []models.Node{}
-	if nodes != "" {
-		for _, v := range strings.Split(nodes, ",") {
-			var node models.Node
-			node.Name = v
-			err := node.Find()
+	if nodeIds != "" {
+		nodeNameSet := make(map[string]bool) // 按节点名称去重（Clash等客户端不支持重名节点）
+		for _, v := range strings.Split(nodeIds, ",") {
+			v = strings.TrimSpace(v)
+			if v == "" {
+				continue
+			}
+			id, err := strconv.Atoi(v)
 			if err != nil {
 				continue
 			}
-			sub.Nodes = append(sub.Nodes, node)
+			var node models.Node
+			node.ID = id
+			err = node.GetByID() // 直接用ID获取节点
+			if err != nil {
+				continue
+			}
+			// 按节点名称去重，同名节点只保留第一个
+			if !nodeNameSet[node.Name] {
+				nodeNameSet[node.Name] = true
+				sub.Nodes = append(sub.Nodes, node)
+			}
 		}
 	}
 
@@ -203,7 +216,7 @@ func SubUpdate(c *gin.Context) {
 	name := c.PostForm("name")
 	oldname := c.PostForm("oldname")
 	config := c.PostForm("config")
-	nodes := c.PostForm("nodes")
+	nodeIds := c.PostForm("nodeIds") // 改为接收节点ID列表
 	groups := c.PostForm("groups")   // 新增：分组列表
 	scripts := c.PostForm("scripts") // 新增：脚本列表
 	ipWhitelist := c.PostForm("IPWhitelist")
@@ -222,7 +235,7 @@ func SubUpdate(c *gin.Context) {
 	tagBlacklist := c.PostForm("TagBlacklist")
 	deduplicationRule := c.PostForm("DeduplicationRule")
 
-	if name == "" || (nodes == "" && groups == "") {
+	if name == "" || (nodeIds == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
 		return
 	}
@@ -263,15 +276,28 @@ func SubUpdate(c *gin.Context) {
 	sub.Name = name
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 	sub.Nodes = []models.Node{}
-	if nodes != "" {
-		for _, v := range strings.Split(nodes, ",") {
-			var node models.Node
-			node.Name = v
-			err := node.Find()
+	if nodeIds != "" {
+		nodeNameSet := make(map[string]bool) // 按节点名称去重（Clash等客户端不支持重名节点）
+		for _, v := range strings.Split(nodeIds, ",") {
+			v = strings.TrimSpace(v)
+			if v == "" {
+				continue
+			}
+			id, err := strconv.Atoi(v)
 			if err != nil {
 				continue
 			}
-			sub.Nodes = append(sub.Nodes, node)
+			var node models.Node
+			node.ID = id
+			err = node.GetByID() // 直接用ID获取节点
+			if err != nil {
+				continue
+			}
+			// 按节点名称去重，同名节点只保留第一个
+			if !nodeNameSet[node.Name] {
+				nodeNameSet[node.Name] = true
+				sub.Nodes = append(sub.Nodes, node)
+			}
 		}
 	}
 	sub.IPWhitelist = ipWhitelist

@@ -170,7 +170,18 @@ const DetailItem = ({ icon, label, value, isLink, onClick, secondary, noBorder }
 /**
  * 节点详情面板组件
  */
-export default function NodeDetailsPanel({ open, node, tagColorMap, onClose, onSpeedTest, onCopy, onEdit, onDelete, onIPClick, onEditLinkName }) {
+export default function NodeDetailsPanel({
+  open,
+  node,
+  tagColorMap,
+  onClose,
+  onSpeedTest,
+  onCopy,
+  onEdit,
+  onDelete,
+  onIPClick,
+  onEditLinkName
+}) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -360,19 +371,12 @@ export default function NodeDetailsPanel({ open, node, tagColorMap, onClose, onS
                   原始名称
                 </Typography>
                 <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography
-                    variant="body2"
-                    sx={{ wordBreak: 'break-word', flex: 1 }}
-                  >
+                  <Typography variant="body2" sx={{ wordBreak: 'break-word', flex: 1 }}>
                     {node.LinkName || '-'}
                   </Typography>
                   {onEditLinkName && (
                     <Tooltip title="修改原始名称">
-                      <IconButton
-                        size="small"
-                        onClick={() => onEditLinkName(node)}
-                        sx={{ color: 'primary.main' }}
-                      >
+                      <IconButton size="small" onClick={() => onEditLinkName(node)} sx={{ color: 'primary.main' }}>
                         <EditIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>

@@ -434,6 +434,31 @@ func (node *Node) Find() error {
 	return nil
 }
 
+// FindByName 仅通过名称查找节点（精确匹配）
+// 用于订阅节点关联场景，避免 Find() 中 link="" 条件导致的错误匹配
+func (node *Node) FindByName() error {
+	if node.Name == "" {
+		return fmt.Errorf("node name is required")
+	}
+
+	// 使用缓存二级索引精确查找
+	results := nodeCache.GetByIndex("name", node.Name)
+	if len(results) > 0 {
+		*node = results[0]
+		return nil
+	}
+
+	// 缓存未命中，查 DB
+	err := database.DB.Where("name = ?", node.Name).First(node).Error
+	if err != nil {
+		return err
+	}
+
+	// 更新缓存
+	nodeCache.Set(node.ID, *node)
+	return nil
+}
+
 // GetByID 根据ID查找节点
 func (node *Node) GetByID() error {
 	if cachedNode, ok := nodeCache.Get(node.ID); ok {
