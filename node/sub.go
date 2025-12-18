@@ -196,7 +196,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 				if line == "" {
 					continue
 				}
-				proxy, errP := protocol.LinkToProxy(protocol.Urls{Url: line}, utils.SqlConfig{})
+				proxy, errP := protocol.LinkToProxy(protocol.Urls{Url: line}, protocol.OutputConfig{})
 				if errP == nil {
 					config.Proxies = append(config.Proxies, proxy)
 				}
@@ -211,7 +211,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 				if line == "" {
 					continue
 				}
-				proxy, errP := protocol.LinkToProxy(protocol.Urls{Url: line}, utils.SqlConfig{})
+				proxy, errP := protocol.LinkToProxy(protocol.Urls{Url: line}, protocol.OutputConfig{})
 				if errP == nil {
 					config.Proxies = append(config.Proxies, proxy)
 				}

@@ -330,7 +330,7 @@ func GetClash(c *gin.Context) {
 		}
 	}
 
-	var configs utils.SqlConfig
+	var configs protocol.OutputConfig
 	err = json.Unmarshal([]byte(sub.Config), &configs)
 	if err != nil {
 		c.Writer.WriteString("配置读取错误")
@@ -457,7 +457,7 @@ func GetSurge(c *gin.Context) {
 		}
 	}
 
-	var configs utils.SqlConfig
+	var configs protocol.OutputConfig
 	err = json.Unmarshal([]byte(sub.Config), &configs)
 	if err != nil {
 		c.Writer.WriteString("配置读取错误")

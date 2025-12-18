@@ -22,8 +22,8 @@ import (
 // GetMihomoAdapter creates a Mihomo Proxy Adapter from a node link
 func GetMihomoAdapter(nodeLink string) (constant.Proxy, error) {
 	// 1. Parse node link to Proxy struct
-	// We use a default SqlConfig as we only need the proxy connection info
-	sqlConfig := utils.SqlConfig{
+	// We use a default OutputConfig as we only need the proxy connection info
+	outputConfig := protocol.OutputConfig{
 		Udp:  true,
 		Cert: true, // Skip cert verify by default for better compatibility? Or false?
 	}
@@ -37,7 +37,7 @@ func GetMihomoAdapter(nodeLink string) (constant.Proxy, error) {
 
 	// We need to handle the case where ParseNodeLink might be better, but LinkToProxy expects Urls struct
 	// LinkToProxy handles various protocols
-	proxyStruct, err := protocol.LinkToProxy(protocol.Urls{Url: nodeLink}, sqlConfig)
+	proxyStruct, err := protocol.LinkToProxy(protocol.Urls{Url: nodeLink}, outputConfig)
 	if err != nil {
 		return nil, fmt.Errorf("convert link to proxy error: %v", err)
 	}

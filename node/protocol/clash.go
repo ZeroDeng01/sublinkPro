@@ -96,7 +96,7 @@ func convertToInt(value interface{}) (int, error) {
 
 // LinkToProxy 将单个节点链接转换为 Proxy 结构体
 // 支持 ss, ssr, trojan, vmess, vless, hysteria, hysteria2, tuic, anytls, socks5 等协议
-func LinkToProxy(link Urls, sqlconfig utils.SqlConfig) (Proxy, error) {
+func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 	Scheme := strings.ToLower(strings.Split(link.Url, "://")[0])
 	switch {
 	case Scheme == "ss":
@@ -115,8 +115,8 @@ func LinkToProxy(link Urls, sqlconfig utils.SqlConfig) (Proxy, error) {
 			Port:             ss.Port,
 			Cipher:           ss.Param.Cipher,
 			Password:         ss.Param.Password,
-			Udp:              sqlconfig.Udp,
-			Skip_cert_verify: sqlconfig.Cert,
+			Udp:              config.Udp,
+			Skip_cert_verify: config.Cert,
 			Dialer_proxy:     link.DialerProxyName,
 		}, nil
 	case Scheme == "ssr":
@@ -138,8 +138,8 @@ func LinkToProxy(link Urls, sqlconfig utils.SqlConfig) (Proxy, error) {
 			Obfs:             ssr.Obfs,
 			Obfs_password:    ssr.Qurey.Obfsparam,
 			Protocol:         ssr.Protocol,
-			Udp:              sqlconfig.Udp,
-			Skip_cert_verify: sqlconfig.Cert,
+			Udp:              config.Udp,
+			Skip_cert_verify: config.Cert,
 			Dialer_proxy:     link.DialerProxyName,
 		}, nil
 	case Scheme == "trojan":
@@ -170,8 +170,8 @@ func LinkToProxy(link Urls, sqlconfig utils.SqlConfig) (Proxy, error) {
 			Flow:               trojan.Query.Flow,
 			Alpn:               trojan.Query.Alpn,
 			Ws_opts:            ws_opts,
-			Udp:                sqlconfig.Udp,
-			Skip_cert_verify:   sqlconfig.Cert,
+			Udp:                config.Udp,
+			Skip_cert_verify:   config.Cert,
 			Dialer_proxy:       link.DialerProxyName,
 		}, nil
 	case Scheme == "vmess":
@@ -207,8 +207,8 @@ func LinkToProxy(link Urls, sqlconfig utils.SqlConfig) (Proxy, error) {
 			Network:          vmess.Net,
 			Tls:              tls,
 			Ws_opts:          ws_opts,
-			Udp:              sqlconfig.Udp,
-			Skip_cert_verify: sqlconfig.Cert,
+			Udp:              config.Udp,
+			Skip_cert_verify: config.Cert,
 			Dialer_proxy:     link.DialerProxyName,
 		}, nil
 	case Scheme == "vless":
@@ -261,8 +261,8 @@ func LinkToProxy(link Urls, sqlconfig utils.SqlConfig) (Proxy, error) {
 			Ws_opts:            ws_opts,
 			Reality_opts:       reality_opts,
 			Grpc_opts:          grpc_opts,
-			Udp:                sqlconfig.Udp,
-			Skip_cert_verify:   sqlconfig.Cert,
+			Udp:                config.Udp,
+			Skip_cert_verify:   config.Cert,
 			Tls:                tls,
 			Dialer_proxy:       link.DialerProxyName,
 		}, nil
@@ -285,8 +285,8 @@ func LinkToProxy(link Urls, sqlconfig utils.SqlConfig) (Proxy, error) {
 			Down:             hy.DownMbps,
 			Alpn:             hy.ALPN,
 			Peer:             hy.Peer,
-			Udp:              sqlconfig.Udp,
-			Skip_cert_verify: sqlconfig.Cert,
+			Udp:              config.Udp,
+			Skip_cert_verify: config.Cert,
 			Dialer_proxy:     link.DialerProxyName,
 		}, nil
 	case Scheme == "hy2" || Scheme == "hysteria2":
@@ -309,8 +309,8 @@ func LinkToProxy(link Urls, sqlconfig utils.SqlConfig) (Proxy, error) {
 			Obfs:             hy2.Obfs,
 			Password:         hy2.Password,
 			Obfs_password:    hy2.ObfsPassword,
-			Udp:              sqlconfig.Udp,
-			Skip_cert_verify: sqlconfig.Cert,
+			Udp:              config.Udp,
+			Skip_cert_verify: config.Cert,
 			Dialer_proxy:     link.DialerProxyName,
 		}, nil
 	case Scheme == "tuic":
@@ -338,8 +338,8 @@ func LinkToProxy(link Urls, sqlconfig utils.SqlConfig) (Proxy, error) {
 			Udp_relay_mode:     tuic.Udp_relay_mode,
 			Disable_sni:        disable_sni,
 			Sni:                tuic.Sni,
-			Udp:                sqlconfig.Udp,
-			Skip_cert_verify:   sqlconfig.Cert,
+			Udp:                config.Udp,
+			Skip_cert_verify:   config.Cert,
 			Dialer_proxy:       link.DialerProxyName,
 		}, nil
 
@@ -381,13 +381,13 @@ func LinkToProxy(link Urls, sqlconfig utils.SqlConfig) (Proxy, error) {
 // EncodeClash 用于生成 Clash 配置文件
 // 输入: 节点链接列表, SQL配置
 // 输出: Clash 配置文件的 YAML 字节流
-func EncodeClash(urls []Urls, sqlconfig utils.SqlConfig) ([]byte, error) {
+func EncodeClash(urls []Urls, config OutputConfig) ([]byte, error) {
 	// 传入urls，解析urls，生成proxys
 	// yamlfile 为模板文件
 	var proxys []Proxy
 
 	for _, link := range urls {
-		proxy, err := LinkToProxy(link, sqlconfig)
+		proxy, err := LinkToProxy(link, config)
 		if err != nil {
 			utils.Error(err.Error())
 			continue
@@ -396,16 +396,16 @@ func EncodeClash(urls []Urls, sqlconfig utils.SqlConfig) ([]byte, error) {
 	}
 
 	// 根据配置执行 Host 替换
-	if sqlconfig.ReplaceServerWithHost && len(sqlconfig.HostMap) > 0 {
+	if config.ReplaceServerWithHost && len(config.HostMap) > 0 {
 		for i := range proxys {
-			if ip, exists := sqlconfig.HostMap[proxys[i].Server]; exists {
+			if ip, exists := config.HostMap[proxys[i].Server]; exists {
 				proxys[i].Server = ip
 			}
 		}
 	}
 
 	// 生成Clash配置文件
-	return DecodeClash(proxys, sqlconfig.Clash)
+	return DecodeClash(proxys, config.Clash)
 }
 
 // DecodeClash 用于解析 Clash 配置文件并合并新节点
