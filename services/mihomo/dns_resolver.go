@@ -1,13 +1,12 @@
 package mihomo
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"net/url"
+	"strconv"
 	"strings"
 	"sublink/models"
 	"sublink/node/protocol"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/metacubex/mihomo/component/resolver"
+	"github.com/miekg/dns"
 )
 
 // HostInfo 包含从节点link解析的主机信息
@@ -90,7 +90,7 @@ func ResolveProxyHost(host string) string {
 		return cachedHost.IP
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 增加超时时间以容纳代理连接
 	defer cancel()
 
 	// 2. 使用mihomo的resolver
@@ -106,21 +106,61 @@ func ResolveProxyHost(host string) string {
 			utils.Debug("[DNS] %s -> %s (mihomo resolver)", host, ip)
 			return ip
 		}
-		utils.Debug("[DNS] mihomo resolver失败: %s, %v", host, err)
+		// 如果是默认resolver失败，这很正常，继续尝试其他方式
+		// utils.Debug("[DNS] mihomo resolver失败: %s, %v", host, err)
 	}
 
 	// 3. 使用用户配置的DNS服务器
 	dnsServer, _ := models.GetSetting("dns_server")
-	if dnsServer == "" {
-		dnsServer = DefaultDNSServer
-	}
 
-	if ip := resolveWithCustomDNS(ctx, host, dnsServer); ip != "" {
-		utils.Info("[DNS] %s -> %s (服务器: %s)", host, ip, dnsServer)
-		return ip
+	// 如果配置了DNS服务器，尝试解析
+	if dnsServer != "" {
+		// 获取代理配置
+		useProxyStr, _ := models.GetSetting("dns_use_proxy")
+		useProxy := useProxyStr == "true"
+
+		var proxyLink string
+		if useProxy {
+			strategy, _ := models.GetSetting("dns_proxy_strategy")
+			if strategy == "manual" {
+				nodeIDStr, _ := models.GetSetting("dns_proxy_node_id")
+				nodeID, _ := strconv.Atoi(nodeIDStr)
+				if nodeID > 0 {
+					node := &models.Node{ID: nodeID}
+					if err := node.GetByID(); err == nil {
+						proxyLink = node.Link
+						utils.Debug("[DNS] 使用手动指定代理节点: %s", node.Name)
+					}
+				}
+			} else {
+				// 自动选择最佳代理
+				if utils.GetBestProxyNodeFunc != nil {
+					link, name, err := utils.GetBestProxyNodeFunc()
+					if err == nil && link != "" {
+						proxyLink = link
+						utils.Debug("[DNS] 自动选择最佳代理节点: %s", name)
+					}
+				}
+			}
+
+			if proxyLink == "" {
+				utils.Warn("[DNS]虽然开启了代理但未找到可用代理节点，将尝试直连DNS")
+				useProxy = false
+			}
+		}
+
+		if ip := resolveWithCustomDNS(ctx, host, dnsServer, useProxy, proxyLink); ip != "" {
+			proxyInfo := ""
+			if useProxy {
+				proxyInfo = " (通过代理)"
+			}
+			utils.Info("[DNS] %s -> %s (服务器: %s%s)", host, ip, dnsServer, proxyInfo)
+			return ip
+		}
 	}
 
 	// 4. Fallback: 使用系统DNS
+	// 如果用户没有配置DNS服务器，或者配置的DNS解析失败，则回退到系统DNS
 	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 	if err != nil {
 		utils.Warn("[DNS] 所有解析方式失败: %s", host)
@@ -138,41 +178,58 @@ func ResolveProxyHost(host string) string {
 
 // resolveWithCustomDNS 使用自定义DNS服务器解析域名
 // 支持格式: DoH(https://...), DoT(tls://...), 普通DNS(IP地址)
-func resolveWithCustomDNS(ctx context.Context, host, dnsServer string) string {
+func resolveWithCustomDNS(ctx context.Context, host, dnsServer string, useProxy bool, proxyLink string) string {
 	if dnsServer == "" {
 		return ""
 	}
 
 	// 判断DNS服务器类型
 	if strings.HasPrefix(dnsServer, "https://") {
-		return resolveWithDoH(ctx, host, dnsServer)
+		return resolveWithDoH(ctx, host, dnsServer, useProxy, proxyLink)
 	} else if strings.HasPrefix(dnsServer, "tls://") {
 		// DoT暂不实现，fallback
 		return ""
 	} else {
-		return resolveWithUDP(ctx, host, dnsServer)
+		return resolveWithUDP(ctx, host, dnsServer, useProxy, proxyLink)
 	}
 }
 
-// resolveWithDoH 使用DoH服务器解析域名
-func resolveWithDoH(ctx context.Context, host, dohServer string) string {
-	reqURL := fmt.Sprintf("%s?name=%s&type=A", dohServer, url.QueryEscape(host))
+// resolveWithDoH 使用DoH服务器解析域名 (RFC 8484)
+func resolveWithDoH(ctx context.Context, host, dohServer string, useProxy bool, proxyLink string) string {
+	// 构造 DNS 消息
+	m := new(dns.Msg)
+	m.SetQuestion(dns.Fqdn(host), dns.TypeA)
+	m.RecursionDesired = true
+	data, err := m.Pack()
+	if err != nil {
+		utils.Debug("[DNS] 打包DNS消息失败: %v", err)
+		return ""
+	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+	// 创建带代理的 Client
+	client, _, err := utils.CreateProxyHTTPClient(useProxy, proxyLink, 5*time.Second)
+	if err != nil {
+		utils.Warn("[DNS] 创建DoH代理客户端失败: %v", err)
+		return ""
+	}
+
+	// 发送 POST 请求 (RFC 8484)
+	req, err := http.NewRequestWithContext(ctx, "POST", dohServer, bytes.NewReader(data))
 	if err != nil {
 		return ""
 	}
-	req.Header.Set("Accept", "application/dns-json")
+	req.Header.Set("Content-Type", "application/dns-message")
+	req.Header.Set("Accept", "application/dns-message")
 
-	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		utils.Debug("DoH请求失败: %s, %v", dohServer, err)
+		utils.Debug("[DNS] DoH请求失败: %s, %v", dohServer, err)
 		return ""
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		utils.Debug("[DNS] DoH响应状态码非200: %s, %d", dohServer, resp.StatusCode)
 		return ""
 	}
 
@@ -181,41 +238,43 @@ func resolveWithDoH(ctx context.Context, host, dohServer string) string {
 		return ""
 	}
 
-	var dohResp struct {
-		Status int `json:"Status"`
-		Answer []struct {
-			Type int    `json:"type"`
-			Data string `json:"data"`
-		} `json:"Answer"`
-	}
-
-	if err := json.Unmarshal(body, &dohResp); err != nil {
+	// 解析响应
+	rm := new(dns.Msg)
+	if err := rm.Unpack(body); err != nil {
+		utils.Debug("[DNS] 解析DoH响应失败: %v", err)
 		return ""
 	}
 
-	// A记录(type=1) 或 AAAA记录(type=28)
-	for _, ans := range dohResp.Answer {
-		if (ans.Type == 1 || ans.Type == 28) && net.ParseIP(ans.Data) != nil {
-			return ans.Data
+	for _, answer := range rm.Answer {
+		if a, ok := answer.(*dns.A); ok {
+			return a.A.String()
+		}
+		if aaaa, ok := answer.(*dns.AAAA); ok {
+			return aaaa.AAAA.String()
 		}
 	}
 
+	utils.Debug("[DNS] DoH未返回有效记录: %s", dohServer)
 	return ""
 }
 
 // resolveWithUDP 使用普通UDP DNS解析
-func resolveWithUDP(ctx context.Context, host, dnsServer string) string {
+func resolveWithUDP(ctx context.Context, host, dnsServer string, useProxy bool, proxyLink string) string {
 	// 确保有端口
 	if !strings.Contains(dnsServer, ":") {
 		dnsServer = dnsServer + ":53"
 	}
 
+	// 注意：根据设计要求，UDP DNS 不经过代理，始终直连。
+	// 只有 DoH 支持代理。
+	d := net.Dialer{Timeout: 3 * time.Second}
+	dialFunc := d.DialContext
+
 	// 使用自定义resolver
 	r := &net.Resolver{
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{Timeout: 3 * time.Second}
-			return d.DialContext(ctx, "udp", dnsServer)
+			return dialFunc(ctx, "udp", dnsServer)
 		},
 	}
 

@@ -141,27 +141,46 @@ func GetHostSettings(c *gin.Context) {
 	persistHost := persistHostStr == "true"
 
 	dnsServer, _ := models.GetSetting("dns_server")
-	if dnsServer == "" {
-		dnsServer = mihomo.DefaultDNSServer
+	// 注意：dnsServer 为空表示使用系统DNS，但在前端可能需要区分"未设置"和"空字符串"
+	// 这里直接返回数据库中的值即可
+
+	dnsUseProxyStr, _ := models.GetSetting("dns_use_proxy")
+	dnsUseProxy := dnsUseProxyStr == "true"
+
+	dnsProxyStrategy, _ := models.GetSetting("dns_proxy_strategy")
+	if dnsProxyStrategy == "" {
+		dnsProxyStrategy = "auto" // 默认自动
+	}
+
+	dnsProxyNodeIDStr, _ := models.GetSetting("dns_proxy_node_id")
+	dnsProxyNodeID := 0
+	if dnsProxyNodeIDStr != "" {
+		dnsProxyNodeID, _ = strconv.Atoi(dnsProxyNodeIDStr)
 	}
 
 	// 获取有效期设置
 	expireHours := models.GetHostExpireHours()
 
 	utils.OkDetailed(c, "获取成功", gin.H{
-		"persist_host": persistHost,
-		"dns_server":   dnsServer,
-		"dns_presets":  mihomo.GetDNSPresets(),
-		"expire_hours": expireHours,
+		"persist_host":       persistHost,
+		"dns_server":         dnsServer,
+		"dns_use_proxy":      dnsUseProxy,
+		"dns_proxy_strategy": dnsProxyStrategy, // auto 或 manual
+		"dns_proxy_node_id":  dnsProxyNodeID,
+		"dns_presets":        mihomo.GetDNSPresets(),
+		"expire_hours":       expireHours,
 	})
 }
 
 // UpdateHostSettings 更新 Host 模块设置
 func UpdateHostSettings(c *gin.Context) {
 	var req struct {
-		PersistHost *bool  `json:"persist_host"`
-		DNSServer   string `json:"dns_server"`
-		ExpireHours *int   `json:"expire_hours"` // 有效期（小时），0表示永不过期
+		PersistHost      *bool  `json:"persist_host"`
+		DNSServer        string `json:"dns_server"`         // 允许为空
+		DNSUseProxy      *bool  `json:"dns_use_proxy"`      // 是否使用代理
+		DNSProxyStrategy string `json:"dns_proxy_strategy"` // auto 或 manual
+		DNSProxyNodeID   int    `json:"dns_proxy_node_id"`  // 代理节点ID
+		ExpireHours      *int   `json:"expire_hours"`       // 有效期（小时），0表示永不过期
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
@@ -175,9 +194,30 @@ func UpdateHostSettings(c *gin.Context) {
 		}
 	}
 
-	if req.DNSServer != "" {
-		if err := models.SetSetting("dns_server", req.DNSServer); err != nil {
-			utils.FailWithMsg(c, "保存DNS服务器配置失败")
+	// 总是保存 dns_server，即使为空
+	if err := models.SetSetting("dns_server", req.DNSServer); err != nil {
+		utils.FailWithMsg(c, "保存DNS服务器配置失败")
+		return
+	}
+
+	if req.DNSUseProxy != nil {
+		if err := models.SetSetting("dns_use_proxy", strconv.FormatBool(*req.DNSUseProxy)); err != nil {
+			utils.FailWithMsg(c, "保存DNS代理开关失败")
+			return
+		}
+	}
+
+	if req.DNSProxyStrategy != "" {
+		if err := models.SetSetting("dns_proxy_strategy", req.DNSProxyStrategy); err != nil {
+			utils.FailWithMsg(c, "保存DNS代理策略失败")
+			return
+		}
+	}
+
+	if req.DNSProxyNodeID != 0 || req.DNSProxyStrategy == "manual" {
+		// 只有在 manual 模式下或确实传了 ID 时才保存
+		if err := models.SetSetting("dns_proxy_node_id", strconv.Itoa(req.DNSProxyNodeID)); err != nil {
+			utils.FailWithMsg(c, "保存DNS代理节点ID失败")
 			return
 		}
 	}
