@@ -407,16 +407,52 @@ export default function NodeList() {
     countries: countryFilter,
     tags: tagFilter,
     sortBy: sortBy,
-    sortOrder: sortOrder
+    sortOrder: sortOrder,
+    page: page,
+    pageSize: rowsPerPage
   });
+
+  // 刷新下拉框选项数据
+  const refreshFilterOptions = useCallback(() => {
+    // 刷新国家选项
+    getNodeCountries()
+      .then((res) => {
+        setCountryOptions(res.data || []);
+      })
+      .catch(console.error);
+    // 刷新分组选项
+    getNodeGroups()
+      .then((res) => {
+        setGroupOptions((res.data || []).sort());
+      })
+      .catch(console.error);
+    // 刷新来源选项
+    getNodeSources()
+      .then((res) => {
+        setSourceOptions((res.data || []).sort());
+      })
+      .catch(console.error);
+    // 刷新标签选项
+    getTags()
+      .then((res) => {
+        const tags = res.data || [];
+        setTagOptions(tags);
+        const colorMap = {};
+        tags.forEach((tag) => {
+          colorMap[tag.name] = tag.color || '#1976d2';
+        });
+        setTagColorMap(colorMap);
+      })
+      .catch(console.error);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     fetchNodes(getCurrentFilters());
-    getNodeGroups();
-    getNodeSources();
+    refreshFilterOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     fetchNodes,
+    refreshFilterOptions,
     searchQuery,
     groupFilter,
     sourceFilter,
@@ -427,7 +463,9 @@ export default function NodeList() {
     countryFilter,
     tagFilter,
     sortBy,
-    sortOrder
+    sortOrder,
+    page,
+    rowsPerPage
   ]);
 
   // 监听任务完成，自动刷新节点列表
@@ -482,7 +520,7 @@ export default function NodeList() {
       try {
         await deleteNode({ id: node.ID });
         showMessage('删除成功');
-        fetchNodes();
+        handleRefresh();
       } catch (error) {
         console.error(error);
         showMessage('删除失败', 'error');
@@ -501,7 +539,7 @@ export default function NodeList() {
         await deleteNodesBatch(ids);
         showMessage(`成功删除 ${selectedNodes.length} 个节点`);
         setSelectedNodes([]);
-        fetchNodes();
+        handleRefresh();
       } catch (error) {
         console.error(error);
         showMessage('批量删除失败', 'error');
@@ -670,7 +708,7 @@ export default function NodeList() {
         showMessage('添加成功');
       }
       setNodeDialogOpen(false);
-      fetchNodes();
+      handleRefresh();
     } catch (error) {
       console.error(error);
       showMessage(isEditNode ? '更新失败' : '添加失败', 'error');
@@ -730,7 +768,7 @@ export default function NodeList() {
       await deleteSubScheduler(deleteSchedulerTarget.ID, deleteSchedulerWithNodes);
       showMessage(deleteSchedulerWithNodes ? '已删除订阅及关联节点' : '已删除订阅（保留节点）');
       fetchSchedulers();
-      fetchNodes();
+      handleRefresh();
     } catch (error) {
       console.error(error);
       showMessage('删除失败', 'error');
@@ -755,7 +793,7 @@ export default function NodeList() {
         });
         showMessage('提交更新任务成功，请稍后刷新查看结果');
         fetchSchedulers();
-        fetchNodes();
+        handleRefresh();
       } catch (error) {
         console.error(error);
         showMessage('提交更新任务失败', 'error');
@@ -984,9 +1022,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -1029,9 +1067,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
