@@ -11,6 +11,8 @@ import (
 	"sublink/utils"
 	"sync"
 	"time"
+
+	"gorm.io/gorm/clause"
 )
 
 // Host 自定义 Host 映射模型
@@ -341,3 +343,149 @@ func GetHostMap() map[string]string {
 
 // Ensure sort is used
 var _ = sort.Slice
+
+// ========== 测速Host持久化 ==========
+
+// HostMappingInfo 用于批量保存Host时传递节点信息
+type HostMappingInfo struct {
+	Hostname string // 代理服务器域名（从link解析得到）
+	IP       string // DNS解析得到的IP
+	NodeName string // 节点名称
+	Group    string // 节点分组
+	Source   string // 节点来源
+}
+
+// BatchUpsertHosts 批量添加或更新Host映射（测速专用）
+// 使用 ON CONFLICT 实现高效的 upsert 操作
+// mappings: HostMappingInfo 列表（已去重）
+// 返回: 成功处理数, 错误
+func BatchUpsertHosts(mappings []HostMappingInfo) (int, error) {
+	if len(mappings) == 0 {
+		return 0, nil
+	}
+
+	now := time.Now()
+	successCount := 0
+
+	// 预处理：生成Host记录，跳过无效数据
+	hosts := make([]Host, 0, len(mappings))
+	for _, m := range mappings {
+		if m.Hostname == "" || m.IP == "" {
+			continue
+		}
+		hosts = append(hosts, Host{
+			Hostname:  m.Hostname,
+			IP:        m.IP,
+			Remark:    formatHostRemark(m.NodeName, m.Group, m.Source),
+			CreatedAt: now,
+			UpdatedAt: now,
+		})
+	}
+
+	if len(hosts) == 0 {
+		return 0, nil
+	}
+
+	// 分块处理，避免SQLite变量限制
+	chunks := chunkHosts(hosts, database.BatchSize)
+
+	for _, chunk := range chunks {
+		// 使用 ON CONFLICT 实现 upsert：已存在则更新 ip/remark/updated_at
+		result := database.DB.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "hostname"}},
+			DoUpdates: clause.AssignmentColumns([]string{"ip", "remark", "updated_at"}),
+		}).Create(&chunk)
+
+		if result.Error != nil {
+			utils.Warn("批量upsert Host失败: %v，降级到逐条处理", result.Error)
+			// 降级到逐条处理
+			for _, h := range chunk {
+				if err := upsertSingleHost(h); err == nil {
+					successCount++
+				}
+			}
+		} else {
+			successCount += len(chunk)
+			// 更新缓存
+			for i := range chunk {
+				if chunk[i].ID > 0 {
+					hostCache.Set(chunk[i].ID, chunk[i])
+				}
+			}
+		}
+	}
+
+	// 有变更时通知外部模块同步
+	if successCount > 0 {
+		// 重新加载缓存以确保数据一致性（因为upsert可能更新了已存在记录）
+		reloadHostCache()
+		utils.Info("[Host持久化] 成功处理 %d 条", successCount)
+		notifyHostChanged()
+	}
+
+	return successCount, nil
+}
+
+// upsertSingleHost 单条upsert（降级用）
+func upsertSingleHost(h Host) error {
+	existingHosts := hostCache.GetByIndex("hostname", h.Hostname)
+	if len(existingHosts) > 0 {
+		existing := existingHosts[0]
+		return database.DB.Model(&existing).Updates(map[string]interface{}{
+			"ip":         h.IP,
+			"remark":     h.Remark,
+			"updated_at": h.UpdatedAt,
+		}).Error
+	}
+	return database.DB.Create(&h).Error
+}
+
+// reloadHostCache 重新加载Host缓存
+func reloadHostCache() {
+	var hosts []Host
+	if err := database.DB.Find(&hosts).Error; err != nil {
+		utils.Error("重新加载Host缓存失败: %v", err)
+		return
+	}
+	hostCache.LoadAll(hosts)
+}
+
+// chunkHosts 将Host列表分块
+func chunkHosts(hosts []Host, size int) [][]Host {
+	if size <= 0 {
+		size = 100
+	}
+	var chunks [][]Host
+	for i := 0; i < len(hosts); i += size {
+		end := i + size
+		if end > len(hosts) {
+			end = len(hosts)
+		}
+		chunks = append(chunks, hosts[i:end])
+	}
+	return chunks
+}
+
+// formatHostRemark 生成友好的备注格式
+// 格式: [自动] 节点名称 | 分组:xxx | 来源:xxx
+func formatHostRemark(nodeName, group, source string) string {
+	parts := []string{"[自动]"}
+
+	if nodeName != "" {
+		// 节点名称可能很长，截取前30个字符
+		if len(nodeName) > 30 {
+			nodeName = nodeName[:30] + "..."
+		}
+		parts = append(parts, nodeName)
+	}
+
+	if group != "" {
+		parts = append(parts, "分组:"+group)
+	}
+
+	if source != "" {
+		parts = append(parts, "来源:"+source)
+	}
+
+	return strings.Join(parts, " | ")
+}

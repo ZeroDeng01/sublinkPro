@@ -167,7 +167,10 @@ export default function NodeList() {
     traffic_by_group: true,
     traffic_by_source: true,
     traffic_by_node: false,
-    include_handshake: true
+    include_handshake: true,
+    persist_host: false,
+    dns_server: '',
+    dns_presets: []
   });
 
   // 国家筛选
@@ -981,9 +984,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -1026,9 +1029,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />

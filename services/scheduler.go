@@ -549,6 +549,10 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 		}
 	}
 
+	// 获取是否持久化Host（测速成功时自动保存域名->IP映射）
+	persistHostStr, _ := models.GetSetting("speed_test_persist_host")
+	persistHost := persistHostStr == "true"
+
 	// 获取延迟测试并发数
 	const maxConcurrency = 1000
 	latencyConcurrency := 10 // 默认延迟测试并发数
@@ -641,6 +645,10 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 
 	// 批量收集：测速结果列表（任务完成后批量写入数据库）
 	speedTestResults := make([]models.SpeedTestResult, 0, len(nodes))
+
+	// 批量收集：Host映射信息（测速成功时收集，任务完成后批量保存）
+	hostMappings := make([]models.HostMappingInfo, 0)
+	var hostMu sync.Mutex
 
 	// ========== 阶段一：延迟测试 ==========
 	utils.Info("阶段一：开始延迟测试，并发数: %d（动态: %v），UnifiedDelay: %v", latencyConcurrency, useAdaptiveLatency, !includeHandshake)
@@ -749,6 +757,25 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 						if geoErr == nil && countryCode != "" {
 							n.LinkCountry = countryCode
 							utils.Debug("节点 [%s] 落地IP: %s, 国家: %s", n.Name, landingIP, countryCode)
+						}
+					}
+
+					// 持久化Host：测速成功时从 link 解析服务器地址并解析DNS
+					if persistHost {
+						hostInfo := mihomo.GetProxyServerFromLink(n.Link)
+						// 只处理域名，跳过已是IP的地址
+						if hostInfo.Server != "" && !hostInfo.IsIP {
+							if resolvedIP := mihomo.ResolveProxyHost(hostInfo.Server); resolvedIP != "" {
+								hostMu.Lock()
+								hostMappings = append(hostMappings, models.HostMappingInfo{
+									Hostname: hostInfo.Server,
+									IP:       resolvedIP,
+									NodeName: n.Name,
+									Group:    n.Group,
+									Source:   n.Source,
+								})
+								hostMu.Unlock()
+							}
 						}
 					}
 				}
@@ -985,6 +1012,25 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 							utils.Debug("节点 [%s] 落地IP: %s, 国家: %s", result.node.Name, landingIP, countryCode)
 						}
 					}
+
+					// 持久化Host：测速成功时从 link 解析服务器地址并解析DNS
+					if persistHost {
+						hostInfo := mihomo.GetProxyServerFromLink(result.node.Link)
+						// 只处理域名，跳过已是IP的地址
+						if hostInfo.Server != "" && !hostInfo.IsIP {
+							if resolvedIP := mihomo.ResolveProxyHost(hostInfo.Server); resolvedIP != "" {
+								hostMu.Lock()
+								hostMappings = append(hostMappings, models.HostMappingInfo{
+									Hostname: hostInfo.Server,
+									IP:       resolvedIP,
+									NodeName: result.node.Name,
+									Group:    result.node.Group,
+									Source:   result.node.Source,
+								})
+								hostMu.Unlock()
+							}
+						}
+					}
 				}
 
 				result.node.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
@@ -1041,6 +1087,28 @@ func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrig
 		} else {
 			utils.Debug("批量更新测速结果成功，共 %d 条记录", len(speedTestResults))
 		}
+	}
+
+	// 批量保存Host映射到数据库（如果开启了持久化）
+	if persistHost && len(hostMappings) > 0 {
+		// 去重：同一个hostname可能被多个节点使用，只保留第一个
+		uniqueHostMappings := make([]models.HostMappingInfo, 0, len(hostMappings))
+		seenHostnames := make(map[string]bool)
+		for _, m := range hostMappings {
+			if !seenHostnames[m.Hostname] {
+				seenHostnames[m.Hostname] = true
+				uniqueHostMappings = append(uniqueHostMappings, m)
+			}
+		}
+		// 异步保存，不阻塞测速任务完成
+		go func(mappings []models.HostMappingInfo) {
+			count, err := models.BatchUpsertHosts(mappings)
+			if err != nil {
+				utils.Error("批量保存Host映射失败: %v", err)
+			} else if count > 0 {
+				utils.Info("测速Host持久化: 成功处理 %d 条", count)
+			}
+		}(uniqueHostMappings)
 	}
 
 	// 完成任务
