@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sublink/cache"
 	"sublink/database"
+	"sublink/node/protocol"
 	"sublink/utils"
 	"time"
 
@@ -20,6 +21,7 @@ type Node struct {
 	Link            string `gorm:"uniqueIndex:idx_link_id"` //出站代理原始连接
 	Name            string //系统内节点名称
 	LinkName        string //节点原始名称
+	Protocol        string `gorm:"index"` //协议类型 (vmess, vless, trojan, ss 等)
 	LinkAddress     string //节点原始地址
 	LinkHost        string //节点原始Host
 	LinkPort        string //节点原始端口
@@ -50,6 +52,7 @@ func init() {
 	nodeCache.AddIndex("group", func(n Node) string { return n.Group })
 	nodeCache.AddIndex("source", func(n Node) string { return n.Source })
 	nodeCache.AddIndex("country", func(n Node) string { return n.LinkCountry })
+	nodeCache.AddIndex("protocol", func(n Node) string { return n.Protocol })
 	nodeCache.AddIndex("sourceID", func(n Node) string { return fmt.Sprintf("%d", n.SourceID) })
 	nodeCache.AddIndex("name", func(n Node) string { return n.Name })
 }
@@ -518,6 +521,7 @@ type NodeFilter struct {
 	Search      string   // 搜索关键词（匹配节点名称或链接）
 	Group       string   // 分组过滤
 	Source      string   // 来源过滤
+	Protocol    string   // 协议类型过滤（如 vmess, vless, trojan 等）
 	MaxDelay    int      // 最大延迟(ms)，只显示延迟在此值以下的节点
 	MinSpeed    float64  // 最低速度(MB/s)，只显示速度在此值以上的节点
 	SpeedStatus string   // 速度状态过滤: untested, success, timeout, error
@@ -631,6 +635,13 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 		// 延迟状态过滤
 		if filter.DelayStatus != "" {
 			if n.DelayStatus != filter.DelayStatus {
+				return false
+			}
+		}
+
+		// 协议类型过滤
+		if filter.Protocol != "" {
+			if !strings.EqualFold(n.Protocol, filter.Protocol) {
 				return false
 			}
 		}
@@ -1122,43 +1133,38 @@ func GetNodeProtocolStats() map[string]int {
 	stats := make(map[string]int)
 	allNodes := nodeCache.GetAll()
 	for _, n := range allNodes {
-		protocol := parseProtocolFromLink(n.Link)
-		stats[protocol]++
+		// 使用节点存储的协议类型，如果为空则从链接解析
+		protoName := n.Protocol
+		if protoName == "" {
+			protoName = protocol.GetProtocolFromLink(n.Link)
+		}
+		// 转换为显示名称
+		protoLabel := protocol.GetProtocolLabel(protoName)
+		stats[protoLabel]++
 	}
 	return stats
 }
 
-// parseProtocolFromLink 从节点链接中解析协议类型
-func parseProtocolFromLink(link string) string {
-	if link == "" {
-		return "未知"
-	}
-	// 常见协议前缀映射
-	protocolPrefixes := map[string]string{
-		"ss://":        "Shadowsocks",
-		"ssr://":       "ShadowsocksR",
-		"vmess://":     "VMess",
-		"vless://":     "VLESS",
-		"trojan://":    "Trojan",
-		"hysteria://":  "Hysteria",
-		"hysteria2://": "Hysteria2",
-		"hy2://":       "Hysteria2",
-		"tuic://":      "TUIC",
-		"wg://":        "WireGuard",
-		"wireguard://": "WireGuard",
-		"naive://":     "NaiveProxy",
-		"http://":      "HTTP",
-		"https://":     "HTTPS",
-		"socks://":     "SOCKS",
-		"socks5://":    "SOCKS5",
-	}
-
-	for prefix, name := range protocolPrefixes {
-		if len(link) >= len(prefix) && link[:len(prefix)] == prefix {
-			return name
+// GetAllProtocols 获取所有使用中的协议类型列表（用于过滤器选项）
+// 返回标准化的小写协议名称列表
+func GetAllProtocols() []string {
+	protoSet := make(map[string]bool)
+	allNodes := nodeCache.GetAll()
+	for _, n := range allNodes {
+		protoName := n.Protocol
+		if protoName == "" {
+			protoName = protocol.GetProtocolFromLink(n.Link)
+		}
+		if protoName != "" && protoName != "unknown" && protoName != "other" {
+			protoSet[protoName] = true
 		}
 	}
-	return "其他"
+
+	protocols := make([]string, 0, len(protoSet))
+	for p := range protoSet {
+		protocols = append(protocols, p)
+	}
+	return protocols
 }
 
 // GetNodeByName 根据节点名称获取节点

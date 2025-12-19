@@ -93,6 +93,8 @@ func SubAdd(c *gin.Context) {
 	nodeNameBlacklist := c.PostForm("NodeNameBlacklist")
 	tagWhitelist := c.PostForm("TagWhitelist")
 	tagBlacklist := c.PostForm("TagBlacklist")
+	protocolWhitelist := c.PostForm("ProtocolWhitelist")
+	protocolBlacklist := c.PostForm("ProtocolBlacklist")
 	deduplicationRule := c.PostForm("DeduplicationRule")
 
 	if name == "" || (nodeIds == "" && groups == "") {
@@ -162,6 +164,8 @@ func SubAdd(c *gin.Context) {
 	sub.NodeNameBlacklist = nodeNameBlacklist
 	sub.TagWhitelist = tagWhitelist
 	sub.TagBlacklist = tagBlacklist
+	sub.ProtocolWhitelist = protocolWhitelist
+	sub.ProtocolBlacklist = protocolBlacklist
 	sub.DeduplicationRule = deduplicationRule
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 
@@ -233,6 +237,8 @@ func SubUpdate(c *gin.Context) {
 	nodeNameBlacklist := c.PostForm("NodeNameBlacklist")
 	tagWhitelist := c.PostForm("TagWhitelist")
 	tagBlacklist := c.PostForm("TagBlacklist")
+	protocolWhitelist := c.PostForm("ProtocolWhitelist")
+	protocolBlacklist := c.PostForm("ProtocolBlacklist")
 	deduplicationRule := c.PostForm("DeduplicationRule")
 
 	if name == "" || (nodeIds == "" && groups == "") {
@@ -312,6 +318,8 @@ func SubUpdate(c *gin.Context) {
 	sub.NodeNameBlacklist = nodeNameBlacklist
 	sub.TagWhitelist = tagWhitelist
 	sub.TagBlacklist = tagBlacklist
+	sub.ProtocolWhitelist = protocolWhitelist
+	sub.ProtocolBlacklist = protocolBlacklist
 	sub.DeduplicationRule = deduplicationRule
 	err = sub.Update()
 	if err != nil {

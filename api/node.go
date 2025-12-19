@@ -167,6 +167,7 @@ func NodeUpdadte(c *gin.Context) {
 	Node.Link = link
 	Node.DialerProxyName = dialerProxyName
 	Node.Group = group
+	Node.Protocol = protocol.GetProtocolFromLink(link)
 	err = Node.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")
@@ -203,6 +204,7 @@ func NodeGet(c *gin.Context) {
 		Search:      c.Query("search"),
 		Group:       c.Query("group"),
 		Source:      c.Query("source"),
+		Protocol:    c.Query("protocol"),
 		SpeedStatus: c.Query("speedStatus"),
 		DelayStatus: c.Query("delayStatus"),
 		SortBy:      c.Query("sortBy"),
@@ -291,6 +293,7 @@ func NodeGetIDs(c *gin.Context) {
 		Search:      c.Query("search"),
 		Group:       c.Query("group"),
 		Source:      c.Query("source"),
+		Protocol:    c.Query("protocol"),
 		SpeedStatus: c.Query("speedStatus"),
 		DelayStatus: c.Query("delayStatus"),
 		SortBy:      c.Query("sortBy"),
@@ -486,6 +489,7 @@ func NodeAdd(c *gin.Context) {
 	Node.Link = link
 	Node.DialerProxyName = dialerProxyName
 	Node.Group = group
+	Node.Protocol = protocol.GetProtocolFromLink(link)
 	err = Node.Find()
 	// 如果找到记录说明重复
 	if err == nil {
@@ -1073,4 +1077,11 @@ func ClearIPCache(c *gin.Context) {
 		return
 	}
 	utils.OkWithMsg(c, "IP缓存已清除")
+}
+
+// GetNodeProtocols 获取所有使用中的协议类型列表（用于过滤器选项）
+// GET /api/v1/nodes/protocols
+func GetNodeProtocols(c *gin.Context) {
+	protocols := models.GetAllProtocols()
+	utils.OkDetailed(c, "获取协议列表成功", protocols)
 }

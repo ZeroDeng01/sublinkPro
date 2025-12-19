@@ -269,15 +269,16 @@ func FormatDelay(delay int) string {
 	return fmt.Sprintf("%dms", delay)
 }
 
-// GetProtocolFromLink 从节点链接解析协议类型
-// link: 节点链接
-// 返回协议名称，如 "VMess", "VLESS", "Trojan" 等
+// GetProtocolFromLink 从节点链接解析协议类型（废弃：请使用 protocol.GetProtocolFromLink）
+// 此函数保留用于向后兼容，返回显示名称格式（如 "VMess", "VLESS"）
+// 新代码应直接使用 protocol.GetProtocolFromLink() 或 protocol.GetProtocolLabel()
+// Deprecated: Use protocol.GetProtocolFromLink instead
 func GetProtocolFromLink(link string) string {
 	if link == "" {
 		return "未知"
 	}
 
-	// 常见协议前缀映射
+	// 常见协议前缀映射（返回显示名称，用于节点重命名等场景）
 	protocolPrefixes := map[string]string{
 		"ss://":        "SS",
 		"ssr://":       "SSR",

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sublink/database"
+	"sublink/node/protocol"
 	"sublink/utils"
 
 	"gorm.io/gorm"
@@ -531,6 +532,42 @@ DIRECT = direct
 		return nil
 	}); err != nil {
 		utils.Error("执行迁移 0015_migrate_subscription_shares 失败: %v", err)
+	}
+
+	// 0016_add_node_protocol_field - 为现有节点填充协议类型字段
+	if err := database.RunCustomMigration("0016_add_node_protocol_field", func() error {
+		// 获取所有节点的 ID 和 Link
+		var nodes []struct {
+			ID   int
+			Link string
+		}
+		if err := db.Model(&Node{}).Select("id", "link").Find(&nodes).Error; err != nil {
+			return fmt.Errorf("获取节点列表失败: %w", err)
+		}
+
+		if len(nodes) == 0 {
+			utils.Info("没有需要迁移的节点")
+			return nil
+		}
+
+		// 按协议类型分组，减少 SQL 执行次数
+		protoGroups := make(map[string][]int)
+		for _, node := range nodes {
+			protoType := protocol.GetProtocolFromLink(node.Link)
+			protoGroups[protoType] = append(protoGroups[protoType], node.ID)
+		}
+
+		// 批量更新每组
+		for protoType, ids := range protoGroups {
+			if err := db.Model(&Node{}).Where("id IN ?", ids).Update("protocol", protoType).Error; err != nil {
+				utils.Warn("批量更新协议类型 %s 失败: %v", protoType, err)
+			}
+		}
+
+		utils.Info("已为 %d 个节点填充协议类型字段，共 %d 种协议", len(nodes), len(protoGroups))
+		return nil
+	}); err != nil {
+		utils.Error("执行迁移 0016_add_node_protocol_field 失败: %v", err)
 	}
 
 	// 初始化用户数据

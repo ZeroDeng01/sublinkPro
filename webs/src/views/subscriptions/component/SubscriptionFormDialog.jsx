@@ -44,6 +44,7 @@ import NodeRenameBuilder from './NodeRenameBuilder';
 import NodeNamePreprocessor from './NodeNamePreprocessor';
 import NodeNameFilter from './NodeNameFilter';
 import NodeTagFilter from './NodeTagFilter';
+import NodeProtocolFilter from './NodeProtocolFilter';
 import NodeTransferBox from './NodeTransferBox';
 import DeduplicationConfig from './DeduplicationConfig';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
@@ -210,6 +211,8 @@ export default function SubscriptionFormDialog({
     if (formData.CountryBlacklist?.length > 0) count++;
     if (formData.tagWhitelist) count++;
     if (formData.tagBlacklist) count++;
+    if (formData.protocolWhitelist) count++;
+    if (formData.protocolBlacklist) count++;
     if (formData.nodeNameWhitelist) count++;
     if (formData.nodeNameBlacklist) count++;
     return count;
@@ -566,6 +569,15 @@ export default function SubscriptionFormDialog({
                   blacklistValue={formData.tagBlacklist}
                   onWhitelistChange={(tags) => setFormData({ ...formData, tagWhitelist: tags })}
                   onBlacklistChange={(tags) => setFormData({ ...formData, tagBlacklist: tags })}
+                />
+
+                {/* 协议类型过滤 */}
+                <NodeProtocolFilter
+                  protocolOptions={formData.protocolOptions || []}
+                  whitelistValue={formData.protocolWhitelist}
+                  blacklistValue={formData.protocolBlacklist}
+                  onWhitelistChange={(protocols) => setFormData({ ...formData, protocolWhitelist: protocols })}
+                  onBlacklistChange={(protocols) => setFormData({ ...formData, protocolBlacklist: protocols })}
                 />
 
                 {/* 节点名称过滤 */}

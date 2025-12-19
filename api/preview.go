@@ -21,6 +21,8 @@ type PreviewRequest struct {
 	CountryBlacklist   string   `json:"CountryBlacklist"`   // 国家黑名单
 	TagWhitelist       string   `json:"TagWhitelist"`       // 标签白名单
 	TagBlacklist       string   `json:"TagBlacklist"`       // 标签黑名单
+	ProtocolWhitelist  string   `json:"ProtocolWhitelist"`  // 协议白名单（逗号分隔）
+	ProtocolBlacklist  string   `json:"ProtocolBlacklist"`  // 协议黑名单（逗号分隔）
 	NodeNameWhitelist  string   `json:"NodeNameWhitelist"`  // 节点名称白名单
 	NodeNameBlacklist  string   `json:"NodeNameBlacklist"`  // 节点名称黑名单
 	NodeNamePreprocess string   `json:"NodeNamePreprocess"` // 原名预处理规则
@@ -57,6 +59,8 @@ func PreviewSubscriptionNodes(c *gin.Context) {
 		CountryBlacklist:   req.CountryBlacklist,
 		TagWhitelist:       req.TagWhitelist,
 		TagBlacklist:       req.TagBlacklist,
+		ProtocolWhitelist:  req.ProtocolWhitelist,
+		ProtocolBlacklist:  req.ProtocolBlacklist,
 		NodeNameWhitelist:  req.NodeNameWhitelist,
 		NodeNameBlacklist:  req.NodeNameBlacklist,
 		NodeNamePreprocess: req.NodeNamePreprocess,

@@ -38,10 +38,13 @@ export default function NodeFilters({
   setCountryFilter,
   tagFilter,
   setTagFilter,
+  protocolFilter,
+  setProtocolFilter,
   groupOptions,
   sourceOptions,
   countryOptions,
   tagOptions,
+  protocolOptions,
   onReset
 }) {
   return (
@@ -72,6 +75,17 @@ export default function NodeFilters({
           {sourceOptions.map((source) => (
             <MenuItem key={source} value={source}>
               {source === 'manual' ? '手动添加' : source}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <FormControl size="small" sx={{ minWidth: 120 }}>
+        <InputLabel>协议</InputLabel>
+        <Select value={protocolFilter} label="协议" onChange={(e) => setProtocolFilter(e.target.value)} variant={'outlined'}>
+          <MenuItem value="">全部</MenuItem>
+          {protocolOptions.map((protocol) => (
+            <MenuItem key={protocol} value={protocol}>
+              {protocol.toUpperCase()}
             </MenuItem>
           ))}
         </Select>
@@ -213,9 +227,12 @@ NodeFilters.propTypes = {
   setCountryFilter: PropTypes.func.isRequired,
   tagFilter: PropTypes.array.isRequired,
   setTagFilter: PropTypes.func.isRequired,
+  protocolFilter: PropTypes.string.isRequired,
+  setProtocolFilter: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,
   sourceOptions: PropTypes.array.isRequired,
   countryOptions: PropTypes.array.isRequired,
   tagOptions: PropTypes.array.isRequired,
+  protocolOptions: PropTypes.array.isRequired,
   onReset: PropTypes.func.isRequired
 };

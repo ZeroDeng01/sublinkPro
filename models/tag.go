@@ -383,6 +383,8 @@ func getNodeFieldValue(node Node, field string) interface{} {
 		return node.LinkPort
 	case "link_country":
 		return node.LinkCountry
+	case "protocol":
+		return node.Protocol
 	case "source":
 		return node.Source
 	case "group":

@@ -211,3 +211,11 @@ export function updateNodeRawInfo(nodeId, fields) {
     data: { nodeId, fields }
   });
 }
+
+// 获取所有使用中的协议类型列表（用于过滤器选项）
+export function getNodeProtocols() {
+  return request({
+    url: '/v1/nodes/protocols',
+    method: 'get'
+  });
+}

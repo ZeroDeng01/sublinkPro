@@ -26,7 +26,7 @@ import {
   copySubscription,
   previewSubscriptionNodes
 } from 'api/subscriptions';
-import { getNodes, getNodeCountries, getNodeGroups, getNodeSources } from 'api/nodes';
+import { getNodes, getNodeCountries, getNodeGroups, getNodeSources, getNodeProtocols } from 'api/nodes';
 import { getTemplates } from 'api/templates';
 import { getScripts } from 'api/scripts';
 import { getTags } from 'api/tags';
@@ -109,6 +109,9 @@ export default function SubscriptionList() {
     nodeNameBlacklist: '',
     tagWhitelist: '',
     tagBlacklist: '',
+    protocolWhitelist: '',
+    protocolBlacklist: '',
+    protocolOptions: [],
     deduplicationRule: ''
   });
 
@@ -165,6 +168,7 @@ export default function SubscriptionList() {
   const [groupOptions, setGroupOptions] = useState([]);
   const [sourceOptions, setSourceOptions] = useState([]);
   const [tagOptions, setTagOptions] = useState([]);
+  const [protocolOptions, setProtocolOptions] = useState([]);
 
   // 获取订阅列表（分页）
   const fetchSubscriptions = async (currentPage, currentPageSize) => {
@@ -191,14 +195,15 @@ export default function SubscriptionList() {
   // 获取其他数据（不分页）
   const fetchOtherData = useCallback(async () => {
     try {
-      const [nodesRes, templatesRes, scriptsRes, countriesRes, groupsRes, sourcesRes, tagsRes] = await Promise.all([
+      const [nodesRes, templatesRes, scriptsRes, countriesRes, groupsRes, sourcesRes, tagsRes, protocolsRes] = await Promise.all([
         getNodes(),
         getTemplates(),
         getScripts(),
         getNodeCountries(),
         getNodeGroups(),
         getNodeSources(),
-        getTags()
+        getTags(),
+        getNodeProtocols()
       ]);
       setAllNodes(nodesRes.data || []);
       setTemplates(templatesRes.data || []);
@@ -207,6 +212,7 @@ export default function SubscriptionList() {
       setGroupOptions((groupsRes.data || []).sort());
       setSourceOptions((sourcesRes.data || []).sort());
       setTagOptions(tagsRes.data || []);
+      setProtocolOptions(protocolsRes.data || []);
     } catch (error) {
       console.error(error);
     }
@@ -254,6 +260,9 @@ export default function SubscriptionList() {
       nodeNameBlacklist: '',
       tagWhitelist: '',
       tagBlacklist: '',
+      protocolWhitelist: '',
+      protocolBlacklist: '',
+      protocolOptions: protocolOptions,
       deduplicationRule: ''
     });
     setNodeGroupFilter('all');
@@ -302,6 +311,9 @@ export default function SubscriptionList() {
       nodeNameBlacklist: sub.NodeNameBlacklist || '',
       tagWhitelist: sub.TagWhitelist || '',
       tagBlacklist: sub.TagBlacklist || '',
+      protocolWhitelist: sub.ProtocolWhitelist || '',
+      protocolBlacklist: sub.ProtocolBlacklist || '',
+      protocolOptions: protocolOptions,
       deduplicationRule: sub.DeduplicationRule || ''
     });
     setNodeGroupFilter('all');
@@ -369,6 +381,8 @@ export default function SubscriptionList() {
         NodeNameBlacklist: formData.nodeNameBlacklist,
         TagWhitelist: formData.tagWhitelist,
         TagBlacklist: formData.tagBlacklist,
+        ProtocolWhitelist: formData.protocolWhitelist,
+        ProtocolBlacklist: formData.protocolBlacklist,
         DeduplicationRule: formData.deduplicationRule || ''
       };
 
@@ -511,6 +525,8 @@ export default function SubscriptionList() {
         CountryBlacklist: formData.CountryBlacklist.join(','),
         TagWhitelist: formData.tagWhitelist || '',
         TagBlacklist: formData.tagBlacklist || '',
+        ProtocolWhitelist: formData.protocolWhitelist || '',
+        ProtocolBlacklist: formData.protocolBlacklist || '',
         NodeNameWhitelist: formData.nodeNameWhitelist || '',
         NodeNameBlacklist: formData.nodeNameBlacklist || '',
         NodeNamePreprocess: formData.nodeNamePreprocess || '',
@@ -552,6 +568,8 @@ export default function SubscriptionList() {
         CountryBlacklist: sub.CountryBlacklist || '',
         TagWhitelist: sub.TagWhitelist || '',
         TagBlacklist: sub.TagBlacklist || '',
+        ProtocolWhitelist: sub.ProtocolWhitelist || '',
+        ProtocolBlacklist: sub.ProtocolBlacklist || '',
         NodeNameWhitelist: sub.NodeNameWhitelist || '',
         NodeNameBlacklist: sub.NodeNameBlacklist || '',
         NodeNamePreprocess: sub.NodeNamePreprocess || '',
@@ -697,9 +715,9 @@ export default function SubscriptionList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -715,9 +733,9 @@ export default function SubscriptionList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />

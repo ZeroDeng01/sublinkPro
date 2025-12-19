@@ -30,6 +30,7 @@ func Nodes(r *gin.Engine) {
 		NodesGroup.GET("/ip-info", api.GetIPDetails)
 		NodesGroup.GET("/ip-cache/stats", api.GetIPCacheStats)
 		NodesGroup.DELETE("/ip-cache", api.ClearIPCache)
+		NodesGroup.GET("/protocols", api.GetNodeProtocols)
 		// 节点原始信息相关
 		NodesGroup.GET("/protocol-ui-meta", api.GetProtocolUIMeta)
 		NodesGroup.GET("/parse-link", api.ParseNodeLinkAPI)

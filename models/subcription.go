@@ -47,6 +47,8 @@ type Subcription struct {
 	NodeNameBlacklist  string           `json:"NodeNameBlacklist"`  // 节点名称黑名单 (JSON数组)
 	TagWhitelist       string           `json:"TagWhitelist"`       // 标签白名单（逗号分隔）
 	TagBlacklist       string           `json:"TagBlacklist"`       // 标签黑名单（逗号分隔）
+	ProtocolWhitelist  string           `json:"ProtocolWhitelist"`  // 协议白名单（逗号分隔）
+	ProtocolBlacklist  string           `json:"ProtocolBlacklist"`  // 协议黑名单（逗号分隔）
 	DeduplicationRule  string           `json:"DeduplicationRule"`  // 去重规则配置(JSON)
 	CreatedAt          time.Time        `json:"CreatedAt"`
 	UpdatedAt          time.Time        `json:"UpdatedAt"`
@@ -180,6 +182,8 @@ func (sub *Subcription) Update() error {
 		"node_name_blacklist":  sub.NodeNameBlacklist,
 		"tag_whitelist":        sub.TagWhitelist,
 		"tag_blacklist":        sub.TagBlacklist,
+		"protocol_whitelist":   sub.ProtocolWhitelist,
+		"protocol_blacklist":   sub.ProtocolBlacklist,
 		"deduplication_rule":   sub.DeduplicationRule,
 	}
 	err := database.DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
@@ -427,7 +431,46 @@ func (sub *Subcription) ApplyFilters(nodes []Node) []Node {
 		result = filteredNodes
 	}
 
-	// 5. 应用去重规则
+	// 5. 协议过滤
+	if sub.ProtocolWhitelist != "" || sub.ProtocolBlacklist != "" {
+		whitelistProtos := make(map[string]bool)
+		blacklistProtos := make(map[string]bool)
+
+		if sub.ProtocolWhitelist != "" {
+			for _, p := range strings.Split(sub.ProtocolWhitelist, ",") {
+				p = strings.TrimSpace(strings.ToLower(p))
+				if p != "" {
+					whitelistProtos[p] = true
+				}
+			}
+		}
+
+		if sub.ProtocolBlacklist != "" {
+			for _, p := range strings.Split(sub.ProtocolBlacklist, ",") {
+				p = strings.TrimSpace(strings.ToLower(p))
+				if p != "" {
+					blacklistProtos[p] = true
+				}
+			}
+		}
+
+		var filteredNodes []Node
+		for _, node := range result {
+			nodeProto := strings.ToLower(node.Protocol)
+			// 黑名单优先
+			if len(blacklistProtos) > 0 && blacklistProtos[nodeProto] {
+				continue
+			}
+			// 白名单
+			if len(whitelistProtos) > 0 && !whitelistProtos[nodeProto] {
+				continue
+			}
+			filteredNodes = append(filteredNodes, node)
+		}
+		result = filteredNodes
+	}
+
+	// 6. 应用去重规则
 	result = sub.ApplyDeduplication(result)
 
 	return result
@@ -784,6 +827,8 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 		NodeNameBlacklist:  sub.NodeNameBlacklist,
 		TagWhitelist:       sub.TagWhitelist,
 		TagBlacklist:       sub.TagBlacklist,
+		ProtocolWhitelist:  sub.ProtocolWhitelist,
+		ProtocolBlacklist:  sub.ProtocolBlacklist,
 		DeduplicationRule:  sub.DeduplicationRule,
 	}
 
@@ -1060,7 +1105,7 @@ func deduplicateByProtocol(nodes []Node, protocolRules map[string][]string) []No
 
 	for _, node := range nodes {
 		// 获取协议类型
-		protoType := getProtocolType(node.Link)
+		protoType := protocol.GetProtocolFromLink(node.Link)
 
 		// 获取该协议的去重字段
 		fields, exists := protocolRules[protoType]
@@ -1087,25 +1132,6 @@ func deduplicateByProtocol(nodes []Node, protocolRules map[string][]string) []No
 
 	utils.Info("协议字段去重: 原%d个 -> %d个", len(nodes), len(result))
 	return result
-}
-
-// getProtocolType 从节点链接中提取协议类型
-func getProtocolType(link string) string {
-	if link == "" {
-		return ""
-	}
-	if idx := strings.Index(link, "://"); idx > 0 {
-		proto := strings.ToLower(link[:idx])
-		// hysteria2 和 hy2 统一处理
-		if proto == "hy2" {
-			return "hysteria2"
-		}
-		if proto == "hy" {
-			return "hysteria"
-		}
-		return proto
-	}
-	return ""
 }
 
 // generateProtocolKey 根据协议解析结果生成去重Key

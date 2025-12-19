@@ -39,6 +39,7 @@ import {
   getNodeCountries,
   getNodeGroups,
   getNodeSources,
+  getNodeProtocols,
   batchUpdateNodeGroup,
   batchUpdateNodeDialerProxy,
   batchUpdateNodeSource,
@@ -119,6 +120,7 @@ export default function NodeList() {
   const [minSpeed, setMinSpeed] = useState('');
   const [speedStatusFilter, setSpeedStatusFilter] = useState('');
   const [delayStatusFilter, setDelayStatusFilter] = useState('');
+  const [protocolFilter, setProtocolFilter] = useState('');
 
   // 排序
   const [sortBy, setSortBy] = useState(''); // 'delay' | 'speed' | ''
@@ -182,6 +184,7 @@ export default function NodeList() {
   // 从后端获取的分组和来源选项
   const [groupOptions, setGroupOptions] = useState([]);
   const [sourceOptions, setSourceOptions] = useState([]);
+  const [protocolOptions, setProtocolOptions] = useState([]);
 
   // 代理节点选择 - 从后端获取的完整节点列表
   const [proxyNodeOptions, setProxyNodeOptions] = useState([]);
@@ -241,6 +244,7 @@ export default function NodeList() {
       if (filterParams.minSpeed) params.minSpeed = filterParams.minSpeed;
       if (filterParams.speedStatus) params.speedStatus = filterParams.speedStatus;
       if (filterParams.delayStatus) params.delayStatus = filterParams.delayStatus;
+      if (filterParams.protocol) params.protocol = filterParams.protocol;
       if (filterParams.countries && filterParams.countries.length > 0) {
         params['countries[]'] = filterParams.countries;
       }
@@ -336,6 +340,12 @@ export default function NodeList() {
         setProtocolMeta(res.data || []);
       })
       .catch(console.error);
+    // 请求协议列表
+    getNodeProtocols()
+      .then((res) => {
+        setProtocolOptions(res.data || []);
+      })
+      .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -356,6 +366,7 @@ export default function NodeList() {
         minSpeed: minSpeed,
         speedStatus: speedStatusFilter,
         delayStatus: delayStatusFilter,
+        protocol: protocolFilter,
         countries: countryFilter,
         tags: tagFilter,
         sortBy: sortBy,
@@ -381,6 +392,7 @@ export default function NodeList() {
     minSpeed,
     speedStatusFilter,
     delayStatusFilter,
+    protocolFilter,
     countryFilter,
     tagFilter,
     sortBy,
@@ -408,6 +420,7 @@ export default function NodeList() {
     setDelayStatusFilter('');
     setCountryFilter([]);
     setTagFilter([]);
+    setProtocolFilter('');
     setSortBy('');
     setSortOrder('asc');
   };
@@ -420,6 +433,7 @@ export default function NodeList() {
     minSpeed: minSpeed,
     speedStatus: speedStatusFilter,
     delayStatus: delayStatusFilter,
+    protocol: protocolFilter,
     countries: countryFilter,
     tags: tagFilter,
     sortBy: sortBy,
@@ -458,6 +472,12 @@ export default function NodeList() {
           colorMap[tag.name] = tag.color || '#1976d2';
         });
         setTagColorMap(colorMap);
+      })
+      .catch(console.error);
+    // 刷新协议选项
+    getNodeProtocols()
+      .then((res) => {
+        setProtocolOptions(res.data || []);
       })
       .catch(console.error);
   }, []);
@@ -1068,9 +1088,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -1113,9 +1133,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
@@ -1142,10 +1162,13 @@ export default function NodeList() {
         setCountryFilter={setCountryFilter}
         tagFilter={tagFilter}
         setTagFilter={setTagFilter}
+        protocolFilter={protocolFilter}
+        setProtocolFilter={setProtocolFilter}
         groupOptions={groupOptions}
         sourceOptions={sourceOptions}
         countryOptions={countryOptions}
         tagOptions={tagOptions}
+        protocolOptions={protocolOptions}
         onReset={resetFilters}
       />
 

@@ -32,6 +32,7 @@ const nodeFields = [
   { value: 'name', label: '备注' },
   { value: 'link_name', label: '原始名称' },
   { value: 'link_country', label: '国家代码' },
+  { value: 'protocol', label: '协议类型' },
   { value: 'source', label: '来源' },
   { value: 'group', label: '分组' },
   { value: 'speed', label: '速度 (MB/s)' },
