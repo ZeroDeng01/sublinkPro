@@ -25,21 +25,32 @@ const (
 	DefaultLogPath          = "./logs"
 	DefaultLogLevel         = "info"
 	DefaultConfigFile       = "config.yaml"
+	DefaultCaptchaMode      = CaptchaModeTraditional // 默认传统验证码
+)
+
+// 验证码模式常量
+const (
+	CaptchaModeDisabled    = 1 // 关闭验证码
+	CaptchaModeTraditional = 2 // 传统图形验证码（默认）
+	CaptchaModeTurnstile   = 3 // Cloudflare Turnstile
 )
 
 // AppConfig 应用配置结构
 type AppConfig struct {
-	Port             int    `yaml:"port"`               // 服务端口
-	JwtSecret        string `yaml:"jwt_secret"`         // JWT密钥
-	APIEncryptionKey string `yaml:"api_encryption_key"` // API加密密钥
-	ExpireDays       int    `yaml:"expire_days"`        // Token过期天数
-	LoginFailCount   int    `yaml:"login_fail_count"`   // 登录失败次数限制
-	LoginFailWindow  int    `yaml:"login_fail_window"`  // 登录失败窗口时间(分钟)
-	LoginBanDuration int    `yaml:"login_ban_duration"` // 登录失败封禁时间(分钟)
-	DBPath           string `yaml:"db_path"`            // 数据库目录
-	LogPath          string `yaml:"log_path"`           // 日志目录
-	LogLevel         string `yaml:"log_level"`          // 日志等级 (debug/info/warn/error/fatal)
-	GeoIPPath        string `yaml:"geoip_path"`         // GeoIP数据库路径
+	Port               int    `yaml:"port"`                 // 服务端口
+	JwtSecret          string `yaml:"jwt_secret"`           // JWT密钥
+	APIEncryptionKey   string `yaml:"api_encryption_key"`   // API加密密钥
+	ExpireDays         int    `yaml:"expire_days"`          // Token过期天数
+	LoginFailCount     int    `yaml:"login_fail_count"`     // 登录失败次数限制
+	LoginFailWindow    int    `yaml:"login_fail_window"`    // 登录失败窗口时间(分钟)
+	LoginBanDuration   int    `yaml:"login_ban_duration"`   // 登录失败封禁时间(分钟)
+	DBPath             string `yaml:"db_path"`              // 数据库目录
+	LogPath            string `yaml:"log_path"`             // 日志目录
+	LogLevel           string `yaml:"log_level"`            // 日志等级 (debug/info/warn/error/fatal)
+	GeoIPPath          string `yaml:"geoip_path"`           // GeoIP数据库路径
+	CaptchaMode        int    `yaml:"captcha_mode"`         // 验证码模式 (1=关闭, 2=传统, 3=Turnstile)
+	TurnstileSiteKey   string `yaml:"turnstile_site_key"`   // Cloudflare Turnstile Site Key
+	TurnstileSecretKey string `yaml:"turnstile_secret_key"` // Cloudflare Turnstile Secret Key
 }
 
 // CommandLineConfig 命令行配置（仅存储用户指定的值）
@@ -245,6 +256,69 @@ func GetAPIEncryptionKey() string {
 	return ""
 }
 
+// CaptchaConfig 验证码配置信息
+type CaptchaConfig struct {
+	Mode             int    // 当前验证码模式（经过降级处理后的实际模式）
+	ConfiguredMode   int    // 用户配置的原始模式
+	TurnstileSiteKey string // Turnstile Site Key
+	Degraded         bool   // 是否已降级
+}
+
+// GetCaptchaConfig 获取验证码配置（含降级逻辑）
+// 当配置为 Turnstile 但未设置密钥时，自动降级为传统验证码
+func GetCaptchaConfig() CaptchaConfig {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	cfg := CaptchaConfig{
+		Mode:           CaptchaModeTraditional, // 默认传统验证码
+		ConfiguredMode: CaptchaModeTraditional,
+		Degraded:       false,
+	}
+
+	if globalConfig == nil {
+		return cfg
+	}
+
+	cfg.ConfiguredMode = globalConfig.CaptchaMode
+	if cfg.ConfiguredMode == 0 {
+		cfg.ConfiguredMode = CaptchaModeTraditional
+	}
+
+	switch cfg.ConfiguredMode {
+	case CaptchaModeDisabled:
+		// 关闭验证码
+		cfg.Mode = CaptchaModeDisabled
+	case CaptchaModeTurnstile:
+		// Turnstile 模式，检查是否配置了密钥
+		if globalConfig.TurnstileSiteKey != "" && globalConfig.TurnstileSecretKey != "" {
+			cfg.Mode = CaptchaModeTurnstile
+			cfg.TurnstileSiteKey = globalConfig.TurnstileSiteKey
+		} else {
+			// 降级为传统验证码
+			cfg.Mode = CaptchaModeTraditional
+			cfg.Degraded = true
+			log.Printf("警告: Turnstile 配置不完整，降级为传统验证码")
+		}
+	default:
+		// 传统验证码
+		cfg.Mode = CaptchaModeTraditional
+	}
+
+	return cfg
+}
+
+// GetTurnstileSecretKey 获取 Turnstile Secret Key（仅供后端使用）
+func GetTurnstileSecretKey() string {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	if globalConfig != nil {
+		return globalConfig.TurnstileSecretKey
+	}
+	return ""
+}
+
 // Reload 重新加载配置
 func Reload() *AppConfig {
 	return Load()
@@ -261,6 +335,7 @@ func applyDefaults(cfg *AppConfig) {
 	cfg.LogPath = DefaultLogPath
 	cfg.LogLevel = DefaultLogLevel
 	cfg.GeoIPPath = "" // 默认为空，运行时通过 GetGeoIPPath() 计算
+	cfg.CaptchaMode = DefaultCaptchaMode
 }
 
 // loadFromFileInternal 从配置文件加载（内部使用，不获取锁）
@@ -305,6 +380,16 @@ func loadFromFileInternal(cfg *AppConfig, configPath string) {
 	}
 	if fileCfg.LogLevel != "" {
 		cfg.LogLevel = fileCfg.LogLevel
+	}
+	// 验证码配置
+	if fileCfg.CaptchaMode != 0 {
+		cfg.CaptchaMode = fileCfg.CaptchaMode
+	}
+	if fileCfg.TurnstileSiteKey != "" {
+		cfg.TurnstileSiteKey = fileCfg.TurnstileSiteKey
+	}
+	if fileCfg.TurnstileSecretKey != "" {
+		cfg.TurnstileSecretKey = fileCfg.TurnstileSecretKey
 	}
 	// 敏感配置也从文件读取（用于迁移）
 	if fileCfg.JwtSecret != "" {
@@ -360,6 +445,18 @@ func loadFromEnvInternal(cfg *AppConfig) {
 	}
 	if key := os.Getenv(envPrefix + "API_ENCRYPTION_KEY"); key != "" {
 		cfg.APIEncryptionKey = key
+	}
+	// 验证码配置
+	if mode := os.Getenv(envPrefix + "CAPTCHA_MODE"); mode != "" {
+		if m, err := strconv.Atoi(mode); err == nil && m >= 1 && m <= 3 {
+			cfg.CaptchaMode = m
+		}
+	}
+	if siteKey := os.Getenv(envPrefix + "TURNSTILE_SITE_KEY"); siteKey != "" {
+		cfg.TurnstileSiteKey = siteKey
+	}
+	if secretKey := os.Getenv(envPrefix + "TURNSTILE_SECRET_KEY"); secretKey != "" {
+		cfg.TurnstileSecretKey = secretKey
 	}
 }
 

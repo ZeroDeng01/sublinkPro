@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // material-ui
@@ -17,6 +17,7 @@ import Stack from '@mui/material/Stack';
 // project imports
 import AnimateButton from 'ui-component/extended/AnimateButton';
 import CustomFormControl from 'ui-component/extended/Form/CustomFormControl';
+import TurnstileWidget from 'ui-component/TurnstileWidget';
 import { useAuth } from 'contexts/AuthContext';
 import { getCaptcha } from 'api/auth';
 
@@ -24,6 +25,13 @@ import { getCaptcha } from 'api/auth';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import RefreshIcon from '@mui/icons-material/Refresh';
+
+// 验证码模式常量（与后端保持一致）
+const CAPTCHA_MODE = {
+  DISABLED: 1,
+  TRADITIONAL: 2,
+  TURNSTILE: 3
+};
 
 // ===============================|| 登录表单 ||=============================== //
 
@@ -41,20 +49,40 @@ export default function AuthLogin() {
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
-  // 获取验证码
-  const fetchCaptcha = async () => {
+  // 验证码配置状态
+  const [captchaMode, setCaptchaMode] = useState(CAPTCHA_MODE.TRADITIONAL);
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [captchaDegraded, setCaptchaDegraded] = useState(false);
+
+  // 获取验证码配置
+  const fetchCaptcha = useCallback(async () => {
     try {
       const response = await getCaptcha();
-      setCaptchaKey(response.data.captchaKey);
-      setCaptchaBase64(response.data.captchaBase64);
+      const data = response.data;
+
+      // 设置验证码模式
+      setCaptchaMode(data.mode || CAPTCHA_MODE.TRADITIONAL);
+      setCaptchaDegraded(data.degraded || false);
+
+      // 根据模式设置相应数据
+      if (data.mode === CAPTCHA_MODE.TRADITIONAL) {
+        setCaptchaKey(data.captchaKey || '');
+        setCaptchaBase64(data.captchaBase64 || '');
+      } else if (data.mode === CAPTCHA_MODE.TURNSTILE) {
+        setTurnstileSiteKey(data.turnstileSiteKey || '');
+        setTurnstileToken(''); // 重置 token
+      }
     } catch (err) {
       console.error('获取验证码失败:', err);
+      // 默认使用传统验证码
+      setCaptchaMode(CAPTCHA_MODE.TRADITIONAL);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchCaptcha();
-  }, []);
+  }, [fetchCaptcha]);
 
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
@@ -62,6 +90,21 @@ export default function AuthLogin() {
 
   const handleMouseDownPassword = (event) => {
     event.preventDefault();
+  };
+
+  // Turnstile 验证回调
+  const handleTurnstileVerify = (token) => {
+    setTurnstileToken(token);
+    setError(''); // 清除错误
+  };
+
+  const handleTurnstileError = () => {
+    setError('人机验证加载失败，请刷新页面重试');
+  };
+
+  const handleTurnstileExpire = () => {
+    setTurnstileToken('');
+    setError('人机验证已过期，请重新验证');
   };
 
   const handleSubmit = async (event) => {
@@ -83,16 +126,30 @@ export default function AuthLogin() {
       return;
     }
 
-    if (!captchaCode.trim()) {
+    // 根据验证码模式验证
+    if (captchaMode === CAPTCHA_MODE.TRADITIONAL && !captchaCode.trim()) {
       setError('请输入验证码');
+      return;
+    }
+
+    if (captchaMode === CAPTCHA_MODE.TURNSTILE && !turnstileToken) {
+      setError('请完成人机验证');
       return;
     }
 
     setLoading(true);
 
     try {
-      // 传递 rememberMe 参数给 login 函数，由后端生成安全令牌
-      const result = await login(username, password, captchaKey, captchaCode, rememberMe);
+      // 根据模式传递不同的验证码数据
+      const result = await login(
+        username,
+        password,
+        captchaMode === CAPTCHA_MODE.TRADITIONAL ? captchaKey : '',
+        captchaMode === CAPTCHA_MODE.TRADITIONAL ? captchaCode : '',
+        rememberMe,
+        captchaMode === CAPTCHA_MODE.TURNSTILE ? turnstileToken : ''
+      );
+
       if (result.success) {
         navigate('/dashboard');
       } else {
@@ -100,13 +157,77 @@ export default function AuthLogin() {
         // 登录失败时刷新验证码
         fetchCaptcha();
         setCaptchaCode('');
+        setTurnstileToken('');
       }
     } catch {
       setError('登录失败，请稍后重试');
       fetchCaptcha();
       setCaptchaCode('');
+      setTurnstileToken('');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 渲染验证码区域
+  const renderCaptcha = () => {
+    switch (captchaMode) {
+      case CAPTCHA_MODE.DISABLED:
+        // 验证码已关闭，不显示任何内容
+        return null;
+
+      case CAPTCHA_MODE.TURNSTILE:
+        // Cloudflare Turnstile
+        return (
+          <Box sx={{ my: 1 }}>
+            <TurnstileWidget
+              siteKey={turnstileSiteKey}
+              onVerify={handleTurnstileVerify}
+              onError={handleTurnstileError}
+              onExpire={handleTurnstileExpire}
+            />
+          </Box>
+        );
+
+      default:
+        // 传统图形验证码
+        return (
+          <CustomFormControl fullWidth>
+            <InputLabel htmlFor="outlined-adornment-captcha-login">验证码</InputLabel>
+            <OutlinedInput
+              id="outlined-adornment-captcha-login"
+              type="text"
+              value={captchaCode}
+              onChange={(e) => setCaptchaCode(e.target.value)}
+              name="captchaCode"
+              autoComplete="off"
+              onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
+              endAdornment={
+                <InputAdornment position="end">
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    {captchaBase64 && (
+                      <Box
+                        component="img"
+                        src={captchaBase64}
+                        alt="验证码"
+                        sx={{
+                          height: 40,
+                          cursor: 'pointer',
+                          borderRadius: 1
+                        }}
+                        onClick={fetchCaptcha}
+                      />
+                    )}
+                    <IconButton onClick={fetchCaptcha} size="small" title="刷新验证码">
+                      <RefreshIcon />
+                    </IconButton>
+                  </Stack>
+                </InputAdornment>
+              }
+              label="验证码"
+            />
+          </CustomFormControl>
+        );
     }
   };
 
@@ -115,6 +236,13 @@ export default function AuthLogin() {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
+        </Alert>
+      )}
+
+      {/* 降级提示 */}
+      {captchaDegraded && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Turnstile 配置不完整，已降级为传统验证码
         </Alert>
       )}
 
@@ -158,41 +286,8 @@ export default function AuthLogin() {
         />
       </CustomFormControl>
 
-      <CustomFormControl fullWidth>
-        <InputLabel htmlFor="outlined-adornment-captcha-login">验证码</InputLabel>
-        <OutlinedInput
-          id="outlined-adornment-captcha-login"
-          type="text"
-          value={captchaCode}
-          onChange={(e) => setCaptchaCode(e.target.value)}
-          name="captchaCode"
-          autoComplete="off"
-          onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
-          endAdornment={
-            <InputAdornment position="end">
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                {captchaBase64 && (
-                  <Box
-                    component="img"
-                    src={captchaBase64}
-                    alt="验证码"
-                    sx={{
-                      height: 40,
-                      cursor: 'pointer',
-                      borderRadius: 1
-                    }}
-                    onClick={fetchCaptcha}
-                  />
-                )}
-                <IconButton onClick={fetchCaptcha} size="small" title="刷新验证码">
-                  <RefreshIcon />
-                </IconButton>
-              </Stack>
-            </InputAdornment>
-          }
-          label="验证码"
-        />
-      </CustomFormControl>
+      {/* 验证码区域 */}
+      {renderCaptcha()}
 
       <FormControlLabel
         control={<Checkbox checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} name="rememberMe" color="secondary" />}

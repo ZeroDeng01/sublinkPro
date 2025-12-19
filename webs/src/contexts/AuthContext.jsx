@@ -233,9 +233,9 @@ export function AuthProvider({ children }) {
   };
 
   // 登录 - 支持验证码和记住密码
-  const login = async (username, password, captchaKey, captchaCode, rememberMe = false) => {
+  const login = async (username, password, captchaKey, captchaCode, rememberMe = false, turnstileToken = '') => {
     try {
-      const response = await loginApi({ username, password, captchaKey, captchaCode, rememberMe });
+      const response = await loginApi({ username, password, captchaKey, captchaCode, rememberMe, turnstileToken });
 
       // 登录成功（code === 200，否则会被 request.js 拦截器 reject）
       const { tokenType, accessToken, rememberToken } = response.data;

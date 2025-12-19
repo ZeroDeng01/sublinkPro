@@ -55,6 +55,26 @@ login_ban_duration: 10
 # geoip_path: ./db/GeoLite2-City.mmdb
 
 # ============================================
+# 验证码配置
+# ============================================
+
+# 验证码模式
+# 1 = 关闭验证码（不推荐，仅限内网环境）
+# 2 = 传统图形验证码（默认）
+# 3 = Cloudflare Turnstile
+# 环境变量: SUBLINK_CAPTCHA_MODE
+captcha_mode: 2
+
+# Cloudflare Turnstile 配置
+# 仅在 captcha_mode: 3 时需要
+# 如未配置将自动降级为传统验证码
+# 获取地址: https://dash.cloudflare.com/?to=/:account/turnstile
+# 环境变量: SUBLINK_TURNSTILE_SITE_KEY
+# turnstile_site_key: your-site-key
+# 环境变量: SUBLINK_TURNSTILE_SECRET_KEY
+# turnstile_secret_key: your-secret-key
+
+# ============================================
 # 敏感配置说明
 # ============================================
 # 以下敏感配置不再存储在此文件中，而是存储在数据库中

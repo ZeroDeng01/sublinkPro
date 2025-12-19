@@ -645,6 +645,9 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 | `SUBLINK_LOGIN_FAIL_WINDOW` | 登录失败窗口(分钟) | 1        |
 | `SUBLINK_LOGIN_BAN_DURATION` | 登录封禁时间(分钟) | 10       |
 | `SUBLINK_GEOIP_PATH` | GeoIP数据库路径 | ./db/GeoLite2-City.mmdb |
+| `SUBLINK_CAPTCHA_MODE` | 验证码模式 (1=关闭, 2=传统, 3=Turnstile) | 2 |
+| `SUBLINK_TURNSTILE_SITE_KEY` | Cloudflare Turnstile Site Key | - |
+| `SUBLINK_TURNSTILE_SECRET_KEY` | Cloudflare Turnstile Secret Key | - |
 | `SUBLINK_ADMIN_PASSWORD` | 初始管理员密码 | 123456   |
 | `SUBLINK_ADMIN_PASSWORD_REST` | 重置管理员密码 | 输入新管理员密码 |
 
@@ -676,6 +679,34 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 
 > [!WARNING]
 > 如果您需要**多实例部署**或**集群部署**，请务必通过环境变量设置相同的 `SUBLINK_JWT_SECRET` 和 `SUBLINK_API_ENCRYPTION_KEY`，以确保各实例间的登录状态和 API Key 一致。
+
+### 验证码配置
+
+SublinkPro 支持三种验证码模式，通过 `SUBLINK_CAPTCHA_MODE` 环境变量配置：
+
+| 模式 | 说明 |
+|:---:|:---|
+| **1** | 关闭验证码（不推荐，仅限内网环境） |
+| **2** | 传统图形验证码（默认） |
+| **3** | Cloudflare Turnstile（推荐，更安全） |
+
+#### Cloudflare Turnstile 配置
+
+如需使用 Turnstile，请：
+
+1. 访问 [Cloudflare Turnstile 控制台](https://dash.cloudflare.com/?to=/:account/turnstile) 创建站点
+2. 获取 **Site Key** 和 **Secret Key**
+3. 配置环境变量：
+
+```yaml
+environment:
+  - SUBLINK_CAPTCHA_MODE=3
+  - SUBLINK_TURNSTILE_SITE_KEY=your-site-key
+  - SUBLINK_TURNSTILE_SECRET_KEY=your-secret-key
+```
+
+> [!NOTE]
+> **降级机制**：如果配置了 Turnstile 模式但未提供完整的密钥配置，系统会自动降级为传统图形验证码。
 
 ### Docker 部署示例（带环境变量）
 

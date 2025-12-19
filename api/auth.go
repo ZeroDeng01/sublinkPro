@@ -29,18 +29,43 @@ func GetToken(username string) (string, error) {
 	return token.SignedString([]byte(config.GetJwtSecret()))
 }
 
-// 获取captcha图形验证码
+// GetCaptcha 获取验证码配置和图形验证码
 func GetCaptcha(c *gin.Context) {
-	id, bs4, _, err := utils.GetCaptcha()
-	if err != nil {
-		utils.Error("获取验证码失败: %v", err)
-		utils.FailWithMsg(c, "获取验证码失败")
-		return
+	captchaCfg := config.GetCaptchaConfig()
+
+	response := gin.H{
+		"mode":             captchaCfg.Mode,           // 实际使用的模式
+		"configuredMode":   captchaCfg.ConfiguredMode, // 用户配置的模式
+		"degraded":         captchaCfg.Degraded,       // 是否已降级
+		"captchaKey":       "",
+		"captchaBase64":    "",
+		"turnstileSiteKey": "",
 	}
-	utils.OkDetailed(c, "获取验证码成功", gin.H{
-		"captchaKey":    id,
-		"captchaBase64": bs4,
-	})
+
+	switch captchaCfg.Mode {
+	case config.CaptchaModeDisabled:
+		// 关闭验证码，不需要返回验证码数据
+		utils.OkDetailed(c, "验证码已关闭", response)
+		return
+
+	case config.CaptchaModeTurnstile:
+		// Turnstile 模式，返回 site key
+		response["turnstileSiteKey"] = captchaCfg.TurnstileSiteKey
+		utils.OkDetailed(c, "获取 Turnstile 配置成功", response)
+		return
+
+	default:
+		// 传统验证码模式
+		id, bs4, _, err := utils.GetCaptcha()
+		if err != nil {
+			utils.Error("获取验证码失败: %v", err)
+			utils.FailWithMsg(c, "获取验证码失败")
+			return
+		}
+		response["captchaKey"] = id
+		response["captchaBase64"] = bs4
+		utils.OkDetailed(c, "获取验证码成功", response)
+	}
 }
 
 // 用户登录
@@ -60,11 +85,40 @@ func UserLogin(c *gin.Context) {
 		return
 	}
 
-	// 验证验证码
-	if !utils.VerifyCaptcha(captchaKey, captchaCode) {
-		utils.Warn("验证码错误")
-		utils.FailWithData(c, "验证码错误", gin.H{"errorType": "captcha"})
-		return
+	// 验证验证码（根据配置模式）
+	captchaCfg := config.GetCaptchaConfig()
+	switch captchaCfg.Mode {
+	case config.CaptchaModeDisabled:
+		// 关闭验证码，跳过验证
+		utils.Debug("验证码已关闭，跳过验证")
+
+	case config.CaptchaModeTurnstile:
+		// Turnstile 模式
+		turnstileToken := c.PostForm("turnstileToken")
+		if turnstileToken == "" {
+			utils.Warn("Turnstile 令牌为空")
+			utils.FailWithData(c, "请完成人机验证", gin.H{"errorType": "captcha"})
+			return
+		}
+		verified, err := utils.VerifyTurnstile(turnstileToken, config.GetTurnstileSecretKey(), ip)
+		if err != nil {
+			utils.Error("Turnstile 验证出错: %v", err)
+			utils.FailWithData(c, "人机验证失败", gin.H{"errorType": "captcha"})
+			return
+		}
+		if !verified {
+			utils.Warn("Turnstile 验证未通过")
+			utils.FailWithData(c, "人机验证未通过", gin.H{"errorType": "captcha"})
+			return
+		}
+
+	default:
+		// 传统验证码模式
+		if !utils.VerifyCaptcha(captchaKey, captchaCode) {
+			utils.Warn("验证码错误")
+			utils.FailWithData(c, "验证码错误", gin.H{"errorType": "captcha"})
+			return
+		}
 	}
 	user := &models.User{Username: username, Password: password}
 	err := user.Verify()

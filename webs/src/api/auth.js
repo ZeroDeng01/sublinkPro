@@ -16,6 +16,10 @@ export function login(data) {
   formData.append('captchaKey', data.captchaKey || '');
   formData.append('captchaCode', data.captchaCode || '');
   formData.append('rememberMe', data.rememberMe ? 'true' : 'false');
+  // Turnstile token（可选）
+  if (data.turnstileToken) {
+    formData.append('turnstileToken', data.turnstileToken);
+  }
 
   return request({
     url: '/v1/auth/login',

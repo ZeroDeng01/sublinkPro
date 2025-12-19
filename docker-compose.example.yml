@@ -64,6 +64,16 @@ services:
       # 如需自定义路径，请取消注释以下配置
       # - SUBLINK_GEOIP_PATH=/app/db/GeoLite2-City.mmdb
       
+      # ---------- 验证码配置 ----------
+      # 验证码模式: 1=关闭 | 2=传统(默认) | 3=Cloudflare Turnstile
+      - SUBLINK_CAPTCHA_MODE=2
+      
+      # Cloudflare Turnstile 配置（仅 mode=3 时需要）
+      # 如未配置将自动降级为传统验证码
+      # 获取地址: https://dash.cloudflare.com/?to=/:account/turnstile
+      # - SUBLINK_TURNSTILE_SITE_KEY=your-site-key
+      # - SUBLINK_TURNSTILE_SECRET_KEY=your-secret-key
+      
       # ---------- 管理员配置 ----------
       # 初始管理员密码（仅首次启动时生效）
       # - SUBLINK_ADMIN_PASSWORD=your-admin-password
