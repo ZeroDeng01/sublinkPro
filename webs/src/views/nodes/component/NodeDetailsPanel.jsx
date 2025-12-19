@@ -40,6 +40,12 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CodeIcon from '@mui/icons-material/Code';
 
+// dialog
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import Zoom from '@mui/material/Zoom';
+import React from 'react';
+
 // utils
 import { formatDateTime, formatCountry, getDelayDisplay, getSpeedDisplay } from '../utils';
 
@@ -223,49 +229,57 @@ export default function NodeDetailsPanel({
   const delayStyles = getStatusStyles(theme, delayDisplay.color);
   const speedStyles = getStatusStyles(theme, speedDisplay.color);
 
-  return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        sx: {
-          width: isMobile ? '100%' : 400,
-          maxWidth: '100vw',
-          bgcolor: 'background.default'
-        }
-      }}
-    >
+  // Common content to be reused in both Dialog and Drawer
+  const NodeContent = (
+    <>
       {/* 顶部区域 */}
       <Box
         sx={{
           position: 'relative',
           background: `linear-gradient(135deg, ${alpha(protocolInfo.color, 0.08)} 0%, ${theme.palette.background.paper} 100%)`,
           pb: 3,
-          pt: 1,
+          pt: isMobile ? 2 : 3,
+          px: 3,
           borderBottom: '1px solid',
-          borderColor: 'divider'
+          borderColor: 'divider',
+          flexShrink: 0 // Prevent shrinking
         }}
       >
-        {/* 关闭按钮 */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1 }}>
-          <IconButton onClick={onClose} size="medium">
+        {/* 关闭按钮 (Only needed if not using DialogTitle/Actions standard close in mobile or custom layout) */}
+        {!isMobile && (
+          <IconButton onClick={onClose} sx={{ position: 'absolute', right: 16, top: 16, color: 'text.secondary' }}>
             <CloseIcon />
           </IconButton>
-        </Box>
+        )}
+
+        {/* Mobile Swipe Indicator (Optional visual cue) */}
+        {isMobile && (
+          <Box
+            sx={{
+              width: 40,
+              height: 4,
+              bgcolor: 'divider',
+              borderRadius: 2,
+              mx: 'auto',
+              mb: 2,
+              opacity: 0.6
+            }}
+          />
+        )}
 
         {/* 协议与名称核心展示 */}
-        <Box sx={{ px: 3, textAlign: 'center' }}>
+        <Box sx={{ textAlign: 'center' }}>
           <Box sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
             <Avatar
               sx={{
-                width: 72,
-                height: 72,
+                width: 80,
+                height: 80,
                 bgcolor: protocolInfo.color,
                 color: '#fff',
-                fontSize: 32,
+                fontSize: 36,
                 fontWeight: 'bold',
-                boxShadow: `0 8px 16px ${alpha(protocolInfo.color, 0.3)}`
+                boxShadow: `0 8px 24px ${alpha(protocolInfo.color, 0.25)}`,
+                border: `4px solid ${theme.palette.background.paper}`
               }}
             >
               {protocolInfo.icon}
@@ -276,103 +290,95 @@ export default function NodeDetailsPanel({
               size="small"
               sx={{
                 position: 'absolute',
-                bottom: -8,
+                bottom: -10,
                 left: '50%',
                 transform: 'translateX(-50%)',
                 bgcolor: 'background.paper',
                 color: protocolInfo.color,
                 fontWeight: 700,
-                fontSize: 10,
-                height: 20,
+                fontSize: 11,
+                height: 22,
                 boxShadow: theme.shadows[2],
                 border: '1px solid',
-                borderColor: alpha(protocolInfo.color, 0.3),
-                maxWidth: 'none', // 允许宽度超长
+                borderColor: alpha(protocolInfo.color, 0.2),
+                maxWidth: 'none',
                 '& .MuiChip-label': {
-                  paddingLeft: 0.5,
-                  paddingRight: 0.5,
+                  px: 1,
                   display: 'block',
                   whiteSpace: 'nowrap',
-                  overflow: 'visible' // 防止文字截断
+                  overflow: 'visible'
                 }
               }}
             />
           </Box>
 
-          <Typography variant="h6" fontWeight="800" sx={{ mt: 1.5, lineHeight: 1.3, wordBreak: 'break-word' }}>
+          <Typography variant="h5" fontWeight="800" sx={{ mt: 2, mb: 0.5, lineHeight: 1.3, wordBreak: 'break-word' }}>
             {node.Name}
           </Typography>
 
           {node.Group && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontWeight: 500 }}>
-              {node.Group}
-            </Typography>
+            <Chip
+              label={node.Group}
+              size="small"
+              variant="outlined"
+              sx={{
+                color: 'text.secondary',
+                borderColor: 'divider',
+                height: 20,
+                fontSize: 11,
+                fontWeight: 500
+              }}
+            />
           )}
 
-          {/* 性能指标卡片 - 增加色块背景以提升区分度 */}
+          {/* 性能指标卡片 */}
           <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
             <Box
               sx={{
                 flex: 1,
                 p: 1.5,
-                borderRadius: 3,
+                borderRadius: 4,
                 bgcolor: delayStyles.bg,
                 border: '1px solid',
                 borderColor: delayStyles.border,
-                textAlign: 'left',
+                textAlign: 'center',
                 position: 'relative',
                 overflow: 'hidden'
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                <SignalCellularAltIcon sx={{ fontSize: 16, color: delayStyles.color, opacity: 0.8 }} />
-                <Typography variant="caption" fontWeight={600} sx={{ color: delayStyles.color, opacity: 0.8 }}>
-                  延迟
-                </Typography>
-              </Box>
+              <Typography variant="caption" fontWeight={600} sx={{ color: delayStyles.color, opacity: 0.9, display: 'block', mb: 0.5 }}>
+                延迟
+              </Typography>
               <Typography variant="h5" fontWeight="800" sx={{ color: delayStyles.color }}>
                 {node.DelayTime > 0 ? node.DelayTime : '-'}
-                <Typography component="span" variant="caption" sx={{ ml: 0.5, color: delayStyles.color, opacity: 0.8 }}>
+                <Typography component="span" variant="caption" sx={{ ml: 0.5, opacity: 0.8 }}>
                   ms
                 </Typography>
               </Typography>
-              {node.LatencyCheckAt && (
-                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 10, display: 'block', mt: 0.5 }}>
-                  {formatDateTime(node.LatencyCheckAt)}
-                </Typography>
-              )}
             </Box>
 
             <Box
               sx={{
                 flex: 1,
                 p: 1.5,
-                borderRadius: 3,
+                borderRadius: 4,
                 bgcolor: speedStyles.bg,
                 border: '1px solid',
                 borderColor: speedStyles.border,
-                textAlign: 'left',
+                textAlign: 'center',
                 position: 'relative',
                 overflow: 'hidden'
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                <SpeedIcon sx={{ fontSize: 16, color: speedStyles.color, opacity: 0.8 }} />
-                <Typography variant="caption" fontWeight={600} sx={{ color: speedStyles.color, opacity: 0.8 }}>
-                  速度
-                </Typography>
-              </Box>
+              <Typography variant="caption" fontWeight={600} sx={{ color: speedStyles.color, opacity: 0.9, display: 'block', mb: 0.5 }}>
+                速度
+              </Typography>
               <Typography variant="h5" fontWeight="800" sx={{ color: speedStyles.color }}>
                 {node.Speed > 0 ? node.Speed.toFixed(1) : '-'}
-                <Typography component="span" variant="caption" sx={{ ml: 0.5, color: speedStyles.color, opacity: 0.8 }}>
+                <Typography component="span" variant="caption" sx={{ ml: 0.5, opacity: 0.8 }}>
                   MB/s
                 </Typography>
               </Typography>
-              {node.SpeedCheckAt && (
-                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 10, display: 'block', mt: 0.5 }}>
-                  {formatDateTime(node.SpeedCheckAt)}
-                </Typography>
-              )}
             </Box>
           </Stack>
         </Box>
@@ -383,52 +389,58 @@ export default function NodeDetailsPanel({
         <List disablePadding sx={{ mb: 3 }}>
           <ListItem disablePadding sx={{ py: 1.5, borderBottom: '1px dashed', borderColor: 'divider', display: 'block' }}>
             <Stack direction="row" alignItems="flex-start" spacing={2} width="100%">
-              <Avatar
+              <Box
                 sx={{
-                  width: 36,
+                  minWidth: 36,
                   height: 36,
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                  borderRadius: 12,
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
                   color: 'primary.main',
-                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   mt: 0.5
                 }}
               >
                 <RouterIcon fontSize="small" />
-              </Avatar>
+              </Box>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
                   原始名称
                 </Typography>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography variant="body2" sx={{ wordBreak: 'break-word', flex: 1 }}>
-                    {node.LinkName || '-'}
-                  </Typography>
-                </Stack>
+                <Typography variant="body2" sx={{ wordBreak: 'break-word', fontWeight: 500 }}>
+                  {node.LinkName || '-'}
+                </Typography>
                 {node.LinkName === node.Name && (
-                  <Typography variant="caption" color="text.secondary" display="block" mt={0.3}>
-                    通过订阅获取的名称一致
+                  <Typography variant="caption" color="text.secondary" display="block" mt={0.3} sx={{ fontSize: 11 }}>
+                    名称与订阅一致
                   </Typography>
                 )}
               </Box>
             </Stack>
           </ListItem>
+
           <DetailItem icon={<SourceIcon fontSize="small" />} label="来源" value={node.Source === 'manual' ? '手动添加' : node.Source} />
           {node.DialerProxyName && <DetailItem icon={<LinkIcon fontSize="small" />} label="前置代理" value={node.DialerProxyName} />}
+
           {node.Tags && (
             <ListItem disablePadding sx={{ py: 1.5, borderBottom: '1px dashed', borderColor: 'divider', display: 'block' }}>
               <Stack direction="row" alignItems="flex-start" spacing={2} width="100%">
-                <Avatar
+                <Box
                   sx={{
-                    width: 36,
+                    minWidth: 36,
                     height: 36,
-                    bgcolor: (theme) => alpha(theme.palette.secondary.main, 0.08),
+                    borderRadius: 12,
+                    bgcolor: (theme) => alpha(theme.palette.secondary.main, 0.1),
                     color: 'secondary.main',
-                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     mt: 0.5
                   }}
                 >
                   <FolderIcon fontSize="small" />
-                </Avatar>
+                </Box>
                 <Box sx={{ flex: 1 }}>
                   <Typography variant="caption" color="text.secondary" display="block" mb={0.8}>
                     标签
@@ -447,7 +459,8 @@ export default function NodeDetailsPanel({
                             fontSize: 11,
                             height: 24,
                             border: 'none',
-                            fontWeight: 500
+                            fontWeight: 600,
+                            borderRadius: 1.5
                           }}
                         />
                       ))}
@@ -469,7 +482,7 @@ export default function NodeDetailsPanel({
             '&:before': { display: 'none' },
             border: '1px solid',
             borderColor: 'divider',
-            borderRadius: 2,
+            borderRadius: 3,
             mb: 3,
             overflow: 'hidden'
           }}
@@ -519,91 +532,149 @@ export default function NodeDetailsPanel({
           )}
           <DetailItem icon={<AccessTimeIcon fontSize="small" />} label="更新时间" value={formatDateTime(node.UpdatedAt)} noBorder />
         </List>
-
-        {/* 占位 */}
-        <Box height={80} />
       </Box>
+    </>
+  );
 
-      {/* 底部悬浮操作栏 */}
-      <Paper
-        elevation={8}
+  // Common Action Bar
+  const ActionBar = (
+    <Box
+      sx={{
+        p: 2,
+        pb: isMobile ? 3 : 2, // Extra padding for bottom safe area on mobile
+        bgcolor: 'background.paper',
+        borderTop: '1px solid',
+        borderColor: 'divider',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5,
+        zIndex: 10
+      }}
+    >
+      <Button
+        variant="contained"
+        color="primary"
+        startIcon={<PlayArrowIcon />}
+        onClick={() => {
+          onSpeedTest(node);
+          onClose();
+        }}
+        fullWidth
         sx={{
-          position: 'absolute',
-          bottom: 24,
-          left: 24,
-          right: 24,
-          borderRadius: 4,
-          p: 1,
-          bgcolor: 'background.paper',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          border: '1px solid',
-          borderColor: alpha(theme.palette.divider, 0.1)
+          borderRadius: 3,
+          height: 48,
+          fontWeight: 700,
+          fontSize: 15,
+          boxShadow: theme.shadows[4],
+          textTransform: 'none'
         }}
       >
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<PlayArrowIcon />}
-          onClick={() => {
-            onSpeedTest(node);
-            onClose();
-          }}
-          sx={{
-            borderRadius: 3,
-            flex: 1,
-            height: 48,
-            fontWeight: 700,
-            fontSize: 15,
-            boxShadow: theme.shadows[4],
-            textTransform: 'none'
+        立即测速
+      </Button>
+
+      <Stack direction="row" spacing={1}>
+        <Tooltip title="复制链接">
+          <IconButton
+            onClick={() => onCopy(node.Link)}
+            color="primary"
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 3,
+              width: 48,
+              height: 48
+            }}
+          >
+            <ContentCopyIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="编辑">
+          <IconButton
+            onClick={() => {
+              onEdit(node);
+              onClose();
+            }}
+            color="info"
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 3,
+              width: 48,
+              height: 48
+            }}
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="删除">
+          <IconButton
+            onClick={() => {
+              onDelete(node);
+              onClose();
+            }}
+            color="error"
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 3,
+              width: 48,
+              height: 48
+            }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+    </Box>
+  );
+
+  return (
+    <>
+      {isMobile ? (
+        <Drawer
+          anchor="bottom"
+          open={open}
+          onClose={onClose}
+          PaperProps={{
+            sx: {
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              maxHeight: '85vh',
+              overflow: 'hidden', // Let children scroll
+              display: 'flex',
+              flexDirection: 'column'
+            }
           }}
         >
-          立即测速
-        </Button>
-
-        <Divider orientation="vertical" flexItem sx={{ my: 1.5 }} />
-
-        <Stack direction="row" spacing={0.5}>
-          <Tooltip title="复制链接">
-            <IconButton
-              onClick={() => onCopy(node.Link)}
-              color="primary"
-              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
-            >
-              <ContentCopyIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="编辑">
-            <IconButton
-              onClick={() => {
-                onEdit(node);
-                onClose();
-              }}
-              color="info"
-              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="删除">
-            <IconButton
-              onClick={() => {
-                onDelete(node);
-                onClose();
-              }}
-              color="error"
-              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      </Paper>
-    </Drawer>
+          {NodeContent}
+          {ActionBar}
+        </Drawer>
+      ) : (
+        <Dialog
+          open={open}
+          onClose={onClose}
+          maxWidth="sm"
+          fullWidth
+          TransitionComponent={Zoom}
+          PaperProps={{
+            sx: {
+              borderRadius: 4,
+              overflow: 'hidden',
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: 'calc(100% - 64px)'
+            }
+          }}
+        >
+          {NodeContent}
+          {ActionBar}
+        </Dialog>
+      )}
+    </>
   );
 }
 

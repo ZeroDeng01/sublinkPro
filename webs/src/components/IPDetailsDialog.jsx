@@ -344,6 +344,9 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
                 <Link href={`https://bgp.he.net/ip/${ip}`} target="_blank" rel="noopener noreferrer" sx={{ fontSize: '0.75rem' }}>
                   BGP 查询 →
                 </Link>
+                <Link href={`https://ippure.com/?ip=${ip}`} target="_blank" rel="noopener noreferrer" sx={{ fontSize: '0.75rem' }}>
+                  IP Pure 详情 →
+                </Link>
               </Stack>
             </Box>
           </Stack>
