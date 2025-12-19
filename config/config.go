@@ -51,6 +51,7 @@ type AppConfig struct {
 	CaptchaMode        int    `yaml:"captcha_mode"`         // 验证码模式 (1=关闭, 2=传统, 3=Turnstile)
 	TurnstileSiteKey   string `yaml:"turnstile_site_key"`   // Cloudflare Turnstile Site Key
 	TurnstileSecretKey string `yaml:"turnstile_secret_key"` // Cloudflare Turnstile Secret Key
+	TurnstileProxyLink string `yaml:"turnstile_proxy_link"` // Turnstile 验证代理链接（mihomo 格式）
 }
 
 // CommandLineConfig 命令行配置（仅存储用户指定的值）
@@ -319,6 +320,17 @@ func GetTurnstileSecretKey() string {
 	return ""
 }
 
+// GetTurnstileProxyLink 获取 Turnstile 代理链接（填写即使用代理，未填写则直连）
+func GetTurnstileProxyLink() string {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	if globalConfig != nil {
+		return globalConfig.TurnstileProxyLink
+	}
+	return ""
+}
+
 // Reload 重新加载配置
 func Reload() *AppConfig {
 	return Load()
@@ -457,6 +469,9 @@ func loadFromEnvInternal(cfg *AppConfig) {
 	}
 	if secretKey := os.Getenv(envPrefix + "TURNSTILE_SECRET_KEY"); secretKey != "" {
 		cfg.TurnstileSecretKey = secretKey
+	}
+	if proxyLink := os.Getenv(envPrefix + "TURNSTILE_PROXY_LINK"); proxyLink != "" {
+		cfg.TurnstileProxyLink = proxyLink
 	}
 }
 

@@ -648,6 +648,7 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 | `SUBLINK_CAPTCHA_MODE` | 验证码模式 (1=关闭, 2=传统, 3=Turnstile) | 2 |
 | `SUBLINK_TURNSTILE_SITE_KEY` | Cloudflare Turnstile Site Key | - |
 | `SUBLINK_TURNSTILE_SECRET_KEY` | Cloudflare Turnstile Secret Key | - |
+| `SUBLINK_TURNSTILE_PROXY_LINK` | Turnstile 验证代理链接（mihomo 格式，解决网络超时问题） | - |
 | `SUBLINK_ADMIN_PASSWORD` | 初始管理员密码 | 123456   |
 | `SUBLINK_ADMIN_PASSWORD_REST` | 重置管理员密码 | 输入新管理员密码 |
 
@@ -707,6 +708,30 @@ environment:
 
 > [!NOTE]
 > **降级机制**：如果配置了 Turnstile 模式但未提供完整的密钥配置，系统会自动降级为传统图形验证码。
+
+#### Turnstile 代理配置
+
+如果您的服务器无法直接访问 Cloudflare API，可能会遇到 `context deadline exceeded` 超时错误。此时可以配置代理：
+
+```yaml
+environment:
+  - SUBLINK_TURNSTILE_PROXY_LINK=vless://your-proxy-link...
+```
+
+> [!TIP]
+> **代理链接格式**：使用 mihomo 支持的代理链接格式（如 `vless://`、`vmess://`、`ss://` 等）。与 Telegram 代理配置类似。
+
+#### Turnstile 验证模式
+
+Cloudflare Turnstile 支持三种验证模式，在 Cloudflare 控制台创建 Site Key 时选择：
+
+| 模式 | 说明 |
+|:---:|:---|
+| **Managed** | Cloudflare 自动决策是否需要交互，大多数用户无感通过 |
+| **Non-Interactive** | 显示加载指示器，但无需用户交互 |
+| **Invisible** | 完全不可见，后台静默完成验证 |
+
+前端 widget 会自动根据 Site Key 对应的模式进行渲染，无需额外配置。
 
 ### Docker 部署示例（带环境变量）
 

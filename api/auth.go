@@ -100,7 +100,7 @@ func UserLogin(c *gin.Context) {
 			utils.FailWithData(c, "请完成人机验证", gin.H{"errorType": "captcha"})
 			return
 		}
-		verified, err := utils.VerifyTurnstile(turnstileToken, config.GetTurnstileSecretKey(), ip)
+		verified, err := utils.VerifyTurnstile(turnstileToken, config.GetTurnstileSecretKey(), ip, config.GetTurnstileProxyLink())
 		if err != nil {
 			utils.Error("Turnstile 验证出错: %v", err)
 			utils.FailWithData(c, "人机验证失败", gin.H{"errorType": "captcha"})

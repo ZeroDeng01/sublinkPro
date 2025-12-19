@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -26,7 +27,8 @@ type TurnstileResponse struct {
 // token: 前端传递的 cf-turnstile-response
 // secretKey: Turnstile Secret Key
 // remoteIP: 用户 IP 地址（可选）
-func VerifyTurnstile(token, secretKey, remoteIP string) (bool, error) {
+// proxyLink: 代理节点链接（mihomo 格式，为空则直连）
+func VerifyTurnstile(token, secretKey, remoteIP, proxyLink string) (bool, error) {
 	if token == "" {
 		return false, fmt.Errorf("turnstile token 为空")
 	}
@@ -42,13 +44,23 @@ func VerifyTurnstile(token, secretKey, remoteIP string) (bool, error) {
 		formData.Set("remoteip", remoteIP)
 	}
 
-	// 创建 HTTP 客户端（带超时）
-	client := &http.Client{
-		Timeout: 10 * time.Second,
+	// 创建 HTTP 客户端（支持代理）
+	var client *http.Client
+	var err error
+	useProxy := proxyLink != ""
+
+	client, usedProxy, err := CreateProxyHTTPClient(useProxy, proxyLink, 30*time.Second)
+	if err != nil {
+		Error("创建 Turnstile HTTP 客户端失败: %v", err)
+		return false, fmt.Errorf("创建 HTTP 客户端失败: %v", err)
+	}
+
+	if usedProxy != "" {
+		Debug("Turnstile 验证使用代理: %s", usedProxy)
 	}
 
 	// 发送 POST 请求
-	resp, err := client.PostForm(TurnstileVerifyURL, formData)
+	resp, err := client.Post(TurnstileVerifyURL, "application/x-www-form-urlencoded", strings.NewReader(formData.Encode()))
 	if err != nil {
 		Error("Turnstile 验证请求失败: %v", err)
 		return false, fmt.Errorf("验证请求失败: %v", err)
