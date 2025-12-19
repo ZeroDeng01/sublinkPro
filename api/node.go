@@ -469,6 +469,20 @@ func NodeAdd(c *gin.Context) {
 		Node.LinkAddress = socks5.Server + ":" + strconv.Itoa(socks5.Port)
 		Node.LinkHost = socks5.Server
 		Node.LinkPort = strconv.Itoa(socks5.Port)
+	case u.Scheme == "anytls":
+		anytls, err := protocol.DecodeAnyTLSURL(link)
+		if err != nil {
+			utils.Error("解析节点链接失败: %v", err)
+			return
+		}
+
+		if name == "" {
+			Node.Name = anytls.Name
+		}
+		Node.LinkName = anytls.Name
+		Node.LinkAddress = anytls.Server + ":" + strconv.Itoa(anytls.Port)
+		Node.LinkHost = anytls.Server
+		Node.LinkPort = strconv.Itoa(anytls.Port)
 	}
 	Node.Link = link
 	Node.DialerProxyName = dialerProxyName

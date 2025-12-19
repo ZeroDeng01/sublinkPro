@@ -298,7 +298,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                   <Typography variant="body2" fontWeight="medium" noWrap>
                     {share.name || '未命名分享'}
                   </Typography>
-                  {share.is_legacy && <Chip label="默认" size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />}
+                  {share.is_legacy && <Chip label="默认" size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#1976d2', color: '#fff' }} />}
                 </Stack>
                 <Typography variant="caption" color="text.secondary">
                   {getExpireText(share)} · 访问 {share.access_count || 0} 次
@@ -419,7 +419,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
           <Stack direction="row" alignItems="center" spacing={1}>
             <LinkIcon color="primary" />
             <Typography variant="h6">{detailShare?.name || '分享链接'}</Typography>
-            {detailShare?.is_legacy && <Chip label="默认" size="small" color="info" />}
+            {detailShare?.is_legacy && <Chip label="默认" size="small" sx={{ bgcolor: '#1976d2', color: '#fff' }} />}
           </Stack>
         </DialogTitle>
         <DialogContent dividers>{renderDetailContent()}</DialogContent>

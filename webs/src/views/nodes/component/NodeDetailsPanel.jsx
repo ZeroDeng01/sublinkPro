@@ -58,7 +58,8 @@ const getProtocolInfo = (link) => {
     'naive://': { name: 'Naive', color: '#5d4037', icon: 'N' },
     'reality://': { name: 'Reality', color: '#c2185b', icon: 'R' },
     'socks5://': { name: 'Socks5', color: '#116ea4ff', icon: 'S' },
-    'socks://': { name: 'Socks', color: '#dd4984ff', icon: 'S' }
+    'socks://': { name: 'Socks', color: '#dd4984ff', icon: 'S' },
+    'anytls://': { name: 'AnyTLS', color: '#20a84c', icon: 'A' }
   };
 
   const linkLower = link.toLowerCase();
