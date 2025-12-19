@@ -194,7 +194,7 @@ function DeduplicationConfig({ value, onChange }) {
               </AccordionSummary>
               <AccordionDetails>
                 <FormGroup row>
-                  {proto.fields.map((field) => (
+                  {(proto.fields || []).map((field) => (
                     <FormControlLabel
                       key={field.name}
                       control={

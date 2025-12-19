@@ -60,8 +60,8 @@ var registeredProtocols = []protocolRegistry{
 func InitProtocolMeta() {
 	metaOnce.Do(func() {
 		for _, proto := range registeredProtocols {
-			// 跳过没有结构体实例的协议（无法提取字段）
-			var fields []FieldMeta
+			// 确保 fields 为空切片而非 nil，JSON 序列化时输出 [] 而非 null
+			fields := []FieldMeta{}
 			if proto.instance != nil {
 				fields = extractFields(proto.instance)
 			}
