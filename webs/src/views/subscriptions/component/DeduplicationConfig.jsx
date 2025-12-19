@@ -216,7 +216,7 @@ function DeduplicationConfig({ value, onChange }) {
 
       {/* 提示信息 */}
       {config.mode !== 'none' && (
-        <Alert severity="info" sx={{ mt: 2 }}>
+        <Alert variant={'standard'} severity="info" sx={{ mt: 2 }}>
           去重规则会在节点预览和订阅输出时应用，当多个节点的选定字段值完全相同时，仅保留第一个节点。
         </Alert>
       )}

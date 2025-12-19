@@ -404,7 +404,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
               <CircularProgress />
             </Box>
           ) : shares.length === 0 ? (
-            <Alert severity="info">暂无分享链接，点击"新增"创建第一个分享</Alert>
+            <Alert variant={'standard'} severity="info">暂无分享链接，点击"新增"创建第一个分享</Alert>
           ) : (
             shares.map((share) => renderShareCard(share))
           )}
@@ -522,7 +522,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
             </Box>
           ) : logs.length === 0 ? (
             <Box sx={{ p: 2 }}>
-              <Alert severity="info">暂无访问记录</Alert>
+              <Alert variant={'standard'} severity="info">暂无访问记录</Alert>
             </Box>
           ) : (
             <Box sx={{ maxHeight: 400, overflow: 'auto' }}>

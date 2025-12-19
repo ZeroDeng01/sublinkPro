@@ -426,6 +426,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
       {ruleItems.length > 0 && (
         <Fade in>
           <Alert
+            variant={'standard'}
             severity="info"
             sx={{
               '& .MuiAlert-message': {

@@ -399,7 +399,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
       <Collapse in={expanded} timeout="auto">
         <Box sx={{ p: 2, pt: 1 }}>
           {/* 说明 */}
-          <Alert severity="info" sx={{ mb: 2 }}>
+          <Alert variant={'standard'} severity="info" sx={{ mb: 2 }}>
             <Typography variant="body2">
               基于节点<strong>原始名称</strong>进行过滤。<strong>黑名单优先级高于白名单</strong>。
             </Typography>
@@ -416,7 +416,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
           {/* 实时预览 */}
           {hasAnyActiveRules && (
             <Fade in>
-              <Alert severity={includedCount < PREVIEW_NODE_NAMES.length ? 'warning' : 'success'} sx={{ mt: 2 }}>
+              <Alert variant={'standard'} severity={includedCount < PREVIEW_NODE_NAMES.length ? 'warning' : 'success'} sx={{ mt: 2 }}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   <strong>预览效果</strong>（{includedCount}/{PREVIEW_NODE_NAMES.length} 个示例节点通过过滤）
                 </Typography>

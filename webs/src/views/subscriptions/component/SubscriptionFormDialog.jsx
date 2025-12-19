@@ -685,7 +685,7 @@ export default function SubscriptionFormDialog({
                         </Typography>
                       </Box>
                       {formData.nodeNameRule && (
-                        <Alert severity="info" sx={{ mt: 1 }}>
+                        <Alert variant={'standard'} severity="info" sx={{ mt: 1 }}>
                           <Typography variant="body2">
                             <strong>预览：</strong> {previewNodeName(formData.nodeNameRule)}
                           </Typography>

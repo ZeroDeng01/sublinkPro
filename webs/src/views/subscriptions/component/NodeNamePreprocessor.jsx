@@ -330,7 +330,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
           {/* 实时预览 */}
           {hasRules && (
             <Fade in>
-              <Alert severity={hasChanges ? 'success' : 'info'} sx={{ mt: 1 }}>
+              <Alert variant={'standard'} severity={hasChanges ? 'success' : 'info'} sx={{ mt: 1 }}>
                 <Stack spacing={0.5}>
                   <Typography variant="body2">
                     <strong>原名：</strong>

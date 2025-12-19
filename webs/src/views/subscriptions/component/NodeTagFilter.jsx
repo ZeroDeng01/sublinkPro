@@ -97,7 +97,7 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
       <Collapse in={expanded} timeout="auto">
         <Box sx={{ p: 2, pt: 1 }}>
           {/* 说明 */}
-          <Alert severity="info" sx={{ mb: 2 }}>
+          <Alert variant={'standard'} severity="info" sx={{ mb: 2 }}>
             <Typography variant="body2">
               按节点标签过滤。<strong>黑名单优先级高于白名单</strong>：匹配黑名单标签的节点会被排除，然后必须匹配白名单标签的节点才会保留。
             </Typography>
