@@ -26,6 +26,10 @@ func UpdateNodeLinkName(nodeID int, newLinkName string) error {
 		return fmt.Errorf("获取节点失败: %w", err)
 	}
 
+	if node.LinkName == node.Name {
+		node.Name = newLinkName
+	}
+
 	// 解析协议类型并处理
 	newLink, err := updateLinkWithNewName(node.Link, newLinkName)
 	if err != nil {
@@ -34,7 +38,7 @@ func UpdateNodeLinkName(nodeID int, newLinkName string) error {
 
 	// 检查新 Link 是否与其他节点冲突（排除当前节点）
 	var existingNode models.Node
-	err = database.DB.Where("link = ? AND id != ?", newLink, nodeID).First(&existingNode).Error
+	err = database.DB.Where("link = ? ", newLink).First(&existingNode).Error
 	if err == nil {
 		return fmt.Errorf("已存在相同连接的节点: %s", existingNode.Name)
 	} else if err != gorm.ErrRecordNotFound {
@@ -45,6 +49,7 @@ func UpdateNodeLinkName(nodeID int, newLinkName string) error {
 	err = database.DB.Model(&models.Node{}).Where("id = ?", nodeID).Updates(map[string]interface{}{
 		"link":      newLink,
 		"link_name": newLinkName,
+		"name":      node.Name,
 	}).Error
 	if err != nil {
 		return fmt.Errorf("更新数据库失败: %w", err)

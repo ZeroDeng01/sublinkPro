@@ -16,3 +16,5 @@ export { default as NodeRenameBuilder } from './NodeRenameBuilder';
 export { default as NodePreviewCard } from './NodePreviewCard';
 export { default as NodePreviewDialog } from './NodePreviewDialog';
 export { default as NodePreviewDetailsPanel } from './NodePreviewDetailsPanel';
+// 分享管理
+export { default as ShareManageDialog } from './ShareManageDialog';

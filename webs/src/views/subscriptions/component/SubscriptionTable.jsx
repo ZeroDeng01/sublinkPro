@@ -100,8 +100,8 @@ export default function SubscriptionTable({
                         <EditIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="客户端">
-                      <IconButton size="small" onClick={() => onClient(sub.Name)}>
+                    <Tooltip title="分享管理">
+                      <IconButton size="small" onClick={() => onClient(sub)}>
                         <QrCode2Icon fontSize="small" />
                       </IconButton>
                     </Tooltip>

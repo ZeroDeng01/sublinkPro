@@ -1,6 +1,8 @@
 package models
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"sublink/database"
@@ -8,6 +10,13 @@ import (
 
 	"gorm.io/gorm"
 )
+
+// md5Hash 生成MD5哈希值（用于迁移老链接）
+func md5Hash(src string) string {
+	m := md5.New()
+	m.Write([]byte(src))
+	return hex.EncodeToString(m.Sum(nil))
+}
 
 // RunMigrations 执行所有数据库迁移
 // 此函数必须在 database.InitSqlite() 之后调用
@@ -116,6 +125,11 @@ func RunMigrations() {
 		utils.Error("基础数据表Host迁移失败: %v", err)
 	} else {
 		utils.Info("数据表Host创建成功")
+	}
+	if err := db.AutoMigrate(&SubscriptionShare{}); err != nil {
+		utils.Error("基础数据表SubscriptionShare迁移失败: %v", err)
+	} else {
+		utils.Info("数据表SubscriptionShare创建成功")
 	}
 
 	// 检查并删除 idx_name_id 索引
@@ -463,6 +477,60 @@ DIRECT = direct
 		return nil
 	}); err != nil {
 		utils.Error("执行迁移 0014_migrate_subcription_node_to_id_v2 失败: %v", err)
+	}
+
+	// 0015_migrate_subscription_shares - 将老订阅的MD5分享链接迁移到新的分享表
+	if err := database.RunCustomMigration("0015_migrate_subscription_shares", func() error {
+		// 获取所有订阅
+		var subs []Subcription
+		if err := db.Find(&subs).Error; err != nil {
+			return fmt.Errorf("获取订阅列表失败: %w", err)
+		}
+
+		migratedCount := 0
+		logsUpdatedCount := 0
+		for _, sub := range subs {
+			// 检查该订阅是否已有分享记录
+			var existingCount int64
+			db.Model(&SubscriptionShare{}).Where("subscription_id = ? AND is_legacy = ?", sub.ID, true).Count(&existingCount)
+			if existingCount > 0 {
+				continue // 已迁移过，跳过
+			}
+
+			// 生成老的 MD5 token
+			token := md5Hash(sub.Name)
+
+			// 创建分享记录
+			share := SubscriptionShare{
+				SubscriptionID: sub.ID,
+				Token:          token,
+				Name:           "默认分享链接",
+				ExpireType:     ExpireTypeNever, // 永不过期
+				IsLegacy:       true,
+				Enabled:        true,
+			}
+
+			if err := db.Create(&share).Error; err != nil {
+				utils.Warn("迁移订阅 %s 的分享链接失败: %v", sub.Name, err)
+				continue
+			}
+			migratedCount++
+
+			// 将该订阅下 ShareID=0 的老访问日志关联到新创建的默认分享链接
+			result := db.Model(&SubLogs{}).
+				Where("subcription_id = ? AND (share_id = 0 OR share_id IS NULL)", sub.ID).
+				Update("share_id", share.ID)
+			if result.Error != nil {
+				utils.Warn("更新订阅 %s 的访问日志失败: %v", sub.Name, result.Error)
+			} else if result.RowsAffected > 0 {
+				logsUpdatedCount += int(result.RowsAffected)
+			}
+		}
+
+		utils.Info("已为 %d 个订阅创建默认分享链接，更新了 %d 条访问日志", migratedCount, logsUpdatedCount)
+		return nil
+	}); err != nil {
+		utils.Error("执行迁移 0015_migrate_subscription_shares 失败: %v", err)
 	}
 
 	// 初始化用户数据

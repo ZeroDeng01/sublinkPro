@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import md5 from 'md5';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -41,7 +40,8 @@ import {
   SubscriptionMobileCard,
   SubscriptionTable,
   SubscriptionFormDialog,
-  NodePreviewDialog
+  NodePreviewDialog,
+  ShareManageDialog
 } from './component';
 
 // ==============================|| 订阅管理 ||============================== //
@@ -126,7 +126,7 @@ export default function SubscriptionList() {
 
   // 客户端对话框
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
-  const [clientUrls, setClientUrls] = useState({});
+  const [clientUrls] = useState({});
 
   // 访问记录对话框
   const [logsDialogOpen, setLogsDialogOpen] = useState(false);
@@ -225,10 +225,6 @@ export default function SubscriptionList() {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     showMessage('已复制到剪贴板');
-  };
-
-  const getServerUrl = () => {
-    return `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
   };
 
   // === 订阅操作 ===
@@ -578,18 +574,13 @@ export default function SubscriptionList() {
     }
   };
 
-  // === 客户端/QR码 ===
-  const handleClient = (name) => {
-    const serverUrl = getServerUrl();
-    const token = md5(name);
-    const baseUrl = `${serverUrl}/c/?token=${token}`;
-    setClientUrls({
-      自动识别: baseUrl,
-      v2ray: baseUrl,
-      clash: baseUrl,
-      surge: baseUrl
-    });
-    setClientDialogOpen(true);
+  // === 分享管理 ===
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareDialogSub, setShareDialogSub] = useState(null);
+
+  const handleClient = (sub) => {
+    setShareDialogSub(sub);
+    setShareDialogOpen(true);
   };
 
   const handleQrcode = (url, title) => {
@@ -888,6 +879,14 @@ export default function SubscriptionList() {
           return acc;
         }, {})}
         onClose={() => setPreviewOpen(false)}
+      />
+
+      {/* 分享管理对话框 */}
+      <ShareManageDialog
+        open={shareDialogOpen}
+        subscription={shareDialogSub}
+        onClose={() => setShareDialogOpen(false)}
+        showMessage={showMessage}
       />
     </MainCard>
   );

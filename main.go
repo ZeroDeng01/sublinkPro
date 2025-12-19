@@ -360,6 +360,9 @@ func Run() {
 	if err := models.InitHostCache(); err != nil {
 		utils.Error("加载Host到缓存失败: %v", err)
 	}
+	if err := models.InitSubscriptionShareCache(); err != nil {
+		utils.Error("加载订阅分享到缓存失败: %v", err)
+	}
 
 	// 注册Host变更回调：当Host模块数据变更时自动同步到mihomo resolver
 	// 这样所有使用代理的功能（测速、订阅导入、Telegram等）都遵循Host设置
@@ -456,6 +459,7 @@ func Run() {
 	routers.Tasks(r)
 	routers.GeoIP(r)
 	routers.Host(r)
+	routers.Share(r)
 
 	// 处理前端路由 (SPA History Mode)
 	// 必须在所有 backend 路由注册之后注册

@@ -1,8 +1,6 @@
 package telegram
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"sort"
 	"strings"
@@ -661,13 +659,12 @@ func GetSubscriptionLink(subID int) (string, error) {
 	var sub models.Subcription
 	sub.ID = subID
 	// 使用 Find 方法获取订阅详情（包括 Name）
-	// 注意：GetSub 只加载关联数据（节点等），不会加载订阅本身的信息
 	if err := sub.Find(); err != nil {
 		return "", fmt.Errorf("获取订阅失败: %v", err)
 	}
 
 	// 获取系统域名设置
-	domain, _ := models.GetSetting("system_domain") // 优先使用 system_domain
+	domain, _ := models.GetSetting("system_domain")
 	if domain == "" {
 		domain, _ = models.GetSetting("server_addr")
 	}
@@ -681,13 +678,13 @@ func GetSubscriptionLink(subID int) (string, error) {
 		domain = "http://" + domain
 	}
 
-	// Token 生成规则: MD5(SubscriptionName)
-	// 参考 api/clients.go 中的验证逻辑
-	h := md5.New()
-	h.Write([]byte(sub.Name))
-	token := hex.EncodeToString(h.Sum(nil))
+	// 从分享表获取默认分享链接
+	share, err := models.GetDefaultShareForSubscription(subID)
+	if err != nil {
+		return "", fmt.Errorf("获取分享链接失败: %v", err)
+	}
 
 	// 构建基础链接
-	link := fmt.Sprintf("%s/c/?token=%s", domain, token)
+	link := fmt.Sprintf("%s/c/?token=%s", domain, share.Token)
 	return link, nil
 }

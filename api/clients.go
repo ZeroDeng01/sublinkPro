@@ -34,80 +34,91 @@ func GetClient(c *gin.Context) {
 		c.Writer.WriteString("token为空")
 		return
 	}
-	// fmt.Println(c.Query("token"))
-	Sub := new(models.Subcription)
-	// 获取所有订阅
-	list, _ := Sub.List()
-	// 查找订阅是否包含此名字
-	for _, sub := range list {
-		// 数据库订阅名字赋值变量
-		SunName = sub.Name
-		//查找token的md5是否匹配并且转换成小写
-		if Md5(SunName) == strings.ToLower(token) {
 
-			if sub.IPBlacklist != "" && utils.IsIpInCidr(c.ClientIP(), sub.IPBlacklist) {
-				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-					"msg": "IP受限(IP已被加入黑名单)",
-				})
-				return
-			}
-			if sub.IPWhitelist != "" && !utils.IsIpInCidr(c.ClientIP(), sub.IPWhitelist) {
-				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-					"msg": "IP受限(您的IP不在允许访问列表)",
-				})
-				return
-			}
+	// 从分享表查找 token
+	share, err := models.GetSubscriptionShareByToken(strings.ToLower(token))
+	if err != nil {
+		utils.Warn("无效的分享token: %s", token)
+		c.Writer.WriteString("无效的分享链接")
+		return
+	}
 
-			// 判断是否带客户端参数
-			switch ClientIndex {
-			case "clash":
-				GetClash(c)
-				return
-			case "surge":
-				GetSurge(c)
-				return
-			case "v2ray":
-				GetV2ray(c)
-				return
-			}
-			// 自动识别客户端
-			ClientList := []string{"clash", "surge"}
-			for k, v := range c.Request.Header {
-				if k == "User-Agent" {
-					for _, UserAgent := range v {
-						if UserAgent == "" {
-							fmt.Println("User-Agent为空")
-						}
-						// fmt.Println("协议头:", UserAgent)
-						// 遍历客户端列表
-						// SunName = sub.Name
-						for _, client := range ClientList {
-							// fmt.Println(strings.ToLower(UserAgent), strings.ToLower(client))
-							// fmt.Println(strings.Contains(strings.ToLower(UserAgent), strings.ToLower(client)))
-							if strings.Contains(strings.ToLower(UserAgent), strings.ToLower(client)) {
-								// fmt.Println("客户端", client)
-								switch client {
-								case "clash":
-									GetClash(c)
-									return
-								case "surge":
-									GetSurge(c)
-									return
-								default:
-									fmt.Println("未知客户端") // 这个应该是不能达到的，因为已经在上面列出所有情况
-								}
-								// 找到匹配的客户端后退出循环
+	// 检查是否过期
+	if share.IsExpired() {
+		utils.Warn("分享链接已过期: %s", token)
+		c.Writer.WriteString("分享链接已过期")
+		return
+	}
 
-							}
-						}
-						GetV2ray(c)
-					}
+	// 获取关联订阅
+	var sub models.Subcription
+	sub.ID = share.SubscriptionID
+	if err := sub.Find(); err != nil {
+		utils.Warn("订阅不存在: %d", share.SubscriptionID)
+		c.Writer.WriteString("订阅不存在")
+		return
+	}
+	SunName = sub.Name
 
+	// IP 黑白名单检查
+	if sub.IPBlacklist != "" && utils.IsIpInCidr(c.ClientIP(), sub.IPBlacklist) {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"msg": "IP受限(IP已被加入黑名单)",
+		})
+		return
+	}
+	if sub.IPWhitelist != "" && !utils.IsIpInCidr(c.ClientIP(), sub.IPWhitelist) {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"msg": "IP受限(您的IP不在允许访问列表)",
+		})
+		return
+	}
+
+	// 更新访问统计
+	share.RecordAccess()
+
+	// 保存 ShareID 到上下文，供IP日志记录使用
+	c.Set("shareID", share.ID)
+
+	// 判断是否带客户端参数
+	switch ClientIndex {
+	case "clash":
+		GetClash(c)
+		return
+	case "surge":
+		GetSurge(c)
+		return
+	case "v2ray":
+		GetV2ray(c)
+		return
+	}
+
+	// 自动识别客户端
+	ClientList := []string{"clash", "surge"}
+	for k, v := range c.Request.Header {
+		if k == "User-Agent" {
+			for _, UserAgent := range v {
+				if UserAgent == "" {
+					fmt.Println("User-Agent为空")
 				}
+				for _, client := range ClientList {
+					if strings.Contains(strings.ToLower(UserAgent), strings.ToLower(client)) {
+						switch client {
+						case "clash":
+							GetClash(c)
+							return
+						case "surge":
+							GetSurge(c)
+							return
+						default:
+							fmt.Println("未知客户端")
+						}
+					}
+				}
+				GetV2ray(c)
 			}
 		}
 	}
-
 }
 func GetV2ray(c *gin.Context) {
 	var sub models.Subcription

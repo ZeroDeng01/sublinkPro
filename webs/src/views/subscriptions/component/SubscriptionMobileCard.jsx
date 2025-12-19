@@ -75,7 +75,7 @@ export default function SubscriptionMobileCard({
                 <IconButton size="small" onClick={() => onEdit(sub)}>
                   <EditIcon fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => onClient(sub.Name)}>
+                <IconButton size="small" onClick={() => onClient(sub)}>
                   <QrCode2Icon fontSize="small" />
                 </IconButton>
                 <IconButton size="small" onClick={() => onLogs(sub)}>
