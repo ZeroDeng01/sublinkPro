@@ -20,7 +20,6 @@ func Nodes(r *gin.Engine) {
 		NodesGroup.GET("/get", api.NodeGet)
 		NodesGroup.GET("/ids", api.NodeGetIDs)
 		NodesGroup.POST("/update", api.NodeUpdadte)
-		NodesGroup.POST("/update-link-name", api.UpdateNodeLinkNameAPI)
 		NodesGroup.GET("/groups", api.GetGroups)
 		NodesGroup.GET("/sources", api.GetSources)
 		NodesGroup.GET("/countries", api.GetNodeCountries)
@@ -31,6 +30,11 @@ func Nodes(r *gin.Engine) {
 		NodesGroup.GET("/ip-info", api.GetIPDetails)
 		NodesGroup.GET("/ip-cache/stats", api.GetIPCacheStats)
 		NodesGroup.DELETE("/ip-cache", api.ClearIPCache)
+		// 节点原始信息相关
+		NodesGroup.GET("/protocol-ui-meta", api.GetProtocolUIMeta)
+		NodesGroup.GET("/parse-link", api.ParseNodeLinkAPI)
+		NodesGroup.GET("/raw-info", api.GetNodeRawInfo)
+		NodesGroup.POST("/update-raw", middlewares.DemoModeRestrict, api.UpdateNodeRawInfo)
 	}
 
 }

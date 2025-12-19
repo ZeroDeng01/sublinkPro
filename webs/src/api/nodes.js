@@ -152,15 +152,6 @@ export function batchUpdateNodeSource(ids, source) {
   });
 }
 
-// 修改节点原始名称
-export function updateNodeLinkName(id, newLinkName) {
-  return request({
-    url: '/v1/nodes/update-link-name',
-    method: 'post',
-    data: { id, newLinkName }
-  });
-}
-
 // 获取IP详细信息
 export function getIPDetails(ip) {
   return request({
@@ -183,5 +174,40 @@ export function clearIPCache() {
   return request({
     url: '/v1/nodes/ip-cache',
     method: 'delete'
+  });
+}
+
+// 获取协议 UI 元数据（包含颜色、图标、字段信息）
+export function getProtocolUIMeta() {
+  return request({
+    url: '/v1/nodes/protocol-ui-meta',
+    method: 'get'
+  });
+}
+
+// 解析节点链接
+export function parseNodeLink(link) {
+  return request({
+    url: '/v1/nodes/parse-link',
+    method: 'get',
+    params: { link }
+  });
+}
+
+// 获取节点原始信息
+export function getNodeRawInfo(id) {
+  return request({
+    url: '/v1/nodes/raw-info',
+    method: 'get',
+    params: { id }
+  });
+}
+
+// 更新节点原始信息
+export function updateNodeRawInfo(nodeId, fields) {
+  return request({
+    url: '/v1/nodes/update-raw',
+    method: 'post',
+    data: { nodeId, fields }
   });
 }

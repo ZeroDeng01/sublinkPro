@@ -18,6 +18,8 @@ type FieldMeta struct {
 type ProtocolMeta struct {
 	Name   string      `json:"name"`   // 协议名称（小写）
 	Label  string      `json:"label"`  // 显示名称
+	Color  string      `json:"color"`  // 主题颜色（用于前端展示）
+	Icon   string      `json:"icon"`   // 图标字符（用于前端展示）
 	Fields []FieldMeta `json:"fields"` // 可用字段列表
 }
 
@@ -31,30 +33,34 @@ var (
 type protocolRegistry struct {
 	name     string      // 协议名称（小写，用于URL scheme）
 	label    string      // 显示名称
+	color    string      // 主题颜色
+	icon     string      // 图标字符
 	instance interface{} // 结构体实例（用于反射）
 }
 
 // InitProtocolMeta 系统启动时调用，通过反射扫描所有协议结构体
 func InitProtocolMeta() {
 	metaOnce.Do(func() {
-		// 注册所有协议结构体
+		// 注册所有协议结构体（包含 UI 展示信息）
 		protocols := []protocolRegistry{
-			{name: "vmess", label: "VMess", instance: Vmess{}},
-			{name: "vless", label: "VLess", instance: VLESS{}},
-			{name: "trojan", label: "Trojan", instance: Trojan{}},
-			{name: "ss", label: "Shadowsocks", instance: Ss{}},
-			{name: "ssr", label: "ShadowsocksR", instance: Ssr{}},
-			{name: "hysteria", label: "Hysteria", instance: HY{}},
-			{name: "hysteria2", label: "Hysteria2", instance: HY2{}},
-			{name: "tuic", label: "TUIC", instance: Tuic{}},
-			{name: "anytls", label: "AnyTLS", instance: AnyTLS{}},
-			{name: "socks5", label: "SOCKS5", instance: Socks5{}},
+			{name: "vmess", label: "VMess", color: "#1976d2", icon: "V", instance: Vmess{}},
+			{name: "vless", label: "VLESS", color: "#7b1fa2", icon: "V", instance: VLESS{}},
+			{name: "trojan", label: "Trojan", color: "#d32f2f", icon: "T", instance: Trojan{}},
+			{name: "ss", label: "Shadowsocks", color: "#2e7d32", icon: "S", instance: Ss{}},
+			{name: "ssr", label: "ShadowsocksR", color: "#e64a19", icon: "R", instance: Ssr{}},
+			{name: "hysteria", label: "Hysteria", color: "#f9a825", icon: "H", instance: HY{}},
+			{name: "hysteria2", label: "Hysteria2", color: "#ef6c00", icon: "H", instance: HY2{}},
+			{name: "tuic", label: "TUIC", color: "#0277bd", icon: "T", instance: Tuic{}},
+			{name: "anytls", label: "AnyTLS", color: "#20a84c", icon: "A", instance: AnyTLS{}},
+			{name: "socks5", label: "SOCKS5", color: "#116ea4", icon: "S", instance: Socks5{}},
 		}
 
 		for _, proto := range protocols {
 			meta := ProtocolMeta{
 				Name:   proto.name,
 				Label:  proto.label,
+				Color:  proto.color,
+				Icon:   proto.icon,
 				Fields: extractFields(proto.instance),
 			}
 			protocolMetaCache = append(protocolMetaCache, meta)

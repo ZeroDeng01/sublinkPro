@@ -298,7 +298,9 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                   <Typography variant="body2" fontWeight="medium" noWrap>
                     {share.name || '未命名分享'}
                   </Typography>
-                  {share.is_legacy && <Chip label="默认" size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#1976d2', color: '#fff' }} />}
+                  {share.is_legacy && (
+                    <Chip label="默认" size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#1976d2', color: '#fff' }} />
+                  )}
                 </Stack>
                 <Typography variant="caption" color="text.secondary">
                   {getExpireText(share)} · 访问 {share.access_count || 0} 次

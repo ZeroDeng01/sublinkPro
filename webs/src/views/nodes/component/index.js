@@ -9,7 +9,6 @@ export { default as BatchDialerProxyDialog } from './BatchDialerProxyDialog';
 export { default as BatchTagDialog } from './BatchTagDialog';
 export { default as BatchRemoveTagDialog } from './BatchRemoveTagDialog';
 export { default as BatchSourceDialog } from './BatchSourceDialog';
-export { default as EditLinkNameDialog } from './EditLinkNameDialog';
 
 export { default as NodeDetailsPanel } from './NodeDetailsPanel';
 

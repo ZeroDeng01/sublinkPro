@@ -41,7 +41,8 @@ import {
   getNodeSources,
   batchUpdateNodeGroup,
   batchUpdateNodeDialerProxy,
-  batchUpdateNodeSource
+  batchUpdateNodeSource,
+  getProtocolUIMeta
 } from 'api/nodes';
 import { getSubSchedulers, addSubScheduler, updateSubScheduler, deleteSubScheduler, pullSubScheduler } from 'api/scheduler';
 import { getTags, batchSetNodeTags, batchRemoveNodeTags } from 'api/tags';
@@ -58,7 +59,6 @@ import {
   BatchTagDialog,
   BatchRemoveTagDialog,
   BatchSourceDialog,
-  EditLinkNameDialog,
   NodeDetailsPanel,
   NodeFilters,
   BatchActions,
@@ -216,9 +216,8 @@ export default function NodeList() {
   const [detailsPanelOpen, setDetailsPanelOpen] = useState(false);
   const [detailsNode, setDetailsNode] = useState(null);
 
-  // 编辑原始名称对话框
-  const [editLinkNameDialogOpen, setEditLinkNameDialogOpen] = useState(false);
-  const [editLinkNameNode, setEditLinkNameNode] = useState(null);
+  // 协议 UI 元数据
+  const [protocolMeta, setProtocolMeta] = useState([]);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -329,6 +328,12 @@ export default function NodeList() {
           colorMap[tag.name] = tag.color || '#1976d2';
         });
         setTagColorMap(colorMap);
+      })
+      .catch(console.error);
+    // 请求协议 UI 元数据
+    getProtocolUIMeta()
+      .then((res) => {
+        setProtocolMeta(res.data || []);
       })
       .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1344,6 +1349,7 @@ export default function NodeList() {
         open={detailsPanelOpen}
         node={detailsNode}
         tagColorMap={tagColorMap}
+        protocolMeta={protocolMeta}
         onClose={() => setDetailsPanelOpen(false)}
         onSpeedTest={handleSingleSpeedTest}
         onCopy={copyToClipboard}
@@ -1353,29 +1359,11 @@ export default function NodeList() {
           setSelectedIP(ip);
           setIpDialogOpen(true);
         }}
-        onEditLinkName={(node) => {
-          setEditLinkNameNode(node);
-          setEditLinkNameDialogOpen(true);
-        }}
-      />
-
-      {/* 编辑原始名称对话框 */}
-      <EditLinkNameDialog
-        open={editLinkNameDialogOpen}
-        node={editLinkNameNode}
-        onClose={() => {
-          setEditLinkNameDialogOpen(false);
-          setEditLinkNameNode(null);
-        }}
-        onSuccess={() => {
-          showMessage('修改原始名称成功');
+        onNodeUpdate={() => {
+          // 节点原始信息更新后刷新列表
           fetchNodes(getCurrentFilters());
-          // 刷新详情面板节点数据
-          if (editLinkNameNode) {
-            setDetailsNode(null);
-            setDetailsPanelOpen(false);
-          }
         }}
+        showMessage={showMessage}
       />
 
       {/* 提示消息 */}

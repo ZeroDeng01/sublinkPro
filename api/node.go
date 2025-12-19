@@ -7,7 +7,6 @@ import (
 	"strings"
 	"sublink/models"
 	"sublink/node/protocol"
-	"sublink/services"
 	"sublink/services/scheduler"
 	"sublink/utils"
 	"time"
@@ -642,33 +641,6 @@ func NodeBatchUpdateSource(c *gin.Context) {
 		return
 	}
 	utils.OkWithMsg(c, "批量更新来源成功")
-}
-
-// UpdateNodeLinkNameAPI 修改节点原始名称 API
-func UpdateNodeLinkNameAPI(c *gin.Context) {
-	var req struct {
-		ID          int    `json:"id"`
-		NewLinkName string `json:"newLinkName"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
-		return
-	}
-	if req.ID <= 0 {
-		utils.FailWithMsg(c, "节点ID无效")
-		return
-	}
-	if req.NewLinkName == "" {
-		utils.FailWithMsg(c, "新名称不能为空")
-		return
-	}
-
-	// 调用服务层更新
-	if err := services.UpdateNodeLinkName(req.ID, req.NewLinkName); err != nil {
-		utils.FailWithMsg(c, err.Error())
-		return
-	}
-	utils.OkWithMsg(c, "修改成功")
 }
 
 // 获取所有分组列表

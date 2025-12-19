@@ -1,8 +1,12 @@
 import PropTypes from 'prop-types';
+import { useState } from 'react';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -33,24 +37,45 @@ import VpnLockIcon from '@mui/icons-material/VpnLock';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SignalCellularAltIcon from '@mui/icons-material/SignalCellularAlt';
 import SpeedIcon from '@mui/icons-material/Speed';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CodeIcon from '@mui/icons-material/Code';
 
 // utils
 import { formatDateTime, formatCountry, getDelayDisplay, getSpeedDisplay } from '../utils';
 
+// components
+import NodeRawInfoEditor from './NodeRawInfoEditor';
+
 /**
  * 解析节点协议类型
+ * 支持使用后端协议元数据或本地映射
  */
-const getProtocolInfo = (link) => {
+const getProtocolInfo = (link, protocolMeta) => {
   if (!link) return { name: '未知', color: '#9e9e9e', icon: <FilterVintageIcon /> };
 
+  // 如果有后端协议元数据，优先使用
+  if (protocolMeta && protocolMeta.length > 0) {
+    const linkLower = link.toLowerCase();
+    for (const proto of protocolMeta) {
+      if (linkLower.startsWith(proto.name + '://') || (proto.name === 'hysteria2' && linkLower.startsWith('hy2://'))) {
+        return {
+          name: proto.label,
+          color: proto.color || '#616161',
+          icon: proto.icon || proto.label.charAt(0).toUpperCase()
+        };
+      }
+    }
+  }
+
+  // 后备的本地映射
   const protocolMap = {
     'vmess://': { name: 'VMess', color: '#1976d2', icon: 'V' },
     'vless://': { name: 'VLESS', color: '#7b1fa2', icon: 'V' },
     'trojan://': { name: 'Trojan', color: '#d32f2f', icon: 'T' },
-    'ss://': { name: 'Shadowsocks', color: '#2e7d32', icon: 'S' }, // Darker green
+    'ss://': { name: 'Shadowsocks', color: '#2e7d32', icon: 'S' },
     'ssr://': { name: 'ShadowsocksR', color: '#e64a19', icon: 'R' },
-    'hysteria://': { name: 'Hysteria', color: '#f9a825', icon: 'H' }, // Darker yellow
-    'hysteria2://': { name: 'Hysteria2', color: '#ef6c00', icon: 'H' }, // Darker orange
+    'hysteria://': { name: 'Hysteria', color: '#f9a825', icon: 'H' },
+    'hysteria2://': { name: 'Hysteria2', color: '#ef6c00', icon: 'H' },
     'hy2://': { name: 'Hysteria2', color: '#ef6c00', icon: 'H' },
     'tuic://': { name: 'TUIC', color: '#0277bd', icon: 'T' },
     'wireguard://': { name: 'WireGuard', color: '#455a64', icon: 'W' },
@@ -175,22 +200,25 @@ export default function NodeDetailsPanel({
   open,
   node,
   tagColorMap,
+  protocolMeta,
   onClose,
   onSpeedTest,
   onCopy,
   onEdit,
   onDelete,
   onIPClick,
-  onEditLinkName
+  onNodeUpdate,
+  showMessage
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [rawInfoExpanded, setRawInfoExpanded] = useState(false);
 
   if (!node) return null;
 
   const delayDisplay = getDelayDisplay(node.DelayTime, node.DelayStatus);
   const speedDisplay = getSpeedDisplay(node.Speed, node.SpeedStatus);
-  const protocolInfo = getProtocolInfo(node.Link);
+  const protocolInfo = getProtocolInfo(node.Link, protocolMeta);
 
   const delayStyles = getStatusStyles(theme, delayDisplay.color);
   const speedStyles = getStatusStyles(theme, speedDisplay.color);
@@ -375,13 +403,6 @@ export default function NodeDetailsPanel({
                   <Typography variant="body2" sx={{ wordBreak: 'break-word', flex: 1 }}>
                     {node.LinkName || '-'}
                   </Typography>
-                  {onEditLinkName && (
-                    <Tooltip title="修改原始名称">
-                      <IconButton size="small" onClick={() => onEditLinkName(node)} sx={{ color: 'primary.main' }}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
                 </Stack>
                 {node.LinkName === node.Name && (
                   <Typography variant="caption" color="text.secondary" display="block" mt={0.3}>
@@ -436,6 +457,41 @@ export default function NodeDetailsPanel({
             </ListItem>
           )}
         </List>
+
+        {/* 原始协议信息区域 */}
+        <Accordion
+          expanded={rawInfoExpanded}
+          onChange={() => setRawInfoExpanded(!rawInfoExpanded)}
+          disableGutters
+          elevation={0}
+          sx={{
+            bgcolor: 'transparent',
+            '&:before': { display: 'none' },
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            mb: 3,
+            overflow: 'hidden'
+          }}
+        >
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            sx={{
+              minHeight: 48,
+              '& .MuiAccordionSummary-content': { my: 1 }
+            }}
+          >
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <CodeIcon fontSize="small" color="primary" />
+              <Typography variant="subtitle2" fontWeight={600}>
+                原始协议信息
+              </Typography>
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails sx={{ pt: 0 }}>
+            <NodeRawInfoEditor node={node} protocolMeta={protocolMeta} onUpdate={onNodeUpdate} showMessage={showMessage} />
+          </AccordionDetails>
+        </Accordion>
 
         <Typography
           variant="subtitle2"
@@ -555,11 +611,13 @@ NodeDetailsPanel.propTypes = {
   open: PropTypes.bool.isRequired,
   node: PropTypes.object,
   tagColorMap: PropTypes.object,
+  protocolMeta: PropTypes.array, // 协议元数据列表（从后端获取）
   onClose: PropTypes.func.isRequired,
   onSpeedTest: PropTypes.func.isRequired,
   onCopy: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onIPClick: PropTypes.func,
-  onEditLinkName: PropTypes.func
+  onNodeUpdate: PropTypes.func, // 节点更新后的回调
+  showMessage: PropTypes.func // 消息提示函数
 };
