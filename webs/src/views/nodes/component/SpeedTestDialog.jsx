@@ -379,6 +379,7 @@ export default function SpeedTestDialog({
             {/* 握手时间设置 - 带详细说明 */}
             <Alert
               severity="info"
+              variant="standard"
               icon={<InfoOutlinedIcon fontSize="small" />}
               sx={{
                 '& .MuiAlert-message': { width: '100%' },
