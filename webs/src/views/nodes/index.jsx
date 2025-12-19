@@ -1088,9 +1088,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -1133,9 +1133,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -1396,23 +1396,7 @@ export default function NodeList() {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert
-          severity={snackbar.severity}
-          variant="standard"
-          sx={{
-            width: '100%',
-            boxShadow: 3,
-            borderRadius: 2,
-            backdropFilter: 'blur(8px)',
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark'
-                ? `${theme.palette[snackbar.severity]?.dark || theme.palette.primary.dark}15`
-                : `${theme.palette[snackbar.severity]?.light || theme.palette.primary.light}`,
-            border: (theme) => `1px solid ${theme.palette[snackbar.severity]?.main || theme.palette.primary.main}`
-          }}
-        >
-          {snackbar.message}
-        </Alert>
+        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
       </Snackbar>
 
       {/* 确认对话框 */}

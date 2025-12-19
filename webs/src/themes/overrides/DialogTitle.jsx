@@ -5,7 +5,9 @@ export default function DialogTitle() {
     MuiDialogTitle: {
       styleOverrides: {
         root: {
-          fontSize: '1.25rem'
+          fontSize: '1.125rem',
+          fontWeight: 700,
+          padding: '24px 24px 16px'
         }
       }
     }

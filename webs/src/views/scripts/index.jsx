@@ -322,7 +322,7 @@ export default function ScriptList() {
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="lg" fullWidth>
         <DialogTitle>{isEdit ? '编辑脚本' : '添加脚本'}</DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          <Stack spacing={2}>
             <Stack direction="row" spacing={2}>
               <TextField
                 fullWidth

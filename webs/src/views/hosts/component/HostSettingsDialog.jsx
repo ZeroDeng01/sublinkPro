@@ -146,7 +146,7 @@ export default function HostSettingsDialog({ open, onClose }) {
             <CircularProgress />
           </Box>
         ) : (
-          <Stack spacing={3} sx={{ mt: 1 }}>
+          <Stack spacing={3}>
             {error && <Alert severity="error">{error}</Alert>}
 
             {/* 1. Persistence & Expiration */}

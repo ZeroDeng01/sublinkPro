@@ -112,7 +112,7 @@ export default function SubscriptionTable({
                     </Tooltip>
                     {sortingSubId !== sub.ID ? (
                       <Tooltip title="排序">
-                        <IconButton size="small" color="warning" onClick={() => onStartSort(sub)}>
+                        <IconButton size="small" onClick={() => onStartSort(sub)}>
                           <SortIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>

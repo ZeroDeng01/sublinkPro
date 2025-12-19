@@ -132,7 +132,7 @@ export default function SpeedTestDialog({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <SpeedIcon color="primary" />
           <span>测速设置</span>
@@ -167,7 +167,7 @@ export default function SpeedTestDialog({
           </Fab>
         </Tooltip>
       </DialogTitle>
-      <DialogContent sx={{ pt: 1 }}>
+      <DialogContent>
         {/* ========== 定时测速设置 ========== */}
         <ConfigSection title="定时测速" icon={<TimerIcon fontSize="small" color="action" />}>
           <Stack spacing={2}>
@@ -580,7 +580,7 @@ export default function SpeedTestDialog({
           </Stack>
         </ConfigSection>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions>
         <Button onClick={onClose}>取消</Button>
         <Button variant="contained" onClick={onSubmit}>
           保存设置

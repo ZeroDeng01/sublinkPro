@@ -5,7 +5,18 @@ export default function Dialog() {
     MuiDialog: {
       styleOverrides: {
         paper: {
-          padding: '12px 0 12px 0'
+          padding: 0,
+          borderRadius: '16px',
+          boxShadow: '0px 24px 48px -12px rgba(0, 0, 0, 0.18)',
+          backgroundImage: 'none'
+        }
+      }
+    },
+    MuiBackdrop: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'rgba(0, 0, 0, 0.45)',
+          backdropFilter: 'blur(6px)'
         }
       }
     }

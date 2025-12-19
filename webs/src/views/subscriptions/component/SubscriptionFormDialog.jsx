@@ -757,7 +757,7 @@ export default function SubscriptionFormDialog({
           </Accordion>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+      <DialogActions sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
         <Stack direction="row" spacing={2} sx={{ width: '100%', justifyContent: 'space-between' }}>
           <Button
             variant="outlined"

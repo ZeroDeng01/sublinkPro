@@ -11,7 +11,7 @@ import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import Divider from '@mui/material/Divider';
+
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
@@ -19,7 +19,6 @@ import ListItem from '@mui/material/ListItem';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import Paper from '@mui/material/Paper';
 
 // icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -35,16 +34,14 @@ import RouterIcon from '@mui/icons-material/Router';
 import FilterVintageIcon from '@mui/icons-material/FilterVintage';
 import VpnLockIcon from '@mui/icons-material/VpnLock';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import SignalCellularAltIcon from '@mui/icons-material/SignalCellularAlt';
-import SpeedIcon from '@mui/icons-material/Speed';
+
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CodeIcon from '@mui/icons-material/Code';
 
 // dialog
 import Dialog from '@mui/material/Dialog';
-import DialogContent from '@mui/material/DialogContent';
+
 import Zoom from '@mui/material/Zoom';
-import React from 'react';
 
 // utils
 import { formatDateTime, formatCountry, getDelayDisplay, getSpeedDisplay } from '../utils';

@@ -310,7 +310,7 @@ export default function ApiKeyList() {
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>创建 API 密钥</DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          <Stack spacing={2}>
             <TextField
               fullWidth
               id="description"

@@ -781,7 +781,7 @@ export default function HostManagement() {
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editingHost ? '编辑 Host' : '添加 Host'}</DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          <Stack spacing={2}>
             <TextField
               label="域名"
               value={formData.hostname}
@@ -807,7 +807,7 @@ export default function HostManagement() {
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>取消</Button>
           <Button variant="contained" onClick={handleSave}>
             {editingHost ? '保存' : '添加'}
