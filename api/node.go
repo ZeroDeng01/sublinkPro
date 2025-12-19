@@ -398,9 +398,10 @@ func NodeAdd(c *gin.Context) {
 			Node.Name = vmess.Ps
 		}
 		Node.LinkName = vmess.Ps
-		Node.LinkAddress = vmess.Add + ":" + vmess.Port.(string)
+		port := fmt.Sprintf("%v", vmess.Port)
+		Node.LinkAddress = vmess.Add + ":" + port
 		Node.LinkHost = vmess.Host
-		Node.LinkPort = vmess.Port.(string)
+		Node.LinkPort = port
 	case u.Scheme == "vless":
 		vless, err := protocol.DecodeVLESSURL(link)
 		if err != nil {
