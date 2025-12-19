@@ -93,11 +93,10 @@ export default function TagManagement() {
     if (showRefreshing) setRefreshing(true);
     try {
       const res = await getTags();
-      if (res.code === 200) {
-        setTags(res.data || []);
-      }
-    } catch {
-      showMessage('获取标签列表失败', 'error');
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      setTags(res.data || []);
+    } catch (error) {
+      showMessage(error.message || '获取标签列表失败', 'error');
     } finally {
       if (showRefreshing) setRefreshing(false);
     }
@@ -107,11 +106,10 @@ export default function TagManagement() {
     if (showRefreshing) setRefreshing(true);
     try {
       const res = await getTagRules();
-      if (res.code === 200) {
-        setRules(res.data || []);
-      }
-    } catch {
-      showMessage('获取规则列表失败', 'error');
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      setRules(res.data || []);
+    } catch (error) {
+      showMessage(error.message || '获取规则列表失败', 'error');
     } finally {
       if (showRefreshing) setRefreshing(false);
     }
@@ -120,9 +118,8 @@ export default function TagManagement() {
   const fetchGroups = async () => {
     try {
       const res = await getTagGroups();
-      if (res.code === 200) {
-        setExistingGroups(res.data || []);
-      }
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      setExistingGroups(res.data || []);
     } catch {
       // Silent fail for groups
     }
@@ -150,8 +147,8 @@ export default function TagManagement() {
         await fetchRules();
       }
       showMessage('刷新成功');
-    } catch {
-      showMessage('刷新失败', 'error');
+    } catch (error) {
+      showMessage(error.message || '刷新失败', 'error');
     } finally {
       setRefreshing(false);
     }
@@ -171,36 +168,29 @@ export default function TagManagement() {
   const handleDeleteTag = async (tag) => {
     if (!window.confirm(`确定删除标签 "${tag.name}" 吗？相关规则也会被删除。`)) return;
     try {
-      const res = await deleteTag(tag.name);
-      if (res.code === 200) {
-        showMessage('删除成功');
-        fetchTags();
-        fetchRules();
-      } else {
-        showMessage(res.msg || '删除失败', 'error');
-      }
-    } catch {
-      showMessage('删除失败', 'error');
+      await deleteTag(tag.name);
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      showMessage('删除成功');
+      fetchTags();
+      fetchRules();
+    } catch (error) {
+      showMessage(error.message || '删除失败', 'error');
     }
   };
 
   const handleSaveTag = async (tagData) => {
     try {
-      let res;
       if (editingTag) {
-        res = await updateTag({ ...tagData, name: editingTag.name });
+        await updateTag({ ...tagData, name: editingTag.name });
       } else {
-        res = await addTag(tagData);
+        await addTag(tagData);
       }
-      if (res.code === 200) {
-        showMessage(editingTag ? '更新成功' : '添加成功');
-        setTagDialogOpen(false);
-        fetchTags();
-      } else {
-        showMessage(res.msg || '操作失败', 'error');
-      }
-    } catch {
-      showMessage('操作失败', 'error');
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      showMessage(editingTag ? '更新成功' : '添加成功');
+      setTagDialogOpen(false);
+      fetchTags();
+    } catch (error) {
+      showMessage(error.message || '操作失败', 'error');
     }
   };
 
@@ -218,48 +208,38 @@ export default function TagManagement() {
   const handleDeleteRule = async (rule) => {
     if (!window.confirm(`确定删除规则 "${rule.name}" 吗？`)) return;
     try {
-      const res = await deleteTagRule(rule.id);
-      if (res.code === 200) {
-        showMessage('删除成功');
-        fetchRules();
-      } else {
-        showMessage(res.msg || '删除失败', 'error');
-      }
-    } catch {
-      showMessage('删除失败', 'error');
+      await deleteTagRule(rule.id);
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      showMessage('删除成功');
+      fetchRules();
+    } catch (error) {
+      showMessage(error.message || '删除失败', 'error');
     }
   };
 
   const handleSaveRule = async (ruleData) => {
     try {
-      let res;
       if (editingRule) {
-        res = await updateTagRule({ ...ruleData, id: editingRule.id });
+        await updateTagRule({ ...ruleData, id: editingRule.id });
       } else {
-        res = await addTagRule(ruleData);
+        await addTagRule(ruleData);
       }
-      if (res.code === 200) {
-        showMessage(editingRule ? '更新成功' : '添加成功');
-        setRuleDialogOpen(false);
-        fetchRules();
-      } else {
-        showMessage(res.msg || '操作失败', 'error');
-      }
-    } catch {
-      showMessage('操作失败', 'error');
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      showMessage(editingRule ? '更新成功' : '添加成功');
+      setRuleDialogOpen(false);
+      fetchRules();
+    } catch (error) {
+      showMessage(error.message || '操作失败', 'error');
     }
   };
 
   const handleTriggerRule = async (rule) => {
     try {
-      const res = await triggerTagRule(rule.id);
-      if (res.code === 200) {
-        showMessage('规则已开始执行');
-      } else {
-        showMessage(res.msg || '执行失败', 'error');
-      }
-    } catch {
-      showMessage('执行失败', 'error');
+      await triggerTagRule(rule.id);
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      showMessage('规则已开始执行');
+    } catch (error) {
+      showMessage(error.message || '执行失败', 'error');
     }
   };
 

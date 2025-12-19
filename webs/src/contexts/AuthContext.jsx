@@ -237,15 +237,7 @@ export function AuthProvider({ children }) {
     try {
       const response = await loginApi({ username, password, captchaKey, captchaCode, rememberMe });
 
-      // 检查业务逻辑状态码，后端登录失败返回 code=500
-      if (response.code !== 200) {
-        return {
-          success: false,
-          message: response.msg || '登录失败',
-          errorType: response.data?.errorType || null
-        };
-      }
-
+      // 登录成功（code === 200，否则会被 request.js 拦截器 reject）
       const { tokenType, accessToken, rememberToken } = response.data;
       localStorage.setItem('accessToken', `${tokenType} ${accessToken}`);
 
@@ -266,11 +258,11 @@ export function AuthProvider({ children }) {
       return { success: true };
     } catch (error) {
       console.error('登录失败:', error);
-      const responseData = error.response?.data;
+      // 业务错误通过 error.message (来自后端 msg) 和 error.data 获取
       return {
         success: false,
-        message: responseData?.message || responseData?.msg || '登录失败，请检查用户名、密码和验证码',
-        errorType: responseData?.data?.errorType || null
+        message: error.message || '登录失败，请检查用户名、密码和验证码',
+        errorType: error.data?.data?.errorType || null
       };
     }
   };

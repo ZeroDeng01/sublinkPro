@@ -119,34 +119,32 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
       const { getIPDetails } = await import('api/nodes');
       const response = await getIPDetails(ip);
 
-      if (response.code === 200 && response.data) {
-        const data = response.data;
-        // 转换为前端需要的格式（保持字段名一致性）
-        const ipData = {
-          status: 'success',
-          query: data.ip,
-          country: data.country,
-          countryCode: data.countryCode,
-          region: data.region,
-          regionName: data.regionName,
-          city: data.city,
-          zip: data.zip,
-          lat: data.lat,
-          lon: data.lon,
-          timezone: data.timezone,
-          isp: data.isp,
-          org: data.org,
-          as: data.as,
-          provider: data.provider
-        };
-        // 缓存成功结果到 localStorage
-        cacheIPInfo(ip, ipData);
-        setIpInfo(ipData);
-      } else {
-        setError(response.msg || '查询IP信息失败');
-      }
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      const data = response.data;
+      // 转换为前端需要的格式（保持字段名一致性）
+      const ipData = {
+        status: 'success',
+        query: data.ip,
+        country: data.country,
+        countryCode: data.countryCode,
+        region: data.region,
+        regionName: data.regionName,
+        city: data.city,
+        zip: data.zip,
+        lat: data.lat,
+        lon: data.lon,
+        timezone: data.timezone,
+        isp: data.isp,
+        org: data.org,
+        as: data.as,
+        provider: data.provider
+      };
+      // 缓存成功结果到 localStorage
+      cacheIPInfo(ip, ipData);
+      setIpInfo(ipData);
     } catch (err) {
-      setError('网络请求失败: ' + (err.message || '未知错误'));
+      // 业务错误或网络错误都通过 err.message 获取
+      setError(err.message || '查询IP信息失败');
     } finally {
       setLoading(false);
     }

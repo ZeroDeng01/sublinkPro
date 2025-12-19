@@ -127,7 +127,7 @@ export default function TemplateList() {
       }
     } catch (error) {
       console.log(error);
-      showMessage('获取模板列表失败', 'error');
+      showMessage(error.message || '获取模板列表失败', 'error');
     } finally {
       setLoading(false);
     }
@@ -185,7 +185,7 @@ export default function TemplateList() {
         fetchTemplates(page, rowsPerPage);
       } catch (error) {
         console.log(error);
-        showMessage('删除失败', 'error');
+        showMessage(error.message || '删除失败', 'error');
       }
     });
   };
@@ -218,7 +218,7 @@ export default function TemplateList() {
       fetchTemplates(page, rowsPerPage);
     } catch (error) {
       console.log(error);
-      showMessage(isEdit ? '更新失败' : '添加失败', 'error');
+      showMessage(error.message || (isEdit ? '更新失败' : '添加失败'), 'error');
     }
   };
 
@@ -235,7 +235,7 @@ export default function TemplateList() {
       }
     } catch (error) {
       console.error(error);
-      showMessage('获取基础模板失败', 'error');
+      showMessage(error.message || '获取基础模板失败', 'error');
     } finally {
       setBaseTemplateLoading(false);
     }
@@ -250,7 +250,7 @@ export default function TemplateList() {
       setBaseTemplateDialogOpen(false);
     } catch (error) {
       console.error(error);
-      showMessage('保存基础模板失败', 'error');
+      showMessage(error.message || '保存基础模板失败', 'error');
     } finally {
       setBaseTemplateSaving(false);
     }
@@ -296,9 +296,9 @@ export default function TemplateList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -314,9 +314,9 @@ export default function TemplateList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />

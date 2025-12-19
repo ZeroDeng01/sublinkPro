@@ -186,7 +186,7 @@ export default function SubscriptionList() {
       }
     } catch (error) {
       console.error(error);
-      showMessage('获取订阅列表失败', 'error');
+      showMessage(error.message || '获取订阅列表失败', 'error');
     } finally {
       setLoading(false);
     }
@@ -331,7 +331,7 @@ export default function SubscriptionList() {
         fetchSubscriptions(page, rowsPerPage);
       } catch (error) {
         console.error(error);
-        showMessage('删除失败', 'error');
+        showMessage(error.message || '删除失败', 'error');
       }
     });
   };
@@ -345,7 +345,7 @@ export default function SubscriptionList() {
         fetchSubscriptions(page, rowsPerPage);
       } catch (error) {
         console.error(error);
-        showMessage('复制失败', 'error');
+        showMessage(error.message || '复制失败', 'error');
       }
     });
   };
@@ -409,7 +409,7 @@ export default function SubscriptionList() {
       fetchSubscriptions(page, rowsPerPage);
     } catch (error) {
       console.error(error);
-      showMessage(isEdit ? '更新失败' : '添加失败', 'error');
+      showMessage(error.message || (isEdit ? '更新失败' : '添加失败'), 'error');
     }
   };
 
@@ -535,16 +535,12 @@ export default function SubscriptionList() {
       };
 
       const response = await previewSubscriptionNodes(previewRequest);
-      // axios 拦截器返回的是 response.data，所以直接使用 response.code
-      if (response.code === 200) {
-        setPreviewData(response.data);
-        setPreviewOpen(true);
-      } else {
-        showMessage(response.msg || '预览失败', 'error');
-      }
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      setPreviewData(response.data);
+      setPreviewOpen(true);
     } catch (error) {
       console.error(error);
-      showMessage('预览请求失败', 'error');
+      showMessage(error.message || '预览请求失败', 'error');
     } finally {
       setPreviewLoading(false);
     }
@@ -578,15 +574,12 @@ export default function SubscriptionList() {
       };
 
       const response = await previewSubscriptionNodes(previewRequest);
-      if (response.code === 200) {
-        setPreviewData(response.data);
-        setPreviewOpen(true);
-      } else {
-        showMessage(response.msg || '预览失败', 'error');
-      }
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      setPreviewData(response.data);
+      setPreviewOpen(true);
     } catch (error) {
       console.error(error);
-      showMessage('预览请求失败', 'error');
+      showMessage(error.message || '预览请求失败', 'error');
     } finally {
       setPreviewLoading(false);
     }
@@ -652,7 +645,7 @@ export default function SubscriptionList() {
       fetchSubscriptions(page, rowsPerPage);
     } catch (error) {
       console.error(error);
-      showMessage('排序保存失败', 'error');
+      showMessage(error.message || '排序保存失败', 'error');
     }
   };
 

@@ -124,7 +124,7 @@ export default function ScriptList() {
       }
     } catch (error) {
       console.error(error);
-      showMessage('获取脚本列表失败', 'error');
+      showMessage(error.message || '获取脚本列表失败', 'error');
     } finally {
       setLoading(false);
     }
@@ -160,7 +160,7 @@ export default function ScriptList() {
         fetchScripts(page, rowsPerPage);
       } catch (error) {
         console.error(error);
-        showMessage('删除失败', 'error');
+        showMessage(error.message || '删除失败', 'error');
       }
     });
   };
@@ -178,7 +178,7 @@ export default function ScriptList() {
       fetchScripts(page, rowsPerPage);
     } catch (error) {
       console.error(error);
-      showMessage(isEdit ? '更新失败' : '添加失败', 'error');
+      showMessage(error.message || (isEdit ? '更新失败' : '添加失败'), 'error');
     }
   };
 

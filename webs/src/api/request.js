@@ -26,7 +26,18 @@ request.interceptors.request.use(
 // 响应拦截器 - 处理错误
 request.interceptors.response.use(
   (response) => {
-    return response.data;
+    const data = response.data;
+    // 检查业务逻辑错误码（后端返回 code 非 200 表示业务错误）
+    if (data && typeof data.code === 'number' && data.code !== 200) {
+      // 构造业务错误对象并 reject，让调用方的 catch 能够捕获
+      const error = new Error(data.msg || '操作失败');
+      error.response = response;
+      error.code = data.code;
+      error.data = data;
+      error.isBusinessError = true; // 标记为业务错误，便于区分
+      return Promise.reject(error);
+    }
+    return data;
   },
   (error) => {
     if (error.response) {

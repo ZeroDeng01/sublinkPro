@@ -109,11 +109,10 @@ export default function HostManagement() {
     if (showRefreshing) setRefreshing(true);
     try {
       const res = await getHosts();
-      if (res.code === 200) {
-        setHosts(res.data || []);
-      }
-    } catch {
-      showMessage('获取 Host 列表失败', 'error');
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      setHosts(res.data || []);
+    } catch (error) {
+      showMessage(error.message || '获取 Host 列表失败', 'error');
     } finally {
       if (showRefreshing) setRefreshing(false);
     }
@@ -123,13 +122,12 @@ export default function HostManagement() {
   const loadTextContent = async () => {
     try {
       const res = await exportHosts();
-      if (res.code === 200) {
-        const text = res.data?.text || '';
-        setTextContent(text);
-        setOriginalText(text);
-      }
-    } catch {
-      showMessage('加载文本内容失败', 'error');
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      const text = res.data?.text || '';
+      setTextContent(text);
+      setOriginalText(text);
+    } catch (error) {
+      showMessage(error.message || '加载文本内容失败', 'error');
     }
   };
 
@@ -160,8 +158,8 @@ export default function HostManagement() {
         await loadTextContent();
       }
       showMessage('刷新成功');
-    } catch {
-      showMessage('刷新失败', 'error');
+    } catch (error) {
+      showMessage(error.message || '刷新失败', 'error');
     } finally {
       setRefreshing(false);
     }
@@ -193,15 +191,12 @@ export default function HostManagement() {
   const handleDelete = async (host) => {
     openConfirm('确定删除', `确定删除 "${host.hostname}" 吗？`, async () => {
       try {
-        const res = await deleteHost(host.id);
-        if (res.code === 200) {
-          showMessage('删除成功');
-          fetchHosts();
-        } else {
-          showMessage(res.msg || '删除失败', 'error');
-        }
-      } catch {
-        showMessage('删除失败', 'error');
+        await deleteHost(host.id);
+        // 成功（code === 200 时返回，否则被拦截器 reject）
+        showMessage('删除成功');
+        fetchHosts();
+      } catch (error) {
+        showMessage(error.message || '删除失败', 'error');
       }
     });
   };
@@ -210,16 +205,13 @@ export default function HostManagement() {
     if (selectedIds.length === 0) return;
     openConfirm('批量删除', `确定删除选中的 ${selectedIds.length} 条记录吗？`, async () => {
       try {
-        const res = await batchDeleteHosts(selectedIds);
-        if (res.code === 200) {
-          showMessage('批量删除成功');
-          setSelectedIds([]);
-          fetchHosts();
-        } else {
-          showMessage(res.msg || '批量删除失败', 'error');
-        }
-      } catch {
-        showMessage('批量删除失败', 'error');
+        await batchDeleteHosts(selectedIds);
+        // 成功（code === 200 时返回，否则被拦截器 reject）
+        showMessage('批量删除成功');
+        setSelectedIds([]);
+        fetchHosts();
+      } catch (error) {
+        showMessage(error.message || '批量删除失败', 'error');
       }
     });
   };
@@ -230,21 +222,17 @@ export default function HostManagement() {
       return;
     }
     try {
-      let res;
       if (editingHost) {
-        res = await updateHost({ id: editingHost.id, ...formData });
+        await updateHost({ id: editingHost.id, ...formData });
       } else {
-        res = await addHost(formData);
+        await addHost(formData);
       }
-      if (res.code === 200) {
-        showMessage(editingHost ? '更新成功' : '添加成功');
-        setDialogOpen(false);
-        fetchHosts();
-      } else {
-        showMessage(res.msg || '操作失败', 'error');
-      }
-    } catch {
-      showMessage('操作失败', 'error');
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      showMessage(editingHost ? '更新成功' : '添加成功');
+      setDialogOpen(false);
+      fetchHosts();
+    } catch (error) {
+      showMessage(error.message || '操作失败', 'error');
     }
   };
 
@@ -268,15 +256,12 @@ export default function HostManagement() {
   const handlePinHost = async (host) => {
     const newPinned = !host.pinned;
     try {
-      const res = await pinHost(host.id, newPinned);
-      if (res.code === 200) {
-        showMessage(newPinned ? '已固定' : '已取消固定');
-        fetchHosts();
-      } else {
-        showMessage(res.msg || '操作失败', 'error');
-      }
-    } catch {
-      showMessage('操作失败', 'error');
+      await pinHost(host.id, newPinned);
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      showMessage(newPinned ? '已固定' : '已取消固定');
+      fetchHosts();
+    } catch (error) {
+      showMessage(error.message || '操作失败', 'error');
     }
   };
 
@@ -316,17 +301,14 @@ export default function HostManagement() {
     setSyncing(true);
     try {
       const res = await syncHosts(textContent);
-      if (res.code === 200) {
-        const { added, updated, deleted } = res.data || {};
-        showMessage(`同步成功：新增 ${added || 0}，更新 ${updated || 0}，删除 ${deleted || 0}`);
-        setOriginalText(textContent);
-        // 刷新列表以同步状态
-        fetchHosts();
-      } else {
-        showMessage(res.msg || '同步失败', 'error');
-      }
-    } catch {
-      showMessage('同步失败', 'error');
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      const { added, updated, deleted } = res.data || {};
+      showMessage(`同步成功：新增 ${added || 0}，更新 ${updated || 0}，删除 ${deleted || 0}`);
+      setOriginalText(textContent);
+      // 刷新列表以同步状态
+      fetchHosts();
+    } catch (error) {
+      showMessage(error.message || '同步失败', 'error');
     } finally {
       setSyncing(false);
     }

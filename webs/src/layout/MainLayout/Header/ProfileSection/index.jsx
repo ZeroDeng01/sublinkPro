@@ -187,9 +187,8 @@ export default function ProfileSection() {
     try {
       const { getIPCacheStats } = await import('api/nodes');
       const response = await getIPCacheStats();
-      if (response.code === 200 && response.data) {
-        setIpCacheCount(response.data.count || 0);
-      }
+      // 成功（code === 200 时返回，否则被拦截器 reject）
+      setIpCacheCount(response.data?.count || 0);
     } catch (error) {
       console.error('获取IP缓存统计失败:', error);
     }
@@ -202,22 +201,19 @@ export default function ProfileSection() {
       setIpCacheLoading(true);
       try {
         const { clearIPCache } = await import('api/nodes');
-        const response = await clearIPCache();
-        if (response.code === 200) {
-          setSnackbar({ open: true, message: 'IP缓存已清除', severity: 'success' });
-          setIpCacheCount(0);
-          // 同时清除前端 localStorage 中的IP缓存
-          try {
-            localStorage.removeItem('sublink_ip_info_cache');
-          } catch {
-            // 忽略 localStorage 错误
-          }
-        } else {
-          setSnackbar({ open: true, message: response.msg || '清除失败', severity: 'error' });
+        await clearIPCache();
+        // 成功（code === 200 时返回，否则被拦截器 reject）
+        setSnackbar({ open: true, message: 'IP缓存已清除', severity: 'success' });
+        setIpCacheCount(0);
+        // 同时清除前端 localStorage 中的IP缓存
+        try {
+          localStorage.removeItem('sublink_ip_info_cache');
+        } catch {
+          // 忽略 localStorage 错误
         }
       } catch (error) {
         console.error('清除IP缓存失败:', error);
-        setSnackbar({ open: true, message: '清除请求失败', severity: 'error' });
+        setSnackbar({ open: true, message: error.message || '清除失败', severity: 'error' });
       } finally {
         setIpCacheLoading(false);
       }

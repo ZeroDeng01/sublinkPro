@@ -270,7 +270,7 @@ export default function NodeList() {
       }
     } catch (error) {
       console.error(error);
-      showMessage('获取节点列表失败', 'error');
+      showMessage(error.message || '获取节点列表失败', 'error');
     } finally {
       setLoading(false);
     }
@@ -559,7 +559,7 @@ export default function NodeList() {
         handleRefresh();
       } catch (error) {
         console.error(error);
-        showMessage('删除失败', 'error');
+        showMessage(error.message || '删除失败', 'error');
       }
     });
   };
@@ -578,7 +578,7 @@ export default function NodeList() {
         handleRefresh();
       } catch (error) {
         console.error(error);
-        showMessage('批量删除失败', 'error');
+        showMessage(error.message || '批量删除失败', 'error');
       }
     });
   };
@@ -607,7 +607,7 @@ export default function NodeList() {
       });
     } catch (error) {
       console.error(error);
-      showMessage('批量修改分组失败', 'error');
+      showMessage(error.message || '批量修改分组失败', 'error');
     }
   };
 
@@ -632,7 +632,7 @@ export default function NodeList() {
       fetchNodes(getCurrentFilters());
     } catch (error) {
       console.error(error);
-      showMessage('批量修改前置代理失败', 'error');
+      showMessage(error.message || '批量修改前置代理失败', 'error');
     }
   };
 
@@ -662,7 +662,7 @@ export default function NodeList() {
       });
     } catch (error) {
       console.error(error);
-      showMessage('批量修改来源失败', 'error');
+      showMessage(error.message || '批量修改来源失败', 'error');
     }
   };
 
@@ -688,7 +688,7 @@ export default function NodeList() {
       fetchNodes(getCurrentFilters());
     } catch (error) {
       console.error(error);
-      showMessage('批量设置标签失败', 'error');
+      showMessage(error.message || '批量设置标签失败', 'error');
     }
   };
 
@@ -713,7 +713,7 @@ export default function NodeList() {
       fetchNodes(getCurrentFilters());
     } catch (error) {
       console.error(error);
-      showMessage('批量移除标签失败', 'error');
+      showMessage(error.message || '批量移除标签失败', 'error');
     }
   };
 
@@ -777,7 +777,7 @@ export default function NodeList() {
       handleRefresh();
     } catch (error) {
       console.error(error);
-      showMessage(isEditNode ? '更新失败' : '添加失败', 'error');
+      showMessage(error.message || (isEditNode ? '更新失败' : '添加失败'), 'error');
     }
   };
 
@@ -837,7 +837,7 @@ export default function NodeList() {
       handleRefresh();
     } catch (error) {
       console.error(error);
-      showMessage('删除失败', 'error');
+      showMessage(error.message || '删除失败', 'error');
     }
     setDeleteSchedulerDialogOpen(false);
     setDeleteSchedulerTarget(null);
@@ -862,7 +862,7 @@ export default function NodeList() {
         handleRefresh();
       } catch (error) {
         console.error(error);
-        showMessage('提交更新任务失败', 'error');
+        showMessage(error.message || '提交更新任务失败', 'error');
       }
     });
   };
@@ -903,7 +903,7 @@ export default function NodeList() {
       fetchSchedulers();
     } catch (error) {
       console.error(error);
-      showMessage(isEditScheduler ? '更新失败' : '添加失败', 'error');
+      showMessage(error.message || (isEditScheduler ? '更新失败' : '添加失败'), 'error');
     }
   };
 
@@ -932,7 +932,7 @@ export default function NodeList() {
       setSpeedTestDialogOpen(true);
     } catch (error) {
       console.error(error);
-      showMessage('获取测速配置失败', 'error');
+      showMessage(error.message || '获取测速配置失败', 'error');
     }
   };
 
@@ -956,7 +956,7 @@ export default function NodeList() {
       setSpeedTestDialogOpen(false);
     } catch (error) {
       console.error(error);
-      showMessage('保存测速配置失败', 'error');
+      showMessage(error.message || '保存测速配置失败', 'error');
     }
   };
 
@@ -966,7 +966,7 @@ export default function NodeList() {
       showMessage('测速任务已在后台启动，请稍后刷新查看结果');
     } catch (error) {
       console.error(error);
-      showMessage('启动测速任务失败', 'error');
+      showMessage(error.message || '启动测速任务失败', 'error');
     }
   };
 
@@ -981,7 +981,7 @@ export default function NodeList() {
       showMessage(`已启动 ${ids.length} 个节点的测速任务`);
     } catch (error) {
       console.error(error);
-      showMessage('启动批量测速任务失败', 'error');
+      showMessage(error.message || '启动批量测速任务失败', 'error');
     }
   };
 
@@ -991,7 +991,7 @@ export default function NodeList() {
       showMessage(`节点 ${node.Name} 测速任务已启动`);
     } catch (error) {
       console.error(error);
-      showMessage('启动测速任务失败', 'error');
+      showMessage(error.message || '启动测速任务失败', 'error');
     }
   };
 
