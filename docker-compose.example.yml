@@ -74,6 +74,11 @@ services:
       # - SUBLINK_TURNSTILE_SITE_KEY=your-site-key
       # - SUBLINK_TURNSTILE_SECRET_KEY=your-secret-key
       
+      # Turnstile 验证代理（解决服务器无法访问 Cloudflare API 问题）
+      # 使用 mihomo 支持的代理链接格式（如 vless://, vmess://, ss://）
+      # 填写即使用代理，未填写则直连
+      # - SUBLINK_TURNSTILE_PROXY_LINK=vless://your-proxy-link...
+      
       # ---------- 管理员配置 ----------
       # 初始管理员密码（仅首次启动时生效）
       # - SUBLINK_ADMIN_PASSWORD=your-admin-password

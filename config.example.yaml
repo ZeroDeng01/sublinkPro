@@ -74,6 +74,13 @@ captcha_mode: 2
 # 环境变量: SUBLINK_TURNSTILE_SECRET_KEY
 # turnstile_secret_key: your-secret-key
 
+# Turnstile 验证代理配置
+# 如果服务器无法直接访问 Cloudflare API,可配置代理
+# 使用 mihomo 支持的代理链接格式（如 vless://, vmess://, ss:// 等）
+# 填写即使用代理，未填写则直连
+# 环境变量: SUBLINK_TURNSTILE_PROXY_LINK
+# turnstile_proxy_link: vless://your-proxy-link...
+
 # ============================================
 # 敏感配置说明
 # ============================================
