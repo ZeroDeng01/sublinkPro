@@ -7,8 +7,13 @@ export default function Dialog() {
         paper: {
           padding: 0,
           borderRadius: '16px',
-          boxShadow: '0px 24px 48px -12px rgba(0, 0, 0, 0.18)',
+          // 使用更柔和的阴影效果，避免过于明显的发光感
+          boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.12)',
           backgroundImage: 'none'
+        },
+        // 全屏模式下移除圆角，避免四角出现黑色区域
+        paperFullScreen: {
+          borderRadius: 0
         }
       }
     },

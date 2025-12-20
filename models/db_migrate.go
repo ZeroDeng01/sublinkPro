@@ -132,6 +132,11 @@ func RunMigrations() {
 	} else {
 		utils.Info("数据表SubscriptionShare创建成功")
 	}
+	if err := db.AutoMigrate(&SubscriptionChainRule{}); err != nil {
+		utils.Error("基础数据表SubscriptionChainRule迁移失败: %v", err)
+	} else {
+		utils.Info("数据表SubscriptionChainRule创建成功")
+	}
 
 	// 检查并删除 idx_name_id 索引
 	// 0000_drop_idx_name_id

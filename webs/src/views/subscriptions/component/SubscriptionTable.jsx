@@ -27,6 +27,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 
 /**
  * 桌面端订阅表格组件
@@ -43,6 +44,7 @@ export default function SubscriptionTable({
   onDelete,
   onCopy,
   onPreview,
+  onChainProxy,
   onStartSort,
   onConfirmSort,
   onCancelSort,
@@ -50,6 +52,7 @@ export default function SubscriptionTable({
   onCopyToClipboard,
   getSortedItems
 }) {
+
   return (
     <TableContainer component={Paper}>
       <Table>
@@ -110,7 +113,13 @@ export default function SubscriptionTable({
                         <HistoryIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="链式代理">
+                      <IconButton size="small" color="warning" onClick={() => onChainProxy(sub)}>
+                        <AccountTreeIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     {sortingSubId !== sub.ID ? (
+
                       <Tooltip title="排序">
                         <IconButton size="small" onClick={() => onStartSort(sub)}>
                           <SortIcon fontSize="small" />

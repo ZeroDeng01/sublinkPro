@@ -41,7 +41,8 @@ import {
   SubscriptionTable,
   SubscriptionFormDialog,
   NodePreviewDialog,
-  ShareManageDialog
+  ShareManageDialog,
+  ChainProxyDialog
 } from './component';
 
 // ==============================|| 订阅管理 ||============================== //
@@ -589,6 +590,15 @@ export default function SubscriptionList() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareDialogSub, setShareDialogSub] = useState(null);
 
+  // === 链式代理 ===
+  const [chainProxyOpen, setChainProxyOpen] = useState(false);
+  const [chainProxySub, setChainProxySub] = useState(null);
+
+  const handleChainProxy = (sub) => {
+    setChainProxySub(sub);
+    setChainProxyOpen(true);
+  };
+
   const handleClient = (sub) => {
     setShareDialogSub(sub);
     setShareDialogOpen(true);
@@ -708,9 +718,9 @@ export default function SubscriptionList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -726,9 +736,9 @@ export default function SubscriptionList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
@@ -752,6 +762,7 @@ export default function SubscriptionList() {
           onDelete={handleDelete}
           onCopy={handleCopy}
           onPreview={handlePreviewSubscription}
+          onChainProxy={handleChainProxy}
           onStartSort={handleStartSort}
           onConfirmSort={handleConfirmSort}
           onCancelSort={handleCancelSort}
@@ -774,6 +785,7 @@ export default function SubscriptionList() {
           onDelete={handleDelete}
           onCopy={handleCopy}
           onPreview={handlePreviewSubscription}
+          onChainProxy={handleChainProxy}
           onStartSort={handleStartSort}
           onConfirmSort={handleConfirmSort}
           onCancelSort={handleCancelSort}
@@ -898,6 +910,13 @@ export default function SubscriptionList() {
         subscription={shareDialogSub}
         onClose={() => setShareDialogOpen(false)}
         showMessage={showMessage}
+      />
+
+      {/* 链式代理配置对话框 */}
+      <ChainProxyDialog
+        open={chainProxyOpen}
+        subscription={chainProxySub}
+        onClose={() => setChainProxyOpen(false)}
       />
     </MainCard>
   );

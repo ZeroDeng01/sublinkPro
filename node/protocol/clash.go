@@ -405,13 +405,14 @@ func EncodeClash(urls []Urls, config OutputConfig) ([]byte, error) {
 	}
 
 	// 生成Clash配置文件
-	return DecodeClash(proxys, config.Clash)
+	return DecodeClash(proxys, config.Clash, config.CustomProxyGroups)
 }
 
 // DecodeClash 用于解析 Clash 配置文件并合并新节点
 // proxys: 新增的节点列表
 // yamlfile: 模板文件路径或 URL
-func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
+// customGroups: 自定义代理组列表（可选，由链式代理规则生成）
+func DecodeClash(proxys []Proxy, yamlfile string, customGroups ...[]CustomProxyGroup) ([]byte, error) {
 	// 读取 YAML 文件
 	var data []byte
 	var err error
@@ -467,6 +468,38 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 	config["proxies"] = proxies
 	// 往ProxyGroup中插入代理列表
 	proxyGroups := config["proxy-groups"].([]interface{})
+
+	// 插入自定义代理组（在模板组之后）
+	// 使用 _custom_group 标记来标识自定义代理组，后续循环时跳过节点追加
+	if len(customGroups) > 0 && len(customGroups[0]) > 0 {
+		for _, cg := range customGroups[0] {
+			// 构建代理组 map
+			groupMap := map[string]interface{}{
+				"name":          cg.Name,
+				"type":          cg.Type,
+				"proxies":       cg.Proxies,
+				"_custom_group": true, // 标记为自定义代理组，不追加所有节点
+			}
+			// 如果是 url-test 类型，添加测速配置
+			if cg.Type == "url-test" {
+				if cg.URL != "" {
+					groupMap["url"] = cg.URL
+				} else {
+					groupMap["url"] = "http://www.gstatic.com/generate_204"
+				}
+				if cg.Interval > 0 {
+					groupMap["interval"] = cg.Interval
+				} else {
+					groupMap["interval"] = 300
+				}
+				if cg.Tolerance > 0 {
+					groupMap["tolerance"] = cg.Tolerance
+				}
+			}
+			proxyGroups = append(proxyGroups, groupMap)
+		}
+	}
+
 	for i, pg := range proxyGroups {
 		proxyGroup, ok := pg.(map[string]interface{})
 		if !ok {
@@ -480,6 +513,14 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 
 		// 如果已有 include-all: true，说明使用 filter 模式，跳过节点插入
 		if includeAll, ok := proxyGroup["include-all"].(bool); ok && includeAll {
+			continue
+		}
+
+		// 自定义代理组（由链式代理规则生成）已有自己的节点列表，跳过节点追加
+		if isCustom, ok := proxyGroup["_custom_group"].(bool); ok && isCustom {
+			// 删除内部标记，避免输出到配置文件
+			delete(proxyGroup, "_custom_group")
+			proxyGroups[i] = proxyGroup
 			continue
 		}
 

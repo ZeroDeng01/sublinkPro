@@ -289,9 +289,20 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
           borderColor: share.is_legacy ? 'primary.main' : expired ? 'error.main' : 'divider'
         }}
       >
-        <CardActionArea onClick={() => handleOpenDetail(share)}>
-          <CardContent sx={{ py: 1.5 }}>
-            <Stack direction="row" alignItems="center" spacing={1}>
+        <CardContent sx={{ py: 1.5 }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Box
+              onClick={() => handleOpenDetail(share)}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                flex: 1,
+                minWidth: 0,
+                cursor: 'pointer',
+                gap: 1,
+                '&:hover': { opacity: 0.8 }
+              }}
+            >
               <LinkIcon color={expired ? 'disabled' : 'primary'} fontSize="small" />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Stack direction="row" alignItems="center" spacing={1}>
@@ -306,37 +317,38 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                   {getExpireText(share)} · 访问 {share.access_count || 0} 次
                 </Typography>
               </Box>
-              <Stack direction="row" spacing={0.5} onClick={(e) => e.stopPropagation()}>
-                <Tooltip title="访问日志">
-                  <IconButton size="small" onClick={(e) => handleViewLogs(share, e)}>
-                    <HistoryIcon fontSize="small" />
+            </Box>
+            <Stack direction="row" spacing={0.5}>
+              <Tooltip title="访问日志">
+                <IconButton size="small" onClick={(e) => handleViewLogs(share, e)}>
+                  <HistoryIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="编辑">
+                <IconButton size="small" onClick={(e) => handleEdit(share, e)}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              {share.is_legacy ? (
+                <Tooltip title="刷新Token">
+                  <IconButton size="small" color="warning" onClick={(e) => handleRefreshToken(share, e)}>
+                    <RefreshIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="编辑">
-                  <IconButton size="small" onClick={(e) => handleEdit(share, e)}>
-                    <EditIcon fontSize="small" />
+              ) : (
+                <Tooltip title="删除">
+                  <IconButton size="small" color="error" onClick={(e) => handleDelete(share, e)}>
+                    <DeleteIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                {share.is_legacy ? (
-                  <Tooltip title="刷新Token">
-                    <IconButton size="small" color="warning" onClick={(e) => handleRefreshToken(share, e)}>
-                      <RefreshIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                ) : (
-                  <Tooltip title="删除">
-                    <IconButton size="small" color="error" onClick={(e) => handleDelete(share, e)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                )}
-              </Stack>
+              )}
             </Stack>
-          </CardContent>
-        </CardActionArea>
+          </Stack>
+        </CardContent>
       </Card>
     );
   };
+
 
   // 渲染链接详情对话框内容
   const renderDetailContent = () => {

@@ -123,3 +123,73 @@ export function getNodeFieldsMeta() {
     method: 'get'
   });
 }
+
+// ========== 链式代理规则 API ==========
+
+// 获取链式代理规则列表
+export function getChainRules(subId) {
+  return request({
+    url: `/v1/subcription/${subId}/chain-rules`,
+    method: 'get'
+  });
+}
+
+// 创建链式代理规则
+export function createChainRule(subId, data) {
+  return request({
+    url: `/v1/subcription/${subId}/chain-rules`,
+    method: 'post',
+    data,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+}
+
+// 更新链式代理规则
+export function updateChainRule(subId, ruleId, data) {
+  return request({
+    url: `/v1/subcription/${subId}/chain-rules/${ruleId}`,
+    method: 'put',
+    data,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+}
+
+// 删除链式代理规则
+export function deleteChainRule(subId, ruleId) {
+  return request({
+    url: `/v1/subcription/${subId}/chain-rules/${ruleId}`,
+    method: 'delete'
+  });
+}
+
+// 切换链式代理规则启用状态
+export function toggleChainRule(subId, ruleId) {
+  return request({
+    url: `/v1/subcription/${subId}/chain-rules/${ruleId}/toggle`,
+    method: 'put'
+  });
+}
+
+// 批量排序链式代理规则
+export function sortChainRules(subId, ruleIds) {
+  return request({
+    url: `/v1/subcription/${subId}/chain-rules/sort`,
+    method: 'put',
+    data: { ruleIds },
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+}
+
+// 获取链式代理可用选项
+export function getChainOptions(subId) {
+  return request({
+    url: `/v1/subcription/${subId}/chain-options`,
+    method: 'get'
+  });
+}

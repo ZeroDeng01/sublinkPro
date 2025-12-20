@@ -267,6 +267,36 @@ func GetClash(c *gin.Context) {
 		sub.Nodes = newNodes
 		nodesJSON = resJSON
 	}
+
+	// 获取链式代理规则
+	chainRules := models.GetEnabledChainRulesBySubscriptionID(sub.ID)
+
+	// 构建节点ID到最终名称的映射（用于链式代理规则解析）
+	nodeNameMap := make(map[int]string)
+	for idx, v := range sub.Nodes {
+		// 计算节点最终名称
+		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
+		finalName := v.LinkName // 默认使用原始名称
+		if sub.NodeNameRule != "" {
+			finalName = utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
+				Name:        v.Name,
+				LinkName:    processedLinkName,
+				LinkCountry: v.LinkCountry,
+				Speed:       v.Speed,
+				DelayTime:   v.DelayTime,
+				Group:       v.Group,
+				Source:      v.Source,
+				Index:       idx + 1,
+				Protocol:    utils.GetProtocolFromLink(v.Link),
+				Tags:        v.Tags,
+			})
+		}
+		nodeNameMap[v.ID] = finalName
+	}
+
+	// 收集自定义代理组
+	customGroups := models.CollectCustomProxyGroups(chainRules, sub.Nodes, nodeNameMap)
+
 	for idx, v := range sub.Nodes {
 		// 应用预处理规则到 LinkName
 		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
@@ -287,6 +317,17 @@ func GetClash(c *gin.Context) {
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
 		}
+
+		// 计算 dialer-proxy（链式代理规则）
+		dialerProxy := strings.TrimSpace(v.DialerProxyName)
+		if dialerProxy == "" && len(chainRules) > 0 {
+			// 应用链式代理规则
+			resolvedProxy, _ := models.ApplyChainRulesToNode(v, chainRules, sub.Nodes, nodeNameMap)
+			if resolvedProxy != "" {
+				dialerProxy = resolvedProxy
+			}
+		}
+
 		switch {
 		// 如果包含多条节点
 		case strings.Contains(v.Link, ","):
@@ -311,7 +352,7 @@ func GetClash(c *gin.Context) {
 				links[i] = renamedLink
 				urls = append(urls, protocol.Urls{
 					Url:             renamedLink,
-					DialerProxyName: strings.TrimSpace(v.DialerProxyName),
+					DialerProxyName: dialerProxy,
 				})
 			}
 			continue
@@ -329,14 +370,14 @@ func GetClash(c *gin.Context) {
 			for _, link := range links {
 				urls = append(urls, protocol.Urls{
 					Url:             link,
-					DialerProxyName: strings.TrimSpace(v.DialerProxyName),
+					DialerProxyName: dialerProxy,
 				})
 			}
 		// 默认
 		default:
 			urls = append(urls, protocol.Urls{
 				Url:             nodeLink,
-				DialerProxyName: strings.TrimSpace(v.DialerProxyName),
+				DialerProxyName: dialerProxy,
 			})
 		}
 	}
@@ -351,6 +392,24 @@ func GetClash(c *gin.Context) {
 	// 如果启用 Host 替换，填充 HostMap
 	if configs.ReplaceServerWithHost {
 		configs.HostMap = models.GetHostMap()
+	}
+
+	// 添加自定义代理组到配置
+	if len(customGroups) > 0 {
+		configs.CustomProxyGroups = make([]protocol.CustomProxyGroup, 0, len(customGroups))
+		for _, g := range customGroups {
+			cpg := protocol.CustomProxyGroup{
+				Name:    g.Name,
+				Type:    g.Type,
+				Proxies: g.Proxies,
+			}
+			if g.URLTestConfig != nil {
+				cpg.URL = g.URLTestConfig.URL
+				cpg.Interval = g.URLTestConfig.Interval
+				cpg.Tolerance = g.URLTestConfig.Tolerance
+			}
+			configs.CustomProxyGroups = append(configs.CustomProxyGroups, cpg)
+		}
 	}
 
 	DecodeClash, err := protocol.EncodeClash(urls, configs)
@@ -374,6 +433,7 @@ func GetClash(c *gin.Context) {
 	}
 	c.Writer.WriteString(string(DecodeClash))
 }
+
 func GetSurge(c *gin.Context) {
 	var sub models.Subcription
 	// subname := c.Param("subname")

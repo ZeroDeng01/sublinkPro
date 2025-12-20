@@ -401,6 +401,8 @@ func getNodeFieldValue(node Node, field string) interface{} {
 		return node.DialerProxyName
 	case "link":
 		return node.Link
+	case "tags":
+		return node.Tags
 	default:
 		return ""
 	}

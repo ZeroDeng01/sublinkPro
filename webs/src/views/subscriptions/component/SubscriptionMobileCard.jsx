@@ -21,6 +21,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 
 /**
  * 移动端订阅卡片组件
@@ -38,6 +39,7 @@ export default function SubscriptionMobileCard({
   onDelete,
   onCopy,
   onPreview,
+  onChainProxy,
   onStartSort,
   onConfirmSort,
   onCancelSort,
@@ -80,6 +82,9 @@ export default function SubscriptionMobileCard({
                 </IconButton>
                 <IconButton size="small" onClick={() => onLogs(sub)}>
                   <HistoryIcon fontSize="small" />
+                </IconButton>
+                <IconButton size="small" color="warning" onClick={() => onChainProxy(sub)}>
+                  <AccountTreeIcon fontSize="small" />
                 </IconButton>
                 {sortingSubId !== sub.ID ? (
                   <IconButton
