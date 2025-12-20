@@ -23,5 +23,7 @@ export { default as ShareManageDialog } from './ShareManageDialog';
 export { default as ChainProxyDialog } from './ChainProxyDialog';
 export { default as ChainRuleEditor } from './ChainRuleEditor';
 export { default as ChainFlowBuilder } from './ChainFlowBuilder';
+export { default as MobileChainBuilder } from './MobileChainBuilder';
 export { default as ProxyChainBuilder } from './ProxyChainBuilder';
 export { default as ConditionBuilder } from './ConditionBuilder';
+

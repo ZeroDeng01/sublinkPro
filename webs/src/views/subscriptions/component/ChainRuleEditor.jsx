@@ -8,10 +8,12 @@ import Switch from '@mui/material/Switch';
 import Divider from '@mui/material/Divider';
 
 import ChainFlowBuilder from './ChainFlowBuilder';
+import MobileChainBuilder from './MobileChainBuilder';
 
 /**
  * 单条链式代理规则编辑器
  * 使用画板式交互配置代理链和目标节点
+ * 移动端使用简化的卡片式配置
  */
 export default function ChainRuleEditor({
     value,
@@ -20,7 +22,8 @@ export default function ChainRuleEditor({
     fields = [],
     operators = [],
     groupTypes = [],
-    templateGroups = []
+    templateGroups = [],
+    isMobile = false
 }) {
     const [name, setName] = useState(value?.name || '');
     const [enabled, setEnabled] = useState(value?.enabled ?? true);
@@ -119,8 +122,13 @@ export default function ChainRuleEditor({
     return (
         <Box sx={{ height: '100%' }}>
             <Stack spacing={2}>
-                {/* 基本信息 */}
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ pt: 1 }}>
+                {/* 基本信息 - 移动端堆叠显示 */}
+                <Stack
+                    direction={isMobile ? 'column' : 'row'}
+                    spacing={2}
+                    alignItems={isMobile ? 'stretch' : 'center'}
+                    sx={{ pt: 1 }}
+                >
                     <TextField
                         size="small"
                         label="规则名称"
@@ -128,32 +136,53 @@ export default function ChainRuleEditor({
                         onChange={handleNameChange}
                         sx={{ flex: 1 }}
                         placeholder="例如：香港中转美国"
+                        fullWidth={isMobile}
                     />
                     <FormControlLabel
                         control={
                             <Switch checked={enabled} onChange={handleEnabledChange} />
                         }
                         label="启用"
+                        sx={isMobile ? { alignSelf: 'flex-start' } : {}}
                     />
                 </Stack>
 
-                {/* 画板式代理链配置 - 占据剩余空间 */}
+                {/* 画板式代理链配置 - 移动端使用简化版 */}
                 <Typography variant="body2" color="text.secondary">
-                    点击「添加代理节点」配置入口代理，点击节点进行编辑。
+                    {isMobile
+                        ? '配置入口代理节点和目标节点'
+                        : '点击「添加代理节点」配置入口代理，点击节点进行编辑。'
+                    }
                 </Typography>
-                <ChainFlowBuilder
-                    chainConfig={chainConfig}
-                    targetConfig={targetConfig}
-                    onChainConfigChange={handleChainConfigChange}
-                    onTargetConfigChange={handleTargetConfigChange}
-                    nodes={nodes}
-                    fields={fields}
-                    operators={operators}
-                    groupTypes={groupTypes}
-                    templateGroups={templateGroups}
-                />
+
+                {isMobile ? (
+                    // 移动端使用简化的卡片式配置
+                    <MobileChainBuilder
+                        chainConfig={chainConfig}
+                        targetConfig={targetConfig}
+                        onChainConfigChange={handleChainConfigChange}
+                        onTargetConfigChange={handleTargetConfigChange}
+                        nodes={nodes}
+                        fields={fields}
+                        operators={operators}
+                        groupTypes={groupTypes}
+                        templateGroups={templateGroups}
+                    />
+                ) : (
+                    // 桌面端使用流程图画板
+                    <ChainFlowBuilder
+                        chainConfig={chainConfig}
+                        targetConfig={targetConfig}
+                        onChainConfigChange={handleChainConfigChange}
+                        onTargetConfigChange={handleTargetConfigChange}
+                        nodes={nodes}
+                        fields={fields}
+                        operators={operators}
+                        groupTypes={groupTypes}
+                        templateGroups={templateGroups}
+                    />
+                )}
             </Stack>
         </Box>
     );
 }
-

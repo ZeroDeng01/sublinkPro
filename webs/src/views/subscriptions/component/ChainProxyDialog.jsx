@@ -14,6 +14,10 @@ import Switch from '@mui/material/Switch';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Alert from '@mui/material/Alert';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
@@ -21,6 +25,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import TouchAppIcon from '@mui/icons-material/TouchApp';
 
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {
@@ -36,8 +42,12 @@ import ChainRuleEditor from './ChainRuleEditor';
 
 /**
  * 链式代理配置主对话框
+ * 支持移动端响应式布局
  */
 export default function ChainProxyDialog({ open, onClose, subscription }) {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
     const [loading, setLoading] = useState(false);
     const [rules, setRules] = useState([]);
     const [options, setOptions] = useState({ nodes: [], conditionFields: [], operators: [], groupTypes: [], templateGroups: [] });
@@ -199,14 +209,37 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth sx={{ '& .MuiDialog-paper': { minHeight: '80vh' } }}>
-            <DialogTitle>
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="lg"
+            fullWidth
+            fullScreen={isMobile}
+            PaperProps={{
+                sx: isMobile
+                    ? { borderRadius: 0 }
+                    : { minHeight: '80vh', borderRadius: 2 }
+            }}
+        >
+            <DialogTitle sx={{ pb: 1.5 }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                     <Stack direction="row" alignItems="center" spacing={1}>
                         <AccountTreeIcon color="primary" />
-                        <Typography variant="h6">
-                            链式代理配置 - {subscription?.Name}
-                        </Typography>
+                        <Box>
+                            <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600}>
+                                链式代理配置
+                            </Typography>
+                            {isMobile && (
+                                <Typography variant="caption" color="text.secondary">
+                                    {subscription?.Name}
+                                </Typography>
+                            )}
+                            {!isMobile && (
+                                <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                    - {subscription?.Name}
+                                </Typography>
+                            )}
+                        </Box>
                     </Stack>
                     <IconButton onClick={onClose} size="small">
                         <CloseIcon />
@@ -214,7 +247,7 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                 </Stack>
             </DialogTitle>
 
-            <DialogContent dividers>
+            <DialogContent dividers sx={{ p: isMobile ? 2 : 3 }}>
                 {loading && (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                         <CircularProgress />
@@ -228,110 +261,202 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                             链式代理规则用于配置节点的前置代理。规则按顺序匹配，第一个匹配的规则生效。
                         </Typography>
 
-                        {/* 规则列表 */}
-                        <DragDropContext onDragEnd={handleDragEnd}>
-                            <Droppable droppableId="chain-rules">
-                                {(provided) => (
-                                    <Stack
-                                        spacing={1}
-                                        {...provided.droppableProps}
-                                        ref={provided.innerRef}
+                        {/* 规则列表 - 移动端使用卡片布局 */}
+                        {isMobile ? (
+                            // 移动端卡片布局
+                            <Stack spacing={1.5}>
+                                {rules.map((rule) => (
+                                    <Card
+                                        key={rule.id}
+                                        variant="outlined"
+                                        sx={{
+                                            borderRadius: 2,
+                                            opacity: rule.enabled ? 1 : 0.6,
+                                            transition: 'all 0.2s ease',
+                                            '&:active': { transform: 'scale(0.98)' }
+                                        }}
                                     >
-                                        {rules.map((rule, index) => (
-                                            <Draggable
-                                                key={rule.id}
-                                                draggableId={String(rule.id)}
-                                                index={index}
-                                            >
-                                                {(provided, snapshot) => (
-                                                    <Paper
-                                                        ref={provided.innerRef}
-                                                        {...provided.draggableProps}
+                                        <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                                            <Stack spacing={1.5}>
+                                                {/* 规则名称和状态 */}
+                                                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                                        <Typography variant="subtitle1" fontWeight={600}>
+                                                            {rule.name || '未命名规则'}
+                                                        </Typography>
+                                                        {!rule.enabled && (
+                                                            <Chip label="已禁用" size="small" color="default" />
+                                                        )}
+                                                    </Stack>
+                                                    <Switch
+                                                        checked={rule.enabled}
+                                                        onChange={() => handleToggle(rule)}
+                                                        size="small"
+                                                    />
+                                                </Stack>
+
+                                                {/* 代理链显示 */}
+                                                <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
+                                                    {parseChainConfig(rule.chainConfig).map((name, i) => (
+                                                        <Chip
+                                                            key={i}
+                                                            label={name}
+                                                            size="small"
+                                                            color="primary"
+                                                            variant="outlined"
+                                                            sx={{ borderRadius: 1.5 }}
+                                                        />
+                                                    ))}
+                                                    <ArrowForwardIcon sx={{ fontSize: 16, color: 'text.secondary', mx: 0.5 }} />
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {parseTargetConfig(rule.targetConfig)}
+                                                    </Typography>
+                                                </Stack>
+
+                                                {/* 操作按钮 - 移动端更大的触摸区域 */}
+                                                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                                    <Button
+                                                        size="small"
                                                         variant="outlined"
-                                                        sx={{
-                                                            p: 2,
-                                                            backgroundColor: snapshot.isDragging
-                                                                ? 'action.hover'
-                                                                : 'background.paper',
-                                                            opacity: rule.enabled ? 1 : 0.6
-                                                        }}
+                                                        startIcon={<EditIcon />}
+                                                        onClick={() => handleEdit(rule)}
+                                                        sx={{ minWidth: 80 }}
                                                     >
-                                                        <Stack direction="row" alignItems="center" spacing={2}>
-                                                            {/* 拖拽手柄 */}
-                                                            <Box
-                                                                {...provided.dragHandleProps}
-                                                                sx={{ cursor: 'grab', color: 'text.secondary' }}
-                                                            >
-                                                                <DragIndicatorIcon />
-                                                            </Box>
+                                                        编辑
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        color="error"
+                                                        startIcon={<DeleteIcon />}
+                                                        onClick={() => handleDelete(rule)}
+                                                        sx={{ minWidth: 80 }}
+                                                    >
+                                                        删除
+                                                    </Button>
+                                                </Stack>
+                                            </Stack>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </Stack>
+                        ) : (
+                            // 桌面端拖拽布局
+                            <DragDropContext onDragEnd={handleDragEnd}>
+                                <Droppable droppableId="chain-rules">
+                                    {(provided) => (
+                                        <Stack
+                                            spacing={1}
+                                            {...provided.droppableProps}
+                                            ref={provided.innerRef}
+                                        >
+                                            {rules.map((rule, index) => (
+                                                <Draggable
+                                                    key={rule.id}
+                                                    draggableId={String(rule.id)}
+                                                    index={index}
+                                                >
+                                                    {(provided, snapshot) => (
+                                                        <Paper
+                                                            ref={provided.innerRef}
+                                                            {...provided.draggableProps}
+                                                            variant="outlined"
+                                                            sx={{
+                                                                p: 2,
+                                                                backgroundColor: snapshot.isDragging
+                                                                    ? 'action.hover'
+                                                                    : 'background.paper',
+                                                                opacity: rule.enabled ? 1 : 0.6
+                                                            }}
+                                                        >
+                                                            <Stack direction="row" alignItems="center" spacing={2}>
+                                                                {/* 拖拽手柄 */}
+                                                                <Box
+                                                                    {...provided.dragHandleProps}
+                                                                    sx={{ cursor: 'grab', color: 'text.secondary' }}
+                                                                >
+                                                                    <DragIndicatorIcon />
+                                                                </Box>
 
-                                                            {/* 规则信息 */}
-                                                            <Box sx={{ flex: 1 }}>
-                                                                <Stack direction="row" alignItems="center" spacing={1}>
-                                                                    <Typography variant="subtitle2">
-                                                                        {rule.name || '未命名规则'}
-                                                                    </Typography>
-                                                                    {!rule.enabled && (
-                                                                        <Chip label="已禁用" size="small" color="default" />
-                                                                    )}
-                                                                </Stack>
-                                                                <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
-                                                                    {parseChainConfig(rule.chainConfig).map((name, i) => (
-                                                                        <Chip
-                                                                            key={i}
-                                                                            label={name}
-                                                                            size="small"
-                                                                            color="primary"
-                                                                            variant="outlined"
-                                                                        />
-                                                                    ))}
-                                                                    <Typography variant="caption" color="text.secondary">
-                                                                        → {parseTargetConfig(rule.targetConfig)}
-                                                                    </Typography>
-                                                                </Stack>
-                                                            </Box>
+                                                                {/* 规则信息 */}
+                                                                <Box sx={{ flex: 1 }}>
+                                                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                                                        <Typography variant="subtitle2">
+                                                                            {rule.name || '未命名规则'}
+                                                                        </Typography>
+                                                                        {!rule.enabled && (
+                                                                            <Chip label="已禁用" size="small" color="default" />
+                                                                        )}
+                                                                    </Stack>
+                                                                    <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                                                                        {parseChainConfig(rule.chainConfig).map((name, i) => (
+                                                                            <Chip
+                                                                                key={i}
+                                                                                label={name}
+                                                                                size="small"
+                                                                                color="primary"
+                                                                                variant="outlined"
+                                                                            />
+                                                                        ))}
+                                                                        <Typography variant="caption" color="text.secondary">
+                                                                            → {parseTargetConfig(rule.targetConfig)}
+                                                                        </Typography>
+                                                                    </Stack>
+                                                                </Box>
 
-                                                            {/* 操作按钮 */}
-                                                            <Switch
-                                                                checked={rule.enabled}
-                                                                onChange={() => handleToggle(rule)}
-                                                                size="small"
-                                                            />
-                                                            <IconButton
-                                                                size="small"
-                                                                onClick={() => handleEdit(rule)}
-                                                            >
-                                                                <EditIcon fontSize="small" />
-                                                            </IconButton>
-                                                            <IconButton
-                                                                size="small"
-                                                                color="error"
-                                                                onClick={() => handleDelete(rule)}
-                                                            >
-                                                                <DeleteIcon fontSize="small" />
-                                                            </IconButton>
-                                                        </Stack>
-                                                    </Paper>
-                                                )}
-                                            </Draggable>
-                                        ))}
-                                        {provided.placeholder}
-                                    </Stack>
-                                )}
-                            </Droppable>
-                        </DragDropContext>
+                                                                {/* 操作按钮 */}
+                                                                <Switch
+                                                                    checked={rule.enabled}
+                                                                    onChange={() => handleToggle(rule)}
+                                                                    size="small"
+                                                                />
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => handleEdit(rule)}
+                                                                >
+                                                                    <EditIcon fontSize="small" />
+                                                                </IconButton>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    color="error"
+                                                                    onClick={() => handleDelete(rule)}
+                                                                >
+                                                                    <DeleteIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </Stack>
+                                                        </Paper>
+                                                    )}
+                                                </Draggable>
+                                            ))}
+                                            {provided.placeholder}
+                                        </Stack>
+                                    )}
+                                </Droppable>
+                            </DragDropContext>
+                        )}
 
                         {/* 空状态 */}
                         {rules.length === 0 && (
-                            <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
+                            <Paper
+                                variant="outlined"
+                                sx={{
+                                    p: isMobile ? 3 : 4,
+                                    textAlign: 'center',
+                                    borderRadius: 2
+                                }}
+                            >
+                                <TouchAppIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                                 <Typography color="text.secondary" gutterBottom>
                                     暂无链式代理规则
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                    链式代理可以为节点配置入口代理，实现流量中转
                                 </Typography>
                                 <Button
                                     variant="contained"
                                     startIcon={<AddIcon />}
                                     onClick={handleAdd}
-                                    sx={{ mt: 1 }}
+                                    size={isMobile ? 'large' : 'medium'}
                                 >
                                     添加规则
                                 </Button>
@@ -350,11 +475,12 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                         operators={options.operators || []}
                         groupTypes={options.groupTypes || []}
                         templateGroups={options.templateGroups || []}
+                        isMobile={isMobile}
                     />
                 )}
             </DialogContent>
 
-            <DialogActions>
+            <DialogActions sx={{ px: isMobile ? 2 : 3, py: 1.5 }}>
                 {!editMode ? (
                     <>
                         <Button onClick={onClose}>关闭</Button>
@@ -380,3 +506,4 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
         </Dialog>
     );
 }
+
