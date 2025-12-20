@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sublink/cache"
 	"sublink/models"
+	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
@@ -25,6 +26,13 @@ func GetChainRules(c *gin.Context) {
 	}
 
 	rules := models.GetChainRulesBySubscriptionID(subID)
+
+	// 调试日志：记录返回的规则
+	utils.Debug("[ChainRule] 获取订阅 %d 的规则，共 %d 条", subID, len(rules))
+	for _, r := range rules {
+		utils.Debug("[ChainRule] 规则 ID=%d, Name=%s, ChainConfig=%s", r.ID, r.Name, r.ChainConfig)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"data": rules})
 }
 
@@ -99,11 +107,17 @@ func UpdateChainRule(c *gin.Context) {
 	existingRule.ChainConfig = updateData.ChainConfig
 	existingRule.TargetConfig = updateData.TargetConfig
 
+	// 调试日志：记录更新的数据
+	utils.Debug("[ChainRule] 更新规则 ID=%d, 名称=%s", existingRule.ID, existingRule.Name)
+	utils.Debug("[ChainRule] ChainConfig: %s", existingRule.ChainConfig)
+	utils.Debug("[ChainRule] TargetConfig: %s", existingRule.TargetConfig)
+
 	if err := existingRule.Update(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新规则失败: " + err.Error()})
 		return
 	}
 
+	utils.Debug("[ChainRule] 规则更新成功，返回数据: ID=%d", existingRule.ID)
 	c.JSON(http.StatusOK, gin.H{"data": existingRule})
 }
 
