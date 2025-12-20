@@ -43,10 +43,10 @@ export default function Alert(theme) {
     const { isWarningOrSuccess } = getCommonStyles(ownerState);
 
     return {
-      color: vars.palette.common.white,
+      color: isWarningOrSuccess ? vars.palette.common.black : vars.palette.common.white,
       backgroundColor: isWarningOrSuccess ? paletteColor.dark : paletteColor.main,
       '& .MuiAlert-icon': {
-        color: vars.palette.common.white
+        color: isWarningOrSuccess ? vars.palette.common.black : vars.palette.common.white
       }
     };
   };
@@ -54,7 +54,6 @@ export default function Alert(theme) {
   return {
     MuiAlert: {
       defaultProps: {
-        variant: 'filled',
         iconMapping: {
           primary: <InfoOutlinedIcon sx={{ fontSize: 'inherit' }} />
         }
