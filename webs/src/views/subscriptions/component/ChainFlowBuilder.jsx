@@ -18,16 +18,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Fade from '@mui/material/Fade';
 
-import {
-    ReactFlow,
-    Controls,
-    Background,
-    useNodesState,
-    useEdgesState,
-    Handle,
-    Position,
-    MarkerType,
-} from '@xyflow/react';
+import { ReactFlow, Controls, Background, useNodesState, useEdgesState, Handle, Position, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -38,164 +29,163 @@ import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import DeviceHubIcon from '@mui/icons-material/DeviceHub';
 import CloseIcon from '@mui/icons-material/Close';
-import SettingsIcon from '@mui/icons-material/Settings';
 
 import ConditionBuilder from './ConditionBuilder';
 
 // 自定义节点样式
 const nodeStyles = {
-    start: {
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
-        borderRadius: '50%',
-        width: 60,
-        height: 60,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 14,
-        fontWeight: 'bold',
-        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
-    },
-    end: {
-        background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-        color: 'white',
-        borderRadius: 8,
-        minWidth: 100,
-        padding: '8px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 12,
-        fontWeight: 'bold',
-        boxShadow: '0 4px 15px rgba(17, 153, 142, 0.4)',
-        cursor: 'pointer',
-    },
-    proxy: {
-        background: 'white',
-        border: '2px solid #2196f3',
-        borderRadius: 8,
-        padding: '8px 14px',
-        minWidth: 120,
-        boxShadow: '0 4px 12px rgba(33, 150, 243, 0.2)',
-        cursor: 'pointer',
-    },
+  start: {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    borderRadius: '50%',
+    width: 60,
+    height: 60,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 14,
+    fontWeight: 'bold',
+    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+  },
+  end: {
+    background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+    color: 'white',
+    borderRadius: 8,
+    minWidth: 100,
+    padding: '8px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 12,
+    fontWeight: 'bold',
+    boxShadow: '0 4px 15px rgba(17, 153, 142, 0.4)',
+    cursor: 'pointer'
+  },
+  proxy: {
+    background: 'white',
+    border: '2px solid #2196f3',
+    borderRadius: 8,
+    padding: '8px 14px',
+    minWidth: 120,
+    boxShadow: '0 4px 12px rgba(33, 150, 243, 0.2)',
+    cursor: 'pointer'
+  }
 };
 
 // 开始节点组件
 function StartNode() {
-    return (
-        <div style={nodeStyles.start}>
-            <PlayArrowIcon fontSize="small" />
-            <Handle type="source" position={Position.Right} style={{ background: '#764ba2' }} />
-        </div>
-    );
+  return (
+    <div style={nodeStyles.start}>
+      <PlayArrowIcon fontSize="small" />
+      <Handle type="source" position={Position.Right} style={{ background: '#764ba2' }} />
+    </div>
+  );
 }
 
 // 结束节点组件（目标节点 - 可配置）
 function EndNode({ data, selected }) {
-    // 根据目标类型显示不同标签
-    const getTargetLabel = () => {
-        switch (data.targetType) {
-            case 'all':
-                return '所有节点';
-            case 'specified_node':
-                return data.nodeName || '指定节点';
-            case 'conditions':
-                return `${data.conditionCount || 0} 个条件`;
-            default:
-                return '所有节点';
-        }
-    };
+  // 根据目标类型显示不同标签
+  const getTargetLabel = () => {
+    switch (data.targetType) {
+      case 'all':
+        return '所有节点';
+      case 'specified_node':
+        return data.nodeName || '指定节点';
+      case 'conditions':
+        return `${data.conditionCount || 0} 个条件`;
+      default:
+        return '所有节点';
+    }
+  };
 
-    return (
-        <div
-            style={{
-                ...nodeStyles.end,
-                boxShadow: selected ? '0 4px 20px rgba(17, 153, 142, 0.6)' : nodeStyles.end.boxShadow,
-            }}
-        >
-            <Handle type="target" position={Position.Left} style={{ background: '#38ef7d' }} />
-            <Stack direction="row" spacing={0.5} alignItems="center">
-                <StopIcon fontSize="small" />
-                <Box>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: 10 }}>
-                        {getTargetLabel()}
-                    </Typography>
-                </Box>
-            </Stack>
-        </div>
-    );
+  return (
+    <div
+      style={{
+        ...nodeStyles.end,
+        boxShadow: selected ? '0 4px 20px rgba(17, 153, 142, 0.6)' : nodeStyles.end.boxShadow
+      }}
+    >
+      <Handle type="target" position={Position.Left} style={{ background: '#38ef7d' }} />
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        <StopIcon fontSize="small" />
+        <Box>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: 10 }}>
+            {getTargetLabel()}
+          </Typography>
+        </Box>
+      </Stack>
+    </div>
+  );
 }
 
 // 代理组节点组件
 function ProxyNode({ data, selected }) {
-    const getIcon = () => {
-        switch (data.proxyType) {
-            case 'template_group':
-                return <GroupWorkIcon color="primary" fontSize="small" />;
-            case 'custom_group':
-                return <DeviceHubIcon color="secondary" fontSize="small" />;
-            case 'dynamic_node':
-                return <FilterAltIcon color="warning" fontSize="small" />;
-            case 'specified_node':
-                return <DeviceHubIcon color="success" fontSize="small" />;
-            default:
-                return <GroupWorkIcon color="primary" fontSize="small" />;
-        }
-    };
+  const getIcon = () => {
+    switch (data.proxyType) {
+      case 'template_group':
+        return <GroupWorkIcon color="primary" fontSize="small" />;
+      case 'custom_group':
+        return <DeviceHubIcon color="secondary" fontSize="small" />;
+      case 'dynamic_node':
+        return <FilterAltIcon color="warning" fontSize="small" />;
+      case 'specified_node':
+        return <DeviceHubIcon color="success" fontSize="small" />;
+      default:
+        return <GroupWorkIcon color="primary" fontSize="small" />;
+    }
+  };
 
-    const getTypeLabel = () => {
-        const labels = {
-            template_group: '模板组',
-            custom_group: '自定义组',
-            dynamic_node: '动态节点',
-            specified_node: '指定节点',
-        };
-        return labels[data.proxyType] || '代理';
+  const getTypeLabel = () => {
+    const labels = {
+      template_group: '模板组',
+      custom_group: '自定义组',
+      dynamic_node: '动态节点',
+      specified_node: '指定节点'
     };
+    return labels[data.proxyType] || '代理';
+  };
 
-    return (
-        <div
-            style={{
-                ...nodeStyles.proxy,
-                borderColor: selected ? '#1976d2' : '#2196f3',
-                borderWidth: selected ? 3 : 2,
-            }}
-        >
-            <Handle type="target" position={Position.Left} style={{ background: '#2196f3' }} />
-            <Stack direction="row" spacing={0.5} alignItems="center">
-                {getIcon()}
-                <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: 10 }}>
-                        {getTypeLabel()}
-                    </Typography>
-                    <Typography variant="body2" fontWeight="medium" sx={{ fontSize: 12 }}>
-                        {data.label || '未配置'}
-                    </Typography>
-                </Box>
-            </Stack>
-            <Handle type="source" position={Position.Right} style={{ background: '#2196f3' }} />
-        </div>
-    );
+  return (
+    <div
+      style={{
+        ...nodeStyles.proxy,
+        borderColor: selected ? '#1976d2' : '#2196f3',
+        borderWidth: selected ? 3 : 2
+      }}
+    >
+      <Handle type="target" position={Position.Left} style={{ background: '#2196f3' }} />
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        {getIcon()}
+        <Box>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: 10 }}>
+            {getTypeLabel()}
+          </Typography>
+          <Typography variant="body2" fontWeight="medium" sx={{ fontSize: 12 }}>
+            {data.label || '未配置'}
+          </Typography>
+        </Box>
+      </Stack>
+      <Handle type="source" position={Position.Right} style={{ background: '#2196f3' }} />
+    </div>
+  );
 }
 
 // 节点类型定义
 const nodeTypes = {
-    start: StartNode,
-    end: EndNode,
-    proxy: ProxyNode,
+  start: StartNode,
+  end: EndNode,
+  proxy: ProxyNode
 };
 
 // 默认边样式
 const defaultEdgeOptions = {
-    type: 'smoothstep',
-    animated: true,
-    style: { stroke: '#b1b1b7', strokeWidth: 2 },
-    markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: '#b1b1b7',
-    },
+  type: 'smoothstep',
+  animated: true,
+  style: { stroke: '#b1b1b7', strokeWidth: 2 },
+  markerEnd: {
+    type: MarkerType.ArrowClosed,
+    color: '#b1b1b7'
+  }
 };
 
 /**
@@ -203,530 +193,526 @@ const defaultEdgeOptions = {
  * 配置面板在流程图右侧内联显示
  */
 export default function ChainFlowBuilder({
-    chainConfig = [],
-    targetConfig = { type: 'all', conditions: null },
-    onChainConfigChange,
-    onTargetConfigChange,
-    nodes: availableNodes = [],
-    fields = [],
-    operators = [],
-    groupTypes = [],
-    templateGroups = [],
+  chainConfig = [],
+  targetConfig = { type: 'all', conditions: null },
+  onChainConfigChange,
+  onTargetConfigChange,
+  nodes: availableNodes = [],
+  fields = [],
+  operators = [],
+  groupTypes = [],
+  templateGroups = []
 }) {
-    // 配置面板状态
-    const [panelOpen, setPanelOpen] = useState(false);
-    const [panelType, setPanelType] = useState(null); // 'proxy' | 'target'
-    const [selectedNodeId, setSelectedNodeId] = useState(null);
-    const [editingProxyConfig, setEditingProxyConfig] = useState(null);
-    const [editingTargetConfig, setEditingTargetConfig] = useState(null);
+  // 配置面板状态
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelType, setPanelType] = useState(null); // 'proxy' | 'target'
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [editingProxyConfig, setEditingProxyConfig] = useState(null);
+  const [editingTargetConfig, setEditingTargetConfig] = useState(null);
 
-    // 获取代理标签
-    const getProxyLabel = useCallback(
-        (item) => {
-            if (!item) return '未配置';
-            if (item.type === 'specified_node') {
-                const node = availableNodes.find((n) => n.id === item.nodeId);
-                return node?.name || node?.linkName || `节点 #${item.nodeId}`;
-            }
-            // 动态节点显示条件数量
-            if (item.type === 'dynamic_node') {
-                const condCount = item.nodeConditions?.conditions?.length || 0;
-                if (condCount > 0) {
-                    return `配置${condCount}`;
-                }
-                return '未配置';
-            }
-            return item.groupName || '未配置';
-        },
-        [availableNodes]
-    );
-
-    // 构建流程节点
-    const flowNodes = useMemo(() => {
-        const nodes = [
-            {
-                id: 'start',
-                type: 'start',
-                position: { x: 30, y: 80 },
-                data: { label: '入口' },
-                draggable: false,
-            },
-        ];
-
-        // 添加代理节点
-        chainConfig.forEach((item, index) => {
-            // 使用保存的位置或计算默认位置，节点间距加大到200px
-            const defaultX = 150 + index * 200;
-            const defaultY = 100;
-            nodes.push({
-                id: `proxy-${index}`,
-                type: 'proxy',
-                position: item.position || { x: defaultX, y: defaultY },
-                data: {
-                    label: getProxyLabel(item),
-                    proxyType: item.type,
-                    config: item,
-                },
-                draggable: true, // 代理节点允许拖拽
-            });
-        });
-
-        // 计算结束节点位置，如果有保存的位置则使用
-        const endX = chainConfig.length > 0 ? 150 + chainConfig.length * 200 : 200;
-        const conditionCount = targetConfig?.conditions?.conditions?.length || 0;
-
-        // 获取指定节点的名称
-        let nodeName = '';
-        if (targetConfig?.type === 'specified_node' && targetConfig?.nodeId) {
-            const targetNode = availableNodes.find(n => n.id === targetConfig.nodeId);
-            nodeName = targetNode?.name || targetNode?.linkName || `节点 #${targetConfig.nodeId}`;
+  // 获取代理标签
+  const getProxyLabel = useCallback(
+    (item) => {
+      if (!item) return '未配置';
+      if (item.type === 'specified_node') {
+        const node = availableNodes.find((n) => n.id === item.nodeId);
+        return node?.name || node?.linkName || `节点 #${item.nodeId}`;
+      }
+      // 动态节点显示条件数量
+      if (item.type === 'dynamic_node') {
+        const condCount = item.nodeConditions?.conditions?.length || 0;
+        if (condCount > 0) {
+          return `配置${condCount}`;
         }
+        return '未配置';
+      }
+      return item.groupName || '未配置';
+    },
+    [availableNodes]
+  );
 
-        nodes.push({
-            id: 'end',
-            type: 'end',
-            position: targetConfig?.endPosition || { x: endX, y: 100 },
-            data: {
-                label: '目标节点',
-                targetType: targetConfig?.type || 'specified_node',
-                conditionCount,
-                nodeName,
-            },
-            draggable: true, // 结束节点也允许拖拽
-        });
-
-        return nodes;
-    }, [chainConfig, targetConfig, getProxyLabel, availableNodes]);
-
-    // 构建边
-    const flowEdges = useMemo(() => {
-        const edges = [];
-
-        if (chainConfig.length === 0) {
-            edges.push({
-                id: 'start-end',
-                source: 'start',
-                target: 'end',
-                ...defaultEdgeOptions,
-            });
-        } else {
-            edges.push({
-                id: 'start-proxy-0',
-                source: 'start',
-                target: 'proxy-0',
-                ...defaultEdgeOptions,
-            });
-
-            for (let i = 0; i < chainConfig.length - 1; i++) {
-                edges.push({
-                    id: `proxy-${i}-proxy-${i + 1}`,
-                    source: `proxy-${i}`,
-                    target: `proxy-${i + 1}`,
-                    ...defaultEdgeOptions,
-                });
-            }
-
-            edges.push({
-                id: `proxy-${chainConfig.length - 1}-end`,
-                source: `proxy-${chainConfig.length - 1}`,
-                target: 'end',
-                ...defaultEdgeOptions,
-            });
-        }
-
-        return edges;
-    }, [chainConfig]);
-
-    const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(flowEdges);
-
-    // 同步外部配置变化到内部节点
-    const prevChainConfigRef = useRef(chainConfig);
-    const prevTargetConfigRef = useRef(targetConfig);
-
-    if (
-        JSON.stringify(prevChainConfigRef.current) !== JSON.stringify(chainConfig) ||
-        JSON.stringify(prevTargetConfigRef.current) !== JSON.stringify(targetConfig)
-    ) {
-        prevChainConfigRef.current = chainConfig;
-        prevTargetConfigRef.current = targetConfig;
-        setTimeout(() => {
-            setNodes(flowNodes);
-            setEdges(flowEdges);
-        }, 0);
-    }
+  // 构建流程节点
+  const flowNodes = useMemo(() => {
+    const nodes = [
+      {
+        id: 'start',
+        type: 'start',
+        position: { x: 30, y: 80 },
+        data: { label: '入口' },
+        draggable: false
+      }
+    ];
 
     // 添加代理节点
-    const handleAddProxy = useCallback(() => {
-        const newConfig = { type: 'template_group', groupName: '' };
-        const newChainConfig = [...chainConfig, newConfig];
-        onChainConfigChange?.(newChainConfig);
+    chainConfig.forEach((item, index) => {
+      // 使用保存的位置或计算默认位置，节点间距加大到200px
+      const defaultX = 150 + index * 200;
+      const defaultY = 100;
+      nodes.push({
+        id: `proxy-${index}`,
+        type: 'proxy',
+        position: item.position || { x: defaultX, y: defaultY },
+        data: {
+          label: getProxyLabel(item),
+          proxyType: item.type,
+          config: item
+        },
+        draggable: true // 代理节点允许拖拽
+      });
+    });
 
-        // 打开配置面板
-        setSelectedNodeId(`proxy-${chainConfig.length}`);
-        setEditingProxyConfig(newConfig);
+    // 计算结束节点位置，如果有保存的位置则使用
+    const endX = chainConfig.length > 0 ? 150 + chainConfig.length * 200 : 200;
+    const conditionCount = targetConfig?.conditions?.conditions?.length || 0;
+
+    // 获取指定节点的名称
+    let nodeName = '';
+    if (targetConfig?.type === 'specified_node' && targetConfig?.nodeId) {
+      const targetNode = availableNodes.find((n) => n.id === targetConfig.nodeId);
+      nodeName = targetNode?.name || targetNode?.linkName || `节点 #${targetConfig.nodeId}`;
+    }
+
+    nodes.push({
+      id: 'end',
+      type: 'end',
+      position: targetConfig?.endPosition || { x: endX, y: 100 },
+      data: {
+        label: '目标节点',
+        targetType: targetConfig?.type || 'specified_node',
+        conditionCount,
+        nodeName
+      },
+      draggable: true // 结束节点也允许拖拽
+    });
+
+    return nodes;
+  }, [chainConfig, targetConfig, getProxyLabel, availableNodes]);
+
+  // 构建边
+  const flowEdges = useMemo(() => {
+    const edges = [];
+
+    if (chainConfig.length === 0) {
+      edges.push({
+        id: 'start-end',
+        source: 'start',
+        target: 'end',
+        ...defaultEdgeOptions
+      });
+    } else {
+      edges.push({
+        id: 'start-proxy-0',
+        source: 'start',
+        target: 'proxy-0',
+        ...defaultEdgeOptions
+      });
+
+      for (let i = 0; i < chainConfig.length - 1; i++) {
+        edges.push({
+          id: `proxy-${i}-proxy-${i + 1}`,
+          source: `proxy-${i}`,
+          target: `proxy-${i + 1}`,
+          ...defaultEdgeOptions
+        });
+      }
+
+      edges.push({
+        id: `proxy-${chainConfig.length - 1}-end`,
+        source: `proxy-${chainConfig.length - 1}`,
+        target: 'end',
+        ...defaultEdgeOptions
+      });
+    }
+
+    return edges;
+  }, [chainConfig]);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(flowEdges);
+
+  // 同步外部配置变化到内部节点
+  const prevChainConfigRef = useRef(chainConfig);
+  const prevTargetConfigRef = useRef(targetConfig);
+
+  if (
+    JSON.stringify(prevChainConfigRef.current) !== JSON.stringify(chainConfig) ||
+    JSON.stringify(prevTargetConfigRef.current) !== JSON.stringify(targetConfig)
+  ) {
+    prevChainConfigRef.current = chainConfig;
+    prevTargetConfigRef.current = targetConfig;
+    setTimeout(() => {
+      setNodes(flowNodes);
+      setEdges(flowEdges);
+    }, 0);
+  }
+
+  // 添加代理节点
+  const handleAddProxy = useCallback(() => {
+    const newConfig = { type: 'template_group', groupName: '' };
+    const newChainConfig = [...chainConfig, newConfig];
+    onChainConfigChange?.(newChainConfig);
+
+    // 打开配置面板
+    setSelectedNodeId(`proxy-${chainConfig.length}`);
+    setEditingProxyConfig(newConfig);
+    setPanelType('proxy');
+    setPanelOpen(true);
+  }, [chainConfig, onChainConfigChange]);
+
+  // 删除代理节点
+  const handleDeleteProxy = useCallback(() => {
+    if (!selectedNodeId || !selectedNodeId.startsWith('proxy-')) return;
+    const nodeIndex = parseInt(selectedNodeId.replace('proxy-', ''), 10);
+    const newChainConfig = chainConfig.filter((_, i) => i !== nodeIndex);
+    onChainConfigChange?.(newChainConfig);
+    setPanelOpen(false);
+  }, [selectedNodeId, chainConfig, onChainConfigChange]);
+
+  // 节点点击
+  const onNodeClick = useCallback(
+    (event, node) => {
+      if (node.type === 'proxy') {
+        const nodeIndex = parseInt(node.id.replace('proxy-', ''), 10);
+        setSelectedNodeId(node.id);
+        setEditingProxyConfig({ ...chainConfig[nodeIndex] });
         setPanelType('proxy');
         setPanelOpen(true);
-    }, [chainConfig, onChainConfigChange]);
+      } else if (node.type === 'end') {
+        setSelectedNodeId('end');
+        setEditingTargetConfig({ ...targetConfig });
+        setPanelType('target');
+        setPanelOpen(true);
+      }
+    },
+    [chainConfig, targetConfig]
+  );
 
-    // 删除代理节点
-    const handleDeleteProxy = useCallback(() => {
-        if (!selectedNodeId || !selectedNodeId.startsWith('proxy-')) return;
-        const nodeIndex = parseInt(selectedNodeId.replace('proxy-', ''), 10);
-        const newChainConfig = chainConfig.filter((_, i) => i !== nodeIndex);
-        onChainConfigChange?.(newChainConfig);
-        setPanelOpen(false);
-    }, [selectedNodeId, chainConfig, onChainConfigChange]);
+  // 保存代理配置
+  const handleSaveProxyConfig = useCallback(() => {
+    if (!selectedNodeId || !editingProxyConfig) return;
+    const nodeIndex = parseInt(selectedNodeId.replace('proxy-', ''), 10);
+    const newChainConfig = [...chainConfig];
+    newChainConfig[nodeIndex] = editingProxyConfig;
+    onChainConfigChange?.(newChainConfig);
+    setPanelOpen(false);
+  }, [selectedNodeId, editingProxyConfig, chainConfig, onChainConfigChange]);
 
-    // 节点点击
-    const onNodeClick = useCallback(
-        (event, node) => {
-            if (node.type === 'proxy') {
-                const nodeIndex = parseInt(node.id.replace('proxy-', ''), 10);
-                setSelectedNodeId(node.id);
-                setEditingProxyConfig({ ...chainConfig[nodeIndex] });
-                setPanelType('proxy');
-                setPanelOpen(true);
-            } else if (node.type === 'end') {
-                setSelectedNodeId('end');
-                setEditingTargetConfig({ ...targetConfig });
-                setPanelType('target');
-                setPanelOpen(true);
-            }
-        },
-        [chainConfig, targetConfig]
-    );
+  // 保存目标配置
+  const handleSaveTargetConfig = useCallback(() => {
+    if (!editingTargetConfig) return;
+    onTargetConfigChange?.(editingTargetConfig);
+    setPanelOpen(false);
+  }, [editingTargetConfig, onTargetConfigChange]);
 
-    // 保存代理配置
-    const handleSaveProxyConfig = useCallback(() => {
-        if (!selectedNodeId || !editingProxyConfig) return;
-        const nodeIndex = parseInt(selectedNodeId.replace('proxy-', ''), 10);
-        const newChainConfig = [...chainConfig];
-        newChainConfig[nodeIndex] = editingProxyConfig;
-        onChainConfigChange?.(newChainConfig);
-        setPanelOpen(false);
-    }, [selectedNodeId, editingProxyConfig, chainConfig, onChainConfigChange]);
-
-    // 保存目标配置
-    const handleSaveTargetConfig = useCallback(() => {
-        if (!editingTargetConfig) return;
-        onTargetConfigChange?.(editingTargetConfig);
-        setPanelOpen(false);
-    }, [editingTargetConfig, onTargetConfigChange]);
-
-    // 渲染代理配置面板
-    const renderProxyConfigPanel = () => {
-        if (!editingProxyConfig) return null;
-
-        return (
-            <Stack spacing={2} sx={{ pt: 0.5 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="subtitle1" fontWeight="bold">代理节点配置</Typography>
-                    <IconButton size="small" onClick={() => setPanelOpen(false)}>
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
-                </Stack>
-
-                <FormControl size="small" fullWidth>
-                    <InputLabel>代理类型</InputLabel>
-                    <Select
-                        value={editingProxyConfig.type || 'template_group'}
-                        label="代理类型"
-                        onChange={(e) =>
-                            setEditingProxyConfig({
-                                type: e.target.value,
-                                groupName: '',
-                                nodeId: undefined,
-                                nodeConditions: undefined,
-                            })
-                        }
-                    >
-                        <MenuItem value="template_group">模板代理组</MenuItem>
-                        <MenuItem value="custom_group">自定义代理组</MenuItem>
-                        <MenuItem value="dynamic_node">动态条件节点</MenuItem>
-                        <MenuItem value="specified_node">指定节点</MenuItem>
-                    </Select>
-                </FormControl>
-
-                {editingProxyConfig.type === 'template_group' && (
-                    <Autocomplete
-                        freeSolo
-                        size="small"
-                        fullWidth
-                        options={templateGroups || []}
-                        value={editingProxyConfig.groupName || ''}
-                        onChange={(e, newValue) => setEditingProxyConfig({ ...editingProxyConfig, groupName: newValue || '' })}
-                        onInputChange={(e, newValue) => setEditingProxyConfig({ ...editingProxyConfig, groupName: newValue || '' })}
-                        renderInput={(params) => (
-                            <TextField
-                                {...params}
-                                label="代理组名称"
-                                placeholder="选择或输入代理组名称"
-                                helperText="从模板中选择或手动输入代理组名称"
-                            />
-                        )}
-                    />
-                )}
-
-                {editingProxyConfig.type === 'custom_group' && (
-                    <>
-                        <TextField
-                            size="small"
-                            fullWidth
-                            label="代理组名称"
-                            placeholder="自定义代理组名称"
-                            value={editingProxyConfig.groupName || ''}
-                            onChange={(e) => setEditingProxyConfig({ ...editingProxyConfig, groupName: e.target.value })}
-                        />
-                        <FormControl size="small" fullWidth>
-                            <InputLabel>组类型</InputLabel>
-                            <Select
-                                value={editingProxyConfig.groupType || 'select'}
-                                label="组类型"
-                                onChange={(e) => setEditingProxyConfig({ ...editingProxyConfig, groupType: e.target.value })}
-                            >
-                                {(groupTypes || []).map((gt) => (
-                                    <MenuItem key={gt.value} value={gt.value}>
-                                        {gt.label}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        <ConditionBuilder
-                            title="节点筛选条件"
-                            value={editingProxyConfig.nodeConditions}
-                            onChange={(conds) => setEditingProxyConfig({ ...editingProxyConfig, nodeConditions: conds })}
-                            fields={fields}
-                            operators={operators}
-                        />
-                    </>
-                )}
-
-                {editingProxyConfig.type === 'dynamic_node' && (
-                    <>
-                        <FormControl size="small" fullWidth>
-                            <InputLabel>选择模式</InputLabel>
-                            <Select
-                                value={editingProxyConfig.selectMode || 'first'}
-                                label="选择模式"
-                                onChange={(e) => setEditingProxyConfig({ ...editingProxyConfig, selectMode: e.target.value })}
-                            >
-                                <MenuItem value="first">第一个匹配</MenuItem>
-                                <MenuItem value="random">随机</MenuItem>
-                                <MenuItem value="fastest">最快节点</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <ConditionBuilder
-                            title="节点匹配条件"
-                            value={editingProxyConfig.nodeConditions}
-                            onChange={(conds) => setEditingProxyConfig({ ...editingProxyConfig, nodeConditions: conds })}
-                            fields={fields}
-                            operators={operators}
-                        />
-                    </>
-                )}
-
-                {editingProxyConfig.type === 'specified_node' && (
-                    <Autocomplete
-                        size="small"
-                        options={availableNodes || []}
-                        getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || '未知'})`}
-                        value={(availableNodes || []).find((n) => n.id === editingProxyConfig.nodeId) || null}
-                        onChange={(e, newValue) => setEditingProxyConfig({ ...editingProxyConfig, nodeId: newValue?.id })}
-                        renderInput={(params) => <TextField {...params} label="选择节点" />}
-                        renderOption={(props, option) => (
-                            <li {...props} key={option.id}>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography variant="body2">{option.name || option.linkName}</Typography>
-                                    <Chip label={option.linkCountry || '未知'} size="small" variant="outlined" />
-                                </Stack>
-                            </li>
-                        )}
-                    />
-                )}
-
-                <Divider />
-
-                <Stack direction="row" spacing={1} justifyContent="space-between">
-                    <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteProxy}>
-                        删除
-                    </Button>
-                    <Button size="small" variant="contained" onClick={handleSaveProxyConfig}>
-                        确定
-                    </Button>
-                </Stack>
-            </Stack>
-        );
-    };
-
-    // 渲染目标节点配置面板
-    const renderTargetConfigPanel = () => {
-        if (!editingTargetConfig) return null;
-
-        return (
-            <Stack spacing={2} sx={{ pt: 0.5 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="subtitle1" fontWeight="bold">目标节点配置</Typography>
-                    <IconButton size="small" onClick={() => setPanelOpen(false)}>
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
-                </Stack>
-
-                <Typography variant="body2" color="text.secondary">
-                    选择应用此规则的节点范围
-                </Typography>
-
-                <ToggleButtonGroup
-                    value={editingTargetConfig.type || 'specified_node'}
-                    exclusive
-                    onChange={(e, newType) => {
-                        if (newType !== null) {
-                            setEditingTargetConfig({ ...editingTargetConfig, type: newType, nodeId: undefined, conditions: undefined });
-                        }
-                    }}
-                    size="small"
-                    color="primary"
-                    fullWidth
-                >
-                    <Tooltip title="手动指定唯一一个目标节点" arrow>
-                        <ToggleButton value="specified_node">指定节点</ToggleButton>
-                    </Tooltip>
-                    <Tooltip title="规则应用于所有节点" arrow>
-                        <ToggleButton value="all">所有节点</ToggleButton>
-                    </Tooltip>
-                    <Tooltip title="根据条件筛选节点" arrow>
-                        <ToggleButton value="conditions">按条件</ToggleButton>
-                    </Tooltip>
-                </ToggleButtonGroup>
-
-                {/* 指定节点选择 */}
-                {editingTargetConfig.type === 'specified_node' && (
-                    <Autocomplete
-                        size="small"
-                        options={availableNodes || []}
-                        getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || '未知'})`}
-                        value={(availableNodes || []).find((n) => n.id === editingTargetConfig.nodeId) || null}
-                        onChange={(e, newValue) => setEditingTargetConfig({ ...editingTargetConfig, nodeId: newValue?.id })}
-                        renderInput={(params) => <TextField {...params} label="选择目标节点" placeholder="搜索节点..." />}
-                        renderOption={(props, option) => (
-                            <li {...props} key={option.id}>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography variant="body2">{option.name || option.linkName}</Typography>
-                                    <Chip label={option.linkCountry || '未知'} size="small" variant="outlined" />
-                                    <Chip label={option.protocol || 'unknown'} size="small" color="info" variant="outlined" />
-                                </Stack>
-                            </li>
-                        )}
-                    />
-                )}
-
-                {/* 条件筛选 */}
-                {editingTargetConfig.type === 'conditions' && (
-                    <ConditionBuilder
-                        title="目标节点筛选条件"
-                        value={editingTargetConfig.conditions}
-                        onChange={(conds) => setEditingTargetConfig({ ...editingTargetConfig, conditions: conds })}
-                        fields={fields}
-                        operators={operators}
-                    />
-                )}
-
-                <Divider />
-
-                <Stack direction="row" justifyContent="flex-end">
-                    <Button size="small" variant="contained" onClick={handleSaveTargetConfig}>
-                        确定
-                    </Button>
-                </Stack>
-            </Stack>
-        );
-    };
-
-    // 处理节点拖拽结束事件，保存位置
-    const onNodeDragStop = useCallback((event, node) => {
-        if (node.id.startsWith('proxy-')) {
-            const nodeIndex = parseInt(node.id.replace('proxy-', ''), 10);
-            const newChainConfig = [...chainConfig];
-            if (newChainConfig[nodeIndex]) {
-                newChainConfig[nodeIndex] = {
-                    ...newChainConfig[nodeIndex],
-                    position: node.position,
-                };
-                onChainConfigChange?.(newChainConfig);
-            }
-        } else if (node.id === 'end') {
-            // 保存结束节点位置
-            onTargetConfigChange?.({
-                ...targetConfig,
-                endPosition: node.position,
-            });
-        }
-    }, [chainConfig, targetConfig, onChainConfigChange, onTargetConfigChange]);
+  // 渲染代理配置面板
+  const renderProxyConfigPanel = () => {
+    if (!editingProxyConfig) return null;
 
     return (
-        <Box sx={{ height: 450, width: '100%', display: 'flex', border: '1px solid #e0e0e0', borderRadius: 2, overflow: 'hidden' }}>
-            {/* 流程图区域 */}
-            <Box sx={{ flex: 1, position: 'relative', minWidth: 0 }}>
-                <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onNodeClick={onNodeClick}
-                    onNodeDragStop={onNodeDragStop}
-                    nodeTypes={nodeTypes}
-                    defaultEdgeOptions={defaultEdgeOptions}
-                    fitView
-                    fitViewOptions={{ padding: 0.3, minZoom: 0.5, maxZoom: 1.2 }}
-                    minZoom={0.3}
-                    maxZoom={1.5}
-                    proOptions={{ hideAttribution: true }}
-                    nodesConnectable={false}
-                    elementsSelectable={true}
-                >
-                    <Background color="#f5f5f5" gap={20} />
-                    <Controls showInteractive={false} />
-                </ReactFlow>
+      <Stack spacing={2} sx={{ pt: 0.5 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Typography variant="subtitle1" fontWeight="bold">
+            代理节点配置
+          </Typography>
+          <IconButton size="small" onClick={() => setPanelOpen(false)}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Stack>
 
-                {/* 添加代理按钮 - 限制只能添加一个入口代理 */}
-                <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 10 }}>
-                    <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={handleAddProxy}
-                        size="small"
-                        disabled={chainConfig.length >= 1}
-                    >
-                        {chainConfig.length >= 1 ? '已配置入口代理' : '添加代理节点'}
-                    </Button>
-                </Box>
+        <FormControl size="small" fullWidth>
+          <InputLabel>代理类型</InputLabel>
+          <Select
+            value={editingProxyConfig.type || 'template_group'}
+            label="代理类型"
+            onChange={(e) =>
+              setEditingProxyConfig({
+                type: e.target.value,
+                groupName: '',
+                nodeId: undefined,
+                nodeConditions: undefined
+              })
+            }
+          >
+            <MenuItem value="template_group">模板代理组</MenuItem>
+            <MenuItem value="custom_group">自定义代理组</MenuItem>
+            <MenuItem value="dynamic_node">动态条件节点</MenuItem>
+            <MenuItem value="specified_node">指定节点</MenuItem>
+          </Select>
+        </FormControl>
 
-                {/* 提示文字 */}
-                <Box sx={{ position: 'absolute', bottom: 10, left: 10, zIndex: 10 }}>
-                    <Typography variant="caption" color="text.secondary">
-                        点击节点进行配置
-                    </Typography>
-                </Box>
-            </Box>
-
-            {/* 配置面板 - 内联显示在右侧 */}
-            {panelOpen && (
-                <Fade in={panelOpen}>
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            width: 500,
-                            minWidth: 500,
-                            borderLeft: '1px solid #e0e0e0',
-                            p: 2.5,
-                            overflow: 'auto',
-                            backgroundColor: '#fafafa',
-                        }}
-                    >
-                        {panelType === 'proxy' ? renderProxyConfigPanel() : renderTargetConfigPanel()}
-                    </Paper>
-                </Fade>
+        {editingProxyConfig.type === 'template_group' && (
+          <Autocomplete
+            freeSolo
+            size="small"
+            fullWidth
+            options={templateGroups || []}
+            value={editingProxyConfig.groupName || ''}
+            onChange={(e, newValue) => setEditingProxyConfig({ ...editingProxyConfig, groupName: newValue || '' })}
+            onInputChange={(e, newValue) => setEditingProxyConfig({ ...editingProxyConfig, groupName: newValue || '' })}
+            renderInput={(params) => (
+              <TextField {...params} label="代理组名称" placeholder="选择或输入代理组名称" helperText="从模板中选择或手动输入代理组名称" />
             )}
-        </Box>
+          />
+        )}
+
+        {editingProxyConfig.type === 'custom_group' && (
+          <>
+            <TextField
+              size="small"
+              fullWidth
+              label="代理组名称"
+              placeholder="自定义代理组名称"
+              value={editingProxyConfig.groupName || ''}
+              onChange={(e) => setEditingProxyConfig({ ...editingProxyConfig, groupName: e.target.value })}
+            />
+            <FormControl size="small" fullWidth>
+              <InputLabel>组类型</InputLabel>
+              <Select
+                value={editingProxyConfig.groupType || 'select'}
+                label="组类型"
+                onChange={(e) => setEditingProxyConfig({ ...editingProxyConfig, groupType: e.target.value })}
+              >
+                {(groupTypes || []).map((gt) => (
+                  <MenuItem key={gt.value} value={gt.value}>
+                    {gt.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <ConditionBuilder
+              title="节点筛选条件"
+              value={editingProxyConfig.nodeConditions}
+              onChange={(conds) => setEditingProxyConfig({ ...editingProxyConfig, nodeConditions: conds })}
+              fields={fields}
+              operators={operators}
+            />
+          </>
+        )}
+
+        {editingProxyConfig.type === 'dynamic_node' && (
+          <>
+            <FormControl size="small" fullWidth>
+              <InputLabel>选择模式</InputLabel>
+              <Select
+                value={editingProxyConfig.selectMode || 'first'}
+                label="选择模式"
+                onChange={(e) => setEditingProxyConfig({ ...editingProxyConfig, selectMode: e.target.value })}
+              >
+                <MenuItem value="first">第一个匹配</MenuItem>
+                <MenuItem value="random">随机</MenuItem>
+                <MenuItem value="fastest">最快节点</MenuItem>
+              </Select>
+            </FormControl>
+            <ConditionBuilder
+              title="节点匹配条件"
+              value={editingProxyConfig.nodeConditions}
+              onChange={(conds) => setEditingProxyConfig({ ...editingProxyConfig, nodeConditions: conds })}
+              fields={fields}
+              operators={operators}
+            />
+          </>
+        )}
+
+        {editingProxyConfig.type === 'specified_node' && (
+          <Autocomplete
+            size="small"
+            options={availableNodes || []}
+            getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || '未知'})`}
+            value={(availableNodes || []).find((n) => n.id === editingProxyConfig.nodeId) || null}
+            onChange={(e, newValue) => setEditingProxyConfig({ ...editingProxyConfig, nodeId: newValue?.id })}
+            renderInput={(params) => <TextField {...params} label="选择节点" />}
+            renderOption={(props, option) => (
+              <li {...props} key={option.id}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="body2">{option.name || option.linkName}</Typography>
+                  <Chip label={option.linkCountry || '未知'} size="small" variant="outlined" />
+                </Stack>
+              </li>
+            )}
+          />
+        )}
+
+        <Divider />
+
+        <Stack direction="row" spacing={1} justifyContent="space-between">
+          <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteProxy}>
+            删除
+          </Button>
+          <Button size="small" variant="contained" onClick={handleSaveProxyConfig}>
+            确定
+          </Button>
+        </Stack>
+      </Stack>
     );
+  };
+
+  // 渲染目标节点配置面板
+  const renderTargetConfigPanel = () => {
+    if (!editingTargetConfig) return null;
+
+    return (
+      <Stack spacing={2} sx={{ pt: 0.5 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Typography variant="subtitle1" fontWeight="bold">
+            目标节点配置
+          </Typography>
+          <IconButton size="small" onClick={() => setPanelOpen(false)}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Stack>
+
+        <Typography variant="body2" color="text.secondary">
+          选择应用此规则的节点范围
+        </Typography>
+
+        <ToggleButtonGroup
+          value={editingTargetConfig.type || 'specified_node'}
+          exclusive
+          onChange={(e, newType) => {
+            if (newType !== null) {
+              setEditingTargetConfig({ ...editingTargetConfig, type: newType, nodeId: undefined, conditions: undefined });
+            }
+          }}
+          size="small"
+          color="primary"
+          fullWidth
+        >
+          <Tooltip title="手动指定唯一一个目标节点" arrow>
+            <ToggleButton value="specified_node">指定节点</ToggleButton>
+          </Tooltip>
+          <Tooltip title="规则应用于所有节点" arrow>
+            <ToggleButton value="all">所有节点</ToggleButton>
+          </Tooltip>
+          <Tooltip title="根据条件筛选节点" arrow>
+            <ToggleButton value="conditions">按条件</ToggleButton>
+          </Tooltip>
+        </ToggleButtonGroup>
+
+        {/* 指定节点选择 */}
+        {editingTargetConfig.type === 'specified_node' && (
+          <Autocomplete
+            size="small"
+            options={availableNodes || []}
+            getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || '未知'})`}
+            value={(availableNodes || []).find((n) => n.id === editingTargetConfig.nodeId) || null}
+            onChange={(e, newValue) => setEditingTargetConfig({ ...editingTargetConfig, nodeId: newValue?.id })}
+            renderInput={(params) => <TextField {...params} label="选择目标节点" placeholder="搜索节点..." />}
+            renderOption={(props, option) => (
+              <li {...props} key={option.id}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="body2">{option.name || option.linkName}</Typography>
+                  <Chip label={option.linkCountry || '未知'} size="small" variant="outlined" />
+                  <Chip label={option.protocol || 'unknown'} size="small" color="info" variant="outlined" />
+                </Stack>
+              </li>
+            )}
+          />
+        )}
+
+        {/* 条件筛选 */}
+        {editingTargetConfig.type === 'conditions' && (
+          <ConditionBuilder
+            title="目标节点筛选条件"
+            value={editingTargetConfig.conditions}
+            onChange={(conds) => setEditingTargetConfig({ ...editingTargetConfig, conditions: conds })}
+            fields={fields}
+            operators={operators}
+          />
+        )}
+
+        <Divider />
+
+        <Stack direction="row" justifyContent="flex-end">
+          <Button size="small" variant="contained" onClick={handleSaveTargetConfig}>
+            确定
+          </Button>
+        </Stack>
+      </Stack>
+    );
+  };
+
+  // 处理节点拖拽结束事件，保存位置
+  const onNodeDragStop = useCallback(
+    (event, node) => {
+      if (node.id.startsWith('proxy-')) {
+        const nodeIndex = parseInt(node.id.replace('proxy-', ''), 10);
+        const newChainConfig = [...chainConfig];
+        if (newChainConfig[nodeIndex]) {
+          newChainConfig[nodeIndex] = {
+            ...newChainConfig[nodeIndex],
+            position: node.position
+          };
+          onChainConfigChange?.(newChainConfig);
+        }
+      } else if (node.id === 'end') {
+        // 保存结束节点位置
+        onTargetConfigChange?.({
+          ...targetConfig,
+          endPosition: node.position
+        });
+      }
+    },
+    [chainConfig, targetConfig, onChainConfigChange, onTargetConfigChange]
+  );
+
+  return (
+    <Box sx={{ height: 450, width: '100%', display: 'flex', border: '1px solid #e0e0e0', borderRadius: 2, overflow: 'hidden' }}>
+      {/* 流程图区域 */}
+      <Box sx={{ flex: 1, position: 'relative', minWidth: 0 }}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={onNodeClick}
+          onNodeDragStop={onNodeDragStop}
+          nodeTypes={nodeTypes}
+          defaultEdgeOptions={defaultEdgeOptions}
+          fitView
+          fitViewOptions={{ padding: 0.3, minZoom: 0.5, maxZoom: 1.2 }}
+          minZoom={0.3}
+          maxZoom={1.5}
+          proOptions={{ hideAttribution: true }}
+          nodesConnectable={false}
+          elementsSelectable={true}
+        >
+          <Background color="#f5f5f5" gap={20} />
+          <Controls showInteractive={false} />
+        </ReactFlow>
+
+        {/* 添加代理按钮 - 限制只能添加一个入口代理 */}
+        <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 10 }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddProxy} size="small" disabled={chainConfig.length >= 1}>
+            {chainConfig.length >= 1 ? '已配置入口代理' : '添加代理节点'}
+          </Button>
+        </Box>
+
+        {/* 提示文字 */}
+        <Box sx={{ position: 'absolute', bottom: 10, left: 10, zIndex: 10 }}>
+          <Typography variant="caption" color="text.secondary">
+            点击节点进行配置
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* 配置面板 - 内联显示在右侧 */}
+      {panelOpen && (
+        <Fade in={panelOpen}>
+          <Paper
+            elevation={0}
+            sx={{
+              width: 500,
+              minWidth: 500,
+              borderLeft: '1px solid #e0e0e0',
+              p: 2.5,
+              overflow: 'auto',
+              backgroundColor: '#fafafa'
+            }}
+          >
+            {panelType === 'proxy' ? renderProxyConfigPanel() : renderTargetConfigPanel()}
+          </Paper>
+        </Fade>
+      )}
+    </Box>
+  );
 }

@@ -12,8 +12,6 @@ import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import Switch from '@mui/material/Switch';
 import CircularProgress from '@mui/material/CircularProgress';
-import Divider from '@mui/material/Divider';
-import Alert from '@mui/material/Alert';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -30,13 +28,13 @@ import TouchAppIcon from '@mui/icons-material/TouchApp';
 
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {
-    getChainRules,
-    createChainRule,
-    updateChainRule,
-    deleteChainRule,
-    toggleChainRule,
-    sortChainRules,
-    getChainOptions
+  getChainRules,
+  createChainRule,
+  updateChainRule,
+  deleteChainRule,
+  toggleChainRule,
+  sortChainRules,
+  getChainOptions
 } from '../../../api/subscriptions';
 import ChainRuleEditor from './ChainRuleEditor';
 
@@ -45,465 +43,406 @@ import ChainRuleEditor from './ChainRuleEditor';
  * 支持移动端响应式布局
  */
 export default function ChainProxyDialog({ open, onClose, subscription }) {
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-    const [loading, setLoading] = useState(false);
-    const [rules, setRules] = useState([]);
-    const [options, setOptions] = useState({ nodes: [], conditionFields: [], operators: [], groupTypes: [], templateGroups: [] });
-    const [editingRule, setEditingRule] = useState(null);
-    const [editMode, setEditMode] = useState(false); // false: 列表模式, true: 编辑模式
+  const [loading, setLoading] = useState(false);
+  const [rules, setRules] = useState([]);
+  const [options, setOptions] = useState({ nodes: [], conditionFields: [], operators: [], groupTypes: [], templateGroups: [] });
+  const [editingRule, setEditingRule] = useState(null);
+  const [editMode, setEditMode] = useState(false); // false: 列表模式, true: 编辑模式
 
-    // 加载数据
-    const loadData = useCallback(async () => {
-        if (!subscription?.ID) return;
-        setLoading(true);
-        try {
-            const [rulesRes, optionsRes] = await Promise.all([
-                getChainRules(subscription.ID),
-                getChainOptions(subscription.ID)
-            ]);
-            // request 拦截器已返回 response.data，所以这里直接取 .data
-            setRules(rulesRes?.data || []);
-            setOptions(optionsRes?.data || { nodes: [], conditionFields: [], operators: [], groupTypes: [], templateGroups: [] });
-        } catch (err) {
-            console.error('加载链式代理数据失败:', err);
-        } finally {
-            setLoading(false);
+  // 加载数据
+  const loadData = useCallback(async () => {
+    if (!subscription?.ID) return;
+    setLoading(true);
+    try {
+      const [rulesRes, optionsRes] = await Promise.all([getChainRules(subscription.ID), getChainOptions(subscription.ID)]);
+      // request 拦截器已返回 response.data，所以这里直接取 .data
+      setRules(rulesRes?.data || []);
+      setOptions(optionsRes?.data || { nodes: [], conditionFields: [], operators: [], groupTypes: [], templateGroups: [] });
+    } catch (err) {
+      console.error('加载链式代理数据失败:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [subscription?.ID]);
+
+  useEffect(() => {
+    if (open && subscription?.ID) {
+      loadData();
+    }
+  }, [open, subscription?.ID, loadData]);
+
+  // 添加规则
+  const handleAdd = () => {
+    setEditingRule({
+      name: '',
+      enabled: true,
+      chainConfig: '[]',
+      targetConfig: '{"type":"specified_node"}'
+    });
+    setEditMode(true);
+  };
+
+  // 编辑规则
+  const handleEdit = (rule) => {
+    setEditingRule(rule);
+    setEditMode(true);
+  };
+
+  // 保存规则
+  const handleSave = async () => {
+    if (!editingRule) return;
+
+    setLoading(true);
+    try {
+      if (editingRule.id) {
+        // 更新
+        await updateChainRule(subscription.ID, editingRule.id, editingRule);
+      } else {
+        // 创建
+        await createChainRule(subscription.ID, editingRule);
+      }
+      await loadData();
+      setEditMode(false);
+      setEditingRule(null);
+    } catch (err) {
+      console.error('保存规则失败:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 删除规则
+  const handleDelete = async (rule) => {
+    if (!window.confirm(`确定删除规则「${rule.name}」吗？`)) return;
+
+    setLoading(true);
+    try {
+      await deleteChainRule(subscription.ID, rule.id);
+      await loadData();
+    } catch (err) {
+      console.error('删除规则失败:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 切换启用状态
+  const handleToggle = async (rule) => {
+    try {
+      await toggleChainRule(subscription.ID, rule.id);
+      await loadData();
+    } catch (err) {
+      console.error('切换规则状态失败:', err);
+    }
+  };
+
+  // 拖拽排序
+  const handleDragEnd = async (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(rules);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    setRules(items);
+
+    // 保存排序
+    try {
+      await sortChainRules(
+        subscription.ID,
+        items.map((r) => r.id)
+      );
+    } catch (err) {
+      console.error('保存排序失败:', err);
+      await loadData(); // 恢复原顺序
+    }
+  };
+
+  // 规则编辑器数据变化
+  const handleRuleChange = (data) => {
+    setEditingRule({ ...editingRule, ...data });
+  };
+
+  // 返回列表
+  const handleBack = () => {
+    setEditMode(false);
+    setEditingRule(null);
+  };
+
+  // 解析代理链配置用于显示
+  const parseChainConfig = (configStr) => {
+    try {
+      const config = JSON.parse(configStr || '[]');
+      return config.map((item) => item.groupName || item.type).filter(Boolean);
+    } catch {
+      return [];
+    }
+  };
+
+  // 解析目标配置用于显示
+  const parseTargetConfig = (configStr) => {
+    try {
+      const config = JSON.parse(configStr || '{}');
+      if (config.type === 'all') return '所有节点';
+      if (config.type === 'specified_node') {
+        if (config.nodeId) {
+          // 尝试从 options.nodes 查找节点名称
+          const node = (options.nodes || []).find((n) => n.id === config.nodeId);
+          if (node) {
+            return node.name || node.linkName || `节点 #${config.nodeId}`;
+          }
+          return `节点 #${config.nodeId}`;
         }
-    }, [subscription?.ID]);
+        return '未选择节点';
+      }
+      if (config.type === 'conditions' && config.conditions?.conditions?.length > 0) {
+        return `${config.conditions.conditions.length} 个条件`;
+      }
+      return '未配置';
+    } catch {
+      return '未配置';
+    }
+  };
 
-    useEffect(() => {
-        if (open && subscription?.ID) {
-            loadData();
-        }
-    }, [open, subscription?.ID, loadData]);
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{
+        sx: isMobile ? { borderRadius: 0 } : { minHeight: '80vh', borderRadius: 2 }
+      }}
+    >
+      <DialogTitle sx={{ pb: 1.5 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <AccountTreeIcon color="primary" />
+            <Box>
+              <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600}>
+                链式代理配置
+              </Typography>
+              {isMobile && (
+                <Typography variant="caption" color="text.secondary">
+                  {subscription?.Name}
+                </Typography>
+              )}
+              {!isMobile && (
+                <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                  - {subscription?.Name}
+                </Typography>
+              )}
+            </Box>
+          </Stack>
+          <IconButton onClick={onClose} size="small">
+            <CloseIcon />
+          </IconButton>
+        </Stack>
+      </DialogTitle>
 
-    // 添加规则
-    const handleAdd = () => {
-        setEditingRule({
-            name: '',
-            enabled: true,
-            chainConfig: '[]',
-            targetConfig: '{"type":"specified_node"}'
-        });
-        setEditMode(true);
-    };
+      <DialogContent dividers sx={{ p: isMobile ? 2 : 3 }}>
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        )}
 
-    // 编辑规则
-    const handleEdit = (rule) => {
-        setEditingRule(rule);
-        setEditMode(true);
-    };
+        {!loading && !editMode && (
+          <Box>
+            {/* 说明文字 */}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              链式代理规则用于配置节点的前置代理。规则按顺序匹配，第一个匹配的规则生效。
+            </Typography>
 
-    // 保存规则
-    const handleSave = async () => {
-        if (!editingRule) return;
-
-        setLoading(true);
-        try {
-            if (editingRule.id) {
-                // 更新
-                await updateChainRule(subscription.ID, editingRule.id, editingRule);
-            } else {
-                // 创建
-                await createChainRule(subscription.ID, editingRule);
-            }
-            await loadData();
-            setEditMode(false);
-            setEditingRule(null);
-        } catch (err) {
-            console.error('保存规则失败:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // 删除规则
-    const handleDelete = async (rule) => {
-        if (!window.confirm(`确定删除规则「${rule.name}」吗？`)) return;
-
-        setLoading(true);
-        try {
-            await deleteChainRule(subscription.ID, rule.id);
-            await loadData();
-        } catch (err) {
-            console.error('删除规则失败:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // 切换启用状态
-    const handleToggle = async (rule) => {
-        try {
-            await toggleChainRule(subscription.ID, rule.id);
-            await loadData();
-        } catch (err) {
-            console.error('切换规则状态失败:', err);
-        }
-    };
-
-    // 拖拽排序
-    const handleDragEnd = async (result) => {
-        if (!result.destination) return;
-
-        const items = Array.from(rules);
-        const [reorderedItem] = items.splice(result.source.index, 1);
-        items.splice(result.destination.index, 0, reorderedItem);
-        setRules(items);
-
-        // 保存排序
-        try {
-            await sortChainRules(subscription.ID, items.map((r) => r.id));
-        } catch (err) {
-            console.error('保存排序失败:', err);
-            await loadData(); // 恢复原顺序
-        }
-    };
-
-    // 规则编辑器数据变化
-    const handleRuleChange = (data) => {
-        setEditingRule({ ...editingRule, ...data });
-    };
-
-    // 返回列表
-    const handleBack = () => {
-        setEditMode(false);
-        setEditingRule(null);
-    };
-
-    // 解析代理链配置用于显示
-    const parseChainConfig = (configStr) => {
-        try {
-            const config = JSON.parse(configStr || '[]');
-            return config.map((item) => item.groupName || item.type).filter(Boolean);
-        } catch {
-            return [];
-        }
-    };
-
-    // 解析目标配置用于显示
-    const parseTargetConfig = (configStr) => {
-        try {
-            const config = JSON.parse(configStr || '{}');
-            if (config.type === 'all') return '所有节点';
-            if (config.type === 'specified_node') {
-                if (config.nodeId) {
-                    // 尝试从 options.nodes 查找节点名称
-                    const node = (options.nodes || []).find(n => n.id === config.nodeId);
-                    if (node) {
-                        return node.name || node.linkName || `节点 #${config.nodeId}`;
-                    }
-                    return `节点 #${config.nodeId}`;
-                }
-                return '未选择节点';
-            }
-            if (config.type === 'conditions' && config.conditions?.conditions?.length > 0) {
-                return `${config.conditions.conditions.length} 个条件`;
-            }
-            return '未配置';
-        } catch {
-            return '未配置';
-        }
-    };
-
-    return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            maxWidth="lg"
-            fullWidth
-            fullScreen={isMobile}
-            PaperProps={{
-                sx: isMobile
-                    ? { borderRadius: 0 }
-                    : { minHeight: '80vh', borderRadius: 2 }
-            }}
-        >
-            <DialogTitle sx={{ pb: 1.5 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                        <AccountTreeIcon color="primary" />
-                        <Box>
-                            <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600}>
-                                链式代理配置
+            {/* 规则列表 - 移动端使用卡片布局 */}
+            {isMobile ? (
+              // 移动端卡片布局
+              <Stack spacing={1.5}>
+                {rules.map((rule) => (
+                  <Card
+                    key={rule.id}
+                    variant="outlined"
+                    sx={{
+                      borderRadius: 2,
+                      opacity: rule.enabled ? 1 : 0.6,
+                      transition: 'all 0.2s ease',
+                      '&:active': { transform: 'scale(0.98)' }
+                    }}
+                  >
+                    <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                      <Stack spacing={1.5}>
+                        {/* 规则名称和状态 */}
+                        <Stack direction="row" alignItems="center" justifyContent="space-between">
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <Typography variant="subtitle1" fontWeight={600}>
+                              {rule.name || '未命名规则'}
                             </Typography>
-                            {isMobile && (
-                                <Typography variant="caption" color="text.secondary">
-                                    {subscription?.Name}
-                                </Typography>
-                            )}
-                            {!isMobile && (
-                                <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                                    - {subscription?.Name}
-                                </Typography>
-                            )}
-                        </Box>
-                    </Stack>
-                    <IconButton onClick={onClose} size="small">
-                        <CloseIcon />
-                    </IconButton>
-                </Stack>
-            </DialogTitle>
+                            {!rule.enabled && <Chip label="已禁用" size="small" color="default" />}
+                          </Stack>
+                          <Switch checked={rule.enabled} onChange={() => handleToggle(rule)} size="small" />
+                        </Stack>
 
-            <DialogContent dividers sx={{ p: isMobile ? 2 : 3 }}>
-                {loading && (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                        <CircularProgress />
-                    </Box>
-                )}
+                        {/* 代理链显示 */}
+                        <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
+                          {parseChainConfig(rule.chainConfig).map((name, i) => (
+                            <Chip key={i} label={name} size="small" color="primary" variant="outlined" sx={{ borderRadius: 1.5 }} />
+                          ))}
+                          <ArrowForwardIcon sx={{ fontSize: 16, color: 'text.secondary', mx: 0.5 }} />
+                          <Typography variant="body2" color="text.secondary">
+                            {parseTargetConfig(rule.targetConfig)}
+                          </Typography>
+                        </Stack>
 
-                {!loading && !editMode && (
-                    <Box>
-                        {/* 说明文字 */}
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            链式代理规则用于配置节点的前置代理。规则按顺序匹配，第一个匹配的规则生效。
-                        </Typography>
-
-                        {/* 规则列表 - 移动端使用卡片布局 */}
-                        {isMobile ? (
-                            // 移动端卡片布局
-                            <Stack spacing={1.5}>
-                                {rules.map((rule) => (
-                                    <Card
-                                        key={rule.id}
-                                        variant="outlined"
-                                        sx={{
-                                            borderRadius: 2,
-                                            opacity: rule.enabled ? 1 : 0.6,
-                                            transition: 'all 0.2s ease',
-                                            '&:active': { transform: 'scale(0.98)' }
-                                        }}
-                                    >
-                                        <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-                                            <Stack spacing={1.5}>
-                                                {/* 规则名称和状态 */}
-                                                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                                                    <Stack direction="row" alignItems="center" spacing={1}>
-                                                        <Typography variant="subtitle1" fontWeight={600}>
-                                                            {rule.name || '未命名规则'}
-                                                        </Typography>
-                                                        {!rule.enabled && (
-                                                            <Chip label="已禁用" size="small" color="default" />
-                                                        )}
-                                                    </Stack>
-                                                    <Switch
-                                                        checked={rule.enabled}
-                                                        onChange={() => handleToggle(rule)}
-                                                        size="small"
-                                                    />
-                                                </Stack>
-
-                                                {/* 代理链显示 */}
-                                                <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
-                                                    {parseChainConfig(rule.chainConfig).map((name, i) => (
-                                                        <Chip
-                                                            key={i}
-                                                            label={name}
-                                                            size="small"
-                                                            color="primary"
-                                                            variant="outlined"
-                                                            sx={{ borderRadius: 1.5 }}
-                                                        />
-                                                    ))}
-                                                    <ArrowForwardIcon sx={{ fontSize: 16, color: 'text.secondary', mx: 0.5 }} />
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {parseTargetConfig(rule.targetConfig)}
-                                                    </Typography>
-                                                </Stack>
-
-                                                {/* 操作按钮 - 移动端更大的触摸区域 */}
-                                                <Stack direction="row" spacing={1} justifyContent="flex-end">
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        startIcon={<EditIcon />}
-                                                        onClick={() => handleEdit(rule)}
-                                                        sx={{ minWidth: 80 }}
-                                                    >
-                                                        编辑
-                                                    </Button>
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        color="error"
-                                                        startIcon={<DeleteIcon />}
-                                                        onClick={() => handleDelete(rule)}
-                                                        sx={{ minWidth: 80 }}
-                                                    >
-                                                        删除
-                                                    </Button>
-                                                </Stack>
-                                            </Stack>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </Stack>
-                        ) : (
-                            // 桌面端拖拽布局
-                            <DragDropContext onDragEnd={handleDragEnd}>
-                                <Droppable droppableId="chain-rules">
-                                    {(provided) => (
-                                        <Stack
-                                            spacing={1}
-                                            {...provided.droppableProps}
-                                            ref={provided.innerRef}
-                                        >
-                                            {rules.map((rule, index) => (
-                                                <Draggable
-                                                    key={rule.id}
-                                                    draggableId={String(rule.id)}
-                                                    index={index}
-                                                >
-                                                    {(provided, snapshot) => (
-                                                        <Paper
-                                                            ref={provided.innerRef}
-                                                            {...provided.draggableProps}
-                                                            variant="outlined"
-                                                            sx={{
-                                                                p: 2,
-                                                                backgroundColor: snapshot.isDragging
-                                                                    ? 'action.hover'
-                                                                    : 'background.paper',
-                                                                opacity: rule.enabled ? 1 : 0.6
-                                                            }}
-                                                        >
-                                                            <Stack direction="row" alignItems="center" spacing={2}>
-                                                                {/* 拖拽手柄 */}
-                                                                <Box
-                                                                    {...provided.dragHandleProps}
-                                                                    sx={{ cursor: 'grab', color: 'text.secondary' }}
-                                                                >
-                                                                    <DragIndicatorIcon />
-                                                                </Box>
-
-                                                                {/* 规则信息 */}
-                                                                <Box sx={{ flex: 1 }}>
-                                                                    <Stack direction="row" alignItems="center" spacing={1}>
-                                                                        <Typography variant="subtitle2">
-                                                                            {rule.name || '未命名规则'}
-                                                                        </Typography>
-                                                                        {!rule.enabled && (
-                                                                            <Chip label="已禁用" size="small" color="default" />
-                                                                        )}
-                                                                    </Stack>
-                                                                    <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
-                                                                        {parseChainConfig(rule.chainConfig).map((name, i) => (
-                                                                            <Chip
-                                                                                key={i}
-                                                                                label={name}
-                                                                                size="small"
-                                                                                color="primary"
-                                                                                variant="outlined"
-                                                                            />
-                                                                        ))}
-                                                                        <Typography variant="caption" color="text.secondary">
-                                                                            → {parseTargetConfig(rule.targetConfig)}
-                                                                        </Typography>
-                                                                    </Stack>
-                                                                </Box>
-
-                                                                {/* 操作按钮 */}
-                                                                <Switch
-                                                                    checked={rule.enabled}
-                                                                    onChange={() => handleToggle(rule)}
-                                                                    size="small"
-                                                                />
-                                                                <IconButton
-                                                                    size="small"
-                                                                    onClick={() => handleEdit(rule)}
-                                                                >
-                                                                    <EditIcon fontSize="small" />
-                                                                </IconButton>
-                                                                <IconButton
-                                                                    size="small"
-                                                                    color="error"
-                                                                    onClick={() => handleDelete(rule)}
-                                                                >
-                                                                    <DeleteIcon fontSize="small" />
-                                                                </IconButton>
-                                                            </Stack>
-                                                        </Paper>
-                                                    )}
-                                                </Draggable>
-                                            ))}
-                                            {provided.placeholder}
-                                        </Stack>
-                                    )}
-                                </Droppable>
-                            </DragDropContext>
-                        )}
-
-                        {/* 空状态 */}
-                        {rules.length === 0 && (
+                        {/* 操作按钮 - 移动端更大的触摸区域 */}
+                        <Stack direction="row" spacing={1} justifyContent="flex-end">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<EditIcon />}
+                            onClick={() => handleEdit(rule)}
+                            sx={{ minWidth: 80 }}
+                          >
+                            编辑
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            startIcon={<DeleteIcon />}
+                            onClick={() => handleDelete(rule)}
+                            sx={{ minWidth: 80 }}
+                          >
+                            删除
+                          </Button>
+                        </Stack>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Stack>
+            ) : (
+              // 桌面端拖拽布局
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <Droppable droppableId="chain-rules">
+                  {(provided) => (
+                    <Stack spacing={1} {...provided.droppableProps} ref={provided.innerRef}>
+                      {rules.map((rule, index) => (
+                        <Draggable key={rule.id} draggableId={String(rule.id)} index={index}>
+                          {(provided, snapshot) => (
                             <Paper
-                                variant="outlined"
-                                sx={{
-                                    p: isMobile ? 3 : 4,
-                                    textAlign: 'center',
-                                    borderRadius: 2
-                                }}
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              variant="outlined"
+                              sx={{
+                                p: 2,
+                                backgroundColor: snapshot.isDragging ? 'action.hover' : 'background.paper',
+                                opacity: rule.enabled ? 1 : 0.6
+                              }}
                             >
-                                <TouchAppIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-                                <Typography color="text.secondary" gutterBottom>
-                                    暂无链式代理规则
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    链式代理可以为节点配置入口代理，实现流量中转
-                                </Typography>
-                                <Button
-                                    variant="contained"
-                                    startIcon={<AddIcon />}
-                                    onClick={handleAdd}
-                                    size={isMobile ? 'large' : 'medium'}
-                                >
-                                    添加规则
-                                </Button>
+                              <Stack direction="row" alignItems="center" spacing={2}>
+                                {/* 拖拽手柄 */}
+                                <Box {...provided.dragHandleProps} sx={{ cursor: 'grab', color: 'text.secondary' }}>
+                                  <DragIndicatorIcon />
+                                </Box>
+
+                                {/* 规则信息 */}
+                                <Box sx={{ flex: 1 }}>
+                                  <Stack direction="row" alignItems="center" spacing={1}>
+                                    <Typography variant="subtitle2">{rule.name || '未命名规则'}</Typography>
+                                    {!rule.enabled && <Chip label="已禁用" size="small" color="default" />}
+                                  </Stack>
+                                  <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                                    {parseChainConfig(rule.chainConfig).map((name, i) => (
+                                      <Chip key={i} label={name} size="small" color="primary" variant="outlined" />
+                                    ))}
+                                    <Typography variant="caption" color="text.secondary">
+                                      → {parseTargetConfig(rule.targetConfig)}
+                                    </Typography>
+                                  </Stack>
+                                </Box>
+
+                                {/* 操作按钮 */}
+                                <Switch checked={rule.enabled} onChange={() => handleToggle(rule)} size="small" />
+                                <IconButton size="small" onClick={() => handleEdit(rule)}>
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton size="small" color="error" onClick={() => handleDelete(rule)}>
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Stack>
                             </Paper>
-                        )}
-                    </Box>
-                )}
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </Stack>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            )}
 
-                {/* 编辑模式 */}
-                {!loading && editMode && editingRule && (
-                    <ChainRuleEditor
-                        value={editingRule}
-                        onChange={handleRuleChange}
-                        nodes={options.nodes || []}
-                        fields={options.conditionFields || []}
-                        operators={options.operators || []}
-                        groupTypes={options.groupTypes || []}
-                        templateGroups={options.templateGroups || []}
-                        isMobile={isMobile}
-                    />
-                )}
-            </DialogContent>
+            {/* 空状态 */}
+            {rules.length === 0 && (
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: isMobile ? 3 : 4,
+                  textAlign: 'center',
+                  borderRadius: 2
+                }}
+              >
+                <TouchAppIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+                <Typography color="text.secondary" gutterBottom>
+                  暂无链式代理规则
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  链式代理可以为节点配置入口代理，实现流量中转
+                </Typography>
+                <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd} size={isMobile ? 'large' : 'medium'}>
+                  添加规则
+                </Button>
+              </Paper>
+            )}
+          </Box>
+        )}
 
-            <DialogActions sx={{ px: isMobile ? 2 : 3, py: 1.5 }}>
-                {!editMode ? (
-                    <>
-                        <Button onClick={onClose}>关闭</Button>
-                        {rules.length > 0 && (
-                            <Button
-                                variant="contained"
-                                startIcon={<AddIcon />}
-                                onClick={handleAdd}
-                            >
-                                添加规则
-                            </Button>
-                        )}
-                    </>
-                ) : (
-                    <>
-                        <Button onClick={handleBack}>返回列表</Button>
-                        <Button variant="contained" onClick={handleSave} disabled={loading}>
-                            保存规则
-                        </Button>
-                    </>
-                )}
-            </DialogActions>
-        </Dialog>
-    );
+        {/* 编辑模式 */}
+        {!loading && editMode && editingRule && (
+          <ChainRuleEditor
+            value={editingRule}
+            onChange={handleRuleChange}
+            nodes={options.nodes || []}
+            fields={options.conditionFields || []}
+            operators={options.operators || []}
+            groupTypes={options.groupTypes || []}
+            templateGroups={options.templateGroups || []}
+            isMobile={isMobile}
+          />
+        )}
+      </DialogContent>
+
+      <DialogActions sx={{ px: isMobile ? 2 : 3, py: 1.5 }}>
+        {!editMode ? (
+          <>
+            <Button onClick={onClose}>关闭</Button>
+            {rules.length > 0 && (
+              <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
+                添加规则
+              </Button>
+            )}
+          </>
+        ) : (
+          <>
+            <Button onClick={handleBack}>返回列表</Button>
+            <Button variant="contained" onClick={handleSave} disabled={loading}>
+              保存规则
+            </Button>
+          </>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
 }
-

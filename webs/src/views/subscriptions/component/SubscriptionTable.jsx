@@ -52,7 +52,6 @@ export default function SubscriptionTable({
   onCopyToClipboard,
   getSortedItems
 }) {
-
   return (
     <TableContainer component={Paper}>
       <Table>
@@ -119,7 +118,6 @@ export default function SubscriptionTable({
                       </IconButton>
                     </Tooltip>
                     {sortingSubId !== sub.ID ? (
-
                       <Tooltip title="排序">
                         <IconButton size="small" onClick={() => onStartSort(sub)}>
                           <SortIcon fontSize="small" />

@@ -20,7 +20,6 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import CardActionArea from '@mui/material/CardActionArea';
 import Tooltip from '@mui/material/Tooltip';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
@@ -349,7 +348,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     );
   };
 
-
   // 渲染链接详情对话框内容
   const renderDetailContent = () => {
     if (!detailShare) return null;
@@ -416,7 +414,9 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
               <CircularProgress />
             </Box>
           ) : shares.length === 0 ? (
-            <Alert variant={'standard'} severity="info">暂无分享链接，点击"新增"创建第一个分享</Alert>
+            <Alert variant={'standard'} severity="info">
+              暂无分享链接，点击"新增"创建第一个分享
+            </Alert>
           ) : (
             shares.map((share) => renderShareCard(share))
           )}
@@ -534,7 +534,9 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
             </Box>
           ) : logs.length === 0 ? (
             <Box sx={{ p: 2 }}>
-              <Alert variant={'standard'} severity="info">暂无访问记录</Alert>
+              <Alert variant={'standard'} severity="info">
+                暂无访问记录
+              </Alert>
             </Box>
           ) : (
             <Box sx={{ maxHeight: 400, overflow: 'auto' }}>

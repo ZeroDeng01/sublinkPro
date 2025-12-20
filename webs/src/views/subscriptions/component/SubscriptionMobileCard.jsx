@@ -29,7 +29,6 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import ShareIcon from '@mui/icons-material/Share';
 
 /**
  * 移动端订阅卡片组件
@@ -92,20 +91,11 @@ export default function SubscriptionMobileCard({
                 sx={{ cursor: 'pointer' }}
               >
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1 }}>
-                  <Chip
-                    label={sub.Name}
-                    color="primary"
-                    sx={{ maxWidth: '70%' }}
-                  />
-                  {sortingSubId === sub.ID && (
-                    <Chip label="排序中" color="warning" size="small" />
-                  )}
+                  <Chip label={sub.Name} color="primary" sx={{ maxWidth: '70%' }} />
+                  {sortingSubId === sub.ID && <Chip label="排序中" color="warning" size="small" />}
                 </Stack>
                 <IconButton size="small">
-                  {expandedRows[sub.ID] || sortingSubId === sub.ID
-                    ? <KeyboardArrowUpIcon />
-                    : <KeyboardArrowDownIcon />
-                  }
+                  {expandedRows[sub.ID] || sortingSubId === sub.ID ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
                 </IconButton>
               </Stack>
 
@@ -192,11 +182,7 @@ export default function SubscriptionMobileCard({
                     </IconButton>
 
                     {/* 更多操作菜单 */}
-                    <IconButton
-                      size="medium"
-                      onClick={(e) => handleOpenMenu(e, sub.ID)}
-                      sx={{ p: 1.5 }}
-                    >
+                    <IconButton size="medium" onClick={(e) => handleOpenMenu(e, sub.ID)} sx={{ p: 1.5 }}>
                       <MoreVertIcon />
                     </IconButton>
                   </Stack>
@@ -254,41 +240,49 @@ export default function SubscriptionMobileCard({
       >
         <MenuItem
           onClick={() => {
-            const sub = subscriptions.find(s => s.ID === menuSubId);
+            const sub = subscriptions.find((s) => s.ID === menuSubId);
             if (sub) handleMenuAction(onLogs, sub);
           }}
         >
-          <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
+          <ListItemIcon>
+            <HistoryIcon fontSize="small" />
+          </ListItemIcon>
           <ListItemText>访问记录</ListItemText>
         </MenuItem>
 
         <MenuItem
           onClick={() => {
-            const sub = subscriptions.find(s => s.ID === menuSubId);
+            const sub = subscriptions.find((s) => s.ID === menuSubId);
             if (sub) handleMenuAction(onChainProxy, sub);
           }}
         >
-          <ListItemIcon><AccountTreeIcon fontSize="small" color="warning" /></ListItemIcon>
+          <ListItemIcon>
+            <AccountTreeIcon fontSize="small" color="warning" />
+          </ListItemIcon>
           <ListItemText>链式代理</ListItemText>
         </MenuItem>
 
         <MenuItem
           onClick={() => {
-            const sub = subscriptions.find(s => s.ID === menuSubId);
+            const sub = subscriptions.find((s) => s.ID === menuSubId);
             if (sub) handleMenuAction(onStartSort, sub);
           }}
         >
-          <ListItemIcon><SortIcon fontSize="small" /></ListItemIcon>
+          <ListItemIcon>
+            <SortIcon fontSize="small" />
+          </ListItemIcon>
           <ListItemText>排序节点</ListItemText>
         </MenuItem>
 
         <MenuItem
           onClick={() => {
-            const sub = subscriptions.find(s => s.ID === menuSubId);
+            const sub = subscriptions.find((s) => s.ID === menuSubId);
             if (sub) handleMenuAction(onCopy, sub);
           }}
         >
-          <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
+          <ListItemIcon>
+            <ContentCopyIcon fontSize="small" />
+          </ListItemIcon>
           <ListItemText>复制订阅</ListItemText>
         </MenuItem>
 
@@ -296,12 +290,14 @@ export default function SubscriptionMobileCard({
 
         <MenuItem
           onClick={() => {
-            const sub = subscriptions.find(s => s.ID === menuSubId);
+            const sub = subscriptions.find((s) => s.ID === menuSubId);
             if (sub) handleMenuAction(onDelete, sub);
           }}
           sx={{ color: 'error.main' }}
         >
-          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
           <ListItemText>删除</ListItemText>
         </MenuItem>
       </Menu>
