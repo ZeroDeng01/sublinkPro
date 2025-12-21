@@ -26,6 +26,7 @@ import Pagination from 'components/Pagination';
 import ConfirmDialog from 'components/ConfirmDialog';
 import TaskProgressPanel from 'components/TaskProgressPanel';
 import { getAirports, addAirport, updateAirport, deleteAirport, pullAirport } from 'api/airports';
+import { useTaskProgress } from 'contexts/TaskProgressContext';
 import { getNodeGroups, getNodes } from 'api/nodes';
 
 // local components
@@ -151,6 +152,22 @@ export default function AirportList() {
     fetchGroupOptions();
   }, [fetchAirports, fetchGroupOptions]);
 
+  // 任务进度钩子
+  const { registerOnComplete, unregisterOnComplete } = useTaskProgress();
+
+  // 监听任务完成
+  useEffect(() => {
+    const handleTaskComplete = (task) => {
+      // 当订阅更新任务完成时，刷新列表以获取最新状态
+      if (task.taskType === 'sub_update') {
+        fetchAirports();
+      }
+    };
+
+    registerOnComplete(handleTaskComplete);
+    return () => unregisterOnComplete(handleTaskComplete);
+  }, [registerOnComplete, unregisterOnComplete, fetchAirports]);
+
   // 刷新
   const handleRefresh = () => {
     fetchAirports();
@@ -237,7 +254,7 @@ export default function AirportList() {
       try {
         await pullAirport(airport.id);
         showMessage('已提交更新任务，请稍后刷新查看结果');
-        fetchAirports();
+        // 任务完成后会自动触发刷新
       } catch (error) {
         console.error('拉取失败:', error);
         showMessage(error.message || '提交更新任务失败', 'error');
@@ -299,9 +316,9 @@ export default function AirportList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
