@@ -50,7 +50,6 @@ const formatExpireDate = (timestamp) => {
   return date.toLocaleDateString('zh-CN');
 };
 
-
 /**
  * 节点预览对话框组件
  * 展示应用过滤和重命名规则后的节点列表
@@ -242,7 +241,6 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-
 
         <DialogContent sx={{ p: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <Box

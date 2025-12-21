@@ -30,6 +30,9 @@ import StarIcon from '@mui/icons-material/Star';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import EventIcon from '@mui/icons-material/Event';
 
 // icons for protocols
 import PublicIcon from '@mui/icons-material/Public';
@@ -52,6 +55,8 @@ import {
   getGroupStats,
   getSourceStats
 } from 'api/total';
+import { getAirports } from 'api/airports';
+import { formatBytes, formatExpireTime, getUsageColor } from 'views/airports/utils';
 
 // ==============================|| 动画定义 ||============================== //
 
@@ -518,6 +523,285 @@ const StarReminderCard = () => {
   );
 };
 
+// ==============================|| 机场流量概览卡片组件 ||============================== //
+
+const AirportUsageCard = ({ airports = [], loading }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  // 筛选开启用量获取且有有效数据的机场
+  const airportsWithUsage = useMemo(() => {
+    return airports.filter((a) => a.fetchUsageInfo && a.usageTotal > 0);
+  }, [airports]);
+
+  // 全局流量汇总
+  const { totalUsed, totalQuota, globalPercent } = useMemo(() => {
+    const used = airportsWithUsage.reduce((sum, a) => sum + (a.usageUpload || 0) + (a.usageDownload || 0), 0);
+    const quota = airportsWithUsage.reduce((sum, a) => sum + a.usageTotal, 0);
+    const percent = quota > 0 ? Math.min((used / quota) * 100, 100) : 0;
+    return { totalUsed: used, totalQuota: quota, globalPercent: percent };
+  }, [airportsWithUsage]);
+
+  // 最近到期机场
+  const nearestExpireAirport = useMemo(() => {
+    const now = Date.now() / 1000;
+    return airportsWithUsage.filter((a) => a.usageExpire > now).sort((a, b) => a.usageExpire - b.usageExpire)[0] || null;
+  }, [airportsWithUsage]);
+
+  // 低流量机场 (剩余 < 10%)
+  const lowUsageAirports = useMemo(() => {
+    return airportsWithUsage.filter((a) => {
+      const used = (a.usageUpload || 0) + (a.usageDownload || 0);
+      const remaining = a.usageTotal - used;
+      return remaining / a.usageTotal < 0.1;
+    });
+  }, [airportsWithUsage]);
+
+  // 如果没有开启用量获取的机场，不显示此卡片
+  if (!loading && airportsWithUsage.length === 0) {
+    return null;
+  }
+
+  // 根据使用率计算进度条渐变色
+  const getProgressGradient = (percent) => {
+    if (percent < 60) return `linear-gradient(90deg, ${theme.palette.success.light}, ${theme.palette.success.main})`;
+    if (percent < 85) return `linear-gradient(90deg, ${theme.palette.warning.light}, ${theme.palette.warning.main})`;
+    return `linear-gradient(90deg, ${theme.palette.error.light}, ${theme.palette.error.main})`;
+  };
+
+  return (
+    <Card
+      sx={{
+        mb: 4,
+        borderRadius: 4,
+        background: isDark
+          ? `linear-gradient(145deg, ${alpha('#06b6d4', 0.12)} 0%, ${alpha('#0891b2', 0.06)} 100%)`
+          : `linear-gradient(145deg, ${alpha('#06b6d4', 0.08)} 0%, ${alpha('#fff', 0.95)} 100%)`,
+        backdropFilter: 'blur(20px)',
+        border: `1px solid ${isDark ? alpha('#06b6d4', 0.2) : alpha('#06b6d4', 0.15)}`,
+        overflow: 'hidden',
+        position: 'relative'
+      }}
+    >
+      {/* 背景装饰 */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: -40,
+          right: -40,
+          width: 120,
+          height: 120,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${alpha('#06b6d4', 0.2)} 0%, transparent 70%)`
+        }}
+      />
+
+      <CardContent sx={{ p: 3, position: 'relative' }}>
+        {/* 标题 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
+            }}
+          >
+            <FlightTakeoffIcon sx={{ color: '#fff', fontSize: 22 }} />
+          </Box>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            机场流量概览
+          </Typography>
+          <Chip
+            label={`${airportsWithUsage.length} 个机场`}
+            size="small"
+            sx={{
+              ml: 'auto',
+              bgcolor: isDark ? alpha('#06b6d4', 0.2) : alpha('#06b6d4', 0.1),
+              color: isDark ? '#67e8f9' : '#0891b2',
+              fontWeight: 600
+            }}
+          />
+        </Box>
+
+        {loading ? (
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} variant="rounded" width={200} height={80} sx={{ borderRadius: 2 }} />
+            ))}
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {/* 全局流量汇总 */}
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <Box
+                sx={{
+                  p: 2.5,
+                  borderRadius: 3,
+                  height: '100%',
+                  bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#fff', 0.7),
+                  border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#06b6d4', 0.15)}`
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                  <TrendingUpIcon sx={{ fontSize: 18, color: '#06b6d4' }} />
+                  <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                    全局流量使用
+                  </Typography>
+                </Box>
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                  {formatBytes(totalUsed)} / {formatBytes(totalQuota)}
+                </Typography>
+                {/* 进度条 */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      flexGrow: 1,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: `${globalPercent}%`,
+                        height: '100%',
+                        borderRadius: 4,
+                        background: getProgressGradient(globalPercent),
+                        transition: 'width 0.3s ease'
+                      }}
+                    />
+                  </Box>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: getUsageColor(globalPercent), minWidth: 45 }}>
+                    {globalPercent.toFixed(1)}%
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
+
+            {/* 最近到期 */}
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <Box
+                sx={{
+                  p: 2.5,
+                  borderRadius: 3,
+                  height: '100%',
+                  bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#fff', 0.7),
+                  border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#06b6d4', 0.15)}`
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                  <EventIcon sx={{ fontSize: 18, color: '#f59e0b' }} />
+                  <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                    最近到期
+                  </Typography>
+                </Box>
+                {nearestExpireAirport ? (
+                  <>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5, color: isDark ? '#fcd34d' : '#b45309' }}>
+                      {nearestExpireAirport.name}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      {formatExpireTime(nearestExpireAirport.usageExpire)}
+                    </Typography>
+                  </>
+                ) : (
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    暂无到期信息
+                  </Typography>
+                )}
+              </Box>
+            </Grid>
+
+            {/* 低流量警告 */}
+            <Grid size={{ xs: 12, sm: 12, md: 4 }}>
+              <Box
+                sx={{
+                  p: 2.5,
+                  borderRadius: 3,
+                  height: '100%',
+                  bgcolor:
+                    lowUsageAirports.length > 0
+                      ? isDark
+                        ? alpha('#ef4444', 0.1)
+                        : alpha('#fef2f2', 0.9)
+                      : isDark
+                        ? alpha('#fff', 0.05)
+                        : alpha('#fff', 0.7),
+                  border: `1px solid ${
+                    lowUsageAirports.length > 0 ? alpha('#ef4444', 0.3) : isDark ? alpha('#fff', 0.1) : alpha('#06b6d4', 0.15)
+                  }`
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                  <WarningAmberIcon
+                    sx={{
+                      fontSize: 18,
+                      color: lowUsageAirports.length > 0 ? '#ef4444' : 'text.secondary'
+                    }}
+                  />
+                  <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                    流量不足警告
+                  </Typography>
+                  {lowUsageAirports.length > 0 && (
+                    <Chip
+                      label={lowUsageAirports.length}
+                      size="small"
+                      sx={{
+                        ml: 'auto',
+                        height: 20,
+                        minWidth: 20,
+                        bgcolor: '#ef4444',
+                        color: '#fff',
+                        fontWeight: 700,
+                        fontSize: '0.7rem'
+                      }}
+                    />
+                  )}
+                </Box>
+                {lowUsageAirports.length > 0 ? (
+                  <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                    {lowUsageAirports.map((airport) => {
+                      const used = (airport.usageUpload || 0) + (airport.usageDownload || 0);
+                      const remaining = airport.usageTotal - used;
+                      const remainPercent = ((remaining / airport.usageTotal) * 100).toFixed(1);
+                      return (
+                        <Tooltip key={airport.id} title={`剩余 ${formatBytes(remaining)} (${remainPercent}%)`} arrow>
+                          <Chip
+                            label={airport.name}
+                            size="small"
+                            sx={{
+                              bgcolor: isDark ? alpha('#ef4444', 0.2) : alpha('#ef4444', 0.1),
+                              color: '#ef4444',
+                              fontWeight: 600,
+                              fontSize: '0.75rem',
+                              '&:hover': {
+                                bgcolor: isDark ? alpha('#ef4444', 0.3) : alpha('#ef4444', 0.2)
+                              }
+                            }}
+                          />
+                        </Tooltip>
+                      );
+                    })}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" sx={{ color: isDark ? '#86efac' : '#16a34a' }}>
+                    ✓ 所有机场流量充足
+                  </Typography>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 // ==============================|| 欢迎横幅组件 ||============================== //
 
 const WelcomeBanner = ({ greeting }) => {
@@ -784,6 +1068,7 @@ export default function DashboardDefault() {
   const [groupStats, setGroupStats] = useState({});
   const [sourceStats, setSourceStats] = useState({});
   const [releases, setReleases] = useState([]);
+  const [airports, setAirports] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingReleases, setLoadingReleases] = useState(true);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -799,17 +1084,19 @@ export default function DashboardDefault() {
   const fetchStats = async () => {
     try {
       setLoadingStats(true);
-      const [subRes, nodeRes, fastestRes, lowestDelayRes, countryRes, protocolRes, tagRes, groupRes, sourceRes] = await Promise.all([
-        getSubTotal(),
-        getNodeTotal(),
-        getFastestSpeedNode(),
-        getLowestDelayNode(),
-        getCountryStats(),
-        getProtocolStats(),
-        getTagStats(),
-        getGroupStats(),
-        getSourceStats()
-      ]);
+      const [subRes, nodeRes, fastestRes, lowestDelayRes, countryRes, protocolRes, tagRes, groupRes, sourceRes, airportRes] =
+        await Promise.all([
+          getSubTotal(),
+          getNodeTotal(),
+          getFastestSpeedNode(),
+          getLowestDelayNode(),
+          getCountryStats(),
+          getProtocolStats(),
+          getTagStats(),
+          getGroupStats(),
+          getSourceStats(),
+          getAirports()
+        ]);
       setSubTotal(subRes.data || 0);
       // nodeRes.data 现在返回 { total, available }
       if (nodeRes.data && typeof nodeRes.data === 'object') {
@@ -826,6 +1113,7 @@ export default function DashboardDefault() {
       setTagStats(tagRes.data || []);
       setGroupStats(groupRes.data || {});
       setSourceStats(sourceRes.data || {});
+      setAirports(airportRes.data?.list || airportRes.data || []);
     } catch (error) {
       console.error('获取统计数据失败:', error);
     } finally {
@@ -925,6 +1213,9 @@ export default function DashboardDefault() {
           </Grid>
         ))}
       </Grid>
+
+      {/* 机场流量概览卡片 */}
+      <AirportUsageCard airports={airports} loading={loadingStats} />
 
       {/* 国家和协议统计 */}
       <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
