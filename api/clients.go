@@ -224,6 +224,9 @@ func GetV2ray(c *gin.Context) {
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// 添加流量信息头
+	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
+
 	// 执行脚本
 	for _, script := range sub.ScriptsWithSort {
 		res, err := utils.RunScript(script.Content, baselist, "v2ray")
@@ -422,6 +425,9 @@ func GetClash(c *gin.Context) {
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	// 添加流量信息头
+	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
+
 	// 执行脚本
 	for _, script := range sub.ScriptsWithSort {
 		res, err := utils.RunScript(script.Content, string(DecodeClash), "clash")
@@ -551,6 +557,9 @@ func GetSurge(c *gin.Context) {
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	// 添加流量信息头
+	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
+
 	host := c.Request.Host
 	url := c.Request.URL.String()
 	// 如果包含头部更新信息
@@ -570,4 +579,60 @@ func GetSurge(c *gin.Context) {
 		DecodeClash = res
 	}
 	c.Writer.WriteString(string(interval + "\n" + DecodeClash))
+}
+
+// getSubscriptionUsage 计算订阅的流量使用情况
+func getSubscriptionUsage(nodes []models.Node) string {
+	airportIDs := make(map[int]bool)
+	for _, node := range nodes {
+		// utils.Info("Node: %s, Source: %s, SourceID: %d", node.Name, node.Source, node.SourceID)
+		if node.Source != "manual" && node.SourceID > 0 {
+			airportIDs[node.SourceID] = true
+		}
+	}
+
+	var upload, download, total int64
+	var expire int64 = 0
+
+	utils.Debug("找到机场订阅数量: %d", len(airportIDs))
+
+	for id := range airportIDs {
+		airport, err := models.GetAirportByID(id)
+		if airport.FetchUsageInfo == false {
+			utils.Debug("机场 %d 未开启获取流量信息", id)
+			continue
+		}
+		if err != nil {
+			utils.Warn("获取机场信息失败 %d: %v", id, err)
+			continue
+		}
+		if airport == nil {
+			utils.Warn("机场 %d 数据为空", id)
+			continue
+		}
+
+		utils.Debug("机场数据 %d usage: U=%d, D=%d, T=%d, E=%d", id, airport.UsageUpload, airport.UsageDownload, airport.UsageTotal, airport.UsageExpire)
+
+		// 累加流量（忽略负数）
+		if airport.UsageUpload > 0 {
+			upload += airport.UsageUpload
+		}
+		if airport.UsageDownload > 0 {
+			download += airport.UsageDownload
+		}
+		if airport.UsageTotal > 0 {
+			total += airport.UsageTotal
+		}
+
+		// 获取最近的过期时间
+		if airport.UsageExpire > 0 {
+			if expire == 0 || airport.UsageExpire < expire {
+				expire = airport.UsageExpire
+			}
+		}
+	}
+
+	result := fmt.Sprintf("upload=%d; download=%d; total=%d; expire=%d", upload, download, total, expire)
+	utils.Debug("完成机场用量信息 subscription-userinfo构造: %s", result)
+	return result
 }
