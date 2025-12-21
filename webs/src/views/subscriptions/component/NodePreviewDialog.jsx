@@ -6,9 +6,13 @@ import { useTheme, alpha } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Collapse from '@mui/material/Collapse';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import Skeleton from '@mui/material/Skeleton';
@@ -16,6 +20,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
+import Tooltip from '@mui/material/Tooltip';
 
 // icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -23,6 +28,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import SpeedIcon from '@mui/icons-material/Speed';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
 // project imports
 import NodePreviewCard from './NodePreviewCard';
@@ -70,6 +80,8 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
   const [selectedIP, setSelectedIP] = useState('');
   // 渐进式加载状态
   const [displayCount, setDisplayCount] = useState(BATCH_SIZE);
+  // 统计面板展开状态
+  const [statsExpanded, setStatsExpanded] = useState(true);
 
   // 当对话框关闭或数据变化时重置显示数量
   useEffect(() => {
@@ -104,6 +116,65 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
   const displayedNodes = useMemo(() => {
     return filteredNodes.slice(0, displayCount);
   }, [filteredNodes, displayCount]);
+
+  // 节点测试统计信息
+  const nodeStats = useMemo(() => {
+    if (!data?.Nodes || data.Nodes.length === 0) {
+      return {
+        delayPassCount: 0,
+        speedPassCount: 0,
+        lowestDelayNode: null,
+        highestSpeedNode: null
+      };
+    }
+
+    const nodes = data.Nodes;
+
+    // 延迟测试通过的节点（DelayStatus 不是 timeout/error 且 DelayTime > 0）
+    const delayPassNodes = nodes.filter(node => {
+      const status = node.DelayStatus;
+      const isError = status === 'timeout' || status === 'error' || status === 2 || status === 3;
+      return !isError && node.DelayTime > 0;
+    });
+
+    // 速度测试通过的节点（SpeedStatus 不是 timeout/error 且 Speed > 0）
+    const speedPassNodes = nodes.filter(node => {
+      const status = node.SpeedStatus;
+      const isError = status === 'timeout' || status === 'error' || status === 2 || status === 3;
+      return !isError && node.Speed > 0;
+    });
+
+    // 延迟最低的节点（需要速度 > 0，以保证节点可用）
+    const validNodesForDelay = nodes.filter(node => {
+      const delayStatus = node.DelayStatus;
+      const speedStatus = node.SpeedStatus;
+      const isDelayError = delayStatus === 'timeout' || delayStatus === 'error' || delayStatus === 2 || delayStatus === 3;
+      const isSpeedError = speedStatus === 'timeout' || speedStatus === 'error' || speedStatus === 2 || speedStatus === 3;
+      return !isDelayError && !isSpeedError && node.DelayTime > 0 && node.Speed > 0;
+    });
+
+    let lowestDelayNode = null;
+    if (validNodesForDelay.length > 0) {
+      lowestDelayNode = validNodesForDelay.reduce((min, node) =>
+        node.DelayTime < min.DelayTime ? node : min
+      );
+    }
+
+    // 速度最高的节点
+    let highestSpeedNode = null;
+    if (speedPassNodes.length > 0) {
+      highestSpeedNode = speedPassNodes.reduce((max, node) =>
+        node.Speed > max.Speed ? node : max
+      );
+    }
+
+    return {
+      delayPassCount: delayPassNodes.length,
+      speedPassCount: speedPassNodes.length,
+      lowestDelayNode,
+      highestSpeedNode
+    };
+  }, [data?.Nodes]);
 
   // 是否还有更多节点可加载
   const hasMore = displayCount < filteredNodes.length;
@@ -291,6 +362,236 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
               </Typography>
             )}
           </Box>
+
+          {/* 节点测试统计信息卡片 */}
+          {!loading && data?.Nodes && data.Nodes.length > 0 && (
+            <Box
+              sx={{
+                px: isMobile ? 1.5 : 3,
+                py: 1.5,
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                bgcolor: alpha(theme.palette.background.paper, 0.3),
+                flexShrink: 0
+              }}
+            >
+              {/* 统计区域标题和展开/收起按钮 */}
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                onClick={() => setStatsExpanded(!statsExpanded)}
+                sx={{
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  mb: statsExpanded ? 1.5 : 0,
+                  transition: 'margin 0.2s ease'
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <EmojiEventsIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
+                  <Typography variant="subtitle2" fontWeight={600} color="text.primary">
+                    节点测试统计
+                  </Typography>
+                  <Chip
+                    label={`${nodeStats.delayPassCount + nodeStats.speedPassCount > 0 ? '有可用节点' : '暂无数据'}`}
+                    size="small"
+                    color={nodeStats.delayPassCount + nodeStats.speedPassCount > 0 ? 'success' : 'default'}
+                    variant="outlined"
+                    sx={{ fontSize: 10, height: 20 }}
+                  />
+                </Stack>
+                <IconButton size="small" sx={{ p: 0.5 }}>
+                  {statsExpanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                </IconButton>
+              </Stack>
+
+              {/* 统计卡片区域（可折叠） */}
+              <Collapse in={statsExpanded} timeout="auto">
+                <Grid container spacing={isMobile ? 1 : 1.5}>
+                  {/* 延迟测试通过 */}
+                  <Grid item xs={6} sm={3}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)} 0%, ${alpha(theme.palette.success.light, 0.05)} 100%)`,
+                        border: '1px solid',
+                        borderColor: alpha(theme.palette.success.main, 0.2),
+                        borderRadius: 2,
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          borderColor: alpha(theme.palette.success.main, 0.4),
+                          transform: 'translateY(-1px)',
+                          boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.15)}`
+                        }
+                      }}
+                    >
+                      <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
+                        <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+                          <AccessTimeIcon sx={{ fontSize: 16, color: theme.palette.success.main }} />
+                          <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: isMobile ? 10 : 11 }}>
+                            延迟通过
+                          </Typography>
+                        </Stack>
+                        <Typography variant={isMobile ? 'h6' : 'h5'} fontWeight={700} color="success.main">
+                          {nodeStats.delayPassCount}
+                          <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 400 }}>
+                            / {data.Nodes.length}
+                          </Typography>
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* 速度测试通过 */}
+                  <Grid item xs={6} sm={3}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.1)} 0%, ${alpha(theme.palette.info.light, 0.05)} 100%)`,
+                        border: '1px solid',
+                        borderColor: alpha(theme.palette.info.main, 0.2),
+                        borderRadius: 2,
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          borderColor: alpha(theme.palette.info.main, 0.4),
+                          transform: 'translateY(-1px)',
+                          boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.15)}`
+                        }
+                      }}
+                    >
+                      <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
+                        <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+                          <SpeedIcon sx={{ fontSize: 16, color: theme.palette.info.main }} />
+                          <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: isMobile ? 10 : 11 }}>
+                            速度通过
+                          </Typography>
+                        </Stack>
+                        <Typography variant={isMobile ? 'h6' : 'h5'} fontWeight={700} color="info.main">
+                          {nodeStats.speedPassCount}
+                          <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 400 }}>
+                            / {data.Nodes.length}
+                          </Typography>
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* 延迟最低节点 */}
+                  <Grid item xs={6} sm={3}>
+                    <Card
+                      elevation={0}
+                      onClick={() => nodeStats.lowestDelayNode && handleViewDetails(nodeStats.lowestDelayNode)}
+                      sx={{
+                        background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.1)} 0%, ${alpha(theme.palette.warning.light, 0.05)} 100%)`,
+                        border: '1px solid',
+                        borderColor: alpha(theme.palette.warning.main, 0.2),
+                        borderRadius: 2,
+                        cursor: nodeStats.lowestDelayNode ? 'pointer' : 'default',
+                        transition: 'all 0.2s ease',
+                        '&:hover': nodeStats.lowestDelayNode ? {
+                          borderColor: alpha(theme.palette.warning.main, 0.4),
+                          transform: 'translateY(-1px)',
+                          boxShadow: `0 4px 12px ${alpha(theme.palette.warning.main, 0.15)}`
+                        } : {}
+                      }}
+                    >
+                      <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
+                        <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+                          <AccessTimeIcon sx={{ fontSize: 16, color: theme.palette.warning.main }} />
+                          <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: isMobile ? 10 : 11 }}>
+                            最低延迟
+                          </Typography>
+                        </Stack>
+                        {nodeStats.lowestDelayNode ? (
+                          <>
+                            <Tooltip title={nodeStats.lowestDelayNode.PreviewName || nodeStats.lowestDelayNode.OriginalName} placement="top" arrow>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                color="warning.dark"
+                                sx={{
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  fontSize: isMobile ? 11 : 12
+                                }}
+                              >
+                                {nodeStats.lowestDelayNode.PreviewName || nodeStats.lowestDelayNode.OriginalName}
+                              </Typography>
+                            </Tooltip>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? 10 : 11 }}>
+                              {nodeStats.lowestDelayNode.DelayTime}ms · {nodeStats.lowestDelayNode.Speed?.toFixed(1)}MB/s
+                            </Typography>
+                          </>
+                        ) : (
+                          <Typography variant="body2" color="text.disabled" sx={{ fontSize: isMobile ? 11 : 12 }}>
+                            暂无数据
+                          </Typography>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* 速度最高节点 */}
+                  <Grid item xs={6} sm={3}>
+                    <Card
+                      elevation={0}
+                      onClick={() => nodeStats.highestSpeedNode && handleViewDetails(nodeStats.highestSpeedNode)}
+                      sx={{
+                        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.primary.light, 0.05)} 100%)`,
+                        border: '1px solid',
+                        borderColor: alpha(theme.palette.primary.main, 0.2),
+                        borderRadius: 2,
+                        cursor: nodeStats.highestSpeedNode ? 'pointer' : 'default',
+                        transition: 'all 0.2s ease',
+                        '&:hover': nodeStats.highestSpeedNode ? {
+                          borderColor: alpha(theme.palette.primary.main, 0.4),
+                          transform: 'translateY(-1px)',
+                          boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`
+                        } : {}
+                      }}
+                    >
+                      <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
+                        <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+                          <SpeedIcon sx={{ fontSize: 16, color: theme.palette.primary.main }} />
+                          <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: isMobile ? 10 : 11 }}>
+                            最高速度
+                          </Typography>
+                        </Stack>
+                        {nodeStats.highestSpeedNode ? (
+                          <>
+                            <Tooltip title={nodeStats.highestSpeedNode.PreviewName || nodeStats.highestSpeedNode.OriginalName} placement="top" arrow>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                color="primary.main"
+                                sx={{
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  fontSize: isMobile ? 11 : 12
+                                }}
+                              >
+                                {nodeStats.highestSpeedNode.PreviewName || nodeStats.highestSpeedNode.OriginalName}
+                              </Typography>
+                            </Tooltip>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? 10 : 11 }}>
+                              {nodeStats.highestSpeedNode.Speed?.toFixed(1)}MB/s · {nodeStats.highestSpeedNode.DelayTime}ms
+                            </Typography>
+                          </>
+                        ) : (
+                          <Typography variant="body2" color="text.disabled" sx={{ fontSize: isMobile ? 11 : 12 }}>
+                            暂无数据
+                          </Typography>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+              </Collapse>
+            </Box>
+          )}
 
           {/* 可滚动内容区域 */}
           <Box
