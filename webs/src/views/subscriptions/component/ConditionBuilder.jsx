@@ -20,6 +20,18 @@ import AddIcon from '@mui/icons-material/Add';
  * 用于构建 AND/OR 组合的条件表达式
  */
 export default function ConditionBuilder({ value, onChange, fields = [], operators = [], title = '条件配置' }) {
+  // 定义特殊字段类型
+  const numericFields = ['speed', 'delay_time'];
+  const statusFields = ['speed_status', 'delay_status'];
+
+  // 状态选项（与 RuleDialog.jsx 保持一致）
+  const STATUS_OPTIONS = [
+    { value: 'untested', label: '未测速' },
+    { value: 'success', label: '成功' },
+    { value: 'timeout', label: '超时' },
+    { value: 'error', label: '失败' }
+  ];
+
   // 初始化条件数据
   const [logic, setLogic] = useState(value?.logic || 'and');
   const [conditions, setConditions] = useState(value?.conditions || []);
@@ -64,20 +76,48 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
 
   // 更新条件字段
   const handleConditionChange = (index, field, newValue) => {
-    const newConditions = conditions.map((cond, i) => {
-      if (i === index) {
-        return { ...cond, [field]: newValue };
+    const newConditions = [...conditions];
+    newConditions[index] = { ...newConditions[index], [field]: newValue };
+
+    // 如果改变了字段，需要重置操作符和值以避免不兼容
+    if (field === 'field') {
+      const isStatus = statusFields.includes(newValue);
+      const isNumeric = numericFields.includes(newValue);
+      const currentOp = newConditions[index].operator;
+
+      if (isStatus) {
+        // 状态字段只能用 equals 或 not_equals
+        if (!['equals', 'not_equals'].includes(currentOp)) {
+          newConditions[index].operator = 'equals';
+        }
+        // 清空值，强制用户从下拉框选择
+        newConditions[index].value = '';
+      } else if (isNumeric) {
+        // 数值字段默认使用 greater_than 如果当前操作符不兼容
+        // 注意：这里我们假设 operators 包含了所有类型的操作符，具体逻辑可能需要根据 operators 的额外信息判断
+        // 但为了简化，如果当前是 regex 或 contains 等字符串专用的，切换到 greater_than
+        if (['contains', 'not_contains', 'regex'].includes(currentOp)) {
+          newConditions[index].operator = 'greater_than';
+        } else if (!currentOp) {
+          newConditions[index].operator = 'greater_than';
+        }
+      } else {
+        // 其他字段（字符串），如果是数值专用操作符，切换回 contains
+        if (['greater_than', 'less_than', 'greater_or_equal', 'less_or_equal'].includes(currentOp)) {
+          newConditions[index].operator = 'contains';
+        }
       }
-      return cond;
-    });
+    }
+
     setConditions(newConditions);
     notifyChange(logic, newConditions);
   };
 
   // 获取字段对应的操作符列表
   const getOperatorsForField = (fieldValue) => {
-    // 数值字段支持比较操作符
-    const numericFields = ['speed', 'delay_time'];
+    if (statusFields.includes(fieldValue)) {
+      return operators.filter((op) => ['equals', 'not_equals'].includes(op.value));
+    }
     if (numericFields.includes(fieldValue)) {
       return operators;
     }
@@ -132,13 +172,27 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
               </Select>
             </FormControl>
 
-            <TextField
-              size="small"
-              label="值"
-              value={condition.value}
-              onChange={(e) => handleConditionChange(index, 'value', e.target.value)}
-              sx={{ flex: 1 }}
-            />
+            {statusFields.includes(condition.field) ? (
+              <FormControl size="small" sx={{ flex: 1 }}>
+                <InputLabel>状态值</InputLabel>
+                <Select value={condition.value} label="状态值" onChange={(e) => handleConditionChange(index, 'value', e.target.value)}>
+                  {STATUS_OPTIONS.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            ) : (
+              <TextField
+                size="small"
+                label="值"
+                value={condition.value}
+                onChange={(e) => handleConditionChange(index, 'value', e.target.value)}
+                sx={{ flex: 1 }}
+                type={numericFields.includes(condition.field) ? 'number' : 'text'}
+              />
+            )}
 
             <IconButton size="small" color="error" onClick={() => handleRemoveCondition(index)}>
               <DeleteIcon fontSize="small" />

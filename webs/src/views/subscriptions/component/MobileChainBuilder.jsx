@@ -174,7 +174,7 @@ export default function MobileChainBuilder({
           <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
             <Stack direction="row" alignItems="center" spacing={1}>
               <PlayArrowIcon />
-              <Typography variant="subtitle2" fontWeight={600}>
+              <Typography variant="subtitle2" fontWeight={600} color="inherit">
                 入口
               </Typography>
             </Stack>
@@ -246,7 +246,7 @@ export default function MobileChainBuilder({
           variant="outlined"
           onClick={handleEditTarget}
           sx={{
-            background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+            background: 'linear-gradient(135deg, #00897b 0%, #43a047 100%)',
             color: 'white',
             borderRadius: 2,
             cursor: 'pointer',
@@ -259,10 +259,10 @@ export default function MobileChainBuilder({
               <Stack direction="row" alignItems="center" spacing={1}>
                 <StopIcon />
                 <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.9 }} color="inherit">
                     目标节点
                   </Typography>
-                  <Typography variant="subtitle2" fontWeight={600}>
+                  <Typography variant="subtitle2" fontWeight={600} color="inherit">
                     {getTargetLabel()}
                   </Typography>
                 </Box>

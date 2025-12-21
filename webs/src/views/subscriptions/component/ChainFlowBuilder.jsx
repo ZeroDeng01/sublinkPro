@@ -35,11 +35,12 @@ import ConditionBuilder from './ConditionBuilder';
 // 自定义节点样式
 const nodeStyles = {
   start: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #5b6bdb 0%, #764ba2 100%)',
     color: 'white',
-    borderRadius: '50%',
-    width: 60,
-    height: 60,
+    borderRadius: 30, // Capsule shape
+    minWidth: 90,
+    padding: '0 16px',
+    height: 40,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -48,7 +49,7 @@ const nodeStyles = {
     boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
   },
   end: {
-    background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+    background: 'linear-gradient(135deg, #00897b 0%, #43a047 100%)',
     color: 'white',
     borderRadius: 8,
     minWidth: 100,
@@ -73,10 +74,11 @@ const nodeStyles = {
 };
 
 // 开始节点组件
-function StartNode() {
+function StartNode({ data }) {
   return (
     <div style={nodeStyles.start}>
-      <PlayArrowIcon fontSize="small" />
+      <PlayArrowIcon fontSize="small" sx={{ mr: 0.5 }} />
+      <span>{data?.label || '入口'}</span>
       <Handle type="source" position={Position.Right} style={{ background: '#764ba2' }} />
     </div>
   );
