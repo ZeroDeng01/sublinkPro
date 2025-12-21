@@ -131,9 +131,9 @@ const system = {
     },
     {
       id: 'user',
-      title: '用户设置',
+      title: '个人中心',
       type: 'item',
-      url: '/system/user',
+      url: '/settings',
       icon: IconSettings,
       breadcrumbs: true
     }
