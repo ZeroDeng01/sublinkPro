@@ -10,6 +10,7 @@ import (
 	"sublink/models"
 	"sublink/services/mihomo"
 	"sublink/utils"
+	"sync"
 	"time"
 
 	"github.com/metacubex/mihomo/constant"
@@ -180,47 +181,63 @@ type UsageResult struct {
 }
 
 // BatchUpdateAirportUsage 批量更新多个机场的用量信息
-// 实时获取每个机场的用量信息并更新到数据库
+// 并发获取每个机场的用量信息并更新到数据库
 // 返回各机场的用量结果映射
 func BatchUpdateAirportUsage(airportIDs []int) map[int]*UsageResult {
-	results := make(map[int]*UsageResult)
+	var wg sync.WaitGroup
+	var resultsMap sync.Map
 
 	for _, id := range airportIDs {
-		airport, err := models.GetAirportByID(id)
-		if err != nil {
-			results[id] = &UsageResult{
-				AirportID: id,
-				Error:     fmt.Errorf("获取机场失败: %v", err),
-			}
-			continue
-		}
+		wg.Add(1)
+		go func(airportID int) {
+			defer wg.Done()
 
-		if airport == nil {
-			results[id] = &UsageResult{
-				AirportID: id,
-				Error:     fmt.Errorf("机场不存在"),
+			airport, err := models.GetAirportByID(airportID)
+			if err != nil {
+				resultsMap.Store(airportID, &UsageResult{
+					AirportID: airportID,
+					Error:     fmt.Errorf("获取机场失败: %v", err),
+				})
+				return
 			}
-			continue
-		}
 
-		// 未开启用量获取的跳过
-		if !airport.FetchUsageInfo {
-			results[id] = &UsageResult{
-				AirportID:   id,
+			if airport == nil {
+				resultsMap.Store(airportID, &UsageResult{
+					AirportID: airportID,
+					Error:     fmt.Errorf("机场不存在"),
+				})
+				return
+			}
+
+			// 未开启用量获取的跳过
+			if !airport.FetchUsageInfo {
+				resultsMap.Store(airportID, &UsageResult{
+					AirportID:   airportID,
+					AirportName: airport.Name,
+					Error:       nil, // 不算错误，只是跳过
+				})
+				return
+			}
+
+			usageInfo, err := UpdateAirportUsageInfo(airportID)
+			resultsMap.Store(airportID, &UsageResult{
+				AirportID:   airportID,
 				AirportName: airport.Name,
-				Error:       nil, // 不算错误，只是跳过
-			}
-			continue
-		}
-
-		usageInfo, err := UpdateAirportUsageInfo(id)
-		results[id] = &UsageResult{
-			AirportID:   id,
-			AirportName: airport.Name,
-			UsageInfo:   usageInfo,
-			Error:       err,
-		}
+				UsageInfo:   usageInfo,
+				Error:       err,
+			})
+		}(id)
 	}
+
+	// 等待所有并发任务完成
+	wg.Wait()
+
+	// 将 sync.Map 转换为普通 map 返回
+	results := make(map[int]*UsageResult)
+	resultsMap.Range(func(key, value interface{}) bool {
+		results[key.(int)] = value.(*UsageResult)
+		return true
+	})
 
 	return results
 }
