@@ -20,6 +20,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import SyncIcon from '@mui/icons-material/Sync';
 
 // utils
 import { formatDateTime, formatBytes, formatExpireTime, getUsageColor } from '../utils';
@@ -30,7 +31,7 @@ import AirportNodeStatsCard from './AirportNodeStatsCard';
 /**
  * 机场移动端列表组件
  */
-export default function AirportMobileList({ airports, onEdit, onDelete, onPull }) {
+export default function AirportMobileList({ airports, onEdit, onDelete, onPull, onRefreshUsage }) {
   const theme = useTheme();
 
   // 复制提示状态
@@ -251,6 +252,21 @@ export default function AirportMobileList({ airports, onEdit, onDelete, onPull }
                     <PlayArrowIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
+                {airport.fetchUsageInfo && (
+                  <Tooltip title="刷新用量" arrow>
+                    <IconButton
+                      size="small"
+                      onClick={() => onRefreshUsage(airport)}
+                      sx={{
+                        bgcolor: alpha(theme.palette.success.main, 0.1),
+                        color: theme.palette.success.main,
+                        '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.2) }
+                      }}
+                    >
+                      <SyncIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
                 <Tooltip title="编辑" arrow>
                   <IconButton
                     size="small"
@@ -302,5 +318,6 @@ AirportMobileList.propTypes = {
   airports: PropTypes.array.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
-  onPull: PropTypes.func.isRequired
+  onPull: PropTypes.func.isRequired,
+  onRefreshUsage: PropTypes.func
 };

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sublink/constants"
 	"sublink/models"
+	"sublink/node"
 	"sublink/services/geoip"
 	"sublink/services/mihomo"
 	"sublink/services/sse"
@@ -871,6 +872,11 @@ applyTags:
 		}
 
 		applyAutoTagRules(updatedNodes, "speed_test")
+	}()
+
+	// 测速完成后后台静默刷新机场用量信息（测速会消耗流量）
+	go func() {
+		node.RefreshUsageForSubscriptionNodes(nodes)
 	}()
 
 }

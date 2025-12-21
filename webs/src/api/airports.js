@@ -51,3 +51,11 @@ export function pullAirport(id) {
     method: 'post'
   });
 }
+
+// 仅刷新机场用量信息
+export function refreshAirportUsage(id) {
+  return request({
+    url: `/v1/airports/${id}/refresh-usage`,
+    method: 'post'
+  });
+}

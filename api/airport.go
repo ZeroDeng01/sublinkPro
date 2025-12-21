@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"sublink/dto"
 	"sublink/models"
+	"sublink/node"
 	"sublink/services/scheduler"
 	"sublink/utils"
 
@@ -305,4 +306,40 @@ func AirportPull(c *gin.Context) {
 	go scheduler.ExecuteSubscriptionTaskWithTrigger(airport.ID, airport.URL, airport.Name, models.TaskTriggerManual)
 
 	utils.OkWithMsg(c, "任务已提交，请稍后刷新查看结果")
+}
+
+// AirportRefreshUsage 仅刷新机场的用量信息，不更新订阅/节点
+func AirportRefreshUsage(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+
+	airport, err := models.GetAirportByID(id)
+	if err != nil {
+		utils.FailWithMsg(c, "机场不存在")
+		return
+	}
+
+	if !airport.FetchUsageInfo {
+		utils.FailWithMsg(c, "该机场未开启用量信息获取")
+		return
+	}
+
+	// 同步获取用量信息
+	usageInfo, err := node.UpdateAirportUsageInfo(id)
+	if err != nil {
+		utils.FailWithMsg(c, "获取用量信息失败: "+err.Error())
+		return
+	}
+
+	// 返回用量信息
+	utils.OkDetailed(c, "用量信息已更新", map[string]interface{}{
+		"upload":   usageInfo.Upload,
+		"download": usageInfo.Download,
+		"total":    usageInfo.Total,
+		"expire":   usageInfo.Expire,
+	})
 }

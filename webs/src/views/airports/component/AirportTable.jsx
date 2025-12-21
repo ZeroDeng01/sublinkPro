@@ -22,6 +22,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SyncIcon from '@mui/icons-material/Sync';
 
 // utils
 import { formatDateTime, formatBytes, formatExpireTime, getUsageColor } from '../utils';
@@ -32,7 +33,7 @@ import AirportNodeStatsCard from './AirportNodeStatsCard';
 /**
  * 机场列表表格组件
  */
-export default function AirportTable({ airports, onEdit, onDelete, onPull }) {
+export default function AirportTable({ airports, onEdit, onDelete, onPull, onRefreshUsage }) {
   const theme = useTheme();
 
   // 复制提示状态
@@ -279,6 +280,13 @@ export default function AirportTable({ airports, onEdit, onDelete, onPull }) {
                           <PlayArrowIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
+                      {airport.fetchUsageInfo && (
+                        <Tooltip title="刷新用量" arrow>
+                          <IconButton size="small" onClick={() => onRefreshUsage(airport)} sx={{ color: theme.palette.success.main }}>
+                            <SyncIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                       <Tooltip title="编辑" arrow>
                         <IconButton size="small" onClick={() => onEdit(airport)}>
                           <EditIcon fontSize="small" />
@@ -317,5 +325,6 @@ AirportTable.propTypes = {
   airports: PropTypes.array.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
-  onPull: PropTypes.func.isRequired
+  onPull: PropTypes.func.isRequired,
+  onRefreshUsage: PropTypes.func
 };

@@ -25,7 +25,7 @@ import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
 import ConfirmDialog from 'components/ConfirmDialog';
 import TaskProgressPanel from 'components/TaskProgressPanel';
-import { getAirports, addAirport, updateAirport, deleteAirport, pullAirport } from 'api/airports';
+import { getAirports, addAirport, updateAirport, deleteAirport, pullAirport, refreshAirportUsage } from 'api/airports';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 import { getNodeGroups, getNodes } from 'api/nodes';
 
@@ -262,6 +262,18 @@ export default function AirportList() {
     });
   };
 
+  // 刷新用量信息
+  const handleRefreshUsage = async (airport) => {
+    try {
+      await refreshAirportUsage(airport.id);
+      showMessage('用量信息已更新');
+      fetchAirports(); // 刷新列表
+    } catch (error) {
+      console.error('刷新用量失败:', error);
+      showMessage(error.message || '刷新用量失败', 'error');
+    }
+  };
+
   // 提交表单
   const handleSubmit = async () => {
     // 验证
@@ -316,9 +328,9 @@ export default function AirportList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
@@ -382,9 +394,9 @@ export default function AirportList() {
 
       {/* 机场列表 */}
       {matchDownMd ? (
-        <AirportMobileList airports={airports} onEdit={handleEdit} onDelete={handleDelete} onPull={handlePull} />
+        <AirportMobileList airports={airports} onEdit={handleEdit} onDelete={handleDelete} onPull={handlePull} onRefreshUsage={handleRefreshUsage} />
       ) : (
-        <AirportTable airports={airports} onEdit={handleEdit} onDelete={handleDelete} onPull={handlePull} />
+        <AirportTable airports={airports} onEdit={handleEdit} onDelete={handleDelete} onPull={handlePull} onRefreshUsage={handleRefreshUsage} />
       )}
 
       {/* 分页 */}

@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"sublink/models"
+	"sublink/node"
 	"sublink/node/protocol"
 	"sublink/utils"
 	"time"
@@ -225,7 +226,8 @@ func GetV2ray(c *gin.Context) {
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	// 添加流量信息头
+	// 实时刷新用量信息后添加流量信息头
+	node.RefreshUsageForSubscriptionNodes(sub.Nodes)
 	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
 
 	// 执行脚本
@@ -426,7 +428,8 @@ func GetClash(c *gin.Context) {
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	// 添加流量信息头
+	// 实时刷新用量信息后添加流量信息头
+	node.RefreshUsageForSubscriptionNodes(sub.Nodes)
 	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
 
 	// 执行脚本
@@ -558,7 +561,8 @@ func GetSurge(c *gin.Context) {
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	// 添加流量信息头
+	// 实时刷新用量信息后添加流量信息头
+	node.RefreshUsageForSubscriptionNodes(sub.Nodes)
 	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
 
 	host := c.Request.Host
