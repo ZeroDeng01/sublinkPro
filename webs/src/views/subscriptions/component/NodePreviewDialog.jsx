@@ -34,6 +34,23 @@ import { AlertTitle } from '@mui/material';
 // 每次加载的卡片数量
 const BATCH_SIZE = 100;
 
+// 格式化字节数
+const formatBytes = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+// 格式化到期时间
+const formatExpireDate = (timestamp) => {
+  if (!timestamp) return '-';
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleDateString('zh-CN');
+};
+
+
 /**
  * 节点预览对话框组件
  * 展示应用过滤和重命名规则后的节点列表
@@ -184,19 +201,39 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
             pb: 2
           }}
         >
-          <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
             <Typography variant="h5" fontWeight="bold">
               节点预览
               <Chip size="small" label="Beta" color="error" variant="outlined" sx={{ ml: 1 }} />
             </Typography>
             {!loading && data && (
-              <Stack direction="row" alignItems="center" spacing={1}>
+              <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
                 <Chip label={`共 ${data.TotalCount} 个`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
                 {data.TotalCount !== data.FilteredCount && (
                   <>
                     <ArrowForwardIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
                     <Chip label={`过滤后 ${data.FilteredCount} 个`} size="small" color="primary" sx={{ fontWeight: 600 }} />
                   </>
+                )}
+                {/* 用量信息 */}
+                {data.UsageTotal > 0 && (
+                  <Chip
+                    label={`${formatBytes(data.UsageUpload + data.UsageDownload)} / ${formatBytes(data.UsageTotal)}`}
+                    size="small"
+                    color="info"
+                    variant="outlined"
+                    sx={{ fontWeight: 600 }}
+                  />
+                )}
+                {/* 最近到期时间 */}
+                {data.UsageExpire > 0 && (
+                  <Chip
+                    label={`最近到期时间: ${formatExpireDate(data.UsageExpire)}`}
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                    sx={{ fontWeight: 600 }}
+                  />
                 )}
               </Stack>
             )}
@@ -205,6 +242,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
             <CloseIcon />
           </IconButton>
         </DialogTitle>
+
 
         <DialogContent sx={{ p: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <Box

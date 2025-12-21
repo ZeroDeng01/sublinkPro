@@ -963,6 +963,11 @@ type PreviewResult struct {
 	Nodes         []PreviewNode `json:"Nodes"`
 	TotalCount    int           `json:"TotalCount"`    // 原始节点总数
 	FilteredCount int           `json:"FilteredCount"` // 过滤后节点数
+	// 用量信息
+	UsageUpload   int64 `json:"UsageUpload"`   // 已上传流量（字节）
+	UsageDownload int64 `json:"UsageDownload"` // 已下载流量（字节）
+	UsageTotal    int64 `json:"UsageTotal"`    // 总流量配额（字节）
+	UsageExpire   int64 `json:"UsageExpire"`   // 最近到期时间（Unix时间戳）
 }
 
 // PreviewSub 预览订阅节点
@@ -971,6 +976,9 @@ type PreviewResult struct {
 func (sub *Subcription) PreviewSub() (*PreviewResult, error) {
 	// 记录原始节点数
 	totalCount := len(sub.Nodes)
+
+	// 计算用量信息
+	upload, download, total, expire := sub.CalculateUsageInfo()
 
 	// 调用共用的过滤方法（与 GetSub 共用逻辑）
 	sub.Nodes = sub.ApplyFilters(sub.Nodes)
@@ -1019,7 +1027,57 @@ func (sub *Subcription) PreviewSub() (*PreviewResult, error) {
 		Nodes:         previewNodes,
 		TotalCount:    totalCount,
 		FilteredCount: filteredCount,
+		UsageUpload:   upload,
+		UsageDownload: download,
+		UsageTotal:    total,
+		UsageExpire:   expire,
 	}, nil
+}
+
+// CalculateUsageInfo 计算订阅的用量信息
+func (sub *Subcription) CalculateUsageInfo() (upload, download, total, expire int64) {
+	airportIDs := make(map[int]bool)
+	for _, node := range sub.Nodes {
+		if node.Source != "manual" && node.SourceID > 0 {
+			airportIDs[node.SourceID] = true
+		}
+	}
+
+	now := time.Now().Unix()
+
+	for id := range airportIDs {
+		airport, err := GetAirportByID(id)
+		if err != nil || airport == nil {
+			continue
+		}
+		if !airport.FetchUsageInfo {
+			continue
+		}
+		// 跳过已过期的机场
+		if airport.UsageExpire > 0 && airport.UsageExpire < now {
+			continue
+		}
+
+		// 累加流量（忽略负数）
+		if airport.UsageUpload > 0 {
+			upload += airport.UsageUpload
+		}
+		if airport.UsageDownload > 0 {
+			download += airport.UsageDownload
+		}
+		if airport.UsageTotal > 0 {
+			total += airport.UsageTotal
+		}
+
+		// 获取最近的过期时间
+		if airport.UsageExpire > 0 {
+			if expire == 0 || airport.UsageExpire < expire {
+				expire = airport.UsageExpire
+			}
+		}
+	}
+
+	return
 }
 
 // ========== 去重规则配置结构 ==========

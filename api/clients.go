@@ -12,6 +12,7 @@ import (
 	"sublink/models"
 	"sublink/node/protocol"
 	"sublink/utils"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -585,7 +586,6 @@ func GetSurge(c *gin.Context) {
 func getSubscriptionUsage(nodes []models.Node) string {
 	airportIDs := make(map[int]bool)
 	for _, node := range nodes {
-		// utils.Info("Node: %s, Source: %s, SourceID: %d", node.Name, node.Source, node.SourceID)
 		if node.Source != "manual" && node.SourceID > 0 {
 			airportIDs[node.SourceID] = true
 		}
@@ -593,21 +593,27 @@ func getSubscriptionUsage(nodes []models.Node) string {
 
 	var upload, download, total int64
 	var expire int64 = 0
+	now := time.Now().Unix()
 
 	utils.Debug("找到机场订阅数量: %d", len(airportIDs))
 
 	for id := range airportIDs {
 		airport, err := models.GetAirportByID(id)
-		if airport.FetchUsageInfo == false {
-			utils.Debug("机场 %d 未开启获取流量信息", id)
-			continue
-		}
 		if err != nil {
 			utils.Warn("获取机场信息失败 %d: %v", id, err)
 			continue
 		}
 		if airport == nil {
 			utils.Warn("机场 %d 数据为空", id)
+			continue
+		}
+		if !airport.FetchUsageInfo {
+			utils.Debug("机场 %d 未开启获取流量信息", id)
+			continue
+		}
+		// 跳过已过期的机场
+		if airport.UsageExpire > 0 && airport.UsageExpire < now {
+			utils.Debug("机场 %d 已过期，跳过统计", id)
 			continue
 		}
 
