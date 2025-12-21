@@ -151,7 +151,7 @@ export default function AuthLogin() {
       );
 
       if (result.success) {
-        navigate('/dashboard');
+        navigate('/dashboard/default');
       } else {
         setError(result.message || '登录失败');
         // 登录失败时刷新验证码

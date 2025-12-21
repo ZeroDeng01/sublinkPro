@@ -125,7 +125,7 @@ export default function ErrorPage({ statusCode = 404, customTitle, customDescrip
   const displayDescription = customDescription || description;
 
   const handleGoHome = () => {
-    navigate('/dashboard');
+    navigate('/dashboard/default');
   };
 
   const handleGoBack = () => {

@@ -1,4 +1,4 @@
-export const DASHBOARD_PATH = '/dashboard';
+export const DASHBOARD_PATH = '/dashboard/default';
 export const DEFAULT_THEME_MODE = 'system';
 
 export const CSS_VAR_PREFIX = '';

@@ -8,6 +8,7 @@ import AuthGuard from 'auth/AuthGuard';
 
 // dashboard routing
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/Default')));
+const NodeMapPage = Loadable(lazy(() => import('views/dashboard/NodeMap')));
 
 // views routing
 const NodeList = Loadable(lazy(() => import('views/nodes')));
@@ -34,11 +35,24 @@ const MainRoutes = {
   children: [
     {
       path: '/',
-      element: <Navigate to="/dashboard" replace />
+      element: <Navigate to="/dashboard/default" replace />
     },
     {
       path: 'dashboard',
-      element: <DashboardDefault />
+      children: [
+        {
+          index: true,
+          element: <Navigate to="/dashboard/default" replace />
+        },
+        {
+          path: 'default',
+          element: <DashboardDefault />
+        },
+        {
+          path: 'map',
+          element: <NodeMapPage />
+        }
+      ]
     },
     {
       path: 'subscription',

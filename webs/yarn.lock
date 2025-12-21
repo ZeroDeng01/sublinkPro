@@ -2250,6 +2250,8 @@ __metadata:
     "@xyflow/react": "npm:^12.10.0"
     apexcharts: "npm:5.3.6"
     axios: "npm:^1.13.2"
+    echarts: "npm:^6.0.0"
+    echarts-gl: "npm:^2.0.9"
     eslint: "npm:9.39.1"
     eslint-config-prettier: "npm:10.1.8"
     eslint-plugin-jsx-a11y: "npm:6.10.2"
@@ -2508,6 +2510,13 @@ __metadata:
   version: 2.5.1
   resolution: "classnames@npm:2.5.1"
   checksum: 10c0/afff4f77e62cea2d79c39962980bf316bacb0d7c49e13a21adaadb9221e1c6b9d3cdb829d8bb1b23c406f4e740507f37e1dcf506f7e3b7113d17c5bab787aa69
+  languageName: node
+  linkType: hard
+
+"claygl@npm:^1.2.1":
+  version: 1.3.0
+  resolution: "claygl@npm:1.3.0"
+  checksum: 10c0/5e04bd7c8ec6f2c0c5bdc04092ddf6744d8165d3227cf370bcb07b581bcb77d481178d18045484fcea852c1f0bdf702c933865431d371b5ed3591886271444f3
   languageName: node
   linkType: hard
 
@@ -2932,6 +2941,28 @@ __metadata:
   version: 0.2.0
   resolution: "eastasianwidth@npm:0.2.0"
   checksum: 10c0/26f364ebcdb6395f95124fda411f63137a4bfb5d3a06453f7f23dfe52502905bd84e0488172e0f9ec295fdc45f05c23d5d91baf16bd26f0fe9acd777a188dc39
+  languageName: node
+  linkType: hard
+
+"echarts-gl@npm:^2.0.9":
+  version: 2.0.9
+  resolution: "echarts-gl@npm:2.0.9"
+  dependencies:
+    claygl: "npm:^1.2.1"
+    zrender: "npm:^5.1.1"
+  peerDependencies:
+    echarts: ^5.1.2
+  checksum: 10c0/8b004731f8d4bcd75c7a8c83bcb70773264a5240788238bd66b8adfdbcaafaa527194bd7cbdf8a53ed11283c939663a6568a1a9d1294a7905162ae99c757daa5
+  languageName: node
+  linkType: hard
+
+"echarts@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "echarts@npm:6.0.0"
+  dependencies:
+    tslib: "npm:2.3.0"
+    zrender: "npm:6.0.0"
+  checksum: 10c0/60bbb4f00ac679d2f81d7a0aa684597c8ccc46041c5ae536def4c4bbb85d5557c1653a536ac6e11f42757718ab66e2bbc35d53d795173c50e8541154c8d59bbd
   languageName: node
   linkType: hard
 
@@ -7083,6 +7114,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tslib@npm:2.3.0":
+  version: 2.3.0
+  resolution: "tslib@npm:2.3.0"
+  checksum: 10c0/a845aed84e7e7dbb4c774582da60d7030ea39d67307250442d35c4c5dd77e4b44007098c37dd079e100029c76055f2a362734b8442ba828f8cc934f15ed9be61
+  languageName: node
+  linkType: hard
+
 "tslib@npm:^1.9.3":
   version: 1.14.1
   resolution: "tslib@npm:1.14.1"
@@ -7635,6 +7673,24 @@ __metadata:
   version: 4.1.13
   resolution: "zod@npm:4.1.13"
   checksum: 10c0/d7e74e82dba81a91ffc3239cd85bc034abe193a28f7087a94ab258a3e48e9a7ca4141920cac979a0d781495b48fc547777394149f26be04c3dc642f58bbc3941
+  languageName: node
+  linkType: hard
+
+"zrender@npm:6.0.0":
+  version: 6.0.0
+  resolution: "zrender@npm:6.0.0"
+  dependencies:
+    tslib: "npm:2.3.0"
+  checksum: 10c0/c794e05ee969c750de6d17cfff60d9d4e6342d1591cf6ba3e488fb084ac7a0415355fe4aec55f83a400fd4cda63792db0533362455058ac06f6e1343be28d0ce
+  languageName: node
+  linkType: hard
+
+"zrender@npm:^5.1.1":
+  version: 5.6.1
+  resolution: "zrender@npm:5.6.1"
+  dependencies:
+    tslib: "npm:2.3.0"
+  checksum: 10c0/dc1cc570054640cbd8fbb7b92e6252f225319522bfe3e8dc8bf02cc02d414e00a4c8d0a6f89bfc9d96e5e9511fdca94dd3d06bf53690df2b2f12b0fc560ac307
   languageName: node
   linkType: hard
 
