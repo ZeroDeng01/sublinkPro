@@ -269,6 +269,7 @@ func (b *TelegramBot) SetCommands() error {
 		{"command": "nodes", "description": "🌐 节点信息"},
 		{"command": "tags", "description": "🏷️ 标签规则"},
 		{"command": "tasks", "description": "📝 任务管理"},
+		{"command": "airports", "description": "✈️ 机场管理"},
 	}
 
 	_, err := b.apiRequest("setMyCommands", map[string]interface{}{

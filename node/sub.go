@@ -329,7 +329,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 		return nil, fmt.Errorf("解析失败 or 未找到节点")
 	}
 
-	err = scheduleClashToNodeLinks(id, config.Proxies, subName, reporter)
+	err = scheduleClashToNodeLinks(id, config.Proxies, subName, reporter, usageInfo)
 	return usageInfo, err
 }
 
@@ -337,8 +337,8 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 // id: 订阅ID
 // proxys: 代理节点列表
 // subName: 订阅名称
-// reporter: 任务报告器（可为nil，用于解耦循环依赖）
-func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, reporter TaskReporter) error {
+// usageInfo: 订阅用量信息 (可选)
+func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, reporter TaskReporter, usageInfo *UsageInfo) error {
 	if reporter == nil {
 		reporter = &NoOpTaskReporter{}
 	}
@@ -822,17 +822,40 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	// 触发webhook的完成事件
 	duration := time.Since(startTime)
 	durationStr := formatDurationSub(duration)
+
+	// 构建用量信息文本
+	var usageText string
+	usageData := make(map[string]interface{})
+	if usageInfo != nil {
+		if usageInfo.Total != -1 {
+			usageText = fmt.Sprintf("\n📊 用量信息\n⬆️ 上传: %s\n⬇️ 下载: %s\n📦 总量: %s\n⏳ 过期: %s",
+				utils.FormatBytes(usageInfo.Upload),
+				utils.FormatBytes(usageInfo.Download),
+				utils.FormatBytes(usageInfo.Total),
+				time.Unix(usageInfo.Expire, 0).Format("2006-01-02 15:04:05"))
+			usageData["upload"] = usageInfo.Upload
+			usageData["download"] = usageInfo.Download
+			usageData["total"] = usageInfo.Total
+			usageData["expire"] = usageInfo.Expire
+		}
+	}
+
+	nData := map[string]interface{}{
+		"id":       id,
+		"name":     subName,
+		"status":   "success",
+		"success":  addSuccessCount + skipCount,
+		"duration": duration.Milliseconds(),
+	}
+	if len(usageData) > 0 {
+		nData["usage"] = usageData
+	}
+
 	sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
 		Event:   "sub_update",
 		Title:   "订阅更新完成",
-		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，耗时 %s，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, durationStr, len(proxys), addSuccessCount+skipCount, addSuccessCount, skipCount, deleteCount),
-		Data: map[string]interface{}{
-			"id":       id,
-			"name":     subName,
-			"status":   "success",
-			"success":  addSuccessCount + skipCount,
-			"duration": duration.Milliseconds(),
-		},
+		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，耗时 %s，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个%s", subName, durationStr, len(proxys), addSuccessCount+skipCount, addSuccessCount, skipCount, deleteCount, usageText),
+		Data:    nData,
 	})
 	return nil
 

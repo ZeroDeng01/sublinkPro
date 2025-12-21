@@ -92,7 +92,10 @@ export const formatExpireTime = (timestamp) => {
   const year = expireDate.getFullYear();
   const month = String(expireDate.getMonth() + 1).padStart(2, '0');
   const day = String(expireDate.getDate()).padStart(2, '0');
-  const dateStr = `${year}-${month}-${day}`;
+  const hours = String(expireDate.getHours()).padStart(2, '0');
+  const minutes = String(expireDate.getMinutes()).padStart(2, '0');
+  const seconds = String(expireDate.getSeconds()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
   // 判断是否已过期
   if (expireDate < now) {

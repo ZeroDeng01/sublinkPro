@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sublink/models"
 	"sublink/utils"
+	"time"
 )
 
 // HandleCallbackQuery 处理回调查询
@@ -37,6 +39,10 @@ func HandleCallbackQuery(bot *TelegramBot, callback *CallbackQuery) error {
 		return handleSubscriptionsCallback(bot, callback)
 	case "tags":
 		return handleTagsCallback(bot, callback, param)
+	case "airports":
+		return handleAirportsCallback(bot, callback)
+	case "airport_detail":
+		return handleAirportDetailCallback(bot, callback, param)
 	case "cancel":
 		return handleCancelCallback(bot, callback)
 
@@ -45,6 +51,8 @@ func HandleCallbackQuery(bot *TelegramBot, callback *CallbackQuery) error {
 		return handleSpeedTestCallback(bot, callback, param)
 	case "sub_pull":
 		return handleSubPullCallback(bot, callback, param)
+	case "airport_pull":
+		return handleAirportPullCallback(bot, callback, param)
 	case "sub_link":
 		return handleSubLinkCallback(bot, callback, param)
 	case "task_cancel":
@@ -228,4 +236,99 @@ func handleSubLinkCallback(bot *TelegramBot, callback *CallbackQuery, param stri
 	}
 
 	return bot.SendMessageWithKeyboard(callback.Message.Chat.ID, text, "Markdown", keyboard)
+}
+
+// handleAirportsCallback 处理 airports 回调
+func handleAirportsCallback(bot *TelegramBot, callback *CallbackQuery) error {
+	handler := GetHandler("airports")
+	if handler == nil {
+		return nil
+	}
+	return handler.Handle(bot, callback.Message)
+}
+
+// handleAirportDetailCallback 处理 airport_detail 回调
+func handleAirportDetailCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 无效的机场 ID", "")
+	}
+
+	airport, err := models.GetAirportByID(id)
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 获取机场失败: "+err.Error(), "")
+	}
+
+	var text strings.Builder
+	text.WriteString(fmt.Sprintf("✈️ *机场详情: %s*\n\n", airport.Name))
+
+	// 基础信息
+	text.WriteString(fmt.Sprintf("🔗 地址: `%s`\n", airport.URL))
+	text.WriteString(fmt.Sprintf("📂 分组: `%s`\n", airport.Group))
+	text.WriteString(fmt.Sprintf("⏰ 定时: `%s`\n", airport.CronExpr))
+
+	status := "启用"
+	if !airport.Enabled {
+		status = "禁用"
+	}
+	text.WriteString(fmt.Sprintf("🔌 状态: %s\n", status))
+
+	proxyStatus := "否"
+	if airport.DownloadWithProxy {
+		proxyStatus = "是"
+		if airport.ProxyLink != "" {
+			proxyStatus += " (指定)"
+		} else {
+			proxyStatus += " (自动)"
+		}
+	}
+	text.WriteString(fmt.Sprintf("🌐 代理下载: %s\n", proxyStatus))
+
+	if airport.UserAgent != "" {
+		text.WriteString(fmt.Sprintf("🕵️ UA: `%s`\n", airport.UserAgent))
+	}
+
+	if airport.LastRunTime != nil {
+		text.WriteString(fmt.Sprintf("🕒 上次更新: %s\n", airport.LastRunTime.Format("2006-01-02 15:04:05")))
+	}
+
+	// 用量信息
+	if airport.FetchUsageInfo {
+		text.WriteString("\n📊 *用量信息*\n")
+		// 注意: 这里假设 models.Airport 结构体中有用量字段，这在之前的文件查看中已确认
+		if airport.UsageTotal > 0 {
+			text.WriteString(fmt.Sprintf("⬆️ 上传: %s\n", utils.FormatBytes(airport.UsageUpload)))
+			text.WriteString(fmt.Sprintf("⬇️ 下载: %s\n", utils.FormatBytes(airport.UsageDownload)))
+			text.WriteString(fmt.Sprintf("📦 总量: %s\n", utils.FormatBytes(airport.UsageTotal)))
+			if airport.UsageExpire > 0 {
+				text.WriteString(fmt.Sprintf("⏳ 过期: %s\n", time.Unix(airport.UsageExpire, 0).Format("2006-01-02 15:04:05")))
+			}
+		} else if airport.UsageTotal == -1 {
+			text.WriteString("⚠️ 获取失败或不支持\n")
+		} else {
+			text.WriteString("⏳ 暂无数据\n")
+		}
+	}
+
+	keyboard := [][]InlineKeyboardButton{
+		{NewInlineButton("🔄 立即更新", fmt.Sprintf("airport_pull:%d", id))},
+		{NewInlineButton("🔙 返回列表", "airports")},
+	}
+
+	return bot.SendMessageWithKeyboard(callback.Message.Chat.ID, text.String(), "Markdown", keyboard)
+}
+
+// handleAirportPullCallback 处理 airport_pull 回调
+func handleAirportPullCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 无效的机场 ID", "")
+	}
+
+	// 复用 PullSubscription 函数
+	if err := PullSubscription(id); err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 启动更新失败: "+err.Error(), "")
+	}
+
+	return bot.SendMessage(callback.Message.Chat.ID, "✅ 已开始更新任务，完成后将收到通知", "")
 }

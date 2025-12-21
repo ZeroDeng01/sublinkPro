@@ -59,6 +59,7 @@ func init() {
 	RegisterHandler("nodes", &NodesHandler{})
 	RegisterHandler("tags", &TagsHandler{})
 	RegisterHandler("tasks", &TasksHandler{})
+	RegisterHandler("airports", &AirportsHandler{})
 }
 
 // ============ StartHandler ============
@@ -687,4 +688,64 @@ func GetSubscriptionLink(subID int) (string, error) {
 	// 构建基础链接
 	link := fmt.Sprintf("%s/c/?token=%s", domain, share.Token)
 	return link, nil
+}
+
+// ============ AirportsHandler ============
+
+type AirportsHandler struct{}
+
+func (h *AirportsHandler) Command() string     { return "airports" }
+func (h *AirportsHandler) Description() string { return "✈️ 机场管理" }
+
+func (h *AirportsHandler) Handle(bot *TelegramBot, message *Message) error {
+	var airport models.Airport
+	airports, err := airport.List()
+	if err != nil {
+		return fmt.Errorf("获取机场列表失败: %v", err)
+	}
+
+	if len(airports) == 0 {
+		return bot.SendMessage(message.Chat.ID, "✈️ 暂无机场", "")
+	}
+
+	var text strings.Builder
+	text.WriteString("✈️ *机场列表*\n\n")
+
+	var keyboard [][]InlineKeyboardButton
+
+	// 分页显示? 暂时限制前 10 个，类似 SubscriptionsHandler
+	for i, ap := range airports {
+		if i >= 10 {
+			text.WriteString(fmt.Sprintf("\n... 还有 %d 个机场", len(airports)-10))
+			break
+		}
+
+		status := "✅"
+		if !ap.Enabled {
+			status = "⏸️"
+		}
+
+		// 节点数量
+		nodes, _ := models.ListNodesByAirportID(ap.ID)
+		nodeCount := len(nodes)
+
+		text.WriteString(fmt.Sprintf("%s *%s*\n", status, truncateName(ap.Name, 20)))
+		text.WriteString(fmt.Sprintf("   └ 🔗 %s\n", truncateName(ap.URL, 30)))
+		text.WriteString(fmt.Sprintf("   └ 📦 %d 个节点\n", nodeCount))
+		if ap.LastRunTime != nil {
+			text.WriteString(fmt.Sprintf("   └ 🕒 上次更新: %s\n", ap.LastRunTime.Format("01-02 15:04")))
+		}
+		text.WriteString("\n")
+
+		// 按钮
+		keyboard = append(keyboard, []InlineKeyboardButton{
+			NewInlineButton("⚙️ 管理 "+truncateName(ap.Name, 10), fmt.Sprintf("airport_detail:%d", ap.ID)),
+		})
+	}
+
+	keyboard = append(keyboard, []InlineKeyboardButton{
+		NewInlineButton("🔙 返回", "start"),
+	})
+
+	return bot.SendMessageWithKeyboard(message.Chat.ID, text.String(), "Markdown", keyboard)
 }

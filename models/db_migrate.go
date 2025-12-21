@@ -60,11 +60,11 @@ func RunMigrations() {
 	} else {
 		utils.Info("数据表AccessKey创建成功")
 	}
-	if err := db.AutoMigrate(&SubScheduler{}); err != nil {
-		utils.Error("基础数据表SubScheduler迁移失败: %v", err)
-	} else {
-		utils.Info("数据表SubScheduler创建成功")
-	}
+	//if err := db.AutoMigrate(&SubScheduler{}); err != nil {
+	//	utils.Error("基础数据表SubScheduler迁移失败: %v", err)
+	//} else {
+	//	utils.Info("数据表SubScheduler创建成功")
+	//}
 	if err := db.AutoMigrate(&SystemSetting{}); err != nil {
 		utils.Error("基础数据表SystemSetting迁移失败: %v", err)
 	} else {
