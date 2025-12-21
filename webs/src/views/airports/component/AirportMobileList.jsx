@@ -18,154 +18,244 @@ import LinkIcon from '@mui/icons-material/Link';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 // utils
-import { formatDateTime } from '../utils';
+import { formatDateTime, formatBytes, formatExpireTime, getUsageColor } from '../utils';
 
 /**
  * 机场移动端列表组件
  */
 export default function AirportMobileList({ airports, onEdit, onDelete, onPull }) {
-    const theme = useTheme();
+  const theme = useTheme();
 
-    if (airports.length === 0) {
-        return (
-            <Box sx={{ py: 6, textAlign: 'center' }}>
-                <Typography variant="body2" color="textSecondary">
-                    暂无机场数据，点击上方"添加"按钮添加
-                </Typography>
-            </Box>
-        );
-    }
-
+  if (airports.length === 0) {
     return (
-        <Stack spacing={2}>
-            {airports.map((airport) => (
-                <Card
-                    key={airport.id}
-                    sx={{
-                        borderRadius: 3,
-                        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: theme.shadows[4]
-                        }
-                    }}
-                >
-                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                        {/* 顶部：名称和状态 */}
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                            <Typography variant="subtitle1" fontWeight={600}>
-                                {airport.name}
-                            </Typography>
-                            <Chip
-                                label={airport.enabled ? '启用' : '禁用'}
-                                color={airport.enabled ? 'success' : 'default'}
-                                size="small"
-                            />
-                        </Box>
-
-                        {/* 订阅地址 */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <LinkIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                            <Typography
-                                variant="body2"
-                                color="textSecondary"
-                                sx={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    flex: 1
-                                }}
-                            >
-                                {airport.url}
-                            </Typography>
-                        </Box>
-
-                        {/* 信息行 */}
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                            <Chip
-                                label={`${airport.nodeCount || 0} 节点`}
-                                color="primary"
-                                variant="outlined"
-                                size="small"
-                            />
-                            {airport.group && (
-                                <Chip label={airport.group} variant="outlined" size="small" />
-                            )}
-                            <Chip
-                                icon={<AccessTimeIcon sx={{ fontSize: '14px !important' }} />}
-                                label={airport.cronExpr}
-                                variant="outlined"
-                                size="small"
-                            />
-                        </Box>
-
-                        {/* 时间信息 */}
-                        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                            <Box>
-                                <Typography variant="caption" color="textSecondary">
-                                    上次运行
-                                </Typography>
-                                <Typography variant="body2">
-                                    {formatDateTime(airport.lastRunTime)}
-                                </Typography>
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" color="textSecondary">
-                                    下次运行
-                                </Typography>
-                                <Typography variant="body2">
-                                    {formatDateTime(airport.nextRunTime)}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        {/* 操作按钮 */}
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                            <IconButton
-                                size="small"
-                                onClick={() => onPull(airport)}
-                                sx={{
-                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                    color: theme.palette.primary.main,
-                                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
-                                }}
-                            >
-                                <PlayArrowIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                                size="small"
-                                onClick={() => onEdit(airport)}
-                                sx={{
-                                    bgcolor: alpha(theme.palette.info.main, 0.1),
-                                    color: theme.palette.info.main,
-                                    '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.2) }
-                                }}
-                            >
-                                <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                                size="small"
-                                onClick={() => onDelete(airport)}
-                                sx={{
-                                    bgcolor: alpha(theme.palette.error.main, 0.1),
-                                    color: theme.palette.error.main,
-                                    '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) }
-                                }}
-                            >
-                                <DeleteIcon fontSize="small" />
-                            </IconButton>
-                        </Box>
-                    </CardContent>
-                </Card>
-            ))}
-        </Stack>
+      <Box sx={{ py: 6, textAlign: 'center' }}>
+        <Typography variant="body2" color="textSecondary">
+          暂无机场数据，点击上方"添加"按钮添加
+        </Typography>
+      </Box>
     );
+  }
+
+  return (
+    <Stack spacing={2}>
+      {airports.map((airport) => (
+        <Card
+          key={airport.id}
+          sx={{
+            borderRadius: 3,
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: theme.shadows[4]
+            }
+          }}
+        >
+          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+            {/* 顶部：名称和状态 */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+              <Typography variant="subtitle1" fontWeight={600}>
+                {airport.name}
+              </Typography>
+              <Chip label={airport.enabled ? '启用' : '禁用'} color={airport.enabled ? 'success' : 'default'} size="small" />
+            </Box>
+
+            {/* 订阅地址 */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <LinkIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                sx={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  flex: 1
+                }}
+              >
+                {airport.url}
+              </Typography>
+            </Box>
+
+            {/* 信息行 */}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+              <Chip label={`${airport.nodeCount || 0} 节点`} color="primary" variant="outlined" size="small" />
+              {airport.group && <Chip label={airport.group} variant="outlined" size="small" />}
+              <Chip
+                icon={<AccessTimeIcon sx={{ fontSize: '14px !important' }} />}
+                label={airport.cronExpr}
+                variant="outlined"
+                size="small"
+              />
+            </Box>
+
+            {/* 时间信息 */}
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Box>
+                <Typography variant="caption" color="textSecondary">
+                  上次运行
+                </Typography>
+                <Typography variant="body2">{formatDateTime(airport.lastRunTime)}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="textSecondary">
+                  下次运行
+                </Typography>
+                <Typography variant="body2">{formatDateTime(airport.nextRunTime)}</Typography>
+              </Box>
+            </Box>
+
+            {/* 用量信息 */}
+            {airport.fetchUsageInfo && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
+                  用量信息
+                </Typography>
+                {airport.usageTotal === -1 ? (
+                  <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 500 }}>
+                    用量获取失败（机场可能不支持）
+                  </Typography>
+                ) : airport.usageTotal > 0 ? (
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                      border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+                    }}
+                  >
+                    {(() => {
+                      const upload = airport.usageUpload || 0;
+                      const download = airport.usageDownload || 0;
+                      const used = upload + download;
+                      const total = airport.usageTotal;
+                      const percent = Math.min((used / total) * 100, 100);
+                      const color = getUsageColor(percent);
+
+                      // 根据使用率计算进度条渐变色
+                      const getProgressGradient = () => {
+                        if (percent < 60) return `linear-gradient(90deg, ${theme.palette.success.light}, ${theme.palette.success.main})`;
+                        if (percent < 85) return `linear-gradient(90deg, ${theme.palette.warning.light}, ${theme.palette.warning.main})`;
+                        return `linear-gradient(90deg, ${theme.palette.error.light}, ${theme.palette.error.main})`;
+                      };
+
+                      return (
+                        <>
+                          {/* 已用/总量 + 百分比 */}
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                              {formatBytes(used)} / {formatBytes(total)}
+                            </Typography>
+                            <Typography variant="body1" sx={{ fontWeight: 700, color: color }}>
+                              {percent.toFixed(1)}%
+                            </Typography>
+                          </Box>
+
+                          {/* 进度条 */}
+                          <Box
+                            sx={{
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                              overflow: 'hidden',
+                              mb: 1.5
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: `${percent}%`,
+                                height: '100%',
+                                borderRadius: 4,
+                                background: getProgressGradient(),
+                                transition: 'width 0.3s ease'
+                              }}
+                            />
+                          </Box>
+
+                          {/* 上传/下载分项 */}
+                          <Box sx={{ display: 'flex', gap: 3, mb: airport.usageExpire > 0 ? 1 : 0 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 500 }}>
+                                ↑
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                {formatBytes(upload)}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Typography variant="body2" sx={{ color: 'info.main', fontWeight: 500 }}>
+                                ↓
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                {formatBytes(download)}
+                              </Typography>
+                            </Box>
+                          </Box>
+
+                          {/* 过期时间 */}
+                          {airport.usageExpire > 0 && (
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                              到期: {formatExpireTime(airport.usageExpire)}
+                            </Typography>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="textSecondary">
+                    待获取
+                  </Typography>
+                )}
+              </Box>
+            )}
+
+            {/* 操作按钮 */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+              <IconButton
+                size="small"
+                onClick={() => onPull(airport)}
+                sx={{
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  color: theme.palette.primary.main,
+                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
+                }}
+              >
+                <PlayArrowIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={() => onEdit(airport)}
+                sx={{
+                  bgcolor: alpha(theme.palette.info.main, 0.1),
+                  color: theme.palette.info.main,
+                  '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.2) }
+                }}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={() => onDelete(airport)}
+                sx={{
+                  bgcolor: alpha(theme.palette.error.main, 0.1),
+                  color: theme.palette.error.main,
+                  '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) }
+                }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </CardContent>
+        </Card>
+      ))}
+    </Stack>
+  );
 }
 
 AirportMobileList.propTypes = {
-    airports: PropTypes.array.isRequired,
-    onEdit: PropTypes.func.isRequired,
-    onDelete: PropTypes.func.isRequired,
-    onPull: PropTypes.func.isRequired
+  airports: PropTypes.array.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onPull: PropTypes.func.isRequired
 };

@@ -2,6 +2,7 @@ package models
 
 import (
 	"strconv"
+	"strings"
 	"sublink/cache"
 	"sublink/database"
 	"sublink/utils"
@@ -26,6 +27,12 @@ type Airport struct {
 	ProxyLink         string     `gorm:"default:''" json:"proxyLink"`            // 代理节点链接
 	UserAgent         string     `json:"userAgent"`                              // 自定义User-Agent
 	NodeCount         int        `gorm:"-" json:"nodeCount"`                     // 节点数量（非数据库字段）
+	// 用量信息相关字段
+	FetchUsageInfo bool  `gorm:"default:false" json:"fetchUsageInfo"` // 是否获取用量信息
+	UsageUpload    int64 `gorm:"default:0" json:"usageUpload"`        // 已上传流量（字节）
+	UsageDownload  int64 `gorm:"default:0" json:"usageDownload"`      // 已下载流量（字节）
+	UsageTotal     int64 `gorm:"default:0" json:"usageTotal"`         // 总流量配额（字节）
+	UsageExpire    int64 `gorm:"default:0" json:"usageExpire"`        // 订阅过期时间（Unix时间戳）
 }
 
 // TableName 指定表名
@@ -72,6 +79,7 @@ func (a *Airport) Update() error {
 	err := database.DB.Model(a).Select(
 		"Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime",
 		"SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent",
+		"FetchUsageInfo",
 	).Updates(a).Error
 	if err != nil {
 		return err
@@ -127,6 +135,57 @@ func (a *Airport) ListPaginated(page, pageSize int) ([]Airport, int64, error) {
 	}
 
 	return allAirports[offset:end], total, nil
+}
+
+// AirportFilter 机场筛选条件
+type AirportFilter struct {
+	Name    string // 名称模糊搜索
+	Group   string // 分组筛选
+	Enabled *bool  // 启用状态筛选
+}
+
+// ListWithFilter 带筛选条件的分页获取机场列表
+func (a *Airport) ListWithFilter(page, pageSize int, filter AirportFilter) ([]Airport, int64, error) {
+	// 从缓存获取所有数据
+	allAirports := airportCache.GetAllSorted(func(x, y Airport) bool {
+		return x.ID < y.ID
+	})
+
+	// 应用筛选条件
+	var filteredAirports []Airport
+	for _, ap := range allAirports {
+		// 名称模糊匹配
+		if filter.Name != "" && !containsIgnoreCase(ap.Name, filter.Name) {
+			continue
+		}
+		// 分组精确匹配
+		if filter.Group != "" && ap.Group != filter.Group {
+			continue
+		}
+		// 启用状态匹配
+		if filter.Enabled != nil && ap.Enabled != *filter.Enabled {
+			continue
+		}
+		filteredAirports = append(filteredAirports, ap)
+	}
+
+	total := int64(len(filteredAirports))
+
+	if page <= 0 || pageSize <= 0 {
+		return filteredAirports, total, nil
+	}
+
+	offset := (page - 1) * pageSize
+	if offset >= len(filteredAirports) {
+		return []Airport{}, total, nil
+	}
+
+	end := offset + pageSize
+	if end > len(filteredAirports) {
+		end = len(filteredAirports)
+	}
+
+	return filteredAirports[offset:end], total, nil
 }
 
 // ListEnabled 获取所有启用的机场
@@ -210,4 +269,31 @@ func ListNodesByAirportID(airportID int) ([]Node, error) {
 // UpdateNodesByAirportID 更新机场关联节点的来源名称和分组
 func UpdateNodesByAirportID(airportID int, name string, group string) error {
 	return UpdateNodesBySourceID(airportID, name, group)
+}
+
+// UpdateUsageInfo 更新用量信息 (Write-Through)
+func (a *Airport) UpdateUsageInfo(upload, download, total, expire int64) error {
+	err := database.DB.Model(a).Select("UsageUpload", "UsageDownload", "UsageTotal", "UsageExpire").Updates(map[string]interface{}{
+		"UsageUpload":   upload,
+		"UsageDownload": download,
+		"UsageTotal":    total,
+		"UsageExpire":   expire,
+	}).Error
+	if err != nil {
+		return err
+	}
+	// 更新缓存
+	if cached, ok := airportCache.Get(a.ID); ok {
+		cached.UsageUpload = upload
+		cached.UsageDownload = download
+		cached.UsageTotal = total
+		cached.UsageExpire = expire
+		airportCache.Set(a.ID, cached)
+	}
+	return nil
+}
+
+// containsIgnoreCase 忽略大小写的字符串包含检查
+func containsIgnoreCase(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }

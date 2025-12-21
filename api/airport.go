@@ -20,7 +20,7 @@ func validateCron(expr string) bool {
 	return err == nil
 }
 
-// AirportList 获取机场列表（支持分页）
+// AirportList 获取机场列表（支持分页和筛选）
 func AirportList(c *gin.Context) {
 	// 解析分页参数
 	page := 0
@@ -36,9 +36,21 @@ func AirportList(c *gin.Context) {
 		}
 	}
 
-	// 分页查询
+	// 解析筛选参数
+	filter := models.AirportFilter{
+		Name:  c.Query("name"),
+		Group: c.Query("group"),
+	}
+
+	// 解析启用状态筛选
+	if enabledStr := c.Query("enabled"); enabledStr != "" {
+		enabled := enabledStr == "true"
+		filter.Enabled = &enabled
+	}
+
+	// 分页查询（带筛选）
 	if page > 0 && pageSize > 0 {
-		airports, total, err := new(models.Airport).ListPaginated(page, pageSize)
+		airports, total, err := new(models.Airport).ListWithFilter(page, pageSize, filter)
 		if err != nil {
 			utils.FailWithMsg(c, "获取机场列表失败: "+err.Error())
 			return
@@ -66,8 +78,8 @@ func AirportList(c *gin.Context) {
 		return
 	}
 
-	// 不带分页，返回全部
-	airports, err := new(models.Airport).List()
+	// 不带分页，返回全部（但仍支持筛选）
+	airports, _, err := new(models.Airport).ListWithFilter(0, 0, filter)
 	if err != nil {
 		utils.FailWithMsg(c, "获取机场列表失败: "+err.Error())
 		return
@@ -130,6 +142,7 @@ func AirportAdd(c *gin.Context) {
 		DownloadWithProxy: req.DownloadWithProxy,
 		ProxyLink:         req.ProxyLink,
 		UserAgent:         req.UserAgent,
+		FetchUsageInfo:    req.FetchUsageInfo,
 	}
 
 	// 检查是否重复
@@ -205,6 +218,7 @@ func AirportUpdate(c *gin.Context) {
 	existing.DownloadWithProxy = req.DownloadWithProxy
 	existing.ProxyLink = req.ProxyLink
 	existing.UserAgent = req.UserAgent
+	existing.FetchUsageInfo = req.FetchUsageInfo
 
 	if err := existing.Update(); err != nil {
 		utils.FailWithMsg(c, "更新失败: "+err.Error())

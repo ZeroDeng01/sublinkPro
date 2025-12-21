@@ -45,6 +45,76 @@ func (n *NoOpTaskReporter) ReportProgress(current int, currentItem string, resul
 func (n *NoOpTaskReporter) ReportComplete(message string, result interface{})                  {}
 func (n *NoOpTaskReporter) ReportFail(errMsg string)                                           {}
 
+// UsageInfo 订阅用量信息（从 subscription-userinfo header 解析）
+type UsageInfo struct {
+	Upload   int64 // 已上传流量（字节）
+	Download int64 // 已下载流量（字节）
+	Total    int64 // 总流量配额（字节）
+	Expire   int64 // 订阅过期时间（Unix时间戳）
+}
+
+// ParseSubscriptionUserInfo 解析 subscription-userinfo header
+// 格式: upload=189594657; download=39476274625; total=108447924224; expire=1768890123
+func ParseSubscriptionUserInfo(headerValue string) *UsageInfo {
+	if headerValue == "" {
+		return nil
+	}
+
+	info := &UsageInfo{}
+	// 按分号分割各个字段
+	parts := strings.Split(headerValue, ";")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		// 按等号分割键值对
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(kv[0])
+		value := strings.TrimSpace(kv[1])
+
+		switch key {
+		case "upload":
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
+				info.Upload = v
+			}
+		case "download":
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
+				info.Download = v
+			}
+		case "total":
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
+				info.Total = v
+			}
+		case "expire":
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
+				info.Expire = v
+			}
+		}
+	}
+
+	// 如果所有字段都为0，则认为解析失败
+	if info.Upload == 0 && info.Download == 0 && info.Total == 0 && info.Expire == 0 {
+		return nil
+	}
+
+	return info
+}
+
+// FailedUsageInfo 返回表示用量信息获取失败的特殊值
+// 使用 -1 作为 Total 字段的标记，表示开启了获取但机场不支持
+func FailedUsageInfo() *UsageInfo {
+	return &UsageInfo{
+		Upload:   0,
+		Download: 0,
+		Total:    -1, // -1 表示获取失败
+		Expire:   0,
+	}
+}
+
 type ClashConfig struct {
 	Proxies []protocol.Proxy `yaml:"proxies"`
 }
@@ -57,13 +127,14 @@ type ClashConfig struct {
 // downloadWithProxy: 是否使用代理下载
 // proxyLink: 代理链接 (可选)
 // userAgent: 请求的 User-Agent (可选，默认 Clash)
-func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string) error {
-	return LoadClashConfigFromURLWithReporter(id, urlStr, subName, downloadWithProxy, proxyLink, userAgent, nil)
+func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string) (*UsageInfo, error) {
+	return LoadClashConfigFromURLWithReporter(id, urlStr, subName, downloadWithProxy, proxyLink, userAgent, nil, false)
 }
 
 // LoadClashConfigFromURLWithReporter 从指定 URL 加载 Clash 配置（带任务报告器）
 // reporter: 任务进度报告器，用于TaskManager集成
-func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string, reporter TaskReporter) error {
+// fetchUsageInfo: 是否获取用量信息
+func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string, reporter TaskReporter, fetchUsageInfo bool) (*UsageInfo, error) {
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -132,7 +203,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
 		utils.Error("URL %s，创建请求失败:  %v", urlStr, err)
-		return err
+		return nil, err
 	}
 
 	// 设置 User-Agent
@@ -155,9 +226,31 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 				"error":  err.Error(),
 			},
 		})
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
+
+	// 解析用量信息（仅当开启获取用量信息时）
+	var usageInfo *UsageInfo
+	if fetchUsageInfo {
+		subUserInfo := resp.Header.Get("subscription-userinfo")
+		if subUserInfo != "" {
+			usageInfo = ParseSubscriptionUserInfo(subUserInfo)
+			if usageInfo != nil {
+				utils.Info("订阅【%s】获取用量信息成功: 上传=%d, 下载=%d, 总量=%d, 过期=%d",
+					subName, usageInfo.Upload, usageInfo.Download, usageInfo.Total, usageInfo.Expire)
+			} else {
+				// header 存在但解析失败
+				utils.Warn("订阅【%s】用量信息 header 解析失败", subName)
+				usageInfo = FailedUsageInfo()
+			}
+		} else {
+			// 开启了获取但机场未返回 header
+			utils.Warn("订阅【%s】未返回用量信息 header，机场可能不支持", subName)
+			usageInfo = FailedUsageInfo()
+		}
+	}
+
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		utils.Error("URL %s，读取Clash配置失败:  %v", urlStr, err)
@@ -173,7 +266,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 				"error":  err.Error(),
 			},
 		})
-		return err
+		return nil, err
 	}
 	var config ClashConfig
 	// 尝试解析 YAML
@@ -233,10 +326,11 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 				"error":  "解析失败或未找到节点",
 			},
 		})
-		return fmt.Errorf("解析失败 or 未找到节点")
+		return nil, fmt.Errorf("解析失败 or 未找到节点")
 	}
 
-	return scheduleClashToNodeLinks(id, config.Proxies, subName, reporter)
+	err = scheduleClashToNodeLinks(id, config.Proxies, subName, reporter)
+	return usageInfo, err
 }
 
 // scheduleClashToNodeLinks 将 Clash 代理配置转换为节点链接并保存到数据库
@@ -262,11 +356,10 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		}
 	}()
 
-	// 获取订阅的Group信息
-	subS := models.SubScheduler{}
-	err := subS.GetByID(id)
+	// 获取机场的Group信息
+	airport, err := models.GetAirportByID(id)
 	if err != nil {
-		utils.Error("获取订阅连接 %s 的Group失败:  %v", subName, err)
+		utils.Error("获取机场 %s 的Group失败:  %v", subName, err)
 	}
 
 	// 1. 获取该订阅当前在数据库中的所有节点
@@ -645,7 +738,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		Node.LinkPort = strconv.Itoa(proxy.Port)
 		Node.Source = subName
 		Node.SourceID = id
-		Node.Group = subS.Group
+		Node.Group = airport.Group
 
 		// 记录本次获取到的节点
 		currentLinks[link] = true
@@ -705,20 +798,17 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	}
 
 	utils.Info("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+skipCount, addSuccessCount, skipCount, deleteCount)
-	// 重新查找订阅以获取最新信息
-	subS = models.SubScheduler{
-		Name: subName,
-	}
-	err = subS.Find()
+	// 重新查找机场以获取最新信息并更新成功次数
+	airport, err = models.GetAirportByID(id)
 	if err != nil {
-		utils.Error("获取订阅连接 %s 失败:  %v", subName, err)
+		utils.Error("获取机场 %s 失败:  %v", subName, err)
 		return err
 	}
-	subS.SuccessCount = addSuccessCount + skipCount
+	airport.SuccessCount = addSuccessCount + skipCount
 	// 当前时间
 	now := time.Now()
-	subS.LastRunTime = &now
-	err1 := subS.Update()
+	airport.LastRunTime = &now
+	err1 := airport.Update()
 	if err1 != nil {
 		return err1
 	}

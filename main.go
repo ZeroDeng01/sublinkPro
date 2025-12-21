@@ -328,9 +328,6 @@ func Run() {
 	if err := models.InitScriptCache(); err != nil {
 		utils.Error("加载脚本到缓存失败: %v", err)
 	}
-	if err := models.InitSubSchedulerCache(); err != nil {
-		utils.Error("加载订阅调度到缓存失败: %v", err)
-	}
 	if err := models.InitAirportCache(); err != nil {
 		utils.Error("加载机场到缓存失败: %v", err)
 	}
@@ -456,7 +453,6 @@ func Run() {
 	routers.Total(r)
 	routers.Templates(r)
 	routers.Version(r, version)
-	routers.SubScheduler(r)
 	routers.Backup(r)
 	routers.Script(r)
 	routers.SSE(r)

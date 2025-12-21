@@ -613,18 +613,18 @@ func RunSpeedTest(scope string) error {
 	}
 }
 
-// PullSubscription 拉取订阅
-func PullSubscription(subID int) error {
-	var sub models.SubScheduler
-	if err := sub.GetByID(subID); err != nil {
-		return fmt.Errorf("获取订阅失败: %v", err)
+// PullSubscription 拉取订阅（机场更新）
+func PullSubscription(airportID int) error {
+	airport, err := models.GetAirportByID(airportID)
+	if err != nil {
+		return fmt.Errorf("获取机场失败: %v", err)
 	}
 
 	// 通过包装器调用服务层
 	if servicesWrapper != nil {
-		go servicesWrapper.ExecuteSubscriptionTaskWithTrigger(sub.ID, sub.URL, sub.Name, models.TaskTriggerManual)
+		go servicesWrapper.ExecuteSubscriptionTaskWithTrigger(airport.ID, airport.URL, airport.Name, models.TaskTriggerManual)
 	}
-	utils.Info("Telegram 触发订阅更新: %s", sub.Name)
+	utils.Info("Telegram 触发机场更新: %s", airport.Name)
 
 	return nil
 }

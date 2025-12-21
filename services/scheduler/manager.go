@@ -50,22 +50,22 @@ func (sm *SchedulerManager) Stop() {
 // LoadFromDatabase 从数据库加载所有启用的定时任务
 func (sm *SchedulerManager) LoadFromDatabase() error {
 
-	schedulers, err := models.ListEnabled()
+	airports, err := models.ListEnabledAirports()
 	if err != nil {
 		utils.Error("从数据库加载定时任务失败: %v", err)
 		return err
 	}
 	// 添加所有启用的任务
-	for _, scheduler := range schedulers {
-		err := sm.AddJob(scheduler.ID, scheduler.CronExpr, func(id int, url string, subName string) {
+	for _, airport := range airports {
+		err := sm.AddJob(airport.ID, airport.CronExpr, func(id int, url string, subName string) {
 			ExecuteSubscriptionTask(id, url, subName)
-		}, scheduler.ID, scheduler.URL, scheduler.Name)
+		}, airport.ID, airport.URL, airport.Name)
 
 		if err != nil {
-			utils.Error("添加定时任务失败 - ID: %d, Error: %v", scheduler.ID, err)
+			utils.Error("添加定时任务失败 - ID: %d, Error: %v", airport.ID, err)
 		} else {
 			utils.Info("成功添加定时任务 - ID: %d, Name: %s, Cron: %s",
-				scheduler.ID, scheduler.Name, scheduler.CronExpr)
+				airport.ID, airport.Name, airport.CronExpr)
 		}
 	}
 
@@ -231,14 +231,13 @@ func (sm *SchedulerManager) getNextRunTime(cronExpr string) *time.Time {
 // updateRunTime 更新数据库中的运行时间
 func (sm *SchedulerManager) updateRunTime(schedulerID int, lastRun, nextRun *time.Time) {
 	go func() {
-		var subS models.SubScheduler
-		err := subS.GetByID(schedulerID)
+		airport, err := models.GetAirportByID(schedulerID)
 		if err != nil {
-			utils.Error("获取订阅调度失败 - ID: %d, Error: %v", schedulerID, err)
+			utils.Error("获取机场失败 - ID: %d, Error: %v", schedulerID, err)
 			return
 		}
 
-		err = subS.UpdateRunTime(lastRun, nextRun)
+		err = airport.UpdateRunTime(lastRun, nextRun)
 		if err != nil {
 			utils.Error("更新运行时间失败 - ID: %d, Error: %v", schedulerID, err)
 		}
