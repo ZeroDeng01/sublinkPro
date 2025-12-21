@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -45,15 +46,11 @@ import {
   batchUpdateNodeSource,
   getProtocolUIMeta
 } from 'api/nodes';
-import { getSubSchedulers, addSubScheduler, updateSubScheduler, deleteSubScheduler, pullSubScheduler } from 'api/scheduler';
 import { getTags, batchSetNodeTags, batchRemoveNodeTags } from 'api/tags';
 
 // local components
 import {
   NodeDialog,
-  SchedulerDialog,
-  SchedulerFormDialog,
-  DeleteSchedulerDialog,
   SpeedTestDialog,
   BatchGroupDialog,
   BatchDialerProxyDialog,
@@ -68,13 +65,15 @@ import {
 } from './component';
 
 // utils
-import { validateCronExpression, SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS } from './utils';
+import { SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS } from './utils';
+
 
 // ==============================|| 节点管理 ||============================== //
 
 export default function NodeList() {
   const theme = useTheme();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
+  const navigate = useNavigate();
 
   // Task progress for auto-refresh
   const { registerOnComplete, unregisterOnComplete } = useTaskProgress();
@@ -133,27 +132,6 @@ export default function NodeList() {
     return saved ? parseInt(saved, 10) : 20;
   });
   const [totalItems, setTotalItems] = useState(0);
-
-  // 订阅调度器
-  const [schedulers, setSchedulers] = useState([]);
-  const [schedulerDialogOpen, setSchedulerDialogOpen] = useState(false);
-  const [schedulerFormOpen, setSchedulerFormOpen] = useState(false);
-  const [isEditScheduler, setIsEditScheduler] = useState(false);
-  const [schedulerForm, setSchedulerForm] = useState({
-    Name: '',
-    URL: '',
-    CronExpr: '',
-    Enabled: true,
-    Group: '',
-    DownloadWithProxy: false,
-    ProxyLink: '',
-    UserAgent: ''
-  });
-
-  // 订阅删除对话框状态
-  const [deleteSchedulerDialogOpen, setDeleteSchedulerDialogOpen] = useState(false);
-  const [deleteSchedulerTarget, setDeleteSchedulerTarget] = useState(null);
-  const [deleteSchedulerWithNodes, setDeleteSchedulerWithNodes] = useState(true);
 
   // 测速配置
   const [speedTestDialogOpen, setSpeedTestDialogOpen] = useState(false);
@@ -275,16 +253,6 @@ export default function NodeList() {
       setLoading(false);
     }
   }, []); // 空依赖，避免循环
-
-  // 获取订阅调度器列表
-  const fetchSchedulers = useCallback(async () => {
-    try {
-      const response = await getSubSchedulers();
-      setSchedulers(response.data || []);
-    } catch (error) {
-      console.error('获取订阅调度器失败:', error);
-    }
-  }, []);
 
   // 获取代理节点选项（用于订阅下载代理选择）
   const fetchProxyNodes = useCallback(async () => {
@@ -781,132 +749,6 @@ export default function NodeList() {
     }
   };
 
-  // === 订阅调度器操作 ===
-  const handleOpenSchedulerDialog = () => {
-    fetchSchedulers();
-    setSchedulerDialogOpen(true);
-  };
-
-  const handleAddScheduler = () => {
-    setIsEditScheduler(false);
-    setSchedulerForm({
-      Name: '',
-      URL: '',
-      CronExpr: '',
-      Enabled: true,
-      Group: '',
-      DownloadWithProxy: false,
-      ProxyLink: '',
-      UserAgent: ''
-    });
-    setSchedulerFormOpen(true);
-  };
-
-  const handleEditScheduler = (scheduler) => {
-    setIsEditScheduler(true);
-    setSchedulerForm({
-      ID: scheduler.ID,
-      Name: scheduler.Name,
-      URL: scheduler.URL,
-      CronExpr: scheduler.CronExpr,
-      Enabled: scheduler.Enabled,
-      Group: scheduler.Group || '',
-      DownloadWithProxy: scheduler.DownloadWithProxy || false,
-      ProxyLink: scheduler.ProxyLink || '',
-      UserAgent: scheduler.UserAgent ?? ''
-    });
-    // 如果启用了代理下载，需要加载代理节点列表
-    if (scheduler.DownloadWithProxy) {
-      fetchProxyNodes();
-    }
-    setSchedulerFormOpen(true);
-  };
-
-  const handleDeleteScheduler = (scheduler) => {
-    setDeleteSchedulerTarget(scheduler);
-    setDeleteSchedulerWithNodes(true);
-    setDeleteSchedulerDialogOpen(true);
-  };
-
-  const handleConfirmDeleteScheduler = async () => {
-    if (!deleteSchedulerTarget) return;
-    try {
-      await deleteSubScheduler(deleteSchedulerTarget.ID, deleteSchedulerWithNodes);
-      showMessage(deleteSchedulerWithNodes ? '已删除订阅及关联节点' : '已删除订阅（保留节点）');
-      fetchSchedulers();
-      handleRefresh();
-    } catch (error) {
-      console.error(error);
-      showMessage(error.message || '删除失败', 'error');
-    }
-    setDeleteSchedulerDialogOpen(false);
-    setDeleteSchedulerTarget(null);
-  };
-
-  const handlePullScheduler = async (scheduler) => {
-    openConfirm('立即更新', `确定要立即更新订阅 "${scheduler.Name}" 吗？`, async () => {
-      try {
-        await pullSubScheduler({
-          ID: scheduler.ID,
-          Name: scheduler.Name,
-          URL: scheduler.URL,
-          CronExpr: scheduler.CronExpr,
-          Enabled: scheduler.Enabled,
-          Group: scheduler.Group,
-          DownloadWithProxy: scheduler.DownloadWithProxy,
-          ProxyLink: scheduler.ProxyLink,
-          UserAgent: scheduler.UserAgent ?? ''
-        });
-        showMessage('提交更新任务成功，请稍后刷新查看结果');
-        fetchSchedulers();
-        handleRefresh();
-      } catch (error) {
-        console.error(error);
-        showMessage(error.message || '提交更新任务失败', 'error');
-      }
-    });
-  };
-
-  const handleSubmitScheduler = async () => {
-    if (!schedulerForm.Name.trim()) {
-      showMessage('请输入名称', 'warning');
-      return;
-    }
-    if (!schedulerForm.URL.trim()) {
-      showMessage('请输入URL', 'warning');
-      return;
-    }
-    // Simple URL validation regex
-    const urlPattern = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
-    if (!urlPattern.test(schedulerForm.URL.trim())) {
-      showMessage('请输入有效的URL', 'warning');
-      return;
-    }
-    if (!schedulerForm.CronExpr.trim()) {
-      showMessage('请输入Cron表达式', 'warning');
-      return;
-    }
-    if (!validateCronExpression(schedulerForm.CronExpr.trim())) {
-      showMessage('Cron表达式格式不正确，格式为：分 时 日 月 周', 'error');
-      return;
-    }
-
-    try {
-      if (isEditScheduler) {
-        await updateSubScheduler(schedulerForm);
-        showMessage('更新成功');
-      } else {
-        await addSubScheduler(schedulerForm);
-        showMessage('添加成功');
-      }
-      setSchedulerFormOpen(false);
-      fetchSchedulers();
-    } catch (error) {
-      console.error(error);
-      showMessage(error.message || (isEditScheduler ? '更新失败' : '添加失败'), 'error');
-    }
-  };
-
   // === 测速配置 ===
   const handleOpenSpeedTest = async () => {
     try {
@@ -1074,8 +916,8 @@ export default function NodeList() {
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNode}>
               添加节点
             </Button>
-            <Button variant="outlined" color="primary" startIcon={<DownloadIcon />} onClick={handleOpenSchedulerDialog}>
-              导入订阅
+            <Button variant="outlined" color="primary" startIcon={<DownloadIcon />} onClick={() => navigate('/subscription/airports')}>
+              机场管理
             </Button>
             <Button variant="outlined" color="info" startIcon={<SettingsIcon />} onClick={handleOpenSpeedTest}>
               测速设置
@@ -1088,9 +930,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -1110,10 +952,10 @@ export default function NodeList() {
             variant="outlined"
             color="primary"
             startIcon={<DownloadIcon />}
-            onClick={handleOpenSchedulerDialog}
+            onClick={() => navigate('/subscription/airports')}
             sx={{ whiteSpace: 'nowrap' }}
           >
-            导入
+            机场
           </Button>
           <Button
             size="small"
@@ -1133,9 +975,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
@@ -1256,43 +1098,6 @@ export default function NodeList() {
         onClose={() => setNodeDialogOpen(false)}
         onSubmit={handleSubmitNode}
         onFetchProxyNodes={fetchProxyNodes}
-      />
-
-      {/* 订阅调度器对话框 */}
-      <SchedulerDialog
-        open={schedulerDialogOpen}
-        schedulers={schedulers}
-        loading={loading}
-        onClose={() => setSchedulerDialogOpen(false)}
-        onRefresh={fetchSchedulers}
-        onAdd={handleAddScheduler}
-        onEdit={handleEditScheduler}
-        onDelete={handleDeleteScheduler}
-        onPull={handlePullScheduler}
-      />
-
-      {/* 添加/编辑订阅表单对话框 */}
-      <SchedulerFormDialog
-        open={schedulerFormOpen}
-        isEdit={isEditScheduler}
-        schedulerForm={schedulerForm}
-        setSchedulerForm={setSchedulerForm}
-        groupOptions={groupOptions}
-        proxyNodeOptions={proxyNodeOptions}
-        loadingProxyNodes={loadingProxyNodes}
-        onClose={() => setSchedulerFormOpen(false)}
-        onSubmit={handleSubmitScheduler}
-        onFetchProxyNodes={fetchProxyNodes}
-      />
-
-      {/* 删除订阅对话框 */}
-      <DeleteSchedulerDialog
-        open={deleteSchedulerDialogOpen}
-        scheduler={deleteSchedulerTarget}
-        withNodes={deleteSchedulerWithNodes}
-        setWithNodes={setDeleteSchedulerWithNodes}
-        onClose={() => setDeleteSchedulerDialogOpen(false)}
-        onConfirm={handleConfirmDeleteScheduler}
       />
 
       {/* 测速设置对话框 */}

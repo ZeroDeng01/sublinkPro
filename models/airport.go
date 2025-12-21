@@ -1,0 +1,213 @@
+package models
+
+import (
+	"strconv"
+	"sublink/cache"
+	"sublink/database"
+	"sublink/utils"
+	"time"
+)
+
+// Airport 机场模型
+// 用于管理外部订阅源，支持定时拉取更新
+type Airport struct {
+	ID                int        `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name              string     `json:"name"`                                   // 机场名称（唯一）
+	URL               string     `json:"url"`                                    // 订阅地址
+	CronExpr          string     `json:"cronExpr"`                               // 定时更新Cron表达式
+	Enabled           bool       `json:"enabled"`                                // 是否启用
+	SuccessCount      int        `gorm:"default:0" json:"successCount"`          // 成功拉取次数
+	LastRunTime       *time.Time `gorm:"type:datetime" json:"lastRunTime"`       // 上次运行时间
+	NextRunTime       *time.Time `gorm:"type:datetime" json:"nextRunTime"`       // 下次运行时间
+	CreatedAt         time.Time  `gorm:"autoCreateTime" json:"createdAt"`        // 创建时间
+	UpdatedAt         time.Time  `gorm:"autoUpdateTime" json:"updatedAt"`        // 更新时间
+	Group             string     `json:"group"`                                  // 导入节点的默认分组
+	DownloadWithProxy bool       `gorm:"default:false" json:"downloadWithProxy"` // 是否使用代理下载
+	ProxyLink         string     `gorm:"default:''" json:"proxyLink"`            // 代理节点链接
+	UserAgent         string     `json:"userAgent"`                              // 自定义User-Agent
+	NodeCount         int        `gorm:"-" json:"nodeCount"`                     // 节点数量（非数据库字段）
+}
+
+// TableName 指定表名
+func (Airport) TableName() string {
+	return "airports"
+}
+
+// airportCache 使用泛型缓存
+var airportCache *cache.MapCache[int, Airport]
+
+func init() {
+	airportCache = cache.NewMapCache(func(a Airport) int { return a.ID })
+	airportCache.AddIndex("enabled", func(a Airport) string { return strconv.FormatBool(a.Enabled) })
+	airportCache.AddIndex("name", func(a Airport) string { return a.Name })
+}
+
+// InitAirportCache 初始化机场缓存
+func InitAirportCache() error {
+	utils.Info("开始加载机场数据到缓存")
+	var airports []Airport
+	if err := database.DB.Find(&airports).Error; err != nil {
+		return err
+	}
+
+	airportCache.LoadAll(airports)
+	utils.Info("机场缓存初始化完成，共加载 %d 个机场", airportCache.Count())
+
+	cache.Manager.Register("airport", airportCache)
+	return nil
+}
+
+// Add 添加机场 (Write-Through)
+func (a *Airport) Add() error {
+	err := database.DB.Create(a).Error
+	if err != nil {
+		return err
+	}
+	airportCache.Set(a.ID, *a)
+	return nil
+}
+
+// Update 更新机场 (Write-Through)
+func (a *Airport) Update() error {
+	err := database.DB.Model(a).Select(
+		"Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime",
+		"SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent",
+	).Updates(a).Error
+	if err != nil {
+		return err
+	}
+	// 从DB读取完整数据后更新缓存
+	var updated Airport
+	if err := database.DB.First(&updated, a.ID).Error; err == nil {
+		airportCache.Set(a.ID, updated)
+	}
+	return nil
+}
+
+// Find 查找机场是否重复（按URL或名称）
+func (a *Airport) Find() error {
+	// 先查缓存
+	results := airportCache.Filter(func(ap Airport) bool {
+		return ap.URL == a.URL || ap.Name == a.Name
+	})
+	if len(results) > 0 {
+		*a = results[0]
+		return nil
+	}
+	return database.DB.Where("url = ? or name = ?", a.URL, a.Name).First(a).Error
+}
+
+// List 获取所有机场
+func (a *Airport) List() ([]Airport, error) {
+	airports := airportCache.GetAllSorted(func(x, y Airport) bool {
+		return x.ID < y.ID
+	})
+	return airports, nil
+}
+
+// ListPaginated 分页获取机场列表
+func (a *Airport) ListPaginated(page, pageSize int) ([]Airport, int64, error) {
+	allAirports := airportCache.GetAllSorted(func(x, y Airport) bool {
+		return x.ID < y.ID
+	})
+	total := int64(len(allAirports))
+
+	if page <= 0 || pageSize <= 0 {
+		return allAirports, total, nil
+	}
+
+	offset := (page - 1) * pageSize
+	if offset >= len(allAirports) {
+		return []Airport{}, total, nil
+	}
+
+	end := offset + pageSize
+	if end > len(allAirports) {
+		end = len(allAirports)
+	}
+
+	return allAirports[offset:end], total, nil
+}
+
+// ListEnabled 获取所有启用的机场
+func ListEnabledAirports() ([]Airport, error) {
+	return airportCache.GetByIndex("enabled", "true"), nil
+}
+
+// Del 删除机场 (Write-Through)
+func (a *Airport) Del() error {
+	err := database.DB.Delete(a).Error
+	if err != nil {
+		return err
+	}
+	airportCache.Delete(a.ID)
+	return nil
+}
+
+// UpdateRunTime 更新运行时间 (Write-Through)
+func (a *Airport) UpdateRunTime(lastRun, nextRun *time.Time) error {
+	err := database.DB.Model(a).Select("LastRunTime", "NextRunTime").Updates(map[string]interface{}{
+		"LastRunTime": lastRun,
+		"NextRunTime": nextRun,
+	}).Error
+	if err != nil {
+		return err
+	}
+	// 更新缓存
+	if cached, ok := airportCache.Get(a.ID); ok {
+		cached.LastRunTime = lastRun
+		cached.NextRunTime = nextRun
+		airportCache.Set(a.ID, cached)
+	}
+	return nil
+}
+
+// GetByID 根据ID获取机场
+func (a *Airport) GetByID(id int) error {
+	if cached, ok := airportCache.Get(id); ok {
+		*a = cached
+		return nil
+	}
+	return database.DB.Where("id = ?", id).First(a).Error
+}
+
+// GetAirportByID 根据ID获取机场（便捷函数）
+func GetAirportByID(id int) (*Airport, error) {
+	if cached, ok := airportCache.Get(id); ok {
+		return &cached, nil
+	}
+	var airport Airport
+	if err := database.DB.Where("id = ?", id).First(&airport).Error; err != nil {
+		return nil, err
+	}
+	airportCache.Set(airport.ID, airport)
+	return &airport, nil
+}
+
+// IncrementSuccessCount 增加成功次数
+func (a *Airport) IncrementSuccessCount() error {
+	err := database.DB.Model(a).Update("success_count", a.SuccessCount+1).Error
+	if err != nil {
+		return err
+	}
+	if cached, ok := airportCache.Get(a.ID); ok {
+		cached.SuccessCount++
+		airportCache.Set(a.ID, cached)
+	}
+	return nil
+}
+
+// DeleteAirportNodes 删除机场关联的所有节点
+func DeleteAirportNodes(airportID int) error {
+	return DeleteAutoSubscriptionNodes(airportID)
+}
+
+// ListNodesByAirportID 获取机场关联的所有节点
+func ListNodesByAirportID(airportID int) ([]Node, error) {
+	return ListBySourceID(airportID)
+}
+
+// UpdateNodesByAirportID 更新机场关联节点的来源名称和分组
+func UpdateNodesByAirportID(airportID int, name string, group string) error {
+	return UpdateNodesBySourceID(airportID, name, group)
+}

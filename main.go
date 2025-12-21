@@ -331,6 +331,9 @@ func Run() {
 	if err := models.InitSubSchedulerCache(); err != nil {
 		utils.Error("加载订阅调度到缓存失败: %v", err)
 	}
+	if err := models.InitAirportCache(); err != nil {
+		utils.Error("加载机场到缓存失败: %v", err)
+	}
 	if err := models.InitAccessKeyCache(); err != nil {
 		utils.Error("加载AccessKey到缓存失败: %v", err)
 	}
@@ -463,6 +466,7 @@ func Run() {
 	routers.GeoIP(r)
 	routers.Host(r)
 	routers.Share(r)
+	routers.Airport(r)
 
 	// 处理前端路由 (SPA History Mode)
 	// 必须在所有 backend 路由注册之后注册

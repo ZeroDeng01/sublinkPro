@@ -22,7 +22,7 @@ type UserAccessKey struct {
 	Description string     `json:"description"`
 }
 
-// SubSchedulerAddRequest 订阅调度添加请求体结构
+// SubSchedulerAddRequest 订阅调度添加请求体结构（兼容旧版本）
 type SubSchedulerAddRequest struct {
 	ID                int    `json:"ID"`
 	Name              string `json:"Name" binding:"required"`
@@ -33,4 +33,17 @@ type SubSchedulerAddRequest struct {
 	DownloadWithProxy bool   `json:"DownloadWithProxy"`
 	ProxyLink         string `json:"ProxyLink"`
 	UserAgent         string `json:"UserAgent"`
+}
+
+// AirportRequest 机场添加/更新请求体结构
+type AirportRequest struct {
+	ID                int    `json:"id"`
+	Name              string `json:"name" binding:"required"`
+	URL               string `json:"url" binding:"required,url"`
+	CronExpr          string `json:"cronExpr" binding:"required"`
+	Enabled           bool   `json:"enabled"`
+	Group             string `json:"group"`
+	DownloadWithProxy bool   `json:"downloadWithProxy"`
+	ProxyLink         string `json:"proxyLink"`
+	UserAgent         string `json:"userAgent"`
 }

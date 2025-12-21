@@ -8,7 +8,8 @@ import {
   IconDeviceDesktopAnalytics,
   IconTags,
   IconListCheck,
-  IconWorld
+  IconWorld,
+  IconPlane
 } from '@tabler/icons-react';
 
 // ==============================|| SUBSCRIPTION MENU ITEMS ||============================== //
@@ -18,6 +19,14 @@ const subscription = {
   title: '订阅管理',
   type: 'group',
   children: [
+    {
+      id: 'airports',
+      title: '机场管理',
+      type: 'item',
+      url: '/subscription/airports',
+      icon: IconPlane,
+      breadcrumbs: true
+    },
     {
       id: 'nodes',
       title: '节点管理',

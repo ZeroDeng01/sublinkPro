@@ -137,6 +137,11 @@ func RunMigrations() {
 	} else {
 		utils.Info("数据表SubscriptionChainRule创建成功")
 	}
+	if err := db.AutoMigrate(&Airport{}); err != nil {
+		utils.Error("基础数据表Airport迁移失败: %v", err)
+	} else {
+		utils.Info("数据表Airport创建成功")
+	}
 
 	// 检查并删除 idx_name_id 索引
 	// 0000_drop_idx_name_id
@@ -573,6 +578,63 @@ DIRECT = direct
 		return nil
 	}); err != nil {
 		utils.Error("执行迁移 0016_add_node_protocol_field 失败: %v", err)
+	}
+
+	// 0017_migrate_subscheduler_to_airport - 将SubScheduler数据迁移到Airport表
+	if err := database.RunCustomMigration("0017_migrate_subscheduler_to_airport", func() error {
+		// 检查旧表是否存在
+		if !db.Migrator().HasTable("sub_schedulers") {
+			utils.Info("SubScheduler表不存在，无需迁移")
+			return nil
+		}
+
+		// 检查新表是否为空（仅空表时才迁移，避免重复迁移）
+		var airportCount int64
+		db.Model(&Airport{}).Count(&airportCount)
+		if airportCount > 0 {
+			utils.Info("Airport表已有数据，跳过迁移")
+			return nil
+		}
+
+		// 获取所有SubScheduler数据
+		var schedulers []SubScheduler
+		if err := db.Find(&schedulers).Error; err != nil {
+			return fmt.Errorf("获取SubScheduler数据失败: %w", err)
+		}
+
+		if len(schedulers) == 0 {
+			utils.Info("SubScheduler表为空，无需迁移")
+			return nil
+		}
+
+		// 迁移数据到Airport表
+		for _, s := range schedulers {
+			airport := Airport{
+				ID:                s.ID,
+				Name:              s.Name,
+				URL:               s.URL,
+				CronExpr:          s.CronExpr,
+				Enabled:           s.Enabled,
+				SuccessCount:      s.SuccessCount,
+				LastRunTime:       s.LastRunTime,
+				NextRunTime:       s.NextRunTime,
+				CreatedAt:         s.CreatedAt,
+				UpdatedAt:         s.UpdatedAt,
+				Group:             s.Group,
+				DownloadWithProxy: s.DownloadWithProxy,
+				ProxyLink:         s.ProxyLink,
+				UserAgent:         s.UserAgent,
+			}
+			if err := db.Create(&airport).Error; err != nil {
+				utils.Warn("迁移机场 %s 失败: %v", s.Name, err)
+				continue
+			}
+		}
+
+		utils.Info("已将 %d 个SubScheduler记录迁移到Airport表", len(schedulers))
+		return nil
+	}); err != nil {
+		utils.Error("执行迁移 0017_migrate_subscheduler_to_airport 失败: %v", err)
 	}
 
 	// 初始化用户数据
