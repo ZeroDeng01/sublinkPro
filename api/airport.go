@@ -20,6 +20,12 @@ func validateCron(expr string) bool {
 	return err == nil
 }
 
+// AirportWithStats 机场数据（包含节点统计）
+type AirportWithStats struct {
+	models.Airport
+	NodeStats models.AirportNodeStats `json:"nodeStats"`
+}
+
 // AirportList 获取机场列表（支持分页和筛选）
 func AirportList(c *gin.Context) {
 	// 解析分页参数
@@ -56,11 +62,16 @@ func AirportList(c *gin.Context) {
 			return
 		}
 
-		// 填充节点数量
+		// 填充节点数量和统计信息
+		result := make([]AirportWithStats, len(airports))
 		for i := range airports {
 			nodes, err := models.ListNodesByAirportID(airports[i].ID)
 			if err == nil {
 				airports[i].NodeCount = len(nodes)
+			}
+			result[i] = AirportWithStats{
+				Airport:   airports[i],
+				NodeStats: models.GetAirportNodeStats(airports[i].ID),
 			}
 		}
 
@@ -69,7 +80,7 @@ func AirportList(c *gin.Context) {
 			totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
 		}
 		utils.OkDetailed(c, "获取成功", gin.H{
-			"items":      airports,
+			"items":      result,
 			"total":      total,
 			"page":       page,
 			"pageSize":   pageSize,
@@ -85,15 +96,20 @@ func AirportList(c *gin.Context) {
 		return
 	}
 
-	// 填充节点数量
+	// 填充节点数量和统计信息
+	result := make([]AirportWithStats, len(airports))
 	for i := range airports {
 		nodes, err := models.ListNodesByAirportID(airports[i].ID)
 		if err == nil {
 			airports[i].NodeCount = len(nodes)
 		}
+		result[i] = AirportWithStats{
+			Airport:   airports[i],
+			NodeStats: models.GetAirportNodeStats(airports[i].ID),
+		}
 	}
 
-	utils.OkDetailed(c, "获取成功", airports)
+	utils.OkDetailed(c, "获取成功", result)
 }
 
 // AirportGet 获取单个机场详情

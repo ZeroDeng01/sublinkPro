@@ -297,3 +297,69 @@ func (a *Airport) UpdateUsageInfo(upload, download, total, expire int64) error {
 func containsIgnoreCase(s, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
+
+// AirportNodeStats 机场节点测速统计
+type AirportNodeStats struct {
+	DelayPassCount    int     `json:"delayPassCount"`    // 延迟测试通过数量
+	SpeedPassCount    int     `json:"speedPassCount"`    // 速度测试通过数量
+	LowestDelayNode   string  `json:"lowestDelayNode"`   // 延迟最低节点名称
+	LowestDelayTime   int     `json:"lowestDelayTime"`   // 最低延迟时间(ms)
+	LowestDelaySpeed  float64 `json:"lowestDelaySpeed"`  // 最低延迟节点速度
+	HighestSpeedNode  string  `json:"highestSpeedNode"`  // 速度最高节点名称
+	HighestSpeed      float64 `json:"highestSpeed"`      // 最高速度(MB/s)
+	HighestSpeedDelay int     `json:"highestSpeedDelay"` // 最高速度节点延迟
+}
+
+// GetAirportNodeStats 获取机场节点测速统计
+func GetAirportNodeStats(airportID int) AirportNodeStats {
+	nodes, err := ListBySourceID(airportID)
+	if err != nil || len(nodes) == 0 {
+		return AirportNodeStats{}
+	}
+
+	stats := AirportNodeStats{}
+	var lowestDelayNode *Node
+	var highestSpeedNode *Node
+
+	for i := range nodes {
+		node := &nodes[i]
+
+		// 延迟测试通过：DelayStatus 为 success 且 DelayTime > 0
+		if node.DelayStatus == "success" && node.DelayTime > 0 {
+			stats.DelayPassCount++
+
+			// 寻找延迟最低且速度有效的节点
+			if node.Speed > 0 {
+				if lowestDelayNode == nil || node.DelayTime < lowestDelayNode.DelayTime {
+					lowestDelayNode = node
+				}
+			}
+		}
+
+		// 速度测试通过：SpeedStatus 为 success 且 Speed > 0
+		if node.SpeedStatus == "success" && node.Speed > 0 {
+			stats.SpeedPassCount++
+
+			// 寻找速度最高的节点
+			if highestSpeedNode == nil || node.Speed > highestSpeedNode.Speed {
+				highestSpeedNode = node
+			}
+		}
+	}
+
+	// 填充最低延迟节点信息
+	if lowestDelayNode != nil {
+		stats.LowestDelayNode = lowestDelayNode.Name
+		stats.LowestDelayTime = lowestDelayNode.DelayTime
+		stats.LowestDelaySpeed = lowestDelayNode.Speed
+	}
+
+	// 填充最高速度节点信息
+	if highestSpeedNode != nil {
+		stats.HighestSpeedNode = highestSpeedNode.Name
+		stats.HighestSpeed = highestSpeedNode.Speed
+		stats.HighestSpeedDelay = highestSpeedNode.DelayTime
+	}
+
+	return stats
+}

@@ -131,21 +131,21 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
     const nodes = data.Nodes;
 
     // 延迟测试通过的节点（DelayStatus 不是 timeout/error 且 DelayTime > 0）
-    const delayPassNodes = nodes.filter(node => {
+    const delayPassNodes = nodes.filter((node) => {
       const status = node.DelayStatus;
       const isError = status === 'timeout' || status === 'error' || status === 2 || status === 3;
       return !isError && node.DelayTime > 0;
     });
 
     // 速度测试通过的节点（SpeedStatus 不是 timeout/error 且 Speed > 0）
-    const speedPassNodes = nodes.filter(node => {
+    const speedPassNodes = nodes.filter((node) => {
       const status = node.SpeedStatus;
       const isError = status === 'timeout' || status === 'error' || status === 2 || status === 3;
       return !isError && node.Speed > 0;
     });
 
     // 延迟最低的节点（需要速度 > 0，以保证节点可用）
-    const validNodesForDelay = nodes.filter(node => {
+    const validNodesForDelay = nodes.filter((node) => {
       const delayStatus = node.DelayStatus;
       const speedStatus = node.SpeedStatus;
       const isDelayError = delayStatus === 'timeout' || delayStatus === 'error' || delayStatus === 2 || delayStatus === 3;
@@ -155,17 +155,13 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
 
     let lowestDelayNode = null;
     if (validNodesForDelay.length > 0) {
-      lowestDelayNode = validNodesForDelay.reduce((min, node) =>
-        node.DelayTime < min.DelayTime ? node : min
-      );
+      lowestDelayNode = validNodesForDelay.reduce((min, node) => (node.DelayTime < min.DelayTime ? node : min));
     }
 
     // 速度最高的节点
     let highestSpeedNode = null;
     if (speedPassNodes.length > 0) {
-      highestSpeedNode = speedPassNodes.reduce((max, node) =>
-        node.Speed > max.Speed ? node : max
-      );
+      highestSpeedNode = speedPassNodes.reduce((max, node) => (node.Speed > max.Speed ? node : max));
     }
 
     return {
@@ -489,11 +485,13 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                         borderRadius: 2,
                         cursor: nodeStats.lowestDelayNode ? 'pointer' : 'default',
                         transition: 'all 0.2s ease',
-                        '&:hover': nodeStats.lowestDelayNode ? {
-                          borderColor: alpha(theme.palette.warning.main, 0.4),
-                          transform: 'translateY(-1px)',
-                          boxShadow: `0 4px 12px ${alpha(theme.palette.warning.main, 0.15)}`
-                        } : {}
+                        '&:hover': nodeStats.lowestDelayNode
+                          ? {
+                              borderColor: alpha(theme.palette.warning.main, 0.4),
+                              transform: 'translateY(-1px)',
+                              boxShadow: `0 4px 12px ${alpha(theme.palette.warning.main, 0.15)}`
+                            }
+                          : {}
                       }}
                     >
                       <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
@@ -505,7 +503,11 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                         </Stack>
                         {nodeStats.lowestDelayNode ? (
                           <>
-                            <Tooltip title={nodeStats.lowestDelayNode.PreviewName || nodeStats.lowestDelayNode.OriginalName} placement="top" arrow>
+                            <Tooltip
+                              title={nodeStats.lowestDelayNode.PreviewName || nodeStats.lowestDelayNode.OriginalName}
+                              placement="top"
+                              arrow
+                            >
                               <Typography
                                 variant="body2"
                                 fontWeight={600}
@@ -545,11 +547,13 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                         borderRadius: 2,
                         cursor: nodeStats.highestSpeedNode ? 'pointer' : 'default',
                         transition: 'all 0.2s ease',
-                        '&:hover': nodeStats.highestSpeedNode ? {
-                          borderColor: alpha(theme.palette.primary.main, 0.4),
-                          transform: 'translateY(-1px)',
-                          boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`
-                        } : {}
+                        '&:hover': nodeStats.highestSpeedNode
+                          ? {
+                              borderColor: alpha(theme.palette.primary.main, 0.4),
+                              transform: 'translateY(-1px)',
+                              boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`
+                            }
+                          : {}
                       }}
                     >
                       <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
@@ -561,7 +565,11 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                         </Stack>
                         {nodeStats.highestSpeedNode ? (
                           <>
-                            <Tooltip title={nodeStats.highestSpeedNode.PreviewName || nodeStats.highestSpeedNode.OriginalName} placement="top" arrow>
+                            <Tooltip
+                              title={nodeStats.highestSpeedNode.PreviewName || nodeStats.highestSpeedNode.OriginalName}
+                              placement="top"
+                              arrow
+                            >
                               <Typography
                                 variant="body2"
                                 fontWeight={600}
