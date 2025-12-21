@@ -279,13 +279,17 @@ export default function SubscriptionFormDialog({
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
                     <FormControl fullWidth>
-                      <InputLabel>Clash 模板</InputLabel>
+                      <InputLabel shrink>Clash 模板</InputLabel>
                       <Select
                         variant={'outlined'}
                         value={formData.clash}
                         label="Clash 模板"
                         onChange={(e) => setFormData({ ...formData, clash: e.target.value })}
+                        displayEmpty
                       >
+                        <MenuItem value="">
+                          <Typography color="text.secondary">未选择</Typography>
+                        </MenuItem>
                         {clashTemplates.map((t) => (
                           <MenuItem key={t.file} value={`./template/${t.file}`}>
                             {t.file}
@@ -293,15 +297,24 @@ export default function SubscriptionFormDialog({
                         ))}
                       </Select>
                     </FormControl>
+                    {clashTemplates.length === 0 && (
+                      <Alert severity="warning" sx={{ mt: 1 }}>
+                        <Typography variant="caption">未检测到可用模板，请检查 Clash 模板是否存在</Typography>
+                      </Alert>
+                    )}
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <FormControl fullWidth>
-                      <InputLabel>Surge 模板</InputLabel>
+                      <InputLabel shrink>Surge 模板</InputLabel>
                       <Select
                         value={formData.surge}
                         label="Surge 模板"
                         onChange={(e) => setFormData({ ...formData, surge: e.target.value })}
+                        displayEmpty
                       >
+                        <MenuItem value="">
+                          <Typography color="text.secondary">未选择</Typography>
+                        </MenuItem>
                         {surgeTemplates.map((t) => (
                           <MenuItem key={t.file} value={`./template/${t.file}`}>
                             {t.file}
@@ -309,6 +322,11 @@ export default function SubscriptionFormDialog({
                         ))}
                       </Select>
                     </FormControl>
+                    {surgeTemplates.length === 0 && (
+                      <Alert severity="warning" sx={{ mt: 1 }}>
+                        <Typography variant="caption">未检测到可用模板，请检查 Surge 模板是否存在</Typography>
+                      </Alert>
+                    )}
                   </Grid>
                 </Grid>
 
