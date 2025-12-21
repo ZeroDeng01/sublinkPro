@@ -80,23 +80,42 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 		}
 	}
 
-	// 创建 HEAD 请求（优先）或 GET 请求
-	// 某些机场可能不支持 HEAD，所以使用 GET 但只读取 header
-	req, err := http.NewRequest("GET", airport.URL, nil)
+	// 设置通用 User-Agent
+	userAgent := "clash.meta"
+	if airport.UserAgent != "" {
+		userAgent = airport.UserAgent
+	}
+
+	// 优先使用 HEAD 请求，减少数据传输
+	var resp *http.Response
+	headReq, err := http.NewRequest("HEAD", airport.URL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("创建请求失败: %v", err)
 	}
+	headReq.Header.Set("User-Agent", userAgent)
 
-	// 设置 User-Agent
-	if airport.UserAgent != "" {
-		req.Header.Set("User-Agent", airport.UserAgent)
-	} else {
-		req.Header.Set("User-Agent", "clash.meta")
-	}
+	resp, err = client.Do(headReq)
+	if err != nil || resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// HEAD 请求失败或返回非 2xx，回退到 GET 请求
+		if resp != nil {
+			resp.Body.Close()
+		}
+		if err != nil {
+			utils.Debug("机场【%s】HEAD 请求失败: %v，尝试 GET 请求", airport.Name, err)
+		} else {
+			utils.Debug("机场【%s】HEAD 请求返回状态码 %d，尝试 GET 请求", airport.Name, resp.StatusCode)
+		}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("请求机场失败: %v", err)
+		getReq, err := http.NewRequest("GET", airport.URL, nil)
+		if err != nil {
+			return nil, fmt.Errorf("创建请求失败: %v", err)
+		}
+		getReq.Header.Set("User-Agent", userAgent)
+
+		resp, err = client.Do(getReq)
+		if err != nil {
+			return nil, fmt.Errorf("请求机场失败: %v", err)
+		}
 	}
 	defer resp.Body.Close()
 

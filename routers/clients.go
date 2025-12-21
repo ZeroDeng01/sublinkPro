@@ -15,6 +15,7 @@ func Clients(r *gin.Engine) {
 		// ClientsGroup.GET("/clash/:subname", api.GetClash)
 		// ClientsGroup.GET("/surge/:subname", api.GetSurge)
 		ClientsGroup.GET("/", api.GetClient)
+		ClientsGroup.HEAD("/", api.GetClient)
 	}
 
 }
