@@ -194,6 +194,13 @@ services:
     command: sublinkpro  # 只监控 sublinkpro 容器
 ```
 
+> [!TIP]
+> **Watchtower 高级配置**：
+> - 可以设置 `WATCHTOWER_NOTIFICATIONS` 环境变量来配置更新通知（支持邮件、Slack、Gotify 等）
+> - 更多配置请参考 [Watchtower 官方文档](https://containrrr.dev/watchtower/)
+
+
+
 ---
 
 ### ☁️ Zeabur 部署
@@ -223,11 +230,11 @@ https://zeabur.com/projects
    ```env
    # 基础配置
    SUBLINK_PORT=8000
-   SUBLINK_LOG_LEVEL=info
+   SUBLINK_LOG_LEVEL=error
    SUBLINK_EXPIRE_DAYS=14
 
    # 登录安全
-   SUBLINK_ADMIN_PASSWORD=123456
+   SUBLINK_ADMIN_PASSWORD=123456 #默认管理员密码，仅首次启动有效
    SUBLINK_LOGIN_FAIL_COUNT=5
    SUBLINK_LOGIN_FAIL_WINDOW=1
    SUBLINK_LOGIN_BAN_DURATION=10
@@ -255,9 +262,4 @@ https://zeabur.com/projects
    - 设置完域名后即可通过域名访问,使用默认账号 `admin` / `123456` 登录
 
 
----
 
-> [!TIP]
-> **Watchtower 高级配置**：
-> - 可以设置 `WATCHTOWER_NOTIFICATIONS` 环境变量来配置更新通知（支持邮件、Slack、Gotify 等）
-> - 更多配置请参考 [Watchtower 官方文档](https://containrrr.dev/watchtower/)
