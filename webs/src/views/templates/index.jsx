@@ -63,7 +63,7 @@ export default function TemplateList() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [currentTemplate, setCurrentTemplate] = useState(null);
-  const [formData, setFormData] = useState({ filename: '', text: '', category: 'clash', ruleSource: '' });
+  const [formData, setFormData] = useState({ filename: '', text: '', category: 'clash', ruleSource: '', enableIncludeAll: false });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [aclPresets, setAclPresets] = useState([]);
   const [converting, setConverting] = useState(false);
@@ -152,7 +152,7 @@ export default function TemplateList() {
   const handleAdd = () => {
     setIsEdit(false);
     setCurrentTemplate(null);
-    setFormData({ filename: '', text: '', category: 'clash', ruleSource: '' });
+    setFormData({ filename: '', text: '', category: 'clash', ruleSource: '', enableIncludeAll: false });
     setUseProxy(false);
     setProxyLink('');
     setDialogOpen(true);
@@ -165,7 +165,8 @@ export default function TemplateList() {
       filename: template.file,
       text: template.text,
       category: template.category || 'clash',
-      ruleSource: template.ruleSource || ''
+      ruleSource: template.ruleSource || '',
+      enableIncludeAll: template.enableIncludeAll || false
     });
     // 从模板数据加载代理设置
     setUseProxy(template.useProxy || false);
@@ -200,7 +201,8 @@ export default function TemplateList() {
           category: formData.category,
           ruleSource: formData.ruleSource,
           useProxy: useProxy,
-          proxyLink: proxyLink
+          proxyLink: proxyLink,
+          enableIncludeAll: formData.enableIncludeAll
         });
         showMessage('更新成功');
       } else {
@@ -210,7 +212,8 @@ export default function TemplateList() {
           category: formData.category,
           ruleSource: formData.ruleSource,
           useProxy: useProxy,
-          proxyLink: proxyLink
+          proxyLink: proxyLink,
+          enableIncludeAll: formData.enableIncludeAll
         });
         showMessage('添加成功');
       }
@@ -296,9 +299,9 @@ export default function TemplateList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -314,9 +317,9 @@ export default function TemplateList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
@@ -517,6 +520,21 @@ export default function TemplateList() {
                 />
               </Box>
             )}
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.enableIncludeAll}
+                  onChange={(e) => setFormData({ ...formData, enableIncludeAll: e.target.checked })}
+                />
+              }
+              label="启用 Include-All 模式"
+            />
+            <Typography variant="caption" color="textSecondary" component="div" sx={{ ml: 6, mt: -0.5, lineHeight: 1.6 }}>
+              • 开启：配置文件更小，生成更快，但节点排序由客户端控制，系统排序将失效
+            </Typography>
+            <Typography variant="caption" color="textSecondary" component="div" sx={{ ml: 6, lineHeight: 1.6 }}>
+              • 关闭：保持系统节点排序，配置文件包含完整节点列表
+            </Typography>
             <Stack direction="row" spacing={1}>
               <Button
                 variant="outlined"
@@ -531,7 +549,8 @@ export default function TemplateList() {
                       expand: false,
                       template: formData.text,
                       useProxy: useProxy,
-                      proxyLink: proxyLink
+                      proxyLink: proxyLink,
+                      enableIncludeAll: formData.enableIncludeAll
                     });
                     if (res.code === 200 && res.data && res.data.content) {
                       setFormData({ ...formData, text: res.data.content });
@@ -571,7 +590,8 @@ export default function TemplateList() {
                       expand: true,
                       template: formData.text,
                       useProxy: useProxy,
-                      proxyLink: proxyLink
+                      proxyLink: proxyLink,
+                      enableIncludeAll: formData.enableIncludeAll
                     });
                     if (res.code === 200 && res.data && res.data.content) {
                       setFormData({ ...formData, text: res.data.content });
