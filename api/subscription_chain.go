@@ -398,3 +398,357 @@ func parseTemplateProxyGroups(configStr string) []string {
 
 	return groupNames
 }
+
+// ChainLinkPreviewNode 链路预览中的节点信息
+type ChainLinkPreviewNode struct {
+	Name        string  `json:"name"`
+	Protocol    string  `json:"protocol"`
+	LinkCountry string  `json:"linkCountry"`
+	DelayTime   int     `json:"delayTime"`
+	Speed       float64 `json:"speed"`
+	Group       string  `json:"group"`
+}
+
+// ChainLinkPreviewItem 链路预览中的单项信息
+type ChainLinkPreviewItem struct {
+	Type        string                 `json:"type"`        // template_group, custom_group, dynamic_node, specified_node
+	Name        string                 `json:"name"`        // 代理名称
+	IsGroup     bool                   `json:"isGroup"`     // 是否为代理组
+	GroupType   string                 `json:"groupType"`   // select, url-test (仅组类型)
+	DialerProxy string                 `json:"dialerProxy"` // 上级 dialer-proxy
+	Nodes       []ChainLinkPreviewNode `json:"nodes"`       // 匹配的节点列表（仅动态/自定义组）
+}
+
+// ChainPreviewResult 单条规则的预览数据
+type ChainPreviewResult struct {
+	RuleID         int                    `json:"ruleId"`
+	RuleName       string                 `json:"ruleName"`
+	Enabled        bool                   `json:"enabled"`
+	Sort           int                    `json:"sort"`
+	Links          []ChainLinkPreviewItem `json:"links"`          // 链路节点列表
+	TargetType     string                 `json:"targetType"`     // all, conditions, specified_node
+	TargetInfo     string                 `json:"targetInfo"`     // 目标描述
+	TargetNodes    []ChainLinkPreviewNode `json:"targetNodes"`    // 匹配的目标节点列表
+	EffectiveNodes int                    `json:"effectiveNodes"` // 实际生效的节点数
+	CoveredNodes   int                    `json:"coveredNodes"`   // 被前面规则覆盖的节点数
+	FullyCovered   bool                   `json:"fullyCovered"`   // 是否完全被覆盖（即无生效节点）
+}
+
+// SubscriptionChainPreviewResult 订阅链式代理整体预览结果
+type SubscriptionChainPreviewResult struct {
+	SubscriptionName string               `json:"subscriptionName"`
+	TotalNodes       int                  `json:"totalNodes"`   // 订阅总节点数
+	Rules            []ChainPreviewResult `json:"rules"`        // 所有规则预览
+	MatchSummary     []NodeMatchSummary   `json:"matchSummary"` // 节点匹配摘要
+}
+
+// NodeMatchSummary 节点匹配摘要
+type NodeMatchSummary struct {
+	NodeID        int    `json:"nodeId"`
+	NodeName      string `json:"nodeName"`
+	LinkCountry   string `json:"linkCountry"`
+	MatchedRule   string `json:"matchedRule"` // 匹配的规则名称（第一个匹配的）
+	MatchedRuleID int    `json:"matchedRuleId"`
+	EntryProxy    string `json:"entryProxy"` // 入口代理名称
+	Unmatched     bool   `json:"unmatched"`  // 是否未匹配任何规则
+}
+
+// PreviewChainLinks 预览订阅的整体链式代理配置
+func PreviewChainLinks(c *gin.Context) {
+	subIDStr := c.Param("id")
+	subID, err := strconv.Atoi(subIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的订阅ID"})
+		return
+	}
+
+	// 获取订阅及其节点
+	var sub models.Subcription
+	sub.ID = subID
+	if err := sub.Find(); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "订阅不存在"})
+		return
+	}
+
+	if err := sub.GetSub("none"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取订阅节点失败: " + err.Error()})
+		return
+	}
+
+	// 构建节点名称映射
+	nodeNameMap := make(map[int]string)
+	nodeInfoMap := make(map[int]models.Node)
+	for _, node := range sub.Nodes {
+		nodeNameMap[node.ID] = node.Name
+		nodeInfoMap[node.ID] = node
+	}
+
+	// 获取所有规则（按排序）
+	rules := models.GetChainRulesBySubscriptionID(subID)
+
+	// 筛选启用的规则
+	enabledRules := make([]models.SubscriptionChainRule, 0)
+	for _, rule := range rules {
+		if rule.Enabled {
+			enabledRules = append(enabledRules, rule)
+		}
+	}
+
+	// 记录已被匹配的节点 ID（用于计算规则覆盖）
+	matchedNodeIDs := make(map[int]bool)
+
+	// 构建规则预览数据（考虑覆盖策略）
+	var rulesPreview []ChainPreviewResult
+	for _, rule := range rules {
+		ruleData := buildRulePreviewData(rule, sub.Nodes, nodeNameMap, nodeInfoMap)
+
+		// 只有启用的规则才计算生效节点
+		if rule.Enabled {
+			effectiveCount := 0
+			coveredCount := 0
+
+			for _, targetNode := range ruleData.TargetNodes {
+				// 从 nodeInfoMap 查找节点 ID
+				var nodeID int
+				for id, node := range nodeInfoMap {
+					if node.Name == targetNode.Name {
+						nodeID = id
+						break
+					}
+				}
+
+				if matchedNodeIDs[nodeID] {
+					// 该节点已被前面规则覆盖
+					coveredCount++
+				} else {
+					// 该节点实际生效
+					effectiveCount++
+					matchedNodeIDs[nodeID] = true
+				}
+			}
+
+			ruleData.EffectiveNodes = effectiveCount
+			ruleData.CoveredNodes = coveredCount
+			ruleData.FullyCovered = effectiveCount == 0 && len(ruleData.TargetNodes) > 0
+		}
+
+		rulesPreview = append(rulesPreview, ruleData)
+	}
+
+	// 构建节点匹配摘要
+	matchSummary := buildNodeMatchSummary(sub.Nodes, enabledRules, nodeNameMap)
+
+	result := SubscriptionChainPreviewResult{
+		SubscriptionName: sub.Name,
+		TotalNodes:       len(sub.Nodes),
+		Rules:            rulesPreview,
+		MatchSummary:     matchSummary,
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// buildRulePreviewData 构建单条规则的预览数据
+func buildRulePreviewData(rule models.SubscriptionChainRule, nodes []models.Node, nodeNameMap map[int]string, nodeInfoMap map[int]models.Node) ChainPreviewResult {
+	data := ChainPreviewResult{
+		RuleID:   rule.ID,
+		RuleName: rule.Name,
+		Enabled:  rule.Enabled,
+		Sort:     rule.Sort,
+	}
+
+	// 解析链路配置
+	chainItems, err := rule.ParseChainConfig()
+	if err != nil {
+		return data
+	}
+
+	var prevProxyName string
+	for i, item := range chainItems {
+		previewItem := ChainLinkPreviewItem{
+			Type:    item.Type,
+			IsGroup: item.Type == "template_group" || item.Type == "custom_group",
+		}
+
+		if i > 0 && prevProxyName != "" {
+			previewItem.DialerProxy = prevProxyName
+		}
+
+		switch item.Type {
+		case "template_group":
+			previewItem.Name = item.GroupName
+			previewItem.GroupType = "select"
+
+		case "custom_group":
+			previewItem.Name = item.GroupName
+			previewItem.GroupType = item.GroupType
+			if previewItem.GroupType == "" {
+				previewItem.GroupType = "select"
+			}
+			if item.NodeConditions != nil {
+				for _, node := range nodes {
+					if item.NodeConditions.EvaluateNode(node) {
+						previewItem.Nodes = append(previewItem.Nodes, ChainLinkPreviewNode{
+							Name:        node.Name,
+							Protocol:    node.Protocol,
+							LinkCountry: node.LinkCountry,
+							DelayTime:   node.DelayTime,
+							Speed:       node.Speed,
+							Group:       node.Group,
+						})
+					}
+				}
+			}
+
+		case "dynamic_node":
+			var matchedNodes []ChainLinkPreviewNode
+			if item.NodeConditions != nil {
+				for _, node := range nodes {
+					if item.NodeConditions.EvaluateNode(node) {
+						matchedNodes = append(matchedNodes, ChainLinkPreviewNode{
+							Name:        node.Name,
+							Protocol:    node.Protocol,
+							LinkCountry: node.LinkCountry,
+							DelayTime:   node.DelayTime,
+							Speed:       node.Speed,
+							Group:       node.Group,
+						})
+					}
+				}
+			}
+			previewItem.Nodes = matchedNodes
+			if len(matchedNodes) > 0 {
+				previewItem.Name = matchedNodes[0].Name + " (动态)"
+			} else {
+				previewItem.Name = "(无匹配节点)"
+			}
+
+		case "specified_node":
+			if name, ok := nodeNameMap[item.NodeID]; ok {
+				previewItem.Name = name
+				if node, exists := nodeInfoMap[item.NodeID]; exists {
+					previewItem.Nodes = []ChainLinkPreviewNode{{
+						Name:        node.Name,
+						Protocol:    node.Protocol,
+						LinkCountry: node.LinkCountry,
+						DelayTime:   node.DelayTime,
+						Speed:       node.Speed,
+						Group:       node.Group,
+					}}
+				}
+			} else {
+				previewItem.Name = "(节点不存在)"
+			}
+		}
+
+		data.Links = append(data.Links, previewItem)
+		prevProxyName = previewItem.Name
+	}
+
+	// 解析目标配置
+	targetConfig, _ := rule.ParseTargetConfig()
+	data.TargetType = "all"
+	data.TargetInfo = "所有节点"
+	if targetConfig != nil {
+		data.TargetType = targetConfig.Type
+		switch targetConfig.Type {
+		case "all":
+			data.TargetInfo = "所有节点"
+			for _, node := range nodes {
+				data.TargetNodes = append(data.TargetNodes, ChainLinkPreviewNode{
+					Name:        node.Name,
+					Protocol:    node.Protocol,
+					LinkCountry: node.LinkCountry,
+					DelayTime:   node.DelayTime,
+					Speed:       node.Speed,
+					Group:       node.Group,
+				})
+			}
+		case "conditions":
+			data.TargetInfo = "符合条件的节点"
+			if targetConfig.Conditions != nil {
+				for _, node := range nodes {
+					if targetConfig.Conditions.EvaluateNode(node) {
+						data.TargetNodes = append(data.TargetNodes, ChainLinkPreviewNode{
+							Name:        node.Name,
+							Protocol:    node.Protocol,
+							LinkCountry: node.LinkCountry,
+							DelayTime:   node.DelayTime,
+							Speed:       node.Speed,
+							Group:       node.Group,
+						})
+					}
+				}
+			}
+		case "specified_node":
+			if name, ok := nodeNameMap[targetConfig.NodeID]; ok {
+				data.TargetInfo = name
+				if node, exists := nodeInfoMap[targetConfig.NodeID]; exists {
+					data.TargetNodes = []ChainLinkPreviewNode{{
+						Name:        node.Name,
+						Protocol:    node.Protocol,
+						LinkCountry: node.LinkCountry,
+						DelayTime:   node.DelayTime,
+						Speed:       node.Speed,
+						Group:       node.Group,
+					}}
+				}
+			} else {
+				data.TargetInfo = "(节点不存在)"
+			}
+		}
+	}
+
+	return data
+}
+
+// buildNodeMatchSummary 构建节点匹配摘要
+func buildNodeMatchSummary(nodes []models.Node, rules []models.SubscriptionChainRule, nodeNameMap map[int]string) []NodeMatchSummary {
+	var summary []NodeMatchSummary
+
+	for _, node := range nodes {
+		ms := NodeMatchSummary{
+			NodeID:      node.ID,
+			NodeName:    node.Name,
+			LinkCountry: node.LinkCountry,
+			Unmatched:   true,
+		}
+
+		// 按规则顺序检查（第一个匹配的生效）
+		for _, rule := range rules {
+			if rule.MatchTargetCondition(node) {
+				ms.Unmatched = false
+				ms.MatchedRule = rule.Name
+				ms.MatchedRuleID = rule.ID
+
+				// 获取入口代理名称
+				chainItems, err := rule.ParseChainConfig()
+				if err == nil && len(chainItems) > 0 {
+					firstItem := chainItems[0]
+					switch firstItem.Type {
+					case "template_group", "custom_group":
+						ms.EntryProxy = firstItem.GroupName
+					case "dynamic_node":
+						if firstItem.NodeConditions != nil {
+							for _, n := range nodes {
+								if firstItem.NodeConditions.EvaluateNode(n) {
+									ms.EntryProxy = n.Name + " (动态)"
+									break
+								}
+							}
+						}
+					case "specified_node":
+						if name, ok := nodeNameMap[firstItem.NodeID]; ok {
+							ms.EntryProxy = name
+						}
+					}
+				}
+				break // 只取第一个匹配的规则
+			}
+		}
+
+		summary = append(summary, ms)
+	}
+
+	return summary
+}

@@ -29,6 +29,7 @@ func Subcription(r *gin.Engine) {
 		SubcriptionGroup.DELETE("/:id/chain-rules/:ruleId", api.DeleteChainRule)     // 删除规则
 		SubcriptionGroup.PUT("/:id/chain-rules/:ruleId/toggle", api.ToggleChainRule) // 切换启用状态
 		SubcriptionGroup.GET("/:id/chain-options", api.GetChainOptions)              // 获取可用选项
+		SubcriptionGroup.GET("/:id/chain-rules/preview", api.PreviewChainLinks)      // 预览链路（整体）
 	}
 
 }

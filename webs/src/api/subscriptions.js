@@ -193,3 +193,11 @@ export function getChainOptions(subId) {
     method: 'get'
   });
 }
+
+// 预览订阅的整体链式代理配置
+export function previewChainLinks(subId) {
+  return request({
+    url: `/v1/subcription/${subId}/chain-rules/preview`,
+    method: 'get'
+  });
+}
