@@ -14,13 +14,14 @@ import (
 )
 
 type Temp struct {
-	File       string `json:"file"`
-	Text       string `json:"text"`
-	Category   string `json:"category"`
-	RuleSource string `json:"ruleSource"`
-	UseProxy   bool   `json:"useProxy"`
-	ProxyLink  string `json:"proxyLink"`
-	CreateDate string `json:"create_date"`
+	File             string `json:"file"`
+	Text             string `json:"text"`
+	Category         string `json:"category"`
+	RuleSource       string `json:"ruleSource"`
+	UseProxy         bool   `json:"useProxy"`
+	ProxyLink        string `json:"proxyLink"`
+	EnableIncludeAll bool   `json:"enableIncludeAll"`
+	CreateDate       string `json:"create_date"`
 }
 
 // 定义允许操作的基础目录
@@ -153,21 +154,24 @@ func GetTempS(c *gin.Context) {
 		ruleSource := ""
 		useProxy := false
 		proxyLink := ""
+		enableIncludeAll := false
 		if err := tmplMeta.FindByName(file.Name()); err == nil {
 			category = tmplMeta.Category
 			ruleSource = tmplMeta.RuleSource
 			useProxy = tmplMeta.UseProxy
 			proxyLink = tmplMeta.ProxyLink
+			enableIncludeAll = tmplMeta.EnableIncludeAll
 		}
 
 		temp := Temp{
-			File:       file.Name(),
-			Text:       textContent,
-			Category:   category,
-			RuleSource: ruleSource,
-			UseProxy:   useProxy,
-			ProxyLink:  proxyLink,
-			CreateDate: modTime,
+			File:             file.Name(),
+			Text:             textContent,
+			Category:         category,
+			RuleSource:       ruleSource,
+			UseProxy:         useProxy,
+			ProxyLink:        proxyLink,
+			EnableIncludeAll: enableIncludeAll,
+			CreateDate:       modTime,
 		}
 		temps = append(temps, temp)
 	}
@@ -231,6 +235,7 @@ func UpdateTemp(c *gin.Context) {
 	ruleSource := c.PostForm("ruleSource")
 	useProxy := c.PostForm("useProxy") == "true"
 	proxyLink := c.PostForm("proxyLink")
+	enableIncludeAll := c.PostForm("enableIncludeAll") == "true"
 
 	if filename == "" || oldname == "" || text == "" {
 		utils.FailWithMsg(c, "文件名或内容不能为空")
@@ -308,11 +313,12 @@ func UpdateTemp(c *gin.Context) {
 	if err := tmpl.FindByName(oldname); err != nil {
 		// 如果数据库中不存在，创建新记录
 		tmpl = models.Template{
-			Name:       filename,
-			Category:   category,
-			RuleSource: ruleSource,
-			UseProxy:   useProxy,
-			ProxyLink:  proxyLink,
+			Name:             filename,
+			Category:         category,
+			RuleSource:       ruleSource,
+			UseProxy:         useProxy,
+			ProxyLink:        proxyLink,
+			EnableIncludeAll: enableIncludeAll,
 		}
 		if err := tmpl.Add(); err != nil {
 			utils.Error("创建模板元数据失败: %v", err)
@@ -324,6 +330,7 @@ func UpdateTemp(c *gin.Context) {
 		tmpl.RuleSource = ruleSource
 		tmpl.UseProxy = useProxy
 		tmpl.ProxyLink = proxyLink
+		tmpl.EnableIncludeAll = enableIncludeAll
 		if err := tmpl.Update(); err != nil {
 			utils.Error("更新模板元数据失败: %v", err)
 		}
@@ -338,6 +345,7 @@ func AddTemp(c *gin.Context) {
 	ruleSource := c.PostForm("ruleSource")
 	useProxy := c.PostForm("useProxy") == "true"
 	proxyLink := c.PostForm("proxyLink")
+	enableIncludeAll := c.PostForm("enableIncludeAll") == "true"
 
 	if filename == "" || text == "" {
 		utils.FailWithMsg(c, "文件名或内容不能为空")
@@ -388,11 +396,12 @@ func AddTemp(c *gin.Context) {
 
 	// 创建数据库记录
 	tmpl := models.Template{
-		Name:       filename,
-		Category:   category,
-		RuleSource: ruleSource,
-		UseProxy:   useProxy,
-		ProxyLink:  proxyLink,
+		Name:             filename,
+		Category:         category,
+		RuleSource:       ruleSource,
+		UseProxy:         useProxy,
+		ProxyLink:        proxyLink,
+		EnableIncludeAll: enableIncludeAll,
 	}
 	if err := tmpl.Add(); err != nil {
 		utils.Error("创建模板元数据失败: %v", err)
