@@ -160,6 +160,7 @@ func AirportAdd(c *gin.Context) {
 		ProxyLink:         req.ProxyLink,
 		UserAgent:         req.UserAgent,
 		FetchUsageInfo:    req.FetchUsageInfo,
+		SkipTLSVerify:     req.SkipTLSVerify,
 	}
 
 	// 检查是否重复
@@ -236,6 +237,7 @@ func AirportUpdate(c *gin.Context) {
 	existing.ProxyLink = req.ProxyLink
 	existing.UserAgent = req.UserAgent
 	existing.FetchUsageInfo = req.FetchUsageInfo
+	existing.SkipTLSVerify = req.SkipTLSVerify
 
 	if err := existing.Update(); err != nil {
 		utils.FailWithMsg(c, "更新失败: "+err.Error())
