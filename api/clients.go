@@ -160,6 +160,16 @@ func GetV2ray(c *gin.Context) {
 		nodesJSON = resJSON
 	}
 
+	// 根据配置决定是否实时刷新用量信息
+	if sub.RefreshUsageOnRequest {
+		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
+	}
+	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
+	// 如果是HEAD请求将不进行订阅内容相关输出
+	if c.Request.Method == "HEAD" {
+		return
+	}
+
 	for idx, v := range sub.Nodes {
 		// 应用预处理规则到 LinkName
 		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
@@ -220,17 +230,11 @@ func GetV2ray(c *gin.Context) {
 			baselist += nodeLink + "\n"
 		}
 	}
-
 	c.Set("subname", SunName)
 	filename := fmt.Sprintf("%s.txt", SunName)
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	// 根据配置决定是否实时刷新用量信息
-	if sub.RefreshUsageOnRequest {
-		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
-	}
-	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
 
 	// 执行脚本
 	for _, script := range sub.ScriptsWithSort {
@@ -274,6 +278,16 @@ func GetClash(c *gin.Context) {
 		}
 		sub.Nodes = newNodes
 		nodesJSON = resJSON
+	}
+
+	// 根据配置决定是否实时刷新用量信息
+	if sub.RefreshUsageOnRequest {
+		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
+	}
+	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
+	// 如果是HEAD请求将不进行订阅内容相关输出
+	if c.Request.Method == "HEAD" {
+		return
 	}
 
 	// 获取链式代理规则
@@ -430,11 +444,6 @@ func GetClash(c *gin.Context) {
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	// 根据配置决定是否实时刷新用量信息
-	if sub.RefreshUsageOnRequest {
-		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
-	}
-	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
 
 	// 执行脚本
 	for _, script := range sub.ScriptsWithSort {
@@ -480,7 +489,15 @@ func GetSurge(c *gin.Context) {
 		sub.Nodes = newNodes
 		nodesJSON = resJSON
 	}
-
+	// 根据配置决定是否实时刷新用量信息
+	if sub.RefreshUsageOnRequest {
+		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
+	}
+	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
+	// 如果是HEAD请求将不进行订阅内容相关输出
+	if c.Request.Method == "HEAD" {
+		return
+	}
 	for idx, v := range sub.Nodes {
 		// 应用预处理规则到 LinkName
 		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
@@ -565,11 +582,6 @@ func GetSurge(c *gin.Context) {
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	// 根据配置决定是否实时刷新用量信息
-	if sub.RefreshUsageOnRequest {
-		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
-	}
-	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
 
 	host := c.Request.Host
 	url := c.Request.URL.String()
