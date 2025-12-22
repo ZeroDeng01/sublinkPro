@@ -137,28 +137,12 @@ func GetV2ray(c *gin.Context) {
 		c.Writer.WriteString("找不到这个订阅:" + SunName)
 		return
 	}
-	err = sub.GetSub()
+	err = sub.GetSub("v2ray")
 	if err != nil {
 		c.Writer.WriteString("读取错误")
 		return
 	}
 	baselist := ""
-	// 执行节点过滤脚本
-	nodesJSON, _ := json.Marshal(sub.Nodes)
-	for _, script := range sub.ScriptsWithSort {
-		resJSON, err := utils.RunNodeFilterScript(script.Content, nodesJSON, "v2ray")
-		if err != nil {
-			utils.Error("Node filter script execution failed: %v", err)
-			continue
-		}
-		var newNodes []models.Node
-		if err := json.Unmarshal(resJSON, &newNodes); err != nil {
-			utils.Error("Failed to unmarshal filtered nodes: %v", err)
-			continue
-		}
-		sub.Nodes = newNodes
-		nodesJSON = resJSON
-	}
 
 	// 根据配置决定是否实时刷新用量信息
 	if sub.RefreshUsageOnRequest {
@@ -257,28 +241,12 @@ func GetClash(c *gin.Context) {
 		c.Writer.WriteString("找不到这个订阅:" + SunName)
 		return
 	}
-	err = sub.GetSub()
+	err = sub.GetSub("clash")
 	if err != nil {
 		c.Writer.WriteString("读取错误")
 		return
 	}
 	var urls []protocol.Urls
-	// 执行节点过滤脚本
-	nodesJSON, _ := json.Marshal(sub.Nodes)
-	for _, script := range sub.ScriptsWithSort {
-		resJSON, err := utils.RunNodeFilterScript(script.Content, nodesJSON, "clash")
-		if err != nil {
-			utils.Error("Node filter script execution failed: %v", err)
-			continue
-		}
-		var newNodes []models.Node
-		if err := json.Unmarshal(resJSON, &newNodes); err != nil {
-			utils.Error("Failed to unmarshal filtered nodes: %v", err)
-			continue
-		}
-		sub.Nodes = newNodes
-		nodesJSON = resJSON
-	}
 
 	// 根据配置决定是否实时刷新用量信息
 	if sub.RefreshUsageOnRequest {
@@ -467,28 +435,13 @@ func GetSurge(c *gin.Context) {
 		c.Writer.WriteString("找不到这个订阅:" + SunName)
 		return
 	}
-	err = sub.GetSub()
+	err = sub.GetSub("surge")
 	if err != nil {
 		c.Writer.WriteString("读取错误")
 		return
 	}
 	urls := []string{}
-	// 执行节点过滤脚本
-	nodesJSON, _ := json.Marshal(sub.Nodes)
-	for _, script := range sub.ScriptsWithSort {
-		resJSON, err := utils.RunNodeFilterScript(script.Content, nodesJSON, "surge")
-		if err != nil {
-			utils.Error("Node filter script execution failed: %v", err)
-			continue
-		}
-		var newNodes []models.Node
-		if err := json.Unmarshal(resJSON, &newNodes); err != nil {
-			utils.Error("Failed to unmarshal filtered nodes: %v", err)
-			continue
-		}
-		sub.Nodes = newNodes
-		nodesJSON = resJSON
-	}
+
 	// 根据配置决定是否实时刷新用量信息
 	if sub.RefreshUsageOnRequest {
 		node.RefreshUsageForSubscriptionNodes(sub.Nodes)

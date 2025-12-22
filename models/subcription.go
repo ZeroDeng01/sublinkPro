@@ -479,7 +479,7 @@ func (sub *Subcription) ApplyFilters(nodes []Node) []Node {
 }
 
 // 读取订阅
-func (sub *Subcription) GetSub() error {
+func (sub *Subcription) GetSub(clientType string) error {
 	// 定义节点排序项结构
 	type NodeSortItem struct {
 		Node
@@ -603,6 +603,9 @@ func (sub *Subcription) GetSub() error {
 		return err
 	}
 	sub.ScriptsWithSort = scriptsWithSort
+
+	// 执行节点过滤脚本
+	sub.Nodes = sub.ApplyNodeFilterScripts(sub.Nodes, scriptsWithSort, clientType)
 
 	return nil
 }
@@ -1080,6 +1083,43 @@ func (sub *Subcription) CalculateUsageInfo() (upload, download, total, expire in
 	}
 
 	return
+}
+
+// ApplyNodeFilterScripts 执行节点过滤脚本
+// 遍历订阅关联的脚本，依次执行 filterNode 函数处理节点列表
+// clientType 参数传递给脚本，默认建议使用 "clash"
+func (sub *Subcription) ApplyNodeFilterScripts(nodes []Node, scripts []ScriptWithSort, clientType string) []Node {
+	if len(scripts) == 0 || len(nodes) == 0 {
+		return nodes
+	}
+
+	result := nodes
+	nodesJSON, err := json.Marshal(result)
+	if err != nil {
+		utils.Error("序列化节点失败: %v", err)
+		return nodes
+	}
+
+	for _, script := range scripts {
+		resJSON, err := utils.RunNodeFilterScript(script.Content, nodesJSON, clientType)
+		if err != nil {
+			// filterNode 函数不存在时跳过，不报错（脚本可能只定义了 subMod）
+			if strings.Contains(err.Error(), "filterNode function not found") {
+				continue
+			}
+			utils.Error("节点过滤脚本执行失败: %v", err)
+			continue
+		}
+		var newNodes []Node
+		if err := json.Unmarshal(resJSON, &newNodes); err != nil {
+			utils.Error("反序列化过滤后节点失败: %v", err)
+			continue
+		}
+		result = newNodes
+		nodesJSON = resJSON
+	}
+
+	return result
 }
 
 // ========== 去重规则配置结构 ==========

@@ -215,7 +215,7 @@ func GetChainOptions(c *gin.Context) {
 	}
 
 	// 获取订阅关联的节点
-	if err := sub.GetSub(); err != nil {
+	if err := sub.GetSub("none"); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取订阅节点失败: " + err.Error()})
 		return
 	}
