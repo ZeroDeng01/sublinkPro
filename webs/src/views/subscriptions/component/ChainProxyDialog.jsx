@@ -286,8 +286,11 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
         {!loading && !editMode && (
           <Box>
             {/* 说明文字 */}
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              链式代理规则用于配置节点的前置代理。规则按顺序匹配，第一个匹配的规则生效。
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              链式代理规则用于配置节点的前置代理（入口代理）。每个落地节点独立匹配规则：按规则顺序检查，应用第一个匹配规则的出口配置。
+            </Typography>
+            <Typography variant="caption" color="info.main" sx={{ mb: 2, display: 'block', backgroundColor: 'info.lighter', p: 1, borderRadius: 1 }}>
+              💡 提示：若需不同落地节点使用不同出口，请确保各规则的「目标节点」配置不重叠（使用「指定节点」或「按条件筛选」精确定义目标范围）。
             </Typography>
 
             {/* 规则列表 - 移动端使用卡片布局 */}
