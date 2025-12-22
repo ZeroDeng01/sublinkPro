@@ -704,13 +704,7 @@ export default function ChainFlowBuilder({
 
         {/* 添加代理按钮 - 支持多级链式代理，建议不超过 4 个 */}
         <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 10 }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAddProxy}
-            size="small"
-            disabled={chainConfig.length >= 4}
-          >
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddProxy} size="small" disabled={chainConfig.length >= 4}>
             {chainConfig.length >= 4 ? '已达最大层级' : '添加代理节点'}
           </Button>
           {chainConfig.length >= 2 && (

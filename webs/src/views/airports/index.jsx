@@ -328,9 +328,9 @@ export default function AirportList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -394,9 +394,21 @@ export default function AirportList() {
 
       {/* 机场列表 */}
       {matchDownMd ? (
-        <AirportMobileList airports={airports} onEdit={handleEdit} onDelete={handleDelete} onPull={handlePull} onRefreshUsage={handleRefreshUsage} />
+        <AirportMobileList
+          airports={airports}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onPull={handlePull}
+          onRefreshUsage={handleRefreshUsage}
+        />
       ) : (
-        <AirportTable airports={airports} onEdit={handleEdit} onDelete={handleDelete} onPull={handlePull} onRefreshUsage={handleRefreshUsage} />
+        <AirportTable
+          airports={airports}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onPull={handlePull}
+          onRefreshUsage={handleRefreshUsage}
+        />
       )}
 
       {/* 分页 */}

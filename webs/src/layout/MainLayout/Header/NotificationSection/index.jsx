@@ -289,11 +289,11 @@ export default function NotificationSection() {
                                             ...(expandedIds.has(notification.id)
                                               ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' }
                                               : {
-                                                display: '-webkit-box',
-                                                WebkitLineClamp: 2,
-                                                WebkitBoxOrient: 'vertical',
-                                                overflow: 'hidden'
-                                              }),
+                                                  display: '-webkit-box',
+                                                  WebkitLineClamp: 2,
+                                                  WebkitBoxOrient: 'vertical',
+                                                  overflow: 'hidden'
+                                                }),
                                             mb: 0.5
                                           }}
                                         >

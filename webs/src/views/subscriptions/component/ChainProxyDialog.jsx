@@ -11,7 +11,6 @@ import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import Switch from '@mui/material/Switch';
-import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -214,29 +213,31 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
   const parseChainConfig = (configStr) => {
     try {
       const config = JSON.parse(configStr || '[]');
-      return config.map((item) => {
-        // 指定节点：显示实际选择的节点名称
-        if (item.type === 'specified_node') {
-          if (item.nodeId) {
-            const node = (options.nodes || []).find((n) => n.id === item.nodeId);
-            if (node) {
-              return node.name || node.linkName || `节点 #${item.nodeId}`;
+      return config
+        .map((item) => {
+          // 指定节点：显示实际选择的节点名称
+          if (item.type === 'specified_node') {
+            if (item.nodeId) {
+              const node = (options.nodes || []).find((n) => n.id === item.nodeId);
+              if (node) {
+                return node.name || node.linkName || `节点 #${item.nodeId}`;
+              }
+              return `节点 #${item.nodeId}`;
             }
-            return `节点 #${item.nodeId}`;
+            return '指定节点';
           }
-          return '指定节点';
-        }
-        // 动态节点：显示"动态节点"
-        if (item.type === 'dynamic_node') {
-          return '动态节点';
-        }
-        // 自定义组和模板组：优先显示组名，否则显示类型名称
-        if (item.type === 'custom_group' || item.type === 'template_group') {
+          // 动态节点：显示"动态节点"
+          if (item.type === 'dynamic_node') {
+            return '动态节点';
+          }
+          // 自定义组和模板组：优先显示组名，否则显示类型名称
+          if (item.type === 'custom_group' || item.type === 'template_group') {
+            return item.groupName || getTypeFriendlyName(item.type);
+          }
+          // 其他情况：显示组名或类型的友好名称
           return item.groupName || getTypeFriendlyName(item.type);
-        }
-        // 其他情况：显示组名或类型的友好名称
-        return item.groupName || getTypeFriendlyName(item.type);
-      }).filter(Boolean);
+        })
+        .filter(Boolean);
     } catch {
       return [];
     }
@@ -318,8 +319,13 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                 链式代理规则用于配置节点的前置代理（入口代理）。每个落地节点独立匹配规则：按规则顺序检查，应用第一个匹配规则的出口配置。
               </Typography>
-              <Typography variant="caption" color="info.main" sx={{ mb: 2, display: 'block', backgroundColor: 'info.lighter', p: 1, borderRadius: 1 }}>
-                💡 提示：若需不同落地节点使用不同出口，请确保各规则的「目标节点」配置不重叠（使用「指定节点」或「按条件筛选」精确定义目标范围）。
+              <Typography
+                variant="caption"
+                color="info.main"
+                sx={{ mb: 2, display: 'block', backgroundColor: 'info.lighter', p: 1, borderRadius: 1 }}
+              >
+                💡
+                提示：若需不同落地节点使用不同出口，请确保各规则的「目标节点」配置不重叠（使用「指定节点」或「按条件筛选」精确定义目标范围）。
               </Typography>
 
               {/* 规则列表 - 移动端使用卡片布局 */}
@@ -516,12 +522,7 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
       </Dialog>
 
       {/* 链路预览对话框 */}
-      <ChainPreviewDialog
-        open={previewOpen}
-        onClose={handleClosePreview}
-        loading={previewLoading}
-        data={previewData}
-      />
+      <ChainPreviewDialog open={previewOpen} onClose={handleClosePreview} loading={previewLoading} data={previewData} />
     </>
   );
 }

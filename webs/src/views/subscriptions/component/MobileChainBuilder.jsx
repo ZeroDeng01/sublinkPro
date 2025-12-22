@@ -240,13 +240,7 @@ export default function MobileChainBuilder({
         {/* 添加代理按钮 - 支持多级链式代理 */}
         {chainConfig.length < 4 && (
           <>
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={handleAddProxy}
-              fullWidth
-              sx={{ borderStyle: 'dashed', py: 1.5 }}
-            >
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAddProxy} fullWidth sx={{ borderStyle: 'dashed', py: 1.5 }}>
               {chainConfig.length === 0 ? '添加入口代理' : '添加中间代理'}
             </Button>
             {chainConfig.length >= 2 && (
