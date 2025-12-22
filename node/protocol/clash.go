@@ -511,7 +511,9 @@ func DecodeClash(proxys []Proxy, yamlfile string, customGroups ...[]CustomProxyG
 			continue
 		}
 
-		// 如果已有 include-all: true，说明使用 filter 模式，跳过节点插入
+		// 如果已有 include-all: true，说明使用自动节点匹配模式，跳过节点插入
+		// filter、exclude-filter、exclude-type、expected-status 等过滤参数都需要 include-all 为前提
+		// 这样可以减小配置文件大小，让客户端自动包含/过滤节点
 		if includeAll, ok := proxyGroup["include-all"].(bool); ok && includeAll {
 			continue
 		}

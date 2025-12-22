@@ -208,13 +208,15 @@ func DecodeSurge(proxys, groups []string, file string) (string, error) {
 
 		// 处理 [Proxy Group] section 中的代理组行
 		if currentSection == "[Proxy Group]" && strings.Contains(line, "=") && trimmedLine != "" {
-			// 如果已有 include-all-proxies，说明使用 filter 模式，跳过节点插入
+			// 如果已有 include-all-proxies，说明使用自动节点匹配模式，跳过节点插入
+			// policy-regex-filter 需要 include-all-proxies 为前提
+			// 这样可以减小配置文件大小，让客户端自动包含/过滤节点
 			if strings.Contains(line, "include-all-proxies") {
 				result = append(result, line)
 				continue
 			}
 
-			// 没有 include-all-proxies，追加所有节点
+			// 没有自动匹配参数，追加所有节点
 			line = strings.TrimSpace(line) + ", " + grouplist
 			// 确保代理组有有效节点
 			line = ensureProxyGroupHasProxies(line)

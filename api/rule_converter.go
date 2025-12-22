@@ -255,14 +255,17 @@ func generateClashProxyGroups(groups []ACLProxyGroup) string {
 			}
 		}
 
-		// 如果有正则模式，使用 include-all + filter
+		// 始终添加 include-all: true，让客户端自动包含所有节点
+		// 这样后台无需逐一插入节点名称，减小配置文件大小并提高生成速度
+		lines = append(lines, "    include-all: true")
+
+		// 如果有正则模式，添加 filter 进行节点过滤
 		if len(regexFilters) > 0 {
-			lines = append(lines, "    include-all: true")
 			// 合并多个正则为一个 filter（用 | 连接内部内容）
 			lines = append(lines, fmt.Sprintf("    filter: %s", mergeRegexFilters(regexFilters)))
 		}
 
-		// 输出 proxies（策略组引用或空）
+		// 输出 proxies（策略组引用，如 DIRECT、其他代理组等）
 		if len(normalProxies) > 0 {
 			lines = append(lines, "    proxies:")
 			for _, proxy := range normalProxies {
@@ -564,12 +567,12 @@ func generateSurgeProxyGroups(groups []ACLProxyGroup) string {
 						g.Name, g.Type, url, interval, tolerance, filter)
 				}
 			} else {
-				// 无正则模式，使用普通格式
+				// 无正则模式，添加 include-all-proxies=1 让客户端自动包含所有节点
 				proxies := normalProxies
 				if len(proxies) == 0 {
 					proxies = []string{"DIRECT"}
 				}
-				line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d",
+				line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d, include-all-proxies=1",
 					g.Name, g.Type, strings.Join(proxies, ", "), url, interval, tolerance)
 			}
 		} else {
@@ -584,11 +587,12 @@ func generateSurgeProxyGroups(groups []ACLProxyGroup) string {
 						g.Name, g.Type, filter)
 				}
 			} else {
+				// 无正则模式，添加 include-all-proxies=1 让客户端自动包含所有节点
 				proxies := normalProxies
 				if len(proxies) == 0 {
 					proxies = []string{"DIRECT"}
 				}
-				line = fmt.Sprintf("%s = %s, %s", g.Name, g.Type, strings.Join(proxies, ", "))
+				line = fmt.Sprintf("%s = %s, %s, include-all-proxies=1", g.Name, g.Type, strings.Join(proxies, ", "))
 			}
 		}
 		lines = append(lines, line)
