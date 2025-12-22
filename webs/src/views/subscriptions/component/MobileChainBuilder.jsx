@@ -113,14 +113,22 @@ export default function MobileChainBuilder({
 
   // 添加代理节点
   const handleAddProxy = () => {
-    const newConfig = { type: 'template_group', groupName: '' };
+    const isEntryNode = chainConfig.length === 0;
+    // 入口节点默认使用模板代理组，中间节点默认使用自定义代理组
+    const defaultType = isEntryNode ? 'template_group' : 'custom_group';
+    const newConfig = { type: defaultType, groupName: '' };
     setEditingProxyConfig({ isNew: true, index: chainConfig.length, config: newConfig });
     setProxyDialogOpen(true);
   };
 
   // 编辑代理节点
   const handleEditProxy = (index) => {
-    setEditingProxyConfig({ isNew: false, index, config: { ...chainConfig[index] } });
+    const config = { ...chainConfig[index] };
+    // 中间节点（索引 > 0）不支持模板代理组，自动修正为自定义代理组
+    if (index > 0 && config.type === 'template_group') {
+      config.type = 'custom_group';
+    }
+    setEditingProxyConfig({ isNew: false, index, config });
     setProxyDialogOpen(true);
   };
 
@@ -229,16 +237,32 @@ export default function MobileChainBuilder({
           </Box>
         ))}
 
-        {/* 添加代理按钮 */}
-        {chainConfig.length < 1 && (
+        {/* 添加代理按钮 - 支持多级链式代理 */}
+        {chainConfig.length < 4 && (
           <>
-            <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAddProxy} fullWidth sx={{ borderStyle: 'dashed', py: 1.5 }}>
-              添加入口代理
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={handleAddProxy}
+              fullWidth
+              sx={{ borderStyle: 'dashed', py: 1.5 }}
+            >
+              {chainConfig.length === 0 ? '添加入口代理' : '添加中间代理'}
             </Button>
+            {chainConfig.length >= 2 && (
+              <Typography variant="caption" color="warning.main" sx={{ textAlign: 'center', display: 'block', mt: 0.5 }}>
+                当前 {chainConfig.length} 级链路，延迟可能较高
+              </Typography>
+            )}
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
               <ArrowForwardIcon sx={{ color: 'text.secondary', transform: 'rotate(90deg)' }} />
             </Box>
           </>
+        )}
+        {chainConfig.length >= 4 && (
+          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block', py: 1 }}>
+            已达最大 4 级链路
+          </Typography>
         )}
 
         {/* 目标节点 */}
@@ -275,32 +299,53 @@ export default function MobileChainBuilder({
 
       {/* 代理节点编辑对话框 */}
       <Dialog open={proxyDialogOpen} onClose={() => setProxyDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{editingProxyConfig?.isNew ? '添加入口代理' : '编辑入口代理'}</DialogTitle>
+        <DialogTitle>
+          {editingProxyConfig?.isNew
+            ? editingProxyConfig?.index === 0
+              ? '添加入口代理'
+              : '添加中间代理'
+            : editingProxyConfig?.index === 0
+              ? '编辑入口代理'
+              : '编辑中间代理'}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <FormControl size="small" fullWidth>
-              <InputLabel>代理类型</InputLabel>
-              <Select
-                value={editingProxyConfig?.config?.type || 'template_group'}
-                label="代理类型"
-                onChange={(e) =>
-                  setEditingProxyConfig({
-                    ...editingProxyConfig,
-                    config: {
-                      type: e.target.value,
-                      groupName: '',
-                      nodeId: undefined,
-                      nodeConditions: undefined
+            {/* 入口节点（索引0）可选所有类型，后续中间节点只能选择指定节点或动态条件节点 */}
+            {(() => {
+              const isEntryNode = editingProxyConfig?.index === 0;
+              return (
+                <FormControl size="small" fullWidth>
+                  <InputLabel>代理类型</InputLabel>
+                  <Select
+                    value={editingProxyConfig?.config?.type || (isEntryNode ? 'template_group' : 'specified_node')}
+                    label="代理类型"
+                    onChange={(e) =>
+                      setEditingProxyConfig({
+                        ...editingProxyConfig,
+                        config: {
+                          type: e.target.value,
+                          groupName: '',
+                          nodeId: undefined,
+                          nodeConditions: undefined
+                        }
+                      })
                     }
-                  })
-                }
-              >
-                <MenuItem value="template_group">模板代理组</MenuItem>
-                <MenuItem value="custom_group">自定义代理组</MenuItem>
-                <MenuItem value="dynamic_node">动态条件节点</MenuItem>
-                <MenuItem value="specified_node">指定节点</MenuItem>
-              </Select>
-            </FormControl>
+                  >
+                    {/* 入口节点可选模板代理组 */}
+                    {isEntryNode && <MenuItem value="template_group">模板代理组</MenuItem>}
+                    {/* 所有节点都可选自定义代理组（中间节点的组内节点会自动设置 dialer-proxy） */}
+                    <MenuItem value="custom_group">自定义代理组</MenuItem>
+                    <MenuItem value="dynamic_node">动态条件节点</MenuItem>
+                    <MenuItem value="specified_node">指定节点</MenuItem>
+                  </Select>
+                  {!isEntryNode && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                      中间节点的组内节点会自动设置 dialer-proxy
+                    </Typography>
+                  )}
+                </FormControl>
+              );
+            })()}
 
             {editingProxyConfig?.config?.type === 'template_group' && (
               <Autocomplete

@@ -350,7 +350,10 @@ export default function ChainFlowBuilder({
 
   // 添加代理节点
   const handleAddProxy = useCallback(() => {
-    const newConfig = { type: 'template_group', groupName: '' };
+    const isEntryNode = chainConfig.length === 0;
+    // 入口节点默认使用模板代理组，中间节点默认使用自定义代理组
+    const defaultType = isEntryNode ? 'template_group' : 'custom_group';
+    const newConfig = { type: defaultType, groupName: '' };
     const newChainConfig = [...chainConfig, newConfig];
     onChainConfigChange?.(newChainConfig);
 
@@ -375,8 +378,13 @@ export default function ChainFlowBuilder({
     (event, node) => {
       if (node.type === 'proxy') {
         const nodeIndex = parseInt(node.id.replace('proxy-', ''), 10);
+        const config = { ...chainConfig[nodeIndex] };
+        // 中间节点（索引 > 0）不支持模板代理组，自动修正为自定义代理组
+        if (nodeIndex > 0 && config.type === 'template_group') {
+          config.type = 'custom_group';
+        }
         setSelectedNodeId(node.id);
-        setEditingProxyConfig({ ...chainConfig[nodeIndex] });
+        setEditingProxyConfig(config);
         setPanelType('proxy');
         setPanelOpen(true);
       } else if (node.type === 'end') {
@@ -410,11 +418,16 @@ export default function ChainFlowBuilder({
   const renderProxyConfigPanel = () => {
     if (!editingProxyConfig) return null;
 
+    // 计算当前编辑节点的索引
+    const nodeIndex = selectedNodeId ? parseInt(selectedNodeId.replace('proxy-', ''), 10) : 0;
+    // 入口节点（索引0）可选所有类型，后续中间节点只能选择指定节点或动态条件节点
+    const isEntryNode = nodeIndex === 0;
+
     return (
       <Stack spacing={2} sx={{ pt: 0.5 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="subtitle1" fontWeight="bold">
-            代理节点配置
+            {isEntryNode ? '入口代理配置' : '中间节点配置'}
           </Typography>
           <IconButton size="small" onClick={() => setPanelOpen(false)}>
             <CloseIcon fontSize="small" />
@@ -424,7 +437,7 @@ export default function ChainFlowBuilder({
         <FormControl size="small" fullWidth>
           <InputLabel>代理类型</InputLabel>
           <Select
-            value={editingProxyConfig.type || 'template_group'}
+            value={editingProxyConfig.type || (isEntryNode ? 'template_group' : 'specified_node')}
             label="代理类型"
             onChange={(e) =>
               setEditingProxyConfig({
@@ -435,11 +448,18 @@ export default function ChainFlowBuilder({
               })
             }
           >
-            <MenuItem value="template_group">模板代理组</MenuItem>
+            {/* 入口节点可选模板代理组 */}
+            {isEntryNode && <MenuItem value="template_group">模板代理组</MenuItem>}
+            {/* 所有节点都可选自定义代理组（中间节点的组内节点会自动设置 dialer-proxy） */}
             <MenuItem value="custom_group">自定义代理组</MenuItem>
             <MenuItem value="dynamic_node">动态条件节点</MenuItem>
             <MenuItem value="specified_node">指定节点</MenuItem>
           </Select>
+          {!isEntryNode && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              中间节点的自定义代理组内所有节点会自动设置 dialer-proxy 指向上一级
+            </Typography>
+          )}
         </FormControl>
 
         {editingProxyConfig.type === 'template_group' && (
@@ -682,17 +702,28 @@ export default function ChainFlowBuilder({
           <Controls showInteractive={false} />
         </ReactFlow>
 
-        {/* 添加代理按钮 - 限制只能添加一个入口代理 */}
+        {/* 添加代理按钮 - 支持多级链式代理，建议不超过 4 个 */}
         <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 10 }}>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddProxy} size="small" disabled={chainConfig.length >= 1}>
-            {chainConfig.length >= 1 ? '已配置入口代理' : '添加代理节点'}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleAddProxy}
+            size="small"
+            disabled={chainConfig.length >= 4}
+          >
+            {chainConfig.length >= 4 ? '已达最大层级' : '添加代理节点'}
           </Button>
+          {chainConfig.length >= 2 && (
+            <Typography variant="caption" color="error.main" sx={{ ml: 1 }}>
+              {chainConfig.length} 级链路，延迟可能较高
+            </Typography>
+          )}
         </Box>
 
         {/* 提示文字 */}
         <Box sx={{ position: 'absolute', bottom: 10, left: 10, zIndex: 10 }}>
           <Typography variant="caption" color="text.secondary">
-            点击节点进行配置
+            点击节点进行配置，支持多级链式代理
           </Typography>
         </Box>
       </Box>

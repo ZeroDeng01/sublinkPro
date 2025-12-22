@@ -55,6 +55,21 @@ type CustomProxyGroup struct {
 	URLTestConfig *URLTestConfig `json:"urlTestConfig,omitempty"`
 }
 
+// ChainLinkItem 链路中单个节点的信息
+type ChainLinkItem struct {
+	ProxyName   string // 代理名称
+	DialerProxy string // 该节点的 dialer-proxy（指向上一级）
+	IsGroup     bool   // 是否是代理组（模板组或自定义组）
+}
+
+// ChainLinkResult 完整链路解析结果
+type ChainLinkResult struct {
+	Links                []ChainLinkItem    // 链路节点列表（按顺序，从入口到最后一跳）
+	FinalDialer          string             // 目标节点应使用的 dialer-proxy（链路最后一个节点）
+	CustomGroups         []CustomProxyGroup // 需要生成的自定义代理组
+	GroupMemberDialerMap map[string]string  // 中间节点自定义代理组内所有节点应设置的 dialer-proxy (节点名 -> dialer-proxy)
+}
+
 // chainRuleCache 链式代理规则缓存
 var chainRuleCache *cache.MapCache[int, SubscriptionChainRule]
 
@@ -290,11 +305,115 @@ func (r *SubscriptionChainRule) ResolveProxyName(allNodes []Node, nodeNameMap ma
 		return "", nil, fmt.Errorf("未知的代理类型: %s", entryItem.Type)
 	}
 
-	// 处理中间链路的 dialer-proxy 设置（如果有多级链）
-	// 注意：多级链的处理需要在 GetClash 中统一处理，这里只返回入口代理名称
-	// 后续版本可以扩展支持多级链
-
 	return entryProxyName, customGroups, nil
+}
+
+// ResolveChainLinks 解析完整的多级链路
+// 返回值：完整链路解析结果（包含所有中间节点及其 dialer-proxy 设置）
+func (r *SubscriptionChainRule) ResolveChainLinks(allNodes []Node, nodeNameMap map[int]string) (*ChainLinkResult, error) {
+	items, err := r.ParseChainConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(items) == 0 {
+		return nil, nil
+	}
+
+	result := &ChainLinkResult{
+		Links:                make([]ChainLinkItem, 0, len(items)),
+		CustomGroups:         make([]CustomProxyGroup, 0),
+		GroupMemberDialerMap: make(map[string]string),
+	}
+
+	var prevProxyName string // 上一个节点的名称
+
+	// 按顺序处理每个链路节点
+	for i, item := range items {
+		var proxyName string
+		var isGroup bool
+
+		switch item.Type {
+		case "template_group":
+			if item.GroupName == "" {
+				return nil, fmt.Errorf("链路第 %d 项：模板代理组名称不能为空", i+1)
+			}
+			proxyName = item.GroupName
+			isGroup = true
+
+		case "custom_group":
+			if item.GroupName == "" {
+				return nil, fmt.Errorf("链路第 %d 项：自定义代理组名称不能为空", i+1)
+			}
+			proxyName = item.GroupName
+			isGroup = true
+
+			// 收集匹配的节点并生成自定义代理组
+			proxies := r.getMatchingNodeNames(allNodes, item.NodeConditions, nodeNameMap)
+			if len(proxies) == 0 {
+				utils.Warn("[ChainRule] 自定义代理组 %s 没有匹配的节点", item.GroupName)
+			}
+			group := CustomProxyGroup{
+				Name:          item.GroupName,
+				Type:          item.GroupType,
+				Proxies:       proxies,
+				URLTestConfig: item.URLTestConfig,
+			}
+			if group.Type == "" {
+				group.Type = "select"
+			}
+			result.CustomGroups = append(result.CustomGroups, group)
+
+			// 如果是中间节点（索引 > 0），为组内所有节点设置 dialer-proxy 指向上一级
+			if i > 0 && prevProxyName != "" {
+				for _, memberName := range proxies {
+					result.GroupMemberDialerMap[memberName] = prevProxyName
+				}
+				utils.Debug("[ChainRule] 中间节点自定义代理组 %s 内 %d 个节点设置 dialer-proxy=%s",
+					item.GroupName, len(proxies), prevProxyName)
+			}
+
+		case "dynamic_node":
+			proxyName = r.getFirstMatchingNodeName(allNodes, item.NodeConditions, item.SelectMode, nodeNameMap)
+			if proxyName == "" {
+				return nil, fmt.Errorf("链路第 %d 项：动态条件没有匹配的节点", i+1)
+			}
+			isGroup = false
+
+		case "specified_node":
+			if name, ok := nodeNameMap[item.NodeID]; ok {
+				proxyName = name
+			} else {
+				return nil, fmt.Errorf("链路第 %d 项：指定的节点 ID %d 不存在", i+1, item.NodeID)
+			}
+			isGroup = false
+
+		default:
+			return nil, fmt.Errorf("链路第 %d 项：未知的代理类型 %s", i+1, item.Type)
+		}
+
+		// 构建链路项
+		linkItem := ChainLinkItem{
+			ProxyName: proxyName,
+			IsGroup:   isGroup,
+		}
+
+		// 设置 dialer-proxy（指向上一个节点，第一个节点无 dialer-proxy）
+		if i > 0 && prevProxyName != "" {
+			linkItem.DialerProxy = prevProxyName
+		}
+
+		result.Links = append(result.Links, linkItem)
+		prevProxyName = proxyName
+	}
+
+	// 目标节点应使用的 dialer-proxy 是链路最后一个节点
+	if len(result.Links) > 0 {
+		result.FinalDialer = result.Links[len(result.Links)-1].ProxyName
+	}
+
+	utils.Debug("[ChainRule] 解析链路完成: 共 %d 个节点, FinalDialer=%s", len(result.Links), result.FinalDialer)
+	return result, nil
 }
 
 // getMatchingNodeNames 获取所有匹配条件的节点名称列表
@@ -370,8 +489,20 @@ func (r *SubscriptionChainRule) getFirstMatchingNodeName(nodes []Node, condition
 // ApplyChainRulesToNode 为单个节点应用链式代理规则
 // 返回值：(dialer-proxy 名称, 自定义代理组列表)
 // 优先级：链式代理规则 > 节点自身的 DialerProxyName 设置
+// 注意：此函数为兼容性保留，新代码应使用 ApplyChainRulesToNodeV2
 func ApplyChainRulesToNode(node Node, rules []SubscriptionChainRule, allNodes []Node, nodeNameMap map[int]string) (string, []CustomProxyGroup) {
-	utils.Debug("[ChainRule] ApplyChainRulesToNode: 节点 #%d (%s), 规则数=%d", node.ID, node.Name, len(rules))
+	result := ApplyChainRulesToNodeV2(node, rules, allNodes, nodeNameMap)
+	if result == nil {
+		return "", nil
+	}
+	return result.FinalDialer, result.CustomGroups
+}
+
+// ApplyChainRulesToNodeV2 为单个节点应用链式代理规则（支持多级链）
+// 返回值：完整链路解析结果（包含所有中间节点及其 dialer-proxy 设置）
+// 优先级：链式代理规则 > 节点自身的 DialerProxyName 设置
+func ApplyChainRulesToNodeV2(node Node, rules []SubscriptionChainRule, allNodes []Node, nodeNameMap map[int]string) *ChainLinkResult {
+	utils.Debug("[ChainRule] ApplyChainRulesToNodeV2: 节点 #%d (%s), 规则数=%d", node.ID, node.Name, len(rules))
 
 	// 按顺序匹配规则（链式代理规则优先级最高）
 	for _, rule := range rules {
@@ -383,15 +514,16 @@ func ApplyChainRulesToNode(node Node, rules []SubscriptionChainRule, allNodes []
 		utils.Debug("[ChainRule] 检查规则 '%s' 是否匹配节点 #%d", rule.Name, node.ID)
 
 		if rule.MatchTargetCondition(node) {
-			utils.Debug("[ChainRule] 规则 '%s' 匹配成功，开始解析入口代理", rule.Name)
-			proxyName, customGroups, err := rule.ResolveProxyName(allNodes, nodeNameMap)
+			utils.Debug("[ChainRule] 规则 '%s' 匹配成功，开始解析链路", rule.Name)
+			chainResult, err := rule.ResolveChainLinks(allNodes, nodeNameMap)
 			if err != nil {
 				utils.Warn("规则 %s 解析失败: %v", rule.Name, err)
 				continue
 			}
-			if proxyName != "" {
-				utils.Debug("[ChainRule] 返回入口代理: %s (覆盖节点原 DialerProxyName='%s')", proxyName, node.DialerProxyName)
-				return proxyName, customGroups
+			if chainResult != nil && chainResult.FinalDialer != "" {
+				utils.Debug("[ChainRule] 返回链路: %d 级, FinalDialer=%s (覆盖节点原 DialerProxyName='%s')",
+					len(chainResult.Links), chainResult.FinalDialer, node.DialerProxyName)
+				return chainResult
 			}
 		} else {
 			utils.Debug("[ChainRule] 规则 '%s' 不匹配节点 #%d", rule.Name, node.ID)
@@ -401,11 +533,13 @@ func ApplyChainRulesToNode(node Node, rules []SubscriptionChainRule, allNodes []
 	// 如果没有规则匹配，使用节点自身的 DialerProxyName
 	if node.DialerProxyName != "" {
 		utils.Debug("[ChainRule] 没有规则匹配，使用节点自身 DialerProxyName='%s'", node.DialerProxyName)
-		return node.DialerProxyName, nil
+		return &ChainLinkResult{
+			FinalDialer: node.DialerProxyName,
+		}
 	}
 
 	utils.Debug("[ChainRule] 没有规则匹配节点 #%d，无 dialer-proxy", node.ID)
-	return "", nil
+	return nil
 }
 
 // CollectCustomProxyGroups 收集所有规则中的自定义代理组

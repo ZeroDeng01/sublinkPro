@@ -151,7 +151,9 @@ export default function ChainRuleEditor({
 
         {/* 画板式代理链配置 - 移动端使用简化版 */}
         <Typography variant="body2" color="text.secondary">
-          {isMobile ? '配置入口代理节点和目标节点' : '点击「添加代理节点」配置入口代理，点击节点进行编辑。'}
+          {isMobile
+            ? '配置多级代理链路：入口 → 中间节点 → 目标节点'
+            : '点击「添加代理节点」构建多级代理链，点击节点进行编辑。建议链路不超过 3 级。'}
         </Typography>
 
         {isMobile ? (

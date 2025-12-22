@@ -287,6 +287,41 @@ func GetClash(c *gin.Context) {
 	// 收集自定义代理组
 	customGroups := models.CollectCustomProxyGroups(chainRules, sub.Nodes, nodeNameMap)
 
+	// ========== 第一阶段：预先收集所有链路的中间节点 dialer-proxy 映射 ==========
+	// key: 节点名称, value: 该节点应设置的 dialer-proxy
+	chainNodeDialerMap := make(map[string]string)
+	// 同时记录每个目标节点应使用的 FinalDialer
+	targetNodeDialerMap := make(map[int]string)
+
+	if len(chainRules) > 0 {
+		for _, v := range sub.Nodes {
+			// 检查该节点是否匹配任何链式规则
+			chainResult := models.ApplyChainRulesToNodeV2(v, chainRules, sub.Nodes, nodeNameMap)
+			if chainResult != nil && chainResult.FinalDialer != "" {
+				// 记录目标节点的 dialer-proxy
+				targetNodeDialerMap[v.ID] = chainResult.FinalDialer
+				// 收集链路中间节点的 dialer-proxy 映射
+				for _, link := range chainResult.Links {
+					// 只处理非代理组类型的中间节点（代理组类型的 dialer-proxy 由组本身处理）
+					if !link.IsGroup && link.DialerProxy != "" {
+						// 如果同一节点在多个规则中作为中间节点，使用最先匹配的
+						if _, exists := chainNodeDialerMap[link.ProxyName]; !exists {
+							chainNodeDialerMap[link.ProxyName] = link.DialerProxy
+						}
+					}
+				}
+				// 收集中间节点自定义代理组内节点的 dialer-proxy 映射
+				for memberName, dialerProxy := range chainResult.GroupMemberDialerMap {
+					if _, exists := chainNodeDialerMap[memberName]; !exists {
+						chainNodeDialerMap[memberName] = dialerProxy
+					}
+				}
+			}
+		}
+		utils.Debug("[ChainProxy] 收集完成: 目标节点=%d, 中间节点=%d", len(targetNodeDialerMap), len(chainNodeDialerMap))
+	}
+
+	// ========== 第二阶段：遍历节点生成配置 ==========
 	for idx, v := range sub.Nodes {
 		// 应用预处理规则到 LinkName
 		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
@@ -310,12 +345,16 @@ func GetClash(c *gin.Context) {
 
 		// 计算 dialer-proxy（链式代理规则）
 		dialerProxy := strings.TrimSpace(v.DialerProxyName)
-		if dialerProxy == "" && len(chainRules) > 0 {
-			// 应用链式代理规则
-			resolvedProxy, _ := models.ApplyChainRulesToNode(v, chainRules, sub.Nodes, nodeNameMap)
-			if resolvedProxy != "" {
-				dialerProxy = resolvedProxy
-			}
+
+		// 优先级：中间节点映射 > 目标节点映射 > 节点自身设置
+		finalNodeName := nodeNameMap[v.ID]
+
+		// 检查是否作为链路中间节点（最高优先级）
+		if chainDialer, exists := chainNodeDialerMap[finalNodeName]; exists {
+			dialerProxy = chainDialer
+		} else if targetDialer, exists := targetNodeDialerMap[v.ID]; exists && dialerProxy == "" {
+			// 作为目标节点
+			dialerProxy = targetDialer
 		}
 
 		switch {
