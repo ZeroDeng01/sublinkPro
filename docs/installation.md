@@ -3,6 +3,7 @@
 本文档介绍 SublinkPro 的完整安装、更新和卸载方法。
 
 ---
+
 ## 📦 Docker Compose 运行（推荐）
 
 > [!TIP]
@@ -193,6 +194,8 @@ services:
     command: sublinkpro  # 只监控 sublinkpro 容器
 ```
 
+---
+
 ### ☁️ Zeabur 部署
 
 https://zeabur.com/projects
@@ -252,6 +255,7 @@ https://zeabur.com/projects
    - 设置完域名后即可通过域名访问,使用默认账号 `admin` / `123456` 登录
 
 
+---
 
 > [!TIP]
 > **Watchtower 高级配置**：
