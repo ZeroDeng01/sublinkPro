@@ -205,7 +205,7 @@ https://zeabur.com/projects
 1. **新建项目与 Service**
    - 点击 "创建项目" > "Docker 容器镜像"
    - 输入镜像名称：`zerodeng/sublink-pro:latest`  (推荐稳定版 latest，开发版 dev 用于测试新功能)
-   - 配置端口：`8000` (TCP)
+   - 配置端口：`8000` (HTTP)
    - **配置卷（重要）**：
      * 点击卷
      * 点击 "添加卷" 添加新卷
