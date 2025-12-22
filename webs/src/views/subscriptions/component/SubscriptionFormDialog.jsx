@@ -350,6 +350,21 @@ export default function SubscriptionFormDialog({
                       label="替换服务器地址为 Host"
                     />
                   </Tooltip>
+                  <Tooltip
+                    title="开启后每次访问订阅链接会实时获取最新用量信息（流量、到期时间等），但会增加响应时间；关闭后使用缓存数据，响应更快"
+                    placement="top"
+                    arrow
+                  >
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={formData.refreshUsageOnRequest}
+                          onChange={(e) => setFormData({ ...formData, refreshUsageOnRequest: e.target.checked })}
+                        />
+                      }
+                      label="实时获取用量信息"
+                    />
+                  </Tooltip>
                 </Stack>
               </Stack>
             </AccordionDetails>

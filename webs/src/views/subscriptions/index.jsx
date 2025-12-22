@@ -113,7 +113,8 @@ export default function SubscriptionList() {
     protocolWhitelist: '',
     protocolBlacklist: '',
     protocolOptions: [],
-    deduplicationRule: ''
+    deduplicationRule: '',
+    refreshUsageOnRequest: true // 默认开启实时获取用量信息
   });
 
   // 节点过滤
@@ -264,7 +265,8 @@ export default function SubscriptionList() {
       protocolWhitelist: '',
       protocolBlacklist: '',
       protocolOptions: protocolOptions,
-      deduplicationRule: ''
+      deduplicationRule: '',
+      refreshUsageOnRequest: true
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -315,7 +317,8 @@ export default function SubscriptionList() {
       protocolWhitelist: sub.ProtocolWhitelist || '',
       protocolBlacklist: sub.ProtocolBlacklist || '',
       protocolOptions: protocolOptions,
-      deduplicationRule: sub.DeduplicationRule || ''
+      deduplicationRule: sub.DeduplicationRule || '',
+      refreshUsageOnRequest: sub.RefreshUsageOnRequest !== false // 默认 true
     });
     setNodeGroupFilter('all');
     setNodeSourceFilter('all');
@@ -384,7 +387,8 @@ export default function SubscriptionList() {
         TagBlacklist: formData.tagBlacklist,
         ProtocolWhitelist: formData.protocolWhitelist,
         ProtocolBlacklist: formData.protocolBlacklist,
-        DeduplicationRule: formData.deduplicationRule || ''
+        DeduplicationRule: formData.deduplicationRule || '',
+        RefreshUsageOnRequest: formData.refreshUsageOnRequest
       };
 
       if (formData.selectionMode === 'nodes') {
@@ -718,9 +722,9 @@ export default function SubscriptionList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -736,9 +740,9 @@ export default function SubscriptionList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />

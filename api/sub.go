@@ -96,6 +96,8 @@ func SubAdd(c *gin.Context) {
 	protocolWhitelist := c.PostForm("ProtocolWhitelist")
 	protocolBlacklist := c.PostForm("ProtocolBlacklist")
 	deduplicationRule := c.PostForm("DeduplicationRule")
+	refreshUsageOnRequestStr := c.PostForm("RefreshUsageOnRequest")
+	refreshUsageOnRequest := refreshUsageOnRequestStr != "false" // 默认为 true
 
 	if name == "" || (nodeIds == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
@@ -167,6 +169,7 @@ func SubAdd(c *gin.Context) {
 	sub.ProtocolWhitelist = protocolWhitelist
 	sub.ProtocolBlacklist = protocolBlacklist
 	sub.DeduplicationRule = deduplicationRule
+	sub.RefreshUsageOnRequest = refreshUsageOnRequest
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 
 	err := sub.Add()
@@ -240,6 +243,8 @@ func SubUpdate(c *gin.Context) {
 	protocolWhitelist := c.PostForm("ProtocolWhitelist")
 	protocolBlacklist := c.PostForm("ProtocolBlacklist")
 	deduplicationRule := c.PostForm("DeduplicationRule")
+	refreshUsageOnRequestStr := c.PostForm("RefreshUsageOnRequest")
+	refreshUsageOnRequest := refreshUsageOnRequestStr != "false" // 默认为 true
 
 	if name == "" || (nodeIds == "" && groups == "") {
 		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
@@ -321,6 +326,7 @@ func SubUpdate(c *gin.Context) {
 	sub.ProtocolWhitelist = protocolWhitelist
 	sub.ProtocolBlacklist = protocolBlacklist
 	sub.DeduplicationRule = deduplicationRule
+	sub.RefreshUsageOnRequest = refreshUsageOnRequest
 	err = sub.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")
