@@ -171,11 +171,44 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
     setEditingRule(null);
   };
 
+  // 获取节点类型的友好显示名称
+  const getTypeFriendlyName = (type) => {
+    const labels = {
+      template_group: '模板组',
+      custom_group: '自定义组',
+      dynamic_node: '动态节点',
+      specified_node: '指定节点'
+    };
+    return labels[type] || type;
+  };
+
   // 解析代理链配置用于显示
   const parseChainConfig = (configStr) => {
     try {
       const config = JSON.parse(configStr || '[]');
-      return config.map((item) => item.groupName || item.type).filter(Boolean);
+      return config.map((item) => {
+        // 指定节点：显示实际选择的节点名称
+        if (item.type === 'specified_node') {
+          if (item.nodeId) {
+            const node = (options.nodes || []).find((n) => n.id === item.nodeId);
+            if (node) {
+              return node.name || node.linkName || `节点 #${item.nodeId}`;
+            }
+            return `节点 #${item.nodeId}`;
+          }
+          return '指定节点';
+        }
+        // 动态节点：显示"动态节点"
+        if (item.type === 'dynamic_node') {
+          return '动态节点';
+        }
+        // 自定义组和模板组：优先显示组名，否则显示类型名称
+        if (item.type === 'custom_group' || item.type === 'template_group') {
+          return item.groupName || getTypeFriendlyName(item.type);
+        }
+        // 其他情况：显示组名或类型的友好名称
+        return item.groupName || getTypeFriendlyName(item.type);
+      }).filter(Boolean);
     } catch {
       return [];
     }
