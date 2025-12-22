@@ -139,7 +139,7 @@ https://zeabur.com/projects
    # 验证码
    SUBLINK_CAPTCHA_MODE=2
    ```
-   ddd
+   [环境变量](https://github.com/lillinlin/sublinkPro/tree/main#%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%88%97%E8%A1%A8)
 
 3. **部署完成**
    - Zeabur 会自动拉取镜像并启动服务
@@ -152,7 +152,7 @@ https://zeabur.com/projects
    - 或者绑定自定义域名：
      * 点击 "Add Domain" 添加你的域名
      * 按照提示配置 DNS CNAME 记录指向 Zeabur 提供的目标地址
-   - 设置完域名后即可通过域名访问
+   - 设置完域名后即可通过域名访问,使用默认账号 `admin` / `123456` 登录
 
 > [!TIP]
 > 更多安装方式（Docker、一键脚本、更新升级等）请参阅 [📦 安装部署指南](docs/installation.md)
