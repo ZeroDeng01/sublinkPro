@@ -18,7 +18,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Fade from '@mui/material/Fade';
 
-import { ReactFlow, Controls, Background, useNodesState, useEdgesState, Handle, Position, MarkerType } from '@xyflow/react';
+import { ReactFlow, Controls, useNodesState, useEdgesState, Handle, Position, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './ChainFlowBuilder.css';
 
@@ -168,9 +168,7 @@ function ProxyNode({ data, selected }) {
       style={{
         ...nodeStyles.proxy,
         borderColor: selected ? '#06b6d4' : 'rgba(6, 182, 212, 0.5)',
-        boxShadow: selected
-          ? '0 0 25px rgba(6, 182, 212, 0.5), 0 8px 32px rgba(6, 182, 212, 0.2)'
-          : nodeStyles.proxy.boxShadow
+        boxShadow: selected ? '0 0 25px rgba(6, 182, 212, 0.5), 0 8px 32px rgba(6, 182, 212, 0.2)' : nodeStyles.proxy.boxShadow
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -219,7 +217,6 @@ function ProxyNode({ data, selected }) {
     </div>
   );
 }
-
 
 // 节点类型定义
 const nodeTypes = {
@@ -283,14 +280,17 @@ export default function ChainFlowBuilder({
   );
 
   // 直接删除代理节点（从节点悬停按钮）
-  const handleDeleteProxyDirect = useCallback((nodeIndex) => {
-    const newChainConfig = chainConfig.filter((_, i) => i !== nodeIndex);
-    onChainConfigChange?.(newChainConfig);
-    // 如果删除的是当前打开面板的节点，关闭面板
-    if (selectedNodeId === `proxy-${nodeIndex}`) {
-      setPanelOpen(false);
-    }
-  }, [chainConfig, onChainConfigChange, selectedNodeId]);
+  const handleDeleteProxyDirect = useCallback(
+    (nodeIndex) => {
+      const newChainConfig = chainConfig.filter((_, i) => i !== nodeIndex);
+      onChainConfigChange?.(newChainConfig);
+      // 如果删除的是当前打开面板的节点，关闭面板
+      if (selectedNodeId === `proxy-${nodeIndex}`) {
+        setPanelOpen(false);
+      }
+    },
+    [chainConfig, onChainConfigChange, selectedNodeId]
+  );
 
   // 构建流程节点
   const flowNodes = useMemo(() => {
