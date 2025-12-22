@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
@@ -51,9 +51,30 @@ export default function NotificationSection() {
   const { notifications, clearAllNotifications } = useAuth();
 
   const [open, setOpen] = useState(false);
-  const [readIds, setReadIds] = useState(new Set());
+  // 从 localStorage 初始化已读状态
+  const [readIds, setReadIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('notification_read_ids');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return new Set(parsed);
+      }
+    } catch (e) {
+      console.error('Failed to parse saved read IDs:', e);
+    }
+    return new Set();
+  });
   const [expandedIds, setExpandedIds] = useState(new Set()); // 追踪展开的通知
   const anchorRef = useRef(null);
+
+  // 保存已读状态到 localStorage
+  const saveReadIds = useCallback((ids) => {
+    try {
+      localStorage.setItem('notification_read_ids', JSON.stringify([...ids]));
+    } catch (e) {
+      console.error('Failed to save read IDs:', e);
+    }
+  }, []);
 
   // 计算未读数
   const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
@@ -70,17 +91,24 @@ export default function NotificationSection() {
   };
 
   const handleMarkAsRead = (id) => {
-    setReadIds((prev) => new Set([...prev, id]));
+    setReadIds((prev) => {
+      const newSet = new Set([...prev, id]);
+      saveReadIds(newSet);
+      return newSet;
+    });
   };
 
   const handleMarkAllRead = () => {
     const allIds = notifications.map((n) => n.id);
-    setReadIds(new Set(allIds));
+    const newSet = new Set(allIds);
+    setReadIds(newSet);
+    saveReadIds(newSet);
   };
 
   const handleClearAll = () => {
     clearAllNotifications();
     setReadIds(new Set());
+    saveReadIds(new Set()); // 清空已读状态
     setExpandedIds(new Set());
     setOpen(false);
   };
@@ -261,11 +289,11 @@ export default function NotificationSection() {
                                             ...(expandedIds.has(notification.id)
                                               ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' }
                                               : {
-                                                  display: '-webkit-box',
-                                                  WebkitLineClamp: 2,
-                                                  WebkitBoxOrient: 'vertical',
-                                                  overflow: 'hidden'
-                                                }),
+                                                display: '-webkit-box',
+                                                WebkitLineClamp: 2,
+                                                WebkitBoxOrient: 'vertical',
+                                                overflow: 'hidden'
+                                              }),
                                             mb: 0.5
                                           }}
                                         >
