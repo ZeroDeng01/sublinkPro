@@ -97,6 +97,7 @@ docker-compose up -d
 
 访问 `http://localhost:8000`，使用默认账号 `admin` / `123456` 登录。
 
+
 > [!TIP]
 > 更多安装方式（Docker、一键脚本、更新升级等）请参阅 [📦 安装部署指南](docs/installation.md)
 
