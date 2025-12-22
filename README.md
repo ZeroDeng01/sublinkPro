@@ -97,61 +97,6 @@ docker-compose up -d
 
 访问 `http://localhost:8000`，使用默认账号 `admin` / `123456` 登录。
 
-### ☁️ Zeabur 部署
-
-https://zeabur.com/projects
-
-**部署步骤：**
-
-1. **新建项目与 Service**
-   - 点击 "创建项目" > "Docker 容器镜像"
-   - 输入镜像名称：`zerodeng/sublink-pro:latest`  (推荐稳定版 latest，开发版 dev 用于测试新功能)
-   - 配置端口：`8000` (TCP)
-   - **配置卷（重要）**：
-     * 点击卷
-     * 点击 "添加卷" 添加新卷
-     * | 卷名称   容器路径|
-     * | sublink-db > /app/db
-     * | sublink-template > /app/template
-     * | sublink-logs > /app/logs
-
-2. **配置环境变量**
-
-   环境变量中添加：
-
-   ```env
-   # 基础配置
-   SUBLINK_PORT=8000
-   SUBLINK_LOG_LEVEL=info
-   SUBLINK_EXPIRE_DAYS=14
-
-   # 登录安全
-   SUBLINK_ADMIN_PASSWORD=123456
-   SUBLINK_LOGIN_FAIL_COUNT=5
-   SUBLINK_LOGIN_FAIL_WINDOW=1
-   SUBLINK_LOGIN_BAN_DURATION=10
-
-   # 安全密钥 !需填写! 随机32位以上字符串
-   SUBLINK_JWT_SECRET=
-   SUBLINK_API_ENCRYPTION_KEY=
-
-
-   # 验证码(1为关闭)
-   SUBLINK_CAPTCHA_MODE=2
-   ```
-
-3. **部署完成**
-   - Zeabur 会自动拉取镜像并启动服务
-   - 等待服务就绪后，需要手动设置访问域名（见下一步）
-
-4. **设置访问域名（必须）**
-
-   - 在服务页面，点击 "Networking" 或 "网络" 标签
-   - 点击 "Generate Domain" 生成 Zeabur 提供的免费域名（如 `xxx.zeabur.app`）
-   - 或者绑定自定义域名：
-     * 点击 "Add Domain" 添加你的域名
-     * 按照提示配置 DNS CNAME 记录指向 Zeabur 提供的目标地址
-   - 设置完域名后即可通过域名访问,使用默认账号 `admin` / `123456` 登录
 
 > [!TIP]
 > 更多安装方式（Docker、一键脚本、更新升级等）请参阅 [📦 安装部署指南](docs/installation.md)
