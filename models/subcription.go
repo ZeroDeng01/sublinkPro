@@ -802,6 +802,10 @@ func (sub *Subcription) Del() error {
 	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionScript{}).Error; err != nil {
 		return err
 	}
+	// 删除关联的链式代理规则
+	if err := DeleteChainRulesBySubscriptionID(sub.ID); err != nil {
+		return err
+	}
 	// 硬删除订阅本身（Unscoped 绕过软删除）
 	err := database.DB.Unscoped().Delete(sub).Error
 	if err != nil {
@@ -817,24 +821,25 @@ func (sub *Subcription) Del() error {
 func (sub *Subcription) Copy() (*Subcription, error) {
 	// 创建新订阅对象，复制所有配置字段
 	newSub := &Subcription{
-		Name:               sub.Name + "_复制",
-		Config:             sub.Config,
-		CreateDate:         time.Now().Format("2006-01-02 15:04:05"),
-		IPWhitelist:        sub.IPWhitelist,
-		IPBlacklist:        sub.IPBlacklist,
-		DelayTime:          sub.DelayTime,
-		MinSpeed:           sub.MinSpeed,
-		CountryWhitelist:   sub.CountryWhitelist,
-		CountryBlacklist:   sub.CountryBlacklist,
-		NodeNameRule:       sub.NodeNameRule,
-		NodeNamePreprocess: sub.NodeNamePreprocess,
-		NodeNameWhitelist:  sub.NodeNameWhitelist,
-		NodeNameBlacklist:  sub.NodeNameBlacklist,
-		TagWhitelist:       sub.TagWhitelist,
-		TagBlacklist:       sub.TagBlacklist,
-		ProtocolWhitelist:  sub.ProtocolWhitelist,
-		ProtocolBlacklist:  sub.ProtocolBlacklist,
-		DeduplicationRule:  sub.DeduplicationRule,
+		Name:                  sub.Name + "_复制",
+		Config:                sub.Config,
+		CreateDate:            time.Now().Format("2006-01-02 15:04:05"),
+		IPWhitelist:           sub.IPWhitelist,
+		IPBlacklist:           sub.IPBlacklist,
+		DelayTime:             sub.DelayTime,
+		MinSpeed:              sub.MinSpeed,
+		CountryWhitelist:      sub.CountryWhitelist,
+		CountryBlacklist:      sub.CountryBlacklist,
+		NodeNameRule:          sub.NodeNameRule,
+		NodeNamePreprocess:    sub.NodeNamePreprocess,
+		NodeNameWhitelist:     sub.NodeNameWhitelist,
+		NodeNameBlacklist:     sub.NodeNameBlacklist,
+		TagWhitelist:          sub.TagWhitelist,
+		TagBlacklist:          sub.TagBlacklist,
+		ProtocolWhitelist:     sub.ProtocolWhitelist,
+		ProtocolBlacklist:     sub.ProtocolBlacklist,
+		DeduplicationRule:     sub.DeduplicationRule,
+		RefreshUsageOnRequest: sub.RefreshUsageOnRequest,
 	}
 
 	// 使用事务确保数据一致性
@@ -901,6 +906,25 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 			tx.Rollback()
 			return nil, fmt.Errorf("复制脚本关联失败: %w", err)
 		}
+	}
+
+	// 复制链式代理规则
+	chainRules := GetChainRulesBySubscriptionID(sub.ID)
+	for _, rule := range chainRules {
+		newRule := SubscriptionChainRule{
+			SubscriptionID: newSub.ID,
+			Name:           rule.Name,
+			Sort:           rule.Sort,
+			Enabled:        rule.Enabled,
+			ChainConfig:    rule.ChainConfig,
+			TargetConfig:   rule.TargetConfig,
+		}
+		if err := tx.Create(&newRule).Error; err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("复制链式代理规则失败: %w", err)
+		}
+		// 更新缓存
+		chainRuleCache.Set(newRule.ID, newRule)
 	}
 
 	// 提交事务

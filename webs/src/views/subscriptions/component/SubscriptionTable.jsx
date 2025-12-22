@@ -92,7 +92,7 @@ export default function SubscriptionTable({
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="复制">
+                    <Tooltip title="复制本配置为新副本">
                       <IconButton size="small" color="secondary" onClick={() => onCopy(sub)}>
                         <ContentCopyIcon fontSize="small" />
                       </IconButton>
