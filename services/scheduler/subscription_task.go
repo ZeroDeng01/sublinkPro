@@ -22,6 +22,7 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 	var proxyLink string
 	var userAgent string
 	var fetchUsageInfo bool
+	var skipTLSVerify bool
 
 	airport, err := models.GetAirportByID(id)
 	if err != nil {
@@ -31,6 +32,7 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 		proxyLink = airport.ProxyLink
 		userAgent = airport.UserAgent
 		fetchUsageInfo = airport.FetchUsageInfo
+		skipTLSVerify = airport.SkipTLSVerify
 	}
 
 	// 创建 TaskManager 任务和报告器
@@ -45,7 +47,7 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 		reporter = NewTaskManagerReporter(tm, task.ID)
 	}
 
-	usageInfo, err := node.LoadClashConfigFromURLWithReporter(id, url, subName, downloadWithProxy, proxyLink, userAgent, reporter, fetchUsageInfo)
+	usageInfo, err := node.LoadClashConfigFromURLWithReporter(id, url, subName, downloadWithProxy, proxyLink, userAgent, reporter, fetchUsageInfo, skipTLSVerify)
 	if err != nil {
 		// 仅在失败时发送通知，成功通知由 node/sub.go 中的 scheduleClashToNodeLinks 发送
 		// 这样可以避免重复通知，且成功通知包含更详细的节点统计信息

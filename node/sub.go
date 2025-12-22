@@ -119,6 +119,18 @@ type ClashConfig struct {
 	Proxies []protocol.Proxy `yaml:"proxies"`
 }
 
+// isTLSError 检测是否为 TLS 证书相关错误
+func isTLSError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "x509:") ||
+		strings.Contains(errStr, "certificate") ||
+		strings.Contains(errStr, "tls:") ||
+		strings.Contains(errStr, "TLS")
+}
+
 // LoadClashConfigFromURL 从指定 URL 加载 Clash 配置
 // 支持 YAML 格式和 Base64 编码的订阅链接
 // id: 订阅ID
@@ -128,15 +140,20 @@ type ClashConfig struct {
 // proxyLink: 代理链接 (可选)
 // userAgent: 请求的 User-Agent (可选，默认 Clash)
 func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string) (*UsageInfo, error) {
-	return LoadClashConfigFromURLWithReporter(id, urlStr, subName, downloadWithProxy, proxyLink, userAgent, nil, false)
+	return LoadClashConfigFromURLWithReporter(id, urlStr, subName, downloadWithProxy, proxyLink, userAgent, nil, false, true)
 }
 
 // LoadClashConfigFromURLWithReporter 从指定 URL 加载 Clash 配置（带任务报告器）
 // reporter: 任务进度报告器，用于TaskManager集成
 // fetchUsageInfo: 是否获取用量信息
-func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string, reporter TaskReporter, fetchUsageInfo bool) (*UsageInfo, error) {
+// skipTLSVerify: 是否跳过TLS证书验证
+func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string, reporter TaskReporter, fetchUsageInfo bool, skipTLSVerify bool) (*UsageInfo, error) {
+	// 创建 HTTP 客户端，配置 TLS
 	client := &http.Client{
 		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipTLSVerify},
+		},
 	}
 
 	if downloadWithProxy {
@@ -191,7 +208,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 						// 使用 mihomo adapter 建立连接
 						return proxyAdapter.DialContext(ctx, metadata)
 					},
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: skipTLSVerify},
 				}
 			}
 		} else {
@@ -214,16 +231,30 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 	resp, err := client.Do(req)
 	if err != nil {
 		utils.Error("URL %s，获取Clash配置失败:  %v", urlStr, err)
+		// 检测是否为 TLS 证书相关错误，给出更明确的提示
+		var title, message string
+		if isTLSError(err) {
+			title = "订阅更新失败 - TLS证书验证错误"
+			if skipTLSVerify {
+				message = fmt.Sprintf("❌订阅【%s】TLS错误: %v", subName, err)
+			} else {
+				message = fmt.Sprintf("❌订阅【%s】证书验证失败: %v\n\n💡 提示：请在机场设置中开启\"忽略证书验证\"选项后重试", subName, err)
+			}
+		} else {
+			title = "订阅更新失败"
+			message = fmt.Sprintf("❌订阅【%s】请求失败: %v", subName, err)
+		}
 		// 发送请求失败通知
 		sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
 			Event:   "sub_update",
-			Title:   "订阅更新失败",
-			Message: fmt.Sprintf("❌订阅【%s】请求失败: %v", subName, err),
+			Title:   title,
+			Message: message,
 			Data: map[string]interface{}{
-				"id":     id,
-				"name":   subName,
-				"status": "failed",
-				"error":  err.Error(),
+				"id":       id,
+				"name":     subName,
+				"status":   "failed",
+				"error":    err.Error(),
+				"tlsError": isTLSError(err),
 			},
 		})
 		return nil, err

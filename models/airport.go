@@ -33,6 +33,7 @@ type Airport struct {
 	UsageDownload  int64 `gorm:"default:0" json:"usageDownload"`      // 已下载流量（字节）
 	UsageTotal     int64 `gorm:"default:0" json:"usageTotal"`         // 总流量配额（字节）
 	UsageExpire    int64 `gorm:"default:0" json:"usageExpire"`        // 订阅过期时间（Unix时间戳）
+	SkipTLSVerify  bool  `gorm:"default:false" json:"skipTLSVerify"`  // 是否跳过TLS证书验证
 }
 
 // TableName 指定表名
@@ -79,7 +80,7 @@ func (a *Airport) Update() error {
 	err := database.DB.Model(a).Select(
 		"Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime",
 		"SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent",
-		"FetchUsageInfo",
+		"FetchUsageInfo", "SkipTLSVerify",
 	).Updates(a).Error
 	if err != nil {
 		return err

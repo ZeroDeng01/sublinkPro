@@ -29,6 +29,9 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 
 	client := &http.Client{
 		Timeout: 10 * time.Second, // 用量获取使用较短超时
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: airport.SkipTLSVerify},
+		},
 	}
 
 	// 配置代理（如果启用）
@@ -75,7 +78,7 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 
 						return proxyAdapter.DialContext(ctx, metadata)
 					},
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: airport.SkipTLSVerify},
 				}
 			}
 		}

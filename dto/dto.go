@@ -34,4 +34,5 @@ type AirportRequest struct {
 	ProxyLink         string `json:"proxyLink"`
 	UserAgent         string `json:"userAgent"`
 	FetchUsageInfo    bool   `json:"fetchUsageInfo"` // 是否获取用量信息
+	SkipTLSVerify     bool   `json:"skipTLSVerify"`  // 是否跳过TLS证书验证
 }

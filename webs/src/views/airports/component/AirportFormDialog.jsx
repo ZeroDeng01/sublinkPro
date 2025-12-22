@@ -153,6 +153,20 @@ export default function AirportFormDialog({
               开启后将从订阅响应 Header 解析用量信息。此功能需要机场支持，且 User-Agent 需设置为 Clash 相关。
             </Alert>
           )}
+          <FormControlLabel
+            control={
+              <Switch
+                checked={airportForm.skipTLSVerify || false}
+                onChange={(e) => setAirportForm({ ...airportForm, skipTLSVerify: e.target.checked })}
+              />
+            }
+            label="忽略证书验证"
+          />
+          {airportForm.skipTLSVerify && (
+            <Alert severity="warning" sx={{ mt: -1 }}>
+              ⚠️ 跳过证书验证会降低安全性，仅在信任订阅源且证书有问题时启用。
+            </Alert>
+          )}
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -178,7 +192,8 @@ AirportFormDialog.propTypes = {
     downloadWithProxy: PropTypes.bool,
     proxyLink: PropTypes.string,
     userAgent: PropTypes.string,
-    fetchUsageInfo: PropTypes.bool
+    fetchUsageInfo: PropTypes.bool,
+    skipTLSVerify: PropTypes.bool
   }).isRequired,
   setAirportForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,
