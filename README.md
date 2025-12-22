@@ -136,10 +136,9 @@ https://zeabur.com/projects
    SUBLINK_API_ENCRYPTION_KEY=
 
 
-   # 验证码
+   # 验证码(1为关闭)
    SUBLINK_CAPTCHA_MODE=2
    ```
-   [环境变量](https://github.com/lillinlin/sublinkPro/tree/main#%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E5%88%97%E8%A1%A8)
 
 3. **部署完成**
    - Zeabur 会自动拉取镜像并启动服务
