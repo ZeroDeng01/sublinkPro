@@ -1,0 +1,324 @@
+/**
+ * 链式代理配置页面 - 深色科幻风格
+ * 与预览页面(ChainCanvasView)风格保持一致
+ */
+
+/* 画布容器 */
+.chain-flow-container {
+    width: 100%;
+    height: 450px;
+    background: linear-gradient(135deg, #0a0e27 0%, #151b3b 50%, #0d1229 100%);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* 网格背景叠加 */
+.chain-flow-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        linear-gradient(rgba(59, 130, 246, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 角落装饰 */
+.chain-flow-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.12) 0%, transparent 25%),
+        radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.08) 0%, transparent 25%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* React Flow 重写 */
+.chain-flow-container .react-flow {
+    background: transparent !important;
+}
+
+.chain-flow-container .react-flow__background {
+    display: none;
+}
+
+.chain-flow-container .react-flow__controls {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    bottom: 50px !important;
+    left: 10px !important;
+}
+
+.chain-flow-container .react-flow__controls-button {
+    background: transparent;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    fill: #94a3b8;
+    transition: all 0.2s ease;
+}
+
+.chain-flow-container .react-flow__controls-button:hover {
+    background: rgba(59, 130, 246, 0.2);
+    fill: #3b82f6;
+}
+
+.chain-flow-container .react-flow__controls-button:last-child {
+    border-bottom: none;
+}
+
+/* ========== 科幻风格节点 ========== */
+
+/* 开始节点 - 入口 */
+.chain-flow-node-start {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.9) 0%, rgba(91, 33, 182, 0.9) 100%);
+    color: white;
+    border-radius: 30px;
+    min-width: 90px;
+    padding: 0 16px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow:
+        0 0 20px rgba(139, 92, 246, 0.4),
+        0 4px 15px rgba(102, 126, 234, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 代理节点 */
+.chain-flow-node-proxy {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(8, 145, 178, 0.1) 100%);
+    border: 2px solid rgba(6, 182, 212, 0.5);
+    border-radius: 12px;
+    padding: 8px 14px;
+    min-width: 120px;
+    box-shadow:
+        0 0 15px rgba(6, 182, 212, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.chain-flow-node-proxy:hover {
+    box-shadow:
+        0 0 25px rgba(6, 182, 212, 0.4),
+        0 8px 32px rgba(6, 182, 212, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    border-color: rgba(6, 182, 212, 0.8);
+}
+
+.chain-flow-node-proxy.selected {
+    border-color: #06b6d4;
+    box-shadow:
+        0 0 30px rgba(6, 182, 212, 0.5),
+        0 8px 32px rgba(6, 182, 212, 0.2);
+}
+
+/* 代理节点 - 删除按钮 */
+.chain-flow-node-proxy .delete-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.2s ease;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+.chain-flow-node-proxy:hover .delete-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.chain-flow-node-proxy .delete-btn:hover {
+    background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+    transform: scale(1.1);
+}
+
+.chain-flow-node-proxy .delete-btn svg {
+    font-size: 12px;
+    color: white;
+}
+
+/* 节点内容样式 */
+.chain-flow-node-proxy .node-type {
+    font-size: 10px;
+    color: #94a3b8;
+    display: block;
+}
+
+.chain-flow-node-proxy .node-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+/* 结束节点 - 目标 */
+.chain-flow-node-end {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(22, 163, 74, 0.9) 100%);
+    color: white;
+    border-radius: 8px;
+    min-width: 100px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    box-shadow:
+        0 0 20px rgba(34, 197, 94, 0.4),
+        0 4px 15px rgba(17, 153, 142, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chain-flow-node-end:hover {
+    box-shadow:
+        0 0 30px rgba(34, 197, 94, 0.5),
+        0 8px 32px rgba(34, 197, 94, 0.2);
+}
+
+.chain-flow-node-end.selected {
+    box-shadow:
+        0 0 35px rgba(34, 197, 94, 0.6),
+        0 8px 32px rgba(34, 197, 94, 0.3);
+}
+
+/* Handle 样式 */
+.chain-flow-container .react-flow__handle {
+    width: 8px;
+    height: 8px;
+    background: #3b82f6;
+    border: 2px solid #1e3a5f;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+/* ========== 配置面板 - 深色玻璃效果 ========== */
+.chain-flow-panel {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+    border-left: 1px solid rgba(59, 130, 246, 0.3);
+    backdrop-filter: blur(20px);
+    box-shadow:
+        -4px 0 20px rgba(0, 0, 0, 0.3),
+        0 0 40px rgba(59, 130, 246, 0.1);
+}
+
+/* 面板标题 */
+.chain-flow-panel .panel-title {
+    color: #f1f5f9;
+    font-weight: 600;
+}
+
+/* 面板内表单控件重写 */
+.chain-flow-panel .MuiInputLabel-root {
+    color: #94a3b8;
+}
+
+.chain-flow-panel .MuiOutlinedInput-root {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
+}
+
+.chain-flow-panel .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.chain-flow-panel .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+.chain-flow-panel .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+    border-color: #3b82f6;
+}
+
+.chain-flow-panel .MuiInputBase-input {
+    color: #e2e8f0;
+}
+
+.chain-flow-panel .MuiSelect-icon {
+    color: #64748b;
+}
+
+.chain-flow-panel .MuiFormHelperText-root {
+    color: #64748b;
+}
+
+/* 分割线 */
+.chain-flow-panel .MuiDivider-root {
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* 按钮样式 */
+.chain-flow-panel .MuiButton-contained {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.chain-flow-panel .MuiButton-contained:hover {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+}
+
+/* ========== 工具栏 ========== */
+.chain-flow-toolbar {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chain-flow-toolbar .MuiButton-root {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #e2e8f0;
+    backdrop-filter: blur(8px);
+}
+
+.chain-flow-toolbar .MuiButton-root:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+.chain-flow-toolbar .MuiButton-root.Mui-disabled {
+    color: #64748b;
+    border-color: rgba(100, 116, 139, 0.3);
+}
+
+/* 提示文字 - 定位在 Controls 右侧 */
+.chain-flow-hint {
+    position: absolute;
+    bottom: 16px;
+    left: 60px;
+    z-index: 10;
+    color: #64748b;
+    font-size: 12px;
+}

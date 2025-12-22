@@ -287,6 +287,7 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
               <Box>
                 <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600}>
                   链式代理配置
+                  <Chip size="small" label="Beta" color="error" variant="outlined" sx={{ ml: 1 }} />
                 </Typography>
                 {isMobile && (
                   <Typography variant="caption" color="text.secondary">

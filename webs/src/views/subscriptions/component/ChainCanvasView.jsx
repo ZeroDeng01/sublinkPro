@@ -166,8 +166,8 @@ const NodeDetailPanel = memo(({ data, position, onClose }) => {
                     {node.name}
                   </span>
                 </span>
-                <span className="col-latency" style={{ color: getLatencyColor(node.latency) }}>
-                  {formatLatency(node.latency)}
+                <span className="col-latency" style={{ color: getLatencyColor(node.delayTime) }}>
+                  {formatLatency(node.delayTime)}
                 </span>
                 <span className="col-speed" style={{ color: getSpeedColor(node.speed) }}>
                   {formatSpeed(node.speed)}
@@ -546,6 +546,7 @@ export default function ChainCanvasView({ rules = [], fullscreen = false }) {
         maxZoom={2}
         onPaneClick={handlePaneClick}
         defaultEdgeOptions={{ type: 'animated' }}
+        proOptions={{ hideAttribution: true }}
       >
         <Controls showInteractive={false} />
         <MiniMap
