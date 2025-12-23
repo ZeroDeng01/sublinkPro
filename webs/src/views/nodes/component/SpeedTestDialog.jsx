@@ -373,8 +373,8 @@ export default function SpeedTestDialog({
           </Stack>
         </ConfigSection>
 
-        {/* ========== 延迟测量设置 ========== */}
-        <ConfigSection title="延迟测量设置" icon={<TuneIcon fontSize="small" color="action" />} defaultExpanded={true}>
+        {/* ========== 性能参数 ========== */}
+        <ConfigSection title="性能参数" icon={<TuneIcon fontSize="small" color="action" />} defaultExpanded={true}>
           <Stack spacing={2}>
             {/* 握手时间设置 - 带详细说明 */}
             <Alert
@@ -560,13 +560,13 @@ export default function SpeedTestDialog({
                     checked={speedTestForm.traffic_by_node ?? false}
                     onChange={(e) => setSpeedTestForm({ ...speedTestForm, traffic_by_node: e.target.checked })}
                     size="small"
-                    color="warning"
+                    color="error"
                   />
                 }
                 label={
                   <Typography variant="body2">
                     按节点统计
-                    <Typography component="span" variant="caption" color="warning.main" sx={{ ml: 0.5 }}>
+                    <Typography component="span" variant="caption" color="error.main" sx={{ ml: 0.5 }}>
                       (大数据量)
                     </Typography>
                   </Typography>
@@ -574,7 +574,7 @@ export default function SpeedTestDialog({
               />
             </Box>
             {speedTestForm.traffic_by_node && (
-              <Typography variant="caption" color="warning.main">
+              <Typography variant="caption" color="error.main">
                 ⚠️ 按节点统计会记录每个节点的流量消耗，节点数量过万时会增加约1-2MB存储空间
               </Typography>
             )}

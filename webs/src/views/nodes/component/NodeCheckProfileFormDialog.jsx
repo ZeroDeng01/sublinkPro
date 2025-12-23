@@ -465,8 +465,8 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
           </Stack>
         </ConfigSection>
 
-        {/* ========== 延迟测量设置 ========== */}
-        <ConfigSection title="延迟测量设置" icon={<TuneIcon fontSize="small" color="action" />} defaultExpanded={true}>
+        {/* ========== 性能参数 ========== */}
+        <ConfigSection title="性能参数" icon={<TuneIcon fontSize="small" color="action" />} defaultExpanded={true}>
           <Stack spacing={2}>
             {/* 握手时间设置 - 带详细说明 */}
             <Alert

@@ -305,7 +305,7 @@ export default function NodeCheckList() {
                         fontSize: '0.65rem',
                         flexShrink: 0,
                         backgroundColor: profile.mode === 'mihomo' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(33, 150, 243, 0.15)',
-                        color: profile.mode === 'mihomo' ? 'success.main' : 'primary.main'
+                        color: profile.mode === 'mihomo' ? 'primary.main' : 'error.main'
                       }}
                     />
                   </Box>
