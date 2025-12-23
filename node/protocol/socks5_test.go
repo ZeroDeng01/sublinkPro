@@ -29,7 +29,7 @@ func TestSocks5EncodeDecode(t *testing.T) {
 
 	// 验证关键字段
 	assertEqualString(t, "Server", original.Server, decoded.Server)
-	assertEqualInt(t, "Port", original.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Username", original.Username, decoded.Username)
 	assertEqualString(t, "Password", original.Password, decoded.Password)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
@@ -77,7 +77,7 @@ func TestSocks5WithoutAuth(t *testing.T) {
 	}
 
 	assertEqualString(t, "Server", original.Server, decoded.Server)
-	assertEqualInt(t, "Port", original.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 
 	t.Logf("✓ Socks5 无认证测试通过，名称: %s", decoded.Name)

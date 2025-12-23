@@ -27,7 +27,7 @@ func TestEncodeSurge_SS(t *testing.T) {
 
 	assertEqualString(t, "Name", ss.Name, decoded.Name)
 	assertEqualString(t, "Server", ss.Server, decoded.Server)
-	assertEqualInt(t, "Port", ss.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", ss.Port, decoded.Port)
 	assertEqualString(t, "Cipher", ss.Param.Cipher, decoded.Param.Cipher)
 	assertEqualString(t, "Password", ss.Param.Password, decoded.Param.Password)
 
@@ -85,7 +85,7 @@ func TestEncodeSurge_Trojan(t *testing.T) {
 
 	assertEqualString(t, "Name", trojan.Name, decoded.Name)
 	assertEqualString(t, "Hostname", trojan.Hostname, decoded.Hostname)
-	assertEqualInt(t, "Port", trojan.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", trojan.Port, decoded.Port)
 	assertEqualString(t, "Password", trojan.Password, decoded.Password)
 	assertEqualString(t, "Sni", trojan.Query.Sni, decoded.Query.Sni)
 
@@ -110,7 +110,7 @@ func TestEncodeSurge_HY2(t *testing.T) {
 
 	assertEqualString(t, "Name", hy2.Name, decoded.Name)
 	assertEqualString(t, "Host", hy2.Host, decoded.Host)
-	assertEqualInt(t, "Port", hy2.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", hy2.Port, decoded.Port)
 	assertEqualString(t, "Password", hy2.Password, decoded.Password)
 	assertEqualString(t, "Sni", hy2.Sni, decoded.Sni)
 
@@ -136,7 +136,7 @@ func TestEncodeSurge_TUIC(t *testing.T) {
 
 	assertEqualString(t, "Name", tuic.Name, decoded.Name)
 	assertEqualString(t, "Host", tuic.Host, decoded.Host)
-	assertEqualInt(t, "Port", tuic.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", tuic.Port, decoded.Port)
 	assertEqualString(t, "Uuid", tuic.Uuid, decoded.Uuid)
 	assertEqualString(t, "Password", tuic.Password, decoded.Password)
 
@@ -225,7 +225,7 @@ func TestProxyStruct(t *testing.T) {
 	assertEqualString(t, "Name", "测试节点", proxy.Name)
 	assertEqualString(t, "Type", "ss", proxy.Type)
 	assertEqualString(t, "Server", "example.com", proxy.Server)
-	assertEqualInt(t, "Port", 8388, proxy.Port)
+	assertEqualFlexPort(t, "Port", 8388, proxy.Port)
 	assertEqualBool(t, "Udp", true, proxy.Udp)
 
 	t.Log("✓ Proxy 结构体测试通过")

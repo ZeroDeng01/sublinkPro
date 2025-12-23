@@ -1,6 +1,9 @@
 package protocol
 
-import "testing"
+import (
+	"strconv"
+	"testing"
+)
 
 // 测试辅助函数 - 用于验证编解码结果
 
@@ -13,10 +16,43 @@ func assertEqualString(t *testing.T, field string, expected, actual string) {
 }
 
 // assertEqualInt 验证两个整数相等
-func assertEqualInt(t *testing.T, field string, expected int, actual FlexPort) {
+func assertEqualInt(t *testing.T, field string, expected, actual int) {
+	t.Helper()
+	if expected != actual {
+		t.Errorf("%s 不匹配: 期望 %d, 实际 %d", field, expected, actual)
+	}
+}
+
+// assertEqualFlexPort 验证 FlexPort 类型的端口
+func assertEqualFlexPort(t *testing.T, field string, expected int, actual FlexPort) {
 	t.Helper()
 	if expected != int(actual) {
 		t.Errorf("%s 不匹配: 期望 %d, 实际 %d", field, expected, int(actual))
+	}
+}
+
+// assertEqualIntInterface 验证 interface{} 类型的整数（用于协议结构体的 Port 字段）
+func assertEqualIntInterface(t *testing.T, field string, expected, actual interface{}) {
+	t.Helper()
+	expectedInt := toInt(expected)
+	actualInt := toInt(actual)
+	if expectedInt != actualInt {
+		t.Errorf("%s 不匹配: 期望 %d, 实际 %d", field, expectedInt, actualInt)
+	}
+}
+
+// toInt 将 interface{} 转换为 int
+func toInt(v interface{}) int {
+	switch val := v.(type) {
+	case int:
+		return val
+	case float64:
+		return int(val)
+	case string:
+		i, _ := strconv.Atoi(val)
+		return i
+	default:
+		return 0
 	}
 }
 

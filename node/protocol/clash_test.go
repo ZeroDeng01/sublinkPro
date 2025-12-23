@@ -23,7 +23,7 @@ func TestLinkToProxy_SS(t *testing.T) {
 
 	assertEqualString(t, "Type", "ss", proxy.Type)
 	assertEqualString(t, "Server", "example.com", proxy.Server)
-	assertEqualInt(t, "Port", 8388, proxy.Port)
+	assertEqualFlexPort(t, "Port", 8388, proxy.Port)
 	assertEqualBool(t, "Udp", true, proxy.Udp)
 
 	t.Logf("✓ SS LinkToProxy 测试通过，名称: %s", proxy.Name)
@@ -54,7 +54,7 @@ func TestLinkToProxy_VMess(t *testing.T) {
 
 	assertEqualString(t, "Type", "vmess", proxy.Type)
 	assertEqualString(t, "Server", "example.com", proxy.Server)
-	assertEqualInt(t, "Port", 443, proxy.Port)
+	assertEqualFlexPort(t, "Port", 443, proxy.Port)
 	assertEqualString(t, "Uuid", vmess.Id, proxy.Uuid)
 
 	t.Logf("✓ VMess LinkToProxy 测试通过，名称: %s", proxy.Name)
@@ -85,7 +85,7 @@ func TestLinkToProxy_VLESS(t *testing.T) {
 
 	assertEqualString(t, "Type", "vless", proxy.Type)
 	assertEqualString(t, "Server", "example.com", proxy.Server)
-	assertEqualInt(t, "Port", 443, proxy.Port)
+	assertEqualFlexPort(t, "Port", 443, proxy.Port)
 	assertEqualString(t, "Uuid", vless.Uuid, proxy.Uuid)
 
 	t.Logf("✓ VLESS LinkToProxy 测试通过，名称: %s", proxy.Name)
@@ -115,7 +115,7 @@ func TestLinkToProxy_Trojan(t *testing.T) {
 
 	assertEqualString(t, "Type", "trojan", proxy.Type)
 	assertEqualString(t, "Server", "example.com", proxy.Server)
-	assertEqualInt(t, "Port", 443, proxy.Port)
+	assertEqualFlexPort(t, "Port", 443, proxy.Port)
 	assertEqualString(t, "Password", trojan.Password, proxy.Password)
 
 	t.Logf("✓ Trojan LinkToProxy 测试通过，名称: %s", proxy.Name)
@@ -142,7 +142,7 @@ func TestLinkToProxy_HY2(t *testing.T) {
 
 	assertEqualString(t, "Type", "hysteria2", proxy.Type)
 	assertEqualString(t, "Server", "example.com", proxy.Server)
-	assertEqualInt(t, "Port", 443, proxy.Port)
+	assertEqualFlexPort(t, "Port", 443, proxy.Port)
 	assertEqualString(t, "Password", hy2.Password, proxy.Password)
 
 	t.Logf("✓ Hysteria2 LinkToProxy 测试通过，名称: %s", proxy.Name)
@@ -169,7 +169,7 @@ func TestLinkToProxy_TUIC(t *testing.T) {
 
 	assertEqualString(t, "Type", "tuic", proxy.Type)
 	assertEqualString(t, "Server", "example.com", proxy.Server)
-	assertEqualInt(t, "Port", 443, proxy.Port)
+	assertEqualFlexPort(t, "Port", 443, proxy.Port)
 
 	t.Logf("✓ TUIC LinkToProxy 测试通过，名称: %s", proxy.Name)
 }
@@ -195,7 +195,7 @@ func TestLinkToProxy_Socks5(t *testing.T) {
 
 	assertEqualString(t, "Type", "socks5", proxy.Type)
 	assertEqualString(t, "Server", "example.com", proxy.Server)
-	assertEqualInt(t, "Port", 1080, proxy.Port)
+	assertEqualFlexPort(t, "Port", 1080, proxy.Port)
 	assertEqualString(t, "Username", socks5.Username, proxy.Username)
 
 	t.Logf("✓ Socks5 LinkToProxy 测试通过，名称: %s", proxy.Name)
@@ -222,7 +222,7 @@ func TestLinkToProxy_AnyTLS(t *testing.T) {
 
 	assertEqualString(t, "Type", "anytls", proxy.Type)
 	assertEqualString(t, "Server", "example.com", proxy.Server)
-	assertEqualInt(t, "Port", 443, proxy.Port)
+	assertEqualFlexPort(t, "Port", 443, proxy.Port)
 	assertEqualString(t, "Password", anytls.Password, proxy.Password)
 
 	t.Logf("✓ AnyTLS LinkToProxy 测试通过，名称: %s", proxy.Name)
@@ -253,7 +253,7 @@ func TestLinkToProxy_SSR(t *testing.T) {
 
 	assertEqualString(t, "Type", "ssr", proxy.Type)
 	assertEqualString(t, "Server", "example.com", proxy.Server)
-	assertEqualInt(t, "Port", 8388, proxy.Port)
+	assertEqualFlexPort(t, "Port", 8388, proxy.Port)
 	assertEqualString(t, "Cipher", ssr.Method, proxy.Cipher)
 	// 注意：SSR 密码在编码时会进行 base64 编码，这里跳过密码验证
 	assertEqualString(t, "Protocol", ssr.Protocol, proxy.Protocol)

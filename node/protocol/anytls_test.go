@@ -31,7 +31,7 @@ func TestAnyTLSEncodeDecode(t *testing.T) {
 
 	// 验证关键字段
 	assertEqualString(t, "Server", original.Server, decoded.Server)
-	assertEqualInt(t, "Port", original.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Password", original.Password, decoded.Password)
 	assertEqualString(t, "SNI", original.SNI, decoded.SNI)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
@@ -82,7 +82,7 @@ func TestAnyTLSWithoutOptionalFields(t *testing.T) {
 	}
 
 	assertEqualString(t, "Server", original.Server, decoded.Server)
-	assertEqualInt(t, "Port", original.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Password", original.Password, decoded.Password)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 

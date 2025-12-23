@@ -32,7 +32,7 @@ func TestHYEncodeDecode(t *testing.T) {
 
 	// 验证关键字段
 	assertEqualString(t, "Host", original.Host, decoded.Host)
-	assertEqualInt(t, "Port", original.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 
 	t.Logf("✓ Hysteria 编解码测试通过，名称: %s", decoded.Name)
@@ -86,7 +86,7 @@ func TestHY2EncodeDecode(t *testing.T) {
 
 	// 验证关键字段
 	assertEqualString(t, "Host", original.Host, decoded.Host)
-	assertEqualInt(t, "Port", original.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Password", original.Password, decoded.Password)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 

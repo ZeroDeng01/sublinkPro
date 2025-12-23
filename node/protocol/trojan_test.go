@@ -36,7 +36,7 @@ func TestTrojanEncodeDecode(t *testing.T) {
 
 	// 验证关键字段
 	assertEqualString(t, "Hostname", original.Hostname, decoded.Hostname)
-	assertEqualInt(t, "Port", original.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Password", original.Password, decoded.Password)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 	assertEqualString(t, "Query.Sni", original.Query.Sni, decoded.Query.Sni)

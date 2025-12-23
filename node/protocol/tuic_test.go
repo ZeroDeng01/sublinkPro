@@ -34,7 +34,7 @@ func TestTuicEncodeDecode(t *testing.T) {
 
 	// 验证关键字段
 	assertEqualString(t, "Host", original.Host, decoded.Host)
-	assertEqualInt(t, "Port", original.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Uuid", original.Uuid, decoded.Uuid)
 	assertEqualString(t, "Password", original.Password, decoded.Password)
 	assertEqualString(t, "Name", original.Name, decoded.Name)

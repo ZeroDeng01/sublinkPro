@@ -38,7 +38,7 @@ func TestVlessEncodeDecode(t *testing.T) {
 
 	// 验证关键字段
 	assertEqualString(t, "Server", original.Server, decoded.Server)
-	assertEqualInt(t, "Port", original.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Uuid", original.Uuid, decoded.Uuid)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 	assertEqualString(t, "Query.Type", original.Query.Type, decoded.Query.Type)
@@ -71,7 +71,7 @@ func TestVlessNameModification(t *testing.T) {
 	assertEqualString(t, "修改后名称", newName, final.Name)
 	assertEqualString(t, "服务器(不变)", original.Server, final.Server)
 	assertEqualString(t, "UUID(不变)", original.Uuid, final.Uuid)
-	assertEqualInt(t, "端口(不变)", original.Port, final.Port)
+	assertEqualIntInterface(t, "端口(不变)", original.Port, final.Port)
 
 	t.Logf("✓ VLESS 名称修改测试通过: %s -> %s", original.Name, final.Name)
 }

@@ -31,7 +31,7 @@ func TestSSEncodeDecode(t *testing.T) {
 
 	// 验证关键字段
 	assertEqualString(t, "Server", original.Server, decoded.Server)
-	assertEqualInt(t, "Port", original.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Cipher", original.Param.Cipher, decoded.Param.Cipher)
 	assertEqualString(t, "Password", original.Param.Password, decoded.Param.Password)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
@@ -95,7 +95,7 @@ func TestSsrEncodeDecode(t *testing.T) {
 
 	// 验证关键字段
 	assertEqualString(t, "Server", original.Server, decoded.Server)
-	assertEqualInt(t, "Port", original.Port, decoded.Port)
+	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Method", original.Method, decoded.Method)
 	assertEqualString(t, "Remarks(名称)", original.Qurey.Remarks, decoded.Qurey.Remarks)
 	assertEqualString(t, "Protocol", original.Protocol, decoded.Protocol)

@@ -21,7 +21,7 @@ func TestEmptyNameFallback(t *testing.T) {
 			name:     "VMess空名称后备",
 			protocol: "vmess",
 			encode: func() string {
-				v := Vmess{Add: "example.com", Port: "443", Id: "uuid", V: "2"}
+				v := Vmess{Add: "example.com", Port: "443", Id: "88888888-9999-7777-5555-777777777777", V: "2"}
 				return EncodeVmessURL(v)
 			},
 			decode: func(s string) (string, error) {
@@ -33,7 +33,7 @@ func TestEmptyNameFallback(t *testing.T) {
 			name:     "VLESS空名称后备",
 			protocol: "vless",
 			encode: func() string {
-				v := VLESS{Server: "example.com", Port: 443, Uuid: "uuid"}
+				v := VLESS{Server: "example.com", Port: 443, Uuid: "88888888-9999-7777-5555-777777777777"}
 				return EncodeVLESSURL(v)
 			},
 			decode: func(s string) (string, error) {
@@ -103,7 +103,7 @@ func TestIPv6Address(t *testing.T) {
 			var encoded string
 			switch tc.protocol {
 			case "vless":
-				v := VLESS{Name: "IPv6测试", Server: tc.server, Port: 443, Uuid: "uuid"}
+				v := VLESS{Name: "IPv6测试", Server: tc.server, Port: 443, Uuid: "88888888-9999-7777-5555-777777777777"}
 				encoded = EncodeVLESSURL(v)
 			case "trojan":
 				tr := Trojan{Name: "IPv6测试", Hostname: tc.server, Port: 443, Password: "pass"}
@@ -165,7 +165,7 @@ func TestPortBoundary(t *testing.T) {
 				Name:   "端口测试",
 				Server: "example.com",
 				Port:   port,
-				Uuid:   "12345678-1234-1234-1234-123456789abc",
+				Uuid:   "88888888-9999-7777-5555-777777777777",
 			}
 
 			encoded := EncodeVLESSURL(original)
@@ -174,7 +174,7 @@ func TestPortBoundary(t *testing.T) {
 				t.Fatalf("解码失败: %v", err)
 			}
 
-			assertEqualInt(t, "Port", port, decoded.Port)
+			assertEqualIntInterface(t, "Port", port, decoded.Port)
 			t.Logf("✓ 端口 %d 测试通过", port)
 		})
 	}
@@ -217,7 +217,7 @@ func TestVMESSPortTypes(t *testing.T) {
 	vmessWithStringPort := Vmess{
 		Add:  "example.com",
 		Port: "443",
-		Id:   "uuid",
+		Id:   "88888888-9999-7777-5555-777777777777",
 		Ps:   "String端口测试",
 		V:    "2",
 	}
@@ -307,7 +307,7 @@ func TestURLEncodingInPath(t *testing.T) {
 				Name:   "路径测试",
 				Server: "example.com",
 				Port:   443,
-				Uuid:   "uuid",
+				Uuid:   "88888888-9999-7777-5555-777777777777",
 				Query: VLESSQuery{
 					Type: "ws",
 					Path: path,
