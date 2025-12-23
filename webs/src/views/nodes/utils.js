@@ -173,30 +173,30 @@ export const getSpeedColor = (speed) => {
 export const getSpeedDisplay = (speed, speedStatus) => {
   // 优先根据状态判断
   if (speedStatus === NODE_STATUS.TIMEOUT) {
-    return { label: '超时', color: 'warning', variant: 'filled' };
+    return { label: '超时', color: 'warning', variant: 'outlined' };
   }
   if (speedStatus === NODE_STATUS.ERROR || speed === -1) {
-    return { label: '失败', color: 'error', variant: 'filled' };
+    return { label: '失败', color: 'error', variant: 'outlined' };
   }
   if (speedStatus === NODE_STATUS.UNTESTED || (!speedStatus && speed <= 0)) {
     return { label: '未测速', color: 'default', variant: 'outlined' };
   }
   // 成功状态，显示具体速度值
-  return { label: `${speed.toFixed(2)}MB/s`, color: getSpeedColor(speed), variant: 'filled' };
+  return { label: `${speed.toFixed(2)}MB/s`, color: getSpeedColor(speed), variant: 'outlined' };
 };
 
 // 延迟状态显示 - 统一处理所有延迟显示逻辑
 export const getDelayDisplay = (delay, delayStatus) => {
   // 优先根据状态判断
   if (delayStatus === NODE_STATUS.TIMEOUT || delay === -1) {
-    return { label: '超时', color: 'error', variant: 'filled' };
+    return { label: '超时', color: 'error', variant: 'outlined' };
   }
   if (delayStatus === NODE_STATUS.ERROR) {
-    return { label: '失败', color: 'error', variant: 'filled' };
+    return { label: '失败', color: 'error', variant: 'outlined' };
   }
   if (delayStatus === NODE_STATUS.UNTESTED || (!delayStatus && delay <= 0)) {
     return { label: '未测速', color: 'default', variant: 'outlined' };
   }
   // 成功状态，显示具体延迟值
-  return { label: `${delay}ms`, color: getDelayColor(delay), variant: 'filled' };
+  return { label: `${delay}ms`, color: getDelayColor(delay), variant: 'outlined' };
 };

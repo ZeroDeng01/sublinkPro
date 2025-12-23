@@ -649,13 +649,13 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                     checked={form.trafficByNode ?? false}
                     onChange={(e) => updateForm('trafficByNode', e.target.checked)}
                     size="small"
-                    color="warning"
+                    color="error"
                   />
                 }
                 label={
                   <Typography variant="body2">
                     按节点统计
-                    <Typography component="span" variant="caption" color="warning.main" sx={{ ml: 0.5 }}>
+                    <Typography component="span" variant="caption" color="error.main" sx={{ ml: 0.5 }}>
                       (大数据量)
                     </Typography>
                   </Typography>
@@ -663,7 +663,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
               />
             </Box>
             {form.trafficByNode && (
-              <Typography variant="caption" color="warning.main">
+              <Typography variant="caption" color="error.main">
                 ⚠️ 按节点统计会记录每个节点的流量消耗，节点数量过万时会增加约1-2MB存储空间
               </Typography>
             )}
