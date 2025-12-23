@@ -96,9 +96,6 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 	// 延迟测试并发数
 	const maxConcurrency = 1000
 	latencyConcurrency := config.LatencyConcurrency
-	if latencyConcurrency == 0 {
-		latencyConcurrency = 10 // 默认值
-	}
 
 	// 标记是否使用动态并发
 	useAdaptiveLatency := config.LatencyConcurrency == 0
@@ -125,9 +122,6 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 		speedConcurrency = speedController.GetCurrentConcurrency()
 	} else {
 		// 固定模式：确保有效的默认值并限制最大值
-		if speedConcurrency <= 0 {
-			speedConcurrency = 1 // 固定模式的默认值
-		}
 		// 硬性并发上限：速度测试不应超过32以避免带宽竞争
 		const maxSpeedConcurrency = 32
 		if speedConcurrency > maxSpeedConcurrency {
