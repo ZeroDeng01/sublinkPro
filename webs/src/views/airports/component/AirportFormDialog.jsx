@@ -38,9 +38,19 @@ export default function AirportFormDialog({
   onFetchProxyNodes
 }) {
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          maxHeight: '90vh'
+        }
+      }}
+    >
       <DialogTitle>{isEdit ? '编辑机场' : '添加机场'}</DialogTitle>
-      <DialogContent>
+      <DialogContent dividers sx={{ pt: 3 }}>
         <Stack spacing={2}>
           <TextField
             fullWidth
