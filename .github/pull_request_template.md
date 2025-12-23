@@ -58,7 +58,7 @@ Related to #
 <!-- 请在提交 PR 前检查以下项目。 -->
 
 - [ ] My code follows the project's coding style / 我的代码遵循项目的代码风格
-- [ ] I have commented my code where necessary (in Chinese) / 我已在必要处添加注释（使用中文）
+- [ ] I have commented my code where necessary / 我已在必要处添加注释
 - [ ] I have updated the documentation accordingly / 我已相应更新文档
 - [ ] My changes do not introduce any security vulnerabilities / 我的更改不会引入任何安全漏洞
 - [ ] I have considered the performance impact of my changes / 我已考虑更改的性能影响

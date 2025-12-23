@@ -566,7 +566,7 @@ export default function NodeDetailsPanel({
           textTransform: 'none'
         }}
       >
-        立即测速
+        立即检测
       </Button>
 
       <Stack direction="row" spacing={1}>

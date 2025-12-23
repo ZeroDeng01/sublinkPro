@@ -7,6 +7,11 @@ export { default as BatchTagDialog } from './BatchTagDialog';
 export { default as BatchRemoveTagDialog } from './BatchRemoveTagDialog';
 export { default as BatchSourceDialog } from './BatchSourceDialog';
 
+// Node check profile components
+export { default as ProfileSelectDialog } from "./ProfileSelectDialog";
+export { default as NodeCheckProfilesDrawer } from "./NodeCheckProfilesDrawer";
+export { default as NodeCheckProfileFormDialog } from "./NodeCheckProfileFormDialog";
+
 export { default as NodeDetailsPanel } from './NodeDetailsPanel';
 
 // List view components

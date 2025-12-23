@@ -36,6 +36,14 @@ const subscription = {
       breadcrumbs: true
     },
     {
+      id: "node-check",
+      title: "节点检测",
+      type: "item",
+      url: "/subscription/node-check",
+      icon: IconDeviceDesktopAnalytics,
+      breadcrumbs: true
+    },
+    {
       id: 'subs',
       title: '订阅列表',
       type: 'item',

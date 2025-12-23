@@ -75,29 +75,23 @@ export function deleteNodesBatch(ids) {
   });
 }
 
-// 获取测速配置
+// 获取节点检测策略列表（替代原测速配置）
 export function getSpeedTestConfig() {
   return request({
-    url: '/v1/nodes/speed-test/config',
+    url: "/v1/node-check/profiles",
     method: 'get'
   });
 }
 
-// 更新测速配置
-export function updateSpeedTestConfig(data) {
+// 运行测速（向后兼容，使用新的node-check API）
+export function runSpeedTest(ids, profileId) {
   return request({
-    url: '/v1/nodes/speed-test/config',
+    url: "/v1/node-check/run",
     method: 'post',
-    data
-  });
-}
-
-// 运行测速
-export function runSpeedTest(ids) {
-  return request({
-    url: '/v1/nodes/speed-test/run',
-    method: 'post',
-    data: { ids }
+    data: {
+      nodeIds: ids || [],
+      profileId: profileId || 0
+    }
   });
 }
 

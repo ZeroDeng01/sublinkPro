@@ -23,10 +23,6 @@ func Nodes(r *gin.Engine) {
 		NodesGroup.GET("/groups", api.GetGroups)
 		NodesGroup.GET("/sources", api.GetSources)
 		NodesGroup.GET("/countries", api.GetNodeCountries)
-		NodesGroup.GET("/speed-test/config", api.GetSpeedTestConfig)
-		// 演示模式下禁止修改测速配置和执行测速
-		NodesGroup.POST("/speed-test/config", middlewares.DemoModeRestrict, api.UpdateSpeedTestConfig)
-		NodesGroup.POST("/speed-test/run", middlewares.DemoModeRestrict, api.RunSpeedTest)
 		NodesGroup.GET("/ip-info", api.GetIPDetails)
 		NodesGroup.GET("/ip-cache/stats", api.GetIPCacheStats)
 		NodesGroup.DELETE("/ip-cache", api.ClearIPCache)

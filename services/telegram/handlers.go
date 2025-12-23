@@ -77,7 +77,7 @@ func (h *StartHandler) Handle(bot *TelegramBot, message *Message) error {
 *可用功能：*
 • 📊 查看仪表盘统计数据
 • 🖥️ 查看系统监控信息
-• ⚡ 开始节点测速任务
+• ⚡ 开始节点检测任务
 • 📋 管理订阅和节点
 • 🏷️ 执行标签规则
 • 📝 查看和管理任务
@@ -315,7 +315,7 @@ func (h *MonitorHandler) Handle(bot *TelegramBot, message *Message) error {
 type SpeedTestHandler struct{}
 
 func (h *SpeedTestHandler) Command() string     { return "speedtest" }
-func (h *SpeedTestHandler) Description() string { return "⚡ 开始测速" }
+func (h *SpeedTestHandler) Description() string { return "⚡ 开始检测" }
 
 func (h *SpeedTestHandler) Handle(bot *TelegramBot, message *Message) error {
 	// 统计未测速节点数
@@ -328,16 +328,16 @@ func (h *SpeedTestHandler) Handle(bot *TelegramBot, message *Message) error {
 		}
 	}
 
-	text := fmt.Sprintf(`⚡ *测速任务*
+	text := fmt.Sprintf(`⚡ *检测任务*
 
 节点总数: %d
-未测速: %d
+未检测: %d
 
-请选择测速方式：`, len(nodes), untestedCount)
+请选择检测方式：`, len(nodes), untestedCount)
 
 	keyboard := [][]InlineKeyboardButton{
-		{NewInlineButton("▶️ 执行定时测速", "speedtest:scheduled")},
-		{NewInlineButton("⏰ 测试未测速节点", "speedtest:untested")},
+		{NewInlineButton("▶️ 执行定时检测", "speedtest:scheduled")},
+		{NewInlineButton("⏰ 检测未检测节点", "speedtest:untested")},
 	}
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text, "Markdown", keyboard)
@@ -452,7 +452,7 @@ func (h *NodesHandler) Handle(bot *TelegramBot, message *Message) error {
 %s`, total, onlineCount, total-onlineCount, countryText.String())
 
 	keyboard := [][]InlineKeyboardButton{
-		{NewInlineButton("🔄 刷新", "nodes"), NewInlineButton("⚡ 测速", "speedtest")},
+		{NewInlineButton("🔄 刷新", "nodes"), NewInlineButton("⚡ 检测", "speedtest")},
 	}
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text, "Markdown", keyboard)

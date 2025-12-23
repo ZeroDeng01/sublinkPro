@@ -34,8 +34,6 @@ import {
   updateNode,
   deleteNode,
   deleteNodesBatch,
-  getSpeedTestConfig,
-  updateSpeedTestConfig,
   runSpeedTest,
   getNodeCountries,
   getNodeGroups,
@@ -48,13 +46,12 @@ import {
 } from 'api/nodes';
 import { getTags, batchSetNodeTags, batchRemoveNodeTags } from 'api/tags';
 
-// utils
-import { validateCronExpression } from 'views/airports/utils';
-
 // local components
 import {
   NodeDialog,
   SpeedTestDialog,
+  ProfileSelectDialog,
+  NodeCheckProfilesDrawer,
   BatchGroupDialog,
   BatchDialerProxyDialog,
   BatchTagDialog,
@@ -137,6 +134,10 @@ export default function NodeList() {
 
   // 测速配置
   const [speedTestDialogOpen, setSpeedTestDialogOpen] = useState(false);
+  // 策略管理
+  const [profilesDrawerOpen, setProfilesDrawerOpen] = useState(false);
+  const [profileSelectOpen, setProfileSelectOpen] = useState(false);
+  const [profileSelectNodeIds, setProfileSelectNodeIds] = useState([]);
   const [speedTestForm, setSpeedTestForm] = useState({
     cron: '',
     enabled: false,
@@ -752,32 +753,9 @@ export default function NodeList() {
   };
 
   // === 测速配置 ===
-  const handleOpenSpeedTest = async () => {
-    try {
-      const response = await getSpeedTestConfig();
-      setSpeedTestForm(
-        response.data || {
-          cron: '',
-          enabled: false,
-          mode: 'tcp',
-          url: '',
-          latency_url: '',
-          timeout: 5,
-          groups: [],
-          tags: [],
-          detect_country: false,
-          landing_ip_url: '',
-          latency_concurrency: 0,
-          speed_concurrency: 1,
-
-          include_handshake: true
-        }
-      );
-      setSpeedTestDialogOpen(true);
-    } catch (error) {
-      console.error(error);
-      showMessage(error.message || '获取测速配置失败', 'error');
-    }
+  const handleOpenSpeedTest = () => {
+    // 跳转到节点检测策略页面
+    navigate("/subscription/node-check");
   };
 
   const handleSpeedModeChange = (mode) => {
@@ -786,22 +764,11 @@ export default function NodeList() {
   };
 
   const handleSubmitSpeedTest = async () => {
-    if (speedTestForm.enabled && !speedTestForm.cron) {
-      showMessage('启用时Cron表达式不能为空', 'warning');
-      return;
-    }
-    if (speedTestForm.enabled && !validateCronExpression(speedTestForm.cron)) {
-      showMessage('Cron表达式格式不正确', 'error');
-      return;
-    }
-    try {
-      await updateSpeedTestConfig(speedTestForm);
-      showMessage('保存成功');
-      setSpeedTestDialogOpen(false);
-    } catch (error) {
-      console.error(error);
-      showMessage(error.message || '保存测速配置失败', 'error');
-    }
+    // 原测速配置API已迁移到策略管理
+    // 关闭旧对话框并打开策略管理抽屉
+    setSpeedTestDialogOpen(false);
+    setProfilesDrawerOpen(true);
+    showMessage("测速配置已迁移至检测策略管理", "info");
   };
 
   const handleRunSpeedTest = async () => {
@@ -814,29 +781,19 @@ export default function NodeList() {
     }
   };
 
-  const handleBatchSpeedTest = async () => {
+  const handleBatchSpeedTest = () => {
     if (selectedNodes.length === 0) {
-      showMessage('请选择要测速的节点', 'warning');
+      showMessage("请选择要检测的节点", "warning");
       return;
     }
-    try {
-      const ids = selectedNodes.map((node) => node.ID);
-      await runSpeedTest(ids);
-      showMessage(`已启动 ${ids.length} 个节点的测速任务`);
-    } catch (error) {
-      console.error(error);
-      showMessage(error.message || '启动批量测速任务失败', 'error');
-    }
+    const ids = selectedNodes.map((node) => node.ID);
+    setProfileSelectNodeIds(ids);
+    setProfileSelectOpen(true);
   };
 
-  const handleSingleSpeedTest = async (node) => {
-    try {
-      await runSpeedTest([node.ID]);
-      showMessage(`节点 ${node.Name} 测速任务已启动`);
-    } catch (error) {
-      console.error(error);
-      showMessage(error.message || '启动测速任务失败', 'error');
-    }
+  const handleSingleSpeedTest = (node) => {
+    setProfileSelectNodeIds([node.ID]);
+    setProfileSelectOpen(true);
   };
 
   // 选择所有（获取符合当前筛选条件的所有节点ID）
@@ -922,10 +879,10 @@ export default function NodeList() {
               机场管理
             </Button>
             <Button variant="outlined" color="info" startIcon={<SettingsIcon />} onClick={handleOpenSpeedTest}>
-              测速设置
+              检测设置
             </Button>
             <Button variant="outlined" startIcon={<SpeedIcon />} onClick={handleBatchSpeedTest}>
-              批量测速
+              批量检测
             </Button>
             <IconButton onClick={handleRefresh} disabled={loading}>
               <RefreshIcon
@@ -967,10 +924,10 @@ export default function NodeList() {
             onClick={handleOpenSpeedTest}
             sx={{ whiteSpace: 'nowrap' }}
           >
-            测速设置
+            检测设置
           </Button>
           <Button size="small" variant="outlined" startIcon={<SpeedIcon />} onClick={handleBatchSpeedTest} sx={{ whiteSpace: 'nowrap' }}>
-            批量测速
+            批量检测
           </Button>
           <IconButton size="small" onClick={handleRefresh} disabled={loading}>
             <RefreshIcon
@@ -1113,6 +1070,24 @@ export default function NodeList() {
         onSubmit={handleSubmitSpeedTest}
         onRunSpeedTest={handleRunSpeedTest}
         onModeChange={handleSpeedModeChange}
+      />
+
+      {/* 策略管理抽屉 */}
+      <NodeCheckProfilesDrawer
+        open={profilesDrawerOpen}
+        onClose={() => setProfilesDrawerOpen(false)}
+        groupOptions={groupOptions}
+        tagOptions={tagOptions}
+        onMessage={showMessage}
+      />
+
+      {/* 策略选择对话框 */}
+      <ProfileSelectDialog
+        open={profileSelectOpen}
+        onClose={() => setProfileSelectOpen(false)}
+        nodeIds={profileSelectNodeIds}
+        onSuccess={showMessage}
+        onOpenSettings={() => setProfilesDrawerOpen(true)}
       />
 
       {/* 批量修改分组对话框 */}

@@ -334,6 +334,9 @@ func Run() {
 	if err := models.InitAccessKeyCache(); err != nil {
 		utils.Error("加载AccessKey到缓存失败: %v", err)
 	}
+	if err := models.InitNodeCheckProfileCache(); err != nil {
+		utils.Error("加载节点检测策略到缓存失败: %v", err)
+	}
 	if err := models.InitSubLogsCache(); err != nil {
 		utils.Error("加载订阅日志到缓存失败: %v", err)
 	}
@@ -463,6 +466,7 @@ func Run() {
 	routers.Host(r)
 	routers.Share(r)
 	routers.Airport(r)
+	routers.NodeCheck(r)
 
 	// 处理前端路由 (SPA History Mode)
 	// 必须在所有 backend 路由注册之后注册

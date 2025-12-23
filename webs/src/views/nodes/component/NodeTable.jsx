@@ -223,7 +223,7 @@ export default function NodeTable({
                     <InfoOutlinedIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="测速">
+                <Tooltip title="检测">
                   <IconButton size="small" onClick={() => onSpeedTest(node)}>
                     <SpeedIcon fontSize="small" />
                   </IconButton>

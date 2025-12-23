@@ -242,31 +242,56 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
             </Box>
 
             {/* Content */}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
               {/* Header row */}
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 0.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: { xs: 0.5, sm: 1 },
+                  mb: 0.5
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 0.5,
+                    minWidth: 0,
+                    flex: 1,
+                    rowGap: 0.5
+                  }}
+                >
                   <Typography
                     variant="subtitle2"
                     sx={{
                       fontWeight: 600,
                       color: isDark ? '#fff' : theme.palette.text.primary,
-                      whiteSpace: 'nowrap'
+                      whiteSpace: "nowrap",
+                      flexShrink: 0
                     }}
                   >
                     {taskConfig.label}
                   </Typography>
-                  {task.taskName && (task.taskType === 'sub_update' || task.taskType === 'tag_rule') && (
+                  {task.taskName && (
                     <Chip
                       label={task.taskName}
                       size="small"
                       sx={{
-                        height: 20,
-                        fontSize: '0.7rem',
+                        height: 18,
+                        fontSize: "0.65rem",
                         fontWeight: 500,
                         bgcolor: alpha(taskConfig.accentColor, 0.15),
                         color: isDark ? alpha('#fff', 0.9) : taskConfig.accentColor,
-                        border: `1px solid ${alpha(taskConfig.accentColor, 0.2)}`
+                        border: `1px solid ${alpha(taskConfig.accentColor, 0.2)}`,
+                        maxWidth: { xs: 80, sm: 100 },
+                        "& .MuiChip-label": {
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          px: 0.75
+                        }
                       }}
                     />
                   )}
@@ -276,12 +301,14 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                       label={task.result.phase === 'latency' ? '延迟测试' : '速度测试'}
                       size="small"
                       sx={{
-                        height: 20,
-                        fontSize: '0.7rem',
+                        height: 18,
+                        fontSize: "0.65rem",
                         fontWeight: 500,
+                        flexShrink: 0,
                         bgcolor: task.result.phase === 'latency' ? alpha('#06b6d4', 0.15) : alpha('#f59e0b', 0.15),
                         color: task.result.phase === 'latency' ? (isDark ? '#22d3ee' : '#0891b2') : isDark ? '#fbbf24' : '#d97706',
-                        border: `1px solid ${task.result.phase === 'latency' ? alpha('#06b6d4', 0.3) : alpha('#f59e0b', 0.3)}`
+                        border: `1px solid ${task.result.phase === "latency" ? alpha("#06b6d4", 0.3) : alpha("#f59e0b", 0.3)}`,
+                        "& .MuiChip-label": { px: 0.75 }
                       }}
                     />
                   )}

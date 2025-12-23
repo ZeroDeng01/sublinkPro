@@ -138,19 +138,26 @@ func RunSpeedTestOnNodes(nodes []models.Node) {
 // 采用两阶段测试策略：阶段一并发测延迟，阶段二低并发测速度
 // 支持通过 TaskManager 进行任务取消
 func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrigger) {
+	RunSpeedTestOnNodesWithName(nodes, trigger, "节点检测")
+}
+
+// RunSpeedTestOnNodesWithName 对指定节点列表执行测速（带触发类型和策略名称）
+// 采用两阶段测试策略：阶段一并发测延迟，阶段二低并发测速度
+// 支持通过 TaskManager 进行任务取消
+func RunSpeedTestOnNodesWithName(nodes []models.Node, trigger models.TaskTrigger, profileName string) {
 	if len(nodes) == 0 {
-		utils.Warn("没有要测速的节点")
+		utils.Warn("没有要检测的节点")
 		return
 	}
 
 	totalNodes := len(nodes)
-	utils.Info("开始执行节点测速，总节点数: %d, 触发类型: %s", totalNodes, trigger)
+	utils.Info("开始执行节点检测，总节点数: %d, 触发类型: %s, 策略: %s", totalNodes, trigger, profileName)
 
 	// 使用 TaskManager 创建任务
 	tm := getTaskManager()
-	task, ctx, err := tm.CreateTask(models.TaskTypeSpeedTest, "节点测速", trigger, totalNodes)
+	task, ctx, err := tm.CreateTask(models.TaskTypeSpeedTest, profileName, trigger, totalNodes)
 	if err != nil {
-		utils.Error("创建测速任务失败: %v", err)
+		utils.Error("创建检测任务失败: %v", err)
 		return
 	}
 	taskID := task.ID
@@ -880,3 +887,116 @@ applyTags:
 	}()
 
 }
+
+// ExecuteNodeCheckWithProfile 使用指定策略执行节点检测
+// profileID: 策略ID
+// nodeIDs: 指定节点ID列表（可选，为空则按策略范围执行）
+func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int) {
+	utils.Info("开始执行节点检测，策略ID: %d", profileID)
+
+	// 获取策略配置
+	profile, err := models.GetNodeCheckProfileByID(profileID)
+	if err != nil {
+		utils.Error("获取节点检测策略失败: %v", err)
+		return
+	}
+
+	// 获取节点列表
+	var nodes []models.Node
+
+	if len(nodeIDs) > 0 {
+		// 使用指定的节点ID
+		for _, id := range nodeIDs {
+			var n models.Node
+			n.ID = id
+			if err := n.GetByID(); err == nil {
+				nodes = append(nodes, n)
+			}
+		}
+	} else {
+		// 按策略范围获取节点
+		groups := profile.GetGroups()
+		tags := profile.GetTags()
+
+		if len(groups) > 0 {
+			nodes, err = new(models.Node).ListByGroups(groups)
+			if err != nil {
+				utils.Error("获取分组节点失败: %v", err)
+				return
+			}
+			// 在分组基础上按标签过滤
+			if len(tags) > 0 {
+				nodes = models.FilterNodesByTags(nodes, tags)
+			}
+		} else if len(tags) > 0 {
+			nodes, err = new(models.Node).ListByTags(tags)
+			if err != nil {
+				utils.Error("获取标签节点失败: %v", err)
+				return
+			}
+		} else {
+			nodes, err = new(models.Node).List()
+			if err != nil {
+				utils.Error("获取节点列表失败: %v", err)
+				return
+			}
+		}
+	}
+
+	if len(nodes) == 0 {
+		utils.Warn("没有符合条件的节点")
+		return
+	}
+
+	// 应用策略配置到系统设置（临时覆盖，用于复用现有测速逻辑）
+	// 这样可以复用 RunSpeedTestOnNodesWithName 的完整逻辑
+	applyProfileToSettings(profile)
+
+	// 确定触发类型
+	trigger := models.TaskTriggerManual
+	if len(nodeIDs) == 0 {
+		// 定时任务触发
+		trigger = models.TaskTriggerScheduled
+	}
+
+	// 执行检测（使用策略名称作为任务名）
+	RunSpeedTestOnNodesWithName(nodes, trigger, profile.Name)
+
+	// 更新策略的上次执行时间（保留现有的下次执行时间）
+	now := time.Now()
+	if err := profile.UpdateLastRunTime(&now); err != nil {
+		utils.Warn("更新策略执行时间失败: %v", err)
+	}
+}
+
+// applyProfileToSettings 将策略配置临时应用到系统设置
+// 这是为了复用现有的测速逻辑，而不需要重写整个流程
+func applyProfileToSettings(profile *models.NodeCheckProfile) {
+	// 测速模式
+	_ = models.SetSetting("speed_test_mode", profile.Mode)
+	// 测速URL
+	_ = models.SetSetting("speed_test_url", profile.TestURL)
+	// 延迟测试URL
+	_ = models.SetSetting("speed_test_latency_url", profile.LatencyURL)
+	// 超时时间
+	_ = models.SetSetting("speed_test_timeout", strconv.Itoa(profile.Timeout))
+	// 延迟并发数
+	_ = models.SetSetting("speed_test_latency_concurrency", strconv.Itoa(profile.LatencyConcurrency))
+	// 速度并发数
+	_ = models.SetSetting("speed_test_speed_concurrency", strconv.Itoa(profile.SpeedConcurrency))
+	// 检测落地IP
+	_ = models.SetSetting("speed_test_detect_country", strconv.FormatBool(profile.DetectCountry))
+	// 落地IP查询URL
+	_ = models.SetSetting("speed_test_landing_ip_url", profile.LandingIPURL)
+	// 包含握手时间
+	_ = models.SetSetting("speed_test_include_handshake", strconv.FormatBool(profile.IncludeHandshake))
+	// 速度记录模式
+	_ = models.SetSetting("speed_test_speed_record_mode", profile.SpeedRecordMode)
+	// 峰值采样间隔
+	_ = models.SetSetting("speed_test_peak_sample_interval", strconv.Itoa(profile.PeakSampleInterval))
+	// 流量统计
+	_ = models.SetSetting("speed_test_traffic_by_group", strconv.FormatBool(profile.TrafficByGroup))
+	_ = models.SetSetting("speed_test_traffic_by_source", strconv.FormatBool(profile.TrafficBySource))
+	_ = models.SetSetting("speed_test_traffic_by_node", strconv.FormatBool(profile.TrafficByNode))
+}
+

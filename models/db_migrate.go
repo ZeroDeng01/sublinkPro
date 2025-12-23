@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"sublink/database"
 	"sublink/node/protocol"
 	"sublink/utils"
@@ -141,6 +142,11 @@ func RunMigrations() {
 		utils.Error("基础数据表Airport迁移失败: %v", err)
 	} else {
 		utils.Info("数据表Airport创建成功")
+	}
+	if err := db.AutoMigrate(&NodeCheckProfile{}); err != nil {
+		utils.Error("基础数据表NodeCheckProfile迁移失败: %v", err)
+	} else {
+		utils.Info("数据表NodeCheckProfile创建成功")
 	}
 
 	// 检查并删除 idx_name_id 索引
@@ -635,6 +641,103 @@ DIRECT = direct
 		return nil
 	}); err != nil {
 		utils.Error("执行迁移 0017_migrate_subscheduler_to_airport 失败: %v", err)
+	}
+
+	// 0018_migrate_speed_test_to_node_check_profile - 迁移测速配置到节点检测策略表
+	if err := database.RunCustomMigration("0018_migrate_speed_test_to_node_check_profile", func() error {
+		// 检查是否已有策略记录
+		var count int64
+		db.Model(&NodeCheckProfile{}).Count(&count)
+		if count > 0 {
+			utils.Info("节点检测策略表已有数据，跳过迁移")
+			return nil
+		}
+
+		// 从 system_settings 读取现有测速配置
+		cron, _ := GetSetting("speed_test_cron")
+		enabledStr, _ := GetSetting("speed_test_enabled")
+		enabled := enabledStr == "true"
+		mode, _ := GetSetting("speed_test_mode")
+		if mode == "" {
+			mode = "tcp"
+		}
+		testURL, _ := GetSetting("speed_test_url")
+		latencyURL, _ := GetSetting("speed_test_latency_url")
+		timeoutStr, _ := GetSetting("speed_test_timeout")
+		timeout := 5
+		if timeoutStr != "" {
+			if t, err := strconv.Atoi(timeoutStr); err == nil && t > 0 {
+				timeout = t
+			}
+		}
+		groups, _ := GetSetting("speed_test_groups")
+		tags, _ := GetSetting("speed_test_tags")
+		latencyConcurrencyStr, _ := GetSetting("speed_test_latency_concurrency")
+		latencyConcurrency := 0
+		if latencyConcurrencyStr != "" {
+			latencyConcurrency, _ = strconv.Atoi(latencyConcurrencyStr)
+		}
+		speedConcurrencyStr, _ := GetSetting("speed_test_speed_concurrency")
+		speedConcurrency := 1
+		if speedConcurrencyStr != "" {
+			if c, err := strconv.Atoi(speedConcurrencyStr); err == nil && c > 0 {
+				speedConcurrency = c
+			}
+		}
+		detectCountryStr, _ := GetSetting("speed_test_detect_country")
+		detectCountry := detectCountryStr == "true"
+		landingIPURL, _ := GetSetting("speed_test_landing_ip_url")
+		includeHandshakeStr, _ := GetSetting("speed_test_include_handshake")
+		includeHandshake := includeHandshakeStr != "false"
+		speedRecordMode, _ := GetSetting("speed_test_speed_record_mode")
+		if speedRecordMode == "" {
+			speedRecordMode = "average"
+		}
+		peakSampleIntervalStr, _ := GetSetting("speed_test_peak_sample_interval")
+		peakSampleInterval := 100
+		if peakSampleIntervalStr != "" {
+			if v, err := strconv.Atoi(peakSampleIntervalStr); err == nil && v >= 50 && v <= 200 {
+				peakSampleInterval = v
+			}
+		}
+		trafficByGroupStr, _ := GetSetting("speed_test_traffic_by_group")
+		trafficByGroup := trafficByGroupStr != "false"
+		trafficBySourceStr, _ := GetSetting("speed_test_traffic_by_source")
+		trafficBySource := trafficBySourceStr != "false"
+		trafficByNodeStr, _ := GetSetting("speed_test_traffic_by_node")
+		trafficByNode := trafficByNodeStr == "true"
+
+		// 创建默认策略
+		defaultProfile := NodeCheckProfile{
+			Name:               "默认策略",
+			Enabled:            enabled,
+			CronExpr:           cron,
+			Mode:               mode,
+			TestURL:            testURL,
+			LatencyURL:         latencyURL,
+			Timeout:            timeout,
+			Groups:             groups,
+			Tags:               tags,
+			LatencyConcurrency: latencyConcurrency,
+			SpeedConcurrency:   speedConcurrency,
+			DetectCountry:      detectCountry,
+			LandingIPURL:       landingIPURL,
+			IncludeHandshake:   includeHandshake,
+			SpeedRecordMode:    speedRecordMode,
+			PeakSampleInterval: peakSampleInterval,
+			TrafficByGroup:     trafficByGroup,
+			TrafficBySource:    trafficBySource,
+			TrafficByNode:      trafficByNode,
+		}
+
+		if err := db.Create(&defaultProfile).Error; err != nil {
+			return fmt.Errorf("创建默认节点检测策略失败: %w", err)
+		}
+
+		utils.Info("已将现有测速配置迁移到默认节点检测策略")
+		return nil
+	}); err != nil {
+		utils.Error("执行迁移 0018_migrate_speed_test_to_node_check_profile 失败: %v", err)
 	}
 
 	// 初始化用户数据
