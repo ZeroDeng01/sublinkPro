@@ -164,11 +164,11 @@ func applyAutoTagRules(nodes []models.Node, source string) {
 var (
 	// latencyAdjustCheckInterval 延迟测试并发调整检查间隔
 	// 单位：任务个数
-	// 在 RunSpeedTestOnNodesWithTrigger 中使用，每完成该数量的延迟测试后检查是否需要调整并发
+	// 在 RunSpeedTestWithConfig 中使用，每完成该数量的延迟测试后检查是否需要调整并发
 	latencyAdjustCheckInterval = 5
 
 	// speedAdjustCheckInterval 速度测试并发调整检查间隔
 	// 单位：任务个数
-	// 在 RunSpeedTestOnNodesWithTrigger 中使用，每完成该数量的速度测试后检查是否需要调整并发
+	// 在 RunSpeedTestWithConfig 中使用，每完成该数量的速度测试后检查是否需要调整并发
 	speedAdjustCheckInterval = 3
 )
