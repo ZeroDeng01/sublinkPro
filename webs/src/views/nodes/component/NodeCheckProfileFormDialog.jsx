@@ -129,7 +129,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
     groups: [],
     tags: [],
     latencyConcurrency: 0,
-    speedConcurrency: 1,
+    speedConcurrency: 0,
     detectCountry: false,
     landingIpUrl: '',
     includeHandshake: true,
