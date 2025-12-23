@@ -11,7 +11,7 @@ import (
 type HY2 struct {
 	Password     string
 	Host         string
-	Port         int
+	Port         interface{}
 	Insecure     int
 	Peer         string
 	Auth         string
@@ -44,12 +44,12 @@ func CallHy2() {
 func EncodeHY2URL(hy2 HY2) string {
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if hy2.Name == "" {
-		hy2.Name = fmt.Sprintf("%s:%d", hy2.Host, hy2.Port)
+		hy2.Name = fmt.Sprintf("%s:%s", hy2.Host, utils.GetPortString(hy2.Port))
 	}
 	u := url.URL{
 		Scheme:   "hy2",
 		User:     url.User(hy2.Password),
-		Host:     fmt.Sprintf("%s:%d", hy2.Host, hy2.Port),
+		Host:     fmt.Sprintf("%s:%s", hy2.Host, utils.GetPortString(hy2.Port)),
 		Fragment: hy2.Name,
 	}
 	q := u.Query()

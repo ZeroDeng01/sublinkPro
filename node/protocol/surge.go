@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sublink/cache"
+	"sublink/utils"
 )
 
 func EncodeSurge(urls []string, config OutputConfig) (string, error) {
@@ -37,7 +38,7 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 			proxy := map[string]interface{}{
 				"name":     ss.Name,
 				"server":   server,
-				"port":     ss.Port,
+				"port":     utils.GetPortInt(ss.Port),
 				"cipher":   ss.Param.Cipher,
 				"password": ss.Param.Password,
 				"udp":      config.Udp,
@@ -93,7 +94,7 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 			proxy := map[string]interface{}{
 				"name":             trojan.Name,
 				"server":           server,
-				"port":             trojan.Port,
+				"port":             utils.GetPortInt(trojan.Port),
 				"password":         trojan.Password,
 				"udp":              config.Udp,
 				"skip-cert-verify": config.Cert,
@@ -116,7 +117,7 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 			proxy := map[string]interface{}{
 				"name":             hy2.Name,
 				"server":           server,
-				"port":             hy2.Port,
+				"port":             utils.GetPortInt(hy2.Port),
 				"password":         hy2.Password,
 				"udp":              config.Udp,
 				"skip-cert-verify": config.Cert,
@@ -139,7 +140,7 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 			proxy := map[string]interface{}{
 				"name":             tuic.Name,
 				"server":           server,
-				"port":             tuic.Port,
+				"port":             utils.GetPortInt(tuic.Port),
 				"password":         tuic.Password,
 				"udp":              config.Udp,
 				"skip-cert-verify": config.Cert,

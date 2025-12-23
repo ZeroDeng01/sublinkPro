@@ -9,11 +9,11 @@ import (
 )
 
 type VLESS struct {
-	Name   string     `json:"name"`
-	Uuid   string     `json:"uuid"`
-	Server string     `json:"server"`
-	Port   int        `json:"port"`
-	Query  VLESSQuery `json:"query"`
+	Name   string      `json:"name"`
+	Uuid   string      `json:"uuid"`
+	Server string      `json:"server"`
+	Port   interface{} `json:"port"`
+	Query  VLESSQuery  `json:"query"`
 }
 type VLESSQuery struct {
 	Security    string   `json:"security"`
@@ -64,7 +64,7 @@ func EncodeVLESSURL(v VLESS) string {
 	u := url.URL{
 		Scheme: "vless",
 		User:   url.User(v.Uuid),
-		Host:   fmt.Sprintf("%s:%d", v.Server, v.Port),
+		Host:   fmt.Sprintf("%s:%s", v.Server, utils.GetPortString(v.Port)),
 	}
 	q := u.Query()
 	q.Set("security", v.Query.Security)
@@ -89,7 +89,7 @@ func EncodeVLESSURL(v VLESS) string {
 	u.RawQuery = q.Encode()
 	// 如果没有name则用服务器加端口
 	if v.Name == "" {
-		u.Fragment = v.Server + ":" + strconv.Itoa(v.Port)
+		u.Fragment = v.Server + ":" + utils.GetPortString(v.Port)
 	} else {
 		u.Fragment = v.Name
 	}

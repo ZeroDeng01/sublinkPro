@@ -10,7 +10,7 @@ import (
 
 type HY struct {
 	Host     string
-	Port     int
+	Port     interface{}
 	Insecure int
 	Peer     string
 	Auth     string
@@ -39,11 +39,11 @@ func CallHy() {
 func EncodeHYURL(hy HY) string {
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if hy.Name == "" {
-		hy.Name = fmt.Sprintf("%s:%d", hy.Host, hy.Port)
+		hy.Name = fmt.Sprintf("%s:%s", hy.Host, utils.GetPortString(hy.Port))
 	}
 	u := url.URL{
 		Scheme:   "hysteria",
-		Host:     fmt.Sprintf("%s:%d", hy.Host, hy.Port),
+		Host:     fmt.Sprintf("%s:%s", hy.Host, utils.GetPortString(hy.Port)),
 		Fragment: hy.Name,
 	}
 	q := u.Query()

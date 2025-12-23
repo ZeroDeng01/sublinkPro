@@ -431,14 +431,14 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 			method := proxy.Cipher
 			password := proxy.Password
 			server := proxy.Server
-			port := proxy.Port
+			port := int(proxy.Port)
 			name := proxy.Name
 			encoded := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", method, password)))
 			link = fmt.Sprintf("ss://%s@%s:%d#%s", encoded, server, port, name)
 		case "ssr":
 			// ssr://server:port:protocol:method:obfs:base64(password)/?remarks=base64(remarks)&obfsparam=base64(obfsparam)
 			server := proxy.Server
-			port := proxy.Port
+			port := int(proxy.Port)
 			protocol := proxy.Protocol
 			method := proxy.Cipher
 			obfs := proxy.Obfs
@@ -459,7 +459,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 			// trojan://password@server:port?参数#name
 			password := proxy.Password
 			server := proxy.Server
-			port := proxy.Port
+			port := int(proxy.Port)
 			name := proxy.Name
 			query := url.Values{}
 
@@ -569,7 +569,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 			// vless://uuid@server:port?参数#name
 			uuid := proxy.Uuid
 			server := proxy.Server
-			port := proxy.Port
+			port := int(proxy.Port)
 			name := proxy.Name
 			query := url.Values{}
 
@@ -654,7 +654,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		case "hysteria":
 			// hysteria://server:port?protocol=udp&auth=auth&peer=peer&insecure=1&upmbps=up&downmbps=down&alpn=alpn#name
 			server := proxy.Server
-			port := proxy.Port
+			port := int(proxy.Port)
 			name := proxy.Name
 			query := url.Values{}
 			query.Set("protocol", "udp")
@@ -681,7 +681,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		case "hysteria2":
 			// hysteria2://auth@server:port?sni=sni&insecure=1&obfs=obfs&obfs-password=obfs-password#name
 			server := proxy.Server
-			port := proxy.Port
+			port := int(proxy.Port)
 			auth := proxy.Password
 			name := proxy.Name
 			query := url.Values{}
@@ -707,7 +707,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 			uuid := proxy.Uuid
 			password := proxy.Password
 			server := proxy.Server
-			port := proxy.Port
+			port := int(proxy.Port)
 			name := proxy.Name
 			query := url.Values{}
 			if proxy.Sni != "" {
@@ -732,7 +732,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 
 			password := proxy.Password
 			server := proxy.Server
-			port := proxy.Port
+			port := int(proxy.Port)
 			name := proxy.Name
 			query := url.Values{}
 			if proxy.Sni != "" {
@@ -752,7 +752,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 			username := proxy.Username
 			password := proxy.Password
 			server := proxy.Server
-			port := proxy.Port
+			port := int(proxy.Port)
 			name := proxy.Name
 			if username != "" && password != "" {
 				link = fmt.Sprintf("socks5://%s:%s@%s:%d#%s", username, password, server, port, name)
@@ -764,9 +764,9 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		Node.Link = link
 		Node.Name = proxy.Name
 		Node.LinkName = proxy.Name
-		Node.LinkAddress = proxy.Server + ":" + strconv.Itoa(proxy.Port)
+		Node.LinkAddress = proxy.Server + ":" + strconv.Itoa(int(proxy.Port))
 		Node.LinkHost = proxy.Server
-		Node.LinkPort = strconv.Itoa(proxy.Port)
+		Node.LinkPort = strconv.Itoa(int(proxy.Port))
 		Node.Source = subName
 		Node.SourceID = id
 		Node.Group = airport.Group

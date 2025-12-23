@@ -6,12 +6,13 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sublink/utils"
 )
 
 type Socks5 struct {
 	Name     string
 	Server   string
-	Port     int
+	Port     interface{}
 	Username string
 	Password string
 }
@@ -56,7 +57,7 @@ func DecodeSocks5URL(s string) (Socks5, error) {
 func EncodeSocks5URL(s Socks5) string {
 	u := url.URL{
 		Scheme:   "socks5",
-		Host:     fmt.Sprintf("%s:%d", s.Server, s.Port),
+		Host:     fmt.Sprintf("%s:%s", s.Server, utils.GetPortString(s.Port)),
 		Fragment: s.Name,
 	}
 	if s.Username != "" {
@@ -68,7 +69,7 @@ func EncodeSocks5URL(s Socks5) string {
 	}
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if s.Name == "" {
-		u.Fragment = fmt.Sprintf("%s:%d", s.Server, s.Port)
+		u.Fragment = fmt.Sprintf("%s:%s", s.Server, utils.GetPortString(s.Port))
 	}
 	return u.String()
 }

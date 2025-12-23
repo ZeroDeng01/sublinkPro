@@ -13,7 +13,7 @@ import (
 type Ss struct {
 	Param  Param
 	Server string
-	Port   int
+	Port   interface{}
 	Name   string
 	Type   string
 }
@@ -73,12 +73,12 @@ func EncodeSSURL(s Ss) string {
 	p := utils.Base64Encode(s.Param.Cipher + ":" + s.Param.Password)
 	// 假设备注没有使用服务器加端口命名
 	if s.Name == "" {
-		s.Name = s.Server + ":" + strconv.Itoa(s.Port)
+		s.Name = s.Server + ":" + utils.GetPortString(s.Port)
 	}
 	param := fmt.Sprintf("%s@%s:%s#%s",
 		p,
 		s.Server,
-		strconv.Itoa(s.Port),
+		utils.GetPortString(s.Port),
 		s.Name,
 	)
 	return "ss://" + param

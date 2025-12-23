@@ -11,7 +11,7 @@ import (
 type Trojan struct {
 	Password string      `json:"password"`
 	Hostname string      `json:"hostname"`
-	Port     int         `json:"port"`
+	Port     interface{} `json:"port"`
 	Query    TrojanQuery `json:"query,omitempty"`
 	Name     string      `json:"name"`
 	Type     string      `json:"type"`
@@ -59,7 +59,7 @@ func EncodeTrojanURL(t Trojan) string {
 	u := url.URL{
 		Scheme: "trojan",
 		User:   url.User(t.Password),
-		Host:   fmt.Sprintf("%s:%d", t.Hostname, t.Port),
+		Host:   fmt.Sprintf("%s:%s", t.Hostname, utils.GetPortString(t.Port)),
 	}
 	q := u.Query()
 	q.Set("peer", t.Query.Peer)
@@ -81,7 +81,7 @@ func EncodeTrojanURL(t Trojan) string {
 	}
 	// 如果没有设置name,则使用hostname:port
 	if t.Name == "" {
-		t.Name = t.Hostname + ":" + strconv.Itoa(t.Port)
+		t.Name = t.Hostname + ":" + utils.GetPortString(t.Port)
 	}
 	u.Fragment = t.Name
 	u.RawQuery = q.Encode()

@@ -5,13 +5,15 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	"github.com/google/uuid"
 	"math/big"
 	"math/rand"
 	"net"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // 检查环境
@@ -287,4 +289,33 @@ func FormatBytes(bytes int64) string {
 func IsUUID(id string) bool {
 	_, err := uuid.Parse(id)
 	return err == nil
+}
+
+// GetPortString 将 interface{} 类型的端口转换为字符串
+func GetPortString(port interface{}) string {
+	switch p := port.(type) {
+	case int:
+		return strconv.Itoa(p)
+	case float64:
+		return strconv.Itoa(int(p))
+	case string:
+		return p
+	default:
+		return fmt.Sprintf("%v", port)
+	}
+}
+
+// GetPortInt 将 interface{} 类型的端口转换为整数
+func GetPortInt(port interface{}) int {
+	switch p := port.(type) {
+	case int:
+		return p
+	case float64:
+		return int(p)
+	case string:
+		val, _ := strconv.Atoi(p)
+		return val
+	default:
+		return 0
+	}
 }

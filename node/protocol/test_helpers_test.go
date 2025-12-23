@@ -13,10 +13,10 @@ func assertEqualString(t *testing.T, field string, expected, actual string) {
 }
 
 // assertEqualInt 验证两个整数相等
-func assertEqualInt(t *testing.T, field string, expected, actual int) {
+func assertEqualInt(t *testing.T, field string, expected int, actual FlexPort) {
 	t.Helper()
-	if expected != actual {
-		t.Errorf("%s 不匹配: 期望 %d, 实际 %d", field, expected, actual)
+	if expected != int(actual) {
+		t.Errorf("%s 不匹配: 期望 %d, 实际 %d", field, expected, int(actual))
 	}
 }
 

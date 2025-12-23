@@ -14,11 +14,50 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// FlexPort 是一个可以从 int 或 string 类型解析的端口类型
+// 用于处理订阅源返回的 port 字段可能是 int 或 string 的情况
+type FlexPort int
+
+// UnmarshalYAML 实现 yaml.Unmarshaler 接口，支持从 int 或 string 解析
+func (fp *FlexPort) UnmarshalYAML(value *yaml.Node) error {
+	var intVal int
+	if err := value.Decode(&intVal); err == nil {
+		*fp = FlexPort(intVal)
+		return nil
+	}
+
+	var strVal string
+	if err := value.Decode(&strVal); err == nil {
+		if strVal == "" {
+			*fp = 0
+			return nil
+		}
+		intVal, err := strconv.Atoi(strVal)
+		if err != nil {
+			return fmt.Errorf("无法将端口 '%s' 转换为整数: %w", strVal, err)
+		}
+		*fp = FlexPort(intVal)
+		return nil
+	}
+
+	return fmt.Errorf("无法解析端口值")
+}
+
+// MarshalYAML 实现 yaml.Marshaler 接口，始终输出为 int
+func (fp FlexPort) MarshalYAML() (interface{}, error) {
+	return int(fp), nil
+}
+
+// Int 返回端口的 int 值
+func (fp FlexPort) Int() int {
+	return int(fp)
+}
+
 type Proxy struct {
 	Name               string                 `yaml:"name,omitempty"`               // 节点名称
 	Type               string                 `yaml:"type,omitempty"`               // 代理类型 (ss, vmess, trojan, etc.)
 	Server             string                 `yaml:"server,omitempty"`             // 服务器地址
-	Port               int                    `yaml:"port,omitempty"`               // 服务器端口
+	Port               FlexPort               `yaml:"port,omitempty"`               // 服务器端口
 	Cipher             string                 `yaml:"cipher,omitempty"`             // 加密方式
 	Username           string                 `yaml:"username,omitempty"`           // 用户名 (socks5 等)
 	Password           string                 `yaml:"password,omitempty"`           // 密码
@@ -106,13 +145,13 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		}
 		// 如果没有名字，就用服务器地址作为名字
 		if ss.Name == "" {
-			ss.Name = fmt.Sprintf("%s:%d", ss.Server, ss.Port)
+			ss.Name = fmt.Sprintf("%s:%s", ss.Server, utils.GetPortString(ss.Port))
 		}
 		return Proxy{
 			Name:             ss.Name,
 			Type:             "ss",
 			Server:           ss.Server,
-			Port:             ss.Port,
+			Port:             FlexPort(utils.GetPortInt(ss.Port)),
 			Cipher:           ss.Param.Cipher,
 			Password:         ss.Param.Password,
 			Udp:              config.Udp,
@@ -126,13 +165,13 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		}
 		// 如果没有名字，就用服务器地址作为名字
 		if ssr.Qurey.Remarks == "" {
-			ssr.Qurey.Remarks = fmt.Sprintf("%s:%d", ssr.Server, ssr.Port)
+			ssr.Qurey.Remarks = fmt.Sprintf("%s:%s", ssr.Server, utils.GetPortString(ssr.Port))
 		}
 		return Proxy{
 			Name:             ssr.Qurey.Remarks,
 			Type:             "ssr",
 			Server:           ssr.Server,
-			Port:             ssr.Port,
+			Port:             FlexPort(utils.GetPortInt(ssr.Port)),
 			Cipher:           ssr.Method,
 			Password:         ssr.Password,
 			Obfs:             ssr.Obfs,
@@ -149,7 +188,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		}
 		// 如果没有名字，就用服务器地址作为名字
 		if trojan.Name == "" {
-			trojan.Name = fmt.Sprintf("%s:%d", trojan.Hostname, trojan.Port)
+			trojan.Name = fmt.Sprintf("%s:%s", trojan.Hostname, utils.GetPortString(trojan.Port))
 		}
 		ws_opts := map[string]interface{}{
 			"path": trojan.Query.Path,
@@ -162,7 +201,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Name:               trojan.Name,
 			Type:               "trojan",
 			Server:             trojan.Hostname,
-			Port:               trojan.Port,
+			Port:               FlexPort(utils.GetPortInt(trojan.Port)),
 			Password:           trojan.Password,
 			Client_fingerprint: trojan.Query.Fp,
 			Sni:                trojan.Query.Sni,
@@ -181,7 +220,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		}
 		// 如果没有名字，就用服务器地址作为名字
 		if vmess.Ps == "" {
-			vmess.Ps = fmt.Sprintf("%s:%s", vmess.Add, vmess.Port)
+			vmess.Ps = fmt.Sprintf("%s:%s", vmess.Add, utils.GetPortString(vmess.Port))
 		}
 		ws_opts := map[string]interface{}{
 			"path": vmess.Path,
@@ -200,7 +239,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Name:             vmess.Ps,
 			Type:             "vmess",
 			Server:           vmess.Add,
-			Port:             port,
+			Port:             FlexPort(port),
 			Cipher:           vmess.Scy,
 			Uuid:             vmess.Id,
 			AlterId:          strconv.Itoa(aid),
@@ -218,7 +257,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		}
 		// 如果没有名字，就用服务器地址作为名字
 		if vless.Name == "" {
-			vless.Name = fmt.Sprintf("%s:%d", vless.Server, vless.Port)
+			vless.Name = fmt.Sprintf("%s:%s", vless.Server, utils.GetPortString(vless.Port))
 		}
 		ws_opts := map[string]interface{}{
 			"path": vless.Query.Path,
@@ -251,7 +290,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Name:               vless.Name,
 			Type:               "vless",
 			Server:             vless.Server,
-			Port:               vless.Port,
+			Port:               FlexPort(utils.GetPortInt(vless.Port)),
 			Servername:         vless.Query.Sni,
 			Uuid:               vless.Uuid,
 			Client_fingerprint: vless.Query.Fp,
@@ -273,13 +312,13 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		}
 		// 如果没有名字，就用服务器地址作为名字
 		if hy.Name == "" {
-			hy.Name = fmt.Sprintf("%s:%d", hy.Host, hy.Port)
+			hy.Name = fmt.Sprintf("%s:%s", hy.Host, utils.GetPortString(hy.Port))
 		}
 		return Proxy{
 			Name:             hy.Name,
 			Type:             "hysteria",
 			Server:           hy.Host,
-			Port:             hy.Port,
+			Port:             FlexPort(utils.GetPortInt(hy.Port)),
 			Auth_str:         hy.Auth,
 			Up:               hy.UpMbps,
 			Down:             hy.DownMbps,
@@ -296,13 +335,13 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		}
 		// 如果没有名字，就用服务器地址作为名字
 		if hy2.Name == "" {
-			hy2.Name = fmt.Sprintf("%s:%d", hy2.Host, hy2.Port)
+			hy2.Name = fmt.Sprintf("%s:%s", hy2.Host, utils.GetPortString(hy2.Port))
 		}
 		return Proxy{
 			Name:             hy2.Name,
 			Type:             "hysteria2",
 			Server:           hy2.Host,
-			Port:             hy2.Port,
+			Port:             FlexPort(utils.GetPortInt(hy2.Port)),
 			Auth_str:         hy2.Auth,
 			Sni:              hy2.Sni,
 			Alpn:             hy2.ALPN,
@@ -320,7 +359,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		}
 		// 如果没有名字，就用服务器地址作为名字
 		if tuic.Name == "" {
-			tuic.Name = fmt.Sprintf("%s:%d", tuic.Host, tuic.Port)
+			tuic.Name = fmt.Sprintf("%s:%s", tuic.Host, utils.GetPortString(tuic.Port))
 		}
 		disable_sni := false
 		if tuic.Disable_sni == 1 {
@@ -330,7 +369,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Name:               tuic.Name,
 			Type:               "tuic",
 			Server:             tuic.Host,
-			Port:               tuic.Port,
+			Port:               FlexPort(utils.GetPortInt(tuic.Port)),
 			Password:           tuic.Password,
 			Uuid:               tuic.Uuid,
 			Congestion_control: tuic.Congestion_control,
@@ -352,7 +391,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Name:               anyTLS.Name,
 			Type:               "anytls",
 			Server:             anyTLS.Server,
-			Port:               anyTLS.Port,
+			Port:               FlexPort(utils.GetPortInt(anyTLS.Port)),
 			Password:           anyTLS.Password,
 			Skip_cert_verify:   anyTLS.SkipCertVerify,
 			Sni:                anyTLS.SNI,
@@ -368,7 +407,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Name:         socks5.Name,
 			Type:         "socks5",
 			Server:       socks5.Server,
-			Port:         socks5.Port,
+			Port:         FlexPort(utils.GetPortInt(socks5.Port)),
 			Username:     socks5.Username,
 			Password:     socks5.Password,
 			Dialer_proxy: link.DialerProxyName,

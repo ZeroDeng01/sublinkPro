@@ -12,7 +12,7 @@ type Tuic struct {
 	Name               string
 	Password           string
 	Host               string
-	Port               int
+	Port               interface{}
 	Uuid               string
 	Congestion_control string
 	Alpn               []string
@@ -89,7 +89,7 @@ func DecodeTuicURL(s string) (Tuic, error) {
 func EncodeTuicURL(t Tuic) string {
 	u := url.URL{
 		Scheme:   "tuic",
-		Host:     fmt.Sprintf("%s:%d", t.Host, t.Port),
+		Host:     fmt.Sprintf("%s:%s", t.Host, utils.GetPortString(t.Port)),
 		Fragment: t.Name,
 	}
 	// 设置用户信息：uuid:password
@@ -117,7 +117,7 @@ func EncodeTuicURL(t Tuic) string {
 	u.RawQuery = q.Encode()
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if t.Name == "" {
-		u.Fragment = fmt.Sprintf("%s:%d", t.Host, t.Port)
+		u.Fragment = fmt.Sprintf("%s:%s", t.Host, utils.GetPortString(t.Port))
 	}
 	return u.String()
 }

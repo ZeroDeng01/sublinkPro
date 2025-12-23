@@ -33,12 +33,12 @@ func EncodeSSRURL(s Ssr) string {
 	remarks := "remarks=" + utils.Base64Encode(s.Qurey.Remarks)
 	// 如果没有备注默认使用服务器+端口作为备注
 	if s.Qurey.Remarks == "" {
-		server_port := utils.Base64Encode(s.Server + ":" + strconv.Itoa(s.Port))
+		server_port := utils.Base64Encode(s.Server + ":" + utils.GetPortString(s.Port))
 		remarks = fmt.Sprintf("remarks=%s", server_port)
 	}
-	param := fmt.Sprintf("%s:%d:%s:%s:%s:%s/?%s&%s",
+	param := fmt.Sprintf("%s:%s:%s:%s:%s:%s/?%s&%s",
 		s.Server,
-		s.Port,
+		utils.GetPortString(s.Port),
 		s.Protocol,
 		s.Method,
 		s.Obfs,
@@ -131,7 +131,7 @@ func DecodeSSRURL(s string) (Ssr, error) {
 
 type Ssr struct {
 	Server   string
-	Port     int
+	Port     interface{}
 	Protocol string
 	Method   string
 	Obfs     string

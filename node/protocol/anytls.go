@@ -6,12 +6,13 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sublink/utils"
 )
 
 type AnyTLS struct {
 	Name              string
 	Server            string
-	Port              int
+	Port              interface{}
 	Password          string
 	SkipCertVerify    bool
 	SNI               string
@@ -70,7 +71,7 @@ func EncodeAnyTLSURL(a AnyTLS) string {
 	u := url.URL{
 		Scheme:   "anytls",
 		User:     url.User(a.Password),
-		Host:     fmt.Sprintf("%s:%d", a.Server, a.Port),
+		Host:     fmt.Sprintf("%s:%s", a.Server, utils.GetPortString(a.Port)),
 		Fragment: a.Name,
 	}
 	q := u.Query()
@@ -86,7 +87,7 @@ func EncodeAnyTLSURL(a AnyTLS) string {
 	u.RawQuery = q.Encode()
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if a.Name == "" {
-		u.Fragment = fmt.Sprintf("%s:%d", a.Server, a.Port)
+		u.Fragment = fmt.Sprintf("%s:%s", a.Server, utils.GetPortString(a.Port))
 	}
 	return u.String()
 }
