@@ -770,7 +770,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		Node.Source = subName
 		Node.SourceID = id
 		Node.Group = airport.Group
-
+		Node.Protocol = proxy.Type
 		// 记录本次获取到的节点
 		currentLinks[link] = true
 

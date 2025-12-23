@@ -54,7 +54,7 @@ func init() {
 	RegisterHandler("help", &HelpHandler{})
 	RegisterHandler("stats", &StatsHandler{})
 	RegisterHandler("monitor", &MonitorHandler{})
-	RegisterHandler("speedtest", &SpeedTestHandler{})
+	RegisterHandler("profiles", &ProfilesHandler{})
 	RegisterHandler("subscriptions", &SubscriptionsHandler{})
 	RegisterHandler("nodes", &NodesHandler{})
 	RegisterHandler("tags", &TagsHandler{})
@@ -77,7 +77,7 @@ func (h *StartHandler) Handle(bot *TelegramBot, message *Message) error {
 *可用功能：*
 • 📊 查看仪表盘统计数据
 • 🖥️ 查看系统监控信息
-• ⚡ 开始节点检测任务
+• ⚡ 节点检测策略管理
 • 📋 管理订阅和节点
 • 🏷️ 执行标签规则
 • 📝 查看和管理任务
@@ -86,7 +86,7 @@ func (h *StartHandler) Handle(bot *TelegramBot, message *Message) error {
 
 	keyboard := [][]InlineKeyboardButton{
 		{NewInlineButton("📊 统计", "stats"), NewInlineButton("🖥️ 监控", "monitor")},
-		{NewInlineButton("⚡ 测速", "speedtest"), NewInlineButton("📋 订阅", "subscriptions")},
+		{NewInlineButton("⚡ 检测策略", "profiles"), NewInlineButton("📋 订阅", "subscriptions")},
 		{NewInlineButton("❓ 帮助", "help")},
 	}
 
@@ -107,7 +107,7 @@ func (h *HelpHandler) Handle(bot *TelegramBot, message *Message) error {
 /help - ❓ 帮助信息
 /stats - 📊 仪表盘统计
 /monitor - 🖥️ 系统监控
-/speedtest - ⚡ 开始测速
+/profiles - ⚡ 检测策略
 /subscriptions - 📋 订阅管理
 /nodes - 🌐 节点信息
 /tags - 🏷️ 标签规则
@@ -310,15 +310,67 @@ func (h *MonitorHandler) Handle(bot *TelegramBot, message *Message) error {
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text, "Markdown", keyboard)
 }
 
-// ============ SpeedTestHandler ============
+// ============ ProfilesHandler ============
 
-type SpeedTestHandler struct{}
+type ProfilesHandler struct{}
 
-func (h *SpeedTestHandler) Command() string     { return "speedtest" }
-func (h *SpeedTestHandler) Description() string { return "⚡ 开始检测" }
+func (h *ProfilesHandler) Command() string     { return "profiles" }
+func (h *ProfilesHandler) Description() string { return "⚡ 检测策略" }
 
-func (h *SpeedTestHandler) Handle(bot *TelegramBot, message *Message) error {
-	// 统计未测速节点数
+func (h *ProfilesHandler) Handle(bot *TelegramBot, message *Message) error {
+	profiles, err := GetNodeCheckProfiles()
+	if err != nil {
+		return bot.SendMessage(message.Chat.ID, "❌ 获取策略列表失败: "+err.Error(), "")
+	}
+
+	if len(profiles) == 0 {
+		text := "⚡ *检测策略*\n\n暂无检测策略，请在 Web 端创建。"
+		return bot.SendMessage(message.Chat.ID, text, "Markdown")
+	}
+
+	var text strings.Builder
+	text.WriteString("⚡ *检测策略列表*\n\n")
+
+	var keyboard [][]InlineKeyboardButton
+
+	for i, p := range profiles {
+		if i >= 10 {
+			text.WriteString(fmt.Sprintf("\n... 还有 %d 个策略", len(profiles)-10))
+			break
+		}
+
+		// 状态图标
+		status := "⏸️"
+		if p.Enabled {
+			status = "✅"
+		}
+
+		// 模式显示
+		mode := "TCP"
+		if p.Mode == "mihomo" {
+			mode = "Mihomo"
+		}
+
+		text.WriteString(fmt.Sprintf("%s *%s*\n", status, p.Name))
+		text.WriteString(fmt.Sprintf("   └ 模式: %s", mode))
+		if p.CronExpr != "" {
+			text.WriteString(fmt.Sprintf(" | 定时: `%s`", p.CronExpr))
+		}
+		text.WriteString("\n")
+
+		if p.LastRunTime != nil {
+			text.WriteString(fmt.Sprintf("   └ 上次执行: %s\n", p.LastRunTime.Format("01-02 15:04")))
+		}
+		text.WriteString("\n")
+
+		// 操作按钮
+		keyboard = append(keyboard, []InlineKeyboardButton{
+			NewInlineButton("🔍 "+truncateName(p.Name, 10), fmt.Sprintf("profile_detail:%d", p.ID)),
+			NewInlineButton("▶️ 执行", fmt.Sprintf("profile_run:%d", p.ID)),
+		})
+	}
+
+	// 统计未测速节点
 	var node models.Node
 	nodes, _ := node.List()
 	untestedCount := 0
@@ -328,19 +380,18 @@ func (h *SpeedTestHandler) Handle(bot *TelegramBot, message *Message) error {
 		}
 	}
 
-	text := fmt.Sprintf(`⚡ *检测任务*
-
-节点总数: %d
-未检测: %d
-
-请选择检测方式：`, len(nodes), untestedCount)
-
-	keyboard := [][]InlineKeyboardButton{
-		{NewInlineButton("▶️ 执行定时检测", "speedtest:scheduled")},
-		{NewInlineButton("⏰ 检测未检测节点", "speedtest:untested")},
+	if untestedCount > 0 {
+		text.WriteString(fmt.Sprintf("\n📌 *未测速节点: %d*\n", untestedCount))
+		keyboard = append(keyboard, []InlineKeyboardButton{
+			NewInlineButton("🔍 选择策略检测未测速节点", "profile_select_untested"),
+		})
 	}
 
-	return bot.SendMessageWithKeyboard(message.Chat.ID, text, "Markdown", keyboard)
+	keyboard = append(keyboard, []InlineKeyboardButton{
+		NewInlineButton("🔙 返回", "start"),
+	})
+
+	return bot.SendMessageWithKeyboard(message.Chat.ID, text.String(), "Markdown", keyboard)
 }
 
 // ============ SubscriptionsHandler ============
@@ -452,7 +503,7 @@ func (h *NodesHandler) Handle(bot *TelegramBot, message *Message) error {
 %s`, total, onlineCount, total-onlineCount, countryText.String())
 
 	keyboard := [][]InlineKeyboardButton{
-		{NewInlineButton("🔄 刷新", "nodes"), NewInlineButton("⚡ 检测", "speedtest")},
+		{NewInlineButton("🔄 刷新", "nodes"), NewInlineButton("⚡ 检测", "profiles")},
 	}
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text, "Markdown", keyboard)
@@ -526,14 +577,28 @@ func (h *TasksHandler) Handle(bot *TelegramBot, message *Message) error {
 	var keyboard [][]InlineKeyboardButton
 
 	for _, task := range runningTasks {
-		progress := ""
+		// 任务名称
+		text.WriteString(fmt.Sprintf("📋 *%s*\n", task.Name))
+
+		// 进度信息
 		if task.Total > 0 {
-			progress = fmt.Sprintf(" (%d/%d)", task.Progress, task.Total)
+			percent := float64(task.Progress) / float64(task.Total) * 100
+			text.WriteString(fmt.Sprintf("├ 进度: %d/%d (%.0f%%)\n", task.Progress, task.Total, percent))
 		}
-		text.WriteString(fmt.Sprintf("• %s%s\n", task.Name, progress))
+
+		// 当前处理项
+		if task.CurrentItem != "" {
+			text.WriteString(fmt.Sprintf("├ 当前: %s\n", truncateName(task.CurrentItem, 30)))
+		}
+
+		// 状态消息
+		if task.Message != "" {
+			text.WriteString(fmt.Sprintf("└ 状态: %s\n", task.Message))
+		}
+		text.WriteString("\n")
 
 		keyboard = append(keyboard, []InlineKeyboardButton{
-			NewInlineButton("❌ 取消 "+task.Name, fmt.Sprintf("task_cancel:%s", task.ID)),
+			NewInlineButton("❌ 取消 "+truncateName(task.Name, 12), fmt.Sprintf("task_cancel:%s", task.ID)),
 		})
 	}
 
@@ -548,12 +613,13 @@ func (h *TasksHandler) Handle(bot *TelegramBot, message *Message) error {
 
 // ServicesWrapper 服务包装器接口
 type ServicesWrapper interface {
-	RunSpeedTestOnNodes(nodes []models.Node)
-	ExecuteScheduledSpeedTest()
 	ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trigger models.TaskTrigger)
 	ApplyAutoTagRules(nodes []models.Node, triggerSource string)
 	CancelTask(taskID string) error
 	GetRunningTasks() []models.Task
+	GetNodeCheckProfiles() ([]models.NodeCheckProfile, error)
+	ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int)
+	ToggleProfileEnabled(profileID int) (bool, error)
 }
 
 var servicesWrapper ServicesWrapper
@@ -573,46 +639,16 @@ func GetRunningTasksFromService() []models.Task {
 	return tasks
 }
 
-// ========== Helper Functions ==========
-
-// RunSpeedTest 启动测速任务
-func RunSpeedTest(scope string) error {
-	switch scope {
-	case "scheduled":
-		// 执行定时测速配置（与 Web 端绿色按钮一致）
-		if servicesWrapper != nil {
-			go servicesWrapper.ExecuteScheduledSpeedTest()
-		}
-		utils.Info("Telegram 触发定时测速任务")
-		return nil
-
-	case "untested":
-		var node models.Node
-		allNodes, err := node.List()
-		if err != nil {
-			return fmt.Errorf("获取节点失败: %v", err)
-		}
-		// 筛选未测速节点
-		var nodes []models.Node
-		for _, n := range allNodes {
-			if n.DelayStatus == "" || n.DelayStatus == "untested" {
-				nodes = append(nodes, n)
-			}
-		}
-		if len(nodes) == 0 {
-			return fmt.Errorf("没有未测速的节点")
-		}
-		// 通过包装器调用服务层
-		if servicesWrapper != nil {
-			go servicesWrapper.RunSpeedTestOnNodes(nodes)
-		}
-		utils.Info("Telegram 触发未测速节点测速: %d 个节点", len(nodes))
-		return nil
-
-	default:
-		return fmt.Errorf("未知的测速范围: %s", scope)
+// GetNodeCheckProfiles 获取节点检测策略列表
+func GetNodeCheckProfiles() ([]models.NodeCheckProfile, error) {
+	if servicesWrapper != nil {
+		return servicesWrapper.GetNodeCheckProfiles()
 	}
+	var profile models.NodeCheckProfile
+	return profile.List()
 }
+
+// ========== Helper Functions ==========
 
 // PullSubscription 拉取订阅（机场更新）
 func PullSubscription(airportID int) error {
@@ -653,6 +689,23 @@ func CancelTask(taskID string) error {
 		return servicesWrapper.CancelTask(taskID)
 	}
 	return fmt.Errorf("服务未初始化")
+}
+
+// ExecuteNodeCheckWithProfile 执行节点检测
+func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int) error {
+	if servicesWrapper != nil {
+		go servicesWrapper.ExecuteNodeCheckWithProfile(profileID, nodeIDs)
+		return nil
+	}
+	return fmt.Errorf("服务未初始化")
+}
+
+// ToggleProfileEnabled 开关策略定时执行
+func ToggleProfileEnabled(profileID int) (bool, error) {
+	if servicesWrapper != nil {
+		return servicesWrapper.ToggleProfileEnabled(profileID)
+	}
+	return false, fmt.Errorf("服务未初始化")
 }
 
 // GetSubscriptionLink 获取订阅链接

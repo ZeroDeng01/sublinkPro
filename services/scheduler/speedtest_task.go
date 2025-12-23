@@ -2,8 +2,6 @@ package scheduler
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"sublink/constants"
 	"sublink/models"
 	"sublink/node"
@@ -16,135 +14,10 @@ import (
 	"time"
 )
 
-// StartNodeSpeedTestTask 启动节点测速定时任务
-func (sm *SchedulerManager) StartNodeSpeedTestTask(cronExpr string) error {
-	sm.mutex.Lock()
-	defer sm.mutex.Unlock()
-
-	// 清理Cron表达式
-	cleanCronExpr := cleanCronExpression(cronExpr)
-
-	// 如果任务已存在，先删除
-	if entryID, exists := sm.jobs[JobIDSpeedTest]; exists {
-		sm.cron.Remove(entryID)
-		delete(sm.jobs, JobIDSpeedTest)
-	}
-
-	// 添加新任务
-	entryID, err := sm.cron.AddFunc(cleanCronExpr, func() {
-		ExecuteNodeSpeedTestTask()
-	})
-
-	if err != nil {
-		utils.Error("添加节点测速任务失败 - Cron: %s, Error: %v", cleanCronExpr, err)
-		return err
-	}
-
-	// 存储任务映射
-	sm.jobs[JobIDSpeedTest] = entryID
-	utils.Info("成功添加节点测速任务 - JobID: %d", JobIDSpeedTest)
-	utils.Info("成功添加节点测速任务 - Cron: %s", cleanCronExpr)
-	return nil
-}
-
-// StopNodeSpeedTestTask 停止节点测速定时任务
-func (sm *SchedulerManager) StopNodeSpeedTestTask() {
-	sm.mutex.Lock()
-	defer sm.mutex.Unlock()
-
-	if entryID, exists := sm.jobs[JobIDSpeedTest]; exists {
-		sm.cron.Remove(entryID)
-		delete(sm.jobs, JobIDSpeedTest)
-		utils.Info("成功停止节点测速任务")
-	}
-}
-
-// ExecuteNodeSpeedTestTask 执行节点测速任务
-func ExecuteNodeSpeedTestTask() {
-	utils.Info("开始执行节点测速任务...")
-
-	// 获取测速分组和标签配置
-	speedTestGroupsStr, _ := models.GetSetting("speed_test_groups")
-	speedTestTagsStr, _ := models.GetSetting("speed_test_tags")
-	var nodes []models.Node
-	var err error
-
-	// 分组优先级高于标签：
-	// 1. 如果选了分组，先按分组筛选，再按标签过滤
-	// 2. 如果只选了标签，直接按标签筛选
-	// 3. 都不选则测全部
-	if speedTestGroupsStr != "" {
-		groups := strings.Split(speedTestGroupsStr, ",")
-		nodes, err = new(models.Node).ListByGroups(groups)
-		utils.Debug("根据分组测速: %v", groups)
-
-		// 在分组基础上按标签继续筛选
-		if err == nil && speedTestTagsStr != "" {
-			tags := strings.Split(speedTestTagsStr, ",")
-			nodes = models.FilterNodesByTags(nodes, tags)
-			utils.Debug("在分组基础上按标签过滤: %v, 剩余节点: %d", tags, len(nodes))
-		}
-	} else if speedTestTagsStr != "" {
-		tags := strings.Split(speedTestTagsStr, ",")
-		nodes, err = new(models.Node).ListByTags(tags)
-		utils.Debug("根据标签测速: %v", tags)
-	} else {
-		nodes, err = new(models.Node).List()
-		utils.Debug("全量测速")
-	}
-
-	if err != nil {
-		utils.Error("获取节点列表失败: %v", err)
-		return
-	}
-
-	// 使用 TaskManager 创建任务（定时触发）
-	RunSpeedTestOnNodesWithTrigger(nodes, models.TaskTriggerScheduled)
-}
-
-// ExecuteSpecificNodeSpeedTestTask 执行指定节点测速任务
-func ExecuteSpecificNodeSpeedTestTask(nodeIDs []int) {
-	utils.Debug("开始执行指定节点测速任务: %v", nodeIDs)
-	if len(nodeIDs) == 0 {
-		return
-	}
-
-	// 获取指定节点
-	var nodes []models.Node
-	for _, id := range nodeIDs {
-		var n models.Node
-		n.ID = id
-		if err := n.GetByID(); err == nil {
-			nodes = append(nodes, n)
-		}
-	}
-
-	if len(nodes) == 0 {
-		utils.Warn("未找到指定节点")
-		return
-	}
-
-	// 使用 TaskManager 创建任务（手动触发）
-	RunSpeedTestOnNodesWithTrigger(nodes, models.TaskTriggerManual)
-}
-
-// RunSpeedTestOnNodes 对指定节点列表执行测速（向后兼容，默认手动触发）
+// RunSpeedTestWithConfig 使用指定配置执行节点测速（并发安全）
+// 每个任务使用独立的配置实例，完全避免配置覆盖问题
 // 采用两阶段测试策略：阶段一并发测延迟，阶段二低并发测速度
-func RunSpeedTestOnNodes(nodes []models.Node) {
-	RunSpeedTestOnNodesWithTrigger(nodes, models.TaskTriggerManual)
-}
-
-// RunSpeedTestOnNodesWithTrigger 对指定节点列表执行测速（带触发类型）
-// 采用两阶段测试策略：阶段一并发测延迟，阶段二低并发测速度
-// 支持通过 TaskManager 进行任务取消
-func RunSpeedTestOnNodesWithTrigger(nodes []models.Node, trigger models.TaskTrigger) {
-	RunSpeedTestOnNodesWithName(nodes, trigger, "节点检测")
-}
-
-// RunSpeedTestOnNodesWithName 对指定节点列表执行测速（带触发类型和策略名称）
-// 采用两阶段测试策略：阶段一并发测延迟，阶段二低并发测速度
-// 支持通过 TaskManager 进行任务取消
-func RunSpeedTestOnNodesWithName(nodes []models.Node, trigger models.TaskTrigger, profileName string) {
+func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, profileName string, config *SpeedTestConfig) {
 	if len(nodes) == 0 {
 		utils.Warn("没有要检测的节点")
 		return
@@ -176,86 +49,59 @@ func RunSpeedTestOnNodesWithName(nodes []models.Node, trigger models.TaskTrigger
 		return
 	}
 
-	// 获取测速配置
-	speedTestUrl, _ := models.GetSetting("speed_test_url")
-	latencyTestUrl, _ := models.GetSetting("speed_test_latency_url")
-	// 向后兼容：如果未配置延迟URL，使用速度URL
+	// 从配置对象读取参数（并发安全，不再访问全局Settings）
+	speedTestUrl := config.SpeedTestURL
+	latencyTestUrl := config.LatencyTestURL
 	if latencyTestUrl == "" {
 		latencyTestUrl = speedTestUrl
 	}
-	speedTestTimeoutStr, _ := models.GetSetting("speed_test_timeout")
-	speedTestTimeout := 5 * time.Second
-	if speedTestTimeoutStr != "" {
-		if d, err := time.ParseDuration(speedTestTimeoutStr + "s"); err == nil {
-			speedTestTimeout = d
-		}
+	speedTestTimeout := config.Timeout
+	if speedTestTimeout == 0 {
+		speedTestTimeout = 5 * time.Second
 	}
 
 	// 获取测速模式
-	speedTestMode, _ := models.GetSetting("speed_test_mode")
+	speedTestMode := config.Mode
 
-	// 获取是否检测落地IP国家
-	detectCountryStr, _ := models.GetSetting("speed_test_detect_country")
-	detectCountry := detectCountryStr == "true"
-
-	// 获取落地IP查询接口URL
-	landingIPUrl, _ := models.GetSetting("speed_test_landing_ip_url")
+	// 从配置对象读取检测参数（并发安全）
+	detectCountry := config.DetectCountry
+	landingIPUrl := config.LandingIPURL
 	if landingIPUrl == "" {
-		landingIPUrl = "https://api.ipify.org" // 默认使用ipify
+		landingIPUrl = "https://api.ipify.org"
 	}
 
-	// 获取流量统计开关设置
-	trafficByGroupStr, _ := models.GetSetting("speed_test_traffic_by_group")
-	trafficByGroup := trafficByGroupStr != "false" // 默认开启
-	trafficBySourceStr, _ := models.GetSetting("speed_test_traffic_by_source")
-	trafficBySource := trafficBySourceStr != "false" // 默认开启
-	trafficByNodeStr, _ := models.GetSetting("speed_test_traffic_by_node")
-	trafficByNode := trafficByNodeStr == "true" // 默认关闭
+	// 流量统计开关
+	trafficByGroup := config.TrafficByGroup
+	trafficBySource := config.TrafficBySource
+	trafficByNode := config.TrafficByNode
 
-	// 获取是否包含握手时间（默认true，测量完整连接时间；false则使用 UnifiedDelay 模式排除握手）
-	includeHandshakeStr, _ := models.GetSetting("speed_test_include_handshake")
-	includeHandshake := includeHandshakeStr != "false" // 默认包含握手时间
+	// 握手时间设置
+	includeHandshake := config.IncludeHandshake
 
-	// 获取速度记录模式（average=平均速度, peak=峰值速度）
-	speedRecordMode, _ := models.GetSetting("speed_test_speed_record_mode")
+	// 速度记录模式
+	speedRecordMode := config.SpeedRecordMode
 	if speedRecordMode == "" {
 		speedRecordMode = "average"
 	}
 
-	// 获取峰值采样间隔（毫秒）
-	peakSampleIntervalStr, _ := models.GetSetting("speed_test_peak_sample_interval")
-	peakSampleInterval := 100 // 默认100ms
-	if peakSampleIntervalStr != "" {
-		if v, err := strconv.Atoi(peakSampleIntervalStr); err == nil && v >= 50 && v <= 200 {
-			peakSampleInterval = v
-		}
+	// 峰值采样间隔
+	peakSampleInterval := config.PeakSampleInterval
+	if peakSampleInterval == 0 {
+		peakSampleInterval = 100
 	}
 
-	// 获取是否持久化Host（测速成功时自动保存域名->IP映射）
-	persistHostStr, _ := models.GetSetting("speed_test_persist_host")
-	persistHost := persistHostStr == "true"
+	// 持久化Host
+	persistHost := config.PersistHost
 
-	// 获取延迟测试并发数
+	// 延迟测试并发数
 	const maxConcurrency = 1000
-	latencyConcurrency := 10 // 默认延迟测试并发数
-	latencyConcurrencyStr, _ := models.GetSetting("speed_test_latency_concurrency")
-	if latencyConcurrencyStr != "" {
-		if c, err := strconv.Atoi(latencyConcurrencyStr); err == nil && c >= 0 {
-			latencyConcurrency = c
-		}
-	}
-	// 向后兼容：如果新配置为空，尝试读取旧配置
-	if latencyConcurrencyStr == "" {
-		oldConcurrencyStr, _ := models.GetSetting("speed_test_concurrency")
-		if oldConcurrencyStr != "" {
-			if c, err := strconv.Atoi(oldConcurrencyStr); err == nil && c >= 0 {
-				latencyConcurrency = c
-			}
-		}
+	latencyConcurrency := config.LatencyConcurrency
+	if latencyConcurrency == 0 {
+		latencyConcurrency = 10 // 默认值
 	}
 
 	// 标记是否使用动态并发
-	useAdaptiveLatency := latencyConcurrency == 0
+	useAdaptiveLatency := config.LatencyConcurrency == 0
 	var latencyController AdaptiveConcurrencyController
 	if useAdaptiveLatency {
 		latencyController = newAdaptiveConcurrencyController(AdaptiveTypeLatency, totalNodes)
@@ -267,17 +113,14 @@ func RunSpeedTestOnNodesWithName(nodes []models.Node, trigger models.TaskTrigger
 		}
 	}
 
-	// 获取速度测试并发数
-	speedConcurrency := 1 // 默认速度测试并发数为1（串行）
-	speedConcurrencyStr, _ := models.GetSetting("speed_test_speed_concurrency")
-	if speedConcurrencyStr != "" {
-		if c, err := strconv.Atoi(speedConcurrencyStr); err == nil && c >= 0 {
-			speedConcurrency = c
-		}
+	// 速度测试并发数
+	speedConcurrency := config.SpeedConcurrency
+	if speedConcurrency == 0 {
+		speedConcurrency = 1 // 默认值
 	}
 
 	// 标记是否使用动态并发
-	useAdaptiveSpeed := speedConcurrency == 0
+	useAdaptiveSpeed := config.SpeedConcurrency == 0
 	var speedController AdaptiveConcurrencyController
 	if useAdaptiveSpeed {
 		speedController = newAdaptiveConcurrencyController(AdaptiveTypeSpeed, totalNodes)
@@ -948,9 +791,8 @@ func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int) {
 		return
 	}
 
-	// 应用策略配置到系统设置（临时覆盖，用于复用现有测速逻辑）
-	// 这样可以复用 RunSpeedTestOnNodesWithName 的完整逻辑
-	applyProfileToSettings(profile)
+	// 从策略构建独立的配置对象（并发安全，完全避免全局状态共享）
+	config := SpeedTestConfigFromProfile(profile)
 
 	// 确定触发类型
 	trigger := models.TaskTriggerManual
@@ -959,8 +801,8 @@ func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int) {
 		trigger = models.TaskTriggerScheduled
 	}
 
-	// 执行检测（使用策略名称作为任务名）
-	RunSpeedTestOnNodesWithName(nodes, trigger, profile.Name)
+	// 执行检测（使用策略名称作为任务名，传递独立配置）
+	RunSpeedTestWithConfig(nodes, trigger, profile.Name, config)
 
 	// 更新策略的上次执行时间（保留现有的下次执行时间）
 	now := time.Now()
@@ -968,35 +810,3 @@ func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int) {
 		utils.Warn("更新策略执行时间失败: %v", err)
 	}
 }
-
-// applyProfileToSettings 将策略配置临时应用到系统设置
-// 这是为了复用现有的测速逻辑，而不需要重写整个流程
-func applyProfileToSettings(profile *models.NodeCheckProfile) {
-	// 测速模式
-	_ = models.SetSetting("speed_test_mode", profile.Mode)
-	// 测速URL
-	_ = models.SetSetting("speed_test_url", profile.TestURL)
-	// 延迟测试URL
-	_ = models.SetSetting("speed_test_latency_url", profile.LatencyURL)
-	// 超时时间
-	_ = models.SetSetting("speed_test_timeout", strconv.Itoa(profile.Timeout))
-	// 延迟并发数
-	_ = models.SetSetting("speed_test_latency_concurrency", strconv.Itoa(profile.LatencyConcurrency))
-	// 速度并发数
-	_ = models.SetSetting("speed_test_speed_concurrency", strconv.Itoa(profile.SpeedConcurrency))
-	// 检测落地IP
-	_ = models.SetSetting("speed_test_detect_country", strconv.FormatBool(profile.DetectCountry))
-	// 落地IP查询URL
-	_ = models.SetSetting("speed_test_landing_ip_url", profile.LandingIPURL)
-	// 包含握手时间
-	_ = models.SetSetting("speed_test_include_handshake", strconv.FormatBool(profile.IncludeHandshake))
-	// 速度记录模式
-	_ = models.SetSetting("speed_test_speed_record_mode", profile.SpeedRecordMode)
-	// 峰值采样间隔
-	_ = models.SetSetting("speed_test_peak_sample_interval", strconv.Itoa(profile.PeakSampleInterval))
-	// 流量统计
-	_ = models.SetSetting("speed_test_traffic_by_group", strconv.FormatBool(profile.TrafficByGroup))
-	_ = models.SetSetting("speed_test_traffic_by_source", strconv.FormatBool(profile.TrafficBySource))
-	_ = models.SetSetting("speed_test_traffic_by_node", strconv.FormatBool(profile.TrafficByNode))
-}
-

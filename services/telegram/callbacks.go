@@ -46,15 +46,25 @@ func HandleCallbackQuery(bot *TelegramBot, callback *CallbackQuery) error {
 	case "cancel":
 		return handleCancelCallback(bot, callback)
 
-	// 操作回调
-	case "speedtest":
-		return handleSpeedTestCallback(bot, callback, param)
-	case "sub_pull":
-		return handleSubPullCallback(bot, callback, param)
-	case "airport_pull":
-		return handleAirportPullCallback(bot, callback, param)
+	// 检测策略相关回调
+	case "profiles":
+		return handleProfilesCallback(bot, callback)
+	case "profile_detail":
+		return handleProfileDetailCallback(bot, callback, param)
+	case "profile_run":
+		return handleProfileRunCallback(bot, callback, param)
+	case "profile_toggle":
+		return handleProfileToggleCallback(bot, callback, param)
+	case "profile_select_untested":
+		return handleProfileSelectUntestedCallback(bot, callback)
+	case "profile_run_untested":
+		return handleProfileRunUntestedCallback(bot, callback, param)
+
+	// 其他操作回调
 	case "sub_link":
 		return handleSubLinkCallback(bot, callback, param)
+	case "airport_pull":
+		return handleAirportPullCallback(bot, callback, param)
 	case "task_cancel":
 		return handleTaskCancelCallback(bot, callback, param)
 
@@ -148,43 +158,226 @@ func handleCancelCallback(bot *TelegramBot, callback *CallbackQuery) error {
 	return bot.EditMessage(callback.Message.Chat.ID, callback.Message.MessageID, "✅ 已取消", "", nil)
 }
 
-// handleSpeedTestCallback 处理测速回调
-func handleSpeedTestCallback(bot *TelegramBot, callback *CallbackQuery, scope string) error {
-	if scope == "" {
-		handler := GetHandler("speedtest")
-		if handler == nil {
-			return nil
-		}
-		return handler.Handle(bot, callback.Message)
-	}
+// ============ 检测策略相关回调 ============
 
-	if err := RunSpeedTest(scope); err != nil {
-		return bot.EditMessage(callback.Message.Chat.ID, callback.Message.MessageID,
-			"❌ 启动测速失败: "+err.Error(), "", nil)
+// handleProfilesCallback 处理 profiles 回调
+func handleProfilesCallback(bot *TelegramBot, callback *CallbackQuery) error {
+	handler := GetHandler("profiles")
+	if handler == nil {
+		return nil
 	}
-
-	scopeText := "定时测速配置"
-	if scope == "untested" {
-		scopeText = "未测速节点"
-	}
-
-	return bot.EditMessage(callback.Message.Chat.ID, callback.Message.MessageID,
-		fmt.Sprintf("✅ 已开始测速 (%s)\n\n测速完成后将会收到通知", scopeText), "", nil)
+	return handler.Handle(bot, callback.Message)
 }
 
-// handleSubPullCallback 处理订阅拉取回调
-func handleSubPullCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
-	subID, err := strconv.Atoi(param)
+// handleProfileDetailCallback 处理策略详情回调
+func handleProfileDetailCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
+	id, err := strconv.Atoi(param)
 	if err != nil {
-		return bot.SendMessage(callback.Message.Chat.ID, "❌ 无效的订阅 ID", "")
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 无效的策略ID", "")
 	}
 
-	if err := PullSubscription(subID); err != nil {
-		return bot.SendMessage(callback.Message.Chat.ID, "❌ 更新订阅失败: "+err.Error(), "")
+	profile, err := models.GetNodeCheckProfileByID(id)
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 策略不存在", "")
 	}
 
-	return bot.SendMessage(callback.Message.Chat.ID, "✅ 已开始更新订阅，完成后将会收到通知", "")
+	var text strings.Builder
+	text.WriteString(fmt.Sprintf("⚡ *策略详情: %s*\n\n", profile.Name))
+
+	// 基本信息
+	status := "❌ 已禁用"
+	if profile.Enabled {
+		status = "✅ 已启用"
+	}
+	text.WriteString(fmt.Sprintf("🔌 定时状态: %s\n", status))
+
+	if profile.CronExpr != "" {
+		text.WriteString(fmt.Sprintf("⏰ 定时: `%s`\n", profile.CronExpr))
+	}
+
+	// 模式配置
+	mode := "TCP（仅延迟）"
+	if profile.Mode == "mihomo" {
+		mode = "Mihomo（延迟+速度）"
+	}
+	text.WriteString(fmt.Sprintf("📡 模式: %s\n", mode))
+	text.WriteString(fmt.Sprintf("⏱️ 超时: %d 秒\n", profile.Timeout))
+
+	// URL配置
+	if profile.TestURL != "" {
+		text.WriteString(fmt.Sprintf("🔗 测速URL: `%s`\n", truncateName(profile.TestURL, 35)))
+	}
+	if profile.LatencyURL != "" {
+		text.WriteString(fmt.Sprintf("🔗 延迟URL: `%s`\n", truncateName(profile.LatencyURL, 35)))
+	}
+
+	// 并发配置
+	text.WriteString(fmt.Sprintf("\n*并发配置*\n"))
+	latencyC := "自动"
+	if profile.LatencyConcurrency > 0 {
+		latencyC = fmt.Sprintf("%d", profile.LatencyConcurrency)
+	}
+	text.WriteString(fmt.Sprintf("├ 延迟并发: %s\n", latencyC))
+	text.WriteString(fmt.Sprintf("└ 速度并发: %d\n", profile.SpeedConcurrency))
+
+	// 范围过滤
+	groups := profile.GetGroups()
+	tags := profile.GetTags()
+	if len(groups) > 0 || len(tags) > 0 {
+		text.WriteString(fmt.Sprintf("\n*检测范围*\n"))
+		if len(groups) > 0 {
+			text.WriteString(fmt.Sprintf("├ 分组: %s\n", strings.Join(groups, ", ")))
+		}
+		if len(tags) > 0 {
+			text.WriteString(fmt.Sprintf("└ 标签: %s\n", strings.Join(tags, ", ")))
+		}
+	} else {
+		text.WriteString("\n*检测范围*: 全部节点\n")
+	}
+
+	// 执行时间
+	if profile.LastRunTime != nil {
+		text.WriteString(fmt.Sprintf("\n🕒 上次执行: %s\n", profile.LastRunTime.Format("2006-01-02 15:04:05")))
+	}
+	if profile.NextRunTime != nil {
+		text.WriteString(fmt.Sprintf("⏳ 下次执行: %s\n", profile.NextRunTime.Format("2006-01-02 15:04:05")))
+	}
+
+	// 操作按钮
+	toggleText := "✅ 启用定时"
+	if profile.Enabled {
+		toggleText = "⏸️ 禁用定时"
+	}
+
+	keyboard := [][]InlineKeyboardButton{
+		{
+			NewInlineButton("▶️ 立即执行", fmt.Sprintf("profile_run:%d", id)),
+			NewInlineButton(toggleText, fmt.Sprintf("profile_toggle:%d", id)),
+		},
+		{NewInlineButton("🔙 返回列表", "profiles")},
+	}
+
+	return bot.SendMessageWithKeyboard(callback.Message.Chat.ID, text.String(), "Markdown", keyboard)
 }
+
+// handleProfileRunCallback 处理策略执行回调
+func handleProfileRunCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 无效的策略ID", "")
+	}
+
+	profile, err := models.GetNodeCheckProfileByID(id)
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 策略不存在", "")
+	}
+
+	if err := ExecuteNodeCheckWithProfile(id, nil); err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 启动检测失败: "+err.Error(), "")
+	}
+
+	text := fmt.Sprintf("✅ 已启动检测任务\n\n📋 策略: *%s*\n\n检测完成后将收到通知", profile.Name)
+	return bot.SendMessage(callback.Message.Chat.ID, text, "Markdown")
+}
+
+// handleProfileToggleCallback 处理策略开关回调
+func handleProfileToggleCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 无效的策略ID", "")
+	}
+
+	newEnabled, err := ToggleProfileEnabled(id)
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 操作失败: "+err.Error(), "")
+	}
+
+	status := "已禁用"
+	if newEnabled {
+		status = "已启用"
+	}
+
+	text := fmt.Sprintf("✅ 定时执行%s", status)
+	return bot.SendMessage(callback.Message.Chat.ID, text, "")
+}
+
+// handleProfileSelectUntestedCallback 处理选择策略检测未测速节点
+func handleProfileSelectUntestedCallback(bot *TelegramBot, callback *CallbackQuery) error {
+	profiles, err := GetNodeCheckProfiles()
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 获取策略列表失败", "")
+	}
+
+	if len(profiles) == 0 {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 暂无检测策略，请先在 Web 端创建", "")
+	}
+
+	// 统计未测速节点
+	var node models.Node
+	nodes, _ := node.List()
+	untestedCount := 0
+	for _, n := range nodes {
+		if n.DelayStatus == "" || n.DelayStatus == "untested" {
+			untestedCount++
+		}
+	}
+
+	if untestedCount == 0 {
+		return bot.SendMessage(callback.Message.Chat.ID, "✅ 所有节点都已测速", "")
+	}
+
+	var text strings.Builder
+	text.WriteString(fmt.Sprintf("🔍 *选择策略检测未测速节点*\n\n共有 *%d* 个未测速节点\n\n请选择一个策略：", untestedCount))
+
+	var keyboard [][]InlineKeyboardButton
+	for _, p := range profiles {
+		keyboard = append(keyboard, []InlineKeyboardButton{
+			NewInlineButton(p.Name, fmt.Sprintf("profile_run_untested:%d", p.ID)),
+		})
+	}
+	keyboard = append(keyboard, []InlineKeyboardButton{
+		NewInlineButton("🔙 返回", "profiles"),
+	})
+
+	return bot.SendMessageWithKeyboard(callback.Message.Chat.ID, text.String(), "Markdown", keyboard)
+}
+
+// handleProfileRunUntestedCallback 使用指定策略检测未测速节点
+func handleProfileRunUntestedCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
+	profileID, err := strconv.Atoi(param)
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 无效的策略ID", "")
+	}
+
+	profile, err := models.GetNodeCheckProfileByID(profileID)
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 策略不存在", "")
+	}
+
+	// 获取未测速节点ID
+	var node models.Node
+	nodes, _ := node.List()
+	var untestedIDs []int
+	for _, n := range nodes {
+		if n.DelayStatus == "" || n.DelayStatus == "untested" {
+			untestedIDs = append(untestedIDs, n.ID)
+		}
+	}
+
+	if len(untestedIDs) == 0 {
+		return bot.SendMessage(callback.Message.Chat.ID, "✅ 所有节点都已测速", "")
+	}
+
+	// 执行检测
+	if err := ExecuteNodeCheckWithProfile(profileID, untestedIDs); err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 启动检测失败: "+err.Error(), "")
+	}
+
+	text := fmt.Sprintf("✅ 已启动未测速节点检测\n\n📋 策略: *%s*\n📦 节点数: *%d*\n\n检测完成后将收到通知", profile.Name, len(untestedIDs))
+	return bot.SendMessage(callback.Message.Chat.ID, text, "Markdown")
+}
+
+// ============ 其他回调 ============
 
 // handleTaskCancelCallback 处理任务取消回调
 func handleTaskCancelCallback(bot *TelegramBot, callback *CallbackQuery, taskID string) error {

@@ -264,7 +264,7 @@ func (b *TelegramBot) SetCommands() error {
 		{"command": "help", "description": "❓ 帮助信息"},
 		{"command": "stats", "description": "📊 仪表盘统计"},
 		{"command": "monitor", "description": "🖥️ 系统监控"},
-		{"command": "speedtest", "description": "⚡ 开始测速"},
+		{"command": "profiles", "description": "⚡ 检测策略"},
 		{"command": "subscriptions", "description": "📋 订阅管理"},
 		{"command": "nodes", "description": "🌐 节点信息"},
 		{"command": "tags", "description": "🏷️ 标签规则"},

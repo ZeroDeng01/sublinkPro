@@ -287,25 +287,29 @@ func DeleteNodeCheckProfile(c *gin.Context) {
 // POST /api/v1/node-check/run
 func RunNodeCheck(c *gin.Context) {
 	var req struct {
-		ProfileID int   `json:"profileId"` // 策略ID（可选，0表示使用默认设置）
-		NodeIDs   []int `json:"nodeIds"`   // 节点ID列表（可选，空表示按策略范围执行）
+		ProfileID int   `json:"profileId" binding:"required"` // 策略ID（必填）
+		NodeIDs   []int `json:"nodeIds"`                      // 节点ID列表（可选，空表示按策略范围执行）
 	}
-	// 尝试绑定 JSON，可能没有body
-	_ = c.ShouldBindJSON(&req)
 
-	if req.ProfileID > 0 {
-		// 使用指定策略执行
-		go scheduler.ExecuteNodeCheckWithProfile(req.ProfileID, req.NodeIDs)
-		utils.OkWithMsg(c, "节点检测任务已启动")
-	} else if len(req.NodeIDs) > 0 {
-		// 指定节点使用默认配置执行
-		go scheduler.ExecuteSpecificNodeSpeedTestTask(req.NodeIDs)
-		utils.OkWithMsg(c, "指定节点检测任务已启动")
-	} else {
-		// 全量执行
-		go scheduler.ExecuteNodeSpeedTestTask()
-		utils.OkWithMsg(c, "节点检测任务已启动")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误：必须指定检测策略")
+		return
 	}
+
+	if req.ProfileID <= 0 {
+		utils.FailWithMsg(c, "参数错误：必须指定有效的检测策略ID")
+		return
+	}
+
+	// 验证策略存在
+	if _, err := models.GetNodeCheckProfileByID(req.ProfileID); err != nil {
+		utils.FailWithMsg(c, "策略不存在")
+		return
+	}
+
+	// 使用指定策略执行
+	go scheduler.ExecuteNodeCheckWithProfile(req.ProfileID, req.NodeIDs)
+	utils.OkWithMsg(c, "节点检测任务已启动")
 }
 
 // RunNodeCheckWithProfile 使用指定策略执行节点检测
