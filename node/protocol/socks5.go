@@ -32,8 +32,12 @@ func DecodeSocks5URL(s string) (Socks5, error) {
 		fmt.Println("Socks5 SplitHostPort error", err)
 		return Socks5{}, err
 	}
+	rawPort := port
+	if rawPort == "" {
+		rawPort = "443"
+	}
 	socks5.Server = host
-	socks5.Port, err = strconv.Atoi(port)
+	socks5.Port, err = strconv.Atoi(rawPort)
 	if err != nil {
 		fmt.Println("Socks5 Port conversion failed:", err)
 		return Socks5{}, err

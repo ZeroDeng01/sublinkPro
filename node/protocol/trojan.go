@@ -102,7 +102,11 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 	}
 	password := u.User.Username()
 	hostname := u.Hostname()
-	port, _ := strconv.Atoi(u.Port())
+	rawPort := u.Port()
+	if rawPort == "" {
+		rawPort = "443"
+	}
+	port, _ := strconv.Atoi(rawPort)
 	peer := u.Query().Get("peer")
 	allowInsecure := u.Query().Get("allowInsecure")
 	sni := u.Query().Get("sni")

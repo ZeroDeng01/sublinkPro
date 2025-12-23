@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"github.com/google/uuid"
 	"math/big"
 	"math/rand"
 	"net"
@@ -280,4 +281,10 @@ func FormatBytes(bytes int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.2f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+// IsUUID 检测是否为UUID
+func IsUUID(id string) bool {
+	_, err := uuid.Parse(id)
+	return err == nil
 }

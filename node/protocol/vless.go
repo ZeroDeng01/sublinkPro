@@ -112,8 +112,21 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 		return VLESS{}, fmt.Errorf("url parse error: %v", err)
 	}
 	uuid := u.User.Username()
+	if !utils.IsUUID(uuid) {
+		utils.Error("❌节点解析错误：%v  【节点：%s】", "UUID格式错误", s)
+		return VLESS{}, fmt.Errorf("uuid格式错误:%s", uuid)
+	}
 	hostname := u.Hostname()
-	port, _ := strconv.Atoi(u.Port())
+	rawPort := u.Port()
+	if rawPort == "" {
+		if u.Query().Get("security") != "" {
+			rawPort = "443"
+		}
+		if u.Query().Get("security") == "none" {
+			rawPort = "80"
+		}
+	}
+	port, _ := strconv.Atoi(rawPort)
 	encryption := u.Query().Get("encryption")
 	security := u.Query().Get("security")
 	types := u.Query().Get("type")

@@ -32,11 +32,19 @@ func DecodeTuicURL(s string) (Tuic, error) {
 	}
 
 	uuid := u.User.Username()
+	if !utils.IsUUID(uuid) {
+		utils.Error("❌节点解析错误：%v  【节点：%s】", "UUID格式错误", s)
+		return Tuic{}, fmt.Errorf("uuid格式错误:%s", uuid)
+	}
 	password, _ := u.User.Password()
 	// log.Println(password)
 	// password = Base64Decode2(password)
 	server := u.Hostname()
-	port, _ := strconv.Atoi(u.Port())
+	rawPort := u.Port()
+	if rawPort == "" {
+		rawPort = "443"
+	}
+	port, _ := strconv.Atoi(rawPort)
 	Congestioncontrol := u.Query().Get("Congestion_control")
 	alpns := u.Query().Get("alpn")
 	alpn := strings.Split(alpns, ",")

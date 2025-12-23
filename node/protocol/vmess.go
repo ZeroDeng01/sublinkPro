@@ -3,7 +3,6 @@ package protocol
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"sublink/utils"
 )
@@ -68,8 +67,12 @@ func DecodeVMESSURL(s string) (Vmess, error) {
 	var vmess Vmess
 	err := json.Unmarshal([]byte(param), &vmess)
 	if err != nil {
-		log.Printf("❌节点解析错误：%v  【节点：%s】", err, param)
+		utils.Error("❌节点解析错误：%v  【节点：%s】", err, param)
 		return Vmess{}, fmt.Errorf("json格式化失败:%s", param)
+	}
+	if !utils.IsUUID(vmess.Id) {
+		utils.Error("❌节点解析错误：%v  【节点：%s】", "UUID格式错误", param)
+		return Vmess{}, fmt.Errorf("uuid格式错误:%s", vmess.Id)
 	}
 	vmess.Add = utils.UnwrapIPv6Host(vmess.Add)
 	if vmess.Scy == "" {

@@ -82,7 +82,11 @@ func DecodeHY2URL(s string) (HY2, error) {
 	}
 	password := u.User.Username()
 	server := u.Hostname()
-	port, _ := strconv.Atoi(u.Port())
+	rawPort := u.Port()
+	if rawPort == "" {
+		rawPort = "443"
+	}
+	port, _ := strconv.Atoi(rawPort)
 	insecure, _ := strconv.Atoi(u.Query().Get("insecure"))
 	auth := u.Query().Get("auth")
 	upMbps, _ := strconv.Atoi(u.Query().Get("upmbps"))
