@@ -86,6 +86,18 @@ export function sortSubscription(data) {
   });
 }
 
+// 批量排序订阅节点
+export function batchSortSubscription(data) {
+  return request({
+    url: '/v1/subcription/batch-sort',
+    method: 'post',
+    data,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+}
+
 // 复制订阅
 export function copySubscription(id) {
   return request({

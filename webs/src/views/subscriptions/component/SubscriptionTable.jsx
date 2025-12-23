@@ -37,6 +37,7 @@ export default function SubscriptionTable({
   expandedRows,
   sortingSubId,
   tempSortData,
+  selectedSortItems = [],
   onToggleRow,
   onClient,
   onLogs,
@@ -50,7 +51,12 @@ export default function SubscriptionTable({
   onCancelSort,
   onDragEnd,
   onCopyToClipboard,
-  getSortedItems
+  getSortedItems,
+  onToggleSortSelect,
+  onSelectAllSort,
+  onClearSortSelection,
+  onBatchSort,
+  onBatchMove
 }) {
   return (
     <TableContainer component={Paper}>
@@ -150,7 +156,16 @@ export default function SubscriptionTable({
                   <Collapse in={expandedRows[sub.ID] || sortingSubId === sub.ID} timeout="auto" unmountOnExit>
                     <Box sx={{ margin: 2 }}>
                       {sortingSubId === sub.ID ? (
-                        <SortableNodeList items={tempSortData} onDragEnd={onDragEnd} />
+                        <SortableNodeList
+                          items={tempSortData}
+                          onDragEnd={onDragEnd}
+                          selectedItems={selectedSortItems}
+                          onToggleSelect={onToggleSortSelect}
+                          onSelectAll={onSelectAllSort}
+                          onClearSelection={onClearSortSelection}
+                          onBatchSort={onBatchSort}
+                          onBatchMove={onBatchMove}
+                        />
                       ) : (
                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                           {getSortedItems(sub).map((item, idx) =>

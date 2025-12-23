@@ -4,6 +4,7 @@ export { default as QrCodeDialog } from './QrCodeDialog';
 export { default as ClientUrlsDialog } from './ClientUrlsDialog';
 export { default as AccessLogsDialog } from './AccessLogsDialog';
 export { default as SortableNodeList } from './SortableNodeList';
+export { default as SortToolbar } from './SortToolbar';
 export { default as SubscriptionMobileCard } from './SubscriptionMobileCard';
 export { default as SubscriptionTable } from './SubscriptionTable';
 export { default as NodeTransferBox } from './NodeTransferBox';

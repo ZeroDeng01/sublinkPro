@@ -23,6 +23,7 @@ import {
   updateSubscription,
   deleteSubscription,
   sortSubscription,
+  batchSortSubscription,
   copySubscription,
   previewSubscriptionNodes
 } from 'api/subscriptions';
@@ -140,6 +141,7 @@ export default function SubscriptionList() {
   // 排序模式
   const [sortingSubId, setSortingSubId] = useState(null);
   const [tempSortData, setTempSortData] = useState([]);
+  const [selectedSortItems, setSelectedSortItems] = useState([]); // 多选排序项
 
   // 展开行
   const [expandedRows, setExpandedRows] = useState({});
@@ -623,6 +625,7 @@ export default function SubscriptionList() {
   // === 排序功能 ===
   const handleStartSort = (sub) => {
     setSortingSubId(sub.ID);
+    setSelectedSortItems([]); // 重置多选
     const sortData = [];
     (sub.Nodes || []).forEach((node, idx) => {
       sortData.push({
@@ -643,7 +646,7 @@ export default function SubscriptionList() {
     });
     sortData.sort((a, b) => a.Sort - b.Sort);
     setTempSortData(sortData);
-    showMessage('已进入排序模式，拖动项目进行排序', 'info');
+    showMessage('已进入排序模式，拖动或多选批量操作', 'info');
   };
 
   const handleConfirmSort = async (sub) => {
@@ -666,6 +669,7 @@ export default function SubscriptionList() {
   const handleCancelSort = () => {
     setSortingSubId(null);
     setTempSortData([]);
+    setSelectedSortItems([]);
     showMessage('已取消排序', 'info');
   };
 
@@ -675,6 +679,61 @@ export default function SubscriptionList() {
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
     setTempSortData(items);
+  };
+
+  // === 多选排序功能 ===
+  const handleToggleSortSelect = (name) => {
+    setSelectedSortItems((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
+  };
+
+  const handleSelectAllSort = () => {
+    setSelectedSortItems(tempSortData.map((item) => item.Name));
+  };
+
+  const handleClearSortSelection = () => {
+    setSelectedSortItems([]);
+  };
+
+  // 批量排序（调用后端API）
+  const handleBatchSort = async (sortBy, sortOrder) => {
+    if (!sortingSubId) return;
+    try {
+      await batchSortSubscription({
+        ID: sortingSubId,
+        sortBy,
+        sortOrder
+      });
+      showMessage('批量排序成功');
+      // 重新加载订阅数据并刷新排序列表
+      const response = await getSubscriptions({ page: page + 1, pageSize: rowsPerPage });
+      const subs = response.data?.items || response.data || [];
+      setSubscriptions(subs);
+      // 找到当前排序的订阅并刷新排序数据
+      const currentSub = subs.find((s) => s.ID === sortingSubId);
+      if (currentSub) {
+        handleStartSort(currentSub);
+      }
+    } catch (error) {
+      console.error(error);
+      showMessage(error.message || '批量排序失败', 'error');
+    }
+  };
+
+  // 批量移动（前端本地操作，需要用户确认后保存）
+  const handleBatchMove = (targetIndex) => {
+    if (selectedSortItems.length === 0) return;
+
+    const selected = tempSortData.filter((item) => selectedSortItems.includes(item.Name));
+    const remaining = tempSortData.filter((item) => !selectedSortItems.includes(item.Name));
+
+    // 插入到目标位置
+    const newData = [...remaining];
+    const insertAt = Math.min(Math.max(0, targetIndex), newData.length);
+    newData.splice(insertAt, 0, ...selected);
+
+    setTempSortData(newData);
+    setSelectedSortItems([]);
+    showMessage(`已移动 ${selected.length} 项到位置 ${insertAt + 1}`);
   };
 
   // 展开/折叠行
@@ -758,6 +817,7 @@ export default function SubscriptionList() {
           expandedRows={expandedRows}
           sortingSubId={sortingSubId}
           tempSortData={tempSortData}
+          selectedSortItems={selectedSortItems}
           theme={theme}
           onToggleRow={toggleRow}
           onClient={handleClient}
@@ -773,6 +833,11 @@ export default function SubscriptionList() {
           onDragEnd={onDragEnd}
           onCopyToClipboard={copyToClipboard}
           getSortedItems={getSortedItems}
+          onToggleSortSelect={handleToggleSortSelect}
+          onSelectAllSort={handleSelectAllSort}
+          onClearSortSelection={handleClearSortSelection}
+          onBatchSort={handleBatchSort}
+          onBatchMove={handleBatchMove}
         />
       ) : (
         <SubscriptionTable
@@ -782,6 +847,7 @@ export default function SubscriptionList() {
           expandedRows={expandedRows}
           sortingSubId={sortingSubId}
           tempSortData={tempSortData}
+          selectedSortItems={selectedSortItems}
           onToggleRow={toggleRow}
           onClient={handleClient}
           onLogs={handleLogs}
@@ -796,6 +862,11 @@ export default function SubscriptionList() {
           onDragEnd={onDragEnd}
           onCopyToClipboard={copyToClipboard}
           getSortedItems={getSortedItems}
+          onToggleSortSelect={handleToggleSortSelect}
+          onSelectAllSort={handleSelectAllSort}
+          onClearSortSelection={handleClearSortSelection}
+          onBatchSort={handleBatchSort}
+          onBatchMove={handleBatchMove}
         />
       )}
 

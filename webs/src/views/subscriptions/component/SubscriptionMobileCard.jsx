@@ -39,6 +39,7 @@ export default function SubscriptionMobileCard({
   expandedRows,
   sortingSubId,
   tempSortData,
+  selectedSortItems = [],
   theme,
   onToggleRow,
   onClient,
@@ -53,7 +54,12 @@ export default function SubscriptionMobileCard({
   onCancelSort,
   onDragEnd,
   onCopyToClipboard,
-  getSortedItems
+  getSortedItems,
+  onToggleSortSelect,
+  onSelectAllSort,
+  onClearSortSelection,
+  onBatchSort,
+  onBatchMove
 }) {
   // 更多菜单状态
   const [menuAnchor, setMenuAnchor] = useState(null);
@@ -193,7 +199,16 @@ export default function SubscriptionMobileCard({
               <Collapse in={expandedRows[sub.ID] || sortingSubId === sub.ID} timeout="auto" unmountOnExit>
                 <Box sx={{ mt: 2 }}>
                   {sortingSubId === sub.ID ? (
-                    <SortableNodeList items={tempSortData} onDragEnd={onDragEnd} />
+                    <SortableNodeList
+                      items={tempSortData}
+                      onDragEnd={onDragEnd}
+                      selectedItems={selectedSortItems}
+                      onToggleSelect={onToggleSortSelect}
+                      onSelectAll={onSelectAllSort}
+                      onClearSelection={onClearSortSelection}
+                      onBatchSort={onBatchSort}
+                      onBatchMove={onBatchMove}
+                    />
                   ) : (
                     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                       {getSortedItems(sub).map((item, idx) =>

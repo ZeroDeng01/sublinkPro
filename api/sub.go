@@ -444,6 +444,45 @@ func SubSort(c *gin.Context) {
 	utils.OkWithMsg(c, "更新排序成功")
 }
 
+// SubBatchSort 批量排序订阅节点
+func SubBatchSort(c *gin.Context) {
+	var req dto.BatchSortRequest
+	if err := c.BindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		return
+	}
+
+	// 验证排序字段
+	validSortBy := map[string]bool{
+		"source": true, "name": true, "protocol": true,
+		"delay": true, "speed": true, "country": true,
+	}
+	if !validSortBy[req.SortBy] {
+		utils.FailWithMsg(c, "无效的排序字段")
+		return
+	}
+
+	// 验证排序方向
+	if req.SortOrder != "asc" && req.SortOrder != "desc" {
+		utils.FailWithMsg(c, "无效的排序方向")
+		return
+	}
+
+	var sub models.Subcription
+	sub.ID = req.ID
+	if err := sub.Find(); err != nil {
+		utils.FailWithMsg(c, "订阅不存在")
+		return
+	}
+
+	if err := sub.BatchSort(req.SortBy, req.SortOrder); err != nil {
+		utils.FailWithMsg(c, err.Error())
+		return
+	}
+
+	utils.OkWithMsg(c, "批量排序成功")
+}
+
 // GetProtocolMeta 获取协议元数据（协议列表及其可用字段）
 func GetProtocolMeta(c *gin.Context) {
 	meta := protocol.GetAllProtocolMeta()

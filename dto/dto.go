@@ -36,3 +36,10 @@ type AirportRequest struct {
 	FetchUsageInfo    bool   `json:"fetchUsageInfo"` // 是否获取用量信息
 	SkipTLSVerify     bool   `json:"skipTLSVerify"`  // 是否跳过TLS证书验证
 }
+
+// BatchSortRequest 批量排序请求
+type BatchSortRequest struct {
+	ID        int    `json:"ID" binding:"required"`        // 订阅ID
+	SortBy    string `json:"sortBy" binding:"required"`    // 排序字段: source, name, protocol, delay, speed, country
+	SortOrder string `json:"sortOrder" binding:"required"` // 排序方向: asc, desc
+}

@@ -977,6 +977,97 @@ func (sub *Subcription) Sort(subNodeSort dto.SubcriptionNodeSortUpdate) error {
 	return nil
 }
 
+// BatchSort 批量排序订阅节点
+// sortBy: source(来源), name(名称), protocol(协议), delay(延迟), speed(速度), country(地区)
+// sortOrder: asc(升序), desc(降序)
+func (sub *Subcription) BatchSort(sortBy, sortOrder string) error {
+	// 获取订阅的所有节点关联（带节点详情）
+	var subNodes []struct {
+		SubcriptionNode
+		Node Node `gorm:"embedded"`
+	}
+
+	err := database.DB.Table("subcription_nodes").
+		Select("subcription_nodes.*, nodes.*").
+		Joins("LEFT JOIN nodes ON nodes.id = subcription_nodes.node_id").
+		Where("subcription_nodes.subcription_id = ?", sub.ID).
+		Scan(&subNodes).Error
+	if err != nil {
+		return fmt.Errorf("获取节点关联失败: %w", err)
+	}
+
+	if len(subNodes) == 0 {
+		return nil
+	}
+
+	// 按指定规则排序
+	sort.Slice(subNodes, func(i, j int) bool {
+		var less bool
+		switch sortBy {
+		case "source":
+			less = subNodes[i].Node.Source < subNodes[j].Node.Source
+		case "name":
+			less = subNodes[i].Node.Name < subNodes[j].Node.Name
+		case "protocol":
+			less = subNodes[i].Node.Protocol < subNodes[j].Node.Protocol
+		case "delay":
+			// 未测试的节点排最后
+			if subNodes[i].Node.DelayTime <= 0 && subNodes[j].Node.DelayTime <= 0 {
+				less = subNodes[i].Node.ID < subNodes[j].Node.ID
+			} else if subNodes[i].Node.DelayTime <= 0 {
+				less = false
+			} else if subNodes[j].Node.DelayTime <= 0 {
+				less = true
+			} else {
+				less = subNodes[i].Node.DelayTime < subNodes[j].Node.DelayTime
+			}
+		case "speed":
+			// 未测试的节点排最后
+			if subNodes[i].Node.Speed <= 0 && subNodes[j].Node.Speed <= 0 {
+				less = subNodes[i].Node.ID < subNodes[j].Node.ID
+			} else if subNodes[i].Node.Speed <= 0 {
+				less = false
+			} else if subNodes[j].Node.Speed <= 0 {
+				less = true
+			} else {
+				less = subNodes[i].Node.Speed < subNodes[j].Node.Speed
+			}
+		case "country":
+			less = subNodes[i].Node.LinkCountry < subNodes[j].Node.LinkCountry
+		default:
+			less = subNodes[i].Node.ID < subNodes[j].Node.ID
+		}
+
+		// 如果是降序，反转结果
+		if sortOrder == "desc" {
+			return !less
+		}
+		return less
+	})
+
+	// 批量更新排序值
+	tx := database.DB.Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("开启事务失败: %w", tx.Error)
+	}
+
+	for idx, sn := range subNodes {
+		err := tx.Model(&SubcriptionNode{}).
+			Where("subcription_id = ? AND node_id = ?", sub.ID, sn.NodeID).
+			Update("sort", idx).Error
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("更新节点排序失败: %w", err)
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("提交事务失败: %w", err)
+	}
+
+	return nil
+}
+
 // PreviewNode 预览节点信息结构体
 type PreviewNode struct {
 	Node

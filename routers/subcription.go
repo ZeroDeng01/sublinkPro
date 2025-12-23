@@ -16,6 +16,7 @@ func Subcription(r *gin.Engine) {
 		SubcriptionGroup.GET("/get", api.SubGet)
 		SubcriptionGroup.POST("/update", api.SubUpdate)
 		SubcriptionGroup.POST("/sort", api.SubSort)
+		SubcriptionGroup.POST("/batch-sort", api.SubBatchSort)           // 批量排序接口
 		SubcriptionGroup.POST("/copy", api.SubCopy)                      // 复制订阅接口
 		SubcriptionGroup.POST("/preview", api.PreviewSubscriptionNodes)  // 节点预览接口
 		SubcriptionGroup.GET("/protocol-meta", api.GetProtocolMeta)      // 协议元数据接口
