@@ -29,7 +29,7 @@ type NodeCheckProfile struct {
 
 	// 并发控制
 	LatencyConcurrency int `gorm:"default:0" json:"latencyConcurrency"` // 延迟检测并发(0=自动)
-	SpeedConcurrency   int `gorm:"default:1" json:"speedConcurrency"`   // 速度检测并发
+	SpeedConcurrency   int `gorm:"default:0" json:"speedConcurrency"`   // 速度检测并发(0=自动)
 
 	// 高级选项
 	DetectCountry      bool   `gorm:"default:false" json:"detectCountry"`       // 检测落地IP国家

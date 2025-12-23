@@ -271,15 +271,14 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
             </Box>
 
             {/* Content */}
-            <Box sx={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+            <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
               {/* Header row */}
-              <Box
-                sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 0.5, mb: 0.25 }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 0.5, mb: 0.25 }}>
                 <Box
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    flexWrap: "wrap",
+                    display: 'flex',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
                     gap: 0.5,
                     minWidth: 0,
                     flex: 1,
@@ -292,7 +291,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                       fontWeight: 600,
                       fontSize: '0.8rem',
                       color: isDark ? '#fff' : theme.palette.text.primary,
-                      whiteSpace: "nowrap",
+                      whiteSpace: 'nowrap',
                       flexShrink: 0
                     }}
                   >
@@ -304,12 +303,12 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                       size="small"
                       sx={{
                         height: 16,
-                        fontSize: "0.6rem",
+                        fontSize: '0.6rem',
                         fontWeight: 500,
                         bgcolor: alpha(taskConfig.accentColor, 0.15),
                         color: isDark ? alpha('#fff', 0.9) : taskConfig.accentColor,
                         border: `1px solid ${alpha(taskConfig.accentColor, 0.2)}`,
-                        "& .MuiChip-label": { px: 0.5, overflow: "hidden", textOverflow: "ellipsis" },
+                        '& .MuiChip-label': { px: 0.5, overflow: 'hidden', textOverflow: 'ellipsis' },
                         maxWidth: 70
                       }}
                     />

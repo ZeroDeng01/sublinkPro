@@ -78,7 +78,7 @@ export function deleteNodesBatch(ids) {
 // 获取节点检测策略列表（替代原测速配置）
 export function getSpeedTestConfig() {
   return request({
-    url: "/v1/node-check/profiles",
+    url: '/v1/node-check/profiles',
     method: 'get'
   });
 }
@@ -86,7 +86,7 @@ export function getSpeedTestConfig() {
 // 运行测速（向后兼容，使用新的node-check API）
 export function runSpeedTest(ids, profileId) {
   return request({
-    url: "/v1/node-check/run",
+    url: '/v1/node-check/run',
     method: 'post',
     data: {
       nodeIds: ids || [],

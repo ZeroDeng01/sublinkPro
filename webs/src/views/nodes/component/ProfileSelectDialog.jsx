@@ -1,35 +1,35 @@
-import PropTypes from "prop-types";
-import { useState, useEffect, useCallback } from "react";
+import PropTypes from 'prop-types';
+import { useState, useEffect, useCallback } from 'react';
 
 // material-ui
-import { useTheme } from "@mui/material/styles";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
-import List from "@mui/material/List";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemText from "@mui/material/ListItemText";
-import Typography from "@mui/material/Typography";
+import { useTheme } from '@mui/material/styles';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Typography from '@mui/material/Typography';
 
 // icons
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CloseIcon from "@mui/icons-material/Close";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import ScheduleIcon from "@mui/icons-material/Schedule";
-import SettingsIcon from "@mui/icons-material/Settings";
-import SpeedIcon from "@mui/icons-material/Speed";
-import TimerIcon from "@mui/icons-material/Timer";
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CloseIcon from '@mui/icons-material/Close';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import SettingsIcon from '@mui/icons-material/Settings';
+import SpeedIcon from '@mui/icons-material/Speed';
+import TimerIcon from '@mui/icons-material/Timer';
 
 // api
-import { getNodeCheckProfiles, runNodeCheck } from "api/nodeCheck";
+import { getNodeCheckProfiles, runNodeCheck } from 'api/nodeCheck';
 
 /**
  * 节点检测策略选择对话框
@@ -37,7 +37,7 @@ import { getNodeCheckProfiles, runNodeCheck } from "api/nodeCheck";
  */
 export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess, onOpenSettings }) {
   const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
+  const isDark = theme.palette.mode === 'dark';
 
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -56,7 +56,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
         setSelectedProfileId((prev) => prev || data[0].id);
       }
     } catch (error) {
-      console.error("加载策略列表失败:", error);
+      console.error('加载策略列表失败:', error);
     } finally {
       setLoading(false);
     }
@@ -76,11 +76,11 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
     setExecuting(true);
     try {
       await runNodeCheck(selectedProfileId, nodeIds);
-      onSuccess?.("检测任务已在后台启动");
+      onSuccess?.('检测任务已在后台启动');
       onClose();
     } catch (error) {
-      console.error("执行检测失败:", error);
-      onSuccess?.(error.message || "执行检测失败", "error");
+      console.error('执行检测失败:', error);
+      onSuccess?.(error.message || '执行检测失败', 'error');
     } finally {
       setExecuting(false);
     }
@@ -89,11 +89,11 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
   const formatNextRunTime = (nextRunTime) => {
     if (!nextRunTime) return null;
     const date = new Date(nextRunTime);
-    return date.toLocaleString("zh-CN", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
+    return date.toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -106,13 +106,13 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
       PaperProps={{
         sx: {
           borderRadius: 3,
-          backgroundColor: isDark ? "rgba(30,30,30,0.95)" : "background.paper"
+          backgroundColor: isDark ? 'rgba(30,30,30,0.95)' : 'background.paper'
         }
       }}
     >
       <DialogTitle sx={{ pb: 1 }}>
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SpeedIcon color="primary" />
             <span>选择检测策略</span>
           </Box>
@@ -131,11 +131,11 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
 
       <DialogContent sx={{ p: 0 }}>
         {loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress size={32} />
           </Box>
         ) : profiles.length === 0 ? (
-          <Box sx={{ textAlign: "center", py: 4 }}>
+          <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography color="text.secondary" gutterBottom>
               暂无检测策略
             </Typography>
@@ -159,11 +159,11 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
                 onClick={() => handleSelect(profile.id)}
                 sx={{
                   borderBottom:
-                    index < profiles.length - 1 ? `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}` : "none",
-                  "&.Mui-selected": {
-                    backgroundColor: isDark ? "rgba(33, 150, 243, 0.16)" : "rgba(33, 150, 243, 0.08)",
-                    "&:hover": {
-                      backgroundColor: isDark ? "rgba(33, 150, 243, 0.24)" : "rgba(33, 150, 243, 0.12)"
+                    index < profiles.length - 1 ? `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` : 'none',
+                  '&.Mui-selected': {
+                    backgroundColor: isDark ? 'rgba(33, 150, 243, 0.16)' : 'rgba(33, 150, 243, 0.08)',
+                    '&:hover': {
+                      backgroundColor: isDark ? 'rgba(33, 150, 243, 0.24)' : 'rgba(33, 150, 243, 0.12)'
                     }
                   }
                 }}
@@ -177,35 +177,34 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
                 </ListItemIcon>
                 <ListItemText
                   primary={
-                    <Box component="span" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <span>{profile.name}</span>
                       <Chip
-                        label={profile.mode === "mihomo" ? "延迟+速度" : "仅延迟"}
+                        label={profile.mode === 'mihomo' ? '延迟+速度' : '仅延迟'}
                         size="small"
                         sx={{
                           height: 20,
-                          fontSize: "0.7rem",
+                          fontSize: '0.7rem',
                           backgroundColor:
-                            profile.mode === "mihomo"
+                            profile.mode === 'mihomo'
                               ? isDark
-                                ? "rgba(76, 175, 80, 0.2)"
-                                : "rgba(76, 175, 80, 0.1)"
+                                ? 'rgba(76, 175, 80, 0.2)'
+                                : 'rgba(76, 175, 80, 0.1)'
                               : isDark
-                                ? "rgba(33, 150, 243, 0.2)"
-                                : "rgba(33, 150, 243, 0.1)",
-                          color: profile.mode === "mihomo" ? "success.main" : "primary.main"
+                                ? 'rgba(33, 150, 243, 0.2)'
+                                : 'rgba(33, 150, 243, 0.1)',
+                          color: profile.mode === 'mihomo' ? 'success.main' : 'primary.main'
                         }}
                       />
                     </Box>
                   }
                   secondary={
-                    <Box component="span"
-                         sx={{ display: "flex", flexDirection: "row", gap: 1, mt: 0.5, alignItems: "center" }}>
+                    <Box component="span" sx={{ display: 'flex', flexDirection: 'row', gap: 1, mt: 0.5, alignItems: 'center' }}>
                       {profile.enabled && (
                         <>
                           <ScheduleIcon sx={{ fontSize: 14, opacity: 0.6 }} />
                           <Typography component="span" variant="caption" color="text.secondary">
-                            {formatNextRunTime(profile.nextRunTime) || "定时启用"}
+                            {formatNextRunTime(profile.nextRunTime) || '定时启用'}
                           </Typography>
                         </>
                       )}
@@ -219,7 +218,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
                       )}
                     </Box>
                   }
-                  secondaryTypographyProps={{ component: "div" }}
+                  secondaryTypographyProps={{ component: 'div' }}
                 />
               </ListItemButton>
             ))}
@@ -229,7 +228,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
 
       <Divider />
 
-      <DialogActions sx={{ px: 2, py: 1.5, justifyContent: "space-between" }}>
+      <DialogActions sx={{ px: 2, py: 1.5, justifyContent: 'space-between' }}>
         <Button
           size="small"
           startIcon={<SettingsIcon />}
@@ -247,10 +246,10 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
           onClick={handleExecute}
           disabled={!selectedProfileId || executing || profiles.length === 0}
           sx={{
-            background: "linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)",
-            fontStyle: { color: "#ffffff" },
-            "&:hover": {
-              background: "linear-gradient(135deg, #66bb6a 0%, #388e3c 100%)"
+            background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
+            fontStyle: { color: '#ffffff' },
+            '&:hover': {
+              background: 'linear-gradient(135deg, #66bb6a 0%, #388e3c 100%)'
             }
           }}
         >

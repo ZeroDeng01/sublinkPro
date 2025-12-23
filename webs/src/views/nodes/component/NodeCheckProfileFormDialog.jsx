@@ -1,55 +1,50 @@
-import PropTypes from "prop-types";
-import { useState, useEffect } from "react";
+import PropTypes from 'prop-types';
+import { useState, useEffect } from 'react';
 
 // material-ui
-import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import Alert from "@mui/material/Alert";
-import Autocomplete from "@mui/material/Autocomplete";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
-import Collapse from "@mui/material/Collapse";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import Divider from "@mui/material/Divider";
-import FormControl from "@mui/material/FormControl";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import InputAdornment from "@mui/material/InputAdornment";
-import InputLabel from "@mui/material/InputLabel";
-import MenuItem from "@mui/material/MenuItem";
-import Paper from "@mui/material/Paper";
-import Select from "@mui/material/Select";
-import Stack from "@mui/material/Stack";
-import Switch from "@mui/material/Switch";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
-import Grid from "@mui/material/Grid";
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import Alert from '@mui/material/Alert';
+import Autocomplete from '@mui/material/Autocomplete';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import Collapse from '@mui/material/Collapse';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Divider from '@mui/material/Divider';
+import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import InputAdornment from '@mui/material/InputAdornment';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
+import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
 
 // icons
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import SpeedIcon from "@mui/icons-material/Speed";
-import TimerIcon from "@mui/icons-material/Timer";
-import TuneIcon from "@mui/icons-material/Tune";
-import DataUsageIcon from "@mui/icons-material/DataUsage";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import SpeedIcon from '@mui/icons-material/Speed';
+import TimerIcon from '@mui/icons-material/Timer';
+import TuneIcon from '@mui/icons-material/Tune';
+import DataUsageIcon from '@mui/icons-material/DataUsage';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 // project imports
-import CronExpressionGenerator from "components/CronExpressionGenerator";
+import CronExpressionGenerator from 'components/CronExpressionGenerator';
 
 // api
-import { createNodeCheckProfile, updateNodeCheckProfile } from "api/nodeCheck";
+import { createNodeCheckProfile, updateNodeCheckProfile } from 'api/nodeCheck';
 
 // constants
-import {
-  SPEED_TEST_TCP_OPTIONS,
-  SPEED_TEST_MIHOMO_OPTIONS,
-  LATENCY_TEST_URL_OPTIONS,
-  LANDING_IP_URL_OPTIONS
-} from "../utils";
+import { SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS, LATENCY_TEST_URL_OPTIONS, LANDING_IP_URL_OPTIONS } from '../utils';
 
 /**
  * 可折叠配置区块
@@ -57,33 +52,33 @@ import {
 function ConfigSection({ title, icon, children, defaultExpanded = true, helperText }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
+  const isDark = theme.palette.mode === 'dark';
 
   return (
     <Paper
       elevation={0}
       sx={{
-        border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
+        border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
         borderRadius: 2,
-        overflow: "hidden",
+        overflow: 'hidden',
         mb: 2
       }}
     >
       <Box
         onClick={() => setExpanded(!expanded)}
         sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           p: 1.5,
-          cursor: "pointer",
-          backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
-          "&:hover": {
-            backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)"
+          cursor: 'pointer',
+          backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+          '&:hover': {
+            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
           }
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {icon}
           <Typography variant="subtitle2" fontWeight={600}>
             {title}
@@ -96,7 +91,7 @@ function ConfigSection({ title, icon, children, defaultExpanded = true, helperTe
         <Box sx={{ p: 2 }}>
           {children}
           {helperText && (
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 1.5, display: "block" }}>
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 1.5, display: 'block' }}>
               {helperText}
             </Typography>
           )}
@@ -117,35 +112,28 @@ ConfigSection.propTypes = {
 /**
  * 节点检测策略编辑表单对话框
  */
-export default function NodeCheckProfileFormDialog({
-                                                     open,
-                                                     onClose,
-                                                     profile,
-                                                     groupOptions = [],
-                                                     tagOptions = [],
-                                                     onSuccess
-                                                   }) {
+export default function NodeCheckProfileFormDialog({ open, onClose, profile, groupOptions = [], tagOptions = [], onSuccess }) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isEdit = !!profile;
 
   // 表单状态
   const [form, setForm] = useState({
-    name: "",
+    name: '',
     enabled: false,
-    cronExpr: "",
-    mode: "tcp",
-    testUrl: "",
-    latencyUrl: "",
+    cronExpr: '',
+    mode: 'tcp',
+    testUrl: '',
+    latencyUrl: '',
     timeout: 5,
     groups: [],
     tags: [],
     latencyConcurrency: 0,
     speedConcurrency: 1,
     detectCountry: false,
-    landingIpUrl: "",
+    landingIpUrl: '',
     includeHandshake: true,
-    speedRecordMode: "average",
+    speedRecordMode: 'average',
     peakSampleInterval: 100,
     trafficByGroup: true,
     trafficBySource: true,
@@ -159,25 +147,25 @@ export default function NodeCheckProfileFormDialog({
     if (open) {
       if (profile) {
         // 解析 groups 和 tags 字符串为数组
-        const groups = profile.groups ? profile.groups.split(",").filter((g) => g) : [];
-        const tags = profile.tags ? profile.tags.split(",").filter((t) => t) : [];
+        const groups = profile.groups ? profile.groups.split(',').filter((g) => g) : [];
+        const tags = profile.tags ? profile.tags.split(',').filter((t) => t) : [];
 
         setForm({
-          name: profile.name || "",
+          name: profile.name || '',
           enabled: profile.enabled || false,
-          cronExpr: profile.cronExpr || "",
-          mode: profile.mode || "tcp",
-          testUrl: profile.testUrl || "",
-          latencyUrl: profile.latencyUrl || "",
+          cronExpr: profile.cronExpr || '',
+          mode: profile.mode || 'tcp',
+          testUrl: profile.testUrl || '',
+          latencyUrl: profile.latencyUrl || '',
           timeout: profile.timeout || 5,
           groups: groups,
           tags: tags,
           latencyConcurrency: profile.latencyConcurrency || 0,
-          speedConcurrency: profile.speedConcurrency || 1,
+          speedConcurrency: profile.speedConcurrency ?? 0,
           detectCountry: profile.detectCountry || false,
-          landingIpUrl: profile.landingIpUrl || "",
+          landingIpUrl: profile.landingIpUrl || '',
           includeHandshake: profile.includeHandshake !== false,
-          speedRecordMode: profile.speedRecordMode || "average",
+          speedRecordMode: profile.speedRecordMode || 'average',
           peakSampleInterval: profile.peakSampleInterval || 100,
           trafficByGroup: profile.trafficByGroup !== false,
           trafficBySource: profile.trafficBySource !== false,
@@ -186,21 +174,21 @@ export default function NodeCheckProfileFormDialog({
       } else {
         // 新建时的默认值
         setForm({
-          name: "",
+          name: '',
           enabled: false,
-          cronExpr: "",
-          mode: "tcp",
-          testUrl: SPEED_TEST_TCP_OPTIONS[0]?.value || "",
-          latencyUrl: "",
+          cronExpr: '',
+          mode: 'tcp',
+          testUrl: SPEED_TEST_TCP_OPTIONS[0]?.value || '',
+          latencyUrl: '',
           timeout: 5,
           groups: [],
           tags: [],
           latencyConcurrency: 0,
-          speedConcurrency: 1,
+          speedConcurrency: 0,
           detectCountry: false,
-          landingIpUrl: "",
+          landingIpUrl: '',
           includeHandshake: true,
-          speedRecordMode: "average",
+          speedRecordMode: 'average',
           peakSampleInterval: 100,
           trafficByGroup: true,
           trafficBySource: true,
@@ -217,7 +205,7 @@ export default function NodeCheckProfileFormDialog({
 
   // 模式切换时更新默认URL
   const handleModeChange = (mode) => {
-    const defaultUrl = mode === "mihomo" ? SPEED_TEST_MIHOMO_OPTIONS[0]?.value : SPEED_TEST_TCP_OPTIONS[0]?.value;
+    const defaultUrl = mode === 'mihomo' ? SPEED_TEST_MIHOMO_OPTIONS[0]?.value : SPEED_TEST_TCP_OPTIONS[0]?.value;
     setForm((prev) => ({ ...prev, mode, testUrl: defaultUrl }));
   };
 
@@ -259,20 +247,20 @@ export default function NodeCheckProfileFormDialog({
 
       onSuccess?.();
     } catch (error) {
-      console.error("保存失败:", error);
+      console.error('保存失败:', error);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const urlOptions = form.mode === "mihomo" ? SPEED_TEST_MIHOMO_OPTIONS : SPEED_TEST_TCP_OPTIONS;
+  const urlOptions = form.mode === 'mihomo' ? SPEED_TEST_MIHOMO_OPTIONS : SPEED_TEST_TCP_OPTIONS;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
       <DialogTitle>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <SpeedIcon color="primary" />
-          <span>{isEdit ? "编辑检测策略" : "新建检测策略"}</span>
+          <span>{isEdit ? '编辑检测策略' : '新建检测策略'}</span>
         </Box>
       </DialogTitle>
 
@@ -282,7 +270,7 @@ export default function NodeCheckProfileFormDialog({
           fullWidth
           label="策略名称"
           value={form.name}
-          onChange={(e) => updateForm("name", e.target.value)}
+          onChange={(e) => updateForm('name', e.target.value)}
           placeholder="例如：每日全量检测"
           sx={{ mb: 2, mt: 1 }}
           required
@@ -292,12 +280,11 @@ export default function NodeCheckProfileFormDialog({
         <ConfigSection title="定时检测" icon={<TimerIcon fontSize="small" color="action" />}>
           <Stack spacing={2}>
             <FormControlLabel
-              control={<Switch checked={form.enabled} onChange={(e) => updateForm("enabled", e.target.checked)} />}
+              control={<Switch checked={form.enabled} onChange={(e) => updateForm('enabled', e.target.checked)} />}
               label="启用定时检测"
             />
             {form.enabled && (
-              <CronExpressionGenerator value={form.cronExpr} onChange={(value) => updateForm("cronExpr", value)}
-                                       label="定时表达式" />
+              <CronExpressionGenerator value={form.cronExpr} onChange={(value) => updateForm('cronExpr', value)} label="定时表达式" />
             )}
           </Stack>
         </ConfigSection>
@@ -307,7 +294,7 @@ export default function NodeCheckProfileFormDialog({
           title="测速模式"
           icon={<SpeedIcon fontSize="small" color="action" />}
           helperText={
-            form.mode === "mihomo" ? "两阶段测试：先并发测延迟，再低并发测下载速度" : "仅测试延迟，速度更快，适合快速筛选可用节点"
+            form.mode === 'mihomo' ? '两阶段测试：先并发测延迟，再低并发测下载速度' : '仅测试延迟，速度更快，适合快速筛选可用节点'
           }
         >
           <Stack spacing={2}>
@@ -323,18 +310,18 @@ export default function NodeCheckProfileFormDialog({
               freeSolo
               size="small"
               options={urlOptions}
-              getOptionLabel={(option) => (typeof option === "string" ? option : option.value)}
+              getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
               value={form.testUrl}
               onChange={(_, newValue) => {
-                const url = typeof newValue === "string" ? newValue : newValue?.value || "";
-                updateForm("testUrl", url);
+                const url = typeof newValue === 'string' ? newValue : newValue?.value || '';
+                updateForm('testUrl', url);
               }}
-              onInputChange={(_, newValue) => updateForm("testUrl", newValue || "")}
+              onInputChange={(_, newValue) => updateForm('testUrl', newValue || '')}
               renderOption={(props, option) => (
                 <Box component="li" {...props} key={option.value}>
                   <Box>
                     <Typography variant="body2">{option.label}</Typography>
-                    <Typography variant="caption" color="textSecondary" sx={{ wordBreak: "break-all" }}>
+                    <Typography variant="caption" color="textSecondary" sx={{ wordBreak: 'break-all' }}>
                       {option.value}
                     </Typography>
                   </Box>
@@ -343,36 +330,35 @@ export default function NodeCheckProfileFormDialog({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label={form.mode === "mihomo" ? "下载测速URL" : "延迟测试URL"}
-                  placeholder={form.mode === "mihomo" ? "请选择或输入下载测速URL" : "请选择或输入204测速URL"}
+                  label={form.mode === 'mihomo' ? '下载测速URL' : '延迟测试URL'}
+                  placeholder={form.mode === 'mihomo' ? '请选择或输入下载测速URL' : '请选择或输入204测速URL'}
                 />
               )}
             />
 
             {/* 延迟测试URL - 仅在Mihomo模式显示 */}
-            {form.mode === "mihomo" && (
+            {form.mode === 'mihomo' && (
               <Autocomplete
                 freeSolo
                 size="small"
                 options={LATENCY_TEST_URL_OPTIONS}
-                getOptionLabel={(option) => (typeof option === "string" ? option : option.value)}
-                value={form.latencyUrl || ""}
+                getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
+                value={form.latencyUrl || ''}
                 onChange={(_, newValue) => {
-                  const url = typeof newValue === "string" ? newValue : newValue?.value || "";
-                  updateForm("latencyUrl", url);
+                  const url = typeof newValue === 'string' ? newValue : newValue?.value || '';
+                  updateForm('latencyUrl', url);
                 }}
                 renderOption={(props, option) => (
                   <Box component="li" {...props} key={option.value}>
                     <Box>
                       <Typography variant="body2">{option.label}</Typography>
-                      <Typography variant="caption" color="textSecondary" sx={{ wordBreak: "break-all" }}>
+                      <Typography variant="caption" color="textSecondary" sx={{ wordBreak: 'break-all' }}>
                         {option.value}
                       </Typography>
                     </Box>
                   </Box>
                 )}
-                renderInput={(params) => <TextField {...params} label="延迟测试URL（阶段一）"
-                                                    placeholder="留空则使用速度测试URL" />}
+                renderInput={(params) => <TextField {...params} label="延迟测试URL（阶段一）" placeholder="留空则使用速度测试URL" />}
               />
             )}
 
@@ -381,53 +367,53 @@ export default function NodeCheckProfileFormDialog({
               size="small"
               label="超时时间"
               type="text"
-              inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+              inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
               value={form.timeout}
               onChange={(e) => {
                 const val = e.target.value;
-                if (val === "" || /^\d+$/.test(val)) {
-                  updateForm("timeout", val === "" ? "" : Number(val));
+                if (val === '' || /^\d+$/.test(val)) {
+                  updateForm('timeout', val === '' ? '' : Number(val));
                 }
               }}
               onBlur={(e) => {
                 const val = Number(e.target.value) || 5;
-                updateForm("timeout", val);
+                updateForm('timeout', val);
               }}
               InputProps={{ endAdornment: <InputAdornment position="end">秒</InputAdornment> }}
             />
 
             {/* 速度记录模式 - 仅在Mihomo模式下显示 */}
-            {form.mode === "mihomo" && (
+            {form.mode === 'mihomo' && (
               <>
                 <FormControl fullWidth size="small">
                   <InputLabel>速度记录模式</InputLabel>
                   <Select
-                    value={form.speedRecordMode || "average"}
+                    value={form.speedRecordMode || 'average'}
                     label="速度记录模式"
-                    onChange={(e) => updateForm("speedRecordMode", e.target.value)}
+                    onChange={(e) => updateForm('speedRecordMode', e.target.value)}
                   >
                     <MenuItem value="average">平均速度 (推荐)</MenuItem>
                     <MenuItem value="peak">峰值速度</MenuItem>
                   </Select>
                 </FormControl>
 
-                {form.speedRecordMode === "peak" && (
+                {form.speedRecordMode === 'peak' && (
                   <TextField
                     fullWidth
                     size="small"
                     label="峰值采样间隔"
                     type="text"
-                    inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                    inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                     value={form.peakSampleInterval ?? 100}
                     onChange={(e) => {
                       const val = e.target.value;
-                      if (val === "" || /^\d+$/.test(val)) {
-                        updateForm("peakSampleInterval", val === "" ? "" : Number(val));
+                      if (val === '' || /^\d+$/.test(val)) {
+                        updateForm('peakSampleInterval', val === '' ? '' : Number(val));
                       }
                     }}
                     onBlur={(e) => {
                       const val = Math.min(200, Math.max(50, Number(e.target.value) || 100));
-                      updateForm("peakSampleInterval", val);
+                      updateForm('peakSampleInterval', val);
                     }}
                     InputProps={{ endAdornment: <InputAdornment position="end">毫秒</InputAdornment> }}
                     helperText="采样间隔范围：50-200毫秒"
@@ -443,9 +429,9 @@ export default function NodeCheckProfileFormDialog({
                   checked={form.detectCountry}
                   onChange={(e) => {
                     const checked = e.target.checked;
-                    updateForm("detectCountry", checked);
+                    updateForm('detectCountry', checked);
                     if (checked && !form.landingIpUrl) {
-                      updateForm("landingIpUrl", "https://api.ipify.org");
+                      updateForm('landingIpUrl', 'https://api.ipify.org');
                     }
                   }}
                   size="small"
@@ -464,9 +450,9 @@ export default function NodeCheckProfileFormDialog({
               <FormControl fullWidth size="small">
                 <InputLabel>IP查询接口</InputLabel>
                 <Select
-                  value={form.landingIpUrl || "https://api.ipify.org"}
+                  value={form.landingIpUrl || 'https://api.ipify.org'}
                   label="IP查询接口"
-                  onChange={(e) => updateForm("landingIpUrl", e.target.value)}
+                  onChange={(e) => updateForm('landingIpUrl', e.target.value)}
                 >
                   {LANDING_IP_URL_OPTIONS.map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
@@ -488,7 +474,7 @@ export default function NodeCheckProfileFormDialog({
               variant="standard"
               icon={<InfoOutlinedIcon fontSize="small" />}
               sx={{
-                "& .MuiAlert-message": { width: "100%" },
+                '& .MuiAlert-message': { width: '100%' },
                 py: 0.5
               }}
             >
@@ -496,7 +482,7 @@ export default function NodeCheckProfileFormDialog({
                 control={
                   <Switch
                     checked={form.includeHandshake ?? true}
-                    onChange={(e) => updateForm("includeHandshake", e.target.checked)}
+                    onChange={(e) => updateForm('includeHandshake', e.target.checked)}
                     size="small"
                   />
                 }
@@ -531,13 +517,13 @@ export default function NodeCheckProfileFormDialog({
                   size="small"
                   label="延迟测试并发"
                   type="text"
-                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-                  value={form.latencyConcurrency || ""}
+                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                  value={form.latencyConcurrency || ''}
                   placeholder="自动"
                   onChange={(e) => {
                     const val = e.target.value;
-                    if (val === "" || /^\d+$/.test(val)) {
-                      updateForm("latencyConcurrency", val === "" ? 0 : Number(val));
+                    if (val === '' || /^\d+$/.test(val)) {
+                      updateForm('latencyConcurrency', val === '' ? 0 : Number(val));
                     }
                   }}
                   helperText="0=智能动态"
@@ -549,13 +535,13 @@ export default function NodeCheckProfileFormDialog({
                   size="small"
                   label="速度测试并发"
                   type="text"
-                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-                  value={form.speedConcurrency || ""}
+                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                  value={form.speedConcurrency || ''}
                   placeholder="自动"
                   onChange={(e) => {
                     const val = e.target.value;
-                    if (val === "" || /^\d+$/.test(val)) {
-                      updateForm("speedConcurrency", val === "" ? 0 : Number(val));
+                    if (val === '' || /^\d+$/.test(val)) {
+                      updateForm('speedConcurrency', val === '' ? 0 : Number(val));
                     }
                   }}
                   helperText="0=智能动态"
@@ -579,7 +565,7 @@ export default function NodeCheckProfileFormDialog({
               size="small"
               options={groupOptions}
               value={form.groups}
-              onChange={(_, newValue) => updateForm("groups", newValue)}
+              onChange={(_, newValue) => updateForm('groups', newValue)}
               renderInput={(params) => <TextField {...params} label="测速分组" placeholder="留空则测试全部分组" />}
             />
             <Autocomplete
@@ -590,7 +576,7 @@ export default function NodeCheckProfileFormDialog({
               value={form.tags.map((t) => tagOptions.find((tag) => tag.name === t) || { name: t })}
               onChange={(_, newValue) =>
                 updateForm(
-                  "tags",
+                  'tags',
                   newValue.map((t) => t.name || t)
                 )
               }
@@ -605,9 +591,9 @@ export default function NodeCheckProfileFormDialog({
                       label={option.name || option}
                       size="small"
                       sx={{
-                        backgroundColor: tagObj?.color || "#1976d2",
-                        color: "#fff",
-                        "& .MuiChip-deleteIcon": { color: "rgba(255,255,255,0.7)" }
+                        backgroundColor: tagObj?.color || '#1976d2',
+                        color: '#fff',
+                        '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
                       }}
                       {...tagProps}
                     />
@@ -620,8 +606,8 @@ export default function NodeCheckProfileFormDialog({
                     sx={{
                       width: 12,
                       height: 12,
-                      borderRadius: "50%",
-                      backgroundColor: option.color || "#1976d2",
+                      borderRadius: '50%',
+                      backgroundColor: option.color || '#1976d2',
                       mr: 1
                     }}
                   />
@@ -634,15 +620,14 @@ export default function NodeCheckProfileFormDialog({
         </ConfigSection>
 
         {/* ========== 流量统计 ========== */}
-        <ConfigSection title="流量统计" icon={<DataUsageIcon fontSize="small" color="action" />}
-                       defaultExpanded={false}>
+        <ConfigSection title="流量统计" icon={<DataUsageIcon fontSize="small" color="action" />} defaultExpanded={false}>
           <Stack spacing={1}>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
               <FormControlLabel
                 control={
                   <Switch
                     checked={form.trafficByGroup ?? true}
-                    onChange={(e) => updateForm("trafficByGroup", e.target.checked)}
+                    onChange={(e) => updateForm('trafficByGroup', e.target.checked)}
                     size="small"
                   />
                 }
@@ -652,7 +637,7 @@ export default function NodeCheckProfileFormDialog({
                 control={
                   <Switch
                     checked={form.trafficBySource ?? true}
-                    onChange={(e) => updateForm("trafficBySource", e.target.checked)}
+                    onChange={(e) => updateForm('trafficBySource', e.target.checked)}
                     size="small"
                   />
                 }
@@ -662,7 +647,7 @@ export default function NodeCheckProfileFormDialog({
                 control={
                   <Switch
                     checked={form.trafficByNode ?? false}
-                    onChange={(e) => updateForm("trafficByNode", e.target.checked)}
+                    onChange={(e) => updateForm('trafficByNode', e.target.checked)}
                     size="small"
                     color="warning"
                   />
@@ -689,7 +674,7 @@ export default function NodeCheckProfileFormDialog({
       <DialogActions sx={{ px: 3, py: 2 }}>
         <Button onClick={onClose}>取消</Button>
         <Button variant="contained" onClick={handleSubmit} disabled={!form.name.trim() || submitting}>
-          {submitting ? "保存中..." : "保存设置"}
+          {submitting ? '保存中...' : '保存设置'}
         </Button>
       </DialogActions>
     </Dialog>

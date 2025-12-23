@@ -1,12 +1,12 @@
-import request from "./request";
+import request from './request';
 
 // 节点检测策略 API
 
 // 获取所有策略列表
 export function getNodeCheckProfiles() {
   return request({
-    url: "/v1/node-check/profiles",
-    method: "get"
+    url: '/v1/node-check/profiles',
+    method: 'get'
   });
 }
 
@@ -14,15 +14,15 @@ export function getNodeCheckProfiles() {
 export function getNodeCheckProfile(id) {
   return request({
     url: `/v1/node-check/profiles/${id}`,
-    method: "get"
+    method: 'get'
   });
 }
 
 // 创建策略
 export function createNodeCheckProfile(data) {
   return request({
-    url: "/v1/node-check/profiles",
-    method: "post",
+    url: '/v1/node-check/profiles',
+    method: 'post',
     data
   });
 }
@@ -31,7 +31,7 @@ export function createNodeCheckProfile(data) {
 export function updateNodeCheckProfile(id, data) {
   return request({
     url: `/v1/node-check/profiles/${id}`,
-    method: "put",
+    method: 'put',
     data
   });
 }
@@ -40,7 +40,7 @@ export function updateNodeCheckProfile(id, data) {
 export function deleteNodeCheckProfile(id) {
   return request({
     url: `/v1/node-check/profiles/${id}`,
-    method: "delete"
+    method: 'delete'
   });
 }
 
@@ -49,8 +49,8 @@ export function deleteNodeCheckProfile(id) {
 // nodeIds: 节点ID列表（可选）
 export function runNodeCheck(profileId, nodeIds) {
   return request({
-    url: "/v1/node-check/run",
-    method: "post",
+    url: '/v1/node-check/run',
+    method: 'post',
     data: {
       profileId: profileId || 0,
       nodeIds: nodeIds || []
@@ -62,6 +62,6 @@ export function runNodeCheck(profileId, nodeIds) {
 export function runNodeCheckWithProfile(profileId) {
   return request({
     url: `/v1/node-check/profiles/${profileId}/run`,
-    method: "post"
+    method: 'post'
   });
 }

@@ -115,17 +115,19 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 
 	// 速度测试并发数
 	speedConcurrency := config.SpeedConcurrency
-	if speedConcurrency == 0 {
-		speedConcurrency = 1 // 默认值
-	}
 
-	// 标记是否使用动态并发
+	// 标记是否使用动态并发（0=自动模式）
 	useAdaptiveSpeed := config.SpeedConcurrency == 0
 	var speedController AdaptiveConcurrencyController
 	if useAdaptiveSpeed {
+		// 动态模式：从控制器获取初始并发数
 		speedController = newAdaptiveConcurrencyController(AdaptiveTypeSpeed, totalNodes)
 		speedConcurrency = speedController.GetCurrentConcurrency()
 	} else {
+		// 固定模式：确保有效的默认值并限制最大值
+		if speedConcurrency <= 0 {
+			speedConcurrency = 1 // 固定模式的默认值
+		}
 		// 硬性并发上限：速度测试不应超过32以避免带宽竞争
 		const maxSpeedConcurrency = 32
 		if speedConcurrency > maxSpeedConcurrency {

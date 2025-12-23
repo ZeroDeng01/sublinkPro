@@ -755,7 +755,7 @@ export default function NodeList() {
   // === 测速配置 ===
   const handleOpenSpeedTest = () => {
     // 跳转到节点检测策略页面
-    navigate("/subscription/node-check");
+    navigate('/subscription/node-check');
   };
 
   const handleSpeedModeChange = (mode) => {
@@ -768,7 +768,7 @@ export default function NodeList() {
     // 关闭旧对话框并打开策略管理抽屉
     setSpeedTestDialogOpen(false);
     setProfilesDrawerOpen(true);
-    showMessage("测速配置已迁移至检测策略管理", "info");
+    showMessage('测速配置已迁移至检测策略管理', 'info');
   };
 
   const handleRunSpeedTest = async () => {
@@ -783,7 +783,7 @@ export default function NodeList() {
 
   const handleBatchSpeedTest = () => {
     if (selectedNodes.length === 0) {
-      showMessage("请选择要检测的节点", "warning");
+      showMessage('请选择要检测的节点', 'warning');
       return;
     }
     const ids = selectedNodes.map((node) => node.ID);

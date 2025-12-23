@@ -1,57 +1,52 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from 'react';
 
 // material-ui
-import { useTheme } from "@mui/material/styles";
+import { useTheme } from '@mui/material/styles';
 
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
-import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
-import Stack from "@mui/material/Stack";
-import Switch from "@mui/material/Switch";
-import Tooltip from "@mui/material/Tooltip";
-import Typography from "@mui/material/Typography";
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 
 // icons
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-import HistoryIcon from "@mui/icons-material/History";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import ScheduleIcon from "@mui/icons-material/Schedule";
-import SpeedIcon from "@mui/icons-material/Speed";
-import TimerIcon from "@mui/icons-material/Timer";
-import FilterListIcon from "@mui/icons-material/FilterList";
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import HistoryIcon from '@mui/icons-material/History';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import SpeedIcon from '@mui/icons-material/Speed';
+import TimerIcon from '@mui/icons-material/Timer';
+import FilterListIcon from '@mui/icons-material/FilterList';
 
 // project imports
-import MainCard from "ui-component/cards/MainCard";
-import TaskProgressPanel from "components/TaskProgressPanel";
+import MainCard from 'ui-component/cards/MainCard';
+import TaskProgressPanel from 'components/TaskProgressPanel';
 
 // api
-import {
-  getNodeCheckProfiles,
-  updateNodeCheckProfile,
-  deleteNodeCheckProfile,
-  runNodeCheckWithProfile
-} from "api/nodeCheck";
-import { getNodeGroups } from "api/nodes";
-import { getTags } from "api/tags";
+import { getNodeCheckProfiles, updateNodeCheckProfile, deleteNodeCheckProfile, runNodeCheckWithProfile } from 'api/nodeCheck';
+import { getNodeGroups } from 'api/nodes';
+import { getTags } from 'api/tags';
 
 // local components
-import NodeCheckProfileFormDialog from "views/nodes/component/NodeCheckProfileFormDialog";
+import NodeCheckProfileFormDialog from 'views/nodes/component/NodeCheckProfileFormDialog';
 
 // ==============================|| 节点检测策略管理 ||============================== //
 
 export default function NodeCheckList() {
   const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
+  const isDark = theme.palette.mode === 'dark';
 
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -60,9 +55,9 @@ export default function NodeCheckList() {
   const [groupOptions, setGroupOptions] = useState([]);
   const [tagOptions, setTagOptions] = useState([]);
 
-  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  const showMessage = (message, severity = "success") => {
+  const showMessage = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
   };
 
@@ -73,8 +68,8 @@ export default function NodeCheckList() {
       const response = await getNodeCheckProfiles();
       setProfiles(response.data || []);
     } catch (error) {
-      console.error("加载策略列表失败:", error);
-      showMessage("加载策略列表失败", "error");
+      console.error('加载策略列表失败:', error);
+      showMessage('加载策略列表失败', 'error');
     } finally {
       setLoading(false);
     }
@@ -87,7 +82,7 @@ export default function NodeCheckList() {
       setGroupOptions((groupRes.data || []).sort());
       setTagOptions(tagRes.data || []);
     } catch (error) {
-      console.error("加载选项失败:", error);
+      console.error('加载选项失败:', error);
     }
   }, []);
 
@@ -100,8 +95,8 @@ export default function NodeCheckList() {
   const handleToggleEnabled = async (profile) => {
     try {
       // API expects arrays for groups and tags, but profile has strings
-      const groups = profile.groups ? profile.groups.split(",").filter(Boolean) : [];
-      const tags = profile.tags ? profile.tags.split(",").filter(Boolean) : [];
+      const groups = profile.groups ? profile.groups.split(',').filter(Boolean) : [];
+      const tags = profile.tags ? profile.tags.split(',').filter(Boolean) : [];
 
       await updateNodeCheckProfile(profile.id, {
         ...profile,
@@ -110,10 +105,10 @@ export default function NodeCheckList() {
         enabled: !profile.enabled
       });
       loadProfiles();
-      showMessage(profile.enabled ? "已禁用定时检测" : "已启用定时检测");
+      showMessage(profile.enabled ? '已禁用定时检测' : '已启用定时检测');
     } catch (error) {
-      console.error("切换状态失败:", error);
-      showMessage("操作失败", "error");
+      console.error('切换状态失败:', error);
+      showMessage('操作失败', 'error');
     }
   };
 
@@ -125,10 +120,10 @@ export default function NodeCheckList() {
     try {
       await deleteNodeCheckProfile(profile.id);
       loadProfiles();
-      showMessage("删除成功");
+      showMessage('删除成功');
     } catch (error) {
-      console.error("删除失败:", error);
-      showMessage(error.message || "删除失败", "error");
+      console.error('删除失败:', error);
+      showMessage(error.message || '删除失败', 'error');
     }
   };
 
@@ -136,10 +131,10 @@ export default function NodeCheckList() {
   const handleRun = async (profile) => {
     try {
       await runNodeCheckWithProfile(profile.id);
-      showMessage("检测任务已启动");
+      showMessage('检测任务已启动');
     } catch (error) {
-      console.error("执行检测失败:", error);
-      showMessage(error.message || "执行失败", "error");
+      console.error('执行检测失败:', error);
+      showMessage(error.message || '执行失败', 'error');
     }
   };
 
@@ -160,26 +155,26 @@ export default function NodeCheckList() {
     setFormOpen(false);
     setEditingProfile(null);
     loadProfiles();
-    showMessage(editingProfile ? "更新成功" : "创建成功");
+    showMessage(editingProfile ? '更新成功' : '创建成功');
   };
 
   const formatTime = (timeStr) => {
-    if (!timeStr) return "-";
+    if (!timeStr) return '-';
     const date = new Date(timeStr);
     // 检查是否是有效日期
-    if (isNaN(date.getTime())) return "-";
-    return date.toLocaleString("zh-CN", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
+    if (isNaN(date.getTime())) return '-';
+    return date.toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
   return (
     <MainCard
       title={
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <SpeedIcon color="primary" />
           <span>节点检测策略</span>
         </Box>
@@ -201,11 +196,11 @@ export default function NodeCheckList() {
       <TaskProgressPanel />
 
       {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
           <CircularProgress />
         </Box>
       ) : profiles.length === 0 ? (
-        <Box sx={{ textAlign: "center", py: 8 }}>
+        <Box sx={{ textAlign: 'center', py: 8 }}>
           <SpeedIcon sx={{ fontSize: 64, opacity: 0.2, mb: 2 }} />
           <Typography variant="h6" color="text.secondary" gutterBottom>
             暂无检测策略
@@ -220,13 +215,13 @@ export default function NodeCheckList() {
       ) : (
         <Box
           sx={{
-            display: "grid",
+            display: 'grid',
             gridTemplateColumns: {
-              xs: "1fr",
-              sm: "repeat(2, minmax(0, 1fr))",
-              md: "repeat(2, minmax(0, 1fr))",
-              lg: "repeat(3, minmax(0, 1fr))",
-              xl: "repeat(4, minmax(0, 1fr))"
+              xs: '1fr',
+              sm: 'repeat(2, minmax(0, 1fr))',
+              md: 'repeat(2, minmax(0, 1fr))',
+              lg: 'repeat(3, minmax(0, 1fr))',
+              xl: 'repeat(4, minmax(0, 1fr))'
             },
             gap: 2,
             mt: 2
@@ -238,42 +233,42 @@ export default function NodeCheckList() {
               variant="outlined"
               sx={{
                 height: 200,
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
                 borderColor: profile.enabled
                   ? isDark
-                    ? "rgba(76, 175, 80, 0.5)"
-                    : "rgba(76, 175, 80, 0.3)"
+                    ? 'rgba(76, 175, 80, 0.5)'
+                    : 'rgba(76, 175, 80, 0.3)'
                   : isDark
-                    ? "rgba(255,255,255,0.12)"
-                    : "rgba(0,0,0,0.12)",
-                backgroundColor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)",
-                transition: "all 0.2s",
-                "&:hover": {
-                  borderColor: "primary.main",
-                  transform: "translateY(-2px)",
-                  boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.3)" : "0 4px 20px rgba(0,0,0,0.1)"
+                    ? 'rgba(255,255,255,0.12)'
+                    : 'rgba(0,0,0,0.12)',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  transform: 'translateY(-2px)',
+                  boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.1)'
                 }
               }}
             >
               <CardContent
                 sx={{
                   flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
+                  display: 'flex',
+                  flexDirection: 'column',
                   py: 1.5,
                   px: 2,
-                  overflow: "hidden",
-                  "&:last-child": { pb: 1.5 }
+                  overflow: 'hidden',
+                  '&:last-child': { pb: 1.5 }
                 }}
               >
                 {/* 标题行 */}
                 <Box
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                     mb: 1,
                     flexShrink: 0,
                     minWidth: 0
@@ -281,12 +276,12 @@ export default function NodeCheckList() {
                 >
                   <Box
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
+                      display: 'flex',
+                      alignItems: 'center',
                       gap: 1,
                       minWidth: 0,
                       flex: 1,
-                      overflow: "hidden"
+                      overflow: 'hidden'
                     }}
                   >
                     <Typography
@@ -295,22 +290,22 @@ export default function NodeCheckList() {
                       sx={{
                         minWidth: 0,
                         flexShrink: 1,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap"
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       {profile.name}
                     </Typography>
                     <Chip
-                      label={profile.mode === "mihomo" ? "延迟+速度" : "仅延迟"}
+                      label={profile.mode === 'mihomo' ? '延迟+速度' : '仅延迟'}
                       size="small"
                       sx={{
                         height: 20,
-                        fontSize: "0.65rem",
+                        fontSize: '0.65rem',
                         flexShrink: 0,
-                        backgroundColor: profile.mode === "mihomo" ? "rgba(76, 175, 80, 0.15)" : "rgba(33, 150, 243, 0.15)",
-                        color: profile.mode === "mihomo" ? "success.main" : "primary.main"
+                        backgroundColor: profile.mode === 'mihomo' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(33, 150, 243, 0.15)',
+                        color: profile.mode === 'mihomo' ? 'success.main' : 'primary.main'
                       }}
                     />
                   </Box>
@@ -329,13 +324,13 @@ export default function NodeCheckList() {
                   sx={{
                     flex: 1,
                     minHeight: 0,
-                    overflow: "hidden",
-                    display: "flex",
-                    flexDirection: "column",
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
                     gap: 0.5
                   }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
                     <TimerIcon sx={{ fontSize: 14, opacity: 0.6, flexShrink: 0 }} />
                     <Typography variant="caption" color="text.secondary" noWrap>
                       超时: {profile.timeout}s
@@ -343,7 +338,7 @@ export default function NodeCheckList() {
                   </Box>
 
                   {profile.enabled && profile.cronExpr && (
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
                       <ScheduleIcon sx={{ fontSize: 14, opacity: 0.6, flexShrink: 0 }} />
                       <Typography variant="caption" color="text.secondary" noWrap>
                         下次: {formatTime(profile.nextRunTime)}
@@ -351,7 +346,7 @@ export default function NodeCheckList() {
                     </Box>
                   )}
 
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
                     <HistoryIcon sx={{ fontSize: 14, opacity: 0.6, flexShrink: 0 }} />
                     <Typography variant="caption" color="text.secondary" noWrap>
                       上次: {formatTime(profile.lastRunTime)}
@@ -359,20 +354,20 @@ export default function NodeCheckList() {
                   </Box>
 
                   {(profile.groups || profile.tags) && (
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0, overflow: "hidden" }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
                       <FilterListIcon sx={{ fontSize: 14, opacity: 0.6, flexShrink: 0 }} />
                       <Typography
                         variant="caption"
                         color="text.secondary"
                         sx={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                           minWidth: 0
                         }}
                       >
-                        范围: {profile.groups || "全部"}
-                        {profile.tags ? ` | ${profile.tags}` : ""}
+                        范围: {profile.groups || '全部'}
+                        {profile.tags ? ` | ${profile.tags}` : ''}
                       </Typography>
                     </Box>
                   )}
@@ -385,8 +380,8 @@ export default function NodeCheckList() {
                       size="small"
                       onClick={() => handleRun(profile)}
                       sx={{
-                        color: "success.main",
-                        "&:hover": { backgroundColor: "rgba(76, 175, 80, 0.1)" }
+                        color: 'success.main',
+                        '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' }
                       }}
                     >
                       <PlayArrowIcon fontSize="small" />
@@ -402,8 +397,8 @@ export default function NodeCheckList() {
                       size="small"
                       onClick={() => handleDelete(profile)}
                       sx={{
-                        color: "error.main",
-                        "&:hover": { backgroundColor: "rgba(244, 67, 54, 0.1)" }
+                        color: 'error.main',
+                        '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' }
                       }}
                     >
                       <DeleteIcon fontSize="small" />
@@ -434,10 +429,9 @@ export default function NodeCheckList() {
         open={snackbar.open}
         autoHideDuration={3000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity}
-               variant="standard">
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant="standard">
           {snackbar.message}
         </Alert>
       </Snackbar>

@@ -84,9 +84,11 @@ func CreateNodeCheckProfile(c *gin.Context) {
 	if timeout <= 0 {
 		timeout = 5
 	}
+	// speedConcurrency: 0=智能动态模式，>0=固定并发数
+	// 负数视为无效，使用默认值0（智能动态）
 	speedConcurrency := req.SpeedConcurrency
-	if speedConcurrency <= 0 {
-		speedConcurrency = 1
+	if speedConcurrency < 0 {
+		speedConcurrency = 0
 	}
 	speedRecordMode := req.SpeedRecordMode
 	if speedRecordMode == "" {
@@ -217,7 +219,8 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	profile.SetGroups(req.Groups)
 	profile.SetTags(req.Tags)
 	profile.LatencyConcurrency = req.LatencyConcurrency
-	if req.SpeedConcurrency > 0 {
+	// speedConcurrency: 0=智能动态模式，>=0 的值都应保存
+	if req.SpeedConcurrency >= 0 {
 		profile.SpeedConcurrency = req.SpeedConcurrency
 	}
 	profile.DetectCountry = req.DetectCountry
