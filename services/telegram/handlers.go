@@ -345,10 +345,10 @@ func (h *ProfilesHandler) Handle(bot *TelegramBot, message *Message) error {
 			status = "✅"
 		}
 
-		// 模式显示
-		mode := "TCP"
+		// 模式显示（与Web端保持一致）
+		mode := "仅延迟测试"
 		if p.Mode == "mihomo" {
-			mode = "Mihomo"
+			mode = "延迟+速度测试"
 		}
 
 		text.WriteString(fmt.Sprintf("%s *%s*\n", status, p.Name))

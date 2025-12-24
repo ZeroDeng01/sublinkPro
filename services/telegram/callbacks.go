@@ -195,10 +195,10 @@ func handleProfileDetailCallback(bot *TelegramBot, callback *CallbackQuery, para
 		text.WriteString(fmt.Sprintf("⏰ 定时: `%s`\n", profile.CronExpr))
 	}
 
-	// 模式配置
-	mode := "TCP（仅延迟）"
+	// 模式配置（与Web端保持一致）
+	mode := "仅延迟测试"
 	if profile.Mode == "mihomo" {
-		mode = "Mihomo（延迟+速度）"
+		mode = "延迟+速度测试"
 	}
 	text.WriteString(fmt.Sprintf("📡 模式: %s\n", mode))
 	text.WriteString(fmt.Sprintf("⏱️ 超时: %d 秒\n", profile.Timeout))
