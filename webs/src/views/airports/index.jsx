@@ -64,7 +64,8 @@ export default function AirportList() {
     downloadWithProxy: false,
     proxyLink: '',
     userAgent: '',
-    fetchUsageInfo: false
+    fetchUsageInfo: false,
+    skipTLSVerify: false
   });
 
   // 搜索筛选状态
@@ -200,7 +201,8 @@ export default function AirportList() {
       downloadWithProxy: false,
       proxyLink: '',
       userAgent: '',
-      fetchUsageInfo: false
+      fetchUsageInfo: false,
+      skipTLSVerify: false
     });
     setFormOpen(true);
   };
@@ -218,7 +220,8 @@ export default function AirportList() {
       downloadWithProxy: airport.downloadWithProxy || false,
       proxyLink: airport.proxyLink || '',
       userAgent: airport.userAgent || '',
-      fetchUsageInfo: airport.fetchUsageInfo || false
+      fetchUsageInfo: airport.fetchUsageInfo || false,
+      skipTLSVerify: airport.skipTLSVerify || false
     });
     if (airport.downloadWithProxy) {
       fetchProxyNodes();
@@ -328,9 +331,9 @@ export default function AirportList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
