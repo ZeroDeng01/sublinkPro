@@ -740,6 +740,48 @@ DIRECT = direct
 		utils.Error("执行迁移 0018_migrate_speed_test_to_node_check_profile 失败: %v", err)
 	}
 
+	// 0019_fill_empty_node_protocol - 为 protocol 为空的节点补充协议类型
+	if err := database.RunCustomMigration("0019_fill_empty_node_protocol", func() error {
+		// 查找所有 protocol 为空的节点
+		var nodes []struct {
+			ID   int
+			Link string
+		}
+		if err := db.Model(&Node{}).
+			Select("id", "link").
+			Where("protocol IS NULL OR protocol = ''").
+			Find(&nodes).Error; err != nil {
+			return fmt.Errorf("查询 protocol 为空的节点失败: %w", err)
+		}
+
+		if len(nodes) == 0 {
+			utils.Info("没有 protocol 为空的节点需要处理")
+			return nil
+		}
+
+		// 按协议类型分组，减少 SQL 执行次数
+		protoGroups := make(map[string][]int)
+		for _, node := range nodes {
+			protoType := protocol.GetProtocolFromLink(node.Link)
+			protoGroups[protoType] = append(protoGroups[protoType], node.ID)
+		}
+
+		// 批量更新每组
+		updateCount := 0
+		for protoType, ids := range protoGroups {
+			if err := db.Model(&Node{}).Where("id IN ?", ids).Update("protocol", protoType).Error; err != nil {
+				utils.Warn("批量更新协议类型 %s 失败: %v", protoType, err)
+			} else {
+				updateCount += len(ids)
+			}
+		}
+
+		utils.Info("已为 %d 个 protocol 为空的节点补充协议类型，共 %d 种协议", updateCount, len(protoGroups))
+		return nil
+	}); err != nil {
+		utils.Error("执行迁移 0019_fill_empty_node_protocol 失败: %v", err)
+	}
+
 	// 初始化用户数据
 	err := db.First(&User{}).Error
 	if err == gorm.ErrRecordNotFound {
