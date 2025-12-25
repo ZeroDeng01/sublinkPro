@@ -28,12 +28,13 @@ type Airport struct {
 	UserAgent         string     `json:"userAgent"`                              // 自定义User-Agent
 	NodeCount         int        `gorm:"-" json:"nodeCount"`                     // 节点数量（非数据库字段）
 	// 用量信息相关字段
-	FetchUsageInfo bool  `gorm:"default:false" json:"fetchUsageInfo"` // 是否获取用量信息
-	UsageUpload    int64 `gorm:"default:0" json:"usageUpload"`        // 已上传流量（字节）
-	UsageDownload  int64 `gorm:"default:0" json:"usageDownload"`      // 已下载流量（字节）
-	UsageTotal     int64 `gorm:"default:0" json:"usageTotal"`         // 总流量配额（字节）
-	UsageExpire    int64 `gorm:"default:0" json:"usageExpire"`        // 订阅过期时间（Unix时间戳）
-	SkipTLSVerify  bool  `gorm:"default:false" json:"skipTLSVerify"`  // 是否跳过TLS证书验证
+	FetchUsageInfo bool   `gorm:"default:false" json:"fetchUsageInfo"` // 是否获取用量信息
+	UsageUpload    int64  `gorm:"default:0" json:"usageUpload"`        // 已上传流量（字节）
+	UsageDownload  int64  `gorm:"default:0" json:"usageDownload"`      // 已下载流量（字节）
+	UsageTotal     int64  `gorm:"default:0" json:"usageTotal"`         // 总流量配额（字节）
+	UsageExpire    int64  `gorm:"default:0" json:"usageExpire"`        // 订阅过期时间（Unix时间戳）
+	SkipTLSVerify  bool   `gorm:"default:false" json:"skipTLSVerify"`  // 是否跳过TLS证书验证
+	Remark         string `json:"remark"`                              // 备注信息
 }
 
 // TableName 指定表名
@@ -80,7 +81,7 @@ func (a *Airport) Update() error {
 	err := database.DB.Model(a).Select(
 		"Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime",
 		"SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent",
-		"FetchUsageInfo", "SkipTLSVerify",
+		"FetchUsageInfo", "SkipTLSVerify", "Remark",
 	).Updates(a).Error
 	if err != nil {
 		return err
@@ -140,7 +141,7 @@ func (a *Airport) ListPaginated(page, pageSize int) ([]Airport, int64, error) {
 
 // AirportFilter 机场筛选条件
 type AirportFilter struct {
-	Name    string // 名称模糊搜索
+	Keyword string // 关键字搜索（匹配名称或备注）
 	Group   string // 分组筛选
 	Enabled *bool  // 启用状态筛选
 }
@@ -155,8 +156,8 @@ func (a *Airport) ListWithFilter(page, pageSize int, filter AirportFilter) ([]Ai
 	// 应用筛选条件
 	var filteredAirports []Airport
 	for _, ap := range allAirports {
-		// 名称模糊匹配
-		if filter.Name != "" && !containsIgnoreCase(ap.Name, filter.Name) {
+		// 关键字模糊匹配（名称或备注）
+		if filter.Keyword != "" && !containsIgnoreCase(ap.Name, filter.Keyword) && !containsIgnoreCase(ap.Remark, filter.Keyword) {
 			continue
 		}
 		// 分组精确匹配

@@ -45,8 +45,8 @@ func AirportList(c *gin.Context) {
 
 	// 解析筛选参数
 	filter := models.AirportFilter{
-		Name:  c.Query("name"),
-		Group: c.Query("group"),
+		Keyword: c.Query("keyword"),
+		Group:   c.Query("group"),
 	}
 
 	// 解析启用状态筛选
@@ -161,6 +161,7 @@ func AirportAdd(c *gin.Context) {
 		UserAgent:         req.UserAgent,
 		FetchUsageInfo:    req.FetchUsageInfo,
 		SkipTLSVerify:     req.SkipTLSVerify,
+		Remark:            req.Remark,
 	}
 
 	// 检查是否重复
@@ -238,6 +239,7 @@ func AirportUpdate(c *gin.Context) {
 	existing.UserAgent = req.UserAgent
 	existing.FetchUsageInfo = req.FetchUsageInfo
 	existing.SkipTLSVerify = req.SkipTLSVerify
+	existing.Remark = req.Remark
 
 	if err := existing.Update(); err != nil {
 		utils.FailWithMsg(c, "更新失败: "+err.Error())

@@ -65,11 +65,12 @@ export default function AirportList() {
     proxyLink: '',
     userAgent: '',
     fetchUsageInfo: false,
-    skipTLSVerify: false
+    skipTLSVerify: false,
+    remark: ''
   });
 
   // 搜索筛选状态
-  const [searchName, setSearchName] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [searchGroup, setSearchGroup] = useState('');
   const [searchEnabled, setSearchEnabled] = useState('');
 
@@ -104,7 +105,7 @@ export default function AirportList() {
         pageSize: rowsPerPage
       };
       // 添加搜索参数
-      if (searchName) params.name = searchName;
+      if (searchKeyword) params.keyword = searchKeyword;
       if (searchGroup) params.group = searchGroup;
       if (searchEnabled !== '') params.enabled = searchEnabled;
 
@@ -122,7 +123,7 @@ export default function AirportList() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchName, searchGroup, searchEnabled, showMessage]);
+  }, [page, rowsPerPage, searchKeyword, searchGroup, searchEnabled, showMessage]);
 
   // 获取分组选项
   const fetchGroupOptions = useCallback(async () => {
@@ -202,7 +203,8 @@ export default function AirportList() {
       proxyLink: '',
       userAgent: '',
       fetchUsageInfo: false,
-      skipTLSVerify: false
+      skipTLSVerify: false,
+      remark: ''
     });
     setFormOpen(true);
   };
@@ -221,7 +223,8 @@ export default function AirportList() {
       proxyLink: airport.proxyLink || '',
       userAgent: airport.userAgent || '',
       fetchUsageInfo: airport.fetchUsageInfo || false,
-      skipTLSVerify: airport.skipTLSVerify || false
+      skipTLSVerify: airport.skipTLSVerify || false,
+      remark: airport.remark || ''
     });
     if (airport.downloadWithProxy) {
       fetchProxyNodes();
@@ -346,9 +349,10 @@ export default function AirportList() {
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
           <TextField
             size="small"
-            label="搜索名称"
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
+            label="关键字"
+            placeholder="搜索名称或备注"
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
             sx={{ minWidth: 150 }}
           />
           <Autocomplete
@@ -371,7 +375,7 @@ export default function AirportList() {
             variant="outlined"
             size="small"
             onClick={() => {
-              setSearchName('');
+              setSearchKeyword('');
               setSearchGroup('');
               setSearchEnabled('');
               setPage(0);

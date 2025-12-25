@@ -116,6 +116,18 @@ export default function AirportFormDialog({
                   <TextField {...params} label="节点分组" helperText="从此机场导入的节点将自动归属到此分组" />
                 )}
               />
+              <TextField
+                fullWidth
+                size="small"
+                label="备注"
+                value={airportForm.remark}
+                placeholder="可选，记录机场的备忘信息"
+                helperText="一些备注信息，方便你对机场和订阅进行管理"
+                multiline
+                minRows={2}
+                maxRows={4}
+                onChange={(e) => setAirportForm({ ...airportForm, remark: e.target.value })}
+              />
             </Stack>
           </Box>
 
@@ -327,7 +339,8 @@ AirportFormDialog.propTypes = {
     proxyLink: PropTypes.string,
     userAgent: PropTypes.string,
     fetchUsageInfo: PropTypes.bool,
-    skipTLSVerify: PropTypes.bool
+    skipTLSVerify: PropTypes.bool,
+    remark: PropTypes.string
   }).isRequired,
   setAirportForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,
