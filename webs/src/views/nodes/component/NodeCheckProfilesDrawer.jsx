@@ -71,9 +71,30 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
   // 切换启用状态
   const handleToggleEnabled = async (profile) => {
     try {
+      // 将 groups 和 tags 字符串转换为数组格式（后端 API 期望数组类型）
+      const groups = profile.groups ? profile.groups.split(',').filter(Boolean) : [];
+      const tags = profile.tags ? profile.tags.split(',').filter(Boolean) : [];
+
       await updateNodeCheckProfile(profile.id, {
-        ...profile,
-        enabled: !profile.enabled
+        name: profile.name,
+        enabled: !profile.enabled,
+        cronExpr: profile.cronExpr,
+        mode: profile.mode,
+        testUrl: profile.testUrl,
+        latencyUrl: profile.latencyUrl,
+        timeout: profile.timeout,
+        groups,
+        tags,
+        latencyConcurrency: profile.latencyConcurrency,
+        speedConcurrency: profile.speedConcurrency,
+        detectCountry: profile.detectCountry,
+        landingIpUrl: profile.landingIpUrl,
+        includeHandshake: profile.includeHandshake,
+        speedRecordMode: profile.speedRecordMode,
+        peakSampleInterval: profile.peakSampleInterval,
+        trafficByGroup: profile.trafficByGroup,
+        trafficBySource: profile.trafficBySource,
+        trafficByNode: profile.trafficByNode
       });
       loadProfiles();
       onMessage?.(profile.enabled ? '已禁用定时检测' : '已启用定时检测');
