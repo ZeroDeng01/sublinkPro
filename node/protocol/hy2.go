@@ -12,6 +12,7 @@ type HY2 struct {
 	Password     string
 	Host         string
 	Port         interface{}
+	MPort        string
 	Insecure     int
 	Peer         string
 	Auth         string
@@ -56,6 +57,7 @@ func EncodeHY2URL(hy2 HY2) string {
 	q.Set("insecure", strconv.Itoa(hy2.Insecure))
 	q.Set("peer", hy2.Peer)
 	q.Set("auth", hy2.Auth)
+	q.Set("mport", hy2.MPort)
 	q.Set("upmbps", strconv.Itoa(hy2.UpMbps))
 	q.Set("downmbps", strconv.Itoa(hy2.DownMbps))
 	q.Set("sni", hy2.Sni)
@@ -92,6 +94,7 @@ func DecodeHY2URL(s string) (HY2, error) {
 	upMbps, _ := strconv.Atoi(u.Query().Get("upmbps"))
 	downMbps, _ := strconv.Atoi(u.Query().Get("downmbps"))
 	alpns := u.Query().Get("alpn")
+	mport := u.Query().Get("mport")
 	alpn := strings.Split(alpns, ",")
 	if alpns == "" {
 		alpn = nil
@@ -108,6 +111,7 @@ func DecodeHY2URL(s string) (HY2, error) {
 		fmt.Println("password:", password)
 		fmt.Println("server:", server)
 		fmt.Println("port:", port)
+		fmt.Println("mport:", mport)
 		fmt.Println("insecure:", insecure)
 		fmt.Println("auth:", auth)
 		fmt.Println("upMbps:", upMbps)
@@ -122,6 +126,7 @@ func DecodeHY2URL(s string) (HY2, error) {
 		Password:     password,
 		Host:         server,
 		Port:         port,
+		MPort:        mport,
 		Insecure:     insecure,
 		Auth:         auth,
 		UpMbps:       upMbps,

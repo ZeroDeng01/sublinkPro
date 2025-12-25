@@ -58,6 +58,7 @@ type Proxy struct {
 	Type               string                 `yaml:"type,omitempty"`               // 代理类型 (ss, vmess, trojan, etc.)
 	Server             string                 `yaml:"server,omitempty"`             // 服务器地址
 	Port               FlexPort               `yaml:"port,omitempty"`               // 服务器端口
+	Ports              string                 `yaml:"ports,omitempty"`              // hysteria2端口跳跃
 	Cipher             string                 `yaml:"cipher,omitempty"`             // 加密方式
 	Username           string                 `yaml:"username,omitempty"`           // 用户名 (socks5 等)
 	Password           string                 `yaml:"password,omitempty"`           // 密码
@@ -342,12 +343,15 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Type:             "hysteria2",
 			Server:           hy2.Host,
 			Port:             FlexPort(utils.GetPortInt(hy2.Port)),
+			Ports:            hy2.MPort,
 			Auth_str:         hy2.Auth,
 			Sni:              hy2.Sni,
 			Alpn:             hy2.ALPN,
 			Obfs:             hy2.Obfs,
 			Password:         hy2.Password,
 			Obfs_password:    hy2.ObfsPassword,
+			Up:               hy2.UpMbps,
+			Down:             hy2.DownMbps,
 			Udp:              config.Udp,
 			Skip_cert_verify: config.Cert,
 			Dialer_proxy:     link.DialerProxyName,

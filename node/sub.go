@@ -679,26 +679,48 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 			link = fmt.Sprintf("hysteria://%s:%d?%s#%s", server, port, query.Encode(), name)
 
 		case "hysteria2":
-			// hysteria2://auth@server:port?sni=sni&insecure=1&obfs=obfs&obfs-password=obfs-password#name
+			// hysteria2://auth@server:port?sni=sni&insecure=1&obfs=obfs&obfs-password=obfs-password&mport=ports&upmbps=up&downmbps=down&fp=fingerprint#name
 			server := proxy.Server
 			port := int(proxy.Port)
 			auth := proxy.Password
 			name := proxy.Name
 			query := url.Values{}
+			// SNI: 优先使用 Sni，如果为空则使用 Servername
 			if proxy.Sni != "" {
 				query.Set("sni", proxy.Sni)
+			} else if proxy.Servername != "" {
+				query.Set("sni", proxy.Servername)
 			}
+			// 跳过证书验证
 			if proxy.Skip_cert_verify {
 				query.Set("insecure", "1")
 			}
+			// 混淆
 			if proxy.Obfs != "" {
 				query.Set("obfs", proxy.Obfs)
 			}
 			if proxy.Obfs_password != "" {
 				query.Set("obfs-password", proxy.Obfs_password)
 			}
+			// ALPN
 			if len(proxy.Alpn) > 0 {
 				query.Set("alpn", strings.Join(proxy.Alpn, ","))
+			}
+			// 端口跳跃 (ports -> mport)
+			if proxy.Ports != "" {
+				query.Set("mport", proxy.Ports)
+			}
+			// 上行带宽
+			if proxy.Up > 0 {
+				query.Set("upmbps", strconv.Itoa(proxy.Up))
+			}
+			// 下行带宽
+			if proxy.Down > 0 {
+				query.Set("downmbps", strconv.Itoa(proxy.Down))
+			}
+			// 客户端指纹
+			if proxy.Client_fingerprint != "" {
+				query.Set("fp", proxy.Client_fingerprint)
 			}
 			link = fmt.Sprintf("hysteria2://%s@%s:%d?%s#%s", auth, server, port, query.Encode(), name)
 
