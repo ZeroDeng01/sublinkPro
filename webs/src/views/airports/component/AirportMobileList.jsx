@@ -21,6 +21,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SyncIcon from '@mui/icons-material/Sync';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import EventIcon from '@mui/icons-material/Event';
 
 // utils
 import { formatDateTime, formatBytes, formatExpireTime, getUsageColor } from '../utils';
@@ -59,23 +61,76 @@ export default function AirportMobileList({ airports, onEdit, onDelete, onPull, 
     );
   }
 
+  /**
+   * 计算顶部状态条颜色
+   * 优先级：禁用(灰色) > 用量警告(红色) > 过期警告(红色) > 启用(绿色)
+   */
+  const getStatusBarColor = (airport) => {
+    // 禁用状态
+    if (!airport.enabled) {
+      return `linear-gradient(90deg, ${theme.palette.grey[400]}, ${theme.palette.grey[300]})`;
+    }
+
+    // 检查用量警告（使用率 >= 85%）
+    if (airport.fetchUsageInfo && airport.usageTotal > 0) {
+      const upload = airport.usageUpload || 0;
+      const download = airport.usageDownload || 0;
+      const used = upload + download;
+      const percent = (used / airport.usageTotal) * 100;
+      if (percent >= 85) {
+        return `linear-gradient(90deg, ${theme.palette.error.main}, ${theme.palette.error.light})`;
+      }
+    }
+
+    // 检查过期警告（7天内过期）
+    if (airport.usageExpire > 0) {
+      const now = Math.floor(Date.now() / 1000);
+      const daysLeft = (airport.usageExpire - now) / (24 * 60 * 60);
+      if (daysLeft <= 7) {
+        return `linear-gradient(90deg, ${theme.palette.error.main}, ${theme.palette.error.light})`;
+      }
+    }
+
+    // 正常启用状态
+    return `linear-gradient(90deg, ${theme.palette.success.main}, ${theme.palette.success.light})`;
+  };
+
   return (
     <>
-      <Stack spacing={2}>
+      <Stack spacing={2.5}>
         {airports.map((airport) => (
           <Card
             key={airport.id}
             sx={{
               borderRadius: 3,
-              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+              boxShadow:
+                theme.palette.mode === 'dark'
+                  ? `0 4px 12px ${alpha('#000', 0.3)}`
+                  : `0 4px 12px ${alpha(theme.palette.primary.main, 0.08)}`,
               transition: 'all 0.2s ease',
+              overflow: 'hidden',
+              position: 'relative',
               '&:hover': {
                 transform: 'translateY(-2px)',
-                boxShadow: theme.shadows[4]
+                boxShadow:
+                  theme.palette.mode === 'dark'
+                    ? `0 8px 24px ${alpha('#000', 0.4)}`
+                    : `0 8px 24px ${alpha(theme.palette.primary.main, 0.15)}`
+              },
+              // 顶部状态指示条
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 4,
+                background: getStatusBarColor(airport)
               }
             }}
           >
-            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+            <CardContent sx={{ p: 2, pt: 2.5, '&:last-child': { pb: 2 } }}>
               {/* 顶部：Logo、名称和状态 */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
                 <AirportLogo logo={airport.logo} name={airport.name} size="medium" />
@@ -201,11 +256,30 @@ export default function AirportMobileList({ airports, onEdit, onDelete, onPull, 
                             </Box>
 
                             {/* 过期时间 */}
-                            {airport.usageExpire > 0 && (
-                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                到期: {formatExpireTime(airport.usageExpire)}
-                              </Typography>
-                            )}
+                            {airport.usageExpire > 0 &&
+                              (() => {
+                                const now = Math.floor(Date.now() / 1000);
+                                const daysLeft = (airport.usageExpire - now) / (24 * 60 * 60);
+                                const isUrgent = daysLeft <= 7;
+                                const isWarning = daysLeft <= 30 && daysLeft > 7;
+
+                                return (
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    {isUrgent && <WarningAmberIcon sx={{ fontSize: 14, color: 'error.main' }} />}
+                                    {isWarning && <EventIcon sx={{ fontSize: 14, color: 'info.main' }} />}
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        color: isUrgent ? 'error.main' : isWarning ? 'info.main' : 'text.secondary',
+                                        fontWeight: isUrgent || isWarning ? 600 : 400
+                                      }}
+                                    >
+                                      到期: {formatExpireTime(airport.usageExpire)}
+                                      {isUrgent && ` (${Math.max(0, Math.ceil(daysLeft))}天)`}
+                                    </Typography>
+                                  </Box>
+                                );
+                              })()}
                           </>
                         );
                       })()}
