@@ -58,8 +58,8 @@ export default function AirportLogo({ logo, name, size = 'medium' }) {
   const parseLogoType = () => {
     if (!logo) return { type: 'initial' };
 
-    // URL类型
-    if (logo.startsWith('http://') || logo.startsWith('https://')) {
+    // URL类型（包括http/https和base64格式）
+    if (logo.startsWith('http://') || logo.startsWith('https://') || logo.startsWith('data:image')) {
       return { type: 'url', value: logo };
     }
 

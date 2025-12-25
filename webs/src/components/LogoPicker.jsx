@@ -301,11 +301,17 @@ export default function LogoPicker({ value, onChange, name }) {
   const [search, setSearch] = useState('');
   const [urlInput, setUrlInput] = useState('');
 
+  // 判断是否为图片URL（包括http/https和base64格式）
+  const isImageUrl = (val) => {
+    if (!val) return false;
+    return val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image');
+  };
+
   // 打开对话框时初始化
   const handleOpen = () => {
     setOpen(true);
-    // 如果当前是URL，填入输入框
-    if (value && (value.startsWith('http://') || value.startsWith('https://'))) {
+    // 如果当前是URL（包括base64），填入输入框
+    if (isImageUrl(value)) {
       setUrlInput(value);
       setTab(0);
     } else if (value && value.startsWith('icon:')) {
@@ -384,7 +390,13 @@ export default function LogoPicker({ value, onChange, name }) {
             {value ? '点击更换Logo' : '点击设置Logo'}
           </Typography>
           <Typography variant="caption" color="textSecondary">
-            {value ? (value.startsWith('icon:') ? '图标' : value.startsWith('http') ? 'URL图片' : 'Emoji') : '默认显示名称首字'}
+            {value
+              ? value.startsWith('icon:')
+                ? '图标'
+                : value.startsWith('http') || value.startsWith('data:image')
+                  ? 'URL图片'
+                  : 'Emoji'
+              : '默认显示名称首字'}
           </Typography>
         </Box>
         {value && (
@@ -427,10 +439,10 @@ export default function LogoPicker({ value, onChange, name }) {
                 fullWidth
                 size="small"
                 label="图片URL"
-                placeholder="https://example.com/logo.png"
+                placeholder="https://example.com/logo.png 或 data:image/png;base64,..."
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
-                helperText="输入图片的网络地址"
+                helperText="输入图片的网络地址或 base64 格式图片"
               />
               {urlInput && (
                 <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
