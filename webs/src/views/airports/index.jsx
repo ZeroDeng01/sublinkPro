@@ -204,7 +204,8 @@ export default function AirportList() {
       userAgent: '',
       fetchUsageInfo: false,
       skipTLSVerify: false,
-      remark: ''
+      remark: '',
+      logo: ''
     });
     setFormOpen(true);
   };
@@ -224,7 +225,8 @@ export default function AirportList() {
       userAgent: airport.userAgent || '',
       fetchUsageInfo: airport.fetchUsageInfo || false,
       skipTLSVerify: airport.skipTLSVerify || false,
-      remark: airport.remark || ''
+      remark: airport.remark || '',
+      logo: airport.logo || ''
     });
     if (airport.downloadWithProxy) {
       fetchProxyNodes();
@@ -334,9 +336,9 @@ export default function AirportList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />

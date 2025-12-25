@@ -35,6 +35,7 @@ type Airport struct {
 	UsageExpire    int64  `gorm:"default:0" json:"usageExpire"`        // 订阅过期时间（Unix时间戳）
 	SkipTLSVerify  bool   `gorm:"default:false" json:"skipTLSVerify"`  // 是否跳过TLS证书验证
 	Remark         string `json:"remark"`                              // 备注信息
+	Logo           string `json:"logo"`                                // Logo：URL、icon:图标名、或emoji字符
 }
 
 // TableName 指定表名
@@ -81,7 +82,7 @@ func (a *Airport) Update() error {
 	err := database.DB.Model(a).Select(
 		"Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime",
 		"SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent",
-		"FetchUsageInfo", "SkipTLSVerify", "Remark",
+		"FetchUsageInfo", "SkipTLSVerify", "Remark", "Logo",
 	).Updates(a).Error
 	if err != nil {
 		return err

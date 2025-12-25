@@ -19,6 +19,7 @@ import Typography from '@mui/material/Typography';
 // project imports
 import SearchableNodeSelect from 'components/SearchableNodeSelect';
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
+import LogoPicker from 'components/LogoPicker';
 
 // constants
 import { USER_AGENT_OPTIONS } from '../utils';
@@ -97,6 +98,16 @@ export default function AirportFormDialog({
                 helperText="机场名称不能重复，名称将作为节点来源"
                 onChange={(e) => setAirportForm({ ...airportForm, name: e.target.value })}
               />
+              <Box>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                  Logo（可选）
+                </Typography>
+                <LogoPicker
+                  value={airportForm.logo || ''}
+                  onChange={(logo) => setAirportForm({ ...airportForm, logo })}
+                  name={airportForm.name}
+                />
+              </Box>
               <TextField
                 fullWidth
                 size="small"
@@ -112,9 +123,7 @@ export default function AirportFormDialog({
                 value={airportForm.group}
                 onChange={(e, newValue) => setAirportForm({ ...airportForm, group: newValue || '' })}
                 onInputChange={(e, newValue) => setAirportForm({ ...airportForm, group: newValue || '' })}
-                renderInput={(params) => (
-                  <TextField {...params} label="节点分组" helperText="从此机场导入的节点将自动归属到此分组" />
-                )}
+                renderInput={(params) => <TextField {...params} label="节点分组" helperText="从此机场导入的节点将自动归属到此分组" />}
               />
               <TextField
                 fullWidth
@@ -151,10 +160,7 @@ export default function AirportFormDialog({
                     关闭后将停止自动拉取订阅
                   </Typography>
                 </Box>
-                <Switch
-                  checked={airportForm.enabled}
-                  onChange={(e) => setAirportForm({ ...airportForm, enabled: e.target.checked })}
-                />
+                <Switch checked={airportForm.enabled} onChange={(e) => setAirportForm({ ...airportForm, enabled: e.target.checked })} />
               </Box>
               <Collapse in={airportForm.enabled}>
                 <CronExpressionGenerator
@@ -340,7 +346,8 @@ AirportFormDialog.propTypes = {
     userAgent: PropTypes.string,
     fetchUsageInfo: PropTypes.bool,
     skipTLSVerify: PropTypes.bool,
-    remark: PropTypes.string
+    remark: PropTypes.string,
+    logo: PropTypes.string
   }).isRequired,
   setAirportForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,

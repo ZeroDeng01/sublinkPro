@@ -29,6 +29,7 @@ import { formatDateTime, formatBytes, formatExpireTime, getUsageColor } from '..
 
 // local components
 import AirportNodeStatsCard from './AirportNodeStatsCard';
+import AirportLogo from './AirportLogo';
 
 /**
  * 机场列表表格组件
@@ -221,9 +222,12 @@ export default function AirportTable({ airports, onEdit, onDelete, onPull, onRef
               airports.map((airport) => (
                 <TableRow key={airport.id} hover>
                   <TableCell>
-                    <Typography variant="body2" fontWeight={500}>
-                      {airport.name}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <AirportLogo logo={airport.logo} name={airport.name} size="small" />
+                      <Typography variant="body2" fontWeight={500}>
+                        {airport.name}
+                      </Typography>
+                    </Box>
                   </TableCell>
                   <TableCell align="center">
                     <Chip label={airport.nodeCount || 0} color="primary" variant="outlined" size="small" />

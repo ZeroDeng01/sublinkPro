@@ -36,6 +36,7 @@ type AirportRequest struct {
 	FetchUsageInfo    bool   `json:"fetchUsageInfo"` // 是否获取用量信息
 	SkipTLSVerify     bool   `json:"skipTLSVerify"`  // 是否跳过TLS证书验证
 	Remark            string `json:"remark"`         // 备注信息
+	Logo              string `json:"logo"`           // Logo配置
 }
 
 // BatchSortRequest 批量排序请求

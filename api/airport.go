@@ -162,6 +162,7 @@ func AirportAdd(c *gin.Context) {
 		FetchUsageInfo:    req.FetchUsageInfo,
 		SkipTLSVerify:     req.SkipTLSVerify,
 		Remark:            req.Remark,
+		Logo:              req.Logo,
 	}
 
 	// 检查是否重复
@@ -240,6 +241,7 @@ func AirportUpdate(c *gin.Context) {
 	existing.FetchUsageInfo = req.FetchUsageInfo
 	existing.SkipTLSVerify = req.SkipTLSVerify
 	existing.Remark = req.Remark
+	existing.Logo = req.Logo
 
 	if err := existing.Update(); err != nil {
 		utils.FailWithMsg(c, "更新失败: "+err.Error())

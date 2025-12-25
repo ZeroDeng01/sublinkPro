@@ -27,6 +27,7 @@ import { formatDateTime, formatBytes, formatExpireTime, getUsageColor } from '..
 
 // local components
 import AirportNodeStatsCard from './AirportNodeStatsCard';
+import AirportLogo from './AirportLogo';
 
 /**
  * 机场移动端列表组件
@@ -75,9 +76,10 @@ export default function AirportMobileList({ airports, onEdit, onDelete, onPull, 
             }}
           >
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              {/* 顶部：名称和状态 */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                <Typography variant="subtitle1" fontWeight={600}>
+              {/* 顶部：Logo、名称和状态 */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                <AirportLogo logo={airport.logo} name={airport.name} size="medium" />
+                <Typography variant="subtitle1" fontWeight={600} sx={{ flex: 1 }}>
                   {airport.name}
                 </Typography>
                 <Chip label={airport.enabled ? '启用' : '禁用'} color={airport.enabled ? 'success' : 'default'} size="small" />
