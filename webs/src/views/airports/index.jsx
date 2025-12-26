@@ -15,10 +15,14 @@ import Select from '@mui/material/Select';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import ViewListIcon from '@mui/icons-material/ViewList';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -30,7 +34,7 @@ import { useTaskProgress } from 'contexts/TaskProgressContext';
 import { getNodeGroups, getNodes } from 'api/nodes';
 
 // local components
-import { AirportTable, AirportMobileList, AirportFormDialog, DeleteAirportDialog } from './component';
+import { AirportTable, AirportListView, AirportMobileList, AirportFormDialog, DeleteAirportDialog } from './component';
 
 // utils
 import { validateCronExpression } from './utils';
@@ -50,6 +54,12 @@ export default function AirportList() {
     return saved ? parseInt(saved, 10) : 10;
   });
   const [totalItems, setTotalItems] = useState(0);
+
+  // 视图模式状态（card: 卡片，list: 列表）
+  const [viewMode, setViewMode] = useState(() => {
+    const saved = localStorage.getItem('airports_viewMode');
+    return saved || 'card';
+  });
 
   // 表单状态
   const [formOpen, setFormOpen] = useState(false);
@@ -327,7 +337,29 @@ export default function AirportList() {
     <MainCard
       title="机场管理"
       secondary={
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          {/* 视图切换按钮（仅桌面端显示） */}
+          {!matchDownMd && (
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={(e, newMode) => {
+                if (newMode) {
+                  setViewMode(newMode);
+                  localStorage.setItem('airports_viewMode', newMode);
+                }
+              }}
+              size="small"
+              sx={{ mr: 1 }}
+            >
+              <ToggleButton value="card" sx={{ px: 1, py: 0.5 }}>
+                <ViewModuleIcon fontSize="small" />
+              </ToggleButton>
+              <ToggleButton value="list" sx={{ px: 1, py: 0.5 }}>
+                <ViewListIcon fontSize="small" />
+              </ToggleButton>
+            </ToggleButtonGroup>
+          )}
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
             添加机场
           </Button>
@@ -404,6 +436,14 @@ export default function AirportList() {
       {/* 机场列表 */}
       {matchDownMd ? (
         <AirportMobileList
+          airports={airports}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onPull={handlePull}
+          onRefreshUsage={handleRefreshUsage}
+        />
+      ) : viewMode === 'list' ? (
+        <AirportListView
           airports={airports}
           onEdit={handleEdit}
           onDelete={handleDelete}
