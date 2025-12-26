@@ -400,6 +400,13 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		if len(proxys) < originalCount {
 			utils.Info("📦订阅【%s】过滤后节点数量：%d（原始：%d，过滤掉：%d）", subName, len(proxys), originalCount, originalCount-len(proxys))
 		}
+		// 应用高级去重规则
+		beforeDedup := len(proxys)
+		proxys = applyAirportDeduplication(airport, proxys)
+		if len(proxys) < beforeDedup {
+			utils.Info("🔄订阅【%s】去重后节点数量：%d（去重前：%d，去重掉：%d）", subName, len(proxys), beforeDedup, beforeDedup-len(proxys))
+		}
+		//节点重命名
 		proxys = applyAirportNodeRename(airport, proxys)
 	}
 
@@ -1023,4 +1030,100 @@ func applyAirportNodeRename(airport *models.Airport, proxys []protocol.Proxy) []
 	}
 
 	return proxys
+}
+
+// applyAirportDeduplication 应用机场高级去重规则
+// 根据机场配置的去重规则对代理节点进行去重
+func applyAirportDeduplication(airport *models.Airport, proxys []protocol.Proxy) []protocol.Proxy {
+	if airport == nil || airport.DeduplicationRule == "" {
+		return proxys
+	}
+
+	// 解析去重配置
+	var config models.DeduplicationConfig
+	if err := json.Unmarshal([]byte(airport.DeduplicationRule), &config); err != nil {
+		utils.Warn("解析机场去重规则失败: %v", err)
+		return proxys
+	}
+
+	// 只有 protocol 模式才进行高级去重
+	if config.Mode != "protocol" || len(config.ProtocolRules) == 0 {
+		return proxys
+	}
+
+	// 按协议字段去重
+	seen := make(map[string]bool)
+	var result []protocol.Proxy
+
+	for _, proxy := range proxys {
+		protoType := strings.ToLower(proxy.Type)
+		fields, exists := config.ProtocolRules[protoType]
+		if !exists || len(fields) == 0 {
+			// 该协议未配置去重规则，保留节点
+			result = append(result, proxy)
+			continue
+		}
+
+		// 生成去重Key
+		key := generateProxyDeduplicationKey(proxy, fields)
+		if key == "" {
+			result = append(result, proxy)
+			continue
+		}
+
+		// 加上协议类型前缀，避免不同协议间Key冲突
+		fullKey := protoType + ":" + key
+		if !seen[fullKey] {
+			seen[fullKey] = true
+			result = append(result, proxy)
+		}
+	}
+
+	return result
+}
+
+// generateProxyDeduplicationKey 根据指定字段生成代理的去重Key
+func generateProxyDeduplicationKey(proxy protocol.Proxy, fields []string) string {
+	var parts []string
+	for _, field := range fields {
+		value := getProxyFieldValue(proxy, field)
+		parts = append(parts, field+":"+value)
+	}
+	return strings.Join(parts, "|")
+}
+
+// getProxyFieldValue 获取代理对象的字段值
+func getProxyFieldValue(proxy protocol.Proxy, field string) string {
+	switch field {
+	case "server":
+		return proxy.Server
+	case "port":
+		return strconv.Itoa(int(proxy.Port))
+	case "uuid":
+		return proxy.Uuid
+	case "password":
+		return proxy.Password
+	case "cipher", "method":
+		return proxy.Cipher
+	case "network":
+		return proxy.Network
+	case "sni":
+		return proxy.Sni
+	case "servername":
+		return proxy.Servername
+	case "protocol":
+		return proxy.Protocol
+	case "obfs":
+		return proxy.Obfs
+	case "auth_str":
+		return proxy.Auth_str
+	case "flow":
+		return proxy.Flow
+	case "congestion_control":
+		return proxy.Congestion_control
+	case "udp_relay_mode":
+		return proxy.Udp_relay_mode
+	default:
+		return ""
+	}
 }

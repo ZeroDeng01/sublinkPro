@@ -43,6 +43,8 @@ type Airport struct {
 	ProtocolBlacklist string `json:"protocolBlacklist"` // 协议黑名单（逗号分隔）
 	// 节点重命名规则（拉取时生效）
 	NodeNamePreprocess string `json:"nodeNamePreprocess"` // 原名预处理规则 (JSON数组)
+	// 节点去重规则（拉取时生效）
+	DeduplicationRule string `json:"deduplicationRule"` // 去重规则配置(JSON)
 }
 
 // TableName 指定表名
@@ -61,6 +63,12 @@ func init() {
 
 // InitAirportCache 初始化机场缓存
 func InitAirportCache() error {
+	// 先执行数据库迁移
+	if err := RunAirportMigrations(); err != nil {
+		utils.Error("机场数据库迁移失败: %v", err)
+		return err
+	}
+
 	utils.Info("开始加载机场数据到缓存")
 	var airports []Airport
 	if err := database.DB.Find(&airports).Error; err != nil {
@@ -72,6 +80,12 @@ func InitAirportCache() error {
 
 	cache.Manager.Register("airport", airportCache)
 	return nil
+}
+
+// RunAirportMigrations 执行机场相关的数据库迁移
+func RunAirportMigrations() error {
+	// 添加去重规则字段
+	return database.RunAutoMigrate("add_airport_deduplication_rule_v1", &Airport{})
 }
 
 // Add 添加机场 (Write-Through)
@@ -91,6 +105,7 @@ func (a *Airport) Update() error {
 		"SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent",
 		"FetchUsageInfo", "SkipTLSVerify", "Remark", "Logo",
 		"NodeNameWhitelist", "NodeNameBlacklist", "ProtocolWhitelist", "ProtocolBlacklist", "NodeNamePreprocess",
+		"DeduplicationRule",
 	).Updates(a).Error
 	if err != nil {
 		return err

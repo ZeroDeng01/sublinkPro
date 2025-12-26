@@ -168,6 +168,7 @@ func AirportAdd(c *gin.Context) {
 		ProtocolWhitelist:  req.ProtocolWhitelist,
 		ProtocolBlacklist:  req.ProtocolBlacklist,
 		NodeNamePreprocess: req.NodeNamePreprocess,
+		DeduplicationRule:  req.DeduplicationRule,
 	}
 
 	// 检查是否重复
@@ -252,6 +253,7 @@ func AirportUpdate(c *gin.Context) {
 	existing.ProtocolWhitelist = req.ProtocolWhitelist
 	existing.ProtocolBlacklist = req.ProtocolBlacklist
 	existing.NodeNamePreprocess = req.NodeNamePreprocess
+	existing.DeduplicationRule = req.DeduplicationRule
 
 	if err := existing.Update(); err != nil {
 		utils.FailWithMsg(c, "更新失败: "+err.Error())

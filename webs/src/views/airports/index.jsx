@@ -82,7 +82,8 @@ export default function AirportList() {
     nodeNameBlacklist: '',
     protocolWhitelist: '',
     protocolBlacklist: '',
-    nodeNamePreprocess: ''
+    nodeNamePreprocess: '',
+    deduplicationRule: ''
   });
 
   // 搜索筛选状态
@@ -238,7 +239,8 @@ export default function AirportList() {
       nodeNameBlacklist: '',
       protocolWhitelist: '',
       protocolBlacklist: '',
-      nodeNamePreprocess: ''
+      nodeNamePreprocess: '',
+      deduplicationRule: ''
     });
     setFormOpen(true);
   };
@@ -264,7 +266,8 @@ export default function AirportList() {
       nodeNameBlacklist: airport.nodeNameBlacklist || '',
       protocolWhitelist: airport.protocolWhitelist || '',
       protocolBlacklist: airport.protocolBlacklist || '',
-      nodeNamePreprocess: airport.nodeNamePreprocess || ''
+      nodeNamePreprocess: airport.nodeNamePreprocess || '',
+      deduplicationRule: airport.deduplicationRule || ''
     });
     if (airport.downloadWithProxy) {
       fetchProxyNodes();

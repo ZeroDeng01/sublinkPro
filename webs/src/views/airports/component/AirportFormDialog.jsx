@@ -23,6 +23,7 @@ import LogoPicker from 'components/LogoPicker';
 import NodeNameFilter from 'components/NodeNameFilter';
 import NodeNamePreprocessor from 'components/NodeNamePreprocessor';
 import NodeProtocolFilter from 'components/NodeProtocolFilter';
+import AirportDeduplicationConfig from './AirportDeduplicationConfig';
 
 // constants
 import { USER_AGENT_OPTIONS } from '../utils';
@@ -351,6 +352,12 @@ export default function AirportFormDialog({
                 onBlacklistChange={(protocols) => setAirportForm({ ...airportForm, protocolBlacklist: protocols })}
               />
 
+              {/* 节点去重配置 */}
+              <AirportDeduplicationConfig
+                value={airportForm.deduplicationRule || ''}
+                onChange={(rule) => setAirportForm({ ...airportForm, deduplicationRule: rule })}
+              />
+
               {/* 节点重命名 */}
               <NodeNamePreprocessor
                 value={airportForm.nodeNamePreprocess || ''}
@@ -391,7 +398,8 @@ AirportFormDialog.propTypes = {
     nodeNameBlacklist: PropTypes.string,
     protocolWhitelist: PropTypes.string,
     protocolBlacklist: PropTypes.string,
-    nodeNamePreprocess: PropTypes.string
+    nodeNamePreprocess: PropTypes.string,
+    deduplicationRule: PropTypes.string
   }).isRequired,
   setAirportForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,

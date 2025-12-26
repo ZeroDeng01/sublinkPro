@@ -44,6 +44,8 @@ type AirportRequest struct {
 	ProtocolBlacklist string `json:"protocolBlacklist"` // 协议黑名单（逗号分隔）
 	// 节点重命名规则（拉取时生效）
 	NodeNamePreprocess string `json:"nodeNamePreprocess"` // 原名预处理规则 (JSON数组)
+	// 去重规则
+	DeduplicationRule string `json:"deduplicationRule"` // 去重规则配置(JSON)
 }
 
 // BatchSortRequest 批量排序请求
