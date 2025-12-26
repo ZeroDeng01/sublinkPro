@@ -20,6 +20,9 @@ import Typography from '@mui/material/Typography';
 import SearchableNodeSelect from 'components/SearchableNodeSelect';
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
 import LogoPicker from 'components/LogoPicker';
+import NodeNameFilter from 'components/NodeNameFilter';
+import NodeNamePreprocessor from 'components/NodeNamePreprocessor';
+import NodeProtocolFilter from 'components/NodeProtocolFilter';
 
 // constants
 import { USER_AGENT_OPTIONS } from '../utils';
@@ -67,6 +70,7 @@ export default function AirportFormDialog({
   groupOptions,
   proxyNodeOptions,
   loadingProxyNodes,
+  protocolOptions,
   onClose,
   onSubmit,
   onFetchProxyNodes
@@ -319,6 +323,41 @@ export default function AirportFormDialog({
               </Box>
             </Stack>
           </Box>
+
+          <Divider />
+
+          {/* ===== 节点处理 ===== */}
+          <Box>
+            <SectionTitle>节点处理（拉取时生效）</SectionTitle>
+            <Stack spacing={2}>
+              <Alert severity="info" icon={false}>
+                <Typography variant="caption">以下规则在拉取订阅时立即生效，过滤的节点不会存储到数据库</Typography>
+              </Alert>
+
+              {/* 节点名称过滤 */}
+              <NodeNameFilter
+                whitelistValue={airportForm.nodeNameWhitelist || ''}
+                blacklistValue={airportForm.nodeNameBlacklist || ''}
+                onWhitelistChange={(rules) => setAirportForm({ ...airportForm, nodeNameWhitelist: rules })}
+                onBlacklistChange={(rules) => setAirportForm({ ...airportForm, nodeNameBlacklist: rules })}
+              />
+
+              {/* 协议过滤 */}
+              <NodeProtocolFilter
+                protocolOptions={protocolOptions}
+                whitelistValue={airportForm.protocolWhitelist || ''}
+                blacklistValue={airportForm.protocolBlacklist || ''}
+                onWhitelistChange={(protocols) => setAirportForm({ ...airportForm, protocolWhitelist: protocols })}
+                onBlacklistChange={(protocols) => setAirportForm({ ...airportForm, protocolBlacklist: protocols })}
+              />
+
+              {/* 节点重命名 */}
+              <NodeNamePreprocessor
+                value={airportForm.nodeNamePreprocess || ''}
+                onChange={(rules) => setAirportForm({ ...airportForm, nodeNamePreprocess: rules })}
+              />
+            </Stack>
+          </Box>
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2 }}>
@@ -347,12 +386,18 @@ AirportFormDialog.propTypes = {
     fetchUsageInfo: PropTypes.bool,
     skipTLSVerify: PropTypes.bool,
     remark: PropTypes.string,
-    logo: PropTypes.string
+    logo: PropTypes.string,
+    nodeNameWhitelist: PropTypes.string,
+    nodeNameBlacklist: PropTypes.string,
+    protocolWhitelist: PropTypes.string,
+    protocolBlacklist: PropTypes.string,
+    nodeNamePreprocess: PropTypes.string
   }).isRequired,
   setAirportForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,
   proxyNodeOptions: PropTypes.array.isRequired,
   loadingProxyNodes: PropTypes.bool.isRequired,
+  protocolOptions: PropTypes.array,
   onClose: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
   onFetchProxyNodes: PropTypes.func.isRequired

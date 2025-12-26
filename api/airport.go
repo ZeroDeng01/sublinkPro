@@ -151,18 +151,23 @@ func AirportAdd(c *gin.Context) {
 	}
 
 	airport := models.Airport{
-		Name:              req.Name,
-		URL:               req.URL,
-		CronExpr:          req.CronExpr,
-		Enabled:           req.Enabled,
-		Group:             req.Group,
-		DownloadWithProxy: req.DownloadWithProxy,
-		ProxyLink:         req.ProxyLink,
-		UserAgent:         req.UserAgent,
-		FetchUsageInfo:    req.FetchUsageInfo,
-		SkipTLSVerify:     req.SkipTLSVerify,
-		Remark:            req.Remark,
-		Logo:              req.Logo,
+		Name:               req.Name,
+		URL:                req.URL,
+		CronExpr:           req.CronExpr,
+		Enabled:            req.Enabled,
+		Group:              req.Group,
+		DownloadWithProxy:  req.DownloadWithProxy,
+		ProxyLink:          req.ProxyLink,
+		UserAgent:          req.UserAgent,
+		FetchUsageInfo:     req.FetchUsageInfo,
+		SkipTLSVerify:      req.SkipTLSVerify,
+		Remark:             req.Remark,
+		Logo:               req.Logo,
+		NodeNameWhitelist:  req.NodeNameWhitelist,
+		NodeNameBlacklist:  req.NodeNameBlacklist,
+		ProtocolWhitelist:  req.ProtocolWhitelist,
+		ProtocolBlacklist:  req.ProtocolBlacklist,
+		NodeNamePreprocess: req.NodeNamePreprocess,
 	}
 
 	// 检查是否重复
@@ -242,6 +247,11 @@ func AirportUpdate(c *gin.Context) {
 	existing.SkipTLSVerify = req.SkipTLSVerify
 	existing.Remark = req.Remark
 	existing.Logo = req.Logo
+	existing.NodeNameWhitelist = req.NodeNameWhitelist
+	existing.NodeNameBlacklist = req.NodeNameBlacklist
+	existing.ProtocolWhitelist = req.ProtocolWhitelist
+	existing.ProtocolBlacklist = req.ProtocolBlacklist
+	existing.NodeNamePreprocess = req.NodeNamePreprocess
 
 	if err := existing.Update(); err != nil {
 		utils.FailWithMsg(c, "更新失败: "+err.Error())

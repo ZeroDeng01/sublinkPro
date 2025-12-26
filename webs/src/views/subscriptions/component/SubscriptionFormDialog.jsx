@@ -41,10 +41,10 @@ import SecurityIcon from '@mui/icons-material/Security';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
 import NodeRenameBuilder from './NodeRenameBuilder';
-import NodeNamePreprocessor from './NodeNamePreprocessor';
-import NodeNameFilter from './NodeNameFilter';
+import NodeNamePreprocessor from 'components/NodeNamePreprocessor';
+import NodeNameFilter from 'components/NodeNameFilter';
 import NodeTagFilter from './NodeTagFilter';
-import NodeProtocolFilter from './NodeProtocolFilter';
+import NodeProtocolFilter from 'components/NodeProtocolFilter';
 import NodeTransferBox from './NodeTransferBox';
 import DeduplicationConfig from './DeduplicationConfig';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';

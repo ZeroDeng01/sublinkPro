@@ -37,6 +37,13 @@ type AirportRequest struct {
 	SkipTLSVerify     bool   `json:"skipTLSVerify"`  // 是否跳过TLS证书验证
 	Remark            string `json:"remark"`         // 备注信息
 	Logo              string `json:"logo"`           // Logo配置
+	// 节点过滤规则（拉取时生效）
+	NodeNameWhitelist string `json:"nodeNameWhitelist"` // 节点名称白名单 (JSON数组)
+	NodeNameBlacklist string `json:"nodeNameBlacklist"` // 节点名称黑名单 (JSON数组)
+	ProtocolWhitelist string `json:"protocolWhitelist"` // 协议白名单（逗号分隔）
+	ProtocolBlacklist string `json:"protocolBlacklist"` // 协议黑名单（逗号分隔）
+	// 节点重命名规则（拉取时生效）
+	NodeNamePreprocess string `json:"nodeNamePreprocess"` // 原名预处理规则 (JSON数组)
 }
 
 // BatchSortRequest 批量排序请求

@@ -393,6 +393,16 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		utils.Error("获取机场 %s 的Group失败:  %v", subName, err)
 	}
 
+	// 应用机场节点过滤和重命名规则
+	if airport != nil {
+		originalCount := len(proxys)
+		proxys = applyAirportNodeFilter(airport, proxys)
+		if len(proxys) < originalCount {
+			utils.Info("📦订阅【%s】过滤后节点数量：%d（原始：%d，过滤掉：%d）", subName, len(proxys), originalCount, originalCount-len(proxys))
+		}
+		proxys = applyAirportNodeRename(airport, proxys)
+	}
+
 	// 1. 获取该订阅当前在数据库中的所有节点
 	existingNodes, err := models.ListBySourceID(id)
 	if err != nil {
@@ -923,4 +933,94 @@ func formatDurationSub(d time.Duration) string {
 		return fmt.Sprintf("%.0f分%.0f秒", d.Minutes(), math.Mod(d.Seconds(), 60))
 	}
 	return fmt.Sprintf("%.0f时%.0f分", d.Hours(), math.Mod(d.Minutes(), 60))
+}
+
+// applyAirportNodeFilter 应用机场节点过滤规则
+// 根据机场配置的白名单/黑名单规则过滤代理节点
+func applyAirportNodeFilter(airport *models.Airport, proxys []protocol.Proxy) []protocol.Proxy {
+	if airport == nil {
+		return proxys
+	}
+
+	hasNameWhitelist := utils.HasActiveNodeNameFilter(airport.NodeNameWhitelist)
+	hasNameBlacklist := utils.HasActiveNodeNameFilter(airport.NodeNameBlacklist)
+	hasProtocolWhitelist := airport.ProtocolWhitelist != ""
+	hasProtocolBlacklist := airport.ProtocolBlacklist != ""
+
+	// 如果没有任何过滤规则，直接返回
+	if !hasNameWhitelist && !hasNameBlacklist && !hasProtocolWhitelist && !hasProtocolBlacklist {
+		return proxys
+	}
+
+	// 解析协议白名单和黑名单
+	protocolWhitelistMap := make(map[string]bool)
+	protocolBlacklistMap := make(map[string]bool)
+
+	if hasProtocolWhitelist {
+		for _, p := range strings.Split(airport.ProtocolWhitelist, ",") {
+			p = strings.TrimSpace(strings.ToLower(p))
+			if p != "" {
+				protocolWhitelistMap[p] = true
+			}
+		}
+	}
+
+	if hasProtocolBlacklist {
+		for _, p := range strings.Split(airport.ProtocolBlacklist, ",") {
+			p = strings.TrimSpace(strings.ToLower(p))
+			if p != "" {
+				protocolBlacklistMap[p] = true
+			}
+		}
+	}
+
+	// 过滤节点
+	result := make([]protocol.Proxy, 0, len(proxys))
+	for _, proxy := range proxys {
+		nodeName := strings.TrimSpace(proxy.Name)
+		nodeProto := strings.ToLower(proxy.Type)
+
+		// 1. 名称黑名单检查（优先级最高）
+		if hasNameBlacklist && utils.MatchesNodeNameFilter(airport.NodeNameBlacklist, nodeName) {
+			continue
+		}
+
+		// 2. 名称白名单检查
+		if hasNameWhitelist && !utils.MatchesNodeNameFilter(airport.NodeNameWhitelist, nodeName) {
+			continue
+		}
+
+		// 3. 协议黑名单检查
+		if len(protocolBlacklistMap) > 0 && protocolBlacklistMap[nodeProto] {
+			continue
+		}
+
+		// 4. 协议白名单检查
+		if len(protocolWhitelistMap) > 0 && !protocolWhitelistMap[nodeProto] {
+			continue
+		}
+
+		result = append(result, proxy)
+	}
+
+	return result
+}
+
+// applyAirportNodeRename 应用机场节点重命名规则
+// 根据机场配置的预处理规则对节点名称进行替换
+func applyAirportNodeRename(airport *models.Airport, proxys []protocol.Proxy) []protocol.Proxy {
+	if airport == nil || airport.NodeNamePreprocess == "" {
+		return proxys
+	}
+
+	// 应用预处理规则到每个节点
+	for i := range proxys {
+		originalName := proxys[i].Name
+		processedName := utils.PreprocessNodeName(airport.NodeNamePreprocess, originalName)
+		if processedName != originalName {
+			proxys[i].Name = processedName
+		}
+	}
+
+	return proxys
 }

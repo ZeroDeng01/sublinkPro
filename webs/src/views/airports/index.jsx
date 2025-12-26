@@ -31,7 +31,7 @@ import ConfirmDialog from 'components/ConfirmDialog';
 import TaskProgressPanel from 'components/TaskProgressPanel';
 import { getAirports, addAirport, updateAirport, deleteAirport, pullAirport, refreshAirportUsage } from 'api/airports';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
-import { getNodeGroups, getNodes } from 'api/nodes';
+import { getNodeGroups, getNodes, getNodeProtocols } from 'api/nodes';
 
 // local components
 import { AirportTable, AirportListView, AirportMobileList, AirportFormDialog, DeleteAirportDialog } from './component';
@@ -76,7 +76,13 @@ export default function AirportList() {
     userAgent: '',
     fetchUsageInfo: false,
     skipTLSVerify: false,
-    remark: ''
+    remark: '',
+    logo: '',
+    nodeNameWhitelist: '',
+    nodeNameBlacklist: '',
+    protocolWhitelist: '',
+    protocolBlacklist: '',
+    nodeNamePreprocess: ''
   });
 
   // 搜索筛选状态
@@ -97,6 +103,7 @@ export default function AirportList() {
   const [groupOptions, setGroupOptions] = useState([]);
   const [proxyNodeOptions, setProxyNodeOptions] = useState([]);
   const [loadingProxyNodes, setLoadingProxyNodes] = useState(false);
+  const [protocolOptions, setProtocolOptions] = useState([]);
 
   // 消息提示
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -158,11 +165,22 @@ export default function AirportList() {
     }
   }, []);
 
+  // 获取协议列表
+  const fetchProtocolOptions = useCallback(async () => {
+    try {
+      const response = await getNodeProtocols();
+      setProtocolOptions(response.data || []);
+    } catch (error) {
+      console.error('获取协议列表失败:', error);
+    }
+  }, []);
+
   // 初始化
   useEffect(() => {
     fetchAirports();
     fetchGroupOptions();
-  }, [fetchAirports, fetchGroupOptions]);
+    fetchProtocolOptions();
+  }, [fetchAirports, fetchGroupOptions, fetchProtocolOptions]);
 
   // 任务进度钩子
   const { registerOnComplete, unregisterOnComplete } = useTaskProgress();
@@ -215,7 +233,12 @@ export default function AirportList() {
       fetchUsageInfo: false,
       skipTLSVerify: false,
       remark: '',
-      logo: ''
+      logo: '',
+      nodeNameWhitelist: '',
+      nodeNameBlacklist: '',
+      protocolWhitelist: '',
+      protocolBlacklist: '',
+      nodeNamePreprocess: ''
     });
     setFormOpen(true);
   };
@@ -236,7 +259,12 @@ export default function AirportList() {
       fetchUsageInfo: airport.fetchUsageInfo || false,
       skipTLSVerify: airport.skipTLSVerify || false,
       remark: airport.remark || '',
-      logo: airport.logo || ''
+      logo: airport.logo || '',
+      nodeNameWhitelist: airport.nodeNameWhitelist || '',
+      nodeNameBlacklist: airport.nodeNameBlacklist || '',
+      protocolWhitelist: airport.protocolWhitelist || '',
+      protocolBlacklist: airport.protocolBlacklist || '',
+      nodeNamePreprocess: airport.nodeNamePreprocess || ''
     });
     if (airport.downloadWithProxy) {
       fetchProxyNodes();
@@ -486,6 +514,7 @@ export default function AirportList() {
         groupOptions={groupOptions}
         proxyNodeOptions={proxyNodeOptions}
         loadingProxyNodes={loadingProxyNodes}
+        protocolOptions={protocolOptions}
         onClose={() => setFormOpen(false)}
         onSubmit={handleSubmit}
         onFetchProxyNodes={fetchProxyNodes}
