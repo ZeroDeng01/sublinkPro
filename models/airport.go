@@ -45,6 +45,9 @@ type Airport struct {
 	NodeNamePreprocess string `json:"nodeNamePreprocess"` // 原名预处理规则 (JSON数组)
 	// 节点去重规则（拉取时生效）
 	DeduplicationRule string `json:"deduplicationRule"` // 去重规则配置(JSON)
+	// 节点名称唯一化（拉取时生效）
+	NodeNameUniquify bool   `gorm:"default:false" json:"nodeNameUniquify"` // 是否开启节点名称唯一化
+	NodeNamePrefix   string `json:"nodeNamePrefix"`                        // 自定义名称前缀（可选）
 }
 
 // TableName 指定表名
@@ -105,7 +108,7 @@ func (a *Airport) Update() error {
 		"SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent",
 		"FetchUsageInfo", "SkipTLSVerify", "Remark", "Logo",
 		"NodeNameWhitelist", "NodeNameBlacklist", "ProtocolWhitelist", "ProtocolBlacklist", "NodeNamePreprocess",
-		"DeduplicationRule",
+		"DeduplicationRule", "NodeNameUniquify", "NodeNamePrefix",
 	).Updates(a).Error
 	if err != nil {
 		return err

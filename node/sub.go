@@ -408,6 +408,8 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		}
 		//节点重命名
 		proxys = applyAirportNodeRename(airport, proxys)
+		// 节点名称唯一化（添加机场标识前缀，防止多机场节点重名）
+		proxys = applyAirportNodeUniquify(airport, proxys)
 	}
 
 	// 1. 获取该订阅当前在数据库中的所有节点
@@ -1055,6 +1057,30 @@ func generateProxyLink(proxy protocol.Proxy) string {
 	default:
 		return ""
 	}
+}
+
+// applyAirportNodeUniquify 应用机场节点名称唯一化
+// 在节点名称前添加机场标识前缀，防止多机场间节点名称重复
+// 同一机场同一节点每次生成的名字保持一致（使用机场ID生成稳定前缀）
+func applyAirportNodeUniquify(airport *models.Airport, proxys []protocol.Proxy) []protocol.Proxy {
+	if airport == nil || !airport.NodeNameUniquify {
+		return proxys
+	}
+
+	// 生成前缀: 使用用户自定义前缀 或 默认的 [A{id}] 格式
+	var prefix string
+	if airport.NodeNamePrefix != "" {
+		prefix = airport.NodeNamePrefix
+	} else {
+		prefix = fmt.Sprintf("[A%d]", airport.ID)
+	}
+
+	// 为每个节点名称添加前缀
+	for i := range proxys {
+		proxys[i].Name = prefix + proxys[i].Name
+	}
+
+	return proxys
 }
 
 // parseProtoFromLink 根据协议类型解析链接获取结构体

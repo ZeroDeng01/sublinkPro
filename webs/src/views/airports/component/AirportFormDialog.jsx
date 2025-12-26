@@ -23,6 +23,7 @@ import LogoPicker from 'components/LogoPicker';
 import NodeNameFilter from 'components/NodeNameFilter';
 import NodeNamePreprocessor from 'components/NodeNamePreprocessor';
 import NodeProtocolFilter from 'components/NodeProtocolFilter';
+import NodeNameUniquifyConfig from 'components/NodeNameUniquifyConfig';
 import AirportDeduplicationConfig from './AirportDeduplicationConfig';
 
 // constants
@@ -363,6 +364,14 @@ export default function AirportFormDialog({
                 value={airportForm.nodeNamePreprocess || ''}
                 onChange={(rules) => setAirportForm({ ...airportForm, nodeNamePreprocess: rules })}
               />
+
+              {/* 节点名称唯一化 */}
+              <NodeNameUniquifyConfig
+                enabled={airportForm.nodeNameUniquify || false}
+                prefix={airportForm.nodeNamePrefix || ''}
+                airportId={airportForm.id || 0}
+                onChange={({ enabled, prefix }) => setAirportForm({ ...airportForm, nodeNameUniquify: enabled, nodeNamePrefix: prefix })}
+              />
             </Stack>
           </Box>
         </Stack>
@@ -399,7 +408,9 @@ AirportFormDialog.propTypes = {
     protocolWhitelist: PropTypes.string,
     protocolBlacklist: PropTypes.string,
     nodeNamePreprocess: PropTypes.string,
-    deduplicationRule: PropTypes.string
+    deduplicationRule: PropTypes.string,
+    nodeNameUniquify: PropTypes.bool,
+    nodeNamePrefix: PropTypes.string
   }).isRequired,
   setAirportForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,

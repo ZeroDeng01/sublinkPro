@@ -169,6 +169,8 @@ func AirportAdd(c *gin.Context) {
 		ProtocolBlacklist:  req.ProtocolBlacklist,
 		NodeNamePreprocess: req.NodeNamePreprocess,
 		DeduplicationRule:  req.DeduplicationRule,
+		NodeNameUniquify:   req.NodeNameUniquify,
+		NodeNamePrefix:     req.NodeNamePrefix,
 	}
 
 	// 检查是否重复
@@ -254,6 +256,8 @@ func AirportUpdate(c *gin.Context) {
 	existing.ProtocolBlacklist = req.ProtocolBlacklist
 	existing.NodeNamePreprocess = req.NodeNamePreprocess
 	existing.DeduplicationRule = req.DeduplicationRule
+	existing.NodeNameUniquify = req.NodeNameUniquify
+	existing.NodeNamePrefix = req.NodeNamePrefix
 
 	if err := existing.Update(); err != nil {
 		utils.FailWithMsg(c, "更新失败: "+err.Error())
