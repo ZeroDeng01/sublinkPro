@@ -268,6 +268,8 @@ func GetChainOptions(c *gin.Context) {
 	groupTypes := []map[string]string{
 		{"value": "select", "label": "手动选择 (select)"},
 		{"value": "url-test", "label": "自动测速 (url-test)"},
+		{"value": "fallback", "label": "故障转移 (fallback)"},
+		{"value": "load-balance", "label": "负载均衡 (load-balance)"},
 	}
 
 	// 从订阅配置中读取模板代理组列表

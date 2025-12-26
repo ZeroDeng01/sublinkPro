@@ -398,6 +398,124 @@ export default function MobileChainBuilder({
                     ))}
                   </Select>
                 </FormControl>
+                {/* url-test 和 fallback 类型配置 */}
+                {(editingProxyConfig?.config?.groupType === 'url-test' || editingProxyConfig?.config?.groupType === 'fallback') && (
+                  <Stack spacing={1.5}>
+                    <TextField
+                      size="small"
+                      fullWidth
+                      label="测速 URL"
+                      value={editingProxyConfig?.config?.urlTestConfig?.url || ''}
+                      onChange={(e) =>
+                        setEditingProxyConfig({
+                          ...editingProxyConfig,
+                          config: {
+                            ...editingProxyConfig.config,
+                            urlTestConfig: { ...editingProxyConfig.config.urlTestConfig, url: e.target.value }
+                          }
+                        })
+                      }
+                      placeholder="http://www.gstatic.com/generate_204"
+                      helperText="用于检测节点可用性的 URL，留空使用默认值"
+                    />
+                    <Stack direction="row" spacing={1}>
+                      <TextField
+                        size="small"
+                        label="间隔(秒)"
+                        type="number"
+                        value={editingProxyConfig?.config?.urlTestConfig?.interval ?? 300}
+                        onChange={(e) =>
+                          setEditingProxyConfig({
+                            ...editingProxyConfig,
+                            config: {
+                              ...editingProxyConfig.config,
+                              urlTestConfig: { ...editingProxyConfig.config.urlTestConfig, interval: parseInt(e.target.value) || 300 }
+                            }
+                          })
+                        }
+                        sx={{ flex: 1 }}
+                        helperText="健康检查间隔"
+                      />
+                      <TextField
+                        size="small"
+                        label="容差(ms)"
+                        type="number"
+                        value={editingProxyConfig?.config?.urlTestConfig?.tolerance ?? 50}
+                        onChange={(e) =>
+                          setEditingProxyConfig({
+                            ...editingProxyConfig,
+                            config: {
+                              ...editingProxyConfig.config,
+                              urlTestConfig: { ...editingProxyConfig.config.urlTestConfig, tolerance: parseInt(e.target.value) || 50 }
+                            }
+                          })
+                        }
+                        sx={{ flex: 1 }}
+                        helperText={editingProxyConfig?.config?.groupType === 'url-test' ? '延迟差在此范围内视为相同' : '故障转移阈值'}
+                      />
+                    </Stack>
+                  </Stack>
+                )}
+                {/* load-balance 类型配置 */}
+                {editingProxyConfig?.config?.groupType === 'load-balance' && (
+                  <Stack spacing={1.5}>
+                    <TextField
+                      size="small"
+                      fullWidth
+                      label="测速 URL"
+                      value={editingProxyConfig?.config?.urlTestConfig?.url || ''}
+                      onChange={(e) =>
+                        setEditingProxyConfig({
+                          ...editingProxyConfig,
+                          config: {
+                            ...editingProxyConfig.config,
+                            urlTestConfig: { ...editingProxyConfig.config.urlTestConfig, url: e.target.value }
+                          }
+                        })
+                      }
+                      placeholder="http://www.gstatic.com/generate_204"
+                      helperText="用于检测节点可用性的 URL，留空使用默认值"
+                    />
+                    <Stack direction="row" spacing={1}>
+                      <TextField
+                        size="small"
+                        label="间隔(秒)"
+                        type="number"
+                        value={editingProxyConfig?.config?.urlTestConfig?.interval ?? 300}
+                        onChange={(e) =>
+                          setEditingProxyConfig({
+                            ...editingProxyConfig,
+                            config: {
+                              ...editingProxyConfig.config,
+                              urlTestConfig: { ...editingProxyConfig.config.urlTestConfig, interval: parseInt(e.target.value) || 300 }
+                            }
+                          })
+                        }
+                        sx={{ flex: 1 }}
+                        helperText="健康检查间隔"
+                      />
+                      <FormControl size="small" sx={{ flex: 1 }}>
+                        <InputLabel>负载均衡策略</InputLabel>
+                        <Select
+                          value={editingProxyConfig?.config?.urlTestConfig?.strategy || 'consistent-hashing'}
+                          label="负载均衡策略"
+                          onChange={(e) =>
+                            setEditingProxyConfig({
+                              ...editingProxyConfig,
+                              config: {
+                                ...editingProxyConfig.config,
+                                urlTestConfig: { ...editingProxyConfig.config.urlTestConfig, strategy: e.target.value }
+                              }
+                            })
+                          }
+                        >
+                          <MenuItem value="consistent-hashing">一致性哈希</MenuItem>
+                          <MenuItem value="round-robin">轮询</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Stack>
+                  </Stack>
+                )}
                 <ConditionBuilder
                   title="节点筛选条件"
                   value={editingProxyConfig?.config?.nodeConditions}

@@ -523,8 +523,11 @@ func DecodeClash(proxys []Proxy, yamlfile string, customGroups ...[]CustomProxyG
 				"proxies":       cg.Proxies,
 				"_custom_group": true, // 标记为自定义代理组，不追加所有节点
 			}
-			// 如果是 url-test 类型，添加测速配置
-			if cg.Type == "url-test" {
+
+			// 根据组类型添加相应配置
+			switch cg.Type {
+			case "url-test", "fallback":
+				// url-test 和 fallback 类型需要 url、interval、tolerance
 				if cg.URL != "" {
 					groupMap["url"] = cg.URL
 				} else {
@@ -533,12 +536,33 @@ func DecodeClash(proxys []Proxy, yamlfile string, customGroups ...[]CustomProxyG
 				if cg.Interval > 0 {
 					groupMap["interval"] = cg.Interval
 				} else {
-					groupMap["interval"] = 300
+					groupMap["interval"] = 300 // 默认 300 秒
 				}
 				if cg.Tolerance > 0 {
 					groupMap["tolerance"] = cg.Tolerance
+				} else {
+					groupMap["tolerance"] = 50 // 默认 50 毫秒
+				}
+
+			case "load-balance":
+				// load-balance 类型需要 url、interval、strategy
+				if cg.URL != "" {
+					groupMap["url"] = cg.URL
+				} else {
+					groupMap["url"] = "http://www.gstatic.com/generate_204"
+				}
+				if cg.Interval > 0 {
+					groupMap["interval"] = cg.Interval
+				} else {
+					groupMap["interval"] = 300 // 默认 300 秒
+				}
+				if cg.Strategy != "" {
+					groupMap["strategy"] = cg.Strategy
+				} else {
+					groupMap["strategy"] = "consistent-hashing" // 默认一致性哈希
 				}
 			}
+
 			proxyGroups = append(proxyGroups, groupMap)
 		}
 	}

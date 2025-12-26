@@ -436,6 +436,7 @@ func GetClash(c *gin.Context) {
 				cpg.URL = g.URLTestConfig.URL
 				cpg.Interval = g.URLTestConfig.Interval
 				cpg.Tolerance = g.URLTestConfig.Tolerance
+				cpg.Strategy = g.URLTestConfig.Strategy
 			}
 			configs.CustomProxyGroups = append(configs.CustomProxyGroups, cpg)
 		}

@@ -26,18 +26,19 @@ type SubscriptionChainRule struct {
 type ChainProxyItem struct {
 	Type           string         `json:"type"`                     // template_group, custom_group, dynamic_node, specified_node
 	GroupName      string         `json:"groupName,omitempty"`      // 代理组名称
-	GroupType      string         `json:"groupType,omitempty"`      // select, url-test (仅 custom_group)
-	URLTestConfig  *URLTestConfig `json:"urlTestConfig,omitempty"`  // URL 测速配置 (仅 custom_group + url-test)
+	GroupType      string         `json:"groupType,omitempty"`      // select, url-test, fallback, load-balance (仅 custom_group)
+	URLTestConfig  *URLTestConfig `json:"urlTestConfig,omitempty"`  // 测速/健康检查配置 (url-test, fallback, load-balance)
 	NodeConditions *TagConditions `json:"nodeConditions,omitempty"` // 节点匹配条件
 	SelectMode     string         `json:"selectMode,omitempty"`     // first, random, fastest (仅 dynamic_node)
 	NodeID         int            `json:"nodeId,omitempty"`         // 指定节点ID (仅 specified_node)
 }
 
-// URLTestConfig URL 测速配置
+// URLTestConfig 测速/健康检查配置
 type URLTestConfig struct {
-	URL       string `json:"url"`
-	Interval  int    `json:"interval"`
-	Tolerance int    `json:"tolerance"`
+	URL       string `json:"url"`                // 测速 URL
+	Interval  int    `json:"interval"`           // 测速间隔（秒）
+	Tolerance int    `json:"tolerance"`          // 容差（毫秒）- 仅 url-test 和 fallback
+	Strategy  string `json:"strategy,omitempty"` // 负载均衡策略 - 仅 load-balance (consistent-hashing, round-robin)
 }
 
 // TargetConfig 目标节点条件配置
@@ -50,7 +51,7 @@ type TargetConfig struct {
 // CustomProxyGroup 自定义代理组（用于生成到 Clash 配置）
 type CustomProxyGroup struct {
 	Name          string         `json:"name"`
-	Type          string         `json:"type"` // select, url-test
+	Type          string         `json:"type"` // select, url-test, fallback, load-balance
 	Proxies       []string       `json:"proxies"`
 	URLTestConfig *URLTestConfig `json:"urlTestConfig,omitempty"`
 }

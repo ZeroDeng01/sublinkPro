@@ -203,10 +203,12 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                       ))}
                     </Select>
                   </FormControl>
-                  {item.groupType === 'url-test' && (
-                    <Stack direction="row" spacing={1}>
+                  {/* url-test 和 fallback 类型配置 */}
+                  {(item.groupType === 'url-test' || item.groupType === 'fallback') && (
+                    <Stack spacing={1.5}>
                       <TextField
                         size="small"
+                        fullWidth
                         label="测速 URL"
                         value={item.urlTestConfig?.url || ''}
                         onChange={(e) =>
@@ -217,39 +219,100 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                             }
                           })
                         }
-                        sx={{ flex: 2 }}
                         placeholder="http://www.gstatic.com/generate_204"
+                        helperText="用于检测节点可用性的 URL，留空使用默认值"
                       />
+                      <Stack direction="row" spacing={1}>
+                        <TextField
+                          size="small"
+                          label="间隔(秒)"
+                          type="number"
+                          value={item.urlTestConfig?.interval ?? 300}
+                          onChange={(e) =>
+                            handleItemChange(index, {
+                              urlTestConfig: {
+                                ...item.urlTestConfig,
+                                interval: parseInt(e.target.value) || 300
+                              }
+                            })
+                          }
+                          sx={{ flex: 1 }}
+                          helperText="健康检查间隔"
+                        />
+                        <TextField
+                          size="small"
+                          label="容差(ms)"
+                          type="number"
+                          value={item.urlTestConfig?.tolerance ?? 50}
+                          onChange={(e) =>
+                            handleItemChange(index, {
+                              urlTestConfig: {
+                                ...item.urlTestConfig,
+                                tolerance: parseInt(e.target.value) || 50
+                              }
+                            })
+                          }
+                          sx={{ flex: 1 }}
+                          helperText={item.groupType === 'url-test' ? '延迟差在此范围内视为相同' : '故障转移阈值'}
+                        />
+                      </Stack>
+                    </Stack>
+                  )}
+                  {/* load-balance 类型配置 */}
+                  {item.groupType === 'load-balance' && (
+                    <Stack spacing={1.5}>
                       <TextField
                         size="small"
-                        label="间隔(秒)"
-                        type="number"
-                        value={item.urlTestConfig?.interval || 300}
+                        fullWidth
+                        label="测速 URL"
+                        value={item.urlTestConfig?.url || ''}
                         onChange={(e) =>
                           handleItemChange(index, {
                             urlTestConfig: {
                               ...item.urlTestConfig,
-                              interval: parseInt(e.target.value) || 300
+                              url: e.target.value
                             }
                           })
                         }
-                        sx={{ flex: 1 }}
+                        placeholder="http://www.gstatic.com/generate_204"
+                        helperText="用于检测节点可用性的 URL，留空使用默认值"
                       />
-                      <TextField
-                        size="small"
-                        label="容差(ms)"
-                        type="number"
-                        value={item.urlTestConfig?.tolerance || 50}
-                        onChange={(e) =>
-                          handleItemChange(index, {
-                            urlTestConfig: {
-                              ...item.urlTestConfig,
-                              tolerance: parseInt(e.target.value) || 50
+                      <Stack direction="row" spacing={1}>
+                        <TextField
+                          size="small"
+                          label="间隔(秒)"
+                          type="number"
+                          value={item.urlTestConfig?.interval ?? 300}
+                          onChange={(e) =>
+                            handleItemChange(index, {
+                              urlTestConfig: {
+                                ...item.urlTestConfig,
+                                interval: parseInt(e.target.value) || 300
+                              }
+                            })
+                          }
+                          sx={{ flex: 1 }}
+                          helperText="健康检查间隔"
+                        />
+                        <FormControl size="small" sx={{ flex: 1 }}>
+                          <InputLabel>负载均衡策略</InputLabel>
+                          <Select
+                            value={item.urlTestConfig?.strategy || 'consistent-hashing'}
+                            label="负载均衡策略"
+                            onChange={(e) =>
+                              handleItemChange(index, {
+                                urlTestConfig: {
+                                  ...item.urlTestConfig,
+                                  strategy: e.target.value
+                                }
+                              })
                             }
-                          })
-                        }
-                        sx={{ flex: 1 }}
-                      />
+                          >
+                            <MenuItem value="consistent-hashing">一致性哈希</MenuItem>
+                            <MenuItem value="round-robin">轮询</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Stack>
                     </Stack>
                   )}
                   <ConditionBuilder

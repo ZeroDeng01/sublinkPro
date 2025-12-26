@@ -15,9 +15,10 @@ type OutputConfig struct {
 // CustomProxyGroup 自定义代理组（由链式代理规则生成）
 type CustomProxyGroup struct {
 	Name      string   `json:"name"`                // 代理组名称
-	Type      string   `json:"type"`                // select, url-test
+	Type      string   `json:"type"`                // select, url-test, fallback, load-balance
 	Proxies   []string `json:"proxies"`             // 代理节点列表
-	URL       string   `json:"url,omitempty"`       // 测速 URL (url-test)
-	Interval  int      `json:"interval,omitempty"`  // 测速间隔 (url-test)
-	Tolerance int      `json:"tolerance,omitempty"` // 容差 (url-test)
+	URL       string   `json:"url,omitempty"`       // 测速 URL (url-test, fallback, load-balance)
+	Interval  int      `json:"interval,omitempty"`  // 测速间隔秒数 (url-test, fallback, load-balance)
+	Tolerance int      `json:"tolerance,omitempty"` // 容差毫秒数 (url-test, fallback)
+	Strategy  string   `json:"strategy,omitempty"`  // 负载均衡策略 (load-balance): consistent-hashing, round-robin
 }
