@@ -30,7 +30,7 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, airportId, onC
       return PREVIEW_NODE_NAME;
     }
     // 使用用户自定义前缀，或默认的 [A{id}] 格式
-    const displayPrefix = prefix || `[${airportId || 0}]`;
+    const displayPrefix = prefix || `[A${airportId || 0}]`;
     return displayPrefix + PREVIEW_NODE_NAME;
   }, [enabled, prefix, airportId]);
 
@@ -110,7 +110,7 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, airportId, onC
             fullWidth
             size="small"
             label="自定义前缀（可选）"
-            placeholder={`留空使用默认前缀 [${airportId || 0}]`}
+            placeholder={`留空使用默认前缀 [A${airportId || 0}]`}
             value={prefix}
             onChange={handlePrefixChange}
             disabled={!enabled}

@@ -66,12 +66,6 @@ func init() {
 
 // InitAirportCache 初始化机场缓存
 func InitAirportCache() error {
-	// 先执行数据库迁移
-	if err := RunAirportMigrations(); err != nil {
-		utils.Error("机场数据库迁移失败: %v", err)
-		return err
-	}
-
 	utils.Info("开始加载机场数据到缓存")
 	var airports []Airport
 	if err := database.DB.Find(&airports).Error; err != nil {
@@ -83,12 +77,6 @@ func InitAirportCache() error {
 
 	cache.Manager.Register("airport", airportCache)
 	return nil
-}
-
-// RunAirportMigrations 执行机场相关的数据库迁移
-func RunAirportMigrations() error {
-	// 添加去重规则字段
-	return database.RunAutoMigrate("add_airport_deduplication_rule_v1", &Airport{})
 }
 
 // Add 添加机场 (Write-Through)

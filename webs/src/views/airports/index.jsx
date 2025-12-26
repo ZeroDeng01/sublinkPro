@@ -83,7 +83,9 @@ export default function AirportList() {
     protocolWhitelist: '',
     protocolBlacklist: '',
     nodeNamePreprocess: '',
-    deduplicationRule: ''
+    deduplicationRule: '',
+    nodeNameUniquify: false,
+    nodeNamePrefix: ''
   });
 
   // 搜索筛选状态
@@ -240,7 +242,9 @@ export default function AirportList() {
       protocolWhitelist: '',
       protocolBlacklist: '',
       nodeNamePreprocess: '',
-      deduplicationRule: ''
+      deduplicationRule: '',
+      nodeNameUniquify: false,
+      nodeNamePrefix: ''
     });
     setFormOpen(true);
   };
@@ -267,7 +271,9 @@ export default function AirportList() {
       protocolWhitelist: airport.protocolWhitelist || '',
       protocolBlacklist: airport.protocolBlacklist || '',
       nodeNamePreprocess: airport.nodeNamePreprocess || '',
-      deduplicationRule: airport.deduplicationRule || ''
+      deduplicationRule: airport.deduplicationRule || '',
+      nodeNameUniquify: airport.nodeNameUniquify || false,
+      nodeNamePrefix: airport.nodeNamePrefix || ''
     });
     if (airport.downloadWithProxy) {
       fetchProxyNodes();
@@ -399,9 +405,9 @@ export default function AirportList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
