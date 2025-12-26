@@ -1,6 +1,7 @@
 package database
 
 import (
+	"log"
 	"os"
 	"strings"
 	"sublink/config"
@@ -51,7 +52,15 @@ func InitSqlite() {
 
 	// 配置 GORM，减少日志噪音
 	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
+		Logger: logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags),
+			logger.Config{
+				SlowThreshold:             time.Second,
+				LogLevel:                  logger.Warn,
+				IgnoreRecordNotFoundError: true, // 忽略 record not found 错误日志
+				Colorful:                  true,
+			},
+		),
 	}
 
 	// 连接数据库
@@ -88,7 +97,15 @@ func initMemorySqlite() {
 
 	// 配置 GORM
 	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
+		Logger: logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags),
+			logger.Config{
+				SlowThreshold:             time.Second,
+				LogLevel:                  logger.Warn,
+				IgnoreRecordNotFoundError: true, // 忽略 record not found 错误日志
+				Colorful:                  true,
+			},
+		),
 	}
 
 	// 连接数据库
