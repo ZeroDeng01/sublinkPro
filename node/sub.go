@@ -1011,6 +1011,8 @@ func generateProxyLink(proxy protocol.Proxy) string {
 		query := url.Values{}
 		if proxy.Sni != "" {
 			query.Set("sni", proxy.Sni)
+		} else if proxy.Servername != "" {
+			query.Set("sni", proxy.Servername)
 		}
 		if proxy.Congestion_controller != "" {
 			query.Set("congestion_control", proxy.Congestion_controller)
