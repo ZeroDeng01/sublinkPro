@@ -310,6 +310,7 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                           >
                             <MenuItem value="consistent-hashing">一致性哈希</MenuItem>
                             <MenuItem value="round-robin">轮询</MenuItem>
+                            <MenuItem value="sticky-sessions">会话保持</MenuItem>
                           </Select>
                         </FormControl>
                       </Stack>
