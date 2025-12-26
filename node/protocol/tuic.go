@@ -19,6 +19,8 @@ type Tuic struct {
 	Sni                string
 	Udp_relay_mode     string
 	Disable_sni        int
+	Tls                bool   // TLS开关，对应URI中的security参数
+	ClientFingerprint  string // 客户端指纹，对应URI中的fp参数
 }
 
 // Tuic 解码
@@ -45,15 +47,20 @@ func DecodeTuicURL(s string) (Tuic, error) {
 		rawPort = "443"
 	}
 	port, _ := strconv.Atoi(rawPort)
-	Congestioncontrol := u.Query().Get("Congestion_control")
+	Congestioncontrol := u.Query().Get("congestion_control")
 	alpns := u.Query().Get("alpn")
 	alpn := strings.Split(alpns, ",")
 	if alpns == "" {
 		alpn = nil
 	}
 	sni := u.Query().Get("sni")
-	Udprelay_mode := u.Query().Get("Udp_relay_mode")
-	Disablesni, _ := strconv.Atoi(u.Query().Get("Disable_sni"))
+	Udprelay_mode := u.Query().Get("udp_relay_mode")
+	Disablesni, _ := strconv.Atoi(u.Query().Get("disable_sni"))
+	// 解析security参数，判断是否启用TLS
+	security := u.Query().Get("security")
+	tls := security == "tls" || security == ""
+	// 解析fp参数，获取客户端指纹
+	clientFingerprint := u.Query().Get("fp")
 	name := u.Fragment
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if name == "" {
@@ -65,10 +72,10 @@ func DecodeTuicURL(s string) (Tuic, error) {
 		fmt.Println("port:", port)
 		fmt.Println("insecure:", Congestioncontrol)
 		fmt.Println("uuid:", uuid)
-		fmt.Println("Udprelay_mode:", Udprelay_mode)
+		fmt.Println("udprelay_mode:", Udprelay_mode)
 		fmt.Println("alpn:", alpn)
 		fmt.Println("sni:", sni)
-		fmt.Println("Disablesni:", Disablesni)
+		fmt.Println("disablesni:", Disablesni)
 		fmt.Println("name:", name)
 	}
 	return Tuic{
@@ -82,6 +89,8 @@ func DecodeTuicURL(s string) (Tuic, error) {
 		Sni:                sni,
 		Udp_relay_mode:     Udprelay_mode,
 		Disable_sni:        Disablesni,
+		Tls:                tls,
+		ClientFingerprint:  clientFingerprint,
 	}, nil
 }
 
@@ -100,7 +109,7 @@ func EncodeTuicURL(t Tuic) string {
 	}
 	q := u.Query()
 	if t.Congestion_control != "" {
-		q.Set("Congestion_control", t.Congestion_control)
+		q.Set("congestion_control", t.Congestion_control)
 	}
 	if len(t.Alpn) > 0 {
 		q.Set("alpn", strings.Join(t.Alpn, ","))
@@ -109,10 +118,18 @@ func EncodeTuicURL(t Tuic) string {
 		q.Set("sni", t.Sni)
 	}
 	if t.Udp_relay_mode != "" {
-		q.Set("Udp_relay_mode", t.Udp_relay_mode)
+		q.Set("udp_relay_mode", t.Udp_relay_mode)
 	}
 	if t.Disable_sni != 0 {
-		q.Set("Disable_sni", strconv.Itoa(t.Disable_sni))
+		q.Set("disable_sni", strconv.Itoa(t.Disable_sni))
+	}
+	// 编码security参数
+	if t.Tls {
+		q.Set("security", "tls")
+	}
+	// 编码客户端指纹
+	if t.ClientFingerprint != "" {
+		q.Set("fp", t.ClientFingerprint)
 	}
 	u.RawQuery = q.Encode()
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment

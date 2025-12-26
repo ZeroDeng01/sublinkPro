@@ -54,41 +54,41 @@ func (fp FlexPort) Int() int {
 }
 
 type Proxy struct {
-	Name               string                 `yaml:"name,omitempty"`               // 节点名称
-	Type               string                 `yaml:"type,omitempty"`               // 代理类型 (ss, vmess, trojan, etc.)
-	Server             string                 `yaml:"server,omitempty"`             // 服务器地址
-	Port               FlexPort               `yaml:"port,omitempty"`               // 服务器端口
-	Ports              string                 `yaml:"ports,omitempty"`              // hysteria2端口跳跃
-	Cipher             string                 `yaml:"cipher,omitempty"`             // 加密方式
-	Username           string                 `yaml:"username,omitempty"`           // 用户名 (socks5 等)
-	Password           string                 `yaml:"password,omitempty"`           // 密码
-	Client_fingerprint string                 `yaml:"client-fingerprint,omitempty"` // 客户端指纹 (uTLS)
-	Tfo                bool                   `yaml:"tfo,omitempty"`                // TCP Fast Open
-	Udp                bool                   `yaml:"udp,omitempty"`                // 是否启用 UDP
-	Skip_cert_verify   bool                   `yaml:"skip-cert-verify,omitempty"`   // 跳过证书验证
-	Tls                bool                   `yaml:"tls,omitempty"`                // 是否启用 TLS
-	Servername         string                 `yaml:"servername,omitempty"`         // TLS SNI
-	Flow               string                 `yaml:"flow,omitempty"`               // 流控 (xtls-rprx-vision 等)
-	AlterId            string                 `yaml:"alterId,omitempty"`            // VMess AlterId
-	Network            string                 `yaml:"network,omitempty"`            // 传输协议 (ws, grpc, etc.)
-	Reality_opts       map[string]interface{} `yaml:"reality-opts,omitempty"`       // Reality 选项
-	Ws_opts            map[string]interface{} `yaml:"ws-opts,omitempty"`            // WebSocket 选项
-	Grpc_opts          map[string]interface{} `yaml:"grpc-opts,omitempty"`          // gRPC 选项
-	Auth_str           string                 `yaml:"auth_str,omitempty"`           // Hysteria 认证字符串
-	Auth               string                 `yaml:"auth,omitempty"`               // 认证信息
-	Up                 int                    `yaml:"up,omitempty"`                 // 上行带宽限制
-	Down               int                    `yaml:"down,omitempty"`               // 下行带宽限制
-	Alpn               []string               `yaml:"alpn,omitempty"`               // ALPN
-	Sni                string                 `yaml:"sni,omitempty"`                // SNI
-	Obfs               string                 `yaml:"obfs,omitempty"`               // 混淆模式 (SSR/Hysteria2)
-	Obfs_password      string                 `yaml:"obfs-password,omitempty"`      // 混淆密码
-	Protocol           string                 `yaml:"protocol,omitempty"`           // SSR 协议
-	Uuid               string                 `yaml:"uuid,omitempty"`               // UUID (VMess/VLESS)
-	Peer               string                 `yaml:"peer,omitempty"`               // Peer (Hysteria)
-	Congestion_control string                 `yaml:"congestion_control,omitempty"` // 拥塞控制 (Tuic)
-	Udp_relay_mode     string                 `yaml:"udp_relay_mode,omitempty"`     // UDP 转发模式 (Tuic)
-	Disable_sni        bool                   `yaml:"disable_sni,omitempty"`        // 禁用 SNI (Tuic)
-	Dialer_proxy       string                 `yaml:"dialer-proxy,omitempty"`       // 前置代理
+	Name                  string                 `yaml:"name,omitempty"`                  // 节点名称
+	Type                  string                 `yaml:"type,omitempty"`                  // 代理类型 (ss, vmess, trojan, etc.)
+	Server                string                 `yaml:"server,omitempty"`                // 服务器地址
+	Port                  FlexPort               `yaml:"port,omitempty"`                  // 服务器端口
+	Ports                 string                 `yaml:"ports,omitempty"`                 // hysteria2端口跳跃
+	Cipher                string                 `yaml:"cipher,omitempty"`                // 加密方式
+	Username              string                 `yaml:"username,omitempty"`              // 用户名 (socks5 等)
+	Password              string                 `yaml:"password,omitempty"`              // 密码
+	Client_fingerprint    string                 `yaml:"client-fingerprint,omitempty"`    // 客户端指纹 (uTLS)
+	Tfo                   bool                   `yaml:"tfo,omitempty"`                   // TCP Fast Open
+	Udp                   bool                   `yaml:"udp,omitempty"`                   // 是否启用 UDP
+	Skip_cert_verify      bool                   `yaml:"skip-cert-verify,omitempty"`      // 跳过证书验证
+	Tls                   bool                   `yaml:"tls,omitempty"`                   // 是否启用 TLS
+	Servername            string                 `yaml:"servername,omitempty"`            // TLS SNI
+	Flow                  string                 `yaml:"flow,omitempty"`                  // 流控 (xtls-rprx-vision 等)
+	AlterId               string                 `yaml:"alterId,omitempty"`               // VMess AlterId
+	Network               string                 `yaml:"network,omitempty"`               // 传输协议 (ws, grpc, etc.)
+	Reality_opts          map[string]interface{} `yaml:"reality-opts,omitempty"`          // Reality 选项
+	Ws_opts               map[string]interface{} `yaml:"ws-opts,omitempty"`               // WebSocket 选项
+	Grpc_opts             map[string]interface{} `yaml:"grpc-opts,omitempty"`             // gRPC 选项
+	Auth_str              string                 `yaml:"auth-str,omitempty"`              // Hysteria 认证字符串
+	Auth                  string                 `yaml:"auth,omitempty"`                  // 认证信息
+	Up                    int                    `yaml:"up,omitempty"`                    // 上行带宽限制
+	Down                  int                    `yaml:"down,omitempty"`                  // 下行带宽限制
+	Alpn                  []string               `yaml:"alpn,omitempty"`                  // ALPN
+	Sni                   string                 `yaml:"sni,omitempty"`                   // SNI
+	Obfs                  string                 `yaml:"obfs,omitempty"`                  // 混淆模式 (SSR/Hysteria2)
+	Obfs_password         string                 `yaml:"obfs-password,omitempty"`         // 混淆密码
+	Protocol              string                 `yaml:"protocol,omitempty"`              // SSR 协议
+	Uuid                  string                 `yaml:"uuid,omitempty"`                  // UUID (VMess/VLESS)
+	Peer                  string                 `yaml:"peer,omitempty"`                  // Peer (Hysteria)
+	Congestion_controller string                 `yaml:"congestion-controller,omitempty"` // 拥塞控制 (Tuic)
+	Udp_relay_mode        string                 `yaml:"udp-relay-mode,omitempty"`        // UDP 转发模式 (Tuic)
+	Disable_sni           bool                   `yaml:"disable-sni,omitempty"`           // 禁用 SNI (Tuic)
+	Dialer_proxy          string                 `yaml:"dialer-proxy,omitempty"`          // 前置代理
 }
 
 type ProxyGroup struct {
@@ -370,20 +370,22 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			disable_sni = true
 		}
 		return Proxy{
-			Name:               tuic.Name,
-			Type:               "tuic",
-			Server:             tuic.Host,
-			Port:               FlexPort(utils.GetPortInt(tuic.Port)),
-			Password:           tuic.Password,
-			Uuid:               tuic.Uuid,
-			Congestion_control: tuic.Congestion_control,
-			Alpn:               tuic.Alpn,
-			Udp_relay_mode:     tuic.Udp_relay_mode,
-			Disable_sni:        disable_sni,
-			Sni:                tuic.Sni,
-			Udp:                config.Udp,
-			Skip_cert_verify:   config.Cert,
-			Dialer_proxy:       link.DialerProxyName,
+			Name:                  tuic.Name,
+			Type:                  "tuic",
+			Server:                tuic.Host,
+			Port:                  FlexPort(utils.GetPortInt(tuic.Port)),
+			Password:              tuic.Password,
+			Uuid:                  tuic.Uuid,
+			Congestion_controller: tuic.Congestion_control,
+			Alpn:                  tuic.Alpn,
+			Udp_relay_mode:        tuic.Udp_relay_mode,
+			Disable_sni:           disable_sni,
+			Sni:                   tuic.Sni,
+			Tls:                   tuic.Tls,
+			Client_fingerprint:    tuic.ClientFingerprint,
+			Udp:                   config.Udp,
+			Skip_cert_verify:      config.Cert,
+			Dialer_proxy:          link.DialerProxyName,
 		}, nil
 
 	case Scheme == "anytls":

@@ -1012,8 +1012,8 @@ func generateProxyLink(proxy protocol.Proxy) string {
 		if proxy.Sni != "" {
 			query.Set("sni", proxy.Sni)
 		}
-		if proxy.Congestion_control != "" {
-			query.Set("congestion_control", proxy.Congestion_control)
+		if proxy.Congestion_controller != "" {
+			query.Set("congestion_control", proxy.Congestion_controller)
 		}
 		if len(proxy.Alpn) > 0 {
 			query.Set("alpn", strings.Join(proxy.Alpn, ","))
@@ -1023,6 +1023,13 @@ func generateProxyLink(proxy protocol.Proxy) string {
 		}
 		if proxy.Disable_sni {
 			query.Set("disable_sni", "1")
+		}
+		// 处理TLS和客户端指纹
+		if proxy.Tls {
+			query.Set("security", "tls")
+		}
+		if proxy.Client_fingerprint != "" {
+			query.Set("fp", proxy.Client_fingerprint)
 		}
 		return fmt.Sprintf("tuic://%s:%s@%s:%d?%s#%s", uuid, password, server, port, query.Encode(), name)
 
