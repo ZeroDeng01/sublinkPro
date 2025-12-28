@@ -354,6 +354,8 @@ func Run() {
 	if err := models.InitTagRuleCache(); err != nil {
 		utils.Error("加载标签规则到缓存失败: %v", err)
 	}
+	// 设置标签组标签查询回调（用于节点重命名的 $TagGroup(xxx) 变量）
+	utils.SetTagGroupTagsFunc(models.GetTagNamesByGroupName)
 	if err := models.InitTaskCache(); err != nil {
 		utils.Error("加载任务到缓存失败: %v", err)
 	}

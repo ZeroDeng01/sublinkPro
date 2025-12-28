@@ -14,10 +14,18 @@ import TextField from '@mui/material/TextField';
 import Alert from '@mui/material/Alert';
 import Tooltip from '@mui/material/Tooltip';
 import Fade from '@mui/material/Fade';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+import CircularProgress from '@mui/material/CircularProgress';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
+import { getTagGroups } from 'api/tags';
 
 // 将国家ISO代码转换为国旗emoji
 const isoToFlag = (isoCode) => {
@@ -51,7 +59,7 @@ const AVAILABLE_VARIABLES = [
   { key: '$Source', label: '来源', color: '#607d8b', description: '节点来源' },
   { key: '$Index', label: '序号', color: '#9e9e9e', description: '节点序号' },
   { key: '$Tags', label: '标签', color: '#673ab7', description: '所有标签(竖线｜分隔)' },
-  { key: '$Tag', label: '首标签', color: '#8bc34a', description: '第一个标签' }
+  { key: '$TagGroup', label: '标签组', color: '#8bc34a', description: '指定标签组中的标签(点击选择标签组)' }
 ];
 
 // 快捷分隔符
@@ -78,8 +86,7 @@ const PREVIEW_DATA = {
   $Source: '机场A',
   $Index: '1',
   $Protocol: 'VMess',
-  $Tags: '速度优秀|香港节点',
-  $Tag: '速度优秀'
+  $Tags: '速度优秀|香港节点'
 };
 
 /**
@@ -89,19 +96,18 @@ const parseRule = (rule) => {
   if (!rule) return [];
 
   const items = [];
-  let remaining = rule;
   let id = 0;
 
-  // 变量正则
-  const varRegex = /\$(Name|LinkName|LinkCountry|Flag|Speed|Delay|Group|Source|Index|Protocol|Tags|Tag)/g;
+  // 匹配普通变量和 $TagGroup(xxx) 格式
+  const varRegex = /\$(Name|LinkName|LinkCountry|Flag|Speed|Delay|Group|Source|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
 
   let match;
   let lastIndex = 0;
 
-  while ((match = varRegex.exec(remaining)) !== null) {
+  while ((match = varRegex.exec(rule)) !== null) {
     // 添加变量前的文本（分隔符）
     if (match.index > lastIndex) {
-      const sep = remaining.substring(lastIndex, match.index);
+      const sep = rule.substring(lastIndex, match.index);
       items.push({ id: `sep-${id++}`, type: 'separator', value: sep });
     }
     // 添加变量
@@ -110,8 +116,8 @@ const parseRule = (rule) => {
   }
 
   // 添加剩余文本
-  if (lastIndex < remaining.length) {
-    items.push({ id: `sep-${id++}`, type: 'separator', value: remaining.substring(lastIndex) });
+  if (lastIndex < rule.length) {
+    items.push({ id: `sep-${id++}`, type: 'separator', value: rule.substring(lastIndex) });
   }
 
   return items;
@@ -135,6 +141,11 @@ export default function NodeRenameBuilder({ value, onChange }) {
   const [customSeparator, setCustomSeparator] = useState('');
   const [idCounter, setIdCounter] = useState(0);
 
+  // 标签组选择弹窗状态
+  const [tagGroupDialogOpen, setTagGroupDialogOpen] = useState(false);
+  const [tagGroups, setTagGroups] = useState([]);
+  const [tagGroupsLoading, setTagGroupsLoading] = useState(false);
+
   // 初始化：从传入的 value 解析规则
   useEffect(() => {
     const items = parseRule(value);
@@ -152,8 +163,39 @@ export default function NodeRenameBuilder({ value, onChange }) {
     [onChange]
   );
 
+  // 打开标签组选择弹窗
+  const openTagGroupDialog = async () => {
+    setTagGroupDialogOpen(true);
+    setTagGroupsLoading(true);
+    try {
+      const res = await getTagGroups();
+      setTagGroups(res.data || []);
+    } catch (error) {
+      console.error('获取标签组失败:', error);
+      setTagGroups([]);
+    } finally {
+      setTagGroupsLoading(false);
+    }
+  };
+
+  // 选择标签组
+  const handleSelectTagGroup = (groupName) => {
+    const varValue = `$TagGroup(${groupName})`;
+    const newItem = { id: `var-${idCounter}`, type: 'variable', value: varValue };
+    const newItems = [...ruleItems, newItem];
+    setRuleItems(newItems);
+    setIdCounter(idCounter + 1);
+    syncRule(newItems);
+    setTagGroupDialogOpen(false);
+  };
+
   // 添加变量
   const handleAddVariable = (varKey) => {
+    // $TagGroup 需要打开选择弹窗
+    if (varKey === '$TagGroup') {
+      openTagGroupDialog();
+      return;
+    }
     const newItem = { id: `var-${idCounter}`, type: 'variable', value: varKey };
     const newItems = [...ruleItems, newItem];
     setRuleItems(newItems);
@@ -199,12 +241,21 @@ export default function NodeRenameBuilder({ value, onChange }) {
 
   // 获取变量的颜色
   const getVariableColor = (varKey) => {
+    // 处理 $TagGroup(xxx) 格式
+    if (varKey.startsWith('$TagGroup(')) {
+      return AVAILABLE_VARIABLES.find((v) => v.key === '$TagGroup')?.color || '#8bc34a';
+    }
     const variable = AVAILABLE_VARIABLES.find((v) => v.key === varKey);
     return variable?.color || '#9e9e9e';
   };
 
   // 获取变量的标签
   const getVariableLabel = (varKey) => {
+    // 处理 $TagGroup(xxx) 格式 - 显示为 "标签组:xxx"
+    const tagGroupMatch = varKey.match(/\$TagGroup\(([^)]+)\)/);
+    if (tagGroupMatch) {
+      return `标签组:${tagGroupMatch[1]}`;
+    }
     const variable = AVAILABLE_VARIABLES.find((v) => v.key === varKey);
     return variable?.label || varKey;
   };
@@ -213,6 +264,11 @@ export default function NodeRenameBuilder({ value, onChange }) {
   const preview = ruleItems
     .map((item) => {
       if (item.type === 'variable') {
+        // 处理 $TagGroup(xxx) - 预览使用示例标签名
+        const tagGroupMatch = item.value.match(/\$TagGroup\(([^)]+)\)/);
+        if (tagGroupMatch) {
+          return '速度优秀'; // 示例标签名
+        }
         return PREVIEW_DATA[item.value] || item.value;
       }
       return item.value;
@@ -455,6 +511,48 @@ export default function NodeRenameBuilder({ value, onChange }) {
           </Alert>
         </Fade>
       )}
+      {/* 标签组选择弹窗 */}
+      <Dialog
+        open={tagGroupDialogOpen}
+        onClose={() => setTagGroupDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>选择标签组</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          {tagGroupsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+              <CircularProgress size={32} />
+            </Box>
+          ) : tagGroups.length === 0 ? (
+            <Typography color="textSecondary" sx={{ py: 2, textAlign: 'center' }}>
+              暂无标签组，请先在标签管理中创建标签组
+            </Typography>
+          ) : (
+            <List sx={{ py: 0 }}>
+              {tagGroups.map((group) => (
+                <ListItemButton
+                  key={group}
+                  onClick={() => handleSelectTagGroup(group)}
+                  sx={{
+                    borderRadius: 1,
+                    mb: 0.5,
+                    '&:hover': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText'
+                    }
+                  }}
+                >
+                  <ListItemText primary={group} />
+                </ListItemButton>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

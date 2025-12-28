@@ -8,6 +8,64 @@ import (
 	"strings"
 )
 
+// TagGroupTagsFn 标签组标签查询函数类型
+// 参数：标签组名称
+// 返回：该标签组下所有标签名称列表
+type TagGroupTagsFn func(groupName string) []string
+
+// tagGroupTagsFunc 标签组标签查询回调（由外部设置，避免循环依赖）
+var tagGroupTagsFunc TagGroupTagsFn
+
+// SetTagGroupTagsFunc 设置标签组标签查询函数（应在应用初始化时调用）
+func SetTagGroupTagsFunc(fn TagGroupTagsFn) {
+	tagGroupTagsFunc = fn
+}
+
+// tagGroupRegex 匹配 $TagGroup(xxx) 格式的正则
+var tagGroupRegex = regexp.MustCompile(`\$TagGroup\(([^)]+)\)`)
+
+// replaceTagGroupVariables 替换规则中的 $TagGroup(xxx) 变量
+// rule: 包含 $TagGroup(xxx) 变量的规则字符串
+// nodeTags: 节点的标签列表（逗号分隔）
+// 返回替换后的字符串
+func replaceTagGroupVariables(rule string, nodeTags string) string {
+	if tagGroupTagsFunc == nil {
+		// 回调未设置，移除所有 $TagGroup(xxx) 变量
+		return tagGroupRegex.ReplaceAllString(rule, "")
+	}
+
+	// 将节点标签转为集合便于快速查找
+	nodeTagSet := make(map[string]bool)
+	if nodeTags != "" {
+		for _, t := range strings.Split(nodeTags, ",") {
+			nodeTagSet[strings.TrimSpace(t)] = true
+		}
+	}
+
+	return tagGroupRegex.ReplaceAllStringFunc(rule, func(match string) string {
+		// 提取标签组名称
+		submatches := tagGroupRegex.FindStringSubmatch(match)
+		if len(submatches) < 2 {
+			return ""
+		}
+		groupName := submatches[1]
+
+		// 获取该标签组下的所有标签
+		groupTags := tagGroupTagsFunc(groupName)
+		if len(groupTags) == 0 {
+			return ""
+		}
+
+		// 查找节点拥有的该组中的标签（由于互斥，最多一个）
+		for _, tag := range groupTags {
+			if nodeTagSet[tag] {
+				return tag
+			}
+		}
+		return ""
+	})
+}
+
 // NodeInfo 节点信息结构体，用于重命名
 type NodeInfo struct {
 	Name        string  // 系统节点备注名称
@@ -196,19 +254,9 @@ func RenameNode(rule string, info NodeInfo) string {
 
 	// 处理标签
 	tags := info.Tags
-	if tags == "" {
-		tags = ""
-	} else {
+	if tags != "" {
 		// 将逗号分隔转换为竖线分隔
 		tags = strings.ReplaceAll(tags, ",", "|")
-	}
-	// 获取第一个标签
-	firstTag := ""
-	if info.Tags != "" {
-		parts := strings.Split(info.Tags, ",")
-		if len(parts) > 0 {
-			firstTag = strings.TrimSpace(parts[0])
-		}
 	}
 
 	// 替换所有支持的变量
@@ -230,13 +278,15 @@ func RenameNode(rule string, info NodeInfo) string {
 		{"$Index", fmt.Sprintf("%d", info.Index)},
 		{"$Name", info.Name},
 		{"$Flag", ISOToFlag(info.LinkCountry)},
-		{"$Tags", tags},    // 所有标签（竖线｜分隔），必须在 $Tag 之前
-		{"$Tag", firstTag}, // 第一个标签
+		{"$Tags", tags}, // 所有标签（竖线｜分隔）
 	}
 
 	for _, r := range replacements {
 		result = strings.ReplaceAll(result, r.variable, r.value)
 	}
+
+	// 处理 $TagGroup(xxx) 变量 - 查找节点在指定标签组中的标签
+	result = replaceTagGroupVariables(result, info.Tags)
 
 	// 清理连续空格和首尾空格
 	result = strings.TrimSpace(result)

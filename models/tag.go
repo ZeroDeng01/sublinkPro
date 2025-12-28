@@ -219,6 +219,21 @@ func GetExistingGroups() []string {
 	return groups
 }
 
+// GetTagNamesByGroupName 获取指定标签组下的所有标签名称
+func GetTagNamesByGroupName(groupName string) []string {
+	if groupName == "" {
+		return nil
+	}
+	allTags := tagCache.GetAll()
+	names := make([]string, 0)
+	for _, t := range allTags {
+		if t.GroupName == groupName {
+			names = append(names, t.Name)
+		}
+	}
+	return names
+}
+
 // ========== TagRule CRUD ==========
 
 // Add 添加规则
