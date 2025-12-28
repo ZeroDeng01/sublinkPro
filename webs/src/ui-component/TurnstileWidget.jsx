@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import PropTypes from 'prop-types';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -10,8 +10,12 @@ const TURNSTILE_SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api
 
 /**
  * Cloudflare Turnstile 组件
+ * 支持重置和各种回调
  */
-export default function TurnstileWidget({ siteKey, onVerify, onError, onExpire }) {
+const TurnstileWidget = forwardRef(function TurnstileWidget(
+  { siteKey, onVerify, onError, onExpire, onLoad, showSuccessMessage = true },
+  ref
+) {
   const widgetIdRef = useRef(null);
   const renderedRef = useRef(false);
   const [containerEl, setContainerEl] = useState(null);
@@ -19,9 +23,39 @@ export default function TurnstileWidget({ siteKey, onVerify, onError, onExpire }
   const [hasError, setHasError] = useState(false);
   const [scriptReady, setScriptReady] = useState(!!window.turnstile);
 
-  // 使用 ref 存储回调
-  const callbacksRef = useRef({ onVerify, onError, onExpire });
-  callbacksRef.current = { onVerify, onError, onExpire };
+  // 使用 ref 存储回调，避免闭包问题
+  const callbacksRef = useRef({ onVerify, onError, onExpire, onLoad });
+  callbacksRef.current = { onVerify, onError, onExpire, onLoad };
+
+  // 重置方法
+  const reset = useCallback(() => {
+    setIsVerified(false);
+    setHasError(false);
+    if (widgetIdRef.current && window.turnstile) {
+      try {
+        window.turnstile.reset(widgetIdRef.current);
+      } catch (err) {
+        console.warn('Turnstile reset failed:', err);
+        // 如果 reset 失败，尝试移除并重新渲染
+        try {
+          window.turnstile.remove(widgetIdRef.current);
+          widgetIdRef.current = null;
+          renderedRef.current = false;
+        } catch {
+          // 忽略
+        }
+      }
+    }
+  }, []);
+
+  // 暴露方法给父组件
+  useImperativeHandle(
+    ref,
+    () => ({
+      reset
+    }),
+    [reset]
+  );
 
   // 使用 callback ref 捕获容器元素
   const containerRefCallback = useCallback((node) => {
@@ -89,14 +123,14 @@ export default function TurnstileWidget({ siteKey, onVerify, onError, onExpire }
         },
         'expired-callback': () => {
           setIsVerified(false);
-          renderedRef.current = false;
-          widgetIdRef.current = null;
           if (callbacksRef.current.onExpire) callbacksRef.current.onExpire();
         },
         theme: 'auto',
         language: 'zh-CN'
       });
       renderedRef.current = true;
+      // 触发加载完成回调
+      if (callbacksRef.current.onLoad) callbacksRef.current.onLoad();
     } catch (err) {
       console.error('Turnstile 渲染失败:', err);
       setHasError(true);
@@ -116,7 +150,7 @@ export default function TurnstileWidget({ siteKey, onVerify, onError, onExpire }
   }, [scriptReady, containerEl, siteKey]);
 
   // 验证通过
-  if (isVerified) {
+  if (isVerified && showSuccessMessage) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 1.5, gap: 0.5 }}>
         <CheckCircleOutlineIcon color="success" fontSize="small" />
@@ -125,6 +159,11 @@ export default function TurnstileWidget({ siteKey, onVerify, onError, onExpire }
         </Typography>
       </Box>
     );
+  }
+
+  // 验证通过但不显示消息（弹窗模式）
+  if (isVerified) {
+    return null;
   }
 
   // 错误状态
@@ -153,11 +192,15 @@ export default function TurnstileWidget({ siteKey, onVerify, onError, onExpire }
       )}
     </Box>
   );
-}
+});
 
 TurnstileWidget.propTypes = {
   siteKey: PropTypes.string.isRequired,
   onVerify: PropTypes.func,
   onError: PropTypes.func,
-  onExpire: PropTypes.func
+  onExpire: PropTypes.func,
+  onLoad: PropTypes.func,
+  showSuccessMessage: PropTypes.bool
 };
+
+export default TurnstileWidget;
