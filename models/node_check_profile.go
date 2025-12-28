@@ -32,11 +32,12 @@ type NodeCheckProfile struct {
 	SpeedConcurrency   int `gorm:"default:0" json:"speedConcurrency"`   // 速度检测并发(0=自动)
 
 	// 高级选项
-	DetectCountry      bool   `gorm:"default:false" json:"detectCountry"`       // 检测落地IP国家
-	LandingIPURL       string `json:"landingIpUrl"`                             // IP查询接口URL
-	IncludeHandshake   bool   `gorm:"default:true" json:"includeHandshake"`     // 延迟包含握手时间
-	SpeedRecordMode    string `gorm:"default:'average'" json:"speedRecordMode"` // 速度记录模式：average/peak
-	PeakSampleInterval int    `gorm:"default:100" json:"peakSampleInterval"`    // 峰值采样间隔(ms)
+	DetectCountry       bool   `gorm:"default:false" json:"detectCountry"`       // 检测落地IP国家
+	LandingIPURL        string `json:"landingIpUrl"`                             // IP查询接口URL
+	IncludeHandshake    bool   `gorm:"default:true" json:"includeHandshake"`     // 延迟包含握手时间
+	SpeedRecordMode     string `gorm:"default:'average'" json:"speedRecordMode"` // 速度记录模式：average/peak
+	PeakSampleInterval  int    `gorm:"default:100" json:"peakSampleInterval"`    // 峰值采样间隔(ms)
+	PreserveSpeedResult bool   `gorm:"default:false" json:"preserveSpeedResult"` // TCP模式保留速度测试结果
 
 	// 流量统计开关
 	TrafficByGroup  bool `gorm:"default:true" json:"trafficByGroup"`
@@ -99,7 +100,7 @@ func (p *NodeCheckProfile) Update() error {
 		"Groups", "Tags",
 		"LatencyConcurrency", "SpeedConcurrency",
 		"DetectCountry", "LandingIPURL", "IncludeHandshake",
-		"SpeedRecordMode", "PeakSampleInterval",
+		"SpeedRecordMode", "PeakSampleInterval", "PreserveSpeedResult",
 		"TrafficByGroup", "TrafficBySource", "TrafficByNode",
 	).Updates(p).Error
 	if err != nil {

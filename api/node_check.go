@@ -43,25 +43,26 @@ func GetNodeCheckProfile(c *gin.Context) {
 // POST /api/v1/node-check/profiles
 func CreateNodeCheckProfile(c *gin.Context) {
 	var req struct {
-		Name               string   `json:"name" binding:"required"`
-		Enabled            bool     `json:"enabled"`
-		CronExpr           string   `json:"cronExpr"`
-		Mode               string   `json:"mode"`
-		TestURL            string   `json:"testUrl"`
-		LatencyURL         string   `json:"latencyUrl"`
-		Timeout            int      `json:"timeout"`
-		Groups             []string `json:"groups"`
-		Tags               []string `json:"tags"`
-		LatencyConcurrency int      `json:"latencyConcurrency"`
-		SpeedConcurrency   int      `json:"speedConcurrency"`
-		DetectCountry      bool     `json:"detectCountry"`
-		LandingIPURL       string   `json:"landingIpUrl"`
-		IncludeHandshake   *bool    `json:"includeHandshake"`
-		SpeedRecordMode    string   `json:"speedRecordMode"`
-		PeakSampleInterval int      `json:"peakSampleInterval"`
-		TrafficByGroup     *bool    `json:"trafficByGroup"`
-		TrafficBySource    *bool    `json:"trafficBySource"`
-		TrafficByNode      *bool    `json:"trafficByNode"`
+		Name                string   `json:"name" binding:"required"`
+		Enabled             bool     `json:"enabled"`
+		CronExpr            string   `json:"cronExpr"`
+		Mode                string   `json:"mode"`
+		TestURL             string   `json:"testUrl"`
+		LatencyURL          string   `json:"latencyUrl"`
+		Timeout             int      `json:"timeout"`
+		Groups              []string `json:"groups"`
+		Tags                []string `json:"tags"`
+		LatencyConcurrency  int      `json:"latencyConcurrency"`
+		SpeedConcurrency    int      `json:"speedConcurrency"`
+		DetectCountry       bool     `json:"detectCountry"`
+		LandingIPURL        string   `json:"landingIpUrl"`
+		IncludeHandshake    *bool    `json:"includeHandshake"`
+		SpeedRecordMode     string   `json:"speedRecordMode"`
+		PeakSampleInterval  int      `json:"peakSampleInterval"`
+		TrafficByGroup      *bool    `json:"trafficByGroup"`
+		TrafficBySource     *bool    `json:"trafficBySource"`
+		TrafficByNode       *bool    `json:"trafficByNode"`
+		PreserveSpeedResult bool     `json:"preserveSpeedResult"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -116,23 +117,24 @@ func CreateNodeCheckProfile(c *gin.Context) {
 	}
 
 	profile := models.NodeCheckProfile{
-		Name:               req.Name,
-		Enabled:            req.Enabled,
-		CronExpr:           req.CronExpr,
-		Mode:               mode,
-		TestURL:            req.TestURL,
-		LatencyURL:         req.LatencyURL,
-		Timeout:            timeout,
-		LatencyConcurrency: req.LatencyConcurrency,
-		SpeedConcurrency:   speedConcurrency,
-		DetectCountry:      req.DetectCountry,
-		LandingIPURL:       req.LandingIPURL,
-		IncludeHandshake:   includeHandshake,
-		SpeedRecordMode:    speedRecordMode,
-		PeakSampleInterval: peakSampleInterval,
-		TrafficByGroup:     trafficByGroup,
-		TrafficBySource:    trafficBySource,
-		TrafficByNode:      trafficByNode,
+		Name:                req.Name,
+		Enabled:             req.Enabled,
+		CronExpr:            req.CronExpr,
+		Mode:                mode,
+		TestURL:             req.TestURL,
+		LatencyURL:          req.LatencyURL,
+		Timeout:             timeout,
+		LatencyConcurrency:  req.LatencyConcurrency,
+		SpeedConcurrency:    speedConcurrency,
+		DetectCountry:       req.DetectCountry,
+		LandingIPURL:        req.LandingIPURL,
+		IncludeHandshake:    includeHandshake,
+		SpeedRecordMode:     speedRecordMode,
+		PeakSampleInterval:  peakSampleInterval,
+		TrafficByGroup:      trafficByGroup,
+		TrafficBySource:     trafficBySource,
+		TrafficByNode:       trafficByNode,
+		PreserveSpeedResult: req.PreserveSpeedResult,
 	}
 	profile.SetGroups(req.Groups)
 	profile.SetTags(req.Tags)
@@ -164,25 +166,26 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	}
 
 	var req struct {
-		Name               string   `json:"name"`
-		Enabled            bool     `json:"enabled"`
-		CronExpr           string   `json:"cronExpr"`
-		Mode               string   `json:"mode"`
-		TestURL            string   `json:"testUrl"`
-		LatencyURL         string   `json:"latencyUrl"`
-		Timeout            int      `json:"timeout"`
-		Groups             []string `json:"groups"`
-		Tags               []string `json:"tags"`
-		LatencyConcurrency int      `json:"latencyConcurrency"`
-		SpeedConcurrency   int      `json:"speedConcurrency"`
-		DetectCountry      bool     `json:"detectCountry"`
-		LandingIPURL       string   `json:"landingIpUrl"`
-		IncludeHandshake   *bool    `json:"includeHandshake"`
-		SpeedRecordMode    string   `json:"speedRecordMode"`
-		PeakSampleInterval int      `json:"peakSampleInterval"`
-		TrafficByGroup     *bool    `json:"trafficByGroup"`
-		TrafficBySource    *bool    `json:"trafficBySource"`
-		TrafficByNode      *bool    `json:"trafficByNode"`
+		Name                string   `json:"name"`
+		Enabled             bool     `json:"enabled"`
+		CronExpr            string   `json:"cronExpr"`
+		Mode                string   `json:"mode"`
+		TestURL             string   `json:"testUrl"`
+		LatencyURL          string   `json:"latencyUrl"`
+		Timeout             int      `json:"timeout"`
+		Groups              []string `json:"groups"`
+		Tags                []string `json:"tags"`
+		LatencyConcurrency  int      `json:"latencyConcurrency"`
+		SpeedConcurrency    int      `json:"speedConcurrency"`
+		DetectCountry       bool     `json:"detectCountry"`
+		LandingIPURL        string   `json:"landingIpUrl"`
+		IncludeHandshake    *bool    `json:"includeHandshake"`
+		SpeedRecordMode     string   `json:"speedRecordMode"`
+		PeakSampleInterval  int      `json:"peakSampleInterval"`
+		TrafficByGroup      *bool    `json:"trafficByGroup"`
+		TrafficBySource     *bool    `json:"trafficBySource"`
+		TrafficByNode       *bool    `json:"trafficByNode"`
+		PreserveSpeedResult *bool    `json:"preserveSpeedResult"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -242,6 +245,9 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	}
 	if req.TrafficByNode != nil {
 		profile.TrafficByNode = *req.TrafficByNode
+	}
+	if req.PreserveSpeedResult != nil {
+		profile.PreserveSpeedResult = *req.PreserveSpeedResult
 	}
 
 	if err := profile.Update(); err != nil {

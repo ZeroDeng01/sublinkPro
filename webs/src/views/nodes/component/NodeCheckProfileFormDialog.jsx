@@ -137,7 +137,8 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
     peakSampleInterval: 100,
     trafficByGroup: true,
     trafficBySource: true,
-    trafficByNode: false
+    trafficByNode: false,
+    preserveSpeedResult: false
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -169,7 +170,8 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
           peakSampleInterval: profile.peakSampleInterval || 100,
           trafficByGroup: profile.trafficByGroup !== false,
           trafficBySource: profile.trafficBySource !== false,
-          trafficByNode: profile.trafficByNode || false
+          trafficByNode: profile.trafficByNode || false,
+          preserveSpeedResult: profile.preserveSpeedResult || false
         });
       } else {
         // 新建时的默认值
@@ -192,7 +194,8 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
           peakSampleInterval: 100,
           trafficByGroup: true,
           trafficBySource: true,
-          trafficByNode: false
+          trafficByNode: false,
+          preserveSpeedResult: false
         });
       }
     }
@@ -236,7 +239,8 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
         peakSampleInterval: form.peakSampleInterval,
         trafficByGroup: form.trafficByGroup,
         trafficBySource: form.trafficBySource,
-        trafficByNode: form.trafficByNode
+        trafficByNode: form.trafficByNode,
+        preserveSpeedResult: form.preserveSpeedResult
       };
 
       if (isEdit) {
@@ -461,6 +465,27 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                   ))}
                 </Select>
               </FormControl>
+            )}
+
+            {/* TCP模式专属选项：保留速度测试结果 */}
+            {form.mode === 'tcp' && (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={form.preserveSpeedResult}
+                    onChange={(e) => updateForm('preserveSpeedResult', e.target.checked)}
+                    size="small"
+                  />
+                }
+                label={
+                  <Typography variant="body2">
+                    保留速度测试结果
+                    <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
+                      (延迟测试不覆盖上次速度结果)
+                    </Typography>
+                  </Typography>
+                }
+              />
             )}
           </Stack>
         </ConfigSection>

@@ -148,15 +148,16 @@ func (node *Node) UpdateSpeed() error {
 
 // SpeedTestResult 测速结果结构（用于批量更新）
 type SpeedTestResult struct {
-	NodeID         int
-	Speed          float64
-	SpeedStatus    string
-	DelayTime      int
-	DelayStatus    string
-	LatencyCheckAt string
-	SpeedCheckAt   string
-	LinkCountry    string
-	LandingIP      string
+	NodeID          int
+	Speed           float64
+	SpeedStatus     string
+	DelayTime       int
+	DelayStatus     string
+	LatencyCheckAt  string
+	SpeedCheckAt    string
+	LinkCountry     string
+	LandingIP       string
+	SkipSpeedFields bool // 是否跳过速度相关字段更新（用于TCP模式保留速度结果）
 }
 
 // BatchAddNodes 批量添加节点（高效 + 容错）
@@ -233,31 +234,59 @@ func fallbackToIndividualNodeInsert(nodes []Node) int {
 // 2. 每块使用 CASE WHEN 批量更新（一条 SQL 更新多条记录）
 // 3. 批量更新失败时，降级到逐条更新以保证容错性
 // 4. 单条失败只记录日志，不影响其他记录
+// 5. 支持 SkipSpeedFields 标记，跳过速度相关字段更新
 func BatchUpdateSpeedResults(results []SpeedTestResult) error {
 	if len(results) == 0 {
 		return nil
 	}
 
-	chunks := chunkSpeedResults(results, database.BatchSize)
-	successCount := 0
-	totalAttempts := len(results)
-
-	for chunkIdx, chunk := range chunks {
-		// 尝试使用 CASE WHEN 批量更新
-		batchSuccess, batchErr := tryBatchUpdateWithCaseWhen(chunk)
-		if batchErr == nil {
-			successCount += batchSuccess
-			// 批量更新成功，批量更新缓存
-			batchUpdateNodeCache(chunk)
+	// 分离需要更新速度字段和不需要的结果
+	var normalResults []SpeedTestResult
+	var skipSpeedResults []SpeedTestResult
+	for _, r := range results {
+		if r.SkipSpeedFields {
+			skipSpeedResults = append(skipSpeedResults, r)
 		} else {
-			// 批量更新失败，降级到逐条更新
-			utils.Warn("分块 %d 批量更新失败，降级到逐条更新: %v", chunkIdx, batchErr)
-			individualSuccess := fallbackToIndividualSpeedUpdate(chunk)
-			successCount += individualSuccess
+			normalResults = append(normalResults, r)
 		}
 	}
 
-	utils.Info("批量更新测速结果完成: 尝试 %d 个，成功 %d 个，分 %d 块处理", totalAttempts, successCount, len(chunks))
+	successCount := 0
+	totalAttempts := len(results)
+
+	// 处理需要更新速度字段的结果
+	if len(normalResults) > 0 {
+		chunks := chunkSpeedResults(normalResults, database.BatchSize)
+		for chunkIdx, chunk := range chunks {
+			batchSuccess, batchErr := tryBatchUpdateWithCaseWhen(chunk, false)
+			if batchErr == nil {
+				successCount += batchSuccess
+				batchUpdateNodeCache(chunk, false)
+			} else {
+				utils.Warn("分块 %d 批量更新失败，降级到逐条更新: %v", chunkIdx, batchErr)
+				individualSuccess := fallbackToIndividualSpeedUpdate(chunk, false)
+				successCount += individualSuccess
+			}
+		}
+	}
+
+	// 处理跳过速度字段的结果
+	if len(skipSpeedResults) > 0 {
+		chunks := chunkSpeedResults(skipSpeedResults, database.BatchSize)
+		for chunkIdx, chunk := range chunks {
+			batchSuccess, batchErr := tryBatchUpdateWithCaseWhen(chunk, true)
+			if batchErr == nil {
+				successCount += batchSuccess
+				batchUpdateNodeCache(chunk, true)
+			} else {
+				utils.Warn("分块 %d (跳过速度) 批量更新失败，降级到逐条更新: %v", chunkIdx, batchErr)
+				individualSuccess := fallbackToIndividualSpeedUpdate(chunk, true)
+				successCount += individualSuccess
+			}
+		}
+	}
+
+	utils.Info("批量更新测速结果完成: 尝试 %d 个，成功 %d 个 (其中 %d 个跳过速度更新)", totalAttempts, successCount, len(skipSpeedResults))
 	return nil
 }
 
@@ -281,7 +310,8 @@ var speedResultFields = []speedResultField{
 
 // tryBatchUpdateWithCaseWhen 使用 CASE WHEN 批量更新（高效）
 // 生成形如: UPDATE nodes SET speed = CASE id WHEN 1 THEN 100.5 WHEN 2 THEN 200.3 END, ... WHERE id IN (1,2)
-func tryBatchUpdateWithCaseWhen(chunk []SpeedTestResult) (int, error) {
+// skipSpeed 为 true 时跳过 speed 和 speed_status 字段
+func tryBatchUpdateWithCaseWhen(chunk []SpeedTestResult, skipSpeed bool) (int, error) {
 	if len(chunk) == 0 {
 		return 0, nil
 	}
@@ -290,10 +320,16 @@ func tryBatchUpdateWithCaseWhen(chunk []SpeedTestResult) (int, error) {
 	sb.WriteString("UPDATE nodes SET ")
 
 	// 遍历字段映射表，生成 CASE WHEN 语句
-	for i, field := range speedResultFields {
-		if i > 0 {
+	first := true
+	for _, field := range speedResultFields {
+		// 跳过速度相关字段
+		if skipSpeed && (field.column == "speed" || field.column == "speed_status" || field.column == "speed_check_at") {
+			continue
+		}
+		if !first {
 			sb.WriteString(", ")
 		}
+		first = false
 		sb.WriteString(field.column)
 		sb.WriteString(" = CASE id ")
 		for _, r := range chunk {
@@ -328,15 +364,18 @@ func escapeSQL(s string) string {
 }
 
 // batchUpdateNodeCache 批量更新节点缓存
-func batchUpdateNodeCache(chunk []SpeedTestResult) {
+// skipSpeed 为 true 时跳过速度相关字段
+func batchUpdateNodeCache(chunk []SpeedTestResult, skipSpeed bool) {
 	for _, r := range chunk {
 		if cachedNode, ok := nodeCache.Get(r.NodeID); ok {
-			cachedNode.Speed = r.Speed
-			cachedNode.SpeedStatus = r.SpeedStatus
+			if !skipSpeed {
+				cachedNode.Speed = r.Speed
+				cachedNode.SpeedStatus = r.SpeedStatus
+				cachedNode.SpeedCheckAt = r.SpeedCheckAt
+			}
 			cachedNode.DelayTime = r.DelayTime
 			cachedNode.DelayStatus = r.DelayStatus
 			cachedNode.LatencyCheckAt = r.LatencyCheckAt
-			cachedNode.SpeedCheckAt = r.SpeedCheckAt
 			cachedNode.LinkCountry = r.LinkCountry
 			cachedNode.LandingIP = r.LandingIP
 			nodeCache.Set(r.NodeID, cachedNode)
@@ -345,19 +384,24 @@ func batchUpdateNodeCache(chunk []SpeedTestResult) {
 }
 
 // fallbackToIndividualSpeedUpdate 降级到逐条更新（容错）
-func fallbackToIndividualSpeedUpdate(chunk []SpeedTestResult) int {
+// skipSpeed 为 true 时跳过速度相关字段
+func fallbackToIndividualSpeedUpdate(chunk []SpeedTestResult, skipSpeed bool) int {
 	successCount := 0
 	for _, r := range chunk {
-		err := database.DB.Model(&Node{}).Where("id = ?", r.NodeID).Updates(map[string]interface{}{
-			"speed":            r.Speed,
-			"speed_status":     r.SpeedStatus,
+		updates := map[string]interface{}{
 			"delay_time":       r.DelayTime,
 			"delay_status":     r.DelayStatus,
 			"latency_check_at": r.LatencyCheckAt,
-			"speed_check_at":   r.SpeedCheckAt,
 			"link_country":     r.LinkCountry,
 			"landing_ip":       r.LandingIP,
-		}).Error
+		}
+		if !skipSpeed {
+			updates["speed"] = r.Speed
+			updates["speed_status"] = r.SpeedStatus
+			updates["speed_check_at"] = r.SpeedCheckAt
+		}
+
+		err := database.DB.Model(&Node{}).Where("id = ?", r.NodeID).Updates(updates).Error
 
 		if err != nil {
 			utils.Error("节点 ID=%d 更新失败: %v", r.NodeID, err)
@@ -367,12 +411,14 @@ func fallbackToIndividualSpeedUpdate(chunk []SpeedTestResult) int {
 
 		// 逐条更新缓存
 		if cachedNode, ok := nodeCache.Get(r.NodeID); ok {
-			cachedNode.Speed = r.Speed
-			cachedNode.SpeedStatus = r.SpeedStatus
+			if !skipSpeed {
+				cachedNode.Speed = r.Speed
+				cachedNode.SpeedStatus = r.SpeedStatus
+				cachedNode.SpeedCheckAt = r.SpeedCheckAt
+			}
 			cachedNode.DelayTime = r.DelayTime
 			cachedNode.DelayStatus = r.DelayStatus
 			cachedNode.LatencyCheckAt = r.LatencyCheckAt
-			cachedNode.SpeedCheckAt = r.SpeedCheckAt
 			cachedNode.LinkCountry = r.LinkCountry
 			cachedNode.LandingIP = r.LandingIP
 			nodeCache.Set(r.NodeID, cachedNode)

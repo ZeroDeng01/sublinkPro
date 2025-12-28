@@ -256,18 +256,23 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 
 			// TCP模式下收集结果（稍后批量写入）
 			if speedTestMode == "tcp" {
+				preserveSpeed := config.PreserveSpeedResult
 				if err != nil {
 					failCount++
 					utils.Debug("节点 [%s] 延迟测试失败: %v", n.Name, err)
-					n.Speed = -1
-					n.SpeedStatus = constants.StatusUntested // TCP模式不测速度
+					if !preserveSpeed {
+						n.Speed = -1
+						n.SpeedStatus = constants.StatusUntested // TCP模式不测速度
+					}
 					n.DelayTime = -1
 					n.DelayStatus = constants.StatusTimeout
 				} else {
 					successCount++
 					utils.Debug("节点 [%s] 延迟测试成功: %d ms", n.Name, latency)
-					n.Speed = 0 // TCP模式不测速度
-					n.SpeedStatus = constants.StatusUntested
+					if !preserveSpeed {
+						n.Speed = 0 // TCP模式不测速度
+						n.SpeedStatus = constants.StatusUntested
+					}
 					n.DelayTime = latency
 					n.DelayStatus = constants.StatusSuccess
 
@@ -304,15 +309,16 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 				n.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
 				// 收集结果到批量更新列表（不再立即写数据库）
 				speedTestResults = append(speedTestResults, models.SpeedTestResult{
-					NodeID:         n.ID,
-					Speed:          n.Speed,
-					SpeedStatus:    n.SpeedStatus,
-					DelayTime:      n.DelayTime,
-					DelayStatus:    n.DelayStatus,
-					LatencyCheckAt: n.LatencyCheckAt,
-					SpeedCheckAt:   "",
-					LinkCountry:    n.LinkCountry,
-					LandingIP:      n.LandingIP,
+					NodeID:          n.ID,
+					Speed:           n.Speed,
+					SpeedStatus:     n.SpeedStatus,
+					DelayTime:       n.DelayTime,
+					DelayStatus:     n.DelayStatus,
+					LatencyCheckAt:  n.LatencyCheckAt,
+					SpeedCheckAt:    "",
+					LinkCountry:     n.LinkCountry,
+					LandingIP:       n.LandingIP,
+					SkipSpeedFields: preserveSpeed, // 标记是否跳过速度字段更新
 				})
 			}
 

@@ -23,10 +23,11 @@ type SpeedTestConfig struct {
 	SpeedConcurrency   int // 速度测试并发数
 
 	// 高级选项
-	IncludeHandshake   bool   // 延迟是否包含握手时间
-	SpeedRecordMode    string // 速度记录模式：average/peak
-	PeakSampleInterval int    // 峰值采样间隔(ms)
-	PersistHost        bool   // 是否持久化Host映射
+	IncludeHandshake    bool   // 延迟是否包含握手时间
+	SpeedRecordMode     string // 速度记录模式：average/peak
+	PeakSampleInterval  int    // 峰值采样间隔(ms)
+	PersistHost         bool   // 是否持久化Host映射
+	PreserveSpeedResult bool   // TCP模式保留速度测试结果
 
 	// 流量统计开关
 	TrafficByGroup  bool // 按分组统计流量
@@ -68,20 +69,21 @@ func SpeedTestConfigFromProfile(profile *models.NodeCheckProfile) *SpeedTestConf
 	}
 
 	return &SpeedTestConfig{
-		SpeedTestURL:       profile.TestURL,
-		LatencyTestURL:     latencyURL,
-		Timeout:            timeout,
-		Mode:               profile.Mode,
-		DetectCountry:      profile.DetectCountry,
-		LandingIPURL:       landingIPURL,
-		LatencyConcurrency: profile.LatencyConcurrency,
-		SpeedConcurrency:   profile.SpeedConcurrency,
-		IncludeHandshake:   profile.IncludeHandshake,
-		SpeedRecordMode:    speedRecordMode,
-		PeakSampleInterval: peakSampleInterval,
-		PersistHost:        false, // 持久化Host功能暂不开放
-		TrafficByGroup:     profile.TrafficByGroup,
-		TrafficBySource:    profile.TrafficBySource,
-		TrafficByNode:      profile.TrafficByNode,
+		SpeedTestURL:        profile.TestURL,
+		LatencyTestURL:      latencyURL,
+		Timeout:             timeout,
+		Mode:                profile.Mode,
+		DetectCountry:       profile.DetectCountry,
+		LandingIPURL:        landingIPURL,
+		LatencyConcurrency:  profile.LatencyConcurrency,
+		SpeedConcurrency:    profile.SpeedConcurrency,
+		IncludeHandshake:    profile.IncludeHandshake,
+		SpeedRecordMode:     speedRecordMode,
+		PeakSampleInterval:  peakSampleInterval,
+		PersistHost:         false, // 持久化Host功能暂不开放
+		PreserveSpeedResult: profile.PreserveSpeedResult,
+		TrafficByGroup:      profile.TrafficByGroup,
+		TrafficBySource:     profile.TrafficBySource,
+		TrafficByNode:       profile.TrafficByNode,
 	}
 }
