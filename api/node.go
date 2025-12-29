@@ -7,7 +7,6 @@ import (
 	"sublink/models"
 	"sublink/node/protocol"
 	"sublink/utils"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -189,6 +188,16 @@ func NodeUpdadte(c *gin.Context) {
 	Node.DialerProxyName = dialerProxyName
 	Node.Group = group
 	Node.Protocol = protocol.GetProtocolFromLink(link)
+
+	// 重新计算 ContentHash
+	proxy, proxyErr := protocol.LinkToProxy(protocol.Urls{Url: link}, protocol.OutputConfig{})
+	if proxyErr == nil {
+		contentHash := protocol.GenerateProxyContentHash(proxy)
+		if contentHash != "" {
+			Node.ContentHash = contentHash
+		}
+	}
+
 	err = Node.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")
@@ -536,11 +545,21 @@ func NodeAdd(c *gin.Context) {
 	Node.DialerProxyName = dialerProxyName
 	Node.Group = group
 	Node.Protocol = protocol.GetProtocolFromLink(link)
-	err = Node.Find()
-	// 如果找到记录说明重复
-	if err == nil {
-		Node.Name = name + " " + time.Now().Format("2006-01-02 15:04:05")
+
+	// 生成 ContentHash（用于全库去重）
+	proxy, proxyErr := protocol.LinkToProxy(protocol.Urls{Url: link}, protocol.OutputConfig{})
+	if proxyErr == nil {
+		contentHash := protocol.GenerateProxyContentHash(proxy)
+		if contentHash != "" {
+			Node.ContentHash = contentHash
+			// 检查是否已存在相同内容的节点
+			if models.NodeExistsByContentHash(contentHash) {
+				utils.FailWithMsg(c, "节点内容已存在（与现有节点重复）")
+				return
+			}
+		}
 	}
+
 	err = Node.Add()
 	if err != nil {
 		utils.FailWithMsg(c, "添加失败检查一下是否节点重复")

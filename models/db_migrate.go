@@ -782,30 +782,26 @@ DIRECT = direct
 		utils.Error("执行迁移 0019_fill_empty_node_protocol 失败: %v", err)
 	}
 
-	// 0020_fill_node_content_hash - 为现有节点生成内容哈希（用于全库去重）
-	if err := database.RunCustomMigration("0020_fill_node_content_hash", func() error {
-		// 查找所有 content_hash 为空的节点
+	// 0021_recalculate_node_content_hash - 重新计算所有节点的 ContentHash（修复之前版本的计算问题）
+	if err := database.RunCustomMigration("0021_recalculate_node_content_hash", func() error {
+		// 获取所有节点
 		var nodes []struct {
 			ID   int
 			Link string
 		}
 		if err := db.Model(&Node{}).
 			Select("id", "link").
-			Where("content_hash IS NULL OR content_hash = ''").
 			Find(&nodes).Error; err != nil {
-			return fmt.Errorf("查询 content_hash 为空的节点失败: %w", err)
+			return fmt.Errorf("查询节点失败: %w", err)
 		}
 
 		if len(nodes) == 0 {
-			utils.Info("没有需要生成 ContentHash 的节点")
+			utils.Info("没有需要重新计算 ContentHash 的节点")
 			return nil
 		}
 
-		utils.Info("开始为 %d 个节点生成 ContentHash...", len(nodes))
+		utils.Info("开始重新计算 %d 个节点的 ContentHash...", len(nodes))
 
-		// 用于检测重复的 hash 集合
-		hashToNodeID := make(map[string]int)
-		duplicateCount := 0
 		updateCount := 0
 		errorCount := 0
 
@@ -824,14 +820,6 @@ DIRECT = direct
 				continue
 			}
 
-			// 检查是否存在重复
-			if existingID, exists := hashToNodeID[contentHash]; exists {
-				utils.Warn("发现重复节点: ID=%d 与 ID=%d 内容哈希相同", node.ID, existingID)
-				duplicateCount++
-			} else {
-				hashToNodeID[contentHash] = node.ID
-			}
-
 			// 更新数据库
 			if err := db.Model(&Node{}).Where("id = ?", node.ID).Update("content_hash", contentHash).Error; err != nil {
 				utils.Warn("更新节点 ID=%d 的 ContentHash 失败: %v", node.ID, err)
@@ -841,13 +829,10 @@ DIRECT = direct
 			updateCount++
 		}
 
-		utils.Info("ContentHash 迁移完成：成功更新 %d 个，发现 %d 个重复，%d 个错误", updateCount, duplicateCount, errorCount)
-		if duplicateCount > 0 {
-			utils.Warn("请注意：发现 %d 个内容重复的节点，建议手动检查并清理", duplicateCount)
-		}
+		utils.Info("ContentHash 重新计算完成：成功更新 %d 个，%d 个错误", updateCount, errorCount)
 		return nil
 	}); err != nil {
-		utils.Error("执行迁移 0020_fill_node_content_hash 失败: %v", err)
+		utils.Error("执行迁移 0021_recalculate_node_content_hash 失败: %v", err)
 	}
 
 	// 初始化用户数据

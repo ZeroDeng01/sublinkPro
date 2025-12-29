@@ -433,10 +433,8 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	// 更新任务总数（此时已知道需要处理的节点数量）
 	reporter.UpdateTotal(len(proxys))
 
-	// 记录本次获取到的节点（用于判断需要删除的节点）
-	// 同时记录 ContentHash 和 Link，用于兼容老数据
+	// 记录本次获取到的节点 ContentHash（用于判断需要删除的节点）
 	currentHashes := make(map[string]bool)
-	currentLinks := make(map[string]bool)
 
 	// 批量收集：新增节点列表（稍后批量写入）
 	nodesToAdd := make([]models.Node, 0)
@@ -476,26 +474,25 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		Node.Protocol = proxy.Type
 		Node.ContentHash = contentHash
 
-		// 记录本次获取到的节点 ContentHash 和 Link
+		// 记录本次获取到的节点 ContentHash
 		currentHashes[contentHash] = true
-		currentLinks[link] = true
 
 		// 判断节点是否已存在（全库去重：使用 ContentHash 判断）
 		var nodeStatus string
 		if allNodeHashes[contentHash] {
 			skipCount++
 			nodeStatus = "skipped"
-			// 已存在的节点跳过，不做任何处理
+			// 节点内容已存在，跳过
 		} else {
 			// 节点不存在，收集到待添加列表
 			nodesToAdd = append(nodesToAdd, Node)
 			addSuccessCount++
 			nodeStatus = "added"
-			// 将新节点的 hash 加入全库集合，避免本次拉取内的重复（边界情况）
+			// 将新节点的 hash 加入全库集合，避免本次拉取内的重复
 			allNodeHashes[contentHash] = true
 		}
 
-		// 更新进度（通过 reporter 报告）- 基于内存计数，保持实时性
+		// 更新进度（通过 reporter 报告）
 		processedCount++
 		reporter.ReportProgress(processedCount, proxy.Name, map[string]interface{}{
 			"status":  nodeStatus,
@@ -505,19 +502,11 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	}
 
 	// 3. 收集需要删除的节点ID（本次订阅没有获取到但数据库中存在的节点）
-	// 同时通过 ContentHash 和 Link 两种方式判断，兼容老数据（ContentHash 为空）
 	nodeIDsToDelete := make([]int, 0)
 	for nodeID, node := range existingNodeByID {
-		// 优先使用 ContentHash 判断
-		if node.ContentHash != "" {
-			if !currentHashes[node.ContentHash] {
-				nodeIDsToDelete = append(nodeIDsToDelete, nodeID)
-			}
-		} else {
-			// ContentHash 为空（老数据），使用 Link 判断
-			if !currentLinks[node.Link] {
-				nodeIDsToDelete = append(nodeIDsToDelete, nodeID)
-			}
+		// 使用 ContentHash 判断节点是否在本次拉取中
+		if !currentHashes[node.ContentHash] {
+			nodeIDsToDelete = append(nodeIDsToDelete, nodeID)
 		}
 	}
 
