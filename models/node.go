@@ -40,6 +40,7 @@ type Node struct {
 	CreatedAt       time.Time `gorm:"autoCreateTime" json:"CreatedAt"` // 创建时间
 	UpdatedAt       time.Time `gorm:"autoUpdateTime" json:"UpdatedAt"` // 更新时间
 	Tags            string    // 标签ID，逗号分隔，如 "1,3,5"
+	ContentHash     string    `gorm:"index;size:64"` // 节点内容哈希（SHA256），用于全库去重
 }
 
 // nodeCache 使用新的泛型缓存，支持二级索引
@@ -55,6 +56,7 @@ func init() {
 	nodeCache.AddIndex("protocol", func(n Node) string { return n.Protocol })
 	nodeCache.AddIndex("sourceID", func(n Node) string { return fmt.Sprintf("%d", n.SourceID) })
 	nodeCache.AddIndex("name", func(n Node) string { return n.Name })
+	nodeCache.AddIndex("contentHash", func(n Node) string { return n.ContentHash })
 }
 
 // InitNodeCache 初始化节点缓存
@@ -1397,4 +1399,52 @@ func (node *Node) GetFieldValue(fieldName string) string {
 	default:
 		return ""
 	}
+}
+
+// ========== ContentHash 相关查询方法 ==========
+
+// GetAllNodeContentHashes 获取全库节点的 ContentHash 集合
+// 用于全库去重判断
+func GetAllNodeContentHashes() map[string]bool {
+	hashes := make(map[string]bool)
+	nodes := nodeCache.GetAll()
+	for _, n := range nodes {
+		if n.ContentHash != "" {
+			hashes[n.ContentHash] = true
+		}
+	}
+	return hashes
+}
+
+// GetNodeContentHashesBySourceID 获取指定来源的节点 ContentHash 集合
+func GetNodeContentHashesBySourceID(sourceID int) map[string]bool {
+	hashes := make(map[string]bool)
+	nodes := nodeCache.GetByIndex("sourceID", fmt.Sprintf("%d", sourceID))
+	for _, n := range nodes {
+		if n.ContentHash != "" {
+			hashes[n.ContentHash] = true
+		}
+	}
+	return hashes
+}
+
+// NodeExistsByContentHash 检查指定 ContentHash 的节点是否存在
+func NodeExistsByContentHash(contentHash string) bool {
+	if contentHash == "" {
+		return false
+	}
+	nodes := nodeCache.GetByIndex("contentHash", contentHash)
+	return len(nodes) > 0
+}
+
+// GetNodeByContentHash 根据 ContentHash 获取节点（如果存在）
+func GetNodeByContentHash(contentHash string) (*Node, bool) {
+	if contentHash == "" {
+		return nil, false
+	}
+	nodes := nodeCache.GetByIndex("contentHash", contentHash)
+	if len(nodes) > 0 {
+		return &nodes[0], true
+	}
+	return nil, false
 }

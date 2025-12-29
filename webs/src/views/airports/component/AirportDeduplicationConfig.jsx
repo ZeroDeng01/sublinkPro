@@ -130,7 +130,7 @@ function AirportDeduplicationConfig({ value, onChange }) {
   // 获取配置状态描述
   const getConfigStatus = () => {
     if (config.mode === 'none') {
-      return '按链接去重';
+      return '内容哈希全库去重';
     }
     const count = getTotalSelectedCount();
     if (count === 0) {
@@ -196,8 +196,8 @@ function AirportDeduplicationConfig({ value, onChange }) {
               <FormControl component="fieldset" sx={{ mb: 2 }}>
                 <FormLabel component="legend">去重模式</FormLabel>
                 <RadioGroup row value={config.mode} onChange={handleModeChange}>
-                  <FormControlLabel value="none" control={<Radio size="small" />} label="不启用（按链接去重）" />
-                  <FormControlLabel value="protocol" control={<Radio size="small" />} label="按协议字段去重" />
+                  <FormControlLabel value="none" control={<Radio size="small" />} label="默认（内容哈希全库去重）" />
+                  <FormControlLabel value="protocol" control={<Radio size="small" />} label="按协议字段去重（仅本次拉取）" />
                 </RadioGroup>
               </FormControl>
 
@@ -238,16 +238,18 @@ function AirportDeduplicationConfig({ value, onChange }) {
               )}
 
               {/* 提示信息 */}
-              <Alert variant="standard" severity="info" sx={{ mt: 2 }}>
+              <Alert variant="standard" severity={config.mode === 'none' ? 'info' : 'warning'} sx={{ mt: 2 }}>
                 <Typography variant="body2">
                   {config.mode === 'none' ? (
                     <>
-                      去重规则在拉取订阅入库时生效。<strong>默认按节点链接相等去重</strong>，即完全相同的节点链接只会保留一个。
+                      使用<strong>节点内容哈希进行全库去重</strong>，确保数据库中不会存储内容完全相同的节点。
+                      此方式不受链接参数顺序影响，不同机场间的重复节点也会被过滤。
                     </>
                   ) : (
                     <>
-                      去重规则在拉取订阅入库时生效。按协议字段去重时，当多个节点的选定字段值完全相同时仅保留第一个节点。
-                      <strong>未配置字段的协议将使用默认的链接相等去重。</strong>
+                      按协议字段去重<strong>仅在本次拉取的节点内部生效</strong>，
+                      不会与数据库中已有的其他节点进行比较。
+                      未配置字段的协议将继续使用默认的内容哈希全库去重。
                     </>
                   )}
                 </Typography>

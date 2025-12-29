@@ -419,19 +419,24 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		existingNodes = []models.Node{} // 确保后续逻辑不会panic
 	}
 
-	// 创建现有节点的映射表（以Link为键）
-	existingNodeMap := make(map[string]models.Node)
+	// 创建现有节点的映射表（以 ContentHash 为键，用于判断节点更新）
+	existingHashMap := make(map[string]models.Node)
 	for _, node := range existingNodes {
-		existingNodeMap[node.Link] = node
+		if node.ContentHash != "" {
+			existingHashMap[node.ContentHash] = node
+		}
 	}
 
-	utils.Info("📄订阅【%s】获取到订阅数量【%d】，现有节点数量【%d】", subName, len(proxys), len(existingNodes))
+	// 获取全库的 ContentHash 集合（用于全库去重）
+	allNodeHashes := models.GetAllNodeContentHashes()
+
+	utils.Info("📄订阅【%s】获取到订阅数量【%d】，现有节点数量【%d】，全库哈希数量【%d】", subName, len(proxys), len(existingNodes), len(allNodeHashes))
 
 	// 更新任务总数（此时已知道需要处理的节点数量）
 	reporter.UpdateTotal(len(proxys))
 
-	// 记录本次获取到的节点Link
-	currentLinks := make(map[string]bool)
+	// 记录本次获取到的节点 ContentHash（用于判断需要删除的节点）
+	currentHashes := make(map[string]bool)
 
 	// 批量收集：新增节点列表（稍后批量写入）
 	nodesToAdd := make([]models.Node, 0)
@@ -444,6 +449,13 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		// 预处理：去除名称空格，处理 IPv6 地址
 		proxy.Name = strings.TrimSpace(proxy.Name)
 		proxy.Server = utils.WrapIPv6Host(proxy.Server)
+
+		// 计算节点内容哈希（用于全库去重）
+		contentHash := protocol.GenerateProxyContentHash(proxy)
+		if contentHash == "" {
+			utils.Warn("节点【%s】生成内容哈希失败，跳过", proxy.Name)
+			continue
+		}
 
 		// 使用公共函数生成节点链接
 		link := generateProxyLink(proxy)
@@ -462,12 +474,14 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		Node.SourceID = id
 		Node.Group = airport.Group
 		Node.Protocol = proxy.Type
-		// 记录本次获取到的节点
-		currentLinks[link] = true
+		Node.ContentHash = contentHash
 
-		// 判断节点是否已存在 - 收集到内存，稍后批量写入
+		// 记录本次获取到的节点 ContentHash
+		currentHashes[contentHash] = true
+
+		// 判断节点是否已存在（全库去重：使用 ContentHash 判断）
 		var nodeStatus string
-		if _, exists := existingNodeMap[link]; exists {
+		if allNodeHashes[contentHash] {
 			skipCount++
 			nodeStatus = "skipped"
 			// 已存在的节点跳过，不做任何处理
@@ -476,6 +490,8 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 			nodesToAdd = append(nodesToAdd, Node)
 			addSuccessCount++
 			nodeStatus = "added"
+			// 将新节点的 hash 加入全库集合，避免本次拉取内的重复（边界情况）
+			allNodeHashes[contentHash] = true
 		}
 
 		// 更新进度（通过 reporter 报告）- 基于内存计数，保持实时性
@@ -489,8 +505,8 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 
 	// 3. 收集需要删除的节点ID（本次订阅没有获取到但数据库中存在的节点）
 	nodeIDsToDelete := make([]int, 0)
-	for link, existingNode := range existingNodeMap {
-		if !currentLinks[link] {
+	for hash, existingNode := range existingHashMap {
+		if !currentHashes[hash] {
 			// 该节点不在本次订阅中，需要删除
 			nodeIDsToDelete = append(nodeIDsToDelete, existingNode.ID)
 		}
