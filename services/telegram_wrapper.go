@@ -61,6 +61,11 @@ func (w *telegramServicesWrapper) ToggleProfileEnabled(profileID int) (bool, err
 	return newEnabled, nil
 }
 
+// TriggerTagRule 执行指定标签规则
+func (w *telegramServicesWrapper) TriggerTagRule(ruleID int) error {
+	return TriggerTagRule(ruleID)
+}
+
 // InitTelegramWrapper 初始化 Telegram 服务包装器
 // 在 Telegram 初始化后调用
 func InitTelegramWrapper() {

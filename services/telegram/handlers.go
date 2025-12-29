@@ -314,10 +314,17 @@ func (h *MonitorHandler) Handle(bot *TelegramBot, message *Message) error {
 
 type ProfilesHandler struct{}
 
+const profilesPageSize = 8 // 每页显示策略数量
+
 func (h *ProfilesHandler) Command() string     { return "profiles" }
 func (h *ProfilesHandler) Description() string { return "⚡ 检测策略" }
 
 func (h *ProfilesHandler) Handle(bot *TelegramBot, message *Message) error {
+	return h.HandleWithPage(bot, message, 0)
+}
+
+// HandleWithPage 处理带分页的策略列表
+func (h *ProfilesHandler) HandleWithPage(bot *TelegramBot, message *Message, page int) error {
 	profiles, err := GetNodeCheckProfiles()
 	if err != nil {
 		return bot.SendMessage(message.Chat.ID, "❌ 获取策略列表失败: "+err.Error(), "")
@@ -328,16 +335,33 @@ func (h *ProfilesHandler) Handle(bot *TelegramBot, message *Message) error {
 		return bot.SendMessage(message.Chat.ID, text, "Markdown")
 	}
 
+	total := len(profiles)
+	totalPages := (total + profilesPageSize - 1) / profilesPageSize
+
+	if page < 0 {
+		page = 0
+	}
+	if page >= totalPages {
+		page = totalPages - 1
+	}
+
+	start := page * profilesPageSize
+	end := start + profilesPageSize
+	if end > total {
+		end = total
+	}
+
 	var text strings.Builder
-	text.WriteString("⚡ *检测策略列表*\n\n")
+	if totalPages > 1 {
+		text.WriteString(fmt.Sprintf("⚡ *检测策略列表* (%d/%d 页)\n\n", page+1, totalPages))
+	} else {
+		text.WriteString("⚡ *检测策略列表*\n\n")
+	}
 
 	var keyboard [][]InlineKeyboardButton
 
-	for i, p := range profiles {
-		if i >= 10 {
-			text.WriteString(fmt.Sprintf("\n... 还有 %d 个策略", len(profiles)-10))
-			break
-		}
+	for i := start; i < end; i++ {
+		p := profiles[i]
 
 		// 状态图标
 		status := "⏸️"
@@ -370,6 +394,20 @@ func (h *ProfilesHandler) Handle(bot *TelegramBot, message *Message) error {
 		})
 	}
 
+	// 分页按钮
+	if totalPages > 1 {
+		var navButtons []InlineKeyboardButton
+		if page > 0 {
+			navButtons = append(navButtons, NewInlineButton("⬅️ 上一页", fmt.Sprintf("profiles_page:%d", page-1)))
+		}
+		if page < totalPages-1 {
+			navButtons = append(navButtons, NewInlineButton("➡️ 下一页", fmt.Sprintf("profiles_page:%d", page+1)))
+		}
+		if len(navButtons) > 0 {
+			keyboard = append(keyboard, navButtons)
+		}
+	}
+
 	// 统计未测速节点
 	var node models.Node
 	nodes, _ := node.List()
@@ -398,11 +436,17 @@ func (h *ProfilesHandler) Handle(bot *TelegramBot, message *Message) error {
 
 type SubscriptionsHandler struct{}
 
+const subscriptionsPageSize = 8 // 每页显示订阅数量
+
 func (h *SubscriptionsHandler) Command() string     { return "subscriptions" }
 func (h *SubscriptionsHandler) Description() string { return "📋 订阅管理" }
 
 func (h *SubscriptionsHandler) Handle(bot *TelegramBot, message *Message) error {
-	// 获取订阅链接列表
+	return h.HandleWithPage(bot, message, 0)
+}
+
+// HandleWithPage 处理带分页的订阅列表
+func (h *SubscriptionsHandler) HandleWithPage(bot *TelegramBot, message *Message, page int) error {
 	var sub models.Subcription
 	subs, err := sub.List()
 	if err != nil {
@@ -413,16 +457,33 @@ func (h *SubscriptionsHandler) Handle(bot *TelegramBot, message *Message) error 
 		return bot.SendMessage(message.Chat.ID, "📋 暂无订阅", "")
 	}
 
+	total := len(subs)
+	totalPages := (total + subscriptionsPageSize - 1) / subscriptionsPageSize
+
+	if page < 0 {
+		page = 0
+	}
+	if page >= totalPages {
+		page = totalPages - 1
+	}
+
+	start := page * subscriptionsPageSize
+	end := start + subscriptionsPageSize
+	if end > total {
+		end = total
+	}
+
 	var text strings.Builder
-	text.WriteString("📋 *订阅列表*\n\n")
+	if totalPages > 1 {
+		text.WriteString(fmt.Sprintf("📋 *订阅列表* (%d/%d 页)\n\n", page+1, totalPages))
+	} else {
+		text.WriteString("📋 *订阅列表*\n\n")
+	}
 
 	var keyboard [][]InlineKeyboardButton
 
-	for i, s := range subs {
-		if i >= 8 {
-			text.WriteString(fmt.Sprintf("\n... 还有 %d 个订阅", len(subs)-8))
-			break
-		}
+	for i := start; i < end; i++ {
+		s := subs[i]
 
 		// 获取节点数和分组数
 		nodeCount := len(s.NodesWithSort)
@@ -439,6 +500,20 @@ func (h *SubscriptionsHandler) Handle(bot *TelegramBot, message *Message) error 
 		keyboard = append(keyboard, []InlineKeyboardButton{
 			NewInlineButton("📝 "+truncateName(s.Name, 12), fmt.Sprintf("sub_link:%d", s.ID)),
 		})
+	}
+
+	// 分页按钮
+	if totalPages > 1 {
+		var navButtons []InlineKeyboardButton
+		if page > 0 {
+			navButtons = append(navButtons, NewInlineButton("⬅️ 上一页", fmt.Sprintf("subscriptions_page:%d", page-1)))
+		}
+		if page < totalPages-1 {
+			navButtons = append(navButtons, NewInlineButton("➡️ 下一页", fmt.Sprintf("subscriptions_page:%d", page+1)))
+		}
+		if len(navButtons) > 0 {
+			keyboard = append(keyboard, navButtons)
+		}
 	}
 
 	keyboard = append(keyboard, []InlineKeyboardButton{
@@ -513,11 +588,17 @@ func (h *NodesHandler) Handle(bot *TelegramBot, message *Message) error {
 
 type TagsHandler struct{}
 
+const tagsPageSize = 10 // 每页显示标签规则数量
+
 func (h *TagsHandler) Command() string     { return "tags" }
 func (h *TagsHandler) Description() string { return "🏷️ 标签规则" }
 
 func (h *TagsHandler) Handle(bot *TelegramBot, message *Message) error {
-	// 获取标签规则
+	return h.HandleWithPage(bot, message, 0)
+}
+
+// HandleWithPage 处理带分页的标签规则列表
+func (h *TagsHandler) HandleWithPage(bot *TelegramBot, message *Message, page int) error {
 	var tagRule models.TagRule
 	rules, err := tagRule.List()
 	if err != nil {
@@ -528,26 +609,62 @@ func (h *TagsHandler) Handle(bot *TelegramBot, message *Message) error {
 		return bot.SendMessage(message.Chat.ID, "🏷️ 暂无标签规则", "")
 	}
 
+	total := len(rules)
+	totalPages := (total + tagsPageSize - 1) / tagsPageSize
+
+	if page < 0 {
+		page = 0
+	}
+	if page >= totalPages {
+		page = totalPages - 1
+	}
+
+	start := page * tagsPageSize
+	end := start + tagsPageSize
+	if end > total {
+		end = total
+	}
+
 	var text strings.Builder
-	text.WriteString("🏷️ *标签规则*\n\n")
+	if totalPages > 1 {
+		text.WriteString(fmt.Sprintf("🏷️ *标签规则* (%d/%d 页)\n\n", page+1, totalPages))
+	} else {
+		text.WriteString("🏷️ *标签规则*\n\n")
+	}
 
-	for i, rule := range rules {
-		if i >= 10 {
-			text.WriteString(fmt.Sprintf("\n... 还有 %d 条规则", len(rules)-10))
-			break
-		}
+	var keyboard [][]InlineKeyboardButton
 
+	for i := start; i < end; i++ {
+		rule := rules[i]
 		status := "✅"
 		if !rule.Enabled {
 			status = "⏸️"
 		}
 		text.WriteString(fmt.Sprintf("%s %s → %s\n", status, rule.Name, rule.TagName))
+
+		// 为每个规则添加执行按钮
+		keyboard = append(keyboard, []InlineKeyboardButton{
+			NewInlineButton("▶️ "+truncateName(rule.Name, 15), fmt.Sprintf("tag_run:%d", rule.ID)),
+		})
 	}
 
-	keyboard := [][]InlineKeyboardButton{
-		{NewInlineButton("▶️ 执行全部标签规则", "tags:apply_all")},
-		{NewInlineButton("🔙 返回", "start")},
+	// 分页按钮
+	if totalPages > 1 {
+		var navButtons []InlineKeyboardButton
+		if page > 0 {
+			navButtons = append(navButtons, NewInlineButton("⬅️ 上一页", fmt.Sprintf("tags_page:%d", page-1)))
+		}
+		if page < totalPages-1 {
+			navButtons = append(navButtons, NewInlineButton("➡️ 下一页", fmt.Sprintf("tags_page:%d", page+1)))
+		}
+		if len(navButtons) > 0 {
+			keyboard = append(keyboard, navButtons)
+		}
 	}
+
+	keyboard = append(keyboard, []InlineKeyboardButton{
+		NewInlineButton("🔙 返回", "start"),
+	})
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text.String(), "Markdown", keyboard)
 }
@@ -620,6 +737,7 @@ type ServicesWrapper interface {
 	GetNodeCheckProfiles() ([]models.NodeCheckProfile, error)
 	ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int)
 	ToggleProfileEnabled(profileID int) (bool, error)
+	TriggerTagRule(ruleID int) error
 }
 
 var servicesWrapper ServicesWrapper
@@ -708,6 +826,15 @@ func ToggleProfileEnabled(profileID int) (bool, error) {
 	return false, fmt.Errorf("服务未初始化")
 }
 
+// TriggerTagRule 执行指定标签规则
+func TriggerTagRule(ruleID int) error {
+	if servicesWrapper != nil {
+		go servicesWrapper.TriggerTagRule(ruleID)
+		return nil
+	}
+	return fmt.Errorf("服务未初始化")
+}
+
 // GetSubscriptionLink 获取订阅链接
 func GetSubscriptionLink(subID int) (string, error) {
 	var sub models.Subcription
@@ -723,7 +850,7 @@ func GetSubscriptionLink(subID int) (string, error) {
 		domain, _ = models.GetSetting("server_addr")
 	}
 	if domain == "" {
-		domain = "http://localhost:8080"
+		domain = "http://localhost:8000"
 	}
 	// 确保没有末尾斜杠
 	domain = strings.TrimRight(domain, "/")
@@ -747,10 +874,17 @@ func GetSubscriptionLink(subID int) (string, error) {
 
 type AirportsHandler struct{}
 
+const airportsPageSize = 8 // 每页显示机场数量
+
 func (h *AirportsHandler) Command() string     { return "airports" }
 func (h *AirportsHandler) Description() string { return "✈️ 机场管理" }
 
 func (h *AirportsHandler) Handle(bot *TelegramBot, message *Message) error {
+	return h.HandleWithPage(bot, message, 0)
+}
+
+// HandleWithPage 处理带分页的机场列表
+func (h *AirportsHandler) HandleWithPage(bot *TelegramBot, message *Message, page int) error {
 	var airport models.Airport
 	airports, err := airport.List()
 	if err != nil {
@@ -761,17 +895,30 @@ func (h *AirportsHandler) Handle(bot *TelegramBot, message *Message) error {
 		return bot.SendMessage(message.Chat.ID, "✈️ 暂无机场", "")
 	}
 
+	total := len(airports)
+	totalPages := (total + airportsPageSize - 1) / airportsPageSize
+
+	// 确保页码有效
+	if page < 0 {
+		page = 0
+	}
+	if page >= totalPages {
+		page = totalPages - 1
+	}
+
+	start := page * airportsPageSize
+	end := start + airportsPageSize
+	if end > total {
+		end = total
+	}
+
 	var text strings.Builder
-	text.WriteString("✈️ *机场列表*\n\n")
+	text.WriteString(fmt.Sprintf("✈️ *机场列表* (%d/%d 页)\n\n", page+1, totalPages))
 
 	var keyboard [][]InlineKeyboardButton
 
-	// 分页显示? 暂时限制前 10 个，类似 SubscriptionsHandler
-	for i, ap := range airports {
-		if i >= 10 {
-			text.WriteString(fmt.Sprintf("\n... 还有 %d 个机场", len(airports)-10))
-			break
-		}
+	for i := start; i < end; i++ {
+		ap := airports[i]
 
 		status := "✅"
 		if !ap.Enabled {
@@ -794,6 +941,20 @@ func (h *AirportsHandler) Handle(bot *TelegramBot, message *Message) error {
 		keyboard = append(keyboard, []InlineKeyboardButton{
 			NewInlineButton("⚙️ 管理 "+truncateName(ap.Name, 10), fmt.Sprintf("airport_detail:%d", ap.ID)),
 		})
+	}
+
+	// 分页按钮
+	if totalPages > 1 {
+		var navButtons []InlineKeyboardButton
+		if page > 0 {
+			navButtons = append(navButtons, NewInlineButton("⬅️ 上一页", fmt.Sprintf("airports_page:%d", page-1)))
+		}
+		if page < totalPages-1 {
+			navButtons = append(navButtons, NewInlineButton("➡️ 下一页", fmt.Sprintf("airports_page:%d", page+1)))
+		}
+		if len(navButtons) > 0 {
+			keyboard = append(keyboard, navButtons)
+		}
 	}
 
 	keyboard = append(keyboard, []InlineKeyboardButton{

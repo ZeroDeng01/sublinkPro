@@ -37,10 +37,18 @@ func HandleCallbackQuery(bot *TelegramBot, callback *CallbackQuery) error {
 		return handleTasksCallback(bot, callback)
 	case "subscriptions":
 		return handleSubscriptionsCallback(bot, callback)
+	case "subscriptions_page":
+		return handleSubscriptionsPageCallback(bot, callback, param)
 	case "tags":
 		return handleTagsCallback(bot, callback, param)
+	case "tags_page":
+		return handleTagsPageCallback(bot, callback, param)
+	case "tag_run":
+		return handleTagRunCallback(bot, callback, param)
 	case "airports":
 		return handleAirportsCallback(bot, callback)
+	case "airports_page":
+		return handleAirportsPageCallback(bot, callback, param)
 	case "airport_detail":
 		return handleAirportDetailCallback(bot, callback, param)
 	case "cancel":
@@ -49,6 +57,8 @@ func HandleCallbackQuery(bot *TelegramBot, callback *CallbackQuery) error {
 	// 检测策略相关回调
 	case "profiles":
 		return handleProfilesCallback(bot, callback)
+	case "profiles_page":
+		return handleProfilesPageCallback(bot, callback, param)
 	case "profile_detail":
 		return handleProfileDetailCallback(bot, callback, param)
 	case "profile_run":
@@ -137,6 +147,24 @@ func handleSubscriptionsCallback(bot *TelegramBot, callback *CallbackQuery) erro
 	return handler.Handle(bot, callback.Message)
 }
 
+// handleSubscriptionsPageCallback 处理订阅分页回调
+func handleSubscriptionsPageCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
+	page, err := strconv.Atoi(param)
+	if err != nil {
+		page = 0
+	}
+
+	handler := GetHandler("subscriptions")
+	if handler == nil {
+		return nil
+	}
+
+	if subsHandler, ok := handler.(*SubscriptionsHandler); ok {
+		return subsHandler.HandleWithPage(bot, callback.Message, page)
+	}
+	return handler.Handle(bot, callback.Message)
+}
+
 // handleTagsCallback 处理 tags 回调
 func handleTagsCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
 	if param == "apply_all" {
@@ -153,6 +181,46 @@ func handleTagsCallback(bot *TelegramBot, callback *CallbackQuery, param string)
 	return handler.Handle(bot, callback.Message)
 }
 
+// handleTagsPageCallback 处理标签规则分页回调
+func handleTagsPageCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
+	page, err := strconv.Atoi(param)
+	if err != nil {
+		page = 0
+	}
+
+	handler := GetHandler("tags")
+	if handler == nil {
+		return nil
+	}
+
+	if tagsHandler, ok := handler.(*TagsHandler); ok {
+		return tagsHandler.HandleWithPage(bot, callback.Message, page)
+	}
+	return handler.Handle(bot, callback.Message)
+}
+
+// handleTagRunCallback 处理执行单个标签规则回调
+func handleTagRunCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
+	ruleID, err := strconv.Atoi(param)
+	if err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 无效的规则ID", "")
+	}
+
+	// 获取规则信息以显示名称
+	var rule models.TagRule
+	if err := rule.GetByID(ruleID); err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 规则不存在", "")
+	}
+
+	// 执行规则
+	if err := TriggerTagRule(ruleID); err != nil {
+		return bot.SendMessage(callback.Message.Chat.ID, "❌ 执行规则失败: "+err.Error(), "")
+	}
+
+	text := fmt.Sprintf("✅ 已开始执行标签规则\n\n📋 规则: *%s*\n🏷️ 标签: *%s*\n\n执行完成后将收到通知", rule.Name, rule.TagName)
+	return bot.SendMessage(callback.Message.Chat.ID, text, "Markdown")
+}
+
 // handleCancelCallback 处理取消回调
 func handleCancelCallback(bot *TelegramBot, callback *CallbackQuery) error {
 	return bot.EditMessage(callback.Message.Chat.ID, callback.Message.MessageID, "✅ 已取消", "", nil)
@@ -165,6 +233,24 @@ func handleProfilesCallback(bot *TelegramBot, callback *CallbackQuery) error {
 	handler := GetHandler("profiles")
 	if handler == nil {
 		return nil
+	}
+	return handler.Handle(bot, callback.Message)
+}
+
+// handleProfilesPageCallback 处理策略分页回调
+func handleProfilesPageCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
+	page, err := strconv.Atoi(param)
+	if err != nil {
+		page = 0
+	}
+
+	handler := GetHandler("profiles")
+	if handler == nil {
+		return nil
+	}
+
+	if profilesHandler, ok := handler.(*ProfilesHandler); ok {
+		return profilesHandler.HandleWithPage(bot, callback.Message, page)
 	}
 	return handler.Handle(bot, callback.Message)
 }
@@ -436,6 +522,25 @@ func handleAirportsCallback(bot *TelegramBot, callback *CallbackQuery) error {
 	handler := GetHandler("airports")
 	if handler == nil {
 		return nil
+	}
+	return handler.Handle(bot, callback.Message)
+}
+
+// handleAirportsPageCallback 处理机场分页回调
+func handleAirportsPageCallback(bot *TelegramBot, callback *CallbackQuery, param string) error {
+	page, err := strconv.Atoi(param)
+	if err != nil {
+		page = 0
+	}
+
+	handler := GetHandler("airports")
+	if handler == nil {
+		return nil
+	}
+
+	// 类型断言获取 AirportsHandler
+	if airportsHandler, ok := handler.(*AirportsHandler); ok {
+		return airportsHandler.HandleWithPage(bot, callback.Message, page)
 	}
 	return handler.Handle(bot, callback.Message)
 }
