@@ -8,6 +8,7 @@ import (
 	"sublink/services/monitor"
 	"sublink/utils"
 	"sync"
+	"time"
 )
 
 // CommandHandler 命令处理器接口
@@ -219,6 +220,9 @@ func (h *StatsHandler) Handle(bot *TelegramBot, message *Message) error {
 		}
 	}
 
+	// 机场流量概览
+	buildAirportUsageOverview(&text)
+
 	keyboard := [][]InlineKeyboardButton{
 		{NewInlineButton("🔄 刷新", "stats")},
 	}
@@ -269,6 +273,125 @@ func sortMapByValue(m map[string]int) []KeyValue {
 		return kvs[i].Value > kvs[j].Value
 	})
 	return kvs
+}
+
+// buildAirportUsageOverview 构建机场流量概览区块
+func buildAirportUsageOverview(text *strings.Builder) {
+	var airport models.Airport
+	airports, err := airport.List()
+	if err != nil || len(airports) == 0 {
+		return
+	}
+
+	// 筛选开启用量获取且有有效数据的机场
+	var airportsWithUsage []models.Airport
+	for _, a := range airports {
+		if a.FetchUsageInfo && a.UsageTotal > 0 {
+			airportsWithUsage = append(airportsWithUsage, a)
+		}
+	}
+
+	if len(airportsWithUsage) == 0 {
+		return
+	}
+
+	// 全局流量汇总
+	var totalUsed, totalQuota int64
+	for _, a := range airportsWithUsage {
+		totalUsed += a.UsageUpload + a.UsageDownload
+		totalQuota += a.UsageTotal
+	}
+
+	var globalPercent float64
+	if totalQuota > 0 {
+		globalPercent = float64(totalUsed) / float64(totalQuota) * 100
+		if globalPercent > 100 {
+			globalPercent = 100
+		}
+	}
+
+	// 最近到期机场
+	now := time.Now().Unix()
+	var nearestExpireAirport *models.Airport
+	for i := range airportsWithUsage {
+		a := &airportsWithUsage[i]
+		if a.UsageExpire > now {
+			if nearestExpireAirport == nil || a.UsageExpire < nearestExpireAirport.UsageExpire {
+				nearestExpireAirport = a
+			}
+		}
+	}
+
+	// 低流量机场（剩余 < 10%）
+	var lowUsageAirports []models.Airport
+	for _, a := range airportsWithUsage {
+		used := a.UsageUpload + a.UsageDownload
+		remaining := a.UsageTotal - used
+		if float64(remaining)/float64(a.UsageTotal) < 0.1 {
+			lowUsageAirports = append(lowUsageAirports, a)
+		}
+	}
+
+	// 构建输出
+	text.WriteString("\n✈️ *机场流量概览*\n")
+	text.WriteString(fmt.Sprintf("├ 机场数量: %d 个\n", len(airportsWithUsage)))
+	text.WriteString(fmt.Sprintf("├ 全局使用: %s / %s (%.1f%%)\n",
+		formatBytesLocal(totalUsed), formatBytesLocal(totalQuota), globalPercent))
+
+	if nearestExpireAirport != nil {
+		text.WriteString(fmt.Sprintf("├ 最近到期: %s\n", truncateName(nearestExpireAirport.Name, 15)))
+		text.WriteString(fmt.Sprintf("│    └ %s\n", formatExpireTimeLocal(nearestExpireAirport.UsageExpire)))
+	}
+
+	if len(lowUsageAirports) > 0 {
+		text.WriteString(fmt.Sprintf("└ ⚠️ 流量不足: %d 个\n", len(lowUsageAirports)))
+		for i, a := range lowUsageAirports {
+			if i >= 3 { // 最多显示3个
+				text.WriteString(fmt.Sprintf("     └ ...等%d个\n", len(lowUsageAirports)-3))
+				break
+			}
+			text.WriteString(fmt.Sprintf("     %s %s\n", "├", truncateName(a.Name, 20)))
+		}
+	} else {
+		text.WriteString("└ ✓ 所有机场流量充足\n")
+	}
+}
+
+// formatBytesLocal 格式化字节数为可读格式
+func formatBytesLocal(bytes int64) string {
+	if bytes == 0 {
+		return "0 B"
+	}
+	if bytes < 0 {
+		return "N/A"
+	}
+
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+
+	units := []string{"B", "KB", "MB", "GB", "TB"}
+	if exp >= len(units)-1 {
+		exp = len(units) - 2
+	}
+
+	return fmt.Sprintf("%.2f %s", float64(bytes)/float64(div), units[exp+1])
+}
+
+// formatExpireTimeLocal 格式化到期时间
+func formatExpireTimeLocal(timestamp int64) string {
+	if timestamp <= 0 {
+		return "未知"
+	}
+	t := time.Unix(timestamp, 0)
+	return t.Format("2006-01-02 15:04")
 }
 
 // ============ MonitorHandler ============
