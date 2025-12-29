@@ -162,16 +162,6 @@ const TurnstileDialog = forwardRef(function TurnstileDialog({ open, onClose, onS
               minHeight: 120
             }}
           >
-            {/* 加载提示（仅在 loading 状态显示） */}
-            {status === 'loading' && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CircularProgress size={18} color="primary" />
-                <Typography variant="body2" color="text.secondary">
-                  正在加载验证组件...
-                </Typography>
-              </Box>
-            )}
-
             {/* Turnstile 控件容器 */}
             <Box
               sx={{
