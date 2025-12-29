@@ -482,7 +482,24 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		if allNodeHashes[contentHash] {
 			skipCount++
 			nodeStatus = "skipped"
-			// 节点内容已存在，跳过
+			// 节点内容已存在，跳过 - 输出详细日志便于排查
+			if existingNode, exists := models.GetNodeByContentHash(contentHash); exists {
+				// 判断是本机场重复还是跨机场重复
+				if existingNode.SourceID == id {
+					// 检查是否名称相同
+					if existingNode.Name == proxy.Name {
+						utils.Debug("⏭️ 节点【%s】在本机场已存在，跳过", proxy.Name)
+					} else {
+						// 名称不同但配置相同，这可能是问题所在
+						utils.Warn("🔀 节点【%s】与本机场已有节点【%s】配置相同（ContentHash重复），跳过", proxy.Name, existingNode.Name)
+					}
+				} else {
+					utils.Warn("⚠️ 节点【%s】与其他机场重复，跳过 [现有节点: %s] [来源: %s] [分组: %s] [SourceID: %d]", proxy.Name, existingNode.Name, existingNode.Source, existingNode.Group, existingNode.SourceID)
+				}
+			} else {
+				// hash存在于allNodeHashes但缓存中找不到，说明是本次拉取中的内部重复
+				utils.Warn("🔄 节点【%s】与本次拉取中的其他节点重复（相同配置），跳过 [ContentHash: %s]", proxy.Name, contentHash[:16])
+			}
 		} else {
 			// 节点不存在，收集到待添加列表
 			nodesToAdd = append(nodesToAdd, Node)
