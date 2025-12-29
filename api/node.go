@@ -195,6 +195,20 @@ func NodeUpdadte(c *gin.Context) {
 		contentHash := protocol.GenerateProxyContentHash(proxy)
 		if contentHash != "" {
 			Node.ContentHash = contentHash
+			// 检查是否与其他节点重复（排除自身）
+			if existingNode, exists := models.GetNodeByContentHash(contentHash); exists && existingNode.ID != Node.ID {
+				// 构建详细的重复信息
+				source := existingNode.Source
+				if source == "" || source == "manual" {
+					source = "手动添加"
+				}
+				group := existingNode.Group
+				if group == "" {
+					group = "未分组"
+				}
+				utils.FailWithMsg(c, "节点内容已存在，与以下节点重复：[来源: "+source+"] [分组: "+group+"] [名称: "+existingNode.Name+"]")
+				return
+			}
 		}
 	}
 
@@ -553,8 +567,17 @@ func NodeAdd(c *gin.Context) {
 		if contentHash != "" {
 			Node.ContentHash = contentHash
 			// 检查是否已存在相同内容的节点
-			if models.NodeExistsByContentHash(contentHash) {
-				utils.FailWithMsg(c, "节点内容已存在（与现有节点重复）")
+			if existingNode, exists := models.GetNodeByContentHash(contentHash); exists {
+				// 构建详细的重复信息
+				source := existingNode.Source
+				if source == "" || source == "manual" {
+					source = "手动添加"
+				}
+				group := existingNode.Group
+				if group == "" {
+					group = "未分组"
+				}
+				utils.FailWithMsg(c, "节点内容已存在，与以下节点重复：[来源: "+source+"] [分组: "+group+"] [名称: "+existingNode.Name+"]")
 				return
 			}
 		}
