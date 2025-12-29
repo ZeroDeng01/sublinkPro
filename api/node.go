@@ -35,6 +35,16 @@ func NodeUpdadte(c *gin.Context) {
 	Node.Name = name
 
 	//更新构造节点元数据
+	// 检测是否为 WireGuard 配置文件格式，如果是则转换为 URL 格式
+	if protocol.IsWireGuardConfig(link) {
+		wg, err := protocol.ParseWireGuardConfig(link)
+		if err != nil {
+			utils.FailWithMsg(c, "WireGuard 配置文件解析失败: "+err.Error())
+			return
+		}
+		// 转换为 URL 格式
+		link = protocol.EncodeWireGuardURL(wg)
+	}
 	u, err := url.Parse(link)
 	if err != nil {
 		utils.Error("解析节点链接失败: %v", err)
@@ -160,6 +170,19 @@ func NodeUpdadte(c *gin.Context) {
 		Node.LinkAddress = socks5.Server + ":" + utils.GetPortString(socks5.Port)
 		Node.LinkHost = socks5.Server
 		Node.LinkPort = utils.GetPortString(socks5.Port)
+	case u.Scheme == "wg" || u.Scheme == "wireguard":
+		wg, err := protocol.DecodeWireGuardURL(link)
+		if err != nil {
+			utils.Error("解析节点链接失败: %v", err)
+			return
+		}
+		if Node.Name == "" {
+			Node.Name = wg.Name
+		}
+		Node.LinkName = wg.Name
+		Node.LinkAddress = wg.Server + ":" + utils.GetPortString(wg.Port)
+		Node.LinkHost = wg.Server
+		Node.LinkPort = utils.GetPortString(wg.Port)
 	}
 
 	Node.Link = link
@@ -336,8 +359,18 @@ func NodeAdd(c *gin.Context) {
 		utils.FailWithMsg(c, "link  不能为空")
 		return
 	}
+	// 检测是否为 WireGuard 配置文件格式，如果是则转换为 URL 格式
+	if protocol.IsWireGuardConfig(link) {
+		wg, err := protocol.ParseWireGuardConfig(link)
+		if err != nil {
+			utils.FailWithMsg(c, "WireGuard 配置文件解析失败: "+err.Error())
+			return
+		}
+		// 转换为 URL 格式
+		link = protocol.EncodeWireGuardURL(wg)
+	}
 	if !strings.Contains(link, "://") {
-		utils.FailWithMsg(c, "link 必须包含 ://")
+		utils.FailWithMsg(c, "link 必须包含 :// 或者是有效的 WireGuard 配置文件")
 		return
 	}
 	Node.Name = name
@@ -484,6 +517,20 @@ func NodeAdd(c *gin.Context) {
 		Node.LinkAddress = anytls.Server + ":" + utils.GetPortString(anytls.Port)
 		Node.LinkHost = anytls.Server
 		Node.LinkPort = utils.GetPortString(anytls.Port)
+	case u.Scheme == "wg" || u.Scheme == "wireguard":
+		wg, err := protocol.DecodeWireGuardURL(link)
+		if err != nil {
+			utils.Error("解析节点链接失败: %v", err)
+			return
+		}
+
+		if name == "" {
+			Node.Name = wg.Name
+		}
+		Node.LinkName = wg.Name
+		Node.LinkAddress = wg.Server + ":" + utils.GetPortString(wg.Port)
+		Node.LinkHost = wg.Server
+		Node.LinkPort = utils.GetPortString(wg.Port)
 	}
 	Node.Link = link
 	Node.DialerProxyName = dialerProxyName

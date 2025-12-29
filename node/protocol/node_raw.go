@@ -56,6 +56,9 @@ func ParseNodeLink(link string) (*ParsedNodeInfo, error) {
 	case strings.HasPrefix(linkLower, "socks5://"):
 		protocol = "socks5"
 		protoObj, err = DecodeSocks5URL(link)
+	case strings.HasPrefix(linkLower, "wireguard://"), strings.HasPrefix(linkLower, "wg://"):
+		protocol = "wireguard"
+		protoObj, err = DecodeWireGuardURL(link)
 	default:
 		return nil, fmt.Errorf("不支持的协议类型")
 	}
@@ -170,6 +173,8 @@ func UpdateNodeLinkFields(link string, fieldsJSON string) (string, error) {
 		return updateAnyTLSFields(link, fields)
 	case strings.HasPrefix(linkLower, "socks5://"):
 		return updateSocks5Fields(link, fields)
+	case strings.HasPrefix(linkLower, "wireguard://"), strings.HasPrefix(linkLower, "wg://"):
+		return updateWireGuardFields(link, fields)
 	default:
 		return "", fmt.Errorf("不支持的协议类型")
 	}
@@ -371,4 +376,16 @@ func updateSocks5Fields(link string, fields map[string]interface{}) (string, err
 		setFieldValue(v, path, val)
 	}
 	return EncodeSocks5URL(socks5), nil
+}
+
+func updateWireGuardFields(link string, fields map[string]interface{}) (string, error) {
+	wg, err := DecodeWireGuardURL(link)
+	if err != nil {
+		return "", err
+	}
+	v := reflect.ValueOf(&wg).Elem()
+	for path, val := range fields {
+		setFieldValue(v, path, val)
+	}
+	return EncodeWireGuardURL(wg), nil
 }

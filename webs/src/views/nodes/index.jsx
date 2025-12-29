@@ -689,10 +689,20 @@ export default function NodeList() {
   };
 
   const handleSubmitNode = async () => {
-    const nodeLinks = nodeForm.link
-      .split(/[\r\n,]/)
-      .map((item) => item.trim())
-      .filter((item) => item !== '');
+    // 检测是否是 WireGuard 配置文件格式（包含 [Interface] 和 [Peer]）
+    const isWireGuardConfig = nodeForm.link.includes('[Interface]') && nodeForm.link.includes('[Peer]');
+
+    let nodeLinks;
+    if (isWireGuardConfig) {
+      // WireGuard 配置文件格式，保持原样不分割
+      nodeLinks = [nodeForm.link.trim()];
+    } else {
+      // 常规链接格式，按换行符和逗号分割
+      nodeLinks = nodeForm.link
+        .split(/[\r\n,]/)
+        .map((item) => item.trim())
+        .filter((item) => item !== '');
+    }
 
     if (nodeLinks.length === 0) {
       showMessage('请输入节点链接', 'warning');
@@ -889,9 +899,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -934,9 +944,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />

@@ -46,7 +46,7 @@ export default function NodeDialog({
             label="节点链接"
             value={nodeForm.link}
             onChange={(e) => setNodeForm({ ...nodeForm, link: e.target.value })}
-            placeholder="请输入节点，多行使用回车或逗号分开，支持base64格式的url订阅"
+            placeholder="支持输入：各类代理链接（vmess://、vless://、wireguard:// 等）、WireGuard 标准配置文件（包含 [Interface] 和 [Peer]）、Base64 订阅链接。多行使用回车分隔"
           />
           {!isEdit && (
             <RadioGroup row value={nodeForm.mergeMode} onChange={(e) => setNodeForm({ ...nodeForm, mergeMode: e.target.value })}>

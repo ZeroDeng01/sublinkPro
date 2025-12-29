@@ -49,7 +49,7 @@ var registeredProtocols = []protocolRegistry{
 	{name: "hysteria", label: "Hysteria", color: "#f9a825", icon: "H", prefixes: []string{"hysteria://", "hy://"}, instance: HY{}},
 	{name: "hysteria2", label: "Hysteria2", color: "#ef6c00", icon: "H", prefixes: []string{"hysteria2://", "hy2://"}, instance: HY2{}},
 	{name: "tuic", label: "TUIC", color: "#0277bd", icon: "T", prefixes: []string{"tuic://"}, instance: Tuic{}},
-	{name: "wireguard", label: "WireGuard", color: "#88171a", icon: "W", prefixes: []string{"wg://", "wireguard://"}, instance: nil},
+	{name: "wireguard", label: "WireGuard", color: "#88171a", icon: "W", prefixes: []string{"wg://", "wireguard://"}, instance: WireGuard{}},
 	{name: "naiveproxy", label: "NaiveProxy", color: "#5d4037", icon: "N", prefixes: []string{"naive://"}, instance: nil},
 	{name: "anytls", label: "AnyTLS", color: "#20a84c", icon: "A", prefixes: []string{"anytls://"}, instance: AnyTLS{}},
 	{name: "socks5", label: "SOCKS5", color: "#116ea4", icon: "S", prefixes: []string{"socks5://"}, instance: Socks5{}},

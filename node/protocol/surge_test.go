@@ -333,7 +333,7 @@ func TestAllProtocolsToProxy(t *testing.T) {
 		expected string
 	}{
 		{"SS", "ss://YWVzLTI1Ni1nY206cGFzc3dvcmQ@example.com:8388#SS节点", "ss"},
-		{"VLESS", "vless://uuid@example.com:443?security=tls&type=tcp#VLESS节点", "vless"},
+		{"VLESS", "vless://12345678-1234-1234-1234-123456789abc@example.com:443?security=tls&type=tcp#VLESS节点", "vless"},
 		{"Trojan", "trojan://password@example.com:443?security=tls#Trojan节点", "trojan"},
 		{"Socks5", "socks5://user:pass@example.com:1080#Socks5节点", "socks5"},
 	}

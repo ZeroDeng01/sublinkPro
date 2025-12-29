@@ -89,6 +89,14 @@ type Proxy struct {
 	Udp_relay_mode        string                 `yaml:"udp-relay-mode,omitempty"`        // UDP 转发模式 (Tuic)
 	Disable_sni           bool                   `yaml:"disable-sni,omitempty"`           // 禁用 SNI (Tuic)
 	Dialer_proxy          string                 `yaml:"dialer-proxy,omitempty"`          // 前置代理
+	// WireGuard 特有字段
+	Private_key string   `yaml:"private-key,omitempty"` // WireGuard 私钥
+	Public_key  string   `yaml:"public-key,omitempty"`  // WireGuard 公钥
+	Ip          string   `yaml:"ip,omitempty"`          // WireGuard 客户端 IPv4
+	Ipv6        string   `yaml:"ipv6,omitempty"`        // WireGuard 客户端 IPv6
+	Mtu         int      `yaml:"mtu,omitempty"`         // MTU 值
+	Reserved    []int    `yaml:"reserved,omitempty"`    // 保留字段
+	Allowed_ips []string `yaml:"allowed-ips,omitempty"` // 允许的 IP 段
 }
 
 type ProxyGroup struct {
@@ -416,6 +424,30 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Port:         FlexPort(utils.GetPortInt(socks5.Port)),
 			Username:     socks5.Username,
 			Password:     socks5.Password,
+			Dialer_proxy: link.DialerProxyName,
+		}, nil
+	case Scheme == "wg" || Scheme == "wireguard":
+		wg, err := DecodeWireGuardURL(link.Url)
+		if err != nil {
+			return Proxy{}, err
+		}
+		// 如果没有名字，就用服务器地址作为名字
+		if wg.Name == "" {
+			wg.Name = fmt.Sprintf("%s:%s", wg.Server, utils.GetPortString(wg.Port))
+		}
+		return Proxy{
+			Name:         wg.Name,
+			Type:         "wireguard",
+			Server:       wg.Server,
+			Port:         FlexPort(utils.GetPortInt(wg.Port)),
+			Private_key:  wg.PrivateKey,
+			Public_key:   wg.PublicKey,
+			Ip:           wg.IP,
+			Ipv6:         wg.IPv6,
+			Mtu:          wg.MTU,
+			Reserved:     wg.Reserved,
+			Allowed_ips:  []string{"0.0.0.0/0"},
+			Udp:          true, // WireGuard 默认启用 UDP
 			Dialer_proxy: link.DialerProxyName,
 		}, nil
 	default:
