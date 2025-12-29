@@ -439,6 +439,33 @@ func Run() {
 			r.GET("/favicon.svg", func(c *gin.Context) {
 				c.FileFromFS("favicon.svg", http.FS(staticFiles))
 			})
+			// PWA 相关静态文件
+			r.GET("/manifest.webmanifest", func(c *gin.Context) {
+				c.Header("Content-Type", "application/manifest+json")
+				c.FileFromFS("manifest.webmanifest", http.FS(staticFiles))
+			})
+			r.GET("/sw.js", func(c *gin.Context) {
+				c.Header("Content-Type", "application/javascript")
+				c.Header("Service-Worker-Allowed", "/")
+				c.FileFromFS("sw.js", http.FS(staticFiles))
+			})
+			r.GET("/registerSW.js", func(c *gin.Context) {
+				c.Header("Content-Type", "application/javascript")
+				c.FileFromFS("registerSW.js", http.FS(staticFiles))
+			})
+			// PWA 图标
+			r.GET("/icon-192.png", func(c *gin.Context) {
+				c.FileFromFS("icon-192.png", http.FS(staticFiles))
+			})
+			r.GET("/icon-512.png", func(c *gin.Context) {
+				c.FileFromFS("icon-512.png", http.FS(staticFiles))
+			})
+			// Workbox 动态路由（文件名包含哈希）
+			r.GET("/workbox-:hash.js", func(c *gin.Context) {
+				filename := "workbox-" + c.Param("hash") + ".js"
+				c.Header("Content-Type", "application/javascript")
+				c.FileFromFS(filename, http.FS(staticFiles))
+			})
 			r.GET("/", func(c *gin.Context) {
 				data, err := fs.ReadFile(staticFiles, "index.html")
 				if err != nil {
