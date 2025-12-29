@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sublink/api"
 	"sublink/cache"
@@ -35,6 +36,32 @@ var Template embed.FS
 var versionFile embed.FS
 
 var version string
+
+// getContentType 根据文件扩展名返回对应的 MIME 类型
+func getContentType(filePath string) string {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	mimeTypes := map[string]string{
+		".html":        "text/html; charset=utf-8",
+		".css":         "text/css; charset=utf-8",
+		".js":          "application/javascript; charset=utf-8",
+		".json":        "application/json; charset=utf-8",
+		".webmanifest": "application/manifest+json; charset=utf-8",
+		".png":         "image/png",
+		".jpg":         "image/jpeg",
+		".jpeg":        "image/jpeg",
+		".gif":         "image/gif",
+		".svg":         "image/svg+xml",
+		".ico":         "image/x-icon",
+		".woff":        "font/woff",
+		".woff2":       "font/woff2",
+		".ttf":         "font/ttf",
+		".eot":         "application/vnd.ms-fontobject",
+	}
+	if contentType, ok := mimeTypes[ext]; ok {
+		return contentType
+	}
+	return "application/octet-stream"
+}
 
 func Templateinit() {
 	// 设置template路径
@@ -430,42 +457,13 @@ func Run() {
 		if err != nil {
 			utils.Error("加载静态文件失败: %v", err)
 		} else {
-			// 增加assets目录的静态服务
+			// 子目录使用 StaticFS（高性能）
 			assetsFiles, _ := fs.Sub(staticFiles, "assets")
 			r.StaticFS("/assets", http.FS(assetsFiles))
-			// 增加images目录的静态服务 (public文件夹)
 			imagesFiles, _ := fs.Sub(staticFiles, "images")
 			r.StaticFS("/images", http.FS(imagesFiles))
-			r.GET("/favicon.svg", func(c *gin.Context) {
-				c.FileFromFS("favicon.svg", http.FS(staticFiles))
-			})
-			// PWA 相关静态文件
-			r.GET("/manifest.webmanifest", func(c *gin.Context) {
-				c.Header("Content-Type", "application/manifest+json")
-				c.FileFromFS("manifest.webmanifest", http.FS(staticFiles))
-			})
-			r.GET("/sw.js", func(c *gin.Context) {
-				c.Header("Content-Type", "application/javascript")
-				c.Header("Service-Worker-Allowed", "/")
-				c.FileFromFS("sw.js", http.FS(staticFiles))
-			})
-			r.GET("/registerSW.js", func(c *gin.Context) {
-				c.Header("Content-Type", "application/javascript")
-				c.FileFromFS("registerSW.js", http.FS(staticFiles))
-			})
-			// PWA 图标
-			r.GET("/icon-192.png", func(c *gin.Context) {
-				c.FileFromFS("icon-192.png", http.FS(staticFiles))
-			})
-			r.GET("/icon-512.png", func(c *gin.Context) {
-				c.FileFromFS("icon-512.png", http.FS(staticFiles))
-			})
-			// Workbox 动态路由（文件名包含哈希）
-			r.GET("/workbox-:hash.js", func(c *gin.Context) {
-				filename := "workbox-" + c.Param("hash") + ".js"
-				c.Header("Content-Type", "application/javascript")
-				c.FileFromFS(filename, http.FS(staticFiles))
-			})
+
+			// 根路径返回 index.html
 			r.GET("/", func(c *gin.Context) {
 				data, err := fs.ReadFile(staticFiles, "index.html")
 				if err != nil {
@@ -497,31 +495,53 @@ func Run() {
 	routers.Airport(r)
 	routers.NodeCheck(r)
 
-	// 处理前端路由 (SPA History Mode)
+	// 处理前端路由 (SPA History Mode) 和静态文件
 	// 必须在所有 backend 路由注册之后注册
 	r.NoRoute(func(c *gin.Context) {
-		// 如果是 API 请求，返回 404
-		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+		path := c.Request.URL.Path
+
+		// API 请求直接返回 404
+		if strings.HasPrefix(path, "/api/") {
 			c.JSON(404, gin.H{"error": "API route not found"})
 			return
 		}
 
-		// 否则返回 index.html
+		// 生产环境：尝试从 embed 文件系统提供静态文件
 		if StaticFiles != nil {
-			// 从 embed 文件系统中读取
 			staticFiles, err := fs.Sub(StaticFiles, "static")
 			if err != nil {
-				c.String(404, "Internal Server Error")
+				c.String(500, "Internal Server Error")
 				return
 			}
-			data, err := fs.ReadFile(staticFiles, "index.html")
+
+			// 去掉路径开头的斜杠
+			filePath := strings.TrimPrefix(path, "/")
+			if filePath == "" {
+				filePath = "index.html"
+			}
+
+			// 尝试读取请求的文件
+			data, err := fs.ReadFile(staticFiles, filePath)
+			if err == nil {
+				// 文件存在，根据扩展名设置 Content-Type
+				contentType := getContentType(filePath)
+				// Service Worker 特殊处理
+				if filePath == "sw.js" {
+					c.Header("Service-Worker-Allowed", "/")
+				}
+				c.Data(200, contentType, data)
+				return
+			}
+
+			// 文件不存在，返回 index.html (SPA fallback)
+			data, err = fs.ReadFile(staticFiles, "index.html")
 			if err != nil {
 				c.String(404, "Index file not found")
 				return
 			}
 			c.Data(200, "text/html", data)
 		} else {
-			// 本地开发环境 fallback (假设 static 目录在当前路径)
+			// 开发环境 fallback
 			c.File("./static/index.html")
 		}
 	})
