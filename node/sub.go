@@ -490,15 +490,19 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 					if existingNode.Name == proxy.Name {
 						utils.Debug("⏭️ 节点【%s】在本机场已存在，跳过", proxy.Name)
 					} else {
-						// 名称不同但配置相同，这可能是问题所在
-						utils.Warn("🔀 节点【%s】与本机场已有节点【%s】配置相同（ContentHash重复），跳过", proxy.Name, existingNode.Name)
+						// 名称不同但配置相同，输出规范化JSON便于排查
+						hashData := protocol.NormalizeProxyForHash(proxy)
+						jsonBytes, _ := json.Marshal(hashData)
+						utils.Warn("🔀 节点【%s】与已有节点【%s】配置相同，跳过\n    HashData: %s", proxy.Name, existingNode.Name, string(jsonBytes))
 					}
 				} else {
 					utils.Warn("⚠️ 节点【%s】与其他机场重复，跳过 [现有节点: %s] [来源: %s] [分组: %s] [SourceID: %d]", proxy.Name, existingNode.Name, existingNode.Source, existingNode.Group, existingNode.SourceID)
 				}
 			} else {
 				// hash存在于allNodeHashes但缓存中找不到，说明是本次拉取中的内部重复
-				utils.Warn("🔄 节点【%s】与本次拉取中的其他节点重复（相同配置），跳过 [ContentHash: %s]", proxy.Name, contentHash[:16])
+				hashData := protocol.NormalizeProxyForHash(proxy)
+				jsonBytes, _ := json.Marshal(hashData)
+				utils.Warn("🔄 节点【%s】与本次拉取中的其他节点重复（相同配置），跳过\n    HashData: %s", proxy.Name, string(jsonBytes))
 			}
 		} else {
 			// 节点不存在，收集到待添加列表
