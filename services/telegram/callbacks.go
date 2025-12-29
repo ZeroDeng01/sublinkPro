@@ -358,7 +358,7 @@ func handleProfileRunCallback(bot *TelegramBot, callback *CallbackQuery, param s
 		return bot.SendMessage(callback.Message.Chat.ID, "❌ 策略不存在", "")
 	}
 
-	if err := ExecuteNodeCheckWithProfile(id, nil); err != nil {
+	if err := ExecuteNodeCheckWithProfile(id, nil, models.TaskTriggerManual); err != nil {
 		return bot.SendMessage(callback.Message.Chat.ID, "❌ 启动检测失败: "+err.Error(), "")
 	}
 
@@ -455,7 +455,7 @@ func handleProfileRunUntestedCallback(bot *TelegramBot, callback *CallbackQuery,
 	}
 
 	// 执行检测
-	if err := ExecuteNodeCheckWithProfile(profileID, untestedIDs); err != nil {
+	if err := ExecuteNodeCheckWithProfile(profileID, untestedIDs, models.TaskTriggerManual); err != nil {
 		return bot.SendMessage(callback.Message.Chat.ID, "❌ 启动检测失败: "+err.Error(), "")
 	}
 

@@ -316,8 +316,8 @@ func RunNodeCheck(c *gin.Context) {
 		return
 	}
 
-	// 使用指定策略执行
-	go scheduler.ExecuteNodeCheckWithProfile(req.ProfileID, req.NodeIDs)
+	// 使用指定策略执行（手动触发）
+	go scheduler.ExecuteNodeCheckWithProfile(req.ProfileID, req.NodeIDs, models.TaskTriggerManual)
 	utils.OkWithMsg(c, "节点检测任务已启动")
 }
 
@@ -337,6 +337,6 @@ func RunNodeCheckWithProfile(c *gin.Context) {
 		return
 	}
 
-	go scheduler.ExecuteNodeCheckWithProfile(id, nil)
+	go scheduler.ExecuteNodeCheckWithProfile(id, nil, models.TaskTriggerManual)
 	utils.OkWithMsg(c, "节点检测任务已启动")
 }

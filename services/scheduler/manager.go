@@ -277,8 +277,8 @@ func (sm *SchedulerManager) AddNodeCheckProfileJob(profileID int, cronExpr strin
 		// 记录开始执行时间
 		startTime := time.Now()
 
-		// 执行节点检测
-		ExecuteNodeCheckWithProfile(profileID, nil)
+		// 执行节点检测（定时触发）
+		ExecuteNodeCheckWithProfile(profileID, nil, models.TaskTriggerScheduled)
 
 		// 计算下次运行时间
 		nextTime := sm.getNextRunTime(cleanCronExpr)
@@ -351,4 +351,3 @@ func (sm *SchedulerManager) updateNodeCheckProfileRunTime(profileID int, lastRun
 		}
 	}()
 }
-

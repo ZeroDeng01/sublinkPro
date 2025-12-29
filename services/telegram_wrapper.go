@@ -33,8 +33,8 @@ func (w *telegramServicesWrapper) GetNodeCheckProfiles() ([]models.NodeCheckProf
 }
 
 // ExecuteNodeCheckWithProfile 使用指定策略执行节点检测
-func (w *telegramServicesWrapper) ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int) {
-	scheduler.ExecuteNodeCheckWithProfile(profileID, nodeIDs)
+func (w *telegramServicesWrapper) ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.TaskTrigger) {
+	scheduler.ExecuteNodeCheckWithProfile(profileID, nodeIDs, trigger)
 }
 
 // ToggleProfileEnabled 开关策略的定时执行

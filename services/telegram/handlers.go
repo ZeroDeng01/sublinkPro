@@ -735,7 +735,7 @@ type ServicesWrapper interface {
 	CancelTask(taskID string) error
 	GetRunningTasks() []models.Task
 	GetNodeCheckProfiles() ([]models.NodeCheckProfile, error)
-	ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int)
+	ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.TaskTrigger)
 	ToggleProfileEnabled(profileID int) (bool, error)
 	TriggerTagRule(ruleID int) error
 }
@@ -810,9 +810,9 @@ func CancelTask(taskID string) error {
 }
 
 // ExecuteNodeCheckWithProfile 执行节点检测
-func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int) error {
+func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.TaskTrigger) error {
 	if servicesWrapper != nil {
-		go servicesWrapper.ExecuteNodeCheckWithProfile(profileID, nodeIDs)
+		go servicesWrapper.ExecuteNodeCheckWithProfile(profileID, nodeIDs, trigger)
 		return nil
 	}
 	return fmt.Errorf("服务未初始化")

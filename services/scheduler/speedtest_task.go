@@ -736,8 +736,9 @@ applyTags:
 // ExecuteNodeCheckWithProfile 使用指定策略执行节点检测
 // profileID: 策略ID
 // nodeIDs: 指定节点ID列表（可选，为空则按策略范围执行）
-func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int) {
-	utils.Info("开始执行节点检测，策略ID: %d", profileID)
+// trigger: 触发类型（手动/定时）
+func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.TaskTrigger) {
+	utils.Info("开始执行节点检测，策略ID: %d, 触发类型: %s", profileID, trigger)
 
 	// 获取策略配置
 	profile, err := models.GetNodeCheckProfileByID(profileID)
@@ -795,13 +796,6 @@ func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int) {
 
 	// 从策略构建独立的配置对象（并发安全，完全避免全局状态共享）
 	config := SpeedTestConfigFromProfile(profile)
-
-	// 确定触发类型
-	trigger := models.TaskTriggerManual
-	if len(nodeIDs) == 0 {
-		// 定时任务触发
-		trigger = models.TaskTriggerScheduled
-	}
 
 	// 执行检测（使用策略名称作为任务名，传递独立配置）
 	RunSpeedTestWithConfig(nodes, trigger, profile.Name, config)
