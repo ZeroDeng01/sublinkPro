@@ -419,12 +419,10 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		existingNodes = []models.Node{} // 确保后续逻辑不会panic
 	}
 
-	// 创建现有节点的映射表（以 ContentHash 为键，用于判断节点更新）
-	existingHashMap := make(map[string]models.Node)
+	// 创建现有节点的映射表（以 ID 为键，用于删除判断时遍历）
+	existingNodeByID := make(map[int]models.Node)
 	for _, node := range existingNodes {
-		if node.ContentHash != "" {
-			existingHashMap[node.ContentHash] = node
-		}
+		existingNodeByID[node.ID] = node
 	}
 
 	// 获取全库的 ContentHash 集合（用于全库去重）
@@ -435,8 +433,10 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	// 更新任务总数（此时已知道需要处理的节点数量）
 	reporter.UpdateTotal(len(proxys))
 
-	// 记录本次获取到的节点 ContentHash（用于判断需要删除的节点）
+	// 记录本次获取到的节点（用于判断需要删除的节点）
+	// 同时记录 ContentHash 和 Link，用于兼容老数据
 	currentHashes := make(map[string]bool)
+	currentLinks := make(map[string]bool)
 
 	// 批量收集：新增节点列表（稍后批量写入）
 	nodesToAdd := make([]models.Node, 0)
@@ -476,8 +476,9 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		Node.Protocol = proxy.Type
 		Node.ContentHash = contentHash
 
-		// 记录本次获取到的节点 ContentHash
+		// 记录本次获取到的节点 ContentHash 和 Link
 		currentHashes[contentHash] = true
+		currentLinks[link] = true
 
 		// 判断节点是否已存在（全库去重：使用 ContentHash 判断）
 		var nodeStatus string
@@ -504,11 +505,19 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	}
 
 	// 3. 收集需要删除的节点ID（本次订阅没有获取到但数据库中存在的节点）
+	// 同时通过 ContentHash 和 Link 两种方式判断，兼容老数据（ContentHash 为空）
 	nodeIDsToDelete := make([]int, 0)
-	for hash, existingNode := range existingHashMap {
-		if !currentHashes[hash] {
-			// 该节点不在本次订阅中，需要删除
-			nodeIDsToDelete = append(nodeIDsToDelete, existingNode.ID)
+	for nodeID, node := range existingNodeByID {
+		// 优先使用 ContentHash 判断
+		if node.ContentHash != "" {
+			if !currentHashes[node.ContentHash] {
+				nodeIDsToDelete = append(nodeIDsToDelete, nodeID)
+			}
+		} else {
+			// ContentHash 为空（老数据），使用 Link 判断
+			if !currentLinks[node.Link] {
+				nodeIDsToDelete = append(nodeIDsToDelete, nodeID)
+			}
 		}
 	}
 
