@@ -802,6 +802,11 @@ func (sub *Subcription) Del() error {
 	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionScript{}).Error; err != nil {
 		return err
 	}
+	// 删除关联的订阅分享
+	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubscriptionShare{}).Error; err != nil {
+		return err
+	}
+
 	// 删除关联的链式代理规则
 	if err := DeleteChainRulesBySubscriptionID(sub.ID); err != nil {
 		return err
