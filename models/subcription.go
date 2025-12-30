@@ -803,7 +803,7 @@ func (sub *Subcription) Del() error {
 		return err
 	}
 	// 删除关联的订阅分享
-	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubscriptionShare{}).Error; err != nil {
+	if err := database.DB.Where("subscription_id = ?", sub.ID).Delete(&SubscriptionShare{}).Error; err != nil {
 		return err
 	}
 
