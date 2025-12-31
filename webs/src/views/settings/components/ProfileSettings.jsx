@@ -13,6 +13,7 @@ import Grid from '@mui/material/Grid';
 import Divider from '@mui/material/Divider';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
+import Alert from '@mui/material/Alert';
 
 // icons
 import Visibility from '@mui/icons-material/Visibility';
@@ -20,10 +21,12 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import PersonIcon from '@mui/icons-material/Person';
 import LockIcon from '@mui/icons-material/Lock';
 import SaveIcon from '@mui/icons-material/Save';
+import LanguageIcon from '@mui/icons-material/Language';
 
 // project imports
 import { useAuth } from 'contexts/AuthContext';
 import { changePassword, updateProfile } from 'api/user';
+import { getSystemDomain, updateSystemDomain } from 'api/settings';
 
 // ==============================|| 个人设置组件 ||============================== //
 
@@ -46,6 +49,10 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // 系统域名配置
+  const [systemDomain, setSystemDomain] = useState('');
+  const [domainSaving, setDomainSaving] = useState(false);
+
   useEffect(() => {
     if (user) {
       setProfileForm({
@@ -53,7 +60,34 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
         nickname: user.nickname || ''
       });
     }
+    // 加载系统域名配置
+    fetchSystemDomain();
   }, [user]);
+
+  // 获取系统域名配置
+  const fetchSystemDomain = async () => {
+    try {
+      const res = await getSystemDomain();
+      if (res.data?.systemDomain) {
+        setSystemDomain(res.data.systemDomain);
+      }
+    } catch (error) {
+      console.error('获取系统域名配置失败:', error);
+    }
+  };
+
+  // 保存系统域名
+  const handleSaveSystemDomain = async () => {
+    setDomainSaving(true);
+    try {
+      await updateSystemDomain({ systemDomain: systemDomain.trim() });
+      showMessage('远程访问域名保存成功');
+    } catch (error) {
+      showMessage('保存失败: ' + (error.response?.data?.message || error.message), 'error');
+    } finally {
+      setDomainSaving(false);
+    }
+  };
 
   // === 更新资料 ===
   const handleUpdateProfile = async () => {
@@ -192,79 +226,118 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
         </Card>
       </Grid>
 
-      {/* 右侧：密码修改 */}
+      {/* 右侧 */}
       <Grid item xs={12} md={8}>
-        <Card>
-          <CardHeader title="修改密码" avatar={<LockIcon color="primary" />} />
-          <CardContent>
-            <Stack spacing={2} sx={{ maxWidth: 500 }}>
-              <TextField
-                fullWidth
-                label="旧密码"
-                type={showOldPassword ? 'text' : 'password'}
-                value={passwordForm.oldPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
-                autoComplete="current-password"
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setShowOldPassword(!showOldPassword)} edge="end">
-                        {showOldPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-              />
-              <TextField
-                fullWidth
-                label="新密码"
-                type={showNewPassword ? 'text' : 'password'}
-                value={passwordForm.newPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                autoComplete="new-password"
-                helperText="密码长度至少6位"
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setShowNewPassword(!showNewPassword)} edge="end">
-                        {showNewPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-              />
-              <TextField
-                fullWidth
-                label="确认新密码"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={passwordForm.confirmPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                autoComplete="new-password"
-                error={passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword}
-                helperText={
-                  passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword ? '两次输入的密码不一致' : ''
-                }
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
-                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-              />
-              <Stack direction="row" spacing={2}>
-                <Button variant="contained" onClick={handleChangePassword} disabled={loading}>
-                  修改密码
-                </Button>
-                <Button variant="outlined" onClick={() => setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' })}>
-                  重置
+        <Stack spacing={3}>
+          {/* 远程访问域名配置 */}
+          <Card>
+            <CardHeader title="远程访问域名" avatar={<LanguageIcon color="primary" />} />
+            <CardContent>
+              <Stack spacing={2} sx={{ maxWidth: 600 }}>
+                <Alert severity="info" sx={{ mb: 1 }}>
+                  配置后，Telegram 机器人和网页分享链接将使用此域名生成订阅链接。未配置时，网页使用当前访问地址，Telegram 使用本地地址。
+                </Alert>
+                <TextField
+                  fullWidth
+                  label="远程访问域名"
+                  value={systemDomain}
+                  onChange={(e) => setSystemDomain(e.target.value)}
+                  placeholder="例如: https://your-domain.com"
+                  helperText="请填写完整域名，包含协议头 (http:// 或 https://)"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LanguageIcon color="action" />
+                      </InputAdornment>
+                    )
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleSaveSystemDomain}
+                  disabled={domainSaving}
+                  startIcon={<SaveIcon />}
+                  sx={{ alignSelf: 'flex-start' }}
+                >
+                  保存域名
                 </Button>
               </Stack>
-            </Stack>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* 密码修改 */}
+          <Card>
+            <CardHeader title="修改密码" avatar={<LockIcon color="primary" />} />
+            <CardContent>
+              <Stack spacing={2} sx={{ maxWidth: 500 }}>
+                <TextField
+                  fullWidth
+                  label="旧密码"
+                  type={showOldPassword ? 'text' : 'password'}
+                  value={passwordForm.oldPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
+                  autoComplete="current-password"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowOldPassword(!showOldPassword)} edge="end">
+                          {showOldPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  label="新密码"
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  autoComplete="new-password"
+                  helperText="密码长度至少6位"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowNewPassword(!showNewPassword)} edge="end">
+                          {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  label="确认新密码"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  autoComplete="new-password"
+                  error={passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword}
+                  helperText={
+                    passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword ? '两次输入的密码不一致' : ''
+                  }
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }}
+                />
+                <Stack direction="row" spacing={2}>
+                  <Button variant="contained" onClick={handleChangePassword} disabled={loading}>
+                    修改密码
+                  </Button>
+                  <Button variant="outlined" onClick={() => setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' })}>
+                    重置
+                  </Button>
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Stack>
       </Grid>
     </Grid>
   );

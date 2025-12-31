@@ -45,8 +45,7 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
     botToken: '',
     chatId: '',
     useProxy: false,
-    proxyLink: '',
-    systemDomain: '' // 新增: 系统域名
+    proxyLink: ''
   });
   const [showToken, setShowToken] = useState(false);
   const [status, setStatus] = useState({ connected: false, error: '', botUsername: '', botId: 0 });
@@ -72,19 +71,12 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
     try {
       const response = await getTelegramConfig();
       if (response.data) {
-        // 如果后端返回的 systemDomain 为空，则自动设置为当前页面域名
-        let domain = response.data.systemDomain || '';
-        if (!domain) {
-          domain = window.location.origin;
-        }
-
         setForm({
           enabled: response.data.enabled || false,
           botToken: response.data.botToken || '',
           chatId: response.data.chatId ? String(response.data.chatId) : '',
           useProxy: response.data.useProxy || false,
-          proxyLink: response.data.proxyLink || '',
-          systemDomain: domain
+          proxyLink: response.data.proxyLink || ''
         });
         setStatus({
           connected: response.data.connected || false,
@@ -141,8 +133,7 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
         botToken: form.botToken,
         chatId: form.chatId ? parseInt(form.chatId, 10) : 0,
         useProxy: form.useProxy,
-        proxyLink: form.proxyLink,
-        systemDomain: form.systemDomain // 保存系统域名
+        proxyLink: form.proxyLink
       });
       showMessage('保存成功');
       fetchConfig();
@@ -317,15 +308,6 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
               </Box>
             </Box>
           )}
-
-          <TextField
-            fullWidth
-            label="远程访问域名 (用于生成订阅链接)"
-            value={form.systemDomain}
-            onChange={(e) => setForm({ ...form, systemDomain: e.target.value })}
-            placeholder="例如: https://your-domain.com"
-            helperText="Telegram Bot 返回的订阅链接将使用此域名作为前缀，默认为当前访问域名。"
-          />
 
           <TextField
             fullWidth

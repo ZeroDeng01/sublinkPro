@@ -2,7 +2,6 @@ package api
 
 import (
 	"strconv"
-	"sublink/models"
 	"sublink/services/telegram"
 	"sublink/utils"
 
@@ -20,44 +19,32 @@ func GetTelegramConfig(c *gin.Context) {
 	// 获取状态
 	status := telegram.GetStatus()
 
-	// 获取系统域名
-	systemDomain, _ := models.GetSetting("system_domain")
-
 	utils.OkDetailed(c, "获取成功", gin.H{
-		"enabled":      config.Enabled,
-		"botToken":     config.BotToken,
-		"chatId":       config.ChatID,
-		"useProxy":     config.UseProxy,
-		"proxyLink":    config.ProxyLink,
-		"systemDomain": systemDomain,
-		"connected":    status["connected"],
-		"lastError":    status["error"],
-		"botUsername":  status["botUsername"],
-		"botId":        status["botId"],
+		"enabled":     config.Enabled,
+		"botToken":    config.BotToken,
+		"chatId":      config.ChatID,
+		"useProxy":    config.UseProxy,
+		"proxyLink":   config.ProxyLink,
+		"connected":   status["connected"],
+		"lastError":   status["error"],
+		"botUsername": status["botUsername"],
+		"botId":       status["botId"],
 	})
 }
 
 // UpdateTelegramConfig 更新 Telegram 配置
 func UpdateTelegramConfig(c *gin.Context) {
 	var req struct {
-		Enabled      bool   `json:"enabled"`
-		BotToken     string `json:"botToken"`
-		ChatId       int64  `json:"chatId"`
-		UseProxy     bool   `json:"useProxy"`
-		ProxyLink    string `json:"proxyLink"`
-		SystemDomain string `json:"systemDomain"`
+		Enabled   bool   `json:"enabled"`
+		BotToken  string `json:"botToken"`
+		ChatId    int64  `json:"chatId"`
+		UseProxy  bool   `json:"useProxy"`
+		ProxyLink string `json:"proxyLink"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
 		return
-	}
-
-	// 保存系统域名
-	if req.SystemDomain != "" {
-		if err := models.SetSetting("system_domain", req.SystemDomain); err != nil {
-			utils.Error("保存系统域名失败: %v", err)
-		}
 	}
 
 	config := &telegram.Config{

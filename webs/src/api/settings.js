@@ -42,3 +42,20 @@ export function updateBaseTemplate(category, content) {
     data: { category, content }
   });
 }
+
+// 获取系统域名配置
+export function getSystemDomain() {
+  return request({
+    url: '/v1/settings/system-domain',
+    method: 'get'
+  });
+}
+
+// 保存系统域名配置
+export function updateSystemDomain(data) {
+  return request({
+    url: '/v1/settings/system-domain',
+    method: 'post',
+    data
+  });
+}

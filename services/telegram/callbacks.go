@@ -481,7 +481,7 @@ func handleSubLinkCallback(bot *TelegramBot, callback *CallbackQuery, param stri
 		return bot.SendMessage(callback.Message.Chat.ID, "❌ 无效的订阅 ID", "")
 	}
 
-	link, err := GetSubscriptionLink(subID)
+	link, needHint, err := GetSubscriptionLink(subID)
 	if err != nil {
 		return bot.SendMessage(callback.Message.Chat.ID, "❌ 获取链接失败: "+err.Error(), "")
 	}
@@ -493,28 +493,27 @@ func handleSubLinkCallback(bot *TelegramBot, callback *CallbackQuery, param stri
 	linkClash := link + "&client=clash"
 	linkSurge := link + "&client=surge"
 
-	// 发送链接（方便复制）
-	text := fmt.Sprintf(`📎 *订阅链接*
+	// 构建消息
+	var text strings.Builder
+	text.WriteString("📎 *订阅链接*\n\n")
 
-🤖 *自动识别*
-`+"`%s`"+`
+	// 如果未配置域名，添加提示
+	if needHint {
+		text.WriteString("⚠️ *提示*: 您尚未配置远程访问域名，当前链接使用本地地址，可能无法在外部访问。\n")
+		text.WriteString("请前往 Web 端「用户中心 → 个人设置」配置远程访问域名。\n\n")
+	}
 
-🚀 *v2ray*
-`+"`%s`"+`
-
-🐱 *clash*
-`+"`%s`"+`
-
-⚡ *surge*
-`+"`%s`"+`
-
-点击链接可复制`, linkAuto, linkV2Ray, linkClash, linkSurge)
+	text.WriteString("🤖 *自动识别*\n`" + linkAuto + "`\n\n")
+	text.WriteString("🚀 *v2ray*\n`" + linkV2Ray + "`\n\n")
+	text.WriteString("🐱 *clash*\n`" + linkClash + "`\n\n")
+	text.WriteString("⚡ *surge*\n`" + linkSurge + "`\n\n")
+	text.WriteString("点击链接可复制")
 
 	keyboard := [][]InlineKeyboardButton{
 		{NewInlineButton("🔙 返回订阅列表", "subscriptions")},
 	}
 
-	return bot.SendMessageWithKeyboard(callback.Message.Chat.ID, text, "Markdown", keyboard)
+	return bot.SendMessageWithKeyboard(callback.Message.Chat.ID, text.String(), "Markdown", keyboard)
 }
 
 // handleAirportsCallback 处理 airports 回调

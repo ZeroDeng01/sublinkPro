@@ -247,8 +247,7 @@ function AirportDeduplicationConfig({ value, onChange }) {
                     </>
                   ) : (
                     <>
-                      按协议字段去重<strong>仅在本次拉取的节点内部生效</strong>，
-                      不会与数据库中已有的其他节点进行比较。
+                      按协议字段去重<strong>仅在本次拉取的节点内部生效</strong>， 不会与数据库中已有的其他节点进行比较。
                       未配置字段的协议将继续使用默认的内容哈希全库去重。
                     </>
                   )}

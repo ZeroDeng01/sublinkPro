@@ -34,6 +34,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import HistoryIcon from '@mui/icons-material/History';
 
 import { getShares, createShare, updateShare, deleteShare, getShareLogs, refreshShareToken } from '../../../api/shares';
+import { getSystemDomain } from '../../../api/settings';
 import QrCodeDialog from './QrCodeDialog';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -51,6 +52,9 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // 系统域名配置
+  const [systemDomainConfig, setSystemDomainConfig] = useState('');
 
   // 链接详情对话框
   const [detailOpen, setDetailOpen] = useState(false);
@@ -83,9 +87,25 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmInfo, setConfirmInfo] = useState({ title: '', content: '', onConfirm: null });
 
-  // 获取服务器URL
-  const getServerUrl = () => {
+  // 获取服务器URL：优先使用系统域名配置，否则使用当前访问地址
+  const getServerUrl = useCallback(() => {
+    if (systemDomainConfig) {
+      // 确保没有末尾斜杠
+      return systemDomainConfig.replace(/\/+$/, '');
+    }
     return `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
+  }, [systemDomainConfig]);
+
+  // 获取系统域名配置
+  const fetchSystemDomain = async () => {
+    try {
+      const res = await getSystemDomain();
+      if (res.data?.systemDomain) {
+        setSystemDomainConfig(res.data.systemDomain);
+      }
+    } catch (error) {
+      console.error('获取系统域名配置失败:', error);
+    }
   };
 
   // 获取分享列表
@@ -104,6 +124,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
   useEffect(() => {
     if (open && subscription?.ID) {
+      fetchSystemDomain();
       fetchShares();
     }
   }, [open, subscription?.ID, fetchShares]);

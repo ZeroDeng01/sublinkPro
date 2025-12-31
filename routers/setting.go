@@ -18,6 +18,10 @@ func Settings(r *gin.Engine) {
 		SettingsGroup.GET("/base-templates", api.GetBaseTemplates)
 		SettingsGroup.POST("/base-templates", middlewares.DemoModeRestrict, api.UpdateBaseTemplate)
 
+		// 系统域名配置
+		SettingsGroup.GET("/system-domain", api.GetSystemDomain)
+		SettingsGroup.POST("/system-domain", middlewares.DemoModeRestrict, api.UpdateSystemDomain)
+
 		// Telegram 机器人设置
 		SettingsGroup.GET("/telegram", api.GetTelegramConfig)
 		SettingsGroup.POST("/telegram", middlewares.DemoModeRestrict, api.UpdateTelegramConfig)

@@ -169,3 +169,25 @@ func UpdateBaseTemplate(c *gin.Context) {
 	}
 	utils.OkWithMsg(c, categoryName+" 基础模板保存成功")
 }
+
+// GetSystemDomain 获取系统域名配置
+func GetSystemDomain(c *gin.Context) {
+	domain, _ := models.GetSetting("system_domain")
+	utils.OkWithData(c, gin.H{"systemDomain": domain})
+}
+
+// UpdateSystemDomain 更新系统域名配置
+func UpdateSystemDomain(c *gin.Context) {
+	var req struct {
+		SystemDomain string `json:"systemDomain"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+	if err := models.SetSetting("system_domain", req.SystemDomain); err != nil {
+		utils.FailWithMsg(c, "保存失败: "+err.Error())
+		return
+	}
+	utils.OkWithMsg(c, "保存成功")
+}

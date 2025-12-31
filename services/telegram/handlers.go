@@ -959,21 +959,22 @@ func TriggerTagRule(ruleID int) error {
 }
 
 // GetSubscriptionLink 获取订阅链接
-func GetSubscriptionLink(subID int) (string, error) {
+// 返回链接和是否需要提示用户配置域名
+func GetSubscriptionLink(subID int) (string, bool, error) {
 	var sub models.Subcription
 	sub.ID = subID
 	// 使用 Find 方法获取订阅详情（包括 Name）
 	if err := sub.Find(); err != nil {
-		return "", fmt.Errorf("获取订阅失败: %v", err)
+		return "", false, fmt.Errorf("获取订阅失败: %v", err)
 	}
 
 	// 获取系统域名设置
 	domain, _ := models.GetSetting("system_domain")
+	needHint := false
 	if domain == "" {
-		domain, _ = models.GetSetting("server_addr")
-	}
-	if domain == "" {
+		// 未配置域名，使用 localhost:8000，并标记需要提示
 		domain = "http://localhost:8000"
+		needHint = true
 	}
 	// 确保没有末尾斜杠
 	domain = strings.TrimRight(domain, "/")
@@ -985,12 +986,12 @@ func GetSubscriptionLink(subID int) (string, error) {
 	// 从分享表获取默认分享链接
 	share, err := models.GetDefaultShareForSubscription(subID)
 	if err != nil {
-		return "", fmt.Errorf("获取分享链接失败: %v", err)
+		return "", false, fmt.Errorf("获取分享链接失败: %v", err)
 	}
 
 	// 构建基础链接
 	link := fmt.Sprintf("%s/c/?token=%s", domain, share.Token)
-	return link, nil
+	return link, needHint, nil
 }
 
 // ============ AirportsHandler ============
