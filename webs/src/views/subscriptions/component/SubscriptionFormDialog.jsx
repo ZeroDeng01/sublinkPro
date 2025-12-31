@@ -83,6 +83,17 @@ const previewNodeName = (rule) => {
     .replace(/\$Tags/g, '速度优秀|香港节点');
 };
 
+// 检查预处理规则是否有实际配置
+const hasPreprocessRules = (value) => {
+  if (!value) return false;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.length > 0;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * 订阅表单对话框
  * 使用折叠面板组织功能分组，提升用户体验
@@ -653,7 +664,7 @@ export default function SubscriptionFormDialog({
               <Typography variant="subtitle1" fontWeight={600}>
                 节点名称处理
               </Typography>
-              {!expandedPanels.naming && (formData.nodeNamePreprocess || formData.nodeNameRule) && (
+              {!expandedPanels.naming && (hasPreprocessRules(formData.nodeNamePreprocess) || formData.nodeNameRule) && (
                 <Chip size="small" label="已配置" color="info" variant="outlined" sx={{ ml: 1 }} />
               )}
             </AccordionSummary>
