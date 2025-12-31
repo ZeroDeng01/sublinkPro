@@ -79,6 +79,12 @@ services:
       # 填写即使用代理，未填写则直连
       # - SUBLINK_TURNSTILE_PROXY_LINK=vless://your-proxy-link...
       
+      # ---------- 站点隐藏配置 ----------
+      # 前端访问基础路径（用于隐藏站点入口）
+      # 设置后需访问 domain/yourpath 才能进入管理界面
+      # 不影响 API 接口和订阅获取功能
+      # - SUBLINK_WEB_BASE_PATH=/admin
+      
       # ---------- 管理员配置 ----------
       # 初始管理员密码（仅首次启动时生效）
       # - SUBLINK_ADMIN_PASSWORD=your-admin-password

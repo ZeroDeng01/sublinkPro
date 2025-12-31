@@ -48,6 +48,7 @@ export default function SubscriptionMobileCard({
   onDelete,
   onCopy,
   onPreview,
+  showPreview = false,
   onChainProxy,
   onStartSort,
   onConfirmSort,
@@ -150,17 +151,19 @@ export default function SubscriptionMobileCard({
                   {/* 快捷操作按钮 - 使用较大的图标 */}
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     {/* 预览 - 常用 */}
-                    <IconButton
-                      size="medium"
-                      color="info"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPreview(sub);
-                      }}
-                      sx={{ p: 1.5 }}
-                    >
-                      <VisibilityIcon />
-                    </IconButton>
+                    {showPreview && (
+                      <IconButton
+                        size="medium"
+                        color="info"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPreview(sub);
+                        }}
+                        sx={{ p: 1.5 }}
+                      >
+                        <VisibilityIcon />
+                      </IconButton>
+                    )}
 
                     {/* 客户端链接 - 常用 */}
                     <IconButton

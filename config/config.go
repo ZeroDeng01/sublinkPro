@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v3"
@@ -52,6 +53,7 @@ type AppConfig struct {
 	TurnstileSiteKey   string `yaml:"turnstile_site_key"`   // Cloudflare Turnstile Site Key
 	TurnstileSecretKey string `yaml:"turnstile_secret_key"` // Cloudflare Turnstile Secret Key
 	TurnstileProxyLink string `yaml:"turnstile_proxy_link"` // Turnstile 验证代理链接（mihomo 格式）
+	WebBasePath        string `yaml:"web_base_path"`        // 前端基础路径（用于隐藏站点入口）
 }
 
 // CommandLineConfig 命令行配置（仅存储用户指定的值）
@@ -331,6 +333,35 @@ func GetTurnstileProxyLink() string {
 	return ""
 }
 
+// GetWebBasePath 获取前端基础路径（已规范化）
+func GetWebBasePath() string {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	if globalConfig != nil {
+		return globalConfig.WebBasePath
+	}
+	return ""
+}
+
+// normalizeBasePath 规范化基础路径
+// - 确保以 / 开头（非空时）
+// - 去除尾部斜杠
+// - 空字符串保持为空
+func normalizeBasePath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" || path == "/" {
+		return ""
+	}
+	// 确保以 / 开头
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	// 去除尾部斜杠
+	path = strings.TrimSuffix(path, "/")
+	return path
+}
+
 // Reload 重新加载配置
 func Reload() *AppConfig {
 	return Load()
@@ -348,6 +379,7 @@ func applyDefaults(cfg *AppConfig) {
 	cfg.LogLevel = DefaultLogLevel
 	cfg.GeoIPPath = "" // 默认为空，运行时通过 GetGeoIPPath() 计算
 	cfg.CaptchaMode = DefaultCaptchaMode
+	cfg.WebBasePath = "" // 默认为空，表示根路径
 }
 
 // loadFromFileInternal 从配置文件加载（内部使用，不获取锁）
@@ -409,6 +441,10 @@ func loadFromFileInternal(cfg *AppConfig, configPath string) {
 	}
 	if fileCfg.APIEncryptionKey != "" {
 		cfg.APIEncryptionKey = fileCfg.APIEncryptionKey
+	}
+	// 站点隐藏配置
+	if fileCfg.WebBasePath != "" {
+		cfg.WebBasePath = normalizeBasePath(fileCfg.WebBasePath)
 	}
 }
 
@@ -472,6 +508,10 @@ func loadFromEnvInternal(cfg *AppConfig) {
 	}
 	if proxyLink := os.Getenv(envPrefix + "TURNSTILE_PROXY_LINK"); proxyLink != "" {
 		cfg.TurnstileProxyLink = proxyLink
+	}
+	// 站点隐藏配置
+	if webBasePath := os.Getenv(envPrefix + "WEB_BASE_PATH"); webBasePath != "" {
+		cfg.WebBasePath = normalizeBasePath(webBasePath)
 	}
 }
 
@@ -683,4 +723,35 @@ func MigrateFromOldConfig() bool {
 	}
 
 	return migrated
+}
+
+// GetEnabledFeatures 获取启用的功能列表
+// 从环境变量 SUBLINK_FEATURE 读取，格式为逗号分隔的功能名（如 SubNodePreview,FeatureA,FeatureB）
+func GetEnabledFeatures() []string {
+	featureStr := os.Getenv(envPrefix + "FEATURE")
+	if featureStr == "" {
+		return []string{}
+	}
+
+	// 解析逗号分隔的功能列表
+	features := strings.Split(featureStr, ",")
+	result := make([]string, 0, len(features))
+	for _, f := range features {
+		f = strings.TrimSpace(f)
+		if f != "" {
+			result = append(result, f)
+		}
+	}
+	return result
+}
+
+// IsFeatureEnabled 检查指定功能是否启用
+func IsFeatureEnabled(feature string) bool {
+	features := GetEnabledFeatures()
+	for _, f := range features {
+		if f == feature {
+			return true
+		}
+	}
+	return false
 }

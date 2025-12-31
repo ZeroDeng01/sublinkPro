@@ -8,6 +8,9 @@ import ErrorBoundary from './ErrorBoundary';
 
 // ==============================|| ROUTING RENDER ||============================== //
 
+// 从后端注入的配置中获取 basePath，回退到环境变量或根路径
+const basePath = window.__SUBLINK_CONFIG__?.basePath || import.meta.env.VITE_APP_BASE_NAME || '/';
+
 const router = createBrowserRouter(
   [
     {
@@ -17,7 +20,7 @@ const router = createBrowserRouter(
     }
   ],
   {
-    basename: import.meta.env.VITE_APP_BASE_NAME
+    basename: basePath
   }
 );
 

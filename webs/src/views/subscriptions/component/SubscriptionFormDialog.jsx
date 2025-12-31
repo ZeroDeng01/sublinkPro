@@ -121,6 +121,7 @@ export default function SubscriptionFormDialog({
   onClose,
   onSubmit,
   onPreview,
+  showPreview = false,
   previewLoading,
   onAddNode,
   onRemoveNode,
@@ -792,16 +793,18 @@ export default function SubscriptionFormDialog({
         </Box>
       </DialogContent>
       <DialogActions sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-        <Stack direction="row" spacing={2} sx={{ width: '100%', justifyContent: 'space-between' }}>
-          <Button
-            variant="outlined"
-            startIcon={<VisibilityIcon />}
-            onClick={onPreview}
-            disabled={previewLoading || (formData.selectedNodes.length === 0 && formData.selectedGroups.length === 0)}
-          >
-            {previewLoading ? '加载中...' : '预览节点'}
-            <Chip size="small" label="Beta" color="error" variant="outlined" sx={{ ml: 1 }} />
-          </Button>
+        <Stack direction="row" spacing={2} sx={{ width: '100%', justifyContent: showPreview ? 'space-between' : 'flex-end' }}>
+          {showPreview && (
+            <Button
+              variant="outlined"
+              startIcon={<VisibilityIcon />}
+              onClick={onPreview}
+              disabled={previewLoading || (formData.selectedNodes.length === 0 && formData.selectedGroups.length === 0)}
+            >
+              {previewLoading ? '加载中...' : '预览节点'}
+              <Chip size="small" label="Beta" color="error" variant="outlined" sx={{ ml: 1 }} />
+            </Button>
+          )}
           <Stack direction="row" spacing={1}>
             <Button onClick={onClose}>关闭</Button>
             <Button variant="contained" onClick={onSubmit}>

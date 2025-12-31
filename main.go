@@ -63,6 +63,53 @@ func getContentType(filePath string) string {
 	return "application/octet-stream"
 }
 
+// injectConfigToHTML 在 HTML 的 <head> 中注入前端配置脚本
+// 配置通过 window.__SUBLINK_CONFIG__ 暴露给前端
+func injectConfigToHTML(html string, basePath string) string {
+	// 构建配置脚本
+	configScript := fmt.Sprintf(`<script>window.__SUBLINK_CONFIG__={basePath:"%s"}</script>`, basePath)
+	// 在 <head> 标签后注入
+	return strings.Replace(html, "<head>", "<head>\n  "+configScript, 1)
+}
+
+// injectBasePathToManifest 修改 PWA manifest 中的 start_url
+// 确保从主屏幕启动时导航到正确的路径
+func injectBasePathToManifest(manifest string, basePath string) string {
+	if basePath == "" {
+		return manifest
+	}
+	// 将 "start_url": "/" 替换为 "start_url": "/basePath/"
+	startURL := fmt.Sprintf(`"start_url":"%s/"`, basePath)
+	result := strings.Replace(manifest, `"start_url":"/"`, startURL, 1)
+	// 也处理可能的空格情况
+	result = strings.Replace(result, `"start_url": "/"`, startURL, 1)
+	return result
+}
+
+// isRootStaticFile 检查路径是否为根路径下的必要静态文件
+// 这些文件需要在根路径下才能让 PWA 和其他功能正常工作
+func isRootStaticFile(path string) bool {
+	// PWA 相关文件（精确匹配）
+	// 注：favicon.ico 在 /images/ 目录下，通过 /images StaticFS 挂载
+	rootFiles := []string{
+		"/sw.js",
+		"/registerSW.js",
+		"/manifest.webmanifest",
+		"/icon-192.png",
+		"/icon-512.png",
+	}
+	for _, f := range rootFiles {
+		if path == f {
+			return true
+		}
+	}
+	// workbox 运行时文件（前缀匹配）
+	if strings.HasPrefix(path, "/workbox-") && strings.HasSuffix(path, ".js") {
+		return true
+	}
+	return false
+}
+
 func Templateinit() {
 	// 设置template路径
 	// 检查目录是否创建
@@ -265,6 +312,7 @@ func printHelp() {
   SUBLINK_LOGIN_FAIL_COUNT   登录失败次数限制 (默认: 5)
   SUBLINK_LOGIN_FAIL_WINDOW  登录失败窗口时间(分钟) (默认: 1)
   SUBLINK_LOGIN_BAN_DURATION 登录封禁时间(分钟) (默认: 10)
+  SUBLINK_WEB_BASE_PATH      前端访问基础路径 (站点隐藏)
   SUBLINK_ADMIN_PASSWORD     初始管理员密码 (首次启动时设置)
 
 配置优先级:
@@ -450,6 +498,12 @@ func Run() {
 	}
 	// 安装中间件
 
+	// 获取前端基础路径配置
+	webBasePath := config.GetWebBasePath()
+	if webBasePath != "" {
+		utils.Info("前端基础路径: %s", webBasePath)
+	}
+
 	// 设置静态资源路径
 	// 生产环境才启用内嵌静态文件服务
 	if StaticFiles != nil {
@@ -457,21 +511,38 @@ func Run() {
 		if err != nil {
 			utils.Error("加载静态文件失败: %v", err)
 		} else {
-			// 子目录使用 StaticFS（高性能）
-			assetsFiles, _ := fs.Sub(staticFiles, "assets")
-			r.StaticFS("/assets", http.FS(assetsFiles))
-			imagesFiles, _ := fs.Sub(staticFiles, "images")
-			r.StaticFS("/images", http.FS(imagesFiles))
-
-			// 根路径返回 index.html
-			r.GET("/", func(c *gin.Context) {
+			// 创建注入配置的 index.html 处理函数
+			serveIndexHTML := func(c *gin.Context) {
 				data, err := fs.ReadFile(staticFiles, "index.html")
 				if err != nil {
 					c.Error(err)
 					return
 				}
-				c.Data(200, "text/html", data)
-			})
+				// 注入配置脚本到 HTML
+				html := injectConfigToHTML(string(data), webBasePath)
+				c.Data(200, "text/html; charset=utf-8", []byte(html))
+			}
+
+			// 静态资源始终挂载到根路径
+			// 因为 Vite 构建后的 index.html 中资源路径是绝对的（/assets/xxx）
+			assetsFiles, _ := fs.Sub(staticFiles, "assets")
+			r.StaticFS("/assets", http.FS(assetsFiles))
+			imagesFiles, _ := fs.Sub(staticFiles, "images")
+			r.StaticFS("/images", http.FS(imagesFiles))
+
+			// basePath 路由处理
+			if webBasePath != "" {
+				// basePath 入口（带斜杠和不带斜杠）
+				r.GET(webBasePath, serveIndexHTML)
+				r.GET(webBasePath+"/", serveIndexHTML)
+				// 根路径返回 404（站点隐藏）
+				r.GET("/", func(c *gin.Context) {
+					c.String(404, "Not Found")
+				})
+			} else {
+				// 默认情况：根路径返回 index.html
+				r.GET("/", serveIndexHTML)
+			}
 		}
 	}
 	// 注册路由
@@ -506,6 +577,33 @@ func Run() {
 			return
 		}
 
+		// 订阅请求（/c/）由路由处理，这里不应该到达
+		// 如果到达这里说明订阅链接无效
+		if strings.HasPrefix(path, "/c/") {
+			c.JSON(404, gin.H{"error": "Subscription not found"})
+			return
+		}
+
+		// 如果设置了 webBasePath，检查路径是否在 basePath 下
+		// 注意：/assets/ 和 /images/ 由 StaticFS 处理，不会到达这里
+		if webBasePath != "" {
+			// 不在 basePath 下的请求返回 404（站点隐藏）
+			// 排除静态资源目录（它们已由 StaticFS 处理）
+			if !strings.HasPrefix(path, webBasePath+"/") && path != webBasePath {
+				// 允许访问根路径下的静态文件（sw.js, manifest.webmanifest 等）
+				// 这些文件需要在根路径下才能让 PWA 正常工作
+				if isRootStaticFile(path) {
+					// 继续处理，不返回 404
+				} else {
+					c.String(404, "Not Found")
+					return
+				}
+			} else {
+				// 去掉 basePath 前缀，得到相对路径
+				path = strings.TrimPrefix(path, webBasePath)
+			}
+		}
+
 		// 生产环境：尝试从 embed 文件系统提供静态文件
 		if StaticFiles != nil {
 			staticFiles, err := fs.Sub(StaticFiles, "static")
@@ -529,7 +627,17 @@ func Run() {
 				if filePath == "sw.js" {
 					c.Header("Service-Worker-Allowed", "/")
 				}
-				c.Data(200, contentType, data)
+				// 如果是 HTML 文件，注入配置
+				if strings.HasSuffix(filePath, ".html") {
+					html := injectConfigToHTML(string(data), webBasePath)
+					c.Data(200, contentType, []byte(html))
+				} else if filePath == "manifest.webmanifest" {
+					// PWA manifest 特殊处理：修改 start_url
+					manifest := injectBasePathToManifest(string(data), webBasePath)
+					c.Data(200, contentType, []byte(manifest))
+				} else {
+					c.Data(200, contentType, data)
+				}
 				return
 			}
 
@@ -539,7 +647,9 @@ func Run() {
 				c.String(404, "Index file not found")
 				return
 			}
-			c.Data(200, "text/html", data)
+			// 注入配置到 SPA fallback
+			html := injectConfigToHTML(string(data), webBasePath)
+			c.Data(200, "text/html; charset=utf-8", []byte(html))
 		} else {
 			// 开发环境 fallback
 			c.File("./static/index.html")

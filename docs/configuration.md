@@ -34,6 +34,7 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 | `SUBLINK_TURNSTILE_SITE_KEY` | Cloudflare Turnstile Site Key | - |
 | `SUBLINK_TURNSTILE_SECRET_KEY` | Cloudflare Turnstile Secret Key | - |
 | `SUBLINK_TURNSTILE_PROXY_LINK` | Turnstile 验证代理链接（mihomo 格式） | - |
+| `SUBLINK_WEB_BASE_PATH` | 前端访问基础路径（站点隐藏） | - |
 | `SUBLINK_ADMIN_PASSWORD` | 初始管理员密码 | 123456 |
 | `SUBLINK_ADMIN_PASSWORD_REST` | 重置管理员密码 | 输入新管理员密码 |
 
@@ -123,6 +124,25 @@ Cloudflare Turnstile 支持三种验证模式，在 Cloudflare 控制台创建 S
 | **Invisible** | 完全不可见，后台静默完成验证 |
 
 前端 widget 会自动根据 Site Key 对应的模式进行渲染，无需额外配置。
+
+---
+
+## 站点隐藏配置
+
+通过设置 `SUBLINK_WEB_BASE_PATH` 可以隐藏管理站点入口，类似 3x-ui 的自定义路径功能。
+
+```yaml
+environment:
+  - SUBLINK_WEB_BASE_PATH=/admin
+```
+
+设置后：
+- 访问 `http://domain/` 返回 404
+- 访问 `http://domain/admin` 才能进入管理界面
+- API 接口 (`/api/*`) 和订阅获取 (`/c/*`) **不受影响**
+
+> [!TIP]
+> 路径支持带或不带前导斜杠，如 `admin` 或 `/admin` 效果相同。
 
 ---
 

@@ -33,7 +33,7 @@ func GetClient(c *gin.Context) {
 	ClientIndex := c.Query("client") // 客户端标识
 	if token == "" {
 		utils.Warn("token为空")
-		c.Writer.WriteString("token为空")
+		c.Writer.WriteString("Not Found")
 		return
 	}
 
