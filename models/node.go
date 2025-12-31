@@ -1224,6 +1224,14 @@ func GetNodeByName(name string) (*Node, bool) {
 	return nil, false
 }
 
+// GetNodeByID 根据节点ID获取节点
+func GetNodeByID(id int) (*Node, bool) {
+	if n, ok := nodeCache.Get(id); ok {
+		return &n, true
+	}
+	return nil, false
+}
+
 // TagStat 标签统计结构
 type TagStat struct {
 	Name  string `json:"name"`

@@ -554,30 +554,12 @@ export default function SubscriptionList() {
   };
 
   // 预览已保存的订阅（从列表触发）
+  // 使用 SubscriptionID 让后端直接调用 GetSub 逻辑，确保预览与实际拉取结果一致
   const handlePreviewSubscription = async (sub) => {
     setPreviewLoading(true);
     try {
-      // 解析订阅配置
-      const nodes = sub.Nodes?.map((n) => n.Name) || [];
-      const groups = (sub.Groups || []).map((g) => (typeof g === 'string' ? g : g.Name));
-
       const previewRequest = {
-        Nodes: nodes,
-        Groups: groups,
-        Scripts: (sub.Scripts || []).map((s) => s.id),
-        DelayTime: sub.DelayTime || 0,
-        MinSpeed: sub.MinSpeed || 0,
-        CountryWhitelist: sub.CountryWhitelist || '',
-        CountryBlacklist: sub.CountryBlacklist || '',
-        TagWhitelist: sub.TagWhitelist || '',
-        TagBlacklist: sub.TagBlacklist || '',
-        ProtocolWhitelist: sub.ProtocolWhitelist || '',
-        ProtocolBlacklist: sub.ProtocolBlacklist || '',
-        NodeNameWhitelist: sub.NodeNameWhitelist || '',
-        NodeNameBlacklist: sub.NodeNameBlacklist || '',
-        NodeNamePreprocess: sub.NodeNamePreprocess || '',
-        NodeNameRule: sub.NodeNameRule || '',
-        DeduplicationRule: sub.DeduplicationRule || ''
+        SubscriptionID: sub.ID // 使用订阅ID，后端会调用 GetSub 获取完整节点列表
       };
 
       const response = await previewSubscriptionNodes(previewRequest);
@@ -781,9 +763,9 @@ export default function SubscriptionList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -799,9 +781,9 @@ export default function SubscriptionList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />

@@ -289,6 +289,21 @@ func (sub *Subcription) Find() error {
 	return nil
 }
 
+// GetSubcriptionByID 根据订阅ID获取订阅（优先从缓存查找）
+func GetSubcriptionByID(id int) (*Subcription, error) {
+	if cached, ok := subcriptionCache.Get(id); ok {
+		return &cached, nil
+	}
+	// 缓存未命中，查数据库
+	var sub Subcription
+	if err := database.DB.First(&sub, id).Error; err != nil {
+		return nil, err
+	}
+	// 更新缓存
+	subcriptionCache.Set(sub.ID, sub)
+	return &sub, nil
+}
+
 // ApplyFilters 对节点列表应用过滤条件
 // 抽取共用的过滤逻辑，供 GetSub 和 PreviewSub 调用
 // 返回过滤后的节点列表
