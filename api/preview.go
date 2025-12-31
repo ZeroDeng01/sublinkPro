@@ -107,7 +107,7 @@ func previewSavedSubscription(subID int) (*models.PreviewResult, error) {
 		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, node.LinkName)
 
 		// 计算预览名称
-		previewName := node.Name
+		previewName := node.LinkName
 		previewLink := node.Link
 
 		if sub.NodeNameRule != "" {
