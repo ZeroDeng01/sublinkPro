@@ -144,9 +144,11 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 				"password":         tuic.Password,
 				"udp":              config.Udp,
 				"skip-cert-verify": config.Cert,
+				"token":            tuic.Token,
+				"version":          tuic.Version,
 			}
 			tuicproxy := fmt.Sprintf("%s = tuic, %s, %d, token=%s, udp-relay=%t, skip-cert-verify=%t",
-				proxy["name"], proxy["server"], proxy["port"], proxy["password"], proxy["udp"], proxy["skip-cert-verify"])
+				proxy["name"], proxy["server"], proxy["port"], proxy["token"], proxy["udp"], proxy["skip-cert-verify"])
 			groups = append(groups, tuic.Name)
 			proxys = append(proxys, tuicproxy)
 		}

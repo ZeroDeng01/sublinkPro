@@ -10,11 +10,13 @@ import (
 
 type Tuic struct {
 	Name               string
-	Password           string
+	Password           string //v5
 	Host               string
 	Port               interface{}
-	Uuid               string
+	Uuid               string //v5
 	Congestion_control string
+	Token              string //v4
+	Version            int
 	Alpn               []string
 	Sni                string
 	Udp_relay_mode     string
@@ -66,6 +68,12 @@ func DecodeTuicURL(s string) (Tuic, error) {
 	if name == "" {
 		name = server + ":" + u.Port()
 	}
+	version := 5 // 默认版本 暂时只考虑支持v5
+	token := ""
+	if password == "" && uuid == "" {
+		token = u.Query().Get("token")
+		version = 4
+	}
 	if utils.CheckEnvironment() {
 		fmt.Println("password:", password)
 		fmt.Println("server:", server)
@@ -77,6 +85,8 @@ func DecodeTuicURL(s string) (Tuic, error) {
 		fmt.Println("sni:", sni)
 		fmt.Println("disablesni:", Disablesni)
 		fmt.Println("name:", name)
+		fmt.Println("version:", version)
+		fmt.Println("token", token)
 	}
 	return Tuic{
 		Name:               name,
@@ -91,6 +101,8 @@ func DecodeTuicURL(s string) (Tuic, error) {
 		Disable_sni:        Disablesni,
 		Tls:                tls,
 		ClientFingerprint:  clientFingerprint,
+		Version:            version,
+		Token:              token,
 	}, nil
 }
 
@@ -131,6 +143,16 @@ func EncodeTuicURL(t Tuic) string {
 	if t.ClientFingerprint != "" {
 		q.Set("fp", t.ClientFingerprint)
 	}
+	if t.Version == 5 {
+		q.Set("version", strconv.Itoa(t.Version))
+	}
+	if t.Password == "" && t.Uuid == "" {
+		q.Set("version", "4")
+	}
+	if t.Token != "" {
+		q.Set("token", t.Token)
+	}
+
 	u.RawQuery = q.Encode()
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if t.Name == "" {

@@ -97,6 +97,8 @@ type Proxy struct {
 	Mtu         int      `yaml:"mtu,omitempty"`         // MTU 值
 	Reserved    []int    `yaml:"reserved,omitempty"`    // 保留字段
 	Allowed_ips []string `yaml:"allowed-ips,omitempty"` // 允许的 IP 段
+	Version     int      `yaml:"version,omitempty"`     // 版本
+	Token       string   `yaml:"token,omitempty"`       // Tuic 令牌v4
 }
 
 type ProxyGroup struct {
@@ -394,6 +396,8 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Udp:                   config.Udp,
 			Skip_cert_verify:      config.Cert,
 			Dialer_proxy:          link.DialerProxyName,
+			Version:               tuic.Version,
+			Token:                 tuic.Token,
 		}, nil
 
 	case Scheme == "anytls":
