@@ -79,6 +79,19 @@ func IsTokenExists(token string, excludeID int) bool {
 	return false
 }
 
+// CreateDefaultShareForSubscription 为订阅创建默认分享链接
+// 创建一个永不过期、启用状态的默认分享链接，标记为 IsLegacy=true
+func CreateDefaultShareForSubscription(subscriptionID int) error {
+	share := &SubscriptionShare{
+		SubscriptionID: subscriptionID,
+		Name:           "默认分享链接",
+		ExpireType:     ExpireTypeNever,
+		IsLegacy:       true,
+		Enabled:        true,
+	}
+	return share.Add()
+}
+
 // Add 添加分享 (Write-Through)
 func (s *SubscriptionShare) Add() error {
 	// 如果没有提供 token，自动生成

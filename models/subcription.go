@@ -955,6 +955,11 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 	// 更新缓存
 	subcriptionCache.Set(newSub.ID, *newSub)
 
+	// 为新订阅创建默认分享链接
+	if err := CreateDefaultShareForSubscription(newSub.ID); err != nil {
+		utils.Warn("创建默认分享链接失败: %v", err)
+	}
+
 	return newSub, nil
 }
 

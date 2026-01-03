@@ -70,7 +70,7 @@ func ScriptUpdate(c *gin.Context) {
 // ScriptList 获取脚本列表
 func ScriptList(c *gin.Context) {
 	var data models.Script
-	
+
 	// 解析分页参数
 	page := 0
 	pageSize := 0

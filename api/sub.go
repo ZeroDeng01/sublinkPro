@@ -214,6 +214,11 @@ func SubAdd(c *gin.Context) {
 		}
 	}
 
+	// 为新订阅创建默认分享链接
+	if err := models.CreateDefaultShareForSubscription(sub.ID); err != nil {
+		utils.Warn("创建默认分享链接失败: %v", err)
+	}
+
 	utils.OkWithMsg(c, "添加成功")
 }
 
