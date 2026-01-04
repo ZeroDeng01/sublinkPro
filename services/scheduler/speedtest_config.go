@@ -68,6 +68,10 @@ func SpeedTestConfigFromProfile(profile *models.NodeCheckProfile) *SpeedTestConf
 		peakSampleInterval = 100
 	}
 
+	// 从全局设置读取持久化Host开关
+	persistHostStr, _ := models.GetSetting("speed_test_persist_host")
+	persistHost := persistHostStr == "true"
+
 	return &SpeedTestConfig{
 		SpeedTestURL:        profile.TestURL,
 		LatencyTestURL:      latencyURL,
@@ -80,7 +84,7 @@ func SpeedTestConfigFromProfile(profile *models.NodeCheckProfile) *SpeedTestConf
 		IncludeHandshake:    profile.IncludeHandshake,
 		SpeedRecordMode:     speedRecordMode,
 		PeakSampleInterval:  peakSampleInterval,
-		PersistHost:         false, // 持久化Host功能暂不开放
+		PersistHost:         persistHost, // 从全局设置读取
 		PreserveSpeedResult: profile.PreserveSpeedResult,
 		TrafficByGroup:      profile.TrafficByGroup,
 		TrafficBySource:     profile.TrafficBySource,

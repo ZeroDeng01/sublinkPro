@@ -56,7 +56,7 @@ func GetProxyServerFromLink(nodeLink string) HostInfo {
 
 	proxyStruct, err := protocol.LinkToProxy(protocol.Urls{Url: nodeLink}, outputConfig)
 	if err != nil {
-		utils.Debug("解析节点link失败: %v", err)
+		utils.Warn("解析节点link失败: %v", err)
 		return HostInfo{}
 	}
 
@@ -204,7 +204,7 @@ func resolveWithDoH(ctx context.Context, host, dohServer string, useProxy bool, 
 	m.RecursionDesired = true
 	data, err := m.Pack()
 	if err != nil {
-		utils.Debug("[DNS] 打包DNS消息失败: %v", err)
+		utils.Warn("[DNS] 打包DNS消息失败: %v", err)
 		return ""
 	}
 
@@ -225,13 +225,13 @@ func resolveWithDoH(ctx context.Context, host, dohServer string, useProxy bool, 
 
 	resp, err := client.Do(req)
 	if err != nil {
-		utils.Debug("[DNS] DoH请求失败: %s, %v", dohServer, err)
+		utils.Warn("[DNS] DoH请求失败: %s, %v", dohServer, err)
 		return ""
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		utils.Debug("[DNS] DoH响应状态码非200: %s, %d", dohServer, resp.StatusCode)
+		utils.Warn("[DNS] DoH响应状态码非200: %s, %d", dohServer, resp.StatusCode)
 		return ""
 	}
 
@@ -243,7 +243,7 @@ func resolveWithDoH(ctx context.Context, host, dohServer string, useProxy bool, 
 	// 解析响应
 	rm := new(dns.Msg)
 	if err := rm.Unpack(body); err != nil {
-		utils.Debug("[DNS] 解析DoH响应失败: %v", err)
+		utils.Warn("[DNS] 解析DoH响应失败: %v", err)
 		return ""
 	}
 
@@ -256,7 +256,7 @@ func resolveWithDoH(ctx context.Context, host, dohServer string, useProxy bool, 
 		}
 	}
 
-	utils.Debug("[DNS] DoH未返回有效记录: %s", dohServer)
+	utils.Warn("[DNS] DoH未返回有效记录: %s", dohServer)
 	return ""
 }
 
