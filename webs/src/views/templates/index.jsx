@@ -527,13 +527,13 @@ export default function TemplateList() {
                   onChange={(e) => setFormData({ ...formData, enableIncludeAll: e.target.checked })}
                 />
               }
-              label="强制 Include-All 模式"
+              label="使用 Include-All 模式"
             />
             <Typography variant="caption" color="textSecondary" component="div" sx={{ ml: 6, mt: -0.5, lineHeight: 1.6 }}>
-              • 开启：强制所有组使用 include-all，每个组都能选择所有节点
+              • 开启：配置更精简，使用客户端 include-all 自动匹配节点，不遵循系统排序
             </Typography>
             <Typography variant="caption" color="textSecondary" component="div" sx={{ ml: 6, lineHeight: 1.6 }}>
-              • 关闭（推荐）：智能模式，只有使用 .* 或正则的组才包含节点，其他组仅引用策略组
+              • 关闭（推荐）：由系统按顺序插入节点，遵循系统排序和过滤规则
             </Typography>
             <Stack direction="row" spacing={1}>
               <Button

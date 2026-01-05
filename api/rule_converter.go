@@ -274,17 +274,17 @@ func generateClashProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) str
 			lines = append(lines, fmt.Sprintf("    tolerance: %d", tolerance))
 		}
 
-		// 使用解析阶段已识别的标志
-		// 优先级: ACL 配置中的 .* 或正则 > enableIncludeAll 开关
-		if g.IncludeAll {
+		// Include-All 模式逻辑：
+		// - 开启模式 (enableIncludeAll=true)：需要包含节点的组使用 include-all + filter，客户端自动匹配
+		// - 关闭模式 (enableIncludeAll=false)：proxies 留空，由系统按顺序追加节点
+		if g.IncludeAll && enableIncludeAll {
+			// 开启模式：使用 include-all + filter，不遵循系统排序
 			lines = append(lines, "    include-all: true")
 			if g.Filter != "" {
 				lines = append(lines, fmt.Sprintf("    filter: %s", g.Filter))
 			}
-		} else if enableIncludeAll {
-			// 用户强制启用 include-all 模式（覆盖智能检测）
-			lines = append(lines, "    include-all: true")
 		}
+		// 关闭模式：不生成 include-all，proxies 为空，由 DecodeClash 追加节点
 
 		// 输出 proxies（策略组引用，如 DIRECT、其他代理组等）
 		if len(g.Proxies) > 0 {
@@ -544,7 +544,7 @@ func isUnsupportedClashRule(rule string, expand bool) bool {
 
 // generateSurgeProxyGroups 生成 Surge 格式的代理组
 // 支持 policy-regex-filter 和 include-all-proxies 参数
-// enableIncludeAll: 强制为所有组启用 include-all-proxies（覆盖 ACL 配置的智能检测）
+// enableIncludeAll: 是否使用 include-all-proxies 模式（开启不遵循系统排序，关闭由系统追加节点）
 func generateSurgeProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) string {
 	var lines []string
 	lines = append(lines, "[Proxy Group]")
@@ -552,16 +552,21 @@ func generateSurgeProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) str
 	for _, g := range groups {
 		var line string
 		proxies := g.Proxies
-		if len(proxies) == 0 {
-			proxies = []string{"DIRECT"}
+		proxiesStr := ""
+		if len(proxies) > 0 {
+			proxiesStr = strings.Join(proxies, ", ")
 		}
-		proxiesStr := strings.Join(proxies, ", ")
 
 		// 提取 Surge 格式的 filter（去除括号）
 		surgeFilter := ""
 		if g.Filter != "" {
 			surgeFilter = strings.TrimPrefix(strings.TrimSuffix(g.Filter, ")"), "(")
 		}
+
+		// Include-All 模式逻辑：
+		// - 开启模式：需要包含节点的组使用 include-all-proxies + filter
+		// - 关闭模式：proxies 留空，由 DecodeSurge 追加节点
+		useIncludeAll := g.IncludeAll && enableIncludeAll
 
 		if g.Type == "url-test" || g.Type == "fallback" {
 			url := g.URL
@@ -577,53 +582,61 @@ func generateSurgeProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) str
 				tolerance = 150
 			}
 
-			// 使用解析阶段已识别的标志
-			if g.IncludeAll {
-				if g.Filter != "" {
-					// 有正则过滤器
-					if len(g.Proxies) > 0 {
-						line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d, policy-regex-filter=%s, include-all-proxies=1",
-							g.Name, g.Type, proxiesStr, url, interval, tolerance, surgeFilter)
-					} else {
-						line = fmt.Sprintf("%s = %s, url=%s, interval=%d, timeout=5, tolerance=%d, policy-regex-filter=%s, include-all-proxies=1",
-							g.Name, g.Type, url, interval, tolerance, surgeFilter)
-					}
+			if useIncludeAll && g.Filter != "" {
+				// 开启模式 + 有正则过滤器
+				if proxiesStr != "" {
+					line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d, policy-regex-filter=%s, include-all-proxies=1",
+						g.Name, g.Type, proxiesStr, url, interval, tolerance, surgeFilter)
 				} else {
-					// .* 通配符，无过滤器
+					line = fmt.Sprintf("%s = %s, url=%s, interval=%d, timeout=5, tolerance=%d, policy-regex-filter=%s, include-all-proxies=1",
+						g.Name, g.Type, url, interval, tolerance, surgeFilter)
+				}
+			} else if useIncludeAll {
+				// 开启模式 + .* 通配符
+				if proxiesStr != "" {
 					line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d, include-all-proxies=1",
 						g.Name, g.Type, proxiesStr, url, interval, tolerance)
+				} else {
+					line = fmt.Sprintf("%s = %s, url=%s, interval=%d, timeout=5, tolerance=%d, include-all-proxies=1",
+						g.Name, g.Type, url, interval, tolerance)
 				}
-			} else if enableIncludeAll {
-				// 用户强制启用 include-all 模式
-				line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d, include-all-proxies=1",
-					g.Name, g.Type, proxiesStr, url, interval, tolerance)
 			} else {
-				// 普通模式，不添加 include-all-proxies
-				line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d",
-					g.Name, g.Type, proxiesStr, url, interval, tolerance)
+				// 关闭模式：不添加 include-all-proxies，由 DecodeSurge 追加节点
+				if proxiesStr != "" {
+					line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d",
+						g.Name, g.Type, proxiesStr, url, interval, tolerance)
+				} else {
+					// proxies 为空，DecodeSurge 会追加节点
+					line = fmt.Sprintf("%s = %s, url=%s, interval=%d, timeout=5, tolerance=%d",
+						g.Name, g.Type, url, interval, tolerance)
+				}
 			}
 		} else {
 			// select, load-balance 等类型
-			if g.IncludeAll {
-				if g.Filter != "" {
-					// 有正则过滤器
-					if len(g.Proxies) > 0 {
-						line = fmt.Sprintf("%s = %s, %s, policy-regex-filter=%s, include-all-proxies=1",
-							g.Name, g.Type, proxiesStr, surgeFilter)
-					} else {
-						line = fmt.Sprintf("%s = %s, policy-regex-filter=%s, include-all-proxies=1",
-							g.Name, g.Type, surgeFilter)
-					}
+			if useIncludeAll && g.Filter != "" {
+				// 开启模式 + 有正则过滤器
+				if proxiesStr != "" {
+					line = fmt.Sprintf("%s = %s, %s, policy-regex-filter=%s, include-all-proxies=1",
+						g.Name, g.Type, proxiesStr, surgeFilter)
 				} else {
-					// .* 通配符，无过滤器
-					line = fmt.Sprintf("%s = %s, %s, include-all-proxies=1", g.Name, g.Type, proxiesStr)
+					line = fmt.Sprintf("%s = %s, policy-regex-filter=%s, include-all-proxies=1",
+						g.Name, g.Type, surgeFilter)
 				}
-			} else if enableIncludeAll {
-				// 用户强制启用 include-all 模式
-				line = fmt.Sprintf("%s = %s, %s, include-all-proxies=1", g.Name, g.Type, proxiesStr)
+			} else if useIncludeAll {
+				// 开启模式 + .* 通配符
+				if proxiesStr != "" {
+					line = fmt.Sprintf("%s = %s, %s, include-all-proxies=1", g.Name, g.Type, proxiesStr)
+				} else {
+					line = fmt.Sprintf("%s = %s, include-all-proxies=1", g.Name, g.Type)
+				}
 			} else {
-				// 普通模式，不添加 include-all-proxies
-				line = fmt.Sprintf("%s = %s, %s", g.Name, g.Type, proxiesStr)
+				// 关闭模式：不添加 include-all-proxies
+				if proxiesStr != "" {
+					line = fmt.Sprintf("%s = %s, %s", g.Name, g.Type, proxiesStr)
+				} else {
+					// proxies 为空，DecodeSurge 会追加节点
+					line = fmt.Sprintf("%s = %s", g.Name, g.Type)
+				}
 			}
 		}
 		lines = append(lines, line)
