@@ -37,12 +37,14 @@ type ACLRuleset struct {
 
 // ACLProxyGroup ACL 代理组定义
 type ACLProxyGroup struct {
-	Name      string   // 组名
-	Type      string   // 类型: select, url-test, fallback, load-balance
-	Proxies   []string // 代理列表
-	URL       string   // 测速 URL (url-test 类型)
-	Interval  int      // 测速间隔
-	Tolerance int      // 容差 (url-test 类型)
+	Name       string   // 组名
+	Type       string   // 类型: select, url-test, fallback, load-balance
+	Proxies    []string // 代理列表（策略组引用）
+	URL        string   // 测速 URL (url-test 类型)
+	Interval   int      // 测速间隔
+	Tolerance  int      // 容差 (url-test 类型)
+	IncludeAll bool     // 是否包含所有节点（.* 通配符）
+	Filter     string   // 正则过滤器（合并后的正则表达式）
 }
 
 // ConvertRules 规则转换 API
@@ -156,6 +158,10 @@ func parseACLConfig(content string) ([]ACLRuleset, []ACLProxyGroup) {
 
 // parseProxyGroup 解析代理组定义
 // 格式: name`type`proxy1`proxy2`...`url`interval,,tolerance
+// 支持识别:
+//   - .* 通配符: 匹配所有节点，生成 include-all: true
+//   - (港|HK) 正则: 匹配特定节点，生成 include-all: true + filter
+//   - []组名: 策略组引用，如 []🚀 节点选择
 func parseProxyGroup(line string) ACLProxyGroup {
 	parts := strings.Split(line, "`")
 	if len(parts) < 2 {
@@ -167,6 +173,9 @@ func parseProxyGroup(line string) ACLProxyGroup {
 		Type:    parts[1],
 		Proxies: make([]string, 0),
 	}
+
+	// 收集正则过滤器
+	var regexFilters []string
 
 	for i := 2; i < len(parts); i++ {
 		part := parts[i]
@@ -204,12 +213,31 @@ func parseProxyGroup(line string) ACLProxyGroup {
 			proxyName = part[2:]
 		}
 
-		// 跳过通配符
-		if proxyName == ".*" || proxyName == "" {
+		// 跳过空字符串
+		if proxyName == "" {
 			continue
 		}
 
+		// 检测 .* 通配符: 匹配所有节点
+		if proxyName == ".*" {
+			pg.IncludeAll = true
+			continue
+		}
+
+		// 检测正则表达式模式: (选项1|选项2|...)
+		if isRegexProxyPattern(proxyName) {
+			regexFilters = append(regexFilters, proxyName)
+			continue
+		}
+
+		// 普通策略组引用
 		pg.Proxies = append(pg.Proxies, proxyName)
+	}
+
+	// 如果有正则过滤器，设置 IncludeAll 并合并 filter
+	if len(regexFilters) > 0 {
+		pg.IncludeAll = true
+		pg.Filter = mergeRegexFilters(regexFilters)
 	}
 
 	return pg
@@ -217,7 +245,7 @@ func parseProxyGroup(line string) ACLProxyGroup {
 
 // generateClashProxyGroups 生成 Clash 格式的代理组
 // 支持 mihomo 内核的 include-all + filter 参数
-// enableIncludeAll: 是否为所有组启用 include-all（有 filter 的组强制启用）
+// enableIncludeAll: 强制为所有组启用 include-all（覆盖 ACL 配置的智能检测）
 func generateClashProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) string {
 	var lines []string
 	lines = append(lines, "proxy-groups:")
@@ -246,32 +274,22 @@ func generateClashProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) str
 			lines = append(lines, fmt.Sprintf("    tolerance: %d", tolerance))
 		}
 
-		// 分离正则模式和策略组引用
-		var regexFilters []string
-		var normalProxies []string
-		for _, proxy := range g.Proxies {
-			if isRegexProxyPattern(proxy) {
-				regexFilters = append(regexFilters, proxy)
-			} else {
-				normalProxies = append(normalProxies, proxy)
-			}
-		}
-
-		// 有正则模式时强制添加 include-all（因为 filter 依赖它）
-		// 无正则模式时，根据 enableIncludeAll 参数决定是否添加
-		if len(regexFilters) > 0 {
+		// 使用解析阶段已识别的标志
+		// 优先级: ACL 配置中的 .* 或正则 > enableIncludeAll 开关
+		if g.IncludeAll {
 			lines = append(lines, "    include-all: true")
-			// 合并多个正则为一个 filter（用 | 连接内部内容）
-			lines = append(lines, fmt.Sprintf("    filter: %s", mergeRegexFilters(regexFilters)))
+			if g.Filter != "" {
+				lines = append(lines, fmt.Sprintf("    filter: %s", g.Filter))
+			}
 		} else if enableIncludeAll {
-			// 用户启用了 include-all 模式
+			// 用户强制启用 include-all 模式（覆盖智能检测）
 			lines = append(lines, "    include-all: true")
 		}
 
 		// 输出 proxies（策略组引用，如 DIRECT、其他代理组等）
-		if len(normalProxies) > 0 {
+		if len(g.Proxies) > 0 {
 			lines = append(lines, "    proxies:")
-			for _, proxy := range normalProxies {
+			for _, proxy := range g.Proxies {
 				lines = append(lines, fmt.Sprintf("      - %s", proxy))
 			}
 		}
@@ -526,24 +544,24 @@ func isUnsupportedClashRule(rule string, expand bool) bool {
 
 // generateSurgeProxyGroups 生成 Surge 格式的代理组
 // 支持 policy-regex-filter 和 include-all-proxies 参数
-// enableIncludeAll: 是否为所有组启用 include-all-proxies（有 filter 的组强制启用）
+// enableIncludeAll: 强制为所有组启用 include-all-proxies（覆盖 ACL 配置的智能检测）
 func generateSurgeProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) string {
 	var lines []string
 	lines = append(lines, "[Proxy Group]")
 
 	for _, g := range groups {
-		// 分离正则模式和策略组引用
-		var regexFilters []string
-		var normalProxies []string
-		for _, proxy := range g.Proxies {
-			if isRegexProxyPattern(proxy) {
-				regexFilters = append(regexFilters, proxy)
-			} else {
-				normalProxies = append(normalProxies, proxy)
-			}
-		}
-
 		var line string
+		proxies := g.Proxies
+		if len(proxies) == 0 {
+			proxies = []string{"DIRECT"}
+		}
+		proxiesStr := strings.Join(proxies, ", ")
+
+		// 提取 Surge 格式的 filter（去除括号）
+		surgeFilter := ""
+		if g.Filter != "" {
+			surgeFilter = strings.TrimPrefix(strings.TrimSuffix(g.Filter, ")"), "(")
+		}
 
 		if g.Type == "url-test" || g.Type == "fallback" {
 			url := g.URL
@@ -559,60 +577,53 @@ func generateSurgeProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) str
 				tolerance = 150
 			}
 
-			// 有正则模式时强制添加 include-all-proxies（因为 policy-regex-filter 依赖它）
-			if len(regexFilters) > 0 {
-				filter := extractSurgeRegexFilter(regexFilters)
-				if len(normalProxies) > 0 {
-					// 有策略组引用时也输出
-					line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d, policy-regex-filter=%s, include-all-proxies=1",
-						g.Name, g.Type, strings.Join(normalProxies, ", "), url, interval, tolerance, filter)
+			// 使用解析阶段已识别的标志
+			if g.IncludeAll {
+				if g.Filter != "" {
+					// 有正则过滤器
+					if len(g.Proxies) > 0 {
+						line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d, policy-regex-filter=%s, include-all-proxies=1",
+							g.Name, g.Type, proxiesStr, url, interval, tolerance, surgeFilter)
+					} else {
+						line = fmt.Sprintf("%s = %s, url=%s, interval=%d, timeout=5, tolerance=%d, policy-regex-filter=%s, include-all-proxies=1",
+							g.Name, g.Type, url, interval, tolerance, surgeFilter)
+					}
 				} else {
-					line = fmt.Sprintf("%s = %s, url=%s, interval=%d, timeout=5, tolerance=%d, policy-regex-filter=%s, include-all-proxies=1",
-						g.Name, g.Type, url, interval, tolerance, filter)
+					// .* 通配符，无过滤器
+					line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d, include-all-proxies=1",
+						g.Name, g.Type, proxiesStr, url, interval, tolerance)
 				}
 			} else if enableIncludeAll {
-				// 用户启用了 include-all 模式
-				proxies := normalProxies
-				if len(proxies) == 0 {
-					proxies = []string{"DIRECT"}
-				}
+				// 用户强制启用 include-all 模式
 				line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d, include-all-proxies=1",
-					g.Name, g.Type, strings.Join(proxies, ", "), url, interval, tolerance)
+					g.Name, g.Type, proxiesStr, url, interval, tolerance)
 			} else {
 				// 普通模式，不添加 include-all-proxies
-				proxies := normalProxies
-				if len(proxies) == 0 {
-					proxies = []string{"DIRECT"}
-				}
 				line = fmt.Sprintf("%s = %s, %s, url=%s, interval=%d, timeout=5, tolerance=%d",
-					g.Name, g.Type, strings.Join(proxies, ", "), url, interval, tolerance)
+					g.Name, g.Type, proxiesStr, url, interval, tolerance)
 			}
 		} else {
 			// select, load-balance 等类型
-			if len(regexFilters) > 0 {
-				// 有正则模式时强制添加
-				filter := extractSurgeRegexFilter(regexFilters)
-				if len(normalProxies) > 0 {
-					line = fmt.Sprintf("%s = %s, %s, policy-regex-filter=%s, include-all-proxies=1",
-						g.Name, g.Type, strings.Join(normalProxies, ", "), filter)
+			if g.IncludeAll {
+				if g.Filter != "" {
+					// 有正则过滤器
+					if len(g.Proxies) > 0 {
+						line = fmt.Sprintf("%s = %s, %s, policy-regex-filter=%s, include-all-proxies=1",
+							g.Name, g.Type, proxiesStr, surgeFilter)
+					} else {
+						line = fmt.Sprintf("%s = %s, policy-regex-filter=%s, include-all-proxies=1",
+							g.Name, g.Type, surgeFilter)
+					}
 				} else {
-					line = fmt.Sprintf("%s = %s, policy-regex-filter=%s, include-all-proxies=1",
-						g.Name, g.Type, filter)
+					// .* 通配符，无过滤器
+					line = fmt.Sprintf("%s = %s, %s, include-all-proxies=1", g.Name, g.Type, proxiesStr)
 				}
 			} else if enableIncludeAll {
-				// 用户启用了 include-all 模式
-				proxies := normalProxies
-				if len(proxies) == 0 {
-					proxies = []string{"DIRECT"}
-				}
-				line = fmt.Sprintf("%s = %s, %s, include-all-proxies=1", g.Name, g.Type, strings.Join(proxies, ", "))
+				// 用户强制启用 include-all 模式
+				line = fmt.Sprintf("%s = %s, %s, include-all-proxies=1", g.Name, g.Type, proxiesStr)
 			} else {
 				// 普通模式，不添加 include-all-proxies
-				proxies := normalProxies
-				if len(proxies) == 0 {
-					proxies = []string{"DIRECT"}
-				}
-				line = fmt.Sprintf("%s = %s, %s", g.Name, g.Type, strings.Join(proxies, ", "))
+				line = fmt.Sprintf("%s = %s, %s", g.Name, g.Type, proxiesStr)
 			}
 		}
 		lines = append(lines, line)

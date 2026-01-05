@@ -637,24 +637,23 @@ func DecodeClash(proxys []Proxy, yamlfile string, customGroups ...[]CustomProxyG
 			existingProxies, _ = proxyGroup["proxies"].([]interface{})
 		}
 
-		// 合并现有代理和新节点
-		var validProxies []interface{}
-		for _, p := range existingProxies {
-			if p != nil {
-				validProxies = append(validProxies, p)
+		// 关键逻辑：只有当 proxies 列表为空时才追加所有节点
+		// 如果已有 proxies（组引用如 🚀 节点选择、DIRECT 等），保持不变
+		// 这符合 ACL4SSR 的设计：只有使用 .* 的组才需要包含所有节点
+		if len(existingProxies) == 0 {
+			// 没有任何 proxies，追加所有节点
+			var validProxies []interface{}
+			for _, newProxy := range ProxiesNameList {
+				validProxies = append(validProxies, newProxy)
 			}
+			// 如果仍然为空，插入 DIRECT 作为后备
+			if len(validProxies) == 0 {
+				validProxies = append(validProxies, "DIRECT")
+			}
+			proxyGroup["proxies"] = validProxies
+			proxyGroups[i] = proxyGroup
 		}
-		for _, newProxy := range ProxiesNameList {
-			validProxies = append(validProxies, newProxy)
-		}
-
-		// 如果代理组为空，插入 DIRECT 作为后备
-		if len(validProxies) == 0 {
-			validProxies = append(validProxies, "DIRECT")
-		}
-
-		proxyGroup["proxies"] = validProxies
-		proxyGroups[i] = proxyGroup
+		// 已有 proxies 的组保持不变
 	}
 
 	config["proxy-groups"] = proxyGroups
