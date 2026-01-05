@@ -352,6 +352,11 @@ export default function NodeDetailsPanel({
                   ms
                 </Typography>
               </Typography>
+              {node.LatencyCheckAt && (
+                <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.7, display: 'block', mt: 0.5, fontSize: 10 }}>
+                  {node.LatencyCheckAt}
+                </Typography>
+              )}
             </Box>
 
             <Box
@@ -376,6 +381,11 @@ export default function NodeDetailsPanel({
                   MB/s
                 </Typography>
               </Typography>
+              {node.SpeedCheckAt && (
+                <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.7, display: 'block', mt: 0.5, fontSize: 10 }}>
+                  {node.SpeedCheckAt}
+                </Typography>
+              )}
             </Box>
           </Stack>
         </Box>
