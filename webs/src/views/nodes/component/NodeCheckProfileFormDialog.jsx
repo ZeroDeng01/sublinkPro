@@ -352,6 +352,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                   const url = typeof newValue === 'string' ? newValue : newValue?.value || '';
                   updateForm('latencyUrl', url);
                 }}
+                onInputChange={(_, newValue) => updateForm('latencyUrl', newValue || '')}
                 renderOption={(props, option) => (
                   <Box component="li" {...props} key={option.value}>
                     <Box>
