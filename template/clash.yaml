@@ -31,11 +31,13 @@ proxy-groups:
       - DIRECT
   - name: 🚀 手动切换
     type: select
+    include-all: true
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
+    include-all: true
   - name: 📲 电报消息
     type: select
     proxies:
