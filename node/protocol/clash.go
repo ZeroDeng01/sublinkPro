@@ -89,6 +89,9 @@ type Proxy struct {
 	Udp_relay_mode        string                 `yaml:"udp-relay-mode,omitempty"`        // UDP 转发模式 (Tuic)
 	Disable_sni           bool                   `yaml:"disable-sni,omitempty"`           // 禁用 SNI (Tuic)
 	Dialer_proxy          string                 `yaml:"dialer-proxy,omitempty"`          // 前置代理
+	// SS 插件字段
+	Plugin      string                 `yaml:"plugin,omitempty"`      // SS 插件名称
+	Plugin_opts map[string]interface{} `yaml:"plugin-opts,omitempty"` // SS 插件选项
 	// WireGuard 特有字段
 	Private_key string   `yaml:"private-key,omitempty"` // WireGuard 私钥
 	Public_key  string   `yaml:"public-key,omitempty"`  // WireGuard 公钥
@@ -144,6 +147,96 @@ func convertToInt(value interface{}) (int, error) {
 	}
 }
 
+// convertSSPluginOpts 将 SsPlugin 转换为 Clash 格式的 plugin-opts
+// 根据不同插件类型生成对应的配置
+func convertSSPluginOpts(plugin *SsPlugin) map[string]interface{} {
+	if plugin == nil || len(plugin.Opts) == 0 {
+		return nil
+	}
+
+	opts := make(map[string]interface{})
+
+	// 根据插件类型处理选项
+	switch plugin.Name {
+	case "obfs", "obfs-local", "simple-obfs":
+		// obfs 插件：mode, host
+		if mode, ok := plugin.Opts["obfs"]; ok {
+			opts["mode"] = mode
+		} else if mode, ok := plugin.Opts["mode"]; ok {
+			opts["mode"] = mode
+		}
+		if host, ok := plugin.Opts["obfs-host"]; ok {
+			opts["host"] = host
+		} else if host, ok := plugin.Opts["host"]; ok {
+			opts["host"] = host
+		}
+
+	case "v2ray-plugin":
+		// v2ray-plugin：mode, tls, host, path, mux, headers
+		if mode, ok := plugin.Opts["mode"]; ok {
+			opts["mode"] = mode
+		}
+		if tls, ok := plugin.Opts["tls"]; ok {
+			opts["tls"] = tls == "true" || tls == "1"
+		}
+		if host, ok := plugin.Opts["host"]; ok {
+			opts["host"] = host
+		}
+		if path, ok := plugin.Opts["path"]; ok {
+			opts["path"] = path
+		}
+		if mux, ok := plugin.Opts["mux"]; ok {
+			opts["mux"] = mux == "true" || mux == "1"
+		}
+
+	case "shadow-tls":
+		// shadow-tls：host, password, version
+		if host, ok := plugin.Opts["host"]; ok {
+			opts["host"] = host
+		}
+		if password, ok := plugin.Opts["password"]; ok {
+			opts["password"] = password
+		}
+		if version, ok := plugin.Opts["version"]; ok {
+			if v, err := strconv.Atoi(version); err == nil {
+				opts["version"] = v
+			}
+		}
+
+	case "restls":
+		// restls：host, password, version-hint, restls-script
+		if host, ok := plugin.Opts["host"]; ok {
+			opts["host"] = host
+		}
+		if password, ok := plugin.Opts["password"]; ok {
+			opts["password"] = password
+		}
+		if versionHint, ok := plugin.Opts["version-hint"]; ok {
+			opts["version-hint"] = versionHint
+		}
+		if script, ok := plugin.Opts["restls-script"]; ok {
+			opts["restls-script"] = script
+		}
+
+	case "kcptun":
+		// kcptun：key, crypt, mode 等
+		for key, val := range plugin.Opts {
+			opts[key] = val
+		}
+
+	default:
+		// 默认直接复制所有选项
+		for key, val := range plugin.Opts {
+			opts[key] = val
+		}
+	}
+
+	if len(opts) == 0 {
+		return nil
+	}
+	return opts
+}
+
 // LinkToProxy 将单个节点链接转换为 Proxy 结构体
 // 支持 ss, ssr, trojan, vmess, vless, hysteria, hysteria2, tuic, anytls, socks5 等协议
 func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
@@ -158,7 +251,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		if ss.Name == "" {
 			ss.Name = fmt.Sprintf("%s:%s", ss.Server, utils.GetPortString(ss.Port))
 		}
-		return Proxy{
+		proxy := Proxy{
 			Name:             ss.Name,
 			Type:             "ss",
 			Server:           ss.Server,
@@ -168,7 +261,14 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Udp:              config.Udp,
 			Skip_cert_verify: config.Cert,
 			Dialer_proxy:     link.DialerProxyName,
-		}, nil
+		}
+		// 处理 SS 插件
+		if ss.Plugin != nil && ss.Plugin.Name != "" {
+			proxy.Plugin = ss.Plugin.Name
+			proxy.Plugin_opts = convertSSPluginOpts(ss.Plugin)
+		}
+		return proxy, nil
+
 	case Scheme == "ssr":
 		ssr, err := DecodeSSRURL(link.Url)
 		if err != nil {
