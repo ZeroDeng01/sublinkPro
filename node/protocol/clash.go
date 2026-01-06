@@ -149,86 +149,34 @@ func convertToInt(value interface{}) (int, error) {
 
 // convertSSPluginOpts 将 SsPlugin 转换为 Clash 格式的 plugin-opts
 // 根据不同插件类型生成对应的配置
-func convertSSPluginOpts(plugin *SsPlugin) map[string]interface{} {
-	if plugin == nil || len(plugin.Opts) == 0 {
+func convertSSPluginOpts(plugin SsPlugin) map[string]interface{} {
+	if plugin.Name == "" {
 		return nil
 	}
 
 	opts := make(map[string]interface{})
 
-	// 根据插件类型处理选项
-	switch plugin.Name {
-	case "obfs", "obfs-local", "simple-obfs":
-		// obfs 插件：mode, host
-		if mode, ok := plugin.Opts["obfs"]; ok {
-			opts["mode"] = mode
-		} else if mode, ok := plugin.Opts["mode"]; ok {
-			opts["mode"] = mode
-		}
-		if host, ok := plugin.Opts["obfs-host"]; ok {
-			opts["host"] = host
-		} else if host, ok := plugin.Opts["host"]; ok {
-			opts["host"] = host
-		}
-
-	case "v2ray-plugin":
-		// v2ray-plugin：mode, tls, host, path, mux, headers
-		if mode, ok := plugin.Opts["mode"]; ok {
-			opts["mode"] = mode
-		}
-		if tls, ok := plugin.Opts["tls"]; ok {
-			opts["tls"] = tls == "true" || tls == "1"
-		}
-		if host, ok := plugin.Opts["host"]; ok {
-			opts["host"] = host
-		}
-		if path, ok := plugin.Opts["path"]; ok {
-			opts["path"] = path
-		}
-		if mux, ok := plugin.Opts["mux"]; ok {
-			opts["mux"] = mux == "true" || mux == "1"
-		}
-
-	case "shadow-tls":
-		// shadow-tls：host, password, version
-		if host, ok := plugin.Opts["host"]; ok {
-			opts["host"] = host
-		}
-		if password, ok := plugin.Opts["password"]; ok {
-			opts["password"] = password
-		}
-		if version, ok := plugin.Opts["version"]; ok {
-			if v, err := strconv.Atoi(version); err == nil {
-				opts["version"] = v
-			}
-		}
-
-	case "restls":
-		// restls：host, password, version-hint, restls-script
-		if host, ok := plugin.Opts["host"]; ok {
-			opts["host"] = host
-		}
-		if password, ok := plugin.Opts["password"]; ok {
-			opts["password"] = password
-		}
-		if versionHint, ok := plugin.Opts["version-hint"]; ok {
-			opts["version-hint"] = versionHint
-		}
-		if script, ok := plugin.Opts["restls-script"]; ok {
-			opts["restls-script"] = script
-		}
-
-	case "kcptun":
-		// kcptun：key, crypt, mode 等
-		for key, val := range plugin.Opts {
-			opts[key] = val
-		}
-
-	default:
-		// 默认直接复制所有选项
-		for key, val := range plugin.Opts {
-			opts[key] = val
-		}
+	// 从结构体字段读取值
+	if plugin.Mode != "" {
+		opts["mode"] = plugin.Mode
+	}
+	if plugin.Host != "" {
+		opts["host"] = plugin.Host
+	}
+	if plugin.Path != "" {
+		opts["path"] = plugin.Path
+	}
+	if plugin.Tls {
+		opts["tls"] = true
+	}
+	if plugin.Mux {
+		opts["mux"] = true
+	}
+	if plugin.Password != "" {
+		opts["password"] = plugin.Password
+	}
+	if plugin.Version > 0 {
+		opts["version"] = plugin.Version
 	}
 
 	if len(opts) == 0 {
@@ -263,10 +211,11 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Dialer_proxy:     link.DialerProxyName,
 		}
 		// 处理 SS 插件
-		if ss.Plugin != nil && ss.Plugin.Name != "" {
+		if ss.Plugin.Name != "" {
 			proxy.Plugin = ss.Plugin.Name
 			proxy.Plugin_opts = convertSSPluginOpts(ss.Plugin)
 		}
+
 		return proxy, nil
 
 	case Scheme == "ssr":

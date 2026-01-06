@@ -145,12 +145,12 @@ func TestSSWithObfsPlugin(t *testing.T) {
 	assertEqualIntInterface(t, "Port", 8388, ss.Port)
 	assertEqualString(t, "Name", "ObfsTest", ss.Name)
 
-	if ss.Plugin == nil {
-		t.Fatal("Plugin 应该不为空")
+	if ss.Plugin.Name == "" {
+		t.Fatal("Plugin.Name 应该不为空")
 	}
 	assertEqualString(t, "Plugin.Name", "obfs-local", ss.Plugin.Name)
-	assertEqualString(t, "Plugin.Opts[obfs]", "http", ss.Plugin.Opts["obfs"])
-	assertEqualString(t, "Plugin.Opts[obfs-host]", "bing.com", ss.Plugin.Opts["obfs-host"])
+	assertEqualString(t, "Plugin.Mode", "http", ss.Plugin.Mode)
+	assertEqualString(t, "Plugin.Host", "bing.com", ss.Plugin.Host)
 
 	t.Logf("✓ SS obfs 插件解码测试通过")
 }
@@ -168,13 +168,16 @@ func TestSSWithV2rayPlugin(t *testing.T) {
 	assertEqualString(t, "Server", "example.com", ss.Server)
 	assertEqualString(t, "Name", "V2RayTest", ss.Name)
 
-	if ss.Plugin == nil {
-		t.Fatal("Plugin 应该不为空")
+	if ss.Plugin.Name == "" {
+		t.Fatal("Plugin.Name 应该不为空")
 	}
 	assertEqualString(t, "Plugin.Name", "v2ray-plugin", ss.Plugin.Name)
-	assertEqualString(t, "Plugin.Opts[mode]", "websocket", ss.Plugin.Opts["mode"])
-	assertEqualString(t, "Plugin.Opts[host]", "example.com", ss.Plugin.Opts["host"])
-	assertEqualString(t, "Plugin.Opts[path]", "/ws", ss.Plugin.Opts["path"])
+	assertEqualString(t, "Plugin.Mode", "websocket", ss.Plugin.Mode)
+	assertEqualString(t, "Plugin.Host", "example.com", ss.Plugin.Host)
+	assertEqualString(t, "Plugin.Path", "/ws", ss.Plugin.Path)
+	if !ss.Plugin.Tls {
+		t.Error("Plugin.Tls 应该为 true")
+	}
 
 	t.Logf("✓ SS v2ray-plugin 解码测试通过")
 }
@@ -188,13 +191,15 @@ func TestSSWithShadowTLS(t *testing.T) {
 		t.Fatalf("解码失败: %v", err)
 	}
 
-	if ss.Plugin == nil {
-		t.Fatal("Plugin 应该不为空")
+	if ss.Plugin.Name == "" {
+		t.Fatal("Plugin.Name 应该不为空")
 	}
 	assertEqualString(t, "Plugin.Name", "shadow-tls", ss.Plugin.Name)
-	assertEqualString(t, "Plugin.Opts[host]", "cloud.tencent.com", ss.Plugin.Opts["host"])
-	assertEqualString(t, "Plugin.Opts[password]", "secret", ss.Plugin.Opts["password"])
-	assertEqualString(t, "Plugin.Opts[version]", "2", ss.Plugin.Opts["version"])
+	assertEqualString(t, "Plugin.Host", "cloud.tencent.com", ss.Plugin.Host)
+	assertEqualString(t, "Plugin.Password", "secret", ss.Plugin.Password)
+	if ss.Plugin.Version != 2 {
+		t.Errorf("Plugin.Version 应该为 2, 实际: %d", ss.Plugin.Version)
+	}
 
 	t.Logf("✓ SS shadow-tls 插件解码测试通过")
 }
@@ -209,12 +214,10 @@ func TestSSPluginEncodeDecode(t *testing.T) {
 			Cipher:   "aes-256-gcm",
 			Password: "test-password",
 		},
-		Plugin: &SsPlugin{
+		Plugin: SsPlugin{
 			Name: "obfs-local",
-			Opts: map[string]string{
-				"mode": "http",
-				"host": "www.bing.com",
-			},
+			Mode: "http",
+			Host: "www.bing.com",
 		},
 	}
 
@@ -235,8 +238,8 @@ func TestSSPluginEncodeDecode(t *testing.T) {
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 
 	// 验证插件
-	if decoded.Plugin == nil {
-		t.Fatal("解码后 Plugin 应该不为空")
+	if decoded.Plugin.Name == "" {
+		t.Fatal("解码后 Plugin.Name 应该不为空")
 	}
 	assertEqualString(t, "Plugin.Name", original.Plugin.Name, decoded.Plugin.Name)
 
@@ -255,8 +258,8 @@ func TestSSWithoutPlugin(t *testing.T) {
 	assertEqualString(t, "Server", "server.com", ss.Server)
 	assertEqualString(t, "Name", "NoPlugin", ss.Name)
 
-	if ss.Plugin != nil {
-		t.Error("无插件的链接 Plugin 应该为 nil")
+	if ss.Plugin.Name != "" {
+		t.Error("无插件的链接 Plugin.Name 应该为空")
 	}
 
 	t.Logf("✓ SS 无插件兼容性测试通过")

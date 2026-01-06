@@ -14,43 +14,34 @@ import (
 
 // appendSurgeSSPlugin 将 SS 插件配置转换为 Surge 格式并追加到代理字符串
 // Surge 主要支持 obfs (simple-obfs) 插件
-func appendSurgeSSPlugin(proxy string, plugin *SsPlugin) string {
-	if plugin == nil || plugin.Name == "" {
+func appendSurgeSSPlugin(proxy string, plugin SsPlugin) string {
+	if plugin.Name == "" {
 		return proxy
 	}
 
 	switch plugin.Name {
 	case "obfs", "obfs-local", "simple-obfs":
 		// Surge 格式: obfs=http/tls, obfs-host=xxx
-		mode := "http"
-		if m, ok := plugin.Opts["obfs"]; ok {
-			mode = m
-		} else if m, ok := plugin.Opts["mode"]; ok {
-			mode = m
+		mode := plugin.Mode
+		if mode == "" {
+			mode = "http"
 		}
 		proxy = fmt.Sprintf("%s, obfs=%s", proxy, mode)
-
-		host := ""
-		if h, ok := plugin.Opts["obfs-host"]; ok {
-			host = h
-		} else if h, ok := plugin.Opts["host"]; ok {
-			host = h
-		}
-		if host != "" {
-			proxy = fmt.Sprintf("%s, obfs-host=%s", proxy, host)
+		if plugin.Host != "" {
+			proxy = fmt.Sprintf("%s, obfs-host=%s", proxy, plugin.Host)
 		}
 
 	case "v2ray-plugin":
 		// v2ray-plugin 在 Surge 中作为 ws 传输处理
-		if mode, ok := plugin.Opts["mode"]; ok && mode == "websocket" {
+		if plugin.Mode == "websocket" {
 			proxy = fmt.Sprintf("%s, ws=true", proxy)
-			if path, ok := plugin.Opts["path"]; ok && path != "" {
-				proxy = fmt.Sprintf("%s, ws-path=%s", proxy, path)
+			if plugin.Path != "" {
+				proxy = fmt.Sprintf("%s, ws-path=%s", proxy, plugin.Path)
 			}
-			if host, ok := plugin.Opts["host"]; ok && host != "" {
-				proxy = fmt.Sprintf("%s, ws-headers=Host:%s", proxy, host)
+			if plugin.Host != "" {
+				proxy = fmt.Sprintf("%s, ws-headers=Host:%s", proxy, plugin.Host)
 			}
-			if tls, ok := plugin.Opts["tls"]; ok && (tls == "true" || tls == "1") {
+			if plugin.Tls {
 				proxy = fmt.Sprintf("%s, tls=true", proxy)
 			}
 		}
@@ -95,9 +86,10 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 			ssproxy := fmt.Sprintf("%s = ss, %s, %d, encrypt-method=%s, password=%s, udp-relay=%t",
 				proxy["name"], proxy["server"], proxy["port"], proxy["cipher"], proxy["password"], proxy["udp"])
 			// 添加 SS 插件支持 (Surge 仅支持 obfs 类插件)
-			if ss.Plugin != nil && ss.Plugin.Name != "" {
+			if ss.Plugin.Name != "" {
 				ssproxy = appendSurgeSSPlugin(ssproxy, ss.Plugin)
 			}
+
 			groups = append(groups, ss.Name)
 			proxys = append(proxys, ssproxy)
 

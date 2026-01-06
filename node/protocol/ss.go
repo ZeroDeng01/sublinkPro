@@ -11,35 +11,41 @@ import (
 
 // ss匹配规则
 type Ss struct {
-	Param  Param
-	Server string
-	Port   interface{}
-	Name   string
-	Type   string
-	Plugin *SsPlugin // SS 插件配置
+	Param  Param       `json:"param"`
+	Server string      `json:"server"`
+	Port   interface{} `json:"port"`
+	Name   string      `json:"name"`
+	Type   string      `json:"type"`
+	Plugin SsPlugin    `json:"plugin"` // SS 插件配置
 }
 type Param struct {
-	Cipher   string
-	Password string
+	Cipher   string `json:"cipher"`
+	Password string `json:"password"`
 }
 
 // SsPlugin SS 插件配置
 type SsPlugin struct {
-	Name string            // 插件名称：obfs, v2ray-plugin, shadow-tls, restls, kcptun 等
-	Opts map[string]string // 插件选项键值对
+	Name     string `json:"name"`     // 插件名称：obfs, v2ray-plugin, shadow-tls, restls, kcptun 等
+	Mode     string `json:"mode"`     // 插件模式：http, tls, websocket 等
+	Host     string `json:"host"`     // 混淆主机名
+	Path     string `json:"path"`     // 路径 (v2ray-plugin)
+	Tls      bool   `json:"tls"`      // 是否启用 TLS
+	Mux      bool   `json:"mux"`      // 是否启用多路复用
+	Password string `json:"password"` // 插件密码 (shadow-tls, restls)
+	Version  int    `json:"version"`  // 插件版本 (shadow-tls)
 }
 
 // parseSSURL 解析SS URL，返回认证信息、地址、名称和插件参数
 // 支持 SIP002 格式：ss://userinfo@host:port/?plugin=xxx#name
-func parseSSURL(s string) (auth, addr, name string, plugin *SsPlugin) {
+func parseSSURL(s string) (auth, addr, name string, plugin SsPlugin) {
 	u, err := url.Parse(s)
 	if err != nil {
 		log.Println("ss url parse fail.", err)
-		return "", "", "", nil
+		return "", "", "", SsPlugin{}
 	}
 	if u.Scheme != "ss" {
 		log.Println("ss url parse fail, not ss url.")
-		return "", "", "", nil
+		return "", "", "", SsPlugin{}
 	}
 	// 处理url全编码的情况（整个链接base64编码）
 	if u.User == nil {
@@ -59,7 +65,7 @@ func parseSSURL(s string) (auth, addr, name string, plugin *SsPlugin) {
 			}
 			u, err = url.Parse(s)
 			if err != nil {
-				return "", "", "", nil
+				return "", "", "", SsPlugin{}
 			}
 		}
 	}
@@ -86,30 +92,48 @@ func parseSSURL(s string) (auth, addr, name string, plugin *SsPlugin) {
 // parseSSPlugin 解析 SIP002 格式的 plugin 参数
 // 格式: plugin_name;opt1=val1;opt2=val2
 // 特殊字符需要反斜杠转义
-func parseSSPlugin(pluginStr string) *SsPlugin {
+func parseSSPlugin(pluginStr string) SsPlugin {
 	if pluginStr == "" {
-		return nil
+		return SsPlugin{}
 	}
 
 	// SIP003 格式：使用分号分隔，第一个是插件名称
-	// 需要处理转义字符
 	parts := splitPluginOpts(pluginStr)
 	if len(parts) == 0 {
-		return nil
+		return SsPlugin{}
 	}
 
-	plugin := &SsPlugin{
+	plugin := SsPlugin{
 		Name: parts[0],
-		Opts: make(map[string]string),
 	}
 
-	// 解析剩余的选项
+	// 解析剩余的选项到结构化字段
 	for i := 1; i < len(parts); i++ {
 		opt := parts[i]
 		if idx := strings.Index(opt, "="); idx != -1 {
 			key := opt[:idx]
 			value := opt[idx+1:]
-			plugin.Opts[key] = value
+			switch key {
+			case "mode", "obfs":
+				plugin.Mode = value
+			case "host", "obfs-host":
+				plugin.Host = value
+			case "path":
+				plugin.Path = value
+			case "tls":
+				plugin.Tls = value == "true" || value == "1" || value == ""
+			case "mux":
+				plugin.Mux = value == "true" || value == "1"
+			case "password":
+				plugin.Password = value
+			case "version":
+				if v, err := strconv.Atoi(value); err == nil {
+					plugin.Version = v
+				}
+			}
+		} else if opt == "tls" {
+			// 无值的 tls 参数表示启用
+			plugin.Tls = true
 		}
 	}
 
@@ -117,6 +141,7 @@ func parseSSPlugin(pluginStr string) *SsPlugin {
 }
 
 // splitPluginOpts 按分号分隔插件选项，处理反斜杠转义
+
 func splitPluginOpts(s string) []string {
 	var result []string
 	var current strings.Builder
@@ -178,7 +203,7 @@ func EncodeSSURL(s Ss) string {
 	}
 
 	// 如果有插件配置，添加 plugin 查询参数
-	if s.Plugin != nil && s.Plugin.Name != "" {
+	if s.Plugin.Name != "" {
 		q := u.Query()
 		q.Set("plugin", encodeSSPlugin(s.Plugin))
 		u.RawQuery = q.Encode()
@@ -191,30 +216,35 @@ func EncodeSSURL(s Ss) string {
 
 // encodeSSPlugin 将插件配置编码为 SIP002 格式字符串
 // 格式: plugin_name;opt1=val1;opt2=val2
-func encodeSSPlugin(plugin *SsPlugin) string {
-	if plugin == nil || plugin.Name == "" {
+func encodeSSPlugin(plugin SsPlugin) string {
+	if plugin.Name == "" {
 		return ""
 	}
 
 	var parts []string
 	parts = append(parts, escapePluginValue(plugin.Name))
 
-	// 按固定顺序输出常见选项，保证一致性
-	orderedKeys := []string{"mode", "host", "path", "tls", "mux", "password", "version", "version-hint", "restls-script"}
-	addedKeys := make(map[string]bool)
-
-	for _, key := range orderedKeys {
-		if val, ok := plugin.Opts[key]; ok {
-			parts = append(parts, escapePluginValue(key)+"="+escapePluginValue(val))
-			addedKeys[key] = true
-		}
+	// 按结构体字段输出选项
+	if plugin.Mode != "" {
+		parts = append(parts, "mode="+escapePluginValue(plugin.Mode))
 	}
-
-	// 添加其他未在固定顺序中的选项
-	for key, val := range plugin.Opts {
-		if !addedKeys[key] {
-			parts = append(parts, escapePluginValue(key)+"="+escapePluginValue(val))
-		}
+	if plugin.Host != "" {
+		parts = append(parts, "host="+escapePluginValue(plugin.Host))
+	}
+	if plugin.Path != "" {
+		parts = append(parts, "path="+escapePluginValue(plugin.Path))
+	}
+	if plugin.Tls {
+		parts = append(parts, "tls")
+	}
+	if plugin.Mux {
+		parts = append(parts, "mux=true")
+	}
+	if plugin.Password != "" {
+		parts = append(parts, "password="+escapePluginValue(plugin.Password))
+	}
+	if plugin.Version > 0 {
+		parts = append(parts, fmt.Sprintf("version=%d", plugin.Version))
 	}
 
 	return strings.Join(parts, ";")
@@ -257,10 +287,12 @@ func DecodeSSURL(s string) (Ss, error) {
 		fmt.Println("Name:", name)
 		fmt.Println("Cipher:", cipher)
 		fmt.Println("Password:", password)
-		if plugin != nil {
+		if plugin.Name != "" {
 			fmt.Println("Plugin:", plugin.Name)
-			fmt.Println("Plugin Opts:", plugin.Opts)
+			fmt.Println("Plugin Mode:", plugin.Mode)
+			fmt.Println("Plugin Host:", plugin.Host)
 		}
+
 	}
 	// 返回结果
 	return Ss{
