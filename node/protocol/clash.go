@@ -390,7 +390,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Down:             hy.DownMbps,
 			Alpn:             hy.ALPN,
 			Peer:             hy.Peer,
-			Udp:              config.Udp,
+			Udp:              true, // Hysteria 基于 UDP/QUIC，默认启用 UDP
 			Skip_cert_verify: skipCert,
 			Dialer_proxy:     link.DialerProxyName,
 		}, nil
@@ -419,7 +419,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Obfs_password:    hy2.ObfsPassword,
 			Up:               hy2.UpMbps,
 			Down:             hy2.DownMbps,
-			Udp:              config.Udp,
+			Udp:              true, // Hysteria2 基于 UDP/QUIC，默认启用 UDP
 			Skip_cert_verify: skipCert,
 			Dialer_proxy:     link.DialerProxyName,
 		}, nil
@@ -452,7 +452,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Sni:                   tuic.Sni,
 			Tls:                   tuic.Tls,
 			Client_fingerprint:    tuic.ClientFingerprint,
-			Udp:                   config.Udp,
+			Udp:                   true, // TUIC 基于 UDP/QUIC，默认启用 UDP
 			Skip_cert_verify:      skipCert,
 			Dialer_proxy:          link.DialerProxyName,
 			Version:               tuic.Version,

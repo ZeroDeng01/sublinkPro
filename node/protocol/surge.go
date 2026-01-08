@@ -169,7 +169,7 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 				"server":           server,
 				"port":             utils.GetPortInt(hy2.Port),
 				"password":         hy2.Password,
-				"udp":              config.Udp,
+				"udp":              true, // Hysteria2 基于 UDP/QUIC，默认启用 UDP
 				"skip-cert-verify": skipCert,
 			}
 			hy2proxy := fmt.Sprintf("%s = hysteria2, %s, %d, password=%s, udp-relay=%t, skip-cert-verify=%t",
@@ -195,7 +195,7 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 				"port":             utils.GetPortInt(tuic.Port),
 				"password":         tuic.Password,
 				"uuid":             tuic.Uuid,
-				"udp":              config.Udp,
+				"udp":              true, // TUIC 基于 UDP/QUIC，默认启用 UDP
 				"skip-cert-verify": skipCert,
 				"token":            tuic.Token,
 				"version":          tuic.Version,
