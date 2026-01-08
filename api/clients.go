@@ -169,7 +169,7 @@ func GetV2ray(c *gin.Context) {
 				Group:       v.Group,
 				Source:      v.Source,
 				Index:       idx + 1,
-				Protocol:    utils.GetProtocolFromLink(v.Link),
+				Protocol:    protocol.GetProtocolFromLink(v.Link),
 				Tags:        v.Tags,
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
@@ -190,7 +190,7 @@ func GetV2ray(c *gin.Context) {
 						Group:       v.Group,
 						Source:      v.Source,
 						Index:       idx + 1,
-						Protocol:    utils.GetProtocolFromLink(link),
+						Protocol:    protocol.GetProtocolFromLink(link),
 						Tags:        v.Tags,
 					})
 					links[i] = utils.RenameNodeLink(link, newName)
@@ -277,7 +277,7 @@ func GetClash(c *gin.Context) {
 				Group:       v.Group,
 				Source:      v.Source,
 				Index:       idx + 1,
-				Protocol:    utils.GetProtocolFromLink(v.Link),
+				Protocol:    protocol.GetProtocolFromLink(v.Link),
 				Tags:        v.Tags,
 			})
 		}
@@ -337,7 +337,7 @@ func GetClash(c *gin.Context) {
 				Group:       v.Group,
 				Source:      v.Source,
 				Index:       idx + 1,
-				Protocol:    utils.GetProtocolFromLink(v.Link),
+				Protocol:    protocol.GetProtocolFromLink(v.Link),
 				Tags:        v.Tags,
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
@@ -373,7 +373,7 @@ func GetClash(c *gin.Context) {
 						Group:       v.Group,
 						Source:      v.Source,
 						Index:       idx + 1,
-						Protocol:    utils.GetProtocolFromLink(link),
+						Protocol:    protocol.GetProtocolFromLink(link),
 						Tags:        v.Tags,
 					})
 					renamedLink = utils.RenameNodeLink(link, newName)
@@ -506,7 +506,7 @@ func GetSurge(c *gin.Context) {
 				Group:       v.Group,
 				Source:      v.Source,
 				Index:       idx + 1,
-				Protocol:    utils.GetProtocolFromLink(v.Link),
+				Protocol:    protocol.GetProtocolFromLink(v.Link),
 				Tags:        v.Tags,
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
@@ -526,7 +526,7 @@ func GetSurge(c *gin.Context) {
 						Group:       v.Group,
 						Source:      v.Source,
 						Index:       idx + 1,
-						Protocol:    utils.GetProtocolFromLink(link),
+						Protocol:    protocol.GetProtocolFromLink(link),
 						Tags:        v.Tags,
 					})
 					links[i] = utils.RenameNodeLink(link, newName)

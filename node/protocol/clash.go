@@ -257,6 +257,8 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			},
 		}
 		DeleteOpts(ws_opts)
+		// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
+		skipCert := config.Cert || trojan.Query.AllowInsecure == 1
 		return Proxy{
 			Name:               trojan.Name,
 			Type:               "trojan",
@@ -270,7 +272,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Alpn:               trojan.Query.Alpn,
 			Ws_opts:            ws_opts,
 			Udp:                config.Udp,
-			Skip_cert_verify:   config.Cert,
+			Skip_cert_verify:   skipCert,
 			Dialer_proxy:       link.DialerProxyName,
 		}, nil
 	case Scheme == "vmess":
@@ -346,6 +348,8 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		if vless.Query.Security == "none" {
 			tls = false
 		}
+		// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
+		skipCert := config.Cert || vless.Query.AllowInsecure == 1
 		return Proxy{
 			Name:               vless.Name,
 			Type:               "vless",
@@ -361,7 +365,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Reality_opts:       reality_opts,
 			Grpc_opts:          grpc_opts,
 			Udp:                config.Udp,
-			Skip_cert_verify:   config.Cert,
+			Skip_cert_verify:   skipCert,
 			Tls:                tls,
 			Dialer_proxy:       link.DialerProxyName,
 		}, nil
@@ -374,6 +378,8 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		if hy.Name == "" {
 			hy.Name = fmt.Sprintf("%s:%s", hy.Host, utils.GetPortString(hy.Port))
 		}
+		// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
+		skipCert := config.Cert || hy.Insecure == 1
 		return Proxy{
 			Name:             hy.Name,
 			Type:             "hysteria",
@@ -385,7 +391,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Alpn:             hy.ALPN,
 			Peer:             hy.Peer,
 			Udp:              config.Udp,
-			Skip_cert_verify: config.Cert,
+			Skip_cert_verify: skipCert,
 			Dialer_proxy:     link.DialerProxyName,
 		}, nil
 	case Scheme == "hy2" || Scheme == "hysteria2":
@@ -397,6 +403,8 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		if hy2.Name == "" {
 			hy2.Name = fmt.Sprintf("%s:%s", hy2.Host, utils.GetPortString(hy2.Port))
 		}
+		// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
+		skipCert := config.Cert || hy2.Insecure == 1
 		return Proxy{
 			Name:             hy2.Name,
 			Type:             "hysteria2",
@@ -412,7 +420,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Up:               hy2.UpMbps,
 			Down:             hy2.DownMbps,
 			Udp:              config.Udp,
-			Skip_cert_verify: config.Cert,
+			Skip_cert_verify: skipCert,
 			Dialer_proxy:     link.DialerProxyName,
 		}, nil
 	case Scheme == "tuic":
@@ -428,6 +436,8 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		if tuic.Disable_sni == 1 {
 			disable_sni = true
 		}
+		// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
+		skipCert := config.Cert || tuic.Insecure == 1
 		return Proxy{
 			Name:                  tuic.Name,
 			Type:                  "tuic",
@@ -443,7 +453,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Tls:                   tuic.Tls,
 			Client_fingerprint:    tuic.ClientFingerprint,
 			Udp:                   config.Udp,
-			Skip_cert_verify:      config.Cert,
+			Skip_cert_verify:      skipCert,
 			Dialer_proxy:          link.DialerProxyName,
 			Version:               tuic.Version,
 			Token:                 tuic.Token,
@@ -454,13 +464,15 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		if err != nil {
 			return Proxy{}, err
 		}
+		// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
+		skipCert := config.Cert || anyTLS.SkipCertVerify
 		return Proxy{
 			Name:               anyTLS.Name,
 			Type:               "anytls",
 			Server:             anyTLS.Server,
 			Port:               FlexPort(utils.GetPortInt(anyTLS.Port)),
 			Password:           anyTLS.Password,
-			Skip_cert_verify:   anyTLS.SkipCertVerify,
+			Skip_cert_verify:   skipCert,
 			Sni:                anyTLS.SNI,
 			Client_fingerprint: anyTLS.ClientFingerprint,
 			Dialer_proxy:       link.DialerProxyName,

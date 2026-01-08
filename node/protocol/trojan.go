@@ -143,6 +143,11 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 		fmt.Println("flow:", flow)
 		fmt.Println("name:", name)
 	}
+	// 解析 allowInsecure 参数
+	insecureVal := 0
+	if allowInsecure == "1" || allowInsecure == "true" {
+		insecureVal = 1
+	}
 	return Trojan{
 		Password: password,
 		Hostname: hostname,
@@ -153,7 +158,7 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 			Path:          path,
 			Security:      security,
 			Fp:            fp,
-			AllowInsecure: 0,
+			AllowInsecure: insecureVal,
 			Alpn:          alpn,
 			Sni:           sni,
 			Host:          host,

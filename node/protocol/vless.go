@@ -16,20 +16,21 @@ type VLESS struct {
 	Query  VLESSQuery  `json:"query"`
 }
 type VLESSQuery struct {
-	Security    string   `json:"security"`
-	Alpn        []string `json:"alpn"`
-	Sni         string   `json:"sni"`
-	Fp          string   `json:"fp"`
-	Sid         string   `json:"sid"`
-	Pbk         string   `json:"pbk"`
-	Flow        string   `json:"flow"`
-	Encryption  string   `json:"encryption"`
-	Type        string   `json:"type"`
-	HeaderType  string   `json:"headerType"`
-	Path        string   `json:"path"`
-	Host        string   `json:"host"`
-	ServiceName string   `json:"serviceName,omitempty"`
-	Mode        string   `json:"mode,omitempty"`
+	Security      string   `json:"security"`
+	Alpn          []string `json:"alpn"`
+	Sni           string   `json:"sni"`
+	Fp            string   `json:"fp"`
+	Sid           string   `json:"sid"`
+	Pbk           string   `json:"pbk"`
+	Flow          string   `json:"flow"`
+	Encryption    string   `json:"encryption"`
+	Type          string   `json:"type"`
+	HeaderType    string   `json:"headerType"`
+	Path          string   `json:"path"`
+	Host          string   `json:"host"`
+	ServiceName   string   `json:"serviceName,omitempty"`
+	Mode          string   `json:"mode,omitempty"`
+	AllowInsecure int      `json:"allowInsecure,omitempty"` // 跳过证书验证
 }
 
 func CallVLESS() {
@@ -145,6 +146,12 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 	host := u.Query().Get("host")
 	serviceName := u.Query().Get("serviceName")
 	mode := u.Query().Get("mode")
+	// 解析 allowInsecure 参数
+	allowInsecure := 0
+	insecureStr := u.Query().Get("allowInsecure")
+	if insecureStr == "1" || insecureStr == "true" {
+		allowInsecure = 1
+	}
 	// 如果没有设置name,则使用hostname:port
 	name := u.Fragment
 	if name == "" {
@@ -176,20 +183,21 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 		Server: hostname,
 		Port:   port,
 		Query: VLESSQuery{
-			Security:    security,
-			Alpn:        alpn,
-			Sni:         sni,
-			Fp:          fp,
-			Sid:         sid,
-			Pbk:         pbk,
-			Flow:        flow,
-			Encryption:  encryption,
-			Type:        types,
-			HeaderType:  headerType,
-			Path:        path,
-			Host:        host,
-			ServiceName: serviceName,
-			Mode:        mode,
+			Security:      security,
+			Alpn:          alpn,
+			Sni:           sni,
+			Fp:            fp,
+			Sid:           sid,
+			Pbk:           pbk,
+			Flow:          flow,
+			Encryption:    encryption,
+			Type:          types,
+			HeaderType:    headerType,
+			Path:          path,
+			Host:          host,
+			ServiceName:   serviceName,
+			Mode:          mode,
+			AllowInsecure: allowInsecure,
 		},
 	}, nil
 }

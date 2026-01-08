@@ -23,6 +23,7 @@ type Tuic struct {
 	Disable_sni        int
 	Tls                bool   // TLS开关，对应URI中的security参数
 	ClientFingerprint  string // 客户端指纹，对应URI中的fp参数
+	Insecure           int    // 跳过证书验证，对应URI中的allow_insecure参数
 }
 
 // Tuic 解码
@@ -63,6 +64,8 @@ func DecodeTuicURL(s string) (Tuic, error) {
 	tls := security == "tls" || security == ""
 	// 解析fp参数，获取客户端指纹
 	clientFingerprint := u.Query().Get("fp")
+	// 解析 allow_insecure 参数，跳过证书验证
+	insecure, _ := strconv.Atoi(u.Query().Get("allow_insecure"))
 	name := u.Fragment
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if name == "" {
@@ -103,6 +106,7 @@ func DecodeTuicURL(s string) (Tuic, error) {
 		ClientFingerprint:  clientFingerprint,
 		Version:            version,
 		Token:              token,
+		Insecure:           insecure,
 	}, nil
 }
 
@@ -151,6 +155,9 @@ func EncodeTuicURL(t Tuic) string {
 	}
 	if t.Token != "" {
 		q.Set("token", t.Token)
+	}
+	if t.Insecure != 0 {
+		q.Set("allow_insecure", strconv.Itoa(t.Insecure))
 	}
 
 	u.RawQuery = q.Encode()

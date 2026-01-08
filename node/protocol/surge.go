@@ -137,13 +137,15 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 				continue
 			}
 			server := replaceHost(trojan.Hostname)
+			// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
+			skipCert := config.Cert || trojan.Query.AllowInsecure == 1
 			proxy := map[string]interface{}{
 				"name":             trojan.Name,
 				"server":           server,
 				"port":             utils.GetPortInt(trojan.Port),
 				"password":         trojan.Password,
 				"udp":              config.Udp,
-				"skip-cert-verify": config.Cert,
+				"skip-cert-verify": skipCert,
 			}
 			trojanproxy := fmt.Sprintf("%s = trojan, %s, %d, password=%s, udp-relay=%t, skip-cert-verify=%t",
 				proxy["name"], proxy["server"], proxy["port"], proxy["password"], proxy["udp"], proxy["skip-cert-verify"])
@@ -160,13 +162,15 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 				continue
 			}
 			server := replaceHost(hy2.Host)
+			// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
+			skipCert := config.Cert || hy2.Insecure == 1
 			proxy := map[string]interface{}{
 				"name":             hy2.Name,
 				"server":           server,
 				"port":             utils.GetPortInt(hy2.Port),
 				"password":         hy2.Password,
 				"udp":              config.Udp,
-				"skip-cert-verify": config.Cert,
+				"skip-cert-verify": skipCert,
 			}
 			hy2proxy := fmt.Sprintf("%s = hysteria2, %s, %d, password=%s, udp-relay=%t, skip-cert-verify=%t",
 				proxy["name"], proxy["server"], proxy["port"], proxy["password"], proxy["udp"], proxy["skip-cert-verify"])
@@ -183,6 +187,8 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 				continue
 			}
 			server := replaceHost(tuic.Host)
+			// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
+			skipCert := config.Cert || tuic.Insecure == 1
 			proxy := map[string]interface{}{
 				"name":             tuic.Name,
 				"server":           server,
@@ -190,7 +196,7 @@ func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 				"password":         tuic.Password,
 				"uuid":             tuic.Uuid,
 				"udp":              config.Udp,
-				"skip-cert-verify": config.Cert,
+				"skip-cert-verify": skipCert,
 				"token":            tuic.Token,
 				"version":          tuic.Version,
 			}
