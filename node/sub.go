@@ -1068,6 +1068,10 @@ func generateProxyLink(proxy protocol.Proxy) string {
 		if proxy.Client_fingerprint != "" {
 			query.Set("fp", proxy.Client_fingerprint)
 		}
+		// 跳过证书验证
+		if proxy.Skip_cert_verify {
+			query.Set("insecure", "1")
+		}
 		return fmt.Sprintf("tuic://%s:%s@%s:%d?%s#%s", uuid, password, server, port, query.Encode(), name)
 
 	case "anytls":
