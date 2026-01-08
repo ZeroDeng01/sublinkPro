@@ -1042,6 +1042,31 @@ func BatchUpdateSource(ids []int, source string) error {
 	return nil
 }
 
+// BatchUpdateCountry 批量更新节点国家代码 - 使用事务保证原子性
+func BatchUpdateCountry(ids []int, country string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	// 使用事务更新
+	err := database.WithTransaction(func(tx *gorm.DB) error {
+		return tx.Model(&Node{}).Where("id IN ?", ids).Update("link_country", country).Error
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// 事务成功后更新缓存
+	for _, id := range ids {
+		if n, ok := nodeCache.Get(id); ok {
+			n.LinkCountry = country
+			nodeCache.Set(id, n)
+		}
+	}
+	return nil
+}
+
 // GetAllGroups 获取所有分组
 func (node *Node) GetAllGroups() ([]string, error) {
 	// 使用二级索引获取所有不同的分组值

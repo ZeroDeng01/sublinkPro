@@ -41,10 +41,7 @@ export function ConfigProvider({ children }) {
   }, []);
 
   // 检查指定功能是否启用
-  const isFeatureEnabled = useCallback(
-    (featureName) => features.includes(featureName),
-    [features]
-  );
+  const isFeatureEnabled = useCallback((featureName) => features.includes(featureName), [features]);
 
   const memoizedValue = useMemo(
     () => ({ state, setState, setField, resetState, version, features, isFeatureEnabled }),
@@ -55,4 +52,3 @@ export function ConfigProvider({ children }) {
 }
 
 ConfigProvider.propTypes = { children: PropTypes.node };
-

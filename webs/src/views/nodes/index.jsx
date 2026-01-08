@@ -42,6 +42,7 @@ import {
   batchUpdateNodeGroup,
   batchUpdateNodeDialerProxy,
   batchUpdateNodeSource,
+  batchUpdateNodeCountry,
   getProtocolUIMeta
 } from 'api/nodes';
 import { getTags, batchSetNodeTags, batchRemoveNodeTags } from 'api/tags';
@@ -57,6 +58,7 @@ import {
   BatchTagDialog,
   BatchRemoveTagDialog,
   BatchSourceDialog,
+  BatchCountryDialog,
   NodeDetailsPanel,
   NodeFilters,
   BatchActions,
@@ -182,6 +184,10 @@ export default function NodeList() {
   // 批量修改来源
   const [batchSourceDialogOpen, setBatchSourceDialogOpen] = useState(false);
   const [batchSourceValue, setBatchSourceValue] = useState('');
+
+  // 批量修改国家
+  const [batchCountryDialogOpen, setBatchCountryDialogOpen] = useState(false);
+  const [batchCountryValue, setBatchCountryValue] = useState('');
 
   // 标签相关状态
   const [tagFilter, setTagFilter] = useState([]);
@@ -637,6 +643,34 @@ export default function NodeList() {
     }
   };
 
+  // 批量修改国家
+  const handleBatchCountry = () => {
+    if (selectedNodes.length === 0) {
+      showMessage('请选择要修改的节点', 'warning');
+      return;
+    }
+    setBatchCountryValue('');
+    setBatchCountryDialogOpen(true);
+  };
+
+  const handleSubmitBatchCountry = async () => {
+    try {
+      const ids = selectedNodes.map((node) => node.ID);
+      await batchUpdateNodeCountry(ids, batchCountryValue);
+      showMessage(`成功修改 ${selectedNodes.length} 个节点的国家代码`);
+      setSelectedNodes([]);
+      setBatchCountryDialogOpen(false);
+      fetchNodes(getCurrentFilters());
+      // 刷新国家选项
+      getNodeCountries().then((res) => {
+        setCountryOptions(res.data || []);
+      });
+    } catch (error) {
+      console.error(error);
+      showMessage(error.message || '批量修改国家代码失败', 'error');
+    }
+  };
+
   // 批量设置标签
   const handleBatchTag = () => {
     if (selectedNodes.length === 0) {
@@ -992,6 +1026,7 @@ export default function NodeList() {
         onDelete={handleBatchDelete}
         onGroup={handleBatchGroup}
         onSource={handleBatchSource}
+        onCountry={handleBatchCountry}
         onDialerProxy={handleBatchDialerProxy}
         onTag={handleBatchTag}
         onRemoveTag={handleBatchRemoveTag}
@@ -1154,6 +1189,17 @@ export default function NodeList() {
         sourceOptions={sourceOptions}
         onClose={() => setBatchSourceDialogOpen(false)}
         onSubmit={handleSubmitBatchSource}
+      />
+
+      {/* 批量修改国家对话框 */}
+      <BatchCountryDialog
+        open={batchCountryDialogOpen}
+        selectedCount={selectedNodes.length}
+        value={batchCountryValue}
+        setValue={setBatchCountryValue}
+        countryOptions={countryOptions}
+        onClose={() => setBatchCountryDialogOpen(false)}
+        onSubmit={handleSubmitBatchCountry}
       />
 
       {/* IP详情弹窗 */}

@@ -22,6 +22,7 @@ export default function BatchActions({
   onDelete,
   onGroup,
   onSource,
+  onCountry,
   onDialerProxy,
   onTag,
   onRemoveTag
@@ -79,6 +80,9 @@ export default function BatchActions({
           <Button size="small" color="info" variant="outlined" onClick={onSource} sx={{ whiteSpace: 'nowrap' }}>
             修改来源
           </Button>
+          <Button size="small" color="secondary" variant="outlined" onClick={onCountry} sx={{ whiteSpace: 'nowrap' }}>
+            修改国家
+          </Button>
           <Button size="small" color="primary" variant="outlined" onClick={onDialerProxy} sx={{ whiteSpace: 'nowrap' }}>
             修改前置代理
           </Button>
@@ -102,6 +106,7 @@ BatchActions.propTypes = {
   onDelete: PropTypes.func.isRequired,
   onGroup: PropTypes.func.isRequired,
   onSource: PropTypes.func.isRequired,
+  onCountry: PropTypes.func.isRequired,
   onDialerProxy: PropTypes.func.isRequired,
   onTag: PropTypes.func.isRequired,
   onRemoveTag: PropTypes.func.isRequired

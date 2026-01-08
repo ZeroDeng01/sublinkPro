@@ -146,6 +146,15 @@ export function batchUpdateNodeSource(ids, source) {
   });
 }
 
+// 批量更新节点国家代码
+export function batchUpdateNodeCountry(ids, country) {
+  return request({
+    url: '/v1/nodes/batch-update-country',
+    method: 'post',
+    data: { ids, country }
+  });
+}
+
 // 获取IP详细信息
 export function getIPDetails(ip) {
   return request({

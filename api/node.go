@@ -735,6 +735,30 @@ func NodeBatchUpdateSource(c *gin.Context) {
 	utils.OkWithMsg(c, "批量更新来源成功")
 }
 
+// NodeBatchUpdateCountry 批量更新节点国家代码
+func NodeBatchUpdateCountry(c *gin.Context) {
+	var req struct {
+		IDs     []int  `json:"ids"`
+		Country string `json:"country"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+	if len(req.IDs) == 0 {
+		utils.FailWithMsg(c, "请选择要修改的节点")
+		return
+	}
+	// 国家代码转大写，保持一致性
+	country := strings.ToUpper(strings.TrimSpace(req.Country))
+	err := models.BatchUpdateCountry(req.IDs, country)
+	if err != nil {
+		utils.FailWithMsg(c, "批量更新国家代码失败")
+		return
+	}
+	utils.OkWithMsg(c, "批量更新国家代码成功")
+}
+
 // 获取所有分组列表
 func GetGroups(c *gin.Context) {
 	var node models.Node

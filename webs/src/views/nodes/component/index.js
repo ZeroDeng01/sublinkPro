@@ -6,6 +6,7 @@ export { default as BatchDialerProxyDialog } from './BatchDialerProxyDialog';
 export { default as BatchTagDialog } from './BatchTagDialog';
 export { default as BatchRemoveTagDialog } from './BatchRemoveTagDialog';
 export { default as BatchSourceDialog } from './BatchSourceDialog';
+export { default as BatchCountryDialog } from './BatchCountryDialog';
 
 // Node check profile components
 export { default as ProfileSelectDialog } from './ProfileSelectDialog';
