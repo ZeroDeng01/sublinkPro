@@ -918,29 +918,50 @@ func generateProxyLink(proxy protocol.Proxy) string {
 		port := int(proxy.Port)
 		name := proxy.Name
 		query := url.Values{}
+
+		// 基本参数
 		if proxy.Network != "" {
 			query.Set("type", proxy.Network)
 		}
-		if proxy.Tls {
+
+		// security参数（TLS/Reality/none）
+		if len(proxy.Reality_opts) > 0 {
+			query.Set("security", "reality")
+			if pbk, ok := proxy.Reality_opts["public-key"].(string); ok && pbk != "" {
+				query.Set("pbk", pbk)
+			}
+			if sid, ok := proxy.Reality_opts["short-id"].(string); ok && sid != "" {
+				query.Set("sid", sid)
+			}
+		} else if proxy.Tls {
 			query.Set("security", "tls")
 		} else {
 			query.Set("security", "none")
 		}
+
+		// TLS相关参数
 		if proxy.Servername != "" {
 			query.Set("sni", proxy.Servername)
 		}
 		if proxy.Client_fingerprint != "" {
 			query.Set("fp", proxy.Client_fingerprint)
 		}
+		if len(proxy.Alpn) > 0 {
+			query.Set("alpn", strings.Join(proxy.Alpn, ","))
+		}
+
+		// VLESS特有参数
 		if proxy.Flow != "" {
 			query.Set("flow", proxy.Flow)
 		}
 		if proxy.Skip_cert_verify {
 			query.Set("allowInsecure", "1")
 		}
-		if len(proxy.Alpn) > 0 {
-			query.Set("alpn", strings.Join(proxy.Alpn, ","))
+		if proxy.Packet_encoding != "" {
+			query.Set("packetEncoding", proxy.Packet_encoding)
 		}
+
+		// ws传输层参数
 		if len(proxy.Ws_opts) > 0 {
 			if path, ok := proxy.Ws_opts["path"].(string); ok && path != "" {
 				query.Set("path", path)
@@ -950,17 +971,59 @@ func generateProxyLink(proxy protocol.Proxy) string {
 					query.Set("host", host)
 				}
 			}
-		}
-		if len(proxy.Reality_opts) > 0 {
-			if pbk, ok := proxy.Reality_opts["public-key"].(string); ok && pbk != "" {
-				query.Set("pbk", pbk)
+			if ed, ok := proxy.Ws_opts["max-early-data"].(int); ok && ed > 0 {
+				query.Set("ed", strconv.Itoa(ed))
 			}
-			if sid, ok := proxy.Reality_opts["short-id"].(string); ok && sid != "" {
-				query.Set("sid", sid)
+			if edh, ok := proxy.Ws_opts["early-data-header-name"].(string); ok && edh != "" {
+				query.Set("eh", edh)
+			}
+			if hup, ok := proxy.Ws_opts["v2ray-http-upgrade"].(bool); ok && hup {
+				query.Set("httpUpgrade", "1")
+			}
+			if hupfo, ok := proxy.Ws_opts["v2ray-http-upgrade-fast-open"].(bool); ok && hupfo {
+				query.Set("httpUpgradeFastOpen", "1")
 			}
 		}
+
+		// h2传输层参数
+		if len(proxy.H2_opts) > 0 {
+			if path, ok := proxy.H2_opts["path"].(string); ok && path != "" {
+				query.Set("path", path)
+			}
+			if hosts, ok := proxy.H2_opts["host"].([]string); ok && len(hosts) > 0 {
+				query.Set("host", hosts[0])
+			}
+			if host, ok := proxy.H2_opts["host"].([]interface{}); ok && len(host) > 0 {
+				if h, ok := host[0].(string); ok {
+					query.Set("host", h)
+				}
+			}
+		}
+
+		// http传输层参数
+		if len(proxy.Http_opts) > 0 {
+			if method, ok := proxy.Http_opts["method"].(string); ok && method != "" {
+				query.Set("method", method)
+			}
+			if paths, ok := proxy.Http_opts["path"].([]string); ok && len(paths) > 0 {
+				query.Set("path", paths[0])
+			}
+			if paths, ok := proxy.Http_opts["path"].([]interface{}); ok && len(paths) > 0 {
+				if p, ok := paths[0].(string); ok {
+					query.Set("path", p)
+				}
+			}
+			if headers, ok := proxy.Http_opts["headers"].(map[string]interface{}); ok {
+				if hosts, ok := headers["Host"].([]interface{}); ok && len(hosts) > 0 {
+					if h, ok := hosts[0].(string); ok {
+						query.Set("host", h)
+					}
+				}
+			}
+		}
+
+		// grpc传输层参数
 		if len(proxy.Grpc_opts) > 0 {
-			query.Set("security", "reality")
 			if sn, ok := proxy.Grpc_opts["grpc-service-name"].(string); ok && sn != "" {
 				query.Set("serviceName", sn)
 			}
@@ -968,6 +1031,7 @@ func generateProxyLink(proxy protocol.Proxy) string {
 				query.Set("mode", "multi")
 			}
 		}
+
 		queryStr := query.Encode()
 		if queryStr != "" {
 			return fmt.Sprintf("vless://%s@%s:%d?%s#%s", uuid, server, port, queryStr, name)

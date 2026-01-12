@@ -102,6 +102,10 @@ type Proxy struct {
 	Allowed_ips []string `yaml:"allowed-ips,omitempty"` // 允许的 IP 段
 	Version     int      `yaml:"version,omitempty"`     // 版本
 	Token       string   `yaml:"token,omitempty"`       // Tuic 令牌v4
+	// VLESS 特有字段
+	Packet_encoding string                 `yaml:"packet-encoding,omitempty"` // VLESS packet-encoding (xudp/packetaddr)
+	H2_opts         map[string]interface{} `yaml:"h2-opts,omitempty"`         // HTTP/2 传输层选项
+	Http_opts       map[string]interface{} `yaml:"http-opts,omitempty"`       // HTTP 传输层选项
 }
 
 type ProxyGroup struct {
@@ -321,35 +325,98 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		if vless.Name == "" {
 			vless.Name = fmt.Sprintf("%s:%s", vless.Server, utils.GetPortString(vless.Port))
 		}
+
+		// ws-opts 完整配置
 		ws_opts := map[string]interface{}{
 			"path": vless.Query.Path,
 			"headers": map[string]interface{}{
 				"Host": vless.Query.Host,
 			},
 		}
+		// 添加ws传输层的额外参数
+		if vless.Query.MaxEarlyData > 0 {
+			ws_opts["max-early-data"] = vless.Query.MaxEarlyData
+		}
+		if vless.Query.EarlyDataHeader != "" {
+			ws_opts["early-data-header-name"] = vless.Query.EarlyDataHeader
+		}
+		if vless.Query.HttpUpgrade == 1 {
+			ws_opts["v2ray-http-upgrade"] = true
+		}
+		if vless.Query.HttpUpgradeFastOpen == 1 {
+			ws_opts["v2ray-http-upgrade-fast-open"] = true
+		}
+
+		// h2-opts 完整配置
+		h2_opts := map[string]interface{}{}
+		if vless.Query.Host != "" {
+			h2_opts["host"] = []string{vless.Query.Host}
+		}
+		if vless.Query.Path != "" {
+			h2_opts["path"] = vless.Query.Path
+		}
+
+		// http-opts 完整配置
+		http_opts := map[string]interface{}{}
+		if vless.Query.Method != "" {
+			http_opts["method"] = vless.Query.Method
+		}
+		if vless.Query.Path != "" {
+			http_opts["path"] = []string{vless.Query.Path}
+		}
+		if vless.Query.Host != "" {
+			http_opts["headers"] = map[string]interface{}{
+				"Host": []string{vless.Query.Host},
+			}
+		}
+
+		// grpc-opts 完整配置
+		grpc_opts := map[string]interface{}{
+			"grpc-service-name": vless.Query.ServiceName,
+		}
+		if vless.Query.Mode != "" {
+			grpc_opts["grpc-mode"] = vless.Query.Mode
+		} else if vless.Query.ServiceName != "" {
+			grpc_opts["grpc-mode"] = "gun" // 默认gun模式
+		}
+
+		// reality-opts 配置
 		reality_opts := map[string]interface{}{
 			"public-key": vless.Query.Pbk,
 			"short-id":   vless.Query.Sid,
 		}
-		grpc_opts := map[string]interface{}{
-			"grpc-mode":         "gun",
-			"grpc-service-name": vless.Query.ServiceName,
-		}
-		if vless.Query.Mode == "multi" {
-			grpc_opts["grpc-mode"] = "multi"
-		}
+
+		// 删除空值
 		DeleteOpts(ws_opts)
-		DeleteOpts(reality_opts)
+		DeleteOpts(h2_opts)
+		DeleteOpts(http_opts)
 		DeleteOpts(grpc_opts)
+		DeleteOpts(reality_opts)
+
+		// TLS判断
 		tls := false
-		if vless.Query.Security != "" {
+		if vless.Query.Security != "" && vless.Query.Security != "none" {
 			tls = true
 		}
-		if vless.Query.Security == "none" {
-			tls = false
-		}
+
 		// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
 		skipCert := config.Cert || vless.Query.AllowInsecure == 1
+
+		// 根据传输层类型选择对应的opts
+		var finalWsOpts, finalH2Opts, finalHttpOpts, finalGrpcOpts map[string]interface{}
+		switch vless.Query.Type {
+		case "ws":
+			finalWsOpts = ws_opts
+		case "h2":
+			finalH2Opts = h2_opts
+		case "http":
+			finalHttpOpts = http_opts
+		case "grpc":
+			finalGrpcOpts = grpc_opts
+		default:
+			// tcp或其他类型不需要传输层opts
+		}
+
 		return Proxy{
 			Name:               vless.Name,
 			Type:               "vless",
@@ -361,9 +428,12 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Network:            vless.Query.Type,
 			Flow:               vless.Query.Flow,
 			Alpn:               vless.Query.Alpn,
-			Ws_opts:            ws_opts,
+			Packet_encoding:    vless.Query.PacketEncoding,
+			Ws_opts:            finalWsOpts,
+			H2_opts:            finalH2Opts,
+			Http_opts:          finalHttpOpts,
+			Grpc_opts:          finalGrpcOpts,
 			Reality_opts:       reality_opts,
-			Grpc_opts:          grpc_opts,
 			Udp:                config.Udp,
 			Skip_cert_verify:   skipCert,
 			Tls:                tls,

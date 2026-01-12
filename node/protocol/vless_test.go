@@ -111,3 +111,101 @@ func TestVlessSpecialCharacters(t *testing.T) {
 		})
 	}
 }
+
+// TestVlessV2rayFormat 测试 v2ray 格式 VLESS 链接解析（明文URL，非base64）
+func TestVlessV2rayFormat(t *testing.T) {
+	// 典型的v2ray格式VLESS链接
+	testCases := []struct {
+		name     string
+		url      string
+		expected VLESSQuery
+	}{
+		{
+			name: "WebSocket传输层",
+			url:  "vless://12345678-1234-1234-1234-123456789abc@example.com:443?encryption=none&security=tls&type=ws&host=cdn.example.com&path=%2Fvless&sni=example.com&fp=chrome#测试节点",
+			expected: VLESSQuery{
+				Security:   "tls",
+				Encryption: "none",
+				Type:       "ws",
+				Host:       "cdn.example.com",
+				Path:       "/vless",
+				Sni:        "example.com",
+				Fp:         "chrome",
+			},
+		},
+		{
+			name: "Reality配置",
+			url:  "vless://12345678-1234-1234-1234-123456789abc@example.com:443?encryption=none&security=reality&type=tcp&flow=xtls-rprx-vision&pbk=testpublickey&sid=testshortid&sni=example.com&fp=chrome#Reality节点",
+			expected: VLESSQuery{
+				Security: "reality",
+				Type:     "tcp",
+				Flow:     "xtls-rprx-vision",
+				Pbk:      "testpublickey",
+				Sid:      "testshortid",
+				Sni:      "example.com",
+				Fp:       "chrome",
+			},
+		},
+		{
+			name: "gRPC传输层",
+			url:  "vless://12345678-1234-1234-1234-123456789abc@example.com:443?encryption=none&security=tls&type=grpc&serviceName=mygrpc&mode=gun#gRPC节点",
+			expected: VLESSQuery{
+				Security:    "tls",
+				Type:        "grpc",
+				ServiceName: "mygrpc",
+				Mode:        "gun",
+			},
+		},
+		{
+			name: "H2传输层",
+			url:  "vless://12345678-1234-1234-1234-123456789abc@example.com:443?encryption=none&security=tls&type=h2&host=example.com&path=%2Fh2path#H2节点",
+			expected: VLESSQuery{
+				Security: "tls",
+				Type:     "h2",
+				Host:     "example.com",
+				Path:     "/h2path",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			decoded, err := DecodeVLESSURL(tc.url)
+			if err != nil {
+				t.Fatalf("解码失败: %v", err)
+			}
+
+			assertEqualString(t, "Security", tc.expected.Security, decoded.Query.Security)
+			assertEqualString(t, "Type", tc.expected.Type, decoded.Query.Type)
+			if tc.expected.Host != "" {
+				assertEqualString(t, "Host", tc.expected.Host, decoded.Query.Host)
+			}
+			if tc.expected.Path != "" {
+				assertEqualString(t, "Path", tc.expected.Path, decoded.Query.Path)
+			}
+			if tc.expected.Flow != "" {
+				assertEqualString(t, "Flow", tc.expected.Flow, decoded.Query.Flow)
+			}
+			if tc.expected.Pbk != "" {
+				assertEqualString(t, "Pbk", tc.expected.Pbk, decoded.Query.Pbk)
+			}
+			if tc.expected.ServiceName != "" {
+				assertEqualString(t, "ServiceName", tc.expected.ServiceName, decoded.Query.ServiceName)
+			}
+
+			t.Logf("✓ %s 测试通过", tc.name)
+		})
+	}
+}
+
+// TestVlessPacketEncoding 测试 packet-encoding 参数
+func TestVlessPacketEncoding(t *testing.T) {
+	url := "vless://12345678-1234-1234-1234-123456789abc@example.com:443?encryption=none&security=tls&type=tcp&packetEncoding=xudp#xudp节点"
+	decoded, err := DecodeVLESSURL(url)
+	if err != nil {
+		t.Fatalf("解码失败: %v", err)
+	}
+
+	assertEqualString(t, "PacketEncoding", "xudp", decoded.Query.PacketEncoding)
+	t.Logf("✓ packet-encoding 测试通过")
+}
