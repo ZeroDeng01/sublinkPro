@@ -237,9 +237,34 @@ export default function SubscriptionList() {
     setSnackbar({ open: true, message, severity });
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    showMessage('已复制到剪贴板');
+  const copyToClipboard = async (text) => {
+    try {
+      // 优先使用现代 Clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        showMessage('已复制到剪贴板');
+        return;
+      }
+      // 备用方案：使用传统的 execCommand
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (successful) {
+        showMessage('已复制到剪贴板');
+      } else {
+        showMessage('复制失败，请手动复制', 'error');
+      }
+    } catch (error) {
+      console.error('复制失败:', error);
+      showMessage('复制失败，请手动复制', 'error');
+    }
   };
 
   // === 订阅操作 ===
@@ -768,9 +793,9 @@ export default function SubscriptionList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -786,9 +811,9 @@ export default function SubscriptionList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
