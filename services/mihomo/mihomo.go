@@ -15,9 +15,22 @@ import (
 	"time"
 
 	"github.com/metacubex/mihomo/adapter"
+	"github.com/metacubex/mihomo/component/resolver"
 	"github.com/metacubex/mihomo/constant"
 	"gopkg.in/yaml.v3"
 )
+
+// init 初始化 mihomo 配置
+// 启用 IPv6 支持，等同于 config.yaml 中的 ipv6: true
+func init() {
+	resolver.DisableIPv6 = false
+}
+
+// SetIPv6 动态设置是否支持 IPv6 （todo：备用，防止以后可以单独设置机场或者节点是否支持ipv6）
+// enable: true 启用 IPv6，false 禁用 IPv6
+func SetIPv6(enable bool) {
+	resolver.DisableIPv6 = !enable
+}
 
 // GetMihomoAdapter creates a Mihomo Proxy Adapter from a node link
 func GetMihomoAdapter(nodeLink string) (constant.Proxy, error) {
@@ -60,7 +73,6 @@ func GetMihomoAdapter(nodeLink string) (constant.Proxy, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create mihomo adapter error: %v", err)
 	}
-
 	return proxyAdapter, nil
 }
 
