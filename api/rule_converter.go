@@ -275,10 +275,10 @@ func generateClashProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) str
 		}
 
 		// Include-All 模式逻辑：
-		// - 开启模式 (enableIncludeAll=true)：需要包含节点的组使用 include-all + filter，客户端自动匹配
-		// - 关闭模式 (enableIncludeAll=false)：proxies 留空，由系统按顺序追加节点
-		if g.IncludeAll && enableIncludeAll {
-			// 开启模式：使用 include-all + filter，不遵循系统排序
+		// - 有正则过滤器时：强制启用 include-all（filter 参数依赖 include-all）
+		// - 开启模式 (enableIncludeAll=true) + .* 通配符：使用 include-all，客户端自动匹配
+		// - 关闭模式 (enableIncludeAll=false) + 无正则：proxies 留空，由系统按顺序追加节点
+		if g.Filter != "" || (g.IncludeAll && enableIncludeAll) {
 			lines = append(lines, "    include-all: true")
 			if g.Filter != "" {
 				lines = append(lines, fmt.Sprintf("    filter: %s", g.Filter))
@@ -564,9 +564,10 @@ func generateSurgeProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) str
 		}
 
 		// Include-All 模式逻辑：
-		// - 开启模式：需要包含节点的组使用 include-all-proxies + filter
-		// - 关闭模式：proxies 留空，由 DecodeSurge 追加节点
-		useIncludeAll := g.IncludeAll && enableIncludeAll
+		// - 有正则过滤器时：强制启用 include-all（filter 参数依赖 include-all）
+		// - 开启模式 + .* 通配符：使用 include-all-proxies，客户端自动匹配
+		// - 关闭模式 + 无正则：proxies 留空，由 DecodeSurge 追加节点
+		useIncludeAll := g.Filter != "" || (g.IncludeAll && enableIncludeAll)
 
 		if g.Type == "url-test" || g.Type == "fallback" {
 			url := g.URL
