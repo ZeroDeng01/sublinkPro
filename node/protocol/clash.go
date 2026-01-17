@@ -216,7 +216,12 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		}
 		// 处理 SS 插件
 		if ss.Plugin.Name != "" {
-			proxy.Plugin = ss.Plugin.Name
+			// 插件名称映射：SS 链接中的 "simple-obfs"/"obfs-local" 在 Clash 中应该是 "obfs"
+			pluginName := ss.Plugin.Name
+			if pluginName == "simple-obfs" || pluginName == "obfs-local" {
+				pluginName = "obfs"
+			}
+			proxy.Plugin = pluginName
 			proxy.Plugin_opts = convertSSPluginOpts(ss.Plugin)
 		}
 

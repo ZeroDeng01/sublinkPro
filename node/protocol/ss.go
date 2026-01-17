@@ -343,8 +343,13 @@ func ConvertProxyToSs(proxy Proxy) Ss {
 
 	// 处理插件信息
 	if proxy.Plugin != "" {
+		// 插件名称映射：Clash 中的 "obfs" 在 SS 链接中应该是 "simple-obfs"
+		pluginName := proxy.Plugin
+		if pluginName == "obfs" {
+			pluginName = "simple-obfs"
+		}
 		ss.Plugin = SsPlugin{
-			Name: proxy.Plugin,
+			Name: pluginName,
 		}
 		if proxy.Plugin_opts != nil {
 			if mode, ok := proxy.Plugin_opts["mode"].(string); ok {
