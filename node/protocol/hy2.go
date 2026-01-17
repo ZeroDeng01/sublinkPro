@@ -9,20 +9,21 @@ import (
 )
 
 type HY2 struct {
-	Password     string
-	Host         string
-	Port         interface{}
-	MPort        string
-	Insecure     int
-	Peer         string
-	Auth         string
-	UpMbps       int
-	DownMbps     int
-	ALPN         []string
-	Name         string
-	Sni          string
-	Obfs         string
-	ObfsPassword string
+	Password          string
+	Host              string
+	Port              interface{}
+	MPort             string
+	Insecure          int
+	Peer              string
+	Auth              string
+	UpMbps            int
+	DownMbps          int
+	ALPN              []string
+	Name              string
+	Sni               string
+	Obfs              string
+	ObfsPassword      string
+	ClientFingerprint string // 客户端指纹
 }
 
 // 开发者测试 CallHy 调用
@@ -63,6 +64,12 @@ func EncodeHY2URL(hy2 HY2) string {
 	q.Set("sni", hy2.Sni)
 	q.Set("obfs", hy2.Obfs)
 	q.Set("obfs-password", hy2.ObfsPassword)
+	// 客户端指纹参数
+	q.Set("fp", hy2.ClientFingerprint)
+	// alpn 参数支持
+	if len(hy2.ALPN) > 0 {
+		q.Set("alpn", strings.Join(hy2.ALPN, ","))
+	}
 	// 检查query是否有空值，有的话删除
 	for k, v := range q {
 		if v[0] == "" || v[0] == "0" {
@@ -105,6 +112,7 @@ func DecodeHY2URL(s string) (HY2, error) {
 	sni := u.Query().Get("sni")
 	obfs := u.Query().Get("obfs")
 	obfsPassword := u.Query().Get("obfs-password")
+	clientFingerprint := u.Query().Get("fp")
 	name := u.Fragment
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if name == "" {
@@ -123,21 +131,56 @@ func DecodeHY2URL(s string) (HY2, error) {
 		fmt.Println("sni:", sni)
 		fmt.Println("obfs:", obfs)
 		fmt.Println("obfsPassword:", obfsPassword)
+		fmt.Println("fp:", clientFingerprint)
 		fmt.Println("name:", name)
 	}
 	return HY2{
-		Password:     password,
-		Host:         server,
-		Port:         port,
-		MPort:        mport,
-		Insecure:     insecure,
-		Auth:         auth,
-		UpMbps:       upMbps,
-		DownMbps:     downMbps,
-		ALPN:         alpn,
-		Name:         name,
-		Sni:          sni,
-		Obfs:         obfs,
-		ObfsPassword: obfsPassword,
+		Password:          password,
+		Host:              server,
+		Port:              port,
+		MPort:             mport,
+		Insecure:          insecure,
+		Auth:              auth,
+		UpMbps:            upMbps,
+		DownMbps:          downMbps,
+		ALPN:              alpn,
+		Name:              name,
+		Sni:               sni,
+		Obfs:              obfs,
+		ObfsPassword:      obfsPassword,
+		ClientFingerprint: clientFingerprint,
 	}, nil
+}
+
+// ConvertProxyToHy2 将 Proxy 结构体转换为 HY2 结构体
+// 用于从 Clash 格式的代理配置生成 Hysteria2 链接
+func ConvertProxyToHy2(proxy Proxy) HY2 {
+	hy2 := HY2{
+		Password:          proxy.Password,
+		Host:              proxy.Server,
+		Port:              int(proxy.Port),
+		MPort:             proxy.Ports,
+		Auth:              proxy.Auth_str,
+		UpMbps:            proxy.Up,
+		DownMbps:          proxy.Down,
+		ALPN:              proxy.Alpn,
+		Name:              proxy.Name,
+		Sni:               proxy.Sni,
+		Obfs:              proxy.Obfs,
+		ObfsPassword:      proxy.Obfs_password,
+		ClientFingerprint: proxy.Client_fingerprint,
+		Peer:              proxy.Peer,
+	}
+
+	// 处理跳过证书验证
+	if proxy.Skip_cert_verify {
+		hy2.Insecure = 1
+	}
+
+	// 如果SNI为空，尝试使用Servername
+	if hy2.Sni == "" && proxy.Servername != "" {
+		hy2.Sni = proxy.Servername
+	}
+
+	return hy2
 }

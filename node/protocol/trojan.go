@@ -27,6 +27,9 @@ type TrojanQuery struct {
 	Sni           string   `json:"sni,omitempty"`
 	Host          string   `json:"host,omitempty"`
 	Flow          string   `json:"flow,omitempty"`
+	// Reality 参数
+	Pbk string `json:"pbk,omitempty"` // Reality public-key
+	Sid string `json:"sid,omitempty"` // Reality short-id
 }
 
 // 开发者测试
@@ -69,15 +72,24 @@ func EncodeTrojanURL(t Trojan) string {
 	q.Set("path", t.Query.Path)
 	q.Set("security", t.Query.Security)
 	q.Set("fp", t.Query.Fp)
-	// q.Set("alpn", t.Query.Alpn)
+	// alpn 参数支持
+	if len(t.Query.Alpn) > 0 {
+		q.Set("alpn", strings.Join(t.Query.Alpn, ","))
+	}
 	q.Set("host", t.Query.Host)
 	q.Set("flow", t.Query.Flow)
+	// Reality 参数支持
+	q.Set("pbk", t.Query.Pbk)
+	q.Set("sid", t.Query.Sid)
 	// 检查query是否有空值，有的话删除
 	for k, v := range q {
 		if v[0] == "" {
 			delete(q, k)
-			// fmt.Printf("k: %v, v: %v\n", k, v)
 		}
+	}
+	// allowInsecure为0时也删除
+	if t.Query.AllowInsecure == 0 {
+		delete(q, "allowInsecure")
 	}
 	// 如果没有设置name,则使用hostname:port
 	if t.Name == "" {
@@ -167,4 +179,53 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 		Name: name,
 		Type: "trojan",
 	}, nil
+}
+
+// ConvertProxyToTrojan 将 Proxy 结构体转换为 Trojan 结构体
+// 用于从 Clash 格式的代理配置生成 Trojan 链接
+func ConvertProxyToTrojan(proxy Proxy) Trojan {
+	trojan := Trojan{
+		Password: proxy.Password,
+		Hostname: proxy.Server,
+		Port:     int(proxy.Port),
+		Name:     proxy.Name,
+		Type:     "trojan",
+		Query: TrojanQuery{
+			Sni:  proxy.Sni,
+			Type: proxy.Network,
+			Fp:   proxy.Client_fingerprint,
+			Flow: proxy.Flow,
+			Alpn: proxy.Alpn,
+			Peer: proxy.Peer,
+		},
+	}
+
+	// 处理跳过证书验证
+	if proxy.Skip_cert_verify {
+		trojan.Query.AllowInsecure = 1
+	}
+
+	// 处理 ws_opts
+	if len(proxy.Ws_opts) > 0 {
+		if path, ok := proxy.Ws_opts["path"].(string); ok {
+			trojan.Query.Path = path
+		}
+		if headers, ok := proxy.Ws_opts["headers"].(map[string]interface{}); ok {
+			if host, ok := headers["Host"].(string); ok {
+				trojan.Query.Host = host
+			}
+		}
+	}
+
+	// 处理 Reality 参数
+	if len(proxy.Reality_opts) > 0 {
+		if pbk, ok := proxy.Reality_opts["public-key"].(string); ok {
+			trojan.Query.Pbk = pbk
+		}
+		if sid, ok := proxy.Reality_opts["short-id"].(string); ok {
+			trojan.Query.Sid = sid
+		}
+	}
+
+	return trojan
 }

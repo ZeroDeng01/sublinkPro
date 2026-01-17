@@ -29,25 +29,31 @@ func EncodeSSRURL(s Ssr) string {
 	/*编码格式
 	ssr://base64(host:port:protocol:method:obfs:base64(password)/?obfsparam=base64(obfsparam)&protoparam=base64(protoparam)&remarks=base64(remarks)&group=base64(group))
 	*/
-	obfsparam := "obfsparam=" + utils.Base64Encode(s.Qurey.Obfsparam)
-	remarks := "remarks=" + utils.Base64Encode(s.Qurey.Remarks)
-	// 如果没有备注默认使用服务器+端口作为备注
-	if s.Qurey.Remarks == "" {
-		server_port := utils.Base64Encode(s.Server + ":" + utils.GetPortString(s.Port))
-		remarks = fmt.Sprintf("remarks=%s", server_port)
+	// 构建查询参数，仅添加非空参数
+	var queryParts []string
+
+	// remarks 必须有，如果没有则使用服务器+端口
+	remarks := s.Qurey.Remarks
+	if remarks == "" {
+		remarks = s.Server + ":" + utils.GetPortString(s.Port)
 	}
-	param := fmt.Sprintf("%s:%s:%s:%s:%s:%s/?%s&%s",
+	queryParts = append(queryParts, "remarks="+utils.Base64Encode(remarks))
+
+	// obfsparam 仅在非空时添加
+	if s.Qurey.Obfsparam != "" {
+		queryParts = append(queryParts, "obfsparam="+utils.Base64Encode(s.Qurey.Obfsparam))
+	}
+
+	param := fmt.Sprintf("%s:%s:%s:%s:%s:%s/?%s",
 		s.Server,
 		utils.GetPortString(s.Port),
 		s.Protocol,
 		s.Method,
 		s.Obfs,
 		utils.Base64Encode(s.Password),
-		obfsparam,
-		remarks,
+		strings.Join(queryParts, "&"),
 	)
 	return "ssr://" + utils.Base64Encode(param)
-
 }
 
 // ssr解码
@@ -142,4 +148,22 @@ type Ssr struct {
 type Ssrquery struct {
 	Obfsparam string
 	Remarks   string
+}
+
+// ConvertProxyToSsr 将 Proxy 结构体转换为 Ssr 结构体
+// 用于从 Clash 格式的代理配置生成 SSR 链接
+func ConvertProxyToSsr(proxy Proxy) Ssr {
+	return Ssr{
+		Server:   proxy.Server,
+		Port:     int(proxy.Port),
+		Protocol: proxy.Protocol,
+		Method:   proxy.Cipher,
+		Obfs:     proxy.Obfs,
+		Password: proxy.Password,
+		Qurey: Ssrquery{
+			Obfsparam: proxy.Obfs_password,
+			Remarks:   proxy.Name,
+		},
+		Type: "ssr",
+	}
 }

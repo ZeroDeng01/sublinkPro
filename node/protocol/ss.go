@@ -326,3 +326,50 @@ func DecodeSSURL(s string) (Ss, error) {
 		Plugin: plugin,
 	}, nil
 }
+
+// ConvertProxyToSs 将 Proxy 结构体转换为 Ss 结构体
+// 用于从 Clash 格式的代理配置生成 SS 链接
+func ConvertProxyToSs(proxy Proxy) Ss {
+	ss := Ss{
+		Param: Param{
+			Cipher:   proxy.Cipher,
+			Password: proxy.Password,
+		},
+		Server: proxy.Server,
+		Port:   int(proxy.Port),
+		Name:   proxy.Name,
+		Type:   "ss",
+	}
+
+	// 处理插件信息
+	if proxy.Plugin != "" {
+		ss.Plugin = SsPlugin{
+			Name: proxy.Plugin,
+		}
+		if proxy.Plugin_opts != nil {
+			if mode, ok := proxy.Plugin_opts["mode"].(string); ok {
+				ss.Plugin.Mode = mode
+			}
+			if host, ok := proxy.Plugin_opts["host"].(string); ok {
+				ss.Plugin.Host = host
+			}
+			if path, ok := proxy.Plugin_opts["path"].(string); ok {
+				ss.Plugin.Path = path
+			}
+			if tls, ok := proxy.Plugin_opts["tls"].(bool); ok {
+				ss.Plugin.Tls = tls
+			}
+			if mux, ok := proxy.Plugin_opts["mux"].(bool); ok {
+				ss.Plugin.Mux = mux
+			}
+			if password, ok := proxy.Plugin_opts["password"].(string); ok {
+				ss.Plugin.Password = password
+			}
+			if version, ok := proxy.Plugin_opts["version"].(int); ok {
+				ss.Plugin.Version = version
+			}
+		}
+	}
+
+	return ss
+}

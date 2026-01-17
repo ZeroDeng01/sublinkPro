@@ -10,7 +10,6 @@ import (
 	"math"
 	"net"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"sublink/models"
@@ -800,405 +799,44 @@ func generateProxyLink(proxy protocol.Proxy) string {
 
 	switch strings.ToLower(proxy.Type) {
 	case "ss":
-		// 构建 Ss 结构体，使用 EncodeSSURL 生成包含插件信息的完整链接
-		ss := protocol.Ss{
-			Param: protocol.Param{
-				Cipher:   proxy.Cipher,
-				Password: proxy.Password,
-			},
-			Server: proxy.Server,
-			Port:   int(proxy.Port),
-			Name:   proxy.Name,
-			Type:   "ss",
-		}
-		// 处理插件信息：从 Proxy 的 Plugin 和 Plugin_opts 转换为 SsPlugin
-		if proxy.Plugin != "" {
-			ss.Plugin = protocol.SsPlugin{
-				Name: proxy.Plugin,
-			}
-			if proxy.Plugin_opts != nil {
-				if mode, ok := proxy.Plugin_opts["mode"].(string); ok {
-					ss.Plugin.Mode = mode
-				}
-				if host, ok := proxy.Plugin_opts["host"].(string); ok {
-					ss.Plugin.Host = host
-				}
-				if path, ok := proxy.Plugin_opts["path"].(string); ok {
-					ss.Plugin.Path = path
-				}
-				if tls, ok := proxy.Plugin_opts["tls"].(bool); ok {
-					ss.Plugin.Tls = tls
-				}
-				if mux, ok := proxy.Plugin_opts["mux"].(bool); ok {
-					ss.Plugin.Mux = mux
-				}
-				if password, ok := proxy.Plugin_opts["password"].(string); ok {
-					ss.Plugin.Password = password
-				}
-				if version, ok := proxy.Plugin_opts["version"].(int); ok {
-					ss.Plugin.Version = version
-				}
-			}
-		}
-		return protocol.EncodeSSURL(ss)
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeSSURL(protocol.ConvertProxyToSs(proxy))
 
 	case "ssr":
-		server := proxy.Server
-		port := int(proxy.Port)
-		proxyProtocol := proxy.Protocol
-		method := proxy.Cipher
-		obfs := proxy.Obfs
-		password := base64.StdEncoding.EncodeToString([]byte(proxy.Password))
-		remarks := base64.StdEncoding.EncodeToString([]byte(proxy.Name))
-		obfsparam := ""
-		if proxy.Obfs_password != "" {
-			obfsparam = base64.StdEncoding.EncodeToString([]byte(proxy.Obfs_password))
-		}
-		params := fmt.Sprintf("remarks=%s", remarks)
-		if obfsparam != "" {
-			params += fmt.Sprintf("&obfsparam=%s", obfsparam)
-		}
-		data := fmt.Sprintf("%s:%d:%s:%s:%s:%s/?%s", server, port, proxyProtocol, method, obfs, password, params)
-		return fmt.Sprintf("ssr://%s", base64.StdEncoding.EncodeToString([]byte(data)))
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeSSRURL(protocol.ConvertProxyToSsr(proxy))
 
 	case "trojan":
-		password := proxy.Password
-		server := proxy.Server
-		port := int(proxy.Port)
-		name := proxy.Name
-		query := url.Values{}
-		if proxy.Sni != "" {
-			query.Set("sni", proxy.Sni)
-		}
-		if proxy.Peer != "" {
-			query.Set("peer", proxy.Peer)
-		}
-		if proxy.Skip_cert_verify {
-			query.Set("allowInsecure", "1")
-		}
-		if proxy.Network != "" {
-			query.Set("type", proxy.Network)
-		}
-		if proxy.Client_fingerprint != "" {
-			query.Set("fp", proxy.Client_fingerprint)
-		}
-		if len(proxy.Alpn) > 0 {
-			query.Set("alpn", strings.Join(proxy.Alpn, ","))
-		}
-		if proxy.Flow != "" {
-			query.Set("flow", proxy.Flow)
-		}
-		if len(proxy.Ws_opts) > 0 {
-			if path, ok := proxy.Ws_opts["path"].(string); ok && path != "" {
-				query.Set("path", path)
-			}
-			if headers, ok := proxy.Ws_opts["headers"].(map[string]interface{}); ok {
-				if host, ok := headers["Host"].(string); ok && host != "" {
-					query.Set("host", host)
-				}
-			}
-		}
-		if len(proxy.Reality_opts) > 0 {
-			if publicKey, ok := proxy.Reality_opts["public-key"].(string); ok && publicKey != "" {
-				query.Set("pbk", publicKey)
-			}
-			if shortId, ok := proxy.Reality_opts["short-id"].(string); ok && shortId != "" {
-				query.Set("sid", shortId)
-			}
-		}
-		queryStr := query.Encode()
-		if queryStr != "" {
-			return fmt.Sprintf("trojan://%s@%s:%d?%s#%s", password, server, port, queryStr, name)
-		}
-		return fmt.Sprintf("trojan://%s@%s:%d#%s", password, server, port, name)
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeTrojanURL(protocol.ConvertProxyToTrojan(proxy))
 
 	case "vmess":
-		vmessObj := map[string]interface{}{
-			"v":    "2",
-			"ps":   proxy.Name,
-			"add":  proxy.Server,
-			"port": proxy.Port,
-			"id":   proxy.Uuid,
-			"scy":  proxy.Cipher,
-		}
-		if proxy.AlterId != "" {
-			aid, _ := strconv.Atoi(proxy.AlterId)
-			vmessObj["aid"] = aid
-		} else {
-			vmessObj["aid"] = 0
-		}
-		vmessObj["net"] = proxy.Network
-		if proxy.Tls {
-			vmessObj["tls"] = "tls"
-		} else {
-			vmessObj["tls"] = "none"
-		}
-		if len(proxy.Ws_opts) > 0 {
-			if path, ok := proxy.Ws_opts["path"].(string); ok {
-				vmessObj["path"] = path
-			}
-			if headers, ok := proxy.Ws_opts["headers"].(map[string]interface{}); ok {
-				if host, ok := headers["Host"].(string); ok {
-					vmessObj["host"] = host
-				}
-			}
-		}
-		jsonData, _ := json.Marshal(vmessObj)
-		return fmt.Sprintf("vmess://%s", base64.StdEncoding.EncodeToString(jsonData))
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeVmessURL(protocol.ConvertProxyToVmess(proxy))
 
 	case "vless":
-		uuid := proxy.Uuid
-		server := proxy.Server
-		port := int(proxy.Port)
-		name := proxy.Name
-		query := url.Values{}
-
-		// 基本参数
-		if proxy.Network != "" {
-			query.Set("type", proxy.Network)
-		}
-
-		// security参数（TLS/Reality/none）
-		if len(proxy.Reality_opts) > 0 {
-			query.Set("security", "reality")
-			if pbk, ok := proxy.Reality_opts["public-key"].(string); ok && pbk != "" {
-				query.Set("pbk", pbk)
-			}
-			if sid, ok := proxy.Reality_opts["short-id"].(string); ok && sid != "" {
-				query.Set("sid", sid)
-			}
-		} else if proxy.Tls {
-			query.Set("security", "tls")
-		} else {
-			query.Set("security", "none")
-		}
-
-		// TLS相关参数
-		if proxy.Servername != "" {
-			query.Set("sni", proxy.Servername)
-		}
-		if proxy.Client_fingerprint != "" {
-			query.Set("fp", proxy.Client_fingerprint)
-		}
-		if len(proxy.Alpn) > 0 {
-			query.Set("alpn", strings.Join(proxy.Alpn, ","))
-		}
-
-		// VLESS特有参数
-		if proxy.Flow != "" {
-			query.Set("flow", proxy.Flow)
-		}
-		if proxy.Skip_cert_verify {
-			query.Set("allowInsecure", "1")
-		}
-		if proxy.Packet_encoding != "" {
-			query.Set("packetEncoding", proxy.Packet_encoding)
-		}
-
-		// ws传输层参数
-		if len(proxy.Ws_opts) > 0 {
-			if path, ok := proxy.Ws_opts["path"].(string); ok && path != "" {
-				query.Set("path", path)
-			}
-			if headers, ok := proxy.Ws_opts["headers"].(map[string]interface{}); ok {
-				if host, ok := headers["Host"].(string); ok && host != "" {
-					query.Set("host", host)
-				}
-			}
-			if ed, ok := proxy.Ws_opts["max-early-data"].(int); ok && ed > 0 {
-				query.Set("ed", strconv.Itoa(ed))
-			}
-			if edh, ok := proxy.Ws_opts["early-data-header-name"].(string); ok && edh != "" {
-				query.Set("eh", edh)
-			}
-			if hup, ok := proxy.Ws_opts["v2ray-http-upgrade"].(bool); ok && hup {
-				query.Set("httpUpgrade", "1")
-			}
-			if hupfo, ok := proxy.Ws_opts["v2ray-http-upgrade-fast-open"].(bool); ok && hupfo {
-				query.Set("httpUpgradeFastOpen", "1")
-			}
-		}
-
-		// h2传输层参数
-		if len(proxy.H2_opts) > 0 {
-			if path, ok := proxy.H2_opts["path"].(string); ok && path != "" {
-				query.Set("path", path)
-			}
-			if hosts, ok := proxy.H2_opts["host"].([]string); ok && len(hosts) > 0 {
-				query.Set("host", hosts[0])
-			}
-			if host, ok := proxy.H2_opts["host"].([]interface{}); ok && len(host) > 0 {
-				if h, ok := host[0].(string); ok {
-					query.Set("host", h)
-				}
-			}
-		}
-
-		// http传输层参数
-		if len(proxy.Http_opts) > 0 {
-			if method, ok := proxy.Http_opts["method"].(string); ok && method != "" {
-				query.Set("method", method)
-			}
-			if paths, ok := proxy.Http_opts["path"].([]string); ok && len(paths) > 0 {
-				query.Set("path", paths[0])
-			}
-			if paths, ok := proxy.Http_opts["path"].([]interface{}); ok && len(paths) > 0 {
-				if p, ok := paths[0].(string); ok {
-					query.Set("path", p)
-				}
-			}
-			if headers, ok := proxy.Http_opts["headers"].(map[string]interface{}); ok {
-				if hosts, ok := headers["Host"].([]interface{}); ok && len(hosts) > 0 {
-					if h, ok := hosts[0].(string); ok {
-						query.Set("host", h)
-					}
-				}
-			}
-		}
-
-		// grpc传输层参数
-		if len(proxy.Grpc_opts) > 0 {
-			if sn, ok := proxy.Grpc_opts["grpc-service-name"].(string); ok && sn != "" {
-				query.Set("serviceName", sn)
-			}
-			if mode, ok := proxy.Grpc_opts["grpc-mode"].(string); ok && mode == "multi" {
-				query.Set("mode", "multi")
-			}
-		}
-
-		queryStr := query.Encode()
-		if queryStr != "" {
-			return fmt.Sprintf("vless://%s@%s:%d?%s#%s", uuid, server, port, queryStr, name)
-		}
-		return fmt.Sprintf("vless://%s@%s:%d#%s", uuid, server, port, name)
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeVLESSURL(protocol.ConvertProxyToVless(proxy))
 
 	case "hysteria":
-		server := proxy.Server
-		port := int(proxy.Port)
-		name := proxy.Name
-		query := url.Values{}
-		query.Set("protocol", "udp")
-		if proxy.Auth_str != "" {
-			query.Set("auth", proxy.Auth_str)
-		}
-		if proxy.Peer != "" {
-			query.Set("peer", proxy.Peer)
-		}
-		if proxy.Skip_cert_verify {
-			query.Set("insecure", "1")
-		}
-		if proxy.Up > 0 {
-			query.Set("upmbps", strconv.Itoa(proxy.Up))
-		}
-		if proxy.Down > 0 {
-			query.Set("downmbps", strconv.Itoa(proxy.Down))
-		}
-		if len(proxy.Alpn) > 0 {
-			query.Set("alpn", strings.Join(proxy.Alpn, ","))
-		}
-		return fmt.Sprintf("hysteria://%s:%d?%s#%s", server, port, query.Encode(), name)
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeHYURL(protocol.ConvertProxyToHy(proxy))
 
 	case "hysteria2":
-		server := proxy.Server
-		port := int(proxy.Port)
-		auth := proxy.Password
-		name := proxy.Name
-		query := url.Values{}
-		if proxy.Sni != "" {
-			query.Set("sni", proxy.Sni)
-		} else if proxy.Servername != "" {
-			query.Set("sni", proxy.Servername)
-		}
-		if proxy.Skip_cert_verify {
-			query.Set("insecure", "1")
-		}
-		if proxy.Obfs != "" {
-			query.Set("obfs", proxy.Obfs)
-		}
-		if proxy.Obfs_password != "" {
-			query.Set("obfs-password", proxy.Obfs_password)
-		}
-		if len(proxy.Alpn) > 0 {
-			query.Set("alpn", strings.Join(proxy.Alpn, ","))
-		}
-		if proxy.Ports != "" {
-			query.Set("mport", proxy.Ports)
-		}
-		if proxy.Up > 0 {
-			query.Set("upmbps", strconv.Itoa(proxy.Up))
-		}
-		if proxy.Down > 0 {
-			query.Set("downmbps", strconv.Itoa(proxy.Down))
-		}
-		if proxy.Client_fingerprint != "" {
-			query.Set("fp", proxy.Client_fingerprint)
-		}
-		return fmt.Sprintf("hysteria2://%s@%s:%d?%s#%s", auth, server, port, query.Encode(), name)
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeHY2URL(protocol.ConvertProxyToHy2(proxy))
 
 	case "tuic":
-		uuid := proxy.Uuid
-		password := proxy.Password
-		server := proxy.Server
-		port := int(proxy.Port)
-		name := proxy.Name
-		query := url.Values{}
-		if proxy.Sni != "" {
-			query.Set("sni", proxy.Sni)
-		} else if proxy.Servername != "" {
-			query.Set("sni", proxy.Servername)
-		}
-		if proxy.Congestion_controller != "" {
-			query.Set("congestion_control", proxy.Congestion_controller)
-		}
-		if len(proxy.Alpn) > 0 {
-			query.Set("alpn", strings.Join(proxy.Alpn, ","))
-		}
-		if proxy.Udp_relay_mode != "" {
-			query.Set("udp_relay_mode", proxy.Udp_relay_mode)
-		}
-		if proxy.Disable_sni {
-			query.Set("disable_sni", "1")
-		}
-		// 处理TLS和客户端指纹
-		if proxy.Tls {
-			query.Set("security", "tls")
-		}
-		if proxy.Client_fingerprint != "" {
-			query.Set("fp", proxy.Client_fingerprint)
-		}
-		// 跳过证书验证
-		if proxy.Skip_cert_verify {
-			query.Set("insecure", "1")
-		}
-		return fmt.Sprintf("tuic://%s:%s@%s:%d?%s#%s", uuid, password, server, port, query.Encode(), name)
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeTuicURL(protocol.ConvertProxyToTuic(proxy))
 
 	case "anytls":
-		password := proxy.Password
-		server := proxy.Server
-		port := int(proxy.Port)
-		name := proxy.Name
-		query := url.Values{}
-		if proxy.Sni != "" {
-			query.Set("sni", proxy.Sni)
-		}
-		if proxy.Skip_cert_verify {
-			query.Set("insecure", "1")
-		}
-		if proxy.Client_fingerprint != "" {
-			query.Set("fp", proxy.Client_fingerprint)
-		}
-		return fmt.Sprintf("anytls://%s@%s:%d?%s#%s", password, server, port, query.Encode(), name)
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeAnyTLSURL(protocol.ConvertProxyToAnyTLS(proxy))
 
 	case "socks5":
-		username := proxy.Username
-		password := proxy.Password
-		server := proxy.Server
-		port := int(proxy.Port)
-		name := proxy.Name
-		if username != "" && password != "" {
-			return fmt.Sprintf("socks5://%s:%s@%s:%d#%s", username, password, server, port, name)
-		}
-		return fmt.Sprintf("socks5://%s:%d#%s", server, port, name)
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeSocks5URL(protocol.ConvertProxyToSocks5(proxy))
 
 	default:
 		return ""

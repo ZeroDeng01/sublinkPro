@@ -91,3 +91,17 @@ func EncodeAnyTLSURL(a AnyTLS) string {
 	}
 	return u.String()
 }
+
+// ConvertProxyToAnyTLS 将 Proxy 结构体转换为 AnyTLS 结构体
+// 用于从 Clash 格式的代理配置生成 AnyTLS 链接
+func ConvertProxyToAnyTLS(proxy Proxy) AnyTLS {
+	return AnyTLS{
+		Name:              proxy.Name,
+		Server:            proxy.Server,
+		Port:              int(proxy.Port),
+		Password:          proxy.Password,
+		SkipCertVerify:    proxy.Skip_cert_verify,
+		SNI:               proxy.Sni,
+		ClientFingerprint: proxy.Client_fingerprint,
+	}
+}

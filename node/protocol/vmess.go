@@ -3,6 +3,7 @@ package protocol
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"sublink/utils"
 )
@@ -95,4 +96,63 @@ func DecodeVMESSURL(s string) (Vmess, error) {
 		fmt.Println("备注", vmess.Ps)
 	}
 	return vmess, nil
+}
+
+// ConvertProxyToVmess 将 Proxy 结构体转换为 Vmess 结构体
+// 用于从 Clash 格式的代理配置生成 VMess 链接
+func ConvertProxyToVmess(proxy Proxy) Vmess {
+	vmess := Vmess{
+		Add:  proxy.Server,
+		Port: int(proxy.Port),
+		Id:   proxy.Uuid,
+		Ps:   proxy.Name,
+		Scy:  proxy.Cipher,
+		Net:  proxy.Network,
+		V:    "2",
+	}
+
+	// 处理 alterId
+	if proxy.AlterId != "" {
+		if aid, err := strconv.Atoi(proxy.AlterId); err == nil {
+			vmess.Aid = aid
+		}
+	} else {
+		vmess.Aid = 0
+	}
+
+	// 处理 TLS
+	if proxy.Tls {
+		vmess.Tls = "tls"
+	} else {
+		vmess.Tls = "none"
+	}
+
+	// 处理 ws_opts
+	if len(proxy.Ws_opts) > 0 {
+		if path, ok := proxy.Ws_opts["path"].(string); ok {
+			vmess.Path = path
+		}
+		if headers, ok := proxy.Ws_opts["headers"].(map[string]interface{}); ok {
+			if host, ok := headers["Host"].(string); ok {
+				vmess.Host = host
+			}
+		}
+	}
+
+	// 处理 Sni
+	if proxy.Sni != "" {
+		vmess.Sni = proxy.Sni
+	} else if proxy.Servername != "" {
+		vmess.Sni = proxy.Servername
+	}
+
+	// 处理 alpn
+	if len(proxy.Alpn) > 0 {
+		vmess.Alpn = strings.Join(proxy.Alpn, ",")
+	}
+
+	// 处理客户端指纹
+	vmess.Fp = proxy.Client_fingerprint
+
+	return vmess
 }

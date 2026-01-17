@@ -168,3 +168,46 @@ func EncodeTuicURL(t Tuic) string {
 	}
 	return u.String()
 }
+
+// ConvertProxyToTuic 将 Proxy 结构体转换为 Tuic 结构体
+// 用于从 Clash 格式的代理配置生成 TUIC 链接
+func ConvertProxyToTuic(proxy Proxy) Tuic {
+	tuic := Tuic{
+		Name:               proxy.Name,
+		Password:           proxy.Password,
+		Host:               proxy.Server,
+		Port:               int(proxy.Port),
+		Uuid:               proxy.Uuid,
+		Congestion_control: proxy.Congestion_controller,
+		Alpn:               proxy.Alpn,
+		Udp_relay_mode:     proxy.Udp_relay_mode,
+		Tls:                proxy.Tls,
+		ClientFingerprint:  proxy.Client_fingerprint,
+		Version:            proxy.Version,
+		Token:              proxy.Token,
+	}
+
+	// 处理 Sni
+	if proxy.Sni != "" {
+		tuic.Sni = proxy.Sni
+	} else if proxy.Servername != "" {
+		tuic.Sni = proxy.Servername
+	}
+
+	// 处理 disable_sni
+	if proxy.Disable_sni {
+		tuic.Disable_sni = 1
+	}
+
+	// 处理跳过证书验证
+	if proxy.Skip_cert_verify {
+		tuic.Insecure = 1
+	}
+
+	// 设置默认版本
+	if tuic.Version == 0 {
+		tuic.Version = 5
+	}
+
+	return tuic
+}

@@ -73,3 +73,15 @@ func EncodeSocks5URL(s Socks5) string {
 	}
 	return u.String()
 }
+
+// ConvertProxyToSocks5 将 Proxy 结构体转换为 Socks5 结构体
+// 用于从 Clash 格式的代理配置生成 Socks5 链接
+func ConvertProxyToSocks5(proxy Proxy) Socks5 {
+	return Socks5{
+		Name:     proxy.Name,
+		Server:   proxy.Server,
+		Port:     int(proxy.Port),
+		Username: proxy.Username,
+		Password: proxy.Password,
+	}
+}

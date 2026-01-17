@@ -47,17 +47,21 @@ func EncodeHYURL(hy HY) string {
 		Fragment: hy.Name,
 	}
 	q := u.Query()
+	// protocol 参数，Hysteria 基于 UDP/QUIC
+	q.Set("protocol", "udp")
 	q.Set("insecure", strconv.Itoa(hy.Insecure))
 	q.Set("peer", hy.Peer)
 	q.Set("auth", hy.Auth)
 	q.Set("upmbps", strconv.Itoa(hy.UpMbps))
 	q.Set("downmbps", strconv.Itoa(hy.DownMbps))
-	// q.Set("alpn", hy.ALPN)
+	// alpn 参数支持
+	if len(hy.ALPN) > 0 {
+		q.Set("alpn", strings.Join(hy.ALPN, ","))
+	}
 	// 检查query是否有空值，有的话删除
 	for k, v := range q {
-		if v[0] == "" {
+		if v[0] == "" || v[0] == "0" {
 			delete(q, k)
-			// fmt.Printf("k: %v, v: %v\n", k, v)
 		}
 	}
 	u.RawQuery = q.Encode()
@@ -113,4 +117,26 @@ func DecodeHYURL(s string) (HY, error) {
 		ALPN:     alpn,
 		Name:     name,
 	}, nil
+}
+
+// ConvertProxyToHy 将 Proxy 结构体转换为 HY 结构体
+// 用于从 Clash 格式的代理配置生成 Hysteria 链接
+func ConvertProxyToHy(proxy Proxy) HY {
+	hy := HY{
+		Host:     proxy.Server,
+		Port:     int(proxy.Port),
+		Auth:     proxy.Auth_str,
+		UpMbps:   proxy.Up,
+		DownMbps: proxy.Down,
+		ALPN:     proxy.Alpn,
+		Peer:     proxy.Peer,
+		Name:     proxy.Name,
+	}
+
+	// 处理跳过证书验证
+	if proxy.Skip_cert_verify {
+		hy.Insecure = 1
+	}
+
+	return hy
 }

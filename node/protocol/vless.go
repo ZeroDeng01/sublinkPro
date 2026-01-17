@@ -298,3 +298,115 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 		},
 	}, nil
 }
+
+// ConvertProxyToVless 将 Proxy 结构体转换为 VLESS 结构体
+// 用于从 Clash 格式的代理配置生成 VLESS 链接
+func ConvertProxyToVless(proxy Proxy) VLESS {
+	vless := VLESS{
+		Name:   proxy.Name,
+		Uuid:   proxy.Uuid,
+		Server: proxy.Server,
+		Port:   int(proxy.Port),
+		Query: VLESSQuery{
+			Sni:            proxy.Servername,
+			Fp:             proxy.Client_fingerprint,
+			Flow:           proxy.Flow,
+			Alpn:           proxy.Alpn,
+			Type:           proxy.Network,
+			PacketEncoding: proxy.Packet_encoding,
+		},
+	}
+
+	// 处理跳过证书验证
+	if proxy.Skip_cert_verify {
+		vless.Query.AllowInsecure = 1
+	}
+
+	// 处理 security 参数（TLS/Reality/none）
+	if len(proxy.Reality_opts) > 0 {
+		vless.Query.Security = "reality"
+		if pbk, ok := proxy.Reality_opts["public-key"].(string); ok {
+			vless.Query.Pbk = pbk
+		}
+		if sid, ok := proxy.Reality_opts["short-id"].(string); ok {
+			vless.Query.Sid = sid
+		}
+	} else if proxy.Tls {
+		vless.Query.Security = "tls"
+	} else {
+		vless.Query.Security = "none"
+	}
+
+	// 处理 ws_opts
+	if len(proxy.Ws_opts) > 0 {
+		if path, ok := proxy.Ws_opts["path"].(string); ok {
+			vless.Query.Path = path
+		}
+		if headers, ok := proxy.Ws_opts["headers"].(map[string]interface{}); ok {
+			if host, ok := headers["Host"].(string); ok {
+				vless.Query.Host = host
+			}
+		}
+		if ed, ok := proxy.Ws_opts["max-early-data"].(int); ok {
+			vless.Query.MaxEarlyData = ed
+		}
+		if edh, ok := proxy.Ws_opts["early-data-header-name"].(string); ok {
+			vless.Query.EarlyDataHeader = edh
+		}
+		if hup, ok := proxy.Ws_opts["v2ray-http-upgrade"].(bool); ok && hup {
+			vless.Query.HttpUpgrade = 1
+		}
+		if hupfo, ok := proxy.Ws_opts["v2ray-http-upgrade-fast-open"].(bool); ok && hupfo {
+			vless.Query.HttpUpgradeFastOpen = 1
+		}
+	}
+
+	// 处理 h2_opts
+	if len(proxy.H2_opts) > 0 {
+		if path, ok := proxy.H2_opts["path"].(string); ok {
+			vless.Query.Path = path
+		}
+		if hosts, ok := proxy.H2_opts["host"].([]string); ok && len(hosts) > 0 {
+			vless.Query.Host = hosts[0]
+		}
+		if host, ok := proxy.H2_opts["host"].([]interface{}); ok && len(host) > 0 {
+			if h, ok := host[0].(string); ok {
+				vless.Query.Host = h
+			}
+		}
+	}
+
+	// 处理 http_opts
+	if len(proxy.Http_opts) > 0 {
+		if method, ok := proxy.Http_opts["method"].(string); ok {
+			vless.Query.Method = method
+		}
+		if paths, ok := proxy.Http_opts["path"].([]string); ok && len(paths) > 0 {
+			vless.Query.Path = paths[0]
+		}
+		if paths, ok := proxy.Http_opts["path"].([]interface{}); ok && len(paths) > 0 {
+			if p, ok := paths[0].(string); ok {
+				vless.Query.Path = p
+			}
+		}
+		if headers, ok := proxy.Http_opts["headers"].(map[string]interface{}); ok {
+			if hosts, ok := headers["Host"].([]interface{}); ok && len(hosts) > 0 {
+				if h, ok := hosts[0].(string); ok {
+					vless.Query.Host = h
+				}
+			}
+		}
+	}
+
+	// 处理 grpc_opts
+	if len(proxy.Grpc_opts) > 0 {
+		if sn, ok := proxy.Grpc_opts["grpc-service-name"].(string); ok {
+			vless.Query.ServiceName = sn
+		}
+		if mode, ok := proxy.Grpc_opts["grpc-mode"].(string); ok && mode == "multi" {
+			vless.Query.Mode = "multi"
+		}
+	}
+
+	return vless
+}
