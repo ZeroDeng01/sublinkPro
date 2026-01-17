@@ -800,13 +800,47 @@ func generateProxyLink(proxy protocol.Proxy) string {
 
 	switch strings.ToLower(proxy.Type) {
 	case "ss":
-		method := proxy.Cipher
-		password := proxy.Password
-		server := proxy.Server
-		port := int(proxy.Port)
-		name := proxy.Name
-		encoded := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", method, password)))
-		return fmt.Sprintf("ss://%s@%s:%d#%s", encoded, server, port, name)
+		// 构建 Ss 结构体，使用 EncodeSSURL 生成包含插件信息的完整链接
+		ss := protocol.Ss{
+			Param: protocol.Param{
+				Cipher:   proxy.Cipher,
+				Password: proxy.Password,
+			},
+			Server: proxy.Server,
+			Port:   int(proxy.Port),
+			Name:   proxy.Name,
+			Type:   "ss",
+		}
+		// 处理插件信息：从 Proxy 的 Plugin 和 Plugin_opts 转换为 SsPlugin
+		if proxy.Plugin != "" {
+			ss.Plugin = protocol.SsPlugin{
+				Name: proxy.Plugin,
+			}
+			if proxy.Plugin_opts != nil {
+				if mode, ok := proxy.Plugin_opts["mode"].(string); ok {
+					ss.Plugin.Mode = mode
+				}
+				if host, ok := proxy.Plugin_opts["host"].(string); ok {
+					ss.Plugin.Host = host
+				}
+				if path, ok := proxy.Plugin_opts["path"].(string); ok {
+					ss.Plugin.Path = path
+				}
+				if tls, ok := proxy.Plugin_opts["tls"].(bool); ok {
+					ss.Plugin.Tls = tls
+				}
+				if mux, ok := proxy.Plugin_opts["mux"].(bool); ok {
+					ss.Plugin.Mux = mux
+				}
+				if password, ok := proxy.Plugin_opts["password"].(string); ok {
+					ss.Plugin.Password = password
+				}
+				if version, ok := proxy.Plugin_opts["version"].(int); ok {
+					ss.Plugin.Version = version
+				}
+			}
+		}
+		return protocol.EncodeSSURL(ss)
 
 	case "ssr":
 		server := proxy.Server

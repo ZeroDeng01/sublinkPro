@@ -216,6 +216,9 @@ func EncodeSSURL(s Ss) string {
 
 // encodeSSPlugin 将插件配置编码为 SIP002 格式字符串
 // 格式: plugin_name;opt1=val1;opt2=val2
+// 注意：不同插件使用不同的参数名
+// - simple-obfs/obfs-local: 使用 obfs 和 obfs-host
+// - v2ray-plugin 等: 使用 mode 和 host
 func encodeSSPlugin(plugin SsPlugin) string {
 	if plugin.Name == "" {
 		return ""
@@ -224,12 +227,23 @@ func encodeSSPlugin(plugin SsPlugin) string {
 	var parts []string
 	parts = append(parts, escapePluginValue(plugin.Name))
 
-	// 按结构体字段输出选项
+	// 根据插件类型选择正确的参数名
+	isSimpleObfs := plugin.Name == "simple-obfs" || plugin.Name == "obfs-local"
+
+	// 按结构体字段输出选项，根据插件类型使用不同的参数名
 	if plugin.Mode != "" {
-		parts = append(parts, "mode="+escapePluginValue(plugin.Mode))
+		if isSimpleObfs {
+			parts = append(parts, "obfs="+escapePluginValue(plugin.Mode))
+		} else {
+			parts = append(parts, "mode="+escapePluginValue(plugin.Mode))
+		}
 	}
 	if plugin.Host != "" {
-		parts = append(parts, "host="+escapePluginValue(plugin.Host))
+		if isSimpleObfs {
+			parts = append(parts, "obfs-host="+escapePluginValue(plugin.Host))
+		} else {
+			parts = append(parts, "host="+escapePluginValue(plugin.Host))
+		}
 	}
 	if plugin.Path != "" {
 		parts = append(parts, "path="+escapePluginValue(plugin.Path))
@@ -291,6 +305,11 @@ func DecodeSSURL(s string) (Ss, error) {
 			fmt.Println("Plugin:", plugin.Name)
 			fmt.Println("Plugin Mode:", plugin.Mode)
 			fmt.Println("Plugin Host:", plugin.Host)
+			fmt.Println("Plugin Path:", plugin.Path)
+			fmt.Println("Plugin Tls:", plugin.Tls)
+			fmt.Println("Plugin Mux:", plugin.Mux)
+			fmt.Println("Plugin Password:", plugin.Password)
+			fmt.Println("Plugin Version:", plugin.Version)
 		}
 
 	}
