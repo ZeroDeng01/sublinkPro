@@ -583,8 +583,23 @@ func GetSurge(c *gin.Context) {
 		c.Writer.WriteString(DecodeClash)
 		return
 	}
+	var domain string
+	if c.Request.TLS != nil {
+		domain = "https://" + host
+	} else {
+		domain = "http://" + host
+	}
+	proto := c.Request.Header.Get("X-Forwarded-Proto")
+	if proto != "" {
+		domain = proto + "://" + host
+	}
+
+	systemDomain, _ := models.GetSetting("system_domain")
+	if systemDomain != "" {
+		domain = systemDomain
+	}
 	// 否则就插入头部更新信息
-	interval := fmt.Sprintf("#!MANAGED-CONFIG %s interval=86400 strict=false", host+url)
+	interval := fmt.Sprintf("#!MANAGED-CONFIG %s interval=86400 strict=false", domain+url)
 	// 执行脚本
 	for _, script := range sub.ScriptsWithSort {
 		res, err := utils.RunScript(script.Content, DecodeClash, "surge")
