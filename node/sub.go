@@ -838,6 +838,10 @@ func generateProxyLink(proxy protocol.Proxy) string {
 		// 使用协议层函数统一生成链接
 		return protocol.EncodeSocks5URL(protocol.ConvertProxyToSocks5(proxy))
 
+	case "http":
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeHTTPURL(protocol.ConvertProxyToHTTP(proxy))
+
 	default:
 		return ""
 	}
@@ -890,6 +894,10 @@ func parseProtoFromLink(link string, protoType string) (interface{}, error) {
 		return protocol.DecodeAnyTLSURL(link)
 	case "socks5":
 		return protocol.DecodeSocks5URL(link)
+	case "http":
+		return protocol.DecodeHTTPURL(link)
+	case "https":
+		return protocol.DecodeHTTPURL(link)
 	default:
 		return nil, fmt.Errorf("unsupported protocol: %s", protoType)
 	}

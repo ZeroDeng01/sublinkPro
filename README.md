@@ -137,7 +137,7 @@ docker-compose up -d
 | 客户端 | 支持协议 |
 |:---|:---|
 | **v2ray** | base64 通用格式 |
-| **clash** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5 |
+| **clash** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS |
 | **surge** | ss, trojan, vmess, hy2, tuic |
 
 ---

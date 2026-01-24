@@ -190,7 +190,7 @@ func convertSSPluginOpts(plugin SsPlugin) map[string]interface{} {
 }
 
 // LinkToProxy 将单个节点链接转换为 Proxy 结构体
-// 支持 ss, ssr, trojan, vmess, vless, hysteria, hysteria2, tuic, anytls, socks5 等协议
+// 支持 ss, ssr, trojan, vmess, vless, hysteria, hysteria2, tuic, anytls, socks5, http, https 等协议
 func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 	Scheme := strings.ToLower(strings.Split(link.Url, "://")[0])
 	switch {
@@ -565,6 +565,25 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Username:     socks5.Username,
 			Password:     socks5.Password,
 			Dialer_proxy: link.DialerProxyName,
+		}, nil
+	case Scheme == "http" || Scheme == "https":
+		httpProxy, err := DecodeHTTPURL(link.Url)
+		if err != nil {
+			return Proxy{}, err
+		}
+		// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
+		skipCert := config.Cert || httpProxy.SkipCertVerify
+		return Proxy{
+			Name:             httpProxy.Name,
+			Type:             "http",
+			Server:           httpProxy.Server,
+			Port:             FlexPort(utils.GetPortInt(httpProxy.Port)),
+			Username:         httpProxy.Username,
+			Password:         httpProxy.Password,
+			Tls:              httpProxy.TLS,
+			Skip_cert_verify: skipCert,
+			Sni:              httpProxy.SNI,
+			Dialer_proxy:     link.DialerProxyName,
 		}, nil
 	case Scheme == "wg" || Scheme == "wireguard":
 		wg, err := DecodeWireGuardURL(link.Url)

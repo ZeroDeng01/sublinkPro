@@ -54,6 +54,8 @@ var registeredProtocols = []protocolRegistry{
 	{name: "anytls", label: "AnyTLS", color: "#20a84c", icon: "A", prefixes: []string{"anytls://"}, instance: AnyTLS{}},
 	{name: "socks5", label: "SOCKS5", color: "#116ea4", icon: "S", prefixes: []string{"socks5://"}, instance: Socks5{}},
 	{name: "socks", label: "SOCKS", color: "#dd4984", icon: "S", prefixes: []string{"socks://"}, instance: nil},
+	{name: "http", label: "HTTP", color: "#0288d1", icon: "H", prefixes: []string{"http://"}, instance: HTTP{}},
+	{name: "https", label: "HTTPS", color: "#0277bd", icon: "H", prefixes: []string{"https://"}, instance: HTTP{}},
 }
 
 // InitProtocolMeta 系统启动时调用，通过反射扫描所有协议结构体

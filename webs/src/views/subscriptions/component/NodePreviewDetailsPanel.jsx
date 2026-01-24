@@ -42,7 +42,9 @@ const protocolThemes = {
   Naive: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
   Reality: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
   SOCKS5: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
-  AnyTLS: 'linear-gradient(135deg, #96fbc4 0%, #f9f586 100%)'
+  AnyTLS: 'linear-gradient(135deg, #96fbc4 0%, #f9f586 100%)',
+  HTTP: 'linear-gradient(135deg, #42a5f5 0%, #1976d2 100%)',
+  HTTPS: 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)'
 };
 
 const defaultTheme = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
