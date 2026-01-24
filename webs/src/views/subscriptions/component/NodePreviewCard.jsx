@@ -27,7 +27,9 @@ const protocolThemes = {
   NaiveProxy: { bg: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)' },
   Reality: { bg: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)' },
   SOCKS5: { bg: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)' },
-  AnyTLS: { bg: 'linear-gradient(135deg, #047857 0%, #10b981 100%)' }
+  AnyTLS: { bg: 'linear-gradient(135deg, #047857 0%, #10b981 100%)' },
+  HTTP: { bg: 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)' },
+  HTTPS: { bg: 'linear-gradient(135deg, #01579b 0%, #0277bd 100%)' }
 };
 
 const defaultTheme = { bg: 'linear-gradient(135deg, #5046e5 0%, #7c3aed 100%)' };

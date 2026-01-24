@@ -65,6 +65,30 @@ func TestEmptyNameFallback(t *testing.T) {
 				return ss.Name, err
 			},
 		},
+		{
+			name:     "HTTP空名称后备",
+			protocol: "http",
+			encode: func() string {
+				h := HTTP{Server: "example.com", Port: 8080, Username: "user", Password: "pass", TLS: false}
+				return EncodeHTTPURL(h)
+			},
+			decode: func(s string) (string, error) {
+				h, err := DecodeHTTPURL(s)
+				return h.Name, err
+			},
+		},
+		{
+			name:     "HTTPS空名称后备",
+			protocol: "https",
+			encode: func() string {
+				h := HTTP{Server: "example.com", Port: 443, Username: "user", Password: "pass", TLS: true}
+				return EncodeHTTPURL(h)
+			},
+			decode: func(s string) (string, error) {
+				h, err := DecodeHTTPURL(s)
+				return h.Name, err
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -333,4 +357,149 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// TestHTTPProtocolIntegration 测试HTTP协议的完整集成
+func TestHTTPProtocolIntegration(t *testing.T) {
+	t.Run("HTTP基本功能", func(t *testing.T) {
+		original := HTTP{
+			Name:     "HTTP测试节点",
+			Server:   "example.com",
+			Port:     8080,
+			Username: "user",
+			Password: "pass",
+			TLS:      false,
+		}
+
+		encoded := EncodeHTTPURL(original)
+		decoded, err := DecodeHTTPURL(encoded)
+		if err != nil {
+			t.Fatalf("解码失败: %v", err)
+		}
+
+		assertEqualString(t, "Name", original.Name, decoded.Name)
+		assertEqualString(t, "Server", original.Server, decoded.Server)
+		assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
+		assertEqualString(t, "Username", original.Username, decoded.Username)
+		assertEqualString(t, "Password", original.Password, decoded.Password)
+		assertEqualBool(t, "TLS", original.TLS, decoded.TLS)
+		t.Log("✓ HTTP基本功能测试通过")
+	})
+
+	t.Run("HTTPS完整功能", func(t *testing.T) {
+		original := HTTP{
+			Name:           "HTTPS测试节点",
+			Server:         "example.com",
+			Port:           8443,
+			Username:       "user",
+			Password:       "pass",
+			TLS:            true,
+			SkipCertVerify: true,
+			SNI:            "example.com",
+		}
+
+		encoded := EncodeHTTPURL(original)
+		decoded, err := DecodeHTTPURL(encoded)
+		if err != nil {
+			t.Fatalf("解码失败: %v", err)
+		}
+
+		assertEqualString(t, "Name", original.Name, decoded.Name)
+		assertEqualString(t, "Server", original.Server, decoded.Server)
+		assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
+		assertEqualString(t, "Username", original.Username, decoded.Username)
+		assertEqualString(t, "Password", original.Password, decoded.Password)
+		assertEqualBool(t, "TLS", original.TLS, decoded.TLS)
+		assertEqualBool(t, "SkipCertVerify", original.SkipCertVerify, decoded.SkipCertVerify)
+		assertEqualString(t, "SNI", original.SNI, decoded.SNI)
+		t.Log("✓ HTTPS完整功能测试通过")
+	})
+
+	t.Run("HTTP到Clash Proxy转换", func(t *testing.T) {
+		httpNode := HTTP{
+			Name:     "HTTP到Clash",
+			Server:   "example.com",
+			Port:     8080,
+			Username: "user",
+			Password: "pass",
+			TLS:      false,
+		}
+
+		proxy := ConvertProxyToHTTP(Proxy{
+			Name:     httpNode.Name,
+			Type:     "http",
+			Server:   httpNode.Server,
+			Port:     FlexPort(toInt(httpNode.Port)),
+			Username: httpNode.Username,
+			Password: httpNode.Password,
+			Tls:      httpNode.TLS,
+		})
+
+		assertEqualString(t, "Name", httpNode.Name, proxy.Name)
+		assertEqualString(t, "Server", httpNode.Server, proxy.Server)
+		assertEqualIntInterface(t, "Port", httpNode.Port, proxy.Port)
+		assertEqualString(t, "Username", httpNode.Username, proxy.Username)
+		assertEqualString(t, "Password", httpNode.Password, proxy.Password)
+		assertEqualBool(t, "TLS", httpNode.TLS, proxy.TLS)
+		t.Log("✓ HTTP到Clash Proxy转换测试通过")
+	})
+
+	t.Run("HTTPS到Clash Proxy转换", func(t *testing.T) {
+		httpNode := HTTP{
+			Name:           "HTTPS到Clash",
+			Server:         "example.com",
+			Port:           8443,
+			Username:       "user",
+			Password:       "pass",
+			TLS:            true,
+			SkipCertVerify: true,
+			SNI:            "example.com",
+		}
+
+		proxy := ConvertProxyToHTTP(Proxy{
+			Name:             httpNode.Name,
+			Type:             "http",
+			Server:           httpNode.Server,
+			Port:             FlexPort(toInt(httpNode.Port)),
+			Username:         httpNode.Username,
+			Password:         httpNode.Password,
+			Tls:              httpNode.TLS,
+			Skip_cert_verify: httpNode.SkipCertVerify,
+			Sni:              httpNode.SNI,
+		})
+
+		assertEqualString(t, "Name", httpNode.Name, proxy.Name)
+		assertEqualString(t, "Server", httpNode.Server, proxy.Server)
+		assertEqualIntInterface(t, "Port", httpNode.Port, proxy.Port)
+		assertEqualString(t, "Username", httpNode.Username, proxy.Username)
+		assertEqualString(t, "Password", httpNode.Password, proxy.Password)
+		assertEqualBool(t, "TLS", httpNode.TLS, proxy.TLS)
+		assertEqualBool(t, "SkipCertVerify", httpNode.SkipCertVerify, proxy.SkipCertVerify)
+		assertEqualString(t, "SNI", httpNode.SNI, proxy.SNI)
+		t.Log("✓ HTTPS到Clash Proxy转换测试通过")
+	})
+
+	t.Run("HTTP协议元数据", func(t *testing.T) {
+		InitProtocolMeta()
+		meta := GetProtocolMeta("http")
+		if meta == nil {
+			t.Fatal("HTTP协议元数据未找到")
+		}
+
+		assertEqualString(t, "ProtocolName", "http", meta.Name)
+		assertEqualString(t, "ProtocolLabel", "HTTP", meta.Label)
+		t.Log("✓ HTTP协议元数据测试通过")
+	})
+
+	t.Run("HTTPS协议元数据", func(t *testing.T) {
+		InitProtocolMeta()
+		meta := GetProtocolMeta("https")
+		if meta == nil {
+			t.Fatal("HTTPS协议元数据未找到")
+		}
+
+		assertEqualString(t, "ProtocolName", "https", meta.Name)
+		assertEqualString(t, "ProtocolLabel", "HTTPS", meta.Label)
+		t.Log("✓ HTTPS协议元数据测试通过")
+	})
 }

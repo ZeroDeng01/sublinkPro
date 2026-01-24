@@ -89,6 +89,10 @@ func updateLinkWithNewName(link string, newName string) (string, error) {
 		return updateSocks5Name(link, newName)
 	case strings.HasPrefix(linkLower, "anytls://"):
 		return updateAnyTLSName(link, newName)
+	case strings.HasPrefix(linkLower, "http://"):
+		return updateHTTPName(link, newName)
+	case strings.HasPrefix(linkLower, "https://"):
+		return updateHTTPName(link, newName)
 	default:
 		return "", fmt.Errorf("不支持的协议类型")
 	}
@@ -184,4 +188,13 @@ func updateAnyTLSName(link string, newName string) (string, error) {
 	}
 	anytls.Name = newName
 	return protocol.EncodeAnyTLSURL(anytls), nil
+}
+
+func updateHTTPName(link string, newName string) (string, error) {
+	httpProxy, err := protocol.DecodeHTTPURL(link)
+	if err != nil {
+		return "", err
+	}
+	httpProxy.Name = newName
+	return protocol.EncodeHTTPURL(httpProxy), nil
 }

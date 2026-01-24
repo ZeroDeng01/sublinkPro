@@ -169,6 +169,19 @@ func NodeUpdadte(c *gin.Context) {
 		Node.LinkAddress = socks5.Server + ":" + utils.GetPortString(socks5.Port)
 		Node.LinkHost = socks5.Server
 		Node.LinkPort = utils.GetPortString(socks5.Port)
+	case u.Scheme == "http" || u.Scheme == "https":
+		httpProxy, err := protocol.DecodeHTTPURL(link)
+		if err != nil {
+			utils.Error("解析节点链接失败: %v", err)
+			return
+		}
+		if Node.Name == "" {
+			Node.Name = httpProxy.Name
+		}
+		Node.LinkName = httpProxy.Name
+		Node.LinkAddress = httpProxy.Server + ":" + utils.GetPortString(httpProxy.Port)
+		Node.LinkHost = httpProxy.Server
+		Node.LinkPort = utils.GetPortString(httpProxy.Port)
 	case u.Scheme == "wg" || u.Scheme == "wireguard":
 		wg, err := protocol.DecodeWireGuardURL(link)
 		if err != nil {

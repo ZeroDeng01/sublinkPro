@@ -198,8 +198,8 @@ func GetV2ray(c *gin.Context) {
 			}
 			baselist += strings.Join(links, "\n") + "\n"
 			continue
-		//如果是订阅转换（以 http:// 或 https:// 开头）
-		case strings.HasPrefix(v.Link, "http://") || strings.HasPrefix(v.Link, "https://"):
+		//如果是订阅转换（以 http:// 或 https:// 开头，但不是HTTP/HTTPS代理节点）
+		case (strings.HasPrefix(v.Link, "http://") || strings.HasPrefix(v.Link, "https://")) && !protocol.IsHTTPLink(v.Link):
 			resp, err := http.Get(v.Link)
 			if err != nil {
 				utils.Error("Error getting link: %v", err)
@@ -385,8 +385,8 @@ func GetClash(c *gin.Context) {
 				})
 			}
 			continue
-		//如果是订阅转换（以 http:// 或 https:// 开头）
-		case strings.HasPrefix(v.Link, "http://") || strings.HasPrefix(v.Link, "https://"):
+		//如果是订阅转换（以 http:// 或 https:// 开头，但不是HTTP/HTTPS代理节点）
+		case (strings.HasPrefix(v.Link, "http://") || strings.HasPrefix(v.Link, "https://")) && !protocol.IsHTTPLink(v.Link):
 			resp, err := http.Get(v.Link)
 			if err != nil {
 				utils.Error("获取包含链接失败: %v", err)
@@ -534,8 +534,8 @@ func GetSurge(c *gin.Context) {
 			}
 			urls = append(urls, links...)
 			continue
-		//如果是订阅转换（以 http:// 或 https:// 开头）
-		case strings.HasPrefix(v.Link, "http://") || strings.HasPrefix(v.Link, "https://"):
+		//如果是订阅转换（以 http:// 或 https:// 开头，但不是HTTP/HTTPS代理节点）
+		case (strings.HasPrefix(v.Link, "http://") || strings.HasPrefix(v.Link, "https://")) && !protocol.IsHTTPLink(v.Link):
 			resp, err := http.Get(v.Link)
 			if err != nil {
 				utils.Error("Error getting link: %v", err)

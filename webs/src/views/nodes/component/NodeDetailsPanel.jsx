@@ -87,7 +87,9 @@ const getProtocolInfo = (link, protocolMeta) => {
     'reality://': { name: 'Reality', color: '#c2185b', icon: 'R' },
     'socks5://': { name: 'Socks5', color: '#116ea4ff', icon: 'S' },
     'socks://': { name: 'Socks', color: '#dd4984ff', icon: 'S' },
-    'anytls://': { name: 'AnyTLS', color: '#20a84c', icon: 'A' }
+    'anytls://': { name: 'AnyTLS', color: '#20a84c', icon: 'A' },
+    'http://': { name: 'HTTP', color: '#0288d1', icon: 'H' },
+    'https://': { name: 'HTTPS', color: '#0277bd', icon: 'H' }
   };
 
   const linkLower = link.toLowerCase();

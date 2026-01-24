@@ -56,6 +56,12 @@ func ParseNodeLink(link string) (*ParsedNodeInfo, error) {
 	case strings.HasPrefix(linkLower, "socks5://"):
 		protocol = "socks5"
 		protoObj, err = DecodeSocks5URL(link)
+	case strings.HasPrefix(linkLower, "http://"):
+		protocol = "http"
+		protoObj, err = DecodeHTTPURL(link)
+	case strings.HasPrefix(linkLower, "https://"):
+		protocol = "https"
+		protoObj, err = DecodeHTTPURL(link)
 	case strings.HasPrefix(linkLower, "wireguard://"), strings.HasPrefix(linkLower, "wg://"):
 		protocol = "wireguard"
 		protoObj, err = DecodeWireGuardURL(link)
@@ -173,6 +179,10 @@ func UpdateNodeLinkFields(link string, fieldsJSON string) (string, error) {
 		return updateAnyTLSFields(link, fields)
 	case strings.HasPrefix(linkLower, "socks5://"):
 		return updateSocks5Fields(link, fields)
+	case strings.HasPrefix(linkLower, "http://"):
+		return updateHTTPFields(link, fields)
+	case strings.HasPrefix(linkLower, "https://"):
+		return updateHTTPFields(link, fields)
 	case strings.HasPrefix(linkLower, "wireguard://"), strings.HasPrefix(linkLower, "wg://"):
 		return updateWireGuardFields(link, fields)
 	default:
@@ -388,4 +398,16 @@ func updateWireGuardFields(link string, fields map[string]interface{}) (string, 
 		setFieldValue(v, path, val)
 	}
 	return EncodeWireGuardURL(wg), nil
+}
+
+func updateHTTPFields(link string, fields map[string]interface{}) (string, error) {
+	httpProxy, err := DecodeHTTPURL(link)
+	if err != nil {
+		return "", err
+	}
+	v := reflect.ValueOf(&httpProxy).Elem()
+	for path, val := range fields {
+		setFieldValue(v, path, val)
+	}
+	return EncodeHTTPURL(httpProxy), nil
 }

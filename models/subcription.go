@@ -1401,6 +1401,10 @@ func generateProtocolKey(link string, protoType string, fields []string) string 
 		protoObj, err = protocol.DecodeAnyTLSURL(link)
 	case "socks5":
 		protoObj, err = protocol.DecodeSocks5URL(link)
+	case "http":
+		protoObj, err = protocol.DecodeHTTPURL(link)
+	case "https":
+		protoObj, err = protocol.DecodeHTTPURL(link)
 	default:
 		return ""
 	}

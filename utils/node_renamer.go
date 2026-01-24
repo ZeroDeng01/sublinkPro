@@ -375,7 +375,7 @@ func RenameNodeLink(link string, newName string) string {
 	switch scheme {
 	case "vmess":
 		return renameVmessLink(link, newName)
-	case "vless", "trojan", "hy2", "hysteria2", "hysteria", "tuic", "anytls", "socks5":
+	case "vless", "trojan", "hy2", "hysteria2", "hysteria", "tuic", "anytls", "socks5", "http", "https":
 		return renameFragmentLink(link, newName)
 	case "ss":
 		return renameSSLink(link, newName)

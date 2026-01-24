@@ -35,7 +35,9 @@ const protocolColors = {
   naiveproxy: '#5d4037',
   anytls: '#20a84c',
   socks5: '#116ea4',
-  socks: '#dd4984'
+  socks: '#dd4984',
+  http: '#0288d1',
+  https: '#0277bd'
 };
 
 // 协议显示名称映射
@@ -52,7 +54,9 @@ const protocolLabels = {
   naiveproxy: 'NaiveProxy',
   anytls: 'AnyTLS',
   socks5: 'SOCKS5',
-  socks: 'SOCKS'
+  socks: 'SOCKS',
+  http: 'HTTP',
+  https: 'HTTPS'
 };
 
 /**
