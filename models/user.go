@@ -1,6 +1,8 @@
 package models
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"sublink/cache"
 	"sublink/database"
 	"sublink/utils"
@@ -141,4 +143,27 @@ func (user *User) Del() error {
 	}
 	userCache.Delete(user.ID)
 	return nil
+}
+
+// GenerateCredentialSign 生成凭证签名（用户名+密码hash 的 SHA256 前16位）
+// 用于 JWT 失效机制：密码或用户名变化后，签名自动失效
+func GenerateCredentialSign(username, passwordHash string) string {
+	h := sha256.Sum256([]byte(username + passwordHash))
+	return fmt.Sprintf("%x", h)[:16]
+}
+
+// VerifyCredentialSign 验证凭证签名
+// 通过用户名查找用户并验证签名是否匹配
+func VerifyCredentialSign(username, sign string) bool {
+	users := userCache.GetByIndex("username", username)
+	if len(users) == 0 {
+		// 缓存未命中时从数据库查询
+		var user User
+		if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
+			return false
+		}
+		userCache.Set(user.ID, user)
+		return GenerateCredentialSign(username, user.Password) == sign
+	}
+	return GenerateCredentialSign(username, users[0].Password) == sign
 }

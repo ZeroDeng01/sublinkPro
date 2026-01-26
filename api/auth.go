@@ -16,13 +16,15 @@ import (
 )
 
 // 获取token
-func GetToken(username string) (string, error) {
+func GetToken(user *models.User) (string, error) {
+	credentialSign := models.GenerateCredentialSign(user.Username, user.Password)
 	c := &middlewares.JwtClaims{
-		Username: username,
+		Username:       user.Username,
+		CredentialSign: credentialSign,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour * 14)), // 14天后过期
 			IssuedAt:  jwt.NewNumericDate(time.Now()),                          // 签发时间
-			Subject:   username,
+			Subject:   user.Username,
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, c)
@@ -131,7 +133,7 @@ func UserLogin(c *gin.Context) {
 	// 登录成功，清除失败记录
 	limiter.ClearFailures(ip)
 	// 生成token
-	token, err := GetToken(username)
+	token, err := GetToken(user)
 	if err != nil {
 		utils.Error("获取token失败: %v", err)
 		utils.FailWithMsg(c, "获取token失败")
@@ -205,7 +207,7 @@ func RememberLogin(c *gin.Context) {
 	}
 
 	// 生成新的 JWT token
-	token, err := GetToken(user.Username)
+	token, err := GetToken(user)
 	if err != nil {
 		utils.Error("获取token失败: %v", err)
 		utils.FailWithMsg(c, "获取token失败")

@@ -85,6 +85,13 @@ func UserSet(c *gin.Context) {
 	}
 	username, _ := c.Get("username")
 	user := &models.User{Username: username.(string)}
+
+	// 先查找用户获取ID
+	if err := user.Find(); err != nil {
+		utils.FailWithMsg(c, "用户不存在")
+		return
+	}
+
 	err := user.Set(&models.User{
 		Username: NewUsername,
 		Password: NewPassword,
@@ -94,9 +101,14 @@ func UserSet(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
+
+	// 清除该用户的所有记住密码令牌
+	if err := models.DeleteUserRememberTokens(user.ID); err != nil {
+		utils.Error("清除记住密码令牌失败: %v", err)
+	}
+
 	// 修改成功
 	utils.OkWithMsg(c, "修改成功")
-
 }
 
 // 修改密码
@@ -178,8 +190,13 @@ func UserUpdateProfile(c *gin.Context) {
 	username, _ := c.Get("username")
 	user := &models.User{Username: username.(string)}
 
+	// 查找用户获取ID
+	if err := user.Find(); err != nil {
+		utils.FailWithMsg(c, "用户不存在")
+		return
+	}
+
 	// 使用 map 更新字段，避免 GORM 忽略零值
-	// 这样可以更新 nickname 为空字符串
 	updates := map[string]interface{}{
 		"username": req.Username,
 		"nickname": req.Nickname,
@@ -189,6 +206,13 @@ func UserUpdateProfile(c *gin.Context) {
 		utils.Error("个人资料更新失败: %v", err)
 		utils.FailWithMsg(c, "个人资料更新失败: "+err.Error())
 		return
+	}
+
+	// 如果修改了用户名，需要清除 remember token
+	if req.Username != username.(string) {
+		if err := models.DeleteUserRememberTokens(user.ID); err != nil {
+			utils.Error("清除记住密码令牌失败: %v", err)
+		}
 	}
 
 	utils.OkWithMsg(c, "个人资料更新成功")

@@ -24,7 +24,8 @@ func getJwtSecret() []byte {
 
 // JwtClaims jwt声明
 type JwtClaims struct {
-	Username string `json:"username"`
+	Username       string `json:"username"`
+	CredentialSign string `json:"cs"` // 凭证签名，用于密码/用户名变更后使JWT失效
 	jwt.RegisteredClaims
 }
 
@@ -65,6 +66,12 @@ func AuthToken(c *gin.Context) {
 	mc, err := ParseToken(token)
 	if err != nil {
 		utils.Forbidden(c, err.Error())
+		c.Abort()
+		return
+	}
+	// 验证凭证签名，用于检测密码或用户名是否已变更
+	if !models.VerifyCredentialSign(mc.Username, mc.CredentialSign) {
+		utils.Forbidden(c, "登录已过期，请重新登录")
 		c.Abort()
 		return
 	}
