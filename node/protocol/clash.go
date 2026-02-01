@@ -486,7 +486,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Server:           hy2.Host,
 			Port:             FlexPort(utils.GetPortInt(hy2.Port)),
 			Ports:            hy2.MPort,
-			Auth_str:         hy2.Auth,
+			Auth:             hy2.Auth,
 			Sni:              hy2.Sni,
 			Alpn:             hy2.ALPN,
 			Obfs:             hy2.Obfs,
