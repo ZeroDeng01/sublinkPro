@@ -78,6 +78,8 @@ type Proxy struct {
 	Auth                  string                 `yaml:"auth,omitempty"`                  // 认证信息
 	Up                    int                    `yaml:"up,omitempty"`                    // 上行带宽限制
 	Down                  int                    `yaml:"down,omitempty"`                  // 下行带宽限制
+	Up_Speed              int                    `yaml:"up-speed,omitempty"`              // 上行带宽限制兼容stash
+	Down_Speed            int                    `yaml:"down-speed,omitempty"`            // 下行带宽限制兼容stash
 	Alpn                  []string               `yaml:"alpn,omitempty"`                  // ALPN
 	Sni                   string                 `yaml:"sni,omitempty"`                   // SNI
 	Obfs                  string                 `yaml:"obfs,omitempty"`                  // 混淆模式 (SSR/Hysteria2)
@@ -463,6 +465,8 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Auth_str:         hy.Auth,
 			Up:               hy.UpMbps,
 			Down:             hy.DownMbps,
+			Up_Speed:         hy.UpMbps,
+			Down_Speed:       hy.DownMbps,
 			Alpn:             hy.ALPN,
 			Peer:             hy.Peer,
 			Udp:              true, // Hysteria 基于 UDP/QUIC，默认启用 UDP
@@ -494,6 +498,8 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Obfs_password:    hy2.ObfsPassword,
 			Up:               hy2.UpMbps,
 			Down:             hy2.DownMbps,
+			Up_Speed:         hy2.UpMbps,
+			Down_Speed:       hy2.DownMbps,
 			Udp:              true, // Hysteria2 基于 UDP/QUIC，默认启用 UDP
 			Skip_cert_verify: skipCert,
 			Dialer_proxy:     link.DialerProxyName,
