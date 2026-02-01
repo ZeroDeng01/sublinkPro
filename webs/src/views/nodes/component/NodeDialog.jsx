@@ -9,9 +9,6 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 
@@ -48,13 +45,7 @@ export default function NodeDialog({
             onChange={(e) => setNodeForm({ ...nodeForm, link: e.target.value })}
             placeholder="支持输入：各类代理链接（vmess://、vless://、wireguard:// 等）、WireGuard 标准配置文件（包含 [Interface] 和 [Peer]）、Base64 订阅链接。多行使用回车分隔"
           />
-          {!isEdit && (
-            <RadioGroup row value={nodeForm.mergeMode} onChange={(e) => setNodeForm({ ...nodeForm, mergeMode: e.target.value })}>
-              <FormControlLabel value="1" control={<Radio />} label="合并" />
-              <FormControlLabel value="2" control={<Radio />} label="分开" />
-            </RadioGroup>
-          )}
-          {(isEdit || nodeForm.mergeMode === '1') && (
+          {isEdit && (
             <TextField fullWidth label="备注" value={nodeForm.name} onChange={(e) => setNodeForm({ ...nodeForm, name: e.target.value })} />
           )}
           <SearchableNodeSelect

@@ -484,12 +484,11 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 		}
 		// 跳过证书验证：订阅设置开启时强制应用，否则使用节点自身设置
 		skipCert := config.Cert || hy2.Insecure == 1
-		return Proxy{
+
+		proxy := Proxy{
 			Name:             hy2.Name,
 			Type:             "hysteria2",
 			Server:           hy2.Host,
-			Port:             FlexPort(utils.GetPortInt(hy2.Port)),
-			Ports:            hy2.MPort,
 			Auth:             hy2.Auth,
 			Sni:              hy2.Sni,
 			Alpn:             hy2.ALPN,
@@ -503,7 +502,16 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Udp:              true, // Hysteria2 基于 UDP/QUIC，默认启用 UDP
 			Skip_cert_verify: skipCert,
 			Dialer_proxy:     link.DialerProxyName,
-		}, nil
+		}
+
+		// 如果 MPort（端口跳跃）有有效值，使用 Ports 字段；否则使用 Port 字段
+		if hy2.MPort != "" {
+			proxy.Ports = hy2.MPort
+		} else {
+			proxy.Port = FlexPort(utils.GetPortInt(hy2.Port))
+		}
+
+		return proxy, nil
 	case Scheme == "tuic":
 		tuic, err := DecodeTuicURL(link.Url)
 		if err != nil {

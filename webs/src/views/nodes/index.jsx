@@ -108,7 +108,7 @@ export default function NodeList() {
     link: '',
     dialerProxyName: '',
     group: '',
-    mergeMode: '1', // 1=合并, 2=分开
+    mergeMode: '2', // 分开模式
     tags: [] // 标签列表
   });
 
@@ -499,7 +499,7 @@ export default function NodeList() {
   const handleAddNode = () => {
     setIsEditNode(false);
     setCurrentNode(null);
-    setNodeForm({ name: '', link: '', dialerProxyName: '', group: '', mergeMode: '1', tags: [] });
+    setNodeForm({ name: '', link: '', dialerProxyName: '', group: '', mergeMode: '2', tags: [] });
     setNodeDialogOpen(true);
   };
 
@@ -760,31 +760,15 @@ export default function NodeList() {
         });
         showMessage('更新成功');
       } else {
-        if (nodeForm.mergeMode === '1') {
-          // 合并模式
-          if (!nodeForm.name.trim()) {
-            showMessage('备注不能为空', 'warning');
-            return;
-          }
-          const processedLink = nodeLinks.join(',');
+        // 分开模式：每条链接单独添加
+        for (const link of nodeLinks) {
           await addNodes({
-            link: processedLink,
-            name: nodeForm.name.trim(),
+            link,
+            name: '',
             dialerProxyName: nodeForm.dialerProxyName.trim(),
             group: nodeForm.group.trim(),
             tags: tagNames
           });
-        } else {
-          // 分开模式
-          for (const link of nodeLinks) {
-            await addNodes({
-              link,
-              name: '',
-              dialerProxyName: nodeForm.dialerProxyName.trim(),
-              group: nodeForm.group.trim(),
-              tags: tagNames
-            });
-          }
         }
         showMessage('添加成功');
       }
@@ -933,9 +917,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -978,9 +962,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
