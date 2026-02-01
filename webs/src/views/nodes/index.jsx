@@ -725,10 +725,12 @@ export default function NodeList() {
   const handleSubmitNode = async () => {
     // 检测是否是 WireGuard 配置文件格式（包含 [Interface] 和 [Peer]）
     const isWireGuardConfig = nodeForm.link.includes('[Interface]') && nodeForm.link.includes('[Peer]');
+    // 检测是否是 Clash YAML 配置格式（包含 proxies: 关键字）
+    const isClashYamlConfig = nodeForm.link.includes('proxies:');
 
     let nodeLinks;
-    if (isWireGuardConfig) {
-      // WireGuard 配置文件格式，保持原样不分割
+    if (isWireGuardConfig || isClashYamlConfig) {
+      // WireGuard 或 Clash YAML 配置文件格式，保持原样不分割
       nodeLinks = [nodeForm.link.trim()];
     } else {
       // 常规链接格式，按换行符和逗号分割

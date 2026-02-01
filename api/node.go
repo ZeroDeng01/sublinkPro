@@ -5,10 +5,12 @@ import (
 	"strconv"
 	"strings"
 	"sublink/models"
+	"sublink/node"
 	"sublink/node/protocol"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
+	"gopkg.in/yaml.v3"
 )
 
 func NodeUpdadte(c *gin.Context) {
@@ -405,8 +407,60 @@ func NodeAdd(c *gin.Context) {
 		// 转换为 URL 格式
 		link = protocol.EncodeWireGuardURL(wg)
 	}
+
+	// 检测是否为 Clash YAML 配置格式
+	if strings.Contains(link, "proxies:") {
+		var clashConfig node.ClashConfig
+		if err := yaml.Unmarshal([]byte(link), &clashConfig); err == nil && len(clashConfig.Proxies) > 0 {
+			// 成功解析为 Clash YAML 格式，处理每个代理节点
+			var addedCount, failedCount int
+			for _, proxy := range clashConfig.Proxies {
+				proxyLink := node.GenerateProxyLink(proxy)
+				if proxyLink == "" {
+					failedCount++
+					continue
+				}
+				// 创建节点并添加
+				var n models.Node
+				n.Name = proxy.Name
+				n.Link = proxyLink
+				n.LinkName = proxy.Name
+				n.LinkHost = proxy.Server
+				n.LinkPort = strconv.Itoa(proxy.Port.Int())
+				n.LinkAddress = proxy.Server + ":" + n.LinkPort
+				n.DialerProxyName = dialerProxyName
+				n.Group = group
+				n.Protocol = proxy.Type
+
+				// 生成 ContentHash
+				contentHash := protocol.GenerateProxyContentHash(proxy)
+				if contentHash != "" {
+					n.ContentHash = contentHash
+					// 检查是否已存在相同内容的节点
+					if _, exists := models.GetNodeByContentHash(contentHash); exists {
+						failedCount++
+						continue
+					}
+				}
+
+				if err := n.Add(); err != nil {
+					failedCount++
+					continue
+				}
+				addedCount++
+			}
+
+			if addedCount == 0 {
+				utils.FailWithMsg(c, "Clash YAML 解析成功但无法添加任何节点（可能全部重复或格式不支持）")
+				return
+			}
+			utils.OkWithMsg(c, "Clash YAML 导入完成，成功添加 "+strconv.Itoa(addedCount)+" 个节点")
+			return
+		}
+	}
+
 	if !strings.Contains(link, "://") {
-		utils.FailWithMsg(c, "link 必须包含 :// 或者是有效的 WireGuard 配置文件")
+		utils.FailWithMsg(c, "link 必须包含 :// 或者是有效的 WireGuard/Clash YAML 配置文件")
 		return
 	}
 	Node.Name = name

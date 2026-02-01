@@ -455,7 +455,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		}
 
 		// 使用公共函数生成节点链接
-		link := generateProxyLink(proxy)
+		link := GenerateProxyLink(proxy)
 		if link == "" {
 			utils.Warn("节点【%s】生成链接失败，跳过", proxy.Name)
 			continue
@@ -772,7 +772,7 @@ func applyAirportDeduplication(airport *models.Airport, proxys []protocol.Proxy)
 // 需要先生成节点链接，再解析获取完整协议结构体，才能正确提取嵌套字段
 func generateProxyDeduplicationKey(proxy protocol.Proxy, protoType string, fields []string) string {
 	// 生成节点链接
-	link := generateProxyLink(proxy)
+	link := GenerateProxyLink(proxy)
 	if link == "" {
 		return ""
 	}
@@ -792,8 +792,8 @@ func generateProxyDeduplicationKey(proxy protocol.Proxy, protoType string, field
 	return strings.Join(parts, "|")
 }
 
-// generateProxyLink 从 Proxy 结构体生成节点链接
-func generateProxyLink(proxy protocol.Proxy) string {
+// GenerateProxyLink 从 Proxy 结构体生成节点链接
+func GenerateProxyLink(proxy protocol.Proxy) string {
 	proxy.Name = strings.TrimSpace(proxy.Name)
 	proxy.Server = utils.WrapIPv6Host(proxy.Server)
 
