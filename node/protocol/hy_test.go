@@ -13,6 +13,7 @@ func TestHYEncodeDecode(t *testing.T) {
 		Port:     443,
 		Auth:     "test-auth-string",
 		Peer:     "sni.example.com",
+		Protocol: "udp",
 		Insecure: 1,
 		UpMbps:   100,
 		DownMbps: 100,

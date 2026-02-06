@@ -469,6 +469,7 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			Down_Speed:       hy.DownMbps,
 			Alpn:             hy.ALPN,
 			Peer:             hy.Peer,
+			Protocol:         hy.Protocol,
 			Udp:              true, // Hysteria 基于 UDP/QUIC，默认启用 UDP
 			Skip_cert_verify: skipCert,
 			Dialer_proxy:     link.DialerProxyName,

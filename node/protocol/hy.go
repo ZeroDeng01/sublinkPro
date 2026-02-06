@@ -16,6 +16,7 @@ type HY struct {
 	Auth     string
 	UpMbps   int
 	DownMbps int
+	Protocol string
 	ALPN     []string
 	Name     string
 }
@@ -25,6 +26,7 @@ func CallHy() {
 	hy := HY{
 		Host:     "qq.com",
 		Port:     11926,
+		Protocol: "udp",
 		Insecure: 1,
 		Peer:     "youku.com",
 		Auth:     "",
@@ -54,6 +56,7 @@ func EncodeHYURL(hy HY) string {
 	q.Set("auth", hy.Auth)
 	q.Set("upmbps", strconv.Itoa(hy.UpMbps))
 	q.Set("downmbps", strconv.Itoa(hy.DownMbps))
+	q.Set("protocol", hy.Protocol)
 	// alpn 参数支持
 	if len(hy.ALPN) > 0 {
 		q.Set("alpn", strings.Join(hy.ALPN, ","))
@@ -89,6 +92,7 @@ func DecodeHYURL(s string) (HY, error) {
 	downMbps, _ := strconv.Atoi(u.Query().Get("downmbps"))
 	alpns := u.Query().Get("alpn")
 	alpn := strings.Split(alpns, ",")
+	protocol := u.Query().Get("protocol")
 	if alpns == "" {
 		alpn = nil
 	}
@@ -105,6 +109,7 @@ func DecodeHYURL(s string) (HY, error) {
 		fmt.Println("upMbps:", upMbps)
 		fmt.Println("downMbps:", downMbps)
 		fmt.Println("alpn:", alpn)
+		fmt.Println("protocol:", protocol)
 		fmt.Println("name:", name)
 	}
 	return HY{
@@ -115,6 +120,7 @@ func DecodeHYURL(s string) (HY, error) {
 		UpMbps:   upMbps,
 		DownMbps: downMbps,
 		ALPN:     alpn,
+		Protocol: protocol,
 		Name:     name,
 	}, nil
 }
@@ -130,6 +136,7 @@ func ConvertProxyToHy(proxy Proxy) HY {
 		DownMbps: proxy.Down,
 		ALPN:     proxy.Alpn,
 		Peer:     proxy.Peer,
+		Protocol: proxy.Protocol,
 		Name:     proxy.Name,
 	}
 
