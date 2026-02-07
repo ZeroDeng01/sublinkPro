@@ -218,8 +218,8 @@ func parseProxyGroup(line string) ACLProxyGroup {
 			continue
 		}
 
-		// 检测 .* 通配符: 匹配所有节点
-		if proxyName == ".*" {
+		// 检测 .* 或 (.*) 通配符: 匹配所有节点
+		if proxyName == ".*" || proxyName == "(.*)" {
 			pg.IncludeAll = true
 			continue
 		}
@@ -246,6 +246,7 @@ func parseProxyGroup(line string) ACLProxyGroup {
 // generateClashProxyGroups 生成 Clash 格式的代理组
 // 支持 mihomo 内核的 include-all + filter 参数
 // enableIncludeAll: 强制为所有组启用 include-all（覆盖 ACL 配置的智能检测）
+// 特殊占位符 __ALL_PROXIES__: 用于标记需要由 DecodeClash 追加所有节点的位置（与 subconverter 行为一致）
 func generateClashProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) string {
 	var lines []string
 	lines = append(lines, "proxy-groups:")
@@ -277,21 +278,23 @@ func generateClashProxyGroups(groups []ACLProxyGroup, enableIncludeAll bool) str
 		// Include-All 模式逻辑：
 		// - 有正则过滤器时：强制启用 include-all（filter 参数依赖 include-all）
 		// - 开启模式 (enableIncludeAll=true) + .* 通配符：使用 include-all，客户端自动匹配
-		// - 关闭模式 (enableIncludeAll=false) + 无正则：proxies 留空，由系统按顺序追加节点
+		// - 关闭模式 (enableIncludeAll=false) + .* 通配符：使用占位符，由 DecodeClash 追加节点（与 subconverter 一致）
 		if g.Filter != "" || (g.IncludeAll && enableIncludeAll) {
 			lines = append(lines, "    include-all: true")
 			if g.Filter != "" {
 				lines = append(lines, fmt.Sprintf("    filter: %s", g.Filter))
 			}
 		}
-		// 关闭模式：不生成 include-all，proxies 为空，由 DecodeClash 追加节点
 
 		// 输出 proxies（策略组引用，如 DIRECT、其他代理组等）
-		if len(g.Proxies) > 0 {
-			lines = append(lines, "    proxies:")
-			for _, proxy := range g.Proxies {
-				lines = append(lines, fmt.Sprintf("      - %s", proxy))
-			}
+		// 关闭模式下，如果有 .* 通配符，添加占位符让 DecodeClash 追加节点
+		lines = append(lines, "    proxies:")
+		for _, proxy := range g.Proxies {
+			lines = append(lines, fmt.Sprintf("      - %s", proxy))
+		}
+		// 关闭模式 + .* 通配符：添加占位符，由 DecodeClash 替换为所有节点
+		if g.IncludeAll && !enableIncludeAll && g.Filter == "" {
+			lines = append(lines, "      - __ALL_PROXIES__")
 		}
 	}
 

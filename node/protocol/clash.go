@@ -807,9 +807,40 @@ func DecodeClash(proxys []Proxy, yamlfile string, customGroups ...[]CustomProxyG
 			existingProxies, _ = proxyGroup["proxies"].([]interface{})
 		}
 
-		// 关键逻辑：只有当 proxies 列表为空时才追加所有节点
+		// 检查是否包含 __ALL_PROXIES__ 占位符（与 subconverter 行为一致）
+		// 如果有占位符，将其替换为所有节点
+		hasPlaceholder := false
+		placeholderIndex := -1
+		for idx, proxy := range existingProxies {
+			if proxyStr, ok := proxy.(string); ok && proxyStr == "__ALL_PROXIES__" {
+				hasPlaceholder = true
+				placeholderIndex = idx
+				break
+			}
+		}
+
+		if hasPlaceholder {
+			// 构建新的 proxies 列表：占位符之前的元素 + 所有节点
+			var newProxies []interface{}
+			// 添加占位符之前的元素（组引用如 🔯 故障转移、♻️ 自动选择、DIRECT 等）
+			for j := 0; j < placeholderIndex; j++ {
+				newProxies = append(newProxies, existingProxies[j])
+			}
+			// 添加所有节点
+			for _, newProxy := range ProxiesNameList {
+				newProxies = append(newProxies, newProxy)
+			}
+			// 添加占位符之后的元素（如果有的话）
+			for j := placeholderIndex + 1; j < len(existingProxies); j++ {
+				newProxies = append(newProxies, existingProxies[j])
+			}
+			proxyGroup["proxies"] = newProxies
+			proxyGroups[i] = proxyGroup
+			continue
+		}
+
+		// 原有逻辑：只有当 proxies 列表为空时才追加所有节点
 		// 如果已有 proxies（组引用如 🚀 节点选择、DIRECT 等），保持不变
-		// 这符合 ACL4SSR 的设计：只有使用 .* 的组才需要包含所有节点
 		if len(existingProxies) == 0 {
 			// 没有任何 proxies，追加所有节点
 			var validProxies []interface{}
