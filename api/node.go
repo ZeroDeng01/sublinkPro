@@ -621,7 +621,21 @@ func NodeAdd(c *gin.Context) {
 		Node.LinkAddress = wg.Server + ":" + utils.GetPortString(wg.Port)
 		Node.LinkHost = wg.Server
 		Node.LinkPort = utils.GetPortString(wg.Port)
+	case u.Scheme == "http" || u.Scheme == "https":
+		httpProxy, err := protocol.DecodeHTTPURL(link)
+		if err != nil {
+			utils.Error("解析节点链接失败: %v", err)
+			return
+		}
+		if name == "" {
+			Node.Name = httpProxy.Name
+		}
+		Node.LinkName = httpProxy.Name
+		Node.LinkAddress = httpProxy.Server + ":" + utils.GetPortString(httpProxy.Port)
+		Node.LinkHost = httpProxy.Server
+		Node.LinkPort = utils.GetPortString(httpProxy.Port)
 	}
+
 	Node.Link = link
 	Node.DialerProxyName = dialerProxyName
 	Node.Group = group
