@@ -841,6 +841,9 @@ func GenerateProxyLink(proxy protocol.Proxy) string {
 	case "http":
 		// 使用协议层函数统一生成链接
 		return protocol.EncodeHTTPURL(protocol.ConvertProxyToHTTP(proxy))
+	case "https":
+		// 使用协议层函数统一生成链接
+		return protocol.EncodeHTTPURL(protocol.ConvertProxyToHTTP(proxy))
 
 	default:
 		return ""
