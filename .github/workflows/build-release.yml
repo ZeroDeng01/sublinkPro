@@ -294,12 +294,12 @@ jobs:
             TAG=${GITHUB_REF#refs/tags/}
             docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64 \
               -f Dockerfile.ci \
-              -t zerodeng/sublink-pro:${TAG} \
-              -t zerodeng/sublink-pro:latest \
+              -t b1ghawk110/sublink-pro:${TAG} \
+              -t b1ghawk110/sublink-pro:latest \
               --push .
           elif [[ $GITHUB_REF == refs/heads/dev ]]; then
             docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64 \
               -f Dockerfile.ci \
-              -t zerodeng/sublink-pro:dev \
+              -t b1ghawk110/sublink-pro:dev \
               --push .
           fi
