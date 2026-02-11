@@ -1149,6 +1149,46 @@ func UpdateNodesBySourceID(sourceID int, sourceName string, group string) error 
 	return nil
 }
 
+// NodeInfoUpdate 节点信息更新项（用于订阅拉取时批量更新名称/链接）
+type NodeInfoUpdate struct {
+	ID       int
+	Name     string
+	LinkName string
+	Link     string
+}
+
+// BatchUpdateNodeInfo 批量更新节点的名称和链接信息
+// 用于订阅拉取时，节点配置未变但名称/链接发生变化的场景
+func BatchUpdateNodeInfo(updates []NodeInfoUpdate) (int, error) {
+	if len(updates) == 0 {
+		return 0, nil
+	}
+
+	successCount := 0
+	for _, u := range updates {
+		err := database.DB.Model(&Node{}).Where("id = ?", u.ID).Updates(map[string]interface{}{
+			"name":      u.Name,
+			"link_name": u.LinkName,
+			"link":      u.Link,
+		}).Error
+		if err != nil {
+			utils.Warn("更新节点信息失败 ID=%d: %v", u.ID, err)
+			continue
+		}
+		successCount++
+
+		// 同步更新缓存
+		if cachedNode, ok := nodeCache.Get(u.ID); ok {
+			cachedNode.Name = u.Name
+			cachedNode.LinkName = u.LinkName
+			cachedNode.Link = u.Link
+			nodeCache.Set(u.ID, cachedNode)
+		}
+	}
+
+	return successCount, nil
+}
+
 // GetFastestSpeedNode 获取最快速度节点
 func GetFastestSpeedNode() *Node {
 	nodes := nodeCache.Filter(func(n Node) bool {

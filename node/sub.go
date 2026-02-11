@@ -374,7 +374,8 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	}
 
 	addSuccessCount := 0
-	skipCount := 0 // 已存在的节点数量（跳过）
+	updateCount := 0 // 名称/链接已更新的节点数量
+	skipCount := 0   // 已存在的节点数量（跳过）
 	processedCount := 0
 	startTime := time.Now() // 记录开始时间用于计算耗时
 
@@ -438,6 +439,9 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	// 批量收集：新增节点列表（稍后批量写入）
 	nodesToAdd := make([]models.Node, 0)
 
+	// 批量收集：需要更新名称/链接的节点列表
+	nodesToUpdate := make([]models.NodeInfoUpdate, 0)
+
 	// 2. 遍历新获取的节点，插入或更新
 	for _, proxy := range proxys {
 		utils.Info("💾准备存储节点【%s】", proxy.Name)
@@ -481,18 +485,23 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		if allNodeHashes[contentHash] {
 			skipCount++
 			nodeStatus = "skipped"
-			// 节点内容已存在，跳过 - 输出详细日志便于排查
+			// 节点内容已存在 - 检查是否需要更新名称/链接
 			if existingNode, exists := models.GetNodeByContentHash(contentHash); exists {
 				// 判断是本机场重复还是跨机场重复
 				if existingNode.SourceID == id {
-					// 检查是否名称相同
-					if existingNode.Name == proxy.Name {
-						utils.Debug("⏭️ 节点【%s】在本机场已存在，跳过", proxy.Name)
+					// 属于本机场：检查名称或链接是否发生变化（上游改名、前缀修改、重命名规则变更等）
+					if existingNode.Name != proxy.Name || existingNode.Link != link {
+						nodesToUpdate = append(nodesToUpdate, models.NodeInfoUpdate{
+							ID:       existingNode.ID,
+							Name:     proxy.Name,
+							LinkName: proxy.Name,
+							Link:     link,
+						})
+						updateCount++
+						nodeStatus = "updated"
+						utils.Info("✏️ 节点【%s】名称/链接已变更，将更新 [旧名称: %s]", proxy.Name, existingNode.Name)
 					} else {
-						// 名称不同但配置相同，输出规范化JSON便于排查
-						hashData := protocol.NormalizeProxyForHash(proxy)
-						jsonBytes, _ := json.Marshal(hashData)
-						utils.Warn("🔀 节点【%s】与已有节点【%s】配置相同，跳过\n    HashData: %s", proxy.Name, existingNode.Name, string(jsonBytes))
+						utils.Debug("⏭️ 节点【%s】在本机场已存在，跳过", proxy.Name)
 					}
 				} else {
 					utils.Warn("⚠️ 节点【%s】与其他机场重复，跳过 [现有节点: %s] [来源: %s] [分组: %s] [SourceID: %d]", proxy.Name, existingNode.Name, existingNode.Source, existingNode.Group, existingNode.SourceID)
@@ -542,6 +551,17 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		}
 	}
 
+	// 批量更新名称/链接已变更的节点
+	actualUpdateCount := 0
+	if len(nodesToUpdate) > 0 {
+		if cnt, err := models.BatchUpdateNodeInfo(nodesToUpdate); err != nil {
+			utils.Error("❌批量更新节点信息失败：%v", err)
+		} else {
+			actualUpdateCount = cnt
+			utils.Info("✏️批量更新 %d 个节点的名称/链接", actualUpdateCount)
+		}
+	}
+
 	// 批量删除失效节点
 	deleteCount := 0
 	if len(nodeIDsToDelete) > 0 {
@@ -553,7 +573,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		}
 	}
 
-	utils.Info("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+skipCount, addSuccessCount, skipCount, deleteCount)
+	utils.Info("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，更新节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+skipCount, addSuccessCount, actualUpdateCount, skipCount, deleteCount)
 	// 重新查找机场以获取最新信息并更新成功次数
 	airport, err = models.GetAirportByID(id)
 	if err != nil {
@@ -569,8 +589,9 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		return err1
 	}
 	// 通过 reporter 报告任务完成
-	reporter.ReportComplete(fmt.Sprintf("订阅更新完成 (新增: %d, 已存在: %d, 删除: %d)", addSuccessCount, skipCount, deleteCount), map[string]interface{}{
+	reporter.ReportComplete(fmt.Sprintf("订阅更新完成 (新增: %d, 更新: %d, 已存在: %d, 删除: %d)", addSuccessCount, actualUpdateCount, skipCount, deleteCount), map[string]interface{}{
 		"added":   addSuccessCount,
+		"updated": actualUpdateCount,
 		"skipped": skipCount,
 		"deleted": deleteCount,
 	})
@@ -610,7 +631,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	sse.GetSSEBroker().BroadcastEvent("sub_update", sse.NotificationPayload{
 		Event:   "sub_update",
 		Title:   "订阅更新完成",
-		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，耗时 %s，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，已存在节点【%d】个，删除失效【%d】个%s", subName, durationStr, len(proxys), addSuccessCount+skipCount, addSuccessCount, skipCount, deleteCount, usageText),
+		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，耗时 %s，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，更新节点【%d】个，已存在节点【%d】个，删除失效【%d】个%s", subName, durationStr, len(proxys), addSuccessCount+skipCount, addSuccessCount, actualUpdateCount, skipCount, deleteCount, usageText),
 		Data:    nData,
 	})
 	return nil
