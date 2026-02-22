@@ -143,6 +143,11 @@ func RunMigrations() {
 	} else {
 		utils.Info("数据表Airport创建成功")
 	}
+	if err := db.AutoMigrate(&GroupAirportSort{}); err != nil {
+		utils.Error("基础数据表GroupAirportSort迁移失败: %v", err)
+	} else {
+		utils.Info("数据表GroupAirportSort创建成功")
+	}
 	if err := db.AutoMigrate(&NodeCheckProfile{}); err != nil {
 		utils.Error("基础数据表NodeCheckProfile迁移失败: %v", err)
 	} else {

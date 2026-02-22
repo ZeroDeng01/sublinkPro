@@ -9,7 +9,8 @@ import {
   IconTags,
   IconListCheck,
   IconWorld,
-  IconPlane
+  IconPlane,
+  IconCategory
 } from '@tabler/icons-react';
 
 // ==============================|| SUBSCRIPTION MENU ITEMS ||============================== //
@@ -41,6 +42,14 @@ const subscription = {
       type: 'item',
       url: '/subscription/node-check',
       icon: IconDeviceDesktopAnalytics,
+      breadcrumbs: true
+    },
+    {
+      id: 'group-sort',
+      title: '分组管理',
+      type: 'item',
+      url: '/subscription/group-sort',
+      icon: IconCategory,
       breadcrumbs: true
     },
     {

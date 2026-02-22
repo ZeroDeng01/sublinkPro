@@ -537,6 +537,26 @@ func (sub *Subcription) GetSub(clientType string) error {
 		if err != nil {
 			return err
 		}
+
+		// 按分组内机场排序配置重排节点
+		airportSortMap := GetGroupAirportSortMap(group.GroupName)
+		if len(airportSortMap) > 0 {
+			sort.SliceStable(groupNodes, func(i, j int) bool {
+				sortI, okI := airportSortMap[groupNodes[i].SourceID]
+				sortJ, okJ := airportSortMap[groupNodes[j].SourceID]
+				if !okI {
+					sortI = 999999
+				}
+				if !okJ {
+					sortJ = 999999
+				}
+				if sortI != sortJ {
+					return sortI < sortJ
+				}
+				return groupNodes[i].ID < groupNodes[j].ID
+			})
+		}
+
 		groupNodeMap[group.GroupName] = groupNodes
 	}
 
