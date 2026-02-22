@@ -252,3 +252,29 @@ func GetAllGroupInfos() []GroupInfo {
 	}
 	return infos
 }
+
+// CleanupAirportSortRecords 清理指定机场的所有排序记录（机场删除时调用）
+func CleanupAirportSortRecords(airportID int) {
+	// 从缓存中找出该机场的所有排序记录并删除
+	all := groupAirportSortCache.GetAll()
+	for _, entry := range all {
+		if entry.AirportID == airportID {
+			groupAirportSortCache.Delete(entry.ID)
+		}
+	}
+	// 从数据库删除
+	if err := database.DB.Where("airport_id = ?", airportID).Delete(&GroupAirportSort{}).Error; err != nil {
+		utils.Warn("清理机场 %d 的排序记录失败: %v", airportID, err)
+	}
+}
+
+// CleanupGroupSortRecords 清理指定分组的所有排序记录（分组被清空时可调用）
+func CleanupGroupSortRecords(groupName string) {
+	entries := groupAirportSortCache.GetByIndex("groupName", groupName)
+	for _, entry := range entries {
+		groupAirportSortCache.Delete(entry.ID)
+	}
+	if err := database.DB.Where("group_name = ?", groupName).Delete(&GroupAirportSort{}).Error; err != nil {
+		utils.Warn("清理分组 %s 的排序记录失败: %v", groupName, err)
+	}
+}
