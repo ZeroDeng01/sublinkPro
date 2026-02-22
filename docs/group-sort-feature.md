@@ -26,6 +26,8 @@
 联合唯一索引: idx_group_airport (group_name, airport_id)
 ```
 
+表由 GORM `AutoMigrate` 在应用启动时自动创建，无需手动执行 DDL。
+
 ### 2.2 缓存策略
 
 使用项目现有的 `cache.MapCache[int, GroupAirportSort]` 泛型缓存，以 `ID` 为主键，添加 `groupName` 二级索引。参照 `models/tag.go` 的缓存模式。
@@ -76,25 +78,32 @@
 
 ## 3. 文件清单
 
-### 3.1 新建文件（5个，共 627 行）
+### 3.1 新建文件（5个，共 649 行）
 
 | 文件 | 行数 | 用途 |
 |------|------|------|
-| `models/group_airport_sort.go` | 254 | 数据模型、缓存 init、CRUD、聚合查询 |
+| `models/group_airport_sort.go` | 280 | 数据模型、缓存 init、CRUD、聚合查询、级联清理 |
 | `api/group_sort.go` | 52 | HTTP Handler（groups / detail / save） |
 | `routers/group_sort.go` | 18 | 路由注册 |
 | `webs/src/api/groupSort.js` | 16 | 前端 API 封装 |
-| `webs/src/views/group-sort/index.jsx` | 287 | 分组管理页面（左右布局 + 拖拽排序） |
+| `webs/src/views/group-sort/index.jsx` | 283 | 分组管理页面（左右布局 + 拖拽排序） |
 
-### 3.2 修改文件（5个）
+### 3.2 修改文件（6个）
 
-| 文件 | 改动行数 | 修改内容 |
-|------|---------|---------|
-| `models/db_migrate.go` | +5 | 在 Airport AutoMigrate 之后添加 GroupAirportSort 表迁移 |
-| `models/subcription.go` | +20 | GetSub 分组展开后，按机场排序权重 `sort.SliceStable` 重排节点 |
-| `main.go` | +4 | 添加 `InitGroupAirportSortCache()` + `routers.GroupSort(r)` |
-| `webs/src/menu-items/subscription.js` | +11 | 在"节点检测"和"订阅列表"之间插入"分组管理"菜单项（IconCategory） |
-| `webs/src/routes/MainRoutes.jsx` | +5 | 添加 `group-sort` 路由和懒加载组件 |
+| 文件 | 修改内容 |
+|------|---------|
+| `models/db_migrate.go` | 在 Airport AutoMigrate 之后添加 GroupAirportSort 表迁移 |
+| `models/subcription.go` | GetSub 分组展开后，按机场排序权重 `sort.SliceStable` 重排节点 |
+| `models/airport.go` | `Airport.Del()` 中调用 `CleanupAirportSortRecords` 级联清理排序记录 |
+| `main.go` | 添加 `InitGroupAirportSortCache()` + `routers.GroupSort(r)` |
+| `webs/src/menu-items/subscription.js` | 在"节点检测"和"订阅列表"之间插入"分组管理"菜单项（IconCategory） |
+| `webs/src/routes/MainRoutes.jsx` | 添加 `group-sort` 路由和懒加载组件 |
+
+### 3.3 其他改动
+
+| 文件 | 修改内容 |
+|------|---------|
+| `.gitignore` | 添加 `.ace-tool/`、`webs/node_modules/`、`webs/package-lock.json` 忽略规则 |
 
 ## 4. 核心实现详解
 
@@ -125,6 +134,10 @@ func init() {
 - 从缓存获取，返回 `map[int]int`（airportID → sortWeight）
 - 无配置时返回 `nil`
 
+**级联清理方法**：
+- `CleanupAirportSortRecords(airportID)` — 机场删除时调用，清理该机场在所有分组中的排序记录
+- `CleanupGroupSortRecords(groupName)` — 分组清空时可调用，清理该分组的全部排序记录
+
 ### 4.2 订阅排序逻辑 — `models/subcription.go:541-558`
 
 在现有 `ORDER BY nodes.id ASC` 数据库查询之后，增加内存重排：
@@ -151,7 +164,22 @@ if len(airportSortMap) > 0 {
 - `len(airportSortMap) > 0` 守卫确保无配置时零开销
 - 从缓存读取映射，无额外数据库查询
 
-### 4.3 前端页面 — `webs/src/views/group-sort/index.jsx`
+### 4.3 级联清理 — `models/airport.go`
+
+`Airport.Del()` 中新增一行调用：
+```go
+func (a *Airport) Del() error {
+    err := database.DB.Delete(a).Error
+    if err != nil {
+        return err
+    }
+    airportCache.Delete(a.ID)
+    CleanupAirportSortRecords(a.ID) // 级联清理排序记录
+    return nil
+}
+```
+
+### 4.4 前端页面 — `webs/src/views/group-sort/index.jsx`
 
 **布局**：Grid 左右两栏
 - 左侧（md=4）：分组列表，带搜索过滤，已配置排序的分组显示 ✓ 图标
@@ -165,48 +193,72 @@ if len(airportSortMap) > 0 {
 3. 拖拽调整顺序 → 本地 state 更新
 4. 点击"保存排序" → `saveGroupAirportSort()` → 提示成功 → 刷新左侧列表状态
 
+**前端响应解包**：`request.js` 拦截器已将 `axios.response.data` 解包，前端直接用 `res.data`（而非 `res.data.data`）获取业务数据。
+
 ## 5. 向后兼容性
 
 | 场景 | 行为 |
 |------|------|
-| 分组无排序配置 | `GetGroupAirportSortMap` 返回 `nil`，`len == 0` 跳过排序，节点按原 ID 升序 |
+| 已有分组无排序配置 | `GetGroupAirportSortMap` 返回 `nil`，`len == 0` 跳过排序，节点按原 ID 升序，**行为与修改前完全一致** |
+| 已有机场 | 不受影响，功能纯增量，不触碰 Airport 表 |
 | 新增机场节点后未更新排序 | 新机场的 SourceID 不在 sortMap 中，赋 `999999` 排到最后 |
-| 机场被删除 | 详情页显示"机场#N(已删除)"，排序配置仍生效 |
 | 保存空排序列表 | 事务删除该分组所有排序记录，等同于重置为默认顺序 |
 
-## 6. 初始化顺序依赖
+## 6. 删除场景与级联处理
+
+| 场景 | 行为 |
+|------|------|
+| 删除机场（不删节点） | `Airport.Del()` 级联调用 `CleanupAirportSortRecords`，清理该机场的排序记录（DB + 缓存）；节点 SourceID 仍在，下次打开详情页会以新机场条目出现 |
+| 删除机场（同时删节点） | 排序记录被级联清理，节点也被删除，该机场从分组详情中自然消失 |
+| 分组内所有节点被移走或删除 | `GetAllGroupNames` 从 nodeCache 聚合，该分组名不再出现在左侧列表；可调用 `CleanupGroupSortRecords` 清理残留排序记录 |
+
+## 7. 初始化顺序依赖
 
 ```
-InitNodeCache()          ← GetGroupDetail 依赖 nodeCache
-InitAirportCache()       ← GetGroupDetail 依赖 airportCache
-InitGroupAirportSortCache()  ← 在以上两者之后
+database.InitSqlite()            ← 数据库连接
+models.RunMigrations()           ← AutoMigrate 建表（含 GroupAirportSort）
+models.InitNodeCache()           ← GetGroupDetail 依赖 nodeCache
+models.InitAirportCache()        ← GetGroupDetail 依赖 airportCache
+models.InitGroupAirportSortCache()  ← 在以上两者之后
 ```
 
 `main.go` 中已按此顺序排列。
 
-## 7. 走查结果
+## 8. 走查与修复记录
 
-### 已发现并修复的问题
+### 第一轮走查（自查）
 
 1. **前端 `Divider` 未使用导入** — `index.jsx` 导入了 `Divider` 但未使用，已删除
 2. **后端 4 个死代码函数** — `GetGroupAirportSortCount`、`GetGroupsWithSortConfig`、`GetGroupAirportCount`、`GetGroupNodeCount` 定义后无调用，已删除
+
+### 第二轮走查（ChatGPT Review）
+
+3. **前端响应解包层级错误** — `res.data?.data` 多包了一层，`request.js` 拦截器已解包 `response.data`，应直接用 `res.data`。已修正为 `res.data` / `res.data?.airports`
+4. **`package-lock.json` / `yarn.lock` 变更噪声** — 由 `npm install` 产生，与功能无关。已将 `webs/package-lock.json` 加入 `.gitignore` 并从仓库移除
+
+### 第三轮走查（级联清理）
+
+5. **机场删除无级联清理** — `Airport.Del()` 未清理 `group_airport_sorts` 表中该 airportID 的记录，会积累垃圾数据。已在 `Airport.Del()` 中添加 `CleanupAirportSortRecords(a.ID)` 调用
+6. 新增 `CleanupGroupSortRecords(groupName)` 供分组清空场景使用
 
 ### 功能闭环验证
 
 | 链路节点 | 状态 |
 |---------|------|
-| 数据表创建（AutoMigrate） | ✅ |
+| 数据表创建（AutoMigrate，启动自动执行） | ✅ |
 | 缓存初始化（在 Airport 之后） | ✅ |
 | 路由注册（AuthToken 鉴权） | ✅ |
 | API → Model 调用链 | ✅ |
 | 前端 API → 后端路径匹配 | ✅ |
+| 前端响应解包（res.data） | ✅ |
 | 前端路由 + 菜单项 | ✅ |
 | GetSub 排序逻辑注入 | ✅ |
+| 机场删除级联清理 | ✅ |
 | 向后兼容（无配置 = 无变化） | ✅ |
 | Go 编译通过 | ✅ |
 | 前端 vite build 通过 | ✅ |
 
-## 8. 验证方案
+## 9. 验证方案
 
 1. **编译验证**：`go build ./...` 通过
 2. **前端构建**：`vite build` 通过
@@ -217,3 +269,4 @@ InitGroupAirportSortCache()  ← 在以上两者之后
    - 拖拽调整机场顺序后点击保存，确认保存成功
    - 访问已关联该分组的订阅输出，确认节点按配置的机场顺序排列
 4. **向后兼容**：未配置排序的分组，节点顺序与修改前完全一致
+5. **级联清理**：删除一个已配置排序的机场，确认 `group_airport_sorts` 表中该机场记录被清理
