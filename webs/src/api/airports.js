@@ -52,6 +52,14 @@ export function pullAirport(id) {
   });
 }
 
+// 批量拉取所有已启用机场的订阅
+export function pullAllAirports() {
+  return request({
+    url: '/v1/airports/pull-all',
+    method: 'post'
+  });
+}
+
 // 仅刷新机场用量信息
 export function refreshAirportUsage(id) {
   return request({

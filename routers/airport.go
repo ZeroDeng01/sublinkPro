@@ -20,6 +20,7 @@ func Airport(r *gin.Engine) {
 		airportGroup.PUT("/:id", middlewares.DemoModeRestrict, api.AirportUpdate)
 		airportGroup.DELETE("/:id", middlewares.DemoModeRestrict, api.AirportDelete)
 		// 手动拉取
+		airportGroup.POST("/pull-all", middlewares.DemoModeRestrict, api.AirportPullAll)
 		airportGroup.POST("/:id/pull", middlewares.DemoModeRestrict, api.AirportPull)
 		// 刷新用量信息
 		airportGroup.POST("/:id/refresh-usage", middlewares.DemoModeRestrict, api.AirportRefreshUsage)
