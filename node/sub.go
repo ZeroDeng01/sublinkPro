@@ -425,10 +425,26 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		existingNodeByID[node.ID] = node
 	}
 
-	// 获取全库的 ContentHash 集合（用于全库去重）
-	allNodeHashes := models.GetAllNodeContentHashes()
+	// 创建现有节点的映射表（以 ContentHash 为键，用于同机场去重判断与更新）
+	existingNodeByContentHash := make(map[string]models.Node)
+	for _, node := range existingNodes {
+		if node.ContentHash != "" {
+			existingNodeByContentHash[node.ContentHash] = node
+		}
+	}
 
-	utils.Info("📄订阅【%s】获取到订阅数量【%d】，现有节点数量【%d】，全库哈希数量【%d】", subName, len(proxys), len(existingNodes), len(allNodeHashes))
+	// 读取全局配置：是否启用跨机场去重（默认启用）
+	crossAirportDedupVal, _ := models.GetSetting("cross_airport_dedup_enabled")
+	enableCrossDedup := crossAirportDedupVal != "false"
+
+	var allNodeHashes map[string]bool
+	if enableCrossDedup {
+		allNodeHashes = models.GetAllNodeContentHashes()
+	} else {
+		allNodeHashes = models.GetNodeContentHashesBySourceID(id)
+	}
+
+	utils.Info("📄订阅【%s】获取到订阅数量【%d】，现有节点数量【%d】，哈希数量【%d】，跨机场去重【%v】", subName, len(proxys), len(existingNodes), len(allNodeHashes), enableCrossDedup)
 
 	// 更新任务总数（此时已知道需要处理的节点数量）
 	reporter.UpdateTotal(len(proxys))
@@ -473,7 +489,9 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		Node.LinkPort = strconv.Itoa(int(proxy.Port))
 		Node.Source = subName
 		Node.SourceID = id
-		Node.Group = airport.Group
+		if airport != nil {
+			Node.Group = airport.Group
+		}
 		Node.Protocol = proxy.Type
 		Node.ContentHash = contentHash
 
@@ -485,29 +503,34 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		if allNodeHashes[contentHash] {
 			skipCount++
 			nodeStatus = "skipped"
-			// 节点内容已存在 - 检查是否需要更新名称/链接
-			if existingNode, exists := models.GetNodeByContentHash(contentHash); exists {
-				// 判断是本机场重复还是跨机场重复
-				if existingNode.SourceID == id {
-					// 属于本机场：检查名称或链接是否发生变化（上游改名、前缀修改、重命名规则变更等）
-					if existingNode.Name != proxy.Name || existingNode.Link != link {
-						nodesToUpdate = append(nodesToUpdate, models.NodeInfoUpdate{
-							ID:       existingNode.ID,
-							Name:     proxy.Name,
-							LinkName: proxy.Name,
-							Link:     link,
-						})
-						updateCount++
-						nodeStatus = "updated"
-						utils.Info("✏️ 节点【%s】名称/链接已变更，将更新 [旧名称: %s]", proxy.Name, existingNode.Name)
-					} else {
-						utils.Debug("⏭️ 节点【%s】在本机场已存在，跳过", proxy.Name)
-					}
+			// 节点内容已存在 - 优先判断是否为本机场已存在节点
+			if existingNode, ok := existingNodeByContentHash[contentHash]; ok {
+				// 属于本机场：检查名称或链接是否发生变化（上游改名、前缀修改、重命名规则变更等）
+				if existingNode.Name != proxy.Name || existingNode.Link != link {
+					nodesToUpdate = append(nodesToUpdate, models.NodeInfoUpdate{
+						ID:       existingNode.ID,
+						Name:     proxy.Name,
+						LinkName: proxy.Name,
+						Link:     link,
+					})
+					updateCount++
+					nodeStatus = "updated"
+					utils.Info("✏️ 节点【%s】名称/链接已变更，将更新 [旧名称: %s]", proxy.Name, existingNode.Name)
 				} else {
+					utils.Debug("⏭️ 节点【%s】在本机场已存在，跳过", proxy.Name)
+				}
+			} else if enableCrossDedup {
+				// 跨机场去重开启：若全库已存在该内容，则跳过
+				if existingNode, exists := models.GetNodeByContentHash(contentHash); exists {
 					utils.Warn("⚠️ 节点【%s】与其他机场重复，跳过 [现有节点: %s] [来源: %s] [分组: %s] [SourceID: %d]", proxy.Name, existingNode.Name, existingNode.Source, existingNode.Group, existingNode.SourceID)
+				} else {
+					// hash存在于allNodeHashes但缓存中找不到，说明是本次拉取中的内部重复
+					hashData := protocol.NormalizeProxyForHash(proxy)
+					jsonBytes, _ := json.Marshal(hashData)
+					utils.Warn("🔄 节点【%s】与本次拉取中的其他节点重复（相同配置），跳过\n    HashData: %s", proxy.Name, string(jsonBytes))
 				}
 			} else {
-				// hash存在于allNodeHashes但缓存中找不到，说明是本次拉取中的内部重复
+				// 跨机场去重关闭时 allNodeHashes 只包含本机场哈希；若此处找不到现有节点，说明是本次拉取内重复
 				hashData := protocol.NormalizeProxyForHash(proxy)
 				jsonBytes, _ := json.Marshal(hashData)
 				utils.Warn("🔄 节点【%s】与本次拉取中的其他节点重复（相同配置），跳过\n    HashData: %s", proxy.Name, string(jsonBytes))
