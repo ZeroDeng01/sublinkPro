@@ -511,7 +511,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	nodesToUpdate := make([]models.NodeInfoUpdate, 0)
 
 	// 2. 遍历新获取的节点，插入或更新
-	for _, proxy := range proxys {
+	for proxyIndex, proxy := range proxys {
 		utils.Info("💾准备存储节点【%s】", proxy.Name)
 		var Node models.Node
 
@@ -541,6 +541,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		Node.LinkPort = strconv.Itoa(int(proxy.Port))
 		Node.Source = subName
 		Node.SourceID = id
+		Node.SourceSort = proxyIndex + 1
 		if airport != nil {
 			Node.Group = airport.Group
 		}
@@ -561,17 +562,18 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 				if infoNodeHashes[contentHash] {
 					// 信息节点：用名称精确匹配（同 hash 对应多个已有节点）
 					if existingByName, nameExists := existingInfoNodeNames[contentHash][proxy.Name]; nameExists {
-						// 该名称的信息节点已存在，检查链接是否变化
-						if existingByName.Link != link {
+						// 该名称的信息节点已存在，检查链接或顺序是否变化
+						if existingByName.Link != link || existingByName.SourceSort != Node.SourceSort {
 							nodesToUpdate = append(nodesToUpdate, models.NodeInfoUpdate{
-								ID:       existingByName.ID,
-								Name:     proxy.Name,
-								LinkName: proxy.Name,
-								Link:     link,
+								ID:         existingByName.ID,
+								Name:       proxy.Name,
+								LinkName:   proxy.Name,
+								Link:       link,
+								SourceSort: Node.SourceSort,
 							})
 							updateCount++
 							nodeStatus = "updated"
-							utils.Info("✏️ 信息节点【%s】链接已变更，将更新", proxy.Name)
+							utils.Info("✏️ 信息节点【%s】链接/顺序已变更，将更新", proxy.Name)
 						} else {
 							utils.Debug("⏭️ 信息节点【%s】在本机场已存在，跳过", proxy.Name)
 						}
@@ -586,16 +588,17 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 				} else {
 					// 普通节点：用 hash 匹配，检查名称或链接是否变化
 					existingNode := existingNodeByContentHash[contentHash]
-					if existingNode.Name != proxy.Name || existingNode.Link != link {
+					if existingNode.Name != proxy.Name || existingNode.Link != link || existingNode.SourceSort != Node.SourceSort {
 						nodesToUpdate = append(nodesToUpdate, models.NodeInfoUpdate{
-							ID:       existingNode.ID,
-							Name:     proxy.Name,
-							LinkName: proxy.Name,
-							Link:     link,
+							ID:         existingNode.ID,
+							Name:       proxy.Name,
+							LinkName:   proxy.Name,
+							Link:       link,
+							SourceSort: Node.SourceSort,
 						})
 						updateCount++
 						nodeStatus = "updated"
-						utils.Info("✏️ 节点【%s】名称/链接已变更，将更新 [旧名称: %s]", proxy.Name, existingNode.Name)
+						utils.Info("✏️ 节点【%s】名称/链接/顺序已变更，将更新 [旧名称: %s]", proxy.Name, existingNode.Name)
 					} else {
 						utils.Debug("⏭️ 节点【%s】在本机场已存在，跳过", proxy.Name)
 					}

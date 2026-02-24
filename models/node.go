@@ -30,6 +30,7 @@ type Node struct {
 	DialerProxyName string
 	Source          string `gorm:"default:'manual'"`
 	SourceID        int
+	SourceSort      int `gorm:"default:0"` // 上游订阅中的顺序（从1开始；0表示未初始化）
 	Group           string
 	Speed           float64   `gorm:"default:0"`          // 测速结果(MB/s)
 	DelayTime       int       `gorm:"default:0"`          // 延迟时间(ms)
@@ -1175,10 +1176,11 @@ func UpdateNodesBySourceID(sourceID int, sourceName string, group string) error 
 
 // NodeInfoUpdate 节点信息更新项（用于订阅拉取时批量更新名称/链接）
 type NodeInfoUpdate struct {
-	ID       int
-	Name     string
-	LinkName string
-	Link     string
+	ID         int
+	Name       string
+	LinkName   string
+	Link       string
+	SourceSort int
 }
 
 // BatchUpdateNodeInfo 批量更新节点的名称和链接信息
@@ -1191,9 +1193,10 @@ func BatchUpdateNodeInfo(updates []NodeInfoUpdate) (int, error) {
 	successCount := 0
 	for _, u := range updates {
 		err := database.DB.Model(&Node{}).Where("id = ?", u.ID).Updates(map[string]interface{}{
-			"name":      u.Name,
-			"link_name": u.LinkName,
-			"link":      u.Link,
+			"name":        u.Name,
+			"link_name":   u.LinkName,
+			"link":        u.Link,
+			"source_sort": u.SourceSort,
 		}).Error
 		if err != nil {
 			utils.Warn("更新节点信息失败 ID=%d: %v", u.ID, err)
@@ -1206,6 +1209,7 @@ func BatchUpdateNodeInfo(updates []NodeInfoUpdate) (int, error) {
 			cachedNode.Name = u.Name
 			cachedNode.LinkName = u.LinkName
 			cachedNode.Link = u.Link
+			cachedNode.SourceSort = u.SourceSort
 			nodeCache.Set(u.ID, cachedNode)
 		}
 	}
