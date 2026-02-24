@@ -425,11 +425,63 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		existingNodeByID[node.ID] = node
 	}
 
+	// 预扫描：统计本次拉取中每个 ContentHash 对应的名称集合（trim 后）
+	// 用于识别同 hash 多名称的信息节点（如"到期时间"、"剩余流量"），这类节点应放行入库且需要按名称粒度清理
+	currentNamesByHash := make(map[string]map[string]bool)
+	for _, p := range proxys {
+		name := strings.TrimSpace(p.Name)
+		p.Server = utils.WrapIPv6Host(p.Server)
+		ch := protocol.GenerateProxyContentHash(p)
+		if ch == "" {
+			continue
+		}
+		if currentNamesByHash[ch] == nil {
+			currentNamesByHash[ch] = make(map[string]bool)
+		}
+		currentNamesByHash[ch][name] = true
+	}
+
+	// 统计数据库中本机场已有节点的 hash→名称集合
+	// 解决“历史上是信息节点，但本次拉取只剩一个名称”时无法识别的问题（否则会导致残留无法清理/误更新）。
+	existingNamesByHash := make(map[string]map[string]bool)
+	for _, node := range existingNodes {
+		if node.ContentHash == "" {
+			continue
+		}
+		name := strings.TrimSpace(node.Name)
+		if existingNamesByHash[node.ContentHash] == nil {
+			existingNamesByHash[node.ContentHash] = make(map[string]bool)
+		}
+		existingNamesByHash[node.ContentHash][name] = true
+	}
+
+	// 信息节点 hash 集合：本次拉取或数据库历史中，同一 hash 对应多个不同名称
+	infoNodeHashes := make(map[string]bool)
+	for ch, names := range currentNamesByHash {
+		if len(names) > 1 {
+			infoNodeHashes[ch] = true
+		}
+	}
+	for ch, names := range existingNamesByHash {
+		if len(names) > 1 {
+			infoNodeHashes[ch] = true
+		}
+	}
+
 	// 创建现有节点的映射表（以 ContentHash 为键，用于同机场去重判断与更新）
 	existingNodeByContentHash := make(map[string]models.Node)
+	// 对信息节点 hash，记录本机场已有的所有名称（用于重新拉取时精确匹配）
+	existingInfoNodeNames := make(map[string]map[string]models.Node)
 	for _, node := range existingNodes {
 		if node.ContentHash != "" {
 			existingNodeByContentHash[node.ContentHash] = node
+			// 如果该 hash 是信息节点，按名称建立索引
+			if infoNodeHashes[node.ContentHash] {
+				if existingInfoNodeNames[node.ContentHash] == nil {
+					existingInfoNodeNames[node.ContentHash] = make(map[string]models.Node)
+				}
+				existingInfoNodeNames[node.ContentHash][strings.TrimSpace(node.Name)] = node
+			}
 		}
 	}
 
@@ -504,36 +556,92 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 			skipCount++
 			nodeStatus = "skipped"
 			// 节点内容已存在 - 优先判断是否为本机场已存在节点
-			if existingNode, ok := existingNodeByContentHash[contentHash]; ok {
-				// 属于本机场：检查名称或链接是否发生变化（上游改名、前缀修改、重命名规则变更等）
-				if existingNode.Name != proxy.Name || existingNode.Link != link {
-					nodesToUpdate = append(nodesToUpdate, models.NodeInfoUpdate{
-						ID:       existingNode.ID,
-						Name:     proxy.Name,
-						LinkName: proxy.Name,
-						Link:     link,
-					})
-					updateCount++
-					nodeStatus = "updated"
-					utils.Info("✏️ 节点【%s】名称/链接已变更，将更新 [旧名称: %s]", proxy.Name, existingNode.Name)
+			if _, ok := existingNodeByContentHash[contentHash]; ok {
+				// 属于本机场
+				if infoNodeHashes[contentHash] {
+					// 信息节点：用名称精确匹配（同 hash 对应多个已有节点）
+					if existingByName, nameExists := existingInfoNodeNames[contentHash][proxy.Name]; nameExists {
+						// 该名称的信息节点已存在，检查链接是否变化
+						if existingByName.Link != link {
+							nodesToUpdate = append(nodesToUpdate, models.NodeInfoUpdate{
+								ID:       existingByName.ID,
+								Name:     proxy.Name,
+								LinkName: proxy.Name,
+								Link:     link,
+							})
+							updateCount++
+							nodeStatus = "updated"
+							utils.Info("✏️ 信息节点【%s】链接已变更，将更新", proxy.Name)
+						} else {
+							utils.Debug("⏭️ 信息节点【%s】在本机场已存在，跳过", proxy.Name)
+						}
+					} else {
+						// 该名称的信息节点不存在（上游新增了一个信息节点），入库
+						nodesToAdd = append(nodesToAdd, Node)
+						skipCount--
+						addSuccessCount++
+						nodeStatus = "added"
+						utils.Info("📌 信息节点【%s】为新名称，允许入库", proxy.Name)
+					}
 				} else {
-					utils.Debug("⏭️ 节点【%s】在本机场已存在，跳过", proxy.Name)
+					// 普通节点：用 hash 匹配，检查名称或链接是否变化
+					existingNode := existingNodeByContentHash[contentHash]
+					if existingNode.Name != proxy.Name || existingNode.Link != link {
+						nodesToUpdate = append(nodesToUpdate, models.NodeInfoUpdate{
+							ID:       existingNode.ID,
+							Name:     proxy.Name,
+							LinkName: proxy.Name,
+							Link:     link,
+						})
+						updateCount++
+						nodeStatus = "updated"
+						utils.Info("✏️ 节点【%s】名称/链接已变更，将更新 [旧名称: %s]", proxy.Name, existingNode.Name)
+					} else {
+						utils.Debug("⏭️ 节点【%s】在本机场已存在，跳过", proxy.Name)
+					}
 				}
 			} else if enableCrossDedup {
 				// 跨机场去重开启：若全库已存在该内容，则跳过
 				if existingNode, exists := models.GetNodeByContentHash(contentHash); exists {
-					utils.Warn("⚠️ 节点【%s】与其他机场重复，跳过 [现有节点: %s] [来源: %s] [分组: %s] [SourceID: %d]", proxy.Name, existingNode.Name, existingNode.Source, existingNode.Group, existingNode.SourceID)
+					// 检查是否为同 hash 不同名的信息节点（预扫描已确定）
+					if infoNodeHashes[contentHash] {
+						nodesToAdd = append(nodesToAdd, Node)
+						skipCount--
+						addSuccessCount++
+						nodeStatus = "added"
+						utils.Info("📌 节点【%s】与已有节点配置相同但名称不同（信息节点），允许入库 [已有: %s]", proxy.Name, existingNode.Name)
+					} else {
+						utils.Warn("⚠️ 节点【%s】与其他机场重复，跳过 [现有节点: %s] [来源: %s] [分组: %s] [SourceID: %d]", proxy.Name, existingNode.Name, existingNode.Source, existingNode.Group, existingNode.SourceID)
+					}
 				} else {
 					// hash存在于allNodeHashes但缓存中找不到，说明是本次拉取中的内部重复
+					if infoNodeHashes[contentHash] {
+						nodesToAdd = append(nodesToAdd, Node)
+						skipCount--
+						addSuccessCount++
+						nodeStatus = "added"
+						allNodeHashes[contentHash] = true
+						utils.Info("📌 节点【%s】与本次拉取中其他节点配置相同但名称不同（信息节点），允许入库", proxy.Name)
+					} else {
+						hashData := protocol.NormalizeProxyForHash(proxy)
+						jsonBytes, _ := json.Marshal(hashData)
+						utils.Warn("🔄 节点【%s】与本次拉取中的其他节点重复（相同配置），跳过\n    HashData: %s", proxy.Name, string(jsonBytes))
+					}
+				}
+			} else {
+				// 跨机场去重关闭时 allNodeHashes 只包含本机场哈希；若此处找不到现有节点，说明是本次拉取内重复
+				if infoNodeHashes[contentHash] {
+					nodesToAdd = append(nodesToAdd, Node)
+					skipCount--
+					addSuccessCount++
+					nodeStatus = "added"
+					allNodeHashes[contentHash] = true
+					utils.Info("📌 节点【%s】与本次拉取中其他节点配置相同但名称不同（信息节点），允许入库", proxy.Name)
+				} else {
 					hashData := protocol.NormalizeProxyForHash(proxy)
 					jsonBytes, _ := json.Marshal(hashData)
 					utils.Warn("🔄 节点【%s】与本次拉取中的其他节点重复（相同配置），跳过\n    HashData: %s", proxy.Name, string(jsonBytes))
 				}
-			} else {
-				// 跨机场去重关闭时 allNodeHashes 只包含本机场哈希；若此处找不到现有节点，说明是本次拉取内重复
-				hashData := protocol.NormalizeProxyForHash(proxy)
-				jsonBytes, _ := json.Marshal(hashData)
-				utils.Warn("🔄 节点【%s】与本次拉取中的其他节点重复（相同配置），跳过\n    HashData: %s", proxy.Name, string(jsonBytes))
 			}
 		} else {
 			// 节点不存在，收集到待添加列表
@@ -559,6 +667,15 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		// 使用 ContentHash 判断节点是否在本次拉取中
 		if !currentHashes[node.ContentHash] {
 			nodeIDsToDelete = append(nodeIDsToDelete, nodeID)
+			continue
+		}
+
+		// 信息节点：hash 仍在，但需要按名称精细判断，避免名称变化/部分移除导致垃圾节点残留（数据膨胀）
+		if infoNodeHashes[node.ContentHash] {
+			currentNames := currentNamesByHash[node.ContentHash]
+			if len(currentNames) == 0 || !currentNames[strings.TrimSpace(node.Name)] {
+				nodeIDsToDelete = append(nodeIDsToDelete, nodeID)
+			}
 		}
 	}
 
