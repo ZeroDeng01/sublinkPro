@@ -9,10 +9,3 @@ sublink.exe
 .idea/
 static
 sublinkPro.exe
-
-# 工具 / IDE 生成目录
-.ace-tool/
-
-# 前端依赖与锁文件（统一用 yarn）
-webs/node_modules/
-webs/package-lock.json
