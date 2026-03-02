@@ -23,8 +23,6 @@ const TaskList = Loadable(lazy(() => import('views/tasks')));
 const HostList = Loadable(lazy(() => import('views/hosts')));
 const AirportList = Loadable(lazy(() => import('views/airports')));
 const NodeCheckList = Loadable(lazy(() => import('views/node-check')));
-const GroupSortList = Loadable(lazy(() => import('views/group-sort')));
-
 // ==============================|| MAIN ROUTING ||==============================  //
 
 const MainRoutes = {
@@ -66,10 +64,6 @@ const MainRoutes = {
         {
           path: 'node-check',
           element: <NodeCheckList />
-        },
-        {
-          path: 'group-sort',
-          element: <GroupSortList />
         },
         {
           path: 'subs',
