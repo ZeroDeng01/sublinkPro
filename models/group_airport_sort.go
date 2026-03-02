@@ -67,10 +67,21 @@ func GetGroupDetail(groupName string) (*GroupDetailResponse, error) {
 		}, nil
 	}
 
-	// 聚合各 SourceID 的节点数量
-	airportNodeCount := make(map[int]int) // airportID -> nodeCount
+	// 按节点 ID 升序排列，保证"首次出现顺序"与订阅输出一致
+	sort.Slice(groupNodes, func(i, j int) bool {
+		return groupNodes[i].ID < groupNodes[j].ID
+	})
+
+	// 聚合各 SourceID 的节点数量，同时记录首次出现顺序
+	airportNodeCount := make(map[int]int)    // airportID -> nodeCount
+	firstRankBySource := make(map[int]int)   // airportID -> 首次出现序号
+	nextRank := 0
 	for _, node := range groupNodes {
 		airportNodeCount[node.SourceID]++
+		if _, ok := firstRankBySource[node.SourceID]; !ok {
+			firstRankBySource[node.SourceID] = nextRank
+			nextRank++
+		}
 	}
 
 	// 获取已保存的排序配置
@@ -105,12 +116,12 @@ func GetGroupDetail(groupName string) (*GroupDetailResponse, error) {
 		})
 	}
 
-	// 按 sort 值升序排列
+	// 按 sort 值升序排列；同 sort 值时按首次出现顺序兜底（与订阅输出一致）
 	sort.Slice(airports, func(i, j int) bool {
 		if airports[i].Sort != airports[j].Sort {
 			return airports[i].Sort < airports[j].Sort
 		}
-		return airports[i].AirportID < airports[j].AirportID
+		return firstRankBySource[airports[i].AirportID] < firstRankBySource[airports[j].AirportID]
 	})
 
 	// 重新编号 sort 值（从 0 开始连续）
