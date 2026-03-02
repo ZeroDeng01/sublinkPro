@@ -191,3 +191,35 @@ func UpdateSystemDomain(c *gin.Context) {
 	}
 	utils.OkWithMsg(c, "保存成功")
 }
+
+// GetNodeDedupConfig 获取节点去重配置
+func GetNodeDedupConfig(c *gin.Context) {
+	crossAirportDedup, _ := models.GetSetting("cross_airport_dedup_enabled")
+	utils.OkDetailed(c, "获取成功", gin.H{
+		"crossAirportDedupEnabled": crossAirportDedup != "false",
+	})
+}
+
+// UpdateNodeDedupConfig 更新节点去重配置
+func UpdateNodeDedupConfig(c *gin.Context) {
+	var req struct {
+		CrossAirportDedupEnabled *bool `json:"crossAirportDedupEnabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+	if req.CrossAirportDedupEnabled == nil {
+		utils.FailWithMsg(c, "缺少必填字段 crossAirportDedupEnabled")
+		return
+	}
+	value := "true"
+	if !*req.CrossAirportDedupEnabled {
+		value = "false"
+	}
+	if err := models.SetSetting("cross_airport_dedup_enabled", value); err != nil {
+		utils.FailWithMsg(c, "保存失败: "+err.Error())
+		return
+	}
+	utils.OkWithMsg(c, "保存成功")
+}

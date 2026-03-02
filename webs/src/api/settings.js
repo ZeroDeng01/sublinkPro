@@ -59,3 +59,20 @@ export function updateSystemDomain(data) {
     data
   });
 }
+
+// 获取节点去重配置
+export function getNodeDedupConfig() {
+  return request({
+    url: '/v1/settings/node-dedup',
+    method: 'get'
+  });
+}
+
+// 保存节点去重配置
+export function updateNodeDedupConfig(data) {
+  return request({
+    url: '/v1/settings/node-dedup',
+    method: 'post',
+    data
+  });
+}

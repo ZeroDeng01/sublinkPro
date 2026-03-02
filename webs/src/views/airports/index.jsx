@@ -17,9 +17,11 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Tooltip from '@mui/material/Tooltip';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
+import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import ViewListIcon from '@mui/icons-material/ViewList';
@@ -29,7 +31,7 @@ import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
 import ConfirmDialog from 'components/ConfirmDialog';
 import TaskProgressPanel from 'components/TaskProgressPanel';
-import { getAirports, addAirport, updateAirport, deleteAirport, pullAirport, refreshAirportUsage } from 'api/airports';
+import { getAirports, addAirport, updateAirport, deleteAirport, pullAirport, pullAllAirports, refreshAirportUsage } from 'api/airports';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 import { getNodeGroups, getNodes, getNodeProtocols } from 'api/nodes';
 
@@ -44,6 +46,33 @@ import { validateCronExpression } from './utils';
 export default function AirportList() {
   const theme = useTheme();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
+
+  // 判断是否需要重新拉取才能使节点处理配置生效
+  const hasNodeProcessConfigChanged = (before, after) => {
+    if (!before || !after) return false;
+
+    const normalizeStr = (v) => (v ?? '').toString().trim();
+
+    const stringKeys = [
+      'nodeNameWhitelist',
+      'nodeNameBlacklist',
+      'protocolWhitelist',
+      'protocolBlacklist',
+      'nodeNamePreprocess',
+      'deduplicationRule',
+      'nodeNamePrefix'
+    ];
+    for (const key of stringKeys) {
+      if (normalizeStr(before[key]) !== normalizeStr(after[key])) return true;
+    }
+
+    const boolKeys = ['nodeNameUniquify'];
+    for (const key of boolKeys) {
+      if (!!before[key] !== !!after[key]) return true;
+    }
+
+    return false;
+  };
 
   // 数据状态
   const [airports, setAirports] = useState([]);
@@ -87,6 +116,7 @@ export default function AirportList() {
     nodeNameUniquify: false,
     nodeNamePrefix: ''
   });
+  const [airportFormSnapshot, setAirportFormSnapshot] = useState(null);
 
   // 搜索筛选状态
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -222,8 +252,7 @@ export default function AirportList() {
 
   // 添加机场
   const handleAdd = () => {
-    setIsEdit(false);
-    setAirportForm({
+    const newForm = {
       id: 0,
       name: '',
       url: '',
@@ -245,14 +274,16 @@ export default function AirportList() {
       deduplicationRule: '',
       nodeNameUniquify: false,
       nodeNamePrefix: ''
-    });
+    };
+    setIsEdit(false);
+    setAirportForm(newForm);
+    setAirportFormSnapshot(newForm);
     setFormOpen(true);
   };
 
   // 编辑机场
   const handleEdit = (airport) => {
-    setIsEdit(true);
-    setAirportForm({
+    const editForm = {
       id: airport.id,
       name: airport.name,
       url: airport.url,
@@ -274,7 +305,10 @@ export default function AirportList() {
       deduplicationRule: airport.deduplicationRule || '',
       nodeNameUniquify: airport.nodeNameUniquify || false,
       nodeNamePrefix: airport.nodeNamePrefix || ''
-    });
+    };
+    setIsEdit(true);
+    setAirportForm(editForm);
+    setAirportFormSnapshot(editForm);
     if (airport.downloadWithProxy) {
       fetchProxyNodes();
     }
@@ -317,6 +351,59 @@ export default function AirportList() {
     });
   };
 
+  // 批量拉取所有机场
+  const handlePullAll = async () => {
+    // 这里不要用当前页 airports 来统计启用数量：列表是分页的，会导致误判“没有已启用机场”
+    // 使用后端分页接口返回的 total 作为全量启用机场数（仅用于提示/确认）
+    let enabledTotal = null;
+    try {
+      const res = await getAirports({ page: 1, pageSize: 1, enabled: true });
+      if (typeof res.data?.total === 'number') {
+        enabledTotal = res.data.total;
+      }
+    } catch (error) {
+      console.error('获取已启用机场数量失败:', error);
+      enabledTotal = null;
+    }
+
+    if (enabledTotal === 0) {
+      showMessage('没有已启用的机场', 'warning');
+      return;
+    }
+
+    const confirmContent =
+      typeof enabledTotal === 'number'
+        ? `确定要立即拉取所有已启用的机场订阅吗？（共 ${enabledTotal} 个）`
+        : '确定要立即拉取所有已启用的机场订阅吗？';
+
+    openConfirm('拉取所有机场', confirmContent, async () => {
+      try {
+        const res = await pullAllAirports();
+        const count = res.data?.count;
+
+        if (typeof count === 'number') {
+          if (count > 0) {
+            showMessage(`已提交 ${count} 个机场的拉取任务，请稍后刷新查看结果`);
+          } else {
+            showMessage('没有已启用的机场', 'warning');
+          }
+          return;
+        }
+
+        // 兼容后端返回 OkWithMsg 的场景（data 为空）
+        if (res.msg && res.msg !== '操作成功') {
+          showMessage(res.msg, 'warning');
+          return;
+        }
+
+        showMessage('批量拉取任务已提交，请稍后刷新查看结果');
+      } catch (error) {
+        console.error('批量拉取失败:', error);
+        showMessage(error.message || '批量拉取失败', 'error');
+      }
+    });
+  };
+
   // 刷新用量信息
   const handleRefreshUsage = async (airport) => {
     try {
@@ -355,15 +442,38 @@ export default function AirportList() {
     }
 
     try {
+      // 在提交前计算配置变更状态（提交后 snapshot 会被清空）
+      const needPullToApply = isEdit && hasNodeProcessConfigChanged(airportFormSnapshot, airportForm);
+      const savedId = airportForm.id;
+      const savedName = airportForm.name;
+
       if (isEdit) {
         await updateAirport(airportForm.id, airportForm);
-        showMessage('更新成功');
+        showMessage(needPullToApply ? '更新成功（节点处理配置需重新拉取后生效）' : '更新成功');
       } else {
         await addAirport(airportForm);
         showMessage('添加成功');
       }
       setFormOpen(false);
+      setAirportFormSnapshot(null);
       fetchAirports();
+
+      // 节点处理配置变更后提示立即拉取，使其对”已存在节点”生效
+      if (needPullToApply) {
+        openConfirm(
+          '立即拉取以生效',
+          `节点处理配置已变更，需要重新拉取订阅才能应用到已存在的节点。是否立即拉取机场 “${savedName}”？`,
+          async () => {
+            try {
+              await pullAirport(savedId);
+              showMessage('已提交更新任务，请稍后刷新查看结果');
+            } catch (error) {
+              console.error('拉取失败:', error);
+              showMessage(error.message || '提交更新任务失败', 'error');
+            }
+          }
+        );
+      }
     } catch (error) {
       console.error('提交失败:', error);
       showMessage(error.message || (isEdit ? '更新失败' : '添加失败'), 'error');
@@ -400,6 +510,11 @@ export default function AirportList() {
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
             添加机场
           </Button>
+          <Tooltip title="拉取所有已启用机场的订阅" arrow>
+            <IconButton onClick={handlePullAll} color="primary">
+              <CloudSyncIcon />
+            </IconButton>
+          </Tooltip>
           <IconButton onClick={handleRefresh} disabled={loading}>
             <RefreshIcon
               sx={
@@ -524,7 +639,10 @@ export default function AirportList() {
         proxyNodeOptions={proxyNodeOptions}
         loadingProxyNodes={loadingProxyNodes}
         protocolOptions={protocolOptions}
-        onClose={() => setFormOpen(false)}
+        onClose={() => {
+          setFormOpen(false);
+          setAirportFormSnapshot(null);
+        }}
         onSubmit={handleSubmit}
         onFetchProxyNodes={fetchProxyNodes}
       />

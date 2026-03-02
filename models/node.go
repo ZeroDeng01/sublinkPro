@@ -30,6 +30,7 @@ type Node struct {
 	DialerProxyName string
 	Source          string `gorm:"default:'manual'"`
 	SourceID        int
+	SourceSort      int `gorm:"default:0"` // 上游订阅中的顺序（从1开始；0表示未初始化）
 	Group           string
 	Speed           float64   `gorm:"default:0"`          // 测速结果(MB/s)
 	DelayTime       int       `gorm:"default:0"`          // 延迟时间(ms)
@@ -100,7 +101,7 @@ func (node *Node) Update() error {
 	}
 	node.UpdatedAt = time.Now()
 	// Write-Through: 先写数据库
-	err := database.DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "LinkCountry", "UpdatedAt").Updates(node).Error
+	err := database.DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "LinkCountry", "Protocol", "ContentHash", "UpdatedAt").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -115,6 +116,8 @@ func (node *Node) Update() error {
 		cachedNode.LinkHost = node.LinkHost
 		cachedNode.LinkPort = node.LinkPort
 		cachedNode.LinkCountry = node.LinkCountry
+		cachedNode.Protocol = node.Protocol
+		cachedNode.ContentHash = node.ContentHash
 		cachedNode.UpdatedAt = node.UpdatedAt
 		nodeCache.Set(node.ID, cachedNode)
 	} else {
@@ -465,17 +468,39 @@ func chunkNodes(nodes []Node, chunkSize int) [][]Node {
 
 // Find 查找节点是否重复
 func (node *Node) Find() error {
-	// 优先查缓存
-	results := nodeCache.Filter(func(n Node) bool {
-		return n.Link == node.Link || n.Name == node.Name
-	})
+	// 优先用 link 精确查找（link 全局唯一）
+	if node.Link != "" {
+		results := nodeCache.Filter(func(n Node) bool {
+			return n.Link == node.Link
+		})
+		if len(results) > 0 {
+			*node = results[0]
+			return nil
+		}
+
+		// 缓存未命中，查 DB
+		err := database.DB.Where("link = ?", node.Link).First(node).Error
+		if err != nil {
+			return err
+		}
+
+		// 更新缓存
+		nodeCache.Set(node.ID, *node)
+		return nil
+	}
+
+	// 否则用 name 查找（可能不唯一，适合历史兼容；更推荐使用 FindByName）
+	if node.Name == "" {
+		return fmt.Errorf("node link or name is required")
+	}
+	results := nodeCache.GetByIndex("name", node.Name)
 	if len(results) > 0 {
 		*node = results[0]
 		return nil
 	}
 
 	// 缓存未命中，查 DB
-	err := database.DB.Where("link = ? or name = ?", node.Link, node.Name).First(node).Error
+	err := database.DB.Where("name = ?", node.Name).First(node).Error
 	if err != nil {
 		return err
 	}
@@ -1149,6 +1174,49 @@ func UpdateNodesBySourceID(sourceID int, sourceName string, group string) error 
 	return nil
 }
 
+// NodeInfoUpdate 节点信息更新项（用于订阅拉取时批量更新名称/链接）
+type NodeInfoUpdate struct {
+	ID         int
+	Name       string
+	LinkName   string
+	Link       string
+	SourceSort int
+}
+
+// BatchUpdateNodeInfo 批量更新节点的名称和链接信息
+// 用于订阅拉取时，节点配置未变但名称/链接发生变化的场景
+func BatchUpdateNodeInfo(updates []NodeInfoUpdate) (int, error) {
+	if len(updates) == 0 {
+		return 0, nil
+	}
+
+	successCount := 0
+	for _, u := range updates {
+		err := database.DB.Model(&Node{}).Where("id = ?", u.ID).Updates(map[string]interface{}{
+			"name":        u.Name,
+			"link_name":   u.LinkName,
+			"link":        u.Link,
+			"source_sort": u.SourceSort,
+		}).Error
+		if err != nil {
+			utils.Warn("更新节点信息失败 ID=%d: %v", u.ID, err)
+			continue
+		}
+		successCount++
+
+		// 同步更新缓存
+		if cachedNode, ok := nodeCache.Get(u.ID); ok {
+			cachedNode.Name = u.Name
+			cachedNode.LinkName = u.LinkName
+			cachedNode.Link = u.Link
+			cachedNode.SourceSort = u.SourceSort
+			nodeCache.Set(u.ID, cachedNode)
+		}
+	}
+
+	return successCount, nil
+}
+
 // GetFastestSpeedNode 获取最快速度节点
 func GetFastestSpeedNode() *Node {
 	nodes := nodeCache.Filter(func(n Node) bool {
@@ -1478,6 +1546,54 @@ func GetNodeByContentHash(contentHash string) (*Node, bool) {
 	nodes := nodeCache.GetByIndex("contentHash", contentHash)
 	if len(nodes) > 0 {
 		return &nodes[0], true
+	}
+	return nil, false
+}
+
+// GetNodeByContentHashAndSourceID 根据 ContentHash + SourceID 获取节点（如果存在）
+// 用于在允许跨机场重复时，仍能准确定位“同机场”的节点，避免因 hash 多条记录导致误判。
+func GetNodeByContentHashAndSourceID(contentHash string, sourceID int) (*Node, bool) {
+	if contentHash == "" {
+		return nil, false
+	}
+	nodes := nodeCache.GetByIndex("contentHash", contentHash)
+	for i := range nodes {
+		if nodes[i].SourceID == sourceID {
+			return &nodes[i], true
+		}
+	}
+	return nil, false
+}
+
+// GetOtherNodeByContentHash 根据 ContentHash 查找任意“非自身”的节点
+// excludeID: 排除的节点ID（通常为自身ID）
+func GetOtherNodeByContentHash(contentHash string, excludeID int) (*Node, bool) {
+	if contentHash == "" {
+		return nil, false
+	}
+	nodes := nodeCache.GetByIndex("contentHash", contentHash)
+	for i := range nodes {
+		if nodes[i].ID != excludeID {
+			return &nodes[i], true
+		}
+	}
+	return nil, false
+}
+
+// GetOtherNodeByContentHashAndSourceID 根据 ContentHash + SourceID 查找任意“非自身”的节点
+// 用于跨机场去重关闭时的“同机场去重”校验。
+func GetOtherNodeByContentHashAndSourceID(contentHash string, sourceID int, excludeID int) (*Node, bool) {
+	if contentHash == "" {
+		return nil, false
+	}
+	nodes := nodeCache.GetByIndex("contentHash", contentHash)
+	for i := range nodes {
+		if nodes[i].ID == excludeID {
+			continue
+		}
+		if nodes[i].SourceID == sourceID {
+			return &nodes[i], true
+		}
 	}
 	return nil, false
 }

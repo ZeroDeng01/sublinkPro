@@ -330,6 +330,35 @@ func AirportPull(c *gin.Context) {
 	utils.OkWithMsg(c, "任务已提交，请稍后刷新查看结果")
 }
 
+// AirportPullAll 批量拉取所有已启用机场的订阅
+func AirportPullAll(c *gin.Context) {
+	airportModel := models.Airport{}
+	airports, err := airportModel.List()
+	if err != nil {
+		utils.FailWithMsg(c, "获取机场列表失败")
+		return
+	}
+
+	count := 0
+	for _, airport := range airports {
+		if !airport.Enabled {
+			continue
+		}
+		go scheduler.ExecuteSubscriptionTaskWithTrigger(airport.ID, airport.URL, airport.Name, models.TaskTriggerManual)
+		count++
+	}
+
+	if count == 0 {
+		utils.OkWithMsg(c, "没有已启用的机场")
+		return
+	}
+
+	utils.OkWithData(c, map[string]interface{}{
+		"message": "批量拉取任务已提交",
+		"count":   count,
+	})
+}
+
 // AirportRefreshUsage 仅刷新机场的用量信息，不更新订阅/节点
 func AirportRefreshUsage(c *gin.Context) {
 	idStr := c.Param("id")

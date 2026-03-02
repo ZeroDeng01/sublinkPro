@@ -217,6 +217,8 @@ func (a *Airport) Del() error {
 		return err
 	}
 	airportCache.Delete(a.ID)
+	// 级联清理该机场在分组排序表中的记录
+	CleanupAirportSortRecords(a.ID)
 	return nil
 }
 

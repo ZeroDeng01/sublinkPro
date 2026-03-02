@@ -537,6 +537,11 @@ func (sub *Subcription) GetSub(clientType string) error {
 		if err != nil {
 			return err
 		}
+
+		// 按分组内机场排序配置重排节点，避免不同机场节点穿插（同机场内优先按 SourceSort）
+		airportSortMap := GetGroupAirportSortMap(group.GroupName)
+		groupNodes = SortNodesByAirport(groupNodes, airportSortMap)
+
 		groupNodeMap[group.GroupName] = groupNodes
 	}
 
