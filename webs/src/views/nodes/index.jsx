@@ -840,6 +840,7 @@ export default function NodeList() {
         if (filters.minSpeed) params.minSpeed = filters.minSpeed;
         if (filters.speedStatus) params.speedStatus = filters.speedStatus;
         if (filters.delayStatus) params.delayStatus = filters.delayStatus;
+        if (filters.protocol) params.protocol = filters.protocol;
         if (filters.countries && filters.countries.length > 0) {
           params['countries[]'] = filters.countries;
         }
