@@ -20,6 +20,8 @@ export { default as NodePreviewDialog } from './NodePreviewDialog';
 export { default as NodePreviewDetailsPanel } from './NodePreviewDetailsPanel';
 // 分享管理
 export { default as ShareManageDialog } from './ShareManageDialog';
+// 分组排序
+export { default as GroupSortDialog } from './GroupSortDialog';
 // 链式代理相关组件
 export { default as ChainProxyDialog } from './ChainProxyDialog';
 export { default as ChainRuleEditor } from './ChainRuleEditor';

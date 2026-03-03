@@ -33,6 +33,7 @@ func NodeUpdadte(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
+	oldContentHash := Node.ContentHash
 	Node.Name = name
 
 	//更新构造节点元数据
@@ -210,19 +211,33 @@ func NodeUpdadte(c *gin.Context) {
 		contentHash := protocol.GenerateProxyContentHash(proxy)
 		if contentHash != "" {
 			Node.ContentHash = contentHash
-			// 检查是否与其他节点重复（排除自身）
-			if existingNode, exists := models.GetNodeByContentHash(contentHash); exists && existingNode.ID != Node.ID {
-				// 构建详细的重复信息
-				source := existingNode.Source
-				if source == "" || source == "manual" {
-					source = "手动添加"
+			// 内容未变化时无需重复校验（避免历史数据存在重复时无法正常改名/改分组）
+			if contentHash != oldContentHash {
+				// 读取全局配置：是否启用跨机场去重（默认启用）
+				crossAirportDedupVal, _ := models.GetSetting("cross_airport_dedup_enabled")
+				enableCrossDedup := crossAirportDedupVal != "false"
+
+				// 检查是否与其他节点重复（排除自身）
+				var dupNode *models.Node
+				var exists bool
+				if enableCrossDedup {
+					dupNode, exists = models.GetOtherNodeByContentHash(contentHash, Node.ID)
+				} else {
+					dupNode, exists = models.GetOtherNodeByContentHashAndSourceID(contentHash, Node.SourceID, Node.ID)
 				}
-				group := existingNode.Group
-				if group == "" {
-					group = "未分组"
+				if exists && dupNode != nil {
+					// 构建详细的重复信息
+					source := dupNode.Source
+					if source == "" || source == "manual" {
+						source = "手动添加"
+					}
+					group := dupNode.Group
+					if group == "" {
+						group = "未分组"
+					}
+					utils.FailWithMsg(c, "节点内容已存在，与以下节点重复：[来源: "+source+"] [分组: "+group+"] [名称: "+dupNode.Name+"]")
+					return
 				}
-				utils.FailWithMsg(c, "节点内容已存在，与以下节点重复：[来源: "+source+"] [分组: "+group+"] [名称: "+existingNode.Name+"]")
-				return
 			}
 		}
 	}
@@ -397,6 +412,10 @@ func NodeAdd(c *gin.Context) {
 		utils.FailWithMsg(c, "link  不能为空")
 		return
 	}
+
+	// 读取全局配置：是否启用跨机场去重（默认启用）
+	crossAirportDedupVal, _ := models.GetSetting("cross_airport_dedup_enabled")
+	enableCrossDedup := crossAirportDedupVal != "false"
 	// 检测是否为 WireGuard 配置文件格式，如果是则转换为 URL 格式
 	if protocol.IsWireGuardConfig(link) {
 		wg, err := protocol.ParseWireGuardConfig(link)
@@ -436,8 +455,13 @@ func NodeAdd(c *gin.Context) {
 				contentHash := protocol.GenerateProxyContentHash(proxy)
 				if contentHash != "" {
 					n.ContentHash = contentHash
-					// 检查是否已存在相同内容的节点
-					if _, exists := models.GetNodeByContentHash(contentHash); exists {
+					// 检查是否已存在相同内容的节点（跨机场去重关闭时仅校验同来源）
+					if enableCrossDedup {
+						if _, exists := models.GetNodeByContentHash(contentHash); exists {
+							failedCount++
+							continue
+						}
+					} else if _, exists := models.GetNodeByContentHashAndSourceID(contentHash, 0); exists {
 						failedCount++
 						continue
 					}
@@ -647,8 +671,15 @@ func NodeAdd(c *gin.Context) {
 		contentHash := protocol.GenerateProxyContentHash(proxy)
 		if contentHash != "" {
 			Node.ContentHash = contentHash
-			// 检查是否已存在相同内容的节点
-			if existingNode, exists := models.GetNodeByContentHash(contentHash); exists {
+			// 检查是否已存在相同内容的节点（跨机场去重关闭时仅校验同来源）
+			var existingNode *models.Node
+			var exists bool
+			if enableCrossDedup {
+				existingNode, exists = models.GetNodeByContentHash(contentHash)
+			} else {
+				existingNode, exists = models.GetNodeByContentHashAndSourceID(contentHash, 0)
+			}
+			if exists && existingNode != nil {
 				// 构建详细的重复信息
 				source := existingNode.Source
 				if source == "" || source == "manual" {

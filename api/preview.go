@@ -298,6 +298,8 @@ func buildNodesWithMixedSort(req PreviewRequest) []models.Node {
 			var groupNodes []models.Node
 			node := &models.Node{}
 			groupNodes, _ = node.ListByGroups([]string{item.Group})
+			airportSortMap := models.GetGroupAirportSortMap(item.Group)
+			groupNodes = models.SortNodesByAirport(groupNodes, airportSortMap)
 			groupNodeMap[item.Group] = groupNodes
 		}
 	}

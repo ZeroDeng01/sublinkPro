@@ -13,6 +13,7 @@ import Tooltip from '@mui/material/Tooltip';
 // icons
 import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import CategoryIcon from '@mui/icons-material/Category';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -44,7 +45,8 @@ import {
   SubscriptionFormDialog,
   NodePreviewDialog,
   ShareManageDialog,
-  ChainProxyDialog
+  ChainProxyDialog,
+  GroupSortDialog
 } from './component';
 
 // ==============================|| 订阅管理 ||============================== //
@@ -608,6 +610,9 @@ export default function SubscriptionList() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareDialogSub, setShareDialogSub] = useState(null);
 
+  // === 分组排序 ===
+  const [groupSortOpen, setGroupSortOpen] = useState(false);
+
   // === 链式代理 ===
   const [chainProxyOpen, setChainProxyOpen] = useState(false);
   const [chainProxySub, setChainProxySub] = useState(null);
@@ -778,13 +783,21 @@ export default function SubscriptionList() {
       title="订阅管理"
       secondary={
         matchDownMd ? (
-          <Tooltip title="添加订阅/刷新">
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="分组排序">
+              <IconButton onClick={() => setGroupSortOpen(true)} size="small">
+                <CategoryIcon />
+              </IconButton>
+            </Tooltip>
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
               添加
             </Button>
-          </Tooltip>
+          </Stack>
         ) : (
           <Stack direction="row" spacing={1}>
+            <Button variant="outlined" startIcon={<CategoryIcon />} onClick={() => setGroupSortOpen(true)}>
+              分组排序
+            </Button>
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
               添加订阅
             </Button>
@@ -1001,6 +1014,9 @@ export default function SubscriptionList() {
         onClose={() => setShareDialogOpen(false)}
         showMessage={showMessage}
       />
+
+      {/* 分组排序对话框 */}
+      <GroupSortDialog open={groupSortOpen} onClose={() => setGroupSortOpen(false)} showMessage={showMessage} />
 
       {/* 链式代理配置对话框 */}
       <ChainProxyDialog open={chainProxyOpen} subscription={chainProxySub} onClose={() => setChainProxyOpen(false)} />

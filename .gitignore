@@ -3,10 +3,9 @@
 db
 logs
 out
-sublink_amd64 
+sublink_amd64
 sublink_arm64
 sublink.exe
 .idea/
 static
 sublinkPro.exe
-

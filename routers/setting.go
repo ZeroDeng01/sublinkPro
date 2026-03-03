@@ -28,5 +28,9 @@ func Settings(r *gin.Engine) {
 		SettingsGroup.POST("/telegram/test", middlewares.DemoModeRestrict, api.TestTelegramConnection)
 		SettingsGroup.GET("/telegram/status", api.GetTelegramStatus)
 		SettingsGroup.POST("/telegram/reconnect", middlewares.DemoModeRestrict, api.ReconnectTelegram)
+
+		// 节点去重配置
+		SettingsGroup.GET("/node-dedup", api.GetNodeDedupConfig)
+		SettingsGroup.POST("/node-dedup", middlewares.DemoModeRestrict, api.UpdateNodeDedupConfig)
 	}
 }
