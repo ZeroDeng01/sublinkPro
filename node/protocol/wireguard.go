@@ -10,16 +10,17 @@ import (
 
 // WireGuard 结构体，存储 WireGuard 节点信息
 type WireGuard struct {
-	Name       string      `json:"name"`       // 节点名称
-	Server     string      `json:"server"`     // 服务器地址
-	Port       interface{} `json:"port"`       // 端口
-	PrivateKey string      `json:"privateKey"` // 客户端私钥
-	PublicKey  string      `json:"publicKey"`  // 服务端公钥
-	IP         string      `json:"ip"`         // 客户端 IPv4 地址
-	IPv6       string      `json:"ipv6"`       // 客户端 IPv6 地址（可选）
-	MTU        int         `json:"mtu"`        // MTU 值（可选，默认 1280）
-	Reserved   []int       `json:"reserved"`   // 保留字段（可选，用于 WARP）
-	DNS        string      `json:"dns"`        // DNS 服务器（可选）
+	Name         string      `json:"name"`         // 节点名称
+	Server       string      `json:"server"`       // 服务器地址
+	Port         interface{} `json:"port"`         // 端口
+	PrivateKey   string      `json:"privateKey"`   // 客户端私钥
+	PublicKey    string      `json:"publicKey"`    // 服务端公钥
+	PreSharedKey string      `json:"preSharedKey"` // 预共享密钥（可选，提供额外的对称加密层）
+	IP           string      `json:"ip"`           // 客户端 IPv4 地址
+	IPv6         string      `json:"ipv6"`         // 客户端 IPv6 地址（可选）
+	MTU          int         `json:"mtu"`          // MTU 值（可选，默认 1280）
+	Reserved     []int       `json:"reserved"`     // 保留字段（可选，用于 WARP）
+	DNS          string      `json:"dns"`          // DNS 服务器（可选）
 }
 
 // DecodeWireGuardURL 解析 WireGuard URL
@@ -56,6 +57,12 @@ func DecodeWireGuardURL(s string) (WireGuard, error) {
 	}
 	if publicKey == "" {
 		return WireGuard{}, fmt.Errorf("缺少公钥: %s", s)
+	}
+
+	// 预共享密钥（可选），兼容 presharedkey / pre-shared-key 两种写法
+	preSharedKey := u.Query().Get("presharedkey")
+	if preSharedKey == "" {
+		preSharedKey = u.Query().Get("pre-shared-key")
 	}
 
 	// 解析地址（可能包含 IPv4 和 IPv6，逗号分隔）
@@ -110,6 +117,7 @@ func DecodeWireGuardURL(s string) (WireGuard, error) {
 		fmt.Println("  port:", port)
 		fmt.Println("  privateKey:", privateKey)
 		fmt.Println("  publicKey:", publicKey)
+		fmt.Println("  preSharedKey:", preSharedKey)
 		fmt.Println("  ip:", ip)
 		fmt.Println("  ipv6:", ipv6)
 		fmt.Println("  mtu:", mtu)
@@ -117,16 +125,17 @@ func DecodeWireGuardURL(s string) (WireGuard, error) {
 	}
 
 	return WireGuard{
-		Name:       name,
-		Server:     server,
-		Port:       port,
-		PrivateKey: privateKey,
-		PublicKey:  publicKey,
-		IP:         ip,
-		IPv6:       ipv6,
-		MTU:        mtu,
-		Reserved:   reserved,
-		DNS:        dns,
+		Name:         name,
+		Server:       server,
+		Port:         port,
+		PrivateKey:   privateKey,
+		PublicKey:    publicKey,
+		PreSharedKey: preSharedKey,
+		IP:           ip,
+		IPv6:         ipv6,
+		MTU:          mtu,
+		Reserved:     reserved,
+		DNS:          dns,
 	}, nil
 }
 
@@ -142,6 +151,9 @@ func EncodeWireGuardURL(wg WireGuard) string {
 	q := u.Query()
 	if wg.PublicKey != "" {
 		q.Set("publickey", wg.PublicKey)
+	}
+	if wg.PreSharedKey != "" {
+		q.Set("presharedkey", wg.PreSharedKey)
 	}
 
 	// 组装地址
@@ -265,6 +277,8 @@ func ParseWireGuardConfig(config string) (WireGuard, error) {
 				}
 			case "publickey":
 				wg.PublicKey = value
+			case "presharedkey":
+				wg.PreSharedKey = value
 			}
 		}
 	}

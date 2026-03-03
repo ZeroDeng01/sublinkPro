@@ -95,15 +95,16 @@ type Proxy struct {
 	Plugin      string                 `yaml:"plugin,omitempty"`      // SS 插件名称
 	Plugin_opts map[string]interface{} `yaml:"plugin-opts,omitempty"` // SS 插件选项
 	// WireGuard 特有字段
-	Private_key string   `yaml:"private-key,omitempty"` // WireGuard 私钥
-	Public_key  string   `yaml:"public-key,omitempty"`  // WireGuard 公钥
-	Ip          string   `yaml:"ip,omitempty"`          // WireGuard 客户端 IPv4
-	Ipv6        string   `yaml:"ipv6,omitempty"`        // WireGuard 客户端 IPv6
-	Mtu         int      `yaml:"mtu,omitempty"`         // MTU 值
-	Reserved    []int    `yaml:"reserved,omitempty"`    // 保留字段
-	Allowed_ips []string `yaml:"allowed-ips,omitempty"` // 允许的 IP 段
-	Version     int      `yaml:"version,omitempty"`     // 版本
-	Token       string   `yaml:"token,omitempty"`       // Tuic 令牌v4
+	Private_key    string   `yaml:"private-key,omitempty"`    // WireGuard 私钥
+	Public_key     string   `yaml:"public-key,omitempty"`     // WireGuard 公钥
+	Pre_shared_key string   `yaml:"pre-shared-key,omitempty"` // WireGuard 预共享密钥（可选）
+	Ip             string   `yaml:"ip,omitempty"`             // WireGuard 客户端 IPv4
+	Ipv6           string   `yaml:"ipv6,omitempty"`           // WireGuard 客户端 IPv6
+	Mtu            int      `yaml:"mtu,omitempty"`            // MTU 值
+	Reserved       []int    `yaml:"reserved,omitempty"`       // 保留字段
+	Allowed_ips    []string `yaml:"allowed-ips,omitempty"`    // 允许的 IP 段
+	Version        int      `yaml:"version,omitempty"`        // 版本
+	Token          string   `yaml:"token,omitempty"`          // Tuic 令牌v4
 	// VLESS 特有字段
 	Packet_encoding string                 `yaml:"packet-encoding,omitempty"` // VLESS packet-encoding (xudp/packetaddr)
 	H2_opts         map[string]interface{} `yaml:"h2-opts,omitempty"`         // HTTP/2 传输层选项
@@ -610,19 +611,20 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 			wg.Name = fmt.Sprintf("%s:%s", wg.Server, utils.GetPortString(wg.Port))
 		}
 		return Proxy{
-			Name:         wg.Name,
-			Type:         "wireguard",
-			Server:       wg.Server,
-			Port:         FlexPort(utils.GetPortInt(wg.Port)),
-			Private_key:  wg.PrivateKey,
-			Public_key:   wg.PublicKey,
-			Ip:           wg.IP,
-			Ipv6:         wg.IPv6,
-			Mtu:          wg.MTU,
-			Reserved:     wg.Reserved,
-			Allowed_ips:  []string{"0.0.0.0/0"},
-			Udp:          true, // WireGuard 默认启用 UDP
-			Dialer_proxy: link.DialerProxyName,
+			Name:           wg.Name,
+			Type:           "wireguard",
+			Server:         wg.Server,
+			Port:           FlexPort(utils.GetPortInt(wg.Port)),
+			Private_key:    wg.PrivateKey,
+			Public_key:     wg.PublicKey,
+			Pre_shared_key: wg.PreSharedKey,
+			Ip:             wg.IP,
+			Ipv6:           wg.IPv6,
+			Mtu:            wg.MTU,
+			Reserved:       wg.Reserved,
+			Allowed_ips:    []string{"0.0.0.0/0"},
+			Udp:            true, // WireGuard 默认启用 UDP
+			Dialer_proxy:   link.DialerProxyName,
 		}, nil
 	default:
 		return Proxy{}, fmt.Errorf("unsupported scheme: %s", Scheme)

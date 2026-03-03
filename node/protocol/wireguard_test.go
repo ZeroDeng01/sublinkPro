@@ -8,14 +8,15 @@ import (
 // TestWireGuardEncodeDecode 测试 WireGuard URL 编解码完整性
 func TestWireGuardEncodeDecode(t *testing.T) {
 	original := WireGuard{
-		Name:       "测试节点-WireGuard",
-		Server:     "162.159.192.127",
-		Port:       7152,
-		PrivateKey: "OOrigZsSjw2YaY4urjbbU4/BNOZKXqW6EYNm8XKLtkU=",
-		PublicKey:  "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
-		IP:         "172.16.0.2",
-		IPv6:       "2606:4700:110:82ce:bdeb:e72d:572a:e280",
-		MTU:        1280,
+		Name:         "测试节点-WireGuard",
+		Server:       "162.159.192.127",
+		Port:         7152,
+		PrivateKey:   "OOrigZsSjw2YaY4urjbbU4/BNOZKXqW6EYNm8XKLtkU=",
+		PublicKey:    "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
+		PreSharedKey: "31aIhAPwktDGpH4JDhA8GNvjFXEf/a6+UaQRyOAiyfM=",
+		IP:           "172.16.0.2",
+		IPv6:         "2606:4700:110:82ce:bdeb:e72d:572a:e280",
+		MTU:          1280,
 	}
 
 	// 编码
@@ -35,6 +36,7 @@ func TestWireGuardEncodeDecode(t *testing.T) {
 	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "PrivateKey", original.PrivateKey, decoded.PrivateKey)
 	assertEqualString(t, "PublicKey", original.PublicKey, decoded.PublicKey)
+	assertEqualString(t, "PreSharedKey", original.PreSharedKey, decoded.PreSharedKey)
 	assertEqualString(t, "IP", original.IP, decoded.IP)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 
@@ -77,7 +79,8 @@ MTU = 1280
 [Peer]
 AllowedIPs = 0.0.0.0/0
 Endpoint = 162.159.192.127:7152
-PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=`
+PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
+PresharedKey = 31aIhAPwktDGpH4JDhA8GNvjFXEf/a6+UaQRyOAiyfM=`
 
 	// 检测是否为配置文件格式
 	if !IsWireGuardConfig(config) {
@@ -95,12 +98,14 @@ PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=`
 	assertEqualIntInterface(t, "Port", 7152, wg.Port)
 	assertEqualString(t, "PrivateKey", "OOrigZsSjw2YaY4urjbbU4/BNOZKXqW6EYNm8XKLtkU=", wg.PrivateKey)
 	assertEqualString(t, "PublicKey", "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=", wg.PublicKey)
+	assertEqualString(t, "PreSharedKey", "31aIhAPwktDGpH4JDhA8GNvjFXEf/a6+UaQRyOAiyfM=", wg.PreSharedKey)
 	assertEqualString(t, "IP", "172.16.0.2", wg.IP)
 	assertEqualString(t, "DNS", "1.1.1.1", wg.DNS)
 
 	t.Logf("✓ WireGuard 配置文件解析测试通过")
 	t.Logf("  Server: %s", wg.Server)
 	t.Logf("  Port: %v", wg.Port)
+	t.Logf("  PreSharedKey: %s", wg.PreSharedKey)
 	t.Logf("  IP: %s", wg.IP)
 	t.Logf("  IPv6: %s", wg.IPv6)
 }
@@ -153,4 +158,34 @@ func TestIsWireGuardConfig(t *testing.T) {
 	}
 
 	t.Log("✓ WireGuard 配置文件格式检测测试通过")
+}
+
+// TestWireGuardPreSharedKeyURL 测试 URL 中 pre-shared-key 的两种参数名写法兼容性
+func TestWireGuardPreSharedKeyURL(t *testing.T) {
+	psk := "31aIhAPwktDGpH4JDhA8GNvjFXEf/a6+UaQRyOAiyfM="
+
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{
+			"presharedkey 参数名",
+			"wireguard://key%3D@1.2.3.4:51820/?publickey=pub%3D&presharedkey=31aIhAPwktDGpH4JDhA8GNvjFXEf%2Fa6%2BUaQRyOAiyfM%3D&address=10.0.0.2%2F32#test",
+		},
+		{
+			"pre-shared-key 参数名",
+			"wireguard://key%3D@1.2.3.4:51820/?publickey=pub%3D&pre-shared-key=31aIhAPwktDGpH4JDhA8GNvjFXEf%2Fa6%2BUaQRyOAiyfM%3D&address=10.0.0.2%2F32#test",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			wg, err := DecodeWireGuardURL(tc.url)
+			if err != nil {
+				t.Fatalf("解析失败: %v", err)
+			}
+			assertEqualString(t, "PreSharedKey", psk, wg.PreSharedKey)
+			t.Logf("✓ %s 解析通过，PSK: %s", tc.name, wg.PreSharedKey)
+		})
+	}
 }
