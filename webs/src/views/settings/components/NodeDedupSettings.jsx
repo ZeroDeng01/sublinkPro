@@ -54,20 +54,11 @@ export default function NodeDedupSettings({ showMessage }) {
 
   return (
     <Card variant="outlined">
-      <CardHeader
-        avatar={<FilterAltIcon color="primary" />}
-        title="跨机场节点去重"
-        subheader="控制不同机场之间是否进行节点内容去重"
-      />
+      <CardHeader avatar={<FilterAltIcon color="primary" />} title="跨机场节点去重" subheader="控制不同机场之间是否进行节点内容去重" />
       <CardContent>
         <Stack spacing={2}>
           <FormControlLabel
-            control={
-              <Switch
-                checked={crossAirportDedupEnabled}
-                onChange={(e) => setCrossAirportDedupEnabled(e.target.checked)}
-              />
-            }
+            control={<Switch checked={crossAirportDedupEnabled} onChange={(e) => setCrossAirportDedupEnabled(e.target.checked)} />}
             label="启用跨机场去重"
           />
           <Alert severity={crossAirportDedupEnabled ? 'info' : 'warning'} variant="standard">

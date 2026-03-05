@@ -53,29 +53,43 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
   const [searchText, setSearchText] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
+  const handleSnackbar = useCallback(
+    (message, severity) => {
+      if (showMessage) {
+        showMessage(message, severity);
+      } else {
+        setSnackbar({ open: true, message, severity });
+      }
+    },
+    [showMessage]
+  );
+
   // 加载分组列表
   const loadGroups = useCallback(async () => {
     try {
       const res = await getGroupSortGroups();
       setGroups(res.data || []);
-    } catch (err) {
+    } catch {
       handleSnackbar('加载分组列表失败', 'error');
     }
-  }, []);
+  }, [handleSnackbar]);
 
   // 加载分组详情
-  const loadGroupDetail = useCallback(async (groupName) => {
-    if (!groupName) return;
-    setLoading(true);
-    try {
-      const res = await getGroupSortDetail(groupName);
-      setAirports(res.data?.airports || []);
-    } catch (err) {
-      handleSnackbar('加载分组详情失败', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loadGroupDetail = useCallback(
+    async (groupName) => {
+      if (!groupName) return;
+      setLoading(true);
+      try {
+        const res = await getGroupSortDetail(groupName);
+        setAirports(res.data?.airports || []);
+      } catch {
+        handleSnackbar('加载分组详情失败', 'error');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [handleSnackbar]
+  );
 
   useEffect(() => {
     if (open) {
@@ -86,14 +100,6 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
       setSearchText('');
     }
   }, [open, loadGroups]);
-
-  const handleSnackbar = (message, severity) => {
-    if (showMessage) {
-      showMessage(message, severity);
-    } else {
-      setSnackbar({ open: true, message, severity });
-    }
-  };
 
   // 选择分组
   const handleSelectGroup = (groupName) => {
@@ -123,7 +129,7 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
       await saveGroupAirportSort({ groupName: selectedGroup, airportSorts });
       handleSnackbar('保存成功', 'success');
       loadGroups();
-    } catch (err) {
+    } catch {
       handleSnackbar('保存失败', 'error');
     } finally {
       setSaving(false);
@@ -131,9 +137,7 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
   };
 
   // 过滤分组列表
-  const filteredGroups = groups.filter(
-    (g) => !searchText || g.groupName.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const filteredGroups = groups.filter((g) => !searchText || g.groupName.toLowerCase().includes(searchText.toLowerCase()));
 
   return (
     <>
@@ -195,19 +199,14 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
                   ) : (
                     filteredGroups.map((group) => (
                       <ListItem key={group.groupName} disablePadding divider>
-                        <ListItemButton
-                          selected={selectedGroup === group.groupName}
-                          onClick={() => handleSelectGroup(group.groupName)}
-                        >
+                        <ListItemButton selected={selectedGroup === group.groupName} onClick={() => handleSelectGroup(group.groupName)}>
                           <ListItemText
                             primary={
                               <Stack direction="row" alignItems="center" spacing={1}>
                                 <Typography variant="body2" noWrap sx={{ flex: 1 }}>
                                   {group.groupName}
                                 </Typography>
-                                {group.hasSortConfig && (
-                                  <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                                )}
+                                {group.hasSortConfig && <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />}
                               </Stack>
                             }
                             secondary={`${group.airportCount} 个机场 · ${group.nodeCount} 个节点`}
@@ -254,11 +253,7 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
                         {(provided) => (
                           <List {...provided.droppableProps} ref={provided.innerRef} sx={{ py: 0 }}>
                             {airports.map((airport, index) => (
-                              <Draggable
-                                key={`airport-${airport.airportId}`}
-                                draggableId={`airport-${airport.airportId}`}
-                                index={index}
-                              >
+                              <Draggable key={`airport-${airport.airportId}`} draggableId={`airport-${airport.airportId}`} index={index}>
                                 {(provided, snapshot) => (
                                   <ListItem
                                     ref={provided.innerRef}
@@ -272,20 +267,11 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
                                   >
                                     <Stack direction="row" alignItems="center" spacing={1.5} sx={{ width: '100%' }}>
                                       <DragIndicatorIcon sx={{ color: 'text.secondary', cursor: 'grab' }} />
-                                      <Chip
-                                        label={index + 1}
-                                        size="small"
-                                        sx={{ minWidth: 32, fontWeight: 600 }}
-                                      />
+                                      <Chip label={index + 1} size="small" sx={{ minWidth: 32, fontWeight: 600 }} />
                                       <Typography variant="body2" sx={{ flex: 1 }} noWrap>
                                         {airport.airportName}
                                       </Typography>
-                                      <Chip
-                                        label={`${airport.nodeCount} 节点`}
-                                        size="small"
-                                        variant="outlined"
-                                        color="primary"
-                                      />
+                                      <Chip label={`${airport.nodeCount} 节点`} size="small" variant="outlined" color="primary" />
                                     </Stack>
                                   </ListItem>
                                 )}
