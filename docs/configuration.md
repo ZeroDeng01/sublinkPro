@@ -18,25 +18,26 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 
 ## 环境变量列表
 
-| 环境变量 | 说明 | 默认值 |
-|----------|------|--------|
-| `SUBLINK_PORT` | 服务端口 | 8000 |
-| `SUBLINK_DB_PATH` | 数据库目录 | ./db |
-| `SUBLINK_LOG_PATH` | 日志目录 | ./logs |
-| `SUBLINK_JWT_SECRET` | JWT签名密钥 | (自动生成) |
-| `SUBLINK_API_ENCRYPTION_KEY` | API加密密钥 | (自动生成) |
-| `SUBLINK_EXPIRE_DAYS` | Token过期天数 | 14 |
-| `SUBLINK_LOGIN_FAIL_COUNT` | 登录失败次数限制 | 5 |
-| `SUBLINK_LOGIN_FAIL_WINDOW` | 登录失败窗口(分钟) | 1 |
-| `SUBLINK_LOGIN_BAN_DURATION` | 登录封禁时间(分钟) | 10 |
-| `SUBLINK_GEOIP_PATH` | GeoIP数据库路径 | ./db/GeoLite2-City.mmdb |
-| `SUBLINK_CAPTCHA_MODE` | 验证码模式 (1=关闭, 2=传统, 3=Turnstile) | 2 |
-| `SUBLINK_TURNSTILE_SITE_KEY` | Cloudflare Turnstile Site Key | - |
-| `SUBLINK_TURNSTILE_SECRET_KEY` | Cloudflare Turnstile Secret Key | - |
-| `SUBLINK_TURNSTILE_PROXY_LINK` | Turnstile 验证代理链接（mihomo 格式） | - |
-| `SUBLINK_WEB_BASE_PATH` | 前端访问基础路径（站点隐藏） | - |
-| `SUBLINK_ADMIN_PASSWORD` | 初始管理员密码 | 123456 |
-| `SUBLINK_ADMIN_PASSWORD_REST` | 重置管理员密码 | 输入新管理员密码 |
+| 环境变量 | 说明                              | 默认值                                 |
+|----------|---------------------------------|-------------------------------------|
+| `SUBLINK_PORT` | 服务端口                            | 8000                                |
+| `SUBLINK_DB_PATH` | 数据库目录                           | ./db                                |
+| `SUBLINK_LOG_PATH` | 日志目录                            | ./logs                              |
+| `SUBLINK_JWT_SECRET` | JWT签名密钥                         | (自动生成)                              |
+| `SUBLINK_API_ENCRYPTION_KEY` | API加密密钥                         | (自动生成)                              |
+| `SUBLINK_EXPIRE_DAYS` | Token过期天数                       | 14                                  |
+| `SUBLINK_LOGIN_FAIL_COUNT` | 登录失败次数限制                        | 5                                   |
+| `SUBLINK_LOGIN_FAIL_WINDOW` | 登录失败窗口(分钟)                      | 1                                   |
+| `SUBLINK_LOGIN_BAN_DURATION` | 登录封禁时间(分钟)                      | 10                                  |
+| `SUBLINK_GEOIP_PATH` | GeoIP数据库路径                      | ./db/GeoLite2-City.mmdb             |
+| `SUBLINK_CAPTCHA_MODE` | 验证码模式 (1=关闭, 2=传统, 3=Turnstile) | 2                                   |
+| `SUBLINK_TURNSTILE_SITE_KEY` | Cloudflare Turnstile Site Key   | -                                   |
+| `SUBLINK_TURNSTILE_SECRET_KEY` | Cloudflare Turnstile Secret Key | -                                   |
+| `SUBLINK_TURNSTILE_PROXY_LINK` | Turnstile 验证代理链接（mihomo 格式）     | -                                   |
+| `SUBLINK_WEB_BASE_PATH` | 前端访问基础路径（站点隐藏）                  | -                                   |
+| `SUBLINK_ADMIN_PASSWORD` | 初始管理员密码                         | 123456                              |
+| `SUBLINK_ADMIN_PASSWORD_REST` | 重置管理员密码                         | 输入新管理员密码                            |
+| `SUBLINK_FEATURE` | 试验性功能开关                         | 目前可以设置其值为`SubNodePreview`开启订阅节点预览功能 |
 
 ---
 
