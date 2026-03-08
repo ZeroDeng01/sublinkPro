@@ -239,26 +239,57 @@ func RandString(number int) string {
 	return Secret
 }
 
+func splitIPEntries(ipString string) []string {
+	fields := strings.FieldsFunc(ipString, func(r rune) bool {
+		return r == ',' || r == '\n' || r == '\r'
+	})
+
+	entries := make([]string, 0, len(fields))
+	for _, field := range fields {
+		entry := strings.TrimSpace(field)
+		if entry != "" {
+			entries = append(entries, entry)
+		}
+	}
+
+	return entries
+}
+
 // IsIpInCidr 判断IP是否在CIDR范围内
 func IsIpInCidr(cIP string, sIP string) bool {
-	ips := strings.Split(sIP, ",")
-	for _, ip := range ips {
+	clientIP := net.ParseIP(strings.TrimSpace(cIP))
+	if clientIP == nil {
+		return false
+	}
+
+	for _, ip := range splitIPEntries(sIP) {
 		if strings.Contains(ip, "/") {
 			_, ipNet, err := net.ParseCIDR(ip)
 			if err != nil {
-				return false
+				continue
 			}
-			return ipNet.Contains(net.ParseIP(cIP))
-		} else {
-			return ip == cIP
+			if ipNet.Contains(clientIP) {
+				return true
+			}
+			continue
+		}
+
+		parsedIP := net.ParseIP(ip)
+		if parsedIP != nil && parsedIP.Equal(clientIP) {
+			return true
 		}
 	}
+
 	return false
 }
 
 // IpFormatValidation IP格式检测
 func IpFormatValidation(ipString string) bool {
-	ips := strings.Split(ipString, ",")
+	ips := splitIPEntries(ipString)
+	if len(ips) == 0 {
+		return strings.TrimSpace(ipString) == ""
+	}
+
 	for _, ip := range ips {
 		_, _, err := net.ParseCIDR(ip)
 		if err != nil {
