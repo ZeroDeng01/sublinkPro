@@ -342,15 +342,11 @@ func generateClashRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxy
 			if strings.HasPrefix(rs.RuleURL, "[]") {
 				// 内联规则
 				rule := rs.RuleURL[2:] // 去掉 []
-				if rule == "GEOIP,CN" {
-					rules = append(rules, fmt.Sprintf("GEOIP,CN,%s", rs.Group))
-				} else if rule == "FINAL" {
+				ruleType := strings.SplitN(rule, ",", 2)[0]
+				if ruleType == "FINAL" {
 					rules = append(rules, fmt.Sprintf("MATCH,%s", rs.Group))
-				} else if strings.HasPrefix(rule, "GEOIP,") {
-					geo := strings.TrimPrefix(rule, "GEOIP,")
-					rules = append(rules, fmt.Sprintf("GEOIP,%s,%s", geo, rs.Group))
 				} else {
-					rules = append(rules, fmt.Sprintf("%s,%s", rule, rs.Group))
+					rules = append(rules, buildInlineRule(rule, rs.Group))
 				}
 			} else if strings.HasPrefix(rs.RuleURL, "http") {
 				// 远程规则，解析出名称
@@ -440,15 +436,11 @@ func expandRulesParallel(rulesets []ACLRuleset, useProxy bool, proxyLink string)
 			if strings.HasPrefix(ruleset.RuleURL, "[]") {
 				// 内联规则
 				rule := ruleset.RuleURL[2:]
-				if rule == "GEOIP,CN" {
-					rules = append(rules, fmt.Sprintf("GEOIP,CN,%s", ruleset.Group))
-				} else if rule == "FINAL" {
+				ruleType := strings.SplitN(rule, ",", 2)[0]
+				if ruleType == "FINAL" {
 					rules = append(rules, fmt.Sprintf("MATCH,%s", ruleset.Group))
-				} else if strings.HasPrefix(rule, "GEOIP,") {
-					geo := strings.TrimPrefix(rule, "GEOIP,")
-					rules = append(rules, fmt.Sprintf("GEOIP,%s,%s", geo, ruleset.Group))
 				} else {
-					rules = append(rules, fmt.Sprintf("%s,%s", rule, ruleset.Group))
+					rules = append(rules, buildInlineRule(rule, ruleset.Group))
 				}
 			} else if strings.HasPrefix(ruleset.RuleURL, "http") {
 				// 获取远程规则
@@ -483,6 +475,37 @@ func expandRulesParallel(rulesets []ACLRuleset, useProxy bool, proxyLink string)
 	}
 
 	return allRules
+}
+
+// buildInlineRule 构建内联规则，在正确位置插入策略组名
+// Clash/Surge 规则格式: TYPE,VALUE,POLICY[,OPTIONS]
+// 将策略组名插入到规则核心字段之后、选项参数（如 no-resolve）之前
+func buildInlineRule(rule string, group string) string {
+	parts := strings.Split(rule, ",")
+	if len(parts) == 0 {
+		return rule + "," + group
+	}
+
+	ruleType := strings.ToUpper(parts[0])
+
+	// 确定核心字段数量（类型名 + 必要参数）
+	// 0 参数类型: FINAL, MATCH（仅类型名）
+	// 1 参数类型: 其他所有标准规则类型（类型名 + 匹配值）
+	coreCount := 2 // 默认: TYPE + VALUE
+	switch ruleType {
+	case "FINAL", "MATCH":
+		coreCount = 1
+	}
+
+	// 不存在多余选项参数，直接追加策略组
+	if len(parts) <= coreCount {
+		return rule + "," + group
+	}
+
+	// 存在选项参数，在核心字段后插入策略组
+	coreParts := strings.Join(parts[:coreCount], ",")
+	extraParts := strings.Join(parts[coreCount:], ",")
+	return coreParts + "," + group + "," + extraParts
 }
 
 // parseRuleList 解析规则列表文件
@@ -683,12 +706,11 @@ func generateSurgeRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxy
 		for _, rs := range rulesets {
 			if strings.HasPrefix(rs.RuleURL, "[]") {
 				rule := rs.RuleURL[2:]
-				if rule == "GEOIP,CN" {
-					lines = append(lines, fmt.Sprintf("GEOIP,CN,%s", rs.Group))
-				} else if rule == "FINAL" {
+				ruleType := strings.SplitN(rule, ",", 2)[0]
+				if ruleType == "FINAL" {
 					lines = append(lines, fmt.Sprintf("FINAL,%s", rs.Group))
 				} else {
-					lines = append(lines, fmt.Sprintf("%s,%s", rule, rs.Group))
+					lines = append(lines, buildInlineRule(rule, rs.Group))
 				}
 			} else if strings.HasPrefix(rs.RuleURL, "http") {
 				lines = append(lines, fmt.Sprintf("RULE-SET,%s,%s,update-interval=86400", rs.RuleURL, rs.Group))
