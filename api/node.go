@@ -680,16 +680,24 @@ func NodeAdd(c *gin.Context) {
 				existingNode, exists = models.GetNodeByContentHashAndSourceID(contentHash, 0)
 			}
 			if exists && existingNode != nil {
-				// 构建详细的重复信息
-				source := existingNode.Source
-				if source == "" || source == "manual" {
-					source = "手动添加"
+				// 重复节点：返回成功响应 + 跳过标记，不终止添加流程
+				dupSource := existingNode.Source
+				if dupSource == "" || dupSource == "manual" {
+					dupSource = "手动添加"
 				}
-				group := existingNode.Group
-				if group == "" {
-					group = "未分组"
+				dupGroup := existingNode.Group
+				if dupGroup == "" {
+					dupGroup = "未分组"
 				}
-				utils.FailWithMsg(c, "节点内容已存在，与以下节点重复：[来源: "+source+"] [分组: "+group+"] [名称: "+existingNode.Name+"]")
+				utils.OkDetailed(c, "节点重复已跳过", gin.H{
+					"skipped": true,
+					"duplicateInfo": gin.H{
+						"name":         Node.Name,
+						"source":       dupSource,
+						"group":        dupGroup,
+						"existingName": existingNode.Name,
+					},
+				})
 				return
 			}
 		}

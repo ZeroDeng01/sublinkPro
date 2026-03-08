@@ -7,6 +7,7 @@ export { default as BatchTagDialog } from './BatchTagDialog';
 export { default as BatchRemoveTagDialog } from './BatchRemoveTagDialog';
 export { default as BatchSourceDialog } from './BatchSourceDialog';
 export { default as BatchCountryDialog } from './BatchCountryDialog';
+export { default as NodeAddResultDialog } from './NodeAddResultDialog';
 
 // Node check profile components
 export { default as ProfileSelectDialog } from './ProfileSelectDialog';

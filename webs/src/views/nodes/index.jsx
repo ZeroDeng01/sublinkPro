@@ -59,6 +59,7 @@ import {
   BatchRemoveTagDialog,
   BatchSourceDialog,
   BatchCountryDialog,
+  NodeAddResultDialog,
   NodeDetailsPanel,
   NodeFilters,
   BatchActions,
@@ -111,6 +112,10 @@ export default function NodeList() {
     mergeMode: '2', // 分开模式
     tags: [] // 标签列表
   });
+
+  // 添加结果汇总弹窗
+  const [addResultDialogOpen, setAddResultDialogOpen] = useState(false);
+  const [addResult, setAddResult] = useState(null);
 
   // 过滤器
   const [searchQuery, setSearchQuery] = useState('');
@@ -761,21 +766,41 @@ export default function NodeList() {
           tags: tagNames
         });
         showMessage('更新成功');
+        setNodeDialogOpen(false);
+        handleRefresh();
       } else {
-        // 分开模式：每条链接单独添加
+        // 收集所有链接的添加结果
+        const result = { added: 0, skipped: [], failed: [] };
         for (const link of nodeLinks) {
-          await addNodes({
-            link,
-            name: '',
-            dialerProxyName: nodeForm.dialerProxyName.trim(),
-            group: nodeForm.group.trim(),
-            tags: tagNames
-          });
+          try {
+            const res = await addNodes({
+              link,
+              name: '',
+              dialerProxyName: nodeForm.dialerProxyName.trim(),
+              group: nodeForm.group.trim(),
+              tags: tagNames
+            });
+            // 检查后端返回的跳过标记
+            if (res.data?.skipped) {
+              result.skipped.push(res.data.duplicateInfo);
+            } else {
+              result.added++;
+            }
+          } catch (error) {
+            result.failed.push({ link, error: error.message || '添加失败' });
+          }
         }
-        showMessage('添加成功');
+        setNodeDialogOpen(false);
+        // 单条且全部成功时，仅显示简单提示
+        if (nodeLinks.length === 1 && result.added === 1) {
+          showMessage('添加成功');
+        } else {
+          // 多条链接或有跳过/失败时，弹出结果汇总面板
+          setAddResult(result);
+          setAddResultDialogOpen(true);
+        }
+        handleRefresh();
       }
-      setNodeDialogOpen(false);
-      handleRefresh();
     } catch (error) {
       console.error(error);
       showMessage(error.message || (isEditNode ? '更新失败' : '添加失败'), 'error');
@@ -920,9 +945,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                        animation: 'spin 1s linear infinite',
-                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                      }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                     : {}
                 }
               />
@@ -965,9 +990,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                  }
                   : {}
               }
             />
@@ -1212,6 +1237,16 @@ export default function NodeList() {
           fetchNodes(getCurrentFilters());
         }}
         showMessage={showMessage}
+      />
+
+      {/* 添加结果汇总弹窗 */}
+      <NodeAddResultDialog
+        open={addResultDialogOpen}
+        result={addResult}
+        onClose={() => {
+          setAddResultDialogOpen(false);
+          setAddResult(null);
+        }}
       />
 
       {/* 提示消息 */}
