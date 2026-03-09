@@ -55,6 +55,11 @@ func Backup(c *gin.Context) {
 				return err
 			}
 
+			// 跳过 GeoIP 数据库文件，该文件体积大且可重新下载
+			if !info.IsDir() && info.Name() == "GeoLite2-City.mmdb" {
+				return nil
+			}
+
 			// 计算相对路径
 			relPath, err := filepath.Rel(baseDir, path)
 			if err != nil {
