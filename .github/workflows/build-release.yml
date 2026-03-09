@@ -5,7 +5,7 @@ on:
     tags:
       - 'v*'
     branches:
-      - 'dev'
+      - '**'
 
 permissions:
   contents: write
@@ -290,15 +290,24 @@ jobs:
       - name: Build and Push Multi-Arch Docker Image
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
+            # 带 tag 的推送：使用 tag 版本号 + latest
             TAG=${GITHUB_REF#refs/tags/}
             docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64 \
               -f Dockerfile.ci \
               -t zerodeng/sublink-pro:${TAG} \
               -t zerodeng/sublink-pro:latest \
               --push .
-          elif [[ $GITHUB_REF == refs/heads/dev ]]; then
+          else
+            # 分支推送：dev 和 main 分支统一使用 dev 标签，其他分支使用分支名
+            BRANCH=${GITHUB_REF#refs/heads/}
+            if [[ "$BRANCH" == "dev" || "$BRANCH" == "main" ]]; then
+              DOCKER_TAG="dev"
+            else
+              # 将分支名中的 / 替换为 - 以兼容 Docker tag 格式
+              DOCKER_TAG=${BRANCH//\//-}
+            fi
             docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64 \
               -f Dockerfile.ci \
-              -t zerodeng/sublink-pro:dev \
+              -t zerodeng/sublink-pro:${DOCKER_TAG} \
               --push .
           fi
