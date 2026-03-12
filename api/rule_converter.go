@@ -3,7 +3,10 @@ package api
 import (
 	"bufio"
 	"fmt"
+	"net/url"
+	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sublink/models"
 	"sublink/utils"
@@ -11,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gopkg.in/yaml.v3"
 )
 
 // ConvertRulesRequest 规则转换请求
@@ -33,6 +37,15 @@ type ConvertRulesResponse struct {
 type ACLRuleset struct {
 	Group   string // 目标代理组
 	RuleURL string // 规则 URL 或内联规则
+}
+
+type parsedRulesetSource struct {
+	Raw        string
+	IsInline   bool
+	InlineRule string
+	SourceType string
+	URL        string
+	Interval   int
 }
 
 // ACLProxyGroup ACL 代理组定义
@@ -117,6 +130,50 @@ func fetchRemoteContent(url string, useProxy bool, proxyLink string) (string, er
 		return "", err
 	}
 	return string(data), nil
+}
+
+func parseRulesetSource(raw string) parsedRulesetSource {
+	source := parsedRulesetSource{
+		Raw:        strings.TrimSpace(raw),
+		SourceType: "surge",
+		Interval:   86400,
+	}
+
+	if strings.HasPrefix(source.Raw, "[]") {
+		source.IsInline = true
+		source.InlineRule = source.Raw[2:]
+		return source
+	}
+
+	sourcePart := source.Raw
+	if idx := strings.LastIndex(source.Raw, ","); idx >= 0 {
+		intervalPart := strings.TrimSpace(source.Raw[idx+1:])
+		if interval, err := strconv.Atoi(intervalPart); err == nil {
+			source.Interval = interval
+			sourcePart = strings.TrimSpace(source.Raw[:idx])
+		}
+	}
+
+	if idx := strings.Index(sourcePart, ":"); idx > 0 {
+		typePart := strings.ToLower(strings.TrimSpace(sourcePart[:idx]))
+		if isSupportedRulesetType(typePart) {
+			source.SourceType = typePart
+			source.URL = strings.TrimSpace(sourcePart[idx+1:])
+			return source
+		}
+	}
+
+	source.URL = sourcePart
+	return source
+}
+
+func isSupportedRulesetType(sourceType string) bool {
+	switch sourceType {
+	case "surge", "quanx", "clash-domain", "clash-ipcidr", "clash-classic", "clash-classical":
+		return true
+	default:
+		return false
+	}
 }
 
 // parseACLConfig 解析 ACL 配置
@@ -339,19 +396,19 @@ func generateClashRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxy
 	} else {
 		// 生成 RULE-SET 引用 + rule-providers
 		for _, rs := range rulesets {
-			if strings.HasPrefix(rs.RuleURL, "[]") {
+			source := parseRulesetSource(rs.RuleURL)
+			if source.IsInline {
 				// 内联规则
-				rule := rs.RuleURL[2:] // 去掉 []
+				rule := source.InlineRule
 				ruleType := strings.SplitN(rule, ",", 2)[0]
-				if ruleType == "FINAL" {
+				if ruleType == "FINAL" || ruleType == "MATCH" {
 					rules = append(rules, fmt.Sprintf("MATCH,%s", rs.Group))
 				} else {
 					rules = append(rules, buildInlineRule(rule, rs.Group))
 				}
-			} else if strings.HasPrefix(rs.RuleURL, "http") {
+			} else if source.URL != "" {
 				// 远程规则，解析出名称
-				// ACL4SSR 的 .list 文件是 classical 类型，包含混合规则
-				providerName, behavior := parseProviderInfo(rs.RuleURL)
+				providerName, behavior, format := parseProviderInfo(source, useProxy, proxyLink)
 
 				// 添加 RULE-SET 引用
 				rules = append(rules, fmt.Sprintf("RULE-SET,%s,%s", providerName, rs.Group))
@@ -359,7 +416,7 @@ func generateClashRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxy
 				// 添加 provider 定义（避免重复）
 				if !providerIndex[providerName] {
 					providerIndex[providerName] = true
-					providers = append(providers, generateProvider(providerName, rs.RuleURL, behavior, behavior))
+					providers = append(providers, generateProvider(providerName, source.URL, behavior, format, source.Interval))
 				}
 			}
 		}
@@ -389,31 +446,26 @@ func generateClashRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxy
 }
 
 // parseProviderInfo 从 URL 解析 provider 名称和行为类型
-func parseProviderInfo(url string) (name string, behavior string) {
-	// 从 URL 提取文件名
-	parts := strings.Split(url, "/")
-	filename := parts[len(parts)-1]
-
-	// 去掉 .list 扩展名
-	name = strings.TrimSuffix(filename, ".list")
-
-	// 默认行为类型
-	behavior = "classical"
-
-	return name, behavior
+func parseProviderInfo(source parsedRulesetSource, useProxy bool, proxyLink string) (name string, behavior string, format string) {
+	name = providerNameFromURL(source.URL)
+	behavior = providerBehavior(source.SourceType)
+	format = resolveProviderFormat(source, useProxy, proxyLink)
+	return name, behavior, format
 }
 
 // generateProvider 生成单个 provider 的 YAML
-// 生成 rule-providers 配置，使用 text 格式
-func generateProvider(name, url, ruleType, behavior string) string {
+func generateProvider(name, url, behavior, format string, interval int) string {
+	if interval <= 0 {
+		interval = 86400
+	}
 	var lines []string
 	lines = append(lines, fmt.Sprintf("  %s:", name))
 	lines = append(lines, "    type: http")
-	lines = append(lines, fmt.Sprintf("    behavior: %s", ruleType))
+	lines = append(lines, fmt.Sprintf("    behavior: %s", behavior))
 	lines = append(lines, fmt.Sprintf("    url: %s", url))
-	lines = append(lines, "    format: text")
-	lines = append(lines, "    path: ./providers/"+strings.ReplaceAll(name, " ", "_")+".txt")
-	lines = append(lines, "    interval: 86400")
+	lines = append(lines, fmt.Sprintf("    format: %s", format))
+	lines = append(lines, fmt.Sprintf("    path: ./providers/%s.%s", strings.ReplaceAll(name, " ", "_"), providerFileExtension(format)))
+	lines = append(lines, fmt.Sprintf("    interval: %d", interval))
 	return strings.Join(lines, "\n")
 }
 
@@ -433,24 +485,25 @@ func expandRulesParallel(rulesets []ACLRuleset, useProxy bool, proxyLink string)
 			defer wg.Done()
 
 			var rules []string
-			if strings.HasPrefix(ruleset.RuleURL, "[]") {
+			source := parseRulesetSource(ruleset.RuleURL)
+			if source.IsInline {
 				// 内联规则
-				rule := ruleset.RuleURL[2:]
+				rule := source.InlineRule
 				ruleType := strings.SplitN(rule, ",", 2)[0]
-				if ruleType == "FINAL" {
+				if ruleType == "FINAL" || ruleType == "MATCH" {
 					rules = append(rules, fmt.Sprintf("MATCH,%s", ruleset.Group))
 				} else {
 					rules = append(rules, buildInlineRule(rule, ruleset.Group))
 				}
-			} else if strings.HasPrefix(ruleset.RuleURL, "http") {
+			} else if source.URL != "" {
 				// 获取远程规则
-				content, err := fetchRemoteContent(ruleset.RuleURL, useProxy, proxyLink)
+				content, err := fetchRemoteContent(source.URL, useProxy, proxyLink)
 				if err != nil {
-					utils.Error("获取规则失败 %s: %v", ruleset.RuleURL, err)
+					utils.Error("获取规则失败 %s: %v", source.URL, err)
 					results <- ruleResult{idx, rules}
 					return
 				}
-				rules = parseRuleList(content, ruleset.Group)
+				rules = parseRemoteRules(content, source, ruleset.Group)
 			}
 			results <- ruleResult{idx, rules}
 		}(i, rs)
@@ -475,6 +528,238 @@ func expandRulesParallel(rulesets []ACLRuleset, useProxy bool, proxyLink string)
 	}
 
 	return allRules
+}
+
+func providerBehavior(sourceType string) string {
+	switch sourceType {
+	case "clash-domain":
+		return "domain"
+	case "clash-ipcidr":
+		return "ipcidr"
+	case "clash-classic", "clash-classical":
+		return "classical"
+	default:
+		return "classical"
+	}
+}
+
+func providerFormat(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err == nil {
+		ext := strings.ToLower(path.Ext(parsed.Path))
+		if ext == ".yaml" || ext == ".yml" {
+			return "yaml"
+		}
+	}
+	return "text"
+}
+
+func resolveProviderFormat(source parsedRulesetSource, useProxy bool, proxyLink string) string {
+	format := providerFormat(source.URL)
+	if format == "yaml" || !strings.HasPrefix(source.SourceType, "clash-") {
+		return format
+	}
+
+	content, err := fetchRemoteContent(source.URL, useProxy, proxyLink)
+	if err != nil {
+		return format
+	}
+	if _, ok := parseYAMLPayloadEntries(content); ok {
+		return "yaml"
+	}
+	return format
+}
+
+func providerFileExtension(format string) string {
+	if format == "yaml" {
+		return "yaml"
+	}
+	return "txt"
+}
+
+func providerNameFromURL(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	filename := rawURL
+	if err == nil && parsed.Path != "" {
+		filename = path.Base(parsed.Path)
+	}
+
+	if filename == "" || filename == "." || filename == "/" {
+		return "remote_ruleset"
+	}
+
+	name := strings.TrimSuffix(filename, path.Ext(filename))
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "remote_ruleset"
+	}
+	return name
+}
+
+func parseRemoteRules(content string, source parsedRulesetSource, group string) []string {
+	switch source.SourceType {
+	case "clash-domain":
+		return parseClashDomainRules(content, group)
+	case "clash-ipcidr":
+		return parseClashIPCIDRRules(content, group)
+	case "clash-classic", "clash-classical":
+		return parseClashClassicalRules(content, group)
+	default:
+		return parseRuleList(content, group)
+	}
+}
+
+func parseClashDomainRules(content string, group string) []string {
+	entries := parseRuleEntries(content)
+	if yamlEntries, ok := parseYAMLPayloadEntries(content); ok {
+		entries = yamlEntries
+	}
+
+	var rules []string
+	for _, entry := range entries {
+		rule := buildClashDomainRule(entry, group)
+		if rule != "" {
+			rules = append(rules, rule)
+		}
+	}
+	return rules
+}
+
+func parseClashIPCIDRRules(content string, group string) []string {
+	entries := parseRuleEntries(content)
+	if yamlEntries, ok := parseYAMLPayloadEntries(content); ok {
+		entries = yamlEntries
+	}
+
+	var rules []string
+	for _, entry := range entries {
+		rule := buildClashIPCIDRRule(entry, group)
+		if rule != "" {
+			rules = append(rules, rule)
+		}
+	}
+	return rules
+}
+
+func parseClashClassicalRules(content string, group string) []string {
+	entries := parseRuleEntries(content)
+	if yamlEntries, ok := parseYAMLPayloadEntries(content); ok {
+		entries = yamlEntries
+	}
+	return appendGroupToRuleEntries(entries, group)
+}
+
+func parseRuleEntries(content string) []string {
+	var entries []string
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		entries = append(entries, trimRuleValue(line))
+	}
+	return entries
+}
+
+func parseYAMLPayloadEntries(content string) ([]string, bool) {
+	var payload struct {
+		Payload []interface{} `yaml:"payload"`
+	}
+
+	if err := yaml.Unmarshal([]byte(content), &payload); err != nil || payload.Payload == nil {
+		return nil, false
+	}
+
+	entries := make([]string, 0, len(payload.Payload))
+	for _, item := range payload.Payload {
+		entry := trimRuleValue(fmt.Sprint(item))
+		if entry != "" {
+			entries = append(entries, entry)
+		}
+	}
+	return entries, true
+}
+
+func appendGroupToRuleEntries(entries []string, group string) []string {
+	var rules []string
+	for _, entry := range entries {
+		if entry == "" {
+			continue
+		}
+		if strings.HasSuffix(entry, ",no-resolve") {
+			lineWithoutNoResolve := strings.TrimSuffix(entry, ",no-resolve")
+			rules = append(rules, fmt.Sprintf("%s,%s,no-resolve", lineWithoutNoResolve, group))
+		} else {
+			rules = append(rules, fmt.Sprintf("%s,%s", entry, group))
+		}
+	}
+	return rules
+}
+
+func buildClashDomainRule(entry string, group string) string {
+	entry = trimRuleValue(entry)
+	if entry == "" {
+		return ""
+	}
+
+	switch {
+	case strings.HasPrefix(entry, "+."):
+		return fmt.Sprintf("DOMAIN-SUFFIX,%s,%s", strings.TrimPrefix(entry, "+."), group)
+	case strings.HasPrefix(entry, "."):
+		return fmt.Sprintf("DOMAIN-SUFFIX,%s,%s", strings.TrimPrefix(entry, "."), group)
+	case strings.Contains(entry, "*"):
+		return fmt.Sprintf("DOMAIN-REGEX,%s,%s", wildcardToRegex(entry), group)
+	default:
+		return fmt.Sprintf("DOMAIN,%s,%s", entry, group)
+	}
+}
+
+func buildClashIPCIDRRule(entry string, group string) string {
+	entry = trimRuleValue(entry)
+	if entry == "" {
+		return ""
+	}
+
+	noResolve := strings.HasSuffix(entry, ",no-resolve")
+	if noResolve {
+		entry = strings.TrimSuffix(entry, ",no-resolve")
+	}
+
+	ruleType := "IP-CIDR"
+	if strings.Contains(entry, ":") {
+		ruleType = "IP-CIDR6"
+	}
+
+	rule := fmt.Sprintf("%s,%s,%s", ruleType, entry, group)
+	if noResolve {
+		rule += ",no-resolve"
+	}
+	return rule
+}
+
+func wildcardToRegex(pattern string) string {
+	var builder strings.Builder
+	builder.WriteString("^")
+	for _, ch := range pattern {
+		switch ch {
+		case '*':
+			builder.WriteString(".*")
+		case '.', '+', '?', '(', ')', '[', ']', '{', '}', '^', '$', '|', '\\':
+			builder.WriteString("\\")
+			builder.WriteRune(ch)
+		default:
+			builder.WriteRune(ch)
+		}
+	}
+	builder.WriteString("$")
+	return builder.String()
+}
+
+func trimRuleValue(value string) string {
+	value = strings.TrimSpace(value)
+	value = strings.Trim(value, "\"'")
+	return strings.TrimSpace(value)
 }
 
 // buildInlineRule 构建内联规则，在正确位置插入策略组名
@@ -704,21 +989,43 @@ func generateSurgeRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxy
 	} else {
 		// 生成 RULE-SET 引用
 		for _, rs := range rulesets {
-			if strings.HasPrefix(rs.RuleURL, "[]") {
-				rule := rs.RuleURL[2:]
+			source := parseRulesetSource(rs.RuleURL)
+			if source.IsInline {
+				rule := source.InlineRule
 				ruleType := strings.SplitN(rule, ",", 2)[0]
-				if ruleType == "FINAL" {
+				if ruleType == "FINAL" || ruleType == "MATCH" {
 					lines = append(lines, fmt.Sprintf("FINAL,%s", rs.Group))
 				} else {
 					lines = append(lines, buildInlineRule(rule, rs.Group))
 				}
-			} else if strings.HasPrefix(rs.RuleURL, "http") {
-				lines = append(lines, fmt.Sprintf("RULE-SET,%s,%s,update-interval=86400", rs.RuleURL, rs.Group))
+			} else if source.URL != "" {
+				// Surge 无法直接消费 clash-* provider，需要先展开为具体规则
+				if strings.HasPrefix(source.SourceType, "clash-") {
+					content, err := fetchRemoteContent(source.URL, useProxy, proxyLink)
+					if err != nil {
+						utils.Error("获取规则失败 %s: %v", source.URL, err)
+						continue
+					}
+					lines = append(lines, parseRemoteRulesForSurge(content, source, rs.Group)...)
+					continue
+				}
+
+				lines = append(lines, fmt.Sprintf("RULE-SET,%s,%s,update-interval=%d", source.URL, rs.Group, source.Interval))
 			}
 		}
 	}
 
 	return strings.Join(lines, "\n"), nil
+}
+
+func parseRemoteRulesForSurge(content string, source parsedRulesetSource, group string) []string {
+	rules := parseRemoteRules(content, source, group)
+	for i, rule := range rules {
+		if strings.HasPrefix(rule, "MATCH,") {
+			rules[i] = "FINAL," + strings.TrimPrefix(rule, "MATCH,")
+		}
+	}
+	return rules
 }
 
 // mergeToTemplate 将生成的代理组和规则合并到模板内容中
