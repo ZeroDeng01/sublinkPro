@@ -359,6 +359,8 @@ const PremiumStatCard = ({
 
 // ==============================|| Star 提醒卡片组件 ||============================== //
 
+import { donationConfig } from "config/donation";
+
 const StarReminderCard = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -440,7 +442,7 @@ const StarReminderCard = () => {
           }}
         >
           {/* 左侧内容 */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 280 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1, minWidth: { xs: "100%", sm: 280 } }}>
             <Box
               sx={{
                 width: 48,
@@ -471,51 +473,113 @@ const StarReminderCard = () => {
                 <FavoriteIcon sx={{ fontSize: 16, color: '#ef4444' }} />
               </Typography>
               <Typography variant="body2" sx={{ color: isDark ? alpha('#fff', 0.7) : '#92400e' }}>
-                如果觉得不错，请给我们一个 Star 支持一下！
+                如果觉得不错，请给我们一个 Star 支持一下！如果你是L站佬友，也可以使用LDC支持本项目！你的支持是我们前进的动力。
               </Typography>
             </Box>
           </Box>
 
           {/* 右侧按钮 */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
-            <Tooltip title="问题反馈" arrow>
-              <IconButton
-                onClick={handleFeedback}
-                size="small"
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: { xs: "flex-start", sm: "flex-end" },
+              gap: 1.5,
+              flexShrink: 0,
+              width: { xs: "100%", sm: "auto" },
+              mt: { xs: 1.5, sm: 0 }
+            }}
+          >
+            {/* 打赏按钮组 */}
+            <Box sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              flexWrap: "wrap",
+              justifyContent: { xs: "flex-start", sm: "flex-end" }
+            }}>
+              {donationConfig.links.map((item, index) => (
+                <Chip
+                  key={index}
+                  icon={item.icon}
+                  label={item.title}
+                  component="a"
+                  href={item.url}
+                  target="_blank"
+                  clickable
+                  sx={{
+                    fontWeight: 600,
+                    px: 0.5,
+                    height: 36,
+                    borderRadius: 2,
+                    bgcolor: isDark ? alpha(theme.palette[item.color].main, 0.15) : alpha(theme.palette[item.color].light, 0.5),
+                    color: isDark ? theme.palette[item.color].light : theme.palette[item.color].dark,
+                    border: `1px solid ${isDark ? alpha(theme.palette[item.color].main, 0.3) : alpha(theme.palette[item.color].main, 0.2)}`,
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      bgcolor: isDark ? alpha(theme.palette[item.color].main, 0.25) : alpha(theme.palette[item.color].light, 0.8),
+                      transform: "scale(1.05)"
+                    },
+                    "& .MuiChip-icon": {
+                      color: "inherit",
+                      fontSize: 18,
+                      ml: 1
+                    }
+                  }}
+                />
+              ))}
+            </Box>
+
+            {/* 工具与 Star 组 */}
+            <Box sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              flexWrap: "wrap",
+              justifyContent: { xs: "flex-start", sm: "flex-end" }
+            }}>
+              <Tooltip title="问题反馈" arrow>
+                <IconButton
+                  onClick={handleFeedback}
+                  size="small"
+                  sx={{
+                    bgcolor: isDark ? alpha("#fff", 0.1) : alpha("#f59e0b", 0.15),
+                    color: isDark ? "#fcd34d" : "#b45309",
+                    width: 36,
+                    height: 36,
+                    borderRadius: 2,
+                    "&:hover": {
+                      bgcolor: isDark ? alpha("#fff", 0.15) : alpha("#f59e0b", 0.25)
+                    }
+                  }}
+                >
+                  <BugReportIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Chip
+                icon={<GitHubIcon sx={{ fontSize: 18, color: "inherit !important" }} />}
+                label={starCount !== null ? `Star ${starCount >= 1000 ? `${(starCount / 1000).toFixed(1)}k` : starCount}` : "Star"}
+                onClick={handleStar}
                 sx={{
-                  bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#f59e0b', 0.15),
-                  color: isDark ? '#fcd34d' : '#b45309',
-                  '&:hover': {
-                    bgcolor: isDark ? alpha('#fff', 0.15) : alpha('#f59e0b', 0.25)
+                  fontWeight: 600,
+                  px: 1,
+                  height: 36,
+                  borderRadius: 2,
+                  background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+                  color: "#78350f",
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                    transform: "scale(1.05)"
+                  },
+                  "& .MuiChip-icon": {
+                    color: "#78350f"
                   }
                 }}
-              >
-                <BugReportIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Chip
-              icon={<GitHubIcon sx={{ fontSize: 18, color: 'inherit !important' }} />}
-              label={starCount !== null ? `Star ${starCount >= 1000 ? `${(starCount / 1000).toFixed(1)}k` : starCount}` : 'Star'}
-              onClick={handleStar}
-              sx={{
-                fontWeight: 600,
-                px: 1,
-                height: 36,
-                borderRadius: 2,
-                background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-                color: '#78350f',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                  transform: 'scale(1.05)'
-                },
-                '& .MuiChip-icon': {
-                  color: '#78350f'
-                }
-              }}
-            />
+              />
+            </Box>
           </Box>
         </Box>
       </CardContent>
@@ -732,8 +796,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                       : isDark
                         ? alpha('#fff', 0.05)
                         : alpha('#fff', 0.7),
-                  border: `1px solid ${
-                    lowUsageAirports.length > 0 ? alpha('#ef4444', 0.3) : isDark ? alpha('#fff', 0.1) : alpha('#06b6d4', 0.15)
+                  border: `1px solid ${lowUsageAirports.length > 0 ? alpha("#ef4444", 0.3) : isDark ? alpha("#fff", 0.1) : alpha("#06b6d4", 0.15)
                   }`
                 }}
               >
