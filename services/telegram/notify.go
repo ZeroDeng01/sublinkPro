@@ -15,6 +15,7 @@ func escapeMd(text string) string {
 		`*`, `\*`,
 		"`", "\\`",
 		`[`, `\[`,
+		`]`, `\]`,
 	)
 	return r.Replace(text)
 }
