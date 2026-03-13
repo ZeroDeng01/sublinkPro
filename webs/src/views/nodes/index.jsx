@@ -123,9 +123,12 @@ export default function NodeList() {
   const [sourceFilter, setSourceFilter] = useState('');
   const [maxDelay, setMaxDelay] = useState('');
   const [minSpeed, setMinSpeed] = useState('');
+  const [maxFraudScore, setMaxFraudScore] = useState('');
   const [speedStatusFilter, setSpeedStatusFilter] = useState('');
   const [delayStatusFilter, setDelayStatusFilter] = useState('');
   const [protocolFilter, setProtocolFilter] = useState('');
+  const [residentialType, setResidentialType] = useState('');
+  const [ipType, setIpType] = useState('');
 
   // 排序
   const [sortBy, setSortBy] = useState(''); // 'delay' | 'speed' | ''
@@ -234,9 +237,12 @@ export default function NodeList() {
       if (filterParams.source) params.source = filterParams.source;
       if (filterParams.maxDelay) params.maxDelay = filterParams.maxDelay;
       if (filterParams.minSpeed) params.minSpeed = filterParams.minSpeed;
+      if (filterParams.maxFraudScore) params.maxFraudScore = filterParams.maxFraudScore;
       if (filterParams.speedStatus) params.speedStatus = filterParams.speedStatus;
       if (filterParams.delayStatus) params.delayStatus = filterParams.delayStatus;
       if (filterParams.protocol) params.protocol = filterParams.protocol;
+      if (filterParams.residentialType) params.residentialType = filterParams.residentialType;
+      if (filterParams.ipType) params.ipType = filterParams.ipType;
       if (filterParams.countries && filterParams.countries.length > 0) {
         params['countries[]'] = filterParams.countries;
       }
@@ -346,9 +352,12 @@ export default function NodeList() {
         source: sourceFilter,
         maxDelay: maxDelay,
         minSpeed: minSpeed,
+        maxFraudScore: maxFraudScore,
         speedStatus: speedStatusFilter,
         delayStatus: delayStatusFilter,
         protocol: protocolFilter,
+        residentialType: residentialType,
+        ipType: ipType,
         countries: countryFilter,
         tags: tagFilter,
         sortBy: sortBy,
@@ -372,9 +381,12 @@ export default function NodeList() {
     sourceFilter,
     maxDelay,
     minSpeed,
+    maxFraudScore,
     speedStatusFilter,
     delayStatusFilter,
     protocolFilter,
+    residentialType,
+    ipType,
     countryFilter,
     tagFilter,
     sortBy,
@@ -398,11 +410,14 @@ export default function NodeList() {
     setSourceFilter('');
     setMaxDelay('');
     setMinSpeed('');
+    setMaxFraudScore('');
     setSpeedStatusFilter('');
     setDelayStatusFilter('');
     setCountryFilter([]);
     setTagFilter([]);
     setProtocolFilter('');
+    setResidentialType('');
+    setIpType('');
     setSortBy('');
     setSortOrder('asc');
   };
@@ -413,9 +428,12 @@ export default function NodeList() {
     source: sourceFilter,
     maxDelay: maxDelay,
     minSpeed: minSpeed,
+    maxFraudScore: maxFraudScore,
     speedStatus: speedStatusFilter,
     delayStatus: delayStatusFilter,
     protocol: protocolFilter,
+    residentialType: residentialType,
+    ipType: ipType,
     countries: countryFilter,
     tags: tagFilter,
     sortBy: sortBy,
@@ -476,10 +494,14 @@ export default function NodeList() {
     sourceFilter,
     maxDelay,
     minSpeed,
+    maxFraudScore,
     speedStatusFilter,
     delayStatusFilter,
+    protocolFilter,
     countryFilter,
     tagFilter,
+    residentialType,
+    ipType,
     sortBy,
     sortOrder,
     page,
@@ -863,9 +885,12 @@ export default function NodeList() {
         if (filters.source) params.source = filters.source;
         if (filters.maxDelay) params.maxDelay = filters.maxDelay;
         if (filters.minSpeed) params.minSpeed = filters.minSpeed;
+        if (filters.maxFraudScore) params.maxFraudScore = filters.maxFraudScore;
         if (filters.speedStatus) params.speedStatus = filters.speedStatus;
         if (filters.delayStatus) params.delayStatus = filters.delayStatus;
         if (filters.protocol) params.protocol = filters.protocol;
+        if (filters.residentialType) params.residentialType = filters.residentialType;
+        if (filters.ipType) params.ipType = filters.ipType;
         if (filters.countries && filters.countries.length > 0) {
           params['countries[]'] = filters.countries;
         }
@@ -945,9 +970,9 @@ export default function NodeList() {
                 sx={
                   loading
                     ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                      }
                     : {}
                 }
               />
@@ -990,9 +1015,9 @@ export default function NodeList() {
               sx={
                 loading
                   ? {
-                    animation: 'spin 1s linear infinite',
-                    '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                  }
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                    }
                   : {}
               }
             />
@@ -1011,10 +1036,16 @@ export default function NodeList() {
         setMaxDelay={setMaxDelay}
         minSpeed={minSpeed}
         setMinSpeed={setMinSpeed}
+        maxFraudScore={maxFraudScore}
+        setMaxFraudScore={setMaxFraudScore}
         speedStatusFilter={speedStatusFilter}
         setSpeedStatusFilter={setSpeedStatusFilter}
         delayStatusFilter={delayStatusFilter}
         setDelayStatusFilter={setDelayStatusFilter}
+        residentialType={residentialType}
+        setResidentialType={setResidentialType}
+        ipType={ipType}
+        setIpType={setIpType}
         countryFilter={countryFilter}
         setCountryFilter={setCountryFilter}
         tagFilter={tagFilter}

@@ -63,6 +63,8 @@ func CreateNodeCheckProfile(c *gin.Context) {
 		TrafficBySource     *bool    `json:"trafficBySource"`
 		TrafficByNode       *bool    `json:"trafficByNode"`
 		PreserveSpeedResult bool     `json:"preserveSpeedResult"`
+		DetectQuality       bool     `json:"detectQuality"`
+		QualityCheckURL     string   `json:"qualityCheckUrl"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -135,6 +137,8 @@ func CreateNodeCheckProfile(c *gin.Context) {
 		TrafficBySource:     trafficBySource,
 		TrafficByNode:       trafficByNode,
 		PreserveSpeedResult: req.PreserveSpeedResult,
+		DetectQuality:       req.DetectQuality,
+		QualityCheckURL:     req.QualityCheckURL,
 	}
 	profile.SetGroups(req.Groups)
 	profile.SetTags(req.Tags)
@@ -186,6 +190,8 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 		TrafficBySource     *bool    `json:"trafficBySource"`
 		TrafficByNode       *bool    `json:"trafficByNode"`
 		PreserveSpeedResult *bool    `json:"preserveSpeedResult"`
+		DetectQuality       bool     `json:"detectQuality"`
+		QualityCheckURL     string   `json:"qualityCheckUrl"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -249,6 +255,8 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	if req.PreserveSpeedResult != nil {
 		profile.PreserveSpeedResult = *req.PreserveSpeedResult
 	}
+	profile.DetectQuality = req.DetectQuality
+	profile.QualityCheckURL = req.QualityCheckURL
 
 	if err := profile.Update(); err != nil {
 		utils.FailWithMsg(c, "更新策略失败")

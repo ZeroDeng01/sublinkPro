@@ -33,6 +33,10 @@ type SpeedTestConfig struct {
 	TrafficByGroup  bool // 按分组统计流量
 	TrafficBySource bool // 按来源统计流量
 	TrafficByNode   bool // 按节点统计流量
+
+	// 节点质量检测
+	DetectQuality   bool   // 是否检测节点质量
+	QualityCheckURL string // 质量检测API URL
 }
 
 // SpeedTestConfigFromProfile 从策略构建配置（并发安全）
@@ -89,5 +93,7 @@ func SpeedTestConfigFromProfile(profile *models.NodeCheckProfile) *SpeedTestConf
 		TrafficByGroup:      profile.TrafficByGroup,
 		TrafficBySource:     profile.TrafficBySource,
 		TrafficByNode:       profile.TrafficByNode,
+		DetectQuality:       profile.DetectQuality,
+		QualityCheckURL:     profile.QualityCheckURL,
 	}
 }

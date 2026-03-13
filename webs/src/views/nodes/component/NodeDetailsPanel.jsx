@@ -44,7 +44,15 @@ import Dialog from '@mui/material/Dialog';
 import Zoom from '@mui/material/Zoom';
 
 // utils
-import { formatDateTime, formatCountry, getDelayDisplay, getSpeedDisplay } from '../utils';
+import {
+  formatDateTime,
+  formatCountry,
+  getDelayDisplay,
+  getFraudScoreDisplay,
+  getIpTypeDisplay,
+  getResidentialDisplay,
+  getSpeedDisplay
+} from '../utils';
 
 // components
 import NodeRawInfoEditor from './NodeRawInfoEditor';
@@ -224,6 +232,9 @@ export default function NodeDetailsPanel({
   const delayDisplay = getDelayDisplay(node.DelayTime, node.DelayStatus);
   const speedDisplay = getSpeedDisplay(node.Speed, node.SpeedStatus);
   const protocolInfo = getProtocolInfo(node.Link, protocolMeta);
+  const ipTypeDisplay = getIpTypeDisplay(node.IsBroadcast, node.FraudScore);
+  const residentialDisplay = getResidentialDisplay(node.IsResidential, node.FraudScore);
+  const fraudScoreDisplay = getFraudScoreDisplay(node.FraudScore);
 
   const delayStyles = getStatusStyles(theme, delayDisplay.color);
   const speedStyles = getStatusStyles(theme, speedDisplay.color);
@@ -539,6 +550,13 @@ export default function NodeDetailsPanel({
               secondary="点击查看 IP 详细信息"
             />
           )}
+          <DetailItem icon={<PublicIcon fontSize="small" />} label="IP类型" value={ipTypeDisplay.label} />
+          <DetailItem icon={<PublicIcon fontSize="small" />} label="住宅属性" value={residentialDisplay.label} />
+          <DetailItem
+            icon={<PublicIcon fontSize="small" />}
+            label="欺诈评分"
+            value={fraudScoreDisplay.detailLabel || fraudScoreDisplay.label}
+          />
           <DetailItem icon={<AccessTimeIcon fontSize="small" />} label="更新时间" value={formatDateTime(node.UpdatedAt)} noBorder />
         </List>
       </Box>

@@ -94,7 +94,9 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
         peakSampleInterval: profile.peakSampleInterval,
         trafficByGroup: profile.trafficByGroup,
         trafficBySource: profile.trafficBySource,
-        trafficByNode: profile.trafficByNode
+        trafficByNode: profile.trafficByNode,
+        detectQuality: profile.detectQuality,
+        qualityCheckUrl: profile.qualityCheckUrl
       });
       loadProfiles();
       onMessage?.(profile.enabled ? '已禁用定时检测' : '已启用定时检测');
@@ -253,6 +255,10 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                               color: profile.mode === 'mihomo' ? 'success.main' : 'primary.main'
                             }}
                           />
+                          {profile.detectCountry && <Chip label="国家" size="small" sx={{ height: 20, fontSize: '0.7rem' }} />}
+                          {profile.detectQuality && (
+                            <Chip label="质量" size="small" color="warning" sx={{ height: 20, fontSize: '0.7rem' }} />
+                          )}
                         </Box>
                       }
                       secondary={

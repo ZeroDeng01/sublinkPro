@@ -122,6 +122,11 @@ export default function SubscriptionList() {
     protocolBlacklist: '',
     protocolOptions: [],
     deduplicationRule: '',
+    MaxFraudScore: 0,
+    OnlyResidential: false,
+    OnlyNative: false,
+    ResidentialType: '',
+    IPType: '',
     refreshUsageOnRequest: true // 默认开启实时获取用量信息
   });
 
@@ -300,6 +305,11 @@ export default function SubscriptionList() {
       protocolBlacklist: '',
       protocolOptions: protocolOptions,
       deduplicationRule: '',
+      MaxFraudScore: 0,
+      OnlyResidential: false,
+      OnlyNative: false,
+      ResidentialType: '',
+      IPType: '',
       refreshUsageOnRequest: true
     });
     setNodeGroupFilter('all');
@@ -352,6 +362,11 @@ export default function SubscriptionList() {
       protocolBlacklist: sub.ProtocolBlacklist || '',
       protocolOptions: protocolOptions,
       deduplicationRule: sub.DeduplicationRule || '',
+      MaxFraudScore: sub.MaxFraudScore || 0,
+      OnlyResidential: sub.OnlyResidential || false,
+      OnlyNative: sub.OnlyNative || false,
+      ResidentialType: sub.ResidentialType || (sub.OnlyResidential ? 'residential' : ''),
+      IPType: sub.IPType || (sub.OnlyNative ? 'native' : ''),
       refreshUsageOnRequest: sub.RefreshUsageOnRequest !== false // 默认 true
     });
     setNodeGroupFilter('all');
@@ -422,6 +437,11 @@ export default function SubscriptionList() {
         ProtocolWhitelist: formData.protocolWhitelist,
         ProtocolBlacklist: formData.protocolBlacklist,
         DeduplicationRule: formData.deduplicationRule || '',
+        MaxFraudScore: formData.MaxFraudScore,
+        OnlyResidential: formData.ResidentialType === 'residential',
+        OnlyNative: formData.IPType === 'native',
+        ResidentialType: formData.ResidentialType || '',
+        IPType: formData.IPType || '',
         RefreshUsageOnRequest: formData.refreshUsageOnRequest
       };
 
@@ -568,6 +588,11 @@ export default function SubscriptionList() {
         ProtocolBlacklist: formData.protocolBlacklist || '',
         NodeNameWhitelist: formData.nodeNameWhitelist || '',
         NodeNameBlacklist: formData.nodeNameBlacklist || '',
+        MaxFraudScore: formData.MaxFraudScore || 0,
+        OnlyResidential: formData.ResidentialType === 'residential',
+        OnlyNative: formData.IPType === 'native',
+        ResidentialType: formData.ResidentialType || '',
+        IPType: formData.IPType || '',
         NodeNamePreprocess: formData.nodeNamePreprocess || '',
         NodeNameRule: formData.nodeNameRule || '',
         DeduplicationRule: formData.deduplicationRule || ''

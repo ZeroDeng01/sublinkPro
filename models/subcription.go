@@ -51,6 +51,11 @@ type Subcription struct {
 	ProtocolBlacklist     string           `json:"ProtocolBlacklist"`                         // 协议黑名单（逗号分隔）
 	DeduplicationRule     string           `json:"DeduplicationRule"`                         // 去重规则配置(JSON)
 	RefreshUsageOnRequest bool             `gorm:"default:true" json:"RefreshUsageOnRequest"` // 获取订阅时是否实时刷新用量信息
+	MaxFraudScore         int              `gorm:"default:0" json:"MaxFraudScore"`            // 最大欺诈评分（0=不限制）
+	OnlyResidential       bool             `gorm:"default:false" json:"OnlyResidential"`      // 仅住宅IP
+	OnlyNative            bool             `gorm:"default:false" json:"OnlyNative"`           // 仅原生IP
+	ResidentialType       string           `json:"ResidentialType"`                           // 住宅属性过滤: residential/datacenter/untested
+	IPType                string           `json:"IPType"`                                    // IP类型过滤: native/broadcast/untested
 	CreatedAt             time.Time        `json:"CreatedAt"`
 	UpdatedAt             time.Time        `json:"UpdatedAt"`
 	DeletedAt             gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
@@ -187,6 +192,11 @@ func (sub *Subcription) Update() error {
 		"protocol_blacklist":       sub.ProtocolBlacklist,
 		"deduplication_rule":       sub.DeduplicationRule,
 		"refresh_usage_on_request": sub.RefreshUsageOnRequest,
+		"max_fraud_score":          sub.MaxFraudScore,
+		"only_residential":         sub.OnlyResidential,
+		"only_native":              sub.OnlyNative,
+		"residential_type":         sub.ResidentialType,
+		"ip_type":                  sub.IPType,
 	}
 	err := database.DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 	if err != nil {
@@ -487,7 +497,37 @@ func (sub *Subcription) ApplyFilters(nodes []Node) []Node {
 		result = filteredNodes
 	}
 
-	// 6. 应用去重规则
+	residentialType := sub.ResidentialType
+	if residentialType == "" && sub.OnlyResidential {
+		residentialType = "residential"
+	}
+	ipType := sub.IPType
+	if ipType == "" && sub.OnlyNative {
+		ipType = "native"
+	}
+
+	// 6. 节点质量过滤
+	if sub.MaxFraudScore > 0 || residentialType != "" || ipType != "" {
+		var filteredNodes []Node
+		for _, node := range result {
+			// 最大欺诈评分过滤
+			if sub.MaxFraudScore > 0 {
+				if node.FraudScore < 0 || node.FraudScore > sub.MaxFraudScore {
+					continue
+				}
+			}
+			if !matchNodeResidentialType(node, residentialType) {
+				continue
+			}
+			if !matchNodeIPType(node, ipType) {
+				continue
+			}
+			filteredNodes = append(filteredNodes, node)
+		}
+		result = filteredNodes
+	}
+
+	// 7. 应用去重规则
 	result = sub.ApplyDeduplication(result)
 
 	return result
@@ -1149,16 +1189,19 @@ func (sub *Subcription) PreviewSub() (*PreviewResult, error) {
 
 		if sub.NodeNameRule != "" {
 			previewName = utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-				Name:        node.Name,
-				LinkName:    processedLinkName,
-				LinkCountry: node.LinkCountry,
-				Speed:       node.Speed,
-				DelayTime:   node.DelayTime,
-				Group:       node.Group,
-				Source:      node.Source,
-				Index:       idx + 1,
-				Protocol:    utils.GetProtocolFromLink(node.Link),
-				Tags:        node.Tags,
+				Name:          node.Name,
+				LinkName:      processedLinkName,
+				LinkCountry:   node.LinkCountry,
+				Speed:         node.Speed,
+				DelayTime:     node.DelayTime,
+				Group:         node.Group,
+				Source:        node.Source,
+				Index:         idx + 1,
+				Protocol:      utils.GetProtocolFromLink(node.Link),
+				Tags:          node.Tags,
+				IsBroadcast:   node.IsBroadcast,
+				IsResidential: node.IsResidential,
+				FraudScore:    node.FraudScore,
 			})
 			previewLink = utils.RenameNodeLink(node.Link, previewName)
 		}

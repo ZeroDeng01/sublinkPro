@@ -14,6 +14,7 @@ import Typography from '@mui/material/Typography';
 // Paper 组件已改为 Box
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import { getNodeConditionValueOptions, isNodeConditionNumericField, isNodeConditionSelectField } from '../../../utils/nodeConditionOptions';
 
 // 深色科幻风格的 Select 样式
 const darkSelectStyles = {
@@ -32,18 +33,6 @@ const darkSelectStyles = {
  * 用于构建 AND/OR 组合的条件表达式
  */
 export default function ConditionBuilder({ value, onChange, fields = [], operators = [], title = '条件配置' }) {
-  // 定义特殊字段类型
-  const numericFields = ['speed', 'delay_time'];
-  const statusFields = ['speed_status', 'delay_status'];
-
-  // 状态选项（与 RuleDialog.jsx 保持一致）
-  const STATUS_OPTIONS = [
-    { value: 'untested', label: '未测速' },
-    { value: 'success', label: '成功' },
-    { value: 'timeout', label: '超时' },
-    { value: 'error', label: '失败' }
-  ];
-
   // 初始化条件数据
   const [logic, setLogic] = useState(value?.logic || 'and');
   const [conditions, setConditions] = useState(value?.conditions || []);
@@ -93,12 +82,12 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
 
     // 如果改变了字段，需要重置操作符和值以避免不兼容
     if (field === 'field') {
-      const isStatus = statusFields.includes(newValue);
-      const isNumeric = numericFields.includes(newValue);
+      const isSelectField = isNodeConditionSelectField(newValue);
+      const isNumeric = isNodeConditionNumericField(newValue);
       const currentOp = newConditions[index].operator;
 
-      if (isStatus) {
-        // 状态字段只能用 equals 或 not_equals
+      if (isSelectField) {
+        // 枚举字段只能用 equals 或 not_equals
         if (!['equals', 'not_equals'].includes(currentOp)) {
           newConditions[index].operator = 'equals';
         }
@@ -127,10 +116,10 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
 
   // 获取字段对应的操作符列表
   const getOperatorsForField = (fieldValue) => {
-    if (statusFields.includes(fieldValue)) {
+    if (isNodeConditionSelectField(fieldValue)) {
       return operators.filter((op) => ['equals', 'not_equals'].includes(op.value));
     }
-    if (numericFields.includes(fieldValue)) {
+    if (isNodeConditionNumericField(fieldValue)) {
       return operators;
     }
     // 文本字段只支持字符串操作符
@@ -205,11 +194,11 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
               </Select>
             </FormControl>
 
-            {statusFields.includes(condition.field) ? (
+            {getNodeConditionValueOptions(condition.field) ? (
               <FormControl size="small" sx={{ flex: 1, minWidth: 100, ...darkSelectStyles }}>
-                <InputLabel sx={{ color: '#94a3b8' }}>状态值</InputLabel>
-                <Select value={condition.value} label="状态值" onChange={(e) => handleConditionChange(index, 'value', e.target.value)}>
-                  {STATUS_OPTIONS.map((opt) => (
+                <InputLabel sx={{ color: '#94a3b8' }}>值</InputLabel>
+                <Select value={condition.value} label="值" onChange={(e) => handleConditionChange(index, 'value', e.target.value)}>
+                  {getNodeConditionValueOptions(condition.field).map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
                       {opt.label}
                     </MenuItem>
@@ -222,7 +211,7 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
                 label="值"
                 value={condition.value}
                 onChange={(e) => handleConditionChange(index, 'value', e.target.value)}
-                type={numericFields.includes(condition.field) ? 'number' : 'text'}
+                type={isNodeConditionNumericField(condition.field) ? 'number' : 'text'}
                 sx={{
                   flex: 1,
                   minWidth: 100,

@@ -27,6 +27,8 @@ import Card from '@mui/material/Card';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 
+import { getNodeConditionValueOptions, isNodeConditionNumericField, isNodeConditionSelectField } from '../../../utils/nodeConditionOptions';
+
 // 节点字段选项
 const nodeFields = [
   { value: 'name', label: '备注' },
@@ -37,6 +39,9 @@ const nodeFields = [
   { value: 'group', label: '分组' },
   { value: 'speed', label: '速度 (MB/s)' },
   { value: 'delay_time', label: '延迟 (ms)' },
+  { value: 'fraud_score', label: '欺诈评分' },
+  { value: 'ip_type', label: 'IP类型' },
+  { value: 'residential_type', label: '住宅属性' },
   { value: 'speed_status', label: '速度状态' },
   { value: 'delay_status', label: '延迟状态' },
   { value: 'link_address', label: '地址' },
@@ -44,14 +49,6 @@ const nodeFields = [
   { value: 'link_port', label: '端口' },
   { value: 'dialer_proxy_name', label: '前置代理' },
   { value: 'link', label: '节点链接' }
-];
-
-// 状态选项（与后端 constants/status.go 保持同步）
-const statusOptions = [
-  { value: 'untested', label: '未测速' },
-  { value: 'success', label: '成功' },
-  { value: 'timeout', label: '超时' },
-  { value: 'error', label: '失败' }
 ];
 
 // 操作符选项
@@ -66,12 +63,6 @@ const operators = [
   { value: 'greater_or_equal', label: '大于等于', type: 'number' },
   { value: 'less_or_equal', label: '小于等于', type: 'number' }
 ];
-
-// 数值字段
-const numericFields = ['speed', 'delay_time'];
-
-// 状态字段（使用下拉框选择值）
-const statusFields = ['speed_status', 'delay_status'];
 
 export default function RuleDialog({ open, onClose, onSave, editingRule, tags }) {
   const theme = useTheme();
@@ -124,13 +115,13 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
 
     // 如果字段变化，检查操作符是否兼容
     if (key === 'field') {
-      const isNumeric = numericFields.includes(value);
-      const isStatus = statusFields.includes(value);
+      const isNumeric = isNodeConditionNumericField(value);
+      const isSelectField = isNodeConditionSelectField(value);
       const currentOp = newConditions[index].operator;
       const opInfo = operators.find((o) => o.value === currentOp);
 
-      if (isStatus) {
-        // 状态字段只能使用 equals 或 not_equals
+      if (isSelectField) {
+        // 枚举字段只能使用 equals 或 not_equals
         if (!['equals', 'not_equals'].includes(currentOp)) {
           newConditions[index].operator = 'equals';
         }
@@ -159,11 +150,11 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
   };
 
   const getAvailableOperators = (field) => {
-    const isNumeric = numericFields.includes(field);
-    const isStatus = statusFields.includes(field);
+    const isNumeric = isNodeConditionNumericField(field);
+    const isSelectField = isNodeConditionSelectField(field);
 
-    if (isStatus) {
-      // 状态字段只支持等于和不等于
+    if (isSelectField) {
+      // 枚举字段只支持等于和不等于
       return operators.filter((o) => ['equals', 'not_equals'].includes(o.value));
     }
     if (isNumeric) {
@@ -279,11 +270,11 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
                         ))}
                       </Select>
                     </FormControl>
-                    {statusFields.includes(cond.field) ? (
+                    {getNodeConditionValueOptions(cond.field) ? (
                       <FormControl size="small" fullWidth>
                         <InputLabel>值</InputLabel>
                         <Select value={cond.value} label="值" onChange={(e) => handleConditionChange(index, 'value', e.target.value)}>
-                          {statusOptions.map((opt) => (
+                          {getNodeConditionValueOptions(cond.field).map((opt) => (
                             <MenuItem key={opt.value} value={opt.value}>
                               {opt.label}
                             </MenuItem>
@@ -297,7 +288,7 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
                         value={cond.value}
                         onChange={(e) => handleConditionChange(index, 'value', e.target.value)}
                         fullWidth
-                        type={numericFields.includes(cond.field) ? 'number' : 'text'}
+                        type={isNodeConditionNumericField(cond.field) ? 'number' : 'text'}
                         placeholder={cond.operator === 'regex' ? '正则表达式' : ''}
                       />
                     )}
@@ -326,11 +317,11 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
                       ))}
                     </Select>
                   </FormControl>
-                  {statusFields.includes(cond.field) ? (
+                  {getNodeConditionValueOptions(cond.field) ? (
                     <FormControl size="small" sx={{ minWidth: 140 }}>
                       <InputLabel>值</InputLabel>
                       <Select value={cond.value} label="值" onChange={(e) => handleConditionChange(index, 'value', e.target.value)}>
-                        {statusOptions.map((opt) => (
+                        {getNodeConditionValueOptions(cond.field).map((opt) => (
                           <MenuItem key={opt.value} value={opt.value}>
                             {opt.label}
                           </MenuItem>
@@ -344,7 +335,7 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
                       value={cond.value}
                       onChange={(e) => handleConditionChange(index, 'value', e.target.value)}
                       sx={{ flex: 1 }}
-                      type={numericFields.includes(cond.field) ? 'number' : 'text'}
+                      type={isNodeConditionNumericField(cond.field) ? 'number' : 'text'}
                       placeholder={cond.operator === 'regex' ? '正则表达式' : ''}
                     />
                   )}

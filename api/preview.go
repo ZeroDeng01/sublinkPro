@@ -32,6 +32,11 @@ type PreviewRequest struct {
 	ProtocolBlacklist  string   `json:"ProtocolBlacklist"`  // 协议黑名单
 	NodeNameWhitelist  string   `json:"NodeNameWhitelist"`  // 节点名称白名单
 	NodeNameBlacklist  string   `json:"NodeNameBlacklist"`  // 节点名称黑名单
+	MaxFraudScore      int      `json:"MaxFraudScore"`      // 最大欺诈评分
+	OnlyResidential    bool     `json:"OnlyResidential"`    // 仅住宅IP
+	OnlyNative         bool     `json:"OnlyNative"`         // 仅原生IP
+	ResidentialType    string   `json:"ResidentialType"`    // 住宅属性过滤
+	IPType             string   `json:"IPType"`             // IP类型过滤
 	NodeNamePreprocess string   `json:"NodeNamePreprocess"` // 原名预处理规则
 	NodeNameRule       string   `json:"NodeNameRule"`       // 节点命名规则模板
 	DeduplicationRule  string   `json:"DeduplicationRule"`  // 去重规则配置
@@ -112,16 +117,19 @@ func previewSavedSubscription(subID int) (*models.PreviewResult, error) {
 
 		if sub.NodeNameRule != "" {
 			previewName = utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-				Name:        node.Name,
-				LinkName:    processedLinkName,
-				LinkCountry: node.LinkCountry,
-				Speed:       node.Speed,
-				DelayTime:   node.DelayTime,
-				Group:       node.Group,
-				Source:      node.Source,
-				Index:       idx + 1,
-				Protocol:    utils.GetProtocolFromLink(node.Link),
-				Tags:        node.Tags,
+				Name:          node.Name,
+				LinkName:      processedLinkName,
+				LinkCountry:   node.LinkCountry,
+				Speed:         node.Speed,
+				DelayTime:     node.DelayTime,
+				Group:         node.Group,
+				Source:        node.Source,
+				Index:         idx + 1,
+				Protocol:      utils.GetProtocolFromLink(node.Link),
+				Tags:          node.Tags,
+				IsBroadcast:   node.IsBroadcast,
+				IsResidential: node.IsResidential,
+				FraudScore:    node.FraudScore,
 			})
 			previewLink = utils.RenameNodeLink(node.Link, previewName)
 		}
@@ -161,6 +169,11 @@ func previewFormSubscription(req PreviewRequest) (*models.PreviewResult, error) 
 		ProtocolBlacklist:  req.ProtocolBlacklist,
 		NodeNameWhitelist:  req.NodeNameWhitelist,
 		NodeNameBlacklist:  req.NodeNameBlacklist,
+		MaxFraudScore:      req.MaxFraudScore,
+		OnlyResidential:    req.OnlyResidential,
+		OnlyNative:         req.OnlyNative,
+		ResidentialType:    req.ResidentialType,
+		IPType:             req.IPType,
 		NodeNamePreprocess: req.NodeNamePreprocess,
 		NodeNameRule:       req.NodeNameRule,
 		DeduplicationRule:  req.DeduplicationRule,

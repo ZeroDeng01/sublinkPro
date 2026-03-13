@@ -42,6 +42,9 @@ type Node struct {
 	UpdatedAt       time.Time `gorm:"autoUpdateTime" json:"UpdatedAt"` // 更新时间
 	Tags            string    // 标签ID，逗号分隔，如 "1,3,5"
 	ContentHash     string    `gorm:"index;size:64"` // 节点内容哈希（SHA256），用于全库去重
+	IsBroadcast     bool      `gorm:"default:false"` // IP来源：true=广播IP false=原生IP
+	IsResidential   bool      `gorm:"default:false"` // 是否住宅IP
+	FraudScore      int       `gorm:"default:-1"`    // 欺诈评分（0-100，-1表示未检测）
 }
 
 // nodeCache 使用新的泛型缓存，支持二级索引
@@ -132,7 +135,7 @@ func (node *Node) Update() error {
 
 // UpdateSpeed 更新节点测速结果
 func (node *Node) UpdateSpeed() error {
-	err := database.DB.Model(node).Select("Speed", "SpeedStatus", "LinkCountry", "LandingIP", "DelayTime", "DelayStatus", "LatencyCheckAt", "SpeedCheckAt").Updates(node).Error
+	err := database.DB.Model(node).Select("Speed", "SpeedStatus", "LinkCountry", "LandingIP", "DelayTime", "DelayStatus", "LatencyCheckAt", "SpeedCheckAt", "IsBroadcast", "IsResidential", "FraudScore").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -146,6 +149,9 @@ func (node *Node) UpdateSpeed() error {
 		cachedNode.SpeedCheckAt = node.SpeedCheckAt
 		cachedNode.LinkCountry = node.LinkCountry
 		cachedNode.LandingIP = node.LandingIP
+		cachedNode.IsBroadcast = node.IsBroadcast
+		cachedNode.IsResidential = node.IsResidential
+		cachedNode.FraudScore = node.FraudScore
 		nodeCache.Set(node.ID, cachedNode)
 	}
 	return nil
@@ -163,6 +169,9 @@ type SpeedTestResult struct {
 	LinkCountry     string
 	LandingIP       string
 	SkipSpeedFields bool // 是否跳过速度相关字段更新（用于TCP模式保留速度结果）
+	IsBroadcast     bool // IP来源：true=广播IP
+	IsResidential   bool // 是否住宅IP
+	FraudScore      int  // 欺诈评分（0-100，-1=未检测）
 }
 
 // BatchAddNodes 批量添加节点（高效 + 容错）
@@ -311,6 +320,19 @@ var speedResultFields = []speedResultField{
 	{"speed_check_at", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.SpeedCheckAt)) }},
 	{"link_country", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.LinkCountry)) }},
 	{"landing_ip", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.LandingIP)) }},
+	{"is_broadcast", func(r SpeedTestResult) string {
+		if r.IsBroadcast {
+			return "1"
+		}
+		return "0"
+	}},
+	{"is_residential", func(r SpeedTestResult) string {
+		if r.IsResidential {
+			return "1"
+		}
+		return "0"
+	}},
+	{"fraud_score", func(r SpeedTestResult) string { return fmt.Sprintf("%d", r.FraudScore) }},
 }
 
 // tryBatchUpdateWithCaseWhen 使用 CASE WHEN 批量更新（高效）
@@ -383,6 +405,9 @@ func batchUpdateNodeCache(chunk []SpeedTestResult, skipSpeed bool) {
 			cachedNode.LatencyCheckAt = r.LatencyCheckAt
 			cachedNode.LinkCountry = r.LinkCountry
 			cachedNode.LandingIP = r.LandingIP
+			cachedNode.IsBroadcast = r.IsBroadcast
+			cachedNode.IsResidential = r.IsResidential
+			cachedNode.FraudScore = r.FraudScore
 			nodeCache.Set(r.NodeID, cachedNode)
 		}
 	}
@@ -399,6 +424,9 @@ func fallbackToIndividualSpeedUpdate(chunk []SpeedTestResult, skipSpeed bool) in
 			"latency_check_at": r.LatencyCheckAt,
 			"link_country":     r.LinkCountry,
 			"landing_ip":       r.LandingIP,
+			"is_broadcast":     r.IsBroadcast,
+			"is_residential":   r.IsResidential,
+			"fraud_score":      r.FraudScore,
 		}
 		if !skipSpeed {
 			updates["speed"] = r.Speed
@@ -426,6 +454,9 @@ func fallbackToIndividualSpeedUpdate(chunk []SpeedTestResult, skipSpeed bool) in
 			cachedNode.LatencyCheckAt = r.LatencyCheckAt
 			cachedNode.LinkCountry = r.LinkCountry
 			cachedNode.LandingIP = r.LandingIP
+			cachedNode.IsBroadcast = r.IsBroadcast
+			cachedNode.IsResidential = r.IsResidential
+			cachedNode.FraudScore = r.FraudScore
 			nodeCache.Set(r.NodeID, cachedNode)
 		}
 	}
@@ -591,18 +622,75 @@ func (node *Node) List() ([]Node, error) {
 }
 
 type NodeFilter struct {
-	Search      string   // 搜索关键词（匹配节点名称或链接）
-	Group       string   // 分组过滤
-	Source      string   // 来源过滤
-	Protocol    string   // 协议类型过滤（如 vmess, vless, trojan 等）
-	MaxDelay    int      // 最大延迟(ms)，只显示延迟在此值以下的节点
-	MinSpeed    float64  // 最低速度(MB/s)，只显示速度在此值以上的节点
-	SpeedStatus string   // 速度状态过滤: untested, success, timeout, error
-	DelayStatus string   // 延迟状态过滤: untested, success, timeout, error
-	Countries   []string // 国家代码过滤
-	Tags        []string // 标签过滤（匹配任一标签的节点）
-	SortBy      string   // 排序字段: "delay" 或 "speed"
-	SortOrder   string   // 排序顺序: "asc" 或 "desc"
+	Search          string   // 搜索关键词（匹配节点名称或链接）
+	Group           string   // 分组过滤
+	Source          string   // 来源过滤
+	Protocol        string   // 协议类型过滤（如 vmess, vless, trojan 等）
+	MaxDelay        int      // 最大延迟(ms)，只显示延迟在此值以下的节点
+	MinSpeed        float64  // 最低速度(MB/s)，只显示速度在此值以上的节点
+	SpeedStatus     string   // 速度状态过滤: untested, success, timeout, error
+	DelayStatus     string   // 延迟状态过滤: untested, success, timeout, error
+	Countries       []string // 国家代码过滤
+	Tags            []string // 标签过滤（匹配任一标签的节点）
+	SortBy          string   // 排序字段: "delay" 或 "speed"
+	SortOrder       string   // 排序顺序: "asc" 或 "desc"
+	MaxFraudScore   int      // 最大欺诈评分（0=不限制）
+	ResidentialType string   // 住宅属性过滤: residential/datacenter/untested
+	IPType          string   // IP类型过滤: native/broadcast/untested
+}
+
+func hasNodeQualityData(n Node) bool {
+	return n.FraudScore >= 0
+}
+
+func getNodeResidentialTypeValue(n Node) string {
+	if !hasNodeQualityData(n) {
+		return "untested"
+	}
+	if n.IsResidential {
+		return "residential"
+	}
+	return "datacenter"
+}
+
+func getNodeIPTypeValue(n Node) string {
+	if !hasNodeQualityData(n) {
+		return "untested"
+	}
+	if n.IsBroadcast {
+		return "broadcast"
+	}
+	return "native"
+}
+
+func matchNodeResidentialType(n Node, residentialType string) bool {
+	switch residentialType {
+	case "", "all":
+		return true
+	case "residential":
+		return getNodeResidentialTypeValue(n) == "residential"
+	case "datacenter":
+		return getNodeResidentialTypeValue(n) == "datacenter"
+	case "untested":
+		return getNodeResidentialTypeValue(n) == "untested"
+	default:
+		return true
+	}
+}
+
+func matchNodeIPType(n Node, ipType string) bool {
+	switch ipType {
+	case "", "all":
+		return true
+	case "native":
+		return getNodeIPTypeValue(n) == "native"
+	case "broadcast":
+		return getNodeIPTypeValue(n) == "broadcast"
+	case "untested":
+		return getNodeIPTypeValue(n) == "untested"
+	default:
+		return true
+	}
 }
 
 // ListWithFilters 根据过滤条件获取节点列表
@@ -717,6 +805,23 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 			if !strings.EqualFold(n.Protocol, filter.Protocol) {
 				return false
 			}
+		}
+
+		// 最大欺诈评分过滤
+		if filter.MaxFraudScore > 0 {
+			if n.FraudScore < 0 || n.FraudScore > filter.MaxFraudScore {
+				return false
+			}
+		}
+
+		// 住宅属性过滤
+		if !matchNodeResidentialType(n, filter.ResidentialType) {
+			return false
+		}
+
+		// IP类型过滤
+		if !matchNodeIPType(n, filter.IPType) {
+			return false
 		}
 
 		return true
@@ -1439,6 +1544,7 @@ func InitNodeFieldsMeta() {
 		"Source":          "来源",
 		"SourceID":        "来源ID",
 		"Group":           "分组",
+		"FraudScore":      "欺诈评分",
 	}
 
 	t := reflect.TypeOf(Node{})

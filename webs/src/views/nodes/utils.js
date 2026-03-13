@@ -41,6 +41,9 @@ export const LANDING_IP_URL_OPTIONS = [
   { label: 'ipinfo.io', value: 'https://ipinfo.io/ip' }
 ];
 
+// IP质量检测接口选项
+export const QUALITY_CHECK_URL_OPTIONS = [{ label: 'IPPure (推荐)', value: 'https://my.ippure.com/v1/info' }];
+
 // User-Agent 预设选项
 export const USER_AGENT_OPTIONS = [
   { label: '无 (空)', value: '' },
@@ -199,4 +202,94 @@ export const getDelayDisplay = (delay, delayStatus) => {
   }
   // 成功状态，显示具体延迟值
   return { label: `${delay}ms`, color: getDelayColor(delay), variant: 'outlined' };
+};
+
+export const getFraudScoreDisplay = (fraudScore) => {
+  if (fraudScore === undefined || fraudScore === null || fraudScore < 0) {
+    return { label: '未检测', color: 'default', variant: 'outlined' };
+  }
+
+  const levels = [
+    {
+      max: 10,
+      category: '极佳',
+      sx: (theme) => ({
+        color: theme.palette.mode === 'dark' ? '#e5e7eb' : '#6b7280',
+        borderColor: theme.palette.mode === 'dark' ? '#94a3b8' : '#9ca3af',
+        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.12)' : 'rgba(148,163,184,0.08)'
+      })
+    },
+    {
+      max: 30,
+      category: '优秀',
+      sx: {
+        color: '#15803d',
+        borderColor: '#22c55e',
+        backgroundColor: 'rgba(34,197,94,0.08)'
+      }
+    },
+    {
+      max: 50,
+      category: '良好',
+      sx: {
+        color: '#a16207',
+        borderColor: '#eab308',
+        backgroundColor: 'rgba(234,179,8,0.10)'
+      }
+    },
+    {
+      max: 70,
+      category: '中等',
+      sx: {
+        color: '#c2410c',
+        borderColor: '#f97316',
+        backgroundColor: 'rgba(249,115,22,0.10)'
+      }
+    },
+    {
+      max: 89,
+      category: '差',
+      sx: {
+        color: '#b91c1c',
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239,68,68,0.10)'
+      }
+    },
+    {
+      max: Infinity,
+      category: '极差',
+      sx: (theme) => ({
+        color: theme.palette.mode === 'dark' ? '#cbd5e1' : '#111827',
+        borderColor: theme.palette.mode === 'dark' ? '#64748b' : '#1f2937',
+        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15,23,42,0.35)' : 'rgba(15,23,42,0.08)'
+      })
+    }
+  ];
+
+  const matchedLevel = levels.find((level) => fraudScore <= level.max) || levels[levels.length - 1];
+  return {
+    label: `${fraudScore}`,
+    detailLabel: `${fraudScore} (${matchedLevel.category})`,
+    color: 'default',
+    variant: 'outlined',
+    sx: matchedLevel.sx
+  };
+};
+
+export const getIpTypeDisplay = (isBroadcast, fraudScore) => {
+  if (fraudScore === undefined || fraudScore === null || fraudScore < 0) {
+    return { label: '未检测', color: 'default', variant: 'outlined' };
+  }
+  return isBroadcast
+    ? { label: '广播IP', color: 'warning', variant: 'outlined' }
+    : { label: '原生IP', color: 'success', variant: 'outlined' };
+};
+
+export const getResidentialDisplay = (isResidential, fraudScore) => {
+  if (fraudScore === undefined || fraudScore === null || fraudScore < 0) {
+    return { label: '未检测', color: 'default', variant: 'outlined' };
+  }
+  return isResidential
+    ? { label: '住宅IP', color: 'success', variant: 'outlined' }
+    : { label: '机房IP', color: 'default', variant: 'outlined' };
 };

@@ -55,6 +55,9 @@ const AVAILABLE_VARIABLES = [
   { key: '$LinkName', label: '原名', color: '#ff9800', description: '原始节点名称' },
   { key: '$Speed', label: '速度', color: '#e91e63', description: '下载速度' },
   { key: '$Delay', label: '延迟', color: '#00bcd4', description: '延迟时间' },
+  { key: '$IpType', label: 'IP类型', color: '#3f51b5', description: 'IP类型 (原生IP/广播IP)' },
+  { key: '$Residential', label: '住宅属性', color: '#009688', description: '住宅属性 (住宅IP/机房IP)' },
+  { key: '$FraudScore', label: '欺诈评分', color: '#ff5722', description: 'IP欺诈评分' },
   { key: '$Group', label: '分组', color: '#795548', description: '分组名称' },
   { key: '$Source', label: '来源', color: '#607d8b', description: '节点来源' },
   { key: '$Index', label: '序号', color: '#9e9e9e', description: '节点序号' },
@@ -82,6 +85,9 @@ const PREVIEW_DATA = {
   $Flag: isoToFlag('HK'),
   $Speed: '1.50MB/s',
   $Delay: '125ms',
+  $IpType: '原生IP',
+  $Residential: '住宅IP',
+  $FraudScore: '12',
   $Group: 'Premium',
   $Source: '机场A',
   $Index: '1',
@@ -99,7 +105,8 @@ const parseRule = (rule) => {
   let id = 0;
 
   // 匹配普通变量和 $TagGroup(xxx) 格式
-  const varRegex = /\$(Name|LinkName|LinkCountry|Flag|Speed|Delay|Group|Source|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
+  const varRegex =
+    /\$(Name|LinkName|LinkCountry|Flag|Speed|Delay|IpType|Residential|FraudScore|Group|Source|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
 
   let match;
   let lastIndex = 0;

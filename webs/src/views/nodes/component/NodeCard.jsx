@@ -13,7 +13,7 @@ import Typography from '@mui/material/Typography';
 import MainCard from 'ui-component/cards/MainCard';
 
 // utils
-import { getDelayDisplay, getSpeedDisplay, formatCountry } from '../utils';
+import { getDelayDisplay, getFraudScoreDisplay, getIpTypeDisplay, getResidentialDisplay, getSpeedDisplay, formatCountry } from '../utils';
 
 /**
  * 移动端节点卡片组件（精简版）
@@ -115,6 +115,24 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
             );
           })()}
           {node.LinkCountry && <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />}
+          {(() => {
+            const display = getIpTypeDisplay(node.IsBroadcast, node.FraudScore);
+            return display.label !== '未检测' ? (
+              <Chip label={display.label} color={display.color} variant={display.variant} size="small" />
+            ) : null;
+          })()}
+          {(() => {
+            const display = getResidentialDisplay(node.IsResidential, node.FraudScore);
+            return display.label !== '未检测' ? (
+              <Chip label={display.label} color={display.color} variant={display.variant} size="small" />
+            ) : null;
+          })()}
+          {(() => {
+            const display = getFraudScoreDisplay(node.FraudScore);
+            return display.label !== '未检测' ? (
+              <Chip label={`评分 ${display.label}`} color={display.color} variant={display.variant} size="small" sx={display.sx} />
+            ) : null;
+          })()}
         </Stack>
 
         {/* 标签区 */}
@@ -173,6 +191,9 @@ NodeCard.propTypes = {
     SpeedStatus: PropTypes.number,
     DialerProxyName: PropTypes.string,
     LinkCountry: PropTypes.string,
+    IsBroadcast: PropTypes.bool,
+    IsResidential: PropTypes.bool,
+    FraudScore: PropTypes.number,
     LandingIP: PropTypes.string,
     CreatedAt: PropTypes.string,
     UpdatedAt: PropTypes.string,

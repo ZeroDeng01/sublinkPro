@@ -24,7 +24,15 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 // utils
-import { formatDateTime, formatCountry, getDelayDisplay, getSpeedDisplay } from '../utils';
+import {
+  formatDateTime,
+  formatCountry,
+  getDelayDisplay,
+  getFraudScoreDisplay,
+  getIpTypeDisplay,
+  getResidentialDisplay,
+  getSpeedDisplay
+} from '../utils';
 
 /**
  * 桌面端节点表格（精简版）
@@ -84,6 +92,9 @@ export default function NodeTable({
               </TableSortLabel>
             </TableCell>
             <TableCell sx={{ minWidth: 80, whiteSpace: 'nowrap' }}>国家</TableCell>
+            <TableCell sx={{ minWidth: 90, whiteSpace: 'nowrap' }}>IP类型</TableCell>
+            <TableCell sx={{ minWidth: 90, whiteSpace: 'nowrap' }}>住宅</TableCell>
+            <TableCell sx={{ minWidth: 90, whiteSpace: 'nowrap' }}>欺诈评分</TableCell>
             <TableCell align="right" sx={{ minWidth: 180 }}>
               操作
             </TableCell>
@@ -216,6 +227,24 @@ export default function NodeTable({
                 ) : (
                   '-'
                 )}
+              </TableCell>
+              <TableCell>
+                {(() => {
+                  const display = getIpTypeDisplay(node.IsBroadcast, node.FraudScore);
+                  return <Chip label={display.label} color={display.color} variant={display.variant} size="small" />;
+                })()}
+              </TableCell>
+              <TableCell>
+                {(() => {
+                  const display = getResidentialDisplay(node.IsResidential, node.FraudScore);
+                  return <Chip label={display.label} color={display.color} variant={display.variant} size="small" />;
+                })()}
+              </TableCell>
+              <TableCell>
+                {(() => {
+                  const display = getFraudScoreDisplay(node.FraudScore);
+                  return <Chip label={display.label} color={display.color} variant={display.variant} size="small" sx={display.sx} />;
+                })()}
               </TableCell>
               <TableCell align="right">
                 <Tooltip title="详情">

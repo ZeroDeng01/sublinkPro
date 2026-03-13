@@ -44,6 +44,10 @@ type NodeCheckProfile struct {
 	TrafficBySource bool `gorm:"default:true" json:"trafficBySource"`
 	TrafficByNode   bool `gorm:"default:false" json:"trafficByNode"`
 
+	// 节点质量检测
+	DetectQuality   bool   `gorm:"default:false" json:"detectQuality"` // 是否检测节点质量
+	QualityCheckURL string `json:"qualityCheckUrl"`                    // 质量检测API URL
+
 	// 执行时间记录
 	LastRunTime *time.Time `gorm:"type:datetime" json:"lastRunTime"` // 上次执行时间
 	NextRunTime *time.Time `gorm:"type:datetime" json:"nextRunTime"` // 下次执行时间
@@ -102,6 +106,7 @@ func (p *NodeCheckProfile) Update() error {
 		"DetectCountry", "LandingIPURL", "IncludeHandshake",
 		"SpeedRecordMode", "PeakSampleInterval", "PreserveSpeedResult",
 		"TrafficByGroup", "TrafficBySource", "TrafficByNode",
+		"DetectQuality", "QualityCheckURL",
 	).Updates(p).Error
 	if err != nil {
 		return err

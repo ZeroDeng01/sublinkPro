@@ -13,6 +13,24 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func normalizeResidentialType(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "residential", "datacenter", "untested":
+		return strings.ToLower(strings.TrimSpace(value))
+	default:
+		return ""
+	}
+}
+
+func normalizeIPType(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "native", "broadcast", "untested":
+		return strings.ToLower(strings.TrimSpace(value))
+	default:
+		return ""
+	}
+}
+
 func NodeUpdadte(c *gin.Context) {
 	var Node models.Node
 	name := c.PostForm("name")
@@ -298,11 +316,25 @@ func NodeGet(c *gin.Context) {
 		}
 	}
 
+	if maxFraudScoreStr := c.Query("maxFraudScore"); maxFraudScoreStr != "" {
+		if maxFraudScore, err := strconv.Atoi(maxFraudScoreStr); err == nil && maxFraudScore > 0 {
+			filter.MaxFraudScore = maxFraudScore
+		}
+	}
+
 	// 解析国家代码数组
 	filter.Countries = c.QueryArray("countries[]")
 
 	// 解析标签数组
 	filter.Tags = c.QueryArray("tags[]")
+	filter.ResidentialType = normalizeResidentialType(c.Query("residentialType"))
+	filter.IPType = normalizeIPType(c.Query("ipType"))
+	if filter.ResidentialType == "" && c.Query("onlyResidential") == "true" {
+		filter.ResidentialType = "residential"
+	}
+	if filter.IPType == "" && c.Query("onlyNative") == "true" {
+		filter.IPType = "native"
+	}
 
 	// 验证排序字段（白名单）
 	if filter.SortBy != "" && filter.SortBy != "delay" && filter.SortBy != "speed" {
@@ -387,11 +419,25 @@ func NodeGetIDs(c *gin.Context) {
 		}
 	}
 
+	if maxFraudScoreStr := c.Query("maxFraudScore"); maxFraudScoreStr != "" {
+		if maxFraudScore, err := strconv.Atoi(maxFraudScoreStr); err == nil && maxFraudScore > 0 {
+			filter.MaxFraudScore = maxFraudScore
+		}
+	}
+
 	// 解析国家代码数组
 	filter.Countries = c.QueryArray("countries[]")
 
 	// 解析标签数组
 	filter.Tags = c.QueryArray("tags[]")
+	filter.ResidentialType = normalizeResidentialType(c.Query("residentialType"))
+	filter.IPType = normalizeIPType(c.Query("ipType"))
+	if filter.ResidentialType == "" && c.Query("onlyResidential") == "true" {
+		filter.ResidentialType = "residential"
+	}
+	if filter.IPType == "" && c.Query("onlyNative") == "true" {
+		filter.IPType = "native"
+	}
 
 	ids, err := Node.GetFilteredNodeIDs(filter)
 	if err != nil {

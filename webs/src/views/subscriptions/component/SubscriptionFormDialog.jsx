@@ -72,6 +72,9 @@ const previewNodeName = (rule) => {
   return result
     .replace(/\$Name/g, '香港节点-备注')
     .replace(/\$Flag/g, '🇭🇰')
+    .replace(/\$IpType/g, '原生IP')
+    .replace(/\$Residential/g, '住宅IP')
+    .replace(/\$FraudScore/g, '12')
     .replace(/\$LinkName/g, '香港01')
     .replace(/\$LinkCountry/g, 'HK')
     .replace(/\$Speed/g, '1.50MB/s')
@@ -228,6 +231,9 @@ export default function SubscriptionFormDialog({
     if (formData.protocolBlacklist) count++;
     if (formData.nodeNameWhitelist) count++;
     if (formData.nodeNameBlacklist) count++;
+    if (formData.MaxFraudScore > 0) count++;
+    if (formData.ResidentialType) count++;
+    if (formData.IPType) count++;
     return count;
   }, [formData]);
 
@@ -576,6 +582,26 @@ export default function SubscriptionFormDialog({
                       helperText="设置筛选节点的最小下载速度，0表示不限制"
                     />
                   </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="最大欺诈评分"
+                      type="text"
+                      inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                      value={formData.MaxFraudScore}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d+$/.test(val)) {
+                          setFormData({ ...formData, MaxFraudScore: val === '' ? '' : Number(val) });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const val = Math.max(0, Number(e.target.value) || 0);
+                        setFormData({ ...formData, MaxFraudScore: val });
+                      }}
+                      helperText="0表示不限制；需要先执行 IP 质量检测"
+                    />
+                  </Grid>
                 </Grid>
 
                 {/* 落地IP国家过滤 */}
@@ -605,6 +631,45 @@ export default function SubscriptionFormDialog({
                       )}
                       renderOption={(props, option) => <li {...props}>{formatCountry(option)}</li>}
                     />
+                  </Grid>
+                </Grid>
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>住宅属性</InputLabel>
+                      <Select
+                        value={formData.ResidentialType || ''}
+                        label="住宅属性"
+                        onChange={(e) => setFormData({ ...formData, ResidentialType: e.target.value })}
+                      >
+                        <MenuItem value="">全部</MenuItem>
+                        <MenuItem value="residential">住宅IP</MenuItem>
+                        <MenuItem value="datacenter">机房IP</MenuItem>
+                        <MenuItem value="untested">未检测</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+                      基于 IP 质量检测结果筛选，未检测状态会与 false 明确区分
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>IP类型</InputLabel>
+                      <Select
+                        value={formData.IPType || ''}
+                        label="IP类型"
+                        onChange={(e) => setFormData({ ...formData, IPType: e.target.value })}
+                      >
+                        <MenuItem value="">全部</MenuItem>
+                        <MenuItem value="native">原生IP</MenuItem>
+                        <MenuItem value="broadcast">广播IP</MenuItem>
+                        <MenuItem value="untested">未检测</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+                      <code>isBroadcast=true</code> 视为广播 IP，<code>isBroadcast=false</code> 视为原生 IP
+                    </Typography>
                   </Grid>
                 </Grid>
 
@@ -727,6 +792,9 @@ export default function SubscriptionFormDialog({
                           <br />• <code>$Delay</code> - 延迟 &nbsp;&nbsp; • <code>$Group</code> - 分组名称
                           <br />• <code>$Source</code> - 来源 &nbsp;&nbsp; • <code>$Index</code> - 序号 &nbsp;&nbsp; •{' '}
                           <code>$Protocol</code> - 协议类型
+                          <br />• <code>$IpType</code> - IP类型(原生IP/广播IP) &nbsp;&nbsp; • <code>$Residential</code> -
+                          住宅属性(住宅IP/机房IP)
+                          <br />• <code>$FraudScore</code> - 欺诈评分
                           <br />• <code>$Tags</code> - 所有标签(竖线分隔) &nbsp;&nbsp; • <code>$TagGroup(组名)</code> - 指定标签组中的标签
                         </Typography>
                       </Box>

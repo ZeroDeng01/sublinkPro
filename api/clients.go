@@ -161,16 +161,19 @@ func GetV2ray(c *gin.Context) {
 		nodeLink := v.Link
 		if sub.NodeNameRule != "" {
 			newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-				Name:        v.Name,
-				LinkName:    processedLinkName,
-				LinkCountry: v.LinkCountry,
-				Speed:       v.Speed,
-				DelayTime:   v.DelayTime,
-				Group:       v.Group,
-				Source:      v.Source,
-				Index:       idx + 1,
-				Protocol:    protocol.GetProtocolFromLink(v.Link),
-				Tags:        v.Tags,
+				Name:          v.Name,
+				LinkName:      processedLinkName,
+				LinkCountry:   v.LinkCountry,
+				Speed:         v.Speed,
+				DelayTime:     v.DelayTime,
+				Group:         v.Group,
+				Source:        v.Source,
+				Index:         idx + 1,
+				Protocol:      protocol.GetProtocolFromLink(v.Link),
+				Tags:          v.Tags,
+				IsBroadcast:   v.IsBroadcast,
+				IsResidential: v.IsResidential,
+				FraudScore:    v.FraudScore,
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
 		}
@@ -182,16 +185,19 @@ func GetV2ray(c *gin.Context) {
 			if sub.NodeNameRule != "" {
 				for i, link := range links {
 					newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-						Name:        v.Name,
-						LinkName:    processedLinkName,
-						LinkCountry: v.LinkCountry,
-						Speed:       v.Speed,
-						DelayTime:   v.DelayTime,
-						Group:       v.Group,
-						Source:      v.Source,
-						Index:       idx + 1,
-						Protocol:    protocol.GetProtocolFromLink(link),
-						Tags:        v.Tags,
+						Name:          v.Name,
+						LinkName:      processedLinkName,
+						LinkCountry:   v.LinkCountry,
+						Speed:         v.Speed,
+						DelayTime:     v.DelayTime,
+						Group:         v.Group,
+						Source:        v.Source,
+						Index:         idx + 1,
+						Protocol:      protocol.GetProtocolFromLink(link),
+						Tags:          v.Tags,
+						IsBroadcast:   v.IsBroadcast,
+						IsResidential: v.IsResidential,
+						FraudScore:    v.FraudScore,
 					})
 					links[i] = utils.RenameNodeLink(link, newName)
 				}
@@ -269,16 +275,19 @@ func GetClash(c *gin.Context) {
 		finalName := v.LinkName // 默认使用原始名称
 		if sub.NodeNameRule != "" {
 			finalName = utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-				Name:        v.Name,
-				LinkName:    processedLinkName,
-				LinkCountry: v.LinkCountry,
-				Speed:       v.Speed,
-				DelayTime:   v.DelayTime,
-				Group:       v.Group,
-				Source:      v.Source,
-				Index:       idx + 1,
-				Protocol:    protocol.GetProtocolFromLink(v.Link),
-				Tags:        v.Tags,
+				Name:          v.Name,
+				LinkName:      processedLinkName,
+				LinkCountry:   v.LinkCountry,
+				Speed:         v.Speed,
+				DelayTime:     v.DelayTime,
+				Group:         v.Group,
+				Source:        v.Source,
+				Index:         idx + 1,
+				Protocol:      protocol.GetProtocolFromLink(v.Link),
+				Tags:          v.Tags,
+				IsBroadcast:   v.IsBroadcast,
+				IsResidential: v.IsResidential,
+				FraudScore:    v.FraudScore,
 			})
 		}
 		nodeNameMap[v.ID] = finalName
@@ -329,16 +338,19 @@ func GetClash(c *gin.Context) {
 		nodeLink := v.Link
 		if sub.NodeNameRule != "" {
 			newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-				Name:        v.Name,
-				LinkName:    processedLinkName,
-				LinkCountry: v.LinkCountry,
-				Speed:       v.Speed,
-				DelayTime:   v.DelayTime,
-				Group:       v.Group,
-				Source:      v.Source,
-				Index:       idx + 1,
-				Protocol:    protocol.GetProtocolFromLink(v.Link),
-				Tags:        v.Tags,
+				Name:          v.Name,
+				LinkName:      processedLinkName,
+				LinkCountry:   v.LinkCountry,
+				Speed:         v.Speed,
+				DelayTime:     v.DelayTime,
+				Group:         v.Group,
+				Source:        v.Source,
+				Index:         idx + 1,
+				Protocol:      protocol.GetProtocolFromLink(v.Link),
+				Tags:          v.Tags,
+				IsBroadcast:   v.IsBroadcast,
+				IsResidential: v.IsResidential,
+				FraudScore:    v.FraudScore,
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
 		}
@@ -365,16 +377,19 @@ func GetClash(c *gin.Context) {
 				renamedLink := link
 				if sub.NodeNameRule != "" {
 					newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-						Name:        v.Name,
-						LinkName:    processedLinkName,
-						LinkCountry: v.LinkCountry,
-						Speed:       v.Speed,
-						DelayTime:   v.DelayTime,
-						Group:       v.Group,
-						Source:      v.Source,
-						Index:       idx + 1,
-						Protocol:    protocol.GetProtocolFromLink(link),
-						Tags:        v.Tags,
+						Name:          v.Name,
+						LinkName:      processedLinkName,
+						LinkCountry:   v.LinkCountry,
+						Speed:         v.Speed,
+						DelayTime:     v.DelayTime,
+						Group:         v.Group,
+						Source:        v.Source,
+						Index:         idx + 1,
+						Protocol:      protocol.GetProtocolFromLink(link),
+						Tags:          v.Tags,
+						IsBroadcast:   v.IsBroadcast,
+						IsResidential: v.IsResidential,
+						FraudScore:    v.FraudScore,
 					})
 					renamedLink = utils.RenameNodeLink(link, newName)
 				}
@@ -498,16 +513,19 @@ func GetSurge(c *gin.Context) {
 		nodeLink := v.Link
 		if sub.NodeNameRule != "" {
 			newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-				Name:        v.Name,
-				LinkName:    processedLinkName,
-				LinkCountry: v.LinkCountry,
-				Speed:       v.Speed,
-				DelayTime:   v.DelayTime,
-				Group:       v.Group,
-				Source:      v.Source,
-				Index:       idx + 1,
-				Protocol:    protocol.GetProtocolFromLink(v.Link),
-				Tags:        v.Tags,
+				Name:          v.Name,
+				LinkName:      processedLinkName,
+				LinkCountry:   v.LinkCountry,
+				Speed:         v.Speed,
+				DelayTime:     v.DelayTime,
+				Group:         v.Group,
+				Source:        v.Source,
+				Index:         idx + 1,
+				Protocol:      protocol.GetProtocolFromLink(v.Link),
+				Tags:          v.Tags,
+				IsBroadcast:   v.IsBroadcast,
+				IsResidential: v.IsResidential,
+				FraudScore:    v.FraudScore,
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
 		}
@@ -518,16 +536,19 @@ func GetSurge(c *gin.Context) {
 			for i, link := range links {
 				if sub.NodeNameRule != "" {
 					newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-						Name:        v.Name,
-						LinkName:    processedLinkName,
-						LinkCountry: v.LinkCountry,
-						Speed:       v.Speed,
-						DelayTime:   v.DelayTime,
-						Group:       v.Group,
-						Source:      v.Source,
-						Index:       idx + 1,
-						Protocol:    protocol.GetProtocolFromLink(link),
-						Tags:        v.Tags,
+						Name:          v.Name,
+						LinkName:      processedLinkName,
+						LinkCountry:   v.LinkCountry,
+						Speed:         v.Speed,
+						DelayTime:     v.DelayTime,
+						Group:         v.Group,
+						Source:        v.Source,
+						Index:         idx + 1,
+						Protocol:      protocol.GetProtocolFromLink(link),
+						Tags:          v.Tags,
+						IsBroadcast:   v.IsBroadcast,
+						IsResidential: v.IsResidential,
+						FraudScore:    v.FraudScore,
 					})
 					links[i] = utils.RenameNodeLink(link, newName)
 				}

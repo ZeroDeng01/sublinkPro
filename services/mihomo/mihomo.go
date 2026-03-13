@@ -3,6 +3,7 @@ package mihomo
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -110,17 +111,29 @@ func MihomoDelayWithAdapter(proxyAdapter constant.Proxy, testUrl string, timeout
 	return int(delay), nil
 }
 
-// MihomoDelayTest 执行延迟测试，可选检测落地IP
+// MihomoDelayTest 执行延迟测试，可选检测落地IP和 IP 质量
 // includeHandshake: true 测量完整连接时间，false 使用 UnifiedDelay 模式排除握手
 // detectLandingIP: 是否检测落地IP
 // landingIPUrl: IP查询服务URL，空则使用默认值 https://api.ipify.org
-// 返回: latency(ms), landingIP(若未检测或失败则为空), error
-func MihomoDelayTest(nodeLink string, testUrl string, timeout time.Duration, includeHandshake bool, detectLandingIP bool, landingIPUrl string) (latency int, landingIP string, err error) {
+// detectQuality: 是否检测 IP 质量
+// qualityURL: 质量查询服务 URL，空则使用默认值 https://my.ippure.com/v1/info
+// 返回: latency(ms), landingIP(若未检测或失败则为空), quality(若未检测或失败则为nil), error
+func MihomoDelayTest(
+	nodeLink string,
+	testUrl string,
+	timeout time.Duration,
+	includeHandshake bool,
+	detectLandingIP bool,
+	landingIPUrl string,
+	detectQuality bool,
+	qualityURL string,
+) (latency int, landingIP string, quality *QualityCheckResult, err error) {
 	// Recover from any panics
 	defer func() {
 		if r := recover(); r != nil {
 			latency = 0
 			landingIP = ""
+			quality = nil
 			err = fmt.Errorf("panic in MihomoDelayTest: %v", r)
 		}
 	}()
@@ -132,13 +145,13 @@ func MihomoDelayTest(nodeLink string, testUrl string, timeout time.Duration, inc
 	// 创建 adapter
 	proxyAdapter, err := GetMihomoAdapter(nodeLink)
 	if err != nil {
-		return 0, "", err
+		return 0, "", nil, err
 	}
 
 	// 执行延迟测试（使用 URLTest）
 	latency, err = MihomoDelayWithAdapter(proxyAdapter, testUrl, timeout, includeHandshake)
 	if err != nil {
-		return 0, "", err
+		return 0, "", nil, err
 	}
 
 	// 延迟测试成功后，如果需要检测落地IP
@@ -146,16 +159,33 @@ func MihomoDelayTest(nodeLink string, testUrl string, timeout time.Duration, inc
 		landingIP = fetchLandingIPWithAdapter(proxyAdapter, landingIPUrl)
 	}
 
-	return latency, landingIP, nil
+	// 延迟测试成功后，如果需要检测 IP 质量
+	if detectQuality {
+		quality = FetchQualityWithAdapter(proxyAdapter, qualityURL)
+	}
+
+	return latency, landingIP, quality, nil
 }
 
-// MihomoSpeedTest 执行速度测试，可选检测落地IP
+// MihomoSpeedTest 执行速度测试，可选检测落地IP和 IP 质量
 // detectLandingIP: 是否检测落地IP
 // landingIPUrl: IP查询服务URL，空则使用默认值 https://api.ipify.org
+// detectQuality: 是否检测 IP 质量
+// qualityURL: 质量查询服务 URL，空则使用默认值 https://my.ippure.com/v1/info
 // speedRecordMode: 速度记录模式 "average"=平均速度, "peak"=峰值速度
 // peakSampleInterval: 峰值采样间隔（毫秒），仅在peak模式下生效，范围50-200
-// 返回: speed(MB/s), latency(ms), bytesDownloaded, landingIP(若未检测或失败则为空), error
-func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, detectLandingIP bool, landingIPUrl string, speedRecordMode string, peakSampleInterval int) (speed float64, latency int, bytesDownloaded int64, landingIP string, err error) {
+// 返回: speed(MB/s), latency(ms), bytesDownloaded, landingIP(若未检测或失败则为空), quality(若未检测或失败则为nil), error
+func MihomoSpeedTest(
+	nodeLink string,
+	testUrl string,
+	timeout time.Duration,
+	detectLandingIP bool,
+	landingIPUrl string,
+	detectQuality bool,
+	qualityURL string,
+	speedRecordMode string,
+	peakSampleInterval int,
+) (speed float64, latency int, bytesDownloaded int64, landingIP string, quality *QualityCheckResult, err error) {
 	// Recover from any panics and return error with zero values
 	defer func() {
 		if r := recover(); r != nil {
@@ -163,6 +193,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 			latency = 0
 			bytesDownloaded = 0
 			landingIP = ""
+			quality = nil
 			err = fmt.Errorf("panic in MihomoSpeedTest: %v", r)
 		}
 	}()
@@ -179,7 +210,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 
 	proxyAdapter, err := GetMihomoAdapter(nodeLink)
 	if err != nil {
-		return 0, 0, 0, "", err
+		return 0, 0, 0, "", nil, err
 	}
 
 	// 4. Perform Speed Test
@@ -190,7 +221,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 
 	parsedUrl, err := url.Parse(testUrl)
 	if err != nil {
-		return 0, 0, 0, "", fmt.Errorf("parse test url error: %v", err)
+		return 0, 0, 0, "", nil, fmt.Errorf("parse test url error: %v", err)
 	}
 
 	portStr := parsedUrl.Port()
@@ -204,11 +235,11 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 
 	portInt, err := strconv.Atoi(portStr)
 	if err != nil {
-		return 0, 0, 0, "", fmt.Errorf("invalid port: %v", err)
+		return 0, 0, 0, "", nil, fmt.Errorf("invalid port: %v", err)
 	}
 	// Validate port range to prevent overflow
 	if portInt < 0 || portInt > 65535 {
-		return 0, 0, 0, "", fmt.Errorf("port out of range: %d", portInt)
+		return 0, 0, 0, "", nil, fmt.Errorf("port out of range: %d", portInt)
 	}
 	port := uint16(portInt)
 
@@ -224,7 +255,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 	start := time.Now()
 	conn, err := proxyAdapter.DialContext(ctx, metadata)
 	if err != nil {
-		return 0, 0, 0, "", fmt.Errorf("dial error: %v", err)
+		return 0, 0, 0, "", nil, fmt.Errorf("dial error: %v", err)
 	}
 	// Close connection asynchronously to avoid blocking if it hangs
 	defer func() {
@@ -239,7 +270,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 	// Create HTTP request
 	req, err := http.NewRequest("GET", testUrl, nil)
 	if err != nil {
-		return 0, latency, 0, "", fmt.Errorf("create request error: %v", err)
+		return 0, latency, 0, "", nil, fmt.Errorf("create request error: %v", err)
 	}
 	req = req.WithContext(ctx)
 
@@ -287,7 +318,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 
 	resp, err := client.Get(testUrl)
 	if err != nil {
-		return 0, latency, 0, "", fmt.Errorf("http get error: %v", err)
+		return 0, latency, 0, "", nil, fmt.Errorf("http get error: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -356,7 +387,7 @@ func MihomoSpeedTest(nodeLink string, testUrl string, timeout time.Duration, det
 			if sampleDone != nil {
 				close(sampleDone)
 			}
-			return 0, latency, totalRead, "", fmt.Errorf("read body error: %v", err)
+			return 0, latency, totalRead, "", nil, fmt.Errorf("read body error: %v", err)
 		}
 		// Check timeout explicitly via context
 		select {
@@ -377,13 +408,13 @@ CalculateSpeed:
 
 	duration := time.Since(readStart)
 	if duration.Seconds() == 0 {
-		return 0, latency, totalRead, "", nil
+		return 0, latency, totalRead, "", nil, nil
 	}
 
 	// 最小有效下载量校验（10KB），避免因下载量过小导致速度虚高
 	const minValidBytes int64 = 10 * 1024 // 10KB
 	if totalRead < minValidBytes {
-		return 0, latency, totalRead, "", fmt.Errorf("下载量过小 (%d 字节 < %d 字节)，结果不可靠", totalRead, minValidBytes)
+		return 0, latency, totalRead, "", nil, fmt.Errorf("下载量过小 (%d 字节 < %d 字节)，结果不可靠", totalRead, minValidBytes)
 	}
 
 	// 根据模式选择返回值
@@ -400,7 +431,11 @@ CalculateSpeed:
 		landingIP = fetchLandingIPWithAdapter(proxyAdapter, landingIPUrl)
 	}
 
-	return speed, latency, totalRead, landingIP, nil
+	if detectQuality && speed > 0 {
+		quality = FetchQualityWithAdapter(proxyAdapter, qualityURL)
+	}
+
+	return speed, latency, totalRead, landingIP, quality, nil
 }
 
 // fetchLandingIPWithAdapter 使用已有adapter获取落地IP（内部辅助函数）
@@ -470,4 +505,104 @@ func fetchLandingIPWithAdapter(proxyAdapter constant.Proxy, ipUrl string) string
 	n, _ := resp.Body.Read(body)
 
 	return strings.TrimSpace(string(body[:n]))
+}
+
+// QualityCheckResult 节点质量检测结果
+type QualityCheckResult struct {
+	IsBroadcast   bool `json:"isBroadcast"`
+	IsResidential bool `json:"isResidential"`
+	FraudScore    int  `json:"fraudScore"`
+}
+
+// FetchQualityWithAdapter 通过代理通道检测节点质量
+// 使用已有的 proxyAdapter 发起请求，获取 IP 质量信息
+// 失败静默返回 nil，不影响主流程
+func FetchQualityWithAdapter(proxyAdapter constant.Proxy, qualityURL string) *QualityCheckResult {
+	defer func() {
+		if r := recover(); r != nil {
+			// 静默处理
+		}
+	}()
+
+	if qualityURL == "" {
+		qualityURL = "https://my.ippure.com/v1/info"
+	}
+
+	// 固定5秒超时
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// 复用 proxyAdapter 创建 HTTP client
+	client := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(dialCtx context.Context, network, addr string) (net.Conn, error) {
+				h, pStr, splitErr := net.SplitHostPort(addr)
+				if splitErr != nil {
+					return nil, splitErr
+				}
+				pInt, atoiErr := strconv.Atoi(pStr)
+				if atoiErr != nil {
+					return nil, atoiErr
+				}
+				if pInt < 0 || pInt > 65535 {
+					return nil, fmt.Errorf("port out of range: %d", pInt)
+				}
+				md := &constant.Metadata{
+					Host:    h,
+					DstPort: uint16(pInt),
+					Type:    constant.HTTP,
+				}
+				return proxyAdapter.DialContext(dialCtx, md)
+			},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+		Timeout: 5 * time.Second,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", qualityURL, nil)
+	if err != nil {
+		utils.Debug("节点质量检测: 创建请求失败: %v", err)
+		return nil
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		utils.Debug("节点质量检测: 请求失败: %v", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		utils.Debug("节点质量检测: 响应状态异常: %d", resp.StatusCode)
+		return nil
+	}
+
+	// 限制读取最多2KB（API返回的JSON不会太大）
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 2048))
+	if err != nil {
+		utils.Debug("节点质量检测: 读取响应失败: %v", err)
+		return nil
+	}
+
+	// 解析JSON响应
+	var apiResp struct {
+		IsBroadcast   *bool `json:"isBroadcast"`
+		IsResidential *bool `json:"isResidential"`
+		FraudScore    *int  `json:"fraudScore"`
+	}
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		utils.Debug("节点质量检测: 解析响应失败: %v", err)
+		return nil
+	}
+
+	if apiResp.IsBroadcast == nil || apiResp.IsResidential == nil || apiResp.FraudScore == nil {
+		utils.Debug("节点质量检测: 响应字段缺失")
+		return nil
+	}
+
+	return &QualityCheckResult{
+		IsBroadcast:   *apiResp.IsBroadcast,
+		IsResidential: *apiResp.IsResidential,
+		FraudScore:    *apiResp.FraudScore,
+	}
 }

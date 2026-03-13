@@ -68,16 +68,19 @@ func replaceTagGroupVariables(rule string, nodeTags string) string {
 
 // NodeInfo 节点信息结构体，用于重命名
 type NodeInfo struct {
-	Name        string  // 系统节点备注名称
-	LinkName    string  // 节点原始名称（来自订阅源）
-	LinkCountry string  // 落地IP国家代码
-	Speed       float64 // 速度 (MB/s)
-	DelayTime   int     // 延迟 (ms)
-	Group       string  // 分组
-	Source      string  // 来源（手动添加/订阅名称）
-	Index       int     // 序号 (从1开始)
-	Protocol    string  // 协议类型
-	Tags        string  // 节点标签（逗号分隔）
+	Name          string  // 系统节点备注名称
+	LinkName      string  // 节点原始名称（来自订阅源）
+	LinkCountry   string  // 落地IP国家代码
+	Speed         float64 // 速度 (MB/s)
+	DelayTime     int     // 延迟 (ms)
+	Group         string  // 分组
+	Source        string  // 来源（手动添加/订阅名称）
+	Index         int     // 序号 (从1开始)
+	Protocol      string  // 协议类型
+	Tags          string  // 节点标签（逗号分隔）
+	IsBroadcast   bool    // IP来源：true=广播 false=原生
+	IsResidential bool    // 是否住宅IP
+	FraudScore    int     // 欺诈评分（0-100，-1=未检测）
 }
 
 // PreprocessRule 原名预处理规则结构体
@@ -269,8 +272,32 @@ func RenameNode(rule string, info NodeInfo) string {
 	// 按变量名长度降序排列，长的变量名优先替换
 	replacements := []replacement{
 		{"$LinkCountry", linkCountry},
+		{"$Residential", func() string {
+			if info.FraudScore < 0 {
+				return "未检测"
+			}
+			if info.IsResidential {
+				return "住宅IP"
+			}
+			return "机房IP"
+		}()},
+		{"$FraudScore", func() string {
+			if info.FraudScore < 0 {
+				return "未检测"
+			}
+			return fmt.Sprintf("%d", info.FraudScore)
+		}()},
 		{"$LinkName", info.LinkName},
 		{"$Protocol", info.Protocol},
+		{"$IpType", func() string {
+			if info.FraudScore < 0 {
+				return "未检测"
+			}
+			if info.IsBroadcast {
+				return "广播IP"
+			}
+			return "原生IP"
+		}()},
 		{"$Source", linkSource},
 		{"$Speed", FormatSpeed(info.Speed)},
 		{"$Delay", FormatDelay(info.DelayTime)},

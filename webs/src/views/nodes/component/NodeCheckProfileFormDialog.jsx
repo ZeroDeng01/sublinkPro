@@ -44,7 +44,13 @@ import CronExpressionGenerator from 'components/CronExpressionGenerator';
 import { createNodeCheckProfile, updateNodeCheckProfile } from 'api/nodeCheck';
 
 // constants
-import { SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS, LATENCY_TEST_URL_OPTIONS, LANDING_IP_URL_OPTIONS } from '../utils';
+import {
+  SPEED_TEST_TCP_OPTIONS,
+  SPEED_TEST_MIHOMO_OPTIONS,
+  LATENCY_TEST_URL_OPTIONS,
+  LANDING_IP_URL_OPTIONS,
+  QUALITY_CHECK_URL_OPTIONS
+} from '../utils';
 
 /**
  * 可折叠配置区块
@@ -138,7 +144,9 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
     trafficByGroup: true,
     trafficBySource: true,
     trafficByNode: false,
-    preserveSpeedResult: false
+    preserveSpeedResult: false,
+    detectQuality: false,
+    qualityCheckUrl: ''
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -171,7 +179,9 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
           trafficByGroup: profile.trafficByGroup !== false,
           trafficBySource: profile.trafficBySource !== false,
           trafficByNode: profile.trafficByNode || false,
-          preserveSpeedResult: profile.preserveSpeedResult || false
+          preserveSpeedResult: profile.preserveSpeedResult || false,
+          detectQuality: profile.detectQuality || false,
+          qualityCheckUrl: profile.qualityCheckUrl || ''
         });
       } else {
         // 新建时的默认值
@@ -195,7 +205,9 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
           trafficByGroup: true,
           trafficBySource: true,
           trafficByNode: false,
-          preserveSpeedResult: false
+          preserveSpeedResult: false,
+          detectQuality: false,
+          qualityCheckUrl: ''
         });
       }
     }
@@ -240,7 +252,9 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
         trafficByGroup: form.trafficByGroup,
         trafficBySource: form.trafficBySource,
         trafficByNode: form.trafficByNode,
-        preserveSpeedResult: form.preserveSpeedResult
+        preserveSpeedResult: form.preserveSpeedResult,
+        detectQuality: form.detectQuality,
+        qualityCheckUrl: form.qualityCheckUrl
       };
 
       if (isEdit) {
@@ -466,6 +480,55 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                   ))}
                 </Select>
               </FormControl>
+            )}
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={form.detectQuality}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    updateForm('detectQuality', checked);
+                    if (checked && !form.qualityCheckUrl) {
+                      updateForm('qualityCheckUrl', 'https://my.ippure.com/v1/info');
+                    }
+                  }}
+                  size="small"
+                />
+              }
+              label={
+                <Typography variant="body2">
+                  IP质量检测
+                  <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
+                    (通过 ippure 检测原生/住宅/欺诈评分)
+                  </Typography>
+                </Typography>
+              }
+            />
+            {form.detectQuality && (
+              <Autocomplete
+                freeSolo
+                size="small"
+                options={QUALITY_CHECK_URL_OPTIONS}
+                getOptionLabel={(option) => (typeof option === 'string' ? option : option.value)}
+                value={form.qualityCheckUrl || ''}
+                onChange={(_, newValue) => {
+                  const url = typeof newValue === 'string' ? newValue : newValue?.value || '';
+                  updateForm('qualityCheckUrl', url);
+                }}
+                onInputChange={(_, newValue) => updateForm('qualityCheckUrl', newValue || '')}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props} key={option.value}>
+                    <Box>
+                      <Typography variant="body2">{option.label}</Typography>
+                      <Typography variant="caption" color="textSecondary" sx={{ wordBreak: 'break-all' }}>
+                        {option.value}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+                renderInput={(params) => <TextField {...params} label="质量检测接口" placeholder="请选择或输入质量检测接口" />}
+              />
             )}
 
             {/* TCP模式专属选项：保留速度测试结果 */}
