@@ -21,7 +21,8 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 | 环境变量 | 说明                              | 默认值                                 |
 |----------|---------------------------------|-------------------------------------|
 | `SUBLINK_PORT` | 服务端口                            | 8000                                |
-| `SUBLINK_DB_PATH` | 数据库目录                           | ./db                                |
+| `SUBLINK_DSN` | 数据库 DSN（支持 sqlite/mysql/postgres） | 默认使用 SQLite：`sqlite://./db/sublink.db` |
+| `SUBLINK_DB_PATH` | 本地数据目录 / SQLite 默认数据库目录        | ./db                                |
 | `SUBLINK_LOG_PATH` | 日志目录                            | ./logs                              |
 | `SUBLINK_JWT_SECRET` | JWT签名密钥                         | (自动生成)                              |
 | `SUBLINK_API_ENCRYPTION_KEY` | API加密密钥                         | (自动生成)                              |
@@ -50,12 +51,55 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 # 指定端口启动
 ./sublinkpro run --port 9000
 
-# 指定数据库目录
-./sublinkpro run --db /data/db
+# 指定 SQLite 数据库
+./sublinkpro run --dsn "sqlite:///data/sublink.db"
+
+# 指定 MySQL
+./sublinkpro run --dsn "mysql://user:pass@tcp(127.0.0.1:3306)/sublink?charset=utf8mb4&parseTime=True&loc=Local"
+
+# 指定 PostgreSQL
+./sublinkpro run --dsn "postgres://user:pass@127.0.0.1:5432/sublink?sslmode=disable"
+
+# 指定本地数据目录（配置文件 / GeoIP / 默认 SQLite）
+./sublinkpro run --db /data
 
 # 重置管理员密码
 ./sublinkpro setting -username admin -password newpass
 ```
+
+---
+
+## 数据库 DSN
+
+SublinkPro 现在支持通过 `dsn` 统一配置数据库连接，支持以下方言：
+
+- `sqlite://`
+- `mysql://`
+- `postgres://`
+- `postgresql://`
+
+如果 `dsn` 为空，系统会自动退回到 SQLite，并使用 `db_path/sublink.db` 作为数据库文件。
+
+### SQLite 示例
+
+```yaml
+dsn: sqlite:///app/db/sublink.db
+```
+
+### MySQL 示例
+
+```yaml
+dsn: mysql://user:pass@tcp(mysql:3306)/sublink?charset=utf8mb4&parseTime=True&loc=Local
+```
+
+### PostgreSQL 示例
+
+```yaml
+dsn: postgres://user:pass@postgres:5432/sublink?sslmode=disable
+```
+
+> [!TIP]
+> 使用 MySQL 或 PostgreSQL 时，`db_path` 仍然用于本地配置文件和 GeoIP 数据库存储；它不再决定实际数据库后端。
 
 ---
 
@@ -162,8 +206,12 @@ services:
       - "./logs:/app/logs"
     environment:
       - SUBLINK_PORT=8000
+      # 数据库 DSN（可选，未设置时默认使用 SQLite）
+      # - SUBLINK_DSN=mysql://user:pass@mysql:3306/sublink?charset=utf8mb4&parseTime=True&loc=Local
       - SUBLINK_EXPIRE_DAYS=14
       - SUBLINK_LOGIN_FAIL_COUNT=5
+      # 本地数据目录（可选，默认用于 config.yaml / GeoIP / SQLite）
+      # - SUBLINK_DB_PATH=/app/db
       # GeoIP 数据库路径（可选，默认为 ./db/GeoLite2-City.mmdb）
       # - SUBLINK_GEOIP_PATH=/app/db/GeoLite2-City.mmdb
       # 敏感配置（可选，不设置则自动生成）

@@ -1,6 +1,8 @@
 package models
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"reflect"
 	"sort"
@@ -18,10 +20,11 @@ import (
 
 type Node struct {
 	ID              int    `gorm:"primaryKey"`
-	Link            string `gorm:"uniqueIndex:idx_link_id"` //出站代理原始连接
+	Link            string //出站代理原始连接
+	LinkHash        string `gorm:"size:64;uniqueIndex" json:"-"`
 	Name            string //系统内节点名称
 	LinkName        string //节点原始名称
-	Protocol        string `gorm:"index"` //协议类型 (vmess, vless, trojan, ss 等)
+	Protocol        string `gorm:"size:32;index"` //协议类型 (vmess, vless, trojan, ss 等)
 	LinkAddress     string //节点原始地址
 	LinkHost        string //节点原始Host
 	LinkPort        string //节点原始端口
@@ -63,6 +66,15 @@ func init() {
 	nodeCache.AddIndex("contentHash", func(n Node) string { return n.ContentHash })
 }
 
+func hashNodeLink(link string) string {
+	sum := sha256.Sum256([]byte(link))
+	return hex.EncodeToString(sum[:])
+}
+
+func (node *Node) syncLinkHash() {
+	node.LinkHash = hashNodeLink(node.Link)
+}
+
 // InitNodeCache 初始化节点缓存
 func InitNodeCache() error {
 	utils.Info("加载节点列表到缓存")
@@ -87,6 +99,7 @@ func UpdateNodeCache(id int, node Node) {
 
 // Add 添加节点
 func (node *Node) Add() error {
+	node.syncLinkHash()
 	// Write-Through: 先写数据库
 	err := database.DB.Create(node).Error
 	if err != nil {
@@ -99,12 +112,13 @@ func (node *Node) Add() error {
 
 // Update 更新节点
 func (node *Node) Update() error {
+	node.syncLinkHash()
 	if node.Name == "" {
 		node.Name = node.LinkName
 	}
 	node.UpdatedAt = time.Now()
 	// Write-Through: 先写数据库
-	err := database.DB.Model(node).Select("Name", "Link", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "LinkCountry", "Protocol", "ContentHash", "UpdatedAt").Updates(node).Error
+	err := database.DB.Model(node).Select("Name", "Link", "LinkHash", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "LinkCountry", "Protocol", "ContentHash", "UpdatedAt").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -112,6 +126,7 @@ func (node *Node) Update() error {
 	if cachedNode, ok := nodeCache.Get(node.ID); ok {
 		cachedNode.Name = node.Name
 		cachedNode.Link = node.Link
+		cachedNode.LinkHash = node.LinkHash
 		cachedNode.DialerProxyName = node.DialerProxyName
 		cachedNode.Group = node.Group
 		cachedNode.LinkName = node.LinkName
@@ -190,9 +205,12 @@ func BatchAddNodes(nodes []Node) error {
 	insertedCount := 0
 
 	for chunkIdx, chunk := range chunks {
+		for i := range chunk {
+			chunk[i].syncLinkHash()
+		}
 		// 尝试批量插入
 		result := database.DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "link"}},
+			Columns:   []clause.Column{{Name: "link_hash"}},
 			DoNothing: true,
 		}).Create(&chunk)
 
@@ -220,9 +238,10 @@ func BatchAddNodes(nodes []Node) error {
 func fallbackToIndividualNodeInsert(nodes []Node) int {
 	insertedCount := 0
 	for i := range nodes {
+		nodes[i].syncLinkHash()
 		// 使用 ON CONFLICT DO NOTHING 跳过已存在的节点
 		result := database.DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "link"}},
+			Columns:   []clause.Column{{Name: "link_hash"}},
 			DoNothing: true,
 		}).Create(&nodes[i])
 
@@ -501,6 +520,7 @@ func chunkNodes(nodes []Node, chunkSize int) [][]Node {
 func (node *Node) Find() error {
 	// 优先用 link 精确查找（link 全局唯一）
 	if node.Link != "" {
+		node.syncLinkHash()
 		results := nodeCache.Filter(func(n Node) bool {
 			return n.Link == node.Link
 		})
@@ -510,7 +530,7 @@ func (node *Node) Find() error {
 		}
 
 		// 缓存未命中，查 DB
-		err := database.DB.Where("link = ?", node.Link).First(node).Error
+		err := database.DB.Where("link_hash = ?", node.LinkHash).First(node).Error
 		if err != nil {
 			return err
 		}
@@ -1017,10 +1037,11 @@ func (node *Node) Del() error {
 
 // UpsertNode 插入或更新节点
 func (node *Node) UpsertNode() error {
+	node.syncLinkHash()
 	// Write-Through: 先写数据库
 	err := database.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "link"}},
-		DoUpdates: clause.AssignmentColumns([]string{"name", "link_name", "link_address", "link_host", "link_port", "link_country", "source", "source_id", "group"}),
+		Columns:   []clause.Column{{Name: "link_hash"}},
+		DoUpdates: clause.AssignmentColumns([]string{"link", "name", "link_name", "link_address", "link_host", "link_port", "link_country", "source", "source_id", "group"}),
 	}).Create(node).Error
 	if err != nil {
 		return err
@@ -1028,7 +1049,7 @@ func (node *Node) UpsertNode() error {
 
 	// 查询更新后的节点并更新缓存
 	var updatedNode Node
-	if err := database.DB.Where("link = ?", node.Link).First(&updatedNode).Error; err == nil {
+	if err := database.DB.Where("link_hash = ?", node.LinkHash).First(&updatedNode).Error; err == nil {
 		nodeCache.Set(updatedNode.ID, updatedNode)
 		*node = updatedNode
 	}

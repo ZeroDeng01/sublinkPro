@@ -1,6 +1,7 @@
 package database
 
 import (
+	"strings"
 	"sublink/utils"
 	"time"
 
@@ -42,7 +43,7 @@ func WithRetry(maxRetries int, delay time.Duration, fn func() error) error {
 			return nil
 		}
 
-		// Check if it's a database lock error (SQLite specific)
+		// Check if it's a retryable database lock/deadlock error
 		if isLockError(err) {
 			if i < maxRetries-1 {
 				utils.Warn("数据库锁冲突，第 %d 次重试，等待 %v...", i+1, delay)
@@ -63,24 +64,15 @@ func isLockError(err error) bool {
 		return false
 	}
 	errStr := err.Error()
-	// SQLite lock error patterns
-	return contains(errStr, "database is locked") ||
-		contains(errStr, "SQLITE_BUSY") ||
-		contains(errStr, "database table is locked")
-}
-
-// contains is a simple string contains check
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsAt(s, substr))
-}
-
-func containsAt(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+	// 覆盖 sqlite/mysql/postgres 常见锁冲突与死锁场景
+	return strings.Contains(errStr, "database is locked") ||
+		strings.Contains(errStr, "SQLITE_BUSY") ||
+		strings.Contains(errStr, "database table is locked") ||
+		strings.Contains(errStr, "Lock wait timeout exceeded") ||
+		strings.Contains(errStr, "deadlock found") ||
+		strings.Contains(errStr, "deadlock detected") ||
+		strings.Contains(errStr, "could not serialize access") ||
+		strings.Contains(errStr, "could not obtain lock")
 }
 
 // BatchSize is the recommended batch size for bulk operations

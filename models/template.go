@@ -13,7 +13,7 @@ import (
 // Template 模板数据模型
 type Template struct {
 	ID               int       `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name             string    `gorm:"uniqueIndex" json:"name"`               // 文件名
+	Name             string    `gorm:"size:191;uniqueIndex" json:"name"`      // 文件名
 	Category         string    `gorm:"default:'clash'" json:"category"`       // clash / surge
 	RuleSource       string    `gorm:"default:''" json:"ruleSource"`          // 远程规则配置地址
 	UseProxy         bool      `gorm:"default:false" json:"useProxy"`         // 是否使用代理下载远程规则

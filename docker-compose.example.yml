@@ -18,9 +18,9 @@ services:
     
     # 数据持久化
     volumes:
-      - "./db:/app/db"           # 数据库目录
+      - "./db:/app/db"             # 本地数据目录（配置文件 / GeoIP / 默认 SQLite）
       - "./template:/app/template" # 模板目录
-      - "./logs:/app/logs"       # 日志目录
+      - "./logs:/app/logs"         # 日志目录
     
     # ============================================
     # 环境变量配置
@@ -29,6 +29,13 @@ services:
       # ---------- 基础配置 ----------
       # 服务端口（容器内部端口）
       - SUBLINK_PORT=8000
+
+      # 数据库 DSN（可选）
+      # 留空时默认使用 SQLite，并在 /app/db/sublink.db 创建数据库文件
+      # MySQL 示例:
+      # - SUBLINK_DSN=mysql://user:pass@tcp(mysql:3306)/sublink?charset=utf8mb4&parseTime=True&loc=Local
+      # PostgreSQL 示例:
+      # - SUBLINK_DSN=postgres://user:pass@postgres:5432/sublink?sslmode=disable
       
       # 日志等级 (debug/info/warn/error/fatal)
       # debug: 调试信息 | info: 一般信息(默认) | warn: 警告 | error: 错误

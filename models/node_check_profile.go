@@ -13,9 +13,9 @@ import (
 // 用于管理节点检测配置，支持多策略和定时执行
 type NodeCheckProfile struct {
 	ID       int    `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name     string `gorm:"not null;uniqueIndex" json:"name"` // 策略名称（唯一）
-	Enabled  bool   `gorm:"default:false" json:"enabled"`     // 是否启用定时检测
-	CronExpr string `json:"cronExpr"`                         // Cron 表达式
+	Name     string `gorm:"size:191;not null;uniqueIndex" json:"name"` // 策略名称（唯一）
+	Enabled  bool   `gorm:"default:false" json:"enabled"`              // 是否启用定时检测
+	CronExpr string `json:"cronExpr"`                                  // Cron 表达式
 
 	// 检测模式参数
 	Mode       string `gorm:"default:'tcp'" json:"mode"` // 检测模式：tcp / mihomo

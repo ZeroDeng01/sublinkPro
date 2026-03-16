@@ -98,6 +98,8 @@ docker-compose up -d
 
 访问 `http://localhost:8000`，使用默认账号 `admin` / `123456` 登录。
 
+默认使用 SQLite；如需切换到 MySQL 或 PostgreSQL，可通过 `SUBLINK_DSN`、配置文件 `dsn:` 或命令行 `--dsn` 指定数据库连接，示例见 [⚙️ 配置说明](docs/configuration.md)。
+
 > [!TIP]
 > 更多安装方式（Docker、一键脚本、更新升级等）请参阅 [📦 安装部署指南](docs/installation.md)
 
