@@ -49,6 +49,7 @@ import NodeTransferBox from './NodeTransferBox';
 import DeduplicationConfig from './DeduplicationConfig';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import { getFraudScoreIcon } from 'utils/fraudScore';
+import { getDelayIcon, getSpeedIcon } from 'utils/nodeMetricIcons';
 
 // ISO国家代码转换为国旗emoji
 const isoToFlag = (isoCode) => {
@@ -73,6 +74,8 @@ const previewNodeName = (rule) => {
   return result
     .replace(/\$Name/g, '香港节点-备注')
     .replace(/\$Flag/g, '🇭🇰')
+    .replace(/\$SpeedIcon/g, getSpeedIcon(1.5, 'success'))
+    .replace(/\$DelayIcon/g, getDelayIcon(125, 'success'))
     .replace(/\$IpType/g, '原生IP')
     .replace(/\$Residential/g, '住宅IP')
     .replace(/\$FraudScoreIcon/g, getFraudScoreIcon(12))
@@ -791,7 +794,8 @@ export default function SubscriptionFormDialog({
                           <strong>可用变量：</strong>
                           <br />• <code>$Name</code> - 系统备注名称 &nbsp;&nbsp; • <code>$LinkName</code> - 原始节点名称
                           <br />• <code>$LinkCountry</code> - 落地IP国家代码 &nbsp;&nbsp; • <code>$Speed</code> - 下载速度
-                          <br />• <code>$Delay</code> - 延迟 &nbsp;&nbsp; • <code>$Group</code> - 分组名称
+                          <br />• <code>$SpeedIcon</code> - 速度图标(🟢🟡🔴/❌⏱️⛔️) &nbsp;&nbsp; • <code>$Delay</code> - 延迟
+                          <br />• <code>$DelayIcon</code> - 延迟图标(🟢🟡🔴/❌⏱️⛔️) &nbsp;&nbsp; • <code>$Group</code> - 分组名称
                           <br />• <code>$Source</code> - 来源 &nbsp;&nbsp; • <code>$Index</code> - 序号 &nbsp;&nbsp; •{' '}
                           <code>$Protocol</code> - 协议类型
                           <br />• <code>$IpType</code> - IP类型(原生IP/广播IP) &nbsp;&nbsp; • <code>$Residential</code> -

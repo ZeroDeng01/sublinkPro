@@ -27,6 +27,7 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import { getTagGroups } from 'api/tags';
 import { getFraudScoreIcon } from 'utils/fraudScore';
+import { getDelayIcon, getSpeedIcon } from 'utils/nodeMetricIcons';
 
 // 将国家ISO代码转换为国旗emoji
 const isoToFlag = (isoCode) => {
@@ -54,7 +55,9 @@ const AVAILABLE_VARIABLES = [
   { key: '$Flag', label: '国旗', color: '#f44336', description: '落地IP国旗' },
   { key: '$Name', label: '备注', color: '#4caf50', description: '系统备注名称' },
   { key: '$LinkName', label: '原名', color: '#ff9800', description: '原始节点名称' },
+  { key: '$SpeedIcon', label: '速度图标', color: '#ec407a', description: '按速度结果输出图标 (🟢🟡🔴/❌⏱️⛔️)' },
   { key: '$Speed', label: '速度', color: '#e91e63', description: '下载速度' },
+  { key: '$DelayIcon', label: '延迟图标', color: '#26c6da', description: '按延迟结果输出图标 (🟢🟡🔴/❌⏱️⛔️)' },
   { key: '$Delay', label: '延迟', color: '#00bcd4', description: '延迟时间' },
   { key: '$IpType', label: 'IP类型', color: '#3f51b5', description: 'IP类型 (原生IP/广播IP)' },
   { key: '$Residential', label: '住宅属性', color: '#009688', description: '住宅属性 (住宅IP/机房IP)' },
@@ -85,7 +88,9 @@ const PREVIEW_DATA = {
   $LinkName: '香港01',
   $LinkCountry: 'HK',
   $Flag: isoToFlag('HK'),
+  $SpeedIcon: getSpeedIcon(1.5, 'success'),
   $Speed: '1.50MB/s',
+  $DelayIcon: getDelayIcon(125, 'success'),
   $Delay: '125ms',
   $IpType: '原生IP',
   $Residential: '住宅IP',
@@ -109,7 +114,7 @@ const parseRule = (rule) => {
 
   // 匹配普通变量和 $TagGroup(xxx) 格式
   const varRegex =
-    /\$(Name|LinkName|LinkCountry|Flag|Speed|Delay|IpType|Residential|FraudScoreIcon|FraudScore|Group|Source|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
+    /\$(Name|LinkName|LinkCountry|Flag|SpeedIcon|Speed|DelayIcon|Delay|IpType|Residential|FraudScoreIcon|FraudScore|Group|Source|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
 
   let match;
   let lastIndex = 0;

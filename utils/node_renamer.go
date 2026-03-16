@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"sublink/constants"
 )
 
 // TagGroupTagsFn 标签组标签查询函数类型
@@ -72,7 +74,9 @@ type NodeInfo struct {
 	LinkName      string  // 节点原始名称（来自订阅源）
 	LinkCountry   string  // 落地IP国家代码
 	Speed         float64 // 速度 (MB/s)
+	SpeedStatus   string  // 速度状态: untested/success/timeout/error
 	DelayTime     int     // 延迟 (ms)
+	DelayStatus   string  // 延迟状态: untested/success/timeout/error
 	Group         string  // 分组
 	Source        string  // 来源（手动添加/订阅名称）
 	Index         int     // 序号 (从1开始)
@@ -103,6 +107,76 @@ func FormatFraudScoreIcon(fraudScore int) string {
 	default:
 		return "⚫"
 	}
+}
+
+// FormatSpeedIcon 根据速度和测速状态返回对应图标
+func FormatSpeedIcon(speed float64, speedStatus string) string {
+	switch speedStatus {
+	case constants.StatusTimeout:
+		return "⏱️"
+	case constants.StatusError:
+		return "❌"
+	case constants.StatusSuccess:
+		if speed >= 5 {
+			return "🟢"
+		}
+		if speed >= 1 {
+			return "🟡"
+		}
+		return "🔴"
+	case constants.StatusUntested:
+		return "⛔️"
+	}
+
+	// 兼容历史数据：状态缺失时根据数值兜底判断
+	if speed == -1 {
+		return "❌"
+	}
+	if speed > 0 {
+		if speed >= 5 {
+			return "🟢"
+		}
+		if speed >= 1 {
+			return "🟡"
+		}
+		return "🔴"
+	}
+	return "⛔️"
+}
+
+// FormatDelayIcon 根据延迟和测速状态返回对应图标
+func FormatDelayIcon(delay int, delayStatus string) string {
+	switch delayStatus {
+	case constants.StatusTimeout:
+		return "⏱️"
+	case constants.StatusError:
+		return "❌"
+	case constants.StatusSuccess:
+		if delay < 200 {
+			return "🟢"
+		}
+		if delay < 500 {
+			return "🟡"
+		}
+		return "🔴"
+	case constants.StatusUntested:
+		return "⛔️"
+	}
+
+	// 兼容历史数据：状态缺失时根据数值兜底判断
+	if delay == -1 {
+		return "⏱️"
+	}
+	if delay > 0 {
+		if delay < 200 {
+			return "🟢"
+		}
+		if delay < 500 {
+			return "🟡"
+		}
+		return "🔴"
+	}
+	return "⛔️"
 }
 
 // PreprocessRule 原名预处理规则结构体
@@ -303,6 +377,8 @@ func RenameNode(rule string, info NodeInfo) string {
 			}
 			return "机房IP"
 		}()},
+		{"$SpeedIcon", FormatSpeedIcon(info.Speed, info.SpeedStatus)},
+		{"$DelayIcon", FormatDelayIcon(info.DelayTime, info.DelayStatus)},
 		{"$FraudScoreIcon", FormatFraudScoreIcon(info.FraudScore)},
 		{"$FraudScore", func() string {
 			if info.FraudScore < 0 {
