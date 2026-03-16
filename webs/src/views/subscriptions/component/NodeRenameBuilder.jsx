@@ -26,6 +26,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import { getTagGroups } from 'api/tags';
+import { getFraudScoreIcon } from 'utils/fraudScore';
 
 // 将国家ISO代码转换为国旗emoji
 const isoToFlag = (isoCode) => {
@@ -57,6 +58,7 @@ const AVAILABLE_VARIABLES = [
   { key: '$Delay', label: '延迟', color: '#00bcd4', description: '延迟时间' },
   { key: '$IpType', label: 'IP类型', color: '#3f51b5', description: 'IP类型 (原生IP/广播IP)' },
   { key: '$Residential', label: '住宅属性', color: '#009688', description: '住宅属性 (住宅IP/机房IP)' },
+  { key: '$FraudScoreIcon', label: '欺诈图标', color: '#ff7043', description: '按欺诈评分输出风险图标 (⚪🟢🟡🟠🔴⚫/⛔️)' },
   { key: '$FraudScore', label: '欺诈评分', color: '#ff5722', description: 'IP欺诈评分' },
   { key: '$Group', label: '分组', color: '#795548', description: '分组名称' },
   { key: '$Source', label: '来源', color: '#607d8b', description: '节点来源' },
@@ -87,6 +89,7 @@ const PREVIEW_DATA = {
   $Delay: '125ms',
   $IpType: '原生IP',
   $Residential: '住宅IP',
+  $FraudScoreIcon: getFraudScoreIcon(12),
   $FraudScore: '12',
   $Group: 'Premium',
   $Source: '机场A',
@@ -106,7 +109,7 @@ const parseRule = (rule) => {
 
   // 匹配普通变量和 $TagGroup(xxx) 格式
   const varRegex =
-    /\$(Name|LinkName|LinkCountry|Flag|Speed|Delay|IpType|Residential|FraudScore|Group|Source|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
+    /\$(Name|LinkName|LinkCountry|Flag|Speed|Delay|IpType|Residential|FraudScoreIcon|FraudScore|Group|Source|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
 
   let match;
   let lastIndex = 0;

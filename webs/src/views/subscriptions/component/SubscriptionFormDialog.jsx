@@ -48,6 +48,7 @@ import NodeProtocolFilter from 'components/NodeProtocolFilter';
 import NodeTransferBox from './NodeTransferBox';
 import DeduplicationConfig from './DeduplicationConfig';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import { getFraudScoreIcon } from 'utils/fraudScore';
 
 // ISO国家代码转换为国旗emoji
 const isoToFlag = (isoCode) => {
@@ -74,6 +75,7 @@ const previewNodeName = (rule) => {
     .replace(/\$Flag/g, '🇭🇰')
     .replace(/\$IpType/g, '原生IP')
     .replace(/\$Residential/g, '住宅IP')
+    .replace(/\$FraudScoreIcon/g, getFraudScoreIcon(12))
     .replace(/\$FraudScore/g, '12')
     .replace(/\$LinkName/g, '香港01')
     .replace(/\$LinkCountry/g, 'HK')
@@ -794,7 +796,8 @@ export default function SubscriptionFormDialog({
                           <code>$Protocol</code> - 协议类型
                           <br />• <code>$IpType</code> - IP类型(原生IP/广播IP) &nbsp;&nbsp; • <code>$Residential</code> -
                           住宅属性(住宅IP/机房IP)
-                          <br />• <code>$FraudScore</code> - 欺诈评分
+                          <br />• <code>$FraudScore</code> - 欺诈评分 &nbsp;&nbsp; • <code>$FraudScoreIcon</code> -
+                          欺诈图标(⚪🟢🟡🟠🔴⚫/⛔️)
                           <br />• <code>$Tags</code> - 所有标签(竖线分隔) &nbsp;&nbsp; • <code>$TagGroup(组名)</code> - 指定标签组中的标签
                         </Typography>
                       </Box>

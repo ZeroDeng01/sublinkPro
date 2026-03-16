@@ -1,3 +1,5 @@
+import { getFraudScoreLevel } from 'utils/fraudScore';
+
 // Cron 表达式预设 - 包含友好的说明
 export const CRON_OPTIONS = [
   { label: '每30分钟', value: '*/30 * * * *' },
@@ -209,70 +211,58 @@ export const getFraudScoreDisplay = (fraudScore) => {
     return { label: '未检测', color: 'default', variant: 'outlined' };
   }
 
-  const levels = [
-    {
-      max: 10,
-      category: '极佳',
+  const matchedLevel = getFraudScoreLevel(fraudScore);
+  const levelStyles = {
+    极佳: {
       sx: (theme) => ({
         color: theme.palette.mode === 'dark' ? '#e5e7eb' : '#6b7280',
         borderColor: theme.palette.mode === 'dark' ? '#94a3b8' : '#9ca3af',
         backgroundColor: theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.12)' : 'rgba(148,163,184,0.08)'
       })
     },
-    {
-      max: 30,
-      category: '优秀',
+    优秀: {
       sx: {
         color: '#15803d',
         borderColor: '#22c55e',
         backgroundColor: 'rgba(34,197,94,0.08)'
       }
     },
-    {
-      max: 50,
-      category: '良好',
+    良好: {
       sx: {
         color: '#a16207',
         borderColor: '#eab308',
         backgroundColor: 'rgba(234,179,8,0.10)'
       }
     },
-    {
-      max: 70,
-      category: '中等',
+    中等: {
       sx: {
         color: '#c2410c',
         borderColor: '#f97316',
         backgroundColor: 'rgba(249,115,22,0.10)'
       }
     },
-    {
-      max: 89,
-      category: '差',
+    差: {
       sx: {
         color: '#b91c1c',
         borderColor: '#ef4444',
         backgroundColor: 'rgba(239,68,68,0.10)'
       }
     },
-    {
-      max: Infinity,
-      category: '极差',
+    极差: {
       sx: (theme) => ({
         color: theme.palette.mode === 'dark' ? '#cbd5e1' : '#111827',
         borderColor: theme.palette.mode === 'dark' ? '#64748b' : '#1f2937',
         backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15,23,42,0.35)' : 'rgba(15,23,42,0.08)'
       })
     }
-  ];
-
-  const matchedLevel = levels.find((level) => fraudScore <= level.max) || levels[levels.length - 1];
+  };
+  const matchedStyle = levelStyles[matchedLevel.category] || levelStyles.极差;
   return {
     label: `${fraudScore}`,
     detailLabel: `${fraudScore} (${matchedLevel.category})`,
     color: 'default',
     variant: 'outlined',
-    sx: matchedLevel.sx
+    sx: matchedStyle.sx
   };
 };
 

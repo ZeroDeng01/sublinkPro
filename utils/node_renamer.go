@@ -83,6 +83,28 @@ type NodeInfo struct {
 	FraudScore    int     // 欺诈评分（0-100，-1=未检测）
 }
 
+// FormatFraudScoreIcon 根据欺诈评分返回对应图标
+// fraudScore: 欺诈评分（0-100，-1=未检测）
+func FormatFraudScoreIcon(fraudScore int) string {
+	if fraudScore < 0 {
+		return "⛔️"
+	}
+	switch {
+	case fraudScore <= 10:
+		return "⚪"
+	case fraudScore <= 30:
+		return "🟢"
+	case fraudScore <= 50:
+		return "🟡"
+	case fraudScore <= 70:
+		return "🟠"
+	case fraudScore <= 89:
+		return "🔴"
+	default:
+		return "⚫"
+	}
+}
+
 // PreprocessRule 原名预处理规则结构体
 type PreprocessRule struct {
 	MatchMode   string `json:"matchMode"`   // 匹配模式: "text" 或 "regex"
@@ -281,6 +303,7 @@ func RenameNode(rule string, info NodeInfo) string {
 			}
 			return "机房IP"
 		}()},
+		{"$FraudScoreIcon", FormatFraudScoreIcon(info.FraudScore)},
 		{"$FraudScore", func() string {
 			if info.FraudScore < 0 {
 				return "未检测"
