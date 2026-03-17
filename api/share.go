@@ -1,8 +1,10 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sublink/models"
 	"sublink/utils"
 	"time"
@@ -36,6 +38,29 @@ type ShareUpdateReq struct {
 	Enabled    bool   `json:"enabled"`
 }
 
+func parseShareExpireAt(expireType int, raw string) (*time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	if expireType != models.ExpireTypeDateTime {
+		return nil, nil
+	}
+	if raw == "" {
+		return nil, fmt.Errorf("指定时间过期时必须提供过期时间")
+	}
+
+	parsed, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		parsed, err = time.ParseInLocation("2006-01-02 15:04:05", raw, time.Local)
+		if err != nil {
+			parsed, err = time.ParseInLocation("2006-01-02T15:04", raw, time.Local)
+			if err != nil {
+				return nil, fmt.Errorf("过期时间格式错误")
+			}
+		}
+	}
+
+	return &parsed, nil
+}
+
 // ShareGet 获取订阅的所有分享列表
 func ShareGet(c *gin.Context) {
 	var req ShareListReq
@@ -56,22 +81,10 @@ func ShareAdd(c *gin.Context) {
 		return
 	}
 
-	// 解析过期时间
-	var expireAt time.Time
-	if req.ExpireAt != "" && req.ExpireType == models.ExpireTypeDateTime {
-		parsed, err := time.Parse(time.RFC3339, req.ExpireAt)
-		if err != nil {
-			// 尝试其他常见格式
-			parsed, err = time.ParseInLocation("2006-01-02 15:04:05", req.ExpireAt, time.Local)
-			if err != nil {
-				parsed, err = time.ParseInLocation("2006-01-02T15:04", req.ExpireAt, time.Local)
-				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "过期时间格式错误"})
-					return
-				}
-			}
-		}
-		expireAt = parsed
+	expireAt, err := parseShareExpireAt(req.ExpireType, req.ExpireAt)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": err.Error()})
+		return
 	}
 
 	share := &models.SubscriptionShare{
@@ -108,21 +121,10 @@ func ShareUpdate(c *gin.Context) {
 		return
 	}
 
-	// 解析过期时间
-	var expireAt time.Time
-	if req.ExpireAt != "" && req.ExpireType == models.ExpireTypeDateTime {
-		parsed, err := time.Parse(time.RFC3339, req.ExpireAt)
-		if err != nil {
-			parsed, err = time.ParseInLocation("2006-01-02 15:04:05", req.ExpireAt, time.Local)
-			if err != nil {
-				parsed, err = time.ParseInLocation("2006-01-02T15:04", req.ExpireAt, time.Local)
-				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "过期时间格式错误"})
-					return
-				}
-			}
-		}
-		expireAt = parsed
+	expireAt, err := parseShareExpireAt(req.ExpireType, req.ExpireAt)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": err.Error()})
+		return
 	}
 
 	// 更新字段

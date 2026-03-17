@@ -20,19 +20,19 @@ const (
 
 // SubscriptionShare 订阅分享表
 type SubscriptionShare struct {
-	ID             int       `gorm:"primaryKey" json:"id"`
-	SubscriptionID int       `gorm:"index" json:"subscription_id"`        // 关联订阅ID
-	Token          string    `gorm:"uniqueIndex;size:64" json:"token"`    // 分享token（支持自定义或自动生成）
-	Name           string    `gorm:"size:100" json:"name"`                // 分享名称/备注
-	ExpireType     int       `gorm:"default:0" json:"expire_type"`        // 过期类型
-	ExpireDays     int       `gorm:"default:0" json:"expire_days"`        // 过期天数
-	ExpireAt       time.Time `gorm:"type:datetime" json:"expire_at"`      // 过期时间
-	IsLegacy       bool      `gorm:"default:false" json:"is_legacy"`      // 是否为迁移的老链接
-	Enabled        bool      `gorm:"default:true" json:"enabled"`         // 是否启用
-	AccessCount    int       `gorm:"default:0" json:"access_count"`       // 访问次数
-	LastAccessAt   time.Time `gorm:"type:datetime" json:"last_access_at"` // 最后访问时间
-	CreatedAt      time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt      time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	ID             int        `gorm:"primaryKey" json:"id"`
+	SubscriptionID int        `gorm:"index" json:"subscription_id"`        // 关联订阅ID
+	Token          string     `gorm:"uniqueIndex;size:64" json:"token"`    // 分享token（支持自定义或自动生成）
+	Name           string     `gorm:"size:100" json:"name"`                // 分享名称/备注
+	ExpireType     int        `gorm:"default:0" json:"expire_type"`        // 过期类型
+	ExpireDays     int        `gorm:"default:0" json:"expire_days"`        // 过期天数
+	ExpireAt       *time.Time `gorm:"type:datetime" json:"expire_at"`      // 过期时间
+	IsLegacy       bool       `gorm:"default:false" json:"is_legacy"`      // 是否为迁移的老链接
+	Enabled        bool       `gorm:"default:true" json:"enabled"`         // 是否启用
+	AccessCount    int        `gorm:"default:0" json:"access_count"`       // 访问次数
+	LastAccessAt   *time.Time `gorm:"type:datetime" json:"last_access_at"` // 最后访问时间
+	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 // subscriptionShareCache 使用泛型缓存
@@ -79,6 +79,28 @@ func IsTokenExists(token string, excludeID int) bool {
 	return false
 }
 
+func normalizeOptionalTime(value *time.Time) *time.Time {
+	if value == nil || value.IsZero() {
+		return nil
+	}
+	normalized := *value
+	return &normalized
+}
+
+func (s *SubscriptionShare) normalizeOptionalFields() {
+	if s.ExpireType != ExpireTypeDateTime {
+		s.ExpireAt = nil
+	} else {
+		s.ExpireAt = normalizeOptionalTime(s.ExpireAt)
+	}
+
+	if s.AccessCount <= 0 {
+		s.LastAccessAt = nil
+	} else {
+		s.LastAccessAt = normalizeOptionalTime(s.LastAccessAt)
+	}
+}
+
 // CreateDefaultShareForSubscription 为订阅创建默认分享链接
 // 创建一个永不过期、启用状态的默认分享链接，标记为 IsLegacy=true
 func CreateDefaultShareForSubscription(subscriptionID int) error {
@@ -94,6 +116,8 @@ func CreateDefaultShareForSubscription(subscriptionID int) error {
 
 // Add 添加分享 (Write-Through)
 func (s *SubscriptionShare) Add() error {
+	s.normalizeOptionalFields()
+
 	// 如果没有提供 token，自动生成
 	if s.Token == "" {
 		token, err := GenerateToken()
@@ -118,6 +142,8 @@ func (s *SubscriptionShare) Add() error {
 
 // Update 更新分享 (Write-Through)
 func (s *SubscriptionShare) Update() error {
+	s.normalizeOptionalFields()
+
 	// 检查 token 唯一性（排除自己）
 	if IsTokenExists(s.Token, s.ID) {
 		return fmt.Errorf("Token 已被使用，请更换")
@@ -223,10 +249,10 @@ func (s *SubscriptionShare) IsExpired() bool {
 		expireTime := s.CreatedAt.AddDate(0, 0, s.ExpireDays)
 		return time.Now().After(expireTime)
 	case ExpireTypeDateTime:
-		if s.ExpireAt.IsZero() {
+		if s.ExpireAt == nil || s.ExpireAt.IsZero() {
 			return false
 		}
-		return time.Now().After(s.ExpireAt)
+		return time.Now().After(*s.ExpireAt)
 	default:
 		return false
 	}
@@ -235,7 +261,8 @@ func (s *SubscriptionShare) IsExpired() bool {
 // RecordAccess 记录一次访问
 func (s *SubscriptionShare) RecordAccess() {
 	s.AccessCount++
-	s.LastAccessAt = time.Now()
+	now := time.Now()
+	s.LastAccessAt = &now
 	database.DB.Model(s).Updates(map[string]interface{}{
 		"access_count":   s.AccessCount,
 		"last_access_at": s.LastAccessAt,

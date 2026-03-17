@@ -800,6 +800,29 @@ DIRECT = direct
 		utils.Error("执行迁移 0022_fill_node_link_hash 失败: %v", err)
 	}
 
+	// 0023_normalize_subscription_share_timestamps - 清理分享表中的零时间/无效时间占位
+	if err := database.RunCustomMigration("0023_normalize_subscription_share_timestamps", func() error {
+		if !db.Migrator().HasTable(&SubscriptionShare{}) {
+			return nil
+		}
+
+		if err := db.Model(&SubscriptionShare{}).
+			Where("expire_type <> ?", ExpireTypeDateTime).
+			Update("expire_at", nil).Error; err != nil {
+			return fmt.Errorf("清理非日期分享 expire_at 失败: %w", err)
+		}
+
+		if err := db.Model(&SubscriptionShare{}).
+			Where("access_count <= ?", 0).
+			Update("last_access_at", nil).Error; err != nil {
+			return fmt.Errorf("清理未访问分享 last_access_at 失败: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		utils.Error("执行迁移 0023_normalize_subscription_share_timestamps 失败: %v", err)
+	}
+
 	// 初始化用户数据
 	err := db.First(&User{}).Error
 	if err == gorm.ErrRecordNotFound {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // subcriptionCache 使用新的泛型缓存
@@ -571,7 +572,7 @@ func (sub *Subcription) GetSub(clientType string) error {
 	for _, group := range groups {
 		var groupNodes []Node
 		err = database.DB.Table("nodes").
-			Where("nodes.`group` = ?", group.GroupName).
+			Where(clause.Eq{Column: clause.Column{Table: "nodes", Name: "group"}, Value: group.GroupName}).
 			Order("nodes.id ASC").
 			Find(&groupNodes).Error
 		if err != nil {
