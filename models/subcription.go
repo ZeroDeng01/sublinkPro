@@ -81,7 +81,7 @@ type SubcriptionNode struct {
 // SubcriptionGroup 订阅与分组关联表
 type SubcriptionGroup struct {
 	SubcriptionID int    `gorm:"primaryKey"`
-	GroupName     string `gorm:"primaryKey"`
+	GroupName     string `gorm:"primaryKey;size:191"`
 	Sort          int    `gorm:"default:0"`
 }
 
