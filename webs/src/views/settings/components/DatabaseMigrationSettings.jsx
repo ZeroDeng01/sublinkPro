@@ -29,6 +29,7 @@ export default function DatabaseMigrationSettings({ showMessage }) {
   const [includeSubLogs, setIncludeSubLogs] = useState(false);
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [lastMigrationResult, setLastMigrationResult] = useState(null);
 
   useEffect(() => {
     const handleTaskComplete = ({ taskType, status, result }) => {
@@ -38,6 +39,7 @@ export default function DatabaseMigrationSettings({ showMessage }) {
 
       if (status === 'completed') {
         const warningCount = result?.warnings?.length || 0;
+        setLastMigrationResult(result || null);
         showMessage(
           warningCount > 0
             ? `迁移完成，但有 ${warningCount} 条警告。请重启项目实例后重新登录并检查数据`
@@ -85,6 +87,7 @@ export default function DatabaseMigrationSettings({ showMessage }) {
       formData.append('includeAccessKeys', String(includeAccessKeys));
       formData.append('includeSubLogs', String(includeSubLogs));
 
+      setLastMigrationResult(null);
       await importDatabaseMigration(formData);
       showMessage('迁移任务已启动，可在右下角进度面板或任务中心查看进度');
     } catch (error) {
@@ -128,6 +131,26 @@ export default function DatabaseMigrationSettings({ showMessage }) {
             <strong> backup.zip </strong>
             文件。该压缩包会包含 <strong>db</strong> 和 <strong>template</strong> 目录，适合作为迁移源文件。
           </Alert>
+
+          {lastMigrationResult?.warnings?.length > 0 && (
+            <Alert severity="warning">
+              <Stack spacing={1}>
+                <Typography variant="body2" fontWeight={600}>
+                  最近一次迁移包含 {lastMigrationResult.warnings.length} 条警告
+                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                  {lastMigrationResult.warnings.map((warning, index) => (
+                    <Box component="li" key={`${warning}-${index}`} sx={{ mb: 0.5 }}>
+                      <Typography variant="body2">{warning}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  这些警告也可在任务中心的“数据库迁移”任务详情中查看。
+                </Typography>
+              </Stack>
+            </Alert>
+          )}
 
           <Box>
             <input ref={fileInputRef} type="file" hidden accept=".zip,.db,.sqlite,.sqlite3" onChange={handleFileChange} />
