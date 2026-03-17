@@ -101,6 +101,90 @@ dsn: postgres://user:pass@postgres:5432/sublink?sslmode=disable
 > [!TIP]
 > 使用 MySQL 或 PostgreSQL 时，`db_path` 仍然用于本地配置文件和 GeoIP 数据库存储；它不再决定实际数据库后端。
 
+## 从 SQLite 迁移到 MySQL / PostgreSQL
+
+如果您的旧实例一直使用 SQLite，现在希望迁移到 MySQL 或 PostgreSQL，建议使用内置的“数据库迁移”功能。
+
+### 迁移前准备
+
+1. 准备一个新的 MySQL 或 PostgreSQL 空库
+2. 为新实例配置数据库 `DSN`
+3. 确认旧实例可以正常登录后台
+4. 如需保留旧 `AccessKey`，请确认新旧实例的 `SUBLINK_API_ENCRYPTION_KEY` 保持一致
+
+### 第一步：在新实例中配置 DSN
+
+您可以通过以下任一方式为新实例配置数据库：
+
+- 环境变量：`SUBLINK_DSN`
+- 配置文件：`db/config.yaml` 中的 `dsn:`
+- 命令行参数：`./sublinkpro run --dsn "..."`
+
+示例：
+
+```yaml
+# MySQL
+dsn: mysql://user:pass@tcp(mysql:3306)/sublink?charset=utf8mb4&parseTime=True&loc=Local
+
+# PostgreSQL
+dsn: postgres://user:pass@postgres:5432/sublink?sslmode=disable
+```
+
+> [!IMPORTANT]
+> 建议迁移目标使用全新的空库。不要在已有业务数据的库上直接导入。
+
+### 第二步：在旧 SQLite 实例中导出备份
+
+登录旧实例后台后：
+
+1. 点击右上角头像菜单
+2. 选择 **系统备份**
+3. 下载生成的 `backup.zip`
+
+推荐使用 `backup.zip` 作为迁移源文件，因为它会同时包含：
+
+- `db` 目录中的 SQLite 数据库文件
+- `template` 目录中的模板文件
+
+> [!TIP]
+> 也可以直接上传 `.db`、`.sqlite`、`.sqlite3` 文件，但这种方式只迁移数据库记录，不会恢复模板目录。
+
+### 第三步：在新实例中执行迁移
+
+启动新实例后，进入：
+
+`设置 -> 数据迁移`
+
+然后按以下步骤操作：
+
+1. 上传旧实例导出的 `backup.zip`
+2. 根据需要选择是否迁移 `AccessKey`
+3. 根据需要选择是否迁移“订阅访问日志”
+4. 勾选“我已确认本次导入会覆盖当前实例的业务数据”
+5. 点击 **开始迁移**
+
+迁移任务会在后台执行，您可以在以下位置查看进度与结果：
+
+- 右下角任务进度面板
+- `任务中心`
+
+### 迁移完成后的操作
+
+迁移完成后，请执行以下操作：
+
+1. 查看迁移结果是否成功
+2. 如果提示“有 N 条警告”，到 `任务中心` 打开对应的“数据库迁移”任务查看详细警告
+3. **手动重启项目实例**
+4. 重新登录后台并检查关键数据是否正常
+
+### 迁移注意事项
+
+- 本次导入会覆盖当前实例的业务数据
+- 推荐只在新部署的 MySQL / PostgreSQL 实例首次迁移时使用
+- 订阅访问日志通常较大，默认不建议迁移
+- 如果旧 `AccessKey` 迁移后无法使用，请检查 `SUBLINK_API_ENCRYPTION_KEY` 是否与旧实例一致
+- 如果迁移完成后登录态异常，重新登录一次即可
+
 ---
 
 ## 敏感配置说明
