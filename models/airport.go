@@ -24,7 +24,7 @@ type Airport struct {
 	UpdatedAt         time.Time  `gorm:"autoUpdateTime" json:"updatedAt"`        // 更新时间
 	Group             string     `json:"group"`                                  // 导入节点的默认分组
 	DownloadWithProxy bool       `gorm:"default:false" json:"downloadWithProxy"` // 是否使用代理下载
-	ProxyLink         string     `gorm:"default:''" json:"proxyLink"`            // 代理节点链接
+	ProxyLink         string     `gorm:"type:text" json:"proxyLink"`             // 代理节点链接
 	UserAgent         string     `json:"userAgent"`                              // 自定义User-Agent
 	NodeCount         int        `gorm:"-" json:"nodeCount"`                     // 节点数量（非数据库字段）
 	// 用量信息相关字段

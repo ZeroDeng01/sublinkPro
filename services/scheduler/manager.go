@@ -47,6 +47,18 @@ func (sm *SchedulerManager) Stop() {
 	utils.Info("定时任务管理器已停止")
 }
 
+// ReloadFromDatabase 清空内存中的定时任务并重新从数据库加载。
+func (sm *SchedulerManager) ReloadFromDatabase() error {
+	sm.mutex.Lock()
+	for jobID, entryID := range sm.jobs {
+		sm.cron.Remove(entryID)
+		delete(sm.jobs, jobID)
+	}
+	sm.mutex.Unlock()
+
+	return sm.LoadFromDatabase()
+}
+
 // LoadFromDatabase 从数据库加载所有启用的定时任务
 func (sm *SchedulerManager) LoadFromDatabase() error {
 

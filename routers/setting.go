@@ -32,5 +32,8 @@ func Settings(r *gin.Engine) {
 		// 节点去重配置
 		SettingsGroup.GET("/node-dedup", api.GetNodeDedupConfig)
 		SettingsGroup.POST("/node-dedup", middlewares.DemoModeRestrict, api.UpdateNodeDedupConfig)
+
+		// 数据库迁移
+		SettingsGroup.POST("/database-migration/import", middlewares.DemoModeRestrict, api.ImportDatabaseMigration)
 	}
 }

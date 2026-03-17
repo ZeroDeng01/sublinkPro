@@ -76,3 +76,15 @@ export function updateNodeDedupConfig(data) {
     data
   });
 }
+
+// 导入 SQLite 备份/数据库
+export function importDatabaseMigration(formData) {
+  return request({
+    url: '/v1/settings/database-migration/import',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+}

@@ -24,9 +24,10 @@ const (
 type TaskType string
 
 const (
-	TaskTypeSpeedTest TaskType = "speed_test" // 节点测速
-	TaskTypeSubUpdate TaskType = "sub_update" // 订阅更新
-	TaskTypeTagRule   TaskType = "tag_rule"   // 标签规则
+	TaskTypeSpeedTest         TaskType = "speed_test"   // 节点测速
+	TaskTypeSubUpdate         TaskType = "sub_update"   // 订阅更新
+	TaskTypeTagRule           TaskType = "tag_rule"     // 标签规则
+	TaskTypeDatabaseMigration TaskType = "db_migration" // 数据库迁移
 )
 
 // TaskTrigger 任务触发方式

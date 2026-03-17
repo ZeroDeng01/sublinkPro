@@ -37,6 +37,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SpeedIcon from '@mui/icons-material/Speed';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import StorageIcon from '@mui/icons-material/Storage';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import ScheduleIcon from '@mui/icons-material/Schedule';
@@ -141,7 +142,8 @@ const TypeChip = ({ type, isDark }) => {
   const config = {
     speed_test: { label: '节点测速', color: '#10b981', icon: SpeedIcon },
     sub_update: { label: '订阅更新', color: '#6366f1', icon: CloudSyncIcon },
-    tag_rule: { label: '标签规则', color: '#f59e0b', icon: LocalOfferIcon }
+    tag_rule: { label: '标签规则', color: '#f59e0b', icon: LocalOfferIcon },
+    db_migration: { label: '数据库迁移', color: '#0284c7', icon: StorageIcon }
   };
 
   const { label, color, icon: Icon } = config[type] || config.speed_test;
@@ -675,6 +677,10 @@ export default function TaskList() {
             <MenuItem value="tag_rule">
               <LocalOfferIcon sx={{ fontSize: 16, mr: 1, color: '#f59e0b' }} />
               标签规则
+            </MenuItem>
+            <MenuItem value="db_migration">
+              <StorageIcon sx={{ fontSize: 16, mr: 1, color: '#0284c7' }} />
+              数据库迁移
             </MenuItem>
           </Select>
         </FormControl>

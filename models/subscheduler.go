@@ -21,7 +21,7 @@ type SubScheduler struct {
 	UpdatedAt         time.Time  `gorm:"autoUpdateTime"`
 	Group             string
 	DownloadWithProxy bool   `gorm:"default:false"`
-	ProxyLink         string `gorm:"default:''"`
+	ProxyLink         string `gorm:"type:text"`
 	UserAgent         string
 	NodeCount         int `gorm:"-"`
 }

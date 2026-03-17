@@ -75,6 +75,54 @@ func (node *Node) syncLinkHash() {
 	node.LinkHash = hashNodeLink(node.Link)
 }
 
+// NormalizeNodeForImport 补齐跨版本迁移时可能缺失的派生字段。
+func NormalizeNodeForImport(node *Node) {
+	if node == nil {
+		return
+	}
+
+	if node.Link != "" {
+		node.syncLinkHash()
+		if node.Protocol == "" {
+			node.Protocol = protocol.GetProtocolFromLink(node.Link)
+		}
+		if node.ContentHash == "" {
+			if proxy, err := protocol.LinkToProxy(protocol.Urls{Url: node.Link}, protocol.OutputConfig{}); err == nil {
+				node.ContentHash = protocol.GenerateProxyContentHash(proxy)
+			}
+		}
+	}
+
+	if node.SpeedStatus == "" {
+		switch {
+		case node.Speed > 0:
+			node.SpeedStatus = "success"
+		case node.Speed == -1:
+			node.SpeedStatus = "error"
+		default:
+			node.SpeedStatus = "untested"
+		}
+	}
+
+	if node.DelayStatus == "" {
+		switch {
+		case node.DelayTime > 0:
+			node.DelayStatus = "success"
+		case node.DelayTime == -1:
+			node.DelayStatus = "timeout"
+		default:
+			node.DelayStatus = "untested"
+		}
+	}
+
+	if node.CreatedAt.IsZero() {
+		node.CreatedAt = time.Now()
+	}
+	if node.UpdatedAt.IsZero() {
+		node.UpdatedAt = node.CreatedAt
+	}
+}
+
 // InitNodeCache 初始化节点缓存
 func InitNodeCache() error {
 	utils.Info("加载节点列表到缓存")

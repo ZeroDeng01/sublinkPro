@@ -13,6 +13,7 @@ import Tooltip from '@mui/material/Tooltip';
 import SpeedIcon from '@mui/icons-material/Speed';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import StorageIcon from '@mui/icons-material/Storage';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -89,6 +90,15 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
         canStop: false
       };
     }
+    if (task.taskType === 'db_migration') {
+      return {
+        icon: StorageIcon,
+        gradientColors: ['#0284c7', '#0369a1'],
+        label: '数据库迁移',
+        accentColor: '#0284c7',
+        canStop: false
+      };
+    }
     return {
       icon: CloudSyncIcon,
       gradientColors: ['#6366f1', '#8b5cf6'],
@@ -154,6 +164,18 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
       const { matchedCount, totalCount } = task.result;
       if (matchedCount !== undefined && totalCount !== undefined) {
         return `匹配 ${matchedCount} / ${totalCount} 节点`;
+      }
+    }
+
+    if (task.taskType === 'db_migration') {
+      const imported = task.result.imported || {};
+      const importedKinds = Object.values(imported).filter((count) => Number(count) > 0).length;
+      const warnings = task.result.warnings?.length || 0;
+      if (importedKinds > 0) {
+        return warnings > 0 ? `导入 ${importedKinds} 类数据 · ${warnings} 条警告` : `导入 ${importedKinds} 类数据`;
+      }
+      if (warnings > 0) {
+        return `${warnings} 条警告`;
       }
     }
 
