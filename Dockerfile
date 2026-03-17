@@ -38,7 +38,8 @@ WORKDIR /app
 # 基础配置
 ENV GIN_MODE=release
 # SUBLINK_PORT        - 服务端口 (默认: 8000)
-# SUBLINK_DB_PATH     - 数据库目录 (默认: ./db)
+# SUBLINK_DSN         - 数据库 DSN (支持 sqlite/mysql/postgres)
+# SUBLINK_DB_PATH     - 本地数据目录 / SQLite 默认数据库目录 (默认: ./db)
 # SUBLINK_LOG_PATH    - 日志目录 (默认: ./logs)
 # SUBLINK_EXPIRE_DAYS - Token过期天数 (默认: 14)
 #

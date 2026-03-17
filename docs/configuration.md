@@ -21,7 +21,8 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 | 环境变量 | 说明                              | 默认值                                 |
 |----------|---------------------------------|-------------------------------------|
 | `SUBLINK_PORT` | 服务端口                            | 8000                                |
-| `SUBLINK_DB_PATH` | 数据库目录                           | ./db                                |
+| `SUBLINK_DSN` | 数据库 DSN（支持 sqlite/mysql/postgres） | 默认使用 SQLite：`sqlite://./db/sublink.db` |
+| `SUBLINK_DB_PATH` | 本地数据目录 / SQLite 默认数据库目录        | ./db                                |
 | `SUBLINK_LOG_PATH` | 日志目录                            | ./logs                              |
 | `SUBLINK_JWT_SECRET` | JWT签名密钥                         | (自动生成)                              |
 | `SUBLINK_API_ENCRYPTION_KEY` | API加密密钥                         | (自动生成)                              |
@@ -50,12 +51,139 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 # 指定端口启动
 ./sublinkpro run --port 9000
 
-# 指定数据库目录
-./sublinkpro run --db /data/db
+# 指定 SQLite 数据库
+./sublinkpro run --dsn "sqlite:///data/sublink.db"
+
+# 指定 MySQL
+./sublinkpro run --dsn "mysql://user:pass@tcp(127.0.0.1:3306)/sublink?charset=utf8mb4&parseTime=True&loc=Local"
+
+# 指定 PostgreSQL
+./sublinkpro run --dsn "postgres://user:pass@127.0.0.1:5432/sublink?sslmode=disable"
+
+# 指定本地数据目录（配置文件 / GeoIP / 默认 SQLite）
+./sublinkpro run --db /data
 
 # 重置管理员密码
 ./sublinkpro setting -username admin -password newpass
 ```
+
+---
+
+## 数据库 DSN
+
+SublinkPro 现在支持通过 `dsn` 统一配置数据库连接，支持以下方言：
+
+- `sqlite://`
+- `mysql://`
+- `postgres://`
+- `postgresql://`
+
+如果 `dsn` 为空，系统会自动退回到 SQLite，并使用 `db_path/sublink.db` 作为数据库文件。
+
+### SQLite 示例
+
+```yaml
+dsn: sqlite:///app/db/sublink.db
+```
+
+### MySQL 示例
+
+```yaml
+dsn: mysql://user:pass@tcp(mysql:3306)/sublink?charset=utf8mb4&parseTime=True&loc=Local
+```
+
+### PostgreSQL 示例
+
+```yaml
+dsn: postgres://user:pass@postgres:5432/sublink?sslmode=disable
+```
+
+> [!TIP]
+> 使用 MySQL 或 PostgreSQL 时，`db_path` 仍然用于本地配置文件和 GeoIP 数据库存储；它不再决定实际数据库后端。
+
+## 从 SQLite 迁移到 MySQL / PostgreSQL
+
+如果您的旧实例一直使用 SQLite，现在希望迁移到 MySQL 或 PostgreSQL，建议使用内置的“数据库迁移”功能。
+
+### 迁移前准备
+
+1. 准备一个新的 MySQL 或 PostgreSQL 空库
+2. 为新实例配置数据库 `DSN`
+3. 确认旧实例可以正常登录后台
+4. 如需保留旧 `AccessKey`，请确认新旧实例的 `SUBLINK_API_ENCRYPTION_KEY` 保持一致
+
+### 第一步：在新实例中配置 DSN
+
+您可以通过以下任一方式为新实例配置数据库：
+
+- 环境变量：`SUBLINK_DSN`
+- 配置文件：`db/config.yaml` 中的 `dsn:`
+- 命令行参数：`./sublinkpro run --dsn "..."`
+
+示例：
+
+```yaml
+# MySQL
+dsn: mysql://user:pass@tcp(mysql:3306)/sublink?charset=utf8mb4&parseTime=True&loc=Local
+
+# PostgreSQL
+dsn: postgres://user:pass@postgres:5432/sublink?sslmode=disable
+```
+
+> [!IMPORTANT]
+> 建议迁移目标使用全新的空库。不要在已有业务数据的库上直接导入。
+
+### 第二步：在旧 SQLite 实例中导出备份
+
+登录旧实例后台后：
+
+1. 点击右上角头像菜单
+2. 选择 **系统备份**
+3. 下载生成的 `backup.zip`
+
+推荐使用 `backup.zip` 作为迁移源文件，因为它会同时包含：
+
+- `db` 目录中的 SQLite 数据库文件
+- `template` 目录中的模板文件
+
+> [!TIP]
+> 也可以直接上传 `.db`、`.sqlite`、`.sqlite3` 文件，但这种方式只迁移数据库记录，不会恢复模板目录。
+
+### 第三步：在新实例中执行迁移
+
+启动新实例后，进入：
+
+`设置 -> 数据迁移`
+
+然后按以下步骤操作：
+
+1. 上传旧实例导出的 `backup.zip`
+2. 根据需要选择是否迁移 `AccessKey`
+3. 根据需要选择是否迁移“订阅访问日志”
+4. 勾选“我已确认本次导入会覆盖当前实例的业务数据”
+5. 点击 **开始迁移**
+
+迁移任务会在后台执行，您可以在以下位置查看进度与结果：
+
+- 右下角任务进度面板
+- `任务中心`
+
+### 迁移完成后的操作
+
+迁移完成后，请执行以下操作：
+
+1. 查看迁移结果是否成功
+2. 如果提示“有 N 条警告”，到 `任务中心` 打开对应的“数据库迁移”任务查看详细警告
+3. **手动重启项目实例**
+4. 重新登录后台并检查关键数据是否正常
+
+### 迁移注意事项
+
+- 本次导入会覆盖当前实例的业务数据
+- 推荐只在新部署的 MySQL / PostgreSQL 实例首次迁移时使用
+- 订阅访问日志通常较大，默认不建议迁移
+- 如果旧 `AccessKey` 迁移后无法使用，请检查 `SUBLINK_API_ENCRYPTION_KEY` 是否与旧实例一致
+- 如果迁移完成后登录态异常，重新登录一次即可
 
 ---
 
@@ -162,8 +290,12 @@ services:
       - "./logs:/app/logs"
     environment:
       - SUBLINK_PORT=8000
+      # 数据库 DSN（可选，未设置时默认使用 SQLite）
+      # - SUBLINK_DSN=mysql://user:pass@mysql:3306/sublink?charset=utf8mb4&parseTime=True&loc=Local
       - SUBLINK_EXPIRE_DAYS=14
       - SUBLINK_LOGIN_FAIL_COUNT=5
+      # 本地数据目录（可选，默认用于 config.yaml / GeoIP / SQLite）
+      # - SUBLINK_DB_PATH=/app/db
       # GeoIP 数据库路径（可选，默认为 ./db/GeoLite2-City.mmdb）
       # - SUBLINK_GEOIP_PATH=/app/db/GeoLite2-City.mmdb
       # 敏感配置（可选，不设置则自动生成）

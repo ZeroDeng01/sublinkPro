@@ -17,6 +17,7 @@ import IconButton from '@mui/material/IconButton';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import LinearProgress from '@mui/material/LinearProgress';
+import Alert from '@mui/material/Alert';
 import Grid from '@mui/material/Grid';
 import Tooltip from '@mui/material/Tooltip';
 import Paper from '@mui/material/Paper';
@@ -37,8 +38,10 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SpeedIcon from '@mui/icons-material/Speed';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import StorageIcon from '@mui/icons-material/Storage';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PersonIcon from '@mui/icons-material/Person';
@@ -141,7 +144,8 @@ const TypeChip = ({ type, isDark }) => {
   const config = {
     speed_test: { label: '节点测速', color: '#10b981', icon: SpeedIcon },
     sub_update: { label: '订阅更新', color: '#6366f1', icon: CloudSyncIcon },
-    tag_rule: { label: '标签规则', color: '#f59e0b', icon: LocalOfferIcon }
+    tag_rule: { label: '标签规则', color: '#f59e0b', icon: LocalOfferIcon },
+    db_migration: { label: '数据库迁移', color: '#0284c7', icon: StorageIcon }
   };
 
   const { label, color, icon: Icon } = config[type] || config.speed_test;
@@ -245,6 +249,42 @@ const formatDuration = (startedAt, completedAt, status) => {
   return `${hours}时${mins}分`;
 };
 
+const parseTaskResult = (result) => {
+  if (!result) return null;
+  if (typeof result === 'string') {
+    try {
+      return JSON.parse(result);
+    } catch (error) {
+      console.error('Failed to parse task result:', error);
+      return null;
+    }
+  }
+  return result;
+};
+
+const getMigrationWarnings = (task) => {
+  if (task?.type !== 'db_migration') return [];
+  const parsedResult = parseTaskResult(task.result);
+  return Array.isArray(parsedResult?.warnings) ? parsedResult.warnings : [];
+};
+
+const migrationWarningButtonSx = {
+  mt: 0.75,
+  minWidth: 0,
+  px: 1.25,
+  py: 0.5,
+  borderRadius: 1.5,
+  textTransform: 'none',
+  fontWeight: 700,
+  color: '#fff',
+  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+  boxShadow: '0 8px 18px rgba(220, 38, 38, 0.18)',
+  '&:hover': {
+    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+    boxShadow: '0 10px 22px rgba(185, 28, 28, 0.24)'
+  }
+};
+
 // ==============================|| CLEAR HISTORY DIALOG ||============================== //
 
 const ClearHistoryDialog = ({ open, onClose, onConfirm }) => {
@@ -291,6 +331,7 @@ const ClearHistoryDialog = ({ open, onClose, onConfirm }) => {
 
 const TaskMobileCard = ({ task, isDark, onStop, canStop }) => {
   const theme = useTheme();
+  const migrationWarnings = useMemo(() => getMigrationWarnings(task), [task]);
 
   return (
     <Card
@@ -313,6 +354,11 @@ const TaskMobileCard = ({ task, isDark, onStop, canStop }) => {
                   {task.message}
                 </Typography>
               </Tooltip>
+            )}
+            {migrationWarnings.length > 0 && (
+              <Typography variant="caption" color="warning.main" display="block" sx={{ mt: 0.5, fontWeight: 600 }}>
+                包含 {migrationWarnings.length} 条迁移警告，请在任务详情中查看
+              </Typography>
             )}
           </Box>
           <StatusChip status={task.status} />
@@ -415,6 +461,8 @@ export default function TaskList() {
   // Traffic Stats Dialog
   const [trafficDialogOpen, setTrafficDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [warningsDialogOpen, setWarningsDialogOpen] = useState(false);
+  const [warningsTask, setWarningsTask] = useState(null);
 
   const { taskList: runningTasks, stopTask: stopRunningTask, isTaskStopping, registerOnComplete, unregisterOnComplete } = useTaskProgress();
 
@@ -534,6 +582,11 @@ export default function TaskList() {
   const handleOpenTrafficStats = (task) => {
     setSelectedTask(task);
     setTrafficDialogOpen(true);
+  };
+
+  const handleOpenMigrationWarnings = (task) => {
+    setWarningsTask(task);
+    setWarningsDialogOpen(true);
   };
 
   return (
@@ -676,6 +729,10 @@ export default function TaskList() {
               <LocalOfferIcon sx={{ fontSize: 16, mr: 1, color: '#f59e0b' }} />
               标签规则
             </MenuItem>
+            <MenuItem value="db_migration">
+              <StorageIcon sx={{ fontSize: 16, mr: 1, color: '#0284c7' }} />
+              数据库迁移
+            </MenuItem>
           </Select>
         </FormControl>
 
@@ -741,6 +798,23 @@ export default function TaskList() {
                   onStop={handleStopTask}
                   canStop={task.status === 'running' && task.type === 'speed_test'}
                 />
+                {task.type === 'db_migration' && getMigrationWarnings(task).length > 0 && (
+                  <Button
+                    size="small"
+                    fullWidth
+                    startIcon={<WarningAmberIcon />}
+                    sx={{
+                      ...migrationWarningButtonSx,
+                      mt: -1.5,
+                      mb: 1.5,
+                      borderTopLeftRadius: 0,
+                      borderTopRightRadius: 0
+                    }}
+                    onClick={() => handleOpenMigrationWarnings(task)}
+                  >
+                    查看 {getMigrationWarnings(task).length} 条迁移警告
+                  </Button>
+                )}
                 {/* Add a invisible click handler or a button to open details if it has traffic */}
                 {task.type === 'speed_test' && task.result && task.status === 'completed' && (
                   <Button
@@ -811,6 +885,16 @@ export default function TaskList() {
                             {task.message}
                           </Typography>
                         </Tooltip>
+                      )}
+                      {task.type === 'db_migration' && getMigrationWarnings(task).length > 0 && (
+                        <Button
+                          size="small"
+                          startIcon={<WarningAmberIcon sx={{ fontSize: 16 }} />}
+                          sx={migrationWarningButtonSx}
+                          onClick={() => handleOpenMigrationWarnings(task)}
+                        >
+                          查看 {getMigrationWarnings(task).length} 条迁移警告
+                        </Button>
                       )}
                     </TableCell>
                     <TableCell>
@@ -917,6 +1001,37 @@ export default function TaskList() {
 
       {/* Traffic Stats Dialog */}
       <TrafficStatsDialog open={trafficDialogOpen} onClose={() => setTrafficDialogOpen(false)} task={selectedTask} />
+
+      <Dialog open={warningsDialogOpen} onClose={() => setWarningsDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>迁移警告详情</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2}>
+            {warningsTask?.name && (
+              <Typography variant="body2" color="text.secondary">
+                任务：{warningsTask.name}
+              </Typography>
+            )}
+            {getMigrationWarnings(warningsTask).length > 0 ? (
+              <Alert severity="warning">
+                <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                  {getMigrationWarnings(warningsTask).map((warning, index) => (
+                    <Box component="li" key={`${warning}-${index}`} sx={{ mb: 1 }}>
+                      <Typography variant="body2">{warning}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Alert>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                当前任务没有可展示的迁移警告。
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setWarningsDialogOpen(false)}>关闭</Button>
+        </DialogActions>
+      </Dialog>
     </MainCard>
   );
 }

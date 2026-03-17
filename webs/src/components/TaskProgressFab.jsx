@@ -13,6 +13,7 @@ import ClickAwayListener from '@mui/material/ClickAwayListener';
 import SpeedIcon from '@mui/icons-material/Speed';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import StorageIcon from '@mui/icons-material/Storage';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -139,6 +140,14 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
         accentColor: '#f59e0b'
       };
     }
+    if (task.taskType === 'db_migration') {
+      return {
+        icon: StorageIcon,
+        gradientColors: ['#0284c7', '#0369a1'],
+        label: '数据库迁移',
+        accentColor: '#0284c7'
+      };
+    }
     return {
       icon: CloudSyncIcon,
       gradientColors: [theme.palette.primary.main, theme.palette.primary.dark],
@@ -200,6 +209,18 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
       const { matchedCount, totalCount } = task.result;
       if (matchedCount !== undefined && totalCount !== undefined) {
         return `匹配 ${matchedCount} / ${totalCount} 节点`;
+      }
+    }
+
+    if (task.taskType === 'db_migration') {
+      const imported = task.result.imported || {};
+      const importedKinds = Object.values(imported).filter((count) => Number(count) > 0).length;
+      const warnings = task.result.warnings?.length || 0;
+      if (importedKinds > 0) {
+        return warnings > 0 ? `导入 ${importedKinds} 类数据 · ${warnings} 条警告` : `导入 ${importedKinds} 类数据`;
+      }
+      if (warnings > 0) {
+        return `${warnings} 条警告`;
       }
     }
 
@@ -493,12 +514,35 @@ const TaskProgressFab = () => {
         glow: alpha('#f59e0b', 0.5)
       };
     }
+    const hasDbMigration = taskList.some(
+      (task) => task.taskType === 'db_migration' && task.status !== 'completed' && task.status !== 'error'
+    );
+    if (hasDbMigration) {
+      return {
+        main: '#0284c7',
+        dark: '#0369a1',
+        glow: alpha('#0284c7', 0.45)
+      };
+    }
     return {
       main: theme.palette.primary.main,
       dark: theme.palette.primary.dark,
       glow: alpha(theme.palette.primary.main, 0.5)
     };
   }, [hasRunningTask, taskList, theme.palette]);
+
+  const FabRunningIcon = useMemo(() => {
+    if (taskList.some((task) => task.taskType === 'speed_test' && task.status !== 'completed' && task.status !== 'error')) {
+      return SpeedIcon;
+    }
+    if (taskList.some((task) => task.taskType === 'tag_rule' && task.status !== 'completed' && task.status !== 'error')) {
+      return LocalOfferIcon;
+    }
+    if (taskList.some((task) => task.taskType === 'db_migration' && task.status !== 'completed' && task.status !== 'error')) {
+      return StorageIcon;
+    }
+    return CloudSyncIcon;
+  }, [taskList]);
 
   // Drag handlers
   const handleDragStart = useCallback(
@@ -752,7 +796,7 @@ const TaskProgressFab = () => {
               )}
               {/* Icon */}
               {hasRunningTask ? (
-                <CloudSyncIcon sx={{ fontSize: 26, color: '#fff' }} />
+                <FabRunningIcon sx={{ fontSize: 26, color: '#fff' }} />
               ) : (
                 <CheckCircleIcon sx={{ fontSize: 26, color: '#fff' }} />
               )}

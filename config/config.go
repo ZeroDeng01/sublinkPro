@@ -45,7 +45,8 @@ type AppConfig struct {
 	LoginFailCount     int    `yaml:"login_fail_count"`     // 登录失败次数限制
 	LoginFailWindow    int    `yaml:"login_fail_window"`    // 登录失败窗口时间(分钟)
 	LoginBanDuration   int    `yaml:"login_ban_duration"`   // 登录失败封禁时间(分钟)
-	DBPath             string `yaml:"db_path"`              // 数据库目录
+	DSN                string `yaml:"dsn"`                  // 数据库 DSN（支持 sqlite/mysql/postgres）
+	DBPath             string `yaml:"db_path"`              // 本地数据目录 / SQLite 默认数据库目录
 	LogPath            string `yaml:"log_path"`             // 日志目录
 	LogLevel           string `yaml:"log_level"`            // 日志等级 (debug/info/warn/error/fatal)
 	GeoIPPath          string `yaml:"geoip_path"`           // GeoIP数据库路径
@@ -59,6 +60,7 @@ type AppConfig struct {
 // CommandLineConfig 命令行配置（仅存储用户指定的值）
 type CommandLineConfig struct {
 	Port       int
+	DSN        string
 	DBPath     string
 	LogPath    string
 	LogLevel   string
@@ -90,11 +92,15 @@ func SetSecretAccessors(getter func(key string) string, setter func(key, value s
 	secretSetterFunc = setter
 }
 
-// GetDBPath 获取数据库路径（在初始化前可用）
+// GetDBPath 获取本地数据目录 / SQLite 默认数据库目录（在初始化前可用）
 func GetDBPath() string {
 	configMutex.RLock()
 	defer configMutex.RUnlock()
 
+	// 已加载配置时，直接使用最终配置值
+	if globalConfig != nil && globalConfig.DBPath != "" {
+		return globalConfig.DBPath
+	}
 	// 命令行参数优先
 	if cmdConfig != nil && cmdConfig.DBPath != "" {
 		return cmdConfig.DBPath
@@ -112,6 +118,10 @@ func GetLogPath() string {
 	configMutex.RLock()
 	defer configMutex.RUnlock()
 
+	// 已加载配置时，直接使用最终配置值
+	if globalConfig != nil && globalConfig.LogPath != "" {
+		return globalConfig.LogPath
+	}
 	// 命令行参数优先
 	if cmdConfig != nil && cmdConfig.LogPath != "" {
 		return cmdConfig.LogPath
@@ -130,8 +140,13 @@ func GetGeoIPPath() string {
 	defer configMutex.RUnlock()
 
 	// 如果已加载配置，从配置中获取
-	if globalConfig != nil && globalConfig.GeoIPPath != "" {
-		return globalConfig.GeoIPPath
+	if globalConfig != nil {
+		if globalConfig.GeoIPPath != "" {
+			return globalConfig.GeoIPPath
+		}
+		if globalConfig.DBPath != "" {
+			return globalConfig.DBPath + "/GeoLite2-City.mmdb"
+		}
 	}
 	// 命令行参数优先（暂不支持命令行设置 GeoIPPath）
 	// 环境变量次之
@@ -164,6 +179,23 @@ func GetConfigFilePath() string {
 	return dbPath + "/" + configFile
 }
 
+// GetDSN 获取数据库 DSN（在基础配置加载后可用）
+func GetDSN() string {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	if globalConfig != nil && globalConfig.DSN != "" {
+		return globalConfig.DSN
+	}
+	if cmdConfig != nil && cmdConfig.DSN != "" {
+		return cmdConfig.DSN
+	}
+	if envDSN := os.Getenv(envPrefix + "DSN"); envDSN != "" {
+		return envDSN
+	}
+	return ""
+}
+
 // getDBPathInternal 内部获取数据库路径（不加锁）
 func getDBPathInternal() string {
 	configMutex.RLock()
@@ -189,19 +221,7 @@ func Load() *AppConfig {
 	configMutex.Lock()
 	defer configMutex.Unlock()
 
-	cfg := &AppConfig{}
-
-	// 第一步：应用默认值
-	applyDefaults(cfg)
-
-	// 第二步：从配置文件加载
-	loadFromFileInternal(cfg, configPath)
-
-	// 第三步：从环境变量加载（覆盖配置文件）
-	loadFromEnvInternal(cfg)
-
-	// 第四步：从命令行加载（覆盖环境变量）
-	loadFromCmdLineInternal(cfg)
+	cfg := buildBaseConfigInternal(configPath)
 
 	// 第五步：处理敏感配置（JWT Secret、API加密密钥）
 	handleSecretsInternal(cfg)
@@ -211,6 +231,24 @@ func Load() *AppConfig {
 
 	log.Printf("配置加载完成: Port=%d, ExpireDays=%d, DBPath=%s, LogPath=%s",
 		cfg.Port, cfg.ExpireDays, cfg.DBPath, cfg.LogPath)
+
+	return cfg
+}
+
+// LoadBootstrap 加载数据库初始化前需要的基础配置
+// 仅应用 默认值/配置文件/环境变量/命令行，不访问数据库中的敏感配置。
+func LoadBootstrap() *AppConfig {
+	configPath := GetConfigFilePath()
+
+	configMutex.Lock()
+	defer configMutex.Unlock()
+
+	cfg := buildBaseConfigInternal(configPath)
+	globalConfig = cfg
+	initialized = false
+
+	log.Printf("基础配置加载完成: Port=%d, DBPath=%s, LogPath=%s, DSN=%t",
+		cfg.Port, cfg.DBPath, cfg.LogPath, cfg.DSN != "")
 
 	return cfg
 }
@@ -374,12 +412,23 @@ func applyDefaults(cfg *AppConfig) {
 	cfg.LoginFailCount = DefaultLoginFailCount
 	cfg.LoginFailWindow = DefaultLoginFailWindow
 	cfg.LoginBanDuration = DefaultLoginBanDuration
+	cfg.DSN = ""
 	cfg.DBPath = DefaultDBPath
 	cfg.LogPath = DefaultLogPath
 	cfg.LogLevel = DefaultLogLevel
 	cfg.GeoIPPath = "" // 默认为空，运行时通过 GetGeoIPPath() 计算
 	cfg.CaptchaMode = DefaultCaptchaMode
 	cfg.WebBasePath = "" // 默认为空，表示根路径
+}
+
+// buildBaseConfigInternal 构建不依赖数据库的基础配置
+func buildBaseConfigInternal(configPath string) *AppConfig {
+	cfg := &AppConfig{}
+	applyDefaults(cfg)
+	loadFromFileInternal(cfg, configPath)
+	loadFromEnvInternal(cfg)
+	loadFromCmdLineInternal(cfg)
+	return cfg
 }
 
 // loadFromFileInternal 从配置文件加载（内部使用，不获取锁）
@@ -416,6 +465,9 @@ func loadFromFileInternal(cfg *AppConfig, configPath string) {
 	if fileCfg.LoginBanDuration != 0 {
 		cfg.LoginBanDuration = fileCfg.LoginBanDuration
 	}
+	if fileCfg.DSN != "" {
+		cfg.DSN = fileCfg.DSN
+	}
 	if fileCfg.DBPath != "" {
 		cfg.DBPath = fileCfg.DBPath
 	}
@@ -424,6 +476,9 @@ func loadFromFileInternal(cfg *AppConfig, configPath string) {
 	}
 	if fileCfg.LogLevel != "" {
 		cfg.LogLevel = fileCfg.LogLevel
+	}
+	if fileCfg.GeoIPPath != "" {
+		cfg.GeoIPPath = fileCfg.GeoIPPath
 	}
 	// 验证码配置
 	if fileCfg.CaptchaMode != 0 {
@@ -434,6 +489,9 @@ func loadFromFileInternal(cfg *AppConfig, configPath string) {
 	}
 	if fileCfg.TurnstileSecretKey != "" {
 		cfg.TurnstileSecretKey = fileCfg.TurnstileSecretKey
+	}
+	if fileCfg.TurnstileProxyLink != "" {
+		cfg.TurnstileProxyLink = fileCfg.TurnstileProxyLink
 	}
 	// 敏感配置也从文件读取（用于迁移）
 	if fileCfg.JwtSecret != "" {
@@ -474,6 +532,9 @@ func loadFromEnvInternal(cfg *AppConfig) {
 		if d, err := strconv.Atoi(duration); err == nil && d > 0 {
 			cfg.LoginBanDuration = d
 		}
+	}
+	if dsn := os.Getenv(envPrefix + "DSN"); dsn != "" {
+		cfg.DSN = dsn
 	}
 	if dbPath := os.Getenv(envPrefix + "DB_PATH"); dbPath != "" {
 		cfg.DBPath = dbPath
@@ -522,6 +583,9 @@ func loadFromCmdLineInternal(cfg *AppConfig) {
 	}
 	if cmdConfig.Port > 0 {
 		cfg.Port = cmdConfig.Port
+	}
+	if cmdConfig.DSN != "" {
+		cfg.DSN = cmdConfig.DSN
 	}
 	if cmdConfig.DBPath != "" {
 		cfg.DBPath = cmdConfig.DBPath
@@ -664,11 +728,20 @@ func SaveToFile() error {
 
 	// 创建用于保存的配置（不包含敏感信息）
 	saveCfg := &AppConfig{
-		Port:             cfg.Port,
-		ExpireDays:       cfg.ExpireDays,
-		LoginFailCount:   cfg.LoginFailCount,
-		LoginFailWindow:  cfg.LoginFailWindow,
-		LoginBanDuration: cfg.LoginBanDuration,
+		Port:               cfg.Port,
+		ExpireDays:         cfg.ExpireDays,
+		LoginFailCount:     cfg.LoginFailCount,
+		LoginFailWindow:    cfg.LoginFailWindow,
+		LoginBanDuration:   cfg.LoginBanDuration,
+		DSN:                cfg.DSN,
+		DBPath:             cfg.DBPath,
+		LogPath:            cfg.LogPath,
+		LogLevel:           cfg.LogLevel,
+		GeoIPPath:          cfg.GeoIPPath,
+		CaptchaMode:        cfg.CaptchaMode,
+		TurnstileSiteKey:   cfg.TurnstileSiteKey,
+		TurnstileProxyLink: cfg.TurnstileProxyLink,
+		WebBasePath:        cfg.WebBasePath,
 	}
 
 	// 生成 YAML 内容（包含注释）

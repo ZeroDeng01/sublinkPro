@@ -14,6 +14,24 @@
 # 环境变量: SUBLINK_PORT
 port: 8000
 
+# 数据库 DSN
+# 支持 sqlite/mysql/postgres
+# 留空时默认使用 SQLite，并在 db_path/sublink.db 创建数据库文件
+# 环境变量: SUBLINK_DSN
+# 示例:
+# dsn: sqlite:///app/db/sublink.db
+# dsn: mysql://user:pass@tcp(mysql:3306)/sublink?charset=utf8mb4&parseTime=True&loc=Local
+# dsn: postgres://user:pass@postgres:5432/sublink?sslmode=disable
+# dsn:
+
+# 本地数据目录
+# 1. 默认配置文件路径: db_path/config.yaml
+# 2. 默认 SQLite 数据库路径: db_path/sublink.db
+# 3. 默认 GeoIP 数据库路径: db_path/GeoLite2-City.mmdb
+# 使用 MySQL/Postgres 时，此目录仍用于本地配置与数据文件
+# 环境变量: SUBLINK_DB_PATH
+# db_path: ./db
+
 # 日志等级 (debug/info/warn/error/fatal)
 # debug: 调试信息，开发时使用
 # info: 一般信息，正常运行状态（默认）

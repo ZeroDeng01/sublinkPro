@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"sublink/cache"
 	"sublink/database"
 	"sublink/utils"
@@ -9,7 +10,7 @@ import (
 )
 
 type SystemSetting struct {
-	Key   string `gorm:"primaryKey"`
+	Key   string `gorm:"primaryKey;size:191"`
 	Value string
 }
 
@@ -22,6 +23,10 @@ func init() {
 
 // InitSettingCache 初始化设置缓存
 func InitSettingCache() error {
+	if database.DB == nil {
+		return fmt.Errorf("数据库未初始化")
+	}
+
 	utils.Info("开始加载系统设置到缓存")
 	var settings []SystemSetting
 	if err := database.DB.Find(&settings).Error; err != nil {
@@ -44,9 +49,13 @@ func GetSetting(key string) (string, error) {
 		return setting.Value, nil
 	}
 
+	if database.DB == nil {
+		return "", fmt.Errorf("数据库未初始化")
+	}
+
 	// 缓存不存在，从数据库读取
 	var setting SystemSetting
-	err := database.DB.Where("key = ?", key).First(&setting).Error
+	err := database.DB.Where(map[string]interface{}{"key": key}).Take(&setting).Error
 	if err != nil {
 		return "", err
 	}
@@ -58,6 +67,10 @@ func GetSetting(key string) (string, error) {
 
 // SetSetting 保存设置 (Write-Through)
 func SetSetting(key string, value string) error {
+	if database.DB == nil {
+		return fmt.Errorf("数据库未初始化")
+	}
+
 	setting := SystemSetting{
 		Key:   key,
 		Value: value,

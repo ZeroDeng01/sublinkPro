@@ -6,7 +6,7 @@ import (
 )
 
 type Migration struct {
-	ID        string `gorm:"primaryKey"`
+	ID        string `gorm:"primaryKey;size:191"`
 	CreatedAt time.Time
 }
 
