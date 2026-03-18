@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -255,10 +257,124 @@ func TestLinkToProxy_SSR(t *testing.T) {
 	assertEqualString(t, "Server", "example.com", proxy.Server)
 	assertEqualFlexPort(t, "Port", 8388, proxy.Port)
 	assertEqualString(t, "Cipher", ssr.Method, proxy.Cipher)
-	// 注意：SSR 密码在编码时会进行 base64 编码，这里跳过密码验证
+	assertEqualString(t, "Password", ssr.Password, proxy.Password)
 	assertEqualString(t, "Protocol", ssr.Protocol, proxy.Protocol)
 
 	t.Logf("✓ SSR LinkToProxy 测试通过，名称: %s", proxy.Name)
+}
+
+// TestLinkToProxy_Hysteria 测试 Hysteria 链接转换为 Proxy 结构体
+func TestLinkToProxy_Hysteria(t *testing.T) {
+	hy := HY{
+		Name:     "测试节点-HY",
+		Host:     "example.com",
+		Port:     443,
+		Auth:     "auth-token",
+		Peer:     "sni.example.com",
+		Protocol: "udp",
+		Insecure: 1,
+		UpMbps:   50,
+		DownMbps: 100,
+		ALPN:     []string{"h3"},
+	}
+
+	link := Urls{Url: EncodeHYURL(hy)}
+	proxy, err := LinkToProxy(link, OutputConfig{Cert: false})
+	if err != nil {
+		t.Fatalf("LinkToProxy 失败: %v", err)
+	}
+
+	assertEqualString(t, "Type", "hysteria", proxy.Type)
+	assertEqualString(t, "Server", hy.Host, proxy.Server)
+	assertEqualString(t, "Auth", hy.Auth, proxy.Auth_str)
+	assertEqualString(t, "Peer", hy.Peer, proxy.Peer)
+	assertEqualBool(t, "Udp", true, proxy.Udp)
+	assertEqualBool(t, "SkipCertVerify", true, proxy.Skip_cert_verify)
+}
+
+// TestLinkToProxy_HTTP 测试 HTTP/HTTPS 链接转换为 Proxy 结构体
+func TestLinkToProxy_HTTP(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		tls      bool
+		skipCert bool
+		username string
+		password string
+		port     int
+		sni      string
+	}{
+		{
+			name:     "HTTP",
+			url:      "http://user:pass@example.com:8080#HTTP节点",
+			tls:      false,
+			skipCert: false,
+			username: "user",
+			password: "pass",
+			port:     8080,
+			sni:      "",
+		},
+		{
+			name:     "HTTPS",
+			url:      "https://user:pass@example.com:8443?skip-cert-verify=true&sni=sni.example.com#HTTPS节点",
+			tls:      true,
+			skipCert: true,
+			username: "user",
+			password: "pass",
+			port:     8443,
+			sni:      "sni.example.com",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			proxy, err := LinkToProxy(Urls{Url: tt.url}, OutputConfig{})
+			if err != nil {
+				t.Fatalf("LinkToProxy 失败: %v", err)
+			}
+
+			assertEqualString(t, "Type", "http", proxy.Type)
+			assertEqualString(t, "Server", "example.com", proxy.Server)
+			assertEqualFlexPort(t, "Port", tt.port, proxy.Port)
+			assertEqualString(t, "Username", tt.username, proxy.Username)
+			assertEqualString(t, "Password", tt.password, proxy.Password)
+			assertEqualBool(t, "Tls", tt.tls, proxy.Tls)
+			assertEqualBool(t, "SkipCertVerify", tt.skipCert, proxy.Skip_cert_verify)
+			assertEqualString(t, "Sni", tt.sni, proxy.Sni)
+		})
+	}
+}
+
+// TestLinkToProxy_WireGuard 测试 WireGuard 链接转换为 Proxy 结构体
+func TestLinkToProxy_WireGuard(t *testing.T) {
+	wg := WireGuard{
+		Name:         "测试节点-WireGuard",
+		Server:       "162.159.192.127",
+		Port:         7152,
+		PrivateKey:   "OOrigZsSjw2YaY4urjbbU4/BNOZKXqW6EYNm8XKLtkU=",
+		PublicKey:    "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
+		PreSharedKey: "31aIhAPwktDGpH4JDhA8GNvjFXEf/a6+UaQRyOAiyfM=",
+		IP:           "172.16.0.2",
+		IPv6:         "2606:4700:110:82ce:bdeb:e72d:572a:e280",
+		MTU:          1280,
+		Reserved:     []int{1, 2, 3},
+	}
+
+	proxy, err := LinkToProxy(Urls{Url: EncodeWireGuardURL(wg)}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("LinkToProxy 失败: %v", err)
+	}
+
+	assertEqualString(t, "Type", "wireguard", proxy.Type)
+	assertEqualString(t, "Server", wg.Server, proxy.Server)
+	assertEqualFlexPort(t, "Port", 7152, proxy.Port)
+	assertEqualString(t, "PrivateKey", wg.PrivateKey, proxy.Private_key)
+	assertEqualString(t, "PublicKey", wg.PublicKey, proxy.Public_key)
+	assertEqualString(t, "PreSharedKey", wg.PreSharedKey, proxy.Pre_shared_key)
+	assertEqualString(t, "IP", wg.IP, proxy.Ip)
+	assertEqualString(t, "IPv6", wg.IPv6, proxy.Ipv6)
+	assertEqualInt(t, "MTU", wg.MTU, proxy.Mtu)
+	assertEqualBool(t, "Udp", true, proxy.Udp)
 }
 
 // TestLinkToProxy_UnsupportedScheme 测试不支持的协议
@@ -309,4 +425,41 @@ func TestLinkToProxy_HostReplacement(t *testing.T) {
 	assertEqualString(t, "Server", "original.example.com", proxy.Server)
 
 	t.Log("✓ Host 替换配置测试通过")
+}
+
+// TestEncodeClash 使用真实模板验证 Clash 配置输出
+func TestEncodeClash(t *testing.T) {
+	tempDir := t.TempDir()
+	templatePath := filepath.Join(tempDir, "clash-template.yaml")
+	template := "proxies: []\nproxy-groups:\n  - name: Proxy\n    type: select\n    proxies: []\n"
+	if err := os.WriteFile(templatePath, []byte(template), 0o600); err != nil {
+		t.Fatalf("写入模板失败: %v", err)
+	}
+
+	ss := Ss{
+		Name:   "Clash-SS",
+		Server: "original.example.com",
+		Port:   8388,
+		Param: Param{
+			Cipher:   "aes-256-gcm",
+			Password: "password",
+		},
+	}
+
+	data, err := EncodeClash([]Urls{{Url: EncodeSSURL(ss)}}, OutputConfig{
+		Clash:                 templatePath,
+		Udp:                   true,
+		ReplaceServerWithHost: true,
+		HostMap: map[string]string{
+			"original.example.com": "1.2.3.4",
+		},
+	})
+	if err != nil {
+		t.Fatalf("EncodeClash 失败: %v", err)
+	}
+
+	output := string(data)
+	assertContains(t, "Clash代理名", output, "name: Clash-SS")
+	assertContains(t, "Clash服务地址", output, "server: 1.2.3.4")
+	assertContains(t, "Clash代理组", output, "- Clash-SS")
 }

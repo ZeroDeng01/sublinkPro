@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -356,4 +358,59 @@ func TestAllProtocolsToProxy(t *testing.T) {
 			t.Logf("✓ %s 协议 LinkToProxy 测试通过", p.name)
 		})
 	}
+}
+
+// TestEncodeSurge 使用真实模板验证 Surge 配置输出
+func TestEncodeSurge(t *testing.T) {
+	tempDir := t.TempDir()
+	templatePath := filepath.Join(tempDir, "surge-template.conf")
+	template := "[Proxy]\n\n[Proxy Group]\nProxy = select\nAuto = url-test, url=http://www.gstatic.com/generate_204, interval=300\n"
+	if err := os.WriteFile(templatePath, []byte(template), 0o600); err != nil {
+		t.Fatalf("写入模板失败: %v", err)
+	}
+
+	ss := Ss{
+		Name:   "Surge-SS",
+		Server: "original.example.com",
+		Port:   8388,
+		Param: Param{
+			Cipher:   "aes-256-gcm",
+			Password: "password",
+		},
+		Plugin: SsPlugin{
+			Name: "obfs-local",
+			Mode: "http",
+			Host: "bing.com",
+		},
+	}
+	trojan := Trojan{
+		Name:     "Surge-Trojan",
+		Hostname: "trojan.example.com",
+		Port:     443,
+		Password: "password",
+		Query: TrojanQuery{
+			Sni: "sni.example.com",
+		},
+	}
+
+	output, err := EncodeSurge([]string{
+		EncodeSSURL(ss),
+		EncodeTrojanURL(trojan),
+	}, OutputConfig{
+		Surge:                 templatePath,
+		Udp:                   true,
+		ReplaceServerWithHost: true,
+		HostMap: map[string]string{
+			"original.example.com": "1.2.3.4",
+		},
+	})
+	if err != nil {
+		t.Fatalf("EncodeSurge 失败: %v", err)
+	}
+
+	assertContains(t, "Surge SS 节点", output, "Surge-SS = ss, 1.2.3.4, 8388")
+	assertContains(t, "Surge SS 插件", output, "obfs=http, obfs-host=bing.com")
+	assertContains(t, "Surge Trojan 节点", output, "Surge-Trojan = trojan, trojan.example.com, 443, password=password")
+	assertContains(t, "Surge 代理组", output, "Proxy = select, Surge-SS, Surge-Trojan")
+	assertContains(t, "Surge 自动组", output, "Auto = url-test, url=http://www.gstatic.com/generate_204, interval=300, Surge-SS, Surge-Trojan")
 }

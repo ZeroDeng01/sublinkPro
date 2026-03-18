@@ -125,16 +125,41 @@ func TestIPv6Address(t *testing.T) {
 	for _, tc := range ipv6Cases {
 		t.Run(tc.protocol+"_ipv6", func(t *testing.T) {
 			var encoded string
+			expectedServer := "2001:db8::1"
 			switch tc.protocol {
 			case "vless":
 				v := VLESS{Name: "IPv6测试", Server: tc.server, Port: 443, Uuid: "88888888-9999-7777-5555-777777777777"}
 				encoded = EncodeVLESSURL(v)
+				if !strings.Contains(encoded, tc.server) {
+					t.Fatalf("编码结果应保留 IPv6 方括号格式: %s", encoded)
+				}
+				decoded, err := DecodeVLESSURL(encoded)
+				if err != nil {
+					t.Fatalf("解码失败: %v", err)
+				}
+				assertEqualString(t, "Server", expectedServer, decoded.Server)
 			case "trojan":
 				tr := Trojan{Name: "IPv6测试", Hostname: tc.server, Port: 443, Password: "pass"}
 				encoded = EncodeTrojanURL(tr)
+				if !strings.Contains(encoded, tc.server) {
+					t.Fatalf("编码结果应保留 IPv6 方括号格式: %s", encoded)
+				}
+				decoded, err := DecodeTrojanURL(encoded)
+				if err != nil {
+					t.Fatalf("解码失败: %v", err)
+				}
+				assertEqualString(t, "Hostname", expectedServer, decoded.Hostname)
 			case "ss":
 				ss := Ss{Name: "IPv6测试", Server: tc.server, Port: 8388, Param: Param{Cipher: "aes-256-gcm", Password: "pass"}}
 				encoded = EncodeSSURL(ss)
+				if !strings.Contains(encoded, tc.server) {
+					t.Fatalf("编码结果应保留 IPv6 方括号格式: %s", encoded)
+				}
+				decoded, err := DecodeSSURL(encoded)
+				if err != nil {
+					t.Fatalf("解码失败: %v", err)
+				}
+				assertEqualString(t, "Server", expectedServer, decoded.Server)
 			}
 
 			if !strings.Contains(encoded, "://") {
@@ -224,15 +249,8 @@ func TestSSRBase64Password(t *testing.T) {
 		t.Fatalf("解码失败: %v", err)
 	}
 
-	// SSR 密码在编解码过程中保持一致（内部处理 base64）
-	// 解码后应该恢复原始密码
-	// 注意：根据 SSR 协议，密码在 URL 中是 base64 编码的
-	// 但解码函数应该返回解码后的原始密码
-	t.Logf("原始密码: %s, 解码后密码: %s", original.Password, decoded.Password)
-
-	// SSR 的 Password 字段在解码时没有做 base64 decode
-	// 这是一个潜在的问题，但保持现有行为
-	t.Log("✓ SSR 密码编解码测试完成（注意：SSR 密码在 URL 中使用 base64 编码）")
+	assertEqualString(t, "Password", original.Password, decoded.Password)
+	t.Log("✓ SSR 密码编解码测试通过")
 }
 
 // TestVMESSPortTypes 测试 VMess 端口类型处理
@@ -258,8 +276,6 @@ func TestVMESSPortTypes(t *testing.T) {
 
 // TestTrojanAlpn 测试 Trojan ALPN 处理
 func TestTrojanAlpn(t *testing.T) {
-	// 注意：当前实现不编码 ALPN 到 URL 中
-	// 这是一个已知限制
 	original := Trojan{
 		Name:     "ALPN测试",
 		Hostname: "example.com",
@@ -277,10 +293,13 @@ func TestTrojanAlpn(t *testing.T) {
 		t.Fatalf("解码失败: %v", err)
 	}
 
-	// ALPN 在当前实现中不会被编码到 URL（被注释掉了）
-	// 所以解码后 ALPN 应该为空
-	t.Logf("原始 ALPN: %v, 解码后 ALPN: %v", original.Query.Alpn, decoded.Query.Alpn)
-	t.Log("✓ Trojan ALPN 测试完成（注意：当前实现不完整编码 ALPN）")
+	if len(decoded.Query.Alpn) != len(original.Query.Alpn) {
+		t.Fatalf("ALPN 数量不匹配: 期望 %d, 实际 %d", len(original.Query.Alpn), len(decoded.Query.Alpn))
+	}
+	for i, alpn := range original.Query.Alpn {
+		assertEqualString(t, "ALPN", alpn, decoded.Query.Alpn[i])
+	}
+	t.Log("✓ Trojan ALPN 测试通过")
 }
 
 // TestSSCipherMethods 测试各种加密方式
@@ -326,7 +345,7 @@ func TestURLEncodingInPath(t *testing.T) {
 	}
 
 	for _, path := range paths {
-		t.Run("VLESS_path", func(t *testing.T) {
+		t.Run(path, func(t *testing.T) {
 			original := VLESS{
 				Name:   "路径测试",
 				Server: "example.com",
@@ -344,11 +363,10 @@ func TestURLEncodingInPath(t *testing.T) {
 				t.Fatalf("解码失败: %v", err)
 			}
 
-			// URL 编码可能会改变路径格式，但应该能正确解码
-			t.Logf("原始路径: %s, 解码后路径: %s", path, decoded.Query.Path)
+			assertEqualString(t, "Path", path, decoded.Query.Path)
 		})
 	}
-	t.Log("✓ URL 路径编码测试完成")
+	t.Log("✓ URL 路径编码测试通过")
 }
 
 // min 辅助函数

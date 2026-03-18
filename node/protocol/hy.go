@@ -87,6 +87,7 @@ func DecodeHYURL(s string) (HY, error) {
 	}
 	port, _ := strconv.Atoi(rawPort)
 	insecure, _ := strconv.Atoi(u.Query().Get("insecure"))
+	peer := u.Query().Get("peer")
 	auth := u.Query().Get("auth")
 	upMbps, _ := strconv.Atoi(u.Query().Get("upmbps"))
 	downMbps, _ := strconv.Atoi(u.Query().Get("downmbps"))
@@ -105,6 +106,7 @@ func DecodeHYURL(s string) (HY, error) {
 		fmt.Println("server:", server)
 		fmt.Println("port:", port)
 		fmt.Println("insecure:", insecure)
+		fmt.Println("peer:", peer)
 		fmt.Println("auth:", auth)
 		fmt.Println("upMbps:", upMbps)
 		fmt.Println("downMbps:", downMbps)
@@ -116,6 +118,7 @@ func DecodeHYURL(s string) (HY, error) {
 		Host:     server,
 		Port:     port,
 		Insecure: insecure,
+		Peer:     peer,
 		Auth:     auth,
 		UpMbps:   upMbps,
 		DownMbps: downMbps,

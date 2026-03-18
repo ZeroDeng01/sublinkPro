@@ -97,6 +97,7 @@ func TestSsrEncodeDecode(t *testing.T) {
 	assertEqualString(t, "Server", original.Server, decoded.Server)
 	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Method", original.Method, decoded.Method)
+	assertEqualString(t, "Password", original.Password, decoded.Password)
 	assertEqualString(t, "Remarks(名称)", original.Qurey.Remarks, decoded.Qurey.Remarks)
 	assertEqualString(t, "Protocol", original.Protocol, decoded.Protocol)
 	assertEqualString(t, "Obfs", original.Obfs, decoded.Obfs)
@@ -127,6 +128,7 @@ func TestSsrNameModification(t *testing.T) {
 
 	assertEqualString(t, "修改后名称", newName, final.Qurey.Remarks)
 	assertEqualString(t, "服务器(不变)", original.Server, final.Server)
+	assertEqualString(t, "密码(不变)", original.Password, final.Password)
 
 	t.Logf("✓ SSR 名称修改测试通过: %s -> %s", original.Qurey.Remarks, final.Qurey.Remarks)
 }

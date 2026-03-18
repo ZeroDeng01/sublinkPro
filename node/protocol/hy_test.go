@@ -34,6 +34,9 @@ func TestHYEncodeDecode(t *testing.T) {
 	// 验证关键字段
 	assertEqualString(t, "Host", original.Host, decoded.Host)
 	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
+	assertEqualString(t, "Peer", original.Peer, decoded.Peer)
+	assertEqualString(t, "Auth", original.Auth, decoded.Auth)
+	assertEqualString(t, "Protocol", original.Protocol, decoded.Protocol)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 
 	t.Logf("✓ Hysteria 编解码测试通过，名称: %s", decoded.Name)
