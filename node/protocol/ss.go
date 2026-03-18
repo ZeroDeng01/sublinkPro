@@ -89,6 +89,26 @@ func parseSSURL(s string) (auth, addr, name string, plugin SsPlugin) {
 	return auth, addr, name, plugin
 }
 
+func decodeSSAuth(auth string) (string, error) {
+	if auth == "" {
+		return "", fmt.Errorf("missing SS auth")
+	}
+
+	if decoded := utils.Base64Decode(auth); decoded != auth && strings.Contains(decoded, ":") {
+		return decoded, nil
+	}
+
+	unescaped, err := url.PathUnescape(auth)
+	if err != nil {
+		return "", fmt.Errorf("unescape SS auth: %w", err)
+	}
+	if strings.Contains(unescaped, ":") {
+		return unescaped, nil
+	}
+
+	return "", fmt.Errorf("invalid SS auth")
+}
+
 // parseSSPlugin 解析 SIP002 格式的 plugin 参数
 // 格式: plugin_name;opt1=val1;opt2=val2
 // 特殊字符需要反斜杠转义
@@ -278,9 +298,9 @@ func DecodeSSURL(s string) (Ss, error) {
 	// 解析ss链接
 	param, addr, name, plugin := parseSSURL(s)
 	// base64解码
-	param = utils.Base64Decode(param)
+	param, err := decodeSSAuth(param)
 	// 判断是否为空
-	if param == "" || addr == "" {
+	if err != nil || param == "" || addr == "" {
 		return Ss{}, fmt.Errorf("invalid SS URL")
 	}
 	// 解析参数
@@ -295,7 +315,7 @@ func DecodeSSURL(s string) (Ss, error) {
 	}
 	// 开发环境输出结果
 	if utils.CheckEnvironment() {
-		fmt.Println("Param:", utils.Base64Decode(param))
+		fmt.Println("Param:", param)
 		fmt.Println("Server", server)
 		fmt.Println("Port", port)
 		fmt.Println("Name:", name)
