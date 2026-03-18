@@ -35,6 +35,7 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 | `SUBLINK_TURNSTILE_SITE_KEY` | Cloudflare Turnstile Site Key   | -                                   |
 | `SUBLINK_TURNSTILE_SECRET_KEY` | Cloudflare Turnstile Secret Key | -                                   |
 | `SUBLINK_TURNSTILE_PROXY_LINK` | Turnstile 验证代理链接（mihomo 格式）     | -                                   |
+| `SUBLINK_TRUSTED_PROXIES` | 可信反向代理 IP/CIDR（逗号分隔）           | `127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10` |
 | `SUBLINK_WEB_BASE_PATH` | 前端访问基础路径（站点隐藏）                  | -                                   |
 | `SUBLINK_ADMIN_PASSWORD` | 初始管理员密码                         | 123456                              |
 | `SUBLINK_ADMIN_PASSWORD_REST` | 重置管理员密码                         | 输入新管理员密码                            |
@@ -275,6 +276,43 @@ environment:
 
 ---
 
+## 反向代理与真实 IP
+
+如果您通过 Nginx、Caddy、宝塔、Docker 反向代理、Cloudflare Tunnel 或其他代理访问 SublinkPro，访问日志里的客户端 IP 取决于服务端是否信任该代理。
+
+- 默认会信任本机和常见内网网段，因此反代到本机或容器网络时会自动识别真实来源 IP。
+- 如果日志里持续出现 `127.0.0.1`、`172.x.x.x` 这类代理地址，通常说明当前代理出口不在可信列表中。
+- 可以通过 `SUBLINK_TRUSTED_PROXIES` 或 `config.yaml` 中的 `trusted_proxies` 补充代理的 IP 或 CIDR。
+
+示例：
+
+```yaml
+trusted_proxies:
+  - 127.0.0.1
+  - ::1
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+  - 100.64.0.0/10
+  - 203.0.113.10
+  - 198.51.100.0/24
+```
+
+Docker Compose 环境变量写法：
+
+```yaml
+environment:
+  - SUBLINK_TRUSTED_PROXIES=127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10
+```
+
+如果您确定不想信任任何代理头，可以显式禁用：
+
+```yaml
+trusted_proxies: []
+```
+
+---
+
 ## Docker 部署示例（带环境变量）
 
 ```yaml
@@ -298,6 +336,8 @@ services:
       # - SUBLINK_DB_PATH=/app/db
       # GeoIP 数据库路径（可选，默认为 ./db/GeoLite2-City.mmdb）
       # - SUBLINK_GEOIP_PATH=/app/db/GeoLite2-City.mmdb
+      # 可信反向代理（可选，逗号分隔；如使用本机/内网反代通常无需额外修改）
+      # - SUBLINK_TRUSTED_PROXIES=127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10
       # 敏感配置（可选，不设置则自动生成）
       # - SUBLINK_JWT_SECRET=your-secret-key
       # - SUBLINK_API_ENCRYPTION_KEY=your-encryption-key

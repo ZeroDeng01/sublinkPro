@@ -395,8 +395,16 @@ func Run() {
 
 	// 初始化gin框架
 	r := gin.Default()
-	if err := r.SetTrustedProxies(nil); err != nil {
+	trustedProxies := cfg.TrustedProxies
+	if len(trustedProxies) == 0 {
+		trustedProxies = nil
+	}
+	if err := r.SetTrustedProxies(trustedProxies); err != nil {
 		utils.Warn("设置 Gin trusted proxies 失败: %v", err)
+	} else if len(trustedProxies) == 0 {
+		utils.Warn("Gin trusted proxies 已禁用，客户端 IP 将直接使用连接源地址")
+	} else {
+		utils.Info("Gin trusted proxies: %s", strings.Join(trustedProxies, ", "))
 	}
 	// 初始化模板
 	Templateinit()

@@ -29,6 +29,15 @@ const (
 	DefaultCaptchaMode      = CaptchaModeTraditional // 默认传统验证码
 )
 
+var DefaultTrustedProxies = []string{
+	"127.0.0.1",
+	"::1",
+	"10.0.0.0/8",
+	"172.16.0.0/12",
+	"192.168.0.0/16",
+	"100.64.0.0/10",
+}
+
 // 验证码模式常量
 const (
 	CaptchaModeDisabled    = 1 // 关闭验证码
@@ -38,23 +47,24 @@ const (
 
 // AppConfig 应用配置结构
 type AppConfig struct {
-	Port               int    `yaml:"port"`                 // 服务端口
-	JwtSecret          string `yaml:"jwt_secret"`           // JWT密钥
-	APIEncryptionKey   string `yaml:"api_encryption_key"`   // API加密密钥
-	ExpireDays         int    `yaml:"expire_days"`          // Token过期天数
-	LoginFailCount     int    `yaml:"login_fail_count"`     // 登录失败次数限制
-	LoginFailWindow    int    `yaml:"login_fail_window"`    // 登录失败窗口时间(分钟)
-	LoginBanDuration   int    `yaml:"login_ban_duration"`   // 登录失败封禁时间(分钟)
-	DSN                string `yaml:"dsn"`                  // 数据库 DSN（支持 sqlite/mysql/postgres）
-	DBPath             string `yaml:"db_path"`              // 本地数据目录 / SQLite 默认数据库目录
-	LogPath            string `yaml:"log_path"`             // 日志目录
-	LogLevel           string `yaml:"log_level"`            // 日志等级 (debug/info/warn/error/fatal)
-	GeoIPPath          string `yaml:"geoip_path"`           // GeoIP数据库路径
-	CaptchaMode        int    `yaml:"captcha_mode"`         // 验证码模式 (1=关闭, 2=传统, 3=Turnstile)
-	TurnstileSiteKey   string `yaml:"turnstile_site_key"`   // Cloudflare Turnstile Site Key
-	TurnstileSecretKey string `yaml:"turnstile_secret_key"` // Cloudflare Turnstile Secret Key
-	TurnstileProxyLink string `yaml:"turnstile_proxy_link"` // Turnstile 验证代理链接（mihomo 格式）
-	WebBasePath        string `yaml:"web_base_path"`        // 前端基础路径（用于隐藏站点入口）
+	Port               int      `yaml:"port"`                 // 服务端口
+	JwtSecret          string   `yaml:"jwt_secret"`           // JWT密钥
+	APIEncryptionKey   string   `yaml:"api_encryption_key"`   // API加密密钥
+	ExpireDays         int      `yaml:"expire_days"`          // Token过期天数
+	LoginFailCount     int      `yaml:"login_fail_count"`     // 登录失败次数限制
+	LoginFailWindow    int      `yaml:"login_fail_window"`    // 登录失败窗口时间(分钟)
+	LoginBanDuration   int      `yaml:"login_ban_duration"`   // 登录失败封禁时间(分钟)
+	DSN                string   `yaml:"dsn"`                  // 数据库 DSN（支持 sqlite/mysql/postgres）
+	DBPath             string   `yaml:"db_path"`              // 本地数据目录 / SQLite 默认数据库目录
+	LogPath            string   `yaml:"log_path"`             // 日志目录
+	LogLevel           string   `yaml:"log_level"`            // 日志等级 (debug/info/warn/error/fatal)
+	GeoIPPath          string   `yaml:"geoip_path"`           // GeoIP数据库路径
+	CaptchaMode        int      `yaml:"captcha_mode"`         // 验证码模式 (1=关闭, 2=传统, 3=Turnstile)
+	TurnstileSiteKey   string   `yaml:"turnstile_site_key"`   // Cloudflare Turnstile Site Key
+	TurnstileSecretKey string   `yaml:"turnstile_secret_key"` // Cloudflare Turnstile Secret Key
+	TurnstileProxyLink string   `yaml:"turnstile_proxy_link"` // Turnstile 验证代理链接（mihomo 格式）
+	WebBasePath        string   `yaml:"web_base_path"`        // 前端基础路径（用于隐藏站点入口）
+	TrustedProxies     []string `yaml:"trusted_proxies"`      // 可信反向代理列表（支持 IP/CIDR）
 }
 
 // CommandLineConfig 命令行配置（仅存储用户指定的值）
@@ -419,6 +429,7 @@ func applyDefaults(cfg *AppConfig) {
 	cfg.GeoIPPath = "" // 默认为空，运行时通过 GetGeoIPPath() 计算
 	cfg.CaptchaMode = DefaultCaptchaMode
 	cfg.WebBasePath = "" // 默认为空，表示根路径
+	cfg.TrustedProxies = append([]string(nil), DefaultTrustedProxies...)
 }
 
 // buildBaseConfigInternal 构建不依赖数据库的基础配置
@@ -504,6 +515,9 @@ func loadFromFileInternal(cfg *AppConfig, configPath string) {
 	if fileCfg.WebBasePath != "" {
 		cfg.WebBasePath = normalizeBasePath(fileCfg.WebBasePath)
 	}
+	if fileCfg.TrustedProxies != nil {
+		cfg.TrustedProxies = normalizeTrustedProxies(fileCfg.TrustedProxies)
+	}
 }
 
 // loadFromEnvInternal 从环境变量加载（内部使用，不获取锁）
@@ -573,6 +587,9 @@ func loadFromEnvInternal(cfg *AppConfig) {
 	// 站点隐藏配置
 	if webBasePath := os.Getenv(envPrefix + "WEB_BASE_PATH"); webBasePath != "" {
 		cfg.WebBasePath = normalizeBasePath(webBasePath)
+	}
+	if trustedProxies, ok := os.LookupEnv(envPrefix + "TRUSTED_PROXIES"); ok {
+		cfg.TrustedProxies = normalizeTrustedProxies(strings.Split(trustedProxies, ","))
 	}
 }
 
@@ -742,6 +759,7 @@ func SaveToFile() error {
 		TurnstileSiteKey:   cfg.TurnstileSiteKey,
 		TurnstileProxyLink: cfg.TurnstileProxyLink,
 		WebBasePath:        cfg.WebBasePath,
+		TrustedProxies:     append([]string(nil), cfg.TrustedProxies...),
 	}
 
 	// 生成 YAML 内容（包含注释）
@@ -755,6 +773,27 @@ func SaveToFile() error {
 	}
 
 	return os.WriteFile(configPath, []byte(comment+string(data)), 0644)
+}
+
+func normalizeTrustedProxies(values []string) []string {
+	if values == nil {
+		return nil
+	}
+
+	result := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
 }
 
 // MigrateFromOldConfig 从旧配置迁移敏感数据到数据库
