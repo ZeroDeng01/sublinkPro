@@ -2,7 +2,6 @@ package protocol
 
 import (
 	"fmt"
-	goccyyaml "github.com/goccy/go-yaml"
 	"io"
 	"net/http"
 	"os"
@@ -879,7 +878,7 @@ func DecodeClash(proxys []Proxy, yamlfile string, customGroups ...[]CustomProxyG
 	config["proxy-groups"] = proxyGroups
 
 	// 将修改后的内容写回文件
-	newData, err := goccyyaml.Marshal(config)
+	newData, err := yaml.Marshal(config)
 	if err != nil {
 		utils.Error("error: %v", err)
 	}
