@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // TestLinkToProxy_SS 测试 SS 链接转换为 Proxy 结构体
@@ -462,4 +464,82 @@ func TestEncodeClash(t *testing.T) {
 	assertContains(t, "Clash代理名", output, "name: Clash-SS")
 	assertContains(t, "Clash服务地址", output, "server: 1.2.3.4")
 	assertContains(t, "Clash代理组", output, "- Clash-SS")
+}
+
+func TestEncodeClashPreservesProviderGroupsAndEmoji(t *testing.T) {
+	tempDir := t.TempDir()
+	templatePath := filepath.Join(tempDir, "clash-provider-template.yaml")
+	template := `proxies: []
+proxy-groups:
+  - name: 🛠️ 手选单一节点
+    type: select
+    use: [Airport-A, Airport-B]
+  - name: 🇭🇰 香港全自动
+    type: url-test
+    use: [Airport-A, Airport-B]
+    filter: '(?i)(🇭🇰|香港|Hong Kong|\bHK\b)'
+    url: https://cp.cloudflare.com/generate_204
+    interval: 300
+    tolerance: 80
+`
+	if err := os.WriteFile(templatePath, []byte(template), 0o600); err != nil {
+		t.Fatalf("写入模板失败: %v", err)
+	}
+
+	ss := Ss{
+		Name:   "Hong Kong-01",
+		Server: "provider.example.com",
+		Port:   8388,
+		Param: Param{
+			Cipher:   "aes-256-gcm",
+			Password: "password",
+		},
+	}
+
+	data, err := EncodeClash([]Urls{{Url: EncodeSSURL(ss)}}, OutputConfig{
+		Clash: templatePath,
+		Udp:   true,
+	})
+	if err != nil {
+		t.Fatalf("EncodeClash 失败: %v", err)
+	}
+
+	output := string(data)
+	assertContains(t, "provider组emoji", output, "🛠️ 手选单一节点")
+	assertContains(t, "provider组名称", output, "🇭🇰 香港全自动")
+	if strings.Contains(output, `\U0001F6E0`) {
+		t.Fatalf("emoji 不应被转义为 Unicode 编码: %s", output)
+	}
+
+	var config map[string]interface{}
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		t.Fatalf("解析输出 YAML 失败: %v", err)
+	}
+
+	rawGroups, ok := config["proxy-groups"].([]interface{})
+	if !ok || len(rawGroups) != 2 {
+		t.Fatalf("proxy-groups 解析失败: %#v", config["proxy-groups"])
+	}
+
+	firstGroup, ok := rawGroups[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("第一个代理组类型错误: %#v", rawGroups[0])
+	}
+	if _, exists := firstGroup["proxies"]; exists {
+		t.Fatalf("use 组不应被强行注入 proxies: %#v", firstGroup)
+	}
+	if use, ok := firstGroup["use"].([]interface{}); !ok || len(use) != 2 {
+		t.Fatalf("use 组 providers 丢失: %#v", firstGroup["use"])
+	}
+
+	secondGroup, ok := rawGroups[1].(map[string]interface{})
+	if !ok {
+		t.Fatalf("第二个代理组类型错误: %#v", rawGroups[1])
+	}
+	if _, exists := secondGroup["proxies"]; exists {
+		t.Fatalf("带 filter 的 provider 组不应被强行注入 proxies: %#v", secondGroup)
+	}
+	if secondGroup["filter"] != "(?i)(🇭🇰|香港|Hong Kong|\\bHK\\b)" {
+		t.Fatalf("filter 被意外改写: %#v", secondGroup["filter"])
+	}
 }
