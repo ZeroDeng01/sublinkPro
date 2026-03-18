@@ -35,6 +35,15 @@ export function updateAirport(id, data) {
   });
 }
 
+// 批量更新机场
+export function batchUpdateAirports(data) {
+  return request({
+    url: '/v1/airports/batch-update',
+    method: 'post',
+    data
+  });
+}
+
 // 删除机场
 export function deleteAirport(id, deleteNodes = false) {
   return request({

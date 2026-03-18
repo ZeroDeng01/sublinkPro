@@ -7,6 +7,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import Snackbar from '@mui/material/Snackbar';
@@ -37,7 +38,7 @@ import AirportLogo from './AirportLogo';
 /**
  * 机场列表卡片网格组件（桌面端）
  */
-export default function AirportTable({ airports, onEdit, onDelete, onPull, onRefreshUsage }) {
+export default function AirportTable({ airports, selectedIds, onToggleSelect, onEdit, onDelete, onPull, onRefreshUsage }) {
   const theme = useTheme();
 
   // 复制提示状态
@@ -336,68 +337,77 @@ export default function AirportTable({ airports, onEdit, onDelete, onPull, onRef
           gap: 2
         }}
       >
-        {airports.map((airport) => (
-          <Card
-            key={airport.id}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              borderRadius: 3,
-              border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
-              boxShadow:
-                theme.palette.mode === 'dark' ? `0 2px 8px ${alpha('#000', 0.25)}` : `0 2px 8px ${alpha(theme.palette.primary.main, 0.06)}`,
-              transition: 'all 0.2s ease',
-              overflow: 'hidden',
-              position: 'relative',
-              '&:hover': {
-                transform: 'translateY(-2px)',
+        {airports.map((airport) => {
+          const isSelected = selectedIds.includes(airport.id);
+
+          return (
+            <Card
+              key={airport.id}
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                borderRadius: 3,
+                border: `1px solid ${isSelected ? alpha(theme.palette.primary.main, 0.4) : alpha(theme.palette.divider, 0.12)}`,
                 boxShadow:
                   theme.palette.mode === 'dark'
-                    ? `0 6px 16px ${alpha('#000', 0.35)}`
-                    : `0 6px 16px ${alpha(theme.palette.primary.main, 0.12)}`
-              },
-              // 顶部状态指示条
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 3,
-                background: getStatusBarColor(airport)
-              }
-            }}
-          >
-            <CardContent sx={{ p: 2, pt: 2, flex: 1, display: 'flex', flexDirection: 'column', '&:last-child': { pb: 2 } }}>
-              {/* 头部：Logo、名称、状态 */}
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1.5 }}>
-                <AirportLogo logo={airport.logo} name={airport.name} size="medium" />
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight={600}
-                    sx={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      lineHeight: 1.3
-                    }}
-                  >
-                    {airport.name}
-                  </Typography>
-                  <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
-                    <Chip
-                      label={airport.enabled ? '启用' : '禁用'}
-                      color={airport.enabled ? 'success' : 'default'}
-                      size="small"
-                      sx={{ height: 20, fontSize: '0.7rem' }}
-                    />
-                    {airport.group && (
-                      <Chip label={airport.group} variant="outlined" size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
-                    )}
-                  </Stack>
+                    ? `0 2px 8px ${alpha('#000', isSelected ? 0.35 : 0.25)}`
+                    : `0 2px 8px ${alpha(theme.palette.primary.main, isSelected ? 0.16 : 0.06)}`,
+                backgroundColor: isSelected ? alpha(theme.palette.primary.main, 0.03) : 'background.paper',
+                transition: 'all 0.2s ease',
+                overflow: 'hidden',
+                position: 'relative',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow:
+                    theme.palette.mode === 'dark'
+                      ? `0 6px 16px ${alpha('#000', 0.35)}`
+                      : `0 6px 16px ${alpha(theme.palette.primary.main, 0.12)}`
+                },
+                // 顶部状态指示条
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  background: getStatusBarColor(airport)
+                }
+              }}
+            >
+              <CardContent sx={{ p: 2, pt: 2, flex: 1, display: 'flex', flexDirection: 'column', '&:last-child': { pb: 2 } }}>
+                <Box sx={{ position: 'absolute', top: 6, right: 6, zIndex: 1 }}>
+                  <Checkbox checked={isSelected} onChange={() => onToggleSelect(airport.id)} size="small" />
                 </Box>
-              </Box>
+                {/* 头部：Logo、名称、状态 */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1.5 }}>
+                  <AirportLogo logo={airport.logo} name={airport.name} size="medium" />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={600}
+                      sx={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        lineHeight: 1.3
+                      }}
+                    >
+                      {airport.name}
+                    </Typography>
+                    <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                      <Chip
+                        label={airport.enabled ? '启用' : '禁用'}
+                        color={airport.enabled ? 'success' : 'default'}
+                        size="small"
+                        sx={{ height: 20, fontSize: '0.7rem' }}
+                      />
+                      {airport.group && (
+                        <Chip label={airport.group} variant="outlined" size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+                      )}
+                    </Stack>
+                  </Box>
+                </Box>
 
               {/* 节点和调度信息 */}
               <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
@@ -558,9 +568,10 @@ export default function AirportTable({ airports, onEdit, onDelete, onPull, onRef
                   </Tooltip>
                 </Box>
               </Box>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </Box>
 
       {/* 复制成功提示 */}
@@ -580,8 +591,14 @@ export default function AirportTable({ airports, onEdit, onDelete, onPull, onRef
 
 AirportTable.propTypes = {
   airports: PropTypes.array.isRequired,
+  selectedIds: PropTypes.array,
+  onToggleSelect: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onPull: PropTypes.func.isRequired,
   onRefreshUsage: PropTypes.func
+};
+
+AirportTable.defaultProps = {
+  selectedIds: []
 };

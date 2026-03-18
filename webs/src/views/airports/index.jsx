@@ -1,16 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // material-ui
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Alert from '@mui/material/Alert';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
+import Chip from '@mui/material/Chip';
 import FormControl from '@mui/material/FormControl';
 import IconButton from '@mui/material/IconButton';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
 import Select from '@mui/material/Select';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
@@ -18,11 +21,13 @@ import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import TuneIcon from '@mui/icons-material/Tune';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import ViewListIcon from '@mui/icons-material/ViewList';
 
@@ -31,12 +36,21 @@ import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
 import ConfirmDialog from 'components/ConfirmDialog';
 import TaskProgressPanel from 'components/TaskProgressPanel';
-import { getAirports, addAirport, updateAirport, deleteAirport, pullAirport, pullAllAirports, refreshAirportUsage } from 'api/airports';
+import {
+  getAirports,
+  addAirport,
+  updateAirport,
+  batchUpdateAirports,
+  deleteAirport,
+  pullAirport,
+  pullAllAirports,
+  refreshAirportUsage
+} from 'api/airports';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 import { getNodeGroups, getNodes, getNodeProtocols } from 'api/nodes';
 
 // local components
-import { AirportTable, AirportListView, AirportMobileList, AirportFormDialog, DeleteAirportDialog } from './component';
+import { AirportTable, AirportListView, AirportMobileList, AirportFormDialog, DeleteAirportDialog, AirportBatchEditDialog } from './component';
 
 // utils
 import { validateCronExpression } from './utils';
@@ -74,6 +88,13 @@ export default function AirportList() {
     return false;
   };
 
+  const createBatchFormState = () => ({
+    applyGroup: false,
+    group: '',
+    applySchedule: false,
+    cronExpr: '0 */12 * * *'
+  });
+
   // 数据状态
   const [airports, setAirports] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -89,6 +110,13 @@ export default function AirportList() {
     const saved = localStorage.getItem('airports_viewMode');
     return saved || 'card';
   });
+
+  // 批量选择与编辑状态
+  const [selectedAirportIds, setSelectedAirportIds] = useState([]);
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
+  const [selectingFiltered, setSelectingFiltered] = useState(false);
+  const [batchForm, setBatchForm] = useState(createBatchFormState);
 
   // 表单状态
   const [formOpen, setFormOpen] = useState(false);
@@ -146,20 +174,29 @@ export default function AirportList() {
     setSnackbar({ open: true, message, severity });
   }, []);
 
-  // 获取机场列表
-  const fetchAirports = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = {
-        page: page + 1,
-        pageSize: rowsPerPage
-      };
-      // 添加搜索参数
+  // 构建机场查询参数
+  const buildAirportQueryParams = useCallback(
+    ({ includePagination = false } = {}) => {
+      const params = {};
+
+      if (includePagination) {
+        params.page = page + 1;
+        params.pageSize = rowsPerPage;
+      }
       if (searchKeyword) params.keyword = searchKeyword;
       if (searchGroup) params.group = searchGroup;
       if (searchEnabled !== '') params.enabled = searchEnabled;
 
-      const response = await getAirports(params);
+      return params;
+    },
+    [page, rowsPerPage, searchKeyword, searchGroup, searchEnabled]
+  );
+
+  // 获取机场列表
+  const fetchAirports = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await getAirports(buildAirportQueryParams({ includePagination: true }));
       if (response.data?.items) {
         setAirports(response.data.items);
         setTotalItems(response.data.total || 0);
@@ -173,7 +210,7 @@ export default function AirportList() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchKeyword, searchGroup, searchEnabled, showMessage]);
+  }, [buildAirportQueryParams, showMessage]);
 
   // 获取分组选项
   const fetchGroupOptions = useCallback(async () => {
@@ -215,6 +252,11 @@ export default function AirportList() {
     fetchProtocolOptions();
   }, [fetchAirports, fetchGroupOptions, fetchProtocolOptions]);
 
+  // 筛选条件变化时清空选择，避免对隐藏项误做批量操作
+  useEffect(() => {
+    setSelectedAirportIds([]);
+  }, [searchKeyword, searchGroup, searchEnabled]);
+
   // 任务进度钩子
   const { registerOnComplete, unregisterOnComplete } = useTaskProgress();
 
@@ -235,6 +277,112 @@ export default function AirportList() {
   const handleRefresh = () => {
     fetchAirports();
     fetchGroupOptions();
+  };
+
+  // 切换单个机场选择状态
+  const handleToggleAirportSelection = (airportId) => {
+    setSelectedAirportIds((prev) => (prev.includes(airportId) ? prev.filter((id) => id !== airportId) : [...prev, airportId]));
+  };
+
+  // 切换当前页全选状态
+  const handleToggleCurrentPageSelection = (checked) => {
+    const pageIds = airports.map((airport) => airport.id);
+    setSelectedAirportIds((prev) => {
+      if (checked) {
+        const merged = [...prev];
+        pageIds.forEach((id) => {
+          if (!merged.includes(id)) {
+            merged.push(id);
+          }
+        });
+        return merged;
+      }
+      return prev.filter((id) => !pageIds.includes(id));
+    });
+  };
+
+  // 清空机场选择
+  const handleClearSelection = () => {
+    setSelectedAirportIds([]);
+  };
+
+  // 选择当前筛选结果中的全部机场
+  const handleSelectFilteredAirports = async () => {
+    if (totalItems === 0) {
+      showMessage('当前筛选结果中没有机场', 'warning');
+      return;
+    }
+
+    setSelectingFiltered(true);
+    try {
+      const response = await getAirports(buildAirportQueryParams());
+      const items = response.data?.items || (Array.isArray(response.data) ? response.data : []);
+      const ids = items.map((airport) => airport.id);
+      setSelectedAirportIds(ids);
+      showMessage(`已选择当前筛选结果中的 ${ids.length} 个机场`);
+    } catch (error) {
+      console.error('选择筛选结果失败:', error);
+      showMessage(error.message || '选择筛选结果失败', 'error');
+    } finally {
+      setSelectingFiltered(false);
+    }
+  };
+
+  // 打开批量设置对话框
+  const handleOpenBatchDialog = () => {
+    if (selectedAirportIds.length === 0) {
+      showMessage('请先选择要修改的机场', 'warning');
+      return;
+    }
+    setBatchForm(createBatchFormState());
+    setBatchDialogOpen(true);
+  };
+
+  // 提交批量设置
+  const handleBatchSubmit = async () => {
+    if (selectedAirportIds.length === 0) {
+      showMessage('请先选择要修改的机场', 'warning');
+      return;
+    }
+    if (!batchForm.applyGroup && !batchForm.applySchedule) {
+      showMessage('请至少选择一个要修改的字段', 'warning');
+      return;
+    }
+
+    const cronExpr = batchForm.cronExpr.trim();
+    if (batchForm.applySchedule) {
+      if (!cronExpr) {
+        showMessage('请输入Cron表达式', 'warning');
+        return;
+      }
+      if (!validateCronExpression(cronExpr)) {
+        showMessage('Cron表达式格式不正确，格式为：分 时 日 月 周', 'error');
+        return;
+      }
+    }
+
+    setBatchSubmitting(true);
+    try {
+      const response = await batchUpdateAirports({
+        ids: selectedAirportIds,
+        applyGroup: batchForm.applyGroup,
+        group: batchForm.applyGroup ? batchForm.group.trim() : '',
+        applySchedule: batchForm.applySchedule,
+        cronExpr: batchForm.applySchedule ? cronExpr : ''
+      });
+      const count = response.data?.count || selectedAirportIds.length;
+      showMessage(`已批量更新 ${count} 个机场`);
+      setBatchDialogOpen(false);
+      setBatchForm(createBatchFormState());
+      setSelectedAirportIds([]);
+      fetchAirports();
+      fetchGroupOptions();
+    } catch (error) {
+      console.error('批量更新机场失败:', error);
+      showMessage(error.message || '批量更新机场失败', 'error');
+    } finally {
+      setBatchSubmitting(false);
+    }
   };
 
   // 打开确认对话框
@@ -328,6 +476,7 @@ export default function AirportList() {
     try {
       await deleteAirport(deleteTarget.id, deleteWithNodes);
       showMessage(deleteWithNodes ? '已删除机场及关联节点' : '已删除机场（保留节点）');
+      setSelectedAirportIds((prev) => prev.filter((id) => id !== deleteTarget.id));
       fetchAirports();
     } catch (error) {
       console.error('删除失败:', error);
@@ -480,6 +629,11 @@ export default function AirportList() {
     }
   };
 
+  const currentPageIds = airports.map((airport) => airport.id);
+  const selectedOnCurrentPage = currentPageIds.filter((id) => selectedAirportIds.includes(id)).length;
+  const allCurrentPageSelected = currentPageIds.length > 0 && selectedOnCurrentPage === currentPageIds.length;
+  const currentPageIndeterminate = selectedOnCurrentPage > 0 && selectedOnCurrentPage < currentPageIds.length;
+
   return (
     <MainCard
       title="机场管理"
@@ -561,6 +715,7 @@ export default function AirportList() {
             variant="outlined"
             size="small"
             onClick={() => {
+              setSelectedAirportIds([]);
               setSearchKeyword('');
               setSearchGroup('');
               setSearchEnabled('');
@@ -573,6 +728,7 @@ export default function AirportList() {
             variant="contained"
             size="small"
             onClick={() => {
+              setSelectedAirportIds([]);
               setPage(0);
               fetchAirports();
             }}
@@ -585,10 +741,122 @@ export default function AirportList() {
       {/* 任务进度显示 */}
       <TaskProgressPanel />
 
+      {/* 批量操作栏 */}
+      {(airports.length > 0 || selectedAirportIds.length > 0) && (
+        <Paper
+          variant="outlined"
+          sx={{
+            mb: 2,
+            p: 1.5,
+            borderRadius: 2,
+            borderColor: alpha(theme.palette.primary.main, 0.16),
+            backgroundColor: alpha(theme.palette.primary.main, 0.03)
+          }}
+        >
+          {matchDownMd ? (
+            <Stack spacing={1.5}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                  <Checkbox
+                    checked={allCurrentPageSelected}
+                    indeterminate={currentPageIndeterminate}
+                    onChange={(e) => handleToggleCurrentPageSelection(e.target.checked)}
+                    disabled={currentPageIds.length === 0}
+                    size="small"
+                    sx={{ ml: -0.5 }}
+                  />
+                  <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                    本页全选
+                  </Typography>
+                </Box>
+                <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', justifyContent: 'flex-end', gap: 0.75 }}>
+                  <Chip color={selectedAirportIds.length > 0 ? 'primary' : 'default'} size="small" label={`已选 ${selectedAirportIds.length}`} />
+                  <Chip variant="outlined" size="small" label={`筛选 ${totalItems}`} />
+                </Stack>
+              </Stack>
+
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                  gap: 1
+                }}
+              >
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="contained"
+                  startIcon={<TuneIcon />}
+                  onClick={handleOpenBatchDialog}
+                  disabled={selectedAirportIds.length === 0}
+                  sx={{ gridColumn: '1 / -1' }}
+                >
+                  批量设置
+                </Button>
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  onClick={handleSelectFilteredAirports}
+                  disabled={selectingFiltered || totalItems === 0 || selectedAirportIds.length === totalItems}
+                >
+                  {selectingFiltered ? '选择中...' : '全选当前筛选'}
+                </Button>
+                <Button fullWidth size="small" color="inherit" onClick={handleClearSelection} disabled={selectedAirportIds.length === 0}>
+                  清空选择
+                </Button>
+              </Box>
+            </Stack>
+          ) : (
+            <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', lg: 'center' }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                <Checkbox
+                  checked={allCurrentPageSelected}
+                  indeterminate={currentPageIndeterminate}
+                  onChange={(e) => handleToggleCurrentPageSelection(e.target.checked)}
+                  disabled={currentPageIds.length === 0}
+                  size="small"
+                />
+                <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                  本页全选
+                </Typography>
+                <Chip color={selectedAirportIds.length > 0 ? 'primary' : 'default'} size="small" label={`已选 ${selectedAirportIds.length}`} />
+                <Chip variant="outlined" size="small" label={`筛选结果 ${totalItems}`} />
+              </Stack>
+
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleSelectFilteredAirports}
+                  disabled={selectingFiltered || totalItems === 0 || selectedAirportIds.length === totalItems}
+                >
+                  {selectingFiltered ? '选择中...' : '全选当前筛选'}
+                </Button>
+                <Button size="small" color="inherit" onClick={handleClearSelection} disabled={selectedAirportIds.length === 0}>
+                  清空选择
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  startIcon={<TuneIcon />}
+                  onClick={handleOpenBatchDialog}
+                  disabled={selectedAirportIds.length === 0}
+                >
+                  批量设置
+                </Button>
+              </Stack>
+            </Stack>
+          )}
+        </Paper>
+      )}
+
       {/* 机场列表 */}
       {matchDownMd ? (
         <AirportMobileList
           airports={airports}
+          selectedIds={selectedAirportIds}
+          onToggleSelect={handleToggleAirportSelection}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onPull={handlePull}
@@ -597,6 +865,8 @@ export default function AirportList() {
       ) : viewMode === 'list' ? (
         <AirportListView
           airports={airports}
+          selectedIds={selectedAirportIds}
+          onToggleSelect={handleToggleAirportSelection}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onPull={handlePull}
@@ -605,6 +875,8 @@ export default function AirportList() {
       ) : (
         <AirportTable
           airports={airports}
+          selectedIds={selectedAirportIds}
+          onToggleSelect={handleToggleAirportSelection}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onPull={handlePull}
@@ -645,6 +917,23 @@ export default function AirportList() {
         }}
         onSubmit={handleSubmit}
         onFetchProxyNodes={fetchProxyNodes}
+      />
+
+      {/* 批量设置对话框 */}
+      <AirportBatchEditDialog
+        open={batchDialogOpen}
+        selectedCount={selectedAirportIds.length}
+        batchForm={batchForm}
+        setBatchForm={setBatchForm}
+        groupOptions={groupOptions}
+        onClose={() => {
+          if (!batchSubmitting) {
+            setBatchDialogOpen(false);
+            setBatchForm(createBatchFormState());
+          }
+        }}
+        onSubmit={handleBatchSubmit}
+        submitting={batchSubmitting}
       />
 
       {/* 删除确认对话框 */}

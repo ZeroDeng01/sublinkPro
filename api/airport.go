@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"sublink/dto"
 	"sublink/models"
 	"sublink/node"
@@ -275,6 +276,60 @@ func AirportUpdate(c *gin.Context) {
 	_ = sch.UpdateJob(id, req.CronExpr, req.Enabled, req.URL, req.Name)
 
 	utils.OkWithMsg(c, "更新成功")
+}
+
+// AirportBatchUpdate 批量更新机场的调度和分组
+func AirportBatchUpdate(c *gin.Context) {
+	var req dto.AirportBatchUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		utils.FailWithMsg(c, "请选择要修改的机场")
+		return
+	}
+	if !req.ApplyGroup && !req.ApplySchedule {
+		utils.FailWithMsg(c, "请至少选择一个要修改的字段")
+		return
+	}
+	if req.ApplySchedule {
+		req.CronExpr = strings.TrimSpace(req.CronExpr)
+		if req.CronExpr == "" {
+			utils.FailWithMsg(c, "请输入Cron表达式")
+			return
+		}
+		if !validateCron(req.CronExpr) {
+			utils.FailWithMsg(c, "Cron表达式格式错误")
+			return
+		}
+	}
+
+	updatedAirports, err := models.BatchUpdateAirports(req.IDs, models.AirportBatchUpdateParams{
+		ApplyGroup:    req.ApplyGroup,
+		Group:         req.Group,
+		ApplySchedule: req.ApplySchedule,
+		CronExpr:      req.CronExpr,
+	})
+	if err != nil {
+		utils.FailWithMsg(c, "批量更新失败: "+err.Error())
+		return
+	}
+
+	if req.ApplySchedule {
+		sch := scheduler.GetSchedulerManager()
+		for _, airport := range updatedAirports {
+			if err := sch.UpdateJob(airport.ID, airport.CronExpr, airport.Enabled, airport.URL, airport.Name); err != nil {
+				utils.FailWithMsg(c, "批量更新成功，但刷新调度失败: "+err.Error())
+				return
+			}
+		}
+	}
+
+	utils.OkDetailed(c, "批量更新成功", gin.H{
+		"count": len(updatedAirports),
+	})
 }
 
 // AirportDelete 删除机场

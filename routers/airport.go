@@ -17,6 +17,7 @@ func Airport(r *gin.Engine) {
 		airportGroup.GET("/:id", api.AirportGet)
 		// 增删改（演示模式下限制）
 		airportGroup.POST("", middlewares.DemoModeRestrict, api.AirportAdd)
+		airportGroup.POST("/batch-update", middlewares.DemoModeRestrict, api.AirportBatchUpdate)
 		airportGroup.PUT("/:id", middlewares.DemoModeRestrict, api.AirportUpdate)
 		airportGroup.DELETE("/:id", middlewares.DemoModeRestrict, api.AirportDelete)
 		// 手动拉取

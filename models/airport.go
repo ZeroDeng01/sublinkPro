@@ -1,12 +1,15 @@
 package models
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"sublink/cache"
 	"sublink/database"
 	"sublink/utils"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // Airport 机场模型
@@ -288,6 +291,94 @@ func ListNodesByAirportID(airportID int) ([]Node, error) {
 // UpdateNodesByAirportID 更新机场关联节点的来源名称和分组
 func UpdateNodesByAirportID(airportID int, name string, group string) error {
 	return UpdateNodesBySourceID(airportID, name, group)
+}
+
+// AirportBatchUpdateParams 机场批量更新参数
+type AirportBatchUpdateParams struct {
+	ApplyGroup    bool
+	Group         string
+	ApplySchedule bool
+	CronExpr      string
+}
+
+// BatchUpdateAirports 批量更新机场的分组和调度配置
+func BatchUpdateAirports(ids []int, params AirportBatchUpdateParams) ([]Airport, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	uniqueIDs := make([]int, 0, len(ids))
+	seen := make(map[int]struct{}, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniqueIDs = append(uniqueIDs, id)
+	}
+	if len(uniqueIDs) == 0 {
+		return nil, nil
+	}
+
+	var airports []Airport
+	err := database.WithTransaction(func(tx *gorm.DB) error {
+		if err := tx.Where("id IN ?", uniqueIDs).Order("id ASC").Find(&airports).Error; err != nil {
+			return err
+		}
+		if len(airports) != len(uniqueIDs) {
+			return fmt.Errorf("部分机场不存在或已被删除")
+		}
+
+		for _, airport := range airports {
+			updates := make(map[string]interface{})
+			if params.ApplyGroup {
+				updates["group"] = params.Group
+			}
+			if params.ApplySchedule {
+				updates["cron_expr"] = params.CronExpr
+			}
+			if len(updates) > 0 {
+				if err := tx.Model(&Airport{}).Where("id = ?", airport.ID).Updates(updates).Error; err != nil {
+					return err
+				}
+			}
+
+			if params.ApplyGroup {
+				if err := tx.Model(&Node{}).Where("source_id = ?", airport.ID).Update("group", params.Group).Error; err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	updatedAirports := make([]Airport, 0, len(uniqueIDs))
+	for _, id := range uniqueIDs {
+		var refreshed Airport
+		if err := database.DB.Where("id = ?", id).First(&refreshed).Error; err != nil {
+			return nil, err
+		}
+		airportCache.Set(refreshed.ID, refreshed)
+
+		if params.ApplyGroup {
+			nodesToUpdate := nodeCache.GetByIndex("sourceID", strconv.Itoa(refreshed.ID))
+			for _, n := range nodesToUpdate {
+				n.Group = refreshed.Group
+				nodeCache.Set(n.ID, n)
+			}
+		}
+
+		updatedAirports = append(updatedAirports, refreshed)
+	}
+
+	return updatedAirports, nil
 }
 
 // UpdateUsageInfo 更新用量信息 (Write-Through)

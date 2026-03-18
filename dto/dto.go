@@ -51,6 +51,15 @@ type AirportRequest struct {
 	NodeNamePrefix   string `json:"nodeNamePrefix"`   // 自定义名称前缀（可选）
 }
 
+// AirportBatchUpdateRequest 机场批量更新请求体结构
+type AirportBatchUpdateRequest struct {
+	IDs           []int  `json:"ids" binding:"required"`
+	ApplyGroup    bool   `json:"applyGroup"`
+	Group         string `json:"group"`
+	ApplySchedule bool   `json:"applySchedule"`
+	CronExpr      string `json:"cronExpr"`
+}
+
 // BatchSortRequest 批量排序请求
 type BatchSortRequest struct {
 	ID        int    `json:"ID" binding:"required"`        // 订阅ID
