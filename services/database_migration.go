@@ -1143,18 +1143,11 @@ func buildTemplateMetadataFromDir(templateDir string) ([]models.Template, error)
 		}
 		templates = append(templates, models.Template{
 			Name:       entry.Name(),
-			Category:   inferTemplateCategory(entry.Name()),
+			Category:   models.InferTemplateCategory(entry.Name()),
 			RuleSource: "",
 		})
 	}
 	return templates, nil
-}
-
-func inferTemplateCategory(filename string) string {
-	if strings.EqualFold(filepath.Ext(filename), ".conf") {
-		return "surge"
-	}
-	return "clash"
 }
 
 func normalizeImportedSubscriptionShare(share *models.SubscriptionShare) {

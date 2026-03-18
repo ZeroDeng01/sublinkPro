@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,8 @@ import (
 	"sublink/database"
 	"sublink/utils"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // Template 模板数据模型
@@ -28,6 +31,14 @@ var templateCache *cache.MapCache[int, Template]
 
 func init() {
 	templateCache = cache.NewMapCache(func(t Template) int { return t.ID })
+}
+
+// InferTemplateCategory 根据文件名推断模板类别
+func InferTemplateCategory(fileName string) string {
+	if strings.EqualFold(filepath.Ext(fileName), ".conf") {
+		return "surge"
+	}
+	return "clash"
 }
 
 // InitTemplateCache 初始化模板缓存
@@ -145,25 +156,32 @@ func MigrateTemplatesFromFiles(templateDir string) error {
 	}
 
 	migratedCount := 0
+	updatedCount := 0
 	for _, file := range files {
 		if file.IsDir() {
 			continue
 		}
 
 		fileName := file.Name()
+		category := InferTemplateCategory(fileName)
 
 		// 检查是否已存在
 		var existing Template
-		if err := database.DB.Where("name = ?", fileName).First(&existing).Error; err == nil {
-			// 已存在，跳过
+		err := database.DB.Where("name = ?", fileName).First(&existing).Error
+		if err == nil {
+			if existing.Category == "" || (existing.Category != "clash" && existing.Category != "surge") {
+				existing.Category = category
+				if err := database.DB.Model(&existing).Update("category", category).Error; err != nil {
+					utils.Error("修复模板类别失败 %s: %v", fileName, err)
+					continue
+				}
+				updatedCount++
+				utils.Info("已修复模板类别: %s (类别: %s)", fileName, category)
+			}
 			continue
 		}
-
-		// 根据扩展名推断类别
-		category := "clash"
-		ext := strings.ToLower(filepath.Ext(fileName))
-		if ext == ".conf" {
-			category = "surge"
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
 		}
 
 		// 创建模板记录
@@ -184,6 +202,9 @@ func MigrateTemplatesFromFiles(templateDir string) error {
 
 	if migratedCount > 0 {
 		utils.Info("模板迁移完成，共迁移 %d 个模板", migratedCount)
+	}
+	if updatedCount > 0 {
+		utils.Info("模板类别修复完成，共修复 %d 个模板", updatedCount)
 	}
 
 	return nil

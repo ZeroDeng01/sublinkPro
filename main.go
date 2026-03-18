@@ -149,6 +149,12 @@ func Templateinit() {
 			}
 		}
 	}
+
+	// 内嵌模板写入文件系统后，立即补齐缺失的模板元数据，
+	// 避免首次启动时因为迁移先于模板落盘而遗漏 surge.conf 的类别。
+	if err := models.MigrateTemplatesFromFiles("./template"); err != nil {
+		utils.Error("同步模板元数据失败: %v", err)
+	}
 }
 
 func main() {

@@ -150,13 +150,15 @@ func GetTempS(c *gin.Context) {
 
 		// 从数据库获取模板元数据
 		var tmplMeta models.Template
-		category := "clash"
+		category := models.InferTemplateCategory(file.Name())
 		ruleSource := ""
 		useProxy := false
 		proxyLink := ""
 		enableIncludeAll := false
 		if err := tmplMeta.FindByName(file.Name()); err == nil {
-			category = tmplMeta.Category
+			if tmplMeta.Category == "clash" || tmplMeta.Category == "surge" {
+				category = tmplMeta.Category
+			}
 			ruleSource = tmplMeta.RuleSource
 			useProxy = tmplMeta.UseProxy
 			proxyLink = tmplMeta.ProxyLink
