@@ -7,7 +7,7 @@ import (
 	"sublink/node"
 	"sublink/services/geoip"
 	"sublink/services/mihomo"
-	"sublink/services/sse"
+	"sublink/services/notifications"
 	"sublink/utils"
 	"sync"
 	"sync/atomic"
@@ -753,16 +753,18 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 		tm.CompleteTask(taskID, fmt.Sprintf("测速完成 (成功: %d, 失败: %d, 流量: %s)", successCount, failCount, formatBytes(trafficTotal)), resultData)
 
 		// 广播测速完成通知（让用户在通知中心看到）
-		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
-			Event:   "speed_test",
+		notifications.Publish("task.speed_test_completed", notifications.Payload{
 			Title:   "节点测速完成",
 			Message: fmt.Sprintf("测速完成: 成功 %d 个, 失败 %d 个, 消耗流量 %s", successCount, failCount, formatBytes(trafficTotal)),
 			Data: map[string]interface{}{
-				"status":  "success",
-				"success": successCount,
-				"fail":    failCount,
-				"total":   totalNodes,
-				"traffic": formatBytes(trafficTotal),
+				"status":           "success",
+				"success":          successCount,
+				"success_count":    successCount,
+				"fail":             failCount,
+				"fail_count":       failCount,
+				"total":            totalNodes,
+				"traffic":          formatBytes(trafficTotal),
+				"total_traffic_mb": float64(trafficTotal) / 1024 / 1024,
 			},
 		})
 	}

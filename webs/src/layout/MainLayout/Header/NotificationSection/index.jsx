@@ -299,6 +299,16 @@ export default function NotificationSection() {
                                         >
                                           {notification.message}
                                         </Typography>
+                                        {(notification.eventName || notification.categoryName) && (
+                                          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mb: 0.75 }}>
+                                            {notification.categoryName && (
+                                              <Chip size="small" variant="outlined" label={notification.categoryName} />
+                                            )}
+                                            {notification.eventName && (
+                                              <Chip size="small" color="primary" variant="outlined" label={notification.eventName} />
+                                            )}
+                                          </Stack>
+                                        )}
                                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                                           <Typography variant="caption" color="textSecondary">
                                             {notification.timestamp?.toLocaleString('zh-CN') || '刚刚'}

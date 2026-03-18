@@ -3,7 +3,7 @@ package services
 import (
 	"fmt"
 	"sublink/models"
-	"sublink/services/sse"
+	"sublink/services/notifications"
 	"sublink/utils"
 )
 
@@ -104,8 +104,7 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 	if taggedCount > 0 || removedCount > 0 {
 		utils.Info("自动标签规则应用完成: 共标记 %d 个节点, 移除 %d 个标签", taggedCount, removedCount)
 		// 广播事件
-		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
-			Event:   "auto_tag",
+		notifications.Publish("task.auto_tag_completed", notifications.Payload{
 			Title:   "自动标签完成",
 			Message: fmt.Sprintf("自动标签规则【%s】应用完成，执行规则【%s】: 共标记 %d 个节点", triggerType, ruleNames, taggedCount),
 			Data: map[string]interface{}{
@@ -211,8 +210,7 @@ func TriggerTagRule(ruleID int) error {
 	})
 
 	// 广播通知消息，让用户在通知中心看到完成通知
-	sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
-		Event:   "tag_rule",
+	notifications.Publish("task.tag_rule_completed", notifications.Payload{
 		Title:   "标签规则执行完成",
 		Message: fmt.Sprintf("规则【%s】执行完成: 匹配 %d 个节点, 移除 %d 个节点标签", rule.Name, matchedCount, removedCount),
 		Data: map[string]interface{}{

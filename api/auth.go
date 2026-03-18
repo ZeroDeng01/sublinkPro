@@ -6,7 +6,7 @@ import (
 	"sublink/middlewares"
 	"sublink/models"
 	"sublink/services/geoip"
-	"sublink/services/sse"
+	"sublink/services/notifications"
 	"sublink/utils"
 	"time"
 
@@ -162,8 +162,7 @@ func UserLogin(c *gin.Context) {
 		}
 		timeStr := time.Now().Format("2006-01-02 15:04:05")
 
-		payload := sse.NotificationPayload{
-			Event:   "user_login",
+		payload := notifications.Payload{
 			Title:   "用户登录通知",
 			Message: fmt.Sprintf("用户 %s 已登录\nIP: %s (%s)\n时间: %s", username, ip, location, timeStr),
 			Data: map[string]interface{}{
@@ -175,9 +174,7 @@ func UserLogin(c *gin.Context) {
 			Time: timeStr,
 		}
 
-		// 触发 Telegram 和 Webhook
-		sse.TriggerTelegram("user_login", payload)
-		sse.TriggerWebhook("user_login", payload)
+		notifications.Publish("security.user_login", payload)
 	}(username, ip)
 
 	// 登录成功返回token

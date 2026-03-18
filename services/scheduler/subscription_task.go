@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sublink/models"
 	"sublink/node"
-	"sublink/services/sse"
+	"sublink/services/notifications"
 	"sublink/utils"
 )
 
@@ -54,8 +54,7 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 		if reporter != nil {
 			reporter.ReportFail(err.Error())
 		}
-		sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
-			Event:   "sub_update",
+		notifications.Publish("subscription.sync_failed", notifications.Payload{
 			Title:   "订阅更新失败",
 			Message: fmt.Sprintf("订阅 [%s] 更新失败: %v", subName, err),
 			Data: map[string]interface{}{

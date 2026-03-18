@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sublink/models"
+	"sublink/services/notifications"
 	"sublink/utils"
 	"sync"
 	"time"
@@ -44,6 +45,7 @@ type Config struct {
 	ChatID    int64
 	UseProxy  bool
 	ProxyLink string
+	EventKeys []string
 }
 
 // 全局机器人实例
@@ -115,6 +117,10 @@ func LoadConfig() (*Config, error) {
 	chatIDStr, _ := models.GetSetting("telegram_chat_id")
 	useProxy, _ := models.GetSetting("telegram_use_proxy")
 	proxyLink, _ := models.GetSetting("telegram_proxy_link")
+	eventKeys, err := notifications.LoadTelegramEventKeys()
+	if err != nil {
+		return nil, err
+	}
 
 	var chatID int64
 	if chatIDStr != "" {
@@ -127,6 +133,7 @@ func LoadConfig() (*Config, error) {
 		ChatID:    chatID,
 		UseProxy:  useProxy == "true",
 		ProxyLink: proxyLink,
+		EventKeys: eventKeys,
 	}, nil
 }
 
@@ -154,6 +161,9 @@ func SaveConfig(config *Config) error {
 		return err
 	}
 	if err := models.SetSetting("telegram_proxy_link", config.ProxyLink); err != nil {
+		return err
+	}
+	if err := notifications.SaveTelegramEventKeys(config.EventKeys); err != nil {
 		return err
 	}
 

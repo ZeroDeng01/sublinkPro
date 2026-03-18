@@ -36,6 +36,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import { getTelegramConfig, saveTelegramConfig, testTelegramConnection, reconnectTelegram } from 'api/telegram';
 import { getNodes } from 'api/nodes';
 import SearchableNodeSelect from 'components/SearchableNodeSelect';
+import NotificationEventSelector from './NotificationEventSelector';
 
 // ==============================|| Telegram 设置组件 ||============================== //
 
@@ -45,10 +46,12 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
     botToken: '',
     chatId: '',
     useProxy: false,
-    proxyLink: ''
+    proxyLink: '',
+    eventKeys: []
   });
   const [showToken, setShowToken] = useState(false);
   const [status, setStatus] = useState({ connected: false, error: '', botUsername: '', botId: 0 });
+  const [eventOptions, setEventOptions] = useState([]);
 
   // 代理节点选择
   const [proxyNodes, setProxyNodes] = useState([]);
@@ -76,8 +79,10 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
           botToken: response.data.botToken || '',
           chatId: response.data.chatId ? String(response.data.chatId) : '',
           useProxy: response.data.useProxy || false,
-          proxyLink: response.data.proxyLink || ''
+          proxyLink: response.data.proxyLink || '',
+          eventKeys: response.data.eventKeys || []
         });
+        setEventOptions(response.data.eventOptions || []);
         setStatus({
           connected: response.data.connected || false,
           error: response.data.lastError || '',
@@ -133,7 +138,8 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
         botToken: form.botToken,
         chatId: form.chatId ? parseInt(form.chatId, 10) : 0,
         useProxy: form.useProxy,
-        proxyLink: form.proxyLink
+        proxyLink: form.proxyLink,
+        eventKeys: form.eventKeys
       });
       showMessage('保存成功');
       fetchConfig();
@@ -366,6 +372,16 @@ export default function TelegramSettings({ showMessage, loading, setLoading }) {
               <Typography variant="body2">{status.error}</Typography>
             </Alert>
           )}
+
+          <Divider />
+
+          <NotificationEventSelector
+            value={form.eventKeys}
+            eventOptions={eventOptions}
+            disabled={loading}
+            description="为 Telegram 机器人勾选自动发送的事件。建议至少保留错误类和安全类通知，避免真正重要的消息被静音。"
+            onChange={(eventKeys) => setForm((prev) => ({ ...prev, eventKeys }))}
+          />
 
           <Stack direction="row" spacing={2} flexWrap="wrap">
             <Button variant="outlined" color="success" onClick={handleTest} disabled={loading || !form.botToken} startIcon={<SendIcon />}>

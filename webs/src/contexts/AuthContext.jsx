@@ -82,39 +82,29 @@ export function AuthProvider({ children }) {
       resetHeartbeat();
     });
 
-    eventSource.addEventListener('task_update', (event) => {
-      resetHeartbeat();
-      try {
-        const data = JSON.parse(event.data);
-        const status = data.status || data.data?.status;
-        const notification = {
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          type: status === 'success' ? 'success' : 'error',
-          title: data.title || (status === 'success' ? '成功' : '失败'),
-          message: data.message,
-          timestamp: new Date()
-        };
-        setNotifications((prev) => [notification, ...prev].slice(0, 50));
-      } catch (e) {
-        console.error('解析 SSE 消息失败', e);
-      }
-    });
+    const appendNotification = (data) => {
+      const parsedTimestamp = data.time ? new Date(data.time.replace(' ', 'T')) : new Date();
+      const timestamp = Number.isNaN(parsedTimestamp.getTime()) ? new Date() : parsedTimestamp;
+      const notification = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: data.severity || data.type || 'info',
+        title: data.title || data.eventName || '通知',
+        message: data.message || '',
+        timestamp,
+        eventKey: data.event || '',
+        eventName: data.eventName || '',
+        category: data.category || '',
+        categoryName: data.categoryName || ''
+      };
+      setNotifications((prev) => [notification, ...prev].slice(0, 50));
+    };
 
-    eventSource.addEventListener('sub_update', (event) => {
+    eventSource.addEventListener('notification', (event) => {
       resetHeartbeat();
       try {
-        const data = JSON.parse(event.data);
-        const status = data.status || data.data?.status;
-        const notification = {
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          type: status === 'success' ? 'success' : 'error',
-          title: data.title || (status === 'success' ? '订阅更新成功' : '订阅更新失败'),
-          message: data.message,
-          timestamp: new Date()
-        };
-        setNotifications((prev) => [notification, ...prev].slice(0, 50));
+        appendNotification(JSON.parse(event.data));
       } catch (e) {
-        console.error('解析 SSE sub_update 消息失败', e);
+        console.error('解析 SSE notification 消息失败', e);
       }
     });
 
@@ -142,7 +132,11 @@ export function AuthProvider({ children }) {
           type: data.type || 'info',
           title: data.title || '通知',
           message: data.message || JSON.stringify(data),
-          timestamp: new Date()
+          timestamp: new Date(),
+          eventKey: data.event || '',
+          eventName: data.eventName || '',
+          category: data.category || '',
+          categoryName: data.categoryName || ''
         };
         setNotifications((prev) => [notification, ...prev].slice(0, 50));
       } catch (e) {

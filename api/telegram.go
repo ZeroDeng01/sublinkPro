@@ -2,6 +2,7 @@ package api
 
 import (
 	"strconv"
+	"sublink/services/notifications"
 	"sublink/services/telegram"
 	"sublink/utils"
 
@@ -20,26 +21,29 @@ func GetTelegramConfig(c *gin.Context) {
 	status := telegram.GetStatus()
 
 	utils.OkDetailed(c, "获取成功", gin.H{
-		"enabled":     config.Enabled,
-		"botToken":    config.BotToken,
-		"chatId":      config.ChatID,
-		"useProxy":    config.UseProxy,
-		"proxyLink":   config.ProxyLink,
-		"connected":   status["connected"],
-		"lastError":   status["error"],
-		"botUsername": status["botUsername"],
-		"botId":       status["botId"],
+		"enabled":      config.Enabled,
+		"botToken":     config.BotToken,
+		"chatId":       config.ChatID,
+		"useProxy":     config.UseProxy,
+		"proxyLink":    config.ProxyLink,
+		"eventKeys":    config.EventKeys,
+		"eventOptions": notifications.EventCatalogForChannel(notifications.ChannelTelegram),
+		"connected":    status["connected"],
+		"lastError":    status["error"],
+		"botUsername":  status["botUsername"],
+		"botId":        status["botId"],
 	})
 }
 
 // UpdateTelegramConfig 更新 Telegram 配置
 func UpdateTelegramConfig(c *gin.Context) {
 	var req struct {
-		Enabled   bool   `json:"enabled"`
-		BotToken  string `json:"botToken"`
-		ChatId    int64  `json:"chatId"`
-		UseProxy  bool   `json:"useProxy"`
-		ProxyLink string `json:"proxyLink"`
+		Enabled   bool     `json:"enabled"`
+		BotToken  string   `json:"botToken"`
+		ChatId    int64    `json:"chatId"`
+		UseProxy  bool     `json:"useProxy"`
+		ProxyLink string   `json:"proxyLink"`
+		EventKeys []string `json:"eventKeys"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -53,6 +57,7 @@ func UpdateTelegramConfig(c *gin.Context) {
 		ChatID:    req.ChatId,
 		UseProxy:  req.UseProxy,
 		ProxyLink: req.ProxyLink,
+		EventKeys: req.EventKeys,
 	}
 
 	// 保存配置

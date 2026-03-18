@@ -2,8 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"strings"
 	"sublink/models"
-	"sublink/services/sse"
+	"sublink/services/notifications"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
@@ -11,39 +12,34 @@ import (
 
 // GetWebhookConfig 获取Webhook配置
 func GetWebhookConfig(c *gin.Context) {
-	webhookUrl, _ := models.GetSetting("webhook_url")
-	webhookMethod, _ := models.GetSetting("webhook_method")
-	if webhookMethod == "" {
-		webhookMethod = "POST"
+	config, err := notifications.LoadWebhookConfig()
+	if err != nil {
+		utils.FailWithMsg(c, "获取 Webhook 配置失败: "+err.Error())
+		return
 	}
-	webhookContentType, _ := models.GetSetting("webhook_content_type")
-	if webhookContentType == "" {
-		webhookContentType = "application/json"
-	}
-	webhookHeaders, _ := models.GetSetting("webhook_headers")
-	webhookBody, _ := models.GetSetting("webhook_body")
-	webhookEnabledStr, _ := models.GetSetting("webhook_enabled")
-	webhookEnabled := webhookEnabledStr == "true"
 
 	utils.OkDetailed(c, "获取成功", gin.H{
-		"webhookUrl":         webhookUrl,
-		"webhookMethod":      webhookMethod,
-		"webhookContentType": webhookContentType,
-		"webhookHeaders":     webhookHeaders,
-		"webhookBody":        webhookBody,
-		"webhookEnabled":     webhookEnabled,
+		"webhookUrl":         config.URL,
+		"webhookMethod":      config.Method,
+		"webhookContentType": config.ContentType,
+		"webhookHeaders":     config.Headers,
+		"webhookBody":        config.Body,
+		"webhookEnabled":     config.Enabled,
+		"eventKeys":          config.EventKeys,
+		"eventOptions":       notifications.EventCatalogForChannel(notifications.ChannelWebhook),
 	})
 }
 
 // UpdateWebhookConfig 更新Webhook配置
 func UpdateWebhookConfig(c *gin.Context) {
 	var req struct {
-		WebhookUrl         string `json:"webhookUrl"`
-		WebhookMethod      string `json:"webhookMethod"`
-		WebhookContentType string `json:"webhookContentType"`
-		WebhookHeaders     string `json:"webhookHeaders"`
-		WebhookBody        string `json:"webhookBody"`
-		WebhookEnabled     bool   `json:"webhookEnabled"`
+		WebhookUrl         string   `json:"webhookUrl"`
+		WebhookMethod      string   `json:"webhookMethod"`
+		WebhookContentType string   `json:"webhookContentType"`
+		WebhookHeaders     string   `json:"webhookHeaders"`
+		WebhookBody        string   `json:"webhookBody"`
+		WebhookEnabled     bool     `json:"webhookEnabled"`
+		EventKeys          []string `json:"eventKeys"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -60,32 +56,18 @@ func UpdateWebhookConfig(c *gin.Context) {
 		}
 	}
 
-	if err := models.SetSetting("webhook_url", req.WebhookUrl); err != nil {
-		utils.FailWithMsg(c, "保存 URL 失败")
-		return
+	config := &notifications.WebhookConfig{
+		URL:         strings.TrimSpace(req.WebhookUrl),
+		Method:      req.WebhookMethod,
+		ContentType: req.WebhookContentType,
+		Headers:     req.WebhookHeaders,
+		Body:        req.WebhookBody,
+		Enabled:     req.WebhookEnabled,
+		EventKeys:   req.EventKeys,
 	}
-	if err := models.SetSetting("webhook_method", req.WebhookMethod); err != nil {
-		utils.FailWithMsg(c, "保存 Method 失败")
-		return
-	}
-	if err := models.SetSetting("webhook_content_type", req.WebhookContentType); err != nil {
-		utils.FailWithMsg(c, "保存 Content-Type 失败")
-		return
-	}
-	if err := models.SetSetting("webhook_headers", req.WebhookHeaders); err != nil {
-		utils.FailWithMsg(c, "保存 Headers 失败")
-		return
-	}
-	if err := models.SetSetting("webhook_body", req.WebhookBody); err != nil {
-		utils.FailWithMsg(c, "保存 Body 失败")
-		return
-	}
-	enabledStr := "false"
-	if req.WebhookEnabled {
-		enabledStr = "true"
-	}
-	if err := models.SetSetting("webhook_enabled", enabledStr); err != nil {
-		utils.FailWithMsg(c, "保存启用状态失败")
+
+	if err := notifications.SaveWebhookConfig(config); err != nil {
+		utils.FailWithMsg(c, "保存 Webhook 配置失败: "+err.Error())
 		return
 	}
 
@@ -107,26 +89,36 @@ func TestWebhookConfig(c *gin.Context) {
 		return
 	}
 
-	// 构造配置对象
-	config := map[string]string{
-		"url":         req.WebhookUrl,
-		"method":      req.WebhookMethod,
-		"contentType": req.WebhookContentType,
-		"headers":     req.WebhookHeaders,
-		"body":        req.WebhookBody,
+	if req.WebhookHeaders != "" {
+		var headers map[string]interface{}
+		if err := json.Unmarshal([]byte(req.WebhookHeaders), &headers); err != nil {
+			utils.FailWithMsg(c, "Headers 必须是有效的 JSON 格式")
+			return
+		}
 	}
 
-	// 构造测试 Payload
-	payload := sse.NotificationPayload{
-		Event:   "test_webhook",
-		Title:   "Sublink Pro Webhook 测试",
-		Message: "这是一条Sublink Pro测试消息，用于验证 Webhook 配置是否正确。",
+	config := &notifications.WebhookConfig{
+		URL:         strings.TrimSpace(req.WebhookUrl),
+		Method:      req.WebhookMethod,
+		ContentType: req.WebhookContentType,
+		Headers:     req.WebhookHeaders,
+		Body:        req.WebhookBody,
+	}
+
+	payload := notifications.Payload{
+		Event:        "test.webhook",
+		EventName:    "Webhook 测试",
+		Category:     "system",
+		CategoryName: "系统测试",
+		Severity:     "info",
+		Title:        "Sublink Pro Webhook 测试",
+		Message:      "这是一条Sublink Pro测试消息，用于验证 Webhook 配置是否正确。",
 		Data: map[string]interface{}{
 			"test": true,
 		},
 	}
 
-	if err := sse.SendWebhook(config, "test_webhook", payload); err != nil {
+	if err := notifications.SendWebhook(config, payload); err != nil {
 		utils.FailWithMsg(c, "测试失败: "+err.Error())
 		return
 	}

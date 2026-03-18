@@ -19,6 +19,7 @@ import (
 	"sublink/services"
 	"sublink/services/geoip"
 	"sublink/services/mihomo"
+	"sublink/services/notifications"
 	"sublink/services/scheduler"
 	"sublink/services/sse"
 	"sublink/services/telegram"
@@ -526,7 +527,7 @@ func Run() {
 
 	// 设置 Telegram 服务包装器和 SSE 通知函数
 	services.InitTelegramWrapper()
-	sse.TelegramNotifier = telegram.SendNotification
+	notifications.RegisterTelegramSender(telegram.SendNotification)
 
 	// 从数据库加载定时任务（演示模式下跳过）
 	if !models.IsDemoMode() && sch != nil {

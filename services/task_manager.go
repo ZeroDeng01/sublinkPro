@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sublink/models"
+	"sublink/services/notifications"
 	"sublink/services/sse"
 	"sublink/utils"
 	"sync"
@@ -368,8 +369,7 @@ func (tm *TaskManager) broadcastProgressWithResult(task *models.Task, status str
 
 // BroadcastEvent 广播任务事件（用于完成通知等）
 func (tm *TaskManager) BroadcastEvent(task *models.Task, eventType string, data map[string]interface{}) {
-	sse.GetSSEBroker().BroadcastEvent("task_update", sse.NotificationPayload{
-		Event:   eventType,
+	notifications.Publish(eventType, notifications.Payload{
 		Title:   fmt.Sprintf("%s - %s", task.Name, getTaskStatusTitle(task.Status)),
 		Message: task.Message,
 		Data:    data,

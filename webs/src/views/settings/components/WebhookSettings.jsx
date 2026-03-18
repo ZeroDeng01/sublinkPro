@@ -10,6 +10,7 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
+import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Switch from '@mui/material/Switch';
@@ -29,6 +30,7 @@ import SaveIcon from '@mui/icons-material/Save';
 
 // project imports
 import { getWebhookConfig, updateWebhookConfig, testWebhook } from 'api/settings';
+import NotificationEventSelector from './NotificationEventSelector';
 
 // ==============================|| Webhook 设置组件 ||============================== //
 
@@ -40,8 +42,10 @@ export default function WebhookSettings({ showMessage, loading, setLoading }) {
     webhookContentType: 'application/json',
     webhookHeaders: '',
     webhookBody: '',
-    webhookEnabled: false
+    webhookEnabled: false,
+    eventKeys: []
   });
+  const [eventOptions, setEventOptions] = useState([]);
 
   useEffect(() => {
     fetchWebhookConfig();
@@ -57,8 +61,10 @@ export default function WebhookSettings({ showMessage, loading, setLoading }) {
           webhookContentType: response.data.webhookContentType || 'application/json',
           webhookHeaders: response.data.webhookHeaders || '',
           webhookBody: response.data.webhookBody || '',
-          webhookEnabled: response.data.webhookEnabled || false
+          webhookEnabled: response.data.webhookEnabled || false,
+          eventKeys: response.data.eventKeys || []
         });
+        setEventOptions(response.data.eventOptions || []);
       }
     } catch (error) {
       console.error('获取 Webhook 配置失败:', error);
@@ -106,58 +112,102 @@ export default function WebhookSettings({ showMessage, loading, setLoading }) {
         title="Webhook 设置"
         avatar={<WebhookIcon color="primary" />}
         action={
-          <FormControlLabel
-            control={
-              <Switch
-                checked={webhookForm.webhookEnabled}
-                onChange={(e) => setWebhookForm({ ...webhookForm, webhookEnabled: e.target.checked })}
-              />
-            }
-            label={webhookForm.webhookEnabled ? '启用' : '禁用'}
-          />
+          <Stack direction="row" spacing={1} alignItems="center">
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={webhookForm.webhookEnabled}
+                  onChange={(e) => setWebhookForm({ ...webhookForm, webhookEnabled: e.target.checked })}
+                />
+              }
+              label={webhookForm.webhookEnabled ? '启用' : '禁用'}
+            />
+          </Stack>
         }
       />
       <CardContent>
-        <Stack spacing={2}>
-          <TextField
-            fullWidth
-            label="Webhook URL"
-            value={webhookForm.webhookUrl}
-            onChange={(e) => setWebhookForm({ ...webhookForm, webhookUrl: e.target.value })}
-            placeholder="https://example.com/webhook"
-          />
-
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <FormControl fullWidth>
-                <InputLabel>请求方法</InputLabel>
-                <Select
-                  value={webhookForm.webhookMethod}
-                  label="请求方法"
-                  onChange={(e) => setWebhookForm({ ...webhookForm, webhookMethod: e.target.value })}
-                >
-                  <MenuItem value="POST">POST</MenuItem>
-                  <MenuItem value="GET">GET</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={6}>
-              <FormControl fullWidth>
-                <InputLabel>Content-Type</InputLabel>
-                <Select
-                  value={webhookForm.webhookContentType}
-                  label="Content-Type"
-                  onChange={(e) => setWebhookForm({ ...webhookForm, webhookContentType: e.target.value })}
-                >
-                  <MenuItem value="application/json">application/json</MenuItem>
-                  <MenuItem value="application/x-www-form-urlencoded">application/x-www-form-urlencoded</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+        <Stack spacing={2.5}>
+          <Alert severity="info" variant="outlined">
+            Webhook 会按事件类型独立触发。建议先勾选需要推送的事件，再配置接收地址和请求内容，避免所有消息都被无差别推送。
+          </Alert>
 
           <Box>
             <Typography variant="subtitle2" gutterBottom>
+              1. 选择触发事件
+            </Typography>
+            <NotificationEventSelector
+              value={webhookForm.eventKeys}
+              eventOptions={eventOptions}
+              disabled={loading}
+              description="先定义哪些事件会触发推送，再继续配置目标地址和请求格式。"
+              onChange={(eventKeys) => setWebhookForm((prev) => ({ ...prev, eventKeys }))}
+            />
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              2. 配置接收地址
+            </Typography>
+            <TextField
+              fullWidth
+              label="Webhook URL"
+              value={webhookForm.webhookUrl}
+              onChange={(e) => setWebhookForm({ ...webhookForm, webhookUrl: e.target.value })}
+              placeholder="https://example.com/webhook"
+              helperText="支持在 URL 中使用模板变量，例如 {{title}}、{{message}}、{{event}}"
+            />
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              3. 配置请求方式
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={4}>
+                <FormControl fullWidth>
+                  <InputLabel>请求方法</InputLabel>
+                  <Select
+                    value={webhookForm.webhookMethod}
+                    label="请求方法"
+                    onChange={(e) => setWebhookForm({ ...webhookForm, webhookMethod: e.target.value })}
+                  >
+                    <MenuItem value="POST">POST</MenuItem>
+                    <MenuItem value="GET">GET</MenuItem>
+                    <MenuItem value="PUT">PUT</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={8}>
+                <FormControl fullWidth>
+                  <InputLabel>Content-Type</InputLabel>
+                  <Select
+                    value={webhookForm.webhookContentType}
+                    label="Content-Type"
+                    onChange={(e) => setWebhookForm({ ...webhookForm, webhookContentType: e.target.value })}
+                  >
+                    <MenuItem value="application/json">application/json</MenuItem>
+                    <MenuItem value="application/x-www-form-urlencoded">application/x-www-form-urlencoded</MenuItem>
+                    <MenuItem value="text/plain">text/plain</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              4. 自定义请求头
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              可选。适合填写鉴权信息、自定义来源标识等 JSON 请求头。
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
               Headers (JSON)
             </Typography>
             <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
@@ -185,14 +235,22 @@ export default function WebhookSettings({ showMessage, loading, setLoading }) {
             </Paper>
           </Box>
 
+          <Divider />
+
           <Box>
             <Typography variant="subtitle2" gutterBottom>
-              Body Template (JSON)
+              5. 配置请求体模板
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              用于定义实际发出的内容。<code>GET</code> 通常只拼接 URL，<code>POST/PUT</code> 更适合在这里组织 JSON 或表单。
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              Body Template
             </Typography>
             <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
               <Editor
                 height="200px"
-                language="json"
+                language={webhookForm.webhookContentType === 'application/json' ? 'json' : 'plaintext'}
                 value={webhookForm.webhookBody}
                 onChange={(value) => setWebhookForm({ ...webhookForm, webhookBody: value || '' })}
                 theme="vs-dark"
@@ -214,8 +272,10 @@ export default function WebhookSettings({ showMessage, loading, setLoading }) {
             </Paper>
             <Alert severity="info" sx={{ mt: 1 }}>
               <Typography variant="caption">
-                支持变量: {'{{title}}'} 消息标题, {'{{message}}'} 消息内容, {'{{event}}'} 事件类型, {'{{time}}'} 事件时间, {'{{json .}}'}{' '}
-                原始json数据
+                支持变量: {'{{title}}'}、{'{{message}}'}、{'{{event}}'}、{'{{eventName}}'}、{'{{category}}'}、{'{{severity}}'}、{'{{time}}'}
+                、{'{{json .}}'}
+                <br />
+                <code>GET</code> 适合只拼接 URL，<code>POST/PUT</code> 适合发送 JSON 或表单。
                 <br />
                 例如 Bark URL: https://api.day.app/key/{'{{title}}'}/{'{{message}}'}
               </Typography>
