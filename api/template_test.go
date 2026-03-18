@@ -9,6 +9,7 @@ import (
 
 	"sublink/cache"
 	"sublink/database"
+	"sublink/internal/testutil"
 	"sublink/models"
 
 	"github.com/glebarez/sqlite"
@@ -23,7 +24,7 @@ func setupTemplateAPITestDB(t *testing.T) {
 	oldInitialized := database.IsInitialized
 	oldBaseTemplateDir := baseTemplateDir
 
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "template_api_test")), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
@@ -48,6 +49,7 @@ func setupTemplateAPITestDB(t *testing.T) {
 		if oldDB != nil {
 			_ = models.InitTemplateCache()
 		}
+		testutil.CloseDB(t, db)
 	})
 }
 

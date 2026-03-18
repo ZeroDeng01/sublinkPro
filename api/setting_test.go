@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sublink/database"
+	"sublink/internal/testutil"
 	"sublink/services/notifications"
 	"testing"
 
@@ -31,7 +32,7 @@ func setupSettingAPITestDB(t *testing.T) {
 	oldDialect := database.Dialect
 	oldInitialized := database.IsInitialized
 
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "setting_api_test")), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
@@ -59,6 +60,7 @@ func setupSettingAPITestDB(t *testing.T) {
 		if oldDB != nil {
 			_ = models.InitSettingCache()
 		}
+		testutil.CloseDB(t, db)
 	})
 }
 

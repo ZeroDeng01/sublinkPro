@@ -73,8 +73,8 @@ func GetGroupDetail(groupName string) (*GroupDetailResponse, error) {
 	})
 
 	// 聚合各 SourceID 的节点数量，同时记录首次出现顺序
-	airportNodeCount := make(map[int]int)    // airportID -> nodeCount
-	firstRankBySource := make(map[int]int)   // airportID -> 首次出现序号
+	airportNodeCount := make(map[int]int)  // airportID -> nodeCount
+	firstRankBySource := make(map[int]int) // airportID -> 首次出现序号
 	nextRank := 0
 	for _, node := range groupNodes {
 		airportNodeCount[node.SourceID]++
@@ -231,10 +231,10 @@ func GetAllGroupNames() []string {
 
 // GroupInfo 分组概要信息
 type GroupInfo struct {
-	GroupName    string `json:"groupName"`
-	NodeCount    int    `json:"nodeCount"`
-	AirportCount int    `json:"airportCount"`
-	HasSortConfig bool  `json:"hasSortConfig"`
+	GroupName     string `json:"groupName"`
+	NodeCount     int    `json:"nodeCount"`
+	AirportCount  int    `json:"airportCount"`
+	HasSortConfig bool   `json:"hasSortConfig"`
 }
 
 // GetAllGroupInfos 获取所有分组的概要信息
@@ -255,9 +255,9 @@ func GetAllGroupInfos() []GroupInfo {
 		}
 
 		infos = append(infos, GroupInfo{
-			GroupName:    name,
-			NodeCount:    len(groupNodes),
-			AirportCount: len(airportSet),
+			GroupName:     name,
+			NodeCount:     len(groupNodes),
+			AirportCount:  len(airportSet),
 			HasSortConfig: configuredGroups[name],
 		})
 	}

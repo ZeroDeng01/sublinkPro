@@ -7,6 +7,7 @@ import (
 
 	"sublink/cache"
 	"sublink/database"
+	"sublink/internal/testutil"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -24,7 +25,7 @@ func setupTemplateTestDB(t *testing.T) {
 	oldDialect := database.Dialect
 	oldInitialized := database.IsInitialized
 
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "template_test")), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
@@ -42,6 +43,7 @@ func setupTemplateTestDB(t *testing.T) {
 		database.Dialect = oldDialect
 		database.IsInitialized = oldInitialized
 		resetTemplateCacheForTest()
+		testutil.CloseDB(t, db)
 	})
 }
 

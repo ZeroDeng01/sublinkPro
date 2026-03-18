@@ -7,6 +7,7 @@ import (
 
 	"sublink/cache"
 	"sublink/database"
+	"sublink/internal/testutil"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -25,7 +26,7 @@ func setupSubscriptionShareTestDB(t *testing.T) {
 	oldDialect := database.Dialect
 	oldInitialized := database.IsInitialized
 
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "subscription_share_test")), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
@@ -43,6 +44,7 @@ func setupSubscriptionShareTestDB(t *testing.T) {
 		database.Dialect = oldDialect
 		database.IsInitialized = oldInitialized
 		resetSubscriptionShareCacheForTest()
+		testutil.CloseDB(t, db)
 	})
 }
 
