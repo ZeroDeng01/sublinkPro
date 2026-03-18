@@ -2,7 +2,9 @@ package telegram
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+
 	"sublink/services/notifications"
 	"sublink/utils"
 )
@@ -146,10 +148,24 @@ func getIntFromData(data map[string]interface{}, key string) int {
 		switch val := v.(type) {
 		case int:
 			return val
+		case int32:
+			return int(val)
 		case int64:
+			return int(val)
+		case uint:
+			return int(val)
+		case uint32:
+			return int(val)
+		case uint64:
+			return int(val)
+		case float32:
 			return int(val)
 		case float64:
 			return int(val)
+		case string:
+			if parsed, err := strconv.Atoi(val); err == nil {
+				return parsed
+			}
 		}
 	}
 	return 0
@@ -158,12 +174,26 @@ func getIntFromData(data map[string]interface{}, key string) int {
 func getFloatFromData(data map[string]interface{}, key string) float64 {
 	if v, ok := data[key]; ok {
 		switch val := v.(type) {
+		case float32:
+			return float64(val)
 		case float64:
 			return val
 		case int:
 			return float64(val)
+		case int32:
+			return float64(val)
 		case int64:
 			return float64(val)
+		case uint:
+			return float64(val)
+		case uint32:
+			return float64(val)
+		case uint64:
+			return float64(val)
+		case string:
+			if parsed, err := strconv.ParseFloat(val, 64); err == nil {
+				return parsed
+			}
 		}
 	}
 	return 0

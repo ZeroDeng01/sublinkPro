@@ -2,16 +2,17 @@ package telegram
 
 import (
 	"strings"
-	"sublink/services/notifications"
 	"testing"
+
+	"sublink/services/notifications"
 )
 
 func TestFormatSpeedTestNotificationIncludesCountsAndTraffic(t *testing.T) {
 	message := formatSpeedTestNotification(notifications.Payload{
 		Message: "测速已完成",
 		Data: map[string]interface{}{
-			"success_count":    3,
-			"fail_count":       1,
+			"success_count":    int32(3),
+			"fail_count":       int32(1),
 			"total_traffic_mb": 12.5,
 		},
 	})
@@ -23,6 +24,27 @@ func TestFormatSpeedTestNotificationIncludesCountsAndTraffic(t *testing.T) {
 		t.Fatalf("expected fail count in message, got %s", message)
 	}
 	if !strings.Contains(message, "流量: 12.50 MB") {
+		t.Fatalf("expected traffic amount in message, got %s", message)
+	}
+}
+
+func TestFormatSpeedTestNotificationSupportsStringFallbackFields(t *testing.T) {
+	message := formatSpeedTestNotification(notifications.Payload{
+		Message: "测速已完成",
+		Data: map[string]interface{}{
+			"success":          "64",
+			"fail":             "103",
+			"total_traffic_mb": "58.86",
+		},
+	})
+
+	if !strings.Contains(message, "成功: 64") {
+		t.Fatalf("expected success count in message, got %s", message)
+	}
+	if !strings.Contains(message, "失败: 103") {
+		t.Fatalf("expected fail count in message, got %s", message)
+	}
+	if !strings.Contains(message, "流量: 58.86 MB") {
 		t.Fatalf("expected traffic amount in message, got %s", message)
 	}
 }
