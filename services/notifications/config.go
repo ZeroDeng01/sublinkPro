@@ -8,19 +8,21 @@ import (
 	"time"
 )
 
-const (
-	webhookEventKeysSetting  = "webhook_event_keys"
-	telegramEventKeysSetting = "telegram_event_keys"
-)
+const telegramEventKeysSetting = "telegram_event_keys"
 
 type WebhookConfig struct {
-	URL         string   `json:"webhookUrl"`
-	Method      string   `json:"webhookMethod"`
-	ContentType string   `json:"webhookContentType"`
-	Headers     string   `json:"webhookHeaders"`
-	Body        string   `json:"webhookBody"`
-	Enabled     bool     `json:"webhookEnabled"`
-	EventKeys   []string `json:"eventKeys"`
+	ID          uint       `json:"id,omitempty"`
+	Name        string     `json:"name"`
+	URL         string     `json:"webhookUrl"`
+	Method      string     `json:"webhookMethod"`
+	ContentType string     `json:"webhookContentType"`
+	Headers     string     `json:"webhookHeaders"`
+	Body        string     `json:"webhookBody"`
+	Enabled     bool       `json:"webhookEnabled"`
+	EventKeys   []string   `json:"eventKeys"`
+	CreatedAt   time.Time  `json:"createdAt,omitempty"`
+	UpdatedAt   time.Time  `json:"updatedAt,omitempty"`
+	LastTestAt  *time.Time `json:"lastTestAt,omitempty"`
 }
 
 func nowString() string {
@@ -35,59 +37,52 @@ func NormalizeWebhookMethod(method string) string {
 	return normalized
 }
 
-func LoadWebhookConfig() (*WebhookConfig, error) {
-	url, _ := models.GetSetting("webhook_url")
-	method, _ := models.GetSetting("webhook_method")
-	contentType, _ := models.GetSetting("webhook_content_type")
-	headers, _ := models.GetSetting("webhook_headers")
-	body, _ := models.GetSetting("webhook_body")
-	enabledStr, _ := models.GetSetting("webhook_enabled")
-	eventKeys, err := loadEventKeys(webhookEventKeysSetting, ChannelWebhook)
+func ListWebhookConfigs() ([]WebhookConfig, error) {
+	webhooks, err := models.ListWebhooks()
 	if err != nil {
 		return nil, err
 	}
 
-	if contentType == "" {
-		contentType = "application/json"
+	configs := make([]WebhookConfig, 0, len(webhooks))
+	for _, webhook := range webhooks {
+		configs = append(configs, webhookModelToConfig(webhook))
 	}
-
-	return &WebhookConfig{
-		URL:         url,
-		Method:      NormalizeWebhookMethod(method),
-		ContentType: contentType,
-		Headers:     headers,
-		Body:        body,
-		Enabled:     enabledStr == "true",
-		EventKeys:   eventKeys,
-	}, nil
+	return configs, nil
 }
 
-func SaveWebhookConfig(config *WebhookConfig) error {
-	if err := models.SetSetting("webhook_url", config.URL); err != nil {
-		return err
+func GetWebhookConfig(id uint) (*WebhookConfig, error) {
+	webhook, err := models.GetWebhookByID(id)
+	if err != nil {
+		return nil, err
 	}
-	if err := models.SetSetting("webhook_method", NormalizeWebhookMethod(config.Method)); err != nil {
-		return err
-	}
-	if err := models.SetSetting("webhook_content_type", normalizeWebhookContentType(config.ContentType)); err != nil {
-		return err
-	}
-	if err := models.SetSetting("webhook_headers", config.Headers); err != nil {
-		return err
-	}
-	if err := models.SetSetting("webhook_body", config.Body); err != nil {
-		return err
-	}
+	config := webhookModelToConfig(*webhook)
+	return &config, nil
+}
 
-	enabledStr := "false"
-	if config.Enabled {
-		enabledStr = "true"
+func CreateWebhookConfig(config *WebhookConfig) (*WebhookConfig, error) {
+	model := webhookConfigToModel(config)
+	if err := model.Add(); err != nil {
+		return nil, err
 	}
-	if err := models.SetSetting("webhook_enabled", enabledStr); err != nil {
-		return err
-	}
+	created := webhookModelToConfig(model)
+	return &created, nil
+}
 
-	return saveEventKeys(webhookEventKeysSetting, ChannelWebhook, config.EventKeys)
+func UpdateWebhookConfig(config *WebhookConfig) (*WebhookConfig, error) {
+	model := webhookConfigToModel(config)
+	if err := model.Update(); err != nil {
+		return nil, err
+	}
+	updated, err := models.GetWebhookByID(model.ID)
+	if err != nil {
+		return nil, err
+	}
+	result := webhookModelToConfig(*updated)
+	return &result, nil
+}
+
+func DeleteWebhookConfig(id uint) error {
+	return (&models.Webhook{ID: id}).Delete()
 }
 
 func LoadTelegramEventKeys() ([]string, error) {
@@ -96,6 +91,62 @@ func LoadTelegramEventKeys() ([]string, error) {
 
 func SaveTelegramEventKeys(keys []string) error {
 	return saveEventKeys(telegramEventKeysSetting, ChannelTelegram, keys)
+}
+
+func webhookModelToConfig(webhook models.Webhook) WebhookConfig {
+	return WebhookConfig{
+		ID:          webhook.ID,
+		Name:        webhook.Name,
+		URL:         webhook.URL,
+		Method:      NormalizeWebhookMethod(webhook.Method),
+		ContentType: normalizeWebhookContentType(webhook.ContentType),
+		Headers:     webhook.Headers,
+		Body:        webhook.Body,
+		Enabled:     webhook.Enabled,
+		EventKeys:   normalizeWebhookEventKeys(webhook.EventKeys),
+		CreatedAt:   webhook.CreatedAt,
+		UpdatedAt:   webhook.UpdatedAt,
+		LastTestAt:  webhook.LastTestAt,
+	}
+}
+
+func webhookConfigToModel(config *WebhookConfig) models.Webhook {
+	return models.Webhook{
+		ID:          config.ID,
+		Name:        strings.TrimSpace(config.Name),
+		URL:         strings.TrimSpace(config.URL),
+		Method:      NormalizeWebhookMethod(config.Method),
+		ContentType: normalizeWebhookContentType(config.ContentType),
+		Headers:     config.Headers,
+		Body:        config.Body,
+		Enabled:     config.Enabled,
+		EventKeys:   encodeWebhookEventKeys(config.EventKeys),
+		LastTestAt:  config.LastTestAt,
+	}
+}
+
+func normalizeWebhookEventKeys(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return DefaultEventKeys(ChannelWebhook)
+	}
+
+	var keys []string
+	if err := json.Unmarshal([]byte(raw), &keys); err != nil {
+		return DefaultEventKeys(ChannelWebhook)
+	}
+	return NormalizeEventKeys(ChannelWebhook, keys)
+}
+
+func encodeWebhookEventKeys(keys []string) string {
+	normalized := DefaultEventKeys(ChannelWebhook)
+	if keys != nil {
+		normalized = NormalizeEventKeys(ChannelWebhook, keys)
+	}
+	value, err := json.Marshal(normalized)
+	if err != nil {
+		return "[]"
+	}
+	return string(value)
 }
 
 func normalizeWebhookContentType(contentType string) string {

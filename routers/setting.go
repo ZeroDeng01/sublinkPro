@@ -11,10 +11,11 @@ func Settings(r *gin.Engine) {
 	SettingsGroup := r.Group("/api/v1/settings")
 	SettingsGroup.Use(middlewares.AuthToken)
 	{
-		SettingsGroup.GET("/webhook", api.GetWebhookConfig)
-		// 演示模式下禁止修改系统设置
-		SettingsGroup.POST("/webhook", middlewares.DemoModeRestrict, api.UpdateWebhookConfig)
-		SettingsGroup.POST("/webhook/test", middlewares.DemoModeRestrict, api.TestWebhookConfig)
+		SettingsGroup.GET("/webhooks", api.ListWebhooks)
+		SettingsGroup.POST("/webhooks", middlewares.DemoModeRestrict, api.CreateWebhook)
+		SettingsGroup.PUT("/webhooks/:id", middlewares.DemoModeRestrict, api.UpdateWebhook)
+		SettingsGroup.DELETE("/webhooks/:id", middlewares.DemoModeRestrict, api.DeleteWebhook)
+		SettingsGroup.POST("/webhooks/:id/test", middlewares.DemoModeRestrict, api.TestWebhookByID)
 		SettingsGroup.GET("/base-templates", api.GetBaseTemplates)
 		SettingsGroup.POST("/base-templates", middlewares.DemoModeRestrict, api.UpdateBaseTemplate)
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sublink/database"
 	"sublink/node/protocol"
 	"sublink/utils"
@@ -45,6 +46,7 @@ func RunMigrations() error {
 		{name: "SubLogs", model: &SubLogs{}},
 		{name: "AccessKey", model: &AccessKey{}},
 		{name: "SystemSetting", model: &SystemSetting{}},
+		{name: "Webhook", model: &Webhook{}},
 		{name: "Script", model: &Script{}},
 		{name: "SubcriptionGroup", model: &SubcriptionGroup{}},
 		{name: "SubcriptionScript", model: &SubcriptionScript{}},
@@ -68,6 +70,51 @@ func RunMigrations() error {
 			return fmt.Errorf("基础数据表%s迁移失败: %w", table.name, err)
 		}
 		utils.Info("数据表%s创建成功", table.name)
+	}
+
+	if err := database.RunCustomMigration("0024_migrate_legacy_webhook_settings", func() error {
+		legacyURL, _ := GetSetting("webhook_url")
+		legacyMethod, _ := GetSetting("webhook_method")
+		legacyContentType, _ := GetSetting("webhook_content_type")
+		legacyHeaders, _ := GetSetting("webhook_headers")
+		legacyBody, _ := GetSetting("webhook_body")
+		legacyEnabled, _ := GetSetting("webhook_enabled")
+		legacyEventKeys, _ := GetSetting("webhook_event_keys")
+
+		if strings.TrimSpace(legacyURL) == "" && strings.TrimSpace(legacyHeaders) == "" && strings.TrimSpace(legacyBody) == "" {
+			return nil
+		}
+
+		var count int64
+		if err := db.Model(&Webhook{}).Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			return nil
+		}
+
+		method := strings.ToUpper(strings.TrimSpace(legacyMethod))
+		if method == "" {
+			method = "POST"
+		}
+		contentType := strings.TrimSpace(legacyContentType)
+		if contentType == "" {
+			contentType = "application/json"
+		}
+
+		config := Webhook{
+			Name:        "默认 Webhook",
+			URL:         strings.TrimSpace(legacyURL),
+			Method:      method,
+			ContentType: contentType,
+			Headers:     legacyHeaders,
+			Body:        legacyBody,
+			Enabled:     legacyEnabled == "true",
+			EventKeys:   legacyEventKeys,
+		}
+		return db.Create(&config).Error
+	}); err != nil {
+		utils.Error("执行迁移 0024_migrate_legacy_webhook_settings 失败: %v", err)
 	}
 
 	// 检查并删除 idx_name_id 索引

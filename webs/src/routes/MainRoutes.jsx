@@ -21,6 +21,7 @@ const SystemMonitor = Loadable(lazy(() => import('views/monitor')));
 const TagList = Loadable(lazy(() => import('views/tags')));
 const TaskList = Loadable(lazy(() => import('views/tasks')));
 const HostList = Loadable(lazy(() => import('views/hosts')));
+const WebhookList = Loadable(lazy(() => import('views/webhooks')));
 const AirportList = Loadable(lazy(() => import('views/airports')));
 const NodeCheckList = Loadable(lazy(() => import('views/node-check')));
 // ==============================|| MAIN ROUTING ||==============================  //
@@ -113,6 +114,10 @@ const MainRoutes = {
         {
           path: 'hosts',
           element: <HostList />
+        },
+        {
+          path: 'webhooks',
+          element: <WebhookList />
         }
       ]
     }

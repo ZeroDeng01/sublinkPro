@@ -10,8 +10,11 @@ import (
 	"strings"
 	"sublink/services/sse"
 	"sublink/utils"
+	"sync"
 	"time"
 )
+
+const webhookDispatchConcurrency = 4
 
 var telegramSender func(eventKey string, payload Payload)
 
@@ -28,22 +31,45 @@ func Publish(eventKey string, payload Payload) {
 }
 
 func TriggerWebhook(eventKey string, payload Payload) {
-	config, err := LoadWebhookConfig()
+	configs, err := ListWebhookConfigs()
 	if err != nil {
 		utils.Warn("加载 Webhook 配置失败: %v", err)
 		return
 	}
-
-	if !config.Enabled || strings.TrimSpace(config.URL) == "" {
-		return
-	}
-	if !IsEventEnabled(config.EventKeys, eventKey) {
+	if len(configs) == 0 {
 		return
 	}
 
-	if err := SendWebhook(config, payload); err != nil {
-		utils.Warn("发送 Webhook 通知失败: %v", err)
+	sem := make(chan struct{}, webhookDispatchConcurrency)
+	var wg sync.WaitGroup
+
+	for _, config := range configs {
+		if !config.Enabled || strings.TrimSpace(config.URL) == "" {
+			continue
+		}
+		if !IsEventEnabled(config.EventKeys, eventKey) {
+			continue
+		}
+
+		cfg := config
+		wg.Add(1)
+		sem <- struct{}{}
+
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			if err := SendWebhook(&cfg, payload); err != nil {
+				name := strings.TrimSpace(cfg.Name)
+				if name == "" {
+					name = fmt.Sprintf("#%d", cfg.ID)
+				}
+				utils.Warn("发送 Webhook[%s] 通知失败: %v", name, err)
+			}
+		}()
 	}
+
+	wg.Wait()
 }
 
 func SendWebhook(config *WebhookConfig, payload Payload) error {

@@ -130,6 +130,14 @@ const system = {
       breadcrumbs: true
     },
     {
+      id: 'webhooks',
+      title: 'Webhook 管理',
+      type: 'item',
+      url: '/system/webhooks',
+      icon: IconList,
+      breadcrumbs: true
+    },
+    {
       id: 'monitor',
       title: '系统监控',
       type: 'item',

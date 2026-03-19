@@ -1,28 +1,39 @@
 import request from './request';
 
-// 获取 Webhook 配置
-export function getWebhookConfig() {
+export function getWebhooks() {
   return request({
-    url: '/v1/settings/webhook',
+    url: '/v1/settings/webhooks',
     method: 'get'
   });
 }
 
-// 保存 Webhook 配置
-export function updateWebhookConfig(data) {
+export function createWebhook(data) {
   return request({
-    url: '/v1/settings/webhook',
+    url: '/v1/settings/webhooks',
     method: 'post',
     data
   });
 }
 
-// 测试 Webhook
-export function testWebhook(data) {
+export function updateWebhook(id, data) {
   return request({
-    url: '/v1/settings/webhook/test',
-    method: 'post',
+    url: `/v1/settings/webhooks/${id}`,
+    method: 'put',
     data
+  });
+}
+
+export function deleteWebhook(id) {
+  return request({
+    url: `/v1/settings/webhooks/${id}`,
+    method: 'delete'
+  });
+}
+
+export function testWebhookById(id) {
+  return request({
+    url: `/v1/settings/webhooks/${id}/test`,
+    method: 'post'
   });
 }
 
