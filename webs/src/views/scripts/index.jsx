@@ -33,6 +33,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 
 import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
@@ -77,6 +79,7 @@ export default function ScriptList() {
   const [isEdit, setIsEdit] = useState(false);
   const [currentScript, setCurrentScript] = useState(null);
   const [formData, setFormData] = useState({ name: '', version: '0.0.0', content: DEFAULT_SCRIPT });
+  const [editorFullscreen, setEditorFullscreen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() => {
@@ -142,6 +145,7 @@ export default function ScriptList() {
     setIsEdit(false);
     setCurrentScript(null);
     setFormData({ name: '', version: '0.0.0', content: DEFAULT_SCRIPT });
+    setEditorFullscreen(false);
     setDialogOpen(true);
   };
 
@@ -149,6 +153,7 @@ export default function ScriptList() {
     setIsEdit(true);
     setCurrentScript(script);
     setFormData({ name: script.name, version: script.version, content: script.content });
+    setEditorFullscreen(false);
     setDialogOpen(true);
   };
 
@@ -174,6 +179,7 @@ export default function ScriptList() {
         await addScript(formData);
         showMessage('添加成功');
       }
+      setEditorFullscreen(false);
       setDialogOpen(false);
       fetchScripts(page, rowsPerPage);
     } catch (error) {
@@ -186,6 +192,22 @@ export default function ScriptList() {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
     return date.toLocaleString('zh-CN');
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditorFullscreen(false);
+  };
+
+  const compactOutlinedFieldSx = {
+    '& .MuiInputLabel-root': {
+      px: 0.5,
+      backgroundColor: 'background.paper',
+      maxWidth: 'calc(100% - 24px)'
+    },
+    '& .MuiInputLabel-shrink': {
+      maxWidth: 'calc(133% - 32px)'
+    }
   };
 
   return (
@@ -319,44 +341,184 @@ export default function ScriptList() {
       />
 
       {/* 添加/编辑对话框 */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle>{isEdit ? '编辑脚本' : '添加脚本'}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2}>
-            <Stack direction="row" spacing={2}>
-              <TextField
-                fullWidth
-                label="脚本名称"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-              <TextField
-                label="版本"
-                value={formData.version}
-                onChange={(e) => setFormData({ ...formData, version: e.target.value })}
-                placeholder="0.0.0"
-                sx={{ width: 150 }}
-              />
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        maxWidth={editorFullscreen ? false : 'lg'}
+        fullWidth
+        fullScreen={editorFullscreen}
+        PaperProps={{
+          sx: editorFullscreen
+            ? {
+                height: '100vh',
+                maxHeight: '100vh',
+                m: 0
+              }
+            : undefined
+        }}
+      >
+        <DialogTitle
+          sx={
+            editorFullscreen
+              ? {
+                  pb: 1,
+                  display: 'flex',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  alignItems: { xs: 'stretch', md: 'center' },
+                  justifyContent: 'space-between',
+                  gap: 1.5
+                }
+              : undefined
+          }
+        >
+          <Stack spacing={0.5}>
+            <Typography variant="h4">{isEdit ? '编辑脚本' : '添加脚本'}</Typography>
+            {editorFullscreen && (
+              <Typography variant="body2" color="textSecondary">
+                全屏模式已切换为编辑器优先布局，脚本信息保留为紧凑工具栏。
+              </Typography>
+            )}
+          </Stack>
+          {editorFullscreen && (
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap justifyContent="flex-end">
+              <Button size="small" onClick={handleCloseDialog}>
+                取消
+              </Button>
+              <Button variant="contained" size="small" onClick={handleSubmit}>
+                保存
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<FullscreenExitIcon />}
+                onClick={() => setEditorFullscreen(false)}
+              >
+                退出全屏
+              </Button>
             </Stack>
-            <Editor
-              height="400px"
-              language="javascript"
-              value={formData.content}
-              onChange={(value) => setFormData({ ...formData, content: value || '' })}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: true },
-                fontSize: 14
-              }}
-            />
+          )}
+        </DialogTitle>
+        <DialogContent
+          sx={
+            editorFullscreen
+              ? {
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  pt: 1,
+                  pb: 2
+                }
+              : undefined
+          }
+        >
+          <Stack spacing={2} sx={editorFullscreen ? { flex: 1, minHeight: 0 } : { mt: 1 }}>
+            {editorFullscreen ? (
+              <Box
+                sx={{
+                  px: 0.5,
+                  py: 1,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  bgcolor: 'background.paper'
+                }}
+              >
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', md: 'flex-start' }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="脚本名称"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      ...compactOutlinedFieldSx,
+                      flex: 1,
+                      minWidth: 0
+                    }}
+                  />
+                  <TextField
+                    size="small"
+                    label="版本"
+                    value={formData.version}
+                    onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+                    placeholder="0.0.0"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      ...compactOutlinedFieldSx,
+                      width: { xs: '100%', md: 180 },
+                      flex: { md: '0 0 180px' }
+                    }}
+                  />
+                </Stack>
+              </Box>
+            ) : (
+              <>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <TextField
+                    fullWidth
+                    label="脚本名称"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                  <TextField
+                    label="版本"
+                    value={formData.version}
+                    onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+                    placeholder="0.0.0"
+                    sx={{ width: 150 }}
+                  />
+                </Stack>
+                <Stack direction="row" justifyContent="flex-end">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={editorFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+                    onClick={() => setEditorFullscreen((prev) => !prev)}
+                  >
+                    {editorFullscreen ? '退出全屏' : '全屏编辑'}
+                  </Button>
+                </Stack>
+              </>
+            )}
+            <Box
+              sx={
+                editorFullscreen
+                  ? {
+                      position: 'relative',
+                      flex: 1,
+                      minHeight: 0,
+                      borderRadius: 1,
+                      overflow: 'hidden'
+                    }
+                  : { position: 'relative' }
+              }
+            >
+              <Editor
+                height={editorFullscreen ? '100%' : '400px'}
+                language="javascript"
+                value={formData.content}
+                onChange={(value) => setFormData({ ...formData, content: value || '' })}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: !matchDownMd },
+                  fontSize: matchDownMd ? 12 : 14,
+                  automaticLayout: true,
+                  scrollBeyondLastLine: false,
+                  lineNumbers: matchDownMd ? 'off' : 'on'
+                }}
+              />
+            </Box>
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>取消</Button>
-          <Button variant="contained" onClick={handleSubmit}>
-            确定
-          </Button>
-        </DialogActions>
+        {!editorFullscreen && (
+          <DialogActions>
+            <Button onClick={handleCloseDialog}>取消</Button>
+            <Button variant="contained" onClick={handleSubmit}>
+              确定
+            </Button>
+          </DialogActions>
+        )}
       </Dialog>
 
       {/* 提示消息 */}
