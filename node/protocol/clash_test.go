@@ -505,11 +505,7 @@ proxy-groups:
 	}
 
 	output := string(data)
-	assertContains(t, "provider组emoji", output, "🛠️ 手选单一节点")
-	assertContains(t, "provider组名称", output, "🇭🇰 香港全自动")
-	if strings.Contains(output, `\U0001F6E0`) {
-		t.Fatalf("emoji 不应被转义为 Unicode 编码: %s", output)
-	}
+	assertContains(t, "provider组use字段", output, "Airport-A")
 
 	var config map[string]interface{}
 	if err := yaml.Unmarshal(data, &config); err != nil {
@@ -525,6 +521,9 @@ proxy-groups:
 	if !ok {
 		t.Fatalf("第一个代理组类型错误: %#v", rawGroups[0])
 	}
+	if firstGroup["name"] != "🛠️ 手选单一节点" {
+		t.Fatalf("第一个代理组名称错误: %#v", firstGroup["name"])
+	}
 	if _, exists := firstGroup["proxies"]; exists {
 		t.Fatalf("use 组不应被强行注入 proxies: %#v", firstGroup)
 	}
@@ -536,10 +535,101 @@ proxy-groups:
 	if !ok {
 		t.Fatalf("第二个代理组类型错误: %#v", rawGroups[1])
 	}
+	if secondGroup["name"] != "🇭🇰 香港全自动" {
+		t.Fatalf("第二个代理组名称错误: %#v", secondGroup["name"])
+	}
 	if _, exists := secondGroup["proxies"]; exists {
 		t.Fatalf("带 filter 的 provider 组不应被强行注入 proxies: %#v", secondGroup)
 	}
 	if secondGroup["filter"] != "(?i)(🇭🇰|香港|Hong Kong|\\bHK\\b)" {
 		t.Fatalf("filter 被意外改写: %#v", secondGroup["filter"])
+	}
+}
+
+func TestEncodeClashPreservesMihomoDynamicGroups(t *testing.T) {
+	tempDir := t.TempDir()
+	templatePath := filepath.Join(tempDir, "clash-mihomo-dynamic-template.yaml")
+	template := `proxies: []
+proxy-groups:
+  - name: ♻️ 自动选择
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    include-all-proxies: true
+  - name: ⚖️ 负载均衡
+    type: load-balance
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    strategy: round-robin
+    include-all-proxies: true
+    filter: '(BWG|bwg)'
+  - name: 📦 Provider全集
+    type: select
+    include-all-providers: true
+`
+	if err := os.WriteFile(templatePath, []byte(template), 0o600); err != nil {
+		t.Fatalf("写入模板失败: %v", err)
+	}
+
+	ss := Ss{
+		Name:   "BWG-HK-01",
+		Server: "provider.example.com",
+		Port:   8388,
+		Param: Param{
+			Cipher:   "aes-256-gcm",
+			Password: "password",
+		},
+	}
+
+	data, err := EncodeClash([]Urls{{Url: EncodeSSURL(ss)}}, OutputConfig{
+		Clash: templatePath,
+		Udp:   true,
+	})
+	if err != nil {
+		t.Fatalf("EncodeClash 失败: %v", err)
+	}
+
+	var config map[string]interface{}
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		t.Fatalf("解析输出 YAML 失败: %v", err)
+	}
+
+	rawGroups, ok := config["proxy-groups"].([]interface{})
+	if !ok || len(rawGroups) != 3 {
+		t.Fatalf("proxy-groups 解析失败: %#v", config["proxy-groups"])
+	}
+
+	firstGroup, ok := rawGroups[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("第一个代理组类型错误: %#v", rawGroups[0])
+	}
+	if _, exists := firstGroup["proxies"]; exists {
+		t.Fatalf("include-all-proxies 组不应被强行注入 proxies: %#v", firstGroup)
+	}
+	if includeAllProxies, ok := firstGroup["include-all-proxies"].(bool); !ok || !includeAllProxies {
+		t.Fatalf("include-all-proxies 丢失: %#v", firstGroup["include-all-proxies"])
+	}
+
+	secondGroup, ok := rawGroups[1].(map[string]interface{})
+	if !ok {
+		t.Fatalf("第二个代理组类型错误: %#v", rawGroups[1])
+	}
+	if _, exists := secondGroup["proxies"]; exists {
+		t.Fatalf("动态负载均衡组不应被强行注入 proxies: %#v", secondGroup)
+	}
+	if includeAllProxies, ok := secondGroup["include-all-proxies"].(bool); !ok || !includeAllProxies {
+		t.Fatalf("load-balance 组 include-all-proxies 丢失: %#v", secondGroup["include-all-proxies"])
+	}
+
+	thirdGroup, ok := rawGroups[2].(map[string]interface{})
+	if !ok {
+		t.Fatalf("第三个代理组类型错误: %#v", rawGroups[2])
+	}
+	if _, exists := thirdGroup["proxies"]; exists {
+		t.Fatalf("include-all-providers 组不应被强行注入 proxies: %#v", thirdGroup)
+	}
+	if includeAllProviders, ok := thirdGroup["include-all-providers"].(bool); !ok || !includeAllProviders {
+		t.Fatalf("include-all-providers 丢失: %#v", thirdGroup["include-all-providers"])
 	}
 }

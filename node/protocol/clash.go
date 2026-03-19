@@ -154,9 +154,31 @@ func convertToInt(value interface{}) (int, error) {
 	}
 }
 
+func isTruthyConfigValue(value interface{}) bool {
+	switch v := value.(type) {
+	case bool:
+		return v
+	case int:
+		return v != 0
+	case int64:
+		return v != 0
+	case float64:
+		return v != 0
+	case string:
+		switch strings.ToLower(strings.TrimSpace(v)) {
+		case "1", "true", "yes", "on":
+			return true
+		}
+	}
+
+	return false
+}
+
 func shouldPreserveProxyGroup(proxyGroup map[string]interface{}) bool {
-	if includeAll, ok := proxyGroup["include-all"].(bool); ok && includeAll {
-		return true
+	for _, field := range []string{"include-all", "include-all-proxies", "include-all-providers"} {
+		if isTruthyConfigValue(proxyGroup[field]) {
+			return true
+		}
 	}
 
 	// Provider 组和自动匹配组由客户端在运行时解析，不能在服务端展开为固定节点列表。
