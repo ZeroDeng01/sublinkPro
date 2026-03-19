@@ -9,6 +9,7 @@ import Snackbar from '@mui/material/Snackbar';
 
 // icons
 import PersonIcon from '@mui/icons-material/Person';
+import LanguageIcon from '@mui/icons-material/Language';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import TuneIcon from '@mui/icons-material/Tune';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -16,6 +17,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import ProfileSettings from './components/ProfileSettings';
+import SubscriptionAddressSettings from './components/SubscriptionAddressSettings';
 import TelegramSettings from './components/TelegramSettings';
 import NodeDedupSettings from './components/NodeDedupSettings';
 import DatabaseMigrationSettings from './components/DatabaseMigrationSettings';
@@ -72,14 +74,15 @@ export default function UserSettings() {
           }}
         >
           <Tab icon={<PersonIcon sx={{ mr: 1 }} />} iconPosition="start" label="个人设置" {...a11yProps(0)} />
+          <Tab icon={<LanguageIcon sx={{ mr: 1 }} />} iconPosition="start" label="订阅地址设置" {...a11yProps(1)} />
           <Tab
-            icon={<TelegramIcon sx={{ mr: 1, color: tabValue === 1 ? '#0088cc' : 'inherit' }} />}
+            icon={<TelegramIcon sx={{ mr: 1, color: tabValue === 2 ? '#0088cc' : 'inherit' }} />}
             iconPosition="start"
             label="Telegram 机器人"
-            {...a11yProps(1)}
+            {...a11yProps(2)}
           />
-          <Tab icon={<TuneIcon sx={{ mr: 1 }} />} iconPosition="start" label="节点去重" {...a11yProps(2)} />
-          <Tab icon={<StorageIcon sx={{ mr: 1 }} />} iconPosition="start" label="数据迁移" {...a11yProps(3)} />
+          <Tab icon={<TuneIcon sx={{ mr: 1 }} />} iconPosition="start" label="节点去重" {...a11yProps(3)} />
+          <Tab icon={<StorageIcon sx={{ mr: 1 }} />} iconPosition="start" label="数据迁移" {...a11yProps(4)} />
         </Tabs>
       </Box>
 
@@ -88,14 +91,18 @@ export default function UserSettings() {
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>
-        <TelegramSettings showMessage={showMessage} loading={loading} setLoading={setLoading} />
+        <SubscriptionAddressSettings showMessage={showMessage} />
       </TabPanel>
 
       <TabPanel value={tabValue} index={2}>
-        <NodeDedupSettings showMessage={showMessage} />
+        <TelegramSettings showMessage={showMessage} loading={loading} setLoading={setLoading} />
       </TabPanel>
 
       <TabPanel value={tabValue} index={3}>
+        <NodeDedupSettings showMessage={showMessage} />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={4}>
         <DatabaseMigrationSettings showMessage={showMessage} />
       </TabPanel>
 
