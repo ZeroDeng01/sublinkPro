@@ -40,11 +40,18 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
         if (e.target.closest('input[type="checkbox"]')) return;
         onViewDetails(node);
       }}
-    >
+      >
       <Box p={2}>
-        {/* 头部: 勾选框 + 名称 + 延迟 */}
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ position: 'relative', mb: 1.5, pr: 10 }}>
+          <Box sx={{ position: 'absolute', top: 0, right: 0 }}>
+            <Chip
+              label={node.LinkCountry ? formatCountry(node.LinkCountry) : '🏳️ 未知'}
+              color={node.LinkCountry ? 'secondary' : 'default'}
+              variant="outlined"
+              size="small"
+            />
+          </Box>
+          <Stack direction="row" alignItems="flex-start" sx={{ minWidth: 0 }}>
             <Checkbox
               checked={isSelected}
               onChange={(e) => {
@@ -58,25 +65,20 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
                 variant="subtitle1"
                 fontWeight="bold"
                 sx={{
+                  flex: 1,
+                  minWidth: 0,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  maxWidth: '180px'
+                  pr: 1
                 }}
               >
                 {node.Name}
               </Typography>
             </Tooltip>
           </Stack>
-          <Box sx={{ flexShrink: 0, ml: 1 }}>
-            {(() => {
-              const d = getDelayDisplay(node.DelayTime, node.DelayStatus);
-              return <Chip label={d.label} color={d.color} variant={d.variant} size="small" />;
-            })()}
-          </Box>
-        </Stack>
+        </Box>
 
-        {/* 信息区: 分组 + 来源 + 速度 + 国家 */}
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
           {node.Group && (
             <Tooltip title={`分组: ${node.Group}`}>
@@ -102,6 +104,21 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
               />
             </Tooltip>
           )}
+        </Stack>
+
+        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+          {(() => {
+            const d = getDelayDisplay(node.DelayTime, node.DelayStatus);
+            return (
+              <Chip
+                icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>⏱️</span>}
+                label={d.label}
+                color={d.color}
+                variant={d.variant}
+                size="small"
+              />
+            );
+          })()}
           {(() => {
             const s = getSpeedDisplay(node.Speed, node.SpeedStatus);
             return (
@@ -114,24 +131,38 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
               />
             );
           })()}
-          {node.LinkCountry && <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />}
+        </Stack>
+
+        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
           {(() => {
-            const display = getIpTypeDisplay(node.IsBroadcast, node.FraudScore);
-            return display.label !== '未检测' ? (
-              <Chip label={display.label} color={display.color} variant={display.variant} size="small" />
-            ) : null;
-          })()}
-          {(() => {
-            const display = getResidentialDisplay(node.IsResidential, node.FraudScore);
-            return display.label !== '未检测' ? (
-              <Chip label={display.label} color={display.color} variant={display.variant} size="small" />
-            ) : null;
-          })()}
-          {(() => {
-            const display = getFraudScoreDisplay(node.FraudScore);
-            return display.label !== '未检测' ? (
-              <Chip label={`评分 ${display.label}`} color={display.color} variant={display.variant} size="small" sx={display.sx} />
-            ) : null;
+            const ipTypeDisplay = getIpTypeDisplay(node.IsBroadcast, node.FraudScore);
+            const residentialDisplay = getResidentialDisplay(node.IsResidential, node.FraudScore);
+            const fraudScoreDisplay = getFraudScoreDisplay(node.FraudScore);
+            const isUntested =
+              ipTypeDisplay.label === '未检测' && residentialDisplay.label === '未检测' && fraudScoreDisplay.label === '未检测';
+
+            if (isUntested) {
+              return <Chip label="未检测" color="default" variant="outlined" size="small" />;
+            }
+
+            return (
+              <>
+                <Chip label={ipTypeDisplay.label} color={ipTypeDisplay.color} variant={ipTypeDisplay.variant} size="small" />
+                <Chip
+                  label={residentialDisplay.label}
+                  color={residentialDisplay.color}
+                  variant={residentialDisplay.variant}
+                  size="small"
+                />
+                <Chip
+                  label={`评分 ${fraudScoreDisplay.label}`}
+                  color={fraudScoreDisplay.color}
+                  variant={fraudScoreDisplay.variant}
+                  size="small"
+                  sx={fraudScoreDisplay.sx}
+                />
+              </>
+            );
           })()}
         </Stack>
 
