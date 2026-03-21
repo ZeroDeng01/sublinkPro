@@ -2,6 +2,7 @@ package api
 
 import (
 	"strconv"
+	"sublink/database"
 	"sublink/models"
 	"sublink/utils"
 
@@ -47,6 +48,55 @@ func ScriptDel(c *gin.Context) {
 		return
 	}
 	utils.OkWithMsg(c, "删除成功")
+}
+
+func GetScriptUsage(c *gin.Context) {
+	scriptIDStr := c.Query("id")
+	if scriptIDStr == "" {
+		utils.FailWithMsg(c, "脚本ID不能为空")
+		return
+	}
+
+	scriptID, err := strconv.Atoi(scriptIDStr)
+	if err != nil || scriptID <= 0 {
+		utils.FailWithMsg(c, "脚本ID非法")
+		return
+	}
+
+	var subScripts []models.SubcriptionScript
+	if err := database.DB.Where("script_id = ?", scriptID).Find(&subScripts).Error; err != nil {
+		utils.FailWithMsg(c, "获取脚本使用情况失败")
+		return
+	}
+
+	if len(subScripts) == 0 {
+		utils.OkWithData(c, gin.H{
+			"subscriptions": []string{},
+			"count":         0,
+		})
+		return
+	}
+
+	subIDs := make([]int, 0, len(subScripts))
+	for _, subScript := range subScripts {
+		subIDs = append(subIDs, subScript.SubcriptionID)
+	}
+
+	var subs []models.Subcription
+	if err := database.DB.Where("id IN ?", subIDs).Find(&subs).Error; err != nil {
+		utils.FailWithMsg(c, "获取脚本使用情况失败")
+		return
+	}
+
+	usedBy := make([]string, 0, len(subs))
+	for _, sub := range subs {
+		usedBy = append(usedBy, sub.Name)
+	}
+
+	utils.OkWithData(c, gin.H{
+		"subscriptions": usedBy,
+		"count":         len(usedBy),
+	})
 }
 
 // ScriptUpdate 更新脚本

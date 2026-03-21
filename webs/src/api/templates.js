@@ -65,6 +65,14 @@ export function deleteTemplate(data) {
   });
 }
 
+export function getTemplateUsage(params) {
+  return request({
+    url: '/v1/template/usage',
+    method: 'get',
+    params
+  });
+}
+
 // 获取 ACL4SSR 规则预设列表
 export function getACL4SSRPresets() {
   return request({

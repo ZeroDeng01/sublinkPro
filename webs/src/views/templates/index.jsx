@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 // material-ui
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -47,7 +47,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
 import SearchableNodeSelect from 'components/SearchableNodeSelect';
-import { getTemplates, addTemplate, updateTemplate, deleteTemplate, getACL4SSRPresets, convertRules } from 'api/templates';
+import { getTemplates, addTemplate, updateTemplate, deleteTemplate, getTemplateUsage, getACL4SSRPresets, convertRules } from 'api/templates';
 import { getBaseTemplates, updateBaseTemplate } from 'api/settings';
 import { getNodes } from 'api/nodes';
 
@@ -71,6 +71,7 @@ export default function TemplateList() {
   const [converting, setConverting] = useState(false);
   const [editorFullscreen, setEditorFullscreen] = useState(false);
   const [errorDialog, setErrorDialog] = useState({ open: false, title: '', message: '' });
+  const [usageDialog, setUsageDialog] = useState({ open: false, title: '', message: '', subscriptions: [], action: null });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() => {
     const saved = localStorage.getItem('templates_rowsPerPage');
@@ -136,6 +137,10 @@ export default function TemplateList() {
     }
   };
 
+  const handleRefresh = () => {
+    fetchTemplates(page, rowsPerPage);
+  };
+
   useEffect(() => {
     fetchTemplates(0, rowsPerPage);
     // 获取 ACL4SSR 预设列表
@@ -184,7 +189,18 @@ export default function TemplateList() {
   };
 
   const handleDelete = async (template) => {
-    openConfirm('删除模板', `确定要删除模板 "${template.file}" 吗？`, async () => {
+    let usedSubscriptions = [];
+
+    try {
+      const response = await getTemplateUsage({ filename: template.file });
+      usedSubscriptions = response.data?.subscriptions || [];
+    } catch (error) {
+      console.log(error);
+      showMessage(error.message || '获取模板使用情况失败', 'error');
+      return;
+    }
+
+    const deleteAction = async () => {
       try {
         await deleteTemplate({ filename: template.file });
         showMessage('删除成功');
@@ -193,7 +209,20 @@ export default function TemplateList() {
         console.log(error);
         showMessage(error.message || '删除失败', 'error');
       }
-    });
+    };
+
+    if (usedSubscriptions.length > 0) {
+      setUsageDialog({
+        open: true,
+        title: '模板正在被订阅使用',
+        message: `模板 "${template.file}" 当前正被以下订阅使用，删除后这些订阅可能受到影响，是否继续删除？`,
+        subscriptions: usedSubscriptions,
+        action: deleteAction
+      });
+      return;
+    }
+
+    openConfirm('删除模板', `确定要删除模板 "${template.file}" 吗？`, deleteAction);
   };
 
   const handleCloseDialog = () => {
@@ -351,7 +380,7 @@ export default function TemplateList() {
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
               添加模板
             </Button>
-            <IconButton onClick={() => fetchTemplates(page, rowsPerPage)} disabled={loading}>
+             <IconButton onClick={handleRefresh} disabled={loading}>
               <RefreshIcon
                 sx={
                   loading
@@ -369,7 +398,7 @@ export default function TemplateList() {
     >
       {matchDownMd && (
         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-          <IconButton onClick={() => fetchTemplates(page, rowsPerPage)} disabled={loading} size="small">
+          <IconButton onClick={handleRefresh} disabled={loading} size="small">
             <RefreshIcon
               sx={
                 loading
@@ -956,11 +985,13 @@ export default function TemplateList() {
       >
         <DialogTitle id="alert-dialog-title">{confirmInfo.title}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">{confirmInfo.content}</DialogContentText>
+          <DialogContentText id="alert-dialog-description" sx={{ color: 'text.primary' }}>
+            {confirmInfo.content}
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleConfirmClose}>取消</Button>
-          <Button onClick={handleConfirmAction} color="primary" autoFocus>
+          <Button onClick={handleConfirmAction} variant="contained" color="error" autoFocus>
             确定
           </Button>
         </DialogActions>
@@ -985,6 +1016,69 @@ export default function TemplateList() {
         <DialogActions>
           <Button variant="contained" onClick={() => setErrorDialog({ ...errorDialog, open: false })} autoFocus>
             知道了
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={usageDialog.open}
+        onClose={() => setUsageDialog({ ...usageDialog, open: false })}
+        aria-labelledby="template-usage-dialog-title"
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle id="template-usage-dialog-title">
+          ⚠️ {usageDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <Alert
+            severity="warning"
+            variant="outlined"
+            sx={{
+              mt: 1,
+              alignItems: 'flex-start',
+              backgroundColor: alpha(theme.palette.warning.main, 0.08),
+              borderColor: alpha(theme.palette.warning.main, 0.28),
+              color: 'text.primary',
+              '& .MuiAlert-icon': {
+                color: 'warning.dark',
+                mt: '2px'
+              },
+              '& .MuiAlert-message': {
+                width: '100%'
+              }
+            }}
+          >
+            {usageDialog.message}
+          </Alert>
+          {usageDialog.subscriptions?.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                使用中的订阅：
+              </Typography>
+              <Stack spacing={1}>
+                {usageDialog.subscriptions.map((subscriptionName) => (
+                  <Chip key={subscriptionName} label={subscriptionName} color="warning" variant="outlined" sx={{ width: 'fit-content' }} />
+                ))}
+              </Stack>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUsageDialog({ ...usageDialog, open: false, subscriptions: [], action: null })}>取消</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={async () => {
+              const action = usageDialog.action;
+              setUsageDialog({ open: false, title: '', message: '', subscriptions: [], action: null });
+              if (action) {
+                await action();
+              }
+            }}
+            autoFocus
+          >
+            继续删除
           </Button>
         </DialogActions>
       </Dialog>

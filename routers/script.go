@@ -15,6 +15,7 @@ func Script(r *gin.Engine) {
 		ScriptGroup.POST("/add", middlewares.DemoModeRestrict, api.ScriptAdd)
 		ScriptGroup.DELETE("/delete", middlewares.DemoModeRestrict, api.ScriptDel)
 		ScriptGroup.POST("/update", middlewares.DemoModeRestrict, api.ScriptUpdate)
+		ScriptGroup.GET("/usage", api.GetScriptUsage)
 		ScriptGroup.GET("/list", api.ScriptList)
 	}
 }

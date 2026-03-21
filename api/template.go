@@ -1,12 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sublink/cache"
+	"sublink/database"
 	"sublink/models"
 	"sublink/utils"
 
@@ -457,6 +459,79 @@ func DelTemp(c *gin.Context) {
 	}
 
 	utils.OkWithMsg(c, "删除成功")
+}
+
+func normalizeTemplateUsageValue(value string) string {
+	return strings.ReplaceAll(strings.TrimSpace(value), "\\", "/")
+}
+
+func buildTemplateMatchValues(filename string) map[string]struct{} {
+	normalizedFile := normalizeTemplateUsageValue(filename)
+	fileName := filepath.Base(normalizedFile)
+	values := []string{normalizedFile, fileName, "./template/" + fileName, "/template/" + fileName}
+	matchValues := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		value = normalizeTemplateUsageValue(value)
+		if value == "" {
+			continue
+		}
+		matchValues[value] = struct{}{}
+	}
+	return matchValues
+}
+
+func getTemplateUsageSubscriptions(filename string) ([]string, error) {
+	var subs []models.Subcription
+	if err := database.DB.Find(&subs).Error; err != nil {
+		return nil, err
+	}
+
+	matchValues := buildTemplateMatchValues(filename)
+	usedBy := make([]string, 0)
+
+	for _, sub := range subs {
+		var config struct {
+			Clash string `json:"clash"`
+			Surge string `json:"surge"`
+		}
+
+		if sub.Config != "" {
+			if err := json.Unmarshal([]byte(sub.Config), &config); err != nil {
+				continue
+			}
+		}
+
+		clashValue := normalizeTemplateUsageValue(config.Clash)
+		surgeValue := normalizeTemplateUsageValue(config.Surge)
+		if _, ok := matchValues[clashValue]; ok {
+			usedBy = append(usedBy, sub.Name)
+			continue
+		}
+		if _, ok := matchValues[surgeValue]; ok {
+			usedBy = append(usedBy, sub.Name)
+		}
+	}
+
+	return usedBy, nil
+}
+
+func GetTemplateUsage(c *gin.Context) {
+	filename := c.Query("filename")
+	if filename == "" {
+		utils.FailWithMsg(c, "文件名不能为空")
+		return
+	}
+
+	usedBy, err := getTemplateUsageSubscriptions(filename)
+	if err != nil {
+		utils.FailWithMsg(c, "获取模板使用情况失败")
+		return
+	}
+
+	utils.OkWithData(c, gin.H{
+		"subscriptions": usedBy,
+		"count":         len(usedBy),
+	})
 }
 
 // ACL4SSRPreset ACL4SSR 规则预设

@@ -37,3 +37,11 @@ export function deleteScript(data) {
     data
   });
 }
+
+export function getScriptUsage(params) {
+  return request({
+    url: '/v1/script/usage',
+    method: 'get',
+    params
+  });
+}
