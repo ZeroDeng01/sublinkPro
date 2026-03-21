@@ -23,6 +23,8 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import ComputerIcon from '@mui/icons-material/Computer';
 import StorageIcon from '@mui/icons-material/Storage';
+import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
+import KeyIcon from '@mui/icons-material/Key';
 
 // project imports
 import { getSystemStats } from 'api/monitor';
@@ -235,6 +237,93 @@ const CircularMetric = ({ value, maxValue, label, color, size = 80 }) => {
   );
 };
 
+const ConfigItemCard = ({ item, masked = false }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const maskedTextColor = isDark ? theme.palette.warning.light : theme.palette.warning.dark;
+
+  return (
+    <Box
+      sx={{
+        p: 1.5,
+        borderRadius: 2.5,
+        height: '100%',
+        background: isDark ? alpha('#fff', 0.03) : alpha('#fff', 0.72),
+        border: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 0 }}>
+          {item.label}
+        </Typography>
+        {masked && (
+          <Chip
+            size="small"
+            label="已隐藏"
+            sx={{
+              height: 20,
+              fontSize: '0.65rem',
+              bgcolor: isDark ? alpha(theme.palette.warning.main, 0.16) : alpha(theme.palette.warning.light, 0.9),
+              color: maskedTextColor,
+              border: `1px solid ${alpha(maskedTextColor, isDark ? 0.32 : 0.2)}`,
+              fontWeight: 700
+            }}
+          />
+        )}
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 1 }}>
+        <Chip
+          size="small"
+          icon={<KeyIcon sx={{ fontSize: 14 }} />}
+          label={item.key}
+          sx={{
+            height: 22,
+            fontSize: '0.68rem',
+            bgcolor: alpha(theme.palette.primary.main, 0.08),
+            color: theme.palette.primary.main,
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.16)}`,
+            '& .MuiChip-icon': {
+              color: 'inherit',
+              ml: 0.6
+            }
+          }}
+        />
+      </Box>
+
+      <Tooltip title={item.value} arrow placement="top-start">
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 600,
+            color: masked ? maskedTextColor : theme.palette.text.primary,
+            lineHeight: 1.6,
+            wordBreak: 'break-all'
+          }}
+        >
+          {item.value}
+        </Typography>
+      </Tooltip>
+
+      {item.env && (
+        <Typography
+          variant="caption"
+          sx={{
+            mt: 1,
+            display: 'block',
+            color: theme.palette.text.secondary,
+            fontSize: '0.68rem',
+            lineHeight: 1.45,
+            wordBreak: 'break-all'
+          }}
+        >
+          环境变量：{item.env}
+        </Typography>
+      )}
+    </Box>
+  );
+};
+
 // ==============================|| 系统监控卡片主组件 ||============================== //
 
 const SystemMonitorCard = () => {
@@ -297,6 +386,13 @@ const SystemMonitorCard = () => {
     uptime: '#06b6d4',
     gc: '#ec4899'
   };
+
+  const configItems = stats?.runtime_config
+    ? [
+        ...(stats.runtime_config.safe_to_show || []).map((item) => ({ ...item, masked: false })),
+        ...(stats.runtime_config.masked_summary || []).map((item) => ({ ...item, masked: true }))
+      ]
+    : [];
 
   return (
     <Card
@@ -563,6 +659,32 @@ const SystemMonitorCard = () => {
                 </Grid>
               </Grid>
             </Box>
+
+            {configItems.length > 0 && (
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  borderRadius: 3,
+                  background: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+                  border: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04)}`
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <SettingsSuggestIcon sx={{ fontSize: 18, color: colors.uptime }} />
+                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                    运行配置参数
+                  </Typography>
+                </Box>
+                <Grid container spacing={1.5}>
+                  {configItems.map((item) => (
+                    <Grid key={`${item.key}-${item.env || 'default'}`} size={{ xs: 12, sm: 6, md: 4 }}>
+                      <ConfigItemCard item={item} masked={item.masked} />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
           </>
         ) : (
           <Box sx={{ textAlign: 'center', py: 4 }}>
