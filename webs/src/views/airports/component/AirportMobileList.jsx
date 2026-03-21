@@ -25,7 +25,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import LanIcon from '@mui/icons-material/Lan';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import DownloadIcon from '@mui/icons-material/Download';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SpeedIcon from '@mui/icons-material/Speed';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
@@ -394,7 +394,7 @@ export default function AirportMobileList({ airports, selectedIds, onToggleSelec
                   <Button
                     variant="contained"
                     color="primary"
-                    startIcon={<PlayArrowIcon />}
+                    startIcon={<DownloadIcon />}
                     onClick={() => onPull(airport)}
                     sx={{
                       flex: 1,

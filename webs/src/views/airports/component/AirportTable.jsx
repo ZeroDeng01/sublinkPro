@@ -20,7 +20,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import LanIcon from '@mui/icons-material/Lan';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import DownloadIcon from '@mui/icons-material/Download';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ScheduleIcon from '@mui/icons-material/Schedule';
@@ -544,7 +544,7 @@ export default function AirportTable({ airports, selectedIds, onToggleSelect, on
                            '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
                          }}
                        >
-                         <PlayArrowIcon sx={{ fontSize: 16 }} />
+                         <DownloadIcon sx={{ fontSize: 16 }} />
                        </IconButton>
                      </Tooltip>
                      {airport.fetchUsageInfo && (

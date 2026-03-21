@@ -25,7 +25,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import LanIcon from '@mui/icons-material/Lan';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import DownloadIcon from '@mui/icons-material/Download';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SpeedIcon from '@mui/icons-material/Speed';
@@ -479,7 +479,7 @@ export default function AirportListView({ airports, selectedIds, onToggleSelect,
                                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
                               }}
                             >
-                              <PlayArrowIcon sx={{ fontSize: 14 }} />
+                              <DownloadIcon sx={{ fontSize: 14 }} />
                             </IconButton>
                           </Tooltip>
                           {airport.fetchUsageInfo && (

@@ -189,17 +189,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
         sx={{
           ...getPanelSurface(theme, taskConfig.accentColor),
           borderRadius: 3,
-          overflow: 'hidden',
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 3,
-            backgroundColor: isCancelling ? '#f59e0b' : isError ? '#ef4444' : isCompleted ? '#10b981' : taskConfig.accentColor
-          }
+          overflow: 'hidden'
         }}
       >
         {isActive && !isCancelling && (
