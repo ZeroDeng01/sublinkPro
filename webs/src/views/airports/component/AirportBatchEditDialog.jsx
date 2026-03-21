@@ -22,7 +22,16 @@ import CronExpressionGenerator from 'components/CronExpressionGenerator';
 /**
  * 机场批量编辑对话框
  */
-export default function AirportBatchEditDialog({ open, selectedCount, batchForm, setBatchForm, groupOptions, onClose, onSubmit, submitting }) {
+export default function AirportBatchEditDialog({
+  open,
+  selectedCount,
+  batchForm,
+  setBatchForm,
+  groupOptions,
+  onClose,
+  onSubmit,
+  submitting
+}) {
   const summaryItems = [];
 
   if (batchForm.applyGroup) {
@@ -46,10 +55,7 @@ export default function AirportBatchEditDialog({ open, selectedCount, batchForm,
           <Box>
             <FormControlLabel
               control={
-                <Checkbox
-                  checked={batchForm.applyGroup}
-                  onChange={(e) => setBatchForm({ ...batchForm, applyGroup: e.target.checked })}
-                />
+                <Checkbox checked={batchForm.applyGroup} onChange={(e) => setBatchForm({ ...batchForm, applyGroup: e.target.checked })} />
               }
               label="统一设置节点分组"
             />

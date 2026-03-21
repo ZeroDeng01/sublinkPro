@@ -52,7 +52,14 @@ import { getNodeGroups, getNodeIds, getNodes, getNodeProtocols } from 'api/nodes
 import ProfileSelectDialog from 'views/nodes/component/ProfileSelectDialog';
 
 // local components
-import { AirportTable, AirportListView, AirportMobileList, AirportFormDialog, DeleteAirportDialog, AirportBatchEditDialog } from './component';
+import {
+  AirportTable,
+  AirportListView,
+  AirportMobileList,
+  AirportFormDialog,
+  DeleteAirportDialog,
+  AirportBatchEditDialog
+} from './component';
 
 // utils
 import { validateCronExpression } from './utils';
@@ -816,7 +823,11 @@ export default function AirportList() {
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', justifyContent: 'flex-end', gap: 0.75 }}>
-                  <Chip color={selectedAirportIds.length > 0 ? 'primary' : 'default'} size="small" label={`已选 ${selectedAirportIds.length}`} />
+                  <Chip
+                    color={selectedAirportIds.length > 0 ? 'primary' : 'default'}
+                    size="small"
+                    label={`已选 ${selectedAirportIds.length}`}
+                  />
                   <Chip variant="outlined" size="small" label={`筛选 ${totalItems}`} />
                 </Stack>
               </Stack>
@@ -866,7 +877,11 @@ export default function AirportList() {
                 <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
                   本页全选
                 </Typography>
-                <Chip color={selectedAirportIds.length > 0 ? 'primary' : 'default'} size="small" label={`已选 ${selectedAirportIds.length}`} />
+                <Chip
+                  color={selectedAirportIds.length > 0 ? 'primary' : 'default'}
+                  size="small"
+                  label={`已选 ${selectedAirportIds.length}`}
+                />
                 <Chip variant="outlined" size="small" label={`筛选结果 ${totalItems}`} />
               </Stack>
 

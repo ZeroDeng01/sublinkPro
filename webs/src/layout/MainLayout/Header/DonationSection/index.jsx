@@ -1,31 +1,31 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
 // material-ui
-import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import Avatar from "@mui/material/Avatar";
-import Box from "@mui/material/Box";
-import ClickAwayListener from "@mui/material/ClickAwayListener";
-import Divider from "@mui/material/Divider";
-import Paper from "@mui/material/Paper";
-import Popper from "@mui/material/Popper";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import Tooltip from "@mui/material/Tooltip";
-import Button from "@mui/material/Button";
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import Avatar from '@mui/material/Avatar';
+import Box from '@mui/material/Box';
+import ClickAwayListener from '@mui/material/ClickAwayListener';
+import Divider from '@mui/material/Divider';
+import Paper from '@mui/material/Paper';
+import Popper from '@mui/material/Popper';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import Tooltip from '@mui/material/Tooltip';
+import Button from '@mui/material/Button';
 
 // project imports
-import MainCard from "ui-component/cards/MainCard";
-import Transitions from "ui-component/extended/Transitions";
+import MainCard from 'ui-component/cards/MainCard';
+import Transitions from 'ui-component/extended/Transitions';
 
 // assets
-import { IconCoffee } from "@tabler/icons-react";
+import { IconCoffee } from '@tabler/icons-react';
 
-import { donationConfig } from "config/donation";
+import { donationConfig } from 'config/donation';
 
 export default function DonationSection() {
   const theme = useTheme();
-  const downMD = useMediaQuery(theme.breakpoints.down("md"));
+  const downMD = useMediaQuery(theme.breakpoints.down('md'));
   const [open, setOpen] = useState(false);
   const anchorRef = useRef(null);
 
@@ -57,17 +57,17 @@ export default function DonationSection() {
             sx={{
               ...theme.typography.commonAvatar,
               ...theme.typography.mediumAvatar,
-              transition: "all .2s ease-in-out",
+              transition: 'all .2s ease-in-out',
               color: theme.palette[donationConfig.headerIconColor].dark,
               background: theme.palette[donationConfig.headerIconColor].light,
-              position: "relative",
-              "&:hover, &[aria-controls=\"menu-list-grow\"]": {
+              position: 'relative',
+              '&:hover, &[aria-controls="menu-list-grow"]': {
                 color: theme.palette[donationConfig.headerIconColor].light,
                 background: theme.palette[donationConfig.headerIconColor].dark
               }
             }}
             ref={anchorRef}
-            aria-controls={open ? "menu-list-grow" : undefined}
+            aria-controls={open ? 'menu-list-grow' : undefined}
             aria-haspopup="true"
             onClick={handleToggle}
           >
@@ -76,29 +76,22 @@ export default function DonationSection() {
         </Tooltip>
       </Box>
       <Popper
-        placement={downMD ? "bottom" : "bottom-end"}
+        placement={downMD ? 'bottom' : 'bottom-end'}
         open={open}
         anchorEl={anchorRef.current}
         role={undefined}
         transition
         disablePortal
-        modifiers={[{ name: "offset", options: { offset: [downMD ? 5 : 0, 20] } }]}
+        modifiers={[{ name: 'offset', options: { offset: [downMD ? 5 : 0, 20] } }]}
       >
         {({ TransitionProps }) => (
           <ClickAwayListener onClickAway={handleClose}>
-            <Transitions position={downMD ? "top" : "top-right"} in={open} {...TransitionProps}>
+            <Transitions position={downMD ? 'top' : 'top-right'} in={open} {...TransitionProps}>
               <Paper>
                 {open && (
-                  <MainCard
-                    border={false}
-                    elevation={16}
-                    content={false}
-                    boxShadow
-                    shadow={theme.shadows[16]}
-                    sx={{ minWidth: 280 }}
-                  >
+                  <MainCard border={false} elevation={16} content={false} boxShadow shadow={theme.shadows[16]} sx={{ minWidth: 280 }}>
                     <Stack sx={{ gap: 2, p: 2 }}>
-                      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "center" }}>
+                      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'center' }}>
                         <Typography variant="subtitle1">{donationConfig.title}</Typography>
                       </Stack>
                       <Divider />
@@ -113,13 +106,13 @@ export default function DonationSection() {
                             target="_blank"
                             fullWidth
                             sx={{
-                              justifyContent: "flex-start",
+                              justifyContent: 'flex-start',
                               px: 2,
                               py: 1.5,
                               borderRadius: 2,
-                              transition: "all 0.2s",
-                              "&:hover": {
-                                transform: "translateY(-2px)"
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                transform: 'translateY(-2px)'
                               }
                             }}
                           >

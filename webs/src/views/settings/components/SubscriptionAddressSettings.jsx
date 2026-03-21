@@ -55,9 +55,9 @@ export default function SubscriptionAddressSettings({ showMessage }) {
       />
       <CardContent>
         <Stack spacing={2} sx={{ maxWidth: 600 }}>
-            <Alert severity="info" sx={{ mb: 1 }}>
-              配置后，Telegram 机器人和网页分享链接将优先使用这里填写的订阅地址。未配置时，网页仍使用当前访问地址，Telegram 使用本地地址。
-            </Alert>
+          <Alert severity="info" sx={{ mb: 1 }}>
+            配置后，Telegram 机器人和网页分享链接将优先使用这里填写的订阅地址。未配置时，网页仍使用当前访问地址，Telegram 使用本地地址。
+          </Alert>
           <TextField
             fullWidth
             label="订阅地址"

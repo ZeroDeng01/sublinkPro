@@ -117,18 +117,7 @@ const getGreeting = () => {
 
 // ==============================|| 高级统计卡片组件 ||============================== //
 
-const PremiumStatCard = ({
-  title,
-  value,
-  subValue,
-  loading,
-  icon: Icon,
-  gradientColors,
-  accentColor,
-  isNodeStat,
-  copyLink,
-  onCopy
-}) => {
+const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradientColors, accentColor, isNodeStat, copyLink, onCopy }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const surfaceSx = getCalmSurface(theme, accentColor || gradientColors[0]);
@@ -302,7 +291,7 @@ const PremiumStatCard = ({
 
 // ==============================|| Star 提醒卡片组件 ||============================== //
 
-import { donationConfig } from "config/donation";
+import { donationConfig } from 'config/donation';
 
 const StarReminderCard = () => {
   const theme = useTheme();
@@ -362,7 +351,7 @@ const StarReminderCard = () => {
           }}
         >
           {/* 左侧内容 */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1, minWidth: { xs: "100%", sm: 280 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: { xs: '100%', sm: 280 } }}>
             <Box
               sx={{
                 width: 48,
@@ -401,23 +390,25 @@ const StarReminderCard = () => {
           {/* 右侧按钮 */}
           <Box
             sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: { xs: "flex-start", sm: "flex-end" },
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: { xs: 'flex-start', sm: 'flex-end' },
               gap: 1.5,
               flexShrink: 0,
-              width: { xs: "100%", sm: "auto" },
+              width: { xs: '100%', sm: 'auto' },
               mt: { xs: 1.5, sm: 0 }
             }}
           >
             {/* 打赏按钮组 */}
-            <Box sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              flexWrap: "wrap",
-              justifyContent: { xs: "flex-start", sm: "flex-end" }
-            }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                flexWrap: 'wrap',
+                justifyContent: { xs: 'flex-start', sm: 'flex-end' }
+              }}
+            >
               {donationConfig.links.map((item, index) => (
                 <Chip
                   key={index}
@@ -436,11 +427,11 @@ const StarReminderCard = () => {
                     color: isDark ? theme.palette[item.color].light : theme.palette[item.color].dark,
                     border: `1px solid ${isDark ? alpha(theme.palette[item.color].main, 0.3) : alpha(theme.palette[item.color].main, 0.2)}`,
                     transition: 'background-color 0.2s ease, border-color 0.2s ease',
-                    "&:hover": {
+                    '&:hover': {
                       bgcolor: isDark ? alpha(theme.palette[item.color].main, 0.22) : alpha(theme.palette[item.color].light, 0.7)
                     },
-                    "& .MuiChip-icon": {
-                      color: "inherit",
+                    '& .MuiChip-icon': {
+                      color: 'inherit',
                       fontSize: 18,
                       ml: 1
                     }
@@ -450,25 +441,27 @@ const StarReminderCard = () => {
             </Box>
 
             {/* 工具与 Star 组 */}
-            <Box sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              flexWrap: "wrap",
-              justifyContent: { xs: "flex-start", sm: "flex-end" }
-            }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                flexWrap: 'wrap',
+                justifyContent: { xs: 'flex-start', sm: 'flex-end' }
+              }}
+            >
               <Tooltip title="问题反馈" arrow>
                 <IconButton
                   onClick={handleFeedback}
                   size="small"
                   sx={{
-                    bgcolor: isDark ? alpha("#fff", 0.1) : alpha("#f59e0b", 0.15),
-                    color: isDark ? "#fcd34d" : "#b45309",
+                    bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#f59e0b', 0.15),
+                    color: isDark ? '#fcd34d' : '#b45309',
                     width: 36,
                     height: 36,
                     borderRadius: 2,
-                    "&:hover": {
-                      bgcolor: isDark ? alpha("#fff", 0.15) : alpha("#f59e0b", 0.25)
+                    '&:hover': {
+                      bgcolor: isDark ? alpha('#fff', 0.15) : alpha('#f59e0b', 0.25)
                     }
                   }}
                 >
@@ -476,8 +469,8 @@ const StarReminderCard = () => {
                 </IconButton>
               </Tooltip>
               <Chip
-                icon={<GitHubIcon sx={{ fontSize: 18, color: "inherit !important" }} />}
-                label={starCount !== null ? `Star ${starCount >= 1000 ? `${(starCount / 1000).toFixed(1)}k` : starCount}` : "Star"}
+                icon={<GitHubIcon sx={{ fontSize: 18, color: 'inherit !important' }} />}
+                label={starCount !== null ? `Star ${starCount >= 1000 ? `${(starCount / 1000).toFixed(1)}k` : starCount}` : 'Star'}
                 onClick={handleStar}
                 sx={{
                   fontWeight: 600,
@@ -485,8 +478,8 @@ const StarReminderCard = () => {
                   height: 36,
                   borderRadius: 2,
                   ...getAccentChipSx(theme, '#f59e0b'),
-                  cursor: "pointer",
-                  "& .MuiChip-icon": {
+                  cursor: 'pointer',
+                  '& .MuiChip-icon': {
                     color: 'inherit'
                   }
                 }}
@@ -610,7 +603,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                 <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
                   {formatBytes(totalUsed)} / {formatBytes(totalQuota)}
                 </Typography>
-                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box
                     sx={{
                       flexGrow: 1,
@@ -686,8 +679,9 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                       : isDark
                         ? alpha(theme.palette.common.white, 0.03)
                         : alpha(theme.palette.common.white, 0.88),
-                   border: `1px solid ${lowUsageAirports.length > 0 ? alpha("#ef4444", 0.3) : isDark ? alpha("#fff", 0.1) : alpha("#06b6d4", 0.15)
-                   }`
+                  border: `1px solid ${
+                    lowUsageAirports.length > 0 ? alpha('#ef4444', 0.3) : isDark ? alpha('#fff', 0.1) : alpha('#06b6d4', 0.15)
+                  }`
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
@@ -1194,12 +1188,12 @@ export default function DashboardDefault() {
                               <Typography sx={{ color: 'text.secondary', fontSize: '0.75rem', ml: 0.5 }}>({count})</Typography>
                             </Box>
                           }
-                           sx={{
-                             ...getAccentChipSx(theme, '#6366f1'),
-                             borderRadius: 2,
-                             height: 36
-                           }}
-                         />
+                          sx={{
+                            ...getAccentChipSx(theme, '#6366f1'),
+                            borderRadius: 2,
+                            height: 36
+                          }}
+                        />
                       );
                     })}
                 </Box>

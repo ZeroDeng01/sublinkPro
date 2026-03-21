@@ -240,12 +240,7 @@ export default function WebhookManagementPage() {
         <Card variant="outlined" sx={{ borderRadius: 3 }}>
           <CardContent>
             <Stack spacing={2.5}>
-              <Stack
-                direction={{ xs: 'column', md: 'row' }}
-                spacing={2}
-                alignItems={{ md: 'center' }}
-                justifyContent="space-between"
-              >
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
                 <Box>
                   <Typography variant="h4" sx={{ mb: 0.75 }}>
                     系统 Webhook 通知
@@ -407,7 +402,12 @@ export default function WebhookManagementPage() {
                           <Chip size="small" color={item.enabled ? 'success' : 'default'} label={item.enabled ? '已启用' : '已停用'} />
                           <Chip size="small" variant="outlined" label={item.method} />
                           <Chip size="small" variant="outlined" label={item.contentType} />
-                          <Chip size="small" variant="outlined" color={hasEvents ? 'primary' : 'default'} label={`${item.eventKeys.length} 个事件`} />
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            color={hasEvents ? 'primary' : 'default'}
+                            label={`${item.eventKeys.length} 个事件`}
+                          />
                         </Stack>
 
                         {!hasEvents && (
@@ -444,7 +444,12 @@ export default function WebhookManagementPage() {
                         />
 
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
-                          <Button variant="outlined" startIcon={<EditIcon />} onClick={() => openEditDialog(item)} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                          <Button
+                            variant="outlined"
+                            startIcon={<EditIcon />}
+                            onClick={() => openEditDialog(item)}
+                            sx={{ width: { xs: '100%', sm: 'auto' } }}
+                          >
                             编辑
                           </Button>
                           <Button
@@ -497,10 +502,7 @@ export default function WebhookManagementPage() {
 
             <FormControlLabel
               control={
-                <Switch
-                  checked={form.enabled}
-                  onChange={(event) => setForm((prev) => ({ ...prev, enabled: event.target.checked }))}
-                />
+                <Switch checked={form.enabled} onChange={(event) => setForm((prev) => ({ ...prev, enabled: event.target.checked }))} />
               }
               label={form.enabled ? '保存后立即启用' : '先保存为停用状态'}
             />
@@ -519,7 +521,11 @@ export default function WebhookManagementPage() {
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormControl fullWidth>
                   <InputLabel>请求方法</InputLabel>
-                  <Select value={form.method} label="请求方法" onChange={(event) => setForm((prev) => ({ ...prev, method: event.target.value }))}>
+                  <Select
+                    value={form.method}
+                    label="请求方法"
+                    onChange={(event) => setForm((prev) => ({ ...prev, method: event.target.value }))}
+                  >
                     <MenuItem value="POST">POST</MenuItem>
                     <MenuItem value="GET">GET</MenuItem>
                     <MenuItem value="PUT">PUT</MenuItem>
@@ -569,7 +575,8 @@ export default function WebhookManagementPage() {
             />
 
             <Alert severity="info" variant="outlined">
-              支持变量：{'{{title}}'}、{'{{message}}'}、{'{{event}}'}、{'{{eventName}}'}、{'{{category}}'}、{'{{severity}}'}、{'{{time}}'}、{'{{json .}}'}
+              支持变量：{'{{title}}'}、{'{{message}}'}、{'{{event}}'}、{'{{eventName}}'}、{'{{category}}'}、{'{{severity}}'}、{'{{time}}'}、
+              {'{{json .}}'}
             </Alert>
 
             <NotificationEventSelector
@@ -585,13 +592,25 @@ export default function WebhookManagementPage() {
           <Button onClick={closeDialog} disabled={submitting} color="inherit">
             取消
           </Button>
-          <Button variant="contained" onClick={handleSave} disabled={submitting} startIcon={submitting ? <CircularProgress size={16} /> : <SaveIcon />}>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={submitting}
+            startIcon={submitting ? <CircularProgress size={16} /> : <SaveIcon />}
+          >
             {form.id ? '保存修改' : '创建 Webhook'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(deleteTarget)} onClose={() => { if (!submitting) setDeleteTarget(null); }} maxWidth="xs" fullWidth>
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onClose={() => {
+          if (!submitting) setDeleteTarget(null);
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>删除 Webhook</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">

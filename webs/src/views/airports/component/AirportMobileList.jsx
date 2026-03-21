@@ -42,7 +42,17 @@ import AirportLogo from './AirportLogo';
 /**
  * 机场移动端列表组件
  */
-export default function AirportMobileList({ airports, selectedIds, onToggleSelect, onEdit, onDelete, onPull, onOpenNodes, onQuickCheck, onRefreshUsage }) {
+export default function AirportMobileList({
+  airports,
+  selectedIds,
+  onToggleSelect,
+  onEdit,
+  onDelete,
+  onPull,
+  onOpenNodes,
+  onQuickCheck,
+  onRefreshUsage
+}) {
   const theme = useTheme();
 
   // 复制提示状态
@@ -283,8 +293,10 @@ export default function AirportMobileList({ airports, selectedIds, onToggleSelec
                           const color = getUsageColor(percent);
 
                           const getProgressGradient = () => {
-                            if (percent < 60) return `linear-gradient(90deg, ${theme.palette.success.light}, ${theme.palette.success.main})`;
-                            if (percent < 85) return `linear-gradient(90deg, ${theme.palette.warning.light}, ${theme.palette.warning.main})`;
+                            if (percent < 60)
+                              return `linear-gradient(90deg, ${theme.palette.success.light}, ${theme.palette.success.main})`;
+                            if (percent < 85)
+                              return `linear-gradient(90deg, ${theme.palette.warning.light}, ${theme.palette.warning.main})`;
                             return `linear-gradient(90deg, ${theme.palette.error.light}, ${theme.palette.error.main})`;
                           };
 
@@ -416,7 +428,9 @@ export default function AirportMobileList({ airports, selectedIds, onToggleSelec
                       width: 40,
                       height: 40,
                       borderRadius: 2,
-                      bgcolor: airport.fetchUsageInfo ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.action.disabledBackground, 0.6),
+                      bgcolor: airport.fetchUsageInfo
+                        ? alpha(theme.palette.success.main, 0.1)
+                        : alpha(theme.palette.action.disabledBackground, 0.6),
                       color: airport.fetchUsageInfo ? theme.palette.success.main : theme.palette.action.disabled,
                       '&:hover': airport.fetchUsageInfo ? { bgcolor: alpha(theme.palette.success.main, 0.2) } : undefined
                     }}

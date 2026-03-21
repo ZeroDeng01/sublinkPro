@@ -387,12 +387,7 @@ export default function ScriptList() {
               <Button variant="contained" size="small" onClick={handleSubmit}>
                 保存
               </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<FullscreenExitIcon />}
-                onClick={() => setEditorFullscreen(false)}
-              >
+              <Button variant="outlined" size="small" startIcon={<FullscreenExitIcon />} onClick={() => setEditorFullscreen(false)}>
                 退出全屏
               </Button>
             </Stack>

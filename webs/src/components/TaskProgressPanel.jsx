@@ -343,12 +343,12 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                           onClick={() => onStopTask(task.taskId)}
                           disabled={isCancelling}
                           sx={{
-                              p: 0.5,
-                              color: isCancelling ? alpha('#f59e0b', 0.5) : '#ef4444',
-                              '&:hover': {
-                                bgcolor: alpha('#ef4444', 0.08)
-                              }
-                            }}
+                            p: 0.5,
+                            color: isCancelling ? alpha('#f59e0b', 0.5) : '#ef4444',
+                            '&:hover': {
+                              bgcolor: alpha('#ef4444', 0.08)
+                            }
+                          }}
                         >
                           {isCancelling ? <CircularProgress size={16} color="inherit" /> : <StopIcon sx={{ fontSize: 18 }} />}
                         </IconButton>

@@ -40,7 +40,7 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
         if (e.target.closest('input[type="checkbox"]')) return;
         onViewDetails(node);
       }}
-      >
+    >
       <Box p={2}>
         <Box sx={{ position: 'relative', mb: 1.5, pr: 10 }}>
           <Box sx={{ position: 'absolute', top: 0, right: 0 }}>
@@ -148,12 +148,7 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
             return (
               <>
                 <Chip label={ipTypeDisplay.label} color={ipTypeDisplay.color} variant={ipTypeDisplay.variant} size="small" />
-                <Chip
-                  label={residentialDisplay.label}
-                  color={residentialDisplay.color}
-                  variant={residentialDisplay.variant}
-                  size="small"
-                />
+                <Chip label={residentialDisplay.label} color={residentialDisplay.color} variant={residentialDisplay.variant} size="small" />
                 <Chip
                   label={`评分 ${fraudScoreDisplay.label}`}
                   color={fraudScoreDisplay.color}

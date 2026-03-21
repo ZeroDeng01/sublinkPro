@@ -89,10 +89,7 @@ export default function NodeTable({
             <TableCell sx={{ minWidth: 88 }}>来源</TableCell>
             <TableCell sx={{ minWidth: 92, whiteSpace: 'nowrap' }}>标签</TableCell>
             <TableCell sx={{ minWidth: 64, whiteSpace: 'nowrap' }}>国家</TableCell>
-            <TableCell
-              sx={{ minWidth: 168 }}
-              sortDirection={sortBy === 'delay' || sortBy === 'speed' ? sortOrder : false}
-            >
+            <TableCell sx={{ minWidth: 168 }} sortDirection={sortBy === 'delay' || sortBy === 'speed' ? sortOrder : false}>
               <Stack direction="row" spacing={1.5} alignItems="center" sx={{ whiteSpace: 'nowrap' }}>
                 <TableSortLabel
                   active={sortBy === 'delay'}

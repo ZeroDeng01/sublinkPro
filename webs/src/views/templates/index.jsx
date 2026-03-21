@@ -553,12 +553,7 @@ export default function TemplateList() {
               <Button variant="contained" size="small" onClick={handleSubmit}>
                 保存
               </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<FullscreenExitIcon />}
-                onClick={() => setEditorFullscreen(false)}
-              >
+              <Button variant="outlined" size="small" startIcon={<FullscreenExitIcon />} onClick={() => setEditorFullscreen(false)}>
                 退出全屏
               </Button>
             </Stack>
@@ -608,7 +603,12 @@ export default function TemplateList() {
                       <InputLabel shrink sx={compactOutlinedFieldSx['& .MuiInputLabel-root']}>
                         类别
                       </InputLabel>
-                      <Select value={formData.category} label="类别" notched onChange={(e) => setFormData({ ...formData, category: e.target.value })}>
+                      <Select
+                        value={formData.category}
+                        label="类别"
+                        notched
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      >
                         <MenuItem value="clash">Clash</MenuItem>
                         <MenuItem value="surge">Surge</MenuItem>
                       </Select>
@@ -696,7 +696,9 @@ export default function TemplateList() {
                     <SearchableNodeSelect
                       nodes={proxyNodeOptions}
                       loading={loadingProxyNodes}
-                      value={proxyNodeOptions.find((n) => n.Link === proxyLink) || (proxyLink ? { Link: proxyLink, Name: '', ID: 0 } : null)}
+                      value={
+                        proxyNodeOptions.find((n) => n.Link === proxyLink) || (proxyLink ? { Link: proxyLink, Name: '', ID: 0 } : null)
+                      }
                       onChange={(newValue) => setProxyLink(newValue?.Link || '')}
                       displayField="Name"
                       valueField="Link"
@@ -797,7 +799,9 @@ export default function TemplateList() {
                     <SearchableNodeSelect
                       nodes={proxyNodeOptions}
                       loading={loadingProxyNodes}
-                      value={proxyNodeOptions.find((n) => n.Link === proxyLink) || (proxyLink ? { Link: proxyLink, Name: '', ID: 0 } : null)}
+                      value={
+                        proxyNodeOptions.find((n) => n.Link === proxyLink) || (proxyLink ? { Link: proxyLink, Name: '', ID: 0 } : null)
+                      }
                       onChange={(newValue) => setProxyLink(newValue?.Link || '')}
                       displayField="Name"
                       valueField="Link"
@@ -895,7 +899,7 @@ export default function TemplateList() {
                     zIndex: 10,
                     borderRadius: 1
                   }}
-               >
+                >
                   <Stack alignItems="center" spacing={1}>
                     <CircularProgress />
                     <Typography color="white">正在转换规则...</Typography>
