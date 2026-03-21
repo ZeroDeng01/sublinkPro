@@ -102,11 +102,6 @@ func UserSet(c *gin.Context) {
 		return
 	}
 
-	// 清除该用户的所有记住密码令牌
-	if err := models.DeleteUserRememberTokens(user.ID); err != nil {
-		utils.Error("清除记住密码令牌失败: %v", err)
-	}
-
 	// 修改成功
 	utils.OkWithMsg(c, "修改成功")
 }
@@ -158,12 +153,6 @@ func UserChangePassword(c *gin.Context) {
 		return
 	}
 
-	// 删除该用户的所有记住密码令牌，强制重新登录
-	if err := models.DeleteUserRememberTokens(user.ID); err != nil {
-		utils.Error("清除记住密码令牌失败: %v", err)
-		// 不影响密码修改成功的返回
-	}
-
 	utils.OkWithMsg(c, "密码修改成功")
 }
 
@@ -206,13 +195,6 @@ func UserUpdateProfile(c *gin.Context) {
 		utils.Error("个人资料更新失败: %v", err)
 		utils.FailWithMsg(c, "个人资料更新失败: "+err.Error())
 		return
-	}
-
-	// 如果修改了用户名，需要清除 remember token
-	if req.Username != username.(string) {
-		if err := models.DeleteUserRememberTokens(user.ID); err != nil {
-			utils.Error("清除记住密码令牌失败: %v", err)
-		}
 	}
 
 	utils.OkWithMsg(c, "个人资料更新成功")

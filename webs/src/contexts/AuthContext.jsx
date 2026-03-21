@@ -3,10 +3,9 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { useNavigate } from 'react-router-dom';
 
 // API imports
-import { login as loginApi, logout as logoutApi, getUserInfo, rememberLogin as rememberLoginApi } from 'api/auth';
+import { login as loginApi, logout as logoutApi, getUserInfo } from 'api/auth';
 
-// Remember Token 的 localStorage key
-const REMEMBER_TOKEN_KEY = 'sublink_remember_token';
+const REMEMBERED_USERNAME_KEY = 'sublink_remembered_username';
 
 // ==============================|| AUTH CONTEXT ||============================== //
 
@@ -188,13 +187,7 @@ export function AuthProvider({ children }) {
           console.error('获取用户信息失败:', error);
           localStorage.removeItem('accessToken');
           setIsAuthenticated(false);
-
-          // 尝试使用记住密码令牌自动登录
-          await tryRememberLogin();
         }
-      } else {
-        // 没有 accessToken，尝试使用记住密码令牌登录
-        await tryRememberLogin();
       }
       setIsInitialized(true);
     };
@@ -203,44 +196,19 @@ export function AuthProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectSSE]);
 
-  // 尝试使用记住密码令牌自动登录
-  const tryRememberLogin = async () => {
-    const rememberToken = localStorage.getItem(REMEMBER_TOKEN_KEY);
-    if (!rememberToken) return false;
-
-    try {
-      const response = await rememberLoginApi(rememberToken);
-      const { tokenType, accessToken } = response.data;
-      localStorage.setItem('accessToken', `${tokenType} ${accessToken}`);
-
-      const userResponse = await getUserInfo();
-      setUser(userResponse.data);
-      setIsAuthenticated(true);
-      connectSSE();
-      return true;
-    } catch (error) {
-      console.error('记住密码自动登录失败:', error);
-      // 令牌无效，清除它
-      localStorage.removeItem(REMEMBER_TOKEN_KEY);
-      return false;
-    }
-  };
-
   // 登录 - 支持验证码和记住密码
   const login = async (username, password, captchaKey, captchaCode, rememberMe = false, turnstileToken = '') => {
     try {
       const response = await loginApi({ username, password, captchaKey, captchaCode, rememberMe, turnstileToken });
 
       // 登录成功（code === 200，否则会被 request.js 拦截器 reject）
-      const { tokenType, accessToken, rememberToken } = response.data;
+      const { tokenType, accessToken } = response.data;
       localStorage.setItem('accessToken', `${tokenType} ${accessToken}`);
 
-      // 如果返回了 rememberToken，保存它
-      if (rememberToken) {
-        localStorage.setItem(REMEMBER_TOKEN_KEY, rememberToken);
+      if (rememberMe) {
+        localStorage.setItem(REMEMBERED_USERNAME_KEY, username);
       } else {
-        // 没有勾选记住密码，清除旧的令牌
-        localStorage.removeItem(REMEMBER_TOKEN_KEY);
+        localStorage.removeItem(REMEMBERED_USERNAME_KEY);
       }
 
       // 获取用户信息
@@ -263,15 +231,12 @@ export function AuthProvider({ children }) {
 
   // 登出
   const logout = async () => {
-    // 获取当前的 rememberToken，用于后端删除
-    const rememberToken = localStorage.getItem(REMEMBER_TOKEN_KEY);
     try {
-      await logoutApi(rememberToken);
+      await logoutApi();
     } catch (error) {
       console.error('登出API调用失败:', error);
     } finally {
       localStorage.removeItem('accessToken');
-      localStorage.removeItem(REMEMBER_TOKEN_KEY); // 登出时清除记住密码令牌
       setUser(null);
       setIsAuthenticated(false);
       disconnectSSE();
@@ -296,6 +261,7 @@ export function AuthProvider({ children }) {
       notifications,
       login,
       logout,
+      rememberedUsernameKey: REMEMBERED_USERNAME_KEY,
       clearNotification,
       clearAllNotifications
     }),

@@ -55,7 +55,6 @@ func RunMigrations() error {
 		{name: "TagRule", model: &TagRule{}},
 		{name: "Task", model: &Task{}},
 		{name: "IPInfo", model: &IPInfo{}},
-		{name: "RememberToken", model: &RememberToken{}},
 		{name: "Host", model: &Host{}},
 		{name: "SubscriptionShare", model: &SubscriptionShare{}},
 		{name: "SubscriptionChainRule", model: &SubscriptionChainRule{}},
@@ -115,6 +114,15 @@ func RunMigrations() error {
 		return db.Create(&config).Error
 	}); err != nil {
 		utils.Error("执行迁移 0024_migrate_legacy_webhook_settings 失败: %v", err)
+	}
+
+	if err := database.RunCustomMigration("0025_drop_remember_tokens_table", func() error {
+		if !db.Migrator().HasTable("remember_tokens") {
+			return nil
+		}
+		return db.Migrator().DropTable("remember_tokens")
+	}); err != nil {
+		utils.Error("执行迁移 0025_drop_remember_tokens_table 失败: %v", err)
 	}
 
 	// 检查并删除 idx_name_id 索引

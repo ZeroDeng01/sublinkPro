@@ -37,7 +37,7 @@ const CAPTCHA_MODE = {
 
 export default function AuthLogin() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, rememberedUsernameKey } = useAuth();
   const turnstileDialogRef = useRef(null);
 
   const [username, setUsername] = useState('');
@@ -87,6 +87,21 @@ export default function AuthLogin() {
   useEffect(() => {
     fetchCaptcha();
   }, [fetchCaptcha]);
+
+  useEffect(() => {
+    try {
+      const rememberedUsername = localStorage.getItem(rememberedUsernameKey);
+      if (!rememberedUsername) {
+        return;
+      }
+
+      setUsername(rememberedUsername);
+      setRememberMe(true);
+    } catch (err) {
+      console.error('读取记住的用户名失败:', err);
+      localStorage.removeItem(rememberedUsernameKey);
+    }
+  }, [rememberedUsernameKey]);
 
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
@@ -256,10 +271,10 @@ export default function AuthLogin() {
 
         <CustomFormControl fullWidth>
           <InputLabel htmlFor="outlined-adornment-username-login">用户名</InputLabel>
-          <OutlinedInput
-            id="outlined-adornment-username-login"
-            type="text"
-            value={username}
+           <OutlinedInput
+             id="outlined-adornment-username-login"
+             type="text"
+             value={username}
             onChange={(e) => setUsername(e.target.value)}
             name="username"
             label="用户名"
@@ -299,7 +314,7 @@ export default function AuthLogin() {
 
         <FormControlLabel
           control={<Checkbox checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} name="rememberMe" color="secondary" />}
-          label="记住密码"
+          label="记住用户名"
           sx={{ mt: 1, mb: 1, ml: 0 }}
         />
 

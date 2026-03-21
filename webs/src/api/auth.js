@@ -31,26 +31,10 @@ export function login(data) {
   });
 }
 
-// 使用令牌自动登录
-export function rememberLogin(rememberToken) {
-  const formData = new FormData();
-  formData.append('rememberToken', rememberToken);
-
-  return request({
-    url: '/v1/auth/remember-login',
-    method: 'post',
-    data: formData,
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  });
-}
-
 // 登出
-export function logout(rememberToken) {
-  const params = rememberToken ? `?rememberToken=${encodeURIComponent(rememberToken)}` : '';
+export function logout() {
   return request({
-    url: `/v1/auth/logout${params}`,
+    url: '/v1/auth/logout',
     method: 'delete'
   });
 }

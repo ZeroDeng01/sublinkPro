@@ -522,9 +522,6 @@ func Run() {
 	protocol.InitProtocolMeta()
 	models.InitNodeFieldsMeta()
 
-	// 启动时清理过期的记住密码令牌
-	models.CleanAllExpiredTokens()
-
 	// 初始化任务管理器
 	services.InitTaskManager()
 

@@ -600,7 +600,6 @@ func loadPreservedTargetSettings(tx *gorm.DB) (map[string]string, error) {
 
 func clearTargetBusinessData(tx *gorm.DB) error {
 	modelsInDeleteOrder := []interface{}{
-		&models.RememberToken{},
 		&models.IPInfo{},
 		&models.SubLogs{},
 		&models.SubscriptionShare{},
@@ -1422,7 +1421,6 @@ func sequenceTables(tx *gorm.DB) []string {
 		&models.Template{},
 		&models.TagRule{},
 		&models.IPInfo{},
-		&models.RememberToken{},
 		&models.Host{},
 		&models.SubscriptionShare{},
 		&models.SubscriptionChainRule{},
