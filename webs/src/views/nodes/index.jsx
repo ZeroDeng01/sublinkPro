@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -13,7 +13,7 @@ import Tooltip from '@mui/material/Tooltip';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
-import DownloadIcon from '@mui/icons-material/Download';
+import FlightIcon from '@mui/icons-material/Flight';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SpeedIcon from '@mui/icons-material/Speed';
@@ -75,7 +75,46 @@ import { SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS } from './utils';
 export default function NodeList() {
   const theme = useTheme();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
+  const location = useLocation();
   const navigate = useNavigate();
+
+  const getSourceFilterFromQuery = useCallback((search) => {
+    try {
+      const params = new URLSearchParams(search);
+      return params.get('source')?.trim() || '';
+    } catch (error) {
+      console.error('解析节点来源筛选参数失败:', error);
+      return '';
+    }
+  }, []);
+
+  const syncSourceFilterToQuery = useCallback(
+    (nextSource) => {
+      const params = new URLSearchParams(location.search);
+      const currentSource = params.get('source')?.trim() || '';
+      const normalizedSource = nextSource?.trim() || '';
+
+      if (currentSource === normalizedSource) {
+        return;
+      }
+
+      if (normalizedSource) {
+        params.set('source', normalizedSource);
+      } else {
+        params.delete('source');
+      }
+
+      const search = params.toString();
+      navigate(
+        {
+          pathname: location.pathname,
+          search: search ? `?${search}` : ''
+        },
+        { replace: true }
+      );
+    },
+    [location.pathname, location.search, navigate]
+  );
 
   // Task progress for auto-refresh
   const { registerOnComplete, unregisterOnComplete } = useTaskProgress();
@@ -120,7 +159,7 @@ export default function NodeList() {
   // 过滤器
   const [searchQuery, setSearchQuery] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
-  const [sourceFilter, setSourceFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState(() => getSourceFilterFromQuery(window.location.search));
   const [maxDelay, setMaxDelay] = useState('');
   const [minSpeed, setMinSpeed] = useState('');
   const [maxFraudScore, setMaxFraudScore] = useState('');
@@ -290,7 +329,7 @@ export default function NodeList() {
 
   // 初始化加载
   useEffect(() => {
-    fetchNodes({ page: 0, pageSize: rowsPerPage });
+    fetchNodes({ page: 0, pageSize: rowsPerPage, source: getSourceFilterFromQuery(location.search) });
     // 请求国家代码列表
     getNodeCountries()
       .then((res) => {
@@ -336,6 +375,15 @@ export default function NodeList() {
       .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const nextSourceFilter = getSourceFilterFromQuery(location.search);
+    setSourceFilter((prev) => (prev === nextSourceFilter ? prev : nextSourceFilter));
+  }, [getSourceFilterFromQuery, location.search]);
+
+  useEffect(() => {
+    syncSourceFilterToQuery(sourceFilter);
+  }, [sourceFilter, syncSourceFilterToQuery]);
 
   // 监听过滤条件变化，带防抖发送请求到后端
   useEffect(() => {
@@ -956,7 +1004,7 @@ export default function NodeList() {
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNode}>
               添加节点
             </Button>
-            <Button variant="outlined" color="primary" startIcon={<DownloadIcon />} onClick={() => navigate('/subscription/airports')}>
+            <Button variant="outlined" color="primary" startIcon={<FlightIcon />} onClick={() => navigate('/subscription/airports')}>
               机场管理
             </Button>
             <Button variant="outlined" color="info" startIcon={<SettingsIcon />} onClick={handleOpenSpeedTest}>
@@ -991,7 +1039,7 @@ export default function NodeList() {
             size="small"
             variant="outlined"
             color="primary"
-            startIcon={<DownloadIcon />}
+            startIcon={<FlightIcon />}
             onClick={() => navigate('/subscription/airports')}
             sx={{ whiteSpace: 'nowrap' }}
           >

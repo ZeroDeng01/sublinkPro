@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // material-ui
 import { alpha, useTheme } from '@mui/material/styles';
@@ -47,7 +48,8 @@ import {
   refreshAirportUsage
 } from 'api/airports';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
-import { getNodeGroups, getNodes, getNodeProtocols } from 'api/nodes';
+import { getNodeGroups, getNodeIds, getNodes, getNodeProtocols } from 'api/nodes';
+import ProfileSelectDialog from 'views/nodes/component/ProfileSelectDialog';
 
 // local components
 import { AirportTable, AirportListView, AirportMobileList, AirportFormDialog, DeleteAirportDialog, AirportBatchEditDialog } from './component';
@@ -60,6 +62,7 @@ import { validateCronExpression } from './utils';
 export default function AirportList() {
   const theme = useTheme();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
+  const navigate = useNavigate();
 
   // 判断是否需要重新拉取才能使节点处理配置生效
   const hasNodeProcessConfigChanged = (before, after) => {
@@ -165,6 +168,9 @@ export default function AirportList() {
   const [proxyNodeOptions, setProxyNodeOptions] = useState([]);
   const [loadingProxyNodes, setLoadingProxyNodes] = useState(false);
   const [protocolOptions, setProtocolOptions] = useState([]);
+
+  const [profileSelectOpen, setProfileSelectOpen] = useState(false);
+  const [profileSelectNodeIds, setProfileSelectNodeIds] = useState([]);
 
   // 消息提示
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -565,6 +571,46 @@ export default function AirportList() {
     }
   };
 
+  const handleOpenNodeManagement = useCallback(
+    (airport) => {
+      const source = airport?.name?.trim();
+      if (!source) {
+        showMessage('机场名称为空，无法打开节点管理', 'warning');
+        return;
+      }
+
+      navigate(`/subscription/nodes?source=${encodeURIComponent(source)}`);
+    },
+    [navigate, showMessage]
+  );
+
+  const handleQuickCheck = useCallback(
+    async (airport) => {
+      const source = airport?.name?.trim();
+      if (!source) {
+        showMessage('机场名称为空，无法执行快速检测', 'warning');
+        return;
+      }
+
+      try {
+        const response = await getNodeIds({ source });
+        const nodeIds = Array.isArray(response.data) ? response.data : [];
+
+        if (nodeIds.length === 0) {
+          showMessage(`未找到来源为「${source}」的节点`, 'warning');
+          return;
+        }
+
+        setProfileSelectNodeIds(nodeIds);
+        setProfileSelectOpen(true);
+      } catch (error) {
+        console.error('获取机场节点失败:', error);
+        showMessage(error.message || '获取机场节点失败', 'error');
+      }
+    },
+    [showMessage]
+  );
+
   // 提交表单
   const handleSubmit = async () => {
     // 验证
@@ -860,6 +906,8 @@ export default function AirportList() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onPull={handlePull}
+          onOpenNodes={handleOpenNodeManagement}
+          onQuickCheck={handleQuickCheck}
           onRefreshUsage={handleRefreshUsage}
         />
       ) : viewMode === 'list' ? (
@@ -870,6 +918,8 @@ export default function AirportList() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onPull={handlePull}
+          onOpenNodes={handleOpenNodeManagement}
+          onQuickCheck={handleQuickCheck}
           onRefreshUsage={handleRefreshUsage}
         />
       ) : (
@@ -880,6 +930,8 @@ export default function AirportList() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onPull={handlePull}
+          onOpenNodes={handleOpenNodeManagement}
+          onQuickCheck={handleQuickCheck}
           onRefreshUsage={handleRefreshUsage}
         />
       )}
@@ -944,6 +996,14 @@ export default function AirportList() {
         setWithNodes={setDeleteWithNodes}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={handleConfirmDelete}
+      />
+
+      <ProfileSelectDialog
+        open={profileSelectOpen}
+        onClose={() => setProfileSelectOpen(false)}
+        nodeIds={profileSelectNodeIds}
+        onSuccess={showMessage}
+        onOpenSettings={() => navigate('/subscription/node-check')}
       />
 
       {/* 提示消息 */}

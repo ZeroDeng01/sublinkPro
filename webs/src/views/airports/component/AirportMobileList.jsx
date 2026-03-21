@@ -9,19 +9,26 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
+import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
 // icons
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import LanIcon from '@mui/icons-material/Lan';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import SyncIcon from '@mui/icons-material/Sync';
+import SpeedIcon from '@mui/icons-material/Speed';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import EventIcon from '@mui/icons-material/Event';
 
@@ -35,11 +42,13 @@ import AirportLogo from './AirportLogo';
 /**
  * 机场移动端列表组件
  */
-export default function AirportMobileList({ airports, selectedIds, onToggleSelect, onEdit, onDelete, onPull, onRefreshUsage }) {
+export default function AirportMobileList({ airports, selectedIds, onToggleSelect, onEdit, onDelete, onPull, onOpenNodes, onQuickCheck, onRefreshUsage }) {
   const theme = useTheme();
 
   // 复制提示状态
   const [copyTip, setCopyTip] = useState({ open: false, name: '' });
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [menuAirportId, setMenuAirportId] = useState(null);
 
   // 复制订阅地址
   const handleCopyUrl = async (airport) => {
@@ -50,6 +59,22 @@ export default function AirportMobileList({ airports, selectedIds, onToggleSelec
     } catch (err) {
       console.error('复制失败:', err);
     }
+  };
+
+  const handleOpenMenu = (event, airportId) => {
+    event.stopPropagation();
+    setMenuAnchor(event.currentTarget);
+    setMenuAirportId(airportId);
+  };
+
+  const handleCloseMenu = () => {
+    setMenuAnchor(null);
+    setMenuAirportId(null);
+  };
+
+  const handleMenuAction = (action, airport) => {
+    handleCloseMenu();
+    action(airport);
   };
 
   if (airports.length === 0) {
@@ -356,80 +381,142 @@ export default function AirportMobileList({ airports, selectedIds, onToggleSelec
                   <AirportNodeStatsCard nodeStats={airport.nodeStats} nodeCount={airport.nodeCount || 0} />
                 </Box>
 
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, flexWrap: 'wrap' }}>
-                  <Tooltip title="复制订阅地址" arrow>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleCopyUrl(airport)}
-                      sx={{
-                        bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                        color: theme.palette.secondary.main,
-                        '&:hover': { bgcolor: alpha(theme.palette.secondary.main, 0.2) }
-                      }}
-                    >
-                      <ContentCopyIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="立即拉取" arrow>
-                    <IconButton
-                      size="small"
-                      onClick={() => onPull(airport)}
-                      sx={{
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                        color: theme.palette.primary.main,
-                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
-                      }}
-                    >
-                      <PlayArrowIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  {airport.fetchUsageInfo && (
-                    <Tooltip title="刷新用量" arrow>
-                      <IconButton
-                        size="small"
-                        onClick={() => onRefreshUsage(airport)}
-                        sx={{
-                          bgcolor: alpha(theme.palette.success.main, 0.1),
-                          color: theme.palette.success.main,
-                          '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.2) }
-                        }}
-                      >
-                        <SyncIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  <Tooltip title="编辑" arrow>
-                    <IconButton
-                      size="small"
-                      onClick={() => onEdit(airport)}
-                      sx={{
-                        bgcolor: alpha(theme.palette.info.main, 0.1),
-                        color: theme.palette.info.main,
-                        '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.2) }
-                      }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="删除" arrow>
-                    <IconButton
-                      size="small"
-                      onClick={() => onDelete(airport)}
-                      sx={{
-                        bgcolor: alpha(theme.palette.error.main, 0.1),
-                        color: theme.palette.error.main,
-                        '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) }
-                      }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{
+                    pt: 1,
+                    borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`
+                  }}
+                >
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<PlayArrowIcon />}
+                    onClick={() => onPull(airport)}
+                    sx={{
+                      flex: 1,
+                      minWidth: 0,
+                      minHeight: 40,
+                      borderRadius: 2,
+                      boxShadow: 'none',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    立即拉取
+                  </Button>
+                  <IconButton
+                    aria-label="刷新用量"
+                    onClick={() => onRefreshUsage(airport)}
+                    disabled={!airport.fetchUsageInfo}
+                    sx={{
+                      flexShrink: 0,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 2,
+                      bgcolor: airport.fetchUsageInfo ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.action.disabledBackground, 0.6),
+                      color: airport.fetchUsageInfo ? theme.palette.success.main : theme.palette.action.disabled,
+                      '&:hover': airport.fetchUsageInfo ? { bgcolor: alpha(theme.palette.success.main, 0.2) } : undefined
+                    }}
+                  >
+                    <AccountBalanceWalletIcon />
+                  </IconButton>
+                  <IconButton
+                    aria-label="复制订阅地址"
+                    onClick={() => handleCopyUrl(airport)}
+                    sx={{
+                      flexShrink: 0,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 2,
+                      bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                      color: theme.palette.secondary.main,
+                      '&:hover': { bgcolor: alpha(theme.palette.secondary.main, 0.2) }
+                    }}
+                  >
+                    <ContentCopyIcon />
+                  </IconButton>
+                  <IconButton
+                    aria-label="更多操作"
+                    onClick={(event) => handleOpenMenu(event, airport.id)}
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 2,
+                      border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+                      bgcolor: alpha(theme.palette.background.default, 0.7)
+                    }}
+                  >
+                    <MoreVertIcon />
+                  </IconButton>
+                </Stack>
               </CardContent>
             </Card>
           );
         })}
       </Stack>
+
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={handleCloseMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        PaperProps={{
+          sx: {
+            minWidth: 190,
+            borderRadius: 2
+          }
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            const airport = airports.find((item) => item.id === menuAirportId);
+            if (airport) handleMenuAction(onOpenNodes, airport);
+          }}
+        >
+          <ListItemIcon>
+            <LanIcon fontSize="small" color="primary" />
+          </ListItemIcon>
+          <ListItemText>查看节点</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            const airport = airports.find((item) => item.id === menuAirportId);
+            if (airport) handleMenuAction(onQuickCheck, airport);
+          }}
+        >
+          <ListItemIcon>
+            <SpeedIcon fontSize="small" color="primary" />
+          </ListItemIcon>
+          <ListItemText>快速检测</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            const airport = airports.find((item) => item.id === menuAirportId);
+            if (airport) handleMenuAction(onEdit, airport);
+          }}
+        >
+          <ListItemIcon>
+            <EditIcon fontSize="small" color="info" />
+          </ListItemIcon>
+          <ListItemText>编辑</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            const airport = airports.find((item) => item.id === menuAirportId);
+            if (airport) handleMenuAction(onDelete, airport);
+          }}
+          sx={{ color: 'error.main' }}
+        >
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText>删除</ListItemText>
+        </MenuItem>
+      </Menu>
 
       {/* 复制成功提示 */}
       <Snackbar
@@ -453,6 +540,8 @@ AirportMobileList.propTypes = {
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onPull: PropTypes.func.isRequired,
+  onOpenNodes: PropTypes.func.isRequired,
+  onQuickCheck: PropTypes.func.isRequired,
   onRefreshUsage: PropTypes.func
 };
 
