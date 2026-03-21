@@ -146,6 +146,7 @@ docker-compose up -d
 | [🌐 Host 管理](docs/features/host.md) | 域名映射、DNS 配置、测速持久化 |
 | [🤖 Telegram 机器人](docs/features/telegram-bot.md) | 命令列表、配置指南 |
 | [📜 脚本功能](docs/script_support.md) | 节点过滤、内容后处理、函数参考 |
+| [🔐 双重验证（MFA）](docs/features/mfa.md) | TOTP 设置、恢复码、应急重置流程 |
 
 ### 👨‍💻 开发者
 

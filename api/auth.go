@@ -131,47 +131,22 @@ func UserLogin(c *gin.Context) {
 	}
 	// 登录成功，清除失败记录
 	limiter.ClearFailures(ip)
-	// 生成token
-	token, err := GetToken(user)
-	if err != nil {
-		utils.Error("获取token失败: %v", err)
-		utils.FailWithMsg(c, "获取token失败")
+	if user.TOTPEnabled {
+		challengeToken, err := issuePendingMFAChallenge(user)
+		if err != nil {
+			utils.Error("生成 MFA 挑战失败: %v", err)
+			utils.FailWithMsg(c, "生成登录验证失败")
+			return
+		}
+		utils.OkDetailed(c, "需要进行二次验证", gin.H{
+			"requiresMFA":    true,
+			"challengeToken": challengeToken,
+			"methods":        []string{"totp", "recovery_code"},
+		})
 		return
 	}
 
-	// 异步发送登录通知
-	go func(username, ip string) {
-		location, err := geoip.GetLocation(ip)
-		if err != nil {
-			location = "未知位置"
-		}
-		if location == "" {
-			location = "未知位置"
-		}
-		timeStr := time.Now().Format("2006-01-02 15:04:05")
-
-		payload := notifications.Payload{
-			Title:   "用户登录通知",
-			Message: fmt.Sprintf("用户 %s 已登录\nIP: %s (%s)\n时间: %s", username, ip, location, timeStr),
-			Data: map[string]interface{}{
-				"username": username,
-				"ip":       ip,
-				"location": location,
-				"time":     timeStr,
-			},
-			Time: timeStr,
-		}
-
-		notifications.Publish("security.user_login", payload)
-	}(username, ip)
-
-	// 登录成功返回token
-	utils.OkDetailed(c, "登录成功", gin.H{
-		"accessToken":  token,
-		"tokenType":    "Bearer",
-		"refreshToken": nil,
-		"expires":      nil,
-	})
+	respondLoginSuccess(c, user, ip)
 }
 
 // UserOut 用户退出登录
@@ -180,4 +155,29 @@ func UserOut(c *gin.Context) {
 	if _, Is := c.Get("username"); Is {
 		utils.OkWithMsg(c, "退出成功")
 	}
+}
+
+func notifyUserLogin(username, ip string) {
+	location, err := geoip.GetLocation(ip)
+	if err != nil {
+		location = "未知位置"
+	}
+	if location == "" {
+		location = "未知位置"
+	}
+	timeStr := time.Now().Format("2006-01-02 15:04:05")
+
+	payload := notifications.Payload{
+		Title:   "用户登录通知",
+		Message: fmt.Sprintf("用户 %s 已登录\nIP: %s (%s)\n时间: %s", username, ip, location, timeStr),
+		Data: map[string]interface{}{
+			"username": username,
+			"ip":       ip,
+			"location": location,
+			"time":     timeStr,
+		},
+		Time: timeStr,
+	}
+
+	notifications.Publish("security.user_login", payload)
 }

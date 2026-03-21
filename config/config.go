@@ -65,6 +65,7 @@ type AppConfig struct {
 	TurnstileProxyLink string   `yaml:"turnstile_proxy_link"` // Turnstile 验证代理链接（mihomo 格式）
 	WebBasePath        string   `yaml:"web_base_path"`        // 前端基础路径（用于隐藏站点入口）
 	TrustedProxies     []string `yaml:"trusted_proxies"`      // 可信反向代理列表（支持 IP/CIDR）
+	MFAResetSecret     string   `yaml:"-"`
 }
 
 // CommandLineConfig 命令行配置（仅存储用户指定的值）
@@ -307,6 +308,19 @@ func GetAPIEncryptionKey() string {
 	return ""
 }
 
+func GetMFAResetSecret() string {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	if secret := os.Getenv(envPrefix + "MFA_RESET_SECRET"); secret != "" {
+		return secret
+	}
+	if globalConfig != nil && globalConfig.MFAResetSecret != "" {
+		return globalConfig.MFAResetSecret
+	}
+	return ""
+}
+
 // CaptchaConfig 验证码配置信息
 type CaptchaConfig struct {
 	Mode             int    // 当前验证码模式（经过降级处理后的实际模式）
@@ -430,6 +444,7 @@ func applyDefaults(cfg *AppConfig) {
 	cfg.CaptchaMode = DefaultCaptchaMode
 	cfg.WebBasePath = "" // 默认为空，表示根路径
 	cfg.TrustedProxies = append([]string(nil), DefaultTrustedProxies...)
+	cfg.MFAResetSecret = ""
 }
 
 // buildBaseConfigInternal 构建不依赖数据库的基础配置
@@ -568,6 +583,9 @@ func loadFromEnvInternal(cfg *AppConfig) {
 	}
 	if key := os.Getenv(envPrefix + "API_ENCRYPTION_KEY"); key != "" {
 		cfg.APIEncryptionKey = key
+	}
+	if secret := os.Getenv(envPrefix + "MFA_RESET_SECRET"); secret != "" {
+		cfg.MFAResetSecret = secret
 	}
 	// 验证码配置
 	if mode := os.Getenv(envPrefix + "CAPTCHA_MODE"); mode != "" {
@@ -766,6 +784,7 @@ func SaveToFile() error {
 	comment := `# SublinkPro 配置文件
 # 敏感配置（jwt_secret, api_encryption_key）已存储在数据库中
 # 如需覆盖，请使用环境变量 SUBLINK_JWT_SECRET 和 SUBLINK_API_ENCRYPTION_KEY
+# 可选受限应急配置：仅支持环境变量 SUBLINK_MFA_RESET_SECRET，不会写入配置文件
 `
 	data, err := yaml.Marshal(saveCfg)
 	if err != nil {

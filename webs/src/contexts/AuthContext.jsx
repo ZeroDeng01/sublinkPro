@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { useNavigate } from 'react-router-dom';
 
 // API imports
-import { login as loginApi, logout as logoutApi, getUserInfo } from 'api/auth';
+import { login as loginApi, logout as logoutApi, getUserInfo, verifyMfaLogin } from 'api/auth';
 
 const REMEMBERED_USERNAME_KEY = 'sublink_remembered_username';
 
@@ -15,6 +15,88 @@ const AuthContext = createContext(null);
 let eventSource = null;
 let heartbeatTimeout = null;
 let reconnectTimeout = null;
+
+function getPayloadData(payload) {
+  return payload?.data || payload || {};
+}
+
+function normalizeTokenPayload(payload) {
+  const data = getPayloadData(payload);
+  const tokenType = data.tokenType || data.token_type || data.authType || data.auth_type;
+  const accessToken = data.accessToken || data.access_token || data.token;
+
+  if (!accessToken) {
+    return null;
+  }
+
+  return {
+    tokenType: tokenType || 'Bearer',
+    accessToken
+  };
+}
+
+function normalizeMfaChallenge(payload) {
+  const data = getPayloadData(payload);
+  const nestedMfa = data.mfa || data.challenge || data.auth || {};
+  const challengeData = nestedMfa.challenge || nestedMfa;
+  const errorType = data.errorType || challengeData.errorType || nestedMfa.errorType || '';
+  const methods = data.methods || challengeData.methods || nestedMfa.methods || [];
+  const challengeToken =
+    data.challengeToken ||
+    data.mfaToken ||
+    data.ticket ||
+    data.sessionToken ||
+    challengeData.challengeToken ||
+    challengeData.mfaToken ||
+    challengeData.ticket ||
+    challengeData.sessionToken ||
+    nestedMfa.challengeToken ||
+    nestedMfa.mfaToken ||
+    nestedMfa.ticket ||
+    nestedMfa.sessionToken ||
+    '';
+
+  const isMfaRequired = Boolean(
+    data.mfaRequired ||
+      data.requiresMfa ||
+      nestedMfa.required ||
+      nestedMfa.mfaRequired ||
+      challengeData.required ||
+      challengeToken ||
+      methods.length > 0 ||
+      String(errorType).toUpperCase().includes('MFA') ||
+      String(errorType).toUpperCase().includes('TOTP')
+  );
+
+  if (!isMfaRequired) {
+    return null;
+  }
+
+  return {
+    challengeToken,
+    challengeType: data.challengeType || challengeData.challengeType || nestedMfa.challengeType || 'totp',
+    methods,
+    availableMethods: methods,
+    hint:
+      data.challengeHint ||
+      data.maskedAccount ||
+      challengeData.challengeHint ||
+      challengeData.maskedAccount ||
+      nestedMfa.challengeHint ||
+      nestedMfa.maskedAccount ||
+      '',
+    recoveryAvailable: Boolean(
+      data.recoveryAvailable ??
+        data.recoveryCodesAvailable ??
+        challengeData.recoveryAvailable ??
+        challengeData.recoveryCodesAvailable ??
+        nestedMfa.recoveryAvailable ??
+        nestedMfa.recoveryCodesAvailable ??
+        methods.includes('recovery_code')
+    ),
+    message: data.msg || data.message || nestedMfa.message || '需要进行二次验证'
+  };
+}
 
 // ==============================|| AUTH PROVIDER ||============================== //
 
@@ -158,6 +240,24 @@ export function AuthProvider({ children }) {
     };
   }, [resetHeartbeat]);
 
+  const finalizeAuth = useCallback(
+    async ({ accessToken, tokenType, rememberMe = false, username = '' }) => {
+      localStorage.setItem('accessToken', `${tokenType} ${accessToken}`);
+
+      if (rememberMe) {
+        localStorage.setItem(REMEMBERED_USERNAME_KEY, username);
+      } else {
+        localStorage.removeItem(REMEMBERED_USERNAME_KEY);
+      }
+
+      const userResponse = await getUserInfo();
+      setUser(userResponse.data);
+      setIsAuthenticated(true);
+      connectSSE();
+    },
+    [connectSSE]
+  );
+
   // 断开 SSE
   const disconnectSSE = useCallback(() => {
     if (eventSource) {
@@ -201,29 +301,82 @@ export function AuthProvider({ children }) {
     try {
       const response = await loginApi({ username, password, captchaKey, captchaCode, rememberMe, turnstileToken });
 
-      // 登录成功（code === 200，否则会被 request.js 拦截器 reject）
-      const { tokenType, accessToken } = response.data;
-      localStorage.setItem('accessToken', `${tokenType} ${accessToken}`);
+      const tokenPayload = normalizeTokenPayload(response);
+      if (tokenPayload) {
+        await finalizeAuth({ ...tokenPayload, rememberMe, username });
 
-      if (rememberMe) {
-        localStorage.setItem(REMEMBERED_USERNAME_KEY, username);
-      } else {
-        localStorage.removeItem(REMEMBERED_USERNAME_KEY);
+        return { success: true };
       }
 
-      // 获取用户信息
-      const userResponse = await getUserInfo();
-      setUser(userResponse.data);
-      setIsAuthenticated(true);
-      connectSSE();
+      const challenge = normalizeMfaChallenge(response);
+      if (challenge) {
+        localStorage.removeItem('accessToken');
+        disconnectSSE();
+        setUser(null);
+        setIsAuthenticated(false);
 
-      return { success: true };
+        return {
+          success: false,
+          mfaRequired: true,
+          challenge,
+          message: challenge.message
+        };
+      }
+
+      return {
+        success: false,
+        message: '登录响应缺少访问令牌，请稍后重试'
+      };
     } catch (error) {
       console.error('登录失败:', error);
+      const challenge = normalizeMfaChallenge(error.data);
+      if (challenge) {
+        localStorage.removeItem('accessToken');
+        disconnectSSE();
+        setUser(null);
+        setIsAuthenticated(false);
+
+        return {
+          success: false,
+          mfaRequired: true,
+          challenge,
+          message: challenge.message
+        };
+      }
+
       // 业务错误通过 error.message (来自后端 msg) 和 error.data 获取
       return {
         success: false,
         message: error.message || '登录失败，请检查用户名、密码和验证码',
+        errorType: error.data?.data?.errorType || null
+      };
+    }
+  };
+
+  const verifyMfa = async ({ challengeToken, code, recoveryCode, type = 'totp', rememberMe = false, username = '' }) => {
+    try {
+      const response = await verifyMfaLogin({
+        challengeToken,
+        code,
+        recoveryCode,
+        type
+      });
+
+      const tokenPayload = normalizeTokenPayload(response);
+      if (!tokenPayload) {
+        return {
+          success: false,
+          message: '验证成功，但未收到访问令牌'
+        };
+      }
+
+      await finalizeAuth({ ...tokenPayload, rememberMe, username });
+      return { success: true };
+    } catch (error) {
+      console.error('MFA 验证失败:', error);
+      return {
+        success: false,
+        message: error.message || '验证失败，请检查验证码或恢复码后重试',
         errorType: error.data?.data?.errorType || null
       };
     }
@@ -260,6 +413,7 @@ export function AuthProvider({ children }) {
       isInitialized,
       notifications,
       login,
+      verifyMfa,
       logout,
       rememberedUsernameKey: REMEMBERED_USERNAME_KEY,
       clearNotification,

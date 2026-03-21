@@ -41,6 +41,7 @@ func RunMigrations() error {
 		model interface{}
 	}{
 		{name: "User", model: &User{}},
+		{name: "MFALoginChallenge", model: &MFALoginChallenge{}},
 		{name: "Subcription", model: &Subcription{}},
 		{name: "Node", model: &Node{}},
 		{name: "SubLogs", model: &SubLogs{}},
@@ -69,6 +70,20 @@ func RunMigrations() error {
 			return fmt.Errorf("基础数据表%s迁移失败: %w", table.name, err)
 		}
 		utils.Info("数据表%s创建成功", table.name)
+	}
+
+	if err := database.RunCustomMigration("0027_add_user_pending_mfa_columns", func() error {
+		if !db.Migrator().HasColumn(&User{}, "totp_pending_recovery_codes") {
+			if err := db.Migrator().AddColumn(&User{}, "TOTPPendingRecoveryCodes"); err != nil {
+				return err
+			}
+		}
+		if result := db.Exec("UPDATE users SET totp_pending_recovery_codes = '[]' WHERE totp_pending_recovery_codes IS NULL OR totp_pending_recovery_codes = ''"); result.Error != nil {
+			return result.Error
+		}
+		return nil
+	}); err != nil {
+		utils.Error("执行迁移 0027_add_user_pending_mfa_columns 失败: %v", err)
 	}
 
 	if err := database.RunCustomMigration("0024_migrate_legacy_webhook_settings", func() error {
@@ -123,6 +138,12 @@ func RunMigrations() error {
 		return db.Migrator().DropTable("remember_tokens")
 	}); err != nil {
 		utils.Error("执行迁移 0025_drop_remember_tokens_table 失败: %v", err)
+	}
+
+	if err := database.RunCustomMigration("0026_add_user_totp_columns", func() error {
+		return db.AutoMigrate(&User{})
+	}); err != nil {
+		utils.Error("执行迁移 0026_add_user_totp_columns 失败: %v", err)
 	}
 
 	// 检查并删除 idx_name_id 索引

@@ -39,6 +39,7 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 | `SUBLINK_WEB_BASE_PATH` | 前端访问基础路径（站点隐藏）                  | -                                   |
 | `SUBLINK_ADMIN_PASSWORD` | 初始管理员密码                         | 123456                              |
 | `SUBLINK_ADMIN_PASSWORD_REST` | 重置管理员密码                         | 输入新管理员密码                            |
+| `SUBLINK_MFA_RESET_SECRET` | 生成受限 TOTP 应急重置令牌的密钥（仅环境变量生效） | - |
 | `SUBLINK_FEATURE` | 试验性功能开关                         | 目前可以设置其值为`SubNodePreview`开启订阅节点预览功能 |
 
 ---
@@ -201,6 +202,50 @@ dsn: postgres://user:pass@postgres:5432/sublink?sslmode=disable
 > [!WARNING]
 > 如果您需要**多实例部署**或**集群部署**，请务必通过环境变量设置相同的 `SUBLINK_JWT_SECRET` 和 `SUBLINK_API_ENCRYPTION_KEY`，以确保各实例间的登录状态和 API Key 一致。
 
+## TOTP / MFA 安全说明
+
+SublinkPro 支持基于 TOTP 的双重验证。启用后，登录流程会变成：
+
+1. 用户名 + 密码 + 验证码
+2. 身份验证器动态验证码，或一次性恢复码
+
+### 启用与使用建议
+
+- 在 `设置 -> 个人设置 -> 双重验证（TOTP）` 中开始绑定
+- 扫描二维码后，必须输入一次当前 6 位验证码才能正式启用
+- 系统会生成一组**一次性恢复码**，请离线保存，不要与账号密码保存在同一位置
+- 修改密码、修改用户名/昵称、关闭 TOTP、重置恢复码时，如果当前账户已启用 TOTP，系统会要求再次输入当前动态验证码
+
+### 恢复码策略
+
+- 恢复码只能在 **TOTP 已正式启用后** 用于登录
+- 每个恢复码只能使用一次
+- 重新生成恢复码后，旧恢复码立即失效
+
+### 应急重置（Break-glass）策略
+
+`SUBLINK_MFA_RESET_SECRET` 用于生成**受限的应急 TOTP 重置令牌**，适合运维人员在用户丢失身份验证器、且无法使用恢复码时介入处理。
+
+这个配置具有以下约束：
+
+- **仅环境变量生效**，不会写入配置文件
+- 不提供全局万能绕过登录能力
+- 只能用于“校验用户名 + 密码后，清除该账号的 TOTP”
+- 推荐仅在运维场景临时设置，并妥善轮换
+
+### 推荐运维方式
+
+1. 临时设置环境变量 `SUBLINK_MFA_RESET_SECRET`
+2. 为目标用户生成一个**带过期时间**的 reset token
+3. 调用 `/api/v1/auth/mfa/reset`，同时提交：
+   - `username`
+   - `password`
+   - `resetToken`
+4. 用户重新登录后重新绑定 TOTP
+
+> [!WARNING]
+> 请不要把 `SUBLINK_MFA_RESET_SECRET` 作为常驻公开配置，也不要把它当作“跳过 MFA 登录”的后门。它的用途只能是**在知道账号密码的前提下，执行受限的 TOTP 重置**。
+
 ---
 
 ## 验证码配置
@@ -341,6 +386,7 @@ services:
       # 敏感配置（可选，不设置则自动生成）
       # - SUBLINK_JWT_SECRET=your-secret-key
       # - SUBLINK_API_ENCRYPTION_KEY=your-encryption-key
+      # - SUBLINK_MFA_RESET_SECRET=your-break-glass-secret
     restart: unless-stopped
 ```
 

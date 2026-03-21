@@ -47,6 +47,11 @@ func UserMe(c *gin.Context) {
 		"userId":   user.ID,
 		"username": user.Username,
 		"roles":    []string{"ADMIN"},
+		"mfa": gin.H{
+			"enabled":                user.TOTPEnabled,
+			"pendingEnrollment":      buildMFAStatus(user).PendingEnrollment,
+			"recoveryCodesRemaining": user.CountRecoveryCodes(),
+		},
 	})
 }
 
@@ -112,6 +117,7 @@ func UserChangePassword(c *gin.Context) {
 		OldPassword     string `json:"oldPassword" binding:"required"`
 		NewPassword     string `json:"newPassword" binding:"required"`
 		ConfirmPassword string `json:"confirmPassword" binding:"required"`
+		Code            string `json:"code"`
 	}
 
 	var req ChangePasswordRequest
@@ -132,16 +138,15 @@ func UserChangePassword(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户
 	username, _ := c.Get("username")
-	user := &models.User{
-		Username: username.(string),
-		Password: req.OldPassword,
+	user := &models.User{Username: username.(string)}
+	if err := user.Find(); err != nil {
+		utils.FailWithMsg(c, "用户不存在")
+		return
 	}
 
-	// 验证旧密码是否正确
-	if err := user.Verify(); err != nil {
-		utils.FailWithMsg(c, "当前密码错误")
+	if err := requireMFAReauth(user, req.OldPassword, req.Code); err != nil {
+		utils.FailWithMsg(c, err.Error())
 		return
 	}
 
@@ -161,6 +166,8 @@ func UserUpdateProfile(c *gin.Context) {
 	type UpdateProfileRequest struct {
 		Username string `json:"username"`
 		Nickname string `json:"nickname"`
+		Password string `json:"password" binding:"required"`
+		Code     string `json:"code"`
 	}
 
 	var req UpdateProfileRequest
@@ -182,6 +189,11 @@ func UserUpdateProfile(c *gin.Context) {
 	// 查找用户获取ID
 	if err := user.Find(); err != nil {
 		utils.FailWithMsg(c, "用户不存在")
+		return
+	}
+
+	if err := requireMFAReauth(user, req.Password, req.Code); err != nil {
+		utils.FailWithMsg(c, err.Error())
 		return
 	}
 

@@ -12,11 +12,27 @@ import (
 )
 
 type User struct {
-	ID       int
-	Username string
-	Password string
-	Role     string
-	Nickname string
+	ID                       int
+	Username                 string
+	Password                 string
+	Role                     string
+	Nickname                 string
+	TOTPEnabled              bool
+	TOTPSecret               string
+	TOTPPendingSecret        string
+	TOTPPendingRecoveryCodes string `gorm:"type:text"`
+	TOTPRecoveryCodes        string `gorm:"type:text"`
+}
+
+type MFALoginChallenge struct {
+	ID           int
+	ChallengeID  string `gorm:"uniqueIndex;size:64"`
+	Username     string `gorm:"index;size:255"`
+	Purpose      string `gorm:"size:64"`
+	ExpiresAt    int64
+	ConsumedAt   int64
+	AttemptCount int
+	MaxAttempts  int
 }
 
 // userCache 使用新的泛型缓存

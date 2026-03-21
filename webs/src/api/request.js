@@ -1,5 +1,12 @@
 import axios from 'axios';
 
+function isAnonymousAuthRequest(config = {}) {
+  const requestUrl = config.url || '';
+  const hasAuthHeader = Boolean(config.headers?.Authorization || config.headers?.authorization);
+
+  return requestUrl.startsWith('/v1/auth/') && !hasAuthHeader;
+}
+
 // 创建 axios 实例
 const request = axios.create({
   baseURL: '/api',
@@ -42,9 +49,10 @@ request.interceptors.response.use(
   (error) => {
     if (error.response) {
       const { status } = error.response;
+      const requestConfig = error.config || {};
 
       // 401 未授权 - 清除 token 并跳转登录
-      if (status === 401) {
+      if (status === 401 && !isAnonymousAuthRequest(requestConfig)) {
         localStorage.removeItem('accessToken');
         window.location.href = '/login';
       }
