@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 // material-ui
-import { useTheme, alpha, keyframes } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -58,43 +58,43 @@ import {
 import { getAirports } from 'api/airports';
 import { formatBytes, formatExpireTime, getUsageColor } from 'views/airports/utils';
 
-// ==============================|| 动画定义 ||============================== //
+const getCalmSurface = (theme, accentColor) => {
+  const isDark = theme.palette.mode === 'dark';
 
-const shimmer = keyframes`
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-`;
+  return {
+    backgroundColor: isDark ? alpha(theme.palette.background.paper, 0.92) : theme.palette.background.paper,
+    border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.08) : alpha(accentColor, 0.12)}`,
+    boxShadow: isDark ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.06)',
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+    '&:hover': {
+      borderColor: isDark ? alpha(accentColor, 0.24) : alpha(accentColor, 0.2),
+      boxShadow: isDark ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.08)'
+    }
+  };
+};
 
-const float = keyframes`
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-`;
+const getAccentIconBox = (theme, accentColor) => ({
+  width: 40,
+  height: 40,
+  borderRadius: 2,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: alpha(accentColor, theme.palette.mode === 'dark' ? 0.18 : 0.12),
+  border: `1px solid ${alpha(accentColor, theme.palette.mode === 'dark' ? 0.32 : 0.18)}`,
+  color: accentColor,
+  flexShrink: 0
+});
 
-const pulse = keyframes`
-  0%, 100% {
-    opacity: 1;
+const getAccentChipSx = (theme, accentColor) => ({
+  bgcolor: alpha(accentColor, theme.palette.mode === 'dark' ? 0.18 : 0.1),
+  color: theme.palette.mode === 'dark' ? alpha('#fff', 0.92) : accentColor,
+  border: `1px solid ${alpha(accentColor, theme.palette.mode === 'dark' ? 0.3 : 0.18)}`,
+  fontWeight: 600,
+  '&:hover': {
+    bgcolor: alpha(accentColor, theme.palette.mode === 'dark' ? 0.24 : 0.14)
   }
-  50% {
-    opacity: 0.6;
-  }
-`;
-
-const glow = keyframes`
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(99, 102, 241, 0.5);
-  }
-`;
+});
 
 // ==============================|| 问候语计算 ||============================== //
 
@@ -125,13 +125,13 @@ const PremiumStatCard = ({
   icon: Icon,
   gradientColors,
   accentColor,
-  index,
   isNodeStat,
   copyLink,
   onCopy
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const surfaceSx = getCalmSurface(theme, accentColor || gradientColors[0]);
 
   const handleClick = () => {
     if (isNodeStat && copyLink && onCopy) {
@@ -150,89 +150,40 @@ const PremiumStatCard = ({
     <Card
       onClick={handleClick}
       sx={{
+        ...surfaceSx,
         position: 'relative',
         overflow: 'hidden',
         borderRadius: 4,
         height: '100%',
-        background: isDark
-          ? `linear-gradient(145deg, ${alpha(gradientColors[0], 0.15)} 0%, ${alpha(gradientColors[1], 0.08)} 100%)`
-          : `linear-gradient(145deg, ${alpha(gradientColors[0], 0.08)} 0%, ${alpha('#fff', 0.95)} 100%)`,
-        backdropFilter: 'blur(20px)',
-        border: `1px solid ${isDark ? alpha(gradientColors[0], 0.2) : alpha(gradientColors[0], 0.15)}`,
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        animation: `${float} 6s ease-in-out infinite`,
-        animationDelay: `${index * 0.3}s`,
         cursor: isNodeStat && copyLink ? 'pointer' : 'default',
         '&:hover': {
-          transform: 'translateY(-8px) scale(1.02)',
-          boxShadow: `0 20px 40px ${alpha(gradientColors[0], 0.25)}`,
-          border: `1px solid ${alpha(gradientColors[0], 0.4)}`,
+          ...surfaceSx['&:hover'],
           '& .stat-icon': {
-            transform: 'rotate(10deg) scale(1.1)'
-          },
-          '& .stat-value': {
-            transform: 'scale(1.05)'
+            borderColor: alpha(gradientColors[0], isDark ? 0.36 : 0.24),
+            backgroundColor: alpha(gradientColors[0], isDark ? 0.2 : 0.14)
           }
         },
-        // 顶部彩色边框装饰
         '&::before': {
           content: '""',
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          height: 4,
-          background: `linear-gradient(90deg, ${gradientColors[0]} 0%, ${gradientColors[1]} 100%)`
-        },
-        // 光泽效果
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: '-100%',
-          width: '200%',
-          height: '100%',
-          background: `linear-gradient(90deg, transparent 0%, ${alpha('#fff', isDark ? 0.03 : 0.1)} 50%, transparent 100%)`,
-          animation: `${shimmer} 3s linear infinite`
+          height: 3,
+          backgroundColor: alpha(gradientColors[0], 0.85)
         }
       }}
     >
       <CardContent sx={{ position: 'relative', zIndex: 1, p: 2.5 }}>
-        {/* 背景装饰圆 */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: -30,
-            right: -30,
-            width: 100,
-            height: 100,
-            borderRadius: '50%',
-            background: `radial-gradient(circle, ${alpha(gradientColors[0], 0.15)} 0%, transparent 70%)`
-          }}
-        />
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: -20,
-            left: -20,
-            width: 60,
-            height: 60,
-            borderRadius: '50%',
-            background: `radial-gradient(circle, ${alpha(gradientColors[1], 0.1)} 0%, transparent 70%)`
-          }}
-        />
-
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            {/* 标题 */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
               <Box
                 sx={{
                   width: 6,
                   height: 6,
                   borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${gradientColors[0]} 0%, ${gradientColors[1]} 100%)`,
-                  animation: `${pulse} 2s ease-in-out infinite`
+                  bgcolor: gradientColors[0]
                 }}
               />
               <Typography
@@ -249,18 +200,13 @@ const PremiumStatCard = ({
               </Typography>
             </Box>
 
-            {/* 数值 */}
             <Typography
               className="stat-value"
               variant="h1"
               sx={{
                 fontWeight: 700,
                 fontSize: isNodeStat ? '1.75rem' : '2.25rem',
-                background: `linear-gradient(135deg, ${gradientColors[0]} 0%, ${gradientColors[1]} 100%)`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                transition: 'transform 0.3s ease',
+                color: theme.palette.text.primary,
                 lineHeight: 1.2
               }}
             >
@@ -273,7 +219,6 @@ const PremiumStatCard = ({
               )}
             </Typography>
 
-            {/* 节点名称/趋势指示器 */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
               {isNodeStat && subValue ? (
                 <Tooltip title={subValue} arrow placement="bottom">
@@ -311,7 +256,6 @@ const PremiumStatCard = ({
             </Box>
           </Box>
 
-          {/* 图标 */}
           <Box
             className="stat-icon"
             sx={{
@@ -321,9 +265,9 @@ const PremiumStatCard = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: `linear-gradient(145deg, ${alpha(gradientColors[0], 0.2)} 0%, ${alpha(gradientColors[1], 0.1)} 100%)`,
-              border: `1px solid ${alpha(gradientColors[0], 0.2)}`,
-              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              backgroundColor: alpha(gradientColors[0], isDark ? 0.16 : 0.1),
+              border: `1px solid ${alpha(gradientColors[0], isDark ? 0.26 : 0.18)}`,
+              transition: 'background-color 0.2s ease, border-color 0.2s ease',
               flexShrink: 0
             }}
           >
@@ -336,7 +280,6 @@ const PremiumStatCard = ({
           </Box>
         </Box>
 
-        {/* 底部进度条装饰 */}
         <Box sx={{ mt: 2 }}>
           <LinearProgress
             variant="determinate"
@@ -347,7 +290,7 @@ const PremiumStatCard = ({
               bgcolor: alpha(gradientColors[0], 0.1),
               '& .MuiLinearProgress-bar': {
                 borderRadius: 1.5,
-                background: `linear-gradient(90deg, ${gradientColors[0]} 0%, ${gradientColors[1]} 100%)`
+                backgroundColor: gradientColors[0]
               }
             }}
           />
@@ -392,45 +335,22 @@ const StarReminderCard = () => {
   return (
     <Card
       sx={{
+        ...getCalmSurface(theme, '#f59e0b'),
         mb: 3,
         borderRadius: 3,
-        background: isDark
-          ? `linear-gradient(135deg, ${alpha('#fbbf24', 0.15)} 0%, ${alpha('#f59e0b', 0.1)} 50%, ${alpha('#d97706', 0.05)} 100%)`
-          : `linear-gradient(135deg, ${alpha('#fef3c7', 0.9)} 0%, ${alpha('#fde68a', 0.6)} 50%, ${alpha('#fcd34d', 0.3)} 100%)`,
-        border: `1px solid ${isDark ? alpha('#fbbf24', 0.25) : alpha('#f59e0b', 0.3)}`,
         position: 'relative',
         overflow: 'hidden',
-        transition: 'all 0.3s ease',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: `0 8px 24px ${alpha('#fbbf24', 0.25)}`
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          backgroundColor: '#f59e0b'
         }
       }}
     >
-      {/* 背景装饰 */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: -20,
-          right: -20,
-          width: 100,
-          height: 100,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${alpha('#fbbf24', 0.2)} 0%, transparent 70%)`
-        }}
-      />
-      <Box
-        sx={{
-          position: 'absolute',
-          bottom: -30,
-          left: '30%',
-          width: 80,
-          height: 80,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${alpha('#f59e0b', 0.15)} 0%, transparent 70%)`
-        }}
-      />
-
       <CardContent sx={{ py: 2.5, px: 3, position: 'relative' }}>
         <Box
           sx={{
@@ -451,8 +371,8 @@ const StarReminderCard = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: `linear-gradient(135deg, ${alpha('#fbbf24', 0.3)} 0%, ${alpha('#f59e0b', 0.2)} 100%)`,
-                border: `1px solid ${alpha('#fbbf24', 0.4)}`,
+                backgroundColor: alpha('#f59e0b', isDark ? 0.18 : 0.12),
+                border: `1px solid ${alpha('#f59e0b', isDark ? 0.32 : 0.2)}`,
                 flexShrink: 0
               }}
             >
@@ -515,10 +435,9 @@ const StarReminderCard = () => {
                     bgcolor: isDark ? alpha(theme.palette[item.color].main, 0.15) : alpha(theme.palette[item.color].light, 0.5),
                     color: isDark ? theme.palette[item.color].light : theme.palette[item.color].dark,
                     border: `1px solid ${isDark ? alpha(theme.palette[item.color].main, 0.3) : alpha(theme.palette[item.color].main, 0.2)}`,
-                    transition: "all 0.2s ease",
+                    transition: 'background-color 0.2s ease, border-color 0.2s ease',
                     "&:hover": {
-                      bgcolor: isDark ? alpha(theme.palette[item.color].main, 0.25) : alpha(theme.palette[item.color].light, 0.8),
-                      transform: "scale(1.05)"
+                      bgcolor: isDark ? alpha(theme.palette[item.color].main, 0.22) : alpha(theme.palette[item.color].light, 0.7)
                     },
                     "& .MuiChip-icon": {
                       color: "inherit",
@@ -565,17 +484,10 @@ const StarReminderCard = () => {
                   px: 1,
                   height: 36,
                   borderRadius: 2,
-                  background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
-                  color: "#78350f",
-                  border: "none",
+                  ...getAccentChipSx(theme, '#f59e0b'),
                   cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                    transform: "scale(1.05)"
-                  },
                   "& .MuiChip-icon": {
-                    color: "#78350f"
+                    color: 'inherit'
                   }
                 }}
               />
@@ -636,45 +548,26 @@ const AirportUsageCard = ({ airports = [], loading }) => {
   return (
     <Card
       sx={{
+        ...getCalmSurface(theme, '#06b6d4'),
         mb: 4,
         borderRadius: 4,
-        background: isDark
-          ? `linear-gradient(145deg, ${alpha('#06b6d4', 0.12)} 0%, ${alpha('#0891b2', 0.06)} 100%)`
-          : `linear-gradient(145deg, ${alpha('#06b6d4', 0.08)} 0%, ${alpha('#fff', 0.95)} 100%)`,
-        backdropFilter: 'blur(20px)',
-        border: `1px solid ${isDark ? alpha('#06b6d4', 0.2) : alpha('#06b6d4', 0.15)}`,
         overflow: 'hidden',
-        position: 'relative'
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          backgroundColor: '#06b6d4'
+        }
       }}
     >
-      {/* 背景装饰 */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: -40,
-          right: -40,
-          width: 120,
-          height: 120,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${alpha('#06b6d4', 0.2)} 0%, transparent 70%)`
-        }}
-      />
-
       <CardContent sx={{ p: 3, position: 'relative' }}>
-        {/* 标题 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
-            }}
-          >
-            <FlightTakeoffIcon sx={{ color: '#fff', fontSize: 22 }} />
+          <Box sx={getAccentIconBox(theme, '#06b6d4')}>
+            <FlightTakeoffIcon sx={{ fontSize: 22 }} />
           </Box>
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
             机场流量概览
@@ -684,9 +577,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
             size="small"
             sx={{
               ml: 'auto',
-              bgcolor: isDark ? alpha('#06b6d4', 0.2) : alpha('#06b6d4', 0.1),
-              color: isDark ? '#67e8f9' : '#0891b2',
-              fontWeight: 600
+              ...getAccentChipSx(theme, '#06b6d4')
             }}
           />
         </Box>
@@ -706,8 +597,8 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                   p: 2.5,
                   borderRadius: 3,
                   height: '100%',
-                  bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#fff', 0.7),
-                  border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#06b6d4', 0.15)}`
+                  bgcolor: isDark ? alpha(theme.palette.common.white, 0.03) : alpha(theme.palette.common.white, 0.88),
+                  border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.08) : alpha('#06b6d4', 0.12)}`
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
@@ -719,8 +610,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                 <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
                   {formatBytes(totalUsed)} / {formatBytes(totalQuota)}
                 </Typography>
-                {/* 进度条 */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box
                     sx={{
                       flexGrow: 1,
@@ -754,8 +644,8 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                   p: 2.5,
                   borderRadius: 3,
                   height: '100%',
-                  bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#fff', 0.7),
-                  border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#06b6d4', 0.15)}`
+                  bgcolor: isDark ? alpha(theme.palette.common.white, 0.03) : alpha(theme.palette.common.white, 0.88),
+                  border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.08) : alpha('#06b6d4', 0.12)}`
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
@@ -792,12 +682,12 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                     lowUsageAirports.length > 0
                       ? isDark
                         ? alpha('#ef4444', 0.1)
-                        : alpha('#fef2f2', 0.9)
+                        : alpha('#fef2f2', 0.92)
                       : isDark
-                        ? alpha('#fff', 0.05)
-                        : alpha('#fff', 0.7),
-                  border: `1px solid ${lowUsageAirports.length > 0 ? alpha("#ef4444", 0.3) : isDark ? alpha("#fff", 0.1) : alpha("#06b6d4", 0.15)
-                  }`
+                        ? alpha(theme.palette.common.white, 0.03)
+                        : alpha(theme.palette.common.white, 0.88),
+                   border: `1px solid ${lowUsageAirports.length > 0 ? alpha("#ef4444", 0.3) : isDark ? alpha("#fff", 0.1) : alpha("#06b6d4", 0.15)
+                   }`
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
@@ -878,48 +768,20 @@ const WelcomeBanner = ({ greeting }) => {
         position: 'relative',
         overflow: 'hidden',
         borderRadius: 4,
-        background: isDark
-          ? `linear-gradient(135deg, ${alpha('#6366f1', 0.2)} 0%, ${alpha('#8b5cf6', 0.15)} 50%, ${alpha('#a855f7', 0.1)} 100%)`
-          : `linear-gradient(135deg, ${alpha('#6366f1', 0.12)} 0%, ${alpha('#8b5cf6', 0.08)} 50%, ${alpha('#a855f7', 0.05)} 100%)`,
-        backdropFilter: 'blur(20px)',
-        border: `1px solid ${isDark ? alpha('#6366f1', 0.2) : alpha('#6366f1', 0.15)}`,
-        animation: `${glow} 4s ease-in-out infinite`
+        backgroundColor: isDark ? alpha(theme.palette.background.paper, 0.96) : theme.palette.background.paper,
+        border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.08) : alpha('#6366f1', 0.1)}`,
+        boxShadow: isDark ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.06)',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          width: 4,
+          backgroundColor: '#6366f1'
+        }
       }}
     >
-      {/* 背景装饰图案 */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: 0.5,
-          background: `
-            radial-gradient(circle at 20% 20%, ${alpha('#6366f1', 0.15)} 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, ${alpha('#a855f7', 0.1)} 0%, transparent 50%),
-            radial-gradient(circle at 50% 50%, ${alpha('#8b5cf6', 0.08)} 0%, transparent 70%)
-          `
-        }}
-      />
-
-      {/* 网格装饰 */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: isDark ? 0.03 : 0.05,
-          backgroundImage: `
-            linear-gradient(to right, ${theme.palette.primary.main} 1px, transparent 1px),
-            linear-gradient(to bottom, ${theme.palette.primary.main} 1px, transparent 1px)
-          `,
-          backgroundSize: '40px 40px'
-        }}
-      />
-
       <CardContent sx={{ position: 'relative', zIndex: 1, py: 5, px: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 3 }}>
           <Box>
@@ -929,12 +791,7 @@ const WelcomeBanner = ({ greeting }) => {
                 sx={{
                   fontWeight: 800,
                   fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-                  background: isDark
-                    ? 'linear-gradient(135deg, #fff 0%, #e0e7ff 100%)'
-                    : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: theme.palette.text.primary,
                   lineHeight: 1.2
                 }}
               >
@@ -942,8 +799,7 @@ const WelcomeBanner = ({ greeting }) => {
               </Typography>
               <Typography
                 sx={{
-                  fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-                  animation: `${float} 3s ease-in-out infinite`
+                  fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' }
                 }}
               >
                 {greeting.emoji}
@@ -964,7 +820,6 @@ const WelcomeBanner = ({ greeting }) => {
             </Typography>
           </Box>
 
-          {/* 装饰图标 */}
           <Box
             sx={{
               display: { xs: 'none', md: 'flex' },
@@ -972,10 +827,9 @@ const WelcomeBanner = ({ greeting }) => {
               justifyContent: 'center',
               width: 80,
               height: 80,
-              borderRadius: '50%',
-              background: `linear-gradient(145deg, ${alpha('#6366f1', 0.2)} 0%, ${alpha('#a855f7', 0.1)} 100%)`,
-              border: `1px solid ${alpha('#6366f1', 0.3)}`,
-              animation: `${float} 4s ease-in-out infinite`
+              borderRadius: 3,
+              backgroundColor: alpha('#6366f1', isDark ? 0.14 : 0.08),
+              border: `1px solid ${alpha('#6366f1', isDark ? 0.28 : 0.16)}`
             }}
           >
             <AutoAwesomeIcon sx={{ fontSize: 40, color: isDark ? '#a5b4fc' : '#6366f1' }} />
@@ -997,13 +851,11 @@ const ReleaseCard = ({ release }) => {
       sx={{
         mb: 2.5,
         borderRadius: 3,
-        background: isDark ? alpha(theme.palette.background.paper, 0.6) : alpha('#fff', 0.9),
-        backdropFilter: 'blur(10px)',
-        border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        backgroundColor: isDark ? alpha(theme.palette.background.paper, 0.94) : theme.palette.background.paper,
+        border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.08) : alpha(theme.palette.primary.main, 0.08)}`,
+        transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
         '&:hover': {
-          transform: 'translateX(8px)',
-          boxShadow: theme.shadows[8],
+          boxShadow: isDark ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.08)',
           borderColor: theme.palette.primary.main
         }
       }}
@@ -1015,8 +867,7 @@ const ReleaseCard = ({ release }) => {
             size="small"
             sx={{
               fontWeight: 700,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              color: 'white',
+              ...getAccentChipSx(theme, theme.palette.primary.main),
               borderRadius: 2,
               px: 0.5
             }}
@@ -1286,31 +1137,26 @@ export default function DashboardDefault() {
         <Grid size={{ xs: 12, md: 6 }}>
           <Card
             sx={{
+              ...getCalmSurface(theme, '#6366f1'),
               borderRadius: 4,
               height: '100%',
-              background: isDark
-                ? `linear-gradient(145deg, ${alpha('#6366f1', 0.12)} 0%, ${alpha('#8b5cf6', 0.06)} 100%)`
-                : `linear-gradient(145deg, ${alpha('#6366f1', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${isDark ? alpha('#6366f1', 0.2) : alpha('#6366f1', 0.12)}`,
               overflow: 'hidden',
-              position: 'relative'
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                backgroundColor: '#6366f1'
+              }
             }}
           >
             <CardContent sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
-                  }}
-                >
-                  <PublicIcon sx={{ color: '#fff', fontSize: 22 }} />
+                <Box sx={getAccentIconBox(theme, '#6366f1')}>
+                  <PublicIcon sx={{ fontSize: 22 }} />
                 </Box>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
                   节点国家分布
@@ -1348,16 +1194,12 @@ export default function DashboardDefault() {
                               <Typography sx={{ color: 'text.secondary', fontSize: '0.75rem', ml: 0.5 }}>({count})</Typography>
                             </Box>
                           }
-                          sx={{
-                            bgcolor: isDark ? alpha('#6366f1', 0.15) : alpha('#6366f1', 0.08),
-                            border: `1px solid ${alpha('#6366f1', 0.2)}`,
-                            borderRadius: 2,
-                            height: 36,
-                            '&:hover': {
-                              bgcolor: isDark ? alpha('#6366f1', 0.25) : alpha('#6366f1', 0.15)
-                            }
-                          }}
-                        />
+                           sx={{
+                             ...getAccentChipSx(theme, '#6366f1'),
+                             borderRadius: 2,
+                             height: 36
+                           }}
+                         />
                       );
                     })}
                 </Box>
@@ -1374,31 +1216,26 @@ export default function DashboardDefault() {
         <Grid size={{ xs: 12, md: 6 }}>
           <Card
             sx={{
+              ...getCalmSurface(theme, '#10b981'),
               borderRadius: 4,
               height: '100%',
-              background: isDark
-                ? `linear-gradient(145deg, ${alpha('#10b981', 0.12)} 0%, ${alpha('#059669', 0.06)} 100%)`
-                : `linear-gradient(145deg, ${alpha('#10b981', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${isDark ? alpha('#10b981', 0.2) : alpha('#10b981', 0.12)}`,
               overflow: 'hidden',
-              position: 'relative'
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                backgroundColor: '#10b981'
+              }
             }}
           >
             <CardContent sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  }}
-                >
-                  <SecurityIcon sx={{ color: '#fff', fontSize: 22 }} />
+                <Box sx={getAccentIconBox(theme, '#10b981')}>
+                  <SecurityIcon sx={{ fontSize: 22 }} />
                 </Box>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
                   节点协议分布
@@ -1452,13 +1289,9 @@ export default function DashboardDefault() {
                             </Box>
                           }
                           sx={{
-                            bgcolor: isDark ? alpha(colors[0], 0.15) : alpha(colors[0], 0.08),
-                            border: `1px solid ${alpha(colors[0], 0.25)}`,
+                            ...getAccentChipSx(theme, colors[0]),
                             borderRadius: 2,
-                            height: 36,
-                            '&:hover': {
-                              bgcolor: isDark ? alpha(colors[0], 0.25) : alpha(colors[0], 0.15)
-                            }
+                            height: 36
                           }}
                         />
                       );
@@ -1480,31 +1313,26 @@ export default function DashboardDefault() {
         <Grid size={{ xs: 12, md: 4 }}>
           <Card
             sx={{
+              ...getCalmSurface(theme, '#ec4899'),
               borderRadius: 4,
               height: '100%',
-              background: isDark
-                ? `linear-gradient(145deg, ${alpha('#ec4899', 0.12)} 0%, ${alpha('#db2777', 0.06)} 100%)`
-                : `linear-gradient(145deg, ${alpha('#ec4899', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${isDark ? alpha('#ec4899', 0.2) : alpha('#ec4899', 0.12)}`,
               overflow: 'hidden',
-              position: 'relative'
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                backgroundColor: '#ec4899'
+              }
             }}
           >
             <CardContent sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)'
-                  }}
-                >
-                  <LabelIcon sx={{ color: '#fff', fontSize: 22 }} />
+                <Box sx={getAccentIconBox(theme, '#ec4899')}>
+                  <LabelIcon sx={{ fontSize: 22 }} />
                 </Box>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
                   标签统计
@@ -1539,13 +1367,9 @@ export default function DashboardDefault() {
                           </Box>
                         }
                         sx={{
-                          bgcolor: isDark ? alpha(tag.color, 0.15) : alpha(tag.color, 0.1),
-                          border: `1px solid ${alpha(tag.color, 0.3)}`,
+                          ...getAccentChipSx(theme, tag.color),
                           borderRadius: 2,
-                          height: 36,
-                          '&:hover': {
-                            bgcolor: isDark ? alpha(tag.color, 0.25) : alpha(tag.color, 0.2)
-                          }
+                          height: 36
                         }}
                       />
                     ))}
@@ -1563,31 +1387,26 @@ export default function DashboardDefault() {
         <Grid size={{ xs: 12, md: 4 }}>
           <Card
             sx={{
+              ...getCalmSurface(theme, '#8b5cf6'),
               borderRadius: 4,
               height: '100%',
-              background: isDark
-                ? `linear-gradient(145deg, ${alpha('#8b5cf6', 0.12)} 0%, ${alpha('#7c3aed', 0.06)} 100%)`
-                : `linear-gradient(145deg, ${alpha('#8b5cf6', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${isDark ? alpha('#8b5cf6', 0.2) : alpha('#8b5cf6', 0.12)}`,
               overflow: 'hidden',
-              position: 'relative'
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                backgroundColor: '#8b5cf6'
+              }
             }}
           >
             <CardContent sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
-                  }}
-                >
-                  <FolderIcon sx={{ color: '#fff', fontSize: 22 }} />
+                <Box sx={getAccentIconBox(theme, '#8b5cf6')}>
+                  <FolderIcon sx={{ fontSize: 22 }} />
                 </Box>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
                   分组统计
@@ -1614,13 +1433,9 @@ export default function DashboardDefault() {
                           </Box>
                         }
                         sx={{
-                          bgcolor: isDark ? alpha('#8b5cf6', 0.15) : alpha('#8b5cf6', 0.08),
-                          border: `1px solid ${alpha('#8b5cf6', 0.2)}`,
+                          ...getAccentChipSx(theme, '#8b5cf6'),
                           borderRadius: 2,
-                          height: 36,
-                          '&:hover': {
-                            bgcolor: isDark ? alpha('#8b5cf6', 0.25) : alpha('#8b5cf6', 0.15)
-                          }
+                          height: 36
                         }}
                       />
                     ))}
@@ -1638,31 +1453,26 @@ export default function DashboardDefault() {
         <Grid size={{ xs: 12, md: 4 }}>
           <Card
             sx={{
+              ...getCalmSurface(theme, '#f97316'),
               borderRadius: 4,
               height: '100%',
-              background: isDark
-                ? `linear-gradient(145deg, ${alpha('#f97316', 0.12)} 0%, ${alpha('#ea580c', 0.06)} 100%)`
-                : `linear-gradient(145deg, ${alpha('#f97316', 0.06)} 0%, ${alpha('#fff', 0.95)} 100%)`,
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${isDark ? alpha('#f97316', 0.2) : alpha('#f97316', 0.12)}`,
               overflow: 'hidden',
-              position: 'relative'
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                backgroundColor: '#f97316'
+              }
             }}
           >
             <CardContent sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)'
-                  }}
-                >
-                  <SourceIcon sx={{ color: '#fff', fontSize: 22 }} />
+                <Box sx={getAccentIconBox(theme, '#f97316')}>
+                  <SourceIcon sx={{ fontSize: 22 }} />
                 </Box>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
                   来源统计
@@ -1689,13 +1499,9 @@ export default function DashboardDefault() {
                           </Box>
                         }
                         sx={{
-                          bgcolor: isDark ? alpha('#f97316', 0.15) : alpha('#f97316', 0.08),
-                          border: `1px solid ${alpha('#f97316', 0.2)}`,
+                          ...getAccentChipSx(theme, '#f97316'),
                           borderRadius: 2,
-                          height: 36,
-                          '&:hover': {
-                            bgcolor: isDark ? alpha('#f97316', 0.25) : alpha('#f97316', 0.15)
-                          }
+                          height: 36
                         }}
                       />
                     ))}
@@ -1739,9 +1545,7 @@ export default function DashboardDefault() {
                 onClick={fetchReleases}
                 disabled={loadingReleases}
                 sx={{
-                  transition: 'all 0.3s ease',
                   '&:hover': {
-                    transform: 'rotate(180deg)',
                     background: alpha(theme.palette.primary.main, 0.1)
                   }
                 }}

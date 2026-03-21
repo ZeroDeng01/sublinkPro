@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useTheme, alpha, keyframes } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -21,30 +21,6 @@ import StopIcon from '@mui/icons-material/Stop';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 
-// ==============================|| ANIMATIONS ||============================== //
-
-const pulse = keyframes`
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
-`;
-
-const slideIn = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`;
-
-// ==============================|| TIME FORMATTING HELPER ||============================== //
-
 const formatTime = (ms) => {
   if (ms < 0) return '--';
   const seconds = Math.floor(ms / 1000);
@@ -56,6 +32,26 @@ const formatTime = (ms) => {
   const mins = minutes % 60;
   return `${hours}时${mins}分`;
 };
+
+const getPanelSurface = (theme, accentColor) => ({
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.94) : theme.palette.background.paper,
+  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.common.white, 0.08) : alpha(accentColor, 0.12)}`,
+  boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.06)',
+  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+  '&:hover': {
+    borderColor: theme.palette.mode === 'dark' ? alpha(accentColor, 0.24) : alpha(accentColor, 0.2),
+    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.08)'
+  }
+});
+
+const getAccentChipSx = (theme, accentColor) => ({
+  bgcolor: alpha(accentColor, theme.palette.mode === 'dark' ? 0.18 : 0.1),
+  color: theme.palette.mode === 'dark' ? alpha('#fff', 0.92) : accentColor,
+  border: `1px solid ${alpha(accentColor, theme.palette.mode === 'dark' ? 0.3 : 0.18)}`,
+  '&:hover': {
+    bgcolor: alpha(accentColor, theme.palette.mode === 'dark' ? 0.24 : 0.14)
+  }
+});
 
 // ==============================|| TASK PROGRESS ITEM ||============================== //
 
@@ -185,33 +181,36 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
   return (
     <Box
       sx={{
-        animation: `${slideIn} 0.3s ease-out`,
         mb: 1.5,
         '&:last-child': { mb: 0 }
       }}
     >
       <Card
         sx={{
+          ...getPanelSurface(theme, taskConfig.accentColor),
           borderRadius: 3,
-          background: isDark
-            ? `linear-gradient(145deg, ${alpha(taskConfig.accentColor, 0.12)} 0%, ${alpha(taskConfig.accentColor, 0.05)} 100%)`
-            : `linear-gradient(145deg, ${alpha(taskConfig.accentColor, 0.08)} 0%, ${alpha('#fff', 0.95)} 100%)`,
-          backdropFilter: 'blur(10px)',
-          border: `1px solid ${isDark ? alpha(taskConfig.accentColor, 0.2) : alpha(taskConfig.accentColor, 0.15)}`,
           overflow: 'hidden',
-          position: 'relative'
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 3,
+            backgroundColor: isCancelling ? '#f59e0b' : isError ? '#ef4444' : isCompleted ? '#10b981' : taskConfig.accentColor
+          }
         }}
       >
-        {/* Progress bar at top */}
         {isActive && !isCancelling && (
           <LinearProgress
             variant="determinate"
             value={progress}
             sx={{
-              height: 3,
+              height: 4,
               backgroundColor: alpha(taskConfig.accentColor, 0.1),
               '& .MuiLinearProgress-bar': {
-                background: `linear-gradient(90deg, ${taskConfig.gradientColors[0]} 0%, ${taskConfig.gradientColors[1]} 100%)`
+                backgroundColor: taskConfig.accentColor
               }
             }}
           />
@@ -219,10 +218,10 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
         {isCancelling && (
           <LinearProgress
             sx={{
-              height: 3,
+              height: 4,
               backgroundColor: alpha('#f59e0b', 0.1),
               '& .MuiLinearProgress-bar': {
-                background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'
+                backgroundColor: '#f59e0b'
               }
             }}
           />
@@ -230,7 +229,6 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
 
         <CardContent sx={{ py: 2, px: 2.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-            {/* Icon */}
             <Box
               sx={{
                 width: 40,
@@ -239,33 +237,29 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: isCompleted
-                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  : isError
-                    ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                    : isCancelled
-                      ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                      : isCancelling
-                        ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                        : `linear-gradient(135deg, ${taskConfig.gradientColors[0]} 0%, ${taskConfig.gradientColors[1]} 100%)`,
-                flexShrink: 0,
-                animation: isActive && !isCancelling ? `${pulse} 2s ease-in-out infinite` : 'none'
+                backgroundColor: alpha(
+                  isCompleted ? '#10b981' : isError ? '#ef4444' : isCancelled || isCancelling ? '#f59e0b' : taskConfig.accentColor,
+                  isDark ? 0.18 : 0.1
+                ),
+                border: `1px solid ${alpha(
+                  isCompleted ? '#10b981' : isError ? '#ef4444' : isCancelled || isCancelling ? '#f59e0b' : taskConfig.accentColor,
+                  isDark ? 0.3 : 0.18
+                )}`,
+                flexShrink: 0
               }}
             >
               {isCompleted ? (
-                <CheckCircleIcon sx={{ color: '#fff', fontSize: 22 }} />
+                <CheckCircleIcon sx={{ color: '#10b981', fontSize: 22 }} />
               ) : isError ? (
-                <ErrorIcon sx={{ color: '#fff', fontSize: 22 }} />
+                <ErrorIcon sx={{ color: '#ef4444', fontSize: 22 }} />
               ) : isCancelled || isCancelling ? (
-                <CancelIcon sx={{ color: '#fff', fontSize: 22 }} />
+                <CancelIcon sx={{ color: '#f59e0b', fontSize: 22 }} />
               ) : (
-                <Icon sx={{ color: '#fff', fontSize: 22 }} />
+                <Icon sx={{ color: taskConfig.accentColor, fontSize: 22 }} />
               )}
             </Box>
 
-            {/* Content */}
             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-              {/* Header row */}
               <Box
                 sx={{
                   display: 'flex',
@@ -317,7 +311,6 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                       }}
                     />
                   )}
-                  {/* Speed test phase indicator */}
                   {task.taskType === 'speed_test' && task.result?.phase && isActive && !isCancelling && (
                     <Chip
                       label={task.result.phase === 'latency' ? '延迟测试' : '速度测试'}
@@ -327,16 +320,13 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                         fontSize: '0.65rem',
                         fontWeight: 500,
                         flexShrink: 0,
-                        bgcolor: task.result.phase === 'latency' ? alpha('#06b6d4', 0.15) : alpha('#f59e0b', 0.15),
-                        color: task.result.phase === 'latency' ? (isDark ? '#22d3ee' : '#0891b2') : isDark ? '#fbbf24' : '#d97706',
-                        border: `1px solid ${task.result.phase === 'latency' ? alpha('#06b6d4', 0.3) : alpha('#f59e0b', 0.3)}`,
+                        ...getAccentChipSx(theme, task.result.phase === 'latency' ? '#06b6d4' : '#f59e0b'),
                         '& .MuiChip-label': { px: 0.75 }
                       }}
                     />
                   )}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  {/* Status text */}
                   <Typography
                     variant="caption"
                     sx={{
@@ -355,7 +345,6 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                   >
                     {isCompleted ? '完成' : isError ? '失败' : isCancelled ? '已取消' : isCancelling ? '停止中...' : `${progress}%`}
                   </Typography>
-                  {/* Stop button for active tasks */}
                   {isActive && taskConfig.canStop && onStopTask && (
                     <Tooltip title={isCancelling ? '正在停止...' : '停止任务'} arrow>
                       <span>
@@ -364,12 +353,12 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                           onClick={() => onStopTask(task.taskId)}
                           disabled={isCancelling}
                           sx={{
-                            p: 0.5,
-                            color: isCancelling ? alpha('#f59e0b', 0.5) : '#ef4444',
-                            '&:hover': {
-                              bgcolor: alpha('#ef4444', 0.1)
-                            }
-                          }}
+                              p: 0.5,
+                              color: isCancelling ? alpha('#f59e0b', 0.5) : '#ef4444',
+                              '&:hover': {
+                                bgcolor: alpha('#ef4444', 0.08)
+                              }
+                            }}
                         >
                           {isCancelling ? <CircularProgress size={16} color="inherit" /> : <StopIcon sx={{ fontSize: 18 }} />}
                         </IconButton>
@@ -379,7 +368,6 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                 </Box>
               </Box>
 
-              {/* Current item with phase info */}
               {task.currentItem && !isCompleted && (
                 <Typography
                   variant="body2"
@@ -396,7 +384,6 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                 </Typography>
               )}
 
-              {/* Progress info and time display */}
               <Box
                 sx={{
                   display: 'flex',
@@ -427,7 +414,6 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                     {task.current || 0} / {task.total || 0}
                   </Typography>
 
-                  {/* Time display */}
                   {timeInfo && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
                       <Typography
@@ -460,7 +446,6 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                   )}
                 </Box>
 
-                {/* Result display */}
                 {resultDisplay && (
                   <Typography
                     variant="caption"
@@ -502,18 +487,22 @@ const TaskProgressPanel = () => {
     <Collapse in={hasActiveTasks} unmountOnExit timeout={300}>
       <Card
         sx={{
+          ...getPanelSurface(theme, '#6366f1'),
           mb: 4,
           borderRadius: 4,
-          background: isDark
-            ? `linear-gradient(145deg, ${alpha('#1e1e2e', 0.8)} 0%, ${alpha('#1e1e2e', 0.6)} 100%)`
-            : `linear-gradient(145deg, ${alpha('#f8fafc', 0.95)} 0%, ${alpha('#fff', 0.9)} 100%)`,
-          backdropFilter: 'blur(20px)',
-          border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
-          overflow: 'hidden'
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 3,
+            backgroundColor: '#6366f1'
+          }
         }}
       >
         <CardContent sx={{ p: 2.5 }}>
-          {/* Header */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
             <Box
               sx={{
@@ -523,7 +512,8 @@ const TaskProgressPanel = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                backgroundColor: alpha('#6366f1', isDark ? 0.18 : 0.1),
+                border: `1px solid ${alpha('#6366f1', isDark ? 0.3 : 0.18)}`
               }}
             >
               <Typography sx={{ fontSize: '1rem' }}>⏳</Typography>
@@ -538,13 +528,11 @@ const TaskProgressPanel = () => {
                 height: 22,
                 fontSize: '0.7rem',
                 fontWeight: 500,
-                bgcolor: alpha('#6366f1', 0.1),
-                color: isDark ? '#a5b4fc' : '#6366f1'
+                ...getAccentChipSx(theme, '#6366f1')
               }}
             />
           </Box>
 
-          {/* Task list */}
           <Box>
             {taskList.map((task) => (
               <TaskProgressItem
