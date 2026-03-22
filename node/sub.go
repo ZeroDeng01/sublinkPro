@@ -187,20 +187,15 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 							return nil, fmt.Errorf("split host port error: %v", splitErr)
 						}
 
-						portInt, atoiErr := strconv.Atoi(portStr)
-						if atoiErr != nil {
-							return nil, fmt.Errorf("invalid port: %v", atoiErr)
-						}
-
-						// 验证端口范围
-						if portInt < 0 || portInt > 65535 {
-							return nil, fmt.Errorf("port out of range: %d", portInt)
+						portUint, parseErr := strconv.ParseUint(portStr, 10, 16)
+						if parseErr != nil {
+							return nil, fmt.Errorf("invalid port: %v", parseErr)
 						}
 
 						// 创建 mihomo metadata
 						metadata := &constant.Metadata{
 							Host:    host,
-							DstPort: uint16(portInt),
+							DstPort: uint16(portUint),
 							Type:    constant.HTTP,
 						}
 

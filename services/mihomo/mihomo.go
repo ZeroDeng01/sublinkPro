@@ -234,15 +234,11 @@ func MihomoSpeedTest(
 		}
 	}
 
-	portInt, err := strconv.Atoi(portStr)
+	portUint, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil {
 		return 0, 0, 0, "", nil, fmt.Errorf("invalid port: %v", err)
 	}
-	// Validate port range to prevent overflow
-	if portInt < 0 || portInt > 65535 {
-		return 0, 0, 0, "", nil, fmt.Errorf("port out of range: %d", portInt)
-	}
-	port := uint16(portInt)
+	port := uint16(portUint)
 
 	metadata := &constant.Metadata{
 		Host:    parsedUrl.Hostname(),
@@ -294,16 +290,11 @@ func MihomoSpeedTest(
 					return nil, fmt.Errorf("split host port error: %v", splitErr)
 				}
 
-				pInt, atoiErr := strconv.Atoi(pStr)
-				if atoiErr != nil {
-					return nil, fmt.Errorf("invalid port string: %v", atoiErr)
+				pUint, parseErr := strconv.ParseUint(pStr, 10, 16)
+				if parseErr != nil {
+					return nil, fmt.Errorf("invalid port string: %v", parseErr)
 				}
-
-				// Validate port range
-				if pInt < 0 || pInt > 65535 {
-					return nil, fmt.Errorf("port out of range: %d", pInt)
-				}
-				p := uint16(pInt)
+				p := uint16(pUint)
 
 				md := &constant.Metadata{
 					Host:    h,
@@ -467,18 +458,14 @@ func fetchLandingIPWithAdapter(proxyAdapter constant.Proxy, ipUrl string) string
 					return nil, splitErr
 				}
 
-				pInt, atoiErr := strconv.Atoi(pStr)
-				if atoiErr != nil {
-					return nil, atoiErr
-				}
-
-				if pInt < 0 || pInt > 65535 {
-					return nil, fmt.Errorf("port out of range: %d", pInt)
+				pUint, parseErr := strconv.ParseUint(pStr, 10, 16)
+				if parseErr != nil {
+					return nil, parseErr
 				}
 
 				md := &constant.Metadata{
 					Host:    h,
-					DstPort: uint16(pInt),
+					DstPort: uint16(pUint),
 					Type:    constant.HTTP,
 				}
 				return proxyAdapter.DialContext(dialCtx, md)
@@ -530,13 +517,13 @@ func fetchQuality(proxyAdapter constant.Proxy, qualityURL string) *QualityCheckR
 				if splitErr != nil {
 					return nil, splitErr
 				}
-				pInt, atoiErr := strconv.Atoi(pStr)
-				if atoiErr != nil {
-					return nil, atoiErr
+				pUint, parseErr := strconv.ParseUint(pStr, 10, 16)
+				if parseErr != nil {
+					return nil, parseErr
 				}
 				md := &constant.Metadata{
 					Host:    h,
-					DstPort: uint16(pInt),
+					DstPort: uint16(pUint),
 					Type:    constant.HTTP,
 				}
 				return proxyAdapter.DialContext(dialCtx, md)
