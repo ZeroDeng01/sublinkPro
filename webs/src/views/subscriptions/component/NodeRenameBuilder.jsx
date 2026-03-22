@@ -94,7 +94,7 @@ const PREVIEW_DATA = {
   $Delay: '125ms',
   $IpType: '原生IP',
   $Residential: '住宅IP',
-  $FraudScoreIcon: getFraudScoreIcon(12),
+  $FraudScoreIcon: getFraudScoreIcon(12, 'success'),
   $FraudScore: '12',
   $Group: 'Premium',
   $Source: '机场A',

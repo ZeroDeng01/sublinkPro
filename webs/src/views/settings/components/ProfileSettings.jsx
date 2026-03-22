@@ -380,7 +380,11 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                     当前昵称：{user?.nickname || '未设置'}
                   </Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    <Chip label={totpStatus.enabled ? '双重验证已启用' : '双重验证未启用'} color={totpStatus.enabled ? 'success' : 'default'} size="small" />
+                    <Chip
+                      label={totpStatus.enabled ? '双重验证已启用' : '双重验证未启用'}
+                      color={totpStatus.enabled ? 'success' : 'default'}
+                      size="small"
+                    />
                   </Stack>
                 </Stack>
               </Stack>
@@ -388,7 +392,12 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
             <Grid item xs={12} md={4}>
               <Stack spacing={1.5} alignItems={{ xs: 'stretch', md: 'flex-end' }} sx={{ width: '100%' }}>
-                <Button variant="outlined" startIcon={<LockIcon />} onClick={() => setPasswordDialogOpen(true)} sx={{ alignSelf: { xs: 'stretch', md: 'flex-end' } }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<LockIcon />}
+                  onClick={() => setPasswordDialogOpen(true)}
+                  sx={{ alignSelf: { xs: 'stretch', md: 'flex-end' } }}
+                >
                   修改密码
                 </Button>
               </Stack>
@@ -425,7 +434,11 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
             <Grid container spacing={3}>
               <Grid item xs={12} lg={7}>
                 <Card variant="outlined">
-                    <CardHeader title="基础资料" subheader="更新用户名和昵称。保存时需要验证当前身份。" avatar={<PersonIcon color="primary" />} />
+                  <CardHeader
+                    title="基础资料"
+                    subheader="更新用户名和昵称。保存时需要验证当前身份。"
+                    avatar={<PersonIcon color="primary" />}
+                  />
                   <CardContent>
                     <Stack spacing={2.5}>
                       <TextField
@@ -484,10 +497,10 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
               <Grid item xs={12} lg={5}>
                 <Stack spacing={2.5}>
-                    <Alert severity="info">修改用户名后需要重新登录。</Alert>
-                    <Card variant="outlined">
+                  <Alert severity="info">修改用户名后需要重新登录。</Alert>
+                  <Card variant="outlined">
                     <CardHeader title="保存前确认" subheader="避免因安全校验导致保存失败。" />
-                     <CardContent>
+                    <CardContent>
                       <Stack spacing={1.5}>
                         <Box>
                           <Typography variant="subtitle2">本次保存需要</Typography>
@@ -524,7 +537,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                   <Card variant="outlined">
                     <CardHeader
                       title="安全总览"
-                        subheader="查看双重验证状态与恢复方式。"
+                      subheader="查看双重验证状态与恢复方式。"
                       avatar={<ShieldOutlinedIcon color="primary" />}
                       action={
                         <Chip
@@ -548,7 +561,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
                   {!totpStatus.enabled && !totpEnrollment.qrCodeData && (
                     <Card variant="outlined">
-                        <CardHeader title="启用双重验证" subheader="先验证当前密码，再绑定身份验证器。" />
+                      <CardHeader title="启用双重验证" subheader="先验证当前密码，再绑定身份验证器。" />
                       <CardContent>
                         <Stack spacing={2}>
                           <Typography variant="body2" color="text.secondary">
@@ -573,7 +586,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
                   {totpStatus.enabled && (
                     <Card variant="outlined">
-                        <CardHeader title="敏感操作验证" subheader="关闭双重验证或重置恢复码前，请先完成验证。" />
+                      <CardHeader title="敏感操作验证" subheader="关闭双重验证或重置恢复码前，请先完成验证。" />
                       <CardContent>
                         <Stack spacing={2}>
                           <TextField
@@ -594,7 +607,12 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                             helperText="输入身份验证器当前显示的验证码。"
                           />
                           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                            <Button variant="outlined" startIcon={<CachedIcon />} onClick={handleRegenerateRecoveryCodes} disabled={loading}>
+                            <Button
+                              variant="outlined"
+                              startIcon={<CachedIcon />}
+                              onClick={handleRegenerateRecoveryCodes}
+                              disabled={loading}
+                            >
                               重新生成恢复码
                             </Button>
                             <Button color="error" variant="outlined" onClick={handleDisableTotp} disabled={loading}>
@@ -686,12 +704,16 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                             <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
                               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" sx={{ mb: 1.5 }}>
                                 <Typography variant="subtitle1">恢复码列表</Typography>
-                                <Button variant="text" startIcon={<ContentCopyIcon />} onClick={() => handleCopy(visibleRecoveryCodes.join('\n'), '恢复码')}>
+                                <Button
+                                  variant="text"
+                                  startIcon={<ContentCopyIcon />}
+                                  onClick={() => handleCopy(visibleRecoveryCodes.join('\n'), '恢复码')}
+                                >
                                   复制全部
                                 </Button>
                               </Stack>
                               <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
-                                 每个恢复码只能使用一次。请离线保存，不要与账号密码放在同一处。
+                                每个恢复码只能使用一次。请离线保存，不要与账号密码放在同一处。
                               </Typography>
                               <List dense disablePadding>
                                 {visibleRecoveryCodes.map((code) => (
@@ -739,7 +761,13 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
         </CardContent>
       </Card>
 
-      <Dialog open={passwordDialogOpen} onClose={loading ? undefined : () => setPasswordDialogOpen(false)} maxWidth="sm" fullWidth fullScreen={fullScreenDialog}>
+      <Dialog
+        open={passwordDialogOpen}
+        onClose={loading ? undefined : () => setPasswordDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={fullScreenDialog}
+      >
         <DialogTitle>修改密码</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2.5} sx={{ pt: 0.5 }}>
@@ -755,7 +783,11 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={() => setShowOldPassword(!showOldPassword)} edge="end" aria-label={showOldPassword ? '隐藏旧密码' : '显示旧密码'}>
+                    <IconButton
+                      onClick={() => setShowOldPassword(!showOldPassword)}
+                      edge="end"
+                      aria-label={showOldPassword ? '隐藏旧密码' : '显示旧密码'}
+                    >
                       {showOldPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
@@ -773,7 +805,11 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={() => setShowNewPassword(!showNewPassword)} edge="end" aria-label={showNewPassword ? '隐藏新密码' : '显示新密码'}>
+                    <IconButton
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      edge="end"
+                      aria-label={showNewPassword ? '隐藏新密码' : '显示新密码'}
+                    >
                       {showNewPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
@@ -788,7 +824,9 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
               onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
               autoComplete="new-password"
               error={passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword}
-              helperText={passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword ? '两次输入的密码不一致' : ' '}
+              helperText={
+                passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword ? '两次输入的密码不一致' : ' '
+              }
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">

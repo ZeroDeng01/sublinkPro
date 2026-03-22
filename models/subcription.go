@@ -57,6 +57,7 @@ type Subcription struct {
 	OnlyNative            bool             `gorm:"default:false" json:"OnlyNative"`           // 仅原生IP
 	ResidentialType       string           `json:"ResidentialType"`                           // 住宅属性过滤: residential/datacenter/untested
 	IPType                string           `json:"IPType"`                                    // IP类型过滤: native/broadcast/untested
+	QualityStatus         string           `json:"QualityStatus"`
 	CreatedAt             time.Time        `json:"CreatedAt"`
 	UpdatedAt             time.Time        `json:"UpdatedAt"`
 	DeletedAt             gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
@@ -198,6 +199,7 @@ func (sub *Subcription) Update() error {
 		"only_native":              sub.OnlyNative,
 		"residential_type":         sub.ResidentialType,
 		"ip_type":                  sub.IPType,
+		"quality_status":           sub.QualityStatus,
 	}
 	err := database.DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 	if err != nil {
@@ -508,14 +510,17 @@ func (sub *Subcription) ApplyFilters(nodes []Node) []Node {
 	}
 
 	// 6. 节点质量过滤
-	if sub.MaxFraudScore > 0 || residentialType != "" || ipType != "" {
+	if sub.MaxFraudScore > 0 || residentialType != "" || ipType != "" || sub.QualityStatus != "" {
 		var filteredNodes []Node
 		for _, node := range result {
 			// 最大欺诈评分过滤
 			if sub.MaxFraudScore > 0 {
-				if node.FraudScore < 0 || node.FraudScore > sub.MaxFraudScore {
+				if getNodeQualityStatusValue(node) != QualityStatusSuccess || node.FraudScore < 0 || node.FraudScore > sub.MaxFraudScore {
 					continue
 				}
+			}
+			if !matchNodeQualityStatus(node, sub.QualityStatus) {
+				continue
 			}
 			if !matchNodeResidentialType(node, residentialType) {
 				continue
@@ -1205,6 +1210,8 @@ func (sub *Subcription) PreviewSub() (*PreviewResult, error) {
 				IsBroadcast:   node.IsBroadcast,
 				IsResidential: node.IsResidential,
 				FraudScore:    node.FraudScore,
+				QualityStatus: node.QualityStatus,
+				QualityFamily: node.QualityFamily,
 			})
 			previewLink = utils.RenameNodeLink(node.Link, previewName)
 		}

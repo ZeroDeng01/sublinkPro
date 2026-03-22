@@ -30,6 +30,7 @@ import {
   getDelayDisplay,
   getFraudScoreDisplay,
   getIpTypeDisplay,
+  getQualityStatusDisplay,
   getResidentialDisplay,
   getSpeedDisplay
 } from '../utils';
@@ -253,32 +254,92 @@ export default function NodeTable({
               </TableCell>
               <TableCell>
                 {(() => {
-                  const ipTypeDisplay = getIpTypeDisplay(node.IsBroadcast, node.FraudScore);
-                  const residentialDisplay = getResidentialDisplay(node.IsResidential, node.FraudScore);
-                  const fraudScoreDisplay = getFraudScoreDisplay(node.FraudScore);
+                  const ipTypeDisplay = getIpTypeDisplay(node.IsBroadcast, node.QualityStatus, node.QualityFamily);
+                  const residentialDisplay = getResidentialDisplay(node.IsResidential, node.QualityStatus, node.QualityFamily);
+                  const fraudScoreDisplay = getFraudScoreDisplay(node.FraudScore, node.QualityStatus, node.QualityFamily);
+                  const qualityStatusDisplay = getQualityStatusDisplay(node.QualityStatus, node.QualityFamily);
                   const isUntested =
                     ipTypeDisplay.label === '未检测' && residentialDisplay.label === '未检测' && fraudScoreDisplay.label === '未检测';
+                  const shouldMergeQualityTags =
+                    node.QualityStatus !== 'success' &&
+                    ipTypeDisplay.label === residentialDisplay.label &&
+                    residentialDisplay.label === fraudScoreDisplay.label;
 
                   return (
                     <Box sx={{ display: 'flex', gap: 0.375, flexWrap: 'wrap', minWidth: 0, maxWidth: 160 }}>
                       {isUntested ? (
                         <Chip label="未检测" color="default" variant="outlined" size="small" />
+                      ) : shouldMergeQualityTags ? (
+                        qualityStatusDisplay.tooltip ? (
+                          <Tooltip title={qualityStatusDisplay.tooltip}>
+                            <Chip
+                              label={qualityStatusDisplay.label}
+                              color={qualityStatusDisplay.color}
+                              variant={qualityStatusDisplay.variant}
+                              size="small"
+                            />
+                          </Tooltip>
+                        ) : (
+                          <Chip
+                            label={qualityStatusDisplay.label}
+                            color={qualityStatusDisplay.color}
+                            variant={qualityStatusDisplay.variant}
+                            size="small"
+                          />
+                        )
                       ) : (
                         <>
-                          <Chip label={ipTypeDisplay.label} color={ipTypeDisplay.color} variant={ipTypeDisplay.variant} size="small" />
-                          <Chip
-                            label={residentialDisplay.label}
-                            color={residentialDisplay.color}
-                            variant={residentialDisplay.variant}
-                            size="small"
-                          />
-                          <Chip
-                            label={fraudScoreDisplay.label}
-                            color={fraudScoreDisplay.color}
-                            variant={fraudScoreDisplay.variant}
-                            size="small"
-                            sx={fraudScoreDisplay.sx}
-                          />
+                          {ipTypeDisplay.tooltip ? (
+                            <Tooltip title={ipTypeDisplay.tooltip}>
+                              <Chip label={ipTypeDisplay.label} color={ipTypeDisplay.color} variant={ipTypeDisplay.variant} size="small" />
+                            </Tooltip>
+                          ) : (
+                            <Chip label={ipTypeDisplay.label} color={ipTypeDisplay.color} variant={ipTypeDisplay.variant} size="small" />
+                          )}
+                          {residentialDisplay.tooltip ? (
+                            <Tooltip title={residentialDisplay.tooltip}>
+                              <Chip
+                                label={residentialDisplay.label}
+                                color={residentialDisplay.color}
+                                variant={residentialDisplay.variant}
+                                size="small"
+                              />
+                            </Tooltip>
+                          ) : (
+                            <Chip
+                              label={residentialDisplay.label}
+                              color={residentialDisplay.color}
+                              variant={residentialDisplay.variant}
+                              size="small"
+                            />
+                          )}
+                          {fraudScoreDisplay.tooltip ? (
+                            <Tooltip title={fraudScoreDisplay.tooltip}>
+                              <Chip
+                                label={
+                                  node.QualityStatus === 'success'
+                                    ? fraudScoreDisplay.label
+                                    : fraudScoreDisplay.detailLabel || fraudScoreDisplay.label
+                                }
+                                color={fraudScoreDisplay.color}
+                                variant={fraudScoreDisplay.variant}
+                                size="small"
+                                sx={fraudScoreDisplay.sx}
+                              />
+                            </Tooltip>
+                          ) : (
+                            <Chip
+                              label={
+                                node.QualityStatus === 'success'
+                                  ? fraudScoreDisplay.label
+                                  : fraudScoreDisplay.detailLabel || fraudScoreDisplay.label
+                              }
+                              color={fraudScoreDisplay.color}
+                              variant={fraudScoreDisplay.variant}
+                              size="small"
+                              sx={fraudScoreDisplay.sx}
+                            />
+                          )}
                         </>
                       )}
                     </Box>

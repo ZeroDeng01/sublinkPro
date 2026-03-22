@@ -14,7 +14,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 
 // utils
-import { isoToFlag, STATUS_OPTIONS } from '../utils';
+import { isoToFlag, QUALITY_STATUS_OPTIONS, STATUS_OPTIONS } from '../utils';
 
 /**
  * 节点过滤器工具栏
@@ -40,6 +40,8 @@ export default function NodeFilters({
   setResidentialType,
   ipType,
   setIpType,
+  qualityStatus,
+  setQualityStatus,
   countryFilter,
   setCountryFilter,
   tagFilter,
@@ -142,6 +144,16 @@ export default function NodeFilters({
         onChange={(e) => setMaxFraudScore(e.target.value)}
         sx={{ width: 160 }}
       />
+      <FormControl size="small" sx={{ minWidth: 140 }}>
+        <InputLabel>质量状态</InputLabel>
+        <Select value={qualityStatus} label="质量状态" onChange={(e) => setQualityStatus(e.target.value)}>
+          {QUALITY_STATUS_OPTIONS.map((opt) => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
       <FormControl size="small" sx={{ minWidth: 120 }}>
         <InputLabel>住宅属性</InputLabel>
         <Select value={residentialType} label="住宅属性" onChange={(e) => setResidentialType(e.target.value)}>
@@ -261,6 +273,8 @@ NodeFilters.propTypes = {
   setResidentialType: PropTypes.func.isRequired,
   ipType: PropTypes.string.isRequired,
   setIpType: PropTypes.func.isRequired,
+  qualityStatus: PropTypes.string.isRequired,
+  setQualityStatus: PropTypes.func.isRequired,
   countryFilter: PropTypes.array.isRequired,
   setCountryFilter: PropTypes.func.isRequired,
   tagFilter: PropTypes.array.isRequired,

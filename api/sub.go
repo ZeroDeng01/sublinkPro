@@ -30,6 +30,15 @@ func normalizeSubscriptionIPType(value string) string {
 	}
 }
 
+func normalizeSubscriptionQualityStatus(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case models.QualityStatusUntested, models.QualityStatusSuccess, models.QualityStatusPartial, models.QualityStatusFailed, models.QualityStatusDisabled:
+		return strings.ToLower(strings.TrimSpace(value))
+	default:
+		return ""
+	}
+}
+
 func SubTotal(c *gin.Context) {
 	var Sub models.Subcription
 	subs, err := Sub.List()
@@ -122,6 +131,7 @@ func SubAdd(c *gin.Context) {
 	onlyNative := c.PostForm("OnlyNative") == "true"
 	residentialType := normalizeSubscriptionResidentialType(c.PostForm("ResidentialType"))
 	ipType := normalizeSubscriptionIPType(c.PostForm("IPType"))
+	qualityStatus := normalizeSubscriptionQualityStatus(c.PostForm("QualityStatus"))
 	if residentialType == "" && onlyResidential {
 		residentialType = "residential"
 	}
@@ -205,6 +215,7 @@ func SubAdd(c *gin.Context) {
 	sub.OnlyNative = ipType == "native"
 	sub.ResidentialType = residentialType
 	sub.IPType = ipType
+	sub.QualityStatus = qualityStatus
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 
 	err := sub.Add()
@@ -291,6 +302,7 @@ func SubUpdate(c *gin.Context) {
 	onlyNative := c.PostForm("OnlyNative") == "true"
 	residentialType := normalizeSubscriptionResidentialType(c.PostForm("ResidentialType"))
 	ipType := normalizeSubscriptionIPType(c.PostForm("IPType"))
+	qualityStatus := normalizeSubscriptionQualityStatus(c.PostForm("QualityStatus"))
 	if residentialType == "" && onlyResidential {
 		residentialType = "residential"
 	}
@@ -384,6 +396,7 @@ func SubUpdate(c *gin.Context) {
 	sub.OnlyNative = ipType == "native"
 	sub.ResidentialType = residentialType
 	sub.IPType = ipType
+	sub.QualityStatus = qualityStatus
 	err = sub.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")

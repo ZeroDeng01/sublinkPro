@@ -244,6 +244,7 @@ func GetChainOptions(c *gin.Context) {
 		{"value": "speed", "label": "速度 (MB/s)"},
 		{"value": "delay_time", "label": "延迟 (ms)"},
 		{"value": "fraud_score", "label": "欺诈评分"},
+		{"value": "quality_status", "label": "质量状态"},
 		{"value": "ip_type", "label": "IP类型"},
 		{"value": "residential_type", "label": "住宅属性"},
 		{"value": "speed_status", "label": "测速状态"},

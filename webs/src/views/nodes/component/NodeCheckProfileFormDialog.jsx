@@ -500,7 +500,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                 <Typography variant="body2">
                   IP质量检测
                   <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
-                    (通过 ippure 检测原生/住宅/欺诈评分)
+                    (优先尝试 IPv4，回退 IPv6；IPv6 可能仅返回部分风险信息)
                   </Typography>
                 </Typography>
               }

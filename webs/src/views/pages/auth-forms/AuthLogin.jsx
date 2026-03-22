@@ -352,9 +352,19 @@ export default function AuthLogin() {
 
       <Stack spacing={2}>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          <Chip color={!useRecoveryCode ? 'secondary' : 'default'} label="身份验证器" size="small" variant={!useRecoveryCode ? 'filled' : 'outlined'} />
+          <Chip
+            color={!useRecoveryCode ? 'secondary' : 'default'}
+            label="身份验证器"
+            size="small"
+            variant={!useRecoveryCode ? 'filled' : 'outlined'}
+          />
           {canUseRecoveryCode && (
-            <Chip color={useRecoveryCode ? 'secondary' : 'default'} label="恢复码" size="small" variant={useRecoveryCode ? 'filled' : 'outlined'} />
+            <Chip
+              color={useRecoveryCode ? 'secondary' : 'default'}
+              label="恢复码"
+              size="small"
+              variant={useRecoveryCode ? 'filled' : 'outlined'}
+            />
           )}
         </Stack>
 
@@ -390,11 +400,18 @@ export default function AuthLogin() {
         )}
 
         <Typography id="mfa-code-helper-text" variant="caption" color="text.secondary" sx={{ mt: -1 }}>
-          {useRecoveryCode ? '恢复码只能使用一次。验证成功后请尽快保存新的恢复码。' : '请打开身份验证器 App，输入当前显示的 6 位动态验证码。'}
+          {useRecoveryCode
+            ? '恢复码只能使用一次。验证成功后请尽快保存新的恢复码。'
+            : '请打开身份验证器 App，输入当前显示的 6 位动态验证码。'}
         </Typography>
 
         {canUseRecoveryCode && (
-          <Button color="secondary" variant="text" onClick={() => setUseRecoveryCode((prev) => !prev)} sx={{ alignSelf: 'flex-start', px: 0.5 }}>
+          <Button
+            color="secondary"
+            variant="text"
+            onClick={() => setUseRecoveryCode((prev) => !prev)}
+            sx={{ alignSelf: 'flex-start', px: 0.5 }}
+          >
             {useRecoveryCode ? '改用身份验证器验证码' : '无法使用身份验证器？改用恢复码'}
           </Button>
         )}

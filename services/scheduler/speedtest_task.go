@@ -18,6 +18,8 @@ func resetNodeQualityInfo(node *models.Node) {
 	node.IsBroadcast = false
 	node.IsResidential = false
 	node.FraudScore = -1
+	node.QualityStatus = models.QualityStatusUntested
+	node.QualityFamily = ""
 }
 
 func applyNodeQualityInfo(node *models.Node, quality *mihomo.QualityCheckResult) {
@@ -25,9 +27,17 @@ func applyNodeQualityInfo(node *models.Node, quality *mihomo.QualityCheckResult)
 		resetNodeQualityInfo(node)
 		return
 	}
-	node.IsBroadcast = quality.IsBroadcast
-	node.IsResidential = quality.IsResidential
-	node.FraudScore = quality.FraudScore
+	node.QualityStatus = quality.Status
+	node.QualityFamily = quality.Family
+	if quality.Status == models.QualityStatusSuccess {
+		node.IsBroadcast = quality.IsBroadcast
+		node.IsResidential = quality.IsResidential
+		node.FraudScore = quality.FraudScore
+		return
+	}
+	node.IsBroadcast = false
+	node.IsResidential = false
+	node.FraudScore = -1
 }
 
 // RunSpeedTestWithConfig 使用指定配置执行节点测速（并发安全）
@@ -356,6 +366,8 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					IsBroadcast:     n.IsBroadcast,
 					IsResidential:   n.IsResidential,
 					FraudScore:      n.FraudScore,
+					QualityStatus:   n.QualityStatus,
+					QualityFamily:   n.QualityFamily,
 				})
 			}
 
@@ -456,6 +468,8 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					IsBroadcast:    nr.node.IsBroadcast,
 					IsResidential:  nr.node.IsResidential,
 					FraudScore:     nr.node.FraudScore,
+					QualityStatus:  nr.node.QualityStatus,
+					QualityFamily:  nr.node.QualityFamily,
 				})
 				mu.Unlock()
 				continue
@@ -636,6 +650,8 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					IsBroadcast:    result.node.IsBroadcast,
 					IsResidential:  result.node.IsResidential,
 					FraudScore:     result.node.FraudScore,
+					QualityStatus:  result.node.QualityStatus,
+					QualityFamily:  result.node.QualityFamily,
 				})
 
 				// 获取当前流量统计（用于实时显示）

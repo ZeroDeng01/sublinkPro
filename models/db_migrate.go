@@ -86,6 +86,29 @@ func RunMigrations() error {
 		utils.Error("执行迁移 0027_add_user_pending_mfa_columns 失败: %v", err)
 	}
 
+	if err := database.RunCustomMigration("0028_backfill_node_quality_status", func() error {
+		if !db.Migrator().HasColumn(&Node{}, "QualityStatus") {
+			if err := db.Migrator().AddColumn(&Node{}, "QualityStatus"); err != nil {
+				return err
+			}
+		}
+		if !db.Migrator().HasColumn(&Node{}, "QualityFamily") {
+			if err := db.Migrator().AddColumn(&Node{}, "QualityFamily"); err != nil {
+				return err
+			}
+		}
+
+		if err := db.Model(&Node{}).Where("quality_status IS NULL OR quality_status = ''").Updates(map[string]interface{}{
+			"quality_status": gorm.Expr("CASE WHEN fraud_score >= 0 THEN 'success' ELSE 'untested' END"),
+			"quality_family": gorm.Expr("CASE WHEN landing_ip LIKE '%:%' THEN 'ipv6' WHEN landing_ip IS NOT NULL AND landing_ip != '' THEN 'ipv4' ELSE '' END"),
+		}).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		utils.Error("执行迁移 0028_backfill_node_quality_status 失败: %v", err)
+	}
+
 	if err := database.RunCustomMigration("0024_migrate_legacy_webhook_settings", func() error {
 		legacyURL, _ := GetSetting("webhook_url")
 		legacyMethod, _ := GetSetting("webhook_method")

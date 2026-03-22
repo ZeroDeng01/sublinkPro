@@ -48,7 +48,20 @@ type Node struct {
 	IsBroadcast     bool      `gorm:"default:false"` // IP来源：true=广播IP false=原生IP
 	IsResidential   bool      `gorm:"default:false"` // 是否住宅IP
 	FraudScore      int       `gorm:"default:-1"`    // 欺诈评分（0-100，-1表示未检测）
+	QualityStatus   string    `gorm:"size:32;default:'untested'"`
+	QualityFamily   string    `gorm:"size:16;default:''"`
 }
+
+const (
+	QualityStatusUntested = "untested"
+	QualityStatusSuccess  = "success"
+	QualityStatusPartial  = "partial"
+	QualityStatusFailed   = "failed"
+	QualityStatusDisabled = "disabled"
+
+	QualityFamilyIPv4 = "ipv4"
+	QualityFamilyIPv6 = "ipv6"
+)
 
 // nodeCache 使用新的泛型缓存，支持二级索引
 var nodeCache *cache.MapCache[int, Node]
@@ -120,6 +133,23 @@ func NormalizeNodeForImport(node *Node) {
 	}
 	if node.UpdatedAt.IsZero() {
 		node.UpdatedAt = node.CreatedAt
+	}
+
+	if node.QualityStatus == "" {
+		switch {
+		case node.FraudScore >= 0:
+			node.QualityStatus = QualityStatusSuccess
+		case node.FraudScore < 0:
+			node.QualityStatus = QualityStatusUntested
+		}
+	}
+
+	if node.QualityFamily == "" && node.LandingIP != "" {
+		if strings.Contains(node.LandingIP, ":") {
+			node.QualityFamily = QualityFamilyIPv6
+		} else {
+			node.QualityFamily = QualityFamilyIPv4
+		}
 	}
 }
 
@@ -198,7 +228,7 @@ func (node *Node) Update() error {
 
 // UpdateSpeed 更新节点测速结果
 func (node *Node) UpdateSpeed() error {
-	err := database.DB.Model(node).Select("Speed", "SpeedStatus", "LinkCountry", "LandingIP", "DelayTime", "DelayStatus", "LatencyCheckAt", "SpeedCheckAt", "IsBroadcast", "IsResidential", "FraudScore").Updates(node).Error
+	err := database.DB.Model(node).Select("Speed", "SpeedStatus", "LinkCountry", "LandingIP", "DelayTime", "DelayStatus", "LatencyCheckAt", "SpeedCheckAt", "IsBroadcast", "IsResidential", "FraudScore", "QualityStatus", "QualityFamily").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -215,6 +245,8 @@ func (node *Node) UpdateSpeed() error {
 		cachedNode.IsBroadcast = node.IsBroadcast
 		cachedNode.IsResidential = node.IsResidential
 		cachedNode.FraudScore = node.FraudScore
+		cachedNode.QualityStatus = node.QualityStatus
+		cachedNode.QualityFamily = node.QualityFamily
 		nodeCache.Set(node.ID, cachedNode)
 	}
 	return nil
@@ -235,6 +267,8 @@ type SpeedTestResult struct {
 	IsBroadcast     bool // IP来源：true=广播IP
 	IsResidential   bool // 是否住宅IP
 	FraudScore      int  // 欺诈评分（0-100，-1=未检测）
+	QualityStatus   string
+	QualityFamily   string
 }
 
 // BatchAddNodes 批量添加节点（高效 + 容错）
@@ -400,6 +434,8 @@ var speedResultFields = []speedResultField{
 		return "0"
 	}},
 	{"fraud_score", func(r SpeedTestResult) string { return fmt.Sprintf("%d", r.FraudScore) }},
+	{"quality_status", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.QualityStatus)) }},
+	{"quality_family", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.QualityFamily)) }},
 }
 
 // tryBatchUpdateWithCaseWhen 使用 CASE WHEN 批量更新（高效）
@@ -475,6 +511,8 @@ func batchUpdateNodeCache(chunk []SpeedTestResult, skipSpeed bool) {
 			cachedNode.IsBroadcast = r.IsBroadcast
 			cachedNode.IsResidential = r.IsResidential
 			cachedNode.FraudScore = r.FraudScore
+			cachedNode.QualityStatus = r.QualityStatus
+			cachedNode.QualityFamily = r.QualityFamily
 			nodeCache.Set(r.NodeID, cachedNode)
 		}
 	}
@@ -494,6 +532,8 @@ func fallbackToIndividualSpeedUpdate(chunk []SpeedTestResult, skipSpeed bool) in
 			"is_broadcast":     r.IsBroadcast,
 			"is_residential":   r.IsResidential,
 			"fraud_score":      r.FraudScore,
+			"quality_status":   r.QualityStatus,
+			"quality_family":   r.QualityFamily,
 		}
 		if !skipSpeed {
 			updates["speed"] = r.Speed
@@ -524,6 +564,8 @@ func fallbackToIndividualSpeedUpdate(chunk []SpeedTestResult, skipSpeed bool) in
 			cachedNode.IsBroadcast = r.IsBroadcast
 			cachedNode.IsResidential = r.IsResidential
 			cachedNode.FraudScore = r.FraudScore
+			cachedNode.QualityStatus = r.QualityStatus
+			cachedNode.QualityFamily = r.QualityFamily
 			nodeCache.Set(r.NodeID, cachedNode)
 		}
 	}
@@ -705,10 +747,21 @@ type NodeFilter struct {
 	MaxFraudScore   int      // 最大欺诈评分（0=不限制）
 	ResidentialType string   // 住宅属性过滤: residential/datacenter/untested
 	IPType          string   // IP类型过滤: native/broadcast/untested
+	QualityStatus   string
 }
 
 func hasNodeQualityData(n Node) bool {
-	return n.FraudScore >= 0
+	return n.QualityStatus == QualityStatusSuccess
+}
+
+func getNodeQualityStatusValue(n Node) string {
+	if n.QualityStatus != "" {
+		return n.QualityStatus
+	}
+	if n.FraudScore >= 0 {
+		return QualityStatusSuccess
+	}
+	return QualityStatusUntested
 }
 
 func getNodeResidentialTypeValue(n Node) string {
@@ -756,6 +809,17 @@ func matchNodeIPType(n Node, ipType string) bool {
 		return getNodeIPTypeValue(n) == "broadcast"
 	case "untested":
 		return getNodeIPTypeValue(n) == "untested"
+	default:
+		return true
+	}
+}
+
+func matchNodeQualityStatus(n Node, qualityStatus string) bool {
+	switch qualityStatus {
+	case "", "all":
+		return true
+	case QualityStatusUntested, QualityStatusSuccess, QualityStatusPartial, QualityStatusFailed, QualityStatusDisabled:
+		return getNodeQualityStatusValue(n) == qualityStatus
 	default:
 		return true
 	}
@@ -877,9 +941,13 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 
 		// 最大欺诈评分过滤
 		if filter.MaxFraudScore > 0 {
-			if n.FraudScore < 0 || n.FraudScore > filter.MaxFraudScore {
+			if getNodeQualityStatusValue(n) != QualityStatusSuccess || n.FraudScore < 0 || n.FraudScore > filter.MaxFraudScore {
 				return false
 			}
+		}
+
+		if !matchNodeQualityStatus(n, filter.QualityStatus) {
+			return false
 		}
 
 		// 住宅属性过滤

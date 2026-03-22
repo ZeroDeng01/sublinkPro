@@ -50,6 +50,7 @@ import {
   getDelayDisplay,
   getFraudScoreDisplay,
   getIpTypeDisplay,
+  getQualityStatusDisplay,
   getResidentialDisplay,
   getSpeedDisplay
 } from '../utils';
@@ -232,9 +233,10 @@ export default function NodeDetailsPanel({
   const delayDisplay = getDelayDisplay(node.DelayTime, node.DelayStatus);
   const speedDisplay = getSpeedDisplay(node.Speed, node.SpeedStatus);
   const protocolInfo = getProtocolInfo(node.Link, protocolMeta);
-  const ipTypeDisplay = getIpTypeDisplay(node.IsBroadcast, node.FraudScore);
-  const residentialDisplay = getResidentialDisplay(node.IsResidential, node.FraudScore);
-  const fraudScoreDisplay = getFraudScoreDisplay(node.FraudScore);
+  const ipTypeDisplay = getIpTypeDisplay(node.IsBroadcast, node.QualityStatus, node.QualityFamily);
+  const residentialDisplay = getResidentialDisplay(node.IsResidential, node.QualityStatus, node.QualityFamily);
+  const fraudScoreDisplay = getFraudScoreDisplay(node.FraudScore, node.QualityStatus, node.QualityFamily);
+  const qualityStatusDisplay = getQualityStatusDisplay(node.QualityStatus, node.QualityFamily);
 
   const delayStyles = getStatusStyles(theme, delayDisplay.color);
   const speedStyles = getStatusStyles(theme, speedDisplay.color);
@@ -552,6 +554,7 @@ export default function NodeDetailsPanel({
           )}
           <DetailItem icon={<PublicIcon fontSize="small" />} label="IP类型" value={ipTypeDisplay.label} />
           <DetailItem icon={<PublicIcon fontSize="small" />} label="住宅属性" value={residentialDisplay.label} />
+          <DetailItem icon={<PublicIcon fontSize="small" />} label="质量状态" value={qualityStatusDisplay.label} />
           <DetailItem
             icon={<PublicIcon fontSize="small" />}
             label="欺诈评分"

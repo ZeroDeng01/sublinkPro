@@ -48,7 +48,7 @@ import NodeProtocolFilter from 'components/NodeProtocolFilter';
 import NodeTransferBox from './NodeTransferBox';
 import DeduplicationConfig from './DeduplicationConfig';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
-import { getFraudScoreIcon } from 'utils/fraudScore';
+import { getFraudScoreIcon, QUALITY_STATUS_OPTIONS } from 'utils/fraudScore';
 import { getDelayIcon, getSpeedIcon } from 'utils/nodeMetricIcons';
 
 // ISO国家代码转换为国旗emoji
@@ -78,7 +78,7 @@ const previewNodeName = (rule) => {
     .replace(/\$DelayIcon/g, getDelayIcon(125, 'success'))
     .replace(/\$IpType/g, '原生IP')
     .replace(/\$Residential/g, '住宅IP')
-    .replace(/\$FraudScoreIcon/g, getFraudScoreIcon(12))
+    .replace(/\$FraudScoreIcon/g, getFraudScoreIcon(12, 'success'))
     .replace(/\$FraudScore/g, '12')
     .replace(/\$LinkName/g, '香港01')
     .replace(/\$LinkCountry/g, 'HK')
@@ -237,6 +237,7 @@ export default function SubscriptionFormDialog({
     if (formData.nodeNameWhitelist) count++;
     if (formData.nodeNameBlacklist) count++;
     if (formData.MaxFraudScore > 0) count++;
+    if (formData.QualityStatus) count++;
     if (formData.ResidentialType) count++;
     if (formData.IPType) count++;
     return count;
@@ -607,6 +608,25 @@ export default function SubscriptionFormDialog({
                       helperText="0表示不限制；需要先执行 IP 质量检测"
                     />
                   </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>质量状态</InputLabel>
+                      <Select
+                        value={formData.QualityStatus || ''}
+                        label="质量状态"
+                        onChange={(e) => setFormData({ ...formData, QualityStatus: e.target.value })}
+                      >
+                        {QUALITY_STATUS_OPTIONS.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+                      可区分完整结果、信息不全、检测失败、未启用和未检测
+                    </Typography>
+                  </Grid>
                 </Grid>
 
                 {/* 落地IP国家过滤 */}
@@ -655,7 +675,7 @@ export default function SubscriptionFormDialog({
                       </Select>
                     </FormControl>
                     <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
-                      基于 IP 质量检测结果筛选，未检测状态会与 false 明确区分
+                      仅完整结果才会显示住宅/机房属性；信息不全会保留为独立状态
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -673,7 +693,7 @@ export default function SubscriptionFormDialog({
                       </Select>
                     </FormControl>
                     <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
-                      <code>isBroadcast=true</code> 视为广播 IP，<code>isBroadcast=false</code> 视为原生 IP
+                      仅完整结果才会显示原生/广播属性；信息不全不会被误判为原生或广播
                     </Typography>
                   </Grid>
                 </Grid>

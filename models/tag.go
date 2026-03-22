@@ -416,6 +416,8 @@ func getNodeFieldValue(node Node, field string) interface{} {
 		return node.DialerProxyName
 	case "fraud_score":
 		return node.FraudScore
+	case "quality_status":
+		return getNodeQualityStatusValue(node)
 	case "ip_type":
 		return getNodeIPTypeValue(node)
 	case "residential_type":

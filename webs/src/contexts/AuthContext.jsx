@@ -58,14 +58,14 @@ function normalizeMfaChallenge(payload) {
 
   const isMfaRequired = Boolean(
     data.mfaRequired ||
-      data.requiresMfa ||
-      nestedMfa.required ||
-      nestedMfa.mfaRequired ||
-      challengeData.required ||
-      challengeToken ||
-      methods.length > 0 ||
-      String(errorType).toUpperCase().includes('MFA') ||
-      String(errorType).toUpperCase().includes('TOTP')
+    data.requiresMfa ||
+    nestedMfa.required ||
+    nestedMfa.mfaRequired ||
+    challengeData.required ||
+    challengeToken ||
+    methods.length > 0 ||
+    String(errorType).toUpperCase().includes('MFA') ||
+    String(errorType).toUpperCase().includes('TOTP')
   );
 
   if (!isMfaRequired) {
@@ -87,12 +87,12 @@ function normalizeMfaChallenge(payload) {
       '',
     recoveryAvailable: Boolean(
       data.recoveryAvailable ??
-        data.recoveryCodesAvailable ??
-        challengeData.recoveryAvailable ??
-        challengeData.recoveryCodesAvailable ??
-        nestedMfa.recoveryAvailable ??
-        nestedMfa.recoveryCodesAvailable ??
-        methods.includes('recovery_code')
+      data.recoveryCodesAvailable ??
+      challengeData.recoveryAvailable ??
+      challengeData.recoveryCodesAvailable ??
+      nestedMfa.recoveryAvailable ??
+      nestedMfa.recoveryCodesAvailable ??
+      methods.includes('recovery_code')
     ),
     message: data.msg || data.message || nestedMfa.message || '需要进行二次验证'
   };
@@ -293,7 +293,6 @@ export function AuthProvider({ children }) {
     };
 
     initAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectSSE]);
 
   // 登录 - 支持验证码和记住密码

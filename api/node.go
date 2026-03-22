@@ -22,6 +22,15 @@ func normalizeResidentialType(value string) string {
 	}
 }
 
+func normalizeQualityStatus(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case models.QualityStatusUntested, models.QualityStatusSuccess, models.QualityStatusPartial, models.QualityStatusFailed, models.QualityStatusDisabled:
+		return strings.ToLower(strings.TrimSpace(value))
+	default:
+		return ""
+	}
+}
+
 func normalizeIPType(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "native", "broadcast", "untested":
@@ -329,6 +338,7 @@ func NodeGet(c *gin.Context) {
 	filter.Tags = c.QueryArray("tags[]")
 	filter.ResidentialType = normalizeResidentialType(c.Query("residentialType"))
 	filter.IPType = normalizeIPType(c.Query("ipType"))
+	filter.QualityStatus = normalizeQualityStatus(c.Query("qualityStatus"))
 	if filter.ResidentialType == "" && c.Query("onlyResidential") == "true" {
 		filter.ResidentialType = "residential"
 	}
@@ -432,6 +442,7 @@ func NodeGetIDs(c *gin.Context) {
 	filter.Tags = c.QueryArray("tags[]")
 	filter.ResidentialType = normalizeResidentialType(c.Query("residentialType"))
 	filter.IPType = normalizeIPType(c.Query("ipType"))
+	filter.QualityStatus = normalizeQualityStatus(c.Query("qualityStatus"))
 	if filter.ResidentialType == "" && c.Query("onlyResidential") == "true" {
 		filter.ResidentialType = "residential"
 	}

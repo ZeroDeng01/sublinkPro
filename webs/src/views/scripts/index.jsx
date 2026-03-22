@@ -583,9 +583,7 @@ export default function ScriptList() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle id="script-usage-dialog-title">
-          ⚠️ {usageDialog.title}
-        </DialogTitle>
+        <DialogTitle id="script-usage-dialog-title">⚠️ {usageDialog.title}</DialogTitle>
         <DialogContent>
           <Alert
             severity="warning"

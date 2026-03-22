@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sublink/models"
 	"sublink/node/protocol"
 	"sublink/utils"
 	"time"
@@ -509,30 +510,19 @@ func fetchLandingIPWithAdapter(proxyAdapter constant.Proxy, ipUrl string) string
 
 // QualityCheckResult 节点质量检测结果
 type QualityCheckResult struct {
-	IsBroadcast   bool `json:"isBroadcast"`
-	IsResidential bool `json:"isResidential"`
-	FraudScore    int  `json:"fraudScore"`
+	IsBroadcast   bool   `json:"isBroadcast"`
+	IsResidential bool   `json:"isResidential"`
+	FraudScore    int    `json:"fraudScore"`
+	Status        string `json:"status"`
+	Family        string `json:"family"`
+	IP            string `json:"ip,omitempty"`
+	Reason        string `json:"reason,omitempty"`
 }
 
-// FetchQualityWithAdapter 通过代理通道检测节点质量
-// 使用已有的 proxyAdapter 发起请求，获取 IP 质量信息
-// 失败静默返回 nil，不影响主流程
-func FetchQualityWithAdapter(proxyAdapter constant.Proxy, qualityURL string) *QualityCheckResult {
-	defer func() {
-		if r := recover(); r != nil {
-			// 静默处理
-		}
-	}()
-
-	if qualityURL == "" {
-		qualityURL = "https://my.ippure.com/v1/info"
-	}
-
-	// 固定5秒超时
+func fetchQuality(proxyAdapter constant.Proxy, qualityURL string) *QualityCheckResult {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 复用 proxyAdapter 创建 HTTP client
 	client := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(dialCtx context.Context, network, addr string) (net.Conn, error) {
@@ -543,9 +533,6 @@ func FetchQualityWithAdapter(proxyAdapter constant.Proxy, qualityURL string) *Qu
 				pInt, atoiErr := strconv.Atoi(pStr)
 				if atoiErr != nil {
 					return nil, atoiErr
-				}
-				if pInt < 0 || pInt > 65535 {
-					return nil, fmt.Errorf("port out of range: %d", pInt)
 				}
 				md := &constant.Metadata{
 					Host:    h,
@@ -562,47 +549,87 @@ func FetchQualityWithAdapter(proxyAdapter constant.Proxy, qualityURL string) *Qu
 	req, err := http.NewRequestWithContext(ctx, "GET", qualityURL, nil)
 	if err != nil {
 		utils.Debug("节点质量检测: 创建请求失败: %v", err)
-		return nil
+		return &QualityCheckResult{Status: models.QualityStatusFailed, Reason: err.Error()}
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
 		utils.Debug("节点质量检测: 请求失败: %v", err)
-		return nil
+		return &QualityCheckResult{Status: models.QualityStatusFailed, Reason: err.Error()}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		utils.Debug("节点质量检测: 响应状态异常: %d", resp.StatusCode)
-		return nil
+		return &QualityCheckResult{Status: models.QualityStatusFailed, Reason: fmt.Sprintf("status_%d", resp.StatusCode)}
 	}
 
-	// 限制读取最多2KB（API返回的JSON不会太大）
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 2048))
 	if err != nil {
 		utils.Debug("节点质量检测: 读取响应失败: %v", err)
-		return nil
+		return &QualityCheckResult{Status: models.QualityStatusFailed, Reason: err.Error()}
 	}
 
-	// 解析JSON响应
+	utils.Debug("节点质量检测: 响应: %s", string(body))
+
 	var apiResp struct {
-		IsBroadcast   *bool `json:"isBroadcast"`
-		IsResidential *bool `json:"isResidential"`
-		FraudScore    *int  `json:"fraudScore"`
+		IP            string `json:"ip"`
+		IsBroadcast   *bool  `json:"isBroadcast"`
+		IsResidential *bool  `json:"isResidential"`
+		FraudScore    *int   `json:"fraudScore"`
 	}
 	if err := json.Unmarshal(body, &apiResp); err != nil {
 		utils.Debug("节点质量检测: 解析响应失败: %v", err)
-		return nil
+		return &QualityCheckResult{Status: models.QualityStatusFailed, Reason: "invalid_json"}
+	}
+
+	resultIP := apiResp.IP
+	qualityFamily := ""
+	if parsedIP := net.ParseIP(resultIP); parsedIP != nil {
+		if parsedIP.To4() != nil {
+			qualityFamily = models.QualityFamilyIPv4
+		} else {
+			qualityFamily = models.QualityFamilyIPv6
+		}
 	}
 
 	if apiResp.IsBroadcast == nil || apiResp.IsResidential == nil || apiResp.FraudScore == nil {
 		utils.Debug("节点质量检测: 响应字段缺失")
-		return nil
+		reason := "missing_quality_fields"
+		if qualityFamily == models.QualityFamilyIPv6 {
+			reason = "incomplete_ipv6_info"
+		}
+		return &QualityCheckResult{
+			Status: models.QualityStatusPartial,
+			Family: qualityFamily,
+			IP:     resultIP,
+			Reason: reason,
+		}
 	}
 
 	return &QualityCheckResult{
 		IsBroadcast:   *apiResp.IsBroadcast,
 		IsResidential: *apiResp.IsResidential,
 		FraudScore:    *apiResp.FraudScore,
+		Status:        models.QualityStatusSuccess,
+		Family:        qualityFamily,
+		IP:            resultIP,
 	}
+}
+
+// FetchQualityWithAdapter 通过代理通道检测节点质量
+// 使用已有的 proxyAdapter 发起请求，获取 IP 质量信息
+// 失败静默返回 nil，不影响主流程
+func FetchQualityWithAdapter(proxyAdapter constant.Proxy, qualityURL string) *QualityCheckResult {
+	defer func() {
+		if r := recover(); r != nil {
+			// 静默处理
+		}
+	}()
+
+	if qualityURL == "" {
+		qualityURL = "https://my.ippure.com/v1/info"
+	}
+
+	return fetchQuality(proxyAdapter, qualityURL)
 }

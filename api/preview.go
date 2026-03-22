@@ -17,26 +17,27 @@ type PreviewRequest struct {
 	SubscriptionID int `json:"SubscriptionID"`
 
 	// 以下字段用于表单预览（未保存的订阅）
-	NodeIDs            []int    `json:"NodeIDs"`            // 选中的节点ID列表（带排序）
-	NodeSorts          []int    `json:"NodeSorts"`          // 节点对应的排序值
-	Groups             []string `json:"Groups"`             // 选中的分组列表
-	GroupSorts         []int    `json:"GroupSorts"`         // 分组对应的排序值
-	Scripts            []int    `json:"Scripts"`            // 选中的脚本ID列表
-	DelayTime          int      `json:"DelayTime"`          // 最大延迟过滤
-	MinSpeed           float64  `json:"MinSpeed"`           // 最小速度过滤
-	CountryWhitelist   string   `json:"CountryWhitelist"`   // 国家白名单
-	CountryBlacklist   string   `json:"CountryBlacklist"`   // 国家黑名单
-	TagWhitelist       string   `json:"TagWhitelist"`       // 标签白名单
-	TagBlacklist       string   `json:"TagBlacklist"`       // 标签黑名单
-	ProtocolWhitelist  string   `json:"ProtocolWhitelist"`  // 协议白名单
-	ProtocolBlacklist  string   `json:"ProtocolBlacklist"`  // 协议黑名单
-	NodeNameWhitelist  string   `json:"NodeNameWhitelist"`  // 节点名称白名单
-	NodeNameBlacklist  string   `json:"NodeNameBlacklist"`  // 节点名称黑名单
-	MaxFraudScore      int      `json:"MaxFraudScore"`      // 最大欺诈评分
-	OnlyResidential    bool     `json:"OnlyResidential"`    // 仅住宅IP
-	OnlyNative         bool     `json:"OnlyNative"`         // 仅原生IP
-	ResidentialType    string   `json:"ResidentialType"`    // 住宅属性过滤
-	IPType             string   `json:"IPType"`             // IP类型过滤
+	NodeIDs            []int    `json:"NodeIDs"`           // 选中的节点ID列表（带排序）
+	NodeSorts          []int    `json:"NodeSorts"`         // 节点对应的排序值
+	Groups             []string `json:"Groups"`            // 选中的分组列表
+	GroupSorts         []int    `json:"GroupSorts"`        // 分组对应的排序值
+	Scripts            []int    `json:"Scripts"`           // 选中的脚本ID列表
+	DelayTime          int      `json:"DelayTime"`         // 最大延迟过滤
+	MinSpeed           float64  `json:"MinSpeed"`          // 最小速度过滤
+	CountryWhitelist   string   `json:"CountryWhitelist"`  // 国家白名单
+	CountryBlacklist   string   `json:"CountryBlacklist"`  // 国家黑名单
+	TagWhitelist       string   `json:"TagWhitelist"`      // 标签白名单
+	TagBlacklist       string   `json:"TagBlacklist"`      // 标签黑名单
+	ProtocolWhitelist  string   `json:"ProtocolWhitelist"` // 协议白名单
+	ProtocolBlacklist  string   `json:"ProtocolBlacklist"` // 协议黑名单
+	NodeNameWhitelist  string   `json:"NodeNameWhitelist"` // 节点名称白名单
+	NodeNameBlacklist  string   `json:"NodeNameBlacklist"` // 节点名称黑名单
+	MaxFraudScore      int      `json:"MaxFraudScore"`     // 最大欺诈评分
+	OnlyResidential    bool     `json:"OnlyResidential"`   // 仅住宅IP
+	OnlyNative         bool     `json:"OnlyNative"`        // 仅原生IP
+	ResidentialType    string   `json:"ResidentialType"`   // 住宅属性过滤
+	IPType             string   `json:"IPType"`            // IP类型过滤
+	QualityStatus      string   `json:"QualityStatus"`
 	NodeNamePreprocess string   `json:"NodeNamePreprocess"` // 原名预处理规则
 	NodeNameRule       string   `json:"NodeNameRule"`       // 节点命名规则模板
 	DeduplicationRule  string   `json:"DeduplicationRule"`  // 去重规则配置
@@ -132,6 +133,8 @@ func previewSavedSubscription(subID int) (*models.PreviewResult, error) {
 				IsBroadcast:   node.IsBroadcast,
 				IsResidential: node.IsResidential,
 				FraudScore:    node.FraudScore,
+				QualityStatus: node.QualityStatus,
+				QualityFamily: node.QualityFamily,
 			})
 			previewLink = utils.RenameNodeLink(node.Link, previewName)
 		}
@@ -176,6 +179,7 @@ func previewFormSubscription(req PreviewRequest) (*models.PreviewResult, error) 
 		OnlyNative:         req.OnlyNative,
 		ResidentialType:    req.ResidentialType,
 		IPType:             req.IPType,
+		QualityStatus:      req.QualityStatus,
 		NodeNamePreprocess: req.NodeNamePreprocess,
 		NodeNameRule:       req.NodeNameRule,
 		DeduplicationRule:  req.DeduplicationRule,

@@ -85,11 +85,28 @@ type NodeInfo struct {
 	IsBroadcast   bool    // IP来源：true=广播 false=原生
 	IsResidential bool    // 是否住宅IP
 	FraudScore    int     // 欺诈评分（0-100，-1=未检测）
+	QualityStatus string
+	QualityFamily string
 }
+
+const (
+	qualityStatusUntested = "untested"
+	qualityStatusSuccess  = "success"
+	qualityStatusPartial  = "partial"
+	qualityStatusFailed   = "failed"
+	qualityStatusDisabled = "disabled"
+	qualityFamilyIPv6     = "ipv6"
+)
 
 // FormatFraudScoreIcon 根据欺诈评分返回对应图标
 // fraudScore: 欺诈评分（0-100，-1=未检测）
-func FormatFraudScoreIcon(fraudScore int) string {
+func FormatFraudScoreIcon(fraudScore int, qualityStatus string) string {
+	if qualityStatus == qualityStatusPartial {
+		return "ℹ️"
+	}
+	if qualityStatus != "" && qualityStatus != qualityStatusSuccess {
+		return "⛔️"
+	}
 	if fraudScore < 0 {
 		return "⛔️"
 	}
@@ -369,8 +386,8 @@ func RenameNode(rule string, info NodeInfo) string {
 	replacements := []replacement{
 		{"$LinkCountry", linkCountry},
 		{"$Residential", func() string {
-			if info.FraudScore < 0 {
-				return "未检测"
+			if info.QualityStatus != qualityStatusSuccess {
+				return formatQualityText(info)
 			}
 			if info.IsResidential {
 				return "住宅IP"
@@ -379,18 +396,18 @@ func RenameNode(rule string, info NodeInfo) string {
 		}()},
 		{"$SpeedIcon", FormatSpeedIcon(info.Speed, info.SpeedStatus)},
 		{"$DelayIcon", FormatDelayIcon(info.DelayTime, info.DelayStatus)},
-		{"$FraudScoreIcon", FormatFraudScoreIcon(info.FraudScore)},
+		{"$FraudScoreIcon", FormatFraudScoreIcon(info.FraudScore, info.QualityStatus)},
 		{"$FraudScore", func() string {
-			if info.FraudScore < 0 {
-				return "未检测"
+			if info.QualityStatus != qualityStatusSuccess {
+				return formatQualityText(info)
 			}
 			return fmt.Sprintf("%d", info.FraudScore)
 		}()},
 		{"$LinkName", info.LinkName},
 		{"$Protocol", info.Protocol},
 		{"$IpType", func() string {
-			if info.FraudScore < 0 {
-				return "未检测"
+			if info.QualityStatus != qualityStatusSuccess {
+				return formatQualityText(info)
 			}
 			if info.IsBroadcast {
 				return "广播IP"
@@ -612,4 +629,22 @@ func renameSSRLink(link string, newName string) string {
 	}
 
 	return "ssr://" + Base64Encode(decoded)
+}
+
+func formatQualityText(info NodeInfo) string {
+	switch info.QualityStatus {
+	case qualityStatusPartial:
+		if info.QualityFamily == qualityFamilyIPv6 {
+			return "IPv6部分结果"
+		}
+		return "部分结果"
+	case qualityStatusFailed:
+		return "检测失败"
+	case qualityStatusDisabled:
+		return "未启用"
+	case qualityStatusUntested, "":
+		return "未检测"
+	default:
+		return "未检测"
+	}
 }

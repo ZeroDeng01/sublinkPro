@@ -47,7 +47,15 @@ import CircularProgress from '@mui/material/CircularProgress';
 import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
 import SearchableNodeSelect from 'components/SearchableNodeSelect';
-import { getTemplates, addTemplate, updateTemplate, deleteTemplate, getTemplateUsage, getACL4SSRPresets, convertRules } from 'api/templates';
+import {
+  getTemplates,
+  addTemplate,
+  updateTemplate,
+  deleteTemplate,
+  getTemplateUsage,
+  getACL4SSRPresets,
+  convertRules
+} from 'api/templates';
 import { getBaseTemplates, updateBaseTemplate } from 'api/settings';
 import { getNodes } from 'api/nodes';
 
@@ -380,7 +388,7 @@ export default function TemplateList() {
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
               添加模板
             </Button>
-             <IconButton onClick={handleRefresh} disabled={loading}>
+            <IconButton onClick={handleRefresh} disabled={loading}>
               <RefreshIcon
                 sx={
                   loading
@@ -1027,9 +1035,7 @@ export default function TemplateList() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle id="template-usage-dialog-title">
-          ⚠️ {usageDialog.title}
-        </DialogTitle>
+        <DialogTitle id="template-usage-dialog-title">⚠️ {usageDialog.title}</DialogTitle>
         <DialogContent>
           <Alert
             severity="warning"

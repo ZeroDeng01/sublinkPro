@@ -13,7 +13,15 @@ import Typography from '@mui/material/Typography';
 import MainCard from 'ui-component/cards/MainCard';
 
 // utils
-import { getDelayDisplay, getFraudScoreDisplay, getIpTypeDisplay, getResidentialDisplay, getSpeedDisplay, formatCountry } from '../utils';
+import {
+  getDelayDisplay,
+  getFraudScoreDisplay,
+  getIpTypeDisplay,
+  getQualityStatusDisplay,
+  getResidentialDisplay,
+  getSpeedDisplay,
+  formatCountry
+} from '../utils';
 
 /**
  * 移动端节点卡片组件（精简版）
@@ -135,27 +143,54 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
 
         <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
           {(() => {
-            const ipTypeDisplay = getIpTypeDisplay(node.IsBroadcast, node.FraudScore);
-            const residentialDisplay = getResidentialDisplay(node.IsResidential, node.FraudScore);
-            const fraudScoreDisplay = getFraudScoreDisplay(node.FraudScore);
+            const ipTypeDisplay = getIpTypeDisplay(node.IsBroadcast, node.QualityStatus, node.QualityFamily);
+            const residentialDisplay = getResidentialDisplay(node.IsResidential, node.QualityStatus, node.QualityFamily);
+            const fraudScoreDisplay = getFraudScoreDisplay(node.FraudScore, node.QualityStatus, node.QualityFamily);
+            const qualityStatusDisplay = getQualityStatusDisplay(node.QualityStatus, node.QualityFamily);
             const isUntested =
               ipTypeDisplay.label === '未检测' && residentialDisplay.label === '未检测' && fraudScoreDisplay.label === '未检测';
+            const shouldMergeQualityTags =
+              node.QualityStatus !== 'success' &&
+              ipTypeDisplay.label === residentialDisplay.label &&
+              residentialDisplay.label === fraudScoreDisplay.label;
 
             if (isUntested) {
               return <Chip label="未检测" color="default" variant="outlined" size="small" />;
             }
 
+            if (shouldMergeQualityTags) {
+              const mergedChip = (
+                <Chip
+                  label={qualityStatusDisplay.label}
+                  color={qualityStatusDisplay.color}
+                  variant={qualityStatusDisplay.variant}
+                  size="small"
+                />
+              );
+              return qualityStatusDisplay.tooltip ? <Tooltip title={qualityStatusDisplay.tooltip}>{mergedChip}</Tooltip> : mergedChip;
+            }
+
+            const ipTypeChip = (
+              <Chip label={ipTypeDisplay.label} color={ipTypeDisplay.color} variant={ipTypeDisplay.variant} size="small" />
+            );
+            const residentialChip = (
+              <Chip label={residentialDisplay.label} color={residentialDisplay.color} variant={residentialDisplay.variant} size="small" />
+            );
+            const fraudChip = (
+              <Chip
+                label={node.QualityStatus === 'success' ? `评分 ${fraudScoreDisplay.label}` : fraudScoreDisplay.label}
+                color={fraudScoreDisplay.color}
+                variant={fraudScoreDisplay.variant}
+                size="small"
+                sx={fraudScoreDisplay.sx}
+              />
+            );
+
             return (
               <>
-                <Chip label={ipTypeDisplay.label} color={ipTypeDisplay.color} variant={ipTypeDisplay.variant} size="small" />
-                <Chip label={residentialDisplay.label} color={residentialDisplay.color} variant={residentialDisplay.variant} size="small" />
-                <Chip
-                  label={`评分 ${fraudScoreDisplay.label}`}
-                  color={fraudScoreDisplay.color}
-                  variant={fraudScoreDisplay.variant}
-                  size="small"
-                  sx={fraudScoreDisplay.sx}
-                />
+                {ipTypeDisplay.tooltip ? <Tooltip title={ipTypeDisplay.tooltip}>{ipTypeChip}</Tooltip> : ipTypeChip}
+                {residentialDisplay.tooltip ? <Tooltip title={residentialDisplay.tooltip}>{residentialChip}</Tooltip> : residentialChip}
+                {fraudScoreDisplay.tooltip ? <Tooltip title={fraudScoreDisplay.tooltip}>{fraudChip}</Tooltip> : fraudChip}
               </>
             );
           })()}

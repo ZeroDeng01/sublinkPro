@@ -1,4 +1,4 @@
-import { getFraudScoreLevel } from 'utils/fraudScore';
+import { getFraudScoreLevel, getQualityStatusMeta, QUALITY_STATUS, QUALITY_STATUS_OPTIONS } from 'utils/fraudScore';
 
 // Cron 表达式预设 - 包含友好的说明
 export const CRON_OPTIONS = [
@@ -156,6 +156,8 @@ export const NODE_STATUS = {
   ERROR: 'error' // 错误
 };
 
+export { QUALITY_STATUS_OPTIONS };
+
 // 状态选择器选项 (用于过滤器下拉框)
 export const STATUS_OPTIONS = [
   { value: '', label: '全部' },
@@ -206,7 +208,18 @@ export const getDelayDisplay = (delay, delayStatus) => {
   return { label: `${delay}ms`, color: getDelayColor(delay), variant: 'outlined' };
 };
 
-export const getFraudScoreDisplay = (fraudScore) => {
+export const getFraudScoreDisplay = (fraudScore, qualityStatus = QUALITY_STATUS.UNTESTED, qualityFamily = '') => {
+  if (qualityStatus !== QUALITY_STATUS.SUCCESS) {
+    const statusMeta = getQualityStatusMeta(qualityStatus, qualityFamily);
+    return {
+      label: statusMeta.shortLabel,
+      detailLabel: statusMeta.label,
+      color: statusMeta.color,
+      variant: statusMeta.variant,
+      tooltip: statusMeta.tooltip
+    };
+  }
+
   if (fraudScore === undefined || fraudScore === null || fraudScore < 0) {
     return { label: '未检测', color: 'default', variant: 'outlined' };
   }
@@ -266,20 +279,24 @@ export const getFraudScoreDisplay = (fraudScore) => {
   };
 };
 
-export const getIpTypeDisplay = (isBroadcast, fraudScore) => {
-  if (fraudScore === undefined || fraudScore === null || fraudScore < 0) {
-    return { label: '未检测', color: 'default', variant: 'outlined' };
+export const getIpTypeDisplay = (isBroadcast, qualityStatus = QUALITY_STATUS.UNTESTED, qualityFamily = '') => {
+  if (qualityStatus !== QUALITY_STATUS.SUCCESS) {
+    const statusMeta = getQualityStatusMeta(qualityStatus, qualityFamily);
+    return { label: statusMeta.shortLabel, color: statusMeta.color, variant: statusMeta.variant, tooltip: statusMeta.tooltip };
   }
   return isBroadcast
     ? { label: '广播IP', color: 'warning', variant: 'outlined' }
     : { label: '原生IP', color: 'success', variant: 'outlined' };
 };
 
-export const getResidentialDisplay = (isResidential, fraudScore) => {
-  if (fraudScore === undefined || fraudScore === null || fraudScore < 0) {
-    return { label: '未检测', color: 'default', variant: 'outlined' };
+export const getResidentialDisplay = (isResidential, qualityStatus = QUALITY_STATUS.UNTESTED, qualityFamily = '') => {
+  if (qualityStatus !== QUALITY_STATUS.SUCCESS) {
+    const statusMeta = getQualityStatusMeta(qualityStatus, qualityFamily);
+    return { label: statusMeta.shortLabel, color: statusMeta.color, variant: statusMeta.variant, tooltip: statusMeta.tooltip };
   }
   return isResidential
     ? { label: '住宅IP', color: 'success', variant: 'outlined' }
     : { label: '机房IP', color: 'default', variant: 'outlined' };
 };
+
+export const getQualityStatusDisplay = (qualityStatus, qualityFamily) => getQualityStatusMeta(qualityStatus, qualityFamily);

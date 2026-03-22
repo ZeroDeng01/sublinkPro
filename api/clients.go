@@ -176,6 +176,8 @@ func GetV2ray(c *gin.Context) {
 				IsBroadcast:   v.IsBroadcast,
 				IsResidential: v.IsResidential,
 				FraudScore:    v.FraudScore,
+				QualityStatus: v.QualityStatus,
+				QualityFamily: v.QualityFamily,
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
 		}
@@ -202,6 +204,8 @@ func GetV2ray(c *gin.Context) {
 						IsBroadcast:   v.IsBroadcast,
 						IsResidential: v.IsResidential,
 						FraudScore:    v.FraudScore,
+						QualityStatus: v.QualityStatus,
+						QualityFamily: v.QualityFamily,
 					})
 					links[i] = utils.RenameNodeLink(link, newName)
 				}
@@ -294,6 +298,8 @@ func GetClash(c *gin.Context) {
 				IsBroadcast:   v.IsBroadcast,
 				IsResidential: v.IsResidential,
 				FraudScore:    v.FraudScore,
+				QualityStatus: v.QualityStatus,
+				QualityFamily: v.QualityFamily,
 			})
 		}
 		nodeNameMap[v.ID] = finalName
@@ -359,6 +365,8 @@ func GetClash(c *gin.Context) {
 				IsBroadcast:   v.IsBroadcast,
 				IsResidential: v.IsResidential,
 				FraudScore:    v.FraudScore,
+				QualityStatus: v.QualityStatus,
+				QualityFamily: v.QualityFamily,
 			})
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
 		}
@@ -400,6 +408,8 @@ func GetClash(c *gin.Context) {
 						IsBroadcast:   v.IsBroadcast,
 						IsResidential: v.IsResidential,
 						FraudScore:    v.FraudScore,
+						QualityStatus: v.QualityStatus,
+						QualityFamily: v.QualityFamily,
 					})
 					renamedLink = utils.RenameNodeLink(link, newName)
 				}
