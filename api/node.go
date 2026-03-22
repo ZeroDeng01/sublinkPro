@@ -1006,6 +1006,11 @@ func NodeSourceStats(c *gin.Context) {
 	utils.OkDetailed(c, "获取来源统计成功", stats)
 }
 
+func DashboardQualityStats(c *gin.Context) {
+	stats := models.GetDashboardQualityStats()
+	utils.OkDetailed(c, "获取仪表盘质量统计成功", stats)
+}
+
 // GetIPDetails 获取IP详细信息
 // GET /api/v1/nodes/ip-info?ip=xxx.xxx.xxx.xxx
 func GetIPDetails(c *gin.Context) {

@@ -1574,6 +1574,29 @@ type TagStat struct {
 	Count int    `json:"count"`
 }
 
+type DashboardCountStat struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
+	Count int    `json:"count"`
+}
+
+type DashboardFraudRangeStat struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
+	Min   int    `json:"min"`
+	Max   int    `json:"max"`
+	Count int    `json:"count"`
+}
+
+type DashboardQualityStats struct {
+	Total           int                       `json:"total"`
+	SuccessTotal    int                       `json:"successTotal"`
+	OtherTotal      int                       `json:"otherTotal"`
+	IPStats         []DashboardCountStat      `json:"ipStats"`
+	FraudScoreStats []DashboardFraudRangeStat `json:"fraudScoreStats"`
+	QualityStatus   []DashboardCountStat      `json:"qualityStatus"`
+}
+
 // GetNodeTagStats 获取按标签统计的节点数量
 func GetNodeTagStats() []TagStat {
 	allNodes := nodeCache.GetAll()
@@ -1617,6 +1640,100 @@ func GetNodeTagStats() []TagStat {
 	}
 
 	return result
+}
+
+func GetDashboardQualityStats() DashboardQualityStats {
+	allNodes := nodeCache.GetAll()
+
+	ipStats := []DashboardCountStat{
+		{Key: "housing", Label: "住房IP", Count: 0},
+		{Key: "datacenter", Label: "机房IP", Count: 0},
+		{Key: "native", Label: "原生IP", Count: 0},
+		{Key: "broadcast", Label: "广播IP", Count: 0},
+		{Key: "other", Label: "其他", Count: 0},
+	}
+
+	fraudStats := []DashboardFraudRangeStat{
+		{Key: "excellent-plus", Label: "极佳 (0-10)", Min: 0, Max: 10, Count: 0},
+		{Key: "excellent", Label: "优秀 (11-30)", Min: 11, Max: 30, Count: 0},
+		{Key: "good", Label: "良好 (31-50)", Min: 31, Max: 50, Count: 0},
+		{Key: "medium", Label: "中等 (51-70)", Min: 51, Max: 70, Count: 0},
+		{Key: "poor", Label: "差 (71-89)", Min: 71, Max: 89, Count: 0},
+		{Key: "very-poor", Label: "极差 (90+)", Min: 90, Max: 100, Count: 0},
+	}
+
+	qualityStatus := []DashboardCountStat{
+		{Key: QualityStatusSuccess, Label: "完整结果", Count: 0},
+		{Key: QualityStatusPartial, Label: "信息不全", Count: 0},
+		{Key: QualityStatusFailed, Label: "检测失败", Count: 0},
+		{Key: QualityStatusDisabled, Label: "未启用", Count: 0},
+		{Key: QualityStatusUntested, Label: "未检测", Count: 0},
+	}
+
+	findFraudBucketIndex := func(score int) int {
+		for index, bucket := range fraudStats {
+			if score >= bucket.Min && score <= bucket.Max {
+				return index
+			}
+		}
+		if score >= 90 {
+			return len(fraudStats) - 1
+		}
+		return -1
+	}
+
+	findQualityStatusIndex := func(status string) int {
+		for index, item := range qualityStatus {
+			if item.Key == status {
+				return index
+			}
+		}
+		return len(qualityStatus) - 1
+	}
+
+	stats := DashboardQualityStats{
+		Total:           len(allNodes),
+		SuccessTotal:    0,
+		OtherTotal:      0,
+		IPStats:         ipStats,
+		FraudScoreStats: fraudStats,
+		QualityStatus:   qualityStatus,
+	}
+
+	for _, n := range allNodes {
+		status := getNodeQualityStatusValue(n)
+		statusIndex := findQualityStatusIndex(status)
+		stats.QualityStatus[statusIndex].Count++
+
+		if status != QualityStatusSuccess {
+			stats.IPStats[4].Count++
+			stats.OtherTotal++
+			continue
+		}
+
+		stats.SuccessTotal++
+
+		if getNodeResidentialTypeValue(n) == "residential" {
+			stats.IPStats[0].Count++
+		} else {
+			stats.IPStats[1].Count++
+		}
+
+		if getNodeIPTypeValue(n) == "broadcast" {
+			stats.IPStats[3].Count++
+		} else {
+			stats.IPStats[2].Count++
+		}
+
+		if n.FraudScore >= 0 {
+			bucketIndex := findFraudBucketIndex(n.FraudScore)
+			if bucketIndex >= 0 {
+				stats.FraudScoreStats[bucketIndex].Count++
+			}
+		}
+	}
+
+	return stats
 }
 
 // GetNodeGroupStats 获取按分组统计的节点数量

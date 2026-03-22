@@ -71,3 +71,10 @@ export function getSourceStats() {
     method: 'get'
   });
 }
+
+export function getQualityStats() {
+  return request({
+    url: '/v1/total/quality-stats',
+    method: 'get'
+  });
+}

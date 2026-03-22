@@ -21,6 +21,7 @@ func Total(r *gin.Engine) {
 		TotalGroup.GET("/tag-stats", api.NodeTagStats)
 		TotalGroup.GET("/group-stats", api.NodeGroupStats)
 		TotalGroup.GET("/source-stats", api.NodeSourceStats)
+		TotalGroup.GET("/quality-stats", api.DashboardQualityStats)
 	}
 
 }
