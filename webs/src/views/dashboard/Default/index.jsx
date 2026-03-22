@@ -19,7 +19,6 @@ import Alert from '@mui/material/Alert';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
 // icons
-import SubscriptionsIcon from '@mui/icons-material/Subscriptions';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -46,7 +45,6 @@ import SecurityIcon from '@mui/icons-material/Security';
 import MainCard from 'ui-component/cards/MainCard';
 import TaskProgressPanel from 'components/TaskProgressPanel';
 import {
-  getSubTotal,
   getNodeTotal,
   getFastestSpeedNode,
   getLowestDelayNode,
@@ -672,7 +670,7 @@ const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradient
               variant="h1"
               sx={{
                 fontWeight: 700,
-                fontSize: isNodeStat ? '1.75rem' : '2.25rem',
+                fontSize: subValue ? '1.75rem' : '2.25rem',
                 color: theme.palette.text.primary,
                 lineHeight: 1.2
               }}
@@ -687,7 +685,7 @@ const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradient
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
-              {isNodeStat && subValue ? (
+              {subValue ? (
                 <Tooltip title={subValue} arrow placement="bottom">
                   <Typography
                     variant="caption"
@@ -702,7 +700,7 @@ const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradient
                       display: 'block'
                     }}
                   >
-                    📍 {subValue}
+                    {isNodeStat ? `📍 ${subValue}` : subValue}
                   </Typography>
                 </Tooltip>
               ) : (
@@ -1444,7 +1442,6 @@ export default function DashboardDefault() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [subTotal, setSubTotal] = useState(0);
   const [nodeTotal, setNodeTotal] = useState(0);
   const [nodeAvailable, setNodeAvailable] = useState(0);
   const [fastestNode, setFastestNode] = useState(null);
@@ -1472,9 +1469,8 @@ export default function DashboardDefault() {
   const fetchStats = async () => {
     try {
       setLoadingStats(true);
-      const [subRes, nodeRes, fastestRes, lowestDelayRes, countryRes, protocolRes, tagRes, groupRes, sourceRes, qualityRes, airportRes] =
+      const [nodeRes, fastestRes, lowestDelayRes, countryRes, protocolRes, tagRes, groupRes, sourceRes, qualityRes, airportRes] =
         await Promise.all([
-          getSubTotal(),
           getNodeTotal(),
           getFastestSpeedNode(),
           getLowestDelayNode(),
@@ -1486,7 +1482,6 @@ export default function DashboardDefault() {
           getQualityStats(),
           getAirports()
         ]);
-      setSubTotal(subRes.data || 0);
       // nodeRes.data 现在返回 { total, available }
       if (nodeRes.data && typeof nodeRes.data === 'object') {
         setNodeTotal(nodeRes.data.total || 0);
@@ -1535,9 +1530,10 @@ export default function DashboardDefault() {
   // 统计卡片配置
   const statsConfig = [
     {
-      title: '订阅总数',
-      value: subTotal,
-      icon: SubscriptionsIcon,
+      title: '机场总数',
+      value: airports.length,
+      subValue: `${airports.filter((airport) => airport.fetchUsageInfo).length} 个已启用用量获取`,
+      icon: FlightTakeoffIcon,
       gradientColors: ['#6366f1', '#8b5cf6'],
       accentColor: '#6366f1'
     },
