@@ -516,11 +516,16 @@ const RankedStatList = ({
                   ) : null}
                 </Box>
                 <Typography variant="caption" sx={{ color: 'text.secondary', minWidth: 42, textAlign: 'right' }}>
-                  {item.percent.toFixed(1)}{percentSuffix}
+                  {item.percent.toFixed(1)}
+                  {percentSuffix}
                 </Typography>
               </Box>
             </Box>
-            <LinearProgress variant="determinate" value={Math.max(0, Math.min(item.percent, 100))} sx={getProgressBarSx(theme, item.color, muted)} />
+            <LinearProgress
+              variant="determinate"
+              value={Math.max(0, Math.min(item.percent, 100))}
+              sx={getProgressBarSx(theme, item.color, muted)}
+            />
             {item.isCollapsedOther && isExpanded && item.hiddenItems?.length ? (
               <Box
                 sx={{
@@ -547,7 +552,9 @@ const RankedStatList = ({
                               color: 'text.secondary'
                             }}
                           >
-                            {hiddenItem.marker ? <Typography sx={{ fontSize: '1rem', lineHeight: 1 }}>{hiddenItem.marker}</Typography> : null}
+                            {hiddenItem.marker ? (
+                              <Typography sx={{ fontSize: '1rem', lineHeight: 1 }}>{hiddenItem.marker}</Typography>
+                            ) : null}
                             <Typography
                               component="div"
                               variant="caption"
@@ -572,7 +579,8 @@ const RankedStatList = ({
                       </Box>
                       <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
                         {valueFormatter ? valueFormatter(hiddenItem.count, hiddenItem) : hiddenItem.count.toLocaleString()}
-                        {detailFormatter ? ` · ${detailFormatter(hiddenItem)}` : ''} · {hiddenItem.percent.toFixed(1)}{percentSuffix}
+                        {detailFormatter ? ` · ${detailFormatter(hiddenItem)}` : ''} · {hiddenItem.percent.toFixed(1)}
+                        {percentSuffix}
                       </Typography>
                     </Box>
                     <LinearProgress
@@ -763,7 +771,19 @@ const getGreeting = () => {
 
 // ==============================|| 高级统计卡片组件 ||============================== //
 
-const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradientColors, accentColor, isNodeStat, copyLink, onCopy, nodePassStats }) => {
+const PremiumStatCard = ({
+  title,
+  value,
+  subValue,
+  loading,
+  icon: Icon,
+  gradientColors,
+  accentColor,
+  isNodeStat,
+  copyLink,
+  onCopy,
+  nodePassStats
+}) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const surfaceSx = getCalmSurface(theme, accentColor || gradientColors[0]);
@@ -1708,16 +1728,15 @@ export default function DashboardDefault() {
   const fetchStats = async () => {
     try {
       setLoadingStats(true);
-      const [nodeRes, fastestRes, lowestDelayRes, countryRes, groupedStatsRes, qualityRes, airportRes] =
-        await Promise.all([
-          getNodeTotal(),
-          getFastestSpeedNode(),
-          getLowestDelayNode(),
-          getDashboardCountryStats(),
-          getDashboardGroupedStats(),
-          getQualityStats(),
-          getAirports()
-        ]);
+      const [nodeRes, fastestRes, lowestDelayRes, countryRes, groupedStatsRes, qualityRes, airportRes] = await Promise.all([
+        getNodeTotal(),
+        getFastestSpeedNode(),
+        getLowestDelayNode(),
+        getDashboardCountryStats(),
+        getDashboardGroupedStats(),
+        getQualityStats(),
+        getAirports()
+      ]);
       if (nodeRes.data && typeof nodeRes.data === 'object') {
         setNodeTotal(nodeRes.data.total || 0);
         setNodeDelayPassCount(getDelayPassMetric(nodeRes.data));
@@ -1961,7 +1980,7 @@ export default function DashboardDefault() {
 
                   return (
                     <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {item.label}
+                      {item.label}
                     </Box>
                   );
                 }}

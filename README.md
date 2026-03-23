@@ -59,6 +59,7 @@
 | 🏷️ **智能标签系统** | 自动规则打标签、零代码筛选、支持 IP 质量条件 | [📖](docs/features/tags.md) |
 | ⚡ **专业测速系统** | 双阶段测试、智能延迟测量、支持 IP 质量检测 | [📖](docs/features/speedtest.md) |
 | 🔗 **链式代理** | Dialer-Proxy 原生支持、可视化配置、支持按 IP 质量选节点 | [📖](docs/features/chain-proxy.md) |
+| 🤖 **AI 模板编辑** | 用自然语言生成模板候选草稿，支持编辑/对比双视图、本地应用与回退 | [📖](docs/features/template-ai.md) |
 | ✈️ **机场管理** | 多格式导入、定时更新、流量监控、一键全量拉取 | [📖](docs/features/airport.md) |
 | 🗂️ **分组排序** | 分组内机场优先级拖拽排序，控制订阅输出中的节点顺序 | - |
 | 📋 **订阅分享** | 多链接管理、过期策略、访问统计 | [📖](docs/features/subscription-share.md) |
@@ -141,6 +142,7 @@ docker-compose up -d
 | [🏷️ 智能标签系统](docs/features/tags.md) | 自动规则打标签、零代码筛选、IP 质量规则 |
 | [⚡ 测速系统](docs/features/speedtest.md) | 测速原理、IP 质量检测、参数配置 |
 | [🔗 链式代理](docs/features/chain-proxy.md) | Dialer-Proxy、条件选节点、配置流程 |
+| [🤖 AI 模板编辑](docs/features/template-ai.md) | AI 生成模板草稿、编辑/对比审阅、本地应用与回退 |
 | [✈️ 机场管理](docs/features/airport.md) | 订阅导入、定时更新、流量监控 |
 | [📋 订阅分享](docs/features/subscription-share.md) | 多链接管理、过期策略、访问统计 |
 | [🌐 Host 管理](docs/features/host.md) | 域名映射、DNS 配置、测速持久化 |

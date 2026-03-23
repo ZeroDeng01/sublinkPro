@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // material-ui
 import { alpha, useTheme } from '@mui/material/styles';
@@ -32,9 +33,11 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Autocomplete from '@mui/material/Autocomplete';
 import Switch from '@mui/material/Switch';
+import InputAdornment from '@mui/material/InputAdornment';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -43,6 +46,9 @@ import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import CircularProgress from '@mui/material/CircularProgress';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import CheckIcon from '@mui/icons-material/Check';
+import UndoIcon from '@mui/icons-material/Undo';
 
 import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
@@ -54,19 +60,197 @@ import {
   deleteTemplate,
   getTemplateUsage,
   getACL4SSRPresets,
-  convertRules
+  convertRules,
+  generateTemplateAICandidateStream
 } from 'api/templates';
 import { getBaseTemplates, updateBaseTemplate } from 'api/settings';
 import { getNodes } from 'api/nodes';
 
 // Monaco Editor
-import Editor from '@monaco-editor/react';
+import Editor, { DiffEditor } from '@monaco-editor/react';
 
 // ==============================|| 模板管理 ||============================== //
 
+const createEmptyTemplateAIAssistant = () => ({
+  summary: '',
+  warnings: [],
+  candidateText: '',
+  revisionHash: '',
+  validation: null,
+  finishReason: '',
+  usage: null,
+  sourceText: '',
+  sourceFilename: '',
+  sourceCategory: '',
+  sourceRuleSource: '',
+  sourceUseProxy: false,
+  sourceProxyLink: '',
+  sourceEnableIncludeAll: false
+});
+
+const normalizeMessages = (messages) => (Array.isArray(messages) ? messages.filter(Boolean) : []);
+
+const JSON_ESCAPE_CHAR_MAP = {
+  '"': '"',
+  '\\': '\\',
+  '/': '/',
+  b: '\b',
+  f: '\f',
+  n: '\n',
+  r: '\r',
+  t: '\t'
+};
+
+const createTemplateAISourceSnapshot = (formData, useProxy, proxyLink) => ({
+  sourceText: formData.text,
+  sourceFilename: formData.filename.trim(),
+  sourceCategory: formData.category,
+  sourceRuleSource: formData.ruleSource,
+  sourceUseProxy: useProxy,
+  sourceProxyLink: proxyLink,
+  sourceEnableIncludeAll: formData.enableIncludeAll
+});
+
+const buildTemplateAIAssistantState = (payload, sourceSnapshot, fallbackCandidateText = '') => ({
+  summary: payload?.summary || '',
+  warnings: normalizeMessages(payload?.warnings),
+  candidateText: payload?.candidateText || fallbackCandidateText,
+  revisionHash: payload?.revisionHash || '',
+  validation: payload?.validation || null,
+  finishReason: payload?.finishReason || '',
+  usage: payload?.usage || null,
+  ...sourceSnapshot
+});
+
+const extractResponseUsage = (eventData) => {
+  if (!eventData || typeof eventData !== 'object' || Array.isArray(eventData)) {
+    return null;
+  }
+
+  const response = eventData.response;
+  if (!response || typeof response !== 'object' || Array.isArray(response)) {
+    return null;
+  }
+
+  return response.usage && typeof response.usage === 'object' && !Array.isArray(response.usage) ? response.usage : null;
+};
+
+const extractResponseFinishReason = (eventData) => {
+  if (!eventData || typeof eventData !== 'object' || Array.isArray(eventData)) {
+    return '';
+  }
+
+  const response = eventData.response;
+  if (!response || typeof response !== 'object' || Array.isArray(response)) {
+    return '';
+  }
+
+  return typeof response.status === 'string' ? response.status : '';
+};
+
+const getUsageNumber = (container, key) => {
+  if (!container || typeof container !== 'object' || Array.isArray(container) || !Object.prototype.hasOwnProperty.call(container, key)) {
+    return null;
+  }
+
+  const value = container[key];
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsedValue = Number(value);
+
+    if (Number.isFinite(parsedValue)) {
+      return parsedValue;
+    }
+  }
+
+  return null;
+};
+
+const buildTemplateAIUsageItems = (usage) => {
+  if (!usage || typeof usage !== 'object' || Array.isArray(usage)) {
+    return [];
+  }
+
+  const inputTokens = getUsageNumber(usage, 'input_tokens') ?? getUsageNumber(usage, 'prompt_tokens');
+  const outputTokens = getUsageNumber(usage, 'output_tokens') ?? getUsageNumber(usage, 'completion_tokens');
+  const inputTokenDetails =
+    usage.input_tokens_details && typeof usage.input_tokens_details === 'object' && !Array.isArray(usage.input_tokens_details)
+      ? usage.input_tokens_details
+      : null;
+  const cacheTokens =
+    getUsageNumber(inputTokenDetails, 'cached_tokens') ??
+    getUsageNumber(usage, 'cached_tokens') ??
+    getUsageNumber(usage, 'cache_tokens') ??
+    getUsageNumber(usage, 'cached_input_tokens');
+
+  return [
+    inputTokens !== null ? { key: 'input', label: '输入', value: inputTokens } : null,
+    outputTokens !== null ? { key: 'output', label: '输出', value: outputTokens } : null,
+    cacheTokens !== null ? { key: 'cache', label: '缓存', value: cacheTokens } : null
+  ].filter(Boolean);
+};
+
+const decodePartialJSONString = (value, startIndex) => {
+  let decoded = '';
+
+  for (let index = startIndex; index < value.length; index += 1) {
+    const currentChar = value[index];
+
+    if (currentChar === '"') {
+      break;
+    }
+
+    if (currentChar !== '\\') {
+      decoded += currentChar;
+      continue;
+    }
+
+    if (index + 1 >= value.length) {
+      break;
+    }
+
+    const nextChar = value[index + 1];
+
+    if (nextChar === 'u') {
+      const unicodeHex = value.slice(index + 2, index + 6);
+      if (unicodeHex.length < 4 || !/^[0-9a-fA-F]{4}$/.test(unicodeHex)) {
+        break;
+      }
+      decoded += String.fromCharCode(parseInt(unicodeHex, 16));
+      index += 5;
+      continue;
+    }
+
+    decoded += JSON_ESCAPE_CHAR_MAP[nextChar] ?? nextChar;
+    index += 1;
+  }
+
+  return decoded;
+};
+
+const extractCandidatePreviewFromStream = (streamBuffer) => {
+  if (!streamBuffer) {
+    return '';
+  }
+
+  const keyMatch = /"candidateText"\s*:\s*"/.exec(streamBuffer);
+  if (!keyMatch) {
+    return '';
+  }
+
+  return decodePartialJSONString(streamBuffer, keyMatch.index + keyMatch[0].length);
+};
+
 export default function TemplateList() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
+  const aiGenerationAbortRef = useRef(null);
+  const aiStreamBufferRef = useRef('');
 
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -78,6 +262,12 @@ export default function TemplateList() {
   const [aclPresets, setAclPresets] = useState([]);
   const [converting, setConverting] = useState(false);
   const [editorFullscreen, setEditorFullscreen] = useState(false);
+  const [templateEditorMode, setTemplateEditorMode] = useState('edit');
+  const [aiPrompt, setAIPrompt] = useState('');
+  const [aiGenerating, setAIGenerating] = useState(false);
+  const [aiAssistant, setAIAssistant] = useState(createEmptyTemplateAIAssistant);
+  const [aiGenerationError, setAIGenerationError] = useState('');
+  const [aiLocalAcceptSnapshot, setAILocalAcceptSnapshot] = useState(null);
   const [errorDialog, setErrorDialog] = useState({ open: false, title: '', message: '' });
   const [usageDialog, setUsageDialog] = useState({ open: false, title: '', message: '', subscriptions: [], action: null });
   const [page, setPage] = useState(0);
@@ -111,6 +301,24 @@ export default function TemplateList() {
   const openConfirm = (title, content, action) => {
     setConfirmInfo({ title, content, action });
     setConfirmOpen(true);
+  };
+
+  const abortAIGeneration = () => {
+    if (aiGenerationAbortRef.current) {
+      aiGenerationAbortRef.current.abort();
+      aiGenerationAbortRef.current = null;
+    }
+    aiStreamBufferRef.current = '';
+  };
+
+  const resetTemplateAIAssistant = () => {
+    abortAIGeneration();
+    setTemplateEditorMode('edit');
+    setAIPrompt('');
+    setAIAssistant(createEmptyTemplateAIAssistant());
+    setAIGenerationError('');
+    setAIGenerating(false);
+    setAILocalAcceptSnapshot(null);
   };
 
   const handleConfirmClose = () => {
@@ -172,6 +380,7 @@ export default function TemplateList() {
     setUseProxy(false);
     setProxyLink('');
     setEditorFullscreen(false);
+    resetTemplateAIAssistant();
     setDialogOpen(true);
   };
 
@@ -193,6 +402,7 @@ export default function TemplateList() {
     if (template.useProxy) {
       fetchProxyNodes();
     }
+    resetTemplateAIAssistant();
     setDialogOpen(true);
   };
 
@@ -236,6 +446,179 @@ export default function TemplateList() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditorFullscreen(false);
+    resetTemplateAIAssistant();
+  };
+
+  useEffect(() => () => abortAIGeneration(), []);
+
+  const handleGenerateWithAI = async () => {
+    if (!aiPrompt.trim()) {
+      showMessage('请输入 AI 指令', 'warning');
+      return;
+    }
+
+    abortAIGeneration();
+    const sourceSnapshot = createTemplateAISourceSnapshot(formData, useProxy, proxyLink);
+    const controller = new AbortController();
+    aiGenerationAbortRef.current = controller;
+    aiStreamBufferRef.current = '';
+    let latestCandidatePreview = '';
+
+    setAIGenerating(true);
+    setAIGenerationError('');
+    setTemplateEditorMode('edit');
+    setAILocalAcceptSnapshot(null);
+    setAIAssistant({
+      ...createEmptyTemplateAIAssistant(),
+      ...sourceSnapshot
+    });
+
+    try {
+      const data = await generateTemplateAICandidateStream(
+        {
+          filename: formData.filename.trim(),
+          category: formData.category,
+          currentText: formData.text,
+          userPrompt: aiPrompt.trim(),
+          ruleSource: formData.ruleSource,
+          useProxy,
+          proxyLink,
+          enableIncludeAll: formData.enableIncludeAll
+        },
+        {
+          signal: controller.signal,
+          onStart: () => {
+            aiStreamBufferRef.current = '';
+          },
+          onDelta: (eventData) => {
+            const deltaText = typeof eventData === 'string' ? eventData : eventData?.delta || '';
+            if (!deltaText) {
+              return;
+            }
+
+            aiStreamBufferRef.current += deltaText;
+            const nextCandidatePreview = extractCandidatePreviewFromStream(aiStreamBufferRef.current);
+            latestCandidatePreview = nextCandidatePreview || latestCandidatePreview;
+
+            setAIAssistant((prev) => ({
+              ...prev,
+              candidateText: nextCandidatePreview || prev.candidateText
+            }));
+          },
+          onComplete: (eventData) => {
+            if (!eventData || typeof eventData !== 'object') {
+              return;
+            }
+            setAIAssistant((prev) => ({
+              ...prev,
+              finishReason: extractResponseFinishReason(eventData) || prev.finishReason,
+              usage: extractResponseUsage(eventData) || prev.usage,
+              candidateText: latestCandidatePreview || prev.candidateText
+            }));
+          },
+          onFinal: (eventData) => {
+            if (!eventData || typeof eventData !== 'object') {
+              return;
+            }
+
+            const nextAssistantState = buildTemplateAIAssistantState(eventData, sourceSnapshot, latestCandidatePreview);
+            latestCandidatePreview = nextAssistantState.candidateText;
+            setAIAssistant(nextAssistantState);
+          }
+        }
+      );
+
+      const finalAssistantState = buildTemplateAIAssistantState(data, sourceSnapshot, latestCandidatePreview);
+      setAIGenerationError('');
+
+      if (finalAssistantState.candidateText) {
+        setTemplateEditorMode('diff');
+        showMessage('AI 草稿已生成，可切换并停留在并排对比模式');
+      } else {
+        showMessage('AI 生成完成，但未返回候选内容', 'warning');
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        return;
+      }
+
+      const errorMessage = error.response?.data?.message || error.message || 'AI 生成失败';
+      const friendlyErrorMessage =
+        errorMessage.includes('当前用户未启用 AI 助手') || errorMessage.includes('AI 设置不完整，请先配置 Base URL、模型和 API Key')
+          ? 'AI 助手当前不可用，请前往 /settings，在 个人设置 -> AI 助手 中完成配置。'
+          : errorMessage;
+      setAIGenerationError(errorMessage);
+      showMessage(friendlyErrorMessage, 'error');
+    } finally {
+      if (aiGenerationAbortRef.current === controller) {
+        aiGenerationAbortRef.current = null;
+      }
+      setAIGenerating(false);
+    }
+  };
+
+  const aiCandidateMatchesEditor = Boolean(aiAssistant.candidateText) && aiAssistant.candidateText === formData.text;
+  const aiCandidateOutdated =
+    Boolean(aiAssistant.candidateText) &&
+    !aiCandidateMatchesEditor &&
+    (aiAssistant.sourceText !== formData.text ||
+      aiAssistant.sourceFilename !== formData.filename.trim() ||
+      aiAssistant.sourceCategory !== formData.category ||
+      aiAssistant.sourceRuleSource !== formData.ruleSource ||
+      aiAssistant.sourceUseProxy !== useProxy ||
+      aiAssistant.sourceProxyLink !== proxyLink ||
+      aiAssistant.sourceEnableIncludeAll !== formData.enableIncludeAll);
+  const canReviewAICandidate = Boolean(aiAssistant.candidateText) && !aiCandidateOutdated && !aiCandidateMatchesEditor;
+  const isDiffMode = templateEditorMode === 'diff';
+  const showDiffReview = isDiffMode && canReviewAICandidate;
+  const canAcceptAICandidateLocally = Boolean(aiAssistant.candidateText) && !aiCandidateOutdated && !aiCandidateMatchesEditor;
+  const canRevertLocalAIAccept = Boolean(aiLocalAcceptSnapshot);
+  const canSwitchToDiffMode = canReviewAICandidate;
+
+  useEffect(() => {
+    if (templateEditorMode === 'diff' && !canSwitchToDiffMode) {
+      setTemplateEditorMode('edit');
+    }
+  }, [templateEditorMode, canSwitchToDiffMode]);
+
+  const handleAcceptAICandidateLocally = () => {
+    if (!aiAssistant.candidateText) {
+      showMessage('请先生成 AI 候选内容', 'warning');
+      return;
+    }
+
+    if (aiCandidateMatchesEditor) {
+      showMessage('当前编辑器内容已经与 AI 候选结果一致', 'info');
+      return;
+    }
+
+    if (aiCandidateOutdated) {
+      showMessage('模板内容或配置已变化，请重新生成或重新校验候选内容后再接受到编辑器', 'warning');
+      return;
+    }
+
+    setAILocalAcceptSnapshot({ text: formData.text });
+    setTemplateEditorMode('edit');
+    setFormData((prev) => ({
+      ...prev,
+      text: aiAssistant.candidateText
+    }));
+    showMessage('AI 草稿已写入编辑器，可继续编辑或直接保存');
+  };
+
+  const handleRevertLastLocalAIAccept = () => {
+    if (!aiLocalAcceptSnapshot) {
+      showMessage('没有可回退的本地接受记录', 'warning');
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      text: aiLocalAcceptSnapshot.text || ''
+    }));
+    setTemplateEditorMode('edit');
+    setAILocalAcceptSnapshot(null);
+    showMessage('已恢复最近一次接受 AI 候选前的编辑器内容');
   };
 
   const handleConvertTemplate = async (expand) => {
@@ -275,6 +658,11 @@ export default function TemplateList() {
 
   const handleSubmit = async () => {
     try {
+      if (templateEditorMode === 'diff') {
+        showMessage('当前处于 AI 对比模式，请先返回编辑模式后再保存', 'warning');
+        return;
+      }
+
       if (isEdit) {
         await updateTemplate({
           oldname: currentTemplate.file,
@@ -301,6 +689,7 @@ export default function TemplateList() {
       }
       setEditorFullscreen(false);
       setDialogOpen(false);
+      resetTemplateAIAssistant();
       fetchTemplates(page, rowsPerPage);
     } catch (error) {
       console.log(error);
@@ -368,6 +757,524 @@ export default function TemplateList() {
       maxWidth: 'calc(133% - 32px)'
     }
   };
+
+  const aiWorkspacePanelSx = {
+    border: 1,
+    borderColor: 'divider',
+    borderRadius: 1,
+    bgcolor: 'background.paper'
+  };
+
+  const isEditMode = templateEditorMode === 'edit';
+
+  const aiStatusText = aiGenerating
+    ? '正在基于当前编辑器内容生成草稿。'
+    : aiGenerationError
+      ? aiGenerationError
+      : aiCandidateOutdated
+        ? '当前内容或配置已变化，请重新生成新的草稿。'
+        : !isEdit && aiAssistant.candidateText
+          ? '当前模板尚未保存，可先应用到编辑器后再保存。'
+          : showDiffReview
+            ? '对比模式为只读，保存前请先返回编辑模式。'
+            : aiCandidateMatchesEditor
+              ? '当前编辑器已载入 AI 草稿。'
+              : canRevertLocalAIAccept
+                ? '已保留应用前快照，可在编辑模式下回退。'
+                : aiAssistant.candidateText
+                  ? '可对比、应用或继续编辑当前候选草稿。'
+                  : '输入指令后生成候选草稿。';
+  const aiStatusColor = aiGenerationError
+    ? 'error.main'
+    : aiCandidateOutdated
+      ? 'warning.main'
+      : showDiffReview
+        ? alpha(theme.palette.common.white, 0.92)
+        : aiCandidateMatchesEditor
+          ? 'success.main'
+          : alpha(theme.palette.common.white, 0.88);
+  const isAISetupIssue =
+    aiGenerationError.includes('当前用户未启用 AI 助手') || aiGenerationError.includes('AI 设置不完整，请先配置 Base URL、模型和 API Key');
+  const aiSetupGuidanceText = isAISetupIssue ? '请前往 /settings，在 个人设置 -> AI 助手 中启用并完成配置。' : '';
+  const aiFriendlyGenerationError = isAISetupIssue ? 'AI 助手当前不可用。' : aiGenerationError;
+  const aiUsageItems = buildTemplateAIUsageItems(aiAssistant.usage);
+
+  const configureTemplateMonacoTheme = (monaco) => {
+    monaco.editor.defineTheme('template-ai-editor', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.rangeHighlightBackground': '#00000000'
+      }
+    });
+  };
+
+  const aiStateChips = (
+    <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+      <Chip
+        size="small"
+        variant="filled"
+        label={isEditMode ? '编辑' : '对比'}
+        color={isEditMode ? 'primary' : 'default'}
+        sx={{
+          color: 'common.white',
+          bgcolor: isEditMode ? undefined : alpha(theme.palette.common.white, 0.14),
+          '& .MuiChip-label': {
+            fontWeight: 600
+          }
+        }}
+      />
+      {aiGenerating ? <Chip size="small" variant="outlined" color="primary" label="生成中" sx={{ color: 'common.white' }} /> : null}
+      {!aiGenerating ? (
+        <Chip
+          size="small"
+          variant="outlined"
+          color={
+            aiGenerationError
+              ? 'error'
+              : aiCandidateOutdated
+                ? 'warning'
+                : aiCandidateMatchesEditor
+                  ? 'success'
+                  : aiAssistant.candidateText
+                    ? 'info'
+                    : 'default'
+          }
+          label={
+            aiGenerationError
+              ? '生成失败'
+              : aiCandidateOutdated
+                ? '草稿过期'
+                : aiCandidateMatchesEditor
+                  ? '已写入编辑器'
+                  : aiAssistant.candidateText
+                    ? '草稿可用'
+                    : '未生成'
+          }
+          sx={{
+            color:
+              aiGenerationError || aiCandidateOutdated || aiCandidateMatchesEditor || aiAssistant.candidateText
+                ? 'common.white'
+                : alpha(theme.palette.common.white, 0.92),
+            borderColor:
+              !aiGenerationError && !aiCandidateOutdated && !aiCandidateMatchesEditor && !aiAssistant.candidateText
+                ? alpha(theme.palette.common.white, 0.22)
+                : undefined
+          }}
+        />
+      ) : null}
+      {canRevertLocalAIAccept ? (
+        <Chip size="small" variant="outlined" color="info" label="可回退上次接受" sx={{ color: 'common.white' }} />
+      ) : null}
+      {!isEdit && aiAssistant.candidateText ? (
+        <Chip
+          size="small"
+          variant="outlined"
+          label="未保存模板"
+          sx={{ color: 'common.white', borderColor: alpha(theme.palette.common.white, 0.22) }}
+        />
+      ) : null}
+    </Stack>
+  );
+
+  const renderAIControlPanel = ({ compact = false, minimal = false } = {}) => {
+    const dense = compact || minimal;
+
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: dense ? 0.75 : 1,
+          justifyContent: 'flex-end'
+        }}
+      >
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1,
+            overflow: 'hidden',
+            bgcolor: alpha(theme.palette.background.default, 0.4),
+            flexShrink: 0
+          }}
+        >
+          <Button
+            variant={isEditMode ? 'contained' : 'text'}
+            size="small"
+            color={isEditMode ? 'primary' : 'inherit'}
+            startIcon={<EditIcon fontSize="small" />}
+            disabled={aiGenerating}
+            onClick={() => setTemplateEditorMode('edit')}
+            sx={{
+              borderRadius: 0,
+              minWidth: dense ? 78 : 86,
+              px: 1.25,
+              ...(isEditMode
+                ? {}
+                : {
+                    color: 'text.secondary'
+                  })
+            }}
+          >
+            编辑
+          </Button>
+          <Divider orientation="vertical" flexItem />
+          <Button
+            variant={showDiffReview ? 'contained' : 'text'}
+            size="small"
+            color={showDiffReview ? 'primary' : 'inherit'}
+            startIcon={<CompareArrowsIcon />}
+            disabled={!canSwitchToDiffMode || aiGenerating}
+            onClick={() => setTemplateEditorMode('diff')}
+            sx={{
+              borderRadius: 0,
+              minWidth: dense ? 78 : 86,
+              px: 1.25,
+              ...(showDiffReview
+                ? {}
+                : {
+                    color: 'text.secondary'
+                  })
+            }}
+          >
+            对比
+          </Button>
+        </Box>
+      </Box>
+    );
+  };
+
+  const renderAIFloatingCommandBar = ({ fullscreen = false } = {}) => (
+    <Box
+      sx={{
+        position: 'absolute',
+        top: fullscreen ? 18 : 12,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: {
+          xs: 'calc(100% - 32px)',
+          sm: fullscreen ? 'min(560px, calc(100% - 84px))' : 'min(500px, calc(100% - 64px))'
+        },
+        maxWidth: '100%',
+        zIndex: 6,
+        display: 'flex',
+        justifyContent: 'center'
+      }}
+    >
+      <Box
+        sx={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.75,
+          px: 0.75,
+          py: 0.5,
+          borderRadius: 1,
+          border: 1,
+          borderColor: alpha(theme.palette.common.white, 0.12),
+          bgcolor: alpha(theme.palette.grey[900], 0.82),
+          boxShadow: `0 10px 26px ${alpha(theme.palette.common.black, 0.24)}`,
+          backdropFilter: 'blur(10px)'
+        }}
+      >
+        <TextField
+          fullWidth
+          size="small"
+          value={aiPrompt}
+          onChange={(e) => setAIPrompt(e.target.value)}
+          disabled={aiGenerating}
+          placeholder="告诉 AI 要如何调整当前模板…"
+          inputProps={{ 'aria-label': 'AI 指令' }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <AutoAwesomeIcon fontSize="small" sx={{ color: alpha(theme.palette.common.white, 0.92) }} />
+              </InputAdornment>
+            )
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              bgcolor: 'transparent',
+              color: alpha(theme.palette.common.white, 0.96),
+              height: 34,
+              pr: 0.25,
+              '&.Mui-disabled': {
+                color: alpha(theme.palette.common.white, 0.72),
+                WebkitTextFillColor: alpha(theme.palette.common.white, 0.72)
+              },
+              '& fieldset': {
+                borderColor: 'transparent'
+              },
+              '&:hover fieldset': {
+                borderColor: 'transparent'
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: alpha(theme.palette.primary.main, 0.6)
+              }
+            },
+            '& .MuiInputBase-input': {
+              color: alpha(theme.palette.common.white, 0.96),
+              paddingLeft: 2
+            },
+            '& .MuiInputBase-input.Mui-disabled': {
+              WebkitTextFillColor: alpha(theme.palette.common.white, 0.72)
+            },
+            '& .MuiInputBase-input::placeholder': {
+              color: alpha(theme.palette.common.white, 0.64),
+              opacity: 1
+            },
+            '& .MuiInputAdornment-root': {
+              mr: 0.75,
+              color: alpha(theme.palette.common.white, 0.88)
+            }
+          }}
+        />
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={aiGenerating ? <CircularProgress size={16} sx={{ color: 'common.white' }} /> : <AutoAwesomeIcon />}
+          disabled={aiGenerating}
+          onClick={handleGenerateWithAI}
+          sx={{
+            flexShrink: 0,
+            minWidth: 92,
+            color: 'common.white',
+            boxShadow: 'none',
+            '&.Mui-disabled': {
+              color: 'common.white',
+              bgcolor: alpha(theme.palette.primary.main, 0.5)
+            }
+          }}
+        >
+          {aiGenerating ? '生成中' : '生成'}
+        </Button>
+        <IconButton
+          size="small"
+          disabled={!canAcceptAICandidateLocally || aiGenerating}
+          onClick={handleAcceptAICandidateLocally}
+          sx={{
+            flexShrink: 0,
+            borderRadius: 1,
+            bgcolor: alpha(theme.palette.common.white, 0.06),
+            color:
+              canAcceptAICandidateLocally && !aiGenerating
+                ? alpha(theme.palette.common.white, 0.96)
+                : alpha(theme.palette.common.white, 0.42),
+            '&.Mui-disabled': {
+              bgcolor: alpha(theme.palette.common.white, 0.04),
+              color: alpha(theme.palette.common.white, 0.34)
+            }
+          }}
+        >
+          <CheckIcon fontSize="small" />
+        </IconButton>
+        {isEditMode ? (
+          <IconButton
+            size="small"
+            disabled={!canRevertLocalAIAccept || aiGenerating}
+            onClick={handleRevertLastLocalAIAccept}
+            sx={{
+              flexShrink: 0,
+              borderRadius: 1,
+              bgcolor: alpha(theme.palette.common.white, 0.06),
+              color:
+                canRevertLocalAIAccept && !aiGenerating ? alpha(theme.palette.common.white, 0.92) : alpha(theme.palette.common.white, 0.4),
+              '&.Mui-disabled': {
+                bgcolor: alpha(theme.palette.common.white, 0.04),
+                color: alpha(theme.palette.common.white, 0.32)
+              }
+            }}
+          >
+            <UndoIcon fontSize="small" />
+          </IconButton>
+        ) : null}
+        {isAISetupIssue ? (
+          <Button
+            size="small"
+            variant="text"
+            disabled={aiGenerating}
+            onClick={() => navigate('/settings')}
+            sx={{
+              flexShrink: 0,
+              minWidth: 'auto',
+              px: 0.75,
+              color: alpha(theme.palette.common.white, 0.92),
+              textDecoration: 'underline',
+              textUnderlineOffset: '2px',
+              '&.Mui-disabled': {
+                color: alpha(theme.palette.common.white, 0.5)
+              }
+            }}
+          >
+            前往设置
+          </Button>
+        ) : null}
+      </Box>
+    </Box>
+  );
+
+  const renderTemplateEditor = ({ fullscreen = false } = {}) => (
+    <Box
+      className="template-ai-editor-shell"
+      sx={{
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: fullscreen ? 0 : 350,
+        flex: fullscreen ? 1 : '0 0 auto',
+        ...(fullscreen
+          ? {
+              height: '100%',
+              borderRadius: 1,
+              overflow: 'hidden'
+            }
+          : null),
+        '& .monaco-editor, & .monaco-diff-editor': {
+          '--vscode-editorGutter-addedBackground': theme.palette.success.main,
+          '--vscode-editorGutter-modifiedBackground': theme.palette.primary.main,
+          '--vscode-editorGutter-deletedBackground': theme.palette.warning.main,
+          '--vscode-diffEditor-insertedTextBackground': alpha(theme.palette.success.main, 0.2),
+          '--vscode-diffEditor-removedTextBackground': alpha(theme.palette.warning.main, 0.16),
+          '--vscode-diffEditor-insertedLineBackground': alpha(theme.palette.success.main, 0.08),
+          '--vscode-diffEditor-removedLineBackground': alpha(theme.palette.warning.main, 0.08)
+        }
+      }}
+    >
+      {renderAIFloatingCommandBar({ fullscreen })}
+      {converting && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10,
+            borderRadius: 1
+          }}
+        >
+          <Stack alignItems="center" spacing={1}>
+            <CircularProgress />
+            <Typography color="white">正在转换规则...</Typography>
+          </Stack>
+        </Box>
+      )}
+      {showDiffReview ? (
+        <DiffEditor
+          height={fullscreen ? '100%' : '350px'}
+          language={formData.category === 'surge' ? 'ini' : 'yaml'}
+          original={aiAssistant.sourceText || ''}
+          modified={aiAssistant.candidateText || ''}
+          theme="template-ai-editor"
+          beforeMount={configureTemplateMonacoTheme}
+          options={{
+            renderSideBySide: true,
+            readOnly: true,
+            originalEditable: false,
+            minimap: { enabled: !matchDownMd },
+            fontSize: matchDownMd ? 12 : 14,
+            wordWrap: 'on',
+            contextmenu: true,
+            automaticLayout: true,
+            scrollBeyondLastLine: false,
+            lineNumbers: matchDownMd ? 'off' : 'on',
+            renderOverviewRuler: !matchDownMd,
+            diffWordWrap: 'on'
+          }}
+        />
+      ) : (
+        <Editor
+          height={fullscreen ? '100%' : '350px'}
+          language={formData.category === 'surge' ? 'ini' : 'yaml'}
+          value={formData.text}
+          onChange={(value) => {
+            setFormData({ ...formData, text: value || '' });
+          }}
+          theme="template-ai-editor"
+          beforeMount={configureTemplateMonacoTheme}
+          options={{
+            minimap: { enabled: !matchDownMd },
+            fontSize: matchDownMd ? 12 : 14,
+            readOnly: converting,
+            wordWrap: 'on',
+            contextmenu: true,
+            selectOnLineNumbers: true,
+            automaticLayout: true,
+            scrollBeyondLastLine: false,
+            lineNumbers: matchDownMd ? 'off' : 'on'
+          }}
+        />
+      )}
+      <Box
+        sx={{
+          position: 'absolute',
+          right: { xs: 24, sm: 32 },
+          bottom: 16,
+          maxWidth: { xs: 'calc(100% - 48px)', sm: 380 },
+          px: 1.25,
+          py: 0.75,
+          borderRadius: 1,
+          bgcolor: alpha(theme.palette.grey[900], 0.76),
+          backdropFilter: 'blur(8px)',
+          border: 1,
+          borderColor: alpha(theme.palette.common.white, 0.12),
+          boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.22)}`,
+          zIndex: 5,
+          pointerEvents: 'none'
+        }}
+      >
+        <Stack spacing={0.75} sx={{ minWidth: 0 }}>
+          {aiStateChips}
+          <Typography
+            variant="caption"
+            sx={{
+              color: aiCandidateMatchesEditor ? 'common.white' : isAISetupIssue ? alpha(theme.palette.common.white, 0.94) : aiStatusColor,
+              display: 'block',
+              lineHeight: 1.45,
+              textShadow: aiCandidateMatchesEditor ? `0 1px 2px ${alpha(theme.palette.common.black, 0.45)}` : 'none'
+            }}
+          >
+            {isAISetupIssue ? aiFriendlyGenerationError : aiStatusText}
+          </Typography>
+          {isAISetupIssue ? (
+            <Typography variant="caption" sx={{ color: alpha(theme.palette.common.white, 0.76), display: 'block', lineHeight: 1.4 }}>
+              {aiSetupGuidanceText}
+            </Typography>
+          ) : null}
+          {aiUsageItems.length > 0 ? (
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+              {aiUsageItems.map((item) => (
+                <Chip
+                  key={item.key}
+                  size="small"
+                  variant="outlined"
+                  label={`${item.label} ${item.value}`}
+                  sx={{
+                    color: alpha(theme.palette.common.white, 0.92),
+                    borderColor: alpha(theme.palette.common.white, 0.18),
+                    bgcolor: alpha(theme.palette.common.white, 0.04),
+                    '& .MuiChip-label': {
+                      px: 1,
+                      fontWeight: 500
+                    }
+                  }}
+                />
+              ))}
+            </Stack>
+          ) : null}
+        </Stack>
+      </Box>
+    </Box>
+  );
 
   return (
     <MainCard
@@ -497,7 +1404,7 @@ export default function TemplateList() {
         page={page}
         pageSize={rowsPerPage}
         totalItems={totalItems}
-        onPageChange={(e, newPage) => {
+        onPageChange={(_, newPage) => {
           setPage(newPage);
           fetchTemplates(newPage, rowsPerPage);
         }}
@@ -521,6 +1428,9 @@ export default function TemplateList() {
         PaperProps={{
           sx: editorFullscreen
             ? {
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
                 height: '100vh',
                 maxHeight: '100vh',
                 m: 0
@@ -532,6 +1442,7 @@ export default function TemplateList() {
           sx={
             editorFullscreen
               ? {
+                  flexShrink: 0,
                   pb: 1,
                   display: 'flex',
                   flexDirection: { xs: 'column', md: 'row' },
@@ -546,48 +1457,16 @@ export default function TemplateList() {
             <Typography variant="h4">{isEdit ? '编辑模板' : '添加模板'}</Typography>
             {editorFullscreen && (
               <Typography variant="body2" color="textSecondary">
-                全屏模式已切换为编辑器优先布局，模板配置保留为紧凑工具栏。
+                全屏模式同样使用编辑 / 对比双模式，避免额外的 AI 侧边工作区。
               </Typography>
             )}
           </Stack>
           {editorFullscreen && (
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap justifyContent="flex-end">
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={converting ? <CircularProgress size={16} /> : <TransformIcon />}
-                disabled={!formData.ruleSource || converting}
-                onClick={() => handleConvertTemplate(false)}
-              >
-                生成/转换
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={converting ? <CircularProgress size={16} /> : <UnfoldMoreIcon />}
-                disabled={!formData.ruleSource || converting}
-                onClick={() => handleConvertTemplate(true)}
-              >
-                转换并展开
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                color="error"
-                disabled={!formData.text || converting}
-                onClick={() => {
-                  openConfirm('清空内容', '确定要清空编辑器中的所有内容吗？', () => {
-                    setFormData({ ...formData, text: '' });
-                    showMessage('已清空内容');
-                  });
-                }}
-              >
-                清空
-              </Button>
               <Button size="small" onClick={handleCloseDialog}>
                 取消
               </Button>
-              <Button variant="contained" size="small" onClick={handleSubmit}>
+              <Button variant="contained" size="small" disabled={templateEditorMode === 'diff'} onClick={handleSubmit}>
                 保存
               </Button>
               <Button variant="outlined" size="small" startIcon={<FullscreenExitIcon />} onClick={() => setEditorFullscreen(false)}>
@@ -602,152 +1481,224 @@ export default function TemplateList() {
               ? {
                   display: 'flex',
                   flexDirection: 'column',
+                  flex: 1,
+                  minHeight: 0,
                   overflow: 'hidden',
+                  overflowX: 'hidden',
                   pt: 1,
-                  pb: 2
+                  pb: 1.5
                 }
               : undefined
           }
         >
-          <Stack spacing={2} sx={editorFullscreen ? { flex: 1, minHeight: 0 } : { mt: 1 }}>
+          <Stack
+            spacing={1.5}
+            sx={
+              editorFullscreen
+                ? {
+                    flex: 1,
+                    minHeight: 0
+                  }
+                : { mt: 0.5 }
+            }
+          >
             {editorFullscreen ? (
-              <Box
-                sx={{
-                  px: 0.5,
-                  py: 1,
-                  border: 1,
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  bgcolor: 'background.paper'
-                }}
-              >
-                <Stack spacing={1.25}>
-                  <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', lg: 'flex-start' }}>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      label="文件名"
-                      value={formData.filename}
-                      onChange={(e) => setFormData({ ...formData, filename: e.target.value })}
-                      placeholder="例如: clash.yaml"
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        ...compactOutlinedFieldSx,
-                        flex: { lg: '0 0 240px' }
-                      }}
-                    />
-                    <FormControl size="small" sx={{ minWidth: { xs: '100%', lg: 140 }, flex: { lg: '0 0 140px' } }}>
-                      <InputLabel shrink sx={compactOutlinedFieldSx['& .MuiInputLabel-root']}>
-                        类别
-                      </InputLabel>
-                      <Select
-                        value={formData.category}
-                        label="类别"
-                        notched
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              <Stack spacing={1} sx={{ flexShrink: 0 }}>
+                <Box
+                  sx={{
+                    px: 1,
+                    py: 1.25,
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    bgcolor: 'background.paper'
+                  }}
+                >
+                  <Stack spacing={1.25}>
+                    <Stack direction="row" spacing={1.25} useFlexGap flexWrap="wrap" alignItems={{ xs: 'stretch', lg: 'flex-start' }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="文件名"
+                        value={formData.filename}
+                        onChange={(e) => setFormData({ ...formData, filename: e.target.value })}
+                        placeholder="例如: clash.yaml"
+                        InputLabelProps={{ shrink: true }}
+                        sx={{
+                          ...compactOutlinedFieldSx,
+                          flex: { xs: '1 1 100%', sm: '1 1 240px', lg: '0 1 220px' },
+                          minWidth: { xs: '100%', sm: 220, lg: 200 }
+                        }}
+                      />
+                      <FormControl
+                        size="small"
+                        sx={{
+                          minWidth: { xs: '100%', sm: 144, lg: 132 },
+                          flex: { xs: '1 1 100%', sm: '0 1 160px', lg: '0 0 132px' }
+                        }}
                       >
-                        <MenuItem value="clash">Clash</MenuItem>
-                        <MenuItem value="surge">Surge</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <Autocomplete
-                      freeSolo
-                      options={aclPresets}
-                      sx={{ flex: 1, minWidth: 0 }}
-                      getOptionLabel={(option) => {
-                        if (typeof option === 'string') return option;
-                        return option.label || option.url || '';
-                      }}
-                      isOptionEqualToValue={(option, value) => {
-                        if (typeof value === 'string') {
-                          return option.url === value;
-                        }
-                        return option.url === value?.url;
-                      }}
-                      value={aclPresets.find((preset) => preset.url === formData.ruleSource) || formData.ruleSource}
-                      onChange={(event, newValue) => {
-                        if (typeof newValue === 'string') {
-                          setFormData({ ...formData, ruleSource: newValue });
-                        } else if (newValue && newValue.url) {
-                          setFormData({ ...formData, ruleSource: newValue.url });
-                        } else {
-                          setFormData({ ...formData, ruleSource: '' });
-                        }
-                      }}
-                      onInputChange={(event, newInputValue) => {
-                        setFormData({ ...formData, ruleSource: newInputValue });
-                      }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          size="small"
-                          label="远程规则地址"
-                          placeholder="输入 URL 或选择 ACL4SSR 预设"
-                          InputLabelProps={{ ...params.InputLabelProps, shrink: true }}
-                          sx={compactOutlinedFieldSx}
+                        <InputLabel shrink sx={compactOutlinedFieldSx['& .MuiInputLabel-root']}>
+                          类别
+                        </InputLabel>
+                        <Select
+                          value={formData.category}
+                          label="类别"
+                          notched
+                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        >
+                          <MenuItem value="clash">Clash</MenuItem>
+                          <MenuItem value="surge">Surge</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <Autocomplete
+                        freeSolo
+                        options={aclPresets}
+                        sx={{
+                          flex: { xs: '1 1 100%', md: '999 1 320px' },
+                          minWidth: { xs: '100%', md: 280, lg: 320 }
+                        }}
+                        getOptionLabel={(option) => {
+                          if (typeof option === 'string') return option;
+                          return option.label || option.url || '';
+                        }}
+                        isOptionEqualToValue={(option, value) => {
+                          if (typeof value === 'string') {
+                            return option.url === value;
+                          }
+                          return option.url === value?.url;
+                        }}
+                        value={aclPresets.find((preset) => preset.url === formData.ruleSource) || formData.ruleSource}
+                        onChange={(_, newValue) => {
+                          if (typeof newValue === 'string') {
+                            setFormData({ ...formData, ruleSource: newValue });
+                          } else if (newValue && newValue.url) {
+                            setFormData({ ...formData, ruleSource: newValue.url });
+                          } else {
+                            setFormData({ ...formData, ruleSource: '' });
+                          }
+                        }}
+                        onInputChange={(_, newInputValue) => {
+                          setFormData({ ...formData, ruleSource: newInputValue });
+                        }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            size="small"
+                            label="远程规则地址"
+                            placeholder="输入 URL 或选择 ACL4SSR 预设"
+                            InputLabelProps={{ ...params.InputLabelProps, shrink: true }}
+                            sx={compactOutlinedFieldSx}
+                          />
+                        )}
+                        renderOption={(props, option) => (
+                          <li {...props} key={option.name}>
+                            <Stack>
+                              <Typography variant="body2">{option.label}</Typography>
+                              <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
+                                {option.url}
+                              </Typography>
+                            </Stack>
+                          </li>
+                        )}
+                      />
+                    </Stack>
+                    <Stack spacing={0.75}>
+                      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">
+                        <FormControlLabel
+                          sx={{ mr: 0, flex: { xs: '1 1 100%', md: '0 1 auto' } }}
+                          control={
+                            <Switch
+                              size="small"
+                              checked={useProxy}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setUseProxy(checked);
+                                if (checked) {
+                                  fetchProxyNodes();
+                                }
+                              }}
+                            />
+                          }
+                          label="使用代理下载远程规则"
                         />
-                      )}
-                      renderOption={(props, option) => (
-                        <li {...props} key={option.name}>
-                          <Stack>
-                            <Typography variant="body2">{option.label}</Typography>
-                            <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                              {option.url}
-                            </Typography>
-                          </Stack>
-                        </li>
-                      )}
-                    />
-                  </Stack>
-                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', md: 'center' }}>
-                    <FormControlLabel
-                      sx={{ mr: 0 }}
-                      control={
-                        <Switch
+                        <FormControlLabel
+                          sx={{ mr: 0, flex: { xs: '1 1 100%', md: '0 1 auto' } }}
+                          control={
+                            <Switch
+                              size="small"
+                              checked={formData.enableIncludeAll}
+                              onChange={(e) => setFormData({ ...formData, enableIncludeAll: e.target.checked })}
+                            />
+                          }
+                          label="使用 Include-All 模式"
+                        />
+                        <Button
+                          variant="outlined"
                           size="small"
-                          checked={useProxy}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setUseProxy(checked);
-                            if (checked) {
-                              fetchProxyNodes();
-                            }
+                          startIcon={converting ? <CircularProgress size={16} /> : <TransformIcon />}
+                          disabled={!formData.ruleSource || converting}
+                          onClick={() => handleConvertTemplate(false)}
+                        >
+                          生成/转换
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={converting ? <CircularProgress size={16} /> : <UnfoldMoreIcon />}
+                          disabled={!formData.ruleSource || converting}
+                          onClick={() => handleConvertTemplate(true)}
+                        >
+                          转换并展开
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="error"
+                          disabled={!formData.text || converting}
+                          onClick={() => {
+                            openConfirm('清空内容', '确定要清空编辑器中的所有内容吗？', () => {
+                              setFormData({ ...formData, text: '' });
+                              showMessage('已清空内容');
+                            });
                           }}
-                        />
-                      }
-                      label="使用代理下载远程规则"
-                    />
-                    <FormControlLabel
-                      sx={{ mr: 0 }}
-                      control={
-                        <Switch
-                          size="small"
-                          checked={formData.enableIncludeAll}
-                          onChange={(e) => setFormData({ ...formData, enableIncludeAll: e.target.checked })}
-                        />
-                      }
-                      label="使用 Include-All 模式"
-                    />
+                        >
+                          清空
+                        </Button>
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        全屏模式保留紧凑配置栏，并在同一编辑区内切换编辑模式与对比模式。
+                      </Typography>
+                    </Stack>
+                    {useProxy && (
+                      <SearchableNodeSelect
+                        nodes={proxyNodeOptions}
+                        loading={loadingProxyNodes}
+                        value={
+                          proxyNodeOptions.find((n) => n.Link === proxyLink) || (proxyLink ? { Link: proxyLink, Name: '', ID: 0 } : null)
+                        }
+                        onChange={(newValue) => setProxyLink(newValue?.Link || '')}
+                        displayField="Name"
+                        valueField="Link"
+                        label="选择代理节点"
+                        placeholder="留空则自动选择最佳节点"
+                        helperText="如果未选择具体代理，系统将自动选择最佳节点"
+                        freeSolo={true}
+                        limit={50}
+                      />
+                    )}
                   </Stack>
-                  {useProxy && (
-                    <SearchableNodeSelect
-                      nodes={proxyNodeOptions}
-                      loading={loadingProxyNodes}
-                      value={
-                        proxyNodeOptions.find((n) => n.Link === proxyLink) || (proxyLink ? { Link: proxyLink, Name: '', ID: 0 } : null)
-                      }
-                      onChange={(newValue) => setProxyLink(newValue?.Link || '')}
-                      displayField="Name"
-                      valueField="Link"
-                      label="选择代理节点"
-                      placeholder="留空则自动选择最佳节点"
-                      helperText="如果未选择具体代理，系统将自动选择最佳节点"
-                      freeSolo={true}
-                      limit={50}
-                    />
-                  )}
-                </Stack>
-              </Box>
+                </Box>
+
+                <Box
+                  sx={{
+                    ...aiWorkspacePanelSx,
+                    p: { xs: 1, md: 1.25 },
+                    flexShrink: 0
+                  }}
+                >
+                  {renderAIControlPanel({ compact: true })}
+                </Box>
+              </Stack>
             ) : (
               <>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -785,7 +1736,7 @@ export default function TemplateList() {
                     // 如果 ruleSource 匹配某个预设的 URL，返回该预设对象
                     aclPresets.find((preset) => preset.url === formData.ruleSource) || formData.ruleSource
                   }
-                  onChange={(event, newValue) => {
+                  onChange={(_, newValue) => {
                     if (typeof newValue === 'string') {
                       setFormData({ ...formData, ruleSource: newValue });
                     } else if (newValue && newValue.url) {
@@ -794,7 +1745,7 @@ export default function TemplateList() {
                       setFormData({ ...formData, ruleSource: '' });
                     }
                   }}
-                  onInputChange={(event, newInputValue) => {
+                  onInputChange={(_, newInputValue) => {
                     setFormData({ ...formData, ruleSource: newInputValue });
                   }}
                   renderInput={(params) => (
@@ -896,7 +1847,7 @@ export default function TemplateList() {
                     清空内容
                   </Button>
                 </Stack>
-                <Stack direction="row" justifyContent="flex-end">
+                <Stack direction="row" justifyContent="flex-end" spacing={1}>
                   <Button
                     variant="outlined"
                     size="small"
@@ -906,68 +1857,36 @@ export default function TemplateList() {
                     {editorFullscreen ? '退出全屏' : '全屏编辑'}
                   </Button>
                 </Stack>
+                <Box
+                  sx={{
+                    ...aiWorkspacePanelSx,
+                    p: { xs: 1, md: 1.25 }
+                  }}
+                >
+                  {renderAIControlPanel({ minimal: true })}
+                </Box>
               </>
             )}
             <Box
               sx={
                 editorFullscreen
                   ? {
-                      position: 'relative',
                       flex: 1,
                       minHeight: 0,
-                      borderRadius: 1,
-                      overflow: 'hidden'
+                      display: 'flex',
+                      flexDirection: 'column'
                     }
-                  : { position: 'relative' }
+                  : undefined
               }
             >
-              {converting && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    bgcolor: 'rgba(0,0,0,0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 10,
-                    borderRadius: 1
-                  }}
-                >
-                  <Stack alignItems="center" spacing={1}>
-                    <CircularProgress />
-                    <Typography color="white">正在转换规则...</Typography>
-                  </Stack>
-                </Box>
-              )}
-              <Editor
-                height={editorFullscreen ? '100%' : '350px'}
-                language={formData.category === 'surge' ? 'ini' : 'yaml'}
-                value={formData.text}
-                onChange={(value) => setFormData({ ...formData, text: value || '' })}
-                theme="vs-dark"
-                options={{
-                  minimap: { enabled: !matchDownMd },
-                  fontSize: matchDownMd ? 12 : 14,
-                  readOnly: converting,
-                  wordWrap: 'on',
-                  contextmenu: true,
-                  selectOnLineNumbers: true,
-                  automaticLayout: true,
-                  scrollBeyondLastLine: false,
-                  lineNumbers: matchDownMd ? 'off' : 'on'
-                }}
-              />
+              {renderTemplateEditor({ fullscreen: editorFullscreen })}
             </Box>
           </Stack>
         </DialogContent>
         {!editorFullscreen && (
           <DialogActions>
             <Button onClick={handleCloseDialog}>取消</Button>
-            <Button variant="contained" onClick={handleSubmit}>
+            <Button variant="contained" disabled={templateEditorMode === 'diff'} onClick={handleSubmit}>
               确定
             </Button>
           </DialogActions>

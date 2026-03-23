@@ -1,8 +1,11 @@
 package api
 
 import (
+	"encoding/json"
+	"strings"
 	"sublink/database"
 	"sublink/models"
+	"sublink/services/ai"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
@@ -42,7 +45,11 @@ func UserMe(c *gin.Context) {
 		return
 	}
 	utils.OkDetailed(c, "获取用户信息成功", gin.H{
-		"avatar":   "",
+		"avatar": "",
+		"ai": gin.H{
+			"enabled":    user.AIEnabled,
+			"configured": strings.TrimSpace(user.AIBaseURL) != "" && strings.TrimSpace(user.AIModel) != "" && strings.TrimSpace(user.AIAPIKeyEncrypted) != "",
+		},
 		"nickname": user.Nickname,
 		"userId":   user.ID,
 		"username": user.Username,
@@ -210,4 +217,226 @@ func UserUpdateProfile(c *gin.Context) {
 	}
 
 	utils.OkWithMsg(c, "个人资料更新成功")
+}
+
+func UserGetAISettings(c *gin.Context) {
+	user, ok := requireCurrentUser(c)
+	if !ok {
+		return
+	}
+
+	settings, err := user.GetAISettings()
+	if err != nil {
+		utils.FailWithMsg(c, "获取 AI 设置失败: "+err.Error())
+		return
+	}
+
+	utils.OkDetailed(c, "获取 AI 设置成功", settings)
+}
+
+func UserListAIModels(c *gin.Context) {
+	type listAIModelsRequest struct {
+		BaseURL      string            `json:"baseUrl"`
+		APIKey       string            `json:"apiKey"`
+		ExtraHeaders map[string]string `json:"extraHeaders"`
+	}
+
+	var req listAIModelsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	user, ok := requireCurrentUser(c)
+	if !ok {
+		return
+	}
+	current, err := user.GetAISettings()
+	if err != nil {
+		utils.FailWithMsg(c, "读取当前 AI 设置失败: "+err.Error())
+		return
+	}
+
+	baseURL := strings.TrimSpace(req.BaseURL)
+	if baseURL == "" {
+		baseURL = current.BaseURL
+	}
+	apiKey := strings.TrimSpace(req.APIKey)
+	if apiKey == "" {
+		apiKey = current.RawAPIKey
+	}
+	extraHeaders := req.ExtraHeaders
+	if len(extraHeaders) == 0 {
+		extraHeaders = current.ExtraHeaders
+	}
+
+	modelsList, err := ai.DiscoverModels(c.Request.Context(), ai.ClientConfig{
+		BaseURL:      baseURL,
+		APIKey:       apiKey,
+		ExtraHeaders: extraHeaders,
+	})
+	if err != nil {
+		utils.FailWithMsg(c, "获取模型列表失败: "+err.Error())
+		return
+	}
+
+	utils.OkDetailed(c, "获取模型列表成功", gin.H{"models": modelsList})
+}
+
+func UserUpdateAISettings(c *gin.Context) {
+	type updateAISettingsRequest struct {
+		Enabled      bool              `json:"enabled"`
+		BaseURL      string            `json:"baseUrl"`
+		Model        string            `json:"model"`
+		APIKey       string            `json:"apiKey"`
+		Temperature  float64           `json:"temperature"`
+		MaxTokens    int               `json:"maxTokens"`
+		ExtraHeaders map[string]string `json:"extraHeaders"`
+		Password     string            `json:"password" binding:"required"`
+		Code         string            `json:"code"`
+	}
+
+	var req updateAISettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	user, ok := requireCurrentUser(c)
+	if !ok {
+		return
+	}
+	if err := requireMFAReauth(user, req.Password, req.Code); err != nil {
+		utils.FailWithMsg(c, err.Error())
+		return
+	}
+
+	validatedBaseURL, err := ai.NormalizeBaseURL(req.BaseURL)
+	if err != nil {
+		utils.FailWithMsg(c, err.Error())
+		return
+	}
+	if req.Enabled && strings.TrimSpace(validatedBaseURL) == "" {
+		utils.FailWithMsg(c, "启用 AI 时 Base URL 不能为空")
+		return
+	}
+	if req.Enabled && strings.TrimSpace(req.Model) == "" {
+		utils.FailWithMsg(c, "启用 AI 时模型不能为空")
+		return
+	}
+	if req.Enabled && strings.TrimSpace(req.APIKey) == "" && strings.TrimSpace(user.AIAPIKeyEncrypted) == "" {
+		utils.FailWithMsg(c, "启用 AI 时请提供 API Key")
+		return
+	}
+	if req.Temperature < 0 || req.Temperature > 2 {
+		utils.FailWithMsg(c, "temperature 必须在 0 到 2 之间")
+		return
+	}
+	if req.MaxTokens < 0 {
+		utils.FailWithMsg(c, "maxTokens 不能小于 0")
+		return
+	}
+
+	headersJSON := ""
+	if len(req.ExtraHeaders) > 0 {
+		payload, err := json.Marshal(req.ExtraHeaders)
+		if err != nil {
+			utils.FailWithMsg(c, "额外请求头格式无效")
+			return
+		}
+		headersJSON = string(payload)
+	}
+
+	if err := user.UpdateAISettings(models.UserAISettings{
+		Enabled:         req.Enabled,
+		BaseURL:         validatedBaseURL,
+		Model:           strings.TrimSpace(req.Model),
+		RawAPIKey:       strings.TrimSpace(req.APIKey),
+		Temperature:     req.Temperature,
+		MaxTokens:       req.MaxTokens,
+		ExtraHeadersRaw: headersJSON,
+	}); err != nil {
+		utils.FailWithMsg(c, "保存 AI 设置失败: "+err.Error())
+		return
+	}
+
+	settings, err := user.GetAISettings()
+	if err != nil {
+		utils.FailWithMsg(c, "读取 AI 设置失败: "+err.Error())
+		return
+	}
+	utils.OkDetailed(c, "AI 设置保存成功", settings)
+}
+
+func UserTestAISettings(c *gin.Context) {
+	type testAISettingsRequest struct {
+		BaseURL      string            `json:"baseUrl"`
+		Model        string            `json:"model"`
+		APIKey       string            `json:"apiKey"`
+		Temperature  float64           `json:"temperature"`
+		MaxTokens    int               `json:"maxTokens"`
+		ExtraHeaders map[string]string `json:"extraHeaders"`
+	}
+
+	var req testAISettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	user, ok := requireCurrentUser(c)
+	if !ok {
+		return
+	}
+	current, err := user.GetAISettings()
+	if err != nil {
+		utils.FailWithMsg(c, "读取当前 AI 设置失败: "+err.Error())
+		return
+	}
+
+	baseURL := strings.TrimSpace(req.BaseURL)
+	if baseURL == "" {
+		baseURL = current.BaseURL
+	}
+	model := strings.TrimSpace(req.Model)
+	if model == "" {
+		model = current.Model
+	}
+	apiKey := strings.TrimSpace(req.APIKey)
+	if apiKey == "" {
+		apiKey = current.RawAPIKey
+	}
+	temperature := req.Temperature
+	if temperature == 0 {
+		temperature = current.Temperature
+	}
+	maxTokens := req.MaxTokens
+	if maxTokens == 0 {
+		maxTokens = current.MaxTokens
+	}
+	extraHeaders := req.ExtraHeaders
+	if len(extraHeaders) == 0 {
+		extraHeaders = current.ExtraHeaders
+	}
+
+	client, err := ai.NewClient(ai.ClientConfig{
+		BaseURL:      baseURL,
+		APIKey:       apiKey,
+		Model:        model,
+		Temperature:  temperature,
+		MaxTokens:    maxTokens,
+		ExtraHeaders: extraHeaders,
+	})
+	if err != nil {
+		utils.FailWithMsg(c, "AI 设置无效: "+err.Error())
+		return
+	}
+
+	result, err := client.TestConnection(c.Request.Context())
+	if err != nil {
+		utils.FailWithMsg(c, "连接测试失败: "+err.Error())
+		return
+	}
+
+	utils.OkDetailed(c, "连接测试成功", result)
 }

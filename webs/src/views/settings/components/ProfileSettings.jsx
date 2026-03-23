@@ -8,11 +8,13 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -20,19 +22,23 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import Autocomplete from '@mui/material/Autocomplete';
 import { useTheme } from '@mui/material/styles';
 
 import CachedIcon from '@mui/icons-material/Cached';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import LockIcon from '@mui/icons-material/Lock';
+import PsychologyIcon from '@mui/icons-material/Psychology';
 import PersonIcon from '@mui/icons-material/Person';
 import SaveIcon from '@mui/icons-material/Save';
+import ScienceIcon from '@mui/icons-material/Science';
 import SecurityIcon from '@mui/icons-material/Security';
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
@@ -40,9 +46,27 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 import { useAuth } from 'contexts/AuthContext';
-import { changePassword, updateProfile } from 'api/user';
+import { changePassword, getAISettings, listAIModels, testAISettings, updateAISettings, updateProfile } from 'api/user';
 import { QRCodeSVG } from 'qrcode.react';
 import { confirmTotpSetup, disableTotp, getTotpStatus, regenerateRecoveryCodes, setupTotp } from 'api/auth';
+
+const dedupeModelOptions = (models = [], currentModel = '') => {
+  const seen = new Set();
+  const options = [];
+
+  const appendOption = (value) => {
+    const nextValue = typeof value === 'string' ? value.trim() : '';
+    if (!nextValue || seen.has(nextValue)) {
+      return;
+    }
+    seen.add(nextValue);
+    options.push(nextValue);
+  };
+
+  models.forEach(appendOption);
+  appendOption(currentModel);
+  return options;
+};
 
 export default function ProfileSettings({ showMessage, loading, setLoading }) {
   const { user, logout } = useAuth();
@@ -81,6 +105,26 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
   const [totpReauthCode, setTotpReauthCode] = useState('');
   const [disableVerificationCode, setDisableVerificationCode] = useState('');
   const [disablePassword, setDisablePassword] = useState('');
+  const [aiSettingsLoading, setAISettingsLoading] = useState(false);
+  const [aiAction, setAIAction] = useState('');
+  const [aiForm, setAIForm] = useState({
+    enabled: false,
+    baseUrl: '',
+    model: '',
+    apiKey: '',
+    maskedKey: '',
+    hasKey: false,
+    configured: false,
+    providerType: 'openai_compatible',
+    temperature: 0.2,
+    maxTokens: 1200,
+    password: '',
+    code: ''
+  });
+  const [aiHeadersText, setAIHeadersText] = useState('{}');
+  const [aiTestResult, setAITestResult] = useState(null);
+  const [aiModelOptions, setAIModelOptions] = useState([]);
+  const [aiModelsFetched, setAIModelsFetched] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -93,7 +137,127 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
   useEffect(() => {
     fetchTotpStatus();
+    fetchUserAISettings();
   }, []);
+
+  const setAIField = (field, value) => {
+    setAIForm((prev) => ({ ...prev, [field]: value }));
+
+    if (field === 'baseUrl' || field === 'apiKey') {
+      setAIModelsFetched(false);
+    }
+  };
+
+  const fetchUserAISettings = async () => {
+    setAISettingsLoading(true);
+    try {
+      const response = await getAISettings();
+      const data = response.data || {};
+      setAIForm((prev) => ({
+        ...prev,
+        enabled: Boolean(data.enabled),
+        baseUrl: data.baseUrl || '',
+        model: data.model || '',
+        apiKey: '',
+        maskedKey: data.maskedKey || '',
+        hasKey: Boolean(data.hasKey),
+        configured: Boolean(data.configured),
+        providerType: data.providerType || 'openai_compatible',
+        temperature: data.temperature ?? 0.2,
+        maxTokens: data.maxTokens ?? 1200,
+        password: '',
+        code: ''
+      }));
+      setAIModelOptions((prev) => dedupeModelOptions(prev, data.model || ''));
+      setAIHeadersText(data.extraHeaders && Object.keys(data.extraHeaders).length > 0 ? JSON.stringify(data.extraHeaders, null, 2) : '{}');
+      setAITestResult(null);
+    } catch (error) {
+      console.error('获取 AI 设置失败:', error);
+    } finally {
+      setAISettingsLoading(false);
+    }
+  };
+
+  const parseAIExtraHeaders = () => {
+    const trimmed = aiHeadersText.trim();
+
+    if (!trimmed) {
+      return {};
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      throw new Error('额外请求头必须为 JSON 对象，例如 {"HTTP-Referer":"https://example.com"}');
+    }
+
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+      throw new Error('额外请求头必须为 JSON 对象');
+    }
+
+    return Object.entries(parsed).reduce((acc, [key, value]) => {
+      const headerKey = key.trim();
+      if (!headerKey) {
+        return acc;
+      }
+      acc[headerKey] = value == null ? '' : String(value);
+      return acc;
+    }, {});
+  };
+
+  const buildAISettingsPayload = () => ({
+    enabled: aiForm.enabled,
+    baseUrl: aiForm.baseUrl.trim(),
+    model: aiForm.model.trim(),
+    apiKey: aiForm.apiKey.trim(),
+    temperature: aiForm.temperature === '' ? 0.2 : Number(aiForm.temperature),
+    maxTokens: aiForm.maxTokens === '' ? 0 : Number(aiForm.maxTokens),
+    extraHeaders: parseAIExtraHeaders()
+  });
+
+  const handleFetchAIModels = async () => {
+    if (!aiForm.baseUrl.trim() && !aiForm.configured) {
+      showMessage('请先填写 AI Base URL', 'warning');
+      return;
+    }
+
+    if (!aiForm.apiKey.trim() && !aiForm.hasKey) {
+      showMessage('请先填写 API Key', 'warning');
+      return;
+    }
+
+    let extraHeaders;
+    try {
+      extraHeaders = parseAIExtraHeaders();
+    } catch (error) {
+      showMessage(error.message, 'warning');
+      return;
+    }
+
+    setAIAction('models');
+    setLoading(true);
+    try {
+      const response = await listAIModels({
+        baseUrl: aiForm.baseUrl.trim(),
+        apiKey: aiForm.apiKey.trim(),
+        extraHeaders
+      });
+      const models = Array.isArray(response.data?.models) ? response.data.models : [];
+      setAIModelOptions((prev) => dedupeModelOptions([...prev, ...models], aiForm.model));
+      setAIModelsFetched(true);
+      if (models.length > 0) {
+        showMessage(`已获取 ${models.length} 个模型选项`);
+      } else {
+        showMessage('接口未返回可用模型列表，可继续手动输入模型名称', 'warning');
+      }
+    } catch (error) {
+      showMessage('获取模型列表失败: ' + (error.response?.data?.message || error.message), 'error');
+    } finally {
+      setLoading(false);
+      setAIAction('');
+    }
+  };
 
   const resetTotpEnrollment = () => {
     setTotpEnrollment({
@@ -269,6 +433,92 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
   const visibleRecoveryCodes = totpStatus.recoveryCodes?.length ? totpStatus.recoveryCodes : totpEnrollment.recoveryCodes;
 
+  const handleTestUserAISettings = async () => {
+    if (!aiForm.baseUrl.trim() && !aiForm.configured) {
+      showMessage('请先填写 AI Base URL', 'warning');
+      return;
+    }
+
+    if (!aiForm.model.trim() && !aiForm.configured) {
+      showMessage('请先填写模型名称', 'warning');
+      return;
+    }
+
+    if (!aiForm.apiKey.trim() && !aiForm.hasKey) {
+      showMessage('请先填写 API Key', 'warning');
+      return;
+    }
+
+    let payload;
+    try {
+      payload = buildAISettingsPayload();
+    } catch (error) {
+      showMessage(error.message, 'warning');
+      return;
+    }
+
+    setAIAction('test');
+    setLoading(true);
+    try {
+      const response = await testAISettings(payload);
+      setAITestResult(response.data || null);
+      showMessage('AI 连接测试成功');
+    } catch (error) {
+      setAITestResult(null);
+      showMessage('连接测试失败: ' + (error.response?.data?.message || error.message), 'error');
+    } finally {
+      setLoading(false);
+      setAIAction('');
+    }
+  };
+
+  const handleSaveUserAISettings = async () => {
+    if (!aiForm.password.trim()) {
+      showMessage('请输入当前密码以保存 AI 设置', 'warning');
+      return;
+    }
+
+    let payload;
+    try {
+      payload = buildAISettingsPayload();
+    } catch (error) {
+      showMessage(error.message, 'warning');
+      return;
+    }
+
+    if (payload.enabled && !payload.baseUrl) {
+      showMessage('启用 AI 助手时必须填写 AI Base URL', 'warning');
+      return;
+    }
+
+    if (payload.enabled && !payload.model) {
+      showMessage('启用 AI 助手时必须填写模型名称', 'warning');
+      return;
+    }
+
+    if (payload.enabled && !payload.apiKey && !aiForm.hasKey) {
+      showMessage('启用 AI 助手时必须提供 API Key', 'warning');
+      return;
+    }
+
+    setAIAction('save');
+    setLoading(true);
+    try {
+      await updateAISettings({
+        ...payload,
+        password: aiForm.password,
+        code: aiForm.code.trim()
+      });
+      showMessage('AI 设置保存成功');
+      await fetchUserAISettings();
+    } catch (error) {
+      showMessage('保存 AI 设置失败: ' + (error.response?.data?.message || error.message), 'error');
+    } finally {
+      setLoading(false);
+      setAIAction('');
+    }
+  };
+
   const handleUpdateProfile = async () => {
     if (!profileForm.username.trim()) {
       showMessage('用户名不能为空', 'warning');
@@ -374,7 +624,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                     {user?.username || '用户'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    管理资料、双重验证与密码。
+                    管理资料、双重验证、密码与个人 AI 助手配置。
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
                     当前昵称：{user?.nickname || '未设置'}
@@ -384,6 +634,12 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                       label={totpStatus.enabled ? '双重验证已启用' : '双重验证未启用'}
                       color={totpStatus.enabled ? 'success' : 'default'}
                       size="small"
+                    />
+                    <Chip
+                      label={aiForm.enabled ? 'AI 助手已启用' : aiForm.configured ? 'AI 已配置' : 'AI 未配置'}
+                      color={aiForm.enabled ? 'primary' : aiForm.configured ? 'info' : 'default'}
+                      size="small"
+                      variant={aiForm.enabled ? 'filled' : 'outlined'}
                     />
                   </Stack>
                 </Stack>
@@ -427,6 +683,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
             >
               <Tab icon={<SettingsSuggestIcon sx={{ mr: 1 }} />} iconPosition="start" label="基本资料" />
               <Tab icon={<SecurityIcon sx={{ mr: 1 }} />} iconPosition="start" label="安全设置" />
+              <Tab icon={<PsychologyIcon sx={{ mr: 1 }} />} iconPosition="start" label="AI 助手" />
             </Tabs>
           </Box>
 
@@ -757,6 +1014,254 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                 </Stack>
               </Grid>
             </Grid>
+          )}
+
+          {settingsSection === 2 && (
+            <Card variant="outlined">
+              <CardHeader
+                title="AI 助手设置"
+                subheader="为当前账号配置独立的 OpenAI 兼容模型参数。"
+                avatar={<PsychologyIcon color="primary" />}
+                action={
+                  <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" justifyContent="flex-end">
+                    <FormControlLabel
+                      sx={{ mr: 0 }}
+                      control={<Switch checked={aiForm.enabled} onChange={(e) => setAIField('enabled', e.target.checked)} />}
+                      label={aiForm.enabled ? '启用' : '禁用'}
+                    />
+                  </Stack>
+                }
+              />
+              <CardContent>
+                {aiSettingsLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress size={28} />
+                  </Box>
+                ) : (
+                  <Stack spacing={2.5}>
+                    <Alert severity="info">
+                      模板编辑器中的 AI 助手会使用这里的个人配置。保存需要当前密码；如已启用双重验证，还需要输入当前验证码。
+                    </Alert>
+
+                    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
+                      <Stack spacing={2}>
+                        <Box>
+                          <Typography variant="subtitle2">启用个人 AI 助手</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            当前接口类型：{aiForm.providerType || 'openai_compatible'}。
+                          </Typography>
+                        </Box>
+
+                        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                          <Chip
+                            size="small"
+                            color={aiForm.configured ? 'info' : 'default'}
+                            variant={aiForm.configured ? 'filled' : 'outlined'}
+                            label={aiForm.configured ? '已保存连接参数' : '尚未完成配置'}
+                          />
+                          <Chip
+                            size="small"
+                            color={aiForm.hasKey ? 'success' : 'default'}
+                            variant={aiForm.hasKey ? 'outlined' : 'outlined'}
+                            label={aiForm.hasKey ? `已保存 API Key：${aiForm.maskedKey || '已隐藏'}` : '未保存 API Key'}
+                          />
+                        </Stack>
+
+                        <TextField
+                          fullWidth
+                          label="AI Base URL"
+                          value={aiForm.baseUrl}
+                          onChange={(e) => setAIField('baseUrl', e.target.value)}
+                          placeholder="https://api.openai.com/v1"
+                          helperText="需为 OpenAI 兼容接口地址，保存时会校验是否为可公开访问的 HTTP/HTTPS 地址。"
+                        />
+                        <TextField
+                          fullWidth
+                          type="password"
+                          label="API Key"
+                          value={aiForm.apiKey}
+                          onChange={(e) => setAIField('apiKey', e.target.value)}
+                          placeholder={aiForm.hasKey ? '留空则继续使用已保存的密钥' : '输入新的 API Key'}
+                          autoComplete="new-password"
+                          helperText={
+                            aiForm.hasKey
+                              ? `当前已保存密钥：${aiForm.maskedKey || '已隐藏'}；如不需要更换，请保持留空。`
+                              : '当前尚未保存 API Key。'
+                          }
+                        />
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
+                          <Autocomplete
+                            freeSolo
+                            fullWidth
+                            options={aiModelOptions}
+                            value={aiForm.model}
+                            onChange={(event, newValue) => setAIField('model', typeof newValue === 'string' ? newValue : newValue || '')}
+                            onInputChange={(event, newValue) => setAIField('model', newValue || '')}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label="模型名称"
+                                placeholder="gpt-4.1-mini"
+                                helperText={
+                                  aiModelsFetched
+                                    ? '可从已获取列表中选择，也可以继续手动输入兼容服务提供的模型 ID。'
+                                    : '可手动输入模型 ID，也可先根据当前接口配置获取模型列表。'
+                                }
+                              />
+                            )}
+                          />
+                          <Button
+                            variant="outlined"
+                            onClick={handleFetchAIModels}
+                            disabled={loading || aiSettingsLoading}
+                            startIcon={loading && aiAction === 'models' ? <CircularProgress size={18} /> : <CachedIcon />}
+                            sx={{ flexShrink: 0, minWidth: { sm: 148 }, height: { sm: 56 } }}
+                          >
+                            获取模型
+                          </Button>
+                        </Stack>
+
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              fullWidth
+                              type="number"
+                              label="Temperature"
+                              value={aiForm.temperature}
+                              onChange={(e) => setAIField('temperature', e.target.value === '' ? '' : Number(e.target.value))}
+                              inputProps={{ min: 0, max: 2, step: 0.1 }}
+                              helperText="范围 0 - 2，建议保留 0.2。"
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              fullWidth
+                              type="number"
+                              label="Max Tokens"
+                              value={aiForm.maxTokens}
+                              onChange={(e) => setAIField('maxTokens', e.target.value === '' ? '' : Number(e.target.value))}
+                              inputProps={{ min: 0, step: 100 }}
+                              helperText="设置为 0 表示使用服务端默认值。"
+                            />
+                          </Grid>
+                        </Grid>
+
+                        <TextField
+                          fullWidth
+                          multiline
+                          minRows={5}
+                          label="额外请求头（JSON）"
+                          value={aiHeadersText}
+                          onChange={(e) => {
+                            setAIHeadersText(e.target.value);
+                            setAIModelsFetched(false);
+                          }}
+                          helperText={'仅支持 JSON 对象，例如 {"HTTP-Referer":"https://example.com"}。留空或 {} 表示不追加请求头。'}
+                        />
+                      </Stack>
+                    </Box>
+
+                    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
+                      <Stack spacing={2}>
+                        <Typography variant="subtitle2">保存前身份确认</Typography>
+                        <TextField
+                          fullWidth
+                          type="password"
+                          label="当前密码"
+                          value={aiForm.password}
+                          onChange={(e) => setAIField('password', e.target.value)}
+                          autoComplete="current-password"
+                          helperText="保存 AI 设置时必填。"
+                        />
+                        <TextField
+                          fullWidth
+                          label="当前 TOTP 验证码（已启用时必填）"
+                          value={aiForm.code}
+                          onChange={(e) => setAIField('code', e.target.value.replace(/\s+/g, '').slice(0, 8))}
+                          inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                          helperText="如果已启用双重验证，请输入当前身份验证器验证码。"
+                        />
+                      </Stack>
+                    </Box>
+
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                      <Button
+                        variant="outlined"
+                        startIcon={loading && aiAction === 'test' ? <CircularProgress size={18} /> : <ScienceIcon />}
+                        onClick={handleTestUserAISettings}
+                        disabled={loading}
+                      >
+                        测试连接
+                      </Button>
+                      <Button
+                        variant="contained"
+                        startIcon={loading && aiAction === 'save' ? <CircularProgress size={18} /> : <SaveIcon />}
+                        onClick={handleSaveUserAISettings}
+                        disabled={loading || aiSettingsLoading}
+                      >
+                        保存 AI 设置
+                      </Button>
+                    </Stack>
+
+                    {aiTestResult && (
+                      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
+                        <Stack spacing={1.75}>
+                          <Alert severity="success">{aiTestResult.message || '连接测试成功'}</Alert>
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                              <Box>
+                                <Typography variant="subtitle2">模型</Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
+                                  {aiTestResult.model || aiForm.model || '-'}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                              <Box>
+                                <Typography variant="subtitle2">延迟</Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {typeof aiTestResult.latencyMs === 'number' ? `${aiTestResult.latencyMs} ms` : '-'}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={12}>
+                              <Box>
+                                <Typography variant="subtitle2">Base URL</Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
+                                  {aiTestResult.baseUrl || aiForm.baseUrl || '-'}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                            {aiTestResult.finishReason && (
+                              <Grid item xs={12}>
+                                <Box>
+                                  <Typography variant="subtitle2">完成原因</Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {aiTestResult.finishReason}
+                                  </Typography>
+                                </Box>
+                              </Grid>
+                            )}
+                          </Grid>
+                          {aiTestResult.usage && Object.keys(aiTestResult.usage).length > 0 && (
+                            <TextField
+                              fullWidth
+                              multiline
+                              minRows={3}
+                              label="用量信息"
+                              value={JSON.stringify(aiTestResult.usage, null, 2)}
+                              InputProps={{ readOnly: true }}
+                            />
+                          )}
+                        </Stack>
+                      </Box>
+                    )}
+
+                    <Alert severity="warning">AI 候选修改仍需人工检查，并在模板编辑器中手动点击应用。</Alert>
+                  </Stack>
+                )}
+              </CardContent>
+            </Card>
           )}
         </CardContent>
       </Card>

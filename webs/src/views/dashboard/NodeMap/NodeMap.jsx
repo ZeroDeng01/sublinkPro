@@ -112,7 +112,10 @@ const NodeMap = ({ data = {}, loading = false }) => {
 
     return { points: pts, lines: lns, targetPoint: tPoint, unknownCount: unk };
   }, [data]);
-  const coveredRegionCount = useMemo(() => points.length + (Object.prototype.hasOwnProperty.call(data, 'CN') ? 1 : 0), [data, points.length]);
+  const coveredRegionCount = useMemo(
+    () => points.length + (Object.prototype.hasOwnProperty.call(data, 'CN') ? 1 : 0),
+    [data, points.length]
+  );
 
   useEffect(() => {
     if (!chartRef.current || loading) return;

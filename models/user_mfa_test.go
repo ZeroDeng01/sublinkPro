@@ -33,7 +33,7 @@ func setupUserMFATestDB(t *testing.T) {
 	database.Dialect = database.DialectSQLite
 	database.IsInitialized = false
 	config.UpdateConfig(func(cfg *config.AppConfig) {
-		cfg.APIEncryptionKey = "test-api-encryption-key"
+		cfg.APIEncryptionKey = "test-api-encryption-key-0123456789abcd"
 		cfg.JwtSecret = "test-jwt-secret"
 	})
 	if err := InitUserCache(); err != nil {

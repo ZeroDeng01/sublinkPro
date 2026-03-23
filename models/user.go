@@ -17,6 +17,13 @@ type User struct {
 	Password                 string
 	Role                     string
 	Nickname                 string
+	AIEnabled                bool
+	AIBaseURL                string
+	AIModel                  string
+	AIAPIKeyEncrypted        string `gorm:"type:text"`
+	AITemperature            float64
+	AIMaxTokens              int
+	AIExtraHeaders           string `gorm:"type:text"`
 	TOTPEnabled              bool
 	TOTPSecret               string
 	TOTPPendingSecret        string

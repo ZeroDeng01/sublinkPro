@@ -18,6 +18,10 @@ func Templates(r *gin.Engine) {
 		TempsGroup.POST("/update", api.UpdateTemp)
 		TempsGroup.GET("/presets", api.GetACL4SSRPresets)
 		TempsGroup.POST("/convert", api.ConvertRules)
+		TempsGroup.POST("/ai/generate", api.GenerateTemplateAICandidate)
+		TempsGroup.POST("/ai/generate-stream", api.GenerateTemplateAICandidateStream)
+		TempsGroup.POST("/ai/validate", api.ValidateTemplateAICandidate)
+		TempsGroup.POST("/ai/apply", api.ApplyTemplateAICandidate)
 	}
 
 }

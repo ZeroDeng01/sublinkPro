@@ -1,8 +1,11 @@
 package api
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -10,6 +13,8 @@ import (
 	"sublink/cache"
 	"sublink/database"
 	"sublink/models"
+	"sublink/services"
+	"sublink/services/ai"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
@@ -342,6 +347,75 @@ func UpdateTemp(c *gin.Context) {
 
 	utils.OkWithMsg(c, "修改成功")
 }
+
+func writeTemplateFileAndMeta(filename, oldname, text, category, ruleSource string, useProxy bool, proxyLink string, enableIncludeAll bool) error {
+	if category == "" {
+		category = "clash"
+	}
+	if _, err := os.Stat(baseTemplateDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(baseTemplateDir, 0755); err != nil {
+			return fmt.Errorf("无法创建模板目录: %w", err)
+		}
+	}
+	newFullPath, err := safeFilePath(filename)
+	if err != nil {
+		return fmt.Errorf("文件名非法: %w", err)
+	}
+	oldResolvedName := strings.TrimSpace(oldname)
+	if oldResolvedName == "" {
+		if _, err := os.Stat(newFullPath); err == nil {
+			return fmt.Errorf("文件已存在")
+		} else if !os.IsNotExist(err) {
+			return fmt.Errorf("检查文件失败: %w", err)
+		}
+	} else {
+		oldFullPath, err := safeFilePath(oldResolvedName)
+		if err != nil {
+			return fmt.Errorf("旧文件名非法: %w", err)
+		}
+		if _, err := os.Stat(oldFullPath); os.IsNotExist(err) {
+			return fmt.Errorf("旧文件不存在")
+		} else if err != nil {
+			return fmt.Errorf("检查旧文件失败: %w", err)
+		}
+		if oldFullPath != newFullPath {
+			if _, err := os.Stat(newFullPath); err == nil {
+				return fmt.Errorf("新文件名已存在，请选择其他名称")
+			} else if !os.IsNotExist(err) {
+				return fmt.Errorf("检查新文件失败: %w", err)
+			}
+			if err := os.Rename(oldFullPath, newFullPath); err != nil {
+				return fmt.Errorf("模板改名失败: %w", err)
+			}
+			cache.InvalidateTemplateContent(oldResolvedName)
+		}
+	}
+	if err := os.WriteFile(newFullPath, []byte(text), 0666); err != nil {
+		return fmt.Errorf("写入模板失败: %w", err)
+	}
+	cache.SetTemplateContent(filename, text)
+	var tmpl models.Template
+	if lookupName := oldResolvedName; lookupName != "" {
+		if err := tmpl.FindByName(lookupName); err == nil {
+			tmpl.Name = filename
+			tmpl.Category = category
+			tmpl.RuleSource = ruleSource
+			tmpl.UseProxy = useProxy
+			tmpl.ProxyLink = proxyLink
+			tmpl.EnableIncludeAll = enableIncludeAll
+			return tmpl.Update()
+		}
+	}
+	tmpl = models.Template{
+		Name:             filename,
+		Category:         category,
+		RuleSource:       ruleSource,
+		UseProxy:         useProxy,
+		ProxyLink:        proxyLink,
+		EnableIncludeAll: enableIncludeAll,
+	}
+	return tmpl.Add()
+}
 func AddTemp(c *gin.Context) {
 	filename := c.PostForm("filename")
 	text := c.PostForm("text")
@@ -361,54 +435,10 @@ func AddTemp(c *gin.Context) {
 		category = "clash"
 	}
 
-	// 确保模板目录存在
-	if _, err := os.Stat(baseTemplateDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(baseTemplateDir, 0755); err != nil {
-			utils.Error("创建模板目录失败: %v", err)
-			utils.FailWithMsg(c, "服务器错误：无法创建模板目录")
-			return
-		}
-	}
-
-	// 获取安全的文件路径
-	fullPath, err := safeFilePath(filename)
-	if err != nil {
-		utils.FailWithMsg(c, "文件名非法: "+err.Error())
+	if err := writeTemplateFileAndMeta(filename, "", text, category, ruleSource, useProxy, proxyLink, enableIncludeAll); err != nil {
+		utils.Error("创建模板失败: %v", err)
+		utils.FailWithMsg(c, err.Error())
 		return
-	}
-
-	// 检查文件是否已存在
-	if _, err := os.Stat(fullPath); err == nil {
-		utils.FailWithMsg(c, "文件已存在")
-		return
-	} else if !os.IsNotExist(err) {
-		utils.Error("检查文件存在性失败: %v", err)
-		utils.FailWithMsg(c, "服务器错误：检查文件失败")
-		return
-	}
-
-	// 写入文件
-	err = os.WriteFile(fullPath, []byte(text), 0666)
-	if err != nil {
-		utils.Error("写入文件失败: %v", err)
-		utils.FailWithMsg(c, "上传失败")
-		return
-	}
-
-	// 写入模板内容缓存
-	cache.SetTemplateContent(filename, text)
-
-	// 创建数据库记录
-	tmpl := models.Template{
-		Name:             filename,
-		Category:         category,
-		RuleSource:       ruleSource,
-		UseProxy:         useProxy,
-		ProxyLink:        proxyLink,
-		EnableIncludeAll: enableIncludeAll,
-	}
-	if err := tmpl.Add(); err != nil {
-		utils.Error("创建模板元数据失败: %v", err)
 	}
 
 	utils.OkWithMsg(c, "上传成功")
@@ -531,6 +561,213 @@ func GetTemplateUsage(c *gin.Context) {
 	utils.OkWithData(c, gin.H{
 		"subscriptions": usedBy,
 		"count":         len(usedBy),
+	})
+}
+
+type TemplateAIGenerateRequest struct {
+	Filename         string `json:"filename"`
+	Category         string `json:"category"`
+	CurrentText      string `json:"currentText"`
+	UserPrompt       string `json:"userPrompt"`
+	RuleSource       string `json:"ruleSource"`
+	UseProxy         bool   `json:"useProxy"`
+	ProxyLink        string `json:"proxyLink"`
+	EnableIncludeAll bool   `json:"enableIncludeAll"`
+}
+
+type TemplateAIValidateRequest struct {
+	Filename      string `json:"filename"`
+	Category      string `json:"category"`
+	OriginalText  string `json:"originalText"`
+	CandidateText string `json:"candidateText"`
+	RuleSource    string `json:"ruleSource"`
+}
+
+type TemplateAIApplyRequest struct {
+	Filename         string `json:"filename"`
+	OldName          string `json:"oldName"`
+	Category         string `json:"category"`
+	CandidateText    string `json:"candidateText"`
+	RevisionHash     string `json:"revisionHash"`
+	RuleSource       string `json:"ruleSource"`
+	UseProxy         bool   `json:"useProxy"`
+	ProxyLink        string `json:"proxyLink"`
+	EnableIncludeAll bool   `json:"enableIncludeAll"`
+}
+
+func GenerateTemplateAICandidate(c *gin.Context) {
+	var req TemplateAIGenerateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		return
+	}
+	if strings.TrimSpace(req.Category) == "" {
+		req.Category = "clash"
+	}
+	if strings.TrimSpace(req.UserPrompt) == "" {
+		utils.FailWithMsg(c, "请输入 AI 指令")
+		return
+	}
+	user, ok := requireCurrentUser(c)
+	if !ok {
+		return
+	}
+	result, err := ai.GenerateCandidate(c.Request.Context(), user, ai.GenerateRequest{
+		Filename:         req.Filename,
+		Category:         req.Category,
+		CurrentText:      req.CurrentText,
+		UserPrompt:       req.UserPrompt,
+		RuleSource:       req.RuleSource,
+		UseProxy:         req.UseProxy,
+		ProxyLink:        req.ProxyLink,
+		EnableIncludeAll: req.EnableIncludeAll,
+	})
+	if err != nil {
+		utils.FailWithMsg(c, "AI 生成失败: "+err.Error())
+		return
+	}
+	usedBy, err := getTemplateUsageSubscriptions(req.Filename)
+	if err == nil {
+		result.Validation.Subscriptions = usedBy
+	}
+	utils.OkDetailed(c, "AI 生成成功", result)
+}
+
+func GenerateTemplateAICandidateStream(c *gin.Context) {
+	var req TemplateAIGenerateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		return
+	}
+	if strings.TrimSpace(req.Category) == "" {
+		req.Category = "clash"
+	}
+	if strings.TrimSpace(req.UserPrompt) == "" {
+		utils.FailWithMsg(c, "请输入 AI 指令")
+		return
+	}
+	user, ok := requireCurrentUser(c)
+	if !ok {
+		return
+	}
+
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		utils.FailWithMsg(c, "当前环境不支持流式响应")
+		return
+	}
+	writeEvent := func(event string, payload interface{}) error {
+		writer := bufio.NewWriter(c.Writer)
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
+		if _, err := writer.WriteString("event: " + event + "\n"); err != nil {
+			return err
+		}
+		if _, err := writer.WriteString("data: " + string(data) + "\n\n"); err != nil {
+			return err
+		}
+		if err := writer.Flush(); err != nil {
+			return err
+		}
+		flusher.Flush()
+		return nil
+	}
+
+	result, err := ai.GenerateCandidateStream(c.Request.Context(), user, ai.GenerateRequest{
+		Filename:         req.Filename,
+		Category:         req.Category,
+		CurrentText:      req.CurrentText,
+		UserPrompt:       req.UserPrompt,
+		RuleSource:       req.RuleSource,
+		UseProxy:         req.UseProxy,
+		ProxyLink:        req.ProxyLink,
+		EnableIncludeAll: req.EnableIncludeAll,
+	}, func(event ai.ResponsesEvent) error {
+		return writeEvent(event.Event, event.Data)
+	})
+	if err != nil {
+		_ = writeEvent("error", gin.H{"message": "AI 生成失败: " + err.Error()})
+		return
+	}
+	usedBy, usageErr := getTemplateUsageSubscriptions(req.Filename)
+	if usageErr == nil {
+		result.Validation.Subscriptions = usedBy
+	}
+	_ = writeEvent("template.final", result)
+}
+
+func ValidateTemplateAICandidate(c *gin.Context) {
+	var req TemplateAIValidateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		return
+	}
+	result := services.ValidateTemplateCandidate(services.TemplateValidationInput{
+		Category:      req.Category,
+		OriginalText:  req.OriginalText,
+		CandidateText: req.CandidateText,
+		RuleSource:    req.RuleSource,
+	})
+	if usedBy, err := getTemplateUsageSubscriptions(req.Filename); err == nil {
+		result.Subscriptions = usedBy
+	}
+	utils.OkDetailed(c, "校验完成", result)
+}
+
+func ApplyTemplateAICandidate(c *gin.Context) {
+	var req TemplateAIApplyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		return
+	}
+	if req.Filename == "" || req.CandidateText == "" {
+		utils.FailWithMsg(c, "文件名或候选模板不能为空")
+		return
+	}
+	oldname := strings.TrimSpace(req.OldName)
+	if oldname == "" {
+		oldname = req.Filename
+	}
+	fullPath, err := safeFilePath(oldname)
+	if err != nil {
+		utils.FailWithMsg(c, "文件名非法: "+err.Error())
+		return
+	}
+	currentBytes, err := os.ReadFile(fullPath)
+	if err != nil {
+		utils.FailWithMsg(c, "读取当前模板失败: "+err.Error())
+		return
+	}
+	currentText := string(currentBytes)
+	if ai.BuildRevisionHash(currentText) != strings.TrimSpace(req.RevisionHash) {
+		utils.FailWithMsg(c, "模板已被其他修改更新，请重新生成候选内容")
+		return
+	}
+	validation := services.ValidateTemplateCandidate(services.TemplateValidationInput{
+		Category:      req.Category,
+		OriginalText:  currentText,
+		CandidateText: req.CandidateText,
+		RuleSource:    req.RuleSource,
+	})
+	if !validation.Valid {
+		utils.FailWithData(c, "候选模板未通过校验", validation)
+		return
+	}
+	if err := writeTemplateFileAndMeta(req.Filename, oldname, req.CandidateText, req.Category, req.RuleSource, req.UseProxy, req.ProxyLink, req.EnableIncludeAll); err != nil {
+		utils.FailWithMsg(c, "应用 AI 修改失败: "+err.Error())
+		return
+	}
+	usedBy, _ := getTemplateUsageSubscriptions(req.Filename)
+	utils.OkDetailed(c, "AI 修改已应用", gin.H{
+		"subscriptions": usedBy,
+		"count":         len(usedBy),
+		"revisionHash":  ai.BuildRevisionHash(req.CandidateText),
 	})
 }
 

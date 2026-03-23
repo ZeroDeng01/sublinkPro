@@ -25,3 +25,34 @@ export function updateProfile(data) {
     data
   });
 }
+
+export function getAISettings() {
+  return request({
+    url: '/v1/users/ai-settings',
+    method: 'get'
+  });
+}
+
+export function listAIModels(data) {
+  return request({
+    url: '/v1/users/ai-settings/models',
+    method: 'post',
+    data
+  });
+}
+
+export function updateAISettings(data) {
+  return request({
+    url: '/v1/users/ai-settings',
+    method: 'post',
+    data
+  });
+}
+
+export function testAISettings(data) {
+  return request({
+    url: '/v1/users/ai-settings/test',
+    method: 'post',
+    data
+  });
+}

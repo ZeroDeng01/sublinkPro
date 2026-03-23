@@ -21,7 +21,11 @@ func User(r *gin.Engine) {
 	userGroup.Use(middlewares.AuthToken)
 	{
 		userGroup.GET("/me", api.UserMe)
+		userGroup.GET("/ai-settings", api.UserGetAISettings)
+		userGroup.POST("/ai-settings/models", middlewares.DemoModeRestrict, api.UserListAIModels)
 		userGroup.GET("/mfa", api.GetMFAStatus)
+		userGroup.POST("/ai-settings", middlewares.DemoModeRestrict, api.UserUpdateAISettings)
+		userGroup.POST("/ai-settings/test", middlewares.DemoModeRestrict, api.UserTestAISettings)
 		userGroup.POST("/mfa/reauth", middlewares.DemoModeRestrict, api.ReauthMFA)
 		userGroup.POST("/mfa/totp/begin", middlewares.DemoModeRestrict, api.BeginTOTPEnrollment)
 		userGroup.POST("/mfa/totp/confirm", middlewares.DemoModeRestrict, api.ConfirmTOTPEnrollment)
