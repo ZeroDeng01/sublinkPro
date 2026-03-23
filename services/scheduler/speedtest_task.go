@@ -98,7 +98,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 	detectQuality := config.DetectQuality
 	qualityCheckURL := config.QualityCheckURL
 	if qualityCheckURL == "" {
-		qualityCheckURL = "https://my.ippure.com/v1/info"
+		qualityCheckURL = "https://my.123169.xyz/v1/info"
 	}
 
 	// 流量统计开关

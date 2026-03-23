@@ -117,7 +117,7 @@ func MihomoDelayWithAdapter(proxyAdapter constant.Proxy, testUrl string, timeout
 // detectLandingIP: 是否检测落地IP
 // landingIPUrl: IP查询服务URL，空则使用默认值 https://api.ipify.org
 // detectQuality: 是否检测 IP 质量
-// qualityURL: 质量查询服务 URL，空则使用默认值 https://my.ippure.com/v1/info
+// qualityURL: 质量查询服务 URL，空则使用默认值 https://my.123169.xyz/v1/info
 // 返回: latency(ms), landingIP(若未检测或失败则为空), quality(若未检测或失败则为nil), error
 func MihomoDelayTest(
 	nodeLink string,
@@ -172,7 +172,7 @@ func MihomoDelayTest(
 // detectLandingIP: 是否检测落地IP
 // landingIPUrl: IP查询服务URL，空则使用默认值 https://api.ipify.org
 // detectQuality: 是否检测 IP 质量
-// qualityURL: 质量查询服务 URL，空则使用默认值 https://my.ippure.com/v1/info
+// qualityURL: 质量查询服务 URL，空则使用默认值 https://my.123169.xyz/v1/info
 // speedRecordMode: 速度记录模式 "average"=平均速度, "peak"=峰值速度
 // peakSampleInterval: 峰值采样间隔（毫秒），仅在peak模式下生效，范围50-200
 // 返回: speed(MB/s), latency(ms), bytesDownloaded, landingIP(若未检测或失败则为空), quality(若未检测或失败则为nil), error
@@ -615,7 +615,7 @@ func FetchQualityWithAdapter(proxyAdapter constant.Proxy, qualityURL string) *Qu
 	}()
 
 	if qualityURL == "" {
-		qualityURL = "https://my.ippure.com/v1/info"
+		qualityURL = "https://my.123169.xyz/v1/info"
 	}
 
 	return fetchQuality(proxyAdapter, qualityURL)

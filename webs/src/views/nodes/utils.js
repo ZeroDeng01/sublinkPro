@@ -44,7 +44,10 @@ export const LANDING_IP_URL_OPTIONS = [
 ];
 
 // IP质量检测接口选项
-export const QUALITY_CHECK_URL_OPTIONS = [{ label: 'IPPure (推荐)', value: 'https://my.ippure.com/v1/info' }];
+export const QUALITY_CHECK_URL_OPTIONS = [
+  { label: 'IPPure (推荐)', value: 'https://my.123169.xyz/v1/info' },
+  { label: 'IPPure', value: 'https://my.ippure.com/v1/info' }
+];
 
 // User-Agent 预设选项
 export const USER_AGENT_OPTIONS = [

@@ -490,7 +490,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                     const checked = e.target.checked;
                     updateForm('detectQuality', checked);
                     if (checked && !form.qualityCheckUrl) {
-                      updateForm('qualityCheckUrl', 'https://my.ippure.com/v1/info');
+                      updateForm('qualityCheckUrl', 'https://my.123169.xyz/v1/info');
                     }
                   }}
                   size="small"
