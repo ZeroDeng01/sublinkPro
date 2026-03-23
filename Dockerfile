@@ -16,7 +16,7 @@ RUN cd webs && yarn install && yarn run build
 
 
 # 2. 构建后端
-FROM golang:1.25.5 AS backend-builder
+FROM golang:1.26.1 AS backend-builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download

@@ -96,6 +96,8 @@ cd sublinkPro
 
 ### 2. 后端开发
 
+建议使用 **Go 1.26.1** 或更高版本，以保持与仓库中的 `go.mod`、Docker 构建和 GitHub Actions 构建环境一致。
+
 ```bash
 # 安装 Go 依赖
 go mod download
