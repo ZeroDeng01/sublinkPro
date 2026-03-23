@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sublink/cache"
+	"sublink/constants"
 	"sublink/database"
 	"sublink/node/protocol"
 	"sublink/utils"
@@ -1613,9 +1614,11 @@ func GetNodeByID(id int) (*Node, bool) {
 
 // TagStat 标签统计结构
 type TagStat struct {
-	Name  string `json:"name"`
-	Color string `json:"color"`
-	Count int    `json:"count"`
+	Name           string `json:"name"`
+	Color          string `json:"color"`
+	Count          int    `json:"count"`
+	DelayPassCount int    `json:"delayPassCount,omitempty"`
+	SpeedPassCount int    `json:"speedPassCount,omitempty"`
 }
 
 type CountryDashboardStat struct {
@@ -1628,6 +1631,20 @@ type DashboardCountStat struct {
 	Key   string `json:"key"`
 	Label string `json:"label"`
 	Count int    `json:"count"`
+}
+
+type DashboardGroupedBucketStat struct {
+	Label          string `json:"label"`
+	Count          int    `json:"count"`
+	DelayPassCount int    `json:"delayPassCount"`
+	SpeedPassCount int    `json:"speedPassCount"`
+}
+
+type DashboardGroupedStats struct {
+	ProtocolStats map[string]DashboardGroupedBucketStat `json:"protocolStats"`
+	TagStats      []TagStat                             `json:"tagStats"`
+	GroupStats    map[string]DashboardGroupedBucketStat `json:"groupStats"`
+	SourceStats   map[string]DashboardGroupedBucketStat `json:"sourceStats"`
 }
 
 type DashboardFraudRangeStat struct {
@@ -1690,6 +1707,123 @@ func GetNodeTagStats() []TagStat {
 	}
 
 	return result
+}
+
+func getProtocolStatLabel(node Node) string {
+	protoName := node.Protocol
+	if protoName == "" {
+		protoName = protocol.GetProtocolFromLink(node.Link)
+	}
+	return protocol.GetProtocolLabel(protoName)
+}
+
+func getGroupStatLabel(node Node) string {
+	if node.Group == "" {
+		return "未分组"
+	}
+	return node.Group
+}
+
+func getSourceStatLabel(node Node) string {
+	if node.Source == "" || node.Source == "manual" {
+		return "手动添加"
+	}
+	return node.Source
+}
+
+func isNodeDelayPass(node Node) bool {
+	return node.DelayStatus == constants.StatusSuccess && node.DelayTime > 0
+}
+
+func isNodeSpeedPass(node Node) bool {
+	return node.SpeedStatus == constants.StatusSuccess && node.Speed > 0
+}
+
+func addDashboardGroupedBucket(stats map[string]DashboardGroupedBucketStat, key string, delayPass bool, speedPass bool) {
+	bucket := stats[key]
+	if bucket.Label == "" {
+		bucket.Label = key
+	}
+	bucket.Count++
+	if delayPass {
+		bucket.DelayPassCount++
+	}
+	if speedPass {
+		bucket.SpeedPassCount++
+	}
+	stats[key] = bucket
+}
+
+func GetDashboardGroupedStats() DashboardGroupedStats {
+	allNodes := nodeCache.GetAll()
+	protocolStats := make(map[string]DashboardGroupedBucketStat)
+	groupStats := make(map[string]DashboardGroupedBucketStat)
+	sourceStats := make(map[string]DashboardGroupedBucketStat)
+	tagStatsMap := make(map[string]*TagStat)
+	noTagStat := &TagStat{Name: "无标签", Color: "#9e9e9e"}
+
+	for _, node := range allNodes {
+		delayPass := isNodeDelayPass(node)
+		speedPass := isNodeSpeedPass(node)
+
+		addDashboardGroupedBucket(protocolStats, getProtocolStatLabel(node), delayPass, speedPass)
+		addDashboardGroupedBucket(groupStats, getGroupStatLabel(node), delayPass, speedPass)
+		addDashboardGroupedBucket(sourceStats, getSourceStatLabel(node), delayPass, speedPass)
+
+		tagNames := node.GetTagNames()
+		if len(tagNames) == 0 {
+			noTagStat.Count++
+			if delayPass {
+				noTagStat.DelayPassCount++
+			}
+			if speedPass {
+				noTagStat.SpeedPassCount++
+			}
+			continue
+		}
+
+		for _, tagName := range tagNames {
+			tagStat, ok := tagStatsMap[tagName]
+			if !ok {
+				color := "#1976d2"
+				if tag, exists := tagCache.Get(tagName); exists {
+					color = tag.Color
+				}
+				tagStat = &TagStat{Name: tagName, Color: color}
+				tagStatsMap[tagName] = tagStat
+			}
+
+			tagStat.Count++
+			if delayPass {
+				tagStat.DelayPassCount++
+			}
+			if speedPass {
+				tagStat.SpeedPassCount++
+			}
+		}
+	}
+
+	tagStats := make([]TagStat, 0, len(tagStatsMap)+1)
+	if noTagStat.Count > 0 {
+		tagStats = append(tagStats, *noTagStat)
+	}
+	for _, stat := range tagStatsMap {
+		tagStats = append(tagStats, *stat)
+	}
+
+	sort.Slice(tagStats, func(i, j int) bool {
+		if tagStats[i].Count == tagStats[j].Count {
+			return tagStats[i].Name < tagStats[j].Name
+		}
+		return tagStats[i].Count > tagStats[j].Count
+	})
+
+	return DashboardGroupedStats{
+		ProtocolStats: protocolStats,
+		TagStats:      tagStats,
+		GroupStats:    groupStats,
+		SourceStats:   sourceStats,
+	}
 }
 
 func GetDashboardQualityStats() DashboardQualityStats {

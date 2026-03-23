@@ -47,34 +47,9 @@ export function getDashboardCountryStats() {
   });
 }
 
-// 获取协议统计
-export function getProtocolStats() {
+export function getDashboardGroupedStats() {
   return request({
-    url: '/v1/total/protocol-stats',
-    method: 'get'
-  });
-}
-
-// 获取标签统计
-export function getTagStats() {
-  return request({
-    url: '/v1/total/tag-stats',
-    method: 'get'
-  });
-}
-
-// 获取分组统计
-export function getGroupStats() {
-  return request({
-    url: '/v1/total/group-stats',
-    method: 'get'
-  });
-}
-
-// 获取来源统计
-export function getSourceStats() {
-  return request({
-    url: '/v1/total/source-stats',
+    url: '/v1/total/dashboard-grouped-stats',
     method: 'get'
   });
 }

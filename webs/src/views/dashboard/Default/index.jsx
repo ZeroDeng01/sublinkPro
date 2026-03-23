@@ -49,10 +49,7 @@ import {
   getFastestSpeedNode,
   getLowestDelayNode,
   getDashboardCountryStats,
-  getProtocolStats,
-  getTagStats,
-  getGroupStats,
-  getSourceStats,
+  getDashboardGroupedStats,
   getQualityStats
 } from 'api/total';
 import { getAirports } from 'api/airports';
@@ -154,6 +151,54 @@ const createCountryStatMap = (stats = []) =>
     return accumulator;
   }, {});
 
+const TOTAL_COUNT_KEYS = ['total', 'count', 'totalCount', 'nodeCount', 'value'];
+const DELAY_PASS_COUNT_KEYS = ['delayPassCount', 'delayPass', 'delayPassedCount', 'delayPassed', 'delayPassTotal'];
+const SPEED_PASS_COUNT_KEYS = ['speedPassCount', 'speedPass', 'speedPassedCount', 'speedPassed', 'speedPassTotal'];
+
+const getNumericStatValue = (source, keys = [], fallback = 0) => {
+  if (typeof source === 'number') {
+    return Number.isFinite(source) ? source : fallback;
+  }
+
+  if (typeof source === 'string' && source.trim() !== '') {
+    const parsedValue = Number(source);
+    return Number.isFinite(parsedValue) ? parsedValue : fallback;
+  }
+
+  if (!source || typeof source !== 'object') {
+    return fallback;
+  }
+
+  for (const key of keys) {
+    const value = source[key];
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsedValue = Number(value);
+      if (Number.isFinite(parsedValue)) {
+        return parsedValue;
+      }
+    }
+  }
+
+  return fallback;
+};
+
+const getLabelStatValue = (source, fallbackLabel) => {
+  if (!source || typeof source !== 'object') {
+    return fallbackLabel;
+  }
+
+  return source.label || source.name || source.title || fallbackLabel;
+};
+
+const getCountMetric = (source) => getNumericStatValue(source, TOTAL_COUNT_KEYS, 0);
+const getDelayPassMetric = (source) => getNumericStatValue(source, DELAY_PASS_COUNT_KEYS, 0);
+const getSpeedPassMetric = (source) => getNumericStatValue(source, SPEED_PASS_COUNT_KEYS, 0);
+
 const buildTopItems = (items = [], total = 0, limit = 5, options = {}) => {
   const { forceCollapsedKeys = [] } = options;
   const normalizedItems = items.filter((item) => item && item.count > 0);
@@ -163,6 +208,8 @@ const buildTopItems = (items = [], total = 0, limit = 5, options = {}) => {
   const hiddenItems = [...forcedHiddenItems, ...eligibleVisibleItems.slice(limit)];
   const hiddenCount = hiddenItems.reduce((sum, item) => sum + item.count, 0);
   const hiddenUniqueIpCount = hiddenItems.reduce((sum, item) => sum + (item.uniqueIpCount || 0), 0);
+  const hiddenDelayPassCount = hiddenItems.reduce((sum, item) => sum + (item.delayPassCount || 0), 0);
+  const hiddenSpeedPassCount = hiddenItems.reduce((sum, item) => sum + (item.speedPassCount || 0), 0);
 
   if (hiddenCount > 0) {
     visibleItems.push({
@@ -170,6 +217,8 @@ const buildTopItems = (items = [], total = 0, limit = 5, options = {}) => {
       label: `其他 ${hiddenItems.length} 项`,
       count: hiddenCount,
       uniqueIpCount: hiddenUniqueIpCount,
+      delayPassCount: hiddenDelayPassCount,
+      speedPassCount: hiddenSpeedPassCount,
       color: '#94a3b8',
       tooltip: `包含未展示的其余 ${hiddenItems.length} 项，合计 ${hiddenCount} 个节点`,
       isCollapsedOther: true,
@@ -187,14 +236,16 @@ const buildTopItems = (items = [], total = 0, limit = 5, options = {}) => {
 };
 
 const normalizeMapStats = ({ entries = [], total, limit, defaultColor, getItemMeta, forceCollapsedKeys = [] }) => {
-  const resolvedTotal = typeof total === 'number' ? total : entries.reduce((sum, [, count]) => sum + count, 0);
+  const resolvedTotal = typeof total === 'number' ? total : entries.reduce((sum, [, value]) => sum + getCountMetric(value), 0);
   const normalized = entries
-    .map(([key, count], index) => ({
+    .map(([key, value], index) => ({
       key,
-      label: key,
-      count,
+      label: getLabelStatValue(value, key),
+      count: getCountMetric(value),
+      delayPassCount: getDelayPassMetric(value),
+      speedPassCount: getSpeedPassMetric(value),
       color: defaultColor,
-      ...(getItemMeta ? getItemMeta(key, count, index) : {})
+      ...(getItemMeta ? getItemMeta(key, value, index) : {})
     }))
     .sort((a, b) => b.count - a.count);
 
@@ -202,13 +253,15 @@ const normalizeMapStats = ({ entries = [], total, limit, defaultColor, getItemMe
 };
 
 const normalizeTagStats = ({ tags = [], limit }) => {
-  const total = tags.reduce((sum, item) => sum + item.count, 0);
+  const total = tags.reduce((sum, item) => sum + getCountMetric(item), 0);
   const normalized = [...tags]
-    .sort((a, b) => b.count - a.count)
-    .map((tag) => ({
-      key: tag.name,
-      label: tag.name,
-      count: tag.count,
+    .sort((a, b) => getCountMetric(b) - getCountMetric(a))
+    .map((tag, index) => ({
+      key: tag.key || tag.name || tag.label || `tag-${index}`,
+      label: getLabelStatValue(tag, tag.name || tag.key || `标签 ${index + 1}`),
+      count: getCountMetric(tag),
+      delayPassCount: getDelayPassMetric(tag),
+      speedPassCount: getSpeedPassMetric(tag),
       color: tag.color || '#ec4899'
     }));
 
@@ -301,9 +354,86 @@ const StatsChartCard = ({ title, icon: Icon, accentColor, summary, loading, tool
   );
 };
 
-const RankedStatList = ({ items = [], emptyText, percentSuffix = '%', valueFormatter, labelFormatter, mutedKeys = [], detailFormatter }) => {
+const RankedStatList = ({
+  items = [],
+  emptyText,
+  percentSuffix = '%',
+  valueFormatter,
+  labelFormatter,
+  mutedKeys = [],
+  detailFormatter,
+  secondaryMetricsFormatter
+}) => {
   const theme = useTheme();
   const [expandedKeys, setExpandedKeys] = useState({});
+
+  const formatSecondaryMetricValue = (value) => {
+    if (typeof value === 'number') {
+      return value.toLocaleString();
+    }
+
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value;
+    }
+
+    return '--';
+  };
+
+  const renderSecondaryMetrics = (metrics = [], itemColor, itemKey) => {
+    if (!metrics.length) return null;
+
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 0.625,
+          mt: 0.25,
+          minWidth: 0
+        }}
+      >
+        {metrics.map((metric, index) => (
+          <Box
+            key={`${itemKey}-${metric.key || metric.label}`}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'baseline',
+              gap: 0.5,
+              minWidth: 0
+            }}
+          >
+            {index > 0 ? (
+              <Typography
+                component="span"
+                variant="caption"
+                sx={{
+                  color: alpha(itemColor, theme.palette.mode === 'dark' ? 0.7 : 0.5),
+                  fontWeight: 700,
+                  lineHeight: 1
+                }}
+              >
+                ·
+              </Typography>
+            ) : null}
+            <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.2 }}>
+              {metric.label}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 700,
+                color: theme.palette.mode === 'dark' ? alpha('#fff', 0.88) : alpha(itemColor, 0.88),
+                lineHeight: 1.2
+              }}
+            >
+              {formatSecondaryMetricValue(metric.value)}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    );
+  };
 
   if (!items.length) {
     return (
@@ -318,6 +448,7 @@ const RankedStatList = ({ items = [], emptyText, percentSuffix = '%', valueForma
       {items.map((item) => {
         const muted = item.isCollapsedOther || mutedKeys.includes(item.key);
         const isExpanded = Boolean(expandedKeys[item.key]);
+        const secondaryMetrics = secondaryMetricsFormatter ? secondaryMetricsFormatter(item) : [];
         const toggleExpanded = () => {
           if (!item.isCollapsedOther) return;
           setExpandedKeys((prev) => ({ ...prev, [item.key]: !prev[item.key] }));
@@ -350,23 +481,28 @@ const RankedStatList = ({ items = [], emptyText, percentSuffix = '%', valueForma
                     }}
                   />
                 )}
-                <Typography
-                  variant="subtitle2"
-                  sx={{
-                    fontWeight: 600,
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {labelFormatter ? labelFormatter(item, isExpanded) : item.label}
-                </Typography>
-                {item.isCollapsedOther ? (
-                  <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
-                    {isExpanded ? '收起' : '展开'}
-                  </Typography>
-                ) : null}
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {labelFormatter ? labelFormatter(item, isExpanded) : item.label}
+                    </Typography>
+                    {item.isCollapsedOther ? (
+                      <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
+                        {isExpanded ? '收起' : '展开'}
+                      </Typography>
+                    ) : null}
+                  </Box>
+                  {renderSecondaryMetrics(secondaryMetrics, item.color, item.key)}
+                </Box>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexShrink: 0 }}>
                 <Box sx={{ textAlign: 'right' }}>
@@ -399,34 +535,41 @@ const RankedStatList = ({ items = [], emptyText, percentSuffix = '%', valueForma
               >
                 {item.hiddenItems.map((hiddenItem) => (
                   <Box key={`${item.key}-${hiddenItem.key}`}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 0.5 }}>
-                      <Tooltip title={hiddenItem.tooltip || hiddenItem.label} arrow>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.75,
-                            minWidth: 0,
-                            color: 'text.secondary'
-                          }}
-                        >
-                          {hiddenItem.marker ? <Typography sx={{ fontSize: '1rem', lineHeight: 1 }}>{hiddenItem.marker}</Typography> : null}
-                          <Typography
-                            component="div"
-                            variant="caption"
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 0.5 }}>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Tooltip title={hiddenItem.tooltip || hiddenItem.label} arrow>
+                          <Box
                             sx={{
-                              color: 'inherit',
-                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.75,
                               minWidth: 0,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
+                              color: 'text.secondary'
                             }}
                           >
-                            {labelFormatter ? labelFormatter(hiddenItem, false) : hiddenItem.label}
-                          </Typography>
-                        </Box>
-                      </Tooltip>
+                            {hiddenItem.marker ? <Typography sx={{ fontSize: '1rem', lineHeight: 1 }}>{hiddenItem.marker}</Typography> : null}
+                            <Typography
+                              component="div"
+                              variant="caption"
+                              sx={{
+                                color: 'inherit',
+                                fontWeight: 600,
+                                minWidth: 0,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {labelFormatter ? labelFormatter(hiddenItem, false) : hiddenItem.label}
+                            </Typography>
+                          </Box>
+                        </Tooltip>
+                        {renderSecondaryMetrics(
+                          secondaryMetricsFormatter ? secondaryMetricsFormatter(hiddenItem) : [],
+                          hiddenItem.color || item.color,
+                          hiddenItem.key
+                        )}
+                      </Box>
                       <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
                         {valueFormatter ? valueFormatter(hiddenItem.count, hiddenItem) : hiddenItem.count.toLocaleString()}
                         {detailFormatter ? ` · ${detailFormatter(hiddenItem)}` : ''} · {hiddenItem.percent.toFixed(1)}{percentSuffix}
@@ -518,7 +661,7 @@ const IPQualityBreakdown = ({ stats, loading }) => {
   const findCount = (key) => stats.ipStats.find((item) => item.key === key)?.count || 0;
 
   const residentialRows = [
-    { key: 'housing', label: '住房IP', count: findCount('housing'), color: '#22c55e' },
+    { key: 'housing', label: '住宅IP', count: findCount('housing'), color: '#22c55e' },
     { key: 'datacenter', label: '机房IP', count: findCount('datacenter'), color: '#64748b' }
   ];
   const typeRows = [
@@ -620,10 +763,11 @@ const getGreeting = () => {
 
 // ==============================|| 高级统计卡片组件 ||============================== //
 
-const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradientColors, accentColor, isNodeStat, copyLink, onCopy }) => {
+const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradientColors, accentColor, isNodeStat, copyLink, onCopy, nodePassStats }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const surfaceSx = getCalmSurface(theme, accentColor || gradientColors[0]);
+  const hasNodePassStats = Boolean(nodePassStats);
 
   const handleClick = () => {
     if (isNodeStat && copyLink && onCopy) {
@@ -697,9 +841,10 @@ const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradient
               variant="h1"
               sx={{
                 fontWeight: 700,
-                fontSize: subValue ? '1.75rem' : '2.25rem',
+                fontSize: subValue || hasNodePassStats ? '1.75rem' : '2.25rem',
                 color: theme.palette.text.primary,
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap'
               }}
             >
               {loading ? (
@@ -711,8 +856,74 @@ const PremiumStatCard = ({ title, value, subValue, loading, icon: Icon, gradient
               )}
             </Typography>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
-              {subValue ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, minHeight: 20 }}>
+              {hasNodePassStats ? (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: { xs: 0.625, sm: 0.875 },
+                    flexWrap: 'nowrap',
+                    minWidth: 0,
+                    width: '100%'
+                  }}
+                >
+                  {[
+                    { key: 'delay', label: '延迟通过', value: nodePassStats.delayPassCount },
+                    { key: 'speed', label: '速度通过', value: nodePassStats.speedPassCount }
+                  ].map((metric, index) => (
+                    <Box
+                      key={metric.key}
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'baseline',
+                        gap: 0.375,
+                        minWidth: 0,
+                        flexShrink: 1
+                      }}
+                    >
+                      {index > 0 ? (
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          sx={{
+                            color: alpha(gradientColors[0], isDark ? 0.72 : 0.52),
+                            fontWeight: 700,
+                            lineHeight: 1,
+                            mr: 0.125,
+                            flexShrink: 0
+                          }}
+                        >
+                          ·
+                        </Typography>
+                      ) : null}
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary,
+                          fontWeight: 500,
+                          fontSize: '0.7rem',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
+                        }}
+                      >
+                        {metric.label}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: gradientColors[0],
+                          fontWeight: 700,
+                          fontSize: '0.72rem',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {loading ? '--' : metric.value.toLocaleString()}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              ) : subValue ? (
                 <Tooltip title={subValue} arrow placement="bottom">
                   <Typography
                     variant="caption"
@@ -1470,7 +1681,8 @@ export default function DashboardDefault() {
   const isDark = theme.palette.mode === 'dark';
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [nodeTotal, setNodeTotal] = useState(0);
-  const [nodeAvailable, setNodeAvailable] = useState(0);
+  const [nodeDelayPassCount, setNodeDelayPassCount] = useState(0);
+  const [nodeSpeedPassCount, setNodeSpeedPassCount] = useState(0);
   const [fastestNode, setFastestNode] = useState(null);
   const [lowestDelayNode, setLowestDelayNode] = useState(null);
   const [countryStats, setCountryStats] = useState([]);
@@ -1496,34 +1708,32 @@ export default function DashboardDefault() {
   const fetchStats = async () => {
     try {
       setLoadingStats(true);
-      const [nodeRes, fastestRes, lowestDelayRes, countryRes, protocolRes, tagRes, groupRes, sourceRes, qualityRes, airportRes] =
+      const [nodeRes, fastestRes, lowestDelayRes, countryRes, groupedStatsRes, qualityRes, airportRes] =
         await Promise.all([
           getNodeTotal(),
           getFastestSpeedNode(),
           getLowestDelayNode(),
           getDashboardCountryStats(),
-          getProtocolStats(),
-          getTagStats(),
-          getGroupStats(),
-          getSourceStats(),
+          getDashboardGroupedStats(),
           getQualityStats(),
           getAirports()
         ]);
-      // nodeRes.data 现在返回 { total, available }
       if (nodeRes.data && typeof nodeRes.data === 'object') {
         setNodeTotal(nodeRes.data.total || 0);
-        setNodeAvailable(nodeRes.data.available || 0);
+        setNodeDelayPassCount(getDelayPassMetric(nodeRes.data));
+        setNodeSpeedPassCount(getSpeedPassMetric(nodeRes.data));
       } else {
         setNodeTotal(nodeRes.data || 0);
-        setNodeAvailable(0);
+        setNodeDelayPassCount(0);
+        setNodeSpeedPassCount(0);
       }
       setFastestNode(fastestRes.data || null);
       setLowestDelayNode(lowestDelayRes.data || null);
       setCountryStats(countryRes.data || []);
-      setProtocolStats(protocolRes.data || {});
-      setTagStats(tagRes.data || []);
-      setGroupStats(groupRes.data || {});
-      setSourceStats(sourceRes.data || {});
+      setProtocolStats(groupedStatsRes.data?.protocolStats || {});
+      setTagStats(groupedStatsRes.data?.tagStats || []);
+      setGroupStats(groupedStatsRes.data?.groupStats || {});
+      setSourceStats(groupedStatsRes.data?.sourceStats || {});
       setQualityStats(qualityRes.data || null);
       setAirports(airportRes.data?.list || airportRes.data || []);
     } catch (error) {
@@ -1566,12 +1776,16 @@ export default function DashboardDefault() {
     },
     {
       title: '节点统计',
-      value: `${nodeAvailable} / ${nodeTotal}`,
-      subValue: '测速通过 / 总节点',
+      value: nodeTotal,
+      subValue: '总节点',
       icon: CloudQueueIcon,
       gradientColors: ['#06b6d4', '#0891b2'],
       accentColor: '#06b6d4',
-      isNodeStat: true
+      isNodeStat: true,
+      nodePassStats: {
+        delayPassCount: nodeDelayPassCount,
+        speedPassCount: nodeSpeedPassCount
+      }
     },
     {
       title: '最快速度',
@@ -1684,6 +1898,11 @@ export default function DashboardDefault() {
     [qualityStats]
   );
 
+  const groupedMetricStrip = (item) => [
+    { key: 'delay-pass', label: '延迟通过', value: item.delayPassCount },
+    { key: 'speed-pass', label: '速度通过', value: item.speedPassCount }
+  ];
+
   return (
     <Box sx={{ pb: 3 }}>
       {/* 欢迎横幅 */}
@@ -1711,6 +1930,7 @@ export default function DashboardDefault() {
               isNodeStat={stat.isNodeStat}
               copyLink={stat.copyLink}
               onCopy={showSnackbar}
+              nodePassStats={stat.nodePassStats}
             />
           </Grid>
         ))}
@@ -1793,6 +2013,7 @@ export default function DashboardDefault() {
               items={protocolDistribution}
               emptyText="暂无协议统计数据"
               labelFormatter={(item) => (item.key === 'collapsed-other' ? '其他（可展开查看）' : item.label)}
+              secondaryMetricsFormatter={groupedMetricStrip}
             />
           </StatsChartCard>
         </Grid>
@@ -1812,6 +2033,7 @@ export default function DashboardDefault() {
               items={tagDistribution}
               emptyText="暂无标签统计数据"
               labelFormatter={(item) => (item.key === 'collapsed-other' ? '其他（可展开查看）' : item.label)}
+              secondaryMetricsFormatter={groupedMetricStrip}
             />
           </StatsChartCard>
         </Grid>
@@ -1829,6 +2051,7 @@ export default function DashboardDefault() {
               items={groupDistribution}
               emptyText="暂无分组统计数据"
               labelFormatter={(item) => (item.key === 'collapsed-other' ? '其他（可展开查看）' : item.label)}
+              secondaryMetricsFormatter={groupedMetricStrip}
             />
           </StatsChartCard>
         </Grid>
@@ -1846,6 +2069,7 @@ export default function DashboardDefault() {
               items={sourceDistribution}
               emptyText="暂无来源统计数据"
               labelFormatter={(item) => (item.key === 'collapsed-other' ? '其他（可展开查看）' : item.label)}
+              secondaryMetricsFormatter={groupedMetricStrip}
             />
           </StatsChartCard>
         </Grid>
@@ -1872,7 +2096,7 @@ export default function DashboardDefault() {
             accentColor="#06b6d4"
             summary={`完整结果 ${qualityStats?.successTotal || 0}`}
             loading={loadingStats}
-            tooltip="住房/机房与原生/广播基于完整质量检测结果统计，其他数量表示未完成细分的节点。"
+            tooltip="住宅/机房与原生/广播基于完整质量检测结果统计，其他数量表示未完成细分的节点。"
           >
             <IPQualityBreakdown stats={qualityStats} loading={loadingStats} />
           </StatsChartCard>
@@ -1885,7 +2109,7 @@ export default function DashboardDefault() {
             accentColor="#f59e0b"
             summary={`完整结果 ${qualityStats?.successTotal || 0}`}
             loading={loadingStats}
-            tooltip={`按系统现有欺诈评分分级方式统计，另有 ${qualityStats?.otherTotal || 0} 个节点未纳入评分分桶。`}
+            tooltip={`按系统现有欺诈评分分级方式统计，仅完整结果节点参与分布；另有 ${qualityStats?.otherTotal || 0} 个节点因质量状态不是完整结果而未参与统计。`}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>
               <RankedStatList items={fraudDistribution} emptyText="暂无欺诈评分统计数据" />
@@ -1901,7 +2125,7 @@ export default function DashboardDefault() {
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
                     <Box>
                       <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        未纳入评分
+                        未参与评分统计
                       </Typography>
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                         质量状态不是完整结果

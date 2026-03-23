@@ -813,15 +813,25 @@ func NodesTotal(c *gin.Context) {
 
 	total := len(nodes)
 	available := 0
+	delayPassCount := 0
+	speedPassCount := 0
 	for _, n := range nodes {
+		if n.DelayStatus == "success" && n.DelayTime > 0 {
+			delayPassCount++
+		}
+		if n.SpeedStatus == "success" && n.Speed > 0 {
+			speedPassCount++
+		}
 		if n.Speed > 0 && n.DelayTime > 0 {
 			available++
 		}
 	}
 
 	utils.OkDetailed(c, "取得节点统计", gin.H{
-		"total":     total,
-		"available": available,
+		"total":          total,
+		"available":      available,
+		"delayPassCount": delayPassCount,
+		"speedPassCount": speedPassCount,
 	})
 }
 
@@ -1009,6 +1019,11 @@ func NodeGroupStats(c *gin.Context) {
 func NodeSourceStats(c *gin.Context) {
 	stats := models.GetNodeSourceStats()
 	utils.OkDetailed(c, "获取来源统计成功", stats)
+}
+
+func DashboardGroupedStats(c *gin.Context) {
+	stats := models.GetDashboardGroupedStats()
+	utils.OkDetailed(c, "获取仪表盘分组统计成功", stats)
 }
 
 func DashboardQualityStats(c *gin.Context) {
