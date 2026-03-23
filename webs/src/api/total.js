@@ -40,6 +40,13 @@ export function getCountryStats() {
   });
 }
 
+export function getDashboardCountryStats() {
+  return request({
+    url: '/v1/total/dashboard-country-stats',
+    method: 'get'
+  });
+}
+
 // 获取协议统计
 export function getProtocolStats() {
   return request({

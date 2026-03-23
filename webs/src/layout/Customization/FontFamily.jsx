@@ -49,10 +49,10 @@ export default function FontFamilyPage() {
             <Grid key={index} size={12}>
               <MainCard
                 content={false}
-                sx={(theme) => ({
+                sx={{
                   p: 0.75,
                   bgcolor: fontFamily === item.value ? 'primary.light' : 'grey.50'
-                })}
+                }}
               >
                 <MainCard
                   content={false}

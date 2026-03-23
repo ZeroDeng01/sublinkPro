@@ -982,6 +982,11 @@ func NodeCountryStats(c *gin.Context) {
 	utils.OkDetailed(c, "获取国家统计成功", stats)
 }
 
+func DashboardCountryStats(c *gin.Context) {
+	stats := models.GetDashboardCountryStats()
+	utils.OkDetailed(c, "获取仪表盘国家统计成功", stats)
+}
+
 // NodeProtocolStats 获取按协议统计的节点数量
 func NodeProtocolStats(c *gin.Context) {
 	stats := models.GetNodeProtocolStats()

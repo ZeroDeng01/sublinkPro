@@ -48,7 +48,7 @@ import {
   getNodeTotal,
   getFastestSpeedNode,
   getLowestDelayNode,
-  getCountryStats,
+  getDashboardCountryStats,
   getProtocolStats,
   getTagStats,
   getGroupStats,
@@ -148,6 +148,12 @@ const qualityStatusLabelMap = {
   untested: '未检测'
 };
 
+const createCountryStatMap = (stats = []) =>
+  stats.reduce((accumulator, item) => {
+    accumulator[item.country] = item;
+    return accumulator;
+  }, {});
+
 const buildTopItems = (items = [], total = 0, limit = 5, options = {}) => {
   const { forceCollapsedKeys = [] } = options;
   const normalizedItems = items.filter((item) => item && item.count > 0);
@@ -156,12 +162,14 @@ const buildTopItems = (items = [], total = 0, limit = 5, options = {}) => {
   const visibleItems = eligibleVisibleItems.slice(0, limit);
   const hiddenItems = [...forcedHiddenItems, ...eligibleVisibleItems.slice(limit)];
   const hiddenCount = hiddenItems.reduce((sum, item) => sum + item.count, 0);
+  const hiddenUniqueIpCount = hiddenItems.reduce((sum, item) => sum + (item.uniqueIpCount || 0), 0);
 
   if (hiddenCount > 0) {
     visibleItems.push({
       key: 'collapsed-other',
       label: `其他 ${hiddenItems.length} 项`,
       count: hiddenCount,
+      uniqueIpCount: hiddenUniqueIpCount,
       color: '#94a3b8',
       tooltip: `包含未展示的其余 ${hiddenItems.length} 项，合计 ${hiddenCount} 个节点`,
       isCollapsedOther: true,
@@ -293,7 +301,7 @@ const StatsChartCard = ({ title, icon: Icon, accentColor, summary, loading, tool
   );
 };
 
-const RankedStatList = ({ items = [], emptyText, percentSuffix = '%', valueFormatter, labelFormatter, mutedKeys = [] }) => {
+const RankedStatList = ({ items = [], emptyText, percentSuffix = '%', valueFormatter, labelFormatter, mutedKeys = [], detailFormatter }) => {
   const theme = useTheme();
   const [expandedKeys, setExpandedKeys] = useState({});
 
@@ -361,9 +369,16 @@ const RankedStatList = ({ items = [], emptyText, percentSuffix = '%', valueForma
                 ) : null}
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexShrink: 0 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                  {valueFormatter ? valueFormatter(item.count, item) : item.count.toLocaleString()}
-                </Typography>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    {valueFormatter ? valueFormatter(item.count, item) : item.count.toLocaleString()}
+                  </Typography>
+                  {detailFormatter ? (
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                      {detailFormatter(item)}
+                    </Typography>
+                  ) : null}
+                </Box>
                 <Typography variant="caption" sx={{ color: 'text.secondary', minWidth: 42, textAlign: 'right' }}>
                   {item.percent.toFixed(1)}{percentSuffix}
                 </Typography>
@@ -386,23 +401,35 @@ const RankedStatList = ({ items = [], emptyText, percentSuffix = '%', valueForma
                   <Box key={`${item.key}-${hiddenItem.key}`}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 0.5 }}>
                       <Tooltip title={hiddenItem.tooltip || hiddenItem.label} arrow>
-                        <Typography
-                          component="div"
-                          variant="caption"
+                        <Box
                           sx={{
-                            color: 'text.secondary',
-                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.75,
                             minWidth: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
+                            color: 'text.secondary'
                           }}
                         >
-                          {labelFormatter ? labelFormatter(hiddenItem, false) : hiddenItem.label}
-                        </Typography>
+                          {hiddenItem.marker ? <Typography sx={{ fontSize: '1rem', lineHeight: 1 }}>{hiddenItem.marker}</Typography> : null}
+                          <Typography
+                            component="div"
+                            variant="caption"
+                            sx={{
+                              color: 'inherit',
+                              fontWeight: 600,
+                              minWidth: 0,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {labelFormatter ? labelFormatter(hiddenItem, false) : hiddenItem.label}
+                          </Typography>
+                        </Box>
                       </Tooltip>
                       <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
-                        {valueFormatter ? valueFormatter(hiddenItem.count, hiddenItem) : hiddenItem.count.toLocaleString()} · {hiddenItem.percent.toFixed(1)}{percentSuffix}
+                        {valueFormatter ? valueFormatter(hiddenItem.count, hiddenItem) : hiddenItem.count.toLocaleString()}
+                        {detailFormatter ? ` · ${detailFormatter(hiddenItem)}` : ''} · {hiddenItem.percent.toFixed(1)}{percentSuffix}
                       </Typography>
                     </Box>
                     <LinearProgress
@@ -1446,7 +1473,7 @@ export default function DashboardDefault() {
   const [nodeAvailable, setNodeAvailable] = useState(0);
   const [fastestNode, setFastestNode] = useState(null);
   const [lowestDelayNode, setLowestDelayNode] = useState(null);
-  const [countryStats, setCountryStats] = useState({});
+  const [countryStats, setCountryStats] = useState([]);
   const [protocolStats, setProtocolStats] = useState({});
   const [tagStats, setTagStats] = useState([]);
   const [groupStats, setGroupStats] = useState({});
@@ -1474,7 +1501,7 @@ export default function DashboardDefault() {
           getNodeTotal(),
           getFastestSpeedNode(),
           getLowestDelayNode(),
-          getCountryStats(),
+          getDashboardCountryStats(),
           getProtocolStats(),
           getTagStats(),
           getGroupStats(),
@@ -1492,7 +1519,7 @@ export default function DashboardDefault() {
       }
       setFastestNode(fastestRes.data || null);
       setLowestDelayNode(lowestDelayRes.data || null);
-      setCountryStats(countryRes.data || {});
+      setCountryStats(countryRes.data || []);
       setProtocolStats(protocolRes.data || {});
       setTagStats(tagRes.data || []);
       setGroupStats(groupRes.data || {});
@@ -1569,20 +1596,23 @@ export default function DashboardDefault() {
   ];
 
   const distributionLimit = isMobile ? 4 : 5;
+  const countryStatsMap = useMemo(() => createCountryStatMap(countryStats), [countryStats]);
+  const unknownCountryStat = countryStatsMap['未知'] || null;
+  const countryDistributionSource = useMemo(() => countryStats.filter((item) => item.country !== '未知'), [countryStats]);
 
   const countryDistribution = useMemo(
     () =>
       normalizeMapStats({
-        entries: Object.entries(countryStats),
+        entries: countryDistributionSource.map((item) => [item.country, item.nodeCount]),
         limit: distributionLimit,
         defaultColor: '#6366f1',
-        forceCollapsedKeys: ['未知'],
         getItemMeta: (country) => ({
           marker: getFlagEmoji(country),
-          tooltip: country === '未知' ? '未识别国家或未返回国家代码' : undefined
+          uniqueIpCount: countryStatsMap[country]?.uniqueIpCount || 0,
+          tooltip: `节点 ${countryStatsMap[country]?.nodeCount || 0}，可用IP ${countryStatsMap[country]?.uniqueIpCount || 0}`
         })
       }),
-    [countryStats, distributionLimit]
+    [countryDistributionSource, countryStatsMap, distributionLimit]
   );
 
   const protocolDistribution = useMemo(
@@ -1695,30 +1725,58 @@ export default function DashboardDefault() {
             title="节点国家分布"
             icon={PublicIcon}
             accentColor="#6366f1"
-            summary={`${Object.keys(countryStats).length} 个地区`}
+            summary={`${countryDistributionSource.length} 个地区`}
             loading={loadingStats}
-            tooltip="按节点落地国家聚合，展示最主要的地区分布。"
+            tooltip="按节点落地国家聚合，仅比较真实地区分布；未知节点数量单独展示。"
           >
-            <RankedStatList
-              items={countryDistribution}
-              emptyText="暂无国家统计数据"
-              labelFormatter={(item) => {
-                if (item.key === 'collapsed-other') {
-                  return '其他（含未知与折叠地区）';
-                }
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>
+              <RankedStatList
+                items={countryDistribution}
+                emptyText="暂无国家统计数据"
+                detailFormatter={(item) => `可用IP ${item.uniqueIpCount || 0}`}
+                labelFormatter={(item) => {
+                  if (item.key === 'collapsed-other') {
+                    return '其他地区（可展开查看）';
+                  }
 
-                return (
-                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-                    <Box component="span" sx={{ fontSize: '1rem', lineHeight: 1 }}>
-                      {getFlagEmoji(item.label)}
-                    </Box>
+                  return (
                     <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.label}
+                        {item.label}
+                    </Box>
+                  );
+                }}
+              />
+
+              {!loadingStats && unknownCountryStat ? (
+                <Box
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 3,
+                    bgcolor: alpha('#94a3b8', theme.palette.mode === 'dark' ? 0.12 : 0.08),
+                    border: `1px solid ${alpha('#94a3b8', theme.palette.mode === 'dark' ? 0.24 : 0.16)}`
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        未知节点
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        未获取到落地国家或节点已失效，不参与地区比较
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'right' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        {unknownCountryStat.nodeCount.toLocaleString()}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        可用IP {unknownCountryStat.uniqueIpCount || 0}
+                      </Typography>
                     </Box>
                   </Box>
-                );
-              }}
-            />
+                </Box>
+              ) : null}
+            </Box>
           </StatsChartCard>
         </Grid>
 

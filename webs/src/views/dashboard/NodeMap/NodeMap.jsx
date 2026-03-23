@@ -110,7 +110,7 @@ const NodeMap = ({ data = {}, loading = false }) => {
       }
     });
 
-    return { points: pts, lines: lns, targetPoint: tPoint, unknownCount: unk, maxCount: max };
+    return { points: pts, lines: lns, targetPoint: tPoint, unknownCount: unk };
   }, [data]);
 
   useEffect(() => {

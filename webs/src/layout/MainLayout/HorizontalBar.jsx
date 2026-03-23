@@ -42,7 +42,7 @@ export default function HorizontalBar() {
   return (
     <ElevationScroll>
       <AppBar
-        sx={(theme) => ({
+        sx={{
           top: 71,
           bgcolor: 'background.paper',
           width: '100%',
@@ -51,7 +51,7 @@ export default function HorizontalBar() {
           borderTop: '1px solid',
           borderColor: 'grey.300',
           zIndex: 1098
-        })}
+        }}
       >
         <Container maxWidth={container ? 'lg' : false}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>

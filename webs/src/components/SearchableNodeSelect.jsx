@@ -93,10 +93,10 @@ export default function SearchableNodeSelect({
       }}
       value={value}
       inputValue={inputValue}
-      onInputChange={(event, newInputValue) => {
+      onInputChange={(_, newInputValue) => {
         setInputValue(newInputValue);
       }}
-      onChange={(event, newValue) => {
+      onChange={(_, newValue) => {
         onChange?.(newValue);
       }}
       onBlur={() => {

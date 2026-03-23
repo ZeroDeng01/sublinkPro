@@ -1511,6 +1511,50 @@ func GetNodeCountryStats() map[string]int {
 	return stats
 }
 
+func GetDashboardCountryStats() []CountryDashboardStat {
+	allNodes := nodeCache.GetAll()
+	type countryAccumulator struct {
+		nodeCount int
+		ipSet     map[string]struct{}
+	}
+
+	statsMap := make(map[string]*countryAccumulator)
+	for _, n := range allNodes {
+		country := n.LinkCountry
+		if country == "" {
+			country = "未知"
+		}
+
+		if _, exists := statsMap[country]; !exists {
+			statsMap[country] = &countryAccumulator{ipSet: make(map[string]struct{})}
+		}
+
+		statsMap[country].nodeCount++
+		landingIP := strings.TrimSpace(n.LandingIP)
+		if landingIP != "" {
+			statsMap[country].ipSet[landingIP] = struct{}{}
+		}
+	}
+
+	result := make([]CountryDashboardStat, 0, len(statsMap))
+	for country, stat := range statsMap {
+		result = append(result, CountryDashboardStat{
+			Country:       country,
+			NodeCount:     stat.nodeCount,
+			UniqueIPCount: len(stat.ipSet),
+		})
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].NodeCount == result[j].NodeCount {
+			return result[i].Country < result[j].Country
+		}
+		return result[i].NodeCount > result[j].NodeCount
+	})
+
+	return result
+}
+
 // GetNodeProtocolStats 获取按协议统计的节点数量
 func GetNodeProtocolStats() map[string]int {
 	stats := make(map[string]int)
@@ -1572,6 +1616,12 @@ type TagStat struct {
 	Name  string `json:"name"`
 	Color string `json:"color"`
 	Count int    `json:"count"`
+}
+
+type CountryDashboardStat struct {
+	Country       string `json:"country"`
+	NodeCount     int    `json:"nodeCount"`
+	UniqueIPCount int    `json:"uniqueIpCount"`
 }
 
 type DashboardCountStat struct {

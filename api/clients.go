@@ -1,8 +1,6 @@
 package api
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,13 +18,6 @@ import (
 
 var SunName string
 
-// md5加密
-func Md5(src string) string {
-	m := md5.New()
-	m.Write([]byte(src))
-	res := hex.EncodeToString(m.Sum(nil))
-	return res
-}
 func GetClient(c *gin.Context) {
 	// 获取协议头
 	token := c.Query("token")

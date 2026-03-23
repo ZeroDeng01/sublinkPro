@@ -162,7 +162,7 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
               options={options}
               getOptionLabel={(option) => option.label || option}
               value={whitelistProtocols.map(getProtocolOption)}
-              onChange={(e, newValue) => onWhitelistChange(toProtocolString(newValue.map((v) => v.value || v)))}
+              onChange={(_, newValue) => onWhitelistChange(toProtocolString(newValue.map((v) => v.value || v)))}
               isOptionEqualToValue={(option, value) => (option.value || option) === (value.value || value)}
               filterSelectedOptions
               renderTags={(value, getTagProps) =>
@@ -219,7 +219,7 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
               options={options}
               getOptionLabel={(option) => option.label || option}
               value={blacklistProtocols.map(getProtocolOption)}
-              onChange={(e, newValue) => onBlacklistChange(toProtocolString(newValue.map((v) => v.value || v)))}
+              onChange={(_, newValue) => onBlacklistChange(toProtocolString(newValue.map((v) => v.value || v)))}
               isOptionEqualToValue={(option, value) => (option.value || option) === (value.value || value)}
               filterSelectedOptions
               renderTags={(value, getTagProps) =>

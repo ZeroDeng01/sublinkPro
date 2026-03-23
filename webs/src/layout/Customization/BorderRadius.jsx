@@ -40,9 +40,9 @@ export default function BorderRadius() {
             min={4}
             max={24}
             color="primary"
-            sx={(theme) => ({
+            sx={{
               '& .MuiSlider-valueLabel': { color: 'primary.light' }
-            })}
+            }}
           />
         </Grid>
         <Grid>
