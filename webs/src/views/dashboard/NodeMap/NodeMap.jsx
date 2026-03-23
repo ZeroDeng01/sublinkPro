@@ -112,6 +112,7 @@ const NodeMap = ({ data = {}, loading = false }) => {
 
     return { points: pts, lines: lns, targetPoint: tPoint, unknownCount: unk };
   }, [data]);
+  const coveredRegionCount = useMemo(() => points.length + (Object.prototype.hasOwnProperty.call(data, 'CN') ? 1 : 0), [data, points.length]);
 
   useEffect(() => {
     if (!chartRef.current || loading) return;
@@ -399,7 +400,7 @@ const NodeMap = ({ data = {}, loading = false }) => {
           variant="h1"
           sx={{ color: '#0ea5e9', fontWeight: '900', fontSize: '4rem', lineHeight: 1, textShadow: '0 0 40px rgba(14, 165, 233, 0.6)' }}
         >
-          {String(points.length + (targetPoint ? 1 : 0)).padStart(2, '0')}
+          {String(coveredRegionCount).padStart(2, '0')}
         </Typography>
 
         <Box sx={{ mt: 2, height: 2, width: 100, bgcolor: '#0ea5e9', ml: 'auto', opacity: 0.8 }} />
