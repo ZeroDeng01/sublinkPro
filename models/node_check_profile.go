@@ -49,8 +49,8 @@ type NodeCheckProfile struct {
 	QualityCheckURL string `json:"qualityCheckUrl"`                    // 质量检测API URL
 
 	// 执行时间记录
-	LastRunTime *time.Time `gorm:"type:datetime" json:"lastRunTime"` // 上次执行时间
-	NextRunTime *time.Time `gorm:"type:datetime" json:"nextRunTime"` // 下次执行时间
+	LastRunTime *time.Time `json:"lastRunTime"` // 上次执行时间
+	NextRunTime *time.Time `json:"nextRunTime"` // 下次执行时间
 
 	// 时间戳
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`

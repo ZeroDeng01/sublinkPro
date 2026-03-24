@@ -21,8 +21,8 @@ type Airport struct {
 	CronExpr          string     `json:"cronExpr"`                               // 定时更新Cron表达式
 	Enabled           bool       `json:"enabled"`                                // 是否启用
 	SuccessCount      int        `gorm:"default:0" json:"successCount"`          // 成功拉取次数
-	LastRunTime       *time.Time `gorm:"type:datetime" json:"lastRunTime"`       // 上次运行时间
-	NextRunTime       *time.Time `gorm:"type:datetime" json:"nextRunTime"`       // 下次运行时间
+	LastRunTime       *time.Time `json:"lastRunTime"`                            // 上次运行时间
+	NextRunTime       *time.Time `json:"nextRunTime"`                            // 下次运行时间
 	CreatedAt         time.Time  `gorm:"autoCreateTime" json:"createdAt"`        // 创建时间
 	UpdatedAt         time.Time  `gorm:"autoUpdateTime" json:"updatedAt"`        // 更新时间
 	Group             string     `json:"group"`                                  // 导入节点的默认分组

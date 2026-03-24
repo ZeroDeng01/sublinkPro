@@ -24,8 +24,8 @@ type Host struct {
 	Source    string     `json:"source" gorm:"size:255;default:'手动添加'"`         // 来源: 手动添加/DNS服务器地址
 	ExpireAt  *time.Time `json:"expireAt" gorm:"index"`                         // 过期时间，nil 表示永不过期
 	Pinned    bool       `json:"pinned" gorm:"default:false"`                   // 是否固定，固定后不会被过期删除
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt time.Time  `json:"updatedAt"`
+	CreatedAt time.Time  `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt time.Time  `json:"updatedAt" gorm:"autoUpdateTime"`
 }
 
 // hostCache 使用泛型缓存

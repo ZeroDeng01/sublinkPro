@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"sublink/cache"
 	"sublink/config"
@@ -63,8 +64,10 @@ type databaseMigrationState struct {
 	importedSubIDs     map[int]struct{}
 	importedShareIDs   map[int]struct{}
 	nodeNameToID       map[string]int
+	ambiguousNodeNames map[string]struct{}
 	sourceHasShares    bool
 	sourceHasProfiles  bool
+	sourceHasWebhooks  bool
 	sourceHasTemplates bool
 }
 
@@ -174,8 +177,10 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 		importedSubIDs:     make(map[int]struct{}),
 		importedShareIDs:   make(map[int]struct{}),
 		nodeNameToID:       make(map[string]int),
+		ambiguousNodeNames: make(map[string]struct{}),
 		sourceHasShares:    sourceDB.Migrator().HasTable(&models.SubscriptionShare{}),
 		sourceHasProfiles:  sourceDB.Migrator().HasTable(&models.NodeCheckProfile{}),
+		sourceHasWebhooks:  sourceDB.Migrator().HasTable(&models.Webhook{}),
 		sourceHasTemplates: sourceDB.Migrator().HasTable(&models.Template{}),
 	}
 
@@ -206,6 +211,13 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 			return err
 		}
 		if err := reportStep(fmt.Sprintf("系统设置导入完成，共 %d 条", state.result.Imported["system_settings"]), nil); err != nil {
+			return err
+		}
+
+		if err := importWebhooks(state); err != nil {
+			return err
+		}
+		if err := reportStep(fmt.Sprintf("Webhook 导入完成，共 %d 条", state.result.Imported["webhooks"]), nil); err != nil {
 			return err
 		}
 
@@ -374,6 +386,7 @@ func buildDatabaseMigrationSteps(sourceBundle *databaseMigrationSource, options 
 		"清空目标业务数据",
 		"导入用户",
 		"导入系统设置",
+		"导入 Webhook",
 		"导入脚本",
 		"导入模板元数据",
 		"导入节点",
@@ -619,6 +632,7 @@ func clearTargetBusinessData(tx *gorm.DB) error {
 		&models.Subcription{},
 		&models.Node{},
 		&models.SystemSetting{},
+		&models.Webhook{},
 		&models.User{},
 	}
 
@@ -685,6 +699,49 @@ func importSystemSettings(state *databaseMigrationState) error {
 	return nil
 }
 
+func importWebhooks(state *databaseMigrationState) error {
+	webhooks := make([]models.Webhook, 0)
+	if state.sourceHasWebhooks {
+		if err := state.source.Find(&webhooks).Error; err != nil {
+			return fmt.Errorf("读取源 Webhook 失败: %w", err)
+		}
+	} else {
+		legacyURL := strings.TrimSpace(state.importedSettings["webhook_url"])
+		legacyHeaders := state.importedSettings["webhook_headers"]
+		legacyBody := state.importedSettings["webhook_body"]
+		if legacyURL != "" || strings.TrimSpace(legacyHeaders) != "" || strings.TrimSpace(legacyBody) != "" {
+			method := strings.ToUpper(strings.TrimSpace(state.importedSettings["webhook_method"]))
+			if method == "" {
+				method = "POST"
+			}
+			contentType := strings.TrimSpace(state.importedSettings["webhook_content_type"])
+			if contentType == "" {
+				contentType = "application/json"
+			}
+			webhooks = append(webhooks, models.Webhook{
+				Name:        "默认 Webhook",
+				URL:         legacyURL,
+				Method:      method,
+				ContentType: contentType,
+				Headers:     legacyHeaders,
+				Body:        legacyBody,
+				Enabled:     parseBool(state.importedSettings["webhook_enabled"], false),
+				EventKeys:   state.importedSettings["webhook_event_keys"],
+			})
+			state.result.Warnings = append(state.result.Warnings, "源备份未包含 Webhook 表，已根据旧版系统设置重建默认 Webhook")
+		}
+	}
+	for i := range webhooks {
+		normalizeOptionalTimePtr(&webhooks[i].LastTestAt)
+	}
+
+	if err := insertRecords(state.tx, webhooks); err != nil {
+		return fmt.Errorf("导入 Webhook 失败: %w", err)
+	}
+	state.result.Imported["webhooks"] = len(webhooks)
+	return nil
+}
+
 func importScripts(state *databaseMigrationState) error {
 	if !state.source.Migrator().HasTable(&models.Script{}) {
 		return nil
@@ -745,8 +802,10 @@ func importNodes(state *databaseMigrationState, ctx context.Context) error {
 		}
 		models.NormalizeNodeForImport(&nodes[i])
 		if nodes[i].Name != "" {
-			if _, exists := state.nodeNameToID[nodes[i].Name]; !exists {
+			if existingID, exists := state.nodeNameToID[nodes[i].Name]; !exists {
 				state.nodeNameToID[nodes[i].Name] = nodes[i].ID
+			} else if existingID != nodes[i].ID {
+				state.ambiguousNodeNames[nodes[i].Name] = struct{}{}
 			}
 		}
 	}
@@ -832,6 +891,9 @@ func importSubscriptionNodes(state *databaseMigrationState) error {
 			return fmt.Errorf("读取源旧版订阅节点关联失败: %w", err)
 		}
 		for _, legacy := range legacyRecords {
+			if _, ambiguous := state.ambiguousNodeNames[legacy.NodeName]; ambiguous {
+				continue
+			}
 			nodeID := state.nodeNameToID[legacy.NodeName]
 			if nodeID == 0 {
 				continue
@@ -843,7 +905,12 @@ func importSubscriptionNodes(state *databaseMigrationState) error {
 			})
 		}
 		if len(legacyRecords) > len(records) {
-			state.result.Warnings = append(state.result.Warnings, fmt.Sprintf("有 %d 条旧版订阅节点关联因找不到对应节点而被跳过", len(legacyRecords)-len(records)))
+			skippedCount := len(legacyRecords) - len(records)
+			warning := fmt.Sprintf("有 %d 条旧版订阅节点关联因找不到对应节点而被跳过", skippedCount)
+			if len(state.ambiguousNodeNames) > 0 {
+				warning = fmt.Sprintf("有 %d 条旧版订阅节点关联因找不到对应节点或节点名称重复而被跳过", skippedCount)
+			}
+			state.result.Warnings = append(state.result.Warnings, warning)
 		}
 	} else {
 		return nil
@@ -1056,6 +1123,10 @@ func importAirports(state *databaseMigrationState) error {
 			state.result.Warnings = append(state.result.Warnings, "源备份使用旧版订阅调度表，已自动转换为机场数据")
 		}
 	}
+	for i := range airports {
+		normalizeOptionalTimePtr(&airports[i].LastRunTime)
+		normalizeOptionalTimePtr(&airports[i].NextRunTime)
+	}
 
 	if err := insertRecords(state.tx, airports); err != nil {
 		return fmt.Errorf("导入机场失败: %w", err)
@@ -1099,6 +1170,10 @@ func importNodeCheckProfiles(state *databaseMigrationState) error {
 			state.result.Warnings = append(state.result.Warnings, "源备份未包含节点检测策略，已根据现有测速配置生成默认策略")
 		}
 	}
+	for i := range profiles {
+		normalizeOptionalTimePtr(&profiles[i].LastRunTime)
+		normalizeOptionalTimePtr(&profiles[i].NextRunTime)
+	}
 
 	if err := insertRecords(state.tx, profiles); err != nil {
 		return fmt.Errorf("导入节点检测策略失败: %w", err)
@@ -1114,6 +1189,9 @@ func importHosts(state *databaseMigrationState) error {
 	var hosts []models.Host
 	if err := state.source.Find(&hosts).Error; err != nil {
 		return fmt.Errorf("读取源 Host 失败: %w", err)
+	}
+	for i := range hosts {
+		normalizeOptionalTimePtr(&hosts[i].ExpireAt)
 	}
 	if err := insertRecords(state.tx, hosts); err != nil {
 		return fmt.Errorf("导入 Host 失败: %w", err)
@@ -1159,6 +1237,15 @@ func normalizeImportedSubscriptionShare(share *models.SubscriptionShare) {
 	}
 	if share.AccessCount <= 0 || share.LastAccessAt == nil || share.LastAccessAt.IsZero() {
 		share.LastAccessAt = nil
+	}
+}
+
+func normalizeOptionalTimePtr(value **time.Time) {
+	if value == nil || *value == nil {
+		return
+	}
+	if (*value).IsZero() {
+		*value = nil
 	}
 }
 
@@ -1427,6 +1514,7 @@ func sequenceTables(tx *gorm.DB) []string {
 		&models.Airport{},
 		&models.GroupAirportSort{},
 		&models.NodeCheckProfile{},
+		&models.Webhook{},
 	}
 
 	tables := make([]string, 0, len(modelsWithSequence))

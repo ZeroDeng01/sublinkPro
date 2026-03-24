@@ -21,16 +21,16 @@ const (
 // SubscriptionShare 订阅分享表
 type SubscriptionShare struct {
 	ID             int        `gorm:"primaryKey" json:"id"`
-	SubscriptionID int        `gorm:"index" json:"subscription_id"`        // 关联订阅ID
-	Token          string     `gorm:"uniqueIndex;size:64" json:"token"`    // 分享token（支持自定义或自动生成）
-	Name           string     `gorm:"size:100" json:"name"`                // 分享名称/备注
-	ExpireType     int        `gorm:"default:0" json:"expire_type"`        // 过期类型
-	ExpireDays     int        `gorm:"default:0" json:"expire_days"`        // 过期天数
-	ExpireAt       *time.Time `gorm:"type:datetime" json:"expire_at"`      // 过期时间
-	IsLegacy       bool       `gorm:"default:false" json:"is_legacy"`      // 是否为迁移的老链接
-	Enabled        bool       `gorm:"default:true" json:"enabled"`         // 是否启用
-	AccessCount    int        `gorm:"default:0" json:"access_count"`       // 访问次数
-	LastAccessAt   *time.Time `gorm:"type:datetime" json:"last_access_at"` // 最后访问时间
+	SubscriptionID int        `gorm:"index" json:"subscription_id"`     // 关联订阅ID
+	Token          string     `gorm:"uniqueIndex;size:64" json:"token"` // 分享token（支持自定义或自动生成）
+	Name           string     `gorm:"size:100" json:"name"`             // 分享名称/备注
+	ExpireType     int        `gorm:"default:0" json:"expire_type"`     // 过期类型
+	ExpireDays     int        `gorm:"default:0" json:"expire_days"`     // 过期天数
+	ExpireAt       *time.Time `json:"expire_at"`                        // 过期时间
+	IsLegacy       bool       `gorm:"default:false" json:"is_legacy"`   // 是否为迁移的老链接
+	Enabled        bool       `gorm:"default:true" json:"enabled"`      // 是否启用
+	AccessCount    int        `gorm:"default:0" json:"access_count"`    // 访问次数
+	LastAccessAt   *time.Time `json:"last_access_at"`                   // 最后访问时间
 	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 }

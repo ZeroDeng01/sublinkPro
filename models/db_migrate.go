@@ -381,7 +381,7 @@ DIRECT = direct
 			utils.Info("已将 %d 条 last_check 数据迁移到新字段", result.RowsAffected)
 
 			// 删除 last_check 列
-			if err := db.Exec("ALTER TABLE nodes DROP COLUMN last_check").Error; err != nil {
+			if err := db.Migrator().DropColumn("nodes", "last_check"); err != nil {
 				utils.Error("删除 last_check 列失败: %v", err)
 				// 不返回错误，因为某些数据库可能不支持 DROP COLUMN
 			} else {
@@ -461,74 +461,87 @@ DIRECT = direct
 
 		utils.Info("开始迁移 SubcriptionNode 表从 NodeName 到 NodeID...")
 
-		// 1. 备份原表 (如果存在先删除)
-		_ = db.Exec("DROP TABLE IF EXISTS subcription_nodes_backup")
-		if err := db.Exec("CREATE TABLE subcription_nodes_backup AS SELECT * FROM subcription_nodes").Error; err != nil {
-			utils.Warn("备份表创建失败: %v", err)
-			return fmt.Errorf("备份表失败: %w", err)
-		} else {
-			utils.Info("已创建备份表 subcription_nodes_backup")
+		type legacySubcriptionNode struct {
+			SubcriptionID int
+			NodeName      string
+			NodeID        int
+			Sort          int
 		}
 
-		// 2. 添加 node_id 列（如果不存在）
-		if !db.Migrator().HasColumn(&SubcriptionNode{}, "node_id") {
-			if err := db.Exec("ALTER TABLE subcription_nodes ADD COLUMN node_id INTEGER").Error; err != nil {
-				return fmt.Errorf("添加 node_id 列失败: %w", err)
+		var legacyRecords []legacySubcriptionNode
+		if err := db.Table("subcription_nodes").Find(&legacyRecords).Error; err != nil {
+			return fmt.Errorf("读取旧版 SubcriptionNode 数据失败: %w", err)
+		}
+
+		var nodes []struct {
+			ID   int
+			Name string
+		}
+		if err := db.Model(&Node{}).Select("id", "name").Find(&nodes).Error; err != nil {
+			return fmt.Errorf("读取节点名称映射失败: %w", err)
+		}
+
+		nodeNameToID := make(map[string]int, len(nodes))
+		for _, node := range nodes {
+			if node.Name == "" {
+				continue
+			}
+			if _, exists := nodeNameToID[node.Name]; !exists {
+				nodeNameToID[node.Name] = node.ID
 			}
 		}
 
-		// 3. 通过 JOIN 更新 node_id
-		result := db.Exec(`
-			UPDATE subcription_nodes 
-			SET node_id = (
-				SELECT nodes.id FROM nodes 
-				WHERE nodes.name = subcription_nodes.node_name
-				LIMIT 1
-			)
-			WHERE node_id IS NULL OR node_id = 0
-		`)
-		if result.Error != nil {
-			return fmt.Errorf("更新 node_id 失败: %w", result.Error)
-		}
-		utils.Info("已更新 %d 条记录的 node_id", result.RowsAffected)
+		convertedRecords := make([]SubcriptionNode, 0, len(legacyRecords))
+		seen := make(map[string]struct{}, len(legacyRecords))
+		skippedCount := 0
+		for _, legacy := range legacyRecords {
+			nodeID := legacy.NodeID
+			if nodeID <= 0 {
+				nodeID = nodeNameToID[legacy.NodeName]
+			}
+			if nodeID <= 0 {
+				skippedCount++
+				continue
+			}
 
-		// 4. 清理无效关联（node_name 对应的节点已不存在）
-		cleanResult := db.Exec("DELETE FROM subcription_nodes WHERE node_id IS NULL OR node_id = 0")
-		if cleanResult.Error != nil {
-			utils.Warn("清理无效关联失败: %v", cleanResult.Error)
-		} else if cleanResult.RowsAffected > 0 {
-			utils.Info("已清理 %d 条无效关联（节点已删除）", cleanResult.RowsAffected)
-		}
+			key := fmt.Sprintf("%d:%d", legacy.SubcriptionID, nodeID)
+			if _, exists := seen[key]; exists {
+				continue
+			}
+			seen[key] = struct{}{}
 
-		// 5. 重建表（SQLite 不支持 DROP COLUMN）
-		if err := db.Exec(`
-			CREATE TABLE subcription_nodes_new (
-				subcription_id INTEGER NOT NULL,
-				node_id INTEGER NOT NULL,
-				sort INTEGER DEFAULT 0,
-				PRIMARY KEY (subcription_id, node_id)
-			)
-		`).Error; err != nil {
-			return fmt.Errorf("创建新表失败: %w", err)
+			convertedRecords = append(convertedRecords, SubcriptionNode{
+				SubcriptionID: legacy.SubcriptionID,
+				NodeID:        nodeID,
+				Sort:          legacy.Sort,
+			})
 		}
 
-		if err := db.Exec(`
-			INSERT INTO subcription_nodes_new (subcription_id, node_id, sort)
-			SELECT subcription_id, node_id, sort FROM subcription_nodes
-			WHERE node_id IS NOT NULL AND node_id > 0
-		`).Error; err != nil {
-			return fmt.Errorf("迁移数据失败: %w", err)
+		if db.Migrator().HasTable("subcription_nodes_backup") {
+			if err := db.Migrator().DropTable("subcription_nodes_backup"); err != nil {
+				return fmt.Errorf("删除旧备份表失败: %w", err)
+			}
 		}
 
-		if err := db.Exec("DROP TABLE subcription_nodes").Error; err != nil {
-			return fmt.Errorf("删除旧表失败: %w", err)
+		if err := db.Migrator().RenameTable("subcription_nodes", "subcription_nodes_backup"); err != nil {
+			return fmt.Errorf("备份旧表失败: %w", err)
+		}
+		utils.Info("已创建备份表 subcription_nodes_backup")
+
+		if err := db.AutoMigrate(&SubcriptionNode{}); err != nil {
+			return fmt.Errorf("创建新版 SubcriptionNode 表失败: %w", err)
 		}
 
-		if err := db.Exec("ALTER TABLE subcription_nodes_new RENAME TO subcription_nodes").Error; err != nil {
-			return fmt.Errorf("重命名表失败: %w", err)
+		if len(convertedRecords) > 0 {
+			if err := db.Create(&convertedRecords).Error; err != nil {
+				return fmt.Errorf("迁移 SubcriptionNode 数据失败: %w", err)
+			}
 		}
 
-		utils.Info("SubcriptionNode 表迁移完成")
+		if skippedCount > 0 {
+			utils.Warn("有 %d 条旧版订阅节点关联因找不到对应节点而被跳过", skippedCount)
+		}
+		utils.Info("SubcriptionNode 表迁移完成，共迁移 %d 条记录", len(convertedRecords))
 		return nil
 	}); err != nil {
 		utils.Error("执行迁移 0014_migrate_subcription_node_to_id_v2 失败: %v", err)
@@ -987,12 +1000,14 @@ func Rollback0014_migrate_subcription_node_to_id_v2() error {
 	}
 
 	// 1. 删除当前表
-	if err := db.Exec("DROP TABLE IF EXISTS subcription_nodes").Error; err != nil {
-		return fmt.Errorf("删除当前表失败: %w", err)
+	if db.Migrator().HasTable("subcription_nodes") {
+		if err := db.Migrator().DropTable("subcription_nodes"); err != nil {
+			return fmt.Errorf("删除当前表失败: %w", err)
+		}
 	}
 
 	// 2. 从备份恢复
-	if err := db.Exec("CREATE TABLE subcription_nodes AS SELECT * FROM subcription_nodes_backup").Error; err != nil {
+	if err := db.Migrator().RenameTable("subcription_nodes_backup", "subcription_nodes"); err != nil {
 		return fmt.Errorf("从备份恢复失败: %w", err)
 	}
 

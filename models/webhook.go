@@ -19,8 +19,8 @@ type Webhook struct {
 	Enabled     bool       `json:"enabled" gorm:"not null;default:false;index"`
 	EventKeys   string     `json:"eventKeys" gorm:"type:text"`
 	LastTestAt  *time.Time `json:"lastTestAt"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
+	CreatedAt   time.Time  `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt   time.Time  `json:"updatedAt" gorm:"autoUpdateTime"`
 }
 
 func (w *Webhook) Add() error {

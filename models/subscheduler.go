@@ -14,11 +14,11 @@ type SubScheduler struct {
 	URL               string
 	CronExpr          string
 	Enabled           bool
-	SuccessCount      int        `gorm:"default:0"`
-	LastRunTime       *time.Time `gorm:"type:datetime"`
-	NextRunTime       *time.Time `gorm:"type:datetime"`
-	CreatedAt         time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt         time.Time  `gorm:"autoUpdateTime"`
+	SuccessCount      int `gorm:"default:0"`
+	LastRunTime       *time.Time
+	NextRunTime       *time.Time
+	CreatedAt         time.Time `gorm:"autoCreateTime"`
+	UpdatedAt         time.Time `gorm:"autoUpdateTime"`
 	Group             string
 	DownloadWithProxy bool   `gorm:"default:false"`
 	ProxyLink         string `gorm:"type:text"`

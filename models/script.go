@@ -13,8 +13,8 @@ type Script struct {
 	Name      string    `json:"name" gorm:"not null"`
 	Version   string    `json:"version" gorm:"default:0.0.0"`
 	Content   string    `json:"content" gorm:"not null"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // scriptCache 使用新的泛型缓存

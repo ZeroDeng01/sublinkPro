@@ -424,15 +424,15 @@ var speedResultFields = []speedResultField{
 	{"landing_ip", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.LandingIP)) }},
 	{"is_broadcast", func(r SpeedTestResult) string {
 		if r.IsBroadcast {
-			return "1"
+			return "TRUE"
 		}
-		return "0"
+		return "FALSE"
 	}},
 	{"is_residential", func(r SpeedTestResult) string {
 		if r.IsResidential {
-			return "1"
+			return "TRUE"
 		}
-		return "0"
+		return "FALSE"
 	}},
 	{"fraud_score", func(r SpeedTestResult) string { return fmt.Sprintf("%d", r.FraudScore) }},
 	{"quality_status", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.QualityStatus)) }},
