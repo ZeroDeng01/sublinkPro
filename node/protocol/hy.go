@@ -8,6 +8,26 @@ import (
 	"sublink/utils"
 )
 
+func init() {
+	base := newProtocolSpec("hysteria", []string{"hysteria://", "hy://"}, "Hysteria", "#f9a825", "H", HY{}, "Name", DecodeHYURL, EncodeHYURL, func(h HY) LinkIdentity {
+		return buildIdentity("hysteria", h.Name, h.Host, utils.GetPortString(h.Port))
+	},
+		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Host", Label: "服务器地址", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
+		FieldMeta{Name: "Auth", Label: "认证", Type: "string", Group: "auth", Secret: true, Advanced: true},
+		FieldMeta{Name: "Protocol", Label: "协议", Type: "string", Group: "transport", Options: []string{"udp", "wechat-video", "faketcp"}},
+		FieldMeta{Name: "UpMbps", Label: "上行 Mbps", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "DownMbps", Label: "下行 Mbps", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Peer", Label: "Peer", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "ALPN", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
+		FieldMeta{Name: "Insecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
+	)
+	MustRegisterProtocol(newProxyProtocolSpec(base, buildHYProxy, func(proxy Proxy) bool {
+		return proxyTypeMatches(proxy, "hysteria")
+	}, ConvertProxyToHy, EncodeHYURL))
+}
+
 type HY struct {
 	Host     string
 	Port     interface{}
@@ -149,4 +169,16 @@ func ConvertProxyToHy(proxy Proxy) HY {
 	}
 
 	return hy
+}
+
+func buildHYProxy(link Urls, config OutputConfig) (Proxy, error) {
+	hy, err := DecodeHYURL(link.Url)
+	if err != nil {
+		return Proxy{}, err
+	}
+	if hy.Name == "" {
+		hy.Name = fmt.Sprintf("%s:%s", hy.Host, utils.GetPortString(hy.Port))
+	}
+	skipCert := config.Cert || hy.Insecure == 1
+	return Proxy{Name: hy.Name, Type: "hysteria", Server: hy.Host, Port: FlexPort(utils.GetPortInt(hy.Port)), Auth_str: hy.Auth, Up: hy.UpMbps, Down: hy.DownMbps, Up_Speed: hy.UpMbps, Down_Speed: hy.DownMbps, Alpn: hy.ALPN, Peer: hy.Peer, Protocol: hy.Protocol, Udp: true, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
 }

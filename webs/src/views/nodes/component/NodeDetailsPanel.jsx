@@ -56,6 +56,7 @@ import {
   getResidentialDisplay,
   getSpeedDisplay
 } from '../utils';
+import { resolveProtocolPresentationFromLink } from 'utils/protocolPresentation';
 
 // components
 import NodeRawInfoEditor from './NodeRawInfoEditor';
@@ -65,51 +66,21 @@ import NodeRawInfoEditor from './NodeRawInfoEditor';
  * 支持使用后端协议元数据或本地映射
  */
 const getProtocolInfo = (link, protocolMeta) => {
-  if (!link) return { name: '未知', color: '#9e9e9e', icon: <FilterVintageIcon /> };
+  const presentation = resolveProtocolPresentationFromLink(link, protocolMeta);
 
-  // 如果有后端协议元数据，优先使用
-  if (protocolMeta && protocolMeta.length > 0) {
-    const linkLower = link.toLowerCase();
-    for (const proto of protocolMeta) {
-      if (linkLower.startsWith(proto.name + '://') || (proto.name === 'hysteria2' && linkLower.startsWith('hy2://'))) {
-        return {
-          name: proto.label,
-          color: proto.color || '#616161',
-          icon: proto.icon || proto.label.charAt(0).toUpperCase()
-        };
-      }
-    }
+  if (!link) {
+    return { name: presentation.label, color: presentation.color, icon: <FilterVintageIcon /> };
   }
 
-  // 后备的本地映射
-  const protocolMap = {
-    'vmess://': { name: 'VMess', color: '#1976d2', icon: 'V' },
-    'vless://': { name: 'VLESS', color: '#7b1fa2', icon: 'V' },
-    'trojan://': { name: 'Trojan', color: '#d32f2f', icon: 'T' },
-    'ss://': { name: 'Shadowsocks', color: '#2e7d32', icon: 'S' },
-    'ssr://': { name: 'ShadowsocksR', color: '#e64a19', icon: 'R' },
-    'hysteria://': { name: 'Hysteria', color: '#f9a825', icon: 'H' },
-    'hysteria2://': { name: 'Hysteria2', color: '#ef6c00', icon: 'H' },
-    'hy2://': { name: 'Hysteria2', color: '#ef6c00', icon: 'H' },
-    'tuic://': { name: 'TUIC', color: '#0277bd', icon: 'T' },
-    'wireguard://': { name: 'WireGuard', color: '#455a64', icon: 'W' },
-    'wg://': { name: 'WireGuard', color: '#455a64', icon: 'W' },
-    'naive://': { name: 'Naive', color: '#5d4037', icon: 'N' },
-    'reality://': { name: 'Reality', color: '#c2185b', icon: 'R' },
-    'socks5://': { name: 'Socks5', color: '#116ea4ff', icon: 'S' },
-    'socks://': { name: 'Socks', color: '#dd4984ff', icon: 'S' },
-    'anytls://': { name: 'AnyTLS', color: '#20a84c', icon: 'A' },
-    'http://': { name: 'HTTP', color: '#0288d1', icon: 'H' },
-    'https://': { name: 'HTTPS', color: '#0277bd', icon: 'H' }
+  if (!presentation.value) {
+    return { name: presentation.label, color: presentation.color, icon: <VpnLockIcon /> };
+  }
+
+  return {
+    name: presentation.label,
+    color: presentation.color,
+    icon: presentation.icon
   };
-
-  const linkLower = link.toLowerCase();
-  for (const [prefix, info] of Object.entries(protocolMap)) {
-    if (linkLower.startsWith(prefix)) {
-      return info;
-    }
-  }
-  return { name: '其他', color: '#616161', icon: <VpnLockIcon /> };
 };
 
 /**

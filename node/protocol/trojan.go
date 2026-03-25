@@ -8,6 +8,32 @@ import (
 	"sublink/utils"
 )
 
+func init() {
+	base := newProtocolSpec("trojan", []string{"trojan://"}, "Trojan", "#d32f2f", "T", Trojan{}, "Name", DecodeTrojanURL, EncodeTrojanURL, func(t Trojan) LinkIdentity {
+		return buildIdentity("trojan", t.Name, t.Hostname, utils.GetPortString(t.Port))
+	},
+		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Hostname", Label: "服务器地址", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
+		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true},
+		FieldMeta{Name: "Query.Type", Label: "传输层", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "grpc"}},
+		FieldMeta{Name: "Query.Path", Label: "路径", Type: "string", Group: "transport", Placeholder: "/ws", Advanced: true},
+		FieldMeta{Name: "Query.Host", Label: "Host", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Query.Flow", Label: "Flow", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Query.Security", Label: "安全类型", Type: "string", Group: "tls", Options: []string{"tls", "reality"}, Advanced: true},
+		FieldMeta{Name: "Query.Sni", Label: "SNI", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Peer", Label: "Peer", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Alpn", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
+		FieldMeta{Name: "Query.Fp", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
+		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
+	)
+	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildTrojanProxy, func(proxy Proxy) bool {
+		return proxyTypeMatches(proxy, "trojan")
+	}, ConvertProxyToTrojan, EncodeTrojanURL, buildTrojanSurgeLine))
+}
+
 type Trojan struct {
 	Password string      `json:"password"`
 	Hostname string      `json:"hostname"`
@@ -228,4 +254,32 @@ func ConvertProxyToTrojan(proxy Proxy) Trojan {
 	}
 
 	return trojan
+}
+
+func buildTrojanProxy(link Urls, config OutputConfig) (Proxy, error) {
+	trojan, err := DecodeTrojanURL(link.Url)
+	if err != nil {
+		return Proxy{}, err
+	}
+	if trojan.Name == "" {
+		trojan.Name = fmt.Sprintf("%s:%s", trojan.Hostname, utils.GetPortString(trojan.Port))
+	}
+	wsOpts := map[string]interface{}{"path": trojan.Query.Path, "headers": map[string]interface{}{"Host": trojan.Query.Host}}
+	DeleteOpts(wsOpts)
+	skipCert := config.Cert || trojan.Query.AllowInsecure == 1
+	return Proxy{Name: trojan.Name, Type: "trojan", Server: trojan.Hostname, Port: FlexPort(utils.GetPortInt(trojan.Port)), Password: trojan.Password, Client_fingerprint: trojan.Query.Fp, Sni: trojan.Query.Sni, Network: trojan.Query.Type, Flow: trojan.Query.Flow, Alpn: trojan.Query.Alpn, Ws_opts: wsOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
+}
+
+func buildTrojanSurgeLine(link string, config OutputConfig) (string, string, error) {
+	trojan, err := DecodeTrojanURL(link)
+	if err != nil {
+		return "", "", err
+	}
+	server := replaceSurgeHost(trojan.Hostname, config)
+	skipCert := config.Cert || trojan.Query.AllowInsecure == 1
+	line := fmt.Sprintf("%s = trojan, %s, %d, password=%s, udp-relay=%t, skip-cert-verify=%t", trojan.Name, server, utils.GetPortInt(trojan.Port), trojan.Password, config.Udp, skipCert)
+	if trojan.Query.Sni != "" {
+		line = fmt.Sprintf("%s, sni=%s", line, trojan.Query.Sni)
+	}
+	return line, trojan.Name, nil
 }

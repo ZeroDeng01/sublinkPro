@@ -166,6 +166,7 @@ docker-compose up -d
 | 文档 | 说明 |
 |:---|:---|
 | [🛠️ 开发指南](docs/development.md) | 项目结构、本地开发、定时任务开发 |
+| [🔌 协议扩展指南](docs/development.md#-新增协议接入指南) | 如何新增协议、注册能力、字段元数据、ProtocolDemo 示例 |
 
 ---
 

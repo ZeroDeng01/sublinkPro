@@ -6,33 +6,7 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-
-/**
- * 协议对应的渐变色主题
- * 优化原则：使用高饱和度深色渐变，确保白色文字始终清晰可读
- */
-const protocolThemes = {
-  VMess: { bg: 'linear-gradient(135deg, #5046e5 0%, #7c3aed 100%)' },
-  VLESS: { bg: 'linear-gradient(135deg, #db2777 0%, #9333ea 100%)' },
-  Trojan: { bg: 'linear-gradient(135deg, #0284c7 0%, #0891b2 100%)' },
-  SS: { bg: 'linear-gradient(135deg, #059669 0%, #10b981 100%)' },
-  Shadowsocks: { bg: 'linear-gradient(135deg, #059669 0%, #10b981 100%)' },
-  SSR: { bg: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)' },
-  ShadowsocksR: { bg: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)' },
-  Hysteria: { bg: 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%)' },
-  Hysteria2: { bg: 'linear-gradient(135deg, #be185d 0%, #ec4899 100%)' },
-  TUIC: { bg: 'linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%)' },
-  WireGuard: { bg: 'linear-gradient(135deg, #1e40af 0%, #7c3aed 100%)' },
-  Naive: { bg: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)' },
-  NaiveProxy: { bg: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)' },
-  Reality: { bg: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)' },
-  SOCKS5: { bg: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)' },
-  AnyTLS: { bg: 'linear-gradient(135deg, #047857 0%, #10b981 100%)' },
-  HTTP: { bg: 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)' },
-  HTTPS: { bg: 'linear-gradient(135deg, #01579b 0%, #0277bd 100%)' }
-};
-
-const defaultTheme = { bg: 'linear-gradient(135deg, #5046e5 0%, #7c3aed 100%)' };
+import { getProtocolGradient } from '../../../utils/protocolPresentation';
 
 /**
  * 获取状态颜色
@@ -79,7 +53,7 @@ const getSpeedDisplay = (speed, speedStatus) => {
  */
 export default function NodePreviewCard({ node, onClick }) {
   const theme = useMemo(() => {
-    return protocolThemes[node.Protocol] || defaultTheme;
+    return { bg: getProtocolGradient(node.Protocol) };
   }, [node.Protocol]);
 
   const delayDisplay = getDelayDisplay(node.DelayTime, node.DelayStatus);

@@ -98,7 +98,7 @@ func UpdateNodeRawInfo(c *gin.Context) {
 	}
 
 	// 获取节点名称（不同协议名称字段不同）
-	newLinkName := getNameFromFields(newInfo.Protocol, newInfo.Fields)
+	newLinkName := protocol.ExtractNodeNameFromFields(newInfo.Protocol, newInfo.Fields)
 
 	// 更新数据库
 	updates := map[string]interface{}{
@@ -132,27 +132,6 @@ func UpdateNodeRawInfo(c *gin.Context) {
 		"link":     newLink,
 		"linkName": newLinkName,
 	})
-}
-
-// getNameFromFields 从字段中提取节点名称
-func getNameFromFields(protocol string, fields map[string]interface{}) string {
-	// 不同协议的名称字段不同
-	switch protocol {
-	case "vmess":
-		if ps, ok := fields["Ps"].(string); ok {
-			return ps
-		}
-	case "ssr":
-		if remarks, ok := fields["Qurey.Remarks"].(string); ok {
-			return remarks
-		}
-	default:
-		// 大多数协议使用 Name 字段
-		if name, ok := fields["Name"].(string); ok {
-			return name
-		}
-	}
-	return ""
 }
 
 // GetNodeRawInfo 获取节点原始信息

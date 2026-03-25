@@ -520,6 +520,7 @@ func Run() {
 
 	// 初始化去重字段元数据缓存（通过反射扫描协议结构体和Node模型）
 	protocol.InitProtocolMeta()
+	utils.SetProtocolLinkFuncs(protocol.GetProtocolLabelFromLink, protocol.RenameNodeLink)
 	models.InitNodeFieldsMeta()
 
 	// 初始化任务管理器

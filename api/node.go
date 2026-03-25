@@ -1,7 +1,6 @@
 package api
 
 import (
-	"net/url"
 	"strconv"
 	"strings"
 	"sublink/models"
@@ -123,158 +122,18 @@ func NodeUpdadte(c *gin.Context) {
 		// 转换为 URL 格式
 		link = protocol.EncodeWireGuardURL(wg)
 	}
-	u, err := url.Parse(link)
+	identity, err := protocol.ExtractLinkIdentity(link)
 	if err != nil {
 		utils.Error("解析节点链接失败: %v", err)
 		return
 	}
-	switch {
-	case u.Scheme == "ss":
-		ss, err := protocol.DecodeSSURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if Node.Name == "" {
-			Node.Name = ss.Name
-		}
-		Node.LinkName = ss.Name
-		Node.LinkAddress = ss.Server + ":" + utils.GetPortString(ss.Port)
-		Node.LinkHost = ss.Server
-		Node.LinkPort = utils.GetPortString(ss.Port)
-	case u.Scheme == "ssr":
-		ssr, err := protocol.DecodeSSRURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if Node.Name == "" {
-			Node.Name = ssr.Qurey.Remarks
-		}
-		Node.LinkName = ssr.Qurey.Remarks
-		Node.LinkAddress = ssr.Server + ":" + utils.GetPortString(ssr.Port)
-		Node.LinkHost = ssr.Server
-		Node.LinkPort = utils.GetPortString(ssr.Port)
-	case u.Scheme == "trojan":
-		trojan, err := protocol.DecodeTrojanURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-
-		if Node.Name == "" {
-			Node.Name = trojan.Name
-		}
-		Node.LinkName = trojan.Name
-		Node.LinkAddress = trojan.Hostname + ":" + utils.GetPortString(trojan.Port)
-		Node.LinkHost = trojan.Hostname
-		Node.LinkPort = utils.GetPortString(trojan.Port)
-	case u.Scheme == "vmess":
-		vmess, err := protocol.DecodeVMESSURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if Node.Name == "" {
-			Node.Name = vmess.Ps
-		}
-		Node.LinkName = vmess.Ps
-		prot := utils.GetPortString(vmess.Port)
-		Node.LinkAddress = vmess.Add + ":" + prot
-		Node.LinkHost = vmess.Host
-		Node.LinkPort = prot
-	case u.Scheme == "vless":
-		vless, err := protocol.DecodeVLESSURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if Node.Name == "" {
-			Node.Name = vless.Name
-		}
-		Node.LinkName = vless.Name
-		Node.LinkAddress = vless.Server + ":" + utils.GetPortString(vless.Port)
-		Node.LinkHost = vless.Server
-		Node.LinkPort = utils.GetPortString(vless.Port)
-	case u.Scheme == "hy" || u.Scheme == "hysteria":
-		hy, err := protocol.DecodeHYURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if Node.Name == "" {
-			Node.Name = hy.Name
-		}
-		Node.LinkName = hy.Name
-		Node.LinkAddress = hy.Host + ":" + utils.GetPortString(hy.Port)
-		Node.LinkHost = hy.Host
-		Node.LinkPort = utils.GetPortString(hy.Port)
-	case u.Scheme == "hy2" || u.Scheme == "hysteria2":
-		hy2, err := protocol.DecodeHY2URL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if Node.Name == "" {
-			Node.Name = hy2.Name
-		}
-		Node.LinkName = hy2.Name
-		Node.LinkAddress = hy2.Host + ":" + utils.GetPortString(hy2.Port)
-		Node.LinkHost = hy2.Host
-		Node.LinkPort = utils.GetPortString(hy2.Port)
-	case u.Scheme == "tuic":
-		tuic, err := protocol.DecodeTuicURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if Node.Name == "" {
-			Node.Name = tuic.Name
-		}
-		Node.LinkName = tuic.Name
-		Node.LinkAddress = tuic.Host + ":" + utils.GetPortString(tuic.Port)
-		Node.LinkHost = tuic.Host
-		Node.LinkPort = utils.GetPortString(tuic.Port)
-	case u.Scheme == "socks5":
-		socks5, err := protocol.DecodeSocks5URL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if Node.Name == "" {
-			Node.Name = socks5.Name
-		}
-		Node.LinkName = socks5.Name
-		Node.LinkAddress = socks5.Server + ":" + utils.GetPortString(socks5.Port)
-		Node.LinkHost = socks5.Server
-		Node.LinkPort = utils.GetPortString(socks5.Port)
-	case u.Scheme == "http" || u.Scheme == "https":
-		httpProxy, err := protocol.DecodeHTTPURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if Node.Name == "" {
-			Node.Name = httpProxy.Name
-		}
-		Node.LinkName = httpProxy.Name
-		Node.LinkAddress = httpProxy.Server + ":" + utils.GetPortString(httpProxy.Port)
-		Node.LinkHost = httpProxy.Server
-		Node.LinkPort = utils.GetPortString(httpProxy.Port)
-	case u.Scheme == "wg" || u.Scheme == "wireguard":
-		wg, err := protocol.DecodeWireGuardURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if Node.Name == "" {
-			Node.Name = wg.Name
-		}
-		Node.LinkName = wg.Name
-		Node.LinkAddress = wg.Server + ":" + utils.GetPortString(wg.Port)
-		Node.LinkHost = wg.Server
-		Node.LinkPort = utils.GetPortString(wg.Port)
+	if Node.Name == "" {
+		Node.Name = identity.Name
 	}
+	Node.LinkName = identity.Name
+	Node.LinkAddress = identity.Address
+	Node.LinkHost = identity.Host
+	Node.LinkPort = identity.Port
 
 	Node.Link = link
 	Node.DialerProxyName = dialerProxyName
@@ -608,177 +467,18 @@ func NodeAdd(c *gin.Context) {
 		return
 	}
 	Node.Name = name
-	u, err := url.Parse(link)
+	identity, err := protocol.ExtractLinkIdentity(link)
 	if err != nil {
 		utils.Error("解析节点链接失败: %v", err)
 		return
 	}
-	switch {
-	case u.Scheme == "ss":
-		ss, err := protocol.DecodeSSURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if Node.Name == "" {
-			Node.Name = ss.Name
-		}
-		Node.LinkName = ss.Name
-		Node.LinkAddress = ss.Server + ":" + utils.GetPortString(ss.Port)
-		Node.LinkHost = ss.Server
-		Node.LinkPort = utils.GetPortString(ss.Port)
-	case u.Scheme == "ssr":
-		ssr, err := protocol.DecodeSSRURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if name == "" {
-			Node.Name = ssr.Qurey.Remarks
-		}
-		Node.LinkName = ssr.Qurey.Remarks
-		Node.LinkAddress = ssr.Server + ":" + utils.GetPortString(ssr.Port)
-		Node.LinkHost = ssr.Server
-		Node.LinkPort = utils.GetPortString(ssr.Port)
-	case u.Scheme == "trojan":
-		trojan, err := protocol.DecodeTrojanURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if name == "" {
-			Node.Name = trojan.Name
-		}
-		Node.LinkName = trojan.Name
-		Node.LinkAddress = trojan.Hostname + ":" + utils.GetPortString(trojan.Port)
-		Node.LinkHost = trojan.Hostname
-		Node.LinkPort = utils.GetPortString(trojan.Port)
-	case u.Scheme == "vmess":
-		vmess, err := protocol.DecodeVMESSURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if name == "" {
-			Node.Name = vmess.Ps
-		}
-		Node.LinkName = vmess.Ps
-		port := utils.GetPortString(vmess.Port)
-		Node.LinkAddress = vmess.Add + ":" + port
-		Node.LinkHost = vmess.Host
-		Node.LinkPort = port
-	case u.Scheme == "vless":
-		vless, err := protocol.DecodeVLESSURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-
-		if name == "" {
-			Node.Name = vless.Name
-		}
-		Node.LinkName = vless.Name
-		Node.LinkAddress = vless.Server + ":" + utils.GetPortString(vless.Port)
-		Node.LinkHost = vless.Server
-		Node.LinkPort = utils.GetPortString(vless.Port)
-	case u.Scheme == "hy" || u.Scheme == "hysteria":
-		hy, err := protocol.DecodeHYURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-
-		if name == "" {
-			Node.Name = hy.Name
-		}
-		Node.LinkName = hy.Name
-		Node.LinkAddress = hy.Host + ":" + utils.GetPortString(hy.Port)
-		Node.LinkHost = hy.Host
-		Node.LinkPort = utils.GetPortString(hy.Port)
-	case u.Scheme == "hy2" || u.Scheme == "hysteria2":
-		hy2, err := protocol.DecodeHY2URL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-
-		if name == "" {
-			Node.Name = hy2.Name
-		}
-		Node.LinkName = hy2.Name
-		Node.LinkAddress = hy2.Host + ":" + utils.GetPortString(hy2.Port)
-		Node.LinkHost = hy2.Host
-		Node.LinkPort = utils.GetPortString(hy2.Port)
-	case u.Scheme == "tuic":
-		tuic, err := protocol.DecodeTuicURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-
-		if name == "" {
-			Node.Name = tuic.Name
-		}
-		Node.LinkName = tuic.Name
-		Node.LinkAddress = tuic.Host + ":" + utils.GetPortString(tuic.Port)
-		Node.LinkHost = tuic.Host
-		Node.LinkPort = utils.GetPortString(tuic.Port)
-	case u.Scheme == "socks5":
-		socks5, err := protocol.DecodeSocks5URL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-
-		if name == "" {
-			Node.Name = socks5.Name
-		}
-		Node.LinkName = socks5.Name
-		Node.LinkAddress = socks5.Server + ":" + utils.GetPortString(socks5.Port)
-		Node.LinkHost = socks5.Server
-		Node.LinkPort = utils.GetPortString(socks5.Port)
-	case u.Scheme == "anytls":
-		anytls, err := protocol.DecodeAnyTLSURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-
-		if name == "" {
-			Node.Name = anytls.Name
-		}
-		Node.LinkName = anytls.Name
-		Node.LinkAddress = anytls.Server + ":" + utils.GetPortString(anytls.Port)
-		Node.LinkHost = anytls.Server
-		Node.LinkPort = utils.GetPortString(anytls.Port)
-	case u.Scheme == "wg" || u.Scheme == "wireguard":
-		wg, err := protocol.DecodeWireGuardURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-
-		if name == "" {
-			Node.Name = wg.Name
-		}
-		Node.LinkName = wg.Name
-		Node.LinkAddress = wg.Server + ":" + utils.GetPortString(wg.Port)
-		Node.LinkHost = wg.Server
-		Node.LinkPort = utils.GetPortString(wg.Port)
-	case u.Scheme == "http" || u.Scheme == "https":
-		httpProxy, err := protocol.DecodeHTTPURL(link)
-		if err != nil {
-			utils.Error("解析节点链接失败: %v", err)
-			return
-		}
-		if name == "" {
-			Node.Name = httpProxy.Name
-		}
-		Node.LinkName = httpProxy.Name
-		Node.LinkAddress = httpProxy.Server + ":" + utils.GetPortString(httpProxy.Port)
-		Node.LinkHost = httpProxy.Server
-		Node.LinkPort = utils.GetPortString(httpProxy.Port)
+	if name == "" {
+		Node.Name = identity.Name
 	}
+	Node.LinkName = identity.Name
+	Node.LinkAddress = identity.Address
+	Node.LinkHost = identity.Host
+	Node.LinkPort = identity.Port
 
 	Node.Link = link
 	Node.DialerProxyName = dialerProxyName

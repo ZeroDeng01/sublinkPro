@@ -3,7 +3,6 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strings"
 
@@ -26,6 +25,14 @@ func SetTagGroupTagsFunc(fn TagGroupTagsFn) {
 // tagGroupRegex 匹配 $TagGroup(xxx) 格式的正则
 var tagGroupRegex = regexp.MustCompile(`\$TagGroup\(([^)]+)\)`)
 var unlockRegex = regexp.MustCompile(`\$Unlock\(([^)]+)\)`)
+
+var protocolLabelFromLinkFunc func(string) string
+var renameNodeLinkFunc func(string, string) string
+
+func SetProtocolLinkFuncs(labelFunc func(string) string, renameFunc func(string, string) string) {
+	protocolLabelFromLinkFunc = labelFunc
+	renameNodeLinkFunc = renameFunc
+}
 
 type renameUnlockSummary struct {
 	Providers []renameUnlockProvider `json:"providers"`
@@ -553,29 +560,10 @@ func GetProtocolFromLink(link string) string {
 	if link == "" {
 		return "未知"
 	}
-
-	// 常见协议前缀映射（返回显示名称，用于节点重命名等场景）
-	protocolPrefixes := map[string]string{
-		"ss://":        "SS",
-		"ssr://":       "SSR",
-		"vmess://":     "VMess",
-		"vless://":     "VLESS",
-		"trojan://":    "Trojan",
-		"hysteria://":  "Hysteria",
-		"hysteria2://": "Hysteria2",
-		"hy2://":       "Hysteria2",
-		"tuic://":      "TUIC",
-		"wg://":        "WireGuard",
-		"wireguard://": "WireGuard",
-		"naive://":     "NaiveProxy",
-		"anytls://":    "AnyTLS",
-		"socks5://":    "SOCKS5",
-	}
-
-	linkLower := strings.ToLower(link)
-	for prefix, name := range protocolPrefixes {
-		if strings.HasPrefix(linkLower, prefix) {
-			return name
+	if protocolLabelFromLinkFunc != nil {
+		label := protocolLabelFromLinkFunc(link)
+		if label != "" {
+			return label
 		}
 	}
 
@@ -590,128 +578,13 @@ func RenameNodeLink(link string, newName string) string {
 	if link == "" || newName == "" {
 		return link
 	}
-
-	// 获取协议scheme
-	idx := strings.Index(link, "://")
-	if idx == -1 {
-		return link
-	}
-	scheme := strings.ToLower(link[:idx])
-
-	switch scheme {
-	case "vmess":
-		return renameVmessLink(link, newName)
-	case "vless", "trojan", "hy2", "hysteria2", "hysteria", "tuic", "anytls", "socks5", "http", "https":
-		return renameFragmentLink(link, newName)
-	case "ss":
-		return renameSSLink(link, newName)
-	case "ssr":
-		return renameSSRLink(link, newName)
-	default:
-		// 尝试使用Fragment方式
-		return renameFragmentLink(link, newName)
-	}
-}
-
-// renameVmessLink VMess协议重命名 (base64 JSON)
-func renameVmessLink(link string, newName string) string {
-	if !strings.HasPrefix(link, "vmess://") {
-		return link
-	}
-
-	encoded := strings.TrimPrefix(link, "vmess://")
-	decoded := Base64Decode(strings.TrimSpace(encoded))
-	if decoded == "" {
-		return link
-	}
-
-	var vmess map[string]interface{}
-	if err := json.Unmarshal([]byte(decoded), &vmess); err != nil {
-		return link
-	}
-
-	vmess["ps"] = newName
-
-	newJSON, err := json.Marshal(vmess)
-	if err != nil {
-		return link
-	}
-
-	return "vmess://" + Base64Encode(string(newJSON))
-}
-
-// renameFragmentLink 使用URL Fragment的协议重命名 (vless, trojan, hy2, tuic等)
-func renameFragmentLink(link string, newName string) string {
-	u, err := url.Parse(link)
-	if err != nil {
-		return link
-	}
-	u.Fragment = newName
-	return u.String()
-}
-
-// renameSSLink SS协议重命名
-func renameSSLink(link string, newName string) string {
-	if !strings.HasPrefix(link, "ss://") {
-		return link
-	}
-
-	// SS链接可能有多种格式:
-	// 1. ss://base64(method:password)@host:port#name (SIP002)
-	// 2. ss://base64(全部内容)
-
-	u, err := url.Parse(link)
-	if err != nil {
-		// 尝试解析纯base64格式
-		encoded := strings.TrimPrefix(link, "ss://")
-		// 分离 #name 部分
-		hashIdx := strings.LastIndex(encoded, "#")
-		if hashIdx != -1 {
-			encoded = encoded[:hashIdx]
+	if renameNodeLinkFunc != nil {
+		renamed := renameNodeLinkFunc(link, newName)
+		if renamed != "" {
+			return renamed
 		}
-		return "ss://" + encoded + "#" + url.PathEscape(newName)
 	}
-	u.Fragment = newName
-	return u.String()
-}
-
-// renameSSRLink SSR协议重命名 (需要解码base64)
-func renameSSRLink(link string, newName string) string {
-	if !strings.HasPrefix(link, "ssr://") {
-		return link
-	}
-
-	encoded := strings.TrimPrefix(link, "ssr://")
-	decoded := Base64Decode(encoded)
-	if decoded == "" {
-		return link
-	}
-
-	// SSR格式: host:port:protocol:method:obfs:base64(password)/?params
-	// remarks=base64(name)
-	if strings.Contains(decoded, "remarks=") {
-		// 替换remarks参数
-		parts := strings.Split(decoded, "remarks=")
-		if len(parts) >= 2 {
-			// 找到remarks的结束位置（下一个&或字符串结束）
-			endIdx := strings.Index(parts[1], "&")
-			var suffix string
-			if endIdx != -1 {
-				suffix = parts[1][endIdx:]
-			} else {
-				suffix = ""
-			}
-			decoded = parts[0] + "remarks=" + Base64Encode(newName) + suffix
-		}
-	} else if strings.Contains(decoded, "/?") {
-		// 有参数但没有remarks，添加remarks
-		decoded = decoded + "&remarks=" + Base64Encode(newName)
-	} else {
-		// 没有参数，添加参数
-		decoded = decoded + "/?remarks=" + Base64Encode(newName)
-	}
-
-	return "ssr://" + Base64Encode(decoded)
+	return link
 }
 
 func formatQualityText(info NodeInfo) string {

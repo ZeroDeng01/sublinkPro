@@ -1443,40 +1443,11 @@ func deduplicateByProtocol(nodes []Node, protocolRules map[string][]string) []No
 
 // generateProtocolKey 根据协议解析结果生成去重Key
 func generateProtocolKey(link string, protoType string, fields []string) string {
-	var protoObj interface{}
-	var err error
-
-	// 根据协议类型解析节点
-	switch protoType {
-	case "vmess":
-		protoObj, err = protocol.DecodeVMESSURL(link)
-	case "vless":
-		protoObj, err = protocol.DecodeVLESSURL(link)
-	case "trojan":
-		protoObj, err = protocol.DecodeTrojanURL(link)
-	case "ss":
-		protoObj, err = protocol.DecodeSSURL(link)
-	case "ssr":
-		protoObj, err = protocol.DecodeSSRURL(link)
-	case "hysteria":
-		protoObj, err = protocol.DecodeHYURL(link)
-	case "hysteria2":
-		protoObj, err = protocol.DecodeHY2URL(link)
-	case "tuic":
-		protoObj, err = protocol.DecodeTuicURL(link)
-	case "anytls":
-		protoObj, err = protocol.DecodeAnyTLSURL(link)
-	case "socks5":
-		protoObj, err = protocol.DecodeSocks5URL(link)
-	case "http":
-		protoObj, err = protocol.DecodeHTTPURL(link)
-	case "https":
-		protoObj, err = protocol.DecodeHTTPURL(link)
-	default:
+	protoObj, detectedProto, err := protocol.DecodeProtocolObject(link)
+	if err != nil {
 		return ""
 	}
-
-	if err != nil {
+	if detectedProto != protoType {
 		return ""
 	}
 

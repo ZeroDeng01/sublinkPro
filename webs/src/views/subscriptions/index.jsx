@@ -30,7 +30,7 @@ import {
   previewSubscriptionNodes
 } from 'api/subscriptions';
 import { getNodeCheckMeta } from 'api/nodeCheck';
-import { getNodes, getNodeCountries, getNodeGroups, getNodeSources, getNodeProtocols } from 'api/nodes';
+import { getNodes, getNodeCountries, getNodeGroups, getNodeSources, getNodeProtocols, getProtocolUIMeta } from 'api/nodes';
 import { getTemplates } from 'api/templates';
 import { getScripts } from 'api/scripts';
 import { getTags } from 'api/tags';
@@ -219,18 +219,29 @@ export default function SubscriptionList() {
   // 获取其他数据（不分页）
   const fetchOtherData = useCallback(async () => {
     try {
-      const [nodesRes, templatesRes, scriptsRes, countriesRes, groupsRes, sourcesRes, tagsRes, protocolsRes, nodeCheckMetaRes] =
-        await Promise.all([
-          getNodes(),
-          getTemplates(),
-          getScripts(),
-          getNodeCountries(),
-          getNodeGroups(),
-          getNodeSources(),
-          getTags(),
-          getNodeProtocols(),
-          getNodeCheckMeta()
-        ]);
+      const [
+        nodesRes,
+        templatesRes,
+        scriptsRes,
+        countriesRes,
+        groupsRes,
+        sourcesRes,
+        tagsRes,
+        protocolsRes,
+        protocolMetaRes,
+        nodeCheckMetaRes
+      ] = await Promise.all([
+        getNodes(),
+        getTemplates(),
+        getScripts(),
+        getNodeCountries(),
+        getNodeGroups(),
+        getNodeSources(),
+        getTags(),
+        getNodeProtocols(),
+        getProtocolUIMeta(),
+        getNodeCheckMeta()
+      ]);
       setAllNodes(nodesRes.data || []);
       setTemplates(templatesRes.data || []);
       setScripts(scriptsRes.data || []);
@@ -238,7 +249,23 @@ export default function SubscriptionList() {
       setGroupOptions((groupsRes.data || []).sort());
       setSourceOptions((sourcesRes.data || []).sort());
       setTagOptions(tagsRes.data || []);
-      setProtocolOptions(protocolsRes.data || []);
+      const usedProtocols = (protocolsRes.data || []).map((protocol) => String(protocol).trim().toLowerCase()).filter(Boolean);
+      const registeredProtocols = (protocolMetaRes.data || [])
+        .map((meta) =>
+          String(meta?.name || '')
+            .trim()
+            .toLowerCase()
+        )
+        .filter(Boolean);
+      const protocolSet = new Set(usedProtocols);
+      const mergedProtocols = [...usedProtocols];
+      registeredProtocols.forEach((protocol) => {
+        if (!protocolSet.has(protocol)) {
+          protocolSet.add(protocol);
+          mergedProtocols.push(protocol);
+        }
+      });
+      setProtocolOptions(mergedProtocols);
       setUnlockMeta(nodeCheckMetaRes.data || {});
     } catch (error) {
       console.error(error);

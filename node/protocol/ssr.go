@@ -8,6 +8,25 @@ import (
 	"sublink/utils"
 )
 
+func init() {
+	base := newProtocolSpec("ssr", []string{"ssr://"}, "SSR", "#e64a19", "R", Ssr{}, "Qurey.Remarks", DecodeSSRURL, EncodeSSRURL, func(s Ssr) LinkIdentity {
+		return buildIdentity("ssr", s.Qurey.Remarks, s.Server, utils.GetPortString(s.Port))
+	},
+		FieldMeta{Name: "Qurey.Remarks", Label: "节点名称", Type: "string", Group: "basic", Placeholder: "例如：SSR-01"},
+		FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
+		FieldMeta{Name: "Method", Label: "加密方式", Type: "string", Group: "transport"},
+		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true},
+		FieldMeta{Name: "Protocol", Label: "协议", Type: "string", Group: "transport"},
+		FieldMeta{Name: "Obfs", Label: "混淆", Type: "string", Group: "transport"},
+		FieldMeta{Name: "Qurey.Obfsparam", Label: "混淆参数", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Qurey.Protoparam", Label: "协议参数", Type: "string", Group: "transport", Advanced: true},
+	)
+	MustRegisterProtocol(newProxyProtocolSpec(base, buildSSRProxy, func(proxy Proxy) bool {
+		return proxyTypeMatches(proxy, "ssr")
+	}, ConvertProxyToSsr, EncodeSSRURL))
+}
+
 func CallSSRURL() {
 	ssr := new(Ssr)
 	ssr.Server = "xx.com"
@@ -166,4 +185,15 @@ func ConvertProxyToSsr(proxy Proxy) Ssr {
 		},
 		Type: "ssr",
 	}
+}
+
+func buildSSRProxy(link Urls, config OutputConfig) (Proxy, error) {
+	ssr, err := DecodeSSRURL(link.Url)
+	if err != nil {
+		return Proxy{}, err
+	}
+	if ssr.Qurey.Remarks == "" {
+		ssr.Qurey.Remarks = fmt.Sprintf("%s:%s", ssr.Server, utils.GetPortString(ssr.Port))
+	}
+	return Proxy{Name: ssr.Qurey.Remarks, Type: "ssr", Server: ssr.Server, Port: FlexPort(utils.GetPortInt(ssr.Port)), Cipher: ssr.Method, Password: ssr.Password, Obfs: ssr.Obfs, Obfs_password: ssr.Qurey.Obfsparam, Protocol: ssr.Protocol, Udp: config.Udp, Skip_cert_verify: config.Cert, Dialer_proxy: link.DialerProxyName}, nil
 }

@@ -16,6 +16,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import { getProtocolGradient } from '../../../utils/protocolPresentation';
 
 // icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -23,31 +24,6 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SignalCellularAltIcon from '@mui/icons-material/SignalCellularAlt';
 import SpeedIcon from '@mui/icons-material/Speed';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-
-/**
- * 协议渐变色主题
- */
-const protocolThemes = {
-  VMess: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  VLESS: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-  Trojan: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-  SS: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-  Shadowsocks: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-  SSR: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-  ShadowsocksR: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-  Hysteria: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-  Hysteria2: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)',
-  TUIC: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
-  WireGuard: 'linear-gradient(135deg, #88d3ce 0%, #6e45e2 100%)',
-  Naive: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
-  Reality: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  SOCKS5: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
-  AnyTLS: 'linear-gradient(135deg, #96fbc4 0%, #f9f586 100%)',
-  HTTP: 'linear-gradient(135deg, #42a5f5 0%, #1976d2 100%)',
-  HTTPS: 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)'
-};
-
-const defaultTheme = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
 
 /**
  * 格式化时间
@@ -73,7 +49,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
 
   if (!node) return null;
 
-  const gradientBg = protocolThemes[node.Protocol] || defaultTheme;
+  const gradientBg = getProtocolGradient(node.Protocol, [], 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
   const displayName = node.PreviewName || node.Name || node.OriginalName || '未知节点';
 
   // 复制到剪贴板

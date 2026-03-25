@@ -8,6 +8,31 @@ import (
 	"sublink/utils"
 )
 
+func init() {
+	base := newProtocolSpec("hysteria2", []string{"hysteria2://", "hy2://"}, "Hysteria2", "#ef6c00", "H", HY2{}, "Name", DecodeHY2URL, EncodeHY2URL, func(h HY2) LinkIdentity {
+		return buildIdentity("hysteria2", h.Name, h.Host, utils.GetPortString(h.Port))
+	},
+		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Host", Label: "服务器地址", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
+		FieldMeta{Name: "MPort", Label: "端口跳跃", Type: "string", Group: "basic", Advanced: true},
+		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true},
+		FieldMeta{Name: "Auth", Label: "认证", Type: "string", Group: "auth", Secret: true, Advanced: true},
+		FieldMeta{Name: "UpMbps", Label: "上行 Mbps", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "DownMbps", Label: "下行 Mbps", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Obfs", Label: "混淆类型", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "ObfsPassword", Label: "混淆密码", Type: "string", Group: "auth", Secret: true, Advanced: true},
+		FieldMeta{Name: "Sni", Label: "SNI", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Peer", Label: "Peer", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "ALPN", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
+		FieldMeta{Name: "ClientFingerprint", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Insecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
+	)
+	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildHY2Proxy, func(proxy Proxy) bool {
+		return proxyTypeMatches(proxy, "hysteria2")
+	}, ConvertProxyToHy2, EncodeHY2URL, buildHY2SurgeLine))
+}
+
 type HY2 struct {
 	Password          string
 	Host              string
@@ -183,4 +208,36 @@ func ConvertProxyToHy2(proxy Proxy) HY2 {
 	}
 
 	return hy2
+}
+
+func buildHY2Proxy(link Urls, config OutputConfig) (Proxy, error) {
+	hy2, err := DecodeHY2URL(link.Url)
+	if err != nil {
+		return Proxy{}, err
+	}
+	if hy2.Name == "" {
+		hy2.Name = fmt.Sprintf("%s:%s", hy2.Host, utils.GetPortString(hy2.Port))
+	}
+	skipCert := config.Cert || hy2.Insecure == 1
+	proxy := Proxy{Name: hy2.Name, Type: "hysteria2", Server: hy2.Host, Auth: hy2.Auth, Sni: hy2.Sni, Alpn: hy2.ALPN, Obfs: hy2.Obfs, Password: hy2.Password, Obfs_password: hy2.ObfsPassword, Up: hy2.UpMbps, Down: hy2.DownMbps, Up_Speed: hy2.UpMbps, Down_Speed: hy2.DownMbps, Udp: true, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}
+	if hy2.MPort != "" {
+		proxy.Ports = hy2.MPort
+	} else {
+		proxy.Port = FlexPort(utils.GetPortInt(hy2.Port))
+	}
+	return proxy, nil
+}
+
+func buildHY2SurgeLine(link string, config OutputConfig) (string, string, error) {
+	hy2, err := DecodeHY2URL(link)
+	if err != nil {
+		return "", "", err
+	}
+	server := replaceSurgeHost(hy2.Host, config)
+	skipCert := config.Cert || hy2.Insecure == 1
+	line := fmt.Sprintf("%s = hysteria2, %s, %d, password=%s, udp-relay=%t, skip-cert-verify=%t", hy2.Name, server, utils.GetPortInt(hy2.Port), hy2.Password, true, skipCert)
+	if hy2.Sni != "" {
+		line = fmt.Sprintf("%s, sni=%s", line, hy2.Sni)
+	}
+	return line, hy2.Name, nil
 }

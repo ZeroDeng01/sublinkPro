@@ -951,58 +951,11 @@ func generateProxyDeduplicationKey(proxy protocol.Proxy, protoType string, field
 func GenerateProxyLink(proxy protocol.Proxy) string {
 	proxy.Name = strings.TrimSpace(proxy.Name)
 	proxy.Server = utils.WrapIPv6Host(proxy.Server)
-
-	switch strings.ToLower(proxy.Type) {
-	case "ss":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeSSURL(protocol.ConvertProxyToSs(proxy))
-
-	case "ssr":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeSSRURL(protocol.ConvertProxyToSsr(proxy))
-
-	case "trojan":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeTrojanURL(protocol.ConvertProxyToTrojan(proxy))
-
-	case "vmess":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeVmessURL(protocol.ConvertProxyToVmess(proxy))
-
-	case "vless":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeVLESSURL(protocol.ConvertProxyToVless(proxy))
-
-	case "hysteria":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeHYURL(protocol.ConvertProxyToHy(proxy))
-
-	case "hysteria2":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeHY2URL(protocol.ConvertProxyToHy2(proxy))
-
-	case "tuic":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeTuicURL(protocol.ConvertProxyToTuic(proxy))
-
-	case "anytls":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeAnyTLSURL(protocol.ConvertProxyToAnyTLS(proxy))
-
-	case "socks5":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeSocks5URL(protocol.ConvertProxyToSocks5(proxy))
-
-	case "http":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeHTTPURL(protocol.ConvertProxyToHTTP(proxy))
-	case "https":
-		// 使用协议层函数统一生成链接
-		return protocol.EncodeHTTPURL(protocol.ConvertProxyToHTTP(proxy))
-
-	default:
+	link, err := protocol.EncodeProxyLink(proxy)
+	if err != nil {
 		return ""
 	}
+	return link
 }
 
 // applyAirportNodeUniquify 应用机场节点名称唯一化
@@ -1031,32 +984,12 @@ func applyAirportNodeUniquify(airport *models.Airport, proxys []protocol.Proxy) 
 
 // parseProtoFromLink 根据协议类型解析链接获取结构体
 func parseProtoFromLink(link string, protoType string) (interface{}, error) {
-	switch protoType {
-	case "vmess":
-		return protocol.DecodeVMESSURL(link)
-	case "vless":
-		return protocol.DecodeVLESSURL(link)
-	case "trojan":
-		return protocol.DecodeTrojanURL(link)
-	case "ss":
-		return protocol.DecodeSSURL(link)
-	case "ssr":
-		return protocol.DecodeSSRURL(link)
-	case "hysteria":
-		return protocol.DecodeHYURL(link)
-	case "hysteria2":
-		return protocol.DecodeHY2URL(link)
-	case "tuic":
-		return protocol.DecodeTuicURL(link)
-	case "anytls":
-		return protocol.DecodeAnyTLSURL(link)
-	case "socks5":
-		return protocol.DecodeSocks5URL(link)
-	case "http":
-		return protocol.DecodeHTTPURL(link)
-	case "https":
-		return protocol.DecodeHTTPURL(link)
-	default:
+	protoObj, detectedProto, err := protocol.DecodeProtocolObject(link)
+	if err != nil {
+		return nil, err
+	}
+	if detectedProto != protoType {
 		return nil, fmt.Errorf("unsupported protocol: %s", protoType)
 	}
+	return protoObj, nil
 }

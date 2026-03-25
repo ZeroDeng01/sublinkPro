@@ -1,105 +1,503 @@
 package protocol
 
 import (
+	"fmt"
+	"net/url"
 	"reflect"
 	"sort"
 	"strings"
 	"sync"
 )
 
-// FieldMeta 字段元数据
 type FieldMeta struct {
-	Name  string `json:"name"`  // 字段名称
-	Label string `json:"label"` // 显示标签
-	Type  string `json:"type"`  // 字段类型
+	Name        string   `json:"name"`
+	Label       string   `json:"label"`
+	Type        string   `json:"type"`
+	Group       string   `json:"group,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Placeholder string   `json:"placeholder,omitempty"`
+	Options     []string `json:"options,omitempty"`
+	Advanced    bool     `json:"advanced,omitempty"`
+	Secret      bool     `json:"secret,omitempty"`
+	Multiline   bool     `json:"multiline,omitempty"`
 }
 
-// ProtocolMeta 协议元数据
 type ProtocolMeta struct {
-	Name   string      `json:"name"`   // 协议名称（小写）
-	Label  string      `json:"label"`  // 显示名称
-	Color  string      `json:"color"`  // 主题颜色（用于前端展示）
-	Icon   string      `json:"icon"`   // 图标字符（用于前端展示）
-	Fields []FieldMeta `json:"fields"` // 可用字段列表
+	Name   string      `json:"name"`
+	Label  string      `json:"label"`
+	Color  string      `json:"color"`
+	Icon   string      `json:"icon"`
+	Fields []FieldMeta `json:"fields"`
 }
 
-// 全局缓存，系统启动时初始化
+type LinkIdentity struct {
+	Protocol string
+	Name     string
+	Address  string
+	Host     string
+	Port     string
+}
+
+type Protocol interface {
+	Name() string
+	Aliases() []string
+	Label() string
+	Color() string
+	Icon() string
+	Prototype() interface{}
+	Fields() []FieldMeta
+	NameFieldPath() string
+	DecodeLink(string) (interface{}, error)
+	EncodeLink(interface{}) (string, error)
+	ExtractIdentity(interface{}) (LinkIdentity, error)
+}
+
+type ProxyCapable interface {
+	ToProxy(Urls, OutputConfig) (Proxy, error)
+	CanHandleProxy(Proxy) bool
+	FromProxy(Proxy) (string, error)
+}
+
+type SurgeCapable interface {
+	ToSurgeLine(string, OutputConfig) (string, string, error)
+}
+
+type ProtocolSpec struct {
+	name          string
+	aliases       []string
+	label         string
+	color         string
+	icon          string
+	prototype     interface{}
+	fields        []FieldMeta
+	nameFieldPath string
+	decode        func(string) (interface{}, error)
+	encode        func(interface{}) (string, error)
+	identity      func(interface{}) (LinkIdentity, error)
+}
+
+func (p *ProtocolSpec) Name() string {
+	return p.name
+}
+
+func (p *ProtocolSpec) Aliases() []string {
+	return append([]string(nil), p.aliases...)
+}
+
+func (p *ProtocolSpec) Label() string {
+	return p.label
+}
+
+func (p *ProtocolSpec) Color() string {
+	return p.color
+}
+
+func (p *ProtocolSpec) Icon() string {
+	return p.icon
+}
+
+func (p *ProtocolSpec) Prototype() interface{} {
+	return p.prototype
+}
+
+func (p *ProtocolSpec) Fields() []FieldMeta {
+	return append([]FieldMeta(nil), p.fields...)
+}
+
+func (p *ProtocolSpec) NameFieldPath() string {
+	return p.nameFieldPath
+}
+
+func (p *ProtocolSpec) DecodeLink(link string) (interface{}, error) {
+	if p.decode == nil {
+		return nil, fmt.Errorf("protocol %s does not support decoding", p.name)
+	}
+	return p.decode(link)
+}
+
+func (p *ProtocolSpec) EncodeLink(value interface{}) (string, error) {
+	if p.encode == nil {
+		return "", fmt.Errorf("protocol %s does not support encoding", p.name)
+	}
+	return p.encode(value)
+}
+
+func (p *ProtocolSpec) ExtractIdentity(value interface{}) (LinkIdentity, error) {
+	if p.identity == nil {
+		return LinkIdentity{}, fmt.Errorf("protocol %s does not provide identity extraction", p.name)
+	}
+	return p.identity(value)
+}
+
+type ProxyProtocolSpec struct {
+	*ProtocolSpec
+	toProxy       func(Urls, OutputConfig) (Proxy, error)
+	canHandleProxy func(Proxy) bool
+	fromProxy     func(Proxy) (string, error)
+}
+
+func (p *ProxyProtocolSpec) ToProxy(link Urls, config OutputConfig) (Proxy, error) {
+	if p.toProxy == nil {
+		return Proxy{}, fmt.Errorf("protocol %s does not support proxy export", p.name)
+	}
+	return p.toProxy(link, config)
+}
+
+func (p *ProxyProtocolSpec) CanHandleProxy(proxy Proxy) bool {
+	if p.canHandleProxy == nil {
+		return false
+	}
+	return p.canHandleProxy(proxy)
+}
+
+func (p *ProxyProtocolSpec) FromProxy(proxy Proxy) (string, error) {
+	if p.fromProxy == nil {
+		return "", fmt.Errorf("protocol %s does not support proxy import", p.name)
+	}
+	return p.fromProxy(proxy)
+}
+
+type ProxySurgeProtocolSpec struct {
+	*ProxyProtocolSpec
+	toSurgeLine func(string, OutputConfig) (string, string, error)
+}
+
+func (p *ProxySurgeProtocolSpec) ToSurgeLine(link string, config OutputConfig) (string, string, error) {
+	if p.toSurgeLine == nil {
+		return "", "", fmt.Errorf("protocol %s does not support Surge export", p.name)
+	}
+	return p.toSurgeLine(link, config)
+}
+
+type aliasMatcher struct {
+	prefix   string
+	protocol Protocol
+}
+
 var (
-	protocolMetaCache []ProtocolMeta
-	metaOnce          sync.Once
+	registryMu           sync.RWMutex
+	protocolsByName      = make(map[string]Protocol)
+	protocolsByAlias     = make(map[string]Protocol)
+	aliasMatchers        []aliasMatcher
+	protocolList         []Protocol
+	proxyCapables        []ProxyCapable
+	protocolMetaCache    []ProtocolMeta
+	protocolMetaDirty    = true
 )
 
-// protocolRegistry 协议注册表，包含协议名称、显示标签、URL前缀和结构体实例
-type protocolRegistry struct {
-	name     string      // 协议名称（小写，存储到数据库）
-	label    string      // 显示名称
-	color    string      // 主题颜色
-	icon     string      // 图标字符
-	prefixes []string    // URL 前缀列表（支持多个，如 hy2:// 和 hysteria2://）
-	instance interface{} // 结构体实例（用于反射，可为nil表示不支持解析）
+func normalizeProtocolName(name string) string {
+	return strings.ToLower(strings.TrimSpace(name))
 }
 
-// registeredProtocols 全局协议注册表
-var registeredProtocols = []protocolRegistry{
-	{name: "vmess", label: "VMess", color: "#1976d2", icon: "V", prefixes: []string{"vmess://"}, instance: Vmess{}},
-	{name: "vless", label: "VLESS", color: "#7b1fa2", icon: "V", prefixes: []string{"vless://"}, instance: VLESS{}},
-	{name: "trojan", label: "Trojan", color: "#d32f2f", icon: "T", prefixes: []string{"trojan://"}, instance: Trojan{}},
-	{name: "ss", label: "SS", color: "#2e7d32", icon: "S", prefixes: []string{"ss://"}, instance: Ss{}},
-	{name: "ssr", label: "SSR", color: "#e64a19", icon: "R", prefixes: []string{"ssr://"}, instance: Ssr{}},
-	{name: "hysteria", label: "Hysteria", color: "#f9a825", icon: "H", prefixes: []string{"hysteria://", "hy://"}, instance: HY{}},
-	{name: "hysteria2", label: "Hysteria2", color: "#ef6c00", icon: "H", prefixes: []string{"hysteria2://", "hy2://"}, instance: HY2{}},
-	{name: "tuic", label: "TUIC", color: "#0277bd", icon: "T", prefixes: []string{"tuic://"}, instance: Tuic{}},
-	{name: "wireguard", label: "WireGuard", color: "#88171a", icon: "W", prefixes: []string{"wg://", "wireguard://"}, instance: WireGuard{}},
-	{name: "naiveproxy", label: "NaiveProxy", color: "#5d4037", icon: "N", prefixes: []string{"naive://"}, instance: nil},
-	{name: "anytls", label: "AnyTLS", color: "#20a84c", icon: "A", prefixes: []string{"anytls://"}, instance: AnyTLS{}},
-	{name: "socks5", label: "SOCKS5", color: "#116ea4", icon: "S", prefixes: []string{"socks5://"}, instance: Socks5{}},
-	{name: "socks", label: "SOCKS", color: "#dd4984", icon: "S", prefixes: []string{"socks://"}, instance: nil},
-	{name: "http", label: "HTTP", color: "#0288d1", icon: "H", prefixes: []string{"http://"}, instance: HTTP{}},
-	{name: "https", label: "HTTPS", color: "#0277bd", icon: "H", prefixes: []string{"https://"}, instance: HTTP{}},
-}
-
-// InitProtocolMeta 系统启动时调用，通过反射扫描所有协议结构体
-func InitProtocolMeta() {
-	metaOnce.Do(func() {
-		for _, proto := range registeredProtocols {
-			// 确保 fields 为空切片而非 nil，JSON 序列化时输出 [] 而非 null
-			fields := []FieldMeta{}
-			if proto.instance != nil {
-				fields = extractFields(proto.instance)
-			}
-			meta := ProtocolMeta{
-				Name:   proto.name,
-				Label:  proto.label,
-				Color:  proto.color,
-				Icon:   proto.icon,
-				Fields: fields,
-			}
-			protocolMetaCache = append(protocolMetaCache, meta)
+func proxyTypeMatches(proxy Proxy, names ...string) bool {
+	proxyType := normalizeProtocolName(proxy.Type)
+	for _, name := range names {
+		if proxyType == normalizeProtocolName(name) {
+			return true
 		}
+	}
+	return false
+}
 
-		// 按名称排序，保证返回顺序稳定
-		sort.Slice(protocolMetaCache, func(i, j int) bool {
-			return protocolMetaCache[i].Name < protocolMetaCache[j].Name
-		})
+func normalizeAlias(alias string) string {
+	alias = strings.ToLower(strings.TrimSpace(alias))
+	if alias == "" {
+		return ""
+	}
+	if !strings.Contains(alias, "://") {
+		alias += "://"
+	}
+	return alias
+}
+
+func sortAliasMatchersLocked() {
+	sort.SliceStable(aliasMatchers, func(i, j int) bool {
+		return len(aliasMatchers[i].prefix) > len(aliasMatchers[j].prefix)
 	})
 }
 
-// extractFields 使用反射提取结构体字段
+func MustRegisterProtocol(protocol Protocol) {
+	if protocol == nil {
+		panic("cannot register nil protocol")
+	}
+
+	name := normalizeProtocolName(protocol.Name())
+	if name == "" {
+		panic("cannot register protocol with empty name")
+	}
+
+	registryMu.Lock()
+	defer registryMu.Unlock()
+
+	if _, exists := protocolsByName[name]; exists {
+		panic(fmt.Sprintf("protocol %s already registered", name))
+	}
+
+	protocolsByName[name] = protocol
+	protocolList = append(protocolList, protocol)
+
+	localAliases := map[string]struct{}{}
+	aliases := append(protocol.Aliases(), name)
+	for _, alias := range aliases {
+		normalized := normalizeAlias(alias)
+		if normalized == "" {
+			continue
+		}
+		if _, seen := localAliases[normalized]; seen {
+			continue
+		}
+		localAliases[normalized] = struct{}{}
+		if existing, exists := protocolsByAlias[normalized]; exists {
+			panic(fmt.Sprintf("alias %s already registered by protocol %s", normalized, existing.Name()))
+		}
+		protocolsByAlias[normalized] = protocol
+		aliasMatchers = append(aliasMatchers, aliasMatcher{prefix: normalized, protocol: protocol})
+	}
+	sortAliasMatchersLocked()
+
+	if proxyProtocol, ok := protocol.(ProxyCapable); ok {
+		proxyCapables = append(proxyCapables, proxyProtocol)
+	}
+
+	protocolMetaDirty = true
+}
+
+func getProtocolByName(name string) Protocol {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	return protocolsByName[normalizeProtocolName(name)]
+}
+
+func detectProtocol(link string) Protocol {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
+	linkLower := strings.ToLower(strings.TrimSpace(link))
+	for _, matcher := range aliasMatchers {
+		if strings.HasPrefix(linkLower, matcher.prefix) {
+			return matcher.protocol
+		}
+	}
+	return nil
+}
+
+func getProxyProtocol(proxy Proxy) ProxyCapable {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	for _, proxyCapable := range proxyCapables {
+		if proxyCapable.CanHandleProxy(proxy) {
+			return proxyCapable
+		}
+	}
+	return nil
+}
+
+func rebuildProtocolMetaCacheLocked() {
+	if !protocolMetaDirty {
+		return
+	}
+
+	metas := make([]ProtocolMeta, 0, len(protocolList))
+	for _, protocol := range protocolList {
+		fields := protocol.Fields()
+		if len(fields) == 0 {
+			if prototype := protocol.Prototype(); prototype != nil {
+				fields = extractFields(prototype)
+			}
+		}
+		metas = append(metas, ProtocolMeta{
+			Name:   protocol.Name(),
+			Label:  protocol.Label(),
+			Color:  protocol.Color(),
+			Icon:   protocol.Icon(),
+			Fields: fields,
+		})
+	}
+
+	sort.Slice(metas, func(i, j int) bool {
+		return metas[i].Name < metas[j].Name
+	})
+
+	protocolMetaCache = metas
+	protocolMetaDirty = false
+}
+
+func buildIdentity(protocolName, name, host, port string) LinkIdentity {
+	return LinkIdentity{
+		Protocol: protocolName,
+		Name:     name,
+		Host:     host,
+		Port:     port,
+		Address:  fmt.Sprintf("%s:%s", host, port),
+	}
+}
+
+func newProtocolSpec[T any](
+	name string,
+	aliases []string,
+	label string,
+	color string,
+	icon string,
+	prototype T,
+	nameFieldPath string,
+	decode func(string) (T, error),
+	encode func(T) string,
+	identity func(T) LinkIdentity,
+	fieldMetas ...FieldMeta,
+) *ProtocolSpec {
+	return &ProtocolSpec{
+		name:          name,
+		aliases:       aliases,
+		label:         label,
+		color:         color,
+		icon:          icon,
+		prototype:     prototype,
+		fields:        append([]FieldMeta(nil), fieldMetas...),
+		nameFieldPath: nameFieldPath,
+		decode: func(link string) (interface{}, error) {
+			return decode(link)
+		},
+		encode: func(value interface{}) (string, error) {
+			typed, ok := value.(T)
+			if !ok {
+				return "", fmt.Errorf("invalid protocol value type %T for %s", value, name)
+			}
+			return encode(typed), nil
+		},
+		identity: func(value interface{}) (LinkIdentity, error) {
+			typed, ok := value.(T)
+			if !ok {
+				return LinkIdentity{}, fmt.Errorf("invalid protocol identity type %T for %s", value, name)
+			}
+			return identity(typed), nil
+		},
+	}
+}
+
+func newProxyProtocolSpec[T any](
+	base *ProtocolSpec,
+	toProxy func(Urls, OutputConfig) (Proxy, error),
+	canHandle func(Proxy) bool,
+	convert func(Proxy) T,
+	encode func(T) string,
+) *ProxyProtocolSpec {
+	return &ProxyProtocolSpec{
+		ProtocolSpec:   base,
+		toProxy:        toProxy,
+		canHandleProxy: canHandle,
+		fromProxy: func(proxy Proxy) (string, error) {
+			return encode(convert(proxy)), nil
+		},
+	}
+}
+
+func newProxySurgeProtocolSpec[T any](
+	base *ProtocolSpec,
+	toProxy func(Urls, OutputConfig) (Proxy, error),
+	canHandle func(Proxy) bool,
+	convert func(Proxy) T,
+	encode func(T) string,
+	toSurgeLine func(string, OutputConfig) (string, string, error),
+) *ProxySurgeProtocolSpec {
+	return &ProxySurgeProtocolSpec{
+		ProxyProtocolSpec: newProxyProtocolSpec(base, toProxy, canHandle, convert, encode),
+		toSurgeLine:       toSurgeLine,
+	}
+}
+
+func InitProtocolMeta() {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	rebuildProtocolMetaCacheLocked()
+}
+
+func GetAllProtocolMeta() []ProtocolMeta {
+	InitProtocolMeta()
+
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
+	metas := make([]ProtocolMeta, len(protocolMetaCache))
+	copy(metas, protocolMetaCache)
+	return metas
+}
+
+func ExtractNodeNameFromFields(protocolName string, fields map[string]interface{}) string {
+	protocol := getProtocolByName(protocolName)
+	if protocol == nil || fields == nil {
+		return ""
+	}
+
+	fieldPath := protocol.NameFieldPath()
+	if fieldPath == "" {
+		return ""
+	}
+
+	if value, ok := fields[fieldPath].(string); ok {
+		return value
+	}
+	return ""
+}
+
+func ExtractLinkIdentity(link string) (LinkIdentity, error) {
+	protocol := detectProtocol(link)
+	if protocol == nil {
+		return LinkIdentity{}, fmt.Errorf("不支持的协议类型")
+	}
+
+	decoded, err := protocol.DecodeLink(link)
+	if err != nil {
+		return LinkIdentity{}, err
+	}
+
+	identity, err := protocol.ExtractIdentity(decoded)
+	if err != nil {
+		return LinkIdentity{}, err
+	}
+	if identity.Protocol == "" {
+		identity.Protocol = protocol.Name()
+	}
+	return identity, nil
+}
+
+func DecodeProtocolObject(link string) (interface{}, string, error) {
+	protocol := detectProtocol(link)
+	if protocol == nil {
+		return nil, "", fmt.Errorf("不支持的协议类型")
+	}
+
+	decoded, err := protocol.DecodeLink(link)
+	if err != nil {
+		return nil, protocol.Name(), err
+	}
+	return decoded, protocol.Name(), nil
+}
+
+func EncodeProxyLink(proxy Proxy) (string, error) {
+	proxyProtocol := getProxyProtocol(proxy)
+	if proxyProtocol == nil {
+		return "", fmt.Errorf("unsupported proxy type: %s", proxy.Type)
+	}
+	return proxyProtocol.FromProxy(proxy)
+}
+
 func extractFields(v interface{}) []FieldMeta {
 	var fields []FieldMeta
 	t := reflect.TypeOf(v)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return fields
+	}
 
-	// 递归处理结构体
 	extractFieldsRecursive(t, "", &fields)
 	return fields
 }
 
-// extractFieldsRecursive 递归提取结构体字段
 func extractFieldsRecursive(t reflect.Type, prefix string, fields *[]FieldMeta) {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-
-		// 跳过非导出字段
 		if !field.IsExported() {
 			continue
 		}
@@ -109,55 +507,31 @@ func extractFieldsRecursive(t reflect.Type, prefix string, fields *[]FieldMeta) 
 			fieldName = prefix + "." + fieldName
 		}
 
-		// 获取json标签作为Label
 		jsonTag := field.Tag.Get("json")
 		label := strings.Split(jsonTag, ",")[0]
 		if label == "" || label == "-" {
 			label = field.Name
 		}
 
-		kind := field.Type.Kind()
-		switch kind {
+		switch field.Type.Kind() {
 		case reflect.String:
-			*fields = append(*fields, FieldMeta{
-				Name:  fieldName,
-				Label: label,
-				Type:  "string",
-			})
+			*fields = append(*fields, FieldMeta{Name: fieldName, Label: label, Type: "string"})
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			*fields = append(*fields, FieldMeta{
-				Name:  fieldName,
-				Label: label,
-				Type:  "int",
-			})
+			*fields = append(*fields, FieldMeta{Name: fieldName, Label: label, Type: "int"})
 		case reflect.Bool:
-			*fields = append(*fields, FieldMeta{
-				Name:  fieldName,
-				Label: label,
-				Type:  "bool",
-			})
+			*fields = append(*fields, FieldMeta{Name: fieldName, Label: label, Type: "bool"})
 		case reflect.Struct:
-			// 递归处理嵌套结构体（如VLESSQuery, TrojanQuery等）
 			extractFieldsRecursive(field.Type, fieldName, fields)
 		}
-		// 跳过数组、切片等复杂类型（如ALPN []string）
 	}
 }
 
-// GetAllProtocolMeta 获取缓存的协议元数据
-func GetAllProtocolMeta() []ProtocolMeta {
-	return protocolMetaCache
-}
-
-// GetProtocolFieldValue 从解析后的协议对象中获取指定字段的值
-// 使用反射动态获取字段值，支持嵌套字段（如 Query.Sni）
 func GetProtocolFieldValue(protoObj interface{}, fieldPath string) string {
 	if protoObj == nil {
 		return ""
 	}
 
 	v := reflect.ValueOf(protoObj)
-	// 处理指针类型
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			return ""
@@ -165,7 +539,6 @@ func GetProtocolFieldValue(protoObj interface{}, fieldPath string) string {
 		v = v.Elem()
 	}
 
-	// 处理嵌套字段路径（如 Query.Sni）
 	parts := strings.Split(fieldPath, ".")
 	for _, part := range parts {
 		if v.Kind() != reflect.Struct {
@@ -177,70 +550,130 @@ func GetProtocolFieldValue(protoObj interface{}, fieldPath string) string {
 		}
 	}
 
-	// 转换为字符串
 	switch v.Kind() {
 	case reflect.String:
 		return v.String()
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return strings.TrimSpace(strings.Replace(reflect.ValueOf(v.Int()).String(), " ", "", -1))
+		return fmt.Sprintf("%d", v.Int())
 	case reflect.Bool:
 		if v.Bool() {
 			return "true"
 		}
 		return "false"
 	case reflect.Interface:
-		// 处理 interface{} 类型（如 vmess 的 Port）
 		if v.IsNil() {
 			return ""
 		}
-		return strings.TrimSpace(reflect.ValueOf(v.Interface()).String())
+		return fmt.Sprintf("%v", v.Interface())
 	default:
 		return ""
 	}
 }
 
-// GetProtocolFromLink 从节点链接解析协议类型
-// 返回标准化的协议名称（小写），用于存储到数据库
 func GetProtocolFromLink(link string) string {
 	if link == "" {
 		return "unknown"
 	}
-	linkLower := strings.ToLower(link)
-	for _, proto := range registeredProtocols {
-		for _, prefix := range proto.prefixes {
-			if strings.HasPrefix(linkLower, prefix) {
-				return proto.name
-			}
-		}
+
+	protocol := detectProtocol(link)
+	if protocol == nil {
+		return "other"
 	}
-	return "other"
+	return protocol.Name()
 }
 
-// GetProtocolLabel 根据协议名称获取显示标签
 func GetProtocolLabel(name string) string {
-	for _, proto := range registeredProtocols {
-		if proto.name == name {
-			return proto.label
-		}
+	protocol := getProtocolByName(name)
+	if protocol == nil {
+		return name
 	}
-	return name
+	return protocol.Label()
 }
 
-// GetAllProtocolNames 获取所有支持的协议名称列表
+func GetProtocolLabelFromLink(link string) string {
+	protocolName := GetProtocolFromLink(link)
+	if protocolName == "unknown" {
+		return "未知"
+	}
+	if protocolName == "other" {
+		return "其他"
+	}
+	return GetProtocolLabel(protocolName)
+}
+
 func GetAllProtocolNames() []string {
-	names := make([]string, len(registeredProtocols))
-	for i, proto := range registeredProtocols {
-		names[i] = proto.name
+	InitProtocolMeta()
+
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
+	names := make([]string, 0, len(protocolMetaCache))
+	for _, meta := range protocolMetaCache {
+		names = append(names, meta.Name)
 	}
 	return names
 }
 
-// GetProtocolMeta 根据协议名称获取完整的协议元数据
 func GetProtocolMeta(name string) *ProtocolMeta {
+	InitProtocolMeta()
+
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
+	normalized := normalizeProtocolName(name)
 	for i := range protocolMetaCache {
-		if protocolMetaCache[i].Name == name {
-			return &protocolMetaCache[i]
+		if protocolMetaCache[i].Name == normalized {
+			meta := protocolMetaCache[i]
+			return &meta
 		}
 	}
 	return nil
+}
+
+func RenameNodeLink(link string, newName string) string {
+	if strings.TrimSpace(link) == "" || strings.TrimSpace(newName) == "" {
+		return link
+	}
+
+	protocol := detectProtocol(link)
+	if protocol == nil {
+		return link
+	}
+
+	decoded, err := protocol.DecodeLink(link)
+	if err != nil {
+		return link
+	}
+
+	v := reflect.ValueOf(decoded)
+	if !v.IsValid() {
+		return link
+	}
+	if v.Kind() != reflect.Ptr {
+		clone := reflect.New(v.Type())
+		clone.Elem().Set(v)
+		v = clone
+	}
+	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
+		return renameFragmentOnly(link, newName)
+	}
+
+	if fieldPath := protocol.NameFieldPath(); fieldPath != "" {
+		if err := setFieldValue(v.Elem(), fieldPath, newName); err == nil {
+			if encoded, encodeErr := protocol.EncodeLink(v.Elem().Interface()); encodeErr == nil {
+				return encoded
+			}
+		}
+	}
+
+	return renameFragmentOnly(link, newName)
+}
+
+func renameFragmentOnly(link string, newName string) string {
+	u, err := url.Parse(link)
+	if err != nil {
+		return link
+	}
+	u.Fragment = newName
+	return u.String()
 }

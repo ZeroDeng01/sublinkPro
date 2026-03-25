@@ -15,6 +15,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
+import InputAdornment from '@mui/material/InputAdornment';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
@@ -27,6 +28,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import RestoreIcon from '@mui/icons-material/Restore';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SecurityIcon from '@mui/icons-material/Security';
 import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
@@ -34,6 +36,7 @@ import VpnKeyIcon from '@mui/icons-material/VpnKey';
 
 // api
 import { parseNodeLink, updateNodeRawInfo } from '../../../api/nodes';
+import { buildFieldMetaMap, getFieldGroupKey } from '../../../utils/protocolPresentation';
 
 /**
  * 字段分组配置
@@ -73,20 +76,12 @@ const FIELD_GROUPS = {
       'ClientFingerprint',
       'AllowInsecure'
     ]
+  },
+  advanced: {
+    label: '高级配置',
+    icon: <SettingsIcon fontSize="small" />,
+    keywords: []
   }
-};
-
-/**
- * 获取字段所属分组
- */
-const getFieldGroup = (fieldName) => {
-  const baseName = fieldName.split('.').pop();
-  for (const [groupKey, group] of Object.entries(FIELD_GROUPS)) {
-    if (group.keywords.some((keyword) => baseName.toLowerCase().includes(keyword.toLowerCase()))) {
-      return groupKey;
-    }
-  }
-  return 'other';
 };
 
 /**
@@ -105,8 +100,12 @@ const getFieldLabel = (fieldName, fieldMeta) => {
  * 渲染字段输入控件
  */
 const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled }) => {
+  const [showSecret, setShowSecret] = useState(false);
   const fieldType = fieldMeta?.type || 'string';
   const label = getFieldLabel(fieldName, fieldMeta);
+  const placeholder = fieldMeta?.placeholder || '';
+  const helperText = fieldMeta?.description || '';
+  const multiline = fieldMeta?.multiline || String(value ?? '').length > 50;
 
   // 布尔类型使用开关
   if (fieldType === 'bool') {
@@ -137,22 +136,63 @@ const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled }) => {
         size="small"
         fullWidth
         variant="outlined"
+        placeholder={placeholder}
+        helperText={helperText}
       />
+    );
+  }
+
+  if (Array.isArray(fieldMeta?.options) && fieldMeta.options.length > 0) {
+    return (
+      <TextField
+        label={label}
+        value={value ?? ''}
+        onChange={(e) => onChange(fieldName, e.target.value)}
+        disabled={disabled}
+        size="small"
+        fullWidth
+        variant="outlined"
+        select
+        SelectProps={{ native: true }}
+        helperText={helperText}
+      >
+        <option value="">请选择</option>
+        {fieldMeta.options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </TextField>
     );
   }
 
   return (
     <TextField
       label={label}
-      type={'text'}
+      type={fieldMeta?.secret && !showSecret ? 'password' : 'text'}
       value={value ?? ''}
       onChange={(e) => onChange(fieldName, e.target.value)}
       disabled={disabled}
       size="small"
       fullWidth
       variant="outlined"
-      multiline={String(value).length > 50}
+      placeholder={placeholder}
+      helperText={helperText}
+      multiline={multiline}
       maxRows={3}
+      InputProps={
+        fieldMeta?.secret
+          ? {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton edge="end" size="small" onClick={() => setShowSecret((prev) => !prev)} disabled={disabled}>
+                    {showSecret ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                  </IconButton>
+                </InputAdornment>
+              )
+            }
+          : undefined
+      }
     />
   );
 };
@@ -189,11 +229,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
   // 创建字段元数据映射
   const fieldMetaMap = useMemo(() => {
     if (!currentProtocolMeta?.fields) return {};
-    const map = {};
-    currentProtocolMeta.fields.forEach((f) => {
-      map[f.name] = f;
-    });
-    return map;
+    return buildFieldMetaMap(currentProtocolMeta.fields);
   }, [currentProtocolMeta]);
 
   // 解析节点链接
@@ -210,6 +246,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
         if (res.data) {
           setParsedInfo(res.data);
           setEditedFields(res.data.fields || {});
+          setExpandedGroups(['basic']);
         }
       })
       .catch((err) => {
@@ -218,6 +255,21 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
       })
       .finally(() => setLoading(false));
   }, [node?.Link]);
+
+  useEffect(() => {
+    if (!editedFields || Object.keys(editedFields).length === 0) {
+      return;
+    }
+
+    const autoExpanded = ['basic'];
+    Object.keys(editedFields).forEach((fieldName) => {
+      const groupKey = getFieldGroupKey(fieldName, fieldMetaMap[fieldName]);
+      if (groupKey !== 'advanced' && !autoExpanded.includes(groupKey)) {
+        autoExpanded.push(groupKey);
+      }
+    });
+    setExpandedGroups(autoExpanded);
+  }, [editedFields, fieldMetaMap]);
 
   // 按分组组织字段
   const groupedFields = useMemo(() => {
@@ -232,7 +284,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
     };
 
     Object.keys(editedFields).forEach((fieldName) => {
-      const group = getFieldGroup(fieldName);
+      const group = getFieldGroupKey(fieldName, fieldMetaMap[fieldName]);
       groups[group].push(fieldName);
     });
 
@@ -244,7 +296,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
     });
 
     return groups;
-  }, [editedFields]);
+  }, [editedFields, fieldMetaMap]);
 
   // 处理字段值变更
   const handleFieldChange = (fieldName, value) => {
