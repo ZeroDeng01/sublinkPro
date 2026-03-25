@@ -10,6 +10,13 @@ export function getNodeCheckProfiles() {
   });
 }
 
+export function getNodeCheckMeta() {
+  return request({
+    url: '/v1/node-check/meta',
+    method: 'get'
+  });
+}
+
 // 获取单个策略
 export function getNodeCheckProfile(id) {
   return request({

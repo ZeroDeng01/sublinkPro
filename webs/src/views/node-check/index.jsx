@@ -29,18 +29,27 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import SpeedIcon from '@mui/icons-material/Speed';
 import TimerIcon from '@mui/icons-material/Timer';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import TaskProgressPanel from 'components/TaskProgressPanel';
 
 // api
-import { getNodeCheckProfiles, updateNodeCheckProfile, deleteNodeCheckProfile, runNodeCheckWithProfile } from 'api/nodeCheck';
+import {
+  getNodeCheckMeta,
+  getNodeCheckProfiles,
+  updateNodeCheckProfile,
+  deleteNodeCheckProfile,
+  runNodeCheckWithProfile
+} from 'api/nodeCheck';
 import { getNodeGroups } from 'api/nodes';
 import { getTags } from 'api/tags';
 
 // local components
 import NodeCheckProfileFormDialog from 'views/nodes/component/NodeCheckProfileFormDialog';
+
+import { buildNodeCheckProfilePayload, formatUnlockProvidersSummary, setUnlockMeta } from 'views/nodes/utils';
 
 // ==============================|| 节点检测策略管理 ||============================== //
 
@@ -78,9 +87,10 @@ export default function NodeCheckList() {
   // 加载分组和标签选项
   const loadOptions = useCallback(async () => {
     try {
-      const [groupRes, tagRes] = await Promise.all([getNodeGroups(), getTags()]);
+      const [groupRes, tagRes, metaRes] = await Promise.all([getNodeGroups(), getTags(), getNodeCheckMeta()]);
       setGroupOptions((groupRes.data || []).sort());
       setTagOptions(tagRes.data || []);
+      setUnlockMeta(metaRes.data || {});
     } catch (error) {
       console.error('加载选项失败:', error);
     }
@@ -94,33 +104,7 @@ export default function NodeCheckList() {
   // 切换启用状态
   const handleToggleEnabled = async (profile) => {
     try {
-      // 将 groups 和 tags 字符串转换为数组格式（后端 API 期望数组类型）
-      const groups = profile.groups ? profile.groups.split(',').filter(Boolean) : [];
-      const tags = profile.tags ? profile.tags.split(',').filter(Boolean) : [];
-
-      await updateNodeCheckProfile(profile.id, {
-        name: profile.name,
-        enabled: !profile.enabled,
-        cronExpr: profile.cronExpr,
-        mode: profile.mode,
-        testUrl: profile.testUrl,
-        latencyUrl: profile.latencyUrl,
-        timeout: profile.timeout,
-        groups,
-        tags,
-        latencyConcurrency: profile.latencyConcurrency,
-        speedConcurrency: profile.speedConcurrency,
-        detectCountry: profile.detectCountry,
-        landingIpUrl: profile.landingIpUrl,
-        includeHandshake: profile.includeHandshake,
-        speedRecordMode: profile.speedRecordMode,
-        peakSampleInterval: profile.peakSampleInterval,
-        trafficByGroup: profile.trafficByGroup,
-        trafficBySource: profile.trafficBySource,
-        trafficByNode: profile.trafficByNode,
-        detectQuality: profile.detectQuality,
-        qualityCheckUrl: profile.qualityCheckUrl
-      });
+      await updateNodeCheckProfile(profile.id, buildNodeCheckProfilePayload(profile, { enabled: !profile.enabled }));
       loadProfiles();
       showMessage(profile.enabled ? '已禁用定时检测' : '已启用定时检测');
     } catch (error) {
@@ -327,6 +311,16 @@ export default function NodeCheckList() {
                     />
                     {profile.detectCountry && <Chip label="国家" size="small" sx={{ height: 20, fontSize: '0.65rem' }} />}
                     {profile.detectQuality && <Chip label="质量" size="small" color="warning" sx={{ height: 20, fontSize: '0.65rem' }} />}
+                    {profile.detectUnlock && (
+                      <Chip
+                        icon={<LockOpenIcon sx={{ fontSize: '12px !important' }} />}
+                        label={`解锁${profile.unlockProviders?.length ? ` · ${formatUnlockProvidersSummary(profile.unlockProviders, 1)}` : ''}`}
+                        size="small"
+                        color="info"
+                        variant="outlined"
+                        sx={{ height: 20, fontSize: '0.65rem' }}
+                      />
+                    )}
                   </Box>
                   <Switch
                     size="small"
@@ -387,6 +381,24 @@ export default function NodeCheckList() {
                       >
                         范围: {profile.groups || '全部'}
                         {profile.tags ? ` | ${profile.tags}` : ''}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {profile.detectUnlock && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
+                      <LockOpenIcon sx={{ fontSize: 14, opacity: 0.6, flexShrink: 0 }} />
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          minWidth: 0
+                        }}
+                      >
+                        解锁: {formatUnlockProvidersSummary(profile.unlockProviders, 2)}
                       </Typography>
                     </Box>
                   )}

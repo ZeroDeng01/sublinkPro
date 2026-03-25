@@ -48,6 +48,9 @@ type NodeCheckProfile struct {
 	DetectQuality   bool   `gorm:"default:false" json:"detectQuality"` // 是否检测节点质量
 	QualityCheckURL string `json:"qualityCheckUrl"`                    // 质量检测API URL
 
+	DetectUnlock    bool   `gorm:"default:false" json:"detectUnlock"`
+	UnlockProviders string `gorm:"type:text" json:"unlockProviders"`
+
 	// 执行时间记录
 	LastRunTime *time.Time `json:"lastRunTime"` // 上次执行时间
 	NextRunTime *time.Time `json:"nextRunTime"` // 下次执行时间
@@ -107,6 +110,7 @@ func (p *NodeCheckProfile) Update() error {
 		"SpeedRecordMode", "PeakSampleInterval", "PreserveSpeedResult",
 		"TrafficByGroup", "TrafficBySource", "TrafficByNode",
 		"DetectQuality", "QualityCheckURL",
+		"DetectUnlock", "UnlockProviders",
 	).Updates(p).Error
 	if err != nil {
 		return err
@@ -233,4 +237,32 @@ func (p *NodeCheckProfile) SetGroups(groups []string) {
 // SetTags 设置标签列表（转换为逗号分隔字符串）
 func (p *NodeCheckProfile) SetTags(tags []string) {
 	p.Tags = strings.Join(tags, ",")
+}
+
+func (p *NodeCheckProfile) GetUnlockProviders() []string {
+	if strings.TrimSpace(p.UnlockProviders) == "" {
+		return []string{}
+	}
+	parts := strings.Split(p.UnlockProviders, ",")
+	providers := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		providers = append(providers, trimmed)
+	}
+	return providers
+}
+
+func (p *NodeCheckProfile) SetUnlockProviders(providers []string) {
+	cleaned := make([]string, 0, len(providers))
+	for _, provider := range providers {
+		trimmed := strings.TrimSpace(provider)
+		if trimmed == "" {
+			continue
+		}
+		cleaned = append(cleaned, trimmed)
+	}
+	p.UnlockProviders = strings.Join(cleaned, ",")
 }

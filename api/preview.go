@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
+	"strings"
 	"sublink/database"
 	"sublink/models"
 	"sublink/utils"
@@ -38,6 +39,11 @@ type PreviewRequest struct {
 	ResidentialType    string   `json:"ResidentialType"`   // 住宅属性过滤
 	IPType             string   `json:"IPType"`            // IP类型过滤
 	QualityStatus      string   `json:"QualityStatus"`
+	UnlockProvider     string   `json:"UnlockProvider"`
+	UnlockStatus       string   `json:"UnlockStatus"`
+	UnlockKeyword      string   `json:"UnlockKeyword"`
+	UnlockRules        string   `json:"UnlockRules"`
+	UnlockRuleMode     string   `json:"UnlockRuleMode"`
 	NodeNamePreprocess string   `json:"NodeNamePreprocess"` // 原名预处理规则
 	NodeNameRule       string   `json:"NodeNameRule"`       // 节点命名规则模板
 	DeduplicationRule  string   `json:"DeduplicationRule"`  // 去重规则配置
@@ -117,25 +123,7 @@ func previewSavedSubscription(subID int) (*models.PreviewResult, error) {
 		previewLink := node.Link
 
 		if sub.NodeNameRule != "" {
-			previewName = utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-				Name:          node.Name,
-				LinkName:      processedLinkName,
-				LinkCountry:   node.LinkCountry,
-				Speed:         node.Speed,
-				SpeedStatus:   node.SpeedStatus,
-				DelayTime:     node.DelayTime,
-				DelayStatus:   node.DelayStatus,
-				Group:         node.Group,
-				Source:        node.Source,
-				Index:         idx + 1,
-				Protocol:      utils.GetProtocolFromLink(node.Link),
-				Tags:          node.Tags,
-				IsBroadcast:   node.IsBroadcast,
-				IsResidential: node.IsResidential,
-				FraudScore:    node.FraudScore,
-				QualityStatus: node.QualityStatus,
-				QualityFamily: node.QualityFamily,
-			})
+			previewName = utils.RenameNode(sub.NodeNameRule, models.BuildNodeRenameInfo(node, processedLinkName, utils.GetProtocolFromLink(node.Link), idx+1))
 			previewLink = utils.RenameNodeLink(node.Link, previewName)
 		}
 
@@ -180,9 +168,21 @@ func previewFormSubscription(req PreviewRequest) (*models.PreviewResult, error) 
 		ResidentialType:    req.ResidentialType,
 		IPType:             req.IPType,
 		QualityStatus:      req.QualityStatus,
+		UnlockProvider:     models.NormalizeUnlockProvider(req.UnlockProvider),
+		UnlockStatus:       strings.TrimSpace(req.UnlockStatus),
+		UnlockKeyword:      strings.TrimSpace(req.UnlockKeyword),
+		UnlockRules:        models.BuildUnlockFilterRulesJSON(models.ParseUnlockFilterRules(req.UnlockRules)),
+		UnlockRuleMode:     models.NormalizeUnlockRuleMode(req.UnlockRuleMode),
 		NodeNamePreprocess: req.NodeNamePreprocess,
 		NodeNameRule:       req.NodeNameRule,
 		DeduplicationRule:  req.DeduplicationRule,
+	}
+	if tempSub.UnlockRules == "" && (tempSub.UnlockProvider != "" || tempSub.UnlockStatus != "" || tempSub.UnlockKeyword != "") {
+		tempSub.UnlockRules = models.BuildUnlockFilterRulesJSON([]models.UnlockFilterRule{{
+			Provider: tempSub.UnlockProvider,
+			Status:   tempSub.UnlockStatus,
+			Keyword:  tempSub.UnlockKeyword,
+		}})
 	}
 
 	// 使用与 GetSub 相同的混合排序逻辑构建节点列表

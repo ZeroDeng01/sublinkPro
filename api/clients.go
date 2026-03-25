@@ -151,25 +151,7 @@ func GetV2ray(c *gin.Context) {
 		// 应用重命名规则
 		nodeLink := v.Link
 		if sub.NodeNameRule != "" {
-			newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-				Name:          v.Name,
-				LinkName:      processedLinkName,
-				LinkCountry:   v.LinkCountry,
-				Speed:         v.Speed,
-				SpeedStatus:   v.SpeedStatus,
-				DelayTime:     v.DelayTime,
-				DelayStatus:   v.DelayStatus,
-				Group:         v.Group,
-				Source:        v.Source,
-				Index:         idx + 1,
-				Protocol:      protocol.GetProtocolFromLink(v.Link),
-				Tags:          v.Tags,
-				IsBroadcast:   v.IsBroadcast,
-				IsResidential: v.IsResidential,
-				FraudScore:    v.FraudScore,
-				QualityStatus: v.QualityStatus,
-				QualityFamily: v.QualityFamily,
-			})
+			newName := utils.RenameNode(sub.NodeNameRule, models.BuildNodeRenameInfo(v, processedLinkName, protocol.GetProtocolFromLink(v.Link), idx+1))
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
 		}
 		switch {
@@ -179,25 +161,7 @@ func GetV2ray(c *gin.Context) {
 			// 对每个链接应用重命名
 			if sub.NodeNameRule != "" {
 				for i, link := range links {
-					newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-						Name:          v.Name,
-						LinkName:      processedLinkName,
-						LinkCountry:   v.LinkCountry,
-						Speed:         v.Speed,
-						SpeedStatus:   v.SpeedStatus,
-						DelayTime:     v.DelayTime,
-						DelayStatus:   v.DelayStatus,
-						Group:         v.Group,
-						Source:        v.Source,
-						Index:         idx + 1,
-						Protocol:      protocol.GetProtocolFromLink(link),
-						Tags:          v.Tags,
-						IsBroadcast:   v.IsBroadcast,
-						IsResidential: v.IsResidential,
-						FraudScore:    v.FraudScore,
-						QualityStatus: v.QualityStatus,
-						QualityFamily: v.QualityFamily,
-					})
+					newName := utils.RenameNode(sub.NodeNameRule, models.BuildNodeRenameInfo(v, processedLinkName, protocol.GetProtocolFromLink(link), idx+1))
 					links[i] = utils.RenameNodeLink(link, newName)
 				}
 			}
@@ -273,25 +237,7 @@ func GetClash(c *gin.Context) {
 		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
 		finalName := v.LinkName // 默认使用原始名称
 		if sub.NodeNameRule != "" {
-			finalName = utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-				Name:          v.Name,
-				LinkName:      processedLinkName,
-				LinkCountry:   v.LinkCountry,
-				Speed:         v.Speed,
-				SpeedStatus:   v.SpeedStatus,
-				DelayTime:     v.DelayTime,
-				DelayStatus:   v.DelayStatus,
-				Group:         v.Group,
-				Source:        v.Source,
-				Index:         idx + 1,
-				Protocol:      protocol.GetProtocolFromLink(v.Link),
-				Tags:          v.Tags,
-				IsBroadcast:   v.IsBroadcast,
-				IsResidential: v.IsResidential,
-				FraudScore:    v.FraudScore,
-				QualityStatus: v.QualityStatus,
-				QualityFamily: v.QualityFamily,
-			})
+			finalName = utils.RenameNode(sub.NodeNameRule, models.BuildNodeRenameInfo(v, processedLinkName, protocol.GetProtocolFromLink(v.Link), idx+1))
 		}
 		nodeNameMap[v.ID] = finalName
 	}
@@ -340,25 +286,7 @@ func GetClash(c *gin.Context) {
 		// 应用重命名规则
 		nodeLink := v.Link
 		if sub.NodeNameRule != "" {
-			newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-				Name:          v.Name,
-				LinkName:      processedLinkName,
-				LinkCountry:   v.LinkCountry,
-				Speed:         v.Speed,
-				SpeedStatus:   v.SpeedStatus,
-				DelayTime:     v.DelayTime,
-				DelayStatus:   v.DelayStatus,
-				Group:         v.Group,
-				Source:        v.Source,
-				Index:         idx + 1,
-				Protocol:      protocol.GetProtocolFromLink(v.Link),
-				Tags:          v.Tags,
-				IsBroadcast:   v.IsBroadcast,
-				IsResidential: v.IsResidential,
-				FraudScore:    v.FraudScore,
-				QualityStatus: v.QualityStatus,
-				QualityFamily: v.QualityFamily,
-			})
+			newName := utils.RenameNode(sub.NodeNameRule, models.BuildNodeRenameInfo(v, processedLinkName, protocol.GetProtocolFromLink(v.Link), idx+1))
 			nodeLink = utils.RenameNodeLink(v.Link, newName)
 		}
 
@@ -383,25 +311,7 @@ func GetClash(c *gin.Context) {
 			for i, link := range links {
 				renamedLink := link
 				if sub.NodeNameRule != "" {
-					newName := utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-						Name:          v.Name,
-						LinkName:      processedLinkName,
-						LinkCountry:   v.LinkCountry,
-						Speed:         v.Speed,
-						SpeedStatus:   v.SpeedStatus,
-						DelayTime:     v.DelayTime,
-						DelayStatus:   v.DelayStatus,
-						Group:         v.Group,
-						Source:        v.Source,
-						Index:         idx + 1,
-						Protocol:      protocol.GetProtocolFromLink(link),
-						Tags:          v.Tags,
-						IsBroadcast:   v.IsBroadcast,
-						IsResidential: v.IsResidential,
-						FraudScore:    v.FraudScore,
-						QualityStatus: v.QualityStatus,
-						QualityFamily: v.QualityFamily,
-					})
+					newName := utils.RenameNode(sub.NodeNameRule, models.BuildNodeRenameInfo(v, processedLinkName, protocol.GetProtocolFromLink(link), idx+1))
 					renamedLink = utils.RenameNodeLink(link, newName)
 				}
 				links[i] = renamedLink

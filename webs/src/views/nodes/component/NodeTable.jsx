@@ -21,6 +21,7 @@ import Typography from '@mui/material/Typography';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 import SpeedIcon from '@mui/icons-material/Speed';
 
 // utils
@@ -30,6 +31,7 @@ import {
   getDelayDisplay,
   getFraudScoreDisplay,
   getIpTypeDisplay,
+  getNodeUnlockSummaryDisplay,
   getQualityStatusDisplay,
   getResidentialDisplay,
   getSpeedDisplay
@@ -258,6 +260,7 @@ export default function NodeTable({
                   const residentialDisplay = getResidentialDisplay(node.IsResidential, node.QualityStatus, node.QualityFamily);
                   const fraudScoreDisplay = getFraudScoreDisplay(node.FraudScore, node.QualityStatus, node.QualityFamily);
                   const qualityStatusDisplay = getQualityStatusDisplay(node.QualityStatus, node.QualityFamily);
+                  const unlockDisplay = getNodeUnlockSummaryDisplay(node, { limit: 2 });
                   const isUntested =
                     ipTypeDisplay.label === '未检测' && residentialDisplay.label === '未检测' && fraudScoreDisplay.label === '未检测';
                   const shouldMergeQualityTags =
@@ -341,6 +344,28 @@ export default function NodeTable({
                             />
                           )}
                         </>
+                      )}
+                      {unlockDisplay?.compactItems.map((item) => {
+                        const chip = (
+                          <Chip
+                            key={`unlock-${item.provider}`}
+                            icon={<LockOpenIcon sx={{ fontSize: '12px !important' }} />}
+                            label={item.compactLabel}
+                            color={item.color}
+                            variant={item.variant}
+                            size="small"
+                          />
+                        );
+                        return item.tooltip ? (
+                          <Tooltip key={`unlock-tip-${item.provider}`} title={item.tooltip}>
+                            {chip}
+                          </Tooltip>
+                        ) : (
+                          chip
+                        );
+                      })}
+                      {unlockDisplay?.extraCount > 0 && (
+                        <Chip label={`+${unlockDisplay.extraCount}`} color="default" variant="outlined" size="small" />
                       )}
                     </Box>
                   );

@@ -8,6 +8,7 @@ import (
 	"sublink/services/geoip"
 	"sublink/services/mihomo"
 	"sublink/services/notifications"
+	"sublink/services/unlock"
 	"sublink/utils"
 	"sync"
 	"sync/atomic"
@@ -100,6 +101,8 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 	if qualityCheckURL == "" {
 		qualityCheckURL = "https://my.123169.xyz/v1/info"
 	}
+	detectUnlock := config.DetectUnlock
+	unlockProviders := models.NormalizeUnlockProviders(config.UnlockProviders)
 
 	// 流量统计开关
 	trafficByGroup := config.TrafficByGroup
@@ -192,6 +195,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 		node    models.Node
 		latency int
 		err     error
+		unlock  models.UnlockSummary
 	}
 	nodeResults := make([]nodeResult, len(nodes))
 
@@ -350,6 +354,14 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 						}
 					}
 				}
+
+				if detectUnlock {
+					unlockSummary := unlock.CheckUnlock(n.Link, speedTestTimeout, n.LinkCountry, unlockProviders)
+					nodeResults[idx].unlock = unlockSummary
+					n.UnlockSummary = models.BuildUnlockSummaryJSON(unlockSummary)
+					n.UnlockCheckAt = unlockSummary.UpdatedAt
+				}
+
 				n.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
 				// 收集结果到批量更新列表（不再立即写数据库）
 				speedTestResults = append(speedTestResults, models.SpeedTestResult{
@@ -368,6 +380,8 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					FraudScore:      n.FraudScore,
 					QualityStatus:   n.QualityStatus,
 					QualityFamily:   n.QualityFamily,
+					UnlockSummary:   n.UnlockSummary,
+					UnlockCheckAt:   n.UnlockCheckAt,
 				})
 			}
 
@@ -449,6 +463,10 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 				if detectQuality {
 					resetNodeQualityInfo(&nr.node)
 				}
+				if detectUnlock {
+					nr.node.UnlockSummary = models.BuildUnlockSummaryJSON(nr.unlock)
+					nr.node.UnlockCheckAt = nr.unlock.UpdatedAt
+				}
 				nr.node.Speed = -1
 				nr.node.SpeedStatus = constants.StatusError // 因延迟失败无法测速
 				nr.node.DelayTime = -1
@@ -470,6 +488,8 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					FraudScore:     nr.node.FraudScore,
 					QualityStatus:  nr.node.QualityStatus,
 					QualityFamily:  nr.node.QualityFamily,
+					UnlockSummary:  nr.node.UnlockSummary,
+					UnlockCheckAt:  nr.node.UnlockCheckAt,
 				})
 				mu.Unlock()
 				continue
@@ -634,6 +654,14 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					}
 				}
 
+				if detectUnlock {
+					unlockSummary := unlock.CheckUnlock(result.node.Link, speedTestTimeout, result.node.LinkCountry, unlockProviders)
+					result.unlock = unlockSummary
+					result.node.UnlockSummary = models.BuildUnlockSummaryJSON(unlockSummary)
+					result.node.UnlockCheckAt = unlockSummary.UpdatedAt
+					resultData["unlock"] = unlockSummary
+				}
+
 				result.node.LatencyCheckAt = time.Now().Format("2006-01-02 15:04:05")
 				result.node.SpeedCheckAt = time.Now().Format("2006-01-02 15:04:05")
 				// 收集结果到批量更新列表（不再立即写数据库）
@@ -652,6 +680,8 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					FraudScore:     result.node.FraudScore,
 					QualityStatus:  result.node.QualityStatus,
 					QualityFamily:  result.node.QualityFamily,
+					UnlockSummary:  result.node.UnlockSummary,
+					UnlockCheckAt:  result.node.UnlockCheckAt,
 				})
 
 				// 获取当前流量统计（用于实时显示）
@@ -764,6 +794,19 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 			"fail":    failCount,
 			"total":   totalNodes,
 			"traffic": trafficData,
+		}
+		if detectUnlock {
+			unlockSummaries := make([]models.UnlockSummary, 0, len(speedTestResults))
+			for _, item := range speedTestResults {
+				summary := models.ParseUnlockSummary(item.UnlockSummary)
+				if len(summary.Providers) == 0 {
+					continue
+				}
+				unlockSummaries = append(unlockSummaries, summary)
+			}
+			resultData["unlockEnabled"] = true
+			resultData["unlockProviders"] = unlockProviders
+			resultData["unlock"] = models.BuildUnlockAggregate(unlockSummaries, unlockProviders)
 		}
 		utils.Info("测速任务完成 - 总计: %d, 成功: %d, 失败: %d, 流量: %s", totalNodes, successCount, failCount, formatBytes(trafficTotal))
 		tm.CompleteTask(taskID, fmt.Sprintf("测速完成 (成功: %d, 失败: %d, 流量: %s)", successCount, failCount, formatBytes(trafficTotal)), resultData)

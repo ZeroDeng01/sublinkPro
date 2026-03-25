@@ -12,6 +12,8 @@ func NodeCheck(r *gin.Engine) {
 	group := r.Group("/api/v1/node-check")
 	group.Use(middlewares.AuthToken)
 	{
+		group.GET("/meta", api.GetNodeCheckMeta)
+
 		// 策略管理
 		group.GET("/profiles", api.ListNodeCheckProfiles)
 		group.GET("/profiles/:id", api.GetNodeCheckProfile)

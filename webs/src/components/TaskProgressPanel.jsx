@@ -21,6 +21,8 @@ import StopIcon from '@mui/icons-material/Stop';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 
+import { getUnlockTaskResultText } from 'views/nodes/utils';
+
 const formatTime = (ms) => {
   if (ms < 0) return '--';
   const seconds = Math.floor(ms / 1000);
@@ -135,16 +137,21 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
   const resultDisplay = useMemo(() => {
     if (!task.result) return null;
 
+    const unlockText = getUnlockTaskResultText(task.result, 1);
+
     if (task.taskType === 'speed_test' && task.result.speed !== undefined) {
       const speed = task.result.speed;
       const latency = task.result.latency;
       if (speed === -1) {
-        return '测速失败';
+        return unlockText ? `测速失败 · ${unlockText}` : '测速失败';
       }
       if (speed === 0) {
-        return latency > 0 ? `延迟 ${latency}ms` : null;
+        if (latency > 0) {
+          return unlockText ? `延迟 ${latency}ms · ${unlockText}` : `延迟 ${latency}ms`;
+        }
+        return unlockText;
       }
-      return `${speed.toFixed(2)} MB/s | ${latency}ms`;
+      return unlockText ? `${speed.toFixed(2)} MB/s | ${latency}ms · ${unlockText}` : `${speed.toFixed(2)} MB/s | ${latency}ms`;
     }
 
     if (task.taskType === 'sub_update') {
@@ -175,7 +182,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
       }
     }
 
-    return null;
+    return unlockText;
   }, [task.result, task.taskType]);
 
   return (

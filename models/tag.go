@@ -418,6 +418,18 @@ func getNodeFieldValue(node Node, field string) interface{} {
 		return node.FraudScore
 	case "quality_status":
 		return getNodeQualityStatusValue(node)
+	case "unlock_provider":
+		summary := ParseUnlockSummary(node.UnlockSummary)
+		if result, ok := GetUnlockResult(summary, ""); ok {
+			return NormalizeUnlockProvider(result.Provider)
+		}
+		return ""
+	case "unlock_status":
+		return BuildPrimaryUnlockStatus(node.UnlockSummary)
+	case "unlock_result":
+		return BuildUnlockRenameValue(node.UnlockSummary, "")
+	case "unlock_keyword":
+		return BuildUnlockSearchText(node.UnlockSummary)
 	case "ip_type":
 		return getNodeIPTypeValue(node)
 	case "residential_type":

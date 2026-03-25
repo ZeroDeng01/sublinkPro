@@ -34,6 +34,7 @@ import RouterIcon from '@mui/icons-material/Router';
 import FilterVintageIcon from '@mui/icons-material/FilterVintage';
 import VpnLockIcon from '@mui/icons-material/VpnLock';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CodeIcon from '@mui/icons-material/Code';
@@ -50,6 +51,7 @@ import {
   getDelayDisplay,
   getFraudScoreDisplay,
   getIpTypeDisplay,
+  getNodeUnlockSummaryDisplay,
   getQualityStatusDisplay,
   getResidentialDisplay,
   getSpeedDisplay
@@ -237,6 +239,7 @@ export default function NodeDetailsPanel({
   const residentialDisplay = getResidentialDisplay(node.IsResidential, node.QualityStatus, node.QualityFamily);
   const fraudScoreDisplay = getFraudScoreDisplay(node.FraudScore, node.QualityStatus, node.QualityFamily);
   const qualityStatusDisplay = getQualityStatusDisplay(node.QualityStatus, node.QualityFamily);
+  const unlockDisplay = getNodeUnlockSummaryDisplay(node, { limit: 99 });
 
   const delayStyles = getStatusStyles(theme, delayDisplay.color);
   const speedStyles = getStatusStyles(theme, speedDisplay.color);
@@ -463,7 +466,7 @@ export default function NodeDetailsPanel({
                 >
                   <FolderIcon fontSize="small" />
                 </Box>
-                <Box sx={{ flex: 1 }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="caption" color="text.secondary" display="block" mb={0.8}>
                     标签
                   </Typography>
@@ -560,6 +563,78 @@ export default function NodeDetailsPanel({
             label="欺诈评分"
             value={fraudScoreDisplay.detailLabel || fraudScoreDisplay.label}
           />
+          {unlockDisplay && (
+            <ListItem disablePadding sx={{ py: 1.5, borderBottom: '1px dashed', borderColor: 'divider', display: 'block' }}>
+              <Stack direction="row" alignItems="flex-start" spacing={2} width="100%">
+                <Box
+                  sx={{
+                    minWidth: 36,
+                    height: 36,
+                    borderRadius: 12,
+                    bgcolor: (theme) => alpha(theme.palette.info.main, 0.1),
+                    color: 'info.main',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mt: 0.5
+                  }}
+                >
+                  <LockOpenIcon fontSize="small" />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="caption" color="text.secondary" display="block" mb={0.8}>
+                    解锁检测
+                  </Typography>
+                  {unlockDisplay.items.length > 0 ? (
+                    <Stack spacing={1}>
+                      <Stack direction="row" flexWrap="wrap" gap={0.8} useFlexGap>
+                        {unlockDisplay.items.map((item) => (
+                          <Chip
+                            key={`unlock-detail-${item.provider}`}
+                            label={`${item.providerLabel} · ${item.statusLabel}${item.region ? ` · ${item.region}` : ''}`}
+                            size="small"
+                            color={item.color}
+                            variant={item.variant}
+                            sx={{ fontSize: 11, height: 24, borderRadius: 1.5 }}
+                          />
+                        ))}
+                      </Stack>
+                      <Stack spacing={0.8}>
+                        {unlockDisplay.items
+                          .filter((item) => item.reason || item.detail)
+                          .map((item) => (
+                            <Typography
+                              key={`unlock-reason-${item.provider}`}
+                              variant="caption"
+                              color="text.secondary"
+                              display="block"
+                              sx={{
+                                lineHeight: 1.7,
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'anywhere'
+                              }}
+                            >
+                              <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>
+                                {item.providerLabel}：
+                              </Box>
+                              {[item.reason, item.detail].filter(Boolean).join(' · ')}
+                            </Typography>
+                          ))}
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        最近检测: {formatDateTime(unlockDisplay.checkedAt)}
+                      </Typography>
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.disabled">
+                      无解锁结果
+                    </Typography>
+                  )}
+                </Box>
+              </Stack>
+            </ListItem>
+          )}
           <DetailItem icon={<AccessTimeIcon fontSize="small" />} label="更新时间" value={formatDateTime(node.UpdatedAt)} noBorder />
         </List>
       </Box>

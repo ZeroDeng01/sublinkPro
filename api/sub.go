@@ -39,6 +39,26 @@ func normalizeSubscriptionQualityStatus(value string) string {
 	}
 }
 
+func normalizeSubscriptionUnlockStatus(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", "all":
+		return ""
+	case models.UnlockStatusUntested, models.UnlockStatusAvailable, models.UnlockStatusPartial, models.UnlockStatusRestricted,
+		models.UnlockStatusReachable, models.UnlockStatusUnsupported, models.UnlockStatusUnknown, models.UnlockStatusError:
+		return strings.ToLower(strings.TrimSpace(value))
+	default:
+		return ""
+	}
+}
+
+func parseUnlockRulesFromForm(raw string, provider string, status string, keyword string) string {
+	rules := models.ParseUnlockFilterRules(raw)
+	if len(rules) == 0 && (provider != "" || status != "" || keyword != "") {
+		rules = []models.UnlockFilterRule{{Provider: provider, Status: status, Keyword: keyword}}
+	}
+	return models.BuildUnlockFilterRulesJSON(rules)
+}
+
 func SubTotal(c *gin.Context) {
 	var Sub models.Subcription
 	subs, err := Sub.List()
@@ -132,6 +152,11 @@ func SubAdd(c *gin.Context) {
 	residentialType := normalizeSubscriptionResidentialType(c.PostForm("ResidentialType"))
 	ipType := normalizeSubscriptionIPType(c.PostForm("IPType"))
 	qualityStatus := normalizeSubscriptionQualityStatus(c.PostForm("QualityStatus"))
+	unlockProvider := models.NormalizeUnlockProvider(c.PostForm("UnlockProvider"))
+	unlockStatus := normalizeSubscriptionUnlockStatus(c.PostForm("UnlockStatus"))
+	unlockKeyword := strings.TrimSpace(c.PostForm("UnlockKeyword"))
+	unlockRuleMode := models.NormalizeUnlockRuleMode(c.PostForm("UnlockRuleMode"))
+	unlockRules := parseUnlockRulesFromForm(c.PostForm("UnlockRules"), unlockProvider, unlockStatus, unlockKeyword)
 	if residentialType == "" && onlyResidential {
 		residentialType = "residential"
 	}
@@ -216,6 +241,11 @@ func SubAdd(c *gin.Context) {
 	sub.ResidentialType = residentialType
 	sub.IPType = ipType
 	sub.QualityStatus = qualityStatus
+	sub.UnlockProvider = unlockProvider
+	sub.UnlockStatus = unlockStatus
+	sub.UnlockKeyword = unlockKeyword
+	sub.UnlockRules = unlockRules
+	sub.UnlockRuleMode = unlockRuleMode
 	sub.CreateDate = time.Now().Format("2006-01-02 15:04:05")
 
 	err := sub.Add()
@@ -303,6 +333,11 @@ func SubUpdate(c *gin.Context) {
 	residentialType := normalizeSubscriptionResidentialType(c.PostForm("ResidentialType"))
 	ipType := normalizeSubscriptionIPType(c.PostForm("IPType"))
 	qualityStatus := normalizeSubscriptionQualityStatus(c.PostForm("QualityStatus"))
+	unlockProvider := models.NormalizeUnlockProvider(c.PostForm("UnlockProvider"))
+	unlockStatus := normalizeSubscriptionUnlockStatus(c.PostForm("UnlockStatus"))
+	unlockKeyword := strings.TrimSpace(c.PostForm("UnlockKeyword"))
+	unlockRuleMode := models.NormalizeUnlockRuleMode(c.PostForm("UnlockRuleMode"))
+	unlockRules := parseUnlockRulesFromForm(c.PostForm("UnlockRules"), unlockProvider, unlockStatus, unlockKeyword)
 	if residentialType == "" && onlyResidential {
 		residentialType = "residential"
 	}
@@ -397,6 +432,11 @@ func SubUpdate(c *gin.Context) {
 	sub.ResidentialType = residentialType
 	sub.IPType = ipType
 	sub.QualityStatus = qualityStatus
+	sub.UnlockProvider = unlockProvider
+	sub.UnlockStatus = unlockStatus
+	sub.UnlockKeyword = unlockKeyword
+	sub.UnlockRules = unlockRules
+	sub.UnlockRuleMode = unlockRuleMode
 	err = sub.Update()
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")

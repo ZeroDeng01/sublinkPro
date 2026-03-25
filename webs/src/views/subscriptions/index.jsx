@@ -29,10 +29,12 @@ import {
   copySubscription,
   previewSubscriptionNodes
 } from 'api/subscriptions';
+import { getNodeCheckMeta } from 'api/nodeCheck';
 import { getNodes, getNodeCountries, getNodeGroups, getNodeSources, getNodeProtocols } from 'api/nodes';
 import { getTemplates } from 'api/templates';
 import { getScripts } from 'api/scripts';
 import { getTags } from 'api/tags';
+import { buildUnlockRulesPayload, normalizeUnlockRules, setUnlockMeta } from 'views/nodes/utils';
 
 // components
 import {
@@ -128,6 +130,11 @@ export default function SubscriptionList() {
     ResidentialType: '',
     IPType: '',
     QualityStatus: '',
+    UnlockProvider: '',
+    UnlockStatus: '',
+    UnlockKeyword: '',
+    UnlockRuleMode: 'or',
+    unlockRules: [],
     refreshUsageOnRequest: true // 默认开启实时获取用量信息
   });
 
@@ -212,16 +219,18 @@ export default function SubscriptionList() {
   // 获取其他数据（不分页）
   const fetchOtherData = useCallback(async () => {
     try {
-      const [nodesRes, templatesRes, scriptsRes, countriesRes, groupsRes, sourcesRes, tagsRes, protocolsRes] = await Promise.all([
-        getNodes(),
-        getTemplates(),
-        getScripts(),
-        getNodeCountries(),
-        getNodeGroups(),
-        getNodeSources(),
-        getTags(),
-        getNodeProtocols()
-      ]);
+      const [nodesRes, templatesRes, scriptsRes, countriesRes, groupsRes, sourcesRes, tagsRes, protocolsRes, nodeCheckMetaRes] =
+        await Promise.all([
+          getNodes(),
+          getTemplates(),
+          getScripts(),
+          getNodeCountries(),
+          getNodeGroups(),
+          getNodeSources(),
+          getTags(),
+          getNodeProtocols(),
+          getNodeCheckMeta()
+        ]);
       setAllNodes(nodesRes.data || []);
       setTemplates(templatesRes.data || []);
       setScripts(scriptsRes.data || []);
@@ -230,6 +239,7 @@ export default function SubscriptionList() {
       setSourceOptions((sourcesRes.data || []).sort());
       setTagOptions(tagsRes.data || []);
       setProtocolOptions(protocolsRes.data || []);
+      setUnlockMeta(nodeCheckMetaRes.data || {});
     } catch (error) {
       console.error(error);
     }
@@ -312,6 +322,11 @@ export default function SubscriptionList() {
       ResidentialType: '',
       IPType: '',
       QualityStatus: '',
+      UnlockProvider: '',
+      UnlockStatus: '',
+      UnlockKeyword: '',
+      UnlockRuleMode: 'or',
+      unlockRules: [],
       refreshUsageOnRequest: true
     });
     setNodeGroupFilter('all');
@@ -325,6 +340,14 @@ export default function SubscriptionList() {
     setIsEdit(true);
     setCurrentSub(sub);
     const config = typeof sub.Config === 'string' ? JSON.parse(sub.Config) : sub.Config;
+    const parsedUnlockRules = (() => {
+      if (!sub.UnlockRules) return [];
+      try {
+        return normalizeUnlockRules(typeof sub.UnlockRules === 'string' ? JSON.parse(sub.UnlockRules) : sub.UnlockRules);
+      } catch {
+        return [];
+      }
+    })();
 
     const nodes = sub.Nodes?.map((n) => n.ID) || [];
     const groups = (sub.Groups || []).map((g) => (typeof g === 'string' ? g : g.Name));
@@ -370,6 +393,16 @@ export default function SubscriptionList() {
       ResidentialType: sub.ResidentialType || (sub.OnlyResidential ? 'residential' : ''),
       IPType: sub.IPType || (sub.OnlyNative ? 'native' : ''),
       QualityStatus: sub.QualityStatus || '',
+      UnlockProvider: sub.UnlockProvider || '',
+      UnlockStatus: sub.UnlockStatus || '',
+      UnlockKeyword: sub.UnlockKeyword || '',
+      UnlockRuleMode: sub.UnlockRuleMode || 'or',
+      unlockRules:
+        parsedUnlockRules.length > 0
+          ? parsedUnlockRules
+          : sub.UnlockProvider || sub.UnlockStatus || sub.UnlockKeyword
+            ? [{ provider: sub.UnlockProvider || '', status: sub.UnlockStatus || '', keyword: sub.UnlockKeyword || '' }]
+            : [],
       refreshUsageOnRequest: sub.RefreshUsageOnRequest !== false // 默认 true
     });
     setNodeGroupFilter('all');
@@ -446,6 +479,11 @@ export default function SubscriptionList() {
         ResidentialType: formData.ResidentialType || '',
         IPType: formData.IPType || '',
         QualityStatus: formData.QualityStatus || '',
+        UnlockProvider: '',
+        UnlockStatus: '',
+        UnlockKeyword: '',
+        UnlockRuleMode: formData.UnlockRuleMode || 'or',
+        UnlockRules: buildUnlockRulesPayload(formData.unlockRules),
         RefreshUsageOnRequest: formData.refreshUsageOnRequest
       };
 
@@ -598,6 +636,11 @@ export default function SubscriptionList() {
         ResidentialType: formData.ResidentialType || '',
         IPType: formData.IPType || '',
         QualityStatus: formData.QualityStatus || '',
+        UnlockProvider: '',
+        UnlockStatus: '',
+        UnlockKeyword: '',
+        UnlockRuleMode: formData.UnlockRuleMode || 'or',
+        UnlockRules: buildUnlockRulesPayload(formData.unlockRules),
         NodeNamePreprocess: formData.nodeNamePreprocess || '',
         NodeNameRule: formData.nodeNameRule || '',
         DeduplicationRule: formData.deduplicationRule || ''

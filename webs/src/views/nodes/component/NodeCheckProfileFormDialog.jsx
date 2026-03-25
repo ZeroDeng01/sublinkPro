@@ -27,6 +27,7 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
+import Checkbox from '@mui/material/Checkbox';
 
 // icons
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -41,7 +42,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
 
 // api
-import { createNodeCheckProfile, updateNodeCheckProfile } from 'api/nodeCheck';
+import { createNodeCheckProfile, getNodeCheckMeta, updateNodeCheckProfile } from 'api/nodeCheck';
 
 // constants
 import {
@@ -49,7 +50,12 @@ import {
   SPEED_TEST_MIHOMO_OPTIONS,
   LATENCY_TEST_URL_OPTIONS,
   LANDING_IP_URL_OPTIONS,
-  QUALITY_CHECK_URL_OPTIONS
+  QUALITY_CHECK_URL_OPTIONS,
+  buildNodeCheckProfilePayload,
+  createNodeCheckProfileFormState,
+  formatUnlockProviderLabel,
+  getUnlockProviderOptions,
+  setUnlockMeta
 } from '../utils';
 
 /**
@@ -124,94 +130,36 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
   const isEdit = !!profile;
 
   // 表单状态
-  const [form, setForm] = useState({
-    name: '',
-    enabled: false,
-    cronExpr: '',
-    mode: 'tcp',
-    testUrl: '',
-    latencyUrl: '',
-    timeout: 5,
-    groups: [],
-    tags: [],
-    latencyConcurrency: 0,
-    speedConcurrency: 0,
-    detectCountry: false,
-    landingIpUrl: '',
-    includeHandshake: true,
-    speedRecordMode: 'average',
-    peakSampleInterval: 100,
-    trafficByGroup: true,
-    trafficBySource: true,
-    trafficByNode: false,
-    preserveSpeedResult: false,
-    detectQuality: false,
-    qualityCheckUrl: ''
-  });
+  const [form, setForm] = useState(() => createNodeCheckProfileFormState());
 
   const [submitting, setSubmitting] = useState(false);
+  const [unlockMetaLoading, setUnlockMetaLoading] = useState(false);
+  const [unlockProviderQuery, setUnlockProviderQuery] = useState('');
 
   // 初始化表单
   useEffect(() => {
     if (open) {
-      if (profile) {
-        // 解析 groups 和 tags 字符串为数组
-        const groups = profile.groups ? profile.groups.split(',').filter((g) => g) : [];
-        const tags = profile.tags ? profile.tags.split(',').filter((t) => t) : [];
-
-        setForm({
-          name: profile.name || '',
-          enabled: profile.enabled || false,
-          cronExpr: profile.cronExpr || '',
-          mode: profile.mode || 'tcp',
-          testUrl: profile.testUrl || '',
-          latencyUrl: profile.latencyUrl || '',
-          timeout: profile.timeout || 5,
-          groups: groups,
-          tags: tags,
-          latencyConcurrency: profile.latencyConcurrency || 0,
-          speedConcurrency: profile.speedConcurrency ?? 0,
-          detectCountry: profile.detectCountry || false,
-          landingIpUrl: profile.landingIpUrl || '',
-          includeHandshake: profile.includeHandshake !== false,
-          speedRecordMode: profile.speedRecordMode || 'average',
-          peakSampleInterval: profile.peakSampleInterval || 100,
-          trafficByGroup: profile.trafficByGroup !== false,
-          trafficBySource: profile.trafficBySource !== false,
-          trafficByNode: profile.trafficByNode || false,
-          preserveSpeedResult: profile.preserveSpeedResult || false,
-          detectQuality: profile.detectQuality || false,
-          qualityCheckUrl: profile.qualityCheckUrl || ''
-        });
-      } else {
-        // 新建时的默认值
-        setForm({
-          name: '',
-          enabled: false,
-          cronExpr: '',
-          mode: 'tcp',
-          testUrl: SPEED_TEST_TCP_OPTIONS[0]?.value || '',
-          latencyUrl: '',
-          timeout: 5,
-          groups: [],
-          tags: [],
-          latencyConcurrency: 0,
-          speedConcurrency: 0,
-          detectCountry: false,
-          landingIpUrl: '',
-          includeHandshake: true,
-          speedRecordMode: 'average',
-          peakSampleInterval: 100,
-          trafficByGroup: true,
-          trafficBySource: true,
-          trafficByNode: false,
-          preserveSpeedResult: false,
-          detectQuality: false,
-          qualityCheckUrl: ''
-        });
-      }
+      setForm(createNodeCheckProfileFormState(profile));
     }
   }, [open, profile]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const loadUnlockMeta = async () => {
+      setUnlockMetaLoading(true);
+      try {
+        const response = await getNodeCheckMeta();
+        setUnlockMeta(response.data || {});
+      } catch (error) {
+        console.error('加载解锁元数据失败:', error);
+      } finally {
+        setUnlockMetaLoading(false);
+      }
+    };
+
+    loadUnlockMeta();
+  }, [open]);
 
   // 更新表单字段
   const updateForm = (field, value) => {
@@ -232,30 +180,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
 
     setSubmitting(true);
     try {
-      const data = {
-        name: form.name.trim(),
-        enabled: form.enabled,
-        cronExpr: form.cronExpr,
-        mode: form.mode,
-        testUrl: form.testUrl,
-        latencyUrl: form.latencyUrl,
-        timeout: form.timeout,
-        groups: form.groups,
-        tags: form.tags,
-        latencyConcurrency: form.latencyConcurrency,
-        speedConcurrency: form.speedConcurrency,
-        detectCountry: form.detectCountry,
-        landingIpUrl: form.landingIpUrl,
-        includeHandshake: form.includeHandshake,
-        speedRecordMode: form.speedRecordMode,
-        peakSampleInterval: form.peakSampleInterval,
-        trafficByGroup: form.trafficByGroup,
-        trafficBySource: form.trafficBySource,
-        trafficByNode: form.trafficByNode,
-        preserveSpeedResult: form.preserveSpeedResult,
-        detectQuality: form.detectQuality,
-        qualityCheckUrl: form.qualityCheckUrl
-      };
+      const data = buildNodeCheckProfilePayload(form);
 
       if (isEdit) {
         await updateNodeCheckProfile(profile.id, data);
@@ -272,6 +197,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
   };
 
   const urlOptions = form.mode === 'mihomo' ? SPEED_TEST_MIHOMO_OPTIONS : SPEED_TEST_TCP_OPTIONS;
+  const unlockProviderOptions = getUnlockProviderOptions();
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
@@ -529,6 +455,71 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                 )}
                 renderInput={(params) => <TextField {...params} label="质量检测接口" placeholder="请选择或输入质量检测接口" />}
               />
+            )}
+
+            <FormControlLabel
+              control={<Switch checked={form.detectUnlock} onChange={(e) => updateForm('detectUnlock', e.target.checked)} size="small" />}
+              label={
+                <Typography variant="body2">
+                  解锁检测
+                  <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
+                    (按 Provider 保存节点解锁结果)
+                  </Typography>
+                </Typography>
+              }
+            />
+            {form.detectUnlock && (
+              <Stack spacing={1.5}>
+                <Alert severity="warning" variant="outlined">
+                  开启解锁检测会显著降低整批节点的检测速度，建议只在需要筛选流媒体或 AI 可用区时启用。
+                </Alert>
+                <Autocomplete
+                  multiple
+                  size="small"
+                  disableCloseOnSelect
+                  options={unlockProviderOptions}
+                  getOptionLabel={(option) => (typeof option === 'string' ? option : option.label || option.value)}
+                  value={form.unlockProviders}
+                  inputValue={unlockProviderQuery}
+                  onInputChange={(_, newValue) => setUnlockProviderQuery(newValue || '')}
+                  onChange={(_, newValue) =>
+                    updateForm(
+                      'unlockProviders',
+                      newValue.map((item) => (typeof item === 'string' ? item : item?.value || '')).filter(Boolean)
+                    )
+                  }
+                  isOptionEqualToValue={(option, value) => {
+                    const optionValue = typeof option === 'string' ? option : option?.value;
+                    const selectedValue = typeof value === 'string' ? value : value?.value;
+                    return optionValue === selectedValue;
+                  }}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => {
+                      const { key, ...tagProps } = getTagProps({ index });
+                      return <Chip key={key} label={formatUnlockProviderLabel(option)} size="small" {...tagProps} />;
+                    })
+                  }
+                  renderOption={(props, option, { selected }) => (
+                    <Box component="li" {...props} key={option.value}>
+                      <Checkbox checked={selected} size="small" sx={{ mr: 1 }} />
+                      <Box>
+                        <Typography variant="body2">{option.label || formatUnlockProviderLabel(option.value)}</Typography>
+                        <Typography variant="caption" color="textSecondary" display="block">
+                          {option.description || option.value}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="解锁 Provider"
+                      placeholder="搜索并选择 Provider，留空则使用后端默认集合"
+                      helperText={unlockMetaLoading ? '正在加载可用 Provider…' : '支持连续勾选，无需每次重新打开下拉框'}
+                    />
+                  )}
+                />
+              </Stack>
             )}
 
             {/* TCP模式专属选项：保留速度测试结果 */}

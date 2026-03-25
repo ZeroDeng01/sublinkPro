@@ -11,6 +11,7 @@ import (
 	"sublink/utils"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"gorm.io/gorm/clause"
 )
@@ -400,6 +401,9 @@ func BatchUpsertHosts(mappings []HostMappingInfo) (int, error) {
 	chunks := chunkHosts(hosts, database.BatchSize)
 
 	for _, chunk := range chunks {
+		for i := range chunk {
+			chunk[i] = sanitizeHostForStorage(chunk[i])
+		}
 		// 使用 ON CONFLICT 实现 upsert：已存在则更新 ip/remark/expire_at/updated_at
 		result := database.DB.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "hostname"}},
@@ -438,6 +442,7 @@ func BatchUpsertHosts(mappings []HostMappingInfo) (int, error) {
 
 // upsertSingleHost 单条upsert（降级用）
 func upsertSingleHost(h Host) error {
+	h = sanitizeHostForStorage(h)
 	existingHosts := hostCache.GetByIndex("hostname", h.Hostname)
 	if len(existingHosts) > 0 {
 		existing := existingHosts[0]
@@ -450,6 +455,14 @@ func upsertSingleHost(h Host) error {
 		}).Error
 	}
 	return database.DB.Create(&h).Error
+}
+
+func sanitizeHostForStorage(h Host) Host {
+	h.Hostname = strings.TrimSpace(strings.ToValidUTF8(h.Hostname, "�"))
+	h.IP = strings.TrimSpace(strings.ToValidUTF8(h.IP, "�"))
+	h.Remark = strings.TrimSpace(strings.ToValidUTF8(h.Remark, "�"))
+	h.Source = strings.TrimSpace(strings.ToValidUTF8(h.Source, "�"))
+	return h
 }
 
 // reloadHostCache 重新加载Host缓存
@@ -482,11 +495,14 @@ func chunkHosts(hosts []Host, size int) [][]Host {
 // 格式: [自动] 节点名称 | 分组:xxx | 来源:xxx
 func formatHostRemark(nodeName, group, source string) string {
 	parts := []string{"[自动]"}
+	nodeName = strings.TrimSpace(strings.ToValidUTF8(nodeName, "�"))
+	group = strings.TrimSpace(strings.ToValidUTF8(group, "�"))
+	source = strings.TrimSpace(strings.ToValidUTF8(source, "�"))
 
 	if nodeName != "" {
-		// 节点名称可能很长，截取前30个字符
-		if len(nodeName) > 30 {
-			nodeName = nodeName[:30] + "..."
+		if utf8.RuneCountInString(nodeName) > 30 {
+			runes := []rune(nodeName)
+			nodeName = string(runes[:30]) + "..."
 		}
 		parts = append(parts, nodeName)
 	}

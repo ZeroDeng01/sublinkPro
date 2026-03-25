@@ -28,12 +28,21 @@ import EditIcon from '@mui/icons-material/Edit';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import SpeedIcon from '@mui/icons-material/Speed';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 
 // api
-import { getNodeCheckProfiles, updateNodeCheckProfile, deleteNodeCheckProfile, runNodeCheckWithProfile } from 'api/nodeCheck';
+import {
+  getNodeCheckMeta,
+  getNodeCheckProfiles,
+  updateNodeCheckProfile,
+  deleteNodeCheckProfile,
+  runNodeCheckWithProfile
+} from 'api/nodeCheck';
 
 // local components
 import NodeCheckProfileFormDialog from './NodeCheckProfileFormDialog';
+
+import { buildNodeCheckProfilePayload, formatUnlockProvidersSummary, setUnlockMeta } from '../utils';
 
 /**
  * 节点检测策略管理抽屉
@@ -52,8 +61,9 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
   const loadProfiles = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getNodeCheckProfiles();
-      setProfiles(response.data || []);
+      const [profilesRes, metaRes] = await Promise.all([getNodeCheckProfiles(), getNodeCheckMeta()]);
+      setProfiles(profilesRes.data || []);
+      setUnlockMeta(metaRes.data || {});
     } catch (error) {
       console.error('加载策略列表失败:', error);
       onMessage?.('加载策略列表失败', 'error');
@@ -71,33 +81,7 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
   // 切换启用状态
   const handleToggleEnabled = async (profile) => {
     try {
-      // 将 groups 和 tags 字符串转换为数组格式（后端 API 期望数组类型）
-      const groups = profile.groups ? profile.groups.split(',').filter(Boolean) : [];
-      const tags = profile.tags ? profile.tags.split(',').filter(Boolean) : [];
-
-      await updateNodeCheckProfile(profile.id, {
-        name: profile.name,
-        enabled: !profile.enabled,
-        cronExpr: profile.cronExpr,
-        mode: profile.mode,
-        testUrl: profile.testUrl,
-        latencyUrl: profile.latencyUrl,
-        timeout: profile.timeout,
-        groups,
-        tags,
-        latencyConcurrency: profile.latencyConcurrency,
-        speedConcurrency: profile.speedConcurrency,
-        detectCountry: profile.detectCountry,
-        landingIpUrl: profile.landingIpUrl,
-        includeHandshake: profile.includeHandshake,
-        speedRecordMode: profile.speedRecordMode,
-        peakSampleInterval: profile.peakSampleInterval,
-        trafficByGroup: profile.trafficByGroup,
-        trafficBySource: profile.trafficBySource,
-        trafficByNode: profile.trafficByNode,
-        detectQuality: profile.detectQuality,
-        qualityCheckUrl: profile.qualityCheckUrl
-      });
+      await updateNodeCheckProfile(profile.id, buildNodeCheckProfilePayload(profile, { enabled: !profile.enabled }));
       loadProfiles();
       onMessage?.(profile.enabled ? '已禁用定时检测' : '已启用定时检测');
     } catch (error) {
@@ -259,6 +243,16 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                           {profile.detectQuality && (
                             <Chip label="质量" size="small" color="warning" sx={{ height: 20, fontSize: '0.7rem' }} />
                           )}
+                          {profile.detectUnlock && (
+                            <Chip
+                              icon={<LockOpenIcon sx={{ fontSize: '12px !important' }} />}
+                              label={`解锁${profile.unlockProviders?.length ? ` · ${formatUnlockProvidersSummary(profile.unlockProviders, 1)}` : ''}`}
+                              size="small"
+                              color="info"
+                              variant="outlined"
+                              sx={{ height: 20, fontSize: '0.7rem' }}
+                            />
+                          )}
                         </Box>
                       }
                       secondary={
@@ -286,6 +280,11 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                           {(profile.groups || profile.tags) && (
                             <Typography variant="caption" color="text.secondary">
                               范围: {profile.groups || '全部分组'} {profile.tags ? `| 标签: ${profile.tags}` : ''}
+                            </Typography>
+                          )}
+                          {profile.detectUnlock && (
+                            <Typography variant="caption" color="text.secondary">
+                              解锁 Provider: {formatUnlockProvidersSummary(profile.unlockProviders, 2)}
                             </Typography>
                           )}
                         </Stack>

@@ -51,6 +51,8 @@ type Node struct {
 	FraudScore      int       `gorm:"default:-1"`    // 欺诈评分（0-100，-1表示未检测）
 	QualityStatus   string    `gorm:"size:32;default:'untested'"`
 	QualityFamily   string    `gorm:"size:16;default:''"`
+	UnlockSummary   string    `gorm:"type:text"`
+	UnlockCheckAt   string
 }
 
 const (
@@ -152,6 +154,10 @@ func NormalizeNodeForImport(node *Node) {
 			node.QualityFamily = QualityFamilyIPv4
 		}
 	}
+
+	if node.UnlockSummary == "" && node.UnlockCheckAt == "" {
+		node.UnlockSummary = ""
+	}
 }
 
 // InitNodeCache 初始化节点缓存
@@ -229,7 +235,7 @@ func (node *Node) Update() error {
 
 // UpdateSpeed 更新节点测速结果
 func (node *Node) UpdateSpeed() error {
-	err := database.DB.Model(node).Select("Speed", "SpeedStatus", "LinkCountry", "LandingIP", "DelayTime", "DelayStatus", "LatencyCheckAt", "SpeedCheckAt", "IsBroadcast", "IsResidential", "FraudScore", "QualityStatus", "QualityFamily").Updates(node).Error
+	err := database.DB.Model(node).Select("Speed", "SpeedStatus", "LinkCountry", "LandingIP", "DelayTime", "DelayStatus", "LatencyCheckAt", "SpeedCheckAt", "IsBroadcast", "IsResidential", "FraudScore", "QualityStatus", "QualityFamily", "UnlockSummary", "UnlockCheckAt").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -248,6 +254,8 @@ func (node *Node) UpdateSpeed() error {
 		cachedNode.FraudScore = node.FraudScore
 		cachedNode.QualityStatus = node.QualityStatus
 		cachedNode.QualityFamily = node.QualityFamily
+		cachedNode.UnlockSummary = node.UnlockSummary
+		cachedNode.UnlockCheckAt = node.UnlockCheckAt
 		nodeCache.Set(node.ID, cachedNode)
 	}
 	return nil
@@ -270,6 +278,8 @@ type SpeedTestResult struct {
 	FraudScore      int  // 欺诈评分（0-100，-1=未检测）
 	QualityStatus   string
 	QualityFamily   string
+	UnlockSummary   string
+	UnlockCheckAt   string
 }
 
 // BatchAddNodes 批量添加节点（高效 + 容错）
@@ -437,6 +447,8 @@ var speedResultFields = []speedResultField{
 	{"fraud_score", func(r SpeedTestResult) string { return fmt.Sprintf("%d", r.FraudScore) }},
 	{"quality_status", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.QualityStatus)) }},
 	{"quality_family", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.QualityFamily)) }},
+	{"unlock_summary", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.UnlockSummary)) }},
+	{"unlock_check_at", func(r SpeedTestResult) string { return fmt.Sprintf("'%s'", escapeSQL(r.UnlockCheckAt)) }},
 }
 
 // tryBatchUpdateWithCaseWhen 使用 CASE WHEN 批量更新（高效）
@@ -514,6 +526,8 @@ func batchUpdateNodeCache(chunk []SpeedTestResult, skipSpeed bool) {
 			cachedNode.FraudScore = r.FraudScore
 			cachedNode.QualityStatus = r.QualityStatus
 			cachedNode.QualityFamily = r.QualityFamily
+			cachedNode.UnlockSummary = r.UnlockSummary
+			cachedNode.UnlockCheckAt = r.UnlockCheckAt
 			nodeCache.Set(r.NodeID, cachedNode)
 		}
 	}
@@ -535,6 +549,8 @@ func fallbackToIndividualSpeedUpdate(chunk []SpeedTestResult, skipSpeed bool) in
 			"fraud_score":      r.FraudScore,
 			"quality_status":   r.QualityStatus,
 			"quality_family":   r.QualityFamily,
+			"unlock_summary":   r.UnlockSummary,
+			"unlock_check_at":  r.UnlockCheckAt,
 		}
 		if !skipSpeed {
 			updates["speed"] = r.Speed
@@ -567,6 +583,8 @@ func fallbackToIndividualSpeedUpdate(chunk []SpeedTestResult, skipSpeed bool) in
 			cachedNode.FraudScore = r.FraudScore
 			cachedNode.QualityStatus = r.QualityStatus
 			cachedNode.QualityFamily = r.QualityFamily
+			cachedNode.UnlockSummary = r.UnlockSummary
+			cachedNode.UnlockCheckAt = r.UnlockCheckAt
 			nodeCache.Set(r.NodeID, cachedNode)
 		}
 	}
@@ -749,6 +767,11 @@ type NodeFilter struct {
 	ResidentialType string   // 住宅属性过滤: residential/datacenter/untested
 	IPType          string   // IP类型过滤: native/broadcast/untested
 	QualityStatus   string
+	UnlockProvider  string
+	UnlockStatus    string
+	UnlockKeyword   string
+	UnlockRules     []UnlockFilterRule
+	UnlockRuleMode  string
 }
 
 func hasNodeQualityData(n Node) bool {
@@ -845,11 +868,13 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 
 	// 使用缓存的 Filter 方法
 	nodes := nodeCache.Filter(func(n Node) bool {
+		unlockSummary := ParseUnlockSummary(n.UnlockSummary)
+
 		// 搜索过滤
 		if searchLower != "" {
 			nameLower := strings.ToLower(n.Name)
 			linkLower := strings.ToLower(n.Link)
-			if !strings.Contains(nameLower, searchLower) && !strings.Contains(linkLower, searchLower) {
+			if !strings.Contains(nameLower, searchLower) && !strings.Contains(linkLower, searchLower) && !MatchUnlockSummary(unlockSummary, "", "", searchLower) {
 				return false
 			}
 		}
@@ -949,6 +974,17 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 
 		if !matchNodeQualityStatus(n, filter.QualityStatus) {
 			return false
+		}
+
+		unlockRules := filter.UnlockRules
+		if len(unlockRules) == 0 && (filter.UnlockProvider != "" || filter.UnlockStatus != "" || filter.UnlockKeyword != "") {
+			unlockRules = []UnlockFilterRule{{Provider: filter.UnlockProvider, Status: filter.UnlockStatus, Keyword: filter.UnlockKeyword}}
+		}
+		unlockRuleMode := NormalizeUnlockRuleMode(filter.UnlockRuleMode)
+		if len(unlockRules) > 0 {
+			if !MatchUnlockSummaryRulesWithMode(unlockSummary, unlockRules, unlockRuleMode) {
+				return false
+			}
 		}
 
 		// 住宅属性过滤

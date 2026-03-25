@@ -17,6 +17,7 @@ import {
   getDelayDisplay,
   getFraudScoreDisplay,
   getIpTypeDisplay,
+  getNodeUnlockSummaryDisplay,
   getQualityStatusDisplay,
   getResidentialDisplay,
   getSpeedDisplay,
@@ -29,6 +30,7 @@ import {
  */
 export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onViewDetails }) {
   const theme = useTheme();
+  const unlockDisplay = getNodeUnlockSummaryDisplay(node, { limit: 2 });
 
   return (
     <MainCard
@@ -195,6 +197,34 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
             );
           })()}
         </Stack>
+
+        {unlockDisplay?.compactItems?.length > 0 && (
+          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+            {unlockDisplay.compactItems.map((item) => {
+              const chip = (
+                <Chip
+                  key={`unlock-${item.provider}`}
+                  icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>🔓</span>}
+                  label={item.compactLabel}
+                  color={item.color}
+                  variant={item.variant}
+                  size="small"
+                />
+              );
+
+              return item.tooltip ? (
+                <Tooltip key={`unlock-tip-${item.provider}`} title={item.tooltip}>
+                  {chip}
+                </Tooltip>
+              ) : (
+                chip
+              );
+            })}
+            {unlockDisplay.extraCount > 0 && (
+              <Chip label={`+${unlockDisplay.extraCount}`} color="default" variant="outlined" size="small" />
+            )}
+          </Stack>
+        )}
 
         {/* 标签区 */}
         {node.Tags && (

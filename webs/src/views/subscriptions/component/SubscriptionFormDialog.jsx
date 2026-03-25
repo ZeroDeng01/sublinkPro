@@ -39,6 +39,8 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 import SecurityIcon from '@mui/icons-material/Security';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 import NodeRenameBuilder from './NodeRenameBuilder';
 import NodeNamePreprocessor from 'components/NodeNamePreprocessor';
@@ -50,6 +52,15 @@ import DeduplicationConfig from './DeduplicationConfig';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import { getFraudScoreIcon, QUALITY_STATUS_OPTIONS } from 'utils/fraudScore';
 import { getDelayIcon, getSpeedIcon } from 'utils/nodeMetricIcons';
+import {
+  formatUnlockProviderLabel,
+  getNodeUnlockSummaryDisplay,
+  getUnlockProviderOptions,
+  getUnlockRenameVariables,
+  getUnlockRuleModeOptions,
+  getUnlockStatusOptions,
+  createEmptyUnlockRule
+} from 'views/nodes/utils';
 
 // ISO国家代码转换为国旗emoji
 const isoToFlag = (isoCode) => {
@@ -80,6 +91,7 @@ const previewNodeName = (rule) => {
     .replace(/\$Residential/g, '住宅IP')
     .replace(/\$FraudScoreIcon/g, getFraudScoreIcon(12, 'success'))
     .replace(/\$FraudScore/g, '12')
+    .replace(/\$Unlock\([^)]+\)/g, '解锁-US')
     .replace(/\$LinkName/g, '香港01')
     .replace(/\$LinkCountry/g, 'HK')
     .replace(/\$Speed/g, '1.50MB/s')
@@ -193,6 +205,10 @@ export default function SubscriptionFormDialog({
     return templates.filter((t) => t.category === 'surge');
   }, [templates]);
 
+  const unlockProviderOptions = getUnlockProviderOptions();
+  const unlockRenameVariables = getUnlockRenameVariables();
+  const unlockRules = useMemo(() => (Array.isArray(formData.unlockRules) ? formData.unlockRules : []), [formData.unlockRules]);
+
   // 过滤后的节点列表
   const filteredNodes = useMemo(() => {
     return allNodes.filter((node) => {
@@ -200,7 +216,12 @@ export default function SubscriptionFormDialog({
       if (nodeSourceFilter !== 'all' && node.Source !== nodeSourceFilter) return false;
       if (nodeSearchQuery) {
         const query = nodeSearchQuery.toLowerCase();
-        if (!node.Name?.toLowerCase().includes(query) && !node.Group?.toLowerCase().includes(query)) {
+        const unlockSummary = getNodeUnlockSummaryDisplay(node, { limit: 4 });
+        const unlockText = unlockSummary?.items
+          ?.map((item) => [item.providerLabel, item.statusLabel, item.region, item.reason, item.detail].filter(Boolean).join(' '))
+          .join(' ')
+          .toLowerCase();
+        if (!node.Name?.toLowerCase().includes(query) && !node.Group?.toLowerCase().includes(query) && !unlockText?.includes(query)) {
           return false;
         }
       }
@@ -240,8 +261,23 @@ export default function SubscriptionFormDialog({
     if (formData.QualityStatus) count++;
     if (formData.ResidentialType) count++;
     if (formData.IPType) count++;
+    if (unlockRules.some((rule) => rule.provider || rule.status || rule.keyword)) count++;
     return count;
-  }, [formData]);
+  }, [formData, unlockRules]);
+
+  const updateUnlockRule = (index, patch) => {
+    const nextRules = unlockRules.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule));
+    setFormData({ ...formData, unlockRules: nextRules });
+  };
+
+  const addUnlockRule = () => {
+    setFormData({ ...formData, unlockRules: [...unlockRules, createEmptyUnlockRule()] });
+  };
+
+  const removeUnlockRule = (index) => {
+    const nextRules = unlockRules.filter((_, ruleIndex) => ruleIndex !== index);
+    setFormData({ ...formData, unlockRules: nextRules });
+  };
 
   // 计算高级设置数量
   const advancedSettingsCount = useMemo(() => {
@@ -627,6 +663,111 @@ export default function SubscriptionFormDialog({
                       可区分完整结果、信息不全、检测失败、未启用和未检测
                     </Typography>
                   </Grid>
+                  <Grid item xs={12}>
+                    <Stack spacing={1.5}>
+                      <Typography variant="subtitle2">解锁筛选规则</Typography>
+                      <Alert severity="info" variant="outlined">
+                        不添加规则时不会启用解锁筛选。你可以按需新增规则，并设置多条规则之间是满足任意一条还是同时满足全部。
+                      </Alert>
+                      <Grid container spacing={1.5} alignItems="center">
+                        <Grid item xs={12} md={4}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel>规则关系</InputLabel>
+                            <Select
+                              value={formData.UnlockRuleMode || 'or'}
+                              label="规则关系"
+                              onChange={(e) => setFormData({ ...formData, UnlockRuleMode: e.target.value })}
+                            >
+                              {getUnlockRuleModeOptions().map((option) => (
+                                <MenuItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={8}>
+                          <Typography variant="caption" color="textSecondary">
+                            {formData.UnlockRuleMode === 'and'
+                              ? '多条规则需要同时满足，适合做更严格的筛选。'
+                              : '多条规则满足任意一条即可，适合组合多个候选解锁条件。'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                      {unlockRules.length > 0 ? (
+                        unlockRules.map((rule, index) => (
+                          <Grid container spacing={1.5} key={`unlock-rule-${index}`} alignItems="flex-start">
+                            <Grid item xs={12} md={4}>
+                              <Autocomplete
+                                options={unlockProviderOptions}
+                                value={unlockProviderOptions.find((item) => item.value === rule.provider) || null}
+                                onChange={(_, newValue) => updateUnlockRule(index, { provider: newValue?.value || '' })}
+                                getOptionLabel={(option) => option?.label || formatUnlockProviderLabel(option?.value || '')}
+                                renderOption={(props, option) => (
+                                  <li {...props} key={option.value}>
+                                    <Box>
+                                      <Typography variant="body2">{option.label}</Typography>
+                                      <Typography variant="caption" color="textSecondary">
+                                        {option.description || option.value}
+                                      </Typography>
+                                    </Box>
+                                  </li>
+                                )}
+                                renderInput={(params) => (
+                                  <TextField {...params} label="Provider" helperText="例如 Gemini / YouTube Premium" />
+                                )}
+                              />
+                            </Grid>
+                            <Grid item xs={12} md={3}>
+                              <FormControl fullWidth>
+                                <InputLabel>状态</InputLabel>
+                                <Select
+                                  value={rule.status || ''}
+                                  label="状态"
+                                  onChange={(e) => updateUnlockRule(index, { status: e.target.value })}
+                                >
+                                  {getUnlockStatusOptions(true).map((option) => (
+                                    <MenuItem key={option.value || 'all'} value={option.value}>
+                                      {option.label}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                              <TextField
+                                fullWidth
+                                label="关键词"
+                                value={rule.keyword || ''}
+                                onChange={(e) => updateUnlockRule(index, { keyword: e.target.value })}
+                                helperText="如 US、可用、Claude、地区受限"
+                              />
+                            </Grid>
+                            <Grid item xs={12} md={1}>
+                              <Button
+                                fullWidth
+                                color="error"
+                                variant="outlined"
+                                startIcon={<DeleteOutlineIcon />}
+                                onClick={() => removeUnlockRule(index)}
+                              >
+                                删除
+                              </Button>
+                            </Grid>
+                          </Grid>
+                        ))
+                      ) : (
+                        <Alert severity="info" variant="outlined">
+                          当前未启用解锁筛选。点击下方按钮后再添加具体规则。
+                        </Alert>
+                      )}
+                      <Box>
+                        <Button startIcon={<AddIcon />} variant="outlined" onClick={addUnlockRule}>
+                          新增一条解锁规则
+                        </Button>
+                      </Box>
+                    </Stack>
+                  </Grid>
                 </Grid>
 
                 {/* 落地IP国家过滤 */}
@@ -822,6 +963,17 @@ export default function SubscriptionFormDialog({
                           住宅属性(住宅IP/机房IP)
                           <br />• <code>$FraudScore</code> - 欺诈评分 &nbsp;&nbsp; • <code>$FraudScoreIcon</code> -
                           欺诈图标(⚪🟢🟡🟠🔴⚫/⛔️)
+                          {unlockRenameVariables.length > 0 && (
+                            <>
+                              <br />•{' '}
+                              {unlockRenameVariables.map((item, index) => (
+                                <span key={item.key}>
+                                  <code>{item.key}</code> - {item.label}
+                                  {index < unlockRenameVariables.length - 1 ? '； ' : ''}
+                                </span>
+                              ))}
+                            </>
+                          )}
                           <br />• <code>$Tags</code> - 所有标签(竖线分隔) &nbsp;&nbsp; • <code>$TagGroup(组名)</code> - 指定标签组中的标签
                         </Typography>
                       </Box>

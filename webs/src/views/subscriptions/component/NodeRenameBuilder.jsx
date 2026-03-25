@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -21,6 +21,7 @@ import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import CircularProgress from '@mui/material/CircularProgress';
+import Divider from '@mui/material/Divider';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -28,6 +29,7 @@ import ClearAllIcon from '@mui/icons-material/ClearAll';
 import { getTagGroups } from 'api/tags';
 import { getFraudScoreIcon } from 'utils/fraudScore';
 import { getDelayIcon, getSpeedIcon } from 'utils/nodeMetricIcons';
+import { getUnlockRenameVariables } from 'views/nodes/utils';
 
 // 将国家ISO代码转换为国旗emoji
 const isoToFlag = (isoCode) => {
@@ -96,6 +98,7 @@ const PREVIEW_DATA = {
   $Residential: '住宅IP',
   $FraudScoreIcon: getFraudScoreIcon(12, 'success'),
   $FraudScore: '12',
+  $Unlock: 'Netflix-解锁-US-+2',
   $Group: 'Premium',
   $Source: '机场A',
   $Index: '1',
@@ -114,7 +117,7 @@ const parseRule = (rule) => {
 
   // 匹配普通变量和 $TagGroup(xxx) 格式
   const varRegex =
-    /\$(Name|LinkName|LinkCountry|Flag|SpeedIcon|Speed|DelayIcon|Delay|IpType|Residential|FraudScoreIcon|FraudScore|Group|Source|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
+    /\$(Name|LinkName|LinkCountry|Flag|SpeedIcon|Speed|DelayIcon|Delay|IpType|Residential|FraudScoreIcon|FraudScore|Unlock\([^)]+\)|Unlock|Group|Source|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
 
   let match;
   let lastIndex = 0;
@@ -160,6 +163,34 @@ export default function NodeRenameBuilder({ value, onChange }) {
   const [tagGroupDialogOpen, setTagGroupDialogOpen] = useState(false);
   const [tagGroups, setTagGroups] = useState([]);
   const [tagGroupsLoading, setTagGroupsLoading] = useState(false);
+  const dynamicUnlockVariables = getUnlockRenameVariables().map((item) => ({
+    key: item.key,
+    label: item.label,
+    color: '#0d47a1',
+    description: item.description,
+    section: 'unlock'
+  }));
+  const availableVariables = useMemo(
+    () => [
+      ...AVAILABLE_VARIABLES.map((item) => ({
+        ...item,
+        section:
+          item.key === '$FraudScoreIcon' || item.key === '$FraudScore' || item.key === '$IpType' || item.key === '$Residential'
+            ? 'quality'
+            : 'basic'
+      })),
+      ...dynamicUnlockVariables
+    ],
+    [dynamicUnlockVariables]
+  );
+  const variableSections = useMemo(
+    () => [
+      { key: 'basic', label: '基础变量' },
+      { key: 'quality', label: '质量变量' },
+      { key: 'unlock', label: '解锁变量' }
+    ],
+    []
+  );
 
   // 初始化：从传入的 value 解析规则
   useEffect(() => {
@@ -258,9 +289,9 @@ export default function NodeRenameBuilder({ value, onChange }) {
   const getVariableColor = (varKey) => {
     // 处理 $TagGroup(xxx) 格式
     if (varKey.startsWith('$TagGroup(')) {
-      return AVAILABLE_VARIABLES.find((v) => v.key === '$TagGroup')?.color || '#8bc34a';
+      return availableVariables.find((v) => v.key === '$TagGroup')?.color || '#8bc34a';
     }
-    const variable = AVAILABLE_VARIABLES.find((v) => v.key === varKey);
+    const variable = availableVariables.find((v) => v.key === varKey);
     return variable?.color || '#9e9e9e';
   };
 
@@ -271,7 +302,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
     if (tagGroupMatch) {
       return `标签组:${tagGroupMatch[1]}`;
     }
-    const variable = AVAILABLE_VARIABLES.find((v) => v.key === varKey);
+    const variable = availableVariables.find((v) => v.key === varKey);
     return variable?.label || varKey;
   };
 
@@ -283,6 +314,12 @@ export default function NodeRenameBuilder({ value, onChange }) {
         const tagGroupMatch = item.value.match(/\$TagGroup\(([^)]+)\)/);
         if (tagGroupMatch) {
           return '速度优秀'; // 示例标签名
+        }
+        if (item.value === '$Unlock') {
+          return PREVIEW_DATA.$Unlock;
+        }
+        if (item.value.startsWith('$Unlock(')) {
+          return PREVIEW_DATA[item.value] || '解锁-US';
         }
         return PREVIEW_DATA[item.value] || item.value;
       }
@@ -307,31 +344,45 @@ export default function NodeRenameBuilder({ value, onChange }) {
         <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1.5, fontWeight: 600 }}>
           🏷️ 可用变量 (点击添加)
         </Typography>
-        <Stack direction="row" flexWrap="wrap" gap={1}>
-          {AVAILABLE_VARIABLES.map((variable) => (
-            <Tooltip key={variable.key} title={variable.description} arrow placement="top">
-              <Chip
-                label={`${variable.label} ${variable.key}`}
-                onClick={() => handleAddVariable(variable.key)}
-                sx={{
-                  bgcolor: `${variable.color}20`,
-                  color: variable.color,
-                  fontWeight: 600,
-                  border: `1px solid ${variable.color}40`,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: `${variable.color}30`,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 4px 12px ${variable.color}40`
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)'
-                  }
-                }}
-              />
-            </Tooltip>
-          ))}
+        <Stack spacing={1.5}>
+          {variableSections.map((section, sectionIndex) => {
+            const sectionVariables = availableVariables.filter((item) => item.section === section.key);
+            if (sectionVariables.length === 0) return null;
+            return (
+              <Box key={section.key}>
+                {sectionIndex > 0 && <Divider sx={{ mb: 1.5 }} />}
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
+                  {section.label}
+                </Typography>
+                <Stack direction="row" flexWrap="wrap" gap={1}>
+                  {sectionVariables.map((variable) => (
+                    <Tooltip key={variable.key} title={variable.description} arrow placement="top">
+                      <Chip
+                        label={`${variable.label} ${variable.key}`}
+                        onClick={() => handleAddVariable(variable.key)}
+                        sx={{
+                          bgcolor: `${variable.color}20`,
+                          color: variable.color,
+                          fontWeight: 600,
+                          border: `1px solid ${variable.color}40`,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: `${variable.color}30`,
+                            transform: 'translateY(-2px)',
+                            boxShadow: `0 4px 12px ${variable.color}40`
+                          },
+                          '&:active': {
+                            transform: 'translateY(0)'
+                          }
+                        }}
+                      />
+                    </Tooltip>
+                  ))}
+                </Stack>
+              </Box>
+            );
+          })}
         </Stack>
       </Paper>
 

@@ -115,6 +115,21 @@ func RunMigrations() error {
 		utils.Error("执行迁移 0029_add_user_ai_settings_columns 失败: %v", err)
 	}
 
+	if err := database.RunCustomMigration("0030_add_unlock_check_columns", func() error {
+		if err := db.AutoMigrate(&Node{}, &NodeCheckProfile{}); err != nil {
+			return err
+		}
+		if err := db.Model(&Node{}).Where("unlock_summary IS NULL").Update("unlock_summary", "").Error; err != nil {
+			return err
+		}
+		if err := db.Model(&NodeCheckProfile{}).Where("unlock_providers IS NULL").Update("unlock_providers", "").Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		utils.Error("执行迁移 0030_add_unlock_check_columns 失败: %v", err)
+	}
+
 	if err := database.RunCustomMigration("0024_migrate_legacy_webhook_settings", func() error {
 		legacyURL, _ := GetSetting("webhook_url")
 		legacyMethod, _ := GetSetting("webhook_method")

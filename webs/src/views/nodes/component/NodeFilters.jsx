@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import PropTypes from 'prop-types';
 
 // material-ui
@@ -12,9 +13,27 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
+import IconButton from '@mui/material/IconButton';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 // utils
-import { isoToFlag, QUALITY_STATUS_OPTIONS, STATUS_OPTIONS } from '../utils';
+import {
+  createEmptyUnlockRule,
+  formatUnlockProviderLabel,
+  getUnlockProviderOptions,
+  getUnlockRuleModeOptions,
+  getUnlockStatusOptions,
+  isoToFlag,
+  QUALITY_STATUS_OPTIONS,
+  STATUS_OPTIONS
+} from '../utils';
 
 /**
  * 节点过滤器工具栏
@@ -42,6 +61,10 @@ export default function NodeFilters({
   setIpType,
   qualityStatus,
   setQualityStatus,
+  unlockRules,
+  setUnlockRules,
+  unlockRuleMode,
+  setUnlockRuleMode,
   countryFilter,
   setCountryFilter,
   tagFilter,
@@ -55,6 +78,21 @@ export default function NodeFilters({
   protocolOptions,
   onReset
 }) {
+  const unlockProviderOptions = getUnlockProviderOptions();
+  const normalizedUnlockRules = Array.isArray(unlockRules) ? unlockRules : [];
+  const [unlockExpanded, setUnlockExpanded] = useState(false);
+
+  const updateUnlockRule = (index, patch) => {
+    setUnlockRules(normalizedUnlockRules.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule)));
+  };
+
+  const addUnlockRule = () => setUnlockRules([...normalizedUnlockRules, createEmptyUnlockRule()]);
+
+  const removeUnlockRule = (index) => {
+    const nextRules = normalizedUnlockRules.filter((_, ruleIndex) => ruleIndex !== index);
+    setUnlockRules(nextRules);
+  };
+
   return (
     <Stack direction="row" spacing={2} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
       <FormControl size="small" sx={{ minWidth: 120 }}>
@@ -247,6 +285,105 @@ export default function NodeFilters({
           renderInput={(params) => <TextField {...params} label="标签" placeholder="选择标签" />}
         />
       )}
+      <Box sx={{ width: '100%', minWidth: 320 }}>
+        <Accordion
+          expanded={unlockExpanded}
+          onChange={(_, expanded) => setUnlockExpanded(expanded)}
+          sx={{ boxShadow: 'none', border: '1px solid', borderColor: 'divider', borderRadius: 2, '&:before': { display: 'none' } }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 56 }}>
+            <Stack spacing={0.25} sx={{ width: '100%' }}>
+              <Typography variant="subtitle2">解锁筛选</Typography>
+              <Typography variant="caption" color="textSecondary">
+                {normalizedUnlockRules.length > 0
+                  ? `${normalizedUnlockRules.length} 条规则 · ${unlockRuleMode === 'and' ? '同时满足全部' : '满足任意一条'}`
+                  : '默认折叠，未添加规则时不启用解锁筛选'}
+              </Typography>
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Stack spacing={1.5}>
+              <Alert severity="info" variant="outlined">
+                不添加规则时不会启用解锁筛选。你可以按需新增规则，并设置多条规则之间是满足任意一条还是同时满足全部。
+              </Alert>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ md: 'center' }}>
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                  <InputLabel>规则关系</InputLabel>
+                  <Select value={unlockRuleMode || 'or'} label="规则关系" onChange={(e) => setUnlockRuleMode(e.target.value)}>
+                    {getUnlockRuleModeOptions().map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Typography variant="caption" color="textSecondary">
+                  {unlockRuleMode === 'and' ? '多条规则需要同时满足。' : '多条规则满足任意一条即可。'}
+                </Typography>
+              </Stack>
+              {normalizedUnlockRules.length > 0 ? (
+                normalizedUnlockRules.map((rule, index) => (
+                  <Stack
+                    key={`node-unlock-rule-${index}`}
+                    direction={{ xs: 'column', md: 'row' }}
+                    spacing={1.5}
+                    alignItems={{ md: 'flex-start' }}
+                  >
+                    <Autocomplete
+                      size="small"
+                      options={unlockProviderOptions}
+                      value={unlockProviderOptions.find((item) => item.value === rule.provider) || null}
+                      onChange={(_, newValue) => updateUnlockRule(index, { provider: newValue?.value || '' })}
+                      getOptionLabel={(option) => option?.label || formatUnlockProviderLabel(option?.value || '')}
+                      sx={{ minWidth: 220, flex: 1 }}
+                      renderOption={(props, option) => (
+                        <li {...props} key={option.value}>
+                          <Box>
+                            <Typography variant="body2">{option.label}</Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {option.description || option.value}
+                            </Typography>
+                          </Box>
+                        </li>
+                      )}
+                      renderInput={(params) => <TextField {...params} label="Provider" />}
+                    />
+                    <FormControl size="small" sx={{ minWidth: 180 }}>
+                      <InputLabel>状态</InputLabel>
+                      <Select value={rule.status || ''} label="状态" onChange={(e) => updateUnlockRule(index, { status: e.target.value })}>
+                        {getUnlockStatusOptions(true).map((opt) => (
+                          <MenuItem key={opt.value || 'all'} value={opt.value}>
+                            {opt.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <TextField
+                      size="small"
+                      label="关键词"
+                      value={rule.keyword || ''}
+                      onChange={(e) => updateUnlockRule(index, { keyword: e.target.value })}
+                      sx={{ minWidth: 220, flex: 1 }}
+                    />
+                    <IconButton color="error" onClick={() => removeUnlockRule(index)} sx={{ alignSelf: { xs: 'flex-end', md: 'center' } }}>
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                ))
+              ) : (
+                <Alert severity="info" variant="outlined">
+                  当前未启用解锁筛选。点击下方按钮后再添加具体规则。
+                </Alert>
+              )}
+              <Box>
+                <Button size="small" startIcon={<AddIcon />} variant="outlined" onClick={addUnlockRule}>
+                  新增解锁规则
+                </Button>
+              </Box>
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
+      </Box>
       <Button onClick={onReset}>重置</Button>
     </Stack>
   );
@@ -275,6 +412,10 @@ NodeFilters.propTypes = {
   setIpType: PropTypes.func.isRequired,
   qualityStatus: PropTypes.string.isRequired,
   setQualityStatus: PropTypes.func.isRequired,
+  unlockRules: PropTypes.array.isRequired,
+  setUnlockRules: PropTypes.func.isRequired,
+  unlockRuleMode: PropTypes.string.isRequired,
+  setUnlockRuleMode: PropTypes.func.isRequired,
   countryFilter: PropTypes.array.isRequired,
   setCountryFilter: PropTypes.func.isRequired,
   tagFilter: PropTypes.array.isRequired,

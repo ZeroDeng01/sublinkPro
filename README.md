@@ -57,23 +57,30 @@
 | 功能 | 说明 | 详情 |
 |:---|:---|:---:|
 | 🏷️ **智能标签系统** | 自动规则打标签、零代码筛选、支持 IP 质量条件 | [📖](docs/features/tags.md) |
-| ⚡ **专业测速系统** | 双阶段测试、智能延迟测量、支持 IP 质量检测 | [📖](docs/features/speedtest.md) |
+| ⚡ **专业测速系统** | 双阶段测试、智能延迟测量、支持 IP 质量检测与解锁检测 | [📖](docs/features/speedtest.md) |
 | 🔗 **链式代理** | Dialer-Proxy 原生支持、可视化配置、支持按 IP 质量选节点 | [📖](docs/features/chain-proxy.md) |
 | 🤖 **AI 模板编辑** | 用自然语言生成模板候选草稿，支持编辑/对比双视图、本地应用与回退 | [📖](docs/features/template-ai.md) |
 | ✈️ **机场管理** | 多格式导入、定时更新、流量监控、一键全量拉取 | [📖](docs/features/airport.md) |
-| 🗂️ **分组排序** | 分组内机场优先级拖拽排序，控制订阅输出中的节点顺序 | - |
+| 🗂️ **分组排序** | 分组内机场优先级拖拽排序，控制订阅输出中的节点顺序 | [📖](docs/development.md) |
 | 📋 **订阅分享** | 多链接管理、过期策略、访问统计 | [📖](docs/features/subscription-share.md) |
 | 🌐 **Host 管理** | 域名映射、DNS 配置、CDN 优选 | [📖](docs/features/host.md) |
 | 🤖 **Telegram Bot** | 远程测速、订阅管理、系统监控 | [📖](docs/features/telegram-bot.md) |
 | 📜 **脚本系统** | 节点过滤、内容后处理、多脚本链式执行 | [📖](docs/script_support.md) |
-| 🔔 **Webhooks** | 支持 PushDeer、Bark、钉钉、方糖等多平台通知 | - |
-| 🔐 **安全特性** | Token 授权、API Key、IP 黑/白名单、访问日志 | - |
+| 🔔 **Webhooks** | 支持 PushDeer、Bark、钉钉、方糖等多平台通知 | [📖](docs/configuration.md) |
+| 🔐 **安全特性** | Token 授权、API Key、IP 黑/白名单、访问日志 | [📖](docs/configuration.md) |
 
 ---
 
 ## 🚀 快速开始
 
 ### Docker Compose（推荐）
+
+> [!IMPORTANT]
+> 运行时数据默认保存在以下目录中，请在升级和迁移时保留：
+>
+> - `./db`：数据库、配置文件、GeoIP 等本地数据
+> - `./template`：模板文件
+> - `./logs`：运行日志
 
 创建 `docker-compose.yml`：
 
@@ -100,6 +107,9 @@ docker-compose up -d
 访问 `http://localhost:8000`，使用默认账号 `admin` / `123456` 登录。
 
 默认使用 SQLite；如需切换到 MySQL 或 PostgreSQL，可通过 `SUBLINK_DSN`、配置文件 `dsn:` 或命令行 `--dsn` 指定数据库连接，示例见 [⚙️ 配置说明](docs/configuration.md)。
+
+> [!NOTE]
+> 即使配置了 `SUBLINK_WEB_BASE_PATH` 隐藏管理界面入口，API (`/api/*`) 与订阅/分享访问路径 (`/c/*`) 仍保持在根路径下，这是本项目特有的前后端集成行为。
 
 > [!TIP]
 > 更多安装方式（Docker、一键脚本、更新升级等）请参阅 [📦 安装部署指南](docs/installation.md)
@@ -140,7 +150,8 @@ docker-compose up -d
 | 文档 | 说明 |
 |:---|:---|
 | [🏷️ 智能标签系统](docs/features/tags.md) | 自动规则打标签、零代码筛选、IP 质量规则 |
-| [⚡ 测速系统](docs/features/speedtest.md) | 测速原理、IP 质量检测、参数配置 |
+| [⚡ 测速系统](docs/features/speedtest.md) | 测速原理、IP 质量检测、解锁检测、参数配置 |
+| [🌍 解锁检测](docs/features/unlock-check.md) | 流媒体 / AI 可用区检测、Provider 架构、扩展方式 |
 | [🔗 链式代理](docs/features/chain-proxy.md) | Dialer-Proxy、条件选节点、配置流程 |
 | [🤖 AI 模板编辑](docs/features/template-ai.md) | AI 生成模板草稿、编辑/对比审阅、本地应用与回退 |
 | [✈️ 机场管理](docs/features/airport.md) | 订阅导入、定时更新、流量监控 |

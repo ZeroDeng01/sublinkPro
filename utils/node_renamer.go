@@ -25,6 +25,17 @@ func SetTagGroupTagsFunc(fn TagGroupTagsFn) {
 
 // tagGroupRegex 匹配 $TagGroup(xxx) 格式的正则
 var tagGroupRegex = regexp.MustCompile(`\$TagGroup\(([^)]+)\)`)
+var unlockRegex = regexp.MustCompile(`\$Unlock\(([^)]+)\)`)
+
+type renameUnlockSummary struct {
+	Providers []renameUnlockProvider `json:"providers"`
+}
+
+type renameUnlockProvider struct {
+	Provider string `json:"provider"`
+	Status   string `json:"status"`
+	Region   string `json:"region,omitempty"`
+}
 
 // replaceTagGroupVariables 替换规则中的 $TagGroup(xxx) 变量
 // rule: 包含 $TagGroup(xxx) 变量的规则字符串
@@ -87,6 +98,11 @@ type NodeInfo struct {
 	FraudScore    int     // 欺诈评分（0-100，-1=未检测）
 	QualityStatus string
 	QualityFamily string
+	UnlockRaw     string
+	UnlockSummary string
+	UnlockStatus  string
+	UnlockLabel   string
+	UnlockRegion  string
 }
 
 const (
@@ -405,6 +421,10 @@ func RenameNode(rule string, info NodeInfo) string {
 		}()},
 		{"$LinkName", info.LinkName},
 		{"$Protocol", info.Protocol},
+		{"$UnlockStatus", info.UnlockStatus},
+		{"$UnlockLabel", info.UnlockLabel},
+		{"$UnlockRegion", info.UnlockRegion},
+		{"$Unlock", info.UnlockSummary},
 		{"$IpType", func() string {
 			if info.QualityStatus != qualityStatusSuccess {
 				return formatQualityText(info)
@@ -424,6 +444,18 @@ func RenameNode(rule string, info NodeInfo) string {
 		{"$Tags", tags}, // 所有标签（竖线｜分隔）
 	}
 
+	result = unlockRegex.ReplaceAllStringFunc(result, func(match string) string {
+		submatches := unlockRegex.FindStringSubmatch(match)
+		if len(submatches) < 2 {
+			return ""
+		}
+		provider := strings.TrimSpace(submatches[1])
+		if provider == "" {
+			return ""
+		}
+		return buildProviderUnlockValue(info.UnlockRaw, provider)
+	})
+
 	for _, r := range replacements {
 		result = strings.ReplaceAll(result, r.variable, r.value)
 	}
@@ -440,6 +472,57 @@ func RenameNode(rule string, info NodeInfo) string {
 	}
 
 	return result
+}
+
+func buildProviderUnlockValue(raw string, provider string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return "未检测"
+	}
+	var summary renameUnlockSummary
+	if err := json.Unmarshal([]byte(trimmed), &summary); err != nil {
+		return "未检测"
+	}
+	provider = normalizeUnlockProviderKey(provider)
+	for _, item := range summary.Providers {
+		if normalizeUnlockProviderKey(item.Provider) != provider {
+			continue
+		}
+		parts := []string{formatUnlockStatusLabel(item.Status)}
+		if item.Region != "" {
+			parts = append(parts, item.Region)
+		}
+		return strings.Join(parts, "-")
+	}
+	return "未检测"
+}
+
+func normalizeUnlockProviderKey(provider string) string {
+	key := strings.ToLower(strings.TrimSpace(provider))
+	key = strings.ReplaceAll(key, " ", "_")
+	key = strings.ReplaceAll(key, "-", "_")
+	return strings.Trim(key, "_")
+}
+
+func formatUnlockStatusLabel(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "available":
+		return "解锁"
+	case "partial":
+		return "部分"
+	case "reachable":
+		return "直连"
+	case "restricted":
+		return "受限"
+	case "unsupported":
+		return "不支持"
+	case "error":
+		return "异常"
+	case "unknown":
+		return "未知"
+	default:
+		return "未测"
+	}
 }
 
 // FormatSpeed 格式化速度显示

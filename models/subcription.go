@@ -58,6 +58,11 @@ type Subcription struct {
 	ResidentialType       string           `json:"ResidentialType"`                           // 住宅属性过滤: residential/datacenter/untested
 	IPType                string           `json:"IPType"`                                    // IP类型过滤: native/broadcast/untested
 	QualityStatus         string           `json:"QualityStatus"`
+	UnlockProvider        string           `json:"UnlockProvider"`
+	UnlockStatus          string           `json:"UnlockStatus"`
+	UnlockKeyword         string           `json:"UnlockKeyword"`
+	UnlockRules           string           `json:"UnlockRules"`
+	UnlockRuleMode        string           `json:"UnlockRuleMode"`
 	CreatedAt             time.Time        `json:"CreatedAt"`
 	UpdatedAt             time.Time        `json:"UpdatedAt"`
 	DeletedAt             gorm.DeletedAt   `gorm:"index" json:"DeletedAt"`
@@ -200,6 +205,11 @@ func (sub *Subcription) Update() error {
 		"residential_type":         sub.ResidentialType,
 		"ip_type":                  sub.IPType,
 		"quality_status":           sub.QualityStatus,
+		"unlock_provider":          sub.UnlockProvider,
+		"unlock_status":            sub.UnlockStatus,
+		"unlock_keyword":           sub.UnlockKeyword,
+		"unlock_rules":             sub.UnlockRules,
+		"unlock_rule_mode":         sub.UnlockRuleMode,
 	}
 	err := database.DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 	if err != nil {
@@ -526,6 +536,23 @@ func (sub *Subcription) ApplyFilters(nodes []Node) []Node {
 				continue
 			}
 			if !matchNodeIPType(node, ipType) {
+				continue
+			}
+			filteredNodes = append(filteredNodes, node)
+		}
+		result = filteredNodes
+	}
+
+	unlockRules := ParseUnlockFilterRules(sub.UnlockRules)
+	if len(unlockRules) == 0 && (sub.UnlockProvider != "" || sub.UnlockStatus != "" || sub.UnlockKeyword != "") {
+		unlockRules = []UnlockFilterRule{{Provider: sub.UnlockProvider, Status: sub.UnlockStatus, Keyword: sub.UnlockKeyword}}
+	}
+	unlockRuleMode := NormalizeUnlockRuleMode(sub.UnlockRuleMode)
+	if len(unlockRules) > 0 {
+		var filteredNodes []Node
+		for _, node := range result {
+			summary := ParseUnlockSummary(node.UnlockSummary)
+			if !MatchUnlockSummaryRulesWithMode(summary, unlockRules, unlockRuleMode) {
 				continue
 			}
 			filteredNodes = append(filteredNodes, node)
@@ -1194,25 +1221,7 @@ func (sub *Subcription) PreviewSub() (*PreviewResult, error) {
 		previewLink := node.Link
 
 		if sub.NodeNameRule != "" {
-			previewName = utils.RenameNode(sub.NodeNameRule, utils.NodeInfo{
-				Name:          node.Name,
-				LinkName:      processedLinkName,
-				LinkCountry:   node.LinkCountry,
-				Speed:         node.Speed,
-				SpeedStatus:   node.SpeedStatus,
-				DelayTime:     node.DelayTime,
-				DelayStatus:   node.DelayStatus,
-				Group:         node.Group,
-				Source:        node.Source,
-				Index:         idx + 1,
-				Protocol:      utils.GetProtocolFromLink(node.Link),
-				Tags:          node.Tags,
-				IsBroadcast:   node.IsBroadcast,
-				IsResidential: node.IsResidential,
-				FraudScore:    node.FraudScore,
-				QualityStatus: node.QualityStatus,
-				QualityFamily: node.QualityFamily,
-			})
+			previewName = utils.RenameNode(sub.NodeNameRule, BuildNodeRenameInfo(node, processedLinkName, utils.GetProtocolFromLink(node.Link), idx+1))
 			previewLink = utils.RenameNodeLink(node.Link, previewName)
 		}
 

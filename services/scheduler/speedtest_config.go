@@ -37,6 +37,9 @@ type SpeedTestConfig struct {
 	// 节点质量检测
 	DetectQuality   bool   // 是否检测节点质量
 	QualityCheckURL string // 质量检测API URL
+
+	DetectUnlock    bool
+	UnlockProviders []string
 }
 
 // SpeedTestConfigFromProfile 从策略构建配置（并发安全）
@@ -95,5 +98,7 @@ func SpeedTestConfigFromProfile(profile *models.NodeCheckProfile) *SpeedTestConf
 		TrafficByNode:       profile.TrafficByNode,
 		DetectQuality:       profile.DetectQuality,
 		QualityCheckURL:     profile.QualityCheckURL,
+		DetectUnlock:        profile.DetectUnlock,
+		UnlockProviders:     models.NormalizeUnlockProviders(profile.GetUnlockProviders()),
 	}
 }

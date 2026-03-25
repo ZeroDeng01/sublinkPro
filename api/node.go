@@ -40,6 +40,62 @@ func normalizeIPType(value string) string {
 	}
 }
 
+func normalizeUnlockStatus(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", "all":
+		return ""
+	case models.UnlockStatusUntested, models.UnlockStatusAvailable, models.UnlockStatusPartial, models.UnlockStatusRestricted,
+		models.UnlockStatusReachable, models.UnlockStatusUnsupported, models.UnlockStatusUnknown, models.UnlockStatusError:
+		return strings.ToLower(strings.TrimSpace(value))
+	default:
+		return ""
+	}
+}
+
+func parseUnlockRulesFromQuery(c *gin.Context) []models.UnlockFilterRule {
+	rawRules := strings.TrimSpace(c.Query("unlockRules"))
+	rules := models.ParseUnlockFilterRules(rawRules)
+	if len(rules) > 0 {
+		return rules
+	}
+
+	providers := c.QueryArray("unlockRules[][provider]")
+	statuses := c.QueryArray("unlockRules[][status]")
+	keywords := c.QueryArray("unlockRules[][keyword]")
+	maxLen := len(providers)
+	if len(statuses) > maxLen {
+		maxLen = len(statuses)
+	}
+	if len(keywords) > maxLen {
+		maxLen = len(keywords)
+	}
+	if maxLen > 0 {
+		ruleList := make([]models.UnlockFilterRule, 0, maxLen)
+		for i := 0; i < maxLen; i++ {
+			rule := models.UnlockFilterRule{}
+			if i < len(providers) {
+				rule.Provider = models.NormalizeUnlockProvider(providers[i])
+			}
+			if i < len(statuses) {
+				rule.Status = normalizeUnlockStatus(statuses[i])
+			}
+			if i < len(keywords) {
+				rule.Keyword = strings.TrimSpace(keywords[i])
+			}
+			ruleList = append(ruleList, rule)
+		}
+		return models.NormalizeUnlockFilterRules(ruleList)
+	}
+
+	legacyProvider := models.NormalizeUnlockProvider(c.Query("unlockProvider"))
+	legacyStatus := normalizeUnlockStatus(c.Query("unlockStatus"))
+	legacyKeyword := strings.TrimSpace(c.Query("unlockKeyword"))
+	if legacyProvider != "" || legacyStatus != "" || legacyKeyword != "" {
+		return []models.UnlockFilterRule{{Provider: legacyProvider, Status: legacyStatus, Keyword: legacyKeyword}}
+	}
+	return nil
+}
+
 func NodeUpdadte(c *gin.Context) {
 	var Node models.Node
 	name := c.PostForm("name")
@@ -339,6 +395,13 @@ func NodeGet(c *gin.Context) {
 	filter.ResidentialType = normalizeResidentialType(c.Query("residentialType"))
 	filter.IPType = normalizeIPType(c.Query("ipType"))
 	filter.QualityStatus = normalizeQualityStatus(c.Query("qualityStatus"))
+	filter.UnlockRuleMode = models.NormalizeUnlockRuleMode(c.Query("unlockRuleMode"))
+	filter.UnlockRules = parseUnlockRulesFromQuery(c)
+	if len(filter.UnlockRules) == 0 {
+		filter.UnlockProvider = models.NormalizeUnlockProvider(c.Query("unlockProvider"))
+		filter.UnlockStatus = normalizeUnlockStatus(c.Query("unlockStatus"))
+		filter.UnlockKeyword = strings.TrimSpace(c.Query("unlockKeyword"))
+	}
 	if filter.ResidentialType == "" && c.Query("onlyResidential") == "true" {
 		filter.ResidentialType = "residential"
 	}
@@ -443,6 +506,13 @@ func NodeGetIDs(c *gin.Context) {
 	filter.ResidentialType = normalizeResidentialType(c.Query("residentialType"))
 	filter.IPType = normalizeIPType(c.Query("ipType"))
 	filter.QualityStatus = normalizeQualityStatus(c.Query("qualityStatus"))
+	filter.UnlockRuleMode = models.NormalizeUnlockRuleMode(c.Query("unlockRuleMode"))
+	filter.UnlockRules = parseUnlockRulesFromQuery(c)
+	if len(filter.UnlockRules) == 0 {
+		filter.UnlockProvider = models.NormalizeUnlockProvider(c.Query("unlockProvider"))
+		filter.UnlockStatus = normalizeUnlockStatus(c.Query("unlockStatus"))
+		filter.UnlockKeyword = strings.TrimSpace(c.Query("unlockKeyword"))
+	}
 	if filter.ResidentialType == "" && c.Query("onlyResidential") == "true" {
 		filter.ResidentialType = "residential"
 	}

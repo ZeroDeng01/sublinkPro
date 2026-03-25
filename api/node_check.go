@@ -4,10 +4,25 @@ import (
 	"strconv"
 	"sublink/models"
 	"sublink/services/scheduler"
+	"sublink/services/unlock"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
 )
+
+func GetNodeCheckMeta(c *gin.Context) {
+	providerValues := unlock.ListRegisteredUnlockProviders()
+	providerOptions := make([]models.UnlockProviderMeta, 0, len(providerValues))
+	for _, provider := range providerValues {
+		providerOptions = append(providerOptions, models.GetUnlockProviderMeta(provider))
+	}
+
+	utils.OkDetailed(c, "获取成功", gin.H{
+		"unlockProviders":       providerOptions,
+		"unlockStatuses":        models.GetUnlockStatusMetas(),
+		"unlockRenameVariables": models.BuildUnlockRenameVariables(providerValues),
+	})
+}
 
 // ListNodeCheckProfiles 获取节点检测策略列表
 // GET /api/v1/node-check/profiles
@@ -65,6 +80,8 @@ func CreateNodeCheckProfile(c *gin.Context) {
 		PreserveSpeedResult bool     `json:"preserveSpeedResult"`
 		DetectQuality       bool     `json:"detectQuality"`
 		QualityCheckURL     string   `json:"qualityCheckUrl"`
+		DetectUnlock        bool     `json:"detectUnlock"`
+		UnlockProviders     []string `json:"unlockProviders"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -139,9 +156,11 @@ func CreateNodeCheckProfile(c *gin.Context) {
 		PreserveSpeedResult: req.PreserveSpeedResult,
 		DetectQuality:       req.DetectQuality,
 		QualityCheckURL:     req.QualityCheckURL,
+		DetectUnlock:        req.DetectUnlock,
 	}
 	profile.SetGroups(req.Groups)
 	profile.SetTags(req.Tags)
+	profile.SetUnlockProviders(models.NormalizeUnlockProviders(req.UnlockProviders))
 
 	if err := profile.Add(); err != nil {
 		utils.FailWithMsg(c, "创建策略失败")
@@ -192,6 +211,8 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 		PreserveSpeedResult *bool    `json:"preserveSpeedResult"`
 		DetectQuality       bool     `json:"detectQuality"`
 		QualityCheckURL     string   `json:"qualityCheckUrl"`
+		DetectUnlock        bool     `json:"detectUnlock"`
+		UnlockProviders     []string `json:"unlockProviders"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -257,6 +278,8 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	}
 	profile.DetectQuality = req.DetectQuality
 	profile.QualityCheckURL = req.QualityCheckURL
+	profile.DetectUnlock = req.DetectUnlock
+	profile.SetUnlockProviders(models.NormalizeUnlockProviders(req.UnlockProviders))
 
 	if err := profile.Update(); err != nil {
 		utils.FailWithMsg(c, "更新策略失败")
