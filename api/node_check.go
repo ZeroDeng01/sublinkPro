@@ -21,6 +21,7 @@ func GetNodeCheckMeta(c *gin.Context) {
 		"unlockProviders":       providerOptions,
 		"unlockStatuses":        models.GetUnlockStatusMetas(),
 		"unlockRenameVariables": models.BuildUnlockRenameVariables(providerValues),
+		"conditionFields":       models.GetNodeConditionFields(),
 	})
 }
 

@@ -6,6 +6,7 @@ import (
 	"sublink/dto"
 	"sublink/models"
 	"sublink/node/protocol"
+	"sublink/services/unlock"
 	"sublink/utils"
 	"time"
 
@@ -40,15 +41,7 @@ func normalizeSubscriptionQualityStatus(value string) string {
 }
 
 func normalizeSubscriptionUnlockStatus(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", "all":
-		return ""
-	case models.UnlockStatusUntested, models.UnlockStatusAvailable, models.UnlockStatusPartial, models.UnlockStatusRestricted,
-		models.UnlockStatusReachable, models.UnlockStatusUnsupported, models.UnlockStatusUnknown, models.UnlockStatusError:
-		return strings.ToLower(strings.TrimSpace(value))
-	default:
-		return ""
-	}
+	return unlock.NormalizeUnlockStatus(value)
 }
 
 func parseUnlockRulesFromForm(raw string, provider string, status string, keyword string) string {
@@ -601,6 +594,8 @@ func GetProtocolMeta(c *gin.Context) {
 
 // GetNodeFieldsMeta 获取节点通用字段元数据
 func GetNodeFieldsMeta(c *gin.Context) {
-	meta := models.GetNodeFieldsMeta()
-	utils.OkDetailed(c, "获取成功", meta)
+	utils.OkDetailed(c, "获取成功", gin.H{
+		"fields":          models.GetNodeFieldsMeta(),
+		"conditionFields": models.GetNodeConditionFields(),
+	})
 }

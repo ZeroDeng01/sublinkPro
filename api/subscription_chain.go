@@ -234,29 +234,13 @@ func GetChainOptions(c *gin.Context) {
 	}
 
 	// 条件字段列表
-	conditionFields := []map[string]string{
-		{"value": "name", "label": "节点名称"},
-		{"value": "link_name", "label": "原始名称"},
-		{"value": "link_country", "label": "国家/地区"},
-		{"value": "protocol", "label": "协议类型"},
-		{"value": "group", "label": "分组"},
-		{"value": "source", "label": "来源"},
-		{"value": "speed", "label": "速度 (MB/s)"},
-		{"value": "delay_time", "label": "延迟 (ms)"},
-		{"value": "fraud_score", "label": "欺诈评分"},
-		{"value": "quality_status", "label": "质量状态"},
-		{"value": "unlock_provider", "label": "解锁 Provider"},
-		{"value": "unlock_status", "label": "解锁状态"},
-		{"value": "unlock_keyword", "label": "解锁关键词"},
-		{"value": "unlock_result", "label": "解锁摘要"},
-		{"value": "ip_type", "label": "IP类型"},
-		{"value": "residential_type", "label": "住宅属性"},
-		{"value": "speed_status", "label": "测速状态"},
-		{"value": "delay_status", "label": "延迟状态"},
-		{"value": "tags", "label": "标签"},
-		{"value": "link_address", "label": "地址"},
-		{"value": "link_host", "label": "主机名"},
-		{"value": "link_port", "label": "端口"},
+	fieldMetas := models.GetNodeConditionFields()
+	conditionFields := make([]models.NodeConditionFieldMeta, 0, len(fieldMetas))
+	for _, field := range fieldMetas {
+		if field.Value == "dialer_proxy_name" || field.Value == "link" {
+			continue
+		}
+		conditionFields = append(conditionFields, field)
 	}
 
 	// 条件操作符列表

@@ -13,6 +13,14 @@ func (claudeUnlockChecker) Key() string { return models.UnlockProviderClaude }
 
 func (claudeUnlockChecker) Aliases() []string { return []string{"claude"} }
 
+func (claudeUnlockChecker) Meta() models.UnlockProviderMeta {
+	return models.UnlockProviderMeta{Value: models.UnlockProviderClaude, Label: "Claude", Description: "检测 Anthropic Claude 服务地区可访问性", Category: "ai"}
+}
+
+func (claudeUnlockChecker) RenameVariableMeta() models.UnlockRenameVariableMeta {
+	return models.UnlockRenameVariableMeta{Provider: models.UnlockProviderClaude}
+}
+
 func (claudeUnlockChecker) Check(runtime UnlockRuntime) models.UnlockProviderResult {
 	if runtime.LandingCountry != "" && !isClaudeSupportedCountry(runtime.LandingCountry) {
 		return models.UnlockProviderResult{Provider: models.UnlockProviderClaude, Status: models.UnlockStatusRestricted, Region: runtime.LandingCountry, Reason: "unsupported_country"}

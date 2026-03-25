@@ -43,7 +43,11 @@ func CheckUnlockWithAdapter(proxyAdapter constant.Proxy, timeout time.Duration, 
 
 			checker, exists := GetUnlockChecker(providerName)
 			if !exists {
-				results[index] = models.UnlockProviderResult{Provider: providerName, Status: models.UnlockStatusUnknown, Reason: "unsupported_provider"}
+				status := models.NormalizeUnlockStatus(models.UnlockStatusUnknown)
+				if status == "" {
+					status = models.UnlockStatusUnknown
+				}
+				results[index] = models.UnlockProviderResult{Provider: providerName, Status: status, Reason: "unsupported_provider"}
 				return
 			}
 			result := checker.Check(runtime)
@@ -67,7 +71,11 @@ func buildUnlockErrorResults(providers []string, reason string) []models.UnlockP
 	}
 	results := make([]models.UnlockProviderResult, 0, len(providerList))
 	for _, provider := range providerList {
-		results = append(results, models.UnlockProviderResult{Provider: provider, Status: models.UnlockStatusError, Reason: reason})
+		status := models.NormalizeUnlockStatus(models.UnlockStatusError)
+		if status == "" {
+			status = models.UnlockStatusError
+		}
+		results = append(results, models.UnlockProviderResult{Provider: provider, Status: status, Reason: reason})
 	}
 	return results
 }

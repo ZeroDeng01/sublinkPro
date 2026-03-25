@@ -12,7 +12,7 @@ SublinkPro 现在支持在节点检测流程中附带执行 **流媒体 / AI 服
 
 ---
 
-## 当前支持的检查项
+## 当前内置检查项
 
 首批内置 Provider：
 
@@ -25,6 +25,8 @@ SublinkPro 现在支持在节点检测流程中附带执行 **流媒体 / AI 服
 
 > [!NOTE]
 > 当前版本优先追求 **可维护性、运行效率和稳定性**，因此首版主要使用低成本 HTTP 探测与区域可用性判断，不依赖外部脚本、浏览器自动化或复杂登录流程。
+>
+> 上面的列表表示**当前内置** Provider，而不是前端或规则系统中的固定枚举。新增 checker 后，相关 Provider 选择器和 unlock 条件会通过后端元数据自动更新。
 
 ---
 
@@ -184,7 +186,7 @@ SublinkPro 现在支持在节点检测流程中附带执行 **流媒体 / AI 服
 
 这是本功能最核心的可维护性目标：
 
-> **新增一个 Provider，应尽量只需要：新增 checker 文件 + 注册。**
+> **新增一个 Provider，应尽量只需要：新增 checker 文件 + 注册 + provider 元数据声明。**
 
 ### 步骤 1：新增 checker 文件
 
@@ -199,6 +201,18 @@ type UnlockChecker interface {
     Key() string
     Aliases() []string
     Check(runtime UnlockRuntime) models.UnlockProviderResult
+}
+```
+
+同时建议在 checker 中实现对应的元数据方法，让后端自动下发展示信息和 rename 变量：
+
+```go
+type UnlockCheckerMeta interface {
+    Meta() models.UnlockProviderMeta
+}
+
+type UnlockCheckerRenameMeta interface {
+    RenameVariableMeta() models.UnlockRenameVariableMeta
 }
 ```
 
@@ -226,24 +240,36 @@ func init() {
 }
 ```
 
-### 步骤 4：前端展示
+### 步骤 4：前端展示与规则系统
 
-如果这是一个全新的 Provider，通常还需要同步更新：
+正常情况下，不需要再去前端手动补 Provider / 状态枚举。
 
-- 前端对 `/api/v1/node-check/meta` 的展示消费
+当前这些位置都会通过后端元数据动态消费 unlock 信息：
 
-主要是补充：
+- 节点检测策略里的 Provider 选择器
+- 节点页面解锁筛选
+- 订阅编辑中的 unlock 过滤规则
+- 标签规则里的 unlock 条件
+- 链式代理里的 unlock 条件
+- 节点重命名中的 `$Unlock(provider)` 变量列表
 
-- 友好展示名称
-- 如有必要的筛选 / 选择器专属文案
+也就是说，**新增 checker 后，只要后端元数据完整，下游 UI 会自动更新。**
+
+只有在以下场景才需要额外前端改动：
+
+- 你新增了全新的 unlock 条件字段，而不是新增 Provider
+- 你希望为某个 Provider 做额外的专属视觉呈现，而不仅仅是普通枚举选项
 
 ### 步骤 5：文档同步
 
-新增 Provider 后，应同步更新：
+新增 Provider 后，应按需同步更新：
 
-- 本文档
-- `README.md` 中的功能说明（如有必要）
-- `docs/development.md` 中的开发说明（如涉及扩展方式变化）
+- 本文档中的“当前内置检查项”（如果你希望文档反映最新内置 Provider）
+- `README.md` 中的功能说明（通常不需要逐个 Provider 更新）
+- `docs/development.md` 中的开发说明（如果扩展方式本身变化）
+
+> [!TIP]
+> 如果只是新增一个普通 checker，而没有改变扩展机制，通常不需要再更新多个前端文档来同步枚举，因为运行时选择器会自动读取后端元数据。
 
 ---
 

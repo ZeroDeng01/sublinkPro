@@ -7,6 +7,13 @@ import (
 	"sublink/utils"
 )
 
+var (
+	unlockStatusMetaResolver       = defaultUnlockStatusMetaResolver
+	unlockProviderMetaResolver     = defaultUnlockProviderMetaResolver
+	unlockRenameVariableResolver   = defaultUnlockRenameVariableResolver
+	unlockStatusNormalizerResolver = defaultUnlockStatusNormalizer
+)
+
 const (
 	UnlockProviderNetflix   = "netflix"
 	UnlockProviderDisney    = "disney"
@@ -102,11 +109,60 @@ func NormalizeUnlockProviders(providers []string) []string {
 	return normalized
 }
 
+func RegisterUnlockStatusMetaResolver(resolver func() []UnlockStatusMeta) {
+	if resolver == nil {
+		unlockStatusMetaResolver = defaultUnlockStatusMetaResolver
+		return
+	}
+	unlockStatusMetaResolver = resolver
+}
+
+func RegisterUnlockProviderMetaResolver(resolver func(string) UnlockProviderMeta) {
+	if resolver == nil {
+		unlockProviderMetaResolver = defaultUnlockProviderMetaResolver
+		return
+	}
+	unlockProviderMetaResolver = resolver
+}
+
+func RegisterUnlockRenameVariableResolver(resolver func([]string) []UnlockRenameVariableMeta) {
+	if resolver == nil {
+		unlockRenameVariableResolver = defaultUnlockRenameVariableResolver
+		return
+	}
+	unlockRenameVariableResolver = resolver
+}
+
+func RegisterUnlockStatusNormalizer(normalizer func(string) string) {
+	if normalizer == nil {
+		unlockStatusNormalizerResolver = defaultUnlockStatusNormalizer
+		return
+	}
+	unlockStatusNormalizerResolver = normalizer
+}
+
+func NormalizeUnlockStatus(status string) string {
+	return unlockStatusNormalizerResolver(status)
+}
+
+func defaultUnlockStatusNormalizer(status string) string {
+	normalized := strings.ToLower(strings.TrimSpace(status))
+	switch normalized {
+	case "", "all":
+		return ""
+	case UnlockStatusUntested, UnlockStatusAvailable, UnlockStatusPartial, UnlockStatusRestricted,
+		UnlockStatusReachable, UnlockStatusUnsupported, UnlockStatusUnknown, UnlockStatusError:
+		return normalized
+	default:
+		return ""
+	}
+}
+
 func NormalizeUnlockFilterRules(rules []UnlockFilterRule) []UnlockFilterRule {
 	normalized := make([]UnlockFilterRule, 0, len(rules))
 	for _, rule := range rules {
 		provider := NormalizeUnlockProvider(rule.Provider)
-		status := strings.ToLower(strings.TrimSpace(rule.Status))
+		status := NormalizeUnlockStatus(rule.Status)
 		keyword := strings.TrimSpace(rule.Keyword)
 		if provider == "" && status == "" && keyword == "" {
 			continue
@@ -181,7 +237,7 @@ func BuildUnlockAggregate(summaries []UnlockSummary, providers []string) UnlockA
 			if _, exists := agg.Counts[provider]; !exists {
 				agg.Counts[provider] = make(map[string]int)
 			}
-			status := strings.TrimSpace(result.Status)
+			status := NormalizeUnlockStatus(result.Status)
 			if status == "" {
 				status = UnlockStatusUnknown
 			}
@@ -198,6 +254,18 @@ func BuildUnlockAggregate(summaries []UnlockSummary, providers []string) UnlockA
 }
 
 func GetUnlockStatusMetas() []UnlockStatusMeta {
+	return unlockStatusMetaResolver()
+}
+
+func GetUnlockProviderMeta(provider string) UnlockProviderMeta {
+	return unlockProviderMetaResolver(provider)
+}
+
+func BuildUnlockRenameVariables(providers []string) []UnlockRenameVariableMeta {
+	return unlockRenameVariableResolver(providers)
+}
+
+func defaultUnlockStatusMetaResolver() []UnlockStatusMeta {
 	return []UnlockStatusMeta{
 		{Value: UnlockStatusAvailable, Label: "解锁", ShortLabel: "解锁", Description: "可正常使用", Color: "success", Severity: "success"},
 		{Value: UnlockStatusPartial, Label: "部分", ShortLabel: "部分", Description: "仅部分能力可用", Color: "warning", Severity: "warning"},
@@ -210,7 +278,7 @@ func GetUnlockStatusMetas() []UnlockStatusMeta {
 	}
 }
 
-func GetUnlockProviderMeta(provider string) UnlockProviderMeta {
+func defaultUnlockProviderMetaResolver(provider string) UnlockProviderMeta {
 	switch NormalizeUnlockProvider(provider) {
 	case UnlockProviderNetflix:
 		return UnlockProviderMeta{Value: UnlockProviderNetflix, Label: "Netflix", Description: "检测是否支持完整区服或仅 Originals", Category: "streaming"}
@@ -230,7 +298,7 @@ func GetUnlockProviderMeta(provider string) UnlockProviderMeta {
 	}
 }
 
-func BuildUnlockRenameVariables(providers []string) []UnlockRenameVariableMeta {
+func defaultUnlockRenameVariableResolver(providers []string) []UnlockRenameVariableMeta {
 	normalizedProviders := NormalizeUnlockProviders(providers)
 	variables := make([]UnlockRenameVariableMeta, 0, len(normalizedProviders))
 	for _, provider := range normalizedProviders {
@@ -246,15 +314,19 @@ func BuildUnlockRenameVariables(providers []string) []UnlockRenameVariableMeta {
 }
 
 func GetUnlockStatusLabel(status string) string {
+	normalizedStatus := NormalizeUnlockStatus(status)
+	if normalizedStatus == "" {
+		normalizedStatus = strings.TrimSpace(status)
+	}
 	for _, item := range GetUnlockStatusMetas() {
-		if item.Value == status {
+		if item.Value == normalizedStatus {
 			if item.Label != "" {
 				return item.Label
 			}
 			return item.ShortLabel
 		}
 	}
-	return status
+	return normalizedStatus
 }
 
 func GetUnlockResult(summary UnlockSummary, provider string) (UnlockProviderResult, bool) {
@@ -292,12 +364,19 @@ func BuildPrimaryUnlockStatus(raw string) string {
 	if len(summary.Providers) == 0 {
 		return UnlockStatusUntested
 	}
-	return strings.TrimSpace(summary.Providers[0].Status)
+	status := NormalizeUnlockStatus(summary.Providers[0].Status)
+	if status == "" {
+		return strings.TrimSpace(summary.Providers[0].Status)
+	}
+	return status
 }
 
 func MatchUnlockSummary(summary UnlockSummary, provider string, status string, keyword string) bool {
 	providerKey := NormalizeUnlockProvider(provider)
-	statusKey := strings.TrimSpace(status)
+	statusKey := NormalizeUnlockStatus(status)
+	if statusKey == "" {
+		statusKey = strings.TrimSpace(status)
+	}
 	keywordLower := strings.ToLower(strings.TrimSpace(keyword))
 
 	if len(summary.Providers) == 0 {
@@ -308,7 +387,11 @@ func MatchUnlockSummary(summary UnlockSummary, provider string, status string, k
 		if providerKey != "" && NormalizeUnlockProvider(result.Provider) != providerKey {
 			continue
 		}
-		if statusKey != "" && strings.TrimSpace(result.Status) != statusKey {
+		resultStatus := NormalizeUnlockStatus(result.Status)
+		if resultStatus == "" {
+			resultStatus = strings.TrimSpace(result.Status)
+		}
+		if statusKey != "" && resultStatus != statusKey {
 			continue
 		}
 		if keywordLower != "" {

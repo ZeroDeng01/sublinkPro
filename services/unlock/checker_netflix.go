@@ -14,6 +14,14 @@ func (netflixUnlockChecker) Key() string { return models.UnlockProviderNetflix }
 
 func (netflixUnlockChecker) Aliases() []string { return []string{"netflix"} }
 
+func (netflixUnlockChecker) Meta() models.UnlockProviderMeta {
+	return models.UnlockProviderMeta{Value: models.UnlockProviderNetflix, Label: "Netflix", Description: "检测是否支持完整区服或仅 Originals", Category: "streaming"}
+}
+
+func (netflixUnlockChecker) RenameVariableMeta() models.UnlockRenameVariableMeta {
+	return models.UnlockRenameVariableMeta{Provider: models.UnlockProviderNetflix}
+}
+
 func (netflixUnlockChecker) Check(runtime UnlockRuntime) models.UnlockProviderResult {
 	primary, err := fetchUnlockProbe(runtime, "https://www.netflix.com/title/80018499", nil)
 	if err != nil {

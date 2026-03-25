@@ -106,7 +106,8 @@ const DEFAULT_UNLOCK_STATUS_METAS = [
 let unlockMetaState = {
   providers: [],
   statuses: DEFAULT_UNLOCK_STATUS_METAS,
-  renameVariables: []
+  renameVariables: [],
+  conditionFields: []
 };
 
 const getCleanString = (value) => {
@@ -118,12 +119,14 @@ export const setUnlockMeta = (meta = {}) => {
   unlockMetaState = {
     providers: Array.isArray(meta.unlockProviders) ? meta.unlockProviders : Array.isArray(meta.providers) ? meta.providers : [],
     statuses: Array.isArray(meta.unlockStatuses) && meta.unlockStatuses.length > 0 ? meta.unlockStatuses : DEFAULT_UNLOCK_STATUS_METAS,
-    renameVariables: Array.isArray(meta.unlockRenameVariables) ? meta.unlockRenameVariables : []
+    renameVariables: Array.isArray(meta.unlockRenameVariables) ? meta.unlockRenameVariables : [],
+    conditionFields: Array.isArray(meta.conditionFields) ? meta.conditionFields : []
   };
 };
 
 export const getUnlockProviderOptions = () => unlockMetaState.providers || [];
 export const getUnlockRenameVariables = () => unlockMetaState.renameVariables || [];
+export const getNodeConditionFieldMetas = () => unlockMetaState.conditionFields || [];
 
 export const getUnlockStatusOptions = (includeAll = true) => {
   const statusOptions = (unlockMetaState.statuses || DEFAULT_UNLOCK_STATUS_METAS).map((item) => ({
@@ -135,6 +138,17 @@ export const getUnlockStatusOptions = (includeAll = true) => {
   }));
 
   return includeAll ? [{ value: '', label: '全部' }, ...statusOptions] : statusOptions;
+};
+
+export const resolveNodeConditionOptionSource = (optionSource, includeAll = false) => {
+  switch (optionSource) {
+    case 'unlockProviders':
+      return getUnlockProviderOptions();
+    case 'unlockStatuses':
+      return getUnlockStatusOptions(includeAll);
+    default:
+      return [];
+  }
 };
 
 export const createEmptyUnlockRule = () => ({ provider: '', status: '', keyword: '' });

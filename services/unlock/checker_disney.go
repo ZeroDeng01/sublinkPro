@@ -13,6 +13,14 @@ func (disneyUnlockChecker) Aliases() []string {
 	return []string{"disney", "disney+", "disneyplus", "disney_plus"}
 }
 
+func (disneyUnlockChecker) Meta() models.UnlockProviderMeta {
+	return models.UnlockProviderMeta{Value: models.UnlockProviderDisney, Label: "Disney+", Description: "检测 Disney+ 服务入口是否可访问及是否明显受限", Category: "streaming"}
+}
+
+func (disneyUnlockChecker) RenameVariableMeta() models.UnlockRenameVariableMeta {
+	return models.UnlockRenameVariableMeta{Provider: models.UnlockProviderDisney}
+}
+
 func (disneyUnlockChecker) Check(runtime UnlockRuntime) models.UnlockProviderResult {
 	resp, err := fetchUnlockProbe(runtime, "https://www.disneyplus.com/", nil)
 	if err != nil {

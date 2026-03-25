@@ -7,6 +7,7 @@ import (
 	"sublink/models"
 	"sublink/node"
 	"sublink/node/protocol"
+	"sublink/services/unlock"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
@@ -41,15 +42,7 @@ func normalizeIPType(value string) string {
 }
 
 func normalizeUnlockStatus(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", "all":
-		return ""
-	case models.UnlockStatusUntested, models.UnlockStatusAvailable, models.UnlockStatusPartial, models.UnlockStatusRestricted,
-		models.UnlockStatusReachable, models.UnlockStatusUnsupported, models.UnlockStatusUnknown, models.UnlockStatusError:
-		return strings.ToLower(strings.TrimSpace(value))
-	default:
-		return ""
-	}
+	return unlock.NormalizeUnlockStatus(value)
 }
 
 func parseUnlockRulesFromQuery(c *gin.Context) []models.UnlockFilterRule {

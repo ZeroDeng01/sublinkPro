@@ -281,8 +281,13 @@ type UnlockChecker interface {
 ```
 
 3. 在 `init()` 中注册 `RegisterUnlockChecker(...)`
-4. 如需前端专属展示，调整 UI 文案
-5. 更新 `docs/features/unlock-check.md`
+4. 在 checker 内同时声明 Provider 元数据（展示名、分类、rename 变量等）
+5. 如新增了新的状态语义，在 `services/unlock/meta.go` 中补充状态元数据
+6. 更新 `docs/features/unlock-check.md`（仅在文档需要列举当前内置 Provider 时）
+
+> [!IMPORTANT]
+> 当前前端的节点筛选、标签规则、链式代理条件、订阅编辑中的 unlock 选项都通过后端元数据动态消费。
+> 正常情况下，新增一个 checker **不需要**再去前端补 Provider / 状态枚举，也不需要手动同步多个页面的选项列表。
 
 ### 命名构建器变量
 
@@ -312,6 +317,12 @@ type UnlockChecker interface {
 - `unlock_result`
 
 推荐优先使用 `unlock_provider` 和 `unlock_status` 做精确匹配；`unlock_keyword` 适合做模糊搜索。
+
+这些字段的 schema、可用操作符、枚举值来源现在都由后端统一下发：
+
+- `unlock_provider` → 动态读取已注册 checker 的 Provider 列表
+- `unlock_status` → 动态读取后端状态元数据
+- `unlock_keyword` / `unlock_result` → 作为文本字段处理
 
 ### 解锁检测并行执行
 

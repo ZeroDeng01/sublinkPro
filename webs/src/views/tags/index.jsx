@@ -57,6 +57,8 @@ import {
   triggerTagRule,
   getTagGroups
 } from 'api/tags';
+import { getNodeCheckMeta } from 'api/nodeCheck';
+import { setUnlockMeta } from 'views/nodes/utils';
 
 // components
 import TagDialog from './component/TagDialog';
@@ -125,10 +127,20 @@ export default function TagManagement() {
     }
   };
 
+  const fetchUnlockMeta = async () => {
+    try {
+      const res = await getNodeCheckMeta();
+      setUnlockMeta(res.data || {});
+    } catch {
+      console.error('加载解锁元数据失败');
+    }
+  };
+
   useEffect(() => {
     fetchTags();
     fetchRules();
     fetchGroups();
+    fetchUnlockMeta();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

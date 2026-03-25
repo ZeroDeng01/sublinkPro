@@ -14,7 +14,12 @@ import Typography from '@mui/material/Typography';
 // Paper 组件已改为 Box
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { getNodeConditionValueOptions, isNodeConditionNumericField, isNodeConditionSelectField } from '../../../utils/nodeConditionOptions';
+import {
+  getNodeConditionFieldMeta,
+  getNodeConditionValueOptions,
+  isNodeConditionNumericField,
+  isNodeConditionSelectField
+} from '../../../utils/nodeConditionOptions';
 
 // 深色科幻风格的 Select 样式
 const darkSelectStyles = {
@@ -82,30 +87,24 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
 
     // 如果改变了字段，需要重置操作符和值以避免不兼容
     if (field === 'field') {
+      const nextFieldMeta = getNodeConditionFieldMeta(newValue);
       const isSelectField = isNodeConditionSelectField(newValue);
       const isNumeric = isNodeConditionNumericField(newValue);
       const currentOp = newConditions[index].operator;
+      const allowedOperators = nextFieldMeta?.operators || [];
 
       if (isSelectField) {
-        // 枚举字段只能用 equals 或 not_equals
-        if (!['equals', 'not_equals'].includes(currentOp)) {
-          newConditions[index].operator = 'equals';
+        if (!allowedOperators.includes(currentOp)) {
+          newConditions[index].operator = allowedOperators[0] || 'equals';
         }
-        // 清空值，强制用户从下拉框选择
         newConditions[index].value = '';
       } else if (isNumeric) {
-        // 数值字段默认使用 greater_than 如果当前操作符不兼容
-        // 注意：这里我们假设 operators 包含了所有类型的操作符，具体逻辑可能需要根据 operators 的额外信息判断
-        // 但为了简化，如果当前是 regex 或 contains 等字符串专用的，切换到 greater_than
-        if (['contains', 'not_contains', 'regex'].includes(currentOp)) {
-          newConditions[index].operator = 'greater_than';
-        } else if (!currentOp) {
-          newConditions[index].operator = 'greater_than';
+        if (!allowedOperators.includes(currentOp)) {
+          newConditions[index].operator = allowedOperators[0] || 'greater_than';
         }
       } else {
-        // 其他字段（字符串），如果是数值专用操作符，切换回 contains
-        if (['greater_than', 'less_than', 'greater_or_equal', 'less_or_equal'].includes(currentOp)) {
-          newConditions[index].operator = 'contains';
+        if (!allowedOperators.includes(currentOp)) {
+          newConditions[index].operator = allowedOperators[0] || 'contains';
         }
       }
     }
@@ -116,6 +115,10 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
 
   // 获取字段对应的操作符列表
   const getOperatorsForField = (fieldValue) => {
+    const fieldMeta = getNodeConditionFieldMeta(fieldValue);
+    if (Array.isArray(fieldMeta?.operators) && fieldMeta.operators.length > 0) {
+      return operators.filter((op) => fieldMeta.operators.includes(op.value));
+    }
     if (isNodeConditionSelectField(fieldValue)) {
       return operators.filter((op) => ['equals', 'not_equals'].includes(op.value));
     }
