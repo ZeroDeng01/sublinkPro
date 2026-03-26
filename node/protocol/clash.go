@@ -174,6 +174,7 @@ func isTruthyConfigValue(value interface{}) bool {
 	return false
 }
 
+// shouldPreserveProxyGroup 判断代理组是否应保留模板原始语义，而不是在服务端展开成固定节点列表。
 func shouldPreserveProxyGroup(proxyGroup map[string]interface{}) bool {
 	for _, field := range []string{"include-all", "include-all-proxies", "include-all-providers"} {
 		if isTruthyConfigValue(proxyGroup[field]) {

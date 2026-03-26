@@ -27,23 +27,9 @@ func init() {
 	}, ConvertProxyToSsr, EncodeSSRURL))
 }
 
-func CallSSRURL() {
-	ssr := new(Ssr)
-	ssr.Server = "xx.com"
-	ssr.Port = 443
-	ssr.Protocol = "auth_aes128_md5"
-	ssr.Method = "aes-256-cfb"
-	ssr.Obfs = "tls1.2_ticket_auth"
-	ssr.Password = "123456"
-	ssr.Qurey = Ssrquery{
-		Obfsparam: "",
-		Remarks:   "没有名字",
-	}
-	cc := EncodeSSRURL(*ssr)
-	fmt.Println(cc)
-}
-
 // ssr格式编码输出
+// EncodeSSRURL 将 SSR 结构编码为 ssr:// 链接。
+// 当前实现只输出仓库内已落地支持的查询字段，其余可选参数不会在这里补写。
 func EncodeSSRURL(s Ssr) string {
 	/*编码格式
 	ssr://base64(host:port:protocol:method:obfs:base64(password)/?obfsparam=base64(obfsparam)&protoparam=base64(protoparam)&remarks=base64(remarks)&group=base64(group))
@@ -75,7 +61,8 @@ func EncodeSSRURL(s Ssr) string {
 	return "ssr://" + utils.Base64Encode(param)
 }
 
-// ssr解码
+// DecodeSSRURL 解析 SSR 链接，并按当前实现提取 remarks 与 obfsparam 等已支持字段。
+// 该解析流程依赖既有编码格式，对未覆盖的扩展参数会保持忽略。
 func DecodeSSRURL(s string) (Ssr, error) {
 	/*解析格式
 	ssr://base64(host:port:protocol:method:obfs:base64(password)/?obfsparam=base64(obfsparam)&protoparam=base64(protoparam)&remarks=base64(remarks)&group=base64(group))
@@ -187,6 +174,7 @@ func ConvertProxyToSsr(proxy Proxy) Ssr {
 	}
 }
 
+// buildSSRProxy 将 SSR 链接转换为 Clash Proxy，并补充输出阶段的 UDP、证书校验与前置代理设置。
 func buildSSRProxy(link Urls, config OutputConfig) (Proxy, error) {
 	ssr, err := DecodeSSRURL(link.Url)
 	if err != nil {

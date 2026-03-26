@@ -51,24 +51,8 @@ type Vmess struct {
 	V    string      `json:"v,omitempty"`
 }
 
-// 开发者测试
-func CallVmessURL() {
-	vmess := Vmess{
-		Add:  "xx.xxx.ru",
-		Port: "2095",
-		Aid:  0,
-		Scy:  "auto",
-		Net:  "ws",
-		Type: "none",
-		Id:   "7a737f41-b792-4260-94ff-3d864da67380",
-		Host: "xx.xxx.ru",
-		Path: "/",
-		Tls:  "",
-	}
-	fmt.Println(EncodeVmessURL(vmess))
-}
-
-// vmess 编码
+// EncodeVmessURL 将 VMess 结构编码为标准 vmess:// base64 JSON 链接。
+// 当备注或协议版本缺失时，会按当前实现补默认值，保证导出结果可被后续流程复用。
 func EncodeVmessURL(v Vmess) string {
 	// 如果备注为空，则使用服务器地址+端口
 	if v.Ps == "" {
@@ -82,7 +66,8 @@ func EncodeVmessURL(v Vmess) string {
 	return "vmess://" + utils.Base64Encode(string(param))
 }
 
-// vmess 解码
+// DecodeVMESSURL 解析 vmess:// 链接并补齐运行时依赖的默认字段。
+// 这里会校验 UUID、兼容 IPv6 主机写法，并在缺少 cipher 或备注时填入当前约定的默认值。
 func DecodeVMESSURL(s string) (Vmess, error) {
 	if !strings.Contains(s, "vmess://") {
 		return Vmess{}, fmt.Errorf("非vmess协议:%s", s)
@@ -182,6 +167,7 @@ func ConvertProxyToVmess(proxy Proxy) Vmess {
 	return vmess
 }
 
+// buildVMessProxy 将 VMess 链接转换为 Clash Proxy，并应用输出阶段的 UDP、证书校验和前置代理覆盖项。
 func buildVMessProxy(link Urls, config OutputConfig) (Proxy, error) {
 	vmess, err := DecodeVMESSURL(link.Url)
 	if err != nil {
@@ -198,6 +184,8 @@ func buildVMessProxy(link Urls, config OutputConfig) (Proxy, error) {
 	return Proxy{Name: vmess.Ps, Type: "vmess", Server: vmess.Add, Port: FlexPort(port), Cipher: vmess.Scy, Uuid: vmess.Id, AlterId: strconv.Itoa(aid), Network: vmess.Net, Tls: tls, Ws_opts: wsOpts, Udp: config.Udp, Skip_cert_verify: config.Cert, Dialer_proxy: link.DialerProxyName}, nil
 }
 
+// buildVMessSurgeLine 将 VMess 链接转换为 Surge 节点行。
+// Surge 导出只保留当前实现支持的传输层和 TLS 字段，其余能力不会在此处完整保真。
 func buildVMessSurgeLine(link string, config OutputConfig) (string, string, error) {
 	vmess, err := DecodeVMESSURL(link)
 	if err != nil {

@@ -77,30 +77,8 @@ type VLESSQuery struct {
 	Method string `json:"method,omitempty"` // HTTP请求方法
 }
 
-func CallVLESS() {
-	vless := VLESS{
-		Name:   "Sharon-香港",
-		Uuid:   "6adb4f43-9813-45f4-abf8-772be7db08sd",
-		Server: "ss.com",
-		Port:   443,
-		Query: VLESSQuery{
-			Security: "reality",
-			// Alpn:       "",
-			Sni:        "ss.com",
-			Fp:         "chrome",
-			Sid:        "",
-			Pbk:        "g-oxbqigzCaXqARxuyD2_vbTYeMD9zn8wnTo02S69QM",
-			Flow:       "xtls-rprx-vision",
-			Encryption: "none",
-			Type:       "tcp",
-			HeaderType: "none",
-			Path:       "",
-			Host:       "",
-		},
-	}
-	fmt.Println(EncodeVLESSURL(vless))
-}
-
+// buildVLESSProxy 将 VLESS 链接转换为 Clash Proxy，并根据传输层选择唯一一组传输配置输出。
+// 输出阶段的证书校验、UDP 与前置代理配置会覆盖或补充链接中的原始字段。
 func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	vless, err := DecodeVLESSURL(link.Url)
 	if err != nil {
@@ -167,8 +145,8 @@ func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	return Proxy{Name: vless.Name, Type: "vless", Server: vless.Server, Port: FlexPort(utils.GetPortInt(vless.Port)), Servername: vless.Query.Sni, Uuid: vless.Uuid, Client_fingerprint: vless.Query.Fp, Network: vless.Query.Type, Flow: vless.Query.Flow, Alpn: vless.Query.Alpn, Packet_encoding: vless.Query.PacketEncoding, Ws_opts: finalWsOpts, H2_opts: finalH2Opts, Http_opts: finalHttpOpts, Grpc_opts: finalGrpcOpts, Reality_opts: realityOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Tls: tls, Dialer_proxy: link.DialerProxyName}, nil
 }
 
-// vless编码
-// 输出v2ray格式的VLESS链接（明文URL格式）
+// EncodeVLESSURL 将 VLESS 结构编码为 v2ray 常见的明文 URL 形式。
+// 编码时会按当前字段状态选择性输出扩展参数，并在名称缺失时回退为 server:port。
 func EncodeVLESSURL(v VLESS) string {
 	u := url.URL{
 		Scheme: "vless",
@@ -247,9 +225,8 @@ func EncodeVLESSURL(v VLESS) string {
 	return u.String()
 }
 
-// vless解码
-// v2ray格式的VLESS链接是明文URL，不需要base64解码
-// 格式: vless://UUID@server:port?参数#名称
+// DecodeVLESSURL 解析明文 VLESS URL，并兼容当前仓库支持的多类传输层扩展参数。
+// 端口默认值会随 security 语义变化，且 packetEncoding 与 packet_encoding 两种写法都会被接受。
 func DecodeVLESSURL(s string) (VLESS, error) {
 	if !strings.HasPrefix(s, "vless://") {
 		return VLESS{}, fmt.Errorf("非vless协议: %s", s)
@@ -400,8 +377,8 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 	}, nil
 }
 
-// ConvertProxyToVless 将 Proxy 结构体转换为 VLESS 结构体
-// 用于从 Clash 格式的代理配置生成 VLESS 链接
+// ConvertProxyToVless 将 Clash Proxy 还原为 VLESS 结构，用于重新生成分享链接。
+// 该转换会按当前实现折叠多种 transport 配置来源，因此在部分字段上属于有损回写。
 func ConvertProxyToVless(proxy Proxy) VLESS {
 	vless := VLESS{
 		Name:   proxy.Name,

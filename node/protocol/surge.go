@@ -51,6 +51,7 @@ func appendSurgeSSPlugin(proxy string, plugin SsPlugin) string {
 	return proxy
 }
 
+// EncodeSurge 将节点链接批量转换为 Surge 节点定义，并交给模板合并逻辑统一落盘。
 func EncodeSurge(urls []string, config OutputConfig) (string, error) {
 	var proxys, groups []string
 
@@ -87,6 +88,8 @@ func replaceSurgeHost(server string, config OutputConfig) string {
 	return server
 }
 
+// DecodeSurge 读取 Surge 模板并合并节点与代理组。
+// 该流程会尽量保留模板中的自动匹配组语义，只在需要时补节点或 DIRECT 后备项。
 func DecodeSurge(proxys, groups []string, file string) (string, error) {
 	var surge []byte
 	var err error

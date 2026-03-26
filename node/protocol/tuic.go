@@ -51,7 +51,7 @@ type Tuic struct {
 	Insecure           int    // 跳过证书验证，对应URI中的insecure参数
 }
 
-// Tuic 解码
+// DecodeTuicURL 解析当前实现支持的 TUIC 链接字段，并补齐默认端口与名称。
 func DecodeTuicURL(s string) (Tuic, error) {
 	u, err := url.Parse(s)
 	if err != nil {
@@ -136,7 +136,8 @@ func DecodeTuicURL(s string) (Tuic, error) {
 	}, nil
 }
 
-// EncodeTuicURL tuic 编码
+// EncodeTuicURL 将 TUIC 结构编码为 tuic:// 链接。
+// 编码时会根据版本与凭据形态选择输出 token 或 uuid/password 相关字段。
 func EncodeTuicURL(t Tuic) string {
 	u := url.URL{
 		Scheme:   "tuic",
@@ -237,6 +238,7 @@ func ConvertProxyToTuic(proxy Proxy) Tuic {
 	return tuic
 }
 
+// buildTuicProxy 将 TUIC 链接转换为 Clash Proxy，并合并输出阶段的证书校验与前置代理配置。
 func buildTuicProxy(link Urls, config OutputConfig) (Proxy, error) {
 	tuic, err := DecodeTuicURL(link.Url)
 	if err != nil {
@@ -250,6 +252,8 @@ func buildTuicProxy(link Urls, config OutputConfig) (Proxy, error) {
 	return Proxy{Name: tuic.Name, Type: "tuic", Server: tuic.Host, Port: FlexPort(utils.GetPortInt(tuic.Port)), Password: tuic.Password, Uuid: tuic.Uuid, Congestion_controller: tuic.Congestion_control, Alpn: tuic.Alpn, Udp_relay_mode: tuic.Udp_relay_mode, Disable_sni: disableSNI, Sni: tuic.Sni, Tls: tuic.Tls, Client_fingerprint: tuic.ClientFingerprint, Udp: true, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName, Version: tuic.Version, Token: tuic.Token}, nil
 }
 
+// buildTuicSurgeLine 将 TUIC 链接转换为 Surge 节点行。
+// 该导出会按当前实现选择可映射的凭据字段，属于面向目标客户端的定向导出而非完整保真。
 func buildTuicSurgeLine(link string, config OutputConfig) (string, string, error) {
 	tuic, err := DecodeTuicURL(link)
 	if err != nil {

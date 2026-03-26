@@ -36,6 +36,7 @@ type AnyTLS struct {
 	ClientFingerprint string
 }
 
+// DecodeAnyTLSURL 解析 AnyTLS 链接，并补齐默认端口与基础 TLS 相关字段。
 func DecodeAnyTLSURL(s string) (AnyTLS, error) {
 
 	if !strings.Contains(s, "anytls://") {

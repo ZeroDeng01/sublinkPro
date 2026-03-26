@@ -51,6 +51,7 @@ func init() {
 	))
 }
 
+// DecodeProtocolDemoURL 解析示例协议链接，用于演示协议接入层如何完成解码与默认命名。
 func DecodeProtocolDemoURL(raw string) (ProtocolDemo, error) {
 	u, err := url.Parse(raw)
 	if err != nil {
@@ -77,6 +78,7 @@ func DecodeProtocolDemoURL(raw string) (ProtocolDemo, error) {
 	}, nil
 }
 
+// EncodeProtocolDemoURL 将示例协议结构编码为 demo:// 链接，作为新增协议接入的参考实现。
 func EncodeProtocolDemoURL(p ProtocolDemo) string {
 	query := url.Values{}
 	if p.Token != "" {
@@ -104,6 +106,7 @@ func EncodeProtocolDemoURL(p ProtocolDemo) string {
 	}).String()
 }
 
+// buildProtocolDemoProxy 演示如何把协议对象映射为 Clash Proxy，并合并输出阶段覆盖项。
 func buildProtocolDemoProxy(link Urls, config OutputConfig) (Proxy, error) {
 	p, err := DecodeProtocolDemoURL(link.Url)
 	if err != nil {
@@ -123,6 +126,7 @@ func buildProtocolDemoProxy(link Urls, config OutputConfig) (Proxy, error) {
 	}, nil
 }
 
+// buildProtocolDemoSurgeLine 演示如何把协议链接导出为 Surge 节点行。
 func buildProtocolDemoSurgeLine(link string, config OutputConfig) (string, string, error) {
 	p, err := DecodeProtocolDemoURL(link)
 	if err != nil {
@@ -133,6 +137,7 @@ func buildProtocolDemoSurgeLine(link string, config OutputConfig) (string, strin
 	return line, p.Name, nil
 }
 
+// ConvertProxyToProtocolDemo 演示如何把 Clash Proxy 反向转换为协议对象以便重新生成链接。
 func ConvertProxyToProtocolDemo(proxy Proxy) ProtocolDemo {
 	return ProtocolDemo{
 		Name:     proxy.Name,

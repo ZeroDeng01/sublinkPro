@@ -51,23 +51,8 @@ type HY2 struct {
 	ClientFingerprint string // 客户端指纹
 }
 
-// 开发者测试 CallHy 调用
-func CallHy2() {
-	hy2 := HY2{
-		Password: "asdasd",
-		Host:     "qq.com",
-		Port:     11926,
-		Insecure: 1,
-		Peer:     "youku.com",
-		Auth:     "",
-		UpMbps:   11,
-		DownMbps: 55,
-		// ALPN:     "h3",
-	}
-	fmt.Println(EncodeHY2URL(hy2))
-}
-
-// hy2 编码
+// EncodeHY2URL 将 Hysteria2 结构编码为 hy2:// 链接。
+// 编码时会清理空值与零值字段，并在名称缺失时回退为 host:port。
 func EncodeHY2URL(hy2 HY2) string {
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if hy2.Name == "" {
@@ -105,7 +90,8 @@ func EncodeHY2URL(hy2 HY2) string {
 	return u.String()
 }
 
-// hy2 解码
+// DecodeHY2URL 解析 hy2:// 与 hysteria2:// 链接，并兼容 auth 缺省时回退为 password 的写法。
+// 当链接未显式给出端口时，解析结果中的端口字段会按当前约定回退到 443。
 func DecodeHY2URL(s string) (HY2, error) {
 	u, err := url.Parse(s)
 	if err != nil {
@@ -210,6 +196,8 @@ func ConvertProxyToHy2(proxy Proxy) HY2 {
 	return hy2
 }
 
+// buildHY2Proxy 将 Hysteria2 链接转换为 Clash Proxy。
+// 当 mport 存在时优先输出端口跳跃配置，否则回退为单端口字段，并合并输出阶段证书校验策略。
 func buildHY2Proxy(link Urls, config OutputConfig) (Proxy, error) {
 	hy2, err := DecodeHY2URL(link.Url)
 	if err != nil {
@@ -228,6 +216,8 @@ func buildHY2Proxy(link Urls, config OutputConfig) (Proxy, error) {
 	return proxy, nil
 }
 
+// buildHY2SurgeLine 将 Hysteria2 链接转换为 Surge 节点行。
+// Surge 导出仅使用当前受支持的密码、端口与 TLS 相关字段，属于精简映射而非完整保真。
 func buildHY2SurgeLine(link string, config OutputConfig) (string, string, error) {
 	hy2, err := DecodeHY2URL(link)
 	if err != nil {

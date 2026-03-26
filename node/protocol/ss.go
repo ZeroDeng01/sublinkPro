@@ -112,6 +112,7 @@ func parseSSURL(s string) (auth, addr, name string, plugin SsPlugin) {
 	return auth, addr, name, plugin
 }
 
+// decodeSSAuth 解析 SS 认证段，兼容 base64、URL 解码后明文两类常见写法。
 func decodeSSAuth(auth string) (string, error) {
 	if auth == "" {
 		return "", fmt.Errorf("missing SS auth")
@@ -215,17 +216,6 @@ func splitPluginOpts(s string) []string {
 	}
 
 	return result
-}
-
-// 开发者测试
-func CallSSURL() {
-	ss := Ss{}
-	// ss.Name = "测试"
-	ss.Server = "baidu.com"
-	ss.Port = 443
-	ss.Param.Cipher = "2022-blake3-aes-256-gcm"
-	ss.Param.Password = "asdasd"
-	fmt.Println(EncodeSSURL(ss))
 }
 
 // ss 编码输出
@@ -422,6 +412,7 @@ func ConvertProxyToSs(proxy Proxy) Ss {
 	return ss
 }
 
+// buildSSProxy 将 SS 链接转换为 Clash Proxy，并按当前兼容策略规范化插件名称与 plugin-opts。
 func buildSSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	ss, err := DecodeSSURL(link.Url)
 	if err != nil {
@@ -452,6 +443,8 @@ func buildSSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	return proxy, nil
 }
 
+// buildSSSurgeLine 将 SS 链接转换为 Surge 节点行。
+// 插件导出只覆盖当前实现识别的插件能力，其余插件会在 Surge 侧被有意省略。
 func buildSSSurgeLine(link string, config OutputConfig) (string, string, error) {
 	ss, err := DecodeSSURL(link)
 	if err != nil {

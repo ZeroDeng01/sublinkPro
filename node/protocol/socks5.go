@@ -34,6 +34,7 @@ type Socks5 struct {
 	Password string
 }
 
+// DecodeSocks5URL 解析 socks5:// 链接，并提取认证信息、地址和节点名称。
 func DecodeSocks5URL(s string) (Socks5, error) {
 	if !strings.Contains(s, "socks5://") {
 		return Socks5{}, fmt.Errorf("非socks协议: %s", s)

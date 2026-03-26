@@ -45,6 +45,7 @@ func init() {
 	}, ConvertProxyToWireGuard, EncodeWireGuardURL))
 }
 
+// buildWireGuardProxy 将 WireGuard 链接转换为 Clash Proxy，并按当前实现补默认名称与默认 AllowedIPs。
 func buildWireGuardProxy(link Urls) (Proxy, error) {
 	wg, err := DecodeWireGuardURL(link.Url)
 	if err != nil {
