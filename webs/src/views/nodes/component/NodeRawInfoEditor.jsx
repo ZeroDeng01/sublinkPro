@@ -280,12 +280,14 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
       auth: [],
       transport: [],
       tls: [],
+      advanced: [],
       other: []
     };
 
     Object.keys(editedFields).forEach((fieldName) => {
       const group = getFieldGroupKey(fieldName, fieldMetaMap[fieldName]);
-      groups[group].push(fieldName);
+      const targetGroup = groups[group] ? group : 'other';
+      groups[targetGroup].push(fieldName);
     });
 
     // 移除空分组
