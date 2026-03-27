@@ -423,16 +423,24 @@ export default function AuthLogin() {
             返回上一步
           </Button>
           <AnimateButton>
-            <Button
-              color="secondary"
-              fullWidth
-              size="large"
-              type="submit"
-              variant="contained"
-              disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
-            >
-              {loading ? '验证中...' : '验 证 并 登 录'}
+            <Button color="secondary" fullWidth size="large" type="submit" variant="contained" disabled={loading}>
+              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                <Box
+                  component="span"
+                  sx={{
+                    width: 20,
+                    height: 20,
+                    mr: 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: loading ? 'visible' : 'hidden'
+                  }}
+                >
+                  <CircularProgress size={20} color="inherit" />
+                </Box>
+                <Box component="span">{loading ? '验证中...' : '验 证 并 登 录'}</Box>
+              </Box>
             </Button>
           </AnimateButton>
         </Stack>
@@ -504,16 +512,24 @@ export default function AuthLogin() {
 
       <Box sx={{ mt: 1 }}>
         <AnimateButton>
-          <Button
-            color="secondary"
-            fullWidth
-            size="large"
-            type="submit"
-            variant="contained"
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
-          >
-            {loading ? '登录中...' : '登 录'}
+          <Button color="secondary" fullWidth size="large" type="submit" variant="contained" disabled={loading}>
+            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+              <Box
+                component="span"
+                sx={{
+                  width: 20,
+                  height: 20,
+                  mr: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: loading ? 'visible' : 'hidden'
+                }}
+              >
+                <CircularProgress size={20} color="inherit" />
+              </Box>
+              <Box component="span">{loading ? '登录中...' : '登 录'}</Box>
+            </Box>
           </Button>
         </AnimateButton>
       </Box>

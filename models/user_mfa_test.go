@@ -25,13 +25,14 @@ func setupUserMFATestDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
-	if err := db.AutoMigrate(&User{}, &MFALoginChallenge{}); err != nil {
-		t.Fatalf("auto migrate users: %v", err)
+	if err := db.AutoMigrate(&User{}, &MFALoginChallenge{}, &SystemSetting{}); err != nil {
+		t.Fatalf("auto migrate test schema: %v", err)
 	}
 
 	database.DB = db
 	database.Dialect = database.DialectSQLite
 	database.IsInitialized = false
+	InitSecretAccessors()
 	config.UpdateConfig(func(cfg *config.AppConfig) {
 		cfg.APIEncryptionKey = "test-api-encryption-key-0123456789abcd"
 		cfg.JwtSecret = "test-jwt-secret"
@@ -45,6 +46,11 @@ func setupUserMFATestDB(t *testing.T) {
 		database.DB = oldDB
 		database.Dialect = oldDialect
 		database.IsInitialized = oldInitialized
+		if oldDB != nil {
+			InitSecretAccessors()
+		} else {
+			config.SetSecretAccessors(nil, nil)
+		}
 		config.UpdateConfig(func(cfg *config.AppConfig) {
 			*cfg = oldCfg
 		})
@@ -122,6 +128,29 @@ func TestEncryptTOTPSecretUsesVersionedAEADFormat(t *testing.T) {
 	decrypted, err := DecryptTOTPSecret(encrypted)
 	if err != nil {
 		t.Fatalf("decrypt secret: %v", err)
+	}
+	if decrypted != "JBSWY3DPEHPK3PXP" {
+		t.Fatalf("unexpected decrypted value: %s", decrypted)
+	}
+}
+
+func TestEncryptTOTPSecretUsesDBBackedAPIEncryptionKeyFallback(t *testing.T) {
+	setupUserMFATestDB(t)
+
+	if err := SetSetting("api_encryption_key", "db-fallback-api-key-0123456789abcdef"); err != nil {
+		t.Fatalf("set api encryption key: %v", err)
+	}
+	config.UpdateConfig(func(cfg *config.AppConfig) {
+		cfg.APIEncryptionKey = ""
+	})
+
+	encrypted, err := EncryptTOTPSecret("JBSWY3DPEHPK3PXP")
+	if err != nil {
+		t.Fatalf("encrypt totp secret with db fallback: %v", err)
+	}
+	decrypted, err := DecryptTOTPSecret(encrypted)
+	if err != nil {
+		t.Fatalf("decrypt totp secret with db fallback: %v", err)
 	}
 	if decrypted != "JBSWY3DPEHPK3PXP" {
 		t.Fatalf("unexpected decrypted value: %s", decrypted)

@@ -305,6 +305,11 @@ func GetAPIEncryptionKey() string {
 	if key := os.Getenv(envPrefix + "API_ENCRYPTION_KEY"); key != "" {
 		return key
 	}
+	if secretGetterFunc != nil {
+		if key := secretGetterFunc("api_encryption_key"); key != "" {
+			return key
+		}
+	}
 	return ""
 }
 

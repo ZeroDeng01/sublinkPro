@@ -1,6 +1,10 @@
 package models
 
-import "testing"
+import (
+	"testing"
+
+	"sublink/config"
+)
 
 func TestEncryptUserAISecretUsesVersionedAEADFormat(t *testing.T) {
 	setupUserMFATestDB(t)
@@ -43,5 +47,28 @@ func TestUserGetAISettingsMasksStoredKey(t *testing.T) {
 	}
 	if settings.RawAPIKey != "sk-test-1234567890" {
 		t.Fatalf("expected decrypted raw key, got %q", settings.RawAPIKey)
+	}
+}
+
+func TestEncryptUserAISecretUsesDBBackedAPIEncryptionKeyFallback(t *testing.T) {
+	setupUserMFATestDB(t)
+
+	if err := SetSetting("api_encryption_key", "db-fallback-api-key-0123456789abcdef"); err != nil {
+		t.Fatalf("set api encryption key: %v", err)
+	}
+	config.UpdateConfig(func(cfg *config.AppConfig) {
+		cfg.APIEncryptionKey = ""
+	})
+
+	encrypted, err := EncryptUserAISecret("sk-test-1234567890")
+	if err != nil {
+		t.Fatalf("encrypt ai secret with db fallback: %v", err)
+	}
+	decrypted, err := DecryptUserAISecret(encrypted)
+	if err != nil {
+		t.Fatalf("decrypt ai secret with db fallback: %v", err)
+	}
+	if decrypted != "sk-test-1234567890" {
+		t.Fatalf("unexpected decrypted value: %s", decrypted)
 	}
 }
