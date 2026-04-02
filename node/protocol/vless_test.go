@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -208,4 +209,144 @@ func TestVlessPacketEncoding(t *testing.T) {
 
 	assertEqualString(t, "PacketEncoding", "xudp", decoded.Query.PacketEncoding)
 	t.Logf("✓ packet-encoding 测试通过")
+}
+
+func TestVlessXHTTPURLMapping(t *testing.T) {
+	extra := map[string]interface{}{
+		"headers": map[string]interface{}{
+			"User-Agent": "curl/8.0",
+		},
+		"noGRPCHeader":  true,
+		"xPaddingBytes": "10-20",
+		"downloadSettings": map[string]interface{}{
+			"path":              "/download",
+			"host":              "dl.example.com",
+			"tls":               true,
+			"server":            "dl-backend.example.com",
+			"port":              float64(8443),
+			"clientFingerprint": "chrome",
+		},
+	}
+	extraBytes, err := json.Marshal(extra)
+	if err != nil {
+		t.Fatalf("extra 编码失败: %v", err)
+	}
+
+	original := VLESS{
+		Name:   "XHTTP节点",
+		Uuid:   "12345678-1234-1234-1234-123456789abc",
+		Server: "example.com",
+		Port:   443,
+		Query: VLESSQuery{
+			Security:   "tls",
+			Encryption: "none",
+			Type:       "xhttp",
+			Host:       "cdn.example.com",
+			Path:       "/xhttp",
+			Mode:       "stream-up",
+			Sni:        "example.com",
+			Extra:      string(extraBytes),
+		},
+	}
+
+	encoded := EncodeVLESSURL(original)
+	assertContains(t, "EncodedType", encoded, "type=xhttp")
+	assertContains(t, "EncodedMode", encoded, "mode=stream-up")
+	assertContains(t, "EncodedExtra", encoded, "extra=")
+
+	decoded, err := DecodeVLESSURL(encoded)
+	if err != nil {
+		t.Fatalf("解码失败: %v", err)
+	}
+
+	assertEqualString(t, "Type", "xhttp", decoded.Query.Type)
+	assertEqualString(t, "Host", original.Query.Host, decoded.Query.Host)
+	assertEqualString(t, "Path", original.Query.Path, decoded.Query.Path)
+	assertEqualString(t, "Mode", original.Query.Mode, decoded.Query.Mode)
+
+	decodedExtra := parseVLESSXHTTPExtra(decoded.Query.Extra)
+	if decodedExtra == nil {
+		t.Fatal("decoded extra 不应为空")
+	}
+	assertEqualString(t, "DecodedHeader", "curl/8.0", decodedExtra["headers"].(map[string]interface{})["User-Agent"].(string))
+	assertEqualString(t, "DecodedPadding", "10-20", decodedExtra["x-padding-bytes"].(string))
+	assertEqualString(t, "DecodedDownloadPath", "/download", decodedExtra["download-settings"].(map[string]interface{})["path"].(string))
+	assertEqualString(t, "DecodedDownloadFingerprint", "chrome", decodedExtra["download-settings"].(map[string]interface{})["client-fingerprint"].(string))
+}
+
+func TestConvertProxyToVlessXHTTP(t *testing.T) {
+	proxy := Proxy{
+		Name:    "XHTTP节点",
+		Type:    "vless",
+		Server:  "example.com",
+		Port:    443,
+		Uuid:    "12345678-1234-1234-1234-123456789abc",
+		Network: "xhttp",
+		Tls:     true,
+		XHTTP_opts: map[string]interface{}{
+			"path": "/xhttp",
+			"host": "cdn.example.com",
+			"mode": "packet-up",
+			"headers": map[string]interface{}{
+				"User-Agent": "curl/8.0",
+			},
+			"no-grpc-header": true,
+			"download-settings": map[string]interface{}{
+				"path":               "/download",
+				"client-fingerprint": "chrome",
+			},
+		},
+	}
+
+	vless := ConvertProxyToVless(proxy)
+	assertEqualString(t, "Type", "xhttp", vless.Query.Type)
+	assertEqualString(t, "Host", "cdn.example.com", vless.Query.Host)
+	assertEqualString(t, "Path", "/xhttp", vless.Query.Path)
+	assertEqualString(t, "Mode", "packet-up", vless.Query.Mode)
+
+	extra := parseVLESSXHTTPExtra(vless.Query.Extra)
+	if extra == nil {
+		t.Fatal("extra 不应为空")
+	}
+	var rawExtra map[string]interface{}
+	if err := json.Unmarshal([]byte(vless.Query.Extra), &rawExtra); err != nil {
+		t.Fatalf("extra 解析失败: %v", err)
+	}
+	assertEqualString(t, "ExtraHeader", "curl/8.0", rawExtra["headers"].(map[string]interface{})["User-Agent"].(string))
+	assertEqualString(t, "ExtraDownloadPath", "/download", rawExtra["downloadSettings"].(map[string]interface{})["path"].(string))
+	assertEqualString(t, "ExtraDownloadFingerprint", "chrome", rawExtra["downloadSettings"].(map[string]interface{})["clientFingerprint"].(string))
+
+	encoded := EncodeVLESSURL(vless)
+	assertContains(t, "EncodedType", encoded, "type=xhttp")
+}
+
+func TestLinkToProxy_VLESSXHTTPSkipCertFollowsSubscriptionConfig(t *testing.T) {
+	vless := VLESS{
+		Name:   "测试节点-VLESS-XHTTP-SkipCert",
+		Uuid:   "12345678-1234-1234-1234-123456789abc",
+		Server: "example.com",
+		Port:   443,
+		Query: VLESSQuery{
+			Security:   "tls",
+			Encryption: "none",
+			Type:       "xhttp",
+			Host:       "cdn.example.com",
+			Path:       "/xhttp",
+			Mode:       "stream-one",
+			Extra:      `{"downloadSettings":{"path":"/download"}}`,
+		},
+	}
+
+	proxy, err := buildVLESSProxy(Urls{Url: EncodeVLESSURL(vless)}, OutputConfig{Cert: true})
+	if err != nil {
+		t.Fatalf("buildVLESSProxy 失败: %v", err)
+	}
+
+	assertEqualString(t, "Network", "xhttp", proxy.Network)
+	assertEqualBool(t, "SkipCertVerify", true, proxy.Skip_cert_verify)
+	downloadSettings, ok := proxy.XHTTP_opts["download-settings"].(map[string]interface{})
+	if !ok {
+		t.Fatal("download-settings 不应为空")
+	}
+	assertEqualBool(t, "DownloadSkipCertVerify", true, downloadSettings["skip-cert-verify"].(bool))
 }

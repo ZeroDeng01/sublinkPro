@@ -95,6 +95,46 @@ func TestLinkToProxy_VLESS(t *testing.T) {
 	t.Logf("✓ VLESS LinkToProxy 测试通过，名称: %s", proxy.Name)
 }
 
+func TestLinkToProxy_VLESSXHTTP(t *testing.T) {
+	vless := VLESS{
+		Name:   "测试节点-VLESS-XHTTP",
+		Uuid:   "12345678-1234-1234-1234-123456789abc",
+		Server: "example.com",
+		Port:   443,
+		Query: VLESSQuery{
+			Security:   "tls",
+			Encryption: "none",
+			Type:       "xhttp",
+			Host:       "cdn.example.com",
+			Path:       "/xhttp",
+			Mode:       "stream-up",
+			Extra:      `{"headers":{"User-Agent":"curl/8.0"},"noGRPCHeader":true,"downloadSettings":{"path":"/download"}}`,
+		},
+	}
+	encoded := EncodeVLESSURL(vless)
+
+	link := Urls{Url: encoded}
+	config := OutputConfig{Udp: true, Cert: true}
+
+	proxy, err := LinkToProxy(link, config)
+	if err != nil {
+		t.Fatalf("LinkToProxy 失败: %v", err)
+	}
+
+	assertEqualString(t, "Type", "vless", proxy.Type)
+	assertEqualString(t, "Network", "xhttp", proxy.Network)
+	assertEqualString(t, "Server", "example.com", proxy.Server)
+	assertEqualFlexPort(t, "Port", 443, proxy.Port)
+	assertEqualString(t, "Uuid", vless.Uuid, proxy.Uuid)
+	assertEqualString(t, "XHTTPPath", "/xhttp", proxy.XHTTP_opts["path"].(string))
+	assertEqualString(t, "XHTTPHost", "cdn.example.com", proxy.XHTTP_opts["host"].(string))
+	assertEqualString(t, "XHTTPMode", "stream-up", proxy.XHTTP_opts["mode"].(string))
+	assertEqualString(t, "XHTTPHeader", "curl/8.0", proxy.XHTTP_opts["headers"].(map[string]interface{})["User-Agent"].(string))
+	assertEqualString(t, "XHTTPDownloadPath", "/download", proxy.XHTTP_opts["download-settings"].(map[string]interface{})["path"].(string))
+
+	t.Logf("✓ VLESS XHTTP LinkToProxy 测试通过，名称: %s", proxy.Name)
+}
+
 // TestLinkToProxy_Trojan 测试 Trojan 链接转换为 Proxy 结构体
 func TestLinkToProxy_Trojan(t *testing.T) {
 	trojan := Trojan{

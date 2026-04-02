@@ -109,6 +109,7 @@ type Proxy struct {
 	Packet_encoding string                 `yaml:"packet-encoding,omitempty"` // VLESS packet-encoding (xudp/packetaddr)
 	H2_opts         map[string]interface{} `yaml:"h2-opts,omitempty"`         // HTTP/2 传输层选项
 	Http_opts       map[string]interface{} `yaml:"http-opts,omitempty"`       // HTTP 传输层选项
+	XHTTP_opts      map[string]interface{} `yaml:"xhttp-opts,omitempty"`
 }
 
 type ProxyGroup struct {

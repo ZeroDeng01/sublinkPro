@@ -284,6 +284,35 @@ MustRegisterProtocol(newProxyProtocolSpec(...))
 
 如果协议只是演示协议、只需要解析和 UI 元数据，也可以只注册 `newProtocolSpec(...)`。
 
+### VLESS XHTTP 映射约定
+
+当前仓库对 `vless + xhttp` 的处理遵循以下约定：
+
+- URL 顶层字段：
+  - `type=xhttp` → Clash / mihomo `network: xhttp`
+  - `path` → `xhttp-opts.path`
+  - `host` → `xhttp-opts.host`
+  - `mode` → `xhttp-opts.mode`
+  - `extra` → 先解码 JSON，再映射到 `xhttp-opts`
+- `extra` 当前已支持的字段：
+  - `headers` → `xhttp-opts.headers`
+  - `noGRPCHeader` → `xhttp-opts.no-grpc-header`
+  - `xPaddingBytes` → `xhttp-opts.x-padding-bytes`
+  - `downloadSettings` → `xhttp-opts.download-settings`
+- `downloadSettings` 中当前已支持的常见子字段包括：
+  - `path`、`host`、`headers`、`server`、`port`、`tls`、`alpn`
+  - `skipCertVerify` → `skip-cert-verify`
+  - `clientFingerprint` → `client-fingerprint`
+  - `privateKey` → `private-key`
+  - `realityOpts` → `reality-opts`
+  - `echOpts` → `ech-opts`
+
+实现时需要注意：
+
+- `xhttp` 只允许出现在 VLESS 上，不要复用到其他协议。
+- 不要把 `xhttp` 静默降级成 `http`、`h2`、`grpc`。
+- 用户在订阅设置中勾选“跳过证书验证”后，会通过 `OutputConfig.Cert` 强制覆盖输出配置；对于 `xhttp`，这条规则同时作用于顶层 `skip-cert-verify` 和 `download-settings.skip-cert-verify`。
+
 ### 字段元数据说明
 
 `newProtocolSpec(...)` 最后可以追加 `FieldMeta`，用于驱动前端字段展示：

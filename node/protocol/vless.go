@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -24,12 +25,13 @@ func init() {
 		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
-		FieldMeta{Name: "Query.Type", Label: "传输层", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "grpc", "http", "h2", "quic"}},
+		FieldMeta{Name: "Query.Type", Label: "传输层", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "grpc", "http", "h2", "xhttp", "quic"}},
 		FieldMeta{Name: "Query.Path", Label: "路径", Type: "string", Group: "transport", Placeholder: "/ws"},
 		FieldMeta{Name: "Query.Host", Label: "Host", Type: "string", Group: "transport", Placeholder: "cdn.example.com"},
 		FieldMeta{Name: "Query.HeaderType", Label: "Header Type", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Query.ServiceName", Label: "gRPC Service Name", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Query.Mode", Label: "gRPC Mode", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Query.Extra", Label: "XHTTP Extra", Type: "string", Group: "transport", Multiline: true, Advanced: true},
 		FieldMeta{Name: "Query.Encryption", Label: "加密方式", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Query.PacketEncoding", Label: "Packet Encoding", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Query.MaxEarlyData", Label: "Early Data", Type: "int", Group: "transport", Advanced: true},
@@ -65,6 +67,7 @@ type VLESSQuery struct {
 	Host          string   `json:"host"`
 	ServiceName   string   `json:"serviceName,omitempty"`
 	Mode          string   `json:"mode,omitempty"`
+	Extra         string   `json:"extra,omitempty"`
 	AllowInsecure int      `json:"allowInsecure,omitempty"` // 跳过证书验证
 	// 新增：packet-encoding参数（xudp/packetaddr）
 	PacketEncoding string `json:"packetEncoding,omitempty"`
@@ -123,15 +126,18 @@ func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	} else if vless.Query.ServiceName != "" {
 		grpcOpts["grpc-mode"] = "gun"
 	}
+	xhttpOpts := buildVLESSXHTTPOpts(vless.Query)
+	applyVLESSXHTTPSkipCertOverride(xhttpOpts, config.Cert)
 	realityOpts := map[string]interface{}{"public-key": vless.Query.Pbk, "short-id": vless.Query.Sid}
 	DeleteOpts(wsOpts)
 	DeleteOpts(h2Opts)
 	DeleteOpts(httpOpts)
 	DeleteOpts(grpcOpts)
+	DeleteOpts(xhttpOpts)
 	DeleteOpts(realityOpts)
 	tls := vless.Query.Security != "" && vless.Query.Security != "none"
 	skipCert := config.Cert || vless.Query.AllowInsecure == 1
-	var finalWsOpts, finalH2Opts, finalHttpOpts, finalGrpcOpts map[string]interface{}
+	var finalWsOpts, finalH2Opts, finalHttpOpts, finalGrpcOpts, finalXHTTPOpts map[string]interface{}
 	switch vless.Query.Type {
 	case "ws":
 		finalWsOpts = wsOpts
@@ -141,8 +147,10 @@ func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 		finalHttpOpts = httpOpts
 	case "grpc":
 		finalGrpcOpts = grpcOpts
+	case "xhttp":
+		finalXHTTPOpts = xhttpOpts
 	}
-	return Proxy{Name: vless.Name, Type: "vless", Server: vless.Server, Port: FlexPort(utils.GetPortInt(vless.Port)), Servername: vless.Query.Sni, Uuid: vless.Uuid, Client_fingerprint: vless.Query.Fp, Network: vless.Query.Type, Flow: vless.Query.Flow, Alpn: vless.Query.Alpn, Packet_encoding: vless.Query.PacketEncoding, Ws_opts: finalWsOpts, H2_opts: finalH2Opts, Http_opts: finalHttpOpts, Grpc_opts: finalGrpcOpts, Reality_opts: realityOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Tls: tls, Dialer_proxy: link.DialerProxyName}, nil
+	return Proxy{Name: vless.Name, Type: "vless", Server: vless.Server, Port: FlexPort(utils.GetPortInt(vless.Port)), Servername: vless.Query.Sni, Uuid: vless.Uuid, Client_fingerprint: vless.Query.Fp, Network: vless.Query.Type, Flow: vless.Query.Flow, Alpn: vless.Query.Alpn, Packet_encoding: vless.Query.PacketEncoding, Ws_opts: finalWsOpts, H2_opts: finalH2Opts, Http_opts: finalHttpOpts, Grpc_opts: finalGrpcOpts, XHTTP_opts: finalXHTTPOpts, Reality_opts: realityOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Tls: tls, Dialer_proxy: link.DialerProxyName}, nil
 }
 
 // EncodeVLESSURL 将 VLESS 结构编码为 v2ray 常见的明文 URL 形式。
@@ -188,6 +196,9 @@ func EncodeVLESSURL(v VLESS) string {
 	}
 	if v.Query.Mode != "" {
 		q.Set("mode", v.Query.Mode)
+	}
+	if v.Query.Extra != "" {
+		q.Set("extra", v.Query.Extra)
 	}
 
 	// ws传输层参数
@@ -273,6 +284,7 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 	host := u.Query().Get("host")
 	serviceName := u.Query().Get("serviceName")
 	mode := u.Query().Get("mode")
+	extra := u.Query().Get("extra")
 
 	// 解析 alpn 参数（逗号分隔）
 	alpns := u.Query().Get("alpn")
@@ -366,6 +378,7 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 			Host:                host,
 			ServiceName:         serviceName,
 			Mode:                mode,
+			Extra:               extra,
 			AllowInsecure:       allowInsecure,
 			PacketEncoding:      packetEncoding,
 			MaxEarlyData:        maxEarlyData,
@@ -486,5 +499,200 @@ func ConvertProxyToVless(proxy Proxy) VLESS {
 		}
 	}
 
+	if proxy.Network == "xhttp" {
+		populateVLESSQueryFromXHTTPOpts(&vless.Query, proxy.XHTTP_opts)
+	}
+
 	return vless
+}
+
+func buildVLESSXHTTPOpts(query VLESSQuery) map[string]interface{} {
+	xhttpOpts := map[string]interface{}{}
+	if query.Path != "" {
+		xhttpOpts["path"] = query.Path
+	}
+	if query.Host != "" {
+		xhttpOpts["host"] = query.Host
+	}
+	if query.Mode != "" {
+		xhttpOpts["mode"] = query.Mode
+	}
+	mergeXHTTPExtraMap(xhttpOpts, parseVLESSXHTTPExtra(query.Extra))
+	return xhttpOpts
+}
+
+func populateVLESSQueryFromXHTTPOpts(query *VLESSQuery, xhttpOpts map[string]interface{}) {
+	if query == nil || len(xhttpOpts) == 0 {
+		return
+	}
+	if path, ok := xhttpOpts["path"].(string); ok {
+		query.Path = path
+	}
+	if host, ok := xhttpOpts["host"].(string); ok {
+		query.Host = host
+	}
+	if mode, ok := xhttpOpts["mode"].(string); ok {
+		query.Mode = mode
+	}
+	extra := buildVLESSXHTTPExtra(xhttpOpts)
+	if extra != "" {
+		query.Extra = extra
+	}
+}
+
+func parseVLESSXHTTPExtra(extra string) map[string]interface{} {
+	extra = strings.TrimSpace(extra)
+	if extra == "" {
+		return nil
+	}
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(extra), &parsed); err != nil {
+		return nil
+	}
+	return normalizeVLESSXHTTPExtra(parsed)
+}
+
+func normalizeVLESSXHTTPExtra(extra map[string]interface{}) map[string]interface{} {
+	if len(extra) == 0 {
+		return nil
+	}
+	normalized := map[string]interface{}{}
+	if headers, ok := extra["headers"].(map[string]interface{}); ok && len(headers) > 0 {
+		normalized["headers"] = headers
+	}
+	if noGRPCHeader, ok := extra["noGRPCHeader"]; ok {
+		normalized["no-grpc-header"] = noGRPCHeader
+	}
+	if xPaddingBytes, ok := extra["xPaddingBytes"]; ok {
+		normalized["x-padding-bytes"] = xPaddingBytes
+	}
+	if downloadSettings, ok := extra["downloadSettings"].(map[string]interface{}); ok && len(downloadSettings) > 0 {
+		if normalizedDownloadSettings := normalizeVLESSXHTTPDownloadSettings(downloadSettings); len(normalizedDownloadSettings) > 0 {
+			normalized["download-settings"] = normalizedDownloadSettings
+		}
+	}
+	DeleteOpts(normalized)
+	if len(normalized) == 0 {
+		return nil
+	}
+	return normalized
+}
+
+func normalizeVLESSXHTTPDownloadSettings(settings map[string]interface{}) map[string]interface{} {
+	if len(settings) == 0 {
+		return nil
+	}
+	normalized := map[string]interface{}{}
+	for key, value := range settings {
+		switch key {
+		case "path", "host", "headers", "server", "port", "tls", "alpn", "certificate", "servername":
+			normalized[key] = value
+		case "noGRPCHeader":
+			normalized["no-grpc-header"] = value
+		case "xPaddingBytes":
+			normalized["x-padding-bytes"] = value
+		case "echOpts":
+			normalized["ech-opts"] = value
+		case "realityOpts":
+			normalized["reality-opts"] = value
+		case "skipCertVerify":
+			normalized["skip-cert-verify"] = value
+		case "fingerprint":
+			normalized["fingerprint"] = value
+		case "privateKey":
+			normalized["private-key"] = value
+		case "serverName":
+			normalized["servername"] = value
+		case "clientFingerprint":
+			normalized["client-fingerprint"] = value
+		}
+	}
+	DeleteOpts(normalized)
+	if len(normalized) == 0 {
+		return nil
+	}
+	return normalized
+}
+
+func buildVLESSXHTTPExtra(xhttpOpts map[string]interface{}) string {
+	if len(xhttpOpts) == 0 {
+		return ""
+	}
+	extra := map[string]interface{}{}
+	if headers, ok := xhttpOpts["headers"].(map[string]interface{}); ok && len(headers) > 0 {
+		extra["headers"] = headers
+	}
+	if noGRPCHeader, ok := xhttpOpts["no-grpc-header"]; ok {
+		extra["noGRPCHeader"] = noGRPCHeader
+	}
+	if xPaddingBytes, ok := xhttpOpts["x-padding-bytes"]; ok {
+		extra["xPaddingBytes"] = xPaddingBytes
+	}
+	if downloadSettings, ok := xhttpOpts["download-settings"].(map[string]interface{}); ok && len(downloadSettings) > 0 {
+		if extraDownloadSettings := buildVLESSXHTTPExtraDownloadSettings(downloadSettings); len(extraDownloadSettings) > 0 {
+			extra["downloadSettings"] = extraDownloadSettings
+		}
+	}
+	if len(extra) == 0 {
+		return ""
+	}
+	encoded, err := json.Marshal(extra)
+	if err != nil {
+		return ""
+	}
+	return string(encoded)
+}
+
+func buildVLESSXHTTPExtraDownloadSettings(settings map[string]interface{}) map[string]interface{} {
+	if len(settings) == 0 {
+		return nil
+	}
+	extraSettings := map[string]interface{}{}
+	for key, value := range settings {
+		switch key {
+		case "path", "host", "headers", "server", "port", "tls", "alpn", "certificate", "fingerprint", "servername":
+			extraSettings[key] = value
+		case "no-grpc-header":
+			extraSettings["noGRPCHeader"] = value
+		case "x-padding-bytes":
+			extraSettings["xPaddingBytes"] = value
+		case "ech-opts":
+			extraSettings["echOpts"] = value
+		case "reality-opts":
+			extraSettings["realityOpts"] = value
+		case "skip-cert-verify":
+			extraSettings["skipCertVerify"] = value
+		case "private-key":
+			extraSettings["privateKey"] = value
+		case "client-fingerprint":
+			extraSettings["clientFingerprint"] = value
+		}
+	}
+	if len(extraSettings) == 0 {
+		return nil
+	}
+	return extraSettings
+}
+
+func mergeXHTTPExtraMap(target map[string]interface{}, extra map[string]interface{}) {
+	if len(target) == 0 || len(extra) == 0 {
+		for key, value := range extra {
+			target[key] = value
+		}
+		return
+	}
+	for key, value := range extra {
+		target[key] = value
+	}
+}
+
+func applyVLESSXHTTPSkipCertOverride(xhttpOpts map[string]interface{}, forceSkipCert bool) {
+	if !forceSkipCert || len(xhttpOpts) == 0 {
+		return
+	}
+	downloadSettings, ok := xhttpOpts["download-settings"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	downloadSettings["skip-cert-verify"] = true
 }
