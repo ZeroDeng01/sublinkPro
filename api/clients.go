@@ -16,7 +16,37 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var SunName string
+const subscriptionNameContextKey = "resolvedSubscriptionName"
+
+var testGetClientAfterResolveSubscriptionNameHook func(*gin.Context)
+
+func setResolvedSubscriptionName(c *gin.Context, subName string) {
+	c.Set(subscriptionNameContextKey, subName)
+}
+
+func getResolvedSubscriptionName(c *gin.Context) (string, bool) {
+	value, ok := c.Get(subscriptionNameContextKey)
+	if !ok {
+		return "", false
+	}
+
+	subName, ok := value.(string)
+	if !ok || subName == "" {
+		return "", false
+	}
+
+	return subName, true
+}
+
+func resolvedSubscriptionNameOrWriteError(c *gin.Context) (string, bool) {
+	subName, ok := getResolvedSubscriptionName(c)
+	if !ok {
+		c.Writer.WriteString("订阅名为空")
+		return "", false
+	}
+
+	return subName, true
+}
 
 func GetClient(c *gin.Context) {
 	// 获取协议头
@@ -51,7 +81,10 @@ func GetClient(c *gin.Context) {
 		c.Writer.WriteString("订阅不存在")
 		return
 	}
-	SunName = sub.Name
+	setResolvedSubscriptionName(c, sub.Name)
+	if testGetClientAfterResolveSubscriptionNameHook != nil {
+		testGetClientAfterResolveSubscriptionNameHook(c)
+	}
 
 	// IP 黑白名单检查
 	if sub.IPBlacklist != "" && utils.IsIpInCidr(c.ClientIP(), sub.IPBlacklist) {
@@ -115,17 +148,14 @@ func GetClient(c *gin.Context) {
 }
 func GetV2ray(c *gin.Context) {
 	var sub models.Subcription
-	if SunName == "" {
-		c.Writer.WriteString("订阅名为空")
+	subName, ok := resolvedSubscriptionNameOrWriteError(c)
+	if !ok {
 		return
 	}
-	// subname := c.Param("subname")
-	// subname := SunName
-	// subname = node.Base64Decode(subname)
-	sub.Name = SunName
+	sub.Name = subName
 	err := sub.Find()
 	if err != nil {
-		c.Writer.WriteString("找不到这个订阅:" + SunName)
+		c.Writer.WriteString("找不到这个订阅:" + subName)
 		return
 	}
 	err = sub.GetSub("v2ray")
@@ -140,6 +170,7 @@ func GetV2ray(c *gin.Context) {
 		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
 	}
 	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
+	c.Set("subname", subName)
 	// 如果是HEAD请求将不进行订阅内容相关输出
 	if c.Request.Method == "HEAD" {
 		return
@@ -183,8 +214,7 @@ func GetV2ray(c *gin.Context) {
 			baselist += nodeLink + "\n"
 		}
 	}
-	c.Set("subname", SunName)
-	filename := fmt.Sprintf("%s.txt", SunName)
+	filename := fmt.Sprintf("%s.txt", subName)
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -202,12 +232,14 @@ func GetV2ray(c *gin.Context) {
 }
 func GetClash(c *gin.Context) {
 	var sub models.Subcription
-	// subname := c.Param("subname")
-	// subname := node.Base64Decode(SunName)
-	sub.Name = SunName
+	subName, ok := resolvedSubscriptionNameOrWriteError(c)
+	if !ok {
+		return
+	}
+	sub.Name = subName
 	err := sub.Find()
 	if err != nil {
-		c.Writer.WriteString("找不到这个订阅:" + SunName)
+		c.Writer.WriteString("找不到这个订阅:" + subName)
 		return
 	}
 	err = sub.GetSub("clash")
@@ -222,6 +254,7 @@ func GetClash(c *gin.Context) {
 		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
 	}
 	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
+	c.Set("subname", subName)
 	// 如果是HEAD请求将不进行订阅内容相关输出
 	if c.Request.Method == "HEAD" {
 		return
@@ -383,8 +416,7 @@ func GetClash(c *gin.Context) {
 		c.Writer.WriteString(err.Error())
 		return
 	}
-	c.Set("subname", SunName)
-	filename := fmt.Sprintf("%s.yaml", SunName)
+	filename := fmt.Sprintf("%s.yaml", subName)
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -403,12 +435,14 @@ func GetClash(c *gin.Context) {
 
 func GetSurge(c *gin.Context) {
 	var sub models.Subcription
-	// subname := c.Param("subname")
-	// subname := node.Base64Decode(SunName)
-	sub.Name = SunName
+	subName, ok := resolvedSubscriptionNameOrWriteError(c)
+	if !ok {
+		return
+	}
+	sub.Name = subName
 	err := sub.Find()
 	if err != nil {
-		c.Writer.WriteString("找不到这个订阅:" + SunName)
+		c.Writer.WriteString("找不到这个订阅:" + subName)
 		return
 	}
 	err = sub.GetSub("surge")
@@ -423,6 +457,7 @@ func GetSurge(c *gin.Context) {
 		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
 	}
 	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
+	c.Set("subname", subName)
 	// 如果是HEAD请求将不进行订阅内容相关输出
 	if c.Request.Method == "HEAD" {
 		return
@@ -516,8 +551,7 @@ func GetSurge(c *gin.Context) {
 		c.Writer.WriteString(err.Error())
 		return
 	}
-	c.Set("subname", SunName)
-	filename := fmt.Sprintf("%s.conf", SunName)
+	filename := fmt.Sprintf("%s.conf", subName)
 	encodedFilename := url.QueryEscape(filename)
 	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
 	c.Writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
