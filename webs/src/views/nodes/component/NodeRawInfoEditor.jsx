@@ -154,6 +154,7 @@ const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled }) => {
         variant="outlined"
         select
         SelectProps={{ native: true }}
+        InputLabelProps={{ shrink: true }}
         helperText={helperText}
       >
         <option value="">请选择</option>
