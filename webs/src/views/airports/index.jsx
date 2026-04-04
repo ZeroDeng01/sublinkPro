@@ -48,8 +48,9 @@ import {
   refreshAirportUsage
 } from 'api/airports';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
-import { getNodeGroups, getNodeIds, getNodes, getNodeProtocols } from 'api/nodes';
+import { getNodeGroups, getNodeIds, getNodes, getProtocolUIMeta } from 'api/nodes';
 import ProfileSelectDialog from 'views/nodes/component/ProfileSelectDialog';
+import { getRegisteredProtocolNames } from 'utils/protocolPresentation';
 
 // local components
 import {
@@ -251,8 +252,8 @@ export default function AirportList() {
   // 获取协议列表
   const fetchProtocolOptions = useCallback(async () => {
     try {
-      const response = await getNodeProtocols();
-      setProtocolOptions(response.data || []);
+      const response = await getProtocolUIMeta();
+      setProtocolOptions(getRegisteredProtocolNames(response.data || []));
     } catch (error) {
       console.error('获取协议列表失败:', error);
     }

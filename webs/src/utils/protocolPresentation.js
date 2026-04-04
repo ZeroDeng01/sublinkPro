@@ -121,6 +121,9 @@ export const getProtocolPresentation = (protocolName, protocolMeta = []) => {
 export const getProtocolOptions = (protocolOptions = [], protocolMeta = []) =>
   (protocolOptions || []).map((protocol) => getProtocolPresentation(protocol, protocolMeta)).filter((option) => option.value);
 
+export const getRegisteredProtocolNames = (protocolMeta = []) =>
+  uniqueValues((Array.isArray(protocolMeta) ? protocolMeta : []).map((meta) => normalizeProtocolName(meta?.name)).filter(Boolean));
+
 export const resolveProtocolPresentationFromLink = (link, protocolMeta = []) => {
   if (!link || typeof link !== 'string') {
     return {
