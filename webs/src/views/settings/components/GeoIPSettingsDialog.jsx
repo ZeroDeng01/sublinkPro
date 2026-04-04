@@ -136,7 +136,7 @@ export default function GeoIPSettingsDialog({ open, onClose, showMessage }) {
   const fetchProxyNodes = async () => {
     setLoadingNodes(true);
     try {
-      const res = await getNodes({ minSpeed: 0.01, pageSize: 200 });
+      const res = await getNodes({ pageSize: 200 });
       if (res.data) {
         const items = res.data.items || res.data || [];
         setProxyNodes(items);
@@ -330,9 +330,9 @@ export default function GeoIPSettingsDialog({ open, onClose, showMessage }) {
                   onChange={handleNodeChange}
                   displayField="Name"
                   valueField="Link"
-                  label="选择代理节点"
+                  label="代理节点"
                   placeholder="留空则自动选择最佳节点"
-                  helperText="如果未选择具体代理，系统将自动选择延迟最低且速度最快的节点"
+                  helperText="可选择任意现有节点，也可手动输入外部代理链接；留空时系统会自动选择最佳节点。"
                   freeSolo={true}
                   limit={50}
                 />

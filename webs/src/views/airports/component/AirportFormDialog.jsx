@@ -245,12 +245,14 @@ export default function AirportFormDialog({
                       proxyNodeOptions.find((n) => n.Link === airportForm.proxyLink) ||
                       (airportForm.proxyLink ? { Link: airportForm.proxyLink, Name: '', ID: 0 } : null)
                     }
-                    onChange={(newValue) => setAirportForm({ ...airportForm, proxyLink: newValue?.Link || '' })}
+                    onChange={(newValue) =>
+                      setAirportForm({ ...airportForm, proxyLink: typeof newValue === 'string' ? newValue : newValue?.Link || '' })
+                    }
                     displayField="Name"
                     valueField="Link"
                     label="代理节点"
-                    placeholder="留空自动选择最佳节点"
-                    helperText="系统将自动选择延迟最低且速度最快的节点"
+                    placeholder="留空则自动选择最佳节点"
+                    helperText="可选择任意现有节点，也可手动输入外部代理链接；留空时系统会自动选择最佳节点。"
                     freeSolo={true}
                     limit={50}
                     size="small"
