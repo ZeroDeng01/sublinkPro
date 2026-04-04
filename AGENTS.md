@@ -280,7 +280,58 @@ For multi-instance deployments, do not casually change semantics around:
 如果你改动路由、认证、静态资源路径或页面刷新行为，请先同时检查前端和后端实现。  
 If you touch routing, auth, asset paths, or page refresh behavior, inspect both backend and frontend sides before changing code.
 
-## 9. mihomo 核心集成说明 / Mihomo integration guidance
+- 任何影响前后端契约、接口字段、路由、鉴权、页面流程、base-path、静态资源、任务结果展示或配置语义的改动，都必须在**同一工作**中同步检查并更新相关前端、后端与文档，不能只改其中一层。  
+  Any change affecting the frontend-backend contract, API fields, routing, auth, page flows, base-path, static assets, task result presentation, or configuration semantics must be checked and updated across the relevant frontend, backend, and documentation **within the same piece of work**; do not change only one layer.
+- 严禁出现“只改后端但前端请求/展示未同步”或“只改前端但后端接口/权限/数据结构未核对”的情况；如果确认另一层无需修改，也应在变更说明中明确写明已检查且无需同步调整。  
+  Do not leave the repo in a state where backend changes are not reflected in frontend requests/UI, or frontend changes are made without checking backend APIs, permissions, and data structures; if another layer truly needs no changes, explicitly state that it was checked and no sync update was required.
+
+## 9. 跨层同步为强制要求 / Cross-layer synchronization is mandatory
+
+本仓库的默认工作方式不是“改到哪层算哪层”，而是“凡是行为受影响的层都必须一起检查并同步”。任何会影响接口、数据结构、页面展示、用户流程、配置语义、部署方式或文档含义的改动，都必须把相关层作为一个整体交付。  
+The default workflow in this repo is not “change only the layer you touched,” but “inspect and synchronize every impacted layer.” Any change that affects APIs, data structures, UI behavior, user flows, configuration semantics, deployment behavior, or documentation meaning must be delivered as a coordinated cross-layer change.
+
+### 完成条件 / Definition of done
+
+- 后端改动如果影响接口、字段、权限、返回结构、任务结果、静态资源路径或路由行为，必须同步检查并更新前端请求层、页面层和相关文档。  
+  If a backend change affects APIs, fields, permissions, response shapes, task results, static asset paths, or routing behavior, update the frontend request layer, frontend views, and related documentation in the same work.
+- 前端改动如果影响接口依赖、鉴权方式、字段语义、页面流程、base-path、资源路径或刷新行为，必须同步核对后端实现和相关文档。  
+  If a frontend change affects API dependencies, auth behavior, field semantics, page flows, base-path handling, asset paths, or refresh behavior, verify and update the backend implementation and related docs in the same work.
+- 配置、部署、构建、迁移、MFA、安全语义、mihomo 相关能力的改动，必须同步更新 `README.md`、`docs/` 和必要的功能说明，不得只改代码。  
+  Changes to configuration, deployment, build flow, migration, MFA, security semantics, or mihomo-related capabilities must be reflected in `README.md`, `docs/`, and relevant feature documentation; code-only delivery is not acceptable.
+
+### 交付禁区 / Unacceptable delivery states
+
+- 只改后端，但前端请求、展示、交互或提示文案仍停留在旧语义。  
+  Backend changed, but frontend requests, UI behavior, or copy still reflect the old contract.
+- 只改前端，但后端接口、权限、字段含义、返回结构或运行时行为未核对。  
+  Frontend changed, but backend APIs, permissions, field meanings, response shapes, or runtime behavior were not checked.
+- 代码行为已变更，但 `README.md`、`docs/` 或 `docs/features/*` 仍描述旧流程、旧字段、旧命令或旧配置语义。  
+  Code behavior changed, but `README.md`, `docs/`, or `docs/features/*` still describe old flows, fields, commands, or configuration semantics.
+
+### 允许不修改另一层的前提 / When it is acceptable not to change another layer
+
+- 只有在你**已经检查**受影响的前端、后端或文档后，确认它们无需变更时，才可以不修改。  
+  You may leave another layer untouched only after you have actually checked it and confirmed no update is required.
+- 这种情况必须在变更说明中明确写出“已检查哪些层，以及为什么无需同步修改”。  
+  In that case, explicitly state in your change summary which layers were checked and why no synchronized update was needed.
+
+### 交付前检查清单 / Pre-delivery checklist
+
+在宣称工作完成之前，至少逐项核对以下内容：  
+Before claiming the work is complete, check each of the following:
+
+- 后端是否有任何接口、字段、权限、路由、返回结构或运行语义变化；如果有，前端请求层、页面层和相关提示文案是否已经同步。  
+  Whether any backend API, field, permission, route, response shape, or runtime semantic changed; if so, whether the frontend request layer, views, and user-facing copy were synchronized.
+- 前端是否有任何交互流程、鉴权方式、字段依赖、base-path、资源路径或刷新行为变化；如果有，后端实现和相关文档是否已经核对。  
+  Whether any frontend interaction flow, auth behavior, field dependency, base-path, asset path, or refresh behavior changed; if so, whether the backend implementation and related documentation were checked.
+- `README.md`、`docs/`、`docs/features/*` 中是否存在仍然描述旧行为、旧字段、旧命令或旧配置语义的内容。  
+  Whether `README.md`, `docs/`, or `docs/features/*` still describe outdated behavior, fields, commands, or configuration semantics.
+- 是否已经运行与改动匹配的验证命令，并确认结果覆盖了受影响的前端、后端或构建链路。  
+  Whether the relevant validation commands were run and their results cover the affected frontend, backend, or build pipeline.
+- 变更说明中是否明确写出：改了哪些层、同步了哪些层、哪些层已检查但无需修改，以及为什么。  
+  Whether the change summary explicitly states which layers changed, which layers were synchronized, and which layers were checked but required no modification, including why.
+
+## 10. mihomo 核心集成说明 / Mihomo integration guidance
 
 本仓库有一批核心功能直接依赖 mihomo 相关能力，因此任何涉及代理、测速、DNS、Host 映射、链式代理兼容性、代理下载或代理外呼的改动，都不应把 mihomo 视为可忽略细节。  
 Several core features in this repo directly depend on mihomo-related capabilities, so any change involving proxying, speed testing, DNS, Host mapping, chain-proxy compatibility, proxied downloads, or proxied outbound requests should not treat mihomo as an incidental detail.
@@ -328,12 +379,14 @@ Several core features in this repo directly depend on mihomo-related capabilitie
 - 若某个特性只是“兼容 mihomo 生态”而不是“直接调用 mihomo Go 包”，在文档中要写清楚，不要把生态兼容误写成直接运行时依赖。  
   If a feature is only “mihomo ecosystem compatible” rather than “directly importing the mihomo Go package,” document that distinction clearly instead of overstating direct runtime dependency.
 
-## 10. 贡献者工作规范 / Working norms for contributors
+## 11. 贡献者工作规范 / Working norms for contributors
 
 ### 做最小且边界清晰的改动 / Make minimal, boundary-respecting changes
 
 - 优先在正确层修复问题，而不是在相邻层加补丁。  
   Prefer fixing the correct layer instead of adding workaround logic nearby.
+- 但“在正确层修复”不等于“只改一层就结束”；凡是改动会影响其他层的输入、输出、展示、文案、配置或操作路径，必须把受影响的层一并同步到位。  
+  But “fixing the correct layer” does not mean “changing only one layer and stopping”; whenever a change affects another layer’s inputs, outputs, presentation, copy, configuration, or operational flow, update all impacted layers together.
 - 不要把业务逻辑塞进 `routers/`。  
   Do not move business logic into `routers/`.
 - 不要把持久化细节放进前端 UI 代码。  
@@ -359,7 +412,7 @@ Several core features in this repo directly depend on mihomo-related capabilitie
 - 不要把通用脚手架默认行为当成这里的事实。  
   Do not assume generic template behavior applies here.
 
-## 11. 验证建议 / Validation guidance
+## 12. 验证建议 / Validation guidance
 
 对于前端改动：  
 For frontend changes:
@@ -392,7 +445,7 @@ Notes:
 因此，写文档或自动化时不要发明不存在的校验流程。  
 So when documenting or automating verification, avoid inventing nonexistent commands.
 
-## 12. 改行为前优先查看的区域 / High-value areas to inspect before changing behavior
+## 13. 改行为前优先查看的区域 / High-value areas to inspect before changing behavior
 
 以下文件/目录通常是高价值起点：  
 Use these files/directories as likely starting points:
@@ -422,7 +475,7 @@ Use these files/directories as likely starting points:
 - 前端 API 层：`webs/src/api/`  
   Frontend API layer: `webs/src/api/`
 
-## 13. 文档同步要求 / Documentation expectations
+## 14. 文档同步要求 / Documentation expectations
 
 如果你改动了以下内容，应在同一工作中同步更新文档：  
 If you change any of the following, update docs in the same work when appropriate:
@@ -444,7 +497,12 @@ Relevant docs include:
 - `docs/installation.md`
 - `docs/features/*`
 
-## 14. 安全提示 / Safety notes
+- 文档同步不是可选收尾步骤，而是变更完成条件的一部分。只要代码改动改变了行为、接口、字段、页面文案、用户流程、命令、配置、部署、迁移或安全语义，就必须在同一工作中同步更新相应文档。  
+  Documentation sync is not an optional finishing step; it is part of the definition of done. If a code change alters behavior, APIs, fields, page copy, user flows, commands, configuration, deployment, migration, or security semantics, the relevant documentation must be updated in the same piece of work.
+- 不允许出现“代码已经修改，但 `README.md`、`docs/` 或功能说明仍保留旧语义”的交付状态；如果确认无需更新文档，也应在变更说明中明确写明原因。  
+  Do not leave the project in a state where code has changed but `README.md`, `docs/`, or feature documentation still describes the old behavior; if no doc update is needed, explicitly state why.
+
+## 15. 安全提示 / Safety notes
 
 - 默认管理员账号是 `admin / 123456`；不要把它重新表述成“安全默认值”，应提醒用户尽快修改。  
   Default admin credentials are `admin / 123456`; do not present them as a safe default, and remind users to change them.
@@ -455,7 +513,7 @@ Relevant docs include:
 - 注意 Docker 挂载的运行时目录：`/app/db`、`/app/template`、`/app/logs`。  
   Be careful with runtime directories mounted by Docker deployments: `/app/db`, `/app/template`, and `/app/logs`.
 
-## 15. 分支与提交约定 / Branch and commit conventions
+## 16. 分支与提交约定 / Branch and commit conventions
 
 `docs/development.md` 中记录了以下约定：  
 `docs/development.md` documents these conventions:
@@ -467,7 +525,7 @@ Relevant docs include:
 - 提交信息优先使用语义化前缀，如 `feat`、`fix`、`docs`、`refactor`。  
   Semantic commit prefixes are preferred, such as `feat`, `fix`, `docs`, and `refactor`.
 
-## 16. 实用变更路径 / Practical change recipes
+## 17. 实用变更路径 / Practical change recipes
 
 ### 添加后端功能 / Add a backend feature
 
