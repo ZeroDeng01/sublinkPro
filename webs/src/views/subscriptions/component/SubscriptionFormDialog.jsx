@@ -77,6 +77,13 @@ const formatCountry = (linkCountry) => {
   return flag ? `${flag}${linkCountry}` : linkCountry;
 };
 
+const normalizeCountryCode = (value) => (typeof value === 'string' ? value.trim().toUpperCase() : '');
+
+const normalizeCountryCodeList = (values) => {
+  if (!Array.isArray(values)) return [];
+  return Array.from(new Set(values.map((value) => normalizeCountryCode(value)).filter(Boolean)));
+};
+
 // 预览节点名称
 const previewNodeName = (rule) => {
   if (!rule) return '';
@@ -167,6 +174,8 @@ export default function SubscriptionFormDialog({
 }) {
   const theme = useTheme();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
+  const [countryWhitelistInput, setCountryWhitelistInput] = useState('');
+  const [countryBlacklistInput, setCountryBlacklistInput] = useState('');
 
   // 折叠面板展开状态（支持多个同时展开）
   const [expandedPanels, setExpandedPanels] = useState({
@@ -208,6 +217,22 @@ export default function SubscriptionFormDialog({
   const unlockProviderOptions = getUnlockProviderOptions();
   const unlockRenameVariables = getUnlockRenameVariables();
   const unlockRules = useMemo(() => (Array.isArray(formData.unlockRules) ? formData.unlockRules : []), [formData.unlockRules]);
+  const normalizedCountryOptions = useMemo(() => normalizeCountryCodeList(countryOptions), [countryOptions]);
+  const normalizedCountryWhitelist = useMemo(() => normalizeCountryCodeList(formData.CountryWhitelist), [formData.CountryWhitelist]);
+  const normalizedCountryBlacklist = useMemo(() => normalizeCountryCodeList(formData.CountryBlacklist), [formData.CountryBlacklist]);
+
+  const updateCountryFilterField = (field, values) => {
+    setFormData({ ...formData, [field]: normalizeCountryCodeList(values) });
+  };
+
+  const handleCountryFilterKeyDown = (event, field, inputValue, setInputValue) => {
+    if (event.key !== 'Enter') return;
+    const normalizedInput = normalizeCountryCode(inputValue);
+    if (!normalizedInput) return;
+    event.preventDefault();
+    updateCountryFilterField(field, [...normalizeCountryCodeList(formData[field]), normalizedInput]);
+    setInputValue('');
+  };
 
   // 过滤后的节点列表
   const filteredNodes = useMemo(() => {
@@ -775,27 +800,61 @@ export default function SubscriptionFormDialog({
                   <Grid item xs={12} sm={6}>
                     <Autocomplete
                       multiple
-                      options={countryOptions}
-                      value={formData.CountryWhitelist}
-                      onChange={(e, newValue) => setFormData({ ...formData, CountryWhitelist: newValue })}
-                      getOptionLabel={(option) => formatCountry(option)}
+                      freeSolo
+                      options={normalizedCountryOptions}
+                      value={normalizedCountryWhitelist}
+                      inputValue={countryWhitelistInput}
+                      onInputChange={(event, newInputValue) => {
+                        void event;
+                        setCountryWhitelistInput(newInputValue);
+                      }}
+                      onChange={(event, newValue) => {
+                        void event;
+                        updateCountryFilterField('CountryWhitelist', newValue);
+                      }}
+                      getOptionLabel={(option) => formatCountry(normalizeCountryCode(option))}
+                      isOptionEqualToValue={(option, value) => normalizeCountryCode(option) === normalizeCountryCode(value)}
                       renderInput={(params) => (
-                        <TextField {...params} label="落地IP国家白名单" helperText="只保留这些国家的节点，不选则不限制" />
+                        <TextField
+                          {...params}
+                          label="落地IP国家白名单"
+                          helperText="可从建议中选择，或输入后按 Enter 添加；建议使用 HK/US/JP 这类两位国家代码"
+                          onKeyDown={(event) =>
+                            handleCountryFilterKeyDown(event, 'CountryWhitelist', countryWhitelistInput, setCountryWhitelistInput)
+                          }
+                        />
                       )}
-                      renderOption={(props, option) => <li {...props}>{formatCountry(option)}</li>}
+                      renderOption={(props, option) => <li {...props}>{formatCountry(normalizeCountryCode(option))}</li>}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <Autocomplete
                       multiple
-                      options={countryOptions}
-                      value={formData.CountryBlacklist}
-                      onChange={(e, newValue) => setFormData({ ...formData, CountryBlacklist: newValue })}
-                      getOptionLabel={(option) => formatCountry(option)}
+                      freeSolo
+                      options={normalizedCountryOptions}
+                      value={normalizedCountryBlacklist}
+                      inputValue={countryBlacklistInput}
+                      onInputChange={(event, newInputValue) => {
+                        void event;
+                        setCountryBlacklistInput(newInputValue);
+                      }}
+                      onChange={(event, newValue) => {
+                        void event;
+                        updateCountryFilterField('CountryBlacklist', newValue);
+                      }}
+                      getOptionLabel={(option) => formatCountry(normalizeCountryCode(option))}
+                      isOptionEqualToValue={(option, value) => normalizeCountryCode(option) === normalizeCountryCode(value)}
                       renderInput={(params) => (
-                        <TextField {...params} label="落地IP国家黑名单" helperText="排除这些国家的节点（优先级高于白名单）" />
+                        <TextField
+                          {...params}
+                          label="落地IP国家黑名单"
+                          helperText="可从建议中选择，或输入后按 Enter 添加；建议使用 HK/US/JP 这类两位国家代码"
+                          onKeyDown={(event) =>
+                            handleCountryFilterKeyDown(event, 'CountryBlacklist', countryBlacklistInput, setCountryBlacklistInput)
+                          }
+                        />
                       )}
-                      renderOption={(props, option) => <li {...props}>{formatCountry(option)}</li>}
+                      renderOption={(props, option) => <li {...props}>{formatCountry(normalizeCountryCode(option))}</li>}
                     />
                   </Grid>
                 </Grid>
