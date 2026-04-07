@@ -1020,7 +1020,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
             <Card variant="outlined">
               <CardHeader
                 title="AI 助手设置"
-                subheader="为当前账号配置独立的 OpenAI 兼容模型参数。"
+                subheader="为当前账号配置独立的 Responses API 模型参数。"
                 avatar={<PsychologyIcon color="primary" />}
                 action={
                   <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" justifyContent="flex-end">
@@ -1040,7 +1040,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                 ) : (
                   <Stack spacing={2.5}>
                     <Alert severity="info">
-                      模板编辑器中的 AI 助手会使用这里的个人配置。保存需要当前密码；如已启用双重验证，还需要输入当前验证码。
+                      模板编辑器中的 AI 助手会使用这里的个人配置。当前仅支持提供 `/responses` endpoint 的 AI 服务。保存需要当前密码；如已启用双重验证，还需要输入当前验证码。
                     </Alert>
 
                     <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
@@ -1048,7 +1048,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                         <Box>
                           <Typography variant="subtitle2">启用个人 AI 助手</Typography>
                           <Typography variant="body2" color="text.secondary">
-                            当前接口类型：{aiForm.providerType || 'openai_compatible'}。
+                            当前接口类型：Responses API（仅支持 `/responses` endpoint）。
                           </Typography>
                         </Box>
 
@@ -1073,7 +1073,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                           value={aiForm.baseUrl}
                           onChange={(e) => setAIField('baseUrl', e.target.value)}
                           placeholder="https://api.openai.com/v1"
-                          helperText="需为 OpenAI 兼容接口地址，保存时会校验是否为可公开访问的 HTTP/HTTPS 地址。"
+                          helperText="需为可用的 Responses API 根地址，并且服务端必须支持 `/responses` endpoint；保存时会校验是否为可公开访问的 HTTP/HTTPS 地址。"
                         />
                         <TextField
                           fullWidth
@@ -1104,8 +1104,8 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                                 placeholder="gpt-4.1-mini"
                                 helperText={
                                   aiModelsFetched
-                                    ? '可从已获取列表中选择，也可以继续手动输入兼容服务提供的模型 ID。'
-                                    : '可手动输入模型 ID，也可先根据当前接口配置获取模型列表。'
+                                    ? '可从已获取列表中选择，也可以继续手动输入支持 `/responses` 的模型 ID。'
+                                    : '可手动输入模型 ID，也可先根据当前 Responses 接口配置获取模型列表。'
                                 }
                               />
                             )}
@@ -1141,7 +1141,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                               value={aiForm.maxTokens}
                               onChange={(e) => setAIField('maxTokens', e.target.value === '' ? '' : Number(e.target.value))}
                               inputProps={{ min: 0, step: 100 }}
-                              helperText="设置为 0 表示使用服务端默认值。"
+                              helperText="设置为 0 表示使用服务端默认值。连接测试会改用最小请求，并单独限制很小的返回 token 数量。"
                             />
                           </Grid>
                         </Grid>

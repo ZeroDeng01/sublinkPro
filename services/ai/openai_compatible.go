@@ -94,6 +94,8 @@ type TestResult struct {
 	FinishReason string                 `json:"finishReason,omitempty"`
 }
 
+const connectionTestMaxTokens = 16
+
 type modelsResponse struct {
 	Data []struct {
 		ID string `json:"id"`
@@ -427,13 +429,15 @@ func (c *Client) StreamResponses(ctx context.Context, messages []Message, onEven
 
 func (c *Client) TestConnection(ctx context.Context) (*TestResult, error) {
 	start := time.Now()
-	content, finishReason, usage, err := c.CreateChatCompletion(ctx, []Message{{
-		Role:    "system",
-		Content: "Reply with exactly OK.",
-	}, {
+	testClient := *c
+	testClient.maxTokens = connectionTestMaxTokens
+	if c.maxTokens > 0 && c.maxTokens < connectionTestMaxTokens {
+		testClient.maxTokens = c.maxTokens
+	}
+	content, finishReason, usage, err := testClient.StreamResponses(ctx, []Message{{
 		Role:    "user",
-		Content: "OK",
-	}})
+		Content: "hi",
+	}}, nil)
 	if err != nil {
 		return nil, err
 	}

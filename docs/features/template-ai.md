@@ -46,6 +46,9 @@ AI 模板编辑特别适合下面这些任务：
 - **模型名称**
 - **API Key**
 
+> [!IMPORTANT]
+> 当前 AI 助手**仅支持提供 `/responses` endpoint 的服务**。如果某个服务只支持 `/chat/completions` 或其他兼容层，而不支持 `/responses`，则无法用于本项目的 AI 模板编辑与连接测试。
+
 > [!TIP]
 > 模板编辑器中的 AI 功能使用的是 `设置 -> 个人设置 -> AI 助手` 中保存的配置。建议先完成配置并测试连接，再回到模板编辑器生成草稿。
 
@@ -59,6 +62,8 @@ AI 模板编辑特别适合下面这些任务：
 `设置 -> 个人设置 -> AI 助手`
 
 检查是否已启用 AI，并确认 Base URL、模型名称和 API Key 已正确填写。
+
+同时请确认该 Base URL 对应的 AI 服务实际支持 `/responses` endpoint；仅有传统 `chat/completions` 能力的接口当前不可用。
 
 ---
 
