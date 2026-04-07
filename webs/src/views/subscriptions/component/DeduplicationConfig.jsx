@@ -47,7 +47,7 @@ function DeduplicationConfig({ value, onChange }) {
         setLoading(true);
         const [protoRes, nodeRes] = await Promise.all([getProtocolMeta(), getNodeFieldsMeta()]);
         setProtocolMeta(protoRes.data || []);
-        setNodeFieldsMeta(nodeRes.data || []);
+        setNodeFieldsMeta(nodeRes.data?.fields || []);
         setError(null);
       } catch (err) {
         setError('加载元数据失败');
