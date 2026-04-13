@@ -140,15 +140,32 @@ func TagRuleAdd(c *gin.Context) {
 
 // TagRuleUpdate 更新规则
 func TagRuleUpdate(c *gin.Context) {
-	var rule models.TagRule
-	if err := c.ShouldBindJSON(&rule); err != nil {
+	var req struct {
+		ID          int    `json:"id"`
+		TagName     string `json:"tagName"`
+		Name        string `json:"name"`
+		Enabled     bool   `json:"enabled"`
+		TriggerType string `json:"triggerType"`
+		Conditions  string `json:"conditions"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误")
 		return
 	}
-	if rule.ID == 0 {
+	if req.ID == 0 {
 		utils.FailWithMsg(c, "规则ID不能为空")
 		return
 	}
+	var rule models.TagRule
+	if err := rule.GetByID(req.ID); err != nil {
+		utils.FailWithMsg(c, "规则不存在")
+		return
+	}
+	rule.TagName = req.TagName
+	rule.Name = req.Name
+	rule.Enabled = req.Enabled
+	rule.TriggerType = req.TriggerType
+	rule.Conditions = req.Conditions
 	// 验证标签是否存在
 	if rule.TagName != "" && !models.TagExists(rule.TagName) {
 		utils.FailWithMsg(c, "关联的标签不存在")

@@ -30,7 +30,7 @@ type IPInfo struct {
 	AS          string    `json:"as"`                            // AS号
 	RawResponse string    `gorm:"type:text" json:"-"`            // 原始JSON响应
 	Provider    string    `json:"provider"`                      // 数据提供商
-	CreatedAt   time.Time `gorm:"autoCreateTime" json:"createdAt"`
+	CreatedAt   time.Time `gorm:"autoCreateTime;<-:create" json:"createdAt"`
 	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updatedAt"`
 }
 
@@ -142,7 +142,26 @@ func GetIPInfo(ip string) (*IPInfo, error) {
 	if dbInfo.ID > 0 {
 		// 更新现有记录
 		info.ID = dbInfo.ID
-		if err := database.DB.Save(info).Error; err != nil {
+		info.CreatedAt = dbInfo.CreatedAt
+		info.UpdatedAt = time.Now()
+		if err := database.DB.Model(&IPInfo{}).Where("id = ?", dbInfo.ID).Updates(map[string]interface{}{
+			"ip":           info.IP,
+			"country":      info.Country,
+			"country_code": info.CountryCode,
+			"region":       info.Region,
+			"region_name":  info.RegionName,
+			"city":         info.City,
+			"zip":          info.Zip,
+			"lat":          info.Lat,
+			"lon":          info.Lon,
+			"timezone":     info.Timezone,
+			"isp":          info.ISP,
+			"org":          info.Org,
+			"as":           info.AS,
+			"raw_response": info.RawResponse,
+			"provider":     info.Provider,
+			"updated_at":   info.UpdatedAt,
+		}).Error; err != nil {
 			utils.Error("更新IP信息失败: %v", err)
 		}
 	} else {

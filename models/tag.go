@@ -32,7 +32,7 @@ type TagRule struct {
 	Enabled     bool      `gorm:"default:true" json:"enabled"`   // 是否启用
 	TriggerType string    `json:"triggerType"`                   // 触发类型: subscription_update, speed_test
 	Conditions  string    `gorm:"type:text" json:"conditions"`   // JSON条件表达式
-	CreatedAt   time.Time `gorm:"autoCreateTime" json:"createdAt"`
+	CreatedAt   time.Time `gorm:"autoCreateTime;<-:create" json:"createdAt"`
 	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updatedAt"`
 }
 
@@ -248,7 +248,14 @@ func (r *TagRule) Add() error {
 // Update 更新规则
 func (r *TagRule) Update() error {
 	r.UpdatedAt = time.Now()
-	if err := database.DB.Save(r).Error; err != nil {
+	if err := database.DB.Model(&TagRule{}).Where("id = ?", r.ID).Updates(map[string]interface{}{
+		"tag_name":     r.TagName,
+		"name":         r.Name,
+		"enabled":      r.Enabled,
+		"trigger_type": r.TriggerType,
+		"conditions":   r.Conditions,
+		"updated_at":   r.UpdatedAt,
+	}).Error; err != nil {
 		return err
 	}
 	tagRuleCache.Set(r.ID, *r)
