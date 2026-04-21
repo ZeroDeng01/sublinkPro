@@ -12,7 +12,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import { getProtocolOptions, getProtocolPresentation } from 'utils/protocolPresentation';
 
 // icons
@@ -29,6 +29,21 @@ import BlockIcon from '@mui/icons-material/Block';
 export default function NodeProtocolFilter({ protocolOptions, whitelistValue, blacklistValue, onWhitelistChange, onBlacklistChange }) {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
+  const getOptionChipSx = (color, fallbackColor) => {
+    const resolvedColor = color || fallbackColor;
+    return {
+      bgcolor: alpha(resolvedColor, theme.palette.mode === 'dark' ? 0.18 : 0.1),
+      color: resolvedColor,
+      border: '1px solid',
+      borderColor: alpha(resolvedColor, theme.palette.mode === 'dark' ? 0.34 : 0.18),
+      '& .MuiChip-deleteIcon': {
+        color: alpha(resolvedColor, 0.72),
+        '&:hover': {
+          color: resolvedColor
+        }
+      }
+    };
+  };
 
   // 解析逗号分隔的协议字符串为数组
   const parseProtocolString = (str) => {
@@ -69,7 +84,9 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a2027' : '#f5f5f5'} 0%, ${theme.palette.mode === 'dark' ? '#121417' : '#fafafa'} 100%)`,
+          bgcolor: 'background.default',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
           cursor: 'pointer',
           '&:hover': {
             bgcolor: 'action.hover'
@@ -83,7 +100,7 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
             协议类型过滤
           </Typography>
           {hasAnyRules && (
-            <Typography variant="caption" color="textSecondary">
+            <Typography variant="caption" color="text.secondary">
               (白名单 {whitelistProtocols.length} / 黑名单 {blacklistProtocols.length} 个协议)
             </Typography>
           )}
@@ -126,11 +143,7 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
                       key={key}
                       label={option.label || option}
                       size="small"
-                      sx={{
-                        backgroundColor: option.color || '#4caf50',
-                        color: '#fff',
-                        '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
-                      }}
+                      sx={getOptionChipSx(option.color, theme.palette.success.main)}
                       {...tagProps}
                     />
                   );
@@ -143,7 +156,7 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
                       width: 12,
                       height: 12,
                       borderRadius: '50%',
-                      backgroundColor: option.color || '#1976d2',
+                      backgroundColor: option.color || theme.palette.primary.main,
                       mr: 1
                     }}
                   />
@@ -152,7 +165,7 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
               )}
               renderInput={(params) => <TextField {...params} placeholder="选择白名单协议（只保留这些协议的节点）" size="small" />}
             />
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
               仅保留使用白名单协议的节点
             </Typography>
           </Box>
@@ -183,11 +196,7 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
                       key={key}
                       label={option.label || option}
                       size="small"
-                      sx={{
-                        backgroundColor: option.color || '#f44336',
-                        color: '#fff',
-                        '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
-                      }}
+                      sx={getOptionChipSx(option.color, theme.palette.error.main)}
                       {...tagProps}
                     />
                   );
@@ -200,7 +209,7 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
                       width: 12,
                       height: 12,
                       borderRadius: '50%',
-                      backgroundColor: option.color || '#1976d2',
+                      backgroundColor: option.color || theme.palette.primary.main,
                       mr: 1
                     }}
                   />
@@ -209,7 +218,7 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
               )}
               renderInput={(params) => <TextField {...params} placeholder="选择黑名单协议（排除这些协议的节点）" size="small" />}
             />
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
               使用黑名单协议的节点将被排除
             </Typography>
           </Box>

@@ -11,13 +11,44 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 // project imports
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
+
+function SectionTitle({ children }) {
+  return (
+    <Typography
+      variant="subtitle2"
+      color="primary"
+      sx={{
+        fontWeight: 600,
+        mb: 1.5,
+        display: 'flex',
+        alignItems: 'center',
+        '&::before': {
+          content: '""',
+          width: 3,
+          height: 16,
+          bgcolor: 'primary.main',
+          borderRadius: 1,
+          mr: 1
+        }
+      }}
+    >
+      {children}
+    </Typography>
+  );
+}
+
+SectionTitle.propTypes = {
+  children: PropTypes.node.isRequired
+};
 
 /**
  * 机场批量编辑对话框
@@ -44,7 +75,7 @@ export default function AirportBatchEditDialog({
   return (
     <Dialog open={open} onClose={submitting ? undefined : onClose} maxWidth="md" fullWidth>
       <DialogTitle>批量设置机场</DialogTitle>
-      <DialogContent dividers>
+      <DialogContent dividers sx={{ pt: 2.5, pb: 2 }}>
         <Stack spacing={2.5}>
           <Alert severity={summaryItems.length > 0 ? 'info' : 'warning'}>
             {summaryItems.length > 0
@@ -53,6 +84,7 @@ export default function AirportBatchEditDialog({
           </Alert>
 
           <Box>
+            <SectionTitle>节点分组</SectionTitle>
             <FormControlLabel
               control={
                 <Checkbox checked={batchForm.applyGroup} onChange={(e) => setBatchForm({ ...batchForm, applyGroup: e.target.checked })} />
@@ -70,33 +102,49 @@ export default function AirportBatchEditDialog({
                   onInputChange={(e, newValue) => setBatchForm({ ...batchForm, group: newValue ?? '' })}
                   renderInput={(params) => <TextField {...params} label="节点分组" placeholder="输入或选择分组，留空表示清空分组" />}
                 />
-                <Typography variant="caption" color="textSecondary">
+                <Typography variant="caption" color="text.secondary">
                   会同步更新这些机场已导入节点的分组，留空表示清空分组。
                 </Typography>
               </Stack>
             </Collapse>
           </Box>
 
+          <Divider />
+
           <Box>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={batchForm.applySchedule}
-                  onChange={(e) => setBatchForm({ ...batchForm, applySchedule: e.target.checked })}
-                />
-              }
-              label="统一设置定时更新"
-            />
-            <Collapse in={batchForm.applySchedule}>
-              <Box sx={{ mt: 1 }}>
-                <CronExpressionGenerator
-                  value={batchForm.cronExpr}
-                  onChange={(value) => setBatchForm({ ...batchForm, cronExpr: value })}
-                  label=""
-                  helperText="只修改 Cron 表达式，不会改变机场当前的启用或禁用状态。"
-                />
+            <SectionTitle>定时更新</SectionTitle>
+            <Stack spacing={2}>
+              <Box>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <Box sx={{ pr: 2 }}>
+                    <Typography variant="body2">更新 Cron 表达式</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      批量编辑仅会更新定时规则，不会改变已选机场当前的启用或禁用状态。
+                    </Typography>
+                  </Box>
+                  <Switch
+                    checked={batchForm.applySchedule}
+                    onChange={(e) => setBatchForm({ ...batchForm, applySchedule: e.target.checked })}
+                  />
+                </Box>
+                <Collapse in={batchForm.applySchedule}>
+                  <Box sx={{ mt: 1.5 }}>
+                    <CronExpressionGenerator
+                      value={batchForm.cronExpr}
+                      onChange={(value) => setBatchForm({ ...batchForm, cronExpr: value })}
+                      label=""
+                      helperText="可批量修改或清空 Cron 表达式；此处不会同步切换机场的定时更新开关状态。"
+                    />
+                  </Box>
+                </Collapse>
               </Box>
-            </Collapse>
+            </Stack>
           </Box>
         </Stack>
       </DialogContent>

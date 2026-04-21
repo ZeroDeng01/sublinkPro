@@ -756,6 +756,19 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                 <Stack spacing={2.5}>
                   <Alert severity="info">修改用户名后需要重新登录。</Alert>
                   <Card variant="outlined">
+                    <CardHeader title="主题切换入口" subheader="全局主题模式已移动到右上角 Header，作为整个应用的主入口。" />
+                    <CardContent>
+                      <Stack spacing={1}>
+                        <Typography variant="body2" color="text.secondary">
+                          请使用右上角 Header 中的主题按钮切换浅色、深色或跟随系统模式。
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          主题选择会自动保存，并在下次登录后继续使用。
+                        </Typography>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                  <Card variant="outlined">
                     <CardHeader title="保存前确认" subheader="避免因安全校验导致保存失败。" />
                     <CardContent>
                       <Stack spacing={1.5}>
@@ -1040,7 +1053,8 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                 ) : (
                   <Stack spacing={2.5}>
                     <Alert severity="info">
-                      模板编辑器中的 AI 助手会使用这里的个人配置。当前仅支持提供 `/responses` endpoint 的 AI 服务。保存需要当前密码；如已启用双重验证，还需要输入当前验证码。
+                      模板编辑器中的 AI 助手会使用这里的个人配置。当前仅支持提供“/responses endpoint”的 AI
+                      服务。保存需要当前密码；如已启用双重验证，还需要输入当前验证码。
                     </Alert>
 
                     <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>

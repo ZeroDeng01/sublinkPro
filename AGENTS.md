@@ -127,6 +127,138 @@ For frontend commands, output paths, and toolchain behavior, rely on the reposit
 - `webs/src/layout/`、`webs/src/themes/`、`webs/src/components/`：共享 UI 外壳与组件。  
   `webs/src/layout/`, `webs/src/themes/`, and `webs/src/components/`: shared UI shell and components.
 
+## 4.1 前端主题适配规范 / Frontend theme adaptation rules
+
+凡是前端 UI 改动涉及颜色、表面、阴影、边框、图标、弹窗、面板、预览卡、悬浮层、提示块、标签、富文本或状态色，都必须同时检查 light / dark 两种模式，而不是只在当前模式下“看起来正常”。  
+Any frontend UI change involving colors, surfaces, shadows, borders, icons, dialogs, panels, preview cards, overlays, notices, chips, rich text, or status colors must be checked in both light and dark modes, not only in the mode currently visible.
+
+### 主题事实来源 / Theme source of truth
+
+- 优先使用 `theme.vars?.palette` 与 `theme.palette` 中现有的 token。  
+  Prefer existing tokens from `theme.vars?.palette` and `theme.palette`.
+- 表面层优先使用：`background.default`、`background.paper`、`divider`、`text.primary`、`text.secondary`。  
+  Prefer `background.default`, `background.paper`, `divider`, `text.primary`, and `text.secondary` for surfaces and text hierarchy.
+- 状态或强调色优先使用现有 palette 语义：`primary` / `secondary` / `info` / `success` / `warning` / `error`。  
+  Use existing semantic palette colors for emphasis or state: `primary`, `secondary`, `info`, `success`, `warning`, and `error`.
+- 透明度和层级优先通过 `alpha()` 或仓库已有 helper（如 `withAlpha()`）表达，不要硬写一组新的浅深色体系。  
+  Express opacity and elevation with `alpha()` or existing helpers like `withAlpha()` instead of inventing a parallel color system.
+
+### 实施规则 / Implementation rules
+
+- 外层卡片、弹窗主体、页面主 panel：优先使用 `background.paper` 语义；暗色模式下允许使用轻量渐变、弱边框和轻微内高光，但不要做成大块发白表面。  
+  Outer cards, dialog bodies, and main panels should generally use `background.paper`; in dark mode, light gradients, soft borders, and subtle inner highlights are acceptable, but avoid large bright slabs.
+- 内层嵌套 panel、底栏、预览 footer、提示块：优先用 `background.default` 或基于语义色的低透明度染色表面，不要“白底嵌白底”。  
+  Nested panels, bottom strips, preview footers, and notice blocks should generally use `background.default` or lightly tinted semantic surfaces; do not create white-on-white layering.
+- 主值 / 标题 / 可点击重点信息：优先用 `text.primary` 及字重体现层级；暗色模式可以提高 alpha，但不要默认全改成纯白。  
+  Main values, titles, and key interactive text should rely on `text.primary` and font weight; in dark mode, a higher alpha is acceptable, but do not default everything to pure white.
+- 次级说明 / 辅助信息 / 百分比 / 提示文案：优先用 `text.secondary` 或基于 `text.primary` 的较低 alpha，而不是继续叠一个新的灰色常量。  
+  Secondary descriptions, helper text, percentages, and hints should use `text.secondary` or a lower-alpha `text.primary`, rather than introducing ad-hoc gray constants.
+- 图标按钮、header action、通知入口、theme toggle 等高频交互元素：必须同时检查静态、hover、active/selected、disabled 四种状态在 light / dark 下的可见性。  
+  High-frequency interactive elements such as icon buttons, header actions, notification entry points, and theme toggles must be checked in light/dark across default, hover, active/selected, and disabled states.
+- 富文本、markdown、代码块、列表和 footer overlay：不要只修容器背景，必须同步检查正文、列表项、code、link、marker 和底栏文字对比度。  
+  For rich text, markdown, code blocks, lists, and footer overlays, do not stop at fixing the container background; also verify body text, list items, code, links, markers, and footer text contrast.
+
+### 明确禁区 / Explicit anti-patterns
+
+- 不要在组件里直接硬编码 `#fff`、`white`、`#000`、`black` 作为大面积表面颜色，除非确实是品牌/图标语义且无法用 token 表达。  
+  Do not hardcode `#fff`, `white`, `#000`, or `black` for large surfaces unless it is truly brand/icon-specific and cannot be expressed with theme tokens.
+- 不要通过“把 dark mode 所有字都调成纯白”来解决可读性问题。  
+  Do not solve dark-mode readability by turning all text pure white.
+- 不要在一个页面里为同类 surface 写多套互相无关的 `isDark ? ... : ...` magic number。  
+  Do not create multiple unrelated `isDark ? ... : ...` magic-number surface styles for equivalent UI layers within one page.
+- 不要只修一个组件实例而放任同类 preview / dialog / footer / chip 在其他文件继续使用旧语义。  
+  Do not fix only one component instance while equivalent previews, dialogs, footers, or chips elsewhere still use outdated semantics.
+
+### 推荐工作方式 / Recommended workflow
+
+- 先在相关文件附近寻找现有 helper、复用组件或同类 `sx` 模式，再决定是否新增小型共享 helper。  
+  First look for nearby helpers, reusable components, or similar `sx` patterns before deciding to add a small shared helper.
+- 如果同类问题出现在 2 个以上文件中，优先抽一个小而明确的 helper，而不是复制粘贴一组颜色表达式。  
+  If the same theme problem appears in 2 or more files, prefer a small focused helper over copy-pasting color expressions.
+- 交付说明中必须写明：检查了哪些 light / dark 场景、改了哪些 surface / text / icon 层级、哪些相关层已检查但无需修改。  
+  In your delivery summary, explicitly state which light/dark scenarios were checked, which surface/text/icon layers changed, and which related layers were inspected but needed no modification.
+
+### 主题覆盖范围 / Theme coverage expectations
+
+- 主题适配不是“修当前看到的那个组件”就结束；只要改动涉及某个页面、模块、共享 helper、theme override 或公共组件的主题语义，就必须把该功能链路中的同类页面、弹窗、抽屉、预览卡、嵌套 panel、底栏、overlay 与移动端入口一并检查。  
+  Theme adaptation does not stop after fixing the one visible component; if the change affects a page, module, shared helper, theme override, or reusable component, inspect all related pages, dialogs, drawers, preview cards, nested panels, footers, overlays, and mobile entry points in that feature flow.
+- 如果你改的是公共主题基础设施，例如 `webs/src/themes/*`、`webs/src/utils/colorUtils.js`、共享 `sx` helper、通用 dialog/card/panel 样式，那么默认影响范围应视为“所有复用该模式的页面”，不能只验证当前需求触达的单一路径。  
+  If you change shared theme infrastructure such as `webs/src/themes/*`, `webs/src/utils/colorUtils.js`, shared `sx` helpers, or common dialog/card/panel styles, treat the default blast radius as every page reusing that pattern rather than only the page touched by the current task.
+- 如果一个模块同时存在桌面版与移动版、dialog 与 fullscreen mobile、drawer 与页面内 panel、卡片列表与详情面板两套入口，主题适配时必须成套覆盖，不能只修桌面或只修主入口。  
+  If a module has desktop and mobile variants, dialog and fullscreen mobile modes, drawer and inline-panel variants, or both list-card and detail-panel entry points, theme work must cover the full set rather than only the desktop or primary path.
+- 凡是带有 `useMediaQuery`、`fullScreen`、`Drawer`、`Popover`、`Menu`、`Tooltip`、`Collapse`、`Tabs`、`Stepper`、`ReactMarkdown`、`code` / `pre`、自定义 footer overlay、sticky action bar 的组件，都应默认视为主题适配高风险区域。  
+  Components using `useMediaQuery`, `fullScreen`, `Drawer`, `Popover`, `Menu`, `Tooltip`, `Collapse`, `Tabs`, `Stepper`, `ReactMarkdown`, `code` / `pre`, custom footer overlays, or sticky action bars should be treated as high-risk theme-adaptation areas by default.
+- 对话框和弹层必须按完整结构检查：`Dialog` / `Drawer` / `Popover` / `Menu` / `Tooltip` 的 trigger、paper、title、content、actions、backdrop、scroll container、内部嵌套 panel、关闭按钮、底部操作区与 fullscreen mobile 形态都要核对，不允许只改容器背景。  
+  Dialogs and overlays must be checked as full structures: triggers, paper, title, content, actions, backdrop, scroll containers, nested panels, close buttons, footer actions, and fullscreen mobile variants for `Dialog` / `Drawer` / `Popover` / `Menu` / `Tooltip`; changing only the container background is not enough.
+- 当某个模块已经在仓库中存在成熟的 dark/light 适配样板时，优先复用其 surface 分层、边框透明度、状态色和移动端处理，而不是重新发明一套局部规则。当前优先参考簇包括 `NodePreviewDialog.jsx`、`NodePreviewCard.jsx`、`NodePreviewDetailsPanel.jsx`、`ChainProxyDialog.jsx`、`ChainPreviewDialog.jsx`、`MobileChainBuilder.jsx`、`ConditionBuilder.jsx`、`layout/MainLayout/Header/NotificationSection/index.jsx`、`views/dashboard/Default/index.jsx`，以及机场管理链路中的 `views/airports/index.jsx`、`AirportMobileList.jsx`、`AirportFormDialog.jsx`、`AirportBatchEditDialog.jsx` 与共享的 `components/CronExpressionGenerator.jsx`。  
+  When a mature dark/light adaptation pattern already exists in the repo, reuse its surface layering, border opacity, state colors, and mobile handling instead of inventing a new local rule set. Current primary reference clusters include `NodePreviewDialog.jsx`, `NodePreviewCard.jsx`, `NodePreviewDetailsPanel.jsx`, `ChainProxyDialog.jsx`, `ChainPreviewDialog.jsx`, `MobileChainBuilder.jsx`, `ConditionBuilder.jsx`, `layout/MainLayout/Header/NotificationSection/index.jsx`, `views/dashboard/Default/index.jsx`, plus the airport-management theme cluster: `views/airports/index.jsx`, `AirportMobileList.jsx`, `AirportFormDialog.jsx`, `AirportBatchEditDialog.jsx`, and the shared `components/CronExpressionGenerator.jsx`.
+
+### 浅色迁移到深色时的高风险遗漏点 / High-risk misses when migrating from light to dark
+
+- 只改外层页面容器，没有同步处理内层 header strip、footer strip、nested panel、统计块、详情块、空状态、skeleton 或 preview footer。  
+  Only the outer page container was updated, while inner header strips, footer strips, nested panels, stat blocks, detail blocks, empty states, skeletons, or preview footers were left behind.
+- 只改文本颜色，没有同步处理边框、阴影、divider、hover、active、selected、disabled、focus-visible 与滚动容器边界。  
+  Text color was updated, but borders, shadows, dividers, hover, active, selected, disabled, focus-visible states, and scroll-container edges were not.
+- 只修主页面，没有同步修同模块的 dialog、drawer、popover、menu、tooltip、fullscreen mobile dialog、底部菜单或二级详情入口。  
+  The main page was fixed, but the same module's dialogs, drawers, popovers, menus, tooltips, fullscreen mobile dialogs, bottom menus, or secondary detail entry points were not.
+- 只修桌面端，没有同步检查移动端卡片、响应式折叠布局、safe-area、sticky footer、横向滚动、点击热区与 icon button 可见性。  
+  Desktop UI was fixed, but mobile cards, responsive collapsed layouts, safe areas, sticky footers, horizontal scrolling, tap targets, and icon-button visibility were not checked.
+- 只修容器，没有同步修 `ReactMarkdown`、`code`、`pre`、列表 marker、链接、表格、chip、badge、tag、状态提示块与通知浮层。  
+  Containers were updated without also fixing `ReactMarkdown`, `code`, `pre`, list markers, links, tables, chips, badges, tags, status notices, and notification overlays.
+- 状态色仍沿用浅色主题的 tint，导致 success / warning / error / info 在暗色模式下背景不够区分、文字发灰、边框发脏。  
+  State colors kept light-mode tints, making success / warning / error / info backgrounds indistinct, text muddy, or borders dirty in dark mode.
+- 图标、次级文字、百分比、caption、placeholder、helper text 与 disabled 文案没有跟随正文层级一起调整，导致“主标题能看，辅文全部发灰”。  
+  Icons, secondary text, percentages, captions, placeholders, helper text, and disabled copy were not adjusted with the main text hierarchy, resulting in readable titles but washed-out supporting content.
+- DataGrid、Autocomplete、Select、ToggleButtonGroup、Tabs、列表 hover 行、搜索框、过滤条和表单控件只修了默认态，没有连同 popup、选中态、聚焦态一起检查。  
+  DataGrid, Autocomplete, Select, ToggleButtonGroup, Tabs, hovered list rows, search bars, filter bars, and form controls were only fixed in their default state without validating popups, selected states, and focus states.
+
+### 深色主题迁移修改原则 / Dark-mode migration principles
+
+- 优先复用仓库既有模式：`const palette = theme.vars?.palette || theme.palette;`，再抽局部的 `dialogSurface`、`mutedPanelSurface`、`nestedPanelSurface`、`panelBorder` 等语义变量，避免在 JSX 中散落大量 `isDark ? ... : ...`。  
+  Prefer the repo's established pattern: start with `const palette = theme.vars?.palette || theme.palette;`, then derive local semantic variables such as `dialogSurface`, `mutedPanelSurface`, `nestedPanelSurface`, and `panelBorder` instead of scattering many `isDark ? ... : ...` expressions across JSX.
+- 深色模式优先做“语义表面分层”，不是简单把浅色背景替换成黑色。外层通常使用 `background.paper`，内层面板、页脚、提示块与弱化区域优先使用 `background.default` 或基于语义色的低透明度染色。  
+  In dark mode, prioritize semantic surface layering rather than replacing light backgrounds with black. Outer containers should usually use `background.paper`, while inner panels, footers, notices, and muted sections should prefer `background.default` or low-opacity semantic tinting.
+- 边框、分隔线和层级优先通过 `divider`、`alpha()`、`withAlpha()` 与轻量 inset highlight 表达，不要在每个组件里手工发明一套新的灰阶。  
+  Express borders, dividers, and elevation with `divider`, `alpha()`, `withAlpha()`, and subtle inset highlights instead of inventing a new gray scale in each component.
+- 主文本、强调文本、次级文本、占位文案、禁用文案、图标与状态色必须保持层级关系稳定；不要用“全部调亮”掩盖层级混乱。  
+  Main text, emphasis text, secondary text, placeholders, disabled copy, icons, and state colors must preserve stable hierarchy; do not hide hierarchy problems by simply brightening everything.
+- 状态色优先保持“语义文字 + 低透明度背景 + 轻量边框”的组合，而不是在暗色模式下直接铺满高饱和纯色块。  
+  State colors should generally use the combination of semantic text, low-opacity backgrounds, and light borders rather than large high-saturation solid fills in dark mode.
+- 当同类问题在多个文件重复出现时，优先抽小型共享 helper 或复用现有 override；不要把相同的 dark-mode magic number 复制到多个模块。  
+  When the same issue appears in multiple files, extract a small shared helper or reuse an existing override instead of copying the same dark-mode magic numbers into multiple modules.
+
+### 主题迁移执行手册 / Theme migration playbook
+
+当你在本仓库做主题适配时，默认按下面顺序执行，不要跳步：  
+When performing theme adaptation in this repo, follow this sequence by default and do not skip steps:
+
+1. 先界定影响范围：当前改动触及的是页面、模块、共享组件、theme override，还是全局 theme helper；如果是后两者，默认把所有复用该模式的页面都列入检查范围。  
+   First define the blast radius: determine whether the change affects a page, a module, a shared component, a theme override, or a global theme helper; if it is one of the latter two, default to checking every page reusing that pattern.
+2. 先找仓库内现成样板，再写代码：优先参考 `NodePreview*`、`Chain*`、`MobileChainBuilder.jsx`、`ConditionBuilder.jsx`、`NotificationSection`、`dashboard/Default`，以及机场管理链路中的 `airports/index.jsx`、`AirportMobileList.jsx`、`AirportFormDialog.jsx`、`AirportBatchEditDialog.jsx`、`CronExpressionGenerator.jsx`，先复用它们的 surface 分层和状态表达，再决定是否抽新的 helper。  
+   Find an internal reference implementation before writing code: first reuse the surface layering and state treatment from `NodePreview*`, `Chain*`, `MobileChainBuilder.jsx`, `ConditionBuilder.jsx`, `NotificationSection`, `dashboard/Default`, and the airport-management cluster (`airports/index.jsx`, `AirportMobileList.jsx`, `AirportFormDialog.jsx`, `AirportBatchEditDialog.jsx`, `CronExpressionGenerator.jsx`), then decide whether a new helper is actually needed.
+3. 先修语义分层，再修局部颜色：优先处理外层 surface、内层 panel、footer/header strip、边框、divider、文本层级、状态色和 icon，再处理局部渐变、阴影或装饰。  
+   Fix semantic layering before tweaking local colors: handle outer surfaces, inner panels, footer/header strips, borders, dividers, text hierarchy, state colors, and icons before touching local gradients, shadows, or decorative polish.
+4. 改主路径时必须同步检查分支路径：桌面端改完后，继续检查移动端、fullscreen dialog、drawer、popover、menu、tooltip、collapse、empty state、skeleton、footer overlay、markdown/code/pre、列表 hover 与表单 focus。  
+   Whenever you change the main path, immediately check the branch paths as well: after desktop, continue through mobile, fullscreen dialogs, drawers, popovers, menus, tooltips, collapse states, empty states, skeletons, footer overlays, markdown/code/pre, hovered lists, and focused form controls.
+5. 交付前必须写清覆盖面：说明本次适配覆盖了哪些页面/模块/弹层/移动端入口，复用了哪些仓库现有样板，哪些同类实例已检查但无需修改。  
+   Before delivery, explicitly state which pages/modules/overlays/mobile entry points were covered, which existing repo patterns were reused, and which similar instances were checked but did not need changes.
+
+如果你没有时间把一个模块的桌面端、移动端、dialog/drawer、overlay、details panel 一起检查完，那就不要宣称该模块“已完成主题适配”；应明确标记为部分覆盖。  
+If you do not have time to inspect a module's desktop, mobile, dialog/drawer, overlay, and detail-panel variants together, do not claim the module is “theme-adapted”; mark it explicitly as partial coverage instead.
+
+### 主题改动完成条件 / Theme-related definition of done
+
+- 至少核对 light / dark 两种模式。  
+  Check both light and dark modes.
+- 至少核对相关 hover / active / disabled 或展开态。  
+  Check relevant hover / active / disabled or expanded states.
+- 不允许出现“容器变暗了，但内层 panel、footer、markdown、percent、icon 仍然发白或发灰不可读”的交付状态。  
+  Do not ship a state where the container is fixed but inner panels, footers, markdown, percentages, or icons remain too bright or too dim to read.
+- 不允许把主题适配交付成“仅当前页面修好、同模块弹窗/移动端/浮层仍然沿用旧语义”的半完成状态。  
+  Do not ship theme work in a half-finished state where the current page looks correct but dialogs, mobile variants, or overlays in the same module still use the old semantics.
+- 只要本次改动触及共享主题基础设施、公共组件或模块级视觉语义，交付说明中必须明确列出已覆盖的页面、弹层、移动端入口和已检查但无需修改的相关实例。  
+  Whenever the change touches shared theme infrastructure, reusable components, or module-level visual semantics, the delivery summary must explicitly list the covered pages, overlays, mobile entry points, and the related instances that were checked but did not require changes.
+
 ### 运行时路径 / Operational and runtime paths
 
 这些目录可能包含运行时状态，应谨慎处理：  
@@ -331,6 +463,26 @@ Before claiming the work is complete, check each of the following:
 - 变更说明中是否明确写出：改了哪些层、同步了哪些层、哪些层已检查但无需修改，以及为什么。  
   Whether the change summary explicitly states which layers changed, which layers were synchronized, and which layers were checked but required no modification, including why.
 
+### 主题改动专项检查清单 / Theme-specific pre-delivery checklist
+
+在宣称主题适配完成之前，至少逐项核对以下内容：  
+Before claiming theme adaptation work is complete, check each of the following:
+
+- 是否已经同时检查 light / dark 两种模式，而不是只在当前模式下截图或肉眼确认。  
+  Whether both light and dark modes were checked rather than only visually validating the currently active one.
+- 是否已经同时检查桌面端与移动端，尤其是 `useMediaQuery`、`fullScreen`、drawer、responsive collapse、sticky footer、bottom action bar、safe-area 相关路径。  
+  Whether both desktop and mobile variants were checked, especially paths involving `useMediaQuery`, `fullScreen`, drawers, responsive collapse, sticky footers, bottom action bars, and safe areas.
+- 是否已经检查同模块的页面主体、dialog、drawer、popover、menu、tooltip、preview card、details panel、footer overlay、empty state、skeleton 与通知/浮层入口。  
+  Whether the module's page body, dialogs, drawers, popovers, menus, tooltips, preview cards, detail panels, footer overlays, empty states, skeletons, and notification/overlay entry points were checked.
+- 是否已经检查主文字、次级文字、icon、chip、badge、link、code、pre、placeholder、helper text、disabled 文案和状态色在 light / dark 下都保持可读且层级一致。  
+  Whether primary text, secondary text, icons, chips, badges, links, code, pre, placeholders, helper text, disabled copy, and state colors remain readable and hierarchically consistent in both light and dark modes.
+- 是否已经检查 hover / active / selected / disabled / focus-visible / expanded 等交互态，而不是只看静态截图。  
+  Whether hover / active / selected / disabled / focus-visible / expanded states were verified instead of relying only on static screenshots.
+- 是否已经确认没有引入新的大面积硬编码 `#fff`、`white`、`#000`、`black`、脱离 token 的灰阶或只在单文件生效的 dark-mode magic number。  
+  Whether no new large hardcoded `#fff`, `white`, `#000`, `black`, ad-hoc grays, or single-file dark-mode magic numbers were introduced.
+- 是否已经在变更说明中明确写出：本次主题适配覆盖了哪些页面/模块/弹层/移动端入口，哪些同类实例已检查但无需修改，以及参考了哪些现有主题样板。  
+  Whether the change summary clearly states which pages/modules/overlays/mobile entry points were covered, which similar instances were checked but did not need changes, and which existing theme reference patterns were followed.
+
 ## 10. mihomo 核心集成说明 / Mihomo integration guidance
 
 本仓库有一批核心功能直接依赖 mihomo 相关能力，因此任何涉及代理、测速、DNS、Host 映射、链式代理兼容性、代理下载或代理外呼的改动，都不应把 mihomo 视为可忽略细节。  
@@ -474,6 +626,14 @@ Use these files/directories as likely starting points:
   Frontend routing: `webs/src/routes/`
 - 前端 API 层：`webs/src/api/`  
   Frontend API layer: `webs/src/api/`
+- 前端主题与视觉语义：`webs/src/themes/`、`webs/src/utils/colorUtils.js`  
+  Frontend theme and visual semantics: `webs/src/themes/`, `webs/src/utils/colorUtils.js`
+- 节点预览相关主题链路：`webs/src/views/subscriptions/component/NodePreviewDialog.jsx`、`NodePreviewCard.jsx`、`NodePreviewDetailsPanel.jsx`  
+  Node preview theme cluster: `webs/src/views/subscriptions/component/NodePreviewDialog.jsx`, `NodePreviewCard.jsx`, `NodePreviewDetailsPanel.jsx`
+- 链式代理相关主题链路：`webs/src/views/subscriptions/component/ChainProxyDialog.jsx`、`ChainPreviewDialog.jsx`、`ChainFlowBuilder.jsx`、`ChainCanvasView.jsx`、`MobileChainBuilder.jsx`、`ConditionBuilder.jsx`  
+  Chain proxy theme cluster: `webs/src/views/subscriptions/component/ChainProxyDialog.jsx`, `ChainPreviewDialog.jsx`, `ChainFlowBuilder.jsx`, `ChainCanvasView.jsx`, `MobileChainBuilder.jsx`, `ConditionBuilder.jsx`
+- 机场管理相关主题链路：`webs/src/views/airports/index.jsx`、`AirportMobileList.jsx`、`AirportFormDialog.jsx`、`AirportBatchEditDialog.jsx`、`AirportDeduplicationConfig.jsx`、`webs/src/components/CronExpressionGenerator.jsx`  
+  Airport management theme cluster: `webs/src/views/airports/index.jsx`, `AirportMobileList.jsx`, `AirportFormDialog.jsx`, `AirportBatchEditDialog.jsx`, `AirportDeduplicationConfig.jsx`, and `webs/src/components/CronExpressionGenerator.jsx`
 
 ## 14. 文档同步要求 / Documentation expectations
 

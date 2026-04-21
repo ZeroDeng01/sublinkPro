@@ -63,10 +63,10 @@ const slideIn = keyframes`
 
 const glowPulse = keyframes`
   0%, 100% {
-    box-shadow: 0 0 20px 4px var(--glow-color, rgba(33, 150, 243, 0.4));
+    box-shadow: 0 0 0 3px var(--glow-color, rgba(33, 150, 243, 0.2));
   }
   50% {
-    box-shadow: 0 0 30px 8px var(--glow-color, rgba(33, 150, 243, 0.6));
+    box-shadow: 0 0 0 6px var(--glow-color, rgba(33, 150, 243, 0.28));
   }
 `;
 
@@ -112,8 +112,6 @@ const savePosition = (position) => {
 // ==============================|| FAB TASK ITEM ||============================== //
 
 const FabTaskItem = ({ task, currentTime, theme }) => {
-  const isDark = theme.palette.mode === 'dark';
-
   // Calculate progress percentage
   // 使用 task.current 保持组件响应式，不依赖 task 引用
   const progress = useMemo(() => {
@@ -127,7 +125,6 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
     if (task.taskType === 'speed_test') {
       return {
         icon: SpeedIcon,
-        gradientColors: [theme.palette.success.main, theme.palette.success.dark],
         label: '节点测速',
         accentColor: theme.palette.success.main
       };
@@ -135,22 +132,19 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
     if (task.taskType === 'tag_rule') {
       return {
         icon: LocalOfferIcon,
-        gradientColors: ['#f59e0b', '#d97706'],
         label: '标签规则',
-        accentColor: '#f59e0b'
+        accentColor: theme.palette.warning.dark
       };
     }
     if (task.taskType === 'db_migration') {
       return {
         icon: StorageIcon,
-        gradientColors: ['#0284c7', '#0369a1'],
         label: '数据库迁移',
-        accentColor: '#0284c7'
+        accentColor: theme.palette.info.main
       };
     }
     return {
       icon: CloudSyncIcon,
-      gradientColors: [theme.palette.primary.main, theme.palette.primary.dark],
       label: '订阅更新',
       accentColor: theme.palette.primary.main
     };
@@ -238,13 +232,11 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
       <Card
         sx={{
           borderRadius: 2.5,
-          background: isDark
-            ? `linear-gradient(145deg, ${alpha(taskConfig.accentColor, 0.12)} 0%, ${alpha(taskConfig.accentColor, 0.05)} 100%)`
-            : `linear-gradient(145deg, ${alpha(taskConfig.accentColor, 0.08)} 0%, ${alpha('#fff', 0.95)} 100%)`,
-          backdropFilter: 'blur(10px)',
-          border: `1px solid ${isDark ? alpha(taskConfig.accentColor, 0.2) : alpha(taskConfig.accentColor, 0.15)}`,
+          bgcolor: 'background.paper',
+          border: `1px solid ${alpha(taskConfig.accentColor, 0.18)}`,
           overflow: 'hidden',
-          position: 'relative'
+          position: 'relative',
+          boxShadow: theme.shadows[1]
         }}
       >
         {/* Progress bar at top */}
@@ -256,7 +248,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
               height: 2,
               backgroundColor: alpha(taskConfig.accentColor, 0.1),
               '& .MuiLinearProgress-bar': {
-                background: `linear-gradient(90deg, ${taskConfig.gradientColors[0]} 0%, ${taskConfig.gradientColors[1]} 100%)`
+                backgroundColor: taskConfig.accentColor
               }
             }}
           />
@@ -273,11 +265,14 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: isCompleted
-                  ? `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`
+                bgcolor: isCompleted ? 'success.main' : isError ? 'error.main' : alpha(taskConfig.accentColor, 0.12),
+                color: isCompleted || isError ? '#fff' : taskConfig.accentColor,
+                border: '1px solid',
+                borderColor: isCompleted
+                  ? alpha(theme.palette.success.main, 0.32)
                   : isError
-                    ? `linear-gradient(135deg, ${theme.palette.error.main} 0%, ${theme.palette.error.dark} 100%)`
-                    : `linear-gradient(135deg, ${taskConfig.gradientColors[0]} 0%, ${taskConfig.gradientColors[1]} 100%)`,
+                    ? alpha(theme.palette.error.main, 0.32)
+                    : alpha(taskConfig.accentColor, 0.2),
                 flexShrink: 0,
                 animation: !isCompleted && !isError ? `${pulse} 2s ease-in-out infinite` : 'none'
               }}
@@ -287,7 +282,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
               ) : isError ? (
                 <ErrorIcon sx={{ color: '#fff', fontSize: 18 }} />
               ) : (
-                <Icon sx={{ color: '#fff', fontSize: 18 }} />
+                <Icon sx={{ color: 'inherit', fontSize: 18 }} />
               )}
             </Box>
 
@@ -311,7 +306,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                     sx={{
                       fontWeight: 600,
                       fontSize: '0.8rem',
-                      color: isDark ? '#fff' : theme.palette.text.primary,
+                      color: 'text.primary',
                       whiteSpace: 'nowrap',
                       flexShrink: 0
                     }}
@@ -327,7 +322,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                         fontSize: '0.6rem',
                         fontWeight: 500,
                         bgcolor: alpha(taskConfig.accentColor, 0.15),
-                        color: isDark ? alpha('#fff', 0.9) : taskConfig.accentColor,
+                        color: taskConfig.accentColor,
                         border: `1px solid ${alpha(taskConfig.accentColor, 0.2)}`,
                         '& .MuiChip-label': { px: 0.5, overflow: 'hidden', textOverflow: 'ellipsis' },
                         maxWidth: 70
@@ -353,7 +348,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                 <Typography
                   variant="caption"
                   sx={{
-                    color: isDark ? alpha('#fff', 0.7) : theme.palette.text.secondary,
+                    color: 'text.secondary',
                     fontSize: '0.7rem',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -380,7 +375,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary,
+                      color: 'text.secondary',
                       fontSize: '0.7rem'
                     }}
                   >
@@ -393,7 +388,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                       <Typography
                         variant="caption"
                         sx={{
-                          color: isDark ? alpha('#fff', 0.5) : theme.palette.text.secondary,
+                          color: 'text.secondary',
                           fontSize: '0.65rem',
                           display: 'flex',
                           alignItems: 'center',
@@ -407,7 +402,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                         <Typography
                           variant="caption"
                           sx={{
-                            color: isDark ? alpha('#fff', 0.5) : theme.palette.text.secondary,
+                            color: 'text.secondary',
                             fontSize: '0.65rem'
                           }}
                         >
@@ -423,7 +418,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: isDark ? alpha('#fff', 0.7) : theme.palette.text.secondary,
+                      color: 'text.secondary',
                       fontSize: '0.7rem',
                       fontWeight: 500
                     }}
@@ -444,7 +439,6 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
 
 const TaskProgressFab = () => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
   const { taskList, hasActiveTasks } = useTaskProgress();
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -492,8 +486,7 @@ const TaskProgressFab = () => {
     if (!hasRunningTask) {
       return {
         main: theme.palette.success.main,
-        dark: theme.palette.success.dark,
-        glow: alpha(theme.palette.success.main, 0.5)
+        glow: alpha(theme.palette.success.main, 0.22)
       };
     }
     // Check if any speed test is running
@@ -501,17 +494,15 @@ const TaskProgressFab = () => {
     if (hasSpeedTest) {
       return {
         main: theme.palette.success.main,
-        dark: theme.palette.success.dark,
-        glow: alpha(theme.palette.success.main, 0.5)
+        glow: alpha(theme.palette.success.main, 0.22)
       };
     }
     // Check if any tag rule is running
     const hasTagRule = taskList.some((task) => task.taskType === 'tag_rule' && task.status !== 'completed' && task.status !== 'error');
     if (hasTagRule) {
       return {
-        main: '#f59e0b',
-        dark: '#d97706',
-        glow: alpha('#f59e0b', 0.5)
+        main: theme.palette.warning.dark,
+        glow: alpha(theme.palette.warning.dark, 0.22)
       };
     }
     const hasDbMigration = taskList.some(
@@ -519,15 +510,13 @@ const TaskProgressFab = () => {
     );
     if (hasDbMigration) {
       return {
-        main: '#0284c7',
-        dark: '#0369a1',
-        glow: alpha('#0284c7', 0.45)
+        main: theme.palette.info.main,
+        glow: alpha(theme.palette.info.main, 0.22)
       };
     }
     return {
       main: theme.palette.primary.main,
-      dark: theme.palette.primary.dark,
-      glow: alpha(theme.palette.primary.main, 0.5)
+      glow: alpha(theme.palette.primary.main, 0.22)
     };
   }, [hasRunningTask, taskList, theme.palette]);
 
@@ -671,12 +660,10 @@ const TaskProgressFab = () => {
               maxHeight: { xs: 'calc(100vh - 160px)', sm: 400 },
               overflow: 'hidden',
               borderRadius: 3,
-              background: isDark
-                ? `linear-gradient(145deg, ${alpha('#1e1e2e', 0.95)} 0%, ${alpha('#1e1e2e', 0.9)} 100%)`
-                : `linear-gradient(145deg, ${alpha('#f8fafc', 0.98)} 0%, ${alpha('#fff', 0.95)} 100%)`,
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`,
-              boxShadow: isDark ? '0 20px 60px -15px rgba(0, 0, 0, 0.5)' : '0 20px 60px -15px rgba(0, 0, 0, 0.2)',
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: alpha(theme.palette.divider, 0.9),
+              boxShadow: theme.shadows[8],
               display: isExpanded ? 'block' : 'none'
             }}
           >
@@ -692,10 +679,13 @@ const TaskProgressFab = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
+                      bgcolor: alpha(theme.palette.primary.main, 0.12),
+                      color: 'primary.main',
+                      border: '1px solid',
+                      borderColor: alpha(theme.palette.primary.main, 0.18)
                     }}
                   >
-                    <Typography sx={{ fontSize: '0.85rem' }}>⏳</Typography>
+                    <Typography sx={{ fontSize: '0.85rem', color: 'inherit' }}>⏳</Typography>
                   </Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                     任务进度
@@ -708,7 +698,7 @@ const TaskProgressFab = () => {
                       fontSize: '0.65rem',
                       fontWeight: 500,
                       bgcolor: alpha(theme.palette.primary.main, 0.1),
-                      color: isDark ? theme.palette.primary.light : theme.palette.primary.main
+                      color: theme.palette.primary.main
                     }}
                   />
                 </Box>
@@ -722,14 +712,14 @@ const TaskProgressFab = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
-                    bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.05),
+                    bgcolor: alpha(theme.palette.action.hover, 0.8),
                     transition: 'background-color 0.2s',
                     '&:hover': {
-                      bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#000', 0.1)
+                      bgcolor: 'action.hover'
                     }
                   }}
                 >
-                  <CloseIcon sx={{ fontSize: 16, color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary }} />
+                  <CloseIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                 </Box>
               </Box>
 
@@ -757,14 +747,19 @@ const TaskProgressFab = () => {
               '--glow-color': fabColor.glow,
               width: fabSize,
               height: fabSize,
-              background: `linear-gradient(135deg, ${fabColor.main} 0%, ${fabColor.dark} 100%)`,
-              boxShadow: `0 8px 32px -8px ${fabColor.glow}`,
+              bgcolor: 'background.paper',
+              color: fabColor.main,
+              border: '1px solid',
+              borderColor: alpha(fabColor.main, 0.24),
+              boxShadow: theme.shadows[6],
               transition: 'transform 0.2s ease, box-shadow 0.2s ease',
               animation: hasRunningTask ? `${glowPulse} 2s ease-in-out infinite` : 'none',
               cursor: isDragging.current ? 'grabbing' : 'grab',
               '&:hover': {
                 transform: 'scale(1.05)',
-                boxShadow: `0 12px 40px -8px ${fabColor.glow}`
+                boxShadow: theme.shadows[8],
+                borderColor: alpha(fabColor.main, 0.36),
+                bgcolor: 'background.paper'
               },
               '&:active': {
                 cursor: 'grabbing'
@@ -789,16 +784,16 @@ const TaskProgressFab = () => {
                     height: fabSize - 12,
                     borderRadius: '50%',
                     border: '2px solid transparent',
-                    borderTopColor: alpha('#fff', 0.5),
+                    borderTopColor: alpha(fabColor.main, 0.4),
                     animation: `${spin} 1.5s linear infinite`
                   }}
                 />
               )}
               {/* Icon */}
               {hasRunningTask ? (
-                <FabRunningIcon sx={{ fontSize: 26, color: '#fff' }} />
+                <FabRunningIcon sx={{ fontSize: 26, color: 'inherit' }} />
               ) : (
-                <CheckCircleIcon sx={{ fontSize: 26, color: '#fff' }} />
+                <CheckCircleIcon sx={{ fontSize: 26, color: 'success.main' }} />
               )}
             </Box>
 
@@ -831,11 +826,11 @@ const TaskProgressFab = () => {
                   position: 'absolute',
                   inset: -3,
                   borderRadius: '50%',
-                  background: `conic-gradient(
-                                        ${alpha('#fff', 0.8)} ${overallProgress * 3.6}deg,
-                                        transparent ${overallProgress * 3.6}deg
-                                    )`,
-                  opacity: 0.35,
+                  border: '2px solid transparent',
+                  borderTopColor: alpha(fabColor.main, 0.32),
+                  borderRightColor: overallProgress > 25 ? alpha(fabColor.main, 0.28) : 'transparent',
+                  borderBottomColor: overallProgress > 50 ? alpha(fabColor.main, 0.24) : 'transparent',
+                  borderLeftColor: overallProgress > 75 ? alpha(fabColor.main, 0.2) : 'transparent',
                   pointerEvents: 'none'
                 }}
               />

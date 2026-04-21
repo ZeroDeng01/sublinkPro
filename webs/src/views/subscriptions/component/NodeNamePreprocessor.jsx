@@ -149,7 +149,9 @@ export default function NodeNamePreprocessor({ value, onChange }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a2027' : '#f5f5f5'} 0%, ${theme.palette.mode === 'dark' ? '#121417' : '#fafafa'} 100%)`,
+          bgcolor: 'background.default',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
           cursor: 'pointer',
           '&:hover': {
             bgcolor: 'action.hover'
@@ -162,7 +164,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
             ✏️ 原名预处理
           </Typography>
           {hasRules && (
-            <Typography variant="caption" color="textSecondary">
+            <Typography variant="caption" color="text.secondary">
               ({rules.filter((r) => r.enabled).length} 条规则)
             </Typography>
           )}
@@ -279,7 +281,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                 />
 
                                 {/* 箭头 */}
-                                <Typography color="textSecondary" sx={{ display: isMobile ? 'none' : 'block' }}>
+                                <Typography color="text.secondary" sx={{ display: isMobile ? 'none' : 'block' }}>
                                   →
                                 </Typography>
 

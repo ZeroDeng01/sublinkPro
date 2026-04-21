@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { alpha, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Card from '@mui/material/Card';
@@ -29,6 +30,7 @@ import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import DeviceHubIcon from '@mui/icons-material/DeviceHub';
 
 import ConditionBuilder from './ConditionBuilder';
+import { withAlpha } from '../../../utils/colorUtils';
 
 /**
  * 移动端链式代理配置器
@@ -45,6 +47,16 @@ export default function MobileChainBuilder({
   groupTypes = [],
   templateGroups = []
 }) {
+  const theme = useTheme();
+  const palette = theme.vars?.palette || theme.palette;
+  const isDark = theme.palette.mode === 'dark';
+  const dialogSurface = isDark ? withAlpha(palette.background.default, 0.96) : palette.background.paper;
+  const dialogSurfaceGradient = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.16)} 0%, ${dialogSurface} 100%)`
+    : 'none';
+  const mutedPanelSurface = isDark ? withAlpha(palette.background.default, 0.84) : palette.background.default;
+  const nestedPanelSurface = isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper;
+  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
   // 编辑对话框状态
   const [proxyDialogOpen, setProxyDialogOpen] = useState(false);
   const [targetDialogOpen, setTargetDialogOpen] = useState(false);
@@ -174,9 +186,11 @@ export default function MobileChainBuilder({
         <Card
           variant="outlined"
           sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            borderRadius: 2
+            backgroundColor: mutedPanelSurface,
+            color: 'primary.main',
+            borderRadius: 2,
+            borderColor: alpha(theme.palette.primary.main, 0.28),
+            boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : 'none'
           }}
         >
           <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
@@ -203,8 +217,9 @@ export default function MobileChainBuilder({
               variant="outlined"
               sx={{
                 borderRadius: 2,
-                borderColor: 'primary.main',
-                borderWidth: 2
+                borderColor: alpha(theme.palette.primary.main, isDark ? 0.3 : 0.24),
+                bgcolor: nestedPanelSurface,
+                boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1]
               }}
             >
               <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
@@ -264,10 +279,12 @@ export default function MobileChainBuilder({
           variant="outlined"
           onClick={handleEditTarget}
           sx={{
-            background: 'linear-gradient(135deg, #00897b 0%, #43a047 100%)',
-            color: 'white',
+            color: 'success.main',
             borderRadius: 2,
             cursor: 'pointer',
+            borderColor: alpha(theme.palette.success.main, 0.26),
+            bgcolor: nestedPanelSurface,
+            boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1],
             transition: 'transform 0.2s',
             '&:active': { transform: 'scale(0.98)' }
           }}
@@ -292,8 +309,21 @@ export default function MobileChainBuilder({
       </Stack>
 
       {/* 代理节点编辑对话框 */}
-      <Dialog open={proxyDialogOpen} onClose={() => setProxyDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>
+      <Dialog
+        open={proxyDialogOpen}
+        onClose={() => setProxyDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            border: '1px solid',
+            borderColor: panelBorder,
+            bgcolor: dialogSurface,
+            backgroundImage: dialogSurfaceGradient
+          }
+        }}
+      >
+        <DialogTitle sx={{ bgcolor: mutedPanelSurface, borderBottom: '1px solid', borderColor: panelBorder }}>
           {editingProxyConfig?.isNew
             ? editingProxyConfig?.index === 0
               ? '添加入口代理'
@@ -302,7 +332,7 @@ export default function MobileChainBuilder({
               ? '编辑入口代理'
               : '编辑中间代理'}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ bgcolor: dialogSurface }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {/* 入口节点（索引0）可选所有类型，后续中间节点只能选择指定节点或动态条件节点 */}
             {(() => {
@@ -591,7 +621,7 @@ export default function MobileChainBuilder({
             )}
           </Stack>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ bgcolor: mutedPanelSurface, borderTop: '1px solid', borderColor: panelBorder }}>
           <Button onClick={() => setProxyDialogOpen(false)}>取消</Button>
           <Button variant="contained" onClick={handleSaveProxy}>
             确定
@@ -600,9 +630,22 @@ export default function MobileChainBuilder({
       </Dialog>
 
       {/* 目标节点编辑对话框 */}
-      <Dialog open={targetDialogOpen} onClose={() => setTargetDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>配置目标节点</DialogTitle>
-        <DialogContent>
+      <Dialog
+        open={targetDialogOpen}
+        onClose={() => setTargetDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            border: '1px solid',
+            borderColor: panelBorder,
+            bgcolor: dialogSurface,
+            backgroundImage: dialogSurfaceGradient
+          }
+        }}
+      >
+        <DialogTitle sx={{ bgcolor: mutedPanelSurface, borderBottom: '1px solid', borderColor: panelBorder }}>配置目标节点</DialogTitle>
+        <DialogContent sx={{ bgcolor: dialogSurface }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Typography variant="body2" color="text.secondary">
               选择应用此规则的节点范围
@@ -669,7 +712,7 @@ export default function MobileChainBuilder({
             )}
           </Stack>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ bgcolor: mutedPanelSurface, borderTop: '1px solid', borderColor: panelBorder }}>
           <Button onClick={() => setTargetDialogOpen(false)}>取消</Button>
           <Button variant="contained" onClick={handleSaveTarget}>
             确定

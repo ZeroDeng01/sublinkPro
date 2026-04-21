@@ -44,6 +44,25 @@ import { AlertTitle } from '@mui/material';
 // 每次加载的卡片数量
 const BATCH_SIZE = 100;
 
+const buildStatCardSx = (theme, color, clickable = false) => ({
+  bgcolor: 'background.paper',
+  border: '1px solid',
+  borderColor: alpha(color, 0.2),
+  borderRadius: 2,
+  boxShadow: theme.shadows[1],
+  cursor: clickable ? 'pointer' : 'default',
+  transition: 'all 0.2s ease',
+  '&:hover': clickable
+    ? {
+        borderColor: alpha(color, 0.35),
+        boxShadow: theme.shadows[4],
+        transform: 'translateY(-1px)'
+      }
+    : {
+        borderColor: alpha(color, 0.24)
+      }
+});
+
 // 格式化字节数
 const formatBytes = (bytes) => {
   if (bytes === 0) return '0 B';
@@ -230,11 +249,11 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
   // 空状态
   const renderEmpty = () => (
     <Box sx={{ textAlign: 'center', py: 8, px: 4 }}>
-      <FilterListIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+      <FilterListIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
       <Typography variant="h6" color="text.secondary" gutterBottom>
         无匹配节点
       </Typography>
-      <Typography variant="body2" color="text.disabled">
+      <Typography variant="body2" color="text.secondary">
         {searchText ? '没有找到匹配的节点，请尝试其他搜索条件' : '当前过滤条件下没有可用节点'}
       </Typography>
     </Box>
@@ -252,7 +271,10 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
           sx: {
             minHeight: isMobile ? '100%' : '80vh',
             maxHeight: isMobile ? '100%' : '90vh',
-            borderRadius: isMobile ? 0 : 4
+            borderRadius: isMobile ? 0 : 4,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper'
           }
         }}
       >
@@ -264,7 +286,8 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
             justifyContent: 'space-between',
             borderBottom: '1px solid',
             borderColor: 'divider',
-            pb: 2
+            pb: 2,
+            bgcolor: 'background.default'
           }}
         >
           <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
@@ -277,7 +300,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                 <Chip label={`共 ${data.TotalCount} 个`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
                 {data.TotalCount !== data.FilteredCount && (
                   <>
-                    <ArrowForwardIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                    <ArrowForwardIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                     <Chip label={`过滤后 ${data.FilteredCount} 个`} size="small" color="primary" sx={{ fontWeight: 600 }} />
                   </>
                 )}
@@ -316,11 +339,11 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
               py: 2,
               borderBottom: '1px solid',
               borderColor: 'divider',
-              bgcolor: alpha(theme.palette.background.paper, 0.5),
+              bgcolor: 'background.default',
               flexShrink: 0
             }}
           >
-            <Alert severity="error">
+            <Alert severity="warning" variant="outlined">
               <AlertTitle>温馨提示</AlertTitle>
               本功能为测试版功能还不稳定。
               预览数据仅供参考，以客户端获取到的实际结果为准，目前部分客户端不支持相关协议的节点，所以节点数量会有出入。
@@ -333,7 +356,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
               py: 2,
               borderBottom: '1px solid',
               borderColor: 'divider',
-              bgcolor: alpha(theme.palette.background.paper, 0.5),
+              bgcolor: 'background.default',
               flexShrink: 0
             }}
           >
@@ -367,8 +390,9 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                 py: 1.5,
                 borderBottom: '1px solid',
                 borderColor: 'divider',
-                bgcolor: alpha(theme.palette.background.paper, 0.3),
-                flexShrink: 0
+                bgcolor: 'background.default',
+                flexShrink: 0,
+                boxShadow: `inset 0 -1px 0 ${alpha(theme.palette.divider, 0.5)}`
               }}
             >
               {/* 统计区域标题和展开/收起按钮 */}
@@ -407,21 +431,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                 <Grid container spacing={isMobile ? 1 : 1.5}>
                   {/* 延迟测试通过 */}
                   <Grid item xs={6} sm={3}>
-                    <Card
-                      elevation={0}
-                      sx={{
-                        background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)} 0%, ${alpha(theme.palette.success.light, 0.05)} 100%)`,
-                        border: '1px solid',
-                        borderColor: alpha(theme.palette.success.main, 0.2),
-                        borderRadius: 2,
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          borderColor: alpha(theme.palette.success.main, 0.4),
-                          transform: 'translateY(-1px)',
-                          boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.15)}`
-                        }
-                      }}
-                    >
+                    <Card elevation={0} sx={buildStatCardSx(theme, theme.palette.success.main)}>
                       <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
                         <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
                           <AccessTimeIcon sx={{ fontSize: 16, color: theme.palette.success.main }} />
@@ -441,21 +451,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
 
                   {/* 速度测试通过 */}
                   <Grid item xs={6} sm={3}>
-                    <Card
-                      elevation={0}
-                      sx={{
-                        background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.1)} 0%, ${alpha(theme.palette.info.light, 0.05)} 100%)`,
-                        border: '1px solid',
-                        borderColor: alpha(theme.palette.info.main, 0.2),
-                        borderRadius: 2,
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          borderColor: alpha(theme.palette.info.main, 0.4),
-                          transform: 'translateY(-1px)',
-                          boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.15)}`
-                        }
-                      }}
-                    >
+                    <Card elevation={0} sx={buildStatCardSx(theme, theme.palette.info.main)}>
                       <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
                         <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
                           <SpeedIcon sx={{ fontSize: 16, color: theme.palette.info.main }} />
@@ -478,21 +474,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                     <Card
                       elevation={0}
                       onClick={() => nodeStats.lowestDelayNode && handleViewDetails(nodeStats.lowestDelayNode)}
-                      sx={{
-                        background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.1)} 0%, ${alpha(theme.palette.warning.light, 0.05)} 100%)`,
-                        border: '1px solid',
-                        borderColor: alpha(theme.palette.warning.main, 0.2),
-                        borderRadius: 2,
-                        cursor: nodeStats.lowestDelayNode ? 'pointer' : 'default',
-                        transition: 'all 0.2s ease',
-                        '&:hover': nodeStats.lowestDelayNode
-                          ? {
-                              borderColor: alpha(theme.palette.warning.main, 0.4),
-                              transform: 'translateY(-1px)',
-                              boxShadow: `0 4px 12px ${alpha(theme.palette.warning.main, 0.15)}`
-                            }
-                          : {}
-                      }}
+                      sx={buildStatCardSx(theme, theme.palette.warning.main, Boolean(nodeStats.lowestDelayNode))}
                     >
                       <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
                         <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
@@ -511,7 +493,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                               <Typography
                                 variant="body2"
                                 fontWeight={600}
-                                color="warning.dark"
+                                color={theme.palette.mode === 'dark' ? 'warning.main' : 'warning.dark'}
                                 sx={{
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
@@ -527,7 +509,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                             </Typography>
                           </>
                         ) : (
-                          <Typography variant="body2" color="text.disabled" sx={{ fontSize: isMobile ? 11 : 12 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: isMobile ? 11 : 12 }}>
                             暂无数据
                           </Typography>
                         )}
@@ -540,21 +522,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                     <Card
                       elevation={0}
                       onClick={() => nodeStats.highestSpeedNode && handleViewDetails(nodeStats.highestSpeedNode)}
-                      sx={{
-                        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.primary.light, 0.05)} 100%)`,
-                        border: '1px solid',
-                        borderColor: alpha(theme.palette.primary.main, 0.2),
-                        borderRadius: 2,
-                        cursor: nodeStats.highestSpeedNode ? 'pointer' : 'default',
-                        transition: 'all 0.2s ease',
-                        '&:hover': nodeStats.highestSpeedNode
-                          ? {
-                              borderColor: alpha(theme.palette.primary.main, 0.4),
-                              transform: 'translateY(-1px)',
-                              boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`
-                            }
-                          : {}
-                      }}
+                      sx={buildStatCardSx(theme, theme.palette.primary.main, Boolean(nodeStats.highestSpeedNode))}
                     >
                       <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
                         <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
@@ -589,7 +557,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                             </Typography>
                           </>
                         ) : (
-                          <Typography variant="body2" color="text.disabled" sx={{ fontSize: isMobile ? 11 : 12 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: isMobile ? 11 : 12 }}>
                             暂无数据
                           </Typography>
                         )}
@@ -635,7 +603,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
 
                 {/* 已全部加载提示 */}
                 {!hasMore && filteredNodes.length > BATCH_SIZE && (
-                  <Typography variant="caption" color="text.disabled" sx={{ display: 'block', textAlign: 'center', py: 2 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', py: 2 }}>
                     已加载全部 {filteredNodes.length} 个节点
                   </Typography>
                 )}
@@ -651,9 +619,10 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                 py: 1.5,
                 borderTop: '1px solid',
                 borderColor: 'divider',
-                bgcolor: alpha(theme.palette.background.paper, 0.5),
+                bgcolor: 'background.default',
                 textAlign: 'center',
-                flexShrink: 0
+                flexShrink: 0,
+                boxShadow: `inset 0 1px 0 ${alpha(theme.palette.divider, 0.4)}`
               }}
             >
               <Typography variant="caption" color="text.secondary">

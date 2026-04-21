@@ -23,7 +23,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import { getProtocolMeta } from 'api/subscriptions';
 
 /**
@@ -156,7 +156,9 @@ function AirportDeduplicationConfig({ value, onChange }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a2027' : '#f5f5f5'} 0%, ${theme.palette.mode === 'dark' ? '#121417' : '#fafafa'} 100%)`,
+          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.default, 0.88) : 'background.default',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
           cursor: 'pointer',
           '&:hover': {
             bgcolor: 'action.hover'
@@ -173,7 +175,20 @@ function AirportDeduplicationConfig({ value, onChange }) {
             size="small"
             label={getConfigStatus()}
             color={config.mode === 'none' ? 'default' : 'primary'}
-            variant={config.mode === 'none' ? 'outlined' : 'filled'}
+            variant="outlined"
+            sx={{
+              bgcolor:
+                config.mode === 'none'
+                  ? 'transparent'
+                  : theme.palette.mode === 'dark'
+                    ? 'action.selected'
+                    : alpha(theme.palette.primary.main, 0.08),
+              color: config.mode === 'none' ? 'text.secondary' : 'primary.main',
+              borderColor:
+                config.mode === 'none'
+                  ? alpha(theme.palette.divider, theme.palette.mode === 'dark' ? 0.9 : 0.72)
+                  : alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.32 : 0.22)
+            }}
           />
         </Stack>
         <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -208,11 +223,49 @@ function AirportDeduplicationConfig({ value, onChange }) {
                     为每个协议配置去重字段（当多个节点的选定字段值完全相同时，仅保留第一个）：
                   </Typography>
                   {protocolMeta.map((proto) => (
-                    <Accordion key={proto.name} sx={{ mb: 1 }} defaultExpanded={getProtocolSelectedCount(proto.name) > 0}>
+                    <Accordion
+                      key={proto.name}
+                      sx={{
+                        mb: 1,
+                        bgcolor: 'background.paper',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        '&:before': { display: 'none' },
+                        '& .MuiAccordionSummary-root': {
+                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.default, 0.92) : 'background.default',
+                          borderBottom: '1px solid',
+                          borderColor: alpha(theme.palette.divider, 0.72),
+                          minHeight: 48,
+                          '&.Mui-expanded': {
+                            minHeight: 48
+                          }
+                        },
+                        '& .MuiAccordionSummary-content': {
+                          alignItems: 'center'
+                        },
+                        '& .MuiAccordionDetails-root': {
+                          bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.08) : 'background.paper'
+                        }
+                      }}
+                      defaultExpanded={getProtocolSelectedCount(proto.name) > 0}
+                    >
                       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                         <Typography sx={{ fontWeight: 500 }}>{proto.label}</Typography>
                         {getProtocolSelectedCount(proto.name) > 0 && (
-                          <Chip size="small" label={`已选 ${getProtocolSelectedCount(proto.name)} 个`} color="primary" sx={{ ml: 1 }} />
+                          <Chip
+                            size="small"
+                            label={`已选 ${getProtocolSelectedCount(proto.name)} 个`}
+                            color="primary"
+                            variant="outlined"
+                            sx={{
+                              ml: 1,
+                              bgcolor:
+                                theme.palette.mode === 'dark'
+                                  ? alpha(theme.palette.primary.main, 0.12)
+                                  : alpha(theme.palette.primary.main, 0.08),
+                              borderColor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.32 : 0.2)
+                            }}
+                          />
                         )}
                       </AccordionSummary>
                       <AccordionDetails>

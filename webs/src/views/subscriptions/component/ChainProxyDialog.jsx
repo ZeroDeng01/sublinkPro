@@ -15,7 +15,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
@@ -38,6 +38,7 @@ import {
   getChainOptions,
   previewChainLinks
 } from '../../../api/subscriptions';
+import { withAlpha } from '../../../utils/colorUtils';
 import ChainPreviewDialog from './ChainPreviewDialog';
 import ChainRuleEditor from './ChainRuleEditor';
 
@@ -48,6 +49,15 @@ import ChainRuleEditor from './ChainRuleEditor';
 export default function ChainProxyDialog({ open, onClose, subscription }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isDark = theme.palette.mode === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
+  const dialogSurface = isDark ? withAlpha(palette.background.default, 0.96) : palette.background.paper;
+  const dialogSurfaceGradient = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.16)} 0%, ${dialogSurface} 100%)`
+    : 'none';
+  const mutedPanelSurface = isDark ? withAlpha(palette.background.default, 0.84) : palette.background.default;
+  const nestedPanelSurface = isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper;
+  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
 
   const [loading, setLoading] = useState(false);
   const [rules, setRules] = useState([]);
@@ -277,10 +287,25 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
         fullWidth
         fullScreen={isMobile}
         PaperProps={{
-          sx: isMobile ? { borderRadius: 0 } : { minHeight: '80vh', borderRadius: 2 }
+          sx: isMobile
+            ? {
+                borderRadius: 0,
+                border: '1px solid',
+                borderColor: panelBorder,
+                bgcolor: dialogSurface,
+                backgroundImage: dialogSurfaceGradient
+              }
+            : {
+                minHeight: '80vh',
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: panelBorder,
+                bgcolor: dialogSurface,
+                backgroundImage: dialogSurfaceGradient
+              }
         }}
       >
-        <DialogTitle sx={{ pb: 1.5 }}>
+        <DialogTitle sx={{ pb: 1.5, bgcolor: mutedPanelSurface, borderBottom: '1px solid', borderColor: panelBorder }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Stack direction="row" alignItems="center" spacing={1}>
               <AccountTreeIcon color="primary" />
@@ -295,19 +320,19 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                   </Typography>
                 )}
                 {!isMobile && (
-                  <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                    - {subscription?.Name}
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                    {subscription?.Name}
                   </Typography>
                 )}
               </Box>
             </Stack>
-            <IconButton onClick={onClose} size="small">
+            <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
               <CloseIcon />
             </IconButton>
           </Stack>
         </DialogTitle>
 
-        <DialogContent dividers sx={{ p: isMobile ? 2 : 3 }}>
+        <DialogContent dividers sx={{ p: isMobile ? 2 : 3, bgcolor: dialogSurface, borderColor: panelBorder }}>
           {loading && (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
               <CircularProgress />
@@ -316,18 +341,25 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
 
           {!loading && !editMode && (
             <Box>
-              {/* 说明文字 */}
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                链式代理规则用于配置节点的前置代理（入口代理）。每个落地节点独立匹配规则：按规则顺序检查，应用第一个匹配规则的出口配置。
-              </Typography>
-              <Typography
-                variant="caption"
-                color="info.main"
-                sx={{ mb: 2, display: 'block', backgroundColor: 'info.lighter', p: 1, borderRadius: 1 }}
-              >
-                💡
-                提示：若需不同落地节点使用不同出口，请确保各规则的「目标节点」配置不重叠（使用「指定节点」或「按条件筛选」精确定义目标范围）。
-              </Typography>
+              <Box sx={{ mb: 2, p: 1.5, borderRadius: 2, bgcolor: mutedPanelSurface, border: '1px solid', borderColor: panelBorder }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  链式代理规则用于配置节点的前置代理（入口代理）。每个落地节点独立匹配规则：按规则顺序检查，应用第一个匹配规则的出口配置。
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="info.main"
+                  sx={{
+                    display: 'block',
+                    p: 1.25,
+                    bgcolor: nestedPanelSurface,
+                    borderRadius: 1.5,
+                    border: '1px solid',
+                    borderColor: alpha(theme.palette.info.main, isDark ? 0.28 : 0.18)
+                  }}
+                >
+                  提示：若需不同落地节点使用不同出口，请确保各规则的「目标节点」配置不重叠（使用「指定节点」或「按条件筛选」精确定义目标范围）。
+                </Typography>
+              </Box>
 
               {/* 规则列表 - 移动端使用卡片布局 */}
               {isMobile ? (
@@ -341,6 +373,8 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                         borderRadius: 2,
                         opacity: rule.enabled ? 1 : 0.6,
                         transition: 'all 0.2s ease',
+                        bgcolor: nestedPanelSurface,
+                        borderColor: panelBorder,
                         '&:active': { transform: 'scale(0.98)' }
                       }}
                     >
@@ -410,8 +444,12 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                                 variant="outlined"
                                 sx={{
                                   p: 2,
-                                  backgroundColor: snapshot.isDragging ? 'action.hover' : 'background.paper',
-                                  opacity: rule.enabled ? 1 : 0.6
+                                  backgroundColor: snapshot.isDragging
+                                    ? alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08)
+                                    : nestedPanelSurface,
+                                  opacity: rule.enabled ? 1 : 0.6,
+                                  borderRadius: 2,
+                                  borderColor: snapshot.isDragging ? alpha(theme.palette.primary.main, isDark ? 0.32 : 0.24) : panelBorder
                                 }}
                               >
                                 <Stack direction="row" alignItems="center" spacing={2}>
@@ -463,7 +501,9 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                   sx={{
                     p: isMobile ? 3 : 4,
                     textAlign: 'center',
-                    borderRadius: 2
+                    borderRadius: 2,
+                    bgcolor: mutedPanelSurface,
+                    borderColor: panelBorder
                   }}
                 >
                   <TouchAppIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
@@ -496,7 +536,7 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
           )}
         </DialogContent>
 
-        <DialogActions sx={{ px: isMobile ? 2 : 3, py: 1.5 }}>
+        <DialogActions sx={{ px: isMobile ? 2 : 3, py: 1.5, bgcolor: mutedPanelSurface, borderTop: '1px solid', borderColor: panelBorder }}>
           {!editMode ? (
             <>
               <Button onClick={onClose}>关闭</Button>

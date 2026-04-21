@@ -13,7 +13,9 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import Collapse from '@mui/material/Collapse';
 import Tooltip from '@mui/material/Tooltip';
+import { useTheme } from '@mui/material/styles';
 import SortableNodeList from './SortableNodeList';
+import { getSubscriptionNameChipSx } from './subscriptionNameChipStyles';
 
 // icons
 import EditIcon from '@mui/icons-material/Edit';
@@ -59,6 +61,8 @@ export default function SubscriptionTable({
   onBatchSort,
   onBatchMove
 }) {
+  const theme = useTheme();
+
   return (
     <TableContainer component={Paper}>
       <Table>
@@ -83,7 +87,7 @@ export default function SubscriptionTable({
                   </IconButton>
                 </TableCell>
                 <TableCell>
-                  <Chip label={sub.Name} color="primary" />
+                  <Chip label={sub.Name} sx={getSubscriptionNameChipSx(theme)} />
                   {sortingSubId === sub.ID && <Chip label="排序中" color="warning" size="small" sx={{ ml: 1 }} />}
                 </TableCell>
                 <TableCell>

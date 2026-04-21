@@ -36,6 +36,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 
 import ChainCanvasView from './ChainCanvasView';
+import { withAlpha } from '../../../utils/colorUtils';
 
 // 箭头脉冲动画
 const pulseAnimation = keyframes`
@@ -84,6 +85,11 @@ function ChainNodeCard({ node, index, isLast, isMobile, theme }) {
   const [expanded, setExpanded] = useState(false);
   const hasNodes = node.nodes && node.nodes.length > 0;
   const typeColor = getTypeColor(node.type, theme);
+  const isDark = theme.palette.mode === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
+  const nestedSurface = isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper;
+  const mutedSurface = isDark ? withAlpha(palette.background.default, 0.84) : palette.background.default;
+  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center' }}>
@@ -91,13 +97,13 @@ function ChainNodeCard({ node, index, isLast, isMobile, theme }) {
         sx={{
           minWidth: isMobile ? '100%' : 140,
           maxWidth: isMobile ? '100%' : 180,
-          background: alpha(typeColor, 0.08),
-          border: `1px solid ${alpha(typeColor, 0.3)}`,
+          backgroundColor: nestedSurface,
+          border: `1px solid ${alpha(typeColor, isDark ? 0.36 : 0.3)}`,
           borderRadius: 2,
           transition: 'all 0.2s ease',
           '&:hover': {
             borderColor: typeColor,
-            boxShadow: `0 2px 8px ${alpha(typeColor, 0.2)}`
+            boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : theme.shadows[2]
           }
         }}
       >
@@ -157,13 +163,20 @@ function ChainNodeCard({ node, index, isLast, isMobile, theme }) {
                 mt: 0.5,
                 maxHeight: 100,
                 overflow: 'auto',
-                bgcolor: alpha(theme.palette.background.paper, 0.8),
+                bgcolor: mutedSurface,
+                border: '1px solid',
+                borderColor: panelBorder,
                 borderRadius: 1,
                 p: 0.5
               }}
             >
               {node.nodes?.map((n, i) => (
-                <Typography key={i} variant="caption" display="block" sx={{ py: 0.25 }}>
+                <Typography
+                  key={i}
+                  variant="caption"
+                  display="block"
+                  sx={{ py: 0.25, color: isDark ? alpha(theme.palette.text.primary, 0.84) : 'text.secondary' }}
+                >
                   {getCountryFlag(n.linkCountry)} {n.name}
                 </Typography>
               ))}
@@ -214,6 +227,10 @@ ChainNodeCard.propTypes = {
 // 单条规则的链路图
 function RuleChainFlow({ rule, isMobile, theme }) {
   const [expanded, setExpanded] = useState(!rule.fullyCovered);
+  const isDark = theme.palette.mode === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
+  const nestedSurface = isDark ? withAlpha(palette.background.paper, 0.4) : palette.background.paper;
+  const mutedSurface = isDark ? withAlpha(palette.background.default, 0.84) : palette.background.default;
 
   // 规则是否完全被覆盖（无生效节点）
   const isFullyCovered = rule.enabled && rule.fullyCovered;
@@ -227,7 +244,7 @@ function RuleChainFlow({ rule, isMobile, theme }) {
         opacity: rule.enabled ? (isFullyCovered ? 0.6 : 1) : 0.4,
         transition: 'all 0.2s ease',
         borderColor: isFullyCovered ? 'warning.main' : 'divider',
-        bgcolor: isFullyCovered ? alpha(theme.palette.warning.main, 0.03) : 'background.paper'
+        bgcolor: isFullyCovered ? alpha(theme.palette.warning.main, isDark ? 0.12 : 0.06) : nestedSurface
       }}
     >
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
@@ -271,7 +288,7 @@ function RuleChainFlow({ rule, isMobile, theme }) {
                   px: 1.5,
                   py: 0.75,
                   borderRadius: 2,
-                  bgcolor: alpha(theme.palette.info.main, 0.1),
+                  bgcolor: mutedSurface,
                   border: `1px dashed ${alpha(theme.palette.info.main, 0.4)}`,
                   textAlign: 'center',
                   minWidth: 60
@@ -352,7 +369,7 @@ function RuleChainFlow({ rule, isMobile, theme }) {
                 px: 1.5,
                 py: 0.75,
                 borderRadius: 2,
-                bgcolor: alpha(theme.palette.error.main, 0.1),
+                bgcolor: mutedSurface,
                 border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
                 textAlign: 'center',
                 minWidth: isMobile ? '100%' : 100
@@ -368,11 +385,11 @@ function RuleChainFlow({ rule, isMobile, theme }) {
               <Typography variant="caption" display="block" fontWeight={600} color="error.main">
                 落地节点
               </Typography>
-              <Typography variant="caption" display="block" color="text.secondary">
+              <Typography variant="caption" display="block" color={isDark ? alpha(theme.palette.text.primary, 0.78) : 'text.secondary'}>
                 {rule.targetInfo}
               </Typography>
               {rule.targetNodes?.length > 0 && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color={isDark ? alpha(theme.palette.text.primary, 0.72) : 'text.secondary'}>
                   ({rule.targetNodes.length} 节点)
                 </Typography>
               )}
@@ -409,7 +426,7 @@ function RuleChainFlow({ rule, isMobile, theme }) {
                 px: 1.5,
                 py: 0.75,
                 borderRadius: 2,
-                bgcolor: alpha(theme.palette.success.main, 0.1),
+                bgcolor: mutedSurface,
                 border: `1px dashed ${alpha(theme.palette.success.main, 0.4)}`,
                 textAlign: 'center',
                 minWidth: 60
@@ -435,6 +452,11 @@ RuleChainFlow.propTypes = {
 
 // 节点匹配摘要表格
 function NodeMatchTable({ matchSummary, isMobile }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
+  const mutedSurface = isDark ? withAlpha(palette.background.default, 0.84) : palette.background.default;
+  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
   const matchedCount = matchSummary?.filter((n) => !n.unmatched).length || 0;
   const unmatchedCount = matchSummary?.filter((n) => n.unmatched).length || 0;
 
@@ -445,18 +467,18 @@ function NodeMatchTable({ matchSummary, isMobile }) {
         <Chip icon={<CancelIcon />} label={`未匹配: ${unmatchedCount}`} color="default" variant="outlined" size="small" />
       </Stack>
 
-      <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
+      <Box sx={{ maxHeight: 300, overflow: 'auto', borderRadius: 2, border: '1px solid', borderColor: panelBorder, bgcolor: mutedSurface }}>
         <Table size="small" stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell>节点</TableCell>
-              <TableCell>匹配规则</TableCell>
-              <TableCell>入口代理</TableCell>
+              <TableCell sx={{ bgcolor: mutedSurface }}>节点</TableCell>
+              <TableCell sx={{ bgcolor: mutedSurface }}>匹配规则</TableCell>
+              <TableCell sx={{ bgcolor: mutedSurface }}>入口代理</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {matchSummary?.map((node) => (
-              <TableRow key={node.nodeId} sx={{ opacity: node.unmatched ? 0.5 : 1 }}>
+              <TableRow key={node.nodeId} sx={{ opacity: node.unmatched ? 0.56 : 1 }}>
                 <TableCell>
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <Typography variant="caption">{getCountryFlag(node.linkCountry)}</Typography>
@@ -470,7 +492,7 @@ function NodeMatchTable({ matchSummary, isMobile }) {
                 </TableCell>
                 <TableCell>
                   {node.unmatched ? (
-                    <Typography variant="caption" color="text.disabled">
+                    <Typography variant="caption" color="text.secondary">
                       无
                     </Typography>
                   ) : (
@@ -481,7 +503,7 @@ function NodeMatchTable({ matchSummary, isMobile }) {
                   {node.entryProxy ? (
                     <Typography variant="body2">{node.entryProxy}</Typography>
                   ) : (
-                    <Typography variant="caption" color="text.disabled">
+                    <Typography variant="caption" color="text.secondary">
                       -
                     </Typography>
                   )}
@@ -507,6 +529,14 @@ NodeMatchTable.propTypes = {
 export default function ChainPreviewDialog({ open, onClose, loading, data }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isDark = theme.palette.mode === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
+  const dialogSurface = isDark ? withAlpha(palette.background.default, 0.96) : palette.background.paper;
+  const dialogSurfaceGradient = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.16)} 0%, ${dialogSurface} 100%)`
+    : 'none';
+  const mutedPanelSurface = isDark ? withAlpha(palette.background.default, 0.84) : palette.background.default;
+  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
   const [tab, setTab] = useState(0);
 
   const rules = useMemo(() => data?.rules || [], [data?.rules]);
@@ -522,57 +552,86 @@ export default function ChainPreviewDialog({ open, onClose, loading, data }) {
       PaperProps={{
         sx: {
           borderRadius: isMobile ? 0 : 3,
-          minHeight: isMobile ? 'auto' : '70vh'
+          minHeight: isMobile ? 'auto' : '70vh',
+          border: '1px solid',
+          borderColor: panelBorder,
+          bgcolor: dialogSurface,
+          backgroundImage: dialogSurfaceGradient
         }
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
+      <DialogTitle sx={{ pb: 1, bgcolor: mutedPanelSurface, borderBottom: '1px solid', borderColor: panelBorder }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <RouteIcon sx={{ color: 'primary.main' }} />
             <Box>
               <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={700}>
-                🔗 链路预览
+                链路预览
               </Typography>
               {data?.subscriptionName && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color={isDark ? alpha(theme.palette.text.primary, 0.78) : 'text.secondary'}>
                   订阅：{data.subscriptionName} | 节点总数：{data.totalNodes}
                 </Typography>
               )}
             </Box>
           </Stack>
-          <IconButton onClick={onClose} size="small">
+          <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
             <CloseIcon />
           </IconButton>
         </Stack>
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 0 }}>
+      <DialogContent sx={{ pt: 0, bgcolor: dialogSurface }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
             <CircularProgress />
           </Box>
         ) : rules.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 6 }}>
-            <AccountTreeIcon sx={{ fontSize: 56, color: 'text.disabled', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary">
+            <AccountTreeIcon sx={{ fontSize: 56, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" color={isDark ? alpha(theme.palette.text.primary, 0.88) : 'text.secondary'}>
               暂无链式代理规则
             </Typography>
-            <Typography variant="body2" color="text.disabled">
+            <Typography variant="body2" color={isDark ? alpha(theme.palette.text.primary, 0.76) : 'text.secondary'}>
               请先添加规则
             </Typography>
           </Box>
         ) : (
           <>
-            <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs
+              value={tab}
+              onChange={(e, v) => setTab(v)}
+              sx={{
+                borderBottom: 1,
+                mb: 2,
+                bgcolor: mutedPanelSurface,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: panelBorder
+              }}
+            >
               <Tab label={`规则链路 (${rules.length})`} />
               <Tab label={`节点匹配 (${matchSummary.length})`} />
             </Tabs>
 
             {tab === 0 && (
               <Box>
-                <Typography variant="caption" color="text.secondary" display="block" mb={2}>
-                  💡 规则按顺序匹配，每个节点只会应用第一个匹配的规则 · 鼠标滚轮缩放，拖拽平移画布
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                  mb={2}
+                  sx={{
+                    px: 1,
+                    py: 0.75,
+                    borderRadius: 1.5,
+                    bgcolor: mutedPanelSurface,
+                    border: '1px solid',
+                    borderColor: panelBorder,
+                    color: isDark ? alpha(theme.palette.text.primary, 0.84) : theme.palette.text.secondary
+                  }}
+                >
+                  规则按顺序匹配，每个节点只会应用第一个匹配的规则 · 鼠标滚轮缩放，拖拽平移画布
                 </Typography>
                 <ChainCanvasView rules={rules} fullscreen={isMobile} />
               </Box>

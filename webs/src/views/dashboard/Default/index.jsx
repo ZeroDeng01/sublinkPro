@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 // material-ui
-import { useTheme, alpha } from '@mui/material/styles';
+import { useColorScheme, useTheme, alpha } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -55,44 +55,112 @@ import {
 import { getAirports } from 'api/airports';
 import { formatBytes, formatExpireTime, getUsageColor } from 'views/airports/utils';
 import { getQualityStatusMeta } from 'utils/fraudScore';
+import { withAlpha } from 'utils/colorUtils';
 
-const getCalmSurface = (theme, accentColor) => {
-  const isDark = theme.palette.mode === 'dark';
+const getCalmSurface = (theme, accentColor, isDark) => {
+  const palette = theme.vars?.palette || theme.palette;
+  const darkSurfaceBase = withAlpha(palette.background.default, 0.96);
+  const darkSurfaceElevated = withAlpha(palette.background.paper, 0.82);
+  const darkSurfaceBackground = `linear-gradient(180deg, ${darkSurfaceElevated} 0%, ${darkSurfaceBase} 100%)`;
 
   return {
-    backgroundColor: isDark ? alpha(theme.palette.background.paper, 0.92) : theme.palette.background.paper,
-    border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.08) : alpha(accentColor, 0.12)}`,
-    boxShadow: isDark ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.06)',
-    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+    backgroundColor: isDark ? darkSurfaceBase : palette.background.paper,
+    backgroundImage: isDark ? darkSurfaceBackground : 'none',
+    border: `1px solid ${isDark ? withAlpha(palette.divider, 0.82) : alpha(accentColor, 0.12)}`,
+    boxShadow: isDark
+      ? `0 14px 34px ${alpha(theme.palette.common.black, 0.22)}, inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}`
+      : `0 1px 3px ${alpha(theme.palette.common.black, 0.06)}`,
+    backdropFilter: isDark ? 'blur(10px)' : 'none',
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
     '&:hover': {
       borderColor: isDark ? alpha(accentColor, 0.24) : alpha(accentColor, 0.2),
-      boxShadow: isDark ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.08)'
+      boxShadow: isDark
+        ? `0 18px 42px ${alpha(theme.palette.common.black, 0.26)}, inset 0 1px 0 ${alpha(theme.palette.common.white, 0.06)}`
+        : `0 4px 12px ${alpha(theme.palette.common.black, 0.08)}`
     }
   };
 };
 
-const getAccentIconBox = (theme, accentColor) => ({
+const getAccentIconBox = (theme, accentColor, isDark) => ({
   width: 40,
   height: 40,
   borderRadius: 2,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  backgroundColor: alpha(accentColor, theme.palette.mode === 'dark' ? 0.18 : 0.12),
-  border: `1px solid ${alpha(accentColor, theme.palette.mode === 'dark' ? 0.32 : 0.18)}`,
+  backgroundColor: alpha(accentColor, isDark ? 0.18 : 0.12),
+  border: `1px solid ${alpha(accentColor, isDark ? 0.32 : 0.18)}`,
   color: accentColor,
   flexShrink: 0
 });
 
-const getAccentChipSx = (theme, accentColor) => ({
-  bgcolor: alpha(accentColor, theme.palette.mode === 'dark' ? 0.18 : 0.1),
-  color: theme.palette.mode === 'dark' ? alpha('#fff', 0.92) : accentColor,
-  border: `1px solid ${alpha(accentColor, theme.palette.mode === 'dark' ? 0.3 : 0.18)}`,
+const getAccentChipSx = (theme, accentColor, isDark) => ({
+  bgcolor: alpha(accentColor, isDark ? 0.18 : 0.08),
+  color: isDark ? alpha('#fff', 0.92) : alpha(accentColor, 0.92),
+  border: `1px solid ${alpha(accentColor, isDark ? 0.3 : 0.2)}`,
   fontWeight: 600,
   '&:hover': {
-    bgcolor: alpha(accentColor, theme.palette.mode === 'dark' ? 0.24 : 0.14)
+    bgcolor: alpha(accentColor, isDark ? 0.24 : 0.12)
   }
 });
+
+const getReadablePrimaryTextColor = (theme, isDark) => {
+  const palette = theme.vars?.palette || theme.palette;
+  const darkText = palette.text?.dark || theme.palette.common.white;
+  return isDark ? withAlpha(darkText, 0.94) : theme.palette.text.primary;
+};
+
+const getReadableSecondaryTextColor = (theme, isDark) => {
+  const palette = theme.vars?.palette || theme.palette;
+  const darkText = palette.text?.dark || theme.palette.common.white;
+  return isDark ? withAlpha(darkText, 0.84) : alpha(theme.palette.text.primary, 0.76);
+};
+
+const getReadableTertiaryTextColor = (theme, isDark) => {
+  const palette = theme.vars?.palette || theme.palette;
+  const darkText = palette.text?.dark || theme.palette.common.white;
+  return isDark ? withAlpha(darkText, 0.72) : alpha(theme.palette.text.primary, 0.68);
+};
+
+const getReadableStatValueColor = (theme, isDark) => {
+  const palette = theme.vars?.palette || theme.palette;
+  const darkText = palette.text?.dark || theme.palette.common.white;
+  return isDark ? withAlpha(darkText, 0.98) : theme.palette.text.primary;
+};
+
+const getReadableStatPercentColor = (theme, isDark) => {
+  const palette = theme.vars?.palette || theme.palette;
+  const darkText = palette.text?.dark || theme.palette.common.white;
+  return isDark ? withAlpha(darkText, 0.92) : alpha(theme.palette.text.primary, 0.8);
+};
+
+const getReadableWarningAccentColor = (theme, isDark) => (isDark ? alpha(theme.palette.warning.light, 0.94) : '#d97706');
+
+const getGitHubChipSx = (theme, isDark) => ({
+  bgcolor: isDark ? alpha(theme.palette.common.white, 0.08) : alpha(theme.palette.common.black, 0.04),
+  color: isDark ? alpha(theme.palette.common.white, 0.92) : '#24292f',
+  border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.18) : 'rgba(27, 31, 36, 0.15)'}`,
+  fontWeight: 600,
+  '&:hover': {
+    bgcolor: isDark ? alpha(theme.palette.common.white, 0.12) : alpha(theme.palette.common.black, 0.07)
+  },
+  '& .MuiChip-icon': {
+    color: 'inherit'
+  }
+});
+
+const getInsetPanelSurface = (theme, accentColor, isDark) => {
+  const palette = theme.vars?.palette || theme.palette;
+  const darkPanelBase = withAlpha(palette.background.default, 0.74);
+  const darkPanelElevated = withAlpha(palette.background.paper, 0.4);
+
+  return {
+    backgroundColor: isDark ? darkPanelBase : withAlpha(palette.background.default, 0.72),
+    backgroundImage: isDark ? `linear-gradient(180deg, ${darkPanelElevated} 0%, ${darkPanelBase} 100%)` : 'none',
+    border: `1px solid ${isDark ? withAlpha(palette.divider, 0.74) : alpha(accentColor, 0.12)}`,
+    boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.025)}` : 'none'
+  };
+};
 
 const COUNTRY_FALLBACK_EMOJI = '🌐';
 
@@ -268,13 +336,13 @@ const normalizeTagStats = ({ tags = [], limit }) => {
   return buildTopItems(normalized, total, limit);
 };
 
-const getProgressBarSx = (theme, color, muted = false) => ({
+const getProgressBarSx = (theme, color, isDark, muted = false) => ({
   height: 7,
   borderRadius: 999,
-  bgcolor: alpha(color, theme.palette.mode === 'dark' ? 0.22 : 0.12),
+  bgcolor: alpha(color, isDark ? 0.22 : 0.12),
   '& .MuiLinearProgress-bar': {
     borderRadius: 999,
-    backgroundColor: muted ? alpha(color, theme.palette.mode === 'dark' ? 0.7 : 0.62) : color
+    backgroundColor: muted ? alpha(color, isDark ? 0.7 : 0.62) : color
   }
 });
 
@@ -294,11 +362,13 @@ const StatRowsSkeleton = ({ rows = 5 }) => (
 
 const StatsChartCard = ({ title, icon: Icon, accentColor, summary, loading, tooltip, children }) => {
   const theme = useTheme();
+  const { mode } = useColorScheme();
+  const isDark = mode === 'dark';
 
   return (
     <Card
       sx={{
-        ...getCalmSurface(theme, accentColor),
+        ...getCalmSurface(theme, accentColor, isDark),
         borderRadius: 4,
         height: '100%',
         overflow: 'hidden',
@@ -316,7 +386,7 @@ const StatsChartCard = ({ title, icon: Icon, accentColor, summary, loading, tool
     >
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1.5, mb: 2.5, flexWrap: 'wrap' }}>
-          <Box sx={getAccentIconBox(theme, accentColor)}>
+          <Box sx={getAccentIconBox(theme, accentColor, isDark)}>
             <Icon sx={{ fontSize: 22 }} />
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -324,7 +394,7 @@ const StatsChartCard = ({ title, icon: Icon, accentColor, summary, loading, tool
               {title}
             </Typography>
             {tooltip ? (
-              <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+              <Typography variant="body2" sx={{ mt: 0.5, color: getReadableSecondaryTextColor(theme, isDark) }}>
                 {tooltip}
               </Typography>
             ) : null}
@@ -365,6 +435,8 @@ const RankedStatList = ({
   secondaryMetricsFormatter
 }) => {
   const theme = useTheme();
+  const { mode } = useColorScheme();
+  const isDark = mode === 'dark';
   const [expandedKeys, setExpandedKeys] = useState({});
 
   const formatSecondaryMetricValue = (value) => {
@@ -416,14 +488,14 @@ const RankedStatList = ({
                 ·
               </Typography>
             ) : null}
-            <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.2 }}>
+            <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark), lineHeight: 1.2 }}>
               {metric.label}
             </Typography>
             <Typography
               variant="caption"
               sx={{
                 fontWeight: 700,
-                color: theme.palette.mode === 'dark' ? alpha('#fff', 0.88) : alpha(itemColor, 0.88),
+                color: isDark ? getReadableStatValueColor(theme, isDark) : alpha(itemColor, 0.88),
                 lineHeight: 1.2
               }}
             >
@@ -436,11 +508,7 @@ const RankedStatList = ({
   };
 
   if (!items.length) {
-    return (
-      <Typography color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-        {emptyText}
-      </Typography>
-    );
+    return <Typography sx={{ fontSize: '0.875rem', color: getReadableSecondaryTextColor(theme, isDark) }}>{emptyText}</Typography>;
   }
 
   return (
@@ -487,6 +555,7 @@ const RankedStatList = ({
                       variant="subtitle2"
                       sx={{
                         fontWeight: 600,
+                        color: getReadablePrimaryTextColor(theme, isDark),
                         minWidth: 0,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -496,7 +565,7 @@ const RankedStatList = ({
                       {labelFormatter ? labelFormatter(item, isExpanded) : item.label}
                     </Typography>
                     {item.isCollapsedOther ? (
-                      <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
+                      <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark), flexShrink: 0 }}>
                         {isExpanded ? '收起' : '展开'}
                       </Typography>
                     ) : null}
@@ -506,16 +575,24 @@ const RankedStatList = ({
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexShrink: 0 }}>
                 <Box sx={{ textAlign: 'right' }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadableStatValueColor(theme, isDark) }}>
                     {valueFormatter ? valueFormatter(item.count, item) : item.count.toLocaleString()}
                   </Typography>
                   {detailFormatter ? (
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                    <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark), display: 'block' }}>
                       {detailFormatter(item)}
                     </Typography>
                   ) : null}
                 </Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary', minWidth: 42, textAlign: 'right' }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: getReadableStatPercentColor(theme, isDark),
+                    minWidth: 42,
+                    textAlign: 'right',
+                    fontWeight: isDark ? 700 : 500
+                  }}
+                >
                   {item.percent.toFixed(1)}
                   {percentSuffix}
                 </Typography>
@@ -524,7 +601,7 @@ const RankedStatList = ({
             <LinearProgress
               variant="determinate"
               value={Math.max(0, Math.min(item.percent, 100))}
-              sx={getProgressBarSx(theme, item.color, muted)}
+              sx={getProgressBarSx(theme, item.color, isDark, muted)}
             />
             {item.isCollapsedOther && isExpanded && item.hiddenItems?.length ? (
               <Box
@@ -549,7 +626,7 @@ const RankedStatList = ({
                               alignItems: 'center',
                               gap: 0.75,
                               minWidth: 0,
-                              color: 'text.secondary'
+                              color: getReadableSecondaryTextColor(theme, isDark)
                             }}
                           >
                             {hiddenItem.marker ? (
@@ -577,7 +654,7 @@ const RankedStatList = ({
                           hiddenItem.key
                         )}
                       </Box>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
+                      <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark), flexShrink: 0 }}>
                         {valueFormatter ? valueFormatter(hiddenItem.count, hiddenItem) : hiddenItem.count.toLocaleString()}
                         {detailFormatter ? ` · ${detailFormatter(hiddenItem)}` : ''} · {hiddenItem.percent.toFixed(1)}
                         {percentSuffix}
@@ -586,7 +663,7 @@ const RankedStatList = ({
                     <LinearProgress
                       variant="determinate"
                       value={Math.max(0, Math.min(hiddenItem.percent, 100))}
-                      sx={getProgressBarSx(theme, hiddenItem.color || item.color, true)}
+                      sx={getProgressBarSx(theme, hiddenItem.color || item.color, isDark, true)}
                     />
                   </Box>
                 ))}
@@ -609,6 +686,8 @@ const RankedStatList = ({
 
 const QualityMetricRow = ({ label, count, percent, color, tooltip }) => {
   const theme = useTheme();
+  const { mode } = useColorScheme();
+  const isDark = mode === 'dark';
   const row = (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: 0.75 }}>
@@ -620,23 +699,23 @@ const QualityMetricRow = ({ label, count, percent, color, tooltip }) => {
               borderRadius: '50%',
               bgcolor: color,
               flexShrink: 0,
-              boxShadow: `0 0 0 4px ${alpha(color, theme.palette.mode === 'dark' ? 0.18 : 0.12)}`
+              boxShadow: `0 0 0 4px ${alpha(color, isDark ? 0.18 : 0.12)}`
             }}
           />
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, minWidth: 0 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, minWidth: 0, color: getReadablePrimaryTextColor(theme, isDark) }}>
             {label}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexShrink: 0 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadablePrimaryTextColor(theme, isDark) }}>
             {count.toLocaleString()}
           </Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary', minWidth: 42, textAlign: 'right' }}>
+          <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark), minWidth: 42, textAlign: 'right' }}>
             {percent.toFixed(1)}%
           </Typography>
         </Box>
       </Box>
-      <LinearProgress variant="determinate" value={Math.max(0, Math.min(percent, 100))} sx={getProgressBarSx(theme, color)} />
+      <LinearProgress variant="determinate" value={Math.max(0, Math.min(percent, 100))} sx={getProgressBarSx(theme, color, isDark)} />
     </Box>
   );
 
@@ -651,17 +730,15 @@ const QualityMetricRow = ({ label, count, percent, color, tooltip }) => {
 
 const IPQualityBreakdown = ({ stats, loading }) => {
   const theme = useTheme();
+  const { mode } = useColorScheme();
+  const isDark = mode === 'dark';
 
   if (loading) {
     return <StatRowsSkeleton rows={5} />;
   }
 
   if (!stats || !Array.isArray(stats.ipStats) || stats.ipStats.length === 0) {
-    return (
-      <Typography color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-        暂无 IP 质量统计数据
-      </Typography>
-    );
+    return <Typography sx={{ fontSize: '0.875rem', color: getReadableSecondaryTextColor(theme, isDark) }}>暂无 IP 质量统计数据</Typography>;
   }
 
   const total = stats.total || 0;
@@ -681,7 +758,7 @@ const IPQualityBreakdown = ({ stats, loading }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.25 }}>
       <Box>
-        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.25, fontWeight: 600 }}>
+        <Typography variant="body2" sx={{ color: getReadableSecondaryTextColor(theme, isDark), mb: 1.25, fontWeight: 600 }}>
           住宅属性
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -703,7 +780,7 @@ const IPQualityBreakdown = ({ stats, loading }) => {
           borderTop: `1px solid ${alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.08 : 0.06)}`
         }}
       >
-        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.25, fontWeight: 600 }}>
+        <Typography variant="body2" sx={{ color: getReadableSecondaryTextColor(theme, isDark), mb: 1.25, fontWeight: 600 }}>
           IP 类型
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -729,18 +806,18 @@ const IPQualityBreakdown = ({ stats, loading }) => {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
           <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadablePrimaryTextColor(theme, isDark) }}>
               其他数量
             </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
               非完整结果，未纳入细分 IP 判断
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadablePrimaryTextColor(theme, isDark) }}>
               {otherCount.toLocaleString()}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
               {total > 0 ? ((otherCount / total) * 100).toFixed(1) : '0.0'}%
             </Typography>
           </Box>
@@ -785,8 +862,9 @@ const PremiumStatCard = ({
   nodePassStats
 }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const surfaceSx = getCalmSurface(theme, accentColor || gradientColors[0]);
+  const { mode } = useColorScheme();
+  const isDark = mode === 'dark';
+  const surfaceSx = getCalmSurface(theme, accentColor || gradientColors[0], isDark);
   const hasNodePassStats = Boolean(nodePassStats);
 
   const handleClick = () => {
@@ -846,7 +924,7 @@ const PremiumStatCard = ({
                 variant="body2"
                 sx={{
                   fontWeight: 500,
-                  color: isDark ? alpha('#fff', 0.7) : theme.palette.text.secondary,
+                  color: getReadableSecondaryTextColor(theme, isDark),
                   textTransform: 'uppercase',
                   letterSpacing: 1,
                   fontSize: '0.7rem'
@@ -862,7 +940,7 @@ const PremiumStatCard = ({
               sx={{
                 fontWeight: 700,
                 fontSize: subValue || hasNodePassStats ? '1.75rem' : '2.25rem',
-                color: theme.palette.text.primary,
+                color: getReadablePrimaryTextColor(theme, isDark),
                 lineHeight: 1.2,
                 whiteSpace: 'nowrap'
               }}
@@ -920,7 +998,7 @@ const PremiumStatCard = ({
                       <Typography
                         variant="caption"
                         sx={{
-                          color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary,
+                          color: getReadableTertiaryTextColor(theme, isDark),
                           fontWeight: 500,
                           fontSize: '0.7rem',
                           whiteSpace: 'nowrap',
@@ -948,7 +1026,7 @@ const PremiumStatCard = ({
                   <Typography
                     variant="caption"
                     sx={{
-                      color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary,
+                      color: getReadableTertiaryTextColor(theme, isDark),
                       fontWeight: 500,
                       fontSize: '0.7rem',
                       overflow: 'hidden',
@@ -1010,7 +1088,7 @@ const PremiumStatCard = ({
             sx={{
               height: 3,
               borderRadius: 1.5,
-              bgcolor: alpha(gradientColors[0], 0.1),
+              bgcolor: alpha(gradientColors[0], isDark ? 0.16 : 0.1),
               '& .MuiLinearProgress-bar': {
                 borderRadius: 1.5,
                 backgroundColor: gradientColors[0]
@@ -1029,8 +1107,13 @@ import { donationConfig } from 'config/donation';
 
 const StarReminderCard = () => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { mode } = useColorScheme();
+  const isDark = mode === 'dark';
   const [starCount, setStarCount] = useState(null);
+  const supportAccent = theme.palette.warning.main;
+  const supportAccentReadable = getReadableWarningAccentColor(theme, isDark);
+  const supportAccentSoft = alpha(supportAccent, isDark ? 0.18 : 0.12);
+  const supportAccentBorder = alpha(supportAccent, isDark ? 0.32 : 0.2);
 
   useEffect(() => {
     const fetchStarCount = async () => {
@@ -1058,7 +1141,7 @@ const StarReminderCard = () => {
   return (
     <Card
       sx={{
-        ...getCalmSurface(theme, '#f59e0b'),
+        ...getCalmSurface(theme, supportAccent, isDark),
         mb: 3,
         borderRadius: 3,
         position: 'relative',
@@ -1070,7 +1153,7 @@ const StarReminderCard = () => {
           left: 0,
           right: 0,
           height: 3,
-          backgroundColor: '#f59e0b'
+          backgroundColor: supportAccent
         }
       }}
     >
@@ -1094,28 +1177,28 @@ const StarReminderCard = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: alpha('#f59e0b', isDark ? 0.18 : 0.12),
-                border: `1px solid ${alpha('#f59e0b', isDark ? 0.32 : 0.2)}`,
+                backgroundColor: supportAccentSoft,
+                border: `1px solid ${supportAccentBorder}`,
                 flexShrink: 0
               }}
             >
-              <StarIcon sx={{ fontSize: 28, color: '#f59e0b' }} />
+              <StarIcon sx={{ fontSize: 28, color: supportAccentReadable }} />
             </Box>
             <Box>
               <Typography
                 variant="subtitle1"
                 sx={{
                   fontWeight: 600,
-                  color: isDark ? '#fcd34d' : '#b45309',
+                  color: supportAccentReadable,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 0.5
                 }}
               >
                 喜欢这个项目吗？
-                <FavoriteIcon sx={{ fontSize: 16, color: '#ef4444' }} />
+                <FavoriteIcon sx={{ fontSize: 16, color: 'error.main' }} />
               </Typography>
-              <Typography variant="body2" sx={{ color: isDark ? alpha('#fff', 0.7) : '#92400e' }}>
+              <Typography variant="body2" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
                 如果觉得不错，请给我们一个 Star 支持一下！如果你是L站佬友，也可以使用LDC支持本项目！你的支持是我们前进的动力。
               </Typography>
             </Box>
@@ -1189,13 +1272,15 @@ const StarReminderCard = () => {
                   onClick={handleFeedback}
                   size="small"
                   sx={{
-                    bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#f59e0b', 0.15),
-                    color: isDark ? '#fcd34d' : '#b45309',
+                    bgcolor: supportAccentSoft,
+                    color: supportAccentReadable,
                     width: 36,
                     height: 36,
                     borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: supportAccentBorder,
                     '&:hover': {
-                      bgcolor: isDark ? alpha('#fff', 0.15) : alpha('#f59e0b', 0.25)
+                      bgcolor: alpha(supportAccent, isDark ? 0.24 : 0.18)
                     }
                   }}
                 >
@@ -1211,7 +1296,7 @@ const StarReminderCard = () => {
                   px: 1,
                   height: 36,
                   borderRadius: 2,
-                  ...getAccentChipSx(theme, '#f59e0b'),
+                  ...getGitHubChipSx(theme, isDark),
                   cursor: 'pointer',
                   '& .MuiChip-icon': {
                     color: 'inherit'
@@ -1230,7 +1315,11 @@ const StarReminderCard = () => {
 
 const AirportUsageCard = ({ airports = [], loading }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { mode } = useColorScheme();
+  const isDark = mode === 'dark';
+  const usageAccent = theme.palette.info.main;
+  const getProgressTrackColor = (percent) => alpha(getUsageColor(percent), isDark ? 0.22 : 0.12);
+  const usageSurface = getInsetPanelSurface(theme, usageAccent, isDark);
 
   // 筛选开启用量获取且有有效数据的机场
   const airportsWithUsage = useMemo(() => {
@@ -1265,17 +1354,10 @@ const AirportUsageCard = ({ airports = [], loading }) => {
     return null;
   }
 
-  // 根据使用率计算进度条渐变色
-  const getProgressGradient = (percent) => {
-    if (percent < 60) return `linear-gradient(90deg, ${theme.palette.success.light}, ${theme.palette.success.main})`;
-    if (percent < 85) return `linear-gradient(90deg, ${theme.palette.warning.light}, ${theme.palette.warning.main})`;
-    return `linear-gradient(90deg, ${theme.palette.error.light}, ${theme.palette.error.main})`;
-  };
-
   return (
     <Card
       sx={{
-        ...getCalmSurface(theme, '#06b6d4'),
+        ...getCalmSurface(theme, usageAccent, isDark),
         mb: 4,
         borderRadius: 4,
         overflow: 'hidden',
@@ -1287,13 +1369,13 @@ const AirportUsageCard = ({ airports = [], loading }) => {
           left: 0,
           right: 0,
           height: 3,
-          backgroundColor: '#06b6d4'
+          backgroundColor: usageAccent
         }
       }}
     >
       <CardContent sx={{ p: 3, position: 'relative' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Box sx={getAccentIconBox(theme, '#06b6d4')}>
+          <Box sx={getAccentIconBox(theme, usageAccent, isDark)}>
             <FlightTakeoffIcon sx={{ fontSize: 22 }} />
           </Box>
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
@@ -1304,7 +1386,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
             size="small"
             sx={{
               ml: 'auto',
-              ...getAccentChipSx(theme, '#06b6d4')
+              ...getAccentChipSx(theme, usageAccent, isDark)
             }}
           />
         </Box>
@@ -1324,17 +1406,16 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                   p: 2.5,
                   borderRadius: 3,
                   height: '100%',
-                  bgcolor: isDark ? alpha(theme.palette.common.white, 0.03) : alpha(theme.palette.common.white, 0.88),
-                  border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.08) : alpha('#06b6d4', 0.12)}`
+                  ...usageSurface
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                  <TrendingUpIcon sx={{ fontSize: 18, color: '#06b6d4' }} />
-                  <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                  <TrendingUpIcon sx={{ fontSize: 18, color: usageAccent }} />
+                  <Typography variant="subtitle2" sx={{ color: getReadablePrimaryTextColor(theme, isDark), fontWeight: 500 }}>
                     全局流量使用
                   </Typography>
                 </Box>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1, color: getReadablePrimaryTextColor(theme, isDark) }}>
                   {formatBytes(totalUsed)} / {formatBytes(totalQuota)}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1343,7 +1424,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                       flexGrow: 1,
                       height: 8,
                       borderRadius: 4,
-                      backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                      backgroundColor: getProgressTrackColor(globalPercent),
                       overflow: 'hidden'
                     }}
                   >
@@ -1352,12 +1433,19 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                         width: `${globalPercent}%`,
                         height: '100%',
                         borderRadius: 4,
-                        background: getProgressGradient(globalPercent),
+                        backgroundColor: getUsageColor(globalPercent),
                         transition: 'width 0.3s ease'
                       }}
                     />
                   </Box>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: getUsageColor(globalPercent), minWidth: 45 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: 700,
+                      color: alpha(getUsageColor(globalPercent), isDark ? 0.9 : 1),
+                      minWidth: 45
+                    }}
+                  >
                     {globalPercent.toFixed(1)}%
                   </Typography>
                 </Box>
@@ -1371,27 +1459,26 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                   p: 2.5,
                   borderRadius: 3,
                   height: '100%',
-                  bgcolor: isDark ? alpha(theme.palette.common.white, 0.03) : alpha(theme.palette.common.white, 0.88),
-                  border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.08) : alpha('#06b6d4', 0.12)}`
+                  ...usageSurface
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                  <EventIcon sx={{ fontSize: 18, color: '#f59e0b' }} />
-                  <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                  <EventIcon sx={{ fontSize: 18, color: getReadableWarningAccentColor(theme, isDark) }} />
+                  <Typography variant="subtitle2" sx={{ color: getReadablePrimaryTextColor(theme, isDark), fontWeight: 500 }}>
                     最近到期
                   </Typography>
                 </Box>
                 {nearestExpireAirport ? (
                   <>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5, color: isDark ? '#fcd34d' : '#b45309' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5, color: getReadableWarningAccentColor(theme, isDark) }}>
                       {nearestExpireAirport.name}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    <Typography variant="body2" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
                       {formatExpireTime(nearestExpireAirport.usageExpire)}
                     </Typography>
                   </>
                 ) : (
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  <Typography variant="body2" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
                     暂无到期信息
                   </Typography>
                 )}
@@ -1408,24 +1495,35 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                   bgcolor:
                     lowUsageAirports.length > 0
                       ? isDark
-                        ? alpha('#ef4444', 0.1)
-                        : alpha('#fef2f2', 0.92)
+                        ? alpha(theme.palette.error.main, 0.12)
+                        : alpha(theme.palette.error.light, 0.12)
                       : isDark
-                        ? alpha(theme.palette.common.white, 0.03)
-                        : alpha(theme.palette.common.white, 0.88),
+                        ? usageSurface.backgroundColor
+                        : usageSurface.backgroundColor,
+                  backgroundImage:
+                    lowUsageAirports.length > 0
+                      ? isDark
+                        ? `linear-gradient(180deg, ${alpha(theme.palette.error.main, 0.14)} 0%, ${withAlpha((theme.vars?.palette || theme.palette).background.default, 0.78)} 100%)`
+                        : 'none'
+                      : usageSurface.backgroundImage,
                   border: `1px solid ${
-                    lowUsageAirports.length > 0 ? alpha('#ef4444', 0.3) : isDark ? alpha('#fff', 0.1) : alpha('#06b6d4', 0.15)
-                  }`
+                    lowUsageAirports.length > 0
+                      ? alpha(theme.palette.error.main, 0.28)
+                      : isDark
+                        ? withAlpha((theme.vars?.palette || theme.palette).divider, 0.74)
+                        : alpha(usageAccent, 0.12)
+                  }`,
+                  boxShadow: isDark && lowUsageAirports.length === 0 ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.025)}` : 'none'
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                   <WarningAmberIcon
                     sx={{
                       fontSize: 18,
-                      color: lowUsageAirports.length > 0 ? '#ef4444' : 'text.secondary'
+                      color: lowUsageAirports.length > 0 ? 'error.main' : 'text.secondary'
                     }}
                   />
-                  <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                  <Typography variant="subtitle2" sx={{ color: getReadablePrimaryTextColor(theme, isDark), fontWeight: 500 }}>
                     流量不足警告
                   </Typography>
                   {lowUsageAirports.length > 0 && (
@@ -1436,8 +1534,8 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                         ml: 'auto',
                         height: 20,
                         minWidth: 20,
-                        bgcolor: '#ef4444',
-                        color: '#fff',
+                        bgcolor: 'error.main',
+                        color: 'error.contrastText',
                         fontWeight: 700,
                         fontSize: '0.7rem'
                       }}
@@ -1456,12 +1554,12 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                             label={airport.name}
                             size="small"
                             sx={{
-                              bgcolor: isDark ? alpha('#ef4444', 0.2) : alpha('#ef4444', 0.1),
-                              color: '#ef4444',
+                              bgcolor: alpha(theme.palette.error.main, isDark ? 0.2 : 0.12),
+                              color: 'error.main',
                               fontWeight: 600,
                               fontSize: '0.75rem',
                               '&:hover': {
-                                bgcolor: isDark ? alpha('#ef4444', 0.3) : alpha('#ef4444', 0.2)
+                                bgcolor: alpha(theme.palette.error.main, isDark ? 0.28 : 0.18)
                               }
                             }}
                           />
@@ -1470,7 +1568,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                     })}
                   </Box>
                 ) : (
-                  <Typography variant="body2" sx={{ color: isDark ? '#86efac' : '#16a34a' }}>
+                  <Typography variant="body2" sx={{ color: isDark ? alpha(theme.palette.success.light, 0.9) : 'success.main' }}>
                     ✓ 所有机场流量充足
                   </Typography>
                 )}
@@ -1487,18 +1585,18 @@ const AirportUsageCard = ({ airports = [], loading }) => {
 
 const WelcomeBanner = ({ greeting }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { mode } = useColorScheme();
+  const isDark = mode === 'dark';
+  const bannerAccent = theme.palette.secondary.main;
 
   return (
     <Card
       sx={{
+        ...getCalmSurface(theme, bannerAccent, isDark),
         mb: 4,
         position: 'relative',
         overflow: 'hidden',
         borderRadius: 4,
-        backgroundColor: isDark ? alpha(theme.palette.background.paper, 0.96) : theme.palette.background.paper,
-        border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.08) : alpha('#6366f1', 0.1)}`,
-        boxShadow: isDark ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.06)',
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -1506,7 +1604,7 @@ const WelcomeBanner = ({ greeting }) => {
           left: 0,
           bottom: 0,
           width: 4,
-          backgroundColor: '#6366f1'
+          backgroundColor: bannerAccent
         }
       }}
     >
@@ -1519,7 +1617,7 @@ const WelcomeBanner = ({ greeting }) => {
                 sx={{
                   fontWeight: 800,
                   fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-                  color: theme.palette.text.primary,
+                  color: getReadablePrimaryTextColor(theme, isDark),
                   lineHeight: 1.2
                 }}
               >
@@ -1536,12 +1634,12 @@ const WelcomeBanner = ({ greeting }) => {
             <Typography
               variant="body1"
               sx={{
-                color: isDark ? alpha('#fff', 0.7) : theme.palette.text.secondary,
+                color: getReadableSecondaryTextColor(theme, isDark),
                 fontSize: '1.1rem'
               }}
             >
               欢迎使用{' '}
-              <Box component="span" sx={{ fontWeight: 700, color: isDark ? '#a5b4fc' : '#6366f1' }}>
+              <Box component="span" sx={{ fontWeight: 700, color: bannerAccent }}>
                 SublinkPro
               </Box>{' '}
               订阅管理系统，{greeting.subText}
@@ -1556,11 +1654,11 @@ const WelcomeBanner = ({ greeting }) => {
               width: 80,
               height: 80,
               borderRadius: 3,
-              backgroundColor: alpha('#6366f1', isDark ? 0.14 : 0.08),
-              border: `1px solid ${alpha('#6366f1', isDark ? 0.28 : 0.16)}`
+              backgroundColor: alpha(bannerAccent, isDark ? 0.16 : 0.08),
+              border: `1px solid ${alpha(bannerAccent, isDark ? 0.3 : 0.18)}`
             }}
           >
-            <AutoAwesomeIcon sx={{ fontSize: 40, color: isDark ? '#a5b4fc' : '#6366f1' }} />
+            <AutoAwesomeIcon sx={{ fontSize: 40, color: bannerAccent }} />
           </Box>
         </Box>
       </CardContent>
@@ -1572,18 +1670,20 @@ const WelcomeBanner = ({ greeting }) => {
 
 const ReleaseCard = ({ release }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { mode } = useColorScheme();
+  const isDark = mode === 'dark';
 
   return (
     <Card
       sx={{
+        ...getCalmSurface(theme, theme.palette.primary.main, isDark),
         mb: 2.5,
         borderRadius: 3,
-        backgroundColor: isDark ? alpha(theme.palette.background.paper, 0.94) : theme.palette.background.paper,
-        border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.08) : alpha(theme.palette.primary.main, 0.08)}`,
         transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
         '&:hover': {
-          boxShadow: isDark ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.08)',
+          boxShadow: isDark
+            ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.06)}`
+            : `0 4px 12px ${alpha(theme.palette.common.black, 0.08)}`,
           borderColor: theme.palette.primary.main
         }
       }}
@@ -1595,12 +1695,12 @@ const ReleaseCard = ({ release }) => {
             size="small"
             sx={{
               fontWeight: 700,
-              ...getAccentChipSx(theme, theme.palette.primary.main),
+              ...getAccentChipSx(theme, theme.palette.primary.main, isDark),
               borderRadius: 2,
               px: 0.5
             }}
           />
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, flex: 1 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, flex: 1, color: getReadablePrimaryTextColor(theme, isDark) }}>
             {release.name}
           </Typography>
           <Chip
@@ -1638,13 +1738,13 @@ const ReleaseCard = ({ release }) => {
               fontWeight: 600,
               mt: 1.5,
               mb: 0.5,
-              color: theme.palette.text.primary
+              color: getReadablePrimaryTextColor(theme, isDark)
             },
             '& p': {
               mb: 1,
               fontSize: '0.875rem',
               lineHeight: 1.7,
-              color: theme.palette.text.secondary
+              color: getReadableSecondaryTextColor(theme, isDark)
             },
             '& ul, & ol': {
               pl: 2.5,
@@ -1653,28 +1753,30 @@ const ReleaseCard = ({ release }) => {
             '& li': {
               fontSize: '0.875rem',
               mb: 0.5,
-              color: theme.palette.text.secondary,
+              color: getReadableSecondaryTextColor(theme, isDark),
               '&::marker': {
                 color: theme.palette.primary.main
               }
             },
             '& code': {
-              backgroundColor: isDark ? alpha('#fff', 0.1) : alpha('#6366f1', 0.1),
-              color: isDark ? '#a5b4fc' : '#6366f1',
+              backgroundColor: isDark ? alpha(theme.palette.primary.main, 0.14) : alpha(theme.palette.primary.main, 0.1),
+              color: isDark ? theme.palette.primary.light : theme.palette.primary.main,
               padding: '2px 8px',
               borderRadius: 6,
               fontSize: '0.8rem',
               fontFamily: '"JetBrains Mono", monospace'
             },
             '& pre': {
-              backgroundColor: isDark ? alpha('#000', 0.3) : alpha('#f1f5f9', 0.8),
+              backgroundColor: isDark ? alpha(theme.palette.background.paper, 0.52) : alpha(theme.palette.background.default, 0.78),
               padding: 2,
               borderRadius: 2,
               overflow: 'auto',
-              border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.05)}`,
+              border: `1px solid ${isDark ? alpha(theme.palette.divider, 0.9) : alpha(theme.palette.divider, 0.72)}`,
+              color: getReadableSecondaryTextColor(theme, isDark),
               '& code': {
                 backgroundColor: 'transparent',
-                padding: 0
+                padding: 0,
+                color: isDark ? alpha(theme.palette.primary.light, 0.94) : theme.palette.primary.main
               }
             },
             '& a': {
@@ -1698,7 +1800,8 @@ const ReleaseCard = ({ release }) => {
 
 export default function DashboardDefault() {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { mode } = useColorScheme();
+  const isDark = mode === 'dark';
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [nodeTotal, setNodeTotal] = useState(0);
   const [nodeDelayPassCount, setNodeDelayPassCount] = useState(0);
@@ -2000,15 +2103,15 @@ export default function DashboardDefault() {
                       <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                         未知节点
                       </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
                         未获取到落地国家或节点已失效，不参与地区比较
                       </Typography>
                     </Box>
                     <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadablePrimaryTextColor(theme, isDark) }}>
                         {unknownCountryStat.nodeCount.toLocaleString()}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
                         可用IP {unknownCountryStat.uniqueIpCount || 0}
                       </Typography>
                     </Box>
@@ -2146,11 +2249,11 @@ export default function DashboardDefault() {
                       <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                         未参与评分统计
                       </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
                         质量状态不是完整结果
                       </Typography>
                     </Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadablePrimaryTextColor(theme, isDark) }}>
                       {(qualityStats?.otherTotal || 0).toLocaleString()}
                     </Typography>
                   </Box>
@@ -2173,7 +2276,8 @@ export default function DashboardDefault() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                backgroundColor: alpha(theme.palette.secondary.main, theme.palette.mode === 'dark' ? 0.18 : 0.1),
+                border: `1px solid ${alpha(theme.palette.secondary.main, theme.palette.mode === 'dark' ? 0.32 : 0.18)}`
               }}
             >
               <Typography sx={{ fontSize: '1.2rem' }}>📝</Typography>
@@ -2201,10 +2305,11 @@ export default function DashboardDefault() {
           </Tooltip>
         }
         sx={{
+          ...getCalmSurface(theme, theme.palette.secondary.main, isDark),
           borderRadius: 4,
           overflow: 'hidden',
           '& .MuiCardHeader-root': {
-            borderBottom: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`
+            borderBottom: `1px solid ${isDark ? alpha(theme.palette.divider, 0.9) : alpha(theme.palette.divider, 0.72)}`
           }
         }}
       >
@@ -2217,7 +2322,7 @@ export default function DashboardDefault() {
                   height={140}
                   sx={{
                     borderRadius: 3,
-                    bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04)
+                    bgcolor: isDark ? alpha(theme.palette.background.paper, 0.44) : alpha(theme.palette.background.default, 0.56)
                   }}
                 />
               </Box>
@@ -2241,10 +2346,10 @@ export default function DashboardDefault() {
             >
               📭
             </Typography>
-            <Typography variant="h6" color="textSecondary" sx={{ fontWeight: 500 }}>
+            <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
               暂无更新日志
             </Typography>
-            <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               请检查网络连接或稍后重试
             </Typography>
           </Box>

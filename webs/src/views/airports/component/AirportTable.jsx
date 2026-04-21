@@ -51,6 +51,8 @@ export default function AirportTable({
   onRefreshUsage
 }) {
   const theme = useTheme();
+  const palette = theme.vars?.palette || theme.palette;
+  const isDark = theme.palette.mode === 'dark';
 
   // 复制提示状态
   const [copyTip, setCopyTip] = useState({ open: false, name: '' });
@@ -66,12 +68,23 @@ export default function AirportTable({
     }
   };
 
-  // 根据使用率计算进度条渐变色
-  const getProgressGradient = (percent) => {
-    if (percent < 60) return `linear-gradient(90deg, ${theme.palette.success.light}, ${theme.palette.success.main})`;
-    if (percent < 85) return `linear-gradient(90deg, ${theme.palette.warning.light}, ${theme.palette.warning.main})`;
-    return `linear-gradient(90deg, ${theme.palette.error.light}, ${theme.palette.error.main})`;
-  };
+  const getProgressTrackColor = (percent) => alpha(getUsageColor(percent), isDark ? 0.22 : 0.12);
+
+  const getStatusChipSx = (enabled) => ({
+    height: 20,
+    fontSize: '0.7rem',
+    fontWeight: 600,
+    color: enabled ? (isDark ? palette.success.light : palette.success.dark) : palette.text.secondary,
+    bgcolor: enabled
+      ? alpha(theme.palette.success.main, isDark ? 0.18 : 0.12)
+      : isDark
+        ? 'background.default'
+        : alpha(theme.palette.grey[500], 0.08),
+    border: `1px solid ${enabled ? alpha(theme.palette.success.main, isDark ? 0.34 : 0.18) : alpha(theme.palette.divider, isDark ? 0.56 : 0.24)}`,
+    '& .MuiChip-label': {
+      px: 1
+    }
+  });
 
   /**
    * 根据延迟值获取颜色
@@ -101,10 +114,10 @@ export default function AirportTable({
    * 计算顶部状态条颜色
    * 优先级：禁用(灰色) > 用量警告(红色) > 过期警告(红色) > 启用(绿色)
    */
-  const getStatusBarColor = (airport) => {
+  const getStatusAccent = (airport) => {
     // 禁用状态
     if (!airport.enabled) {
-      return `linear-gradient(90deg, ${theme.palette.grey[400]}, ${theme.palette.grey[300]})`;
+      return theme.palette.text.secondary;
     }
 
     // 检查用量警告（使用率 >= 85%）
@@ -114,7 +127,7 @@ export default function AirportTable({
       const used = upload + download;
       const percent = (used / airport.usageTotal) * 100;
       if (percent >= 85) {
-        return `linear-gradient(90deg, ${theme.palette.error.main}, ${theme.palette.error.light})`;
+        return theme.palette.error.main;
       }
     }
 
@@ -123,12 +136,12 @@ export default function AirportTable({
       const now = Math.floor(Date.now() / 1000);
       const daysLeft = (airport.usageExpire - now) / (24 * 60 * 60);
       if (daysLeft <= 7) {
-        return `linear-gradient(90deg, ${theme.palette.error.main}, ${theme.palette.error.light})`;
+        return theme.palette.error.main;
       }
     }
 
     // 正常启用状态
-    return `linear-gradient(90deg, ${theme.palette.success.main}, ${theme.palette.success.light})`;
+    return theme.palette.success.main;
   };
 
   // 渲染用量信息
@@ -136,7 +149,7 @@ export default function AirportTable({
     // 未开启获取用量信息
     if (!airport.fetchUsageInfo) {
       return (
-        <Typography variant="caption" color="textSecondary">
+        <Typography variant="caption" color="text.secondary">
           未开启用量获取
         </Typography>
       );
@@ -154,7 +167,7 @@ export default function AirportTable({
     // usageTotal 为 0 或未设置，表示尚未获取
     if (!airport.usageTotal || airport.usageTotal === 0) {
       return (
-        <Typography variant="body2" color="textSecondary">
+        <Typography variant="body2" color="text.secondary">
           待获取
         </Typography>
       );
@@ -184,7 +197,7 @@ export default function AirportTable({
           sx={{
             height: 6,
             borderRadius: 3,
-            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+            backgroundColor: getProgressTrackColor(percent),
             overflow: 'hidden',
             mb: 0.5
           }}
@@ -194,7 +207,7 @@ export default function AirportTable({
               width: `${percent}%`,
               height: '100%',
               borderRadius: 3,
-              background: getProgressGradient(percent),
+              backgroundColor: color,
               transition: 'width 0.3s ease'
             }}
           />
@@ -264,23 +277,7 @@ export default function AirportTable({
     }
 
     return (
-      <Tooltip
-        arrow
-        placement="top"
-        componentsProps={{
-          tooltip: {
-            sx: {
-              bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.50',
-              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-              borderRadius: 2,
-              boxShadow: theme.shadows[8],
-              p: 1.5,
-              maxWidth: 320
-            }
-          }
-        }}
-        title={<AirportNodeStatsCard nodeStats={nodeStats} nodeCount={nodeCount} />}
-      >
+      <Tooltip arrow placement="top" title={<AirportNodeStatsCard nodeStats={nodeStats} nodeCount={nodeCount} />}>
         <Box sx={{ cursor: 'help' }}>
           {/* 通过数量 */}
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
@@ -326,7 +323,7 @@ export default function AirportTable({
   if (airports.length === 0) {
     return (
       <Box sx={{ py: 6, textAlign: 'center' }}>
-        <Typography variant="body2" color="textSecondary">
+        <Typography variant="body2" color="text.secondary">
           暂无机场数据，点击上方"添加机场"按钮添加
         </Typography>
       </Box>
@@ -350,6 +347,7 @@ export default function AirportTable({
       >
         {airports.map((airport) => {
           const isSelected = selectedIds.includes(airport.id);
+          const statusAccent = getStatusAccent(airport);
 
           return (
             <Card
@@ -361,17 +359,17 @@ export default function AirportTable({
                 border: `1px solid ${isSelected ? alpha(theme.palette.primary.main, 0.4) : alpha(theme.palette.divider, 0.12)}`,
                 boxShadow:
                   theme.palette.mode === 'dark'
-                    ? `0 2px 8px ${alpha('#000', isSelected ? 0.35 : 0.25)}`
+                    ? `0 2px 8px ${alpha(theme.palette.common.black, isSelected ? 0.28 : 0.22)}`
                     : `0 2px 8px ${alpha(theme.palette.primary.main, isSelected ? 0.16 : 0.06)}`,
                 backgroundColor: isSelected ? alpha(theme.palette.primary.main, 0.03) : 'background.paper',
                 transition: 'all 0.2s ease',
                 overflow: 'hidden',
                 position: 'relative',
                 '&:hover': {
-                  transform: 'translateY(-2px)',
+                  transform: 'translateY(-1px)',
                   boxShadow:
                     theme.palette.mode === 'dark'
-                      ? `0 6px 16px ${alpha('#000', 0.35)}`
+                      ? `0 6px 16px ${alpha(theme.palette.common.black, 0.28)}`
                       : `0 6px 16px ${alpha(theme.palette.primary.main, 0.12)}`
                 },
                 // 顶部状态指示条
@@ -382,7 +380,7 @@ export default function AirportTable({
                   left: 0,
                   right: 0,
                   height: 3,
-                  background: getStatusBarColor(airport)
+                  backgroundColor: statusAccent
                 }
               }}
             >
@@ -407,12 +405,7 @@ export default function AirportTable({
                       {airport.name}
                     </Typography>
                     <Stack direction="row" spacing={0.4} sx={{ mt: 0.35, flexWrap: 'wrap', gap: 0.4 }}>
-                      <Chip
-                        label={airport.enabled ? '启用' : '禁用'}
-                        color={airport.enabled ? 'success' : 'default'}
-                        size="small"
-                        sx={{ height: 20, fontSize: '0.7rem' }}
-                      />
+                      <Chip label={airport.enabled ? '启用' : '禁用'} variant="filled" size="small" sx={getStatusChipSx(airport.enabled)} />
                       {airport.group && (
                         <Chip label={airport.group} variant="outlined" size="small" sx={{ height: 18, fontSize: '0.66rem' }} />
                       )}
@@ -447,14 +440,14 @@ export default function AirportTable({
                     mb: 1.25,
                     p: 0.85,
                     borderRadius: 1.5,
-                    bgcolor: alpha(theme.palette.background.default, 0.5),
-                    border: `1px solid ${alpha(theme.palette.divider, 0.06)}`
+                    bgcolor: 'background.default',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.12)}`
                   }}
                 >
                   <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
                       <ScheduleIcon sx={{ fontSize: 12, color: 'text.secondary' }} />
-                      <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                         上次运行
                       </Typography>
                     </Box>
@@ -465,7 +458,7 @@ export default function AirportTable({
                   <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
                       <UpdateIcon sx={{ fontSize: 12, color: 'text.secondary' }} />
-                      <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                         下次运行
                       </Typography>
                     </Box>
@@ -480,14 +473,14 @@ export default function AirportTable({
                   sx={{
                     p: 0.9,
                     borderRadius: 1.5,
-                    bgcolor: alpha(theme.palette.primary.main, 0.03),
-                    border: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
+                    bgcolor: 'background.default',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
                     mb: 1.25
                   }}
                 >
                   <Typography
                     variant="caption"
-                    color="textSecondary"
+                    color="text.secondary"
                     sx={{ display: 'block', mb: 0.5, fontWeight: 500, fontSize: '0.65rem' }}
                   >
                     用量信息
@@ -496,10 +489,18 @@ export default function AirportTable({
                 </Box>
 
                 {/* 节点测试统计 */}
-                <Box sx={{ mb: 1.25 }}>
+                <Box
+                  sx={{
+                    mb: 1.25,
+                    p: 0.9,
+                    borderRadius: 1.5,
+                    bgcolor: 'background.default',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.12)}`
+                  }}
+                >
                   <Typography
                     variant="caption"
-                    color="textSecondary"
+                    color="text.secondary"
                     sx={{ display: 'block', mb: 0.5, fontWeight: 500, fontSize: '0.65rem' }}
                   >
                     节点测试

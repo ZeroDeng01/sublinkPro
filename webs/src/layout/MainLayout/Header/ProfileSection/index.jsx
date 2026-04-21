@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // material-ui
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import Avatar from '@mui/material/Avatar';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -30,6 +30,7 @@ import MainCard from 'ui-component/cards/MainCard';
 import Transitions from 'ui-component/extended/Transitions';
 import useConfig from 'hooks/useConfig';
 import { useAuth } from 'contexts/AuthContext';
+import { withAlpha } from 'utils/colorUtils';
 
 // assets
 import { IconLogout, IconUser, IconKey, IconDatabaseExport, IconSettings, IconDatabaseOff, IconWorld } from '@tabler/icons-react';
@@ -77,6 +78,19 @@ export default function ProfileSection() {
   const [geoipDialogOpen, setGeoipDialogOpen] = useState(false);
   const anchorRef = useRef(null);
   const greeting = getGreeting();
+  const isDark = theme.palette.mode === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
+  const popoverSurface = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.98)} 0%, ${withAlpha(palette.background.default, 0.98)} 100%)`
+    : 'background.paper';
+  const popoverBorder = withAlpha(palette.divider, isDark ? 0.84 : 0.72);
+  const headerSurface = isDark ? withAlpha(palette.background.default, 0.88) : 'transparent';
+  const nestedProfileSurface = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.46)} 0%, ${withAlpha(palette.background.default, 0.9)} 100%)`
+    : withAlpha(palette.background.default, 0.72);
+  const nestedProfileBorder = isDark ? withAlpha(palette.divider, 0.8) : alpha(theme.palette.primary.main, 0.16);
+  const menuHoverBg = isDark ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.primary.main, 0.08);
+  const menuSecondaryText = isDark ? withAlpha(palette.text.primary, 0.72) : 'text.secondary';
 
   // 确认对话框
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -287,22 +301,47 @@ export default function ProfileSection() {
         {({ TransitionProps }) => (
           <ClickAwayListener onClickAway={handleClose}>
             <Transitions in={open} {...TransitionProps}>
-              <Paper>
+              <Paper sx={{ bgcolor: 'transparent' }}>
                 {open && (
-                  <MainCard border={false} elevation={16} content={false} boxShadow shadow={theme.shadows[16]}>
-                    <Box sx={{ p: 2, pb: 0 }}>
+                  <MainCard
+                    border={false}
+                    elevation={0}
+                    content={false}
+                    boxShadow
+                    shadow={isDark ? 'none' : theme.shadows[12]}
+                    sx={{
+                      bgcolor: popoverSurface,
+                      border: '1px solid',
+                      borderColor: popoverBorder,
+                      boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : undefined
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        p: 2,
+                        pb: 0,
+                        bgcolor: headerSurface,
+                        borderBottom: isDark ? `1px solid ${withAlpha(palette.divider, 0.62)}` : 'none'
+                      }}
+                    >
                       <Stack>
                         <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
-                          <Typography variant="h4">{greeting}，</Typography>
-                          <Typography component="span" variant="h4" sx={{ fontWeight: 600 }}>
+                          <Typography variant="h4" sx={{ color: isDark ? withAlpha(palette.text.primary, 0.92) : 'text.primary' }}>
+                            {greeting}，
+                          </Typography>
+                          <Typography
+                            component="span"
+                            variant="h4"
+                            sx={{ fontWeight: 600, color: isDark ? withAlpha(palette.text.primary, 0.98) : 'text.primary' }}
+                          >
                             {user?.nickname || user?.username || '用户'}
                           </Typography>
                         </Stack>
-                        <Typography variant="subtitle2" color="textSecondary">
+                        <Typography variant="subtitle2" sx={{ color: menuSecondaryText }}>
                           {user?.role === 'admin' ? '管理员' : '普通用户'}
                         </Typography>
                       </Stack>
-                      <Divider sx={{ my: 2 }} />
+                      <Divider sx={{ my: 2, borderColor: withAlpha(palette.divider, isDark ? 0.7 : 1) }} />
                     </Box>
                     <Box
                       sx={{
@@ -314,23 +353,53 @@ export default function ProfileSection() {
                         '&::-webkit-scrollbar': { width: 5 }
                       }}
                     >
-                      <Card sx={{ bgcolor: 'primary.light', mb: 2 }}>
-                        <CardContent>
+                      <Card
+                        sx={{
+                          mb: 2,
+                          bgcolor: nestedProfileSurface,
+                          border: '1px solid',
+                          borderColor: nestedProfileBorder,
+                          boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : 'none'
+                        }}
+                      >
+                        <CardContent sx={{ '&:last-child': { pb: 2 } }}>
                           <Stack direction="row" sx={{ alignItems: 'center', gap: 2 }}>
-                            <Avatar src={user?.avatar} alt={(user?.username?.[0] || 'U').toUpperCase()} sx={{ width: 56, height: 56 }}>
+                            <Avatar
+                              src={user?.avatar}
+                              alt={(user?.username?.[0] || 'U').toUpperCase()}
+                              sx={{
+                                width: 56,
+                                height: 56,
+                                bgcolor: alpha(theme.palette.primary.main, isDark ? 0.18 : 0.1),
+                                color: 'primary.main',
+                                border: '1px solid',
+                                borderColor: alpha(theme.palette.primary.main, isDark ? 0.3 : 0.18)
+                              }}
+                            >
                               {!user?.avatar && (user?.username?.[0] || user?.nickname?.[0] || 'U').toUpperCase()}
                             </Avatar>
-                            <Box>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography
+                                variant="subtitle1"
+                                sx={{
+                                  fontWeight: 700,
+                                  color: isDark ? withAlpha(palette.text.primary, 0.98) : 'text.primary'
+                                }}
+                              >
                                 {user?.username || '未知用户'}
                               </Typography>
-                              <Typography variant="caption" color="textSecondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ color: isDark ? withAlpha(palette.text.primary, 0.74) : 'text.secondary' }}
+                              >
                                 {user?.nickname || user?.username || '用户'}
                               </Typography>
                             </Box>
                           </Stack>
                         </CardContent>
                       </Card>
+
                       <List
                         component="nav"
                         sx={{
@@ -338,7 +407,17 @@ export default function ProfileSection() {
                           maxWidth: 350,
                           minWidth: 300,
                           borderRadius: `${borderRadius}px`,
-                          '& .MuiListItemButton-root': { mt: 0.5 }
+                          '& .MuiListItemButton-root': {
+                            mt: 0.5,
+                            color: isDark ? withAlpha(palette.text.primary, 0.92) : 'text.primary',
+                            '& .MuiListItemIcon-root': {
+                              minWidth: 36,
+                              color: isDark ? withAlpha(palette.text.primary, 0.72) : 'text.secondary'
+                            },
+                            '&:hover': {
+                              bgcolor: menuHoverBg
+                            }
+                          }
                         }}
                       >
                         <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={handleApiKeys}>
@@ -376,7 +455,7 @@ export default function ProfileSection() {
                             primaryTypographyProps={{ component: 'div' }}
                             primary={<Typography variant="body2">清除IP缓存</Typography>}
                             secondary={
-                              <Typography variant="caption" color="textSecondary">
+                              <Typography variant="caption" sx={{ color: menuSecondaryText }}>
                                 当前缓存 {ipCacheCount} 条
                               </Typography>
                             }
@@ -403,7 +482,7 @@ export default function ProfileSection() {
                             borderRadius: `${borderRadius}px`,
                             color: 'error.main',
                             '&:hover': {
-                              bgcolor: 'error.light'
+                              bgcolor: alpha(theme.palette.error.main, isDark ? 0.16 : 0.12)
                             }
                           }}
                           onClick={handleLogout}

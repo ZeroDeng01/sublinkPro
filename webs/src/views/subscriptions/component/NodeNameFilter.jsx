@@ -347,7 +347,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
           </Droppable>
         </DragDropContext>
       ) : (
-        <Typography variant="body2" color="textSecondary" sx={{ py: 1, textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary" sx={{ py: 1, textAlign: 'center' }}>
           暂无{title}规则
         </Typography>
       )}
@@ -372,7 +372,9 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a2027' : '#f5f5f5'} 0%, ${theme.palette.mode === 'dark' ? '#121417' : '#fafafa'} 100%)`,
+          bgcolor: 'background.default',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
           cursor: 'pointer',
           '&:hover': {
             bgcolor: 'action.hover'
@@ -386,7 +388,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
             节点名称过滤
           </Typography>
           {hasAnyRules && (
-            <Typography variant="caption" color="textSecondary">
+            <Typography variant="caption" color="text.secondary">
               (白名单 {activeWhitelistRules.length} / 黑名单 {activeBlacklistRules.length} 条有效规则)
             </Typography>
           )}
@@ -432,7 +434,7 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
                         variant="body2"
                         sx={{
                           textDecoration: node.status === 'excluded' ? 'line-through' : 'none',
-                          color: node.status === 'excluded' ? 'text.disabled' : 'text.primary'
+                          color: node.status === 'excluded' ? 'text.secondary' : 'text.primary'
                         }}
                       >
                         {node.name}

@@ -12,11 +12,12 @@ import DialogContent from '@mui/material/DialogContent';
 import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
+import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
-import { getProtocolGradient } from '../../../utils/protocolPresentation';
+import { getProtocolPresentation } from '../../../utils/protocolPresentation';
 
 // icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -49,8 +50,9 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
 
   if (!node) return null;
 
-  const gradientBg = getProtocolGradient(node.Protocol, [], 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
   const displayName = node.PreviewName || node.Name || node.OriginalName || '未知节点';
+  const protocolInfo = getProtocolPresentation(node.Protocol);
+  const protocolColor = protocolInfo.color || theme.palette.primary.main;
 
   // 复制到剪贴板
   const copyToClipboard = async (text, label) => {
@@ -65,6 +67,8 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
   // 标签列表
   const tags = node.Tags ? node.Tags.split(',').filter((t) => t.trim()) : [];
   const previewLink = node.PreviewLink || node.Link || '';
+  const subtleMonoColor = alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.86 : 0.66);
+  const secondaryLinkColor = alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.76 : 0.58);
 
   return (
     <>
@@ -77,12 +81,24 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
           sx: {
             borderRadius: 3,
             overflow: 'hidden',
-            m: isMobile ? 2 : 3
+            m: isMobile ? 2 : 3,
+            bgcolor: 'background.paper',
+            backgroundImage: 'none',
+            border: '1px solid',
+            borderColor: 'divider'
           }
         }}
       >
-        {/* 渐变头部 - 紧凑 */}
-        <Box sx={{ background: gradientBg, p: 2, position: 'relative' }}>
+        <Box
+          sx={{
+            p: 2,
+            position: 'relative',
+            bgcolor: 'background.default',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            boxShadow: `inset 0 -1px 0 ${alpha(theme.palette.divider, 0.45)}`
+          }}
+        >
           {/* 关闭按钮 */}
           <IconButton
             onClick={onClose}
@@ -91,9 +107,11 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
               position: 'absolute',
               top: 8,
               right: 8,
-              color: '#fff',
-              bgcolor: 'rgba(255,255,255,0.2)',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
+              color: 'text.secondary',
+              bgcolor: alpha(theme.palette.background.paper, 0.9),
+              border: '1px solid',
+              borderColor: alpha(theme.palette.divider, 0.9),
+              '&:hover': { bgcolor: 'background.paper' }
             }}
           >
             <CloseIcon fontSize="small" />
@@ -101,55 +119,108 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
 
           {/* 头部信息 */}
           <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Typography sx={{ fontSize: 36 }}>{node.CountryFlag || '🌐'}</Typography>
+            <Box
+              sx={{
+                width: 52,
+                height: 52,
+                borderRadius: 2,
+                bgcolor: alpha(protocolColor, 0.12),
+                color: protocolColor,
+                border: '1px solid',
+                borderColor: alpha(protocolColor, 0.22),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <Typography sx={{ fontSize: 30, lineHeight: 1 }}>{node.CountryFlag || '🌐'}</Typography>
+            </Box>
             <Box sx={{ flex: 1, minWidth: 0, pr: 4 }}>
-              <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 16, lineHeight: 1.3, wordBreak: 'break-word' }}>
+              <Typography sx={{ color: 'text.primary', fontWeight: 700, fontSize: 16, lineHeight: 1.3, wordBreak: 'break-word' }}>
                 {displayName}
               </Typography>
               <Stack direction="row" alignItems="center" spacing={0.75} mt={0.5}>
                 <Chip
                   label={node.Protocol || '未知'}
                   size="small"
-                  sx={{ height: 20, fontSize: 10, fontWeight: 600, bgcolor: 'rgba(255,255,255,0.25)', color: '#fff' }}
+                  sx={{
+                    height: 20,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    bgcolor: alpha(protocolColor, 0.12),
+                    color: protocolColor,
+                    border: '1px solid',
+                    borderColor: alpha(protocolColor, 0.18)
+                  }}
                 />
-                {node.Group && <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: 11 }}>{node.Group}</Typography>}
+                {node.Group && <Typography sx={{ color: 'text.secondary', fontSize: 11 }}>{node.Group}</Typography>}
               </Stack>
             </Box>
           </Stack>
 
           {/* 性能指标 - 紧凑横向 */}
           <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
-            <Box sx={{ flex: 1, bgcolor: 'rgba(255,255,255,0.15)', borderRadius: 1.5, p: 1, textAlign: 'center' }}>
+            <Paper
+              variant="outlined"
+              sx={{
+                flex: 1,
+                borderRadius: 1.5,
+                p: 1,
+                textAlign: 'center',
+                bgcolor: 'background.paper',
+                borderColor: alpha(theme.palette.divider, 0.9)
+              }}
+            >
               <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5}>
-                <SignalCellularAltIcon sx={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }} />
-                <Typography sx={{ fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>延迟</Typography>
+                <SignalCellularAltIcon sx={{ fontSize: 12, color: 'success.main' }} />
+                <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>延迟</Typography>
               </Stack>
-              <Typography sx={{ fontSize: 18, fontWeight: 700, color: '#fff', mt: 0.25 }}>
+              <Typography sx={{ fontSize: 18, fontWeight: 700, color: 'text.primary', mt: 0.25 }}>
                 {node.DelayTime > 0 ? `${node.DelayTime}ms` : '-'}
               </Typography>
               {node.LatencyCheckAt && (
-                <Typography sx={{ fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>{formatDateTime(node.LatencyCheckAt)}</Typography>
+                <Typography sx={{ fontSize: 9, color: 'text.secondary' }}>{formatDateTime(node.LatencyCheckAt)}</Typography>
               )}
-            </Box>
-            <Box sx={{ flex: 1, bgcolor: 'rgba(255,255,255,0.15)', borderRadius: 1.5, p: 1, textAlign: 'center' }}>
+            </Paper>
+            <Paper
+              variant="outlined"
+              sx={{
+                flex: 1,
+                borderRadius: 1.5,
+                p: 1,
+                textAlign: 'center',
+                bgcolor: 'background.paper',
+                borderColor: alpha(theme.palette.divider, 0.9)
+              }}
+            >
               <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5}>
-                <SpeedIcon sx={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }} />
-                <Typography sx={{ fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>速度</Typography>
+                <SpeedIcon sx={{ fontSize: 12, color: 'info.main' }} />
+                <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>速度</Typography>
               </Stack>
-              <Typography sx={{ fontSize: 18, fontWeight: 700, color: '#fff', mt: 0.25 }}>
+              <Typography sx={{ fontSize: 18, fontWeight: 700, color: 'text.primary', mt: 0.25 }}>
                 {node.Speed > 0 ? `${node.Speed.toFixed(1)}M` : '-'}
               </Typography>
               {node.SpeedCheckAt && (
-                <Typography sx={{ fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>{formatDateTime(node.SpeedCheckAt)}</Typography>
+                <Typography sx={{ fontSize: 9, color: 'text.secondary' }}>{formatDateTime(node.SpeedCheckAt)}</Typography>
               )}
-            </Box>
+            </Paper>
           </Stack>
         </Box>
 
-        <DialogContent sx={{ p: 2 }}>
+        <DialogContent sx={{ p: 2, bgcolor: 'background.paper' }}>
           {/* 名称转换 - 紧凑 */}
           {node.OriginalName && node.OriginalName !== displayName && (
-            <Box sx={{ mb: 1.5, p: 1, bgcolor: alpha(theme.palette.primary.main, 0.06), borderRadius: 1.5 }}>
+            <Box
+              sx={{
+                mb: 1.5,
+                p: 1,
+                bgcolor: 'background.default',
+                borderRadius: 1.5,
+                border: '1px solid',
+                borderColor: alpha(theme.palette.primary.main, 0.18)
+              }}
+            >
               <Typography variant="caption" color="primary" fontWeight={600}>
                 名称转换
               </Typography>
@@ -166,7 +237,11 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
           )}
 
           {/* 基本信息 - 一行显示 */}
-          <Grid container spacing={1} sx={{ mb: 1.5 }}>
+          <Grid
+            container
+            spacing={1}
+            sx={{ mb: 1.5, p: 1.25, borderRadius: 1.5, bgcolor: 'background.default', border: '1px solid', borderColor: 'divider' }}
+          >
             <Grid item xs={6}>
               <Typography variant="caption" color="text.secondary">
                 来源
@@ -222,7 +297,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                         height: 22,
                         fontSize: 11,
                         bgcolor: tagColor || alpha(theme.palette.primary.main, 0.1),
-                        color: tagColor ? '#fff' : 'text.primary'
+                        color: tagColor ? theme.palette.getContrastText(tagColor) : 'text.primary'
                       }}
                     />
                   );
@@ -233,54 +308,81 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
 
           <Divider sx={{ my: 1.5 }} />
 
-          {/* 预览链接 - 紧凑单行显示 + 复制 */}
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-              预览链接
-            </Typography>
-            <Typography
-              sx={{
-                flex: 1,
-                fontSize: 10,
-                color: 'text.disabled',
-                fontFamily: 'monospace',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {previewLink.substring(0, 50)}...
-            </Typography>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<ContentCopyIcon sx={{ fontSize: 12 }} />}
-              onClick={() => copyToClipboard(previewLink, '链接')}
-              sx={{ fontSize: 10, py: 0.25, px: 1, minWidth: 0, flexShrink: 0 }}
-            >
-              复制
-            </Button>
-          </Stack>
-
-          {/* 原始链接（如果不同）- 紧凑 */}
-          {node.PreviewLink && node.PreviewLink !== node.Link && (
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
-              <Typography variant="caption" color="text.disabled" sx={{ flexShrink: 0 }}>
-                原始链接
+          <Box
+            sx={{
+              p: 1.25,
+              borderRadius: 1.5,
+              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.default, 0.84) : 'background.default',
+              border: '1px solid',
+              borderColor: alpha(theme.palette.divider, theme.palette.mode === 'dark' ? 0.82 : 0.72)
+            }}
+          >
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, fontWeight: 600 }}>
+                预览链接
               </Typography>
-              <Typography sx={{ flex: 1, fontSize: 9, color: 'text.disabled', fontFamily: 'monospace' }} noWrap>
-                {node.Link?.substring(0, 40)}...
+              <Typography
+                sx={{
+                  flex: 1,
+                  fontSize: 10,
+                  color: subtleMonoColor,
+                  fontFamily: 'monospace',
+                  fontWeight: 500,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {previewLink.substring(0, 50)}...
               </Typography>
               <Button
                 size="small"
-                color="inherit"
-                onClick={() => copyToClipboard(node.Link, '原始链接')}
-                sx={{ fontSize: 9, py: 0, minWidth: 0, color: 'text.disabled' }}
+                variant="outlined"
+                startIcon={<ContentCopyIcon sx={{ fontSize: 12 }} />}
+                onClick={() => copyToClipboard(previewLink, '链接')}
+                sx={{
+                  fontSize: 10,
+                  py: 0.25,
+                  px: 1,
+                  minWidth: 0,
+                  flexShrink: 0,
+                  borderColor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.3 : 0.18),
+                  color: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.9) : 'primary.main'
+                }}
               >
                 复制
               </Button>
             </Stack>
-          )}
+
+            {node.PreviewLink && node.PreviewLink !== node.Link && (
+              <Stack
+                direction="row"
+                alignItems="center"
+                spacing={1}
+                sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: alpha(theme.palette.divider, 0.72) }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, fontWeight: 600 }}>
+                  原始链接
+                </Typography>
+                <Typography sx={{ flex: 1, fontSize: 9, color: secondaryLinkColor, fontFamily: 'monospace' }} noWrap>
+                  {node.Link?.substring(0, 40)}...
+                </Typography>
+                <Button
+                  size="small"
+                  color="inherit"
+                  onClick={() => copyToClipboard(node.Link, '原始链接')}
+                  sx={{
+                    fontSize: 9,
+                    py: 0,
+                    minWidth: 0,
+                    color: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.82) : 'text.secondary'
+                  }}
+                >
+                  复制
+                </Button>
+              </Stack>
+            )}
+          </Box>
         </DialogContent>
       </Dialog>
 

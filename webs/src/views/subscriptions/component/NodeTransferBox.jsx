@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -20,6 +20,7 @@ import Grid from '@mui/material/Grid';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Fade from '@mui/material/Fade';
+import { withAlpha } from '../../../utils/colorUtils';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
@@ -61,6 +62,147 @@ export default function NodeTransferBox({
   onToggleAllSelected
 }) {
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
+  const dialogSurface = isDark ? withAlpha(palette.background.default, 0.96) : palette.background.paper;
+  const dialogSurfaceGradient = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.16)} 0%, ${dialogSurface} 100%)`
+    : 'none';
+  const mutedPanelSurface = isDark ? withAlpha(palette.background.default, 0.84) : palette.background.default;
+  const nestedPanelSurface = isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper;
+  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
+  const listItemSurface = isDark ? withAlpha(palette.background.default, 0.62) : 'transparent';
+  const listItemHoverSurface = isDark ? withAlpha(palette.background.paper, 0.5) : theme.palette.action.hover;
+  const actionStripSurface = isDark ? withAlpha(palette.background.default, 0.9) : palette.background.paper;
+
+  const buildPanelSx = (colorKey) => ({
+    backgroundColor: dialogSurface,
+    backgroundImage: dialogSurfaceGradient,
+    border: '1px solid',
+    borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.28 : 0.18),
+    borderRadius: 3,
+    boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.03)}` : 'none',
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+    '&:hover': {
+      borderColor: `${colorKey}.main`,
+      boxShadow: isDark ? `0 0 0 1px ${alpha(theme.palette[colorKey].main, 0.18)}` : theme.shadows[2]
+    }
+  });
+
+  const listSurfaceSx = {
+    bgcolor: nestedPanelSurface,
+    border: '1px solid',
+    borderColor: panelBorder,
+    borderRadius: 2,
+    boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.03)}` : 'none'
+  };
+
+  const searchFieldSx = {
+    mb: 2,
+    flexShrink: 0,
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 2.5,
+      bgcolor: mutedPanelSurface,
+      border: '1px solid',
+      borderColor: panelBorder,
+      boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.02)}` : 'none',
+      transition: 'border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
+      '& fieldset': { borderColor: 'transparent' },
+      '&:hover': {
+        bgcolor: isDark ? withAlpha(palette.background.default, 0.92) : palette.background.paper,
+        '& fieldset': {
+          borderColor: alpha(theme.palette.primary.main, isDark ? 0.22 : 0.14)
+        }
+      },
+      '&.Mui-focused': {
+        bgcolor: dialogSurface,
+        boxShadow: isDark ? `0 0 0 1px ${alpha(theme.palette.primary.main, 0.16)}` : 'none',
+        '& fieldset': {
+          borderColor: alpha(theme.palette.primary.main, isDark ? 0.32 : 0.22)
+        }
+      }
+    },
+    '& .MuiInputBase-input::placeholder': {
+      color: isDark ? alpha(theme.palette.text.secondary, 0.92) : undefined,
+      opacity: 1
+    }
+  };
+
+  const actionStripSx = {
+    mt: 2,
+    p: 1.5,
+    borderRadius: 2.5,
+    display: 'flex',
+    gap: 1,
+    justifyContent: 'center',
+    bgcolor: actionStripSurface,
+    border: '1px solid',
+    borderColor: panelBorder,
+    boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.03)}` : theme.shadows[1]
+  };
+
+  const actionStripButtonSx = (colorKey) => ({
+    bgcolor: alpha(theme.palette[colorKey].main, isDark ? 0.14 : 0.08),
+    color: `${colorKey}.main`,
+    border: '1px solid',
+    borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.32 : 0.18),
+    fontWeight: 700,
+    boxShadow: 'none',
+    '&:hover': { bgcolor: alpha(theme.palette[colorKey].main, isDark ? 0.2 : 0.12) },
+    '&:disabled': {
+      bgcolor: 'action.disabledBackground',
+      color: 'text.disabled'
+    }
+  });
+  const actionStripOutlinedButtonSx = (colorKey) => ({
+    bgcolor: nestedPanelSurface,
+    borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.28 : 0.18),
+    borderWidth: 1,
+    color: theme.palette[colorKey].main,
+    fontWeight: 700,
+    '&:hover': {
+      bgcolor: isDark ? withAlpha(palette.background.paper, 0.52) : alpha(theme.palette[colorKey].main, 0.06),
+      borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.42 : 0.28)
+    }
+  });
+  const desktopActionButtonSx = (colorKey) => ({
+    minWidth: 120,
+    bgcolor: alpha(theme.palette[colorKey].main, isDark ? 0.18 : 0.1),
+    border: '1px solid',
+    borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.34 : 0.22),
+    boxShadow: 'none',
+    color: theme.palette[colorKey].main,
+    fontWeight: 700,
+    '&:hover': {
+      bgcolor: alpha(theme.palette[colorKey].main, isDark ? 0.26 : 0.16),
+      borderColor: theme.palette[colorKey].main
+    },
+    '&:disabled': {
+      background: theme.palette.action.disabledBackground,
+      color: theme.palette.text.disabled
+    }
+  });
+  const desktopSecondaryActionButtonSx = (colorKey) => ({
+    minWidth: 120,
+    bgcolor: isDark ? withAlpha(palette.background.paper, 0.46) : alpha(theme.palette[colorKey].main, 0.04),
+    border: '1px solid',
+    borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.28 : 0.18),
+    color: theme.palette[colorKey].main,
+    fontWeight: 600,
+    '&:hover': {
+      bgcolor: alpha(theme.palette[colorKey].main, isDark ? 0.14 : 0.08),
+      borderColor: theme.palette[colorKey].main
+    }
+  });
+  const desktopActionStripSx = {
+    width: '100%',
+    p: 1.5,
+    borderRadius: 3,
+    bgcolor: mutedPanelSurface,
+    border: '1px solid',
+    borderColor: panelBorder,
+    boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.03)}` : theme.shadows[1]
+  };
 
   // 筛选已选节点
   const filteredSelectedNodes = useMemo(() => {
@@ -79,15 +221,32 @@ export default function NodeTransferBox({
           variant="fullWidth"
           sx={{
             mb: 2,
+            p: 0.5,
+            bgcolor: mutedPanelSurface,
+            border: '1px solid',
+            borderColor: panelBorder,
+            borderRadius: 3,
+            boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.03)}` : 'none',
+            '& .MuiTabs-indicator': {
+              display: 'none'
+            },
             '& .MuiTab-root': {
               fontWeight: 600,
               borderRadius: 2,
               mx: 0.5,
-              transition: 'all 0.2s'
+              minHeight: 44,
+              color: 'text.secondary',
+              transition: 'all 0.2s',
+              '&:hover': {
+                bgcolor: isDark ? withAlpha(palette.background.paper, 0.26) : alpha(theme.palette.primary.main, 0.05)
+              }
             },
             '& .Mui-selected': {
-              bgcolor: 'primary.light',
-              color: 'primary.contrastText'
+              bgcolor: nestedPanelSurface,
+              color: 'text.primary',
+              border: '1px solid',
+              borderColor: alpha(theme.palette.primary.main, isDark ? 0.24 : 0.18),
+              boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : 'none'
             }
           }}
         >
@@ -104,10 +263,7 @@ export default function NodeTransferBox({
                 p: 2,
                 maxHeight: 350,
                 overflow: 'auto',
-                background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a1a2e' : '#f8f9fa'} 0%, ${theme.palette.mode === 'dark' ? '#16213e' : '#ffffff'} 100%)`,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 3
+                ...buildPanelSx('primary')
               }}
             >
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
@@ -133,7 +289,7 @@ export default function NodeTransferBox({
                   variant="outlined"
                 />
               </Stack>
-              <List dense sx={{ pt: 0 }}>
+              <List dense sx={{ pt: 0, ...listSurfaceSx, p: 1 }}>
                 {availableNodes.slice(0, 100).map((node) => (
                   <ListItem
                     key={node.ID}
@@ -142,13 +298,18 @@ export default function NodeTransferBox({
                       px: 1,
                       mb: 0.5,
                       borderRadius: 2,
-                      bgcolor: checkedAvailable.includes(node.ID) ? 'action.selected' : 'transparent',
+                      bgcolor: checkedAvailable.includes(node.ID)
+                        ? alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08)
+                        : listItemSurface,
                       border: '1px solid',
-                      borderColor: checkedAvailable.includes(node.ID) ? 'primary.main' : 'transparent',
+                      borderColor: checkedAvailable.includes(node.ID)
+                        ? alpha(theme.palette.primary.main, isDark ? 0.38 : 0.24)
+                        : alpha(theme.palette.divider, isDark ? 0.72 : 0.4),
                       transition: 'all 0.15s ease-in-out',
                       '&:hover': {
-                        bgcolor: 'action.hover',
-                        transform: 'translateX(4px)'
+                        bgcolor: listItemHoverSurface,
+                        transform: 'translateX(4px)',
+                        borderColor: alpha(theme.palette.primary.main, isDark ? 0.28 : 0.18)
                       }
                     }}
                     secondaryAction={
@@ -157,9 +318,11 @@ export default function NodeTransferBox({
                         color="primary"
                         onClick={() => onAddNode(node.ID)}
                         sx={{
-                          bgcolor: 'primary.main',
-                          color: 'white',
-                          '&:hover': { bgcolor: 'primary.dark' }
+                          bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
+                          color: 'primary.main',
+                          border: '1px solid',
+                          borderColor: alpha(theme.palette.primary.main, isDark ? 0.3 : 0.18),
+                          '&:hover': { bgcolor: alpha(theme.palette.primary.main, isDark ? 0.22 : 0.12) }
                         }}
                       >
                         <AddIcon fontSize="small" />
@@ -196,18 +359,7 @@ export default function NodeTransferBox({
             </Paper>
 
             {/* 移动端底部操作栏 */}
-            <Paper
-              elevation={3}
-              sx={{
-                mt: 2,
-                p: 1.5,
-                borderRadius: 2,
-                display: 'flex',
-                gap: 1,
-                justifyContent: 'center',
-                background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
-              }}
-            >
+            <Paper elevation={3} sx={actionStripSx}>
               <Button
                 variant="contained"
                 color="inherit"
@@ -215,30 +367,11 @@ export default function NodeTransferBox({
                 startIcon={<AddIcon />}
                 onClick={onAddChecked}
                 disabled={checkedAvailable.length === 0}
-                sx={{
-                  bgcolor: 'white',
-                  color: 'primary.dark',
-                  fontWeight: 700,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                  '&:hover': { bgcolor: '#f5f5f5' },
-                  '&:disabled': { bgcolor: '#e0e0e0', color: '#999' }
-                }}
+                sx={actionStripButtonSx('primary')}
               >
                 添加选中 ({checkedAvailable.length})
               </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={onAddAllVisible}
-                sx={{
-                  borderColor: 'white',
-                  borderWidth: 2,
-                  color: 'white',
-                  fontWeight: 700,
-                  textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', borderColor: 'white' }
-                }}
-              >
+              <Button variant="outlined" size="small" onClick={onAddAllVisible} sx={actionStripOutlinedButtonSx('primary')}>
                 全部添加
               </Button>
             </Paper>
@@ -261,7 +394,7 @@ export default function NodeTransferBox({
                   </InputAdornment>
                 )
               }}
-              sx={{ mb: 2 }}
+              sx={searchFieldSx}
             />
             <Paper
               elevation={0}
@@ -269,10 +402,7 @@ export default function NodeTransferBox({
                 p: 2,
                 maxHeight: 350,
                 overflow: 'auto',
-                background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1e3a2f' : '#f0fff4'} 0%, ${theme.palette.mode === 'dark' ? '#1a3330' : '#ffffff'} 100%)`,
-                border: '1px solid',
-                borderColor: 'success.light',
-                borderRadius: 3
+                ...buildPanelSx('success')
               }}
             >
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
@@ -294,7 +424,7 @@ export default function NodeTransferBox({
                 />
                 <Chip label={`${selectedNodes.length}个已选`} size="small" color="success" />
               </Stack>
-              <List dense sx={{ pt: 0 }}>
+              <List dense sx={{ pt: 0, ...listSurfaceSx, p: 1 }}>
                 {filteredSelectedNodes.map((node) => (
                   <ListItem
                     key={node.ID}
@@ -303,13 +433,16 @@ export default function NodeTransferBox({
                       px: 1,
                       mb: 0.5,
                       borderRadius: 2,
-                      bgcolor: checkedSelected.includes(node.ID) ? 'error.lighter' : 'transparent',
+                      bgcolor: checkedSelected.includes(node.ID) ? alpha(theme.palette.error.main, isDark ? 0.14 : 0.08) : listItemSurface,
                       border: '1px solid',
-                      borderColor: checkedSelected.includes(node.ID) ? 'error.main' : 'transparent',
+                      borderColor: checkedSelected.includes(node.ID)
+                        ? alpha(theme.palette.error.main, isDark ? 0.34 : 0.22)
+                        : alpha(theme.palette.divider, isDark ? 0.72 : 0.4),
                       transition: 'all 0.15s ease-in-out',
                       '&:hover': {
-                        bgcolor: 'action.hover',
-                        transform: 'translateX(-4px)'
+                        bgcolor: listItemHoverSurface,
+                        transform: 'translateX(-4px)',
+                        borderColor: alpha(theme.palette.error.main, isDark ? 0.26 : 0.18)
                       }
                     }}
                     secondaryAction={
@@ -318,9 +451,11 @@ export default function NodeTransferBox({
                         color="error"
                         onClick={() => onRemoveNode(node.ID)}
                         sx={{
-                          bgcolor: 'error.main',
-                          color: 'white',
-                          '&:hover': { bgcolor: 'error.dark' }
+                          bgcolor: alpha(theme.palette.error.main, isDark ? 0.16 : 0.08),
+                          color: 'error.main',
+                          border: '1px solid',
+                          borderColor: alpha(theme.palette.error.main, isDark ? 0.3 : 0.18),
+                          '&:hover': { bgcolor: alpha(theme.palette.error.main, isDark ? 0.22 : 0.12) }
                         }}
                       >
                         <DeleteIcon fontSize="small" />
@@ -357,25 +492,14 @@ export default function NodeTransferBox({
                 ))}
               </List>
               {filteredSelectedNodes.length === 0 && (
-                <Typography color="textSecondary" align="center" sx={{ py: 4 }}>
+                <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
                   {selectedNodeSearch ? '未找到匹配的节点' : '暂无已选节点'}
                 </Typography>
               )}
             </Paper>
 
             {/* 移动端底部操作栏 */}
-            <Paper
-              elevation={3}
-              sx={{
-                mt: 2,
-                p: 1.5,
-                borderRadius: 2,
-                display: 'flex',
-                gap: 1,
-                justifyContent: 'center',
-                background: `linear-gradient(90deg, ${theme.palette.error.main} 0%, ${theme.palette.error.dark} 100%)`
-              }}
-            >
+            <Paper elevation={3} sx={actionStripSx}>
               <Button
                 variant="contained"
                 color="inherit"
@@ -383,30 +507,11 @@ export default function NodeTransferBox({
                 startIcon={<DeleteIcon />}
                 onClick={onRemoveChecked}
                 disabled={checkedSelected.length === 0}
-                sx={{
-                  bgcolor: 'white',
-                  color: 'error.dark',
-                  fontWeight: 700,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                  '&:hover': { bgcolor: '#f5f5f5' },
-                  '&:disabled': { bgcolor: '#e0e0e0', color: '#999' }
-                }}
+                sx={actionStripButtonSx('error')}
               >
                 移除选中 ({checkedSelected.length})
               </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={onRemoveAll}
-                sx={{
-                  borderColor: 'white',
-                  borderWidth: 2,
-                  color: 'white',
-                  fontWeight: 700,
-                  textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', borderColor: 'white' }
-                }}
-              >
+              <Button variant="outlined" size="small" onClick={onRemoveAll} sx={actionStripOutlinedButtonSx('error')}>
                 全部移除
               </Button>
             </Paper>
@@ -429,15 +534,7 @@ export default function NodeTransferBox({
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a1a2e' : '#f8f9fa'} 0%, ${theme.palette.mode === 'dark' ? '#16213e' : '#ffffff'} 100%)`,
-            border: '2px solid',
-            borderColor: 'primary.light',
-            borderRadius: 3,
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              borderColor: 'primary.main',
-              boxShadow: `0 4px 20px ${theme.palette.primary.main}20`
-            }
+            ...buildPanelSx('primary')
           }}
         >
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5, flexShrink: 0 }}>
@@ -465,7 +562,7 @@ export default function NodeTransferBox({
             />
           </Stack>
           <Box sx={{ flexGrow: 1, overflow: 'auto', pr: 1 }}>
-            <List dense>
+            <List dense sx={{ ...listSurfaceSx, p: 1 }}>
               {availableNodes.slice(0, 100).map((node) => (
                 <ListItem
                   key={node.ID}
@@ -475,14 +572,16 @@ export default function NodeTransferBox({
                     mb: 0.5,
                     borderRadius: 2,
                     cursor: 'pointer',
-                    bgcolor: checkedAvailable.includes(node.ID) ? 'primary.lighter' : 'transparent',
+                    bgcolor: checkedAvailable.includes(node.ID) ? alpha(theme.palette.primary.main, isDark ? 0.16 : 0.1) : listItemSurface,
                     border: '1px solid',
-                    borderColor: checkedAvailable.includes(node.ID) ? 'primary.main' : 'divider',
+                    borderColor: checkedAvailable.includes(node.ID)
+                      ? alpha(theme.palette.primary.main, isDark ? 0.38 : 0.24)
+                      : alpha(theme.palette.divider, isDark ? 0.72 : 0.5),
                     transition: 'all 0.15s ease-in-out',
                     '&:hover': {
-                      bgcolor: 'action.hover',
+                      bgcolor: listItemHoverSurface,
                       transform: 'translateX(4px)',
-                      borderColor: 'primary.light'
+                      borderColor: alpha(theme.palette.primary.main, isDark ? 0.28 : 0.18)
                     }
                   }}
                   onClick={() => onToggleAvailable(node.ID)}
@@ -507,7 +606,7 @@ export default function NodeTransferBox({
                 </ListItem>
               ))}
               {availableNodes.length > 100 && (
-                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textAlign: 'center', py: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', py: 1 }}>
                   还有 {availableNodes.length - 100} 个节点未显示
                 </Typography>
               )}
@@ -517,70 +616,52 @@ export default function NodeTransferBox({
       </Grid>
 
       {/* 中间操作按钮 */}
-      <Grid item xs={2} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-        <Button
-          variant="contained"
-          size="small"
-          onClick={onAddChecked}
-          disabled={checkedAvailable.length === 0}
-          endIcon={<ChevronRightIcon />}
-          sx={{
-            minWidth: 120,
-            background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-            boxShadow: '0 3px 5px 2px rgba(33, 150, 243, .3)',
-            color: '#fff',
-            fontWeight: 700,
-            textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-            '&:disabled': {
-              background: '#ccc',
-              color: '#888'
-            }
-          }}
-        >
-          添加 ({checkedAvailable.length})
-        </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={onAddAllVisible}
-          endIcon={<ChevronRightIcon />}
-          sx={{ minWidth: 120, fontWeight: 600 }}
-        >
-          全部添加
-        </Button>
-        <Divider sx={{ width: '60%', my: 1 }} />
-        <Button
-          variant="outlined"
-          size="small"
-          color="error"
-          onClick={onRemoveAll}
-          startIcon={<ChevronLeftIcon />}
-          sx={{ minWidth: 120, fontWeight: 600 }}
-        >
-          全部移除
-        </Button>
-        <Button
-          variant="contained"
-          size="small"
-          color="error"
-          onClick={onRemoveChecked}
-          disabled={checkedSelected.length === 0}
-          startIcon={<ChevronLeftIcon />}
-          sx={{
-            minWidth: 120,
-            background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
-            boxShadow: '0 3px 5px 2px rgba(254, 107, 139, .3)',
-            color: '#fff',
-            fontWeight: 700,
-            textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-            '&:disabled': {
-              background: '#ccc',
-              color: '#888'
-            }
-          }}
-        >
-          移除 ({checkedSelected.length})
-        </Button>
+      <Grid item xs={2} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={desktopActionStripSx}>
+          <Stack spacing={1} alignItems="center">
+            <Button
+              variant="contained"
+              size="small"
+              onClick={onAddChecked}
+              disabled={checkedAvailable.length === 0}
+              endIcon={<ChevronRightIcon />}
+              sx={desktopActionButtonSx('primary')}
+            >
+              添加 ({checkedAvailable.length})
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={onAddAllVisible}
+              endIcon={<ChevronRightIcon />}
+              sx={desktopSecondaryActionButtonSx('primary')}
+            >
+              全部添加
+            </Button>
+            <Divider sx={{ width: '60%', my: 0.5, borderColor: panelBorder }} />
+            <Button
+              variant="outlined"
+              size="small"
+              color="error"
+              onClick={onRemoveAll}
+              startIcon={<ChevronLeftIcon />}
+              sx={desktopSecondaryActionButtonSx('error')}
+            >
+              全部移除
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              color="error"
+              onClick={onRemoveChecked}
+              disabled={checkedSelected.length === 0}
+              startIcon={<ChevronLeftIcon />}
+              sx={desktopActionButtonSx('error')}
+            >
+              移除 ({checkedSelected.length})
+            </Button>
+          </Stack>
+        </Box>
       </Grid>
 
       {/* 已选节点 */}
@@ -593,15 +674,7 @@ export default function NodeTransferBox({
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1e3a2f' : '#f0fff4'} 0%, ${theme.palette.mode === 'dark' ? '#1a3330' : '#ffffff'} 100%)`,
-            border: '2px solid',
-            borderColor: 'success.light',
-            borderRadius: 3,
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              borderColor: 'success.main',
-              boxShadow: `0 4px 20px ${theme.palette.success.main}20`
-            }
+            ...buildPanelSx('success')
           }}
         >
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1, flexShrink: 0 }}>
@@ -638,10 +711,10 @@ export default function NodeTransferBox({
                 </InputAdornment>
               )
             }}
-            sx={{ mb: 1, flexShrink: 0, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            sx={{ ...searchFieldSx, mb: 1 }}
           />
           <Box sx={{ flexGrow: 1, overflow: 'auto', pr: 1 }}>
-            <List dense>
+            <List dense sx={{ ...listSurfaceSx, p: 1 }}>
               {filteredSelectedNodes.map((node) => (
                 <ListItem
                   key={node.ID}
@@ -651,14 +724,16 @@ export default function NodeTransferBox({
                     mb: 0.5,
                     borderRadius: 2,
                     cursor: 'pointer',
-                    bgcolor: checkedSelected.includes(node.ID) ? 'error.lighter' : 'transparent',
+                    bgcolor: checkedSelected.includes(node.ID) ? alpha(theme.palette.error.main, isDark ? 0.14 : 0.08) : listItemSurface,
                     border: '1px solid',
-                    borderColor: checkedSelected.includes(node.ID) ? 'error.main' : 'divider',
+                    borderColor: checkedSelected.includes(node.ID)
+                      ? alpha(theme.palette.error.main, isDark ? 0.34 : 0.22)
+                      : alpha(theme.palette.divider, isDark ? 0.72 : 0.5),
                     transition: 'all 0.15s ease-in-out',
                     '&:hover': {
-                      bgcolor: 'action.hover',
+                      bgcolor: listItemHoverSurface,
                       transform: 'translateX(-4px)',
-                      borderColor: 'error.light'
+                      borderColor: alpha(theme.palette.error.main, isDark ? 0.26 : 0.18)
                     }
                   }}
                   onClick={() => onToggleSelected(node.ID)}
@@ -691,7 +766,7 @@ export default function NodeTransferBox({
               ))}
             </List>
             {filteredSelectedNodes.length === 0 && (
-              <Typography color="textSecondary" align="center" sx={{ py: 4 }}>
+              <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
                 {selectedNodeSearch ? '未找到匹配的节点' : '暂无已选节点'}
               </Typography>
             )}

@@ -15,8 +15,9 @@ import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { alpha, useTheme } from '@mui/material/styles';
+import { alpha, useColorScheme, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { withAlpha } from 'utils/colorUtils';
 
 // icons
 import ScheduleIcon from '@mui/icons-material/Schedule';
@@ -307,7 +308,17 @@ const WEEKDAY_OPTIONS = [
  */
 export default function CronExpressionGenerator({ value, onChange, label = 'Cron表达式', helperText, error = false }) {
   const theme = useTheme();
+  const { mode } = useColorScheme();
+  const palette = theme.vars?.palette || theme.palette;
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const runtimeColorScheme = typeof document !== 'undefined' ? document.documentElement?.getAttribute('data-color-scheme') : null;
+  const isDark = (mode || runtimeColorScheme || theme.palette.mode) === 'dark';
+  const customPanelBackground = isDark ? withAlpha(palette.background.default, 0.92) : alpha(theme.palette.background.default, 0.5);
+  const customPanelBorder = isDark ? withAlpha(palette.divider, 0.84) : alpha(theme.palette.divider, 0.5);
+  const nestedFieldBackground = isDark ? withAlpha(palette.background.paper, 0.94) : 'background.paper';
+  const nestedFieldBorder = isDark ? withAlpha(palette.divider, 0.82) : undefined;
+  const nestedFieldHoverBorder = isDark ? withAlpha(palette.divider, 0.94) : undefined;
+  const subtleChipBackground = isDark ? withAlpha(palette.background.paper, 0.92) : undefined;
 
   // 状态管理
   const [showCustom, setShowCustom] = useState(false);
@@ -358,7 +369,7 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
 
   // 当自定义配置变化时自动更新
   useEffect(() => {
-    if (showCustom && !showAdvanced) {
+    if (showCustom) {
       const newCron = generateCronFromConfig();
       if (newCron !== value) {
         onChange(newCron);
@@ -409,10 +420,12 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
   return (
     <Box>
       {/* 标签 */}
-      <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <ScheduleIcon fontSize="small" />
-        {label}
-      </Typography>
+      {label ? (
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <ScheduleIcon fontSize="small" />
+          {label}
+        </Typography>
+      ) : null}
 
       {/* 预设快捷选项 */}
       <Box sx={{ mb: 2 }}>
@@ -433,8 +446,10 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
                   width: '100%',
                   height: 36,
                   fontSize: isMobile ? '0.75rem' : '0.875rem',
+                  bgcolor:
+                    matchedPreset?.value === preset.value ? undefined : isDark ? alpha(theme.palette.background.paper, 0.08) : undefined,
                   '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.1)
+                    backgroundColor: alpha(theme.palette.primary.main, isDark ? 0.14 : 0.1)
                   }
                 }}
               />
@@ -454,7 +469,8 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
               sx={{
                 width: '100%',
                 height: 36,
-                fontSize: isMobile ? '0.75rem' : '0.875rem'
+                fontSize: isMobile ? '0.75rem' : '0.875rem',
+                bgcolor: showCustom ? undefined : isDark ? alpha(theme.palette.background.paper, 0.08) : undefined
               }}
             />
           </Grid>
@@ -468,8 +484,19 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
           sx={{
             p: 2,
             mb: 2,
-            backgroundColor: alpha(theme.palette.background.default, 0.5),
-            borderRadius: 2
+            backgroundColor: customPanelBackground,
+            borderColor: customPanelBorder,
+            borderRadius: 2,
+            boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.03)}` : 'none',
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: nestedFieldBackground,
+              '& fieldset': {
+                borderColor: nestedFieldBorder
+              },
+              '&:hover fieldset': {
+                borderColor: nestedFieldHoverBorder
+              }
+            }
           }}
         >
           <Stack spacing={2}>
@@ -532,7 +559,7 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
             {/* 星期选择 */}
             {frequency === 'weekly' && (
               <Box>
-                <Typography variant="caption" color="textSecondary" sx={{ mb: 1, display: 'block' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
                   选择执行日期（可多选）
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -594,14 +621,25 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
             display: 'flex',
             alignItems: 'center',
             gap: 1,
-            backgroundColor: alpha(theme.palette.background.default, 0.3),
-            borderRadius: 1
+            backgroundColor: isDark ? withAlpha(palette.background.default, 0.92) : alpha(theme.palette.background.default, 0.3),
+            borderColor: isDark ? withAlpha(palette.divider, 0.84) : alpha(theme.palette.divider, 0.5),
+            borderRadius: 1.5
           }}
         >
-          <Typography variant="body2" color="textSecondary">
+          <Typography variant="body2" color="text.secondary">
             当前表达式:
           </Typography>
-          <Chip label={value} size="small" color={isValid ? 'default' : 'error'} icon={isValid ? <CheckCircleIcon /> : <ErrorIcon />} />
+          <Chip
+            label={value}
+            size="small"
+            color={isValid ? 'default' : 'error'}
+            icon={isValid ? <CheckCircleIcon /> : <ErrorIcon />}
+            sx={{
+              bgcolor: subtleChipBackground,
+              color: isDark && isValid ? alpha(theme.palette.text.primary, 0.9) : undefined,
+              borderColor: isDark ? withAlpha(palette.divider, 0.72) : undefined
+            }}
+          />
         </Paper>
       )}
 
@@ -611,8 +649,8 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
           variant="outlined"
           sx={{
             p: isMobile ? 1.5 : 2,
-            backgroundColor: alpha(theme.palette.success.main, 0.05),
-            borderColor: alpha(theme.palette.success.main, 0.3),
+            backgroundColor: isDark ? alpha(theme.palette.success.main, 0.08) : alpha(theme.palette.success.main, 0.05),
+            borderColor: alpha(theme.palette.success.main, isDark ? 0.24 : 0.3),
             borderRadius: 2
           }}
         >
@@ -641,11 +679,21 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
                   borderBottom: index < nextRuns.length - 1 ? `1px dashed ${alpha(theme.palette.divider, 0.5)}` : 'none'
                 }}
               >
-                <Chip label={`第${index + 1}次`} size="small" variant="outlined" sx={{ minWidth: 56, fontSize: '0.7rem' }} />
+                <Chip
+                  label={`第${index + 1}次`}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    minWidth: 56,
+                    fontSize: '0.7rem',
+                    bgcolor: subtleChipBackground,
+                    borderColor: alpha(theme.palette.success.main, isDark ? 0.22 : 0.18)
+                  }}
+                />
                 <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
                   {isMobile ? formatDateTimeShort(run) : formatDateTime(run)}
                 </Typography>
-                <Typography variant="caption" color="textSecondary" sx={{ ml: 'auto' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
                   {formatRelativeTime(run)}
                 </Typography>
               </Box>
@@ -661,9 +709,9 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
           sx={{
             p: 1.5,
             mt: 1,
-            backgroundColor: alpha(theme.palette.error.main, 0.05),
-            borderColor: alpha(theme.palette.error.main, 0.3),
-            borderRadius: 1
+            backgroundColor: isDark ? alpha(theme.palette.error.main, 0.08) : alpha(theme.palette.error.main, 0.05),
+            borderColor: alpha(theme.palette.error.main, isDark ? 0.24 : 0.3),
+            borderRadius: 1.5
           }}
         >
           <Typography variant="body2" color="error" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -675,7 +723,7 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
 
       {/* 帮助文本 */}
       {helperText && (
-        <Typography variant="caption" color={error ? 'error' : 'textSecondary'} sx={{ mt: 1, display: 'block' }}>
+        <Typography variant="caption" color={error ? 'error' : 'text.secondary'} sx={{ mt: 1, display: 'block' }}>
           {helperText}
         </Typography>
       )}

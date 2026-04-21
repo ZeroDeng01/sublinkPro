@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { alpha, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Paper from '@mui/material/Paper';
@@ -32,65 +33,94 @@ import DeviceHubIcon from '@mui/icons-material/DeviceHub';
 import CloseIcon from '@mui/icons-material/Close';
 
 import ConditionBuilder from './ConditionBuilder';
+import { withAlpha } from '../../../utils/colorUtils';
 
-// 自定义节点样式 - 深色科幻风格
-const nodeStyles = {
-  start: {
-    background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.9) 0%, rgba(91, 33, 182, 0.9) 100%)',
-    color: 'white',
-    borderRadius: 30,
-    minWidth: 90,
-    padding: '0 16px',
-    height: 40,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 14,
-    fontWeight: 'bold',
-    boxShadow: '0 0 20px rgba(139, 92, 246, 0.4), 0 4px 15px rgba(102, 126, 234, 0.3)',
-    border: '1px solid rgba(255, 255, 255, 0.2)'
-  },
-  end: {
-    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(22, 163, 74, 0.9) 100%)',
-    color: 'white',
-    borderRadius: 8,
-    minWidth: 100,
-    padding: '8px 16px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 12,
-    fontWeight: 'bold',
-    boxShadow: '0 0 20px rgba(34, 197, 94, 0.4), 0 4px 15px rgba(17, 153, 142, 0.3)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    cursor: 'pointer'
-  },
-  proxy: {
-    background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(8, 145, 178, 0.1) 100%)',
-    border: '2px solid rgba(6, 182, 212, 0.5)',
-    borderRadius: 12,
-    padding: '8px 14px',
-    minWidth: 120,
-    boxShadow: '0 0 15px rgba(6, 182, 212, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-    backdropFilter: 'blur(8px)',
-    cursor: 'pointer',
-    position: 'relative'
+const getProxyTypeColor = (theme, proxyType) => {
+  switch (proxyType) {
+    case 'template_group':
+      return theme.palette.info.main;
+    case 'custom_group':
+      return theme.palette.secondary.main;
+    case 'dynamic_node':
+      return theme.palette.warning.main;
+    case 'specified_node':
+      return theme.palette.success.main;
+    default:
+      return theme.palette.info.main;
   }
+};
+
+const getNodeStyles = (theme) => {
+  const palette = theme.vars?.palette || theme.palette;
+  const isDark = theme.palette.mode === 'dark';
+  const surface = isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper;
+  const elevatedSurface = isDark ? withAlpha(palette.background.default, 0.9) : palette.background.paper;
+
+  return {
+    start: {
+      background: elevatedSurface,
+      color: theme.palette.secondary.main,
+      borderRadius: 30,
+      minWidth: 90,
+      padding: '0 16px',
+      height: 40,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 14,
+      fontWeight: 'bold',
+      boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1],
+      border: `1px solid ${alpha(theme.palette.secondary.main, 0.28)}`
+    },
+    end: {
+      background: surface,
+      color: theme.palette.success.main,
+      borderRadius: 8,
+      minWidth: 100,
+      padding: '8px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 12,
+      fontWeight: 'bold',
+      boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1],
+      border: `1px solid ${alpha(theme.palette.success.main, 0.28)}`,
+      cursor: 'pointer'
+    },
+    proxy: {
+      background: surface,
+      border: `1px solid ${alpha(theme.palette.info.main, 0.28)}`,
+      borderRadius: 12,
+      padding: '8px 14px',
+      minWidth: 120,
+      boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1],
+      cursor: 'pointer',
+      position: 'relative'
+    }
+  };
 };
 
 // 开始节点组件
 function StartNode({ data }) {
+  const theme = useTheme();
+  const nodeStyles = getNodeStyles(theme);
   return (
     <div style={nodeStyles.start}>
       <PlayArrowIcon fontSize="small" sx={{ mr: 0.5 }} />
       <span>{data?.label || '入口'}</span>
-      <Handle type="source" position={Position.Right} style={{ background: '#764ba2' }} />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: theme.palette.secondary.main, border: `2px solid ${nodeStyles.start.background}` }}
+      />
     </div>
   );
 }
 
 // 结束节点组件（目标节点 - 可配置）
 function EndNode({ data, selected }) {
+  const theme = useTheme();
+  const nodeStyles = getNodeStyles(theme);
   // 根据目标类型显示不同标签
   const getTargetLabel = () => {
     switch (data.targetType) {
@@ -109,14 +139,22 @@ function EndNode({ data, selected }) {
     <div
       style={{
         ...nodeStyles.end,
-        boxShadow: selected ? '0 4px 20px rgba(17, 153, 142, 0.6)' : nodeStyles.end.boxShadow
+        boxShadow: selected
+          ? theme.palette.mode === 'dark'
+            ? `0 0 0 1px ${alpha(theme.palette.success.main, 0.32)}`
+            : `0 4px 16px ${alpha(theme.palette.success.main, 0.22)}`
+          : nodeStyles.end.boxShadow
       }}
     >
-      <Handle type="target" position={Position.Left} style={{ background: '#38ef7d' }} />
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: theme.palette.success.main, border: `2px solid ${nodeStyles.end.background}` }}
+      />
       <Stack direction="row" spacing={0.5} alignItems="center">
         <StopIcon fontSize="small" />
         <Box>
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: 10 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 10 }}>
             {getTargetLabel()}
           </Typography>
         </Box>
@@ -127,21 +165,24 @@ function EndNode({ data, selected }) {
 
 // 代理组节点组件 - 支持悬停删除
 function ProxyNode({ data, selected }) {
+  const theme = useTheme();
+  const nodeStyles = getNodeStyles(theme);
   const [hovered, setHovered] = useState(false);
 
   const getIcon = () => {
     const iconStyles = { fontSize: 18 };
+    const color = getProxyTypeColor(theme, data.proxyType);
     switch (data.proxyType) {
       case 'template_group':
-        return <GroupWorkIcon sx={{ ...iconStyles, color: '#06b6d4' }} />;
+        return <GroupWorkIcon sx={{ ...iconStyles, color }} />;
       case 'custom_group':
-        return <DeviceHubIcon sx={{ ...iconStyles, color: '#8b5cf6' }} />;
+        return <DeviceHubIcon sx={{ ...iconStyles, color }} />;
       case 'dynamic_node':
-        return <FilterAltIcon sx={{ ...iconStyles, color: '#eab308' }} />;
+        return <FilterAltIcon sx={{ ...iconStyles, color }} />;
       case 'specified_node':
-        return <DeviceHubIcon sx={{ ...iconStyles, color: '#22c55e' }} />;
+        return <DeviceHubIcon sx={{ ...iconStyles, color }} />;
       default:
-        return <GroupWorkIcon sx={{ ...iconStyles, color: '#06b6d4' }} />;
+        return <GroupWorkIcon sx={{ ...iconStyles, color }} />;
     }
   };
 
@@ -167,13 +208,21 @@ function ProxyNode({ data, selected }) {
     <div
       style={{
         ...nodeStyles.proxy,
-        borderColor: selected ? '#06b6d4' : 'rgba(6, 182, 212, 0.5)',
-        boxShadow: selected ? '0 0 25px rgba(6, 182, 212, 0.5), 0 8px 32px rgba(6, 182, 212, 0.2)' : nodeStyles.proxy.boxShadow
+        borderColor: selected ? theme.palette.info.main : alpha(theme.palette.info.main, 0.42),
+        boxShadow: selected
+          ? theme.palette.mode === 'dark'
+            ? `0 0 0 1px ${alpha(theme.palette.info.main, 0.28)}`
+            : `0 6px 18px ${alpha(theme.palette.info.main, 0.16)}`
+          : nodeStyles.proxy.boxShadow
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <Handle type="target" position={Position.Left} style={{ background: '#06b6d4', width: 8, height: 8, border: '2px solid #1e3a5f' }} />
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: theme.palette.info.main, width: 8, height: 8, border: `2px solid ${nodeStyles.proxy.background}` }}
+      />
 
       {/* 删除按钮 - 悬停显示 */}
       {hovered && (
@@ -187,17 +236,17 @@ function ProxyNode({ data, selected }) {
               right: -8,
               width: 20,
               height: 20,
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              border: '2px solid rgba(255, 255, 255, 0.3)',
-              boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+              background: theme.palette.error.main,
+              border: `1px solid ${alpha(theme.palette.error.main, 0.24)}`,
+              boxShadow: 'none',
               '&:hover': {
-                background: 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)',
+                background: alpha(theme.palette.error.main, 0.9),
                 transform: 'scale(1.1)'
               },
               zIndex: 10
             }}
           >
-            <CloseIcon sx={{ fontSize: 12, color: 'white' }} />
+            <CloseIcon sx={{ fontSize: 12, color: 'error.contrastText' }} />
           </IconButton>
         </Tooltip>
       )}
@@ -205,15 +254,19 @@ function ProxyNode({ data, selected }) {
       <Stack direction="row" spacing={0.5} alignItems="center">
         {getIcon()}
         <Box>
-          <Typography variant="caption" sx={{ display: 'block', fontSize: 10, color: '#94a3b8' }}>
+          <Typography variant="caption" sx={{ display: 'block', fontSize: 10, color: 'text.secondary' }}>
             {getTypeLabel()}
           </Typography>
-          <Typography variant="body2" fontWeight="medium" sx={{ fontSize: 12, color: '#e2e8f0' }}>
+          <Typography variant="body2" fontWeight="medium" sx={{ fontSize: 12, color: 'text.primary' }}>
             {data.label || '未配置'}
           </Typography>
         </Box>
       </Stack>
-      <Handle type="source" position={Position.Right} style={{ background: '#06b6d4', width: 8, height: 8, border: '2px solid #1e3a5f' }} />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: theme.palette.info.main, width: 8, height: 8, border: `2px solid ${nodeStyles.proxy.background}` }}
+      />
     </div>
   );
 }
@@ -225,21 +278,6 @@ const nodeTypes = {
   proxy: ProxyNode
 };
 
-// 默认边样式
-const defaultEdgeOptions = {
-  type: 'smoothstep',
-  animated: true,
-  style: { stroke: '#b1b1b7', strokeWidth: 2 },
-  markerEnd: {
-    type: MarkerType.ArrowClosed,
-    color: '#b1b1b7'
-  }
-};
-
-/**
- * 基于 React Flow 的画板式链式代理配置器
- * 配置面板在流程图右侧内联显示
- */
 export default function ChainFlowBuilder({
   chainConfig = [],
   targetConfig = { type: 'all', conditions: null },
@@ -251,6 +289,21 @@ export default function ChainFlowBuilder({
   groupTypes = [],
   templateGroups = []
 }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
+  const defaultEdgeOptions = useMemo(
+    () => ({
+      type: 'smoothstep',
+      animated: true,
+      style: { stroke: withAlpha(palette.text.secondary, isDark ? 0.76 : 0.72), strokeWidth: 2 },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: withAlpha(palette.text.secondary, isDark ? 0.76 : 0.72)
+      }
+    }),
+    [isDark, palette.text.secondary]
+  );
   // 配置面板状态
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelType, setPanelType] = useState(null); // 'proxy' | 'target'
@@ -388,7 +441,7 @@ export default function ChainFlowBuilder({
     }
 
     return edges;
-  }, [chainConfig]);
+  }, [chainConfig, defaultEdgeOptions]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(flowEdges);
@@ -425,7 +478,6 @@ export default function ChainFlowBuilder({
     setPanelOpen(true);
   }, [chainConfig, onChainConfigChange]);
 
-  // 删除代理节点（从面板）
   const handleDeleteProxy = useCallback(() => {
     if (!selectedNodeId || !selectedNodeId.startsWith('proxy-')) return;
     const nodeIndex = parseInt(selectedNodeId.replace('proxy-', ''), 10);
@@ -434,7 +486,6 @@ export default function ChainFlowBuilder({
     setPanelOpen(false);
   }, [selectedNodeId, chainConfig, onChainConfigChange]);
 
-  // 节点点击
   const onNodeClick = useCallback(
     (event, node) => {
       if (node.type === 'proxy') {
@@ -505,16 +556,16 @@ export default function ChainFlowBuilder({
     return (
       <Stack spacing={2} sx={{ pt: 0.5 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="subtitle1" fontWeight="bold" sx={{ color: '#f1f5f9' }}>
+          <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
             {isEntryNode ? '入口代理配置' : '中间节点配置'}
           </Typography>
-          <IconButton size="small" onClick={() => setPanelOpen(false)} sx={{ color: '#94a3b8' }}>
+          <IconButton size="small" onClick={() => setPanelOpen(false)} sx={{ color: 'text.secondary' }}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Stack>
 
         <FormControl size="small" fullWidth>
-          <InputLabel sx={{ color: '#94a3b8' }}>代理类型</InputLabel>
+          <InputLabel color="primary">代理类型</InputLabel>
           <Select
             value={editingProxyConfig.type || (isEntryNode ? 'template_group' : 'specified_node')}
             label="代理类型"
@@ -527,11 +578,11 @@ export default function ChainFlowBuilder({
               })
             }
             sx={{
-              color: '#e2e8f0',
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59, 130, 246, 0.3)' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59, 130, 246, 0.5)' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
-              '& .MuiSelect-icon': { color: '#64748b' }
+              color: 'text.primary',
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: alpha(theme.palette.primary.main, 0.24) },
+              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: alpha(theme.palette.primary.main, 0.4) },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main' },
+              '& .MuiSelect-icon': { color: 'text.secondary' }
             }}
           >
             {/* 入口节点可选模板代理组 */}
@@ -542,7 +593,7 @@ export default function ChainFlowBuilder({
             <MenuItem value="specified_node">指定节点</MenuItem>
           </Select>
           {!isEntryNode && (
-            <Typography variant="caption" sx={{ mt: 0.5, color: '#64748b' }}>
+            <Typography variant="caption" sx={{ mt: 0.5, color: 'text.secondary' }}>
               中间节点的自定义代理组内所有节点会自动设置 dialer-proxy 指向上一级
             </Typography>
           )}
@@ -741,7 +792,7 @@ export default function ChainFlowBuilder({
           />
         )}
 
-        <Divider sx={{ borderColor: 'rgba(59, 130, 246, 0.2)' }} />
+        <Divider sx={{ borderColor: alpha(theme.palette.primary.main, 0.16) }} />
 
         {/* 删除按钮 - 实时保存无需确定按钮 */}
         <Stack direction="row" justifyContent="flex-start">
@@ -751,8 +802,8 @@ export default function ChainFlowBuilder({
             startIcon={<DeleteIcon />}
             onClick={handleDeleteProxy}
             sx={{
-              color: '#f87171',
-              '&:hover': { bgcolor: 'rgba(248, 113, 113, 0.1)' }
+              color: 'error.light',
+              '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.08) }
             }}
           >
             删除此节点
@@ -769,15 +820,15 @@ export default function ChainFlowBuilder({
     return (
       <Stack spacing={2} sx={{ pt: 0.5 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="subtitle1" fontWeight="bold" sx={{ color: '#f1f5f9' }}>
+          <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
             目标节点配置
           </Typography>
-          <IconButton size="small" onClick={() => setPanelOpen(false)} sx={{ color: '#94a3b8' }}>
+          <IconButton size="small" onClick={() => setPanelOpen(false)} sx={{ color: 'text.secondary' }}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Stack>
 
-        <Typography variant="body2" sx={{ color: '#64748b' }}>
+        <Typography variant="body2" color="text.secondary">
           选择应用此规则的节点范围
         </Typography>
 
@@ -793,15 +844,15 @@ export default function ChainFlowBuilder({
           fullWidth
           sx={{
             '& .MuiToggleButton-root': {
-              color: '#94a3b8',
-              borderColor: 'rgba(59, 130, 246, 0.3)',
+              color: 'text.secondary',
+              borderColor: alpha(theme.palette.primary.main, 0.24),
               '&.Mui-selected': {
-                color: '#3b82f6',
-                bgcolor: 'rgba(59, 130, 246, 0.15)',
-                borderColor: 'rgba(59, 130, 246, 0.5)'
+                color: 'primary.main',
+                bgcolor: alpha(theme.palette.primary.main, 0.14),
+                borderColor: alpha(theme.palette.primary.main, 0.42)
               },
               '&:hover': {
-                bgcolor: 'rgba(59, 130, 246, 0.1)'
+                bgcolor: alpha(theme.palette.primary.main, 0.08)
               }
             }
           }}
@@ -849,10 +900,10 @@ export default function ChainFlowBuilder({
           />
         )}
 
-        <Divider sx={{ borderColor: 'rgba(59, 130, 246, 0.2)' }} />
+        <Divider sx={{ borderColor: alpha(theme.palette.primary.main, 0.16) }} />
 
         {/* 实时保存，无需确定按钮 */}
-        <Typography variant="caption" sx={{ color: '#64748b', textAlign: 'center' }}>
+        <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
           配置已自动保存
         </Typography>
       </Stack>
@@ -884,7 +935,39 @@ export default function ChainFlowBuilder({
   );
 
   return (
-    <Box className="chain-flow-container" sx={{ height: 450, width: '100%', display: 'flex', overflow: 'hidden' }}>
+    <Box
+      className="chain-flow-container"
+      sx={{
+        height: 450,
+        width: '100%',
+        display: 'flex',
+        overflow: 'hidden',
+        '--flow-bg': palette.background.default,
+        '--flow-border': isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9),
+        '--flow-border-muted': isDark ? withAlpha(palette.divider, 0.58) : withAlpha(palette.divider, 0.72),
+        '--flow-grid': isDark ? withAlpha(palette.divider, 0.12) : withAlpha(palette.divider, 0.4),
+        '--flow-overlay': isDark ? withAlpha(palette.background.paper, 0.1) : withAlpha(palette.background.default, 0.16),
+        '--flow-surface-strong': isDark ? withAlpha(palette.background.paper, 0.28) : withAlpha(palette.background.paper, 0.98),
+        '--flow-shadow': alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.24 : 0.12),
+        '--flow-text': palette.text.primary,
+        '--flow-muted': palette.text.secondary,
+        '--flow-primary': theme.palette.primary.main,
+        '--flow-primary-dark': theme.palette.primary.dark,
+        '--flow-primary-contrast': theme.palette.primary.contrastText,
+        '--flow-hover': alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.16 : 0.12),
+        '--flow-toolbar-bg': isDark ? withAlpha(palette.background.default, 0.92) : withAlpha(palette.background.paper, 0.94),
+        '--flow-handle': theme.palette.primary.main,
+        '--flow-handle-border': isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper,
+        '--flow-handle-shadow': alpha(theme.palette.primary.main, 0.18),
+        '--flow-panel-bg': isDark ? withAlpha(palette.background.default, 0.96) : withAlpha(palette.background.paper, 0.98),
+        '--flow-panel-input-bg': isDark ? withAlpha(palette.background.paper, 0.18) : withAlpha(palette.background.paper, 0.96),
+        '--flow-panel-input-bg-active': isDark ? withAlpha(palette.background.paper, 0.24) : withAlpha(palette.background.paper, 1),
+        '--flow-panel-input-highlight': isDark ? alpha(theme.palette.common.white, 0.05) : alpha(theme.palette.common.black, 0.02),
+        '--flow-panel-border-soft': alpha(theme.palette.primary.main, 0.16),
+        '--flow-panel-button-bg': theme.palette.primary.main,
+        '--flow-panel-button-bg-hover': theme.palette.primary.dark
+      }}
+    >
       {/* 流程图区域 */}
       <Box sx={{ flex: 1, position: 'relative', minWidth: 0 }}>
         <ReactFlow
@@ -916,17 +999,17 @@ export default function ChainFlowBuilder({
             size="small"
             disabled={chainConfig.length >= 4}
             sx={{
-              background: 'rgba(15, 23, 42, 0.9)',
-              border: '1px solid rgba(59, 130, 246, 0.4)',
-              backdropFilter: 'blur(8px)',
-              '&:hover': { background: 'rgba(59, 130, 246, 0.3)' },
-              '&.Mui-disabled': { color: '#64748b', borderColor: 'rgba(100, 116, 139, 0.3)' }
+              backgroundColor: isDark ? withAlpha(palette.background.default, 0.92) : withAlpha(palette.background.paper, 0.94),
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+              color: 'text.primary',
+              '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.12) },
+              '&.Mui-disabled': { color: 'text.disabled', borderColor: alpha(theme.palette.text.secondary, 0.22) }
             }}
           >
             {chainConfig.length >= 4 ? '已达最大层级' : '添加代理节点'}
           </Button>
           {chainConfig.length >= 2 && (
-            <Typography variant="caption" sx={{ ml: 1, color: '#f87171' }}>
+            <Typography variant="caption" sx={{ ml: 1, color: isDark ? alpha(theme.palette.warning.main, 0.88) : 'warning.dark' }}>
               {chainConfig.length} 级链路，延迟可能较高
             </Typography>
           )}
@@ -934,7 +1017,7 @@ export default function ChainFlowBuilder({
 
         {/* 提示文字 */}
         <Box className="chain-flow-hint">
-          <Typography variant="caption" sx={{ color: '#64748b' }}>
+          <Typography variant="caption" color="text.secondary">
             点击节点进行配置，悬停节点可快速删除
           </Typography>
         </Box>
@@ -949,13 +1032,15 @@ export default function ChainFlowBuilder({
             sx={{
               width: 480,
               minWidth: 480,
-              borderLeft: '1px solid rgba(59, 130, 246, 0.3)',
+              borderLeft: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
               borderRadius: 0,
               p: 2.5,
               overflow: 'auto',
-              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)',
-              backdropFilter: 'blur(20px)',
-              boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.3)'
+              backgroundColor: isDark ? withAlpha(palette.background.default, 0.96) : withAlpha(palette.background.paper, 0.98),
+              backgroundImage: isDark
+                ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.14)} 0%, ${withAlpha(palette.background.default, 0.96)} 100%)`
+                : 'none',
+              boxShadow: theme.palette.mode === 'dark' ? 'none' : `-4px 0 16px ${alpha(theme.palette.common.black, 0.1)}`
             }}
           >
             {panelType === 'proxy' ? renderProxyConfigPanel() : renderTargetConfigPanel()}

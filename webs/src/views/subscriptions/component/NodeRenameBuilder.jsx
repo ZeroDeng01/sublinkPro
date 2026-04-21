@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
@@ -154,6 +154,30 @@ const buildRule = (items) => {
 export default function NodeRenameBuilder({ value, onChange }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const getSectionAccent = (section) => {
+    switch (section) {
+      case 'quality':
+        return theme.palette.warning.main;
+      case 'unlock':
+        return theme.palette.info.main;
+      case 'basic':
+      default:
+        return theme.palette.primary.main;
+    }
+  };
+  const buildSectionChipSx = (accent) => ({
+    bgcolor: alpha(accent, theme.palette.mode === 'dark' ? 0.18 : 0.1),
+    color: accent,
+    fontWeight: 600,
+    border: '1px solid',
+    borderColor: alpha(accent, theme.palette.mode === 'dark' ? 0.34 : 0.18),
+    cursor: 'pointer',
+    transition: 'background-color 0.2s ease, border-color 0.2s ease',
+    '&:hover': {
+      bgcolor: alpha(accent, theme.palette.mode === 'dark' ? 0.24 : 0.14),
+      borderColor: alpha(accent, theme.palette.mode === 'dark' ? 0.46 : 0.28)
+    }
+  });
 
   const [ruleItems, setRuleItems] = useState([]);
   const [customSeparator, setCustomSeparator] = useState('');
@@ -287,12 +311,11 @@ export default function NodeRenameBuilder({ value, onChange }) {
 
   // 获取变量的颜色
   const getVariableColor = (varKey) => {
-    // 处理 $TagGroup(xxx) 格式
     if (varKey.startsWith('$TagGroup(')) {
-      return availableVariables.find((v) => v.key === '$TagGroup')?.color || '#8bc34a';
+      return getSectionAccent('basic');
     }
     const variable = availableVariables.find((v) => v.key === varKey);
-    return variable?.color || '#9e9e9e';
+    return getSectionAccent(variable?.section);
   };
 
   // 获取变量的标签
@@ -335,13 +358,13 @@ export default function NodeRenameBuilder({ value, onChange }) {
         sx={{
           p: 2,
           mb: 2,
-          background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a2027' : '#f8f9fa'} 0%, ${theme.palette.mode === 'dark' ? '#121417' : '#ffffff'} 100%)`,
+          bgcolor: 'background.paper',
           border: '1px solid',
           borderColor: 'divider',
           borderRadius: 2
         }}
       >
-        <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1.5, fontWeight: 600 }}>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
           🏷️ 可用变量 (点击添加)
         </Typography>
         <Stack spacing={1.5}>
@@ -360,22 +383,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
                       <Chip
                         label={`${variable.label} ${variable.key}`}
                         onClick={() => handleAddVariable(variable.key)}
-                        sx={{
-                          bgcolor: `${variable.color}20`,
-                          color: variable.color,
-                          fontWeight: 600,
-                          border: `1px solid ${variable.color}40`,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: `${variable.color}30`,
-                            transform: 'translateY(-2px)',
-                            boxShadow: `0 4px 12px ${variable.color}40`
-                          },
-                          '&:active': {
-                            transform: 'translateY(0)'
-                          }
-                        }}
+                        sx={buildSectionChipSx(getVariableColor(variable.key))}
                       />
                     </Tooltip>
                   ))}
@@ -392,13 +400,13 @@ export default function NodeRenameBuilder({ value, onChange }) {
         sx={{
           p: 2,
           mb: 2,
-          background: theme.palette.mode === 'dark' ? '#1a2027' : '#f8f9fa',
+          bgcolor: 'background.paper',
           border: '1px solid',
           borderColor: 'divider',
           borderRadius: 2
         }}
       >
-        <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1.5, fontWeight: 600 }}>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
           ✂️ 分隔符
         </Typography>
         <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
@@ -439,15 +447,15 @@ export default function NodeRenameBuilder({ value, onChange }) {
           p: 2,
           mb: 2,
           minHeight: 80,
-          background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1e2a35' : '#e3f2fd'} 0%, ${theme.palette.mode === 'dark' ? '#1a2027' : '#ffffff'} 100%)`,
+          bgcolor: 'background.default',
           border: '2px dashed',
-          borderColor: ruleItems.length > 0 ? 'primary.main' : 'divider',
+          borderColor: ruleItems.length > 0 ? alpha(theme.palette.primary.main, 0.32) : 'divider',
           borderRadius: 2,
-          transition: 'all 0.3s ease'
+          transition: 'border-color 0.3s ease, background-color 0.3s ease'
         }}
       >
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-          <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 600 }}>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
             📝 命名规则 (拖拽排序)
           </Typography>
           {ruleItems.length > 0 && (
@@ -479,7 +487,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
                 {ruleItems.length === 0 ? (
                   <Typography
                     variant="body2"
-                    color="textSecondary"
+                    color="text.secondary"
                     sx={{
                       fontStyle: 'italic',
                       display: 'flex',
@@ -507,9 +515,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
                               bgcolor:
                                 item.type === 'variable'
                                   ? `${getVariableColor(item.value)}20`
-                                  : theme.palette.mode === 'dark'
-                                    ? '#333'
-                                    : '#e0e0e0',
+                                  : alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.12 : 0.08),
                               color: item.type === 'variable' ? getVariableColor(item.value) : 'text.primary',
                               fontWeight: 600,
                               border: '1px solid',
@@ -594,7 +600,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
               <CircularProgress size={32} />
             </Box>
           ) : tagGroups.length === 0 ? (
-            <Typography color="textSecondary" sx={{ py: 2, textAlign: 'center' }}>
+            <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
               暂无标签组，请先在标签管理中创建标签组
             </Typography>
           ) : (
@@ -607,8 +613,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
                     borderRadius: 1,
                     mb: 0.5,
                     '&:hover': {
-                      bgcolor: 'primary.main',
-                      color: 'primary.contrastText'
+                      bgcolor: 'action.hover'
                     }
                   }}
                 >

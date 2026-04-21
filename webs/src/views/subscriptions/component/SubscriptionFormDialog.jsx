@@ -313,11 +313,20 @@ export default function SubscriptionFormDialog({
     return count;
   }, [formData]);
 
+  const helperCaptionSx = {
+    display: 'block',
+    mt: 1,
+    color: 'text.secondary'
+  };
+
   // 面板样式
   const accordionSx = {
     mb: 1.5,
     '&:before': { display: 'none' },
-    boxShadow: theme.shadows[1],
+    bgcolor: 'background.paper',
+    border: '1px solid',
+    borderColor: 'divider',
+    boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1],
     borderRadius: '12px !important',
     overflow: 'hidden',
     '&.Mui-expanded': {
@@ -327,9 +336,16 @@ export default function SubscriptionFormDialog({
 
   const accordionSummarySx = {
     minHeight: 56,
-    background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a2027' : '#f8f9fa'} 0%, ${theme.palette.mode === 'dark' ? '#121417' : '#ffffff'} 100%)`,
+    bgcolor: 'background.default',
+    borderBottom: '1px solid',
+    borderColor: 'divider',
+    transition: 'background-color 0.2s ease',
+    '&:hover': {
+      bgcolor: 'action.hover'
+    },
     '&.Mui-expanded': {
-      minHeight: 56
+      minHeight: 56,
+      bgcolor: 'background.paper'
     },
     '& .MuiAccordionSummary-content': {
       alignItems: 'center',
@@ -486,7 +502,7 @@ export default function SubscriptionFormDialog({
                     <FormControlLabel value="groups" control={<Radio />} label="动态选择分组" />
                     <FormControlLabel value="mixed" control={<Radio />} label="混合模式" />
                   </RadioGroup>
-                  <Typography variant="caption" color="textSecondary">
+                  <Typography variant="caption" sx={helperCaptionSx}>
                     {formData.selectionMode === 'nodes' && '手动选择具体节点，节点不会随分组变化自动更新'}
                     {formData.selectionMode === 'groups' && '选择分组，自动包含该分组下的所有节点，节点会随分组变化自动更新'}
                     {formData.selectionMode === 'mixed' && '同时支持手动选择节点和动态选择分组'}
@@ -684,7 +700,7 @@ export default function SubscriptionFormDialog({
                         ))}
                       </Select>
                     </FormControl>
-                    <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+                    <Typography variant="caption" sx={helperCaptionSx}>
                       可区分完整结果、信息不全、检测失败、未启用和未检测
                     </Typography>
                   </Grid>
@@ -712,7 +728,7 @@ export default function SubscriptionFormDialog({
                           </FormControl>
                         </Grid>
                         <Grid item xs={12} md={8}>
-                          <Typography variant="caption" color="textSecondary">
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                             {formData.UnlockRuleMode === 'and'
                               ? '多条规则需要同时满足，适合做更严格的筛选。'
                               : '多条规则满足任意一条即可，适合组合多个候选解锁条件。'}
@@ -732,7 +748,7 @@ export default function SubscriptionFormDialog({
                                   <li {...props} key={option.value}>
                                     <Box>
                                       <Typography variant="body2">{option.label}</Typography>
-                                      <Typography variant="caption" color="textSecondary">
+                                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                                         {option.description || option.value}
                                       </Typography>
                                     </Box>
@@ -874,7 +890,7 @@ export default function SubscriptionFormDialog({
                         <MenuItem value="untested">未检测</MenuItem>
                       </Select>
                     </FormControl>
-                    <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+                    <Typography variant="caption" sx={helperCaptionSx}>
                       仅完整结果才会显示住宅/机房属性；信息不全会保留为独立状态
                     </Typography>
                   </Grid>
@@ -892,7 +908,7 @@ export default function SubscriptionFormDialog({
                         <MenuItem value="untested">未检测</MenuItem>
                       </Select>
                     </FormControl>
-                    <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+                    <Typography variant="caption" sx={helperCaptionSx}>
                       仅完整结果才会显示原生/广播属性；信息不全不会被误判为原生或广播
                     </Typography>
                   </Grid>
@@ -1009,8 +1025,17 @@ export default function SubscriptionFormDialog({
                         placeholder="例如: [$Protocol]$LinkCountry-$Name"
                         helperText="留空则使用原始名称，仅在访问订阅链接时生效"
                       />
-                      <Box sx={{ mt: 1, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-                        <Typography variant="caption" color="textSecondary" component="div">
+                      <Box
+                        sx={{
+                          mt: 1,
+                          p: 1.5,
+                          bgcolor: 'background.default',
+                          borderRadius: 1.5,
+                          border: '1px solid',
+                          borderColor: 'divider'
+                        }}
+                      >
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }} component="div">
                           <strong>可用变量：</strong>
                           <br />• <code>$Name</code> - 系统备注名称 &nbsp;&nbsp; • <code>$LinkName</code> - 原始节点名称
                           <br />• <code>$LinkCountry</code> - 落地IP国家代码 &nbsp;&nbsp; • <code>$Speed</code> - 下载速度
@@ -1077,7 +1102,7 @@ export default function SubscriptionFormDialog({
                     <li {...props}>
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                         <Typography variant="body1">{option.name}</Typography>
-                        <Typography variant="caption" color="textSecondary">
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                           版本: {option.version}
                         </Typography>
                       </Box>
@@ -1109,7 +1134,7 @@ export default function SubscriptionFormDialog({
           </Accordion>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+      <DialogActions sx={{ borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
         <Stack direction="row" spacing={2} sx={{ width: '100%', justifyContent: showPreview ? 'space-between' : 'flex-end' }}>
           {showPreview && (
             <Button

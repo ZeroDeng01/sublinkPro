@@ -25,6 +25,7 @@ import ListItemText from './ListItemText';
 import Paper from './Paper';
 import Select from './Select';
 import Slider from './Slider';
+import Tooltip from './Tooltip';
 import TableCell from './TableCell';
 import Tabs from './Tabs';
 import Typography from './Typography';
@@ -56,6 +57,7 @@ export default function ComponentsOverrides(theme, borderRadius, outlinedFilled)
     Paper(borderRadius),
     Select(),
     Slider(theme),
+    Tooltip(theme),
     TableCell(theme),
     Tabs(theme),
     Typography(theme)

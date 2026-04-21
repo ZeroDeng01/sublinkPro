@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // material-ui
-import { useTheme } from '@mui/material/styles';
+import { useColorScheme, useTheme } from '@mui/material/styles';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -34,6 +34,7 @@ import LockOpenIcon from '@mui/icons-material/LockOpen';
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import TaskProgressPanel from 'components/TaskProgressPanel';
+import { withAlpha } from 'utils/colorUtils';
 
 // api
 import {
@@ -53,9 +54,58 @@ import { buildNodeCheckProfilePayload, formatUnlockProvidersSummary, setUnlockMe
 
 // ==============================|| 节点检测策略管理 ||============================== //
 
+const getStrategyTitleChipSx = (theme, isDark, tone = 'neutral') => {
+  const palette = theme.vars?.palette || theme.palette;
+  const toneMap = {
+    success: {
+      accent: palette.success.main,
+      text: isDark ? palette.success.light : palette.success.dark
+    },
+    info: {
+      accent: palette.info.main,
+      text: isDark ? palette.info.light : palette.info.dark
+    },
+    warning: {
+      accent: palette.warning.main,
+      text: isDark ? palette.warning.light : palette.warning.dark
+    },
+    neutral: {
+      accent: palette.grey[500],
+      text: isDark ? withAlpha(palette.common.white, 0.92) : withAlpha(palette.text.primary, 0.82)
+    }
+  };
+
+  const { accent, text } = toneMap[tone] || toneMap.neutral;
+
+  return {
+    height: 22,
+    borderRadius: 1.5,
+    flexShrink: 0,
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    letterSpacing: '0.01em',
+    color: text,
+    backgroundColor: withAlpha(accent, isDark ? (tone === 'neutral' ? 0.24 : 0.18) : tone === 'neutral' ? 0.08 : 0.1),
+    border: `1px solid ${withAlpha(accent, isDark ? (tone === 'neutral' ? 0.34 : 0.32) : tone === 'neutral' ? 0.16 : 0.2)}`,
+    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.05)}` : 'none',
+    '& .MuiChip-label': {
+      px: 1,
+      py: 0
+    },
+    '& .MuiChip-icon': {
+      color: 'inherit',
+      fontSize: '0.82rem',
+      ml: 0.75,
+      mr: -0.25
+    }
+  };
+};
+
 export default function NodeCheckList() {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { mode } = useColorScheme();
+  const runtimeColorScheme = typeof document !== 'undefined' ? document.documentElement?.getAttribute('data-color-scheme') : null;
+  const isDark = (mode || runtimeColorScheme || theme.palette.mode) === 'dark';
 
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -279,7 +329,9 @@ export default function NodeCheckList() {
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 1,
+                      columnGap: 0.75,
+                      rowGap: 0.75,
+                      flexWrap: 'wrap',
                       minWidth: 0,
                       flex: 1,
                       overflow: 'hidden'
@@ -301,24 +353,16 @@ export default function NodeCheckList() {
                     <Chip
                       label={profile.mode === 'mihomo' ? '延迟+速度' : '仅延迟'}
                       size="small"
-                      sx={{
-                        height: 20,
-                        fontSize: '0.65rem',
-                        flexShrink: 0,
-                        backgroundColor: profile.mode === 'mihomo' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(33, 150, 243, 0.15)',
-                        color: profile.mode === 'mihomo' ? 'primary.main' : 'error.main'
-                      }}
+                      sx={getStrategyTitleChipSx(theme, isDark, profile.mode === 'mihomo' ? 'success' : 'info')}
                     />
-                    {profile.detectCountry && <Chip label="国家" size="small" sx={{ height: 20, fontSize: '0.65rem' }} />}
-                    {profile.detectQuality && <Chip label="质量" size="small" color="warning" sx={{ height: 20, fontSize: '0.65rem' }} />}
+                    {profile.detectCountry && <Chip label="国家" size="small" sx={getStrategyTitleChipSx(theme, isDark, 'neutral')} />}
+                    {profile.detectQuality && <Chip label="质量" size="small" sx={getStrategyTitleChipSx(theme, isDark, 'warning')} />}
                     {profile.detectUnlock && (
                       <Chip
                         icon={<LockOpenIcon sx={{ fontSize: '12px !important' }} />}
                         label={`解锁${profile.unlockProviders?.length ? ` · ${formatUnlockProvidersSummary(profile.unlockProviders, 1)}` : ''}`}
                         size="small"
-                        color="info"
-                        variant="outlined"
-                        sx={{ height: 20, fontSize: '0.65rem' }}
+                        sx={getStrategyTitleChipSx(theme, isDark, 'info')}
                       />
                     )}
                   </Box>

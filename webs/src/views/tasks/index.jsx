@@ -58,7 +58,7 @@ import { extractUnlockSummaryFromTaskResult, formatUnlockProviderLabel } from 'v
 
 // ==============================|| STAT CARD - COMPACT ||============================== //
 
-const StatCard = ({ title, value, icon: Icon, color, isDark }) => (
+const StatCard = ({ title, value, icon: Icon, color }) => (
   <Box
     sx={{
       display: 'flex',
@@ -66,14 +66,14 @@ const StatCard = ({ title, value, icon: Icon, color, isDark }) => (
       gap: 1.5,
       p: 1.5,
       borderRadius: 2,
-      background: isDark
-        ? `linear-gradient(135deg, ${alpha(color, 0.15)} 0%, ${alpha(color, 0.05)} 100%)`
-        : `linear-gradient(135deg, ${alpha(color, 0.08)} 0%, #fff 100%)`,
+      bgcolor: 'background.paper',
       border: `1px solid ${alpha(color, 0.15)}`,
+      boxShadow: 1,
       transition: 'all 0.2s ease',
       '&:hover': {
         transform: 'translateY(-2px)',
-        boxShadow: `0 4px 12px ${alpha(color, 0.15)}`
+        borderColor: alpha(color, 0.28),
+        boxShadow: 3
       }
     }}
   >
@@ -98,7 +98,7 @@ const StatCard = ({ title, value, icon: Icon, color, isDark }) => (
       <Typography
         variant="caption"
         sx={{
-          color: isDark ? alpha('#fff', 0.6) : 'text.secondary',
+          color: 'text.secondary',
           fontWeight: 500,
           whiteSpace: 'nowrap'
         }}
@@ -142,7 +142,7 @@ const StatusChip = ({ status }) => {
 
 // ==============================|| TYPE CHIP ||============================== //
 
-const TypeChip = ({ type, isDark }) => {
+const TypeChip = ({ type }) => {
   const config = {
     speed_test: { label: '节点测速', color: '#10b981', icon: SpeedIcon },
     sub_update: { label: '订阅更新', color: '#6366f1', icon: CloudSyncIcon },
@@ -162,8 +162,8 @@ const TypeChip = ({ type, isDark }) => {
         fontSize: '0.7rem',
         fontWeight: 500,
         bgcolor: alpha(color, 0.1),
-        color: isDark ? alpha(color, 1.2) : color,
-        '& .MuiChip-icon': { color: isDark ? alpha(color, 1.2) : color }
+        color,
+        '& .MuiChip-icon': { color }
       }}
     />
   );
@@ -171,7 +171,7 @@ const TypeChip = ({ type, isDark }) => {
 
 // ==============================|| TRIGGER CHIP ||============================== //
 
-const TriggerChip = ({ trigger, isDark }) => {
+const TriggerChip = ({ trigger }) => {
   const config = {
     manual: { label: '手动', color: '#8b5cf6', icon: PersonIcon },
     scheduled: { label: '定时', color: '#06b6d4', icon: AutoModeIcon }
@@ -189,8 +189,8 @@ const TriggerChip = ({ trigger, isDark }) => {
         fontSize: '0.7rem',
         fontWeight: 500,
         bgcolor: alpha(color, 0.1),
-        color: isDark ? color : alpha(color, 0.9),
-        '& .MuiChip-icon': { color: isDark ? color : alpha(color, 0.9) }
+        color,
+        '& .MuiChip-icon': { color }
       }}
     />
   );
@@ -305,12 +305,13 @@ const migrationWarningButtonSx = {
   borderRadius: 1.5,
   textTransform: 'none',
   fontWeight: 700,
-  color: '#fff',
-  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-  boxShadow: '0 8px 18px rgba(220, 38, 38, 0.18)',
+  color: 'error.main',
+  bgcolor: (theme) => alpha(theme.palette.error.main, 0.08),
+  border: '1px solid',
+  borderColor: (theme) => alpha(theme.palette.error.main, 0.24),
   '&:hover': {
-    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-    boxShadow: '0 10px 22px rgba(185, 28, 28, 0.24)'
+    bgcolor: (theme) => alpha(theme.palette.error.main, 0.12),
+    borderColor: (theme) => alpha(theme.palette.error.main, 0.36)
   }
 };
 
@@ -358,7 +359,7 @@ const ClearHistoryDialog = ({ open, onClose, onConfirm }) => {
 
 // ==============================|| TASK MOBILE CARD ||============================== //
 
-const TaskMobileCard = ({ task, isDark, onStop, canStop }) => {
+const TaskMobileCard = ({ task, onStop, canStop }) => {
   const theme = useTheme();
   const migrationWarnings = useMemo(() => getMigrationWarnings(task), [task]);
   const unlockSummary = useMemo(() => getTaskUnlockSummary(task), [task]);
@@ -420,8 +421,8 @@ const TaskMobileCard = ({ task, isDark, onStop, canStop }) => {
 
         {/* Chips: Type + Trigger */}
         <Stack direction="row" spacing={1} mb={1.5}>
-          <TypeChip type={task.type} isDark={isDark} />
-          <TriggerChip trigger={task.trigger} isDark={isDark} />
+          <TypeChip type={task.type} />
+          <TriggerChip trigger={task.trigger} />
         </Stack>
 
         {/* Progress */}
@@ -498,7 +499,6 @@ import TrafficStatsDialog from './TrafficStatsDialog';
 
 export default function TaskList() {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [tasks, setTasks] = useState([]);
@@ -675,28 +675,40 @@ export default function TaskList() {
       {/* Stats Cards - Compact Grid */}
       <Grid container spacing={1.5} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}>
-          <StatCard title="运行中" value={stats.running || runningTasks.length || 0} icon={PlayArrowIcon} color="#3b82f6" isDark={isDark} />
+          <StatCard
+            title="运行中"
+            value={stats.running || runningTasks.length || 0}
+            icon={PlayArrowIcon}
+            color={theme.palette.primary.main}
+          />
         </Grid>
         <Grid item xs={6} sm={3}>
-          <StatCard title="等待中" value={stats.pending || 0} icon={ScheduleIcon} color="#f59e0b" isDark={isDark} />
+          <StatCard title="等待中" value={stats.pending || 0} icon={ScheduleIcon} color={theme.palette.warning.dark} />
         </Grid>
         <Grid item xs={6} sm={3}>
-          <StatCard title="已完成" value={stats.completed || 0} icon={CheckCircleIcon} color="#10b981" isDark={isDark} />
+          <StatCard title="已完成" value={stats.completed || 0} icon={CheckCircleIcon} color={theme.palette.success.main} />
         </Grid>
         <Grid item xs={6} sm={3}>
           <StatCard
             title="失败/取消"
             value={(stats.error || 0) + (stats.cancelled || 0)}
             icon={ErrorIcon}
-            color="#ef4444"
-            isDark={isDark}
+            color={theme.palette.error.main}
           />
         </Grid>
       </Grid>
 
       {/* Running Tasks from SSE */}
       {runningTasks.length > 0 && (
-        <Card sx={{ mb: 3, borderRadius: 2, border: `1px solid ${alpha('#3b82f6', 0.3)}` }}>
+        <Card
+          sx={{
+            mb: 3,
+            borderRadius: 2,
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: alpha(theme.palette.primary.main, 0.2)
+          }}
+        >
           <CardContent sx={{ py: 2 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
               实时任务进度
@@ -705,7 +717,7 @@ export default function TaskList() {
               <Box key={task.taskId} sx={{ mb: 2, '&:last-child': { mb: 0 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TypeChip type={task.taskType} isDark={isDark} />
+                    <TypeChip type={task.taskType} />
                     <Typography variant="body2" noWrap sx={{ maxWidth: isMobile ? 120 : 300 }}>
                       {task.currentItem || '处理中...'}
                     </Typography>
@@ -875,12 +887,7 @@ export default function TaskList() {
           ) : (
             tasks.map((task) => (
               <Box key={task.id}>
-                <TaskMobileCard
-                  task={task}
-                  isDark={isDark}
-                  onStop={handleStopTask}
-                  canStop={task.status === 'running' && task.type === 'speed_test'}
-                />
+                <TaskMobileCard task={task} onStop={handleStopTask} canStop={task.status === 'running' && task.type === 'speed_test'} />
                 {task.type === 'db_migration' && getMigrationWarnings(task).length > 0 && (
                   <Button
                     size="small"
@@ -1013,10 +1020,10 @@ export default function TaskList() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <TypeChip type={task.type} isDark={isDark} />
+                        <TypeChip type={task.type} />
                       </TableCell>
                       <TableCell>
-                        <TriggerChip trigger={task.trigger} isDark={isDark} />
+                        <TriggerChip trigger={task.trigger} />
                       </TableCell>
                       <TableCell>
                         <StatusChip status={task.status} />

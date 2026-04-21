@@ -53,6 +53,8 @@ export default function AirportListView({
   onRefreshUsage
 }) {
   const theme = useTheme();
+  const palette = theme.vars?.palette || theme.palette;
+  const isDark = theme.palette.mode === 'dark';
 
   // 复制提示状态
   const [copyTip, setCopyTip] = useState({ open: false, name: '' });
@@ -225,23 +227,7 @@ export default function AirportListView({
     }
 
     return (
-      <Tooltip
-        arrow
-        placement="top"
-        componentsProps={{
-          tooltip: {
-            sx: {
-              bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.50',
-              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-              borderRadius: 2,
-              boxShadow: theme.shadows[8],
-              p: 1.5,
-              maxWidth: 320
-            }
-          }
-        }}
-        title={<AirportNodeStatsCard nodeStats={nodeStats} nodeCount={nodeCount} />}
-      >
+      <Tooltip arrow placement="top" title={<AirportNodeStatsCard nodeStats={nodeStats} nodeCount={nodeCount} />}>
         <Box sx={{ cursor: 'help' }}>
           {/* 通过数量 */}
           <Stack direction="row" spacing={0.5} alignItems="center">
@@ -279,10 +265,26 @@ export default function AirportListView({
     );
   };
 
+  const getStatusChipSx = (enabled) => ({
+    height: 20,
+    fontSize: '0.65rem',
+    fontWeight: 600,
+    color: enabled ? (isDark ? palette.success.light : palette.success.dark) : palette.text.secondary,
+    bgcolor: enabled
+      ? alpha(theme.palette.success.main, isDark ? 0.18 : 0.12)
+      : isDark
+        ? 'background.default'
+        : alpha(theme.palette.grey[500], 0.08),
+    border: `1px solid ${enabled ? alpha(theme.palette.success.main, isDark ? 0.34 : 0.18) : alpha(theme.palette.divider, isDark ? 0.56 : 0.24)}`,
+    '& .MuiChip-label': {
+      px: 1
+    }
+  });
+
   if (airports.length === 0) {
     return (
       <Box sx={{ py: 6, textAlign: 'center' }}>
-        <Typography variant="body2" color="textSecondary">
+        <Typography variant="body2" color="text.secondary">
           暂无机场数据，点击上方"添加机场"按钮添加
         </Typography>
       </Box>
@@ -386,12 +388,7 @@ export default function AirportListView({
 
                   {/* 状态 */}
                   <TableCell align="center">
-                    <Chip
-                      label={airport.enabled ? '启用' : '禁用'}
-                      color={airport.enabled ? 'success' : 'default'}
-                      size="small"
-                      sx={{ height: 20, fontSize: '0.65rem', '& .MuiChip-label': { px: 1 } }}
-                    />
+                    <Chip label={airport.enabled ? '启用' : '禁用'} variant="filled" size="small" sx={getStatusChipSx(airport.enabled)} />
                   </TableCell>
 
                   {/* 节点数 */}

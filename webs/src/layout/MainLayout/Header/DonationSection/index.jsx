@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 // material-ui
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
@@ -26,6 +26,7 @@ import { donationConfig } from 'config/donation';
 export default function DonationSection() {
   const theme = useTheme();
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
+  const isDark = theme.palette.mode === 'dark';
   const [open, setOpen] = useState(false);
   const anchorRef = useRef(null);
 
@@ -58,12 +59,18 @@ export default function DonationSection() {
               ...theme.typography.commonAvatar,
               ...theme.typography.mediumAvatar,
               transition: 'all .2s ease-in-out',
-              color: theme.palette[donationConfig.headerIconColor].dark,
-              background: theme.palette[donationConfig.headerIconColor].light,
+              color: theme.palette[donationConfig.headerIconColor].main,
+              background: isDark
+                ? alpha(theme.palette.background.default, 0.88)
+                : alpha(theme.palette[donationConfig.headerIconColor].main, 0.12),
+              border: '1px solid',
+              borderColor: alpha(theme.palette[donationConfig.headerIconColor].main, isDark ? 0.28 : 0.18),
               position: 'relative',
               '&:hover, &[aria-controls="menu-list-grow"]': {
-                color: theme.palette[donationConfig.headerIconColor].light,
-                background: theme.palette[donationConfig.headerIconColor].dark
+                color: theme.palette[donationConfig.headerIconColor].main,
+                background: isDark
+                  ? alpha(theme.palette[donationConfig.headerIconColor].main, 0.16)
+                  : alpha(theme.palette[donationConfig.headerIconColor].main, 0.22)
               }
             }}
             ref={anchorRef}
@@ -87,9 +94,21 @@ export default function DonationSection() {
         {({ TransitionProps }) => (
           <ClickAwayListener onClickAway={handleClose}>
             <Transitions position={downMD ? 'top' : 'top-right'} in={open} {...TransitionProps}>
-              <Paper>
+              <Paper sx={{ bgcolor: 'transparent' }}>
                 {open && (
-                  <MainCard border={false} elevation={16} content={false} boxShadow shadow={theme.shadows[16]} sx={{ minWidth: 280 }}>
+                  <MainCard
+                    border={false}
+                    elevation={0}
+                    content={false}
+                    boxShadow
+                    shadow={isDark ? 'none' : theme.shadows[12]}
+                    sx={{
+                      minWidth: 280,
+                      bgcolor: isDark ? alpha(theme.palette.background.default, 0.96) : 'background.paper',
+                      border: '1px solid',
+                      borderColor: alpha(theme.palette.divider, isDark ? 0.9 : 0.72)
+                    }}
+                  >
                     <Stack sx={{ gap: 2, p: 2 }}>
                       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'center' }}>
                         <Typography variant="subtitle1">{donationConfig.title}</Typography>

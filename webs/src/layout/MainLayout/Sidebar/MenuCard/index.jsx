@@ -1,16 +1,11 @@
-import { memo, useState, useEffect } from 'react';
+import { memo, useState, useEffect, useMemo } from 'react';
 
 // material-ui
-import { useTheme, alpha } from '@mui/material/styles';
+import { useTheme, useColorScheme, alpha } from '@mui/material/styles';
 import Avatar from '@mui/material/Avatar';
 import Card from '@mui/material/Card';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemAvatar from '@mui/material/ListItemAvatar';
-import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -22,6 +17,7 @@ import NewReleasesIcon from '@mui/icons-material/NewReleases';
 
 // project imports
 import useConfig from 'hooks/useConfig';
+import { withAlpha } from 'utils/colorUtils';
 
 // GitHub 仓库配置
 const GITHUB_REPO = 'ZeroDeng01/sublinkPro';
@@ -32,9 +28,11 @@ const GITHUB_API_RELEASES = `https://api.github.com/repos/${GITHUB_REPO}/release
 
 function MenuCard() {
   const theme = useTheme();
+  const { mode } = useColorScheme();
+  const isDark = mode === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
   const { version } = useConfig();
   const [latestVersion, setLatestVersion] = useState('');
-  const [hasUpdate, setHasUpdate] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,113 +54,337 @@ function MenuCard() {
     fetchLatestVersion();
   }, []);
 
-  useEffect(() => {
-    if (latestVersion && version) {
-      const current = version.replace(/^v/, '');
-      const latest = latestVersion.replace(/^v/, '');
+  const currentVersion = version || 'dev';
+  const normalizedCurrentVersion = currentVersion.replace(/^v/, '');
+  const normalizedLatestVersion = latestVersion.replace(/^v/, '');
+  const hasLatestVersion = Boolean(normalizedLatestVersion);
+  const hasUpdate = hasLatestVersion && Boolean(normalizedCurrentVersion) && normalizedLatestVersion !== normalizedCurrentVersion;
+  const releasesPageHref = `${GITHUB_URL}/releases`;
+  const releaseHref = latestVersion ? `${GITHUB_URL}/releases/tag/${latestVersion}` : releasesPageHref;
 
-      if (latest && current && latest !== current) {
-        setHasUpdate(true);
-      }
+  const versionStatus = useMemo(() => {
+    if (loading) {
+      return {
+        key: 'loading',
+        label: '检查更新中',
+        tone: 'info',
+        hint: '正在获取最新版本',
+        actionLabel: '查看 Releases',
+        actionHref: releasesPageHref,
+        actionVariant: 'text'
+      };
     }
-  }, [version, latestVersion]);
+
+    if (hasUpdate) {
+      return {
+        key: 'update',
+        label: '可更新',
+        tone: 'warning',
+        hint: latestVersion ? `最新版本 ${latestVersion}` : '发现新版本',
+        actionLabel: '查看更新',
+        actionHref: releaseHref,
+        actionVariant: 'contained'
+      };
+    }
+
+    if (hasLatestVersion) {
+      return {
+        key: 'current',
+        label: '已是最新',
+        tone: 'success',
+        hint: latestVersion ? `已同步到 ${latestVersion}` : '无需更新',
+        actionLabel: '查看 Releases',
+        actionHref: releasesPageHref,
+        actionVariant: 'text'
+      };
+    }
+
+    return {
+      key: 'unknown',
+      label: '暂未确认',
+      tone: 'default',
+      hint: '手动查看',
+      actionLabel: '查看 Releases',
+      actionHref: releasesPageHref,
+      actionVariant: 'text'
+    };
+  }, [hasLatestVersion, hasUpdate, latestVersion, loading, releaseHref, releasesPageHref]);
+
+  const statusToneMap = {
+    warning: isDark ? theme.palette.warning.main : theme.palette.warning.dark,
+    success: theme.palette.success.main,
+    info: theme.palette.info.main,
+    default: isDark ? withAlpha(palette.text.primary, 0.72) : palette.text.secondary
+  };
+
+  const statusColor = statusToneMap[versionStatus.tone] || statusToneMap.default;
+  const neutralCardSurface = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.96)} 0%, ${withAlpha(palette.background.default, 0.985)} 100%)`
+    : `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.98)} 0%, ${withAlpha(palette.background.default, 0.9)} 100%)`;
+  const cardBorder = hasUpdate
+    ? alpha(statusColor, isDark ? 0.28 : 0.2)
+    : isDark
+      ? withAlpha(palette.divider, 0.84)
+      : alpha(theme.palette.divider, 0.72);
+  const panelBorder = isDark ? withAlpha(palette.divider, 0.8) : alpha(theme.palette.divider, 0.72);
+  const statusBorder = alpha(statusColor, isDark ? 0.28 : 0.2);
+  const mutedTextColor = isDark ? withAlpha(palette.text.primary, 0.72) : palette.text.secondary;
+  const secondaryTextColor = isDark ? withAlpha(palette.text.primary, 0.88) : palette.text.primary;
+  const currentVersionColor = isDark ? withAlpha(palette.text.primary, 0.98) : palette.text.primary;
+  const statusTextColor = secondaryTextColor;
+  const statusHintColor =
+    versionStatus.key === 'update' ? (isDark ? withAlpha(palette.warning.light, 0.9) : mutedTextColor) : mutedTextColor;
+  const statusPanelBackground = isDark
+    ? `linear-gradient(180deg, ${alpha(statusColor, 0.14)} 0%, ${withAlpha(palette.background.default, 0.82)} 100%)`
+    : alpha(statusColor, versionStatus.key === 'update' ? 0.08 : 0.06);
+  const currentVersionBackground = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.2)} 0%, ${withAlpha(palette.background.default, 0.82)} 100%)`
+    : withAlpha(palette.background.default, 0.78);
+  const currentVersionBorder = isDark ? withAlpha(palette.divider, 0.76) : alpha(theme.palette.divider, 0.76);
+  const titleColor = isDark ? withAlpha(palette.text.primary, 0.96) : palette.text.primary;
+  const titleAccentColor = hasUpdate ? statusColor : theme.palette.primary.main;
+  const iconButtonBackground = isDark ? withAlpha(palette.background.paper, 0.18) : withAlpha(palette.background.paper, 0.98);
+  const iconButtonHoverBackground = isDark ? withAlpha(palette.background.paper, 0.26) : alpha(titleAccentColor, 0.08);
+  const iconButtonColor = hasUpdate ? statusColor : mutedTextColor;
+  const ctaBackground = isDark ? alpha(theme.palette.warning.main, 0.18) : theme.palette.warning.dark;
+  const ctaHoverBackground = isDark ? alpha(theme.palette.warning.main, 0.26) : theme.palette.warning.main;
+  const ctaColor = isDark ? withAlpha(palette.warning.light, 0.98) : theme.palette.common.white;
+  const ctaBorderColor = isDark ? alpha(theme.palette.warning.main, 0.28) : alpha(theme.palette.warning.dark, 0.22);
+  const statusActionIsContained = versionStatus.actionVariant === 'contained';
 
   return (
     <Card
       sx={{
-        bgcolor: hasUpdate ? alpha(theme.palette.warning.main, 0.1) : 'primary.light',
+        background: neutralCardSurface,
         mb: 2.75,
         overflow: 'hidden',
         position: 'relative',
-        border: hasUpdate ? `1px solid ${alpha(theme.palette.warning.main, 0.3)}` : 'none',
+        boxShadow: isDark
+          ? `0 10px 24px ${alpha(theme.palette.common.black, 0.18)}, inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}`
+          : `0 1px 3px ${alpha(theme.palette.common.black, 0.05)}`,
+        border: `1px solid ${cardBorder}`,
         '&:after': {
           content: '""',
           position: 'absolute',
-          width: 130,
-          height: 130,
-          bgcolor: hasUpdate ? alpha(theme.palette.warning.main, 0.1) : 'primary.200',
+          width: 120,
+          height: 120,
+          bgcolor: hasUpdate
+            ? alpha(theme.palette.warning.main, isDark ? 0.12 : 0.08)
+            : isDark
+              ? alpha(theme.palette.primary.main, 0.04)
+              : alpha(theme.palette.primary.main, 0.06),
           borderRadius: '50%',
-          top: -85,
-          right: -76
+          top: -72,
+          right: -68
         }
       }}
     >
-      <Box sx={{ p: 2 }}>
-        <List disablePadding sx={{ pb: 1 }}>
-          <ListItem alignItems="flex-start" disableGutters disablePadding>
-            <ListItemAvatar sx={{ mt: 0 }}>
-              <Avatar
-                variant="rounded"
+      <Box sx={{ p: 1.35, position: 'relative', zIndex: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+          <Avatar
+            variant="rounded"
+            sx={{
+              ...theme.typography.mediumAvatar,
+              width: 32,
+              height: 32,
+              borderRadius: 2,
+              color: titleAccentColor,
+              border: '1px solid',
+              borderColor: hasUpdate ? alpha(statusColor, isDark ? 0.3 : 0.2) : alpha(theme.palette.primary.main, isDark ? 0.28 : 0.16),
+              bgcolor: hasUpdate
+                ? alpha(statusColor, isDark ? 0.16 : 0.1)
+                : isDark
+                  ? alpha(theme.palette.background.paper, 0.16)
+                  : alpha(theme.palette.primary.main, 0.06),
+              boxShadow: 'none',
+              flexShrink: 0
+            }}
+          >
+            {hasUpdate ? <NewReleasesIcon fontSize="small" /> : <InfoOutlinedIcon fontSize="small" />}
+          </Avatar>
+
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.75 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    color: titleColor,
+                    fontWeight: 700,
+                    lineHeight: 1.2
+                  }}
+                >
+                  SublinkPro
+                </Typography>
+                <Typography variant="caption" sx={{ display: 'block', color: mutedTextColor, mt: 0.15, lineHeight: 1.2 }}>
+                  当前系统版本
+                </Typography>
+              </Box>
+
+              <Tooltip title="查看 GitHub 仓库">
+                <IconButton
+                  size="small"
+                  component="a"
+                  href={GITHUB_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="查看 GitHub 仓库"
+                  sx={{
+                    p: 0.5,
+                    color: iconButtonColor,
+                    background: iconButtonBackground,
+                    border: '1px solid',
+                    borderColor: panelBorder,
+                    '&:hover': {
+                      background: iconButtonHoverBackground,
+                      color: secondaryTextColor
+                    }
+                  }}
+                >
+                  <OpenInNewIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            <Box
+              sx={{
+                mt: 0.7,
+                px: 0.8,
+                py: 0.65,
+                borderRadius: 1.25,
+                background: currentVersionBackground,
+                border: '1px solid',
+                borderColor: currentVersionBorder,
+                boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.02)}` : 'none'
+              }}
+            >
+              <Typography
+                variant="body2"
                 sx={{
-                  ...theme.typography.largeAvatar,
-                  borderRadius: 2,
-                  color: hasUpdate ? 'warning.main' : 'primary.main',
-                  border: 'none',
-                  bgcolor: 'background.paper',
-                  boxShadow: theme.shadows[2]
+                  color: currentVersionColor,
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                {hasUpdate ? <NewReleasesIcon fontSize="inherit" /> : <InfoOutlinedIcon fontSize="inherit" />}
-              </Avatar>
-            </ListItemAvatar>
-            <ListItemText
-              sx={{ mt: 0 }}
-              primary={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {currentVersion}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            mt: 0.8,
+            p: 0.9,
+            borderRadius: 1.5,
+            background: statusPanelBackground,
+            border: '1px solid',
+            borderColor: statusBorder,
+            boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.02)}` : 'none'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.75, minWidth: 0 }}>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.65, minWidth: 0 }}>
+                <Box
+                  sx={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    bgcolor: statusColor,
+                    boxShadow: `0 0 0 3px ${alpha(statusColor, isDark ? 0.14 : 0.1)}`,
+                    flexShrink: 0,
+                    mt: 0.6
+                  }}
+                />
+                <Box sx={{ minWidth: 0, flex: 1 }}>
                   <Typography
-                    variant="subtitle1"
+                    variant="body2"
                     sx={{
-                      color: hasUpdate ? 'warning.dark' : 'primary.800',
-                      fontWeight: 600
+                      color: statusTextColor,
+                      fontWeight: 700,
+                      lineHeight: 1.2,
+                      whiteSpace: 'nowrap'
                     }}
                   >
-                    SublinkPro
+                    {versionStatus.label}
                   </Typography>
-                  <Tooltip title="查看 GitHub">
-                    <IconButton size="small" component="a" href={GITHUB_URL} target="_blank" rel="noopener noreferrer" sx={{ p: 0.5 }}>
-                      <OpenInNewIcon fontSize="small" sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  </Tooltip>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                      mt: 0.2,
+                      color: statusHintColor,
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {versionStatus.hint}
+                  </Typography>
                 </Box>
-              }
-              secondary={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                  <Chip
-                    label={loading ? '加载中...' : version || 'dev'}
-                    size="small"
-                    color="primary"
-                    variant="outlined"
-                    sx={{ height: 20, fontSize: '0.7rem' }}
-                  />
-                </Box>
-              }
-              secondaryTypographyProps={{ component: 'div' }}
-            />
-          </ListItem>
-        </List>
-        {hasUpdate && latestVersion && (
-          <Box sx={{ mt: 1 }}>
-            <Typography variant="caption" sx={{ color: 'warning.dark', display: 'block', mb: 0.5 }}>
-              💡 发现新版本，建议更新
-            </Typography>
-            <Button
-              size="small"
-              variant="contained"
-              color="warning"
-              href={`${GITHUB_URL}/releases/tag/${latestVersion}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{ fontSize: '0.7rem', py: 0.25, px: 1 }}
-            >
-              {latestVersion} 可用
-            </Button>
+              </Box>
+            </Box>
+
+            {statusActionIsContained ? (
+              <Button
+                size="small"
+                variant="contained"
+                color="warning"
+                href={versionStatus.actionHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  minWidth: 'auto',
+                  px: 1.05,
+                  py: 0.35,
+                  fontSize: '0.72rem',
+                  lineHeight: 1,
+                  fontWeight: 700,
+                  color: ctaColor,
+                  bgcolor: ctaBackground,
+                  border: '1px solid',
+                  borderColor: ctaBorderColor,
+                  boxShadow: 'none',
+                  flexShrink: 0,
+                  '&:hover': {
+                    bgcolor: ctaHoverBackground,
+                    boxShadow: 'none'
+                  }
+                }}
+              >
+                {versionStatus.actionLabel}
+              </Button>
+            ) : (
+              <Button
+                size="small"
+                variant="text"
+                href={versionStatus.actionHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  minWidth: 'auto',
+                  px: 0.6,
+                  py: 0.25,
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  color: mutedTextColor,
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.06),
+                    color: secondaryTextColor
+                  },
+                  flexShrink: 0
+                }}
+              >
+                {versionStatus.actionLabel}
+              </Button>
+            )}
           </Box>
-        )}
-        {!hasUpdate && latestVersion && (
-          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-            最新版本: {latestVersion}
-          </Typography>
-        )}
+        </Box>
       </Box>
     </Card>
   );

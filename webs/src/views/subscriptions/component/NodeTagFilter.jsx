@@ -12,7 +12,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 
 // icons
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -28,6 +28,21 @@ import BlockIcon from '@mui/icons-material/Block';
 export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistValue, onWhitelistChange, onBlacklistChange }) {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
+  const getTagChipSx = (color, fallbackColor) => {
+    const resolvedColor = color || fallbackColor;
+    return {
+      backgroundColor: alpha(resolvedColor, theme.palette.mode === 'dark' ? 0.18 : 0.1),
+      color: resolvedColor,
+      border: '1px solid',
+      borderColor: alpha(resolvedColor, theme.palette.mode === 'dark' ? 0.34 : 0.18),
+      '& .MuiChip-deleteIcon': {
+        color: alpha(resolvedColor, 0.72),
+        '&:hover': {
+          color: resolvedColor
+        }
+      }
+    };
+  };
 
   // 解析逗号分隔的标签字符串为数组
   const parseTagString = (str) => {
@@ -49,7 +64,7 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
 
   // 获取标签选项的完整信息（包含颜色）
   const getTagOption = (tagName) => {
-    return (tagOptions || []).find((t) => t.name === tagName) || { name: tagName, color: '#1976d2' };
+    return (tagOptions || []).find((t) => t.name === tagName) || { name: tagName, color: theme.palette.primary.main };
   };
 
   return (
@@ -70,7 +85,9 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: `linear-gradient(145deg, ${theme.palette.mode === 'dark' ? '#1a2027' : '#f5f5f5'} 0%, ${theme.palette.mode === 'dark' ? '#121417' : '#fafafa'} 100%)`,
+          bgcolor: 'background.default',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
           cursor: 'pointer',
           '&:hover': {
             bgcolor: 'action.hover'
@@ -84,7 +101,7 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
             节点标签过滤
           </Typography>
           {hasAnyRules && (
-            <Typography variant="caption" color="textSecondary">
+            <Typography variant="caption" color="text.secondary">
               (白名单 {whitelistTags.length} / 黑名单 {blacklistTags.length} 个标签)
             </Typography>
           )}
@@ -127,11 +144,7 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
                       key={key}
                       label={option.name || option}
                       size="small"
-                      sx={{
-                        backgroundColor: option.color || '#4caf50',
-                        color: '#fff',
-                        '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
-                      }}
+                      sx={getTagChipSx(option.color, theme.palette.success.main)}
                       {...tagProps}
                     />
                   );
@@ -144,7 +157,7 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
                       width: 12,
                       height: 12,
                       borderRadius: '50%',
-                      backgroundColor: option.color || '#1976d2',
+                      backgroundColor: option.color || theme.palette.primary.main,
                       mr: 1
                     }}
                   />
@@ -153,7 +166,7 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
               )}
               renderInput={(params) => <TextField {...params} placeholder="选择白名单标签（节点必须包含其中一个标签）" size="small" />}
             />
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
               节点必须包含白名单中的至少一个标签才会被保留
             </Typography>
           </Box>
@@ -184,11 +197,7 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
                       key={key}
                       label={option.name || option}
                       size="small"
-                      sx={{
-                        backgroundColor: option.color || '#f44336',
-                        color: '#fff',
-                        '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
-                      }}
+                      sx={getTagChipSx(option.color, theme.palette.error.main)}
                       {...tagProps}
                     />
                   );
@@ -201,7 +210,7 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
                       width: 12,
                       height: 12,
                       borderRadius: '50%',
-                      backgroundColor: option.color || '#1976d2',
+                      backgroundColor: option.color || theme.palette.primary.main,
                       mr: 1
                     }}
                   />
@@ -210,7 +219,7 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
               )}
               renderInput={(params) => <TextField {...params} placeholder="选择黑名单标签（包含这些标签的节点将被排除）" size="small" />}
             />
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
               包含黑名单标签的节点会被排除
             </Typography>
           </Box>

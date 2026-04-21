@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // material-ui
-import { alpha, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Alert from '@mui/material/Alert';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -63,12 +63,15 @@ import {
 } from './component';
 
 // utils
+import { withAlpha } from 'utils/colorUtils';
 import { validateCronExpression } from './utils';
 
 // ==============================|| 机场管理 ||============================== //
 
 export default function AirportList() {
   const theme = useTheme();
+  const palette = theme.vars?.palette || theme.palette;
+  const isDark = theme.palette.mode === 'dark';
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
 
@@ -687,6 +690,93 @@ export default function AirportList() {
   const selectedOnCurrentPage = currentPageIds.filter((id) => selectedAirportIds.includes(id)).length;
   const allCurrentPageSelected = currentPageIds.length > 0 && selectedOnCurrentPage === currentPageIds.length;
   const currentPageIndeterminate = selectedOnCurrentPage > 0 && selectedOnCurrentPage < currentPageIds.length;
+  const hasSelection = selectedAirportIds.length > 0;
+  const allFilteredSelected = totalItems > 0 && selectedAirportIds.length === totalItems;
+
+  const selectionToolbarSx = {
+    mb: 2,
+    p: 1.5,
+    borderRadius: 2.5,
+    borderColor: isDark ? withAlpha(palette.primary.main, 0.24) : withAlpha(palette.primary.main, 0.16),
+    backgroundColor: isDark ? withAlpha(palette.background.paper, 0.96) : withAlpha(palette.primary.main, 0.03)
+  };
+
+  const selectionRegionSx = {
+    display: 'flex',
+    alignItems: 'center',
+    minWidth: 0,
+    gap: 1,
+    px: 1,
+    py: 0.5,
+    borderRadius: 2,
+    bgcolor: isDark ? withAlpha(palette.background.default, 0.88) : withAlpha(palette.background.paper, 0.82),
+    border: `1px solid ${hasSelection ? withAlpha(palette.primary.main, isDark ? 0.34 : 0.2) : withAlpha(palette.divider, isDark ? 0.42 : 0.18)}`
+  };
+
+  const getSelectionChipSx = (active) => ({
+    height: 24,
+    borderRadius: 999,
+    fontWeight: 600,
+    color: active ? (isDark ? palette.primary.light : palette.primary.main) : palette.text.secondary,
+    bgcolor: active
+      ? isDark
+        ? withAlpha(palette.primary.main, 0.18)
+        : withAlpha(palette.primary.main, 0.08)
+      : isDark
+        ? withAlpha(palette.background.default, 0.92)
+        : withAlpha(palette.background.default, 0.72),
+    border: `1px solid ${active ? withAlpha(palette.primary.main, isDark ? 0.34 : 0.2) : withAlpha(palette.divider, isDark ? 0.42 : 0.18)}`,
+    '& .MuiChip-label': {
+      px: 1.1
+    }
+  });
+
+  const selectionActionButtonBaseSx = {
+    minHeight: 34,
+    borderRadius: 2,
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+    boxShadow: 'none',
+    '&.Mui-disabled': {
+      color: palette.action.disabled,
+      borderColor: withAlpha(palette.action.disabledBackground, isDark ? 0.68 : 1),
+      backgroundColor: isDark ? withAlpha(palette.action.disabledBackground, 0.42) : withAlpha(palette.action.disabledBackground, 0.92)
+    }
+  };
+
+  const selectFilteredButtonSx = {
+    ...selectionActionButtonBaseSx,
+    borderColor: withAlpha(palette.primary.main, isDark ? 0.34 : 0.18),
+    bgcolor: isDark ? withAlpha(palette.primary.main, 0.1) : withAlpha(palette.primary.main, 0.03),
+    color: isDark ? palette.primary.light : palette.primary.main,
+    '&:hover': {
+      borderColor: withAlpha(palette.primary.main, isDark ? 0.44 : 0.24),
+      bgcolor: isDark ? withAlpha(palette.primary.main, 0.16) : withAlpha(palette.primary.main, 0.06)
+    }
+  };
+
+  const clearSelectionButtonSx = {
+    ...selectionActionButtonBaseSx,
+    borderColor: withAlpha(palette.divider, isDark ? 0.42 : 0.18),
+    bgcolor: isDark ? withAlpha(palette.background.default, 0.9) : withAlpha(palette.background.paper, 0.82),
+    color: palette.text.primary,
+    '&:hover': {
+      borderColor: withAlpha(palette.primary.main, isDark ? 0.24 : 0.14),
+      bgcolor: isDark ? withAlpha(palette.primary.main, 0.08) : withAlpha(palette.primary.main, 0.04)
+    }
+  };
+
+  const batchActionButtonSx = {
+    ...selectionActionButtonBaseSx,
+    border: `1px solid ${withAlpha(palette.primary.main, isDark ? 0.42 : 0.22)}`,
+    bgcolor: isDark ? withAlpha(palette.primary.main, 0.18) : palette.primary.main,
+    color: isDark ? palette.primary.light : palette.primary.contrastText,
+    '&:hover': {
+      boxShadow: 'none',
+      borderColor: withAlpha(palette.primary.main, isDark ? 0.5 : 0.28),
+      bgcolor: isDark ? withAlpha(palette.primary.main, 0.24) : palette.primary.dark
+    }
+  };
 
   return (
     <MainCard
@@ -797,39 +887,29 @@ export default function AirportList() {
 
       {/* 批量操作栏 */}
       {(airports.length > 0 || selectedAirportIds.length > 0) && (
-        <Paper
-          variant="outlined"
-          sx={{
-            mb: 2,
-            p: 1.5,
-            borderRadius: 2,
-            borderColor: alpha(theme.palette.primary.main, 0.16),
-            backgroundColor: alpha(theme.palette.primary.main, 0.03)
-          }}
-        >
+        <Paper variant="outlined" sx={selectionToolbarSx}>
           {matchDownMd ? (
             <Stack spacing={1.5}>
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ gap: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                <Box sx={selectionRegionSx}>
                   <Checkbox
                     checked={allCurrentPageSelected}
                     indeterminate={currentPageIndeterminate}
                     onChange={(e) => handleToggleCurrentPageSelection(e.target.checked)}
                     disabled={currentPageIds.length === 0}
                     size="small"
-                    sx={{ ml: -0.5 }}
+                    sx={{
+                      p: 0.5,
+                      color: hasSelection ? 'primary.main' : 'text.secondary'
+                    }}
                   />
-                  <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                  <Typography variant="body2" sx={{ whiteSpace: 'nowrap', color: 'text.primary', fontWeight: 500 }}>
                     本页全选
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', justifyContent: 'flex-end', gap: 0.75 }}>
-                  <Chip
-                    color={selectedAirportIds.length > 0 ? 'primary' : 'default'}
-                    size="small"
-                    label={`已选 ${selectedAirportIds.length}`}
-                  />
-                  <Chip variant="outlined" size="small" label={`筛选 ${totalItems}`} />
+                  <Chip size="small" label={`已选 ${selectedAirportIds.length}`} sx={getSelectionChipSx(hasSelection)} />
+                  <Chip variant="outlined" size="small" label={`筛选结果 ${totalItems}`} sx={getSelectionChipSx(false)} />
                 </Stack>
               </Stack>
 
@@ -846,8 +926,11 @@ export default function AirportList() {
                   variant="contained"
                   startIcon={<TuneIcon />}
                   onClick={handleOpenBatchDialog}
-                  disabled={selectedAirportIds.length === 0}
-                  sx={{ gridColumn: '1 / -1' }}
+                  disabled={!hasSelection}
+                  sx={{
+                    ...batchActionButtonSx,
+                    gridColumn: '1 / -1'
+                  }}
                 >
                   批量设置
                 </Button>
@@ -856,11 +939,19 @@ export default function AirportList() {
                   size="small"
                   variant="outlined"
                   onClick={handleSelectFilteredAirports}
-                  disabled={selectingFiltered || totalItems === 0 || selectedAirportIds.length === totalItems}
+                  disabled={selectingFiltered || totalItems === 0 || allFilteredSelected}
+                  sx={selectFilteredButtonSx}
                 >
                   {selectingFiltered ? '选择中...' : '全选当前筛选'}
                 </Button>
-                <Button fullWidth size="small" color="inherit" onClick={handleClearSelection} disabled={selectedAirportIds.length === 0}>
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  onClick={handleClearSelection}
+                  disabled={!hasSelection}
+                  sx={clearSelectionButtonSx}
+                >
                   清空选择
                 </Button>
               </Box>
@@ -868,22 +959,24 @@ export default function AirportList() {
           ) : (
             <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', lg: 'center' }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                <Checkbox
-                  checked={allCurrentPageSelected}
-                  indeterminate={currentPageIndeterminate}
-                  onChange={(e) => handleToggleCurrentPageSelection(e.target.checked)}
-                  disabled={currentPageIds.length === 0}
-                  size="small"
-                />
-                <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
-                  本页全选
-                </Typography>
-                <Chip
-                  color={selectedAirportIds.length > 0 ? 'primary' : 'default'}
-                  size="small"
-                  label={`已选 ${selectedAirportIds.length}`}
-                />
-                <Chip variant="outlined" size="small" label={`筛选结果 ${totalItems}`} />
+                <Box sx={selectionRegionSx}>
+                  <Checkbox
+                    checked={allCurrentPageSelected}
+                    indeterminate={currentPageIndeterminate}
+                    onChange={(e) => handleToggleCurrentPageSelection(e.target.checked)}
+                    disabled={currentPageIds.length === 0}
+                    size="small"
+                    sx={{
+                      p: 0.5,
+                      color: hasSelection ? 'primary.main' : 'text.secondary'
+                    }}
+                  />
+                  <Typography variant="body2" sx={{ whiteSpace: 'nowrap', color: 'text.primary', fontWeight: 500 }}>
+                    本页全选
+                  </Typography>
+                </Box>
+                <Chip size="small" label={`已选 ${selectedAirportIds.length}`} sx={getSelectionChipSx(hasSelection)} />
+                <Chip variant="outlined" size="small" label={`筛选结果 ${totalItems}`} sx={getSelectionChipSx(false)} />
               </Stack>
 
               <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
@@ -891,11 +984,12 @@ export default function AirportList() {
                   size="small"
                   variant="outlined"
                   onClick={handleSelectFilteredAirports}
-                  disabled={selectingFiltered || totalItems === 0 || selectedAirportIds.length === totalItems}
+                  disabled={selectingFiltered || totalItems === 0 || allFilteredSelected}
+                  sx={selectFilteredButtonSx}
                 >
                   {selectingFiltered ? '选择中...' : '全选当前筛选'}
                 </Button>
-                <Button size="small" color="inherit" onClick={handleClearSelection} disabled={selectedAirportIds.length === 0}>
+                <Button size="small" variant="outlined" onClick={handleClearSelection} disabled={!hasSelection} sx={clearSelectionButtonSx}>
                   清空选择
                 </Button>
                 <Button
@@ -903,7 +997,8 @@ export default function AirportList() {
                   variant="contained"
                   startIcon={<TuneIcon />}
                   onClick={handleOpenBatchDialog}
-                  disabled={selectedAirportIds.length === 0}
+                  disabled={!hasSelection}
+                  sx={batchActionButtonSx}
                 >
                   批量设置
                 </Button>

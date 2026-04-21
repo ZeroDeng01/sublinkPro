@@ -49,6 +49,9 @@ export default function NotificationSection() {
   const theme = useTheme();
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
   const { notifications, clearAllNotifications } = useAuth();
+  const isDark = theme.palette.mode === 'dark';
+  const bellAccent = isDark ? theme.palette.warning.main : theme.palette.warning.dark;
+  const bellSurface = isDark ? alpha(theme.palette.warning.main, 0.14) : alpha(theme.palette.warning.main, 0.14);
 
   const [open, setOpen] = useState(false);
   // 从 localStorage 初始化已读状态
@@ -146,12 +149,15 @@ export default function NotificationSection() {
                 ...theme.typography.commonAvatar,
                 ...theme.typography.mediumAvatar,
                 transition: 'all .2s ease-in-out',
-                color: theme.palette.warning.dark,
-                background: theme.palette.warning.light,
+                color: bellAccent,
+                background: isDark ? alpha(theme.palette.background.default, 0.88) : bellSurface,
+                border: '1px solid',
+                borderColor: alpha(bellAccent, isDark ? 0.28 : 0.2),
                 position: 'relative',
                 '&:hover, &[aria-controls="menu-list-grow"]': {
-                  color: theme.palette.warning.light,
-                  background: theme.palette.warning.dark
+                  color: theme.palette.common.white,
+                  background: bellAccent,
+                  borderColor: bellAccent
                 }
               }}
               ref={anchorRef}
@@ -176,15 +182,21 @@ export default function NotificationSection() {
         {({ TransitionProps }) => (
           <ClickAwayListener onClickAway={handleClose}>
             <Transitions position={downMD ? 'top' : 'top-right'} in={open} {...TransitionProps}>
-              <Paper>
+              <Paper sx={{ bgcolor: 'transparent' }}>
                 {open && (
                   <MainCard
                     border={false}
-                    elevation={16}
+                    elevation={0}
                     content={false}
                     boxShadow
-                    shadow={theme.shadows[16]}
-                    sx={{ minWidth: 330, maxWidth: 400 }}
+                    shadow={isDark ? 'none' : theme.shadows[12]}
+                    sx={{
+                      minWidth: 330,
+                      maxWidth: 400,
+                      bgcolor: isDark ? alpha(theme.palette.background.default, 0.96) : 'background.paper',
+                      border: '1px solid',
+                      borderColor: alpha(theme.palette.divider, isDark ? 0.9 : 0.72)
+                    }}
                   >
                     <Stack sx={{ gap: 2 }}>
                       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 2, px: 2 }}>
@@ -196,8 +208,10 @@ export default function NotificationSection() {
                               label={unreadCount}
                               variant="filled"
                               sx={{
-                                color: 'background.default',
-                                bgcolor: 'warning.dark',
+                                color: isDark ? 'warning.main' : 'background.default',
+                                bgcolor: isDark ? alpha(theme.palette.warning.main, 0.14) : 'warning.dark',
+                                border: '1px solid',
+                                borderColor: alpha(theme.palette.warning.main, isDark ? 0.28 : 0),
                                 height: 20,
                                 fontSize: '0.75rem'
                               }}
@@ -236,12 +250,16 @@ export default function NotificationSection() {
                                   sx={{
                                     py: 1.5,
                                     px: 2,
-                                    bgcolor: isRead ? 'transparent' : alpha(theme.palette.primary.light, 0.15),
+                                    bgcolor: isRead
+                                      ? 'transparent'
+                                      : isDark
+                                        ? alpha(theme.palette.primary.main, 0.1)
+                                        : alpha(theme.palette.primary.main, 0.1),
                                     borderBottom: `1px solid ${theme.palette.divider}`,
                                     cursor: 'pointer',
                                     transition: 'background-color 0.2s',
                                     '&:hover': {
-                                      bgcolor: alpha(theme.palette.primary.light, 0.08)
+                                      bgcolor: isDark ? alpha(theme.palette.action.hover, 0.7) : alpha(theme.palette.primary.main, 0.06)
                                     }
                                   }}
                                   onClick={() => handleMarkAsRead(notification.id)}
@@ -284,7 +302,7 @@ export default function NotificationSection() {
                                       <>
                                         <Typography
                                           variant="body2"
-                                          color="textSecondary"
+                                          color="text.secondary"
                                           sx={{
                                             ...(expandedIds.has(notification.id)
                                               ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' }
@@ -310,7 +328,7 @@ export default function NotificationSection() {
                                           </Stack>
                                         )}
                                         <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                          <Typography variant="caption" color="textSecondary">
+                                          <Typography variant="caption" color="text.secondary">
                                             {notification.timestamp?.toLocaleString('zh-CN') || '刚刚'}
                                           </Typography>
                                           {notification.message && notification.message.length > 50 && (
@@ -333,7 +351,7 @@ export default function NotificationSection() {
                           </List>
                         ) : (
                           <Box sx={{ py: 4, textAlign: 'center' }}>
-                            <Typography variant="body2" color="textSecondary">
+                            <Typography variant="body2" color="text.secondary">
                               暂无通知消息
                             </Typography>
                           </Box>

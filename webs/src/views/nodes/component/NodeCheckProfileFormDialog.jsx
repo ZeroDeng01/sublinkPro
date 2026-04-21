@@ -40,6 +40,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 // project imports
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
+import { withAlpha } from 'utils/colorUtils';
 
 // api
 import { createNodeCheckProfile, getNodeCheckMeta, updateNodeCheckProfile } from 'api/nodeCheck';
@@ -65,15 +66,24 @@ function ConfigSection({ title, icon, children, defaultExpanded = true, helperTe
   const [expanded, setExpanded] = useState(defaultExpanded);
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
+  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
+  const sectionSurface = isDark ? withAlpha(palette.background.paper, 0.36) : palette.background.paper;
+  const headerSurface = isDark ? withAlpha(palette.background.default, 0.84) : withAlpha(palette.background.default, 0.72);
+  const hoverSurface = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.2)} 0%, ${withAlpha(palette.primary.main, 0.08)} 100%)`
+    : withAlpha(palette.primary.main, 0.04);
 
   return (
     <Paper
       elevation={0}
       sx={{
-        border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+        border: `1px solid ${panelBorder}`,
         borderRadius: 2,
         overflow: 'hidden',
-        mb: 2
+        mb: 2,
+        backgroundColor: sectionSurface,
+        boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none'
       }}
     >
       <Box
@@ -84,9 +94,9 @@ function ConfigSection({ title, icon, children, defaultExpanded = true, helperTe
           justifyContent: 'space-between',
           p: 1.5,
           cursor: 'pointer',
-          backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+          backgroundColor: headerSurface,
           '&:hover': {
-            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
+            background: hoverSurface
           }
         }}
       >
@@ -99,11 +109,11 @@ function ConfigSection({ title, icon, children, defaultExpanded = true, helperTe
         {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
       </Box>
       <Collapse in={expanded}>
-        <Divider />
+        <Divider sx={{ borderColor: panelBorder }} />
         <Box sx={{ p: 2 }}>
           {children}
           {helperText && (
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 1.5, display: 'block' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
               {helperText}
             </Typography>
           )}
@@ -128,6 +138,33 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isEdit = !!profile;
+  const isDark = theme.palette.mode === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
+  const dialogSurface = isDark ? withAlpha(palette.background.default, 0.96) : palette.background.paper;
+  const dialogSurfaceGradient = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.14)} 0%, ${dialogSurface} 100%)`
+    : 'none';
+  const headerSurface = isDark ? withAlpha(palette.background.paper, 0.2) : palette.background.paper;
+  const actionSurface = isDark ? withAlpha(palette.background.default, 0.9) : withAlpha(palette.background.default, 0.78);
+  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
+  const getTokenChipSx = (accent) => ({
+    color: accent,
+    backgroundColor: withAlpha(accent, isDark ? 0.18 : 0.1),
+    border: `1px solid ${withAlpha(accent, isDark ? 0.34 : 0.2)}`,
+    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none',
+    '& .MuiChip-deleteIcon': {
+      color: withAlpha(accent, isDark ? 0.78 : 0.62),
+      '&:hover': {
+        color: accent
+      }
+    }
+  });
+  const getAlertSx = (accent) => ({
+    color: isDark ? accent : palette.text.primary,
+    backgroundColor: withAlpha(accent, isDark ? 0.12 : 0.08),
+    border: `1px solid ${withAlpha(accent, isDark ? 0.28 : 0.16)}`,
+    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none'
+  });
 
   // 表单状态
   const [form, setForm] = useState(() => createNodeCheckProfileFormState());
@@ -200,15 +237,35 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
   const unlockProviderOptions = getUnlockProviderOptions();
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
-      <DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{
+        sx: {
+          backgroundColor: dialogSurface,
+          backgroundImage: dialogSurfaceGradient,
+          border: '1px solid',
+          borderColor: panelBorder,
+          boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.05)}` : theme.shadows[8]
+        }
+      }}
+    >
+      <DialogTitle
+        sx={{
+          borderBottom: `1px solid ${panelBorder}`,
+          backgroundColor: headerSurface
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <SpeedIcon color="primary" />
           <span>{isEdit ? '编辑检测策略' : '新建检测策略'}</span>
         </Box>
       </DialogTitle>
 
-      <DialogContent dividers>
+      <DialogContent dividers sx={{ backgroundColor: dialogSurface, borderColor: panelBorder }}>
         {/* 策略名称 - 增加上边距避免遮挡 */}
         <TextField
           fullWidth
@@ -265,7 +322,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                 <Box component="li" {...props} key={option.value}>
                   <Box>
                     <Typography variant="body2">{option.label}</Typography>
-                    <Typography variant="caption" color="textSecondary" sx={{ wordBreak: 'break-all' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
                       {option.value}
                     </Typography>
                   </Box>
@@ -297,7 +354,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                   <Box component="li" {...props} key={option.value}>
                     <Box>
                       <Typography variant="body2">{option.label}</Typography>
-                      <Typography variant="caption" color="textSecondary" sx={{ wordBreak: 'break-all' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
                         {option.value}
                       </Typography>
                     </Box>
@@ -385,7 +442,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
               label={
                 <Typography variant="body2">
                   检测落地IP国家
-                  <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
+                  <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
                     (测速时顺便获取节点出口国家)
                   </Typography>
                 </Typography>
@@ -425,7 +482,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
               label={
                 <Typography variant="body2">
                   IP质量检测
-                  <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
+                  <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
                     (优先尝试 IPv4，回退 IPv6；IPv6 可能仅返回部分风险信息)
                   </Typography>
                 </Typography>
@@ -447,7 +504,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                   <Box component="li" {...props} key={option.value}>
                     <Box>
                       <Typography variant="body2">{option.label}</Typography>
-                      <Typography variant="caption" color="textSecondary" sx={{ wordBreak: 'break-all' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
                         {option.value}
                       </Typography>
                     </Box>
@@ -462,7 +519,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
               label={
                 <Typography variant="body2">
                   解锁检测
-                  <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
+                  <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
                     (按 Provider 保存节点解锁结果)
                   </Typography>
                 </Typography>
@@ -470,7 +527,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
             />
             {form.detectUnlock && (
               <Stack spacing={1.5}>
-                <Alert severity="warning" variant="outlined">
+                <Alert severity="warning" variant="outlined" sx={getAlertSx(palette.warning.main)}>
                   开启解锁检测会显著降低整批节点的检测速度，建议只在需要筛选流媒体或 AI 可用区时启用。
                 </Alert>
                 <Autocomplete
@@ -496,7 +553,15 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                   renderTags={(value, getTagProps) =>
                     value.map((option, index) => {
                       const { key, ...tagProps } = getTagProps({ index });
-                      return <Chip key={key} label={formatUnlockProviderLabel(option)} size="small" {...tagProps} />;
+                      return (
+                        <Chip
+                          key={key}
+                          label={formatUnlockProviderLabel(option)}
+                          size="small"
+                          sx={getTokenChipSx(palette.info.main)}
+                          {...tagProps}
+                        />
+                      );
                     })
                   }
                   renderOption={(props, option, { selected }) => (
@@ -504,7 +569,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                       <Checkbox checked={selected} size="small" sx={{ mr: 1 }} />
                       <Box>
                         <Typography variant="body2">{option.label || formatUnlockProviderLabel(option.value)}</Typography>
-                        <Typography variant="caption" color="textSecondary" display="block">
+                        <Typography variant="caption" color="text.secondary" display="block">
                           {option.description || option.value}
                         </Typography>
                       </Box>
@@ -535,7 +600,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                 label={
                   <Typography variant="body2">
                     保留速度测试结果
-                    <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
+                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
                       (延迟测试不覆盖上次速度结果)
                     </Typography>
                   </Typography>
@@ -573,7 +638,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                 }
                 sx={{ mb: 0.5, ml: 0 }}
               />
-              <Typography variant="caption" color="textSecondary" component="div">
+              <Typography variant="caption" color="text.secondary" component="div">
                 {(form.includeHandshake ?? true) ? (
                   <>
                     <strong>开启（推荐）</strong>：测量完整连接时间，包含TCP/TLS/代理协议握手。
@@ -670,11 +735,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                       key={key}
                       label={option.name || option}
                       size="small"
-                      sx={{
-                        backgroundColor: tagObj?.color || '#1976d2',
-                        color: '#fff',
-                        '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
-                      }}
+                      sx={getTokenChipSx(tagObj?.color || palette.primary.main)}
                       {...tagProps}
                     />
                   );
@@ -687,7 +748,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                       width: 12,
                       height: 12,
                       borderRadius: '50%',
-                      backgroundColor: option.color || '#1976d2',
+                      backgroundColor: option.color || palette.primary.main,
                       mr: 1
                     }}
                   />
@@ -751,7 +812,14 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
         </ConfigSection>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, py: 2 }}>
+      <DialogActions
+        sx={{
+          px: 3,
+          py: 2,
+          borderTop: `1px solid ${panelBorder}`,
+          backgroundColor: actionSurface
+        }}
+      >
         <Button onClick={onClose}>取消</Button>
         <Button variant="contained" onClick={handleSubmit} disabled={!form.name.trim() || submitting}>
           {submitting ? '保存中...' : '保存设置'}

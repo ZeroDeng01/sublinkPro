@@ -82,7 +82,76 @@ export function buildPalette(presetColor) {
 
   const commonColor = { common: { black: colors.darkPaper, white: '#fff' } };
 
+  const darkColors = {
+    primary: {
+      light: colors.darkPrimaryLight,
+      main: colors.darkPrimaryMain,
+      dark: colors.darkPrimaryDark,
+      200: colors.darkPrimary200,
+      800: colors.darkPrimary800
+    },
+    secondary: {
+      light: colors.darkSecondaryLight,
+      main: colors.darkSecondaryMain,
+      dark: colors.darkSecondaryDark,
+      200: colors.darkSecondary200,
+      800: colors.darkSecondary800
+    },
+    error: {
+      light: colors.errorLight,
+      main: colors.errorMain,
+      dark: colors.errorDark
+    },
+    orange: {
+      light: colors.orangeLight,
+      main: colors.orangeMain,
+      dark: colors.orangeDark
+    },
+    warning: {
+      light: colors.warningLight,
+      main: colors.warningMain,
+      dark: colors.warningDark,
+      contrastText: colors.grey900
+    },
+    success: {
+      light: colors.successLight,
+      200: colors.success200,
+      main: colors.successMain,
+      dark: colors.successDark
+    },
+    grey: {
+      50: colors.darkPaper,
+      100: colors.darkBackground,
+      200: colors.darkLevel2,
+      300: colors.darkLevel1,
+      500: colors.darkTextSecondary,
+      600: colors.darkTextPrimary,
+      700: colors.darkTextTitle,
+      900: '#ffffff'
+    },
+    dark: {
+      light: colors.darkTextPrimary,
+      main: colors.darkLevel1,
+      dark: colors.darkLevel2,
+      800: colors.darkBackground,
+      900: colors.darkPaper
+    },
+    text: {
+      primary: colors.darkTextTitle,
+      secondary: colors.darkTextPrimary,
+      dark: '#ffffff',
+      hint: colors.darkTextSecondary,
+      heading: '#ffffff'
+    },
+    divider: colors.darkLevel1,
+    background: {
+      paper: colors.darkBackground,
+      default: colors.darkPaper
+    }
+  };
+
   const extendedLight = extendPaletteWithChannels(lightColors);
+  const extendedDark = extendPaletteWithChannels(darkColors);
   const extendedCommon = extendPaletteWithChannels(commonColor);
 
   return {
@@ -90,6 +159,11 @@ export function buildPalette(presetColor) {
       mode: 'light',
       ...extendedCommon,
       ...extendedLight
+    },
+    dark: {
+      mode: 'dark',
+      ...extendedCommon,
+      ...extendedDark
     }
   };
 }

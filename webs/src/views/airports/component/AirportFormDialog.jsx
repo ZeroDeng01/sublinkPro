@@ -105,7 +105,7 @@ export default function AirportFormDialog({
                 onChange={(e) => setAirportForm({ ...airportForm, name: e.target.value })}
               />
               <Box>
-                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Logo（可选）
                 </Typography>
                 <LogoPicker
@@ -162,7 +162,7 @@ export default function AirportFormDialog({
               >
                 <Box>
                   <Typography variant="body2">启用定时更新</Typography>
-                  <Typography variant="caption" color="textSecondary">
+                  <Typography variant="caption" color="text.secondary">
                     关闭后将停止自动拉取订阅
                   </Typography>
                 </Box>
@@ -199,7 +199,7 @@ export default function AirportFormDialog({
                   <Box component="li" {...props} key={option.value}>
                     <Box>
                       <Typography variant="body2">{option.label}</Typography>
-                      <Typography variant="caption" color="textSecondary">
+                      <Typography variant="caption" color="text.secondary">
                         {option.value}
                       </Typography>
                     </Box>
@@ -222,7 +222,7 @@ export default function AirportFormDialog({
                 >
                   <Box>
                     <Typography variant="body2">使用代理下载</Typography>
-                    <Typography variant="caption" color="textSecondary">
+                    <Typography variant="caption" color="text.secondary">
                       通过代理节点拉取订阅
                     </Typography>
                   </Box>
@@ -280,7 +280,7 @@ export default function AirportFormDialog({
                 >
                   <Box>
                     <Typography variant="body2">获取用量信息</Typography>
-                    <Typography variant="caption" color="textSecondary">
+                    <Typography variant="caption" color="text.secondary">
                       从订阅响应解析流量使用情况
                     </Typography>
                   </Box>
@@ -310,7 +310,7 @@ export default function AirportFormDialog({
                 >
                   <Box>
                     <Typography variant="body2">忽略证书验证</Typography>
-                    <Typography variant="caption" color="textSecondary">
+                    <Typography variant="caption" color="text.secondary">
                       跳过 TLS 证书检查
                     </Typography>
                   </Box>

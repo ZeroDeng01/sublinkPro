@@ -9,6 +9,7 @@ import LogoSection from '../LogoSection';
 import ProfileSection from './ProfileSection';
 import NotificationSection from './NotificationSection';
 import DonationSection from './DonationSection';
+import ThemeModeSection from './ThemeModeSection';
 
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
 
@@ -59,6 +60,8 @@ export default function Header() {
 
       {/* notification */}
       <NotificationSection />
+
+      <ThemeModeSection />
 
       {/* profile */}
       <ProfileSection />

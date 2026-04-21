@@ -222,13 +222,22 @@ export default function NodeDetailsPanel({
       <Box
         sx={{
           position: 'relative',
-          background: `linear-gradient(135deg, ${alpha(protocolInfo.color, 0.08)} 0%, ${theme.palette.background.paper} 100%)`,
+          bgcolor: 'background.default',
           pb: 3,
           pt: isMobile ? 2 : 3,
           px: 3,
           borderBottom: '1px solid',
           borderColor: 'divider',
-          flexShrink: 0 // Prevent shrinking
+          flexShrink: 0,
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 3,
+            bgcolor: protocolInfo.color
+          }
         }}
       >
         {/* 关闭按钮 (Only needed if not using DialogTitle/Actions standard close in mobile or custom layout) */}

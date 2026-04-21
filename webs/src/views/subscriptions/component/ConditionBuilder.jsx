@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { alpha, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
@@ -14,6 +15,7 @@ import Typography from '@mui/material/Typography';
 // Paper 组件已改为 Box
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import { withAlpha } from '../../../utils/colorUtils';
 import {
   getNodeConditionFieldMeta,
   getNodeConditionValueOptions,
@@ -21,23 +23,32 @@ import {
   isNodeConditionSelectField
 } from '../../../utils/nodeConditionOptions';
 
-// 深色科幻风格的 Select 样式
-const darkSelectStyles = {
-  '& .MuiOutlinedInput-root': {
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59, 130, 246, 0.3)' },
-    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59, 130, 246, 0.5)' },
-    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' }
-  },
-  '& .MuiSelect-select': { color: '#e2e8f0' },
-  '& .MuiSelect-icon': { color: '#64748b' }
-};
-
 /**
  * 通用条件构建器组件
  * 用于构建 AND/OR 组合的条件表达式
  */
 export default function ConditionBuilder({ value, onChange, fields = [], operators = [], title = '条件配置' }) {
+  const theme = useTheme();
+  const palette = theme.vars?.palette || theme.palette;
+  const isDark = theme.palette.mode === 'dark';
+  const panelBorder = isDark ? withAlpha(palette.divider, 0.78) : withAlpha(palette.divider, 0.9);
+  const containerSurface = isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper;
+  const fieldSurface = isDark ? withAlpha(palette.background.default, 0.72) : palette.background.default;
+
+  const fieldControlSx = {
+    '& .MuiInputLabel-root': { color: 'text.secondary' },
+    '& .MuiInputLabel-root.Mui-focused': { color: 'primary.main' },
+    '& .MuiOutlinedInput-root': {
+      backgroundColor: fieldSurface,
+      boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : 'none',
+      '& .MuiOutlinedInput-notchedOutline': { borderColor: panelBorder },
+      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: alpha(theme.palette.primary.main, 0.4) },
+      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.main }
+    },
+    '& .MuiSelect-select': { color: 'text.primary' },
+    '& .MuiInputBase-input': { color: 'text.primary' },
+    '& .MuiSelect-icon': { color: 'text.secondary' }
+  };
   // 初始化条件数据
   const [logic, setLogic] = useState(value?.logic || 'and');
   const [conditions, setConditions] = useState(value?.conditions || []);
@@ -133,16 +144,17 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
     <Box
       sx={{
         p: 2,
-        border: '1px solid rgba(59, 130, 246, 0.3)',
+        border: `1px solid ${panelBorder}`,
         borderRadius: 2,
-        backgroundColor: 'rgba(15, 23, 42, 0.6)',
-        backdropFilter: 'blur(8px)'
+        backgroundColor: containerSurface,
+        backdropFilter: 'blur(8px)',
+        boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : 'none'
       }}
     >
       <Stack spacing={2}>
         {/* 标题和逻辑切换 */}
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-          <Typography variant="subtitle2" sx={{ color: '#94a3b8' }}>
+          <Typography variant="subtitle2" color="text.secondary">
             {title}
           </Typography>
           <ToggleButtonGroup
@@ -152,17 +164,18 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
             size="small"
             sx={{
               '& .MuiToggleButton-root': {
-                color: '#94a3b8',
-                borderColor: 'rgba(59, 130, 246, 0.3)',
+                color: 'text.secondary',
+                backgroundColor: fieldSurface,
+                borderColor: panelBorder,
                 fontSize: 12,
                 py: 0.5,
                 '&.Mui-selected': {
-                  color: '#3b82f6',
-                  bgcolor: 'rgba(59, 130, 246, 0.15)',
-                  borderColor: 'rgba(59, 130, 246, 0.5)'
+                  color: 'primary.main',
+                  bgcolor: alpha(theme.palette.primary.main, 0.14),
+                  borderColor: alpha(theme.palette.primary.main, 0.42)
                 },
                 '&:hover': {
-                  bgcolor: 'rgba(59, 130, 246, 0.1)'
+                  bgcolor: alpha(theme.palette.primary.main, 0.08)
                 }
               }
             }}
@@ -175,8 +188,8 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
         {/* 条件列表 */}
         {conditions.map((condition, index) => (
           <Stack key={index} direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-            <FormControl size="small" sx={{ minWidth: 100, ...darkSelectStyles }}>
-              <InputLabel sx={{ color: '#94a3b8' }}>字段</InputLabel>
+            <FormControl size="small" sx={{ minWidth: 100, ...fieldControlSx }}>
+              <InputLabel color="primary">字段</InputLabel>
               <Select value={condition.field} label="字段" onChange={(e) => handleConditionChange(index, 'field', e.target.value)}>
                 {fields.map((field) => (
                   <MenuItem key={field.value} value={field.value}>
@@ -186,8 +199,8 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
               </Select>
             </FormControl>
 
-            <FormControl size="small" sx={{ minWidth: 90, ...darkSelectStyles }}>
-              <InputLabel sx={{ color: '#94a3b8' }}>操作</InputLabel>
+            <FormControl size="small" sx={{ minWidth: 90, ...fieldControlSx }}>
+              <InputLabel color="primary">操作</InputLabel>
               <Select value={condition.operator} label="操作" onChange={(e) => handleConditionChange(index, 'operator', e.target.value)}>
                 {getOperatorsForField(condition.field).map((op) => (
                   <MenuItem key={op.value} value={op.value}>
@@ -198,8 +211,8 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
             </FormControl>
 
             {getNodeConditionValueOptions(condition.field) ? (
-              <FormControl size="small" sx={{ flex: 1, minWidth: 100, ...darkSelectStyles }}>
-                <InputLabel sx={{ color: '#94a3b8' }}>值</InputLabel>
+              <FormControl size="small" sx={{ flex: 1, minWidth: 100, ...fieldControlSx }}>
+                <InputLabel color="primary">值</InputLabel>
                 <Select value={condition.value} label="值" onChange={(e) => handleConditionChange(index, 'value', e.target.value)}>
                   {getNodeConditionValueOptions(condition.field).map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
@@ -218,14 +231,15 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
                 sx={{
                   flex: 1,
                   minWidth: 100,
-                  '& .MuiInputLabel-root': { color: '#94a3b8' },
+                  '& .MuiInputLabel-root': { color: theme.palette.text.secondary },
                   '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59, 130, 246, 0.3)' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59, 130, 246, 0.5)' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' }
+                    backgroundColor: fieldSurface,
+                    boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : 'none',
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: panelBorder },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: alpha(theme.palette.primary.main, 0.4) },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.main }
                   },
-                  '& .MuiInputBase-input': { color: '#e2e8f0' }
+                  '& .MuiInputBase-input': { color: theme.palette.text.primary }
                 }}
               />
             )}
@@ -234,8 +248,8 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
               size="small"
               onClick={() => handleRemoveCondition(index)}
               sx={{
-                color: '#f87171',
-                '&:hover': { bgcolor: 'rgba(248, 113, 113, 0.1)' }
+                color: 'error.light',
+                '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.08) }
               }}
             >
               <DeleteIcon fontSize="small" />
@@ -250,9 +264,9 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
           onClick={handleAddCondition}
           sx={{
             alignSelf: 'flex-start',
-            color: '#3b82f6',
-            borderColor: 'rgba(59, 130, 246, 0.3)',
-            '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.1)' }
+            color: 'primary.main',
+            borderColor: alpha(theme.palette.primary.main, 0.24),
+            '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
           }}
         >
           添加条件
@@ -260,7 +274,7 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
 
         {/* 空状态提示 */}
         {conditions.length === 0 && (
-          <Typography variant="body2" sx={{ color: '#64748b', fontStyle: 'italic' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
             尚未添加任何条件
           </Typography>
         )}

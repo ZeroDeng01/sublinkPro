@@ -291,7 +291,7 @@ export default function ScriptList() {
             <MainCard key={script.id} content={false} border shadow={theme.shadows[1]}>
               <Box p={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Chip label={script.name} color="success" size="small" />
+                  <Chip label={script.name} color="success" variant="outlined" size="small" />
                   <Typography variant="caption" color="textSecondary">
                     v{script.version}
                   </Typography>
@@ -331,7 +331,7 @@ export default function ScriptList() {
               {scripts.map((script) => (
                 <TableRow key={script.id} hover>
                   <TableCell>
-                    <Chip label={script.name} color="success" size="small" />
+                    <Chip label={script.name} color="success" variant="outlined" size="small" />
                   </TableCell>
                   <TableCell>{script.version}</TableCell>
                   <TableCell>{formatDate(script.created_at)}</TableCell>

@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
 
 // material-ui
-import { useTheme } from '@mui/material/styles';
+import { useColorScheme, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -11,7 +11,6 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -30,14 +29,86 @@ import TimerIcon from '@mui/icons-material/Timer';
 
 // api
 import { getNodeCheckProfiles, runNodeCheck } from 'api/nodeCheck';
+import { withAlpha } from 'utils/colorUtils';
 
 /**
  * 节点检测策略选择对话框
  * 用于手动测速时选择检测策略
  */
+
+const getStrategyTitleChipSx = (theme, isDark, tone = 'neutral') => {
+  const palette = theme.vars?.palette || theme.palette;
+  const toneMap = {
+    success: {
+      accent: palette.success.main,
+      text: isDark ? palette.success.light : palette.success.dark
+    },
+    info: {
+      accent: palette.info.main,
+      text: isDark ? palette.info.light : palette.info.dark
+    },
+    warning: {
+      accent: palette.warning.main,
+      text: isDark ? palette.warning.light : palette.warning.dark
+    },
+    neutral: {
+      accent: palette.grey[500],
+      text: isDark ? withAlpha(palette.common.white, 0.92) : withAlpha(palette.text.primary, 0.82)
+    }
+  };
+
+  const { accent, text } = toneMap[tone] || toneMap.neutral;
+
+  return {
+    height: 22,
+    borderRadius: 1.5,
+    flexShrink: 0,
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    letterSpacing: '0.01em',
+    color: text,
+    backgroundColor: withAlpha(accent, isDark ? (tone === 'neutral' ? 0.24 : 0.18) : tone === 'neutral' ? 0.08 : 0.1),
+    border: `1px solid ${withAlpha(accent, isDark ? (tone === 'neutral' ? 0.34 : 0.32) : tone === 'neutral' ? 0.16 : 0.2)}`,
+    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.05)}` : 'none',
+    '& .MuiChip-label': {
+      px: 1,
+      py: 0
+    },
+    '& .MuiChip-icon': {
+      color: 'inherit',
+      fontSize: '0.82rem',
+      ml: 0.75,
+      mr: -0.25
+    }
+  };
+};
+
 export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess, onOpenSettings }) {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { mode } = useColorScheme();
+  const runtimeColorScheme = typeof document !== 'undefined' ? document.documentElement?.getAttribute('data-color-scheme') : null;
+  const isDark = (mode || runtimeColorScheme || theme.palette.mode) === 'dark';
+  const palette = theme.vars?.palette || theme.palette;
+  const dialogSurface = isDark ? withAlpha(palette.background.default, 0.96) : palette.background.paper;
+  const dialogSurfaceGradient = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.16)} 0%, ${dialogSurface} 100%)`
+    : 'none';
+  const headerSurface = isDark ? withAlpha(palette.background.paper, 0.2) : palette.background.paper;
+  const actionSurface = isDark ? withAlpha(palette.background.default, 0.9) : withAlpha(palette.background.default, 0.78);
+  const emptyStateSurface = isDark ? withAlpha(palette.background.paper, 0.34) : withAlpha(palette.background.default, 0.72);
+  const strategyItemDivider = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
+  const strategyItemHoverBackground = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.28)} 0%, ${withAlpha(palette.primary.main, 0.06)} 100%)`
+    : withAlpha(palette.primary.main, 0.04);
+  const strategyItemSelectedBackground = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.42)} 0%, ${withAlpha(palette.primary.main, 0.12)} 100%)`
+    : withAlpha(palette.primary.main, 0.08);
+  const strategyItemSelectedHoverBackground = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.48)} 0%, ${withAlpha(palette.primary.main, 0.16)} 100%)`
+    : withAlpha(palette.primary.main, 0.11);
+  const strategyItemSelectedShadow = isDark
+    ? `inset 0 0 0 1px ${withAlpha(palette.primary.main, 0.24)}, inset 0 1px 0 ${withAlpha(palette.common.white, 0.05)}`
+    : `inset 0 0 0 1px ${withAlpha(palette.primary.main, 0.14)}`;
 
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -106,17 +177,35 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
       PaperProps={{
         sx: {
           borderRadius: 3,
-          backgroundColor: isDark ? 'rgba(30,30,30,0.95)' : 'background.paper'
+          backgroundColor: dialogSurface,
+          backgroundImage: dialogSurfaceGradient,
+          border: '1px solid',
+          borderColor: strategyItemDivider,
+          boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.05)}` : theme.shadows[8]
         }
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
+      <DialogTitle
+        sx={{
+          pb: 1,
+          borderBottom: `1px solid ${strategyItemDivider}`,
+          backgroundColor: headerSurface
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SpeedIcon color="primary" />
             <span>选择检测策略</span>
           </Box>
-          <IconButton size="small" onClick={onClose}>
+          <IconButton
+            size="small"
+            onClick={onClose}
+            sx={{
+              '&:hover': {
+                backgroundColor: withAlpha(palette.primary.main, isDark ? 0.14 : 0.08)
+              }
+            }}
+          >
             <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
@@ -127,15 +216,25 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
         )}
       </DialogTitle>
 
-      <Divider />
-
-      <DialogContent sx={{ p: 0 }}>
+      <DialogContent sx={{ p: 0, backgroundColor: dialogSurface }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress size={32} />
           </Box>
         ) : profiles.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Box
+            sx={{
+              textAlign: 'center',
+              py: 4,
+              px: 2,
+              m: 2,
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: strategyItemDivider,
+              backgroundColor: emptyStateSurface,
+              boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none'
+            }}
+          >
             <Typography color="text.secondary" gutterBottom>
               暂无检测策略
             </Typography>
@@ -158,12 +257,16 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
                 selected={selectedProfileId === profile.id}
                 onClick={() => handleSelect(profile.id)}
                 sx={{
-                  borderBottom:
-                    index < profiles.length - 1 ? `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` : 'none',
+                  borderBottom: index < profiles.length - 1 ? `1px solid ${strategyItemDivider}` : 'none',
+                  transition: 'background 0.2s ease, box-shadow 0.2s ease',
+                  '&:hover': {
+                    background: strategyItemHoverBackground
+                  },
                   '&.Mui-selected': {
-                    backgroundColor: isDark ? 'rgba(33, 150, 243, 0.16)' : 'rgba(33, 150, 243, 0.08)',
+                    background: strategyItemSelectedBackground,
+                    boxShadow: strategyItemSelectedShadow,
                     '&:hover': {
-                      backgroundColor: isDark ? 'rgba(33, 150, 243, 0.24)' : 'rgba(33, 150, 243, 0.12)'
+                      background: strategyItemSelectedHoverBackground
                     }
                   }
                 }}
@@ -172,29 +275,17 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
                   {selectedProfileId === profile.id ? (
                     <CheckCircleIcon color="primary" fontSize="small" />
                   ) : (
-                    <SpeedIcon fontSize="small" sx={{ opacity: 0.5 }} />
+                    <SpeedIcon fontSize="small" sx={{ color: 'text.secondary', opacity: isDark ? 0.82 : 0.64 }} />
                   )}
                 </ListItemIcon>
                 <ListItemText
                   primary={
-                    <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box component="span" sx={{ display: 'flex', alignItems: 'center', columnGap: 0.75, rowGap: 0.75, flexWrap: 'wrap' }}>
                       <span>{profile.name}</span>
                       <Chip
                         label={profile.mode === 'mihomo' ? '延迟+速度' : '仅延迟'}
                         size="small"
-                        sx={{
-                          height: 20,
-                          fontSize: '0.7rem',
-                          backgroundColor:
-                            profile.mode === 'mihomo'
-                              ? isDark
-                                ? 'rgba(76, 175, 80, 0.2)'
-                                : 'rgba(76, 175, 80, 0.1)'
-                              : isDark
-                                ? 'rgba(33, 150, 243, 0.2)'
-                                : 'rgba(33, 150, 243, 0.1)',
-                          color: profile.mode === 'mihomo' ? 'success.main' : 'primary.main'
-                        }}
+                        sx={getStrategyTitleChipSx(theme, isDark, profile.mode === 'mihomo' ? 'success' : 'info')}
                       />
                     </Box>
                   }
@@ -226,9 +317,15 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
         )}
       </DialogContent>
 
-      <Divider />
-
-      <DialogActions sx={{ px: 2, py: 1.5, justifyContent: 'space-between' }}>
+      <DialogActions
+        sx={{
+          px: 2,
+          py: 1.5,
+          justifyContent: 'space-between',
+          borderTop: `1px solid ${strategyItemDivider}`,
+          backgroundColor: actionSurface
+        }}
+      >
         <Button
           size="small"
           startIcon={<SettingsIcon />}
@@ -246,10 +343,17 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
           onClick={handleExecute}
           disabled={!selectedProfileId || executing || profiles.length === 0}
           sx={{
-            background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
-            fontStyle: { color: '#ffffff' },
+            color: palette.common.white,
+            background: `linear-gradient(135deg, ${palette.success.main} 0%, ${palette.success.dark} 100%)`,
+            boxShadow: `0 8px 18px ${withAlpha(palette.success.main, isDark ? 0.28 : 0.22)}`,
             '&:hover': {
-              background: 'linear-gradient(135deg, #66bb6a 0%, #388e3c 100%)'
+              background: `linear-gradient(135deg, ${palette.success.light} 0%, ${palette.success.main} 100%)`,
+              boxShadow: `0 10px 22px ${withAlpha(palette.success.main, isDark ? 0.34 : 0.26)}`
+            },
+            '&.Mui-disabled': {
+              color: 'text.disabled',
+              background: theme.palette.action.disabledBackground,
+              boxShadow: 'none'
             }
           }}
         >

@@ -19,6 +19,7 @@ import FontFamily from './FontFamily';
 import BorderRadius from './BorderRadius';
 
 import { DEFAULT_THEME_MODE } from 'config';
+import ThemeModeSelector from 'components/ThemeModeSelector';
 import MainCard from 'ui-component/cards/MainCard';
 import AnimateButton from 'ui-component/extended/AnimateButton';
 import SimpleBar from 'ui-component/third-party/SimpleBar';
@@ -100,6 +101,10 @@ export default function Customization() {
               </Stack>
               <Divider />
               <Grid container spacing={2}>
+                <Grid size={12}>
+                  <ThemeModeSelector />
+                  <Divider />
+                </Grid>
                 <Grid size={12}>
                   {/* font family */}
                   <FontFamily />

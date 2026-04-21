@@ -106,7 +106,7 @@ export const formatExpireTime = (timestamp) => {
 
 // 根据使用率百分比返回颜色
 export const getUsageColor = (percent) => {
-  if (percent < 60) return 'success.main';
-  if (percent < 85) return 'warning.main';
-  return 'error.main';
+  if (percent < 60) return '#22c55e';
+  if (percent < 85) return '#f59e0b';
+  return '#ef4444';
 };
