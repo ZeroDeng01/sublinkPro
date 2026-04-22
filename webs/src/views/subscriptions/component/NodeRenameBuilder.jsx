@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { alpha, useTheme } from '@mui/material/styles';
+import { darken, lighten, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
@@ -27,8 +27,11 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import { getTagGroups } from 'api/tags';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getFraudScoreIcon } from 'utils/fraudScore';
 import { getDelayIcon, getSpeedIcon } from 'utils/nodeMetricIcons';
+import { withAlpha } from '../../../utils/colorUtils';
+import { getReadableTextTokens, getSurfaceTokens } from '../../../themes/surfaceTokens';
 import { getUnlockRenameVariables } from 'views/nodes/utils';
 
 // 将国家ISO代码转换为国旗emoji
@@ -83,6 +86,28 @@ const QUICK_SEPARATORS = [
   { key: '(', label: '(' },
   { key: ')', label: ')' }
 ];
+
+const UNLOCK_VARIABLE_COLOR_POOL = [
+  '#1e88e5',
+  '#8e24aa',
+  '#00acc1',
+  '#43a047',
+  '#fb8c00',
+  '#e53935',
+  '#3949ab',
+  '#00897b',
+  '#6d4c41',
+  '#5e35b1'
+];
+
+const getStableAccentFromKey = (key, palette) => {
+  if (!key) return palette[0];
+  let hash = 0;
+  for (let i = 0; i < key.length; i += 1) {
+    hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  }
+  return palette[hash % palette.length];
+};
 
 // 预览用的示例数据
 const PREVIEW_DATA = {
@@ -154,6 +179,31 @@ const buildRule = (items) => {
 export default function NodeRenameBuilder({ value, onChange }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { isDark } = useResolvedColorScheme();
+  const palette = theme.vars?.palette || theme.palette;
+  const { dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(theme, isDark);
+  const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
+  const insetHighlight = isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.03)}` : 'none';
+  const emphasisInsetHighlight = isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.05)}` : 'none';
+  const subtleDivider = withAlpha(palette.divider, isDark ? 0.72 : 0.9);
+  const accentRing = withAlpha(palette.primary.main, isDark ? 0.16 : 0.08);
+  const builderBorderColor = withAlpha(palette.primary.main, isDark ? 0.34 : 0.18);
+  const builderHoverBorderColor = withAlpha(palette.primary.main, isDark ? 0.46 : 0.28);
+  const dragOverSurface = withAlpha(palette.primary.main, isDark ? 0.12 : 0.05);
+  const previewInlineSurface = isDark ? withAlpha(palette.background.default, 0.9) : nestedPanelSurface;
+
+  const getAccentTone = useCallback(
+    (accent) => ({
+      subtleSurface: withAlpha(accent, isDark ? 0.16 : 0.1),
+      hoverSurface: withAlpha(accent, isDark ? 0.24 : 0.16),
+      strongSurface: withAlpha(accent, isDark ? 0.2 : 0.14),
+      softBorder: withAlpha(accent, isDark ? 0.34 : 0.24),
+      strongBorder: withAlpha(accent, isDark ? 0.46 : 0.34),
+      textColor: isDark ? lighten(accent, 0.12) : darken(accent, 0.22)
+    }),
+    [isDark]
+  );
+
   const getSectionAccent = (section) => {
     switch (section) {
       case 'quality':
@@ -165,19 +215,25 @@ export default function NodeRenameBuilder({ value, onChange }) {
         return theme.palette.primary.main;
     }
   };
-  const buildSectionChipSx = (accent) => ({
-    bgcolor: alpha(accent, theme.palette.mode === 'dark' ? 0.18 : 0.1),
-    color: accent,
-    fontWeight: 600,
-    border: '1px solid',
-    borderColor: alpha(accent, theme.palette.mode === 'dark' ? 0.34 : 0.18),
-    cursor: 'pointer',
-    transition: 'background-color 0.2s ease, border-color 0.2s ease',
-    '&:hover': {
-      bgcolor: alpha(accent, theme.palette.mode === 'dark' ? 0.24 : 0.14),
-      borderColor: alpha(accent, theme.palette.mode === 'dark' ? 0.46 : 0.28)
-    }
-  });
+  const buildSectionChipSx = (accent) => {
+    const tone = getAccentTone(accent);
+
+    return {
+      bgcolor: tone.subtleSurface,
+      color: tone.textColor,
+      fontWeight: 700,
+      border: '1px solid',
+      borderColor: tone.softBorder,
+      cursor: 'pointer',
+      boxShadow: insetHighlight,
+      transition: 'background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+      '&:hover': {
+        bgcolor: tone.hoverSurface,
+        borderColor: tone.strongBorder,
+        boxShadow: isDark ? `0 0 0 1px ${withAlpha(accent, 0.16)}` : theme.shadows[1]
+      }
+    };
+  };
 
   const [ruleItems, setRuleItems] = useState([]);
   const [customSeparator, setCustomSeparator] = useState('');
@@ -190,7 +246,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
   const dynamicUnlockVariables = getUnlockRenameVariables().map((item) => ({
     key: item.key,
     label: item.label,
-    color: '#0d47a1',
+    color: item.color || getStableAccentFromKey(item.key, UNLOCK_VARIABLE_COLOR_POOL),
     description: item.description,
     section: 'unlock'
   }));
@@ -215,6 +271,55 @@ export default function NodeRenameBuilder({ value, onChange }) {
     ],
     []
   );
+
+  const sectionPaperSx = {
+    p: 2,
+    mb: 2,
+    bgcolor: dialogSurface,
+    backgroundImage: dialogSurfaceGradient,
+    border: '1px solid',
+    borderColor: panelBorder,
+    borderRadius: 2.5,
+    boxShadow: insetHighlight
+  };
+
+  const sectionHeaderSx = {
+    mb: 1.5,
+    fontWeight: 700,
+    color: secondaryText
+  };
+
+  const outlinedInputSx = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 2,
+      bgcolor: mutedPanelSurface,
+      color: primaryText,
+      border: '1px solid',
+      borderColor: subtleDivider,
+      boxShadow: insetHighlight,
+      transition: 'border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
+      '& fieldset': {
+        borderColor: 'transparent'
+      },
+      '&:hover': {
+        bgcolor: dialogSurface,
+        '& fieldset': {
+          borderColor: builderBorderColor
+        }
+      },
+      '&.Mui-focused': {
+        bgcolor: dialogSurface,
+        boxShadow: isDark ? `0 0 0 1px ${accentRing}` : 'none',
+        '& fieldset': {
+          borderColor: builderHoverBorderColor
+        }
+      }
+    },
+    '& .MuiInputBase-input::placeholder': {
+      color: tertiaryText,
+      opacity: 1
+    }
+  };
 
   // 初始化：从传入的 value 解析规则
   useEffect(() => {
@@ -311,11 +416,10 @@ export default function NodeRenameBuilder({ value, onChange }) {
 
   // 获取变量的颜色
   const getVariableColor = (varKey) => {
-    if (varKey.startsWith('$TagGroup(')) {
-      return getSectionAccent('basic');
-    }
-    const variable = availableVariables.find((v) => v.key === varKey);
-    return getSectionAccent(variable?.section);
+    const variable = varKey.startsWith('$TagGroup(')
+      ? availableVariables.find((v) => v.key === '$TagGroup')
+      : availableVariables.find((v) => v.key === varKey);
+    return variable?.color || getSectionAccent(variable?.section);
   };
 
   // 获取变量的标签
@@ -328,6 +432,8 @@ export default function NodeRenameBuilder({ value, onChange }) {
     const variable = availableVariables.find((v) => v.key === varKey);
     return variable?.label || varKey;
   };
+
+  const getVariableTone = (varKey) => getAccentTone(getVariableColor(varKey));
 
   // 生成预览
   const preview = ruleItems
@@ -350,21 +456,16 @@ export default function NodeRenameBuilder({ value, onChange }) {
     })
     .join('');
 
+  const qualityVariableKeys = useMemo(
+    () => new Set(availableVariables.filter((item) => item.section === 'quality').map((item) => item.key)),
+    [availableVariables]
+  );
+
   return (
     <Box>
       {/* 可用变量区 */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          mb: 2,
-          bgcolor: 'background.paper',
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2
-        }}
-      >
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
+      <Paper elevation={0} sx={sectionPaperSx}>
+        <Typography variant="subtitle2" sx={sectionHeaderSx}>
           🏷️ 可用变量 (点击添加)
         </Typography>
         <Stack spacing={1.5}>
@@ -373,8 +474,8 @@ export default function NodeRenameBuilder({ value, onChange }) {
             if (sectionVariables.length === 0) return null;
             return (
               <Box key={section.key}>
-                {sectionIndex > 0 && <Divider sx={{ mb: 1.5 }} />}
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 700 }}>
+                {sectionIndex > 0 && <Divider sx={{ mb: 1.5, borderColor: subtleDivider }} />}
+                <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 700, color: secondaryText }}>
                   {section.label}
                 </Typography>
                 <Stack direction="row" flexWrap="wrap" gap={1}>
@@ -395,32 +496,33 @@ export default function NodeRenameBuilder({ value, onChange }) {
       </Paper>
 
       {/* 分隔符快捷按钮 */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          mb: 2,
-          bgcolor: 'background.paper',
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2
-        }}
-      >
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
+      <Paper elevation={0} sx={sectionPaperSx}>
+        <Typography variant="subtitle2" sx={sectionHeaderSx}>
           ✂️ 分隔符
         </Typography>
         <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
-          <ButtonGroup size="small" variant="outlined">
+          <ButtonGroup
+            size="small"
+            variant="outlined"
+            sx={{
+              '& .MuiButton-root': {
+                minWidth: isMobile ? 36 : 44,
+                fontWeight: 700,
+                fontFamily: 'monospace',
+                color: secondaryText,
+                bgcolor: nestedPanelSurface,
+                borderColor: subtleDivider,
+                boxShadow: insetHighlight,
+                '&:hover': {
+                  bgcolor: mutedPanelSurface,
+                  borderColor: builderHoverBorderColor,
+                  color: primaryText
+                }
+              }
+            }}
+          >
             {QUICK_SEPARATORS.map((sep) => (
-              <Button
-                key={sep.key}
-                onClick={() => handleAddSeparator(sep.key)}
-                sx={{
-                  minWidth: isMobile ? 36 : 44,
-                  fontWeight: 700,
-                  fontFamily: 'monospace'
-                }}
-              >
+              <Button key={sep.key} onClick={() => handleAddSeparator(sep.key)}>
                 {sep.label}
               </Button>
             ))}
@@ -431,9 +533,28 @@ export default function NodeRenameBuilder({ value, onChange }) {
               placeholder="自定义"
               value={customSeparator}
               onChange={(e) => setCustomSeparator(e.target.value)}
-              sx={{ width: 90, '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
+              sx={{ width: 90, ...outlinedInputSx }}
             />
-            <IconButton size="small" color="primary" onClick={() => handleAddSeparator(customSeparator)} disabled={!customSeparator}>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={() => handleAddSeparator(customSeparator)}
+              disabled={!customSeparator}
+              sx={{
+                bgcolor: withAlpha(palette.primary.main, isDark ? 0.16 : 0.08),
+                border: '1px solid',
+                borderColor: withAlpha(palette.primary.main, isDark ? 0.34 : 0.18),
+                boxShadow: insetHighlight,
+                '&:hover': {
+                  bgcolor: withAlpha(palette.primary.main, isDark ? 0.22 : 0.12),
+                  borderColor: withAlpha(palette.primary.main, isDark ? 0.46 : 0.28)
+                },
+                '&.Mui-disabled': {
+                  bgcolor: 'action.disabledBackground',
+                  borderColor: 'action.disabledBackground'
+                }
+              }}
+            >
               <AddIcon />
             </IconButton>
           </Stack>
@@ -447,20 +568,36 @@ export default function NodeRenameBuilder({ value, onChange }) {
           p: 2,
           mb: 2,
           minHeight: 80,
-          bgcolor: 'background.default',
+          bgcolor: dialogSurface,
+          backgroundImage: dialogSurfaceGradient,
+          boxShadow: insetHighlight,
           border: '2px dashed',
-          borderColor: ruleItems.length > 0 ? alpha(theme.palette.primary.main, 0.32) : 'divider',
-          borderRadius: 2,
-          transition: 'border-color 0.3s ease, background-color 0.3s ease'
+          borderColor: ruleItems.length > 0 ? builderBorderColor : panelBorder,
+          borderRadius: 2.5,
+          transition: 'border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease'
         }}
       >
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-          <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: secondaryText }}>
             📝 命名规则 (拖拽排序)
           </Typography>
           {ruleItems.length > 0 && (
             <Tooltip title="清空所有">
-              <IconButton size="small" color="error" onClick={handleClearAll}>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={handleClearAll}
+                sx={{
+                  bgcolor: nestedPanelSurface,
+                  border: '1px solid',
+                  borderColor: subtleDivider,
+                  boxShadow: insetHighlight,
+                  '&:hover': {
+                    bgcolor: withAlpha(palette.error.main, isDark ? 0.14 : 0.08),
+                    borderColor: withAlpha(palette.error.main, isDark ? 0.42 : 0.24)
+                  }
+                }}
+              >
                 <ClearAllIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -479,16 +616,19 @@ export default function NodeRenameBuilder({ value, onChange }) {
                   gap: 1,
                   minHeight: 44,
                   p: 1,
-                  borderRadius: 1,
-                  bgcolor: snapshot.isDraggingOver ? 'action.hover' : 'transparent',
-                  transition: 'background-color 0.2s ease'
+                  borderRadius: 2,
+                  bgcolor: snapshot.isDraggingOver ? dragOverSurface : mutedPanelSurface,
+                  border: '1px solid',
+                  borderColor: snapshot.isDraggingOver ? builderHoverBorderColor : subtleDivider,
+                  boxShadow: emphasisInsetHighlight,
+                  transition: 'background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease'
                 }}
               >
                 {ruleItems.length === 0 ? (
                   <Typography
                     variant="body2"
-                    color="text.secondary"
                     sx={{
+                      color: tertiaryText,
                       fontStyle: 'italic',
                       display: 'flex',
                       alignItems: 'center',
@@ -503,41 +643,51 @@ export default function NodeRenameBuilder({ value, onChange }) {
                     <Draggable key={item.id} draggableId={item.id} index={index}>
                       {(provided, snapshot) => (
                         <Fade in>
-                          <Chip
+                          <Box
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            icon={<DragIndicatorIcon sx={{ fontSize: 16 }} />}
-                            label={item.type === 'variable' ? getVariableLabel(item.value) : `"${item.value}"`}
-                            onDelete={() => handleRemoveItem(item.id)}
-                            deleteIcon={<DeleteOutlineIcon sx={{ fontSize: 16 }} />}
-                            sx={{
-                              bgcolor:
-                                item.type === 'variable'
-                                  ? `${getVariableColor(item.value)}20`
-                                  : alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.12 : 0.08),
-                              color: item.type === 'variable' ? getVariableColor(item.value) : 'text.primary',
-                              fontWeight: 600,
-                              border: '1px solid',
-                              borderColor: item.type === 'variable' ? `${getVariableColor(item.value)}40` : 'divider',
-                              transform: snapshot.isDragging ? 'scale(1.05)' : 'scale(1)',
-                              boxShadow: snapshot.isDragging ? 4 : 0,
-                              transition: 'transform 0.1s ease, box-shadow 0.1s ease',
-                              '& .MuiChip-icon': {
-                                color: 'inherit',
-                                opacity: 0.6,
-                                cursor: 'grab'
-                              },
-                              '& .MuiChip-deleteIcon': {
-                                color: 'inherit',
-                                opacity: 0.6,
-                                '&:hover': {
-                                  opacity: 1,
-                                  color: 'error.main'
-                                }
-                              }
-                            }}
-                          />
+                            sx={{ display: 'inline-flex' }}
+                          >
+                            <Chip
+                              icon={<DragIndicatorIcon sx={{ fontSize: 16 }} />}
+                              label={item.type === 'variable' ? getVariableLabel(item.value) : `"${item.value}"`}
+                              onDelete={() => handleRemoveItem(item.id)}
+                              deleteIcon={<DeleteOutlineIcon sx={{ fontSize: 16 }} />}
+                              sx={(() => {
+                                const accent = item.type === 'variable' ? getVariableColor(item.value) : null;
+                                const tone = item.type === 'variable' ? getVariableTone(item.value) : null;
+
+                                return {
+                                  bgcolor: tone ? tone.strongSurface : nestedPanelSurface,
+                                  color: tone ? tone.textColor : primaryText,
+                                  fontWeight: 600,
+                                  border: '1px solid',
+                                  borderColor: tone ? tone.softBorder : subtleDivider,
+                                  boxShadow: snapshot.isDragging
+                                    ? isDark
+                                      ? `0 0 0 1px ${tone ? withAlpha(accent, 0.2) : accentRing}, 0 10px 24px ${withAlpha(palette.common.black, 0.28)}`
+                                      : theme.shadows[4]
+                                    : insetHighlight,
+                                  transform: snapshot.isDragging ? 'scale(1.03)' : 'scale(1)',
+                                  transition: 'transform 0.1s ease, box-shadow 0.1s ease, border-color 0.2s ease',
+                                  '& .MuiChip-icon': {
+                                    color: 'inherit',
+                                    opacity: 0.72,
+                                    cursor: 'grab'
+                                  },
+                                  '& .MuiChip-deleteIcon': {
+                                    color: 'inherit',
+                                    opacity: 0.68,
+                                    '&:hover': {
+                                      opacity: 1,
+                                      color: 'error.main'
+                                    }
+                                  }
+                                };
+                              })()}
+                            />
+                          </Box>
                         </Fade>
                       )}
                     </Draggable>
@@ -557,6 +707,14 @@ export default function NodeRenameBuilder({ value, onChange }) {
             variant={'standard'}
             severity="info"
             sx={{
+              bgcolor: dialogSurface,
+              color: primaryText,
+              border: '1px solid',
+              borderColor: withAlpha(palette.info.main, isDark ? 0.34 : 0.18),
+              boxShadow: insetHighlight,
+              '& .MuiAlert-icon': {
+                color: 'info.main'
+              },
               '& .MuiAlert-message': {
                 width: '100%'
               }
@@ -570,7 +728,10 @@ export default function NodeRenameBuilder({ value, onChange }) {
                 variant="body2"
                 sx={{
                   fontFamily: 'monospace',
-                  bgcolor: 'action.hover',
+                  bgcolor: previewInlineSurface,
+                  border: '1px solid',
+                  borderColor: subtleDivider,
+                  color: primaryText,
                   px: 1,
                   py: 0.5,
                   borderRadius: 1,
@@ -580,6 +741,33 @@ export default function NodeRenameBuilder({ value, onChange }) {
                 {preview || '(空)'}
               </Typography>
             </Stack>
+            {qualityVariableKeys.size > 0 && (
+              <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0.75} sx={{ mt: 1.25 }}>
+                {availableVariables
+                  .filter((variable) => variable.section === 'quality')
+                  .map((variable) => {
+                    const tone = getVariableTone(variable.key);
+                    return (
+                      <Chip
+                        key={variable.key}
+                        label={variable.label}
+                        size="small"
+                        sx={{
+                          height: 22,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          bgcolor: tone.subtleSurface,
+                          color: tone.textColor,
+                          border: '1px solid',
+                          borderColor: tone.softBorder,
+                          boxShadow: insetHighlight,
+                          '& .MuiChip-label': { px: 0.9 }
+                        }}
+                      />
+                    );
+                  })}
+              </Stack>
+            )}
           </Alert>
         </Fade>
       )}
@@ -589,31 +777,87 @@ export default function NodeRenameBuilder({ value, onChange }) {
         onClose={() => setTagGroupDialogOpen(false)}
         maxWidth="xs"
         fullWidth
-        PaperProps={{
-          sx: { borderRadius: 2 }
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 2.5,
+              bgcolor: dialogSurface,
+              backgroundImage: dialogSurfaceGradient,
+              border: '1px solid',
+              borderColor: panelBorder,
+              boxShadow: emphasisInsetHighlight
+            }
+          }
         }}
       >
-        <DialogTitle sx={{ pb: 1 }}>选择标签组</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
+        <DialogTitle
+          sx={{
+            pb: 1,
+            bgcolor: mutedPanelSurface,
+            color: primaryText,
+            borderBottom: '1px solid',
+            borderColor: panelBorder
+          }}
+        >
+          选择标签组
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1.5, bgcolor: 'transparent' }}>
           {tagGroupsLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                py: 3,
+                bgcolor: mutedPanelSurface,
+                border: '1px solid',
+                borderColor: subtleDivider,
+                borderRadius: 2,
+                boxShadow: insetHighlight
+              }}
+            >
               <CircularProgress size={32} />
             </Box>
           ) : tagGroups.length === 0 ? (
-            <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-              暂无标签组，请先在标签管理中创建标签组
-            </Typography>
+            <Box
+              sx={{
+                py: 2,
+                px: 1.5,
+                textAlign: 'center',
+                bgcolor: mutedPanelSurface,
+                border: '1px solid',
+                borderColor: subtleDivider,
+                borderRadius: 2,
+                boxShadow: insetHighlight
+              }}
+            >
+              <Typography sx={{ color: secondaryText }}>暂无标签组，请先在标签管理中创建标签组</Typography>
+            </Box>
           ) : (
-            <List sx={{ py: 0 }}>
+            <List
+              sx={{
+                py: 0,
+                px: 0.5,
+                bgcolor: mutedPanelSurface,
+                border: '1px solid',
+                borderColor: subtleDivider,
+                borderRadius: 2,
+                boxShadow: insetHighlight
+              }}
+            >
               {tagGroups.map((group) => (
                 <ListItemButton
                   key={group}
                   onClick={() => handleSelectTagGroup(group)}
                   sx={{
-                    borderRadius: 1,
+                    borderRadius: 1.5,
                     mb: 0.5,
+                    color: primaryText,
+                    bgcolor: nestedPanelSurface,
+                    border: '1px solid',
+                    borderColor: 'transparent',
                     '&:hover': {
-                      bgcolor: 'action.hover'
+                      bgcolor: withAlpha(palette.primary.main, isDark ? 0.12 : 0.06),
+                      borderColor: withAlpha(palette.primary.main, isDark ? 0.34 : 0.18)
                     }
                   }}
                 >

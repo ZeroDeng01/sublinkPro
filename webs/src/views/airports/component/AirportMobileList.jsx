@@ -2,7 +2,7 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 
 // material-ui
-import { useTheme, useColorScheme, alpha } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -34,7 +34,9 @@ import EventIcon from '@mui/icons-material/Event';
 
 // utils
 import { formatDateTime, formatBytes, formatExpireTime, getUsageColor } from '../utils';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from 'utils/colorUtils';
+import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 
 // local components
 import AirportNodeStatsCard from './AirportNodeStatsCard';
@@ -55,10 +57,13 @@ export default function AirportMobileList({
   onRefreshUsage
 }) {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const palette = theme.vars?.palette || theme.palette;
-  const runtimeColorScheme = typeof document !== 'undefined' ? document.documentElement?.getAttribute('data-color-scheme') : null;
-  const isDark = (mode || runtimeColorScheme || theme.palette.mode) === 'dark';
+  const { isDark } = useResolvedColorScheme();
+  const { palette, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(theme, isDark);
+  const { primaryText, secondaryText } = getReadableTextTokens(theme, isDark);
+  const cardSurface = isDark ? withAlpha(palette.background.paper, 0.94) : palette.background.paper;
+  const selectedCardSurface = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.primary.main, 0.12)} 0%, ${cardSurface} 100%)`
+    : withAlpha(palette.primary.main, 0.04);
 
   // 复制提示状态
   const [copyTip, setCopyTip] = useState({ open: false, name: '' });
@@ -142,13 +147,9 @@ export default function AirportMobileList({
     height: 20,
     fontSize: '0.72rem',
     fontWeight: 600,
-    color: enabled ? (isDark ? palette.success.light : palette.success.dark) : palette.text.secondary,
-    bgcolor: enabled
-      ? alpha(theme.palette.success.main, isDark ? 0.18 : 0.12)
-      : isDark
-        ? 'background.default'
-        : alpha(theme.palette.grey[500], 0.08),
-    border: `1px solid ${enabled ? alpha(theme.palette.success.main, isDark ? 0.34 : 0.18) : alpha(theme.palette.divider, isDark ? 0.56 : 0.24)}`,
+    color: enabled ? (isDark ? palette.success.light : palette.success.dark) : secondaryText,
+    bgcolor: enabled ? withAlpha(palette.success.main, isDark ? 0.18 : 0.12) : mutedPanelSurface,
+    border: `1px solid ${enabled ? withAlpha(palette.success.main, isDark ? 0.34 : 0.18) : panelBorder}`,
     '& .MuiChip-label': {
       px: 1
     }
@@ -166,21 +167,19 @@ export default function AirportMobileList({
               key={airport.id}
               sx={{
                 borderRadius: 3,
-                border: `1px solid ${isSelected ? alpha(theme.palette.primary.main, 0.45) : alpha(theme.palette.divider, 0.15)}`,
-                boxShadow:
-                  theme.palette.mode === 'dark'
-                    ? `0 4px 12px ${alpha(theme.palette.common.black, 0.24)}`
-                    : `0 4px 12px ${alpha(theme.palette.primary.main, isSelected ? 0.14 : 0.08)}`,
-                backgroundColor: isSelected ? alpha(theme.palette.primary.main, 0.03) : 'background.paper',
+                border: `1px solid ${isSelected ? withAlpha(palette.primary.main, isDark ? 0.42 : 0.24) : panelBorder}`,
+                boxShadow: isDark
+                  ? `0 4px 12px ${alpha(theme.palette.common.black, 0.24)}`
+                  : `0 4px 12px ${alpha(theme.palette.primary.main, isSelected ? 0.14 : 0.08)}`,
+                bgcolor: isSelected ? selectedCardSurface : cardSurface,
                 transition: 'all 0.2s ease',
                 overflow: 'hidden',
                 position: 'relative',
                 '&:hover': {
                   transform: 'translateY(-1px)',
-                  boxShadow:
-                    theme.palette.mode === 'dark'
-                      ? `0 8px 24px ${alpha(theme.palette.common.black, 0.3)}`
-                      : `0 8px 24px ${alpha(theme.palette.primary.main, 0.15)}`
+                  boxShadow: isDark
+                    ? `0 8px 24px ${alpha(theme.palette.common.black, 0.3)}`
+                    : `0 8px 24px ${alpha(theme.palette.primary.main, 0.15)}`
                 },
                 // 顶部状态指示条
                 '&::before': {
@@ -202,6 +201,7 @@ export default function AirportMobileList({
                       variant="subtitle1"
                       fontWeight={600}
                       sx={{
+                        color: primaryText,
                         lineHeight: 1.3,
                         wordBreak: 'break-word'
                       }}
@@ -217,6 +217,8 @@ export default function AirportMobileList({
                           size="small"
                           sx={{
                             maxWidth: '100%',
+                            bgcolor: mutedPanelSurface,
+                            borderColor: panelBorder,
                             '& .MuiChip-label': {
                               overflow: 'hidden',
                               textOverflow: 'ellipsis'
@@ -235,12 +237,8 @@ export default function AirportMobileList({
                       alignItems: 'center',
                       justifyContent: 'center',
                       borderRadius: 2.5,
-                      border: `1px solid ${isSelected ? alpha(theme.palette.primary.main, isDark ? 0.38 : 0.28) : alpha(theme.palette.divider, isDark ? 0.26 : 0.14)}`,
-                      backgroundColor: isSelected
-                        ? alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08)
-                        : isDark
-                          ? withAlpha(palette.background.default, 0.88)
-                          : alpha(theme.palette.background.default, 0.6)
+                      border: `1px solid ${isSelected ? withAlpha(palette.primary.main, isDark ? 0.38 : 0.24) : panelBorder}`,
+                      backgroundColor: isSelected ? withAlpha(palette.primary.main, isDark ? 0.16 : 0.08) : mutedPanelSurface
                     }}
                   >
                     <Checkbox checked={isSelected} onChange={() => onToggleSelect(airport.id)} size="small" />
@@ -272,23 +270,23 @@ export default function AirportMobileList({
                     mb: 2,
                     p: 1.25,
                     borderRadius: 2,
-                    backgroundColor: 'background.default',
-                    border: `1px solid ${alpha(theme.palette.divider, 0.12)}`
+                    bgcolor: nestedPanelSurface,
+                    border: `1px solid ${panelBorder}`
                   }}
                 >
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ color: secondaryText }}>
                       上次运行
                     </Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5, wordBreak: 'break-word' }}>
+                    <Typography variant="body2" sx={{ mt: 0.5, color: primaryText, wordBreak: 'break-word' }}>
                       {formatDateTime(airport.lastRunTime)}
                     </Typography>
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ color: secondaryText }}>
                       下次运行
                     </Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5, wordBreak: 'break-word' }}>
+                    <Typography variant="body2" sx={{ mt: 0.5, color: primaryText, wordBreak: 'break-word' }}>
                       {formatDateTime(airport.nextRunTime)}
                     </Typography>
                   </Box>
@@ -296,7 +294,7 @@ export default function AirportMobileList({
 
                 {airport.fetchUsageInfo && (
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
+                    <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 500, color: secondaryText }}>
                       用量信息
                     </Typography>
                     {airport.usageTotal === -1 ? (
@@ -308,8 +306,8 @@ export default function AirportMobileList({
                         sx={{
                           p: 1.5,
                           borderRadius: 2,
-                          backgroundColor: 'background.default',
-                          border: `1px solid ${alpha(theme.palette.divider, 0.12)}`
+                          bgcolor: nestedPanelSurface,
+                          border: `1px solid ${panelBorder}`
                         }}
                       >
                         {(() => {
@@ -323,7 +321,7 @@ export default function AirportMobileList({
                           return (
                             <>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, gap: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', wordBreak: 'break-word' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: primaryText, wordBreak: 'break-word' }}>
                                   {formatBytes(used)} / {formatBytes(total)}
                                 </Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 700, color }}>
@@ -356,7 +354,7 @@ export default function AirportMobileList({
                                   <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 500 }}>
                                     ↑
                                   </Typography>
-                                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                  <Typography variant="body2" sx={{ color: secondaryText }}>
                                     {formatBytes(upload)}
                                   </Typography>
                                 </Box>
@@ -364,7 +362,7 @@ export default function AirportMobileList({
                                   <Typography variant="body2" sx={{ color: 'info.main', fontWeight: 500 }}>
                                     ↓
                                   </Typography>
-                                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                  <Typography variant="body2" sx={{ color: secondaryText }}>
                                     {formatBytes(download)}
                                   </Typography>
                                 </Box>
@@ -399,7 +397,7 @@ export default function AirportMobileList({
                         })()}
                       </Box>
                     ) : (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" sx={{ color: secondaryText }}>
                         待获取
                       </Typography>
                     )}
@@ -407,7 +405,7 @@ export default function AirportMobileList({
                 )}
 
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
+                  <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 500, color: secondaryText }}>
                     节点测试
                   </Typography>
                   <AirportNodeStatsCard nodeStats={airport.nodeStats} nodeCount={airport.nodeCount || 0} />
@@ -420,12 +418,12 @@ export default function AirportMobileList({
                   justifyContent="space-between"
                   sx={{
                     pt: 1,
-                    borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+                    borderTop: `1px solid ${panelBorder}`,
                     mt: 0.5,
                     p: 1,
                     borderRadius: 2,
-                    bgcolor: isDark ? palette.background.default : 'background.default',
-                    border: `1px solid ${alpha(theme.palette.divider, isDark ? 0.2 : 0.12)}`
+                    bgcolor: mutedPanelSurface,
+                    border: `1px solid ${panelBorder}`
                   }}
                 >
                   <Button
@@ -454,10 +452,10 @@ export default function AirportMobileList({
                       height: 40,
                       borderRadius: 2,
                       bgcolor: airport.fetchUsageInfo
-                        ? alpha(theme.palette.success.main, 0.1)
-                        : alpha(theme.palette.action.disabledBackground, 0.6),
-                      color: airport.fetchUsageInfo ? theme.palette.success.main : theme.palette.action.disabled,
-                      '&:hover': airport.fetchUsageInfo ? { bgcolor: alpha(theme.palette.success.main, 0.2) } : undefined
+                        ? withAlpha(palette.success.main, 0.1)
+                        : withAlpha(palette.action.disabledBackground, 0.7),
+                      color: airport.fetchUsageInfo ? palette.success.main : palette.action.disabled,
+                      '&:hover': airport.fetchUsageInfo ? { bgcolor: withAlpha(palette.success.main, 0.2) } : undefined
                     }}
                   >
                     <AccountBalanceWalletIcon />
@@ -470,9 +468,9 @@ export default function AirportMobileList({
                       width: 40,
                       height: 40,
                       borderRadius: 2,
-                      bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                      color: theme.palette.secondary.main,
-                      '&:hover': { bgcolor: alpha(theme.palette.secondary.main, 0.2) }
+                      bgcolor: withAlpha(palette.secondary.main, 0.1),
+                      color: palette.secondary.main,
+                      '&:hover': { bgcolor: withAlpha(palette.secondary.main, 0.2) }
                     }}
                   >
                     <ContentCopyIcon />
@@ -484,11 +482,11 @@ export default function AirportMobileList({
                       width: 40,
                       height: 40,
                       borderRadius: 2,
-                      border: `1px solid ${alpha(theme.palette.divider, isDark ? 0.24 : 0.12)}`,
-                      bgcolor: isDark ? withAlpha(palette.background.default, 0.88) : alpha(theme.palette.background.default, 0.7),
-                      color: 'text.secondary',
+                      border: `1px solid ${panelBorder}`,
+                      bgcolor: mutedPanelSurface,
+                      color: secondaryText,
                       '&:hover': {
-                        bgcolor: isDark ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.primary.main, 0.05)
+                        bgcolor: withAlpha(palette.primary.main, isDark ? 0.12 : 0.05)
                       }
                     }}
                   >
@@ -510,7 +508,10 @@ export default function AirportMobileList({
         PaperProps={{
           sx: {
             minWidth: 190,
-            borderRadius: 2
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: panelBorder,
+            bgcolor: cardSurface
           }
         }}
       >

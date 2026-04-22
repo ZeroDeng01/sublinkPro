@@ -9,3 +9,5 @@ sublink.exe
 .idea/
 static
 sublinkPro.exe
+/.sisyphus/
+/.playwright-mcp/

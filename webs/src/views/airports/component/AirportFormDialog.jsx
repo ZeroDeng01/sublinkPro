@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 
-// material-ui
+import { useTheme } from '@mui/material/styles';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -16,7 +16,6 @@ import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
 import Typography from '@mui/material/Typography';
 
-// project imports
 import SearchableNodeSelect from 'components/SearchableNodeSelect';
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
 import LogoPicker from 'components/LogoPicker';
@@ -24,46 +23,14 @@ import NodeNameFilter from 'components/NodeNameFilter';
 import NodeNamePreprocessor from 'components/NodeNamePreprocessor';
 import NodeProtocolFilter from 'components/NodeProtocolFilter';
 import NodeNameUniquifyConfig from 'components/NodeNameUniquifyConfig';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
+import { withAlpha } from 'utils/colorUtils';
 import AirportDeduplicationConfig from './AirportDeduplicationConfig';
+import AirportDialogSection from './AirportDialogSection';
 
-// constants
 import { USER_AGENT_OPTIONS } from '../utils';
 
-/**
- * 分组标题组件
- */
-function SectionTitle({ children }) {
-  return (
-    <Typography
-      variant="subtitle2"
-      color="primary"
-      sx={{
-        fontWeight: 600,
-        mb: 1.5,
-        display: 'flex',
-        alignItems: 'center',
-        '&::before': {
-          content: '""',
-          width: 3,
-          height: 16,
-          bgcolor: 'primary.main',
-          borderRadius: 1,
-          mr: 1
-        }
-      }}
-    >
-      {children}
-    </Typography>
-  );
-}
-
-SectionTitle.propTypes = {
-  children: PropTypes.node.isRequired
-};
-
-/**
- * 添加/编辑机场表单对话框
- */
 export default function AirportFormDialog({
   open,
   isEdit,
@@ -77,6 +44,27 @@ export default function AirportFormDialog({
   onSubmit,
   onFetchProxyNodes
 }) {
+  const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
+    theme,
+    isDark
+  );
+  const { primaryText, secondaryText } = getReadableTextTokens(theme, isDark);
+
+  const controlRowSx = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 2,
+    px: 1.5,
+    py: 1.25,
+    borderRadius: 2,
+    bgcolor: isDark ? withAlpha(palette.background.paper, 0.2) : withAlpha(palette.background.paper, 0.92),
+    border: '1px solid',
+    borderColor: panelBorder
+  };
+
   return (
     <Dialog
       open={open}
@@ -85,16 +73,29 @@ export default function AirportFormDialog({
       fullWidth
       PaperProps={{
         sx: {
-          maxHeight: '90vh'
+          maxHeight: '90vh',
+          borderRadius: 2.5,
+          border: '1px solid',
+          borderColor: panelBorder,
+          bgcolor: dialogSurface,
+          backgroundImage: dialogSurfaceGradient
         }
       }}
     >
-      <DialogTitle>{isEdit ? '编辑机场' : '添加机场'}</DialogTitle>
-      <DialogContent dividers sx={{ pt: 2.5, pb: 2 }}>
+      <DialogTitle
+        sx={{
+          pb: 1.5,
+          color: primaryText,
+          bgcolor: mutedPanelSurface,
+          borderBottom: '1px solid',
+          borderColor: panelBorder
+        }}
+      >
+        {isEdit ? '编辑机场' : '添加机场'}
+      </DialogTitle>
+      <DialogContent dividers sx={{ pt: 2.5, pb: 2, bgcolor: 'transparent', borderColor: panelBorder }}>
         <Stack spacing={2.5}>
-          {/* ===== 基本信息 ===== */}
-          <Box>
-            <SectionTitle>基本信息</SectionTitle>
+          <AirportDialogSection title="基本信息" surface={nestedPanelSurface} borderColor={panelBorder} titleColor={primaryText}>
             <Stack spacing={2}>
               <TextField
                 fullWidth
@@ -105,7 +106,7 @@ export default function AirportFormDialog({
                 onChange={(e) => setAirportForm({ ...airportForm, name: e.target.value })}
               />
               <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                <Typography variant="body2" sx={{ mb: 1, color: secondaryText }}>
                   Logo（可选）
                 </Typography>
                 <LogoPicker
@@ -144,25 +145,16 @@ export default function AirportFormDialog({
                 onChange={(e) => setAirportForm({ ...airportForm, remark: e.target.value })}
               />
             </Stack>
-          </Box>
+          </AirportDialogSection>
 
-          <Divider />
-
-          {/* ===== 定时更新 ===== */}
-          <Box>
-            <SectionTitle>定时更新</SectionTitle>
+          <AirportDialogSection title="定时更新" surface={nestedPanelSurface} borderColor={panelBorder} titleColor={primaryText}>
             <Stack spacing={2}>
-              {/* 启用定时更新开关 */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}
-              >
+              <Box sx={controlRowSx}>
                 <Box>
-                  <Typography variant="body2">启用定时更新</Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="body2" sx={{ color: primaryText }}>
+                    启用定时更新
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: secondaryText }}>
                     关闭后将停止自动拉取订阅
                   </Typography>
                 </Box>
@@ -176,13 +168,9 @@ export default function AirportFormDialog({
                 />
               </Collapse>
             </Stack>
-          </Box>
+          </AirportDialogSection>
 
-          <Divider />
-
-          {/* ===== 请求设置 ===== */}
-          <Box>
-            <SectionTitle>请求设置</SectionTitle>
+          <AirportDialogSection title="请求设置" surface={nestedPanelSurface} borderColor={panelBorder} titleColor={primaryText}>
             <Stack spacing={2}>
               <Autocomplete
                 freeSolo
@@ -198,8 +186,10 @@ export default function AirportFormDialog({
                 renderOption={(props, option) => (
                   <Box component="li" {...props} key={option.value}>
                     <Box>
-                      <Typography variant="body2">{option.label}</Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="body2" sx={{ color: primaryText }}>
+                        {option.label}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: secondaryText }}>
                         {option.value}
                       </Typography>
                     </Box>
@@ -210,19 +200,13 @@ export default function AirportFormDialog({
                 )}
               />
 
-              {/* 使用代理下载 */}
               <Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    mb: airportForm.downloadWithProxy ? 1.5 : 0
-                  }}
-                >
+                <Box sx={{ ...controlRowSx, mb: airportForm.downloadWithProxy ? 1.5 : 0 }}>
                   <Box>
-                    <Typography variant="body2">使用代理下载</Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="body2" sx={{ color: primaryText }}>
+                      使用代理下载
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: secondaryText }}>
                       通过代理节点拉取订阅
                     </Typography>
                   </Box>
@@ -260,27 +244,17 @@ export default function AirportFormDialog({
                 </Collapse>
               </Box>
             </Stack>
-          </Box>
+          </AirportDialogSection>
 
-          <Divider />
-
-          {/* ===== 高级选项 ===== */}
-          <Box>
-            <SectionTitle>高级选项</SectionTitle>
+          <AirportDialogSection title="高级选项" surface={nestedPanelSurface} borderColor={panelBorder} titleColor={primaryText}>
             <Stack spacing={1}>
-              {/* 获取用量信息 */}
               <Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    py: 0.5
-                  }}
-                >
+                <Box sx={controlRowSx}>
                   <Box>
-                    <Typography variant="body2">获取用量信息</Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="body2" sx={{ color: primaryText }}>
+                      获取用量信息
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: secondaryText }}>
                       从订阅响应解析流量使用情况
                     </Typography>
                   </Box>
@@ -296,21 +270,15 @@ export default function AirportFormDialog({
                 </Collapse>
               </Box>
 
-              <Divider sx={{ my: 0.5 }} />
+              <Divider sx={{ my: 0.5, borderColor: panelBorder }} />
 
-              {/* 忽略证书验证 */}
               <Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    py: 0.5
-                  }}
-                >
+                <Box sx={controlRowSx}>
                   <Box>
-                    <Typography variant="body2">忽略证书验证</Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="body2" sx={{ color: primaryText }}>
+                      忽略证书验证
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: secondaryText }}>
                       跳过 TLS 证书检查
                     </Typography>
                   </Box>
@@ -326,27 +294,24 @@ export default function AirportFormDialog({
                 </Collapse>
               </Box>
             </Stack>
-          </Box>
+          </AirportDialogSection>
 
-          <Divider />
-
-          {/* ===== 节点处理 ===== */}
-          <Box>
-            <SectionTitle>节点处理（拉取时生效）</SectionTitle>
+          <AirportDialogSection
+            title="节点处理（拉取时生效）"
+            surface={nestedPanelSurface}
+            borderColor={panelBorder}
+            titleColor={primaryText}
+          >
             <Stack spacing={2}>
               <Alert severity="info" icon={false}>
                 <Typography variant="caption">以下规则在拉取订阅时立即生效，过滤的节点不会存储到数据库</Typography>
               </Alert>
-
-              {/* 节点名称过滤 */}
               <NodeNameFilter
                 whitelistValue={airportForm.nodeNameWhitelist || ''}
                 blacklistValue={airportForm.nodeNameBlacklist || ''}
                 onWhitelistChange={(rules) => setAirportForm({ ...airportForm, nodeNameWhitelist: rules })}
                 onBlacklistChange={(rules) => setAirportForm({ ...airportForm, nodeNameBlacklist: rules })}
               />
-
-              {/* 协议过滤 */}
               <NodeProtocolFilter
                 protocolOptions={protocolOptions}
                 whitelistValue={airportForm.protocolWhitelist || ''}
@@ -354,20 +319,14 @@ export default function AirportFormDialog({
                 onWhitelistChange={(protocols) => setAirportForm({ ...airportForm, protocolWhitelist: protocols })}
                 onBlacklistChange={(protocols) => setAirportForm({ ...airportForm, protocolBlacklist: protocols })}
               />
-
-              {/* 节点去重配置 */}
               <AirportDeduplicationConfig
                 value={airportForm.deduplicationRule || ''}
                 onChange={(rule) => setAirportForm({ ...airportForm, deduplicationRule: rule })}
               />
-
-              {/* 节点重命名 */}
               <NodeNamePreprocessor
                 value={airportForm.nodeNamePreprocess || ''}
                 onChange={(rules) => setAirportForm({ ...airportForm, nodeNamePreprocess: rules })}
               />
-
-              {/* 节点名称唯一化 */}
               <NodeNameUniquifyConfig
                 enabled={airportForm.nodeNameUniquify || false}
                 prefix={airportForm.nodeNamePrefix || ''}
@@ -375,10 +334,18 @@ export default function AirportFormDialog({
                 onChange={({ enabled, prefix }) => setAirportForm({ ...airportForm, nodeNameUniquify: enabled, nodeNamePrefix: prefix })}
               />
             </Stack>
-          </Box>
+          </AirportDialogSection>
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2 }}>
+      <DialogActions
+        sx={{
+          px: 3,
+          py: 2,
+          bgcolor: mutedPanelSurface,
+          borderTop: '1px solid',
+          borderColor: panelBorder
+        }}
+      >
         <Button onClick={onClose}>取消</Button>
         <Button variant="contained" onClick={onSubmit}>
           确定

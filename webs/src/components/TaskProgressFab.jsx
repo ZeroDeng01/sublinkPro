@@ -19,6 +19,18 @@ import ErrorIcon from '@mui/icons-material/Error';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import {
+  getTaskActionButtonSx,
+  getTaskCardSx,
+  getTaskCenterTokens,
+  getTaskChipSx,
+  getTaskDialogPaperSx,
+  getTaskIconBoxSx,
+  getTaskProgressSx,
+  getTaskTypeMeta,
+  TASK_CLUSTER_ACCENT
+} from 'components/taskCenterTheme';
 
 // ==============================|| CONSTANTS ||============================== //
 
@@ -111,59 +123,40 @@ const savePosition = (position) => {
 
 // ==============================|| FAB TASK ITEM ||============================== //
 
-const FabTaskItem = ({ task, currentTime, theme }) => {
-  // Calculate progress percentage
-  // 使用 task.current 保持组件响应式，不依赖 task 引用
+const FabTaskItem = ({ task, currentTime, theme, tokens }) => {
   const progress = useMemo(() => {
     if (!task.total || task.total === 0) return 0;
     return Math.round((task.current / task.total) * 100);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task.current, task.total]);
 
-  // Get task icon and colors based on type - using theme colors
   const taskConfig = useMemo(() => {
-    if (task.taskType === 'speed_test') {
-      return {
-        icon: SpeedIcon,
-        label: '节点测速',
-        accentColor: theme.palette.success.main
-      };
-    }
-    if (task.taskType === 'tag_rule') {
-      return {
-        icon: LocalOfferIcon,
-        label: '标签规则',
-        accentColor: theme.palette.warning.dark
-      };
-    }
-    if (task.taskType === 'db_migration') {
-      return {
-        icon: StorageIcon,
-        label: '数据库迁移',
-        accentColor: theme.palette.info.main
-      };
-    }
-    return {
-      icon: CloudSyncIcon,
-      label: '订阅更新',
-      accentColor: theme.palette.primary.main
+    const meta = getTaskTypeMeta(task.taskType);
+    const iconMap = {
+      speed_test: SpeedIcon,
+      sub_update: CloudSyncIcon,
+      tag_rule: LocalOfferIcon,
+      db_migration: StorageIcon
     };
-  }, [task.taskType, theme.palette]);
+
+    return {
+      icon: iconMap[task.taskType] || CloudSyncIcon,
+      label: meta.label,
+      accentColor: meta.color
+    };
+  }, [task.taskType]);
 
   const Icon = taskConfig.icon;
   const isCompleted = task.status === 'completed';
   const isError = task.status === 'error';
 
-  // Calculate time info
   const timeInfo = useMemo(() => {
     if (!task.startTime || isCompleted || isError) return null;
 
     const elapsed = currentTime - task.startTime;
     const progressRatio = task.total > 0 ? task.current / task.total : 0;
-
     const elapsedStr = formatTime(elapsed);
 
-    // Estimated remaining time (only show when progress > 5%)
     let remainingStr = null;
     if (progressRatio > 0.05 && progressRatio < 1) {
       const remaining = (elapsed / progressRatio) * (1 - progressRatio);
@@ -174,19 +167,14 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task.startTime, task.current, task.total, currentTime, isCompleted, isError]);
 
-  // Format result display
   const resultDisplay = useMemo(() => {
     if (!task.result) return null;
 
     if (task.taskType === 'speed_test' && task.result.speed !== undefined) {
       const speed = task.result.speed;
       const latency = task.result.latency;
-      if (speed === -1) {
-        return '测速失败';
-      }
-      if (speed === 0) {
-        return latency > 0 ? `延迟 ${latency}ms` : null;
-      }
+      if (speed === -1) return '测速失败';
+      if (speed === 0) return latency > 0 ? `延迟 ${latency}ms` : null;
       return `${speed.toFixed(2)} MB/s | ${latency}ms`;
     }
 
@@ -213,9 +201,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
       if (importedKinds > 0) {
         return warnings > 0 ? `导入 ${importedKinds} 类数据 · ${warnings} 条警告` : `导入 ${importedKinds} 类数据`;
       }
-      if (warnings > 0) {
-        return `${warnings} 条警告`;
-      }
+      if (warnings > 0) return `${warnings} 条警告`;
     }
 
     return null;
@@ -231,64 +217,44 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
     >
       <Card
         sx={{
+          ...getTaskCardSx(theme, tokens, taskConfig.accentColor, { compact: true }),
           borderRadius: 2.5,
-          bgcolor: 'background.paper',
-          border: `1px solid ${alpha(taskConfig.accentColor, 0.18)}`,
           overflow: 'hidden',
-          position: 'relative',
-          boxShadow: theme.shadows[1]
+          position: 'relative'
         }}
       >
-        {/* Progress bar at top */}
         {!isCompleted && !isError && (
-          <LinearProgress
-            variant="determinate"
-            value={progress}
-            sx={{
-              height: 2,
-              backgroundColor: alpha(taskConfig.accentColor, 0.1),
-              '& .MuiLinearProgress-bar': {
-                backgroundColor: taskConfig.accentColor
-              }
-            }}
-          />
+          <LinearProgress variant="determinate" value={progress} sx={getTaskProgressSx(tokens, taskConfig.accentColor, { height: 2 })} />
         )}
 
         <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-            {/* Icon */}
             <Box
               sx={{
-                width: 32,
-                height: 32,
-                borderRadius: 1.5,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: isCompleted ? 'success.main' : isError ? 'error.main' : alpha(taskConfig.accentColor, 0.12),
-                color: isCompleted || isError ? '#fff' : taskConfig.accentColor,
-                border: '1px solid',
-                borderColor: isCompleted
-                  ? alpha(theme.palette.success.main, 0.32)
-                  : isError
-                    ? alpha(theme.palette.error.main, 0.32)
-                    : alpha(taskConfig.accentColor, 0.2),
+                ...getTaskIconBoxSx(
+                  theme,
+                  tokens,
+                  isCompleted ? theme.palette.success.main : isError ? theme.palette.error.main : taskConfig.accentColor,
+                  {
+                    size: 32,
+                    radius: 1.5,
+                    filled: isCompleted || isError
+                  }
+                ),
                 flexShrink: 0,
                 animation: !isCompleted && !isError ? `${pulse} 2s ease-in-out infinite` : 'none'
               }}
             >
               {isCompleted ? (
-                <CheckCircleIcon sx={{ color: '#fff', fontSize: 18 }} />
+                <CheckCircleIcon sx={{ color: 'inherit', fontSize: 18 }} />
               ) : isError ? (
-                <ErrorIcon sx={{ color: '#fff', fontSize: 18 }} />
+                <ErrorIcon sx={{ color: 'inherit', fontSize: 18 }} />
               ) : (
                 <Icon sx={{ color: 'inherit', fontSize: 18 }} />
               )}
             </Box>
 
-            {/* Content */}
             <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-              {/* Header row */}
               <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 0.5, mb: 0.25 }}>
                 <Box
                   sx={{
@@ -306,7 +272,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                     sx={{
                       fontWeight: 600,
                       fontSize: '0.8rem',
-                      color: 'text.primary',
+                      color: tokens.primaryText,
                       whiteSpace: 'nowrap',
                       flexShrink: 0
                     }}
@@ -321,9 +287,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                         height: 16,
                         fontSize: '0.6rem',
                         fontWeight: 500,
-                        bgcolor: alpha(taskConfig.accentColor, 0.15),
-                        color: taskConfig.accentColor,
-                        border: `1px solid ${alpha(taskConfig.accentColor, 0.2)}`,
+                        ...getTaskChipSx(theme, tokens, taskConfig.accentColor),
                         '& .MuiChip-label': { px: 0.5, overflow: 'hidden', textOverflow: 'ellipsis' },
                         maxWidth: 70
                       }}
@@ -343,12 +307,11 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                 </Typography>
               </Box>
 
-              {/* Current item */}
               {task.currentItem && !isCompleted && (
                 <Typography
                   variant="caption"
                   sx={{
-                    color: 'text.secondary',
+                    color: tokens.secondaryText,
                     fontSize: '0.7rem',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -361,7 +324,6 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                 </Typography>
               )}
 
-              {/* Progress info and time display */}
               <Box
                 sx={{
                   display: 'flex',
@@ -375,20 +337,19 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: 'text.secondary',
+                      color: tokens.secondaryText,
                       fontSize: '0.7rem'
                     }}
                   >
                     {task.current || 0} / {task.total || 0}
                   </Typography>
 
-                  {/* Time display */}
                   {timeInfo && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <Typography
                         variant="caption"
                         sx={{
-                          color: 'text.secondary',
+                          color: tokens.secondaryText,
                           fontSize: '0.65rem',
                           display: 'flex',
                           alignItems: 'center',
@@ -402,7 +363,7 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                         <Typography
                           variant="caption"
                           sx={{
-                            color: 'text.secondary',
+                            color: tokens.secondaryText,
                             fontSize: '0.65rem'
                           }}
                         >
@@ -413,12 +374,11 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
                   )}
                 </Box>
 
-                {/* Result display */}
                 {resultDisplay && (
                   <Typography
                     variant="caption"
                     sx={{
-                      color: 'text.secondary',
+                      color: tokens.secondaryText,
                       fontSize: '0.7rem',
                       fontWeight: 500
                     }}
@@ -439,6 +399,8 @@ const FabTaskItem = ({ task, currentTime, theme }) => {
 
 const TaskProgressFab = () => {
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getTaskCenterTokens(theme, isDark);
   const { taskList, hasActiveTasks } = useTaskProgress();
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -501,8 +463,8 @@ const TaskProgressFab = () => {
     const hasTagRule = taskList.some((task) => task.taskType === 'tag_rule' && task.status !== 'completed' && task.status !== 'error');
     if (hasTagRule) {
       return {
-        main: theme.palette.warning.dark,
-        glow: alpha(theme.palette.warning.dark, 0.22)
+        main: theme.palette.warning.main,
+        glow: alpha(theme.palette.warning.main, 0.22)
       };
     }
     const hasDbMigration = taskList.some(
@@ -659,11 +621,8 @@ const TaskProgressFab = () => {
               maxWidth: 360,
               maxHeight: { xs: 'calc(100vh - 160px)', sm: 400 },
               overflow: 'hidden',
+              ...getTaskDialogPaperSx(theme, tokens),
               borderRadius: 3,
-              bgcolor: 'background.paper',
-              border: '1px solid',
-              borderColor: alpha(theme.palette.divider, 0.9),
-              boxShadow: theme.shadows[8],
               display: isExpanded ? 'block' : 'none'
             }}
           >
@@ -673,21 +632,12 @@ const TaskProgressFab = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box
                     sx={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 1.25,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: alpha(theme.palette.primary.main, 0.12),
-                      color: 'primary.main',
-                      border: '1px solid',
-                      borderColor: alpha(theme.palette.primary.main, 0.18)
+                      ...getTaskIconBoxSx(theme, tokens, TASK_CLUSTER_ACCENT, { size: 28, radius: 1.25 })
                     }}
                   >
                     <Typography sx={{ fontSize: '0.85rem', color: 'inherit' }}>⏳</Typography>
                   </Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '0.9rem', color: tokens.primaryText }}>
                     任务进度
                   </Typography>
                   <Chip
@@ -697,14 +647,14 @@ const TaskProgressFab = () => {
                       height: 20,
                       fontSize: '0.65rem',
                       fontWeight: 500,
-                      bgcolor: alpha(theme.palette.primary.main, 0.1),
-                      color: theme.palette.primary.main
+                      ...getTaskChipSx(theme, tokens, TASK_CLUSTER_ACCENT)
                     }}
                   />
                 </Box>
                 <Box
                   onClick={() => setIsExpanded(false)}
                   sx={{
+                    ...getTaskActionButtonSx(theme, tokens, theme.palette.text.secondary),
                     width: 24,
                     height: 24,
                     borderRadius: 1,
@@ -712,21 +662,18 @@ const TaskProgressFab = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
-                    bgcolor: alpha(theme.palette.action.hover, 0.8),
-                    transition: 'background-color 0.2s',
-                    '&:hover': {
-                      bgcolor: 'action.hover'
-                    }
+                    minWidth: 0,
+                    p: 0
                   }}
                 >
-                  <CloseIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                  <CloseIcon sx={{ fontSize: 16, color: tokens.secondaryText }} />
                 </Box>
               </Box>
 
               {/* Task list */}
               <Box sx={{ maxHeight: { xs: 'calc(100vh - 240px)', sm: 320 }, overflowY: 'auto', pr: 0.5 }}>
                 {taskList.map((task) => (
-                  <FabTaskItem key={task.taskId} task={task} currentTime={currentTime} theme={theme} />
+                  <FabTaskItem key={task.taskId} task={task} currentTime={currentTime} theme={theme} tokens={tokens} />
                 ))}
               </Box>
             </CardContent>
@@ -747,19 +694,20 @@ const TaskProgressFab = () => {
               '--glow-color': fabColor.glow,
               width: fabSize,
               height: fabSize,
-              bgcolor: 'background.paper',
+              bgcolor: tokens.floatingSurface,
+              backgroundImage: `linear-gradient(180deg, ${alpha(fabColor.main, tokens.isDark ? 0.18 : 0.06)} 0%, ${tokens.floatingSurface} 100%)`,
               color: fabColor.main,
               border: '1px solid',
-              borderColor: alpha(fabColor.main, 0.24),
-              boxShadow: theme.shadows[6],
+              borderColor: alpha(fabColor.main, tokens.isDark ? 0.28 : 0.24),
+              boxShadow: tokens.isDark ? `0 18px 32px ${alpha(theme.palette.common.black, 0.28)}` : theme.shadows[6],
               transition: 'transform 0.2s ease, box-shadow 0.2s ease',
               animation: hasRunningTask ? `${glowPulse} 2s ease-in-out infinite` : 'none',
               cursor: isDragging.current ? 'grabbing' : 'grab',
               '&:hover': {
                 transform: 'scale(1.05)',
-                boxShadow: theme.shadows[8],
+                boxShadow: tokens.isDark ? `0 22px 38px ${alpha(theme.palette.common.black, 0.32)}` : theme.shadows[8],
                 borderColor: alpha(fabColor.main, 0.36),
-                bgcolor: 'background.paper'
+                bgcolor: tokens.floatingSurface
               },
               '&:active': {
                 cursor: 'grabbing'

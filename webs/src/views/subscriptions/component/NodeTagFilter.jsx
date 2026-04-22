@@ -13,6 +13,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import { alpha, useTheme } from '@mui/material/styles';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // icons
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -27,14 +28,15 @@ import BlockIcon from '@mui/icons-material/Block';
  */
 export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistValue, onWhitelistChange, onBlacklistChange }) {
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
   const [expanded, setExpanded] = useState(false);
   const getTagChipSx = (color, fallbackColor) => {
     const resolvedColor = color || fallbackColor;
     return {
-      backgroundColor: alpha(resolvedColor, theme.palette.mode === 'dark' ? 0.18 : 0.1),
+      backgroundColor: alpha(resolvedColor, isDark ? 0.18 : 0.1),
       color: resolvedColor,
       border: '1px solid',
-      borderColor: alpha(resolvedColor, theme.palette.mode === 'dark' ? 0.34 : 0.18),
+      borderColor: alpha(resolvedColor, isDark ? 0.34 : 0.18),
       '& .MuiChip-deleteIcon': {
         color: alpha(resolvedColor, 0.72),
         '&:hover': {

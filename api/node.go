@@ -88,6 +88,115 @@ func parseUnlockRulesFromQuery(c *gin.Context) []models.UnlockFilterRule {
 	return nil
 }
 
+func parseExcludeIDs(c *gin.Context) []int {
+	return parseIntList(c, []string{"excludeIds[]", "excludeIds"})
+}
+
+func parseSelectedIDs(c *gin.Context) []int {
+	return parseIntList(c, []string{"ids[]", "ids", "id"})
+}
+
+func parseIntList(c *gin.Context, keys []string) []int {
+	values := make([]string, 0)
+	for _, key := range keys {
+		values = append(values, c.QueryArray(key)...)
+	}
+	ids := make([]int, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		for _, part := range strings.Split(trimmed, ",") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			if id, err := strconv.Atoi(part); err == nil && id > 0 {
+				ids = append(ids, id)
+			}
+		}
+	}
+	return ids
+}
+
+func buildNodeFilterFromQuery(c *gin.Context) models.NodeFilter {
+	filter := models.NodeFilter{
+		Search:      c.Query("search"),
+		Group:       c.Query("group"),
+		Source:      c.Query("source"),
+		Protocol:    c.Query("protocol"),
+		SpeedStatus: c.Query("speedStatus"),
+		DelayStatus: c.Query("delayStatus"),
+		SortBy:      c.Query("sortBy"),
+		SortOrder:   c.Query("sortOrder"),
+	}
+
+	if maxDelayStr := c.Query("maxDelay"); maxDelayStr != "" {
+		if maxDelay, err := strconv.Atoi(maxDelayStr); err == nil && maxDelay > 0 {
+			filter.MaxDelay = maxDelay
+		}
+	}
+
+	if minSpeedStr := c.Query("minSpeed"); minSpeedStr != "" {
+		if minSpeed, err := strconv.ParseFloat(minSpeedStr, 64); err == nil && minSpeed > 0 {
+			filter.MinSpeed = minSpeed
+		}
+	}
+
+	if maxFraudScoreStr := c.Query("maxFraudScore"); maxFraudScoreStr != "" {
+		if maxFraudScore, err := strconv.Atoi(maxFraudScoreStr); err == nil && maxFraudScore > 0 {
+			filter.MaxFraudScore = maxFraudScore
+		}
+	}
+
+	filter.Countries = c.QueryArray("countries[]")
+	filter.Tags = c.QueryArray("tags[]")
+	filter.ResidentialType = normalizeResidentialType(c.Query("residentialType"))
+	filter.IPType = normalizeIPType(c.Query("ipType"))
+	filter.QualityStatus = normalizeQualityStatus(c.Query("qualityStatus"))
+	filter.UnlockRuleMode = models.NormalizeUnlockRuleMode(c.Query("unlockRuleMode"))
+	filter.UnlockRules = parseUnlockRulesFromQuery(c)
+	filter.ExcludeIDs = parseExcludeIDs(c)
+	if len(filter.UnlockRules) == 0 {
+		filter.UnlockProvider = models.NormalizeUnlockProvider(c.Query("unlockProvider"))
+		filter.UnlockStatus = normalizeUnlockStatus(c.Query("unlockStatus"))
+		filter.UnlockKeyword = strings.TrimSpace(c.Query("unlockKeyword"))
+	}
+	if filter.ResidentialType == "" && c.Query("onlyResidential") == "true" {
+		filter.ResidentialType = "residential"
+	}
+	if filter.IPType == "" && c.Query("onlyNative") == "true" {
+		filter.IPType = "native"
+	}
+
+	if filter.SortBy != "" && filter.SortBy != "delay" && filter.SortBy != "speed" {
+		filter.SortBy = ""
+	}
+
+	if filter.SortOrder != "" && filter.SortOrder != "asc" && filter.SortOrder != "desc" {
+		filter.SortOrder = "asc"
+	}
+
+	return filter
+}
+
+func parsePagination(c *gin.Context) (int, int) {
+	page := 0
+	pageSize := 0
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if pageSizeStr := c.Query("pageSize"); pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 {
+			pageSize = ps
+		}
+	}
+	return page, pageSize
+}
+
 func NodeUpdadte(c *gin.Context) {
 	var Node models.Node
 	name := c.PostForm("name")
@@ -207,83 +316,8 @@ func NodeUpdadte(c *gin.Context) {
 // 获取节点列表
 func NodeGet(c *gin.Context) {
 	var Node models.Node
-
-	// 解析过滤参数
-	filter := models.NodeFilter{
-		Search:      c.Query("search"),
-		Group:       c.Query("group"),
-		Source:      c.Query("source"),
-		Protocol:    c.Query("protocol"),
-		SpeedStatus: c.Query("speedStatus"),
-		DelayStatus: c.Query("delayStatus"),
-		SortBy:      c.Query("sortBy"),
-		SortOrder:   c.Query("sortOrder"),
-	}
-
-	// 安全解析数值参数
-	if maxDelayStr := c.Query("maxDelay"); maxDelayStr != "" {
-		if maxDelay, err := strconv.Atoi(maxDelayStr); err == nil && maxDelay > 0 {
-			filter.MaxDelay = maxDelay
-		}
-	}
-
-	if minSpeedStr := c.Query("minSpeed"); minSpeedStr != "" {
-		if minSpeed, err := strconv.ParseFloat(minSpeedStr, 64); err == nil && minSpeed > 0 {
-			filter.MinSpeed = minSpeed
-		}
-	}
-
-	if maxFraudScoreStr := c.Query("maxFraudScore"); maxFraudScoreStr != "" {
-		if maxFraudScore, err := strconv.Atoi(maxFraudScoreStr); err == nil && maxFraudScore > 0 {
-			filter.MaxFraudScore = maxFraudScore
-		}
-	}
-
-	// 解析国家代码数组
-	filter.Countries = c.QueryArray("countries[]")
-
-	// 解析标签数组
-	filter.Tags = c.QueryArray("tags[]")
-	filter.ResidentialType = normalizeResidentialType(c.Query("residentialType"))
-	filter.IPType = normalizeIPType(c.Query("ipType"))
-	filter.QualityStatus = normalizeQualityStatus(c.Query("qualityStatus"))
-	filter.UnlockRuleMode = models.NormalizeUnlockRuleMode(c.Query("unlockRuleMode"))
-	filter.UnlockRules = parseUnlockRulesFromQuery(c)
-	if len(filter.UnlockRules) == 0 {
-		filter.UnlockProvider = models.NormalizeUnlockProvider(c.Query("unlockProvider"))
-		filter.UnlockStatus = normalizeUnlockStatus(c.Query("unlockStatus"))
-		filter.UnlockKeyword = strings.TrimSpace(c.Query("unlockKeyword"))
-	}
-	if filter.ResidentialType == "" && c.Query("onlyResidential") == "true" {
-		filter.ResidentialType = "residential"
-	}
-	if filter.IPType == "" && c.Query("onlyNative") == "true" {
-		filter.IPType = "native"
-	}
-
-	// 验证排序字段（白名单）
-	if filter.SortBy != "" && filter.SortBy != "delay" && filter.SortBy != "speed" {
-		filter.SortBy = "" // 无效排序字段，忽略
-	}
-
-	// 验证排序顺序
-	if filter.SortOrder != "" && filter.SortOrder != "asc" && filter.SortOrder != "desc" {
-		filter.SortOrder = "asc" // 默认升序
-	}
-
-	// 解析分页参数
-	page := 0
-	pageSize := 0
-	if pageStr := c.Query("page"); pageStr != "" {
-		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
-			page = p
-		}
-	}
-	if pageSizeStr := c.Query("pageSize"); pageSizeStr != "" {
-		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 {
-			pageSize = ps
-		}
-	}
+	filter := buildNodeFilterFromQuery(c)
+	page, pageSize := parsePagination(c)
 
 	// 如果提供了分页参数，返回分页响应
 	if page > 0 && pageSize > 0 {
@@ -315,62 +349,64 @@ func NodeGet(c *gin.Context) {
 	utils.OkDetailed(c, "node get", nodes)
 }
 
+func NodeSelector(c *gin.Context) {
+	var node models.Node
+	filter := buildNodeFilterFromQuery(c)
+	page, pageSize := parsePagination(c)
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 100
+	}
+
+	nodes, total, err := node.ListWithFiltersPaginated(filter, page, pageSize)
+	if err != nil {
+		utils.FailWithMsg(c, "node selector list error")
+		return
+	}
+	totalPages := 0
+	if pageSize > 0 {
+		totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
+	}
+	utils.OkDetailed(c, "node selector get", gin.H{
+		"items":      models.ToNodeSelectorItems(nodes),
+		"total":      total,
+		"page":       page,
+		"pageSize":   pageSize,
+		"totalPages": totalPages,
+	})
+}
+
+func NodeSelectorByIDs(c *gin.Context) {
+	ids := parseSelectedIDs(c)
+	if len(ids) == 0 {
+		utils.OkDetailed(c, "node selector get by ids", []models.NodeSelectorItem{})
+		return
+	}
+	nodes, err := models.GetNodesByIDs(ids)
+	if err != nil {
+		utils.FailWithMsg(c, "node selector get by ids error")
+		return
+	}
+	items := models.ToNodeSelectorItems(nodes)
+	sorted := make([]models.NodeSelectorItem, 0, len(items))
+	indexMap := make(map[int]models.NodeSelectorItem, len(items))
+	for _, item := range items {
+		indexMap[item.ID] = item
+	}
+	for _, id := range ids {
+		if item, ok := indexMap[id]; ok {
+			sorted = append(sorted, item)
+		}
+	}
+	utils.OkDetailed(c, "node selector get by ids", sorted)
+}
+
 // NodeGetIDs 获取符合过滤条件的所有节点ID（用于全选操作）
 func NodeGetIDs(c *gin.Context) {
 	var Node models.Node
-
-	// 解析过滤参数
-	filter := models.NodeFilter{
-		Search:      c.Query("search"),
-		Group:       c.Query("group"),
-		Source:      c.Query("source"),
-		Protocol:    c.Query("protocol"),
-		SpeedStatus: c.Query("speedStatus"),
-		DelayStatus: c.Query("delayStatus"),
-		SortBy:      c.Query("sortBy"),
-		SortOrder:   c.Query("sortOrder"),
-	}
-
-	// 安全解析数值参数
-	if maxDelayStr := c.Query("maxDelay"); maxDelayStr != "" {
-		if maxDelay, err := strconv.Atoi(maxDelayStr); err == nil && maxDelay > 0 {
-			filter.MaxDelay = maxDelay
-		}
-	}
-
-	if minSpeedStr := c.Query("minSpeed"); minSpeedStr != "" {
-		if minSpeed, err := strconv.ParseFloat(minSpeedStr, 64); err == nil && minSpeed > 0 {
-			filter.MinSpeed = minSpeed
-		}
-	}
-
-	if maxFraudScoreStr := c.Query("maxFraudScore"); maxFraudScoreStr != "" {
-		if maxFraudScore, err := strconv.Atoi(maxFraudScoreStr); err == nil && maxFraudScore > 0 {
-			filter.MaxFraudScore = maxFraudScore
-		}
-	}
-
-	// 解析国家代码数组
-	filter.Countries = c.QueryArray("countries[]")
-
-	// 解析标签数组
-	filter.Tags = c.QueryArray("tags[]")
-	filter.ResidentialType = normalizeResidentialType(c.Query("residentialType"))
-	filter.IPType = normalizeIPType(c.Query("ipType"))
-	filter.QualityStatus = normalizeQualityStatus(c.Query("qualityStatus"))
-	filter.UnlockRuleMode = models.NormalizeUnlockRuleMode(c.Query("unlockRuleMode"))
-	filter.UnlockRules = parseUnlockRulesFromQuery(c)
-	if len(filter.UnlockRules) == 0 {
-		filter.UnlockProvider = models.NormalizeUnlockProvider(c.Query("unlockProvider"))
-		filter.UnlockStatus = normalizeUnlockStatus(c.Query("unlockStatus"))
-		filter.UnlockKeyword = strings.TrimSpace(c.Query("unlockKeyword"))
-	}
-	if filter.ResidentialType == "" && c.Query("onlyResidential") == "true" {
-		filter.ResidentialType = "residential"
-	}
-	if filter.IPType == "" && c.Query("onlyNative") == "true" {
-		filter.IPType = "native"
-	}
+	filter := buildNodeFilterFromQuery(c)
 
 	ids, err := Node.GetFilteredNodeIDs(filter)
 	if err != nil {

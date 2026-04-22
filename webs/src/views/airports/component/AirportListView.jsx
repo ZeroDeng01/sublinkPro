@@ -19,6 +19,7 @@ import TableRow from '@mui/material/TableRow';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import LinearProgress from '@mui/material/LinearProgress';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // icons
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -54,7 +55,7 @@ export default function AirportListView({
 }) {
   const theme = useTheme();
   const palette = theme.vars?.palette || theme.palette;
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
 
   // 复制提示状态
   const [copyTip, setCopyTip] = useState({ open: false, name: '' });
@@ -227,7 +228,31 @@ export default function AirportListView({
     }
 
     return (
-      <Tooltip arrow placement="top" title={<AirportNodeStatsCard nodeStats={nodeStats} nodeCount={nodeCount} />}>
+      <Tooltip
+        arrow
+        placement="top"
+        title={<AirportNodeStatsCard nodeStats={nodeStats} nodeCount={nodeCount} />}
+        slotProps={{
+          tooltip: {
+            sx: {
+              p: 0,
+              bgcolor: 'transparent',
+              backgroundImage: 'none',
+              border: 'none',
+              boxShadow: 'none',
+              maxWidth: 'none'
+            }
+          },
+          arrow: {
+            sx: {
+              color: 'transparent',
+              '&::before': {
+                border: 'none'
+              }
+            }
+          }
+        }}
+      >
         <Box sx={{ cursor: 'help' }}>
           {/* 通过数量 */}
           <Stack direction="row" spacing={0.5} alignItems="center">

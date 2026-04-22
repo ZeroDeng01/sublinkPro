@@ -18,6 +18,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getNodeDialogPaperSx, getNodePanelSx, getNodeThemeTokens } from '../nodeTheme';
 
 // icons
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -30,7 +32,9 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
  */
 export default function NodeAddResultDialog({ open, result, onClose }) {
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const tokens = getNodeThemeTokens(theme, isDark);
 
   if (!result) return null;
 
@@ -39,13 +43,24 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
   const allSuccess = skipped.length === 0 && failed.length === 0;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+      PaperProps={{ sx: getNodeDialogPaperSx(theme, tokens) }}
+    >
       <DialogTitle
         sx={{
           pb: 1,
           display: 'flex',
           alignItems: 'center',
-          gap: 1
+          gap: 1,
+          color: tokens.primaryText,
+          bgcolor: tokens.mutedPanelSurface,
+          borderBottom: '1px solid',
+          borderColor: tokens.panelBorder
         }}
       >
         {allSuccess ? (
@@ -56,7 +71,7 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
         节点添加结果
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 1 }}>
+      <DialogContent sx={{ pt: 1, bgcolor: 'transparent' }}>
         {/* 统计概览 */}
         <Stack
           direction="row"
@@ -65,7 +80,9 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
             mb: 2,
             p: 1.5,
             borderRadius: 2,
-            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+            backgroundColor: tokens.nestedPanelSurface,
+            border: '1px solid',
+            borderColor: tokens.softBorder,
             flexWrap: 'wrap',
             gap: 1
           }}
@@ -116,12 +133,10 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
             <List
               dense
               sx={{
-                border: `1px solid ${theme.palette.divider}`,
+                ...getNodePanelSx(theme, tokens, tokens.palette.warning.main, { compact: true }),
                 borderRadius: 2,
                 overflow: 'hidden',
-                '& .MuiListItem-root:not(:last-child)': {
-                  borderBottom: `1px solid ${theme.palette.divider}`
-                }
+                '& .MuiListItem-root:not(:last-child)': { borderBottom: `1px solid ${tokens.softBorder}` }
               }}
             >
               {skipped.map((item, index) => (
@@ -184,12 +199,10 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
             <List
               dense
               sx={{
-                border: `1px solid ${theme.palette.divider}`,
+                ...getNodePanelSx(theme, tokens, tokens.palette.error.main, { compact: true }),
                 borderRadius: 2,
                 overflow: 'hidden',
-                '& .MuiListItem-root:not(:last-child)': {
-                  borderBottom: `1px solid ${theme.palette.divider}`
-                }
+                '& .MuiListItem-root:not(:last-child)': { borderBottom: `1px solid ${tokens.softBorder}` }
               }}
             >
               {failed.map((item, index) => (
@@ -213,7 +226,7 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
         )}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 3, pb: 2, bgcolor: tokens.mutedPanelSurface, borderTop: '1px solid', borderColor: tokens.panelBorder }}>
         <Button variant="contained" onClick={onClose} fullWidth={isMobile}>
           确定
         </Button>

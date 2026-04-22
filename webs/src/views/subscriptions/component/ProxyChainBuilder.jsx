@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Paper from '@mui/material/Paper';
@@ -22,12 +23,20 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 import ConditionBuilder from './ConditionBuilder';
+import { getChainProxyFieldControlSx, getChainProxyIconButtonSx, getChainProxyThemeTokens } from './chainProxyTheme';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 /**
  * 代理链可视化构建器
  * 用于配置入口代理的类型和参数
  */
 export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fields = [], operators = [], groupTypes = [] }) {
+  const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getChainProxyThemeTokens(theme, isDark);
+  const fieldControlSx = getChainProxyFieldControlSx(tokens);
+  const iconButtonSx = getChainProxyIconButtonSx(tokens);
+  const errorIconButtonSx = getChainProxyIconButtonSx(tokens, theme.palette.error.main);
   const [chainItems, setChainItems] = useState(value || []);
   const [expandedIndex, setExpandedIndex] = useState(0);
 
@@ -114,13 +123,22 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
         sx={{
           p: 2,
           position: 'relative',
-          borderColor: isExpanded ? 'primary.main' : 'divider'
+          borderColor: isExpanded ? tokens.primaryStrongBorder : tokens.panelBorder,
+          backgroundColor: isExpanded ? tokens.containerSurface : tokens.nestedPanelSurface,
+          backgroundImage: isExpanded ? tokens.dialogSurfaceGradient : 'none',
+          boxShadow: tokens.cardShadow,
+          borderRadius: 2
         }}
       >
         {/* 代理项头部 */}
         <Stack direction="row" alignItems="center" spacing={1}>
-          <Chip label={getTypeLabel(item.type)} color={getTypeColor(item.type)} size="small" />
-          <Typography variant="body2" sx={{ flex: 1 }}>
+          <Chip
+            label={getTypeLabel(item.type)}
+            color={getTypeColor(item.type)}
+            size="small"
+            sx={{ borderRadius: 1.5, fontWeight: 600, boxShadow: tokens.insetHighlight }}
+          />
+          <Typography variant="body2" sx={{ flex: 1, color: item.groupName || item.nodeId ? tokens.primaryText : tokens.tertiaryText }}>
             {item.groupName || item.nodeId ? (
               item.type === 'specified_node' ? (
                 nodes.find((n) => n.id === item.nodeId)?.name || `节点 #${item.nodeId}`
@@ -128,23 +146,25 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                 item.groupName
               )
             ) : (
-              <em style={{ color: 'gray' }}>未配置</em>
+              <Box component="em" sx={{ color: tokens.tertiaryText, fontStyle: 'italic' }}>
+                未配置
+              </Box>
             )}
           </Typography>
-          <IconButton size="small" onClick={() => toggleExpand(index)}>
+          <IconButton size="small" onClick={() => toggleExpand(index)} sx={iconButtonSx}>
             {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
           </IconButton>
-          <IconButton size="small" color="error" onClick={() => handleRemoveItem(index)}>
+          <IconButton size="small" onClick={() => handleRemoveItem(index)} sx={{ ...errorIconButtonSx, color: theme.palette.error.main }}>
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Stack>
 
         {/* 展开的配置区域 */}
         <Collapse in={isExpanded}>
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${tokens.softBorder}` }}>
             <Stack spacing={2}>
               {/* 代理类型选择 */}
-              <FormControl size="small" fullWidth>
+              <FormControl size="small" fullWidth sx={fieldControlSx}>
                 <InputLabel>代理类型</InputLabel>
                 <Select
                   value={item.type}
@@ -175,6 +195,7 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                   value={item.groupName || ''}
                   onChange={(e) => handleItemChange(index, { groupName: e.target.value })}
                   helperText="输入 Clash 模板中已存在的代理组名称"
+                  sx={fieldControlSx}
                 />
               )}
 
@@ -188,8 +209,9 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                     placeholder="自定义代理组名称"
                     value={item.groupName || ''}
                     onChange={(e) => handleItemChange(index, { groupName: e.target.value })}
+                    sx={fieldControlSx}
                   />
-                  <FormControl size="small" fullWidth>
+                  <FormControl size="small" fullWidth sx={fieldControlSx}>
                     <InputLabel>组类型</InputLabel>
                     <Select
                       value={item.groupType || 'select'}
@@ -221,6 +243,7 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                         }
                         placeholder="http://www.gstatic.com/generate_204"
                         helperText="用于检测节点可用性的 URL，留空使用默认值"
+                        sx={fieldControlSx}
                       />
                       <Stack direction="row" spacing={1}>
                         <TextField
@@ -236,7 +259,7 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                               }
                             })
                           }
-                          sx={{ flex: 1 }}
+                          sx={{ ...fieldControlSx, flex: 1 }}
                           helperText="健康检查间隔"
                         />
                         <TextField
@@ -252,7 +275,7 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                               }
                             })
                           }
-                          sx={{ flex: 1 }}
+                          sx={{ ...fieldControlSx, flex: 1 }}
                           helperText={item.groupType === 'url-test' ? '延迟差在此范围内视为相同' : '故障转移阈值'}
                         />
                       </Stack>
@@ -276,6 +299,7 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                         }
                         placeholder="http://www.gstatic.com/generate_204"
                         helperText="用于检测节点可用性的 URL，留空使用默认值"
+                        sx={fieldControlSx}
                       />
                       <Stack direction="row" spacing={1}>
                         <TextField
@@ -291,10 +315,10 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                               }
                             })
                           }
-                          sx={{ flex: 1 }}
+                          sx={{ ...fieldControlSx, flex: 1 }}
                           helperText="健康检查间隔"
                         />
-                        <FormControl size="small" sx={{ flex: 1 }}>
+                        <FormControl size="small" sx={{ ...fieldControlSx, flex: 1 }}>
                           <InputLabel>负载均衡策略</InputLabel>
                           <Select
                             value={item.urlTestConfig?.strategy || 'consistent-hashing'}
@@ -329,7 +353,7 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
               {/* 动态条件节点配置 */}
               {item.type === 'dynamic_node' && (
                 <>
-                  <FormControl size="small" fullWidth>
+                  <FormControl size="small" fullWidth sx={fieldControlSx}>
                     <InputLabel>选择模式</InputLabel>
                     <Select
                       value={item.selectMode || 'first'}
@@ -356,6 +380,7 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                 <Autocomplete
                   size="small"
                   options={nodes}
+                  sx={fieldControlSx}
                   getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || '未知'})`}
                   value={nodes.find((n) => n.id === item.nodeId) || null}
                   onChange={(e, newValue) => handleItemChange(index, { nodeId: newValue?.id })}
@@ -383,7 +408,14 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
       <Stack spacing={2}>
         {/* 代理链可视化 */}
         {chainItems.length > 0 && (
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            flexWrap="wrap"
+            useFlexGap
+            sx={{ p: 1.5, borderRadius: 2, backgroundColor: tokens.mutedPanelSurface, border: `1px solid ${tokens.softBorder}` }}
+          >
             {chainItems.map((item, index) => (
               <Stack key={index} direction="row" alignItems="center" spacing={1}>
                 <Chip
@@ -394,32 +426,48 @@ export default function ProxyChainBuilder({ value = [], onChange, nodes = [], fi
                   }
                   color={getTypeColor(item.type)}
                   onClick={() => toggleExpand(index)}
+                  sx={{ boxShadow: tokens.insetHighlight, cursor: 'pointer' }}
                 />
                 {index < chainItems.length - 1 && <ArrowForwardIcon color="action" fontSize="small" />}
               </Stack>
             ))}
             <ArrowForwardIcon color="action" fontSize="small" />
-            <Chip label="目标节点" variant="outlined" />
+            <Chip label="目标节点" variant="outlined" sx={{ borderColor: tokens.softBorder, color: tokens.secondaryText }} />
           </Stack>
         )}
 
-        <Divider />
+        <Divider sx={{ borderColor: tokens.softBorder }} />
 
         {/* 代理项配置列表 */}
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" sx={{ color: tokens.secondaryText }}>
           入口代理配置
         </Typography>
 
         {chainItems.map((item, index) => renderItemConfig(item, index))}
 
         {/* 添加代理按钮 */}
-        <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAddItem} sx={{ alignSelf: 'flex-start' }}>
+        <Button
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={handleAddItem}
+          sx={{
+            alignSelf: 'flex-start',
+            borderColor: tokens.primarySoftBorder,
+            backgroundColor: tokens.fieldSurface,
+            boxShadow: tokens.insetHighlight,
+            color: tokens.primaryText,
+            '&:hover': {
+              borderColor: tokens.primaryStrongBorder,
+              backgroundColor: tokens.hoverSurface
+            }
+          }}
+        >
           添加入口代理
         </Button>
 
         {/* 空状态提示 */}
         {chainItems.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+          <Typography variant="body2" sx={{ fontStyle: 'italic', color: tokens.secondaryText }}>
             点击上方按钮添加入口代理配置
           </Typography>
         )}

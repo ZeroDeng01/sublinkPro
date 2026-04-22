@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 
 // material-ui
+import { useTheme } from '@mui/material/styles';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -11,16 +12,33 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getNodeColorChipSx, getNodeDialogPaperSx, getNodeFieldControlSx, getNodeThemeTokens } from '../nodeTheme';
 
 /**
  * 批量设置标签对话框
  */
 export default function BatchTagDialog({ open, selectedCount, value, setValue, tagOptions, onClose, onSubmit }) {
+  const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getNodeThemeTokens(theme, isDark);
+  const fieldControlSx = getNodeFieldControlSx(tokens, tokens.palette.success.main);
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>批量设置标签</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{ sx: getNodeDialogPaperSx(theme, tokens, tokens.palette.success.main) }}
+    >
+      <DialogTitle
+        sx={{ color: tokens.primaryText, bgcolor: tokens.mutedPanelSurface, borderBottom: '1px solid', borderColor: tokens.panelBorder }}
+      >
+        批量设置标签
+      </DialogTitle>
+      <DialogContent dividers sx={{ bgcolor: 'transparent', borderColor: tokens.panelBorder }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           将为选中的 {selectedCount} 个节点设置标签（会覆盖原有标签）
         </Typography>
         <Autocomplete
@@ -39,7 +57,7 @@ export default function BatchTagDialog({ open, selectedCount, value, setValue, t
                     width: 12,
                     height: 12,
                     borderRadius: '50%',
-                    backgroundColor: option.color || '#1976d2',
+                    backgroundColor: option.color || tokens.palette.primary.main,
                     mr: 1,
                     flexShrink: 0
                   }}
@@ -56,23 +74,20 @@ export default function BatchTagDialog({ open, selectedCount, value, setValue, t
                   key={key}
                   label={option.name || option}
                   size="small"
-                  sx={{
-                    backgroundColor: option.color || '#1976d2',
-                    color: '#fff',
-                    '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
-                  }}
+                  sx={getNodeColorChipSx(theme, tokens, option.color || theme.palette.primary.main, { deletable: true })}
                   {...tagProps}
                 />
               );
             })
           }
-          renderInput={(params) => <TextField {...params} label="选择标签" placeholder="选择要设置的标签" fullWidth />}
+          sx={fieldControlSx}
+          renderInput={(params) => <TextField {...params} label="选择标签" placeholder="选择要设置的标签" fullWidth sx={fieldControlSx} />}
         />
-        <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
           提示：留空将清除所选节点的所有标签
         </Typography>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ bgcolor: tokens.mutedPanelSurface, borderTop: '1px solid', borderColor: tokens.panelBorder }}>
         <Button onClick={onClose}>取消</Button>
         <Button variant="contained" onClick={onSubmit}>
           确认设置

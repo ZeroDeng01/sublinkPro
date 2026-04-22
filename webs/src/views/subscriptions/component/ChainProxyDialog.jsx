@@ -15,7 +15,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { alpha, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
@@ -38,9 +39,9 @@ import {
   getChainOptions,
   previewChainLinks
 } from '../../../api/subscriptions';
-import { withAlpha } from '../../../utils/colorUtils';
 import ChainPreviewDialog from './ChainPreviewDialog';
 import ChainRuleEditor from './ChainRuleEditor';
+import { getChainProxyIconButtonSx, getChainProxyThemeTokens } from './chainProxyTheme';
 
 /**
  * 链式代理配置主对话框
@@ -49,15 +50,26 @@ import ChainRuleEditor from './ChainRuleEditor';
 export default function ChainProxyDialog({ open, onClose, subscription }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const isDark = theme.palette.mode === 'dark';
-  const palette = theme.vars?.palette || theme.palette;
-  const dialogSurface = isDark ? withAlpha(palette.background.default, 0.96) : palette.background.paper;
-  const dialogSurfaceGradient = isDark
-    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.16)} 0%, ${dialogSurface} 100%)`
-    : 'none';
-  const mutedPanelSurface = isDark ? withAlpha(palette.background.default, 0.84) : palette.background.default;
-  const nestedPanelSurface = isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper;
-  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getChainProxyThemeTokens(theme, isDark);
+  const {
+    dialogSurface,
+    dialogSurfaceGradient,
+    mutedPanelSurface,
+    elevatedSurface,
+    panelBorder,
+    softBorder,
+    selectedSurface,
+    primaryStrongBorder,
+    primaryText,
+    secondaryText,
+    tertiaryText,
+    infoSurface,
+    infoSoftBorder,
+    cardShadow
+  } = tokens;
+  const iconButtonSx = getChainProxyIconButtonSx(tokens);
+  const errorIconButtonSx = getChainProxyIconButtonSx(tokens, theme.palette.error.main);
 
   const [loading, setLoading] = useState(false);
   const [rules, setRules] = useState([]);
@@ -286,23 +298,25 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
         maxWidth="lg"
         fullWidth
         fullScreen={isMobile}
-        PaperProps={{
-          sx: isMobile
-            ? {
-                borderRadius: 0,
-                border: '1px solid',
-                borderColor: panelBorder,
-                bgcolor: dialogSurface,
-                backgroundImage: dialogSurfaceGradient
-              }
-            : {
-                minHeight: '80vh',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: panelBorder,
-                bgcolor: dialogSurface,
-                backgroundImage: dialogSurfaceGradient
-              }
+        slotProps={{
+          paper: {
+            sx: isMobile
+              ? {
+                  borderRadius: 0,
+                  border: '1px solid',
+                  borderColor: panelBorder,
+                  bgcolor: dialogSurface,
+                  backgroundImage: dialogSurfaceGradient
+                }
+              : {
+                  minHeight: '80vh',
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: panelBorder,
+                  bgcolor: dialogSurface,
+                  backgroundImage: dialogSurfaceGradient
+                }
+          }
         }}
       >
         <DialogTitle sx={{ pb: 1.5, bgcolor: mutedPanelSurface, borderBottom: '1px solid', borderColor: panelBorder }}>
@@ -310,23 +324,23 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
             <Stack direction="row" alignItems="center" spacing={1}>
               <AccountTreeIcon color="primary" />
               <Box>
-                <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600}>
+                <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600} sx={{ color: primaryText }}>
                   链式代理配置
                   <Chip size="small" label="Beta" color="error" variant="outlined" sx={{ ml: 1 }} />
                 </Typography>
                 {isMobile && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{ color: secondaryText }}>
                     {subscription?.Name}
                   </Typography>
                 )}
                 {!isMobile && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                  <Typography variant="body2" sx={{ mt: 0.25, color: secondaryText }}>
                     {subscription?.Name}
                   </Typography>
                 )}
               </Box>
             </Stack>
-            <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
+            <IconButton onClick={onClose} size="small" sx={iconButtonSx}>
               <CloseIcon />
             </IconButton>
           </Stack>
@@ -341,20 +355,30 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
 
           {!loading && !editMode && (
             <Box>
-              <Box sx={{ mb: 2, p: 1.5, borderRadius: 2, bgcolor: mutedPanelSurface, border: '1px solid', borderColor: panelBorder }}>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              <Box
+                sx={{
+                  mb: 2,
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: elevatedSurface,
+                  border: '1px solid',
+                  borderColor: softBorder,
+                  boxShadow: cardShadow
+                }}
+              >
+                <Typography variant="body2" sx={{ mb: 1, color: secondaryText }}>
                   链式代理规则用于配置节点的前置代理（入口代理）。每个落地节点独立匹配规则：按规则顺序检查，应用第一个匹配规则的出口配置。
                 </Typography>
                 <Typography
                   variant="caption"
-                  color="info.main"
                   sx={{
                     display: 'block',
                     p: 1.25,
-                    bgcolor: nestedPanelSurface,
+                    bgcolor: infoSurface,
+                    color: tertiaryText,
                     borderRadius: 1.5,
                     border: '1px solid',
-                    borderColor: alpha(theme.palette.info.main, isDark ? 0.28 : 0.18)
+                    borderColor: infoSoftBorder
                   }}
                 >
                   提示：若需不同落地节点使用不同出口，请确保各规则的「目标节点」配置不重叠（使用「指定节点」或「按条件筛选」精确定义目标范围）。
@@ -373,8 +397,9 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                         borderRadius: 2,
                         opacity: rule.enabled ? 1 : 0.6,
                         transition: 'all 0.2s ease',
-                        bgcolor: nestedPanelSurface,
-                        borderColor: panelBorder,
+                        bgcolor: elevatedSurface,
+                        borderColor: softBorder,
+                        boxShadow: cardShadow,
                         '&:active': { transform: 'scale(0.98)' }
                       }}
                     >
@@ -383,7 +408,7 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                           {/* 规则名称和状态 */}
                           <Stack direction="row" alignItems="center" justifyContent="space-between">
                             <Stack direction="row" alignItems="center" spacing={1}>
-                              <Typography variant="subtitle1" fontWeight={600}>
+                              <Typography variant="subtitle1" fontWeight={600} sx={{ color: primaryText }}>
                                 {rule.name || '未命名规则'}
                               </Typography>
                               {!rule.enabled && <Chip label="已禁用" size="small" color="default" />}
@@ -396,8 +421,8 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                             {parseChainConfig(rule.chainConfig).map((name, i) => (
                               <Chip key={i} label={name} size="small" color="primary" variant="outlined" sx={{ borderRadius: 1.5 }} />
                             ))}
-                            <ArrowForwardIcon sx={{ fontSize: 16, color: 'text.secondary', mx: 0.5 }} />
-                            <Typography variant="body2" color="text.secondary">
+                            <ArrowForwardIcon sx={{ fontSize: 16, color: secondaryText, mx: 0.5 }} />
+                            <Typography variant="body2" sx={{ color: secondaryText }}>
                               {parseTargetConfig(rule.targetConfig)}
                             </Typography>
                           </Stack>
@@ -409,7 +434,7 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                               variant="outlined"
                               startIcon={<EditIcon />}
                               onClick={() => handleEdit(rule)}
-                              sx={{ minWidth: 80 }}
+                              sx={{ minWidth: 80, borderColor: primaryStrongBorder }}
                             >
                               编辑
                             </Button>
@@ -419,7 +444,7 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                               color="error"
                               startIcon={<DeleteIcon />}
                               onClick={() => handleDelete(rule)}
-                              sx={{ minWidth: 80 }}
+                              sx={{ minWidth: 80, borderColor: tokens.errorSoftBorder }}
                             >
                               删除
                             </Button>
@@ -444,31 +469,32 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                                 variant="outlined"
                                 sx={{
                                   p: 2,
-                                  backgroundColor: snapshot.isDragging
-                                    ? alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08)
-                                    : nestedPanelSurface,
+                                  backgroundColor: snapshot.isDragging ? selectedSurface : elevatedSurface,
                                   opacity: rule.enabled ? 1 : 0.6,
                                   borderRadius: 2,
-                                  borderColor: snapshot.isDragging ? alpha(theme.palette.primary.main, isDark ? 0.32 : 0.24) : panelBorder
+                                  boxShadow: cardShadow,
+                                  borderColor: snapshot.isDragging ? primaryStrongBorder : softBorder
                                 }}
                               >
                                 <Stack direction="row" alignItems="center" spacing={2}>
                                   {/* 拖拽手柄 */}
-                                  <Box {...provided.dragHandleProps} sx={{ cursor: 'grab', color: 'text.secondary' }}>
+                                  <Box {...provided.dragHandleProps} sx={{ cursor: 'grab', color: secondaryText }}>
                                     <DragIndicatorIcon />
                                   </Box>
 
                                   {/* 规则信息 */}
                                   <Box sx={{ flex: 1 }}>
                                     <Stack direction="row" alignItems="center" spacing={1}>
-                                      <Typography variant="subtitle2">{rule.name || '未命名规则'}</Typography>
+                                      <Typography variant="subtitle2" sx={{ color: primaryText }}>
+                                        {rule.name || '未命名规则'}
+                                      </Typography>
                                       {!rule.enabled && <Chip label="已禁用" size="small" color="default" />}
                                     </Stack>
                                     <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
                                       {parseChainConfig(rule.chainConfig).map((name, i) => (
                                         <Chip key={i} label={name} size="small" color="primary" variant="outlined" />
                                       ))}
-                                      <Typography variant="caption" color="text.secondary">
+                                      <Typography variant="caption" sx={{ color: secondaryText }}>
                                         → {parseTargetConfig(rule.targetConfig)}
                                       </Typography>
                                     </Stack>
@@ -476,10 +502,10 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
 
                                   {/* 操作按钮 */}
                                   <Switch checked={rule.enabled} onChange={() => handleToggle(rule)} size="small" />
-                                  <IconButton size="small" onClick={() => handleEdit(rule)}>
+                                  <IconButton size="small" onClick={() => handleEdit(rule)} sx={iconButtonSx}>
                                     <EditIcon fontSize="small" />
                                   </IconButton>
-                                  <IconButton size="small" color="error" onClick={() => handleDelete(rule)}>
+                                  <IconButton size="small" onClick={() => handleDelete(rule)} sx={errorIconButtonSx}>
                                     <DeleteIcon fontSize="small" />
                                   </IconButton>
                                 </Stack>
@@ -502,15 +528,17 @@ export default function ChainProxyDialog({ open, onClose, subscription }) {
                     p: isMobile ? 3 : 4,
                     textAlign: 'center',
                     borderRadius: 2,
-                    bgcolor: mutedPanelSurface,
-                    borderColor: panelBorder
+                    bgcolor: elevatedSurface,
+                    backgroundImage: dialogSurfaceGradient,
+                    borderColor: softBorder,
+                    boxShadow: cardShadow
                   }}
                 >
-                  <TouchAppIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-                  <Typography color="text.secondary" gutterBottom>
+                  <TouchAppIcon sx={{ fontSize: 48, color: secondaryText, mb: 1 }} />
+                  <Typography sx={{ color: primaryText }} gutterBottom>
                     暂无链式代理规则
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ mb: 2, color: secondaryText }}>
                     链式代理可以为节点配置入口代理，实现流量中转
                   </Typography>
                   <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd} size={isMobile ? 'large' : 'medium'}>

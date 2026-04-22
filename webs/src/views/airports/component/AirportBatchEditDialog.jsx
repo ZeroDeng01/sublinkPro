@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 
-// material-ui
+import { useTheme } from '@mui/material/styles';
 import Alert from '@mui/material/Alert';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
@@ -11,48 +11,18 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-// project imports
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
+import { withAlpha } from 'utils/colorUtils';
+import AirportDialogSection from './AirportDialogSection';
 
-function SectionTitle({ children }) {
-  return (
-    <Typography
-      variant="subtitle2"
-      color="primary"
-      sx={{
-        fontWeight: 600,
-        mb: 1.5,
-        display: 'flex',
-        alignItems: 'center',
-        '&::before': {
-          content: '""',
-          width: 3,
-          height: 16,
-          bgcolor: 'primary.main',
-          borderRadius: 1,
-          mr: 1
-        }
-      }}
-    >
-      {children}
-    </Typography>
-  );
-}
-
-SectionTitle.propTypes = {
-  children: PropTypes.node.isRequired
-};
-
-/**
- * 机场批量编辑对话框
- */
 export default function AirportBatchEditDialog({
   open,
   selectedCount,
@@ -63,6 +33,14 @@ export default function AirportBatchEditDialog({
   onSubmit,
   submitting
 }) {
+  const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
+    theme,
+    isDark
+  );
+  const { primaryText, secondaryText } = getReadableTextTokens(theme, isDark);
+
   const summaryItems = [];
 
   if (batchForm.applyGroup) {
@@ -72,10 +50,47 @@ export default function AirportBatchEditDialog({
     summaryItems.push(`调度：${batchForm.cronExpr.trim() || '未设置'}`);
   }
 
+  const controlRowSx = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 2,
+    px: 1.5,
+    py: 1.25,
+    borderRadius: 2,
+    bgcolor: isDark ? withAlpha(palette.background.paper, 0.2) : withAlpha(palette.background.paper, 0.92),
+    border: '1px solid',
+    borderColor: panelBorder
+  };
+
   return (
-    <Dialog open={open} onClose={submitting ? undefined : onClose} maxWidth="md" fullWidth>
-      <DialogTitle>批量设置机场</DialogTitle>
-      <DialogContent dividers sx={{ pt: 2.5, pb: 2 }}>
+    <Dialog
+      open={open}
+      onClose={submitting ? undefined : onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2.5,
+          border: '1px solid',
+          borderColor: panelBorder,
+          bgcolor: dialogSurface,
+          backgroundImage: dialogSurfaceGradient
+        }
+      }}
+    >
+      <DialogTitle
+        sx={{
+          pb: 1.5,
+          color: primaryText,
+          bgcolor: mutedPanelSurface,
+          borderBottom: '1px solid',
+          borderColor: panelBorder
+        }}
+      >
+        批量设置机场
+      </DialogTitle>
+      <DialogContent dividers sx={{ pt: 2.5, pb: 2, bgcolor: 'transparent', borderColor: panelBorder }}>
         <Stack spacing={2.5}>
           <Alert severity={summaryItems.length > 0 ? 'info' : 'warning'}>
             {summaryItems.length > 0
@@ -83,16 +98,16 @@ export default function AirportBatchEditDialog({
               : `已选择 ${selectedCount} 个机场，请先勾选本次要修改的字段`}
           </Alert>
 
-          <Box>
-            <SectionTitle>节点分组</SectionTitle>
+          <AirportDialogSection title="节点分组" surface={nestedPanelSurface} borderColor={panelBorder} titleColor={primaryText}>
             <FormControlLabel
               control={
                 <Checkbox checked={batchForm.applyGroup} onChange={(e) => setBatchForm({ ...batchForm, applyGroup: e.target.checked })} />
               }
               label="统一设置节点分组"
+              sx={{ color: primaryText, alignItems: 'flex-start', m: 0 }}
             />
             <Collapse in={batchForm.applyGroup}>
-              <Stack spacing={1.5} sx={{ mt: 1 }}>
+              <Stack spacing={1.5} sx={{ mt: 1.5 }}>
                 <Autocomplete
                   freeSolo
                   size="small"
@@ -102,29 +117,22 @@ export default function AirportBatchEditDialog({
                   onInputChange={(e, newValue) => setBatchForm({ ...batchForm, group: newValue ?? '' })}
                   renderInput={(params) => <TextField {...params} label="节点分组" placeholder="输入或选择分组，留空表示清空分组" />}
                 />
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: secondaryText }}>
                   会同步更新这些机场已导入节点的分组，留空表示清空分组。
                 </Typography>
               </Stack>
             </Collapse>
-          </Box>
+          </AirportDialogSection>
 
-          <Divider />
-
-          <Box>
-            <SectionTitle>定时更新</SectionTitle>
+          <AirportDialogSection title="定时更新" surface={nestedPanelSurface} borderColor={panelBorder} titleColor={primaryText}>
             <Stack spacing={2}>
               <Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}
-                >
+                <Box sx={controlRowSx}>
                   <Box sx={{ pr: 2 }}>
-                    <Typography variant="body2">更新 Cron 表达式</Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="body2" sx={{ color: primaryText }}>
+                      更新 Cron 表达式
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: secondaryText }}>
                       批量编辑仅会更新定时规则，不会改变已选机场当前的启用或禁用状态。
                     </Typography>
                   </Box>
@@ -145,10 +153,18 @@ export default function AirportBatchEditDialog({
                 </Collapse>
               </Box>
             </Stack>
-          </Box>
+          </AirportDialogSection>
         </Stack>
       </DialogContent>
-      <DialogActions>
+      <DialogActions
+        sx={{
+          px: 3,
+          py: 2,
+          bgcolor: mutedPanelSurface,
+          borderTop: '1px solid',
+          borderColor: panelBorder
+        }}
+      >
         <Button onClick={onClose} disabled={submitting}>
           取消
         </Button>

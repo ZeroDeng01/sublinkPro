@@ -8,6 +8,7 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -23,6 +24,7 @@ import {
   getSpeedDisplay,
   formatCountry
 } from '../utils';
+import { getNodePanelSx, getNodeTagChipSx, getNodeThemeTokens } from '../nodeTheme';
 
 /**
  * 移动端节点卡片组件（精简版）
@@ -30,6 +32,8 @@ import {
  */
 export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onViewDetails }) {
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getNodeThemeTokens(theme, isDark);
   const unlockDisplay = getNodeUnlockSummaryDisplay(node, { limit: 2 });
 
   return (
@@ -38,12 +42,11 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
       border
       shadow={theme.shadows[1]}
       sx={{
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        '&:hover': {
-          boxShadow: theme.shadows[4],
-          transform: 'translateY(-2px)'
-        }
+        ...getNodePanelSx(theme, tokens, tokens.palette.primary.main, {
+          interactive: true,
+          selected: isSelected
+        }),
+        cursor: 'pointer'
       }}
       onClick={(e) => {
         // 点击复选框时不触发详情
@@ -233,18 +236,13 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
               .filter((t) => t.trim())
               .map((tag, idx) => {
                 const tagName = tag.trim();
-                const tagColor = tagColorMap?.[tagName] || '#1976d2';
+                const tagColor = tagColorMap?.[tagName] || tokens.palette.primary.main;
                 return (
                   <Chip
                     key={`tag-${idx}`}
                     label={tagName}
                     size="small"
-                    sx={{
-                      fontSize: '10px',
-                      height: 20,
-                      backgroundColor: tagColor,
-                      color: '#fff'
-                    }}
+                    sx={{ fontSize: '10px', height: 20, ...getNodeTagChipSx(theme, tokens, tagColor) }}
                   />
                 );
               })}

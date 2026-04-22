@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { alpha, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Card from '@mui/material/Card';
@@ -18,6 +18,16 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import {
+  getChainProxyFieldControlSx,
+  getChainProxyIconButtonSx,
+  getChainProxyThemeTokens,
+  getChainProxyToggleButtonGroupSx
+} from './chainProxyTheme';
+import { withAlpha } from '../../../utils/colorUtils';
 
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -30,7 +40,6 @@ import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import DeviceHubIcon from '@mui/icons-material/DeviceHub';
 
 import ConditionBuilder from './ConditionBuilder';
-import { withAlpha } from '../../../utils/colorUtils';
 
 /**
  * 移动端链式代理配置器
@@ -48,15 +57,13 @@ export default function MobileChainBuilder({
   templateGroups = []
 }) {
   const theme = useTheme();
-  const palette = theme.vars?.palette || theme.palette;
-  const isDark = theme.palette.mode === 'dark';
-  const dialogSurface = isDark ? withAlpha(palette.background.default, 0.96) : palette.background.paper;
-  const dialogSurfaceGradient = isDark
-    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.16)} 0%, ${dialogSurface} 100%)`
-    : 'none';
-  const mutedPanelSurface = isDark ? withAlpha(palette.background.default, 0.84) : palette.background.default;
-  const nestedPanelSurface = isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper;
-  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getChainProxyThemeTokens(theme, isDark);
+  const { dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = tokens;
+  const fieldControlSx = getChainProxyFieldControlSx(tokens);
+  const iconButtonSx = getChainProxyIconButtonSx(tokens);
+  const errorIconButtonSx = getChainProxyIconButtonSx(tokens, theme.palette.error.main);
+  const targetToggleSx = getChainProxyToggleButtonGroupSx(tokens, theme.palette.success.main);
   // 编辑对话框状态
   const [proxyDialogOpen, setProxyDialogOpen] = useState(false);
   const [targetDialogOpen, setTargetDialogOpen] = useState(false);
@@ -186,11 +193,12 @@ export default function MobileChainBuilder({
         <Card
           variant="outlined"
           sx={{
-            backgroundColor: mutedPanelSurface,
+            backgroundColor: tokens.elevatedSurface,
+            backgroundImage: tokens.dialogSurfaceGradient,
             color: 'primary.main',
             borderRadius: 2,
-            borderColor: alpha(theme.palette.primary.main, 0.28),
-            boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : 'none'
+            borderColor: tokens.primarySoftBorder,
+            boxShadow: tokens.insetHighlight
           }}
         >
           <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
@@ -217,9 +225,9 @@ export default function MobileChainBuilder({
               variant="outlined"
               sx={{
                 borderRadius: 2,
-                borderColor: alpha(theme.palette.primary.main, isDark ? 0.3 : 0.24),
+                borderColor: tokens.primarySoftBorder,
                 bgcolor: nestedPanelSurface,
-                boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1]
+                boxShadow: tokens.cardShadow
               }}
             >
               <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
@@ -227,19 +235,23 @@ export default function MobileChainBuilder({
                   <Stack direction="row" alignItems="center" spacing={1.5}>
                     {getTypeIcon(item.type)}
                     <Box>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{ color: tokens.secondaryText }}>
                         {getTypeLabel(item.type)}
                       </Typography>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body2" fontWeight={600} sx={{ color: tokens.primaryText }}>
                         {getProxyLabel(item)}
                       </Typography>
                     </Box>
                   </Stack>
                   <Stack direction="row" spacing={0.5}>
-                    <IconButton size="small" onClick={() => handleEditProxy(index)}>
+                    <IconButton size="small" onClick={() => handleEditProxy(index)} sx={iconButtonSx}>
                       <EditIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" color="error" onClick={() => handleDeleteProxy(index)}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeleteProxy(index)}
+                      sx={{ ...errorIconButtonSx, color: theme.palette.error.main }}
+                    >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Stack>
@@ -255,11 +267,28 @@ export default function MobileChainBuilder({
         {/* 添加代理按钮 - 支持多级链式代理 */}
         {chainConfig.length < 4 && (
           <>
-            <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAddProxy} fullWidth sx={{ borderStyle: 'dashed', py: 1.5 }}>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={handleAddProxy}
+              fullWidth
+              sx={{
+                borderStyle: 'dashed',
+                py: 1.5,
+                borderColor: tokens.primarySoftBorder,
+                backgroundColor: tokens.fieldSurface,
+                boxShadow: tokens.insetHighlight,
+                color: tokens.primaryText,
+                '&:hover': {
+                  borderColor: tokens.primaryStrongBorder,
+                  backgroundColor: tokens.hoverSurface
+                }
+              }}
+            >
               {chainConfig.length === 0 ? '添加入口代理' : '添加中间代理'}
             </Button>
             {chainConfig.length >= 2 && (
-              <Typography variant="caption" color="warning.main" sx={{ textAlign: 'center', display: 'block', mt: 0.5 }}>
+              <Typography variant="caption" sx={{ textAlign: 'center', display: 'block', mt: 0.5, color: tokens.warningSoftText }}>
                 当前 {chainConfig.length} 级链路，延迟可能较高
               </Typography>
             )}
@@ -269,7 +298,7 @@ export default function MobileChainBuilder({
           </>
         )}
         {chainConfig.length >= 4 && (
-          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block', py: 1 }}>
+          <Typography variant="caption" sx={{ textAlign: 'center', display: 'block', py: 1, color: tokens.secondaryText }}>
             已达最大 4 级链路
           </Typography>
         )}
@@ -282,11 +311,15 @@ export default function MobileChainBuilder({
             color: 'success.main',
             borderRadius: 2,
             cursor: 'pointer',
-            borderColor: alpha(theme.palette.success.main, 0.26),
+            borderColor: withAlpha(theme.palette.success.main, isDark ? 0.34 : 0.22),
             bgcolor: nestedPanelSurface,
-            boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1],
+            boxShadow: tokens.cardShadow,
             transition: 'transform 0.2s',
-            '&:active': { transform: 'scale(0.98)' }
+            '&:active': { transform: 'scale(0.98)' },
+            '&:hover': {
+              backgroundColor: tokens.successSurface,
+              borderColor: withAlpha(theme.palette.success.main, isDark ? 0.44 : 0.3)
+            }
           }}
         >
           <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
@@ -294,15 +327,15 @@ export default function MobileChainBuilder({
               <Stack direction="row" alignItems="center" spacing={1}>
                 <StopIcon />
                 <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.9 }} color="inherit">
+                  <Typography variant="caption" sx={{ opacity: 0.9, color: tokens.secondaryText }}>
                     目标节点
                   </Typography>
-                  <Typography variant="subtitle2" fontWeight={600} color="inherit">
+                  <Typography variant="subtitle2" fontWeight={600} sx={{ color: tokens.primaryText }}>
                     {getTargetLabel()}
                   </Typography>
                 </Box>
               </Stack>
-              <EditIcon fontSize="small" sx={{ opacity: 0.8 }} />
+              <EditIcon fontSize="small" sx={{ opacity: 0.8, color: tokens.secondaryText }} />
             </Stack>
           </CardContent>
         </Card>
@@ -323,7 +356,7 @@ export default function MobileChainBuilder({
           }
         }}
       >
-        <DialogTitle sx={{ bgcolor: mutedPanelSurface, borderBottom: '1px solid', borderColor: panelBorder }}>
+        <DialogTitle sx={{ bgcolor: mutedPanelSurface, borderBottom: '1px solid', borderColor: panelBorder, color: tokens.primaryText }}>
           {editingProxyConfig?.isNew
             ? editingProxyConfig?.index === 0
               ? '添加入口代理'
@@ -338,7 +371,7 @@ export default function MobileChainBuilder({
             {(() => {
               const isEntryNode = editingProxyConfig?.index === 0;
               return (
-                <FormControl size="small" fullWidth>
+                <FormControl size="small" fullWidth sx={fieldControlSx}>
                   <InputLabel>代理类型</InputLabel>
                   <Select
                     value={editingProxyConfig?.config?.type || (isEntryNode ? 'template_group' : 'specified_node')}
@@ -363,7 +396,7 @@ export default function MobileChainBuilder({
                     <MenuItem value="specified_node">指定节点</MenuItem>
                   </Select>
                   {!isEntryNode && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                    <Typography variant="caption" sx={{ mt: 0.5, color: tokens.tertiaryText }}>
                       中间节点的组内节点会自动设置 dialer-proxy
                     </Typography>
                   )}
@@ -376,6 +409,7 @@ export default function MobileChainBuilder({
                 freeSolo
                 size="small"
                 fullWidth
+                sx={fieldControlSx}
                 options={templateGroups || []}
                 value={editingProxyConfig?.config?.groupName || ''}
                 onChange={(e, newValue) =>
@@ -408,8 +442,9 @@ export default function MobileChainBuilder({
                       config: { ...editingProxyConfig.config, groupName: e.target.value }
                     })
                   }
+                  sx={fieldControlSx}
                 />
-                <FormControl size="small" fullWidth>
+                <FormControl size="small" fullWidth sx={fieldControlSx}>
                   <InputLabel>组类型</InputLabel>
                   <Select
                     value={editingProxyConfig?.config?.groupType || 'select'}
@@ -447,6 +482,7 @@ export default function MobileChainBuilder({
                       }
                       placeholder="http://www.gstatic.com/generate_204"
                       helperText="用于检测节点可用性的 URL，留空使用默认值"
+                      sx={fieldControlSx}
                     />
                     <Stack direction="row" spacing={1}>
                       <TextField
@@ -463,7 +499,7 @@ export default function MobileChainBuilder({
                             }
                           })
                         }
-                        sx={{ flex: 1 }}
+                        sx={{ ...fieldControlSx, flex: 1 }}
                         helperText="健康检查间隔"
                       />
                       <TextField
@@ -480,7 +516,7 @@ export default function MobileChainBuilder({
                             }
                           })
                         }
-                        sx={{ flex: 1 }}
+                        sx={{ ...fieldControlSx, flex: 1 }}
                         helperText={editingProxyConfig?.config?.groupType === 'url-test' ? '延迟差在此范围内视为相同' : '故障转移阈值'}
                       />
                     </Stack>
@@ -505,6 +541,7 @@ export default function MobileChainBuilder({
                       }
                       placeholder="http://www.gstatic.com/generate_204"
                       helperText="用于检测节点可用性的 URL，留空使用默认值"
+                      sx={fieldControlSx}
                     />
                     <Stack direction="row" spacing={1}>
                       <TextField
@@ -521,10 +558,10 @@ export default function MobileChainBuilder({
                             }
                           })
                         }
-                        sx={{ flex: 1 }}
+                        sx={{ ...fieldControlSx, flex: 1 }}
                         helperText="健康检查间隔"
                       />
-                      <FormControl size="small" sx={{ flex: 1 }}>
+                      <FormControl size="small" sx={{ ...fieldControlSx, flex: 1 }}>
                         <InputLabel>负载均衡策略</InputLabel>
                         <Select
                           value={editingProxyConfig?.config?.urlTestConfig?.strategy || 'consistent-hashing'}
@@ -564,7 +601,7 @@ export default function MobileChainBuilder({
 
             {editingProxyConfig?.config?.type === 'dynamic_node' && (
               <>
-                <FormControl size="small" fullWidth>
+                <FormControl size="small" fullWidth sx={fieldControlSx}>
                   <InputLabel>选择模式</InputLabel>
                   <Select
                     value={editingProxyConfig?.config?.selectMode || 'first'}
@@ -600,6 +637,7 @@ export default function MobileChainBuilder({
               <Autocomplete
                 size="small"
                 options={availableNodes || []}
+                sx={fieldControlSx}
                 getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || '未知'})`}
                 value={(availableNodes || []).find((n) => n.id === editingProxyConfig?.config?.nodeId) || null}
                 onChange={(e, newValue) =>
@@ -644,37 +682,42 @@ export default function MobileChainBuilder({
           }
         }}
       >
-        <DialogTitle sx={{ bgcolor: mutedPanelSurface, borderBottom: '1px solid', borderColor: panelBorder }}>配置目标节点</DialogTitle>
+        <DialogTitle sx={{ bgcolor: mutedPanelSurface, borderBottom: '1px solid', borderColor: panelBorder, color: tokens.primaryText }}>
+          配置目标节点
+        </DialogTitle>
         <DialogContent sx={{ bgcolor: dialogSurface }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: tokens.secondaryText }}>
               选择应用此规则的节点范围
             </Typography>
 
-            <FormControl size="small" fullWidth>
-              <InputLabel>目标类型</InputLabel>
-              <Select
-                value={editingTargetConfig?.type || 'specified_node'}
-                label="目标类型"
-                onChange={(e) =>
+            <ToggleButtonGroup
+              value={editingTargetConfig?.type || 'specified_node'}
+              exclusive
+              fullWidth
+              size="small"
+              onChange={(_event, newType) => {
+                if (newType !== null) {
                   setEditingTargetConfig({
                     ...editingTargetConfig,
-                    type: e.target.value,
+                    type: newType,
                     nodeId: undefined,
                     conditions: undefined
-                  })
+                  });
                 }
-              >
-                <MenuItem value="specified_node">指定节点</MenuItem>
-                <MenuItem value="all">所有节点</MenuItem>
-                <MenuItem value="conditions">按条件筛选</MenuItem>
-              </Select>
-            </FormControl>
+              }}
+              sx={{ ...targetToggleSx, '& .MuiToggleButton-root': { minHeight: 40 } }}
+            >
+              <ToggleButton value="specified_node">指定节点</ToggleButton>
+              <ToggleButton value="all">所有节点</ToggleButton>
+              <ToggleButton value="conditions">按条件</ToggleButton>
+            </ToggleButtonGroup>
 
             {editingTargetConfig?.type === 'specified_node' && (
               <Autocomplete
                 size="small"
                 options={availableNodes || []}
+                sx={fieldControlSx}
                 getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || '未知'})`}
                 value={(availableNodes || []).find((n) => n.id === editingTargetConfig?.nodeId) || null}
                 onChange={(e, newValue) =>

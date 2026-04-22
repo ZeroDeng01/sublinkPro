@@ -20,6 +20,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import ToggleButton from '@mui/material/ToggleButton';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // project imports
 import { getHostSettings, updateHostSettings } from 'api/hosts';
@@ -28,6 +29,7 @@ import SearchableNodeSelect from '../../../components/SearchableNodeSelect'; // 
 
 export default function HostSettingsDialog({ open, onClose }) {
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // Local state for settings form
@@ -245,10 +247,7 @@ export default function HostSettingsDialog({ open, onClose }) {
                   />
 
                   <Collapse in={settings.dns_use_proxy && !!settings.dns_server}>
-                    <Paper
-                      variant="outlined"
-                      sx={{ mt: 1, p: 2, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}
-                    >
+                    <Paper variant="outlined" sx={{ mt: 1, p: 2, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
                       <Stack spacing={2}>
                         <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap" gap={1}>
                           <Typography variant="body2" sx={{ minWidth: 60 }}>

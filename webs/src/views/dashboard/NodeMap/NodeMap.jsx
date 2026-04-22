@@ -1,9 +1,10 @@
 import { useEffect, useRef, useMemo } from 'react';
 import * as echarts from 'echarts';
 // import 'echarts-gl'; // 3D Not needed for flat map
-import { alpha, useColorScheme, useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Card, Typography, CircularProgress } from '@mui/material';
 import worldJson from 'assets/world.json';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from 'utils/colorUtils';
 import { COUNTRY_COORDINATES, COUNTRY_NAME_MAP } from './countryData';
 
@@ -43,9 +44,8 @@ const findCountryCode = (name) => {
 const NodeMap = ({ data = {}, loading = false }) => {
   const chartRef = useRef(null);
   const theme = useTheme();
-  const { mode } = useColorScheme();
+  const { isDark } = useResolvedColorScheme();
   const palette = theme.vars?.palette || theme.palette;
-  const isDark = mode === 'dark';
   const chartInstance = useRef(null);
   const accentColor = theme.palette.info.main;
   const accentSoft = theme.palette.info.light;
@@ -426,13 +426,8 @@ const NodeMap = ({ data = {}, loading = false }) => {
             display: 'inline-flex',
             flexDirection: 'column',
             gap: 1.25,
-            px: 3,
-            py: 2.5,
-            background: overlaySurface,
-            border: isDark ? '1px solid' : 'none',
-            borderColor: overlayBorderColor,
-            boxShadow: overlayInsetHighlight,
-            backdropFilter: `blur(${isDark ? 10 : 4}px)`
+            maxWidth: 320,
+            pointerEvents: 'none'
           }}
         >
           <Typography
@@ -448,54 +443,27 @@ const NodeMap = ({ data = {}, loading = false }) => {
           >
             全球节点分布
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
             <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: successColor, boxShadow: `0 0 10px ${statusDotGlow}` }} />
             <Typography
               variant="subtitle2"
-              sx={{ color: isDark ? alpha('#98f7ff', 0.9) : accentColor, letterSpacing: '2px', fontFamily: '"Noto Sans SC", monospace' }}
+              sx={{ color: isDark ? alpha('#98f7ff', 0.9) : accentColor, letterSpacing: '1.6px', fontFamily: '"Noto Sans SC", monospace' }}
             >
               以获取到落地IP的数据为参考
             </Typography>
           </Box>
         </Box>
-
-        {unknownCount > 0 && (
-          <Box
-            sx={{
-              mt: 3,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 2,
-              background: overlaySurface,
-              border: isDark ? '1px solid' : 'none',
-              borderColor: overlayBorderColor,
-              py: 1.5,
-              px: 3,
-              borderRadius: 0,
-              borderLeft: `4px solid ${accentColor}`,
-              boxShadow: overlayInsetHighlight,
-              backdropFilter: `blur(${isDark ? 10 : 4}px)`
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{ color: readableSecondaryTextColor, fontFamily: '"Noto Sans SC", monospace', fontSize: '0.9rem' }}
-            >
-              未知区域 &gt;&gt; <span style={{ color: readablePrimaryTextColor, fontWeight: 'bold' }}>{unknownCount}</span>
-            </Typography>
-          </Box>
-        )}
       </Box>
 
-      {/* Stats overlay */}
-      <Box sx={{ p: 6, position: 'absolute', bottom: 0, right: 0, zIndex: 10, textAlign: 'right', pointerEvents: 'none' }}>
+      <Box sx={{ p: 4, position: 'absolute', right: 0, bottom: 0, zIndex: 10, pointerEvents: 'none' }}>
         <Box
           sx={{
             display: 'inline-flex',
             flexDirection: 'column',
-            alignItems: 'flex-end',
-            px: 3,
-            py: 2.5,
+            gap: 1.25,
+            px: 2.5,
+            py: 2,
+            minWidth: 210,
             background: overlaySurface,
             border: isDark ? '1px solid' : 'none',
             borderColor: overlayBorderColor,
@@ -503,26 +471,74 @@ const NodeMap = ({ data = {}, loading = false }) => {
             backdropFilter: `blur(${isDark ? 10 : 4}px)`
           }}
         >
-          <Typography
-            variant="overline"
-            sx={{ color: readableTertiaryTextColor, letterSpacing: 2, display: 'block', fontFamily: '"Noto Sans SC"' }}
-          >
-            覆盖区域
-          </Typography>
-          <Typography
-            variant="h1"
-            sx={{
-              color: isDark ? alpha('#7ff9ff', 0.98) : accentColor,
-              fontWeight: '900',
-              fontSize: '4rem',
-              lineHeight: 1,
-              textShadow: `0 0 ${isDark ? 34 : 28}px ${coverageGlow}`
-            }}
-          >
-            {String(coveredRegionCount).padStart(2, '0')}
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+            <Box>
+              <Typography
+                variant="overline"
+                sx={{ color: readableTertiaryTextColor, letterSpacing: 2, display: 'block', fontFamily: '"Noto Sans SC"' }}
+              >
+                覆盖区域
+              </Typography>
+              <Typography
+                variant="h2"
+                sx={{
+                  color: isDark ? alpha('#7ff9ff', 0.98) : accentColor,
+                  fontWeight: '900',
+                  lineHeight: 1,
+                  textShadow: `0 0 ${isDark ? 28 : 22}px ${coverageGlow}`,
+                  fontFamily: '"Orbitron", sans-serif'
+                }}
+              >
+                {String(coveredRegionCount).padStart(2, '0')}
+              </Typography>
+            </Box>
 
-          <Box sx={{ mt: 2, height: 2, width: 100, bgcolor: alpha(isDark ? '#63f2ff' : accentColor, isDark ? 0.9 : 0.8), ml: 'auto' }} />
+            <Box
+              sx={{
+                px: 1.5,
+                py: 1.15,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1.25,
+                background: alpha(theme.palette.background.default, isDark ? 0.34 : 0.8),
+                border: '1px solid',
+                borderColor: overlayBorderColor,
+                borderTop: `2px solid ${unknownCount > 0 ? alpha(isDark ? '#63f2ff' : accentColor, isDark ? 0.72 : 0.6) : alpha(accentColor, 0.3)}`,
+                boxShadow: overlayInsetHighlight,
+                backdropFilter: `blur(${isDark ? 8 : 4}px)`
+              }}
+            >
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2, minWidth: 0 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ color: readableSecondaryTextColor, letterSpacing: 1.2, fontFamily: '"Noto Sans SC", monospace' }}
+                >
+                  未知区域
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ color: readableTertiaryTextColor, lineHeight: 1.2, fontFamily: '"Noto Sans SC", monospace' }}
+                >
+                  未匹配到国家坐标
+                </Typography>
+              </Box>
+
+              <Typography
+                variant="h6"
+                sx={{
+                  color: unknownCount > 0 ? readablePrimaryTextColor : readableTertiaryTextColor,
+                  fontWeight: 800,
+                  lineHeight: 1,
+                  fontFamily: '"Orbitron", sans-serif'
+                }}
+              >
+                {String(unknownCount).padStart(2, '0')}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ height: 2, width: 88, bgcolor: alpha(isDark ? '#63f2ff' : accentColor, isDark ? 0.9 : 0.8) }} />
         </Box>
       </Box>
 

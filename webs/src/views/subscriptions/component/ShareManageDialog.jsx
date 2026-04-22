@@ -27,14 +27,17 @@ import { useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import QrCodeIcon from '@mui/icons-material/QrCode';
 import LinkIcon from '@mui/icons-material/Link';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import HistoryIcon from '@mui/icons-material/History';
 
 import { getShares, createShare, updateShare, deleteShare, getShareLogs, refreshShareToken } from '../../../api/shares';
 import { getSystemDomain } from '../../../api/settings';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
+import { withAlpha } from 'utils/colorUtils';
+import AccessLogsDialog from './AccessLogsDialog';
+import ClientUrlsDialog from './ClientUrlsDialog';
 import QrCodeDialog from './QrCodeDialog';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -49,6 +52,12 @@ const EXPIRE_TYPE_DATETIME = 2;
 export default function ShareManageDialog({ open, subscription, onClose, showMessage }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { isDark } = useResolvedColorScheme();
+  const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
+    theme,
+    isDark
+  );
+  const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
 
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -295,22 +304,85 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     return false;
   };
 
+  const getDialogPaperSx = (fullScreen = false) => ({
+    borderRadius: fullScreen ? 0 : 3,
+    overflow: 'hidden',
+    bgcolor: dialogSurface,
+    backgroundImage: dialogSurfaceGradient,
+    border: fullScreen ? 'none' : '1px solid',
+    borderColor: panelBorder
+  });
+
+  const iconButtonBaseSx = {
+    color: secondaryText,
+    bgcolor: nestedPanelSurface,
+    border: '1px solid',
+    borderColor: panelBorder,
+    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      color: primaryText,
+      bgcolor: withAlpha(palette.primary.main, isDark ? 0.14 : 0.06),
+      borderColor: withAlpha(palette.primary.main, isDark ? 0.34 : 0.2)
+    }
+  };
+
+  const actionIconButtonSx = {
+    ...iconButtonBaseSx,
+    width: 32,
+    height: 32
+  };
+
+  const legacyChipSx = {
+    height: 20,
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    bgcolor: withAlpha(palette.primary.main, isDark ? 0.18 : 0.1),
+    color: palette.primary.main,
+    border: '1px solid',
+    borderColor: withAlpha(palette.primary.main, isDark ? 0.38 : 0.22),
+    '& .MuiChip-label': {
+      px: 0.9
+    }
+  };
+
   // 渲染分享卡片
   const renderShareCard = (share) => {
     const expired = isExpired(share);
+    const accentColor = share.is_legacy ? palette.primary.main : expired ? palette.error.main : palette.info.main;
+    const accentSurface = share.is_legacy
+      ? withAlpha(palette.primary.main, isDark ? 0.16 : 0.06)
+      : expired
+        ? withAlpha(palette.error.main, isDark ? 0.14 : 0.05)
+        : nestedPanelSurface;
+    const accentBorder = share.is_legacy
+      ? withAlpha(palette.primary.main, isDark ? 0.38 : 0.22)
+      : expired
+        ? withAlpha(palette.error.main, isDark ? 0.34 : 0.2)
+        : panelBorder;
 
     return (
       <Card
         key={share.id}
-        variant="outlined"
         sx={{
-          mb: 1,
-          opacity: expired ? 0.6 : 1,
-          borderColor: share.is_legacy ? 'primary.main' : expired ? 'error.main' : 'divider'
+          borderRadius: 2.5,
+          bgcolor: accentSurface,
+          backgroundImage: share.is_legacy
+            ? `linear-gradient(180deg, ${withAlpha(palette.primary.main, isDark ? 0.1 : 0.04)} 0%, ${accentSurface} 100%)`
+            : 'none',
+          border: '1px solid',
+          borderColor: accentBorder,
+          boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none',
+          opacity: expired ? 0.72 : 1,
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            borderColor: withAlpha(accentColor, isDark ? 0.48 : 0.28),
+            bgcolor: share.is_legacy ? withAlpha(palette.primary.main, isDark ? 0.2 : 0.08) : mutedPanelSurface
+          }
         }}
       >
-        <CardContent sx={{ py: 1.5 }}>
-          <Stack direction="row" alignItems="center" spacing={1}>
+        <CardContent sx={{ px: 2, py: 1.75, '&:last-child': { pb: 1.75 } }}>
+          <Stack direction="row" alignItems="center" spacing={1.25}>
             <Box
               onClick={() => handleOpenDetail(share)}
               sx={{
@@ -320,44 +392,84 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                 minWidth: 0,
                 cursor: 'pointer',
                 gap: 1,
-                '&:hover': { opacity: 0.8 }
+                '&:hover': { opacity: 0.92 }
               }}
             >
-              <LinkIcon color={expired ? 'disabled' : 'primary'} fontSize="small" />
+              <Box
+                sx={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 1.75,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  bgcolor: withAlpha(accentColor, isDark ? 0.16 : 0.08),
+                  color: expired ? tertiaryText : accentColor,
+                  border: '1px solid',
+                  borderColor: withAlpha(accentColor, isDark ? 0.32 : 0.18)
+                }}
+              >
+                <LinkIcon fontSize="small" />
+              </Box>
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography variant="body2" fontWeight="medium" noWrap>
+                <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 0.35 }}>
+                  <Typography variant="body2" fontWeight={600} noWrap sx={{ color: primaryText }}>
                     {share.name || '未命名分享'}
                   </Typography>
-                  {share.is_legacy && (
-                    <Chip label="默认" size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#1976d2', color: '#fff' }} />
-                  )}
+                  {share.is_legacy && <Chip label="默认" size="small" sx={legacyChipSx} />}
                 </Stack>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: expired ? tertiaryText : secondaryText }}>
                   {getExpireText(share)} · 访问 {share.access_count || 0} 次
                 </Typography>
               </Box>
             </Box>
             <Stack direction="row" spacing={0.5}>
               <Tooltip title="访问日志">
-                <IconButton size="small" onClick={(e) => handleViewLogs(share, e)}>
+                <IconButton size="small" onClick={(e) => handleViewLogs(share, e)} sx={actionIconButtonSx}>
                   <HistoryIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title="编辑">
-                <IconButton size="small" onClick={(e) => handleEdit(share, e)}>
+                <IconButton size="small" onClick={(e) => handleEdit(share, e)} sx={actionIconButtonSx}>
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               {share.is_legacy ? (
                 <Tooltip title="刷新Token">
-                  <IconButton size="small" color="warning" onClick={(e) => handleRefreshToken(share, e)}>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleRefreshToken(share, e)}
+                    sx={{
+                      ...actionIconButtonSx,
+                      color: palette.warning.main,
+                      '&:hover': {
+                        ...actionIconButtonSx['&:hover'],
+                        color: palette.warning.main,
+                        bgcolor: withAlpha(palette.warning.main, isDark ? 0.16 : 0.08),
+                        borderColor: withAlpha(palette.warning.main, isDark ? 0.36 : 0.2)
+                      }
+                    }}
+                  >
                     <RefreshIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
               ) : (
                 <Tooltip title="删除">
-                  <IconButton size="small" color="error" onClick={(e) => handleDelete(share, e)}>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleDelete(share, e)}
+                    sx={{
+                      ...actionIconButtonSx,
+                      color: palette.error.main,
+                      '&:hover': {
+                        ...actionIconButtonSx['&:hover'],
+                        color: palette.error.main,
+                        bgcolor: withAlpha(palette.error.main, isDark ? 0.16 : 0.08),
+                        borderColor: withAlpha(palette.error.main, isDark ? 0.34 : 0.2)
+                      }
+                    }}
+                  >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
@@ -369,57 +481,44 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     );
   };
 
-  // 渲染链接详情对话框内容
-  const renderDetailContent = () => {
-    if (!detailShare) return null;
-    const serverUrl = getServerUrl();
-    const baseUrl = `${serverUrl}/c/?token=${detailShare.token}`;
-    const clients = [
-      { name: '自动识别', url: baseUrl },
-      { name: 'Clash', url: `${baseUrl}&client=clash` },
-      { name: 'Surge', url: `${baseUrl}&client=surge` },
-      { name: 'V2ray', url: `${baseUrl}&client=v2ray` }
-    ];
-
-    return (
-      <Stack spacing={1.5}>
-        {clients.map((client) => (
-          <Card key={client.name} variant="outlined">
-            <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Chip label={client.name} size="small" color="primary" sx={{ minWidth: 80 }} />
-                <Box sx={{ flex: 1, overflow: 'hidden' }}>
-                  <Typography variant="body2" noWrap sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                    {client.url}
-                  </Typography>
-                </Box>
-                <Tooltip title="复制链接">
-                  <IconButton size="small" onClick={() => copyToClipboard(client.url)}>
-                    <ContentCopyIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="显示二维码">
-                  <IconButton size="small" onClick={() => handleQrCode(client.url, client.name)}>
-                    <QrCodeIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-            </CardContent>
-          </Card>
-        ))}
-      </Stack>
-    );
-  };
+  const detailClientUrls = detailShare
+    ? {
+        自动识别: `${getServerUrl()}/c/?token=${detailShare.token}`,
+        Clash: `${getServerUrl()}/c/?token=${detailShare.token}&client=clash`,
+        Surge: `${getServerUrl()}/c/?token=${detailShare.token}&client=surge`,
+        V2ray: `${getServerUrl()}/c/?token=${detailShare.token}&client=v2ray`
+      }
+    : {};
 
   return (
     <>
       {/* 主对话框 - 分享列表 */}
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
-        <DialogTitle>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={isMobile}
+        slotProps={{
+          paper: {
+            sx: getDialogPaperSx(isMobile)
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            px: 2.5,
+            py: 1.75,
+            bgcolor: mutedPanelSurface,
+            borderBottom: '1px solid',
+            borderColor: panelBorder,
+            boxShadow: `inset 0 -1px 0 ${withAlpha(palette.divider, 0.4)}`
+          }}
+        >
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Typography variant="h6">分享管理 - {subscription?.Name}</Typography>
             <Stack direction="row" spacing={1}>
-              <IconButton size="small" onClick={fetchShares} disabled={loading}>
+              <IconButton size="small" onClick={fetchShares} disabled={loading} sx={iconButtonBaseSx}>
                 <RefreshIcon fontSize="small" />
               </IconButton>
               <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAdd}>
@@ -429,44 +528,80 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
           </Stack>
         </DialogTitle>
 
-        <DialogContent dividers>
+        <DialogContent
+          sx={{
+            px: 2.5,
+            pt: 2.5,
+            pb: 2,
+            bgcolor: dialogSurface
+          }}
+        >
           {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4.25 }}>
               <CircularProgress />
             </Box>
           ) : shares.length === 0 ? (
-            <Alert variant={'standard'} severity="info">
+            <Alert
+              variant="outlined"
+              severity="info"
+              sx={{
+                mt: 1.5,
+                bgcolor: withAlpha(palette.info.main, isDark ? 0.12 : 0.05),
+                borderColor: withAlpha(palette.info.main, isDark ? 0.3 : 0.18)
+              }}
+            >
               暂无分享链接，点击"新增"创建第一个分享
             </Alert>
           ) : (
-            shares.map((share) => renderShareCard(share))
+            <Stack spacing={1.5} sx={{ mt: 1.5 }}>
+              {shares.map((share) => renderShareCard(share))}
+            </Stack>
           )}
         </DialogContent>
 
-        <DialogActions>
-          <Button onClick={onClose}>关闭</Button>
+        <DialogActions sx={{ px: 2.5, py: 1.5, bgcolor: mutedPanelSurface, borderTop: '1px solid', borderColor: panelBorder }}>
+          <Button onClick={onClose} variant="outlined">
+            关闭
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* 链接详情对话框 */}
-      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <LinkIcon color="primary" />
-            <Typography variant="h6">{detailShare?.name || '分享链接'}</Typography>
-            {detailShare?.is_legacy && <Chip label="默认" size="small" sx={{ bgcolor: '#1976d2', color: '#fff' }} />}
-          </Stack>
-        </DialogTitle>
-        <DialogContent dividers>{renderDetailContent()}</DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDetailOpen(false)}>关闭</Button>
-        </DialogActions>
-      </Dialog>
+      <ClientUrlsDialog
+        open={detailOpen}
+        title={detailShare?.name || '分享链接'}
+        subtitle="选择需要的客户端地址，可直接复制或生成二维码"
+        legacy={Boolean(detailShare?.is_legacy)}
+        clientUrls={detailClientUrls}
+        onClose={() => setDetailOpen(false)}
+        onQrCode={handleQrCode}
+        onCopy={copyToClipboard}
+      />
 
       {/* 新增/编辑表单对话框 */}
-      <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>{editingShare ? '编辑分享' : '新增分享'}</DialogTitle>
-        <DialogContent>
+      <Dialog
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: getDialogPaperSx(false)
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            px: 2.5,
+            py: 2,
+            bgcolor: mutedPanelSurface,
+            borderBottom: '1px solid',
+            borderColor: panelBorder
+          }}
+        >
+          {editingShare ? '编辑分享' : '新增分享'}
+        </DialogTitle>
+        <DialogContent sx={{ bgcolor: dialogSurface }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="分享名称"
@@ -532,7 +667,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
             )}
           </Stack>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 2.5, py: 1.75, bgcolor: mutedPanelSurface, borderTop: '1px solid', borderColor: panelBorder }}>
           <Button onClick={() => setFormOpen(false)}>取消</Button>
           <Button variant="contained" onClick={handleSave}>
             保存
@@ -541,77 +676,13 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       </Dialog>
 
       {/* IP访问日志对话框 */}
-      <Dialog open={logsOpen} onClose={() => setLogsOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <HistoryIcon color="primary" />
-            <Typography variant="h6">访问日志 - {logsShareName}</Typography>
-          </Stack>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
-          {logsLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : logs.length === 0 ? (
-            <Box sx={{ p: 2 }}>
-              <Alert variant={'standard'} severity="info">
-                暂无访问记录
-              </Alert>
-            </Box>
-          ) : (
-            <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
-              {logs.map((log, idx) => (
-                <Box
-                  key={idx}
-                  sx={{
-                    p: 2,
-                    borderBottom: idx < logs.length - 1 ? '1px solid' : 'none',
-                    borderColor: 'divider',
-                    '&:hover': { bgcolor: 'action.hover' }
-                  }}
-                >
-                  <Stack direction="row" alignItems="flex-start" spacing={2}>
-                    {/* IP地址 - 使用代码风格显示 */}
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontFamily: 'monospace',
-                          bgcolor: 'action.selected',
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          display: 'inline-block',
-                          wordBreak: 'break-all'
-                        }}
-                      >
-                        {log.IP}
-                      </Typography>
-                      <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          📍 {log.Addr || '未知'}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          🕐 {log.Date}
-                        </Typography>
-                      </Stack>
-                    </Box>
-                    {/* 访问次数 */}
-                    <Chip label={`${log.Count} 次`} size="small" color="primary" variant="outlined" sx={{ minWidth: 60 }} />
-                  </Stack>
-                </Box>
-              ))}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Typography variant="caption" color="text.secondary" sx={{ flex: 1, pl: 2 }}>
-            共 {logs.length} 条记录
-          </Typography>
-          <Button onClick={() => setLogsOpen(false)}>关闭</Button>
-        </DialogActions>
-      </Dialog>
+      <AccessLogsDialog
+        open={logsOpen}
+        logs={logs}
+        loading={logsLoading}
+        title={`访问日志 - ${logsShareName}`}
+        onClose={() => setLogsOpen(false)}
+      />
 
       {/* 二维码对话框 */}
       <QrCodeDialog open={qrOpen} title={qrTitle} url={qrUrl} onClose={() => setQrOpen(false)} onCopy={copyToClipboard} />

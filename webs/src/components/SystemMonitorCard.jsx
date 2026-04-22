@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 // material-ui
-import { useTheme, useColorScheme, alpha, keyframes } from '@mui/material/styles';
+import { useTheme, alpha, keyframes } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -28,6 +28,8 @@ import KeyIcon from '@mui/icons-material/Key';
 
 // project imports
 import { getSystemStats } from 'api/monitor';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
 
 // ==============================|| 动画定义 ||============================== //
@@ -68,21 +70,20 @@ const formatUptime = (seconds) => {
 
 const useMonitorThemeTokens = () => {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const runtimeColorScheme = typeof document !== 'undefined' ? document.documentElement?.getAttribute('data-color-scheme') : null;
-  const isDark = (mode || runtimeColorScheme || theme.palette.mode) === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const palette = theme.vars?.palette || theme.palette;
-  const darkText = palette.text?.dark || theme.palette.common.white;
+  const surfaceTokens = getSurfaceTokens(theme, isDark);
+  const textTokens = getReadableTextTokens(theme, isDark);
 
-  const cardSurface = isDark ? withAlpha(palette.background.default, 0.96) : withAlpha(palette.background.paper, 0.98);
-  const elevatedSurface = isDark ? withAlpha(palette.background.paper, 0.82) : withAlpha(palette.background.paper, 0.96);
-  const mutedPanelSurface = isDark ? withAlpha(palette.background.default, 0.84) : withAlpha(palette.background.default, 0.72);
-  const nestedPanelSurface = isDark ? withAlpha(palette.background.paper, 0.46) : withAlpha(palette.background.paper, 0.92);
-  const panelBorder = isDark ? withAlpha(palette.divider, 0.78) : withAlpha(palette.divider, 0.94);
+  const cardSurface = isDark ? surfaceTokens.dialogSurface : withAlpha(surfaceTokens.dialogSurface, 0.98);
+  const elevatedSurface = isDark ? withAlpha(palette.background.paper, 0.82) : withAlpha(surfaceTokens.dialogSurface, 0.96);
+  const mutedPanelSurface = isDark ? surfaceTokens.mutedPanelSurface : withAlpha(surfaceTokens.mutedPanelSurface, 0.72);
+  const nestedPanelSurface = isDark ? withAlpha(palette.background.paper, 0.46) : withAlpha(surfaceTokens.nestedPanelSurface, 0.92);
+  const panelBorder = isDark ? withAlpha(palette.divider, 0.78) : surfaceTokens.panelBorder;
   const softBorder = isDark ? withAlpha(palette.divider, 0.62) : withAlpha(palette.divider, 0.82);
-  const primaryText = isDark ? withAlpha(darkText, 0.96) : theme.palette.text.primary;
-  const secondaryText = isDark ? withAlpha(darkText, 0.86) : theme.palette.text.secondary;
-  const tertiaryText = isDark ? withAlpha(darkText, 0.76) : alpha(theme.palette.text.primary, 0.62);
+  const primaryText = isDark ? withAlpha(textTokens.primaryText, 0.98) : textTokens.primaryText;
+  const secondaryText = isDark ? withAlpha(textTokens.secondaryText, 0.96) : textTokens.secondaryText;
+  const tertiaryText = isDark ? withAlpha(textTokens.secondaryText, 0.86) : withAlpha(textTokens.primaryText, 0.62);
 
   return {
     theme,
@@ -97,7 +98,7 @@ const useMonitorThemeTokens = () => {
     primaryText,
     secondaryText,
     tertiaryText,
-    topCardBackground: `linear-gradient(180deg, ${elevatedSurface} 0%, ${cardSurface} 100%)`,
+    topCardBackground: isDark ? `linear-gradient(180deg, ${elevatedSurface} 0%, ${cardSurface} 100%)` : surfaceTokens.dialogSurfaceGradient,
     insetPanelBackground: `linear-gradient(180deg, ${nestedPanelSurface} 0%, ${mutedPanelSurface} 100%)`,
     subtleSurface: isDark ? withAlpha(palette.background.paper, 0.38) : withAlpha(palette.background.paper, 0.88),
     iconButtonSurface: isDark ? withAlpha(palette.background.paper, 0.5) : withAlpha(palette.background.default, 0.88),
@@ -313,9 +314,9 @@ const ConfigItemCard = ({ item, masked = false }) => {
             sx={{
               height: 20,
               fontSize: '0.65rem',
-              bgcolor: isDark ? alpha(theme.palette.warning.main, 0.16) : alpha(theme.palette.warning.main, 0.1),
+              bgcolor: isDark ? withAlpha(theme.palette.warning.main, 0.16) : withAlpha(theme.palette.warning.main, 0.1),
               color: maskedTextColor,
-              border: `1px solid ${alpha(maskedTextColor, isDark ? 0.32 : 0.2)}`,
+              border: `1px solid ${withAlpha(maskedTextColor, isDark ? 0.32 : 0.2)}`,
               fontWeight: 700
             }}
           />
@@ -330,9 +331,9 @@ const ConfigItemCard = ({ item, masked = false }) => {
           sx={{
             height: 22,
             fontSize: '0.68rem',
-            bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
+            bgcolor: withAlpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
             color: theme.palette.primary.main,
-            border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.28 : 0.16)}`,
+            border: `1px solid ${withAlpha(theme.palette.primary.main, isDark ? 0.28 : 0.16)}`,
             '& .MuiChip-icon': {
               color: 'inherit',
               ml: 0.6
@@ -546,14 +547,14 @@ const SystemMonitorCard = () => {
                 onClick={toggleAutoRefresh}
                 size="small"
                 sx={{
-                  bgcolor: autoRefresh ? alpha(colors.cpu, isDark ? 0.18 : 0.1) : iconButtonSurface,
+                  bgcolor: autoRefresh ? withAlpha(colors.cpu, isDark ? 0.18 : 0.1) : iconButtonSurface,
                   color: autoRefresh ? colors.cpu : secondaryText,
                   border: '1px solid',
-                  borderColor: autoRefresh ? alpha(colors.cpu, isDark ? 0.32 : 0.18) : softBorder,
+                  borderColor: autoRefresh ? withAlpha(colors.cpu, isDark ? 0.32 : 0.18) : softBorder,
                   transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, color 0.2s ease',
                   '&:hover': {
-                    bgcolor: autoRefresh ? alpha(colors.cpu, isDark ? 0.24 : 0.14) : iconButtonHover,
-                    borderColor: autoRefresh ? alpha(colors.cpu, isDark ? 0.4 : 0.24) : panelBorder
+                    bgcolor: autoRefresh ? withAlpha(colors.cpu, isDark ? 0.24 : 0.14) : iconButtonHover,
+                    borderColor: autoRefresh ? withAlpha(colors.cpu, isDark ? 0.4 : 0.24) : panelBorder
                   },
                   '&:active': {
                     transform: 'scale(0.96)'
@@ -576,14 +577,14 @@ const SystemMonitorCard = () => {
                 disabled={refreshing}
                 size="small"
                 sx={{
-                  bgcolor: refreshing ? subtleSurface : alpha(theme.palette.primary.main, isDark ? 0.16 : 0.1),
+                  bgcolor: refreshing ? subtleSurface : withAlpha(theme.palette.primary.main, isDark ? 0.16 : 0.1),
                   color: refreshing ? tertiaryText : theme.palette.primary.main,
                   border: '1px solid',
-                  borderColor: refreshing ? softBorder : alpha(theme.palette.primary.main, isDark ? 0.28 : 0.16),
+                  borderColor: refreshing ? softBorder : withAlpha(theme.palette.primary.main, isDark ? 0.28 : 0.16),
                   transition: 'all 0.3s ease',
                   '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, isDark ? 0.22 : 0.14),
-                    borderColor: alpha(theme.palette.primary.main, isDark ? 0.36 : 0.22),
+                    bgcolor: withAlpha(theme.palette.primary.main, isDark ? 0.22 : 0.14),
+                    borderColor: withAlpha(theme.palette.primary.main, isDark ? 0.36 : 0.22),
                     transform: 'rotate(180deg)'
                   },
                   '&:active': {

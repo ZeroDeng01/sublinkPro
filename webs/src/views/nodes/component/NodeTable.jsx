@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 
 // material-ui
+import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
@@ -16,6 +17,8 @@ import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { withAlpha } from 'utils/colorUtils';
 
 // icons
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -36,6 +39,7 @@ import {
   getResidentialDisplay,
   getSpeedDisplay
 } from '../utils';
+import { getNodeTableRowSx, getNodeTagChipSx, getNodeThemeTokens } from '../nodeTheme';
 
 /**
  * 桌面端节点表格（精简版）
@@ -43,13 +47,10 @@ import {
  */
 export default function NodeTable({
   nodes,
-  page,
-  rowsPerPage,
   selectedNodes,
   sortBy,
   sortOrder,
   tagColorMap,
-  onSelectAll,
   onSelect,
   onSort,
   onSpeedTest,
@@ -58,6 +59,9 @@ export default function NodeTable({
   onDelete,
   onViewDetails
 }) {
+  const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getNodeThemeTokens(theme, isDark);
   const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
   const denseCellSx = {
     px: 0.75,
@@ -67,7 +71,20 @@ export default function NodeTable({
   };
 
   return (
-    <TableContainer component={Paper}>
+    <TableContainer
+      component={Paper}
+      sx={{
+        bgcolor: tokens.cardSurface,
+        backgroundImage: `linear-gradient(180deg, ${
+          tokens.isDark ? withAlpha(tokens.palette.background.paper, 0.12) : withAlpha(tokens.palette.primary.main, 0.03)
+        } 0%, ${tokens.cardSurface} 100%)`,
+        border: '1px solid',
+        borderColor: tokens.softBorder,
+        boxShadow: tokens.isDark
+          ? `0 12px 24px ${withAlpha(theme.palette.common.black, 0.16)}, inset 0 1px 0 ${withAlpha(theme.palette.common.white, 0.03)}`
+          : `0 6px 18px ${withAlpha(theme.palette.common.black, 0.06)}`
+      }}
+    >
       <Table
         size="small"
         sx={{
@@ -78,15 +95,17 @@ export default function NodeTable({
           '& .MuiIconButton-root': { p: 0.5 }
         }}
       >
-        <TableHead>
+        <TableHead
+          sx={{
+            '& .MuiTableCell-root': {
+              bgcolor: tokens.toolbarSurface,
+              color: tokens.primaryText,
+              borderBottomColor: tokens.softBorder
+            }
+          }}
+        >
           <TableRow>
-            <TableCell padding="checkbox">
-              <Checkbox
-                indeterminate={selectedNodes.length > 0 && selectedNodes.length < nodes.length}
-                checked={nodes.length > 0 && selectedNodes.length >= nodes.length}
-                onChange={onSelectAll}
-              />
-            </TableCell>
+            <TableCell padding="checkbox" />
             <TableCell sx={{ minWidth: 132 }}>备注</TableCell>
             <TableCell sx={{ minWidth: 88 }}>分组</TableCell>
             <TableCell sx={{ minWidth: 88 }}>来源</TableCell>
@@ -122,7 +141,7 @@ export default function NodeTable({
               key={node.ID}
               hover
               selected={isSelected(node)}
-              sx={{ cursor: 'pointer' }}
+              sx={getNodeTableRowSx(theme, tokens, tokens.palette.primary.main, isSelected(node))}
               onClick={(e) => {
                 // 点击复选框或操作按钮时不触发详情
                 if (e.target.closest('button') || e.target.closest('input[type="checkbox"]')) return;
@@ -160,7 +179,7 @@ export default function NodeTable({
                     />
                   </Tooltip>
                 ) : (
-                  <Typography variant="caption" color="textSecondary">
+                  <Typography variant="caption" color="text.secondary">
                     未分组
                   </Typography>
                 )}
@@ -177,7 +196,7 @@ export default function NodeTable({
                     />
                   </Tooltip>
                 ) : (
-                  <Typography variant="caption" color="textSecondary">
+                  <Typography variant="caption" color="text.secondary">
                     手动添加
                   </Typography>
                 )}
@@ -189,24 +208,19 @@ export default function NodeTable({
                       .filter((t) => t.trim())
                       .map((tag, idx) => {
                         const tagName = tag.trim();
-                        const tagColor = tagColorMap?.[tagName] || '#1976d2';
+                        const tagColor = tagColorMap?.[tagName] || tokens.palette.primary.main;
                         return (
                           <Chip
                             key={idx}
                             label={tagName}
                             size="small"
-                            sx={{
-                              fontSize: '10px',
-                              height: 18,
-                              backgroundColor: tagColor,
-                              color: '#fff'
-                            }}
+                            sx={{ fontSize: '10px', height: 18, ...getNodeTagChipSx(theme, tokens, tagColor) }}
                           />
                         );
                       })}
                   </Box>
                 ) : (
-                  <Typography variant="caption" color="textSecondary">
+                  <Typography variant="caption" color="text.secondary">
                     -
                   </Typography>
                 )}
@@ -229,7 +243,7 @@ export default function NodeTable({
                       {node.LatencyCheckAt && (
                         <Typography
                           variant="caption"
-                          color="textSecondary"
+                          color="text.secondary"
                           sx={{ display: 'block', fontSize: '10px', mt: 0.25, lineHeight: 1.2 }}
                         >
                           {formatDateTime(node.LatencyCheckAt)}
@@ -244,7 +258,7 @@ export default function NodeTable({
                       {node.SpeedCheckAt && node.Speed > 0 && (
                         <Typography
                           variant="caption"
-                          color="textSecondary"
+                          color="text.secondary"
                           sx={{ display: 'block', fontSize: '10px', mt: 0.25, lineHeight: 1.2 }}
                         >
                           {formatDateTime(node.SpeedCheckAt)}
@@ -403,13 +417,10 @@ export default function NodeTable({
 
 NodeTable.propTypes = {
   nodes: PropTypes.array.isRequired,
-  page: PropTypes.number.isRequired,
-  rowsPerPage: PropTypes.number.isRequired,
   selectedNodes: PropTypes.array.isRequired,
   sortBy: PropTypes.string.isRequired,
   sortOrder: PropTypes.string.isRequired,
   tagColorMap: PropTypes.object,
-  onSelectAll: PropTypes.func.isRequired,
   onSelect: PropTypes.func.isRequired,
   onSort: PropTypes.func.isRequired,
   onSpeedTest: PropTypes.func.isRequired,

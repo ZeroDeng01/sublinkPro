@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { alpha, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
@@ -15,7 +15,13 @@ import Typography from '@mui/material/Typography';
 // Paper 组件已改为 Box
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { withAlpha } from '../../../utils/colorUtils';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import {
+  getChainProxyFieldControlSx,
+  getChainProxyIconButtonSx,
+  getChainProxyThemeTokens,
+  getChainProxyToggleButtonGroupSx
+} from './chainProxyTheme';
 import {
   getNodeConditionFieldMeta,
   getNodeConditionValueOptions,
@@ -29,26 +35,12 @@ import {
  */
 export default function ConditionBuilder({ value, onChange, fields = [], operators = [], title = '条件配置' }) {
   const theme = useTheme();
-  const palette = theme.vars?.palette || theme.palette;
-  const isDark = theme.palette.mode === 'dark';
-  const panelBorder = isDark ? withAlpha(palette.divider, 0.78) : withAlpha(palette.divider, 0.9);
-  const containerSurface = isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper;
-  const fieldSurface = isDark ? withAlpha(palette.background.default, 0.72) : palette.background.default;
-
-  const fieldControlSx = {
-    '& .MuiInputLabel-root': { color: 'text.secondary' },
-    '& .MuiInputLabel-root.Mui-focused': { color: 'primary.main' },
-    '& .MuiOutlinedInput-root': {
-      backgroundColor: fieldSurface,
-      boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : 'none',
-      '& .MuiOutlinedInput-notchedOutline': { borderColor: panelBorder },
-      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: alpha(theme.palette.primary.main, 0.4) },
-      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.main }
-    },
-    '& .MuiSelect-select': { color: 'text.primary' },
-    '& .MuiInputBase-input': { color: 'text.primary' },
-    '& .MuiSelect-icon': { color: 'text.secondary' }
-  };
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getChainProxyThemeTokens(theme, isDark);
+  const fieldControlSx = getChainProxyFieldControlSx(tokens);
+  const logicToggleSx = getChainProxyToggleButtonGroupSx(tokens);
+  const removeButtonSx = getChainProxyIconButtonSx(tokens, theme.palette.error.main);
+  const palette = tokens.palette;
   // 初始化条件数据
   const [logic, setLogic] = useState(value?.logic || 'and');
   const [conditions, setConditions] = useState(value?.conditions || []);
@@ -70,7 +62,7 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
   };
 
   // 切换逻辑运算符
-  const handleLogicChange = (event, newLogic) => {
+  const handleLogicChange = (_event, newLogic) => {
     if (newLogic !== null) {
       setLogic(newLogic);
       notifyChange(newLogic, conditions);
@@ -144,42 +136,21 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
     <Box
       sx={{
         p: 2,
-        border: `1px solid ${panelBorder}`,
+        border: `1px solid ${tokens.panelBorder}`,
         borderRadius: 2,
-        backgroundColor: containerSurface,
+        backgroundColor: tokens.containerSurface,
+        backgroundImage: tokens.dialogSurfaceGradient,
         backdropFilter: 'blur(8px)',
-        boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : 'none'
+        boxShadow: tokens.panelShadow
       }}
     >
       <Stack spacing={2}>
         {/* 标题和逻辑切换 */}
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-          <Typography variant="subtitle2" color="text.secondary">
+          <Typography variant="subtitle2" color={tokens.secondaryText}>
             {title}
           </Typography>
-          <ToggleButtonGroup
-            value={logic}
-            exclusive
-            onChange={handleLogicChange}
-            size="small"
-            sx={{
-              '& .MuiToggleButton-root': {
-                color: 'text.secondary',
-                backgroundColor: fieldSurface,
-                borderColor: panelBorder,
-                fontSize: 12,
-                py: 0.5,
-                '&.Mui-selected': {
-                  color: 'primary.main',
-                  bgcolor: alpha(theme.palette.primary.main, 0.14),
-                  borderColor: alpha(theme.palette.primary.main, 0.42)
-                },
-                '&:hover': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.08)
-                }
-              }
-            }}
-          >
+          <ToggleButtonGroup value={logic} exclusive onChange={handleLogicChange} size="small" sx={logicToggleSx}>
             <ToggleButton value="and">全部满足 (AND)</ToggleButton>
             <ToggleButton value="or">满足任一 (OR)</ToggleButton>
           </ToggleButtonGroup>
@@ -187,7 +158,20 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
 
         {/* 条件列表 */}
         {conditions.map((condition, index) => (
-          <Stack key={index} direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+          <Stack
+            key={index}
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            flexWrap="wrap"
+            sx={{
+              p: 1.25,
+              borderRadius: 1.5,
+              backgroundColor: tokens.mutedPanelSurface,
+              border: `1px solid ${tokens.softBorder}`,
+              boxShadow: tokens.insetHighlight
+            }}
+          >
             <FormControl size="small" sx={{ minWidth: 100, ...fieldControlSx }}>
               <InputLabel color="primary">字段</InputLabel>
               <Select value={condition.field} label="字段" onChange={(e) => handleConditionChange(index, 'field', e.target.value)}>
@@ -228,29 +212,14 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
                 value={condition.value}
                 onChange={(e) => handleConditionChange(index, 'value', e.target.value)}
                 type={isNodeConditionNumericField(condition.field) ? 'number' : 'text'}
-                sx={{
-                  flex: 1,
-                  minWidth: 100,
-                  '& .MuiInputLabel-root': { color: theme.palette.text.secondary },
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: fieldSurface,
-                    boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : 'none',
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: panelBorder },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: alpha(theme.palette.primary.main, 0.4) },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.main }
-                  },
-                  '& .MuiInputBase-input': { color: theme.palette.text.primary }
-                }}
+                sx={{ flex: 1, minWidth: 100, ...fieldControlSx }}
               />
             )}
 
             <IconButton
               size="small"
               onClick={() => handleRemoveCondition(index)}
-              sx={{
-                color: 'error.light',
-                '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.08) }
-              }}
+              sx={{ ...removeButtonSx, color: theme.palette.error.main }}
             >
               <DeleteIcon fontSize="small" />
             </IconButton>
@@ -264,17 +233,23 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
           onClick={handleAddCondition}
           sx={{
             alignSelf: 'flex-start',
-            color: 'primary.main',
-            borderColor: alpha(theme.palette.primary.main, 0.24),
-            '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
+            color: palette.primary.main,
+            borderColor: tokens.primarySoftBorder,
+            backgroundColor: tokens.fieldSurface,
+            boxShadow: tokens.insetHighlight,
+            '&:hover': {
+              bgcolor: tokens.hoverSurface,
+              borderColor: tokens.primaryStrongBorder
+            }
           }}
+          variant="outlined"
         >
           添加条件
         </Button>
 
         {/* 空状态提示 */}
         {conditions.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+          <Typography variant="body2" color={tokens.secondaryText} sx={{ fontStyle: 'italic' }}>
             尚未添加任何条件
           </Typography>
         )}

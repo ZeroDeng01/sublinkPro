@@ -10,20 +10,36 @@ import ProfileSection from './ProfileSection';
 import NotificationSection from './NotificationSection';
 import DonationSection from './DonationSection';
 import ThemeModeSection from './ThemeModeSection';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getHeaderTriggerTokens } from './headerPopoverTokens';
+import { donationConfig } from 'config/donation';
 
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
 
 // assets
-import { IconMenu2 } from '@tabler/icons-react';
+import { IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand } from '@tabler/icons-react';
 
 // ==============================|| MAIN NAVBAR / HEADER ||============================== //
 
 export default function Header() {
   const theme = useTheme();
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
+  const { isDark } = useResolvedColorScheme();
 
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
+  const sidebarAccent = theme.palette[donationConfig.headerIconColor].main;
+  const { triggerColor, triggerSurface, triggerBorder, activeSurface, activeBorder } = getHeaderTriggerTokens(
+    theme,
+    isDark,
+    sidebarAccent,
+    {
+      lightSurfaceAlpha: 0.12,
+      lightHoverAlpha: 0.22,
+      activeColor: sidebarAccent
+    }
+  );
+  const MenuToggleIcon = drawerOpen ? IconLayoutSidebarLeftCollapse : IconLayoutSidebarLeftExpand;
 
   return (
     <>
@@ -39,16 +55,19 @@ export default function Header() {
             ...theme.typography.mediumAvatar,
             overflow: 'hidden',
             transition: 'all .2s ease-in-out',
-            color: theme.vars.palette.secondary.dark,
-            background: theme.vars.palette.secondary.light,
-            '&:hover': {
-              color: theme.vars.palette.secondary.light,
-              background: theme.vars.palette.secondary.dark
+            color: triggerColor,
+            background: triggerSurface,
+            border: '1px solid',
+            borderColor: triggerBorder,
+            '&:hover, &:focus-visible': {
+              color: triggerColor,
+              background: activeSurface,
+              borderColor: activeBorder
             }
           }}
           onClick={() => handlerDrawerOpen(!drawerOpen)}
         >
-          <IconMenu2 stroke={1.5} size="20px" />
+          <MenuToggleIcon stroke={1.5} size="20px" />
         </Avatar>
       </Box>
 

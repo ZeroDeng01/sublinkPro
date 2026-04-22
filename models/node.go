@@ -55,6 +55,36 @@ type Node struct {
 	UnlockCheckAt   string
 }
 
+type NodeSelectorItem struct {
+	ID            int
+	Name          string
+	Group         string
+	Source        string
+	LinkCountry   string
+	UnlockSummary string
+	UnlockCheckAt string
+}
+
+func BuildNodeSelectorItem(node Node) NodeSelectorItem {
+	return NodeSelectorItem{
+		ID:            node.ID,
+		Name:          node.Name,
+		Group:         node.Group,
+		Source:        node.Source,
+		LinkCountry:   node.LinkCountry,
+		UnlockSummary: node.UnlockSummary,
+		UnlockCheckAt: node.UnlockCheckAt,
+	}
+}
+
+func ToNodeSelectorItems(nodes []Node) []NodeSelectorItem {
+	items := make([]NodeSelectorItem, 0, len(nodes))
+	for _, node := range nodes {
+		items = append(items, BuildNodeSelectorItem(node))
+	}
+	return items
+}
+
 const (
 	QualityStatusUntested = "untested"
 	QualityStatusSuccess  = "success"
@@ -772,6 +802,7 @@ type NodeFilter struct {
 	UnlockKeyword   string
 	UnlockRules     []UnlockFilterRule
 	UnlockRuleMode  string
+	ExcludeIDs      []int
 }
 
 func hasNodeQualityData(n Node) bool {
@@ -865,10 +896,29 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 	for _, t := range filter.Tags {
 		tagMap[t] = true
 	}
+	excludeMap := make(map[int]bool)
+	for _, id := range filter.ExcludeIDs {
+		if id > 0 {
+			excludeMap[id] = true
+		}
+	}
+
+	unlockRules := filter.UnlockRules
+	if len(unlockRules) == 0 && (filter.UnlockProvider != "" || filter.UnlockStatus != "" || filter.UnlockKeyword != "") {
+		unlockRules = []UnlockFilterRule{{Provider: filter.UnlockProvider, Status: filter.UnlockStatus, Keyword: filter.UnlockKeyword}}
+	}
+	unlockRuleMode := NormalizeUnlockRuleMode(filter.UnlockRuleMode)
+	needsUnlockSummary := searchLower != "" || len(unlockRules) > 0
 
 	// 使用缓存的 Filter 方法
 	nodes := nodeCache.Filter(func(n Node) bool {
-		unlockSummary := ParseUnlockSummary(n.UnlockSummary)
+		if excludeMap[n.ID] {
+			return false
+		}
+		var unlockSummary UnlockSummary
+		if needsUnlockSummary {
+			unlockSummary = ParseUnlockSummary(n.UnlockSummary)
+		}
 
 		// 搜索过滤
 		if searchLower != "" {
@@ -976,11 +1026,6 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 			return false
 		}
 
-		unlockRules := filter.UnlockRules
-		if len(unlockRules) == 0 && (filter.UnlockProvider != "" || filter.UnlockStatus != "" || filter.UnlockKeyword != "") {
-			unlockRules = []UnlockFilterRule{{Provider: filter.UnlockProvider, Status: filter.UnlockStatus, Keyword: filter.UnlockKeyword}}
-		}
-		unlockRuleMode := NormalizeUnlockRuleMode(filter.UnlockRuleMode)
 		if len(unlockRules) > 0 {
 			if !MatchUnlockSummaryRulesWithMode(unlockSummary, unlockRules, unlockRuleMode) {
 				return false

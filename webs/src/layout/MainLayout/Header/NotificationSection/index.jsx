@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 // material-ui
-import { useTheme, alpha } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Avatar from '@mui/material/Avatar';
 import Badge from '@mui/material/Badge';
@@ -25,6 +25,9 @@ import Tooltip from '@mui/material/Tooltip';
 import MainCard from 'ui-component/cards/MainCard';
 import Transitions from 'ui-component/extended/Transitions';
 import { useAuth } from 'contexts/AuthContext';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getHeaderPopoverTokens, getHeaderTriggerTokens } from '../headerPopoverTokens';
+import { withAlpha } from 'utils/colorUtils';
 
 // assets
 import { IconBell, IconCheck, IconTrash, IconCircleCheck, IconCircleX, IconInfoCircle } from '@tabler/icons-react';
@@ -49,9 +52,29 @@ export default function NotificationSection() {
   const theme = useTheme();
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
   const { notifications, clearAllNotifications } = useAuth();
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const bellAccent = isDark ? theme.palette.warning.main : theme.palette.warning.dark;
-  const bellSurface = isDark ? alpha(theme.palette.warning.main, 0.14) : alpha(theme.palette.warning.main, 0.14);
+  const {
+    popoverSurface,
+    popoverSurfaceAccent,
+    popoverBorder,
+    popoverInsetShadow,
+    headerSurface,
+    headerDivider,
+    mutedText,
+    listItemHover,
+    selectedSurface,
+    selectedHoverSurface
+  } = getHeaderPopoverTokens(theme, isDark);
+  const { triggerColor, triggerSurface, triggerBorder, activeColor, activeSurface, activeBorder } = getHeaderTriggerTokens(
+    theme,
+    isDark,
+    bellAccent,
+    {
+      lightSurfaceAlpha: 0.14,
+      lightHoverAlpha: 0.22
+    }
+  );
 
   const [open, setOpen] = useState(false);
   // 从 localStorage 初始化已读状态
@@ -149,15 +172,15 @@ export default function NotificationSection() {
                 ...theme.typography.commonAvatar,
                 ...theme.typography.mediumAvatar,
                 transition: 'all .2s ease-in-out',
-                color: bellAccent,
-                background: isDark ? alpha(theme.palette.background.default, 0.88) : bellSurface,
+                color: triggerColor,
+                background: triggerSurface,
                 border: '1px solid',
-                borderColor: alpha(bellAccent, isDark ? 0.28 : 0.2),
+                borderColor: triggerBorder,
                 position: 'relative',
                 '&:hover, &[aria-controls="menu-list-grow"]': {
-                  color: theme.palette.common.white,
-                  background: bellAccent,
-                  borderColor: bellAccent
+                  color: activeColor,
+                  background: activeSurface,
+                  borderColor: activeBorder
                 }
               }}
               ref={anchorRef}
@@ -193,13 +216,18 @@ export default function NotificationSection() {
                     sx={{
                       minWidth: 330,
                       maxWidth: 400,
-                      bgcolor: isDark ? alpha(theme.palette.background.default, 0.96) : 'background.paper',
+                      bgcolor: popoverSurface,
+                      backgroundImage: popoverSurfaceAccent,
                       border: '1px solid',
-                      borderColor: alpha(theme.palette.divider, isDark ? 0.9 : 0.72)
+                      borderColor: popoverBorder,
+                      boxShadow: popoverInsetShadow
                     }}
                   >
                     <Stack sx={{ gap: 2 }}>
-                      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 2, px: 2 }}>
+                      <Stack
+                        direction="row"
+                        sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 2, px: 2, bgcolor: headerSurface }}
+                      >
                         <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
                           <Typography variant="subtitle1">通知消息</Typography>
                           {unreadCount > 0 && (
@@ -209,9 +237,9 @@ export default function NotificationSection() {
                               variant="filled"
                               sx={{
                                 color: isDark ? 'warning.main' : 'background.default',
-                                bgcolor: isDark ? alpha(theme.palette.warning.main, 0.14) : 'warning.dark',
+                                bgcolor: isDark ? withAlpha(theme.palette.warning.main, 0.14) : 'warning.dark',
                                 border: '1px solid',
-                                borderColor: alpha(theme.palette.warning.main, isDark ? 0.28 : 0),
+                                borderColor: withAlpha(theme.palette.warning.main, isDark ? 0.28 : 0),
                                 height: 20,
                                 fontSize: '0.75rem'
                               }}
@@ -229,7 +257,7 @@ export default function NotificationSection() {
                           </Button>
                         )}
                       </Stack>
-                      <Divider />
+                      <Divider sx={{ borderColor: headerDivider }} />
                       <Box
                         sx={{
                           height: 'auto',
@@ -250,16 +278,12 @@ export default function NotificationSection() {
                                   sx={{
                                     py: 1.5,
                                     px: 2,
-                                    bgcolor: isRead
-                                      ? 'transparent'
-                                      : isDark
-                                        ? alpha(theme.palette.primary.main, 0.1)
-                                        : alpha(theme.palette.primary.main, 0.1),
-                                    borderBottom: `1px solid ${theme.palette.divider}`,
+                                    bgcolor: isRead ? 'transparent' : selectedSurface,
+                                    borderBottom: `1px solid ${popoverBorder}`,
                                     cursor: 'pointer',
                                     transition: 'background-color 0.2s',
                                     '&:hover': {
-                                      bgcolor: isDark ? alpha(theme.palette.action.hover, 0.7) : alpha(theme.palette.primary.main, 0.06)
+                                      bgcolor: isRead ? listItemHover : selectedHoverSurface
                                     }
                                   }}
                                   onClick={() => handleMarkAsRead(notification.id)}
@@ -302,7 +326,7 @@ export default function NotificationSection() {
                                       <>
                                         <Typography
                                           variant="body2"
-                                          color="text.secondary"
+                                          color={mutedText}
                                           sx={{
                                             ...(expandedIds.has(notification.id)
                                               ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' }
@@ -328,7 +352,7 @@ export default function NotificationSection() {
                                           </Stack>
                                         )}
                                         <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                          <Typography variant="caption" color="text.secondary">
+                                          <Typography variant="caption" sx={{ color: mutedText }}>
                                             {notification.timestamp?.toLocaleString('zh-CN') || '刚刚'}
                                           </Typography>
                                           {notification.message && notification.message.length > 50 && (
@@ -351,7 +375,7 @@ export default function NotificationSection() {
                           </List>
                         ) : (
                           <Box sx={{ py: 4, textAlign: 'center' }}>
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body2" sx={{ color: mutedText }}>
                               暂无通知消息
                             </Typography>
                           </Box>
@@ -359,7 +383,7 @@ export default function NotificationSection() {
                       </Box>
                     </Stack>
                     {notifications.length > 0 && (
-                      <CardActions sx={{ p: 1.25, justifyContent: 'center', borderTop: `1px solid ${theme.palette.divider}` }}>
+                      <CardActions sx={{ p: 1.25, justifyContent: 'center', borderTop: `1px solid ${popoverBorder}` }}>
                         <Button
                           size="small"
                           color="error"

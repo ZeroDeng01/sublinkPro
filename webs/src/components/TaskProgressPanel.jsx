@@ -20,8 +20,20 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import StopIcon from '@mui/icons-material/Stop';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 import { getUnlockTaskResultText } from 'views/nodes/utils';
+import {
+  getTaskActionButtonSx,
+  getTaskCardSx,
+  getTaskCenterTokens,
+  getTaskChipSx,
+  getTaskIconBoxSx,
+  getTaskProgressSx,
+  getTaskShellSx,
+  getTaskTypeMeta,
+  TASK_CLUSTER_ACCENT
+} from 'components/taskCenterTheme';
 
 const formatTime = (ms) => {
   if (ms < 0) return '--';
@@ -35,31 +47,13 @@ const formatTime = (ms) => {
   return `${hours}时${mins}分`;
 };
 
-const getPanelSurface = (theme, accentColor) => ({
-  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.94) : theme.palette.background.paper,
-  border: `1px solid ${theme.palette.mode === 'dark' ? alpha(theme.palette.common.white, 0.08) : alpha(accentColor, 0.12)}`,
-  boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.06)',
-  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-  '&:hover': {
-    borderColor: theme.palette.mode === 'dark' ? alpha(accentColor, 0.24) : alpha(accentColor, 0.2),
-    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.08)'
-  }
-});
-
-const getAccentChipSx = (theme, accentColor) => ({
-  bgcolor: alpha(accentColor, theme.palette.mode === 'dark' ? 0.18 : 0.1),
-  color: theme.palette.mode === 'dark' ? alpha('#fff', 0.92) : accentColor,
-  border: `1px solid ${alpha(accentColor, theme.palette.mode === 'dark' ? 0.3 : 0.18)}`,
-  '&:hover': {
-    bgcolor: alpha(accentColor, theme.palette.mode === 'dark' ? 0.24 : 0.14)
-  }
-});
-
 // ==============================|| TASK PROGRESS ITEM ||============================== //
 
 const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getTaskCenterTokens(theme, isDark);
+  const { primaryText: primaryTextColor, secondaryText: secondaryTextColor, tertiaryText: tertiaryTextColor } = tokens;
 
   // Calculate progress percentage
   const progress = useMemo(() => {
@@ -70,39 +64,19 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
 
   // Get task icon and colors based on type
   const taskConfig = useMemo(() => {
-    if (task.taskType === 'speed_test') {
-      return {
-        icon: SpeedIcon,
-        gradientColors: ['#10b981', '#059669'],
-        label: '节点测速',
-        accentColor: '#10b981',
-        canStop: true // speed_test can be stopped
-      };
-    }
-    if (task.taskType === 'tag_rule') {
-      return {
-        icon: LocalOfferIcon,
-        gradientColors: ['#f59e0b', '#d97706'],
-        label: '标签规则',
-        accentColor: '#f59e0b',
-        canStop: false
-      };
-    }
-    if (task.taskType === 'db_migration') {
-      return {
-        icon: StorageIcon,
-        gradientColors: ['#0284c7', '#0369a1'],
-        label: '数据库迁移',
-        accentColor: '#0284c7',
-        canStop: false
-      };
-    }
+    const meta = getTaskTypeMeta(task.taskType);
+    const iconMap = {
+      speed_test: SpeedIcon,
+      sub_update: CloudSyncIcon,
+      tag_rule: LocalOfferIcon,
+      db_migration: StorageIcon
+    };
+
     return {
-      icon: CloudSyncIcon,
-      gradientColors: ['#6366f1', '#8b5cf6'],
-      label: '订阅更新',
-      accentColor: '#6366f1',
-      canStop: false
+      icon: iconMap[task.taskType] || CloudSyncIcon,
+      label: meta.label,
+      accentColor: meta.color,
+      canStop: task.taskType === 'speed_test'
     };
   }, [task.taskType]);
 
@@ -112,6 +86,16 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
   const isCancelled = task.status === 'cancelled';
   const isCancelling = task.status === 'cancelling' || isStopping;
   const isActive = !isCompleted && !isError && !isCancelled;
+  const successColor = theme.palette.success.main;
+  const errorColor = theme.palette.error.main;
+  const warningColor = theme.palette.warning.main;
+  const stateAccentColor = isCompleted
+    ? successColor
+    : isError
+      ? errorColor
+      : isCancelled || isCancelling
+        ? warningColor
+        : taskConfig.accentColor;
 
   // Calculate time info
   const timeInfo = useMemo(() => {
@@ -194,63 +178,29 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
     >
       <Card
         sx={{
-          ...getPanelSurface(theme, taskConfig.accentColor),
+          ...getTaskCardSx(theme, tokens, taskConfig.accentColor),
           borderRadius: 3,
           overflow: 'hidden'
         }}
       >
         {isActive && !isCancelling && (
-          <LinearProgress
-            variant="determinate"
-            value={progress}
-            sx={{
-              height: 4,
-              backgroundColor: alpha(taskConfig.accentColor, 0.1),
-              '& .MuiLinearProgress-bar': {
-                backgroundColor: taskConfig.accentColor
-              }
-            }}
-          />
+          <LinearProgress variant="determinate" value={progress} sx={getTaskProgressSx(tokens, taskConfig.accentColor, { height: 4 })} />
         )}
-        {isCancelling && (
-          <LinearProgress
-            sx={{
-              height: 4,
-              backgroundColor: alpha('#f59e0b', 0.1),
-              '& .MuiLinearProgress-bar': {
-                backgroundColor: '#f59e0b'
-              }
-            }}
-          />
-        )}
+        {isCancelling && <LinearProgress sx={getTaskProgressSx(tokens, warningColor, { height: 4 })} />}
 
         <CardContent sx={{ py: 2, px: 2.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
             <Box
               sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: alpha(
-                  isCompleted ? '#10b981' : isError ? '#ef4444' : isCancelled || isCancelling ? '#f59e0b' : taskConfig.accentColor,
-                  isDark ? 0.18 : 0.1
-                ),
-                border: `1px solid ${alpha(
-                  isCompleted ? '#10b981' : isError ? '#ef4444' : isCancelled || isCancelling ? '#f59e0b' : taskConfig.accentColor,
-                  isDark ? 0.3 : 0.18
-                )}`,
-                flexShrink: 0
+                ...getTaskIconBoxSx(theme, tokens, stateAccentColor)
               }}
             >
               {isCompleted ? (
-                <CheckCircleIcon sx={{ color: '#10b981', fontSize: 22 }} />
+                <CheckCircleIcon sx={{ color: successColor, fontSize: 22 }} />
               ) : isError ? (
-                <ErrorIcon sx={{ color: '#ef4444', fontSize: 22 }} />
+                <ErrorIcon sx={{ color: errorColor, fontSize: 22 }} />
               ) : isCancelled || isCancelling ? (
-                <CancelIcon sx={{ color: '#f59e0b', fontSize: 22 }} />
+                <CancelIcon sx={{ color: warningColor, fontSize: 22 }} />
               ) : (
                 <Icon sx={{ color: taskConfig.accentColor, fontSize: 22 }} />
               )}
@@ -281,7 +231,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                     variant="subtitle2"
                     sx={{
                       fontWeight: 600,
-                      color: isDark ? '#fff' : theme.palette.text.primary,
+                      color: primaryTextColor,
                       whiteSpace: 'nowrap',
                       flexShrink: 0
                     }}
@@ -296,9 +246,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                         height: 18,
                         fontSize: '0.65rem',
                         fontWeight: 500,
-                        bgcolor: alpha(taskConfig.accentColor, 0.15),
-                        color: isDark ? alpha('#fff', 0.9) : taskConfig.accentColor,
-                        border: `1px solid ${alpha(taskConfig.accentColor, 0.2)}`,
+                        ...getTaskChipSx(theme, tokens, taskConfig.accentColor),
                         maxWidth: { xs: 80, sm: 100 },
                         '& .MuiChip-label': {
                           overflow: 'hidden',
@@ -317,7 +265,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                         fontSize: '0.65rem',
                         fontWeight: 500,
                         flexShrink: 0,
-                        ...getAccentChipSx(theme, task.result.phase === 'latency' ? '#06b6d4' : '#f59e0b'),
+                        ...getTaskChipSx(theme, tokens, task.result.phase === 'latency' ? '#06b6d4' : '#f59e0b'),
                         '& .MuiChip-label': { px: 0.75 }
                       }}
                     />
@@ -329,13 +277,13 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                     sx={{
                       fontWeight: 600,
                       color: isCompleted
-                        ? '#10b981'
+                        ? successColor
                         : isError
-                          ? '#ef4444'
+                          ? errorColor
                           : isCancelled
-                            ? '#f59e0b'
+                            ? warningColor
                             : isCancelling
-                              ? '#f59e0b'
+                              ? warningColor
                               : taskConfig.accentColor,
                       whiteSpace: 'nowrap'
                     }}
@@ -350,11 +298,11 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                           onClick={() => onStopTask(task.taskId)}
                           disabled={isCancelling}
                           sx={{
+                            ...getTaskActionButtonSx(theme, tokens, errorColor),
                             p: 0.5,
-                            color: isCancelling ? alpha('#f59e0b', 0.5) : '#ef4444',
-                            '&:hover': {
-                              bgcolor: alpha('#ef4444', 0.08)
-                            }
+                            color: isCancelling ? alpha(warningColor, 0.6) : errorColor,
+                            minWidth: 0,
+                            borderRadius: 1.5
                           }}
                         >
                           {isCancelling ? <CircularProgress size={16} color="inherit" /> : <StopIcon sx={{ fontSize: 18 }} />}
@@ -369,7 +317,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                 <Typography
                   variant="body2"
                   sx={{
-                    color: isDark ? alpha('#fff', 0.7) : theme.palette.text.secondary,
+                    color: secondaryTextColor,
                     fontSize: '0.8rem',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -403,7 +351,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary,
+                      color: secondaryTextColor,
                       fontSize: { xs: '0.7rem', sm: '0.75rem' },
                       whiteSpace: 'nowrap'
                     }}
@@ -416,7 +364,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                       <Typography
                         variant="caption"
                         sx={{
-                          color: isDark ? alpha('#fff', 0.5) : theme.palette.text.secondary,
+                          color: tertiaryTextColor,
                           fontSize: { xs: '0.65rem', sm: '0.7rem' },
                           display: 'flex',
                           alignItems: 'center',
@@ -431,7 +379,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                         <Typography
                           variant="caption"
                           sx={{
-                            color: isDark ? alpha('#fff', 0.5) : theme.palette.text.secondary,
+                            color: tertiaryTextColor,
                             fontSize: { xs: '0.65rem', sm: '0.7rem' },
                             whiteSpace: 'nowrap'
                           }}
@@ -447,7 +395,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: isDark ? alpha('#fff', 0.7) : theme.palette.text.secondary,
+                      color: secondaryTextColor,
                       fontSize: { xs: '0.7rem', sm: '0.75rem' },
                       fontWeight: 500,
                       whiteSpace: 'nowrap'
@@ -469,7 +417,9 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
 
 const TaskProgressPanel = () => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getTaskCenterTokens(theme, isDark);
+  const { primaryText: primaryTextColor } = tokens;
   const { taskList, hasActiveTasks, stopTask, isTaskStopping } = useTaskProgress();
   const [currentTime, setCurrentTime] = useState(Date.now());
 
@@ -484,7 +434,7 @@ const TaskProgressPanel = () => {
     <Collapse in={hasActiveTasks} unmountOnExit timeout={300}>
       <Card
         sx={{
-          ...getPanelSurface(theme, '#6366f1'),
+          ...getTaskShellSx(theme, tokens, TASK_CLUSTER_ACCENT, { interactive: false }),
           mb: 4,
           borderRadius: 4,
           overflow: 'hidden',
@@ -503,19 +453,15 @@ const TaskProgressPanel = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
             <Box
               sx={{
+                ...getTaskIconBoxSx(theme, tokens, TASK_CLUSTER_ACCENT),
                 width: 32,
                 height: 32,
-                borderRadius: 1.5,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: alpha('#6366f1', isDark ? 0.18 : 0.1),
-                border: `1px solid ${alpha('#6366f1', isDark ? 0.3 : 0.18)}`
+                borderRadius: 1.5
               }}
             >
               <Typography sx={{ fontSize: '1rem' }}>⏳</Typography>
             </Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: primaryTextColor }}>
               任务进度
             </Typography>
             <Chip
@@ -525,7 +471,7 @@ const TaskProgressPanel = () => {
                 height: 22,
                 fontSize: '0.7rem',
                 fontWeight: 500,
-                ...getAccentChipSx(theme, '#6366f1')
+                ...getTaskChipSx(theme, tokens, TASK_CLUSTER_ACCENT)
               }}
             />
           </Box>

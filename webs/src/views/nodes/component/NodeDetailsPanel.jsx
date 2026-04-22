@@ -43,6 +43,7 @@ import CodeIcon from '@mui/icons-material/Code';
 import Dialog from '@mui/material/Dialog';
 
 import Zoom from '@mui/material/Zoom';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // utils
 import {
@@ -60,6 +61,14 @@ import { resolveProtocolPresentationFromLink } from 'utils/protocolPresentation'
 
 // components
 import NodeRawInfoEditor from './NodeRawInfoEditor';
+import {
+  getNodeActionButtonSx,
+  getNodeDialogPaperSx,
+  getNodeIconButtonSx,
+  getNodeStatusMetricSx,
+  getNodeTagChipSx,
+  getNodeThemeTokens
+} from '../nodeTheme';
 
 /**
  * 解析节点协议类型
@@ -80,36 +89,6 @@ const getProtocolInfo = (link, protocolMeta) => {
     name: presentation.label,
     color: presentation.color,
     icon: presentation.icon
-  };
-};
-
-/**
- * 获取状态相关样式配置
- * 增强红黄区分度，避免使用难以辨识的浅色
- */
-const getStatusStyles = (theme, colorName) => {
-  const mode = theme.palette.mode;
-
-  // 定义高对比度颜色
-  const colors = {
-    warning: mode === 'dark' ? '#c69800ff' : '#d19a04ff', // 深橙色用于浅色模式，确保不像红色
-    error: mode === 'dark' ? '#ef5350' : '#d32f2f', // 鲜艳红
-    success: mode === 'dark' ? '#66bb6a' : '#2e7d32', // 深绿
-    info: mode === 'dark' ? '#4fc3f7' : '#0277bd', // 深蓝
-    default: theme.palette.text.secondary
-  };
-
-  // 映射 colorName 到具体颜色
-  let mainColor = colors.default;
-  if (colorName === 'warning' || colorName === 'yellow') mainColor = colors.warning;
-  else if (colorName === 'error') mainColor = colors.error;
-  else if (colorName === 'success') mainColor = colors.success;
-  else if (colorName === 'info') mainColor = colors.info;
-
-  return {
-    color: mainColor,
-    bg: alpha(mainColor, 0.1),
-    border: alpha(mainColor, 0.3)
   };
 };
 
@@ -199,6 +178,8 @@ export default function NodeDetailsPanel({
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getNodeThemeTokens(theme, isDark);
   const [rawInfoExpanded, setRawInfoExpanded] = useState(false);
 
   if (!node) return null;
@@ -212,8 +193,8 @@ export default function NodeDetailsPanel({
   const qualityStatusDisplay = getQualityStatusDisplay(node.QualityStatus, node.QualityFamily);
   const unlockDisplay = getNodeUnlockSummaryDisplay(node, { limit: 99 });
 
-  const delayStyles = getStatusStyles(theme, delayDisplay.color);
-  const speedStyles = getStatusStyles(theme, speedDisplay.color);
+  const delayStyles = getNodeStatusMetricSx(tokens, delayDisplay.color);
+  const speedStyles = getNodeStatusMetricSx(tokens, speedDisplay.color);
 
   // Common content to be reused in both Dialog and Drawer
   const NodeContent = (
@@ -222,12 +203,12 @@ export default function NodeDetailsPanel({
       <Box
         sx={{
           position: 'relative',
-          bgcolor: 'background.default',
+          bgcolor: tokens.mutedPanelSurface,
           pb: 3,
           pt: isMobile ? 2 : 3,
           px: 3,
           borderBottom: '1px solid',
-          borderColor: 'divider',
+          borderColor: tokens.panelBorder,
           flexShrink: 0,
           '&::after': {
             content: '""',
@@ -242,7 +223,10 @@ export default function NodeDetailsPanel({
       >
         {/* 关闭按钮 (Only needed if not using DialogTitle/Actions standard close in mobile or custom layout) */}
         {!isMobile && (
-          <IconButton onClick={onClose} sx={{ position: 'absolute', right: 16, top: 16, color: 'text.secondary' }}>
+          <IconButton
+            onClick={onClose}
+            sx={{ position: 'absolute', right: 16, top: 16, ...getNodeIconButtonSx(theme, tokens, tokens.palette.text.secondary) }}
+          >
             <CloseIcon />
           </IconButton>
         )}
@@ -270,11 +254,11 @@ export default function NodeDetailsPanel({
                 width: 80,
                 height: 80,
                 bgcolor: protocolInfo.color,
-                color: '#fff',
+                color: theme.palette.common.white,
                 fontSize: 36,
                 fontWeight: 'bold',
                 boxShadow: `0 8px 24px ${alpha(protocolInfo.color, 0.25)}`,
-                border: `4px solid ${theme.palette.background.paper}`
+                border: `4px solid ${tokens.dialogSurface}`
               }}
             >
               {protocolInfo.icon}
@@ -288,7 +272,7 @@ export default function NodeDetailsPanel({
                 bottom: -10,
                 left: '50%',
                 transform: 'translateX(-50%)',
-                bgcolor: 'background.paper',
+                bgcolor: tokens.elevatedSurface,
                 color: protocolInfo.color,
                 fontWeight: 700,
                 fontSize: 11,
@@ -318,7 +302,7 @@ export default function NodeDetailsPanel({
               variant="outlined"
               sx={{
                 color: 'text.secondary',
-                borderColor: 'divider',
+                borderColor: tokens.softBorder,
                 height: 20,
                 fontSize: 11,
                 fontWeight: 500
@@ -390,7 +374,7 @@ export default function NodeDetailsPanel({
       </Box>
 
       {/* 滚动详情区域 */}
-      <Box sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2 }}>
+      <Box sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2, bgcolor: tokens.dialogSurface }}>
         <List disablePadding sx={{ mb: 3 }}>
           <ListItem disablePadding sx={{ py: 1.5, borderBottom: '1px dashed', borderColor: 'divider', display: 'block' }}>
             <Stack direction="row" alignItems="flex-start" spacing={2} width="100%">
@@ -459,13 +443,9 @@ export default function NodeDetailsPanel({
                           label={tag.trim()}
                           size="small"
                           sx={{
-                            bgcolor: tagColorMap?.[tag.trim()] || theme.palette.action.selected,
-                            color: tagColorMap?.[tag.trim()] ? '#fff' : 'text.primary',
                             fontSize: 11,
                             height: 24,
-                            border: 'none',
-                            fontWeight: 600,
-                            borderRadius: 1.5
+                            ...getNodeTagChipSx(theme, tokens, tagColorMap?.[tag.trim()] || theme.palette.primary.main)
                           }}
                         />
                       ))}
@@ -483,12 +463,12 @@ export default function NodeDetailsPanel({
           disableGutters
           elevation={0}
           sx={{
-            bgcolor: 'transparent',
+            bgcolor: tokens.nestedPanelSurface,
             '&:before': { display: 'none' },
             border: '1px solid',
-            borderColor: 'divider',
+            borderColor: tokens.softBorder,
             borderRadius: 3,
-            mb: 3,
+            mb: 5,
             overflow: 'hidden'
           }}
         >
@@ -496,6 +476,7 @@ export default function NodeDetailsPanel({
             expandIcon={<ExpandMoreIcon />}
             sx={{
               minHeight: 48,
+              bgcolor: tokens.toolbarSurface,
               '& .MuiAccordionSummary-content': { my: 1 }
             }}
           >
@@ -511,15 +492,7 @@ export default function NodeDetailsPanel({
           </AccordionDetails>
         </Accordion>
 
-        <Typography
-          variant="subtitle2"
-          color="text.secondary"
-          fontWeight={700}
-          sx={{ mb: 1, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}
-        >
-          网络与状态
-        </Typography>
-        <List disablePadding sx={{ mb: 3 }}>
+        <List disablePadding sx={{ mt: 1, mb: 3 }}>
           <DetailItem
             icon={<PublicIcon fontSize="small" />}
             label="国家/地区"
@@ -627,9 +600,9 @@ export default function NodeDetailsPanel({
       sx={{
         p: 2,
         pb: isMobile ? 3 : 2, // Extra padding for bottom safe area on mobile
-        bgcolor: 'background.paper',
+        bgcolor: tokens.mutedPanelSurface,
         borderTop: '1px solid',
-        borderColor: 'divider',
+        borderColor: tokens.panelBorder,
         display: 'flex',
         alignItems: 'center',
         gap: 1.5,
@@ -646,11 +619,11 @@ export default function NodeDetailsPanel({
         }}
         fullWidth
         sx={{
+          ...getNodeActionButtonSx(theme, tokens, tokens.palette.primary.main, { variant: 'solid' }),
           borderRadius: 3,
           height: 48,
           fontWeight: 700,
           fontSize: 15,
-          boxShadow: theme.shadows[4],
           textTransform: 'none'
         }}
       >
@@ -663,11 +636,10 @@ export default function NodeDetailsPanel({
             onClick={() => onCopy(node.Link)}
             color="primary"
             sx={{
-              border: '1px solid',
-              borderColor: 'divider',
               borderRadius: 3,
               width: 48,
-              height: 48
+              height: 48,
+              ...getNodeIconButtonSx(theme, tokens, tokens.palette.primary.main)
             }}
           >
             <ContentCopyIcon fontSize="small" />
@@ -682,11 +654,10 @@ export default function NodeDetailsPanel({
             }}
             color="info"
             sx={{
-              border: '1px solid',
-              borderColor: 'divider',
               borderRadius: 3,
               width: 48,
-              height: 48
+              height: 48,
+              ...getNodeIconButtonSx(theme, tokens, tokens.palette.info.main)
             }}
           >
             <EditIcon fontSize="small" />
@@ -701,11 +672,10 @@ export default function NodeDetailsPanel({
             }}
             color="error"
             sx={{
-              border: '1px solid',
-              borderColor: 'divider',
               borderRadius: 3,
               width: 48,
-              height: 48
+              height: 48,
+              ...getNodeIconButtonSx(theme, tokens, tokens.palette.error.main)
             }}
           >
             <DeleteIcon fontSize="small" />
@@ -729,7 +699,11 @@ export default function NodeDetailsPanel({
               maxHeight: '85vh',
               overflow: 'hidden', // Let children scroll
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              bgcolor: tokens.dialogSurface,
+              backgroundImage: tokens.dialogSurfaceGradient,
+              borderTop: '1px solid',
+              borderColor: tokens.panelBorder
             }
           }}
         >
@@ -745,10 +719,8 @@ export default function NodeDetailsPanel({
           TransitionComponent={Zoom}
           PaperProps={{
             sx: {
+              ...getNodeDialogPaperSx(theme, tokens, protocolInfo.color || tokens.palette.primary.main),
               borderRadius: 4,
-              overflow: 'hidden',
-              bgcolor: 'background.paper',
-              backgroundImage: 'none',
               display: 'flex',
               flexDirection: 'column',
               maxHeight: 'calc(100% - 64px)'

@@ -33,6 +33,13 @@ import DeviceHubIcon from '@mui/icons-material/DeviceHub';
 import CloseIcon from '@mui/icons-material/Close';
 
 import ConditionBuilder from './ConditionBuilder';
+import {
+  getChainProxyFieldControlSx,
+  getChainProxyIconButtonSx,
+  getChainProxyThemeTokens,
+  getChainProxyToggleButtonGroupSx
+} from './chainProxyTheme';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from '../../../utils/colorUtils';
 
 const getProxyTypeColor = (theme, proxyType) => {
@@ -50,15 +57,12 @@ const getProxyTypeColor = (theme, proxyType) => {
   }
 };
 
-const getNodeStyles = (theme) => {
-  const palette = theme.vars?.palette || theme.palette;
-  const isDark = theme.palette.mode === 'dark';
-  const surface = isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper;
-  const elevatedSurface = isDark ? withAlpha(palette.background.default, 0.9) : palette.background.paper;
+const getNodeStyles = (theme, tokens) => {
+  const { mutedPanelSurface, nestedPanelSurface, cardShadow, subtleBorder } = tokens;
 
   return {
     start: {
-      background: elevatedSurface,
+      background: mutedPanelSurface,
       color: theme.palette.secondary.main,
       borderRadius: 30,
       minWidth: 90,
@@ -69,11 +73,11 @@ const getNodeStyles = (theme) => {
       justifyContent: 'center',
       fontSize: 14,
       fontWeight: 'bold',
-      boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1],
+      boxShadow: cardShadow,
       border: `1px solid ${alpha(theme.palette.secondary.main, 0.28)}`
     },
     end: {
-      background: surface,
+      background: nestedPanelSurface,
       color: theme.palette.success.main,
       borderRadius: 8,
       minWidth: 100,
@@ -83,17 +87,17 @@ const getNodeStyles = (theme) => {
       justifyContent: 'center',
       fontSize: 12,
       fontWeight: 'bold',
-      boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1],
+      boxShadow: cardShadow,
       border: `1px solid ${alpha(theme.palette.success.main, 0.28)}`,
       cursor: 'pointer'
     },
     proxy: {
-      background: surface,
-      border: `1px solid ${alpha(theme.palette.info.main, 0.28)}`,
+      background: nestedPanelSurface,
+      border: `1px solid ${subtleBorder}`,
       borderRadius: 12,
       padding: '8px 14px',
       minWidth: 120,
-      boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1],
+      boxShadow: cardShadow,
       cursor: 'pointer',
       position: 'relative'
     }
@@ -103,7 +107,9 @@ const getNodeStyles = (theme) => {
 // 开始节点组件
 function StartNode({ data }) {
   const theme = useTheme();
-  const nodeStyles = getNodeStyles(theme);
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getChainProxyThemeTokens(theme, isDark);
+  const nodeStyles = getNodeStyles(theme, tokens);
   return (
     <div style={nodeStyles.start}>
       <PlayArrowIcon fontSize="small" sx={{ mr: 0.5 }} />
@@ -120,7 +126,9 @@ function StartNode({ data }) {
 // 结束节点组件（目标节点 - 可配置）
 function EndNode({ data, selected }) {
   const theme = useTheme();
-  const nodeStyles = getNodeStyles(theme);
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getChainProxyThemeTokens(theme, isDark);
+  const nodeStyles = getNodeStyles(theme, tokens);
   // 根据目标类型显示不同标签
   const getTargetLabel = () => {
     switch (data.targetType) {
@@ -140,7 +148,7 @@ function EndNode({ data, selected }) {
       style={{
         ...nodeStyles.end,
         boxShadow: selected
-          ? theme.palette.mode === 'dark'
+          ? isDark
             ? `0 0 0 1px ${alpha(theme.palette.success.main, 0.32)}`
             : `0 4px 16px ${alpha(theme.palette.success.main, 0.22)}`
           : nodeStyles.end.boxShadow
@@ -166,7 +174,9 @@ function EndNode({ data, selected }) {
 // 代理组节点组件 - 支持悬停删除
 function ProxyNode({ data, selected }) {
   const theme = useTheme();
-  const nodeStyles = getNodeStyles(theme);
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getChainProxyThemeTokens(theme, isDark);
+  const nodeStyles = getNodeStyles(theme, tokens);
   const [hovered, setHovered] = useState(false);
 
   const getIcon = () => {
@@ -210,7 +220,7 @@ function ProxyNode({ data, selected }) {
         ...nodeStyles.proxy,
         borderColor: selected ? theme.palette.info.main : alpha(theme.palette.info.main, 0.42),
         boxShadow: selected
-          ? theme.palette.mode === 'dark'
+          ? isDark
             ? `0 0 0 1px ${alpha(theme.palette.info.main, 0.28)}`
             : `0 6px 18px ${alpha(theme.palette.info.main, 0.16)}`
           : nodeStyles.proxy.boxShadow
@@ -238,9 +248,9 @@ function ProxyNode({ data, selected }) {
               height: 20,
               background: theme.palette.error.main,
               border: `1px solid ${alpha(theme.palette.error.main, 0.24)}`,
-              boxShadow: 'none',
+              boxShadow: tokens.insetHighlight,
               '&:hover': {
-                background: alpha(theme.palette.error.main, 0.9),
+                background: withAlpha(theme.palette.error.main, 0.9),
                 transform: 'scale(1.1)'
               },
               zIndex: 10
@@ -290,8 +300,12 @@ export default function ChainFlowBuilder({
   templateGroups = []
 }) {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const palette = theme.vars?.palette || theme.palette;
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getChainProxyThemeTokens(theme, isDark);
+  const palette = tokens.palette;
+  const fieldControlSx = getChainProxyFieldControlSx(tokens);
+  const toggleButtonSx = getChainProxyToggleButtonGroupSx(tokens);
+  const iconButtonSx = getChainProxyIconButtonSx(tokens);
   const defaultEdgeOptions = useMemo(
     () => ({
       type: 'smoothstep',
@@ -556,15 +570,15 @@ export default function ChainFlowBuilder({
     return (
       <Stack spacing={2} sx={{ pt: 0.5 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+          <Typography variant="subtitle1" fontWeight="bold" color={tokens.primaryText}>
             {isEntryNode ? '入口代理配置' : '中间节点配置'}
           </Typography>
-          <IconButton size="small" onClick={() => setPanelOpen(false)} sx={{ color: 'text.secondary' }}>
+          <IconButton size="small" onClick={() => setPanelOpen(false)} sx={iconButtonSx}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Stack>
 
-        <FormControl size="small" fullWidth>
+        <FormControl size="small" fullWidth sx={fieldControlSx}>
           <InputLabel color="primary">代理类型</InputLabel>
           <Select
             value={editingProxyConfig.type || (isEntryNode ? 'template_group' : 'specified_node')}
@@ -577,13 +591,6 @@ export default function ChainFlowBuilder({
                 nodeConditions: undefined
               })
             }
-            sx={{
-              color: 'text.primary',
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: alpha(theme.palette.primary.main, 0.24) },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: alpha(theme.palette.primary.main, 0.4) },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main' },
-              '& .MuiSelect-icon': { color: 'text.secondary' }
-            }}
           >
             {/* 入口节点可选模板代理组 */}
             {isEntryNode && <MenuItem value="template_group">模板代理组</MenuItem>}
@@ -593,7 +600,7 @@ export default function ChainFlowBuilder({
             <MenuItem value="specified_node">指定节点</MenuItem>
           </Select>
           {!isEntryNode && (
-            <Typography variant="caption" sx={{ mt: 0.5, color: 'text.secondary' }}>
+            <Typography variant="caption" sx={{ mt: 0.5, color: tokens.tertiaryText }}>
               中间节点的自定义代理组内所有节点会自动设置 dialer-proxy 指向上一级
             </Typography>
           )}
@@ -604,6 +611,7 @@ export default function ChainFlowBuilder({
             freeSolo
             size="small"
             fullWidth
+            sx={fieldControlSx}
             options={templateGroups || []}
             value={editingProxyConfig.groupName || ''}
             onChange={(e, newValue) => setEditingProxyConfig({ ...editingProxyConfig, groupName: newValue || '' })}
@@ -623,8 +631,9 @@ export default function ChainFlowBuilder({
               placeholder="自定义代理组名称"
               value={editingProxyConfig.groupName || ''}
               onChange={(e) => setEditingProxyConfig({ ...editingProxyConfig, groupName: e.target.value })}
+              sx={fieldControlSx}
             />
-            <FormControl size="small" fullWidth>
+            <FormControl size="small" fullWidth sx={fieldControlSx}>
               <InputLabel>组类型</InputLabel>
               <Select
                 value={editingProxyConfig.groupType || 'select'}
@@ -654,6 +663,7 @@ export default function ChainFlowBuilder({
                   }
                   placeholder="http://www.gstatic.com/generate_204"
                   helperText="用于检测节点可用性的 URL，留空使用默认值"
+                  sx={fieldControlSx}
                 />
                 <Stack direction="row" spacing={1}>
                   <TextField
@@ -667,7 +677,7 @@ export default function ChainFlowBuilder({
                         urlTestConfig: { ...editingProxyConfig.urlTestConfig, interval: parseInt(e.target.value) || 300 }
                       })
                     }
-                    sx={{ flex: 1 }}
+                    sx={{ ...fieldControlSx, flex: 1 }}
                     helperText="健康检查间隔"
                   />
                   <TextField
@@ -681,7 +691,7 @@ export default function ChainFlowBuilder({
                         urlTestConfig: { ...editingProxyConfig.urlTestConfig, tolerance: parseInt(e.target.value) || 50 }
                       })
                     }
-                    sx={{ flex: 1 }}
+                    sx={{ ...fieldControlSx, flex: 1 }}
                     helperText={editingProxyConfig.groupType === 'url-test' ? '延迟差在此范围内视为相同' : '故障转移阈值'}
                   />
                 </Stack>
@@ -703,6 +713,7 @@ export default function ChainFlowBuilder({
                   }
                   placeholder="http://www.gstatic.com/generate_204"
                   helperText="用于检测节点可用性的 URL，留空使用默认值"
+                  sx={fieldControlSx}
                 />
                 <Stack direction="row" spacing={1}>
                   <TextField
@@ -716,10 +727,10 @@ export default function ChainFlowBuilder({
                         urlTestConfig: { ...editingProxyConfig.urlTestConfig, interval: parseInt(e.target.value) || 300 }
                       })
                     }
-                    sx={{ flex: 1 }}
+                    sx={{ ...fieldControlSx, flex: 1 }}
                     helperText="健康检查间隔"
                   />
-                  <FormControl size="small" sx={{ flex: 1 }}>
+                  <FormControl size="small" sx={{ ...fieldControlSx, flex: 1 }}>
                     <InputLabel>负载均衡策略</InputLabel>
                     <Select
                       value={editingProxyConfig.urlTestConfig?.strategy || 'consistent-hashing'}
@@ -751,7 +762,7 @@ export default function ChainFlowBuilder({
 
         {editingProxyConfig.type === 'dynamic_node' && (
           <>
-            <FormControl size="small" fullWidth>
+            <FormControl size="small" fullWidth sx={fieldControlSx}>
               <InputLabel>选择模式</InputLabel>
               <Select
                 value={editingProxyConfig.selectMode || 'first'}
@@ -777,6 +788,7 @@ export default function ChainFlowBuilder({
           <Autocomplete
             size="small"
             options={availableNodes || []}
+            sx={fieldControlSx}
             getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || '未知'})`}
             value={(availableNodes || []).find((n) => n.id === editingProxyConfig.nodeId) || null}
             onChange={(e, newValue) => setEditingProxyConfig({ ...editingProxyConfig, nodeId: newValue?.id })}
@@ -792,7 +804,7 @@ export default function ChainFlowBuilder({
           />
         )}
 
-        <Divider sx={{ borderColor: alpha(theme.palette.primary.main, 0.16) }} />
+        <Divider sx={{ borderColor: tokens.softBorder }} />
 
         {/* 删除按钮 - 实时保存无需确定按钮 */}
         <Stack direction="row" justifyContent="flex-start">
@@ -802,9 +814,16 @@ export default function ChainFlowBuilder({
             startIcon={<DeleteIcon />}
             onClick={handleDeleteProxy}
             sx={{
-              color: 'error.light',
-              '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.08) }
+              color: theme.palette.error.main,
+              border: `1px solid ${withAlpha(theme.palette.error.main, isDark ? 0.32 : 0.2)}`,
+              backgroundColor: tokens.fieldSurface,
+              boxShadow: tokens.insetHighlight,
+              '&:hover': {
+                bgcolor: tokens.errorSurface,
+                borderColor: withAlpha(theme.palette.error.main, isDark ? 0.42 : 0.28)
+              }
             }}
+            variant="outlined"
           >
             删除此节点
           </Button>
@@ -820,15 +839,15 @@ export default function ChainFlowBuilder({
     return (
       <Stack spacing={2} sx={{ pt: 0.5 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+          <Typography variant="subtitle1" fontWeight="bold" color={tokens.primaryText}>
             目标节点配置
           </Typography>
-          <IconButton size="small" onClick={() => setPanelOpen(false)} sx={{ color: 'text.secondary' }}>
+          <IconButton size="small" onClick={() => setPanelOpen(false)} sx={iconButtonSx}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Stack>
 
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color={tokens.secondaryText}>
           选择应用此规则的节点范围
         </Typography>
 
@@ -842,20 +861,7 @@ export default function ChainFlowBuilder({
           }}
           size="small"
           fullWidth
-          sx={{
-            '& .MuiToggleButton-root': {
-              color: 'text.secondary',
-              borderColor: alpha(theme.palette.primary.main, 0.24),
-              '&.Mui-selected': {
-                color: 'primary.main',
-                bgcolor: alpha(theme.palette.primary.main, 0.14),
-                borderColor: alpha(theme.palette.primary.main, 0.42)
-              },
-              '&:hover': {
-                bgcolor: alpha(theme.palette.primary.main, 0.08)
-              }
-            }
-          }}
+          sx={toggleButtonSx}
         >
           <Tooltip title="手动指定唯一一个目标节点" arrow>
             <ToggleButton value="specified_node">指定节点</ToggleButton>
@@ -873,6 +879,7 @@ export default function ChainFlowBuilder({
           <Autocomplete
             size="small"
             options={availableNodes || []}
+            sx={fieldControlSx}
             getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || '未知'})`}
             value={(availableNodes || []).find((n) => n.id === editingTargetConfig.nodeId) || null}
             onChange={(e, newValue) => setEditingTargetConfig({ ...editingTargetConfig, nodeId: newValue?.id })}
@@ -900,10 +907,10 @@ export default function ChainFlowBuilder({
           />
         )}
 
-        <Divider sx={{ borderColor: alpha(theme.palette.primary.main, 0.16) }} />
+        <Divider sx={{ borderColor: tokens.softBorder }} />
 
         {/* 实时保存，无需确定按钮 */}
-        <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+        <Typography variant="caption" sx={{ color: tokens.tertiaryText, textAlign: 'center' }}>
           配置已自动保存
         </Typography>
       </Stack>
@@ -942,28 +949,28 @@ export default function ChainFlowBuilder({
         width: '100%',
         display: 'flex',
         overflow: 'hidden',
-        '--flow-bg': palette.background.default,
-        '--flow-border': isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9),
-        '--flow-border-muted': isDark ? withAlpha(palette.divider, 0.58) : withAlpha(palette.divider, 0.72),
+        '--flow-bg': tokens.mutedPanelSurface,
+        '--flow-border': tokens.panelBorder,
+        '--flow-border-muted': tokens.subtleBorder,
         '--flow-grid': isDark ? withAlpha(palette.divider, 0.12) : withAlpha(palette.divider, 0.4),
         '--flow-overlay': isDark ? withAlpha(palette.background.paper, 0.1) : withAlpha(palette.background.default, 0.16),
-        '--flow-surface-strong': isDark ? withAlpha(palette.background.paper, 0.28) : withAlpha(palette.background.paper, 0.98),
-        '--flow-shadow': alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.24 : 0.12),
-        '--flow-text': palette.text.primary,
-        '--flow-muted': palette.text.secondary,
+        '--flow-surface-strong': tokens.containerSurface,
+        '--flow-shadow': withAlpha(palette.text.primary, isDark ? 0.24 : 0.12),
+        '--flow-text': tokens.primaryText,
+        '--flow-muted': tokens.secondaryText,
         '--flow-primary': theme.palette.primary.main,
         '--flow-primary-dark': theme.palette.primary.dark,
         '--flow-primary-contrast': theme.palette.primary.contrastText,
-        '--flow-hover': alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.16 : 0.12),
-        '--flow-toolbar-bg': isDark ? withAlpha(palette.background.default, 0.92) : withAlpha(palette.background.paper, 0.94),
+        '--flow-hover': tokens.hoverSurface,
+        '--flow-toolbar-bg': tokens.elevatedSurface,
         '--flow-handle': theme.palette.primary.main,
-        '--flow-handle-border': isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper,
+        '--flow-handle-border': tokens.nestedPanelSurface,
         '--flow-handle-shadow': alpha(theme.palette.primary.main, 0.18),
-        '--flow-panel-bg': isDark ? withAlpha(palette.background.default, 0.96) : withAlpha(palette.background.paper, 0.98),
-        '--flow-panel-input-bg': isDark ? withAlpha(palette.background.paper, 0.18) : withAlpha(palette.background.paper, 0.96),
-        '--flow-panel-input-bg-active': isDark ? withAlpha(palette.background.paper, 0.24) : withAlpha(palette.background.paper, 1),
-        '--flow-panel-input-highlight': isDark ? alpha(theme.palette.common.white, 0.05) : alpha(theme.palette.common.black, 0.02),
-        '--flow-panel-border-soft': alpha(theme.palette.primary.main, 0.16),
+        '--flow-panel-bg': tokens.dialogSurface,
+        '--flow-panel-input-bg': tokens.fieldSurface,
+        '--flow-panel-input-bg-active': tokens.fieldSurfaceActive,
+        '--flow-panel-input-highlight': isDark ? withAlpha(theme.palette.common.white, 0.05) : withAlpha(theme.palette.common.black, 0.02),
+        '--flow-panel-border-soft': tokens.softBorder,
         '--flow-panel-button-bg': theme.palette.primary.main,
         '--flow-panel-button-bg-hover': theme.palette.primary.dark
       }}
@@ -999,17 +1006,18 @@ export default function ChainFlowBuilder({
             size="small"
             disabled={chainConfig.length >= 4}
             sx={{
-              backgroundColor: isDark ? withAlpha(palette.background.default, 0.92) : withAlpha(palette.background.paper, 0.94),
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-              color: 'text.primary',
-              '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.12) },
-              '&.Mui-disabled': { color: 'text.disabled', borderColor: alpha(theme.palette.text.secondary, 0.22) }
+              backgroundColor: tokens.elevatedSurface,
+              border: `1px solid ${tokens.primarySoftBorder}`,
+              color: tokens.primaryText,
+              boxShadow: tokens.panelShadow,
+              '&:hover': { backgroundColor: tokens.hoverSurface, borderColor: tokens.primaryStrongBorder },
+              '&.Mui-disabled': { color: palette.text.disabled, borderColor: tokens.subtleBorder }
             }}
           >
             {chainConfig.length >= 4 ? '已达最大层级' : '添加代理节点'}
           </Button>
           {chainConfig.length >= 2 && (
-            <Typography variant="caption" sx={{ ml: 1, color: isDark ? alpha(theme.palette.warning.main, 0.88) : 'warning.dark' }}>
+            <Typography variant="caption" sx={{ ml: 1, color: tokens.warningSoftText }}>
               {chainConfig.length} 级链路，延迟可能较高
             </Typography>
           )}
@@ -1032,15 +1040,13 @@ export default function ChainFlowBuilder({
             sx={{
               width: 480,
               minWidth: 480,
-              borderLeft: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
+              borderLeft: `1px solid ${tokens.softBorder}`,
               borderRadius: 0,
               p: 2.5,
               overflow: 'auto',
-              backgroundColor: isDark ? withAlpha(palette.background.default, 0.96) : withAlpha(palette.background.paper, 0.98),
-              backgroundImage: isDark
-                ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.14)} 0%, ${withAlpha(palette.background.default, 0.96)} 100%)`
-                : 'none',
-              boxShadow: theme.palette.mode === 'dark' ? 'none' : `-4px 0 16px ${alpha(theme.palette.common.black, 0.1)}`
+              backgroundColor: tokens.dialogSurface,
+              backgroundImage: tokens.dialogSurfaceGradient,
+              boxShadow: isDark ? 'none' : `-4px 0 16px ${withAlpha(palette.common.black, 0.1)}`
             }}
           >
             {panelType === 'proxy' ? renderProxyConfigPanel() : renderTargetConfigPanel()}

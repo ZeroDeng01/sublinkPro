@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 
 // material-ui
-import { useTheme, alpha } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
@@ -33,10 +33,12 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import SecurityIcon from '@mui/icons-material/Security';
 import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // api
 import { parseNodeLink, updateNodeRawInfo } from '../../../api/nodes';
 import { buildFieldMetaMap, getFieldGroupKey } from '../../../utils/protocolPresentation';
+import { getNodeColorChipSx, getNodeFieldControlSx, getNodeThemeTokens } from '../nodeTheme';
 
 /**
  * 字段分组配置
@@ -99,7 +101,7 @@ const getFieldLabel = (fieldName, fieldMeta) => {
 /**
  * 渲染字段输入控件
  */
-const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled }) => {
+const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled, fieldSx }) => {
   const [showSecret, setShowSecret] = useState(false);
   const fieldType = fieldMeta?.type || 'string';
   const label = getFieldLabel(fieldName, fieldMeta);
@@ -138,6 +140,7 @@ const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled }) => {
         variant="outlined"
         placeholder={placeholder}
         helperText={helperText}
+        sx={fieldSx}
       />
     );
   }
@@ -156,6 +159,7 @@ const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled }) => {
         SelectProps={{ native: true }}
         InputLabelProps={{ shrink: true }}
         helperText={helperText}
+        sx={fieldSx}
       >
         <option value="">请选择</option>
         {fieldMeta.options.map((option) => (
@@ -181,6 +185,7 @@ const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled }) => {
       helperText={helperText}
       multiline={multiline}
       maxRows={3}
+      sx={fieldSx}
       InputProps={
         fieldMeta?.secret
           ? {
@@ -203,7 +208,8 @@ FieldInput.propTypes = {
   fieldMeta: PropTypes.object,
   value: PropTypes.any,
   onChange: PropTypes.func.isRequired,
-  disabled: PropTypes.bool
+  disabled: PropTypes.bool,
+  fieldSx: PropTypes.object
 };
 
 /**
@@ -212,6 +218,9 @@ FieldInput.propTypes = {
 export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMessage }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getNodeThemeTokens(theme, isDark);
+  const fieldControlSx = getNodeFieldControlSx(tokens);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -370,11 +379,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
           <Chip
             label={currentProtocolMeta?.label || parsedInfo.protocol}
             size="small"
-            sx={{
-              bgcolor: currentProtocolMeta?.color || theme.palette.primary.main,
-              color: '#fff',
-              fontWeight: 600
-            }}
+            sx={getNodeColorChipSx(theme, tokens, currentProtocolMeta?.color || theme.palette.primary.main)}
           />
           <Typography variant="caption" color="text.secondary">
             {Object.keys(editedFields).length} 个字段
@@ -386,7 +391,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
             size="small"
             onClick={() => setEditMode(!editMode)}
             sx={{
-              bgcolor: editMode ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+              bgcolor: editMode ? tokens.hoverSurface : 'transparent',
               color: editMode ? 'primary.main' : 'text.secondary'
             }}
           >
@@ -407,10 +412,10 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
             disableGutters
             elevation={0}
             sx={{
-              bgcolor: 'transparent',
+              bgcolor: tokens.nestedPanelSurface,
               '&:before': { display: 'none' },
               border: '1px solid',
-              borderColor: 'divider',
+              borderColor: tokens.softBorder,
               borderRadius: 2,
               mb: 1,
               overflow: 'hidden'
@@ -419,8 +424,15 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                minHeight: 48,
-                '& .MuiAccordionSummary-content': { my: 1 }
+                minHeight: 52,
+                bgcolor: tokens.toolbarSurface,
+                '&.Mui-expanded': {
+                  minHeight: 52
+                },
+                '& .MuiAccordionSummary-content, & .MuiAccordionSummary-content.Mui-expanded': {
+                  my: 1.25,
+                  alignItems: 'center'
+                }
               }}
             >
               <Stack direction="row" alignItems="center" spacing={1}>
@@ -428,11 +440,29 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
                 <Typography variant="subtitle2" fontWeight={600}>
                   {groupConfig.label}
                 </Typography>
-                <Chip label={fields.length} size="small" sx={{ height: 20, fontSize: 11 }} />
+                <Chip
+                  label={fields.length}
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: 11,
+                    bgcolor: tokens.fieldSurface,
+                    color: tokens.primaryText,
+                    border: '1px solid',
+                    borderColor: tokens.subtleBorder
+                  }}
+                />
               </Stack>
             </AccordionSummary>
-            <AccordionDetails sx={{ pt: 0 }}>
-              <Stack spacing={isMobile ? 2 : 1.5}>
+            <AccordionDetails sx={{ pt: 2.75, pb: 1.5 }}>
+              <Stack
+                spacing={isMobile ? 2 : 1.5}
+                sx={{
+                  '& > :first-of-type': {
+                    mt: 0.5
+                  }
+                }}
+              >
                 {fields.map((fieldName) => (
                   <Box key={fieldName}>
                     <FieldInput
@@ -441,6 +471,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
                       value={editedFields[fieldName]}
                       onChange={handleFieldChange}
                       disabled={!editMode}
+                      fieldSx={fieldControlSx}
                     />
                   </Box>
                 ))}

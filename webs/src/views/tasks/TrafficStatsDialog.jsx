@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -25,6 +25,17 @@ import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import {
+  getTaskActionButtonSx,
+  getTaskCardSx,
+  getTaskCenterTokens,
+  getTaskDialogPaperSx,
+  getTaskProgressSx,
+  getTaskTableContainerSx,
+  getTaskTableRowSx,
+  TASK_CLUSTER_ACCENT
+} from 'components/taskCenterTheme';
 
 import DownloadIcon from '@mui/icons-material/Download';
 import SearchIcon from '@mui/icons-material/Search';
@@ -53,6 +64,8 @@ TabPanel.propTypes = {
 
 export default function TrafficStatsDialog({ open, onClose, task }) {
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getTaskCenterTokens(theme, isDark);
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
   const [tabValue, setTabValue] = useState(0);
 
@@ -125,15 +138,19 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
   // NOW we can have early returns - all hooks have been called
   if (!task || !trafficData) {
     return (
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-        <DialogTitle>流量统计</DialogTitle>
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" PaperProps={{ sx: getTaskDialogPaperSx(theme, tokens) }}>
+        <DialogTitle sx={{ color: tokens.primaryText }}>流量统计</DialogTitle>
         <DialogContent>
-          <Typography color="textSecondary" textAlign="center" py={4}>
+          <Typography sx={{ color: tokens.secondaryText }} textAlign="center" py={4}>
             无流量数据
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} variant="contained">
+          <Button
+            onClick={onClose}
+            variant="contained"
+            sx={getTaskActionButtonSx(theme, tokens, TASK_CLUSTER_ACCENT, { variant: 'solid' })}
+          >
             关闭
           </Button>
         </DialogActions>
@@ -206,20 +223,20 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
 
   // Render summary stats table (group or source)
   const renderStatsTable = (statsMap, labelHeader, filterType) => {
-    if (!statsMap) return <Typography color="textSecondary">无数据</Typography>;
+    if (!statsMap) return <Typography sx={{ color: tokens.secondaryText }}>无数据</Typography>;
 
     const entries = Object.entries(statsMap).sort((a, b) => b[1].bytes - a[1].bytes);
 
     return (
       <Box>
         {hasNodeData && (
-          <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
+          <Typography variant="caption" sx={{ display: 'block', mb: 1, color: tokens.secondaryText }}>
             点击行可查看该{filterType === 'group' ? '分组' : '来源'}下的节点流量详情
           </Typography>
         )}
-        <TableContainer component={Paper} variant="outlined">
+        <TableContainer component={Paper} variant="outlined" sx={getTaskTableContainerSx(theme, tokens)}>
           <Table size="small">
-            <TableHead>
+            <TableHead sx={{ bgcolor: tokens.tableHeaderSurface }}>
               <TableRow>
                 <TableCell>{labelHeader}</TableCell>
                 <TableCell align="right">流量</TableCell>
@@ -235,12 +252,12 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
                   <TableRow
                     key={name}
                     hover
-                    sx={{ cursor: hasNodeData ? 'pointer' : 'default' }}
+                    sx={getTaskTableRowSx(tokens, hasNodeData)}
                     onClick={() => hasNodeData && handleDrillDown(filterType, name)}
                   >
                     <TableCell component="th" scope="row">
                       <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography variant="body2" fontWeight={500}>
+                        <Typography variant="body2" fontWeight={500} sx={{ color: tokens.primaryText }}>
                           {name}
                         </Typography>
                         {hasNodeData && <ExpandMoreIcon fontSize="small" color="action" />}
@@ -254,9 +271,13 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
                     <TableCell align="right">
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Box sx={{ width: '100%', mr: 1 }}>
-                          <LinearProgress variant="determinate" value={percent} sx={{ height: 6, borderRadius: 1 }} />
+                          <LinearProgress
+                            variant="determinate"
+                            value={percent}
+                            sx={getTaskProgressSx(tokens, theme.palette.primary.main)}
+                          />
                         </Box>
-                        <Typography variant="caption" color="textSecondary" sx={{ minWidth: 35 }}>
+                        <Typography variant="caption" sx={{ minWidth: 35, color: tokens.secondaryText }}>
                           {Math.round(percent)}%
                         </Typography>
                       </Box>
@@ -268,7 +289,12 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
           </Table>
         </TableContainer>
         <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button size="small" startIcon={<DownloadIcon />} onClick={() => exportToCSV(statsMap, `traffic_by_${filterType}`)}>
+          <Button
+            size="small"
+            startIcon={<DownloadIcon />}
+            onClick={() => exportToCSV(statsMap, `traffic_by_${filterType}`)}
+            sx={getTaskActionButtonSx(theme, tokens, theme.palette.primary.main)}
+          >
             导出CSV
           </Button>
         </Box>
@@ -280,10 +306,22 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
   const renderDrillDownNodes = () => (
     <Box>
       <Stack direction="row" alignItems="center" spacing={2} mb={2}>
-        <IconButton onClick={handleBackFromDrill} size="small">
+        <IconButton
+          onClick={handleBackFromDrill}
+          size="small"
+          sx={{
+            bgcolor: alpha(theme.palette.primary.main, tokens.isDark ? 0.14 : 0.08),
+            border: '1px solid',
+            borderColor: alpha(theme.palette.primary.main, tokens.isDark ? 0.24 : 0.16),
+            color: theme.palette.primary.main,
+            '&:hover': {
+              bgcolor: alpha(theme.palette.primary.main, tokens.isDark ? 0.2 : 0.12)
+            }
+          }}
+        >
           <ArrowBackIcon />
         </IconButton>
-        <Typography variant="subtitle1" fontWeight={500}>
+        <Typography variant="subtitle1" fontWeight={500} sx={{ color: tokens.primaryText }}>
           {drillFilter?.type === 'group' ? '分组' : '来源'}: {drillFilter?.value}
         </Typography>
       </Stack>
@@ -295,9 +333,19 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
           value={drillSearchInput}
           onChange={(e) => setDrillSearchInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleDrillSearch()}
-          sx={{ flex: 1 }}
+          sx={{
+            flex: 1,
+            '& .MuiOutlinedInput-root': {
+              bgcolor: tokens.nestedInteractiveSurface
+            }
+          }}
         />
-        <Button variant="outlined" startIcon={<SearchIcon />} onClick={handleDrillSearch}>
+        <Button
+          variant="outlined"
+          startIcon={<SearchIcon />}
+          onClick={handleDrillSearch}
+          sx={getTaskActionButtonSx(theme, tokens, theme.palette.primary.main)}
+        >
           搜索
         </Button>
       </Stack>
@@ -308,9 +356,9 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
         </Box>
       ) : (
         <>
-          <TableContainer component={Paper} variant="outlined">
+          <TableContainer component={Paper} variant="outlined" sx={getTaskTableContainerSx(theme, tokens)}>
             <Table size="small">
-              <TableHead>
+              <TableHead sx={{ bgcolor: tokens.tableHeaderSurface }}>
                 <TableRow>
                   <TableCell>节点名称</TableCell>
                   <TableCell>原始名称</TableCell>
@@ -323,27 +371,31 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
                 {drillNodes.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} align="center">
-                      <Typography color="textSecondary">无数据</Typography>
+                      <Typography sx={{ color: tokens.secondaryText }}>无数据</Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
                   drillNodes.map((node) => (
-                    <TableRow key={node.nodeId} hover>
+                    <TableRow key={node.nodeId} hover sx={getTaskTableRowSx(tokens, false)}>
                       <TableCell>
-                        <Typography variant="body2" fontWeight={500} noWrap sx={{ maxWidth: 150 }}>
+                        <Typography variant="body2" fontWeight={500} noWrap sx={{ maxWidth: 150, color: tokens.primaryText }}>
                           {node.name}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" color="textSecondary" noWrap sx={{ maxWidth: 150 }}>
+                        <Typography variant="body2" noWrap sx={{ maxWidth: 150, color: tokens.secondaryText }}>
                           {node.originName || '-'}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2">{node.group || '-'}</Typography>
+                        <Typography variant="body2" sx={{ color: tokens.primaryText }}>
+                          {node.group || '-'}
+                        </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2">{node.source || '-'}</Typography>
+                        <Typography variant="body2" sx={{ color: tokens.primaryText }}>
+                          {node.source || '-'}
+                        </Typography>
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2" color="primary" fontWeight={500}>
@@ -361,6 +413,7 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
               size="small"
               startIcon={<DownloadIcon />}
               onClick={() => exportToCSV(drillNodes, `traffic_nodes_${drillFilter?.value}`, true)}
+              sx={getTaskActionButtonSx(theme, tokens, theme.palette.primary.main)}
             >
               导出CSV
             </Button>
@@ -388,11 +441,18 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
   );
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={fullScreen}>
-      <DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="md"
+      fullScreen={fullScreen}
+      PaperProps={{ sx: getTaskDialogPaperSx(theme, tokens) }}
+    >
+      <DialogTitle sx={{ color: tokens.primaryText }}>
         <Stack direction="column" spacing={1}>
           <Typography variant="h4">流量统计详情</Typography>
-          <Typography variant="subtitle2" color="textSecondary">
+          <Typography variant="subtitle2" sx={{ color: tokens.secondaryText }}>
             任务: {task.name}
           </Typography>
         </Stack>
@@ -403,9 +463,9 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
           <Grid item xs={12}>
             <Paper
               variant="outlined"
-              sx={{ p: 2, textAlign: 'center', bgcolor: theme.palette.mode === 'dark' ? 'background.default' : 'primary.lighter' }}
+              sx={{ ...getTaskCardSx(theme, tokens, theme.palette.primary.main, { interactive: false }), p: 2, textAlign: 'center' }}
             >
-              <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+              <Typography variant="subtitle2" sx={{ color: tokens.secondaryText }} gutterBottom>
                 总消耗流量
               </Typography>
               <Typography variant="h2" color="primary">
@@ -416,15 +476,28 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
         </Grid>
 
         {!hasGroupData && !hasSourceData && !hasNodeData ? (
-          <Typography variant="body2" color="textSecondary" textAlign="center">
+          <Typography variant="body2" sx={{ color: tokens.secondaryText }} textAlign="center">
             未开启详细流量统计，可在测速设置中开启
           </Typography>
         ) : drillFilter ? (
           renderDrillDownNodes()
         ) : (
           <>
-            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs value={tabValue} onChange={handleTabChange} aria-label="traffic stats tabs">
+            <Box sx={{ borderBottom: '1px solid', borderColor: tokens.softBorder }}>
+              <Tabs
+                value={tabValue}
+                onChange={handleTabChange}
+                aria-label="traffic stats tabs"
+                sx={{
+                  '& .MuiTab-root': {
+                    color: tokens.secondaryText,
+                    minHeight: 44
+                  },
+                  '& .Mui-selected': {
+                    color: theme.palette.primary.main
+                  }
+                }}
+              >
                 {hasGroupData && <Tab label="分组统计" />}
                 {hasSourceData && <Tab label="来源统计" />}
               </Tabs>
@@ -443,7 +516,7 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} variant="contained">
+        <Button onClick={onClose} variant="contained" sx={getTaskActionButtonSx(theme, tokens, TASK_CLUSTER_ACCENT, { variant: 'solid' })}>
           关闭
         </Button>
       </DialogActions>

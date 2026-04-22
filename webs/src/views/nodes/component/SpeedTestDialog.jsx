@@ -41,6 +41,9 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 // project imports
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
+import { withAlpha } from 'utils/colorUtils';
 
 // constants
 import { SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS, LATENCY_TEST_URL_OPTIONS, LANDING_IP_URL_OPTIONS } from '../utils';
@@ -51,19 +54,97 @@ import { useState } from 'react';
 /**
  * 配置区块组件 - 可折叠的设置分组
  */
-function ConfigSection({ title, icon, children, defaultExpanded = true, helperText }) {
+function getSpeedTestDialogThemeTokens(theme, isDark) {
+  const surfaceTokens = getSurfaceTokens(theme, isDark);
+  const textTokens = getReadableTextTokens(theme, isDark);
+  const { palette, mutedPanelSurface, nestedPanelSurface } = surfaceTokens;
+
+  return {
+    ...surfaceTokens,
+    ...textTokens,
+    headerSurface: isDark ? withAlpha(palette.background.paper, 0.18) : mutedPanelSurface,
+    actionSurface: isDark ? withAlpha(palette.background.default, 0.88) : mutedPanelSurface,
+    sectionSurface: isDark ? withAlpha(palette.background.paper, 0.36) : nestedPanelSurface,
+    sectionHeaderSurface: isDark ? withAlpha(palette.background.default, 0.84) : withAlpha(palette.background.default, 0.72),
+    sectionHoverSurface: isDark
+      ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.18)} 0%, ${withAlpha(palette.primary.main, 0.08)} 100%)`
+      : withAlpha(palette.primary.main, 0.04),
+    fieldSurface: isDark ? withAlpha(palette.background.paper, 0.74) : palette.background.paper,
+    fieldHoverBorder: withAlpha(palette.primary.main, isDark ? 0.4 : 0.24),
+    overlaySurface: isDark ? withAlpha(palette.background.default, 0.98) : palette.background.paper,
+    overlayHoverSurface: withAlpha(palette.primary.main, isDark ? 0.12 : 0.06),
+    overlaySelectedSurface: withAlpha(palette.primary.main, isDark ? 0.18 : 0.08),
+    controlRowSurface: isDark ? withAlpha(palette.background.paper, 0.24) : withAlpha(palette.background.default, 0.92),
+    controlRowBorder: isDark ? withAlpha(palette.divider, 0.68) : surfaceTokens.panelBorder,
+    infoAlertSurface: withAlpha(palette.info.main, isDark ? 0.12 : 0.06),
+    infoAlertBorder: withAlpha(palette.info.main, isDark ? 0.28 : 0.16),
+    warningAlertSurface: withAlpha(palette.error.main, isDark ? 0.1 : 0.05),
+    warningAlertBorder: withAlpha(palette.error.main, isDark ? 0.24 : 0.16),
+    successFabSurface: `linear-gradient(135deg, ${palette.success.light} 0%, ${palette.success.main} 100%)`,
+    successFabHoverSurface: `linear-gradient(135deg, ${palette.success.main} 0%, ${palette.success.dark} 100%)`,
+    successFabShadow: `0 4px 14px ${withAlpha(palette.success.main, isDark ? 0.42 : 0.26)}`,
+    successFabHoverShadow: `0 6px 20px ${withAlpha(palette.success.main, isDark ? 0.5 : 0.34)}`
+  };
+}
+
+function getOverlayPaperSx(themeTokens, theme) {
+  const { isDark, palette, overlaySurface, overlayHoverSurface, overlaySelectedSurface, panelBorder } = themeTokens;
+
+  return {
+    mt: 0.5,
+    borderRadius: 2,
+    backgroundColor: overlaySurface,
+    backgroundImage: isDark ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.14)} 0%, ${overlaySurface} 100%)` : 'none',
+    border: '1px solid',
+    borderColor: panelBorder,
+    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : theme.shadows[8],
+    '& .MuiMenuItem-root': {
+      mx: 0.75,
+      my: 0.25,
+      borderRadius: 1.5,
+      '&:hover': {
+        backgroundColor: overlayHoverSurface
+      },
+      '&.Mui-selected': {
+        backgroundColor: overlaySelectedSurface,
+        '&:hover': {
+          backgroundColor: withAlpha(palette.primary.main, isDark ? 0.24 : 0.12)
+        }
+      }
+    },
+    '& .MuiAutocomplete-option': {
+      mx: 0.75,
+      my: 0.25,
+      borderRadius: 1.5,
+      alignItems: 'flex-start',
+      '&.Mui-focused': {
+        backgroundColor: overlayHoverSurface
+      },
+      '&[aria-selected="true"]': {
+        backgroundColor: overlaySelectedSurface
+      },
+      '&[aria-selected="true"].Mui-focused': {
+        backgroundColor: withAlpha(palette.primary.main, isDark ? 0.24 : 0.12)
+      }
+    }
+  };
+}
+
+function ConfigSection({ title, icon, children, defaultExpanded = true, helperText, themeTokens }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark, palette, panelBorder, primaryText, secondaryText, sectionSurface, sectionHeaderSurface, sectionHoverSurface } =
+    themeTokens;
 
   return (
     <Paper
       elevation={0}
       sx={{
-        border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+        border: `1px solid ${panelBorder}`,
         borderRadius: 2,
         overflow: 'hidden',
-        mb: 2
+        mb: 2,
+        backgroundColor: sectionSurface,
+        boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none'
       }}
     >
       <Box
@@ -74,27 +155,31 @@ function ConfigSection({ title, icon, children, defaultExpanded = true, helperTe
           justifyContent: 'space-between',
           p: 1.5,
           cursor: 'pointer',
-          backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+          backgroundColor: sectionHeaderSurface,
           '&:hover': {
-            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
+            background: sectionHoverSurface
           },
-          transition: 'background-color 0.2s'
+          transition: 'background 0.2s ease'
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {icon}
-          <Typography variant="subtitle2" fontWeight={600}>
+          <Typography variant="subtitle2" fontWeight={600} sx={{ color: primaryText }}>
             {title}
           </Typography>
         </Box>
-        {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+        {expanded ? (
+          <ExpandLessIcon fontSize="small" sx={{ color: secondaryText }} />
+        ) : (
+          <ExpandMoreIcon fontSize="small" sx={{ color: secondaryText }} />
+        )}
       </Box>
       <Collapse in={expanded}>
-        <Divider />
+        <Divider sx={{ borderColor: panelBorder }} />
         <Box sx={{ p: 2 }}>
           {children}
           {helperText && (
-            <Typography variant="caption" color="textSecondary" sx={{ mt: 1.5, display: 'block' }}>
+            <Typography variant="caption" sx={{ mt: 1.5, display: 'block', color: secondaryText }}>
               {helperText}
             </Typography>
           )}
@@ -109,7 +194,8 @@ ConfigSection.propTypes = {
   icon: PropTypes.node,
   children: PropTypes.node.isRequired,
   defaultExpanded: PropTypes.bool,
-  helperText: PropTypes.string
+  helperText: PropTypes.string,
+  themeTokens: PropTypes.object.isRequired
 };
 
 /**
@@ -127,36 +213,99 @@ export default function SpeedTestDialog({
   onModeChange
 }) {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const themeTokens = getSpeedTestDialogThemeTokens(theme, isDark);
+  const {
+    palette,
+    dialogSurface,
+    dialogSurfaceGradient,
+    headerSurface,
+    actionSurface,
+    panelBorder,
+    fieldSurface,
+    fieldHoverBorder,
+    primaryText,
+    secondaryText,
+    tertiaryText,
+    controlRowSurface,
+    controlRowBorder,
+    infoAlertSurface,
+    infoAlertBorder,
+    warningAlertSurface,
+    warningAlertBorder,
+    successFabSurface,
+    successFabHoverSurface,
+    successFabShadow,
+    successFabHoverShadow
+  } = themeTokens;
+  const overlayPaperSx = getOverlayPaperSx(themeTokens, theme);
+  const selectMenuProps = {
+    PaperProps: {
+      sx: overlayPaperSx
+    },
+    MenuListProps: {
+      sx: { py: 0.5 }
+    }
+  };
+  const autocompleteSlotProps = {
+    paper: {
+      sx: overlayPaperSx
+    },
+    listbox: {
+      sx: { py: 0.5 }
+    }
+  };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          backgroundColor: dialogSurface,
+          backgroundImage: dialogSurfaceGradient,
+          border: '1px solid',
+          borderColor: panelBorder,
+          boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.05)}` : theme.shadows[8]
+        }
+      }}
+    >
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: `1px solid ${panelBorder}`,
+          backgroundColor: headerSurface,
+          color: primaryText
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <SpeedIcon color="primary" />
-          <span>测速设置</span>
+          <Typography variant="h6" sx={{ color: primaryText }}>
+            测速设置
+          </Typography>
         </Box>
         <Tooltip title="使用当前配置立即开始测速" placement="left">
           <Fab
-            color="primary"
             size={isMobile ? 'small' : 'medium'}
             onClick={() => {
               onRunSpeedTest();
               onClose();
             }}
             sx={{
-              background: isDark
-                ? 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)'
-                : 'linear-gradient(135deg, #66bb6a 0%, #43a047 100%)',
-              boxShadow: isDark ? '0 4px 14px rgba(76, 175, 80, 0.4)' : '0 4px 14px rgba(76, 175, 80, 0.3)',
+              background: successFabSurface,
+              boxShadow: successFabShadow,
+              color: theme.palette.common.white,
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
-                background: isDark
-                  ? 'linear-gradient(135deg, #66bb6a 0%, #388e3c 100%)'
-                  : 'linear-gradient(135deg, #81c784 0%, #66bb6a 100%)',
+                background: successFabHoverSurface,
                 transform: 'scale(1.08)',
-                boxShadow: isDark ? '0 6px 20px rgba(76, 175, 80, 0.5)' : '0 6px 20px rgba(76, 175, 80, 0.4)'
+                boxShadow: successFabHoverShadow
               },
               '&:active': {
                 transform: 'scale(0.98)'
@@ -167,19 +316,58 @@ export default function SpeedTestDialog({
           </Fab>
         </Tooltip>
       </DialogTitle>
-      <DialogContent>
+      <DialogContent
+        sx={{
+          backgroundColor: dialogSurface,
+          '& .MuiOutlinedInput-root': {
+            backgroundColor: fieldSurface,
+            transition: 'background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+            '& fieldset': {
+              borderColor: panelBorder
+            },
+            '&:hover fieldset': {
+              borderColor: fieldHoverBorder
+            }
+          },
+          '& .MuiFormHelperText-root': {
+            color: secondaryText
+          },
+          '& .MuiFormLabel-root': {
+            color: secondaryText
+          },
+          '& .MuiInputAdornment-root, & .MuiAutocomplete-endAdornment': {
+            color: secondaryText
+          },
+          '& .MuiFormControlLabel-label': {
+            color: primaryText
+          }
+        }}
+      >
         {/* ========== 定时测速设置 ========== */}
-        <ConfigSection title="定时测速" icon={<TimerIcon fontSize="small" color="action" />}>
+        <ConfigSection title="定时测速" icon={<TimerIcon fontSize="small" color="action" />} themeTokens={themeTokens}>
           <Stack spacing={2}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={speedTestForm.enabled}
-                  onChange={(e) => setSpeedTestForm({ ...speedTestForm, enabled: e.target.checked })}
-                />
-              }
-              label="启用自动测速"
-            />
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 2,
+                p: 1.5,
+                borderRadius: 2,
+                backgroundColor: controlRowSurface,
+                border: `1px solid ${controlRowBorder}`
+              }}
+            >
+              <Box>
+                <Typography variant="body2" sx={{ color: primaryText }}>
+                  启用自动测速
+                </Typography>
+                <Typography variant="caption" sx={{ color: tertiaryText }}>
+                  关闭后将停止按计划自动执行测速任务
+                </Typography>
+              </Box>
+              <Switch checked={speedTestForm.enabled} onChange={(e) => setSpeedTestForm({ ...speedTestForm, enabled: e.target.checked })} />
+            </Box>
             {speedTestForm.enabled && (
               <CronExpressionGenerator
                 value={speedTestForm.cron}
@@ -194,6 +382,7 @@ export default function SpeedTestDialog({
         <ConfigSection
           title="测速模式"
           icon={<SpeedIcon fontSize="small" color="action" />}
+          themeTokens={themeTokens}
           helperText={
             speedTestForm.mode === 'mihomo' ? '两阶段测试：先并发测延迟，再低并发测下载速度' : '仅测试延迟，速度更快，适合快速筛选可用节点'
           }
@@ -201,7 +390,13 @@ export default function SpeedTestDialog({
           <Stack spacing={2}>
             <FormControl fullWidth size="small">
               <InputLabel>测速模式</InputLabel>
-              <Select variant={'outlined'} value={speedTestForm.mode} label="测速模式" onChange={(e) => onModeChange(e.target.value)}>
+              <Select
+                variant="outlined"
+                value={speedTestForm.mode}
+                label="测速模式"
+                onChange={(e) => onModeChange(e.target.value)}
+                MenuProps={selectMenuProps}
+              >
                 <MenuItem value="tcp">仅延迟测试 (更快)</MenuItem>
                 <MenuItem value="mihomo">延迟 + 下载速度测试</MenuItem>
               </Select>
@@ -218,11 +413,14 @@ export default function SpeedTestDialog({
                 setSpeedTestForm({ ...speedTestForm, url: value });
               }}
               onInputChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, url: newValue || '' })}
+              slotProps={autocompleteSlotProps}
               renderOption={(props, option) => (
                 <Box component="li" {...props} key={option.value}>
                   <Box>
-                    <Typography variant="body2">{option.label}</Typography>
-                    <Typography variant="caption" color="textSecondary" sx={{ wordBreak: 'break-all' }}>
+                    <Typography variant="body2" sx={{ color: primaryText }}>
+                      {option.label}
+                    </Typography>
+                    <Typography variant="caption" sx={{ wordBreak: 'break-all', color: secondaryText }}>
                       {option.value}
                     </Typography>
                   </Box>
@@ -250,11 +448,14 @@ export default function SpeedTestDialog({
                   setSpeedTestForm({ ...speedTestForm, latency_url: value });
                 }}
                 onInputChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, latency_url: newValue || '' })}
+                slotProps={autocompleteSlotProps}
                 renderOption={(props, option) => (
                   <Box component="li" {...props} key={option.value}>
                     <Box>
-                      <Typography variant="body2">{option.label}</Typography>
-                      <Typography variant="caption" color="textSecondary" sx={{ wordBreak: 'break-all' }}>
+                      <Typography variant="body2" sx={{ color: primaryText }}>
+                        {option.label}
+                      </Typography>
+                      <Typography variant="caption" sx={{ wordBreak: 'break-all', color: secondaryText }}>
                         {option.value}
                       </Typography>
                     </Box>
@@ -295,6 +496,7 @@ export default function SpeedTestDialog({
                     value={speedTestForm.speed_record_mode || 'average'}
                     label="速度记录模式"
                     onChange={(e) => setSpeedTestForm({ ...speedTestForm, speed_record_mode: e.target.value })}
+                    MenuProps={selectMenuProps}
                   >
                     <MenuItem value="average">平均速度 (推荐)</MenuItem>
                     <MenuItem value="peak">峰值速度</MenuItem>
@@ -346,9 +548,9 @@ export default function SpeedTestDialog({
                 />
               }
               label={
-                <Typography variant="body2">
+                <Typography variant="body2" sx={{ color: primaryText }}>
                   检测落地IP国家
-                  <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
+                  <Typography component="span" variant="caption" sx={{ ml: 0.5, color: secondaryText }}>
                     (测速时顺便获取节点出口国家)
                   </Typography>
                 </Typography>
@@ -361,6 +563,7 @@ export default function SpeedTestDialog({
                   value={speedTestForm.landing_ip_url || 'https://api.ipify.org'}
                   label="IP查询接口"
                   onChange={(e) => setSpeedTestForm({ ...speedTestForm, landing_ip_url: e.target.value })}
+                  MenuProps={selectMenuProps}
                 >
                   {LANDING_IP_URL_OPTIONS.map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
@@ -374,7 +577,12 @@ export default function SpeedTestDialog({
         </ConfigSection>
 
         {/* ========== 性能参数 ========== */}
-        <ConfigSection title="性能参数" icon={<TuneIcon fontSize="small" color="action" />} defaultExpanded={true}>
+        <ConfigSection
+          title="性能参数"
+          icon={<TuneIcon fontSize="small" color="action" />}
+          defaultExpanded={true}
+          themeTokens={themeTokens}
+        >
           <Stack spacing={2}>
             {/* 握手时间设置 - 带详细说明 */}
             <Alert
@@ -382,7 +590,12 @@ export default function SpeedTestDialog({
               variant="standard"
               icon={<InfoOutlinedIcon fontSize="small" />}
               sx={{
+                color: isDark ? palette.info.light : palette.text.primary,
+                backgroundColor: infoAlertSurface,
+                border: `1px solid ${infoAlertBorder}`,
+                boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none',
                 '& .MuiAlert-message': { width: '100%' },
+                '& .MuiAlert-icon': { color: isDark ? palette.info.light : palette.info.main },
                 py: 0.5
               }}
             >
@@ -395,13 +608,13 @@ export default function SpeedTestDialog({
                   />
                 }
                 label={
-                  <Typography variant="body2" fontWeight={500}>
+                  <Typography variant="body2" fontWeight={500} sx={{ color: primaryText }}>
                     延迟包含握手时间
                   </Typography>
                 }
                 sx={{ mb: 0.5, ml: 0 }}
               />
-              <Typography variant="caption" color="textSecondary" component="div">
+              <Typography variant="caption" component="div" sx={{ color: secondaryText }}>
                 {(speedTestForm.include_handshake ?? true) ? (
                   <>
                     <strong>开启（推荐）</strong>：测量完整连接时间，包含TCP/TLS/代理协议握手。
@@ -472,6 +685,7 @@ export default function SpeedTestDialog({
           title="测速范围"
           icon={<DataUsageIcon fontSize="small" color="action" />}
           defaultExpanded={false}
+          themeTokens={themeTokens}
           helperText="分组优先级高于标签：选了分组则先按分组筛选，再按标签过滤；只选标签则直接按标签筛选；都不选则测全部"
         >
           <Stack spacing={2}>
@@ -482,6 +696,7 @@ export default function SpeedTestDialog({
               options={groupOptions}
               value={speedTestForm.groups || []}
               onChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, groups: newValue })}
+              slotProps={autocompleteSlotProps}
               renderInput={(params) => <TextField {...params} label="测速分组" placeholder="留空则测试全部分组" />}
             />
             <Autocomplete
@@ -492,6 +707,7 @@ export default function SpeedTestDialog({
               value={speedTestForm.tags || []}
               onChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, tags: newValue.map((t) => t.name || t) })}
               isOptionEqualToValue={(option, value) => (option.name || option) === value}
+              slotProps={autocompleteSlotProps}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => {
                   const tagObj = (tagOptions || []).find((t) => t.name === option);
@@ -531,9 +747,24 @@ export default function SpeedTestDialog({
         </ConfigSection>
 
         {/* ========== 流量统计 ========== */}
-        <ConfigSection title="流量统计" icon={<DataUsageIcon fontSize="small" color="action" />} defaultExpanded={false}>
+        <ConfigSection
+          title="流量统计"
+          icon={<DataUsageIcon fontSize="small" color="action" />}
+          defaultExpanded={false}
+          themeTokens={themeTokens}
+        >
           <Stack spacing={1}>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 1,
+                p: 1.25,
+                borderRadius: 2,
+                backgroundColor: controlRowSurface,
+                border: `1px solid ${controlRowBorder}`
+              }}
+            >
               <FormControlLabel
                 control={
                   <Switch
@@ -542,7 +773,11 @@ export default function SpeedTestDialog({
                     size="small"
                   />
                 }
-                label={<Typography variant="body2">按分组统计</Typography>}
+                label={
+                  <Typography variant="body2" sx={{ color: primaryText }}>
+                    按分组统计
+                  </Typography>
+                }
               />
               <FormControlLabel
                 control={
@@ -552,7 +787,11 @@ export default function SpeedTestDialog({
                     size="small"
                   />
                 }
-                label={<Typography variant="body2">按来源统计</Typography>}
+                label={
+                  <Typography variant="body2" sx={{ color: primaryText }}>
+                    按来源统计
+                  </Typography>
+                }
               />
               <FormControlLabel
                 control={
@@ -564,7 +803,7 @@ export default function SpeedTestDialog({
                   />
                 }
                 label={
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ color: primaryText }}>
                     按节点统计
                     <Typography component="span" variant="caption" color="error.main" sx={{ ml: 0.5 }}>
                       (大数据量)
@@ -574,14 +813,29 @@ export default function SpeedTestDialog({
               />
             </Box>
             {speedTestForm.traffic_by_node && (
-              <Typography variant="caption" color="error.main">
-                ⚠️ 按节点统计会记录每个节点的流量消耗，节点数量过万时会增加约1-2MB存储空间
-              </Typography>
+              <Alert
+                severity="error"
+                variant="standard"
+                sx={{
+                  backgroundColor: warningAlertSurface,
+                  border: `1px solid ${warningAlertBorder}`,
+                  '& .MuiAlert-icon': { color: palette.error.main }
+                }}
+              >
+                <Typography variant="caption" sx={{ color: primaryText }}>
+                  按节点统计会记录每个节点的流量消耗，节点数量过万时会增加约1-2MB存储空间
+                </Typography>
+              </Alert>
             )}
           </Stack>
         </ConfigSection>
       </DialogContent>
-      <DialogActions>
+      <DialogActions
+        sx={{
+          backgroundColor: actionSurface,
+          borderTop: `1px solid ${panelBorder}`
+        }}
+      >
         <Button onClick={onClose}>取消</Button>
         <Button variant="contained" onClick={onSubmit}>
           保存设置

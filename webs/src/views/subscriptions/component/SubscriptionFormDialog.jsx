@@ -50,6 +50,9 @@ import NodeProtocolFilter from 'components/NodeProtocolFilter';
 import NodeTransferBox from './NodeTransferBox';
 import DeduplicationConfig from './DeduplicationConfig';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
+import { withAlpha } from 'utils/colorUtils';
 import { getFraudScoreIcon, QUALITY_STATUS_OPTIONS } from 'utils/fraudScore';
 import { getDelayIcon, getSpeedIcon } from 'utils/nodeMetricIcons';
 import {
@@ -132,7 +135,12 @@ export default function SubscriptionFormDialog({
   setFormData,
   templates,
   scripts,
-  allNodes,
+  selectorNodes,
+  selectorNodesTotal,
+  selectorNodesLoading,
+  selectedNodesList,
+  groupNodeCounts,
+  allNodeTotal,
   groupOptions,
   sourceOptions,
   countryOptions,
@@ -173,7 +181,13 @@ export default function SubscriptionFormDialog({
   onToggleAllSelected
 }) {
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
+  const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
+    theme,
+    isDark
+  );
+  const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
   const [countryWhitelistInput, setCountryWhitelistInput] = useState('');
   const [countryBlacklistInput, setCountryBlacklistInput] = useState('');
 
@@ -194,16 +208,6 @@ export default function SubscriptionFormDialog({
       [panel]: isExpanded
     }));
   };
-
-  // 按分组统计节点数量
-  const groupNodeCounts = useMemo(() => {
-    const counts = {};
-    allNodes.forEach((node) => {
-      const group = node.Group || '未分组';
-      counts[group] = (counts[group] || 0) + 1;
-    });
-    return counts;
-  }, [allNodes]);
 
   // 按类别筛选模板
   const clashTemplates = useMemo(() => {
@@ -234,9 +238,12 @@ export default function SubscriptionFormDialog({
     setInputValue('');
   };
 
-  // 过滤后的节点列表
-  const filteredNodes = useMemo(() => {
-    return allNodes.filter((node) => {
+  const normalizedSelectorNodes = useMemo(() => selectorNodes || [], [selectorNodes]);
+  const selectorLoadingText = selectorNodesLoading ? '节点列表加载中...' : '';
+
+  // 可选节点（排除已选，使用 ID 匹配）
+  const availableNodes = useMemo(() => {
+    return normalizedSelectorNodes.filter((node) => {
       if (nodeGroupFilter !== 'all' && node.Group !== nodeGroupFilter) return false;
       if (nodeSourceFilter !== 'all' && node.Source !== nodeSourceFilter) return false;
       if (nodeSearchQuery) {
@@ -255,20 +262,13 @@ export default function SubscriptionFormDialog({
           return false;
         }
       }
-      return true;
+      return !formData.selectedNodes.includes(node.ID);
     });
-  }, [allNodes, nodeGroupFilter, nodeSourceFilter, nodeSearchQuery, nodeCountryFilter]);
+  }, [normalizedSelectorNodes, nodeGroupFilter, nodeSourceFilter, nodeSearchQuery, nodeCountryFilter, formData.selectedNodes]);
 
-  // 可选节点（排除已选，使用 ID 匹配）
-  const availableNodes = useMemo(() => {
-    return filteredNodes.filter((node) => !formData.selectedNodes.includes(node.ID));
-  }, [filteredNodes, formData.selectedNodes]);
+  const selectorNodesCount = selectorNodesTotal || availableNodes.length;
 
   // 已选节点（使用 ID 匹配）
-  const selectedNodesList = useMemo(() => {
-    return allNodes.filter((node) => formData.selectedNodes.includes(node.ID));
-  }, [allNodes, formData.selectedNodes]);
-
   // 计算过滤规则数量
   const filterRulesCount = useMemo(() => {
     let count = 0;
@@ -316,36 +316,71 @@ export default function SubscriptionFormDialog({
   const helperCaptionSx = {
     display: 'block',
     mt: 1,
-    color: 'text.secondary'
+    color: secondaryText
+  };
+
+  const insetHighlight = isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.03)}` : 'none';
+  const accordionHoverBorder = withAlpha(palette.primary.main, isDark ? 0.3 : 0.16);
+  const accordionExpandedBorder = withAlpha(palette.primary.main, isDark ? 0.36 : 0.2);
+  const accordionSummaryHoverSurface = isDark ? withAlpha(palette.background.paper, 0.22) : withAlpha(palette.primary.main, 0.04);
+  const accordionDetailsSurface = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.08)} 0%, ${dialogSurface} 100%)`
+    : dialogSurface;
+  const helperPanelSx = {
+    mt: 1,
+    p: 1.5,
+    bgcolor: nestedPanelSurface,
+    borderRadius: 1.5,
+    border: '1px solid',
+    borderColor: panelBorder,
+    boxShadow: insetHighlight
   };
 
   // 面板样式
   const accordionSx = {
     mb: 1.5,
     '&:before': { display: 'none' },
-    bgcolor: 'background.paper',
+    bgcolor: dialogSurface,
+    backgroundImage: isDark ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.12)} 0%, ${dialogSurface} 100%)` : 'none',
     border: '1px solid',
-    borderColor: 'divider',
-    boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[1],
+    borderColor: panelBorder,
+    boxShadow: insetHighlight,
     borderRadius: '12px !important',
     overflow: 'hidden',
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+    '&:hover': {
+      borderColor: accordionHoverBorder
+    },
     '&.Mui-expanded': {
-      margin: '0 0 12px 0'
+      margin: '0 0 12px 0',
+      borderColor: accordionExpandedBorder
     }
   };
 
   const accordionSummarySx = {
     minHeight: 56,
-    bgcolor: 'background.default',
-    borderBottom: '1px solid',
-    borderColor: 'divider',
-    transition: 'background-color 0.2s ease',
+    px: 0.5,
+    color: primaryText,
+    bgcolor: mutedPanelSurface,
+    transition: 'background-color 0.2s ease, border-color 0.2s ease',
+    '& .MuiAccordionSummary-expandIconWrapper': {
+      color: tertiaryText,
+      transition: 'color 0.2s ease, transform 0.2s ease'
+    },
     '&:hover': {
-      bgcolor: 'action.hover'
+      bgcolor: accordionSummaryHoverSurface,
+      '& .MuiAccordionSummary-expandIconWrapper': {
+        color: secondaryText
+      }
     },
     '&.Mui-expanded': {
       minHeight: 56,
-      bgcolor: 'background.paper'
+      bgcolor: nestedPanelSurface,
+      borderBottom: '1px solid',
+      borderColor: panelBorder,
+      '& .MuiAccordionSummary-expandIconWrapper': {
+        color: primaryText
+      }
     },
     '& .MuiAccordionSummary-content': {
       alignItems: 'center',
@@ -356,10 +391,52 @@ export default function SubscriptionFormDialog({
     }
   };
 
+  const accordionDetailsSx = {
+    px: matchDownMd ? 2 : 2.5,
+    py: 2.25,
+    bgcolor: dialogSurface,
+    backgroundImage: accordionDetailsSurface
+  };
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>{isEdit ? '编辑订阅' : '添加订阅'}</DialogTitle>
-      <DialogContent>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      fullScreen={matchDownMd}
+      slotProps={{
+        paper: {
+          sx: matchDownMd
+            ? {
+                borderRadius: 0,
+                border: '1px solid',
+                borderColor: panelBorder,
+                bgcolor: dialogSurface,
+                backgroundImage: dialogSurfaceGradient
+              }
+            : {
+                borderRadius: 2.5,
+                border: '1px solid',
+                borderColor: panelBorder,
+                bgcolor: dialogSurface,
+                backgroundImage: dialogSurfaceGradient
+              }
+        }
+      }}
+    >
+      <DialogTitle
+        sx={{
+          pb: 1.5,
+          color: primaryText,
+          bgcolor: mutedPanelSurface,
+          borderBottom: '1px solid',
+          borderColor: panelBorder
+        }}
+      >
+        {isEdit ? '编辑订阅' : '添加订阅'}
+      </DialogTitle>
+      <DialogContent sx={{ px: matchDownMd ? 2 : 3, pt: 2.5, pb: 2, bgcolor: 'transparent' }}>
         <Box sx={{ mt: 1 }}>
           {/* ========== 基础设置 ========== */}
           <Accordion expanded={expandedPanels.basic} onChange={handlePanelChange('basic')} sx={accordionSx}>
@@ -369,7 +446,7 @@ export default function SubscriptionFormDialog({
                 基础设置
               </Typography>
             </AccordionSummary>
-            <AccordionDetails>
+            <AccordionDetails sx={accordionDetailsSx}>
               <Stack spacing={2.5}>
                 <TextField
                   fullWidth
@@ -489,7 +566,7 @@ export default function SubscriptionFormDialog({
                 />
               )}
             </AccordionSummary>
-            <AccordionDetails>
+            <AccordionDetails sx={accordionDetailsSx}>
               <Stack spacing={2.5}>
                 {/* 选择模式 */}
                 <Box>
@@ -533,7 +610,7 @@ export default function SubscriptionFormDialog({
                         <FormControl fullWidth size="small">
                           <InputLabel>分组过滤</InputLabel>
                           <Select value={nodeGroupFilter} label="分组过滤" onChange={(e) => setNodeGroupFilter(e.target.value)}>
-                            <MenuItem value="all">全部分组 ({allNodes.length})</MenuItem>
+                            <MenuItem value="all">全部分组 ({allNodeTotal})</MenuItem>
                             {groupOptions.map((g) => (
                               <MenuItem key={g} value={g}>
                                 {g} ({groupNodeCounts[g] || 0})
@@ -583,11 +660,12 @@ export default function SubscriptionFormDialog({
                       availableNodes={availableNodes}
                       selectedNodes={formData.selectedNodes}
                       selectedNodesList={selectedNodesList}
-                      allNodes={allNodes}
                       checkedAvailable={checkedAvailable}
                       checkedSelected={checkedSelected}
                       selectedNodeSearch={selectedNodeSearch}
                       onSelectedNodeSearchChange={setSelectedNodeSearch}
+                      selectorNodesTotal={selectorNodesCount}
+                      selectorNodesLoading={selectorNodesLoading}
                       mobileTab={mobileTab}
                       onMobileTabChange={setMobileTab}
                       matchDownMd={matchDownMd}
@@ -602,6 +680,11 @@ export default function SubscriptionFormDialog({
                       onToggleAllAvailable={onToggleAllAvailable}
                       onToggleAllSelected={onToggleAllSelected}
                     />
+                    {selectorLoadingText && (
+                      <Alert severity="info" variant="outlined" sx={{ mt: 1 }}>
+                        {selectorLoadingText}
+                      </Alert>
+                    )}
                   </>
                 )}
               </Stack>
@@ -619,7 +702,7 @@ export default function SubscriptionFormDialog({
                 <Chip size="small" label={`已启用 ${filterRulesCount} 项规则`} color="warning" variant="outlined" sx={{ ml: 1 }} />
               )}
             </AccordionSummary>
-            <AccordionDetails>
+            <AccordionDetails sx={accordionDetailsSx}>
               <Stack spacing={2.5}>
                 {/* 延迟和速度过滤 */}
                 <Grid container spacing={2}>
@@ -955,7 +1038,7 @@ export default function SubscriptionFormDialog({
                 <Chip size="small" label="已配置" color="success" variant="outlined" sx={{ ml: 1 }} />
               )}
             </AccordionSummary>
-            <AccordionDetails>
+            <AccordionDetails sx={accordionDetailsSx}>
               <DeduplicationConfig
                 value={formData.deduplicationRule || ''}
                 onChange={(rule) => setFormData({ ...formData, deduplicationRule: rule })}
@@ -974,7 +1057,7 @@ export default function SubscriptionFormDialog({
                 <Chip size="small" label="已配置" color="info" variant="outlined" sx={{ ml: 1 }} />
               )}
             </AccordionSummary>
-            <AccordionDetails>
+            <AccordionDetails sx={accordionDetailsSx}>
               <Stack spacing={2.5}>
                 {/* 原名预处理 */}
                 <NodeNamePreprocessor
@@ -1025,17 +1108,8 @@ export default function SubscriptionFormDialog({
                         placeholder="例如: [$Protocol]$LinkCountry-$Name"
                         helperText="留空则使用原始名称，仅在访问订阅链接时生效"
                       />
-                      <Box
-                        sx={{
-                          mt: 1,
-                          p: 1.5,
-                          bgcolor: 'background.default',
-                          borderRadius: 1.5,
-                          border: '1px solid',
-                          borderColor: 'divider'
-                        }}
-                      >
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }} component="div">
+                      <Box sx={helperPanelSx}>
+                        <Typography variant="caption" sx={{ color: tertiaryText }} component="div">
                           <strong>可用变量：</strong>
                           <br />• <code>$Name</code> - 系统备注名称 &nbsp;&nbsp; • <code>$LinkName</code> - 原始节点名称
                           <br />• <code>$LinkCountry</code> - 落地IP国家代码 &nbsp;&nbsp; • <code>$Speed</code> - 下载速度
@@ -1086,7 +1160,7 @@ export default function SubscriptionFormDialog({
                 <Chip size="small" label={`已配置 ${advancedSettingsCount} 项`} color="secondary" variant="outlined" sx={{ ml: 1 }} />
               )}
             </AccordionSummary>
-            <AccordionDetails>
+            <AccordionDetails sx={accordionDetailsSx}>
               <Stack spacing={2.5}>
                 {/* 脚本选择 */}
                 <Autocomplete
@@ -1134,7 +1208,15 @@ export default function SubscriptionFormDialog({
           </Accordion>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+      <DialogActions
+        sx={{
+          px: matchDownMd ? 2 : 3,
+          py: 1.5,
+          bgcolor: mutedPanelSurface,
+          borderTop: '1px solid',
+          borderColor: panelBorder
+        }}
+      >
         <Stack direction="row" spacing={2} sx={{ width: '100%', justifyContent: showPreview ? 'space-between' : 'flex-end' }}>
           {showPreview && (
             <Button

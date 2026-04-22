@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
 
 // material-ui
-import { useColorScheme, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -38,80 +38,35 @@ import {
   deleteNodeCheckProfile,
   runNodeCheckWithProfile
 } from 'api/nodeCheck';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // local components
 import NodeCheckProfileFormDialog from './NodeCheckProfileFormDialog';
 import { withAlpha } from 'utils/colorUtils';
+import { getNodeCheckStrategyChipSx, getNodeCheckStrategyThemeTokens } from '../nodeCheckTheme';
 
 import { buildNodeCheckProfilePayload, formatUnlockProvidersSummary, setUnlockMeta } from '../utils';
-
-const getStrategyTitleChipSx = (theme, isDark, tone = 'neutral') => {
-  const palette = theme.vars?.palette || theme.palette;
-  const toneMap = {
-    success: {
-      accent: palette.success.main,
-      text: isDark ? palette.success.light : palette.success.dark
-    },
-    info: {
-      accent: palette.info.main,
-      text: isDark ? palette.info.light : palette.info.dark
-    },
-    warning: {
-      accent: palette.warning.main,
-      text: isDark ? palette.warning.light : palette.warning.dark
-    },
-    neutral: {
-      accent: palette.grey[500],
-      text: isDark ? withAlpha(palette.common.white, 0.92) : withAlpha(palette.text.primary, 0.82)
-    }
-  };
-
-  const { accent, text } = toneMap[tone] || toneMap.neutral;
-
-  return {
-    height: 22,
-    borderRadius: 1.5,
-    flexShrink: 0,
-    fontSize: '0.72rem',
-    fontWeight: 700,
-    letterSpacing: '0.01em',
-    color: text,
-    backgroundColor: withAlpha(accent, isDark ? (tone === 'neutral' ? 0.24 : 0.18) : tone === 'neutral' ? 0.08 : 0.1),
-    border: `1px solid ${withAlpha(accent, isDark ? (tone === 'neutral' ? 0.34 : 0.32) : tone === 'neutral' ? 0.16 : 0.2)}`,
-    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.05)}` : 'none',
-    '& .MuiChip-label': {
-      px: 1,
-      py: 0
-    },
-    '& .MuiChip-icon': {
-      color: 'inherit',
-      fontSize: '0.82rem',
-      ml: 0.75,
-      mr: -0.25
-    }
-  };
-};
 
 /**
  * 节点检测策略管理抽屉
  */
 export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, tagOptions, onMessage }) {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const runtimeColorScheme = typeof document !== 'undefined' ? document.documentElement?.getAttribute('data-color-scheme') : null;
-  const isDark = (mode || runtimeColorScheme || theme.palette.mode) === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const palette = theme.vars?.palette || theme.palette;
-  const drawerSurface = isDark ? withAlpha(palette.background.default, 0.97) : palette.background.paper;
-  const drawerSurfaceGradient = isDark
-    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.14)} 0%, ${drawerSurface} 100%)`
-    : 'none';
-  const headerSurface = isDark ? withAlpha(palette.background.paper, 0.2) : palette.background.paper;
-  const mutedPanelSurface = isDark ? withAlpha(palette.background.paper, 0.34) : withAlpha(palette.background.default, 0.72);
-  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
-  const listRowHover = isDark
-    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.28)} 0%, ${withAlpha(palette.primary.main, 0.05)} 100%)`
-    : withAlpha(palette.primary.main, 0.04);
+  const themeTokens = getNodeCheckStrategyThemeTokens(theme, isDark);
+  const {
+    palette,
+    dialogSurface,
+    dialogSurfaceGradient,
+    headerSurface,
+    emptyStateSurface,
+    panelBorder,
+    listRowHoverBackground,
+    closeButtonHoverSurface,
+    successActionHoverSurface,
+    errorActionHoverSurface
+  } = themeTokens;
 
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -228,8 +183,8 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
         PaperProps={{
           sx: {
             width: isMobile ? '100%' : 420,
-            backgroundColor: drawerSurface,
-            backgroundImage: drawerSurfaceGradient,
+            backgroundColor: dialogSurface,
+            backgroundImage: dialogSurfaceGradient,
             borderLeft: `1px solid ${panelBorder}`,
             boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.05)}` : theme.shadows[8],
             display: 'flex',
@@ -261,7 +216,7 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
               size="small"
               sx={{
                 '&:hover': {
-                  backgroundColor: withAlpha(palette.primary.main, isDark ? 0.14 : 0.08)
+                  backgroundColor: closeButtonHoverSurface
                 }
               }}
             >
@@ -286,7 +241,7 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                 borderRadius: 2,
                 border: '1px solid',
                 borderColor: panelBorder,
-                backgroundColor: mutedPanelSurface,
+                backgroundColor: emptyStateSurface,
                 boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none'
               }}
             >
@@ -307,7 +262,7 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                       py: 2,
                       transition: 'background 0.2s ease',
                       '&:hover': {
-                        background: listRowHover
+                        background: listRowHoverBackground
                       }
                     }}
                   >
@@ -336,20 +291,20 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                           <Chip
                             label={profile.mode === 'mihomo' ? '延迟+速度' : '仅延迟'}
                             size="small"
-                            sx={getStrategyTitleChipSx(theme, isDark, profile.mode === 'mihomo' ? 'success' : 'info')}
+                            sx={getNodeCheckStrategyChipSx(themeTokens, profile.mode === 'mihomo' ? 'success' : 'info')}
                           />
                           {profile.detectCountry && (
-                            <Chip label="国家" size="small" sx={getStrategyTitleChipSx(theme, isDark, 'neutral')} />
+                            <Chip label="国家" size="small" sx={getNodeCheckStrategyChipSx(themeTokens, 'neutral')} />
                           )}
                           {profile.detectQuality && (
-                            <Chip label="质量" size="small" sx={getStrategyTitleChipSx(theme, isDark, 'warning')} />
+                            <Chip label="质量" size="small" sx={getNodeCheckStrategyChipSx(themeTokens, 'warning')} />
                           )}
                           {profile.detectUnlock && (
                             <Chip
                               icon={<LockOpenIcon sx={{ fontSize: '12px !important' }} />}
                               label={`解锁${profile.unlockProviders?.length ? ` · ${formatUnlockProvidersSummary(profile.unlockProviders, 1)}` : ''}`}
                               size="small"
-                              sx={getStrategyTitleChipSx(theme, isDark, 'info')}
+                              sx={getNodeCheckStrategyChipSx(themeTokens, 'info')}
                             />
                           )}
                         </Box>
@@ -368,7 +323,7 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                                 label={`下次: ${formatNextRunTime(profile.nextRunTime)}`}
                                 size="small"
                                 sx={{
-                                  ...getStrategyTitleChipSx(theme, isDark, 'neutral'),
+                                  ...getNodeCheckStrategyChipSx(themeTokens, 'neutral'),
                                   height: 20,
                                   fontSize: '0.65rem'
                                 }}
@@ -401,7 +356,7 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                             onClick={() => handleRun(profile)}
                             sx={{
                               color: 'success.main',
-                              '&:hover': { backgroundColor: withAlpha(palette.success.main, isDark ? 0.16 : 0.08) }
+                              '&:hover': { backgroundColor: successActionHoverSurface }
                             }}
                           >
                             <PlayArrowIcon fontSize="small" />
@@ -413,7 +368,7 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                             onClick={() => handleEdit(profile)}
                             sx={{
                               color: 'text.secondary',
-                              '&:hover': { backgroundColor: withAlpha(palette.primary.main, isDark ? 0.14 : 0.08) }
+                              '&:hover': { backgroundColor: closeButtonHoverSurface }
                             }}
                           >
                             <EditIcon fontSize="small" />
@@ -425,7 +380,7 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                             onClick={() => handleDelete(profile)}
                             sx={{
                               color: 'error.main',
-                              '&:hover': { backgroundColor: withAlpha(palette.error.main, isDark ? 0.16 : 0.08) }
+                              '&:hover': { backgroundColor: errorActionHoverSurface }
                             }}
                           >
                             <DeleteIcon fontSize="small" />

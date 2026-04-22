@@ -50,6 +50,7 @@ import {
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 import { getNodeGroups, getNodeIds, getNodes, getProtocolUIMeta } from 'api/nodes';
 import ProfileSelectDialog from 'views/nodes/component/ProfileSelectDialog';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getRegisteredProtocolNames } from 'utils/protocolPresentation';
 
 // local components
@@ -71,7 +72,7 @@ import { validateCronExpression } from './utils';
 export default function AirportList() {
   const theme = useTheme();
   const palette = theme.vars?.palette || theme.palette;
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
 

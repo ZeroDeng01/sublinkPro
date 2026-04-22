@@ -14,6 +14,7 @@ import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // icons
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -52,7 +53,7 @@ export default function AirportTable({
 }) {
   const theme = useTheme();
   const palette = theme.vars?.palette || theme.palette;
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
 
   // 复制提示状态
   const [copyTip, setCopyTip] = useState({ open: false, name: '' });
@@ -277,7 +278,31 @@ export default function AirportTable({
     }
 
     return (
-      <Tooltip arrow placement="top" title={<AirportNodeStatsCard nodeStats={nodeStats} nodeCount={nodeCount} />}>
+      <Tooltip
+        arrow
+        placement="top"
+        title={<AirportNodeStatsCard nodeStats={nodeStats} nodeCount={nodeCount} />}
+        slotProps={{
+          tooltip: {
+            sx: {
+              p: 0,
+              bgcolor: 'transparent',
+              backgroundImage: 'none',
+              border: 'none',
+              boxShadow: 'none',
+              maxWidth: 'none'
+            }
+          },
+          arrow: {
+            sx: {
+              color: 'transparent',
+              '&::before': {
+                border: 'none'
+              }
+            }
+          }
+        }}
+      >
         <Box sx={{ cursor: 'help' }}>
           {/* 通过数量 */}
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
@@ -357,20 +382,18 @@ export default function AirportTable({
                 flexDirection: 'column',
                 borderRadius: 3,
                 border: `1px solid ${isSelected ? alpha(theme.palette.primary.main, 0.4) : alpha(theme.palette.divider, 0.12)}`,
-                boxShadow:
-                  theme.palette.mode === 'dark'
-                    ? `0 2px 8px ${alpha(theme.palette.common.black, isSelected ? 0.28 : 0.22)}`
-                    : `0 2px 8px ${alpha(theme.palette.primary.main, isSelected ? 0.16 : 0.06)}`,
+                boxShadow: isDark
+                  ? `0 2px 8px ${alpha(theme.palette.common.black, isSelected ? 0.28 : 0.22)}`
+                  : `0 2px 8px ${alpha(theme.palette.primary.main, isSelected ? 0.16 : 0.06)}`,
                 backgroundColor: isSelected ? alpha(theme.palette.primary.main, 0.03) : 'background.paper',
                 transition: 'all 0.2s ease',
                 overflow: 'hidden',
                 position: 'relative',
                 '&:hover': {
                   transform: 'translateY(-1px)',
-                  boxShadow:
-                    theme.palette.mode === 'dark'
-                      ? `0 6px 16px ${alpha(theme.palette.common.black, 0.28)}`
-                      : `0 6px 16px ${alpha(theme.palette.primary.main, 0.12)}`
+                  boxShadow: isDark
+                    ? `0 6px 16px ${alpha(theme.palette.common.black, 0.28)}`
+                    : `0 6px 16px ${alpha(theme.palette.primary.main, 0.12)}`
                 },
                 // 顶部状态指示条
                 '&::before': {

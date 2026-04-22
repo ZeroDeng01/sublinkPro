@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import { useState } from 'react';
 
 // material-ui
-import { useTheme, alpha } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -17,6 +17,9 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { withAlpha } from '../../../utils/colorUtils';
+import { getReadableTextTokens, getSurfaceTokens } from '../../../themes/surfaceTokens';
 import { getProtocolPresentation } from '../../../utils/protocolPresentation';
 
 // icons
@@ -39,12 +42,21 @@ const formatDateTime = (dateStr) => {
   }
 };
 
+const truncateText = (text, maxLength) => {
+  if (!text) return '-';
+  return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+};
+
 /**
  * 节点预览详情面板 - 居中弹窗
  */
 export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClose, onViewIP }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { isDark } = useResolvedColorScheme();
+  const palette = theme.vars?.palette || theme.palette;
+  const { dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(theme, isDark);
+  const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -52,7 +64,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
 
   const displayName = node.PreviewName || node.Name || node.OriginalName || '未知节点';
   const protocolInfo = getProtocolPresentation(node.Protocol);
-  const protocolColor = protocolInfo.color || theme.palette.primary.main;
+  const protocolColor = protocolInfo.color || palette.primary.main;
 
   // 复制到剪贴板
   const copyToClipboard = async (text, label) => {
@@ -67,8 +79,31 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
   // 标签列表
   const tags = node.Tags ? node.Tags.split(',').filter((t) => t.trim()) : [];
   const previewLink = node.PreviewLink || node.Link || '';
-  const subtleMonoColor = alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.86 : 0.66);
-  const secondaryLinkColor = alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.76 : 0.58);
+  const subtleMonoColor = isDark ? withAlpha(primaryText, 0.9) : withAlpha(palette.text.primary, 0.66);
+  const secondaryLinkColor = isDark ? withAlpha(primaryText, 0.74) : tertiaryText;
+  const subtleBorder = isDark ? withAlpha(palette.divider, 0.56) : withAlpha(palette.divider, 0.74);
+  const elevatedSurface = isDark ? withAlpha(palette.background.paper, 0.28) : palette.background.paper;
+  const accentSoftBorder = withAlpha(protocolColor, isDark ? 0.34 : 0.2);
+  const previewPanelBackground = isDark
+    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.18)} 0%, ${mutedPanelSurface} 100%)`
+    : 'none';
+  const copyButtonSx = {
+    fontSize: 10,
+    py: 0.25,
+    px: 1,
+    minWidth: 0,
+    flexShrink: 0,
+    borderRadius: 1,
+    borderColor: subtleBorder,
+    bgcolor: nestedPanelSurface,
+    color: secondaryText,
+    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none',
+    '&:hover': {
+      borderColor: withAlpha(palette.primary.main, isDark ? 0.42 : 0.24),
+      bgcolor: withAlpha(palette.primary.main, isDark ? 0.14 : 0.06),
+      color: primaryText
+    }
+  };
 
   return (
     <>
@@ -77,15 +112,17 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
         onClose={onClose}
         maxWidth="xs"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            overflow: 'hidden',
-            m: isMobile ? 2 : 3,
-            bgcolor: 'background.paper',
-            backgroundImage: 'none',
-            border: '1px solid',
-            borderColor: 'divider'
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+              overflow: 'hidden',
+              m: isMobile ? 2 : 3,
+              bgcolor: dialogSurface,
+              backgroundImage: dialogSurfaceGradient,
+              border: '1px solid',
+              borderColor: panelBorder
+            }
           }
         }}
       >
@@ -93,10 +130,10 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
           sx={{
             p: 2,
             position: 'relative',
-            bgcolor: 'background.default',
+            bgcolor: mutedPanelSurface,
             borderBottom: '1px solid',
-            borderColor: 'divider',
-            boxShadow: `inset 0 -1px 0 ${alpha(theme.palette.divider, 0.45)}`
+            borderColor: panelBorder,
+            boxShadow: `inset 0 -1px 0 ${withAlpha(palette.divider, 0.45)}`
           }}
         >
           {/* 关闭按钮 */}
@@ -107,11 +144,16 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
               position: 'absolute',
               top: 8,
               right: 8,
-              color: 'text.secondary',
-              bgcolor: alpha(theme.palette.background.paper, 0.9),
+              color: secondaryText,
+              bgcolor: nestedPanelSurface,
               border: '1px solid',
-              borderColor: alpha(theme.palette.divider, 0.9),
-              '&:hover': { bgcolor: 'background.paper' }
+              borderColor: subtleBorder,
+              boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none',
+              '&:hover': {
+                color: primaryText,
+                bgcolor: elevatedSurface,
+                borderColor: panelBorder
+              }
             }}
           >
             <CloseIcon fontSize="small" />
@@ -124,10 +166,10 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                 width: 52,
                 height: 52,
                 borderRadius: 2,
-                bgcolor: alpha(protocolColor, 0.12),
+                bgcolor: withAlpha(protocolColor, isDark ? 0.18 : 0.12),
                 color: protocolColor,
                 border: '1px solid',
-                borderColor: alpha(protocolColor, 0.22),
+                borderColor: accentSoftBorder,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -137,7 +179,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
               <Typography sx={{ fontSize: 30, lineHeight: 1 }}>{node.CountryFlag || '🌐'}</Typography>
             </Box>
             <Box sx={{ flex: 1, minWidth: 0, pr: 4 }}>
-              <Typography sx={{ color: 'text.primary', fontWeight: 700, fontSize: 16, lineHeight: 1.3, wordBreak: 'break-word' }}>
+              <Typography sx={{ color: primaryText, fontWeight: 700, fontSize: 16, lineHeight: 1.3, wordBreak: 'break-word' }}>
                 {displayName}
               </Typography>
               <Stack direction="row" alignItems="center" spacing={0.75} mt={0.5}>
@@ -148,13 +190,13 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                     height: 20,
                     fontSize: 10,
                     fontWeight: 600,
-                    bgcolor: alpha(protocolColor, 0.12),
+                    bgcolor: withAlpha(protocolColor, isDark ? 0.18 : 0.12),
                     color: protocolColor,
                     border: '1px solid',
-                    borderColor: alpha(protocolColor, 0.18)
+                    borderColor: accentSoftBorder
                   }}
                 />
-                {node.Group && <Typography sx={{ color: 'text.secondary', fontSize: 11 }}>{node.Group}</Typography>}
+                {node.Group && <Typography sx={{ color: secondaryText, fontSize: 11 }}>{node.Group}</Typography>}
               </Stack>
             </Box>
           </Stack>
@@ -168,19 +210,20 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                 borderRadius: 1.5,
                 p: 1,
                 textAlign: 'center',
-                bgcolor: 'background.paper',
-                borderColor: alpha(theme.palette.divider, 0.9)
+                bgcolor: nestedPanelSurface,
+                borderColor: subtleBorder,
+                boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.03)}` : 'none'
               }}
             >
               <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5}>
                 <SignalCellularAltIcon sx={{ fontSize: 12, color: 'success.main' }} />
-                <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>延迟</Typography>
+                <Typography sx={{ fontSize: 10, color: secondaryText }}>延迟</Typography>
               </Stack>
-              <Typography sx={{ fontSize: 18, fontWeight: 700, color: 'text.primary', mt: 0.25 }}>
+              <Typography sx={{ fontSize: 18, fontWeight: 700, color: primaryText, mt: 0.25 }}>
                 {node.DelayTime > 0 ? `${node.DelayTime}ms` : '-'}
               </Typography>
               {node.LatencyCheckAt && (
-                <Typography sx={{ fontSize: 9, color: 'text.secondary' }}>{formatDateTime(node.LatencyCheckAt)}</Typography>
+                <Typography sx={{ fontSize: 9, color: tertiaryText }}>{formatDateTime(node.LatencyCheckAt)}</Typography>
               )}
             </Paper>
             <Paper
@@ -190,42 +233,41 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                 borderRadius: 1.5,
                 p: 1,
                 textAlign: 'center',
-                bgcolor: 'background.paper',
-                borderColor: alpha(theme.palette.divider, 0.9)
+                bgcolor: nestedPanelSurface,
+                borderColor: subtleBorder,
+                boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.03)}` : 'none'
               }}
             >
               <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5}>
                 <SpeedIcon sx={{ fontSize: 12, color: 'info.main' }} />
-                <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>速度</Typography>
+                <Typography sx={{ fontSize: 10, color: secondaryText }}>速度</Typography>
               </Stack>
-              <Typography sx={{ fontSize: 18, fontWeight: 700, color: 'text.primary', mt: 0.25 }}>
+              <Typography sx={{ fontSize: 18, fontWeight: 700, color: primaryText, mt: 0.25 }}>
                 {node.Speed > 0 ? `${node.Speed.toFixed(1)}M` : '-'}
               </Typography>
-              {node.SpeedCheckAt && (
-                <Typography sx={{ fontSize: 9, color: 'text.secondary' }}>{formatDateTime(node.SpeedCheckAt)}</Typography>
-              )}
+              {node.SpeedCheckAt && <Typography sx={{ fontSize: 9, color: tertiaryText }}>{formatDateTime(node.SpeedCheckAt)}</Typography>}
             </Paper>
           </Stack>
         </Box>
 
-        <DialogContent sx={{ p: 2, bgcolor: 'background.paper' }}>
+        <DialogContent sx={{ p: 2, bgcolor: dialogSurface }}>
           {/* 名称转换 - 紧凑 */}
           {node.OriginalName && node.OriginalName !== displayName && (
             <Box
               sx={{
                 mb: 1.5,
                 p: 1,
-                bgcolor: 'background.default',
+                bgcolor: withAlpha(palette.primary.main, isDark ? 0.14 : 0.05),
                 borderRadius: 1.5,
                 border: '1px solid',
-                borderColor: alpha(theme.palette.primary.main, 0.18)
+                borderColor: withAlpha(palette.primary.main, isDark ? 0.3 : 0.18)
               }}
             >
               <Typography variant="caption" color="primary" fontWeight={600}>
                 名称转换
               </Typography>
               <Stack direction="row" alignItems="center" spacing={0.5} mt={0.25}>
-                <Typography sx={{ fontSize: 11, color: 'text.secondary' }} noWrap>
+                <Typography sx={{ fontSize: 11, color: secondaryText }} noWrap>
                   {node.OriginalName}
                 </Typography>
                 <ArrowForwardIcon sx={{ fontSize: 12, color: 'primary.main', flexShrink: 0 }} />
@@ -240,18 +282,18 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
           <Grid
             container
             spacing={1}
-            sx={{ mb: 1.5, p: 1.25, borderRadius: 1.5, bgcolor: 'background.default', border: '1px solid', borderColor: 'divider' }}
+            sx={{ mb: 1.5, p: 1.25, borderRadius: 1.5, bgcolor: mutedPanelSurface, border: '1px solid', borderColor: panelBorder }}
           >
             <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: secondaryText }}>
                 来源
               </Typography>
-              <Typography variant="body2" fontWeight={500}>
+              <Typography variant="body2" fontWeight={500} sx={{ color: primaryText }}>
                 {node.Source === 'manual' ? '手动添加' : node.Source || '-'}
               </Typography>
             </Grid>
             <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: secondaryText }}>
                 落地IP
               </Typography>
               {node.LandingIP ? (
@@ -271,7 +313,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                   {node.LandingIP.length > 15 ? node.LandingIP.substring(0, 15) + '...' : node.LandingIP}
                 </Typography>
               ) : (
-                <Typography variant="body2" fontWeight={500}>
+                <Typography variant="body2" fontWeight={500} sx={{ color: primaryText }}>
                   -
                 </Typography>
               )}
@@ -281,13 +323,14 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
           {/* 标签 */}
           {tags.length > 0 && (
             <Box sx={{ mb: 1.5 }}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: secondaryText }}>
                 标签
               </Typography>
               <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
                 {tags.map((tag, idx) => {
                   const tagName = tag.trim();
                   const tagColor = tagColorMap?.[tagName];
+                  const chipAccent = tagColor || palette.primary.main;
                   return (
                     <Chip
                       key={idx}
@@ -296,8 +339,14 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                       sx={{
                         height: 22,
                         fontSize: 11,
-                        bgcolor: tagColor || alpha(theme.palette.primary.main, 0.1),
-                        color: tagColor ? theme.palette.getContrastText(tagColor) : 'text.primary'
+                        bgcolor: withAlpha(chipAccent, isDark ? 0.18 : 0.1),
+                        color: tagColor ? chipAccent : primaryText,
+                        border: '1px solid',
+                        borderColor: withAlpha(chipAccent, isDark ? 0.34 : 0.2),
+                        '& .MuiChip-label': {
+                          px: 0.9,
+                          fontWeight: 600
+                        }
                       }}
                     />
                   );
@@ -306,19 +355,21 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
             </Box>
           )}
 
-          <Divider sx={{ my: 1.5 }} />
+          <Divider sx={{ my: 1.5, borderColor: subtleBorder }} />
 
           <Box
             sx={{
               p: 1.25,
               borderRadius: 1.5,
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.default, 0.84) : 'background.default',
+              bgcolor: mutedPanelSurface,
+              backgroundImage: previewPanelBackground,
               border: '1px solid',
-              borderColor: alpha(theme.palette.divider, theme.palette.mode === 'dark' ? 0.82 : 0.72)
+              borderColor: panelBorder,
+              boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.03)}` : 'none'
             }}
           >
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, fontWeight: 600 }}>
+              <Typography variant="caption" sx={{ flexShrink: 0, fontWeight: 600, color: secondaryText }}>
                 预览链接
               </Typography>
               <Typography
@@ -333,22 +384,14 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                   whiteSpace: 'nowrap'
                 }}
               >
-                {previewLink.substring(0, 50)}...
+                {truncateText(previewLink, 50)}
               </Typography>
               <Button
                 size="small"
                 variant="outlined"
                 startIcon={<ContentCopyIcon sx={{ fontSize: 12 }} />}
                 onClick={() => copyToClipboard(previewLink, '链接')}
-                sx={{
-                  fontSize: 10,
-                  py: 0.25,
-                  px: 1,
-                  minWidth: 0,
-                  flexShrink: 0,
-                  borderColor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.3 : 0.18),
-                  color: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.9) : 'primary.main'
-                }}
+                sx={copyButtonSx}
               >
                 复制
               </Button>
@@ -359,23 +402,23 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                 direction="row"
                 alignItems="center"
                 spacing={1}
-                sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: alpha(theme.palette.divider, 0.72) }}
+                sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: subtleBorder }}
               >
-                <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, fontWeight: 600 }}>
+                <Typography variant="caption" sx={{ flexShrink: 0, fontWeight: 600, color: secondaryText }}>
                   原始链接
                 </Typography>
                 <Typography sx={{ flex: 1, fontSize: 9, color: secondaryLinkColor, fontFamily: 'monospace' }} noWrap>
-                  {node.Link?.substring(0, 40)}...
+                  {truncateText(node.Link, 40)}
                 </Typography>
                 <Button
                   size="small"
                   color="inherit"
                   onClick={() => copyToClipboard(node.Link, '原始链接')}
                   sx={{
+                    ...copyButtonSx,
                     fontSize: 9,
                     py: 0,
-                    minWidth: 0,
-                    color: theme.palette.mode === 'dark' ? alpha(theme.palette.text.primary, 0.82) : 'text.secondary'
+                    px: 0.75
                   }}
                 >
                   复制

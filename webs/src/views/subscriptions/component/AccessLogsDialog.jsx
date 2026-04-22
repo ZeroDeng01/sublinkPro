@@ -17,71 +17,135 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
+import { withAlpha } from 'utils/colorUtils';
 
-/**
- * 访问记录对话框 - 响应式设计
- * 桌面端显示表格，移动端显示卡片
- */
-export default function AccessLogsDialog({ open, logs, onClose }) {
+export default function AccessLogsDialog({ open, logs, onClose, loading = false, title = '访问记录' }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { isDark } = useResolvedColorScheme();
+  const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
+    theme,
+    isDark
+  );
+  const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
 
-  // 移动端卡片布局
+  const rowHoverSurface = withAlpha(palette.primary.main, isDark ? 0.12 : 0.05);
+  const rowBorder = isDark ? withAlpha(palette.divider, 0.58) : withAlpha(palette.divider, 0.78);
+  const ipSurface = isDark ? withAlpha(palette.primary.main, 0.14) : withAlpha(palette.primary.main, 0.06);
+  const ipBorder = withAlpha(palette.primary.main, isDark ? 0.26 : 0.16);
+  const countChipSurface = withAlpha(palette.primary.main, isDark ? 0.18 : 0.08);
+  const countChipBorder = withAlpha(palette.primary.main, isDark ? 0.34 : 0.18);
+
+  const dialogPaperSx = {
+    borderRadius: isMobile ? 0 : 3,
+    overflow: 'hidden',
+    bgcolor: dialogSurface,
+    backgroundImage: dialogSurfaceGradient,
+    border: '1px solid',
+    borderColor: panelBorder
+  };
+
+  const titleSx = {
+    px: 2.5,
+    py: 2,
+    bgcolor: mutedPanelSurface,
+    borderBottom: '1px solid',
+    borderColor: panelBorder,
+    boxShadow: `inset 0 -1px 0 ${withAlpha(palette.divider, 0.42)}`
+  };
+
+  const actionsSx = {
+    px: 2.5,
+    py: 1.5,
+    bgcolor: mutedPanelSurface,
+    borderTop: '1px solid',
+    borderColor: panelBorder
+  };
+
+  const countChipSx = {
+    ml: 1,
+    bgcolor: countChipSurface,
+    color: palette.primary.main,
+    border: '1px solid',
+    borderColor: countChipBorder,
+    fontWeight: 600
+  };
+
+  const renderIpBlock = (ip) => (
+    <Box
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        maxWidth: '100%',
+        px: 1,
+        py: 0.5,
+        borderRadius: 1.25,
+        bgcolor: ipSurface,
+        border: '1px solid',
+        borderColor: ipBorder
+      }}
+    >
+      <Typography
+        variant="body2"
+        sx={{
+          fontFamily: 'monospace',
+          color: palette.primary.main,
+          fontWeight: 600,
+          wordBreak: 'break-all'
+        }}
+      >
+        {ip}
+      </Typography>
+    </Box>
+  );
+
   const MobileLogCard = ({ log }) => (
     <Card
-      variant="outlined"
       sx={{
         mb: 1.5,
-        borderRadius: 2,
+        borderRadius: 2.5,
+        bgcolor: nestedPanelSurface,
+        border: '1px solid',
+        borderColor: rowBorder,
         transition: 'all 0.2s ease',
         '&:hover': {
-          boxShadow: 2
+          bgcolor: rowHoverSurface,
+          borderColor: withAlpha(palette.primary.main, isDark ? 0.24 : 0.14)
         }
       }}
     >
       <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
         <Stack spacing={1}>
-          {/* 第一行: IP 地址和访问次数 */}
           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
-            <Typography
-              variant="subtitle2"
-              sx={{
-                fontFamily: 'monospace',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: 'primary.main',
-                wordBreak: 'break-all',
-                lineHeight: 1.4,
-                flex: 1,
-                minWidth: 0
-              }}
-            >
-              {log.IP}
-            </Typography>
+            <Box sx={{ flex: 1, minWidth: 0 }}>{renderIpBlock(log.IP)}</Box>
             <Chip
               size="small"
               label={`${log.Count} 次`}
-              color="primary"
-              variant="outlined"
               icon={<TouchAppIcon sx={{ fontSize: 14 }} />}
               sx={{
                 height: 24,
+                bgcolor: countChipSurface,
+                color: palette.primary.main,
+                border: '1px solid',
+                borderColor: countChipBorder,
                 '& .MuiChip-label': { px: 1 },
                 flexShrink: 0
               }}
             />
           </Box>
 
-          {/* 第二行: 来源地区 */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <LocationOnIcon sx={{ fontSize: 16, color: 'text.secondary', flexShrink: 0 }} />
+            <LocationOnIcon sx={{ fontSize: 16, color: tertiaryText, flexShrink: 0 }} />
             <Typography
               variant="body2"
-              color="text.secondary"
               sx={{
+                color: secondaryText,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap'
@@ -91,10 +155,9 @@ export default function AccessLogsDialog({ open, logs, onClose }) {
             </Typography>
           </Box>
 
-          {/* 第三行: 访问时间 */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <AccessTimeIcon sx={{ fontSize: 16, color: 'text.secondary', flexShrink: 0 }} />
-            <Typography variant="body2" color="text.secondary">
+            <AccessTimeIcon sx={{ fontSize: 16, color: tertiaryText, flexShrink: 0 }} />
+            <Typography variant="body2" sx={{ color: secondaryText }}>
               {log.Date}
             </Typography>
           </Box>
@@ -103,18 +166,32 @@ export default function AccessLogsDialog({ open, logs, onClose }) {
     </Card>
   );
 
-  // 桌面端表格布局
   const DesktopTable = () => (
-    <TableContainer>
+    <TableContainer
+      sx={{
+        borderRadius: 2.5,
+        bgcolor: nestedPanelSurface,
+        border: '1px solid',
+        borderColor: rowBorder,
+        overflow: 'hidden'
+      }}
+    >
       <Table size="small">
         <TableHead>
-          <TableRow>
-            <TableCell sx={{ fontWeight: 600, minWidth: 140 }}>IP 地址</TableCell>
-            <TableCell sx={{ fontWeight: 600, minWidth: 120 }}>来源地区</TableCell>
-            <TableCell sx={{ fontWeight: 600, width: 100 }} align="center">
+          <TableRow
+            sx={{
+              bgcolor: mutedPanelSurface,
+              '& .MuiTableCell-root': {
+                borderColor: rowBorder
+              }
+            }}
+          >
+            <TableCell sx={{ fontWeight: 600, minWidth: 140, color: secondaryText }}>IP 地址</TableCell>
+            <TableCell sx={{ fontWeight: 600, minWidth: 120, color: secondaryText }}>来源地区</TableCell>
+            <TableCell sx={{ fontWeight: 600, width: 100, color: secondaryText }} align="center">
               访问次数
             </TableCell>
-            <TableCell sx={{ fontWeight: 600, minWidth: 160 }}>最近访问</TableCell>
+            <TableCell sx={{ fontWeight: 600, minWidth: 160, color: secondaryText }}>最近访问</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -122,32 +199,24 @@ export default function AccessLogsDialog({ open, logs, onClose }) {
             <TableRow
               key={log.ID}
               sx={{
-                '&:hover': { bgcolor: 'action.hover' },
-                transition: 'background-color 0.2s'
+                transition: 'background-color 0.2s ease',
+                '&:hover': { bgcolor: rowHoverSurface },
+                '& .MuiTableCell-root': {
+                  borderColor: rowBorder
+                }
               }}
             >
+              <TableCell>{renderIpBlock(log.IP)}</TableCell>
               <TableCell>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontFamily: 'monospace',
-                    color: 'primary.main',
-                    fontWeight: 500
-                  }}
-                >
-                  {log.IP}
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{ color: secondaryText }}>
                   {log.Addr || '-'}
                 </Typography>
               </TableCell>
               <TableCell align="center">
-                <Chip size="small" label={log.Count} color="primary" variant="outlined" sx={{ minWidth: 50 }} />
+                <Chip size="small" label={log.Count} sx={{ ...countChipSx, minWidth: 50 }} />
               </TableCell>
               <TableCell>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{ color: secondaryText }}>
                   {log.Date}
                 </Typography>
               </TableCell>
@@ -165,25 +234,32 @@ export default function AccessLogsDialog({ open, logs, onClose }) {
       maxWidth="md"
       fullWidth
       fullScreen={isMobile}
-      PaperProps={{
-        sx: isMobile ? { borderRadius: 0 } : { borderRadius: 2 }
+      slotProps={{
+        paper: {
+          sx: dialogPaperSx
+        }
       }}
     >
-      <DialogTitle
-        sx={{
-          pb: 1,
-          borderBottom: '1px solid',
-          borderColor: 'divider'
-        }}
-      >
+      <DialogTitle sx={titleSx}>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <TouchAppIcon color="primary" />
-          <Typography variant="h6">访问记录</Typography>
-          {logs.length > 0 && <Chip size="small" label={`共 ${logs.length} 条`} sx={{ ml: 1 }} />}
+          <TouchAppIcon sx={{ color: palette.primary.main }} />
+          <Typography variant="h6" sx={{ color: primaryText }}>
+            {title}
+          </Typography>
+          {!loading && logs.length > 0 && <Chip size="small" label={`共 ${logs.length} 条`} sx={countChipSx} />}
         </Stack>
       </DialogTitle>
-      <DialogContent sx={{ p: isMobile ? 1.5 : 2 }}>
-        {logs.length === 0 ? (
+      <DialogContent
+        sx={{
+          p: isMobile ? 1.5 : 2,
+          bgcolor: dialogSurface
+        }}
+      >
+        {loading ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 8 }}>
+            <CircularProgress size={28} />
+          </Box>
+        ) : logs.length === 0 ? (
           <Box
             sx={{
               display: 'flex',
@@ -191,11 +267,15 @@ export default function AccessLogsDialog({ open, logs, onClose }) {
               alignItems: 'center',
               justifyContent: 'center',
               py: 8,
-              color: 'text.secondary'
+              borderRadius: 2.5,
+              bgcolor: nestedPanelSurface,
+              border: '1px solid',
+              borderColor: rowBorder,
+              color: secondaryText
             }}
           >
-            <TouchAppIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
-            <Typography>暂无访问记录</Typography>
+            <TouchAppIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5, color: tertiaryText }} />
+            <Typography sx={{ color: secondaryText }}>暂无访问记录</Typography>
           </Box>
         ) : isMobile ? (
           <Box sx={{ mt: 1 }}>
@@ -207,7 +287,7 @@ export default function AccessLogsDialog({ open, logs, onClose }) {
           <DesktopTable />
         )}
       </DialogContent>
-      <DialogActions sx={{ borderTop: '1px solid', borderColor: 'divider', px: 2, py: 1.5 }}>
+      <DialogActions sx={actionsSx}>
         <Button onClick={onClose} variant="outlined">
           关闭
         </Button>

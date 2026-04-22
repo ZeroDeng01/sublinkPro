@@ -13,6 +13,8 @@ import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import SettingsBrightnessOutlinedIcon from '@mui/icons-material/SettingsBrightnessOutlined';
 
 import { DEFAULT_THEME_MODE } from 'config';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { withAlpha } from 'utils/colorUtils';
 import MainCard from 'ui-component/cards/MainCard';
 
 const copyByLocale = {
@@ -61,7 +63,8 @@ const modeIcons = {
 export default function ThemeModeSelector({ locale = 'en', title, description, sx }) {
   const theme = useTheme();
   const { mode, setMode } = useColorScheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
+  const palette = theme.vars?.palette || theme.palette;
   const content = copyByLocale[locale] || copyByLocale.en;
   const selectedMode = mode || DEFAULT_THEME_MODE;
   const resolvedTitle = title === undefined ? content.title : title;
@@ -97,7 +100,7 @@ export default function ThemeModeSelector({ locale = 'en', title, description, s
                         ? alpha(theme.palette.primary.main, 0.14)
                         : alpha(theme.palette.primary.main, 0.08)
                       : isDark
-                        ? alpha(theme.palette.background.default, 0.92)
+                        ? withAlpha(palette.background.default, 0.92)
                         : 'background.default',
                     border: '1px solid',
                     borderColor: selected
@@ -111,7 +114,7 @@ export default function ThemeModeSelector({ locale = 'en', title, description, s
                     sx={{
                       p: 1.75,
                       borderWidth: 1,
-                      bgcolor: isDark ? alpha(theme.palette.background.paper, 0.94) : 'background.paper',
+                      bgcolor: isDark ? withAlpha(palette.background.paper, 0.94) : 'background.paper',
                       ...(selected && { borderColor: 'primary.main' })
                     }}
                   >

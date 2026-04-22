@@ -40,7 +40,9 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 // project imports
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from 'utils/colorUtils';
+import { getNodeCheckStrategyThemeTokens } from '../nodeCheckTheme';
 
 // api
 import { createNodeCheckProfile, getNodeCheckMeta, updateNodeCheckProfile } from 'api/nodeCheck';
@@ -62,17 +64,9 @@ import {
 /**
  * 可折叠配置区块
  */
-function ConfigSection({ title, icon, children, defaultExpanded = true, helperText }) {
+function ConfigSection({ title, icon, children, defaultExpanded = true, helperText, themeTokens }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const palette = theme.vars?.palette || theme.palette;
-  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
-  const sectionSurface = isDark ? withAlpha(palette.background.paper, 0.36) : palette.background.paper;
-  const headerSurface = isDark ? withAlpha(palette.background.default, 0.84) : withAlpha(palette.background.default, 0.72);
-  const hoverSurface = isDark
-    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.2)} 0%, ${withAlpha(palette.primary.main, 0.08)} 100%)`
-    : withAlpha(palette.primary.main, 0.04);
+  const { isDark, palette, panelBorder, sectionSurface, sectionHeaderSurface, sectionHoverSurface } = themeTokens;
 
   return (
     <Paper
@@ -94,9 +88,9 @@ function ConfigSection({ title, icon, children, defaultExpanded = true, helperTe
           justifyContent: 'space-between',
           p: 1.5,
           cursor: 'pointer',
-          backgroundColor: headerSurface,
+          backgroundColor: sectionHeaderSurface,
           '&:hover': {
-            background: hoverSurface
+            background: sectionHoverSurface
           }
         }}
       >
@@ -128,7 +122,8 @@ ConfigSection.propTypes = {
   icon: PropTypes.node,
   children: PropTypes.node.isRequired,
   defaultExpanded: PropTypes.bool,
-  helperText: PropTypes.string
+  helperText: PropTypes.string,
+  themeTokens: PropTypes.object.isRequired
 };
 
 /**
@@ -138,15 +133,9 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isEdit = !!profile;
-  const isDark = theme.palette.mode === 'dark';
-  const palette = theme.vars?.palette || theme.palette;
-  const dialogSurface = isDark ? withAlpha(palette.background.default, 0.96) : palette.background.paper;
-  const dialogSurfaceGradient = isDark
-    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.14)} 0%, ${dialogSurface} 100%)`
-    : 'none';
-  const headerSurface = isDark ? withAlpha(palette.background.paper, 0.2) : palette.background.paper;
-  const actionSurface = isDark ? withAlpha(palette.background.default, 0.9) : withAlpha(palette.background.default, 0.78);
-  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
+  const { isDark } = useResolvedColorScheme();
+  const themeTokens = getNodeCheckStrategyThemeTokens(theme, isDark);
+  const { palette, dialogSurface, dialogSurfaceGradient, headerSurface, actionSurface, panelBorder } = themeTokens;
   const getTokenChipSx = (accent) => ({
     color: accent,
     backgroundColor: withAlpha(accent, isDark ? 0.18 : 0.1),
@@ -278,7 +267,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
         />
 
         {/* ========== 定时检测 ========== */}
-        <ConfigSection title="定时检测" icon={<TimerIcon fontSize="small" color="action" />}>
+        <ConfigSection title="定时检测" icon={<TimerIcon fontSize="small" color="action" />} themeTokens={themeTokens}>
           <Stack spacing={2}>
             <FormControlLabel
               control={<Switch checked={form.enabled} onChange={(e) => updateForm('enabled', e.target.checked)} />}
@@ -294,6 +283,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
         <ConfigSection
           title="测速模式"
           icon={<SpeedIcon fontSize="small" color="action" />}
+          themeTokens={themeTokens}
           helperText={
             form.mode === 'mihomo' ? '两阶段测试：先并发测延迟，再低并发测下载速度' : '仅测试延迟，速度更快，适合快速筛选可用节点'
           }
@@ -611,7 +601,12 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
         </ConfigSection>
 
         {/* ========== 性能参数 ========== */}
-        <ConfigSection title="性能参数" icon={<TuneIcon fontSize="small" color="action" />} defaultExpanded={true}>
+        <ConfigSection
+          title="性能参数"
+          icon={<TuneIcon fontSize="small" color="action" />}
+          defaultExpanded={true}
+          themeTokens={themeTokens}
+        >
           <Stack spacing={2}>
             {/* 握手时间设置 - 带详细说明 */}
             <Alert
@@ -701,6 +696,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
           title="测速范围"
           icon={<DataUsageIcon fontSize="small" color="action" />}
           defaultExpanded={false}
+          themeTokens={themeTokens}
           helperText="分组优先级高于标签：选了分组则先按分组筛选，再按标签过滤；只选标签则直接按标签筛选；都不选则测全部"
         >
           <Stack spacing={2}>
@@ -761,7 +757,12 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
         </ConfigSection>
 
         {/* ========== 流量统计 ========== */}
-        <ConfigSection title="流量统计" icon={<DataUsageIcon fontSize="small" color="action" />} defaultExpanded={false}>
+        <ConfigSection
+          title="流量统计"
+          icon={<DataUsageIcon fontSize="small" color="action" />}
+          defaultExpanded={false}
+          themeTokens={themeTokens}
+        >
           <Stack spacing={1}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
               <FormControlLabel

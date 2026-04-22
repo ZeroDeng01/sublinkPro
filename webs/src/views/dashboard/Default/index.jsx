@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 // material-ui
-import { useColorScheme, useTheme, alpha } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -55,18 +55,31 @@ import {
 import { getAirports } from 'api/airports';
 import { formatBytes, formatExpireTime, getUsageColor } from 'views/airports/utils';
 import { getQualityStatusMeta } from 'utils/fraudScore';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
 
-const getCalmSurface = (theme, accentColor, isDark) => {
-  const palette = theme.vars?.palette || theme.palette;
-  const darkSurfaceBase = withAlpha(palette.background.default, 0.96);
-  const darkSurfaceElevated = withAlpha(palette.background.paper, 0.82);
-  const darkSurfaceBackground = `linear-gradient(180deg, ${darkSurfaceElevated} 0%, ${darkSurfaceBase} 100%)`;
+const getDashboardReadableTextTokens = (theme, isDark) => {
+  const readableTextTokens = getReadableTextTokens(theme, isDark);
 
   return {
-    backgroundColor: isDark ? darkSurfaceBase : palette.background.paper,
-    backgroundImage: isDark ? darkSurfaceBackground : 'none',
-    border: `1px solid ${isDark ? withAlpha(palette.divider, 0.82) : alpha(accentColor, 0.12)}`,
+    primaryText: readableTextTokens.primaryText,
+    secondaryText: isDark ? withAlpha(readableTextTokens.primaryText, 0.84) : withAlpha(readableTextTokens.primaryText, 0.76),
+    tertiaryText: isDark ? withAlpha(readableTextTokens.primaryText, 0.72) : readableTextTokens.tertiaryText,
+    statValueText: isDark ? withAlpha(readableTextTokens.primaryText, 0.98) : readableTextTokens.primaryText,
+    statPercentText: isDark ? withAlpha(readableTextTokens.primaryText, 0.92) : withAlpha(readableTextTokens.primaryText, 0.8)
+  };
+};
+
+const getCalmSurface = (theme, accentColor, isDark) => {
+  const { palette, dialogSurface, panelBorder } = getSurfaceTokens(theme, isDark);
+  const darkSurfaceElevated = isDark ? withAlpha(palette.background.paper, 0.82) : dialogSurface;
+  const calmSurfaceBackground = isDark ? `linear-gradient(180deg, ${darkSurfaceElevated} 0%, ${dialogSurface} 100%)` : 'none';
+
+  return {
+    backgroundColor: dialogSurface,
+    backgroundImage: calmSurfaceBackground,
+    border: `1px solid ${isDark ? panelBorder : alpha(accentColor, 0.12)}`,
     boxShadow: isDark
       ? `0 14px 34px ${alpha(theme.palette.common.black, 0.22)}, inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}`
       : `0 1px 3px ${alpha(theme.palette.common.black, 0.06)}`,
@@ -81,7 +94,7 @@ const getCalmSurface = (theme, accentColor, isDark) => {
   };
 };
 
-const getAccentIconBox = (theme, accentColor, isDark) => ({
+const getAccentIconBox = (accentColor, isDark) => ({
   width: 40,
   height: 40,
   borderRadius: 2,
@@ -95,63 +108,64 @@ const getAccentIconBox = (theme, accentColor, isDark) => ({
 });
 
 const getAccentChipSx = (theme, accentColor, isDark) => ({
-  bgcolor: alpha(accentColor, isDark ? 0.18 : 0.08),
-  color: isDark ? alpha('#fff', 0.92) : alpha(accentColor, 0.92),
-  border: `1px solid ${alpha(accentColor, isDark ? 0.3 : 0.2)}`,
-  fontWeight: 600,
-  '&:hover': {
-    bgcolor: alpha(accentColor, isDark ? 0.24 : 0.12)
-  }
+  ...(() => {
+    const { primaryText } = getDashboardReadableTextTokens(theme, isDark);
+
+    return {
+      bgcolor: alpha(accentColor, isDark ? 0.18 : 0.08),
+      color: isDark ? withAlpha(primaryText, 0.92) : withAlpha(accentColor, 0.92),
+      border: `1px solid ${alpha(accentColor, isDark ? 0.3 : 0.2)}`,
+      fontWeight: 600,
+      '&:hover': {
+        bgcolor: alpha(accentColor, isDark ? 0.24 : 0.12)
+      }
+    };
+  })()
 });
 
 const getReadablePrimaryTextColor = (theme, isDark) => {
-  const palette = theme.vars?.palette || theme.palette;
-  const darkText = palette.text?.dark || theme.palette.common.white;
-  return isDark ? withAlpha(darkText, 0.94) : theme.palette.text.primary;
+  return getDashboardReadableTextTokens(theme, isDark).primaryText;
 };
 
 const getReadableSecondaryTextColor = (theme, isDark) => {
-  const palette = theme.vars?.palette || theme.palette;
-  const darkText = palette.text?.dark || theme.palette.common.white;
-  return isDark ? withAlpha(darkText, 0.84) : alpha(theme.palette.text.primary, 0.76);
+  return getDashboardReadableTextTokens(theme, isDark).secondaryText;
 };
 
 const getReadableTertiaryTextColor = (theme, isDark) => {
-  const palette = theme.vars?.palette || theme.palette;
-  const darkText = palette.text?.dark || theme.palette.common.white;
-  return isDark ? withAlpha(darkText, 0.72) : alpha(theme.palette.text.primary, 0.68);
+  return getDashboardReadableTextTokens(theme, isDark).tertiaryText;
 };
 
 const getReadableStatValueColor = (theme, isDark) => {
-  const palette = theme.vars?.palette || theme.palette;
-  const darkText = palette.text?.dark || theme.palette.common.white;
-  return isDark ? withAlpha(darkText, 0.98) : theme.palette.text.primary;
+  return getDashboardReadableTextTokens(theme, isDark).statValueText;
 };
 
 const getReadableStatPercentColor = (theme, isDark) => {
-  const palette = theme.vars?.palette || theme.palette;
-  const darkText = palette.text?.dark || theme.palette.common.white;
-  return isDark ? withAlpha(darkText, 0.92) : alpha(theme.palette.text.primary, 0.8);
+  return getDashboardReadableTextTokens(theme, isDark).statPercentText;
 };
 
-const getReadableWarningAccentColor = (theme, isDark) => (isDark ? alpha(theme.palette.warning.light, 0.94) : '#d97706');
+const getReadableWarningAccentColor = (theme, isDark) =>
+  isDark ? withAlpha(theme.palette.warning.light, 0.94) : theme.palette.warning.dark;
 
-const getGitHubChipSx = (theme, isDark) => ({
-  bgcolor: isDark ? alpha(theme.palette.common.white, 0.08) : alpha(theme.palette.common.black, 0.04),
-  color: isDark ? alpha(theme.palette.common.white, 0.92) : '#24292f',
-  border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.18) : 'rgba(27, 31, 36, 0.15)'}`,
-  fontWeight: 600,
-  '&:hover': {
-    bgcolor: isDark ? alpha(theme.palette.common.white, 0.12) : alpha(theme.palette.common.black, 0.07)
-  },
-  '& .MuiChip-icon': {
-    color: 'inherit'
-  }
-});
+const getGitHubChipSx = (theme, isDark) => {
+  const { primaryText } = getDashboardReadableTextTokens(theme, isDark);
+
+  return {
+    bgcolor: isDark ? alpha(theme.palette.common.white, 0.08) : alpha(theme.palette.common.black, 0.04),
+    color: isDark ? withAlpha(primaryText, 0.98) : '#24292f',
+    border: `1px solid ${isDark ? alpha(theme.palette.common.white, 0.18) : 'rgba(27, 31, 36, 0.15)'}`,
+    fontWeight: 600,
+    '&:hover': {
+      bgcolor: isDark ? alpha(theme.palette.common.white, 0.12) : alpha(theme.palette.common.black, 0.07)
+    },
+    '& .MuiChip-icon': {
+      color: 'inherit'
+    }
+  };
+};
 
 const getInsetPanelSurface = (theme, accentColor, isDark) => {
-  const palette = theme.vars?.palette || theme.palette;
-  const darkPanelBase = withAlpha(palette.background.default, 0.74);
+  const { palette, mutedPanelSurface } = getSurfaceTokens(theme, isDark);
+  const darkPanelBase = mutedPanelSurface;
   const darkPanelElevated = withAlpha(palette.background.paper, 0.4);
 
   return {
@@ -336,7 +350,7 @@ const normalizeTagStats = ({ tags = [], limit }) => {
   return buildTopItems(normalized, total, limit);
 };
 
-const getProgressBarSx = (theme, color, isDark, muted = false) => ({
+const getProgressBarSx = (color, isDark, muted = false) => ({
   height: 7,
   borderRadius: 999,
   bgcolor: alpha(color, isDark ? 0.22 : 0.12),
@@ -362,8 +376,7 @@ const StatRowsSkeleton = ({ rows = 5 }) => (
 
 const StatsChartCard = ({ title, icon: Icon, accentColor, summary, loading, tooltip, children }) => {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const isDark = mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
 
   return (
     <Card
@@ -386,7 +399,7 @@ const StatsChartCard = ({ title, icon: Icon, accentColor, summary, loading, tool
     >
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1.5, mb: 2.5, flexWrap: 'wrap' }}>
-          <Box sx={getAccentIconBox(theme, accentColor, isDark)}>
+          <Box sx={getAccentIconBox(accentColor, isDark)}>
             <Icon sx={{ fontSize: 22 }} />
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -409,8 +422,8 @@ const StatsChartCard = ({ title, icon: Icon, accentColor, summary, loading, tool
                 fontSize: '0.75rem',
                 fontWeight: 700,
                 color: accentColor,
-                bgcolor: alpha(accentColor, theme.palette.mode === 'dark' ? 0.2 : 0.1),
-                border: `1px solid ${alpha(accentColor, theme.palette.mode === 'dark' ? 0.32 : 0.18)}`
+                bgcolor: alpha(accentColor, isDark ? 0.2 : 0.1),
+                border: `1px solid ${alpha(accentColor, isDark ? 0.32 : 0.18)}`
               }}
             >
               {summary}
@@ -435,8 +448,7 @@ const RankedStatList = ({
   secondaryMetricsFormatter
 }) => {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const isDark = mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const [expandedKeys, setExpandedKeys] = useState({});
 
   const formatSecondaryMetricValue = (value) => {
@@ -480,7 +492,7 @@ const RankedStatList = ({
                 component="span"
                 variant="caption"
                 sx={{
-                  color: alpha(itemColor, theme.palette.mode === 'dark' ? 0.7 : 0.5),
+                  color: alpha(itemColor, isDark ? 0.7 : 0.5),
                   fontWeight: 700,
                   lineHeight: 1
                 }}
@@ -545,7 +557,7 @@ const RankedStatList = ({
                       borderRadius: '50%',
                       bgcolor: item.color,
                       flexShrink: 0,
-                      boxShadow: `0 0 0 4px ${alpha(item.color, theme.palette.mode === 'dark' ? 0.18 : 0.12)}`
+                      boxShadow: `0 0 0 4px ${alpha(item.color, isDark ? 0.18 : 0.12)}`
                     }}
                   />
                 )}
@@ -601,7 +613,7 @@ const RankedStatList = ({
             <LinearProgress
               variant="determinate"
               value={Math.max(0, Math.min(item.percent, 100))}
-              sx={getProgressBarSx(theme, item.color, isDark, muted)}
+              sx={getProgressBarSx(item.color, isDark, muted)}
             />
             {item.isCollapsedOther && isExpanded && item.hiddenItems?.length ? (
               <Box
@@ -609,7 +621,7 @@ const RankedStatList = ({
                   mt: 1.25,
                   ml: { xs: 1.5, sm: 2 },
                   pl: 1.5,
-                  borderLeft: `2px dashed ${alpha(item.color, theme.palette.mode === 'dark' ? 0.4 : 0.3)}`,
+                  borderLeft: `2px dashed ${alpha(item.color, isDark ? 0.4 : 0.3)}`,
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 1.25
@@ -663,7 +675,7 @@ const RankedStatList = ({
                     <LinearProgress
                       variant="determinate"
                       value={Math.max(0, Math.min(hiddenItem.percent, 100))}
-                      sx={getProgressBarSx(theme, hiddenItem.color || item.color, isDark, true)}
+                      sx={getProgressBarSx(hiddenItem.color || item.color, isDark, true)}
                     />
                   </Box>
                 ))}
@@ -686,8 +698,7 @@ const RankedStatList = ({
 
 const QualityMetricRow = ({ label, count, percent, color, tooltip }) => {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const isDark = mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const row = (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: 0.75 }}>
@@ -715,7 +726,7 @@ const QualityMetricRow = ({ label, count, percent, color, tooltip }) => {
           </Typography>
         </Box>
       </Box>
-      <LinearProgress variant="determinate" value={Math.max(0, Math.min(percent, 100))} sx={getProgressBarSx(theme, color, isDark)} />
+      <LinearProgress variant="determinate" value={Math.max(0, Math.min(percent, 100))} sx={getProgressBarSx(color, isDark)} />
     </Box>
   );
 
@@ -730,8 +741,7 @@ const QualityMetricRow = ({ label, count, percent, color, tooltip }) => {
 
 const IPQualityBreakdown = ({ stats, loading }) => {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const isDark = mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
 
   if (loading) {
     return <StatRowsSkeleton rows={5} />;
@@ -777,7 +787,7 @@ const IPQualityBreakdown = ({ stats, loading }) => {
       <Box
         sx={{
           pt: 2,
-          borderTop: `1px solid ${alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.08 : 0.06)}`
+          borderTop: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.08 : 0.06)}`
         }}
       >
         <Typography variant="body2" sx={{ color: getReadableSecondaryTextColor(theme, isDark), mb: 1.25, fontWeight: 600 }}>
@@ -800,8 +810,8 @@ const IPQualityBreakdown = ({ stats, loading }) => {
         sx={{
           p: 1.5,
           borderRadius: 3,
-          bgcolor: alpha('#94a3b8', theme.palette.mode === 'dark' ? 0.12 : 0.08),
-          border: `1px solid ${alpha('#94a3b8', theme.palette.mode === 'dark' ? 0.24 : 0.16)}`
+          bgcolor: alpha('#94a3b8', isDark ? 0.12 : 0.08),
+          border: `1px solid ${alpha('#94a3b8', isDark ? 0.24 : 0.16)}`
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
@@ -862,8 +872,7 @@ const PremiumStatCard = ({
   nodePassStats
 }) => {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const isDark = mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const surfaceSx = getCalmSurface(theme, accentColor || gradientColors[0], isDark);
   const hasNodePassStats = Boolean(nodePassStats);
 
@@ -1107,8 +1116,7 @@ import { donationConfig } from 'config/donation';
 
 const StarReminderCard = () => {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const isDark = mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const [starCount, setStarCount] = useState(null);
   const supportAccent = theme.palette.warning.main;
   const supportAccentReadable = getReadableWarningAccentColor(theme, isDark);
@@ -1315,8 +1323,7 @@ const StarReminderCard = () => {
 
 const AirportUsageCard = ({ airports = [], loading }) => {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const isDark = mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const usageAccent = theme.palette.info.main;
   const getProgressTrackColor = (percent) => alpha(getUsageColor(percent), isDark ? 0.22 : 0.12);
   const usageSurface = getInsetPanelSurface(theme, usageAccent, isDark);
@@ -1375,7 +1382,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
     >
       <CardContent sx={{ p: 3, position: 'relative' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Box sx={getAccentIconBox(theme, usageAccent, isDark)}>
+          <Box sx={getAccentIconBox(usageAccent, isDark)}>
             <FlightTakeoffIcon sx={{ fontSize: 22 }} />
           </Box>
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
@@ -1585,8 +1592,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
 
 const WelcomeBanner = ({ greeting }) => {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const isDark = mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const bannerAccent = theme.palette.secondary.main;
 
   return (
@@ -1670,8 +1676,7 @@ const WelcomeBanner = ({ greeting }) => {
 
 const ReleaseCard = ({ release }) => {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const isDark = mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
 
   return (
     <Card
@@ -1800,8 +1805,7 @@ const ReleaseCard = ({ release }) => {
 
 export default function DashboardDefault() {
   const theme = useTheme();
-  const { mode } = useColorScheme();
-  const isDark = mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [nodeTotal, setNodeTotal] = useState(0);
   const [nodeDelayPassCount, setNodeDelayPassCount] = useState(0);
@@ -2094,8 +2098,8 @@ export default function DashboardDefault() {
                   sx={{
                     p: 1.5,
                     borderRadius: 3,
-                    bgcolor: alpha('#94a3b8', theme.palette.mode === 'dark' ? 0.12 : 0.08),
-                    border: `1px solid ${alpha('#94a3b8', theme.palette.mode === 'dark' ? 0.24 : 0.16)}`
+                    bgcolor: alpha('#94a3b8', isDark ? 0.12 : 0.08),
+                    border: `1px solid ${alpha('#94a3b8', isDark ? 0.24 : 0.16)}`
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
@@ -2240,8 +2244,8 @@ export default function DashboardDefault() {
                   sx={{
                     p: 1.5,
                     borderRadius: 3,
-                    bgcolor: alpha('#94a3b8', theme.palette.mode === 'dark' ? 0.12 : 0.08),
-                    border: `1px solid ${alpha('#94a3b8', theme.palette.mode === 'dark' ? 0.24 : 0.16)}`
+                    bgcolor: alpha('#94a3b8', isDark ? 0.12 : 0.08),
+                    border: `1px solid ${alpha('#94a3b8', isDark ? 0.24 : 0.16)}`
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
@@ -2276,8 +2280,8 @@ export default function DashboardDefault() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: alpha(theme.palette.secondary.main, theme.palette.mode === 'dark' ? 0.18 : 0.1),
-                border: `1px solid ${alpha(theme.palette.secondary.main, theme.palette.mode === 'dark' ? 0.32 : 0.18)}`
+                backgroundColor: alpha(theme.palette.secondary.main, isDark ? 0.18 : 0.1),
+                border: `1px solid ${alpha(theme.palette.secondary.main, isDark ? 0.32 : 0.18)}`
               }}
             >
               <Typography sx={{ fontSize: '1.2rem' }}>📝</Typography>

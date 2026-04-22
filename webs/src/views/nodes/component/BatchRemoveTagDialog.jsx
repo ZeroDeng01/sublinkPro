@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 
 // material-ui
+import { useTheme } from '@mui/material/styles';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -11,16 +12,33 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getNodeColorChipSx, getNodeDialogPaperSx, getNodeFieldControlSx, getNodeThemeTokens } from '../nodeTheme';
 
 /**
  * 批量移除标签对话框
  */
 export default function BatchRemoveTagDialog({ open, selectedCount, value, setValue, tagOptions, onClose, onSubmit }) {
+  const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getNodeThemeTokens(theme, isDark);
+  const fieldControlSx = getNodeFieldControlSx(tokens, tokens.palette.error.main);
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>批量移除标签</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{ sx: getNodeDialogPaperSx(theme, tokens, tokens.palette.error.main) }}
+    >
+      <DialogTitle
+        sx={{ color: tokens.primaryText, bgcolor: tokens.mutedPanelSurface, borderBottom: '1px solid', borderColor: tokens.panelBorder }}
+      >
+        批量移除标签
+      </DialogTitle>
+      <DialogContent dividers sx={{ bgcolor: 'transparent', borderColor: tokens.panelBorder }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           将从选中的 {selectedCount} 个节点移除以下标签（保留其他标签）
         </Typography>
         <Autocomplete
@@ -39,7 +57,7 @@ export default function BatchRemoveTagDialog({ open, selectedCount, value, setVa
                     width: 12,
                     height: 12,
                     borderRadius: '50%',
-                    backgroundColor: option.color || '#1976d2',
+                    backgroundColor: option.color || tokens.palette.primary.main,
                     mr: 1,
                     flexShrink: 0
                   }}
@@ -56,23 +74,20 @@ export default function BatchRemoveTagDialog({ open, selectedCount, value, setVa
                   key={key}
                   label={option.name || option}
                   size="small"
-                  sx={{
-                    backgroundColor: option.color || '#1976d2',
-                    color: '#fff',
-                    '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' }
-                  }}
+                  sx={getNodeColorChipSx(theme, tokens, option.color || theme.palette.primary.main, { deletable: true })}
                   {...tagProps}
                 />
               );
             })
           }
-          renderInput={(params) => <TextField {...params} label="选择要移除的标签" placeholder="选择标签" fullWidth />}
+          sx={fieldControlSx}
+          renderInput={(params) => <TextField {...params} label="选择要移除的标签" placeholder="选择标签" fullWidth sx={fieldControlSx} />}
         />
-        <Typography variant="caption" color="text.main" sx={{ mt: 1, display: 'block' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
           提示：只会移除选中的标签，节点的其他标签将保留
         </Typography>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ bgcolor: tokens.mutedPanelSurface, borderTop: '1px solid', borderColor: tokens.panelBorder }}>
         <Button onClick={onClose}>取消</Button>
         <Button variant="contained" color="warning" onClick={onSubmit} disabled={value.length === 0}>
           确认移除

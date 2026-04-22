@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { alpha, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -20,6 +20,8 @@ import Grid from '@mui/material/Grid';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Fade from '@mui/material/Fade';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from '../../../utils/colorUtils';
 
 // icons
@@ -36,9 +38,10 @@ import SearchIcon from '@mui/icons-material/Search';
 export default function NodeTransferBox({
   // 数据
   availableNodes,
+  selectorNodesTotal,
+  selectorNodesLoading,
   selectedNodes,
   selectedNodesList,
-  allNodes,
   // 选中状态
   checkedAvailable,
   checkedSelected,
@@ -62,30 +65,49 @@ export default function NodeTransferBox({
   onToggleAllSelected
 }) {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const palette = theme.vars?.palette || theme.palette;
-  const dialogSurface = isDark ? withAlpha(palette.background.default, 0.96) : palette.background.paper;
-  const dialogSurfaceGradient = isDark
-    ? `linear-gradient(180deg, ${withAlpha(palette.background.paper, 0.16)} 0%, ${dialogSurface} 100%)`
-    : 'none';
-  const mutedPanelSurface = isDark ? withAlpha(palette.background.default, 0.84) : palette.background.default;
-  const nestedPanelSurface = isDark ? withAlpha(palette.background.paper, 0.42) : palette.background.paper;
-  const panelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
+  const { isDark } = useResolvedColorScheme();
+  const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
+    theme,
+    isDark
+  );
+  const insetHighlight = isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.03)}` : 'none';
+  const emphasisInsetHighlight = isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none';
+  const searchInsetHighlight = isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.02)}` : 'none';
+  const listItemNeutralBorder = withAlpha(palette.divider, isDark ? 0.72 : 0.48);
   const listItemSurface = isDark ? withAlpha(palette.background.default, 0.62) : 'transparent';
-  const listItemHoverSurface = isDark ? withAlpha(palette.background.paper, 0.5) : theme.palette.action.hover;
+  const listItemHoverSurface = isDark ? withAlpha(palette.background.paper, 0.5) : palette.action.hover;
   const actionStripSurface = isDark ? withAlpha(palette.background.default, 0.9) : palette.background.paper;
+
+  const getAccentTone = (colorKey) => ({
+    main: palette[colorKey].main,
+    subtleSurface: withAlpha(palette[colorKey].main, isDark ? 0.14 : 0.08),
+    subtleHoverSurface: withAlpha(palette[colorKey].main, isDark ? 0.2 : 0.12),
+    strongSurface: withAlpha(palette[colorKey].main, isDark ? 0.18 : 0.1),
+    strongHoverSurface: withAlpha(palette[colorKey].main, isDark ? 0.26 : 0.16),
+    faintSurface: withAlpha(palette[colorKey].main, isDark ? 0.12 : 0.06),
+    selectedSurface: withAlpha(palette[colorKey].main, isDark ? 0.16 : 0.08),
+    selectedBorder: withAlpha(palette[colorKey].main, isDark ? 0.38 : 0.24),
+    softBorder: withAlpha(palette[colorKey].main, isDark ? 0.32 : 0.18),
+    mediumBorder: withAlpha(palette[colorKey].main, isDark ? 0.34 : 0.22),
+    hoverBorder: withAlpha(palette[colorKey].main, isDark ? 0.28 : 0.18),
+    strongBorder: withAlpha(palette[colorKey].main, isDark ? 0.42 : 0.28),
+    ring: withAlpha(palette[colorKey].main, 0.18)
+  });
+
+  const primaryTone = getAccentTone('primary');
+  const errorTone = getAccentTone('error');
 
   const buildPanelSx = (colorKey) => ({
     backgroundColor: dialogSurface,
     backgroundImage: dialogSurfaceGradient,
     border: '1px solid',
-    borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.28 : 0.18),
+    borderColor: withAlpha(palette[colorKey].main, isDark ? 0.28 : 0.18),
     borderRadius: 3,
-    boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.03)}` : 'none',
+    boxShadow: insetHighlight,
     transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
     '&:hover': {
       borderColor: `${colorKey}.main`,
-      boxShadow: isDark ? `0 0 0 1px ${alpha(theme.palette[colorKey].main, 0.18)}` : theme.shadows[2]
+      boxShadow: isDark ? `0 0 0 1px ${withAlpha(palette[colorKey].main, 0.18)}` : theme.shadows[2]
     }
   });
 
@@ -94,8 +116,10 @@ export default function NodeTransferBox({
     border: '1px solid',
     borderColor: panelBorder,
     borderRadius: 2,
-    boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.03)}` : 'none'
+    boxShadow: insetHighlight
   };
+
+  const availableNodesTotal = selectorNodesTotal || availableNodes.length;
 
   const searchFieldSx = {
     mb: 2,
@@ -105,25 +129,25 @@ export default function NodeTransferBox({
       bgcolor: mutedPanelSurface,
       border: '1px solid',
       borderColor: panelBorder,
-      boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.02)}` : 'none',
+      boxShadow: searchInsetHighlight,
       transition: 'border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
       '& fieldset': { borderColor: 'transparent' },
       '&:hover': {
-        bgcolor: isDark ? withAlpha(palette.background.default, 0.92) : palette.background.paper,
+        bgcolor: isDark ? withAlpha(palette.background.default, 0.92) : nestedPanelSurface,
         '& fieldset': {
-          borderColor: alpha(theme.palette.primary.main, isDark ? 0.22 : 0.14)
+          borderColor: primaryTone.hoverBorder
         }
       },
       '&.Mui-focused': {
         bgcolor: dialogSurface,
-        boxShadow: isDark ? `0 0 0 1px ${alpha(theme.palette.primary.main, 0.16)}` : 'none',
+        boxShadow: isDark ? `0 0 0 1px ${withAlpha(primaryTone.main, 0.16)}` : 'none',
         '& fieldset': {
-          borderColor: alpha(theme.palette.primary.main, isDark ? 0.32 : 0.22)
+          borderColor: primaryTone.softBorder
         }
       }
     },
     '& .MuiInputBase-input::placeholder': {
-      color: isDark ? alpha(theme.palette.text.secondary, 0.92) : undefined,
+      color: isDark ? withAlpha(palette.text.secondary, 0.92) : undefined,
       opacity: 1
     }
   };
@@ -138,62 +162,74 @@ export default function NodeTransferBox({
     bgcolor: actionStripSurface,
     border: '1px solid',
     borderColor: panelBorder,
-    boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.03)}` : theme.shadows[1]
+    boxShadow: isDark ? insetHighlight : theme.shadows[1]
   };
 
-  const actionStripButtonSx = (colorKey) => ({
-    bgcolor: alpha(theme.palette[colorKey].main, isDark ? 0.14 : 0.08),
-    color: `${colorKey}.main`,
-    border: '1px solid',
-    borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.32 : 0.18),
-    fontWeight: 700,
-    boxShadow: 'none',
-    '&:hover': { bgcolor: alpha(theme.palette[colorKey].main, isDark ? 0.2 : 0.12) },
-    '&:disabled': {
-      bgcolor: 'action.disabledBackground',
-      color: 'text.disabled'
-    }
-  });
-  const actionStripOutlinedButtonSx = (colorKey) => ({
-    bgcolor: nestedPanelSurface,
-    borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.28 : 0.18),
-    borderWidth: 1,
-    color: theme.palette[colorKey].main,
-    fontWeight: 700,
-    '&:hover': {
-      bgcolor: isDark ? withAlpha(palette.background.paper, 0.52) : alpha(theme.palette[colorKey].main, 0.06),
-      borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.42 : 0.28)
-    }
-  });
-  const desktopActionButtonSx = (colorKey) => ({
-    minWidth: 120,
-    bgcolor: alpha(theme.palette[colorKey].main, isDark ? 0.18 : 0.1),
-    border: '1px solid',
-    borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.34 : 0.22),
-    boxShadow: 'none',
-    color: theme.palette[colorKey].main,
-    fontWeight: 700,
-    '&:hover': {
-      bgcolor: alpha(theme.palette[colorKey].main, isDark ? 0.26 : 0.16),
-      borderColor: theme.palette[colorKey].main
-    },
-    '&:disabled': {
-      background: theme.palette.action.disabledBackground,
-      color: theme.palette.text.disabled
-    }
-  });
-  const desktopSecondaryActionButtonSx = (colorKey) => ({
-    minWidth: 120,
-    bgcolor: isDark ? withAlpha(palette.background.paper, 0.46) : alpha(theme.palette[colorKey].main, 0.04),
-    border: '1px solid',
-    borderColor: alpha(theme.palette[colorKey].main, isDark ? 0.28 : 0.18),
-    color: theme.palette[colorKey].main,
-    fontWeight: 600,
-    '&:hover': {
-      bgcolor: alpha(theme.palette[colorKey].main, isDark ? 0.14 : 0.08),
-      borderColor: theme.palette[colorKey].main
-    }
-  });
+  const actionStripButtonSx = (colorKey) => {
+    const tone = getAccentTone(colorKey);
+    return {
+      bgcolor: tone.subtleSurface,
+      color: `${colorKey}.main`,
+      border: '1px solid',
+      borderColor: tone.softBorder,
+      fontWeight: 700,
+      boxShadow: 'none',
+      '&:hover': { bgcolor: tone.subtleHoverSurface },
+      '&:disabled': {
+        bgcolor: 'action.disabledBackground',
+        color: 'text.disabled'
+      }
+    };
+  };
+  const actionStripOutlinedButtonSx = (colorKey) => {
+    const tone = getAccentTone(colorKey);
+    return {
+      bgcolor: nestedPanelSurface,
+      borderColor: tone.softBorder,
+      borderWidth: 1,
+      color: tone.main,
+      fontWeight: 700,
+      '&:hover': {
+        bgcolor: tone.faintSurface,
+        borderColor: tone.strongBorder
+      }
+    };
+  };
+  const desktopActionButtonSx = (colorKey) => {
+    const tone = getAccentTone(colorKey);
+    return {
+      minWidth: 120,
+      bgcolor: tone.strongSurface,
+      border: '1px solid',
+      borderColor: tone.mediumBorder,
+      boxShadow: 'none',
+      color: tone.main,
+      fontWeight: 700,
+      '&:hover': {
+        bgcolor: tone.strongHoverSurface,
+        borderColor: tone.main
+      },
+      '&:disabled': {
+        background: palette.action.disabledBackground,
+        color: palette.text.disabled
+      }
+    };
+  };
+  const desktopSecondaryActionButtonSx = (colorKey) => {
+    const tone = getAccentTone(colorKey);
+    return {
+      minWidth: 120,
+      bgcolor: nestedPanelSurface,
+      border: '1px solid',
+      borderColor: tone.softBorder,
+      color: tone.main,
+      fontWeight: 600,
+      '&:hover': {
+        bgcolor: tone.faintSurface,
+        borderColor: tone.main
+      }
+    };
+  };
   const desktopActionStripSx = {
     width: '100%',
     p: 1.5,
@@ -201,8 +237,64 @@ export default function NodeTransferBox({
     bgcolor: mutedPanelSurface,
     border: '1px solid',
     borderColor: panelBorder,
-    boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.03)}` : theme.shadows[1]
+    boxShadow: isDark ? insetHighlight : theme.shadows[1]
   };
+
+  const mobileTabsSx = {
+    mb: 2,
+    p: 0.5,
+    bgcolor: mutedPanelSurface,
+    border: '1px solid',
+    borderColor: panelBorder,
+    borderRadius: 3,
+    boxShadow: insetHighlight,
+    '& .MuiTabs-indicator': {
+      display: 'none'
+    },
+    '& .MuiTab-root': {
+      fontWeight: 600,
+      borderRadius: 2,
+      mx: 0.5,
+      minHeight: 44,
+      color: 'text.secondary',
+      transition: 'all 0.2s',
+      '&:hover': {
+        bgcolor: primaryTone.faintSurface
+      }
+    },
+    '& .Mui-selected': {
+      bgcolor: nestedPanelSurface,
+      color: 'text.primary',
+      border: '1px solid',
+      borderColor: primaryTone.hoverBorder,
+      boxShadow: emphasisInsetHighlight
+    }
+  };
+
+  const getTransferListItemSx = (tone, checked, translateX) => ({
+    py: 0.75,
+    px: 1,
+    mb: 0.5,
+    borderRadius: 2,
+    bgcolor: checked ? tone.selectedSurface : listItemSurface,
+    border: '1px solid',
+    borderColor: checked ? tone.selectedBorder : listItemNeutralBorder,
+    boxShadow: checked ? emphasisInsetHighlight : 'none',
+    transition: 'all 0.15s ease-in-out',
+    '&:hover': {
+      bgcolor: checked ? tone.subtleHoverSurface : listItemHoverSurface,
+      transform: `translateX(${translateX}px)`,
+      borderColor: tone.hoverBorder
+    }
+  });
+
+  const getTransferIconButtonSx = (tone) => ({
+    bgcolor: tone.selectedSurface,
+    color: tone.main,
+    border: '1px solid',
+    borderColor: tone.softBorder,
+    '&:hover': { bgcolor: tone.subtleHoverSurface }
+  });
 
   // 筛选已选节点
   const filteredSelectedNodes = useMemo(() => {
@@ -211,46 +303,15 @@ export default function NodeTransferBox({
     return selectedNodesList.filter((node) => node.Name?.toLowerCase().includes(query) || node.Group?.toLowerCase().includes(query));
   }, [selectedNodesList, selectedNodeSearch]);
 
+  const handleMobileTabChange = (_event, nextTab) => onMobileTabChange(nextTab);
+  const handleSelectedNodeSearchChange = (event) => onSelectedNodeSearchChange(event.target.value);
+
   // 移动端穿梭框
   if (matchDownMd) {
     return (
       <Box sx={{ mt: 2 }}>
-        <Tabs
-          value={mobileTab}
-          onChange={(e, v) => onMobileTabChange(v)}
-          variant="fullWidth"
-          sx={{
-            mb: 2,
-            p: 0.5,
-            bgcolor: mutedPanelSurface,
-            border: '1px solid',
-            borderColor: panelBorder,
-            borderRadius: 3,
-            boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.03)}` : 'none',
-            '& .MuiTabs-indicator': {
-              display: 'none'
-            },
-            '& .MuiTab-root': {
-              fontWeight: 600,
-              borderRadius: 2,
-              mx: 0.5,
-              minHeight: 44,
-              color: 'text.secondary',
-              transition: 'all 0.2s',
-              '&:hover': {
-                bgcolor: isDark ? withAlpha(palette.background.paper, 0.26) : alpha(theme.palette.primary.main, 0.05)
-              }
-            },
-            '& .Mui-selected': {
-              bgcolor: nestedPanelSurface,
-              color: 'text.primary',
-              border: '1px solid',
-              borderColor: alpha(theme.palette.primary.main, isDark ? 0.24 : 0.18),
-              boxShadow: isDark ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}` : 'none'
-            }
-          }}
-        >
-          <Tab label={`可选节点 (${availableNodes.length})`} icon={<ChevronRightIcon />} iconPosition="end" />
+        <Tabs value={mobileTab} onChange={handleMobileTabChange} variant="fullWidth" sx={mobileTabsSx}>
+          <Tab label={`可选节点 (${availableNodesTotal})`} icon={<ChevronRightIcon />} iconPosition="end" />
           <Tab label={`已选节点 (${selectedNodes.length})`} icon={<ChevronLeftIcon />} iconPosition="start" />
         </Tabs>
 
@@ -270,8 +331,8 @@ export default function NodeTransferBox({
                 <FormControlLabel
                   control={
                     <Checkbox
-                      checked={checkedAvailable.length === availableNodes.length && availableNodes.length > 0}
-                      indeterminate={checkedAvailable.length > 0 && checkedAvailable.length < availableNodes.length}
+                      checked={checkedAvailable.length === availableNodesTotal && availableNodesTotal > 0}
+                      indeterminate={checkedAvailable.length > 0 && checkedAvailable.length < availableNodesTotal}
                       onChange={onToggleAllAvailable}
                       size="small"
                     />
@@ -283,7 +344,7 @@ export default function NodeTransferBox({
                   }
                 />
                 <Chip
-                  label={availableNodes.length > 100 ? `显示前100/${availableNodes.length}` : `${availableNodes.length}个`}
+                  label={availableNodesTotal > 100 ? `显示前100/${availableNodesTotal}` : `${availableNodesTotal}个`}
                   size="small"
                   color="primary"
                   variant="outlined"
@@ -294,37 +355,10 @@ export default function NodeTransferBox({
                   <ListItem
                     key={node.ID}
                     sx={{
-                      py: 0.75,
-                      px: 1,
-                      mb: 0.5,
-                      borderRadius: 2,
-                      bgcolor: checkedAvailable.includes(node.ID)
-                        ? alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08)
-                        : listItemSurface,
-                      border: '1px solid',
-                      borderColor: checkedAvailable.includes(node.ID)
-                        ? alpha(theme.palette.primary.main, isDark ? 0.38 : 0.24)
-                        : alpha(theme.palette.divider, isDark ? 0.72 : 0.4),
-                      transition: 'all 0.15s ease-in-out',
-                      '&:hover': {
-                        bgcolor: listItemHoverSurface,
-                        transform: 'translateX(4px)',
-                        borderColor: alpha(theme.palette.primary.main, isDark ? 0.28 : 0.18)
-                      }
+                      ...getTransferListItemSx(primaryTone, checkedAvailable.includes(node.ID), 4)
                     }}
                     secondaryAction={
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => onAddNode(node.ID)}
-                        sx={{
-                          bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08),
-                          color: 'primary.main',
-                          border: '1px solid',
-                          borderColor: alpha(theme.palette.primary.main, isDark ? 0.3 : 0.18),
-                          '&:hover': { bgcolor: alpha(theme.palette.primary.main, isDark ? 0.22 : 0.12) }
-                        }}
-                      >
+                      <IconButton size="small" color="primary" onClick={() => onAddNode(node.ID)} sx={getTransferIconButtonSx(primaryTone)}>
                         <AddIcon fontSize="small" />
                       </IconButton>
                     }
@@ -386,7 +420,7 @@ export default function NodeTransferBox({
               size="small"
               placeholder="搜索已选节点..."
               value={selectedNodeSearch}
-              onChange={(e) => onSelectedNodeSearchChange(e.target.value)}
+              onChange={handleSelectedNodeSearchChange}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -429,35 +463,10 @@ export default function NodeTransferBox({
                   <ListItem
                     key={node.ID}
                     sx={{
-                      py: 0.75,
-                      px: 1,
-                      mb: 0.5,
-                      borderRadius: 2,
-                      bgcolor: checkedSelected.includes(node.ID) ? alpha(theme.palette.error.main, isDark ? 0.14 : 0.08) : listItemSurface,
-                      border: '1px solid',
-                      borderColor: checkedSelected.includes(node.ID)
-                        ? alpha(theme.palette.error.main, isDark ? 0.34 : 0.22)
-                        : alpha(theme.palette.divider, isDark ? 0.72 : 0.4),
-                      transition: 'all 0.15s ease-in-out',
-                      '&:hover': {
-                        bgcolor: listItemHoverSurface,
-                        transform: 'translateX(-4px)',
-                        borderColor: alpha(theme.palette.error.main, isDark ? 0.26 : 0.18)
-                      }
+                      ...getTransferListItemSx(errorTone, checkedSelected.includes(node.ID), -4)
                     }}
                     secondaryAction={
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => onRemoveNode(node.ID)}
-                        sx={{
-                          bgcolor: alpha(theme.palette.error.main, isDark ? 0.16 : 0.08),
-                          color: 'error.main',
-                          border: '1px solid',
-                          borderColor: alpha(theme.palette.error.main, isDark ? 0.3 : 0.18),
-                          '&:hover': { bgcolor: alpha(theme.palette.error.main, isDark ? 0.22 : 0.12) }
-                        }}
-                      >
+                      <IconButton size="small" color="error" onClick={() => onRemoveNode(node.ID)} sx={getTransferIconButtonSx(errorTone)}>
                         <DeleteIcon fontSize="small" />
                       </IconButton>
                     }
@@ -542,8 +551,8 @@ export default function NodeTransferBox({
               <FormControlLabel
                 control={
                   <Checkbox
-                    checked={checkedAvailable.length === availableNodes.length && availableNodes.length > 0}
-                    indeterminate={checkedAvailable.length > 0 && checkedAvailable.length < availableNodes.length}
+                    checked={checkedAvailable.length === availableNodesTotal && availableNodesTotal > 0}
+                    indeterminate={checkedAvailable.length > 0 && checkedAvailable.length < availableNodesTotal}
                     onChange={onToggleAllAvailable}
                     size="small"
                   />
@@ -555,11 +564,7 @@ export default function NodeTransferBox({
                 可选节点
               </Typography>
             </Stack>
-            <Chip
-              label={availableNodes.length > 100 ? `前100/${availableNodes.length}` : availableNodes.length}
-              size="small"
-              color="primary"
-            />
+            <Chip label={availableNodesTotal > 100 ? `前100/${availableNodesTotal}` : availableNodesTotal} size="small" color="primary" />
           </Stack>
           <Box sx={{ flexGrow: 1, overflow: 'auto', pr: 1 }}>
             <List dense sx={{ ...listSurfaceSx, p: 1 }}>
@@ -567,22 +572,9 @@ export default function NodeTransferBox({
                 <ListItem
                   key={node.ID}
                   sx={{
-                    py: 0.5,
-                    px: 1,
-                    mb: 0.5,
-                    borderRadius: 2,
+                    ...getTransferListItemSx(primaryTone, checkedAvailable.includes(node.ID), 4),
                     cursor: 'pointer',
-                    bgcolor: checkedAvailable.includes(node.ID) ? alpha(theme.palette.primary.main, isDark ? 0.16 : 0.1) : listItemSurface,
-                    border: '1px solid',
-                    borderColor: checkedAvailable.includes(node.ID)
-                      ? alpha(theme.palette.primary.main, isDark ? 0.38 : 0.24)
-                      : alpha(theme.palette.divider, isDark ? 0.72 : 0.5),
-                    transition: 'all 0.15s ease-in-out',
-                    '&:hover': {
-                      bgcolor: listItemHoverSurface,
-                      transform: 'translateX(4px)',
-                      borderColor: alpha(theme.palette.primary.main, isDark ? 0.28 : 0.18)
-                    }
+                    py: 0.5
                   }}
                   onClick={() => onToggleAvailable(node.ID)}
                   onDoubleClick={() => onAddNode(node.ID)}
@@ -605,9 +597,14 @@ export default function NodeTransferBox({
                   />
                 </ListItem>
               ))}
-              {availableNodes.length > 100 && (
+              {availableNodesTotal > 100 && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', py: 1 }}>
-                  还有 {availableNodes.length - 100} 个节点未显示
+                  还有 {availableNodesTotal - 100} 个节点未显示
+                </Typography>
+              )}
+              {selectorNodesLoading && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', py: 1 }}>
+                  节点列表加载中...
                 </Typography>
               )}
             </List>
@@ -703,7 +700,7 @@ export default function NodeTransferBox({
             size="small"
             placeholder="搜索已选节点..."
             value={selectedNodeSearch}
-            onChange={(e) => onSelectedNodeSearchChange(e.target.value)}
+            onChange={handleSelectedNodeSearchChange}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -719,22 +716,9 @@ export default function NodeTransferBox({
                 <ListItem
                   key={node.ID}
                   sx={{
-                    py: 0.5,
-                    px: 1,
-                    mb: 0.5,
-                    borderRadius: 2,
+                    ...getTransferListItemSx(errorTone, checkedSelected.includes(node.ID), -4),
                     cursor: 'pointer',
-                    bgcolor: checkedSelected.includes(node.ID) ? alpha(theme.palette.error.main, isDark ? 0.14 : 0.08) : listItemSurface,
-                    border: '1px solid',
-                    borderColor: checkedSelected.includes(node.ID)
-                      ? alpha(theme.palette.error.main, isDark ? 0.34 : 0.22)
-                      : alpha(theme.palette.divider, isDark ? 0.72 : 0.5),
-                    transition: 'all 0.15s ease-in-out',
-                    '&:hover': {
-                      bgcolor: listItemHoverSurface,
-                      transform: 'translateX(-4px)',
-                      borderColor: alpha(theme.palette.error.main, isDark ? 0.26 : 0.18)
-                    }
+                    py: 0.5
                   }}
                   onClick={() => onToggleSelected(node.ID)}
                   onDoubleClick={() => onRemoveNode(node.ID)}

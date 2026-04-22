@@ -19,6 +19,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 
 // project imports
 import { getGeoIPStatus } from 'api/geoip';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import GeoIPSettingsDialog from 'views/settings/components/GeoIPSettingsDialog';
 
 const STORAGE_KEY = 'sublinkpro_geoip_warning_dismissed';
@@ -27,7 +28,7 @@ const STORAGE_KEY = 'sublinkpro_geoip_warning_dismissed';
 
 export default function GeoIPWarningDialog() {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);

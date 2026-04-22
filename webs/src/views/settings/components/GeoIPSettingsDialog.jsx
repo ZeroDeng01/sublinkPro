@@ -18,6 +18,7 @@ import Collapse from '@mui/material/Collapse';
 import LinearProgress from '@mui/material/LinearProgress';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
+import { useTheme } from '@mui/material/styles';
 
 // icons
 import PublicIcon from '@mui/icons-material/Public';
@@ -32,6 +33,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import { getGeoIPConfig, saveGeoIPConfig, getGeoIPStatus, downloadGeoIP, stopGeoIPDownload } from 'api/geoip';
 import { getNodes } from 'api/nodes';
 import SearchableNodeSelect from 'components/SearchableNodeSelect';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
+import { withAlpha } from 'utils/colorUtils';
 
 // 默认下载地址
 const DEFAULT_DOWNLOAD_URL = 'https://git.io/GeoLite2-City.mmdb';
@@ -39,6 +43,10 @@ const DEFAULT_DOWNLOAD_URL = 'https://git.io/GeoLite2-City.mmdb';
 // ==============================|| GeoIP 设置对话框 ||============================== //
 
 export default function GeoIPSettingsDialog({ open, onClose, showMessage }) {
+  const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const { dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(theme, isDark);
+  const { primaryText, secondaryText } = getReadableTextTokens(theme, isDark);
   const [config, setConfig] = useState({
     downloadUrl: DEFAULT_DOWNLOAD_URL,
     useProxy: false,
@@ -212,13 +220,39 @@ export default function GeoIPSettingsDialog({ open, onClose, showMessage }) {
     }
   };
 
+  const getStatusPanelSx = (accentColor) => ({
+    p: 2,
+    borderRadius: 2,
+    backgroundColor: isDark ? nestedPanelSurface : withAlpha(accentColor, 0.08),
+    backgroundImage: isDark ? `linear-gradient(180deg, ${withAlpha(accentColor, 0.12)} 0%, ${nestedPanelSurface} 100%)` : 'none',
+    border: '1px solid',
+    borderColor: withAlpha(accentColor, isDark ? 0.3 : 0.18),
+    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(theme.palette.common.white, 0.04)}` : 'none'
+  });
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          border: '1px solid',
+          borderColor: panelBorder,
+          bgcolor: dialogSurface,
+          backgroundImage: dialogSurfaceGradient,
+          boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(theme.palette.common.white, 0.04)}` : undefined
+        }
+      }}
+    >
+      <DialogTitle sx={{ bgcolor: mutedPanelSurface, borderBottom: '1px solid', borderColor: panelBorder }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Stack direction="row" alignItems="center" spacing={1}>
             <PublicIcon sx={{ color: 'primary.main' }} />
-            <Typography variant="h4">GeoIP 数据库设置</Typography>
+            <Typography variant="h4" sx={{ color: primaryText }}>
+              GeoIP 数据库设置
+            </Typography>
           </Stack>
           <IconButton onClick={onClose} size="small">
             <CloseIcon />
@@ -226,7 +260,7 @@ export default function GeoIPSettingsDialog({ open, onClose, showMessage }) {
         </Stack>
       </DialogTitle>
 
-      <DialogContent dividers>
+      <DialogContent dividers sx={{ bgcolor: dialogSurface, borderColor: panelBorder }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
@@ -234,35 +268,27 @@ export default function GeoIPSettingsDialog({ open, onClose, showMessage }) {
         ) : (
           <Stack spacing={2.5}>
             {/* 状态区域 */}
-            <Box
-              sx={{
-                p: 2,
-                borderRadius: 1,
-                backgroundColor: status.available ? 'success.light' : 'warning.light',
-                border: '1px solid',
-                borderColor: status.available ? 'success.main' : 'warning.main'
-              }}
-            >
+            <Box sx={getStatusPanelSx(status.available ? theme.palette.success.main : theme.palette.warning.main)}>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
                 {status.available ? <CheckCircleIcon sx={{ color: 'success.main' }} /> : <ErrorIcon sx={{ color: 'warning.main' }} />}
-                <Typography variant="subtitle1" fontWeight={600}>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ color: primaryText }}>
                   {status.available ? '数据库已安装' : '数据库未安装'}
                 </Typography>
               </Stack>
 
               {status.available && (
                 <Stack spacing={0.5}>
-                  <Typography variant="body2" color="textSecondary">
+                  <Typography variant="body2" sx={{ color: secondaryText }}>
                     文件大小: {status.sizeFormatted}
                   </Typography>
-                  <Typography variant="body2" color="textSecondary">
+                  <Typography variant="body2" sx={{ color: secondaryText }}>
                     更新时间: {status.modTime || config.lastUpdate || '未知'}
                   </Typography>
                 </Stack>
               )}
 
               {!status.available && (
-                <Typography variant="body2" color="textSecondary">
+                <Typography variant="body2" sx={{ color: secondaryText }}>
                   GeoIP 数据库用于 IP 地理位置查询和落地检测，请下载安装。
                 </Typography>
               )}
@@ -282,7 +308,7 @@ export default function GeoIPSettingsDialog({ open, onClose, showMessage }) {
                 </Stack>
                 <LinearProgress variant="determinate" value={status.progress} />
                 {status.source === 'auto' && (
-                  <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
+                  <Typography variant="caption" sx={{ mt: 0.5, display: 'block', color: secondaryText }}>
                     系统启动时检测到 GeoIP 数据库缺失，正在自动下载。您可以停止后配置代理重新下载。
                   </Typography>
                 )}
@@ -343,10 +369,10 @@ export default function GeoIPSettingsDialog({ open, onClose, showMessage }) {
 
             {/* 说明 */}
             <Alert severity="info">
-              <Typography variant="body2" sx={{ mb: 1 }}>
+              <Typography variant="body2" sx={{ mb: 1, color: primaryText }}>
                 <strong>注意事项：</strong>
               </Typography>
-              <Typography variant="body2" component="ul" sx={{ m: 0, pl: 2 }}>
+              <Typography variant="body2" component="ul" sx={{ m: 0, pl: 2, color: secondaryText }}>
                 <li>数据库必须是 MaxMind 的 mmdb 格式且包含 city 数据 (GeoLite2-City)</li>
                 <li>如果没有 GeoIP 数据库，IP 地理位置查询和落地检测功能将不可用</li>
                 <li>建议定期更新数据库以获得更准确的地理位置信息</li>
@@ -356,7 +382,7 @@ export default function GeoIPSettingsDialog({ open, onClose, showMessage }) {
         )}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, py: 2 }}>
+      <DialogActions sx={{ px: 3, py: 2, bgcolor: mutedPanelSurface, borderTop: '1px solid', borderColor: panelBorder }}>
         <Button onClick={handleSave} disabled={saving || status.downloading} startIcon={<SaveIcon />}>
           保存配置
         </Button>

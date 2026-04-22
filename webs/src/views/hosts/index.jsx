@@ -49,6 +49,7 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getHosts, addHost, updateHost, deleteHost, batchDeleteHosts, exportHosts, syncHosts, pinHost } from 'api/hosts';
 
 import HostSettingsDialog from './component/HostSettingsDialog';
@@ -59,6 +60,7 @@ import IPDetailsDialog from 'components/IPDetailsDialog';
 
 export default function HostManagement() {
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // 模式切换：table（表单模式）或 text（文本编辑模式）
@@ -443,7 +445,7 @@ export default function HostManagement() {
                 color="text.secondary"
                 sx={{
                   mb: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : theme.palette.grey[50],
+                  bgcolor: isDark ? theme.palette.background.default : theme.palette.grey[50],
                   p: 1,
                   borderRadius: 1
                 }}
@@ -737,7 +739,7 @@ export default function HostManagement() {
                 fontFamily: 'monospace',
                 fontSize: '0.9rem',
                 lineHeight: 1.6,
-                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[50]
+                backgroundColor: isDark ? theme.palette.grey[900] : theme.palette.grey[50]
               }
             }}
           />

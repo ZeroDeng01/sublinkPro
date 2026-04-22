@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 
 // material-ui
-import { useTheme, alpha } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -12,6 +12,9 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SpeedIcon from '@mui/icons-material/Speed';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
+import { withAlpha } from 'utils/colorUtils';
 
 /**
  * 机场节点统计信息展示组件
@@ -19,6 +22,44 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
  */
 export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = false }) {
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
+    theme,
+    isDark
+  );
+  const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
+
+  const shellSx = {
+    minWidth: 220,
+    p: 1.5,
+    borderRadius: 2.5,
+    color: primaryText,
+    bgcolor: dialogSurface,
+    backgroundImage: dialogSurfaceGradient,
+    border: '1px solid',
+    borderColor: isDark ? withAlpha(palette.divider, 0.58) : panelBorder,
+    boxShadow: isDark
+      ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.03)}, 0 8px 18px ${withAlpha(palette.common.black, 0.18)}`
+      : 'none'
+  };
+
+  const sectionSx = {
+    p: 1,
+    borderRadius: 2,
+    bgcolor: mutedPanelSurface,
+    border: '1px solid',
+    borderColor: isDark ? withAlpha(palette.divider, 0.42) : panelBorder,
+    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.02)}` : 'none'
+  };
+
+  const getAccentPanelSx = (accentColor) => ({
+    p: 1.25,
+    borderRadius: 1.75,
+    bgcolor: nestedPanelSurface,
+    backgroundImage: `linear-gradient(180deg, ${withAlpha(accentColor, isDark ? 0.16 : 0.08)} 0%, ${nestedPanelSurface} 100%)`,
+    border: `1px solid ${withAlpha(accentColor, isDark ? 0.28 : 0.16)}`,
+    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.035)}` : 'none'
+  });
 
   // 检查是否有测试数据
   const hasData = nodeStats && (nodeStats.delayPassCount > 0 || nodeStats.speedPassCount > 0);
@@ -61,156 +102,129 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
   // 完整展示模式（用于 Tooltip 内容和移动端卡片）
   if (!hasData) {
     return (
-      <Box
-        sx={{
-          p: 2,
-          borderRadius: 2,
-          bgcolor: alpha(theme.palette.grey[500], 0.08),
-          textAlign: 'center'
-        }}
-      >
-        <HelpOutlineIcon sx={{ fontSize: 32, color: 'text.disabled', mb: 1 }} />
-        <Typography variant="body2" color="text.disabled">
-          该机场节点尚未进行测速
-        </Typography>
-        <Typography variant="caption" color="text.disabled">
-          请先运行延迟或速度测试
-        </Typography>
+      <Box sx={shellSx}>
+        <Box
+          sx={{
+            ...sectionSx,
+            px: 1.5,
+            py: 2,
+            textAlign: 'center'
+          }}
+        >
+          <HelpOutlineIcon sx={{ fontSize: 32, color: tertiaryText, mb: 1 }} />
+          <Typography variant="body2" sx={{ color: secondaryText, fontWeight: 500 }}>
+            该机场节点尚未进行测速
+          </Typography>
+          <Typography variant="caption" sx={{ color: tertiaryText }}>
+            请先运行延迟或速度测试
+          </Typography>
+        </Box>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ minWidth: 220 }}>
-      {/* 通过数量统计 */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 1.5,
-          mb: 2
-        }}
-      >
-        {/* 延迟通过 */}
-        <Box
-          sx={{
-            p: 1.5,
-            borderRadius: 2,
-            bgcolor: alpha(theme.palette.success.main, 0.1),
-            border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
-            <AccessTimeIcon sx={{ fontSize: 14, color: 'success.main' }} />
-            <Typography variant="caption" color="text.secondary">
-              延迟通过
-            </Typography>
-          </Stack>
-          <Typography variant="h6" fontWeight={700} color="success.main">
-            {nodeStats.delayPassCount}
-            <Typography component="span" variant="caption" color="text.disabled" sx={{ ml: 0.5 }}>
-              / {nodeCount}
-            </Typography>
-          </Typography>
-        </Box>
-
-        {/* 速度通过 */}
-        <Box
-          sx={{
-            p: 1.5,
-            borderRadius: 2,
-            bgcolor: alpha(theme.palette.info.main, 0.1),
-            border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
-            <SpeedIcon sx={{ fontSize: 14, color: 'info.main' }} />
-            <Typography variant="caption" color="text.secondary">
-              速度通过
-            </Typography>
-          </Stack>
-          <Typography variant="h6" fontWeight={700} color="info.main">
-            {nodeStats.speedPassCount}
-            <Typography component="span" variant="caption" color="text.disabled" sx={{ ml: 0.5 }}>
-              / {nodeCount}
-            </Typography>
-          </Typography>
-        </Box>
-      </Box>
-
-      {/* 最优节点信息 */}
-      <Stack spacing={1.5}>
-        {/* 最低延迟节点 */}
-        {nodeStats.lowestDelayNode && (
+    <Box sx={shellSx}>
+      <Stack spacing={1.25}>
+        <Box sx={sectionSx}>
           <Box
             sx={{
-              p: 1.5,
-              borderRadius: 2,
-              bgcolor: alpha(theme.palette.warning.main, 0.08),
-              border: `1px solid ${alpha(theme.palette.warning.main, 0.15)}`
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 1
             }}
           >
-            <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
-              <CheckCircleOutlineIcon sx={{ fontSize: 14, color: 'warning.main' }} />
-              <Typography variant="caption" color="text.secondary">
-                最低延迟
+            <Box sx={getAccentPanelSx(palette.success.main)}>
+              <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
+                <AccessTimeIcon sx={{ fontSize: 14, color: 'success.main' }} />
+                <Typography variant="caption" sx={{ color: secondaryText }}>
+                  延迟通过
+                </Typography>
+              </Stack>
+              <Typography variant="h6" fontWeight={700} color="success.main">
+                {nodeStats.delayPassCount}
+                <Typography component="span" variant="caption" sx={{ ml: 0.5, color: tertiaryText }}>
+                  / {nodeCount}
+                </Typography>
               </Typography>
-            </Stack>
-            <Tooltip title={nodeStats.lowestDelayNode} placement="top" arrow>
-              <Typography
-                variant="body2"
-                fontWeight={600}
-                color="warning.dark"
-                sx={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {nodeStats.lowestDelayNode}
-              </Typography>
-            </Tooltip>
-            <Typography variant="caption" color="text.secondary">
-              {nodeStats.lowestDelayTime}ms · {nodeStats.lowestDelaySpeed?.toFixed(1)}MB/s
-            </Typography>
-          </Box>
-        )}
+            </Box>
 
-        {/* 最高速度节点 */}
-        {nodeStats.highestSpeedNode && (
-          <Box
-            sx={{
-              p: 1.5,
-              borderRadius: 2,
-              bgcolor: alpha(theme.palette.primary.main, 0.08),
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`
-            }}
-          >
-            <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
-              <CheckCircleOutlineIcon sx={{ fontSize: 14, color: 'primary.main' }} />
-              <Typography variant="caption" color="text.secondary">
-                最高速度
+            <Box sx={getAccentPanelSx(palette.info.main)}>
+              <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
+                <SpeedIcon sx={{ fontSize: 14, color: 'info.main' }} />
+                <Typography variant="caption" sx={{ color: secondaryText }}>
+                  速度通过
+                </Typography>
+              </Stack>
+              <Typography variant="h6" fontWeight={700} color="info.main">
+                {nodeStats.speedPassCount}
+                <Typography component="span" variant="caption" sx={{ ml: 0.5, color: tertiaryText }}>
+                  / {nodeCount}
+                </Typography>
               </Typography>
-            </Stack>
-            <Tooltip title={nodeStats.highestSpeedNode} placement="top" arrow>
-              <Typography
-                variant="body2"
-                fontWeight={600}
-                color="primary.main"
-                sx={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {nodeStats.highestSpeedNode}
-              </Typography>
-            </Tooltip>
-            <Typography variant="caption" color="text.secondary">
-              {nodeStats.highestSpeed?.toFixed(1)}MB/s · {nodeStats.highestSpeedDelay}ms
-            </Typography>
+            </Box>
           </Box>
-        )}
+        </Box>
+
+        <Box sx={sectionSx}>
+          <Stack spacing={1}>
+            {nodeStats.lowestDelayNode && (
+              <Box sx={getAccentPanelSx(palette.warning.main)}>
+                <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
+                  <CheckCircleOutlineIcon sx={{ fontSize: 14, color: 'warning.main' }} />
+                  <Typography variant="caption" sx={{ color: secondaryText }}>
+                    最低延迟
+                  </Typography>
+                </Stack>
+                <Tooltip title={nodeStats.lowestDelayNode} placement="top" arrow>
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    sx={{
+                      color: isDark ? palette.warning.light : palette.warning.dark,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {nodeStats.lowestDelayNode}
+                  </Typography>
+                </Tooltip>
+                <Typography variant="caption" sx={{ color: secondaryText }}>
+                  {nodeStats.lowestDelayTime}ms · {nodeStats.lowestDelaySpeed?.toFixed(1)}MB/s
+                </Typography>
+              </Box>
+            )}
+
+            {nodeStats.highestSpeedNode && (
+              <Box sx={getAccentPanelSx(palette.primary.main)}>
+                <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
+                  <CheckCircleOutlineIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+                  <Typography variant="caption" sx={{ color: secondaryText }}>
+                    最高速度
+                  </Typography>
+                </Stack>
+                <Tooltip title={nodeStats.highestSpeedNode} placement="top" arrow>
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    sx={{
+                      color: isDark ? palette.primary.light : palette.primary.main,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {nodeStats.highestSpeedNode}
+                  </Typography>
+                </Tooltip>
+                <Typography variant="caption" sx={{ color: secondaryText }}>
+                  {nodeStats.highestSpeed?.toFixed(1)}MB/s · {nodeStats.highestSpeedDelay}ms
+                </Typography>
+              </Box>
+            )}
+          </Stack>
+        </Box>
       </Stack>
     </Box>
   );

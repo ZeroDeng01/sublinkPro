@@ -1,575 +1,584 @@
 /* 画布容器 */
 .chain-canvas-container {
-    width: 100%;
-    height: 500px;
-    background: var(--canvas-bg);
-    border-radius: 12px;
-    overflow: hidden;
-    position: relative;
-    border: 1px solid var(--canvas-border);
-    box-shadow: 0 8px 20px -16px var(--canvas-shadow);
+  width: 100%;
+  height: 500px;
+  background: var(--canvas-bg);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--canvas-border);
+  box-shadow: 0 8px 20px -16px var(--canvas-shadow);
+  backdrop-filter: blur(10px);
 }
 
 .chain-canvas-container.fullscreen {
-    height: calc(100vh - 140px);
+  height: calc(100vh - 140px);
 }
 
 .chain-canvas-container::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(var(--canvas-grid) 1px, transparent 1px),
-        linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px);
-    background-size: 36px 36px;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.38;
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--canvas-grid) 1px, transparent 1px), linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px);
+  background-size: 36px 36px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.38;
 }
 
 .chain-canvas-container::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: var(--canvas-border);
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.6;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--canvas-border);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
 }
 
 /* React Flow 重写 */
 .chain-canvas-container .react-flow {
-    background: transparent !important;
+  background: transparent !important;
 }
 
 .chain-canvas-container .react-flow__background {
-    display: none;
+  display: none;
 }
 
 .chain-canvas-container .react-flow__controls {
-    background: var(--canvas-surface-strong);
-    border: 1px solid var(--canvas-border);
-    border-radius: 8px;
-    box-shadow: 0 10px 20px -16px var(--canvas-shadow);
-    bottom: 60px !important;
-    left: 16px !important;
+  background: var(--canvas-surface-strong);
+  border: 1px solid var(--canvas-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 20px -16px var(--canvas-shadow);
+  bottom: 60px !important;
+  left: 16px !important;
+  backdrop-filter: blur(10px);
+  overflow: hidden;
 }
 
 .chain-canvas-container .react-flow__controls-button {
-    background: transparent;
-    border-bottom: 1px solid var(--canvas-border);
-    fill: var(--canvas-muted);
-    color: var(--canvas-muted);
-    transition: all 0.2s ease;
+  background: transparent;
+  border-bottom: 1px solid var(--canvas-border);
+  fill: var(--canvas-muted);
+  color: var(--canvas-muted);
+  transition: all 0.2s ease;
 }
 
 .chain-canvas-container .react-flow__controls-button:hover {
-    background: var(--canvas-hover);
-    fill: var(--canvas-primary-strong);
+  background: var(--canvas-hover);
+  fill: var(--canvas-primary-strong);
+  color: var(--canvas-primary-strong);
 }
 
 .chain-canvas-container .react-flow__controls-button:last-child {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 /* 节点基础样式 */
 .sci-fi-node {
-    padding: 12px 16px;
-    border-radius: 12px;
-    min-width: 120px;
-    max-width: 160px;
-    text-align: center;
-    position: relative;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    background: var(--canvas-surface-strong);
-    border: 1px solid var(--canvas-border);
-    box-shadow: 0 6px 14px -12px var(--canvas-shadow);
+  padding: 12px 16px;
+  border-radius: 12px;
+  min-width: 120px;
+  max-width: 160px;
+  text-align: center;
+  position: relative;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  background: var(--canvas-surface-strong);
+  border: 1px solid var(--canvas-border);
+  box-shadow: 0 6px 14px -12px var(--canvas-shadow);
+  backdrop-filter: blur(8px);
 }
 
 .sci-fi-node:hover {
-    transform: translateY(-1px);
+  transform: translateY(-1px);
 }
 
 /* 禁用状态 */
 .sci-fi-node.disabled {
-    opacity: 0.4;
-    filter: grayscale(60%);
+  opacity: 0.4;
+  filter: grayscale(60%);
 }
 
 /* 被覆盖状态 */
 .sci-fi-node.covered {
-    opacity: 0.7;
+  opacity: 0.7;
 }
 
 .sci-fi-node.covered::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 12px;
-    border: 2px dashed var(--canvas-covered-border);
-    pointer-events: none;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  border: 2px dashed var(--canvas-covered-border);
+  pointer-events: none;
 }
 
 /* 用户节点 */
 .sci-fi-node.user-node {
-    background: var(--canvas-primary-soft);
-    border: 1px solid var(--canvas-primary-border);
-    cursor: grab;
+  background: var(--canvas-primary-soft);
+  border: 1px solid var(--canvas-primary-border);
+  cursor: grab;
 }
 
 .sci-fi-node.user-node:active {
-    cursor: grabbing;
+  cursor: grabbing;
 }
 
 .sci-fi-node.user-node:hover {
-    box-shadow: 0 8px 18px -14px var(--canvas-shadow);
+  box-shadow: 0 8px 18px -14px var(--canvas-shadow);
 }
 
 /* 代理节点 */
 .sci-fi-node.proxy-node {
-    background: var(--canvas-secondary-soft);
-    border: 1px solid var(--canvas-secondary-border);
+  background: var(--canvas-secondary-soft);
+  border: 1px solid var(--canvas-secondary-border);
 }
 
 .sci-fi-node.proxy-node:hover {
-    box-shadow: 0 8px 18px -14px var(--canvas-shadow);
+  box-shadow: 0 8px 18px -14px var(--canvas-shadow);
 }
 
 /* 代理节点变体 - 紫色 */
 .sci-fi-node.proxy-node.variant {
-    background: var(--canvas-secondary-soft);
-    border: 1px solid var(--canvas-secondary-border);
+  background: var(--canvas-secondary-soft);
+  border: 1px solid var(--canvas-secondary-border);
 }
 
 .sci-fi-node.proxy-node.variant:hover {
-    box-shadow: 0 8px 18px -14px var(--canvas-shadow);
+  box-shadow: 0 8px 18px -14px var(--canvas-shadow);
 }
 
 /* 落地节点 */
 .sci-fi-node.target-node {
-    background: var(--canvas-warning-soft);
-    border: 1px solid var(--canvas-warning-border);
+  background: var(--canvas-warning-soft);
+  border: 1px solid var(--canvas-warning-border);
 }
 
 .sci-fi-node.target-node:hover {
-    box-shadow: 0 8px 18px -14px var(--canvas-shadow);
+  box-shadow: 0 8px 18px -14px var(--canvas-shadow);
 }
 
 /* 互联网节点 */
 .sci-fi-node.internet-node {
-    background: var(--canvas-success-soft);
-    border: 1px solid var(--canvas-success-border);
-    cursor: grab;
+  background: var(--canvas-success-soft);
+  border: 1px solid var(--canvas-success-border);
+  cursor: grab;
 }
 
 .sci-fi-node.internet-node:active {
-    cursor: grabbing;
+  cursor: grabbing;
 }
 
 .sci-fi-node.internet-node:hover {
-    box-shadow: 0 8px 18px -14px var(--canvas-shadow);
+  box-shadow: 0 8px 18px -14px var(--canvas-shadow);
 }
 
 /* 节点图标 */
 .node-icon {
-    width: 36px;
-    height: 36px;
-    margin: 0 auto 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--canvas-chip-bg);
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--canvas-chip-bg);
+  box-shadow: inset 0 0 0 1px var(--canvas-border);
 }
 
 /* 节点标签 */
 .node-label {
-    color: var(--canvas-text);
-    font-weight: 600;
-    font-size: 12px;
-    margin-bottom: 2px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  color: var(--canvas-text);
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .node-type-label {
-    color: var(--canvas-muted);
-    font-size: 10px;
-    opacity: 0.9;
-    margin-bottom: 4px;
+  color: var(--canvas-muted);
+  font-size: 10px;
+  opacity: 0.9;
+  margin-bottom: 4px;
 }
 
 /* 节点数量标签 - 可点击 */
 .node-count-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 600;
-    background: var(--canvas-chip-bg);
-    color: var(--canvas-text);
-    margin-top: 4px;
-    transition: all 0.2s ease;
-    border: 1px solid var(--canvas-border);
-    backdrop-filter: blur(6px);
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--canvas-chip-bg);
+  color: var(--canvas-text);
+  margin-top: 4px;
+  transition: all 0.2s ease;
+  border: 1px solid var(--canvas-border);
+  backdrop-filter: blur(6px);
 }
 
 .node-count-badge.clickable {
-    cursor: pointer;
-    position: relative;
+  cursor: pointer;
+  position: relative;
 }
 
 .node-count-badge.clickable:hover {
-    background: var(--canvas-hover);
-    color: var(--canvas-primary-main, var(--canvas-primary-strong));
+  background: var(--canvas-hover);
+  color: var(--canvas-primary-main, var(--canvas-primary-strong));
 }
 
 .node-count-badge .click-hint {
-    display: none;
-    margin-left: 4px;
-    font-size: 9px;
-    opacity: 0.7;
+  display: none;
+  margin-left: 4px;
+  font-size: 9px;
+  opacity: 0.7;
 }
 
 .node-count-badge.clickable:hover .click-hint {
-    display: inline;
+  display: inline;
 }
 
 /* Handle 样式 */
 .sci-fi-node .react-flow__handle {
-    width: 8px;
-    height: 8px;
-    background: var(--canvas-handle);
-    border: 2px solid var(--canvas-surface);
-    box-shadow: 0 0 0 2px var(--canvas-primary-soft);
+  width: 8px;
+  height: 8px;
+  background: var(--canvas-handle);
+  border: 2px solid var(--canvas-surface);
+  box-shadow: 0 0 0 2px var(--canvas-primary-soft);
 }
 
 /* 粒子流动动画 */
 @keyframes particleFlow {
-    0% {
-        stroke-dashoffset: 20;
-    }
+  0% {
+    stroke-dashoffset: 20;
+  }
 
-    100% {
-        stroke-dashoffset: 0;
-    }
+  100% {
+    stroke-dashoffset: 0;
+  }
 }
 
 .particle-flow {
-    animation: particleFlow 0.8s linear infinite;
+  animation: particleFlow 0.8s linear infinite;
 }
 
 /* 规则标签 */
 .rule-label {
-    position: absolute;
-    top: -28px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 4px 12px;
-    background: var(--canvas-chip-bg);
-    border: 1px solid var(--canvas-primary-border);
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--canvas-text);
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    backdrop-filter: blur(6px);
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  background: var(--canvas-chip-bg);
+  border: 1px solid var(--canvas-primary-border);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--canvas-text);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 14px -14px var(--canvas-shadow);
 }
 
 .rule-label.disabled {
-    background: var(--canvas-disabled-soft);
-    border-color: var(--canvas-disabled-border);
-    color: var(--canvas-muted);
+  background: var(--canvas-disabled-soft);
+  border-color: var(--canvas-disabled-border);
+  color: var(--canvas-muted);
 }
 
 .rule-label.covered {
-    background: var(--canvas-covered-soft);
-    border-color: var(--canvas-covered-border);
+  background: var(--canvas-covered-soft);
+  border-color: var(--canvas-covered-border);
 }
 
 .rule-label .covered-tag,
 .rule-label .disabled-tag {
-    margin-left: 6px;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 9px;
-    font-weight: 500;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 500;
 }
 
 .rule-label .covered-tag {
-    background: var(--canvas-warning-soft);
-    color: var(--canvas-warning-main, var(--canvas-warning-strong));
+  background: var(--canvas-warning-soft);
+  color: var(--canvas-warning-main, var(--canvas-warning-strong));
 }
 
 .rule-label .disabled-tag {
-    background: var(--canvas-disabled-soft);
-    color: var(--canvas-muted);
+  background: var(--canvas-disabled-soft);
+  color: var(--canvas-muted);
 }
 
 /* ========== 详情面板 ========== */
 .node-detail-panel {
-    position: fixed;
-    z-index: 99999;
-    min-width: 360px;
-    max-width: 480px;
-    max-height: 70vh;
-    display: flex;
-    flex-direction: column;
-    background: var(--canvas-surface-strong);
-    border: 1px solid var(--canvas-border);
-    border-radius: 16px;
-    box-shadow: 0 14px 28px -22px var(--canvas-shadow);
-    animation: panelSlideIn 0.2s ease;
-    overflow: hidden;
+  position: fixed;
+  z-index: 99999;
+  min-width: 360px;
+  max-width: 480px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas-surface-strong);
+  border: 1px solid var(--canvas-border);
+  border-radius: 16px;
+  box-shadow: 0 14px 28px -22px var(--canvas-shadow);
+  animation: panelSlideIn 0.2s ease;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
 }
 
 @keyframes panelSlideIn {
-    from {
-        opacity: 0;
-        transform: translateX(-10px);
-    }
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
 
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .panel-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 16px 12px;
-    border-bottom: 1px solid var(--canvas-border);
-    background: var(--canvas-panel-header);
-    flex-shrink: 0;
-    box-shadow: inset 0 -1px 0 var(--canvas-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--canvas-border);
+  background: var(--canvas-panel-header);
+  flex-shrink: 0;
+  box-shadow: inset 0 -1px 0 var(--canvas-border);
 }
 
 .panel-icon {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    background: var(--canvas-primary-soft);
-    flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--canvas-panel-surface);
+  box-shadow: inset 0 0 0 1px var(--canvas-border);
+  flex-shrink: 0;
 }
 
 .panel-title {
-    flex: 1;
-    min-width: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .panel-title h4 {
-    margin: 0;
-    color: var(--canvas-text);
-    font-size: 15px;
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  margin: 0;
+  color: var(--canvas-text);
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel-title span {
-    color: var(--canvas-muted);
-    font-size: 12px;
+  color: var(--canvas-muted);
+  font-size: 12px;
 }
 
 .panel-stats {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--canvas-border);
-    flex-shrink: 0;
-    background: var(--canvas-surface);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--canvas-border);
+  flex-shrink: 0;
+  background: var(--canvas-panel-surface);
 }
 
 .panel-stats .stat-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 4px 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
 }
 
 .panel-stats .stat-label {
-    color: var(--canvas-muted);
-    font-size: 12px;
+  color: var(--canvas-muted);
+  font-size: 12px;
 }
 
 .panel-stats .stat-value {
-    color: var(--canvas-text);
-    font-size: 12px;
-    font-weight: 600;
+  color: var(--canvas-text);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* 节点列表容器 */
 .panel-nodes-list {
-    flex: 1;
-    min-height: 100px;
-    max-height: 350px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+  flex: 1;
+  min-height: 100px;
+  max-height: 350px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .panel-nodes-list .list-header {
-    display: flex;
-    padding: 10px 16px;
-    background: var(--canvas-panel-header);
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--canvas-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    flex-shrink: 0;
+  display: flex;
+  padding: 10px 16px;
+  background: var(--canvas-panel-header);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--canvas-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .panel-nodes-list .list-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 12px 16px;
-    background: var(--canvas-surface);
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px 16px;
+  background: var(--canvas-panel-surface);
 }
 
 .panel-nodes-list .list-body::-webkit-scrollbar {
-    width: 6px;
+  width: 6px;
 }
 
 .panel-nodes-list .list-body::-webkit-scrollbar-track {
-    background: var(--canvas-hover);
-    border-radius: 3px;
+  background: var(--canvas-hover);
+  border-radius: 3px;
 }
 
 .panel-nodes-list .list-body::-webkit-scrollbar-thumb {
-    background: var(--canvas-primary-border);
-    border-radius: 3px;
+  background: var(--canvas-primary-border);
+  border-radius: 3px;
 }
 
 .panel-nodes-list .list-body::-webkit-scrollbar-thumb:hover {
-    background: var(--canvas-primary-strong);
+  background: var(--canvas-primary-strong);
 }
 
 /* 列宽度 */
 .panel-nodes-list .col-name {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .panel-nodes-list .col-latency {
-    width: 70px;
-    text-align: right;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
+  width: 70px;
+  text-align: right;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .panel-nodes-list .col-speed {
-    width: 90px;
-    text-align: right;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
+  width: 90px;
+  text-align: right;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 /* 节点行 */
 .panel-nodes-list .node-row {
-    display: flex;
-    align-items: center;
-    padding: 8px 4px;
-    border-radius: 6px;
-    font-size: 12px;
-    color: var(--canvas-text);
-    transition: background 0.15s ease;
+  display: flex;
+  align-items: center;
+  padding: 8px 4px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--canvas-text);
+  transition: background 0.15s ease;
 }
 
 .panel-nodes-list .node-row:hover {
-    background: var(--canvas-hover);
-    box-shadow: inset 0 0 0 1px var(--canvas-shadow-soft);
+  background: var(--canvas-hover);
+  box-shadow: inset 0 0 0 1px var(--canvas-shadow-soft);
 }
 
 .panel-nodes-list .node-row .flag {
-    font-size: 14px;
-    flex-shrink: 0;
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .panel-nodes-list .node-row .name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 空状态 */
 .panel-empty {
-    padding: 32px 16px;
-    text-align: center;
-    color: var(--canvas-muted);
-    font-size: 13px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--canvas-muted);
+  font-size: 13px;
 }
 
 /* Mini 地图 */
 .chain-canvas-container .react-flow__minimap {
-    background: var(--canvas-surface-strong);
-    border: 1px solid var(--canvas-border);
-    border-radius: 8px;
-    box-shadow: 0 8px 18px -16px var(--canvas-shadow);
+  background: var(--canvas-surface-strong);
+  border: 1px solid var(--canvas-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 18px -16px var(--canvas-shadow);
+  backdrop-filter: blur(10px);
 }
 
 .chain-canvas-container .react-flow__minimap-mask {
-    fill: var(--canvas-hover);
+  fill: var(--canvas-hover);
 }
 
 /* 移动端适配 */
 @media (max-width: 768px) {
-    .chain-canvas-container {
-        height: 400px;
-        border-radius: 8px;
-    }
+  .chain-canvas-container {
+    height: 400px;
+    border-radius: 8px;
+  }
 
-    .sci-fi-node {
-        padding: 10px 12px;
-        min-width: 100px;
-        max-width: 130px;
-    }
+  .sci-fi-node {
+    padding: 10px 12px;
+    min-width: 100px;
+    max-width: 130px;
+  }
 
-    .node-icon {
-        width: 28px;
-        height: 28px;
-    }
+  .node-icon {
+    width: 28px;
+    height: 28px;
+  }
 
-    .node-label {
-        font-size: 11px;
-    }
+  .node-label {
+    font-size: 11px;
+  }
 
-    .node-type-label {
-        font-size: 9px;
-    }
+  .node-type-label {
+    font-size: 9px;
+  }
 
-    .rule-label {
-        font-size: 10px;
-        padding: 3px 8px;
-        top: -24px;
-    }
+  .rule-label {
+    font-size: 10px;
+    padding: 3px 8px;
+    top: -24px;
+  }
 
-    .node-detail-panel {
-        min-width: 280px;
-        max-width: 90vw;
-        max-height: 60vh;
-        left: 5vw !important;
-        right: 5vw !important;
-    }
+  .node-detail-panel {
+    min-width: 280px;
+    max-width: 90vw;
+    max-height: 60vh;
+    left: 5vw !important;
+    right: 5vw !important;
+  }
 }

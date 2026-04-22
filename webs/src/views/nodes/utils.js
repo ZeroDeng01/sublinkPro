@@ -732,11 +732,18 @@ export const getFraudScoreDisplay = (fraudScore, qualityStatus = QUALITY_STATUS.
   const matchedLevel = getFraudScoreLevel(fraudScore);
   const levelStyles = {
     极佳: {
-      sx: (theme) => ({
-        color: theme.palette.mode === 'dark' ? '#e5e7eb' : '#6b7280',
-        borderColor: theme.palette.mode === 'dark' ? '#94a3b8' : '#9ca3af',
-        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.12)' : 'rgba(148,163,184,0.08)'
-      })
+      sx: (theme) => [
+        {
+          color: '#6b7280',
+          borderColor: '#9ca3af',
+          backgroundColor: 'rgba(148,163,184,0.08)'
+        },
+        theme.applyStyles('dark', {
+          color: '#e5e7eb',
+          borderColor: '#94a3b8',
+          backgroundColor: 'rgba(148,163,184,0.12)'
+        })
+      ]
     },
     优秀: {
       sx: {
@@ -767,11 +774,18 @@ export const getFraudScoreDisplay = (fraudScore, qualityStatus = QUALITY_STATUS.
       }
     },
     极差: {
-      sx: (theme) => ({
-        color: theme.palette.mode === 'dark' ? '#cbd5e1' : '#111827',
-        borderColor: theme.palette.mode === 'dark' ? '#64748b' : '#1f2937',
-        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15,23,42,0.35)' : 'rgba(15,23,42,0.08)'
-      })
+      sx: (theme) => [
+        {
+          color: '#111827',
+          borderColor: '#1f2937',
+          backgroundColor: 'rgba(15,23,42,0.08)'
+        },
+        theme.applyStyles('dark', {
+          color: '#cbd5e1',
+          borderColor: '#64748b',
+          backgroundColor: 'rgba(15,23,42,0.35)'
+        })
+      ]
     }
   };
   const matchedStyle = levelStyles[matchedLevel.category] || levelStyles.极差;

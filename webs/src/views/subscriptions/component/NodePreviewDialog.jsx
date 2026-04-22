@@ -40,6 +40,7 @@ import NodePreviewDetailsPanel from './NodePreviewDetailsPanel';
 import IPDetailsDialog from 'components/IPDetailsDialog';
 import Alert from '@mui/material/Alert';
 import { AlertTitle } from '@mui/material';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // 每次加载的卡片数量
 const BATCH_SIZE = 100;
@@ -86,6 +87,7 @@ const formatExpireDate = (timestamp) => {
  */
 export default function NodePreviewDialog({ open, loading, data, tagColorMap, onClose }) {
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const contentRef = useRef(null);
 
@@ -493,7 +495,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                               <Typography
                                 variant="body2"
                                 fontWeight={600}
-                                color={theme.palette.mode === 'dark' ? 'warning.main' : 'warning.dark'}
+                                color={isDark ? 'warning.main' : 'warning.dark'}
                                 sx={{
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',

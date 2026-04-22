@@ -17,6 +17,8 @@ import Typography from '@mui/material/Typography';
 // project imports
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
 import useConfig from 'hooks/useConfig';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { getSidebarNavTokens } from '../../sidebarNavTokens';
 
 // assets
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
@@ -24,6 +26,7 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 export default function NavItem({ item, level, isParents = false, setSelectedID }) {
   const theme = useTheme();
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
+  const { isDark } = useResolvedColorScheme();
   const ref = useRef(null);
 
   const { pathname } = useLocation();
@@ -34,6 +37,8 @@ export default function NavItem({ item, level, isParents = false, setSelectedID 
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
   const isSelected = !!matchPath({ path: item?.link ? item.link : item.url, end: false }, pathname);
+  const navTokens = getSidebarNavTokens(theme, isDark);
+  const isCollapsedLevelOne = !drawerOpen && level === 1;
 
   const [hoverStatus, setHover] = useState(false);
 
@@ -79,17 +84,34 @@ export default function NavItem({ item, level, isParents = false, setSelectedID 
         sx={{
           zIndex: 1201,
           borderRadius: `${borderRadius}px`,
-          mb: 0.5,
+          mb: isCollapsedLevelOne ? 0.125 : 0.5,
+          color: isSelected ? navTokens.accent : navTokens.itemText,
           ...(drawerOpen && level !== 1 && { ml: `${level * 18}px` }),
           ...(!drawerOpen && { pl: 1.25 }),
-          ...((!drawerOpen || level !== 1) && {
-            py: level === 1 ? 0 : 1,
-            '&:hover': { bgcolor: 'transparent' },
-            '&.Mui-selected': {
-              '&:hover': { bgcolor: 'transparent' },
-              bgcolor: 'transparent'
-            }
-          })
+          ...(isCollapsedLevelOne
+            ? {
+                pl: navTokens.collapsedLevelOneInset,
+                py: 0.125,
+                '&:hover': {
+                  bgcolor: 'transparent'
+                },
+                '&.Mui-selected': {
+                  bgcolor: 'transparent',
+                  '&:hover': { bgcolor: 'transparent' }
+                }
+              }
+            : {
+                ...((!drawerOpen || level !== 1) && {
+                  py: level === 1 ? 0 : 1
+                }),
+                '&:hover': {
+                  bgcolor: navTokens.hoverSurface
+                },
+                '&.Mui-selected': {
+                  bgcolor: navTokens.selectedSurface,
+                  '&:hover': { bgcolor: navTokens.selectedHoverSurface }
+                }
+              })
         }}
         selected={isSelected}
         onClick={() => itemHandler()}
@@ -98,20 +120,16 @@ export default function NavItem({ item, level, isParents = false, setSelectedID 
           <ListItemIcon
             sx={{
               minWidth: level === 1 ? 36 : 18,
-              color: isSelected ? 'secondary.main' : 'text.primary',
-              ...(!drawerOpen &&
-                level === 1 && {
-                  borderRadius: `${borderRadius}px`,
-                  width: 46,
-                  height: 46,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  '&:hover': { bgcolor: 'secondary.light' },
-                  ...(isSelected && {
-                    bgcolor: 'secondary.light',
-                    '&:hover': { bgcolor: 'secondary.light' }
-                  })
-                })
+              color: isSelected ? navTokens.accent : navTokens.itemText,
+              ...(isCollapsedLevelOne && {
+                borderRadius: `${borderRadius}px`,
+                width: navTokens.collapsedLevelOneTileSize,
+                height: navTokens.collapsedLevelOneTileSize,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: isSelected ? navTokens.iconActiveSurface : navTokens.iconSurface,
+                '&:hover': { bgcolor: isSelected ? navTokens.iconActiveSurface : navTokens.iconHoverSurface }
+              })
             }}
           >
             {itemIcon}

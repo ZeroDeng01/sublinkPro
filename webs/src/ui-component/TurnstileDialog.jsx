@@ -12,6 +12,7 @@ import IconButton from '@mui/material/IconButton';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import Fade from '@mui/material/Fade';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // Icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -30,6 +31,7 @@ import TurnstileWidget from './TurnstileWidget';
 const TurnstileDialog = forwardRef(function TurnstileDialog({ open, onClose, onSuccess, siteKey, title = '安全验证' }, ref) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { isDark } = useResolvedColorScheme();
   const turnstileRef = useRef(null);
 
   // 状态：idle | loading | verified | error
@@ -213,7 +215,7 @@ const TurnstileDialog = forwardRef(function TurnstileDialog({ open, onClose, onS
           py: 1.5,
           px: 2,
           background: (theme) =>
-            theme.palette.mode === 'dark'
+            isDark
               ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1))'
               : 'linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.05))',
           borderBottom: '1px solid',

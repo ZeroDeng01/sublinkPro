@@ -8,6 +8,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { ReactFlow, Controls, MiniMap, useNodesState, useEdgesState, Handle, Position, getBezierPath } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './ChainCanvasView.css';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 import PersonIcon from '@mui/icons-material/Person';
 import PublicIcon from '@mui/icons-material/Public';
@@ -21,7 +22,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import BlockIcon from '@mui/icons-material/Block';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CloseIcon from '@mui/icons-material/Close';
-import { withAlpha } from '../../../utils/colorUtils';
+import { getChainProxyCanvasCssVars, getChainProxyThemeTokens } from './chainProxyTheme';
 
 // 国旗转换
 const getCountryFlag = (code) => {
@@ -346,8 +347,8 @@ const START_Y = 60;
 
 export default function ChainCanvasView({ rules = [], fullscreen = false }) {
   const theme = useTheme();
-  const palette = theme.vars?.palette || theme.palette;
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getChainProxyThemeTokens(theme, isDark);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -521,6 +522,7 @@ export default function ChainCanvasView({ rules = [], fullscreen = false }) {
       <Box
         className="chain-canvas-container"
         sx={{
+          ...getChainProxyCanvasCssVars(tokens),
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -538,37 +540,7 @@ export default function ChainCanvasView({ rules = [], fullscreen = false }) {
     <Box
       className={`chain-canvas-container ${fullscreen ? 'fullscreen' : ''}`}
       sx={{
-        '--canvas-bg': palette.background.default,
-        '--canvas-surface': isDark ? withAlpha(palette.background.default, 0.84) : palette.background.paper,
-        '--canvas-surface-strong': isDark ? withAlpha(palette.background.paper, 0.3) : withAlpha(palette.background.paper, 0.98),
-        '--canvas-border': isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9),
-        '--canvas-grid': isDark ? withAlpha(palette.divider, 0.12) : withAlpha(palette.divider, 0.38),
-        '--canvas-muted': palette.text.secondary,
-        '--canvas-text': palette.text.primary,
-        '--canvas-hover': isDark ? withAlpha(palette.background.paper, 0.22) : withAlpha(palette.background.default, 0.92),
-        '--canvas-shadow': alpha(theme.palette.text.primary, isDark ? 0.24 : 0.12),
-        '--canvas-primary-soft': alpha(theme.palette.primary.main, 0.1),
-        '--canvas-primary-border': alpha(theme.palette.primary.main, 0.28),
-        '--canvas-primary-strong': palette.primary.main,
-        '--canvas-secondary-soft': alpha(theme.palette.secondary.main, 0.1),
-        '--canvas-secondary-border': alpha(theme.palette.secondary.main, 0.28),
-        '--canvas-secondary-strong': palette.secondary.main,
-        '--canvas-warning-soft': alpha(theme.palette.warning.main, 0.1),
-        '--canvas-warning-border': alpha(theme.palette.warning.main, 0.28),
-        '--canvas-warning-strong': palette.warning.main,
-        '--canvas-warning-main': palette.warning.main,
-        '--canvas-success-soft': alpha(theme.palette.success.main, 0.1),
-        '--canvas-success-border': alpha(theme.palette.success.main, 0.28),
-        '--canvas-success-strong': palette.success.main,
-        '--canvas-disabled-soft': alpha(theme.palette.text.secondary, 0.08),
-        '--canvas-disabled-border': alpha(theme.palette.text.secondary, 0.22),
-        '--canvas-covered-soft': alpha(theme.palette.warning.main, 0.12),
-        '--canvas-covered-border': alpha(theme.palette.warning.main, 0.34),
-        '--canvas-chip-bg': isDark ? withAlpha(palette.background.paper, 0.22) : withAlpha(palette.background.default, 0.92),
-        '--canvas-handle': palette.primary.main,
-        '--canvas-panel-header': isDark ? withAlpha(palette.background.default, 0.92) : withAlpha(palette.background.default, 0.9),
-        '--canvas-primary-main': palette.primary.main,
-        '--canvas-shadow-soft': alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08)
+        ...getChainProxyCanvasCssVars(tokens)
       }}
     >
       <ReactFlow
@@ -600,8 +572,8 @@ export default function ChainCanvasView({ rules = [], fullscreen = false }) {
             if (node.type === 'internetNode') return theme.palette.success.main;
             return theme.palette.text.secondary;
           }}
-          maskColor={isDark ? withAlpha(palette.background.default, 0.46) : withAlpha(palette.background.default, 0.16)}
-          style={{ background: isDark ? withAlpha(palette.background.paper, 0.72) : withAlpha(palette.background.paper, 0.96) }}
+          maskColor={tokens.containerSurface}
+          style={{ background: tokens.canvasElevatedSurface }}
         />
       </ReactFlow>
 
@@ -625,10 +597,10 @@ export default function ChainCanvasView({ rules = [], fullscreen = false }) {
           icon={<PersonIcon sx={{ fontSize: 14 }} />}
           label="用户"
           sx={{
-            bgcolor: alpha(theme.palette.primary.main, 0.1),
+            bgcolor: tokens.primarySurface,
             color: 'primary.main',
             border: '1px solid',
-            borderColor: alpha(theme.palette.primary.main, 0.24),
+            borderColor: tokens.primarySoftBorder,
             fontSize: 11
           }}
         />
@@ -637,10 +609,10 @@ export default function ChainCanvasView({ rules = [], fullscreen = false }) {
           icon={<HubIcon sx={{ fontSize: 14 }} />}
           label="代理链"
           sx={{
-            bgcolor: alpha(theme.palette.secondary.main, 0.1),
+            bgcolor: tokens.secondarySurface,
             color: 'secondary.main',
             border: '1px solid',
-            borderColor: alpha(theme.palette.secondary.main, 0.24),
+            borderColor: tokens.secondarySoftBorder,
             fontSize: 11
           }}
         />
@@ -649,10 +621,10 @@ export default function ChainCanvasView({ rules = [], fullscreen = false }) {
           icon={<FlagIcon sx={{ fontSize: 14 }} />}
           label="落地"
           sx={{
-            bgcolor: alpha(theme.palette.warning.main, 0.1),
+            bgcolor: tokens.warningSurface,
             color: 'warning.main',
             border: '1px solid',
-            borderColor: alpha(theme.palette.warning.main, 0.24),
+            borderColor: tokens.warningSoftBorder,
             fontSize: 11
           }}
         />
@@ -661,10 +633,10 @@ export default function ChainCanvasView({ rules = [], fullscreen = false }) {
           icon={<PublicIcon sx={{ fontSize: 14 }} />}
           label="互联网"
           sx={{
-            bgcolor: alpha(theme.palette.success.main, 0.1),
+            bgcolor: tokens.successSurface,
             color: 'success.main',
             border: '1px solid',
-            borderColor: alpha(theme.palette.success.main, 0.24),
+            borderColor: tokens.successSoftBorder,
             fontSize: 11
           }}
         />

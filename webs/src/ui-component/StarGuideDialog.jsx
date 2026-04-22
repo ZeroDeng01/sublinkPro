@@ -18,6 +18,7 @@ import StarIcon from '@mui/icons-material/Star';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 const STORAGE_KEY = 'sublinkpro_star_guide_shown';
 
@@ -55,7 +56,7 @@ const sparkle = keyframes`
 
 export default function StarGuideDialog() {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark } = useResolvedColorScheme();
   const [open, setOpen] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 

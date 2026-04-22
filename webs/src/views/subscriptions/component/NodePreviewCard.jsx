@@ -6,6 +6,7 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getProtocolPresentation } from '../../../utils/protocolPresentation';
 import { withAlpha } from '../../../utils/colorUtils';
 
@@ -54,6 +55,7 @@ const getSpeedDisplay = (speed, speedStatus) => {
  */
 export default function NodePreviewCard({ node, onClick }) {
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
   const palette = theme.vars?.palette || theme.palette;
 
   const delayDisplay = getDelayDisplay(node.DelayTime, node.DelayStatus);
@@ -61,7 +63,6 @@ export default function NodePreviewCard({ node, onClick }) {
   const displayName = node.PreviewName || node.Name || node.OriginalName || '未知节点';
   const protocolInfo = getProtocolPresentation(node.Protocol);
   const protocolColor = protocolInfo.color || theme.palette.primary.main;
-  const isDark = theme.palette.mode === 'dark';
   const footerBackground = isDark ? withAlpha(palette.background.default, 0.92) : withAlpha(palette.background.default, 0.88);
   const footerBorderColor = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
 
@@ -93,7 +94,7 @@ export default function NodePreviewCard({ node, onClick }) {
         '&:hover': {
           transform: 'translateY(-1px)',
           borderColor: alpha(protocolColor, 0.35),
-          boxShadow: theme.palette.mode === 'dark' ? `0 0 0 1px ${alpha(protocolColor, 0.18)}` : theme.shadows[3],
+          boxShadow: isDark ? `0 0 0 1px ${alpha(protocolColor, 0.18)}` : theme.shadows[3],
           '& .protocol-badge': {
             transform: 'scale(1.1)'
           },

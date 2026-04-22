@@ -12,6 +12,29 @@ export function getNodes(params = {}) {
   });
 }
 
+export function getNodeSelector(params = {}) {
+  return request({
+    url: '/v1/nodes/selector',
+    method: 'get',
+    params
+  });
+}
+
+export function getNodeSelectorByIds(params = {}) {
+  return request({
+    url: '/v1/nodes/selector/by-ids',
+    method: 'get',
+    params
+  });
+}
+
+export function getNodeGroupStats() {
+  return request({
+    url: '/v1/nodes/group-stats',
+    method: 'get'
+  });
+}
+
 // 获取符合过滤条件的所有节点ID（用于全选操作）
 export function getNodeIds(params = {}) {
   return request({

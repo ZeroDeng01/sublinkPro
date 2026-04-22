@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { useMemo } from 'react';
 
 // material-ui
+import { useTheme } from '@mui/material/styles';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -11,9 +12,11 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // utils
 import { isoToFlag } from '../utils';
+import { getNodeDialogPaperSx, getNodeFieldControlSx, getNodeThemeTokens } from '../nodeTheme';
 
 // 常用国家代码列表
 const COMMON_COUNTRY_CODES = [
@@ -45,6 +48,10 @@ const COMMON_COUNTRY_CODES = [
  * 批量修改国家代码对话框
  */
 export default function BatchCountryDialog({ open, selectedCount, value, setValue, countryOptions, onClose, onSubmit }) {
+  const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
+  const tokens = getNodeThemeTokens(theme, isDark);
+  const fieldControlSx = getNodeFieldControlSx(tokens, tokens.palette.secondary.main);
   // 合并已有国家列表和常用国家列表，去重
   const allOptions = useMemo(() => {
     const existingCodes = new Set(countryOptions || []);
@@ -74,10 +81,20 @@ export default function BatchCountryDialog({ open, selectedCount, value, setValu
   const previewName = value ? COMMON_COUNTRY_CODES.find((item) => item.code === value.toUpperCase())?.name || '' : '';
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>批量修改国家/地区</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{ sx: getNodeDialogPaperSx(theme, tokens, tokens.palette.secondary.main) }}
+    >
+      <DialogTitle
+        sx={{ color: tokens.primaryText, bgcolor: tokens.mutedPanelSurface, borderBottom: '1px solid', borderColor: tokens.panelBorder }}
+      >
+        批量修改国家/地区
+      </DialogTitle>
+      <DialogContent dividers sx={{ bgcolor: 'transparent', borderColor: tokens.panelBorder }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           将为选中的 {selectedCount} 个节点设置相同的国家代码
         </Typography>
         <Autocomplete
@@ -87,6 +104,7 @@ export default function BatchCountryDialog({ open, selectedCount, value, setValu
           onChange={(e, newValue) => setValue(newValue ? newValue.toUpperCase() : '')}
           onInputChange={(e, newInputValue) => setValue(newInputValue ? newInputValue.toUpperCase() : '')}
           getOptionLabel={(option) => option}
+          sx={fieldControlSx}
           renderOption={(props, option) => {
             const { key, ...otherProps } = props;
             return (
@@ -95,12 +113,24 @@ export default function BatchCountryDialog({ open, selectedCount, value, setValu
               </Box>
             );
           }}
-          renderInput={(params) => <TextField {...params} label="国家代码" placeholder="输入或选择国家代码，如 US、HK、JP" fullWidth />}
+          renderInput={(params) => (
+            <TextField {...params} label="国家代码" placeholder="输入或选择国家代码，如 US、HK、JP" fullWidth sx={fieldControlSx} />
+          )}
         />
 
         {/* 国旗预览 */}
         {value && (
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 2, textAlign: 'center' }}>
+          <Box
+            sx={{
+              mt: 2,
+              p: 2,
+              bgcolor: tokens.nestedPanelSurface,
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: tokens.softBorder,
+              textAlign: 'center'
+            }}
+          >
             <Typography variant="h3" sx={{ mb: 0.5 }}>
               {previewFlag || '🏳️'}
             </Typography>
@@ -111,11 +141,11 @@ export default function BatchCountryDialog({ open, selectedCount, value, setValu
           </Box>
         )}
 
-        <Typography variant="caption" color="textSecondary" sx={{ mt: 2, display: 'block' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
           提示：留空将清除所选节点的国家标记。国家代码使用 ISO 3166-1 alpha-2 标准（如 US、CN、JP）。
         </Typography>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ bgcolor: tokens.mutedPanelSurface, borderTop: '1px solid', borderColor: tokens.panelBorder }}>
         <Button onClick={onClose}>取消</Button>
         <Button variant="contained" onClick={onSubmit}>
           确认修改
