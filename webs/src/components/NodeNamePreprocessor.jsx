@@ -133,7 +133,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
     : 'none';
 
   const sectionCardSx = {
-    p: 1.75,
+    p: { xs: 1.25, sm: 1.75 },
     borderRadius: 2,
     bgcolor: nestedPanelSurface,
     border: '1px solid',
@@ -142,15 +142,18 @@ export default function NodeNamePreprocessor({ value, onChange }) {
   };
 
   const codeTokenSx = {
-    display: 'inline-flex',
-    alignItems: 'center',
+    display: 'block',
+    width: '100%',
+    minWidth: 0,
     px: 0.75,
     py: 0.35,
-    ml: 0.5,
     borderRadius: 1,
     bgcolor: withAlpha(palette.background.default, isDark ? 0.72 : 0.92),
     fontFamily: 'monospace',
-    wordBreak: 'break-all'
+    lineHeight: 1.5,
+    whiteSpace: 'normal',
+    overflowWrap: 'anywhere',
+    wordBreak: 'break-word'
   };
 
   return (
@@ -174,6 +177,8 @@ export default function NodeNamePreprocessor({ value, onChange }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 1,
           bgcolor: expanded ? nestedPanelSurface : mutedPanelSurface,
           borderBottom: expanded ? '1px solid' : 'none',
           borderColor: panelBorder,
@@ -185,7 +190,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
         }}
         onClick={() => setExpanded(!expanded)}
       >
-        <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0, flex: 1 }}>
+        <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0, flex: '1 1 220px', flexWrap: 'wrap', rowGap: 0.75 }}>
           <TextFieldsIcon color="primary" fontSize="small" />
           <Typography variant="subtitle2" fontWeight={600} sx={{ color: primaryText }}>
             原名预处理
@@ -197,14 +202,19 @@ export default function NodeNamePreprocessor({ value, onChange }) {
               label={`${enabledRulesCount}/${rules.length} 条生效`}
               sx={{
                 height: 22,
+                maxWidth: '100%',
                 color: enabledRulesCount > 0 ? palette.primary.main : tertiaryText,
                 bgcolor: withAlpha(palette.primary.main, isDark ? 0.14 : 0.06),
-                borderColor: withAlpha(palette.primary.main, isDark ? 0.28 : 0.16)
+                borderColor: withAlpha(palette.primary.main, isDark ? 0.28 : 0.16),
+                '& .MuiChip-label': {
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }
               }}
             />
           )}
         </Stack>
-        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ ml: 1 }}>
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ ml: 'auto', flexShrink: 0 }}>
           <Tooltip title="添加规则">
             <IconButton
               size="small"
@@ -225,7 +235,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
       </Box>
 
       <Collapse in={expanded} timeout="auto">
-        <Box sx={{ px: 2.25, py: 2.25, bgcolor: dialogSurface, backgroundImage: contentSurface }}>
+        <Box sx={{ px: { xs: 1.5, sm: 2.25 }, py: { xs: 1.75, sm: 2.25 }, bgcolor: dialogSurface, backgroundImage: contentSurface }}>
           <Stack spacing={2.25}>
             <Typography variant="body2" sx={{ color: secondaryText }}>
               先按顺序处理节点原始名称，再把结果继续交给下游命名规则。支持文本匹配和正则表达式两种模式。
@@ -277,9 +287,14 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                       }}
                                     >
                                       <Stack
-                                        direction={isMobile ? 'column' : 'row'}
+                                        direction="row"
                                         spacing={1.25}
-                                        alignItems={isMobile ? 'stretch' : 'center'}
+                                        alignItems="flex-start"
+                                        useFlexGap
+                                        sx={{
+                                          minWidth: 0,
+                                          flexWrap: 'wrap'
+                                        }}
                                       >
                                         <Box
                                           {...provided.dragHandleProps}
@@ -289,8 +304,9 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                             justifyContent: 'center',
                                             cursor: 'grab',
                                             color: tertiaryText,
-                                            alignSelf: isMobile ? 'flex-start' : 'center',
-                                            pt: isMobile ? 0.25 : 0
+                                            alignSelf: 'center',
+                                            flexShrink: 0,
+                                            pt: 0.25
                                           }}
                                         >
                                           <DragIndicatorIcon fontSize="small" />
@@ -300,10 +316,10 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                           size="small"
                                           checked={rule.enabled}
                                           onChange={(e) => handleUpdateRule(rule.id, 'enabled', e.target.checked)}
-                                          sx={{ alignSelf: isMobile ? 'flex-start' : 'center' }}
+                                          sx={{ alignSelf: 'center', flexShrink: 0 }}
                                         />
 
-                                        <FormControl size="small" sx={{ minWidth: isMobile ? '100%' : 96 }}>
+                                        <FormControl size="small" sx={{ minWidth: 0, flex: '1 1 108px' }}>
                                           <Select
                                             value={rule.matchMode}
                                             onChange={(e) => handleUpdateRule(rule.id, 'matchMode', e.target.value)}
@@ -318,12 +334,19 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                           placeholder={rule.matchMode === 'regex' ? '正则表达式' : '查找文本'}
                                           value={rule.pattern}
                                           onChange={(e) => handleUpdateRule(rule.id, 'pattern', e.target.value)}
-                                          sx={{ flex: 1, minWidth: isMobile ? '100%' : 140 }}
+                                          sx={{ flex: '1 1 180px', minWidth: 0 }}
                                           error={regexError}
                                           helperText={regexError ? '无效正则' : ' '}
                                         />
 
-                                        <Typography sx={{ display: isMobile ? 'none' : 'block', color: tertiaryText, fontWeight: 600 }}>
+                                        <Typography
+                                          sx={{
+                                            display: { xs: 'none', sm: 'block' },
+                                            color: tertiaryText,
+                                            fontWeight: 600,
+                                            alignSelf: 'center'
+                                          }}
+                                        >
                                           →
                                         </Typography>
 
@@ -332,7 +355,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                           placeholder="替换为 (留空删除)"
                                           value={rule.replacement}
                                           onChange={(e) => handleUpdateRule(rule.id, 'replacement', e.target.value)}
-                                          sx={{ flex: 1, minWidth: isMobile ? '100%' : 120 }}
+                                          sx={{ flex: '1 1 180px', minWidth: 0 }}
                                         />
 
                                         <Tooltip title="删除规则">
@@ -340,7 +363,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                             size="small"
                                             color="error"
                                             onClick={() => handleDeleteRule(rule.id)}
-                                            sx={{ alignSelf: isMobile ? 'flex-end' : 'center' }}
+                                            sx={{ alignSelf: 'center', flexShrink: 0, ml: 'auto' }}
                                           >
                                             <DeleteOutlineIcon fontSize="small" />
                                           </IconButton>
@@ -394,18 +417,22 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                     boxShadow: insetHighlight
                   }}
                 >
-                  <Stack spacing={0.75}>
-                    <Typography variant="body2" sx={{ color: secondaryText }}>
+                  <Stack spacing={1} sx={{ minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ color: secondaryText, minWidth: 0 }}>
                       实时预览会按当前顺序连续应用所有启用规则。
                     </Typography>
-                    <Typography variant="body2" sx={{ color: primaryText }}>
-                      <strong>原名：</strong>
+                    <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ color: primaryText, fontWeight: 600 }}>
+                        原名：
+                      </Typography>
                       <Box component="code" sx={{ ...codeTokenSx, color: secondaryText }}>
                         {PREVIEW_LINK_NAME}
                       </Box>
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: primaryText }}>
-                      <strong>结果：</strong>
+                    </Stack>
+                    <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ color: primaryText, fontWeight: 600 }}>
+                        结果：
+                      </Typography>
                       <Box
                         component="code"
                         sx={{
@@ -416,7 +443,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                       >
                         {previewResult || '(空)'}
                       </Box>
-                    </Typography>
+                    </Stack>
                   </Stack>
                 </Alert>
               </Fade>
