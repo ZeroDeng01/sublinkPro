@@ -75,7 +75,7 @@ export default function AirportFormDialog({
     theme,
     isDark
   );
-  const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
+  const { primaryText, secondaryText } = getReadableTextTokens(theme, isDark);
 
   const controlRowSx = {
     display: 'flex',
@@ -109,24 +109,10 @@ export default function AirportFormDialog({
     borderColor: panelBorder
   };
 
-  const requestHeaderActionTraySx = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 1,
-    width: { xs: '100%', sm: 'auto' },
-    minWidth: { sm: 172 },
-    px: 1,
-    py: 0.75,
-    borderRadius: 2,
-    bgcolor: isDark ? withAlpha(palette.background.paper, 0.16) : withAlpha(palette.background.paper, 0.88),
-    border: '1px solid',
-    borderColor: panelBorder
-  };
-
   const addRequestHeaderButtonSx = {
     minWidth: 0,
-    px: 1.25,
+    alignSelf: { xs: 'flex-start', sm: 'center' },
+    px: 1,
     py: 0.5,
     borderRadius: 1.5,
     fontSize: '0.8125rem',
@@ -310,9 +296,9 @@ export default function AirportFormDialog({
                     direction={{ xs: 'column', sm: 'row' }}
                     spacing={1}
                     justifyContent="space-between"
-                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                    alignItems={{ xs: 'flex-start', sm: 'flex-start' }}
                   >
-                    <Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography variant="body2" sx={{ color: primaryText, fontWeight: 500 }}>
                         自定义请求头
                       </Typography>
@@ -320,20 +306,15 @@ export default function AirportFormDialog({
                         可按行添加额外请求头，空白行不会提交，User-Agent 请使用上方专用字段
                       </Typography>
                     </Box>
-                    <Box sx={requestHeaderActionTraySx}>
-                      <Typography variant="caption" sx={{ color: tertiaryText, fontWeight: 500, whiteSpace: 'nowrap' }}>
-                        {hasRequestHeaderRows ? `已添加 ${requestHeaders.length} 项` : '按需添加'}
-                      </Typography>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<AddIcon />}
-                        onClick={handleAddRequestHeader}
-                        sx={addRequestHeaderButtonSx}
-                      >
-                        添加请求头
-                      </Button>
-                    </Box>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<AddIcon />}
+                      onClick={handleAddRequestHeader}
+                      sx={addRequestHeaderButtonSx}
+                    >
+                      添加请求头
+                    </Button>
                   </Stack>
 
                   {hasRequestHeaderRows ? (
