@@ -22,6 +22,30 @@ func validateCron(expr string) bool {
 	return err == nil
 }
 
+func normalizeAirportRequestHeaders(headers []dto.AirportRequestHeader) (models.AirportRequestHeaders, error) {
+	normalized := make(models.AirportRequestHeaders, 0, len(headers))
+	for _, header := range headers {
+		key := strings.TrimSpace(header.Key)
+		value := strings.TrimSpace(header.Value)
+
+		if key == "" && value == "" {
+			continue
+		}
+		if key == "" {
+			return nil, errors.New("自定义 Header 的名称不能为空")
+		}
+		if strings.EqualFold(key, "User-Agent") {
+			return nil, errors.New("User-Agent 请使用专用字段设置")
+		}
+
+		normalized = append(normalized, models.AirportRequestHeader{
+			Key:   key,
+			Value: value,
+		})
+	}
+	return normalized, nil
+}
+
 // AirportWithStats 机场数据（包含节点统计）
 type AirportWithStats struct {
 	models.Airport
@@ -151,6 +175,12 @@ func AirportAdd(c *gin.Context) {
 		return
 	}
 
+	requestHeaders, err := normalizeAirportRequestHeaders(req.RequestHeaders)
+	if err != nil {
+		utils.FailWithMsg(c, err.Error())
+		return
+	}
+
 	airport := models.Airport{
 		Name:               req.Name,
 		URL:                req.URL,
@@ -160,6 +190,7 @@ func AirportAdd(c *gin.Context) {
 		DownloadWithProxy:  req.DownloadWithProxy,
 		ProxyLink:          req.ProxyLink,
 		UserAgent:          req.UserAgent,
+		RequestHeaders:     requestHeaders,
 		FetchUsageInfo:     req.FetchUsageInfo,
 		SkipTLSVerify:      req.SkipTLSVerify,
 		Remark:             req.Remark,
@@ -221,6 +252,12 @@ func AirportUpdate(c *gin.Context) {
 		return
 	}
 
+	requestHeaders, err := normalizeAirportRequestHeaders(req.RequestHeaders)
+	if err != nil {
+		utils.FailWithMsg(c, err.Error())
+		return
+	}
+
 	// 检查是否存在
 	existing, err := models.GetAirportByID(id)
 	if err != nil {
@@ -247,6 +284,7 @@ func AirportUpdate(c *gin.Context) {
 	existing.DownloadWithProxy = req.DownloadWithProxy
 	existing.ProxyLink = req.ProxyLink
 	existing.UserAgent = req.UserAgent
+	existing.RequestHeaders = requestHeaders
 	existing.FetchUsageInfo = req.FetchUsageInfo
 	existing.SkipTLSVerify = req.SkipTLSVerify
 	existing.Remark = req.Remark

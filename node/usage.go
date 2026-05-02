@@ -92,7 +92,7 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("创建请求失败: %v", err)
 	}
-	headReq.Header.Set("User-Agent", userAgent)
+	applyRequestHeaders(headReq, userAgent, airport.RequestHeaders)
 
 	resp, err = client.Do(headReq)
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -110,7 +110,7 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 		if err != nil {
 			return nil, fmt.Errorf("创建请求失败: %v", err)
 		}
-		getReq.Header.Set("User-Agent", userAgent)
+		applyRequestHeaders(getReq, userAgent, airport.RequestHeaders)
 
 		resp, err = client.Do(getReq)
 		if err != nil {

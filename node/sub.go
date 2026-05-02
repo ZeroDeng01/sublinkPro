@@ -139,14 +139,29 @@ func isTLSError(err error) bool {
 // proxyLink: 代理链接 (可选)
 // userAgent: 请求的 User-Agent (可选，默认 Clash)
 func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string) (*UsageInfo, error) {
-	return LoadClashConfigFromURLWithReporter(id, urlStr, subName, downloadWithProxy, proxyLink, userAgent, nil, false, true)
+	return LoadClashConfigFromURLWithReporter(id, urlStr, subName, downloadWithProxy, proxyLink, userAgent, nil, nil, false, true)
+}
+
+func applyRequestHeaders(req *http.Request, userAgent string, requestHeaders models.AirportRequestHeaders) {
+	resolvedUserAgent := strings.TrimSpace(userAgent)
+	if resolvedUserAgent == "" {
+		resolvedUserAgent = "clash.meta"
+	}
+	req.Header.Set("User-Agent", resolvedUserAgent)
+
+	for _, header := range requestHeaders {
+		if header.Key == "" || strings.EqualFold(header.Key, "User-Agent") {
+			continue
+		}
+		req.Header.Add(header.Key, header.Value)
+	}
 }
 
 // LoadClashConfigFromURLWithReporter 从指定 URL 加载 Clash 配置（带任务报告器）
 // reporter: 任务进度报告器，用于TaskManager集成
 // fetchUsageInfo: 是否获取用量信息
 // skipTLSVerify: 是否跳过TLS证书验证
-func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string, reporter TaskReporter, fetchUsageInfo bool, skipTLSVerify bool) (*UsageInfo, error) {
+func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string, requestHeaders models.AirportRequestHeaders, reporter TaskReporter, fetchUsageInfo bool, skipTLSVerify bool) (*UsageInfo, error) {
 	// 创建 HTTP 客户端，配置 TLS
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -217,10 +232,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 		return nil, err
 	}
 
-	// 设置 User-Agent
-	if userAgent != "" {
-		req.Header.Set("User-Agent", userAgent)
-	}
+	applyRequestHeaders(req, userAgent, requestHeaders)
 
 	resp, err := client.Do(req)
 	if err != nil {

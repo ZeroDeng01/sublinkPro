@@ -10,11 +10,15 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
 import Typography from '@mui/material/Typography';
+
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 import SearchableNodeSelect from 'components/SearchableNodeSelect';
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
@@ -30,6 +34,27 @@ import AirportDeduplicationConfig from './AirportDeduplicationConfig';
 import AirportDialogSection from './AirportDialogSection';
 
 import { USER_AGENT_OPTIONS } from '../utils';
+
+const createEmptyRequestHeader = () => ({ key: '', value: '' });
+
+const getRequestHeaderRowError = (requestHeader) => {
+  const key = `${requestHeader?.key ?? ''}`.trim();
+  const value = `${requestHeader?.value ?? ''}`.trim();
+
+  if (!key && !value) {
+    return '';
+  }
+
+  if (!key && value) {
+    return '请输入请求头键名';
+  }
+
+  if (key.toLowerCase() === 'user-agent') {
+    return 'User-Agent 请使用上方专用字段设置';
+  }
+
+  return '';
+};
 
 export default function AirportFormDialog({
   open,
@@ -50,7 +75,7 @@ export default function AirportFormDialog({
     theme,
     isDark
   );
-  const { primaryText, secondaryText } = getReadableTextTokens(theme, isDark);
+  const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
 
   const controlRowSx = {
     display: 'flex',
@@ -63,6 +88,85 @@ export default function AirportFormDialog({
     bgcolor: isDark ? withAlpha(palette.background.paper, 0.2) : withAlpha(palette.background.paper, 0.92),
     border: '1px solid',
     borderColor: panelBorder
+  };
+
+  const requestHeaders = Array.isArray(airportForm.requestHeaders) ? airportForm.requestHeaders : [];
+  const hasRequestHeaderRows = requestHeaders.length > 0;
+
+  const requestHeaderPanelSx = {
+    p: 1.5,
+    borderRadius: 2,
+    bgcolor: isDark ? withAlpha(palette.background.default, 0.88) : withAlpha(palette.background.default, 0.56),
+    border: '1px solid',
+    borderColor: panelBorder
+  };
+
+  const requestHeaderRowSx = {
+    p: 1.25,
+    borderRadius: 2,
+    bgcolor: isDark ? withAlpha(palette.background.paper, 0.22) : withAlpha(palette.background.paper, 0.96),
+    border: '1px solid',
+    borderColor: panelBorder
+  };
+
+  const requestHeaderActionTraySx = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 1,
+    width: { xs: '100%', sm: 'auto' },
+    minWidth: { sm: 172 },
+    px: 1,
+    py: 0.75,
+    borderRadius: 2,
+    bgcolor: isDark ? withAlpha(palette.background.paper, 0.16) : withAlpha(palette.background.paper, 0.88),
+    border: '1px solid',
+    borderColor: panelBorder
+  };
+
+  const addRequestHeaderButtonSx = {
+    minWidth: 0,
+    px: 1.25,
+    py: 0.5,
+    borderRadius: 1.5,
+    fontSize: '0.8125rem',
+    fontWeight: 600,
+    lineHeight: 1.2,
+    color: isDark ? palette.primary.light : palette.primary.main,
+    bgcolor: withAlpha(palette.primary.main, isDark ? 0.08 : 0.04),
+    borderColor: withAlpha(palette.primary.main, isDark ? 0.24 : 0.16),
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+    '& .MuiButton-startIcon': {
+      mr: 0.5,
+      ml: 0,
+      '& > *:nth-of-type(1)': {
+        fontSize: '1rem'
+      }
+    },
+    '&:hover': {
+      borderColor: withAlpha(palette.primary.main, isDark ? 0.34 : 0.22),
+      bgcolor: withAlpha(palette.primary.main, isDark ? 0.14 : 0.08)
+    }
+  };
+
+  const updateRequestHeaders = (updater) => {
+    const nextRequestHeaders = typeof updater === 'function' ? updater(requestHeaders) : updater;
+    setAirportForm({ ...airportForm, requestHeaders: nextRequestHeaders });
+  };
+
+  const handleRequestHeaderChange = (index, field, value) => {
+    updateRequestHeaders((currentHeaders) =>
+      currentHeaders.map((header, headerIndex) => (headerIndex === index ? { ...header, [field]: value } : header))
+    );
+  };
+
+  const handleAddRequestHeader = () => {
+    updateRequestHeaders((currentHeaders) => [...currentHeaders, createEmptyRequestHeader()]);
+  };
+
+  const handleRemoveRequestHeader = (index) => {
+    updateRequestHeaders((currentHeaders) => currentHeaders.filter((_, headerIndex) => headerIndex !== index));
   };
 
   return (
@@ -199,6 +303,103 @@ export default function AirportFormDialog({
                   <TextField {...params} label="User-Agent" placeholder="选择或输入" helperText="拉取订阅时使用的 User-Agent，可留空" />
                 )}
               />
+
+              <Box sx={requestHeaderPanelSx}>
+                <Stack spacing={1.5}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    justifyContent="space-between"
+                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                  >
+                    <Box>
+                      <Typography variant="body2" sx={{ color: primaryText, fontWeight: 500 }}>
+                        自定义请求头
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: secondaryText }}>
+                        可按行添加额外请求头，空白行不会提交，User-Agent 请使用上方专用字段
+                      </Typography>
+                    </Box>
+                    <Box sx={requestHeaderActionTraySx}>
+                      <Typography variant="caption" sx={{ color: tertiaryText, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                        {hasRequestHeaderRows ? `已添加 ${requestHeaders.length} 项` : '按需添加'}
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={handleAddRequestHeader}
+                        sx={addRequestHeaderButtonSx}
+                      >
+                        添加请求头
+                      </Button>
+                    </Box>
+                  </Stack>
+
+                  {hasRequestHeaderRows ? (
+                    <Stack spacing={1}>
+                      {requestHeaders.map((header, index) => {
+                        const rowError = getRequestHeaderRowError(header);
+
+                        return (
+                          <Box key={`request-header-${index}`} sx={requestHeaderRowSx}>
+                            <Stack spacing={1}>
+                              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  label="Header Key"
+                                  placeholder="例如：X-Custom-Token"
+                                  value={header.key}
+                                  error={Boolean(rowError)}
+                                  onChange={(e) => handleRequestHeaderChange(index, 'key', e.target.value)}
+                                />
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  label="Header Value"
+                                  placeholder="例如：your-value"
+                                  value={header.value}
+                                  onChange={(e) => handleRequestHeaderChange(index, 'value', e.target.value)}
+                                />
+                                <IconButton
+                                  aria-label={`删除第 ${index + 1} 行请求头`}
+                                  color="error"
+                                  onClick={() => handleRemoveRequestHeader(index)}
+                                  sx={{
+                                    alignSelf: { xs: 'flex-end', sm: 'center' },
+                                    border: '1px solid',
+                                    borderColor: withAlpha(palette.error.main, isDark ? 0.32 : 0.22),
+                                    bgcolor: withAlpha(palette.error.main, isDark ? 0.12 : 0.04),
+                                    '&:hover': {
+                                      bgcolor: withAlpha(palette.error.main, isDark ? 0.18 : 0.08)
+                                    }
+                                  }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Stack>
+                              {rowError ? (
+                                <Typography variant="caption" color="error">
+                                  {rowError}
+                                </Typography>
+                              ) : (
+                                <Typography variant="caption" sx={{ color: secondaryText }}>
+                                  留空整行会在保存时自动忽略
+                                </Typography>
+                              )}
+                            </Stack>
+                          </Box>
+                        );
+                      })}
+                    </Stack>
+                  ) : (
+                    <Typography variant="caption" sx={{ color: secondaryText }}>
+                      当前未设置额外请求头，可按需添加。
+                    </Typography>
+                  )}
+                </Stack>
+              </Box>
 
               <Box>
                 <Box sx={{ ...controlRowSx, mb: airportForm.downloadWithProxy ? 1.5 : 0 }}>
@@ -368,6 +569,12 @@ AirportFormDialog.propTypes = {
     downloadWithProxy: PropTypes.bool,
     proxyLink: PropTypes.string,
     userAgent: PropTypes.string,
+    requestHeaders: PropTypes.arrayOf(
+      PropTypes.shape({
+        key: PropTypes.string,
+        value: PropTypes.string
+      })
+    ),
     fetchUsageInfo: PropTypes.bool,
     skipTLSVerify: PropTypes.bool,
     remark: PropTypes.string,

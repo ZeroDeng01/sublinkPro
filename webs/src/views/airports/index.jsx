@@ -69,6 +69,91 @@ import { validateCronExpression } from './utils';
 
 // ==============================|| 机场管理 ||============================== //
 
+const createEmptyRequestHeader = () => ({ key: '', value: '' });
+
+const normalizeRequestHeadersForForm = (requestHeaders) => {
+  if (!Array.isArray(requestHeaders)) {
+    return [];
+  }
+
+  return requestHeaders
+    .map((header) => ({
+      key: typeof header?.key === 'string' ? header.key : `${header?.key ?? ''}`,
+      value: typeof header?.value === 'string' ? header.value : `${header?.value ?? ''}`
+    }))
+    .filter((header) => header.key.trim() || header.value.trim());
+};
+
+const getRequestHeaderValidationMessage = (requestHeader) => {
+  const key = `${requestHeader?.key ?? ''}`.trim();
+  const value = `${requestHeader?.value ?? ''}`.trim();
+
+  if (!key && !value) {
+    return '';
+  }
+
+  if (!key && value) {
+    return '存在仅填写值但未填写键的自定义请求头';
+  }
+
+  if (key.toLowerCase() === 'user-agent') {
+    return '自定义请求头中不能填写 User-Agent，请使用专用 User-Agent 字段';
+  }
+
+  return '';
+};
+
+const normalizeRequestHeadersForSubmit = (requestHeaders) => {
+  const normalizedHeaders = Array.isArray(requestHeaders)
+    ? requestHeaders
+        .map((header) => ({
+          key: `${header?.key ?? ''}`.trim(),
+          value: `${header?.value ?? ''}`.trim()
+        }))
+        .filter((header) => header.key || header.value)
+    : [];
+
+  const invalidHeaderIndex = normalizedHeaders.findIndex((header) => getRequestHeaderValidationMessage(header));
+
+  if (invalidHeaderIndex !== -1) {
+    return {
+      requestHeaders: normalizedHeaders,
+      error: `第 ${invalidHeaderIndex + 1} 行自定义请求头无效：${getRequestHeaderValidationMessage(normalizedHeaders[invalidHeaderIndex])}`
+    };
+  }
+
+  return {
+    requestHeaders: normalizedHeaders,
+    error: ''
+  };
+};
+
+const createAirportFormState = (overrides = {}) => ({
+  id: 0,
+  name: '',
+  url: '',
+  cronExpr: '0 */12 * * *',
+  enabled: true,
+  group: '',
+  downloadWithProxy: false,
+  proxyLink: '',
+  userAgent: '',
+  requestHeaders: [],
+  fetchUsageInfo: false,
+  skipTLSVerify: false,
+  remark: '',
+  logo: '',
+  nodeNameWhitelist: '',
+  nodeNameBlacklist: '',
+  protocolWhitelist: '',
+  protocolBlacklist: '',
+  nodeNamePreprocess: '',
+  deduplicationRule: '',
+  nodeNameUniquify: false,
+  nodeNamePrefix: '',
+  ...overrides
+});
+
 export default function AirportList() {
   const theme = useTheme();
   const palette = theme.vars?.palette || theme.palette;
@@ -136,29 +221,7 @@ export default function AirportList() {
   // 表单状态
   const [formOpen, setFormOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [airportForm, setAirportForm] = useState({
-    id: 0,
-    name: '',
-    url: '',
-    cronExpr: '0 */12 * * *',
-    enabled: true,
-    group: '',
-    downloadWithProxy: false,
-    proxyLink: '',
-    userAgent: '',
-    fetchUsageInfo: false,
-    skipTLSVerify: false,
-    remark: '',
-    logo: '',
-    nodeNameWhitelist: '',
-    nodeNameBlacklist: '',
-    protocolWhitelist: '',
-    protocolBlacklist: '',
-    nodeNamePreprocess: '',
-    deduplicationRule: '',
-    nodeNameUniquify: false,
-    nodeNamePrefix: ''
-  });
+  const [airportForm, setAirportForm] = useState(() => createAirportFormState());
   const [airportFormSnapshot, setAirportFormSnapshot] = useState(null);
 
   // 搜索筛选状态
@@ -418,29 +481,7 @@ export default function AirportList() {
 
   // 添加机场
   const handleAdd = () => {
-    const newForm = {
-      id: 0,
-      name: '',
-      url: '',
-      cronExpr: '0 */12 * * *',
-      enabled: true,
-      group: '',
-      downloadWithProxy: false,
-      proxyLink: '',
-      userAgent: '',
-      fetchUsageInfo: false,
-      skipTLSVerify: false,
-      remark: '',
-      logo: '',
-      nodeNameWhitelist: '',
-      nodeNameBlacklist: '',
-      protocolWhitelist: '',
-      protocolBlacklist: '',
-      nodeNamePreprocess: '',
-      deduplicationRule: '',
-      nodeNameUniquify: false,
-      nodeNamePrefix: ''
-    };
+    const newForm = createAirportFormState({ requestHeaders: [createEmptyRequestHeader()] });
     setIsEdit(false);
     setAirportForm(newForm);
     setAirportFormSnapshot(newForm);
@@ -449,7 +490,7 @@ export default function AirportList() {
 
   // 编辑机场
   const handleEdit = (airport) => {
-    const editForm = {
+    const editForm = createAirportFormState({
       id: airport.id,
       name: airport.name,
       url: airport.url,
@@ -459,6 +500,7 @@ export default function AirportList() {
       downloadWithProxy: airport.downloadWithProxy || false,
       proxyLink: airport.proxyLink || '',
       userAgent: airport.userAgent || '',
+      requestHeaders: normalizeRequestHeadersForForm(airport.requestHeaders),
       fetchUsageInfo: airport.fetchUsageInfo || false,
       skipTLSVerify: airport.skipTLSVerify || false,
       remark: airport.remark || '',
@@ -471,7 +513,7 @@ export default function AirportList() {
       deduplicationRule: airport.deduplicationRule || '',
       nodeNameUniquify: airport.nodeNameUniquify || false,
       nodeNamePrefix: airport.nodeNamePrefix || ''
-    };
+    });
     setIsEdit(true);
     setAirportForm(editForm);
     setAirportFormSnapshot(editForm);
@@ -648,17 +690,28 @@ export default function AirportList() {
       return;
     }
 
+    const { requestHeaders, error: requestHeadersError } = normalizeRequestHeadersForSubmit(airportForm.requestHeaders);
+    if (requestHeadersError) {
+      showMessage(requestHeadersError, 'warning');
+      return;
+    }
+
     try {
+      const normalizedAirportForm = {
+        ...airportForm,
+        requestHeaders
+      };
+
       // 在提交前计算配置变更状态（提交后 snapshot 会被清空）
       const needPullToApply = isEdit && hasNodeProcessConfigChanged(airportFormSnapshot, airportForm);
       const savedId = airportForm.id;
       const savedName = airportForm.name;
 
       if (isEdit) {
-        await updateAirport(airportForm.id, airportForm);
+        await updateAirport(airportForm.id, normalizedAirportForm);
         showMessage(needPullToApply ? '更新成功（节点处理配置需重新拉取后生效）' : '更新成功');
       } else {
-        await addAirport(airportForm);
+        await addAirport(normalizedAirportForm);
         showMessage('添加成功');
       }
       setFormOpen(false);
