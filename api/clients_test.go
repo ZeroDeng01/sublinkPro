@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"sublink/database"
 	"sublink/internal/testutil"
@@ -129,6 +130,36 @@ func createClientSubscriptionFixture(t *testing.T, clashTemplatePath, surgeTempl
 	if err := share.Add(); err != nil {
 		t.Fatalf("add share for %s: %v", subName, err)
 	}
+}
+
+func expireClientSubscriptionShare(t *testing.T, token string) {
+	t.Helper()
+
+	share, err := models.GetSubscriptionShareByToken(token)
+	if err != nil {
+		t.Fatalf("find share %s: %v", token, err)
+	}
+
+	expiredAt := time.Now().Add(-time.Hour)
+	share.ExpireType = models.ExpireTypeDateTime
+	share.ExpireAt = &expiredAt
+	if err := share.Update(); err != nil {
+		t.Fatalf("expire share %s: %v", token, err)
+	}
+}
+
+func deleteClientSubscriptionByToken(t *testing.T, token string) {
+	t.Helper()
+
+	share, err := models.GetSubscriptionShareByToken(token)
+	if err != nil {
+		t.Fatalf("find share %s: %v", token, err)
+	}
+
+	if err := database.DB.Delete(&models.Subcription{}, share.SubscriptionID).Error; err != nil {
+		t.Fatalf("delete subscription %d: %v", share.SubscriptionID, err)
+	}
+	models.InitSubcriptionCache()
 }
 
 func writeTestClashTemplate(t *testing.T) string {
@@ -326,6 +357,143 @@ func TestGetClientHeadRequestUsesRequestScopedSubscriptionName(t *testing.T) {
 	}
 	if value, ok := context.Get("subname"); !ok || value != "head-sub" {
 		t.Fatalf("expected request-scoped subname to be preserved, got %v ok=%v", value, ok)
+	}
+}
+
+func TestGetClientInvalidShareReturnsSyntheticV2rayNode(t *testing.T) {
+	setupClientsAPITestDB(t)
+
+	recorder := performClientRequest(t, http.MethodGet, "/c/?token=missing-token&client=v2ray")
+	decoded := strings.TrimSpace(utils.Base64Decode(recorder.Body.String()))
+
+	if !strings.Contains(decoded, "http://placeholder.invalid:80#无效的分享链接") {
+		t.Fatalf("expected synthetic invalid-share node in v2ray payload, got %q", decoded)
+	}
+	if got := recorder.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
+		t.Fatalf("expected v2ray content type, got %q", got)
+	}
+	if got := recorder.Header().Get("subscription-userinfo"); got == "" {
+		t.Fatal("expected subscription-userinfo header for invalid v2ray share")
+	}
+}
+
+func TestGetClientExpiredShareReturnsSyntheticClashNode(t *testing.T) {
+	setupClientsAPITestDB(t)
+	clashTemplatePath := writeTestClashTemplate(t)
+	surgeTemplatePath := writeTestSurgeTemplate(t)
+	createClientSubscriptionFixture(t, clashTemplatePath, surgeTemplatePath, "expired-sub", "expired-token", "Expired Node")
+	expireClientSubscriptionShare(t, "expired-token")
+
+	recorder := performClientRequest(t, http.MethodGet, "/c/?token=expired-token&client=clash")
+	body := recorder.Body.String()
+
+	if !strings.Contains(body, "name: 订阅已过期") {
+		t.Fatalf("expected synthetic expired-share clash node, got %q", body)
+	}
+	if !strings.Contains(body, "type: http") {
+		t.Fatalf("expected synthetic expired-share clash node to use http type, got %q", body)
+	}
+	if !strings.Contains(body, "server: placeholder.invalid") {
+		t.Fatalf("expected synthetic expired-share clash node to use placeholder host, got %q", body)
+	}
+	if !strings.Contains(body, "- 订阅已过期") {
+		t.Fatalf("expected clash proxy group to reference synthetic node, got %q", body)
+	}
+	if !strings.Contains(recorder.Header().Get("Content-Disposition"), "expired-sub.yaml") {
+		t.Fatalf("expected expired share to keep original subscription envelope filename, got %q", recorder.Header().Get("Content-Disposition"))
+	}
+	if got := recorder.Header().Get("Content-Type"); got != "text/plain; charset=utf-8" {
+		t.Fatalf("expected clash content type, got %q", got)
+	}
+}
+
+func TestGetClientInvalidShareHeadReturnsHeadersOnly(t *testing.T) {
+	setupClientsAPITestDB(t)
+
+	recorder := performClientRequest(t, http.MethodHead, "/c/?token=missing-token&client=surge")
+
+	if body := recorder.Body.String(); body != "" {
+		t.Fatalf("expected empty HEAD body for invalid share, got %q", body)
+	}
+	if got := recorder.Header().Get("Content-Disposition"); !strings.Contains(got, ".conf") {
+		t.Fatalf("expected surge content disposition for invalid share HEAD, got %q", got)
+	}
+	if got := recorder.Header().Get("subscription-userinfo"); got == "" {
+		t.Fatal("expected subscription-userinfo header for invalid share HEAD")
+	}
+}
+
+func TestGetClientInvalidShareReturnsSyntheticSurgeNode(t *testing.T) {
+	setupClientsAPITestDB(t)
+
+	recorder := performClientRequest(t, http.MethodGet, "/c/?token=missing-token&client=surge")
+	body := recorder.Body.String()
+
+	if !strings.Contains(body, "[Proxy]") {
+		t.Fatalf("expected surge proxy section, got %q", body)
+	}
+	if !strings.Contains(body, "无效的分享链接 = http, placeholder.invalid, 80") {
+		t.Fatalf("expected synthetic invalid-share surge node, got %q", body)
+	}
+	if !strings.Contains(body, "节点选择 = select, 无效的分享链接") {
+		t.Fatalf("expected surge proxy group to reference synthetic node, got %q", body)
+	}
+	if got := recorder.Header().Get("Content-Type"); got != "text/plain; charset=utf-8" {
+		t.Fatalf("expected surge content type, got %q", got)
+	}
+}
+
+func TestGetClientMissingSubscriptionReturnsSyntheticNode(t *testing.T) {
+	setupClientsAPITestDB(t)
+	clashTemplatePath := writeTestClashTemplate(t)
+	surgeTemplatePath := writeTestSurgeTemplate(t)
+	createClientSubscriptionFixture(t, clashTemplatePath, surgeTemplatePath, "missing-sub", "missing-sub-token", "Missing Node")
+	deleteClientSubscriptionByToken(t, "missing-sub-token")
+
+	recorder := performClientRequest(t, http.MethodGet, "/c/?token=missing-sub-token&client=v2ray")
+	decoded := strings.TrimSpace(utils.Base64Decode(recorder.Body.String()))
+
+	if !strings.Contains(decoded, "http://placeholder.invalid:80#订阅不存在") {
+		t.Fatalf("expected synthetic missing-subscription node in v2ray payload, got %q", decoded)
+	}
+	if !strings.Contains(recorder.Header().Get("Content-Disposition"), "%E8%AE%A2%E9%98%85%E4%B8%8D%E5%AD%98%E5%9C%A8.txt") {
+		t.Fatalf("expected fallback filename for missing subscription, got %q", recorder.Header().Get("Content-Disposition"))
+	}
+}
+
+func TestGetClientExpiredSharePreservesSurgeEnvelopeWithSyntheticNode(t *testing.T) {
+	setupClientsAPITestDB(t)
+	clashTemplatePath := writeTestClashTemplate(t)
+	surgeTemplatePath := writeTestSurgeTemplate(t)
+	createClientSubscriptionFixture(t, clashTemplatePath, surgeTemplatePath, "expired-surge-sub", "expired-surge-token", "Expired Surge Node")
+	expireClientSubscriptionShare(t, "expired-surge-token")
+
+	recorder := performClientRequest(t, http.MethodGet, "/c/?token=expired-surge-token&client=surge")
+	body := recorder.Body.String()
+
+	if !strings.Contains(body, "订阅已过期 = http, placeholder.invalid, 80") {
+		t.Fatalf("expected synthetic expired-share surge node, got %q", body)
+	}
+	if !strings.Contains(recorder.Header().Get("Content-Disposition"), "expired-surge-sub.conf") {
+		t.Fatalf("expected expired surge share to keep original subscription envelope filename, got %q", recorder.Header().Get("Content-Disposition"))
+	}
+}
+
+func TestGetClientExpiredSharePreservesV2rayEnvelopeWithSyntheticNode(t *testing.T) {
+	setupClientsAPITestDB(t)
+	clashTemplatePath := writeTestClashTemplate(t)
+	surgeTemplatePath := writeTestSurgeTemplate(t)
+	createClientSubscriptionFixture(t, clashTemplatePath, surgeTemplatePath, "expired-v2ray-sub", "expired-v2ray-token", "Expired V2ray Node")
+	expireClientSubscriptionShare(t, "expired-v2ray-token")
+
+	recorder := performClientRequest(t, http.MethodGet, "/c/?token=expired-v2ray-token&client=v2ray")
+	decoded := strings.TrimSpace(utils.Base64Decode(recorder.Body.String()))
+
+	if !strings.Contains(decoded, "http://placeholder.invalid:80#订阅已过期") {
+		t.Fatalf("expected synthetic expired-share v2ray node, got %q", decoded)
+	}
+	if !strings.Contains(recorder.Header().Get("Content-Disposition"), "expired-v2ray-sub.txt") {
+		t.Fatalf("expected expired v2ray share to keep original subscription envelope filename, got %q", recorder.Header().Get("Content-Disposition"))
 	}
 }
 

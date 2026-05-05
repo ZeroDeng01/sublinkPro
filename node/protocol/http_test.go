@@ -56,10 +56,10 @@ func TestDecodeHTTPURL(t *testing.T) {
 			name: "HTTP without authentication",
 			url:  "http://example.com:8080#TestNode",
 			want: HTTP{
-				Name:     "TestNode",
-				Server:   "example.com",
-				Port:     8080,
-				TLS:      false,
+				Name:   "TestNode",
+				Server: "example.com",
+				Port:   8080,
+				TLS:    false,
 			},
 			wantErr: false,
 		},
@@ -352,6 +352,11 @@ func TestIsHTTPLink(t *testing.T) {
 		{
 			name:     "HTTPS订阅转换链接",
 			link:     "https://example.com/sub.txt",
+			expected: false,
+		},
+		{
+			name:     "带端口的订阅转换链接",
+			link:     "https://example.com:8443/sub.txt",
 			expected: false,
 		},
 		{

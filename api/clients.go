@@ -6,11 +6,13 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sublink/models"
 	"sublink/node"
 	"sublink/node/protocol"
 	"sublink/utils"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +20,51 @@ import (
 
 const subscriptionNameContextKey = "resolvedSubscriptionName"
 
+type clientResponseMode int
+
+const (
+	clientResponseNormal clientResponseMode = iota
+	clientResponseSyntheticFallback
+)
+
+type preparedClientResponse struct {
+	ClientType   string
+	Mode         clientResponseMode
+	Subscription models.Subcription
+	SubName      string
+	ShareID      int
+	FallbackName string
+}
+
+type resolvedPreparedResponse struct {
+	Subscription models.Subcription
+	SubName      string
+}
+
+const syntheticClashTemplate = `port: 7890
+proxies: []
+proxy-groups:
+  - name: 节点选择
+    type: select
+    proxies: []
+`
+
+const syntheticSurgeTemplate = `[General]
+
+[Proxy]
+
+[Proxy Group]
+节点选择 = select
+`
+
 var testGetClientAfterResolveSubscriptionNameHook func(*gin.Context)
+
+var (
+	syntheticTemplateOnce sync.Once
+	syntheticClashPath    string
+	syntheticSurgePath    string
+	syntheticTemplateErr  error
+)
 
 func setResolvedSubscriptionName(c *gin.Context, subName string) {
 	c.Set(subscriptionNameContextKey, subName)
@@ -51,39 +97,47 @@ func resolvedSubscriptionNameOrWriteError(c *gin.Context) (string, bool) {
 func GetClient(c *gin.Context) {
 	// 获取协议头
 	token := c.Query("token")
-	ClientIndex := c.Query("client") // 客户端标识
 	if token == "" {
 		utils.Warn("token为空")
 		c.Writer.WriteString("Not Found")
 		return
 	}
+	clientType := resolveSubscriptionClient(c)
+	prepared, ok := prepareClientResponse(c, clientType, strings.ToLower(token))
+	if !ok {
+		return
+	}
+	setResolvedSubscriptionName(c, prepared.SubName)
+	if testGetClientAfterResolveSubscriptionNameHook != nil {
+		testGetClientAfterResolveSubscriptionNameHook(c)
+	}
+	c.Set("shareID", prepared.ShareID)
+	dispatchPreparedClientResponse(c, prepared)
+}
 
-	// 从分享表查找 token
-	share, err := models.GetSubscriptionShareByToken(strings.ToLower(token))
+func prepareClientResponse(c *gin.Context, clientType, token string) (preparedClientResponse, bool) {
+	share, err := models.GetSubscriptionShareByToken(token)
 	if err != nil {
 		utils.Warn("无效的分享token: %s", token)
-		c.Writer.WriteString("无效的分享链接")
-		return
+		return buildSyntheticFallbackResponse(clientType, "无效的分享链接"), true
 	}
 
-	// 检查是否过期
 	if share.IsExpired() {
 		utils.Warn("分享链接已过期: %s", token)
-		c.Writer.WriteString("分享链接已过期")
-		return
+		var expiredSub models.Subcription
+		expiredSub.ID = share.SubscriptionID
+		if err := expiredSub.Find(); err != nil {
+			utils.Warn("过期分享关联订阅不存在: %d", share.SubscriptionID)
+			return buildSyntheticFallbackResponse(clientType, "订阅不存在"), true
+		}
+		return buildPreparedExpiredShareResponse(expiredSub, clientType, "订阅已过期", share.ID)
 	}
 
-	// 获取关联订阅
 	var sub models.Subcription
 	sub.ID = share.SubscriptionID
 	if err := sub.Find(); err != nil {
 		utils.Warn("订阅不存在: %d", share.SubscriptionID)
-		c.Writer.WriteString("订阅不存在")
-		return
-	}
-	setResolvedSubscriptionName(c, sub.Name)
-	if testGetClientAfterResolveSubscriptionNameHook != nil {
-		testGetClientAfterResolveSubscriptionNameHook(c)
+		return buildSyntheticFallbackResponse(clientType, "订阅不存在"), true
 	}
 
 	// IP 黑白名单检查
@@ -91,90 +145,230 @@ func GetClient(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 			"msg": "IP受限(IP已被加入黑名单)",
 		})
-		return
+		return preparedClientResponse{}, false
 	}
 	if sub.IPWhitelist != "" && !utils.IsIpInCidr(c.ClientIP(), sub.IPWhitelist) {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 			"msg": "IP受限(您的IP不在允许访问列表)",
 		})
-		return
+		return preparedClientResponse{}, false
 	}
 
 	// 更新访问统计
 	share.RecordAccess()
+	prepared, ok := buildPreparedResponseFromSubscription(sub, clientType, share.ID)
+	if !ok {
+		return preparedClientResponse{}, false
+	}
+	return prepared, true
+}
 
-	// 保存 ShareID 到上下文，供IP日志记录使用
-	c.Set("shareID", share.ID)
-
-	// 判断是否带客户端参数
-	switch ClientIndex {
-	case "clash":
-		GetClash(c)
-		return
-	case "surge":
-		GetSurge(c)
-		return
-	case "v2ray":
-		GetV2ray(c)
-		return
+func resolveSubscriptionClient(c *gin.Context) string {
+	clientIndex := c.Query("client")
+	switch clientIndex {
+	case "clash", "surge", "v2ray":
+		return clientIndex
 	}
 
-	// 自动识别客户端
-	ClientList := []string{"clash", "surge"}
 	for k, v := range c.Request.Header {
-		if k == "User-Agent" {
-			for _, UserAgent := range v {
-				if UserAgent == "" {
-					fmt.Println("User-Agent为空")
-				}
-				for _, client := range ClientList {
-					if strings.Contains(strings.ToLower(UserAgent), strings.ToLower(client)) {
-						switch client {
-						case "clash":
-							GetClash(c)
-							return
-						case "surge":
-							GetSurge(c)
-							return
-						default:
-							fmt.Println("未知客户端")
-						}
-					}
-				}
-				GetV2ray(c)
+		if k != "User-Agent" {
+			continue
+		}
+		for _, userAgent := range v {
+			if userAgent == "" {
+				fmt.Println("User-Agent为空")
 			}
+			for _, client := range []string{"clash", "surge"} {
+				if strings.Contains(strings.ToLower(userAgent), strings.ToLower(client)) {
+					return client
+				}
+			}
+			return "v2ray"
 		}
 	}
-}
-func GetV2ray(c *gin.Context) {
-	var sub models.Subcription
-	subName, ok := resolvedSubscriptionNameOrWriteError(c)
-	if !ok {
-		return
-	}
-	sub.Name = subName
-	err := sub.Find()
-	if err != nil {
-		c.Writer.WriteString("找不到这个订阅:" + subName)
-		return
-	}
-	err = sub.GetSub("v2ray")
-	if err != nil {
-		c.Writer.WriteString("读取错误")
-		return
-	}
-	baselist := ""
 
-	// 根据配置决定是否实时刷新用量信息
+	return "v2ray"
+}
+
+func dispatchPreparedClientResponse(c *gin.Context, prepared preparedClientResponse) {
+	switch prepared.ClientType {
+	case "clash":
+		renderPreparedClash(c, prepared)
+	case "surge":
+		renderPreparedSurge(c, prepared)
+	default:
+		renderPreparedV2ray(c, prepared)
+	}
+}
+
+func buildSyntheticFallbackResponse(clientType, message string) preparedClientResponse {
+	config, err := buildSyntheticFallbackConfig()
+	if err != nil {
+		utils.Warn("构造 synthetic fallback 配置失败: %v", err)
+	}
+	sub := models.Subcription{
+		Name:                  message,
+		Config:                config,
+		Nodes:                 buildSyntheticErrorNodes(message),
+		RefreshUsageOnRequest: false,
+	}
+	return preparedClientResponse{
+		ClientType:   clientType,
+		Mode:         clientResponseSyntheticFallback,
+		Subscription: sub,
+		SubName:      sub.Name,
+		FallbackName: message,
+	}
+}
+
+func buildSyntheticErrorNodes(message string) []models.Node {
+	httpLink := protocol.EncodeHTTPURL(protocol.HTTP{
+		Name:   message,
+		Server: "placeholder.invalid",
+		Port:   80,
+		TLS:    false,
+	})
+
+	return []models.Node{{
+		ID:       -1,
+		Name:     message,
+		LinkName: message,
+		Link:     httpLink,
+		Protocol: "http",
+		Source:   "manual",
+		SourceID: 0,
+	}}
+}
+
+func buildSyntheticFallbackConfig() (string, error) {
+	clashPath, surgePath, err := getSyntheticTemplatePaths()
+	if err != nil {
+		return "", err
+	}
+
+	config := map[string]string{
+		"clash": clashPath,
+		"surge": surgePath,
+	}
+	encoded, err := json.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+
+	return string(encoded), nil
+}
+
+func getSyntheticTemplatePaths() (string, string, error) {
+	syntheticTemplateOnce.Do(func() {
+		syntheticClashPath, syntheticTemplateErr = writeSyntheticTemplateFile("synthetic-clash-*.yaml", syntheticClashTemplate)
+		if syntheticTemplateErr != nil {
+			return
+		}
+		syntheticSurgePath, syntheticTemplateErr = writeSyntheticTemplateFile("synthetic-surge-*.conf", syntheticSurgeTemplate)
+	})
+
+	return syntheticClashPath, syntheticSurgePath, syntheticTemplateErr
+}
+
+func writeSyntheticTemplateFile(pattern, content string) (string, error) {
+	file, err := os.CreateTemp("", pattern)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(content); err != nil {
+		return "", err
+	}
+
+	return file.Name(), nil
+}
+
+func buildPreparedResponseFromSubscription(sub models.Subcription, clientType string, shareID int) (preparedClientResponse, bool) {
+	preparedSub := sub
+	if err := preparedSub.GetSub(clientType); err != nil {
+		return preparedClientResponse{}, false
+	}
+	return preparedClientResponse{
+		ClientType:   clientType,
+		Mode:         clientResponseNormal,
+		Subscription: preparedSub,
+		SubName:      preparedSub.Name,
+		ShareID:      shareID,
+	}, true
+}
+
+func buildPreparedExpiredShareResponse(sub models.Subcription, clientType, message string, shareID int) (preparedClientResponse, bool) {
+	prepared, ok := buildPreparedResponseFromSubscription(sub, clientType, shareID)
+	if !ok {
+		return preparedClientResponse{}, false
+	}
+	prepared.Mode = clientResponseSyntheticFallback
+	prepared.FallbackName = message
+	return prepared, true
+}
+
+func applyPreparedResponseMode(prepared preparedClientResponse) resolvedPreparedResponse {
+	sub := prepared.Subscription
+	subName := prepared.SubName
+
+	switch prepared.Mode {
+	case clientResponseSyntheticFallback:
+		sub.Nodes = buildSyntheticErrorNodes(prepared.FallbackName)
+		sub.RefreshUsageOnRequest = false
+		if prepared.ShareID == 0 {
+			sub.Name = prepared.FallbackName
+			subName = prepared.FallbackName
+		}
+	}
+
+	return resolvedPreparedResponse{
+		Subscription: sub,
+		SubName:      subName,
+	}
+}
+
+func prepareRendererResponse(c *gin.Context, prepared preparedClientResponse) (resolvedPreparedResponse, bool) {
+	resolved := applyPreparedResponseMode(prepared)
+	sub := resolved.Subscription
 	if sub.RefreshUsageOnRequest {
 		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
 	}
 	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
-	c.Set("subname", subName)
-	// 如果是HEAD请求将不进行订阅内容相关输出
+	c.Set("subname", resolved.SubName)
 	if c.Request.Method == "HEAD" {
+		return resolved, false
+	}
+	return resolved, true
+}
+
+func GetV2ray(c *gin.Context) {
+	subName, ok := resolvedSubscriptionNameOrWriteError(c)
+	if !ok {
 		return
 	}
+	var sub models.Subcription
+	sub.Name = subName
+	if err := sub.Find(); err != nil {
+		c.Writer.WriteString("找不到这个订阅:" + subName)
+		return
+	}
+	prepared, ok := buildPreparedResponseFromSubscription(sub, "v2ray", 0)
+	if !ok {
+		c.Writer.WriteString("读取错误")
+		return
+	}
+	renderPreparedV2ray(c, prepared)
+}
+
+func renderPreparedV2ray(c *gin.Context, prepared preparedClientResponse) {
+	resolved, shouldWriteBody := prepareRendererResponse(c, prepared)
+	if !shouldWriteBody {
+		return
+	}
+	sub := resolved.Subscription
+	subName := resolved.SubName
+	baselist := ""
 
 	for idx, v := range sub.Nodes {
 		// 应用预处理规则到 LinkName
@@ -231,34 +425,32 @@ func GetV2ray(c *gin.Context) {
 	c.Writer.WriteString(utils.Base64Encode(baselist))
 }
 func GetClash(c *gin.Context) {
-	var sub models.Subcription
 	subName, ok := resolvedSubscriptionNameOrWriteError(c)
 	if !ok {
 		return
 	}
+	var sub models.Subcription
 	sub.Name = subName
-	err := sub.Find()
-	if err != nil {
+	if err := sub.Find(); err != nil {
 		c.Writer.WriteString("找不到这个订阅:" + subName)
 		return
 	}
-	err = sub.GetSub("clash")
-	if err != nil {
+	prepared, ok := buildPreparedResponseFromSubscription(sub, "clash", 0)
+	if !ok {
 		c.Writer.WriteString("读取错误")
 		return
 	}
-	var urls []protocol.Urls
+	renderPreparedClash(c, prepared)
+}
 
-	// 根据配置决定是否实时刷新用量信息
-	if sub.RefreshUsageOnRequest {
-		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
-	}
-	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
-	c.Set("subname", subName)
-	// 如果是HEAD请求将不进行订阅内容相关输出
-	if c.Request.Method == "HEAD" {
+func renderPreparedClash(c *gin.Context, prepared preparedClientResponse) {
+	resolved, shouldWriteBody := prepareRendererResponse(c, prepared)
+	if !shouldWriteBody {
 		return
 	}
+	sub := resolved.Subscription
+	subName := resolved.SubName
+	var urls []protocol.Urls
 
 	// 获取链式代理规则
 	chainRules := models.GetEnabledChainRulesBySubscriptionID(sub.ID)
@@ -381,7 +573,7 @@ func GetClash(c *gin.Context) {
 	}
 
 	var configs protocol.OutputConfig
-	err = json.Unmarshal([]byte(sub.Config), &configs)
+	err := json.Unmarshal([]byte(sub.Config), &configs)
 	if err != nil {
 		c.Writer.WriteString("配置读取错误")
 		return
@@ -434,34 +626,32 @@ func GetClash(c *gin.Context) {
 }
 
 func GetSurge(c *gin.Context) {
-	var sub models.Subcription
 	subName, ok := resolvedSubscriptionNameOrWriteError(c)
 	if !ok {
 		return
 	}
+	var sub models.Subcription
 	sub.Name = subName
-	err := sub.Find()
-	if err != nil {
+	if err := sub.Find(); err != nil {
 		c.Writer.WriteString("找不到这个订阅:" + subName)
 		return
 	}
-	err = sub.GetSub("surge")
-	if err != nil {
+	prepared, ok := buildPreparedResponseFromSubscription(sub, "surge", 0)
+	if !ok {
 		c.Writer.WriteString("读取错误")
 		return
 	}
-	urls := []string{}
+	renderPreparedSurge(c, prepared)
+}
 
-	// 根据配置决定是否实时刷新用量信息
-	if sub.RefreshUsageOnRequest {
-		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
-	}
-	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
-	c.Set("subname", subName)
-	// 如果是HEAD请求将不进行订阅内容相关输出
-	if c.Request.Method == "HEAD" {
+func renderPreparedSurge(c *gin.Context, prepared preparedClientResponse) {
+	resolved, shouldWriteBody := prepareRendererResponse(c, prepared)
+	if !shouldWriteBody {
 		return
 	}
+	sub := resolved.Subscription
+	subName := resolved.SubName
+	urls := []string{}
 	for idx, v := range sub.Nodes {
 		// 应用预处理规则到 LinkName
 		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
@@ -534,7 +724,7 @@ func GetSurge(c *gin.Context) {
 	}
 
 	var configs protocol.OutputConfig
-	err = json.Unmarshal([]byte(sub.Config), &configs)
+	err := json.Unmarshal([]byte(sub.Config), &configs)
 	if err != nil {
 		c.Writer.WriteString("配置读取错误")
 		return
