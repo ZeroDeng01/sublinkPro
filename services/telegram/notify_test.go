@@ -1,8 +1,9 @@
 package telegram
 
 import (
-	"strings"
 	"testing"
+
+	"strings"
 
 	"sublink/services/notifications"
 )
