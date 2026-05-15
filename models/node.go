@@ -1804,54 +1804,318 @@ func BatchUpdateNodeInfo(updates []NodeInfoUpdate) (int, error) {
 	}
 
 	successCount := 0
-	for _, u := range updates {
-		existing := Node{Name: u.CurrentName, LinkName: u.CurrentLinkName, NameMode: u.NameMode}
-		if cachedNode, ok := nodeCache.Get(u.ID); ok {
-			if existing.Name == "" {
-				existing.Name = cachedNode.Name
-			}
-			if existing.LinkName == "" {
-				existing.LinkName = cachedNode.LinkName
-			}
-			if existing.NameMode == "" {
-				existing.NameMode = cachedNode.NameMode
-			}
-		}
-		newName := existing.NameAfterLinkNameUpdate(u.LinkName)
-		fields := map[string]any{
-			"link_name":   u.LinkName,
-			"link":        u.Link,
-			"link_hash":   hashNodeLink(u.Link),
-			"source_sort": u.SourceSort,
-		}
-		if existing.ShouldSyncNameFromLink() {
-			newName = GenerateUniqueNodeNameWithSource(newName, u.Source, u.ID, nil)
-			fields["name"] = newName
-		}
-
-		err := database.DB.Model(&Node{}).Where("id = ?", u.ID).Updates(fields).Error
-		if err != nil {
-			utils.Warn("更新节点信息失败 ID=%d: %v", u.ID, err)
+	chunks := chunkNodeInfoUpdates(updates, database.BatchSize)
+	for chunkIdx, chunk := range chunks {
+		plans := prepareNodeInfoUpdatePlans(chunk)
+		batchSuccess, batchErr := tryBatchUpdateNodeInfoWithCaseWhen(plans)
+		if batchErr == nil {
+			successCount += batchSuccess
+			batchUpdateNodeInfoCache(plans)
 			continue
 		}
-		successCount++
 
-		// 同步更新缓存
-		if cachedNode, ok := nodeCache.Get(u.ID); ok {
-			if existing.ShouldSyncNameFromLink() {
-				cachedNode.Name = newName
-			}
-			cachedNode.LinkName = u.LinkName
-			cachedNode.Link = u.Link
-			cachedNode.LinkHash = hashNodeLink(u.Link)
-			cachedNode.SourceSort = u.SourceSort
-			cachedNode.NameMode = NormalizeNodeNameMode(cachedNode.NameMode)
-			cachedNode.EffectiveNameValue = cachedNode.EffectiveName()
-			nodeCache.Set(u.ID, cachedNode)
-		}
+		utils.Warn("分块 %d 节点信息批量更新失败，降级到逐条更新: %v", chunkIdx, batchErr)
+		successCount += fallbackToIndividualNodeInfoUpdate(chunk)
 	}
 
 	return successCount, nil
+}
+
+type nodeInfoUpdatePlan struct {
+	ID         int
+	Name       string
+	SyncName   bool
+	LinkName   string
+	Link       string
+	LinkHash   string
+	SourceSort int
+	UpdatedAt  time.Time
+}
+
+type nodeInfoNameState struct {
+	namesByID map[int]string
+	reserved  map[string]bool
+}
+
+func newNodeInfoNameState() *nodeInfoNameState {
+	state := &nodeInfoNameState{
+		namesByID: make(map[int]string),
+		reserved:  make(map[string]bool),
+	}
+	for _, node := range nodeCache.GetAll() {
+		state.namesByID[node.ID] = node.Name
+	}
+	return state
+}
+
+func (state *nodeInfoNameState) nameReserved(name string, excludeID int) bool {
+	trimmedName := normalizeNodeRemarkName(name)
+	if trimmedName == "" {
+		return false
+	}
+	if state.reserved[trimmedName] {
+		return true
+	}
+	for id, existingName := range state.namesByID {
+		if id != excludeID && normalizeNodeRemarkName(existingName) == trimmedName {
+			return true
+		}
+	}
+	return false
+}
+
+func (state *nodeInfoNameState) reserveNodeName(id int, name string) string {
+	state.namesByID[id] = name
+	state.reserved[name] = true
+	return name
+}
+
+func (state *nodeInfoNameState) uniqueNodeNameWithBase(baseName string, excludeID int) string {
+	baseName = normalizeNodeRemarkName(baseName)
+	if baseName == "" {
+		baseName = "未命名节点"
+	}
+	if !state.nameReserved(baseName, excludeID) {
+		return state.reserveNodeName(excludeID, baseName)
+	}
+	for suffix := 2; ; suffix++ {
+		candidate := fmt.Sprintf("%s-%d", baseName, suffix)
+		if !state.nameReserved(candidate, excludeID) {
+			return state.reserveNodeName(excludeID, candidate)
+		}
+	}
+}
+
+func (state *nodeInfoNameState) uniqueNodeNameWithSource(baseName string, sourceName string, excludeID int) string {
+	baseName = normalizeNodeRemarkName(baseName)
+	if baseName == "" {
+		baseName = "未命名节点"
+	}
+	if !state.nameReserved(baseName, excludeID) {
+		return state.reserveNodeName(excludeID, baseName)
+	}
+	sourceName = normalizeNodeRemarkName(sourceName)
+	if sourceName != "" && sourceName != "manual" {
+		return state.uniqueNodeNameWithBase(baseName+"@"+sourceName, excludeID)
+	}
+	return state.uniqueNodeNameWithBase(baseName, excludeID)
+}
+
+func (state *nodeInfoNameState) setNodeName(id int, name string) {
+	state.namesByID[id] = name
+}
+
+func prepareNodeInfoUpdatePlans(updates []NodeInfoUpdate) []nodeInfoUpdatePlan {
+	updatedAt := currentDBTime()
+	nameState := newNodeInfoNameState()
+	plans := make([]nodeInfoUpdatePlan, 0, len(updates))
+	for _, update := range updates {
+		plans = append(plans, prepareNodeInfoUpdatePlan(update, nameState, updatedAt))
+	}
+	return plans
+}
+
+func prepareNodeInfoUpdatePlan(update NodeInfoUpdate, nameState *nodeInfoNameState, updatedAt time.Time) nodeInfoUpdatePlan {
+	existing := Node{Name: update.CurrentName, LinkName: update.CurrentLinkName, NameMode: update.NameMode}
+	if cachedNode, ok := nodeCache.Get(update.ID); ok {
+		if existing.Name == "" {
+			existing.Name = cachedNode.Name
+		}
+		if existing.LinkName == "" {
+			existing.LinkName = cachedNode.LinkName
+		}
+		if existing.NameMode == "" {
+			existing.NameMode = cachedNode.NameMode
+		}
+	}
+
+	syncName := existing.ShouldSyncNameFromLink()
+	newName := existing.NameAfterLinkNameUpdate(update.LinkName)
+	if syncName {
+		if nameState != nil {
+			newName = nameState.uniqueNodeNameWithSource(newName, update.Source, update.ID)
+		} else {
+			newName = GenerateUniqueNodeNameWithSource(newName, update.Source, update.ID, nil)
+		}
+	} else if nameState != nil {
+		nameState.setNodeName(update.ID, existing.Name)
+	}
+
+	return nodeInfoUpdatePlan{
+		ID:         update.ID,
+		Name:       newName,
+		SyncName:   syncName,
+		LinkName:   update.LinkName,
+		Link:       update.Link,
+		LinkHash:   hashNodeLink(update.Link),
+		SourceSort: update.SourceSort,
+		UpdatedAt:  updatedAt,
+	}
+}
+
+func currentDBTime() time.Time {
+	if database.DB != nil && database.DB.NowFunc != nil {
+		return database.DB.NowFunc()
+	}
+	return time.Now()
+}
+
+func tryBatchUpdateNodeInfoWithCaseWhen(plans []nodeInfoUpdatePlan) (int, error) {
+	if len(plans) == 0 {
+		return 0, nil
+	}
+	if hasDuplicateNodeInfoUpdateID(plans) {
+		return 0, errors.New("duplicate node IDs in node info update chunk")
+	}
+
+	var sb strings.Builder
+	args := make([]any, 0, len(plans)*5+1)
+	sb.WriteString("UPDATE nodes SET ")
+
+	first := true
+	appendCaseColumn := func(column string, value func(nodeInfoUpdatePlan) any) {
+		if !first {
+			sb.WriteString(", ")
+		}
+		first = false
+		sb.WriteString(column)
+		sb.WriteString(" = CASE id ")
+		for _, plan := range plans {
+			fmt.Fprintf(&sb, "WHEN %d THEN ? ", plan.ID)
+			args = append(args, value(plan))
+		}
+		sb.WriteString("ELSE ")
+		sb.WriteString(column)
+		sb.WriteString(" END")
+	}
+
+	appendCaseColumn("link_name", func(plan nodeInfoUpdatePlan) any { return plan.LinkName })
+	appendCaseColumn("link", func(plan nodeInfoUpdatePlan) any { return plan.Link })
+	appendCaseColumn("link_hash", func(plan nodeInfoUpdatePlan) any { return plan.LinkHash })
+	appendCaseColumn("source_sort", func(plan nodeInfoUpdatePlan) any { return plan.SourceSort })
+	if hasSyncedNodeInfoName(plans) {
+		if !first {
+			sb.WriteString(", ")
+		}
+		first = false
+		sb.WriteString("name = CASE id ")
+		for _, plan := range plans {
+			if !plan.SyncName {
+				continue
+			}
+			fmt.Fprintf(&sb, "WHEN %d THEN ? ", plan.ID)
+			args = append(args, plan.Name)
+		}
+		sb.WriteString("ELSE name END")
+	}
+	sb.WriteString(", updated_at = ?")
+	args = append(args, plans[0].UpdatedAt)
+
+	sb.WriteString(" WHERE id IN (")
+	for i, plan := range plans {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		fmt.Fprintf(&sb, "%d", plan.ID)
+	}
+	sb.WriteString(")")
+
+	result := database.DB.Exec(sb.String(), args...)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	if int(result.RowsAffected) != len(plans) {
+		return 0, fmt.Errorf("节点信息批量更新影响行数不匹配: got %d, want %d", result.RowsAffected, len(plans))
+	}
+	return int(result.RowsAffected), nil
+}
+
+func hasSyncedNodeInfoName(plans []nodeInfoUpdatePlan) bool {
+	for _, plan := range plans {
+		if plan.SyncName {
+			return true
+		}
+	}
+	return false
+}
+
+func hasDuplicateNodeInfoUpdateID(plans []nodeInfoUpdatePlan) bool {
+	seen := make(map[int]bool, len(plans))
+	for _, plan := range plans {
+		if seen[plan.ID] {
+			return true
+		}
+		seen[plan.ID] = true
+	}
+	return false
+}
+
+func batchUpdateNodeInfoCache(plans []nodeInfoUpdatePlan) {
+	for _, plan := range plans {
+		updateNodeInfoCache(plan)
+	}
+}
+
+func updateNodeInfoCache(plan nodeInfoUpdatePlan) {
+	if cachedNode, ok := nodeCache.Get(plan.ID); ok {
+		if plan.SyncName {
+			cachedNode.Name = plan.Name
+		}
+		cachedNode.LinkName = plan.LinkName
+		cachedNode.Link = plan.Link
+		cachedNode.LinkHash = plan.LinkHash
+		cachedNode.SourceSort = plan.SourceSort
+		cachedNode.UpdatedAt = plan.UpdatedAt
+		cachedNode.NameMode = NormalizeNodeNameMode(cachedNode.NameMode)
+		cachedNode.EffectiveNameValue = cachedNode.EffectiveName()
+		nodeCache.Set(plan.ID, cachedNode)
+	}
+}
+
+func fallbackToIndividualNodeInfoUpdate(updates []NodeInfoUpdate) int {
+	successCount := 0
+	for _, update := range updates {
+		plan := prepareNodeInfoUpdatePlan(update, nil, currentDBTime())
+		fields := map[string]any{
+			"link_name":   plan.LinkName,
+			"link":        plan.Link,
+			"link_hash":   plan.LinkHash,
+			"source_sort": plan.SourceSort,
+			"updated_at":  plan.UpdatedAt,
+		}
+		if plan.SyncName {
+			fields["name"] = plan.Name
+		}
+
+		result := database.DB.Model(&Node{}).Where("id = ?", plan.ID).Updates(fields)
+		if result.Error != nil {
+			utils.Warn("更新节点信息失败 ID=%d: %v", plan.ID, result.Error)
+			continue
+		}
+		if result.RowsAffected == 0 {
+			utils.Warn("更新节点信息失败 ID=%d: 未找到对应节点", plan.ID)
+			continue
+		}
+		successCount++
+		updateNodeInfoCache(plan)
+	}
+	return successCount
+}
+
+func chunkNodeInfoUpdates(updates []NodeInfoUpdate, chunkSize int) [][]NodeInfoUpdate {
+	if chunkSize <= 0 {
+		chunkSize = database.BatchSize
+	}
+
+	var chunks [][]NodeInfoUpdate
+	for i := 0; i < len(updates); i += chunkSize {
+		end := i + chunkSize
+		if end > len(updates) {
+			end = len(updates)
+		}
+		chunks = append(chunks, updates[i:end])
+	}
+	return chunks
 }
 
 // GetFastestSpeedNode 获取最快速度节点
