@@ -598,6 +598,25 @@ const TaskProgressFab = () => {
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 600;
   const fabSize = isMobile ? MOBILE_FAB_SIZE : FAB_SIZE;
+  const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 768;
+  const safeGap = 16;
+  const panelGap = 12;
+  const panelWidth = Math.min(360, windowWidth - 32);
+  const fabLeft = windowWidth - position.right - fabSize;
+  const fabRight = fabLeft + fabSize;
+  const fabTop = windowHeight - position.bottom - fabSize;
+  const fabCenterX = fabLeft + fabSize / 2;
+  const opensToRight = fabCenterX < windowWidth / 2;
+  const desiredPanelLeft = opensToRight ? fabLeft : fabRight - panelWidth;
+  const maxPanelLeft = windowWidth - panelWidth - safeGap;
+  const panelLeft = Math.max(safeGap, Math.min(maxPanelLeft, desiredPanelLeft));
+  const availableAbove = Math.max(0, fabTop - safeGap - panelGap);
+  const availableBelow = Math.max(0, windowHeight - fabTop - fabSize - safeGap - panelGap);
+  const opensAbove = availableAbove >= 220 || availableAbove >= availableBelow;
+  const panelMaxHeight = Math.max(160, Math.min(isMobile ? windowHeight - 160 : 400, opensAbove ? availableAbove : availableBelow));
+  const transformOriginX = Math.max(0, Math.min(panelWidth, fabCenterX - panelLeft));
+  const transformOriginY = opensAbove ? 'bottom' : 'top';
 
   return (
     <ClickAwayListener onClickAway={handleClickAway}>
@@ -606,22 +625,24 @@ const TaskProgressFab = () => {
           position: 'fixed',
           bottom: position.bottom,
           right: position.right,
-          zIndex: theme.zIndex.speedDial,
+          width: fabSize,
+          height: fabSize,
+          zIndex: theme.zIndex.tooltip,
           touchAction: 'none' // Prevent scroll on touch
         }}
       >
         {/* Expanded Card */}
-        <Grow in={isExpanded} style={{ transformOrigin: 'bottom right' }} timeout={300}>
+        <Grow in={isExpanded} style={{ transformOrigin: `${transformOriginX}px ${transformOriginY}` }} timeout={300}>
           <Card
             sx={{
-              position: 'absolute',
-              bottom: fabSize + 12,
-              right: 0,
-              width: { xs: 'calc(100vw - 32px)', sm: 360 },
-              maxWidth: 360,
-              maxHeight: { xs: 'calc(100vh - 160px)', sm: 400 },
-              overflow: 'hidden',
               ...getTaskDialogPaperSx(theme, tokens),
+              position: 'fixed',
+              left: panelLeft,
+              ...(opensAbove ? { bottom: position.bottom + fabSize + panelGap } : { top: fabTop + fabSize + panelGap }),
+              width: panelWidth,
+              maxWidth: 'calc(100vw - 32px)',
+              maxHeight: panelMaxHeight,
+              overflow: 'hidden',
               borderRadius: 3,
               display: isExpanded ? 'block' : 'none'
             }}
