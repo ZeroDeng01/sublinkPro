@@ -1,4 +1,15 @@
-import { IconCoffee, IconGift, IconHeart } from '@tabler/icons-react';
+import { IconCoffee, IconGift, IconHeart, IconServer, IconCloud } from '@tabler/icons-react';
+import affiliateData from './affiliateRecommendations.json';
+
+export const affiliateRecommendationConfig = {
+  title: '🌟 优质推荐',
+  disclaimer:
+    '此区域包含推广链接，通过这些链接购买可能会为维护者带来佣金奖励。具体价格与活动资格请以官方页面为准，我们不保证具体的延迟、网络质量或固定折扣。',
+  items: affiliateData.map((item) => ({
+    ...item,
+    icon: item.id === 'bandwagonhost' ? <IconServer size={18} /> : <IconCloud size={18} />
+  }))
+};
 
 export const donationConfig = {
   headerIconColor: 'primary',

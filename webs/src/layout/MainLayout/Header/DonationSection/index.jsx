@@ -20,10 +20,8 @@ import Transitions from 'ui-component/extended/Transitions';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getHeaderPopoverTokens, getHeaderTriggerTokens } from '../headerPopoverTokens';
 
-// assets
 import { IconCoffee } from '@tabler/icons-react';
-
-import { donationConfig } from 'config/donation';
+import { donationConfig, affiliateRecommendationConfig } from 'config/donation';
 
 export default function DonationSection() {
   const theme = useTheme();
@@ -132,6 +130,7 @@ export default function DonationSection() {
                             startIcon={item.icon}
                             href={item.url}
                             target="_blank"
+                            rel="noopener noreferrer"
                             fullWidth
                             sx={{
                               justifyContent: 'flex-start',
@@ -148,6 +147,55 @@ export default function DonationSection() {
                           </Button>
                         ))}
                       </Stack>
+
+                      {affiliateRecommendationConfig && affiliateRecommendationConfig.items.length > 0 && (
+                        <>
+                          <Divider />
+                          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'center' }}>
+                            <Typography variant="subtitle2" color="text.secondary">
+                              {affiliateRecommendationConfig.title}
+                            </Typography>
+                          </Stack>
+                          <Stack spacing={1.5}>
+                            {affiliateRecommendationConfig.items.map((item, index) => (
+                              <Tooltip
+                                key={index}
+                                title={[item.description, ...(item.highlights || [])].join(' · ')}
+                                placement="left"
+                                arrow
+                              >
+                                <Button
+                                  variant="outlined"
+                                  color={item.color || 'primary'}
+                                  startIcon={item.icon}
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  fullWidth
+                                  sx={{
+                                    justifyContent: 'flex-start',
+                                    px: 2,
+                                    py: 1,
+                                    borderRadius: 2,
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                      transform: 'translateY(-2px)'
+                                    }
+                                  }}
+                                >
+                                  {item.title} · {item.ctaLabel}
+                                </Button>
+                              </Tooltip>
+                            ))}
+                            <Typography
+                              variant="caption"
+                              sx={{ color: 'text.disabled', textAlign: 'center', fontSize: '0.65rem', mt: 0.5, px: 1 }}
+                            >
+                              * 此区域含推广链接，具体以官方页面为准
+                            </Typography>
+                          </Stack>
+                        </>
+                      )}
                     </Stack>
                   </MainCard>
                 )}

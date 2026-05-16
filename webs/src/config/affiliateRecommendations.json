@@ -1,0 +1,32 @@
+[
+  {
+    "id": "bandwagonhost",
+    "title": "BandwagonHost (搬瓦工)",
+    "description": "精品线路，提供多机房与 CN2 GIA 等线路方案，适合优质线路机。或者当作稳定落地机结合打野节点使用。",
+    "highlights": ["多机房 VPS 方案", "可关注 CN2 GIA 优化线路", "高质量线路机"],
+    "ctaLabel": "查看方案",
+    "url": "https://bandwagonhost.com/aff.php?aff=19245",
+    "tag": "VPS(推荐)",
+    "color": "primary"
+  },
+  {
+    "id": "vultr",
+    "title": "Vultr",
+    "description": "海量机房可选，按时收费，IP随时更换，最低$2.5/月，适合建站和AI服务托管等，也可作为线路机和落地机使用。",
+    "highlights": ["多机房地区可选", "按时计费", "低价稳定","有纯V6机器"],
+    "ctaLabel": "查看方案",
+    "url": "https://www.vultr.com/?ref=8055869",
+    "tag": "VPS",
+    "color": "primary"
+  },
+  {
+    "id": "aliyun",
+    "title": "阿里云 (Aliyun)",
+    "description": "99元/年服务器新购续费同价，适合日常建站和测试，可部署newapi和sublinkPro等服务，通过链接注册可享受优惠（AI等均可使用折扣）。",
+    "highlights": ["适合国内部署与开发测试", "99元/年服务器新购续费同价", "可领折扣券"],
+    "ctaLabel": "查看活动",
+    "url": "https://www.aliyun.com/minisite/goods?userCode=brje0cbs",
+    "tag": "云服务",
+    "color": "primary"
+  }
+]
