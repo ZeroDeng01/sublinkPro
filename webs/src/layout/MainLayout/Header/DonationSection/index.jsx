@@ -20,7 +20,6 @@ import Transitions from 'ui-component/extended/Transitions';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getHeaderPopoverTokens, getHeaderTriggerTokens } from '../headerPopoverTokens';
 
-import { IconCoffee } from '@tabler/icons-react';
 import { donationConfig, affiliateRecommendationConfig } from 'config/donation';
 
 export default function DonationSection() {
@@ -83,7 +82,7 @@ export default function DonationSection() {
             aria-haspopup="true"
             onClick={handleToggle}
           >
-            <IconCoffee stroke={1.5} size="20px" />
+            {donationConfig.headerIcon}
           </Avatar>
         </Tooltip>
       </Box>
