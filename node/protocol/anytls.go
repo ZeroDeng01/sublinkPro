@@ -18,9 +18,14 @@ func init() {
 		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
 		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true},
 		FieldMeta{Name: "SNI", Label: "SNI", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "ALPN", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
 		FieldMeta{Name: "SkipCertVerify", Label: "跳过证书校验", Type: "bool", Group: "tls", Advanced: true},
 		FieldMeta{Name: "ClientFingerprint", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Fingerprint", Label: "证书指纹", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "UDP", Label: "UDP", Type: "bool", Group: "transport", Advanced: true},
+		FieldMeta{Name: "IdleSessionCheckInterval", Label: "空闲会话检查间隔", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "IdleSessionTimeout", Label: "空闲会话超时时间", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "MinIdleSession", Label: "最小空闲会话数", Type: "int", Group: "transport", Advanced: true},
 	)
 	MustRegisterProtocol(newProxyProtocolSpec(base, buildAnyTLSProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "anytls")
@@ -28,14 +33,19 @@ func init() {
 }
 
 type AnyTLS struct {
-	Name              string
-	Server            string
-	Port              any
-	Password          string
-	SkipCertVerify    bool
-	SNI               string
-	ClientFingerprint string
-	Fingerprint       string
+	Name                     string
+	Server                   string
+	Port                     any
+	Password                 string
+	SkipCertVerify           bool
+	SNI                      string
+	ALPN                     []string
+	ClientFingerprint        string
+	Fingerprint              string
+	UDP                      bool
+	IdleSessionCheckInterval int
+	IdleSessionTimeout       int
+	MinIdleSession           int
 }
 
 // DecodeAnyTLSURL 解析 AnyTLS 链接，并补齐默认端口与基础 TLS 相关字段。
@@ -76,8 +86,13 @@ func DecodeAnyTLSURL(s string) (AnyTLS, error) {
 		return AnyTLS{}, err
 	}
 	anyTLS.SNI = u.Query().Get("sni")
+	anyTLS.ALPN = splitVMessALPN(u.Query().Get("alpn"))
 	anyTLS.ClientFingerprint = u.Query().Get("fp")
 	anyTLS.Fingerprint = sanitizeCertificateFingerprint(u.Query().Get("fingerprint"))
+	anyTLS.UDP, _ = strconv.ParseBool(u.Query().Get("udp"))
+	anyTLS.IdleSessionCheckInterval, _ = strconv.Atoi(u.Query().Get("idle-session-check-interval"))
+	anyTLS.IdleSessionTimeout, _ = strconv.Atoi(u.Query().Get("idle-session-timeout"))
+	anyTLS.MinIdleSession, _ = strconv.Atoi(u.Query().Get("min-idle-session"))
 
 	if name == "" {
 		anyTLS.Name = u.Host
@@ -102,11 +117,26 @@ func EncodeAnyTLSURL(a AnyTLS) string {
 	if a.SNI != "" {
 		q.Set("sni", a.SNI)
 	}
+	if len(a.ALPN) > 0 {
+		q.Set("alpn", strings.Join(a.ALPN, ","))
+	}
 	if a.ClientFingerprint != "" {
 		q.Set("fp", a.ClientFingerprint)
 	}
 	if a.Fingerprint != "" {
 		q.Set("fingerprint", a.Fingerprint)
+	}
+	if a.UDP {
+		q.Set("udp", "1")
+	}
+	if a.IdleSessionCheckInterval > 0 {
+		q.Set("idle-session-check-interval", strconv.Itoa(a.IdleSessionCheckInterval))
+	}
+	if a.IdleSessionTimeout > 0 {
+		q.Set("idle-session-timeout", strconv.Itoa(a.IdleSessionTimeout))
+	}
+	if a.MinIdleSession > 0 {
+		q.Set("min-idle-session", strconv.Itoa(a.MinIdleSession))
 	}
 	u.RawQuery = q.Encode()
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
@@ -120,14 +150,19 @@ func EncodeAnyTLSURL(a AnyTLS) string {
 // 用于从 Clash 格式的代理配置生成 AnyTLS 链接
 func ConvertProxyToAnyTLS(proxy Proxy) AnyTLS {
 	return AnyTLS{
-		Name:              proxy.Name,
-		Server:            proxy.Server,
-		Port:              int(proxy.Port),
-		Password:          proxy.Password,
-		SkipCertVerify:    proxy.Skip_cert_verify,
-		SNI:               proxy.Sni,
-		ClientFingerprint: proxy.Client_fingerprint,
-		Fingerprint:       sanitizeCertificateFingerprint(proxy.Fingerprint),
+		Name:                     proxy.Name,
+		Server:                   proxy.Server,
+		Port:                     int(proxy.Port),
+		Password:                 proxy.Password,
+		SkipCertVerify:           proxy.Skip_cert_verify,
+		SNI:                      proxy.Sni,
+		ALPN:                     proxy.Alpn,
+		ClientFingerprint:        proxy.Client_fingerprint,
+		Fingerprint:              sanitizeCertificateFingerprint(proxy.Fingerprint),
+		UDP:                      proxy.Udp,
+		IdleSessionCheckInterval: proxy.AnyTLSIdleCheck,
+		IdleSessionTimeout:       proxy.AnyTLSIdleTimeout,
+		MinIdleSession:           proxy.AnyTLSMinIdle,
 	}
 }
 
@@ -137,5 +172,6 @@ func buildAnyTLSProxy(link Urls, config OutputConfig) (Proxy, error) {
 		return Proxy{}, err
 	}
 	skipCert := config.Cert || anyTLS.SkipCertVerify
-	return Proxy{Name: anyTLS.Name, Type: "anytls", Server: anyTLS.Server, Port: FlexPort(utils.GetPortInt(anyTLS.Port)), Password: anyTLS.Password, Skip_cert_verify: skipCert, Sni: anyTLS.SNI, Client_fingerprint: anyTLS.ClientFingerprint, Fingerprint: anyTLS.Fingerprint, Dialer_proxy: link.DialerProxyName}, nil
+	udp := config.Udp || anyTLS.UDP
+	return Proxy{Name: anyTLS.Name, Type: "anytls", Server: anyTLS.Server, Port: FlexPort(utils.GetPortInt(anyTLS.Port)), Password: anyTLS.Password, Skip_cert_verify: skipCert, Sni: anyTLS.SNI, Alpn: anyTLS.ALPN, Client_fingerprint: anyTLS.ClientFingerprint, Fingerprint: anyTLS.Fingerprint, Udp: udp, AnyTLSIdleCheck: anyTLS.IdleSessionCheckInterval, AnyTLSIdleTimeout: anyTLS.IdleSessionTimeout, AnyTLSMinIdle: anyTLS.MinIdleSession, Dialer_proxy: link.DialerProxyName}, nil
 }
