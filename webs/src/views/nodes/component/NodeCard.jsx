@@ -12,6 +12,7 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
+import NodeProtocolChip from './NodeProtocolChip';
 
 // utils
 import {
@@ -30,7 +31,7 @@ import { getNodePanelSx, getNodeTagChipSx, getNodeThemeTokens } from '../nodeThe
  * 移动端节点卡片组件（精简版）
  * 只显示核心信息，点击卡片打开详情面板
  */
-export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onViewDetails }) {
+export default function NodeCard({ node, isSelected, tagColorMap, protocolMeta, onSelect, onViewDetails }) {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
@@ -105,6 +106,7 @@ export default function NodeCard({ node, isSelected, tagColorMap, onSelect, onVi
         </Box>
 
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+          <NodeProtocolChip link={node.Link} protocolMeta={protocolMeta} maxWidth={104} />
           {node.Group && (
             <Tooltip title={`分组: ${node.Group}`}>
               <Chip
@@ -304,6 +306,7 @@ NodeCard.propTypes = {
   }).isRequired,
   isSelected: PropTypes.bool.isRequired,
   tagColorMap: PropTypes.object,
+  protocolMeta: PropTypes.array,
   onSelect: PropTypes.func.isRequired,
   onViewDetails: PropTypes.func.isRequired
 };

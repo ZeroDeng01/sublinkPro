@@ -1175,6 +1175,7 @@ export default function NodeList() {
           rowsPerPage={rowsPerPage}
           selectedNodes={selectedNodes}
           tagColorMap={tagColorMap}
+          protocolMeta={protocolMeta}
           onSelect={handleSelectNode}
           onViewDetails={(node) => {
             setDetailsNode(node);
@@ -1190,6 +1191,7 @@ export default function NodeList() {
           sortBy={sortBy}
           sortOrder={sortOrder}
           tagColorMap={tagColorMap}
+          protocolMeta={protocolMeta}
           onSelectAll={handleSelectAll}
           onSelect={handleSelectNode}
           onSort={handleSort}

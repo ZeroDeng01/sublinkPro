@@ -26,6 +26,9 @@ import EditIcon from '@mui/icons-material/Edit';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import SpeedIcon from '@mui/icons-material/Speed';
 
+// project imports
+import NodeProtocolChip from './NodeProtocolChip';
+
 // utils
 import {
   formatDateTime,
@@ -50,6 +53,7 @@ export default function NodeTable({
   sortBy,
   sortOrder,
   tagColorMap,
+  protocolMeta,
   onSelect,
   onSort,
   onSpeedTest,
@@ -95,7 +99,7 @@ export default function NodeTable({
       <Table
         size="small"
         sx={{
-          minWidth: 820,
+          minWidth: 900,
           width: '100%',
           '& .MuiTableCell-root': {
             px: 0.75,
@@ -124,6 +128,7 @@ export default function NodeTable({
           <TableRow>
             <TableCell padding="checkbox" />
             <TableCell sx={{ minWidth: 132 }}>备注</TableCell>
+            <TableCell sx={{ minWidth: 76, whiteSpace: 'nowrap' }}>协议</TableCell>
             <TableCell sx={{ minWidth: 88 }}>分组</TableCell>
             <TableCell sx={{ minWidth: 88 }}>来源</TableCell>
             <TableCell sx={{ minWidth: 92, whiteSpace: 'nowrap' }}>标签</TableCell>
@@ -194,6 +199,9 @@ export default function NodeTable({
                       )}
                     </Stack>
                   </Tooltip>
+                </TableCell>
+                <TableCell>
+                  <NodeProtocolChip link={node.Link} protocolMeta={protocolMeta} maxWidth={92} />
                 </TableCell>
                 <TableCell>
                   {node.Group ? (
@@ -455,6 +463,7 @@ NodeTable.propTypes = {
   sortBy: PropTypes.string.isRequired,
   sortOrder: PropTypes.string.isRequired,
   tagColorMap: PropTypes.object,
+  protocolMeta: PropTypes.array,
   onSelect: PropTypes.func.isRequired,
   onSort: PropTypes.func.isRequired,
   onSpeedTest: PropTypes.func.isRequired,

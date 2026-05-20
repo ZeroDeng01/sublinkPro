@@ -13,7 +13,7 @@ import { getNodeThemeTokens } from '../nodeTheme';
 /**
  * 移动端节点卡片列表
  */
-export default function NodeMobileList({ nodes, page, rowsPerPage, selectedNodes, tagColorMap, onSelect, onViewDetails }) {
+export default function NodeMobileList({ nodes, page, rowsPerPage, selectedNodes, tagColorMap, protocolMeta, onSelect, onViewDetails }) {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
@@ -33,6 +33,7 @@ export default function NodeMobileList({ nodes, page, rowsPerPage, selectedNodes
           node={node}
           isSelected={isSelected(node)}
           tagColorMap={tagColorMap}
+          protocolMeta={protocolMeta}
           onSelect={onSelect}
           onViewDetails={onViewDetails}
         />
@@ -47,6 +48,7 @@ NodeMobileList.propTypes = {
   rowsPerPage: PropTypes.number.isRequired,
   selectedNodes: PropTypes.array.isRequired,
   tagColorMap: PropTypes.object,
+  protocolMeta: PropTypes.array,
   onSelect: PropTypes.func.isRequired,
   onViewDetails: PropTypes.func.isRequired
 };
