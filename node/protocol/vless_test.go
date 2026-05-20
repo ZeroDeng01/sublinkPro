@@ -73,6 +73,29 @@ func TestVlessCertificateFingerprintAliases(t *testing.T) {
 	assertContains(t, "EncodedCertificateFingerprint", reEncoded, "pcs="+fingerprint)
 }
 
+func TestVlessCertificateFingerprintPrefersValidPCS(t *testing.T) {
+	const pcs = "16dac3717024eb319093d1c95290c14adc850e2814b2208d11c7b7a436923859"
+	const hpkp = "78443c6c21bd739a9d3d07ecdba487aa1fe75aed671e484151a61f24d114b39d"
+	url := "vless://12345678-1234-1234-1234-123456789abc@example.com:443?encryption=none&security=tls&type=tcp&pcs=" + pcs + "&hpkp=" + hpkp + "#证书指纹优先级"
+
+	decoded, err := DecodeVLESSURL(url)
+	if err != nil {
+		t.Fatalf("解码失败: %v", err)
+	}
+	assertEqualString(t, "PreferPCS", pcs, decoded.Query.Fingerprint)
+}
+
+func TestVlessCertificateFingerprintFallsBackWhenPCSInvalid(t *testing.T) {
+	const hpkp = "78443c6c21bd739a9d3d07ecdba487aa1fe75aed671e484151a61f24d114b39d"
+	url := "vless://12345678-1234-1234-1234-123456789abc@example.com:443?encryption=none&security=tls&type=tcp&pcs=invalid&hpkp=" + hpkp + "#证书指纹兼容"
+
+	decoded, err := DecodeVLESSURL(url)
+	if err != nil {
+		t.Fatalf("解码失败: %v", err)
+	}
+	assertEqualString(t, "FallbackHPKP", hpkp, decoded.Query.Fingerprint)
+}
+
 // TestVlessNameModification 测试 VLESS 名称修改
 func TestVlessNameModification(t *testing.T) {
 	original := VLESS{

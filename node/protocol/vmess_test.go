@@ -44,10 +44,40 @@ func TestVmessEncodeDecode(t *testing.T) {
 	assertEqualString(t, "Path", original.Path, decoded.Path)
 	assertEqualString(t, "Ps(名称)", original.Ps, decoded.Ps)
 	assertEqualString(t, "Sni", original.Sni, decoded.Sni)
+	assertEqualString(t, "Alpn", original.Alpn, decoded.Alpn)
+	assertEqualString(t, "Fp", original.Fp, decoded.Fp)
 	assertEqualString(t, "Scy", original.Scy, decoded.Scy)
 	assertEqualString(t, "Tls", original.Tls, decoded.Tls)
 
 	t.Logf("✓ VMess 编解码测试通过，名称: %s", decoded.Ps)
+}
+
+func TestVmessBuildProxyPreservesTLSMetadata(t *testing.T) {
+	vmess := Vmess{
+		Add:  "example.com",
+		Port: "443",
+		Id:   "12345678-1234-1234-1234-123456789abc",
+		Net:  "ws",
+		Path: "/vmess",
+		Host: "cdn.example.com",
+		Tls:  "tls",
+		Sni:  "sni.example.com",
+		Alpn: "h2,http/1.1",
+		Fp:   "chrome",
+		Scy:  "auto",
+		Ps:   "测试节点-VMess-TLS",
+		V:    "2",
+	}
+
+	proxy, err := buildVMessProxy(Urls{Url: EncodeVmessURL(vmess)}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildVMessProxy 失败: %v", err)
+	}
+
+	assertEqualString(t, "ClientFingerprint", vmess.Fp, proxy.Client_fingerprint)
+	assertEqualString(t, "Servername", vmess.Sni, proxy.Servername)
+	assertEqualString(t, "ALPN0", "h2", proxy.Alpn[0])
+	assertEqualString(t, "ALPN1", "http/1.1", proxy.Alpn[1])
 }
 
 // TestVmessNameModification 测试 VMess 名称修改

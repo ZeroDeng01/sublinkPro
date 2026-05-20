@@ -286,11 +286,10 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 	pbk := u.Query().Get("pbk")
 	sid := u.Query().Get("sid")
 	fp := u.Query().Get("fp")
-	fingerprint := u.Query().Get("pcs")
+	fingerprint := sanitizeCertificateFingerprint(u.Query().Get("pcs"))
 	if fingerprint == "" {
-		fingerprint = u.Query().Get("hpkp")
+		fingerprint = sanitizeCertificateFingerprint(u.Query().Get("hpkp"))
 	}
-	fingerprint = sanitizeCertificateFingerprint(fingerprint)
 	sni := u.Query().Get("sni")
 	ech := u.Query().Get("ech")
 	path := u.Query().Get("path")

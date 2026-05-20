@@ -181,7 +181,22 @@ func buildVMessProxy(link Urls, config OutputConfig) (Proxy, error) {
 	tls := vmess.Tls != "none" && vmess.Tls != ""
 	port, _ := convertToInt(vmess.Port)
 	aid, _ := convertToInt(vmess.Aid)
-	return Proxy{Name: vmess.Ps, Type: "vmess", Server: vmess.Add, Port: FlexPort(port), Cipher: vmess.Scy, Uuid: vmess.Id, AlterId: strconv.Itoa(aid), Network: vmess.Net, Tls: tls, Ws_opts: wsOpts, Udp: config.Udp, Skip_cert_verify: config.Cert, Dialer_proxy: link.DialerProxyName}, nil
+	alpn := splitVMessALPN(vmess.Alpn)
+	return Proxy{Name: vmess.Ps, Type: "vmess", Server: vmess.Add, Port: FlexPort(port), Cipher: vmess.Scy, Uuid: vmess.Id, AlterId: strconv.Itoa(aid), Network: vmess.Net, Tls: tls, Servername: vmess.Sni, Alpn: alpn, Client_fingerprint: vmess.Fp, Ws_opts: wsOpts, Udp: config.Udp, Skip_cert_verify: config.Cert, Dialer_proxy: link.DialerProxyName}, nil
+}
+
+func splitVMessALPN(alpn string) []string {
+	if strings.TrimSpace(alpn) == "" {
+		return nil
+	}
+	parts := strings.Split(alpn, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
 
 // buildVMessSurgeLine 将 VMess 链接转换为 Surge 节点行。

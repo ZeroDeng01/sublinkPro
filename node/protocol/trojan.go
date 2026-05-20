@@ -25,6 +25,7 @@ func init() {
 		FieldMeta{Name: "Query.Peer", Label: "Peer", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Alpn", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
 		FieldMeta{Name: "Query.Fp", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Fingerprint", Label: "证书指纹", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
@@ -48,6 +49,7 @@ type TrojanQuery struct {
 	Path          string   `json:"path,omitempty"`
 	Security      string   `json:"security,omitempty"`
 	Fp            string   `json:"fp,omitempty"`
+	Fingerprint   string   `json:"fingerprint,omitempty"`
 	AllowInsecure int      `json:"allowInsecure,omitempty"`
 	Alpn          []string `json:"alpn,omitempty"`
 	Sni           string   `json:"sni,omitempty"`
@@ -77,6 +79,7 @@ func EncodeTrojanURL(t Trojan) string {
 	q.Set("path", t.Query.Path)
 	q.Set("security", t.Query.Security)
 	q.Set("fp", t.Query.Fp)
+	q.Set("pcs", t.Query.Fingerprint)
 	// alpn 参数支持
 	if len(t.Query.Alpn) > 0 {
 		q.Set("alpn", strings.Join(t.Query.Alpn, ","))
@@ -132,6 +135,7 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 	path := u.Query().Get("path")
 	security := u.Query().Get("security")
 	fp := u.Query().Get("fp")
+	fingerprint := sanitizeCertificateFingerprint(u.Query().Get("pcs"))
 	alpns := u.Query().Get("alpn")
 	alpn := strings.Split(alpns, ",")
 	if alpns == "" {
@@ -156,6 +160,7 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 		fmt.Println("path:", path)
 		fmt.Println("security:", security)
 		fmt.Println("fp:", fp)
+		fmt.Println("fingerprint:", fingerprint)
 		fmt.Println("alpn:", alpn)
 		fmt.Println("host:", host)
 		fmt.Println("flow:", flow)
@@ -176,6 +181,7 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 			Path:          path,
 			Security:      security,
 			Fp:            fp,
+			Fingerprint:   fingerprint,
 			AllowInsecure: insecureVal,
 			Alpn:          alpn,
 			Sni:           sni,
@@ -197,12 +203,13 @@ func ConvertProxyToTrojan(proxy Proxy) Trojan {
 		Name:     proxy.Name,
 		Type:     "trojan",
 		Query: TrojanQuery{
-			Sni:  proxy.Sni,
-			Type: proxy.Network,
-			Fp:   proxy.Client_fingerprint,
-			Flow: proxy.Flow,
-			Alpn: proxy.Alpn,
-			Peer: proxy.Peer,
+			Sni:         proxy.Sni,
+			Type:        proxy.Network,
+			Fp:          proxy.Client_fingerprint,
+			Fingerprint: sanitizeCertificateFingerprint(proxy.Fingerprint),
+			Flow:        proxy.Flow,
+			Alpn:        proxy.Alpn,
+			Peer:        proxy.Peer,
 		},
 	}
 
@@ -248,7 +255,7 @@ func buildTrojanProxy(link Urls, config OutputConfig) (Proxy, error) {
 	wsOpts := map[string]any{"path": trojan.Query.Path, "headers": map[string]any{"Host": trojan.Query.Host}}
 	DeleteOpts(wsOpts)
 	skipCert := config.Cert || trojan.Query.AllowInsecure == 1
-	return Proxy{Name: trojan.Name, Type: "trojan", Server: trojan.Hostname, Port: FlexPort(utils.GetPortInt(trojan.Port)), Password: trojan.Password, Client_fingerprint: trojan.Query.Fp, Sni: trojan.Query.Sni, Network: trojan.Query.Type, Flow: trojan.Query.Flow, Alpn: trojan.Query.Alpn, Ws_opts: wsOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
+	return Proxy{Name: trojan.Name, Type: "trojan", Server: trojan.Hostname, Port: FlexPort(utils.GetPortInt(trojan.Port)), Password: trojan.Password, Client_fingerprint: trojan.Query.Fp, Fingerprint: trojan.Query.Fingerprint, Sni: trojan.Query.Sni, Network: trojan.Query.Type, Flow: trojan.Query.Flow, Alpn: trojan.Query.Alpn, Ws_opts: wsOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
 }
 
 // buildTrojanSurgeLine 将 Trojan 链接转换为 Surge 节点行。
