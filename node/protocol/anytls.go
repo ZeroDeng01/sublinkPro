@@ -20,6 +20,7 @@ func init() {
 		FieldMeta{Name: "SNI", Label: "SNI", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "SkipCertVerify", Label: "跳过证书校验", Type: "bool", Group: "tls", Advanced: true},
 		FieldMeta{Name: "ClientFingerprint", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Fingerprint", Label: "证书指纹", Type: "string", Group: "tls", Advanced: true},
 	)
 	MustRegisterProtocol(newProxyProtocolSpec(base, buildAnyTLSProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "anytls")
@@ -34,6 +35,7 @@ type AnyTLS struct {
 	SkipCertVerify    bool
 	SNI               string
 	ClientFingerprint string
+	Fingerprint       string
 }
 
 // DecodeAnyTLSURL 解析 AnyTLS 链接，并补齐默认端口与基础 TLS 相关字段。
@@ -75,6 +77,7 @@ func DecodeAnyTLSURL(s string) (AnyTLS, error) {
 	}
 	anyTLS.SNI = u.Query().Get("sni")
 	anyTLS.ClientFingerprint = u.Query().Get("fp")
+	anyTLS.Fingerprint = sanitizeCertificateFingerprint(u.Query().Get("fingerprint"))
 
 	if name == "" {
 		anyTLS.Name = u.Host
@@ -102,6 +105,9 @@ func EncodeAnyTLSURL(a AnyTLS) string {
 	if a.ClientFingerprint != "" {
 		q.Set("fp", a.ClientFingerprint)
 	}
+	if a.Fingerprint != "" {
+		q.Set("fingerprint", a.Fingerprint)
+	}
 	u.RawQuery = q.Encode()
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if a.Name == "" {
@@ -121,6 +127,7 @@ func ConvertProxyToAnyTLS(proxy Proxy) AnyTLS {
 		SkipCertVerify:    proxy.Skip_cert_verify,
 		SNI:               proxy.Sni,
 		ClientFingerprint: proxy.Client_fingerprint,
+		Fingerprint:       sanitizeCertificateFingerprint(proxy.Fingerprint),
 	}
 }
 
@@ -130,5 +137,5 @@ func buildAnyTLSProxy(link Urls, config OutputConfig) (Proxy, error) {
 		return Proxy{}, err
 	}
 	skipCert := config.Cert || anyTLS.SkipCertVerify
-	return Proxy{Name: anyTLS.Name, Type: "anytls", Server: anyTLS.Server, Port: FlexPort(utils.GetPortInt(anyTLS.Port)), Password: anyTLS.Password, Skip_cert_verify: skipCert, Sni: anyTLS.SNI, Client_fingerprint: anyTLS.ClientFingerprint, Dialer_proxy: link.DialerProxyName}, nil
+	return Proxy{Name: anyTLS.Name, Type: "anytls", Server: anyTLS.Server, Port: FlexPort(utils.GetPortInt(anyTLS.Port)), Password: anyTLS.Password, Skip_cert_verify: skipCert, Sni: anyTLS.SNI, Client_fingerprint: anyTLS.ClientFingerprint, Fingerprint: anyTLS.Fingerprint, Dialer_proxy: link.DialerProxyName}, nil
 }

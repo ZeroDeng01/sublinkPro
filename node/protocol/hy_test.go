@@ -67,13 +67,15 @@ func TestHYNameModification(t *testing.T) {
 // TestHY2EncodeDecode 测试 Hysteria2 编解码完整性
 func TestHY2EncodeDecode(t *testing.T) {
 	original := HY2{
-		Name:     "测试节点-Hysteria2",
-		Host:     "example.com",
-		Port:     443,
-		Password: "test-hy2-password",
-		Sni:      "sni.example.com",
-		Insecure: 1,
-		Obfs:     "salamander",
+		Name:              "测试节点-Hysteria2",
+		Host:              "example.com",
+		Port:              443,
+		Password:          "test-hy2-password",
+		Sni:               "sni.example.com",
+		Insecure:          1,
+		Obfs:              "salamander",
+		ClientFingerprint: "chrome",
+		Fingerprint:       "16dac3717024eb319093d1c95290c14adc850e2814b2208d11c7b7a436923859",
 	}
 
 	// 编码
@@ -92,9 +94,34 @@ func TestHY2EncodeDecode(t *testing.T) {
 	assertEqualString(t, "Host", original.Host, decoded.Host)
 	assertEqualIntInterface(t, "Port", original.Port, decoded.Port)
 	assertEqualString(t, "Password", original.Password, decoded.Password)
+	assertEqualString(t, "ClientFingerprint", original.ClientFingerprint, decoded.ClientFingerprint)
+	assertEqualString(t, "Fingerprint", original.Fingerprint, decoded.Fingerprint)
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 
+	proxy, err := buildHY2Proxy(Urls{Url: encoded}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2Proxy 失败: %v", err)
+	}
+	assertEqualString(t, "ProxyClientFingerprint", original.ClientFingerprint, proxy.Client_fingerprint)
+	assertEqualString(t, "ProxyFingerprint", original.Fingerprint, proxy.Fingerprint)
+
 	t.Logf("✓ Hysteria2 编解码测试通过，名称: %s", decoded.Name)
+}
+
+func TestHY2RejectsInvalidCertificateFingerprint(t *testing.T) {
+	link := "hy2://password@example.com:443/?sni=example.com&pinSHA256=abc%2Cskip-cert-verify%3Dtrue#bad-fingerprint"
+
+	decoded, err := DecodeHY2URL(link)
+	if err != nil {
+		t.Fatalf("解码失败: %v", err)
+	}
+	assertEqualString(t, "InvalidFingerprintDropped", "", decoded.Fingerprint)
+
+	proxy, err := buildHY2Proxy(Urls{Url: link}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2Proxy 失败: %v", err)
+	}
+	assertEqualString(t, "ProxyInvalidFingerprintDropped", "", proxy.Fingerprint)
 }
 
 // TestHY2NameModification 测试 Hysteria2 名称修改

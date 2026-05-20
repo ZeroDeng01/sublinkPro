@@ -15,6 +15,7 @@ func TestAnyTLSEncodeDecode(t *testing.T) {
 		SkipCertVerify:    true,
 		SNI:               "sni.example.com",
 		ClientFingerprint: "chrome",
+		Fingerprint:       "16dac3717024eb319093d1c95290c14adc850e2814b2208d11c7b7a436923859",
 	}
 
 	// 编码
@@ -37,6 +38,13 @@ func TestAnyTLSEncodeDecode(t *testing.T) {
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 	assertEqualBool(t, "SkipCertVerify", original.SkipCertVerify, decoded.SkipCertVerify)
 	assertEqualString(t, "ClientFingerprint", original.ClientFingerprint, decoded.ClientFingerprint)
+	assertEqualString(t, "Fingerprint", original.Fingerprint, decoded.Fingerprint)
+
+	proxy, err := buildAnyTLSProxy(Urls{Url: encoded}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildAnyTLSProxy 失败: %v", err)
+	}
+	assertEqualString(t, "ProxyFingerprint", original.Fingerprint, proxy.Fingerprint)
 
 	t.Logf("✓ AnyTLS 编解码测试通过，名称: %s", decoded.Name)
 }

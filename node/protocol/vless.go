@@ -23,6 +23,7 @@ func init() {
 		FieldMeta{Name: "Query.Ech", Label: "ECH", Type: "string", Group: "tls", Advanced: true, Placeholder: "example.com+https://1.1.1.1/dns-query"},
 		FieldMeta{Name: "Query.Alpn", Label: "ALPN", Type: "string", Group: "tls", Multiline: true, Advanced: true},
 		FieldMeta{Name: "Query.Fp", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Fingerprint", Label: "证书指纹", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
@@ -59,6 +60,7 @@ type VLESSQuery struct {
 	Sni           string   `json:"sni"`
 	Ech           string   `json:"ech,omitempty"`
 	Fp            string   `json:"fp"`
+	Fingerprint   string   `json:"fingerprint,omitempty"`
 	Sid           string   `json:"sid"`
 	Pbk           string   `json:"pbk"`
 	Flow          string   `json:"flow"`
@@ -153,7 +155,7 @@ func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 		finalXHTTPOpts = xhttpOpts
 	}
 	echOpts := buildVLESSECHOpts(vless.Query.Ech)
-	return Proxy{Name: vless.Name, Type: "vless", Server: vless.Server, Port: FlexPort(utils.GetPortInt(vless.Port)), Servername: vless.Query.Sni, Uuid: vless.Uuid, Client_fingerprint: vless.Query.Fp, Network: vless.Query.Type, Flow: vless.Query.Flow, Alpn: vless.Query.Alpn, Packet_encoding: vless.Query.PacketEncoding, Ws_opts: finalWsOpts, H2_opts: finalH2Opts, Http_opts: finalHttpOpts, Grpc_opts: finalGrpcOpts, XHTTP_opts: finalXHTTPOpts, ECH_opts: echOpts, Reality_opts: realityOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Tls: tls, Dialer_proxy: link.DialerProxyName}, nil
+	return Proxy{Name: vless.Name, Type: "vless", Server: vless.Server, Port: FlexPort(utils.GetPortInt(vless.Port)), Servername: vless.Query.Sni, Uuid: vless.Uuid, Client_fingerprint: vless.Query.Fp, Fingerprint: vless.Query.Fingerprint, Network: vless.Query.Type, Flow: vless.Query.Flow, Alpn: vless.Query.Alpn, Packet_encoding: vless.Query.PacketEncoding, Ws_opts: finalWsOpts, H2_opts: finalH2Opts, Http_opts: finalHttpOpts, Grpc_opts: finalGrpcOpts, XHTTP_opts: finalXHTTPOpts, ECH_opts: echOpts, Reality_opts: realityOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Tls: tls, Dialer_proxy: link.DialerProxyName}, nil
 }
 
 // EncodeVLESSURL 将 VLESS 结构编码为 v2ray 常见的明文 URL 形式。
@@ -175,6 +177,7 @@ func EncodeVLESSURL(v VLESS) string {
 	q.Set("sni", v.Query.Sni)
 	q.Set("ech", v.Query.Ech)
 	q.Set("fp", v.Query.Fp)
+	q.Set("pcs", v.Query.Fingerprint)
 	if len(v.Query.Alpn) > 0 {
 		q.Set("alpn", strings.Join(v.Query.Alpn, ","))
 	}
@@ -283,6 +286,11 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 	pbk := u.Query().Get("pbk")
 	sid := u.Query().Get("sid")
 	fp := u.Query().Get("fp")
+	fingerprint := u.Query().Get("pcs")
+	if fingerprint == "" {
+		fingerprint = u.Query().Get("hpkp")
+	}
+	fingerprint = sanitizeCertificateFingerprint(fingerprint)
 	sni := u.Query().Get("sni")
 	ech := u.Query().Get("ech")
 	path := u.Query().Get("path")
@@ -349,6 +357,7 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 		fmt.Println("pbk:", pbk)
 		fmt.Println("sid:", sid)
 		fmt.Println("fp:", fp)
+		fmt.Println("fingerprint:", fingerprint)
 		fmt.Println("alpn:", alpn)
 		fmt.Println("sni:", sni)
 		fmt.Println("ech:", ech)
@@ -375,6 +384,7 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 			Sni:                 sni,
 			Ech:                 ech,
 			Fp:                  fp,
+			Fingerprint:         fingerprint,
 			Sid:                 sid,
 			Pbk:                 pbk,
 			Flow:                flow,
@@ -409,6 +419,7 @@ func ConvertProxyToVless(proxy Proxy) VLESS {
 			Sni:            proxy.Servername,
 			Ech:            buildVLESSECHQuery(proxy.ECH_opts),
 			Fp:             proxy.Client_fingerprint,
+			Fingerprint:    sanitizeCertificateFingerprint(proxy.Fingerprint),
 			Flow:           proxy.Flow,
 			Alpn:           proxy.Alpn,
 			Type:           proxy.Network,

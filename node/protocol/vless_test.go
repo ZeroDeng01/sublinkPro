@@ -14,14 +14,15 @@ func TestVlessEncodeDecode(t *testing.T) {
 		Server: "example.com",
 		Port:   443,
 		Query: VLESSQuery{
-			Security:   "tls",
-			Encryption: "none",
-			Type:       "ws",
-			Host:       "cdn.example.com",
-			Path:       "/vless",
-			Sni:        "sni.example.com",
-			Fp:         "chrome",
-			Alpn:       []string{"h2", "http/1.1"},
+			Security:    "tls",
+			Encryption:  "none",
+			Type:        "ws",
+			Host:        "cdn.example.com",
+			Path:        "/vless",
+			Sni:         "sni.example.com",
+			Fp:          "chrome",
+			Fingerprint: "16dac3717024eb319093d1c95290c14adc850e2814b2208d11c7b7a436923859",
+			Alpn:        []string{"h2", "http/1.1"},
 		},
 	}
 
@@ -44,9 +45,32 @@ func TestVlessEncodeDecode(t *testing.T) {
 	assertEqualString(t, "Name", original.Name, decoded.Name)
 	assertEqualString(t, "Query.Type", original.Query.Type, decoded.Query.Type)
 	assertEqualString(t, "Query.Sni", original.Query.Sni, decoded.Query.Sni)
+	assertEqualString(t, "Query.Fingerprint", original.Query.Fingerprint, decoded.Query.Fingerprint)
 	assertEqualString(t, "Query.Path", original.Query.Path, decoded.Query.Path)
 
 	t.Logf("✓ VLESS 编解码测试通过，名称: %s", decoded.Name)
+}
+
+func TestVlessCertificateFingerprintAliases(t *testing.T) {
+	const fingerprint = "16dac3717024eb319093d1c95290c14adc850e2814b2208d11c7b7a436923859"
+	url := "vless://12345678-1234-1234-1234-123456789abc@example.com:443?encryption=none&security=tls&type=tcp&fp=random&hpkp=" + fingerprint + "#证书指纹节点"
+
+	decoded, err := DecodeVLESSURL(url)
+	if err != nil {
+		t.Fatalf("解码失败: %v", err)
+	}
+	assertEqualString(t, "ClientFingerprint", "random", decoded.Query.Fp)
+	assertEqualString(t, "CertificateFingerprint", fingerprint, decoded.Query.Fingerprint)
+
+	proxy, err := buildVLESSProxy(Urls{Url: url}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildVLESSProxy 失败: %v", err)
+	}
+	assertEqualString(t, "ProxyClientFingerprint", "random", proxy.Client_fingerprint)
+	assertEqualString(t, "ProxyCertificateFingerprint", fingerprint, proxy.Fingerprint)
+
+	reEncoded := EncodeVLESSURL(decoded)
+	assertContains(t, "EncodedCertificateFingerprint", reEncoded, "pcs="+fingerprint)
 }
 
 // TestVlessNameModification 测试 VLESS 名称修改

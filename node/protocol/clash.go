@@ -74,6 +74,7 @@ type Proxy struct {
 	Multiplexing          string         `yaml:"multiplexing,omitempty"`          // Mieru 多路复用级别
 	TrafficPattern        string         `yaml:"traffic-pattern,omitempty"`       // Mieru 流量模式
 	Client_fingerprint    string         `yaml:"client-fingerprint,omitempty"`    // 客户端指纹 (uTLS)
+	Fingerprint           string         `yaml:"fingerprint,omitempty"`           // 服务端证书 SHA-256 指纹
 	Tfo                   bool           `yaml:"tfo,omitempty"`                   // TCP Fast Open
 	Udp                   bool           `yaml:"udp,omitempty"`                   // 是否启用 UDP
 	Skip_cert_verify      bool           `yaml:"skip-cert-verify,omitempty"`      // 跳过证书验证
@@ -122,6 +123,19 @@ type Proxy struct {
 	Http_opts       map[string]any `yaml:"http-opts,omitempty"`       // HTTP 传输层选项
 	XHTTP_opts      map[string]any `yaml:"xhttp-opts,omitempty"`
 	ECH_opts        map[string]any `yaml:"ech-opts,omitempty"`
+}
+
+func sanitizeCertificateFingerprint(fingerprint string) string {
+	if len(fingerprint) != 64 {
+		return ""
+	}
+	for _, c := range fingerprint {
+		if (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') {
+			continue
+		}
+		return ""
+	}
+	return fingerprint
 }
 
 type ProxyGroup struct {

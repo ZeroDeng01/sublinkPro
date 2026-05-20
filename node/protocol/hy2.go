@@ -26,6 +26,7 @@ func init() {
 		FieldMeta{Name: "Peer", Label: "Peer", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "ALPN", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
 		FieldMeta{Name: "ClientFingerprint", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Fingerprint", Label: "证书指纹", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Insecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 	)
 	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildHY2Proxy, func(proxy Proxy) bool {
@@ -49,6 +50,7 @@ type HY2 struct {
 	Obfs              string
 	ObfsPassword      string
 	ClientFingerprint string // 客户端指纹
+	Fingerprint       string // 服务端证书 SHA-256 指纹
 }
 
 // EncodeHY2URL 将 Hysteria2 结构编码为 hy2:// 链接。
@@ -76,6 +78,7 @@ func EncodeHY2URL(hy2 HY2) string {
 	q.Set("obfs-password", hy2.ObfsPassword)
 	// 客户端指纹参数
 	q.Set("fp", hy2.ClientFingerprint)
+	q.Set("pinSHA256", hy2.Fingerprint)
 	// alpn 参数支持
 	if len(hy2.ALPN) > 0 {
 		q.Set("alpn", strings.Join(hy2.ALPN, ","))
@@ -124,6 +127,7 @@ func DecodeHY2URL(s string) (HY2, error) {
 	obfs := u.Query().Get("obfs")
 	obfsPassword := u.Query().Get("obfs-password")
 	clientFingerprint := u.Query().Get("fp")
+	fingerprint := sanitizeCertificateFingerprint(u.Query().Get("pinSHA256"))
 	name := u.Fragment
 	// 如果没有设置 Name，则使用 Host:Port 作为 Fragment
 	if name == "" {
@@ -143,6 +147,7 @@ func DecodeHY2URL(s string) (HY2, error) {
 		fmt.Println("obfs:", obfs)
 		fmt.Println("obfsPassword:", obfsPassword)
 		fmt.Println("fp:", clientFingerprint)
+		fmt.Println("fingerprint:", fingerprint)
 		fmt.Println("name:", name)
 	}
 	return HY2{
@@ -160,6 +165,7 @@ func DecodeHY2URL(s string) (HY2, error) {
 		Obfs:              obfs,
 		ObfsPassword:      obfsPassword,
 		ClientFingerprint: clientFingerprint,
+		Fingerprint:       fingerprint,
 	}, nil
 }
 
@@ -180,6 +186,7 @@ func ConvertProxyToHy2(proxy Proxy) HY2 {
 		Obfs:              proxy.Obfs,
 		ObfsPassword:      proxy.Obfs_password,
 		ClientFingerprint: proxy.Client_fingerprint,
+		Fingerprint:       sanitizeCertificateFingerprint(proxy.Fingerprint),
 		Peer:              proxy.Peer,
 	}
 
@@ -207,7 +214,7 @@ func buildHY2Proxy(link Urls, config OutputConfig) (Proxy, error) {
 		hy2.Name = fmt.Sprintf("%s:%s", hy2.Host, utils.GetPortString(hy2.Port))
 	}
 	skipCert := config.Cert || hy2.Insecure == 1
-	proxy := Proxy{Name: hy2.Name, Type: "hysteria2", Server: hy2.Host, Auth: hy2.Auth, Sni: hy2.Sni, Alpn: hy2.ALPN, Obfs: hy2.Obfs, Password: hy2.Password, Obfs_password: hy2.ObfsPassword, Up: hy2.UpMbps, Down: hy2.DownMbps, Up_Speed: hy2.UpMbps, Down_Speed: hy2.DownMbps, Udp: true, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}
+	proxy := Proxy{Name: hy2.Name, Type: "hysteria2", Server: hy2.Host, Auth: hy2.Auth, Sni: hy2.Sni, Alpn: hy2.ALPN, Obfs: hy2.Obfs, Password: hy2.Password, Obfs_password: hy2.ObfsPassword, Client_fingerprint: hy2.ClientFingerprint, Fingerprint: hy2.Fingerprint, Up: hy2.UpMbps, Down: hy2.DownMbps, Up_Speed: hy2.UpMbps, Down_Speed: hy2.DownMbps, Udp: true, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}
 	if hy2.MPort != "" {
 		proxy.Ports = hy2.MPort
 	} else {
@@ -228,6 +235,9 @@ func buildHY2SurgeLine(link string, config OutputConfig) (string, string, error)
 	line := fmt.Sprintf("%s = hysteria2, %s, %d, password=%s, udp-relay=%t, skip-cert-verify=%t", hy2.Name, server, utils.GetPortInt(hy2.Port), hy2.Password, true, skipCert)
 	if hy2.Sni != "" {
 		line = fmt.Sprintf("%s, sni=%s", line, hy2.Sni)
+	}
+	if hy2.Fingerprint != "" {
+		line = fmt.Sprintf("%s, server-cert-fingerprint-sha256=%s", line, hy2.Fingerprint)
 	}
 	return line, hy2.Name, nil
 }
