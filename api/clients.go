@@ -356,6 +356,67 @@ func buildRenamedNodeLink(node models.Node, processedLinkName, nodeNameRule, lin
 	return utils.RenameNodeLink(link, newName)
 }
 
+func buildClashNodeNameMap(sub models.Subcription) map[int]string {
+	nodeNameMap := make(map[int]string)
+	for idx, v := range sub.Nodes {
+		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
+		finalName := v.EffectiveName()
+		if sub.NodeNameRule != "" {
+			finalName = utils.RenameNode(sub.NodeNameRule, models.BuildNodeRenameInfo(v, processedLinkName, protocol.GetProtocolFromLink(v.Link), idx+1))
+		}
+		nodeNameMap[v.ID] = finalName
+	}
+	return nodeNameMap
+}
+
+func addDialerProxyNameAlias(aliasToFinal map[string]string, conflicts map[string]bool, alias, finalName string) {
+	alias = strings.TrimSpace(alias)
+	finalName = strings.TrimSpace(finalName)
+	if alias == "" || finalName == "" || conflicts[alias] {
+		return
+	}
+	if existing, exists := aliasToFinal[alias]; exists && existing != finalName {
+		delete(aliasToFinal, alias)
+		conflicts[alias] = true
+		return
+	}
+	aliasToFinal[alias] = finalName
+}
+
+func buildDialerProxyNameMap(nodes []models.Node, nodeNameMap map[int]string) map[string]string {
+	aliasToFinal := make(map[string]string)
+	conflicts := make(map[string]bool)
+	for _, node := range nodes {
+		finalName := nodeNameMap[node.ID]
+		addDialerProxyNameAlias(aliasToFinal, conflicts, finalName, finalName)
+		addDialerProxyNameAlias(aliasToFinal, conflicts, node.EffectiveName(), finalName)
+		addDialerProxyNameAlias(aliasToFinal, conflicts, node.Name, finalName)
+		addDialerProxyNameAlias(aliasToFinal, conflicts, node.LinkName, finalName)
+	}
+	return aliasToFinal
+}
+
+func normalizeDialerProxyName(name string, dialerProxyNameMap map[string]string) string {
+	trimmedName := strings.TrimSpace(name)
+	if trimmedName == "" {
+		return ""
+	}
+	if finalName, ok := dialerProxyNameMap[trimmedName]; ok {
+		return finalName
+	}
+	return trimmedName
+}
+
+func resolveClashDialerProxy(node models.Node, finalNodeName string, chainNodeDialerMap map[string]string, targetNodeDialerMap map[int]string, dialerProxyNameMap map[string]string) string {
+	dialerProxy := strings.TrimSpace(node.DialerProxyName)
+	if chainDialer, exists := chainNodeDialerMap[finalNodeName]; exists {
+		dialerProxy = chainDialer
+	} else if targetDialer, exists := targetNodeDialerMap[node.ID]; exists {
+		dialerProxy = targetDialer
+	}
+	return normalizeDialerProxyName(dialerProxy, dialerProxyNameMap)
+}
+
 func buildSurgeRenameInfo(node models.Node, processedLinkName, link string, index int) utils.NodeInfo {
 	return utils.NodeInfo{
 		Name:          node.EffectiveName(),
@@ -534,16 +595,8 @@ func renderPreparedClash(c *gin.Context, prepared preparedClientResponse) {
 	chainRules := models.GetEnabledChainRulesBySubscriptionID(sub.ID)
 
 	// 构建节点ID到最终名称的映射（用于链式代理规则解析）
-	nodeNameMap := make(map[int]string)
-	for idx, v := range sub.Nodes {
-		// 计算节点最终名称
-		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
-		finalName := v.EffectiveName() // 默认使用节点名称模式计算后的实际名称
-		if sub.NodeNameRule != "" {
-			finalName = utils.RenameNode(sub.NodeNameRule, models.BuildNodeRenameInfo(v, processedLinkName, protocol.GetProtocolFromLink(v.Link), idx+1))
-		}
-		nodeNameMap[v.ID] = finalName
-	}
+	nodeNameMap := buildClashNodeNameMap(sub)
+	dialerProxyNameMap := buildDialerProxyNameMap(sub.Nodes, nodeNameMap)
 
 	// 收集自定义代理组
 	customGroups := models.CollectCustomProxyGroups(chainRules, sub.Nodes, nodeNameMap)
@@ -590,18 +643,9 @@ func renderPreparedClash(c *gin.Context, prepared preparedClientResponse) {
 		nodeLink := buildRenamedNodeLink(v, processedLinkName, sub.NodeNameRule, v.Link, idx+1)
 
 		// 计算 dialer-proxy（链式代理规则）
-		dialerProxy := strings.TrimSpace(v.DialerProxyName)
-
 		// 优先级：中间节点映射 > 目标节点映射 > 节点自身设置
 		finalNodeName := nodeNameMap[v.ID]
-
-		// 检查是否作为链路中间节点（最高优先级）
-		if chainDialer, exists := chainNodeDialerMap[finalNodeName]; exists {
-			dialerProxy = chainDialer
-		} else if targetDialer, exists := targetNodeDialerMap[v.ID]; exists && dialerProxy == "" {
-			// 作为目标节点
-			dialerProxy = targetDialer
-		}
+		dialerProxy := resolveClashDialerProxy(v, finalNodeName, chainNodeDialerMap, targetNodeDialerMap, dialerProxyNameMap)
 
 		switch {
 		// 如果包含多条节点

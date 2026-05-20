@@ -296,6 +296,68 @@ func TestShouldSkipV2rayLinkUsesProtocolClientSupport(t *testing.T) {
 	}
 }
 
+func TestResolveClashDialerProxyNormalizesStoredNameWithSubscriptionRule(t *testing.T) {
+	frontNode := models.Node{
+		ID:          1,
+		Name:        "【亚洲】 日本02 | Vless",
+		LinkName:    "【亚洲】 日本02 | Vless",
+		Link:        "vless://12345678-1234-1234-1234-123456789abc@example.com:443?security=tls#%E3%80%90%E4%BA%9A%E6%B4%B2%E3%80%91%20%E6%97%A5%E6%9C%AC02%20%7C%20Vless",
+		LinkCountry: "JP",
+		Speed:       1.5,
+	}
+	targetNode := models.Node{
+		ID:              2,
+		Name:            "德国03[HY2]",
+		LinkName:        "德国03[HY2]",
+		Link:            "hysteria2://password@example.net:443#%E5%BE%B7%E5%9B%BD03%5BHY2%5D",
+		DialerProxyName: "【亚洲】 日本02 | Vless",
+	}
+	sub := models.Subcription{
+		NodeNameRule: "$Flag $LinkCountry - $LinkName - $Speed",
+		Nodes:        []models.Node{frontNode, targetNode},
+	}
+
+	nodeNameMap := buildClashNodeNameMap(sub)
+	dialerProxyNameMap := buildDialerProxyNameMap(sub.Nodes, nodeNameMap)
+	got := resolveClashDialerProxy(targetNode, nodeNameMap[targetNode.ID], nil, nil, dialerProxyNameMap)
+	want := "🇯🇵 JP - 【亚洲】 日本02 | Vless - 1.50MB/s"
+
+	if got != want {
+		t.Fatalf("expected stored dialer-proxy to normalize to subscription final name, got %q want %q", got, want)
+	}
+}
+
+func TestResolveClashDialerProxyPrefersChainTargetOverStoredName(t *testing.T) {
+	targetNode := models.Node{
+		ID:              2,
+		Name:            "target-node",
+		LinkName:        "target-node",
+		DialerProxyName: "stale-front-name",
+	}
+	targetNodeDialerMap := map[int]string{targetNode.ID: "renamed-front-name"}
+
+	got := resolveClashDialerProxy(targetNode, "target-node", nil, targetNodeDialerMap, nil)
+
+	if got != "renamed-front-name" {
+		t.Fatalf("expected chain target dialer to override stored dialer-proxy, got %q", got)
+	}
+}
+
+func TestBuildDialerProxyNameMapIgnoresAmbiguousAliases(t *testing.T) {
+	nodes := []models.Node{
+		{ID: 1, Name: "same-old-name", LinkName: "same-old-name"},
+		{ID: 2, Name: "same-old-name", LinkName: "same-old-name"},
+	}
+	nodeNameMap := map[int]string{1: "final-a", 2: "final-b"}
+
+	dialerProxyNameMap := buildDialerProxyNameMap(nodes, nodeNameMap)
+	got := normalizeDialerProxyName("same-old-name", dialerProxyNameMap)
+
+	if got != "same-old-name" {
+		t.Fatalf("expected ambiguous alias to remain unchanged, got %q", got)
+	}
+}
+
 func TestGetClientConcurrentRequestsKeepSubscriptionScoped(t *testing.T) {
 	setupClientsAPITestDB(t)
 	clashTemplatePath := writeTestClashTemplate(t)
