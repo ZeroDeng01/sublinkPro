@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sublink/models"
 	"sublink/node"
@@ -20,6 +21,11 @@ import (
 )
 
 const subscriptionNameContextKey = "resolvedSubscriptionName"
+
+const (
+	defaultSubscriptionUpdateIntervalHours = 24
+	maxSubscriptionUpdateIntervalHours     = 8760
+)
 
 type clientResponseMode int
 
@@ -452,11 +458,52 @@ func prepareRendererResponse(c *gin.Context, prepared preparedClientResponse) (r
 		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
 	}
 	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
+	if prepared.ClientType == "clash" {
+		c.Writer.Header().Set("profile-update-interval", strconv.Itoa(resolveSubscriptionUpdateIntervalHours(sub.UpdateInterval)))
+		c.Writer.Header().Set("profile-title", url.QueryEscape(resolved.SubName))
+	}
 	c.Set("subname", resolved.SubName)
 	if c.Request.Method == "HEAD" {
 		return resolved, false
 	}
 	return resolved, true
+}
+
+func resolveSubscriptionUpdateIntervalHours(interval int) int {
+	if interval > maxSubscriptionUpdateIntervalHours {
+		return maxSubscriptionUpdateIntervalHours
+	}
+	if interval > 0 {
+		return interval
+	}
+	return defaultSubscriptionUpdateIntervalHours
+}
+
+func resolveSubscriptionUpdateIntervalSeconds(interval int) int {
+	return resolveSubscriptionUpdateIntervalHours(interval) * 60 * 60
+}
+
+func withSurgeManagedConfigInterval(config string, seconds int) string {
+	lines := strings.Split(config, "\n")
+	for i, line := range lines {
+		if !strings.Contains(line, "#!MANAGED-CONFIG") {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		intervalField := fmt.Sprintf("interval=%d", seconds)
+		for j, field := range fields {
+			if strings.HasPrefix(field, "interval=") {
+				fields[j] = intervalField
+				lines[i] = strings.Join(fields, " ")
+				return strings.Join(lines, "\n")
+			}
+		}
+		fields = append(fields, intervalField)
+		lines[i] = strings.Join(fields, " ")
+		return strings.Join(lines, "\n")
+	}
+	return config
 }
 
 func GetV2ray(c *gin.Context) {
@@ -819,6 +866,7 @@ func renderPreparedSurge(c *gin.Context, prepared preparedClientResponse) {
 	url := c.Request.URL.String()
 	// 如果包含头部更新信息
 	if strings.Contains(DecodeClash, "#!MANAGED-CONFIG") {
+		DecodeClash = withSurgeManagedConfigInterval(DecodeClash, resolveSubscriptionUpdateIntervalSeconds(sub.UpdateInterval))
 		_, _ = c.Writer.WriteString(DecodeClash)
 		return
 	}
@@ -838,7 +886,7 @@ func renderPreparedSurge(c *gin.Context, prepared preparedClientResponse) {
 		domain = systemDomain
 	}
 	// 否则就插入头部更新信息
-	interval := fmt.Sprintf("#!MANAGED-CONFIG %s interval=86400 strict=false", domain+url)
+	interval := fmt.Sprintf("#!MANAGED-CONFIG %s interval=%d strict=false", domain+url, resolveSubscriptionUpdateIntervalSeconds(sub.UpdateInterval))
 	// 执行脚本
 	for _, script := range sub.ScriptsWithSort {
 		res, err := utils.RunScript(script.Content, DecodeClash, "surge")

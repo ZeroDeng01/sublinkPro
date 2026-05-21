@@ -202,6 +202,25 @@ func writeTestSurgeTemplate(t *testing.T) string {
 	return file.Name()
 }
 
+func writeTestSurgeTemplateWithManagedConfig(t *testing.T) string {
+	t.Helper()
+
+	file, err := os.CreateTemp(t.TempDir(), "surge-managed-template-*.conf")
+	if err != nil {
+		t.Fatalf("create surge managed template: %v", err)
+	}
+	content := "#!MANAGED-CONFIG https://old.example/sub interval=86400 strict=false\n" + testSurgeTemplate
+	if _, err := file.WriteString(content); err != nil {
+		_ = file.Close()
+		t.Fatalf("write surge managed template: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatalf("close surge managed template: %v", err)
+	}
+
+	return file.Name()
+}
+
 func performClientRequest(t *testing.T, method, path string) *httptest.ResponseRecorder {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -506,6 +525,140 @@ func TestGetClientHeadRequestUsesRequestScopedSubscriptionName(t *testing.T) {
 	}
 	if value, ok := ginContext.Get("subname"); !ok || value != "head-sub" {
 		t.Fatalf("expected request-scoped subname to be preserved, got %v ok=%v", value, ok)
+	}
+}
+
+func TestRenderPreparedClashSetsProfileUpdateIntervalHeader(t *testing.T) {
+	setupClientsAPITestDB(t)
+	clashTemplatePath := writeTestClashTemplate(t)
+
+	tests := []struct {
+		name           string
+		updateInterval int
+		wantHeader     string
+	}{
+		{name: "custom hours", updateInterval: 6, wantHeader: "6"},
+		{name: "default hours", updateInterval: 0, wantHeader: "24"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			recorder := httptest.NewRecorder()
+			ginContext, _ := gin.CreateTestContext(recorder)
+			ginContext.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c/?client=clash", nil)
+
+			renderPreparedClash(ginContext, preparedClientResponse{
+				ClientType: "clash",
+				Mode:       clientResponseNormal,
+				SubName:    "interval-sub",
+				Subscription: models.Subcription{
+					Name:                  "interval-sub",
+					Config:                `{"clash":"` + clashTemplatePath + `"}`,
+					RefreshUsageOnRequest: false,
+					UpdateInterval:        tt.updateInterval,
+				},
+			})
+
+			if got := recorder.Header().Get("profile-update-interval"); got != tt.wantHeader {
+				t.Fatalf("expected profile-update-interval %q, got %q", tt.wantHeader, got)
+			}
+		})
+	}
+}
+
+func TestRenderPreparedSurgeUsesSubscriptionUpdateIntervalSeconds(t *testing.T) {
+	setupClientsAPITestDB(t)
+	surgeTemplatePath := writeTestSurgeTemplate(t)
+
+	tests := []struct {
+		name           string
+		updateInterval int
+		wantInterval   string
+	}{
+		{name: "custom hours converted to seconds", updateInterval: 6, wantInterval: "interval=21600"},
+		{name: "default seconds", updateInterval: 0, wantInterval: "interval=86400"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			recorder := httptest.NewRecorder()
+			ginContext, _ := gin.CreateTestContext(recorder)
+			ginContext.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c/?client=surge", nil)
+			ginContext.Request.Host = "example.test"
+
+			renderPreparedSurge(ginContext, preparedClientResponse{
+				ClientType: "surge",
+				Mode:       clientResponseNormal,
+				SubName:    "interval-sub",
+				Subscription: models.Subcription{
+					Name:                  "interval-sub",
+					Config:                `{"surge":"` + surgeTemplatePath + `"}`,
+					RefreshUsageOnRequest: false,
+					UpdateInterval:        tt.updateInterval,
+				},
+			})
+
+			body := recorder.Body.String()
+			if !strings.Contains(body, tt.wantInterval) {
+				t.Fatalf("expected surge managed config to contain %q, got %q", tt.wantInterval, body)
+			}
+		})
+	}
+}
+
+func TestRenderPreparedSurgeRewritesExistingManagedConfigInterval(t *testing.T) {
+	setupClientsAPITestDB(t)
+	surgeTemplatePath := writeTestSurgeTemplateWithManagedConfig(t)
+
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	ginContext, _ := gin.CreateTestContext(recorder)
+	ginContext.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c/?client=surge", nil)
+
+	renderPreparedSurge(ginContext, preparedClientResponse{
+		ClientType: "surge",
+		Mode:       clientResponseNormal,
+		SubName:    "managed-interval-sub",
+		Subscription: models.Subcription{
+			Name:                  "managed-interval-sub",
+			Config:                `{"surge":"` + surgeTemplatePath + `"}`,
+			RefreshUsageOnRequest: false,
+			UpdateInterval:        6,
+		},
+	})
+
+	body := recorder.Body.String()
+	if !strings.Contains(body, "#!MANAGED-CONFIG https://old.example/sub interval=21600 strict=false") {
+		t.Fatalf("expected existing managed config interval to be rewritten, got %q", body)
+	}
+	if strings.Contains(body, "interval=86400 strict=false") {
+		t.Fatalf("expected old managed config interval to be replaced, got %q", body)
+	}
+}
+
+func TestParseSubscriptionUpdateIntervalBoundsValues(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want int
+	}{
+		{name: "empty", raw: "", want: 0},
+		{name: "non numeric", raw: "abc", want: 0},
+		{name: "negative", raw: "-1", want: 0},
+		{name: "valid", raw: "6", want: 6},
+		{name: "max valid", raw: "8760", want: maxSubscriptionUpdateIntervalHours},
+		{name: "too large", raw: "999999999", want: maxSubscriptionUpdateIntervalHours},
+		{name: "larger than uint64", raw: "999999999999999999999999999999", want: maxSubscriptionUpdateIntervalHours},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseSubscriptionUpdateInterval(tt.raw); got != tt.want {
+				t.Fatalf("parseSubscriptionUpdateInterval(%q)=%d, want %d", tt.raw, got, tt.want)
+			}
+		})
 	}
 }
 

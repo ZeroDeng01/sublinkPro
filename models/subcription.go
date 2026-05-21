@@ -52,6 +52,7 @@ type Subcription struct {
 	ProtocolBlacklist     string           `json:"ProtocolBlacklist"`                         // 协议黑名单（逗号分隔）
 	DeduplicationRule     string           `json:"DeduplicationRule"`                         // 去重规则配置(JSON)
 	RefreshUsageOnRequest bool             `gorm:"default:true" json:"RefreshUsageOnRequest"` // 获取订阅时是否实时刷新用量信息
+	UpdateInterval        int              `gorm:"default:0" json:"UpdateInterval"`           // 订阅客户端更新间隔（小时，0=使用默认值）
 	MaxFraudScore         int              `gorm:"default:0" json:"MaxFraudScore"`            // 最大欺诈评分（0=不限制）
 	OnlyResidential       bool             `gorm:"default:false" json:"OnlyResidential"`      // 仅住宅IP
 	OnlyNative            bool             `gorm:"default:false" json:"OnlyNative"`           // 仅原生IP
@@ -199,6 +200,7 @@ func (sub *Subcription) Update() error {
 		"protocol_blacklist":       sub.ProtocolBlacklist,
 		"deduplication_rule":       sub.DeduplicationRule,
 		"refresh_usage_on_request": sub.RefreshUsageOnRequest,
+		"update_interval":          sub.UpdateInterval,
 		"max_fraud_score":          sub.MaxFraudScore,
 		"only_residential":         sub.OnlyResidential,
 		"only_native":              sub.OnlyNative,
@@ -940,6 +942,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 		ProtocolBlacklist:     sub.ProtocolBlacklist,
 		DeduplicationRule:     sub.DeduplicationRule,
 		RefreshUsageOnRequest: sub.RefreshUsageOnRequest,
+		UpdateInterval:        sub.UpdateInterval,
 	}
 
 	// 使用事务确保数据一致性

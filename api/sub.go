@@ -52,6 +52,24 @@ func parseUnlockRulesFromForm(raw string, provider string, status string, keywor
 	return models.BuildUnlockFilterRulesJSON(rules)
 }
 
+func parseSubscriptionUpdateInterval(raw string) int {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" || strings.HasPrefix(trimmed, "-") {
+		return 0
+	}
+	interval, err := strconv.ParseUint(trimmed, 10, 64)
+	if err != nil {
+		if numErr, ok := err.(*strconv.NumError); ok && numErr.Err == strconv.ErrRange {
+			return maxSubscriptionUpdateIntervalHours
+		}
+		return 0
+	}
+	if interval > uint64(maxSubscriptionUpdateIntervalHours) {
+		return maxSubscriptionUpdateIntervalHours
+	}
+	return int(interval)
+}
+
 func SubTotal(c *gin.Context) {
 	var Sub models.Subcription
 	subs, err := Sub.List()
@@ -138,6 +156,7 @@ func SubAdd(c *gin.Context) {
 	deduplicationRule := c.PostForm("DeduplicationRule")
 	refreshUsageOnRequestStr := c.PostForm("RefreshUsageOnRequest")
 	refreshUsageOnRequest := refreshUsageOnRequestStr != "false" // 默认为 true
+	updateInterval := parseSubscriptionUpdateInterval(c.PostForm("UpdateInterval"))
 	maxFraudScoreStr := c.PostForm("MaxFraudScore")
 	maxFraudScore, _ := strconv.Atoi(maxFraudScoreStr)
 	onlyResidential := c.PostForm("OnlyResidential") == "true"
@@ -228,6 +247,7 @@ func SubAdd(c *gin.Context) {
 	sub.ProtocolBlacklist = protocolBlacklist
 	sub.DeduplicationRule = deduplicationRule
 	sub.RefreshUsageOnRequest = refreshUsageOnRequest
+	sub.UpdateInterval = updateInterval
 	sub.MaxFraudScore = maxFraudScore
 	sub.OnlyResidential = residentialType == "residential"
 	sub.OnlyNative = ipType == "native"
@@ -319,6 +339,7 @@ func SubUpdate(c *gin.Context) {
 	deduplicationRule := c.PostForm("DeduplicationRule")
 	refreshUsageOnRequestStr := c.PostForm("RefreshUsageOnRequest")
 	refreshUsageOnRequest := refreshUsageOnRequestStr != "false" // 默认为 true
+	updateInterval := parseSubscriptionUpdateInterval(c.PostForm("UpdateInterval"))
 	maxFraudScoreStr := c.PostForm("MaxFraudScore")
 	maxFraudScore, _ := strconv.Atoi(maxFraudScoreStr)
 	onlyResidential := c.PostForm("OnlyResidential") == "true"
@@ -419,6 +440,7 @@ func SubUpdate(c *gin.Context) {
 	sub.ProtocolBlacklist = protocolBlacklist
 	sub.DeduplicationRule = deduplicationRule
 	sub.RefreshUsageOnRequest = refreshUsageOnRequest
+	sub.UpdateInterval = updateInterval
 	sub.MaxFraudScore = maxFraudScore
 	sub.OnlyResidential = residentialType == "residential"
 	sub.OnlyNative = ipType == "native"

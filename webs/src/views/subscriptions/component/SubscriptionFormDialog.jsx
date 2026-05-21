@@ -533,6 +533,25 @@ export default function SubscriptionFormDialog({
                   </Grid>
                 </Grid>
 
+                <TextField
+                  fullWidth
+                  label="更新间隔 (小时)"
+                  type="text"
+                  slotProps={{ htmlInput: { inputMode: 'numeric', pattern: '[0-9]*', max: 8760 } }}
+                  value={formData.UpdateInterval}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d+$/.test(val)) {
+                      setFormData({ ...formData, UpdateInterval: val === '' ? '' : Number(val) });
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = Math.min(8760, Math.max(0, Number(e.target.value) || 0));
+                    setFormData({ ...formData, UpdateInterval: val });
+                  }}
+                  helperText="设置为 0 或留空时，默认使用 Clash 24 小时和 Surge 86400 秒；最大 8760 小时。目前仅少量客户端兼容本参数！"
+                />
+
                 <Stack direction="row" spacing={2} flexWrap="wrap">
                   <FormControlLabel
                     control={<Checkbox checked={formData.udp} onChange={(e) => setFormData({ ...formData, udp: e.target.checked })} />}
