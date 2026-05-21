@@ -14,6 +14,14 @@ SublinkPro 提供了完善的机场订阅管理功能，不仅能将订阅转换
 | **🚀 立即更新机制** | 支持一键「立即拉取」，配合实时回调机制，无需刷新页面即可看到最新的流量数据和节点列表 |
 | **🤖 Bot 集成管理** | 通过 Telegram Bot 可随时查询各订阅的剩余流量、到期时间，并支持远程触发更新任务 |
 
+### Clash / mihomo `proxy-providers` 兼容说明
+
+- 机场订阅导入支持 Clash / mihomo YAML 中的 `proxy-providers`，当顶层没有 `proxies` 但 provider 中包含节点时，也会展开并导入为普通节点。
+- 当前会远程拉取 `type: http` 的 provider，并复用机场订阅本身的代理下载和忽略 TLS 证书验证等行为；provider 请求始终携带 User-Agent，只有 provider URL 与根订阅 URL 同 host 时才会继承自定义 Header，跨 host provider 和跨 host 跳转不会携带自定义 Header。
+- 系统优先展开 `proxy-groups[].use` 引用到的 provider；当分组启用 `include-all` / `include-all-providers`，或配置中没有任何分组引用时，会按配置声明顺序展开所有 HTTP provider。
+- Provider 响应支持标准 YAML 顶层 `proxies`；如果 provider 返回的是 base64 或明文 URI 行列表，也会按普通订阅链接兼容解析。
+- 当前不会实现本地 `file` provider、provider 缓存、定时健康检查、完整 mihomo override 语义或 provider 自身的 `proxy` 路由；这些运行时能力仍应由 Clash / mihomo 客户端处理。
+
 ### VLESS / XHTTP 兼容说明
 
 - 机场订阅导入现已支持 `vless://` 链接中的 `type=xhttp`。

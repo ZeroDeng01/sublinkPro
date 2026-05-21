@@ -178,8 +178,8 @@ func ConvertProxyToHy2(proxy Proxy) HY2 {
 		Port:              int(proxy.Port),
 		MPort:             proxy.Ports,
 		Auth:              proxy.Auth_str,
-		UpMbps:            proxy.Up,
-		DownMbps:          proxy.Down,
+		UpMbps:            int(proxy.Up),
+		DownMbps:          int(proxy.Down),
 		ALPN:              proxy.Alpn,
 		Name:              proxy.Name,
 		Sni:               proxy.Sni,
@@ -214,7 +214,7 @@ func buildHY2Proxy(link Urls, config OutputConfig) (Proxy, error) {
 		hy2.Name = fmt.Sprintf("%s:%s", hy2.Host, utils.GetPortString(hy2.Port))
 	}
 	skipCert := config.Cert || hy2.Insecure == 1
-	proxy := Proxy{Name: hy2.Name, Type: "hysteria2", Server: hy2.Host, Auth: hy2.Auth, Sni: hy2.Sni, Alpn: hy2.ALPN, Obfs: hy2.Obfs, Password: hy2.Password, Obfs_password: hy2.ObfsPassword, Client_fingerprint: hy2.ClientFingerprint, Fingerprint: hy2.Fingerprint, Up: hy2.UpMbps, Down: hy2.DownMbps, Up_Speed: hy2.UpMbps, Down_Speed: hy2.DownMbps, Udp: true, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}
+	proxy := Proxy{Name: hy2.Name, Type: "hysteria2", Server: hy2.Host, Auth: hy2.Auth, Sni: hy2.Sni, Alpn: hy2.ALPN, Obfs: hy2.Obfs, Password: hy2.Password, Obfs_password: hy2.ObfsPassword, Client_fingerprint: hy2.ClientFingerprint, Fingerprint: hy2.Fingerprint, Up: Mbps(hy2.UpMbps), Down: Mbps(hy2.DownMbps), Up_Speed: Mbps(hy2.UpMbps), Down_Speed: Mbps(hy2.DownMbps), Udp: true, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}
 	if hy2.MPort != "" {
 		proxy.Ports = hy2.MPort
 	} else {

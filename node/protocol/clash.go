@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sublink/cache"
@@ -60,6 +61,64 @@ func (fp FlexPort) IsZero() bool {
 	return fp == 0
 }
 
+// Mbps 是 Clash 兼容的带宽数值类型。
+// 兼容 provider 里把 up/down 之类字段写成 "11 Mbps" 这种字符串的情况，但序列化时仍输出整数。
+type Mbps int
+
+var bandwidthRatePattern = regexp.MustCompile(`^(\d+)\s*([KMGTkmgt]?)([Bb])ps$`)
+
+// UnmarshalYAML 支持把带宽字段解析为整数、裸数字字符串或标准速率字符串。
+// 这里保留对 Hysteria/Hysteria2 兼容格式的支持，但拒绝非标准后缀，避免把非法带宽静默降级。
+func (m *Mbps) UnmarshalYAML(value *yaml.Node) error {
+	var intVal int
+	if err := value.Decode(&intVal); err == nil {
+		*m = Mbps(intVal)
+		return nil
+	}
+
+	var strVal string
+	if err := value.Decode(&strVal); err != nil {
+		return fmt.Errorf("无法解析带宽值")
+	}
+	strVal = strings.TrimSpace(strVal)
+	if strVal == "" {
+		*m = 0
+		return nil
+	}
+	if directVal, err := strconv.Atoi(strVal); err == nil {
+		*m = Mbps(directVal)
+		return nil
+	}
+	matches := bandwidthRatePattern.FindStringSubmatch(strVal)
+	if matches == nil {
+		return fmt.Errorf("无法解析带宽值 %q", strVal)
+	}
+	base, err := strconv.Atoi(matches[1])
+	if err != nil {
+		return fmt.Errorf("无法将带宽值 %q 转换为整数: %w", strVal, err)
+	}
+	switch strings.ToUpper(matches[2]) {
+	case "", "M":
+		*m = Mbps(base)
+		return nil
+	case "G":
+		*m = Mbps(base * 1000)
+		return nil
+	case "T":
+		*m = Mbps(base * 1000 * 1000)
+		return nil
+	case "K":
+		return fmt.Errorf("带宽值 %q 使用了 Kbps 单位，无法无损转换为 Mbps", strVal)
+	default:
+		return fmt.Errorf("无法解析带宽值 %q", strVal)
+	}
+}
+
+// MarshalYAML 始终把带宽写成整数，避免把内部类型泄漏成字符串。
+func (m Mbps) MarshalYAML() (any, error) {
+	return int(m), nil
+}
+
 type Proxy struct {
 	Name                  string         `yaml:"name,omitempty"`                        // 节点名称
 	Type                  string         `yaml:"type,omitempty"`                        // 代理类型 (ss, vmess, trojan, etc.)
@@ -88,13 +147,13 @@ type Proxy struct {
 	Grpc_opts             map[string]any `yaml:"grpc-opts,omitempty"`                   // gRPC 选项
 	Auth_str              string         `yaml:"auth-str,omitempty"`                    // Hysteria 认证字符串
 	Auth                  string         `yaml:"auth,omitempty"`                        // 认证信息
-	Up                    int            `yaml:"up,omitempty"`                          // 上行带宽限制
-	Down                  int            `yaml:"down,omitempty"`                        // 下行带宽限制
+	Up                    Mbps           `yaml:"up,omitempty"`                          // 上行带宽限制
+	Down                  Mbps           `yaml:"down,omitempty"`                        // 下行带宽限制
 	AnyTLSIdleCheck       int            `yaml:"idle-session-check-interval,omitempty"` // AnyTLS 空闲会话检查间隔
 	AnyTLSIdleTimeout     int            `yaml:"idle-session-timeout,omitempty"`        // AnyTLS 空闲会话超时时间
 	AnyTLSMinIdle         int            `yaml:"min-idle-session,omitempty"`            // AnyTLS 最小空闲会话数
-	Up_Speed              int            `yaml:"up-speed,omitempty"`                    // 上行带宽限制兼容stash
-	Down_Speed            int            `yaml:"down-speed,omitempty"`                  // 下行带宽限制兼容stash
+	Up_Speed              Mbps           `yaml:"up-speed,omitempty"`                    // 上行带宽限制兼容stash
+	Down_Speed            Mbps           `yaml:"down-speed,omitempty"`                  // 下行带宽限制兼容stash
 	Alpn                  []string       `yaml:"alpn,omitempty"`                        // ALPN
 	Sni                   string         `yaml:"sni,omitempty"`                         // SNI
 	Obfs                  string         `yaml:"obfs,omitempty"`                        // 混淆模式 (SSR/Hysteria2)

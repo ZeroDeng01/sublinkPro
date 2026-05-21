@@ -140,8 +140,8 @@ func ConvertProxyToHy(proxy Proxy) HY {
 		Host:     proxy.Server,
 		Port:     int(proxy.Port),
 		Auth:     proxy.Auth_str,
-		UpMbps:   proxy.Up,
-		DownMbps: proxy.Down,
+		UpMbps:   int(proxy.Up),
+		DownMbps: int(proxy.Down),
 		ALPN:     proxy.Alpn,
 		Peer:     proxy.Peer,
 		Protocol: proxy.Protocol,
@@ -167,5 +167,5 @@ func buildHYProxy(link Urls, config OutputConfig) (Proxy, error) {
 		hy.Name = fmt.Sprintf("%s:%s", hy.Host, utils.GetPortString(hy.Port))
 	}
 	skipCert := config.Cert || hy.Insecure == 1
-	return Proxy{Name: hy.Name, Type: "hysteria", Server: hy.Host, Port: FlexPort(utils.GetPortInt(hy.Port)), Auth_str: hy.Auth, Up: hy.UpMbps, Down: hy.DownMbps, Up_Speed: hy.UpMbps, Down_Speed: hy.DownMbps, Alpn: hy.ALPN, Peer: hy.Peer, Protocol: hy.Protocol, Udp: true, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
+	return Proxy{Name: hy.Name, Type: "hysteria", Server: hy.Host, Port: FlexPort(utils.GetPortInt(hy.Port)), Auth_str: hy.Auth, Up: Mbps(hy.UpMbps), Down: Mbps(hy.DownMbps), Up_Speed: Mbps(hy.UpMbps), Down_Speed: Mbps(hy.DownMbps), Alpn: hy.ALPN, Peer: hy.Peer, Protocol: hy.Protocol, Udp: true, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
 }

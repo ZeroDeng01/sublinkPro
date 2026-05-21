@@ -9,6 +9,46 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func TestProxyBandwidthYAMLUnmarshal(t *testing.T) {
+	tests := []struct {
+		name     string
+		yamlDoc  string
+		wantUp   int
+		wantDown int
+		wantErr  string
+	}{
+		{name: "integer", yamlDoc: "up: 30\n", wantUp: 30},
+		{name: "bare string", yamlDoc: "up: \"30\"\n", wantUp: 30},
+		{name: "provider bare string pair", yamlDoc: "up: \"500\"\ndown: \"1000\"\n", wantUp: 500, wantDown: 1000},
+		{name: "mbps string", yamlDoc: "up: \"30 Mbps\"\n", wantUp: 30},
+		{name: "invalid suffix", yamlDoc: "up: \"30 bananas\"\n", wantErr: "无法解析带宽值"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var proxy Proxy
+			err := yaml.Unmarshal([]byte(tt.yamlDoc), &proxy)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("yaml.Unmarshal error = %v, want contains %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("yaml.Unmarshal failed: %v", err)
+			}
+			if got := int(proxy.Up); got != tt.wantUp {
+				t.Fatalf("proxy.Up = %d, want %d", got, tt.wantUp)
+			}
+			if tt.wantDown != 0 {
+				if got := int(proxy.Down); got != tt.wantDown {
+					t.Fatalf("proxy.Down = %d, want %d", got, tt.wantDown)
+				}
+			}
+		})
+	}
+}
+
 // TestLinkToProxy_SS 测试 SS 链接转换为 Proxy 结构体
 func TestLinkToProxy_SS(t *testing.T) {
 	link := Urls{
