@@ -75,8 +75,8 @@ export default defineConfig(({ mode }) => {
           ]
         },
         workbox: {
-          // 增加文件缓存大小限制到 3MB
-          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+          // 依赖升级后主入口包可能略超 3 MiB，保持预缓存覆盖并避免 CI 构建失败。
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           // 缓存静态资源（排除 html，因为后端会动态注入配置）
           globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
           // 导航请求使用 NetworkFirst 策略
