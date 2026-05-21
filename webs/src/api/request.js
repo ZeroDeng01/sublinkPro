@@ -51,15 +51,22 @@ request.interceptors.response.use(
       const { status } = error.response;
       const requestConfig = error.config || {};
 
-      // 401 未授权 - 清除 token 并跳转登录
-      if (status === 401 && !isAnonymousAuthRequest(requestConfig)) {
-        localStorage.removeItem('accessToken');
-        window.location.href = '/login';
-      }
+      // 401/403 - 清除 token 并跳转登录
+      if ((status === 401 || status === 403) && !isAnonymousAuthRequest(requestConfig)) {
+        if (status === 403) {
+          console.error('没有权限访问该资源');
+        } else {
+          console.error('未授权访问');
+        }
 
-      // 403 禁止访问
-      if (status === 403) {
-        console.error('没有权限访问该资源');
+        localStorage.removeItem('accessToken');
+
+        const basePath = window.__SUBLINK_CONFIG__?.basePath || import.meta.env.VITE_APP_BASE_NAME || '/';
+        const loginPath = basePath.replace(/\/+$/, '') + '/login';
+
+        if (window.location.pathname !== loginPath) {
+          window.location.href = loginPath;
+        }
       }
 
       // 500 服务器错误
