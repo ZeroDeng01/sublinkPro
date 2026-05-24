@@ -12,7 +12,8 @@ export const TASK_TYPE_META = {
 
 export const TASK_TRIGGER_META = {
   manual: { label: '手动', color: '#8b5cf6' },
-  scheduled: { label: '定时', color: '#06b6d4' }
+  scheduled: { label: '定时', color: '#06b6d4' },
+  airport_update: { label: '机场更新', color: '#0ea5e9' }
 };
 
 export const getTaskTypeMeta = (type) => TASK_TYPE_META[type] || TASK_TYPE_META.speed_test;

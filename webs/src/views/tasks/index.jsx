@@ -46,6 +46,7 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PersonIcon from '@mui/icons-material/Person';
 import AutoModeIcon from '@mui/icons-material/AutoMode';
+import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import StopIcon from '@mui/icons-material/Stop';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
@@ -87,7 +88,8 @@ const TASK_TYPE_ICONS = {
 
 const TASK_TRIGGER_ICONS = {
   manual: PersonIcon,
-  scheduled: AutoModeIcon
+  scheduled: AutoModeIcon,
+  airport_update: FlightTakeoffIcon
 };
 
 const renderUnlockDetails = (unlockSummary) => (
@@ -962,6 +964,10 @@ export default function TaskList() {
             <MenuItem value="scheduled">
               <AutoModeIcon sx={{ fontSize: 16, mr: 1, color: getTaskTriggerMeta('scheduled').color }} />
               定时
+            </MenuItem>
+            <MenuItem value="airport_update">
+              <FlightTakeoffIcon sx={{ fontSize: 16, mr: 1, color: getTaskTriggerMeta('airport_update').color }} />
+              机场更新
             </MenuItem>
           </Select>
         </FormControl>

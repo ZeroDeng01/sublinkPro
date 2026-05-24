@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 
 import { useTheme } from '@mui/material/styles';
 import Alert from '@mui/material/Alert';
+import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Collapse from '@mui/material/Collapse';
@@ -11,10 +12,10 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
-import Autocomplete from '@mui/material/Autocomplete';
 import Typography from '@mui/material/Typography';
 
 import AddIcon from '@mui/icons-material/Add';
@@ -65,6 +66,7 @@ export default function AirportFormDialog({
   proxyNodeOptions,
   loadingProxyNodes,
   protocolOptions,
+  nodeCheckProfiles,
   onClose,
   onSubmit,
   onFetchProxyNodes
@@ -92,6 +94,8 @@ export default function AirportFormDialog({
 
   const requestHeaders = Array.isArray(airportForm.requestHeaders) ? airportForm.requestHeaders : [];
   const hasRequestHeaderRows = requestHeaders.length > 0;
+  const updateAfterDetectProfileId = airportForm.updateAfterDetectProfileId || '';
+  const hasUpdateAfterDetectProfiles = Array.isArray(nodeCheckProfiles) && nodeCheckProfiles.length > 0;
 
   const requestHeaderPanelSx = {
     p: 1.5,
@@ -475,6 +479,55 @@ export default function AirportFormDialog({
                   </Alert>
                 </Collapse>
               </Box>
+
+              <Divider sx={{ my: 0.5, borderColor: panelBorder }} />
+
+              <Box>
+                <Box sx={controlRowSx}>
+                  <Box>
+                    <Typography variant="body2" sx={{ color: primaryText }}>
+                      更新后检测
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: secondaryText }}>
+                      订阅更新完成后，立即按所选策略执行该机场节点检测
+                    </Typography>
+                  </Box>
+                  <Switch
+                    checked={airportForm.updateAfterDetect || false}
+                    onChange={(e) => setAirportForm({ ...airportForm, updateAfterDetect: e.target.checked })}
+                  />
+                </Box>
+                <Collapse in={airportForm.updateAfterDetect}>
+                  <Stack spacing={1} sx={{ mt: 1 }}>
+                    <TextField
+                      select
+                      fullWidth
+                      size="small"
+                      label="检测策略"
+                      value={updateAfterDetectProfileId}
+                      onChange={(e) =>
+                        setAirportForm({
+                          ...airportForm,
+                          updateAfterDetectProfileId: Number(e.target.value) || 0
+                        })
+                      }
+                      disabled={!hasUpdateAfterDetectProfiles}
+                      helperText={
+                        hasUpdateAfterDetectProfiles
+                          ? '更新完成后会针对该机场当前节点立即执行所选节点检测策略'
+                          : '暂无可用节点检测策略，请先创建策略'
+                      }
+                    >
+                      <MenuItem value="">请选择策略</MenuItem>
+                      {nodeCheckProfiles.map((profile) => (
+                        <MenuItem key={profile.id} value={profile.id}>
+                          {profile.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Stack>
+                </Collapse>
+              </Box>
             </Stack>
           </AirportDialogSection>
 
@@ -566,6 +619,8 @@ AirportFormDialog.propTypes = {
     ),
     fetchUsageInfo: PropTypes.bool,
     skipTLSVerify: PropTypes.bool,
+    updateAfterDetect: PropTypes.bool,
+    updateAfterDetectProfileId: PropTypes.number,
     remark: PropTypes.string,
     logo: PropTypes.string,
     nodeNameWhitelist: PropTypes.string,
@@ -583,6 +638,7 @@ AirportFormDialog.propTypes = {
   proxyNodeOptions: PropTypes.array.isRequired,
   loadingProxyNodes: PropTypes.bool.isRequired,
   protocolOptions: PropTypes.array,
+  nodeCheckProfiles: PropTypes.array.isRequired,
   onClose: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
   onFetchProxyNodes: PropTypes.func.isRequired

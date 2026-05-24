@@ -84,4 +84,28 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 			applyAutoTagRules(updatedNodes, "subscription_update")
 		}
 	}()
+
+	// 订阅更新成功后，如机场开启“更新后检测”，则立即按指定策略补做一次机场内节点检测。
+	if airport != nil && airport.UpdateAfterDetect && airport.UpdateAfterDetectProfileID > 0 {
+		profileID := airport.UpdateAfterDetectProfileID
+		go func(airportID int, airportName string, nodeCheckProfileID int) {
+			updatedNodes, listErr := models.ListBySourceID(airportID)
+			if listErr != nil {
+				utils.Warn("获取机场节点失败，跳过更新后检测 - ID: %d, Error: %v", airportID, listErr)
+				return
+			}
+			if len(updatedNodes) == 0 {
+				utils.Warn("机场 [%s] 更新后检测已启用，但没有可检测节点", airportName)
+				return
+			}
+
+			nodeIDs := make([]int, 0, len(updatedNodes))
+			for _, n := range updatedNodes {
+				nodeIDs = append(nodeIDs, n.ID)
+			}
+
+			utils.Info("机场 [%s] 订阅更新完成，立即执行节点检测策略 ID: %d", airportName, nodeCheckProfileID)
+			ExecuteNodeCheckWithProfile(nodeCheckProfileID, nodeIDs, models.TaskTriggerAirportUpdate)
+		}(id, subName, profileID)
+	}
 }

@@ -47,6 +47,7 @@ import {
   pullAllAirports,
   refreshAirportUsage
 } from 'api/airports';
+import { getNodeCheckProfiles } from 'api/nodeCheck';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 import { getNodeGroups, getNodeIds, getNodes, getProtocolUIMeta } from 'api/nodes';
 import ProfileSelectDialog from 'views/nodes/component/ProfileSelectDialog';
@@ -141,6 +142,8 @@ const createAirportFormState = (overrides = {}) => ({
   requestHeaders: [],
   fetchUsageInfo: false,
   skipTLSVerify: false,
+  updateAfterDetect: false,
+  updateAfterDetectProfileId: 0,
   remark: '',
   logo: '',
   nodeNameWhitelist: '',
@@ -244,6 +247,7 @@ export default function AirportList() {
   const [proxyNodeOptions, setProxyNodeOptions] = useState([]);
   const [loadingProxyNodes, setLoadingProxyNodes] = useState(false);
   const [protocolOptions, setProtocolOptions] = useState([]);
+  const [nodeCheckProfiles, setNodeCheckProfiles] = useState([]);
 
   const [profileSelectOpen, setProfileSelectOpen] = useState(false);
   const [profileSelectNodeIds, setProfileSelectNodeIds] = useState([]);
@@ -327,12 +331,23 @@ export default function AirportList() {
     }
   }, []);
 
+  // 获取节点检测策略
+  const fetchNodeCheckProfiles = useCallback(async () => {
+    try {
+      const response = await getNodeCheckProfiles();
+      setNodeCheckProfiles(response.data || []);
+    } catch (error) {
+      console.error('获取节点检测策略失败:', error);
+    }
+  }, []);
+
   // 初始化
   useEffect(() => {
     fetchAirports();
     fetchGroupOptions();
     fetchProtocolOptions();
-  }, [fetchAirports, fetchGroupOptions, fetchProtocolOptions]);
+    fetchNodeCheckProfiles();
+  }, [fetchAirports, fetchGroupOptions, fetchNodeCheckProfiles, fetchProtocolOptions]);
 
   // 筛选条件变化时清空选择，避免对隐藏项误做批量操作
   useEffect(() => {
@@ -504,6 +519,8 @@ export default function AirportList() {
       requestHeaders: normalizeRequestHeadersForForm(airport.requestHeaders),
       fetchUsageInfo: airport.fetchUsageInfo || false,
       skipTLSVerify: airport.skipTLSVerify || false,
+      updateAfterDetect: airport.updateAfterDetect || false,
+      updateAfterDetectProfileId: airport.updateAfterDetectProfileId || 0,
       remark: airport.remark || '',
       logo: airport.logo || '',
       nodeNameWhitelist: airport.nodeNameWhitelist || '',
@@ -689,6 +706,10 @@ export default function AirportList() {
     }
     if (!validateCronExpression(airportForm.cronExpr.trim())) {
       showMessage('Cron表达式格式不正确，格式为：分 时 日 月 周', 'error');
+      return;
+    }
+    if (airportForm.updateAfterDetect && !airportForm.updateAfterDetectProfileId) {
+      showMessage('请先选择更新后检测策略', 'warning');
       return;
     }
 
@@ -1130,6 +1151,7 @@ export default function AirportList() {
         proxyNodeOptions={proxyNodeOptions}
         loadingProxyNodes={loadingProxyNodes}
         protocolOptions={protocolOptions}
+        nodeCheckProfiles={nodeCheckProfiles}
         onClose={() => {
           setFormOpen(false);
           setAirportFormSnapshot(null);
