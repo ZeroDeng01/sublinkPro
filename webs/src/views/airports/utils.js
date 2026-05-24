@@ -16,28 +16,58 @@ export const validateCronExpression = (cron) => {
     const part = parts[i];
     const range = ranges[i];
 
-    // 支持的模式: *, */n, n, n-m, n,m,o
-    const patterns = [
-      /^\*$/, // *
-      /^\*\/\d+$/, // */n
-      /^\d+$/, // n
-      /^\d+-\d+$/, // n-m
-      /^[\d,]+$/ // n,m,o
-    ];
+    const segments = part.split(',');
+    for (const segment of segments) {
+      if (segment === '*') {
+        continue;
+      }
 
-    if (!patterns.some((p) => p.test(part))) {
-      return false;
-    }
-
-    // 验证数字范围
-    const numbers = part.match(/\d+/g);
-    if (numbers) {
-      for (const num of numbers) {
-        const n = parseInt(num, 10);
-        if (n < range.min || n > range.max) {
+      const wildcardStepMatch = segment.match(/^\*\/(\d+)$/);
+      if (wildcardStepMatch) {
+        if (parseInt(wildcardStepMatch[1], 10) <= 0) {
           return false;
         }
+        continue;
       }
+
+      const stepMatch = segment.match(/^(\d+|\d+-\d+)\/(\d+)$/);
+      if (stepMatch) {
+        const step = parseInt(stepMatch[2], 10);
+        if (step <= 0) {
+          return false;
+        }
+
+        const [startRaw, endRaw] = stepMatch[1].split('-');
+        const start = parseInt(startRaw, 10);
+        const end = endRaw ? parseInt(endRaw, 10) : start;
+        if (start > end) {
+          return false;
+        }
+        if (start < range.min || end > range.max) {
+          return false;
+        }
+        continue;
+      }
+
+      const rangeMatch = segment.match(/^(\d+)-(\d+)$/);
+      if (rangeMatch) {
+        const start = parseInt(rangeMatch[1], 10);
+        const end = parseInt(rangeMatch[2], 10);
+        if (start > end || start < range.min || end > range.max) {
+          return false;
+        }
+        continue;
+      }
+
+      if (/^\d+$/.test(segment)) {
+        const value = parseInt(segment, 10);
+        if (value < range.min || value > range.max) {
+          return false;
+        }
+        continue;
+      }
+
+      return false;
     }
   }
   return true;
