@@ -353,13 +353,14 @@ func TestVlessXHTTPURLMapping(t *testing.T) {
 
 func TestConvertProxyToVlessXHTTP(t *testing.T) {
 	proxy := Proxy{
-		Name:    "XHTTP节点",
-		Type:    "vless",
-		Server:  "example.com",
-		Port:    443,
-		Uuid:    "12345678-1234-1234-1234-123456789abc",
-		Network: "xhttp",
-		Tls:     true,
+		Name:       "XHTTP节点",
+		Type:       "vless",
+		Server:     "example.com",
+		Port:       443,
+		Uuid:       "12345678-1234-1234-1234-123456789abc",
+		Network:    "xhttp",
+		Tls:        true,
+		Encryption: "mlkem768x25519plus.native.0rtt.test-key",
 		XHTTP_opts: map[string]any{
 			"path": "/xhttp",
 			"host": "cdn.example.com",
@@ -380,6 +381,7 @@ func TestConvertProxyToVlessXHTTP(t *testing.T) {
 	assertEqualString(t, "Host", "cdn.example.com", vless.Query.Host)
 	assertEqualString(t, "Path", "/xhttp", vless.Query.Path)
 	assertEqualString(t, "Mode", "packet-up", vless.Query.Mode)
+	assertEqualString(t, "Encryption", "mlkem768x25519plus.native.0rtt.test-key", vless.Query.Encryption)
 
 	extra := parseVLESSXHTTPExtra(vless.Query.Extra)
 	if extra == nil {
@@ -397,6 +399,7 @@ func TestConvertProxyToVlessXHTTP(t *testing.T) {
 
 	encoded := EncodeVLESSURL(vless)
 	assertContains(t, "EncodedType", encoded, "type=xhttp")
+	assertContains(t, "EncodedEncryption", encoded, "encryption=mlkem768x25519plus.native.0rtt.test-key")
 }
 
 func TestConvertProxyToVlessPreservesTopLevelECH(t *testing.T) {

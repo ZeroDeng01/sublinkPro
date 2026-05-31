@@ -180,6 +180,7 @@ type Proxy struct {
 	Version        int      `yaml:"version,omitempty"`        // 版本
 	Token          string   `yaml:"token,omitempty"`          // Tuic 令牌v4
 	// VLESS 特有字段
+	Encryption      string         `yaml:"encryption,omitempty"`
 	Packet_encoding string         `yaml:"packet-encoding,omitempty"` // VLESS packet-encoding (xudp/packetaddr)
 	H2_opts         map[string]any `yaml:"h2-opts,omitempty"`         // HTTP/2 传输层选项
 	Http_opts       map[string]any `yaml:"http-opts,omitempty"`       // HTTP 传输层选项

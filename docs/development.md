@@ -336,6 +336,7 @@ MustRegisterProtocol(newProxyProtocolSpec(...))
 
 - URL 顶层字段：
   - `type=xhttp` → Clash / mihomo `network: xhttp`
+  - `encryption` → Clash / mihomo 顶层 `encryption`
   - `path` → `xhttp-opts.path`
   - `host` → `xhttp-opts.host`
   - `mode` → `xhttp-opts.mode`

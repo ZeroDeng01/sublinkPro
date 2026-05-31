@@ -143,7 +143,7 @@ func TestLinkToProxy_VLESSXHTTP(t *testing.T) {
 		Port:   443,
 		Query: VLESSQuery{
 			Security:   "tls",
-			Encryption: "none",
+			Encryption: "mlkem768x25519plus.native.0rtt.test-key",
 			Type:       "xhttp",
 			Host:       "cdn.example.com",
 			Path:       "/xhttp",
@@ -163,6 +163,7 @@ func TestLinkToProxy_VLESSXHTTP(t *testing.T) {
 
 	assertEqualString(t, "Type", "vless", proxy.Type)
 	assertEqualString(t, "Network", "xhttp", proxy.Network)
+	assertEqualString(t, "Encryption", vless.Query.Encryption, proxy.Encryption)
 	assertEqualString(t, "Server", "example.com", proxy.Server)
 	assertEqualFlexPort(t, "Port", 443, proxy.Port)
 	assertEqualString(t, "Uuid", vless.Uuid, proxy.Uuid)
@@ -173,6 +174,14 @@ func TestLinkToProxy_VLESSXHTTP(t *testing.T) {
 	assertEqualString(t, "XHTTPHeader", "curl/8.0", mustString(t, "XHTTPHeader User-Agent", headers["User-Agent"]))
 	downloadSettings := mustMap(t, "XHTTPDownloadPath download-settings", proxy.XHTTP_opts["download-settings"])
 	assertEqualString(t, "XHTTPDownloadPath", "/download", mustString(t, "XHTTPDownloadPath path", downloadSettings["path"]))
+
+	data, err := yaml.Marshal(proxy)
+	if err != nil {
+		t.Fatalf("YAML 编码失败: %v", err)
+	}
+	if !strings.Contains(string(data), "encryption: "+vless.Query.Encryption) {
+		t.Fatalf("VLESS encryption 应出现在 YAML 输出中: %s", string(data))
+	}
 
 	t.Logf("✓ VLESS XHTTP LinkToProxy 测试通过，名称: %s", proxy.Name)
 }
