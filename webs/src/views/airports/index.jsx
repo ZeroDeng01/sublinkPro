@@ -1097,6 +1097,7 @@ export default function AirportList() {
           onOpenNodes={handleOpenNodeManagement}
           onQuickCheck={handleQuickCheck}
           onRefreshUsage={handleRefreshUsage}
+          nodeCheckProfiles={nodeCheckProfiles}
         />
       ) : viewMode === 'list' ? (
         <AirportListView
@@ -1109,6 +1110,7 @@ export default function AirportList() {
           onOpenNodes={handleOpenNodeManagement}
           onQuickCheck={handleQuickCheck}
           onRefreshUsage={handleRefreshUsage}
+          nodeCheckProfiles={nodeCheckProfiles}
         />
       ) : (
         <AirportTable
@@ -1121,6 +1123,7 @@ export default function AirportList() {
           onOpenNodes={handleOpenNodeManagement}
           onQuickCheck={handleQuickCheck}
           onRefreshUsage={handleRefreshUsage}
+          nodeCheckProfiles={nodeCheckProfiles}
         />
       )}
 

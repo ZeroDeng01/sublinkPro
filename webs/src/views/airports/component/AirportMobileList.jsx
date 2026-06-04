@@ -54,7 +54,8 @@ export default function AirportMobileList({
   onPull,
   onOpenNodes,
   onQuickCheck,
-  onRefreshUsage
+  onRefreshUsage,
+  nodeCheckProfiles
 }) {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
@@ -69,6 +70,13 @@ export default function AirportMobileList({
   const [copyTip, setCopyTip] = useState({ open: false, name: '' });
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [menuAirportId, setMenuAirportId] = useState(null);
+
+  // 根据检测策略ID查找策略名称
+  const getDetectProfileName = (profileId) => {
+    if (!profileId || profileId === 0) return null;
+    const profile = nodeCheckProfiles.find((p) => p.id === profileId);
+    return profile ? profile.name : null;
+  };
 
   // 复制订阅地址
   const handleCopyUrl = async (airport) => {
@@ -411,6 +419,55 @@ export default function AirportMobileList({
                   <AirportNodeStatsCard nodeStats={airport.nodeStats} nodeCount={airport.nodeCount || 0} />
                 </Box>
 
+                {/* 更新后检测 */}
+                {airport.updateAfterDetect && (
+                  <Box
+                    sx={{
+                      mb: 2,
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: nestedPanelSurface,
+                      border: `1px solid ${panelBorder}`
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 500, color: secondaryText }}>
+                      更新后检测
+                    </Typography>
+                    {(() => {
+                      const profileName = getDetectProfileName(airport.updateAfterDetectProfileId);
+                      return profileName ? (
+                        <Chip
+                          label={profileName}
+                          size="small"
+                          sx={{
+                            height: 22,
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            color: isDark ? palette.success.light : palette.success.dark,
+                            bgcolor: withAlpha(palette.success.main, isDark ? 0.18 : 0.12),
+                            border: `1px solid ${withAlpha(palette.success.main, isDark ? 0.34 : 0.18)}`,
+                            '& .MuiChip-label': { px: 1 }
+                          }}
+                        />
+                      ) : (
+                        <Chip
+                          label="策略已删除"
+                          size="small"
+                          sx={{
+                            height: 22,
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            color: isDark ? palette.warning.light : palette.warning.dark,
+                            bgcolor: withAlpha(palette.warning.main, isDark ? 0.18 : 0.12),
+                            border: `1px solid ${withAlpha(palette.warning.main, isDark ? 0.34 : 0.18)}`,
+                            '& .MuiChip-label': { px: 1 }
+                          }}
+                        />
+                      );
+                    })()}
+                  </Box>
+                )}
+
                 <Stack
                   direction="row"
                   spacing={1}
@@ -586,9 +643,11 @@ AirportMobileList.propTypes = {
   onPull: PropTypes.func.isRequired,
   onOpenNodes: PropTypes.func.isRequired,
   onQuickCheck: PropTypes.func.isRequired,
-  onRefreshUsage: PropTypes.func
+  onRefreshUsage: PropTypes.func,
+  nodeCheckProfiles: PropTypes.array
 };
 
 AirportMobileList.defaultProps = {
-  selectedIds: []
+  selectedIds: [],
+  nodeCheckProfiles: []
 };

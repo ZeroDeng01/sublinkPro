@@ -52,11 +52,19 @@ export default function AirportListView({
   onPull,
   onOpenNodes,
   onQuickCheck,
-  onRefreshUsage
+  onRefreshUsage,
+  nodeCheckProfiles
 }) {
   const theme = useTheme();
   const palette = theme.vars?.palette || theme.palette;
   const { isDark } = useResolvedColorScheme();
+
+  // 根据检测策略ID查找策略名称
+  const getDetectProfileName = (profileId) => {
+    if (!profileId || profileId === 0) return null;
+    const profile = nodeCheckProfiles.find((p) => p.id === profileId);
+    return profile ? profile.name : null;
+  };
 
   const tableContainerSx = {
     bgcolor: isDark ? withAlpha(palette.common.black, 0.2) : palette.background.paper,
@@ -365,6 +373,9 @@ export default function AirportListView({
               <TableCell sx={{ width: '14%', minWidth: 158 }}>运行时间</TableCell>
               <TableCell sx={{ width: '17%', minWidth: 145 }}>用量</TableCell>
               <TableCell sx={{ width: '10%', minWidth: 100 }}>测速</TableCell>
+              <TableCell sx={{ width: '8%', minWidth: 90 }} align="center">
+                更新后检测
+              </TableCell>
               <TableCell sx={{ width: 188 }} align="center">
                 操作
               </TableCell>
@@ -459,6 +470,48 @@ export default function AirportListView({
 
                   {/* 测速 */}
                   <TableCell>{renderSpeedCompact(airport.nodeStats, airport.nodeCount || 0)}</TableCell>
+
+                  {/* 更新检测 */}
+                  <TableCell align="center">
+                    {airport.updateAfterDetect ? (
+                      (() => {
+                        const profileName = getDetectProfileName(airport.updateAfterDetectProfileId);
+                        return profileName ? (
+                          <Chip
+                            label={profileName}
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.65rem',
+                              fontWeight: 500,
+                              color: isDark ? palette.success.light : palette.success.dark,
+                              bgcolor: alpha(theme.palette.success.main, isDark ? 0.18 : 0.12),
+                              border: `1px solid ${alpha(theme.palette.success.main, isDark ? 0.34 : 0.18)}`,
+                              '& .MuiChip-label': { px: 0.8 }
+                            }}
+                          />
+                        ) : (
+                          <Chip
+                            label="策略已删除"
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.65rem',
+                              fontWeight: 500,
+                              color: isDark ? palette.warning.light : palette.warning.dark,
+                              bgcolor: alpha(theme.palette.warning.main, isDark ? 0.18 : 0.12),
+                              border: `1px solid ${alpha(theme.palette.warning.main, isDark ? 0.34 : 0.18)}`,
+                              '& .MuiChip-label': { px: 0.8 }
+                            }}
+                          />
+                        );
+                      })()
+                    ) : (
+                      <Typography variant="caption" color="text.disabled">
+                        -
+                      </Typography>
+                    )}
+                  </TableCell>
 
                   {/* 操作按钮 */}
                   <TableCell align="center">
@@ -614,9 +667,11 @@ AirportListView.propTypes = {
   onPull: PropTypes.func.isRequired,
   onOpenNodes: PropTypes.func.isRequired,
   onQuickCheck: PropTypes.func.isRequired,
-  onRefreshUsage: PropTypes.func
+  onRefreshUsage: PropTypes.func,
+  nodeCheckProfiles: PropTypes.array
 };
 
 AirportListView.defaultProps = {
-  selectedIds: []
+  selectedIds: [],
+  nodeCheckProfiles: []
 };

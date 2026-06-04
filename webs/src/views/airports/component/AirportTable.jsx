@@ -49,7 +49,8 @@ export default function AirportTable({
   onPull,
   onOpenNodes,
   onQuickCheck,
-  onRefreshUsage
+  onRefreshUsage,
+  nodeCheckProfiles
 }) {
   const theme = useTheme();
   const palette = theme.vars?.palette || theme.palette;
@@ -70,6 +71,13 @@ export default function AirportTable({
   };
 
   const getProgressTrackColor = (percent) => alpha(getUsageColor(percent), isDark ? 0.22 : 0.12);
+
+  // 根据检测策略ID查找策略名称
+  const getDetectProfileName = (profileId) => {
+    if (!profileId || profileId === 0) return null;
+    const profile = nodeCheckProfiles.find((p) => p.id === profileId);
+    return profile ? profile.name : null;
+  };
 
   const getStatusChipSx = (enabled) => ({
     height: 20,
@@ -531,6 +539,59 @@ export default function AirportTable({
                   {renderSpeedSummary(airport.nodeStats, airport.nodeCount || 0)}
                 </Box>
 
+                {/* 更新后检测 */}
+                {airport.updateAfterDetect && (
+                  <Box
+                    sx={{
+                      mb: 1.25,
+                      p: 0.9,
+                      borderRadius: 1.5,
+                      bgcolor: 'background.default',
+                      border: `1px solid ${alpha(theme.palette.divider, 0.12)}`
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: 'block', mb: 0.5, fontWeight: 500, fontSize: '0.65rem' }}
+                    >
+                      更新后检测
+                    </Typography>
+                    {(() => {
+                      const profileName = getDetectProfileName(airport.updateAfterDetectProfileId);
+                      return profileName ? (
+                        <Chip
+                          label={profileName}
+                          size="small"
+                          sx={{
+                            height: 20,
+                            fontSize: '0.68rem',
+                            fontWeight: 500,
+                            color: isDark ? palette.success.light : palette.success.dark,
+                            bgcolor: alpha(theme.palette.success.main, isDark ? 0.18 : 0.12),
+                            border: `1px solid ${alpha(theme.palette.success.main, isDark ? 0.34 : 0.18)}`,
+                            '& .MuiChip-label': { px: 1 }
+                          }}
+                        />
+                      ) : (
+                        <Chip
+                          label="策略已删除"
+                          size="small"
+                          sx={{
+                            height: 20,
+                            fontSize: '0.68rem',
+                            fontWeight: 500,
+                            color: isDark ? palette.warning.light : palette.warning.dark,
+                            bgcolor: alpha(theme.palette.warning.main, isDark ? 0.18 : 0.12),
+                            border: `1px solid ${alpha(theme.palette.warning.main, isDark ? 0.34 : 0.18)}`,
+                            '& .MuiChip-label': { px: 1 }
+                          }}
+                        />
+                      );
+                    })()}
+                  </Box>
+                )}
+
                 {/* 操作按钮 - 固定在底部 */}
                 <Box sx={{ mt: 'auto', pt: 0.85, borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}` }}>
                   <Stack spacing={0.55} alignItems="center">
@@ -674,9 +735,11 @@ AirportTable.propTypes = {
   onPull: PropTypes.func.isRequired,
   onOpenNodes: PropTypes.func.isRequired,
   onQuickCheck: PropTypes.func.isRequired,
-  onRefreshUsage: PropTypes.func
+  onRefreshUsage: PropTypes.func,
+  nodeCheckProfiles: PropTypes.array
 };
 
 AirportTable.defaultProps = {
-  selectedIds: []
+  selectedIds: [],
+  nodeCheckProfiles: []
 };
