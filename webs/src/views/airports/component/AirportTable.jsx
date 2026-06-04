@@ -557,38 +557,45 @@ export default function AirportTable({
                     >
                       更新后检测
                     </Typography>
-                    {(() => {
-                      const profileName = getDetectProfileName(airport.updateAfterDetectProfileId);
-                      return profileName ? (
-                        <Chip
-                          label={profileName}
-                          size="small"
-                          sx={{
-                            height: 20,
-                            fontSize: '0.68rem',
-                            fontWeight: 500,
-                            color: isDark ? palette.success.light : palette.success.dark,
-                            bgcolor: alpha(theme.palette.success.main, isDark ? 0.18 : 0.12),
-                            border: `1px solid ${alpha(theme.palette.success.main, isDark ? 0.34 : 0.18)}`,
-                            '& .MuiChip-label': { px: 1 }
-                          }}
-                        />
-                      ) : (
-                        <Chip
-                          label="策略已删除"
-                          size="small"
-                          sx={{
-                            height: 20,
-                            fontSize: '0.68rem',
-                            fontWeight: 500,
-                            color: isDark ? palette.warning.light : palette.warning.dark,
-                            bgcolor: alpha(theme.palette.warning.main, isDark ? 0.18 : 0.12),
-                            border: `1px solid ${alpha(theme.palette.warning.main, isDark ? 0.34 : 0.18)}`,
-                            '& .MuiChip-label': { px: 1 }
-                          }}
-                        />
-                      );
-                    })()}
+                    <Stack direction="row" spacing={0.5} alignItems="center" useFlexGap>
+                      {(() => {
+                        const profileName = getDetectProfileName(airport.updateAfterDetectProfileId);
+                        return profileName ? (
+                          <Chip
+                            label={profileName}
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.68rem',
+                              fontWeight: 500,
+                              color: isDark ? palette.success.light : palette.success.dark,
+                              bgcolor: alpha(theme.palette.success.main, isDark ? 0.18 : 0.12),
+                              border: `1px solid ${alpha(theme.palette.success.main, isDark ? 0.34 : 0.18)}`,
+                              '& .MuiChip-label': { px: 1 }
+                            }}
+                          />
+                        ) : (
+                          <Chip
+                            label="策略已删除"
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.68rem',
+                              fontWeight: 500,
+                              color: isDark ? palette.warning.light : palette.warning.dark,
+                              bgcolor: alpha(theme.palette.warning.main, isDark ? 0.18 : 0.12),
+                              border: `1px solid ${alpha(theme.palette.warning.main, isDark ? 0.34 : 0.18)}`,
+                              '& .MuiChip-label': { px: 1 }
+                            }}
+                          />
+                        );
+                      })()}
+                      {airport.updateAfterDetectChangedOnly && (
+                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem' }}>
+                          仅变更节点
+                        </Typography>
+                      )}
+                    </Stack>
                   </Box>
                 )}
 

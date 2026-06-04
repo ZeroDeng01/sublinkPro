@@ -181,30 +181,31 @@ func AirportAdd(c *gin.Context) {
 	}
 
 	airport := models.Airport{
-		Name:                       req.Name,
-		URL:                        req.URL,
-		CronExpr:                   req.CronExpr,
-		Enabled:                    req.Enabled,
-		Group:                      req.Group,
-		DownloadWithProxy:          req.DownloadWithProxy,
-		ProxyLink:                  req.ProxyLink,
-		UserAgent:                  req.UserAgent,
-		RequestHeaders:             requestHeaders,
-		FetchUsageInfo:             req.FetchUsageInfo,
-		SkipTLSVerify:              req.SkipTLSVerify,
-		UpdateAfterDetect:          req.UpdateAfterDetect,
-		UpdateAfterDetectProfileID: req.UpdateAfterDetectProfileID,
-		Remark:                     req.Remark,
-		Logo:                       req.Logo,
-		NodeNameWhitelist:          req.NodeNameWhitelist,
-		NodeNameBlacklist:          req.NodeNameBlacklist,
-		ProtocolWhitelist:          req.ProtocolWhitelist,
-		ProtocolBlacklist:          req.ProtocolBlacklist,
-		NodeNamePreprocess:         req.NodeNamePreprocess,
-		DeduplicationRule:          req.DeduplicationRule,
-		NodeNameUniquify:           req.NodeNameUniquify,
-		NodeNamePrefix:             req.NodeNamePrefix,
-		NodeNameIntraUniquify:      req.NodeNameIntraUniquify,
+		Name:                         req.Name,
+		URL:                          req.URL,
+		CronExpr:                     req.CronExpr,
+		Enabled:                      req.Enabled,
+		Group:                        req.Group,
+		DownloadWithProxy:            req.DownloadWithProxy,
+		ProxyLink:                    req.ProxyLink,
+		UserAgent:                    req.UserAgent,
+		RequestHeaders:               requestHeaders,
+		FetchUsageInfo:               req.FetchUsageInfo,
+		SkipTLSVerify:                req.SkipTLSVerify,
+		UpdateAfterDetect:            req.UpdateAfterDetect,
+		UpdateAfterDetectProfileID:   req.UpdateAfterDetectProfileID,
+		UpdateAfterDetectChangedOnly: req.UpdateAfterDetectChangedOnly,
+		Remark:                       req.Remark,
+		Logo:                         req.Logo,
+		NodeNameWhitelist:            req.NodeNameWhitelist,
+		NodeNameBlacklist:            req.NodeNameBlacklist,
+		ProtocolWhitelist:            req.ProtocolWhitelist,
+		ProtocolBlacklist:            req.ProtocolBlacklist,
+		NodeNamePreprocess:           req.NodeNamePreprocess,
+		DeduplicationRule:            req.DeduplicationRule,
+		NodeNameUniquify:             req.NodeNameUniquify,
+		NodeNamePrefix:               req.NodeNamePrefix,
+		NodeNameIntraUniquify:        req.NodeNameIntraUniquify,
 	}
 
 	// 检查是否重复
@@ -291,6 +292,7 @@ func AirportUpdate(c *gin.Context) {
 	existing.SkipTLSVerify = req.SkipTLSVerify
 	existing.UpdateAfterDetect = req.UpdateAfterDetect
 	existing.UpdateAfterDetectProfileID = req.UpdateAfterDetectProfileID
+	existing.UpdateAfterDetectChangedOnly = req.UpdateAfterDetectChangedOnly
 	existing.Remark = req.Remark
 	existing.Logo = req.Logo
 	existing.NodeNameWhitelist = req.NodeNameWhitelist

@@ -476,7 +476,7 @@ export default function AirportListView({
                     {airport.updateAfterDetect ? (
                       (() => {
                         const profileName = getDetectProfileName(airport.updateAfterDetectProfileId);
-                        return profileName ? (
+                        const chip = profileName ? (
                           <Chip
                             label={profileName}
                             size="small"
@@ -504,6 +504,16 @@ export default function AirportListView({
                               '& .MuiChip-label': { px: 0.8 }
                             }}
                           />
+                        );
+                        return (
+                          <Stack spacing={0.2} alignItems="center">
+                            {chip}
+                            {airport.updateAfterDetectChangedOnly && (
+                              <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1 }}>
+                                仅变更节点
+                              </Typography>
+                            )}
+                          </Stack>
                         );
                       })()
                     ) : (

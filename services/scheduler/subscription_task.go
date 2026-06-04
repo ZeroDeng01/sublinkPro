@@ -49,7 +49,7 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 		reporter = NewTaskManagerReporter(tm, task.ID)
 	}
 
-	usageInfo, err := node.LoadClashConfigFromURLWithReporter(id, url, subName, downloadWithProxy, proxyLink, userAgent, requestHeaders, reporter, fetchUsageInfo, skipTLSVerify)
+	changedNodeIDs, usageInfo, err := node.LoadClashConfigFromURLWithReporter(id, url, subName, downloadWithProxy, proxyLink, userAgent, requestHeaders, reporter, fetchUsageInfo, skipTLSVerify)
 	if err != nil {
 		// 仅在失败时发送通知，成功通知由 node/sub.go 中的 scheduleClashToNodeLinks 发送
 		// 这样可以避免重复通知，且成功通知包含更详细的节点统计信息
@@ -88,24 +88,36 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 	// 订阅更新成功后，如机场开启“更新后检测”，则立即按指定策略补做一次机场内节点检测。
 	if airport != nil && airport.UpdateAfterDetect && airport.UpdateAfterDetectProfileID > 0 {
 		profileID := airport.UpdateAfterDetectProfileID
-		go func(airportID int, airportName string, nodeCheckProfileID int) {
-			updatedNodes, listErr := models.ListBySourceID(airportID)
-			if listErr != nil {
-				utils.Warn("获取机场节点失败，跳过更新后检测 - ID: %d, Error: %v", airportID, listErr)
-				return
-			}
-			if len(updatedNodes) == 0 {
-				utils.Warn("机场 [%s] 更新后检测已启用，但没有可检测节点", airportName)
-				return
+		changedOnly := airport.UpdateAfterDetectChangedOnly
+		go func(airportID int, airportName string, nodeCheckProfileID int, changedNodeIDs []int, changedOnly bool) {
+			var nodeIDs []int
+
+			if changedOnly && len(changedNodeIDs) > 0 {
+				nodeIDs = changedNodeIDs
+				utils.Info("机场 [%s] 订阅更新完成，仅检测 %d 个变化/新增节点，策略 ID: %d", airportName, len(nodeIDs), nodeCheckProfileID)
+			} else {
+				updatedNodes, listErr := models.ListBySourceID(airportID)
+				if listErr != nil {
+					utils.Warn("获取机场节点失败，跳过更新后检测 - ID: %d, Error: %v", airportID, listErr)
+					return
+				}
+				if len(updatedNodes) == 0 {
+					utils.Warn("机场 [%s] 更新后检测已启用，但没有可检测节点", airportName)
+					return
+				}
+
+				nodeIDs = make([]int, 0, len(updatedNodes))
+				for _, n := range updatedNodes {
+					nodeIDs = append(nodeIDs, n.ID)
+				}
+
+				if changedOnly {
+					utils.Info("机场 [%s] 开启了仅检测变化节点，但本次更新没有变化/新增节点，将检测全部 %d 个节点", airportName, len(nodeIDs))
+				}
+				utils.Info("机场 [%s] 订阅更新完成，立即执行节点检测策略 ID: %d", airportName, nodeCheckProfileID)
 			}
 
-			nodeIDs := make([]int, 0, len(updatedNodes))
-			for _, n := range updatedNodes {
-				nodeIDs = append(nodeIDs, n.ID)
-			}
-
-			utils.Info("机场 [%s] 订阅更新完成，立即执行节点检测策略 ID: %d", airportName, nodeCheckProfileID)
 			ExecuteNodeCheckWithProfile(nodeCheckProfileID, nodeIDs, models.TaskTriggerAirportUpdate)
-		}(id, subName, profileID)
+		}(id, subName, profileID, changedNodeIDs, changedOnly)
 	}
 }

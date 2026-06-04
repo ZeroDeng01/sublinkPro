@@ -83,16 +83,17 @@ type Airport struct {
 	RequestHeaders    AirportRequestHeaders `gorm:"type:text" json:"requestHeaders"`        // 自定义请求头
 	NodeCount         int                   `gorm:"-" json:"nodeCount"`                     // 节点数量（非数据库字段）
 	// 用量信息相关字段
-	FetchUsageInfo             bool   `gorm:"default:false" json:"fetchUsageInfo"`         // 是否获取用量信息
-	UsageUpload                int64  `gorm:"default:0" json:"usageUpload"`                // 已上传流量（字节）
-	UsageDownload              int64  `gorm:"default:0" json:"usageDownload"`              // 已下载流量（字节）
-	UsageTotal                 int64  `gorm:"default:0" json:"usageTotal"`                 // 总流量配额（字节）
-	UsageExpire                int64  `gorm:"default:0" json:"usageExpire"`                // 订阅过期时间（Unix时间戳）
-	SkipTLSVerify              bool   `gorm:"default:false" json:"skipTLSVerify"`          // 是否跳过TLS证书验证
-	UpdateAfterDetect          bool   `gorm:"default:false" json:"updateAfterDetect"`      // 更新后是否自动执行节点检测
-	UpdateAfterDetectProfileID int    `gorm:"default:0" json:"updateAfterDetectProfileId"` // 更新后检测使用的节点检测策略ID
-	Remark                     string `json:"remark"`                                      // 备注信息
-	Logo                       string `json:"logo"`                                        // Logo：URL、icon:图标名、或emoji字符
+	FetchUsageInfo               bool   `gorm:"default:false" json:"fetchUsageInfo"`               // 是否获取用量信息
+	UsageUpload                  int64  `gorm:"default:0" json:"usageUpload"`                      // 已上传流量（字节）
+	UsageDownload                int64  `gorm:"default:0" json:"usageDownload"`                    // 已下载流量（字节）
+	UsageTotal                   int64  `gorm:"default:0" json:"usageTotal"`                       // 总流量配额（字节）
+	UsageExpire                  int64  `gorm:"default:0" json:"usageExpire"`                      // 订阅过期时间（Unix时间戳）
+	SkipTLSVerify                bool   `gorm:"default:false" json:"skipTLSVerify"`                // 是否跳过TLS证书验证
+	UpdateAfterDetect            bool   `gorm:"default:false" json:"updateAfterDetect"`            // 更新后是否自动执行节点检测
+	UpdateAfterDetectProfileID   int    `gorm:"default:0" json:"updateAfterDetectProfileId"`       // 更新后检测使用的节点检测策略ID
+	UpdateAfterDetectChangedOnly bool   `gorm:"default:false" json:"updateAfterDetectChangedOnly"` // 更新后检测仅检测变化/新增节点
+	Remark                       string `json:"remark"`                                            // 备注信息
+	Logo                         string `json:"logo"`                                              // Logo：URL、icon:图标名、或emoji字符
 	// 节点过滤规则（拉取时生效）
 	NodeNameWhitelist string `json:"nodeNameWhitelist"` // 节点名称白名单 (JSON数组)
 	NodeNameBlacklist string `json:"nodeNameBlacklist"` // 节点名称黑名单 (JSON数组)
@@ -153,7 +154,7 @@ func (a *Airport) Update() error {
 		"Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime",
 		"SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent",
 		"RequestHeaders",
-		"FetchUsageInfo", "SkipTLSVerify", "UpdateAfterDetect", "UpdateAfterDetectProfileID", "Remark", "Logo",
+		"FetchUsageInfo", "SkipTLSVerify", "UpdateAfterDetect", "UpdateAfterDetectProfileID", "UpdateAfterDetectChangedOnly", "Remark", "Logo",
 		"NodeNameWhitelist", "NodeNameBlacklist", "ProtocolWhitelist", "ProtocolBlacklist", "NodeNamePreprocess",
 		"DeduplicationRule", "NodeNameUniquify", "NodeNamePrefix", "NodeNameIntraUniquify",
 	).Updates(a).Error

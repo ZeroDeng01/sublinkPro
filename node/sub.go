@@ -214,7 +214,8 @@ func isTLSError(err error) bool {
 // proxyLink: 代理链接 (可选)
 // userAgent: 请求的 User-Agent (可选，默认 Clash)
 func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string) (*UsageInfo, error) {
-	return LoadClashConfigFromURLWithReporter(id, urlStr, subName, downloadWithProxy, proxyLink, userAgent, nil, nil, false, true)
+	_, usageInfo, err := LoadClashConfigFromURLWithReporter(id, urlStr, subName, downloadWithProxy, proxyLink, userAgent, nil, nil, false, true)
+	return usageInfo, err
 }
 
 func applyRequestHeaders(req *http.Request, userAgent string, requestHeaders models.AirportRequestHeaders) {
@@ -505,7 +506,7 @@ func parseClashConfigData(ctx context.Context, client *http.Client, rootSubscrip
 // reporter: 任务进度报告器，用于TaskManager集成
 // fetchUsageInfo: 是否获取用量信息
 // skipTLSVerify: 是否跳过TLS证书验证
-func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string, requestHeaders models.AirportRequestHeaders, reporter TaskReporter, fetchUsageInfo bool, skipTLSVerify bool) (*UsageInfo, error) {
+func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string, requestHeaders models.AirportRequestHeaders, reporter TaskReporter, fetchUsageInfo bool, skipTLSVerify bool) ([]int, *UsageInfo, error) {
 	// 创建 HTTP 客户端，配置 TLS
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -573,7 +574,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, urlStr, nil)
 	if err != nil {
 		utils.Error("URL %s，创建请求失败:  %v", urlStr, err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	applyRequestHeaders(req, userAgent, requestHeaders)
@@ -606,7 +607,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 				"tlsError": isTLSError(err),
 			},
 		})
-		return nil, err
+		return nil, nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -645,7 +646,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 				"error":  err.Error(),
 			},
 		})
-		return nil, err
+		return nil, nil, err
 	}
 	config, errYaml, providerErr := parseClashConfigData(context.Background(), client, urlStr, data, userAgent, requestHeaders)
 
@@ -669,11 +670,11 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 				"error":  errorMessage,
 			},
 		})
-		return nil, parseErr
+		return nil, nil, parseErr
 	}
 
-	err = scheduleClashToNodeLinks(id, config.Proxies, subName, reporter, usageInfo)
-	return usageInfo, err
+	changedNodeIDs, err := scheduleClashToNodeLinks(id, config.Proxies, subName, reporter, usageInfo)
+	return changedNodeIDs, usageInfo, err
 }
 
 // scheduleClashToNodeLinks 将 Clash 代理配置转换为节点链接并保存到数据库
@@ -681,7 +682,7 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 // proxys: 代理节点列表
 // subName: 订阅名称
 // usageInfo: 订阅用量信息 (可选)
-func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, reporter TaskReporter, usageInfo *UsageInfo) error {
+func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, reporter TaskReporter, usageInfo *UsageInfo) ([]int, error) {
 	if reporter == nil {
 		reporter = &NoOpTaskReporter{}
 	}
@@ -1033,11 +1034,25 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	}
 
 	utils.Info("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，更新节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+skipCount, addSuccessCount, actualUpdateCount, skipCount, deleteCount)
+
+	// 收集变更和新增的节点ID（用于更新后仅检测变化节点的功能）
+	changedNodeIDs := make([]int, 0, addSuccessCount+actualUpdateCount)
+	for _, n := range nodesToAdd {
+		if n.ID > 0 {
+			changedNodeIDs = append(changedNodeIDs, n.ID)
+		}
+	}
+	for _, u := range nodesToUpdate {
+		if u.ID > 0 {
+			changedNodeIDs = append(changedNodeIDs, u.ID)
+		}
+	}
+
 	// 重新查找机场以获取最新信息并更新成功次数
 	airport, err = models.GetAirportByID(id)
 	if err != nil {
 		utils.Error("获取机场 %s 失败:  %v", subName, err)
-		return err
+		return nil, err
 	}
 	airport.SuccessCount = addSuccessCount + skipCount
 	// 当前时间
@@ -1045,7 +1060,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	airport.LastRunTime = &now
 	err1 := airport.Update()
 	if err1 != nil {
-		return err1
+		return nil, err1
 	}
 	// 通过 reporter 报告任务完成
 	reporter.ReportComplete(fmt.Sprintf("订阅更新完成 (新增: %d, 更新: %d, 已存在: %d, 删除: %d)", addSuccessCount, actualUpdateCount, skipCount, deleteCount), map[string]any{
@@ -1092,7 +1107,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，耗时 %s，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，更新节点【%d】个，已存在节点【%d】个，删除失效【%d】个%s", subName, durationStr, len(proxys), addSuccessCount+skipCount, addSuccessCount, actualUpdateCount, skipCount, deleteCount, usageText),
 		Data:    nData,
 	})
-	return nil
+	return changedNodeIDs, nil
 
 }
 

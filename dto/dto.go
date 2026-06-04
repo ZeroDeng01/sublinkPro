@@ -29,22 +29,23 @@ type UserAccessKey struct {
 
 // AirportRequest 机场添加/更新请求体结构
 type AirportRequest struct {
-	ID                         int                    `json:"id"`
-	Name                       string                 `json:"name" binding:"required"`
-	URL                        string                 `json:"url" binding:"required,url"`
-	CronExpr                   string                 `json:"cronExpr" binding:"required"`
-	Enabled                    bool                   `json:"enabled"`
-	Group                      string                 `json:"group"`
-	DownloadWithProxy          bool                   `json:"downloadWithProxy"`
-	ProxyLink                  string                 `json:"proxyLink"`
-	UserAgent                  string                 `json:"userAgent"`
-	RequestHeaders             []AirportRequestHeader `json:"requestHeaders"`
-	FetchUsageInfo             bool                   `json:"fetchUsageInfo"`             // 是否获取用量信息
-	SkipTLSVerify              bool                   `json:"skipTLSVerify"`              // 是否跳过TLS证书验证
-	UpdateAfterDetect          bool                   `json:"updateAfterDetect"`          // 更新后是否自动执行节点检测
-	UpdateAfterDetectProfileID int                    `json:"updateAfterDetectProfileId"` // 更新后检测使用的节点检测策略ID
-	Remark                     string                 `json:"remark"`                     // 备注信息
-	Logo                       string                 `json:"logo"`                       // Logo配置
+	ID                           int                    `json:"id"`
+	Name                         string                 `json:"name" binding:"required"`
+	URL                          string                 `json:"url" binding:"required,url"`
+	CronExpr                     string                 `json:"cronExpr" binding:"required"`
+	Enabled                      bool                   `json:"enabled"`
+	Group                        string                 `json:"group"`
+	DownloadWithProxy            bool                   `json:"downloadWithProxy"`
+	ProxyLink                    string                 `json:"proxyLink"`
+	UserAgent                    string                 `json:"userAgent"`
+	RequestHeaders               []AirportRequestHeader `json:"requestHeaders"`
+	FetchUsageInfo               bool                   `json:"fetchUsageInfo"`               // 是否获取用量信息
+	SkipTLSVerify                bool                   `json:"skipTLSVerify"`                // 是否跳过TLS证书验证
+	UpdateAfterDetect            bool                   `json:"updateAfterDetect"`            // 更新后是否自动执行节点检测
+	UpdateAfterDetectProfileID   int                    `json:"updateAfterDetectProfileId"`   // 更新后检测使用的节点检测策略ID
+	UpdateAfterDetectChangedOnly bool                   `json:"updateAfterDetectChangedOnly"` // 更新后仅检测变化/新增节点
+	Remark                       string                 `json:"remark"`                       // 备注信息
+	Logo                         string                 `json:"logo"`                         // Logo配置
 	// 节点过滤规则（拉取时生效）
 	NodeNameWhitelist string `json:"nodeNameWhitelist"` // 节点名称白名单 (JSON数组)
 	NodeNameBlacklist string `json:"nodeNameBlacklist"` // 节点名称黑名单 (JSON数组)

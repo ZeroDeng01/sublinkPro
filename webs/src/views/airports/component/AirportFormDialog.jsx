@@ -525,6 +525,20 @@ export default function AirportFormDialog({
                         </MenuItem>
                       ))}
                     </TextField>
+                    <Box sx={controlRowSx}>
+                      <Box>
+                        <Typography variant="body2" sx={{ color: primaryText }}>
+                          只检测变化的节点和新节点
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: secondaryText }}>
+                          开启后仅检测本次更新中配置变化或新增的节点，不检测已有节点
+                        </Typography>
+                      </Box>
+                      <Switch
+                        checked={airportForm.updateAfterDetectChangedOnly || false}
+                        onChange={(e) => setAirportForm({ ...airportForm, updateAfterDetectChangedOnly: e.target.checked })}
+                      />
+                    </Box>
                   </Stack>
                 </Collapse>
               </Box>
@@ -621,6 +635,7 @@ AirportFormDialog.propTypes = {
     skipTLSVerify: PropTypes.bool,
     updateAfterDetect: PropTypes.bool,
     updateAfterDetectProfileId: PropTypes.number,
+    updateAfterDetectChangedOnly: PropTypes.bool,
     remark: PropTypes.string,
     logo: PropTypes.string,
     nodeNameWhitelist: PropTypes.string,

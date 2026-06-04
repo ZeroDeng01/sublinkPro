@@ -433,38 +433,45 @@ export default function AirportMobileList({
                     <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 500, color: secondaryText }}>
                       更新后检测
                     </Typography>
-                    {(() => {
-                      const profileName = getDetectProfileName(airport.updateAfterDetectProfileId);
-                      return profileName ? (
-                        <Chip
-                          label={profileName}
-                          size="small"
-                          sx={{
-                            height: 22,
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            color: isDark ? palette.success.light : palette.success.dark,
-                            bgcolor: withAlpha(palette.success.main, isDark ? 0.18 : 0.12),
-                            border: `1px solid ${withAlpha(palette.success.main, isDark ? 0.34 : 0.18)}`,
-                            '& .MuiChip-label': { px: 1 }
-                          }}
-                        />
-                      ) : (
-                        <Chip
-                          label="策略已删除"
-                          size="small"
-                          sx={{
-                            height: 22,
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            color: isDark ? palette.warning.light : palette.warning.dark,
-                            bgcolor: withAlpha(palette.warning.main, isDark ? 0.18 : 0.12),
-                            border: `1px solid ${withAlpha(palette.warning.main, isDark ? 0.34 : 0.18)}`,
-                            '& .MuiChip-label': { px: 1 }
-                          }}
-                        />
-                      );
-                    })()}
+                    <Stack direction="row" spacing={1} alignItems="center" useFlexGap>
+                      {(() => {
+                        const profileName = getDetectProfileName(airport.updateAfterDetectProfileId);
+                        return profileName ? (
+                          <Chip
+                            label={profileName}
+                            size="small"
+                            sx={{
+                              height: 22,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              color: isDark ? palette.success.light : palette.success.dark,
+                              bgcolor: withAlpha(palette.success.main, isDark ? 0.18 : 0.12),
+                              border: `1px solid ${withAlpha(palette.success.main, isDark ? 0.34 : 0.18)}`,
+                              '& .MuiChip-label': { px: 1 }
+                            }}
+                          />
+                        ) : (
+                          <Chip
+                            label="策略已删除"
+                            size="small"
+                            sx={{
+                              height: 22,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              color: isDark ? palette.warning.light : palette.warning.dark,
+                              bgcolor: withAlpha(palette.warning.main, isDark ? 0.18 : 0.12),
+                              border: `1px solid ${withAlpha(palette.warning.main, isDark ? 0.34 : 0.18)}`,
+                              '& .MuiChip-label': { px: 1 }
+                            }}
+                          />
+                        );
+                      })()}
+                      {airport.updateAfterDetectChangedOnly && (
+                        <Typography variant="caption" sx={{ color: secondaryText, fontSize: '0.7rem' }}>
+                          仅变更节点
+                        </Typography>
+                      )}
+                    </Stack>
                   </Box>
                 )}
 
