@@ -189,6 +189,8 @@ type Proxy struct {
 }
 
 func sanitizeCertificateFingerprint(fingerprint string) string {
+	fingerprint = strings.ReplaceAll(fingerprint, ":", "")
+	fingerprint = strings.ReplaceAll(fingerprint, "-", "")
 	if len(fingerprint) != 64 {
 		return ""
 	}
@@ -198,6 +200,7 @@ func sanitizeCertificateFingerprint(fingerprint string) string {
 		}
 		return ""
 	}
+	fingerprint = strings.ToLower(fingerprint)
 	return fingerprint
 }
 
