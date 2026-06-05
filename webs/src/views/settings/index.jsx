@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 // material-ui
@@ -47,6 +48,7 @@ function a11yProps(index) {
 // ==============================|| 用户中心 ||============================== //
 
 export default function UserSettings() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [tabValue, setTabValue] = useState(() => (searchParams.get('tab') === 'ai' ? 4 : 0));
   const [loading, setLoading] = useState(false);
@@ -65,7 +67,7 @@ export default function UserSettings() {
   }, []);
 
   return (
-    <MainCard title="用户中心">
+    <MainCard title={t('settings.title')}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs
           value={tabValue}
@@ -83,18 +85,23 @@ export default function UserSettings() {
             }
           }}
         >
-          <Tab icon={<PersonIcon sx={{ mr: 1 }} />} iconPosition="start" label="个人设置" {...a11yProps(0)} />
-          <Tab icon={<LanguageIcon sx={{ mr: 1 }} />} iconPosition="start" label="订阅地址设置" {...a11yProps(1)} />
+          <Tab icon={<PersonIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.profile')} {...a11yProps(0)} />
+          <Tab
+            icon={<LanguageIcon sx={{ mr: 1 }} />}
+            iconPosition="start"
+            label={t('settings.tabs.subscriptionAddress')}
+            {...a11yProps(1)}
+          />
           <Tab
             icon={<TelegramIcon sx={{ mr: 1, color: tabValue === 2 ? '#0088cc' : 'inherit' }} />}
             iconPosition="start"
-            label="Telegram 机器人"
+            label={t('settings.tabs.telegram')}
             {...a11yProps(2)}
           />
-          <Tab icon={<TuneIcon sx={{ mr: 1 }} />} iconPosition="start" label="节点去重" {...a11yProps(3)} />
-          <Tab icon={<PsychologyIcon sx={{ mr: 1 }} />} iconPosition="start" label="AI 助手" {...a11yProps(4)} />
+          <Tab icon={<TuneIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.nodeDedup')} {...a11yProps(3)} />
+          <Tab icon={<PsychologyIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.aiAssistant')} {...a11yProps(4)} />
           <Tab icon={<CloudQueueIcon sx={{ mr: 1 }} />} iconPosition="start" label="Cloudflare Tunnel" {...a11yProps(5)} />
-          <Tab icon={<StorageIcon sx={{ mr: 1 }} />} iconPosition="start" label="数据迁移" {...a11yProps(6)} />
+          <Tab icon={<StorageIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.dataMigration')} {...a11yProps(6)} />
         </Tabs>
       </Box>
 

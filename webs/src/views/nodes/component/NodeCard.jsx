@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { alpha, useTheme } from '@mui/material/styles';
@@ -32,6 +33,7 @@ import { getNodePanelSx, getNodeTagChipSx, getNodeThemeTokens } from '../nodeThe
  * 只显示核心信息，点击卡片打开详情面板
  */
 export default function NodeCard({ node, isSelected, tagColorMap, protocolMeta, onSelect, onViewDetails }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
@@ -64,7 +66,7 @@ export default function NodeCard({ node, isSelected, tagColorMap, protocolMeta, 
         <Box sx={{ position: 'relative', mb: 1.5, pr: 10 }}>
           <Box sx={{ position: 'absolute', top: 0, right: 0 }}>
             <Chip
-              label={node.LinkCountry ? formatCountry(node.LinkCountry) : '🏳️ 未知'}
+              label={node.LinkCountry ? formatCountry(node.LinkCountry) : t('nodes.mobile.unknownCountry')}
               color={node.LinkCountry ? 'secondary' : 'default'}
               variant="outlined"
               size="small"
@@ -97,7 +99,9 @@ export default function NodeCard({ node, isSelected, tagColorMap, protocolMeta, 
                     variant="caption"
                     sx={{ color: tokens.secondaryText, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}
                   >
-                    {node.NameMode === 'remark' ? `原始：${secondaryName}` : `备注：${secondaryName}`}
+                    {node.NameMode === 'remark'
+                      ? t('nodes.mobile.originalName', { name: secondaryName })
+                      : t('nodes.mobile.remarkName', { name: secondaryName })}
                   </Typography>
                 )}
               </Box>
@@ -108,7 +112,7 @@ export default function NodeCard({ node, isSelected, tagColorMap, protocolMeta, 
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
           <NodeProtocolChip link={node.Link} protocolMeta={protocolMeta} maxWidth={104} />
           {node.Group && (
-            <Tooltip title={`分组: ${node.Group}`}>
+            <Tooltip title={t('nodes.mobile.groupTooltip', { group: node.Group })}>
               <Chip
                 icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📁</span>}
                 label={node.Group}
@@ -120,7 +124,7 @@ export default function NodeCard({ node, isSelected, tagColorMap, protocolMeta, 
             </Tooltip>
           )}
           {node.Source && node.Source !== 'manual' && (
-            <Tooltip title={`来源: ${node.Source}`}>
+            <Tooltip title={t('nodes.mobile.sourceTooltip', { source: node.Source })}>
               <Chip
                 icon={<span style={{ fontSize: '12px', marginLeft: '8px' }}>📥</span>}
                 label={node.Source}
@@ -167,14 +171,14 @@ export default function NodeCard({ node, isSelected, tagColorMap, protocolMeta, 
             const fraudScoreDisplay = getFraudScoreDisplay(node.FraudScore, node.QualityStatus, node.QualityFamily);
             const qualityStatusDisplay = getQualityStatusDisplay(node.QualityStatus, node.QualityFamily);
             const isUntested =
-              ipTypeDisplay.label === '未检测' && residentialDisplay.label === '未检测' && fraudScoreDisplay.label === '未检测';
+              ipTypeDisplay.state === 'untested' && residentialDisplay.state === 'untested' && fraudScoreDisplay.state === 'untested';
             const shouldMergeQualityTags =
               node.QualityStatus !== 'success' &&
               ipTypeDisplay.label === residentialDisplay.label &&
               residentialDisplay.label === fraudScoreDisplay.label;
 
             if (isUntested) {
-              return <Chip label="未检测" color="default" variant="outlined" size="small" />;
+              return <Chip label={t('nodeConditions.qualityStatus.untested')} color="default" variant="outlined" size="small" />;
             }
 
             if (shouldMergeQualityTags) {
@@ -197,7 +201,11 @@ export default function NodeCard({ node, isSelected, tagColorMap, protocolMeta, 
             );
             const fraudChip = (
               <Chip
-                label={node.QualityStatus === 'success' ? `评分 ${fraudScoreDisplay.label}` : fraudScoreDisplay.label}
+                label={
+                  node.QualityStatus === 'success'
+                    ? t('nodes.mobile.fraudScoreLabel', { score: fraudScoreDisplay.label })
+                    : fraudScoreDisplay.label
+                }
                 color={fraudScoreDisplay.color}
                 variant={fraudScoreDisplay.variant}
                 size="small"

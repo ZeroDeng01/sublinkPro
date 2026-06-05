@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -19,14 +20,8 @@ const severityColorMap = {
   info: 'info'
 };
 
-const severityLabelMap = {
-  success: '成功',
-  error: '错误',
-  warning: '警告',
-  info: '信息'
-};
-
 export default function NotificationEventSelector({ value, eventOptions, onChange, disabled = false, description }) {
+  const { t } = useTranslation();
   const selectedKeys = value || [];
 
   const groupedOptions = useMemo(() => {
@@ -36,14 +31,14 @@ export default function NotificationEventSelector({ value, eventOptions, onChang
       if (!groups.has(categoryKey)) {
         groups.set(categoryKey, {
           key: categoryKey,
-          name: event.categoryName || '其他事件',
+          name: event.categoryName || t('notificationEvents.otherCategory'),
           events: []
         });
       }
       groups.get(categoryKey).events.push(event);
     });
     return Array.from(groups.values());
-  }, [eventOptions]);
+  }, [eventOptions, t]);
 
   const importantKeys = useMemo(
     () => (eventOptions || []).filter((event) => event.severity === 'error' || event.category === 'security').map((event) => event.key),
@@ -84,15 +79,15 @@ export default function NotificationEventSelector({ value, eventOptions, onChang
     <Stack spacing={2}>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }} justifyContent="space-between">
         <Box>
-          <Typography variant="subtitle1">触发事件</Typography>
+          <Typography variant="subtitle1">{t('notificationEvents.title')}</Typography>
           <Typography variant="body2" color="text.secondary">
-            {description || '为当前通知渠道勾选要自动发送的事件，测试发送不受这里的选择影响。'}
+            {description || t('notificationEvents.description')}
           </Typography>
         </Box>
         <Chip
           color={selectedCount === 0 ? 'default' : 'primary'}
           variant={selectedCount === totalCount && totalCount > 0 ? 'filled' : 'outlined'}
-          label={`${selectedCount}/${totalCount} 已选`}
+          label={t('notificationEvents.selectedCount', { selected: selectedCount, total: totalCount })}
         />
       </Stack>
 
@@ -103,19 +98,19 @@ export default function NotificationEventSelector({ value, eventOptions, onChang
           disabled={disabled || totalCount === 0}
           onClick={() => updateKeys((eventOptions || []).map((event) => event.key))}
         >
-          全选
+          {t('notificationEvents.actions.selectAll')}
         </Button>
         <Button size="small" variant="outlined" disabled={disabled || importantKeys.length === 0} onClick={() => updateKeys(importantKeys)}>
-          仅错误与安全
+          {t('notificationEvents.actions.errorsAndSecurity')}
         </Button>
         <Button size="small" color="inherit" disabled={disabled || selectedCount === 0} onClick={() => updateKeys([])}>
-          清空
+          {t('notificationEvents.actions.clear')}
         </Button>
       </Stack>
 
       {selectedCount === 0 && (
         <Alert severity="warning" variant="outlined">
-          当前没有选中任何自动触发事件。保存后渠道仍可启用，但不会自动推送业务通知。
+          {t('notificationEvents.emptySelection')}
         </Alert>
       )}
 
@@ -136,12 +131,12 @@ export default function NotificationEventSelector({ value, eventOptions, onChang
               <Box>
                 <Typography variant="subtitle2">{group.name}</Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {groupSelectedCount}/{group.events.length} 个事件已选
+                  {t('notificationEvents.groupSelectedCount', { selected: groupSelectedCount, total: group.events.length })}
                 </Typography>
               </Box>
               <FormControlLabel
                 sx={{ mr: 0 }}
-                label="全选分组"
+                label={t('notificationEvents.actions.selectGroup')}
                 control={
                   <Checkbox
                     checked={groupChecked}
@@ -199,7 +194,7 @@ export default function NotificationEventSelector({ value, eventOptions, onChang
                             size="small"
                             color={severityColorMap[event.severity] || 'default'}
                             variant="outlined"
-                            label={severityLabelMap[event.severity] || '事件'}
+                            label={t(`notificationEvents.severity.${event.severity}`, t('notificationEvents.severity.event'))}
                           />
                         </Stack>
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>

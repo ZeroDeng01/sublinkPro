@@ -1,4 +1,5 @@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -17,8 +18,6 @@ import { withAlpha } from 'utils/colorUtils';
 import SortToolbar from './SortToolbar';
 
 /**
- * 可拖拽排序的节点/分组列表
- * 支持多选和批量移动
  */
 export default function SortableNodeList({
   items,
@@ -31,11 +30,11 @@ export default function SortableNodeList({
   onBatchMove
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const { palette, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(theme, isDark);
   const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
 
-  // 全选/取消全选
   const allSelected = items.length > 0 && selectedItems.length === items.length;
   const someSelected = selectedItems.length > 0 && selectedItems.length < items.length;
   const shellInset = isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.03)}` : 'none';
@@ -61,7 +60,6 @@ export default function SortableNodeList({
 
   return (
     <Box>
-      {/* 排序工具栏 */}
       <SortToolbar
         selectedItems={selectedItems}
         onBatchSort={onBatchSort}
@@ -70,7 +68,6 @@ export default function SortableNodeList({
         totalItems={items.length}
       />
 
-      {/* 全选/取消全选按钮 */}
       <Stack
         direction="row"
         spacing={1}
@@ -102,11 +99,11 @@ export default function SortableNodeList({
             }
           }}
         >
-          {allSelected ? '取消全选' : '全选'}
+          {allSelected ? t('subscriptions.sort.deselectAll') : t('common.selectAll')}
         </Button>
         {someSelected && (
           <Chip
-            label={`已选 ${selectedItems.length}/${items.length}`}
+            label={t('subscriptions.sort.selectedFraction', { selected: selectedItems.length, total: items.length })}
             size="small"
             variant="outlined"
             sx={{
@@ -119,12 +116,11 @@ export default function SortableNodeList({
         )}
         {!someSelected && !allSelected && (
           <Typography variant="caption" sx={{ color: tertiaryText }}>
-            共 {items.length} 项，可多选后批量排序或移动
+            {t('subscriptions.sort.totalHint', { count: items.length })}
           </Typography>
         )}
       </Stack>
 
-      {/* 拖拽列表 */}
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="sortList">
           {(provided) => (
@@ -169,7 +165,6 @@ export default function SortableNodeList({
                           }
                         }}
                       >
-                        {/* 多选复选框 */}
                         <Checkbox
                           size="small"
                           checked={isSelected}
@@ -178,7 +173,7 @@ export default function SortableNodeList({
                         />
                         <DragIndicatorIcon sx={{ mr: 1, color: secondaryText, flexShrink: 0 }} />
                         <Chip
-                          label={item.IsGroup ? `📁 ${item.Name} (分组)` : item.Name}
+                          label={item.IsGroup ? t('subscriptions.sort.groupLabel', { name: item.Name }) : item.Name}
                           variant="outlined"
                           size="small"
                           sx={{
@@ -195,7 +190,6 @@ export default function SortableNodeList({
                             }
                           }}
                         />
-                        {/* 显示索引 */}
                         <Chip
                           label={`#${index + 1}`}
                           size="small"

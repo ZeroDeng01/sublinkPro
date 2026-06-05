@@ -11,6 +11,7 @@ import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import { useTranslation } from 'react-i18next';
 
 // icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -28,6 +29,7 @@ const STORAGE_KEY = 'sublinkpro_geoip_warning_dismissed';
 
 export default function GeoIPWarningDialog() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -147,7 +149,7 @@ export default function GeoIPWarningDialog() {
                 position: 'relative'
               }}
             >
-              GeoIP 数据库未安装
+              {t('components.geoIpWarning.title')}
             </Typography>
           </Box>
 
@@ -162,7 +164,7 @@ export default function GeoIPWarningDialog() {
                 lineHeight: 1.8
               }}
             >
-              系统检测到 GeoIP 数据库尚未安装。以下功能将受到影响：
+              {t('components.geoIpWarning.description')}
             </Typography>
 
             <Box
@@ -184,9 +186,9 @@ export default function GeoIPWarningDialog() {
                   '& li': { mb: 0.5 }
                 }}
               >
-                <li>IP 地理位置信息查询</li>
-                <li>节点落地 IP 国家/地区检测</li>
-                <li>登录位置信息显示</li>
+                <li>{t('components.geoIpWarning.impacts.ipLocation')}</li>
+                <li>{t('components.geoIpWarning.impacts.nodeCountry')}</li>
+                <li>{t('components.geoIpWarning.impacts.loginLocation')}</li>
               </Typography>
             </Box>
 
@@ -197,7 +199,7 @@ export default function GeoIPWarningDialog() {
                 color: isDark ? alpha('#fff', 0.7) : theme.palette.text.secondary
               }}
             >
-              点击下方按钮进入设置页面下载 GeoIP 数据库。
+              {t('components.geoIpWarning.ctaHint')}
             </Typography>
           </Box>
         </DialogContent>
@@ -219,7 +221,7 @@ export default function GeoIPWarningDialog() {
             }
             label={
               <Typography variant="caption" sx={{ color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary }}>
-                不再提示
+                {t('components.geoIpWarning.dontShowAgain')}
               </Typography>
             }
           />
@@ -235,7 +237,7 @@ export default function GeoIPWarningDialog() {
               }
             }}
           >
-            前往设置
+            {t('components.geoIpWarning.openSettings')}
           </Button>
         </DialogActions>
       </Dialog>

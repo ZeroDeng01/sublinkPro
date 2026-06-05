@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
@@ -41,8 +42,8 @@ import NodePreviewDetailsPanel from './NodePreviewDetailsPanel';
 import IPDetailsDialog from 'components/IPDetailsDialog';
 import Alert from '@mui/material/Alert';
 import { AlertTitle } from '@mui/material';
+import { formatDateTime } from 'i18n/locales';
 
-// 每次加载的卡片数量
 const BATCH_SIZE = 100;
 
 const buildStatCardSx = (theme, color, clickable = false) => ({
@@ -64,7 +65,6 @@ const buildStatCardSx = (theme, color, clickable = false) => ({
       }
 });
 
-// 格式化字节数
 const formatBytes = (bytes) => {
   if (bytes === 0) return '0 B';
   const k = 1024;
@@ -73,37 +73,26 @@ const formatBytes = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// 格式化到期时间
-const formatExpireDate = (timestamp) => {
+const formatExpireDate = (timestamp, language) => {
   if (!timestamp) return '-';
   const date = new Date(timestamp * 1000);
-  return date.toLocaleDateString('zh-CN');
+  return formatDateTime(date, language, { year: 'numeric', month: 'numeric', day: 'numeric' });
 };
 
-/**
- * 节点预览对话框组件
- * 展示应用过滤和重命名规则后的节点列表
- * 使用渐进式加载优化大量卡片的性能
- */
 export default function NodePreviewDialog({ open, loading, data, tagColorMap, onClose }) {
   const theme = useTheme();
+  const { t, i18n } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const contentRef = useRef(null);
 
-  // 搜索状态
   const [searchText, setSearchText] = useState('');
-  // 详情面板状态
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
-  // IP详情状态
   const [ipDialogOpen, setIpDialogOpen] = useState(false);
   const [selectedIP, setSelectedIP] = useState('');
-  // 渐进式加载状态
   const [displayCount, setDisplayCount] = useState(BATCH_SIZE);
-  // 统计面板展开状态
   const [statsExpanded, setStatsExpanded] = useState(true);
 
-  // 当对话框关闭或数据变化时重置显示数量
   useEffect(() => {
     if (!open) {
       setDisplayCount(BATCH_SIZE);
@@ -111,12 +100,10 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
     }
   }, [open]);
 
-  // 搜索变化时重置显示数量
   useEffect(() => {
     setDisplayCount(BATCH_SIZE);
   }, [searchText]);
 
-  // 过滤后的节点列表
   const filteredNodes = useMemo(() => {
     if (!data?.Nodes) return [];
     if (!searchText.trim()) return data.Nodes;
@@ -134,12 +121,10 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
     });
   }, [data?.Nodes, searchText]);
 
-  // 当前显示的节点（切片）
   const displayedNodes = useMemo(() => {
     return filteredNodes.slice(0, displayCount);
   }, [filteredNodes, displayCount]);
 
-  // 节点测试统计信息
   const nodeStats = useMemo(() => {
     if (!data?.Nodes || data.Nodes.length === 0) {
       return {
@@ -152,21 +137,18 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
 
     const nodes = data.Nodes;
 
-    // 延迟测试通过的节点（DelayStatus 不是 timeout/error 且 DelayTime > 0）
     const delayPassNodes = nodes.filter((node) => {
       const status = node.DelayStatus;
       const isError = status === 'timeout' || status === 'error' || status === 2 || status === 3;
       return !isError && node.DelayTime > 0;
     });
 
-    // 速度测试通过的节点（SpeedStatus 不是 timeout/error 且 Speed > 0）
     const speedPassNodes = nodes.filter((node) => {
       const status = node.SpeedStatus;
       const isError = status === 'timeout' || status === 'error' || status === 2 || status === 3;
       return !isError && node.Speed > 0;
     });
 
-    // 延迟最低的节点（需要速度 > 0，以保证节点可用）
     const validNodesForDelay = nodes.filter((node) => {
       const delayStatus = node.DelayStatus;
       const speedStatus = node.SpeedStatus;
@@ -180,7 +162,6 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
       lowestDelayNode = validNodesForDelay.reduce((min, node) => (node.DelayTime < min.DelayTime ? node : min));
     }
 
-    // 速度最高的节点
     let highestSpeedNode = null;
     if (speedPassNodes.length > 0) {
       highestSpeedNode = speedPassNodes.reduce((max, node) => (node.Speed > max.Speed ? node : max));
@@ -194,19 +175,15 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
     };
   }, [data?.Nodes]);
 
-  // 是否还有更多节点可加载
   const hasMore = displayCount < filteredNodes.length;
 
-  // 加载更多
   const loadMore = useCallback(() => {
     setDisplayCount((prev) => Math.min(prev + BATCH_SIZE, filteredNodes.length));
   }, [filteredNodes.length]);
 
-  // 滚动检测 - 无限滚动
   const handleScroll = useCallback(
     (e) => {
       const { scrollTop, scrollHeight, clientHeight } = e.target;
-      // 距离底部 200px 时触发加载
       if (scrollHeight - scrollTop - clientHeight < 200 && hasMore) {
         loadMore();
       }
@@ -214,25 +191,21 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
     [hasMore, loadMore]
   );
 
-  // 打开详情面板
   const handleViewDetails = (node) => {
     setSelectedNode(node);
     setDetailsOpen(true);
   };
 
-  // 关闭详情面板
   const handleCloseDetails = () => {
     setDetailsOpen(false);
     setSelectedNode(null);
   };
 
-  // 查看IP详情
   const handleViewIP = (ip) => {
     setSelectedIP(ip);
     setIpDialogOpen(true);
   };
 
-  // 骨架屏加载状态
   const renderSkeletons = () => (
     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 1.5 }}>
       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
@@ -249,15 +222,14 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
     </Box>
   );
 
-  // 空状态
   const renderEmpty = () => (
     <Box sx={{ textAlign: 'center', py: 8, px: 4 }}>
       <FilterListIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
       <Typography variant="h6" color="text.secondary" gutterBottom>
-        无匹配节点
+        {t('subscriptions.preview.emptyTitle')}
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        {searchText ? '没有找到匹配的节点，请尝试其他搜索条件' : '当前过滤条件下没有可用节点'}
+        {searchText ? t('subscriptions.preview.emptySearch') : t('subscriptions.preview.emptyFiltered')}
       </Typography>
     </Box>
   );
@@ -281,7 +253,6 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
           }
         }}
       >
-        {/* 标题栏 */}
         <DialogTitle
           sx={{
             display: 'flex',
@@ -295,19 +266,28 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
         >
           <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
             <Typography variant="h5" fontWeight="bold">
-              节点预览
+              {t('subscriptions.preview.title')}
               <Chip size="small" label="Beta" color="error" variant="outlined" sx={{ ml: 1 }} />
             </Typography>
             {!loading && data && (
               <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-                <Chip label={`共 ${data.TotalCount} 个`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
+                <Chip
+                  label={t('subscriptions.preview.totalCount', { count: data.TotalCount })}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontWeight: 600 }}
+                />
                 {data.TotalCount !== data.FilteredCount && (
                   <>
                     <ArrowForwardIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                    <Chip label={`过滤后 ${data.FilteredCount} 个`} size="small" color="primary" sx={{ fontWeight: 600 }} />
+                    <Chip
+                      label={t('subscriptions.preview.filteredCount', { count: data.FilteredCount })}
+                      size="small"
+                      color="primary"
+                      sx={{ fontWeight: 600 }}
+                    />
                   </>
                 )}
-                {/* 用量信息 */}
                 {data.UsageTotal > 0 && (
                   <Chip
                     label={`${formatBytes(data.UsageUpload + data.UsageDownload)} / ${formatBytes(data.UsageTotal)}`}
@@ -317,10 +297,11 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                     sx={{ fontWeight: 600 }}
                   />
                 )}
-                {/* 最近到期时间 */}
                 {data.UsageExpire > 0 && (
                   <Chip
-                    label={`最近到期时间: ${formatExpireDate(data.UsageExpire)}`}
+                    label={t('subscriptions.preview.latestExpireTime', {
+                      date: formatExpireDate(data.UsageExpire, i18n.resolvedLanguage || i18n.language)
+                    })}
                     size="small"
                     color="warning"
                     variant="outlined"
@@ -347,12 +328,10 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
             }}
           >
             <Alert severity="warning" variant="outlined">
-              <AlertTitle>温馨提示</AlertTitle>
-              本功能为测试版功能还不稳定。
-              预览数据仅供参考，以客户端获取到的实际结果为准，目前部分客户端不支持相关协议的节点，所以节点数量会有出入。
+              <AlertTitle>{t('subscriptions.preview.noticeTitle')}</AlertTitle>
+              {t('subscriptions.preview.noticeText')}
             </Alert>
           </Box>
-          {/* 搜索栏 */}
           <Box
             sx={{
               px: 3,
@@ -366,7 +345,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
             <TextField
               fullWidth
               size="small"
-              placeholder="搜索节点名称、协议、分组或标签..."
+              placeholder={t('subscriptions.preview.searchPlaceholder')}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               InputProps={{
@@ -380,12 +359,11 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
             />
             {searchText && filteredNodes.length !== data?.Nodes?.length && (
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                找到 {filteredNodes.length} 个匹配结果
+                {t('subscriptions.preview.searchResultCount', { count: filteredNodes.length })}
               </Typography>
             )}
           </Box>
 
-          {/* 节点测试统计信息卡片 */}
           {!loading && data?.Nodes && data.Nodes.length > 0 && (
             <Box
               sx={{
@@ -398,7 +376,6 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                 boxShadow: `inset 0 -1px 0 ${alpha(theme.palette.divider, 0.5)}`
               }}
             >
-              {/* 统计区域标题和展开/收起按钮 */}
               <Stack
                 direction="row"
                 alignItems="center"
@@ -414,10 +391,14 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                 <Stack direction="row" alignItems="center" spacing={1}>
                   <EmojiEventsIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
                   <Typography variant="subtitle2" fontWeight={600} color="text.primary">
-                    节点测试统计
+                    {t('subscriptions.preview.stats.title')}
                   </Typography>
                   <Chip
-                    label={`${nodeStats.delayPassCount + nodeStats.speedPassCount > 0 ? '有可用节点' : '暂无数据'}`}
+                    label={
+                      nodeStats.delayPassCount + nodeStats.speedPassCount > 0
+                        ? t('subscriptions.preview.stats.available')
+                        : t('subscriptions.preview.stats.noData')
+                    }
                     size="small"
                     color={nodeStats.delayPassCount + nodeStats.speedPassCount > 0 ? 'success' : 'default'}
                     variant="outlined"
@@ -429,17 +410,15 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                 </IconButton>
               </Stack>
 
-              {/* 统计卡片区域（可折叠） */}
               <Collapse in={statsExpanded} timeout="auto">
                 <Grid container spacing={isMobile ? 1 : 1.5}>
-                  {/* 延迟测试通过 */}
                   <Grid item xs={6} sm={3}>
                     <Card elevation={0} sx={buildStatCardSx(theme, theme.palette.success.main)}>
                       <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
                         <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
                           <AccessTimeIcon sx={{ fontSize: 16, color: theme.palette.success.main }} />
                           <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: isMobile ? 10 : 11 }}>
-                            延迟通过
+                            {t('subscriptions.preview.stats.delayPassed')}
                           </Typography>
                         </Stack>
                         <Typography variant={isMobile ? 'h6' : 'h5'} fontWeight={700} color="success.main">
@@ -452,14 +431,13 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                     </Card>
                   </Grid>
 
-                  {/* 速度测试通过 */}
                   <Grid item xs={6} sm={3}>
                     <Card elevation={0} sx={buildStatCardSx(theme, theme.palette.info.main)}>
                       <CardContent sx={{ p: isMobile ? 1.25 : 1.5, '&:last-child': { pb: isMobile ? 1.25 : 1.5 } }}>
                         <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
                           <SpeedIcon sx={{ fontSize: 16, color: theme.palette.info.main }} />
                           <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: isMobile ? 10 : 11 }}>
-                            速度通过
+                            {t('subscriptions.preview.stats.speedPassed')}
                           </Typography>
                         </Stack>
                         <Typography variant={isMobile ? 'h6' : 'h5'} fontWeight={700} color="info.main">
@@ -472,7 +450,6 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                     </Card>
                   </Grid>
 
-                  {/* 延迟最低节点 */}
                   <Grid item xs={6} sm={3}>
                     <Card
                       elevation={0}
@@ -483,7 +460,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                         <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
                           <AccessTimeIcon sx={{ fontSize: 16, color: theme.palette.warning.main }} />
                           <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: isMobile ? 10 : 11 }}>
-                            最低延迟
+                            {t('subscriptions.preview.stats.lowestDelay')}
                           </Typography>
                         </Stack>
                         {nodeStats.lowestDelayNode ? (
@@ -510,14 +487,13 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                           </>
                         ) : (
                           <Typography variant="body2" color="text.secondary" sx={{ fontSize: isMobile ? 11 : 12 }}>
-                            暂无数据
+                            {t('subscriptions.preview.stats.noData')}
                           </Typography>
                         )}
                       </CardContent>
                     </Card>
                   </Grid>
 
-                  {/* 速度最高节点 */}
                   <Grid item xs={6} sm={3}>
                     <Card
                       elevation={0}
@@ -528,7 +504,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                         <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
                           <SpeedIcon sx={{ fontSize: 16, color: theme.palette.primary.main }} />
                           <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: isMobile ? 10 : 11 }}>
-                            最高速度
+                            {t('subscriptions.preview.stats.highestSpeed')}
                           </Typography>
                         </Stack>
                         {nodeStats.highestSpeedNode ? (
@@ -554,7 +530,7 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                           </>
                         ) : (
                           <Typography variant="body2" color="text.secondary" sx={{ fontSize: isMobile ? 11 : 12 }}>
-                            暂无数据
+                            {t('subscriptions.preview.stats.noData')}
                           </Typography>
                         )}
                       </CardContent>
@@ -565,7 +541,6 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
             </Box>
           )}
 
-          {/* 可滚动内容区域 */}
           <Box
             ref={contentRef}
             onScroll={handleScroll}
@@ -588,26 +563,23 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
                   ))}
                 </Box>
 
-                {/* 加载更多按钮/提示 */}
                 {hasMore && (
                   <Box sx={{ textAlign: 'center', py: 2, mt: 1 }}>
                     <Button variant="outlined" size="small" onClick={loadMore} startIcon={<ExpandMoreIcon />} sx={{ borderRadius: 2 }}>
-                      加载更多 ({displayedNodes.length}/{filteredNodes.length})
+                      {t('subscriptions.preview.loadMore', { displayed: displayedNodes.length, total: filteredNodes.length })}
                     </Button>
                   </Box>
                 )}
 
-                {/* 已全部加载提示 */}
                 {!hasMore && filteredNodes.length > BATCH_SIZE && (
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', py: 2 }}>
-                    已加载全部 {filteredNodes.length} 个节点
+                    {t('subscriptions.preview.allLoaded', { count: filteredNodes.length })}
                   </Typography>
                 )}
               </>
             )}
           </Box>
 
-          {/* 底部提示 */}
           {!loading && filteredNodes.length > 0 && (
             <Box
               sx={{
@@ -622,14 +594,13 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
               }}
             >
               <Typography variant="caption" color="text.secondary">
-                显示 {displayedNodes.length}/{filteredNodes.length} 个节点 · 点击卡片查看详情
+                {t('subscriptions.preview.footerHint', { displayed: displayedNodes.length, total: filteredNodes.length })}
               </Typography>
             </Box>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* 节点详情面板 */}
       <NodePreviewDetailsPanel
         open={detailsOpen}
         node={selectedNode}
@@ -638,7 +609,6 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
         onViewIP={handleViewIP}
       />
 
-      {/* IP详情对话框 */}
       <IPDetailsDialog open={ipDialogOpen} onClose={() => setIpDialogOpen(false)} ip={selectedIP} />
     </>
   );

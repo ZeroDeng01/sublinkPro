@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -43,6 +44,7 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 // local components
 import NodeCheckProfileFormDialog from './NodeCheckProfileFormDialog';
 import { withAlpha } from 'utils/colorUtils';
+import { formatDateTime } from 'i18n/locales';
 import { getNodeCheckStrategyChipSx, getNodeCheckStrategyThemeTokens } from '../nodeCheckTheme';
 
 import { buildNodeCheckProfilePayload, formatUnlockProvidersSummary, setUnlockMeta } from '../utils';
@@ -52,6 +54,7 @@ import { buildNodeCheckProfilePayload, formatUnlockProvidersSummary, setUnlockMe
  */
 export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, tagOptions, onMessage }) {
   const theme = useTheme();
+  const { i18n, t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const themeTokens = getNodeCheckStrategyThemeTokens(theme, isDark);
@@ -82,11 +85,11 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
       setUnlockMeta(metaRes.data || {});
     } catch (error) {
       console.error('加载策略列表失败:', error);
-      onMessage?.('加载策略列表失败', 'error');
+      onMessage?.(t('nodes.nodeCheckProfiles.messages.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [onMessage]);
+  }, [onMessage, t]);
 
   useEffect(() => {
     if (open) {
@@ -99,25 +102,25 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
     try {
       await updateNodeCheckProfile(profile.id, buildNodeCheckProfilePayload(profile, { enabled: !profile.enabled }));
       loadProfiles();
-      onMessage?.(profile.enabled ? '已禁用定时检测' : '已启用定时检测');
+      onMessage?.(profile.enabled ? t('nodes.nodeCheckProfiles.messages.disabled') : t('nodes.nodeCheckProfiles.messages.enabled'));
     } catch (error) {
       console.error('切换状态失败:', error);
-      onMessage?.('操作失败', 'error');
+      onMessage?.(t('nodes.nodeCheckProfiles.messages.operationFailed'), 'error');
     }
   };
 
   // 删除策略
   const handleDelete = async (profile) => {
-    if (!window.confirm(`确定要删除策略 "${profile.name}" 吗？`)) {
+    if (!window.confirm(t('nodes.nodeCheckProfiles.confirmDelete', { name: profile.name }))) {
       return;
     }
     try {
       await deleteNodeCheckProfile(profile.id);
       loadProfiles();
-      onMessage?.('删除成功');
+      onMessage?.(t('nodes.nodeCheckProfiles.messages.deleteSuccess'));
     } catch (error) {
       console.error('删除失败:', error);
-      onMessage?.(error.message || '删除失败', 'error');
+      onMessage?.(error.message || t('nodes.nodeCheckProfiles.messages.deleteFailed'), 'error');
     }
   };
 
@@ -125,10 +128,10 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
   const handleRun = async (profile) => {
     try {
       await runNodeCheckWithProfile(profile.id);
-      onMessage?.('检测任务已启动');
+      onMessage?.(t('nodes.nodeCheckProfiles.messages.started'));
     } catch (error) {
       console.error('执行检测失败:', error);
-      onMessage?.(error.message || '执行失败', 'error');
+      onMessage?.(error.message || t('nodes.nodeCheckProfiles.messages.executeFailed'), 'error');
     }
   };
 
@@ -149,13 +152,12 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
     setFormOpen(false);
     setEditingProfile(null);
     loadProfiles();
-    onMessage?.(editingProfile ? '更新成功' : '创建成功');
+    onMessage?.(editingProfile ? t('nodes.nodeCheckProfiles.messages.updateSuccess') : t('nodes.nodeCheckProfiles.messages.createSuccess'));
   };
 
   const formatNextRunTime = (nextRunTime) => {
     if (!nextRunTime) return null;
-    const date = new Date(nextRunTime);
-    return date.toLocaleString('zh-CN', {
+    return formatDateTime(nextRunTime, i18n.resolvedLanguage || i18n.language, {
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
@@ -164,9 +166,8 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
   };
 
   const formatLastRunTime = (lastRunTime) => {
-    if (!lastRunTime) return '从未执行';
-    const date = new Date(lastRunTime);
-    return date.toLocaleString('zh-CN', {
+    if (!lastRunTime) return t('nodes.nodeCheckProfiles.neverRun');
+    return formatDateTime(lastRunTime, i18n.resolvedLanguage || i18n.language, {
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
@@ -205,11 +206,11 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SpeedIcon color="primary" />
-            <Typography variant="h6">检测策略管理</Typography>
+            <Typography variant="h6">{t('nodes.nodeCheckProfiles.title')}</Typography>
           </Box>
           <Stack direction="row" spacing={1}>
             <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
-              新建
+              {t('nodes.nodeCheckProfiles.new')}
             </Button>
             <IconButton
               onClick={onClose}
@@ -247,10 +248,10 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
             >
               <SpeedIcon sx={{ fontSize: 48, opacity: 0.3, mb: 2 }} />
               <Typography color="text.secondary" gutterBottom>
-                暂无检测策略
+                {t('nodes.nodeCheckProfiles.empty')}
               </Typography>
               <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAdd} sx={{ mt: 2 }}>
-                创建第一个策略
+                {t('nodes.nodeCheckProfiles.createFirst')}
               </Button>
             </Box>
           ) : (
@@ -289,20 +290,36 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                             {profile.name}
                           </Typography>
                           <Chip
-                            label={profile.mode === 'mihomo' ? '延迟+速度' : '仅延迟'}
+                            label={
+                              profile.mode === 'mihomo'
+                                ? t('nodes.nodeCheckProfiles.mode.full')
+                                : t('nodes.nodeCheckProfiles.mode.delayOnly')
+                            }
                             size="small"
                             sx={getNodeCheckStrategyChipSx(themeTokens, profile.mode === 'mihomo' ? 'success' : 'info')}
                           />
                           {profile.detectCountry && (
-                            <Chip label="国家" size="small" sx={getNodeCheckStrategyChipSx(themeTokens, 'neutral')} />
+                            <Chip
+                              label={t('nodes.nodeCheckProfiles.detect.country')}
+                              size="small"
+                              sx={getNodeCheckStrategyChipSx(themeTokens, 'neutral')}
+                            />
                           )}
                           {profile.detectQuality && (
-                            <Chip label="质量" size="small" sx={getNodeCheckStrategyChipSx(themeTokens, 'warning')} />
+                            <Chip
+                              label={t('nodes.nodeCheckProfiles.detect.quality')}
+                              size="small"
+                              sx={getNodeCheckStrategyChipSx(themeTokens, 'warning')}
+                            />
                           )}
                           {profile.detectUnlock && (
                             <Chip
                               icon={<LockOpenIcon sx={{ fontSize: '12px !important' }} />}
-                              label={`解锁${profile.unlockProviders?.length ? ` · ${formatUnlockProvidersSummary(profile.unlockProviders, 1)}` : ''}`}
+                              label={t('nodes.nodeCheckProfiles.detect.unlock', {
+                                suffix: profile.unlockProviders?.length
+                                  ? ` · ${formatUnlockProvidersSummary(profile.unlockProviders, 1)}`
+                                  : ''
+                              })}
                               size="small"
                               sx={getNodeCheckStrategyChipSx(themeTokens, 'info')}
                             />
@@ -315,12 +332,14 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Switch size="small" checked={profile.enabled} onChange={() => handleToggleEnabled(profile)} />
                             <Typography variant="caption" color="text.secondary">
-                              {profile.enabled ? '定时已启用' : '定时未启用'}
+                              {profile.enabled
+                                ? t('nodes.nodeCheckProfiles.schedule.enabled')
+                                : t('nodes.nodeCheckProfiles.schedule.disabled')}
                             </Typography>
                             {profile.enabled && profile.nextRunTime && (
                               <Chip
                                 icon={<ScheduleIcon sx={{ fontSize: '14px !important' }} />}
-                                label={`下次: ${formatNextRunTime(profile.nextRunTime)}`}
+                                label={t('nodes.nodeCheckProfiles.schedule.next', { time: formatNextRunTime(profile.nextRunTime) })}
                                 size="small"
                                 sx={{
                                   ...getNodeCheckStrategyChipSx(themeTokens, 'neutral'),
@@ -332,17 +351,22 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                           </Box>
                           {/* 上次执行时间 */}
                           <Typography variant="caption" color="text.secondary">
-                            上次执行: {formatLastRunTime(profile.lastRunTime)}
+                            {t('nodes.nodeCheckProfiles.lastRun', { time: formatLastRunTime(profile.lastRunTime) })}
                           </Typography>
                           {/* 检测范围 */}
                           {(profile.groups || profile.tags) && (
                             <Typography variant="caption" color="text.secondary">
-                              范围: {profile.groups || '全部分组'} {profile.tags ? `| 标签: ${profile.tags}` : ''}
+                              {t('nodes.nodeCheckProfiles.scope', {
+                                groups: profile.groups || t('nodes.nodeCheckProfiles.allGroups'),
+                                tags: profile.tags ? t('nodes.nodeCheckProfiles.scopeTags', { tags: profile.tags }) : ''
+                              })}
                             </Typography>
                           )}
                           {profile.detectUnlock && (
                             <Typography variant="caption" color="text.secondary">
-                              解锁 Provider: {formatUnlockProvidersSummary(profile.unlockProviders, 2)}
+                              {t('nodes.nodeCheckProfiles.unlockProviders', {
+                                providers: formatUnlockProvidersSummary(profile.unlockProviders, 2)
+                              })}
                             </Typography>
                           )}
                         </Stack>
@@ -350,7 +374,7 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                     />
                     <ListItemSecondaryAction>
                       <Stack direction="row" spacing={0.5}>
-                        <Tooltip title="立即执行">
+                        <Tooltip title={t('nodes.nodeCheckProfiles.runNow')}>
                           <IconButton
                             size="small"
                             onClick={() => handleRun(profile)}
@@ -362,7 +386,7 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                             <PlayArrowIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="编辑">
+                        <Tooltip title={t('nodes.nodeCheckProfiles.edit')}>
                           <IconButton
                             size="small"
                             onClick={() => handleEdit(profile)}
@@ -374,7 +398,7 @@ export default function NodeCheckProfilesDrawer({ open, onClose, groupOptions, t
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="删除">
+                        <Tooltip title={t('nodes.nodeCheckProfiles.delete')}>
                           <IconButton
                             size="small"
                             onClick={() => handleDelete(profile)}

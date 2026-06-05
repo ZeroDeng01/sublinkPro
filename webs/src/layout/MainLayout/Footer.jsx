@@ -1,4 +1,5 @@
 import { Link as RouterLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import Link from '@mui/material/Link';
@@ -9,6 +10,7 @@ import Typography from '@mui/material/Typography';
 import useConfig from 'hooks/useConfig';
 
 export default function Footer() {
+  const { t } = useTranslation();
   const { version } = useConfig();
 
   return (
@@ -43,7 +45,7 @@ export default function Footer() {
           variant="caption"
           color="text.primary"
         >
-          License
+          {t('footer.license')}
         </Link>
         <Link
           component={RouterLink}
@@ -53,7 +55,7 @@ export default function Footer() {
           variant="caption"
           color="text.primary"
         >
-          问题反馈
+          {t('footer.feedback')}
         </Link>
       </Stack>
     </Stack>

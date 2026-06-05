@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
@@ -46,6 +47,7 @@ import { confirmTotpSetup, disableTotp, getTotpStatus, regenerateRecoveryCodes, 
 
 export default function ProfileSettings({ showMessage, loading, setLoading }) {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const theme = useTheme();
   const fullScreenDialog = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -137,15 +139,15 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
     try {
       await navigator.clipboard.writeText(value);
-      showMessage(`${label}已复制`);
+      showMessage(t('settings.profilePanel.messages.copied', { label }));
     } catch {
-      showMessage(`复制${label}失败，请手动复制`, 'warning');
+      showMessage(t('settings.profilePanel.messages.copyFailed', { label }), 'warning');
     }
   };
 
   const startTotpSetup = async () => {
     if (!totpPassword.trim()) {
-      showMessage('请输入当前密码以开始设置 TOTP', 'warning');
+      showMessage(t('settings.profilePanel.messages.totpPasswordRequired'), 'warning');
       return;
     }
 
@@ -166,9 +168,12 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
       });
       setTotpCode('');
       setTotpReauthCode('');
-      showMessage('请使用身份验证器扫描二维码后输入验证码完成绑定');
+      showMessage(t('settings.profilePanel.messages.scanTotp'));
     } catch (error) {
-      showMessage('获取 TOTP 配置失败: ' + (error.response?.data?.message || error.message), 'error');
+      showMessage(
+        t('settings.profilePanel.messages.totpSetupFailed', { message: error.response?.data?.message || error.message }),
+        'error'
+      );
     } finally {
       setLoading(false);
     }
@@ -176,7 +181,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
   const handleConfirmTotpSetup = async () => {
     if (!totpCode.trim()) {
-      showMessage('请输入身份验证器中的 6 位验证码', 'warning');
+      showMessage(t('settings.profilePanel.messages.totpCodeRequired'), 'warning');
       return;
     }
 
@@ -197,10 +202,13 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
       }));
       setTotpEnrollment((prev) => ({ ...prev, recoveryCodes }));
       setTotpCode('');
-      showMessage('双重验证已启用，请立即妥善保存恢复码');
+      showMessage(t('settings.profilePanel.messages.totpEnabled'));
       fetchTotpStatus();
     } catch (error) {
-      showMessage('启用 TOTP 失败: ' + (error.response?.data?.message || error.message), 'error');
+      showMessage(
+        t('settings.profilePanel.messages.totpEnableFailed', { message: error.response?.data?.message || error.message }),
+        'error'
+      );
     } finally {
       setLoading(false);
     }
@@ -208,12 +216,12 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
   const handleDisableTotp = async () => {
     if (!disablePassword.trim()) {
-      showMessage('请输入当前密码', 'warning');
+      showMessage(t('settings.profilePanel.messages.currentPasswordRequired'), 'warning');
       return;
     }
 
     if (!disableVerificationCode.trim()) {
-      showMessage('请输入当前身份验证器验证码', 'warning');
+      showMessage(t('settings.profilePanel.messages.currentTotpRequired'), 'warning');
       return;
     }
 
@@ -229,10 +237,13 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
       setDisablePassword('');
       setTotpPassword('');
       setTotpReauthCode('');
-      showMessage('双重验证已关闭');
+      showMessage(t('settings.profilePanel.messages.totpDisabled'));
       fetchTotpStatus();
     } catch (error) {
-      showMessage('关闭 TOTP 失败: ' + (error.response?.data?.message || error.message), 'error');
+      showMessage(
+        t('settings.profilePanel.messages.totpDisableFailed', { message: error.response?.data?.message || error.message }),
+        'error'
+      );
     } finally {
       setLoading(false);
     }
@@ -240,12 +251,12 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
   const handleRegenerateRecoveryCodes = async () => {
     if (!disablePassword.trim()) {
-      showMessage('请输入当前密码以重新生成恢复码', 'warning');
+      showMessage(t('settings.profilePanel.messages.regenPasswordRequired'), 'warning');
       return;
     }
 
     if (!disableVerificationCode.trim()) {
-      showMessage('请输入当前身份验证器验证码以重新生成恢复码', 'warning');
+      showMessage(t('settings.profilePanel.messages.regenTotpRequired'), 'warning');
       return;
     }
 
@@ -259,9 +270,12 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
       setTotpStatus((prev) => ({ ...prev, recoveryCodes: codes, recoveryCodesRemaining: codes.length }));
       setTotpEnrollment((prev) => ({ ...prev, recoveryCodes: codes }));
       setDisableVerificationCode('');
-      showMessage('恢复码已重新生成，请保存新的恢复码');
+      showMessage(t('settings.profilePanel.messages.recoveryCodesRegenerated'));
     } catch (error) {
-      showMessage('重新生成恢复码失败: ' + (error.response?.data?.message || error.message), 'error');
+      showMessage(
+        t('settings.profilePanel.messages.regenerateFailed', { message: error.response?.data?.message || error.message }),
+        'error'
+      );
     } finally {
       setLoading(false);
     }
@@ -271,7 +285,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
   const handleUpdateProfile = async () => {
     if (!profileForm.username.trim()) {
-      showMessage('用户名不能为空', 'warning');
+      showMessage(t('settings.profilePanel.messages.usernameRequired'), 'warning');
       return;
     }
 
@@ -285,18 +299,21 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
         password: profilePassword,
         code: profileCode.trim()
       });
-      showMessage('资料更新成功');
+      showMessage(t('settings.profilePanel.messages.profileUpdated'));
       setProfilePassword('');
       setProfileCode('');
 
       if (usernameChanged) {
-        showMessage('用户名已修改，需要重新登录...', 'warning');
+        showMessage(t('settings.profilePanel.messages.usernameChanged'), 'warning');
         setTimeout(() => {
           logout();
         }, 2000);
       }
     } catch (error) {
-      showMessage('更新失败: ' + (error.response?.data?.message || '未知错误'), 'error');
+      showMessage(
+        t('settings.profilePanel.messages.updateFailed', { message: error.response?.data?.message || t('common.unknown') }),
+        'error'
+      );
     } finally {
       setLoading(false);
     }
@@ -304,19 +321,19 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
   const handleChangePassword = async () => {
     if (!passwordForm.oldPassword) {
-      showMessage('请输入旧密码', 'warning');
+      showMessage(t('settings.profilePanel.messages.oldPasswordRequired'), 'warning');
       return;
     }
     if (!passwordForm.newPassword) {
-      showMessage('请输入新密码', 'warning');
+      showMessage(t('settings.profilePanel.messages.newPasswordRequired'), 'warning');
       return;
     }
     if (passwordForm.newPassword.length < 6) {
-      showMessage('新密码长度至少6位', 'warning');
+      showMessage(t('settings.profilePanel.messages.passwordTooShort'), 'warning');
       return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      showMessage('两次输入的密码不一致', 'warning');
+      showMessage(t('settings.profilePanel.messages.passwordMismatch'), 'warning');
       return;
     }
 
@@ -330,9 +347,9 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
       });
 
       if (res.code !== 200) {
-        throw new Error(res.msg || '修改失败');
+        throw new Error(res.msg || t('settings.profilePanel.messages.changePasswordFailed'));
       }
-      showMessage('密码修改成功，即将重新登录...', 'success');
+      showMessage(t('settings.profilePanel.messages.passwordChanged'), 'success');
       resetPasswordForm();
       setPasswordDialogOpen(false);
       setTimeout(() => {
@@ -341,9 +358,9 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.message || '';
       if (errorMsg.includes('password') || errorMsg.includes('密码')) {
-        showMessage('旧密码不正确', 'error');
+        showMessage(t('settings.profilePanel.messages.oldPasswordIncorrect'), 'error');
       } else {
-        showMessage('修改失败: ' + errorMsg, 'error');
+        showMessage(t('settings.profilePanel.messages.changeFailed', { message: errorMsg }), 'error');
       }
     } finally {
       setLoading(false);
@@ -371,17 +388,19 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                 </Avatar>
                 <Stack spacing={0.75} sx={{ minWidth: 0 }}>
                   <Typography variant="h3" sx={{ wordBreak: 'break-word' }}>
-                    {user?.username || '用户'}
+                    {user?.username || t('settings.profilePanel.userFallback')}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    管理资料、双重验证与密码。
+                    {t('settings.profilePanel.heroDescription')}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
-                    当前昵称：{user?.nickname || '未设置'}
+                    {t('settings.profilePanel.currentNickname', { nickname: user?.nickname || t('settings.profilePanel.notSet') })}
                   </Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Chip
-                      label={totpStatus.enabled ? '双重验证已启用' : '双重验证未启用'}
+                      label={
+                        totpStatus.enabled ? t('settings.profilePanel.status.totpEnabled') : t('settings.profilePanel.status.totpDisabled')
+                      }
                       color={totpStatus.enabled ? 'success' : 'default'}
                       size="small"
                       variant="outlined"
@@ -399,7 +418,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                   onClick={() => setPasswordDialogOpen(true)}
                   sx={{ alignSelf: { xs: 'stretch', md: 'flex-end' } }}
                 >
-                  修改密码
+                  {t('settings.profilePanel.actions.changePassword')}
                 </Button>
               </Stack>
             </Grid>
@@ -408,7 +427,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
       </Card>
 
       <Card>
-        <CardHeader title="个人设置" subheader="更新资料并管理账号安全。" />
+        <CardHeader title={t('settings.profilePanel.title')} subheader={t('settings.profilePanel.subheader')} />
         <CardContent sx={{ pt: 0 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
             <Tabs
@@ -426,8 +445,8 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                 }
               }}
             >
-              <Tab icon={<SettingsSuggestIcon sx={{ mr: 1 }} />} iconPosition="start" label="基本资料" />
-              <Tab icon={<SecurityIcon sx={{ mr: 1 }} />} iconPosition="start" label="安全设置" />
+              <Tab icon={<SettingsSuggestIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.profilePanel.tabs.profile')} />
+              <Tab icon={<SecurityIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.profilePanel.tabs.security')} />
             </Tabs>
           </Box>
 
@@ -436,15 +455,15 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
               <Grid item xs={12} lg={7}>
                 <Card variant="outlined">
                   <CardHeader
-                    title="基础资料"
-                    subheader="更新用户名和昵称。保存时需要验证当前身份。"
+                    title={t('settings.profilePanel.basic.title')}
+                    subheader={t('settings.profilePanel.basic.subheader')}
                     avatar={<PersonIcon color="primary" />}
                   />
                   <CardContent>
                     <Stack spacing={2.5}>
                       <TextField
                         fullWidth
-                        label="用户名"
+                        label={t('settings.profilePanel.fields.username')}
                         value={profileForm.username}
                         onChange={(e) => setProfileForm({ ...profileForm, username: e.target.value })}
                         InputProps={{
@@ -457,38 +476,38 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                       />
                       <TextField
                         fullWidth
-                        label="昵称"
+                        label={t('settings.profilePanel.fields.nickname')}
                         value={profileForm.nickname}
                         onChange={(e) => setProfileForm({ ...profileForm, nickname: e.target.value })}
-                        placeholder="可选"
+                        placeholder={t('settings.profilePanel.fields.optional')}
                       />
 
                       <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
                         <Stack spacing={2}>
-                          <Typography variant="subtitle2">身份确认</Typography>
+                          <Typography variant="subtitle2">{t('settings.profilePanel.identity.title')}</Typography>
                           <TextField
                             fullWidth
                             type="password"
-                            label="当前密码"
+                            label={t('settings.profilePanel.fields.currentPassword')}
                             value={profilePassword}
                             onChange={(e) => setProfilePassword(e.target.value)}
                             autoComplete="current-password"
-                            helperText="保存时需要输入当前密码。"
+                            helperText={t('settings.profilePanel.fields.currentPasswordHelper')}
                           />
                           <TextField
                             fullWidth
-                            label="当前 TOTP 验证码（已启用时必填）"
+                            label={t('settings.profilePanel.fields.currentTotpOptional')}
                             value={profileCode}
                             onChange={(e) => setProfileCode(e.target.value.replace(/\s+/g, '').slice(0, 8))}
                             inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                            helperText="已启用双重验证时填写。"
+                            helperText={t('settings.profilePanel.fields.currentTotpHelper')}
                           />
                         </Stack>
                       </Box>
 
                       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                         <Button variant="contained" onClick={handleUpdateProfile} disabled={loading} startIcon={<SaveIcon />}>
-                          更新资料
+                          {t('settings.profilePanel.actions.updateProfile')}
                         </Button>
                       </Stack>
                     </Stack>
@@ -498,42 +517,49 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
               <Grid item xs={12} lg={5}>
                 <Stack spacing={2.5}>
-                  <Alert severity="info">修改用户名后需要重新登录。</Alert>
+                  <Alert severity="info">{t('settings.profilePanel.basic.usernameChangeNotice')}</Alert>
                   <Card variant="outlined">
-                    <CardHeader title="主题切换入口" subheader="全局主题模式已移动到右上角 Header，作为整个应用的主入口。" />
+                    <CardHeader title={t('settings.profilePanel.theme.title')} subheader={t('settings.profilePanel.theme.subheader')} />
                     <CardContent>
                       <Stack spacing={1}>
                         <Typography variant="body2" color="text.secondary">
-                          请使用右上角 Header 中的主题按钮切换浅色、深色或跟随系统模式。
+                          {t('settings.profilePanel.theme.description')}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          主题选择会自动保存，并在下次登录后继续使用。
+                          {t('settings.profilePanel.theme.helper')}
                         </Typography>
                       </Stack>
                     </CardContent>
                   </Card>
                   <Card variant="outlined">
-                    <CardHeader title="保存前确认" subheader="避免因安全校验导致保存失败。" />
+                    <CardHeader
+                      title={t('settings.profilePanel.saveCheck.title')}
+                      subheader={t('settings.profilePanel.saveCheck.subheader')}
+                    />
                     <CardContent>
                       <Stack spacing={1.5}>
                         <Box>
-                          <Typography variant="subtitle2">本次保存需要</Typography>
+                          <Typography variant="subtitle2">{t('settings.profilePanel.saveCheck.requiresTitle')}</Typography>
                           <Typography variant="body2" color="text.secondary">
-                            当前密码{totpStatus.enabled ? '，以及当前 TOTP 验证码。' : '。'}
+                            {totpStatus.enabled
+                              ? t('settings.profilePanel.saveCheck.requiresPasswordAndTotp')
+                              : t('settings.profilePanel.saveCheck.requiresPassword')}
                           </Typography>
                         </Box>
                         <Divider />
                         <Box>
-                          <Typography variant="subtitle2">修改用户名时</Typography>
+                          <Typography variant="subtitle2">{t('settings.profilePanel.saveCheck.usernameTitle')}</Typography>
                           <Typography variant="body2" color="text.secondary">
-                            保存成功后会自动退出登录，请使用新用户名重新登录。
+                            {t('settings.profilePanel.saveCheck.usernameDescription')}
                           </Typography>
                         </Box>
                         <Divider />
                         <Box>
-                          <Typography variant="subtitle2">当前安全状态</Typography>
+                          <Typography variant="subtitle2">{t('settings.profilePanel.saveCheck.securityTitle')}</Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {totpStatus.enabled ? '双重验证已启用。' : '尚未启用双重验证。'}
+                            {totpStatus.enabled
+                              ? t('settings.profilePanel.saveCheck.securityEnabled')
+                              : t('settings.profilePanel.saveCheck.securityDisabled')}
                           </Typography>
                         </Box>
                       </Stack>
@@ -550,12 +576,12 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                 <Stack spacing={2.5}>
                   <Card variant="outlined">
                     <CardHeader
-                      title="安全总览"
-                      subheader="查看双重验证状态与恢复方式。"
+                      title={t('settings.profilePanel.security.title')}
+                      subheader={t('settings.profilePanel.security.subheader')}
                       avatar={<ShieldOutlinedIcon color="primary" />}
                       action={
                         <Chip
-                          label={totpStatus.enabled ? '已启用' : '未启用'}
+                          label={totpStatus.enabled ? t('common.enabled') : t('common.disabled')}
                           color={totpStatus.enabled ? 'success' : 'default'}
                           size="small"
                           variant="outlined"
@@ -566,8 +592,8 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                       <Stack spacing={2}>
                         <Alert severity={totpStatus.enabled ? 'success' : 'info'}>
                           {totpStatus.enabled
-                            ? '登录时需要身份验证器验证码；设备不可用时可改用恢复码。'
-                            : '启用后，登录将增加一步验证码校验。完成绑定后请立即保存恢复码。'}
+                            ? t('settings.profilePanel.security.enabledAlert')
+                            : t('settings.profilePanel.security.disabledAlert')}
                         </Alert>
                       </Stack>
                     </CardContent>
@@ -575,23 +601,26 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
                   {!totpStatus.enabled && !totpEnrollment.qrCodeData && (
                     <Card variant="outlined">
-                      <CardHeader title="启用双重验证" subheader="先验证当前密码，再绑定身份验证器。" />
+                      <CardHeader
+                        title={t('settings.profilePanel.totpSetup.title')}
+                        subheader={t('settings.profilePanel.totpSetup.subheader')}
+                      />
                       <CardContent>
                         <Stack spacing={2}>
                           <Typography variant="body2" color="text.secondary">
-                            支持常见的 TOTP 身份验证器应用。
+                            {t('settings.profilePanel.totpSetup.description')}
                           </Typography>
                           <TextField
                             fullWidth
                             type="password"
-                            label="当前密码"
+                            label={t('settings.profilePanel.fields.currentPassword')}
                             value={totpPassword}
                             onChange={(e) => setTotpPassword(e.target.value)}
                             autoComplete="current-password"
-                            helperText="开始设置前需要验证当前密码。"
+                            helperText={t('settings.profilePanel.fields.startSetupPasswordHelper')}
                           />
                           <Button variant="contained" onClick={startTotpSetup} disabled={loading} sx={{ alignSelf: 'flex-start' }}>
-                            开始设置 TOTP
+                            {t('settings.profilePanel.actions.startTotpSetup')}
                           </Button>
                         </Stack>
                       </CardContent>
@@ -600,25 +629,28 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
                   {totpStatus.enabled && (
                     <Card variant="outlined">
-                      <CardHeader title="敏感操作验证" subheader="关闭双重验证或重置恢复码前，请先完成验证。" />
+                      <CardHeader
+                        title={t('settings.profilePanel.sensitive.title')}
+                        subheader={t('settings.profilePanel.sensitive.subheader')}
+                      />
                       <CardContent>
                         <Stack spacing={2}>
                           <TextField
                             fullWidth
                             type="password"
-                            label="当前密码"
+                            label={t('settings.profilePanel.fields.currentPassword')}
                             value={disablePassword}
                             onChange={(e) => setDisablePassword(e.target.value)}
                             autoComplete="current-password"
-                            helperText="继续前需要输入当前密码。"
+                            helperText={t('settings.profilePanel.fields.continuePasswordHelper')}
                           />
                           <TextField
                             fullWidth
-                            label="当前验证码"
+                            label={t('settings.profilePanel.fields.currentCode')}
                             value={disableVerificationCode}
                             onChange={(e) => setDisableVerificationCode(e.target.value.replace(/\s+/g, '').slice(0, 8))}
                             inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                            helperText="输入身份验证器当前显示的验证码。"
+                            helperText={t('settings.profilePanel.fields.authenticatorCodeHelper')}
                           />
                           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                             <Button
@@ -627,10 +659,10 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                               onClick={handleRegenerateRecoveryCodes}
                               disabled={loading}
                             >
-                              重新生成恢复码
+                              {t('settings.profilePanel.actions.regenerateRecoveryCodes')}
                             </Button>
                             <Button color="error" variant="outlined" onClick={handleDisableTotp} disabled={loading}>
-                              关闭双重验证
+                              {t('settings.profilePanel.actions.disableTotp')}
                             </Button>
                           </Stack>
                         </Stack>
@@ -644,7 +676,10 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                 <Stack spacing={2.5}>
                   {!totpStatus.enabled && totpEnrollment.qrCodeData && (
                     <Card variant="outlined">
-                      <CardHeader title="完成 TOTP 绑定" subheader="扫描二维码后，输入验证码完成启用。" />
+                      <CardHeader
+                        title={t('settings.profilePanel.totpEnrollment.title')}
+                        subheader={t('settings.profilePanel.totpEnrollment.subheader')}
+                      />
                       <CardContent>
                         <Stack spacing={2.5}>
                           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems={{ xs: 'stretch', md: 'flex-start' }}>
@@ -663,39 +698,44 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                             </Box>
 
                             <Stack spacing={2} sx={{ flex: 1, minWidth: 0 }}>
-                              <Alert severity="info">使用身份验证器扫描二维码；无法扫描时可改为手动输入密钥。</Alert>
+                              <Alert severity="info">{t('settings.profilePanel.totpEnrollment.scanHint')}</Alert>
                               <TextField
                                 fullWidth
-                                label="手动输入密钥"
+                                label={t('settings.profilePanel.fields.manualEntryKey')}
                                 value={totpEnrollment.manualEntryKey}
                                 InputProps={{
                                   readOnly: true,
                                   endAdornment: (
                                     <InputAdornment position="end">
-                                      <Tooltip title="复制密钥">
-                                        <IconButton onClick={() => handleCopy(totpEnrollment.manualEntryKey, '密钥')} edge="end">
+                                      <Tooltip title={t('settings.profilePanel.actions.copySecret')}>
+                                        <IconButton
+                                          onClick={() =>
+                                            handleCopy(totpEnrollment.manualEntryKey, t('settings.profilePanel.labels.secret'))
+                                          }
+                                          edge="end"
+                                        >
                                           <ContentCopyIcon />
                                         </IconButton>
                                       </Tooltip>
                                     </InputAdornment>
                                   )
                                 }}
-                                helperText="扫码失败时，可复制此密钥手动添加账户。"
+                                helperText={t('settings.profilePanel.fields.manualEntryKeyHelper')}
                               />
                               <TextField
                                 fullWidth
-                                label="验证码"
+                                label={t('settings.profilePanel.fields.code')}
                                 value={totpCode}
                                 onChange={(e) => setTotpCode(e.target.value.replace(/\s+/g, '').slice(0, 8))}
                                 inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                                helperText="输入身份验证器当前显示的验证码。"
+                                helperText={t('settings.profilePanel.fields.authenticatorCodeHelper')}
                               />
                               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                                 <Button variant="contained" onClick={handleConfirmTotpSetup} disabled={loading}>
-                                  确认启用
+                                  {t('settings.profilePanel.actions.confirmEnable')}
                                 </Button>
                                 <Button variant="outlined" onClick={resetTotpEnrollment} disabled={loading}>
-                                  取消设置
+                                  {t('settings.profilePanel.actions.cancelSetup')}
                                 </Button>
                               </Stack>
                             </Stack>
@@ -707,27 +747,30 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
                   {totpStatus.enabled && (
                     <Card variant="outlined">
-                      <CardHeader title="恢复码" subheader="每个恢复码只能使用一次，请及时离线保存。" />
+                      <CardHeader
+                        title={t('settings.profilePanel.recovery.title')}
+                        subheader={t('settings.profilePanel.recovery.subheader')}
+                      />
                       <CardContent>
                         <Stack spacing={2}>
-                          <Alert severity="warning">
-                            关闭双重验证或重新生成恢复码前，请确认仍可访问当前身份验证器，或已保存可用恢复码。
-                          </Alert>
+                          <Alert severity="warning">{t('settings.profilePanel.recovery.warning')}</Alert>
 
                           {visibleRecoveryCodes?.length > 0 ? (
                             <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
                               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" sx={{ mb: 1.5 }}>
-                                <Typography variant="subtitle1">恢复码列表</Typography>
+                                <Typography variant="subtitle1">{t('settings.profilePanel.recovery.listTitle')}</Typography>
                                 <Button
                                   variant="text"
                                   startIcon={<ContentCopyIcon />}
-                                  onClick={() => handleCopy(visibleRecoveryCodes.join('\n'), '恢复码')}
+                                  onClick={() =>
+                                    handleCopy(visibleRecoveryCodes.join('\n'), t('settings.profilePanel.labels.recoveryCodes'))
+                                  }
                                 >
-                                  复制全部
+                                  {t('settings.profilePanel.actions.copyAll')}
                                 </Button>
                               </Stack>
                               <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
-                                每个恢复码只能使用一次。请离线保存，不要与账号密码放在同一处。
+                                {t('settings.profilePanel.recovery.helper')}
                               </Typography>
                               <List dense disablePadding>
                                 {visibleRecoveryCodes.map((code) => (
@@ -735,7 +778,10 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                                     key={code}
                                     disableGutters
                                     secondaryAction={
-                                      <IconButton edge="end" onClick={() => handleCopy(code, '恢复码')}>
+                                      <IconButton
+                                        edge="end"
+                                        onClick={() => handleCopy(code, t('settings.profilePanel.labels.recoveryCode'))}
+                                      >
                                         <ContentCopyIcon fontSize="small" />
                                       </IconButton>
                                     }
@@ -746,7 +792,7 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                               </List>
                             </Box>
                           ) : (
-                            <Alert severity="info">启用后生成的恢复码会展示在这里，请及时保存。</Alert>
+                            <Alert severity="info">{t('settings.profilePanel.recovery.empty')}</Alert>
                           )}
                         </Stack>
                       </CardContent>
@@ -755,14 +801,14 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
 
                   {!totpStatus.enabled && !totpEnrollment.qrCodeData && (
                     <Card variant="outlined">
-                      <CardHeader title="启用建议" />
+                      <CardHeader title={t('settings.profilePanel.recommendation.title')} />
                       <CardContent>
                         <Stack spacing={1.5}>
                           <Typography variant="body2" color="text.secondary">
-                            双重验证会在密码之外增加一步验证码校验，更适合保护管理后台与安全敏感操作。
+                            {t('settings.profilePanel.recommendation.description')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            启用后请立即保存恢复码，并确认常用设备上的身份验证器可正常使用。
+                            {t('settings.profilePanel.recommendation.helper')}
                           </Typography>
                         </Stack>
                       </CardContent>
@@ -782,14 +828,14 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
         fullWidth
         fullScreen={fullScreenDialog}
       >
-        <DialogTitle>修改密码</DialogTitle>
+        <DialogTitle>{t('settings.profilePanel.passwordDialog.title')}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2.5} sx={{ pt: 0.5 }}>
-            <Alert severity="info">修改成功后将重新登录；已启用双重验证时，还需要输入当前验证码。</Alert>
+            <Alert severity="info">{t('settings.profilePanel.passwordDialog.notice')}</Alert>
 
             <TextField
               fullWidth
-              label="旧密码"
+              label={t('settings.profilePanel.fields.oldPassword')}
               type={showOldPassword ? 'text' : 'password'}
               value={passwordForm.oldPassword}
               onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
@@ -800,7 +846,11 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                     <IconButton
                       onClick={() => setShowOldPassword(!showOldPassword)}
                       edge="end"
-                      aria-label={showOldPassword ? '隐藏旧密码' : '显示旧密码'}
+                      aria-label={
+                        showOldPassword
+                          ? t('settings.profilePanel.passwordDialog.hideOld')
+                          : t('settings.profilePanel.passwordDialog.showOld')
+                      }
                     >
                       {showOldPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -810,19 +860,23 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
             />
             <TextField
               fullWidth
-              label="新密码"
+              label={t('settings.profilePanel.fields.newPassword')}
               type={showNewPassword ? 'text' : 'password'}
               value={passwordForm.newPassword}
               onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
               autoComplete="new-password"
-              helperText="密码长度至少6位"
+              helperText={t('settings.profilePanel.fields.newPasswordHelper')}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
                       onClick={() => setShowNewPassword(!showNewPassword)}
                       edge="end"
-                      aria-label={showNewPassword ? '隐藏新密码' : '显示新密码'}
+                      aria-label={
+                        showNewPassword
+                          ? t('settings.profilePanel.passwordDialog.hideNew')
+                          : t('settings.profilePanel.passwordDialog.showNew')
+                      }
                     >
                       {showNewPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -832,14 +886,16 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
             />
             <TextField
               fullWidth
-              label="确认新密码"
+              label={t('settings.profilePanel.fields.confirmPassword')}
               type={showConfirmPassword ? 'text' : 'password'}
               value={passwordForm.confirmPassword}
               onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
               autoComplete="new-password"
               error={passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword}
               helperText={
-                passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword ? '两次输入的密码不一致' : ' '
+                passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword
+                  ? t('settings.profilePanel.messages.passwordMismatch')
+                  : ' '
               }
               InputProps={{
                 endAdornment: (
@@ -847,7 +903,11 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
                     <IconButton
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       edge="end"
-                      aria-label={showConfirmPassword ? '隐藏确认密码' : '显示确认密码'}
+                      aria-label={
+                        showConfirmPassword
+                          ? t('settings.profilePanel.passwordDialog.hideConfirm')
+                          : t('settings.profilePanel.passwordDialog.showConfirm')
+                      }
                     >
                       {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -857,23 +917,23 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
             />
             <TextField
               fullWidth
-              label="当前 TOTP 验证码（已启用时必填）"
+              label={t('settings.profilePanel.fields.currentTotpOptional')}
               value={passwordForm.code}
               onChange={(e) => setPasswordForm({ ...passwordForm, code: e.target.value.replace(/\s+/g, '').slice(0, 8) })}
               inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-              helperText="已启用双重验证时填写。"
+              helperText={t('settings.profilePanel.fields.currentTotpHelper')}
             />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={() => setPasswordDialogOpen(false)} color="inherit" disabled={loading}>
-            取消
+            {t('common.cancel')}
           </Button>
           <Button onClick={resetPasswordForm} variant="outlined" disabled={loading}>
-            重置
+            {t('common.reset')}
           </Button>
           <Button variant="contained" onClick={handleChangePassword} disabled={loading} startIcon={<LockIcon />}>
-            修改密码
+            {t('settings.profilePanel.actions.changePassword')}
           </Button>
         </DialogActions>
       </Dialog>

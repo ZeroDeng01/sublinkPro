@@ -1,6 +1,5 @@
 import PropTypes from 'prop-types';
 
-// material-ui
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -9,31 +8,30 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 删除机场确认对话框
  */
 export default function DeleteAirportDialog({ open, airport, withNodes, setWithNodes, onClose, onConfirm }) {
+  const { t } = useTranslation();
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm">
-      <DialogTitle>确认删除</DialogTitle>
+      <DialogTitle>{t('airports.deleteDialog.title')}</DialogTitle>
       <DialogContent>
-        <DialogContentText>
-          确定要删除机场 <strong>&quot;{airport?.name}&quot;</strong> 吗？
-        </DialogContentText>
+        <DialogContentText>{t('airports.deleteDialog.confirm', { name: airport?.name || t('common.unknown') })}</DialogContentText>
         <FormControlLabel
           control={<Switch checked={withNodes} onChange={(e) => setWithNodes(e.target.checked)} />}
-          label="同时删除关联节点"
+          label={t('airports.deleteDialog.withNodes')}
           sx={{ mt: 2 }}
         />
-        {withNodes && (
-          <DialogContentText sx={{ mt: 1, color: 'error.main' }}>⚠️ 将同时删除此机场导入的所有节点，此操作不可恢复！</DialogContentText>
-        )}
+        {withNodes && <DialogContentText sx={{ mt: 1, color: 'error.main' }}>{t('airports.deleteDialog.warning')}</DialogContentText>}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>取消</Button>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button variant="contained" color="error" onClick={onConfirm}>
-          确认删除
+          {t('airports.deleteDialog.confirmAction')}
         </Button>
       </DialogActions>
     </Dialog>

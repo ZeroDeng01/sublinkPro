@@ -5,6 +5,7 @@ import { useTheme } from '@mui/material/styles';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { useTranslation } from 'react-i18next';
 
 // components
 import NodeCard from './NodeCard';
@@ -15,6 +16,7 @@ import { getNodeThemeTokens } from '../nodeTheme';
  */
 export default function NodeMobileList({ nodes, page, rowsPerPage, selectedNodes, tagColorMap, protocolMeta, onSelect, onViewDetails }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
   const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
@@ -24,7 +26,7 @@ export default function NodeMobileList({ nodes, page, rowsPerPage, selectedNodes
     <Stack spacing={2}>
       {nodes.length === 0 && (
         <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3, color: tokens.secondaryText }}>
-          暂无节点
+          {t('nodes.mobile.empty')}
         </Typography>
       )}
       {nodes.map((node) => (

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Alert from '@mui/material/Alert';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -50,6 +51,7 @@ const formatAIUsage = (usage) => {
 };
 
 export default function AIAssistantSettings({ showMessage, loading, setLoading }) {
+  const { t } = useTranslation();
   const [aiSettingsLoading, setAISettingsLoading] = useState(false);
   const [aiAction, setAIAction] = useState('');
   const [aiHeadersText, setAIHeadersText] = useState('{}');
@@ -105,11 +107,11 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
       setAITestError('');
     } catch (error) {
       console.error('获取 AI 设置失败:', error);
-      showMessage('获取 AI 设置失败: ' + (error.response?.data?.message || error.message), 'error');
+      showMessage(t('settings.aiAssistantPanel.messages.loadFailed', { message: error.response?.data?.message || error.message }), 'error');
     } finally {
       setAISettingsLoading(false);
     }
-  }, [applyAISettingsData, showMessage]);
+  }, [applyAISettingsData, showMessage, t]);
 
   useEffect(() => {
     fetchAISettings();
@@ -125,11 +127,11 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
     try {
       parsed = JSON.parse(trimmed);
     } catch {
-      throw new Error('额外请求头必须为 JSON 对象，例如 {"HTTP-Referer":"https://example.com"}');
+      throw new Error(t('settings.aiAssistantPanel.messages.extraHeadersExample'));
     }
 
     if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
-      throw new Error('额外请求头必须为 JSON 对象');
+      throw new Error(t('settings.aiAssistantPanel.messages.extraHeadersObject'));
     }
 
     return Object.entries(parsed).reduce((acc, [key, value]) => {
@@ -153,11 +155,11 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
 
   const handleFetchAIModels = async () => {
     if (!aiForm.baseUrl.trim() && !aiForm.configured) {
-      showMessage('请先填写 AI Base URL', 'warning');
+      showMessage(t('settings.aiAssistantPanel.messages.baseUrlRequired'), 'warning');
       return;
     }
     if (!aiForm.apiKey.trim() && !aiForm.hasKey) {
-      showMessage('请先填写 API Key', 'warning');
+      showMessage(t('settings.aiAssistantPanel.messages.apiKeyRequired'), 'warning');
       return;
     }
 
@@ -176,9 +178,15 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
       const models = response.data?.models || [];
       setAIModelOptions(dedupeModelOptions(models, aiForm.model));
       setAIModelsFetched(true);
-      showMessage(models.length > 0 ? '模型列表获取成功' : '未发现可用模型，请手动填写模型名称', models.length > 0 ? 'success' : 'info');
+      showMessage(
+        models.length > 0 ? t('settings.aiAssistantPanel.messages.modelsLoaded') : t('settings.aiAssistantPanel.messages.noModels'),
+        models.length > 0 ? 'success' : 'info'
+      );
     } catch (error) {
-      showMessage('获取模型列表失败: ' + (error.response?.data?.message || error.message), 'error');
+      showMessage(
+        t('settings.aiAssistantPanel.messages.modelsFailed', { message: error.response?.data?.message || error.message }),
+        'error'
+      );
     } finally {
       setLoading(false);
       setAIAction('');
@@ -187,13 +195,13 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
 
   const validateAISettingsPayload = (payload) => {
     if (payload.enabled && !payload.baseUrl) {
-      throw new Error('启用 AI 助手时必须填写 AI Base URL');
+      throw new Error(t('settings.aiAssistantPanel.messages.enabledBaseUrlRequired'));
     }
     if (payload.enabled && !payload.model) {
-      throw new Error('启用 AI 助手时必须填写模型名称');
+      throw new Error(t('settings.aiAssistantPanel.messages.enabledModelRequired'));
     }
     if (payload.enabled && !payload.apiKey && !aiForm.hasKey) {
-      throw new Error('启用 AI 助手时必须提供 API Key');
+      throw new Error(t('settings.aiAssistantPanel.messages.enabledApiKeyRequired'));
     }
   };
 
@@ -214,12 +222,12 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
     try {
       const response = await testAISettings(payload);
       setAITestResult(response.data || null);
-      showMessage('AI 连接测试成功');
+      showMessage(t('settings.aiAssistantPanel.messages.testSuccess'));
     } catch (error) {
       setAITestResult(null);
       const message = error.response?.data?.message || error.message;
       setAITestError(message);
-      showMessage('连接测试失败: ' + message, 'error');
+      showMessage(t('settings.aiAssistantPanel.messages.testFailed', { message }), 'error');
     } finally {
       setLoading(false);
       setAIAction('');
@@ -252,9 +260,9 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
     try {
       const response = await updateAISettings(payload);
       applyAISettingsData(response.data || {});
-      showMessage('AI 助手设置保存成功');
+      showMessage(t('settings.aiAssistantPanel.messages.saveSuccess'));
     } catch (error) {
-      showMessage('保存 AI 设置失败: ' + (error.response?.data?.message || error.message), 'error');
+      showMessage(t('settings.aiAssistantPanel.messages.saveFailed', { message: error.response?.data?.message || error.message }), 'error');
     } finally {
       setLoading(false);
       setAIAction('');
@@ -282,14 +290,14 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
   return (
     <Card variant="outlined">
       <CardHeader
-        title="AI 助手设置"
-        subheader="配置模板编辑器使用的系统级 AI 助手。"
+        title={t('settings.aiAssistantPanel.title')}
+        subheader={t('settings.aiAssistantPanel.subheader')}
         avatar={<PsychologyIcon color="primary" />}
         action={
           <FormControlLabel
             sx={{ mr: 0 }}
             control={<Switch checked={aiForm.enabled} onChange={(e) => setAIField('enabled', e.target.checked)} />}
-            label={aiForm.enabled ? '启用' : '禁用'}
+            label={aiForm.enabled ? t('common.enabled') : t('common.disabled')}
           />
         }
       />
@@ -300,14 +308,14 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
           </Box>
         ) : (
           <Stack spacing={2.5}>
-            <Alert severity="info">模板编辑器中的 AI 助手会使用这里的系统级配置。当前仅支持提供“/responses endpoint”的 AI 服务。</Alert>
+            <Alert severity="info">{t('settings.aiAssistantPanel.alerts.systemConfig')}</Alert>
 
             <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
               <Stack spacing={2}>
                 <Box>
-                  <Typography variant="subtitle2">启用系统 AI 助手</Typography>
+                  <Typography variant="subtitle2">{t('settings.aiAssistantPanel.enableTitle')}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    当前接口类型：Responses API（仅支持 `/responses` endpoint）。
+                    {t('settings.aiAssistantPanel.providerType')}
                   </Typography>
                 </Box>
 
@@ -316,13 +324,23 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                     size="small"
                     color={aiForm.configured ? 'info' : 'default'}
                     variant={aiForm.configured ? 'filled' : 'outlined'}
-                    label={aiForm.configured ? '已保存连接参数' : '尚未完成配置'}
+                    label={
+                      aiForm.configured
+                        ? t('settings.aiAssistantPanel.status.configured')
+                        : t('settings.aiAssistantPanel.status.notConfigured')
+                    }
                   />
                   <Chip
                     size="small"
                     color={aiForm.hasKey ? 'success' : 'default'}
                     variant="outlined"
-                    label={aiForm.hasKey ? `已保存 API Key：${aiForm.maskedKey || '已隐藏'}` : '未保存 API Key'}
+                    label={
+                      aiForm.hasKey
+                        ? t('settings.aiAssistantPanel.status.savedApiKey', {
+                            key: aiForm.maskedKey || t('settings.aiAssistantPanel.status.hidden')
+                          })
+                        : t('settings.aiAssistantPanel.status.noApiKey')
+                    }
                   />
                 </Stack>
 
@@ -332,13 +350,13 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                   value={aiForm.baseUrl}
                   onChange={(e) => setAIField('baseUrl', e.target.value)}
                   placeholder="https://api.openai.com/v1"
-                  helperText="需为可用的 Responses API 根地址，并且服务端必须支持 `/responses` endpoint。"
+                  helperText={t('settings.aiAssistantPanel.fields.baseUrlHelper')}
                 />
 
                 <TextField
                   fullWidth
                   type="password"
-                  label={aiForm.hasKey ? '替换 API Key（留空则保留已保存密钥）' : 'API Key'}
+                  label={aiForm.hasKey ? t('settings.aiAssistantPanel.fields.replaceApiKey') : 'API Key'}
                   value={aiForm.apiKey}
                   onChange={(e) => setAIField('apiKey', e.target.value)}
                   autoComplete="off"
@@ -355,12 +373,12 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                       renderInput={(params) => (
                         <TextField
                           {...params}
-                          label="模型"
+                          label={t('settings.aiAssistantPanel.fields.model')}
                           placeholder="gpt-4.1-mini"
                           helperText={
                             aiModelsFetched
-                              ? '可从已获取模型中选择，也可手动输入。'
-                              : '可手动输入，或先填写 Base URL / API Key 后获取模型列表。'
+                              ? t('settings.aiAssistantPanel.fields.modelHelperFetched')
+                              : t('settings.aiAssistantPanel.fields.modelHelper')
                           }
                         />
                       )}
@@ -377,10 +395,10 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                         onClick={(event) => runWithoutPageJump(event, handleFetchAIModels)}
                         sx={modelButtonSx}
                       >
-                        获取模型
+                        {t('settings.aiAssistantPanel.actions.fetchModels')}
                       </Button>
                       <Typography variant="caption" color="text.secondary" sx={{ px: 1.75, lineHeight: 1.66 }}>
-                        使用当前 Base URL / API Key 拉取可选模型。
+                        {t('settings.aiAssistantPanel.actions.fetchModelsHelper')}
                       </Typography>
                     </Stack>
                   </Grid>
@@ -401,7 +419,7 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                     value={aiForm.maxTokens}
                     onChange={(e) => setAIField('maxTokens', e.target.value)}
                     slotProps={{ htmlInput: { min: 0, step: 100 } }}
-                    helperText="填 0 使用服务端默认值（400000）。"
+                    helperText={t('settings.aiAssistantPanel.fields.maxTokensHelper')}
                     sx={{ width: { xs: '100%', sm: 280 } }}
                   />
                 </Stack>
@@ -410,10 +428,10 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                   fullWidth
                   multiline
                   minRows={3}
-                  label="额外请求头（JSON）"
+                  label={t('settings.aiAssistantPanel.fields.extraHeaders')}
                   value={aiHeadersText}
                   onChange={(e) => setAIHeadersText(e.target.value)}
-                  helperText='例如：{"HTTP-Referer":"https://example.com"}'
+                  helperText={t('settings.aiAssistantPanel.fields.extraHeadersHelper')}
                 />
               </Stack>
             </Box>
@@ -422,21 +440,21 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
               <Stack spacing={1.5}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <ScienceIcon color="primary" fontSize="small" />
-                  <Typography variant="subtitle2">连接测试结果</Typography>
+                  <Typography variant="subtitle2">{t('settings.aiAssistantPanel.testResult.title')}</Typography>
                 </Stack>
 
                 {loading && aiAction === 'test' ? (
                   <Alert severity="info" icon={<CircularProgress size={18} />}>
-                    正在连接 AI 服务并发送测试请求...
+                    {t('settings.aiAssistantPanel.testResult.testing')}
                   </Alert>
                 ) : aiTestError ? (
                   <Alert severity="error">{aiTestError}</Alert>
                 ) : aiTestResult ? (
                   <Stack spacing={1.75}>
-                    <Alert severity="success">连接测试成功，AI 服务已返回响应。</Alert>
+                    <Alert severity="success">{t('settings.aiAssistantPanel.testResult.success')}</Alert>
                     <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', p: 1.5 }}>
                       <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-                        AI 返回内容
+                        {t('settings.aiAssistantPanel.testResult.response')}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                         {aiTestResult.message || '-'}
@@ -444,19 +462,19 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                     </Box>
                     <Grid container spacing={2}>
                       <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2">模型</Typography>
+                        <Typography variant="subtitle2">{t('settings.aiAssistantPanel.fields.model')}</Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
                           {aiTestResult.model || aiForm.model || '-'}
                         </Typography>
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2">延迟</Typography>
+                        <Typography variant="subtitle2">{t('settings.aiAssistantPanel.testResult.latency')}</Typography>
                         <Typography variant="body2" color="text.secondary">
                           {typeof aiTestResult.latencyMs === 'number' ? `${aiTestResult.latencyMs} ms` : '-'}
                         </Typography>
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2">完成原因</Typography>
+                        <Typography variant="subtitle2">{t('settings.aiAssistantPanel.testResult.finishReason')}</Typography>
                         <Typography variant="body2" color="text.secondary">
                           {aiTestResult.finishReason || '-'}
                         </Typography>
@@ -471,7 +489,7 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                     {aiUsageText && (
                       <Box>
                         <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-                          用量信息
+                          {t('settings.aiAssistantPanel.testResult.usage')}
                         </Typography>
                         <Box
                           component="pre"
@@ -496,7 +514,7 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                   </Stack>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    点击“测试连接”后，结果会显示在这里，不会打断当前表单操作。
+                    {t('settings.aiAssistantPanel.testResult.empty')}
                   </Typography>
                 )}
               </Stack>
@@ -511,7 +529,7 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                 disabled={loading}
                 sx={actionButtonSx}
               >
-                测试连接
+                {t('settings.aiAssistantPanel.actions.test')}
               </Button>
               <Button
                 type="button"
@@ -521,7 +539,7 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                 disabled={loading || aiSettingsLoading}
                 sx={actionButtonSx}
               >
-                保存 AI 设置
+                {t('settings.aiAssistantPanel.actions.save')}
               </Button>
             </Stack>
           </Stack>

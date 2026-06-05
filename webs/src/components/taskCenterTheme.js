@@ -4,33 +4,38 @@ import { withAlpha } from 'utils/colorUtils';
 export const TASK_CLUSTER_ACCENT = '#6366f1';
 
 export const TASK_TYPE_META = {
-  speed_test: { label: '节点测速', color: '#10b981' },
-  sub_update: { label: '订阅更新', color: '#6366f1' },
-  tag_rule: { label: '标签规则', color: '#f59e0b' },
-  db_migration: { label: '数据库迁移', color: '#0284c7' }
+  speed_test: { label: 'Speed test', labelKey: 'tasks.type.speedTest', color: '#10b981' },
+  sub_update: { label: 'Subscription update', labelKey: 'tasks.type.subUpdate', color: '#6366f1' },
+  tag_rule: { label: 'Tag rule', labelKey: 'tasks.type.tagRule', color: '#f59e0b' },
+  db_migration: { label: 'Database migration', labelKey: 'tasks.type.dbMigration', color: '#0284c7' }
 };
 
 export const TASK_TRIGGER_META = {
-  manual: { label: '手动', color: '#8b5cf6' },
-  scheduled: { label: '定时', color: '#06b6d4' },
-  airport_update: { label: '机场更新', color: '#0ea5e9' }
+  manual: { label: 'Manual', labelKey: 'tasks.trigger.manual', color: '#8b5cf6' },
+  scheduled: { label: 'Scheduled', labelKey: 'tasks.trigger.scheduled', color: '#06b6d4' },
+  airport_update: { label: 'Airport update', labelKey: 'tasks.trigger.airportUpdate', color: '#0ea5e9' }
 };
 
-export const getTaskTypeMeta = (type) => TASK_TYPE_META[type] || TASK_TYPE_META.speed_test;
+const withTranslatedLabel = (meta, t) => ({
+  ...meta,
+  label: t && meta.labelKey ? t(meta.labelKey, meta.label) : meta.label
+});
 
-export const getTaskTriggerMeta = (trigger) => TASK_TRIGGER_META[trigger] || TASK_TRIGGER_META.manual;
+export const getTaskTypeMeta = (type, t) => withTranslatedLabel(TASK_TYPE_META[type] || TASK_TYPE_META.speed_test, t);
 
-export const getTaskStatusMeta = (theme, status) => {
+export const getTaskTriggerMeta = (trigger, t) => withTranslatedLabel(TASK_TRIGGER_META[trigger] || TASK_TRIGGER_META.manual, t);
+
+export const getTaskStatusMeta = (theme, status, t) => {
   const statusMap = {
-    pending: { label: '等待中', color: theme.palette.warning.main },
-    running: { label: '运行中', color: theme.palette.primary.main },
-    completed: { label: '已完成', color: theme.palette.success.main },
-    cancelled: { label: '已取消', color: theme.palette.warning.main },
-    cancelling: { label: '停止中', color: theme.palette.warning.main },
-    error: { label: '失败', color: theme.palette.error.main }
+    pending: { label: 'Pending', labelKey: 'tasks.status.pending', color: theme.palette.warning.main },
+    running: { label: 'Running', labelKey: 'tasks.status.running', color: theme.palette.primary.main },
+    completed: { label: 'Completed', labelKey: 'tasks.status.completed', color: theme.palette.success.main },
+    cancelled: { label: 'Cancelled', labelKey: 'tasks.status.cancelled', color: theme.palette.warning.main },
+    cancelling: { label: 'Stopping', labelKey: 'tasks.status.cancelling', color: theme.palette.warning.main },
+    error: { label: 'Failed', labelKey: 'tasks.status.error', color: theme.palette.error.main }
   };
 
-  return statusMap[status] || statusMap.pending;
+  return withTranslatedLabel(statusMap[status] || statusMap.pending, t);
 };
 
 export const getTaskCenterTokens = (theme, isDark) => {

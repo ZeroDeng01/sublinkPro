@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 // material-ui
@@ -14,17 +15,16 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import FingerprintIcon from '@mui/icons-material/Fingerprint';
 
-// 示例节点名用于预览
-const PREVIEW_NODE_NAME = '香港节点-01';
-const SECOND_PREVIEW_NODE_NAME = '日本节点';
-
 /**
  * 节点名称唯一化配置组件
  * 通过添加机场标识前缀防止多机场间节点名称重复
  */
 export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify, airportId, onChange }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const displayPrefix = prefix.trim() || (airportId ? `[A${airportId}]` : '[A保存后分配ID]');
+  const previewNodeName = t('components.nodeNameUniquify.preview.samplePrimary');
+  const secondPreviewNodeName = t('components.nodeNameUniquify.preview.sampleSecondary');
+  const displayPrefix = prefix.trim() || (airportId ? `[A${airportId}]` : t('components.nodeNameUniquify.defaultPrefixPending'));
 
   const getSettingRowSx = (active) => ({
     px: 1.5,
@@ -42,10 +42,10 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
   // 根据当前配置计算预览结果
   const previewResult = useMemo(() => {
     if (!enabled) {
-      return PREVIEW_NODE_NAME;
+      return previewNodeName;
     }
-    return displayPrefix + PREVIEW_NODE_NAME;
-  }, [enabled, displayPrefix]);
+    return displayPrefix + previewNodeName;
+  }, [enabled, displayPrefix, previewNodeName]);
 
   const duplicatePreviewGroups = useMemo(() => {
     if (!intraUniquify) {
@@ -56,15 +56,15 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
 
     return [
       {
-        label: `${PREVIEW_NODE_NAME} 重名组`,
-        items: [`${previewPrefix}${PREVIEW_NODE_NAME}-1`, `${previewPrefix}${PREVIEW_NODE_NAME}-2`]
+        label: t('components.nodeNameUniquify.preview.duplicateGroup', { name: previewNodeName }),
+        items: [`${previewPrefix}${previewNodeName}-1`, `${previewPrefix}${previewNodeName}-2`]
       },
       {
-        label: `${SECOND_PREVIEW_NODE_NAME} 重名组`,
-        items: [`${previewPrefix}${SECOND_PREVIEW_NODE_NAME}-1`, `${previewPrefix}${SECOND_PREVIEW_NODE_NAME}-2`]
+        label: t('components.nodeNameUniquify.preview.duplicateGroup', { name: secondPreviewNodeName }),
+        items: [`${previewPrefix}${secondPreviewNodeName}-1`, `${previewPrefix}${secondPreviewNodeName}-2`]
       }
     ];
-  }, [enabled, intraUniquify, displayPrefix]);
+  }, [enabled, intraUniquify, displayPrefix, previewNodeName, secondPreviewNodeName, t]);
 
   // 自动展开面板（当开启功能时）
   useEffect(() => {
@@ -113,7 +113,7 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
             <FingerprintIcon color="action" fontSize="small" />
             <Box sx={{ minWidth: 0 }}>
               <Typography variant="body2" fontWeight={500}>
-                节点名称唯一化
+                {t('components.nodeNameUniquify.title')}
               </Typography>
               <Typography
                 variant="caption"
@@ -122,7 +122,7 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
                   color: 'text.secondary'
                 }}
               >
-                跨机场前缀与机场内重名编号可分别开启，互不影响
+                {t('components.nodeNameUniquify.subtitle')}
               </Typography>
             </Box>
           </Box>
@@ -139,7 +139,7 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
                     color: 'primary.contrastText'
                   }}
                 >
-                  跨机场前缀
+                  {t('components.nodeNameUniquify.crossAirport.title')}
                 </Typography>
               )}
               {intraUniquify && (
@@ -153,7 +153,7 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
                     color: 'secondary.contrastText'
                   }}
                 >
-                  机场内编号
+                  {t('components.nodeNameUniquify.intraAirport.badge')}
                 </Typography>
               )}
             </Box>
@@ -166,7 +166,7 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
       <Collapse in={expanded}>
         <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
           <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 2 }}>
-            跨机场前缀唯一化与机场内重名编号是两个独立设置：前者用于区分不同机场的同名节点，后者仅处理同一机场内的重名节点。
+            {t('components.nodeNameUniquify.description')}
           </Typography>
 
           <Box sx={{ display: 'grid', gap: 1.25, mb: 2 }}>
@@ -174,10 +174,10 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="body2" fontWeight={500}>
-                    跨机场前缀
+                    {t('components.nodeNameUniquify.crossAirport.title')}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    为当前机场节点添加唯一前缀，用于区分不同机场之间的同名节点
+                    {t('components.nodeNameUniquify.crossAirport.description')}
                   </Typography>
                 </Box>
                 <Switch size="small" checked={enabled} onChange={handleEnabledChange} />
@@ -186,11 +186,15 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
                 <TextField
                   fullWidth
                   size="small"
-                  label="跨机场前缀（可选）"
-                  placeholder={airportId ? `留空使用默认前缀 [A${airportId}]` : '留空后保存时使用默认前缀 [A新机场ID]'}
+                  label={t('components.nodeNameUniquify.crossAirport.prefixLabel')}
+                  placeholder={
+                    airportId
+                      ? t('components.nodeNameUniquify.crossAirport.placeholderWithId', { id: airportId })
+                      : t('components.nodeNameUniquify.crossAirport.placeholderPending')
+                  }
                   value={prefix}
                   onChange={handlePrefixChange}
-                  helperText="仅在开启跨机场前缀唯一化时生效，用于区分不同机场的同名节点"
+                  helperText={t('components.nodeNameUniquify.crossAirport.helper')}
                 />
               )}
             </Box>
@@ -198,10 +202,10 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
             <Box sx={getSettingRowSx(intraUniquify)}>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="body2" fontWeight={500}>
-                  机场内重名编号
+                  {t('components.nodeNameUniquify.intraAirport.title')}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  同一机场内若有重名节点，会按各自重名组在名称后追加 -1、-2、-3…；不同名称组会分别从 -1 开始
+                  {t('components.nodeNameUniquify.intraAirport.description')}
                 </Typography>
               </Box>
               <Switch size="small" checked={intraUniquify} onChange={handleIntraUniquifyChange} />
@@ -217,11 +221,11 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
             }}
           >
             <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 0.5 }}>
-              跨机场前缀预览
+              {t('components.nodeNameUniquify.preview.crossAirportTitle')}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.secondary', textDecoration: 'line-through' }}>
-                {PREVIEW_NODE_NAME}
+                {previewNodeName}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 →
@@ -239,16 +243,20 @@ export default function NodeNameUniquifyConfig({ enabled, prefix, intraUniquify,
             </Box>
 
             <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 0.75 }}>
-              {enabled ? '开启后会为当前机场添加唯一前缀，仅影响不同机场之间的同名节点。' : '未开启时，跨机场同名节点仍保持原名称。'}
+              {t(
+                enabled
+                  ? 'components.nodeNameUniquify.preview.enabledDescription'
+                  : 'components.nodeNameUniquify.preview.disabledDescription'
+              )}
             </Typography>
 
             {intraUniquify && (
               <Box sx={{ mt: 1.5 }}>
                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 0.5 }}>
-                  机场内重名编号预览
+                  {t('components.nodeNameUniquify.preview.intraAirportTitle')}
                 </Typography>
                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
-                  每组重名会单独编号，HK 与日本两个名称组都会各自从 -1 开始，而不是共用一套全局序号。
+                  {t('components.nodeNameUniquify.preview.intraAirportDescription')}
                 </Typography>
 
                 {duplicatePreviewGroups.map((group) => (

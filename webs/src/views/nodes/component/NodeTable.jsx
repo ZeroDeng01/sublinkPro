@@ -18,6 +18,7 @@ import TableSortLabel from '@mui/material/TableSortLabel';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { useTranslation } from 'react-i18next';
 
 // icons
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -63,6 +64,7 @@ export default function NodeTable({
   onViewDetails
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
   const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
@@ -127,12 +129,12 @@ export default function NodeTable({
         >
           <TableRow>
             <TableCell padding="checkbox" />
-            <TableCell sx={{ minWidth: 132 }}>备注</TableCell>
-            <TableCell sx={{ minWidth: 76, whiteSpace: 'nowrap' }}>协议</TableCell>
-            <TableCell sx={{ minWidth: 88 }}>分组</TableCell>
-            <TableCell sx={{ minWidth: 88 }}>来源</TableCell>
-            <TableCell sx={{ minWidth: 92, whiteSpace: 'nowrap' }}>标签</TableCell>
-            <TableCell sx={{ minWidth: 64, whiteSpace: 'nowrap' }}>国家</TableCell>
+            <TableCell sx={{ minWidth: 132 }}>{t('nodes.table.remark')}</TableCell>
+            <TableCell sx={{ minWidth: 76, whiteSpace: 'nowrap' }}>{t('nodes.table.protocol')}</TableCell>
+            <TableCell sx={{ minWidth: 88 }}>{t('nodes.table.group')}</TableCell>
+            <TableCell sx={{ minWidth: 88 }}>{t('nodes.table.source')}</TableCell>
+            <TableCell sx={{ minWidth: 92, whiteSpace: 'nowrap' }}>{t('nodes.table.tags')}</TableCell>
+            <TableCell sx={{ minWidth: 64, whiteSpace: 'nowrap' }}>{t('nodes.table.country')}</TableCell>
             <TableCell sx={{ minWidth: 168 }} sortDirection={sortBy === 'delay' || sortBy === 'speed' ? sortOrder : false}>
               <Stack direction="row" spacing={1.5} alignItems="center" sx={{ whiteSpace: 'nowrap' }}>
                 <TableSortLabel
@@ -140,20 +142,20 @@ export default function NodeTable({
                   direction={sortBy === 'delay' ? sortOrder : 'asc'}
                   onClick={() => onSort('delay')}
                 >
-                  延迟
+                  {t('nodes.table.delay')}
                 </TableSortLabel>
                 <TableSortLabel
                   active={sortBy === 'speed'}
                   direction={sortBy === 'speed' ? sortOrder : 'asc'}
                   onClick={() => onSort('speed')}
                 >
-                  速度
+                  {t('nodes.table.speed')}
                 </TableSortLabel>
               </Stack>
             </TableCell>
-            <TableCell sx={{ minWidth: 128, whiteSpace: 'nowrap' }}>IP特征</TableCell>
+            <TableCell sx={{ minWidth: 128, whiteSpace: 'nowrap' }}>{t('nodes.table.ipFeatures')}</TableCell>
             <TableCell align="right" sx={{ minWidth: 104, pr: 0.5 }}>
-              操作
+              {t('nodes.table.actions')}
             </TableCell>
           </TableRow>
         </TableHead>
@@ -194,7 +196,9 @@ export default function NodeTable({
                       </Typography>
                       {showSecondaryName && (
                         <Typography variant="caption" sx={{ color: tokens.secondaryText, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {node.NameMode === 'remark' ? `原始：${secondaryName}` : `备注：${secondaryName}`}
+                          {node.NameMode === 'remark'
+                            ? t('nodes.table.originalName', { name: secondaryName })
+                            : t('nodes.table.remarkName', { name: secondaryName })}
                         </Typography>
                       )}
                     </Stack>
@@ -216,15 +220,15 @@ export default function NodeTable({
                     </Tooltip>
                   ) : (
                     <Typography variant="caption" color="text.secondary">
-                      未分组
+                      {t('nodes.table.ungrouped')}
                     </Typography>
                   )}
                 </TableCell>
                 <TableCell>
                   {node.Source ? (
-                    <Tooltip title={node.Source === 'manual' ? '手动添加' : node.Source}>
+                    <Tooltip title={node.Source === 'manual' ? t('nodes.table.manualSource') : node.Source}>
                       <Chip
-                        label={node.Source === 'manual' ? '手动添加' : node.Source}
+                        label={node.Source === 'manual' ? t('nodes.table.manualSource') : node.Source}
                         color="info"
                         variant="outlined"
                         size="small"
@@ -233,7 +237,7 @@ export default function NodeTable({
                     </Tooltip>
                   ) : (
                     <Typography variant="caption" color="text.secondary">
-                      手动添加
+                      {t('nodes.table.manualSource')}
                     </Typography>
                   )}
                 </TableCell>
@@ -312,7 +316,9 @@ export default function NodeTable({
                     const qualityStatusDisplay = getQualityStatusDisplay(node.QualityStatus, node.QualityFamily);
                     const unlockDisplay = getNodeUnlockSummaryDisplay(node, { limit: 2 });
                     const isUntested =
-                      ipTypeDisplay.label === '未检测' && residentialDisplay.label === '未检测' && fraudScoreDisplay.label === '未检测';
+                      ipTypeDisplay.state === 'untested' &&
+                      residentialDisplay.state === 'untested' &&
+                      fraudScoreDisplay.state === 'untested';
                     const shouldMergeQualityTags =
                       node.QualityStatus !== 'success' &&
                       ipTypeDisplay.label === residentialDisplay.label &&
@@ -321,7 +327,7 @@ export default function NodeTable({
                     return (
                       <Box sx={{ display: 'flex', gap: 0.375, flexWrap: 'wrap', minWidth: 0, maxWidth: 160 }}>
                         {isUntested ? (
-                          <Chip label="未检测" color="default" variant="outlined" size="small" />
+                          <Chip label={t('nodes.table.untested')} color="default" variant="outlined" size="small" />
                         ) : shouldMergeQualityTags ? (
                           qualityStatusDisplay.tooltip ? (
                             <Tooltip title={qualityStatusDisplay.tooltip}>
@@ -427,22 +433,22 @@ export default function NodeTable({
                   })()}
                 </TableCell>
                 <TableCell align="right" sx={{ pr: 0.5 }}>
-                  <Tooltip title="检测">
+                  <Tooltip title={t('nodes.table.speedTest')}>
                     <IconButton size="small" onClick={() => onSpeedTest(node)}>
                       <SpeedIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="复制链接">
+                  <Tooltip title={t('nodes.table.copyLink')}>
                     <IconButton size="small" onClick={() => onCopy(node.Link)}>
                       <ContentCopyIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="编辑">
+                  <Tooltip title={t('nodes.table.edit')}>
                     <IconButton size="small" onClick={() => onEdit(node)}>
                       <EditIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="删除">
+                  <Tooltip title={t('nodes.table.delete')}>
                     <IconButton size="small" color="error" onClick={() => onDelete(node)}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>

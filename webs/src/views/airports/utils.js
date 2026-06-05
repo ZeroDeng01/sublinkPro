@@ -97,7 +97,7 @@ export const formatDateTime = (dateTimeString) => {
 
 // User-Agent 预设选项
 export const USER_AGENT_OPTIONS = [
-  { label: '无 (空)', value: '' },
+  { labelKey: 'airports.form.userAgentOptions.none', value: '' },
   { label: 'clash.meta', value: 'clash.meta' },
   { label: 'clash', value: 'clash' },
   { label: 'v2ray', value: 'v2ray' },

@@ -5,12 +5,14 @@ import { IconDashboard, IconWorldLatitude } from '@tabler/icons-react';
 
 const dashboard = {
   id: 'dashboard',
-  title: '仪表盘',
+  title: 'Dashboard',
+  titleKey: 'navigation.groups.dashboard',
   type: 'group',
   children: [
     {
       id: 'default',
-      title: '仪表盘',
+      title: 'Dashboard',
+      titleKey: 'navigation.items.dashboard',
       type: 'item',
       url: '/dashboard/default',
       icon: IconDashboard,
@@ -18,7 +20,8 @@ const dashboard = {
     },
     {
       id: 'node-map',
-      title: '节点地图',
+      title: 'Node Map',
+      titleKey: 'navigation.items.nodeMap',
       type: 'item',
       url: '/dashboard/map',
       icon: IconWorldLatitude,

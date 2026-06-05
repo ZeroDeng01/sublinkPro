@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Dialog from '@mui/material/Dialog';
@@ -29,6 +30,7 @@ import SearchableNodeSelect from '../../../components/SearchableNodeSelect'; // 
 
 export default function HostSettingsDialog({ open, onClose }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -80,11 +82,11 @@ export default function HostSettingsDialog({ open, onClose }) {
           fetchNodes();
         }
       } else {
-        setError(res.msg || '加载设置失败');
+        setError(res.msg || t('hosts.settings.messages.loadFailed'));
       }
     } catch (err) {
       console.error(err);
-      setError('加载设置失败');
+      setError(t('hosts.settings.messages.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -124,11 +126,11 @@ export default function HostSettingsDialog({ open, onClose }) {
       if (res.code === 200) {
         onClose(); // Close on success
       } else {
-        setError(res.msg || '保存失败');
+        setError(res.msg || t('hosts.settings.messages.saveFailed'));
       }
     } catch (err) {
       console.error(err);
-      setError('保存失败');
+      setError(t('hosts.settings.messages.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -141,7 +143,7 @@ export default function HostSettingsDialog({ open, onClose }) {
 
   return (
     <Dialog open={open} onClose={saving ? null : onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>模块设置</DialogTitle>
+      <DialogTitle>{t('hosts.settings.title')}</DialogTitle>
       <DialogContent dividers>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -160,9 +162,9 @@ export default function HostSettingsDialog({ open, onClose }) {
                   }
                   label={
                     <Typography variant="body2">
-                      持久化节点Host
+                      {t('hosts.settings.persistHost')}
                       <Typography component="span" variant="caption" color="textSecondary" sx={{ ml: 0.5 }}>
-                        (测速成功时保存域名→IP)
+                        {t('hosts.settings.persistHostHint')}
                       </Typography>
                     </Typography>
                   }
@@ -170,7 +172,7 @@ export default function HostSettingsDialog({ open, onClose }) {
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <TextField
-                    label="有效期"
+                    label={t('hosts.settings.expireHours')}
                     type="number"
                     size="small"
                     value={settings.expire_hours}
@@ -180,7 +182,7 @@ export default function HostSettingsDialog({ open, onClose }) {
                     InputProps={{ inputProps: { min: 0 } }}
                   />
                   <Typography variant="body2" color="textSecondary">
-                    小时 {settings.expire_hours === 0 && '(永不过期)'}
+                    {t('hosts.settings.hours')} {settings.expire_hours === 0 && t('hosts.settings.neverExpire')}
                   </Typography>
                 </Box>
               </Stack>
@@ -191,7 +193,7 @@ export default function HostSettingsDialog({ open, onClose }) {
             {/* 2. DNS Settings */}
             <Box>
               <Typography variant="subtitle2" color="primary" sx={{ mb: 2 }}>
-                DNS 解析设置
+                {t('hosts.settings.dnsTitle')}
               </Typography>
 
               <Stack spacing={2}>
@@ -220,9 +222,9 @@ export default function HostSettingsDialog({ open, onClose }) {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="DNS 解析服务器"
-                      placeholder="留空（使用系统 DNS）"
-                      helperText="支持 DoH (https://...) 或 UDP (IP)。IP格式（UDP协议）将始终直连不走代理。"
+                      label={t('hosts.settings.dnsServer')}
+                      placeholder={t('hosts.settings.dnsPlaceholder')}
+                      helperText={t('hosts.settings.dnsHelper')}
                     />
                   )}
                 />
@@ -243,7 +245,7 @@ export default function HostSettingsDialog({ open, onClose }) {
                         size="small"
                       />
                     }
-                    label="使用代理连接 DNS (仅支持 DoH)"
+                    label={t('hosts.settings.dnsUseProxy')}
                   />
 
                   <Collapse in={settings.dns_use_proxy && !!settings.dns_server}>
@@ -251,7 +253,7 @@ export default function HostSettingsDialog({ open, onClose }) {
                       <Stack spacing={2}>
                         <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap" gap={1}>
                           <Typography variant="body2" sx={{ minWidth: 60 }}>
-                            代理策略:
+                            {t('hosts.settings.proxyStrategy')}
                           </Typography>
                           <ToggleButtonGroup
                             value={settings.dns_proxy_strategy}
@@ -265,8 +267,8 @@ export default function HostSettingsDialog({ open, onClose }) {
                             color="primary"
                             sx={{ height: 32 }}
                           >
-                            <ToggleButton value="auto">自动选择</ToggleButton>
-                            <ToggleButton value="manual">手动指定</ToggleButton>
+                            <ToggleButton value="auto">{t('hosts.settings.strategy.auto')}</ToggleButton>
+                            <ToggleButton value="manual">{t('hosts.settings.strategy.manual')}</ToggleButton>
                           </ToggleButtonGroup>
                         </Stack>
 
@@ -278,7 +280,7 @@ export default function HostSettingsDialog({ open, onClose }) {
                             onChange={(newValue) => {
                               updateField('dns_proxy_node_id', newValue ? newValue.ID : 0);
                             }}
-                            label="选择代理节点"
+                            label={t('hosts.settings.proxyNode')}
                             displayField="Name"
                             valueField="ID"
                           />
@@ -286,8 +288,8 @@ export default function HostSettingsDialog({ open, onClose }) {
 
                         <Typography variant="caption" color="textSecondary">
                           {settings.dns_proxy_strategy === 'auto'
-                            ? '系统将自动选择最近一次测速中延迟最低且无丢包的节点。'
-                            : '指定一个节点用于建立 DNS 连接。注意：仅 DoH (https) 协议支持通过代理连接。'}
+                            ? t('hosts.settings.strategy.autoHint')
+                            : t('hosts.settings.strategy.manualHint')}
                         </Typography>
                       </Stack>
                     </Paper>
@@ -300,10 +302,10 @@ export default function HostSettingsDialog({ open, onClose }) {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="inherit" disabled={saving}>
-          取消
+          {t('common.cancel')}
         </Button>
         <Button onClick={handleSave} variant="contained" disabled={loading || saving}>
-          {saving ? '保存中...' : '确定'}
+          {saving ? t('common.saving') : t('common.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

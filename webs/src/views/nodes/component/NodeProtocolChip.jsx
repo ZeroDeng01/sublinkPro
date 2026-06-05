@@ -5,6 +5,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { useTranslation } from 'react-i18next';
 
 // utils
 import { resolveProtocolPresentationFromLink } from 'utils/protocolPresentation';
@@ -12,13 +13,14 @@ import { getNodeThemeTokens } from '../nodeTheme';
 
 export default function NodeProtocolChip({ link, protocolMeta, maxWidth = 92 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
   const protocol = resolveProtocolPresentationFromLink(link, protocolMeta);
   const chipColor = protocol.color || tokens.palette.primary.main;
 
   return (
-    <Tooltip title={`协议：${protocol.label}`}>
+    <Tooltip title={t('nodes.protocol.tooltip', { protocol: protocol.label })}>
       <Chip
         label={protocol.label}
         size="small"

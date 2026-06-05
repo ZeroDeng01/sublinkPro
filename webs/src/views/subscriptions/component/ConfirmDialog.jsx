@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Dialog from '@mui/material/Dialog';
@@ -11,10 +12,8 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
 
-/**
- * 通用确认对话框组件
- */
 export default function ConfirmDialog({ open, title, content, onClose, onConfirm }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { isDark } = useResolvedColorScheme();
@@ -106,10 +105,10 @@ export default function ConfirmDialog({ open, title, content, onClose, onConfirm
         }}
       >
         <Button onClick={onClose} variant="outlined" sx={cancelButtonSx}>
-          取消
+          {t('common.cancel')}
         </Button>
         <Button onClick={onConfirm} color="error" variant="contained" autoFocus sx={confirmButtonSx}>
-          确定
+          {t('common.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

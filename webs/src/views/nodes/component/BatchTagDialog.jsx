@@ -13,6 +13,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { useTranslation } from 'react-i18next';
 import { getNodeColorChipSx, getNodeDialogPaperSx, getNodeFieldControlSx, getNodeThemeTokens } from '../nodeTheme';
 
 /**
@@ -20,6 +21,7 @@ import { getNodeColorChipSx, getNodeDialogPaperSx, getNodeFieldControlSx, getNod
  */
 export default function BatchTagDialog({ open, selectedCount, value, setValue, tagOptions, onClose, onSubmit }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
   const fieldControlSx = getNodeFieldControlSx(tokens, tokens.palette.success.main);
@@ -35,11 +37,11 @@ export default function BatchTagDialog({ open, selectedCount, value, setValue, t
       <DialogTitle
         sx={{ color: tokens.primaryText, bgcolor: tokens.mutedPanelSurface, borderBottom: '1px solid', borderColor: tokens.panelBorder }}
       >
-        批量设置标签
+        {t('nodes.batch.tagDialog.title')}
       </DialogTitle>
       <DialogContent dividers sx={{ bgcolor: 'transparent', borderColor: tokens.panelBorder }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          将为选中的 {selectedCount} 个节点设置标签（会覆盖原有标签）
+          {t('nodes.batch.tagDialog.description', { count: selectedCount })}
         </Typography>
         <Autocomplete
           multiple
@@ -81,16 +83,24 @@ export default function BatchTagDialog({ open, selectedCount, value, setValue, t
             })
           }
           sx={fieldControlSx}
-          renderInput={(params) => <TextField {...params} label="选择标签" placeholder="选择要设置的标签" fullWidth sx={fieldControlSx} />}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label={t('nodes.batch.tagDialog.fieldLabel')}
+              placeholder={t('nodes.batch.tagDialog.placeholder')}
+              fullWidth
+              sx={fieldControlSx}
+            />
+          )}
         />
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-          提示：留空将清除所选节点的所有标签
+          {t('nodes.batch.tagDialog.helper')}
         </Typography>
       </DialogContent>
       <DialogActions sx={{ bgcolor: tokens.mutedPanelSurface, borderTop: '1px solid', borderColor: tokens.panelBorder }}>
-        <Button onClick={onClose}>取消</Button>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button variant="contained" onClick={onSubmit}>
-          确认设置
+          {t('nodes.batch.tagDialog.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

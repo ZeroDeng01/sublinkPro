@@ -11,9 +11,8 @@ import { getProtocolPresentation } from '../../../utils/protocolPresentation';
 import { withAlpha } from '../../../utils/colorUtils';
 import { getNodeDisplayName } from 'utils/nodeDisplayName';
 
-/**
- * 获取状态颜色
- */
+import { useTranslation } from 'react-i18next';
+
 const getStatusColor = (theme, status) => {
   switch (status) {
     case 'success':
@@ -27,40 +26,32 @@ const getStatusColor = (theme, status) => {
   }
 };
 
-/**
- * 获取延迟显示
- */
-const getDelayDisplay = (delayTime, delayStatus) => {
-  if (delayStatus === 'timeout' || delayStatus === 2) return { text: '超时', color: 'error' };
-  if (delayStatus === 'error' || delayStatus === 3) return { text: '错误', color: 'error' };
-  if (!delayTime || delayTime <= 0) return { text: '未测', color: 'default' };
+const getDelayDisplay = (delayTime, delayStatus, t) => {
+  if (delayStatus === 'timeout' || delayStatus === 2) return { text: t('subscriptions.preview.timeout'), color: 'error' };
+  if (delayStatus === 'error' || delayStatus === 3) return { text: t('subscriptions.preview.error'), color: 'error' };
+  if (!delayTime || delayTime <= 0) return { text: t('subscriptions.preview.untested'), color: 'default' };
   if (delayTime < 200) return { text: `${delayTime}ms`, color: 'success' };
   if (delayTime < 500) return { text: `${delayTime}ms`, color: 'warning' };
   return { text: `${delayTime}ms`, color: 'error' };
 };
 
-/**
- * 获取速度显示
- */
-const getSpeedDisplay = (speed, speedStatus) => {
-  if (speedStatus === 'timeout' || speedStatus === 2) return { text: '超时', color: 'error' };
-  if (speedStatus === 'error' || speedStatus === 3) return { text: '错误', color: 'error' };
-  if (!speed || speed <= 0) return { text: '未测', color: 'default' };
+const getSpeedDisplay = (speed, speedStatus, t) => {
+  if (speedStatus === 'timeout' || speedStatus === 2) return { text: t('subscriptions.preview.timeout'), color: 'error' };
+  if (speedStatus === 'error' || speedStatus === 3) return { text: t('subscriptions.preview.error'), color: 'error' };
+  if (!speed || speed <= 0) return { text: t('subscriptions.preview.untested'), color: 'default' };
   if (speed >= 5) return { text: `${speed.toFixed(1)}MB/s`, color: 'success' };
   if (speed >= 1) return { text: `${speed.toFixed(1)}MB/s`, color: 'warning' };
   return { text: `${speed.toFixed(2)}MB/s`, color: 'error' };
 };
 
-/**
- * 节点预览卡片组件 - 固定尺寸紧凑卡片
- */
 export default function NodePreviewCard({ node, onClick }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const palette = theme.vars?.palette || theme.palette;
 
-  const delayDisplay = getDelayDisplay(node.DelayTime, node.DelayStatus);
-  const speedDisplay = getSpeedDisplay(node.Speed, node.SpeedStatus);
+  const delayDisplay = getDelayDisplay(node.DelayTime, node.DelayStatus, t);
+  const speedDisplay = getSpeedDisplay(node.Speed, node.SpeedStatus, t);
   const displayName = getNodeDisplayName(node);
   const protocolInfo = getProtocolPresentation(node.Protocol);
   const protocolColor = protocolInfo.color || theme.palette.primary.main;
@@ -73,7 +64,6 @@ export default function NodePreviewCard({ node, onClick }) {
       sx={{
         position: 'relative',
         p: 1,
-        pb: 3.5, // 底部预留空间给指标栏
         borderRadius: 2,
         cursor: 'pointer',
         overflow: 'hidden',
@@ -109,7 +99,7 @@ export default function NodePreviewCard({ node, onClick }) {
         }
       }}
     >
-      {/* 协议标签 - 右上角 */}
+      {/* Protocol badge - top right */}
       <Box
         className="protocol-badge"
         sx={{
@@ -129,7 +119,6 @@ export default function NodePreviewCard({ node, onClick }) {
         <Typography sx={{ color: 'inherit', fontSize: 9, fontWeight: 700 }}>{node.Protocol || '?'}</Typography>
       </Box>
 
-      {/* 节点名称区域 */}
       <Box sx={{ flex: 1, pr: 4, overflow: 'hidden' }}>
         <Tooltip title={displayName} placement="top" arrow>
           <Typography
@@ -163,7 +152,6 @@ export default function NodePreviewCard({ node, onClick }) {
         )}
       </Box>
 
-      {/* 底部指标栏 - 深色半透明背景确保可读性 */}
       <Box
         sx={{
           position: 'absolute',
@@ -182,7 +170,6 @@ export default function NodePreviewCard({ node, onClick }) {
           backdropFilter: 'blur(6px)'
         }}
       >
-        {/* 延迟指标 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Box
             sx={{
@@ -205,7 +192,6 @@ export default function NodePreviewCard({ node, onClick }) {
           </Typography>
         </Box>
 
-        {/* 速度指标 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Box
             sx={{
@@ -228,10 +214,8 @@ export default function NodePreviewCard({ node, onClick }) {
           </Typography>
         </Box>
 
-        {/* 右侧填充 */}
         <Box sx={{ flex: 1 }} />
 
-        {/* 国旗 + 国家代码 */}
         <Stack direction="row" alignItems="center" spacing={0.25} className="country-flag" sx={{ transition: 'all 0.3s ease' }}>
           <Typography sx={{ fontSize: 12, lineHeight: 1 }}>{node.CountryFlag || '🌐'}</Typography>
           {node.LinkCountry && (

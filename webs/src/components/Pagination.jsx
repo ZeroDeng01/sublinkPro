@@ -9,6 +9,7 @@ import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTranslation } from 'react-i18next';
 
 // icons
 import FirstPageIcon from '@mui/icons-material/FirstPage';
@@ -36,10 +37,11 @@ export default function Pagination({
   disabled = false,
   showPageInput = true,
   showFirstLast = true,
-  labelRowsPerPage = '每页',
+  labelRowsPerPage,
   ...props
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const totalPages = pageSize > 0 ? Math.ceil(totalItems / pageSize) : 0;
@@ -113,13 +115,13 @@ export default function Pagination({
     >
       {/* 显示范围 */}
       <Typography variant="body2" color="textSecondary" sx={{ whiteSpace: 'nowrap' }}>
-        {totalItems > 0 ? `${from}-${to} / ${totalItems}` : '0 条'}
+        {totalItems > 0 ? `${from}-${to} / ${totalItems}` : t('components.pagination.empty')}
       </Typography>
 
       {/* 每页条数选择 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography variant="body2" color="textSecondary">
-          {labelRowsPerPage}
+          {labelRowsPerPage || t('components.pagination.rowsPerPage')}
         </Typography>
         <Select
           size="small"
@@ -139,12 +141,12 @@ export default function Pagination({
       {/* 分页控制 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
         {showFirstLast && (
-          <IconButton size="small" onClick={handleFirstPage} disabled={disabled || page === 0} title="首页">
+          <IconButton size="small" onClick={handleFirstPage} disabled={disabled || page === 0} title={t('components.pagination.first')}>
             <FirstPageIcon fontSize="small" />
           </IconButton>
         )}
 
-        <IconButton size="small" onClick={handlePrevPage} disabled={disabled || page === 0} title="上一页">
+        <IconButton size="small" onClick={handlePrevPage} disabled={disabled || page === 0} title={t('components.pagination.previous')}>
           <NavigateBeforeIcon fontSize="small" />
         </IconButton>
 
@@ -188,12 +190,22 @@ export default function Pagination({
           </Box>
         )}
 
-        <IconButton size="small" onClick={handleNextPage} disabled={disabled || page >= totalPages - 1} title="下一页">
+        <IconButton
+          size="small"
+          onClick={handleNextPage}
+          disabled={disabled || page >= totalPages - 1}
+          title={t('components.pagination.next')}
+        >
           <NavigateNextIcon fontSize="small" />
         </IconButton>
 
         {showFirstLast && (
-          <IconButton size="small" onClick={handleLastPage} disabled={disabled || page >= totalPages - 1} title="末页">
+          <IconButton
+            size="small"
+            onClick={handleLastPage}
+            disabled={disabled || page >= totalPages - 1}
+            title={t('components.pagination.last')}
+          >
             <LastPageIcon fontSize="small" />
           </IconButton>
         )}

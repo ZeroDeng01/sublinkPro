@@ -40,13 +40,11 @@ import { getGroupSortGroups, getGroupSortDetail, saveGroupAirportSort, resetGrou
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
+import { useTranslation } from 'react-i18next';
 
-/**
- * 分组排序对话框
- * 管理同一分组内不同机场的节点输出排序
- */
 export default function GroupSortDialog({ open, onClose, showMessage }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
@@ -75,17 +73,16 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
     [showMessage]
   );
 
-  // 加载分组列表
   const loadGroups = useCallback(async () => {
     try {
       const res = await getGroupSortGroups();
       setGroups(res.data || []);
-    } catch {
-      handleSnackbar('加载分组列表失败', 'error');
+    } catch (err) {
+      console.error('Failed to load groups:', err);
+      handleSnackbar(t('subscriptions.sort.messages.loadGroupsFailed'), 'error');
     }
-  }, [handleSnackbar]);
+  }, [handleSnackbar, t]);
 
-  // 加载分组详情
   const loadGroupDetail = useCallback(
     async (groupName) => {
       if (!groupName) return;
@@ -93,32 +90,30 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
       try {
         const res = await getGroupSortDetail(groupName);
         setAirports(res.data?.airports || []);
-      } catch {
-        handleSnackbar('加载分组详情失败', 'error');
+      } catch (err) {
+        console.error('Failed to load group detail:', err);
+        handleSnackbar(t('subscriptions.sort.messages.loadGroupDetailFailed'), 'error');
       } finally {
         setLoading(false);
       }
     },
-    [handleSnackbar]
+    [handleSnackbar, t]
   );
 
   useEffect(() => {
     if (open) {
       loadGroups();
-      // 重置选中状态
       setSelectedGroup('');
       setAirports([]);
       setSearchText('');
     }
   }, [open, loadGroups]);
 
-  // 选择分组
   const handleSelectGroup = (groupName) => {
     setSelectedGroup(groupName);
     loadGroupDetail(groupName);
   };
 
-  // 拖拽结束
   const handleDragEnd = (result) => {
     if (!result.destination) return;
     const items = Array.from(airports);
@@ -128,7 +123,6 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
     setAirports(updated);
   };
 
-  // 保存排序
   const handleSave = async () => {
     if (!selectedGroup) return;
     setSaving(true);
@@ -138,16 +132,15 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
         sort: index
       }));
       await saveGroupAirportSort({ groupName: selectedGroup, airportSorts });
-      handleSnackbar('保存成功', 'success');
+      handleSnackbar(t('subscriptions.sort.messages.saveSuccess'), 'success');
       loadGroups();
     } catch {
-      handleSnackbar('保存失败', 'error');
+      handleSnackbar(t('subscriptions.sort.messages.saveFailed'), 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  // 重置当前分组排序
   const handleReset = async () => {
     if (!selectedGroup) return;
     setResetting(true);
@@ -155,15 +148,14 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
       await resetGroupAirportSort(selectedGroup);
       await loadGroupDetail(selectedGroup);
       await loadGroups();
-      handleSnackbar('已重置为默认排序', 'success');
+      handleSnackbar(t('subscriptions.sort.messages.resetSuccess'), 'success');
     } catch {
-      handleSnackbar('重置排序失败', 'error');
+      handleSnackbar(t('subscriptions.sort.messages.resetFailed'), 'error');
     } finally {
       setResetting(false);
     }
   };
 
-  // 过滤分组列表
   const filteredGroups = groups.filter((g) => !searchText || g.groupName.toLowerCase().includes(searchText.toLowerCase()));
   const isSortActionDisabled = loading || saving || resetting || airports.length === 0;
 
@@ -259,7 +251,7 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
         <DialogTitle sx={sectionHeaderSx}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2} sx={{ flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="h6" sx={{ color: primaryText, fontWeight: 700 }}>
-              分组排序
+              {t('subscriptions.sort.groupSort')}
             </Typography>
             {selectedGroup && (
               <Stack direction="row" spacing={1} alignItems="center">
@@ -271,10 +263,10 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
                   disabled={isSortActionDisabled}
                   sx={{ borderColor: panelBorder, color: secondaryText }}
                 >
-                  {resetting ? '重置中...' : '重置排序'}
+                  {resetting ? t('subscriptions.sort.resetting') : t('subscriptions.sort.resetSort')}
                 </Button>
                 <Button variant="contained" size="small" startIcon={<SaveIcon />} onClick={handleSave} disabled={isSortActionDisabled}>
-                  {saving ? '保存中...' : '保存排序'}
+                  {saving ? t('subscriptions.sort.saving') : t('subscriptions.sort.saveSort')}
                 </Button>
               </Stack>
             )}
@@ -283,18 +275,17 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
 
         <DialogContent sx={{ p: 2, bgcolor: dialogSurface }}>
           <Typography variant="caption" sx={{ display: 'block', mb: 1.5, color: tertiaryText }}>
-            管理同一分组内不同机场的节点输出顺序，排在前面的机场节点在订阅输出中也排在前面
+            {t('subscriptions.sort.groupSortDesc')}
           </Typography>
 
           <Grid container spacing={2} sx={{ height: isMobile ? 'auto' : 'calc(70vh - 120px)' }}>
-            {/* 左侧：分组列表 */}
             <Grid item xs={12} md={4}>
               <Paper variant="outlined" sx={listShellSx}>
                 <Box sx={{ ...sectionHeaderSx, p: 1.5 }}>
                   <TextField
                     fullWidth
                     size="small"
-                    placeholder="搜索分组..."
+                    placeholder={t('subscriptions.sort.searchGroup')}
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
                     sx={searchFieldSx}
@@ -318,7 +309,7 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
                   {filteredGroups.length === 0 ? (
                     <Box sx={{ p: 3, textAlign: 'center' }}>
                       <Typography variant="body2" sx={{ color: secondaryText }}>
-                        {groups.length === 0 ? '暂无分组' : '无匹配结果'}
+                        {groups.length === 0 ? t('subscriptions.sort.noGroups') : t('common.noMatch')}
                       </Typography>
                     </Box>
                   ) : (
@@ -387,7 +378,10 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
                                 {group.hasSortConfig && <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />}
                               </Stack>
                             }
-                            secondary={`${group.airportCount} 个机场 · ${group.nodeCount} 个节点`}
+                            secondary={t('subscriptions.sort.airportNodeCount', {
+                              airportCount: group.airportCount,
+                              nodeCount: group.nodeCount
+                            })}
                           />
                         </ListItemButton>
                       </ListItem>
@@ -397,13 +391,12 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
               </Paper>
             </Grid>
 
-            {/* 右侧：机场排序管理 */}
             <Grid item xs={12} md={8}>
               <Paper variant="outlined" sx={listShellSx}>
                 {!selectedGroup ? (
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, p: 4 }}>
                     <Typography variant="body1" sx={{ color: secondaryText }}>
-                      请从左侧选择一个分组来管理机场排序
+                      {t('subscriptions.sort.selectGroupPrompt')}
                     </Typography>
                   </Box>
                 ) : loading ? (
@@ -413,7 +406,7 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
                 ) : airports.length === 0 ? (
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, p: 4 }}>
                     <Typography variant="body1" sx={{ color: secondaryText }}>
-                      该分组下没有机场
+                      {t('subscriptions.sort.noAirportsInGroup')}
                     </Typography>
                   </Box>
                 ) : (
@@ -423,7 +416,7 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
                         {selectedGroup}
                       </Typography>
                       <Typography variant="caption" sx={{ color: secondaryText }}>
-                        拖拽调整机场排序，排在前面的机场节点在订阅输出中也排在前面
+                        {t('subscriptions.sort.dragAirportHint')}
                       </Typography>
                     </Box>
                     <DragDropContext onDragEnd={handleDragEnd}>
@@ -467,7 +460,7 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
                                         {airport.airportName}
                                       </Typography>
                                       <Chip
-                                        label={`${airport.nodeCount} 节点`}
+                                        label={t('subscriptions.sort.nodeCount', { count: airport.nodeCount })}
                                         size="small"
                                         variant="outlined"
                                         color="primary"
@@ -503,12 +496,11 @@ export default function GroupSortDialog({ open, onClose, showMessage }) {
           }}
         >
           <Button onClick={onClose} variant="outlined" sx={{ borderColor: panelBorder, color: secondaryText }}>
-            关闭
+            {t('common.close')}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* 仅在未传入 showMessage 时使用内部 Snackbar */}
       {!showMessage && (
         <Snackbar
           open={snackbar.open}

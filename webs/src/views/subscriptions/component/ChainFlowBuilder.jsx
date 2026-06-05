@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { alpha, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -104,16 +105,16 @@ const getNodeStyles = (theme, tokens) => {
   };
 };
 
-// 开始节点组件
 function StartNode({ data }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getChainProxyThemeTokens(theme, isDark);
   const nodeStyles = getNodeStyles(theme, tokens);
   return (
     <div style={nodeStyles.start}>
       <PlayArrowIcon fontSize="small" sx={{ mr: 0.5 }} />
-      <span>{data?.label || '入口'}</span>
+      <span>{data?.label || t('subscriptions.chain.entry')}</span>
       <Handle
         type="source"
         position={Position.Right}
@@ -123,23 +124,22 @@ function StartNode({ data }) {
   );
 }
 
-// 结束节点组件（目标节点 - 可配置）
 function EndNode({ data, selected }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getChainProxyThemeTokens(theme, isDark);
   const nodeStyles = getNodeStyles(theme, tokens);
-  // 根据目标类型显示不同标签
   const getTargetLabel = () => {
     switch (data.targetType) {
       case 'all':
-        return '所有节点';
+        return t('subscriptions.chain.targetTypes.all');
       case 'specified_node':
-        return data.nodeName || '指定节点';
+        return data.nodeName || t('subscriptions.chain.targetTypes.specified_node');
       case 'conditions':
-        return `${data.conditionCount || 0} 个条件`;
+        return t('subscriptions.chain.conditionCount', { count: data.conditionCount || 0 });
       default:
-        return '所有节点';
+        return t('subscriptions.chain.targetTypes.all');
     }
   };
 
@@ -171,9 +171,9 @@ function EndNode({ data, selected }) {
   );
 }
 
-// 代理组节点组件 - 支持悬停删除
 function ProxyNode({ data, selected }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getChainProxyThemeTokens(theme, isDark);
   const nodeStyles = getNodeStyles(theme, tokens);
@@ -197,16 +197,10 @@ function ProxyNode({ data, selected }) {
   };
 
   const getTypeLabel = () => {
-    const labels = {
-      template_group: '模板组',
-      custom_group: '自定义组',
-      dynamic_node: '动态节点',
-      specified_node: '指定节点'
-    };
-    return labels[data.proxyType] || '代理';
+    const labels = t('subscriptions.chain.proxyTypeShort', { returnObjects: true });
+    return labels[data.proxyType] || t('subscriptions.chain.proxy');
   };
 
-  // 处理删除点击
   const handleDeleteClick = (e) => {
     e.stopPropagation();
     if (data.onDelete) {
@@ -234,9 +228,8 @@ function ProxyNode({ data, selected }) {
         style={{ background: theme.palette.info.main, width: 8, height: 8, border: `2px solid ${nodeStyles.proxy.background}` }}
       />
 
-      {/* 删除按钮 - 悬停显示 */}
       {hovered && (
-        <Tooltip title="删除此节点" arrow placement="top">
+        <Tooltip title={t('subscriptions.chain.deleteNode')} arrow placement="top">
           <IconButton
             size="small"
             onClick={handleDeleteClick}
@@ -268,7 +261,7 @@ function ProxyNode({ data, selected }) {
             {getTypeLabel()}
           </Typography>
           <Typography variant="body2" fontWeight="medium" sx={{ fontSize: 12, color: 'text.primary' }}>
-            {data.label || '未配置'}
+            {data.label || t('subscriptions.chain.unconfigured')}
           </Typography>
         </Box>
       </Stack>
@@ -281,7 +274,6 @@ function ProxyNode({ data, selected }) {
   );
 }
 
-// 节点类型定义
 const nodeTypes = {
   start: StartNode,
   end: EndNode,
@@ -300,6 +292,7 @@ export default function ChainFlowBuilder({
   templateGroups = []
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getChainProxyThemeTokens(theme, isDark);
   const palette = tokens.palette;
@@ -318,40 +311,35 @@ export default function ChainFlowBuilder({
     }),
     [isDark, palette.text.secondary]
   );
-  // 配置面板状态
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelType, setPanelType] = useState(null); // 'proxy' | 'target'
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [editingProxyConfig, setEditingProxyConfig] = useState(null);
   const [editingTargetConfig, setEditingTargetConfig] = useState(null);
 
-  // 获取代理标签
   const getProxyLabel = useCallback(
     (item) => {
-      if (!item) return '未配置';
+      if (!item) return t('subscriptions.chain.unconfigured');
       if (item.type === 'specified_node') {
         const node = availableNodes.find((n) => n.id === item.nodeId);
-        return node?.name || node?.linkName || `节点 #${item.nodeId}`;
+        return node?.name || node?.linkName || t('subscriptions.chain.nodeNumber', { id: item.nodeId });
       }
-      // 动态节点显示条件数量
       if (item.type === 'dynamic_node') {
         const condCount = item.nodeConditions?.conditions?.length || 0;
         if (condCount > 0) {
-          return `配置${condCount}`;
+          return t('subscriptions.chain.configuredConditions', { count: condCount });
         }
-        return '未配置';
+        return t('subscriptions.chain.unconfigured');
       }
-      return item.groupName || '未配置';
+      return item.groupName || t('subscriptions.chain.unconfigured');
     },
-    [availableNodes]
+    [availableNodes, t]
   );
 
-  // 直接删除代理节点（从节点悬停按钮）
   const handleDeleteProxyDirect = useCallback(
     (nodeIndex) => {
       const newChainConfig = chainConfig.filter((_, i) => i !== nodeIndex);
       onChainConfigChange?.(newChainConfig);
-      // 如果删除的是当前打开面板的节点，关闭面板
       if (selectedNodeId === `proxy-${nodeIndex}`) {
         setPanelOpen(false);
       }
@@ -359,21 +347,18 @@ export default function ChainFlowBuilder({
     [chainConfig, onChainConfigChange, selectedNodeId]
   );
 
-  // 构建流程节点
   const flowNodes = useMemo(() => {
     const nodes = [
       {
         id: 'start',
         type: 'start',
         position: { x: 30, y: 80 },
-        data: { label: '入口' },
+        data: { label: t('subscriptions.chain.entry') },
         draggable: false
       }
     ];
 
-    // 添加代理节点
     chainConfig.forEach((item, index) => {
-      // 使用保存的位置或计算默认位置，节点间距加大到200px
       const defaultX = 150 + index * 200;
       const defaultY = 100;
       nodes.push({
@@ -387,19 +372,17 @@ export default function ChainFlowBuilder({
           nodeIndex: index,
           onDelete: handleDeleteProxyDirect
         },
-        draggable: true // 代理节点允许拖拽
+        draggable: true
       });
     });
 
-    // 计算结束节点位置，如果有保存的位置则使用
     const endX = chainConfig.length > 0 ? 150 + chainConfig.length * 200 : 200;
     const conditionCount = targetConfig?.conditions?.conditions?.length || 0;
 
-    // 获取指定节点的名称
     let nodeName = '';
     if (targetConfig?.type === 'specified_node' && targetConfig?.nodeId) {
       const targetNode = availableNodes.find((n) => n.id === targetConfig.nodeId);
-      nodeName = targetNode?.name || targetNode?.linkName || `节点 #${targetConfig.nodeId}`;
+      nodeName = targetNode?.name || targetNode?.linkName || t('subscriptions.chain.nodeNumber', { id: targetConfig.nodeId });
     }
 
     nodes.push({
@@ -407,18 +390,17 @@ export default function ChainFlowBuilder({
       type: 'end',
       position: targetConfig?.endPosition || { x: endX, y: 100 },
       data: {
-        label: '目标节点',
+        label: t('subscriptions.chain.targetNode'),
         targetType: targetConfig?.type || 'specified_node',
         conditionCount,
         nodeName
       },
-      draggable: true // 结束节点也允许拖拽
+      draggable: true
     });
 
     return nodes;
-  }, [chainConfig, targetConfig, getProxyLabel, availableNodes, handleDeleteProxyDirect]);
+  }, [chainConfig, targetConfig, getProxyLabel, availableNodes, handleDeleteProxyDirect, t]);
 
-  // 构建边
   const flowEdges = useMemo(() => {
     const edges = [];
 
@@ -460,7 +442,6 @@ export default function ChainFlowBuilder({
   const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(flowEdges);
 
-  // 同步外部配置变化到内部节点
   const prevChainConfigRef = useRef(chainConfig);
   const prevTargetConfigRef = useRef(targetConfig);
 
@@ -476,16 +457,13 @@ export default function ChainFlowBuilder({
     }, 0);
   }
 
-  // 添加代理节点
   const handleAddProxy = useCallback(() => {
     const isEntryNode = chainConfig.length === 0;
-    // 入口节点默认使用模板代理组，中间节点默认使用自定义代理组
     const defaultType = isEntryNode ? 'template_group' : 'custom_group';
     const newConfig = { type: defaultType, groupName: '' };
     const newChainConfig = [...chainConfig, newConfig];
     onChainConfigChange?.(newChainConfig);
 
-    // 打开配置面板
     setSelectedNodeId(`proxy-${chainConfig.length}`);
     setEditingProxyConfig(newConfig);
     setPanelType('proxy');
@@ -501,11 +479,10 @@ export default function ChainFlowBuilder({
   }, [selectedNodeId, chainConfig, onChainConfigChange]);
 
   const onNodeClick = useCallback(
-    (event, node) => {
+    (_event, node) => {
       if (node.type === 'proxy') {
         const nodeIndex = parseInt(node.id.replace('proxy-', ''), 10);
         const config = { ...chainConfig[nodeIndex] };
-        // 中间节点（索引 > 0）不支持模板代理组，自动修正为自定义代理组
         if (nodeIndex > 0 && config.type === 'template_group') {
           config.type = 'custom_group';
         }
@@ -523,7 +500,6 @@ export default function ChainFlowBuilder({
     [chainConfig, targetConfig]
   );
 
-  // 保存代理配置（不关闭面板）
   const saveProxyConfig = useCallback(() => {
     if (!selectedNodeId || !editingProxyConfig) return;
     const nodeIndex = parseInt(selectedNodeId.replace('proxy-', ''), 10);
@@ -532,46 +508,40 @@ export default function ChainFlowBuilder({
     onChainConfigChange?.(newChainConfig);
   }, [selectedNodeId, editingProxyConfig, chainConfig, onChainConfigChange]);
 
-  // 保存目标配置（不关闭面板）
   const saveTargetConfig = useCallback(() => {
     if (!editingTargetConfig) return;
     onTargetConfigChange?.(editingTargetConfig);
   }, [editingTargetConfig, onTargetConfigChange]);
 
-  // 实时保存 - 代理配置变化时自动保存
   useEffect(() => {
     if (panelOpen && panelType === 'proxy' && editingProxyConfig) {
       const timer = setTimeout(() => {
         saveProxyConfig();
-      }, 300); // 300ms防抖
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [panelOpen, panelType, editingProxyConfig, saveProxyConfig]);
 
-  // 实时保存 - 目标配置变化时自动保存
   useEffect(() => {
     if (panelOpen && panelType === 'target' && editingTargetConfig) {
       const timer = setTimeout(() => {
         saveTargetConfig();
-      }, 300); // 300ms防抖
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [panelOpen, panelType, editingTargetConfig, saveTargetConfig]);
 
-  // 渲染代理配置面板
   const renderProxyConfigPanel = () => {
     if (!editingProxyConfig) return null;
 
-    // 计算当前编辑节点的索引
     const nodeIndex = selectedNodeId ? parseInt(selectedNodeId.replace('proxy-', ''), 10) : 0;
-    // 入口节点（索引0）可选所有类型，后续中间节点只能选择指定节点或动态条件节点
     const isEntryNode = nodeIndex === 0;
 
     return (
       <Stack spacing={2} sx={{ pt: 0.5 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="subtitle1" fontWeight="bold" color={tokens.primaryText}>
-            {isEntryNode ? '入口代理配置' : '中间节点配置'}
+            {isEntryNode ? t('subscriptions.chain.entryProxyConfig') : t('subscriptions.chain.middleNodeConfig')}
           </Typography>
           <IconButton size="small" onClick={() => setPanelOpen(false)} sx={iconButtonSx}>
             <CloseIcon fontSize="small" />
@@ -579,10 +549,10 @@ export default function ChainFlowBuilder({
         </Stack>
 
         <FormControl size="small" fullWidth sx={fieldControlSx}>
-          <InputLabel color="primary">代理类型</InputLabel>
+          <InputLabel color="primary">{t('subscriptions.chain.proxyType')}</InputLabel>
           <Select
             value={editingProxyConfig.type || (isEntryNode ? 'template_group' : 'specified_node')}
-            label="代理类型"
+            label={t('subscriptions.chain.proxyType')}
             onChange={(e) =>
               setEditingProxyConfig({
                 type: e.target.value,
@@ -592,16 +562,14 @@ export default function ChainFlowBuilder({
               })
             }
           >
-            {/* 入口节点可选模板代理组 */}
-            {isEntryNode && <MenuItem value="template_group">模板代理组</MenuItem>}
-            {/* 所有节点都可选自定义代理组（中间节点的组内节点会自动设置 dialer-proxy） */}
-            <MenuItem value="custom_group">自定义代理组</MenuItem>
-            <MenuItem value="dynamic_node">动态条件节点</MenuItem>
-            <MenuItem value="specified_node">指定节点</MenuItem>
+            {isEntryNode && <MenuItem value="template_group">{t('subscriptions.chain.proxyTypes.template_group')}</MenuItem>}
+            <MenuItem value="custom_group">{t('subscriptions.chain.proxyTypes.custom_group')}</MenuItem>
+            <MenuItem value="dynamic_node">{t('subscriptions.chain.proxyTypes.dynamic_node')}</MenuItem>
+            <MenuItem value="specified_node">{t('subscriptions.chain.proxyTypes.specified_node')}</MenuItem>
           </Select>
           {!isEntryNode && (
             <Typography variant="caption" sx={{ mt: 0.5, color: tokens.tertiaryText }}>
-              中间节点的自定义代理组内所有节点会自动设置 dialer-proxy 指向上一级
+              {t('subscriptions.chain.middleNodeDialerProxyHint')}
             </Typography>
           )}
         </FormControl>
@@ -614,10 +582,15 @@ export default function ChainFlowBuilder({
             sx={fieldControlSx}
             options={templateGroups || []}
             value={editingProxyConfig.groupName || ''}
-            onChange={(e, newValue) => setEditingProxyConfig({ ...editingProxyConfig, groupName: newValue || '' })}
-            onInputChange={(e, newValue) => setEditingProxyConfig({ ...editingProxyConfig, groupName: newValue || '' })}
+            onChange={(_event, newValue) => setEditingProxyConfig({ ...editingProxyConfig, groupName: newValue || '' })}
+            onInputChange={(_event, newValue) => setEditingProxyConfig({ ...editingProxyConfig, groupName: newValue || '' })}
             renderInput={(params) => (
-              <TextField {...params} label="代理组名称" placeholder="选择或输入代理组名称" helperText="从模板中选择或手动输入代理组名称" />
+              <TextField
+                {...params}
+                label={t('subscriptions.chain.groupName')}
+                placeholder={t('subscriptions.chain.selectOrInputGroupPlaceholder')}
+                helperText={t('subscriptions.chain.selectOrInputGroupHelper')}
+              />
             )}
           />
         )}
@@ -627,17 +600,17 @@ export default function ChainFlowBuilder({
             <TextField
               size="small"
               fullWidth
-              label="代理组名称"
-              placeholder="自定义代理组名称"
+              label={t('subscriptions.chain.groupName')}
+              placeholder={t('subscriptions.chain.customGroupPlaceholder')}
               value={editingProxyConfig.groupName || ''}
               onChange={(e) => setEditingProxyConfig({ ...editingProxyConfig, groupName: e.target.value })}
               sx={fieldControlSx}
             />
             <FormControl size="small" fullWidth sx={fieldControlSx}>
-              <InputLabel>组类型</InputLabel>
+              <InputLabel>{t('subscriptions.chain.groupType')}</InputLabel>
               <Select
                 value={editingProxyConfig.groupType || 'select'}
-                label="组类型"
+                label={t('subscriptions.chain.groupType')}
                 onChange={(e) => setEditingProxyConfig({ ...editingProxyConfig, groupType: e.target.value })}
               >
                 {(groupTypes || []).map((gt) => (
@@ -647,13 +620,12 @@ export default function ChainFlowBuilder({
                 ))}
               </Select>
             </FormControl>
-            {/* url-test 和 fallback 类型配置 */}
             {(editingProxyConfig.groupType === 'url-test' || editingProxyConfig.groupType === 'fallback') && (
               <Stack spacing={1.5}>
                 <TextField
                   size="small"
                   fullWidth
-                  label="测速 URL"
+                  label={t('subscriptions.chain.testUrl')}
                   value={editingProxyConfig.urlTestConfig?.url || ''}
                   onChange={(e) =>
                     setEditingProxyConfig({
@@ -662,13 +634,13 @@ export default function ChainFlowBuilder({
                     })
                   }
                   placeholder="http://www.gstatic.com/generate_204"
-                  helperText="用于检测节点可用性的 URL，留空使用默认值"
+                  helperText={t('subscriptions.chain.testUrlHelper')}
                   sx={fieldControlSx}
                 />
                 <Stack direction="row" spacing={1}>
                   <TextField
                     size="small"
-                    label="间隔(秒)"
+                    label={t('subscriptions.chain.intervalSeconds')}
                     type="number"
                     value={editingProxyConfig.urlTestConfig?.interval ?? 300}
                     onChange={(e) =>
@@ -678,11 +650,11 @@ export default function ChainFlowBuilder({
                       })
                     }
                     sx={{ ...fieldControlSx, flex: 1 }}
-                    helperText="健康检查间隔"
+                    helperText={t('subscriptions.chain.healthCheckInterval')}
                   />
                   <TextField
                     size="small"
-                    label="容差(ms)"
+                    label={t('subscriptions.chain.toleranceMs')}
                     type="number"
                     value={editingProxyConfig.urlTestConfig?.tolerance ?? 50}
                     onChange={(e) =>
@@ -692,18 +664,21 @@ export default function ChainFlowBuilder({
                       })
                     }
                     sx={{ ...fieldControlSx, flex: 1 }}
-                    helperText={editingProxyConfig.groupType === 'url-test' ? '延迟差在此范围内视为相同' : '故障转移阈值'}
+                    helperText={
+                      editingProxyConfig.groupType === 'url-test'
+                        ? t('subscriptions.chain.toleranceHelper')
+                        : t('subscriptions.chain.fallbackThreshold')
+                    }
                   />
                 </Stack>
               </Stack>
             )}
-            {/* load-balance 类型配置 */}
             {editingProxyConfig.groupType === 'load-balance' && (
               <Stack spacing={1.5}>
                 <TextField
                   size="small"
                   fullWidth
-                  label="测速 URL"
+                  label={t('subscriptions.chain.testUrl')}
                   value={editingProxyConfig.urlTestConfig?.url || ''}
                   onChange={(e) =>
                     setEditingProxyConfig({
@@ -712,13 +687,13 @@ export default function ChainFlowBuilder({
                     })
                   }
                   placeholder="http://www.gstatic.com/generate_204"
-                  helperText="用于检测节点可用性的 URL，留空使用默认值"
+                  helperText={t('subscriptions.chain.testUrlHelper')}
                   sx={fieldControlSx}
                 />
                 <Stack direction="row" spacing={1}>
                   <TextField
                     size="small"
-                    label="间隔(秒)"
+                    label={t('subscriptions.chain.intervalSeconds')}
                     type="number"
                     value={editingProxyConfig.urlTestConfig?.interval ?? 300}
                     onChange={(e) =>
@@ -728,13 +703,13 @@ export default function ChainFlowBuilder({
                       })
                     }
                     sx={{ ...fieldControlSx, flex: 1 }}
-                    helperText="健康检查间隔"
+                    helperText={t('subscriptions.chain.healthCheckInterval')}
                   />
                   <FormControl size="small" sx={{ ...fieldControlSx, flex: 1 }}>
-                    <InputLabel>负载均衡策略</InputLabel>
+                    <InputLabel>{t('subscriptions.chain.loadBalanceStrategy')}</InputLabel>
                     <Select
                       value={editingProxyConfig.urlTestConfig?.strategy || 'consistent-hashing'}
-                      label="负载均衡策略"
+                      label={t('subscriptions.chain.loadBalanceStrategy')}
                       onChange={(e) =>
                         setEditingProxyConfig({
                           ...editingProxyConfig,
@@ -742,16 +717,16 @@ export default function ChainFlowBuilder({
                         })
                       }
                     >
-                      <MenuItem value="consistent-hashing">一致性哈希</MenuItem>
-                      <MenuItem value="round-robin">轮询</MenuItem>
-                      <MenuItem value="sticky-sessions">会话保持</MenuItem>
+                      <MenuItem value="consistent-hashing">{t('subscriptions.chain.strategies.consistentHashing')}</MenuItem>
+                      <MenuItem value="round-robin">{t('subscriptions.chain.strategies.roundRobin')}</MenuItem>
+                      <MenuItem value="sticky-sessions">{t('subscriptions.chain.strategies.stickySessions')}</MenuItem>
                     </Select>
                   </FormControl>
                 </Stack>
               </Stack>
             )}
             <ConditionBuilder
-              title="节点筛选条件"
+              title={t('subscriptions.chain.nodeFilterConditions')}
               value={editingProxyConfig.nodeConditions}
               onChange={(conds) => setEditingProxyConfig({ ...editingProxyConfig, nodeConditions: conds })}
               fields={fields}
@@ -763,19 +738,19 @@ export default function ChainFlowBuilder({
         {editingProxyConfig.type === 'dynamic_node' && (
           <>
             <FormControl size="small" fullWidth sx={fieldControlSx}>
-              <InputLabel>选择模式</InputLabel>
+              <InputLabel>{t('subscriptions.chain.selectMode')}</InputLabel>
               <Select
                 value={editingProxyConfig.selectMode || 'first'}
-                label="选择模式"
+                label={t('subscriptions.chain.selectMode')}
                 onChange={(e) => setEditingProxyConfig({ ...editingProxyConfig, selectMode: e.target.value })}
               >
-                <MenuItem value="first">第一个匹配</MenuItem>
-                <MenuItem value="random">随机</MenuItem>
-                <MenuItem value="fastest">最快节点</MenuItem>
+                <MenuItem value="first">{t('subscriptions.chain.selectModes.first')}</MenuItem>
+                <MenuItem value="random">{t('subscriptions.chain.selectModes.random')}</MenuItem>
+                <MenuItem value="fastest">{t('subscriptions.chain.selectModes.fastest')}</MenuItem>
               </Select>
             </FormControl>
             <ConditionBuilder
-              title="节点匹配条件"
+              title={t('subscriptions.chain.nodeMatchConditions')}
               value={editingProxyConfig.nodeConditions}
               onChange={(conds) => setEditingProxyConfig({ ...editingProxyConfig, nodeConditions: conds })}
               fields={fields}
@@ -789,15 +764,15 @@ export default function ChainFlowBuilder({
             size="small"
             options={availableNodes || []}
             sx={fieldControlSx}
-            getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || '未知'})`}
+            getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || t('common.unknown')})`}
             value={(availableNodes || []).find((n) => n.id === editingProxyConfig.nodeId) || null}
-            onChange={(e, newValue) => setEditingProxyConfig({ ...editingProxyConfig, nodeId: newValue?.id })}
-            renderInput={(params) => <TextField {...params} label="选择节点" />}
+            onChange={(_event, newValue) => setEditingProxyConfig({ ...editingProxyConfig, nodeId: newValue?.id })}
+            renderInput={(params) => <TextField {...params} label={t('subscriptions.chain.selectNode')} />}
             renderOption={(props, option) => (
               <li {...props} key={option.id}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Typography variant="body2">{option.name || option.linkName}</Typography>
-                  <Chip label={option.linkCountry || '未知'} size="small" variant="outlined" />
+                  <Chip label={option.linkCountry || t('common.unknown')} size="small" variant="outlined" />
                 </Stack>
               </li>
             )}
@@ -806,7 +781,6 @@ export default function ChainFlowBuilder({
 
         <Divider sx={{ borderColor: tokens.softBorder }} />
 
-        {/* 删除按钮 - 实时保存无需确定按钮 */}
         <Stack direction="row" justifyContent="flex-start">
           <Button
             size="small"
@@ -825,14 +799,13 @@ export default function ChainFlowBuilder({
             }}
             variant="outlined"
           >
-            删除此节点
+            {t('subscriptions.chain.deleteNode')}
           </Button>
         </Stack>
       </Stack>
     );
   };
 
-  // 渲染目标节点配置面板
   const renderTargetConfigPanel = () => {
     if (!editingTargetConfig) return null;
 
@@ -840,7 +813,7 @@ export default function ChainFlowBuilder({
       <Stack spacing={2} sx={{ pt: 0.5 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="subtitle1" fontWeight="bold" color={tokens.primaryText}>
-            目标节点配置
+            {t('subscriptions.chain.targetNodeConfig')}
           </Typography>
           <IconButton size="small" onClick={() => setPanelOpen(false)} sx={iconButtonSx}>
             <CloseIcon fontSize="small" />
@@ -848,13 +821,13 @@ export default function ChainFlowBuilder({
         </Stack>
 
         <Typography variant="body2" color={tokens.secondaryText}>
-          选择应用此规则的节点范围
+          {t('subscriptions.chain.targetScopeDescription')}
         </Typography>
 
         <ToggleButtonGroup
           value={editingTargetConfig.type || 'specified_node'}
           exclusive
-          onChange={(e, newType) => {
+          onChange={(_event, newType) => {
             if (newType !== null) {
               setEditingTargetConfig({ ...editingTargetConfig, type: newType, nodeId: undefined, conditions: undefined });
             }
@@ -863,32 +836,33 @@ export default function ChainFlowBuilder({
           fullWidth
           sx={toggleButtonSx}
         >
-          <Tooltip title="手动指定唯一一个目标节点" arrow>
-            <ToggleButton value="specified_node">指定节点</ToggleButton>
+          <Tooltip title={t('subscriptions.chain.targetTooltips.specified')} arrow>
+            <ToggleButton value="specified_node">{t('subscriptions.chain.targetTypes.specified_node')}</ToggleButton>
           </Tooltip>
-          <Tooltip title="规则应用于所有节点" arrow>
-            <ToggleButton value="all">所有节点</ToggleButton>
+          <Tooltip title={t('subscriptions.chain.targetTooltips.all')} arrow>
+            <ToggleButton value="all">{t('subscriptions.chain.targetTypes.all')}</ToggleButton>
           </Tooltip>
-          <Tooltip title="根据条件筛选节点" arrow>
-            <ToggleButton value="conditions">按条件</ToggleButton>
+          <Tooltip title={t('subscriptions.chain.targetTooltips.conditions')} arrow>
+            <ToggleButton value="conditions">{t('subscriptions.chain.targetTypes.conditions')}</ToggleButton>
           </Tooltip>
         </ToggleButtonGroup>
 
-        {/* 指定节点选择 */}
         {editingTargetConfig.type === 'specified_node' && (
           <Autocomplete
             size="small"
             options={availableNodes || []}
             sx={fieldControlSx}
-            getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || '未知'})`}
+            getOptionLabel={(option) => `${option.name || option.linkName} (${option.linkCountry || t('common.unknown')})`}
             value={(availableNodes || []).find((n) => n.id === editingTargetConfig.nodeId) || null}
-            onChange={(e, newValue) => setEditingTargetConfig({ ...editingTargetConfig, nodeId: newValue?.id })}
-            renderInput={(params) => <TextField {...params} label="选择目标节点" placeholder="搜索节点..." />}
+            onChange={(_event, newValue) => setEditingTargetConfig({ ...editingTargetConfig, nodeId: newValue?.id })}
+            renderInput={(params) => (
+              <TextField {...params} label={t('subscriptions.chain.selectTargetNode')} placeholder={t('subscriptions.chain.searchNodes')} />
+            )}
             renderOption={(props, option) => (
               <li {...props} key={option.id}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Typography variant="body2">{option.name || option.linkName}</Typography>
-                  <Chip label={option.linkCountry || '未知'} size="small" variant="outlined" />
+                  <Chip label={option.linkCountry || t('common.unknown')} size="small" variant="outlined" />
                   <Chip label={option.protocol || 'unknown'} size="small" color="info" variant="outlined" />
                 </Stack>
               </li>
@@ -896,10 +870,9 @@ export default function ChainFlowBuilder({
           />
         )}
 
-        {/* 条件筛选 */}
         {editingTargetConfig.type === 'conditions' && (
           <ConditionBuilder
-            title="目标节点筛选条件"
+            title={t('subscriptions.chain.targetNodeFilterConditions')}
             value={editingTargetConfig.conditions}
             onChange={(conds) => setEditingTargetConfig({ ...editingTargetConfig, conditions: conds })}
             fields={fields}
@@ -909,17 +882,15 @@ export default function ChainFlowBuilder({
 
         <Divider sx={{ borderColor: tokens.softBorder }} />
 
-        {/* 实时保存，无需确定按钮 */}
         <Typography variant="caption" sx={{ color: tokens.tertiaryText, textAlign: 'center' }}>
-          配置已自动保存
+          {t('subscriptions.chain.autoSaved')}
         </Typography>
       </Stack>
     );
   };
 
-  // 处理节点拖拽结束事件，保存位置
   const onNodeDragStop = useCallback(
-    (event, node) => {
+    (_event, node) => {
       if (node.id.startsWith('proxy-')) {
         const nodeIndex = parseInt(node.id.replace('proxy-', ''), 10);
         const newChainConfig = [...chainConfig];
@@ -931,7 +902,6 @@ export default function ChainFlowBuilder({
           onChainConfigChange?.(newChainConfig);
         }
       } else if (node.id === 'end') {
-        // 保存结束节点位置
         onTargetConfigChange?.({
           ...targetConfig,
           endPosition: node.position
@@ -975,7 +945,6 @@ export default function ChainFlowBuilder({
         '--flow-panel-button-bg-hover': theme.palette.primary.dark
       }}
     >
-      {/* 流程图区域 */}
       <Box sx={{ flex: 1, position: 'relative', minWidth: 0 }}>
         <ReactFlow
           nodes={nodes}
@@ -997,7 +966,6 @@ export default function ChainFlowBuilder({
           <Controls showInteractive={false} />
         </ReactFlow>
 
-        {/* 添加代理按钮 */}
         <Box className="chain-flow-toolbar">
           <Button
             variant="contained"
@@ -1014,24 +982,22 @@ export default function ChainFlowBuilder({
               '&.Mui-disabled': { color: palette.text.disabled, borderColor: tokens.subtleBorder }
             }}
           >
-            {chainConfig.length >= 4 ? '已达最大层级' : '添加代理节点'}
+            {chainConfig.length >= 4 ? t('subscriptions.chain.maxLevelReached') : t('subscriptions.chain.addProxyNode')}
           </Button>
           {chainConfig.length >= 2 && (
             <Typography variant="caption" sx={{ ml: 1, color: tokens.warningSoftText }}>
-              {chainConfig.length} 级链路，延迟可能较高
+              {t('subscriptions.chain.levelWarning', { count: chainConfig.length })}
             </Typography>
           )}
         </Box>
 
-        {/* 提示文字 */}
         <Box className="chain-flow-hint">
           <Typography variant="caption" color="text.secondary">
-            点击节点进行配置，悬停节点可快速删除
+            {t('subscriptions.chain.flowHint')}
           </Typography>
         </Box>
       </Box>
 
-      {/* 配置面板 - 深色玻璃效果 */}
       {panelOpen && (
         <Fade in={panelOpen}>
           <Paper

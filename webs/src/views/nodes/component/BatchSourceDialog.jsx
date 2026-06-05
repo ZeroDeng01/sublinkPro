@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -17,6 +18,7 @@ import { getNodeDialogPaperSx, getNodeFieldControlSx, getNodeThemeTokens } from 
  * 批量修改来源对话框
  */
 export default function BatchSourceDialog({ open, selectedCount, value, setValue, sourceOptions, onClose, onSubmit }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
@@ -33,11 +35,11 @@ export default function BatchSourceDialog({ open, selectedCount, value, setValue
       <DialogTitle
         sx={{ color: tokens.primaryText, bgcolor: tokens.mutedPanelSurface, borderBottom: '1px solid', borderColor: tokens.panelBorder }}
       >
-        批量修改来源
+        {t('nodes.batchSource.title')}
       </DialogTitle>
       <DialogContent dividers sx={{ bgcolor: 'transparent', borderColor: tokens.panelBorder }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          将为选中的 {selectedCount} 个节点设置相同的来源
+          {t('nodes.batchSource.description', { count: selectedCount })}
         </Typography>
         <Autocomplete
           freeSolo
@@ -47,17 +49,23 @@ export default function BatchSourceDialog({ open, selectedCount, value, setValue
           onInputChange={(e, newInputValue) => setValue(newInputValue)}
           sx={fieldControlSx}
           renderInput={(params) => (
-            <TextField {...params} label="来源名称" placeholder="输入或选择来源名称" fullWidth sx={fieldControlSx} />
+            <TextField
+              {...params}
+              label={t('nodes.batchSource.label')}
+              placeholder={t('nodes.batchSource.placeholder')}
+              fullWidth
+              sx={fieldControlSx}
+            />
           )}
         />
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-          提示：留空将设置为手动添加(manual)
+          {t('nodes.batchSource.hint')}
         </Typography>
       </DialogContent>
       <DialogActions sx={{ bgcolor: tokens.mutedPanelSurface, borderTop: '1px solid', borderColor: tokens.panelBorder }}>
-        <Button onClick={onClose}>取消</Button>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button variant="contained" onClick={onSubmit}>
-          确认修改
+          {t('nodes.batchSource.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

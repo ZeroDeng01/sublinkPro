@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // MUI Components
 import Box from '@mui/material/Box';
@@ -22,8 +23,10 @@ import 'assets/scss/error.css';
 const ERROR_CONFIG = {
   404: {
     code: '404',
-    title: '页面未找到',
-    description: '抱歉，您访问的页面似乎已经迷失在数字宇宙中了。请检查网址是否正确，或返回首页继续探索。',
+    title: 'Page not found',
+    titleKey: 'errorPage.404.title',
+    description: 'The page you requested could not be found. Check the URL or return home.',
+    descriptionKey: 'errorPage.404.description',
     icon: '🚀',
     isAstronaut: true,
     bgClass: 'error-bg-404',
@@ -31,36 +34,46 @@ const ERROR_CONFIG = {
   },
   401: {
     code: '401',
-    title: '需要授权',
-    description: '您需要登录才能访问此页面。请先登录您的账户，或联系管理员获取访问权限。',
+    title: 'Authorization required',
+    titleKey: 'errorPage.401.title',
+    description: 'You need to sign in before accessing this page.',
+    descriptionKey: 'errorPage.401.description',
     Icon: LockOutlinedIcon,
     bgClass: 'error-bg-401'
   },
   403: {
     code: '403',
-    title: '禁止访问',
-    description: '很抱歉，您没有权限访问此资源。如果您认为这是一个错误，请联系系统管理员。',
+    title: 'Access forbidden',
+    titleKey: 'errorPage.403.title',
+    description: 'You do not have permission to access this resource.',
+    descriptionKey: 'errorPage.403.description',
     Icon: BlockIcon,
     bgClass: 'error-bg-403'
   },
   500: {
     code: '500',
-    title: '服务器错误',
-    description: '服务器遇到了一些问题，我们的工程师正在紧急修复中。请稍后再试。',
+    title: 'Server error',
+    titleKey: 'errorPage.500.title',
+    description: 'The server encountered a problem. Try again later.',
+    descriptionKey: 'errorPage.500.description',
     Icon: ErrorOutlineIcon,
     bgClass: 'error-bg-500'
   },
   503: {
     code: '503',
-    title: '服务维护中',
-    description: '系统正在进行维护升级，预计很快就会恢复。感谢您的耐心等待！',
+    title: 'Service under maintenance',
+    titleKey: 'errorPage.503.title',
+    description: 'The system is under maintenance and should be back soon.',
+    descriptionKey: 'errorPage.503.description',
     Icon: BuildCircleIcon,
     bgClass: 'error-bg-503'
   },
   default: {
     code: '???',
-    title: '发生错误',
-    description: '系统遇到了一些问题，请稍后再试或联系管理员。',
+    title: 'Something went wrong',
+    titleKey: 'errorPage.default.title',
+    description: 'The system encountered a problem. Try again later or contact an administrator.',
+    descriptionKey: 'errorPage.default.description',
     Icon: SettingsSuggestIcon,
     bgClass: 'error-bg-default'
   }
@@ -115,14 +128,15 @@ function StarsBackground() {
 // Main ErrorPage component
 export default function ErrorPage({ statusCode = 404, customTitle, customDescription }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Get error configuration
   const config = ERROR_CONFIG[statusCode] || ERROR_CONFIG.default;
-  const { code, title, description, icon, Icon, isAstronaut, bgClass, showStars } = config;
+  const { code, title, titleKey, description, descriptionKey, icon, Icon, isAstronaut, bgClass, showStars } = config;
 
   // Use custom title/description if provided
-  const displayTitle = customTitle || title;
-  const displayDescription = customDescription || description;
+  const displayTitle = customTitle || t(titleKey, title);
+  const displayDescription = customDescription || t(descriptionKey, description);
 
   const handleGoHome = () => {
     navigate('/dashboard/default');
@@ -193,7 +207,7 @@ export default function ErrorPage({ statusCode = 404, customTitle, customDescrip
               }
             }}
           >
-            返回首页
+            {t('errorPage.actions.home')}
           </Button>
 
           {statusCode === 500 || statusCode === 503 ? (
@@ -217,7 +231,7 @@ export default function ErrorPage({ statusCode = 404, customTitle, customDescrip
                 }
               }}
             >
-              刷新页面
+              {t('errorPage.actions.refresh')}
             </Button>
           ) : (
             <Button
@@ -240,7 +254,7 @@ export default function ErrorPage({ statusCode = 404, customTitle, customDescrip
                 }
               }}
             >
-              返回上一页
+              {t('errorPage.actions.back')}
             </Button>
           )}
         </Box>
@@ -260,7 +274,7 @@ export default function ErrorPage({ statusCode = 404, customTitle, customDescrip
             zIndex: 10
           }}
         >
-          🌌 在浩瀚的互联网中，总有一些路径通往未知...
+          {t('errorPage.404.footer')}
         </Box>
       )}
     </Box>

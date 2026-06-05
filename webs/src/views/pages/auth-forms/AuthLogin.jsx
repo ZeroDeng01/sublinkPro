@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import Button from '@mui/material/Button';
@@ -40,6 +41,7 @@ const CAPTCHA_MODE = {
 
 export default function AuthLogin() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { login, verifyMfa, rememberedUsernameKey } = useAuth();
   const turnstileDialogRef = useRef(null);
 
@@ -151,7 +153,7 @@ export default function AuthLogin() {
         setRecoveryCode('');
         setError('');
       } else {
-        setError(result.message || '登录失败');
+        setError(result.message || t('auth.login.loginFailed'));
         // 登录失败时刷新验证码或重置 Turnstile
         if (captchaMode === CAPTCHA_MODE.TRADITIONAL) {
           fetchCaptcha();
@@ -164,7 +166,7 @@ export default function AuthLogin() {
         }
       }
     } catch {
-      setError('登录失败，请稍后重试');
+      setError(t('auth.login.loginFailed'));
       if (captchaMode === CAPTCHA_MODE.TRADITIONAL) {
         fetchCaptcha();
         setCaptchaCode('');
@@ -191,17 +193,17 @@ export default function AuthLogin() {
     setError('');
 
     if (!mfaChallenge?.challengeToken) {
-      setError('缺少验证上下文，请重新登录');
+      setError(t('auth.mfa.missingContext'));
       return;
     }
 
     if (useRecoveryCode) {
       if (!recoveryCode.trim()) {
-        setError('请输入恢复码');
+        setError(t('auth.mfa.missingRecovery'));
         return;
       }
     } else if (!mfaCode.trim()) {
-      setError('请输入 6 位验证码');
+      setError(t('auth.mfa.missingCode'));
       return;
     }
 
@@ -220,7 +222,7 @@ export default function AuthLogin() {
         resetMfaState();
         navigate('/dashboard/default');
       } else {
-        setError(result.message || '验证失败');
+        setError(result.message || t('auth.mfa.verifyFailed'));
         if (useRecoveryCode) {
           setRecoveryCode('');
         } else {
@@ -228,7 +230,7 @@ export default function AuthLogin() {
         }
       }
     } catch {
-      setError('验证失败，请稍后重试');
+      setError(t('auth.mfa.verifyFailed'));
     } finally {
       setLoading(false);
     }
@@ -249,17 +251,17 @@ export default function AuthLogin() {
 
     // 表单验证
     if (!username.trim()) {
-      setError('请输入用户名');
+      setError(t('auth.login.missingUsername'));
       return;
     }
 
     if (!password.trim()) {
-      setError('请输入密码');
+      setError(t('auth.login.missingPassword'));
       return;
     }
 
     if (password.length < 6) {
-      setError('密码长度至少6位');
+      setError(t('auth.login.passwordMinLength'));
       return;
     }
 
@@ -278,7 +280,7 @@ export default function AuthLogin() {
       default:
         // 传统验证码模式
         if (!captchaCode.trim()) {
-          setError('请输入验证码');
+          setError(t('auth.login.missingCaptcha'));
           return;
         }
         performLogin('');
@@ -294,7 +296,7 @@ export default function AuthLogin() {
 
     return (
       <CustomFormControl fullWidth>
-        <InputLabel htmlFor="outlined-adornment-captcha-login">验证码</InputLabel>
+        <InputLabel htmlFor="outlined-adornment-captcha-login">{t('auth.login.captcha')}</InputLabel>
         <OutlinedInput
           id="outlined-adornment-captcha-login"
           type="text"
@@ -310,7 +312,7 @@ export default function AuthLogin() {
                   <Box
                     component="img"
                     src={captchaBase64}
-                    alt="验证码"
+                    alt={t('auth.login.captcha')}
                     sx={{
                       height: 40,
                       cursor: 'pointer',
@@ -319,13 +321,13 @@ export default function AuthLogin() {
                     onClick={fetchCaptcha}
                   />
                 )}
-                <IconButton onClick={fetchCaptcha} size="small" title="刷新验证码">
+                <IconButton onClick={fetchCaptcha} size="small" title={t('auth.login.refreshCaptcha')}>
                   <RefreshIcon />
                 </IconButton>
               </Stack>
             </InputAdornment>
           }
-          label="验证码"
+          label={t('auth.login.captcha')}
         />
       </CustomFormControl>
     );
@@ -341,10 +343,10 @@ export default function AuthLogin() {
 
       <Alert severity="info" sx={{ mb: 2 }}>
         <Stack spacing={0.5}>
-          <Typography variant="body2">请输入身份验证器中的动态验证码以完成登录。</Typography>
+          <Typography variant="body2">{t('auth.mfa.info')}</Typography>
           {maskedAccountHint && (
             <Typography variant="caption" color="text.secondary">
-              当前验证账户：{maskedAccountHint}
+              {t('auth.mfa.currentAccount', { account: maskedAccountHint })}
             </Typography>
           )}
         </Stack>
@@ -354,14 +356,14 @@ export default function AuthLogin() {
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           <Chip
             color={!useRecoveryCode ? 'secondary' : 'default'}
-            label="身份验证器"
+            label={t('auth.mfa.authenticator')}
             size="small"
             variant={!useRecoveryCode ? 'filled' : 'outlined'}
           />
           {canUseRecoveryCode && (
             <Chip
               color={useRecoveryCode ? 'secondary' : 'default'}
-              label="恢复码"
+              label={t('auth.mfa.recoveryCode')}
               size="small"
               variant={useRecoveryCode ? 'filled' : 'outlined'}
             />
@@ -370,14 +372,14 @@ export default function AuthLogin() {
 
         {!useRecoveryCode ? (
           <CustomFormControl fullWidth>
-            <InputLabel htmlFor="outlined-adornment-totp-code">验证码</InputLabel>
+            <InputLabel htmlFor="outlined-adornment-totp-code">{t('auth.mfa.codeLabel')}</InputLabel>
             <OutlinedInput
               id="outlined-adornment-totp-code"
               type="text"
               value={mfaCode}
               onChange={(e) => setMfaCode(e.target.value.replace(/\s+/g, '').slice(0, 8))}
               name="totpCode"
-              label="验证码"
+              label={t('auth.mfa.codeLabel')}
               autoComplete="one-time-code"
               autoFocus
               inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', 'aria-describedby': 'mfa-code-helper-text' }}
@@ -385,14 +387,14 @@ export default function AuthLogin() {
           </CustomFormControl>
         ) : (
           <CustomFormControl fullWidth>
-            <InputLabel htmlFor="outlined-adornment-recovery-code">恢复码</InputLabel>
+            <InputLabel htmlFor="outlined-adornment-recovery-code">{t('auth.mfa.recoveryCodeLabel')}</InputLabel>
             <OutlinedInput
               id="outlined-adornment-recovery-code"
               type="text"
               value={recoveryCode}
               onChange={(e) => setRecoveryCode(e.target.value.trimStart())}
               name="recoveryCode"
-              label="恢复码"
+              label={t('auth.mfa.recoveryCodeLabel')}
               autoComplete="one-time-code"
               autoFocus
             />
@@ -400,9 +402,7 @@ export default function AuthLogin() {
         )}
 
         <Typography id="mfa-code-helper-text" variant="caption" color="text.secondary" sx={{ mt: -1 }}>
-          {useRecoveryCode
-            ? '恢复码只能使用一次。验证成功后请尽快保存新的恢复码。'
-            : '请打开身份验证器 App，输入当前显示的 6 位动态验证码。'}
+          {useRecoveryCode ? t('auth.mfa.recoveryCodeHint') : t('auth.mfa.authenticatorHint')}
         </Typography>
 
         {canUseRecoveryCode && (
@@ -412,7 +412,7 @@ export default function AuthLogin() {
             onClick={() => setUseRecoveryCode((prev) => !prev)}
             sx={{ alignSelf: 'flex-start', px: 0.5 }}
           >
-            {useRecoveryCode ? '改用身份验证器验证码' : '无法使用身份验证器？改用恢复码'}
+            {useRecoveryCode ? t('auth.mfa.useAuthenticatorBtn') : t('auth.mfa.useRecoveryBtn')}
           </Button>
         )}
 
@@ -420,7 +420,7 @@ export default function AuthLogin() {
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
           <Button variant="outlined" onClick={handleBackToCredentials} disabled={loading}>
-            返回上一步
+            {t('auth.mfa.backBtn')}
           </Button>
           <AnimateButton>
             <Button color="secondary" fullWidth size="large" type="submit" variant="contained" disabled={loading}>
@@ -439,7 +439,7 @@ export default function AuthLogin() {
                 >
                   <CircularProgress size={20} color="inherit" />
                 </Box>
-                <Box component="span">{loading ? '验证中...' : '验 证 并 登 录'}</Box>
+                <Box component="span">{loading ? t('auth.mfa.verifying') : t('auth.mfa.verifyBtn')}</Box>
               </Box>
             </Button>
           </AnimateButton>
@@ -458,26 +458,26 @@ export default function AuthLogin() {
 
       {captchaDegraded && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Turnstile 配置不完整，已降级为传统验证码
+          {t('auth.login.turnstileDegraded')}
         </Alert>
       )}
 
       <CustomFormControl fullWidth>
-        <InputLabel htmlFor="outlined-adornment-username-login">用户名</InputLabel>
+        <InputLabel htmlFor="outlined-adornment-username-login">{t('auth.login.username')}</InputLabel>
         <OutlinedInput
           id="outlined-adornment-username-login"
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           name="username"
-          label="用户名"
+          label={t('auth.login.username')}
           autoComplete="username"
           autoFocus
         />
       </CustomFormControl>
 
       <CustomFormControl fullWidth>
-        <InputLabel htmlFor="outlined-adornment-password-login">密码</InputLabel>
+        <InputLabel htmlFor="outlined-adornment-password-login">{t('auth.login.password')}</InputLabel>
         <OutlinedInput
           id="outlined-adornment-password-login"
           type={showPassword ? 'text' : 'password'}
@@ -488,7 +488,7 @@ export default function AuthLogin() {
           endAdornment={
             <InputAdornment position="end">
               <IconButton
-                aria-label="切换密码可见性"
+                aria-label={t('auth.login.togglePassword')}
                 onClick={handleClickShowPassword}
                 onMouseDown={handleMouseDownPassword}
                 edge="end"
@@ -498,7 +498,7 @@ export default function AuthLogin() {
               </IconButton>
             </InputAdornment>
           }
-          label="密码"
+          label={t('auth.login.password')}
         />
       </CustomFormControl>
 
@@ -506,7 +506,7 @@ export default function AuthLogin() {
 
       <FormControlLabel
         control={<Checkbox checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} name="rememberMe" color="secondary" />}
-        label="记住用户名"
+        label={t('auth.login.rememberMe')}
         sx={{ mt: 1, mb: 1, ml: 0 }}
       />
 
@@ -528,7 +528,7 @@ export default function AuthLogin() {
               >
                 <CircularProgress size={20} color="inherit" />
               </Box>
-              <Box component="span">{loading ? '登录中...' : '登 录'}</Box>
+              <Box component="span">{loading ? t('auth.login.loggingIn') : t('auth.login.loginBtn')}</Box>
             </Box>
           </Button>
         </AnimateButton>

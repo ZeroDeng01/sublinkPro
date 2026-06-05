@@ -274,6 +274,68 @@ These directories may contain runtime state and should be handled carefully:
 正常功能开发时，不要随意编辑、删除或格式化这些运行时数据。  
 Do not casually edit, delete, or reformat runtime data during normal feature work.
 
+## 4.2 国际化规范 / Internationalization requirements
+
+本仓库已经具备前端国际化基础设施和成对维护的国际化实施契约。凡是新增或修改用户可见文本、API 展示语义、任务结果、通知内容、导出内容、文档说明或语言选择行为，都必须先阅读并遵守 `docs/internationalization.md` 与 `docs/internationalization.zh-CN.md`。
+This repository already has frontend i18n infrastructure and paired internationalization contract documents. Whenever you add or change user-visible text, API display semantics, task results, notification content, exported content, documentation, or language-selection behavior, read and follow `docs/internationalization.md` and `docs/internationalization.zh-CN.md` first.
+
+### 当前国际化形态 / Current i18n shape
+
+- 首批支持 locale 是 `zh-CN` 和 `en-US`；新增用户可见前端文本时，必须在同一次变更中补齐这两种语言。
+  The initial supported locales are `zh-CN` and `en-US`; new user-visible frontend text must include both translations in the same change.
+- 前端使用 `i18next`、`react-i18next` 和 `i18next-browser-languagedetector`，入口在 `webs/src/i18n/index.js`，locale、MUI 映射与格式化 helper 在 `webs/src/i18n/locales.js`。
+  The frontend uses `i18next`, `react-i18next`, and `i18next-browser-languagedetector`; the entrypoint is `webs/src/i18n/index.js`, with locale normalization, MUI mapping, and formatting helpers in `webs/src/i18n/locales.js`.
+- 翻译资源当前按 locale 放在 `webs/src/i18n/locales/`，例如 `zh-CN.json` 和 `en-US.json`；不要把前端翻译资源放进后端目录、运行时目录或数据库。
+  Translation resources currently live under `webs/src/i18n/locales/`, such as `zh-CN.json` and `en-US.json`; do not place frontend translation resources in backend directories, runtime directories, or the database.
+- 语言选择不使用 URL path 或 subdomain；`SUBLINK_WEB_BASE_PATH` 已经是 Web UI 路由关注点，国际化改动不得额外引入语言路径前缀或域名路由层。
+  Language selection does not use URL paths or subdomains; `SUBLINK_WEB_BASE_PATH` is already the Web UI routing concern, so i18n changes must not add locale path prefixes or host-based routing.
+
+### 前端国际化规则 / Frontend i18n rules
+
+- React 组件中的用户可见文本必须通过 `useTranslation()`、`Trans` 或已有 i18n helper 输出；不要在 JSX、toast、dialog、菜单、表单校验、空状态、tooltip、图表标签或移动端入口中继续硬编码中文或英文文案。
+  User-visible text in React components must go through `useTranslation()`, `Trans`, or existing i18n helpers; do not keep hardcoded Chinese or English copy in JSX, toasts, dialogs, menus, form validation, empty states, tooltips, chart labels, or mobile entry points.
+- Key 必须表达稳定语义而不是当前文案；使用 lower camel case 的点路径，按功能或稳定 UI 边界组织 namespace，优先复用 `common`、`airports`、`subscriptions`、`dashboard`、`settings`、`tasks` 等既有结构。
+  Keys must express stable meaning rather than current wording; use lower-camel-case dot paths, organize namespaces by feature or stable UI boundary, and prefer existing structures such as `common`, `airports`, `subscriptions`, `dashboard`, `settings`, and `tasks`.
+- 不要在 JSX 中拼接多个翻译片段来组成一句话；完整短语、句子、复数、插值和富文本应作为完整翻译项处理，富文本使用 `Trans` 并显式传入允许的组件。
+  Do not concatenate translated fragments in JSX to build a sentence; full phrases, sentences, plurals, interpolation, and rich text should be represented as complete translation entries, with rich text rendered through `Trans` and explicit allowed components.
+- 日期、时间、相对时间、数字、百分比、字节、流量和统计值必须通过接收当前 locale 的共享 helper 或 `Intl` 格式化；不要在功能组件里硬编码中文或英文日期顺序、分隔符或单位。
+  Dates, times, relative time, numbers, percentages, bytes, traffic values, and statistics must be formatted through shared helpers that receive the active locale or through `Intl`; do not hardcode Chinese or English date order, separators, or units in feature components.
+- MUI locale 必须由当前应用 locale 推导，新增语言时同步更新 `getMuiLocale()`、语言归一化、语言切换入口和完整翻译资源。
+  The MUI locale must be derived from the active app locale; when adding a language, update `getMuiLocale()`, language normalization, language switchers, and complete translation resources together.
+- 协议值、节点名称、域名、文件路径、API key、token、模板语法、订阅输出和外部客户端消费的字段值必须保持原样；只翻译周边 UI 标签和说明。
+  Protocol values, node names, domains, file paths, API keys, tokens, template syntax, subscription output, and field values consumed by external clients must remain unchanged; translate only surrounding UI labels and descriptions.
+
+### 后端国际化规则 / Backend i18n rules
+
+- 后端必须保持现有 API 客户端兼容。已经暴露的 `msg`、`code`、字段名、路由、状态码和业务码不得为了国际化随意改名或改语义。
+  The backend must preserve compatibility with existing API clients. Existing `msg`, `code`, field names, routes, status codes, and business codes must not be renamed or semantically changed just for i18n.
+- 新增或改造会在 Web UI 展示的错误、任务结果、通知结果或操作反馈时，优先在响应中补充可选的 `i18nKey` 和 `i18nParams`，让前端按当前 locale 渲染；`msg` 保留为旧客户端和诊断回退。
+  When adding or revising errors, task results, notification results, or operation feedback shown in the Web UI, prefer adding optional `i18nKey` and `i18nParams` so the frontend can render with the active locale; keep `msg` as the fallback for older clients and diagnostics.
+- `i18nParams` 只能包含普通 JSON 值，不能塞入已本地化句子、HTML、React 结构、错误对象、数据库模型或敏感数据。
+  `i18nParams` may contain only plain JSON values, not localized sentences, HTML, React structures, error objects, database models, or sensitive data.
+- 日志、调试标识、协议输出、订阅内容、模板变量、webhook payload、Telegram Bot 回复、导出文件和外部客户端直接消费的内容，应按其产品边界处理；如果内容会进入 Web UI 且需要本地化，使用 `i18nKey` 加参数而不是让后端按浏览器语言拼接文案。
+  Logs, debug identifiers, protocol output, subscription content, template variables, webhook payloads, Telegram Bot replies, exported files, and content consumed directly by external clients should be handled according to their product boundary; if the content enters the Web UI and needs localization, use `i18nKey` plus params instead of having the backend assemble browser-language text.
+
+### 跨层同步 / Cross-layer synchronization
+
+- 任何影响前端展示文案、API 错误语义、任务中心结果、通知内容、设置说明、认证/MFA 提示、配置语义、订阅分享提示或导出展示的改动，都必须同步检查后端 handler/service、`webs/src/api/`、相关 `webs/src/views/` 页面、翻译资源和文档。
+  Any change affecting frontend copy, API error semantics, task-center results, notification content, settings descriptions, auth/MFA prompts, configuration semantics, subscription-share prompts, or exported display must check backend handlers/services, `webs/src/api/`, related `webs/src/views/` pages, translation resources, and docs together.
+- 如果只改一层后确认另一层无需修改，交付说明必须写明已检查哪些前端、后端或文档入口，以及为什么无需同步调整。
+  If only one layer changes and the other layer truly needs no edit, the delivery summary must state which frontend, backend, or documentation entry points were checked and why no synchronized change was required.
+- i18n 行为或贡献者契约变化时，必须成对更新 `docs/internationalization.md` 与 `docs/internationalization.zh-CN.md`；涉及 README 或功能文档时，也必须同步更新英文 canonical 文件和对应 `*.zh-CN.md` 文件。
+  When i18n behavior or contributor contracts change, update `docs/internationalization.md` and `docs/internationalization.zh-CN.md` as a pair; if README or feature docs are affected, also update the English canonical file and the matching `*.zh-CN.md` file.
+
+### 国际化完成条件 / I18n definition of done
+
+- 至少确认 `zh-CN` 和 `en-US` 两种语言下新增或修改的页面、弹窗、抽屉、移动端入口、空状态、错误状态、任务结果和通知文案都可读且语义一致。
+  Verify at least that the changed pages, dialogs, drawers, mobile entry points, empty states, error states, task results, and notification copy are readable and semantically aligned in both `zh-CN` and `en-US`.
+- 前端 i18n 代码改动必须运行 `yarn run lint`；如果影响路由、资源、base-path、生产集成或构建行为，还必须运行 `yarn run build`。不要发明仓库中不存在的前端 `test` 或 `typecheck` 命令。
+  Frontend i18n code changes must run `yarn run lint`; if routing, assets, base-path, production integration, or build behavior is affected, also run `yarn run build`. Do not invent frontend `test` or `typecheck` commands that do not exist in this repository.
+- 后端 i18n 行为改动必须对改动的 Go 文件运行 `gofmt`，并运行 `golangci-lint run` 和相关 `go test`；涉及 API 响应契约时，优先补充或更新 handler/response 回归测试。
+  Backend i18n behavior changes must run `gofmt` on changed Go files plus `golangci-lint run` and relevant `go test`; when API response contracts are affected, prefer adding or updating handler/response regression tests.
+- 文档-only 的 AGENTS 或 i18n 规范改动不需要运行前后端构建，但必须人工核对链接、双语一致性、现有命令真实性，以及是否与本文件的跨层同步、测试和文档规则冲突。
+  Documentation-only AGENTS or i18n contract changes do not require frontend/backend builds, but must be manually checked for links, bilingual consistency, real command names, and consistency with this file's cross-layer, testing, and documentation rules.
+
 ## 5. 本地开发命令 / Local development commands
 
 ### 后端 / Backend

@@ -1,5 +1,9 @@
+import i18n from 'i18n';
+
+const getUnknownNodeName = () => i18n.t('nodes.common.unknownNode', { defaultValue: 'Unknown node' });
+
 export const getNodeDisplayName = (node) => {
-  if (!node) return '未知节点';
+  if (!node) return getUnknownNodeName();
 
   if (node.PreviewName) {
     return node.PreviewName;
@@ -17,5 +21,5 @@ export const getNodeDisplayName = (node) => {
     return node.LinkName;
   }
 
-  return node.Name || node.LinkName || node.OriginalName || '未知节点';
+  return node.Name || node.LinkName || node.OriginalName || getUnknownNodeName();
 };

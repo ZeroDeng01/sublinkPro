@@ -16,6 +16,7 @@ import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { useTranslation } from 'react-i18next';
 
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
@@ -40,14 +41,21 @@ export default function AirportBatchEditDialog({
     isDark
   );
   const { primaryText, secondaryText } = getReadableTextTokens(theme, isDark);
+  const { t } = useTranslation();
 
   const summaryItems = [];
 
   if (batchForm.applyGroup) {
-    summaryItems.push(`分组：${batchForm.group.trim() ? batchForm.group.trim() : '清空分组'}`);
+    summaryItems.push({
+      label: t('airports.batchEdit.summary.group'),
+      value: batchForm.group.trim() ? batchForm.group.trim() : t('airports.batchEdit.summary.clearGroup')
+    });
   }
   if (batchForm.applySchedule) {
-    summaryItems.push(`调度：${batchForm.cronExpr.trim() || '未设置'}`);
+    summaryItems.push({
+      label: t('airports.batchEdit.summary.schedule'),
+      value: batchForm.cronExpr.trim() || t('airports.batchEdit.summary.unset')
+    });
   }
 
   const controlRowSx = {
@@ -88,22 +96,30 @@ export default function AirportBatchEditDialog({
           borderColor: panelBorder
         }}
       >
-        批量设置机场
+        {t('airports.batchEdit.title')}
       </DialogTitle>
       <DialogContent dividers sx={{ pt: 2.5, pb: 2, bgcolor: 'transparent', borderColor: panelBorder }}>
         <Stack spacing={2.5}>
           <Alert severity={summaryItems.length > 0 ? 'info' : 'warning'}>
             {summaryItems.length > 0
-              ? `将更新 ${selectedCount} 个机场：${summaryItems.join('；')}`
-              : `已选择 ${selectedCount} 个机场，请先勾选本次要修改的字段`}
+              ? t('airports.batchEdit.messages.selectedWithSummary', {
+                  count: selectedCount,
+                  summary: summaryItems.map((item) => `${item.label}${item.value}`).join(t('airports.batchEdit.summarySeparator'))
+                })
+              : t('airports.batchEdit.messages.selectedOnly', { count: selectedCount })}
           </Alert>
 
-          <AirportDialogSection title="节点分组" surface={nestedPanelSurface} borderColor={panelBorder} titleColor={primaryText}>
+          <AirportDialogSection
+            title={t('airports.batchEdit.sections.group.title')}
+            surface={nestedPanelSurface}
+            borderColor={panelBorder}
+            titleColor={primaryText}
+          >
             <FormControlLabel
               control={
                 <Checkbox checked={batchForm.applyGroup} onChange={(e) => setBatchForm({ ...batchForm, applyGroup: e.target.checked })} />
               }
-              label="统一设置节点分组"
+              label={t('airports.batchEdit.sections.group.switch')}
               sx={{ color: primaryText, alignItems: 'flex-start', m: 0 }}
             />
             <Collapse in={batchForm.applyGroup}>
@@ -115,25 +131,36 @@ export default function AirportBatchEditDialog({
                   value={batchForm.group}
                   onChange={(e, newValue) => setBatchForm({ ...batchForm, group: newValue || '' })}
                   onInputChange={(e, newValue) => setBatchForm({ ...batchForm, group: newValue ?? '' })}
-                  renderInput={(params) => <TextField {...params} label="节点分组" placeholder="输入或选择分组，留空表示清空分组" />}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label={t('airports.batchEdit.sections.group.fieldLabel')}
+                      placeholder={t('airports.batchEdit.sections.group.placeholder')}
+                    />
+                  )}
                 />
                 <Typography variant="caption" sx={{ color: secondaryText }}>
-                  会同步更新这些机场已导入节点的分组，留空表示清空分组。
+                  {t('airports.batchEdit.sections.group.helper')}
                 </Typography>
               </Stack>
             </Collapse>
           </AirportDialogSection>
 
-          <AirportDialogSection title="定时更新" surface={nestedPanelSurface} borderColor={panelBorder} titleColor={primaryText}>
+          <AirportDialogSection
+            title={t('airports.batchEdit.sections.schedule.title')}
+            surface={nestedPanelSurface}
+            borderColor={panelBorder}
+            titleColor={primaryText}
+          >
             <Stack spacing={2}>
               <Box>
                 <Box sx={controlRowSx}>
                   <Box sx={{ pr: 2 }}>
                     <Typography variant="body2" sx={{ color: primaryText }}>
-                      更新 Cron 表达式
+                      {t('airports.batchEdit.sections.schedule.fieldLabel')}
                     </Typography>
                     <Typography variant="caption" sx={{ color: secondaryText }}>
-                      批量编辑仅会更新定时规则，不会改变已选机场当前的启用或禁用状态。
+                      {t('airports.batchEdit.sections.schedule.description')}
                     </Typography>
                   </Box>
                   <Switch
@@ -147,7 +174,7 @@ export default function AirportBatchEditDialog({
                       value={batchForm.cronExpr}
                       onChange={(value) => setBatchForm({ ...batchForm, cronExpr: value })}
                       label=""
-                      helperText="可批量修改或清空 Cron 表达式；此处不会同步切换机场的定时更新开关状态。"
+                      helperText={t('airports.batchEdit.sections.schedule.helper')}
                     />
                   </Box>
                 </Collapse>
@@ -166,10 +193,10 @@ export default function AirportBatchEditDialog({
         }}
       >
         <Button onClick={onClose} disabled={submitting}>
-          取消
+          {t('common.cancel')}
         </Button>
         <Button variant="contained" onClick={onSubmit} disabled={submitting}>
-          {submitting ? '保存中...' : '确认批量更新'}
+          {submitting ? t('common.saving') : t('airports.batchEdit.actions.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

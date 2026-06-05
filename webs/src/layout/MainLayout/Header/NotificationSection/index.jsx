@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -28,6 +29,7 @@ import { useAuth } from 'contexts/AuthContext';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getHeaderPopoverTokens, getHeaderTriggerTokens } from '../headerPopoverTokens';
 import { withAlpha } from 'utils/colorUtils';
+import { formatDateTime } from 'i18n/locales';
 
 // assets
 import { IconBell, IconCheck, IconTrash, IconCircleCheck, IconCircleX, IconInfoCircle } from '@tabler/icons-react';
@@ -50,6 +52,7 @@ const getNotificationIcon = (type) => {
 
 export default function NotificationSection() {
   const theme = useTheme();
+  const { t, i18n } = useTranslation();
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
   const { notifications, clearAllNotifications } = useAuth();
   const { isDark } = useResolvedColorScheme();
@@ -164,7 +167,7 @@ export default function NotificationSection() {
   return (
     <>
       <Box sx={{ ml: 2 }}>
-        <Tooltip title="通知">
+        <Tooltip title={t('notifications.title')}>
           <Badge badgeContent={unreadCount} color="error" max={99}>
             <Avatar
               variant="rounded"
@@ -229,7 +232,7 @@ export default function NotificationSection() {
                         sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 2, px: 2, bgcolor: headerSurface }}
                       >
                         <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
-                          <Typography variant="subtitle1">通知消息</Typography>
+                          <Typography variant="subtitle1">{t('notifications.messages')}</Typography>
                           {unreadCount > 0 && (
                             <Chip
                               size="small"
@@ -253,7 +256,7 @@ export default function NotificationSection() {
                             onClick={handleMarkAllRead}
                             sx={{ textTransform: 'none' }}
                           >
-                            全部已读
+                            {t('notifications.markAllRead')}
                           </Button>
                         )}
                       </Stack>
@@ -353,7 +356,9 @@ export default function NotificationSection() {
                                         )}
                                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                                           <Typography variant="caption" sx={{ color: mutedText }}>
-                                            {notification.timestamp?.toLocaleString('zh-CN') || '刚刚'}
+                                            {notification.timestamp
+                                              ? formatDateTime(notification.timestamp, i18n.resolvedLanguage || i18n.language)
+                                              : t('notifications.justNow')}
                                           </Typography>
                                           {notification.message && notification.message.length > 50 && (
                                             <Typography
@@ -362,7 +367,7 @@ export default function NotificationSection() {
                                               sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
                                               onClick={(e) => handleToggleExpand(notification.id, e)}
                                             >
-                                              {expandedIds.has(notification.id) ? '收起' : '展开'}
+                                              {expandedIds.has(notification.id) ? t('notifications.collapse') : t('notifications.expand')}
                                             </Typography>
                                           )}
                                         </Stack>
@@ -376,7 +381,7 @@ export default function NotificationSection() {
                         ) : (
                           <Box sx={{ py: 4, textAlign: 'center' }}>
                             <Typography variant="body2" sx={{ color: mutedText }}>
-                              暂无通知消息
+                              {t('notifications.empty')}
                             </Typography>
                           </Box>
                         )}
@@ -391,7 +396,7 @@ export default function NotificationSection() {
                           onClick={handleClearAll}
                           sx={{ textTransform: 'none' }}
                         >
-                          清空所有通知
+                          {t('notifications.clearAll')}
                         </Button>
                       </CardActions>
                     )}

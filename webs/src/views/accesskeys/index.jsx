@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -41,10 +42,12 @@ import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
 import { getAccessKeys, createAccessKey, deleteAccessKey } from 'api/accesskeys';
 import { useAuth } from 'contexts/AuthContext';
+import { formatDateTime } from 'i18n/locales';
 
 // ==============================|| API 密钥管理 ||============================== //
 
 export default function ApiKeyList() {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const theme = useTheme();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
@@ -108,7 +111,7 @@ export default function ApiKeyList() {
         setTotalItems((response.data || []).length);
       }
     } catch (error) {
-      showMessage(error.message || '获取 API 密钥列表失败', 'error');
+      showMessage(error.message || t('accessKeys.messages.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -130,20 +133,20 @@ export default function ApiKeyList() {
   };
 
   const handleDelete = async (accessKey) => {
-    openConfirm('删除 API 密钥', '确定要删除此 API 密钥吗？此操作不可恢复！', async () => {
+    openConfirm(t('accessKeys.delete.title'), t('accessKeys.delete.confirm'), async () => {
       try {
         await deleteAccessKey(accessKey.ID);
-        showMessage('删除成功');
+        showMessage(t('accessKeys.messages.deleteSuccess'));
         fetchAccessKeys(page, rowsPerPage);
       } catch (error) {
-        showMessage(error.message || '删除失败', 'error');
+        showMessage(error.message || t('accessKeys.messages.deleteFailed'), 'error');
       }
     });
   };
 
   const handleSubmit = async () => {
     if (!formData.description) {
-      showMessage('请输入描述', 'warning');
+      showMessage(t('accessKeys.messages.descriptionRequired'), 'warning');
       return;
     }
 
@@ -155,7 +158,7 @@ export default function ApiKeyList() {
 
       if (formData.expirationOption === 'custom') {
         if (!formData.expiredAt) {
-          showMessage('请选择过期时间', 'warning');
+          showMessage(t('accessKeys.messages.expiredAtRequired'), 'warning');
           return;
         }
         params.expiredAt = formData.expiredAt.toISOString();
@@ -167,49 +170,49 @@ export default function ApiKeyList() {
       setShowKeyDialog(true);
       fetchAccessKeys(page, rowsPerPage);
     } catch (error) {
-      showMessage(error.message || '创建失败', 'error');
+      showMessage(error.message || t('accessKeys.messages.createFailed'), 'error');
     }
   };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    showMessage('已复制到剪贴板');
+    showMessage(t('accessKeys.messages.copied'));
   };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
-    return date.toLocaleString('zh-CN');
+    return formatDateTime(date, i18n.resolvedLanguage || i18n.language);
   };
 
   const getExpirationStatus = (apiKey) => {
     if (!apiKey.ExpiredAt) {
-      return <Chip label="永不过期" color="success" size="small" variant="outlined" />;
+      return <Chip label={t('accessKeys.expiration.never')} color="success" size="small" variant="outlined" />;
     }
     const expireDate = new Date(apiKey.ExpiredAt);
     const now = new Date();
     if (expireDate < now) {
-      return <Chip label="已过期" color="error" size="small" variant="outlined" />;
+      return <Chip label={t('accessKeys.expiration.expired')} color="error" size="small" variant="outlined" />;
     }
     const diffDays = Math.ceil((expireDate - now) / (1000 * 60 * 60 * 24));
     if (diffDays <= 7) {
-      return <Chip label={`${diffDays}天后过期`} color="warning" size="small" variant="outlined" />;
+      return <Chip label={t('accessKeys.expiration.expiresInDays', { count: diffDays })} color="warning" size="small" variant="outlined" />;
     }
     return <Chip label={formatDate(apiKey.ExpiredAt)} color="info" size="small" variant="outlined" />;
   };
 
   return (
     <MainCard
-      title="API 密钥管理"
+      title={t('accessKeys.title')}
       secondary={
         matchDownMd ? (
           <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAdd}>
-            创建
+            {t('accessKeys.actions.create')}
           </Button>
         ) : (
           <Stack direction="row" spacing={1}>
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
-              创建密钥
+              {t('accessKeys.actions.createKey')}
             </Button>
             <IconButton onClick={() => fetchAccessKeys(page, rowsPerPage)} disabled={loading}>
               <RefreshIcon />
@@ -232,14 +235,14 @@ export default function ApiKeyList() {
             <MainCard key={accessKey.ID} content={false} border shadow={theme.shadows[1]}>
               <Box p={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Typography variant="subtitle1">{accessKey.Description || '无描述'}</Typography>
+                  <Typography variant="subtitle1">{accessKey.Description || t('accessKeys.noDescription')}</Typography>
                   {getExpirationStatus(accessKey)}
                 </Stack>
                 <Typography variant="caption" color="textSecondary" display="block" gutterBottom>
                   ID: {accessKey.ID}
                 </Typography>
                 <Typography variant="caption" color="textSecondary" display="block" gutterBottom>
-                  创建时间: {formatDate(accessKey.CreatedAt)}
+                  {t('accessKeys.fields.createdAt')}: {formatDate(accessKey.CreatedAt)}
                 </Typography>
                 <Divider sx={{ my: 1 }} />
                 <Stack direction="row" justifyContent="flex-end">
@@ -257,10 +260,10 @@ export default function ApiKeyList() {
             <TableHead>
               <TableRow>
                 <TableCell>ID</TableCell>
-                <TableCell>描述</TableCell>
-                <TableCell>创建时间</TableCell>
-                <TableCell>过期状态</TableCell>
-                <TableCell align="right">操作</TableCell>
+                <TableCell>{t('accessKeys.fields.description')}</TableCell>
+                <TableCell>{t('accessKeys.fields.createdAt')}</TableCell>
+                <TableCell>{t('accessKeys.fields.expiration')}</TableCell>
+                <TableCell align="right">{t('accessKeys.fields.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -284,7 +287,7 @@ export default function ApiKeyList() {
 
       {accessKeys.length === 0 && !loading && (
         <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography color="textSecondary">暂无 API 密钥</Typography>
+          <Typography color="textSecondary">{t('accessKeys.empty')}</Typography>
         </Box>
       )}
 
@@ -308,29 +311,29 @@ export default function ApiKeyList() {
 
       {/* 创建对话框 */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>创建 API 密钥</DialogTitle>
+        <DialogTitle>{t('accessKeys.createDialog.title')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2}>
             <TextField
               fullWidth
               id="description"
               name="description"
-              label="描述"
+              label={t('accessKeys.fields.description')}
               autoComplete="off"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               inputProps={{ maxLength: 10 }}
-              helperText="最多10个字符"
+              helperText={t('accessKeys.createDialog.descriptionHelper')}
             />
             <FormControl component="fieldset">
-              <FormLabel component="legend">过期设置</FormLabel>
+              <FormLabel component="legend">{t('accessKeys.createDialog.expirationSettings')}</FormLabel>
               <RadioGroup
                 row
                 value={formData.expirationOption}
                 onChange={(e) => setFormData({ ...formData, expirationOption: e.target.value })}
               >
-                <FormControlLabel value="never" control={<Radio />} label="永不过期" />
-                <FormControlLabel value="custom" control={<Radio />} label="自定义" />
+                <FormControlLabel value="never" control={<Radio />} label={t('accessKeys.expiration.never')} />
+                <FormControlLabel value="custom" control={<Radio />} label={t('accessKeys.expiration.custom')} />
               </RadioGroup>
             </FormControl>
             {formData.expirationOption === 'custom' && (
@@ -338,7 +341,7 @@ export default function ApiKeyList() {
                 fullWidth
                 id="expiredAt"
                 name="expiredAt"
-                label="过期时间"
+                label={t('accessKeys.fields.expiredAt')}
                 type="datetime-local"
                 autoComplete="off"
                 value={
@@ -358,19 +361,19 @@ export default function ApiKeyList() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>取消</Button>
+          <Button onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
           <Button variant="contained" onClick={handleSubmit}>
-            创建
+            {t('accessKeys.actions.create')}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* 显示新密钥对话框 */}
       <Dialog open={showKeyDialog} onClose={() => setShowKeyDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>API 密钥已创建</DialogTitle>
+        <DialogTitle>{t('accessKeys.createdDialog.title')}</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            请立即保存此密钥，关闭后将无法再次查看！
+            {t('accessKeys.createdDialog.warning')}
           </Alert>
           <TextField
             fullWidth
@@ -387,7 +390,7 @@ export default function ApiKeyList() {
         </DialogContent>
         <DialogActions>
           <Button variant="contained" onClick={() => setShowKeyDialog(false)}>
-            我已保存
+            {t('accessKeys.createdDialog.saved')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -414,9 +417,9 @@ export default function ApiKeyList() {
           <DialogContentText id="alert-dialog-description">{confirmInfo.content}</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleConfirmClose}>取消</Button>
+          <Button onClick={handleConfirmClose}>{t('common.cancel')}</Button>
           <Button onClick={handleConfirmAction} color="primary" autoFocus>
-            确定
+            {t('common.confirm')}
           </Button>
         </DialogActions>
       </Dialog>

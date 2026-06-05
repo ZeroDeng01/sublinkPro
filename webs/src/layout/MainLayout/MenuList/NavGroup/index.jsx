@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { Activity, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { matchPath, useLocation } from 'react-router-dom';
 
 // material-ui
@@ -17,12 +18,15 @@ import { useGetMenuMaster } from 'api/menu';
 
 export default function NavGroup({ item, lastItem, remItems, lastItemId, setSelectedID }) {
   const { pathname } = useLocation();
+  const { t } = useTranslation();
 
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
 
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentItem, setCurrentItem] = useState(item);
+  const currentTitle = currentItem.titleKey ? t(currentItem.titleKey) : currentItem.title;
+  const currentCaption = currentItem.captionKey ? t(currentItem.captionKey) : currentItem.caption;
 
   const openMini = Boolean(anchorEl);
 
@@ -94,7 +98,7 @@ export default function NavGroup({ item, lastItem, remItems, lastItemId, setSele
       <List
         disablePadding={!drawerOpen}
         subheader={
-          currentItem.title &&
+          currentTitle &&
           drawerOpen && (
             <Typography
               variant="caption"
@@ -109,8 +113,8 @@ export default function NavGroup({ item, lastItem, remItems, lastItemId, setSele
                 marginTop: 1.25
               }}
             >
-              {currentItem.title}
-              {currentItem.caption && (
+              {currentTitle}
+              {currentCaption && (
                 <Typography
                   gutterBottom
                   sx={{
@@ -122,7 +126,7 @@ export default function NavGroup({ item, lastItem, remItems, lastItemId, setSele
                     lineHeight: 1.66
                   }}
                 >
-                  {currentItem.caption}
+                  {currentCaption}
                 </Typography>
               )}
             </Typography>

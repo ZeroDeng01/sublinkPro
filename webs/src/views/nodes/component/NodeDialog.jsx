@@ -14,6 +14,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { useTranslation } from 'react-i18next';
 
 // project imports
 import SearchableNodeSelect from 'components/SearchableNodeSelect';
@@ -36,6 +37,7 @@ export default function NodeDialog({
   onFetchProxyNodes
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
   const fieldControlSx = getNodeFieldControlSx(tokens);
@@ -50,7 +52,7 @@ export default function NodeDialog({
           borderColor: tokens.panelBorder
         }}
       >
-        {isEdit ? '编辑节点' : '添加节点'}
+        {isEdit ? t('nodes.dialog.editTitle') : t('nodes.dialog.addTitle')}
       </DialogTitle>
       <DialogContent dividers sx={{ bgcolor: 'transparent', borderColor: tokens.panelBorder }}>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -58,10 +60,10 @@ export default function NodeDialog({
             fullWidth
             multiline
             rows={4}
-            label="节点链接"
+            label={t('nodes.dialog.fields.link')}
             value={nodeForm.link}
             onChange={(e) => setNodeForm({ ...nodeForm, link: e.target.value })}
-            placeholder="支持输入：各类代理链接（vmess://、vless://、wireguard:// 等）、WireGuard 标准配置文件（包含 [Interface] 和 [Peer]）、Clash YAML 配置（包含 proxies 字段）、Base64 订阅链接。多行使用回车分隔"
+            placeholder={t('nodes.dialog.fields.linkPlaceholder')}
             sx={fieldControlSx}
           />
           {isEdit && (
@@ -69,28 +71,28 @@ export default function NodeDialog({
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                 <TextField
                   fullWidth
-                  label="备注名称"
+                  label={t('nodes.dialog.fields.remarkName')}
                   value={nodeForm.name}
                   onChange={(e) => setNodeForm({ ...nodeForm, name: e.target.value })}
-                  helperText="自定义备注会保存在 Name 字段，不会被机场更新覆盖。"
+                  helperText={t('nodes.dialog.fields.remarkNameHelper')}
                   sx={fieldControlSx}
                 />
                 <TextField
                   select
                   fullWidth
-                  label="实际使用名称"
+                  label={t('nodes.dialog.fields.nameMode')}
                   value={nodeForm.nameMode || 'link'}
                   onChange={(e) => setNodeForm({ ...nodeForm, nameMode: e.target.value })}
                   SelectProps={{ native: true }}
-                  helperText="控制订阅输出、重命名规则、脚本和链式代理使用哪个名称。"
+                  helperText={t('nodes.dialog.fields.nameModeHelper')}
                   sx={fieldControlSx}
                 >
-                  <option value="link">使用原始名称</option>
-                  <option value="remark">使用备注名称</option>
+                  <option value="link">{t('nodes.dialog.fields.nameModeLink')}</option>
+                  <option value="remark">{t('nodes.dialog.fields.nameModeRemark')}</option>
                 </TextField>
               </Stack>
               <Typography variant="caption" sx={{ color: tokens.secondaryText }}>
-                需要恢复机场原始名称时，切换为“使用原始名称”即可；备注内容仍会保留，之后可随时再切回。
+                {t('nodes.dialog.fields.nameModeNotice')}
               </Typography>
             </Stack>
           )}
@@ -104,9 +106,9 @@ export default function NodeDialog({
             }}
             displayField="Name"
             valueField="Name"
-            label="前置代理节点名称或策略组名称"
-            placeholder="选择或输入节点名称/策略组名称"
-            helperText="仅Clash-Meta内核可用，留空则不使用前置代理"
+            label={t('nodes.dialog.fields.dialerProxy')}
+            placeholder={t('nodes.dialog.fields.dialerProxyPlaceholder')}
+            helperText={t('nodes.dialog.fields.dialerProxyHelper')}
             freeSolo={true}
             limit={50}
             onFocus={onFetchProxyNodes}
@@ -119,7 +121,14 @@ export default function NodeDialog({
             onChange={(e, newValue) => setNodeForm({ ...nodeForm, group: newValue || '' })}
             onInputChange={(e, newValue) => setNodeForm({ ...nodeForm, group: newValue || '' })}
             sx={fieldControlSx}
-            renderInput={(params) => <TextField {...params} label="分组" placeholder="请选择或输入分组名称" sx={fieldControlSx} />}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={t('nodes.dialog.fields.group')}
+                placeholder={t('nodes.dialog.fields.groupPlaceholder')}
+                sx={fieldControlSx}
+              />
+            )}
           />
           {/* 标签选择 */}
           <Autocomplete
@@ -162,14 +171,21 @@ export default function NodeDialog({
               })
             }
             sx={fieldControlSx}
-            renderInput={(params) => <TextField {...params} label="标签" placeholder="选择要设置的标签" sx={fieldControlSx} />}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={t('nodes.dialog.fields.tags')}
+                placeholder={t('nodes.dialog.fields.tagsPlaceholder')}
+                sx={fieldControlSx}
+              />
+            )}
           />
         </Stack>
       </DialogContent>
       <DialogActions sx={{ bgcolor: tokens.mutedPanelSurface, borderTop: '1px solid', borderColor: tokens.panelBorder }}>
-        <Button onClick={onClose}>关闭</Button>
+        <Button onClick={onClose}>{t('common.close')}</Button>
         <Button variant="contained" onClick={onSubmit}>
-          确定
+          {t('common.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

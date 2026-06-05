@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
@@ -33,7 +34,6 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 
 /**
- * 桌面端订阅表格组件
  */
 export default function SubscriptionTable({
   subscriptions,
@@ -62,6 +62,7 @@ export default function SubscriptionTable({
   onBatchMove
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
 
   return (
     <TableContainer component={Paper}>
@@ -69,11 +70,11 @@ export default function SubscriptionTable({
         <TableHead>
           <TableRow>
             <TableCell width={50} />
-            <TableCell>订阅名称</TableCell>
-            <TableCell>节点/分组</TableCell>
-            <TableCell>创建时间</TableCell>
+            <TableCell>{t('subscriptions.table.name')}</TableCell>
+            <TableCell>{t('subscriptions.table.nodesAndGroups')}</TableCell>
+            <TableCell>{t('subscriptions.table.createdAt')}</TableCell>
             <TableCell align="right" width={350}>
-              操作
+              {t('subscriptions.table.actions')}
             </TableCell>
           </TableRow>
         </TableHead>
@@ -88,67 +89,67 @@ export default function SubscriptionTable({
                 </TableCell>
                 <TableCell>
                   <Chip label={sub.Name} sx={getSubscriptionNameChipSx(theme)} />
-                  {sortingSubId === sub.ID && <Chip label="排序中" color="warning" size="small" sx={{ ml: 1 }} />}
+                  {sortingSubId === sub.ID && <Chip label={t('subscriptions.table.sorting')} color="warning" size="small" sx={{ ml: 1 }} />}
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">
-                    {sub.Nodes?.length || 0} 个节点, {sub.Groups?.length || 0} 个分组
+                    {t('subscriptions.table.nodeGroupCount', { nodes: sub.Nodes?.length || 0, groups: sub.Groups?.length || 0 })}
                   </Typography>
                 </TableCell>
                 <TableCell>{sub.CreateDate}</TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                    <Tooltip title="预览节点">
+                    <Tooltip title={t('subscriptions.table.tooltips.preview')}>
                       <IconButton size="small" color="info" onClick={() => onPreview(sub)}>
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="复制本配置为新副本">
+                    <Tooltip title={t('subscriptions.table.tooltips.copy')}>
                       <IconButton size="small" color="secondary" onClick={() => onCopy(sub)}>
                         <ContentCopyIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="编辑">
+                    <Tooltip title={t('common.edit')}>
                       <IconButton size="small" onClick={() => onEdit(sub)}>
                         <EditIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="分享管理">
+                    <Tooltip title={t('subscriptions.table.tooltips.share')}>
                       <IconButton size="small" onClick={() => onClient(sub)}>
                         <QrCode2Icon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="访问记录">
+                    <Tooltip title={t('subscriptions.table.tooltips.accessLogs')}>
                       <IconButton size="small" onClick={() => onLogs(sub)}>
                         <HistoryIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="链式代理">
+                    <Tooltip title={t('subscriptions.table.tooltips.chainProxy')}>
                       <IconButton size="small" color="warning" onClick={() => onChainProxy(sub)}>
                         <AccountTreeIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     {sortingSubId !== sub.ID ? (
-                      <Tooltip title="排序">
+                      <Tooltip title={t('subscriptions.table.tooltips.sort')}>
                         <IconButton size="small" onClick={() => onStartSort(sub)}>
                           <SortIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     ) : (
                       <>
-                        <Tooltip title="确定">
+                        <Tooltip title={t('common.confirm')}>
                           <IconButton size="small" color="success" onClick={() => onConfirmSort(sub)}>
                             <CheckIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="取消">
+                        <Tooltip title={t('common.cancel')}>
                           <IconButton size="small" onClick={onCancelSort}>
                             <CloseIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
                       </>
                     )}
-                    <Tooltip title="删除">
+                    <Tooltip title={t('common.delete')}>
                       <IconButton size="small" color="error" onClick={() => onDelete(sub)}>
                         <DeleteIcon fontSize="small" />
                       </IconButton>

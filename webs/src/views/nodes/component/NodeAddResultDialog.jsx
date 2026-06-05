@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import Alert from '@mui/material/Alert';
@@ -31,6 +32,7 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
  * 展示添加成功、重复跳过、失败的统计和详情
  */
 export default function NodeAddResultDialog({ open, result, onClose }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -68,7 +70,7 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
         ) : (
           <ErrorOutlineIcon sx={{ color: skipped.length > 0 ? 'warning.main' : 'error.main' }} />
         )}
-        节点添加结果
+        {t('nodes.addResult.title')}
       </DialogTitle>
 
       <DialogContent sx={{ pt: 1, bgcolor: 'transparent' }}>
@@ -89,7 +91,7 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
         >
           <Chip
             icon={<CheckCircleOutlineIcon />}
-            label={`成功 ${added}`}
+            label={t('nodes.addResult.stats.added', { count: added })}
             color="success"
             variant={added > 0 ? 'filled' : 'outlined'}
             size={isMobile ? 'small' : 'medium'}
@@ -97,7 +99,7 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
           {skipped.length > 0 && (
             <Chip
               icon={<SwapHorizIcon />}
-              label={`跳过 ${skipped.length}`}
+              label={t('nodes.addResult.stats.skipped', { count: skipped.length })}
               color="warning"
               variant="filled"
               size={isMobile ? 'small' : 'medium'}
@@ -106,21 +108,21 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
           {failed.length > 0 && (
             <Chip
               icon={<ErrorOutlineIcon />}
-              label={`失败 ${failed.length}`}
+              label={t('nodes.addResult.stats.failed', { count: failed.length })}
               color="error"
               variant="filled"
               size={isMobile ? 'small' : 'medium'}
             />
           )}
           <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center', ml: 'auto' }}>
-            共 {total} 个节点
+            {t('nodes.addResult.stats.total', { count: total })}
           </Typography>
         </Stack>
 
         {/* 全部成功提示 */}
         {allSuccess && added > 0 && (
           <Alert severity="success" sx={{ borderRadius: 2 }}>
-            所有 {added} 个节点添加成功！
+            {t('nodes.addResult.successAll', { count: added })}
           </Alert>
         )}
 
@@ -128,7 +130,7 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
         {skipped.length > 0 && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" color="warning.main" sx={{ mb: 1, fontWeight: 600 }}>
-              重复跳过的节点
+              {t('nodes.addResult.skippedTitle')}
             </Typography>
             <List
               dense
@@ -156,24 +158,24 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
                   <ListItemText
                     primary={
                       <Typography variant="body2" sx={{ fontWeight: 500, wordBreak: 'break-all' }}>
-                        {item.name || '未知节点'}
+                        {item.name || t('nodes.addResult.unknownNode')}
                       </Typography>
                     }
                     secondary={
                       <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
                         <Typography variant="caption" color="text.secondary">
-                          与已有节点重复：
+                          {t('nodes.addResult.duplicatePrefix')}
                         </Typography>
                         <Chip label={item.existingName} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
                         <Chip
-                          label={`来源: ${item.source}`}
+                          label={t('nodes.addResult.sourceLabel', { source: item.source })}
                           size="small"
                           variant="outlined"
                           color="info"
                           sx={{ height: 20, fontSize: '0.7rem' }}
                         />
                         <Chip
-                          label={`分组: ${item.group}`}
+                          label={t('nodes.addResult.groupLabel', { group: item.group })}
                           size="small"
                           variant="outlined"
                           color="secondary"
@@ -194,7 +196,7 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
           <Box>
             {skipped.length > 0 && <Divider sx={{ mb: 2 }} />}
             <Typography variant="subtitle2" color="error.main" sx={{ mb: 1, fontWeight: 600 }}>
-              添加失败的节点
+              {t('nodes.addResult.failedTitle')}
             </Typography>
             <List
               dense
@@ -228,7 +230,7 @@ export default function NodeAddResultDialog({ open, result, onClose }) {
 
       <DialogActions sx={{ px: 3, pb: 2, bgcolor: tokens.mutedPanelSurface, borderTop: '1px solid', borderColor: tokens.panelBorder }}>
         <Button variant="contained" onClick={onClose} fullWidth={isMobile}>
-          确定
+          {t('common.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

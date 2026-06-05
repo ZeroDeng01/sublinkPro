@@ -1,4 +1,5 @@
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -25,8 +26,9 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
 
-export default function AccessLogsDialog({ open, logs, onClose, loading = false, title = '访问记录' }) {
+export default function AccessLogsDialog({ open, logs, onClose, loading = false, title }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { isDark } = useResolvedColorScheme();
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
@@ -126,7 +128,7 @@ export default function AccessLogsDialog({ open, logs, onClose, loading = false,
             <Box sx={{ flex: 1, minWidth: 0 }}>{renderIpBlock(log.IP)}</Box>
             <Chip
               size="small"
-              label={`${log.Count} 次`}
+              label={t('subscriptions.accessLogs.count', { count: log.Count })}
               icon={<TouchAppIcon sx={{ fontSize: 14 }} />}
               sx={{
                 height: 24,
@@ -151,7 +153,7 @@ export default function AccessLogsDialog({ open, logs, onClose, loading = false,
                 whiteSpace: 'nowrap'
               }}
             >
-              {log.Addr || '未知来源'}
+              {log.Addr || t('subscriptions.accessLogs.unknownSource')}
             </Typography>
           </Box>
 
@@ -186,12 +188,12 @@ export default function AccessLogsDialog({ open, logs, onClose, loading = false,
               }
             }}
           >
-            <TableCell sx={{ fontWeight: 600, minWidth: 140, color: secondaryText }}>IP 地址</TableCell>
-            <TableCell sx={{ fontWeight: 600, minWidth: 120, color: secondaryText }}>来源地区</TableCell>
+            <TableCell sx={{ fontWeight: 600, minWidth: 140, color: secondaryText }}>{t('subscriptions.accessLogs.ip')}</TableCell>
+            <TableCell sx={{ fontWeight: 600, minWidth: 120, color: secondaryText }}>{t('subscriptions.accessLogs.region')}</TableCell>
             <TableCell sx={{ fontWeight: 600, width: 100, color: secondaryText }} align="center">
-              访问次数
+              {t('subscriptions.accessLogs.visits')}
             </TableCell>
-            <TableCell sx={{ fontWeight: 600, minWidth: 160, color: secondaryText }}>最近访问</TableCell>
+            <TableCell sx={{ fontWeight: 600, minWidth: 160, color: secondaryText }}>{t('subscriptions.accessLogs.lastVisit')}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -244,9 +246,11 @@ export default function AccessLogsDialog({ open, logs, onClose, loading = false,
         <Stack direction="row" alignItems="center" spacing={1}>
           <TouchAppIcon sx={{ color: palette.primary.main }} />
           <Typography variant="h6" sx={{ color: primaryText }}>
-            {title}
+            {title || t('subscriptions.accessLogs.title')}
           </Typography>
-          {!loading && logs.length > 0 && <Chip size="small" label={`共 ${logs.length} 条`} sx={countChipSx} />}
+          {!loading && logs.length > 0 && (
+            <Chip size="small" label={t('subscriptions.accessLogs.total', { count: logs.length })} sx={countChipSx} />
+          )}
         </Stack>
       </DialogTitle>
       <DialogContent
@@ -275,7 +279,7 @@ export default function AccessLogsDialog({ open, logs, onClose, loading = false,
             }}
           >
             <TouchAppIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5, color: tertiaryText }} />
-            <Typography sx={{ color: secondaryText }}>暂无访问记录</Typography>
+            <Typography sx={{ color: secondaryText }}>{t('subscriptions.accessLogs.empty')}</Typography>
           </Box>
         ) : isMobile ? (
           <Box sx={{ mt: 1 }}>
@@ -289,7 +293,7 @@ export default function AccessLogsDialog({ open, logs, onClose, loading = false,
       </DialogContent>
       <DialogActions sx={actionsSx}>
         <Button onClick={onClose} variant="outlined">
-          关闭
+          {t('common.close')}
         </Button>
       </DialogActions>
     </Dialog>

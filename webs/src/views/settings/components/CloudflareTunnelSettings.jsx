@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -47,6 +48,7 @@ const cloudflaredInstallDocsUrl = `${cloudflareTunnelDocsUrl}#安装-cloudflared
 const cloudflareTunnelTokenDocsUrl = `${cloudflareTunnelDocsUrl}#第二步复制-tunnel-token`;
 
 export default function CloudflareTunnelSettings({ showMessage }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState(defaultStatus);
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(true);
@@ -62,14 +64,14 @@ export default function CloudflareTunnelSettings({ showMessage }) {
         const response = await getCloudflaredStatus();
         setStatus({ ...defaultStatus, ...(response.data || {}) });
       } catch (error) {
-        showMessage('获取 Cloudflare Tunnel 状态失败: ' + (error.response?.data?.msg || error.message), 'error');
+        showMessage(t('settings.cloudflareTunnel.messages.loadFailed', { message: error.response?.data?.msg || error.message }), 'error');
       } finally {
         if (!silent) {
           setLoading(false);
         }
       }
     },
-    [showMessage]
+    [showMessage, t]
   );
 
   useEffect(() => {
@@ -102,9 +104,9 @@ export default function CloudflareTunnelSettings({ showMessage }) {
       const response = await updateCloudflaredConfig({ enabled: status.enabled, token: token.trim() });
       setStatus({ ...defaultStatus, ...(response.data || {}) });
       setToken('');
-      showMessage('Cloudflare Tunnel 配置已保存');
+      showMessage(t('settings.cloudflareTunnel.messages.saved'));
     } catch (error) {
-      showMessage('保存失败: ' + (error.response?.data?.msg || error.message), 'error');
+      showMessage(t('settings.cloudflareTunnel.messages.saveFailed', { message: error.response?.data?.msg || error.message }), 'error');
     } finally {
       setSaving(false);
     }
@@ -115,9 +117,9 @@ export default function CloudflareTunnelSettings({ showMessage }) {
     try {
       await runAction('start', () => startCloudflared({ token: token.trim() }));
       setToken('');
-      showMessage('cloudflared 已启动');
+      showMessage(t('settings.cloudflareTunnel.messages.started'));
     } catch (error) {
-      showMessage('启动失败: ' + (error.response?.data?.msg || error.message), 'error');
+      showMessage(t('settings.cloudflareTunnel.messages.startFailed', { message: error.response?.data?.msg || error.message }), 'error');
     }
   };
 
@@ -125,9 +127,9 @@ export default function CloudflareTunnelSettings({ showMessage }) {
     event?.preventDefault();
     try {
       await runAction('stop', stopCloudflared);
-      showMessage('cloudflared 已停止');
+      showMessage(t('settings.cloudflareTunnel.messages.stopped'));
     } catch (error) {
-      showMessage('停止失败: ' + (error.response?.data?.msg || error.message), 'error');
+      showMessage(t('settings.cloudflareTunnel.messages.stopFailed', { message: error.response?.data?.msg || error.message }), 'error');
     }
   };
 
@@ -136,9 +138,9 @@ export default function CloudflareTunnelSettings({ showMessage }) {
     try {
       await runAction('remove', removeCloudflaredToken);
       setToken('');
-      showMessage('Cloudflare Tunnel token 已清除');
+      showMessage(t('settings.cloudflareTunnel.messages.tokenRemoved'));
     } catch (error) {
-      showMessage('清除失败: ' + (error.response?.data?.msg || error.message), 'error');
+      showMessage(t('settings.cloudflareTunnel.messages.removeFailed', { message: error.response?.data?.msg || error.message }), 'error');
     }
   };
 
@@ -158,10 +160,10 @@ export default function CloudflareTunnelSettings({ showMessage }) {
     <Card variant="outlined">
       <CardHeader
         title="Cloudflare Tunnel"
-        subheader="通过本机 cloudflared 将当前 SublinkPro 实例连接到 Cloudflare Zero Trust Tunnel。"
+        subheader={t('settings.cloudflareTunnel.subheader')}
         avatar={<CloudQueueIcon color="primary" />}
         action={
-          <Tooltip title="刷新状态">
+          <Tooltip title={t('settings.cloudflareTunnel.actions.refreshStatus')}>
             <IconButton type="button" onClick={handleRefresh} disabled={loading || Boolean(action)}>
               <RefreshIcon />
             </IconButton>
@@ -175,65 +177,73 @@ export default function CloudflareTunnelSettings({ showMessage }) {
           </Box>
         ) : (
           <Stack spacing={2.5} sx={{ maxWidth: 760 }}>
-            <Alert severity="info">
-              请先在 Cloudflare Zero Trust 中创建 remotely-managed Tunnel，然后粘贴安装命令中的 token。系统会调用已安装的
-              cloudflared，并在内部安全传递 token，避免在进程参数中直接暴露 token。
-            </Alert>
+            <Alert severity="info">{t('settings.cloudflareTunnel.alerts.setup')}</Alert>
 
             {!status.installed && (
               <Alert
                 severity="warning"
                 sx={{ color: (theme) => (theme.palette.mode === 'dark' ? theme.palette.warning.main : theme.palette.warning.dark) }}
               >
-                当前运行环境未检测到 cloudflared。Docker 官方镜像会内置 cloudflared；非 Docker 部署需要先安装 cloudflared 并确保命令在 PATH
-                中可用。{' '}
+                {t('settings.cloudflareTunnel.alerts.notInstalledPrefix')}{' '}
                 <Link href={cloudflaredInstallDocsUrl} target="_blank" rel="noreferrer" color="inherit" underline="always">
-                  查看本项目安装指南
+                  {t('settings.cloudflareTunnel.alerts.installGuide')}
                 </Link>
-                。
+                {t('settings.cloudflareTunnel.alerts.sentenceEnd')}
               </Alert>
             )}
 
             <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2, bgcolor: 'background.default' }}>
               <Stack spacing={1.5}>
-                <Typography variant="subtitle2">运行状态</Typography>
+                <Typography variant="subtitle2">{t('settings.cloudflareTunnel.status.title')}</Typography>
                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                   <Chip
                     size="small"
                     color={status.installed ? 'success' : 'default'}
                     variant="outlined"
-                    label={status.installed ? '已安装 cloudflared' : '未安装 cloudflared'}
+                    label={
+                      status.installed
+                        ? t('settings.cloudflareTunnel.status.installed')
+                        : t('settings.cloudflareTunnel.status.notInstalled')
+                    }
                   />
                   <Chip
                     size="small"
                     color={status.running ? 'success' : 'default'}
                     variant="outlined"
-                    label={status.running ? '运行中' : '未运行'}
+                    label={status.running ? t('settings.cloudflareTunnel.status.running') : t('settings.cloudflareTunnel.status.stopped')}
                   />
                   <Chip
                     size="small"
                     color={status.enabled ? 'info' : 'default'}
                     variant="outlined"
-                    label={status.enabled ? '已启用自动启动' : '未启用自动启动'}
+                    label={
+                      status.enabled
+                        ? t('settings.cloudflareTunnel.status.autoEnabled')
+                        : t('settings.cloudflareTunnel.status.autoDisabled')
+                    }
                   />
                   <Chip
                     size="small"
                     color={status.hasToken ? 'success' : 'default'}
                     variant="outlined"
-                    label={status.hasToken ? `已保存 token：${status.maskedToken}` : '未保存 token'}
+                    label={
+                      status.hasToken
+                        ? t('settings.cloudflareTunnel.status.tokenSaved', { token: status.maskedToken })
+                        : t('settings.cloudflareTunnel.status.tokenMissing')
+                    }
                   />
                 </Stack>
                 <Typography variant="body2" color="text.secondary">
-                  启动命令：{status.commandLabel}
+                  {t('settings.cloudflareTunnel.status.command', { command: status.commandLabel })}
                 </Typography>
                 {status.path && (
                   <Typography variant="body2" color="text.secondary">
-                    cloudflared 路径：{status.path}
+                    {t('settings.cloudflareTunnel.status.path', { path: status.path })}
                   </Typography>
                 )}
                 {status.version && (
                   <Typography variant="body2" color="text.secondary">
-                    cloudflared 版本：{status.version}
+                    {t('settings.cloudflareTunnel.status.version', { version: status.version })}
                   </Typography>
                 )}
               </Stack>
@@ -249,7 +259,7 @@ export default function CloudflareTunnelSettings({ showMessage }) {
                     onChange={(e) => setStatus((prev) => ({ ...prev, enabled: e.target.checked }))}
                   />
                 }
-                label={status.enabled ? '随服务启动自动连接 Tunnel' : '不自动连接 Tunnel'}
+                label={status.enabled ? t('settings.cloudflareTunnel.form.autoConnect') : t('settings.cloudflareTunnel.form.noAutoConnect')}
               />
 
               <TextField
@@ -258,14 +268,18 @@ export default function CloudflareTunnelSettings({ showMessage }) {
                 label="Cloudflare Tunnel Token"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                placeholder={status.hasToken ? '留空则继续使用已保存 token' : '粘贴 cloudflared service install 命令中的 token'}
+                placeholder={
+                  status.hasToken
+                    ? t('settings.cloudflareTunnel.form.tokenPlaceholderSaved')
+                    : t('settings.cloudflareTunnel.form.tokenPlaceholderNew')
+                }
                 helperText={
                   <span>
-                    保存或启动时会加密存储 token。Token 来自 Cloudflare Zero Trust 的 Tunnel 安装命令最后一段；可参考{' '}
+                    {t('settings.cloudflareTunnel.form.tokenHelperPrefix')}{' '}
                     <Link href={cloudflareTunnelTokenDocsUrl} target="_blank" rel="noreferrer">
-                      获取 token 指引
+                      {t('settings.cloudflareTunnel.form.tokenGuide')}
                     </Link>
-                    。
+                    {t('settings.cloudflareTunnel.alerts.sentenceEnd')}
                   </span>
                 }
                 disabled={status.running}
@@ -286,7 +300,7 @@ export default function CloudflareTunnelSettings({ showMessage }) {
                 <Stack spacing={1}>
                   {status.lastMessage && (
                     <Typography variant="body2" color="text.secondary">
-                      最近消息：{status.lastMessage}
+                      {t('settings.cloudflareTunnel.status.lastMessage', { message: status.lastMessage })}
                     </Typography>
                   )}
                   {status.lastError && (
@@ -295,7 +309,7 @@ export default function CloudflareTunnelSettings({ showMessage }) {
                       color="text.secondary"
                       sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'monospace' }}
                     >
-                      运行日志：{status.lastError}
+                      {t('settings.cloudflareTunnel.status.lastError', { message: status.lastError })}
                     </Typography>
                   )}
                 </Stack>
@@ -312,7 +326,7 @@ export default function CloudflareTunnelSettings({ showMessage }) {
                 disabled={saving || Boolean(action) || status.running}
                 startIcon={<SaveIcon />}
               >
-                {saving ? '保存中...' : '保存配置'}
+                {saving ? t('settings.cloudflareTunnel.actions.saving') : t('settings.cloudflareTunnel.actions.save')}
               </Button>
               <Button
                 type="button"
@@ -321,7 +335,7 @@ export default function CloudflareTunnelSettings({ showMessage }) {
                 disabled={!canStart || Boolean(action)}
                 startIcon={<PlayArrowIcon />}
               >
-                {action === 'start' ? '启动中...' : '启动 cloudflared'}
+                {action === 'start' ? t('settings.cloudflareTunnel.actions.starting') : t('settings.cloudflareTunnel.actions.start')}
               </Button>
               <Button
                 color="error"
@@ -331,7 +345,7 @@ export default function CloudflareTunnelSettings({ showMessage }) {
                 disabled={!status.running || Boolean(action)}
                 startIcon={<StopCircleIcon />}
               >
-                {action === 'stop' ? '停止中...' : '停止 cloudflared'}
+                {action === 'stop' ? t('settings.cloudflareTunnel.actions.stopping') : t('settings.cloudflareTunnel.actions.stop')}
               </Button>
               <Button
                 color="error"
@@ -341,7 +355,7 @@ export default function CloudflareTunnelSettings({ showMessage }) {
                 disabled={!status.hasToken || status.running || Boolean(action)}
                 startIcon={<DeleteOutlineIcon />}
               >
-                清除 token
+                {t('settings.cloudflareTunnel.actions.removeToken')}
               </Button>
             </Stack>
           </Stack>

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { Activity, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
 // material-ui
@@ -32,6 +33,7 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 
 export default function NavCollapse({ menu, level, parentId }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const ref = useRef(null);
 
@@ -43,6 +45,8 @@ export default function NavCollapse({ menu, level, parentId }) {
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
   const navTokens = getSidebarNavTokens(theme, isDark);
   const isCollapsedLevelOne = !drawerOpen && level === 1;
+  const menuTitle = menu.titleKey ? t(menu.titleKey) : menu.title;
+  const menuCaption = menu.captionKey ? t(menu.captionKey) : menu.caption;
 
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -197,7 +201,7 @@ export default function NavCollapse({ menu, level, parentId }) {
           </ListItemIcon>
         </Activity>
         {(drawerOpen || (!drawerOpen && level !== 1)) && (
-          <Tooltip title={menu.title} disableHoverListener={!hoverStatus}>
+          <Tooltip title={menuTitle} disableHoverListener={!hoverStatus}>
             <ListItemText
               primary={
                 <Typography
@@ -211,11 +215,11 @@ export default function NavCollapse({ menu, level, parentId }) {
                     width: 120
                   }}
                 >
-                  {menu.title}
+                  {menuTitle}
                 </Typography>
               }
               secondary={
-                menu.caption && (
+                menuCaption && (
                   <Typography
                     gutterBottom
                     sx={{
@@ -227,7 +231,7 @@ export default function NavCollapse({ menu, level, parentId }) {
                       lineHeight: 1.66
                     }}
                   >
-                    {menu.caption}
+                    {menuCaption}
                   </Typography>
                 )
               }

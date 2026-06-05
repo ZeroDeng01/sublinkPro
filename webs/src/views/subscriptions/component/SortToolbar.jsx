@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -33,33 +34,34 @@ import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
 
 /**
- * 排序工具栏组件
- * 提供快速排序和批量移动功能
+ * Sort toolbar component
+ * Provides quick sort and batch move functions
  */
 export default function SortToolbar({ selectedItems = [], onBatchSort, onBatchMove, onClearSelection, totalItems = 0 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const { palette, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(theme, isDark);
   const { primaryText, secondaryText } = getReadableTextTokens(theme, isDark);
 
-  // 排序方向
+  // Sort order
   const [sortOrder, setSortOrder] = useState('asc');
-  // 移动位置输入
+  // Move position input
   const [movePosition, setMovePosition] = useState('');
-  // 排序菜单锚点
+  // Sort menu anchor
   const [sortMenuAnchor, setSortMenuAnchor] = useState(null);
 
-  // 排序选项
+  // Sort options
   const sortOptions = [
-    { value: 'source', label: '按来源', icon: <SourceIcon fontSize="small" /> },
-    { value: 'name', label: '按名称', icon: <AbcIcon fontSize="small" /> },
-    { value: 'protocol', label: '按协议', icon: <RouterIcon fontSize="small" /> },
-    { value: 'delay', label: '按延迟', icon: <TimerIcon fontSize="small" /> },
-    { value: 'speed', label: '按速度', icon: <SpeedIcon fontSize="small" /> },
-    { value: 'country', label: '按地区', icon: <PublicIcon fontSize="small" /> }
+    { value: 'source', label: t('subscriptions.sort.options.source'), icon: <SourceIcon fontSize="small" /> },
+    { value: 'name', label: t('subscriptions.sort.options.name'), icon: <AbcIcon fontSize="small" /> },
+    { value: 'protocol', label: t('subscriptions.sort.options.protocol'), icon: <RouterIcon fontSize="small" /> },
+    { value: 'delay', label: t('subscriptions.sort.options.delay'), icon: <TimerIcon fontSize="small" /> },
+    { value: 'speed', label: t('subscriptions.sort.options.speed'), icon: <SpeedIcon fontSize="small" /> },
+    { value: 'country', label: t('subscriptions.sort.options.country'), icon: <PublicIcon fontSize="small" /> }
   ];
 
-  // 处理批量排序
+  // Handle batch sort
   const handleBatchSort = (sortBy) => {
     if (onBatchSort) {
       onBatchSort(sortBy, sortOrder);
@@ -67,18 +69,18 @@ export default function SortToolbar({ selectedItems = [], onBatchSort, onBatchMo
     setSortMenuAnchor(null);
   };
 
-  // 处理批量移动
+  // Handle batch move
   const handleBatchMove = (position) => {
     if (onBatchMove && selectedItems.length > 0) {
       onBatchMove(position);
     }
   };
 
-  // 处理移动到指定位置
+  // Handle move to specific position
   const handleMoveToPosition = () => {
     const pos = parseInt(movePosition, 10);
     if (!isNaN(pos) && pos >= 1 && pos <= totalItems) {
-      handleBatchMove(pos - 1); // 转为0-indexed
+      handleBatchMove(pos - 1); // convert to 0-indexed
       setMovePosition('');
     }
   };
@@ -148,12 +150,11 @@ export default function SortToolbar({ selectedItems = [], onBatchSort, onBatchMo
         boxShadow: shellInset
       }}
     >
-      {/* 快速排序区域 */}
       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: hasSelection ? 1 : 0 }}>
-        <Tooltip title="快速排序">
+        <Tooltip title={t('subscriptions.sort.quickSort')}>
           <Chip
             icon={<SortIcon />}
-            label="快速排序"
+            label={t('subscriptions.sort.quickSort')}
             size="small"
             onClick={(e) => setSortMenuAnchor(e.currentTarget)}
             sx={{
@@ -174,8 +175,7 @@ export default function SortToolbar({ selectedItems = [], onBatchSort, onBatchMo
           />
         </Tooltip>
 
-        {/* 排序方向切换 */}
-        <Tooltip title={sortOrder === 'asc' ? '升序' : '降序'}>
+        <Tooltip title={sortOrder === 'asc' ? t('subscriptions.sort.asc') : t('subscriptions.sort.desc')}>
           <IconButton
             size="small"
             onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
@@ -194,7 +194,6 @@ export default function SortToolbar({ selectedItems = [], onBatchSort, onBatchMo
           </IconButton>
         </Tooltip>
 
-        {/* 排序菜单 */}
         <Menu
           anchorEl={sortMenuAnchor}
           open={Boolean(sortMenuAnchor)}
@@ -235,16 +234,15 @@ export default function SortToolbar({ selectedItems = [], onBatchSort, onBatchMo
           <>
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: neutralBorder }} />
             <Typography variant="caption" sx={{ color: secondaryText, fontWeight: 600 }}>
-              已选 {selectedItems.length} 项
+              {t('subscriptions.sort.selectedCount', { count: selectedItems.length })}
             </Typography>
           </>
         )}
       </Stack>
 
-      {/* 批量移动区域（仅在有选中项时显示） */}
       {hasSelection && (
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-          <Tooltip title="移动到顶部">
+          <Tooltip title={t('subscriptions.sort.moveTop')}>
             <Button
               size="small"
               variant="outlined"
@@ -252,11 +250,11 @@ export default function SortToolbar({ selectedItems = [], onBatchSort, onBatchMo
               onClick={() => handleBatchMove(0)}
               sx={actionButtonSx}
             >
-              顶部
+              {t('subscriptions.sort.top')}
             </Button>
           </Tooltip>
 
-          <Tooltip title="移动到底部">
+          <Tooltip title={t('subscriptions.sort.moveBottom')}>
             <Button
               size="small"
               variant="outlined"
@@ -264,17 +262,16 @@ export default function SortToolbar({ selectedItems = [], onBatchSort, onBatchMo
               onClick={() => handleBatchMove(totalItems - 1)}
               sx={actionButtonSx}
             >
-              底部
+              {t('subscriptions.sort.bottom')}
             </Button>
           </Tooltip>
 
           <Divider orientation="vertical" flexItem sx={{ borderColor: neutralBorder }} />
 
-          {/* 移动到指定位置 */}
           <TextField
             size="small"
             type="number"
-            placeholder="位置"
+            placeholder={t('subscriptions.sort.position')}
             value={movePosition}
             onChange={(e) => setMovePosition(e.target.value)}
             sx={compactFieldSx}
@@ -282,7 +279,7 @@ export default function SortToolbar({ selectedItems = [], onBatchSort, onBatchMo
               htmlInput: { min: 1, max: totalItems }
             }}
           />
-          <Tooltip title="移动到指定位置">
+          <Tooltip title={t('subscriptions.sort.moveToPosition')}>
             <IconButton
               size="small"
               onClick={handleMoveToPosition}
@@ -309,7 +306,7 @@ export default function SortToolbar({ selectedItems = [], onBatchSort, onBatchMo
 
           <Divider orientation="vertical" flexItem sx={{ borderColor: neutralBorder }} />
 
-          <Tooltip title="取消选择">
+          <Tooltip title={t('subscriptions.sort.clearSelection')}>
             <Button
               size="small"
               variant="outlined"
@@ -328,7 +325,7 @@ export default function SortToolbar({ selectedItems = [], onBatchSort, onBatchMo
                 }
               }}
             >
-              取消选择
+              {t('subscriptions.sort.clearSelection')}
             </Button>
           </Tooltip>
         </Stack>

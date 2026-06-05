@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 // material-ui
@@ -219,7 +220,7 @@ export const getNextCronRuns = (cronExpr, count = 3, startFrom = new Date()) => 
  * @param {Date} now - 当前时间
  * @returns {string} - 相对时间描述
  */
-const formatRelativeTime = (date, now = new Date()) => {
+const formatRelativeTime = (date, t, now = new Date()) => {
   const diffMs = date.getTime() - now.getTime();
   const diffMinutes = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMinutes / 60);
@@ -227,13 +228,17 @@ const formatRelativeTime = (date, now = new Date()) => {
 
   if (diffDays > 0) {
     const remainHours = diffHours % 24;
-    return remainHours > 0 ? `${diffDays}天${remainHours}小时后` : `${diffDays}天后`;
+    return remainHours > 0
+      ? t('components.cronExpressionGenerator.relative.daysHours', { days: diffDays, hours: remainHours })
+      : t('components.cronExpressionGenerator.relative.days', { days: diffDays });
   }
   if (diffHours > 0) {
     const remainMinutes = diffMinutes % 60;
-    return remainMinutes > 0 ? `${diffHours}小时${remainMinutes}分钟后` : `${diffHours}小时后`;
+    return remainMinutes > 0
+      ? t('components.cronExpressionGenerator.relative.hoursMinutes', { hours: diffHours, minutes: remainMinutes })
+      : t('components.cronExpressionGenerator.relative.hours', { hours: diffHours });
   }
-  return `${diffMinutes}分钟后`;
+  return t('components.cronExpressionGenerator.relative.minutes', { minutes: diffMinutes });
 };
 
 /**
@@ -266,40 +271,40 @@ const formatDateTimeShort = (date) => {
 // ==================== 预设选项 ====================
 
 const CRON_PRESETS = [
-  { label: '每30分钟', value: '*/30 * * * *', icon: '⏱️' },
-  { label: '每1小时', value: '0 * * * *', icon: '🕐' },
-  { label: '每6小时', value: '0 */6 * * *', icon: '🕕' },
-  { label: '每12小时', value: '0 */12 * * *', icon: '🕛' },
-  { label: '每天0点', value: '0 0 * * *', icon: '🌙' },
-  { label: '每周一', value: '0 0 * * 1', icon: '📅' }
+  { labelKey: 'presets.every30Minutes', value: '*/30 * * * *', icon: '⏱️' },
+  { labelKey: 'presets.every1Hour', value: '0 * * * *', icon: '🕐' },
+  { labelKey: 'presets.every6Hours', value: '0 */6 * * *', icon: '🕕' },
+  { labelKey: 'presets.every12Hours', value: '0 */12 * * *', icon: '🕛' },
+  { labelKey: 'presets.dailyMidnight', value: '0 0 * * *', icon: '🌙' },
+  { labelKey: 'presets.weeklyMonday', value: '0 0 * * 1', icon: '📅' }
 ];
 
 const FREQUENCY_OPTIONS = [
-  { value: 'interval', label: '每隔固定时间' },
-  { value: 'daily', label: '每天指定时间' },
-  { value: 'weekly', label: '每周指定日期' }
+  { value: 'interval', labelKey: 'frequency.interval' },
+  { value: 'daily', labelKey: 'frequency.daily' },
+  { value: 'weekly', labelKey: 'frequency.weekly' }
 ];
 
 const INTERVAL_OPTIONS = [
-  { value: 5, label: '5分钟' },
-  { value: 10, label: '10分钟' },
-  { value: 15, label: '15分钟' },
-  { value: 30, label: '30分钟' },
-  { value: 60, label: '1小时' },
-  { value: 120, label: '2小时' },
-  { value: 180, label: '3小时' },
-  { value: 360, label: '6小时' },
-  { value: 720, label: '12小时' }
+  { value: 5, labelKey: 'intervals.minutes', count: 5 },
+  { value: 10, labelKey: 'intervals.minutes', count: 10 },
+  { value: 15, labelKey: 'intervals.minutes', count: 15 },
+  { value: 30, labelKey: 'intervals.minutes', count: 30 },
+  { value: 60, labelKey: 'intervals.hours', count: 1 },
+  { value: 120, labelKey: 'intervals.hours', count: 2 },
+  { value: 180, labelKey: 'intervals.hours', count: 3 },
+  { value: 360, labelKey: 'intervals.hours', count: 6 },
+  { value: 720, labelKey: 'intervals.hours', count: 12 }
 ];
 
 const WEEKDAY_OPTIONS = [
-  { value: 1, label: '周一' },
-  { value: 2, label: '周二' },
-  { value: 3, label: '周三' },
-  { value: 4, label: '周四' },
-  { value: 5, label: '周五' },
-  { value: 6, label: '周六' },
-  { value: 0, label: '周日' }
+  { value: 1, labelKey: 'weekdays.monday' },
+  { value: 2, labelKey: 'weekdays.tuesday' },
+  { value: 3, labelKey: 'weekdays.wednesday' },
+  { value: 4, labelKey: 'weekdays.thursday' },
+  { value: 5, labelKey: 'weekdays.friday' },
+  { value: 6, labelKey: 'weekdays.saturday' },
+  { value: 0, labelKey: 'weekdays.sunday' }
 ];
 
 function getCronThemeTokens(theme, isDark) {
@@ -337,10 +342,12 @@ function getCronThemeTokens(theme, isDark) {
  * Cron 表达式生成器组件
  * 提供直观的可视化界面让用户设置定时任务规则
  */
-export default function CronExpressionGenerator({ value, onChange, label = 'Cron表达式', helperText, error = false }) {
+export default function CronExpressionGenerator({ value, onChange, label, helperText, error = false }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const displayLabel = label ?? t('components.cronExpressionGenerator.label');
   const themeTokens = getCronThemeTokens(theme, isDark);
   const {
     palette,
@@ -467,10 +474,10 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
   return (
     <Box>
       {/* 标签 */}
-      {label ? (
+      {displayLabel ? (
         <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5, color: secondaryText }}>
           <ScheduleIcon fontSize="small" />
-          {label}
+          {displayLabel}
         </Typography>
       ) : null}
 
@@ -483,7 +490,7 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
                 label={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <span>{preset.icon}</span>
-                    <span>{preset.label}</span>
+                    <span>{t(`components.cronExpressionGenerator.${preset.labelKey}`)}</span>
                   </Box>
                 }
                 onClick={() => handlePresetClick(preset)}
@@ -506,7 +513,7 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <EditIcon fontSize="small" />
-                  <span>自定义</span>
+                  <span>{t('common.custom')}</span>
                 </Box>
               }
               onClick={handleCustomToggle}
@@ -551,11 +558,15 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
           <Stack spacing={2}>
             {/* 频率选择 */}
             <FormControl fullWidth size="small">
-              <InputLabel>执行频率</InputLabel>
-              <Select value={frequency} label="执行频率" onChange={(e) => setFrequency(e.target.value)}>
+              <InputLabel>{t('components.cronExpressionGenerator.fields.frequency')}</InputLabel>
+              <Select
+                value={frequency}
+                label={t('components.cronExpressionGenerator.fields.frequency')}
+                onChange={(e) => setFrequency(e.target.value)}
+              >
                 {FREQUENCY_OPTIONS.map((opt) => (
                   <MenuItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {t(`components.cronExpressionGenerator.${opt.labelKey}`, { count: opt.count })}
                   </MenuItem>
                 ))}
               </Select>
@@ -564,11 +575,15 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
             {/* 间隔时间选择 */}
             {frequency === 'interval' && (
               <FormControl fullWidth size="small">
-                <InputLabel>间隔时间</InputLabel>
-                <Select value={interval} label="间隔时间" onChange={(e) => setInterval(e.target.value)}>
+                <InputLabel>{t('components.cronExpressionGenerator.fields.interval')}</InputLabel>
+                <Select
+                  value={interval}
+                  label={t('components.cronExpressionGenerator.fields.interval')}
+                  onChange={(e) => setInterval(e.target.value)}
+                >
                   {INTERVAL_OPTIONS.map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(`components.cronExpressionGenerator.${opt.labelKey}`, { count: opt.count })}
                     </MenuItem>
                   ))}
                 </Select>
@@ -580,8 +595,12 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
               <Grid container spacing={2}>
                 <Grid item size={{ xs: 6 }}>
                   <FormControl fullWidth size="small">
-                    <InputLabel>小时</InputLabel>
-                    <Select value={hour} label="小时" onChange={(e) => setHour(e.target.value)}>
+                    <InputLabel>{t('components.cronExpressionGenerator.fields.hour')}</InputLabel>
+                    <Select
+                      value={hour}
+                      label={t('components.cronExpressionGenerator.fields.hour')}
+                      onChange={(e) => setHour(e.target.value)}
+                    >
                       {Array.from({ length: 24 }, (_, i) => (
                         <MenuItem key={i} value={i}>
                           {String(i).padStart(2, '0')}:00
@@ -592,8 +611,12 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
                 </Grid>
                 <Grid item size={{ xs: 6 }}>
                   <FormControl fullWidth size="small">
-                    <InputLabel>分钟</InputLabel>
-                    <Select value={minute} label="分钟" onChange={(e) => setMinute(e.target.value)}>
+                    <InputLabel>{t('components.cronExpressionGenerator.fields.minute')}</InputLabel>
+                    <Select
+                      value={minute}
+                      label={t('components.cronExpressionGenerator.fields.minute')}
+                      onChange={(e) => setMinute(e.target.value)}
+                    >
                       {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
                         <MenuItem key={m} value={m}>
                           :{String(m).padStart(2, '0')}
@@ -609,13 +632,13 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
             {frequency === 'weekly' && (
               <Box>
                 <Typography variant="caption" sx={{ mb: 1, display: 'block', color: secondaryText }}>
-                  选择执行日期（可多选）
+                  {t('components.cronExpressionGenerator.fields.weekdaysHelper')}
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {WEEKDAY_OPTIONS.map((day) => (
                     <Chip
                       key={day.value}
-                      label={day.label}
+                      label={t(`components.cronExpressionGenerator.${day.labelKey}`)}
                       size="small"
                       onClick={() => {
                         if (weekdays.includes(day.value)) {
@@ -648,7 +671,11 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
                 }
               }}
             >
-              {showAdvanced ? '隐藏高级选项' : '显示高级选项'}
+              {t(
+                showAdvanced
+                  ? 'components.cronExpressionGenerator.actions.hideAdvanced'
+                  : 'components.cronExpressionGenerator.actions.showAdvanced'
+              )}
             </Button>
 
             {/* 高级模式：直接编辑 cron 表达式 */}
@@ -656,12 +683,16 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
               <TextField
                 fullWidth
                 size="small"
-                label="Cron 表达式"
+                label={t('components.cronExpressionGenerator.label')}
                 value={value || ''}
                 onChange={(e) => onChange(e.target.value)}
                 error={!isValid}
-                helperText={!isValid ? '格式错误：分 时 日 月 周' : '格式: 分 时 日 月 周，如 0 */6 * * *'}
-                placeholder="分 时 日 月 周"
+                helperText={
+                  !isValid
+                    ? t('components.cronExpressionGenerator.advanced.invalidHelper')
+                    : t('components.cronExpressionGenerator.advanced.helper')
+                }
+                placeholder={t('components.cronExpressionGenerator.advanced.placeholder')}
               />
             </Collapse>
           </Stack>
@@ -684,7 +715,7 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
           }}
         >
           <Typography variant="body2" sx={{ color: secondaryText }}>
-            当前表达式:
+            {t('components.cronExpressionGenerator.currentExpression')}
           </Typography>
           <Chip
             label={value}
@@ -722,7 +753,7 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
             }}
           >
             <ScheduleIcon fontSize="small" />
-            下次运行时间预览
+            {t('components.cronExpressionGenerator.nextRunsTitle')}
           </Typography>
           <Stack spacing={0.5}>
             {nextRuns.map((run, index) => (
@@ -737,7 +768,7 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
                 }}
               >
                 <Chip
-                  label={`第${index + 1}次`}
+                  label={t('components.cronExpressionGenerator.runOrdinal', { count: index + 1 })}
                   size="small"
                   variant="outlined"
                   sx={{
@@ -751,7 +782,7 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
                   {isMobile ? formatDateTimeShort(run) : formatDateTime(run)}
                 </Typography>
                 <Typography variant="caption" sx={{ ml: 'auto', color: tertiaryText }}>
-                  {formatRelativeTime(run)}
+                  {formatRelativeTime(run, t)}
                 </Typography>
               </Box>
             ))}
@@ -773,7 +804,7 @@ export default function CronExpressionGenerator({ value, onChange, label = 'Cron
         >
           <Typography variant="body2" color="error" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <ErrorIcon fontSize="small" />
-            表达式格式不正确，请检查输入
+            {t('components.cronExpressionGenerator.invalidExpression')}
           </Typography>
         </Paper>
       )}

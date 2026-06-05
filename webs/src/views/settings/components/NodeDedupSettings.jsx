@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 
 // material-ui
 import Button from '@mui/material/Button';
@@ -21,6 +22,7 @@ import { getNodeDedupConfig, updateNodeDedupConfig } from 'api/settings';
 // ==============================|| 节点去重设置 ||============================== //
 
 export default function NodeDedupSettings({ showMessage }) {
+  const { t } = useTranslation();
   const [crossAirportDedupEnabled, setCrossAirportDedupEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -43,10 +45,10 @@ export default function NodeDedupSettings({ showMessage }) {
     setSaving(true);
     try {
       await updateNodeDedupConfig({ crossAirportDedupEnabled });
-      showMessage('节点去重设置保存成功');
+      showMessage(t('nodeDedup.messages.saveSuccess'));
     } catch (error) {
       console.error('保存失败:', error);
-      showMessage(error.message || '保存失败', 'error');
+      showMessage(error.message || t('nodeDedup.messages.saveFailed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -54,30 +56,29 @@ export default function NodeDedupSettings({ showMessage }) {
 
   return (
     <Card variant="outlined">
-      <CardHeader avatar={<FilterAltIcon color="primary" />} title="跨机场节点去重" subheader="控制不同机场之间是否进行节点内容去重" />
+      <CardHeader avatar={<FilterAltIcon color="primary" />} title={t('nodeDedup.title')} subheader={t('nodeDedup.subheader')} />
       <CardContent>
         <Stack spacing={2}>
           <FormControlLabel
             control={<Switch checked={crossAirportDedupEnabled} onChange={(e) => setCrossAirportDedupEnabled(e.target.checked)} />}
-            label="启用跨机场去重"
+            label={t('nodeDedup.enable')}
           />
           <Alert severity={crossAirportDedupEnabled ? 'info' : 'warning'} variant="standard">
             <Typography variant="body2">
               {crossAirportDedupEnabled ? (
                 <>
-                  当前为<strong>开启</strong>状态：不同机场间配置完全相同的节点（ContentHash 一致）只保留最先入库的一份，避免重复。
+                  <Trans i18nKey="nodeDedup.enabledInfo" components={{ strong: <strong /> }} />
                 </>
               ) : (
                 <>
-                  当前为<strong>关闭</strong>状态：每个机场独立保留自己的节点，即使不同机场存在配置完全相同的节点也会各自入库。
-                  同一机场内的重复节点仍然会被去重。
+                  <Trans i18nKey="nodeDedup.disabledInfo" components={{ strong: <strong /> }} />
                 </>
               )}
             </Typography>
           </Alert>
           <Stack direction="row" justifyContent="flex-end">
             <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave} disabled={saving}>
-              {saving ? '保存中...' : '保存'}
+              {saving ? t('common.saving') : t('common.save')}
             </Button>
           </Stack>
         </Stack>

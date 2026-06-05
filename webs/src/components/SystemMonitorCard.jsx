@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme, alpha, keyframes } from '@mui/material/styles';
@@ -13,6 +14,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
 import Chip from '@mui/material/Chip';
 import Skeleton from '@mui/material/Skeleton';
+import { formatDateTime } from 'i18n/locales'; // Update later if path is different
 
 // icons
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -40,8 +42,6 @@ const rotate = keyframes`
 `;
 
 const AUTO_REFRESH_INTERVAL_MS = 1000;
-const AUTO_REFRESH_INTERVAL_LABEL = `${AUTO_REFRESH_INTERVAL_MS / 1000}秒`;
-
 // ==============================|| 工具函数 ||============================== //
 
 // 格式化字节数
@@ -55,17 +55,17 @@ const formatBytes = (bytes, decimals = 2) => {
 };
 
 // 格式化运行时间
-const formatUptime = (seconds) => {
-  if (!seconds) return '0秒';
+const formatUptime = (seconds, t) => {
+  if (!seconds) return t('components.systemMonitor.uptime.seconds', { seconds: 0 });
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
 
-  if (days > 0) return `${days}天${hours}时${minutes}分`;
-  if (hours > 0) return `${hours}时${minutes}分${secs}秒`;
-  if (minutes > 0) return `${minutes}分${secs}秒`;
-  return `${secs}秒`;
+  if (days > 0) return t('components.systemMonitor.uptime.days', { days, hours, minutes });
+  if (hours > 0) return t('components.systemMonitor.uptime.hours', { hours, minutes, seconds: secs });
+  if (minutes > 0) return t('components.systemMonitor.uptime.minutes', { minutes, seconds: secs });
+  return t('components.systemMonitor.uptime.seconds', { seconds: secs });
 };
 
 const useMonitorThemeTokens = () => {
@@ -288,8 +288,10 @@ const CircularMetric = ({ value, maxValue, label, color, size = 80 }) => {
 };
 
 const ConfigItemCard = ({ item, masked = false }) => {
+  const { t } = useTranslation();
   const { theme, isDark, nestedPanelSurface, mutedPanelSurface, panelBorder, primaryText, secondaryText } = useMonitorThemeTokens();
   const maskedTextColor = isDark ? theme.palette.warning.light : theme.palette.warning.dark;
+  const displayValue = item.value_key ? t(item.value_key, { ...(item.value_params || {}), defaultValue: item.value }) : item.value;
 
   return (
     <Box
@@ -305,12 +307,12 @@ const ConfigItemCard = ({ item, masked = false }) => {
     >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
         <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 0, color: primaryText }}>
-          {item.label}
+          {t(`components.systemMonitor.config.keys.${item.key}`, { defaultValue: item.label })}
         </Typography>
         {masked && (
           <Chip
             size="small"
-            label="已隐藏"
+            label={item.hiddenLabel}
             sx={{
               height: 20,
               fontSize: '0.65rem',
@@ -342,7 +344,7 @@ const ConfigItemCard = ({ item, masked = false }) => {
         />
       </Box>
 
-      <Tooltip title={item.value} arrow placement="top-start">
+      <Tooltip title={displayValue} arrow placement="top-start">
         <Typography
           variant="body2"
           sx={{
@@ -352,7 +354,7 @@ const ConfigItemCard = ({ item, masked = false }) => {
             wordBreak: 'break-all'
           }}
         >
-          {item.value}
+          {displayValue}
         </Typography>
       </Tooltip>
 
@@ -368,7 +370,7 @@ const ConfigItemCard = ({ item, masked = false }) => {
             wordBreak: 'break-all'
           }}
         >
-          环境变量：{item.env}
+          {item.envLabel}
         </Typography>
       )}
     </Box>
@@ -378,6 +380,8 @@ const ConfigItemCard = ({ item, masked = false }) => {
 // ==============================|| 系统监控卡片主组件 ||============================== //
 
 const SystemMonitorCard = () => {
+  const { i18n, t } = useTranslation();
+  const systemMonitorTitle = t('components.systemMonitor.title');
   const {
     theme,
     isDark,
@@ -457,8 +461,18 @@ const SystemMonitorCard = () => {
 
   const configItems = stats?.runtime_config
     ? [
-        ...(stats.runtime_config.safe_to_show || []).map((item) => ({ ...item, masked: false })),
-        ...(stats.runtime_config.masked_summary || []).map((item) => ({ ...item, masked: true }))
+        ...(stats.runtime_config.safe_to_show || []).map((item) => ({
+          ...item,
+          masked: false,
+          hiddenLabel: t('components.systemMonitor.hidden'),
+          envLabel: item.env ? t('components.systemMonitor.env', { env: item.env }) : ''
+        })),
+        ...(stats.runtime_config.masked_summary || []).map((item) => ({
+          ...item,
+          masked: true,
+          hiddenLabel: t('components.systemMonitor.hidden'),
+          envLabel: item.env ? t('components.systemMonitor.env', { env: item.env }) : ''
+        }))
       ]
     : [];
 
@@ -506,7 +520,7 @@ const SystemMonitorCard = () => {
             </Box>
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 600, color: primaryText }}>
-                系统监控
+                {systemMonitorTitle}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {stats && (
@@ -542,7 +556,14 @@ const SystemMonitorCard = () => {
           {/* 控制按钮 */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {/* 自动刷新指示器 */}
-            <Tooltip title={autoRefresh ? '关闭自动刷新' : `开启自动刷新 (${AUTO_REFRESH_INTERVAL_LABEL})`} arrow>
+            <Tooltip
+              title={
+                autoRefresh
+                  ? t('components.systemMonitor.actions.disableAutoRefresh')
+                  : t('components.systemMonitor.actions.enableAutoRefresh', { seconds: AUTO_REFRESH_INTERVAL_MS / 1000 })
+              }
+              arrow
+            >
               <IconButton
                 onClick={toggleAutoRefresh}
                 size="small"
@@ -571,7 +592,7 @@ const SystemMonitorCard = () => {
             </Tooltip>
 
             {/* 手动刷新 */}
-            <Tooltip title="刷新" arrow>
+            <Tooltip title={t('common.refresh')} arrow>
               <IconButton
                 onClick={handleRefresh}
                 disabled={refreshing}
@@ -633,9 +654,9 @@ const SystemMonitorCard = () => {
               {/* 内存使用 */}
               <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                 <MetricCard
-                  title="堆内存"
+                  title={t('components.systemMonitor.metrics.heapMemory')}
                   value={formatBytes(stats.heap_inuse)}
-                  subValue={`共申请 ${formatBytes(stats.heap_sys)}`}
+                  subValue={t('components.systemMonitor.metrics.heapAllocated', { value: formatBytes(stats.heap_sys) })}
                   icon={MemoryIcon}
                   color={colors.memory}
                   progress={stats.memory_usage}
@@ -645,9 +666,9 @@ const SystemMonitorCard = () => {
               {/* CPU信息 */}
               <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                 <MetricCard
-                  title="CPU"
-                  value={`${stats.num_cpu} 核`}
-                  subValue={`GOMAXPROCS: ${stats.gomaxprocs}`}
+                  title={t('components.systemMonitor.metrics.cpu')}
+                  value={t('components.systemMonitor.metrics.cpuCores', { count: stats.num_cpu })}
+                  subValue={t('components.systemMonitor.metrics.gomaxprocs', { count: stats.gomaxprocs })}
                   icon={DeveloperBoardIcon}
                   color={colors.cpu}
                   progress={stats.cpu_usage}
@@ -657,9 +678,9 @@ const SystemMonitorCard = () => {
               {/* Goroutine数量 */}
               <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                 <MetricCard
-                  title="Goroutines"
+                  title={t('components.systemMonitor.metrics.goroutines')}
                   value={stats.num_goroutine}
-                  subValue={`CGO调用: ${stats.num_cgo_call}`}
+                  subValue={t('components.systemMonitor.metrics.cgoCalls', { count: stats.num_cgo_call })}
                   icon={AccountTreeIcon}
                   color={colors.goroutine}
                 />
@@ -668,9 +689,11 @@ const SystemMonitorCard = () => {
               {/* 运行时间 */}
               <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                 <MetricCard
-                  title="运行时间"
-                  value={formatUptime(stats.uptime)}
-                  subValue={`启动: ${new Date(stats.start_time * 1000).toLocaleString()}`}
+                  title={t('components.systemMonitor.metrics.uptime')}
+                  value={formatUptime(stats.uptime, t)}
+                  subValue={t('components.systemMonitor.metrics.startedAt', {
+                    value: formatDateTime(new Date(stats.start_time * 1000), i18n.resolvedLanguage || i18n.language)
+                  })}
                   icon={AccessTimeIcon}
                   color={colors.uptime}
                 />
@@ -691,7 +714,7 @@ const SystemMonitorCard = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <StorageIcon sx={{ fontSize: 18, color: colors.gc }} />
                 <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem', color: primaryText }}>
-                  运行时详情
+                  {t('components.systemMonitor.runtime.title')}
                 </Typography>
               </Box>
 
@@ -699,8 +722,20 @@ const SystemMonitorCard = () => {
                 {/* 内存详情 */}
                 <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
-                    <CircularMetric value={stats.heap_inuse} maxValue={stats.sys} label="堆内存使用" color={colors.memory} size={70} />
-                    <CircularMetric value={stats.stack_inuse} maxValue={stats.sys} label="栈内存使用" color={colors.cpu} size={70} />
+                    <CircularMetric
+                      value={stats.heap_inuse}
+                      maxValue={stats.sys}
+                      label={t('components.systemMonitor.runtime.heapInUse')}
+                      color={colors.memory}
+                      size={70}
+                    />
+                    <CircularMetric
+                      value={stats.stack_inuse}
+                      maxValue={stats.sys}
+                      label={t('components.systemMonitor.runtime.stackInUse')}
+                      color={colors.cpu}
+                      size={70}
+                    />
                   </Box>
                 </Grid>
 
@@ -709,7 +744,7 @@ const SystemMonitorCard = () => {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: secondaryText }}>
-                        GC 次数
+                        {t('components.systemMonitor.runtime.gcCount')}
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: colors.gc }}>
                         {stats.num_gc}
@@ -717,7 +752,7 @@ const SystemMonitorCard = () => {
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: secondaryText }}>
-                        GC 暂停时间
+                        {t('components.systemMonitor.runtime.gcPause')}
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: colors.gc }}>
                         {(stats.pause_total_ns / 1e6).toFixed(2)} ms
@@ -725,7 +760,7 @@ const SystemMonitorCard = () => {
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: secondaryText }}>
-                        GC CPU 占用
+                        {t('components.systemMonitor.runtime.gcCpu')}
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: colors.gc }}>
                         {(stats.gc_cpu_frac * 100).toFixed(3)}%
@@ -739,7 +774,7 @@ const SystemMonitorCard = () => {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: secondaryText }}>
-                        系统内存获取
+                        {t('components.systemMonitor.runtime.systemMemory')}
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: colors.memory }}>
                         {formatBytes(stats.sys)}
@@ -747,7 +782,7 @@ const SystemMonitorCard = () => {
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: secondaryText }}>
-                        累计分配内存
+                        {t('components.systemMonitor.runtime.totalAllocated')}
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: colors.memory }}>
                         {formatBytes(stats.total_alloc)}
@@ -755,7 +790,7 @@ const SystemMonitorCard = () => {
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: secondaryText }}>
-                        栈内存使用
+                        {t('components.systemMonitor.runtime.stackInUse')}
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: colors.cpu }}>
                         {formatBytes(stats.stack_inuse)}
@@ -781,7 +816,7 @@ const SystemMonitorCard = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <SettingsSuggestIcon sx={{ fontSize: 18, color: colors.uptime }} />
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem', color: primaryText }}>
-                    运行配置参数
+                    {t('components.systemMonitor.config.title')}
                   </Typography>
                 </Box>
                 <Grid container spacing={1.5}>
@@ -796,7 +831,7 @@ const SystemMonitorCard = () => {
           </>
         ) : (
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography sx={{ color: secondaryText }}>无法获取系统状态</Typography>
+            <Typography sx={{ color: secondaryText }}>{t('components.systemMonitor.unavailable')}</Typography>
           </Box>
         )}
       </CardContent>

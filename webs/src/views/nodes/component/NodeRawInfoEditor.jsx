@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -46,23 +47,23 @@ import { getNodeColorChipSx, getNodeFieldControlSx, getNodeThemeTokens } from '.
  */
 const FIELD_GROUPS = {
   basic: {
-    label: '基础信息',
+    labelKey: 'nodes.rawInfo.groups.basic',
     icon: <SettingsIcon fontSize="small" />,
     // 匹配规则：字段名包含这些关键词
     keywords: ['Name', 'Ps', 'Server', 'Host', 'Add', 'Port', 'Hostname']
   },
   auth: {
-    label: '认证信息',
+    labelKey: 'nodes.rawInfo.groups.auth',
     icon: <VpnKeyIcon fontSize="small" />,
     keywords: ['Password', 'Uuid', 'Id', 'Auth', 'Username']
   },
   transport: {
-    label: '传输配置',
+    labelKey: 'nodes.rawInfo.groups.transport',
     icon: <NetworkCheckIcon fontSize="small" />,
     keywords: ['Net', 'Type', 'Path', 'Encryption', 'Cipher', 'Method', 'Obfs', 'Protocol', 'Flow', 'Mode', 'ServiceName', 'HeaderType']
   },
   tls: {
-    label: 'TLS/安全',
+    labelKey: 'nodes.rawInfo.groups.tls',
     icon: <SecurityIcon fontSize="small" />,
     keywords: [
       'Tls',
@@ -80,7 +81,7 @@ const FIELD_GROUPS = {
     ]
   },
   advanced: {
-    label: '高级配置',
+    labelKey: 'nodes.rawInfo.groups.advanced',
     icon: <SettingsIcon fontSize="small" />,
     keywords: []
   }
@@ -92,7 +93,7 @@ const FIELD_GROUPS = {
 const getFieldLabel = (fieldName, fieldMeta) => {
   // 优先使用元数据中的 label
   if (fieldMeta?.label) {
-    return fieldMeta.label;
+    return fieldMeta.label + '(' + fieldName.split('.').pop() + ')';
   }
   // 否则使用字段名的最后一部分
   return fieldName.split('.').pop();
@@ -102,6 +103,7 @@ const getFieldLabel = (fieldName, fieldMeta) => {
  * 渲染字段输入控件
  */
 const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled, fieldSx }) => {
+  const { t } = useTranslation();
   const [showSecret, setShowSecret] = useState(false);
   const fieldType = fieldMeta?.type || 'string';
   const label = getFieldLabel(fieldName, fieldMeta);
@@ -161,7 +163,7 @@ const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled, fieldSx }
         helperText={helperText}
         sx={fieldSx}
       >
-        <option value="">请选择</option>
+        <option value="">{t('nodes.rawInfo.selectPlaceholder')}</option>
         {fieldMeta.options.map((option) => (
           <option key={option} value={option}>
             {option}
@@ -216,6 +218,7 @@ FieldInput.propTypes = {
  * 节点原始信息编辑器组件
  */
 export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMessage }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { isDark } = useResolvedColorScheme();
@@ -261,10 +264,10 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
       })
       .catch((err) => {
         console.error('解析节点失败:', err);
-        setError('解析节点信息失败');
+        setError(t('nodes.rawInfo.messages.parseFailed'));
       })
       .finally(() => setLoading(false));
-  }, [node?.Link]);
+  }, [node?.Link, t]);
 
   useEffect(() => {
     if (!editedFields || Object.keys(editedFields).length === 0) {
@@ -334,13 +337,13 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
     try {
       const res = await updateNodeRawInfo(node.ID, editedFields);
       if (res.data) {
-        showMessage?.('保存成功', 'success');
+        showMessage?.(t('common.saveSuccess'), 'success');
         setEditMode(false);
         onUpdate?.();
       }
     } catch (err) {
       console.error('保存失败:', err);
-      showMessage?.(err.response?.data?.msg || '保存失败', 'error');
+      showMessage?.(err.response?.data?.msg || t('common.saveFailed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -366,7 +369,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
   if (!parsedInfo) {
     return (
       <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-        无法解析节点信息
+        {t('nodes.rawInfo.unavailable')}
       </Typography>
     );
   }
@@ -382,11 +385,11 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
             sx={getNodeColorChipSx(theme, tokens, currentProtocolMeta?.color || theme.palette.primary.main)}
           />
           <Typography variant="caption" color="text.secondary">
-            {Object.keys(editedFields).length} 个字段
+            {t('nodes.rawInfo.fieldCount', { count: Object.keys(editedFields).length })}
           </Typography>
         </Stack>
 
-        <Tooltip title={editMode ? '查看模式' : '编辑模式'}>
+        <Tooltip title={editMode ? t('nodes.rawInfo.viewMode') : t('nodes.rawInfo.editMode')}>
           <IconButton
             size="small"
             onClick={() => setEditMode(!editMode)}
@@ -402,7 +405,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
 
       {/* 字段分组展示 */}
       {Object.entries(groupedFields).map(([groupKey, fields]) => {
-        const groupConfig = FIELD_GROUPS[groupKey] || { label: '其他配置', icon: <SettingsIcon fontSize="small" /> };
+        const groupConfig = FIELD_GROUPS[groupKey] || { labelKey: 'nodes.rawInfo.groups.other', icon: <SettingsIcon fontSize="small" /> };
 
         return (
           <Accordion
@@ -438,7 +441,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
               <Stack direction="row" alignItems="center" spacing={1}>
                 {groupConfig.icon}
                 <Typography variant="subtitle2" fontWeight={600}>
-                  {groupConfig.label}
+                  {t(groupConfig.labelKey)}
                 </Typography>
                 <Chip
                   label={fields.length}
@@ -493,7 +496,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
               disabled={saving}
               size={isMobile ? 'medium' : 'small'}
             >
-              重置
+              {t('common.reset')}
             </Button>
             <Button
               variant="contained"
@@ -502,7 +505,7 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
               disabled={saving}
               size={isMobile ? 'medium' : 'small'}
             >
-              保存
+              {t('common.save')}
             </Button>
           </Stack>
         </>

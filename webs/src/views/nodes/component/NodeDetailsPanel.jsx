@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
@@ -176,6 +177,7 @@ export default function NodeDetailsPanel({
   onNodeUpdate,
   showMessage
 }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { isDark } = useResolvedColorScheme();
@@ -194,8 +196,9 @@ export default function NodeDetailsPanel({
   const unlockDisplay = getNodeUnlockSummaryDisplay(node, { limit: 99 });
   const effectiveName = node.EffectiveName || node.Name || node.LinkName;
   const usesRemarkName = (node.NameMode || 'link') === 'remark';
-  const nameModeHint = usesRemarkName && node.LinkName ? ` · 原始：${node.LinkName}` : '';
-  const remarkHint = !usesRemarkName && node.Name && node.Name !== effectiveName ? ` · 备注：${node.Name}` : '';
+  const nameModeHint = usesRemarkName && node.LinkName ? t('nodes.details.nameHints.original', { name: node.LinkName }) : '';
+  const remarkHint =
+    !usesRemarkName && node.Name && node.Name !== effectiveName ? t('nodes.details.nameHints.remark', { name: node.Name }) : '';
 
   const delayStyles = getNodeStatusMetricSx(tokens, delayDisplay.color);
   const speedStyles = getNodeStatusMetricSx(tokens, speedDisplay.color);
@@ -300,7 +303,7 @@ export default function NodeDetailsPanel({
           </Typography>
 
           <Typography variant="caption" sx={{ color: tokens.secondaryText, display: 'block', mb: 0.75 }}>
-            {usesRemarkName ? '当前使用备注名称' : '当前使用原始名称'}
+            {usesRemarkName ? t('nodes.details.currentRemarkName') : t('nodes.details.currentOriginalName')}
             {nameModeHint || remarkHint}
           </Typography>
 
@@ -335,7 +338,7 @@ export default function NodeDetailsPanel({
               }}
             >
               <Typography variant="caption" fontWeight={600} sx={{ color: delayStyles.color, opacity: 0.9, display: 'block', mb: 0.5 }}>
-                延迟
+                {t('nodes.details.metrics.delay')}
               </Typography>
               <Typography variant="h5" fontWeight="800" sx={{ color: delayStyles.color }}>
                 {node.DelayTime > 0 ? node.DelayTime : '-'}
@@ -364,7 +367,7 @@ export default function NodeDetailsPanel({
               }}
             >
               <Typography variant="caption" fontWeight={600} sx={{ color: speedStyles.color, opacity: 0.9, display: 'block', mb: 0.5 }}>
-                速度
+                {t('nodes.details.metrics.speed')}
               </Typography>
               <Typography variant="h5" fontWeight="800" sx={{ color: speedStyles.color }}>
                 {node.Speed > 0 ? node.Speed.toFixed(1) : '-'}
@@ -404,25 +407,31 @@ export default function NodeDetailsPanel({
               </Box>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
-                  名称设置
+                  {t('nodes.details.nameSettings.title')}
                 </Typography>
                 <Stack spacing={0.4}>
                   <Typography variant="body2" sx={{ wordBreak: 'break-word', fontWeight: 600 }}>
-                    实际名称：{effectiveName || '-'}
+                    {t('nodes.details.nameSettings.effectiveName', { name: effectiveName || '-' })}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 11, wordBreak: 'break-word' }}>
-                    原始名称：{node.LinkName || '-'}
+                    {t('nodes.details.nameSettings.originalName', { name: node.LinkName || '-' })}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 11, wordBreak: 'break-word' }}>
-                    备注名称：{node.Name || '-'}
+                    {t('nodes.details.nameSettings.remarkName', { name: node.Name || '-' })}
                   </Typography>
                 </Stack>
               </Box>
             </Stack>
           </ListItem>
 
-          <DetailItem icon={<SourceIcon fontSize="small" />} label="来源" value={node.Source === 'manual' ? '手动添加' : node.Source} />
-          {node.DialerProxyName && <DetailItem icon={<LinkIcon fontSize="small" />} label="前置代理" value={node.DialerProxyName} />}
+          <DetailItem
+            icon={<SourceIcon fontSize="small" />}
+            label={t('nodes.details.labels.source')}
+            value={node.Source === 'manual' ? t('nodes.details.values.manualAdd') : node.Source}
+          />
+          {node.DialerProxyName && (
+            <DetailItem icon={<LinkIcon fontSize="small" />} label={t('nodes.details.labels.dialerProxy')} value={node.DialerProxyName} />
+          )}
 
           {node.Tags && (
             <ListItem disablePadding sx={{ py: 1.5, borderBottom: '1px dashed', borderColor: 'divider', display: 'block' }}>
@@ -444,7 +453,7 @@ export default function NodeDetailsPanel({
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="caption" color="text.secondary" display="block" mb={0.8}>
-                    标签
+                    {t('nodes.details.labels.tags')}
                   </Typography>
                   <Stack direction="row" flexWrap="wrap" gap={0.8}>
                     {node.Tags.split(',')
@@ -495,7 +504,7 @@ export default function NodeDetailsPanel({
             <Stack direction="row" alignItems="center" spacing={1}>
               <CodeIcon fontSize="small" color="primary" />
               <Typography variant="subtitle2" fontWeight={600}>
-                原始协议信息
+                {t('nodes.details.rawProtocolInfo')}
               </Typography>
             </Stack>
           </AccordionSummary>
@@ -507,25 +516,33 @@ export default function NodeDetailsPanel({
         <List disablePadding sx={{ mt: 1, mb: 3 }}>
           <DetailItem
             icon={<PublicIcon fontSize="small" />}
-            label="国家/地区"
+            label={t('nodes.details.labels.countryRegion')}
             value={node.LinkCountry ? formatCountry(node.LinkCountry) : '-'}
           />
           {node.LandingIP && (
             <DetailItem
               icon={<RouterIcon fontSize="small" />}
-              label="落地 IP"
+              label={t('nodes.details.labels.landingIP')}
               value={node.LandingIP}
               isLink
               onClick={() => onIPClick && onIPClick(node.LandingIP)}
-              secondary="点击查看 IP 详细信息"
+              secondary={t('nodes.details.viewIpDetails')}
             />
           )}
-          <DetailItem icon={<PublicIcon fontSize="small" />} label="IP类型" value={ipTypeDisplay.label} />
-          <DetailItem icon={<PublicIcon fontSize="small" />} label="住宅属性" value={residentialDisplay.label} />
-          <DetailItem icon={<PublicIcon fontSize="small" />} label="质量状态" value={qualityStatusDisplay.label} />
+          <DetailItem icon={<PublicIcon fontSize="small" />} label={t('nodes.details.labels.ipType')} value={ipTypeDisplay.label} />
           <DetailItem
             icon={<PublicIcon fontSize="small" />}
-            label="欺诈评分"
+            label={t('nodes.details.labels.residential')}
+            value={residentialDisplay.label}
+          />
+          <DetailItem
+            icon={<PublicIcon fontSize="small" />}
+            label={t('nodes.details.labels.qualityStatus')}
+            value={qualityStatusDisplay.label}
+          />
+          <DetailItem
+            icon={<PublicIcon fontSize="small" />}
+            label={t('nodes.details.labels.fraudScore')}
             value={fraudScoreDisplay.detailLabel || fraudScoreDisplay.label}
           />
           {unlockDisplay && (
@@ -548,7 +565,7 @@ export default function NodeDetailsPanel({
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="caption" color="text.secondary" display="block" mb={0.8}>
-                    解锁检测
+                    {t('nodes.details.unlockCheck')}
                   </Typography>
                   {unlockDisplay.items.length > 0 ? (
                     <Stack spacing={1}>
@@ -588,19 +605,24 @@ export default function NodeDetailsPanel({
                           ))}
                       </Stack>
                       <Typography variant="caption" color="text.secondary">
-                        最近检测: {formatDateTime(unlockDisplay.checkedAt)}
+                        {t('nodes.details.recentCheck', { time: formatDateTime(unlockDisplay.checkedAt) })}
                       </Typography>
                     </Stack>
                   ) : (
                     <Typography variant="body2" color="text.disabled">
-                      无解锁结果
+                      {t('nodes.details.noUnlockResults')}
                     </Typography>
                   )}
                 </Box>
               </Stack>
             </ListItem>
           )}
-          <DetailItem icon={<AccessTimeIcon fontSize="small" />} label="更新时间" value={formatDateTime(node.UpdatedAt)} noBorder />
+          <DetailItem
+            icon={<AccessTimeIcon fontSize="small" />}
+            label={t('nodes.details.labels.updatedAt')}
+            value={formatDateTime(node.UpdatedAt)}
+            noBorder
+          />
         </List>
       </Box>
     </>
@@ -639,11 +661,11 @@ export default function NodeDetailsPanel({
           textTransform: 'none'
         }}
       >
-        立即检测
+        {t('nodes.details.actions.runNow')}
       </Button>
 
       <Stack direction="row" spacing={1}>
-        <Tooltip title="复制链接">
+        <Tooltip title={t('nodes.details.actions.copyLink')}>
           <IconButton
             onClick={() => onCopy(node.Link)}
             color="primary"
@@ -658,7 +680,7 @@ export default function NodeDetailsPanel({
           </IconButton>
         </Tooltip>
 
-        <Tooltip title="编辑">
+        <Tooltip title={t('nodes.details.actions.edit')}>
           <IconButton
             onClick={() => {
               onEdit(node);
@@ -676,7 +698,7 @@ export default function NodeDetailsPanel({
           </IconButton>
         </Tooltip>
 
-        <Tooltip title="删除">
+        <Tooltip title={t('nodes.details.actions.delete')}>
           <IconButton
             onClick={() => {
               onDelete(node);

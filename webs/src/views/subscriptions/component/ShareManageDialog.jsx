@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -12,6 +13,7 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
+import { formatDateTime } from 'i18n/locales';
 import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
 import Switch from '@mui/material/Switch';
@@ -41,16 +43,15 @@ import ClientUrlsDialog from './ClientUrlsDialog';
 import QrCodeDialog from './QrCodeDialog';
 import ConfirmDialog from './ConfirmDialog';
 
-// 过期类型常量
 const EXPIRE_TYPE_NEVER = 0;
 const EXPIRE_TYPE_DAYS = 1;
 const EXPIRE_TYPE_DATETIME = 2;
 
 /**
- * 分享管理对话框
  */
 export default function ShareManageDialog({ open, subscription, onClose, showMessage }) {
   const theme = useTheme();
+  const { t, i18n } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { isDark } = useResolvedColorScheme();
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
@@ -62,14 +63,11 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 系统域名配置
   const [systemDomainConfig, setSystemDomainConfig] = useState('');
 
-  // 链接详情对话框
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailShare, setDetailShare] = useState(null);
 
-  // 新增/编辑表单
   const [formOpen, setFormOpen] = useState(false);
   const [editingShare, setEditingShare] = useState(null);
   const [formData, setFormData] = useState({
@@ -81,31 +79,25 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     enabled: true
   });
 
-  // 二维码对话框
   const [qrOpen, setQrOpen] = useState(false);
   const [qrUrl, setQrUrl] = useState('');
   const [qrTitle, setQrTitle] = useState('');
 
-  // IP日志对话框
   const [logsOpen, setLogsOpen] = useState(false);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logs, setLogs] = useState([]);
   const [logsShareName, setLogsShareName] = useState('');
 
-  // 确认对话框
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmInfo, setConfirmInfo] = useState({ title: '', content: '', onConfirm: null });
 
-  // 获取服务器URL：优先使用系统域名配置，否则使用当前访问地址
   const getServerUrl = useCallback(() => {
     if (systemDomainConfig) {
-      // 确保没有末尾斜杠
       return systemDomainConfig.replace(/\/+$/, '');
     }
     return `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
   }, [systemDomainConfig]);
 
-  // 获取系统域名配置
   const fetchSystemDomain = async () => {
     try {
       const res = await getSystemDomain();
@@ -113,11 +105,10 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         setSystemDomainConfig(res.data.systemDomain);
       }
     } catch (error) {
-      console.error('获取系统域名配置失败:', error);
+      console.error('Failed to get system domain config:', error);
     }
   };
 
-  // 获取分享列表
   const fetchShares = useCallback(async () => {
     if (!subscription?.ID) return;
     setLoading(true);
@@ -125,7 +116,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       const res = await getShares(subscription.ID);
       setShares(res.data || []);
     } catch (error) {
-      console.error('获取分享列表失败:', error);
+      console.error('Failed to get share list:', error);
     } finally {
       setLoading(false);
     }
@@ -138,19 +129,16 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     }
   }, [open, subscription?.ID, fetchShares]);
 
-  // 复制到剪贴板
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    showMessage?.('已复制到剪贴板', 'success');
+    showMessage?.(t('common.copied'), 'success');
   };
 
-  // 打开链接详情
   const handleOpenDetail = (share) => {
     setDetailShare(share);
     setDetailOpen(true);
   };
 
-  // 打开新增表单
   const handleAdd = () => {
     setEditingShare(null);
     setFormData({
@@ -164,7 +152,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     setFormOpen(true);
   };
 
-  // 打开编辑表单
   const handleEdit = (share, e) => {
     e?.stopPropagation();
     setEditingShare(share);
@@ -179,7 +166,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     setFormOpen(true);
   };
 
-  // 保存分享
   const handleSave = async () => {
     try {
       const data = {
@@ -190,36 +176,35 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       if (editingShare) {
         data.id = editingShare.id;
         await updateShare(data);
-        showMessage?.('更新成功', 'success');
+        showMessage?.(t('subscriptions.share.messages.updateSuccess'), 'success');
       } else {
         await createShare(data);
-        showMessage?.('创建成功', 'success');
+        showMessage?.(t('subscriptions.share.messages.createSuccess'), 'success');
       }
       setFormOpen(false);
       fetchShares();
     } catch (error) {
-      console.error('保存失败:', error);
-      showMessage?.(error.response?.data?.msg || '保存失败', 'error');
+      console.error('Failed to save:', error);
+      showMessage?.(error.response?.data?.msg || t('subscriptions.share.messages.saveFailed'), 'error');
     }
   };
 
-  // 删除分享
   const handleDelete = (share, e) => {
     e?.stopPropagation();
     setConfirmInfo({
-      title: '删除分享',
-      content: `确定要删除分享"${share.name || share.token}"吗？`,
+      title: t('subscriptions.share.confirm.deleteTitle'),
+      content: t('subscriptions.share.confirm.deleteContent', { name: share.name || share.token }),
       onConfirm: async () => {
         try {
           await deleteShare(share.id);
-          showMessage?.('删除成功', 'success');
+          showMessage?.(t('subscriptions.share.messages.deleteSuccess'), 'success');
           fetchShares();
           if (detailShare?.id === share.id) {
             setDetailOpen(false);
           }
         } catch (error) {
-          console.error('删除失败:', error);
-          showMessage?.(error.response?.data?.msg || '删除失败', 'error');
+          console.error('Failed to delete:', error);
+          showMessage?.(error.response?.data?.msg || t('subscriptions.share.messages.deleteFailed'), 'error');
         }
         setConfirmOpen(false);
       }
@@ -227,23 +212,22 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     setConfirmOpen(true);
   };
 
-  // 刷新Token
   const handleRefreshToken = (share, e) => {
     e?.stopPropagation();
     setConfirmInfo({
-      title: '刷新Token',
-      content: '刷新Token后，旧链接将失效，确定要刷新吗？',
+      title: t('subscriptions.share.confirm.refreshTitle'),
+      content: t('subscriptions.share.confirm.refreshContent'),
       onConfirm: async () => {
         try {
           await refreshShareToken(share.id);
-          showMessage?.('Token已刷新', 'success');
+          showMessage?.(t('subscriptions.share.messages.tokenRefreshed'), 'success');
           fetchShares();
           if (detailShare?.id === share.id) {
             setDetailOpen(false);
           }
         } catch (error) {
-          console.error('刷新失败:', error);
-          showMessage?.(error.response?.data?.msg || '刷新失败', 'error');
+          console.error('Failed to refresh:', error);
+          showMessage?.(error.response?.data?.msg || t('subscriptions.share.messages.refreshFailed'), 'error');
         }
         setConfirmOpen(false);
       }
@@ -251,46 +235,44 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     setConfirmOpen(true);
   };
 
-  // 查看IP日志
   const handleViewLogs = async (share, e) => {
     e?.stopPropagation();
-    setLogsShareName(share.name || '未命名分享');
+    setLogsShareName(share.name || t('subscriptions.share.unnamed'));
     setLogsLoading(true);
     setLogsOpen(true);
     try {
       const res = await getShareLogs(share.id);
       setLogs(res.data || []);
     } catch (error) {
-      console.error('获取日志失败:', error);
+      console.error('Failed to get logs:', error);
       setLogs([]);
     } finally {
       setLogsLoading(false);
     }
   };
 
-  // 显示二维码
   const handleQrCode = (url, title) => {
     setQrUrl(url);
     setQrTitle(title);
     setQrOpen(true);
   };
 
-  // 获取过期状态文本
   const getExpireText = (share) => {
-    if (!share.enabled) return '已禁用';
+    if (!share.enabled) return t('common.disabled');
     switch (share.expire_type) {
       case EXPIRE_TYPE_NEVER:
-        return '永不过期';
+        return t('subscriptions.share.expire.never');
       case EXPIRE_TYPE_DAYS:
-        return `${share.expire_days}天后过期`;
+        return t('subscriptions.share.expire.days', { count: share.expire_days });
       case EXPIRE_TYPE_DATETIME:
-        return share.expire_at ? new Date(share.expire_at).toLocaleString() : '指定时间';
+        return share.expire_at
+          ? formatDateTime(share.expire_at, i18n.resolvedLanguage || i18n.language)
+          : t('subscriptions.share.expire.datetime');
       default:
-        return '永不过期';
+        return t('subscriptions.share.expire.never');
     }
   };
 
-  // 检查是否过期
   const isExpired = (share) => {
     if (!share.enabled) return true;
     if (share.expire_type === EXPIRE_TYPE_DAYS && share.expire_days > 0) {
@@ -346,7 +328,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     }
   };
 
-  // 渲染分享卡片
   const renderShareCard = (share) => {
     const expired = isExpired(share);
     const accentColor = share.is_legacy ? palette.primary.main : expired ? palette.error.main : palette.info.main;
@@ -415,28 +396,28 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 0.35 }}>
                   <Typography variant="body2" fontWeight={600} noWrap sx={{ color: primaryText }}>
-                    {share.name || '未命名分享'}
+                    {share.name || t('subscriptions.share.unnamed')}
                   </Typography>
-                  {share.is_legacy && <Chip label="默认" size="small" sx={legacyChipSx} />}
+                  {share.is_legacy && <Chip label={t('subscriptions.share.defaultChip')} size="small" sx={legacyChipSx} />}
                 </Stack>
                 <Typography variant="caption" sx={{ color: expired ? tertiaryText : secondaryText }}>
-                  {getExpireText(share)} · 访问 {share.access_count || 0} 次
+                  {t('subscriptions.share.cardMeta', { expire: getExpireText(share), count: share.access_count || 0 })}
                 </Typography>
               </Box>
             </Box>
             <Stack direction="row" spacing={0.5}>
-              <Tooltip title="访问日志">
+              <Tooltip title={t('subscriptions.share.actions.accessLogs')}>
                 <IconButton size="small" onClick={(e) => handleViewLogs(share, e)} sx={actionIconButtonSx}>
                   <HistoryIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="编辑">
+              <Tooltip title={t('common.edit')}>
                 <IconButton size="small" onClick={(e) => handleEdit(share, e)} sx={actionIconButtonSx}>
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               {share.is_legacy ? (
-                <Tooltip title="刷新Token">
+                <Tooltip title={t('subscriptions.share.actions.refreshToken')}>
                   <IconButton
                     size="small"
                     onClick={(e) => handleRefreshToken(share, e)}
@@ -455,7 +436,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                   </IconButton>
                 </Tooltip>
               ) : (
-                <Tooltip title="删除">
+                <Tooltip title={t('common.delete')}>
                   <IconButton
                     size="small"
                     onClick={(e) => handleDelete(share, e)}
@@ -483,7 +464,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
   const detailClientUrls = detailShare
     ? {
-        自动识别: `${getServerUrl()}/c/?token=${detailShare.token}`,
+        [t('subscriptions.share.clients.auto')]: `${getServerUrl()}/c/?token=${detailShare.token}`,
         Clash: `${getServerUrl()}/c/?token=${detailShare.token}&client=clash`,
         Surge: `${getServerUrl()}/c/?token=${detailShare.token}&client=surge`,
         V2ray: `${getServerUrl()}/c/?token=${detailShare.token}&client=v2ray`
@@ -492,7 +473,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
   return (
     <>
-      {/* 主对话框 - 分享列表 */}
       <Dialog
         open={open}
         onClose={onClose}
@@ -516,13 +496,13 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
           }}
         >
           <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Typography variant="h6">分享管理 - {subscription?.Name}</Typography>
+            <Typography variant="h6">{t('subscriptions.share.title', { name: subscription?.Name })}</Typography>
             <Stack direction="row" spacing={1}>
               <IconButton size="small" onClick={fetchShares} disabled={loading} sx={iconButtonBaseSx}>
                 <RefreshIcon fontSize="small" />
               </IconButton>
               <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAdd}>
-                新增
+                {t('common.add')}
               </Button>
             </Stack>
           </Stack>
@@ -550,7 +530,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                 borderColor: withAlpha(palette.info.main, isDark ? 0.3 : 0.18)
               }}
             >
-              暂无分享链接，点击"新增"创建第一个分享
+              {t('subscriptions.share.empty')}
             </Alert>
           ) : (
             <Stack spacing={1.5} sx={{ mt: 1.5 }}>
@@ -561,16 +541,15 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
         <DialogActions sx={{ px: 2.5, py: 1.5, bgcolor: mutedPanelSurface, borderTop: '1px solid', borderColor: panelBorder }}>
           <Button onClick={onClose} variant="outlined">
-            关闭
+            {t('common.close')}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* 链接详情对话框 */}
       <ClientUrlsDialog
         open={detailOpen}
-        title={detailShare?.name || '分享链接'}
-        subtitle="选择需要的客户端地址，可直接复制或生成二维码"
+        title={detailShare?.name || t('subscriptions.share.detailTitle')}
+        subtitle={t('subscriptions.share.detailSubtitle')}
         legacy={Boolean(detailShare?.is_legacy)}
         clientUrls={detailClientUrls}
         onClose={() => setDetailOpen(false)}
@@ -578,7 +557,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         onCopy={copyToClipboard}
       />
 
-      {/* 新增/编辑表单对话框 */}
       <Dialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
@@ -599,45 +577,45 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
             borderColor: panelBorder
           }}
         >
-          {editingShare ? '编辑分享' : '新增分享'}
+          {editingShare ? t('subscriptions.share.form.editTitle') : t('subscriptions.share.form.addTitle')}
         </DialogTitle>
         <DialogContent sx={{ bgcolor: dialogSurface }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
-              label="分享名称"
+              label={t('subscriptions.share.form.name')}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="例如：朋友使用、临时分享"
+              placeholder={t('subscriptions.share.form.namePlaceholder')}
               size="small"
               fullWidth
             />
 
             <TextField
-              label="自定义Token（可选）"
+              label={t('subscriptions.share.form.token')}
               value={formData.token}
               onChange={(e) => setFormData({ ...formData, token: e.target.value })}
-              placeholder="留空自动生成随机token"
+              placeholder={t('subscriptions.share.form.tokenPlaceholder')}
               size="small"
               fullWidth
-              helperText="自定义token便于记忆，留空则自动生成安全的随机token"
+              helperText={t('subscriptions.share.form.tokenHelper')}
             />
 
             <FormControl size="small" fullWidth>
-              <InputLabel>过期策略</InputLabel>
+              <InputLabel>{t('subscriptions.share.form.expirePolicy')}</InputLabel>
               <Select
                 value={formData.expire_type}
-                label="过期策略"
+                label={t('subscriptions.share.form.expirePolicy')}
                 onChange={(e) => setFormData({ ...formData, expire_type: e.target.value })}
               >
-                <MenuItem value={EXPIRE_TYPE_NEVER}>永不过期</MenuItem>
-                <MenuItem value={EXPIRE_TYPE_DAYS}>按天数过期</MenuItem>
-                <MenuItem value={EXPIRE_TYPE_DATETIME}>指定时间过期</MenuItem>
+                <MenuItem value={EXPIRE_TYPE_NEVER}>{t('subscriptions.share.expire.never')}</MenuItem>
+                <MenuItem value={EXPIRE_TYPE_DAYS}>{t('subscriptions.share.form.expireByDays')}</MenuItem>
+                <MenuItem value={EXPIRE_TYPE_DATETIME}>{t('subscriptions.share.form.expireAt')}</MenuItem>
               </Select>
             </FormControl>
 
             {formData.expire_type === EXPIRE_TYPE_DAYS && (
               <TextField
-                label="过期天数"
+                label={t('subscriptions.share.form.expireDays')}
                 type="number"
                 value={formData.expire_days}
                 onChange={(e) => setFormData({ ...formData, expire_days: parseInt(e.target.value) || 0 })}
@@ -649,7 +627,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
             {formData.expire_type === EXPIRE_TYPE_DATETIME && (
               <TextField
-                label="过期时间"
+                label={t('subscriptions.share.form.expireTime')}
                 type="datetime-local"
                 value={formData.expire_at}
                 onChange={(e) => setFormData({ ...formData, expire_at: e.target.value })}
@@ -662,32 +640,29 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
             {editingShare && (
               <FormControlLabel
                 control={<Switch checked={formData.enabled} onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })} />}
-                label="启用此分享"
+                label={t('subscriptions.share.form.enabled')}
               />
             )}
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 2.5, py: 1.75, bgcolor: mutedPanelSurface, borderTop: '1px solid', borderColor: panelBorder }}>
-          <Button onClick={() => setFormOpen(false)}>取消</Button>
+          <Button onClick={() => setFormOpen(false)}>{t('common.cancel')}</Button>
           <Button variant="contained" onClick={handleSave}>
-            保存
+            {t('common.save')}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* IP访问日志对话框 */}
       <AccessLogsDialog
         open={logsOpen}
         logs={logs}
         loading={logsLoading}
-        title={`访问日志 - ${logsShareName}`}
+        title={t('subscriptions.share.logsTitle', { name: logsShareName })}
         onClose={() => setLogsOpen(false)}
       />
 
-      {/* 二维码对话框 */}
       <QrCodeDialog open={qrOpen} title={qrTitle} url={qrUrl} onClose={() => setQrOpen(false)} onCopy={copyToClipboard} />
 
-      {/* 确认对话框 */}
       <ConfirmDialog
         open={confirmOpen}
         title={confirmInfo.title}

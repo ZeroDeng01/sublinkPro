@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -28,9 +29,10 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 
-const PREVIEW_LINK_NAME = 'github-香港节点-01-Premium';
+const PREVIEW_LINK_NAME = 'github-HongKong-Node-01-Premium';
 
 export default function NodeNamePreprocessor({ value, onChange }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -193,13 +195,13 @@ export default function NodeNamePreprocessor({ value, onChange }) {
         <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0, flex: '1 1 220px', flexWrap: 'wrap', rowGap: 0.75 }}>
           <TextFieldsIcon color="primary" fontSize="small" />
           <Typography variant="subtitle2" fontWeight={600} sx={{ color: primaryText }}>
-            原名预处理
+            {t('components.nodeNamePreprocessor.title')}
           </Typography>
           {hasRules && (
             <Chip
               size="small"
               variant="outlined"
-              label={`${enabledRulesCount}/${rules.length} 条生效`}
+              label={t('components.nodeNamePreprocessor.enabledSummary', { enabled: enabledRulesCount, total: rules.length })}
               sx={{
                 height: 22,
                 maxWidth: '100%',
@@ -215,7 +217,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
           )}
         </Stack>
         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ ml: 'auto', flexShrink: 0 }}>
-          <Tooltip title="添加规则">
+          <Tooltip title={t('components.nodeNamePreprocessor.addRule')}>
             <IconButton
               size="small"
               color="primary"
@@ -238,7 +240,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
         <Box sx={{ px: { xs: 1.5, sm: 2.25 }, py: { xs: 1.75, sm: 2.25 }, bgcolor: dialogSurface, backgroundImage: contentSurface }}>
           <Stack spacing={2.25}>
             <Typography variant="body2" sx={{ color: secondaryText }}>
-              先按顺序处理节点原始名称，再把结果继续交给下游命名规则。支持文本匹配和正则表达式两种模式。
+              {t('components.nodeNamePreprocessor.description')}
             </Typography>
 
             {hasRules ? (
@@ -324,19 +326,23 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                                             value={rule.matchMode}
                                             onChange={(e) => handleUpdateRule(rule.id, 'matchMode', e.target.value)}
                                           >
-                                            <MenuItem value="text">文本</MenuItem>
-                                            <MenuItem value="regex">正则</MenuItem>
+                                            <MenuItem value="text">{t('components.nodeNamePreprocessor.matchMode.text')}</MenuItem>
+                                            <MenuItem value="regex">{t('components.nodeNamePreprocessor.matchMode.regex')}</MenuItem>
                                           </Select>
                                         </FormControl>
 
                                         <TextField
                                           size="small"
-                                          placeholder={rule.matchMode === 'regex' ? '正则表达式' : '查找文本'}
+                                          placeholder={
+                                            rule.matchMode === 'regex'
+                                              ? t('components.nodeNamePreprocessor.placeholders.regex')
+                                              : t('components.nodeNamePreprocessor.placeholders.findText')
+                                          }
                                           value={rule.pattern}
                                           onChange={(e) => handleUpdateRule(rule.id, 'pattern', e.target.value)}
                                           sx={{ flex: '1 1 180px', minWidth: 0 }}
                                           error={regexError}
-                                          helperText={regexError ? '无效正则' : ' '}
+                                          helperText={regexError ? t('components.nodeNamePreprocessor.invalidRegex') : ' '}
                                         />
 
                                         <Typography
@@ -352,13 +358,13 @@ export default function NodeNamePreprocessor({ value, onChange }) {
 
                                         <TextField
                                           size="small"
-                                          placeholder="替换为 (留空删除)"
+                                          placeholder={t('components.nodeNamePreprocessor.placeholders.replaceWith')}
                                           value={rule.replacement}
                                           onChange={(e) => handleUpdateRule(rule.id, 'replacement', e.target.value)}
                                           sx={{ flex: '1 1 180px', minWidth: 0 }}
                                         />
 
-                                        <Tooltip title="删除规则">
+                                        <Tooltip title={t('components.nodeNamePreprocessor.deleteRule')}>
                                           <IconButton
                                             size="small"
                                             color="error"
@@ -399,9 +405,9 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                   boxShadow: insetHighlight
                 }}
               >
-                <Typography variant="body2">暂无预处理规则</Typography>
+                <Typography variant="body2">{t('components.nodeNamePreprocessor.empty')}</Typography>
                 <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={handleAddRule}>
-                  添加规则
+                  {t('components.nodeNamePreprocessor.addRule')}
                 </Button>
               </Box>
             )}
@@ -419,11 +425,11 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                 >
                   <Stack spacing={1} sx={{ minWidth: 0 }}>
                     <Typography variant="body2" sx={{ color: secondaryText, minWidth: 0 }}>
-                      实时预览会按当前顺序连续应用所有启用规则。
+                      {t('components.nodeNamePreprocessor.previewDescription')}
                     </Typography>
                     <Stack spacing={0.5} sx={{ minWidth: 0 }}>
                       <Typography variant="body2" sx={{ color: primaryText, fontWeight: 600 }}>
-                        原名：
+                        {t('components.nodeNamePreprocessor.originalName')}
                       </Typography>
                       <Box component="code" sx={{ ...codeTokenSx, color: secondaryText }}>
                         {PREVIEW_LINK_NAME}
@@ -431,7 +437,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                     </Stack>
                     <Stack spacing={0.5} sx={{ minWidth: 0 }}>
                       <Typography variant="body2" sx={{ color: primaryText, fontWeight: 600 }}>
-                        结果：
+                        {t('components.nodeNamePreprocessor.result')}
                       </Typography>
                       <Box
                         component="code"
@@ -441,7 +447,7 @@ export default function NodeNamePreprocessor({ value, onChange }) {
                           fontWeight: hasChanges ? 600 : 400
                         }}
                       >
-                        {previewResult || '(空)'}
+                        {previewResult || t('components.nodeNamePreprocessor.emptyResult')}
                       </Box>
                     </Stack>
                   </Stack>

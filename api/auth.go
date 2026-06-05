@@ -47,13 +47,13 @@ func GetCaptcha(c *gin.Context) {
 	switch captchaCfg.Mode {
 	case config.CaptchaModeDisabled:
 		// 关闭验证码，不需要返回验证码数据
-		utils.OkDetailed(c, "验证码已关闭", response)
+		utils.OkDetailedI18n(c, "验证码已关闭", response, "backend.auth.captcha.disabled", nil)
 		return
 
 	case config.CaptchaModeTurnstile:
 		// Turnstile 模式，返回 site key
 		response["turnstileSiteKey"] = captchaCfg.TurnstileSiteKey
-		utils.OkDetailed(c, "获取 Turnstile 配置成功", response)
+		utils.OkDetailedI18n(c, "获取 Turnstile 配置成功", response, "backend.auth.captcha.turnstileLoaded", nil)
 		return
 
 	default:
@@ -61,12 +61,12 @@ func GetCaptcha(c *gin.Context) {
 		id, bs4, _, err := utils.GetCaptcha()
 		if err != nil {
 			utils.Error("获取验证码失败: %v", err)
-			utils.FailWithMsg(c, "获取验证码失败")
+			utils.FailWithI18n(c, "获取验证码失败", "backend.auth.captcha.loadFailed", nil)
 			return
 		}
 		response["captchaKey"] = id
 		response["captchaBase64"] = bs4
-		utils.OkDetailed(c, "获取验证码成功", response)
+		utils.OkDetailedI18n(c, "获取验证码成功", response, "backend.auth.captcha.loaded", nil)
 	}
 }
 
@@ -82,7 +82,7 @@ func UserLogin(c *gin.Context) {
 	limiter := GetLoginLimiter()
 	if isBanned, banUntil := limiter.CheckBan(ip); isBanned {
 		minutes := int(time.Until(banUntil).Minutes()) + 1
-		utils.FailWithMsg(c, fmt.Sprintf("由于多次登录失败，IP已被封禁，请 %d 分钟后再试", minutes))
+		utils.FailWithI18n(c, fmt.Sprintf("由于多次登录失败，IP已被封禁，请 %d 分钟后再试", minutes), "backend.auth.login.ipBanned", map[string]any{"minutes": minutes})
 		return
 	}
 
@@ -98,18 +98,18 @@ func UserLogin(c *gin.Context) {
 		turnstileToken := c.PostForm("turnstileToken")
 		if turnstileToken == "" {
 			utils.Warn("Turnstile 令牌为空")
-			utils.FailWithData(c, "请完成人机验证", gin.H{"errorType": "captcha"})
+			utils.FailWithDataI18n(c, "请完成人机验证", gin.H{"errorType": "captcha"}, "backend.auth.login.turnstileRequired", nil)
 			return
 		}
 		verified, err := utils.VerifyTurnstile(turnstileToken, config.GetTurnstileSecretKey(), ip, config.GetTurnstileProxyLink())
 		if err != nil {
 			utils.Error("Turnstile 验证出错: %v", err)
-			utils.FailWithData(c, "人机验证失败", gin.H{"errorType": "captcha"})
+			utils.FailWithDataI18n(c, "人机验证失败", gin.H{"errorType": "captcha"}, "backend.auth.login.turnstileFailed", nil)
 			return
 		}
 		if !verified {
 			utils.Warn("Turnstile 验证未通过")
-			utils.FailWithData(c, "人机验证未通过", gin.H{"errorType": "captcha"})
+			utils.FailWithDataI18n(c, "人机验证未通过", gin.H{"errorType": "captcha"}, "backend.auth.login.turnstileRejected", nil)
 			return
 		}
 
@@ -117,7 +117,7 @@ func UserLogin(c *gin.Context) {
 		// 传统验证码模式
 		if !utils.VerifyCaptcha(captchaKey, captchaCode) {
 			utils.Warn("验证码错误")
-			utils.FailWithData(c, "验证码错误", gin.H{"errorType": "captcha"})
+			utils.FailWithDataI18n(c, "验证码错误", gin.H{"errorType": "captcha"}, "backend.auth.login.captchaInvalid", nil)
 			return
 		}
 	}
@@ -126,7 +126,7 @@ func UserLogin(c *gin.Context) {
 	if err != nil {
 		utils.Warn("账号或者密码错误: %v", err)
 		limiter.RecordFailure(ip) // 记录失败
-		utils.FailWithData(c, "用户名或密码错误", gin.H{"errorType": "credentials"})
+		utils.FailWithDataI18n(c, "用户名或密码错误", gin.H{"errorType": "credentials"}, "backend.auth.login.invalidCredentials", nil)
 		return
 	}
 	// 登录成功，清除失败记录
@@ -135,14 +135,14 @@ func UserLogin(c *gin.Context) {
 		challengeToken, err := issuePendingMFAChallenge(user)
 		if err != nil {
 			utils.Error("生成 MFA 挑战失败: %v", err)
-			utils.FailWithMsg(c, "生成登录验证失败")
+			utils.FailWithI18n(c, "生成登录验证失败", "backend.auth.login.mfaChallengeFailed", nil)
 			return
 		}
-		utils.OkDetailed(c, "需要进行二次验证", gin.H{
+		utils.OkDetailedI18n(c, "需要进行二次验证", gin.H{
 			"requiresMFA":    true,
 			"challengeToken": challengeToken,
 			"methods":        []string{"totp", "recovery_code"},
-		})
+		}, "backend.auth.login.mfaRequired", nil)
 		return
 	}
 
@@ -153,7 +153,7 @@ func UserLogin(c *gin.Context) {
 func UserOut(c *gin.Context) {
 	// 拿到jwt中的username
 	if _, Is := c.Get("username"); Is {
-		utils.OkWithMsg(c, "退出成功")
+		utils.OkDetailedI18n(c, "退出成功", nil, "backend.auth.logout.success", nil)
 	}
 }
 

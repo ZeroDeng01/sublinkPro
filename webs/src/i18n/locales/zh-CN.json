@@ -1,0 +1,3429 @@
+{
+  "auth": {
+    "page": {
+      "welcome": "欢迎回来",
+      "subtitle": "请输入您的登录凭据"
+    },
+    "login": {
+      "title": "登录",
+      "username": "用户名",
+      "password": "密码",
+      "passwordMinLength": "密码长度至少6位",
+      "captcha": "验证码",
+      "refreshCaptcha": "刷新验证码",
+      "rememberMe": "记住用户名",
+      "loginBtn": "登 录",
+      "loggingIn": "登录中...",
+      "turnstileDegraded": "Turnstile 配置不完整，已降级为传统验证码",
+      "missingUsername": "请输入用户名",
+      "missingPassword": "请输入密码",
+      "missingCaptcha": "请输入验证码",
+      "loginFailed": "登录失败，请稍后重试",
+      "loginFailedDefault": "登录失败，请检查用户名、密码和验证码",
+      "noToken": "登录响应缺少访问令牌，请稍后重试",
+      "togglePassword": "切换密码可见性"
+    },
+    "mfa": {
+      "info": "请输入身份验证器中的动态验证码以完成登录。",
+      "currentAccount": "当前验证账户：{{account}}",
+      "authenticator": "身份验证器",
+      "recoveryCode": "恢复码",
+      "codeLabel": "验证码",
+      "recoveryCodeLabel": "恢复码",
+      "authenticatorHint": "请打开身份验证器 App，输入当前显示的 6 位动态验证码。",
+      "recoveryCodeHint": "恢复码只能使用一次。验证成功后请尽快保存新的恢复码。",
+      "useRecoveryBtn": "无法使用身份验证器？改用恢复码",
+      "useAuthenticatorBtn": "改用身份验证器验证码",
+      "backBtn": "返回上一步",
+      "verifyBtn": "验 证 并 登 录",
+      "verifying": "验证中...",
+      "missingContext": "缺少验证上下文，请重新登录",
+      "missingRecovery": "请输入恢复码",
+      "missingCode": "请输入 6 位验证码",
+      "verifyFailed": "验证失败，请稍后重试",
+      "verifyFailedDefault": "验证失败，请检查验证码或恢复码后重试",
+      "noToken": "验证成功，但未收到访问令牌",
+      "defaultMessage": "需要进行二次验证"
+    },
+    "fallback": {
+      "noPermission": "没有权限访问该资源",
+      "unauthorized": "未授权访问",
+      "serverError": "服务器错误",
+      "operationFailed": "操作失败",
+      "notification": "通知"
+    }
+  },
+  "turnstile": {
+    "title": "安全验证",
+    "success": "验证通过",
+    "error": "验证加载失败，请重试",
+    "expired": "验证已过期，请重新验证",
+    "retry": "重新验证",
+    "retryLimit": "多次验证失败，请刷新页面后重试",
+    "widgetSuccess": "人机验证已通过",
+    "widgetError": "人机验证加载失败，请刷新页面重试",
+    "widgetLoading": "正在加载人机验证..."
+  },
+  "theme": {
+    "title": "主题模式",
+    "description": "当前为 {{mode}}，可立即切换整个界面的配色方案。",
+    "system": "跟随系统",
+    "systemShort": "系统",
+    "systemDesc": "自动跟随当前设备的外观设置。",
+    "light": "浅色模式",
+    "lightShort": "浅色",
+    "lightDesc": "使用明亮的工作区配色。",
+    "dark": "深色模式",
+    "darkShort": "深色",
+    "darkDesc": "使用深色的工作区配色。"
+  },
+  "language": {
+    "title": "语言",
+    "description": "切换界面显示语言",
+    "zh-CN": "简体中文",
+    "zh-CNShort": "中文",
+    "zh-CNDesc": "切换到中文界面",
+    "en-US": "English",
+    "en-USShort": "EN",
+    "en-USDesc": "Switch to English interface"
+  },
+  "navigation": {
+    "groups": {
+      "dashboard": "仪表盘",
+      "subscription": "订阅管理",
+      "script": "脚本管理",
+      "accessKey": "API 密钥",
+      "system": "系统设置"
+    },
+    "items": {
+      "dashboard": "仪表盘",
+      "nodeMap": "节点地图",
+      "airports": "机场管理",
+      "nodes": "节点管理",
+      "nodeCheck": "节点检测",
+      "subscriptions": "订阅列表",
+      "templates": "模板管理",
+      "tags": "标签管理",
+      "scripts": "脚本列表",
+      "accessKeys": "API 密钥",
+      "tasks": "任务管理",
+      "hosts": "Host 管理",
+      "webhooks": "Webhook 管理",
+      "monitor": "系统监控",
+      "userCenter": "个人中心"
+    }
+  },
+  "common": {
+    "cancel": "取消",
+    "confirm": "确定",
+    "close": "关闭",
+    "refresh": "刷新",
+    "edit": "编辑",
+    "delete": "删除",
+    "all": "全部",
+    "unknown": "未知",
+    "add": "添加",
+    "copy": "复制",
+    "copied": "已复制到剪贴板",
+    "copyFailed": "复制失败",
+    "copyFailedManual": "复制失败，请手动复制",
+    "selectAll": "全选",
+    "enabled": "启用",
+    "disabled": "禁用",
+    "reset": "重置",
+    "saving": "保存中...",
+    "save": "保存",
+    "none": "无",
+    "open": "打开",
+    "linkAddress": "链接地址",
+    "custom": "自定义",
+    "clearAll": "清空所有",
+    "clear": "清除",
+    "preview": "预览",
+    "empty": "空",
+    "noMatch": "无匹配结果",
+    "saveSuccess": "保存成功",
+    "saveFailed": "保存失败",
+    "status": "状态",
+    "space": "空格"
+  },
+  "airports": {
+    "title": "机场管理",
+    "page": {
+      "actions": {
+        "addAirport": "添加机场",
+        "pullAllTooltip": "拉取所有已启用机场的订阅",
+        "search": "搜索",
+        "batchSettings": "批量设置",
+        "selecting": "选择中...",
+        "selectFiltered": "全选当前筛选",
+        "clearSelection": "清空选择"
+      },
+      "filters": {
+        "keyword": "关键字",
+        "keywordPlaceholder": "搜索名称或备注",
+        "group": "分组",
+        "status": "状态"
+      },
+      "selection": {
+        "currentPage": "本页全选",
+        "selectedCount": "已选 {{count}}",
+        "filteredCount": "筛选结果 {{count}}"
+      },
+      "confirm": {
+        "pullTitle": "立即更新",
+        "pullContent": "确定要立即更新机场 \"{{name}}\" 的订阅吗？",
+        "pullAllTitle": "拉取所有机场",
+        "pullAllContent": "确定要立即拉取所有已启用的机场订阅吗？",
+        "pullAllContentWithCount": "确定要立即拉取所有已启用的机场订阅吗？（共 {{count}} 个）",
+        "pullToApplyTitle": "立即拉取以生效",
+        "pullToApplyContent": "节点处理配置已变更，需要重新拉取订阅才能应用到已存在的节点。是否立即拉取机场 \"{{name}}\"？"
+      },
+      "messages": {
+        "loadFailed": "获取机场列表失败",
+        "noFilteredAirports": "当前筛选结果中没有机场",
+        "selectedFiltered": "已选择当前筛选结果中的 {{count}} 个机场",
+        "selectFilteredFailed": "选择筛选结果失败",
+        "selectAirportsFirst": "请先选择要修改的机场",
+        "selectFieldFirst": "请至少选择一个要修改的字段",
+        "cronRequired": "请输入 Cron 表达式",
+        "cronInvalid": "Cron 表达式格式不正确，格式为：分 时 日 月 周",
+        "batchUpdated": "已批量更新 {{count}} 个机场",
+        "batchUpdateFailed": "批量更新机场失败",
+        "deletedWithNodes": "已删除机场及关联节点",
+        "deletedKeepNodes": "已删除机场（保留节点）",
+        "deleteFailed": "删除失败",
+        "pullSubmitted": "已提交更新任务，请稍后刷新查看结果",
+        "pullSubmitFailed": "提交更新任务失败",
+        "noEnabledAirports": "没有已启用的机场",
+        "pullAllSubmittedWithCount": "已提交 {{count}} 个机场的拉取任务，请稍后刷新查看结果",
+        "pullAllSubmitted": "批量拉取任务已提交，请稍后刷新查看结果",
+        "pullAllFailed": "批量拉取失败",
+        "usageRefreshed": "用量信息已更新",
+        "usageRefreshFailed": "刷新用量失败",
+        "emptyAirportNameForNodes": "机场名称为空，无法打开节点管理",
+        "emptyAirportNameForQuickCheck": "机场名称为空，无法执行快速检测",
+        "noNodesForSource": "未找到来源为「{{source}}」的节点",
+        "loadAirportNodesFailed": "获取机场节点失败",
+        "nameRequired": "请输入机场名称",
+        "urlRequired": "请输入订阅地址",
+        "urlInvalid": "请输入有效的订阅地址",
+        "detectProfileRequired": "请先选择更新后检测策略",
+        "updateSuccessNeedPull": "更新成功（节点处理配置需重新拉取后生效）",
+        "updateSuccess": "更新成功",
+        "addSuccess": "添加成功",
+        "updateFailed": "更新失败",
+        "addFailed": "添加失败",
+        "invalidRequestHeaderRow": "第 {{row}} 行自定义请求头无效：{{message}}"
+      }
+    },
+    "form": {
+      "userAgentOptions": {
+        "none": "无 (空)"
+      },
+      "title": {
+        "add": "添加机场",
+        "edit": "编辑机场"
+      },
+      "sections": {
+        "basic": "基本信息",
+        "schedule": "定时更新",
+        "request": "请求设置",
+        "advanced": "高级选项",
+        "nodeProcessing": "节点处理（拉取时生效）"
+      },
+      "fields": {
+        "name": "名称",
+        "logoOptional": "Logo（可选）",
+        "subscriptionUrl": "订阅地址",
+        "nodeGroup": "节点分组",
+        "remark": "备注"
+      },
+      "helpers": {
+        "name": "机场名称不能重复，名称将作为节点来源",
+        "subscriptionUrl": "支持 Clash YAML 订阅和 V2Ray Base64 订阅",
+        "nodeGroup": "从此机场导入的节点将自动归属到此分组",
+        "remark": "一些备注信息，方便你对机场和订阅进行管理",
+        "userAgent": "拉取订阅时使用的 User-Agent，可留空"
+      },
+      "placeholders": {
+        "remark": "可选，记录机场的备忘信息",
+        "userAgent": "选择或输入"
+      },
+      "logoPicker": {
+        "set": "点击设置 Logo",
+        "change": "点击更换 Logo",
+        "dialogTitle": "选择 Logo",
+        "urlLabel": "图片 URL",
+        "urlPlaceholder": "https://example.com/logo.png 或 data:image/png;base64,...",
+        "urlHelper": "输入图片的网络地址或 base64 格式图片",
+        "searchIcon": "搜索图标...",
+        "tabs": {
+          "url": "🔗 URL",
+          "icon": "🎨 图标",
+          "emoji": "😊 Emoji"
+        },
+        "types": {
+          "icon": "图标",
+          "urlImage": "URL 图片",
+          "emoji": "Emoji",
+          "initial": "默认显示名称首字"
+        }
+      },
+      "schedule": {
+        "enable": "启用定时更新",
+        "disableDescription": "关闭后将停止自动拉取订阅"
+      },
+      "requestHeaders": {
+        "title": "自定义请求头",
+        "description": "可按行添加额外请求头，空白行不会提交，User-Agent 请使用上方专用字段",
+        "add": "添加请求头",
+        "key": "Header Key",
+        "value": "Header Value",
+        "keyPlaceholder": "例如：X-Custom-Token",
+        "valuePlaceholder": "例如：your-value",
+        "deleteRow": "删除第 {{index}} 行请求头",
+        "emptyRowIgnored": "留空整行会在保存时自动忽略",
+        "empty": "当前未设置额外请求头，可按需添加。",
+        "errors": {
+          "missingKey": "请输入请求头键名",
+          "userAgentDedicated": "User-Agent 请使用上方专用字段设置"
+        }
+      },
+      "proxyDownload": {
+        "enable": "使用代理下载",
+        "description": "通过代理节点拉取订阅",
+        "proxyNode": "代理节点",
+        "placeholder": "留空则自动选择最佳节点",
+        "helper": "可选择任意现有节点，也可手动输入外部代理链接；留空时系统会自动选择最佳节点。"
+      },
+      "advanced": {
+        "fetchUsage": "获取用量信息",
+        "fetchUsageDescription": "从订阅响应解析流量使用情况",
+        "fetchUsageAlert": "需要机场支持，且 User-Agent 需设置为 Clash 相关",
+        "skipTls": "忽略证书验证",
+        "skipTlsDescription": "跳过 TLS 证书检查",
+        "skipTlsAlert": "会降低安全性，仅在信任订阅源且证书有问题时启用",
+        "updateAfterDetect": "更新后检测",
+        "updateAfterDetectDescription": "订阅更新完成后，立即按所选策略执行该机场节点检测",
+        "detectProfile": "检测策略",
+        "detectProfileHelper": "更新完成后会针对该机场当前节点立即执行所选节点检测策略",
+        "noDetectProfiles": "暂无可用节点检测策略，请先创建策略",
+        "selectProfile": "请选择策略",
+        "changedOnly": "只检测变化的节点和新节点",
+        "changedOnlyDescription": "开启后仅检测本次更新中配置变化或新增的节点，不检测已有节点"
+      },
+      "nodeProcessing": {
+        "alert": "以下规则在拉取订阅时立即生效，过滤的节点不会存储到数据库"
+      }
+    },
+    "list": {
+      "empty": {
+        "addAirport": "暂无机场数据，点击上方\"添加机场\"按钮添加"
+      },
+      "nodeCount": "{{count}} 节点",
+      "lastRun": "上次运行",
+      "nextRun": "下次运行",
+      "usage": {
+        "title": "用量信息",
+        "disabled": "未开启用量获取",
+        "disabledShort": "未开启",
+        "failed": "用量获取失败",
+        "failedShort": "获取失败",
+        "failedMaybeUnsupported": "用量获取失败（机场可能不支持）",
+        "pending": "待获取",
+        "expireAt": "到期: {{time}}",
+        "daysLeft": "{{count}}天"
+      },
+      "speed": {
+        "title": "节点测试",
+        "untested": "暂未测试",
+        "lowestDelay": "最低延迟",
+        "highestSpeed": "最高速度"
+      },
+      "updateAfterDetect": {
+        "title": "更新后检测",
+        "deletedProfile": "策略已删除",
+        "changedOnly": "仅变更节点"
+      },
+      "actions": {
+        "viewNodes": "查看节点",
+        "quickCheck": "快速检测",
+        "pullNow": "立即拉取",
+        "refreshUsage": "刷新用量",
+        "copySubscriptionUrl": "复制订阅地址",
+        "copySubscription": "复制订阅",
+        "more": "更多操作"
+      },
+      "messages": {
+        "copiedSubscriptionUrl": "已复制「{{name}}」的订阅地址"
+      }
+    },
+    "mobile": {
+      "empty": {
+        "add": "暂无机场数据，点击上方\"添加\"按钮添加"
+      }
+    },
+    "table": {
+      "columns": {
+        "select": "选择",
+        "airport": "机场",
+        "nodes": "节点",
+        "schedule": "调度",
+        "runTime": "运行时间",
+        "usage": "用量",
+        "speedTest": "测速",
+        "actions": "操作"
+      },
+      "lastRunCompact": "上次: {{time}}",
+      "nextRunCompact": "下次: {{time}}"
+    },
+    "dedup": {
+      "title": "节点入库去重",
+      "loading": "加载配置...",
+      "modeLabel": "去重模式",
+      "fieldDescription": "为每个协议配置去重字段（当多个节点的选定字段值完全相同时，仅保留第一个）：",
+      "selectedCount": "已选 {{count}} 个",
+      "status": {
+        "contentHash": "内容哈希全库去重",
+        "protocolNoFields": "按协议去重（未配置字段）",
+        "protocolFields": "按协议去重（{{count}} 个字段）"
+      },
+      "modes": {
+        "none": "默认（内容哈希全库去重）",
+        "protocol": "按协议字段去重（仅本次拉取）"
+      },
+      "alerts": {
+        "none": "使用<strong>节点内容哈希进行全库去重</strong>，确保数据库中不会存储内容完全相同的节点。此方式不受链接参数顺序影响，不同机场间的重复节点也会被过滤。",
+        "protocol": "按协议字段去重<strong>仅在本次拉取的节点内部生效</strong>， 不会与数据库中已有的其他节点进行比较。未配置字段的协议将继续使用默认的内容哈希全库去重。"
+      },
+      "messages": {
+        "loadMetaFailed": "加载协议元数据失败"
+      }
+    },
+    "nodeStats": {
+      "untested": "暂未测试",
+      "delayPassed": "延迟通过",
+      "speedPassed": "速度通过",
+      "noDataTitle": "该机场节点尚未进行测速",
+      "noDataDescription": "请先运行延迟或速度测试",
+      "lowestDelay": "最低延迟",
+      "highestSpeed": "最高速度"
+    },
+    "batchEdit": {
+      "title": "批量设置机场",
+      "summary": {
+        "group": "分组：",
+        "clearGroup": "清空分组",
+        "schedule": "调度：",
+        "unset": "未设置"
+      },
+      "summarySeparator": "；",
+      "messages": {
+        "selectedWithSummary": "将更新 {{count}} 个机场：{{summary}}",
+        "selectedOnly": "已选择 {{count}} 个机场，请先勾选本次要修改的字段"
+      },
+      "sections": {
+        "group": {
+          "title": "节点分组",
+          "switch": "统一设置节点分组",
+          "fieldLabel": "节点分组",
+          "placeholder": "输入或选择分组，留空表示清空分组",
+          "helper": "会同步更新这些机场已导入节点的分组，留空表示清空分组。"
+        },
+        "schedule": {
+          "title": "定时更新",
+          "fieldLabel": "更新 Cron 表达式",
+          "description": "批量编辑仅会更新定时规则，不会改变已选机场当前的启用或禁用状态。",
+          "helper": "可批量修改或清空 Cron 表达式；此处不会同步切换机场的定时更新开关状态。"
+        }
+      },
+      "actions": {
+        "confirm": "确认批量更新"
+      },
+      "summaryItem": "{{label}}{{value}}"
+    },
+    "deleteDialog": {
+      "title": "确认删除",
+      "confirm": "确定要删除机场 \"{{name}}\" 吗？",
+      "withNodes": "同时删除关联节点",
+      "warning": "⚠️ 将同时删除此机场导入的所有节点，此操作不可恢复！",
+      "confirmAction": "确认删除"
+    }
+  },
+  "notificationEvents": {
+    "title": "触发事件",
+    "description": "为当前通知渠道勾选要自动发送的事件，测试发送不受这里的选择影响。",
+    "otherCategory": "其他事件",
+    "selectedCount": "{{selected}}/{{total}} 已选",
+    "groupSelectedCount": "{{selected}}/{{total}} 个事件已选",
+    "emptySelection": "当前没有选中任何自动触发事件。保存后渠道仍可启用，但不会自动推送业务通知。",
+    "actions": {
+      "selectAll": "全选",
+      "errorsAndSecurity": "仅错误与安全",
+      "clear": "清空",
+      "selectGroup": "全选分组"
+    },
+    "severity": {
+      "success": "成功",
+      "error": "错误",
+      "warning": "警告",
+      "info": "信息",
+      "event": "事件"
+    }
+  },
+  "subscriptionAddress": {
+    "title": "订阅地址设置",
+    "subheader": "用于生成 Telegram 机器人和网页分享中的订阅访问地址",
+    "info": "配置后，Telegram 机器人和网页分享链接将优先使用这里填写的订阅地址。未配置时，网页仍使用当前访问地址，Telegram 使用本地地址。",
+    "field": {
+      "label": "订阅地址",
+      "placeholder": "例如: https://your-domain.com",
+      "helper": "请填写完整地址并包含协议头（http:// 或 https://），保存后将作为订阅链接的基础地址。"
+    },
+    "actions": {
+      "save": "保存订阅地址"
+    },
+    "messages": {
+      "saveSuccess": "订阅地址设置保存成功",
+      "saveFailed": "保存失败: {{message}}"
+    }
+  },
+  "nodeDedup": {
+    "title": "跨机场节点去重",
+    "subheader": "控制不同机场之间是否进行节点内容去重",
+    "enable": "启用跨机场去重",
+    "enabledInfo": "当前为<strong>开启</strong>状态：不同机场间配置完全相同的节点（ContentHash 一致）只保留最先入库的一份，避免重复。",
+    "disabledInfo": "当前为<strong>关闭</strong>状态：每个机场独立保留自己的节点，即使不同机场存在配置完全相同的节点也会各自入库。同一机场内的重复节点仍然会被去重。",
+    "messages": {
+      "saveSuccess": "节点去重设置保存成功",
+      "saveFailed": "保存失败"
+    }
+  },
+  "settings": {
+    "title": "用户中心",
+    "tabs": {
+      "profile": "个人设置",
+      "subscriptionAddress": "订阅地址设置",
+      "telegram": "Telegram 机器人",
+      "nodeDedup": "节点去重",
+      "aiAssistant": "AI 助手",
+      "dataMigration": "数据迁移"
+    },
+    "telegramPanel": {
+      "title": "Telegram 机器人",
+      "botFatherHint": "使用 <botFather>@BotFather</botFather> 创建机器人并获取 Token。首次发送 /start 命令后，机器人会自动绑定您的 Chat ID。",
+      "connectedAs": "机器人已连接:",
+      "qrTooltip": "使用手机扫描二维码打开机器人",
+      "qrTitle": "扫描二维码打开机器人",
+      "qrHelper": "或点击上方机器人名称直接跳转",
+      "chatIdPlaceholder": "发送 /start 后自动获取",
+      "chatIdHelper": "可留空，首次发送 /start 后自动绑定",
+      "useProxy": "使用代理连接 Telegram",
+      "proxyNode": "代理节点",
+      "proxyPlaceholder": "留空则自动选择最佳节点",
+      "proxyHelper": "可选择任意现有节点，也可手动输入外部代理链接；留空时系统会自动选择最佳节点。",
+      "eventsDescription": "为 Telegram 机器人勾选自动发送的事件。建议至少保留错误类和安全类通知，避免真正重要的消息被静音。",
+      "status": {
+        "connected": "已连接",
+        "disconnected": "未连接"
+      },
+      "actions": {
+        "test": "测试连接",
+        "reconnect": "重新连接",
+        "save": "保存设置"
+      },
+      "commands": {
+        "title": "支持的命令",
+        "start": "开始使用",
+        "stats": "查看仪表盘统计",
+        "monitor": "查看系统监控",
+        "speedtest": "开始节点测速",
+        "subscriptions": "管理订阅",
+        "nodes": "查看节点信息",
+        "tags": "执行标签规则",
+        "tasks": "管理任务"
+      },
+      "messages": {
+        "botTokenRequired": "请输入 Bot Token",
+        "saveSuccess": "保存成功",
+        "saveFailed": "保存失败: {{message}}",
+        "testSent": "连接成功，测试消息已发送",
+        "testSuccess": "连接成功",
+        "testFailed": "测试失败: {{message}}",
+        "reconnectSuccess": "重连成功",
+        "reconnectFailed": "重连失败: {{message}}"
+      }
+    },
+    "aiAssistantPanel": {
+      "title": "AI 助手设置",
+      "subheader": "配置模板编辑器使用的系统级 AI 助手。",
+      "alerts": {
+        "systemConfig": "模板编辑器中的 AI 助手会使用这里的系统级配置。当前仅支持提供“/responses endpoint”的 AI 服务。"
+      },
+      "enableTitle": "启用系统 AI 助手",
+      "providerType": "当前接口类型：Responses API（仅支持 `/responses` endpoint）。",
+      "status": {
+        "configured": "已保存连接参数",
+        "notConfigured": "尚未完成配置",
+        "savedApiKey": "已保存 API Key：{{key}}",
+        "noApiKey": "未保存 API Key",
+        "hidden": "已隐藏"
+      },
+      "fields": {
+        "baseUrlHelper": "需为可用的 Responses API 根地址，并且服务端必须支持 `/responses` endpoint。",
+        "replaceApiKey": "替换 API Key（留空则保留已保存密钥）",
+        "model": "模型",
+        "modelHelperFetched": "可从已获取模型中选择，也可手动输入。",
+        "modelHelper": "可手动输入，或先填写 Base URL / API Key 后获取模型列表。",
+        "maxTokensHelper": "填 0 使用服务端默认值（400000）。",
+        "extraHeaders": "额外请求头（JSON）",
+        "extraHeadersHelper": "例如：{\"HTTP-Referer\":\"https://example.com\"}"
+      },
+      "actions": {
+        "fetchModels": "获取模型",
+        "fetchModelsHelper": "使用当前 Base URL / API Key 拉取可选模型。",
+        "test": "测试连接",
+        "save": "保存 AI 设置"
+      },
+      "testResult": {
+        "title": "连接测试结果",
+        "testing": "正在连接 AI 服务并发送测试请求...",
+        "success": "连接测试成功，AI 服务已返回响应。",
+        "response": "AI 返回内容",
+        "latency": "延迟",
+        "finishReason": "完成原因",
+        "usage": "用量信息",
+        "empty": "点击“测试连接”后，结果会显示在这里，不会打断当前表单操作。"
+      },
+      "messages": {
+        "loadFailed": "获取 AI 设置失败: {{message}}",
+        "extraHeadersExample": "额外请求头必须为 JSON 对象，例如 {\"HTTP-Referer\":\"https://example.com\"}",
+        "extraHeadersObject": "额外请求头必须为 JSON 对象",
+        "baseUrlRequired": "请先填写 AI Base URL",
+        "apiKeyRequired": "请先填写 API Key",
+        "modelsLoaded": "模型列表获取成功",
+        "noModels": "未发现可用模型，请手动填写模型名称",
+        "modelsFailed": "获取模型列表失败: {{message}}",
+        "enabledBaseUrlRequired": "启用 AI 助手时必须填写 AI Base URL",
+        "enabledModelRequired": "启用 AI 助手时必须填写模型名称",
+        "enabledApiKeyRequired": "启用 AI 助手时必须提供 API Key",
+        "testSuccess": "AI 连接测试成功",
+        "testFailed": "连接测试失败: {{message}}",
+        "saveSuccess": "AI 助手设置保存成功",
+        "saveFailed": "保存 AI 设置失败: {{message}}"
+      }
+    },
+    "profilePanel": {
+      "title": "个人设置",
+      "subheader": "更新资料并管理账号安全。",
+      "userFallback": "用户",
+      "notSet": "未设置",
+      "heroDescription": "管理资料、双重验证与密码。",
+      "currentNickname": "当前昵称：{{nickname}}",
+      "tabs": {
+        "profile": "基本资料",
+        "security": "安全设置"
+      },
+      "status": {
+        "totpEnabled": "双重验证已启用",
+        "totpDisabled": "双重验证未启用"
+      },
+      "actions": {
+        "changePassword": "修改密码",
+        "updateProfile": "更新资料",
+        "startTotpSetup": "开始设置 TOTP",
+        "regenerateRecoveryCodes": "重新生成恢复码",
+        "disableTotp": "关闭双重验证",
+        "copySecret": "复制密钥",
+        "confirmEnable": "确认启用",
+        "cancelSetup": "取消设置",
+        "copyAll": "复制全部"
+      },
+      "basic": {
+        "title": "基础资料",
+        "subheader": "更新用户名和昵称。保存时需要验证当前身份。",
+        "usernameChangeNotice": "修改用户名后需要重新登录。"
+      },
+      "fields": {
+        "username": "用户名",
+        "nickname": "昵称",
+        "optional": "可选",
+        "currentPassword": "当前密码",
+        "currentPasswordHelper": "保存时需要输入当前密码。",
+        "currentTotpOptional": "当前 TOTP 验证码（已启用时必填）",
+        "currentTotpHelper": "已启用双重验证时填写。",
+        "startSetupPasswordHelper": "开始设置前需要验证当前密码。",
+        "continuePasswordHelper": "继续前需要输入当前密码。",
+        "currentCode": "当前验证码",
+        "authenticatorCodeHelper": "输入身份验证器当前显示的验证码。",
+        "manualEntryKey": "手动输入密钥",
+        "manualEntryKeyHelper": "扫码失败时，可复制此密钥手动添加账户。",
+        "code": "验证码",
+        "oldPassword": "旧密码",
+        "newPassword": "新密码",
+        "newPasswordHelper": "密码长度至少6位",
+        "confirmPassword": "确认新密码"
+      },
+      "identity": {
+        "title": "身份确认"
+      },
+      "theme": {
+        "title": "主题切换入口",
+        "subheader": "全局主题模式已移动到右上角 Header，作为整个应用的主入口。",
+        "description": "请使用右上角 Header 中的主题按钮切换浅色、深色或跟随系统模式。",
+        "helper": "主题选择会自动保存，并在下次登录后继续使用。"
+      },
+      "saveCheck": {
+        "title": "保存前确认",
+        "subheader": "避免因安全校验导致保存失败。",
+        "requiresTitle": "本次保存需要",
+        "requiresPassword": "当前密码。",
+        "requiresPasswordAndTotp": "当前密码，以及当前 TOTP 验证码。",
+        "usernameTitle": "修改用户名时",
+        "usernameDescription": "保存成功后会自动退出登录，请使用新用户名重新登录。",
+        "securityTitle": "当前安全状态",
+        "securityEnabled": "双重验证已启用。",
+        "securityDisabled": "尚未启用双重验证。"
+      },
+      "passwordDialog": {
+        "title": "修改密码",
+        "notice": "修改成功后将重新登录；已启用双重验证时，还需要输入当前验证码。",
+        "showOld": "显示旧密码",
+        "hideOld": "隐藏旧密码",
+        "showNew": "显示新密码",
+        "hideNew": "隐藏新密码",
+        "showConfirm": "显示确认密码",
+        "hideConfirm": "隐藏确认密码"
+      },
+      "labels": {
+        "secret": "密钥",
+        "recoveryCode": "恢复码",
+        "recoveryCodes": "恢复码"
+      },
+      "security": {
+        "title": "安全总览",
+        "subheader": "查看双重验证状态与恢复方式。",
+        "enabledAlert": "登录时需要身份验证器验证码；设备不可用时可改用恢复码。",
+        "disabledAlert": "启用后，登录将增加一步验证码校验。完成绑定后请立即保存恢复码。"
+      },
+      "totpSetup": {
+        "title": "启用双重验证",
+        "subheader": "先验证当前密码，再绑定身份验证器。",
+        "description": "支持常见的 TOTP 身份验证器应用。"
+      },
+      "sensitive": {
+        "title": "敏感操作验证",
+        "subheader": "关闭双重验证或重置恢复码前，请先完成验证。"
+      },
+      "totpEnrollment": {
+        "title": "完成 TOTP 绑定",
+        "subheader": "扫描二维码后，输入验证码完成启用。",
+        "scanHint": "使用身份验证器扫描二维码；无法扫描时可改为手动输入密钥。"
+      },
+      "recovery": {
+        "title": "恢复码",
+        "subheader": "每个恢复码只能使用一次，请及时离线保存。",
+        "warning": "关闭双重验证或重新生成恢复码前，请确认仍可访问当前身份验证器，或已保存可用恢复码。",
+        "listTitle": "恢复码列表",
+        "helper": "每个恢复码只能使用一次。请离线保存，不要与账号密码放在同一处。",
+        "empty": "启用后生成的恢复码会展示在这里，请及时保存。"
+      },
+      "recommendation": {
+        "title": "启用建议",
+        "description": "双重验证会在密码之外增加一步验证码校验，更适合保护管理后台与安全敏感操作。",
+        "helper": "启用后请立即保存恢复码，并确认常用设备上的身份验证器可正常使用。"
+      },
+      "messages": {
+        "copied": "{{label}}已复制",
+        "copyFailed": "复制{{label}}失败，请手动复制",
+        "totpPasswordRequired": "请输入当前密码以开始设置 TOTP",
+        "scanTotp": "请使用身份验证器扫描二维码后输入验证码完成绑定",
+        "totpSetupFailed": "获取 TOTP 配置失败: {{message}}",
+        "totpCodeRequired": "请输入身份验证器中的 6 位验证码",
+        "totpEnabled": "双重验证已启用，请立即妥善保存恢复码",
+        "totpEnableFailed": "启用 TOTP 失败: {{message}}",
+        "currentPasswordRequired": "请输入当前密码",
+        "currentTotpRequired": "请输入当前身份验证器验证码",
+        "totpDisabled": "双重验证已关闭",
+        "totpDisableFailed": "关闭 TOTP 失败: {{message}}",
+        "regenPasswordRequired": "请输入当前密码以重新生成恢复码",
+        "regenTotpRequired": "请输入当前身份验证器验证码以重新生成恢复码",
+        "recoveryCodesRegenerated": "恢复码已重新生成，请保存新的恢复码",
+        "regenerateFailed": "重新生成恢复码失败: {{message}}",
+        "usernameRequired": "用户名不能为空",
+        "profileUpdated": "资料更新成功",
+        "usernameChanged": "用户名已修改，需要重新登录...",
+        "updateFailed": "更新失败: {{message}}",
+        "oldPasswordRequired": "请输入旧密码",
+        "newPasswordRequired": "请输入新密码",
+        "passwordTooShort": "新密码长度至少6位",
+        "passwordMismatch": "两次输入的密码不一致",
+        "changePasswordFailed": "修改失败",
+        "passwordChanged": "密码修改成功，即将重新登录...",
+        "oldPasswordIncorrect": "旧密码不正确",
+        "changeFailed": "修改失败: {{message}}"
+      }
+    },
+    "databaseMigration": {
+      "title": "SQLite 数据迁移",
+      "subheader": "上传旧实例的 backup.zip 或 SQLite 数据库文件，导入到当前实例",
+      "alerts": {
+        "overwrite": "本操作会覆盖当前实例的业务数据。建议只在新部署的 MySQL / PostgreSQL 实例首次迁移时使用，并先自行备份当前实例。",
+        "recommendBackup": "推荐上传旧 SQLite 实例导出的 <strong>backup.zip</strong>。直接上传 <strong>.db</strong> 只会迁移数据库记录，不会恢复模板目录。",
+        "exportGuide": "旧实例导出备份方式：登录旧实例后台后，点击右上角头像菜单中的 <strong>系统备份</strong>，即可下载 <strong>backup.zip</strong> 文件。该压缩包会包含 <strong>db</strong> 和 <strong>template</strong> 目录，适合作为迁移源文件。"
+      },
+      "warnings": {
+        "title": "最近一次迁移包含 {{count}} 条警告",
+        "helper": "这些警告也可在任务中心的“数据库迁移”任务详情中查看。"
+      },
+      "fileSupport": "支持 `backup.zip`、`.db`、`.sqlite`、`.sqlite3`",
+      "options": {
+        "accessKeys": "迁移 AccessKey",
+        "accessKeysHelper": "如果旧 API Key 迁移后无法使用，请确认当前实例的 API 加密密钥与旧实例一致，或在迁移后重新生成。",
+        "subLogs": "迁移订阅访问日志",
+        "subLogsHelper": "日志数据通常较大，默认不迁移。",
+        "confirmOverwrite": "我已确认本次导入会覆盖当前实例的业务数据",
+        "restartNotice": "迁移任务完成后，请手动重启项目实例，再重新登录检查迁移结果。"
+      },
+      "actions": {
+        "chooseFile": "选择迁移文件",
+        "start": "开始迁移",
+        "submitting": "提交中..."
+      },
+      "messages": {
+        "completedWithWarnings": "迁移完成，但有 {{count}} 条警告。请重启项目实例后重新登录并检查数据",
+        "completed": "迁移完成，请重启项目实例后重新登录并检查数据",
+        "taskFailed": "迁移任务失败，请到任务中心查看详情",
+        "fileRequired": "请先选择 backup.zip 或 SQLite 数据库文件",
+        "confirmRequired": "请先确认本次导入会覆盖当前实例数据",
+        "started": "迁移任务已启动，可在右下角进度面板或任务中心查看进度",
+        "startFailed": "启动迁移任务失败"
+      }
+    },
+    "cloudflareTunnel": {
+      "subheader": "通过本机 cloudflared 将当前 SublinkPro 实例连接到 Cloudflare Zero Trust Tunnel。",
+      "alerts": {
+        "setup": "请先在 Cloudflare Zero Trust 中创建 remotely-managed Tunnel，然后粘贴安装命令中的 token。系统会调用已安装的 cloudflared，并在内部安全传递 token，避免在进程参数中直接暴露 token。",
+        "notInstalledPrefix": "当前运行环境未检测到 cloudflared。Docker 官方镜像会内置 cloudflared；非 Docker 部署需要先安装 cloudflared 并确保命令在 PATH 中可用。",
+        "installGuide": "查看本项目安装指南",
+        "sentenceEnd": "。"
+      },
+      "status": {
+        "title": "运行状态",
+        "installed": "已安装 cloudflared",
+        "notInstalled": "未安装 cloudflared",
+        "running": "运行中",
+        "stopped": "未运行",
+        "autoEnabled": "已启用自动启动",
+        "autoDisabled": "未启用自动启动",
+        "tokenSaved": "已保存 token：{{token}}",
+        "tokenMissing": "未保存 token",
+        "command": "启动命令：{{command}}",
+        "path": "cloudflared 路径：{{path}}",
+        "version": "cloudflared 版本：{{version}}",
+        "lastMessage": "最近消息：{{message}}",
+        "lastError": "运行日志：{{message}}"
+      },
+      "form": {
+        "autoConnect": "随服务启动自动连接 Tunnel",
+        "noAutoConnect": "不自动连接 Tunnel",
+        "tokenPlaceholderSaved": "留空则继续使用已保存 token",
+        "tokenPlaceholderNew": "粘贴 cloudflared service install 命令中的 token",
+        "tokenHelperPrefix": "保存或启动时会加密存储 token。Token 来自 Cloudflare Zero Trust 的 Tunnel 安装命令最后一段；可参考",
+        "tokenGuide": "获取 token 指引"
+      },
+      "actions": {
+        "refreshStatus": "刷新状态",
+        "save": "保存配置",
+        "saving": "保存中...",
+        "start": "启动 cloudflared",
+        "starting": "启动中...",
+        "stop": "停止 cloudflared",
+        "stopping": "停止中...",
+        "removeToken": "清除 token"
+      },
+      "messages": {
+        "loadFailed": "获取 Cloudflare Tunnel 状态失败: {{message}}",
+        "saved": "Cloudflare Tunnel 配置已保存",
+        "saveFailed": "保存失败: {{message}}",
+        "started": "cloudflared 已启动",
+        "startFailed": "启动失败: {{message}}",
+        "stopped": "cloudflared 已停止",
+        "stopFailed": "停止失败: {{message}}",
+        "tokenRemoved": "Cloudflare Tunnel token 已清除",
+        "removeFailed": "清除失败: {{message}}"
+      }
+    }
+  },
+  "errorPage": {
+    "401": {
+      "title": "需要授权",
+      "description": "您需要登录才能访问此页面。请先登录您的账户，或联系管理员获取访问权限。"
+    },
+    "403": {
+      "title": "禁止访问",
+      "description": "很抱歉，您没有权限访问此资源。如果您认为这是一个错误，请联系系统管理员。"
+    },
+    "404": {
+      "title": "页面未找到",
+      "description": "抱歉，您访问的页面似乎已经迷失在数字宇宙中了。请检查网址是否正确，或返回首页继续探索。",
+      "footer": "🌌 在浩瀚的互联网中，总有一些路径通往未知..."
+    },
+    "500": {
+      "title": "服务器错误",
+      "description": "服务器遇到了一些问题，请稍后再试。"
+    },
+    "503": {
+      "title": "服务维护中",
+      "description": "系统正在进行维护升级，预计很快就会恢复。感谢您的耐心等待！"
+    },
+    "default": {
+      "title": "发生错误",
+      "description": "系统遇到了一些问题，请稍后再试或联系管理员。"
+    },
+    "actions": {
+      "home": "返回首页",
+      "refresh": "刷新页面",
+      "back": "返回上一页"
+    }
+  },
+  "webhooks": {
+    "title": "Webhook 管理",
+    "description": "集中管理多个通知目标。每个 Webhook 都可以单独设置请求方式、事件范围，并在保存后独立测试。",
+    "splitAlert": "支持为不同通知渠道拆分不同的事件范围，例如错误类通知、订阅更新通知或安全类通知。测试发送不会受事件勾选限制。",
+    "createWebhook": "新增 Webhook",
+    "editWebhook": "编辑 Webhook",
+    "deleteWebhook": "删除 Webhook",
+    "deleteConfirm": "确定删除 {{name}} 吗？删除后无法恢复。",
+    "confirmDelete": "确认删除",
+    "totalWebhooks": "Webhook 总数",
+    "enabledCount": "已启用",
+    "optionalEvents": "当前可选事件",
+    "emptyTitle": "还没有配置任何 Webhook。建议按通知用途拆分多个接收地址，后续维护会更轻松。",
+    "createNow": "立即创建",
+    "statusEnabled": "已启用",
+    "statusDisabled": "已停用",
+    "eventsCount": "{{count}} 个事件",
+    "noEventsAlert": "当前未勾选任何自动触发事件，保存后此 Webhook 不会自动接收业务通知。",
+    "headersLabel": "请求头：",
+    "headersConfigured": "已配置",
+    "headersUnconfigured": "未配置",
+    "bodyLabel": "请求体：",
+    "bodyConfigured": "已配置模板",
+    "bodyUnconfigured": "使用默认空内容",
+    "lastUpdated": "最近更新：",
+    "lastTested": "最近测试：",
+    "switchEnabled": "通知已启用",
+    "switchDisabled": "通知已停用",
+    "edit": "编辑",
+    "test": "发送测试",
+    "delete": "删除",
+    "unrecorded": "未记录",
+    "defaultName": "Webhook {{index}}",
+    "noUrl": "未配置 URL",
+    "dialog": {
+      "nameLabel": "Webhook 名称",
+      "namePlaceholder": "例如：错误告警",
+      "nameHelperText": "可选，未填写时列表会显示默认名称。",
+      "enableNow": "保存后立即启用",
+      "enableLater": "先保存为停用状态",
+      "urlLabel": "Webhook URL",
+      "urlHelperText": "支持在 URL 中使用模板变量，例如 {{title}}、{{message}}、{{event}}。",
+      "methodLabel": "请求方法",
+      "contentTypeLabel": "Content-Type",
+      "headersInputLabel": "请求头（JSON，可选）",
+      "headersHelperText": "填写 JSON 请求头，适合放鉴权信息或渠道标识。",
+      "bodyInputLabel": "请求体模板",
+      "bodyHelperText": "当 Content-Type 为 JSON 时，这里建议填写合法 JSON。",
+      "variablesAlert": "支持变量：{{variables}}",
+      "eventSelectorDesc": "为当前 Webhook 勾选自动触发的业务事件。测试发送不会受这里的选择影响。",
+      "save": "保存修改",
+      "create": "创建 Webhook",
+      "infoAlert": "使用独立名称区分不同通知渠道会更清晰，例如“错误告警”、“安全通知”或“订阅更新”。保存成功后可回到列表里单独发送测试消息。"
+    },
+    "messages": {
+      "fetchFailed": "获取 Webhook 列表失败",
+      "urlRequired": "请输入 Webhook URL",
+      "headersInvalid": "请求头必须是合法的 JSON",
+      "bodyInvalid": "JSON 请求体格式不正确",
+      "created": "Webhook 已创建",
+      "updated": "Webhook 已更新",
+      "saveFailed": "保存 Webhook 失败",
+      "deleted": "Webhook 已删除",
+      "deleteFailed": "删除 Webhook 失败",
+      "enabled": "Webhook 已启用",
+      "disabled": "Webhook 已停用",
+      "toggleFailed": "更新启用状态失败",
+      "testSuccess": "Webhook 测试发送成功",
+      "testFailed": "Webhook 测试失败"
+    }
+  },
+  "dashboard": {
+    "nodeMap": {
+      "localRegion": "本地区域",
+      "nodeCount": "节点数量",
+      "globalDistribution": "全球节点分布",
+      "dataReference": "以获取到落地IP的数据为参考",
+      "coveredRegions": "覆盖区域",
+      "unknownRegions": "未知区域",
+      "unmatchedCoordinates": "未匹配到国家坐标",
+      "initializing": "正在初始化地图..."
+    },
+    "default": {
+      "greeting": {
+        "morning": "早上好",
+        "morningSub": "新的一天开始了",
+        "lateMorning": "上午好",
+        "lateMorningSub": "充满活力的上午",
+        "noon": "中午好",
+        "noonSub": "记得休息一下",
+        "afternoon": "下午好",
+        "afternoonSub": "继续加油",
+        "evening": "晚上好",
+        "eveningSub": "辛苦了一天",
+        "night": "夜深了",
+        "nightSub": "注意休息",
+        "welcome": "欢迎使用",
+        "system": "订阅管理系统，"
+      },
+      "stats": {
+        "airportCount": "机场总数",
+        "airportUsageSub": "个已启用用量获取",
+        "nodeTotal": "节点统计",
+        "totalNodes": "总节点",
+        "delayPass": "延迟通过",
+        "speedPass": "速度通过",
+        "fastestSpeed": "最快速度",
+        "lowestDelay": "最低延迟",
+        "noData": "暂无数据",
+        "running": "运行中",
+        "copied": "节点链接已复制到剪贴板",
+        "copyFailed": "复制失败"
+      },
+      "airports": {
+        "usageOverview": "机场流量概览",
+        "airportCount": "个机场",
+        "globalUsage": "全局流量使用",
+        "recentlyExpiring": "最近到期",
+        "noExpireInfo": "暂无到期信息",
+        "lowUsageWarning": "流量不足警告",
+        "allSufficient": "所有机场流量充足",
+        "remain": "剩余"
+      },
+      "charts": {
+        "countryDistribution": "节点国家分布",
+        "countryTooltip": "按节点落地国家聚合，仅比较真实地区分布；未知节点数量单独展示。",
+        "regions": "个地区",
+        "unknownNodes": "未知节点",
+        "unknownCountryDesc": "未获取到落地国家或节点已失效，不参与地区比较",
+        "protocolDistribution": "节点协议分布",
+        "protocolTooltip": "按协议类型统计，便于快速判断节点结构。",
+        "protocols": "种协议",
+        "tagStats": "标签统计",
+        "tagTooltip": "展示命中最多的标签，便于识别规则覆盖情况。",
+        "tags": "个标签",
+        "groupStats": "分组统计",
+        "groupTooltip": "按节点分组聚合，方便查看主要组织结构。",
+        "groups": "个分组",
+        "sourceStats": "来源统计",
+        "sourceTooltip": "展示节点主要来源，便于识别上游贡献占比。",
+        "sources": "个来源",
+        "qualityStats": "质量状态统计",
+        "qualityTooltip": "完整结果可参与 IP 和欺诈评分细分，其余状态用于说明覆盖率。",
+        "qualityAnalyzable": "可细分",
+        "ipQuality": "IP 质量统计",
+        "ipQualityTooltip": "住宅/机房与原生/广播基于完整质量检测结果统计，其他数量表示未完成细分的节点。",
+        "fullResults": "完整结果",
+        "fraudDistribution": "欺诈评分分布",
+        "fraudTooltip": "按系统现有欺诈评分分级方式统计，仅完整结果节点参与分布；另有 {{count}} 个节点因质量状态不是完整结果而未参与统计。",
+        "noFraudStats": "未参与评分统计",
+        "notFullResults": "质量状态不是完整结果",
+        "others": "其他 {{count}} 项",
+        "othersDesc": "包含未展示的其余 {{count}} 项，合计 {{total}} 个节点",
+        "otherExpand": "其他（可展开查看）",
+        "expand": "展开",
+        "collapse": "收起",
+        "availableIp": "可用IP",
+        "nodes": "节点",
+        "tagItem": "标签 {{index}}",
+        "emptyCountry": "暂无国家统计数据",
+        "emptyProtocol": "暂无协议统计数据",
+        "emptyTag": "暂无标签统计数据",
+        "emptyGroup": "暂无分组统计数据",
+        "emptySource": "暂无来源统计数据",
+        "emptyQuality": "暂无质量状态统计数据",
+        "emptyFraud": "暂无欺诈评分统计数据",
+        "emptyIp": "暂无 IP 质量统计数据"
+      },
+      "ipQuality": {
+        "residential": "住宅属性",
+        "housing": "住宅IP",
+        "datacenter": "机房IP",
+        "ipType": "IP 类型",
+        "native": "原生IP",
+        "broadcast": "广播IP",
+        "others": "其他数量",
+        "othersDesc": "非完整结果，未纳入细分 IP 判断"
+      },
+      "releases": {
+        "title": "更新日志",
+        "refresh": "刷新",
+        "viewGithub": "在 GitHub 查看",
+        "noDescription": "暂无更新说明",
+        "noReleases": "暂无更新日志",
+        "networkError": "请检查网络连接或稍后重试"
+      },
+      "star": {
+        "like": "喜欢这个项目吗？",
+        "desc": "如果觉得不错，请给我们一个 Star 支持一下！如果你是L站佬友，也可以使用LDC支持本项目！你的支持是我们前进的动力。",
+        "feedback": "问题反馈",
+        "starCount": "Star {{count}}"
+      },
+      "qualityStatus": {
+        "success": "完整结果",
+        "partial": "信息不全",
+        "failed": "检测失败",
+        "disabled": "未启用",
+        "untested": "未检测"
+      }
+    }
+  },
+  "nodes": {
+    "common": {
+      "unknownNode": "未知节点"
+    },
+    "page": {
+      "title": "节点管理",
+      "actions": {
+        "addMore": "添加节点/更多操作",
+        "addNode": "添加节点",
+        "airports": "机场管理",
+        "airportsShort": "机场",
+        "checkSettings": "检测设置",
+        "batchCheck": "批量检测"
+      },
+      "confirm": {
+        "deleteTitle": "删除节点",
+        "deleteOne": "确定要删除节点 \"{{name}}\" 吗？",
+        "batchDeleteTitle": "批量删除",
+        "batchDelete": "确定要删除选中的 {{count}} 个节点吗？"
+      },
+      "messages": {
+        "loadFailed": "获取节点列表失败",
+        "deleteSuccess": "删除成功",
+        "deleteFailed": "删除失败",
+        "selectDeleteRequired": "请选择要删除的节点",
+        "batchDeleteSuccess": "成功删除 {{count}} 个节点",
+        "batchDeleteFailed": "批量删除失败",
+        "selectModifyRequired": "请选择要修改的节点",
+        "batchGroupSuccess": "成功修改 {{count}} 个节点的分组",
+        "batchGroupFailed": "批量修改分组失败",
+        "batchDialerProxySuccess": "成功修改 {{count}} 个节点的前置代理",
+        "batchDialerProxyFailed": "批量修改前置代理失败",
+        "batchSourceSuccess": "成功修改 {{count}} 个节点的来源",
+        "batchSourceFailed": "批量修改来源失败",
+        "batchCountrySuccess": "成功修改 {{count}} 个节点的国家代码",
+        "batchCountryFailed": "批量修改国家代码失败",
+        "selectTagRequired": "请选择要设置标签的节点",
+        "batchTagSuccess": "成功为 {{count}} 个节点设置标签",
+        "batchTagFailed": "批量设置标签失败",
+        "selectRemoveTagRequired": "请选择要移除标签的节点",
+        "batchRemoveTagSuccess": "成功从 {{count}} 个节点移除标签",
+        "batchRemoveTagFailed": "批量移除标签失败",
+        "nodeLinkRequired": "请输入节点链接",
+        "updateSuccess": "更新成功",
+        "updateFailed": "更新失败",
+        "addSuccess": "添加成功",
+        "addFailed": "添加失败",
+        "speedConfigMoved": "测速配置已迁移至检测策略管理",
+        "speedTaskStarted": "测速任务已在后台启动，请稍后刷新查看结果",
+        "speedTaskFailed": "启动测速任务失败",
+        "selectCheckRequired": "请选择要检测的节点",
+        "selectedAll": "已选择所有符合条件的 {{count}} 个节点"
+      }
+    },
+    "dialog": {
+      "addTitle": "添加节点",
+      "editTitle": "编辑节点",
+      "fields": {
+        "link": "节点链接",
+        "linkPlaceholder": "支持输入：各类代理链接（vmess://、vless://、wireguard:// 等）、WireGuard 标准配置文件（包含 [Interface] 和 [Peer]）、Clash YAML 配置（包含 proxies 字段）、Base64 订阅链接。多行使用回车分隔",
+        "remarkName": "备注名称",
+        "remarkNameHelper": "自定义备注会保存在 Name 字段，不会被机场更新覆盖。",
+        "nameMode": "实际使用名称",
+        "nameModeHelper": "控制订阅输出、重命名规则、脚本和链式代理使用哪个名称。",
+        "nameModeLink": "使用原始名称",
+        "nameModeRemark": "使用备注名称",
+        "nameModeNotice": "需要恢复机场原始名称时，切换为“使用原始名称”即可；备注内容仍会保留，之后可随时再切回。",
+        "dialerProxy": "前置代理节点名称或策略组名称",
+        "dialerProxyPlaceholder": "选择或输入节点名称/策略组名称",
+        "dialerProxyHelper": "仅 Clash-Meta 内核可用，留空则不使用前置代理",
+        "group": "分组",
+        "groupPlaceholder": "请选择或输入分组名称",
+        "tags": "标签",
+        "tagsPlaceholder": "选择要设置的标签"
+      }
+    },
+    "speedTest": {
+      "title": "测速设置",
+      "runNowTooltip": "使用当前配置立即开始测速",
+      "sections": {
+        "schedule": "定时测速",
+        "mode": "测速模式",
+        "performance": "性能参数",
+        "scope": "测速范围",
+        "traffic": "流量统计"
+      },
+      "schedule": {
+        "enable": "启用自动测速",
+        "disableDescription": "关闭后将停止按计划自动执行测速任务",
+        "cronLabel": "定时测速设置"
+      },
+      "mode": {
+        "label": "测速模式",
+        "helper": {
+          "mihomo": "两阶段测试：先并发测延迟，再低并发测下载速度",
+          "tcp": "仅测试延迟，速度更快，适合快速筛选可用节点"
+        },
+        "options": {
+          "tcp": "仅延迟测试 (更快)",
+          "mihomo": "延迟 + 下载速度测试"
+        }
+      },
+      "fields": {
+        "downloadUrl": "下载测速URL",
+        "latencyUrl": "延迟测试URL",
+        "latencyStageOneUrl": "延迟测试URL（阶段一）",
+        "timeout": "超时时间"
+      },
+      "placeholders": {
+        "downloadUrl": "请选择或输入下载测速URL",
+        "latencyUrl": "请选择或输入204测速URL",
+        "latencyStageOneUrl": "留空则使用速度测试URL"
+      },
+      "units": {
+        "seconds": "秒",
+        "milliseconds": "毫秒"
+      },
+      "speedRecord": {
+        "label": "速度记录模式",
+        "options": {
+          "average": "平均速度 (推荐)",
+          "peak": "峰值速度"
+        },
+        "peakSampleInterval": "峰值采样间隔",
+        "peakSampleHelper": "采样间隔范围：{{min}}-{{max}}毫秒"
+      },
+      "landingIp": {
+        "detectCountry": "检测落地IP国家",
+        "detectCountryHint": "(测速时顺便获取节点出口国家)",
+        "queryInterface": "IP查询接口",
+        "options": {
+          "ipifyRecommended": "ipify.org (推荐)",
+          "ipSb": "ip.sb",
+          "ifconfigMe": "ifconfig.me",
+          "icanhazip": "icanhazip.com",
+          "ipinfo": "ipinfo.io"
+        }
+      },
+      "urlOptions": {
+        "cloudflareCp": "Cloudflare (cp.cloudflare.com)",
+        "appleCaptive": "Apple (captive.apple.com)",
+        "gstatic": "Gstatic (www.gstatic.com)",
+        "cloudflare1mb": "1MB (Cloudflare)",
+        "cloudflare3mb": "3MB (Cloudflare)",
+        "cloudflare5mb": "5MB (Cloudflare)",
+        "cloudflare10mb": "10MB (Cloudflare)",
+        "cloudflare50mb": "50MB (Cloudflare)",
+        "cloudflare100mb": "100MB (Cloudflare)",
+        "cloudflare204Recommended": "Cloudflare 204 (推荐)",
+        "apple204": "Apple 204",
+        "gstatic204": "Gstatic 204"
+      },
+      "handshake": {
+        "label": "延迟包含握手时间",
+        "enabledStrong": "开启（推荐）",
+        "enabledText": "：测量完整连接时间，包含TCP/TLS/代理协议握手。",
+        "enabledDetail": "反映真实使用体验，每次请求都需要握手。",
+        "disabledStrong": "关闭",
+        "disabledText": "：先预热建立连接，再测量纯传输延迟。",
+        "disabledDetail": "适合精确评估网络线路质量（排除握手开销）。若预热失败则判定节点不可用。"
+      },
+      "concurrency": {
+        "latency": "延迟测试并发",
+        "speed": "速度测试并发",
+        "auto": "自动",
+        "helper": "0=智能动态"
+      },
+      "scope": {
+        "helper": "分组优先级高于标签：选了分组则先按分组筛选，再按标签过滤；只选标签则直接按标签筛选；都不选则测全部",
+        "groups": "测速分组",
+        "groupsPlaceholder": "留空则测试全部分组",
+        "tags": "测速标签",
+        "tagsPlaceholder": "留空则不按标签过滤"
+      },
+      "traffic": {
+        "byGroup": "按分组统计",
+        "bySource": "按来源统计",
+        "byNode": "按节点统计",
+        "largeData": "(大数据量)",
+        "warning": "按节点统计会记录每个节点的流量消耗，节点数量过万时会增加约1-2MB存储空间"
+      },
+      "actions": {
+        "cancel": "取消",
+        "save": "保存设置"
+      }
+    },
+    "details": {
+      "currentRemarkName": "当前使用备注名称",
+      "currentOriginalName": "当前使用原始名称",
+      "nameHints": {
+        "original": " · 原始：{{name}}",
+        "remark": " · 备注：{{name}}"
+      },
+      "metrics": {
+        "delay": "延迟",
+        "speed": "速度"
+      },
+      "nameSettings": {
+        "title": "名称设置",
+        "effectiveName": "实际名称：{{name}}",
+        "originalName": "原始名称：{{name}}",
+        "remarkName": "备注名称：{{name}}"
+      },
+      "labels": {
+        "source": "来源",
+        "dialerProxy": "前置代理",
+        "tags": "标签",
+        "countryRegion": "国家/地区",
+        "landingIP": "落地 IP",
+        "ipType": "IP类型",
+        "residential": "住宅属性",
+        "qualityStatus": "质量状态",
+        "fraudScore": "欺诈评分",
+        "updatedAt": "更新时间"
+      },
+      "values": {
+        "manualAdd": "手动添加"
+      },
+      "rawProtocolInfo": "原始协议信息",
+      "viewIpDetails": "点击查看 IP 详细信息",
+      "unlockCheck": "解锁检测",
+      "recentCheck": "最近检测: {{time}}",
+      "noUnlockResults": "无解锁结果",
+      "actions": {
+        "runNow": "立即检测",
+        "copyLink": "复制链接",
+        "edit": "编辑",
+        "delete": "删除"
+      }
+    },
+    "rawInfo": {
+      "groups": {
+        "basic": "基础信息",
+        "auth": "认证信息",
+        "transport": "传输配置",
+        "tls": "TLS/安全",
+        "advanced": "高级配置",
+        "other": "其他配置"
+      },
+      "selectPlaceholder": "请选择",
+      "fieldCount": "{{count}} 个字段",
+      "viewMode": "查看模式",
+      "editMode": "编辑模式",
+      "unavailable": "无法解析节点信息",
+      "messages": {
+        "parseFailed": "解析节点信息失败"
+      }
+    },
+    "unlock": {
+      "notSelected": "未选择",
+      "regionTooltip": "地区: {{region}}",
+      "reasonTooltip": "原因: {{reason}}",
+      "taskSummary": "解锁 {{summary}}",
+      "ruleModes": {
+        "or": {
+          "label": "满足任意一条",
+          "description": "多条规则之间按 OR 匹配"
+        },
+        "and": {
+          "label": "同时满足所有规则",
+          "description": "多条规则之间按 AND 匹配"
+        }
+      },
+      "status": {
+        "available": {
+          "label": "解锁",
+          "short": "解锁",
+          "description": "可正常使用"
+        },
+        "partial": {
+          "label": "部分可用",
+          "short": "部分",
+          "description": "仅部分能力可用"
+        },
+        "reachable": {
+          "label": "可访问",
+          "short": "直连",
+          "description": "可以访问，但不代表完整能力可用"
+        },
+        "restricted": {
+          "label": "受限",
+          "short": "受限",
+          "description": "当前地区或出口被限制"
+        },
+        "unsupported": {
+          "label": "不支持",
+          "short": "不支持",
+          "description": "当前地区不在官方支持范围内"
+        },
+        "unknown": {
+          "label": "未知",
+          "short": "未知",
+          "description": "当前无法稳定判断结果"
+        },
+        "error": {
+          "label": "异常",
+          "short": "异常",
+          "description": "本轮检测出现错误"
+        },
+        "untested": {
+          "label": "未测",
+          "short": "未测",
+          "description": "尚未执行检测"
+        },
+        "checking": {
+          "label": "检测中",
+          "short": "检测中"
+        },
+        "timeout": {
+          "label": "超时",
+          "short": "超时"
+        },
+        "unavailable": {
+          "label": "不可用",
+          "short": "不可用"
+        }
+      },
+      "reasons": {
+        "ip_banned": "IP 被封禁",
+        "unsupported_country": "当前地区不支持",
+        "region_restricted": "地区受限",
+        "not_available": "不可用",
+        "not_supported": "不支持",
+        "timeout": "检测超时",
+        "network_error": "网络错误"
+      }
+    },
+    "mobile": {
+      "empty": "暂无节点",
+      "unknownCountry": "🏳️ 未知",
+      "originalName": "原始：{{name}}",
+      "remarkName": "备注：{{name}}",
+      "groupTooltip": "分组：{{group}}",
+      "sourceTooltip": "来源：{{source}}",
+      "fraudScoreLabel": "评分 {{score}}"
+    },
+    "protocol": {
+      "tooltip": "协议：{{protocol}}"
+    },
+    "batchSource": {
+      "title": "批量修改来源",
+      "description": "将为选中的 {{count}} 个节点设置相同的来源",
+      "label": "来源名称",
+      "placeholder": "输入或选择来源名称",
+      "hint": "提示：留空将设置为手动添加(manual)",
+      "confirm": "确认修改"
+    },
+    "nodeCheckProfiles": {
+      "neverRun": "从未执行",
+      "title": "检测策略管理",
+      "new": "新建",
+      "empty": "暂无检测策略",
+      "description": "创建检测策略来自动或手动检测节点延迟和速度",
+      "createFirst": "创建第一个策略",
+      "confirmDelete": "确定要删除策略 \"{{name}}\" 吗？",
+      "runNow": "立即执行",
+      "edit": "编辑",
+      "delete": "删除",
+      "allGroups": "全部分组",
+      "timeout": "超时: {{seconds}}s",
+      "lastRun": "上次执行: {{time}}",
+      "scope": "范围: {{groups}} {{tags}}",
+      "scopeTags": "| 标签: {{tags}}",
+      "unlockProviders": "解锁 Provider: {{providers}}",
+      "mode": {
+        "full": "延迟+速度",
+        "delayOnly": "仅延迟"
+      },
+      "detect": {
+        "country": "国家",
+        "quality": "质量",
+        "unlock": "解锁{{suffix}}"
+      },
+      "schedule": {
+        "enabled": "定时已启用",
+        "disabled": "定时未启用",
+        "next": "下次: {{time}}"
+      },
+      "messages": {
+        "loadFailed": "加载策略列表失败",
+        "enabled": "已启用定时检测",
+        "disabled": "已禁用定时检测",
+        "operationFailed": "操作失败",
+        "deleteSuccess": "删除成功",
+        "deleteFailed": "删除失败",
+        "started": "检测任务已启动",
+        "executeFailed": "执行失败",
+        "updateSuccess": "更新成功",
+        "createSuccess": "创建成功"
+      },
+      "form": {
+        "editTitle": "编辑检测策略",
+        "createTitle": "新建检测策略",
+        "name": "策略名称",
+        "namePlaceholder": "例如：每日全量检测",
+        "scheduleTitle": "定时检测",
+        "enableSchedule": "启用定时检测",
+        "cronExpression": "定时表达式",
+        "modeTitle": "测速模式",
+        "mode": "测速模式",
+        "modeHelper": {
+          "full": "两阶段测试：先并发测延迟，再低并发测下载速度",
+          "delayOnly": "仅测试延迟，速度更快，适合快速筛选可用节点"
+        },
+        "modeOptions": {
+          "tcp": "仅延迟测试 (更快)",
+          "mihomo": "延迟 + 下载速度测试"
+        },
+        "downloadTestUrl": "下载测速 URL",
+        "delayTestUrl": "延迟测试 URL",
+        "downloadTestUrlPlaceholder": "请选择或输入下载测速 URL",
+        "delayTestUrlPlaceholder": "请选择或输入 204 测速 URL",
+        "latencyStageUrl": "延迟测试 URL（阶段一）",
+        "latencyStageUrlPlaceholder": "留空则使用速度测试 URL",
+        "timeout": "超时时间",
+        "units": {
+          "seconds": "秒",
+          "milliseconds": "毫秒"
+        },
+        "speedRecordMode": "速度记录模式",
+        "speedRecordOptions": {
+          "average": "平均速度 (推荐)",
+          "peak": "峰值速度"
+        },
+        "peakSampleInterval": "峰值采样间隔",
+        "peakSampleHelper": "采样间隔范围：50-200毫秒",
+        "detectCountry": "检测落地 IP 国家",
+        "detectCountryHint": "(测速时顺便获取节点出口国家)",
+        "ipQueryUrl": "IP 查询接口",
+        "detectQuality": "IP 质量检测",
+        "detectQualityHint": "(优先尝试 IPv4，回退 IPv6；IPv6 可能仅返回部分风险信息)",
+        "qualityCheckUrl": "质量检测接口",
+        "qualityCheckUrlPlaceholder": "请选择或输入质量检测接口",
+        "detectUnlock": "解锁检测",
+        "detectUnlockHint": "(按 Provider 保存节点解锁结果)",
+        "unlockWarning": "开启解锁检测会显著降低整批节点的检测速度，建议只在需要筛选流媒体或 AI 可用区时启用。",
+        "unlockProvider": "解锁 Provider",
+        "unlockProviderPlaceholder": "搜索并选择 Provider，留空则使用后端默认集合",
+        "unlockProviderLoading": "正在加载可用 Provider…",
+        "unlockProviderHelper": "支持连续勾选，无需每次重新打开下拉框",
+        "preserveSpeedResult": "保留速度测试结果",
+        "preserveSpeedResultHint": "(延迟测试不覆盖上次速度结果)",
+        "performanceTitle": "性能参数",
+        "includeHandshake": "延迟包含握手时间",
+        "handshake": {
+          "enabledTitle": "开启（推荐）",
+          "enabledDesc": "：测量完整连接时间，包含 TCP/TLS/代理协议握手。",
+          "enabledDetail": "反映真实使用体验，每次请求都需要握手。",
+          "disabledTitle": "关闭",
+          "disabledDesc": "：先预热建立连接，再测量纯传输延迟。",
+          "disabledDetail": "适合精确评估网络线路质量（排除握手开销）。若预热失败则判定节点不可用。"
+        },
+        "latencyConcurrency": "延迟测试并发",
+        "speedConcurrency": "速度测试并发",
+        "auto": "自动",
+        "dynamicHelper": "0=智能动态",
+        "scopeTitle": "测速范围",
+        "scopeHelper": "分组优先级高于标签：选了分组则先按分组筛选，再按标签过滤；只选标签则直接按标签筛选；都不选则测全部",
+        "groups": "测速分组",
+        "groupsPlaceholder": "留空则测试全部分组",
+        "tags": "测速标签",
+        "tagsPlaceholder": "留空则不按标签过滤",
+        "trafficTitle": "流量统计",
+        "trafficByGroup": "按分组统计",
+        "trafficBySource": "按来源统计",
+        "trafficByNode": "按节点统计",
+        "largeData": "(大数据量)",
+        "trafficByNodeWarning": "⚠️ 按节点统计会记录每个节点的流量消耗，节点数量过万时会增加约1-2MB存储空间",
+        "saveSettings": "保存设置"
+      }
+    },
+    "batch": {
+      "selectAll": "全选",
+      "selectedCount": "已选择 {{count}} 个节点",
+      "delete": "批量删除",
+      "changeGroup": "修改分组",
+      "changeSource": "修改来源",
+      "changeCountry": "修改国家",
+      "changeDialerProxy": "修改前置代理",
+      "setTags": "设置标签",
+      "removeTags": "删除标签",
+      "groupDialog": {
+        "title": "批量修改分组",
+        "description": "将为选中的 {{count}} 个节点设置相同的分组",
+        "fieldLabel": "分组名称",
+        "placeholder": "输入或选择分组名称，留空则清空分组",
+        "helper": "提示：留空将清除所选节点的分组设置",
+        "confirm": "确认修改"
+      },
+      "countryDialog": {
+        "title": "批量修改国家/地区",
+        "description": "将为选中的 {{count}} 个节点设置相同的国家代码",
+        "fieldLabel": "国家代码",
+        "placeholder": "输入或选择国家代码，如 US、HK、JP",
+        "helper": "提示：留空将清除所选节点的国家标记。国家代码使用 ISO 3166-1 alpha-2 标准（如 US、CN、JP）。",
+        "confirm": "确认修改",
+        "countries": {
+          "hk": "香港",
+          "tw": "台湾",
+          "sg": "新加坡",
+          "jp": "日本",
+          "kr": "韩国",
+          "us": "美国",
+          "gb": "英国",
+          "de": "德国",
+          "fr": "法国",
+          "nl": "荷兰",
+          "au": "澳大利亚",
+          "ca": "加拿大",
+          "ru": "俄罗斯",
+          "in": "印度",
+          "br": "巴西",
+          "tr": "土耳其",
+          "ar": "阿根廷",
+          "ph": "菲律宾",
+          "my": "马来西亚",
+          "th": "泰国",
+          "vn": "越南",
+          "id": "印度尼西亚"
+        }
+      },
+      "tagDialog": {
+        "title": "批量设置标签",
+        "description": "将为选中的 {{count}} 个节点设置标签（会覆盖原有标签）",
+        "fieldLabel": "选择标签",
+        "placeholder": "选择要设置的标签",
+        "helper": "提示：留空将清除所选节点的所有标签",
+        "confirm": "确认设置"
+      },
+      "removeTagDialog": {
+        "title": "批量移除标签",
+        "description": "将从选中的 {{count}} 个节点移除以下标签（保留其他标签）",
+        "fieldLabel": "选择要移除的标签",
+        "placeholder": "选择标签",
+        "helper": "提示：只会移除选中的标签，节点的其他标签将保留",
+        "confirm": "确认移除"
+      },
+      "dialerProxyDialog": {
+        "title": "批量修改前置代理",
+        "description": "将为选中的 {{count}} 个节点设置相同的前置代理",
+        "fieldLabel": "前置代理节点",
+        "placeholder": "选择或输入代理节点名称/策略组名称，留空则清空前置代理",
+        "helper": "提示：前置代理节点用于链式代理，流量将先经过此节点再转发。留空将清除前置代理设置。",
+        "warning": "前置代理仅 Clash-Meta 内核可用",
+        "confirm": "确认修改"
+      }
+    },
+    "table": {
+      "remark": "备注",
+      "protocol": "协议",
+      "group": "分组",
+      "source": "来源",
+      "tags": "标签",
+      "country": "国家",
+      "delay": "延迟",
+      "speed": "速度",
+      "ipFeatures": "IP特征",
+      "actions": "操作",
+      "originalName": "原始：{{name}}",
+      "remarkName": "备注：{{name}}",
+      "ungrouped": "未分组",
+      "manualSource": "手动添加",
+      "untested": "未检测",
+      "speedTest": "检测",
+      "copyLink": "复制链接",
+      "edit": "编辑",
+      "delete": "删除"
+    },
+    "profileSelect": {
+      "title": "选择检测策略",
+      "selectedCount": "已选择 {{count}} 个节点",
+      "empty": "暂无检测策略",
+      "create": "创建策略",
+      "scheduled": "定时启用",
+      "manage": "管理策略",
+      "start": "开始检测",
+      "mode": {
+        "full": "延迟+速度",
+        "delayOnly": "仅延迟"
+      },
+      "messages": {
+        "started": "检测任务已在后台启动",
+        "executeFailed": "执行检测失败"
+      }
+    },
+    "filters": {
+      "group": "分组",
+      "ungrouped": "未分组",
+      "searchPlaceholder": "搜索节点备注或链接",
+      "source": "来源",
+      "manualSource": "手动添加",
+      "protocol": "协议",
+      "delayStatus": "延迟状态",
+      "speedStatus": "速度状态",
+      "maxDelay": "最大延迟",
+      "minSpeed": "最低速度",
+      "maxFraudScore": "最大欺诈评分",
+      "qualityStatus": "质量状态",
+      "residentialType": "住宅属性",
+      "ipType": "IP类型",
+      "countryCode": "国家代码",
+      "countryPlaceholder": "选择国家",
+      "tags": "标签",
+      "tagsPlaceholder": "选择标签",
+      "unlock": {
+        "title": "解锁筛选",
+        "summary": "{{count}} 条规则 · {{mode}}",
+        "modeAll": "同时满足全部",
+        "modeAny": "满足任意一条",
+        "emptySummary": "默认折叠，未添加规则时不启用解锁筛选",
+        "description": "不添加规则时不会启用解锁筛选。你可以按需新增规则，并设置多条规则之间是满足任意一条还是同时满足全部。",
+        "relation": "规则关系",
+        "andHelper": "多条规则需要同时满足。",
+        "orHelper": "多条规则满足任意一条即可。",
+        "status": "状态",
+        "keyword": "关键词",
+        "inactive": "当前未启用解锁筛选。点击下方按钮后再添加具体规则。",
+        "addRule": "新增解锁规则"
+      }
+    }
+  },
+  "subscriptions": {
+    "sort": {
+      "quickSort": "快速排序",
+      "asc": "升序",
+      "desc": "降序",
+      "selectedCount": "已选 {{count}} 项",
+      "selectedFraction": "已选 {{selected}}/{{total}}",
+      "totalHint": "共 {{count}} 项，可多选后批量排序或移动",
+      "deselectAll": "取消全选",
+      "groupLabel": "📁 {{name}} (分组)",
+      "moveTop": "移动到顶部",
+      "moveBottom": "移动到底部",
+      "top": "顶部",
+      "bottom": "底部",
+      "position": "位置",
+      "moveToPosition": "移动到指定位置",
+      "clearSelection": "取消选择",
+      "groupSort": "分组排序",
+      "resetting": "重置中...",
+      "resetSort": "重置排序",
+      "saving": "保存中...",
+      "saveSort": "保存排序",
+      "groupSortDesc": "管理同一分组内不同机场的节点输出顺序，排在前面的机场节点在订阅输出中也排在前面",
+      "searchGroup": "搜索分组...",
+      "noGroups": "暂无分组",
+      "airportNodeCount": "{{airportCount}} 个机场 · {{nodeCount}} 个节点",
+      "selectGroupPrompt": "请从左侧选择一个分组来管理机场排序",
+      "noAirportsInGroup": "该分组下没有机场",
+      "dragAirportHint": "拖拽调整机场排序，排在前面的机场节点在订阅输出中也排在前面",
+      "nodeCount": "{{count}} 节点",
+      "messages": {
+        "loadGroupsFailed": "加载分组列表失败",
+        "loadGroupDetailFailed": "加载分组详情失败",
+        "saveSuccess": "保存成功",
+        "saveFailed": "保存失败",
+        "resetSuccess": "已重置为默认排序",
+        "resetFailed": "重置排序失败"
+      },
+      "options": {
+        "source": "按来源",
+        "name": "按名称",
+        "protocol": "按协议",
+        "delay": "按延迟",
+        "speed": "按速度",
+        "country": "按地区"
+      }
+    },
+    "rename": {
+      "availableVars": "可用变量 (点击添加)",
+      "separators": "分隔符",
+      "namingRule": "命名规则 (拖拽排序)",
+      "clickToAdd": "点击上方变量和分隔符添加到这里",
+      "selectTagGroup": "选择标签组",
+      "noTagGroup": "暂无标签组，请先在标签管理中创建标签组",
+      "categories": {
+        "basic": "基础变量",
+        "quality": "质量变量",
+        "unlock": "解锁变量"
+      },
+      "vars": {
+        "protocol": "协议",
+        "protocolDesc": "协议类型 (VMess/VLESS等)",
+        "country": "国家",
+        "countryDesc": "落地IP国家代码",
+        "flag": "国旗",
+        "flagDesc": "落地IP国旗",
+        "name": "备注",
+        "nameDesc": "系统备注名称",
+        "linkName": "原名",
+        "linkNameDesc": "原始节点名称",
+        "speedIcon": "速度图标",
+        "speedIconDesc": "按速度结果输出图标 (🟢🟡🔴/❌⏱️⛔️)",
+        "speed": "速度",
+        "speedDesc": "下载速度",
+        "delayIcon": "延迟图标",
+        "delayIconDesc": "按延迟结果输出图标 (🟢🟡🔴/❌⏱️⛔️)",
+        "delay": "延迟",
+        "delayDesc": "延迟时间",
+        "ipType": "IP类型",
+        "ipTypeDesc": "IP类型 (原生IP/广播IP)",
+        "residential": "住宅属性",
+        "residentialDesc": "住宅属性 (住宅IP/机房IP)",
+        "fraudScoreIcon": "欺诈图标",
+        "fraudScoreIconDesc": "按欺诈评分输出风险图标 (⚪🟢🟡🟠🔴⚫/⛔️)",
+        "fraudScore": "欺诈评分",
+        "fraudScoreDesc": "IP欺诈评分",
+        "group": "分组",
+        "groupDesc": "分组名称",
+        "source": "来源",
+        "sourceDesc": "节点来源",
+        "index": "序号",
+        "indexDesc": "节点序号",
+        "tags": "标签",
+        "tagsDesc": "所有标签(竖线｜分隔)",
+        "tagGroup": "标签组",
+        "tagGroupDesc": "指定标签组中的标签(点击选择标签组)"
+      }
+    },
+    "mobileCard": {
+      "sorting": "排序中",
+      "nodeCount": "{{count}} 个节点",
+      "groupCount": "{{count}} 个分组",
+      "expandHint": "轻触头部展开更多内容",
+      "confirmSort": "确认排序",
+      "sortNodes": "排序节点"
+    },
+    "preview": {
+      "timeout": "超时",
+      "error": "错误",
+      "untested": "未测",
+      "latestExpireTime": "最近到期时间: {{date}}",
+      "title": "节点预览",
+      "totalCount": "共 {{count}} 个",
+      "filteredCount": "过滤后 {{count}} 个",
+      "noticeTitle": "温馨提示",
+      "noticeText": "本功能为测试版功能还不稳定。预览数据仅供参考，以客户端获取到的实际结果为准，目前部分客户端不支持相关协议的节点，所以节点数量会有出入。",
+      "searchPlaceholder": "搜索节点名称、协议、分组或标签...",
+      "searchResultCount": "找到 {{count}} 个匹配结果",
+      "emptyTitle": "无匹配节点",
+      "emptySearch": "没有找到匹配的节点，请尝试其他搜索条件",
+      "emptyFiltered": "当前过滤条件下没有可用节点",
+      "loadMore": "加载更多 ({{displayed}}/{{total}})",
+      "allLoaded": "已加载全部 {{count}} 个节点",
+      "footerHint": "显示 {{displayed}}/{{total}} 个节点 · 点击卡片查看详情",
+      "stats": {
+        "title": "节点测试统计",
+        "available": "有可用节点",
+        "noData": "暂无数据",
+        "delayPassed": "延迟通过",
+        "speedPassed": "速度通过",
+        "lowestDelay": "最低延迟",
+        "highestSpeed": "最高速度"
+      }
+    },
+    "nodeTagFilter": {
+      "title": "节点标签过滤",
+      "summary": "白 {{whitelist}} / 黑 {{blacklist}}",
+      "description": "直接复用节点标签体系控制订阅输出，适合把已有标签规则接到白名单和黑名单过滤上。",
+      "priorityHint": "按节点标签过滤。<strong>黑名单优先级高于白名单</strong>：匹配黑名单标签的节点会被排除，然后必须匹配白名单标签的节点才会保留。",
+      "whitelist": "白名单标签",
+      "blacklist": "黑名单标签",
+      "whitelistPlaceholder": "选择白名单标签（节点必须包含其中一个标签）",
+      "blacklistPlaceholder": "选择黑名单标签（包含这些标签的节点将被排除）",
+      "whitelistHelper": "节点必须包含白名单中的至少一个标签才会被保留。",
+      "blacklistHelper": "包含黑名单标签的节点会被排除。"
+    },
+    "page": {
+      "title": "订阅管理",
+      "actions": {
+        "groupSort": "分组排序",
+        "addSubscription": "添加订阅"
+      },
+      "confirm": {
+        "deleteTitle": "删除订阅",
+        "deleteOne": "确定要删除订阅 \"{{name}}\" 吗？",
+        "copyTitle": "复制订阅",
+        "copyOne": "确定要复制订阅 \"{{name}}\" 吗？"
+      },
+      "messages": {
+        "loadFailed": "获取订阅列表失败",
+        "deleteSuccess": "删除成功",
+        "deleteFailed": "删除失败",
+        "copySuccess": "复制成功",
+        "copyFailed": "复制失败",
+        "nameRequired": "请输入订阅名称",
+        "updateSuccess": "更新成功",
+        "updateFailed": "更新失败",
+        "addSuccess": "添加成功",
+        "addFailed": "添加失败",
+        "sortModeStarted": "已进入排序模式，拖动或多选批量操作",
+        "sortUpdated": "排序已更新",
+        "sortSaveFailed": "排序保存失败",
+        "sortCancelled": "已取消排序",
+        "batchSortSuccess": "批量排序成功",
+        "batchSortFailed": "批量排序失败",
+        "movedItems": "已移动 {{count}} 项到位置 {{position}}"
+      }
+    },
+    "table": {
+      "name": "订阅名称",
+      "nodesAndGroups": "节点/分组",
+      "createdAt": "创建时间",
+      "actions": "操作",
+      "sorting": "排序中",
+      "nodeGroupCount": "{{nodes}} 个节点, {{groups}} 个分组",
+      "tooltips": {
+        "preview": "预览节点",
+        "copy": "复制本配置为新副本",
+        "share": "分享管理",
+        "accessLogs": "访问记录",
+        "chainProxy": "链式代理",
+        "sort": "排序"
+      }
+    },
+    "accessLogs": {
+      "title": "访问记录",
+      "ip": "IP 地址",
+      "region": "来源地区",
+      "visits": "访问次数",
+      "lastVisit": "最近访问",
+      "count": "{{count}} 次",
+      "total": "共 {{count}} 条",
+      "unknownSource": "未知来源",
+      "empty": "暂无访问记录"
+    },
+    "conditions": {
+      "title": "条件配置",
+      "field": "字段",
+      "operator": "操作",
+      "value": "值",
+      "add": "添加条件",
+      "empty": "尚未添加任何条件",
+      "logic": {
+        "and": "全部满足 (AND)",
+        "or": "满足任一 (OR)"
+      }
+    },
+    "chain": {
+      "dialogTitle": "链式代理配置",
+      "description": "链式代理规则用于配置节点的前置代理（入口代理）。每个落地节点独立匹配规则：按规则顺序检查，应用第一个匹配规则的出口配置。",
+      "overlapHint": "提示：若需不同落地节点使用不同出口，请确保各规则的「目标节点」配置不重叠（使用「指定节点」或「按条件筛选」精确定义目标范围）。",
+      "unnamedRule": "未命名规则",
+      "confirmDeleteRule": "确定删除规则「{{name}}」吗？",
+      "emptyRules": "暂无链式代理规则",
+      "emptyRulesDescription": "链式代理可以为节点配置入口代理，实现流量中转",
+      "addRule": "添加规则",
+      "previewFullChain": "预览整体链路",
+      "backToList": "返回列表",
+      "saveRule": "保存规则",
+      "proxyType": "代理类型",
+      "proxyTypes": {
+        "template_group": "模板代理组",
+        "custom_group": "自定义代理组",
+        "dynamic_node": "动态条件节点",
+        "specified_node": "指定节点"
+      },
+      "proxyTypeShort": {
+        "template_group": "模板组",
+        "custom_group": "自定义组",
+        "dynamic_node": "动态节点",
+        "specified_node": "指定节点"
+      },
+      "proxy": "代理",
+      "entry": "入口",
+      "nodeNumber": "节点 #{{id}}",
+      "unconfigured": "未配置",
+      "configuredConditions": "配置{{count}}",
+      "conditionCount": "{{count}} 个条件",
+      "deleteNode": "删除此节点",
+      "groupName": "代理组名称",
+      "templateGroupPlaceholder": "输入模板中的代理组名称",
+      "templateGroupHelper": "输入 Clash 模板中已存在的代理组名称",
+      "customGroupPlaceholder": "自定义代理组名称",
+      "groupType": "组类型",
+      "testUrl": "测速 URL",
+      "testUrlHelper": "用于检测节点可用性的 URL，留空使用默认值",
+      "intervalSeconds": "间隔(秒)",
+      "healthCheckInterval": "健康检查间隔",
+      "toleranceMs": "容差(ms)",
+      "toleranceHelper": "延迟差在此范围内视为相同",
+      "fallbackThreshold": "故障转移阈值",
+      "loadBalanceStrategy": "负载均衡策略",
+      "strategies": {
+        "consistentHashing": "一致性哈希",
+        "roundRobin": "轮询",
+        "stickySessions": "会话保持"
+      },
+      "nodeFilterConditions": "节点筛选条件",
+      "nodeMatchConditions": "节点匹配条件",
+      "selectMode": "选择模式",
+      "selectModes": {
+        "first": "第一个匹配",
+        "random": "随机",
+        "fastest": "最快节点"
+      },
+      "selectNode": "选择节点",
+      "targetNode": "目标节点",
+      "targetNodeConfig": "目标节点配置",
+      "targetScopeDescription": "选择应用此规则的节点范围",
+      "targetTypes": {
+        "all": "所有节点",
+        "specified_node": "指定节点",
+        "conditions": "按条件"
+      },
+      "noNodeSelected": "未选择节点",
+      "targetTooltips": {
+        "specified": "手动指定唯一一个目标节点",
+        "all": "规则应用于所有节点",
+        "conditions": "根据条件筛选节点"
+      },
+      "selectTargetNode": "选择目标节点",
+      "searchNodes": "搜索节点...",
+      "targetNodeFilterConditions": "目标节点筛选条件",
+      "autoSaved": "配置已自动保存",
+      "entryProxyConfig": "入口代理配置",
+      "middleNodeConfig": "中间节点配置",
+      "middleNodeDialerProxyHint": "中间节点的自定义代理组内所有节点会自动设置 dialer-proxy 指向上一级",
+      "selectOrInputGroupPlaceholder": "选择或输入代理组名称",
+      "selectOrInputGroupHelper": "从模板中选择或手动输入代理组名称",
+      "addEntryProxy": "添加入口代理",
+      "addMiddleProxy": "添加中间代理",
+      "editEntryProxy": "编辑入口代理",
+      "editMiddleProxy": "编辑中间代理",
+      "mobileDialerProxyHint": "中间节点的组内节点会自动设置 dialer-proxy",
+      "addProxyNode": "添加代理节点",
+      "maxLevelReached": "已达最大层级",
+      "levelWarning": "{{count}} 级链路，延迟可能较高",
+      "currentLevelWarning": "当前 {{count}} 级链路，延迟可能较高",
+      "maxFourLevels": "已达最大 4 级链路",
+      "flowHint": "点击节点进行配置，悬停节点可快速删除",
+      "emptyEntryProxy": "点击上方按钮添加入口代理配置",
+      "ruleName": "规则名称",
+      "ruleNamePlaceholder": "例如：香港中转美国",
+      "mobileDescription": "配置多级代理链路：入口 → 中间节点 → 目标节点",
+      "desktopDescription": "点击「添加代理节点」构建多级代理链，点击节点进行编辑。建议链路不超过 3 级。",
+      "preview": {
+        "title": "链路预览",
+        "subtitle": "订阅：{{name}} | 节点总数：{{count}}",
+        "addRuleHint": "请先添加规则",
+        "ruleChainsTab": "规则链路 ({{count}})",
+        "nodeMatchesTab": "节点匹配 ({{count}})",
+        "canvasHint": "规则按顺序匹配，每个节点只会应用第一个匹配的规则 · 鼠标滚轮缩放，拖拽平移画布",
+        "nodeCount": "{{count}} 节点",
+        "nodeCountParen": "({{count}} 节点)",
+        "covered": "已被覆盖",
+        "effectiveNodes": "生效 {{count}} 节点",
+        "coveredNodes": "{{count}} 被覆盖",
+        "user": "用户",
+        "landingNode": "落地节点",
+        "internet": "🌐 互联网",
+        "internetPlain": "互联网",
+        "proxyChain": "代理链",
+        "landing": "落地",
+        "matchedCount": "已匹配: {{count}}",
+        "unmatchedCount": "未匹配: {{count}}",
+        "containsNodes": "包含节点",
+        "latency": "延迟",
+        "speed": "速度",
+        "noNodeInfo": "暂无节点信息",
+        "clickToView": "点击查看",
+        "ruleNumber": "规则 {{number}}",
+        "table": {
+          "node": "节点",
+          "matchedRule": "匹配规则",
+          "entryProxy": "入口代理"
+        }
+      }
+    },
+    "transfer": {
+      "availableTab": "可选节点 ({{count}})",
+      "selectedTab": "已选节点 ({{count}})",
+      "availableTitle": "可选节点",
+      "selectedTitle": "已选节点",
+      "searchSelected": "搜索已选节点...",
+      "showingFirst": "显示前100/{{total}}",
+      "firstCount": "前100/{{total}}",
+      "count": "{{count}}个",
+      "selectedChip": "{{count}}个已选",
+      "addSelected": "添加选中 ({{count}})",
+      "removeSelected": "移除选中 ({{count}})",
+      "add": "添加 ({{count}})",
+      "remove": "移除 ({{count}})",
+      "addAll": "全部添加",
+      "removeAll": "全部移除",
+      "moreHidden": "还有 {{count}} 个节点未显示",
+      "loading": "节点列表加载中...",
+      "noMatch": "未找到匹配的节点",
+      "noSelected": "暂无已选节点"
+    },
+    "clientUrls": {
+      "defaultTitle": "客户端（点击二维码获取地址）",
+      "defaultChip": "默认",
+      "qrCode": "二维码"
+    },
+    "previewDetails": {
+      "metrics": {
+        "delay": "延迟",
+        "speed": "速度"
+      },
+      "nameConversion": "名称转换",
+      "source": "来源",
+      "landingIp": "落地IP",
+      "tags": "标签",
+      "previewLink": "预览链接",
+      "originalLink": "原始链接",
+      "labels": {
+        "link": "链接",
+        "originalLink": "原始链接"
+      },
+      "messages": {
+        "copied": "{{label}}已复制"
+      }
+    },
+    "dedup": {
+      "title": "节点去重规则",
+      "loading": "加载配置...",
+      "description": "在预览和导出前统一处理重复节点，可按通用字段组合去重，也可以为协议分别设置去重字段。",
+      "commonFieldsHint": "选择用于判断节点是否重复的字段（多选组合）：",
+      "protocolFieldsHint": "为每个协议配置去重字段（未配置的协议不进行去重）：",
+      "selectedFields": "已选择：{{fields}}",
+      "selectedCount": "已选 {{count}} 个",
+      "applyNotice": "去重规则会在节点预览和订阅输出时应用，当多个节点的选定字段值完全相同时，仅保留第一个节点。",
+      "status": {
+        "disabled": "未启用",
+        "common": "通用 {{count}} 项",
+        "protocol": "协议 {{count}} 项"
+      },
+      "mode": {
+        "label": "去重模式",
+        "none": "不启用",
+        "common": "通用字段去重",
+        "protocol": "按协议去重"
+      },
+      "messages": {
+        "loadMetaFailed": "加载元数据失败"
+      }
+    },
+    "share": {
+      "title": "分享管理 - {{name}}",
+      "unnamed": "未命名分享",
+      "defaultChip": "默认",
+      "cardMeta": "{{expire}} · 访问 {{count}} 次",
+      "empty": "暂无分享链接，点击“新增”创建第一个分享",
+      "detailTitle": "分享链接",
+      "detailSubtitle": "选择需要的客户端地址，可直接复制或生成二维码",
+      "logsTitle": "访问日志 - {{name}}",
+      "clients": {
+        "auto": "自动识别"
+      },
+      "actions": {
+        "accessLogs": "访问日志",
+        "refreshToken": "刷新Token"
+      },
+      "expire": {
+        "never": "永不过期",
+        "days": "{{count}}天后过期",
+        "datetime": "指定时间"
+      },
+      "confirm": {
+        "deleteTitle": "删除分享",
+        "deleteContent": "确定要删除分享“{{name}}”吗？",
+        "refreshTitle": "刷新Token",
+        "refreshContent": "刷新Token后，旧链接将失效，确定要刷新吗？"
+      },
+      "messages": {
+        "updateSuccess": "更新成功",
+        "createSuccess": "创建成功",
+        "saveFailed": "保存失败",
+        "deleteSuccess": "删除成功",
+        "deleteFailed": "删除失败",
+        "tokenRefreshed": "Token已刷新",
+        "refreshFailed": "刷新失败"
+      },
+      "form": {
+        "addTitle": "新增分享",
+        "editTitle": "编辑分享",
+        "name": "分享名称",
+        "namePlaceholder": "例如：朋友使用、临时分享",
+        "token": "自定义Token（可选）",
+        "tokenPlaceholder": "留空自动生成随机token",
+        "tokenHelper": "自定义token便于记忆，留空则自动生成安全的随机token",
+        "expirePolicy": "过期策略",
+        "expireByDays": "按天数过期",
+        "expireAt": "指定时间过期",
+        "expireDays": "过期天数",
+        "expireTime": "过期时间",
+        "enabled": "启用此分享"
+      }
+    },
+    "form": {
+      "title": {
+        "add": "添加订阅",
+        "edit": "编辑订阅"
+      },
+      "sections": {
+        "basic": "基础设置",
+        "nodeSelection": "节点选择",
+        "nodeFilter": "节点过滤",
+        "nodeDeduplication": "节点去重",
+        "nameProcessing": "节点名称处理",
+        "advanced": "高级设置"
+      },
+      "basic": {
+        "name": "订阅名称",
+        "clashTemplate": "Clash 模板",
+        "clashTemplateNone": "未选择",
+        "clashTemplateHelper": "未检测到可用模板，请检查 Clash 模板是否存在",
+        "surgeTemplate": "Surge 模板",
+        "surgeTemplateNone": "未选择",
+        "surgeTemplateHelper": "未检测到可用模板，请检查 Surge 模板是否存在",
+        "updateInterval": "更新间隔 (小时)",
+        "updateIntervalHelper": "设置为0时，默认为1天。目前除surge外仅少量clash客户端兼容本参数！",
+        "forceUdp": "强制开启 UDP",
+        "skipCertVerify": "跳过证书验证",
+        "replaceHost": "替换服务器地址为 Host",
+        "replaceHostTooltip": "根据系统 Host 配置，将节点服务器地址替换为对应的 IP 地址",
+        "realtimeUsage": "实时获取用量信息",
+        "realtimeUsageTooltip": "开启后每次访问订阅链接会实时获取最新用量信息（流量、到期时间等），但会增加响应时间；关闭后使用缓存数据，响应更快"
+      },
+      "nodeSelection": {
+        "summary": "{{nodeCount}} 节点 / {{groupCount}} 分组",
+        "modeLabel": "选择模式",
+        "modeManual": "手动选择节点",
+        "modeDynamic": "动态选择分组",
+        "modeMixed": "混合模式",
+        "modeManualHelper": "手动选择具体节点，节点不会随分组变化自动更新",
+        "modeDynamicHelper": "选择分组，自动包含该分组下的所有节点，节点会随分组变化自动更新",
+        "modeMixedHelper": "同时支持手动选择节点和动态选择分组",
+        "groupSelect": "选择分组（动态）",
+        "groupOption": "{{name}} ({{count}} 个节点)",
+        "nodeGroupFilter": "分组过滤",
+        "nodeGroupAll": "全部分组 ({{count}})",
+        "nodeSourceFilter": "来源过滤",
+        "nodeSourceAll": "全部来源",
+        "nodeCountryFilter": "国家过滤",
+        "nodeSearch": "搜索节点"
+      },
+      "nodeFilter": {
+        "activeRules": "已启用 {{count}} 项规则",
+        "maxDelay": "最大延迟",
+        "maxDelayHelper": "设置筛选节点的延迟阈值，0表示不限制",
+        "minSpeed": "最小速度",
+        "minSpeedHelper": "设置筛选节点的最小下载速度，0表示不限制",
+        "maxFraudScore": "最大欺诈评分",
+        "maxFraudScoreHelper": "0表示不限制；需要先执行 IP 质量检测",
+        "qualityStatus": "质量状态",
+        "qualityStatusHelper": "可区分完整结果、信息不全、检测失败、未启用和未检测",
+        "unlockRules": "解锁筛选规则",
+        "unlockRulesDesc": "不添加规则时不会启用解锁筛选。你可以按需新增规则，并设置多条规则之间是满足任意一条还是同时满足全部。",
+        "ruleRelation": "规则关系",
+        "ruleRelationAnd": "多条规则需要同时满足，适合做更严格的筛选。",
+        "ruleRelationOr": "多条规则满足任意一条即可，适合组合多个候选解锁条件。",
+        "providerHelper": "例如 Gemini / YouTube Premium",
+        "status": "状态",
+        "keyword": "关键词",
+        "keywordHelper": "如 US、可用、Claude、地区受限",
+        "delete": "删除",
+        "unlockInactive": "当前未启用解锁筛选。点击下方按钮后再添加具体规则。",
+        "addUnlockRule": "新增一条解锁规则",
+        "countryWhitelist": "落地IP国家白名单",
+        "countryWhitelistHelper": "可从建议中选择，或输入后按 Enter 添加；建议使用 HK/US/JP 这类两位国家代码",
+        "countryBlacklist": "落地IP国家黑名单",
+        "countryBlacklistHelper": "可从建议中选择，或输入后按 Enter 添加；建议使用 HK/US/JP 这类两位国家代码",
+        "residential": "住宅属性",
+        "all": "全部",
+        "residentialIp": "住宅IP",
+        "datacenterIp": "机房IP",
+        "untested": "未检测",
+        "residentialHelper": "仅完整结果才会显示住宅/机房属性；信息不全会保留为独立状态",
+        "ipType": "IP类型",
+        "nativeIp": "原生IP",
+        "broadcastIp": "广播IP",
+        "ipTypeHelper": "仅完整结果才会显示原生/广播属性；信息不全不会被误判为原生或广播"
+      },
+      "nodeDeduplication": {
+        "configured": "已配置"
+      },
+      "nameProcessing": {
+        "configured": "已配置",
+        "namingRule": "节点命名规则",
+        "builderTooltip": "可视化构建器 - 拖拽添加变量",
+        "builder": "构建器",
+        "manualTooltip": "手动输入模式",
+        "manual": "手动",
+        "templateLabel": "命名规则模板",
+        "templatePlaceholder": "例如: [$Protocol]$LinkCountry-$Name",
+        "templateHelper": "留空则使用原始名称，仅在访问订阅链接时生效",
+        "variables": "可用变量：",
+        "varName": "系统备注名称",
+        "varLinkName": "原始节点名称",
+        "varLinkCountry": "落地IP国家代码",
+        "varSpeed": "下载速度",
+        "varSpeedIcon": "速度图标(🟢🟡🔴/❌⏱️⛔️)",
+        "varDelay": "延迟",
+        "varDelayIcon": "延迟图标(🟢🟡🔴/❌⏱️⛔️)",
+        "varGroup": "分组名称",
+        "varSource": "来源",
+        "varIndex": "序号",
+        "varProtocol": "协议类型",
+        "varIpType": "IP类型(原生IP/广播IP)",
+        "varResidential": "住宅属性(住宅IP/机房IP)",
+        "varFraudScore": "欺诈评分",
+        "varFraudScoreIcon": "欺诈图标(⚪🟢🟡🟠🔴⚫/⛔️)",
+        "varTags": "所有标签(竖线分隔)",
+        "varTagGroup": "指定标签组中的标签",
+        "preview": "预览："
+      },
+      "advanced": {
+        "configured": "已配置 {{count}} 项",
+        "scriptLabel": "数据处理脚本",
+        "scriptHelper": "脚本将在查询到节点数据后运行，多个脚本按顺序执行",
+        "scriptVersion": "版本: {{version}}",
+        "ipBlacklist": "IP 黑名单（优先级高于白名单），不允许指定IP访问订阅链接",
+        "ipBlacklistHelper": "每行一个 IP 或 CIDR",
+        "ipWhitelist": "IP 白名单，只允许指定IP访问订阅链接",
+        "ipWhitelistHelper": "每行一个 IP 或 CIDR"
+      },
+      "actions": {
+        "previewLoading": "加载中...",
+        "previewNode": "预览节点",
+        "close": "关闭",
+        "confirm": "确定"
+      },
+      "nodes": {
+        "loading": "节点加载中..."
+      }
+    }
+  },
+  "hosts": {
+    "title": "Host 管理",
+    "mode": {
+      "form": "表单模式",
+      "text": "文本模式"
+    },
+    "actions": {
+      "settings": "模块设置",
+      "refresh": "刷新",
+      "delete": "删除",
+      "add": "添加",
+      "edit": "编辑",
+      "save": "保存",
+      "saveSync": "保存同步",
+      "restore": "还原",
+      "copy": "复制",
+      "pin": "固定 (pin住的host不受过期时间影响)",
+      "unpin": "取消固定"
+    },
+    "fields": {
+      "hostname": "域名",
+      "ip": "IP 地址",
+      "source": "来源",
+      "remark": "备注",
+      "status": "状态",
+      "updatedAt": "更新时间",
+      "actions": "操作"
+    },
+    "searchPlaceholder": "搜索域名、IP、备注...",
+    "total": "总数: {{count}}",
+    "matched": "找到 {{count}} 条匹配结果",
+    "empty": "暂无 Host 记录，点击\"添加\"创建",
+    "noMatch": "没有找到匹配的结果",
+    "selectAll": "全选",
+    "updatedAt": "更新于 {{date}}",
+    "textMode": {
+      "description": "每行一条记录，格式：<code>域名 IP</code> 或 <code>域名 IP # 备注</code>。保存后将与数据库同步（新增、修改、删除）。",
+      "placeholder": "# 示例格式：\nexample.com 192.168.1.1\napi.example.com 192.168.1.2 # API 服务器",
+      "changed": "* 内容已修改，请保存同步"
+    },
+    "dialog": {
+      "addTitle": "添加 Host",
+      "editTitle": "编辑 Host",
+      "hostnameDisabled": "域名不可修改",
+      "remarkPlaceholder": "可选"
+    },
+    "confirm": {
+      "deleteTitle": "确定删除",
+      "deleteOne": "确定删除 \"{{hostname}}\" 吗？",
+      "batchDeleteTitle": "批量删除",
+      "batchDelete": "确定删除选中的 {{count}} 条记录吗？"
+    },
+    "expire": {
+      "pinned": "已固定",
+      "never": "永不过期",
+      "expired": "已过期",
+      "hours": "{{count}}小时后过期",
+      "days": "{{count}}天后过期"
+    },
+    "messages": {
+      "loadFailed": "获取 Host 列表失败",
+      "loadTextFailed": "加载文本内容失败",
+      "refreshSuccess": "刷新成功",
+      "refreshFailed": "刷新失败",
+      "deleteSuccess": "删除成功",
+      "deleteFailed": "删除失败",
+      "batchDeleteSuccess": "批量删除成功",
+      "batchDeleteFailed": "批量删除失败",
+      "required": "域名和 IP 不能为空",
+      "updateSuccess": "更新成功",
+      "addSuccess": "添加成功",
+      "operationFailed": "操作失败",
+      "pinned": "已固定",
+      "unpinned": "已取消固定",
+      "syncSuccess": "同步成功：新增 {{added}}，更新 {{updated}}，删除 {{deleted}}",
+      "syncFailed": "同步失败",
+      "restored": "已还原",
+      "copied": "已复制到剪贴板"
+    }
+  },
+  "tags": {
+    "title": "标签管理",
+    "tabs": {
+      "tags": "标签列表",
+      "rules": "自动规则"
+    },
+    "actions": {
+      "refresh": "刷新",
+      "addTag": "添加标签",
+      "addRule": "添加规则",
+      "edit": "编辑",
+      "delete": "删除",
+      "execute": "手动执行"
+    },
+    "fields": {
+      "ruleName": "规则名称",
+      "tag": "关联标签",
+      "trigger": "触发时机",
+      "status": "状态",
+      "actions": "操作"
+    },
+    "search": {
+      "tagPlaceholder": "搜索标签名称、分组、描述...",
+      "rulePlaceholder": "搜索规则名称...",
+      "tagMatched": "找到 {{count}} 个匹配的标签",
+      "ruleMatched": "找到 {{count}} 条匹配的规则"
+    },
+    "filters": {
+      "allTags": "全部标签",
+      "allTriggers": "全部时机",
+      "allStatuses": "全部状态"
+    },
+    "trigger": {
+      "subscriptionUpdate": "订阅更新后",
+      "speedTest": "测速完成后"
+    },
+    "status": {
+      "enabled": "启用",
+      "disabled": "禁用"
+    },
+    "empty": {
+      "noTagMatch": "没有找到匹配的标签",
+      "noTags": "暂无标签，点击\"添加标签\"创建第一个标签",
+      "createTagFirst": "请先创建标签后再添加自动规则",
+      "noRuleMatch": "没有找到匹配的规则",
+      "noRules": "暂无自动规则"
+    },
+    "confirm": {
+      "deleteTag": "确定删除标签 \"{{name}}\" 吗？相关规则也会被删除。",
+      "deleteRule": "确定删除规则 \"{{name}}\" 吗？"
+    },
+    "messages": {
+      "loadTagsFailed": "获取标签列表失败",
+      "loadRulesFailed": "获取规则列表失败",
+      "refreshSuccess": "刷新成功",
+      "refreshFailed": "刷新失败",
+      "deleteSuccess": "删除成功",
+      "deleteFailed": "删除失败",
+      "updateSuccess": "更新成功",
+      "addSuccess": "添加成功",
+      "operationFailed": "操作失败",
+      "ruleStarted": "规则已开始执行",
+      "executeFailed": "执行失败"
+    },
+    "unknownTag": "未知标签",
+    "groupLabel": "组: {{group}}",
+    "dialog": {
+      "tag": {
+        "addTitle": "添加标签",
+        "editTitle": "编辑标签",
+        "helpTitle": "💡 标签使用说明",
+        "helpTag": "• 标签：用于对节点进行分类标记，可用于筛选和自动规则",
+        "helpGroup": "• 标签组：同一组内的标签互斥，添加新标签时会自动移除同组的旧标签",
+        "helpExample": "• 例如：创建“优秀”和“差”两个标签并设为同组，测速时节点只会保留最新的评级",
+        "name": "标签名称",
+        "group": "标签组 (可选)",
+        "groupPlaceholder": "选择或输入标签组名称",
+        "groupHelper": "同一组内的标签互斥，为空则不参与互斥",
+        "recommendedGroups": "推荐组：",
+        "color": "标签颜色",
+        "openColorPicker": "打开颜色选择器",
+        "customColor": "自定义颜色 (HEX)",
+        "invalidColor": "请输入有效的 HEX 颜色值，如 #FF5733",
+        "description": "描述 (可选)",
+        "presetGroups": {
+          "speedRating": "速度评级",
+          "latencyRating": "延迟评级",
+          "regionCategory": "地区分类",
+          "usageCategory": "用途分类",
+          "stability": "稳定性"
+        },
+        "presetDescriptions": {
+          "speedRating": "根据测速结果分类：优秀、良好、一般、差",
+          "latencyRating": "根据延迟分类：低延迟、中等延迟、高延迟",
+          "regionCategory": "按地理区域分类：亚洲、欧洲、美洲等",
+          "usageCategory": "按使用场景分类：流媒体、游戏、下载等",
+          "stability": "按节点稳定性分类：稳定、不稳定"
+        }
+      },
+      "rule": {
+        "addTitle": "添加规则",
+        "editTitle": "编辑规则",
+        "enableRule": "启用规则",
+        "conditions": "匹配条件",
+        "addCondition": "添加条件",
+        "field": "字段",
+        "operator": "操作符",
+        "value": "值",
+        "regexPlaceholder": "正则表达式",
+        "example": "示例：国家代码 等于 CN，匹配所有中国节点",
+        "logic": {
+          "and": "全部满足 (AND)",
+          "or": "任一满足 (OR)"
+        },
+        "operators": {
+          "equals": "等于",
+          "notEquals": "不等于",
+          "contains": "包含",
+          "notContains": "不包含",
+          "regex": "正则匹配",
+          "greaterThan": "大于",
+          "lessThan": "小于",
+          "greaterOrEqual": "大于等于",
+          "lessOrEqual": "小于等于"
+        }
+      }
+    }
+  },
+  "templates": {
+    "title": "模板管理",
+    "actions": {
+      "addTemplate": "添加模板",
+      "convertRules": "规则生成/转换",
+      "convertRulesExpand": "规则生成/转换（远程规则展开模式）",
+      "clearContent": "清空内容",
+      "fullscreen": "全屏编辑",
+      "exitFullscreen": "退出全屏",
+      "continueDelete": "继续删除"
+    },
+    "fields": {
+      "filename": "文件名",
+      "category": "类别",
+      "ruleSource": "规则源",
+      "remoteRuleSource": "远程规则地址",
+      "createdAt": "创建时间",
+      "actions": "操作",
+      "useProxy": "使用代理下载远程规则",
+      "proxyNode": "代理节点",
+      "includeAll": "使用 Include-All 模式"
+    },
+    "placeholders": {
+      "filename": "例如: clash.yaml",
+      "ruleSource": "输入 URL 或选择 ACL4SSR 预设",
+      "proxyNode": "留空则自动选择最佳节点"
+    },
+    "helpers": {
+      "ruleSource": "可填写远程 ACL 规则配置地址，生成订阅时会动态加载规则",
+      "proxyNode": "可选择任意现有节点，也可手动输入外部代理链接；留空时系统会自动选择最佳节点。",
+      "includeAllOn": "• 开启：配置更精简，使用客户端 include-all 自动匹配节点，不遵循系统排序",
+      "includeAllOff": "• 关闭（推荐）：由系统按顺序插入节点，遵循系统排序和过滤规则"
+    },
+    "dialog": {
+      "addTitle": "添加模板",
+      "editTitle": "编辑模板"
+    },
+    "delete": {
+      "title": "删除模板",
+      "confirm": "确定要删除模板 \"{{name}}\" 吗？"
+    },
+    "confirm": {
+      "clearTitle": "清空内容",
+      "clearContent": "确定要清空编辑器中的所有内容吗？"
+    },
+    "usage": {
+      "title": "模板正在被订阅使用",
+      "message": "模板 \"{{name}}\" 当前正被以下订阅使用，删除后这些订阅可能受到影响，是否继续删除？",
+      "usedSubscriptions": "使用中的订阅："
+    },
+    "baseTemplate": {
+      "button": "{{category}} 基础模板",
+      "title": "{{category}} 基础模板配置",
+      "description": "基础模板用于规则转换时，当模板内容为空时自动填充的默认配置。修改后将影响所有使用默认模板的规则转换操作。"
+    },
+    "messages": {
+      "loadFailed": "获取模板列表失败",
+      "usageFailed": "获取模板使用情况失败",
+      "deleteSuccess": "删除成功",
+      "deleteFailed": "删除失败",
+      "promptRequired": "请输入 AI 指令",
+      "convertSuccess": "规则生成/转换成功",
+      "convertExpandSuccess": "规则生成/转换并展开成功",
+      "convertFailed": "规则生成/转换失败",
+      "convertError": "生成/转换过程中发生错误",
+      "converting": "正在转换规则...",
+      "diffSaveBlocked": "当前处于 AI 对比模式，请先返回编辑模式后再保存",
+      "updateSuccess": "更新成功",
+      "updateFailed": "更新失败",
+      "addSuccess": "添加成功",
+      "addFailed": "添加失败",
+      "baseTemplateLoadFailed": "获取基础模板失败",
+      "baseTemplateSaveSuccess": "{{category}} 基础模板保存成功",
+      "baseTemplateSaveFailed": "保存基础模板失败",
+      "cleared": "已清空内容"
+    },
+    "ai": {
+      "setupGuidance": "请前往 /settings 的 AI 助手页签启用并完成配置。",
+      "setupUnavailable": "AI 助手当前不可用。",
+      "promptPlaceholder": "告诉 AI 要如何调整当前模板…",
+      "promptAria": "AI 指令",
+      "generate": "生成",
+      "generating": "生成中",
+      "goSettings": "前往设置",
+      "goSettingsShort": "去设置",
+      "disabled": "AI 助手未启用",
+      "mode": {
+        "edit": "编辑",
+        "diff": "对比"
+      },
+      "usage": {
+        "input": "输入",
+        "output": "输出",
+        "cache": "缓存"
+      },
+      "status": {
+        "generating": "正在基于当前编辑器内容生成草稿。",
+        "outdated": "当前内容或配置已变化，请重新生成新的草稿。",
+        "unsavedTemplate": "当前模板尚未保存，可先应用到编辑器后再保存。",
+        "diffReadonly": "对比模式为只读，保存前请先返回编辑模式。",
+        "applied": "当前编辑器已载入 AI 草稿。",
+        "revertAvailable": "已保留应用前快照，可在编辑模式下回退。",
+        "ready": "可对比、应用或继续编辑当前候选草稿。",
+        "prompt": "输入指令后生成候选草稿。"
+      },
+      "statusChip": {
+        "generating": "生成中",
+        "failed": "生成失败",
+        "outdated": "草稿过期",
+        "applied": "已写入编辑器",
+        "ready": "草稿可用",
+        "notGenerated": "未生成",
+        "canRevert": "可回退上次接受",
+        "unsavedTemplate": "未保存模板"
+      },
+      "messages": {
+        "promptRequired": "请输入 AI 指令",
+        "generated": "AI 草稿已生成，可切换并停留在并排对比模式",
+        "emptyCandidate": "AI 生成完成，但未返回候选内容",
+        "generateFailed": "AI 生成失败",
+        "setupUnavailable": "AI 助手当前不可用，请前往 /settings 的 AI 助手页签完成配置。",
+        "generateFirst": "请先生成 AI 候选内容",
+        "alreadyApplied": "当前编辑器内容已经与 AI 候选结果一致",
+        "outdatedAccept": "模板内容或配置已变化，请重新生成或重新校验候选内容后再接受到编辑器",
+        "accepted": "AI 草稿已写入编辑器，可继续编辑或直接保存",
+        "noRevert": "没有可回退的本地接受记录",
+        "reverted": "已恢复最近一次接受 AI 候选前的编辑器内容",
+        "diffSaveBlocked": "当前处于 AI 对比模式，请先返回编辑模式后再保存"
+      },
+      "aria": {
+        "expandCommand": "展开 AI 指令工具条",
+        "collapseCommand": "收起 AI 指令工具条",
+        "collapseDisabledPrompt": "收起 AI 助手启用提示",
+        "viewDisabledPrompt": "查看 AI 助手启用提示"
+      }
+    }
+  },
+  "nodeConditions": {
+    "fields": {
+      "name": "备注",
+      "linkName": "原始名称",
+      "linkCountry": "国家代码",
+      "protocol": "协议类型",
+      "source": "来源",
+      "group": "分组",
+      "speed": "速度 (MB/s)",
+      "delayTime": "延迟 (ms)",
+      "fraudScore": "欺诈评分",
+      "qualityStatus": "质量状态",
+      "unlockProvider": "解锁 Provider",
+      "unlockStatus": "解锁状态",
+      "unlockKeyword": "解锁关键词",
+      "unlockResult": "解锁摘要",
+      "ipType": "IP类型",
+      "residentialType": "住宅属性",
+      "speedStatus": "速度状态",
+      "delayStatus": "延迟状态",
+      "linkAddress": "地址",
+      "linkPort": "端口",
+      "dialerProxyName": "前置代理",
+      "link": "节点链接"
+    },
+    "status": {
+      "untested": "未测速",
+      "success": "成功",
+      "timeout": "超时",
+      "error": "失败",
+      "all": "全部"
+    },
+    "ipType": {
+      "native": "原生IP",
+      "broadcast": "广播IP",
+      "untested": "未检测"
+    },
+    "residential": {
+      "residential": "住宅IP",
+      "datacenter": "机房IP",
+      "untested": "未检测"
+    },
+    "qualityStatus": {
+      "all": "全部",
+      "success": "完整结果",
+      "ipv6Success": "IPv6 完整结果",
+      "partial": "信息不全",
+      "failed": "检测失败",
+      "shortFailed": "失败",
+      "disabled": "未启用",
+      "untested": "未检测",
+      "tooltip": {
+        "partial": "质量接口未返回完整的欺诈评分、住宅属性或 IP 类型信息",
+        "ipv6Partial": "IPv6 环境下质量接口未返回完整的欺诈评分、住宅属性或 IP 类型信息"
+      }
+    },
+    "fraudLevels": {
+      "excellentPlus": "极佳",
+      "excellent": "优秀",
+      "good": "良好",
+      "medium": "中等",
+      "poor": "差",
+      "veryPoor": "极差"
+    }
+  },
+  "affiliate": {
+    "title": "推荐资源",
+    "disclaimer": "推广链接可能包含推荐信息，请根据自身需求选择。",
+    "items": {
+      "bandwagonhost": {
+        "title": "BandwagonHost",
+        "description": "优质线路，提供多个数据中心和 CN2 GIA 选项。",
+        "highlights": ["多个 VPS 机房", "CN2 GIA 线路选项", "高质量线路服务器"],
+        "ctaLabel": "查看套餐",
+        "tag": "VPS 推荐"
+      },
+      "vultr": {
+        "title": "Vultr",
+        "description": "多地区可选，支持小时计费，并可灵活更换 IP 或区域。",
+        "highlights": ["多地区", "小时计费", "低成本稳定套餐", "IPv6-only 选项"],
+        "ctaLabel": "查看套餐",
+        "tag": "VPS"
+      },
+      "aliyun": {
+        "title": "阿里云",
+        "description": "新购与续费同价的 99 元/年服务器优惠。",
+        "highlights": ["适合国内部署和测试", "新购续费 99 元/年", "可用优惠券"],
+        "ctaLabel": "查看优惠",
+        "tag": "云服务"
+      }
+    }
+  },
+  "donation": {
+    "title": "支持项目",
+    "tooltip": "支持项目",
+    "links": {
+      "small": "小额支持",
+      "generous": "慷慨支持",
+      "support": "特别支持"
+    }
+  },
+  "footer": {
+    "feedback": "问题反馈",
+    "license": "开源协议"
+  },
+  "notifications": {
+    "title": "通知",
+    "messages": "消息",
+    "empty": "暂无通知",
+    "justNow": "刚刚",
+    "markAllRead": "全部标记已读",
+    "clearAll": "清空全部",
+    "expand": "展开",
+    "collapse": "收起"
+  },
+  "profile": {
+    "userFallback": "用户",
+    "unknownUser": "未知用户",
+    "account": "账号",
+    "greeting": {
+      "earlyMorning": "早安",
+      "morning": "上午好",
+      "noon": "中午好",
+      "afternoon": "下午好",
+      "evening": "晚上好",
+      "lateNight": "夜深了"
+    },
+    "role": {
+      "admin": "管理员",
+      "user": "普通用户"
+    },
+    "actions": {
+      "personalCenter": "个人中心",
+      "apiKeys": "API 密钥",
+      "backup": "系统备份",
+      "geoip": "GeoIP 设置",
+      "clearIpCache": "清空 IP 缓存",
+      "logout": "退出登录"
+    },
+    "backup": {
+      "title": "系统备份",
+      "confirm": "确定要生成并下载系统备份吗？",
+      "generating": "正在生成备份...",
+      "downloadStarted": "备份已开始下载",
+      "invalidFile": "备份文件无效",
+      "requestFailed": "备份请求失败"
+    },
+    "ipCache": {
+      "currentCount": "当前缓存条目：{{count}}",
+      "clearTitle": "清空 IP 缓存",
+      "clearConfirm": "确定要清空当前 {{count}} 条 IP 查询缓存吗？清空后后续查询会重新请求 IP 信息。",
+      "cleared": "IP 缓存已清空",
+      "clearFailed": "清空 IP 缓存失败"
+    }
+  },
+  "search": {
+    "placeholder": "搜索...",
+    "ariaLabel": "搜索"
+  },
+  "version": {
+    "currentSystemVersion": "当前系统版本",
+    "githubRepo": "GitHub 仓库",
+    "status": {
+      "current": "当前版本",
+      "loading": "检查中...",
+      "unknown": "未知",
+      "update": "有新版本"
+    },
+    "hint": {
+      "latest": "已是最新版本",
+      "loading": "正在检查最新版本...",
+      "manual": "打开 GitHub 手动查看发布版本",
+      "noUpdate": "暂无更新",
+      "synced": "版本信息已同步",
+      "updateAvailable": "发现新版本"
+    },
+    "actions": {
+      "releases": "查看发布版本",
+      "update": "更新"
+    }
+  },
+  "accessKeys": {
+    "title": "API 密钥",
+    "noDescription": "无描述",
+    "empty": "暂无 API 密钥",
+    "actions": {
+      "create": "创建",
+      "createKey": "创建 API 密钥"
+    },
+    "fields": {
+      "description": "描述",
+      "createdAt": "创建时间",
+      "expiration": "过期时间",
+      "expiredAt": "过期时间",
+      "actions": "操作"
+    },
+    "expiration": {
+      "never": "永不过期",
+      "custom": "自定义过期时间",
+      "expired": "已过期",
+      "expiresInDays": "{{count}} 天后过期"
+    },
+    "createDialog": {
+      "title": "创建 API 密钥",
+      "descriptionHelper": "填写简短描述，便于识别该密钥。",
+      "expirationSettings": "过期设置"
+    },
+    "createdDialog": {
+      "title": "API 密钥已创建",
+      "warning": "该密钥只会显示一次，请立即复制并保存。",
+      "saved": "我已保存"
+    },
+    "delete": {
+      "title": "删除 API 密钥",
+      "confirm": "确定要删除此 API 密钥吗？删除后无法恢复。"
+    },
+    "messages": {
+      "loadFailed": "获取 API 密钥失败",
+      "deleteSuccess": "删除成功",
+      "deleteFailed": "删除失败",
+      "descriptionRequired": "请输入描述",
+      "expiredAtRequired": "请选择过期时间",
+      "createFailed": "创建 API 密钥失败",
+      "copied": "已复制到剪贴板"
+    }
+  },
+  "scripts": {
+    "title": "脚本管理",
+    "actions": {
+      "add": "添加",
+      "addScript": "添加脚本",
+      "usageGuide": "使用说明",
+      "fullscreen": "全屏",
+      "exitFullscreen": "退出全屏",
+      "continueDelete": "继续删除"
+    },
+    "fields": {
+      "name": "名称",
+      "version": "版本",
+      "createdAt": "创建时间",
+      "updatedAt": "更新时间",
+      "actions": "操作"
+    },
+    "dialog": {
+      "addTitle": "添加脚本",
+      "editTitle": "编辑脚本"
+    },
+    "delete": {
+      "title": "删除脚本",
+      "confirm": "确定要删除脚本 \"{{name}}\" 吗？"
+    },
+    "usage": {
+      "title": "脚本正在被订阅使用",
+      "message": "脚本 \"{{name}}\" 当前正被以下订阅使用，删除后这些订阅可能受到影响，是否继续删除？",
+      "usedSubscriptions": "使用中的订阅："
+    },
+    "messages": {
+      "loadFailed": "获取脚本列表失败",
+      "usageFailed": "获取脚本使用情况失败",
+      "deleteSuccess": "删除成功",
+      "deleteFailed": "删除失败",
+      "updateSuccess": "更新成功",
+      "updateFailed": "更新失败",
+      "createSuccess": "创建成功",
+      "createFailed": "创建失败"
+    },
+    "template": {
+      "modifyNodes": "修改节点列表",
+      "nodes": "节点列表",
+      "clientType": "客户端类型",
+      "returnNodes": "返回修改后的节点列表",
+      "modifySubscription": "修改订阅内容",
+      "input": "原始订阅内容",
+      "returnContent": "返回修改后的订阅内容"
+    }
+  },
+  "tasks": {
+    "title": "任务管理",
+    "progressTitle": "任务进度",
+    "taskCount": "{{count}} 个任务",
+    "processing": "处理中...",
+    "processingItem": "正在处理：{{item}}",
+    "remainingApprox": "预计剩余 {{time}}",
+    "realtimeProgress": "实时进度",
+    "empty": "暂无任务",
+    "viewMigrationWarnings": "查看 {{count}} 条迁移警告",
+    "migrationWarningSummary": "{{count}} 条迁移警告",
+    "unlockSummary": "解锁检测命中 {{matched}}/{{total}}",
+    "fields": {
+      "name": "名称",
+      "type": "类型",
+      "trigger": "触发方式",
+      "status": "状态",
+      "progress": "进度",
+      "traffic": "流量",
+      "realtimeTraffic": "实时流量",
+      "createdAt": "创建时间",
+      "duration": "耗时",
+      "actions": "操作"
+    },
+    "stats": {
+      "running": "运行中",
+      "pending": "等待中",
+      "completed": "已完成",
+      "failedCancelled": "失败 / 已取消"
+    },
+    "status": {
+      "pending": "等待中",
+      "running": "运行中",
+      "completed": "已完成",
+      "cancelled": "已取消",
+      "cancelling": "停止中",
+      "error": "失败"
+    },
+    "shortStatus": {
+      "completed": "完成",
+      "error": "失败",
+      "cancelled": "已取消",
+      "cancelling": "停止中"
+    },
+    "type": {
+      "speedTest": "节点测速",
+      "subUpdate": "订阅更新",
+      "tagRule": "标签规则",
+      "dbMigration": "数据迁移"
+    },
+    "trigger": {
+      "manual": "手动",
+      "scheduled": "定时",
+      "airportUpdate": "机场更新"
+    },
+    "filters": {
+      "allTypes": "全部类型",
+      "allTriggers": "全部触发方式",
+      "clear": "清除筛选"
+    },
+    "actions": {
+      "stop": "停止",
+      "stopTask": "停止任务",
+      "stopping": "停止中...",
+      "viewTrafficDetails": "查看流量详情"
+    },
+    "phase": {
+      "latency": "延迟",
+      "speed": "速度"
+    },
+    "time": {
+      "seconds": "{{count}}秒",
+      "minutesSeconds": "{{minutes}}分{{seconds}}秒",
+      "hoursMinutes": "{{hours}}小时{{minutes}}分"
+    },
+    "relative": {
+      "justNow": "刚刚",
+      "minutesAgo": "{{count}} 分钟前",
+      "hoursAgo": "{{count}} 小时前"
+    },
+    "result": {
+      "speedTestFailed": "测速失败",
+      "latency": "{{latency}}ms",
+      "added": "新增 {{count}}",
+      "exists": "已存在 {{count}}",
+      "deleted": "删除 {{count}}",
+      "matchedNodes": "命中 {{matched}}/{{total}} 个节点",
+      "importedKinds": "已导入 {{count}} 类数据",
+      "warnings": "{{count}} 条警告"
+    },
+    "clearHistory": {
+      "title": "清理任务历史",
+      "description": "清理指定时间之前已完成、失败或取消的任务历史。",
+      "daysBefore": "{{count}} 天前",
+      "all": "清理全部历史",
+      "confirm": "确认清理",
+      "tooltip": "清理任务历史"
+    },
+    "migrationWarnings": {
+      "title": "迁移警告",
+      "taskName": "任务：{{name}}",
+      "empty": "暂无迁移警告"
+    },
+    "trafficStats": {
+      "title": "流量统计",
+      "detailTitle": "流量统计详情",
+      "taskLabel": "任务：{{name}}",
+      "noTrafficData": "无流量数据",
+      "noData": "无数据",
+      "drillHint": "点击行可查看该{{type}}下的节点流量详情",
+      "totalTraffic": "总消耗流量",
+      "detailDisabled": "未开启详细流量统计，可在测速设置中开启",
+      "groupTab": "分组统计",
+      "sourceTab": "来源统计",
+      "groupName": "分组名称",
+      "sourceName": "来源名称",
+      "group": "分组",
+      "source": "来源",
+      "traffic": "流量",
+      "percent": "占比",
+      "nodeName": "节点名称",
+      "originalName": "原始名称",
+      "searchPlaceholder": "搜索节点名称...",
+      "search": "搜索",
+      "exportCsv": "导出 CSV",
+      "rowsPerPage": "每页",
+      "close": "关闭",
+      "csv": {
+        "nodeName": "节点名称",
+        "originalName": "原始名称",
+        "group": "分组",
+        "source": "来源",
+        "trafficBytes": "流量(字节)",
+        "traffic": "流量",
+        "name": "名称",
+        "percent": "占比"
+      }
+    }
+  },
+  "components": {
+    "pagination": {
+      "empty": "0 条",
+      "rowsPerPage": "每页行数",
+      "first": "第一页",
+      "previous": "上一页",
+      "next": "下一页",
+      "last": "最后一页"
+    },
+    "cronExpressionGenerator": {
+      "label": "Cron 表达式",
+      "currentExpression": "当前表达式：",
+      "nextRunsTitle": "下次运行时间预览",
+      "runOrdinal": "第 {{count}} 次",
+      "invalidExpression": "表达式格式不正确，请检查输入",
+      "presets": {
+        "every30Minutes": "每 30 分钟",
+        "every1Hour": "每 1 小时",
+        "every6Hours": "每 6 小时",
+        "every12Hours": "每 12 小时",
+        "dailyMidnight": "每天 0 点",
+        "weeklyMonday": "每周一"
+      },
+      "frequency": {
+        "interval": "每隔固定时间",
+        "daily": "每天指定时间",
+        "weekly": "每周指定日期"
+      },
+      "intervals": {
+        "minutes": "{{count}} 分钟",
+        "hours": "{{count}} 小时"
+      },
+      "weekdays": {
+        "monday": "周一",
+        "tuesday": "周二",
+        "wednesday": "周三",
+        "thursday": "周四",
+        "friday": "周五",
+        "saturday": "周六",
+        "sunday": "周日"
+      },
+      "fields": {
+        "frequency": "执行频率",
+        "interval": "间隔时间",
+        "hour": "小时",
+        "minute": "分钟",
+        "weekdaysHelper": "选择执行日期（可多选）"
+      },
+      "actions": {
+        "showAdvanced": "显示高级选项",
+        "hideAdvanced": "隐藏高级选项"
+      },
+      "advanced": {
+        "helper": "格式：分 时 日 月 周，如 0 */6 * * *",
+        "invalidHelper": "格式错误：分 时 日 月 周",
+        "placeholder": "分 时 日 月 周"
+      },
+      "relative": {
+        "daysHours": "{{days}} 天 {{hours}} 小时后",
+        "days": "{{days}} 天后",
+        "hoursMinutes": "{{hours}} 小时 {{minutes}} 分钟后",
+        "hours": "{{hours}} 小时后",
+        "minutes": "{{minutes}} 分钟后"
+      }
+    },
+    "nodeNameUniquify": {
+      "title": "节点名称唯一化",
+      "subtitle": "跨机场前缀与机场内重名编号可分别开启，互不影响",
+      "description": "跨机场前缀唯一化与机场内重名编号是两个独立设置：前者用于区分不同机场的同名节点，后者仅处理同一机场内的重名节点。",
+      "defaultPrefixPending": "[A新机场ID]",
+      "crossAirport": {
+        "title": "跨机场前缀",
+        "description": "为当前机场节点添加唯一前缀，用于区分不同机场之间的同名节点",
+        "prefixLabel": "跨机场前缀（可选）",
+        "placeholderWithId": "留空使用默认前缀 [A{{id}}]",
+        "placeholderPending": "留空后保存时使用默认前缀 [A新机场ID]",
+        "helper": "仅在开启跨机场前缀唯一化时生效，用于区分不同机场的同名节点"
+      },
+      "intraAirport": {
+        "title": "机场内重名编号",
+        "badge": "机场内编号",
+        "description": "同一机场内若有重名节点，会按各自重名组在名称后追加 -1、-2、-3…；不同名称组会分别从 -1 开始"
+      },
+      "preview": {
+        "crossAirportTitle": "跨机场前缀预览",
+        "enabledDescription": "开启后会为当前机场添加唯一前缀，仅影响不同机场之间的同名节点。",
+        "disabledDescription": "未开启时，跨机场同名节点仍保持原名称。",
+        "intraAirportTitle": "机场内重名编号预览",
+        "intraAirportDescription": "每组重名会单独编号，HK 与日本两个名称组都会各自从 -1 开始，而不是共用一套全局序号。",
+        "duplicateGroup": "{{name}} 重名组",
+        "samplePrimary": "香港节点-01",
+        "sampleSecondary": "日本节点"
+      }
+    },
+    "systemMonitor": {
+      "title": "系统监控",
+      "hidden": "已隐藏",
+      "env": "环境变量：{{env}}",
+      "unavailable": "暂无系统监控数据",
+      "actions": {
+        "enableAutoRefresh": "启用自动刷新（{{seconds}}秒）",
+        "disableAutoRefresh": "关闭自动刷新"
+      },
+      "uptime": {
+        "days": "{{days}}天 {{hours}}小时 {{minutes}}分",
+        "hours": "{{hours}}小时 {{minutes}}分 {{seconds}}秒",
+        "minutes": "{{minutes}}分 {{seconds}}秒",
+        "seconds": "{{seconds}}秒"
+      },
+      "metrics": {
+        "heapMemory": "堆内存",
+        "heapAllocated": "已分配：{{value}}",
+        "cpuCores": "{{count}} 核",
+        "cgoCalls": "CGO 调用：{{count}}",
+        "uptime": "运行时间",
+        "startedAt": "启动于 {{value}}",
+        "cpu": "CPU",
+        "goroutines": "协程",
+        "gomaxprocs": "GOMAXPROCS: {{count}}"
+      },
+      "runtime": {
+        "title": "运行时内存详情",
+        "heapInUse": "堆使用",
+        "stackInUse": "栈使用",
+        "gcCount": "GC 次数",
+        "gcPause": "GC 暂停",
+        "gcCpu": "GC CPU",
+        "systemMemory": "系统内存",
+        "totalAllocated": "累计分配"
+      },
+      "config": {
+        "title": "运行时配置",
+        "keys": {
+          "port": "端口",
+          "expire_days": "登录令牌有效期",
+          "login_fail_count": "登录失败次数限制",
+          "login_fail_window": "登录失败统计窗口",
+          "login_ban_duration": "登录封禁时长",
+          "log_level": "日志级别",
+          "captcha_mode": "验证码模式",
+          "trusted_proxies": "可信代理规则",
+          "feature": "功能开关",
+          "dsn": "数据库连接",
+          "db_path": "本地数据目录",
+          "log_path": "日志目录路径",
+          "geoip_path": "GeoIP 数据库",
+          "web_base_path": "前端访问基础路径",
+          "turnstile_site_key": "Turnstile 站点密钥",
+          "turnstile_proxy_link": "Turnstile 验证代理"
+        },
+        "values": {
+          "plain": "{{count}}",
+          "days": "{{count}} 天",
+          "times": "{{count}} 次",
+          "minutes": "{{count}} 分钟",
+          "unset": "未设置",
+          "literal": "{{value}}",
+          "captchaDisabled": "关闭",
+          "captchaTurnstile": "Cloudflare Turnstile",
+          "captchaTurnstileDegraded": "Cloudflare Turnstile（已降级为传统验证码）",
+          "captchaLegacy": "传统验证码",
+          "disabled": "未启用",
+          "rules": "{{count}} 条规则",
+          "configured": "已配置",
+          "notConfigured": "未配置",
+          "configuredHidden": "已配置（详情已隐藏）",
+          "defaultPath": "默认路径",
+          "customPath": "已自定义",
+          "autoDetect": "自动检测",
+          "rootPath": "根路径",
+          "databaseConfigured": "{{kind}} · 已配置",
+          "databaseHost": "{{kind}} · {{host}} · {{database}}"
+        }
+      }
+    },
+    "geoIpSettings": {
+      "title": "GeoIP 数据库设置",
+      "status": {
+        "installed": "数据库已安装",
+        "notInstalled": "数据库未安装",
+        "fileSize": "文件大小：{{value}}",
+        "updatedAt": "更新时间：{{value}}",
+        "missingDescription": "GeoIP 数据库用于 IP 地理位置查询和落地检测，请下载安装。"
+      },
+      "download": {
+        "autoDownloading": "系统自动下载中... {{progress}}%",
+        "downloading": "正在下载... {{progress}}%",
+        "autoHint": "系统启动时检测到 GeoIP 数据库缺失，正在自动下载。您可以停止后配置代理重新下载。"
+      },
+      "fields": {
+        "downloadUrl": "下载地址",
+        "useProxy": "使用代理下载",
+        "proxyNode": "代理节点"
+      },
+      "placeholders": {
+        "proxyNode": "留空则自动选择最佳节点"
+      },
+      "helpers": {
+        "downloadUrl": "MaxMind GeoLite2-City 数据库下载地址",
+        "proxyNode": "可选择任意现有节点，也可手动输入外部代理链接；留空时系统会自动选择最佳节点。"
+      },
+      "notice": {
+        "title": "注意事项：",
+        "mmdb": "数据库必须是 MaxMind 的 mmdb 格式且包含 city 数据 (GeoLite2-City)",
+        "required": "如果没有 GeoIP 数据库，IP 地理位置查询和落地检测功能将不可用",
+        "update": "建议定期更新数据库以获得更准确的地理位置信息"
+      },
+      "actions": {
+        "restoreDefault": "恢复默认",
+        "stop": "停止",
+        "saveConfig": "保存配置",
+        "updateDatabase": "更新数据库",
+        "downloadDatabase": "下载数据库"
+      },
+      "messages": {
+        "downloadFailedWithReason": "下载失败：{{reason}}",
+        "downloadSuccess": "GeoIP 数据库下载成功",
+        "saveSuccess": "配置已保存",
+        "saveFailed": "保存失败",
+        "saveFailedWithReason": "保存失败：{{reason}}",
+        "downloadStarted": "开始下载 GeoIP 数据库...",
+        "startDownloadFailed": "启动下载失败",
+        "startDownloadFailedWithReason": "启动下载失败：{{reason}}",
+        "stopSignalSent": "已发送停止信号",
+        "stopFailed": "停止失败",
+        "stopFailedWithReason": "停止失败：{{reason}}"
+      }
+    },
+    "geoIpWarning": {
+      "title": "未配置 GeoIP 数据",
+      "description": "部分地区相关功能需要 GeoIP 数据才能显示准确结果。",
+      "ctaHint": "可前往设置配置 GeoIP 数据。",
+      "openSettings": "前往设置",
+      "dontShowAgain": "不再提示",
+      "impacts": {
+        "ipLocation": "IP 归属地显示",
+        "loginLocation": "登录位置显示",
+        "nodeCountry": "节点国家检测"
+      }
+    },
+    "ipDetails": {
+      "title": "IP 详情",
+      "cached": "缓存",
+      "cacheTooltip": "该结果来自缓存",
+      "copyIp": "复制 IP",
+      "sourceNotice": "数据来自 <ipinfo>ipinfo.io</ipinfo> 与 <ippure>IPPure</ippure>，结果仅供参考。",
+      "sections": {
+        "location": "位置信息",
+        "provider": "运营商信息",
+        "other": "其他信息"
+      },
+      "fields": {
+        "coordinates": "坐标",
+        "organization": "组织",
+        "timezone": "时区",
+        "zip": "邮编"
+      },
+      "links": {
+        "viewOnIpinfo": "在 ipinfo.io 查看",
+        "ipinfoDetails": "ipinfo 详情",
+        "ipPureDetails": "IPPure 详情",
+        "bgpLookup": "BGP 查询"
+      },
+      "messages": {
+        "queryFailed": "查询 IP 详情失败"
+      }
+    },
+    "nodeNameFilter": {
+      "title": "节点名称过滤",
+      "summary": "白 {{whitelist}} / 黑 {{blacklist}}",
+      "description": "按节点名称过滤。<strong>黑名单优先级高于白名单</strong>。",
+      "blacklist": "黑名单",
+      "notInWhitelist": "不在白名单",
+      "noRules": "暂无规则",
+      "deleteRule": "删除规则",
+      "previewTitle": "预览",
+      "previewCount": " 保留 {{included}}/{{total}} 个",
+      "invalidRegex": "正则表达式无效",
+      "matchMode": {
+        "text": "文本",
+        "regex": "正则"
+      },
+      "placeholders": {
+        "keyword": "输入关键词",
+        "regex": "输入正则表达式"
+      },
+      "whitelist": "白名单"
+    },
+    "nodeNamePreprocessor": {
+      "title": "节点名称预处理",
+      "description": "在过滤和输出前替换节点名称。",
+      "enabledSummary": "已启用 {{enabled}}/{{total}} 条",
+      "addRule": "添加规则",
+      "deleteRule": "删除规则",
+      "empty": "暂无预处理规则",
+      "emptyResult": "暂无预览结果",
+      "originalName": "原始名称",
+      "result": "处理结果",
+      "previewDescription": "预览当前规则对节点名称的转换效果。",
+      "invalidRegex": "正则表达式无效",
+      "matchMode": {
+        "text": "文本",
+        "regex": "正则"
+      },
+      "placeholders": {
+        "findText": "查找文本",
+        "regex": "正则表达式",
+        "replaceWith": "替换为"
+      }
+    },
+    "nodeProtocolFilter": {
+      "title": "协议过滤",
+      "summary": "白 {{whitelist}} / 黑 {{blacklist}}",
+      "description": "按节点协议类型限制输出。",
+      "priorityHint": "<strong>黑名单优先级高于白名单</strong>：先排除黑名单协议。",
+      "whitelist": "协议白名单",
+      "blacklist": "协议黑名单",
+      "whitelistPlaceholder": "选择白名单协议",
+      "blacklistPlaceholder": "选择黑名单协议",
+      "whitelistHelper": "仅保留选中的协议。",
+      "blacklistHelper": "排除选中的协议。"
+    },
+    "searchableNodeSelect": {
+      "label": "代理节点",
+      "placeholder": "搜索或选择节点",
+      "searchPrompt": "输入关键词搜索节点",
+      "noMatch": "无匹配节点",
+      "ungrouped": "未分组",
+      "limitHint": "显示前 {{limit}} / {{total}} 个节点",
+      "hiddenHint": "还有 {{count}} 项未显示"
+    },
+    "starGuide": {
+      "title": "支持 Sublink Pro",
+      "descriptionPrefix": "如果这个项目对你有帮助，欢迎在 GitHub 点一个 Star。",
+      "descriptionSuffix": "你的支持会帮助项目持续改进。",
+      "dontShowAgain": "不再提示",
+      "actions": {
+        "star": "前往 GitHub Star"
+      },
+      "feedback": {
+        "title": "问题反馈",
+        "description": "可在 GitHub 提交问题或建议。"
+      }
+    }
+  },
+  "pagination": {
+    "rowsPerPage": "每页行数"
+  }
+}

@@ -12,12 +12,12 @@ import (
 func currentUsernameFromContext(c *gin.Context) (string, bool) {
 	usernameValue, exists := c.Get("username")
 	if !exists {
-		utils.Forbidden(c, "未获取到当前用户")
+		utils.ForbiddenI18n(c, "未获取到当前用户", "backend.auth.currentUser.missing", nil)
 		return "", false
 	}
 	username, ok := usernameValue.(string)
 	if !ok || strings.TrimSpace(username) == "" {
-		utils.Forbidden(c, "当前用户身份无效")
+		utils.ForbiddenI18n(c, "当前用户身份无效", "backend.auth.currentUser.invalid", nil)
 		return "", false
 	}
 	return username, true

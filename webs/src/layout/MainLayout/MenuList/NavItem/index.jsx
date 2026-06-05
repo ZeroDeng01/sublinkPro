@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { Activity, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, matchPath, useLocation } from 'react-router-dom';
 
 // material-ui
@@ -25,6 +26,7 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 
 export default function NavItem({ item, level, isParents = false, setSelectedID }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
   const { isDark } = useResolvedColorScheme();
   const ref = useRef(null);
@@ -39,6 +41,8 @@ export default function NavItem({ item, level, isParents = false, setSelectedID 
   const isSelected = !!matchPath({ path: item?.link ? item.link : item.url, end: false }, pathname);
   const navTokens = getSidebarNavTokens(theme, isDark);
   const isCollapsedLevelOne = !drawerOpen && level === 1;
+  const itemTitle = item.titleKey ? t(item.titleKey) : item.title;
+  const itemCaption = item.captionKey ? t(item.captionKey) : item.caption;
 
   const [hoverStatus, setHover] = useState(false);
 
@@ -137,7 +141,7 @@ export default function NavItem({ item, level, isParents = false, setSelectedID 
         </ButtonBase>
 
         {(drawerOpen || (!drawerOpen && level !== 1)) && (
-          <Tooltip title={item.title} disableHoverListener={!hoverStatus}>
+          <Tooltip title={itemTitle} disableHoverListener={!hoverStatus}>
             <ListItemText
               primary={
                 <Typography
@@ -151,11 +155,11 @@ export default function NavItem({ item, level, isParents = false, setSelectedID 
                     color: 'inherit'
                   }}
                 >
-                  {item.title}
+                  {itemTitle}
                 </Typography>
               }
               secondary={
-                item.caption && (
+                itemCaption && (
                   <Typography
                     variant="caption"
                     gutterBottom
@@ -168,7 +172,7 @@ export default function NavItem({ item, level, isParents = false, setSelectedID 
                       lineHeight: 1.66
                     }}
                   >
-                    {item.caption}
+                    {itemCaption}
                   </Typography>
                 )
               }

@@ -11,6 +11,7 @@ import IconButton from '@mui/material/IconButton';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
+import { useTranslation } from 'react-i18next';
 
 // icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -56,6 +57,7 @@ const sparkle = keyframes`
 
 export default function StarGuideDialog() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const [open, setOpen] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
@@ -200,7 +202,7 @@ export default function StarGuideDialog() {
               position: 'relative'
             }}
           >
-            感谢使用 SublinkPro！
+            {t('components.starGuide.title')}
           </Typography>
         </Box>
 
@@ -215,7 +217,7 @@ export default function StarGuideDialog() {
               lineHeight: 1.8
             }}
           >
-            如果您觉得这个项目对您有帮助，欢迎在 GitHub 上给我们一个
+            {t('components.starGuide.descriptionPrefix')}
             <Box
               component="span"
               sx={{
@@ -229,7 +231,7 @@ export default function StarGuideDialog() {
               <StarIcon sx={{ fontSize: 18, mr: 0.25 }} />
               Star
             </Box>
-            ！您的支持是我们持续改进的动力
+            {t('components.starGuide.descriptionSuffix')}
             <FavoriteIcon sx={{ fontSize: 16, color: '#ef4444', ml: 0.5, verticalAlign: 'middle' }} />
           </Typography>
 
@@ -258,7 +260,7 @@ export default function StarGuideDialog() {
                 transition: 'all 0.3s ease'
               }}
             >
-              前往 Star
+              {t('components.starGuide.actions.star')}
             </Button>
           </Stack>
 
@@ -283,7 +285,7 @@ export default function StarGuideDialog() {
               }}
             >
               <BugReportIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-              问题反馈
+              {t('components.starGuide.feedback.title')}
             </Typography>
             <Typography
               variant="body2"
@@ -292,7 +294,7 @@ export default function StarGuideDialog() {
                 mb: 1.5
               }}
             >
-              如果您在使用过程中遇到任何问题或有功能建议，欢迎通过以下方式反馈：
+              {t('components.starGuide.feedback.description')}
             </Typography>
             <Button
               variant="outlined"
@@ -332,7 +334,7 @@ export default function StarGuideDialog() {
               }
               label={
                 <Typography variant="caption" sx={{ color: isDark ? alpha('#fff', 0.6) : theme.palette.text.secondary }}>
-                  下次不再显示
+                  {t('components.starGuide.dontShowAgain')}
                 </Typography>
               }
             />

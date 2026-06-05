@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import {
   Box,
@@ -37,6 +38,7 @@ import { withAlpha } from 'utils/colorUtils';
  */
 function AirportDeduplicationConfig({ value, onChange }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const palette = theme.vars?.palette || theme.palette;
   const darkText = palette.text?.dark || theme.palette.common.white;
@@ -73,14 +75,14 @@ function AirportDeduplicationConfig({ value, onChange }) {
         setProtocolMeta(protoRes.data || []);
         setError(null);
       } catch (err) {
-        setError('加载协议元数据失败');
+        setError(t('airports.dedup.messages.loadMetaFailed'));
         console.error('加载去重元数据失败:', err);
       } finally {
         setLoading(false);
       }
     };
     fetchMeta();
-  }, []);
+  }, [t]);
 
   // 解析初始值
   useEffect(() => {
@@ -147,13 +149,13 @@ function AirportDeduplicationConfig({ value, onChange }) {
   // 获取配置状态描述
   const getConfigStatus = () => {
     if (config.mode === 'none') {
-      return '内容哈希全库去重';
+      return t('airports.dedup.status.contentHash');
     }
     const count = getTotalSelectedCount();
     if (count === 0) {
-      return '按协议去重（未配置字段）';
+      return t('airports.dedup.status.protocolNoFields');
     }
-    return `按协议去重（${count} 个字段）`;
+    return t('airports.dedup.status.protocolFields', { count });
   };
 
   return (
@@ -188,7 +190,7 @@ function AirportDeduplicationConfig({ value, onChange }) {
         <Stack direction="row" alignItems="center" spacing={1}>
           <FilterAltIcon color="primary" fontSize="small" />
           <Typography variant="subtitle2" fontWeight={600} sx={{ color: primaryTextColor }}>
-            节点入库去重
+            {t('airports.dedup.title')}
           </Typography>
           <Chip
             size="small"
@@ -212,7 +214,7 @@ function AirportDeduplicationConfig({ value, onChange }) {
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
               <CircularProgress size={24} />
-              <Typography sx={{ ml: 1 }}>加载配置...</Typography>
+              <Typography sx={{ ml: 1 }}>{t('airports.dedup.loading')}</Typography>
             </Box>
           ) : error ? (
             <Alert severity="error">{error}</Alert>
@@ -220,10 +222,10 @@ function AirportDeduplicationConfig({ value, onChange }) {
             <>
               {/* 模式选择 */}
               <FormControl component="fieldset" sx={{ mb: 2 }}>
-                <FormLabel component="legend">去重模式</FormLabel>
+                <FormLabel component="legend">{t('airports.dedup.modeLabel')}</FormLabel>
                 <RadioGroup row value={config.mode} onChange={handleModeChange}>
-                  <FormControlLabel value="none" control={<Radio size="small" />} label="默认（内容哈希全库去重）" />
-                  <FormControlLabel value="protocol" control={<Radio size="small" />} label="按协议字段去重（仅本次拉取）" />
+                  <FormControlLabel value="none" control={<Radio size="small" />} label={t('airports.dedup.modes.none')} />
+                  <FormControlLabel value="protocol" control={<Radio size="small" />} label={t('airports.dedup.modes.protocol')} />
                 </RadioGroup>
               </FormControl>
 
@@ -231,7 +233,7 @@ function AirportDeduplicationConfig({ value, onChange }) {
               {config.mode === 'protocol' && (
                 <Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    为每个协议配置去重字段（当多个节点的选定字段值完全相同时，仅保留第一个）：
+                    {t('airports.dedup.fieldDescription')}
                   </Typography>
                   {protocolMeta.map((proto) => (
                     <Accordion
@@ -277,7 +279,7 @@ function AirportDeduplicationConfig({ value, onChange }) {
                         {getProtocolSelectedCount(proto.name) > 0 && (
                           <Chip
                             size="small"
-                            label={`已选 ${getProtocolSelectedCount(proto.name)} 个`}
+                            label={t('airports.dedup.selectedCount', { count: getProtocolSelectedCount(proto.name) })}
                             color="primary"
                             variant="outlined"
                             sx={{
@@ -315,15 +317,9 @@ function AirportDeduplicationConfig({ value, onChange }) {
               <Alert variant="standard" severity={config.mode === 'none' ? 'info' : 'warning'} sx={{ mt: 2 }}>
                 <Typography variant="body2">
                   {config.mode === 'none' ? (
-                    <>
-                      使用<strong>节点内容哈希进行全库去重</strong>，确保数据库中不会存储内容完全相同的节点。
-                      此方式不受链接参数顺序影响，不同机场间的重复节点也会被过滤。
-                    </>
+                    <Trans i18nKey="airports.dedup.alerts.none" components={{ strong: <strong /> }} />
                   ) : (
-                    <>
-                      按协议字段去重<strong>仅在本次拉取的节点内部生效</strong>， 不会与数据库中已有的其他节点进行比较。
-                      未配置字段的协议将继续使用默认的内容哈希全库去重。
-                    </>
+                    <Trans i18nKey="airports.dedup.alerts.protocol" components={{ strong: <strong /> }} />
                   )}
                 </Typography>
               </Alert>

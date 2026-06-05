@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 // material-ui
@@ -38,9 +39,8 @@ import {
 } from '../utils';
 import { getNodeActionButtonSx, getNodeColorChipSx, getNodeFieldControlSx, getNodeThemeTokens } from '../nodeTheme';
 
-/**
- * 节点过滤器工具栏
- */
+const UNGROUPED_GROUP_VALUE = '\u672a\u5206\u7ec4';
+
 export default function NodeFilters({
   searchQuery,
   setSearchQuery,
@@ -81,6 +81,7 @@ export default function NodeFilters({
   protocolOptions,
   onReset
 }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
@@ -88,6 +89,7 @@ export default function NodeFilters({
   const unlockProviderOptions = getUnlockProviderOptions();
   const normalizedUnlockRules = Array.isArray(unlockRules) ? unlockRules : [];
   const [unlockExpanded, setUnlockExpanded] = useState(false);
+  const allLabel = t('common.all');
 
   const updateUnlockRule = (index, patch) => {
     setUnlockRules(normalizedUnlockRules.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule)));
@@ -117,10 +119,10 @@ export default function NodeFilters({
       useFlexGap
     >
       <FormControl size="small" sx={{ minWidth: 120, ...fieldControlSx }}>
-        <InputLabel>分组</InputLabel>
-        <Select value={groupFilter} label="分组" onChange={(e) => setGroupFilter(e.target.value)} variant={'outlined'}>
-          <MenuItem value="">全部</MenuItem>
-          <MenuItem value="未分组">未分组</MenuItem>
+        <InputLabel>{t('nodes.filters.group')}</InputLabel>
+        <Select value={groupFilter} label={t('nodes.filters.group')} onChange={(e) => setGroupFilter(e.target.value)} variant={'outlined'}>
+          <MenuItem value="">{allLabel}</MenuItem>
+          <MenuItem value={UNGROUPED_GROUP_VALUE}>{t('nodes.filters.ungrouped')}</MenuItem>
           {groupOptions.map((group) => (
             <MenuItem key={group} value={group}>
               {group}
@@ -130,26 +132,36 @@ export default function NodeFilters({
       </FormControl>
       <TextField
         size="small"
-        placeholder="搜索节点备注或链接"
+        placeholder={t('nodes.filters.searchPlaceholder')}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         sx={{ minWidth: 200, flex: { xs: '1 1 100%', md: '1 1 220px' }, ...fieldControlSx }}
       />
       <FormControl size="small" sx={{ minWidth: 120, ...fieldControlSx }}>
-        <InputLabel>来源</InputLabel>
-        <Select value={sourceFilter} label="来源" onChange={(e) => setSourceFilter(e.target.value)} variant={'outlined'}>
-          <MenuItem value="">全部</MenuItem>
+        <InputLabel>{t('nodes.filters.source')}</InputLabel>
+        <Select
+          value={sourceFilter}
+          label={t('nodes.filters.source')}
+          onChange={(e) => setSourceFilter(e.target.value)}
+          variant={'outlined'}
+        >
+          <MenuItem value="">{allLabel}</MenuItem>
           {sourceOptions.map((source) => (
             <MenuItem key={source} value={source}>
-              {source === 'manual' ? '手动添加' : source}
+              {source === 'manual' ? t('nodes.filters.manualSource') : source}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
       <FormControl size="small" sx={{ minWidth: 120, ...fieldControlSx }}>
-        <InputLabel>协议</InputLabel>
-        <Select value={protocolFilter} label="协议" onChange={(e) => setProtocolFilter(e.target.value)} variant={'outlined'}>
-          <MenuItem value="">全部</MenuItem>
+        <InputLabel>{t('nodes.filters.protocol')}</InputLabel>
+        <Select
+          value={protocolFilter}
+          label={t('nodes.filters.protocol')}
+          onChange={(e) => setProtocolFilter(e.target.value)}
+          variant={'outlined'}
+        >
+          <MenuItem value="">{allLabel}</MenuItem>
           {protocolOptions.map((protocol) => (
             <MenuItem key={protocol} value={protocol}>
               {protocol.toUpperCase()}
@@ -158,28 +170,28 @@ export default function NodeFilters({
         </Select>
       </FormControl>
       <FormControl size="small" sx={{ minWidth: 100, ...fieldControlSx }}>
-        <InputLabel>延迟状态</InputLabel>
-        <Select value={delayStatusFilter} label="延迟状态" onChange={(e) => setDelayStatusFilter(e.target.value)}>
+        <InputLabel>{t('nodes.filters.delayStatus')}</InputLabel>
+        <Select value={delayStatusFilter} label={t('nodes.filters.delayStatus')} onChange={(e) => setDelayStatusFilter(e.target.value)}>
           {STATUS_OPTIONS.map((opt) => (
             <MenuItem key={opt.value} value={opt.value}>
-              {opt.label}
+              {opt.labelKey ? t(opt.labelKey, opt.label) : opt.label}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
       <FormControl size="small" sx={{ minWidth: 100, ...fieldControlSx }}>
-        <InputLabel>速度状态</InputLabel>
-        <Select value={speedStatusFilter} label="速度状态" onChange={(e) => setSpeedStatusFilter(e.target.value)}>
+        <InputLabel>{t('nodes.filters.speedStatus')}</InputLabel>
+        <Select value={speedStatusFilter} label={t('nodes.filters.speedStatus')} onChange={(e) => setSpeedStatusFilter(e.target.value)}>
           {STATUS_OPTIONS.map((opt) => (
             <MenuItem key={opt.value} value={opt.value}>
-              {opt.label}
+              {opt.labelKey ? t(opt.labelKey, opt.label) : opt.label}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
       <TextField
         size="small"
-        placeholder="最大延迟"
+        placeholder={t('nodes.filters.maxDelay')}
         type="number"
         value={maxDelay}
         onChange={(e) => setMaxDelay(e.target.value)}
@@ -188,7 +200,7 @@ export default function NodeFilters({
       />
       <TextField
         size="small"
-        placeholder="最低速度"
+        placeholder={t('nodes.filters.minSpeed')}
         type="number"
         value={minSpeed}
         onChange={(e) => setMinSpeed(e.target.value)}
@@ -197,38 +209,38 @@ export default function NodeFilters({
       />
       <TextField
         size="small"
-        placeholder="最大欺诈评分"
+        placeholder={t('nodes.filters.maxFraudScore')}
         type="number"
         value={maxFraudScore}
         onChange={(e) => setMaxFraudScore(e.target.value)}
         sx={{ width: 160, ...fieldControlSx }}
       />
       <FormControl size="small" sx={{ minWidth: 140, ...fieldControlSx }}>
-        <InputLabel>质量状态</InputLabel>
-        <Select value={qualityStatus} label="质量状态" onChange={(e) => setQualityStatus(e.target.value)}>
+        <InputLabel>{t('nodes.filters.qualityStatus')}</InputLabel>
+        <Select value={qualityStatus} label={t('nodes.filters.qualityStatus')} onChange={(e) => setQualityStatus(e.target.value)}>
           {QUALITY_STATUS_OPTIONS.map((opt) => (
             <MenuItem key={opt.value} value={opt.value}>
-              {opt.label}
+              {opt.labelKey ? t(opt.labelKey, opt.label) : opt.label}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
       <FormControl size="small" sx={{ minWidth: 120, ...fieldControlSx }}>
-        <InputLabel>住宅属性</InputLabel>
-        <Select value={residentialType} label="住宅属性" onChange={(e) => setResidentialType(e.target.value)}>
-          <MenuItem value="">全部</MenuItem>
-          <MenuItem value="residential">住宅IP</MenuItem>
-          <MenuItem value="datacenter">机房IP</MenuItem>
-          <MenuItem value="untested">未检测</MenuItem>
+        <InputLabel>{t('nodes.filters.residentialType')}</InputLabel>
+        <Select value={residentialType} label={t('nodes.filters.residentialType')} onChange={(e) => setResidentialType(e.target.value)}>
+          <MenuItem value="">{allLabel}</MenuItem>
+          <MenuItem value="residential">{t('nodeConditions.residential.residential')}</MenuItem>
+          <MenuItem value="datacenter">{t('nodeConditions.residential.datacenter')}</MenuItem>
+          <MenuItem value="untested">{t('nodeConditions.residential.untested')}</MenuItem>
         </Select>
       </FormControl>
       <FormControl size="small" sx={{ minWidth: 120, ...fieldControlSx }}>
-        <InputLabel>IP类型</InputLabel>
-        <Select value={ipType} label="IP类型" onChange={(e) => setIpType(e.target.value)}>
-          <MenuItem value="">全部</MenuItem>
-          <MenuItem value="native">原生IP</MenuItem>
-          <MenuItem value="broadcast">广播IP</MenuItem>
-          <MenuItem value="untested">未检测</MenuItem>
+        <InputLabel>{t('nodes.filters.ipType')}</InputLabel>
+        <Select value={ipType} label={t('nodes.filters.ipType')} onChange={(e) => setIpType(e.target.value)}>
+          <MenuItem value="">{allLabel}</MenuItem>
+          <MenuItem value="native">{t('nodeConditions.ipType.native')}</MenuItem>
+          <MenuItem value="broadcast">{t('nodeConditions.ipType.broadcast')}</MenuItem>
+          <MenuItem value="untested">{t('nodeConditions.ipType.untested')}</MenuItem>
         </Select>
       </FormControl>
       {countryOptions.length > 0 && (
@@ -237,7 +249,7 @@ export default function NodeFilters({
           size="small"
           options={countryOptions}
           value={countryFilter}
-          onChange={(e, newValue) => setCountryFilter(newValue)}
+          onChange={(_, newValue) => setCountryFilter(newValue)}
           sx={{ minWidth: 150, ...fieldControlSx }}
           getOptionLabel={(option) => `${isoToFlag(option)} ${option}`}
           renderOption={(props, option) => {
@@ -254,7 +266,9 @@ export default function NodeFilters({
               return <Chip key={key} label={`${isoToFlag(option)} ${option}`} size="small" {...tagProps} />;
             })
           }
-          renderInput={(params) => <TextField {...params} label="国家代码" placeholder="选择国家" />}
+          renderInput={(params) => (
+            <TextField {...params} label={t('nodes.filters.countryCode')} placeholder={t('nodes.filters.countryPlaceholder')} />
+          )}
         />
       )}
       {tagOptions && tagOptions.length > 0 && (
@@ -263,7 +277,7 @@ export default function NodeFilters({
           size="small"
           options={tagOptions}
           value={tagFilter}
-          onChange={(e, newValue) => setTagFilter(newValue)}
+          onChange={(_, newValue) => setTagFilter(newValue)}
           sx={{ minWidth: 150, ...fieldControlSx }}
           getOptionLabel={(option) => option.name || option}
           isOptionEqualToValue={(option, value) => option.name === (value.name || value)}
@@ -299,7 +313,9 @@ export default function NodeFilters({
               );
             })
           }
-          renderInput={(params) => <TextField {...params} label="标签" placeholder="选择标签" sx={fieldControlSx} />}
+          renderInput={(params) => (
+            <TextField {...params} label={t('nodes.filters.tags')} placeholder={t('nodes.filters.tagsPlaceholder')} sx={fieldControlSx} />
+          )}
         />
       )}
       <Box sx={{ width: '100%', minWidth: 320 }}>
@@ -317,32 +333,39 @@ export default function NodeFilters({
         >
           <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 56 }}>
             <Stack spacing={0.25} sx={{ width: '100%' }}>
-              <Typography variant="subtitle2">解锁筛选</Typography>
+              <Typography variant="subtitle2">{t('nodes.filters.unlock.title')}</Typography>
               <Typography variant="caption" color="text.secondary">
                 {normalizedUnlockRules.length > 0
-                  ? `${normalizedUnlockRules.length} 条规则 · ${unlockRuleMode === 'and' ? '同时满足全部' : '满足任意一条'}`
-                  : '默认折叠，未添加规则时不启用解锁筛选'}
+                  ? t('nodes.filters.unlock.summary', {
+                      count: normalizedUnlockRules.length,
+                      mode: unlockRuleMode === 'and' ? t('nodes.filters.unlock.modeAll') : t('nodes.filters.unlock.modeAny')
+                    })
+                  : t('nodes.filters.unlock.emptySummary')}
               </Typography>
             </Stack>
           </AccordionSummary>
           <AccordionDetails>
             <Stack spacing={1.5}>
               <Alert severity="info" variant="outlined">
-                不添加规则时不会启用解锁筛选。你可以按需新增规则，并设置多条规则之间是满足任意一条还是同时满足全部。
+                {t('nodes.filters.unlock.description')}
               </Alert>
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ md: 'center' }}>
                 <FormControl size="small" sx={{ minWidth: 200, ...fieldControlSx }}>
-                  <InputLabel>规则关系</InputLabel>
-                  <Select value={unlockRuleMode || 'or'} label="规则关系" onChange={(e) => setUnlockRuleMode(e.target.value)}>
+                  <InputLabel>{t('nodes.filters.unlock.relation')}</InputLabel>
+                  <Select
+                    value={unlockRuleMode || 'or'}
+                    label={t('nodes.filters.unlock.relation')}
+                    onChange={(e) => setUnlockRuleMode(e.target.value)}
+                  >
                     {getUnlockRuleModeOptions().map((option) => (
                       <MenuItem key={option.value} value={option.value}>
-                        {option.label}
+                        {option.labelKey ? t(option.labelKey, option.label) : option.label}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
                 <Typography variant="caption" color="text.secondary">
-                  {unlockRuleMode === 'and' ? '多条规则需要同时满足。' : '多条规则满足任意一条即可。'}
+                  {unlockRuleMode === 'and' ? t('nodes.filters.unlock.andHelper') : t('nodes.filters.unlock.orHelper')}
                 </Typography>
               </Stack>
               {normalizedUnlockRules.length > 0 ? (
@@ -358,12 +381,18 @@ export default function NodeFilters({
                       options={unlockProviderOptions}
                       value={unlockProviderOptions.find((item) => item.value === rule.provider) || null}
                       onChange={(_, newValue) => updateUnlockRule(index, { provider: newValue?.value || '' })}
-                      getOptionLabel={(option) => option?.label || formatUnlockProviderLabel(option?.value || '')}
+                      getOptionLabel={(option) =>
+                        option?.labelKey
+                          ? t(option.labelKey, option.label || option.value)
+                          : option?.label || formatUnlockProviderLabel(option?.value || '')
+                      }
                       sx={{ minWidth: 220, flex: 1, ...fieldControlSx }}
                       renderOption={(props, option) => (
                         <li {...props} key={option.value}>
                           <Box>
-                            <Typography variant="body2">{option.label}</Typography>
+                            <Typography variant="body2">
+                              {option.labelKey ? t(option.labelKey, option.label || option.value) : option.label}
+                            </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {option.description || option.value}
                             </Typography>
@@ -373,18 +402,22 @@ export default function NodeFilters({
                       renderInput={(params) => <TextField {...params} label="Provider" sx={fieldControlSx} />}
                     />
                     <FormControl size="small" sx={{ minWidth: 180, ...fieldControlSx }}>
-                      <InputLabel>状态</InputLabel>
-                      <Select value={rule.status || ''} label="状态" onChange={(e) => updateUnlockRule(index, { status: e.target.value })}>
+                      <InputLabel>{t('nodes.filters.unlock.status')}</InputLabel>
+                      <Select
+                        value={rule.status || ''}
+                        label={t('nodes.filters.unlock.status')}
+                        onChange={(e) => updateUnlockRule(index, { status: e.target.value })}
+                      >
                         {getUnlockStatusOptions(true).map((opt) => (
                           <MenuItem key={opt.value || 'all'} value={opt.value}>
-                            {opt.label}
+                            {opt.labelKey ? t(opt.labelKey, opt.label) : opt.label}
                           </MenuItem>
                         ))}
                       </Select>
                     </FormControl>
                     <TextField
                       size="small"
-                      label="关键词"
+                      label={t('nodes.filters.unlock.keyword')}
                       value={rule.keyword || ''}
                       onChange={(e) => updateUnlockRule(index, { keyword: e.target.value })}
                       sx={{ minWidth: 220, flex: 1, ...fieldControlSx }}
@@ -396,12 +429,12 @@ export default function NodeFilters({
                 ))
               ) : (
                 <Alert severity="info" variant="outlined">
-                  当前未启用解锁筛选。点击下方按钮后再添加具体规则。
+                  {t('nodes.filters.unlock.inactive')}
                 </Alert>
               )}
               <Box>
                 <Button size="small" startIcon={<AddIcon />} variant="outlined" onClick={addUnlockRule}>
-                  新增解锁规则
+                  {t('nodes.filters.unlock.addRule')}
                 </Button>
               </Box>
             </Stack>
@@ -409,7 +442,7 @@ export default function NodeFilters({
         </Accordion>
       </Box>
       <Button onClick={onReset} sx={getNodeActionButtonSx(theme, tokens, tokens.palette.text.secondary)}>
-        重置
+        {t('common.reset')}
       </Button>
     </Stack>
   );

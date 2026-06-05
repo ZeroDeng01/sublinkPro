@@ -1,0 +1,3429 @@
+{
+  "auth": {
+    "page": {
+      "welcome": "Welcome back",
+      "subtitle": "Enter your credentials to sign in"
+    },
+    "login": {
+      "title": "Login",
+      "username": "Username",
+      "password": "Password",
+      "passwordMinLength": "Password must be at least 6 characters",
+      "captcha": "Captcha",
+      "refreshCaptcha": "Refresh captcha",
+      "rememberMe": "Remember username",
+      "loginBtn": "Log in",
+      "loggingIn": "Logging in...",
+      "turnstileDegraded": "Turnstile is not fully configured, so traditional captcha is being used.",
+      "missingUsername": "Please enter your username",
+      "missingPassword": "Please enter your password",
+      "missingCaptcha": "Please enter the captcha",
+      "loginFailed": "Login failed. Please try again later.",
+      "loginFailedDefault": "Login failed. Check your username, password, and captcha.",
+      "noToken": "The login response did not include an access token. Please try again later.",
+      "togglePassword": "Toggle password visibility"
+    },
+    "mfa": {
+      "info": "Enter the code from your authenticator app to finish signing in.",
+      "currentAccount": "Current account: {{account}}",
+      "authenticator": "Authenticator",
+      "recoveryCode": "Recovery code",
+      "codeLabel": "Verification code",
+      "recoveryCodeLabel": "Recovery code",
+      "authenticatorHint": "Open your authenticator app and enter the current 6-digit code.",
+      "recoveryCodeHint": "Recovery codes can only be used once. Save a new recovery code after verification succeeds.",
+      "useRecoveryBtn": "Can’t use your authenticator? Use a recovery code",
+      "useAuthenticatorBtn": "Use authenticator code instead",
+      "backBtn": "Back",
+      "verifyBtn": "Verify and log in",
+      "verifying": "Verifying...",
+      "missingContext": "Missing verification context. Please log in again.",
+      "missingRecovery": "Please enter your recovery code",
+      "missingCode": "Please enter the 6-digit code",
+      "verifyFailed": "Verification failed. Please try again later.",
+      "verifyFailedDefault": "Verification failed. Check the code or recovery code and try again.",
+      "noToken": "Verification succeeded, but no access token was received.",
+      "defaultMessage": "Two-factor verification is required"
+    },
+    "fallback": {
+      "noPermission": "You do not have permission to access this resource",
+      "unauthorized": "Unauthorized access",
+      "serverError": "Server error",
+      "operationFailed": "Operation failed",
+      "notification": "Notification"
+    }
+  },
+  "turnstile": {
+    "title": "Security verification",
+    "success": "Verification passed",
+    "error": "Verification failed to load. Please try again.",
+    "expired": "Verification expired. Please verify again.",
+    "retry": "Retry verification",
+    "retryLimit": "Verification failed several times. Refresh the page and try again.",
+    "widgetSuccess": "Human verification passed",
+    "widgetError": "Human verification failed to load. Refresh the page and try again.",
+    "widgetLoading": "Loading human verification..."
+  },
+  "theme": {
+    "title": "Theme mode",
+    "description": "Currently using {{mode}}. You can switch the interface color scheme immediately.",
+    "system": "System",
+    "systemShort": "System",
+    "systemDesc": "Follow your device appearance automatically.",
+    "light": "Light mode",
+    "lightShort": "Light",
+    "lightDesc": "Use the bright workspace color scheme.",
+    "dark": "Dark mode",
+    "darkShort": "Dark",
+    "darkDesc": "Use the dark workspace color scheme."
+  },
+  "language": {
+    "title": "Language",
+    "description": "Switch the interface language",
+    "zh-CN": "简体中文",
+    "zh-CNShort": "中文",
+    "zh-CNDesc": "切换到中文界面",
+    "en-US": "English",
+    "en-USShort": "EN",
+    "en-USDesc": "Switch to English interface"
+  },
+  "navigation": {
+    "groups": {
+      "dashboard": "Dashboard",
+      "subscription": "Subscription Management",
+      "script": "Script Management",
+      "accessKey": "API Keys",
+      "system": "System Settings"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "nodeMap": "Node Map",
+      "airports": "Airport",
+      "nodes": "Node",
+      "nodeCheck": "Node Check",
+      "subscriptions": "Subscriptions",
+      "templates": "Templates",
+      "tags": "Tags",
+      "scripts": "Scripts",
+      "accessKeys": "API Keys",
+      "tasks": "Tasks",
+      "hosts": "Host",
+      "webhooks": "Webhooks",
+      "monitor": "System Monitor",
+      "userCenter": "User Center"
+    }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "refresh": "Refresh",
+    "edit": "Edit",
+    "delete": "Delete",
+    "all": "All",
+    "unknown": "Unknown",
+    "add": "Add",
+    "copy": "Copy",
+    "copied": "Copied to clipboard",
+    "copyFailed": "Copy failed",
+    "copyFailedManual": "Copy failed. Please copy manually.",
+    "selectAll": "Select all",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "reset": "Reset",
+    "saving": "Saving...",
+    "save": "Save",
+    "none": "None",
+    "open": "Open",
+    "linkAddress": "Link Address",
+    "custom": "Custom",
+    "clearAll": "Clear All",
+    "clear": "Clear",
+    "preview": "Preview",
+    "empty": "Empty",
+    "noMatch": "No match found",
+    "saveSuccess": "Save successful",
+    "saveFailed": "Save failed",
+    "status": "Status",
+    "space": "Space"
+  },
+  "airports": {
+    "title": "Airport Management",
+    "page": {
+      "actions": {
+        "addAirport": "Add Airport",
+        "pullAllTooltip": "Pull subscriptions for all enabled airports",
+        "search": "Search",
+        "batchSettings": "Batch settings",
+        "selecting": "Selecting...",
+        "selectFiltered": "Select current filter",
+        "clearSelection": "Clear selection"
+      },
+      "filters": {
+        "keyword": "Keyword",
+        "keywordPlaceholder": "Search name or remark",
+        "group": "Group",
+        "status": "Status"
+      },
+      "selection": {
+        "currentPage": "Select page",
+        "selectedCount": "Selected {{count}}",
+        "filteredCount": "Filtered {{count}}"
+      },
+      "confirm": {
+        "pullTitle": "Update now",
+        "pullContent": "Update the subscription for airport \"{{name}}\" now?",
+        "pullAllTitle": "Pull all airports",
+        "pullAllContent": "Pull subscriptions for all enabled airports now?",
+        "pullAllContentWithCount": "Pull subscriptions for all enabled airports now? ({{count}} total)",
+        "pullToApplyTitle": "Pull now to apply changes",
+        "pullToApplyContent": "Node processing settings changed. Existing nodes need a new subscription pull before the changes apply. Pull airport \"{{name}}\" now?"
+      },
+      "messages": {
+        "loadFailed": "Failed to load airports",
+        "noFilteredAirports": "No airports in the current filter result",
+        "selectedFiltered": "Selected {{count}} airports in the current filter result",
+        "selectFilteredFailed": "Failed to select filtered results",
+        "selectAirportsFirst": "Select airports to update first",
+        "selectFieldFirst": "Select at least one field to update",
+        "cronRequired": "Enter a Cron expression",
+        "cronInvalid": "Cron expression format is incorrect. Format: minute hour day month weekday",
+        "batchUpdated": "Batch updated {{count}} airports",
+        "batchUpdateFailed": "Batch update failed",
+        "deletedWithNodes": "Deleted airport and associated nodes",
+        "deletedKeepNodes": "Deleted airport and kept nodes",
+        "deleteFailed": "Delete failed",
+        "pullSubmitted": "Update task submitted. Refresh later to view results.",
+        "pullSubmitFailed": "Failed to submit update task",
+        "noEnabledAirports": "No enabled airports",
+        "pullAllSubmittedWithCount": "Submitted pull tasks for {{count}} airports. Refresh later to view results.",
+        "pullAllSubmitted": "Batch pull task submitted. Refresh later to view results.",
+        "pullAllFailed": "Batch pull failed",
+        "usageRefreshed": "Usage information updated",
+        "usageRefreshFailed": "Failed to refresh usage",
+        "emptyAirportNameForNodes": "Airport name is empty, so node management cannot be opened",
+        "emptyAirportNameForQuickCheck": "Airport name is empty, so quick check cannot run",
+        "noNodesForSource": "No nodes found for source \"{{source}}\"",
+        "loadAirportNodesFailed": "Failed to load airport nodes",
+        "nameRequired": "Enter an airport name",
+        "urlRequired": "Enter a subscription URL",
+        "urlInvalid": "Enter a valid subscription URL",
+        "detectProfileRequired": "Select a check strategy first",
+        "updateSuccessNeedPull": "Updated successfully. Node processing settings require a new pull before they apply.",
+        "updateSuccess": "Updated successfully",
+        "addSuccess": "Added successfully",
+        "updateFailed": "Update failed",
+        "addFailed": "Add failed",
+        "invalidRequestHeaderRow": "Request header row {{row}} is invalid: {{message}}"
+      }
+    },
+    "form": {
+      "userAgentOptions": {
+        "none": "None (empty)"
+      },
+      "title": {
+        "add": "Add Airport",
+        "edit": "Edit Airport"
+      },
+      "sections": {
+        "basic": "Basic Information",
+        "schedule": "Scheduled Update",
+        "request": "Request Settings",
+        "advanced": "Advanced Options",
+        "nodeProcessing": "Node Processing (applies during pull)"
+      },
+      "fields": {
+        "name": "Name",
+        "logoOptional": "Logo (optional)",
+        "subscriptionUrl": "Subscription URL",
+        "nodeGroup": "Node group",
+        "remark": "Remark"
+      },
+      "helpers": {
+        "name": "Airport names must be unique. The name is used as the node source.",
+        "subscriptionUrl": "Supports Clash YAML subscriptions and V2Ray Base64 subscriptions",
+        "nodeGroup": "Nodes imported from this airport will automatically belong to this group",
+        "remark": "Optional notes to help you manage airports and subscriptions",
+        "userAgent": "User-Agent used when pulling subscriptions. Leave blank if not needed."
+      },
+      "placeholders": {
+        "remark": "Optional memo for this airport",
+        "userAgent": "Select or enter"
+      },
+      "logoPicker": {
+        "set": "Click to set Logo",
+        "change": "Click to change Logo",
+        "dialogTitle": "Select Logo",
+        "urlLabel": "Image URL",
+        "urlPlaceholder": "https://example.com/logo.png or data:image/png;base64,...",
+        "urlHelper": "Enter an image URL or a base64 image",
+        "searchIcon": "Search icons...",
+        "tabs": {
+          "url": "🔗 URL",
+          "icon": "🎨 Icon",
+          "emoji": "😊 Emoji"
+        },
+        "types": {
+          "icon": "Icon",
+          "urlImage": "URL image",
+          "emoji": "Emoji",
+          "initial": "Default to name initial"
+        }
+      },
+      "schedule": {
+        "enable": "Enable scheduled update",
+        "disableDescription": "Turning this off stops automatic subscription pulls"
+      },
+      "requestHeaders": {
+        "title": "Custom request headers",
+        "description": "Add extra headers by row. Blank rows are not submitted. Configure User-Agent with the dedicated field above.",
+        "add": "Add header",
+        "key": "Header Key",
+        "value": "Header Value",
+        "keyPlaceholder": "Example: X-Custom-Token",
+        "valuePlaceholder": "Example: your-value",
+        "deleteRow": "Delete request header row {{index}}",
+        "emptyRowIgnored": "Blank rows are automatically ignored when saving",
+        "empty": "No extra request headers are configured. Add them if needed.",
+        "errors": {
+          "missingKey": "Enter a request header key",
+          "userAgentDedicated": "Set User-Agent with the dedicated field above"
+        }
+      },
+      "proxyDownload": {
+        "enable": "Use proxy download",
+        "description": "Pull subscriptions through a proxy node",
+        "proxyNode": "Proxy node",
+        "placeholder": "Leave blank to automatically choose the best node",
+        "helper": "Select any existing node or manually enter an external proxy link. Leave blank for automatic best-node selection."
+      },
+      "advanced": {
+        "fetchUsage": "Fetch usage information",
+        "fetchUsageDescription": "Parse traffic usage from the subscription response",
+        "fetchUsageAlert": "Requires airport support, and User-Agent should be set to a Clash-related value",
+        "skipTls": "Ignore certificate verification",
+        "skipTlsDescription": "Skip TLS certificate checks",
+        "skipTlsAlert": "This reduces security. Enable only for trusted subscription sources with certificate issues.",
+        "updateAfterDetect": "Check after update",
+        "updateAfterDetectDescription": "Run the selected check strategy for this airport's nodes immediately after subscription update completes",
+        "detectProfile": "Check strategy",
+        "detectProfileHelper": "After the update completes, the selected node check strategy runs immediately on this airport's current nodes",
+        "noDetectProfiles": "No available node check strategies. Create a strategy first.",
+        "selectProfile": "Select a strategy",
+        "changedOnly": "Check only changed and new nodes",
+        "changedOnlyDescription": "When enabled, only nodes changed or added in this update are checked. Existing nodes are skipped."
+      },
+      "nodeProcessing": {
+        "alert": "The following rules take effect immediately when pulling subscriptions. Filtered nodes are not stored in the database."
+      }
+    },
+    "list": {
+      "empty": {
+        "addAirport": "No airport data yet. Click the \"Add Airport\" button above to add one."
+      },
+      "nodeCount": "{{count}} nodes",
+      "lastRun": "Last run",
+      "nextRun": "Next run",
+      "usage": {
+        "title": "Usage information",
+        "disabled": "Usage fetching is not enabled",
+        "disabledShort": "Not enabled",
+        "failed": "Usage fetch failed",
+        "failedShort": "Fetch failed",
+        "failedMaybeUnsupported": "Usage fetch failed (the airport may not support it)",
+        "pending": "Pending fetch",
+        "expireAt": "Expires: {{time}}",
+        "daysLeft": "{{count}}d"
+      },
+      "speed": {
+        "title": "Node test",
+        "untested": "Not tested yet",
+        "lowestDelay": "Lowest delay",
+        "highestSpeed": "Highest speed"
+      },
+      "updateAfterDetect": {
+        "title": "Check after update",
+        "deletedProfile": "Strategy deleted",
+        "changedOnly": "Changed nodes only"
+      },
+      "actions": {
+        "viewNodes": "View nodes",
+        "quickCheck": "Quick check",
+        "pullNow": "Pull now",
+        "refreshUsage": "Refresh usage",
+        "copySubscriptionUrl": "Copy subscription URL",
+        "copySubscription": "Copy subscription",
+        "more": "More actions"
+      },
+      "messages": {
+        "copiedSubscriptionUrl": "Copied subscription URL for “{{name}}”"
+      }
+    },
+    "mobile": {
+      "empty": {
+        "add": "No airport data yet. Click the \"Add\" button above to add one."
+      }
+    },
+    "table": {
+      "columns": {
+        "select": "Select",
+        "airport": "Airport",
+        "nodes": "Nodes",
+        "schedule": "Schedule",
+        "runTime": "Run time",
+        "usage": "Usage",
+        "speedTest": "Speed test",
+        "actions": "Actions"
+      },
+      "lastRunCompact": "Last: {{time}}",
+      "nextRunCompact": "Next: {{time}}"
+    },
+    "dedup": {
+      "title": "Node import deduplication",
+      "loading": "Loading configuration...",
+      "modeLabel": "Deduplication mode",
+      "fieldDescription": "Configure deduplication fields for each protocol. When multiple nodes have identical selected field values, only the first one is kept:",
+      "selectedCount": "{{count}} selected",
+      "status": {
+        "contentHash": "Content-hash database-wide deduplication",
+        "protocolNoFields": "Protocol deduplication (no fields configured)",
+        "protocolFields": "Protocol deduplication ({{count}} fields)"
+      },
+      "modes": {
+        "none": "Default (content-hash database-wide deduplication)",
+        "protocol": "Deduplicate by protocol fields (current pull only)"
+      },
+      "alerts": {
+        "none": "Use <strong>node content hash for database-wide deduplication</strong> to ensure nodes with exactly identical content are not stored repeatedly. This method is not affected by link parameter order, and duplicate nodes across different airports are also filtered.",
+        "protocol": "Protocol-field deduplication <strong>only applies within nodes from the current pull</strong> and does not compare against existing nodes already in the database. Protocols without configured fields continue to use the default content-hash database-wide deduplication."
+      },
+      "messages": {
+        "loadMetaFailed": "Failed to load protocol metadata"
+      }
+    },
+    "nodeStats": {
+      "untested": "Not tested yet",
+      "delayPassed": "Delay passed",
+      "speedPassed": "Speed passed",
+      "noDataTitle": "This airport's nodes have not been tested yet",
+      "noDataDescription": "Run a delay or speed test first",
+      "lowestDelay": "Lowest delay",
+      "highestSpeed": "Highest speed"
+    },
+    "batchEdit": {
+      "title": "Batch Update Airports",
+      "summary": {
+        "group": "Group: ",
+        "clearGroup": "Clear group",
+        "schedule": "Schedule: ",
+        "unset": "Not set"
+      },
+      "summarySeparator": "; ",
+      "messages": {
+        "selectedWithSummary": "Updating {{count}} airports: {{summary}}",
+        "selectedOnly": "Selected {{count}} airports. Please choose the fields to update."
+      },
+      "sections": {
+        "group": {
+          "title": "Node Group",
+          "switch": "Set node group for all selected airports",
+          "fieldLabel": "Node group",
+          "placeholder": "Type or choose a group, leave blank to clear it",
+          "helper": "This will update the group for imported nodes in these airports. Leave blank to clear the group."
+        },
+        "schedule": {
+          "title": "Scheduled Update",
+          "fieldLabel": "Update Cron expression",
+          "description": "This only updates the schedule rule and does not change the selected airports’ enabled state.",
+          "helper": "You can update or clear the Cron expression in bulk; this does not toggle the airports’ scheduled update switch."
+        }
+      },
+      "actions": {
+        "confirm": "Confirm batch update"
+      },
+      "summaryItem": "{{label}}{{value}}"
+    },
+    "deleteDialog": {
+      "title": "Delete Airport",
+      "confirm": "Delete airport \"{{name}}\"?",
+      "withNodes": "Delete associated nodes too",
+      "warning": "⚠️ This will also delete all nodes imported from this airport. This action cannot be undone!",
+      "confirmAction": "Delete"
+    }
+  },
+  "notificationEvents": {
+    "title": "Trigger events",
+    "description": "Select the events this notification channel should send automatically. Test sends are not affected by this selection.",
+    "otherCategory": "Other events",
+    "selectedCount": "{{selected}}/{{total}} selected",
+    "groupSelectedCount": "{{selected}}/{{total}} events selected",
+    "emptySelection": "No automatic trigger events are selected. The channel can still be enabled, but it will not send business notifications automatically.",
+    "actions": {
+      "selectAll": "Select all",
+      "errorsAndSecurity": "Errors and security only",
+      "clear": "Clear",
+      "selectGroup": "Select group"
+    },
+    "severity": {
+      "success": "Success",
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Info",
+      "event": "Event"
+    }
+  },
+  "subscriptionAddress": {
+    "title": "Subscription address settings",
+    "subheader": "Used to generate subscription URLs for the Telegram bot and web sharing",
+    "info": "After configuration, Telegram bot and web sharing links will prefer this subscription address. When it is not configured, the web UI uses the current access address and Telegram uses the local address.",
+    "field": {
+      "label": "Subscription address",
+      "placeholder": "Example: https://your-domain.com",
+      "helper": "Enter a complete address including the protocol (http:// or https://). It will be used as the base address for subscription links after saving."
+    },
+    "actions": {
+      "save": "Save subscription address"
+    },
+    "messages": {
+      "saveSuccess": "Subscription address settings saved",
+      "saveFailed": "Save failed: {{message}}"
+    }
+  },
+  "nodeDedup": {
+    "title": "Cross-airport node deduplication",
+    "subheader": "Control whether node content is deduplicated across different airports",
+    "enable": "Enable cross-airport deduplication",
+    "enabledInfo": "Currently <strong>enabled</strong>: nodes with identical configuration across airports (same ContentHash) keep only the first imported copy to avoid duplicates.",
+    "disabledInfo": "Currently <strong>disabled</strong>: each airport keeps its own nodes even if another airport has identical node content. Duplicate nodes inside the same airport are still deduplicated.",
+    "messages": {
+      "saveSuccess": "Node deduplication settings saved",
+      "saveFailed": "Save failed"
+    }
+  },
+  "settings": {
+    "title": "User Center",
+    "tabs": {
+      "profile": "Profile",
+      "subscriptionAddress": "Subscription address",
+      "telegram": "Telegram bot",
+      "nodeDedup": "Node deduplication",
+      "aiAssistant": "AI Assistant",
+      "dataMigration": "Data migration"
+    },
+    "telegramPanel": {
+      "title": "Telegram Bot",
+      "botFatherHint": "Use <botFather>@BotFather</botFather> to create a bot and get a token. After you send /start for the first time, the bot automatically binds your Chat ID.",
+      "connectedAs": "Bot connected:",
+      "qrTooltip": "Scan with your phone to open the bot",
+      "qrTitle": "Scan the QR code to open the bot",
+      "qrHelper": "Or click the bot name above to open it directly",
+      "chatIdPlaceholder": "Automatically filled after sending /start",
+      "chatIdHelper": "Optional. The first /start message binds it automatically.",
+      "useProxy": "Use proxy to connect to Telegram",
+      "proxyNode": "Proxy node",
+      "proxyPlaceholder": "Leave blank to automatically choose the best node",
+      "proxyHelper": "Select any existing node or manually enter an external proxy link. Leave blank for automatic best-node selection.",
+      "eventsDescription": "Choose events that Telegram should send automatically. Keep at least error and security notifications enabled so important messages are not muted.",
+      "status": {
+        "connected": "Connected",
+        "disconnected": "Disconnected"
+      },
+      "actions": {
+        "test": "Test connection",
+        "reconnect": "Reconnect",
+        "save": "Save settings"
+      },
+      "commands": {
+        "title": "Supported Commands",
+        "start": "Start using",
+        "stats": "View dashboard stats",
+        "monitor": "View system monitor",
+        "speedtest": "Start node speed test",
+        "subscriptions": "Manage subscriptions",
+        "nodes": "View node information",
+        "tags": "Run tag rules",
+        "tasks": "Manage tasks"
+      },
+      "messages": {
+        "botTokenRequired": "Enter Bot Token",
+        "saveSuccess": "Saved successfully",
+        "saveFailed": "Save failed: {{message}}",
+        "testSent": "Connected successfully. Test message sent.",
+        "testSuccess": "Connected successfully",
+        "testFailed": "Test failed: {{message}}",
+        "reconnectSuccess": "Reconnected successfully",
+        "reconnectFailed": "Reconnect failed: {{message}}"
+      }
+    },
+    "aiAssistantPanel": {
+      "title": "AI Assistant Settings",
+      "subheader": "Configure the system AI assistant used by the template editor.",
+      "alerts": {
+        "systemConfig": "The template editor's AI assistant uses this system-level configuration. Currently only AI services that provide a /responses endpoint are supported."
+      },
+      "enableTitle": "Enable system AI assistant",
+      "providerType": "Current interface type: Responses API (only `/responses` endpoint is supported).",
+      "status": {
+        "configured": "Connection parameters saved",
+        "notConfigured": "Configuration incomplete",
+        "savedApiKey": "Saved API Key: {{key}}",
+        "noApiKey": "No API Key saved",
+        "hidden": "Hidden"
+      },
+      "fields": {
+        "baseUrlHelper": "Must be a usable Responses API base URL, and the server must support the `/responses` endpoint.",
+        "replaceApiKey": "Replace API Key (leave blank to keep the saved key)",
+        "model": "Model",
+        "modelHelperFetched": "Choose from fetched models or enter one manually.",
+        "modelHelper": "Enter manually, or fill Base URL / API Key first and fetch the model list.",
+        "maxTokensHelper": "Use 0 for the server default (400000).",
+        "extraHeaders": "Extra headers (JSON)",
+        "extraHeadersHelper": "Example: {\"HTTP-Referer\":\"https://example.com\"}"
+      },
+      "actions": {
+        "fetchModels": "Fetch models",
+        "fetchModelsHelper": "Fetch available models using the current Base URL / API Key.",
+        "test": "Test connection",
+        "save": "Save AI settings"
+      },
+      "testResult": {
+        "title": "Connection Test Result",
+        "testing": "Connecting to the AI service and sending a test request...",
+        "success": "Connection test succeeded. The AI service returned a response.",
+        "response": "AI response",
+        "latency": "Latency",
+        "finishReason": "Finish reason",
+        "usage": "Usage information",
+        "empty": "After clicking Test connection, results will appear here without interrupting the form."
+      },
+      "messages": {
+        "loadFailed": "Failed to load AI settings: {{message}}",
+        "extraHeadersExample": "Extra headers must be a JSON object, for example {\"HTTP-Referer\":\"https://example.com\"}",
+        "extraHeadersObject": "Extra headers must be a JSON object",
+        "baseUrlRequired": "Fill AI Base URL first",
+        "apiKeyRequired": "Fill API Key first",
+        "modelsLoaded": "Model list fetched successfully",
+        "noModels": "No available models found. Enter a model name manually.",
+        "modelsFailed": "Failed to fetch model list: {{message}}",
+        "enabledBaseUrlRequired": "AI Base URL is required when enabling the AI assistant",
+        "enabledModelRequired": "Model name is required when enabling the AI assistant",
+        "enabledApiKeyRequired": "API Key is required when enabling the AI assistant",
+        "testSuccess": "AI connection test succeeded",
+        "testFailed": "Connection test failed: {{message}}",
+        "saveSuccess": "AI assistant settings saved",
+        "saveFailed": "Failed to save AI settings: {{message}}"
+      }
+    },
+    "profilePanel": {
+      "title": "Profile Settings",
+      "subheader": "Update your profile and manage account security.",
+      "userFallback": "User",
+      "notSet": "Not set",
+      "heroDescription": "Manage profile, two-factor authentication, and password.",
+      "currentNickname": "Current nickname: {{nickname}}",
+      "tabs": {
+        "profile": "Profile",
+        "security": "Security"
+      },
+      "status": {
+        "totpEnabled": "Two-factor authentication enabled",
+        "totpDisabled": "Two-factor authentication disabled"
+      },
+      "actions": {
+        "changePassword": "Change password",
+        "updateProfile": "Update profile",
+        "startTotpSetup": "Start TOTP setup",
+        "regenerateRecoveryCodes": "Regenerate recovery codes",
+        "disableTotp": "Disable two-factor authentication",
+        "copySecret": "Copy secret",
+        "confirmEnable": "Confirm enable",
+        "cancelSetup": "Cancel setup",
+        "copyAll": "Copy all"
+      },
+      "basic": {
+        "title": "Basic Profile",
+        "subheader": "Update username and nickname. Saving requires identity verification.",
+        "usernameChangeNotice": "Changing username requires signing in again."
+      },
+      "fields": {
+        "username": "Username",
+        "nickname": "Nickname",
+        "optional": "Optional",
+        "currentPassword": "Current password",
+        "currentPasswordHelper": "Enter your current password to save.",
+        "currentTotpOptional": "Current TOTP code (required when enabled)",
+        "currentTotpHelper": "Required when two-factor authentication is enabled.",
+        "startSetupPasswordHelper": "Verify current password before starting setup.",
+        "continuePasswordHelper": "Enter current password to continue.",
+        "currentCode": "Current code",
+        "authenticatorCodeHelper": "Enter the code currently shown in your authenticator.",
+        "manualEntryKey": "Manual entry key",
+        "manualEntryKeyHelper": "If scanning fails, copy this key and add the account manually.",
+        "code": "Code",
+        "oldPassword": "Old password",
+        "newPassword": "New password",
+        "newPasswordHelper": "Password must be at least 6 characters",
+        "confirmPassword": "Confirm new password"
+      },
+      "identity": {
+        "title": "Identity Confirmation"
+      },
+      "theme": {
+        "title": "Theme Switcher Entry",
+        "subheader": "Global theme mode has moved to the upper-right Header as the app-wide entry point.",
+        "description": "Use the theme button in the upper-right Header to switch light, dark, or system mode.",
+        "helper": "Theme selection is saved automatically and reused after the next sign-in."
+      },
+      "saveCheck": {
+        "title": "Before Saving",
+        "subheader": "Avoid save failures caused by security checks.",
+        "requiresTitle": "This save requires",
+        "requiresPassword": "Current password.",
+        "requiresPasswordAndTotp": "Current password and current TOTP code.",
+        "usernameTitle": "When changing username",
+        "usernameDescription": "After saving, you will be signed out automatically. Sign in again with the new username.",
+        "securityTitle": "Current security state",
+        "securityEnabled": "Two-factor authentication is enabled.",
+        "securityDisabled": "Two-factor authentication is not enabled."
+      },
+      "passwordDialog": {
+        "title": "Change Password",
+        "notice": "After changing password, you will sign in again. If two-factor authentication is enabled, enter the current code too.",
+        "showOld": "Show old password",
+        "hideOld": "Hide old password",
+        "showNew": "Show new password",
+        "hideNew": "Hide new password",
+        "showConfirm": "Show confirmation password",
+        "hideConfirm": "Hide confirmation password"
+      },
+      "labels": {
+        "secret": "Secret",
+        "recoveryCode": "Recovery code",
+        "recoveryCodes": "Recovery codes"
+      },
+      "security": {
+        "title": "Security Overview",
+        "subheader": "View two-factor authentication status and recovery options.",
+        "enabledAlert": "Sign-in requires an authenticator code. If the device is unavailable, use a recovery code instead.",
+        "disabledAlert": "After enabling, sign-in adds one verification step. Save recovery codes immediately after binding."
+      },
+      "totpSetup": {
+        "title": "Enable Two-Factor Authentication",
+        "subheader": "Verify current password first, then bind an authenticator.",
+        "description": "Common TOTP authenticator apps are supported."
+      },
+      "sensitive": {
+        "title": "Sensitive Operation Verification",
+        "subheader": "Verify before disabling two-factor authentication or resetting recovery codes."
+      },
+      "totpEnrollment": {
+        "title": "Finish TOTP Binding",
+        "subheader": "Scan the QR code, then enter the code to enable it.",
+        "scanHint": "Scan the QR code with an authenticator. If scanning fails, enter the secret manually."
+      },
+      "recovery": {
+        "title": "Recovery Codes",
+        "subheader": "Each recovery code can be used only once. Save them offline promptly.",
+        "warning": "Before disabling two-factor authentication or regenerating recovery codes, make sure you can still access the current authenticator or have valid recovery codes saved.",
+        "listTitle": "Recovery code list",
+        "helper": "Each recovery code can be used only once. Save them offline and keep them separate from your account password.",
+        "empty": "Generated recovery codes will appear here after enabling. Save them promptly."
+      },
+      "recommendation": {
+        "title": "Enable Recommendation",
+        "description": "Two-factor authentication adds a verification step beyond your password and is better for protecting admin access and sensitive operations.",
+        "helper": "After enabling, save recovery codes immediately and confirm your authenticator works on regular devices."
+      },
+      "messages": {
+        "copied": "{{label}} copied",
+        "copyFailed": "Failed to copy {{label}}. Please copy manually.",
+        "totpPasswordRequired": "Enter current password to start TOTP setup",
+        "scanTotp": "Scan the QR code with your authenticator, then enter the code to finish binding",
+        "totpSetupFailed": "Failed to load TOTP setup: {{message}}",
+        "totpCodeRequired": "Enter the 6-digit code from your authenticator",
+        "totpEnabled": "Two-factor authentication enabled. Save recovery codes immediately.",
+        "totpEnableFailed": "Failed to enable TOTP: {{message}}",
+        "currentPasswordRequired": "Enter current password",
+        "currentTotpRequired": "Enter current authenticator code",
+        "totpDisabled": "Two-factor authentication disabled",
+        "totpDisableFailed": "Failed to disable TOTP: {{message}}",
+        "regenPasswordRequired": "Enter current password to regenerate recovery codes",
+        "regenTotpRequired": "Enter current authenticator code to regenerate recovery codes",
+        "recoveryCodesRegenerated": "Recovery codes regenerated. Save the new codes.",
+        "regenerateFailed": "Failed to regenerate recovery codes: {{message}}",
+        "usernameRequired": "Username cannot be empty",
+        "profileUpdated": "Profile updated successfully",
+        "usernameChanged": "Username changed. Sign in again...",
+        "updateFailed": "Update failed: {{message}}",
+        "oldPasswordRequired": "Enter old password",
+        "newPasswordRequired": "Enter new password",
+        "passwordTooShort": "New password must be at least 6 characters",
+        "passwordMismatch": "Passwords do not match",
+        "changePasswordFailed": "Change failed",
+        "passwordChanged": "Password changed successfully. Signing in again...",
+        "oldPasswordIncorrect": "Old password is incorrect",
+        "changeFailed": "Change failed: {{message}}"
+      }
+    },
+    "databaseMigration": {
+      "title": "SQLite Data Migration",
+      "subheader": "Upload a backup.zip or SQLite database file from an old instance and import it into this instance",
+      "alerts": {
+        "overwrite": "This operation overwrites business data in the current instance. Use it only for the first migration into a newly deployed MySQL / PostgreSQL instance, and back up the current instance first.",
+        "recommendBackup": "Uploading <strong>backup.zip</strong> exported from the old SQLite instance is recommended. Uploading a <strong>.db</strong> file directly migrates database records only and will not restore the template directory.",
+        "exportGuide": "To export a backup from the old instance, sign in to the old admin UI, open <strong>System Backup</strong> from the avatar menu in the upper right, and download <strong>backup.zip</strong>. The archive includes the <strong>db</strong> and <strong>template</strong> directories and is suitable as a migration source."
+      },
+      "warnings": {
+        "title": "The latest migration contains {{count}} warnings",
+        "helper": "These warnings are also available in the Database Migration task details in Task Center."
+      },
+      "fileSupport": "Supports `backup.zip`, `.db`, `.sqlite`, `.sqlite3`",
+      "options": {
+        "accessKeys": "Migrate AccessKey",
+        "accessKeysHelper": "If old API Keys do not work after migration, make sure the current instance uses the same API encryption key as the old instance, or regenerate them after migration.",
+        "subLogs": "Migrate subscription access logs",
+        "subLogsHelper": "Log data is usually large and is not migrated by default.",
+        "confirmOverwrite": "I confirm that this import will overwrite business data in the current instance",
+        "restartNotice": "After the migration task completes, manually restart the project instance, then sign in again and check the result."
+      },
+      "actions": {
+        "chooseFile": "Choose migration file",
+        "start": "Start migration",
+        "submitting": "Submitting..."
+      },
+      "messages": {
+        "completedWithWarnings": "Migration completed with {{count}} warnings. Restart the project instance, sign in again, and check the data.",
+        "completed": "Migration completed. Restart the project instance, sign in again, and check the data.",
+        "taskFailed": "Migration task failed. Check Task Center for details.",
+        "fileRequired": "Choose a backup.zip or SQLite database file first",
+        "confirmRequired": "Confirm that this import will overwrite current instance data first",
+        "started": "Migration task started. You can track progress in the lower-right progress panel or Task Center.",
+        "startFailed": "Failed to start migration task"
+      }
+    },
+    "cloudflareTunnel": {
+      "subheader": "Connect the current SublinkPro instance to Cloudflare Zero Trust Tunnel through local cloudflared.",
+      "alerts": {
+        "setup": "Create a remotely-managed Tunnel in Cloudflare Zero Trust first, then paste the token from the install command. The system calls the installed cloudflared and passes the token internally so it is not exposed in process arguments.",
+        "notInstalledPrefix": "cloudflared was not detected in the current runtime. The official Docker image includes cloudflared; non-Docker deployments must install cloudflared first and make sure the command is available on PATH.",
+        "installGuide": "View this project's installation guide",
+        "sentenceEnd": "."
+      },
+      "status": {
+        "title": "Runtime status",
+        "installed": "cloudflared installed",
+        "notInstalled": "cloudflared not installed",
+        "running": "Running",
+        "stopped": "Not running",
+        "autoEnabled": "Auto-start enabled",
+        "autoDisabled": "Auto-start disabled",
+        "tokenSaved": "Saved token: {{token}}",
+        "tokenMissing": "No token saved",
+        "command": "Start command: {{command}}",
+        "path": "cloudflared path: {{path}}",
+        "version": "cloudflared version: {{version}}",
+        "lastMessage": "Latest message: {{message}}",
+        "lastError": "Runtime log: {{message}}"
+      },
+      "form": {
+        "autoConnect": "Connect Tunnel automatically when the service starts",
+        "noAutoConnect": "Do not connect Tunnel automatically",
+        "tokenPlaceholderSaved": "Leave blank to keep using the saved token",
+        "tokenPlaceholderNew": "Paste the token from the cloudflared service install command",
+        "tokenHelperPrefix": "The token is encrypted when saved or started. It comes from the last segment of the Cloudflare Zero Trust Tunnel install command; see",
+        "tokenGuide": "token guide"
+      },
+      "actions": {
+        "refreshStatus": "Refresh status",
+        "save": "Save configuration",
+        "saving": "Saving...",
+        "start": "Start cloudflared",
+        "starting": "Starting...",
+        "stop": "Stop cloudflared",
+        "stopping": "Stopping...",
+        "removeToken": "Clear token"
+      },
+      "messages": {
+        "loadFailed": "Failed to load Cloudflare Tunnel status: {{message}}",
+        "saved": "Cloudflare Tunnel configuration saved",
+        "saveFailed": "Save failed: {{message}}",
+        "started": "cloudflared started",
+        "startFailed": "Start failed: {{message}}",
+        "stopped": "cloudflared stopped",
+        "stopFailed": "Stop failed: {{message}}",
+        "tokenRemoved": "Cloudflare Tunnel token cleared",
+        "removeFailed": "Clear failed: {{message}}"
+      }
+    }
+  },
+  "errorPage": {
+    "401": {
+      "title": "Authorization required",
+      "description": "You need to sign in before accessing this page. Sign in to your account or contact an administrator for access."
+    },
+    "403": {
+      "title": "Access forbidden",
+      "description": "You do not have permission to access this resource. Contact an administrator if you think this is a mistake."
+    },
+    "404": {
+      "title": "Page not found",
+      "description": "The page you requested seems to be lost in the digital universe. Check the URL or return home to continue.",
+      "footer": "Some paths still lead into the unknown..."
+    },
+    "500": {
+      "title": "Server error",
+      "description": "The server encountered a problem. Please try again later."
+    },
+    "503": {
+      "title": "Service under maintenance",
+      "description": "The system is being maintained and should be back soon. Thank you for your patience."
+    },
+    "default": {
+      "title": "Something went wrong",
+      "description": "The system encountered a problem. Try again later or contact an administrator."
+    },
+    "actions": {
+      "home": "Back home",
+      "refresh": "Refresh page",
+      "back": "Go back"
+    }
+  },
+  "webhooks": {
+    "title": "Webhook Management",
+    "description": "Centrally manage multiple notification targets. Each Webhook can have its own method, event scope, and can be independently tested after saving.",
+    "splitAlert": "You can split different event scopes for different notification channels, such as errors, subscription updates, or security notifications. Test requests are not affected by event selection.",
+    "createWebhook": "Add Webhook",
+    "editWebhook": "Edit Webhook",
+    "deleteWebhook": "Delete Webhook",
+    "deleteConfirm": "Are you sure you want to delete {{name}}? This action cannot be undone.",
+    "confirmDelete": "Confirm Delete",
+    "totalWebhooks": "Total Webhooks",
+    "enabledCount": "Enabled",
+    "optionalEvents": "Available Events",
+    "emptyTitle": "No Webhooks configured yet. It is recommended to create separate receiving URLs by notification purpose for easier maintenance.",
+    "createNow": "Create Now",
+    "statusEnabled": "Enabled",
+    "statusDisabled": "Disabled",
+    "eventsCount": "{{count}} events",
+    "noEventsAlert": "No automatic trigger events are selected. This Webhook will not receive business notifications automatically.",
+    "headersLabel": "Headers: ",
+    "headersConfigured": "Configured",
+    "headersUnconfigured": "Not configured",
+    "bodyLabel": "Body: ",
+    "bodyConfigured": "Template configured",
+    "bodyUnconfigured": "Using default empty content",
+    "lastUpdated": "Last Updated: ",
+    "lastTested": "Last Tested: ",
+    "switchEnabled": "Notifications enabled",
+    "switchDisabled": "Notifications disabled",
+    "edit": "Edit",
+    "test": "Send Test",
+    "delete": "Delete",
+    "unrecorded": "Not recorded",
+    "defaultName": "Webhook {{index}}",
+    "noUrl": "No URL configured",
+    "dialog": {
+      "nameLabel": "Webhook Name",
+      "namePlaceholder": "e.g., Error Alerts",
+      "nameHelperText": "Optional. Default name will be shown if left blank.",
+      "enableNow": "Enable immediately after saving",
+      "enableLater": "Save as disabled initially",
+      "urlLabel": "Webhook URL",
+      "urlHelperText": "Template variables are supported in URL, e.g., {{title}}, {{message}}, {{event}}.",
+      "methodLabel": "Request Method",
+      "contentTypeLabel": "Content-Type",
+      "headersInputLabel": "Headers (JSON, optional)",
+      "headersHelperText": "Enter JSON headers, useful for authentication or channel identification.",
+      "bodyInputLabel": "Body Template",
+      "bodyHelperText": "When Content-Type is JSON, it is recommended to enter valid JSON.",
+      "variablesAlert": "Supported variables: {{variables}}",
+      "eventSelectorDesc": "Select business events to automatically trigger this Webhook. Test requests will not be affected by this selection.",
+      "save": "Save Changes",
+      "create": "Create Webhook",
+      "infoAlert": "Using separate names to distinguish notification channels (e.g., \"Error Alerts\", \"Security Notifications\") is recommended. You can send test messages from the list after saving."
+    },
+    "messages": {
+      "fetchFailed": "Failed to fetch Webhooks",
+      "urlRequired": "Please enter Webhook URL",
+      "headersInvalid": "Headers must be valid JSON",
+      "bodyInvalid": "JSON body format is invalid",
+      "created": "Webhook created successfully",
+      "updated": "Webhook updated successfully",
+      "saveFailed": "Failed to save Webhook",
+      "deleted": "Webhook deleted successfully",
+      "deleteFailed": "Failed to delete Webhook",
+      "enabled": "Webhook enabled",
+      "disabled": "Webhook disabled",
+      "toggleFailed": "Failed to update enabled status",
+      "testSuccess": "Webhook test sent successfully",
+      "testFailed": "Webhook test failed"
+    }
+  },
+  "dashboard": {
+    "nodeMap": {
+      "localRegion": "Local Region",
+      "nodeCount": "Node Count",
+      "globalDistribution": "Global Node Distribution",
+      "dataReference": "Based on retrieved landing IP data",
+      "coveredRegions": "Covered Regions",
+      "unknownRegions": "Unknown Regions",
+      "unmatchedCoordinates": "Unmatched coordinates",
+      "initializing": "Initializing map..."
+    },
+    "default": {
+      "greeting": {
+        "morning": "Good morning",
+        "morningSub": "A new day has begun",
+        "lateMorning": "Good morning",
+        "lateMorningSub": "Energetic morning",
+        "noon": "Good noon",
+        "noonSub": "Remember to take a break",
+        "afternoon": "Good afternoon",
+        "afternoonSub": "Keep it up",
+        "evening": "Good evening",
+        "eveningSub": "Hard work today",
+        "night": "Late night",
+        "nightSub": "Take a rest",
+        "welcome": "Welcome to",
+        "system": "Subscription Management System,"
+      },
+      "stats": {
+        "airportCount": "Total Airports",
+        "airportUsageSub": "Usage fetching enabled",
+        "nodeTotal": "Node Statistics",
+        "totalNodes": "Total Nodes",
+        "delayPass": "Delay Passed",
+        "speedPass": "Speed Passed",
+        "fastestSpeed": "Fastest Speed",
+        "lowestDelay": "Lowest Delay",
+        "noData": "No Data",
+        "running": "Running",
+        "copied": "Node link copied to clipboard",
+        "copyFailed": "Copy failed"
+      },
+      "airports": {
+        "usageOverview": "Airport Usage Overview",
+        "airportCount": "Airports",
+        "globalUsage": "Global Usage",
+        "recentlyExpiring": "Expiring Soon",
+        "noExpireInfo": "No expiry info",
+        "lowUsageWarning": "Low Usage Warning",
+        "allSufficient": "All airports have sufficient usage",
+        "remain": "Remain"
+      },
+      "charts": {
+        "countryDistribution": "Node Country Distribution",
+        "countryTooltip": "Grouped by node landing country, comparing real region distribution; unknown nodes shown separately.",
+        "regions": "Regions",
+        "unknownNodes": "Unknown Nodes",
+        "unknownCountryDesc": "Country not fetched or node invalid, not included in comparison",
+        "protocolDistribution": "Node Protocol Distribution",
+        "protocolTooltip": "Grouped by protocol, for quick structure assessment.",
+        "protocols": "Protocols",
+        "tagStats": "Tag Statistics",
+        "tagTooltip": "Shows most hit tags to identify rule coverage.",
+        "tags": "Tags",
+        "groupStats": "Group Statistics",
+        "groupTooltip": "Aggregated by node groups to see main structure.",
+        "groups": "Groups",
+        "sourceStats": "Source Statistics",
+        "sourceTooltip": "Shows main sources to identify upstream contribution.",
+        "sources": "Sources",
+        "qualityStats": "Quality Status Statistics",
+        "qualityTooltip": "Success results can be used for IP and fraud score breakdown.",
+        "qualityAnalyzable": "Analyzable",
+        "ipQuality": "IP Quality Statistics",
+        "ipQualityTooltip": "Residential/Datacenter and Native/Broadcast are based on complete quality results.",
+        "fullResults": "Success",
+        "fraudDistribution": "Fraud Score Distribution",
+        "fraudTooltip": "Fraud score distribution for full result nodes; {{count}} nodes without full results are not included.",
+        "noFraudStats": "Not Included in Score",
+        "notFullResults": "Quality status is not success",
+        "others": "Other {{count}} items",
+        "othersDesc": "Includes the remaining {{count}} items, total {{total}} nodes",
+        "otherExpand": "Others (Expand)",
+        "expand": "Expand",
+        "collapse": "Collapse",
+        "availableIp": "Available IPs",
+        "nodes": "Nodes",
+        "tagItem": "Tag {{index}}",
+        "emptyCountry": "No country stats data",
+        "emptyProtocol": "No protocol stats data",
+        "emptyTag": "No tag stats data",
+        "emptyGroup": "No group stats data",
+        "emptySource": "No source stats data",
+        "emptyQuality": "No quality status data",
+        "emptyFraud": "No fraud score data",
+        "emptyIp": "No IP quality stats data"
+      },
+      "ipQuality": {
+        "residential": "Residential Properties",
+        "housing": "Residential IP",
+        "datacenter": "Datacenter IP",
+        "ipType": "IP Type",
+        "native": "Native IP",
+        "broadcast": "Broadcast IP",
+        "others": "Other Counts",
+        "othersDesc": "Not complete results, excluded from detailed IP checks"
+      },
+      "releases": {
+        "title": "Changelog",
+        "refresh": "Refresh",
+        "viewGithub": "View on GitHub",
+        "noDescription": "No release notes",
+        "noReleases": "No changelog available",
+        "networkError": "Please check your network or try again later"
+      },
+      "star": {
+        "like": "Like this project?",
+        "desc": "If you find it useful, please give us a Star! It's the motivation that keeps us moving forward.",
+        "feedback": "Feedback",
+        "starCount": "Star {{count}}"
+      },
+      "qualityStatus": {
+        "success": "Success",
+        "partial": "Partial",
+        "failed": "Failed",
+        "disabled": "Disabled",
+        "untested": "Untested"
+      }
+    }
+  },
+  "nodes": {
+    "common": {
+      "unknownNode": "Unknown node"
+    },
+    "page": {
+      "title": "Node Management",
+      "actions": {
+        "addMore": "Add node / more actions",
+        "addNode": "Add node",
+        "airports": "Airport Management",
+        "airportsShort": "Airports",
+        "checkSettings": "Check Settings",
+        "batchCheck": "Batch Check"
+      },
+      "confirm": {
+        "deleteTitle": "Delete Node",
+        "deleteOne": "Delete node \"{{name}}\"?",
+        "batchDeleteTitle": "Batch Delete",
+        "batchDelete": "Delete the selected {{count}} nodes?"
+      },
+      "messages": {
+        "loadFailed": "Failed to load node list",
+        "deleteSuccess": "Deleted successfully",
+        "deleteFailed": "Delete failed",
+        "selectDeleteRequired": "Select nodes to delete",
+        "batchDeleteSuccess": "Deleted {{count}} nodes",
+        "batchDeleteFailed": "Batch delete failed",
+        "selectModifyRequired": "Select nodes to modify",
+        "batchGroupSuccess": "Changed group for {{count}} nodes",
+        "batchGroupFailed": "Failed to change group",
+        "batchDialerProxySuccess": "Changed dialer proxy for {{count}} nodes",
+        "batchDialerProxyFailed": "Failed to change dialer proxy",
+        "batchSourceSuccess": "Changed source for {{count}} nodes",
+        "batchSourceFailed": "Failed to change source",
+        "batchCountrySuccess": "Changed country code for {{count}} nodes",
+        "batchCountryFailed": "Failed to change country code",
+        "selectTagRequired": "Select nodes to set tags",
+        "batchTagSuccess": "Set tags for {{count}} nodes",
+        "batchTagFailed": "Failed to set tags",
+        "selectRemoveTagRequired": "Select nodes to remove tags",
+        "batchRemoveTagSuccess": "Removed tags from {{count}} nodes",
+        "batchRemoveTagFailed": "Failed to remove tags",
+        "nodeLinkRequired": "Enter node links",
+        "updateSuccess": "Updated successfully",
+        "updateFailed": "Update failed",
+        "addSuccess": "Added successfully",
+        "addFailed": "Add failed",
+        "speedConfigMoved": "Speed test configuration has moved to check strategy management",
+        "speedTaskStarted": "Speed test task started in the background. Refresh later to view results.",
+        "speedTaskFailed": "Failed to start speed test task",
+        "selectCheckRequired": "Select nodes to check",
+        "selectedAll": "Selected all {{count}} matching nodes"
+      }
+    },
+    "dialog": {
+      "addTitle": "Add Node",
+      "editTitle": "Edit Node",
+      "fields": {
+        "link": "Node link",
+        "linkPlaceholder": "Supports proxy links such as vmess://, vless://, wireguard://, WireGuard standard configuration files containing [Interface] and [Peer], Clash YAML configuration containing proxies, and Base64 subscription links. Use new lines for multiple entries.",
+        "remarkName": "Remark name",
+        "remarkNameHelper": "Custom remarks are saved in the Name field and will not be overwritten by airport updates.",
+        "nameMode": "Effective name",
+        "nameModeHelper": "Controls which name subscription output, rename rules, scripts, and chain proxy use.",
+        "nameModeLink": "Use original name",
+        "nameModeRemark": "Use remark name",
+        "nameModeNotice": "To restore the original airport name, switch to “Use original name”. The remark is kept and can be switched back later.",
+        "dialerProxy": "Dialer proxy node or policy group name",
+        "dialerProxyPlaceholder": "Select or enter a node name / policy group name",
+        "dialerProxyHelper": "Only available with Clash-Meta core. Leave blank to disable dialer proxy.",
+        "group": "Group",
+        "groupPlaceholder": "Select or enter a group name",
+        "tags": "Tags",
+        "tagsPlaceholder": "Select tags to set"
+      }
+    },
+    "speedTest": {
+      "title": "Speed test settings",
+      "runNowTooltip": "Start a speed test immediately with the current configuration",
+      "sections": {
+        "schedule": "Scheduled speed test",
+        "mode": "Speed test mode",
+        "performance": "Performance parameters",
+        "scope": "Speed test scope",
+        "traffic": "Traffic statistics"
+      },
+      "schedule": {
+        "enable": "Enable automatic speed test",
+        "disableDescription": "Turning this off stops automatic speed test tasks from running on schedule",
+        "cronLabel": "Scheduled speed test settings"
+      },
+      "mode": {
+        "label": "Speed test mode",
+        "helper": {
+          "mihomo": "Two-stage test: first test latency concurrently, then test download speed with low concurrency",
+          "tcp": "Tests latency only. Faster and suitable for quickly filtering usable nodes"
+        },
+        "options": {
+          "tcp": "Latency test only (faster)",
+          "mihomo": "Latency + download speed test"
+        }
+      },
+      "fields": {
+        "downloadUrl": "Download speed test URL",
+        "latencyUrl": "Latency test URL",
+        "latencyStageOneUrl": "Latency test URL (stage one)",
+        "timeout": "Timeout"
+      },
+      "placeholders": {
+        "downloadUrl": "Select or enter a download speed test URL",
+        "latencyUrl": "Select or enter a 204 speed test URL",
+        "latencyStageOneUrl": "Leave blank to use the speed test URL"
+      },
+      "units": {
+        "seconds": "sec",
+        "milliseconds": "ms"
+      },
+      "speedRecord": {
+        "label": "Speed record mode",
+        "options": {
+          "average": "Average speed (recommended)",
+          "peak": "Peak speed"
+        },
+        "peakSampleInterval": "Peak sample interval",
+        "peakSampleHelper": "Sample interval range: {{min}}-{{max}} ms"
+      },
+      "landingIp": {
+        "detectCountry": "Detect landing IP country",
+        "detectCountryHint": "(also fetch the node exit country during speed test)",
+        "queryInterface": "IP query interface",
+        "options": {
+          "ipifyRecommended": "ipify.org (recommended)",
+          "ipSb": "ip.sb",
+          "ifconfigMe": "ifconfig.me",
+          "icanhazip": "icanhazip.com",
+          "ipinfo": "ipinfo.io"
+        }
+      },
+      "urlOptions": {
+        "cloudflareCp": "Cloudflare (cp.cloudflare.com)",
+        "appleCaptive": "Apple (captive.apple.com)",
+        "gstatic": "Gstatic (www.gstatic.com)",
+        "cloudflare1mb": "1MB (Cloudflare)",
+        "cloudflare3mb": "3MB (Cloudflare)",
+        "cloudflare5mb": "5MB (Cloudflare)",
+        "cloudflare10mb": "10MB (Cloudflare)",
+        "cloudflare50mb": "50MB (Cloudflare)",
+        "cloudflare100mb": "100MB (Cloudflare)",
+        "cloudflare204Recommended": "Cloudflare 204 (recommended)",
+        "apple204": "Apple 204",
+        "gstatic204": "Gstatic 204"
+      },
+      "handshake": {
+        "label": "Include handshake time in latency",
+        "enabledStrong": "Enabled (recommended)",
+        "enabledText": ": Measures complete connection time, including TCP/TLS/proxy protocol handshakes.",
+        "enabledDetail": "Reflects the real usage experience because every request needs a handshake.",
+        "disabledStrong": "Disabled",
+        "disabledText": ": Warms up the connection first, then measures pure transfer latency.",
+        "disabledDetail": "Suitable for precisely evaluating network route quality (excluding handshake overhead). If warm-up fails, the node is considered unavailable."
+      },
+      "concurrency": {
+        "latency": "Latency test concurrency",
+        "speed": "Speed test concurrency",
+        "auto": "Auto",
+        "helper": "0=smart dynamic"
+      },
+      "scope": {
+        "helper": "Group priority is higher than tags: when groups are selected, filter by group first and then by tag; when only tags are selected, filter directly by tag; when neither is selected, test all nodes",
+        "groups": "Speed test groups",
+        "groupsPlaceholder": "Leave blank to test all groups",
+        "tags": "Speed test tags",
+        "tagsPlaceholder": "Leave blank to skip tag filtering"
+      },
+      "traffic": {
+        "byGroup": "By group",
+        "bySource": "By source",
+        "byNode": "By node",
+        "largeData": "(large data volume)",
+        "warning": "Per-node statistics record traffic usage for each node. When there are over ten thousand nodes, this adds about 1-2MB of storage usage"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "save": "Save settings"
+      }
+    },
+    "details": {
+      "currentRemarkName": "Currently using remark name",
+      "currentOriginalName": "Currently using original name",
+      "nameHints": {
+        "original": " · Original: {{name}}",
+        "remark": " · Remark: {{name}}"
+      },
+      "metrics": {
+        "delay": "Delay",
+        "speed": "Speed"
+      },
+      "nameSettings": {
+        "title": "Name settings",
+        "effectiveName": "Actual name: {{name}}",
+        "originalName": "Original name: {{name}}",
+        "remarkName": "Remark name: {{name}}"
+      },
+      "labels": {
+        "source": "Source",
+        "dialerProxy": "Dialer proxy",
+        "tags": "Tags",
+        "countryRegion": "Country/Region",
+        "landingIP": "Landing IP",
+        "ipType": "IP type",
+        "residential": "Residential attribute",
+        "qualityStatus": "Quality status",
+        "fraudScore": "Fraud score",
+        "updatedAt": "Updated at"
+      },
+      "values": {
+        "manualAdd": "Manual add"
+      },
+      "rawProtocolInfo": "Raw protocol information",
+      "viewIpDetails": "Click to view IP details",
+      "unlockCheck": "Unlock check",
+      "recentCheck": "Recent check: {{time}}",
+      "noUnlockResults": "No unlock results",
+      "actions": {
+        "runNow": "Check now",
+        "copyLink": "Copy link",
+        "edit": "Edit",
+        "delete": "Delete"
+      }
+    },
+    "rawInfo": {
+      "groups": {
+        "basic": "Basic information",
+        "auth": "Authentication",
+        "transport": "Transport settings",
+        "tls": "TLS/Security",
+        "advanced": "Advanced settings",
+        "other": "Other settings"
+      },
+      "selectPlaceholder": "Please select",
+      "fieldCount": "{{count}} fields",
+      "viewMode": "View mode",
+      "editMode": "Edit mode",
+      "unavailable": "Unable to parse node information",
+      "messages": {
+        "parseFailed": "Failed to parse node information"
+      }
+    },
+    "unlock": {
+      "notSelected": "Not selected",
+      "regionTooltip": "Region: {{region}}",
+      "reasonTooltip": "Reason: {{reason}}",
+      "taskSummary": "Unlock {{summary}}",
+      "ruleModes": {
+        "or": {
+          "label": "Match any rule",
+          "description": "Multiple rules are matched with OR"
+        },
+        "and": {
+          "label": "Match all rules",
+          "description": "Multiple rules are matched with AND"
+        }
+      },
+      "status": {
+        "available": {
+          "label": "Unlocked",
+          "short": "Unlocked",
+          "description": "Available normally"
+        },
+        "partial": {
+          "label": "Partially available",
+          "short": "Partial",
+          "description": "Only some capabilities are available"
+        },
+        "reachable": {
+          "label": "Reachable",
+          "short": "Reachable",
+          "description": "Reachable, but not necessarily fully available"
+        },
+        "restricted": {
+          "label": "Restricted",
+          "short": "Restricted",
+          "description": "The current region or exit is restricted"
+        },
+        "unsupported": {
+          "label": "Unsupported",
+          "short": "Unsupported",
+          "description": "The current region is outside the officially supported range"
+        },
+        "unknown": {
+          "label": "Unknown",
+          "short": "Unknown",
+          "description": "The result cannot be determined reliably"
+        },
+        "error": {
+          "label": "Error",
+          "short": "Error",
+          "description": "This check encountered an error"
+        },
+        "untested": {
+          "label": "Untested",
+          "short": "Untested",
+          "description": "No check has been run yet"
+        },
+        "checking": {
+          "label": "Checking",
+          "short": "Checking"
+        },
+        "timeout": {
+          "label": "Timeout",
+          "short": "Timeout"
+        },
+        "unavailable": {
+          "label": "Unavailable",
+          "short": "Unavailable"
+        }
+      },
+      "reasons": {
+        "ip_banned": "IP banned",
+        "unsupported_country": "Unsupported country",
+        "region_restricted": "Region restricted",
+        "not_available": "Not available",
+        "not_supported": "Not supported",
+        "timeout": "Check timed out",
+        "network_error": "Network error"
+      }
+    },
+    "mobile": {
+      "empty": "No nodes yet",
+      "unknownCountry": "🏳️ Unknown",
+      "originalName": "Original: {{name}}",
+      "remarkName": "Remark: {{name}}",
+      "groupTooltip": "Group: {{group}}",
+      "sourceTooltip": "Source: {{source}}",
+      "fraudScoreLabel": "Score {{score}}"
+    },
+    "protocol": {
+      "tooltip": "Protocol: {{protocol}}"
+    },
+    "batchSource": {
+      "title": "Batch Edit Source",
+      "description": "Will set the same source for the {{count}} selected nodes",
+      "label": "Source Name",
+      "placeholder": "Enter or select a source name",
+      "hint": "Hint: Leave blank to set as manual addition (manual)",
+      "confirm": "Confirm Edit"
+    },
+    "nodeCheckProfiles": {
+      "neverRun": "Never run",
+      "title": "Check Strategy Management",
+      "new": "New",
+      "empty": "No check strategies yet",
+      "description": "Create check strategies to test node latency and speed automatically or manually",
+      "createFirst": "Create first strategy",
+      "confirmDelete": "Delete strategy \"{{name}}\"?",
+      "runNow": "Run now",
+      "edit": "Edit",
+      "delete": "Delete",
+      "allGroups": "All groups",
+      "timeout": "Timeout: {{seconds}}s",
+      "lastRun": "Last run: {{time}}",
+      "scope": "Scope: {{groups}} {{tags}}",
+      "scopeTags": "| Tags: {{tags}}",
+      "unlockProviders": "Unlock Provider: {{providers}}",
+      "mode": {
+        "full": "Delay + speed",
+        "delayOnly": "Delay only"
+      },
+      "detect": {
+        "country": "Country",
+        "quality": "Quality",
+        "unlock": "Unlock{{suffix}}"
+      },
+      "schedule": {
+        "enabled": "Schedule enabled",
+        "disabled": "Schedule disabled",
+        "next": "Next: {{time}}"
+      },
+      "messages": {
+        "loadFailed": "Failed to load strategy list",
+        "enabled": "Scheduled checks enabled",
+        "disabled": "Scheduled checks disabled",
+        "operationFailed": "Operation failed",
+        "deleteSuccess": "Deleted successfully",
+        "deleteFailed": "Delete failed",
+        "started": "Check task started",
+        "executeFailed": "Execution failed",
+        "updateSuccess": "Updated successfully",
+        "createSuccess": "Created successfully"
+      },
+      "form": {
+        "editTitle": "Edit Check Strategy",
+        "createTitle": "New Check Strategy",
+        "name": "Strategy name",
+        "namePlaceholder": "Example: Daily full check",
+        "scheduleTitle": "Scheduled check",
+        "enableSchedule": "Enable scheduled check",
+        "cronExpression": "Cron expression",
+        "modeTitle": "Check mode",
+        "mode": "Check mode",
+        "modeHelper": {
+          "full": "Two-stage test: first test latency concurrently, then test download speed with lower concurrency",
+          "delayOnly": "Latency only. Faster and suitable for quickly filtering available nodes"
+        },
+        "modeOptions": {
+          "tcp": "Latency only (faster)",
+          "mihomo": "Latency + download speed test"
+        },
+        "downloadTestUrl": "Download test URL",
+        "delayTestUrl": "Latency test URL",
+        "downloadTestUrlPlaceholder": "Select or enter a download test URL",
+        "delayTestUrlPlaceholder": "Select or enter a 204 latency test URL",
+        "latencyStageUrl": "Latency test URL (stage 1)",
+        "latencyStageUrlPlaceholder": "Leave blank to use the speed test URL",
+        "timeout": "Timeout",
+        "units": {
+          "seconds": "s",
+          "milliseconds": "ms"
+        },
+        "speedRecordMode": "Speed record mode",
+        "speedRecordOptions": {
+          "average": "Average speed (recommended)",
+          "peak": "Peak speed"
+        },
+        "peakSampleInterval": "Peak sample interval",
+        "peakSampleHelper": "Sample interval range: 50-200 ms",
+        "detectCountry": "Detect landing IP country",
+        "detectCountryHint": "(also fetch the node exit country during checks)",
+        "ipQueryUrl": "IP query endpoint",
+        "detectQuality": "IP quality check",
+        "detectQualityHint": "(try IPv4 first, then fall back to IPv6; IPv6 may only return partial risk information)",
+        "qualityCheckUrl": "Quality check endpoint",
+        "qualityCheckUrlPlaceholder": "Select or enter a quality check endpoint",
+        "detectUnlock": "Unlock check",
+        "detectUnlockHint": "(save node unlock results by Provider)",
+        "unlockWarning": "Enabling unlock checks can significantly slow down the whole batch. Enable it only when filtering streaming or AI availability regions.",
+        "unlockProvider": "Unlock Provider",
+        "unlockProviderPlaceholder": "Search and select Providers. Leave blank to use the backend defaults",
+        "unlockProviderLoading": "Loading available Providers…",
+        "unlockProviderHelper": "You can select multiple items continuously without reopening the dropdown each time",
+        "preserveSpeedResult": "Preserve speed test result",
+        "preserveSpeedResultHint": "(latency checks will not overwrite the last speed result)",
+        "performanceTitle": "Performance parameters",
+        "includeHandshake": "Include handshake time in latency",
+        "handshake": {
+          "enabledTitle": "Enabled (recommended)",
+          "enabledDesc": ": measure full connection time, including TCP/TLS/proxy protocol handshakes.",
+          "enabledDetail": "Reflects real usage because each request needs a handshake.",
+          "disabledTitle": "Disabled",
+          "disabledDesc": ": warm up the connection first, then measure pure transfer latency.",
+          "disabledDetail": "Useful for evaluating route quality precisely by excluding handshake overhead. If warm-up fails, the node is treated as unavailable."
+        },
+        "latencyConcurrency": "Latency concurrency",
+        "speedConcurrency": "Speed concurrency",
+        "auto": "Auto",
+        "dynamicHelper": "0 = smart dynamic",
+        "scopeTitle": "Check scope",
+        "scopeHelper": "Groups have higher priority than tags: selected groups are filtered first, then tags; tag-only selection filters by tags directly; leaving both empty checks all nodes",
+        "groups": "Check groups",
+        "groupsPlaceholder": "Leave blank to check all groups",
+        "tags": "Check tags",
+        "tagsPlaceholder": "Leave blank to skip tag filtering",
+        "trafficTitle": "Traffic statistics",
+        "trafficByGroup": "By group",
+        "trafficBySource": "By source",
+        "trafficByNode": "By node",
+        "largeData": "(large data)",
+        "trafficByNodeWarning": "⚠️ Per-node traffic statistics record each node's traffic usage. With over ten thousand nodes, storage usage may increase by about 1-2 MB.",
+        "saveSettings": "Save settings"
+      }
+    },
+    "batch": {
+      "selectAll": "Select all",
+      "selectedCount": "{{count}} nodes selected",
+      "delete": "Batch delete",
+      "changeGroup": "Change group",
+      "changeSource": "Change source",
+      "changeCountry": "Change country",
+      "changeDialerProxy": "Change dialer proxy",
+      "setTags": "Set tags",
+      "removeTags": "Remove tags",
+      "groupDialog": {
+        "title": "Batch Change Group",
+        "description": "Set the same group for the selected {{count}} nodes",
+        "fieldLabel": "Group name",
+        "placeholder": "Enter or select a group name; leave blank to clear group",
+        "helper": "Tip: leave blank to clear group settings from the selected nodes",
+        "confirm": "Confirm change"
+      },
+      "countryDialog": {
+        "title": "Batch Change Country/Region",
+        "description": "Set the same country code for the selected {{count}} nodes",
+        "fieldLabel": "Country code",
+        "placeholder": "Enter or select a country code, such as US, HK, JP",
+        "helper": "Tip: leave blank to clear the country marker from selected nodes. Country codes use the ISO 3166-1 alpha-2 standard, such as US, CN, JP.",
+        "confirm": "Confirm change",
+        "countries": {
+          "hk": "Hong Kong",
+          "tw": "Taiwan",
+          "sg": "Singapore",
+          "jp": "Japan",
+          "kr": "South Korea",
+          "us": "United States",
+          "gb": "United Kingdom",
+          "de": "Germany",
+          "fr": "France",
+          "nl": "Netherlands",
+          "au": "Australia",
+          "ca": "Canada",
+          "ru": "Russia",
+          "in": "India",
+          "br": "Brazil",
+          "tr": "Turkey",
+          "ar": "Argentina",
+          "ph": "Philippines",
+          "my": "Malaysia",
+          "th": "Thailand",
+          "vn": "Vietnam",
+          "id": "Indonesia"
+        }
+      },
+      "tagDialog": {
+        "title": "Batch Set Tags",
+        "description": "Set tags for the selected {{count}} nodes. Existing tags will be overwritten.",
+        "fieldLabel": "Select tags",
+        "placeholder": "Select tags to set",
+        "helper": "Tip: leave empty to clear all tags from the selected nodes",
+        "confirm": "Confirm set"
+      },
+      "removeTagDialog": {
+        "title": "Batch Remove Tags",
+        "description": "Remove the following tags from the selected {{count}} nodes. Other tags will be kept.",
+        "fieldLabel": "Select tags to remove",
+        "placeholder": "Select tags",
+        "helper": "Tip: only the selected tags will be removed; other node tags will be kept",
+        "confirm": "Confirm remove"
+      },
+      "dialerProxyDialog": {
+        "title": "Batch Change Dialer Proxy",
+        "description": "Set the same dialer proxy for the selected {{count}} nodes",
+        "fieldLabel": "Dialer proxy node",
+        "placeholder": "Select or enter a proxy node or policy group name; leave blank to clear dialer proxy",
+        "helper": "Tip: dialer proxy is used for chain proxy, sending traffic through this node before forwarding. Leave blank to clear dialer proxy settings.",
+        "warning": "Dialer proxy is only available with Clash-Meta core",
+        "confirm": "Confirm change"
+      }
+    },
+    "table": {
+      "remark": "Remark",
+      "protocol": "Protocol",
+      "group": "Group",
+      "source": "Source",
+      "tags": "Tags",
+      "country": "Country",
+      "delay": "Delay",
+      "speed": "Speed",
+      "ipFeatures": "IP Features",
+      "actions": "Actions",
+      "originalName": "Original: {{name}}",
+      "remarkName": "Remark: {{name}}",
+      "ungrouped": "Ungrouped",
+      "manualSource": "Manual",
+      "untested": "Untested",
+      "speedTest": "Test",
+      "copyLink": "Copy link",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "profileSelect": {
+      "title": "Select Check Strategy",
+      "selectedCount": "{{count}} nodes selected",
+      "empty": "No check strategies yet",
+      "create": "Create strategy",
+      "scheduled": "Scheduled",
+      "manage": "Manage strategies",
+      "start": "Start check",
+      "mode": {
+        "full": "Delay + speed",
+        "delayOnly": "Delay only"
+      },
+      "messages": {
+        "started": "Check task started in the background",
+        "executeFailed": "Failed to execute check"
+      }
+    },
+    "filters": {
+      "group": "Group",
+      "ungrouped": "Ungrouped",
+      "searchPlaceholder": "Search node remark or link",
+      "source": "Source",
+      "manualSource": "Manual add",
+      "protocol": "Protocol",
+      "delayStatus": "Delay status",
+      "speedStatus": "Speed status",
+      "maxDelay": "Max delay",
+      "minSpeed": "Min speed",
+      "maxFraudScore": "Max fraud score",
+      "qualityStatus": "Quality status",
+      "residentialType": "Residential attribute",
+      "ipType": "IP type",
+      "countryCode": "Country code",
+      "countryPlaceholder": "Select country",
+      "tags": "Tags",
+      "tagsPlaceholder": "Select tags",
+      "unlock": {
+        "title": "Unlock filter",
+        "summary": "{{count}} rules · {{mode}}",
+        "modeAll": "match all",
+        "modeAny": "match any",
+        "emptySummary": "Collapsed by default. Unlock filtering is disabled when no rules are added.",
+        "description": "Unlock filtering is disabled without rules. Add rules as needed and choose whether all rules or any rule must match.",
+        "relation": "Rule relation",
+        "andHelper": "Multiple rules must all match.",
+        "orHelper": "Any one of the rules can match.",
+        "status": "Status",
+        "keyword": "Keyword",
+        "inactive": "Unlock filtering is currently disabled. Add a rule below to enable it.",
+        "addRule": "Add unlock rule"
+      }
+    }
+  },
+  "subscriptions": {
+    "sort": {
+      "quickSort": "Quick sort",
+      "asc": "Ascending",
+      "desc": "Descending",
+      "selectedCount": "{{count}} selected",
+      "selectedFraction": "{{selected}}/{{total}} selected",
+      "totalHint": "{{count}} items total. Select multiple items to batch sort or move.",
+      "deselectAll": "Deselect all",
+      "groupLabel": "📁 {{name}} (group)",
+      "moveTop": "Move to top",
+      "moveBottom": "Move to bottom",
+      "top": "Top",
+      "bottom": "Bottom",
+      "position": "Position",
+      "moveToPosition": "Move to position",
+      "clearSelection": "Clear selection",
+      "groupSort": "Group sort",
+      "resetting": "Resetting...",
+      "resetSort": "Reset sort",
+      "saving": "Saving...",
+      "saveSort": "Save sort",
+      "groupSortDesc": "Manage airport node output order within the same group. Airports placed earlier also output earlier in subscriptions.",
+      "searchGroup": "Search groups...",
+      "noGroups": "No groups yet",
+      "airportNodeCount": "{{airportCount}} airports · {{nodeCount}} nodes",
+      "selectGroupPrompt": "Select a group on the left to manage airport sorting",
+      "noAirportsInGroup": "No airports in this group",
+      "dragAirportHint": "Drag to adjust airport order. Airports placed earlier also output earlier in subscriptions.",
+      "nodeCount": "{{count}} nodes",
+      "messages": {
+        "loadGroupsFailed": "Failed to load groups",
+        "loadGroupDetailFailed": "Failed to load group details",
+        "saveSuccess": "Saved successfully",
+        "saveFailed": "Save failed",
+        "resetSuccess": "Reset to default order",
+        "resetFailed": "Failed to reset sort order"
+      },
+      "options": {
+        "source": "By source",
+        "name": "By name",
+        "protocol": "By protocol",
+        "delay": "By delay",
+        "speed": "By speed",
+        "country": "By region"
+      }
+    },
+    "rename": {
+      "availableVars": "Available variables (click to add)",
+      "separators": "Separators",
+      "namingRule": "Naming rule (drag to sort)",
+      "clickToAdd": "Click variables and separators above to add them here",
+      "selectTagGroup": "Select tag group",
+      "noTagGroup": "No tag groups yet. Create a tag group in Tag Management first.",
+      "categories": {
+        "basic": "Basic variables",
+        "quality": "Quality variables",
+        "unlock": "Unlock variables"
+      },
+      "vars": {
+        "protocol": "Protocol",
+        "protocolDesc": "Protocol type (VMess/VLESS, etc.)",
+        "country": "Country",
+        "countryDesc": "Landing IP country code",
+        "flag": "Flag",
+        "flagDesc": "Landing IP flag",
+        "name": "Remark",
+        "nameDesc": "System remark name",
+        "linkName": "Original name",
+        "linkNameDesc": "Original node name",
+        "speedIcon": "Speed icon",
+        "speedIconDesc": "Output an icon by speed result (🟢🟡🔴/❌⏱️⛔️)",
+        "speed": "Speed",
+        "speedDesc": "Download speed",
+        "delayIcon": "Delay icon",
+        "delayIconDesc": "Output an icon by delay result (🟢🟡🔴/❌⏱️⛔️)",
+        "delay": "Delay",
+        "delayDesc": "Latency time",
+        "ipType": "IP type",
+        "ipTypeDesc": "IP type (Native IP/Broadcast IP)",
+        "residential": "Residential attribute",
+        "residentialDesc": "Residential attribute (Residential IP/Datacenter IP)",
+        "fraudScoreIcon": "Fraud icon",
+        "fraudScoreIconDesc": "Output a risk icon by fraud score (⚪🟢🟡🟠🔴⚫/⛔️)",
+        "fraudScore": "Fraud score",
+        "fraudScoreDesc": "IP fraud score",
+        "group": "Group",
+        "groupDesc": "Group name",
+        "source": "Source",
+        "sourceDesc": "Node source",
+        "index": "Index",
+        "indexDesc": "Node sequence number",
+        "tags": "Tags",
+        "tagsDesc": "All tags (pipe separated)",
+        "tagGroup": "Tag group",
+        "tagGroupDesc": "Tags in the specified tag group (click to select a tag group)"
+      }
+    },
+    "mobileCard": {
+      "sorting": "Sorting",
+      "nodeCount": "{{count}} nodes",
+      "groupCount": "{{count}} groups",
+      "expandHint": "Tap the header to expand details",
+      "confirmSort": "Confirm sort",
+      "sortNodes": "Sort nodes"
+    },
+    "preview": {
+      "timeout": "Timeout",
+      "error": "Error",
+      "untested": "Untested",
+      "latestExpireTime": "Latest expiration: {{date}}",
+      "title": "Node Preview",
+      "totalCount": "Total {{count}}",
+      "filteredCount": "Filtered {{count}}",
+      "noticeTitle": "Note",
+      "noticeText": "This beta feature is not fully stable yet. Preview data is for reference only. The actual result depends on what the client receives, and some clients do not support every related protocol, so node counts may differ.",
+      "searchPlaceholder": "Search node name, protocol, group, or tag...",
+      "searchResultCount": "{{count}} matching results found",
+      "emptyTitle": "No matching nodes",
+      "emptySearch": "No matching nodes found. Try other search terms.",
+      "emptyFiltered": "No available nodes under the current filter conditions.",
+      "loadMore": "Load more ({{displayed}}/{{total}})",
+      "allLoaded": "All {{count}} nodes loaded",
+      "footerHint": "Showing {{displayed}}/{{total}} nodes · Click a card to view details",
+      "stats": {
+        "title": "Node test statistics",
+        "available": "Available nodes",
+        "noData": "No data",
+        "delayPassed": "Delay passed",
+        "speedPassed": "Speed passed",
+        "lowestDelay": "Lowest delay",
+        "highestSpeed": "Highest speed"
+      }
+    },
+    "nodeTagFilter": {
+      "title": "Node tag filter",
+      "summary": "White {{whitelist}} / black {{blacklist}}",
+      "description": "Reuse node tags to control subscription output, making existing tag rules available for whitelist and blacklist filtering.",
+      "priorityHint": "Filter by node tags. <strong>Blacklist has higher priority than whitelist</strong>: nodes matching blacklist tags are excluded first, then remaining nodes must match whitelist tags to be kept.",
+      "whitelist": "Whitelist tags",
+      "blacklist": "Blacklist tags",
+      "whitelistPlaceholder": "Select whitelist tags (nodes must include one of them)",
+      "blacklistPlaceholder": "Select blacklist tags (nodes with these tags are excluded)",
+      "whitelistHelper": "Nodes must contain at least one whitelist tag to be kept.",
+      "blacklistHelper": "Nodes containing blacklist tags are excluded."
+    },
+    "page": {
+      "title": "Subscription Management",
+      "actions": {
+        "groupSort": "Group sort",
+        "addSubscription": "Add subscription"
+      },
+      "confirm": {
+        "deleteTitle": "Delete Subscription",
+        "deleteOne": "Delete subscription \"{{name}}\"?",
+        "copyTitle": "Copy Subscription",
+        "copyOne": "Copy subscription \"{{name}}\"?"
+      },
+      "messages": {
+        "loadFailed": "Failed to load subscription list",
+        "deleteSuccess": "Deleted successfully",
+        "deleteFailed": "Delete failed",
+        "copySuccess": "Copied successfully",
+        "copyFailed": "Copy failed",
+        "nameRequired": "Enter a subscription name",
+        "updateSuccess": "Updated successfully",
+        "updateFailed": "Update failed",
+        "addSuccess": "Added successfully",
+        "addFailed": "Add failed",
+        "sortModeStarted": "Sort mode started. Drag items or use batch selection.",
+        "sortUpdated": "Sort order updated",
+        "sortSaveFailed": "Failed to save sort order",
+        "sortCancelled": "Sort cancelled",
+        "batchSortSuccess": "Batch sort succeeded",
+        "batchSortFailed": "Batch sort failed",
+        "movedItems": "Moved {{count}} items to position {{position}}"
+      }
+    },
+    "table": {
+      "name": "Subscription Name",
+      "nodesAndGroups": "Nodes / Groups",
+      "createdAt": "Created At",
+      "actions": "Actions",
+      "sorting": "Sorting",
+      "nodeGroupCount": "{{nodes}} nodes, {{groups}} groups",
+      "tooltips": {
+        "preview": "Preview nodes",
+        "copy": "Copy this configuration as a new copy",
+        "share": "Share management",
+        "accessLogs": "Access logs",
+        "chainProxy": "Chain proxy",
+        "sort": "Sort"
+      }
+    },
+    "accessLogs": {
+      "title": "Access Logs",
+      "ip": "IP Address",
+      "region": "Source Region",
+      "visits": "Visits",
+      "lastVisit": "Last Visit",
+      "count": "{{count}} times",
+      "total": "{{count}} records",
+      "unknownSource": "Unknown source",
+      "empty": "No access logs yet"
+    },
+    "conditions": {
+      "title": "Condition Configuration",
+      "field": "Field",
+      "operator": "Operator",
+      "value": "Value",
+      "add": "Add condition",
+      "empty": "No conditions added yet",
+      "logic": {
+        "and": "Match all (AND)",
+        "or": "Match any (OR)"
+      }
+    },
+    "chain": {
+      "dialogTitle": "Chain Proxy Configuration",
+      "description": "Chain proxy rules configure a node's upstream entry proxy. Each landing node matches rules independently in order and uses the first matching rule's outbound configuration.",
+      "overlapHint": "Tip: if different landing nodes need different outbound paths, make sure each rule's target node configuration does not overlap. Use “Specified node” or “By conditions” to define precise target scopes.",
+      "unnamedRule": "Unnamed rule",
+      "confirmDeleteRule": "Delete rule “{{name}}”?",
+      "emptyRules": "No chain proxy rules yet",
+      "emptyRulesDescription": "Chain proxy can configure entry proxies for nodes to relay traffic.",
+      "addRule": "Add rule",
+      "previewFullChain": "Preview full chain",
+      "backToList": "Back to list",
+      "saveRule": "Save rule",
+      "proxyType": "Proxy type",
+      "proxyTypes": {
+        "template_group": "Template proxy group",
+        "custom_group": "Custom proxy group",
+        "dynamic_node": "Dynamic condition node",
+        "specified_node": "Specified node"
+      },
+      "proxyTypeShort": {
+        "template_group": "Template group",
+        "custom_group": "Custom group",
+        "dynamic_node": "Dynamic node",
+        "specified_node": "Specified node"
+      },
+      "proxy": "Proxy",
+      "entry": "Entry",
+      "nodeNumber": "Node #{{id}}",
+      "unconfigured": "Not configured",
+      "configuredConditions": "Configured {{count}}",
+      "conditionCount": "{{count}} conditions",
+      "deleteNode": "Delete this node",
+      "groupName": "Proxy group name",
+      "templateGroupPlaceholder": "Enter a proxy group name from the template",
+      "templateGroupHelper": "Enter an existing proxy group name from the Clash template",
+      "customGroupPlaceholder": "Custom proxy group name",
+      "groupType": "Group type",
+      "testUrl": "Test URL",
+      "testUrlHelper": "URL used to check node availability. Leave blank to use the default.",
+      "intervalSeconds": "Interval (seconds)",
+      "healthCheckInterval": "Health check interval",
+      "toleranceMs": "Tolerance (ms)",
+      "toleranceHelper": "Latency differences within this range are treated as equal",
+      "fallbackThreshold": "Fallback threshold",
+      "loadBalanceStrategy": "Load balancing strategy",
+      "strategies": {
+        "consistentHashing": "Consistent hashing",
+        "roundRobin": "Round robin",
+        "stickySessions": "Sticky sessions"
+      },
+      "nodeFilterConditions": "Node filter conditions",
+      "nodeMatchConditions": "Node match conditions",
+      "selectMode": "Selection mode",
+      "selectModes": {
+        "first": "First match",
+        "random": "Random",
+        "fastest": "Fastest node"
+      },
+      "selectNode": "Select node",
+      "targetNode": "Target node",
+      "targetNodeConfig": "Target node configuration",
+      "targetScopeDescription": "Choose which nodes this rule applies to",
+      "targetTypes": {
+        "all": "All nodes",
+        "specified_node": "Specified node",
+        "conditions": "By conditions"
+      },
+      "noNodeSelected": "No node selected",
+      "targetTooltips": {
+        "specified": "Manually specify one target node",
+        "all": "Apply this rule to all nodes",
+        "conditions": "Filter nodes by conditions"
+      },
+      "selectTargetNode": "Select target node",
+      "searchNodes": "Search nodes...",
+      "targetNodeFilterConditions": "Target node filter conditions",
+      "autoSaved": "Configuration is saved automatically",
+      "entryProxyConfig": "Entry proxy configuration",
+      "middleNodeConfig": "Intermediate node configuration",
+      "middleNodeDialerProxyHint": "All nodes in an intermediate custom proxy group automatically set dialer-proxy to the previous hop",
+      "selectOrInputGroupPlaceholder": "Select or enter a proxy group name",
+      "selectOrInputGroupHelper": "Select from the template or enter a proxy group name manually",
+      "addEntryProxy": "Add entry proxy",
+      "addMiddleProxy": "Add intermediate proxy",
+      "editEntryProxy": "Edit entry proxy",
+      "editMiddleProxy": "Edit intermediate proxy",
+      "mobileDialerProxyHint": "Nodes inside an intermediate group automatically set dialer-proxy",
+      "addProxyNode": "Add proxy node",
+      "maxLevelReached": "Maximum level reached",
+      "levelWarning": "{{count}}-level chain. Latency may be higher.",
+      "currentLevelWarning": "Current {{count}}-level chain. Latency may be higher.",
+      "maxFourLevels": "Maximum 4-level chain reached",
+      "flowHint": "Click nodes to configure them. Hover over a node to quickly delete it.",
+      "emptyEntryProxy": "Click the button above to add entry proxy configuration",
+      "ruleName": "Rule name",
+      "ruleNamePlaceholder": "For example: Hong Kong transit to US",
+      "mobileDescription": "Configure a multi-hop proxy chain: entry → intermediate node → target node",
+      "desktopDescription": "Click “Add proxy node” to build a multi-hop proxy chain, then click nodes to edit. Keep chains within 3 hops when possible.",
+      "preview": {
+        "title": "Chain Preview",
+        "subtitle": "Subscription: {{name}} | Total nodes: {{count}}",
+        "addRuleHint": "Add a rule first",
+        "ruleChainsTab": "Rule chains ({{count}})",
+        "nodeMatchesTab": "Node matches ({{count}})",
+        "canvasHint": "Rules match in order. Each node applies only the first matching rule. Use the mouse wheel to zoom and drag to pan the canvas.",
+        "nodeCount": "{{count}} nodes",
+        "nodeCountParen": "({{count}} nodes)",
+        "covered": "Covered",
+        "effectiveNodes": "Effective {{count}} nodes",
+        "coveredNodes": "{{count}} covered",
+        "user": "User",
+        "landingNode": "Landing node",
+        "internet": "🌐 Internet",
+        "internetPlain": "Internet",
+        "proxyChain": "Proxy chain",
+        "landing": "Landing",
+        "matchedCount": "Matched: {{count}}",
+        "unmatchedCount": "Unmatched: {{count}}",
+        "containsNodes": "Contains nodes",
+        "latency": "Latency",
+        "speed": "Speed",
+        "noNodeInfo": "No node information",
+        "clickToView": "Click to view",
+        "ruleNumber": "Rule {{number}}",
+        "table": {
+          "node": "Node",
+          "matchedRule": "Matched rule",
+          "entryProxy": "Entry proxy"
+        }
+      }
+    },
+    "transfer": {
+      "availableTab": "Available nodes ({{count}})",
+      "selectedTab": "Selected nodes ({{count}})",
+      "availableTitle": "Available nodes",
+      "selectedTitle": "Selected nodes",
+      "searchSelected": "Search selected nodes...",
+      "showingFirst": "Showing first 100/{{total}}",
+      "firstCount": "First 100/{{total}}",
+      "count": "{{count}} nodes",
+      "selectedChip": "{{count}} selected",
+      "addSelected": "Add selected ({{count}})",
+      "removeSelected": "Remove selected ({{count}})",
+      "add": "Add ({{count}})",
+      "remove": "Remove ({{count}})",
+      "addAll": "Add all",
+      "removeAll": "Remove all",
+      "moreHidden": "{{count}} more nodes not shown",
+      "loading": "Loading node list...",
+      "noMatch": "No matching nodes found",
+      "noSelected": "No selected nodes yet"
+    },
+    "clientUrls": {
+      "defaultTitle": "Clients (click QR code to get address)",
+      "defaultChip": "Default",
+      "qrCode": "QR code"
+    },
+    "previewDetails": {
+      "metrics": {
+        "delay": "Delay",
+        "speed": "Speed"
+      },
+      "nameConversion": "Name conversion",
+      "source": "Source",
+      "landingIp": "Landing IP",
+      "tags": "Tags",
+      "previewLink": "Preview link",
+      "originalLink": "Original link",
+      "labels": {
+        "link": "Link",
+        "originalLink": "Original link"
+      },
+      "messages": {
+        "copied": "{{label}} copied"
+      }
+    },
+    "dedup": {
+      "title": "Node deduplication rules",
+      "loading": "Loading configuration...",
+      "description": "Handle duplicate nodes before preview and export. You can deduplicate by a shared field combination or configure fields per protocol.",
+      "commonFieldsHint": "Choose fields used to determine whether nodes are duplicates (multi-field combination):",
+      "protocolFieldsHint": "Configure deduplication fields for each protocol. Protocols without fields are not deduplicated:",
+      "selectedFields": "Selected: {{fields}}",
+      "selectedCount": "{{count}} selected",
+      "applyNotice": "Deduplication rules apply during node preview and subscription output. When selected field values match exactly, only the first node is kept.",
+      "status": {
+        "disabled": "Disabled",
+        "common": "Common {{count}} fields",
+        "protocol": "Protocol {{count}} fields"
+      },
+      "mode": {
+        "label": "Deduplication mode",
+        "none": "Disabled",
+        "common": "Common fields",
+        "protocol": "Per protocol"
+      },
+      "messages": {
+        "loadMetaFailed": "Failed to load metadata"
+      }
+    },
+    "share": {
+      "title": "Share Management - {{name}}",
+      "unnamed": "Unnamed share",
+      "defaultChip": "Default",
+      "cardMeta": "{{expire}} · {{count}} visits",
+      "empty": "No share links yet. Click “Add” to create the first share.",
+      "detailTitle": "Share link",
+      "detailSubtitle": "Choose a client address to copy directly or generate a QR code.",
+      "logsTitle": "Access Logs - {{name}}",
+      "clients": {
+        "auto": "Auto detect"
+      },
+      "actions": {
+        "accessLogs": "Access logs",
+        "refreshToken": "Refresh token"
+      },
+      "expire": {
+        "never": "Never expires",
+        "days": "Expires in {{count}} days",
+        "datetime": "Specific time"
+      },
+      "confirm": {
+        "deleteTitle": "Delete Share",
+        "deleteContent": "Delete share “{{name}}”?",
+        "refreshTitle": "Refresh Token",
+        "refreshContent": "After refreshing the token, old links become invalid. Continue?"
+      },
+      "messages": {
+        "updateSuccess": "Updated successfully",
+        "createSuccess": "Created successfully",
+        "saveFailed": "Save failed",
+        "deleteSuccess": "Deleted successfully",
+        "deleteFailed": "Delete failed",
+        "tokenRefreshed": "Token refreshed",
+        "refreshFailed": "Refresh failed"
+      },
+      "form": {
+        "addTitle": "Add Share",
+        "editTitle": "Edit Share",
+        "name": "Share name",
+        "namePlaceholder": "For example: friend access, temporary share",
+        "token": "Custom token (optional)",
+        "tokenPlaceholder": "Leave blank to generate a random token",
+        "tokenHelper": "Custom tokens are easier to remember. Leave blank to generate a secure random token.",
+        "expirePolicy": "Expiration policy",
+        "expireByDays": "Expire by days",
+        "expireAt": "Expire at specific time",
+        "expireDays": "Expiration days",
+        "expireTime": "Expiration time",
+        "enabled": "Enable this share"
+      }
+    },
+    "form": {
+      "title": {
+        "add": "Add Subscription",
+        "edit": "Edit Subscription"
+      },
+      "sections": {
+        "basic": "Basic Settings",
+        "nodeSelection": "Node Selection",
+        "nodeFilter": "Node Filter",
+        "nodeDeduplication": "Node Deduplication",
+        "nameProcessing": "Node Name Processing",
+        "advanced": "Advanced Settings"
+      },
+      "basic": {
+        "name": "Subscription Name",
+        "clashTemplate": "Clash Template",
+        "clashTemplateNone": "Not selected",
+        "clashTemplateHelper": "No available template detected. Please check if the Clash template exists.",
+        "surgeTemplate": "Surge Template",
+        "surgeTemplateNone": "Not selected",
+        "surgeTemplateHelper": "No available template detected. Please check if the Surge template exists.",
+        "updateInterval": "Update Interval (Hours)",
+        "updateIntervalHelper": "When set to 0, it defaults to 1 day. Currently, besides surge, only a few clash clients support this parameter!",
+        "forceUdp": "Force Enable UDP",
+        "skipCertVerify": "Skip Cert Verification",
+        "replaceHost": "Replace Server Address with Host",
+        "replaceHostTooltip": "Replace node server address with the corresponding IP address based on system Host configuration",
+        "realtimeUsage": "Real-time Usage",
+        "realtimeUsageTooltip": "When enabled, it will fetch the latest usage info (traffic, expiration time, etc.) in real time upon every subscription link access, which increases response time; when disabled, it uses cached data for faster response."
+      },
+      "nodeSelection": {
+        "summary": "{{nodeCount}} nodes / {{groupCount}} groups",
+        "modeLabel": "Selection Mode",
+        "modeManual": "Manual node selection",
+        "modeDynamic": "Dynamic group selection",
+        "modeMixed": "Mixed mode",
+        "modeManualHelper": "Select specific nodes manually. Nodes will not update automatically with group changes.",
+        "modeDynamicHelper": "Select groups to automatically include all their nodes. Nodes will update dynamically with group changes.",
+        "modeMixedHelper": "Supports both manual node selection and dynamic group selection.",
+        "groupSelect": "Select Groups (Dynamic)",
+        "groupOption": "{{name}} ({{count}} nodes)",
+        "nodeGroupFilter": "Group Filter",
+        "nodeGroupAll": "All Groups ({{count}})",
+        "nodeSourceFilter": "Source Filter",
+        "nodeSourceAll": "All Sources",
+        "nodeCountryFilter": "Country Filter",
+        "nodeSearch": "Search nodes"
+      },
+      "nodeFilter": {
+        "activeRules": "{{count}} rules enabled",
+        "maxDelay": "Max Delay",
+        "maxDelayHelper": "Set the latency threshold for filtering nodes. 0 means no limit.",
+        "minSpeed": "Min Speed",
+        "minSpeedHelper": "Set the minimum download speed for filtering nodes. 0 means no limit.",
+        "maxFraudScore": "Max Fraud Score",
+        "maxFraudScoreHelper": "0 means no limit; IP quality check must be executed first.",
+        "qualityStatus": "Quality Status",
+        "qualityStatusHelper": "Can distinguish between complete results, incomplete info, test failed, not enabled, and untested.",
+        "unlockRules": "Unlock Filter Rules",
+        "unlockRulesDesc": "Unlock filtering is not enabled without rules. You can add rules as needed, and set whether multiple rules must all be satisfied or any one is enough.",
+        "ruleRelation": "Rule Relationship",
+        "ruleRelationAnd": "Multiple rules must be met simultaneously, suitable for stricter filtering.",
+        "ruleRelationOr": "Any one of the multiple rules met is sufficient, suitable for combining multiple candidate unlock conditions.",
+        "providerHelper": "e.g. Gemini / YouTube Premium",
+        "status": "Status",
+        "keyword": "Keyword",
+        "keywordHelper": "e.g. US, Available, Claude, Region Restricted",
+        "delete": "Delete",
+        "unlockInactive": "Unlock filtering is currently disabled. Click the button below to add specific rules.",
+        "addUnlockRule": "Add unlock rule",
+        "countryWhitelist": "Landing IP Country Whitelist",
+        "countryWhitelistHelper": "Select from suggestions or press Enter to add; recommend using two-letter country codes like HK/US/JP.",
+        "countryBlacklist": "Landing IP Country Blacklist",
+        "countryBlacklistHelper": "Select from suggestions or press Enter to add; recommend using two-letter country codes like HK/US/JP.",
+        "residential": "Residential Attribute",
+        "all": "All",
+        "residentialIp": "Residential IP",
+        "datacenterIp": "Datacenter IP",
+        "untested": "Untested",
+        "residentialHelper": "Only complete results show residential/datacenter attribute; incomplete info is kept as a separate state.",
+        "ipType": "IP Type",
+        "nativeIp": "Native IP",
+        "broadcastIp": "Broadcast IP",
+        "ipTypeHelper": "Only complete results show native/broadcast attribute; incomplete info won't be misjudged as native or broadcast."
+      },
+      "nodeDeduplication": {
+        "configured": "Configured"
+      },
+      "nameProcessing": {
+        "configured": "Configured",
+        "namingRule": "Node Naming Rule",
+        "builderTooltip": "Visual Builder - Drag and drop variables",
+        "builder": "Builder",
+        "manualTooltip": "Manual input mode",
+        "manual": "Manual",
+        "templateLabel": "Naming Rule Template",
+        "templatePlaceholder": "e.g. [$Protocol]$LinkCountry-$Name",
+        "templateHelper": "Leave blank to use original name, only effective when accessing the subscription link.",
+        "variables": "Available variables:",
+        "varName": "System remark name",
+        "varLinkName": "Original node name",
+        "varLinkCountry": "Landing IP country code",
+        "varSpeed": "Download speed",
+        "varSpeedIcon": "Speed icon (🟢🟡🔴/❌⏱️⛔️)",
+        "varDelay": "Latency",
+        "varDelayIcon": "Latency icon (🟢🟡🔴/❌⏱️⛔️)",
+        "varGroup": "Group name",
+        "varSource": "Source",
+        "varIndex": "Sequence number",
+        "varProtocol": "Protocol type",
+        "varIpType": "IP type (Native/Broadcast)",
+        "varResidential": "Residential attribute (Residential/Datacenter)",
+        "varFraudScore": "Fraud score",
+        "varFraudScoreIcon": "Fraud icon (⚪🟢🟡🟠🔴⚫/⛔️)",
+        "varTags": "All tags (pipe separated)",
+        "varTagGroup": "Tags in specific tag group (e.g. $TagGroup(Name))",
+        "preview": "Preview:"
+      },
+      "advanced": {
+        "configured": "{{count}} configured",
+        "scriptLabel": "Data Processing Script",
+        "scriptHelper": "Scripts run sequentially after querying node data.",
+        "scriptVersion": "Version: {{version}}",
+        "ipBlacklist": "IP Blacklist (higher priority than whitelist), disallow specific IPs",
+        "ipBlacklistHelper": "One IP or CIDR per line",
+        "ipWhitelist": "IP Whitelist, only allow specific IPs",
+        "ipWhitelistHelper": "One IP or CIDR per line"
+      },
+      "actions": {
+        "previewLoading": "Loading...",
+        "previewNode": "Preview Nodes",
+        "close": "Close",
+        "confirm": "Confirm"
+      },
+      "nodes": {
+        "loading": "Loading nodes..."
+      }
+    }
+  },
+  "hosts": {
+    "title": "Host Management",
+    "mode": {
+      "form": "Form mode",
+      "text": "Text mode"
+    },
+    "actions": {
+      "settings": "Module settings",
+      "refresh": "Refresh",
+      "delete": "Delete",
+      "add": "Add",
+      "edit": "Edit",
+      "save": "Save",
+      "saveSync": "Save and sync",
+      "restore": "Restore",
+      "copy": "Copy",
+      "pin": "Pin (pinned hosts are not affected by expiration)",
+      "unpin": "Unpin"
+    },
+    "fields": {
+      "hostname": "Domain",
+      "ip": "IP address",
+      "source": "Source",
+      "remark": "Remark",
+      "status": "Status",
+      "updatedAt": "Updated at",
+      "actions": "Actions"
+    },
+    "searchPlaceholder": "Search domain, IP, or remark...",
+    "total": "Total: {{count}}",
+    "matched": "Found {{count}} matching records",
+    "empty": "No Host records yet. Click \"Add\" to create one.",
+    "noMatch": "No matching results found",
+    "selectAll": "Select all",
+    "updatedAt": "Updated at {{date}}",
+    "textMode": {
+      "description": "One record per line, format: <code>domain IP</code> or <code>domain IP # remark</code>. Saving syncs changes with the database (add, update, delete).",
+      "placeholder": "# Example format:\nexample.com 192.168.1.1\napi.example.com 192.168.1.2 # API server",
+      "changed": "* Content changed. Save and sync to apply."
+    },
+    "dialog": {
+      "addTitle": "Add Host",
+      "editTitle": "Edit Host",
+      "hostnameDisabled": "Domain cannot be changed",
+      "remarkPlaceholder": "Optional"
+    },
+    "confirm": {
+      "deleteTitle": "Confirm delete",
+      "deleteOne": "Delete \"{{hostname}}\"?",
+      "batchDeleteTitle": "Batch delete",
+      "batchDelete": "Delete the selected {{count}} records?"
+    },
+    "expire": {
+      "pinned": "Pinned",
+      "never": "Never expires",
+      "expired": "Expired",
+      "hours": "Expires in {{count}} hours",
+      "days": "Expires in {{count}} days"
+    },
+    "messages": {
+      "loadFailed": "Failed to load Host list",
+      "loadTextFailed": "Failed to load text content",
+      "refreshSuccess": "Refreshed successfully",
+      "refreshFailed": "Refresh failed",
+      "deleteSuccess": "Deleted successfully",
+      "deleteFailed": "Delete failed",
+      "batchDeleteSuccess": "Batch delete completed",
+      "batchDeleteFailed": "Batch delete failed",
+      "required": "Domain and IP cannot be empty",
+      "updateSuccess": "Updated successfully",
+      "addSuccess": "Added successfully",
+      "operationFailed": "Operation failed",
+      "pinned": "Pinned",
+      "unpinned": "Unpinned",
+      "syncSuccess": "Sync complete: added {{added}}, updated {{updated}}, deleted {{deleted}}",
+      "syncFailed": "Sync failed",
+      "restored": "Restored",
+      "copied": "Copied to clipboard"
+    }
+  },
+  "tags": {
+    "title": "Tag Management",
+    "tabs": {
+      "tags": "Tags",
+      "rules": "Automation Rules"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "addTag": "Add Tag",
+      "addRule": "Add Rule",
+      "edit": "Edit",
+      "delete": "Delete",
+      "execute": "Run manually"
+    },
+    "fields": {
+      "ruleName": "Rule Name",
+      "tag": "Tag",
+      "trigger": "Trigger",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "search": {
+      "tagPlaceholder": "Search tag name, group, or description...",
+      "rulePlaceholder": "Search rule name...",
+      "tagMatched": "Found {{count}} matching tags",
+      "ruleMatched": "Found {{count}} matching rules"
+    },
+    "filters": {
+      "allTags": "All tags",
+      "allTriggers": "All triggers",
+      "allStatuses": "All statuses"
+    },
+    "trigger": {
+      "subscriptionUpdate": "After subscription update",
+      "speedTest": "After speed test"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "empty": {
+      "noTagMatch": "No matching tags found",
+      "noTags": "No tags yet. Click \"Add Tag\" to create the first tag.",
+      "createTagFirst": "Create a tag before adding automation rules",
+      "noRuleMatch": "No matching rules found",
+      "noRules": "No automation rules yet"
+    },
+    "confirm": {
+      "deleteTag": "Delete tag \"{{name}}\"? Related rules will also be deleted.",
+      "deleteRule": "Delete rule \"{{name}}\"?"
+    },
+    "messages": {
+      "loadTagsFailed": "Failed to load tags",
+      "loadRulesFailed": "Failed to load rules",
+      "refreshSuccess": "Refreshed successfully",
+      "refreshFailed": "Refresh failed",
+      "deleteSuccess": "Deleted successfully",
+      "deleteFailed": "Delete failed",
+      "updateSuccess": "Updated successfully",
+      "addSuccess": "Added successfully",
+      "operationFailed": "Operation failed",
+      "ruleStarted": "Rule execution started",
+      "executeFailed": "Execution failed"
+    },
+    "unknownTag": "Unknown tag",
+    "groupLabel": "Group: {{group}}",
+    "dialog": {
+      "tag": {
+        "addTitle": "Add Tag",
+        "editTitle": "Edit Tag",
+        "helpTitle": "Tag usage tips",
+        "helpTag": "• Tags classify nodes and can be used for filtering and automation rules",
+        "helpGroup": "• Tag groups are mutually exclusive. Adding a new tag in the same group removes the previous one.",
+        "helpExample": "• Example: create “Excellent” and “Poor” tags in the same group, so speed tests keep only the latest rating.",
+        "name": "Tag name",
+        "group": "Tag group (optional)",
+        "groupPlaceholder": "Select or enter a tag group name",
+        "groupHelper": "Tags in the same group are mutually exclusive. Leave blank to skip exclusivity.",
+        "recommendedGroups": "Recommended groups:",
+        "color": "Tag color",
+        "openColorPicker": "Open color picker",
+        "customColor": "Custom color (HEX)",
+        "invalidColor": "Enter a valid HEX color value, such as #FF5733",
+        "description": "Description (optional)",
+        "presetGroups": {
+          "speedRating": "Speed rating",
+          "latencyRating": "Latency rating",
+          "regionCategory": "Region category",
+          "usageCategory": "Usage category",
+          "stability": "Stability"
+        },
+        "presetDescriptions": {
+          "speedRating": "Classify by speed test result: excellent, good, average, poor",
+          "latencyRating": "Classify by latency: low, medium, high",
+          "regionCategory": "Classify by region: Asia, Europe, Americas, etc.",
+          "usageCategory": "Classify by usage scenario: streaming, gaming, downloads, etc.",
+          "stability": "Classify by node stability: stable or unstable"
+        }
+      },
+      "rule": {
+        "addTitle": "Add Rule",
+        "editTitle": "Edit Rule",
+        "enableRule": "Enable rule",
+        "conditions": "Match conditions",
+        "addCondition": "Add condition",
+        "field": "Field",
+        "operator": "Operator",
+        "value": "Value",
+        "regexPlaceholder": "Regular expression",
+        "example": "Example: country code equals CN, matching all China nodes",
+        "logic": {
+          "and": "Match all (AND)",
+          "or": "Match any (OR)"
+        },
+        "operators": {
+          "equals": "Equals",
+          "notEquals": "Not equals",
+          "contains": "Contains",
+          "notContains": "Does not contain",
+          "regex": "Regex match",
+          "greaterThan": "Greater than",
+          "lessThan": "Less than",
+          "greaterOrEqual": "Greater than or equal",
+          "lessOrEqual": "Less than or equal"
+        }
+      }
+    }
+  },
+  "templates": {
+    "title": "Template Management",
+    "actions": {
+      "addTemplate": "Add template",
+      "convertRules": "Generate/convert rules",
+      "convertRulesExpand": "Generate/convert rules (expand remote rules)",
+      "clearContent": "Clear content",
+      "fullscreen": "Fullscreen editor",
+      "exitFullscreen": "Exit fullscreen",
+      "continueDelete": "Continue deleting"
+    },
+    "fields": {
+      "filename": "Filename",
+      "category": "Category",
+      "ruleSource": "Rule source",
+      "remoteRuleSource": "Remote rule URL",
+      "createdAt": "Created at",
+      "actions": "Actions",
+      "useProxy": "Use proxy to download remote rules",
+      "proxyNode": "Proxy node",
+      "includeAll": "Use Include-All mode"
+    },
+    "placeholders": {
+      "filename": "For example: clash.yaml",
+      "ruleSource": "Enter a URL or choose an ACL4SSR preset",
+      "proxyNode": "Leave blank to automatically choose the best node"
+    },
+    "helpers": {
+      "ruleSource": "Enter a remote ACL rule configuration URL. Rules are loaded dynamically when generating subscriptions.",
+      "proxyNode": "Select any existing node or manually enter an external proxy link. Leave blank for automatic best-node selection.",
+      "includeAllOn": "• Enabled: more compact configuration, using client include-all to match nodes automatically. System sorting is not followed.",
+      "includeAllOff": "• Disabled (recommended): the system inserts nodes in order and follows system sorting and filtering rules."
+    },
+    "dialog": {
+      "addTitle": "Add Template",
+      "editTitle": "Edit Template"
+    },
+    "delete": {
+      "title": "Delete template",
+      "confirm": "Delete template \"{{name}}\"?"
+    },
+    "confirm": {
+      "clearTitle": "Clear content",
+      "clearContent": "Clear all content in the editor?"
+    },
+    "usage": {
+      "title": "Template is used by subscriptions",
+      "message": "Template \"{{name}}\" is currently used by the following subscriptions. Deleting it may affect them. Continue?",
+      "usedSubscriptions": "Subscriptions using this template:"
+    },
+    "baseTemplate": {
+      "button": "{{category}} base template",
+      "title": "{{category}} base template configuration",
+      "description": "The base template is the default configuration auto-filled during rule conversion when template content is empty. Changes affect all rule conversion operations that use the default template."
+    },
+    "messages": {
+      "loadFailed": "Failed to load template list",
+      "usageFailed": "Failed to load template usage",
+      "deleteSuccess": "Deleted successfully",
+      "deleteFailed": "Delete failed",
+      "promptRequired": "Please enter an AI instruction",
+      "convertSuccess": "Rules generated/converted successfully",
+      "convertExpandSuccess": "Rules generated/converted and expanded successfully",
+      "convertFailed": "Rule generation/conversion failed",
+      "convertError": "An error occurred during generation/conversion",
+      "converting": "Converting rules...",
+      "diffSaveBlocked": "Currently in AI compare mode. Return to edit mode before saving.",
+      "updateSuccess": "Updated successfully",
+      "updateFailed": "Update failed",
+      "addSuccess": "Added successfully",
+      "addFailed": "Add failed",
+      "baseTemplateLoadFailed": "Failed to load base template",
+      "baseTemplateSaveSuccess": "{{category}} base template saved",
+      "baseTemplateSaveFailed": "Failed to save base template",
+      "cleared": "Content cleared"
+    },
+    "ai": {
+      "setupGuidance": "Go to Settings > AI Assistant to enable and complete configuration.",
+      "setupUnavailable": "AI Assistant is currently unavailable.",
+      "promptPlaceholder": "Tell AI how to adjust the current template...",
+      "promptAria": "AI instruction",
+      "generate": "Generate",
+      "generating": "Generating",
+      "goSettings": "Go to settings",
+      "goSettingsShort": "Settings",
+      "disabled": "AI Assistant is disabled",
+      "mode": {
+        "edit": "Edit",
+        "diff": "Compare"
+      },
+      "usage": {
+        "input": "Input",
+        "output": "Output",
+        "cache": "Cache"
+      },
+      "status": {
+        "generating": "Generating a draft based on the current editor content.",
+        "outdated": "Current content or configuration changed. Generate a new draft again.",
+        "unsavedTemplate": "This template is not saved yet. You can apply it to the editor first, then save.",
+        "diffReadonly": "Compare mode is read-only. Return to edit mode before saving.",
+        "applied": "The editor has loaded the AI draft.",
+        "revertAvailable": "A snapshot before applying is available and can be reverted in edit mode.",
+        "ready": "You can compare, apply, or keep editing the current candidate draft.",
+        "prompt": "Enter an instruction to generate a candidate draft."
+      },
+      "statusChip": {
+        "generating": "Generating",
+        "failed": "Generation failed",
+        "outdated": "Draft expired",
+        "applied": "Applied to editor",
+        "ready": "Draft ready",
+        "notGenerated": "Not generated",
+        "canRevert": "Can revert last accept",
+        "unsavedTemplate": "Unsaved template"
+      },
+      "messages": {
+        "promptRequired": "Please enter an AI instruction",
+        "generated": "AI draft generated. You can switch to side-by-side compare mode.",
+        "emptyCandidate": "AI generation finished, but no candidate content was returned.",
+        "generateFailed": "AI generation failed",
+        "setupUnavailable": "AI Assistant is currently unavailable. Go to Settings > AI Assistant to complete configuration.",
+        "generateFirst": "Generate an AI candidate first",
+        "alreadyApplied": "The current editor content already matches the AI candidate",
+        "outdatedAccept": "Template content or configuration changed. Regenerate or revalidate the candidate before accepting it into the editor.",
+        "accepted": "AI draft written to the editor. You can keep editing or save directly.",
+        "noRevert": "No local accept snapshot to revert",
+        "reverted": "Restored the editor content from before the most recent AI candidate accept",
+        "diffSaveBlocked": "Currently in AI compare mode. Return to edit mode before saving."
+      },
+      "aria": {
+        "expandCommand": "Expand AI instruction toolbar",
+        "collapseCommand": "Collapse AI instruction toolbar",
+        "collapseDisabledPrompt": "Collapse AI Assistant enablement prompt",
+        "viewDisabledPrompt": "View AI Assistant enablement prompt"
+      }
+    }
+  },
+  "nodeConditions": {
+    "fields": {
+      "name": "Remark",
+      "linkName": "Original name",
+      "linkCountry": "Country code",
+      "protocol": "Protocol type",
+      "source": "Source",
+      "group": "Group",
+      "speed": "Speed (MB/s)",
+      "delayTime": "Delay (ms)",
+      "fraudScore": "Fraud score",
+      "qualityStatus": "Quality status",
+      "unlockProvider": "Unlock provider",
+      "unlockStatus": "Unlock status",
+      "unlockKeyword": "Unlock keyword",
+      "unlockResult": "Unlock summary",
+      "ipType": "IP type",
+      "residentialType": "Residential attribute",
+      "speedStatus": "Speed status",
+      "delayStatus": "Delay status",
+      "linkAddress": "Address",
+      "linkPort": "Port",
+      "dialerProxyName": "Dialer proxy",
+      "link": "Node link"
+    },
+    "status": {
+      "untested": "Untested",
+      "success": "Success",
+      "timeout": "Timeout",
+      "error": "Failed",
+      "all": "All"
+    },
+    "ipType": {
+      "native": "Native IP",
+      "broadcast": "Broadcast IP",
+      "untested": "Untested"
+    },
+    "residential": {
+      "residential": "Residential IP",
+      "datacenter": "Datacenter IP",
+      "untested": "Untested"
+    },
+    "qualityStatus": {
+      "all": "All",
+      "success": "Complete result",
+      "ipv6Success": "IPv6 complete result",
+      "partial": "Incomplete info",
+      "failed": "Check failed",
+      "shortFailed": "Failed",
+      "disabled": "Disabled",
+      "untested": "Untested",
+      "tooltip": {
+        "partial": "The quality API did not return complete fraud score, residential, or IP type details",
+        "ipv6Partial": "The quality API did not return complete fraud score, residential, or IP type details in IPv6 environments"
+      }
+    },
+    "fraudLevels": {
+      "excellentPlus": "Excellent+",
+      "excellent": "Excellent",
+      "good": "Good",
+      "medium": "Medium",
+      "poor": "Poor",
+      "veryPoor": "Very poor"
+    }
+  },
+  "affiliate": {
+    "title": "Recommended resources",
+    "disclaimer": "Affiliate links may include referral information. Please choose based on your own needs.",
+    "items": {
+      "bandwagonhost": {
+        "title": "BandwagonHost",
+        "description": "Premium routes with multiple data centers and CN2 GIA options.",
+        "highlights": ["Multiple VPS locations", "CN2 GIA route options", "High-quality route servers"],
+        "ctaLabel": "View plans",
+        "tag": "VPS recommended"
+      },
+      "vultr": {
+        "title": "Vultr",
+        "description": "Many regions with hourly billing and flexible IP or region changes.",
+        "highlights": ["Many regions", "Hourly billing", "Low-cost stable plans", "IPv6-only options"],
+        "ctaLabel": "View plans",
+        "tag": "VPS"
+      },
+      "aliyun": {
+        "title": "Aliyun",
+        "description": "99 RMB per year server offers for new purchase and renewal.",
+        "highlights": ["China-based deployment and testing", "99 RMB/year new purchase and renewal", "Discount coupons available"],
+        "ctaLabel": "View offers",
+        "tag": "Cloud service"
+      }
+    }
+  },
+  "donation": {
+    "title": "Support the project",
+    "tooltip": "Support the project",
+    "links": {
+      "small": "Small support",
+      "generous": "Generous support",
+      "support": "Special support"
+    }
+  },
+  "footer": {
+    "feedback": "Feedback",
+    "license": "Open-source license"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "messages": "Messages",
+    "empty": "No notifications yet",
+    "justNow": "Just now",
+    "markAllRead": "Mark all as read",
+    "clearAll": "Clear all",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "profile": {
+    "userFallback": "User",
+    "unknownUser": "Unknown user",
+    "account": "Account",
+    "greeting": {
+      "earlyMorning": "Good morning",
+      "morning": "Good morning",
+      "noon": "Good noon",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "lateNight": "It's late"
+    },
+    "role": {
+      "admin": "Administrator",
+      "user": "User"
+    },
+    "actions": {
+      "personalCenter": "User Center",
+      "apiKeys": "API Keys",
+      "backup": "System Backup",
+      "geoip": "GeoIP Settings",
+      "clearIpCache": "Clear IP cache",
+      "logout": "Log out"
+    },
+    "backup": {
+      "title": "System Backup",
+      "confirm": "Generate and download a system backup now?",
+      "generating": "Generating backup...",
+      "downloadStarted": "Backup download started",
+      "invalidFile": "Invalid backup file",
+      "requestFailed": "Backup request failed"
+    },
+    "ipCache": {
+      "currentCount": "Current cache entries: {{count}}",
+      "clearTitle": "Clear IP cache",
+      "clearConfirm": "Clear the current {{count}} cached IP lookup entries? Future lookups will request IP information again.",
+      "cleared": "IP cache cleared",
+      "clearFailed": "Failed to clear IP cache"
+    }
+  },
+  "search": {
+    "placeholder": "Search...",
+    "ariaLabel": "Search"
+  },
+  "version": {
+    "currentSystemVersion": "Current system version",
+    "githubRepo": "GitHub repository",
+    "status": {
+      "current": "Current",
+      "loading": "Checking...",
+      "unknown": "Unknown",
+      "update": "Update available"
+    },
+    "hint": {
+      "latest": "Already on the latest version",
+      "loading": "Checking the latest release...",
+      "manual": "Open GitHub to check releases manually",
+      "noUpdate": "No update available",
+      "synced": "Version information is up to date",
+      "updateAvailable": "A new version is available"
+    },
+    "actions": {
+      "releases": "View releases",
+      "update": "Update"
+    }
+  },
+  "accessKeys": {
+    "title": "API Keys",
+    "noDescription": "No description",
+    "empty": "No API keys yet",
+    "actions": {
+      "create": "Create",
+      "createKey": "Create API Key"
+    },
+    "fields": {
+      "description": "Description",
+      "createdAt": "Created at",
+      "expiration": "Expiration",
+      "expiredAt": "Expiration time",
+      "actions": "Actions"
+    },
+    "expiration": {
+      "never": "Never expires",
+      "custom": "Custom expiration",
+      "expired": "Expired",
+      "expiresInDays": "Expires in {{count}} days"
+    },
+    "createDialog": {
+      "title": "Create API Key",
+      "descriptionHelper": "Enter a short description to identify this key.",
+      "expirationSettings": "Expiration settings"
+    },
+    "createdDialog": {
+      "title": "API Key Created",
+      "warning": "This key is only shown once. Copy and save it now.",
+      "saved": "I have saved it"
+    },
+    "delete": {
+      "title": "Delete API Key",
+      "confirm": "Are you sure you want to delete this API key? This action cannot be undone."
+    },
+    "messages": {
+      "loadFailed": "Failed to load API keys",
+      "deleteSuccess": "Deleted successfully",
+      "deleteFailed": "Delete failed",
+      "descriptionRequired": "Please enter a description",
+      "expiredAtRequired": "Please select an expiration time",
+      "createFailed": "Failed to create API key",
+      "copied": "Copied to clipboard"
+    }
+  },
+  "scripts": {
+    "title": "Scripts",
+    "actions": {
+      "add": "Add",
+      "addScript": "Add Script",
+      "usageGuide": "Usage guide",
+      "fullscreen": "Fullscreen",
+      "exitFullscreen": "Exit fullscreen",
+      "continueDelete": "Continue deleting"
+    },
+    "fields": {
+      "name": "Name",
+      "version": "Version",
+      "createdAt": "Created at",
+      "updatedAt": "Updated at",
+      "actions": "Actions"
+    },
+    "dialog": {
+      "addTitle": "Add Script",
+      "editTitle": "Edit Script"
+    },
+    "delete": {
+      "title": "Delete Script",
+      "confirm": "Delete script \"{{name}}\"?"
+    },
+    "usage": {
+      "title": "Script is used by subscriptions",
+      "message": "Script \"{{name}}\" is currently used by the following subscriptions. Deleting it may affect them. Continue?",
+      "usedSubscriptions": "Subscriptions using this script:"
+    },
+    "messages": {
+      "loadFailed": "Failed to load scripts",
+      "usageFailed": "Failed to load script usage",
+      "deleteSuccess": "Deleted successfully",
+      "deleteFailed": "Delete failed",
+      "updateSuccess": "Updated successfully",
+      "updateFailed": "Update failed",
+      "createSuccess": "Created successfully",
+      "createFailed": "Create failed"
+    },
+    "template": {
+      "modifyNodes": "Modify node list",
+      "nodes": "Node list",
+      "clientType": "Client type",
+      "returnNodes": "Return the modified node list",
+      "modifySubscription": "Modify subscription content",
+      "input": "Original subscription content",
+      "returnContent": "Return the modified subscription content"
+    }
+  },
+  "tasks": {
+    "title": "Tasks",
+    "progressTitle": "Task progress",
+    "taskCount": "{{count}} tasks",
+    "processing": "Processing...",
+    "processingItem": "Processing: {{item}}",
+    "remainingApprox": "About {{time}} remaining",
+    "realtimeProgress": "Real-time progress",
+    "empty": "No tasks yet",
+    "viewMigrationWarnings": "View {{count}} migration warnings",
+    "migrationWarningSummary": "{{count}} migration warnings",
+    "unlockSummary": "{{matched}}/{{total}} unlock checks matched",
+    "fields": {
+      "name": "Name",
+      "type": "Type",
+      "trigger": "Trigger",
+      "status": "Status",
+      "progress": "Progress",
+      "traffic": "Traffic",
+      "realtimeTraffic": "Real-time traffic",
+      "createdAt": "Created at",
+      "duration": "Duration",
+      "actions": "Actions"
+    },
+    "stats": {
+      "running": "Running",
+      "pending": "Pending",
+      "completed": "Completed",
+      "failedCancelled": "Failed / Cancelled"
+    },
+    "status": {
+      "pending": "Pending",
+      "running": "Running",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "cancelling": "Stopping",
+      "error": "Failed"
+    },
+    "shortStatus": {
+      "completed": "Done",
+      "error": "Failed",
+      "cancelled": "Cancelled",
+      "cancelling": "Stopping"
+    },
+    "type": {
+      "speedTest": "Speed test",
+      "subUpdate": "Subscription update",
+      "tagRule": "Tag rule",
+      "dbMigration": "Database migration"
+    },
+    "trigger": {
+      "manual": "Manual",
+      "scheduled": "Scheduled",
+      "airportUpdate": "Airport update"
+    },
+    "filters": {
+      "allTypes": "All types",
+      "allTriggers": "All triggers",
+      "clear": "Clear filters"
+    },
+    "actions": {
+      "stop": "Stop",
+      "stopTask": "Stop task",
+      "stopping": "Stopping...",
+      "viewTrafficDetails": "View traffic details"
+    },
+    "phase": {
+      "latency": "Latency",
+      "speed": "Speed"
+    },
+    "time": {
+      "seconds": "{{count}}s",
+      "minutesSeconds": "{{minutes}}m {{seconds}}s",
+      "hoursMinutes": "{{hours}}h {{minutes}}m"
+    },
+    "relative": {
+      "justNow": "Just now",
+      "minutesAgo": "{{count}} minutes ago",
+      "hoursAgo": "{{count}} hours ago"
+    },
+    "result": {
+      "speedTestFailed": "Speed test failed",
+      "latency": "{{latency}}ms",
+      "added": "{{count}} added",
+      "exists": "{{count}} existing",
+      "deleted": "{{count}} deleted",
+      "matchedNodes": "{{matched}}/{{total}} nodes matched",
+      "importedKinds": "{{count}} item types imported",
+      "warnings": "{{count}} warnings"
+    },
+    "clearHistory": {
+      "title": "Clear Task History",
+      "description": "Clear completed, failed, or cancelled task history before the selected time.",
+      "daysBefore": "Before {{count}} days",
+      "all": "Clear all history",
+      "confirm": "Clear history",
+      "tooltip": "Clear task history"
+    },
+    "migrationWarnings": {
+      "title": "Migration Warnings",
+      "taskName": "Task: {{name}}",
+      "empty": "No migration warnings"
+    },
+    "trafficStats": {
+      "title": "Traffic Statistics",
+      "detailTitle": "Traffic Statistics Details",
+      "taskLabel": "Task: {{name}}",
+      "noTrafficData": "No traffic data",
+      "noData": "No data",
+      "drillHint": "Click a row to view node traffic details under this {{type}}.",
+      "totalTraffic": "Total traffic consumed",
+      "detailDisabled": "Detailed traffic statistics are not enabled. Enable them in speed test settings.",
+      "groupTab": "Group statistics",
+      "sourceTab": "Source statistics",
+      "groupName": "Group name",
+      "sourceName": "Source name",
+      "group": "Group",
+      "source": "Source",
+      "traffic": "Traffic",
+      "percent": "Share",
+      "nodeName": "Node name",
+      "originalName": "Original name",
+      "searchPlaceholder": "Search node name...",
+      "search": "Search",
+      "exportCsv": "Export CSV",
+      "rowsPerPage": "Rows per page",
+      "close": "Close",
+      "csv": {
+        "nodeName": "Node name",
+        "originalName": "Original name",
+        "group": "Group",
+        "source": "Source",
+        "trafficBytes": "Traffic (bytes)",
+        "traffic": "Traffic",
+        "name": "Name",
+        "percent": "Share"
+      }
+    }
+  },
+  "components": {
+    "pagination": {
+      "empty": "0 items",
+      "rowsPerPage": "Rows per page",
+      "first": "First page",
+      "previous": "Previous page",
+      "next": "Next page",
+      "last": "Last page"
+    },
+    "cronExpressionGenerator": {
+      "label": "Cron expression",
+      "currentExpression": "Current expression:",
+      "nextRunsTitle": "Next run preview",
+      "runOrdinal": "Run {{count}}",
+      "invalidExpression": "The expression format is incorrect. Check your input.",
+      "presets": {
+        "every30Minutes": "Every 30 min",
+        "every1Hour": "Every hour",
+        "every6Hours": "Every 6 hours",
+        "every12Hours": "Every 12 hours",
+        "dailyMidnight": "Daily at 00:00",
+        "weeklyMonday": "Every Monday"
+      },
+      "frequency": {
+        "interval": "Fixed interval",
+        "daily": "Daily at a time",
+        "weekly": "Weekly on selected days"
+      },
+      "intervals": {
+        "minutes": "{{count}} min",
+        "hours": "{{count}} h"
+      },
+      "weekdays": {
+        "monday": "Mon",
+        "tuesday": "Tue",
+        "wednesday": "Wed",
+        "thursday": "Thu",
+        "friday": "Fri",
+        "saturday": "Sat",
+        "sunday": "Sun"
+      },
+      "fields": {
+        "frequency": "Frequency",
+        "interval": "Interval",
+        "hour": "Hour",
+        "minute": "Minute",
+        "weekdaysHelper": "Select run days (multiple allowed)"
+      },
+      "actions": {
+        "showAdvanced": "Show advanced options",
+        "hideAdvanced": "Hide advanced options"
+      },
+      "advanced": {
+        "helper": "Format: minute hour day month weekday, for example 0 */6 * * *",
+        "invalidHelper": "Format error: minute hour day month weekday",
+        "placeholder": "minute hour day month weekday"
+      },
+      "relative": {
+        "daysHours": "in {{days}}d {{hours}}h",
+        "days": "in {{days}}d",
+        "hoursMinutes": "in {{hours}}h {{minutes}}m",
+        "hours": "in {{hours}}h",
+        "minutes": "in {{minutes}}m"
+      }
+    },
+    "nodeNameUniquify": {
+      "title": "Node name uniquification",
+      "subtitle": "Cross-airport prefixes and intra-airport numbering can be enabled independently",
+      "description": "Cross-airport prefix uniquification and intra-airport duplicate numbering are independent settings. The former distinguishes same-name nodes across airports, while the latter only handles duplicate names within the same airport.",
+      "defaultPrefixPending": "[Anew-airport-id]",
+      "crossAirport": {
+        "title": "Cross-airport prefix",
+        "description": "Add a unique prefix to this airport's nodes to distinguish same-name nodes from different airports",
+        "prefixLabel": "Cross-airport prefix (optional)",
+        "placeholderWithId": "Leave blank to use default prefix [A{{id}}]",
+        "placeholderPending": "Leave blank to use the default prefix [Anew-airport-id] after saving",
+        "helper": "Only applies when cross-airport prefix uniquification is enabled, and distinguishes same-name nodes from different airports"
+      },
+      "intraAirport": {
+        "title": "Intra-airport duplicate numbering",
+        "badge": "Intra-airport numbering",
+        "description": "If nodes within the same airport share a name, each duplicate group receives -1, -2, -3... suffixes. Different name groups start from -1 independently."
+      },
+      "preview": {
+        "crossAirportTitle": "Cross-airport prefix preview",
+        "enabledDescription": "When enabled, a unique prefix is added for the current airport. It only affects same-name nodes across different airports.",
+        "disabledDescription": "When disabled, same-name nodes across airports keep their original names.",
+        "intraAirportTitle": "Intra-airport duplicate numbering preview",
+        "intraAirportDescription": "Each duplicate group is numbered independently. The Hong Kong and Japan example groups both start from -1 instead of sharing one global sequence.",
+        "duplicateGroup": "{{name}} duplicate group",
+        "samplePrimary": "Hong Kong Node-01",
+        "sampleSecondary": "Japan Node"
+      }
+    },
+    "systemMonitor": {
+      "title": "System Monitor",
+      "hidden": "Hidden",
+      "env": "Env: {{env}}",
+      "unavailable": "System monitor data is unavailable",
+      "actions": {
+        "enableAutoRefresh": "Enable auto refresh ({{seconds}}s)",
+        "disableAutoRefresh": "Disable auto refresh"
+      },
+      "uptime": {
+        "days": "{{days}}d {{hours}}h {{minutes}}m",
+        "hours": "{{hours}}h {{minutes}}m {{seconds}}s",
+        "minutes": "{{minutes}}m {{seconds}}s",
+        "seconds": "{{seconds}}s"
+      },
+      "metrics": {
+        "heapMemory": "Heap memory",
+        "heapAllocated": "Allocated: {{value}}",
+        "cpuCores": "{{count}} cores",
+        "cgoCalls": "CGO calls: {{count}}",
+        "uptime": "Uptime",
+        "startedAt": "Started at {{value}}",
+        "cpu": "CPU",
+        "goroutines": "Goroutines",
+        "gomaxprocs": "GOMAXPROCS: {{count}}"
+      },
+      "runtime": {
+        "title": "Runtime memory details",
+        "heapInUse": "Heap in use",
+        "stackInUse": "Stack in use",
+        "gcCount": "GC count",
+        "gcPause": "GC pause",
+        "gcCpu": "GC CPU",
+        "systemMemory": "System memory",
+        "totalAllocated": "Total allocated"
+      },
+      "config": {
+        "title": "Runtime configuration",
+        "keys": {
+          "port": "Port",
+          "expire_days": "Token Expire Days",
+          "login_fail_count": "Login Fail Limit",
+          "login_fail_window": "Login Fail Window",
+          "login_ban_duration": "Login Ban Duration",
+          "log_level": "Log Level",
+          "captcha_mode": "Captcha Mode",
+          "trusted_proxies": "Trusted Proxies",
+          "feature": "Feature Flags",
+          "dsn": "Database Connection",
+          "db_path": "Local DB Path",
+          "log_path": "Log Directory",
+          "geoip_path": "GeoIP Database",
+          "web_base_path": "Web Base Path",
+          "turnstile_site_key": "Turnstile Site Key",
+          "turnstile_proxy_link": "Turnstile Proxy Link"
+        },
+        "values": {
+          "plain": "{{count}}",
+          "days": "{{count}} days",
+          "times": "{{count}} times",
+          "minutes": "{{count}} minutes",
+          "unset": "Not set",
+          "literal": "{{value}}",
+          "captchaDisabled": "Disabled",
+          "captchaTurnstile": "Cloudflare Turnstile",
+          "captchaTurnstileDegraded": "Cloudflare Turnstile (degraded to legacy captcha)",
+          "captchaLegacy": "Legacy captcha",
+          "disabled": "Disabled",
+          "rules": "{{count}} rules",
+          "configured": "Configured",
+          "notConfigured": "Not configured",
+          "configuredHidden": "Configured (details hidden)",
+          "defaultPath": "Default path",
+          "customPath": "Customized",
+          "autoDetect": "Auto detect",
+          "rootPath": "Root path",
+          "databaseConfigured": "{{kind}} · configured",
+          "databaseHost": "{{kind}} · {{host}} · {{database}}"
+        }
+      }
+    },
+    "geoIpSettings": {
+      "title": "GeoIP database settings",
+      "status": {
+        "installed": "Database installed",
+        "notInstalled": "Database not installed",
+        "fileSize": "File size: {{value}}",
+        "updatedAt": "Updated at: {{value}}",
+        "missingDescription": "GeoIP database is used for IP geolocation and landing checks. Please download and install it."
+      },
+      "download": {
+        "autoDownloading": "System auto downloading... {{progress}}%",
+        "downloading": "Downloading... {{progress}}%",
+        "autoHint": "The system detected missing GeoIP data during startup and is downloading automatically. You can stop it, configure a proxy, and download again."
+      },
+      "fields": {
+        "downloadUrl": "Download URL",
+        "useProxy": "Use proxy for download",
+        "proxyNode": "Proxy node"
+      },
+      "placeholders": {
+        "proxyNode": "Leave blank to auto select the best node"
+      },
+      "helpers": {
+        "downloadUrl": "MaxMind GeoLite2-City database download URL",
+        "proxyNode": "Choose an existing node or manually enter an external proxy link. When left blank, the system auto selects the best node."
+      },
+      "notice": {
+        "title": "Notes:",
+        "mmdb": "The database must be MaxMind mmdb format and include city data (GeoLite2-City)",
+        "required": "Without a GeoIP database, IP geolocation and landing checks are unavailable",
+        "update": "Update the database regularly for more accurate geolocation information"
+      },
+      "actions": {
+        "restoreDefault": "Restore default",
+        "stop": "Stop",
+        "saveConfig": "Save configuration",
+        "updateDatabase": "Update database",
+        "downloadDatabase": "Download database"
+      },
+      "messages": {
+        "downloadFailedWithReason": "Download failed: {{reason}}",
+        "downloadSuccess": "GeoIP database downloaded successfully",
+        "saveSuccess": "Configuration saved",
+        "saveFailed": "Save failed",
+        "saveFailedWithReason": "Save failed: {{reason}}",
+        "downloadStarted": "Started downloading GeoIP database...",
+        "startDownloadFailed": "Failed to start download",
+        "startDownloadFailedWithReason": "Failed to start download: {{reason}}",
+        "stopSignalSent": "Stop signal sent",
+        "stopFailed": "Stop failed",
+        "stopFailedWithReason": "Stop failed: {{reason}}"
+      }
+    },
+    "geoIpWarning": {
+      "title": "GeoIP data is not configured",
+      "description": "Some location-related features need GeoIP data to show accurate results.",
+      "ctaHint": "Open settings to configure GeoIP data.",
+      "openSettings": "Open settings",
+      "dontShowAgain": "Do not show again",
+      "impacts": {
+        "ipLocation": "IP location display",
+        "loginLocation": "Login location display",
+        "nodeCountry": "Node country detection"
+      }
+    },
+    "ipDetails": {
+      "title": "IP Details",
+      "cached": "Cached",
+      "cacheTooltip": "This result is from cache",
+      "copyIp": "Copy IP",
+      "sourceNotice": "Data comes from <ipinfo>ipinfo.io</ipinfo> and <ippure>IPPure</ippure>. Results are for reference only.",
+      "sections": {
+        "location": "Location",
+        "provider": "Provider",
+        "other": "Other information"
+      },
+      "fields": {
+        "coordinates": "Coordinates",
+        "organization": "Organization",
+        "timezone": "Timezone",
+        "zip": "ZIP code"
+      },
+      "links": {
+        "viewOnIpinfo": "View on ipinfo.io",
+        "ipinfoDetails": "ipinfo details",
+        "ipPureDetails": "IPPure details",
+        "bgpLookup": "BGP lookup"
+      },
+      "messages": {
+        "queryFailed": "Failed to query IP details"
+      }
+    },
+    "nodeNameFilter": {
+      "title": "Node name filter",
+      "summary": "White {{whitelist}} / black {{blacklist}}",
+      "description": "Filter nodes by name. <strong>Blacklist has higher priority than whitelist</strong>.",
+      "blacklist": "Blacklist",
+      "notInWhitelist": "Not in whitelist",
+      "noRules": "No rules yet",
+      "deleteRule": "Delete rule",
+      "previewTitle": "Preview",
+      "previewCount": " {{included}}/{{total}} included",
+      "invalidRegex": "Invalid regular expression",
+      "matchMode": {
+        "text": "Text",
+        "regex": "Regex"
+      },
+      "placeholders": {
+        "keyword": "Enter keyword",
+        "regex": "Enter regular expression"
+      },
+      "whitelist": "Whitelist"
+    },
+    "nodeNamePreprocessor": {
+      "title": "Node name preprocessor",
+      "description": "Replace node names before filtering and output.",
+      "enabledSummary": "{{enabled}}/{{total}} enabled",
+      "addRule": "Add rule",
+      "deleteRule": "Delete rule",
+      "empty": "No preprocessing rules yet",
+      "emptyResult": "No preview result",
+      "originalName": "Original name",
+      "result": "Result",
+      "previewDescription": "Preview how the current rules transform node names.",
+      "invalidRegex": "Invalid regular expression",
+      "matchMode": {
+        "text": "Text",
+        "regex": "Regex"
+      },
+      "placeholders": {
+        "findText": "Find text",
+        "regex": "Regular expression",
+        "replaceWith": "Replace with"
+      }
+    },
+    "nodeProtocolFilter": {
+      "title": "Protocol filter",
+      "summary": "White {{whitelist}} / black {{blacklist}}",
+      "description": "Limit output by node protocol type.",
+      "priorityHint": "<strong>Blacklist has higher priority than whitelist</strong>: blacklisted protocols are excluded first.",
+      "whitelist": "Whitelist protocols",
+      "blacklist": "Blacklist protocols",
+      "whitelistPlaceholder": "Select whitelist protocols",
+      "blacklistPlaceholder": "Select blacklist protocols",
+      "whitelistHelper": "Only selected protocols will be kept.",
+      "blacklistHelper": "Selected protocols will be excluded."
+    },
+    "searchableNodeSelect": {
+      "label": "Proxy node",
+      "placeholder": "Search or select a node",
+      "searchPrompt": "Type to search nodes",
+      "noMatch": "No matching nodes",
+      "ungrouped": "Ungrouped",
+      "limitHint": "Showing first {{limit}} of {{total}} nodes",
+      "hiddenHint": "{{count}} more hidden"
+    },
+    "starGuide": {
+      "title": "Support Sublink Pro",
+      "descriptionPrefix": "If this project helps you, please consider giving it a Star on GitHub.",
+      "descriptionSuffix": "Your support helps the project keep improving.",
+      "dontShowAgain": "Do not show again",
+      "actions": {
+        "star": "Star on GitHub"
+      },
+      "feedback": {
+        "title": "Feedback",
+        "description": "Report issues or share suggestions on GitHub."
+      }
+    }
+  },
+  "pagination": {
+    "rowsPerPage": "Rows per page"
+  }
+}

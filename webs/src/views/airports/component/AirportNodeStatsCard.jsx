@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -22,6 +23,7 @@ import { withAlpha } from 'utils/colorUtils';
  */
 export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = false }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
     theme,
@@ -69,14 +71,14 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
     if (!hasData) {
       return (
         <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-          暂未测试
+          {t('airports.nodeStats.untested')}
         </Typography>
       );
     }
 
     return (
       <Stack direction="row" spacing={0.5} alignItems="center">
-        <Tooltip title="延迟通过" arrow placement="top">
+        <Tooltip title={t('airports.nodeStats.delayPassed')} arrow placement="top">
           <Stack direction="row" spacing={0.25} alignItems="center" sx={{ cursor: 'help' }}>
             <AccessTimeIcon sx={{ fontSize: 14, color: 'success.main' }} />
             <Typography variant="caption" fontWeight={600} color="success.main">
@@ -87,7 +89,7 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
         <Typography variant="caption" color="text.disabled">
           /
         </Typography>
-        <Tooltip title="速度通过" arrow placement="top">
+        <Tooltip title={t('airports.nodeStats.speedPassed')} arrow placement="top">
           <Stack direction="row" spacing={0.25} alignItems="center" sx={{ cursor: 'help' }}>
             <SpeedIcon sx={{ fontSize: 14, color: 'info.main' }} />
             <Typography variant="caption" fontWeight={600} color="info.main">
@@ -113,10 +115,10 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
         >
           <HelpOutlineIcon sx={{ fontSize: 32, color: tertiaryText, mb: 1 }} />
           <Typography variant="body2" sx={{ color: secondaryText, fontWeight: 500 }}>
-            该机场节点尚未进行测速
+            {t('airports.nodeStats.noDataTitle')}
           </Typography>
           <Typography variant="caption" sx={{ color: tertiaryText }}>
-            请先运行延迟或速度测试
+            {t('airports.nodeStats.noDataDescription')}
           </Typography>
         </Box>
       </Box>
@@ -138,7 +140,7 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
               <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
                 <AccessTimeIcon sx={{ fontSize: 14, color: 'success.main' }} />
                 <Typography variant="caption" sx={{ color: secondaryText }}>
-                  延迟通过
+                  {t('airports.nodeStats.delayPassed')}
                 </Typography>
               </Stack>
               <Typography variant="h6" fontWeight={700} color="success.main">
@@ -153,7 +155,7 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
               <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
                 <SpeedIcon sx={{ fontSize: 14, color: 'info.main' }} />
                 <Typography variant="caption" sx={{ color: secondaryText }}>
-                  速度通过
+                  {t('airports.nodeStats.speedPassed')}
                 </Typography>
               </Stack>
               <Typography variant="h6" fontWeight={700} color="info.main">
@@ -173,7 +175,7 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
                 <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
                   <CheckCircleOutlineIcon sx={{ fontSize: 14, color: 'warning.main' }} />
                   <Typography variant="caption" sx={{ color: secondaryText }}>
-                    最低延迟
+                    {t('airports.nodeStats.lowestDelay')}
                   </Typography>
                 </Stack>
                 <Tooltip title={nodeStats.lowestDelayNode} placement="top" arrow>
@@ -201,7 +203,7 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
                 <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
                   <CheckCircleOutlineIcon sx={{ fontSize: 14, color: 'primary.main' }} />
                   <Typography variant="caption" sx={{ color: secondaryText }}>
-                    最高速度
+                    {t('airports.nodeStats.highestSpeed')}
                   </Typography>
                 </Stack>
                 <Tooltip title={nodeStats.highestSpeedNode} placement="top" arrow>

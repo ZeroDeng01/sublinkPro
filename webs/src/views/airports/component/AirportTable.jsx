@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
@@ -53,6 +54,7 @@ export default function AirportTable({
   nodeCheckProfiles
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const palette = theme.vars?.palette || theme.palette;
   const { isDark } = useResolvedColorScheme();
 
@@ -159,7 +161,7 @@ export default function AirportTable({
     if (!airport.fetchUsageInfo) {
       return (
         <Typography variant="caption" color="text.secondary">
-          未开启用量获取
+          {t('airports.list.usage.disabled')}
         </Typography>
       );
     }
@@ -168,7 +170,7 @@ export default function AirportTable({
     if (airport.usageTotal === -1) {
       return (
         <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 500 }}>
-          用量获取失败
+          {t('airports.list.usage.failed')}
         </Typography>
       );
     }
@@ -177,7 +179,7 @@ export default function AirportTable({
     if (!airport.usageTotal || airport.usageTotal === 0) {
       return (
         <Typography variant="body2" color="text.secondary">
-          待获取
+          {t('airports.list.usage.pending')}
         </Typography>
       );
     }
@@ -261,8 +263,8 @@ export default function AirportTable({
                     fontWeight: isUrgent || isWarning ? 600 : 400
                   }}
                 >
-                  到期: {formatExpireTime(airport.usageExpire)}
-                  {isUrgent && ` (${Math.max(0, Math.ceil(daysLeft))}天)`}
+                  {t('airports.list.usage.expireAt', { time: formatExpireTime(airport.usageExpire) })}
+                  {isUrgent && ` (${t('airports.list.usage.daysLeft', { count: Math.max(0, Math.ceil(daysLeft)) })})`}
                 </Typography>
               </Box>
             );
@@ -280,7 +282,7 @@ export default function AirportTable({
     if (!hasData) {
       return (
         <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-          暂未测试
+          {t('airports.list.speed.untested')}
         </Typography>
       );
     }
@@ -335,13 +337,13 @@ export default function AirportTable({
           <Stack spacing={0.25}>
             {nodeStats.lowestDelayTime > 0 && (
               <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem' }}>
-                最低延迟:{' '}
+                {t('airports.list.speed.lowestDelay')}:{' '}
                 <span style={{ fontWeight: 600, color: getDelayColor(nodeStats.lowestDelayTime) }}>{nodeStats.lowestDelayTime}ms</span>
               </Typography>
             )}
             {nodeStats.highestSpeed > 0 && (
               <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem' }}>
-                最高速度:{' '}
+                {t('airports.list.speed.highestSpeed')}:{' '}
                 <span style={{ fontWeight: 600, color: getSpeedColor(nodeStats.highestSpeed) }}>
                   {nodeStats.highestSpeed?.toFixed(1)}MB/s
                 </span>
@@ -357,7 +359,7 @@ export default function AirportTable({
     return (
       <Box sx={{ py: 6, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          暂无机场数据，点击上方"添加机场"按钮添加
+          {t('airports.list.empty.addAirport')}
         </Typography>
       </Box>
     );
@@ -436,7 +438,12 @@ export default function AirportTable({
                       {airport.name}
                     </Typography>
                     <Stack direction="row" spacing={0.4} sx={{ mt: 0.35, flexWrap: 'wrap', gap: 0.4 }}>
-                      <Chip label={airport.enabled ? '启用' : '禁用'} variant="filled" size="small" sx={getStatusChipSx(airport.enabled)} />
+                      <Chip
+                        label={airport.enabled ? t('common.enabled') : t('common.disabled')}
+                        variant="filled"
+                        size="small"
+                        sx={getStatusChipSx(airport.enabled)}
+                      />
                       {airport.group && (
                         <Chip label={airport.group} variant="outlined" size="small" sx={{ height: 18, fontSize: '0.66rem' }} />
                       )}
@@ -447,7 +454,7 @@ export default function AirportTable({
                 {/* 节点和调度信息 */}
                 <Stack direction="row" spacing={0.75} sx={{ mb: 1.25, flexWrap: 'wrap', gap: 0.4 }}>
                   <Chip
-                    label={`${airport.nodeCount || 0} 节点`}
+                    label={t('airports.list.nodeCount', { count: airport.nodeCount || 0 })}
                     color="primary"
                     variant="outlined"
                     size="small"
@@ -479,7 +486,7 @@ export default function AirportTable({
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
                       <ScheduleIcon sx={{ fontSize: 12, color: 'text.secondary' }} />
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                        上次运行
+                        {t('airports.list.lastRun')}
                       </Typography>
                     </Box>
                     <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>
@@ -490,7 +497,7 @@ export default function AirportTable({
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
                       <UpdateIcon sx={{ fontSize: 12, color: 'text.secondary' }} />
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                        下次运行
+                        {t('airports.list.nextRun')}
                       </Typography>
                     </Box>
                     <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '0.7rem' }}>
@@ -514,7 +521,7 @@ export default function AirportTable({
                     color="text.secondary"
                     sx={{ display: 'block', mb: 0.5, fontWeight: 500, fontSize: '0.65rem' }}
                   >
-                    用量信息
+                    {t('airports.list.usage.title')}
                   </Typography>
                   {renderUsageInfo(airport)}
                 </Box>
@@ -534,7 +541,7 @@ export default function AirportTable({
                     color="text.secondary"
                     sx={{ display: 'block', mb: 0.5, fontWeight: 500, fontSize: '0.65rem' }}
                   >
-                    节点测试
+                    {t('airports.list.speed.title')}
                   </Typography>
                   {renderSpeedSummary(airport.nodeStats, airport.nodeCount || 0)}
                 </Box>
@@ -555,7 +562,7 @@ export default function AirportTable({
                       color="text.secondary"
                       sx={{ display: 'block', mb: 0.5, fontWeight: 500, fontSize: '0.65rem' }}
                     >
-                      更新后检测
+                      {t('airports.list.updateAfterDetect.title')}
                     </Typography>
                     <Stack direction="row" spacing={0.5} alignItems="center" useFlexGap>
                       {(() => {
@@ -576,7 +583,7 @@ export default function AirportTable({
                           />
                         ) : (
                           <Chip
-                            label="策略已删除"
+                            label={t('airports.list.updateAfterDetect.deletedProfile')}
                             size="small"
                             sx={{
                               height: 20,
@@ -592,7 +599,7 @@ export default function AirportTable({
                       })()}
                       {airport.updateAfterDetectChangedOnly && (
                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem' }}>
-                          仅变更节点
+                          {t('airports.list.updateAfterDetect.changedOnly')}
                         </Typography>
                       )}
                     </Stack>
@@ -603,10 +610,10 @@ export default function AirportTable({
                 <Box sx={{ mt: 'auto', pt: 0.85, borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}` }}>
                   <Stack spacing={0.55} alignItems="center">
                     <Stack direction="row" spacing={0.55} justifyContent="center" useFlexGap>
-                      <Tooltip title="查看节点" arrow>
+                      <Tooltip title={t('airports.list.actions.viewNodes')} arrow>
                         <IconButton
                           size="small"
-                          aria-label="查看节点"
+                          aria-label={t('airports.list.actions.viewNodes')}
                           onClick={() => onOpenNodes(airport)}
                           sx={{
                             width: 28,
@@ -619,10 +626,10 @@ export default function AirportTable({
                           <LanIcon sx={{ fontSize: 16 }} />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="快速检测" arrow>
+                      <Tooltip title={t('airports.list.actions.quickCheck')} arrow>
                         <IconButton
                           size="small"
-                          aria-label="快速检测"
+                          aria-label={t('airports.list.actions.quickCheck')}
                           onClick={() => onQuickCheck(airport)}
                           sx={{
                             width: 28,
@@ -635,10 +642,10 @@ export default function AirportTable({
                           <SpeedIcon sx={{ fontSize: 16 }} />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="立即拉取" arrow>
+                      <Tooltip title={t('airports.list.actions.pullNow')} arrow>
                         <IconButton
                           size="small"
-                          aria-label="立即拉取"
+                          aria-label={t('airports.list.actions.pullNow')}
                           onClick={() => onPull(airport)}
                           sx={{
                             bgcolor: alpha(theme.palette.primary.main, 0.08),
@@ -650,10 +657,10 @@ export default function AirportTable({
                         </IconButton>
                       </Tooltip>
                       {airport.fetchUsageInfo && (
-                        <Tooltip title="刷新用量" arrow>
+                        <Tooltip title={t('airports.list.actions.refreshUsage')} arrow>
                           <IconButton
                             size="small"
-                            aria-label="刷新用量"
+                            aria-label={t('airports.list.actions.refreshUsage')}
                             onClick={() => onRefreshUsage(airport)}
                             sx={{
                               bgcolor: alpha(theme.palette.success.main, 0.08),
@@ -667,10 +674,10 @@ export default function AirportTable({
                       )}
                     </Stack>
                     <Stack direction="row" spacing={0.55} justifyContent="center" useFlexGap>
-                      <Tooltip title="复制订阅地址" arrow>
+                      <Tooltip title={t('airports.list.actions.copySubscriptionUrl')} arrow>
                         <IconButton
                           size="small"
-                          aria-label="复制订阅地址"
+                          aria-label={t('airports.list.actions.copySubscriptionUrl')}
                           onClick={() => handleCopyUrl(airport)}
                           sx={{
                             bgcolor: alpha(theme.palette.secondary.main, 0.08),
@@ -681,10 +688,10 @@ export default function AirportTable({
                           <ContentCopyIcon sx={{ fontSize: 16 }} />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="编辑" arrow>
+                      <Tooltip title={t('common.edit')} arrow>
                         <IconButton
                           size="small"
-                          aria-label="编辑"
+                          aria-label={t('common.edit')}
                           onClick={() => onEdit(airport)}
                           sx={{
                             bgcolor: alpha(theme.palette.info.main, 0.08),
@@ -695,10 +702,10 @@ export default function AirportTable({
                           <EditIcon sx={{ fontSize: 16 }} />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="删除" arrow>
+                      <Tooltip title={t('common.delete')} arrow>
                         <IconButton
                           size="small"
-                          aria-label="删除"
+                          aria-label={t('common.delete')}
                           onClick={() => onDelete(airport)}
                           sx={{
                             bgcolor: alpha(theme.palette.error.main, 0.08),
@@ -726,7 +733,7 @@ export default function AirportTable({
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert severity="success" variant="standard" sx={{ width: '100%' }}>
-          已复制「{copyTip.name}」的订阅地址
+          {t('airports.list.messages.copiedSubscriptionUrl', { name: copyTip.name })}
         </Alert>
       </Snackbar>
     </>

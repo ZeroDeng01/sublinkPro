@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -31,6 +32,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import { getNodeCheckProfiles, runNodeCheck } from 'api/nodeCheck';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from 'utils/colorUtils';
+import { formatDateTime } from 'i18n/locales';
 import { getNodeCheckStrategyChipSx, getNodeCheckStrategyThemeTokens } from '../nodeCheckTheme';
 
 /**
@@ -40,6 +42,7 @@ import { getNodeCheckStrategyChipSx, getNodeCheckStrategyThemeTokens } from '../
 
 export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess, onOpenSettings }) {
   const theme = useTheme();
+  const { i18n, t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const themeTokens = getNodeCheckStrategyThemeTokens(theme, isDark);
   const {
@@ -95,11 +98,11 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
     setExecuting(true);
     try {
       await runNodeCheck(selectedProfileId, nodeIds);
-      onSuccess?.('检测任务已在后台启动');
+      onSuccess?.(t('nodes.profileSelect.messages.started'));
       onClose();
     } catch (error) {
       console.error('执行检测失败:', error);
-      onSuccess?.(error.message || '执行检测失败', 'error');
+      onSuccess?.(error.message || t('nodes.profileSelect.messages.executeFailed'), 'error');
     } finally {
       setExecuting(false);
     }
@@ -107,8 +110,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
 
   const formatNextRunTime = (nextRunTime) => {
     if (!nextRunTime) return null;
-    const date = new Date(nextRunTime);
-    return date.toLocaleString('zh-CN', {
+    return formatDateTime(nextRunTime, i18n.resolvedLanguage || i18n.language, {
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
@@ -143,7 +145,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SpeedIcon color="primary" />
-            <span>选择检测策略</span>
+            <span>{t('nodes.profileSelect.title')}</span>
           </Box>
           <IconButton
             size="small"
@@ -159,7 +161,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
         </Box>
         {nodeIds?.length > 0 && (
           <Typography variant="caption" color="text.secondary">
-            已选择 {nodeIds.length} 个节点
+            {t('nodes.profileSelect.selectedCount', { count: nodeIds.length })}
           </Typography>
         )}
       </DialogTitle>
@@ -184,7 +186,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
             }}
           >
             <Typography color="text.secondary" gutterBottom>
-              暂无检测策略
+              {t('nodes.profileSelect.empty')}
             </Typography>
             <Button
               size="small"
@@ -194,7 +196,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
                 onOpenSettings?.();
               }}
             >
-              创建策略
+              {t('nodes.profileSelect.create')}
             </Button>
           </Box>
         ) : (
@@ -231,7 +233,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
                     <Box component="span" sx={{ display: 'flex', alignItems: 'center', columnGap: 0.75, rowGap: 0.75, flexWrap: 'wrap' }}>
                       <span>{profile.name}</span>
                       <Chip
-                        label={profile.mode === 'mihomo' ? '延迟+速度' : '仅延迟'}
+                        label={profile.mode === 'mihomo' ? t('nodes.profileSelect.mode.full') : t('nodes.profileSelect.mode.delayOnly')}
                         size="small"
                         sx={getNodeCheckStrategyChipSx(themeTokens, profile.mode === 'mihomo' ? 'success' : 'info')}
                       />
@@ -243,7 +245,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
                         <>
                           <ScheduleIcon sx={{ fontSize: 14, opacity: 0.6 }} />
                           <Typography component="span" variant="caption" color="text.secondary">
-                            {formatNextRunTime(profile.nextRunTime) || '定时启用'}
+                            {formatNextRunTime(profile.nextRunTime) || t('nodes.profileSelect.scheduled')}
                           </Typography>
                         </>
                       )}
@@ -282,7 +284,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
             onOpenSettings?.();
           }}
         >
-          管理策略
+          {t('nodes.profileSelect.manage')}
         </Button>
         <Button
           variant="contained"
@@ -305,7 +307,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
             }
           }}
         >
-          开始检测
+          {t('nodes.profileSelect.start')}
         </Button>
       </DialogActions>
     </Dialog>

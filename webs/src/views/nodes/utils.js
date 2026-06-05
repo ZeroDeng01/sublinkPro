@@ -1,4 +1,7 @@
+import i18n from 'i18n';
 import { getFraudScoreLevel, getQualityStatusMeta, QUALITY_STATUS, QUALITY_STATUS_OPTIONS } from 'utils/fraudScore';
+
+const translate = (key, defaultValue, options = {}) => i18n.t(key, { defaultValue, ...options });
 
 // Cron 表达式预设 - 包含友好的说明
 export const CRON_OPTIONS = [
@@ -72,35 +75,70 @@ const UNLOCK_PROVIDER_LABEL_MAP = {
 };
 
 const DEFAULT_UNLOCK_STATUS_METAS = [
-  { value: 'available', label: '解锁', shortLabel: '解锁', color: 'success', severity: 'success', description: '可正常使用' },
+  {
+    value: 'available',
+    labelKey: 'nodes.unlock.status.available.label',
+    shortLabelKey: 'nodes.unlock.status.available.short',
+    descriptionKey: 'nodes.unlock.status.available.description',
+    color: 'success',
+    severity: 'success'
+  },
   {
     value: 'partial',
-    label: '部分',
-    shortLabel: '部分',
+    labelKey: 'nodes.unlock.status.partial.label',
+    shortLabelKey: 'nodes.unlock.status.partial.short',
     color: 'warning',
     severity: 'warning',
-    description: '仅部分能力可用'
+    descriptionKey: 'nodes.unlock.status.partial.description'
   },
   {
     value: 'reachable',
-    label: '直连',
-    shortLabel: '直连',
+    labelKey: 'nodes.unlock.status.reachable.label',
+    shortLabelKey: 'nodes.unlock.status.reachable.short',
     color: 'info',
     severity: 'info',
-    description: '可以访问，但不代表完整能力可用'
+    descriptionKey: 'nodes.unlock.status.reachable.description'
   },
-  { value: 'restricted', label: '受限', shortLabel: '受限', color: 'error', severity: 'error', description: '当前地区或出口被限制' },
+  {
+    value: 'restricted',
+    labelKey: 'nodes.unlock.status.restricted.label',
+    shortLabelKey: 'nodes.unlock.status.restricted.short',
+    color: 'error',
+    severity: 'error',
+    descriptionKey: 'nodes.unlock.status.restricted.description'
+  },
   {
     value: 'unsupported',
-    label: '不支持',
-    shortLabel: '不支持',
+    labelKey: 'nodes.unlock.status.unsupported.label',
+    shortLabelKey: 'nodes.unlock.status.unsupported.short',
     color: 'warning',
     severity: 'warning',
-    description: '当前地区不在官方支持范围内'
+    descriptionKey: 'nodes.unlock.status.unsupported.description'
   },
-  { value: 'unknown', label: '未知', shortLabel: '未知', color: 'default', severity: 'default', description: '当前无法稳定判断结果' },
-  { value: 'error', label: '异常', shortLabel: '异常', color: 'error', severity: 'error', description: '本轮检测出现错误' },
-  { value: 'untested', label: '未测', shortLabel: '未测', color: 'default', severity: 'default', description: '尚未执行检测' }
+  {
+    value: 'unknown',
+    labelKey: 'nodes.unlock.status.unknown.label',
+    shortLabelKey: 'nodes.unlock.status.unknown.short',
+    color: 'default',
+    severity: 'default',
+    descriptionKey: 'nodes.unlock.status.unknown.description'
+  },
+  {
+    value: 'error',
+    labelKey: 'nodes.unlock.status.error.label',
+    shortLabelKey: 'nodes.unlock.status.error.short',
+    color: 'error',
+    severity: 'error',
+    descriptionKey: 'nodes.unlock.status.error.description'
+  },
+  {
+    value: 'untested',
+    labelKey: 'nodes.unlock.status.untested.label',
+    shortLabelKey: 'nodes.unlock.status.untested.short',
+    color: 'default',
+    severity: 'default',
+    descriptionKey: 'nodes.unlock.status.untested.description'
+  }
 ];
 
 let unlockMetaState = {
@@ -131,13 +169,13 @@ export const getNodeConditionFieldMetas = () => unlockMetaState.conditionFields 
 export const getUnlockStatusOptions = (includeAll = true) => {
   const statusOptions = (unlockMetaState.statuses || DEFAULT_UNLOCK_STATUS_METAS).map((item) => ({
     value: item.value,
-    label: item.label || item.shortLabel || item.value,
-    shortLabel: item.shortLabel || item.label || item.value,
+    label: getLocalizedUnlockStatusLabel(item),
+    shortLabel: getLocalizedUnlockStatusShortLabel(item),
     color: item.color || item.severity || 'default',
-    description: item.description || ''
+    description: getLocalizedUnlockStatusDescription(item)
   }));
 
-  return includeAll ? [{ value: '', label: '全部' }, ...statusOptions] : statusOptions;
+  return includeAll ? [{ value: '', label: translate('common.all', 'All') }, ...statusOptions] : statusOptions;
 };
 
 export const resolveNodeConditionOptionSource = (optionSource, includeAll = false) => {
@@ -154,8 +192,16 @@ export const resolveNodeConditionOptionSource = (optionSource, includeAll = fals
 export const createEmptyUnlockRule = () => ({ provider: '', status: '', keyword: '' });
 
 export const getUnlockRuleModeOptions = () => [
-  { value: 'or', label: '满足任意一条', description: '多条规则之间按 OR 匹配' },
-  { value: 'and', label: '同时满足所有规则', description: '多条规则之间按 AND 匹配' }
+  {
+    value: 'or',
+    label: translate('nodes.unlock.ruleModes.or.label', 'Match any rule'),
+    description: translate('nodes.unlock.ruleModes.or.description', 'Multiple rules are matched with OR')
+  },
+  {
+    value: 'and',
+    label: translate('nodes.unlock.ruleModes.and.label', 'Match all rules'),
+    description: translate('nodes.unlock.ruleModes.and.description', 'Multiple rules are matched with AND')
+  }
 ];
 
 export const normalizeUnlockRules = (rules) => {
@@ -252,11 +298,42 @@ export const formatUnlockProviderLabel = (provider) => {
 
 export const formatUnlockProvidersSummary = (providers, limit = 2) => {
   const normalizedProviders = normalizeUnlockProviders(providers);
-  if (normalizedProviders.length === 0) return '未选择';
+  if (normalizedProviders.length === 0) return translate('nodes.unlock.notSelected', 'Not selected');
 
   const labels = normalizedProviders.slice(0, limit).map((provider) => formatUnlockProviderLabel(provider));
   const extraCount = normalizedProviders.length - labels.length;
   return extraCount > 0 ? `${labels.join('、')} +${extraCount}` : labels.join('、');
+};
+
+const getLocalizedUnlockStatusLabel = (item) => {
+  if (!item) return '';
+  const value = getCleanString(item.value).toLowerCase();
+  if (item.labelKey) return translate(item.labelKey, item.label || item.shortLabel || value);
+  if (value) return translate(`nodes.unlock.status.${value}.label`, item.label || item.shortLabel || item.value);
+  return item.label || item.shortLabel || item.value || '';
+};
+
+const getLocalizedUnlockStatusShortLabel = (item) => {
+  if (!item) return '';
+  const value = getCleanString(item.value).toLowerCase();
+  if (item.shortLabelKey) return translate(item.shortLabelKey, item.shortLabel || item.label || value);
+  if (value) return translate(`nodes.unlock.status.${value}.short`, item.shortLabel || item.label || item.value);
+  return item.shortLabel || item.label || item.value || '';
+};
+
+const getLocalizedUnlockStatusDescription = (item) => {
+  if (!item) return '';
+  const value = getCleanString(item.value).toLowerCase();
+  if (item.descriptionKey) return translate(item.descriptionKey, item.description || '');
+  if (value) return translate(`nodes.unlock.status.${value}.description`, item.description || '');
+  return item.description || '';
+};
+
+const formatUnlockReason = (reason) => {
+  const raw = getCleanString(reason);
+  if (!raw) return '';
+  const normalized = raw.toLowerCase().replace(/[\s-]+/g, '_');
+  return translate(`nodes.unlock.reasons.${normalized}`, raw);
 };
 
 export const createNodeCheckProfileFormState = (profile = null) => {
@@ -354,36 +431,72 @@ export const getUnlockStatusMeta = (status) => {
   if (dynamicMeta) {
     return {
       key: normalized || 'default',
-      label: dynamicMeta.label || dynamicMeta.shortLabel || status,
-      shortLabel: dynamicMeta.shortLabel || dynamicMeta.label || status,
+      label: getLocalizedUnlockStatusLabel(dynamicMeta),
+      shortLabel: getLocalizedUnlockStatusShortLabel(dynamicMeta),
       color: dynamicMeta.color || dynamicMeta.severity || 'default',
       variant: 'outlined',
-      description: dynamicMeta.description || ''
+      description: getLocalizedUnlockStatusDescription(dynamicMeta)
     };
   }
 
   if (!normalized) {
-    return { key: 'default', label: '未知', shortLabel: '未知', color: 'default', variant: 'outlined' };
+    return {
+      key: 'default',
+      label: translate('nodes.unlock.status.unknown.label', 'Unknown'),
+      shortLabel: translate('nodes.unlock.status.unknown.short', 'Unknown'),
+      color: 'default',
+      variant: 'outlined'
+    };
   }
 
   if (['success', 'supported', 'unlock', 'unlocked', 'available', 'ok', 'passed', 'pass', 'yes'].includes(normalized)) {
-    return { key: 'success', label: '可用', shortLabel: '可用', color: 'success', variant: 'outlined' };
+    return {
+      key: 'success',
+      label: translate('nodes.unlock.status.available.label', 'Available'),
+      shortLabel: translate('nodes.unlock.status.available.short', 'Available'),
+      color: 'success',
+      variant: 'outlined'
+    };
   }
 
   if (['partial', 'limited', 'warning', 'region_restricted'].includes(normalized)) {
-    return { key: 'warning', label: '受限', shortLabel: '受限', color: 'warning', variant: 'outlined' };
+    return {
+      key: 'warning',
+      label: translate('nodes.unlock.status.restricted.label', 'Restricted'),
+      shortLabel: translate('nodes.unlock.status.restricted.short', 'Restricted'),
+      color: 'warning',
+      variant: 'outlined'
+    };
   }
 
   if (['pending', 'running', 'checking', 'processing'].includes(normalized)) {
-    return { key: 'info', label: '检测中', shortLabel: '检测中', color: 'info', variant: 'outlined' };
+    return {
+      key: 'info',
+      label: translate('nodes.unlock.status.checking.label', 'Checking'),
+      shortLabel: translate('nodes.unlock.status.checking.short', 'Checking'),
+      color: 'info',
+      variant: 'outlined'
+    };
   }
 
   if (['timeout', 'timed_out'].includes(normalized)) {
-    return { key: 'timeout', label: '超时', shortLabel: '超时', color: 'warning', variant: 'outlined' };
+    return {
+      key: 'timeout',
+      label: translate('nodes.unlock.status.timeout.label', 'Timeout'),
+      shortLabel: translate('nodes.unlock.status.timeout.short', 'Timeout'),
+      color: 'warning',
+      variant: 'outlined'
+    };
   }
 
   if (['blocked', 'locked', 'unsupported', 'unavailable', 'denied', 'forbidden', 'error', 'failed', 'fail', 'no'].includes(normalized)) {
-    return { key: 'error', label: '不可用', shortLabel: '不可用', color: 'error', variant: 'outlined' };
+    return {
+      key: 'error',
+      label: translate('nodes.unlock.status.unavailable.label', 'Unavailable'),
+      shortLabel: translate('nodes.unlock.status.unavailable.short', 'Unavailable'),
+      color: 'error',
+      variant: 'outlined'
+    };
   }
 
   return {
@@ -489,12 +602,18 @@ export const getUnlockProviderDisplay = (providerResult) => {
   const providerLabel = formatUnlockProviderLabel(providerResult?.provider);
   const statusMeta = getUnlockStatusMeta(providerResult?.status);
   const region = getCleanString(providerResult?.region);
-  const reason = getCleanString(providerResult?.reason);
+  const reason = formatUnlockReason(providerResult?.reason);
   const detail = getCleanString(providerResult?.detail);
 
   const compactStatus = statusMeta.key === 'available' && region ? region : statusMeta.shortLabel;
   const compactLabel = compactStatus ? `${providerLabel} ${compactStatus}` : providerLabel;
-  const tooltip = [statusMeta.label, statusMeta.description || '', region ? `地区: ${region}` : '', reason ? `原因: ${reason}` : '', detail]
+  const tooltip = [
+    statusMeta.label,
+    statusMeta.description || '',
+    region ? translate('nodes.unlock.regionTooltip', 'Region: {{region}}', { region }) : '',
+    reason ? translate('nodes.unlock.reasonTooltip', 'Reason: {{reason}}', { reason }) : '',
+    detail
+  ]
     .filter(Boolean)
     .join(' · ');
 
@@ -548,7 +667,9 @@ export const getUnlockTaskResultText = (taskResult, limit = 2) => {
   const summary = getUnlockSummaryDisplay(extractUnlockSummaryFromTaskResult(taskResult), { limit });
   if (!summary || summary.compactItems.length === 0) return null;
 
-  return `解锁 ${summary.summaryText}${summary.extraCount > 0 ? ` +${summary.extraCount}` : ''}`;
+  return translate('nodes.unlock.taskSummary', 'Unlock {{summary}}', {
+    summary: `${summary.summaryText}${summary.extraCount > 0 ? ` +${summary.extraCount}` : ''}`
+  });
 };
 
 // User-Agent 预设选项
@@ -665,11 +786,11 @@ export { QUALITY_STATUS_OPTIONS };
 
 // 状态选择器选项 (用于过滤器下拉框)
 export const STATUS_OPTIONS = [
-  { value: '', label: '全部' },
-  { value: NODE_STATUS.UNTESTED, label: '未测速', color: 'default' },
-  { value: NODE_STATUS.SUCCESS, label: '成功', color: 'success' },
-  { value: NODE_STATUS.TIMEOUT, label: '超时', color: 'warning' },
-  { value: NODE_STATUS.ERROR, label: '失败', color: 'error' }
+  { value: '', label: 'All', labelKey: 'nodeConditions.status.all' },
+  { value: NODE_STATUS.UNTESTED, label: 'Untested', labelKey: 'nodeConditions.status.untested', color: 'default' },
+  { value: NODE_STATUS.SUCCESS, label: 'Success', labelKey: 'nodeConditions.status.success', color: 'success' },
+  { value: NODE_STATUS.TIMEOUT, label: 'Timeout', labelKey: 'nodeConditions.status.timeout', color: 'warning' },
+  { value: NODE_STATUS.ERROR, label: 'Failed', labelKey: 'nodeConditions.status.error', color: 'error' }
 ];
 
 // 速度颜色 (基于数值)
@@ -685,13 +806,13 @@ export const getSpeedColor = (speed) => {
 export const getSpeedDisplay = (speed, speedStatus) => {
   // 优先根据状态判断
   if (speedStatus === NODE_STATUS.TIMEOUT) {
-    return { label: '超时', color: 'warning', variant: 'outlined' };
+    return { label: translate('nodeConditions.status.timeout', 'Timeout'), color: 'warning', variant: 'outlined' };
   }
   if (speedStatus === NODE_STATUS.ERROR || speed === -1) {
-    return { label: '失败', color: 'error', variant: 'outlined' };
+    return { label: translate('nodeConditions.status.error', 'Failed'), color: 'error', variant: 'outlined' };
   }
   if (speedStatus === NODE_STATUS.UNTESTED || (!speedStatus && speed <= 0)) {
-    return { label: '未测速', color: 'default', variant: 'outlined' };
+    return { label: translate('nodeConditions.status.untested', 'Untested'), color: 'default', variant: 'outlined' };
   }
   // 成功状态，显示具体速度值
   return { label: `${speed.toFixed(2)}MB/s`, color: getSpeedColor(speed), variant: 'outlined' };
@@ -701,13 +822,13 @@ export const getSpeedDisplay = (speed, speedStatus) => {
 export const getDelayDisplay = (delay, delayStatus) => {
   // 优先根据状态判断
   if (delayStatus === NODE_STATUS.TIMEOUT || delay === -1) {
-    return { label: '超时', color: 'error', variant: 'outlined' };
+    return { label: translate('nodeConditions.status.timeout', 'Timeout'), color: 'error', variant: 'outlined' };
   }
   if (delayStatus === NODE_STATUS.ERROR) {
-    return { label: '失败', color: 'error', variant: 'outlined' };
+    return { label: translate('nodeConditions.status.error', 'Failed'), color: 'error', variant: 'outlined' };
   }
   if (delayStatus === NODE_STATUS.UNTESTED || (!delayStatus && delay <= 0)) {
-    return { label: '未测速', color: 'default', variant: 'outlined' };
+    return { label: translate('nodeConditions.status.untested', 'Untested'), color: 'default', variant: 'outlined' };
   }
   // 成功状态，显示具体延迟值
   return { label: `${delay}ms`, color: getDelayColor(delay), variant: 'outlined' };
@@ -721,17 +842,19 @@ export const getFraudScoreDisplay = (fraudScore, qualityStatus = QUALITY_STATUS.
       detailLabel: statusMeta.label,
       color: statusMeta.color,
       variant: statusMeta.variant,
-      tooltip: statusMeta.tooltip
+      tooltip: statusMeta.tooltip,
+      state: qualityStatus
     };
   }
 
   if (fraudScore === undefined || fraudScore === null || fraudScore < 0) {
-    return { label: '未检测', color: 'default', variant: 'outlined' };
+    const statusMeta = getQualityStatusMeta(QUALITY_STATUS.UNTESTED, qualityFamily);
+    return { label: statusMeta.shortLabel, color: 'default', variant: 'outlined', state: QUALITY_STATUS.UNTESTED };
   }
 
   const matchedLevel = getFraudScoreLevel(fraudScore);
   const levelStyles = {
-    极佳: {
+    excellentPlus: {
       sx: (theme) => [
         {
           color: '#6b7280',
@@ -745,35 +868,35 @@ export const getFraudScoreDisplay = (fraudScore, qualityStatus = QUALITY_STATUS.
         })
       ]
     },
-    优秀: {
+    excellent: {
       sx: {
         color: '#15803d',
         borderColor: '#22c55e',
         backgroundColor: 'rgba(34,197,94,0.08)'
       }
     },
-    良好: {
+    good: {
       sx: {
         color: '#a16207',
         borderColor: '#eab308',
         backgroundColor: 'rgba(234,179,8,0.10)'
       }
     },
-    中等: {
+    medium: {
       sx: {
         color: '#c2410c',
         borderColor: '#f97316',
         backgroundColor: 'rgba(249,115,22,0.10)'
       }
     },
-    差: {
+    poor: {
       sx: {
         color: '#b91c1c',
         borderColor: '#ef4444',
         backgroundColor: 'rgba(239,68,68,0.10)'
       }
     },
-    极差: {
+    veryPoor: {
       sx: (theme) => [
         {
           color: '#111827',
@@ -788,10 +911,11 @@ export const getFraudScoreDisplay = (fraudScore, qualityStatus = QUALITY_STATUS.
       ]
     }
   };
-  const matchedStyle = levelStyles[matchedLevel.category] || levelStyles.极差;
+  const matchedStyle = levelStyles[matchedLevel.category] || levelStyles.veryPoor;
+  const categoryLabel = matchedLevel.category ? i18n.t(`nodeConditions.fraudLevels.${matchedLevel.category}`, matchedLevel.category) : '';
   return {
     label: `${fraudScore}`,
-    detailLabel: `${fraudScore} (${matchedLevel.category})`,
+    detailLabel: categoryLabel ? `${fraudScore} (${categoryLabel})` : `${fraudScore}`,
     color: 'default',
     variant: 'outlined',
     sx: matchedStyle.sx
@@ -801,21 +925,33 @@ export const getFraudScoreDisplay = (fraudScore, qualityStatus = QUALITY_STATUS.
 export const getIpTypeDisplay = (isBroadcast, qualityStatus = QUALITY_STATUS.UNTESTED, qualityFamily = '') => {
   if (qualityStatus !== QUALITY_STATUS.SUCCESS) {
     const statusMeta = getQualityStatusMeta(qualityStatus, qualityFamily);
-    return { label: statusMeta.shortLabel, color: statusMeta.color, variant: statusMeta.variant, tooltip: statusMeta.tooltip };
+    return {
+      label: statusMeta.shortLabel,
+      color: statusMeta.color,
+      variant: statusMeta.variant,
+      tooltip: statusMeta.tooltip,
+      state: qualityStatus
+    };
   }
   return isBroadcast
-    ? { label: '广播IP', color: 'warning', variant: 'outlined' }
-    : { label: '原生IP', color: 'success', variant: 'outlined' };
+    ? { label: translate('nodeConditions.ipType.broadcast', 'Broadcast IP'), color: 'warning', variant: 'outlined' }
+    : { label: translate('nodeConditions.ipType.native', 'Native IP'), color: 'success', variant: 'outlined' };
 };
 
 export const getResidentialDisplay = (isResidential, qualityStatus = QUALITY_STATUS.UNTESTED, qualityFamily = '') => {
   if (qualityStatus !== QUALITY_STATUS.SUCCESS) {
     const statusMeta = getQualityStatusMeta(qualityStatus, qualityFamily);
-    return { label: statusMeta.shortLabel, color: statusMeta.color, variant: statusMeta.variant, tooltip: statusMeta.tooltip };
+    return {
+      label: statusMeta.shortLabel,
+      color: statusMeta.color,
+      variant: statusMeta.variant,
+      tooltip: statusMeta.tooltip,
+      state: qualityStatus
+    };
   }
   return isResidential
-    ? { label: '住宅IP', color: 'success', variant: 'outlined' }
-    : { label: '机房IP', color: 'default', variant: 'outlined' };
+    ? { label: translate('nodeConditions.residential.residential', 'Residential IP'), color: 'success', variant: 'outlined' }
+    : { label: translate('nodeConditions.residential.datacenter', 'Datacenter IP'), color: 'default', variant: 'outlined' };
 };
 
 export const getQualityStatusDisplay = (qualityStatus, qualityFamily) => getQualityStatusMeta(qualityStatus, qualityFamily);

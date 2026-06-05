@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -48,13 +49,14 @@ function HeaderAvatar({ children, ref, ...others }) {
 
 function MobileSearch({ value, setValue, popupState }) {
   const theme = useTheme();
+  const { t } = useTranslation();
 
   return (
     <OutlinedInput
       id="input-search-header"
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      placeholder="Search"
+      placeholder={t('search.placeholder')}
       startAdornment={
         <InputAdornment position="start">
           <IconSearch stroke={1.5} size="16px" />
@@ -83,7 +85,7 @@ function MobileSearch({ value, setValue, popupState }) {
         </InputAdornment>
       }
       aria-describedby="search-helper-text"
-      slotProps={{ input: { 'aria-label': 'weight', sx: { bgcolor: 'transparent', pl: 0.5 } } }}
+      slotProps={{ input: { 'aria-label': t('search.ariaLabel'), sx: { bgcolor: 'transparent', pl: 0.5 } } }}
       sx={{ width: '100%', ml: 0.5, px: 2, bgcolor: 'background.paper' }}
     />
   );
@@ -92,6 +94,7 @@ function MobileSearch({ value, setValue, popupState }) {
 // ==============================|| SEARCH INPUT ||============================== //
 
 export default function SearchSection() {
+  const { t } = useTranslation();
   const [value, setValue] = useState('');
 
   return (
@@ -135,7 +138,7 @@ export default function SearchSection() {
           id="input-search-header"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Search"
+          placeholder={t('search.placeholder')}
           startAdornment={
             <InputAdornment position="start">
               <IconSearch stroke={1.5} size="16px" />
@@ -149,7 +152,7 @@ export default function SearchSection() {
             </InputAdornment>
           }
           aria-describedby="search-helper-text"
-          slotProps={{ input: { 'aria-label': 'weight', sx: { bgcolor: 'transparent', pl: 0.5 } } }}
+          slotProps={{ input: { 'aria-label': t('search.ariaLabel'), sx: { bgcolor: 'transparent', pl: 0.5 } } }}
           sx={{ width: { md: 250, lg: 434 }, ml: 2, px: 2 }}
         />
       </Box>

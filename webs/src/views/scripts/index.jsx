@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { alpha, useTheme } from '@mui/material/styles';
@@ -39,37 +40,39 @@ import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import MainCard from 'ui-component/cards/MainCard';
 import Pagination from 'components/Pagination';
 import { getScripts, addScript, updateScript, deleteScript, getScriptUsage } from 'api/scripts';
+import { formatDateTime } from 'i18n/locales';
 
 // Monaco Editor
 import Editor from '@monaco-editor/react';
 
-const DEFAULT_SCRIPT = `//修改节点列表
+const buildDefaultScript = (t) => `// ${t('scripts.template.modifyNodes')}
 /**
  * @param {Node[]} nodes
  * @param {string} clientType
  */
 function filterNode(nodes, clientType) {
-    // nodes: 节点列表
-    // clientType: 客户端类型
-    // 返回值: 修改后节点列表
+    // nodes: ${t('scripts.template.nodes')}
+    // clientType: ${t('scripts.template.clientType')}
+    // ${t('scripts.template.returnNodes')}
     return nodes;
 }
 
-//修改订阅文件
+// ${t('scripts.template.modifySubscription')}
 /**
  * @param {string} input
  * @param {string} clientType
  */
 function subMod(input, clientType) {
-    // input: 原始输入内容
-    // clientType: 客户端类型
-    // 返回值: 修改后的内容字符串
+    // input: ${t('scripts.template.input')}
+    // clientType: ${t('scripts.template.clientType')}
+    // ${t('scripts.template.returnContent')}
     return input;
 }`;
 
 // ==============================|| 脚本管理 ||============================== //
 
 export default function ScriptList() {
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -78,7 +81,7 @@ export default function ScriptList() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [currentScript, setCurrentScript] = useState(null);
-  const [formData, setFormData] = useState({ name: '', version: '0.0.0', content: DEFAULT_SCRIPT });
+  const [formData, setFormData] = useState(() => ({ name: '', version: '0.0.0', content: buildDefaultScript(t) }));
   const [editorFullscreen, setEditorFullscreen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [usageDialog, setUsageDialog] = useState({ open: false, title: '', message: '', subscriptions: [], action: null });
@@ -128,7 +131,7 @@ export default function ScriptList() {
       }
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '获取脚本列表失败', 'error');
+      showMessage(error.message || t('scripts.messages.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -149,7 +152,7 @@ export default function ScriptList() {
   const handleAdd = () => {
     setIsEdit(false);
     setCurrentScript(null);
-    setFormData({ name: '', version: '0.0.0', content: DEFAULT_SCRIPT });
+    setFormData({ name: '', version: '0.0.0', content: buildDefaultScript(t) });
     setEditorFullscreen(false);
     setDialogOpen(true);
   };
@@ -170,57 +173,57 @@ export default function ScriptList() {
       usedSubscriptions = response.data?.subscriptions || [];
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '获取脚本使用情况失败', 'error');
+      showMessage(error.message || t('scripts.messages.usageFailed'), 'error');
       return;
     }
 
     const deleteAction = async () => {
       try {
         await deleteScript(script);
-        showMessage('删除成功');
+        showMessage(t('scripts.messages.deleteSuccess'));
         fetchScripts(page, rowsPerPage);
       } catch (error) {
         console.error(error);
-        showMessage(error.message || '删除失败', 'error');
+        showMessage(error.message || t('scripts.messages.deleteFailed'), 'error');
       }
     };
 
     if (usedSubscriptions.length > 0) {
       setUsageDialog({
         open: true,
-        title: '脚本正在被订阅使用',
-        message: `脚本 "${script.name}" 当前正被以下订阅使用，删除后这些订阅可能受到影响，是否继续删除？`,
+        title: t('scripts.usage.title'),
+        message: t('scripts.usage.message', { name: script.name }),
         subscriptions: usedSubscriptions,
         action: deleteAction
       });
       return;
     }
 
-    openConfirm('删除脚本', `确定要删除脚本 "${script.name}" 吗？`, deleteAction);
+    openConfirm(t('scripts.delete.title'), t('scripts.delete.confirm', { name: script.name }), deleteAction);
   };
 
   const handleSubmit = async () => {
     try {
       if (isEdit) {
         await updateScript({ ...formData, id: currentScript.id });
-        showMessage('更新成功');
+        showMessage(t('scripts.messages.updateSuccess'));
       } else {
         await addScript(formData);
-        showMessage('添加成功');
+        showMessage(t('scripts.messages.createSuccess'));
       }
       setEditorFullscreen(false);
       setDialogOpen(false);
       fetchScripts(page, rowsPerPage);
     } catch (error) {
       console.error(error);
-      showMessage(error.message || (isEdit ? '更新失败' : '添加失败'), 'error');
+      showMessage(error.message || (isEdit ? t('scripts.messages.updateFailed') : t('scripts.messages.createFailed')), 'error');
     }
   };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
-    return date.toLocaleString('zh-CN');
+    return formatDateTime(date, i18n.resolvedLanguage || i18n.language);
   };
 
   const handleCloseDialog = () => {
@@ -230,11 +233,11 @@ export default function ScriptList() {
 
   return (
     <MainCard
-      title="脚本管理"
+      title={t('scripts.title')}
       secondary={
         matchDownMd ? (
           <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAdd}>
-            添加
+            {t('scripts.actions.add')}
           </Button>
         ) : (
           <Stack direction="row" spacing={1} alignItems="center">
@@ -245,10 +248,10 @@ export default function ScriptList() {
               sx={{ display: 'flex', alignItems: 'center' }}
             >
               <HelpOutlineIcon sx={{ mr: 0.5 }} fontSize="small" />
-              使用说明
+              {t('scripts.actions.usageGuide')}
             </Link>
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
-              添加脚本
+              {t('scripts.actions.addScript')}
             </Button>
             <IconButton onClick={handleRefresh} disabled={loading}>
               <RefreshIcon />
@@ -266,7 +269,7 @@ export default function ScriptList() {
             sx={{ display: 'flex', alignItems: 'center' }}
           >
             <HelpOutlineIcon sx={{ mr: 0.5 }} fontSize="small" />
-            使用说明
+            {t('scripts.actions.usageGuide')}
           </Link>
           <IconButton onClick={handleRefresh} disabled={loading} size="small">
             <RefreshIcon />
@@ -287,7 +290,7 @@ export default function ScriptList() {
                 </Stack>
 
                 <Typography variant="caption" color="textSecondary" display="block">
-                  更新于: {formatDate(script.updated_at)}
+                  {t('scripts.fields.updatedAt')}: {formatDate(script.updated_at)}
                 </Typography>
 
                 <Divider sx={{ my: 1 }} />
@@ -309,11 +312,11 @@ export default function ScriptList() {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>脚本名称</TableCell>
-                <TableCell>版本</TableCell>
-                <TableCell>创建时间</TableCell>
-                <TableCell>更新时间</TableCell>
-                <TableCell align="right">操作</TableCell>
+                <TableCell>{t('scripts.fields.name')}</TableCell>
+                <TableCell>{t('scripts.fields.version')}</TableCell>
+                <TableCell>{t('scripts.fields.createdAt')}</TableCell>
+                <TableCell>{t('scripts.fields.updatedAt')}</TableCell>
+                <TableCell align="right">{t('scripts.fields.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -390,12 +393,12 @@ export default function ScriptList() {
           }
         >
           <Stack spacing={0.5}>
-            <Typography variant="h4">{isEdit ? '编辑脚本' : '添加脚本'}</Typography>
+            <Typography variant="h4">{isEdit ? t('scripts.dialog.editTitle') : t('scripts.dialog.addTitle')}</Typography>
           </Stack>
           {editorFullscreen && (
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap justifyContent="flex-end">
               <Button variant="outlined" size="small" startIcon={<FullscreenExitIcon />} onClick={() => setEditorFullscreen(false)}>
-                退出全屏
+                {t('scripts.actions.exitFullscreen')}
               </Button>
             </Stack>
           )}
@@ -419,12 +422,12 @@ export default function ScriptList() {
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                   <TextField
                     fullWidth
-                    label="脚本名称"
+                    label={t('scripts.fields.name')}
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
                   <TextField
-                    label="版本"
+                    label={t('scripts.fields.version')}
                     value={formData.version}
                     onChange={(e) => setFormData({ ...formData, version: e.target.value })}
                     placeholder="0.0.0"
@@ -433,7 +436,7 @@ export default function ScriptList() {
                 </Stack>
                 <Stack direction="row" justifyContent="flex-end">
                   <Button variant="outlined" size="small" startIcon={<FullscreenIcon />} onClick={() => setEditorFullscreen(true)}>
-                    全屏编辑
+                    {t('scripts.actions.fullscreen')}
                   </Button>
                 </Stack>
               </>
@@ -470,9 +473,9 @@ export default function ScriptList() {
         </DialogContent>
         {!editorFullscreen && (
           <DialogActions>
-            <Button onClick={handleCloseDialog}>取消</Button>
+            <Button onClick={handleCloseDialog}>{t('common.cancel')}</Button>
             <Button variant="contained" onClick={handleSubmit}>
-              确定
+              {t('common.confirm')}
             </Button>
           </DialogActions>
         )}
@@ -502,9 +505,9 @@ export default function ScriptList() {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleConfirmClose}>取消</Button>
+          <Button onClick={handleConfirmClose}>{t('common.cancel')}</Button>
           <Button onClick={handleConfirmAction} variant="contained" color="error" autoFocus>
-            确定
+            {t('common.confirm')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -541,7 +544,7 @@ export default function ScriptList() {
           {usageDialog.subscriptions?.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                使用中的订阅：
+                {t('scripts.usage.usedSubscriptions')}
               </Typography>
               <Stack spacing={1}>
                 {usageDialog.subscriptions.map((subscriptionName) => (
@@ -552,7 +555,9 @@ export default function ScriptList() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUsageDialog({ ...usageDialog, open: false, subscriptions: [], action: null })}>取消</Button>
+          <Button onClick={() => setUsageDialog({ ...usageDialog, open: false, subscriptions: [], action: null })}>
+            {t('common.cancel')}
+          </Button>
           <Button
             variant="contained"
             color="error"
@@ -565,7 +570,7 @@ export default function ScriptList() {
             }}
             autoFocus
           >
-            继续删除
+            {t('scripts.actions.continueDelete')}
           </Button>
         </DialogActions>
       </Dialog>

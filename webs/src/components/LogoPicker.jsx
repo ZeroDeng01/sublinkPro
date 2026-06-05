@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
@@ -295,6 +296,7 @@ const EMOJI_LIST = [
  * 支持URL输入、图标选择、Emoji选择三种模式
  */
 export default function LogoPicker({ value, onChange, name }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState(0);
@@ -387,20 +389,20 @@ export default function LogoPicker({ value, onChange, name }) {
         <AirportLogo logo={value} name={name} size="medium" />
         <Box sx={{ flex: 1 }}>
           <Typography variant="body2" fontWeight={500}>
-            {value ? '点击更换Logo' : '点击设置Logo'}
+            {value ? t('airports.form.logoPicker.change') : t('airports.form.logoPicker.set')}
           </Typography>
           <Typography variant="caption" color="textSecondary">
             {value
               ? value.startsWith('icon:')
-                ? '图标'
+                ? t('airports.form.logoPicker.types.icon')
                 : value.startsWith('http') || value.startsWith('data:image')
-                  ? 'URL图片'
-                  : 'Emoji'
-              : '默认显示名称首字'}
+                  ? t('airports.form.logoPicker.types.urlImage')
+                  : t('airports.form.logoPicker.types.emoji')
+              : t('airports.form.logoPicker.types.initial')}
           </Typography>
         </Box>
         {value && (
-          <Tooltip title="清除" arrow>
+          <Tooltip title={t('common.clear')} arrow>
             <IconButton
               size="small"
               onClick={(e) => {
@@ -416,20 +418,20 @@ export default function LogoPicker({ value, onChange, name }) {
 
       {/* 选择对话框 */}
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>选择Logo</DialogTitle>
+        <DialogTitle>{t('airports.form.logoPicker.dialogTitle')}</DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
           {/* Tab切换 */}
           <Tabs
             value={tab}
-            onChange={(e, v) => {
+            onChange={(_, v) => {
               setTab(v);
               setSearch('');
             }}
             sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
           >
-            <Tab label="🔗 URL" />
-            <Tab label="🎨 图标" />
-            <Tab label="😊 Emoji" />
+            <Tab label={t('airports.form.logoPicker.tabs.url')} />
+            <Tab label={t('airports.form.logoPicker.tabs.icon')} />
+            <Tab label={t('airports.form.logoPicker.tabs.emoji')} />
           </Tabs>
 
           {/* URL输入 */}
@@ -438,11 +440,11 @@ export default function LogoPicker({ value, onChange, name }) {
               <TextField
                 fullWidth
                 size="small"
-                label="图片URL"
-                placeholder="https://example.com/logo.png 或 data:image/png;base64,..."
+                label={t('airports.form.logoPicker.urlLabel')}
+                placeholder={t('airports.form.logoPicker.urlPlaceholder')}
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
-                helperText="输入图片的网络地址或 base64 格式图片"
+                helperText={t('airports.form.logoPicker.urlHelper')}
               />
               {urlInput && (
                 <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
@@ -456,7 +458,7 @@ export default function LogoPicker({ value, onChange, name }) {
                     }}
                   >
                     <Typography variant="caption" color="textSecondary" sx={{ mb: 1, display: 'block' }}>
-                      预览
+                      {t('common.preview')}
                     </Typography>
                     <Box
                       sx={{
@@ -471,7 +473,7 @@ export default function LogoPicker({ value, onChange, name }) {
                       <Box
                         component="img"
                         src={urlInput}
-                        alt="预览"
+                        alt={t('common.preview')}
                         referrerPolicy="no-referrer"
                         sx={{
                           maxWidth: 200,
@@ -496,7 +498,7 @@ export default function LogoPicker({ value, onChange, name }) {
               <TextField
                 fullWidth
                 size="small"
-                placeholder="搜索图标..."
+                placeholder={t('airports.form.logoPicker.searchIcon')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 slotProps={{
@@ -597,13 +599,13 @@ export default function LogoPicker({ value, onChange, name }) {
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={handleClear} color="error">
-            清除
+            {t('common.clear')}
           </Button>
           <Box sx={{ flex: 1 }} />
-          <Button onClick={handleClose}>取消</Button>
+          <Button onClick={handleClose}>{t('common.cancel')}</Button>
           {tab === 0 && (
             <Button variant="contained" onClick={handleConfirmUrl} disabled={!urlInput.trim()}>
-              确定
+              {t('common.confirm')}
             </Button>
           )}
         </DialogActions>

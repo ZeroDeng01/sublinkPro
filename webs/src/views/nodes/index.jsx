@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -75,6 +76,7 @@ import { buildUnlockRulesPayload, setUnlockMeta, SPEED_TEST_TCP_OPTIONS, SPEED_T
 
 export default function NodeList() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
   const location = useLocation();
   const navigate = useNavigate();
@@ -271,57 +273,60 @@ export default function NodeList() {
 
   // 获取节点列表（支持过滤和分页参数）
   // 注意：不依赖 page/rowsPerPage，而是通过参数传递，避免触发 filter useEffect 循环
-  const fetchNodes = useCallback(async (filterParams = {}) => {
-    setLoading(true);
-    try {
-      // 构建过滤参数
-      const params = {};
-      if (filterParams.search) params.search = filterParams.search;
-      if (filterParams.group) params.group = filterParams.group;
-      if (filterParams.source) params.source = filterParams.source;
-      if (filterParams.maxDelay) params.maxDelay = filterParams.maxDelay;
-      if (filterParams.minSpeed) params.minSpeed = filterParams.minSpeed;
-      if (filterParams.maxFraudScore) params.maxFraudScore = filterParams.maxFraudScore;
-      if (filterParams.speedStatus) params.speedStatus = filterParams.speedStatus;
-      if (filterParams.delayStatus) params.delayStatus = filterParams.delayStatus;
-      if (filterParams.protocol) params.protocol = filterParams.protocol;
-      if (filterParams.residentialType) params.residentialType = filterParams.residentialType;
-      if (filterParams.ipType) params.ipType = filterParams.ipType;
-      if (filterParams.qualityStatus) params.qualityStatus = filterParams.qualityStatus;
-      if (filterParams.unlockRules?.some((rule) => rule.provider || rule.status || rule.keyword)) {
-        params.unlockRules = buildUnlockRulesPayload(filterParams.unlockRules);
-        params.unlockRuleMode = filterParams.unlockRuleMode || 'or';
-      }
-      if (filterParams.countries && filterParams.countries.length > 0) {
-        params['countries[]'] = filterParams.countries;
-      }
-      if (filterParams.tags && filterParams.tags.length > 0) {
-        params['tags[]'] = filterParams.tags.map((t) => t.name || t);
-      }
-      if (filterParams.sortBy) params.sortBy = filterParams.sortBy;
-      if (filterParams.sortOrder) params.sortOrder = filterParams.sortOrder;
+  const fetchNodes = useCallback(
+    async (filterParams = {}) => {
+      setLoading(true);
+      try {
+        // 构建过滤参数
+        const params = {};
+        if (filterParams.search) params.search = filterParams.search;
+        if (filterParams.group) params.group = filterParams.group;
+        if (filterParams.source) params.source = filterParams.source;
+        if (filterParams.maxDelay) params.maxDelay = filterParams.maxDelay;
+        if (filterParams.minSpeed) params.minSpeed = filterParams.minSpeed;
+        if (filterParams.maxFraudScore) params.maxFraudScore = filterParams.maxFraudScore;
+        if (filterParams.speedStatus) params.speedStatus = filterParams.speedStatus;
+        if (filterParams.delayStatus) params.delayStatus = filterParams.delayStatus;
+        if (filterParams.protocol) params.protocol = filterParams.protocol;
+        if (filterParams.residentialType) params.residentialType = filterParams.residentialType;
+        if (filterParams.ipType) params.ipType = filterParams.ipType;
+        if (filterParams.qualityStatus) params.qualityStatus = filterParams.qualityStatus;
+        if (filterParams.unlockRules?.some((rule) => rule.provider || rule.status || rule.keyword)) {
+          params.unlockRules = buildUnlockRulesPayload(filterParams.unlockRules);
+          params.unlockRuleMode = filterParams.unlockRuleMode || 'or';
+        }
+        if (filterParams.countries && filterParams.countries.length > 0) {
+          params['countries[]'] = filterParams.countries;
+        }
+        if (filterParams.tags && filterParams.tags.length > 0) {
+          params['tags[]'] = filterParams.tags.map((t) => t.name || t);
+        }
+        if (filterParams.sortBy) params.sortBy = filterParams.sortBy;
+        if (filterParams.sortOrder) params.sortOrder = filterParams.sortOrder;
 
-      // 分页参数必须通过 filterParams 传递
-      params.page = (filterParams.page ?? 0) + 1; // 后端是1-indexed
-      params.pageSize = filterParams.pageSize ?? 20;
+        // 分页参数必须通过 filterParams 传递
+        params.page = (filterParams.page ?? 0) + 1; // 后端是1-indexed
+        params.pageSize = filterParams.pageSize ?? 20;
 
-      const response = await getNodes(params);
-      // 处理分页响应
-      if (response.data && response.data.items !== undefined) {
-        setNodes(response.data.items || []);
-        setTotalItems(response.data.total || 0);
-      } else {
-        // 向后兼容：老格式直接返回数组
-        setNodes(response.data || []);
-        setTotalItems((response.data || []).length);
+        const response = await getNodes(params);
+        // 处理分页响应
+        if (response.data && response.data.items !== undefined) {
+          setNodes(response.data.items || []);
+          setTotalItems(response.data.total || 0);
+        } else {
+          // 向后兼容：老格式直接返回数组
+          setNodes(response.data || []);
+          setTotalItems((response.data || []).length);
+        }
+      } catch (error) {
+        console.error(error);
+        showMessage(error.message || t('nodes.page.messages.loadFailed'), 'error');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error(error);
-      showMessage(error.message || '获取节点列表失败', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, []); // 空依赖，避免循环
+    },
+    [t]
+  );
 
   // 获取代理节点选项（用于订阅下载代理选择）
   const fetchProxyNodes = useCallback(async () => {
@@ -470,7 +475,7 @@ export default function NodeList() {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    showMessage('已复制到剪贴板');
+    showMessage(t('common.copied'));
   };
 
   const resetFilters = () => {
@@ -636,41 +641,45 @@ export default function NodeList() {
 
   const handleDeleteNode = async (node) => {
     const displayName = node.EffectiveName || node.Name || node.LinkName;
-    openConfirm('删除节点', `确定要删除节点 "${displayName}" 吗？`, async () => {
+    openConfirm(t('nodes.page.confirm.deleteTitle'), t('nodes.page.confirm.deleteOne', { name: displayName }), async () => {
       try {
         await deleteNode({ id: node.ID });
-        showMessage('删除成功');
+        showMessage(t('nodes.page.messages.deleteSuccess'));
         handleRefresh();
       } catch (error) {
         console.error(error);
-        showMessage(error.message || '删除失败', 'error');
+        showMessage(error.message || t('nodes.page.messages.deleteFailed'), 'error');
       }
     });
   };
 
   const handleBatchDelete = async () => {
     if (selectedNodes.length === 0) {
-      showMessage('请选择要删除的节点', 'warning');
+      showMessage(t('nodes.page.messages.selectDeleteRequired'), 'warning');
       return;
     }
-    openConfirm('批量删除', `确定要删除选中的 ${selectedNodes.length} 个节点吗？`, async () => {
-      try {
-        const ids = selectedNodes.map((node) => node.ID);
-        await deleteNodesBatch(ids);
-        showMessage(`成功删除 ${selectedNodes.length} 个节点`);
-        setSelectedNodes([]);
-        handleRefresh();
-      } catch (error) {
-        console.error(error);
-        showMessage(error.message || '批量删除失败', 'error');
+    openConfirm(
+      t('nodes.page.confirm.batchDeleteTitle'),
+      t('nodes.page.confirm.batchDelete', { count: selectedNodes.length }),
+      async () => {
+        try {
+          const ids = selectedNodes.map((node) => node.ID);
+          await deleteNodesBatch(ids);
+          showMessage(t('nodes.page.messages.batchDeleteSuccess', { count: selectedNodes.length }));
+          setSelectedNodes([]);
+          handleRefresh();
+        } catch (error) {
+          console.error(error);
+          showMessage(error.message || t('nodes.page.messages.batchDeleteFailed'), 'error');
+        }
       }
-    });
+    );
   };
 
   // 批量修改分组
   const handleBatchGroup = () => {
     if (selectedNodes.length === 0) {
-      showMessage('请选择要修改的节点', 'warning');
+      showMessage(t('nodes.page.messages.selectModifyRequired'), 'warning');
       return;
     }
     setBatchGroupValue('');
@@ -681,7 +690,7 @@ export default function NodeList() {
     try {
       const ids = selectedNodes.map((node) => node.ID);
       await batchUpdateNodeGroup(ids, batchGroupValue);
-      showMessage(`成功修改 ${selectedNodes.length} 个节点的分组`);
+      showMessage(t('nodes.page.messages.batchGroupSuccess', { count: selectedNodes.length }));
       setSelectedNodes([]);
       setBatchGroupDialogOpen(false);
       fetchNodes(getCurrentFilters());
@@ -691,14 +700,14 @@ export default function NodeList() {
       });
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '批量修改分组失败', 'error');
+      showMessage(error.message || t('nodes.page.messages.batchGroupFailed'), 'error');
     }
   };
 
   // 批量修改前置代理
   const handleBatchDialerProxy = () => {
     if (selectedNodes.length === 0) {
-      showMessage('请选择要修改的节点', 'warning');
+      showMessage(t('nodes.page.messages.selectModifyRequired'), 'warning');
       return;
     }
     setBatchDialerProxyValue('');
@@ -710,20 +719,20 @@ export default function NodeList() {
     try {
       const ids = selectedNodes.map((node) => node.ID);
       await batchUpdateNodeDialerProxy(ids, batchDialerProxyValue);
-      showMessage(`成功修改 ${selectedNodes.length} 个节点的前置代理`);
+      showMessage(t('nodes.page.messages.batchDialerProxySuccess', { count: selectedNodes.length }));
       setSelectedNodes([]);
       setBatchDialerProxyDialogOpen(false);
       fetchNodes(getCurrentFilters());
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '批量修改前置代理失败', 'error');
+      showMessage(error.message || t('nodes.page.messages.batchDialerProxyFailed'), 'error');
     }
   };
 
   // 批量修改来源
   const handleBatchSource = () => {
     if (selectedNodes.length === 0) {
-      showMessage('请选择要修改的节点', 'warning');
+      showMessage(t('nodes.page.messages.selectModifyRequired'), 'warning');
       return;
     }
     setBatchSourceValue('');
@@ -736,7 +745,7 @@ export default function NodeList() {
       // 如果值为空，设置为 manual
       const source = batchSourceValue.trim() || 'manual';
       await batchUpdateNodeSource(ids, source);
-      showMessage(`成功修改 ${selectedNodes.length} 个节点的来源`);
+      showMessage(t('nodes.page.messages.batchSourceSuccess', { count: selectedNodes.length }));
       setSelectedNodes([]);
       setBatchSourceDialogOpen(false);
       fetchNodes(getCurrentFilters());
@@ -746,14 +755,14 @@ export default function NodeList() {
       });
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '批量修改来源失败', 'error');
+      showMessage(error.message || t('nodes.page.messages.batchSourceFailed'), 'error');
     }
   };
 
   // 批量修改国家
   const handleBatchCountry = () => {
     if (selectedNodes.length === 0) {
-      showMessage('请选择要修改的节点', 'warning');
+      showMessage(t('nodes.page.messages.selectModifyRequired'), 'warning');
       return;
     }
     setBatchCountryValue('');
@@ -764,7 +773,7 @@ export default function NodeList() {
     try {
       const ids = selectedNodes.map((node) => node.ID);
       await batchUpdateNodeCountry(ids, batchCountryValue);
-      showMessage(`成功修改 ${selectedNodes.length} 个节点的国家代码`);
+      showMessage(t('nodes.page.messages.batchCountrySuccess', { count: selectedNodes.length }));
       setSelectedNodes([]);
       setBatchCountryDialogOpen(false);
       fetchNodes(getCurrentFilters());
@@ -774,14 +783,14 @@ export default function NodeList() {
       });
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '批量修改国家代码失败', 'error');
+      showMessage(error.message || t('nodes.page.messages.batchCountryFailed'), 'error');
     }
   };
 
   // 批量设置标签
   const handleBatchTag = () => {
     if (selectedNodes.length === 0) {
-      showMessage('请选择要设置标签的节点', 'warning');
+      showMessage(t('nodes.page.messages.selectTagRequired'), 'warning');
       return;
     }
     setBatchTagValue([]);
@@ -794,20 +803,20 @@ export default function NodeList() {
       const tagNames = batchTagValue.map((t) => t.name || t);
       // 使用新的批量设置标签API（覆盖模式）
       await batchSetNodeTags({ nodeIds: ids, tagNames: tagNames });
-      showMessage(`成功为 ${selectedNodes.length} 个节点设置标签`);
+      showMessage(t('nodes.page.messages.batchTagSuccess', { count: selectedNodes.length }));
       setSelectedNodes([]);
       setBatchTagDialogOpen(false);
       fetchNodes(getCurrentFilters());
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '批量设置标签失败', 'error');
+      showMessage(error.message || t('nodes.page.messages.batchTagFailed'), 'error');
     }
   };
 
   // 批量移除标签
   const handleBatchRemoveTag = () => {
     if (selectedNodes.length === 0) {
-      showMessage('请选择要移除标签的节点', 'warning');
+      showMessage(t('nodes.page.messages.selectRemoveTagRequired'), 'warning');
       return;
     }
     setBatchRemoveTagValue([]);
@@ -819,13 +828,13 @@ export default function NodeList() {
       const ids = selectedNodes.map((node) => node.ID);
       const tagNames = batchRemoveTagValue.map((t) => t.name || t);
       await batchRemoveNodeTags({ nodeIds: ids, tagNames: tagNames });
-      showMessage(`成功从 ${selectedNodes.length} 个节点移除标签`);
+      showMessage(t('nodes.page.messages.batchRemoveTagSuccess', { count: selectedNodes.length }));
       setSelectedNodes([]);
       setBatchRemoveTagDialogOpen(false);
       fetchNodes(getCurrentFilters());
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '批量移除标签失败', 'error');
+      showMessage(error.message || t('nodes.page.messages.batchRemoveTagFailed'), 'error');
     }
   };
 
@@ -848,7 +857,7 @@ export default function NodeList() {
     }
 
     if (nodeLinks.length === 0) {
-      showMessage('请输入节点链接', 'warning');
+      showMessage(t('nodes.page.messages.nodeLinkRequired'), 'warning');
       return;
     }
 
@@ -868,7 +877,7 @@ export default function NodeList() {
           group: nodeForm.group.trim(),
           tags: tagNames
         });
-        showMessage('更新成功');
+        showMessage(t('nodes.page.messages.updateSuccess'));
         setNodeDialogOpen(false);
         handleRefresh();
       } else {
@@ -890,13 +899,13 @@ export default function NodeList() {
               result.added++;
             }
           } catch (error) {
-            result.failed.push({ link, error: error.message || '添加失败' });
+            result.failed.push({ link, error: error.message || t('nodes.page.messages.addFailed') });
           }
         }
         setNodeDialogOpen(false);
         // 单条且全部成功时，仅显示简单提示
         if (nodeLinks.length === 1 && result.added === 1) {
-          showMessage('添加成功');
+          showMessage(t('nodes.page.messages.addSuccess'));
         } else {
           // 多条链接或有跳过/失败时，弹出结果汇总面板
           setAddResult(result);
@@ -906,7 +915,7 @@ export default function NodeList() {
       }
     } catch (error) {
       console.error(error);
-      showMessage(error.message || (isEditNode ? '更新失败' : '添加失败'), 'error');
+      showMessage(error.message || (isEditNode ? t('nodes.page.messages.updateFailed') : t('nodes.page.messages.addFailed')), 'error');
     }
   };
 
@@ -926,22 +935,22 @@ export default function NodeList() {
     // 关闭旧对话框并打开策略管理抽屉
     setSpeedTestDialogOpen(false);
     setProfilesDrawerOpen(true);
-    showMessage('测速配置已迁移至检测策略管理', 'info');
+    showMessage(t('nodes.page.messages.speedConfigMoved'), 'info');
   };
 
   const handleRunSpeedTest = async () => {
     try {
       await runSpeedTest();
-      showMessage('测速任务已在后台启动，请稍后刷新查看结果');
+      showMessage(t('nodes.page.messages.speedTaskStarted'));
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '启动测速任务失败', 'error');
+      showMessage(error.message || t('nodes.page.messages.speedTaskFailed'), 'error');
     }
   };
 
   const handleBatchSpeedTest = () => {
     if (selectedNodes.length === 0) {
-      showMessage('请选择要检测的节点', 'warning');
+      showMessage(t('nodes.page.messages.selectCheckRequired'), 'warning');
       return;
     }
     const ids = selectedNodes.map((node) => node.ID);
@@ -990,7 +999,7 @@ export default function NodeList() {
         // 将ID转换为节点对象（只包含ID，用于后续操作）
         const selectedObjs = allIds.map((id) => ({ ID: id }));
         setSelectedNodes(selectedObjs);
-        showMessage(`已选择所有符合条件的 ${allIds.length} 个节点`);
+        showMessage(t('nodes.page.messages.selectedAll', { count: allIds.length }));
       } catch (error) {
         console.error('获取所有节点ID失败:', error);
         // 回退方案：只选择当前页
@@ -1029,27 +1038,27 @@ export default function NodeList() {
 
   return (
     <MainCard
-      title="节点管理"
+      title={t('nodes.page.title')}
       secondary={
         matchDownMd ? (
-          <Tooltip title="添加节点/更多操作">
+          <Tooltip title={t('nodes.page.actions.addMore')}>
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNode}>
-              添加
+              {t('common.add')}
             </Button>
           </Tooltip>
         ) : (
           <Stack direction="row" spacing={1}>
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNode}>
-              添加节点
+              {t('nodes.page.actions.addNode')}
             </Button>
             <Button variant="outlined" color="primary" startIcon={<FlightIcon />} onClick={() => navigate('/subscription/airports')}>
-              机场管理
+              {t('nodes.page.actions.airports')}
             </Button>
             <Button variant="outlined" color="info" startIcon={<SettingsIcon />} onClick={handleOpenSpeedTest}>
-              检测设置
+              {t('nodes.page.actions.checkSettings')}
             </Button>
             <Button variant="outlined" startIcon={<SpeedIcon />} onClick={handleBatchSpeedTest}>
-              批量检测
+              {t('nodes.page.actions.batchCheck')}
             </Button>
             <IconButton onClick={handleRefresh} disabled={loading}>
               <RefreshIcon
@@ -1081,7 +1090,7 @@ export default function NodeList() {
             onClick={() => navigate('/subscription/airports')}
             sx={{ whiteSpace: 'nowrap' }}
           >
-            机场
+            {t('nodes.page.actions.airportsShort')}
           </Button>
           <Button
             size="small"
@@ -1091,10 +1100,10 @@ export default function NodeList() {
             onClick={handleOpenSpeedTest}
             sx={{ whiteSpace: 'nowrap' }}
           >
-            检测设置
+            {t('nodes.page.actions.checkSettings')}
           </Button>
           <Button size="small" variant="outlined" startIcon={<SpeedIcon />} onClick={handleBatchSpeedTest} sx={{ whiteSpace: 'nowrap' }}>
-            批量检测
+            {t('nodes.page.actions.batchCheck')}
           </Button>
           <IconButton size="small" onClick={handleRefresh} disabled={loading}>
             <RefreshIcon

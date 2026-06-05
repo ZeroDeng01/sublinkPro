@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { useTranslation } from 'react-i18next';
 
 // icons
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -32,6 +33,7 @@ export default function BatchActions({
   onRemoveTag
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
   const hasSelection = selectedCount > 0;
@@ -69,12 +71,17 @@ export default function BatchActions({
           }}
           onClick={() => onSelectAll({ target: { checked: !isAllSelected } })}
         >
-          全选
+          {t('nodes.batch.selectAll')}
         </Typography>
       </Box>
 
       {/* 已选择数量显示 */}
-      <Chip label={`已选择 ${selectedCount} 个节点`} size="small" sx={{ fontWeight: 600 }} color={hasSelection ? 'primary' : 'default'} />
+      <Chip
+        label={t('nodes.batch.selectedCount', { count: selectedCount })}
+        size="small"
+        sx={{ fontWeight: 600 }}
+        color={hasSelection ? 'primary' : 'default'}
+      />
 
       {/* 清除选择按钮 */}
       <Button
@@ -85,7 +92,7 @@ export default function BatchActions({
         disabled={!hasSelection}
         sx={getNodeActionButtonSx(theme, tokens, tokens.palette.text.secondary)}
       >
-        取消
+        {t('common.cancel')}
       </Button>
 
       <Button
@@ -96,7 +103,7 @@ export default function BatchActions({
         disabled={!hasSelection}
         sx={getNodeActionButtonSx(theme, tokens, tokens.palette.error.main)}
       >
-        批量删除
+        {t('nodes.batch.delete')}
       </Button>
       <Button
         size="small"
@@ -106,7 +113,7 @@ export default function BatchActions({
         disabled={!hasSelection}
         sx={getNodeActionButtonSx(theme, tokens, tokens.palette.warning.main)}
       >
-        修改分组
+        {t('nodes.batch.changeGroup')}
       </Button>
       <Button
         size="small"
@@ -116,7 +123,7 @@ export default function BatchActions({
         disabled={!hasSelection}
         sx={getNodeActionButtonSx(theme, tokens, tokens.palette.info.main)}
       >
-        修改来源
+        {t('nodes.batch.changeSource')}
       </Button>
       <Button
         size="small"
@@ -126,7 +133,7 @@ export default function BatchActions({
         disabled={!hasSelection}
         sx={getNodeActionButtonSx(theme, tokens, tokens.palette.secondary.main)}
       >
-        修改国家
+        {t('nodes.batch.changeCountry')}
       </Button>
       <Button
         size="small"
@@ -136,7 +143,7 @@ export default function BatchActions({
         disabled={!hasSelection}
         sx={getNodeActionButtonSx(theme, tokens, tokens.palette.primary.main)}
       >
-        修改前置代理
+        {t('nodes.batch.changeDialerProxy')}
       </Button>
       <Button
         size="small"
@@ -146,7 +153,7 @@ export default function BatchActions({
         disabled={!hasSelection}
         sx={getNodeActionButtonSx(theme, tokens, tokens.palette.success.main)}
       >
-        设置标签
+        {t('nodes.batch.setTags')}
       </Button>
       <Button
         size="small"
@@ -156,7 +163,7 @@ export default function BatchActions({
         disabled={!hasSelection}
         sx={getNodeActionButtonSx(theme, tokens, tokens.palette.error.main)}
       >
-        删除标签
+        {t('nodes.batch.removeTags')}
       </Button>
     </Stack>
   );

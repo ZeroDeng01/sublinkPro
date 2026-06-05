@@ -5,11 +5,14 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 通用确认对话框组件
  */
 export default function ConfirmDialog({ open, title, content, onClose, onConfirm }) {
+  const { t } = useTranslation();
+
   const handleConfirm = async () => {
     if (onConfirm) {
       await onConfirm();
@@ -24,9 +27,9 @@ export default function ConfirmDialog({ open, title, content, onClose, onConfirm
         <DialogContentText id="confirm-dialog-description">{content}</DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>取消</Button>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button onClick={handleConfirm} color="primary" autoFocus>
-          确定
+          {t('common.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

@@ -195,11 +195,11 @@ func respondLoginSuccess(c *gin.Context, user *models.User, ip string) {
 	token, err := GetToken(user)
 	if err != nil {
 		utils.Error("获取token失败: %v", err)
-		utils.FailWithMsg(c, "获取token失败")
+		utils.FailWithI18n(c, "获取token失败", "backend.auth.login.tokenFailed", nil)
 		return
 	}
 	go notifyUserLogin(user.Username, ip)
-	utils.OkDetailed(c, "登录成功", buildLoginSuccessData(token))
+	utils.OkDetailedI18n(c, "登录成功", buildLoginSuccessData(token), "backend.auth.login.success", nil)
 }
 
 func buildMFAStatus(user *models.User) MFAStatusResponse {

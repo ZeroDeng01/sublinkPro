@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 // material-ui
 import { createTheme, ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { useTranslation } from 'react-i18next';
 
 // project imports
 import { CSS_VAR_PREFIX, DEFAULT_THEME_MODE } from 'config';
@@ -12,6 +13,7 @@ import useConfig from 'hooks/useConfig';
 import { buildPalette } from './palette';
 import Typography from './typography';
 import componentsOverrides from './overrides';
+import { getMuiLocale } from 'i18n/locales';
 
 // ==============================|| DEFAULT THEME - MAIN ||============================== //
 
@@ -55,8 +57,15 @@ export default function ThemeCustomization({ children }) {
     [themeTypography, palette]
   );
 
-  const themes = createTheme(themeOptions);
-  themes.components = useMemo(() => componentsOverrides(themes, borderRadius, outlinedFilled), [themes, borderRadius, outlinedFilled]);
+  const { i18n } = useTranslation();
+
+  const muiLocale = useMemo(() => getMuiLocale(i18n.resolvedLanguage || i18n.language), [i18n.resolvedLanguage, i18n.language]);
+
+  const themes = useMemo(() => {
+    const t = createTheme(themeOptions, muiLocale);
+    t.components = componentsOverrides(t, borderRadius, outlinedFilled);
+    return t;
+  }, [themeOptions, muiLocale, borderRadius, outlinedFilled]);
 
   return (
     <StyledEngineProvider injectFirst>

@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme, alpha } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -35,21 +36,22 @@ import {
   TASK_CLUSTER_ACCENT
 } from 'components/taskCenterTheme';
 
-const formatTime = (ms) => {
+const formatTime = (ms, t) => {
   if (ms < 0) return '--';
   const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}秒`;
+  if (seconds < 60) return t('tasks.time.seconds', { count: seconds });
   const minutes = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  if (minutes < 60) return `${minutes}分${secs}秒`;
+  if (minutes < 60) return t('tasks.time.minutesSeconds', { minutes, seconds: secs });
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  return `${hours}时${mins}分`;
+  return t('tasks.time.hoursMinutes', { hours, minutes: mins });
 };
 
 // ==============================|| TASK PROGRESS ITEM ||============================== //
 
 const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const tokens = getTaskCenterTokens(theme, isDark);
@@ -64,7 +66,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
 
   // Get task icon and colors based on type
   const taskConfig = useMemo(() => {
-    const meta = getTaskTypeMeta(task.taskType);
+    const meta = getTaskTypeMeta(task.taskType, t);
     const iconMap = {
       speed_test: SpeedIcon,
       sub_update: CloudSyncIcon,
@@ -78,7 +80,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
       accentColor: meta.color,
       canStop: task.taskType === 'speed_test'
     };
-  }, [task.taskType]);
+  }, [task.taskType, t]);
 
   const Icon = taskConfig.icon;
   const isCompleted = task.status === 'completed';
@@ -104,18 +106,18 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
     const elapsed = currentTime - task.startTime;
     const progressRatio = task.total > 0 ? task.current / task.total : 0;
 
-    const elapsedStr = formatTime(elapsed);
+    const elapsedStr = formatTime(elapsed, t);
 
     // Estimated remaining time (only show when progress > 2%)
     let remainingStr = null;
     if (progressRatio > 0.02 && progressRatio < 1) {
       const remaining = (elapsed / progressRatio) * (1 - progressRatio);
-      remainingStr = formatTime(remaining);
+      remainingStr = formatTime(remaining, t);
     }
 
     return { elapsedStr, remainingStr };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task.startTime, task.current, task.total, currentTime, isCompleted, isError, isCancelled]);
+  }, [task.startTime, task.current, task.total, currentTime, isCompleted, isError, isCancelled, t]);
 
   // Format result display
   const resultDisplay = useMemo(() => {
@@ -127,11 +129,11 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
       const speed = task.result.speed;
       const latency = task.result.latency;
       if (speed === -1) {
-        return unlockText ? `测速失败 · ${unlockText}` : '测速失败';
+        return unlockText ? `${t('tasks.result.speedTestFailed')} · ${unlockText}` : t('tasks.result.speedTestFailed');
       }
       if (speed === 0) {
         if (latency > 0) {
-          return unlockText ? `延迟 ${latency}ms · ${unlockText}` : `延迟 ${latency}ms`;
+          return unlockText ? `${t('tasks.result.latency', { latency })} · ${unlockText}` : t('tasks.result.latency', { latency });
         }
         return unlockText;
       }
@@ -141,16 +143,16 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
     if (task.taskType === 'sub_update') {
       const { added, exists, deleted } = task.result;
       const parts = [];
-      if (added !== undefined) parts.push(`新增 ${added}`);
-      if (exists !== undefined) parts.push(`已存在 ${exists}`);
-      if (deleted !== undefined) parts.push(`删除 ${deleted}`);
+      if (added !== undefined) parts.push(t('tasks.result.added', { count: added }));
+      if (exists !== undefined) parts.push(t('tasks.result.exists', { count: exists }));
+      if (deleted !== undefined) parts.push(t('tasks.result.deleted', { count: deleted }));
       return parts.length > 0 ? parts.join(' · ') : null;
     }
 
     if (task.taskType === 'tag_rule') {
       const { matchedCount, totalCount } = task.result;
       if (matchedCount !== undefined && totalCount !== undefined) {
-        return `匹配 ${matchedCount} / ${totalCount} 节点`;
+        return t('tasks.result.matchedNodes', { matched: matchedCount, total: totalCount });
       }
     }
 
@@ -159,15 +161,17 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
       const importedKinds = Object.values(imported).filter((count) => Number(count) > 0).length;
       const warnings = task.result.warnings?.length || 0;
       if (importedKinds > 0) {
-        return warnings > 0 ? `导入 ${importedKinds} 类数据 · ${warnings} 条警告` : `导入 ${importedKinds} 类数据`;
+        return warnings > 0
+          ? `${t('tasks.result.importedKinds', { count: importedKinds })} · ${t('tasks.result.warnings', { count: warnings })}`
+          : t('tasks.result.importedKinds', { count: importedKinds });
       }
       if (warnings > 0) {
-        return `${warnings} 条警告`;
+        return t('tasks.result.warnings', { count: warnings });
       }
     }
 
     return unlockText;
-  }, [task.result, task.taskType]);
+  }, [task.result, task.taskType, t]);
 
   return (
     <Box
@@ -258,7 +262,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                   )}
                   {task.taskType === 'speed_test' && task.result?.phase && isActive && !isCancelling && (
                     <Chip
-                      label={task.result.phase === 'latency' ? '延迟测试' : '速度测试'}
+                      label={task.result.phase === 'latency' ? t('tasks.phase.latency') : t('tasks.phase.speed')}
                       size="small"
                       sx={{
                         height: 18,
@@ -288,10 +292,18 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    {isCompleted ? '完成' : isError ? '失败' : isCancelled ? '已取消' : isCancelling ? '停止中...' : `${progress}%`}
+                    {isCompleted
+                      ? t('tasks.shortStatus.completed')
+                      : isError
+                        ? t('tasks.shortStatus.error')
+                        : isCancelled
+                          ? t('tasks.shortStatus.cancelled')
+                          : isCancelling
+                            ? t('tasks.shortStatus.cancelling')
+                            : `${progress}%`}
                   </Typography>
                   {isActive && taskConfig.canStop && onStopTask && (
-                    <Tooltip title={isCancelling ? '正在停止...' : '停止任务'} arrow>
+                    <Tooltip title={isCancelling ? t('tasks.actions.stopping') : t('tasks.actions.stopTask')} arrow>
                       <span>
                         <IconButton
                           size="small"
@@ -325,7 +337,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                     mb: 0.5
                   }}
                 >
-                  正在处理: {task.currentItem}
+                  {t('tasks.processingItem', { item: task.currentItem })}
                 </Typography>
               )}
 
@@ -384,7 +396,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
                             whiteSpace: 'nowrap'
                           }}
                         >
-                          · 剩余 ~{timeInfo.remainingStr}
+                          {t('tasks.remainingApprox', { time: timeInfo.remainingStr })}
                         </Typography>
                       )}
                     </Box>
@@ -416,6 +428,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
 // ==============================|| TASK PROGRESS PANEL ||============================== //
 
 const TaskProgressPanel = () => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const tokens = getTaskCenterTokens(theme, isDark);
@@ -462,10 +475,10 @@ const TaskProgressPanel = () => {
               <Typography sx={{ fontSize: '1rem' }}>⏳</Typography>
             </Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: primaryTextColor }}>
-              任务进度
+              {t('tasks.progressTitle')}
             </Typography>
             <Chip
-              label={`${taskList.length} 个任务`}
+              label={t('tasks.taskCount', { count: taskList.length })}
               size="small"
               sx={{
                 height: 22,

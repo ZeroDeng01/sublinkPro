@@ -10,23 +10,16 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import QrCodeIcon from '@mui/icons-material/QrCode';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
 
-export default function ClientUrlsDialog({
-  open,
-  title = '客户端（点击二维码获取地址）',
-  subtitle = '',
-  legacy = false,
-  clientUrls,
-  onClose,
-  onQrCode,
-  onCopy
-}) {
+export default function ClientUrlsDialog({ open, title, subtitle = '', legacy = false, clientUrls, onClose, onQrCode, onCopy }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { isDark } = useResolvedColorScheme();
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
@@ -83,11 +76,11 @@ export default function ClientUrlsDialog({
       >
         <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
           <Typography variant="h6" component="span" sx={{ color: 'inherit' }}>
-            {title}
+            {title || t('subscriptions.clientUrls.defaultTitle')}
           </Typography>
           {legacy && (
             <Chip
-              label="默认"
+              label={t('subscriptions.clientUrls.defaultChip')}
               size="small"
               sx={{
                 height: 20,
@@ -159,7 +152,7 @@ export default function ClientUrlsDialog({
                 </Box>
                 <Stack direction="row" spacing={1} justifyContent={isMobile ? 'flex-end' : 'flex-start'}>
                   <Button variant="outlined" startIcon={<QrCodeIcon />} onClick={() => onQrCode(resolvedUrl, name)}>
-                    二维码
+                    {t('subscriptions.clientUrls.qrCode')}
                   </Button>
                   <IconButton size="small" onClick={() => onCopy(resolvedUrl)} sx={actionButtonSx}>
                     <ContentCopyIcon fontSize="small" />
@@ -180,7 +173,7 @@ export default function ClientUrlsDialog({
         }}
       >
         <Button onClick={onClose} variant="outlined">
-          关闭
+          {t('common.close')}
         </Button>
       </DialogActions>
     </Dialog>

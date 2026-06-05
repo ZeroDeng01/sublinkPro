@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   FormControl,
@@ -30,6 +31,7 @@ import { withAlpha } from 'utils/colorUtils';
 
 function DeduplicationConfig({ value, onChange }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
     theme,
@@ -58,15 +60,15 @@ function DeduplicationConfig({ value, onChange }) {
         setNodeFieldsMeta(nodeRes.data?.fields || []);
         setError(null);
       } catch (err) {
-        setError('加载元数据失败');
-        console.error('加载去重元数据失败:', err);
+        setError(t('subscriptions.dedup.messages.loadMetaFailed'));
+        console.error('Failed to load deduplication metadata:', err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchMeta();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (value) {
@@ -81,7 +83,7 @@ function DeduplicationConfig({ value, onChange }) {
           setExpanded(true);
         }
       } catch (err) {
-        console.error('解析去重配置失败:', err);
+        console.error('Failed to parse deduplication config:', err);
       }
     }
   }, [value]);
@@ -130,10 +132,10 @@ function DeduplicationConfig({ value, onChange }) {
   const getProtocolSelectedCount = (protoName) => (config.protocolRules[protoName] || []).length;
 
   const getStatusLabel = () => {
-    if (config.mode === 'none') return '未启用';
-    if (config.mode === 'common') return `通用 ${config.commonFields.length} 项`;
+    if (config.mode === 'none') return t('subscriptions.dedup.status.disabled');
+    if (config.mode === 'common') return t('subscriptions.dedup.status.common', { count: config.commonFields.length });
     const total = Object.values(config.protocolRules).reduce((sum, fields) => sum + (fields?.length || 0), 0);
-    return `协议 ${total} 项`;
+    return t('subscriptions.dedup.status.protocol', { count: total });
   };
 
   const headerHoverSurface = isDark ? withAlpha(palette.background.paper, 0.2) : withAlpha(palette.primary.main, 0.04);
@@ -247,7 +249,7 @@ function DeduplicationConfig({ value, onChange }) {
         <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0, flex: 1 }}>
           <FilterAltIcon color="primary" fontSize="small" />
           <Typography variant="subtitle2" fontWeight={600} sx={{ color: primaryText }}>
-            节点去重规则
+            {t('subscriptions.dedup.title')}
           </Typography>
           <Chip
             size="small"
@@ -280,7 +282,7 @@ function DeduplicationConfig({ value, onChange }) {
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1, p: 1.5, color: secondaryText }}>
               <CircularProgress size={24} />
-              <Typography variant="body2">加载配置...</Typography>
+              <Typography variant="body2">{t('subscriptions.dedup.loading')}</Typography>
             </Box>
           ) : error ? (
             <Alert variant="outlined" severity="error">
@@ -289,18 +291,18 @@ function DeduplicationConfig({ value, onChange }) {
           ) : (
             <Stack spacing={2.25}>
               <Typography variant="body2" sx={{ color: secondaryText }}>
-                在预览和导出前统一处理重复节点，可按通用字段组合去重，也可以为协议分别设置去重字段。
+                {t('subscriptions.dedup.description')}
               </Typography>
 
               <Box sx={sectionCardSx}>
                 <FormControl component="fieldset">
                   <FormLabel component="legend" sx={{ color: tertiaryText, '&.Mui-focused': { color: tertiaryText } }}>
-                    去重模式
+                    {t('subscriptions.dedup.mode.label')}
                   </FormLabel>
                   <RadioGroup row value={config.mode} onChange={handleModeChange} sx={{ mt: 0.75 }}>
-                    <FormControlLabel value="none" control={<Radio size="small" />} label="不启用" />
-                    <FormControlLabel value="common" control={<Radio size="small" />} label="通用字段去重" />
-                    <FormControlLabel value="protocol" control={<Radio size="small" />} label="按协议去重" />
+                    <FormControlLabel value="none" control={<Radio size="small" />} label={t('subscriptions.dedup.mode.none')} />
+                    <FormControlLabel value="common" control={<Radio size="small" />} label={t('subscriptions.dedup.mode.common')} />
+                    <FormControlLabel value="protocol" control={<Radio size="small" />} label={t('subscriptions.dedup.mode.protocol')} />
                   </RadioGroup>
                 </FormControl>
               </Box>
@@ -309,7 +311,7 @@ function DeduplicationConfig({ value, onChange }) {
                 <Box sx={sectionCardSx}>
                   <Stack spacing={1.25}>
                     <Typography variant="body2" sx={{ color: secondaryText }}>
-                      选择用于判断节点是否重复的字段（多选组合）：
+                      {t('subscriptions.dedup.commonFieldsHint')}
                     </Typography>
                     <FormGroup row sx={optionGroupSx}>
                       {nodeFieldsMeta.map((field) => (
@@ -328,7 +330,9 @@ function DeduplicationConfig({ value, onChange }) {
                     </FormGroup>
                     {config.commonFields.length > 0 && (
                       <Typography variant="caption" sx={{ color: palette.primary.main }}>
-                        已选择：{config.commonFields.map((f) => nodeFieldsMeta.find((m) => m.name === f)?.label || f).join(' + ')}
+                        {t('subscriptions.dedup.selectedFields', {
+                          fields: config.commonFields.map((f) => nodeFieldsMeta.find((m) => m.name === f)?.label || f).join(' + ')
+                        })}
                       </Typography>
                     )}
                   </Stack>
@@ -339,7 +343,7 @@ function DeduplicationConfig({ value, onChange }) {
                 <Box sx={sectionCardSx}>
                   <Stack spacing={1.25} sx={{ mb: 1.5 }}>
                     <Typography variant="body2" sx={{ color: secondaryText }}>
-                      为每个协议配置去重字段（未配置的协议不进行去重）：
+                      {t('subscriptions.dedup.protocolFieldsHint')}
                     </Typography>
                   </Stack>
                   <Stack spacing={1.25}>
@@ -350,7 +354,7 @@ function DeduplicationConfig({ value, onChange }) {
                           {getProtocolSelectedCount(proto.name) > 0 && (
                             <Chip
                               size="small"
-                              label={`已选 ${getProtocolSelectedCount(proto.name)} 个`}
+                              label={t('subscriptions.dedup.selectedCount', { count: getProtocolSelectedCount(proto.name) })}
                               variant="outlined"
                               sx={{
                                 ml: 0.5,
@@ -395,7 +399,7 @@ function DeduplicationConfig({ value, onChange }) {
                   }}
                 >
                   <Typography variant="body2" sx={{ color: primaryText }}>
-                    去重规则会在节点预览和订阅输出时应用，当多个节点的选定字段值完全相同时，仅保留第一个节点。
+                    {t('subscriptions.dedup.applyNotice')}
                   </Typography>
                 </Alert>
               )}

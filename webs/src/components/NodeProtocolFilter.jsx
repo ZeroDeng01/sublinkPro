@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import { Trans, useTranslation } from 'react-i18next';
 
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
@@ -23,6 +24,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import BlockIcon from '@mui/icons-material/Block';
 
 export default function NodeProtocolFilter({ protocolOptions, whitelistValue, blacklistValue, onWhitelistChange, onBlacklistChange }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
@@ -156,13 +158,16 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
         <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0, flex: 1 }}>
           <RouterIcon color="primary" fontSize="small" />
           <Typography variant="subtitle2" fontWeight={600} sx={{ color: primaryText }}>
-            协议类型过滤
+            {t('components.nodeProtocolFilter.title')}
           </Typography>
           {hasAnyRules && (
             <Chip
               size="small"
               variant="outlined"
-              label={`白 ${whitelistProtocols.length} / 黑 ${blacklistProtocols.length}`}
+              label={t('components.nodeProtocolFilter.summary', {
+                whitelist: whitelistProtocols.length,
+                blacklist: blacklistProtocols.length
+              })}
               sx={{
                 height: 22,
                 color: tertiaryText,
@@ -181,12 +186,12 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
         <Box sx={{ px: 2.25, py: 2.25, bgcolor: dialogSurface, backgroundImage: contentSurface }}>
           <Stack spacing={2.25}>
             <Typography variant="body2" sx={{ color: secondaryText }}>
-              利用协议元数据筛选节点，白名单负责收窄范围，黑名单负责优先剔除不需要的协议。
+              {t('components.nodeProtocolFilter.description')}
             </Typography>
 
             <Alert variant="outlined" severity="info" sx={infoAlertSx}>
               <Typography variant="body2" sx={{ color: secondaryText }}>
-                按节点协议类型过滤。<strong>黑名单优先级高于白名单</strong>：黑名单协议的节点会被排除，剩余节点必须匹配白名单协议才会保留。
+                <Trans i18nKey="components.nodeProtocolFilter.priorityHint" components={{ strong: <strong /> }} />
               </Typography>
             </Alert>
 
@@ -195,7 +200,7 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
                 <Stack direction="row" alignItems="center" spacing={1}>
                   <CheckCircleOutlineIcon color="success" fontSize="small" />
                   <Typography variant="subtitle2" fontWeight={600} sx={{ color: theme.palette.success.main }}>
-                    白名单协议
+                    {t('components.nodeProtocolFilter.whitelist')}
                   </Typography>
                 </Stack>
                 <Autocomplete
@@ -222,10 +227,12 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
                     })
                   }
                   renderOption={renderOption}
-                  renderInput={(params) => <TextField {...params} placeholder="选择白名单协议（只保留这些协议的节点）" size="small" />}
+                  renderInput={(params) => (
+                    <TextField {...params} placeholder={t('components.nodeProtocolFilter.whitelistPlaceholder')} size="small" />
+                  )}
                 />
                 <Typography variant="caption" sx={{ color: secondaryText }}>
-                  仅保留使用白名单协议的节点。
+                  {t('components.nodeProtocolFilter.whitelistHelper')}
                 </Typography>
               </Stack>
             </Box>
@@ -235,7 +242,7 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
                 <Stack direction="row" alignItems="center" spacing={1}>
                   <BlockIcon color="error" fontSize="small" />
                   <Typography variant="subtitle2" fontWeight={600} sx={{ color: theme.palette.error.main }}>
-                    黑名单协议
+                    {t('components.nodeProtocolFilter.blacklist')}
                   </Typography>
                 </Stack>
                 <Autocomplete
@@ -262,10 +269,12 @@ export default function NodeProtocolFilter({ protocolOptions, whitelistValue, bl
                     })
                   }
                   renderOption={renderOption}
-                  renderInput={(params) => <TextField {...params} placeholder="选择黑名单协议（排除这些协议的节点）" size="small" />}
+                  renderInput={(params) => (
+                    <TextField {...params} placeholder={t('components.nodeProtocolFilter.blacklistPlaceholder')} size="small" />
+                  )}
                 />
                 <Typography variant="caption" sx={{ color: secondaryText }}>
-                  使用黑名单协议的节点将被排除。
+                  {t('components.nodeProtocolFilter.blacklistHelper')}
                 </Typography>
               </Stack>
             </Box>

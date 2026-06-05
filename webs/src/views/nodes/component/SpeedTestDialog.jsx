@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -50,6 +51,29 @@ import { SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS, LATENCY_TEST_URL_OPT
 
 // hooks
 import { useState, useEffect } from 'react';
+
+const SPEED_TEST_URL_OPTION_LABEL_KEYS = {
+  'Cloudflare (cp.cloudflare.com)': 'cloudflareCp',
+  'Apple (captive.apple.com)': 'appleCaptive',
+  'Gstatic (www.gstatic.com)': 'gstatic',
+  '1MB (Cloudflare)': 'cloudflare1mb',
+  '3MB (Cloudflare)': 'cloudflare3mb',
+  '5MB (Cloudflare)': 'cloudflare5mb',
+  '10MB (Cloudflare)': 'cloudflare10mb',
+  '50MB (Cloudflare)': 'cloudflare50mb',
+  '100MB (Cloudflare)': 'cloudflare100mb',
+  'Cloudflare 204 (\u63a8\u8350)': 'cloudflare204Recommended',
+  'Apple 204': 'apple204',
+  'Gstatic 204': 'gstatic204'
+};
+
+const LANDING_IP_URL_OPTION_LABEL_KEYS = {
+  'ipify.org (\u63a8\u8350)': 'ipifyRecommended',
+  'ip.sb': 'ipSb',
+  'ifconfig.me': 'ifconfigMe',
+  'icanhazip.com': 'icanhazip',
+  'ipinfo.io': 'ipinfo'
+};
 
 /**
  * 配置区块组件 - 可折叠的设置分组
@@ -212,6 +236,7 @@ export default function SpeedTestDialog({
   onRunSpeedTest,
   onModeChange
 }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -255,6 +280,14 @@ export default function SpeedTestDialog({
     listbox: {
       sx: { py: 0.5 }
     }
+  };
+  const getSpeedTestUrlOptionLabel = (option) => {
+    const key = SPEED_TEST_URL_OPTION_LABEL_KEYS[option.label];
+    return key ? t(`nodes.speedTest.urlOptions.${key}`) : option.label;
+  };
+  const getLandingIpUrlOptionLabel = (option) => {
+    const key = LANDING_IP_URL_OPTION_LABEL_KEYS[option.label];
+    return key ? t(`nodes.speedTest.landingIp.options.${key}`) : option.label;
   };
 
   useEffect(() => {
@@ -312,10 +345,10 @@ export default function SpeedTestDialog({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <SpeedIcon color="primary" />
           <Typography variant="h6" sx={{ color: primaryText }}>
-            测速设置
+            {t('nodes.speedTest.title')}
           </Typography>
         </Box>
-        <Tooltip title="使用当前配置立即开始测速" placement="left">
+        <Tooltip title={t('nodes.speedTest.runNowTooltip')} placement="left">
           <Fab
             size={isMobile ? 'small' : 'medium'}
             onClick={() => {
@@ -369,7 +402,11 @@ export default function SpeedTestDialog({
         }}
       >
         {/* ========== 定时测速设置 ========== */}
-        <ConfigSection title="定时测速" icon={<TimerIcon fontSize="small" color="action" />} themeTokens={themeTokens}>
+        <ConfigSection
+          title={t('nodes.speedTest.sections.schedule')}
+          icon={<TimerIcon fontSize="small" color="action" />}
+          themeTokens={themeTokens}
+        >
           <Stack spacing={2}>
             <Box
               sx={{
@@ -385,10 +422,10 @@ export default function SpeedTestDialog({
             >
               <Box>
                 <Typography variant="body2" sx={{ color: primaryText }}>
-                  启用自动测速
+                  {t('nodes.speedTest.schedule.enable')}
                 </Typography>
                 <Typography variant="caption" sx={{ color: tertiaryText }}>
-                  关闭后将停止按计划自动执行测速任务
+                  {t('nodes.speedTest.schedule.disableDescription')}
                 </Typography>
               </Box>
               <Switch checked={speedTestForm.enabled} onChange={(e) => setSpeedTestForm({ ...speedTestForm, enabled: e.target.checked })} />
@@ -397,7 +434,7 @@ export default function SpeedTestDialog({
               <CronExpressionGenerator
                 value={speedTestForm.cron}
                 onChange={(value) => setSpeedTestForm({ ...speedTestForm, cron: value })}
-                label="定时测速设置"
+                label={t('nodes.speedTest.schedule.cronLabel')}
               />
             )}
           </Stack>
@@ -405,25 +442,23 @@ export default function SpeedTestDialog({
 
         {/* ========== 测速模式与URL ========== */}
         <ConfigSection
-          title="测速模式"
+          title={t('nodes.speedTest.sections.mode')}
           icon={<SpeedIcon fontSize="small" color="action" />}
           themeTokens={themeTokens}
-          helperText={
-            speedTestForm.mode === 'mihomo' ? '两阶段测试：先并发测延迟，再低并发测下载速度' : '仅测试延迟，速度更快，适合快速筛选可用节点'
-          }
+          helperText={speedTestForm.mode === 'mihomo' ? t('nodes.speedTest.mode.helper.mihomo') : t('nodes.speedTest.mode.helper.tcp')}
         >
           <Stack spacing={2}>
             <FormControl fullWidth size="small">
-              <InputLabel>测速模式</InputLabel>
+              <InputLabel>{t('nodes.speedTest.mode.label')}</InputLabel>
               <Select
                 variant="outlined"
                 value={speedTestForm.mode}
-                label="测速模式"
+                label={t('nodes.speedTest.mode.label')}
                 onChange={(e) => onModeChange(e.target.value)}
                 MenuProps={selectMenuProps}
               >
-                <MenuItem value="tcp">仅延迟测试 (更快)</MenuItem>
-                <MenuItem value="mihomo">延迟 + 下载速度测试</MenuItem>
+                <MenuItem value="tcp">{t('nodes.speedTest.mode.options.tcp')}</MenuItem>
+                <MenuItem value="mihomo">{t('nodes.speedTest.mode.options.mihomo')}</MenuItem>
               </Select>
             </FormControl>
 
@@ -443,7 +478,7 @@ export default function SpeedTestDialog({
                 <Box component="li" {...props} key={option.value}>
                   <Box>
                     <Typography variant="body2" sx={{ color: primaryText }}>
-                      {option.label}
+                      {getSpeedTestUrlOptionLabel(option)}
                     </Typography>
                     <Typography variant="caption" sx={{ wordBreak: 'break-all', color: secondaryText }}>
                       {option.value}
@@ -454,8 +489,12 @@ export default function SpeedTestDialog({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label={speedTestForm.mode === 'mihomo' ? '下载测速URL' : '延迟测试URL'}
-                  placeholder={speedTestForm.mode === 'mihomo' ? '请选择或输入下载测速URL' : '请选择或输入204测速URL'}
+                  label={speedTestForm.mode === 'mihomo' ? t('nodes.speedTest.fields.downloadUrl') : t('nodes.speedTest.fields.latencyUrl')}
+                  placeholder={
+                    speedTestForm.mode === 'mihomo'
+                      ? t('nodes.speedTest.placeholders.downloadUrl')
+                      : t('nodes.speedTest.placeholders.latencyUrl')
+                  }
                 />
               )}
             />
@@ -478,7 +517,7 @@ export default function SpeedTestDialog({
                   <Box component="li" {...props} key={option.value}>
                     <Box>
                       <Typography variant="body2" sx={{ color: primaryText }}>
-                        {option.label}
+                        {getSpeedTestUrlOptionLabel(option)}
                       </Typography>
                       <Typography variant="caption" sx={{ wordBreak: 'break-all', color: secondaryText }}>
                         {option.value}
@@ -486,14 +525,20 @@ export default function SpeedTestDialog({
                     </Box>
                   </Box>
                 )}
-                renderInput={(params) => <TextField {...params} label="延迟测试URL（阶段一）" placeholder="留空则使用速度测试URL" />}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label={t('nodes.speedTest.fields.latencyStageOneUrl')}
+                    placeholder={t('nodes.speedTest.placeholders.latencyStageOneUrl')}
+                  />
+                )}
               />
             )}
 
             <TextField
               fullWidth
               size="small"
-              label="超时时间"
+              label={t('nodes.speedTest.fields.timeout')}
               type="text"
               inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
               value={speedTestForm.timeout}
@@ -509,22 +554,22 @@ export default function SpeedTestDialog({
                 const val = Number(e.target.value) || 5;
                 setSpeedTestForm({ ...speedTestForm, timeout: val });
               }}
-              InputProps={{ endAdornment: <InputAdornment position="end">秒</InputAdornment> }}
+              InputProps={{ endAdornment: <InputAdornment position="end">{t('nodes.speedTest.units.seconds')}</InputAdornment> }}
             />
 
             {/* 速度记录模式 - 仅在Mihomo模式下显示 */}
             {speedTestForm.mode === 'mihomo' && (
               <>
                 <FormControl fullWidth size="small">
-                  <InputLabel>速度记录模式</InputLabel>
+                  <InputLabel>{t('nodes.speedTest.speedRecord.label')}</InputLabel>
                   <Select
                     value={speedTestForm.speed_record_mode || 'average'}
-                    label="速度记录模式"
+                    label={t('nodes.speedTest.speedRecord.label')}
                     onChange={(e) => setSpeedTestForm({ ...speedTestForm, speed_record_mode: e.target.value })}
                     MenuProps={selectMenuProps}
                   >
-                    <MenuItem value="average">平均速度 (推荐)</MenuItem>
-                    <MenuItem value="peak">峰值速度</MenuItem>
+                    <MenuItem value="average">{t('nodes.speedTest.speedRecord.options.average')}</MenuItem>
+                    <MenuItem value="peak">{t('nodes.speedTest.speedRecord.options.peak')}</MenuItem>
                   </Select>
                 </FormControl>
 
@@ -532,7 +577,7 @@ export default function SpeedTestDialog({
                   <TextField
                     fullWidth
                     size="small"
-                    label="峰值采样间隔"
+                    label={t('nodes.speedTest.speedRecord.peakSampleInterval')}
                     type="text"
                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                     value={speedTestForm.peak_sample_interval ?? 100}
@@ -548,8 +593,8 @@ export default function SpeedTestDialog({
                       const val = Math.min(200, Math.max(50, Number(e.target.value) || 100));
                       setSpeedTestForm({ ...speedTestForm, peak_sample_interval: val });
                     }}
-                    InputProps={{ endAdornment: <InputAdornment position="end">毫秒</InputAdornment> }}
-                    helperText="采样间隔范围：50-200毫秒"
+                    InputProps={{ endAdornment: <InputAdornment position="end">{t('nodes.speedTest.units.milliseconds')}</InputAdornment> }}
+                    helperText={t('nodes.speedTest.speedRecord.peakSampleHelper', { min: 50, max: 200 })}
                   />
                 )}
               </>
@@ -574,25 +619,25 @@ export default function SpeedTestDialog({
               }
               label={
                 <Typography variant="body2" sx={{ color: primaryText }}>
-                  检测落地IP国家
+                  {t('nodes.speedTest.landingIp.detectCountry')}
                   <Typography component="span" variant="caption" sx={{ ml: 0.5, color: secondaryText }}>
-                    (测速时顺便获取节点出口国家)
+                    {t('nodes.speedTest.landingIp.detectCountryHint')}
                   </Typography>
                 </Typography>
               }
             />
             {speedTestForm.detect_country && (
               <FormControl fullWidth size="small">
-                <InputLabel>IP查询接口</InputLabel>
+                <InputLabel>{t('nodes.speedTest.landingIp.queryInterface')}</InputLabel>
                 <Select
                   value={speedTestForm.landing_ip_url || 'https://api.ipify.org'}
-                  label="IP查询接口"
+                  label={t('nodes.speedTest.landingIp.queryInterface')}
                   onChange={(e) => setSpeedTestForm({ ...speedTestForm, landing_ip_url: e.target.value })}
                   MenuProps={selectMenuProps}
                 >
                   {LANDING_IP_URL_OPTIONS.map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {getLandingIpUrlOptionLabel(opt)}
                     </MenuItem>
                   ))}
                 </Select>
@@ -603,7 +648,7 @@ export default function SpeedTestDialog({
 
         {/* ========== 性能参数 ========== */}
         <ConfigSection
-          title="性能参数"
+          title={t('nodes.speedTest.sections.performance')}
           icon={<TuneIcon fontSize="small" color="action" />}
           defaultExpanded={true}
           themeTokens={themeTokens}
@@ -634,7 +679,7 @@ export default function SpeedTestDialog({
                 }
                 label={
                   <Typography variant="body2" fontWeight={500} sx={{ color: primaryText }}>
-                    延迟包含握手时间
+                    {t('nodes.speedTest.handshake.label')}
                   </Typography>
                 }
                 sx={{ mb: 0.5, ml: 0 }}
@@ -642,15 +687,17 @@ export default function SpeedTestDialog({
               <Typography variant="caption" component="div" sx={{ color: secondaryText }}>
                 {(speedTestForm.include_handshake ?? true) ? (
                   <>
-                    <strong>开启（推荐）</strong>：测量完整连接时间，包含TCP/TLS/代理协议握手。
+                    <strong>{t('nodes.speedTest.handshake.enabledStrong')}</strong>
+                    {t('nodes.speedTest.handshake.enabledText')}
                     <br />
-                    反映真实使用体验，每次请求都需要握手。
+                    {t('nodes.speedTest.handshake.enabledDetail')}
                   </>
                 ) : (
                   <>
-                    <strong>关闭</strong>：先预热建立连接，再测量纯传输延迟。
+                    <strong>{t('nodes.speedTest.handshake.disabledStrong')}</strong>
+                    {t('nodes.speedTest.handshake.disabledText')}
                     <br />
-                    适合精确评估网络线路质量（排除握手开销）。若预热失败则判定节点不可用。
+                    {t('nodes.speedTest.handshake.disabledDetail')}
                   </>
                 )}
               </Typography>
@@ -661,11 +708,11 @@ export default function SpeedTestDialog({
                 <TextField
                   fullWidth
                   size="small"
-                  label="延迟测试并发"
+                  label={t('nodes.speedTest.concurrency.latency')}
                   type="text"
                   inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                   value={speedTestForm.latency_concurrency || ''}
-                  placeholder="自动"
+                  placeholder={t('nodes.speedTest.concurrency.auto')}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val === '' || /^\d+$/.test(val)) {
@@ -676,18 +723,18 @@ export default function SpeedTestDialog({
                     const val = Math.min(1000, Math.max(0, Number(e.target.value) || 0));
                     setSpeedTestForm({ ...speedTestForm, latency_concurrency: val });
                   }}
-                  helperText="0=智能动态"
+                  helperText={t('nodes.speedTest.concurrency.helper')}
                 />
               </Grid>
               <Grid item size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   size="small"
-                  label="速度测试并发"
+                  label={t('nodes.speedTest.concurrency.speed')}
                   type="text"
                   inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                   value={speedTestForm.speed_concurrency || ''}
-                  placeholder="自动"
+                  placeholder={t('nodes.speedTest.concurrency.auto')}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val === '' || /^\d+$/.test(val)) {
@@ -698,7 +745,7 @@ export default function SpeedTestDialog({
                     const val = Math.min(128, Math.max(0, Number(e.target.value) || 0));
                     setSpeedTestForm({ ...speedTestForm, speed_concurrency: val });
                   }}
-                  helperText="0=智能动态"
+                  helperText={t('nodes.speedTest.concurrency.helper')}
                 />
               </Grid>
             </Grid>
@@ -707,11 +754,11 @@ export default function SpeedTestDialog({
 
         {/* ========== 测速范围 ========== */}
         <ConfigSection
-          title="测速范围"
+          title={t('nodes.speedTest.sections.scope')}
           icon={<DataUsageIcon fontSize="small" color="action" />}
           defaultExpanded={false}
           themeTokens={themeTokens}
-          helperText="分组优先级高于标签：选了分组则先按分组筛选，再按标签过滤；只选标签则直接按标签筛选；都不选则测全部"
+          helperText={t('nodes.speedTest.scope.helper')}
         >
           <Stack spacing={2}>
             <Autocomplete
@@ -722,7 +769,13 @@ export default function SpeedTestDialog({
               onChange={(e, newValue) => setSpeedTestForm({ ...speedTestForm, groups: newValue })}
               slotProps={autocompleteSlotProps}
               sx={autocompleteChipSx}
-              renderInput={(params) => <TextField {...params} label="测速分组" placeholder="留空则测试全部分组" />}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={t('nodes.speedTest.scope.groups')}
+                  placeholder={t('nodes.speedTest.scope.groupsPlaceholder')}
+                />
+              )}
             />
             <Autocomplete
               multiple
@@ -766,14 +819,16 @@ export default function SpeedTestDialog({
                   {option.name}
                 </Box>
               )}
-              renderInput={(params) => <TextField {...params} label="测速标签" placeholder="留空则不按标签过滤" />}
+              renderInput={(params) => (
+                <TextField {...params} label={t('nodes.speedTest.scope.tags')} placeholder={t('nodes.speedTest.scope.tagsPlaceholder')} />
+              )}
             />
           </Stack>
         </ConfigSection>
 
         {/* ========== 流量统计 ========== */}
         <ConfigSection
-          title="流量统计"
+          title={t('nodes.speedTest.sections.traffic')}
           icon={<DataUsageIcon fontSize="small" color="action" />}
           defaultExpanded={false}
           themeTokens={themeTokens}
@@ -800,7 +855,7 @@ export default function SpeedTestDialog({
                 }
                 label={
                   <Typography variant="body2" sx={{ color: primaryText }}>
-                    按分组统计
+                    {t('nodes.speedTest.traffic.byGroup')}
                   </Typography>
                 }
               />
@@ -814,7 +869,7 @@ export default function SpeedTestDialog({
                 }
                 label={
                   <Typography variant="body2" sx={{ color: primaryText }}>
-                    按来源统计
+                    {t('nodes.speedTest.traffic.bySource')}
                   </Typography>
                 }
               />
@@ -829,9 +884,9 @@ export default function SpeedTestDialog({
                 }
                 label={
                   <Typography variant="body2" sx={{ color: primaryText }}>
-                    按节点统计
+                    {t('nodes.speedTest.traffic.byNode')}
                     <Typography component="span" variant="caption" color="error.main" sx={{ ml: 0.5 }}>
-                      (大数据量)
+                      {t('nodes.speedTest.traffic.largeData')}
                     </Typography>
                   </Typography>
                 }
@@ -848,7 +903,7 @@ export default function SpeedTestDialog({
                 }}
               >
                 <Typography variant="caption" sx={{ color: primaryText }}>
-                  按节点统计会记录每个节点的流量消耗，节点数量过万时会增加约1-2MB存储空间
+                  {t('nodes.speedTest.traffic.warning')}
                 </Typography>
               </Alert>
             )}
@@ -861,9 +916,9 @@ export default function SpeedTestDialog({
           borderTop: `1px solid ${panelBorder}`
         }}
       >
-        <Button onClick={onClose}>取消</Button>
+        <Button onClick={onClose}>{t('nodes.speedTest.actions.cancel')}</Button>
         <Button variant="contained" onClick={onSubmit}>
-          保存设置
+          {t('nodes.speedTest.actions.save')}
         </Button>
       </DialogActions>
     </Dialog>

@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import { useTheme, alpha } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
@@ -61,6 +62,7 @@ TabPanel.propTypes = {
 // ==============================|| TRAFFIC STATS DIALOG ||============================== //
 
 export default function TrafficStatsDialog({ open, onClose, task }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const tokens = getTaskCenterTokens(theme, isDark);
@@ -179,10 +181,10 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
   if (!task || !trafficData) {
     return (
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" PaperProps={{ sx: getTaskDialogPaperSx(theme, tokens) }}>
-        <DialogTitle sx={{ color: tokens.primaryText }}>流量统计</DialogTitle>
+        <DialogTitle sx={{ color: tokens.primaryText }}>{t('tasks.trafficStats.title')}</DialogTitle>
         <DialogContent>
           <Typography sx={{ color: tokens.secondaryText }} textAlign="center" py={4}>
-            无流量数据
+            {t('tasks.trafficStats.noTrafficData')}
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -191,7 +193,7 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
             variant="contained"
             sx={getTaskActionButtonSx(theme, tokens, TASK_CLUSTER_ACCENT, { variant: 'solid' })}
           >
-            关闭
+            {t('tasks.trafficStats.close')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -240,12 +242,12 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
   const exportToCSV = (data, filename, isNodeData = false) => {
     let csvContent = '';
     if (isNodeData) {
-      csvContent = '节点名称,原始名称,分组,来源,流量(字节),流量\n';
+      csvContent = `${t('tasks.trafficStats.csv.nodeName')},${t('tasks.trafficStats.csv.originalName')},${t('tasks.trafficStats.csv.group')},${t('tasks.trafficStats.csv.source')},${t('tasks.trafficStats.csv.trafficBytes')},${t('tasks.trafficStats.csv.traffic')}\n`;
       data.forEach((node) => {
         csvContent += `"${node.name}","${node.originName}","${node.group}","${node.source}",${node.bytes},"${node.formatted}"\n`;
       });
     } else {
-      csvContent = '名称,流量(字节),流量,占比\n';
+      csvContent = `${t('tasks.trafficStats.csv.name')},${t('tasks.trafficStats.csv.trafficBytes')},${t('tasks.trafficStats.csv.traffic')},${t('tasks.trafficStats.csv.percent')}\n`;
       Object.entries(data)
         .sort((a, b) => b[1].bytes - a[1].bytes)
         .forEach(([name, info]) => {
@@ -263,7 +265,7 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
 
   // Render summary stats table (group or source)
   const renderStatsTable = (statsMap, labelHeader, filterType) => {
-    if (!statsMap) return <Typography sx={{ color: tokens.secondaryText }}>无数据</Typography>;
+    if (!statsMap) return <Typography sx={{ color: tokens.secondaryText }}>{t('tasks.trafficStats.noData')}</Typography>;
 
     const entries = Object.entries(statsMap).sort((a, b) => b[1].bytes - a[1].bytes);
 
@@ -271,7 +273,9 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
       <Box>
         {hasNodeData && (
           <Typography variant="caption" sx={{ display: 'block', mb: 1, color: tokens.secondaryText }}>
-            点击行可查看该{filterType === 'group' ? '分组' : '来源'}下的节点流量详情
+            {t('tasks.trafficStats.drillHint', {
+              type: filterType === 'group' ? t('tasks.trafficStats.group') : t('tasks.trafficStats.source')
+            })}
           </Typography>
         )}
         <TableContainer component={Paper} variant="outlined" sx={{ ...tableContainerSx, overflowX: 'auto' }}>
@@ -279,9 +283,9 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
             <TableHead sx={tableHeadSx}>
               <TableRow>
                 <TableCell>{labelHeader}</TableCell>
-                <TableCell align="right">流量</TableCell>
+                <TableCell align="right">{t('tasks.trafficStats.traffic')}</TableCell>
                 <TableCell align="right" width="40%">
-                  占比
+                  {t('tasks.trafficStats.percent')}
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -330,7 +334,7 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
             onClick={() => exportToCSV(statsMap, `traffic_by_${filterType}`)}
             sx={getTaskActionButtonSx(theme, tokens, theme.palette.primary.main)}
           >
-            导出CSV
+            {t('tasks.trafficStats.exportCsv')}
           </Button>
         </Box>
       </Box>
@@ -357,14 +361,14 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="subtitle1" fontWeight={500} sx={{ color: tokens.primaryText }}>
-          {drillFilter?.type === 'group' ? '分组' : '来源'}: {drillFilter?.value}
+          {drillFilter?.type === 'group' ? t('tasks.trafficStats.group') : t('tasks.trafficStats.source')}: {drillFilter?.value}
         </Typography>
       </Stack>
 
       <Stack direction="row" spacing={1} mb={2}>
         <TextField
           size="small"
-          placeholder="搜索节点名称..."
+          placeholder={t('tasks.trafficStats.searchPlaceholder')}
           value={drillSearchInput}
           onChange={(e) => setDrillSearchInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleDrillSearch()}
@@ -381,7 +385,7 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
           onClick={handleDrillSearch}
           sx={getTaskActionButtonSx(theme, tokens, theme.palette.primary.main)}
         >
-          搜索
+          {t('tasks.trafficStats.search')}
         </Button>
       </Stack>
 
@@ -395,18 +399,18 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
             <Table size="small" sx={{ ...tableSx, minWidth: 760 }}>
               <TableHead sx={tableHeadSx}>
                 <TableRow>
-                  <TableCell>节点名称</TableCell>
-                  <TableCell>原始名称</TableCell>
-                  <TableCell>分组</TableCell>
-                  <TableCell>来源</TableCell>
-                  <TableCell align="right">流量</TableCell>
+                  <TableCell>{t('tasks.trafficStats.nodeName')}</TableCell>
+                  <TableCell>{t('tasks.trafficStats.originalName')}</TableCell>
+                  <TableCell>{t('tasks.trafficStats.group')}</TableCell>
+                  <TableCell>{t('tasks.trafficStats.source')}</TableCell>
+                  <TableCell align="right">{t('tasks.trafficStats.traffic')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {drillNodes.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} align="center">
-                      <Typography sx={{ color: tokens.secondaryText }}>无数据</Typography>
+                      <Typography sx={{ color: tokens.secondaryText }}>{t('tasks.trafficStats.noData')}</Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -450,7 +454,7 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
               onClick={() => exportToCSV(drillNodes, `traffic_nodes_${drillFilter?.value}`, true)}
               sx={getTaskActionButtonSx(theme, tokens, theme.palette.primary.main)}
             >
-              导出CSV
+              {t('tasks.trafficStats.exportCsv')}
             </Button>
             <TablePagination
               component="div"
@@ -467,7 +471,7 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
                 }
               }}
               rowsPerPageOptions={[20, 50, 100]}
-              labelRowsPerPage="每页"
+              labelRowsPerPage={t('tasks.trafficStats.rowsPerPage')}
             />
           </Box>
         </>
@@ -486,9 +490,9 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
     >
       <DialogTitle sx={{ color: tokens.primaryText }}>
         <Stack direction="column" spacing={1}>
-          <Typography variant="h4">流量统计详情</Typography>
+          <Typography variant="h4">{t('tasks.trafficStats.detailTitle')}</Typography>
           <Typography variant="subtitle2" sx={{ color: tokens.secondaryText }}>
-            任务: {task.name}
+            {t('tasks.trafficStats.taskLabel', { name: task.name })}
           </Typography>
         </Stack>
       </DialogTitle>
@@ -501,7 +505,7 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
               sx={{ ...getTaskCardSx(theme, tokens, theme.palette.primary.main, { interactive: false }), p: 2, textAlign: 'center' }}
             >
               <Typography variant="subtitle2" sx={{ color: tokens.secondaryText }} gutterBottom>
-                总消耗流量
+                {t('tasks.trafficStats.totalTraffic')}
               </Typography>
               <Typography variant="h2" color="primary">
                 {trafficData.totalFormatted}
@@ -512,7 +516,7 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
 
         {!hasGroupData && !hasSourceData && !hasNodeData ? (
           <Typography variant="body2" sx={{ color: tokens.secondaryText }} textAlign="center">
-            未开启详细流量统计，可在测速设置中开启
+            {t('tasks.trafficStats.detailDisabled')}
           </Typography>
         ) : drillFilter ? (
           renderDrillDownNodes()
@@ -533,18 +537,18 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
                   }
                 }}
               >
-                {hasGroupData && <Tab label="分组统计" />}
-                {hasSourceData && <Tab label="来源统计" />}
+                {hasGroupData && <Tab label={t('tasks.trafficStats.groupTab')} />}
+                {hasSourceData && <Tab label={t('tasks.trafficStats.sourceTab')} />}
               </Tabs>
             </Box>
             {hasGroupData && (
               <TabPanel value={tabValue} index={0}>
-                {renderStatsTable(trafficData.byGroup, '分组名称', 'group')}
+                {renderStatsTable(trafficData.byGroup, t('tasks.trafficStats.groupName'), 'group')}
               </TabPanel>
             )}
             {hasSourceData && (
               <TabPanel value={tabValue} index={hasGroupData ? 1 : 0}>
-                {renderStatsTable(trafficData.bySource, '来源名称', 'source')}
+                {renderStatsTable(trafficData.bySource, t('tasks.trafficStats.sourceName'), 'source')}
               </TabPanel>
             )}
           </>
@@ -552,7 +556,7 @@ export default function TrafficStatsDialog({ open, onClose, task }) {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} variant="contained" sx={getTaskActionButtonSx(theme, tokens, TASK_CLUSTER_ACCENT, { variant: 'solid' })}>
-          关闭
+          {t('tasks.trafficStats.close')}
         </Button>
       </DialogActions>
     </Dialog>

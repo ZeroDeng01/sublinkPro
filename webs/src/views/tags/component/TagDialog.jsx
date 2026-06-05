@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 // material-ui
@@ -35,39 +36,55 @@ const colorPresets = [
   '#616161' // Grey
 ];
 
-// 预设标签组
 const presetGroups = [
-  { value: '速度评级', description: '根据测速结果分类：优秀、良好、一般、差' },
-  { value: '延迟评级', description: '根据延迟分类：低延迟、中等延迟、高延迟' },
-  { value: '地区分类', description: '按地理区域分类：亚洲、欧洲、美洲等' },
-  { value: '用途分类', description: '按使用场景分类：流媒体、游戏、下载等' },
-  { value: '稳定性', description: '按节点稳定性分类：稳定、不稳定' }
+  {
+    valueKey: 'speedRating',
+    labelKey: 'tags.dialog.tag.presetGroups.speedRating',
+    descKey: 'tags.dialog.tag.presetDescriptions.speedRating'
+  },
+  {
+    valueKey: 'latencyRating',
+    labelKey: 'tags.dialog.tag.presetGroups.latencyRating',
+    descKey: 'tags.dialog.tag.presetDescriptions.latencyRating'
+  },
+  {
+    valueKey: 'regionCategory',
+    labelKey: 'tags.dialog.tag.presetGroups.regionCategory',
+    descKey: 'tags.dialog.tag.presetDescriptions.regionCategory'
+  },
+  {
+    valueKey: 'usageCategory',
+    labelKey: 'tags.dialog.tag.presetGroups.usageCategory',
+    descKey: 'tags.dialog.tag.presetDescriptions.usageCategory'
+  },
+  { valueKey: 'stability', labelKey: 'tags.dialog.tag.presetGroups.stability', descKey: 'tags.dialog.tag.presetDescriptions.stability' }
 ];
 
 export default function TagDialog({ open, onClose, onSave, editingTag, existingGroups = [] }) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [color, setColor] = useState('#1976d2');
   const [description, setDescription] = useState('');
   const [groupName, setGroupName] = useState('');
   const colorPickerRef = useRef(null);
 
-  // 处理颜色输入，支持带或不带#的hex值
   const handleColorInput = (value) => {
     let newColor = value.trim();
-    // 如果输入不以#开头且看起来像hex值，自动添加#
     if (newColor && !newColor.startsWith('#') && /^[0-9A-Fa-f]{3,6}$/.test(newColor)) {
       newColor = '#' + newColor;
     }
     setColor(newColor);
   };
 
-  // 验证颜色格式
   const isValidColor = (c) => {
     return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(c);
   };
 
-  // 合并预设组和已有组
-  const allGroupOptions = [...new Set([...presetGroups.map((g) => g.value), ...existingGroups])];
+  const localizedPresetGroups = presetGroups.map((group) => ({
+    value: t(group.labelKey),
+    description: t(group.descKey)
+  }));
+  const allGroupOptions = [...new Set([...localizedPresetGroups.map((g) => g.value), ...existingGroups])];
 
   useEffect(() => {
     if (editingTag) {
@@ -89,29 +106,30 @@ export default function TagDialog({ open, onClose, onSave, editingTag, existingG
   };
 
   const getGroupDescription = (group) => {
-    const preset = presetGroups.find((g) => g.value === group);
+    const preset = localizedPresetGroups.find((g) => g.value === group);
     return preset ? preset.description : null;
   };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{editingTag ? '编辑标签' : '添加标签'}</DialogTitle>
+      <DialogTitle>{editingTag ? t('tags.dialog.tag.editTitle') : t('tags.dialog.tag.addTitle')}</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* 帮助说明 */}
           <Alert severity="info" sx={{ '& .MuiAlert-message': { width: '100%' } }}>
             <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
-              💡 标签使用说明
+              {t('tags.dialog.tag.helpTitle')}
             </Typography>
             <Typography variant="caption" component="div">
-              • <strong>标签</strong>：用于对节点进行分类标记，可用于筛选和自动规则
-              <br />• <strong>标签组</strong>：同一组内的标签互斥，添加新标签时会自动移除同组的旧标签
-              <br />• 例如：创建"优秀"和"差"两个标签并设为同组，测速时节点只会保留最新的评级
+              {t('tags.dialog.tag.helpTag')}
+              <br />
+              {t('tags.dialog.tag.helpGroup')}
+              <br />
+              {t('tags.dialog.tag.helpExample')}
             </Typography>
           </Alert>
 
           <TextField
-            label="标签名称"
+            label={t('tags.dialog.tag.name')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             fullWidth
@@ -120,20 +138,19 @@ export default function TagDialog({ open, onClose, onSave, editingTag, existingG
             disabled={!!editingTag}
           />
 
-          {/* 标签组选择 */}
           <Box>
             <Autocomplete
               freeSolo
               value={groupName}
-              onChange={(e, newValue) => setGroupName(newValue || '')}
-              onInputChange={(e, newValue) => setGroupName(newValue || '')}
+              onChange={(_, newValue) => setGroupName(newValue || '')}
+              onInputChange={(_, newValue) => setGroupName(newValue || '')}
               options={allGroupOptions}
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="标签组 (可选)"
-                  placeholder="选择或输入标签组名称"
-                  helperText="同一组内的标签互斥，为空则不参与互斥"
+                  label={t('tags.dialog.tag.group')}
+                  placeholder={t('tags.dialog.tag.groupPlaceholder')}
+                  helperText={t('tags.dialog.tag.groupHelper')}
                 />
               )}
               renderOption={(props, option) => {
@@ -156,9 +173,9 @@ export default function TagDialog({ open, onClose, onSave, editingTag, existingG
             {groupName && (
               <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
-                  推荐组：
+                  {t('tags.dialog.tag.recommendedGroups')}
                 </Typography>
-                {presetGroups.slice(0, 3).map((g) => (
+                {localizedPresetGroups.slice(0, 3).map((g) => (
                   <Chip
                     key={g.value}
                     label={g.value}
@@ -174,13 +191,11 @@ export default function TagDialog({ open, onClose, onSave, editingTag, existingG
 
           <Divider />
 
-          {/* 颜色选择 */}
           <Box>
             <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
-              标签颜色
+              {t('tags.dialog.tag.color')}
             </Typography>
 
-            {/* 预设颜色 + 颜色选择器按钮 */}
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
               {colorPresets.map((c) => (
                 <Box
@@ -206,8 +221,7 @@ export default function TagDialog({ open, onClose, onSave, editingTag, existingG
                 />
               ))}
 
-              {/* 颜色选择器按钮 */}
-              <Tooltip title="打开颜色选择器">
+              <Tooltip title={t('tags.dialog.tag.openColorPicker')}>
                 <IconButton
                   onClick={() => colorPickerRef.current?.click()}
                   sx={{
@@ -226,7 +240,6 @@ export default function TagDialog({ open, onClose, onSave, editingTag, existingG
                 </IconButton>
               </Tooltip>
 
-              {/* 隐藏的原生颜色选择器 */}
               <input
                 ref={colorPickerRef}
                 type="color"
@@ -242,15 +255,14 @@ export default function TagDialog({ open, onClose, onSave, editingTag, existingG
               />
             </Box>
 
-            {/* 自定义颜色输入 */}
             <Box sx={{ mt: 2, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
               <TextField
-                label="自定义颜色 (HEX)"
+                label={t('tags.dialog.tag.customColor')}
                 value={color}
                 onChange={(e) => handleColorInput(e.target.value)}
                 size="small"
                 error={color && !isValidColor(color)}
-                helperText={color && !isValidColor(color) ? '请输入有效的HEX颜色值 (如 #FF5733)' : ''}
+                helperText={color && !isValidColor(color) ? t('tags.dialog.tag.invalidColor') : ''}
                 sx={{ width: { xs: '100%', sm: 180 } }}
                 InputProps={{
                   startAdornment: (
@@ -278,7 +290,7 @@ export default function TagDialog({ open, onClose, onSave, editingTag, existingG
             </Box>
           </Box>
           <TextField
-            label="描述 (可选)"
+            label={t('tags.dialog.tag.description')}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             fullWidth
@@ -288,9 +300,9 @@ export default function TagDialog({ open, onClose, onSave, editingTag, existingG
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>取消</Button>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button variant="contained" onClick={handleSave} disabled={!name.trim()}>
-          保存
+          {t('common.save')}
         </Button>
       </DialogActions>
     </Dialog>

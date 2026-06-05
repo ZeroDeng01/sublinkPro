@@ -13,13 +13,13 @@ import (
 func GenerateAccessKey(c *gin.Context) {
 	var userAccessKey dto.UserAccessKey
 	if err := c.BindJSON(&userAccessKey); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithI18n(c, "参数错误", "backend.common.invalidParams", nil)
 		return
 	}
 	user := &models.User{Username: userAccessKey.UserName}
 	err := user.Find()
 	if err != nil {
-		utils.FailWithMsg(c, "用户不存在")
+		utils.FailWithI18n(c, "用户不存在", "backend.user.notFound", nil)
 		return
 	}
 
@@ -33,55 +33,55 @@ func GenerateAccessKey(c *gin.Context) {
 	apiKey, err := accessKey.GenerateAPIKey()
 	if err != nil {
 		utils.Error("生成 API Key 失败: %v", err)
-		utils.FailWithMsg(c, "生成API Key失败")
+		utils.FailWithI18n(c, "生成API Key失败", "backend.accessKeys.generateFailed", nil)
 		return
 	}
 	err = accessKey.Generate()
 	if err != nil {
 		utils.Error("生成 API Key 失败: %v", err)
-		utils.FailWithMsg(c, "生成API Key失败")
+		utils.FailWithI18n(c, "生成API Key失败", "backend.accessKeys.generateFailed", nil)
 		return
 	}
-	utils.OkDetailed(c, "API Key生成成功", map[string]string{
+	utils.OkDetailedI18n(c, "API Key生成成功", map[string]string{
 		"accessKey": apiKey,
-	})
+	}, "backend.accessKeys.generateSuccess", nil)
 }
 
 func DeleteAccessKey(c *gin.Context) {
 
 	accessKeyIDParam := c.Param("accessKeyId")
 	if accessKeyIDParam == "" {
-		utils.FailWithMsg(c, "缺少Access Key ID")
+		utils.FailWithI18n(c, "缺少Access Key ID", "backend.accessKeys.missingAccessKeyID", nil)
 		return
 	}
 
 	var accessKey models.AccessKey
 	accessKeyID, err := strconv.Atoi(accessKeyIDParam)
 	if err != nil {
-		utils.FailWithMsg(c, "删除Access Key失败")
+		utils.FailWithI18n(c, "删除Access Key失败", "backend.accessKeys.deleteFailed", nil)
 		return
 	}
 	accessKey.ID = accessKeyID
 	err = accessKey.Delete()
 	if err != nil {
-		utils.FailWithMsg(c, "删除Access Key失败")
+		utils.FailWithI18n(c, "删除Access Key失败", "backend.accessKeys.deleteFailed", nil)
 		return
 	}
 
-	utils.OkWithMsg(c, "删除Access Key成功")
+	utils.OkDetailedI18n(c, "删除Access Key成功", nil, "backend.accessKeys.deleteSuccess", nil)
 
 }
 
 func GetAccessKey(c *gin.Context) {
 	userIDParam := c.Param("userId")
 	if userIDParam == "" {
-		utils.FailWithMsg(c, "缺少User ID")
+		utils.FailWithI18n(c, "缺少User ID", "backend.user.missingUserID", nil)
 		return
 	}
 
 	userID, err := strconv.Atoi(userIDParam)
 	if err != nil {
-		utils.FailWithMsg(c, "查询Access Key失败")
+		utils.FailWithI18n(c, "查询Access Key失败", "backend.accessKeys.queryFailed", nil)
 		return
 	}
 
@@ -103,28 +103,28 @@ func GetAccessKey(c *gin.Context) {
 	if page > 0 && pageSize > 0 {
 		accessKeys, total, err := models.FindValidAccessKeysPaginated(userID, page, pageSize)
 		if err != nil {
-			utils.FailWithMsg(c, "查询Access Key失败")
+			utils.FailWithI18n(c, "查询Access Key失败", "backend.accessKeys.queryFailed", nil)
 			return
 		}
 		totalPages := 0
 		if pageSize > 0 {
 			totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
 		}
-		utils.OkDetailed(c, "查询Access Key成功", gin.H{
+		utils.OkDetailedI18n(c, "查询Access Key成功", gin.H{
 			"items":      accessKeys,
 			"total":      total,
 			"page":       page,
 			"pageSize":   pageSize,
 			"totalPages": totalPages,
-		})
+		}, "backend.accessKeys.querySuccess", nil)
 		return
 	}
 
 	// 不带分页参数，返回全部（向后兼容）
 	accessKeys, err := models.FindValidAccessKeys(userID)
 	if err != nil {
-		utils.FailWithMsg(c, "查询Access Key失败")
+		utils.FailWithI18n(c, "查询Access Key失败", "backend.accessKeys.queryFailed", nil)
 		return
 	}
-	utils.OkDetailed(c, "查询Access Key成功", accessKeys)
+	utils.OkDetailedI18n(c, "查询Access Key成功", accessKeys, "backend.accessKeys.querySuccess", nil)
 }

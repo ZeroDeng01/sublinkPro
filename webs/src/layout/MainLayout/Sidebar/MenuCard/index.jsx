@@ -1,4 +1,5 @@
 import { memo, useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
@@ -71,6 +72,7 @@ const getMenuCardTokens = (theme, isDark, hasUpdate, statusColor, versionStatus)
 
 function MenuCard() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const palette = theme.vars?.palette || theme.palette;
   const { version } = useConfig();
@@ -108,10 +110,10 @@ function MenuCard() {
     if (loading) {
       return {
         key: 'loading',
-        label: '检查更新中',
+        label: t('version.status.loading'),
         tone: 'info',
-        hint: '正在获取最新版本',
-        actionLabel: '查看 Releases',
+        hint: t('version.hint.loading'),
+        actionLabel: t('version.actions.releases'),
         actionHref: releasesPageHref,
         actionVariant: 'text'
       };
@@ -120,10 +122,10 @@ function MenuCard() {
     if (hasUpdate) {
       return {
         key: 'update',
-        label: '可更新',
+        label: t('version.status.update'),
         tone: 'warning',
-        hint: latestVersion ? `最新版本 ${latestVersion}` : '发现新版本',
-        actionLabel: '查看更新',
+        hint: latestVersion ? t('version.hint.latest', { version: latestVersion }) : t('version.hint.updateAvailable'),
+        actionLabel: t('version.actions.update'),
         actionHref: releaseHref,
         actionVariant: 'contained'
       };
@@ -132,10 +134,10 @@ function MenuCard() {
     if (hasLatestVersion) {
       return {
         key: 'current',
-        label: '已是最新',
+        label: t('version.status.current'),
         tone: 'success',
-        hint: latestVersion ? `已同步到 ${latestVersion}` : '无需更新',
-        actionLabel: '查看 Releases',
+        hint: latestVersion ? t('version.hint.synced', { version: latestVersion }) : t('version.hint.noUpdate'),
+        actionLabel: t('version.actions.releases'),
         actionHref: releasesPageHref,
         actionVariant: 'text'
       };
@@ -143,14 +145,14 @@ function MenuCard() {
 
     return {
       key: 'unknown',
-      label: '暂未确认',
+      label: t('version.status.unknown'),
       tone: 'default',
-      hint: '手动查看',
-      actionLabel: '查看 Releases',
+      hint: t('version.hint.manual'),
+      actionLabel: t('version.actions.releases'),
       actionHref: releasesPageHref,
       actionVariant: 'text'
     };
-  }, [hasLatestVersion, hasUpdate, latestVersion, loading, releaseHref, releasesPageHref]);
+  }, [hasLatestVersion, hasUpdate, latestVersion, loading, releaseHref, releasesPageHref, t]);
 
   const statusToneMap = {
     warning: isDark ? theme.palette.warning.main : theme.palette.warning.dark,
@@ -249,18 +251,18 @@ function MenuCard() {
                   SublinkPro
                 </Typography>
                 <Typography variant="caption" sx={{ display: 'block', color: mutedTextColor, mt: 0.15, lineHeight: 1.2 }}>
-                  当前系统版本
+                  {t('version.currentSystemVersion')}
                 </Typography>
               </Box>
 
-              <Tooltip title="查看 GitHub 仓库">
+              <Tooltip title={t('version.githubRepo')}>
                 <IconButton
                   size="small"
                   component="a"
                   href={GITHUB_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="查看 GitHub 仓库"
+                  aria-label={t('version.githubRepo')}
                   sx={{
                     p: 0.5,
                     color: iconButtonColor,

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -65,6 +66,7 @@ import {
 
 export default function SubscriptionList() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
 
   const [subscriptions, setSubscriptions] = useState([]);
@@ -309,7 +311,7 @@ export default function SubscriptionList() {
       }
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '获取订阅列表失败', 'error');
+      showMessage(error.message || t('subscriptions.page.messages.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -365,7 +367,7 @@ export default function SubscriptionList() {
       // 优先使用现代 Clipboard API
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text);
-        showMessage('已复制到剪贴板');
+        showMessage(t('common.copied'));
         return;
       }
       // 备用方案：使用传统的 execCommand
@@ -380,13 +382,13 @@ export default function SubscriptionList() {
       const successful = document.execCommand('copy');
       document.body.removeChild(textArea);
       if (successful) {
-        showMessage('已复制到剪贴板');
+        showMessage(t('common.copied'));
       } else {
-        showMessage('复制失败，请手动复制', 'error');
+        showMessage(t('common.copyFailedManual'), 'error');
       }
     } catch (error) {
       console.error('复制失败:', error);
-      showMessage('复制失败，请手动复制', 'error');
+      showMessage(t('common.copyFailedManual'), 'error');
     }
   };
 
@@ -526,35 +528,35 @@ export default function SubscriptionList() {
   };
 
   const handleDelete = async (sub) => {
-    openConfirm('删除订阅', `确定要删除订阅 "${sub.Name}" 吗？`, async () => {
+    openConfirm(t('subscriptions.page.confirm.deleteTitle'), t('subscriptions.page.confirm.deleteOne', { name: sub.Name }), async () => {
       try {
         await deleteSubscription({ id: sub.ID });
-        showMessage('删除成功');
+        showMessage(t('subscriptions.page.messages.deleteSuccess'));
         fetchSubscriptions(page, rowsPerPage);
       } catch (error) {
         console.error(error);
-        showMessage(error.message || '删除失败', 'error');
+        showMessage(error.message || t('subscriptions.page.messages.deleteFailed'), 'error');
       }
     });
   };
 
   // 复制订阅
   const handleCopy = async (sub) => {
-    openConfirm('复制订阅', `确定要复制订阅 "${sub.Name}" 吗？`, async () => {
+    openConfirm(t('subscriptions.page.confirm.copyTitle'), t('subscriptions.page.confirm.copyOne', { name: sub.Name }), async () => {
       try {
         await copySubscription(sub.ID);
-        showMessage('复制成功');
+        showMessage(t('subscriptions.page.messages.copySuccess'));
         fetchSubscriptions(page, rowsPerPage);
       } catch (error) {
         console.error(error);
-        showMessage(error.message || '复制失败', 'error');
+        showMessage(error.message || t('subscriptions.page.messages.copyFailed'), 'error');
       }
     });
   };
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      showMessage('请输入订阅名称', 'warning');
+      showMessage(t('subscriptions.page.messages.nameRequired'), 'warning');
       return;
     }
 
@@ -615,16 +617,19 @@ export default function SubscriptionList() {
       if (isEdit) {
         requestData.oldname = currentSub.Name;
         await updateSubscription(requestData);
-        showMessage('更新成功');
+        showMessage(t('subscriptions.page.messages.updateSuccess'));
       } else {
         await addSubscription(requestData);
-        showMessage('添加成功');
+        showMessage(t('subscriptions.page.messages.addSuccess'));
       }
       setDialogOpen(false);
       fetchSubscriptions(page, rowsPerPage);
     } catch (error) {
       console.error(error);
-      showMessage(error.message || (isEdit ? '更新失败' : '添加失败'), 'error');
+      showMessage(
+        error.message || (isEdit ? t('subscriptions.page.messages.updateFailed') : t('subscriptions.page.messages.addFailed')),
+        'error'
+      );
     }
   };
 
@@ -844,7 +849,7 @@ export default function SubscriptionList() {
     });
     sortData.sort((a, b) => a.Sort - b.Sort);
     setTempSortData(sortData);
-    showMessage('已进入排序模式，拖动或多选批量操作', 'info');
+    showMessage(t('subscriptions.page.messages.sortModeStarted'), 'info');
   };
 
   const handleConfirmSort = async (sub) => {
@@ -854,13 +859,13 @@ export default function SubscriptionList() {
         ID: sub.ID,
         NodeSort: newSortData
       });
-      showMessage('排序已更新');
+      showMessage(t('subscriptions.page.messages.sortUpdated'));
       setSortingSubId(null);
       setTempSortData([]);
       fetchSubscriptions(page, rowsPerPage);
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '排序保存失败', 'error');
+      showMessage(error.message || t('subscriptions.page.messages.sortSaveFailed'), 'error');
     }
   };
 
@@ -868,7 +873,7 @@ export default function SubscriptionList() {
     setSortingSubId(null);
     setTempSortData([]);
     setSelectedSortItems([]);
-    showMessage('已取消排序', 'info');
+    showMessage(t('subscriptions.page.messages.sortCancelled'), 'info');
   };
 
   const onDragEnd = (result) => {
@@ -901,7 +906,7 @@ export default function SubscriptionList() {
         sortBy,
         sortOrder
       });
-      showMessage('批量排序成功');
+      showMessage(t('subscriptions.page.messages.batchSortSuccess'));
       // 重新加载订阅数据并刷新排序列表
       const response = await getSubscriptions({ page: page + 1, pageSize: rowsPerPage });
       const subs = response.data?.items || response.data || [];
@@ -913,7 +918,7 @@ export default function SubscriptionList() {
       }
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '批量排序失败', 'error');
+      showMessage(error.message || t('subscriptions.page.messages.batchSortFailed'), 'error');
     }
   };
 
@@ -931,7 +936,7 @@ export default function SubscriptionList() {
 
     setTempSortData(newData);
     setSelectedSortItems([]);
-    showMessage(`已移动 ${selected.length} 项到位置 ${insertAt + 1}`);
+    showMessage(t('subscriptions.page.messages.movedItems', { count: selected.length, position: insertAt + 1 }));
   };
 
   // 展开/折叠行
@@ -961,26 +966,26 @@ export default function SubscriptionList() {
 
   return (
     <MainCard
-      title="订阅管理"
+      title={t('subscriptions.page.title')}
       secondary={
         matchDownMd ? (
           <Stack direction="row" spacing={1}>
-            <Tooltip title="分组排序">
+            <Tooltip title={t('subscriptions.page.actions.groupSort')}>
               <IconButton onClick={() => setGroupSortOpen(true)} size="small">
                 <CategoryIcon />
               </IconButton>
             </Tooltip>
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
-              添加
+              {t('common.add')}
             </Button>
           </Stack>
         ) : (
           <Stack direction="row" spacing={1}>
             <Button variant="outlined" startIcon={<CategoryIcon />} onClick={() => setGroupSortOpen(true)}>
-              分组排序
+              {t('subscriptions.page.actions.groupSort')}
             </Button>
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
-              添加订阅
+              {t('subscriptions.page.actions.addSubscription')}
             </Button>
             <IconButton onClick={() => fetchSubscriptions(page, rowsPerPage)} disabled={loading}>
               <RefreshIcon

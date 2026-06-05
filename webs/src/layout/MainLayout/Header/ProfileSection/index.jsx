@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 // material-ui
@@ -45,20 +46,20 @@ import GeoIPSettingsDialog from 'views/settings/components/GeoIPSettingsDialog';
 
 // ==============================|| 问候语计算 ||============================== //
 
-const getGreeting = () => {
+const getGreetingKey = () => {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 9) {
-    return '早上好';
+    return 'profile.greeting.earlyMorning';
   } else if (hour >= 9 && hour < 12) {
-    return '上午好';
+    return 'profile.greeting.morning';
   } else if (hour >= 12 && hour < 14) {
-    return '中午好';
+    return 'profile.greeting.noon';
   } else if (hour >= 14 && hour < 18) {
-    return '下午好';
+    return 'profile.greeting.afternoon';
   } else if (hour >= 18 && hour < 23) {
-    return '晚上好';
+    return 'profile.greeting.evening';
   } else {
-    return '夜深了';
+    return 'profile.greeting.lateNight';
   }
 };
 
@@ -102,6 +103,7 @@ const getProfileMenuTokens = (theme, isDark) => {
 
 export default function ProfileSection() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const {
@@ -115,7 +117,7 @@ export default function ProfileSection() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [geoipDialogOpen, setGeoipDialogOpen] = useState(false);
   const anchorRef = useRef(null);
-  const greeting = getGreeting();
+  const greeting = t(getGreetingKey());
   const { isDark } = useResolvedColorScheme();
   const {
     palette,
@@ -203,7 +205,7 @@ export default function ProfileSection() {
     setOpen(false);
 
     // 确认备份
-    openConfirm('系统备份', '确定备份系统数据吗？数据备份文件存有您的机密信息，请妥善保管。', async () => {
+    openConfirm('profile.backup.title', 'profile.backup.confirm', async () => {
       setBackupLoading(true);
       try {
         const response = await request({
@@ -215,7 +217,7 @@ export default function ProfileSection() {
         const data = response.data || response;
 
         if (!(data instanceof Blob) || data.size === 0) {
-          setSnackbar({ open: true, message: '备份失败：服务器未返回有效的备份文件', severity: 'error' });
+          setSnackbar({ open: true, message: t('profile.backup.invalidFile'), severity: 'error' });
           return;
         }
 
@@ -239,10 +241,10 @@ export default function ProfileSection() {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
 
-        setSnackbar({ open: true, message: '备份文件已开始下载', severity: 'success' });
+        setSnackbar({ open: true, message: t('profile.backup.downloadStarted'), severity: 'success' });
       } catch (error) {
         console.error('Backup failed:', error);
-        setSnackbar({ open: true, message: '备份请求失败，请检查网络或服务器日志', severity: 'error' });
+        setSnackbar({ open: true, message: t('profile.backup.requestFailed'), severity: 'error' });
       } finally {
         setBackupLoading(false);
       }
@@ -264,13 +266,13 @@ export default function ProfileSection() {
   // 清除IP缓存
   const handleClearIPCache = async () => {
     setOpen(false);
-    openConfirm('清除IP缓存', `确定要清除所有IP缓存数据吗？当前共有 ${ipCacheCount} 条缓存记录。`, async () => {
+    openConfirm('profile.ipCache.clearTitle', 'profile.ipCache.clearConfirm', async () => {
       setIpCacheLoading(true);
       try {
         const { clearIPCache } = await import('api/nodes');
         await clearIPCache();
         // 成功（code === 200 时返回，否则被拦截器 reject）
-        setSnackbar({ open: true, message: 'IP缓存已清除', severity: 'success' });
+        setSnackbar({ open: true, message: t('profile.ipCache.cleared'), severity: 'success' });
         setIpCacheCount(0);
         // 同时清除前端 localStorage 中的IP缓存
         try {
@@ -280,7 +282,7 @@ export default function ProfileSection() {
         }
       } catch (error) {
         console.error('清除IP缓存失败:', error);
-        setSnackbar({ open: true, message: error.message || '清除失败', severity: 'error' });
+        setSnackbar({ open: true, message: error.message || t('profile.ipCache.clearFailed'), severity: 'error' });
       } finally {
         setIpCacheLoading(false);
       }
@@ -348,7 +350,7 @@ export default function ProfileSection() {
         aria-haspopup="true"
         onClick={handleToggle}
         color="primary"
-        aria-label="用户账户"
+        aria-label={t('profile.account')}
       />
       <Popper
         placement="bottom"
@@ -399,11 +401,11 @@ export default function ProfileSection() {
                             {greeting}，
                           </Typography>
                           <Typography component="span" variant="h4" sx={{ fontWeight: 600, color: emphasizedText }}>
-                            {user?.nickname || user?.username || '用户'}
+                            {user?.nickname || user?.username || t('profile.userFallback')}
                           </Typography>
                         </Stack>
                         <Typography variant="subtitle2" sx={{ color: mutedText }}>
-                          {user?.role === 'admin' ? '管理员' : '普通用户'}
+                          {user?.role === 'admin' ? t('profile.role.admin') : t('profile.role.user')}
                         </Typography>
                       </Stack>
                       <Divider sx={{ my: 2, borderColor: withAlpha(palette.divider, isDark ? 0.7 : 1) }} />
@@ -451,10 +453,10 @@ export default function ProfileSection() {
                                   color: emphasizedText
                                 }}
                               >
-                                {user?.username || '未知用户'}
+                                {user?.username || t('profile.unknownUser')}
                               </Typography>
                               <Typography variant="caption" color="text.secondary" sx={{ color: mutedText }}>
-                                {user?.nickname || user?.username || '用户'}
+                                {user?.nickname || user?.username || t('profile.userFallback')}
                               </Typography>
                             </Box>
                           </Stack>
@@ -487,7 +489,7 @@ export default function ProfileSection() {
                           </ListItemIcon>
                           <ListItemText
                             primaryTypographyProps={{ component: 'div' }}
-                            primary={<Typography variant="body2">管理API密钥</Typography>}
+                            primary={<Typography variant="body2">{t('profile.actions.apiKeys')}</Typography>}
                           />
                         </ListItemButton>
                         <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={handlePersonalCenter}>
@@ -496,7 +498,7 @@ export default function ProfileSection() {
                           </ListItemIcon>
                           <ListItemText
                             primaryTypographyProps={{ component: 'div' }}
-                            primary={<Typography variant="body2">个人中心</Typography>}
+                            primary={<Typography variant="body2">{t('profile.actions.personalCenter')}</Typography>}
                           />
                         </ListItemButton>
                         <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={handleBackup}>
@@ -505,7 +507,7 @@ export default function ProfileSection() {
                           </ListItemIcon>
                           <ListItemText
                             primaryTypographyProps={{ component: 'div' }}
-                            primary={<Typography variant="body2">系统备份</Typography>}
+                            primary={<Typography variant="body2">{t('profile.actions.backup')}</Typography>}
                           />
                         </ListItemButton>
                         <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={handleClearIPCache} disabled={ipCacheLoading}>
@@ -514,10 +516,10 @@ export default function ProfileSection() {
                           </ListItemIcon>
                           <ListItemText
                             primaryTypographyProps={{ component: 'div' }}
-                            primary={<Typography variant="body2">清除IP缓存</Typography>}
+                            primary={<Typography variant="body2">{t('profile.actions.clearIpCache')}</Typography>}
                             secondary={
                               <Typography variant="caption" sx={{ color: mutedText }}>
-                                当前缓存 {ipCacheCount} 条
+                                {t('profile.ipCache.currentCount', { count: ipCacheCount })}
                               </Typography>
                             }
                           />
@@ -534,7 +536,7 @@ export default function ProfileSection() {
                           </ListItemIcon>
                           <ListItemText
                             primaryTypographyProps={{ component: 'div' }}
-                            primary={<Typography variant="body2">GeoIP 数据库</Typography>}
+                            primary={<Typography variant="body2">{t('profile.actions.geoip')}</Typography>}
                           />
                         </ListItemButton>
                         <Divider sx={{ my: 1 }} />
@@ -555,7 +557,7 @@ export default function ProfileSection() {
                             primaryTypographyProps={{ component: 'div' }}
                             primary={
                               <Typography variant="body2" color="error">
-                                注销登出
+                                {t('profile.actions.logout')}
                               </Typography>
                             }
                           />
@@ -574,7 +576,7 @@ export default function ProfileSection() {
       <Backdrop sx={{ color: theme.palette.common.white, zIndex: (muiTheme) => muiTheme.zIndex.drawer + 1 }} open={backupLoading}>
         <Stack alignItems="center" spacing={2}>
           <CircularProgress color="inherit" />
-          <Typography>正在生成备份文件，请稍候...</Typography>
+          <Typography>{t('profile.backup.generating')}</Typography>
         </Stack>
       </Backdrop>
 
@@ -597,14 +599,14 @@ export default function ProfileSection() {
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
       >
-        <DialogTitle id="alert-dialog-title">{confirmInfo.title}</DialogTitle>
+        <DialogTitle id="alert-dialog-title">{t(confirmInfo.title)}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">{confirmInfo.content}</DialogContentText>
+          <DialogContentText id="alert-dialog-description">{t(confirmInfo.content, { count: ipCacheCount })}</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleConfirmClose}>取消</Button>
+          <Button onClick={handleConfirmClose}>{t('common.cancel')}</Button>
           <Button onClick={handleConfirmAction} color="primary" autoFocus>
-            确定
+            {t('common.confirm')}
           </Button>
         </DialogActions>
       </Dialog>

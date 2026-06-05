@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
@@ -15,6 +16,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import { getSystemDomain as getSubscriptionAddress, updateSystemDomain as updateSubscriptionAddress } from 'api/settings';
 
 export default function SubscriptionAddressSettings({ showMessage }) {
+  const { t } = useTranslation();
   const [subscriptionAddress, setSubscriptionAddress] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -38,9 +40,9 @@ export default function SubscriptionAddressSettings({ showMessage }) {
     try {
       await updateSubscriptionAddress({ systemDomain: trimmedSubscriptionAddress });
       setSubscriptionAddress(trimmedSubscriptionAddress);
-      showMessage('订阅地址设置保存成功');
+      showMessage(t('subscriptionAddress.messages.saveSuccess'));
     } catch (error) {
-      showMessage('保存失败: ' + (error.response?.data?.message || error.message), 'error');
+      showMessage(t('subscriptionAddress.messages.saveFailed', { message: error.response?.data?.message || error.message }), 'error');
     } finally {
       setSaving(false);
     }
@@ -49,22 +51,22 @@ export default function SubscriptionAddressSettings({ showMessage }) {
   return (
     <Card>
       <CardHeader
-        title="订阅地址设置"
-        subheader="用于生成 Telegram 机器人和网页分享中的订阅访问地址"
+        title={t('subscriptionAddress.title')}
+        subheader={t('subscriptionAddress.subheader')}
         avatar={<LanguageIcon color="primary" />}
       />
       <CardContent>
         <Stack spacing={2} sx={{ maxWidth: 600 }}>
           <Alert severity="info" sx={{ mb: 1 }}>
-            配置后，Telegram 机器人和网页分享链接将优先使用这里填写的订阅地址。未配置时，网页仍使用当前访问地址，Telegram 使用本地地址。
+            {t('subscriptionAddress.info')}
           </Alert>
           <TextField
             fullWidth
-            label="订阅地址"
+            label={t('subscriptionAddress.field.label')}
             value={subscriptionAddress}
             onChange={(e) => setSubscriptionAddress(e.target.value)}
-            placeholder="例如: https://your-domain.com"
-            helperText="请填写完整地址并包含协议头（http:// 或 https://），保存后将作为订阅链接的基础地址。"
+            placeholder={t('subscriptionAddress.field.placeholder')}
+            helperText={t('subscriptionAddress.field.helper')}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -80,7 +82,7 @@ export default function SubscriptionAddressSettings({ showMessage }) {
             startIcon={<SaveIcon />}
             sx={{ alignSelf: 'flex-start' }}
           >
-            {saving ? '保存中...' : '保存订阅地址'}
+            {saving ? t('common.saving') : t('subscriptionAddress.actions.save')}
           </Button>
         </Stack>
       </CardContent>

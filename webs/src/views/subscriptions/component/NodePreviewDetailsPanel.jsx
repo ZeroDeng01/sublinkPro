@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-// material-ui
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
@@ -12,6 +12,7 @@ import DialogContent from '@mui/material/DialogContent';
 import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
+import { formatDateTime as globalFormatDateTime } from 'i18n/locales';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -23,35 +24,34 @@ import { getReadableTextTokens, getSurfaceTokens } from '../../../themes/surface
 import { getProtocolPresentation } from '../../../utils/protocolPresentation';
 import { getNodeDisplayName } from 'utils/nodeDisplayName';
 
-// icons
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SignalCellularAltIcon from '@mui/icons-material/SignalCellularAlt';
 import SpeedIcon from '@mui/icons-material/Speed';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
-/**
- * 格式化时间
- */
-const formatDateTime = (dateStr) => {
-  if (!dateStr) return '-';
-  try {
-    const date = new Date(dateStr);
-    return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return dateStr;
-  }
-};
-
 const truncateText = (text, maxLength) => {
   if (!text) return '-';
   return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
 };
 
-/**
- * 节点预览详情面板 - 居中弹窗
- */
 export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClose, onViewIP }) {
+  const { t, i18n } = useTranslation();
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    try {
+      const date = new Date(dateStr);
+      if (Number.isNaN(date.getTime())) return dateStr;
+      return globalFormatDateTime(date, i18n.resolvedLanguage || i18n.language, {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { isDark } = useResolvedColorScheme();
@@ -67,17 +67,15 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
   const protocolInfo = getProtocolPresentation(node.Protocol);
   const protocolColor = protocolInfo.color || palette.primary.main;
 
-  // 复制到剪贴板
   const copyToClipboard = async (text, label) => {
     try {
       await navigator.clipboard.writeText(text);
-      setSnackbar({ open: true, message: `${label}已复制`, severity: 'success' });
+      setSnackbar({ open: true, message: t('subscriptions.previewDetails.messages.copied', { label }), severity: 'success' });
     } catch {
-      setSnackbar({ open: true, message: '复制失败', severity: 'error' });
+      setSnackbar({ open: true, message: t('common.copyFailed'), severity: 'error' });
     }
   };
 
-  // 标签列表
   const tags = node.Tags ? node.Tags.split(',').filter((t) => t.trim()) : [];
   const previewLink = node.PreviewLink || node.Link || '';
   const subtleMonoColor = isDark ? withAlpha(primaryText, 0.9) : withAlpha(palette.text.primary, 0.66);
@@ -137,7 +135,6 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
             boxShadow: `inset 0 -1px 0 ${withAlpha(palette.divider, 0.45)}`
           }}
         >
-          {/* 关闭按钮 */}
           <IconButton
             onClick={onClose}
             size="small"
@@ -160,7 +157,6 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
             <CloseIcon fontSize="small" />
           </IconButton>
 
-          {/* 头部信息 */}
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <Box
               sx={{
@@ -185,7 +181,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
               </Typography>
               <Stack direction="row" alignItems="center" spacing={0.75} mt={0.5}>
                 <Chip
-                  label={node.Protocol || '未知'}
+                  label={node.Protocol || t('common.unknown')}
                   size="small"
                   sx={{
                     height: 20,
@@ -202,7 +198,6 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
             </Box>
           </Stack>
 
-          {/* 性能指标 - 紧凑横向 */}
           <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
             <Paper
               variant="outlined"
@@ -218,7 +213,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
             >
               <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5}>
                 <SignalCellularAltIcon sx={{ fontSize: 12, color: 'success.main' }} />
-                <Typography sx={{ fontSize: 10, color: secondaryText }}>延迟</Typography>
+                <Typography sx={{ fontSize: 10, color: secondaryText }}>{t('subscriptions.previewDetails.metrics.delay')}</Typography>
               </Stack>
               <Typography sx={{ fontSize: 18, fontWeight: 700, color: primaryText, mt: 0.25 }}>
                 {node.DelayTime > 0 ? `${node.DelayTime}ms` : '-'}
@@ -241,7 +236,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
             >
               <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5}>
                 <SpeedIcon sx={{ fontSize: 12, color: 'info.main' }} />
-                <Typography sx={{ fontSize: 10, color: secondaryText }}>速度</Typography>
+                <Typography sx={{ fontSize: 10, color: secondaryText }}>{t('subscriptions.previewDetails.metrics.speed')}</Typography>
               </Stack>
               <Typography sx={{ fontSize: 18, fontWeight: 700, color: primaryText, mt: 0.25 }}>
                 {node.Speed > 0 ? `${node.Speed.toFixed(1)}M` : '-'}
@@ -252,7 +247,6 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
         </Box>
 
         <DialogContent sx={{ p: 2, bgcolor: dialogSurface }}>
-          {/* 名称转换 - 紧凑 */}
           {node.OriginalName && node.OriginalName !== displayName && (
             <Box
               sx={{
@@ -265,7 +259,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
               }}
             >
               <Typography variant="caption" color="primary" fontWeight={600}>
-                名称转换
+                {t('subscriptions.previewDetails.nameConversion')}
               </Typography>
               <Stack direction="row" alignItems="center" spacing={0.5} mt={0.25}>
                 <Typography sx={{ fontSize: 11, color: secondaryText }} noWrap>
@@ -279,7 +273,6 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
             </Box>
           )}
 
-          {/* 基本信息 - 一行显示 */}
           <Grid
             container
             spacing={1}
@@ -287,15 +280,15 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
           >
             <Grid item xs={6}>
               <Typography variant="caption" sx={{ color: secondaryText }}>
-                来源
+                {t('subscriptions.previewDetails.source')}
               </Typography>
               <Typography variant="body2" fontWeight={500} sx={{ color: primaryText }}>
-                {node.Source === 'manual' ? '手动添加' : node.Source || '-'}
+                {node.Source === 'manual' ? t('nodes.table.manualSource') : node.Source || '-'}
               </Typography>
             </Grid>
             <Grid item xs={6}>
               <Typography variant="caption" sx={{ color: secondaryText }}>
-                落地IP
+                {t('subscriptions.previewDetails.landingIp')}
               </Typography>
               {node.LandingIP ? (
                 <Typography
@@ -321,11 +314,10 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
             </Grid>
           </Grid>
 
-          {/* 标签 */}
           {tags.length > 0 && (
             <Box sx={{ mb: 1.5 }}>
               <Typography variant="caption" sx={{ color: secondaryText }}>
-                标签
+                {t('subscriptions.previewDetails.tags')}
               </Typography>
               <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
                 {tags.map((tag, idx) => {
@@ -371,7 +363,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
           >
             <Stack direction="row" alignItems="center" spacing={1}>
               <Typography variant="caption" sx={{ flexShrink: 0, fontWeight: 600, color: secondaryText }}>
-                预览链接
+                {t('subscriptions.previewDetails.previewLink')}
               </Typography>
               <Typography
                 sx={{
@@ -391,10 +383,10 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                 size="small"
                 variant="outlined"
                 startIcon={<ContentCopyIcon sx={{ fontSize: 12 }} />}
-                onClick={() => copyToClipboard(previewLink, '链接')}
+                onClick={() => copyToClipboard(previewLink, t('subscriptions.previewDetails.labels.link'))}
                 sx={copyButtonSx}
               >
-                复制
+                {t('common.copy')}
               </Button>
             </Stack>
 
@@ -406,7 +398,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                 sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: subtleBorder }}
               >
                 <Typography variant="caption" sx={{ flexShrink: 0, fontWeight: 600, color: secondaryText }}>
-                  原始链接
+                  {t('subscriptions.previewDetails.originalLink')}
                 </Typography>
                 <Typography sx={{ flex: 1, fontSize: 9, color: secondaryLinkColor, fontFamily: 'monospace' }} noWrap>
                   {truncateText(node.Link, 40)}
@@ -414,7 +406,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                 <Button
                   size="small"
                   color="inherit"
-                  onClick={() => copyToClipboard(node.Link, '原始链接')}
+                  onClick={() => copyToClipboard(node.Link, t('subscriptions.previewDetails.labels.originalLink'))}
                   sx={{
                     ...copyButtonSx,
                     fontSize: 9,
@@ -422,7 +414,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                     px: 0.75
                   }}
                 >
-                  复制
+                  {t('common.copy')}
                 </Button>
               </Stack>
             )}
@@ -430,7 +422,6 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
         </DialogContent>
       </Dialog>
 
-      {/* 复制成功提示 */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={1500}

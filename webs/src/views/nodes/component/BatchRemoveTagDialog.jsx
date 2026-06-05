@@ -13,6 +13,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { useTranslation } from 'react-i18next';
 import { getNodeColorChipSx, getNodeDialogPaperSx, getNodeFieldControlSx, getNodeThemeTokens } from '../nodeTheme';
 
 /**
@@ -20,6 +21,7 @@ import { getNodeColorChipSx, getNodeDialogPaperSx, getNodeFieldControlSx, getNod
  */
 export default function BatchRemoveTagDialog({ open, selectedCount, value, setValue, tagOptions, onClose, onSubmit }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
   const fieldControlSx = getNodeFieldControlSx(tokens, tokens.palette.error.main);
@@ -35,11 +37,11 @@ export default function BatchRemoveTagDialog({ open, selectedCount, value, setVa
       <DialogTitle
         sx={{ color: tokens.primaryText, bgcolor: tokens.mutedPanelSurface, borderBottom: '1px solid', borderColor: tokens.panelBorder }}
       >
-        批量移除标签
+        {t('nodes.batch.removeTagDialog.title')}
       </DialogTitle>
       <DialogContent dividers sx={{ bgcolor: 'transparent', borderColor: tokens.panelBorder }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          将从选中的 {selectedCount} 个节点移除以下标签（保留其他标签）
+          {t('nodes.batch.removeTagDialog.description', { count: selectedCount })}
         </Typography>
         <Autocomplete
           multiple
@@ -81,16 +83,24 @@ export default function BatchRemoveTagDialog({ open, selectedCount, value, setVa
             })
           }
           sx={fieldControlSx}
-          renderInput={(params) => <TextField {...params} label="选择要移除的标签" placeholder="选择标签" fullWidth sx={fieldControlSx} />}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label={t('nodes.batch.removeTagDialog.fieldLabel')}
+              placeholder={t('nodes.batch.removeTagDialog.placeholder')}
+              fullWidth
+              sx={fieldControlSx}
+            />
+          )}
         />
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-          提示：只会移除选中的标签，节点的其他标签将保留
+          {t('nodes.batch.removeTagDialog.helper')}
         </Typography>
       </DialogContent>
       <DialogActions sx={{ bgcolor: tokens.mutedPanelSurface, borderTop: '1px solid', borderColor: tokens.panelBorder }}>
-        <Button onClick={onClose}>取消</Button>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button variant="contained" color="warning" onClick={onSubmit} disabled={value.length === 0}>
-          确认移除
+          {t('nodes.batch.removeTagDialog.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

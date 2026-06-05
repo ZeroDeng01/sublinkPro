@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Stack from '@mui/material/Stack';
@@ -10,6 +11,8 @@ import { alpha, useColorScheme, useTheme } from '@mui/material/styles';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import SettingsBrightnessOutlinedIcon from '@mui/icons-material/SettingsBrightnessOutlined';
+import TranslateIcon from '@mui/icons-material/Translate';
+import CheckIcon from '@mui/icons-material/Check';
 
 // project imports
 import AuthWrapper1 from './AuthWrapper1';
@@ -19,34 +22,22 @@ import Logo from 'ui-component/Logo';
 import AuthFooter from 'ui-component/cards/AuthFooter';
 import AuthLogin from '../auth-forms/AuthLogin';
 import { DEFAULT_THEME_MODE } from 'config';
+import { LANGUAGE_OPTIONS, normalizeLanguage } from 'i18n/locales';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 const themeModeOptions = [
-  {
-    value: 'system',
-    label: '跟随系统',
-    shortLabel: '系统',
-    icon: SettingsBrightnessOutlinedIcon
-  },
-  {
-    value: 'light',
-    label: '浅色模式',
-    shortLabel: '浅色',
-    icon: LightModeOutlinedIcon
-  },
-  {
-    value: 'dark',
-    label: '深色模式',
-    shortLabel: '深色',
-    icon: DarkModeOutlinedIcon
-  }
+  { value: 'system', icon: SettingsBrightnessOutlinedIcon },
+  { value: 'light', icon: LightModeOutlinedIcon },
+  { value: 'dark', icon: DarkModeOutlinedIcon }
 ];
 
-function LoginThemeModeSwitch() {
+function LoginFloatingControls() {
   const theme = useTheme();
   const { mode, setMode } = useColorScheme();
   const { isDark } = useResolvedColorScheme();
+  const { t, i18n } = useTranslation();
   const selectedMode = mode || DEFAULT_THEME_MODE;
+  const currentLanguage = normalizeLanguage(i18n.resolvedLanguage || i18n.language);
 
   const switchTokens = useMemo(
     () => ({
@@ -63,82 +54,119 @@ function LoginThemeModeSwitch() {
     [isDark, theme]
   );
 
+  const controlGroupSx = {
+    p: 0.375,
+    borderRadius: 999,
+    display: 'flex',
+    gap: 0.375,
+    bgcolor: switchTokens.surface,
+    border: '1px solid',
+    borderColor: switchTokens.border,
+    boxShadow: switchTokens.shadow,
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)'
+  };
+
+  const controlButtonSx = (selected) => ({
+    minWidth: { xs: 36, sm: 74 },
+    height: 34,
+    px: { xs: 0, sm: 1 },
+    border: '1px solid',
+    borderColor: selected ? switchTokens.selectedBorder : 'transparent',
+    borderRadius: 999,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 0.75,
+    color: selected ? switchTokens.selectedText : switchTokens.text,
+    bgcolor: selected ? switchTokens.selected : 'transparent',
+    cursor: 'pointer',
+    font: 'inherit',
+    transition: theme.transitions.create(['background-color', 'border-color', 'color', 'transform'], {
+      duration: theme.transitions.duration.shorter
+    }),
+    '&:hover': {
+      bgcolor: selected ? switchTokens.selected : switchTokens.hover,
+      color: selected ? switchTokens.selectedText : switchTokens.hoverText
+    },
+    '&:focus-visible': {
+      outline: `2px solid ${alpha(theme.palette.primary.main, 0.48)}`,
+      outlineOffset: 2
+    },
+    '&:active': {
+      transform: 'scale(0.97)'
+    }
+  });
+
   return (
     <Box
-      component="nav"
-      aria-label="登录页主题模式"
       sx={{
         position: 'absolute',
         top: { xs: 16, sm: 24, md: 32 },
         right: { xs: 16, sm: 24, md: 32 },
         zIndex: 1200,
-        p: 0.375,
-        borderRadius: 999,
         display: 'flex',
-        gap: 0.375,
-        bgcolor: switchTokens.surface,
-        border: '1px solid',
-        borderColor: switchTokens.border,
-        boxShadow: switchTokens.shadow,
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)'
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: 1
       }}
     >
-      {themeModeOptions.map((item) => {
-        const selected = selectedMode === item.value;
-        const Icon = item.icon;
+      <Box component="nav" aria-label={t('language.title')} sx={controlGroupSx}>
+        {LANGUAGE_OPTIONS.map((item) => {
+          const selected = currentLanguage === item.value;
 
-        return (
-          <Tooltip key={item.value} title={item.label}>
-            <Box
-              component="button"
-              type="button"
-              aria-pressed={selected}
-              aria-label={item.label}
-              onClick={() => setMode(item.value)}
-              sx={{
-                minWidth: { xs: 36, sm: 74 },
-                height: 34,
-                px: { xs: 0, sm: 1 },
-                border: '1px solid',
-                borderColor: selected ? switchTokens.selectedBorder : 'transparent',
-                borderRadius: 999,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 0.75,
-                color: selected ? switchTokens.selectedText : switchTokens.text,
-                bgcolor: selected ? switchTokens.selected : 'transparent',
-                cursor: 'pointer',
-                font: 'inherit',
-                transition: theme.transitions.create(['background-color', 'border-color', 'color', 'transform'], {
-                  duration: theme.transitions.duration.shorter
-                }),
-                '&:hover': {
-                  bgcolor: selected ? switchTokens.selected : switchTokens.hover,
-                  color: selected ? switchTokens.selectedText : switchTokens.hoverText
-                },
-                '&:focus-visible': {
-                  outline: `2px solid ${alpha(theme.palette.primary.main, 0.48)}`,
-                  outlineOffset: 2
-                },
-                '&:active': {
-                  transform: 'scale(0.97)'
-                }
-              }}
-            >
-              <Icon fontSize="small" />
-              <Typography
-                component="span"
-                variant="caption"
-                sx={{ display: { xs: 'none', sm: 'inline' }, fontWeight: selected ? 700 : 600, lineHeight: 1 }}
+          return (
+            <Tooltip key={item.value} title={t(`language.${item.value}`)}>
+              <Box
+                component="button"
+                type="button"
+                aria-pressed={selected}
+                aria-label={t(`language.${item.value}`)}
+                onClick={() => i18n.changeLanguage(normalizeLanguage(item.value))}
+                sx={controlButtonSx(selected)}
               >
-                {item.shortLabel}
-              </Typography>
-            </Box>
-          </Tooltip>
-        );
-      })}
+                {selected ? <CheckIcon fontSize="small" /> : <TranslateIcon fontSize="small" />}
+                <Typography
+                  component="span"
+                  variant="caption"
+                  sx={{ display: { xs: 'none', sm: 'inline' }, fontWeight: selected ? 700 : 600, lineHeight: 1 }}
+                >
+                  {t(`language.${item.value}Short`)}
+                </Typography>
+              </Box>
+            </Tooltip>
+          );
+        })}
+      </Box>
+
+      <Box component="nav" aria-label={t('theme.title')} sx={controlGroupSx}>
+        {themeModeOptions.map((item) => {
+          const selected = selectedMode === item.value;
+          const Icon = item.icon;
+
+          return (
+            <Tooltip key={item.value} title={t(`theme.${item.value}`)}>
+              <Box
+                component="button"
+                type="button"
+                aria-pressed={selected}
+                aria-label={t(`theme.${item.value}`)}
+                onClick={() => setMode(item.value)}
+                sx={controlButtonSx(selected)}
+              >
+                <Icon fontSize="small" />
+                <Typography
+                  component="span"
+                  variant="caption"
+                  sx={{ display: { xs: 'none', sm: 'inline' }, fontWeight: selected ? 700 : 600, lineHeight: 1 }}
+                >
+                  {t(`theme.${item.value}Short`)}
+                </Typography>
+              </Box>
+            </Tooltip>
+          );
+        })}
+      </Box>
     </Box>
   );
 }
@@ -147,10 +175,11 @@ function LoginThemeModeSwitch() {
 
 export default function Login() {
   const downMD = useMediaQuery((theme) => theme.breakpoints.down('md'));
+  const { t } = useTranslation();
 
   return (
     <AuthWrapper1>
-      <LoginThemeModeSwitch />
+      <LoginFloatingControls />
       <Stack sx={{ justifyContent: 'flex-end', minHeight: '100vh' }}>
         <Stack sx={{ justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 68px)' }}>
           <Box sx={{ m: { xs: 1, sm: 3 }, mb: 0 }}>
@@ -161,10 +190,10 @@ export default function Login() {
                 </Box>
                 <Stack sx={{ alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                   <Typography variant={downMD ? 'h3' : 'h2'} sx={{ color: 'secondary.main' }}>
-                    欢迎回来
+                    {t('auth.page.welcome')}
                   </Typography>
                   <Typography variant="caption" sx={{ fontSize: '16px', textAlign: { xs: 'center', md: 'inherit' } }}>
-                    请输入您的登录凭据
+                    {t('auth.page.subtitle')}
                   </Typography>
                 </Stack>
                 <Box sx={{ width: 1 }}>

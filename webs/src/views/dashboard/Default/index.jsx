@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import { getNodeDisplayName } from 'utils/nodeDisplayName';
+import { formatDateTime, formatNumber } from 'i18n/locales';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
@@ -220,14 +222,6 @@ const qualityStatusColorMap = {
   untested: '#64748b'
 };
 
-const qualityStatusLabelMap = {
-  success: '完整结果',
-  partial: '信息不全',
-  failed: '检测失败',
-  disabled: '未启用',
-  untested: '未检测'
-};
-
 const createCountryStatMap = (stats = []) =>
   stats.reduce((accumulator, item) => {
     accumulator[item.country] = item;
@@ -282,7 +276,7 @@ const getCountMetric = (source) => getNumericStatValue(source, TOTAL_COUNT_KEYS,
 const getDelayPassMetric = (source) => getNumericStatValue(source, DELAY_PASS_COUNT_KEYS, 0);
 const getSpeedPassMetric = (source) => getNumericStatValue(source, SPEED_PASS_COUNT_KEYS, 0);
 
-const buildTopItems = (items = [], total = 0, limit = 5, options = {}) => {
+const buildTopItems = (items = [], total = 0, limit = 5, options = {}, t) => {
   const { forceCollapsedKeys = [] } = options;
   const normalizedItems = items.filter((item) => item && item.count > 0);
   const forcedHiddenItems = normalizedItems.filter((item) => forceCollapsedKeys.includes(item.key));
@@ -297,13 +291,15 @@ const buildTopItems = (items = [], total = 0, limit = 5, options = {}) => {
   if (hiddenCount > 0) {
     visibleItems.push({
       key: 'collapsed-other',
-      label: `其他 ${hiddenItems.length} 项`,
+      label: t ? t('dashboard.default.charts.others', { count: hiddenItems.length }) : `Other ${hiddenItems.length} items`,
       count: hiddenCount,
       uniqueIpCount: hiddenUniqueIpCount,
       delayPassCount: hiddenDelayPassCount,
       speedPassCount: hiddenSpeedPassCount,
       color: '#94a3b8',
-      tooltip: `包含未展示的其余 ${hiddenItems.length} 项，合计 ${hiddenCount} 个节点`,
+      tooltip: t
+        ? t('dashboard.default.charts.othersDesc', { count: hiddenItems.length, total: hiddenCount })
+        : `Includes other ${hiddenItems.length} items, total ${hiddenCount} nodes`,
       isCollapsedOther: true,
       hiddenItems: hiddenItems.map((item) => ({
         ...item,
@@ -318,7 +314,7 @@ const buildTopItems = (items = [], total = 0, limit = 5, options = {}) => {
   }));
 };
 
-const normalizeMapStats = ({ entries = [], total, limit, defaultColor, getItemMeta, forceCollapsedKeys = [] }) => {
+const normalizeMapStats = ({ entries = [], total, limit, defaultColor, getItemMeta, forceCollapsedKeys = [], t }) => {
   const resolvedTotal = typeof total === 'number' ? total : entries.reduce((sum, [, value]) => sum + getCountMetric(value), 0);
   const normalized = entries
     .map(([key, value], index) => ({
@@ -332,23 +328,26 @@ const normalizeMapStats = ({ entries = [], total, limit, defaultColor, getItemMe
     }))
     .sort((a, b) => b.count - a.count);
 
-  return buildTopItems(normalized, resolvedTotal, limit, { forceCollapsedKeys });
+  return buildTopItems(normalized, resolvedTotal, limit, { forceCollapsedKeys }, t);
 };
 
-const normalizeTagStats = ({ tags = [], limit }) => {
+const normalizeTagStats = ({ tags = [], limit, t }) => {
   const total = tags.reduce((sum, item) => sum + getCountMetric(item), 0);
   const normalized = [...tags]
     .sort((a, b) => getCountMetric(b) - getCountMetric(a))
     .map((tag, index) => ({
       key: tag.key || tag.name || tag.label || `tag-${index}`,
-      label: getLabelStatValue(tag, tag.name || tag.key || `标签 ${index + 1}`),
+      label: getLabelStatValue(
+        tag,
+        tag.name || tag.key || (t ? t('dashboard.default.charts.tagItem', { index: index + 1 }) : `Tag ${index + 1}`)
+      ),
       count: getCountMetric(tag),
       delayPassCount: getDelayPassMetric(tag),
       speedPassCount: getSpeedPassMetric(tag),
       color: tag.color || '#ec4899'
     }));
 
-  return buildTopItems(normalized, total, limit);
+  return buildTopItems(normalized, total, limit, {}, t);
 };
 
 const getProgressBarSx = (color, isDark, muted = false) => ({
@@ -450,11 +449,12 @@ const RankedStatList = ({
 }) => {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
+  const { t, i18n } = useTranslation();
   const [expandedKeys, setExpandedKeys] = useState({});
 
   const formatSecondaryMetricValue = (value) => {
     if (typeof value === 'number') {
-      return value.toLocaleString();
+      return formatNumber(value, i18n.resolvedLanguage || i18n.language);
     }
 
     if (typeof value === 'string' && value.trim() !== '') {
@@ -579,7 +579,7 @@ const RankedStatList = ({
                     </Typography>
                     {item.isCollapsedOther ? (
                       <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark), flexShrink: 0 }}>
-                        {isExpanded ? '收起' : '展开'}
+                        {isExpanded ? t('dashboard.default.charts.collapse') : t('dashboard.default.charts.expand')}
                       </Typography>
                     ) : null}
                   </Box>
@@ -589,7 +589,7 @@ const RankedStatList = ({
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexShrink: 0 }}>
                 <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadableStatValueColor(theme, isDark) }}>
-                    {valueFormatter ? valueFormatter(item.count, item) : item.count.toLocaleString()}
+                    {valueFormatter ? valueFormatter(item.count, item) : formatNumber(item.count, i18n.resolvedLanguage || i18n.language)}
                   </Typography>
                   {detailFormatter ? (
                     <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark), display: 'block' }}>
@@ -668,7 +668,9 @@ const RankedStatList = ({
                         )}
                       </Box>
                       <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark), flexShrink: 0 }}>
-                        {valueFormatter ? valueFormatter(hiddenItem.count, hiddenItem) : hiddenItem.count.toLocaleString()}
+                        {valueFormatter
+                          ? valueFormatter(hiddenItem.count, hiddenItem)
+                          : formatNumber(hiddenItem.count, i18n.resolvedLanguage || i18n.language)}
                         {detailFormatter ? ` · ${detailFormatter(hiddenItem)}` : ''} · {hiddenItem.percent.toFixed(1)}
                         {percentSuffix}
                       </Typography>
@@ -700,6 +702,7 @@ const RankedStatList = ({
 const QualityMetricRow = ({ label, count, percent, color, tooltip }) => {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
+  const { i18n } = useTranslation();
   const row = (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: 0.75 }}>
@@ -720,7 +723,7 @@ const QualityMetricRow = ({ label, count, percent, color, tooltip }) => {
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexShrink: 0 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadablePrimaryTextColor(theme, isDark) }}>
-            {count.toLocaleString()}
+            {formatNumber(count, i18n.resolvedLanguage || i18n.language)}
           </Typography>
           <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark), minWidth: 42, textAlign: 'right' }}>
             {percent.toFixed(1)}%
@@ -743,13 +746,18 @@ const QualityMetricRow = ({ label, count, percent, color, tooltip }) => {
 const IPQualityBreakdown = ({ stats, loading }) => {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
+  const { t, i18n } = useTranslation();
 
   if (loading) {
     return <StatRowsSkeleton rows={5} />;
   }
 
   if (!stats || !Array.isArray(stats.ipStats) || stats.ipStats.length === 0) {
-    return <Typography sx={{ fontSize: '0.875rem', color: getReadableSecondaryTextColor(theme, isDark) }}>暂无 IP 质量统计数据</Typography>;
+    return (
+      <Typography sx={{ fontSize: '0.875rem', color: getReadableSecondaryTextColor(theme, isDark) }}>
+        {t('dashboard.default.charts.emptyIp')}
+      </Typography>
+    );
   }
 
   const total = stats.total || 0;
@@ -757,12 +765,12 @@ const IPQualityBreakdown = ({ stats, loading }) => {
   const findCount = (key) => stats.ipStats.find((item) => item.key === key)?.count || 0;
 
   const residentialRows = [
-    { key: 'housing', label: '住宅IP', count: findCount('housing'), color: '#22c55e' },
-    { key: 'datacenter', label: '机房IP', count: findCount('datacenter'), color: '#64748b' }
+    { key: 'housing', label: t('dashboard.default.ipQuality.housing'), count: findCount('housing'), color: '#22c55e' },
+    { key: 'datacenter', label: t('dashboard.default.ipQuality.datacenter'), count: findCount('datacenter'), color: '#64748b' }
   ];
   const typeRows = [
-    { key: 'native', label: '原生IP', count: findCount('native'), color: '#06b6d4' },
-    { key: 'broadcast', label: '广播IP', count: findCount('broadcast'), color: '#f59e0b' }
+    { key: 'native', label: t('dashboard.default.ipQuality.native'), count: findCount('native'), color: '#06b6d4' },
+    { key: 'broadcast', label: t('dashboard.default.ipQuality.broadcast'), count: findCount('broadcast'), color: '#f59e0b' }
   ];
   const otherCount = findCount('other');
 
@@ -770,7 +778,7 @@ const IPQualityBreakdown = ({ stats, loading }) => {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.25 }}>
       <Box>
         <Typography variant="body2" sx={{ color: getReadableSecondaryTextColor(theme, isDark), mb: 1.25, fontWeight: 600 }}>
-          住宅属性
+          {t('dashboard.default.ipQuality.residential')}
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {residentialRows.map((item) => (
@@ -792,7 +800,7 @@ const IPQualityBreakdown = ({ stats, loading }) => {
         }}
       >
         <Typography variant="body2" sx={{ color: getReadableSecondaryTextColor(theme, isDark), mb: 1.25, fontWeight: 600 }}>
-          IP 类型
+          {t('dashboard.default.ipQuality.ipType')}
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {typeRows.map((item) => (
@@ -818,15 +826,15 @@ const IPQualityBreakdown = ({ stats, loading }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
           <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadablePrimaryTextColor(theme, isDark) }}>
-              其他数量
+              {t('dashboard.default.ipQuality.others')}
             </Typography>
             <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
-              非完整结果，未纳入细分 IP 判断
+              {t('dashboard.default.ipQuality.othersDesc')}
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'right' }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadablePrimaryTextColor(theme, isDark) }}>
-              {otherCount.toLocaleString()}
+              {formatNumber(otherCount, i18n.resolvedLanguage || i18n.language)}
             </Typography>
             <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
               {total > 0 ? ((otherCount / total) * 100).toFixed(1) : '0.0'}%
@@ -840,20 +848,20 @@ const IPQualityBreakdown = ({ stats, loading }) => {
 
 // ==============================|| 问候语计算 ||============================== //
 
-const getGreeting = () => {
+const getGreeting = (t) => {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 9) {
-    return { text: '早上好', emoji: '🌅', subText: '新的一天开始了' };
+    return { text: t('dashboard.default.greeting.morning'), emoji: '🌅', subText: t('dashboard.default.greeting.morningSub') };
   } else if (hour >= 9 && hour < 12) {
-    return { text: '上午好', emoji: '☀️', subText: '充满活力的上午' };
+    return { text: t('dashboard.default.greeting.lateMorning'), emoji: '☀️', subText: t('dashboard.default.greeting.lateMorningSub') };
   } else if (hour >= 12 && hour < 14) {
-    return { text: '中午好', emoji: '🌤️', subText: '记得休息一下' };
+    return { text: t('dashboard.default.greeting.noon'), emoji: '🌤️', subText: t('dashboard.default.greeting.noonSub') };
   } else if (hour >= 14 && hour < 18) {
-    return { text: '下午好', emoji: '🌇', subText: '继续加油' };
+    return { text: t('dashboard.default.greeting.afternoon'), emoji: '🌇', subText: t('dashboard.default.greeting.afternoonSub') };
   } else if (hour >= 18 && hour < 23) {
-    return { text: '晚上好', emoji: '🌙', subText: '辛苦了一天' };
+    return { text: t('dashboard.default.greeting.evening'), emoji: '🌙', subText: t('dashboard.default.greeting.eveningSub') };
   } else {
-    return { text: '夜深了', emoji: '✨', subText: '注意休息' };
+    return { text: t('dashboard.default.greeting.night'), emoji: '✨', subText: t('dashboard.default.greeting.nightSub') };
   }
 };
 
@@ -874,6 +882,7 @@ const PremiumStatCard = ({
 }) => {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
+  const { t, i18n } = useTranslation();
   const surfaceSx = getCalmSurface(theme, accentColor || gradientColors[0], isDark);
   const hasNodePassStats = Boolean(nodePassStats);
 
@@ -882,10 +891,10 @@ const PremiumStatCard = ({
       navigator.clipboard
         .writeText(copyLink)
         .then(() => {
-          onCopy('节点链接已复制到剪贴板', 'success');
+          onCopy(true, 'success');
         })
         .catch(() => {
-          onCopy('复制失败', 'error');
+          onCopy(false, 'error');
         });
     }
   };
@@ -958,7 +967,7 @@ const PremiumStatCard = ({
               {loading ? (
                 <Skeleton width={60} sx={{ bgcolor: alpha(gradientColors[0], 0.2) }} />
               ) : typeof value === 'number' ? (
-                value.toLocaleString()
+                formatNumber(value, i18n.resolvedLanguage || i18n.language)
               ) : (
                 value
               )}
@@ -977,8 +986,8 @@ const PremiumStatCard = ({
                   }}
                 >
                   {[
-                    { key: 'delay', label: '延迟通过', value: nodePassStats.delayPassCount },
-                    { key: 'speed', label: '速度通过', value: nodePassStats.speedPassCount }
+                    { key: 'delay', label: t('dashboard.default.stats.delayPass'), value: nodePassStats.delayPassCount },
+                    { key: 'speed', label: t('dashboard.default.stats.speedPass'), value: nodePassStats.speedPassCount }
                   ].map((metric, index) => (
                     <Box
                       key={metric.key}
@@ -1026,7 +1035,7 @@ const PremiumStatCard = ({
                           whiteSpace: 'nowrap'
                         }}
                       >
-                        {loading ? '--' : metric.value.toLocaleString()}
+                        {loading ? '--' : formatNumber(metric.value, i18n.resolvedLanguage || i18n.language)}
                       </Typography>
                     </Box>
                   ))}
@@ -1060,7 +1069,7 @@ const PremiumStatCard = ({
                       fontSize: '0.7rem'
                     }}
                   >
-                    运行中
+                    {t('dashboard.default.stats.running')}
                   </Typography>
                 </>
               )}
@@ -1118,6 +1127,7 @@ import { donationConfig, affiliateRecommendationConfig } from 'config/donation';
 const StarReminderCard = () => {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
+  const { t } = useTranslation();
   const [starCount, setStarCount] = useState(null);
   const supportAccent = theme.palette.warning.main;
   const supportAccentReadable = getReadableWarningAccentColor(theme, isDark);
@@ -1204,11 +1214,11 @@ const StarReminderCard = () => {
                   gap: 0.5
                 }}
               >
-                喜欢这个项目吗？
+                {t('dashboard.default.star.like')}
                 <FavoriteIcon sx={{ fontSize: 16, color: 'error.main' }} />
               </Typography>
               <Typography variant="body2" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
-                如果觉得不错，请给我们一个 Star 支持一下！如果你是L站佬友，也可以使用LDC支持本项目！你的支持是我们前进的动力。
+                {t('dashboard.default.star.desc')}
               </Typography>
             </Box>
           </Box>
@@ -1237,9 +1247,9 @@ const StarReminderCard = () => {
             >
               {donationConfig.links.map((item, index) => (
                 <Chip
-                  key={index}
+                  key={item.id || index}
                   icon={item.icon}
-                  label={item.title}
+                  label={t(`donation.links.${item.id}`, item.title)}
                   component="a"
                   href={item.url}
                   target="_blank"
@@ -1276,7 +1286,7 @@ const StarReminderCard = () => {
                 justifyContent: { xs: 'flex-start', sm: 'flex-end' }
               }}
             >
-              <Tooltip title="问题反馈" arrow>
+              <Tooltip title={t('dashboard.default.star.feedback')} arrow>
                 <IconButton
                   onClick={handleFeedback}
                   size="small"
@@ -1298,7 +1308,11 @@ const StarReminderCard = () => {
               </Tooltip>
               <Chip
                 icon={<GitHubIcon sx={{ fontSize: 18, color: 'inherit !important' }} />}
-                label={starCount !== null ? `Star ${starCount >= 1000 ? `${(starCount / 1000).toFixed(1)}k` : starCount}` : 'Star'}
+                label={
+                  starCount !== null
+                    ? t('dashboard.default.star.starCount', { count: starCount >= 1000 ? `${(starCount / 1000).toFixed(1)}k` : starCount })
+                    : 'Star'
+                }
                 onClick={handleStar}
                 sx={{
                   fontWeight: 600,
@@ -1323,7 +1337,7 @@ const StarReminderCard = () => {
                 variant="subtitle2"
                 sx={{ fontWeight: 600, color: supportAccentReadable, display: 'flex', alignItems: 'center', gap: 0.5 }}
               >
-                {affiliateRecommendationConfig.title}
+                {t(affiliateRecommendationConfig.titleKey || 'affiliate.title')}
               </Typography>
               <Typography
                 variant="caption"
@@ -1336,11 +1350,11 @@ const StarReminderCard = () => {
                   whiteSpace: 'nowrap'
                 }}
               >
-                {affiliateRecommendationConfig.disclaimer}
+                {t(affiliateRecommendationConfig.disclaimerKey || 'affiliate.disclaimer')}
               </Typography>
             </Box>
             <Typography variant="caption" sx={{ color: 'text.secondary', display: { xs: 'block', sm: 'none' }, mb: 1.5 }}>
-              {affiliateRecommendationConfig.disclaimer}
+              {t(affiliateRecommendationConfig.disclaimerKey || 'affiliate.disclaimer')}
             </Typography>
             <Box
               sx={{
@@ -1351,7 +1365,7 @@ const StarReminderCard = () => {
             >
               {affiliateRecommendationConfig.items.map((item, index) => (
                 <Box
-                  key={index}
+                  key={item.id || index}
                   component="a"
                   href={item.url}
                   target="_blank"
@@ -1402,11 +1416,11 @@ const StarReminderCard = () => {
                         variant="subtitle2"
                         sx={{ fontWeight: 600, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                       >
-                        {item.title}
+                        {t(`affiliate.items.${item.id}.title`, item.title)}
                       </Typography>
                       {item.tag && (
                         <Chip
-                          label={item.tag}
+                          label={t(`affiliate.items.${item.id}.tag`, item.tag)}
                           size="small"
                           sx={{
                             height: 18,
@@ -1430,14 +1444,14 @@ const StarReminderCard = () => {
                         overflow: 'hidden'
                       }}
                     >
-                      {item.description}
+                      {t(`affiliate.items.${item.id}.description`, item.description)}
                     </Typography>
                     {item.highlights?.length > 0 && (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                        {item.highlights.map((highlight) => (
+                        {item.highlights.map((highlight, hIndex) => (
                           <Chip
-                            key={highlight}
-                            label={highlight}
+                            key={hIndex}
+                            label={t(`affiliate.items.${item.id}.highlights.${hIndex}`, highlight)}
                             size="small"
                             sx={{
                               height: 20,
@@ -1460,7 +1474,7 @@ const StarReminderCard = () => {
                         fontWeight: 600
                       }}
                     >
-                      {item.ctaLabel} →
+                      {t(`affiliate.items.${item.id}.ctaLabel`, item.ctaLabel)} →
                     </Typography>
                   </Box>
                 </Box>
@@ -1478,6 +1492,7 @@ const StarReminderCard = () => {
 const AirportUsageCard = ({ airports = [], loading }) => {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
+  const { t } = useTranslation();
   const usageAccent = theme.palette.info.main;
   const getProgressTrackColor = (percent) => alpha(getUsageColor(percent), isDark ? 0.22 : 0.12);
   const usageSurface = getInsetPanelSurface(theme, usageAccent, isDark);
@@ -1540,10 +1555,10 @@ const AirportUsageCard = ({ airports = [], loading }) => {
             <FlightTakeoffIcon sx={{ fontSize: 22 }} />
           </Box>
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
-            机场流量概览
+            {t('dashboard.default.airports.usageOverview')}
           </Typography>
           <Chip
-            label={`${airportsWithUsage.length} 个机场`}
+            label={`${airportsWithUsage.length} ${t('dashboard.default.airports.airportCount')}`}
             size="small"
             sx={{
               ml: 'auto',
@@ -1573,7 +1588,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                   <TrendingUpIcon sx={{ fontSize: 18, color: usageAccent }} />
                   <Typography variant="subtitle2" sx={{ color: getReadablePrimaryTextColor(theme, isDark), fontWeight: 500 }}>
-                    全局流量使用
+                    {t('dashboard.default.airports.globalUsage')}
                   </Typography>
                 </Box>
                 <Typography variant="h5" sx={{ fontWeight: 700, mb: 1, color: getReadablePrimaryTextColor(theme, isDark) }}>
@@ -1626,7 +1641,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                   <EventIcon sx={{ fontSize: 18, color: getReadableWarningAccentColor(theme, isDark) }} />
                   <Typography variant="subtitle2" sx={{ color: getReadablePrimaryTextColor(theme, isDark), fontWeight: 500 }}>
-                    最近到期
+                    {t('dashboard.default.airports.recentlyExpiring')}
                   </Typography>
                 </Box>
                 {nearestExpireAirport ? (
@@ -1640,7 +1655,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                   </>
                 ) : (
                   <Typography variant="body2" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
-                    暂无到期信息
+                    {t('dashboard.default.airports.noExpireInfo')}
                   </Typography>
                 )}
               </Box>
@@ -1685,7 +1700,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                     }}
                   />
                   <Typography variant="subtitle2" sx={{ color: getReadablePrimaryTextColor(theme, isDark), fontWeight: 500 }}>
-                    流量不足警告
+                    {t('dashboard.default.airports.lowUsageWarning')}
                   </Typography>
                   {lowUsageAirports.length > 0 && (
                     <Chip
@@ -1710,7 +1725,11 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                       const remaining = airport.usageTotal - used;
                       const remainPercent = ((remaining / airport.usageTotal) * 100).toFixed(1);
                       return (
-                        <Tooltip key={airport.id} title={`剩余 ${formatBytes(remaining)} (${remainPercent}%)`} arrow>
+                        <Tooltip
+                          key={airport.id}
+                          title={`${t('dashboard.default.airports.remain')} ${formatBytes(remaining)} (${remainPercent}%)`}
+                          arrow
+                        >
                           <Chip
                             label={airport.name}
                             size="small"
@@ -1730,7 +1749,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
                   </Box>
                 ) : (
                   <Typography variant="body2" sx={{ color: isDark ? alpha(theme.palette.success.light, 0.9) : 'success.main' }}>
-                    ✓ 所有机场流量充足
+                    ✓ {t('dashboard.default.airports.allSufficient')}
                   </Typography>
                 )}
               </Box>
@@ -1747,6 +1766,7 @@ const AirportUsageCard = ({ airports = [], loading }) => {
 const WelcomeBanner = ({ greeting }) => {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
+  const { t } = useTranslation();
   const bannerAccent = theme.palette.secondary.main;
 
   return (
@@ -1798,11 +1818,12 @@ const WelcomeBanner = ({ greeting }) => {
                 fontSize: '1.1rem'
               }}
             >
-              欢迎使用{' '}
+              {t('dashboard.default.greeting.welcome')}{' '}
               <Box component="span" sx={{ fontWeight: 700, color: bannerAccent }}>
                 SublinkPro
               </Box>{' '}
-              订阅管理系统，{greeting.subText}
+              {t('dashboard.default.greeting.system')}
+              {greeting.subText}
             </Typography>
           </Box>
 
@@ -1831,6 +1852,7 @@ const WelcomeBanner = ({ greeting }) => {
 const ReleaseCard = ({ release }) => {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
+  const { t, i18n } = useTranslation();
 
   return (
     <Card
@@ -1863,7 +1885,7 @@ const ReleaseCard = ({ release }) => {
             {release.name}
           </Typography>
           <Chip
-            label={new Date(release.published_at).toLocaleDateString('zh-CN', {
+            label={formatDateTime(release.published_at, i18n.resolvedLanguage || i18n.language, {
               month: 'short',
               day: 'numeric'
             })}
@@ -1871,7 +1893,7 @@ const ReleaseCard = ({ release }) => {
             variant="outlined"
             sx={{ borderRadius: 2 }}
           />
-          <Tooltip title="在 GitHub 查看" arrow>
+          <Tooltip title={t('dashboard.default.releases.viewGithub')} arrow>
             <IconButton
               size="small"
               component="a"
@@ -1948,7 +1970,7 @@ const ReleaseCard = ({ release }) => {
             }
           }}
         >
-          <ReactMarkdown>{release.body || '暂无更新说明'}</ReactMarkdown>
+          <ReactMarkdown>{release.body || t('dashboard.default.releases.noDescription')}</ReactMarkdown>
         </Box>
       </CardContent>
     </Card>
@@ -1959,6 +1981,7 @@ const ReleaseCard = ({ release }) => {
 
 export default function DashboardDefault() {
   const theme = useTheme();
+  const { t, i18n } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [nodeTotal, setNodeTotal] = useState(0);
@@ -1978,10 +2001,11 @@ export default function DashboardDefault() {
   const [loadingReleases, setLoadingReleases] = useState(true);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  const greeting = useMemo(() => getGreeting(), []);
+  const greeting = useMemo(() => getGreeting(t), [t]);
 
   // 显示提示消息
-  const showSnackbar = (message, severity = 'success') => {
+  const showSnackbar = (success, severity = 'success') => {
+    const message = success ? t('dashboard.default.stats.copied') : t('dashboard.default.stats.copyFailed');
     setSnackbar({ open: true, message, severity });
   };
 
@@ -2047,17 +2071,17 @@ export default function DashboardDefault() {
   // 统计卡片配置
   const statsConfig = [
     {
-      title: '机场总数',
+      title: t('dashboard.default.stats.airportCount'),
       value: airports.length,
-      subValue: `${airports.filter((airport) => airport.fetchUsageInfo).length} 个已启用用量获取`,
+      subValue: `${airports.filter((airport) => airport.fetchUsageInfo).length} ${t('dashboard.default.stats.airportUsageSub')}`,
       icon: FlightTakeoffIcon,
       gradientColors: ['#6366f1', '#8b5cf6'],
       accentColor: '#6366f1'
     },
     {
-      title: '节点统计',
+      title: t('dashboard.default.stats.nodeTotal'),
       value: nodeTotal,
-      subValue: '总节点',
+      subValue: t('dashboard.default.stats.totalNodes'),
       icon: CloudQueueIcon,
       gradientColors: ['#06b6d4', '#0891b2'],
       accentColor: '#06b6d4',
@@ -2068,9 +2092,9 @@ export default function DashboardDefault() {
       }
     },
     {
-      title: '最快速度',
+      title: t('dashboard.default.stats.fastestSpeed'),
       value: fastestNode?.Speed ? `${fastestNode.Speed.toFixed(2)} MB/s` : '--',
-      subValue: fastestNode ? getNodeDisplayName(fastestNode) : '暂无数据',
+      subValue: fastestNode ? getNodeDisplayName(fastestNode) : t('dashboard.default.stats.noData'),
       icon: SpeedIcon,
       gradientColors: ['#10b981', '#059669'],
       accentColor: '#10b981',
@@ -2078,9 +2102,9 @@ export default function DashboardDefault() {
       copyLink: fastestNode?.Link
     },
     {
-      title: '最低延迟',
+      title: t('dashboard.default.stats.lowestDelay'),
       value: lowestDelayNode?.DelayTime ? `${lowestDelayNode.DelayTime} ms` : '--',
-      subValue: lowestDelayNode ? getNodeDisplayName(lowestDelayNode) : '暂无数据',
+      subValue: lowestDelayNode ? getNodeDisplayName(lowestDelayNode) : t('dashboard.default.stats.noData'),
       icon: TimerIcon,
       gradientColors: ['#f59e0b', '#d97706'],
       accentColor: '#f59e0b',
@@ -2100,13 +2124,14 @@ export default function DashboardDefault() {
         entries: countryDistributionSource.map((item) => [item.country, item.nodeCount]),
         limit: distributionLimit,
         defaultColor: '#6366f1',
+        t,
         getItemMeta: (country) => ({
           marker: getFlagEmoji(country),
           uniqueIpCount: countryStatsMap[country]?.uniqueIpCount || 0,
-          tooltip: `节点 ${countryStatsMap[country]?.nodeCount || 0}，可用IP ${countryStatsMap[country]?.uniqueIpCount || 0}`
+          tooltip: `${t('dashboard.default.charts.nodes')} ${countryStatsMap[country]?.nodeCount || 0}，${t('dashboard.default.charts.availableIp')} ${countryStatsMap[country]?.uniqueIpCount || 0}`
         })
       }),
-    [countryDistributionSource, countryStatsMap, distributionLimit]
+    [countryDistributionSource, countryStatsMap, distributionLimit, t]
   );
 
   const protocolDistribution = useMemo(
@@ -2115,23 +2140,28 @@ export default function DashboardDefault() {
         entries: Object.entries(protocolStats),
         limit: distributionLimit,
         defaultColor: '#10b981',
+        t,
         getItemMeta: (protocolName) => ({
           color: protocolColors[protocolName]?.[0] || '#10b981'
         })
       }),
-    [protocolStats, distributionLimit]
+    [protocolStats, distributionLimit, t]
   );
 
-  const tagDistribution = useMemo(() => normalizeTagStats({ tags: tagStats, limit: distributionLimit }), [tagStats, distributionLimit]);
+  const tagDistribution = useMemo(
+    () => normalizeTagStats({ tags: tagStats, limit: distributionLimit, t }),
+    [tagStats, distributionLimit, t]
+  );
 
   const groupDistribution = useMemo(
     () =>
       normalizeMapStats({
         entries: Object.entries(groupStats),
         limit: distributionLimit,
-        defaultColor: '#8b5cf6'
+        defaultColor: '#8b5cf6',
+        t
       }),
-    [groupStats, distributionLimit]
+    [groupStats, distributionLimit, t]
   );
 
   const sourceDistribution = useMemo(
@@ -2139,9 +2169,10 @@ export default function DashboardDefault() {
       normalizeMapStats({
         entries: Object.entries(sourceStats),
         limit: distributionLimit,
-        defaultColor: '#f97316'
+        defaultColor: '#f97316',
+        t
       }),
-    [sourceStats, distributionLimit]
+    [sourceStats, distributionLimit, t]
   );
 
   const qualityStatusDistribution = useMemo(() => {
@@ -2150,7 +2181,7 @@ export default function DashboardDefault() {
         const meta = getQualityStatusMeta(item.key);
         return {
           key: item.key,
-          label: qualityStatusLabelMap[item.key] || meta.label || item.label,
+          label: t(`dashboard.default.qualityStatus.${item.key}`, meta.label || item.label),
           count: item.count,
           color: qualityStatusColorMap[item.key] || '#64748b',
           tooltip: meta.tooltip
@@ -2164,7 +2195,7 @@ export default function DashboardDefault() {
 
     const order = ['success', 'partial', 'failed', 'disabled', 'untested'];
     return order.map((key) => items.find((item) => item.key === key)).filter(Boolean);
-  }, [qualityStats]);
+  }, [qualityStats, t]);
 
   const fraudDistribution = useMemo(
     () =>
@@ -2179,8 +2210,8 @@ export default function DashboardDefault() {
   );
 
   const groupedMetricStrip = (item) => [
-    { key: 'delay-pass', label: '延迟通过', value: item.delayPassCount },
-    { key: 'speed-pass', label: '速度通过', value: item.speedPassCount }
+    { key: 'delay-pass', label: t('dashboard.default.stats.delayPass'), value: item.delayPassCount },
+    { key: 'speed-pass', label: t('dashboard.default.stats.speedPass'), value: item.speedPassCount }
   ];
 
   return (
@@ -2222,21 +2253,21 @@ export default function DashboardDefault() {
       <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 6 }}>
           <StatsChartCard
-            title="节点国家分布"
+            title={t('dashboard.default.charts.countryDistribution')}
             icon={PublicIcon}
             accentColor="#6366f1"
-            summary={`${countryDistributionSource.length} 个地区`}
+            summary={`${countryDistributionSource.length} ${t('dashboard.default.charts.regions')}`}
             loading={loadingStats}
-            tooltip="按节点落地国家聚合，仅比较真实地区分布；未知节点数量单独展示。"
+            tooltip={t('dashboard.default.charts.countryTooltip')}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>
               <RankedStatList
                 items={countryDistribution}
-                emptyText="暂无国家统计数据"
-                detailFormatter={(item) => `可用IP ${item.uniqueIpCount || 0}`}
+                emptyText={t('dashboard.default.charts.emptyCountry')}
+                detailFormatter={(item) => `${t('dashboard.default.charts.availableIp')} ${item.uniqueIpCount || 0}`}
                 labelFormatter={(item) => {
                   if (item.key === 'collapsed-other') {
-                    return '其他地区（可展开查看）';
+                    return t('dashboard.default.charts.otherExpand');
                   }
 
                   return (
@@ -2259,18 +2290,18 @@ export default function DashboardDefault() {
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
                     <Box>
                       <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        未知节点
+                        {t('dashboard.default.charts.unknownNodes')}
                       </Typography>
                       <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
-                        未获取到落地国家或节点已失效，不参与地区比较
+                        {t('dashboard.default.charts.unknownCountryDesc')}
                       </Typography>
                     </Box>
                     <Box sx={{ textAlign: 'right' }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadablePrimaryTextColor(theme, isDark) }}>
-                        {unknownCountryStat.nodeCount.toLocaleString()}
+                        {formatNumber(unknownCountryStat.nodeCount, i18n.resolvedLanguage || i18n.language)}
                       </Typography>
                       <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
-                        可用IP {unknownCountryStat.uniqueIpCount || 0}
+                        {t('dashboard.default.charts.availableIp')} {unknownCountryStat.uniqueIpCount || 0}
                       </Typography>
                     </Box>
                   </Box>
@@ -2282,17 +2313,17 @@ export default function DashboardDefault() {
 
         <Grid size={{ xs: 12, md: 6 }}>
           <StatsChartCard
-            title="节点协议分布"
+            title={t('dashboard.default.charts.protocolDistribution')}
             icon={SecurityIcon}
             accentColor="#10b981"
-            summary={`${Object.keys(protocolStats).length} 种协议`}
+            summary={`${Object.keys(protocolStats).length} ${t('dashboard.default.charts.protocols')}`}
             loading={loadingStats}
-            tooltip="按协议类型统计，便于快速判断节点结构。"
+            tooltip={t('dashboard.default.charts.protocolTooltip')}
           >
             <RankedStatList
               items={protocolDistribution}
-              emptyText="暂无协议统计数据"
-              labelFormatter={(item) => (item.key === 'collapsed-other' ? '其他（可展开查看）' : item.label)}
+              emptyText={t('dashboard.default.charts.emptyProtocol')}
+              labelFormatter={(item) => (item.key === 'collapsed-other' ? t('dashboard.default.charts.otherExpand') : item.label)}
               secondaryMetricsFormatter={groupedMetricStrip}
             />
           </StatsChartCard>
@@ -2302,17 +2333,17 @@ export default function DashboardDefault() {
       <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 4 }}>
           <StatsChartCard
-            title="标签统计"
+            title={t('dashboard.default.charts.tagStats')}
             icon={LabelIcon}
             accentColor="#ec4899"
-            summary={`${tagStats.length} 个标签`}
+            summary={`${tagStats.length} ${t('dashboard.default.charts.tags')}`}
             loading={loadingStats}
-            tooltip="展示命中最多的标签，便于识别规则覆盖情况。"
+            tooltip={t('dashboard.default.charts.tagTooltip')}
           >
             <RankedStatList
               items={tagDistribution}
-              emptyText="暂无标签统计数据"
-              labelFormatter={(item) => (item.key === 'collapsed-other' ? '其他（可展开查看）' : item.label)}
+              emptyText={t('dashboard.default.charts.emptyTag')}
+              labelFormatter={(item) => (item.key === 'collapsed-other' ? t('dashboard.default.charts.otherExpand') : item.label)}
               secondaryMetricsFormatter={groupedMetricStrip}
             />
           </StatsChartCard>
@@ -2320,17 +2351,17 @@ export default function DashboardDefault() {
 
         <Grid size={{ xs: 12, md: 4 }}>
           <StatsChartCard
-            title="分组统计"
+            title={t('dashboard.default.charts.groupStats')}
             icon={FolderIcon}
             accentColor="#8b5cf6"
-            summary={`${Object.keys(groupStats).length} 个分组`}
+            summary={`${Object.keys(groupStats).length} ${t('dashboard.default.charts.groups')}`}
             loading={loadingStats}
-            tooltip="按节点分组聚合，方便查看主要组织结构。"
+            tooltip={t('dashboard.default.charts.groupTooltip')}
           >
             <RankedStatList
               items={groupDistribution}
-              emptyText="暂无分组统计数据"
-              labelFormatter={(item) => (item.key === 'collapsed-other' ? '其他（可展开查看）' : item.label)}
+              emptyText={t('dashboard.default.charts.emptyGroup')}
+              labelFormatter={(item) => (item.key === 'collapsed-other' ? t('dashboard.default.charts.otherExpand') : item.label)}
               secondaryMetricsFormatter={groupedMetricStrip}
             />
           </StatsChartCard>
@@ -2338,17 +2369,17 @@ export default function DashboardDefault() {
 
         <Grid size={{ xs: 12, md: 4 }}>
           <StatsChartCard
-            title="来源统计"
+            title={t('dashboard.default.charts.sourceStats')}
             icon={SourceIcon}
             accentColor="#f97316"
-            summary={`${Object.keys(sourceStats).length} 个来源`}
+            summary={`${Object.keys(sourceStats).length} ${t('dashboard.default.charts.sources')}`}
             loading={loadingStats}
-            tooltip="展示节点主要来源，便于识别上游贡献占比。"
+            tooltip={t('dashboard.default.charts.sourceTooltip')}
           >
             <RankedStatList
               items={sourceDistribution}
-              emptyText="暂无来源统计数据"
-              labelFormatter={(item) => (item.key === 'collapsed-other' ? '其他（可展开查看）' : item.label)}
+              emptyText={t('dashboard.default.charts.emptySource')}
+              labelFormatter={(item) => (item.key === 'collapsed-other' ? t('dashboard.default.charts.otherExpand') : item.label)}
               secondaryMetricsFormatter={groupedMetricStrip}
             />
           </StatsChartCard>
@@ -2358,25 +2389,25 @@ export default function DashboardDefault() {
       <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 4 }}>
           <StatsChartCard
-            title="质量状态统计"
+            title={t('dashboard.default.charts.qualityStats')}
             icon={AutoAwesomeIcon}
             accentColor="#0ea5e9"
-            summary={`${qualityStats?.successTotal || 0}/${qualityStats?.total || 0} 可细分`}
+            summary={`${qualityStats?.successTotal || 0}/${qualityStats?.total || 0} ${t('dashboard.default.charts.qualityAnalyzable')}`}
             loading={loadingStats}
-            tooltip="完整结果可参与 IP 和欺诈评分细分，其余状态用于说明覆盖率。"
+            tooltip={t('dashboard.default.charts.qualityTooltip')}
           >
-            <RankedStatList items={qualityStatusDistribution} emptyText="暂无质量状态统计数据" />
+            <RankedStatList items={qualityStatusDistribution} emptyText={t('dashboard.default.charts.emptyQuality')} />
           </StatsChartCard>
         </Grid>
 
         <Grid size={{ xs: 12, md: 4 }}>
           <StatsChartCard
-            title="IP 质量统计"
+            title={t('dashboard.default.charts.ipQuality')}
             icon={CloudQueueIcon}
             accentColor="#06b6d4"
-            summary={`完整结果 ${qualityStats?.successTotal || 0}`}
+            summary={`${t('dashboard.default.charts.fullResults')} ${qualityStats?.successTotal || 0}`}
             loading={loadingStats}
-            tooltip="住宅/机房与原生/广播基于完整质量检测结果统计，其他数量表示未完成细分的节点。"
+            tooltip={t('dashboard.default.charts.ipQualityTooltip')}
           >
             <IPQualityBreakdown stats={qualityStats} loading={loadingStats} />
           </StatsChartCard>
@@ -2384,15 +2415,15 @@ export default function DashboardDefault() {
 
         <Grid size={{ xs: 12, md: 4 }}>
           <StatsChartCard
-            title="欺诈评分分布"
+            title={t('dashboard.default.charts.fraudDistribution')}
             icon={WarningAmberIcon}
             accentColor="#f59e0b"
-            summary={`完整结果 ${qualityStats?.successTotal || 0}`}
+            summary={`${t('dashboard.default.charts.fullResults')} ${qualityStats?.successTotal || 0}`}
             loading={loadingStats}
-            tooltip={`按系统现有欺诈评分分级方式统计，仅完整结果节点参与分布；另有 ${qualityStats?.otherTotal || 0} 个节点因质量状态不是完整结果而未参与统计。`}
+            tooltip={t('dashboard.default.charts.fraudTooltip', { count: qualityStats?.otherTotal || 0 })}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>
-              <RankedStatList items={fraudDistribution} emptyText="暂无欺诈评分统计数据" />
+              <RankedStatList items={fraudDistribution} emptyText={t('dashboard.default.charts.emptyFraud')} />
               {!loadingStats && (qualityStats?.otherTotal || 0) > 0 ? (
                 <Box
                   sx={{
@@ -2405,14 +2436,14 @@ export default function DashboardDefault() {
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
                     <Box>
                       <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        未参与评分统计
+                        {t('dashboard.default.charts.noFraudStats')}
                       </Typography>
                       <Typography variant="caption" sx={{ color: getReadableSecondaryTextColor(theme, isDark) }}>
-                        质量状态不是完整结果
+                        {t('dashboard.default.charts.notFullResults')}
                       </Typography>
                     </Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700, color: getReadablePrimaryTextColor(theme, isDark) }}>
-                      {(qualityStats?.otherTotal || 0).toLocaleString()}
+                      {formatNumber(qualityStats?.otherTotal || 0, i18n.resolvedLanguage || i18n.language)}
                     </Typography>
                   </Box>
                 </Box>
@@ -2441,12 +2472,12 @@ export default function DashboardDefault() {
               <Typography sx={{ fontSize: '1.2rem' }}>📝</Typography>
             </Box>
             <Typography variant="h4" sx={{ fontWeight: 600 }}>
-              更新日志
+              {t('dashboard.default.releases.title')}
             </Typography>
           </Box>
         }
         secondary={
-          <Tooltip title="刷新" arrow>
+          <Tooltip title={t('dashboard.default.releases.refresh')} arrow>
             <Box component="span" sx={{ display: 'inline-block' }}>
               <IconButton
                 onClick={fetchReleases}
@@ -2505,10 +2536,10 @@ export default function DashboardDefault() {
               📭
             </Typography>
             <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
-              暂无更新日志
+              {t('dashboard.default.releases.noReleases')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              请检查网络连接或稍后重试
+              {t('dashboard.default.releases.networkError')}
             </Typography>
           </Box>
         )}

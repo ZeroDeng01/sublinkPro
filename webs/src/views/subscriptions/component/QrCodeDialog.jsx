@@ -10,12 +10,14 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
 
 export default function QrCodeDialog({ open, title, url, onClose, onCopy }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { isDark } = useResolvedColorScheme();
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
@@ -96,7 +98,7 @@ export default function QrCodeDialog({ open, title, url, onClose, onCopy }) {
           </Box>
           <Box sx={{ width: '100%' }}>
             <Typography variant="caption" sx={{ display: 'block', mb: 0.75, color: secondaryText }}>
-              链接地址
+              {t('common.linkAddress')}
             </Typography>
             <TextField fullWidth value={url} size="small" InputProps={{ readOnly: true }} />
           </Box>
@@ -111,10 +113,10 @@ export default function QrCodeDialog({ open, title, url, onClose, onCopy }) {
           borderColor: panelBorder
         }}
       >
-        <Button onClick={() => onCopy(url)}>复制</Button>
-        <Button onClick={() => window.open(url)}>打开</Button>
+        <Button onClick={() => onCopy(url)}>{t('common.copy')}</Button>
+        <Button onClick={() => window.open(url)}>{t('common.open')}</Button>
         <Button onClick={onClose} variant="outlined">
-          关闭
+          {t('common.close')}
         </Button>
       </DialogActions>
     </Dialog>

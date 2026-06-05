@@ -7,29 +7,29 @@ import {
 import { QUALITY_STATUS_OPTIONS } from './fraudScore';
 
 export const NODE_CONDITION_FIELDS = [
-  { value: 'name', label: '备注' },
-  { value: 'link_name', label: '原始名称' },
-  { value: 'link_country', label: '国家代码' },
-  { value: 'protocol', label: '协议类型' },
-  { value: 'source', label: '来源' },
-  { value: 'group', label: '分组' },
-  { value: 'speed', label: '速度 (MB/s)' },
-  { value: 'delay_time', label: '延迟 (ms)' },
-  { value: 'fraud_score', label: '欺诈评分' },
-  { value: 'quality_status', label: '质量状态' },
-  { value: 'unlock_provider', label: '解锁 Provider' },
-  { value: 'unlock_status', label: '解锁状态' },
-  { value: 'unlock_keyword', label: '解锁关键词' },
-  { value: 'unlock_result', label: '解锁摘要' },
-  { value: 'ip_type', label: 'IP类型' },
-  { value: 'residential_type', label: '住宅属性' },
-  { value: 'speed_status', label: '速度状态' },
-  { value: 'delay_status', label: '延迟状态' },
-  { value: 'link_address', label: '地址' },
+  { value: 'name', label: 'Remark', labelKey: 'nodeConditions.fields.name' },
+  { value: 'link_name', label: 'Original name', labelKey: 'nodeConditions.fields.linkName' },
+  { value: 'link_country', label: 'Country code', labelKey: 'nodeConditions.fields.linkCountry' },
+  { value: 'protocol', label: 'Protocol type', labelKey: 'nodeConditions.fields.protocol' },
+  { value: 'source', label: 'Source', labelKey: 'nodeConditions.fields.source' },
+  { value: 'group', label: 'Group', labelKey: 'nodeConditions.fields.group' },
+  { value: 'speed', label: 'Speed (MB/s)', labelKey: 'nodeConditions.fields.speed' },
+  { value: 'delay_time', label: 'Delay (ms)', labelKey: 'nodeConditions.fields.delayTime' },
+  { value: 'fraud_score', label: 'Fraud score', labelKey: 'nodeConditions.fields.fraudScore' },
+  { value: 'quality_status', label: 'Quality status', labelKey: 'nodeConditions.fields.qualityStatus' },
+  { value: 'unlock_provider', label: 'Unlock provider', labelKey: 'nodeConditions.fields.unlockProvider' },
+  { value: 'unlock_status', label: 'Unlock status', labelKey: 'nodeConditions.fields.unlockStatus' },
+  { value: 'unlock_keyword', label: 'Unlock keyword', labelKey: 'nodeConditions.fields.unlockKeyword' },
+  { value: 'unlock_result', label: 'Unlock summary', labelKey: 'nodeConditions.fields.unlockResult' },
+  { value: 'ip_type', label: 'IP type', labelKey: 'nodeConditions.fields.ipType' },
+  { value: 'residential_type', label: 'Residential attribute', labelKey: 'nodeConditions.fields.residentialType' },
+  { value: 'speed_status', label: 'Speed status', labelKey: 'nodeConditions.fields.speedStatus' },
+  { value: 'delay_status', label: 'Delay status', labelKey: 'nodeConditions.fields.delayStatus' },
+  { value: 'link_address', label: 'Address', labelKey: 'nodeConditions.fields.linkAddress' },
   { value: 'link_host', label: 'Host' },
-  { value: 'link_port', label: '端口' },
-  { value: 'dialer_proxy_name', label: '前置代理' },
-  { value: 'link', label: '节点链接' }
+  { value: 'link_port', label: 'Port', labelKey: 'nodeConditions.fields.linkPort' },
+  { value: 'dialer_proxy_name', label: 'Dialer proxy', labelKey: 'nodeConditions.fields.dialerProxyName' },
+  { value: 'link', label: 'Node link', labelKey: 'nodeConditions.fields.link' }
 ];
 
 const STATIC_FIELD_META_MAP = NODE_CONDITION_FIELDS.reduce((acc, field) => {
@@ -42,22 +42,22 @@ export const UNLOCK_STATUS_OPTIONS = () => getUnlockStatusOptions(false);
 export const UNLOCK_PROVIDER_OPTIONS = () => getUnlockProviderOptions();
 
 export const NODE_STATUS_OPTIONS = [
-  { value: 'untested', label: '未测速' },
-  { value: 'success', label: '成功' },
-  { value: 'timeout', label: '超时' },
-  { value: 'error', label: '失败' }
+  { value: 'untested', label: 'Untested', labelKey: 'nodeConditions.status.untested' },
+  { value: 'success', label: 'Success', labelKey: 'nodeConditions.status.success' },
+  { value: 'timeout', label: 'Timeout', labelKey: 'nodeConditions.status.timeout' },
+  { value: 'error', label: 'Failed', labelKey: 'nodeConditions.status.error' }
 ];
 
 export const NODE_IP_TYPE_OPTIONS = [
-  { value: 'native', label: '原生IP' },
-  { value: 'broadcast', label: '广播IP' },
-  { value: 'untested', label: '未检测' }
+  { value: 'native', label: 'Native IP', labelKey: 'nodeConditions.ipType.native' },
+  { value: 'broadcast', label: 'Broadcast IP', labelKey: 'nodeConditions.ipType.broadcast' },
+  { value: 'untested', label: 'Untested', labelKey: 'nodeConditions.ipType.untested' }
 ];
 
 export const NODE_RESIDENTIAL_TYPE_OPTIONS = [
-  { value: 'residential', label: '住宅IP' },
-  { value: 'datacenter', label: '机房IP' },
-  { value: 'untested', label: '未检测' }
+  { value: 'residential', label: 'Residential IP', labelKey: 'nodeConditions.residential.residential' },
+  { value: 'datacenter', label: 'Datacenter IP', labelKey: 'nodeConditions.residential.datacenter' },
+  { value: 'untested', label: 'Untested', labelKey: 'nodeConditions.residential.untested' }
 ];
 
 export const NODE_CONDITION_NUMERIC_FIELDS = ['speed', 'delay_time', 'fraud_score'];

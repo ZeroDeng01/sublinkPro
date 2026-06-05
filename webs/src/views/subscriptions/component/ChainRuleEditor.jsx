@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
@@ -9,11 +10,6 @@ import Switch from '@mui/material/Switch';
 import ChainFlowBuilder from './ChainFlowBuilder';
 import MobileChainBuilder from './MobileChainBuilder';
 
-/**
- * 单条链式代理规则编辑器
- * 使用画板式交互配置代理链和目标节点
- * 移动端使用简化的卡片式配置
- */
 export default function ChainRuleEditor({
   value,
   onChange,
@@ -24,21 +20,19 @@ export default function ChainRuleEditor({
   templateGroups = [],
   isMobile = false
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(value?.name || '');
   const [enabled, setEnabled] = useState(value?.enabled ?? true);
   const [chainConfig, setChainConfig] = useState([]);
   const [targetConfig, setTargetConfig] = useState({ type: 'specified_node', conditions: null, nodeId: undefined });
 
-  // 使用 ref 跟踪更新来源
   const skipNextUpdate = useRef(false);
 
-  // 解析外部数据
   useEffect(() => {
     if (value && !skipNextUpdate.current) {
       setName(value.name || '');
       setEnabled(value.enabled ?? true);
 
-      // 解析 chainConfig
       if (value.chainConfig) {
         try {
           const parsed = typeof value.chainConfig === 'string' ? JSON.parse(value.chainConfig) : value.chainConfig;
@@ -50,7 +44,6 @@ export default function ChainRuleEditor({
         setChainConfig([]);
       }
 
-      // 解析 targetConfig
       if (value.targetConfig) {
         try {
           const parsed = typeof value.targetConfig === 'string' ? JSON.parse(value.targetConfig) : value.targetConfig;
@@ -58,7 +51,7 @@ export default function ChainRuleEditor({
             type: parsed.type || 'specified_node',
             conditions: parsed.conditions || null,
             nodeId: parsed.nodeId,
-            endPosition: parsed.endPosition // 恢复结束节点位置
+            endPosition: parsed.endPosition
           });
         } catch {
           setTargetConfig({ type: 'specified_node', conditions: null, nodeId: undefined });
@@ -70,7 +63,6 @@ export default function ChainRuleEditor({
     skipNextUpdate.current = false;
   }, [value]);
 
-  // 通知父组件数据变化
   const notifyChange = useCallback(
     (newName, newEnabled, newChainConfig, newTargetConfig) => {
       skipNextUpdate.current = true;
@@ -82,7 +74,7 @@ export default function ChainRuleEditor({
           type: newTargetConfig.type,
           conditions: newTargetConfig.type === 'conditions' ? newTargetConfig.conditions : undefined,
           nodeId: newTargetConfig.type === 'specified_node' ? newTargetConfig.nodeId : undefined,
-          endPosition: newTargetConfig.endPosition // 保存结束节点位置
+          endPosition: newTargetConfig.endPosition
         })
       };
       onChange?.(output);
@@ -90,7 +82,6 @@ export default function ChainRuleEditor({
     [onChange]
   );
 
-  // 名称变化
   const handleNameChange = useCallback(
     (e) => {
       const newName = e.target.value;
@@ -100,7 +91,6 @@ export default function ChainRuleEditor({
     [enabled, chainConfig, targetConfig, notifyChange]
   );
 
-  // 启用状态变化
   const handleEnabledChange = useCallback(
     (e) => {
       const newEnabled = e.target.checked;
@@ -110,7 +100,6 @@ export default function ChainRuleEditor({
     [name, chainConfig, targetConfig, notifyChange]
   );
 
-  // 代理链配置变化
   const handleChainConfigChange = useCallback(
     (newConfig) => {
       setChainConfig(newConfig);
@@ -119,7 +108,6 @@ export default function ChainRuleEditor({
     [name, enabled, targetConfig, notifyChange]
   );
 
-  // 目标配置变化
   const handleTargetConfigChange = useCallback(
     (newConfig) => {
       setTargetConfig(newConfig);
@@ -131,33 +119,28 @@ export default function ChainRuleEditor({
   return (
     <Box sx={{ height: '100%' }}>
       <Stack spacing={2}>
-        {/* 基本信息 - 移动端堆叠显示 */}
         <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems={isMobile ? 'stretch' : 'center'} sx={{ pt: 1 }}>
           <TextField
             size="small"
-            label="规则名称"
+            label={t('subscriptions.chain.ruleName')}
             value={name}
             onChange={handleNameChange}
             sx={{ flex: 1 }}
-            placeholder="例如：香港中转美国"
+            placeholder={t('subscriptions.chain.ruleNamePlaceholder')}
             fullWidth={isMobile}
           />
           <FormControlLabel
             control={<Switch checked={enabled} onChange={handleEnabledChange} />}
-            label="启用"
+            label={t('common.enabled')}
             sx={isMobile ? { alignSelf: 'flex-start' } : {}}
           />
         </Stack>
 
-        {/* 画板式代理链配置 - 移动端使用简化版 */}
         <Typography variant="body2" color="text.secondary">
-          {isMobile
-            ? '配置多级代理链路：入口 → 中间节点 → 目标节点'
-            : '点击「添加代理节点」构建多级代理链，点击节点进行编辑。建议链路不超过 3 级。'}
+          {isMobile ? t('subscriptions.chain.mobileDescription') : t('subscriptions.chain.desktopDescription')}
         </Typography>
 
         {isMobile ? (
-          // 移动端使用简化的卡片式配置
           <MobileChainBuilder
             chainConfig={chainConfig}
             targetConfig={targetConfig}
@@ -170,7 +153,6 @@ export default function ChainRuleEditor({
             templateGroups={templateGroups}
           />
         ) : (
-          // 桌面端使用流程图画板
           <ChainFlowBuilder
             chainConfig={chainConfig}
             targetConfig={targetConfig}

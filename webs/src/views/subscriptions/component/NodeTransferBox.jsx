@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -32,27 +33,20 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import SearchIcon from '@mui/icons-material/Search';
 
 /**
- * 节点穿梭框组件
- * 支持移动端Tab模式和桌面端双栏布局
  */
 export default function NodeTransferBox({
-  // 数据
   availableNodes,
   selectorNodesTotal,
   selectorNodesLoading,
   selectedNodes,
   selectedNodesList,
-  // 选中状态
   checkedAvailable,
   checkedSelected,
-  // 搜索
   selectedNodeSearch,
   onSelectedNodeSearchChange,
-  // 移动端Tab
   mobileTab,
   onMobileTabChange,
   matchDownMd,
-  // 操作回调
   onAddNode,
   onRemoveNode,
   onAddAllVisible,
@@ -65,6 +59,7 @@ export default function NodeTransferBox({
   onToggleAllSelected
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
     theme,
@@ -296,7 +291,6 @@ export default function NodeTransferBox({
     '&:hover': { bgcolor: tone.subtleHoverSurface }
   });
 
-  // 筛选已选节点
   const filteredSelectedNodes = useMemo(() => {
     if (!selectedNodeSearch) return selectedNodesList;
     const query = selectedNodeSearch.toLowerCase();
@@ -306,16 +300,22 @@ export default function NodeTransferBox({
   const handleMobileTabChange = (_event, nextTab) => onMobileTabChange(nextTab);
   const handleSelectedNodeSearchChange = (event) => onSelectedNodeSearchChange(event.target.value);
 
-  // 移动端穿梭框
   if (matchDownMd) {
     return (
       <Box sx={{ mt: 2 }}>
         <Tabs value={mobileTab} onChange={handleMobileTabChange} variant="fullWidth" sx={mobileTabsSx}>
-          <Tab label={`可选节点 (${availableNodesTotal})`} icon={<ChevronRightIcon />} iconPosition="end" />
-          <Tab label={`已选节点 (${selectedNodes.length})`} icon={<ChevronLeftIcon />} iconPosition="start" />
+          <Tab
+            label={t('subscriptions.transfer.availableTab', { count: availableNodesTotal })}
+            icon={<ChevronRightIcon />}
+            iconPosition="end"
+          />
+          <Tab
+            label={t('subscriptions.transfer.selectedTab', { count: selectedNodes.length })}
+            icon={<ChevronLeftIcon />}
+            iconPosition="start"
+          />
         </Tabs>
 
-        {/* 可选节点面板 */}
         <Fade in={mobileTab === 0}>
           <Box sx={{ display: mobileTab === 0 ? 'block' : 'none' }}>
             <Paper
@@ -339,12 +339,16 @@ export default function NodeTransferBox({
                   }
                   label={
                     <Typography variant="body2" fontWeight={600}>
-                      全选
+                      {t('common.selectAll')}
                     </Typography>
                   }
                 />
                 <Chip
-                  label={availableNodesTotal > 100 ? `显示前100/${availableNodesTotal}` : `${availableNodesTotal}个`}
+                  label={
+                    availableNodesTotal > 100
+                      ? t('subscriptions.transfer.showingFirst', { total: availableNodesTotal })
+                      : t('subscriptions.transfer.count', { count: availableNodesTotal })
+                  }
                   size="small"
                   color="primary"
                   variant="outlined"
@@ -375,7 +379,7 @@ export default function NodeTransferBox({
                       primary={node.Name}
                       secondary={
                         <Chip
-                          label={node.Group || '未分组'}
+                          label={node.Group || t('nodes.table.ungrouped')}
                           size="small"
                           variant="outlined"
                           sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
@@ -392,7 +396,6 @@ export default function NodeTransferBox({
               </List>
             </Paper>
 
-            {/* 移动端底部操作栏 */}
             <Paper elevation={3} sx={actionStripSx}>
               <Button
                 variant="contained"
@@ -403,22 +406,21 @@ export default function NodeTransferBox({
                 disabled={checkedAvailable.length === 0}
                 sx={actionStripButtonSx('primary')}
               >
-                添加选中 ({checkedAvailable.length})
+                {t('subscriptions.transfer.addSelected', { count: checkedAvailable.length })}
               </Button>
               <Button variant="outlined" size="small" onClick={onAddAllVisible} sx={actionStripOutlinedButtonSx('primary')}>
-                全部添加
+                {t('subscriptions.transfer.addAll')}
               </Button>
             </Paper>
           </Box>
         </Fade>
 
-        {/* 已选节点面板 */}
         <Fade in={mobileTab === 1}>
           <Box sx={{ display: mobileTab === 1 ? 'block' : 'none' }}>
             <TextField
               fullWidth
               size="small"
-              placeholder="搜索已选节点..."
+              placeholder={t('subscriptions.transfer.searchSelected')}
               value={selectedNodeSearch}
               onChange={handleSelectedNodeSearchChange}
               InputProps={{
@@ -452,11 +454,11 @@ export default function NodeTransferBox({
                   }
                   label={
                     <Typography variant="body2" fontWeight={600}>
-                      全选
+                      {t('common.selectAll')}
                     </Typography>
                   }
                 />
-                <Chip label={`${selectedNodes.length}个已选`} size="small" color="success" />
+                <Chip label={t('subscriptions.transfer.selectedChip', { count: selectedNodes.length })} size="small" color="success" />
               </Stack>
               <List dense sx={{ pt: 0, ...listSurfaceSx, p: 1 }}>
                 {filteredSelectedNodes.map((node) => (
@@ -484,7 +486,7 @@ export default function NodeTransferBox({
                       primary={node.Name}
                       secondary={
                         <Chip
-                          label={node.Group || '未分组'}
+                          label={node.Group || t('nodes.table.ungrouped')}
                           size="small"
                           color="success"
                           variant="outlined"
@@ -502,12 +504,11 @@ export default function NodeTransferBox({
               </List>
               {filteredSelectedNodes.length === 0 && (
                 <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-                  {selectedNodeSearch ? '未找到匹配的节点' : '暂无已选节点'}
+                  {selectedNodeSearch ? t('subscriptions.transfer.noMatch') : t('subscriptions.transfer.noSelected')}
                 </Typography>
               )}
             </Paper>
 
-            {/* 移动端底部操作栏 */}
             <Paper elevation={3} sx={actionStripSx}>
               <Button
                 variant="contained"
@@ -518,10 +519,10 @@ export default function NodeTransferBox({
                 disabled={checkedSelected.length === 0}
                 sx={actionStripButtonSx('error')}
               >
-                移除选中 ({checkedSelected.length})
+                {t('subscriptions.transfer.removeSelected', { count: checkedSelected.length })}
               </Button>
               <Button variant="outlined" size="small" onClick={onRemoveAll} sx={actionStripOutlinedButtonSx('error')}>
-                全部移除
+                {t('subscriptions.transfer.removeAll')}
               </Button>
             </Paper>
           </Box>
@@ -530,10 +531,8 @@ export default function NodeTransferBox({
     );
   }
 
-  // 桌面端穿梭框
   return (
     <Grid container spacing={2} sx={{ mt: 1 }}>
-      {/* 可选节点 */}
       <Grid item xs={5}>
         <Paper
           elevation={0}
@@ -561,10 +560,16 @@ export default function NodeTransferBox({
                 sx={{ mr: 0 }}
               />
               <Typography variant="subtitle1" fontWeight={700} color="primary">
-                可选节点
+                {t('subscriptions.transfer.availableTitle')}
               </Typography>
             </Stack>
-            <Chip label={availableNodesTotal > 100 ? `前100/${availableNodesTotal}` : availableNodesTotal} size="small" color="primary" />
+            <Chip
+              label={
+                availableNodesTotal > 100 ? t('subscriptions.transfer.firstCount', { total: availableNodesTotal }) : availableNodesTotal
+              }
+              size="small"
+              color="primary"
+            />
           </Stack>
           <Box sx={{ flexGrow: 1, overflow: 'auto', pr: 1 }}>
             <List dense sx={{ ...listSurfaceSx, p: 1 }}>
@@ -599,12 +604,12 @@ export default function NodeTransferBox({
               ))}
               {availableNodesTotal > 100 && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', py: 1 }}>
-                  还有 {availableNodesTotal - 100} 个节点未显示
+                  {t('subscriptions.transfer.moreHidden', { count: availableNodesTotal - 100 })}
                 </Typography>
               )}
               {selectorNodesLoading && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', py: 1 }}>
-                  节点列表加载中...
+                  {t('subscriptions.transfer.loading')}
                 </Typography>
               )}
             </List>
@@ -612,7 +617,6 @@ export default function NodeTransferBox({
         </Paper>
       </Grid>
 
-      {/* 中间操作按钮 */}
       <Grid item xs={2} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Box sx={desktopActionStripSx}>
           <Stack spacing={1} alignItems="center">
@@ -624,7 +628,7 @@ export default function NodeTransferBox({
               endIcon={<ChevronRightIcon />}
               sx={desktopActionButtonSx('primary')}
             >
-              添加 ({checkedAvailable.length})
+              {t('subscriptions.transfer.add', { count: checkedAvailable.length })}
             </Button>
             <Button
               variant="outlined"
@@ -633,7 +637,7 @@ export default function NodeTransferBox({
               endIcon={<ChevronRightIcon />}
               sx={desktopSecondaryActionButtonSx('primary')}
             >
-              全部添加
+              {t('subscriptions.transfer.addAll')}
             </Button>
             <Divider sx={{ width: '60%', my: 0.5, borderColor: panelBorder }} />
             <Button
@@ -644,7 +648,7 @@ export default function NodeTransferBox({
               startIcon={<ChevronLeftIcon />}
               sx={desktopSecondaryActionButtonSx('error')}
             >
-              全部移除
+              {t('subscriptions.transfer.removeAll')}
             </Button>
             <Button
               variant="contained"
@@ -655,13 +659,12 @@ export default function NodeTransferBox({
               startIcon={<ChevronLeftIcon />}
               sx={desktopActionButtonSx('error')}
             >
-              移除 ({checkedSelected.length})
+              {t('subscriptions.transfer.remove', { count: checkedSelected.length })}
             </Button>
           </Stack>
         </Box>
       </Grid>
 
-      {/* 已选节点 */}
       <Grid item xs={5}>
         <Paper
           elevation={0}
@@ -690,7 +693,7 @@ export default function NodeTransferBox({
                 sx={{ mr: 0 }}
               />
               <Typography variant="subtitle1" fontWeight={700} color="success.main">
-                已选节点
+                {t('subscriptions.transfer.selectedTitle')}
               </Typography>
             </Stack>
             <Chip label={selectedNodes.length} size="small" color="success" />
@@ -698,7 +701,7 @@ export default function NodeTransferBox({
           <TextField
             fullWidth
             size="small"
-            placeholder="搜索已选节点..."
+            placeholder={t('subscriptions.transfer.searchSelected')}
             value={selectedNodeSearch}
             onChange={handleSelectedNodeSearchChange}
             InputProps={{
@@ -751,7 +754,7 @@ export default function NodeTransferBox({
             </List>
             {filteredSelectedNodes.length === 0 && (
               <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-                {selectedNodeSearch ? '未找到匹配的节点' : '暂无已选节点'}
+                {selectedNodeSearch ? t('subscriptions.transfer.noMatch') : t('subscriptions.transfer.noSelected')}
               </Typography>
             )}
           </Box>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useColorScheme, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -22,22 +23,10 @@ import { getHeaderPopoverTokens, getHeaderTriggerTokens } from '../headerPopover
 import MainCard from 'ui-component/cards/MainCard';
 import Transitions from 'ui-component/extended/Transitions';
 
-const modeMeta = {
-  system: {
-    label: '跟随系统',
-    icon: SettingsBrightnessOutlinedIcon,
-    colorKey: 'info'
-  },
-  light: {
-    label: '浅色模式',
-    icon: LightModeOutlinedIcon,
-    colorKey: 'warning'
-  },
-  dark: {
-    label: '深色模式',
-    icon: DarkModeOutlinedIcon,
-    colorKey: 'secondary'
-  }
+const modeIcons = {
+  system: SettingsBrightnessOutlinedIcon,
+  light: LightModeOutlinedIcon,
+  dark: DarkModeOutlinedIcon
 };
 
 export default function ThemeModeSection() {
@@ -45,13 +34,14 @@ export default function ThemeModeSection() {
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
   const { mode } = useColorScheme();
   const { isDark } = useResolvedColorScheme();
+  const { t } = useTranslation();
 
   const [open, setOpen] = useState(false);
   const anchorRef = useRef(null);
 
   const selectedMode = mode || DEFAULT_THEME_MODE;
-  const currentMeta = modeMeta[selectedMode] || modeMeta.system;
-  const Icon = currentMeta.icon;
+  const currentLabel = t(`theme.${selectedMode}`);
+  const Icon = modeIcons[selectedMode] || modeIcons.system;
   const accentColor = theme.palette.primary.main;
   const { popoverSurface, popoverSurfaceAccent, popoverBorder, popoverInsetShadow, mutedText } = getHeaderPopoverTokens(theme, isDark);
   const { triggerColor, triggerSurface, triggerBorder, activeColor, activeSurface, activeBorder } = getHeaderTriggerTokens(
@@ -87,7 +77,7 @@ export default function ThemeModeSection() {
   return (
     <>
       <Box sx={{ ml: 2 }}>
-        <Tooltip title={`主题模式：${currentMeta.label}`}>
+        <Tooltip title={`${t('theme.title')}: ${currentLabel}`}>
           <Avatar
             ref={anchorRef}
             variant="rounded"
@@ -148,13 +138,13 @@ export default function ThemeModeSection() {
                     <Stack sx={{ p: 2.5, gap: 2 }}>
                       <Box>
                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                          主题模式
+                          {t('theme.title')}
                         </Typography>
                         <Typography variant="body2" sx={{ mt: 0.5, color: mutedText }}>
-                          当前为 {currentMeta.label}，可立即切换整个界面的配色方案。
+                          {t('theme.description', { mode: currentLabel })}
                         </Typography>
                       </Box>
-                      <ThemeModeSelector locale="zh" title={null} />
+                      <ThemeModeSelector title={null} />
                     </Stack>
                   </MainCard>
                 )}

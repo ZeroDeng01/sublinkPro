@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { alpha, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
@@ -37,6 +38,7 @@ import WebhookIcon from '@mui/icons-material/Webhook';
 import MainCard from 'ui-component/cards/MainCard';
 import NotificationEventSelector from 'views/settings/components/NotificationEventSelector';
 import { createWebhook, deleteWebhook, getWebhooks, testWebhookById, updateWebhook } from 'api/settings';
+import { formatDateTime as formatLocalizedDateTime } from 'i18n/locales';
 
 const createDefaultForm = () => ({
   id: null,
@@ -78,20 +80,18 @@ const toWebhookPayload = (form) => ({
   eventKeys: form.eventKeys
 });
 
-const formatDateTime = (value) => {
-  if (!value) return '未记录';
+const formatWebhookDateTime = (value, language, fallback) => {
+  if (!value) return fallback;
 
-  try {
-    return new Date(value).toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  } catch {
-    return value;
-  }
+  const formatted = formatLocalizedDateTime(value, language, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  return formatted || value;
 };
 
 const validateJsonText = (value) => {
@@ -107,6 +107,7 @@ const validateJsonText = (value) => {
 
 export default function WebhookManagementPage() {
   const theme = useTheme();
+  const { i18n, t } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [items, setItems] = useState([]);
@@ -131,11 +132,11 @@ export default function WebhookManagementPage() {
       setItems((data.items || []).map(normalizeWebhook));
       setEventOptions(data.eventOptions || []);
     } catch (error) {
-      showMessage(error.response?.data?.message || error.message || '获取 Webhook 列表失败', 'error');
+      showMessage(error.response?.data?.message || error.message || t('webhooks.messages.fetchFailed'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [showMessage]);
+  }, [showMessage, t]);
 
   useEffect(() => {
     fetchWebhooks();
@@ -161,17 +162,17 @@ export default function WebhookManagementPage() {
 
   const handleSave = async () => {
     if (!form.url.trim()) {
-      showMessage('请输入 Webhook URL', 'warning');
+      showMessage(t('webhooks.messages.urlRequired'), 'warning');
       return;
     }
 
     if (!validateJsonText(form.headers)) {
-      showMessage('请求头必须是合法的 JSON', 'warning');
+      showMessage(t('webhooks.messages.headersInvalid'), 'warning');
       return;
     }
 
     if (form.contentType === 'application/json' && form.body.trim() && !validateJsonText(form.body)) {
-      showMessage('JSON 请求体格式不正确', 'warning');
+      showMessage(t('webhooks.messages.bodyInvalid'), 'warning');
       return;
     }
 
@@ -180,16 +181,16 @@ export default function WebhookManagementPage() {
       const payload = toWebhookPayload(form);
       if (form.id) {
         await updateWebhook(form.id, payload);
-        showMessage('Webhook 已更新');
+        showMessage(t('webhooks.messages.updated'));
       } else {
         await createWebhook(payload);
-        showMessage('Webhook 已创建');
+        showMessage(t('webhooks.messages.created'));
       }
       setDialogOpen(false);
       setForm(createDefaultForm());
       await fetchWebhooks();
     } catch (error) {
-      showMessage(error.response?.data?.message || error.message || '保存 Webhook 失败', 'error');
+      showMessage(error.response?.data?.message || error.message || t('webhooks.messages.saveFailed'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -201,11 +202,11 @@ export default function WebhookManagementPage() {
     setSubmitting(true);
     try {
       await deleteWebhook(deleteTarget.id);
-      showMessage('Webhook 已删除');
+      showMessage(t('webhooks.messages.deleted'));
       setDeleteTarget(null);
       await fetchWebhooks();
     } catch (error) {
-      showMessage(error.response?.data?.message || error.message || '删除 Webhook 失败', 'error');
+      showMessage(error.response?.data?.message || error.message || t('webhooks.messages.deleteFailed'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -215,9 +216,9 @@ export default function WebhookManagementPage() {
     try {
       await updateWebhook(item.id, toWebhookPayload({ ...normalizeWebhook(item), enabled }));
       setItems((prev) => prev.map((current) => (current.id === item.id ? { ...current, enabled } : current)));
-      showMessage(enabled ? 'Webhook 已启用' : 'Webhook 已停用');
+      showMessage(enabled ? t('webhooks.messages.enabled') : t('webhooks.messages.disabled'));
     } catch (error) {
-      showMessage(error.response?.data?.message || error.message || '更新启用状态失败', 'error');
+      showMessage(error.response?.data?.message || error.message || t('webhooks.messages.toggleFailed'), 'error');
     }
   };
 
@@ -225,17 +226,17 @@ export default function WebhookManagementPage() {
     setTestingId(item.id);
     try {
       const response = await testWebhookById(item.id);
-      showMessage(response.data?.message || 'Webhook 测试发送成功');
+      showMessage(response.data?.message || t('webhooks.messages.testSuccess'));
       await fetchWebhooks();
     } catch (error) {
-      showMessage(error.response?.data?.message || error.message || 'Webhook 测试失败', 'error');
+      showMessage(error.response?.data?.message || error.message || t('webhooks.messages.testFailed'), 'error');
     } finally {
       setTestingId(null);
     }
   };
 
   return (
-    <MainCard title="Webhook 管理">
+    <MainCard title={t('webhooks.title')}>
       <Stack spacing={3}>
         <Card variant="outlined" sx={{ borderRadius: 3 }}>
           <CardContent>
@@ -243,10 +244,10 @@ export default function WebhookManagementPage() {
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} justifyContent="space-between">
                 <Box>
                   <Typography variant="h4" sx={{ mb: 0.75 }}>
-                    系统 Webhook 通知
+                    {t('webhooks.title')}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    集中管理多个通知目标。每个 Webhook 都可以单独设置请求方式、事件范围，并在保存后独立测试。
+                    {t('webhooks.description')}
                   </Typography>
                 </Box>
 
@@ -258,16 +259,16 @@ export default function WebhookManagementPage() {
                     startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
                     sx={{ width: { xs: '100%', sm: 'auto' } }}
                   >
-                    刷新列表
+                    {t('common.refresh')}
                   </Button>
                   <Button variant="contained" onClick={openCreateDialog} startIcon={<AddIcon />} sx={{ width: { xs: '100%', sm: 'auto' } }}>
-                    新增 Webhook
+                    {t('webhooks.createWebhook')}
                   </Button>
                 </Stack>
               </Stack>
 
               <Alert severity="info" variant="outlined">
-                支持为不同通知渠道拆分不同的事件范围，例如错误类通知、订阅更新通知或安全类通知。测试发送不会受事件勾选限制。
+                {t('webhooks.splitAlert')}
               </Alert>
 
               <Grid container spacing={2}>
@@ -282,7 +283,7 @@ export default function WebhookManagementPage() {
                     }}
                   >
                     <Typography variant="caption" color="text.secondary">
-                      Webhook 总数
+                      {t('webhooks.totalWebhooks')}
                     </Typography>
                     <Typography variant="h3" sx={{ mt: 0.5 }}>
                       {items.length}
@@ -300,7 +301,7 @@ export default function WebhookManagementPage() {
                     }}
                   >
                     <Typography variant="caption" color="text.secondary">
-                      已启用
+                      {t('webhooks.enabledCount')}
                     </Typography>
                     <Typography variant="h3" sx={{ mt: 0.5 }}>
                       {enabledCount}
@@ -318,7 +319,7 @@ export default function WebhookManagementPage() {
                     }}
                   >
                     <Typography variant="caption" color="text.secondary">
-                      当前可选事件
+                      {t('webhooks.optionalEvents')}
                     </Typography>
                     <Typography variant="h3" sx={{ mt: 0.5 }}>
                       {eventOptions.length}
@@ -340,16 +341,16 @@ export default function WebhookManagementPage() {
             variant="outlined"
             action={
               <Button color="inherit" size="small" onClick={openCreateDialog} startIcon={<AddIcon />}>
-                立即创建
+                {t('webhooks.createNow')}
               </Button>
             }
           >
-            还没有配置任何 Webhook。建议按通知用途拆分多个接收地址，后续维护会更轻松。
+            {t('webhooks.emptyTitle')}
           </Alert>
         ) : (
           <Grid container spacing={2.5}>
             {items.map((item, index) => {
-              const title = item.name || `Webhook ${index + 1}`;
+              const title = item.name || `${t('webhooks.defaultName', { index: index + 1 })}`;
               const hasEvents = item.eventKeys.length > 0;
 
               return (
@@ -390,7 +391,7 @@ export default function WebhookManagementPage() {
                       }
                       subheader={
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, wordBreak: 'break-all' }}>
-                          {item.url || '未配置 URL'}
+                          {item.url || t('webhooks.noUrl')}
                         </Typography>
                       }
                       sx={{ pb: 1.5 }}
@@ -399,35 +400,47 @@ export default function WebhookManagementPage() {
                     <CardContent sx={{ pt: 0 }}>
                       <Stack spacing={2}>
                         <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                          <Chip size="small" color={item.enabled ? 'success' : 'default'} label={item.enabled ? '已启用' : '已停用'} />
+                          <Chip
+                            size="small"
+                            color={item.enabled ? 'success' : 'default'}
+                            label={item.enabled ? t('webhooks.statusEnabled') : t('webhooks.statusDisabled')}
+                          />
                           <Chip size="small" variant="outlined" label={item.method} />
                           <Chip size="small" variant="outlined" label={item.contentType} />
                           <Chip
                             size="small"
                             variant="outlined"
                             color={hasEvents ? 'primary' : 'default'}
-                            label={`${item.eventKeys.length} 个事件`}
+                            label={t('webhooks.eventsCount', { count: item.eventKeys.length })}
                           />
                         </Stack>
 
                         {!hasEvents && (
                           <Alert severity="warning" variant="outlined">
-                            当前未勾选任何自动触发事件，保存后此 Webhook 不会自动接收业务通知。
+                            {t('webhooks.noEventsAlert')}
                           </Alert>
                         )}
 
                         <Box>
                           <Typography variant="body2" color="text.secondary">
-                            请求头：{item.headers?.trim() ? '已配置' : '未配置'}
+                            {t('webhooks.headersLabel')}
+                            {item.headers?.trim() ? t('webhooks.headersConfigured') : t('webhooks.headersUnconfigured')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            请求体：{item.body?.trim() ? '已配置模板' : '使用默认空内容'}
+                            {t('webhooks.bodyLabel')}
+                            {item.body?.trim() ? t('webhooks.bodyConfigured') : t('webhooks.bodyUnconfigured')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            最近更新：{formatDateTime(item.updatedAt || item.createdAt)}
+                            {t('webhooks.lastUpdated')}
+                            {formatWebhookDateTime(
+                              item.updatedAt || item.createdAt,
+                              i18n.resolvedLanguage || i18n.language,
+                              t('webhooks.unrecorded')
+                            )}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            最近测试：{formatDateTime(item.lastTestAt)}
+                            {t('webhooks.lastTested')}
+                            {formatWebhookDateTime(item.lastTestAt, i18n.resolvedLanguage || i18n.language, t('webhooks.unrecorded'))}
                           </Typography>
                         </Box>
 
@@ -440,7 +453,7 @@ export default function WebhookManagementPage() {
                               disabled={submitting || testingId === item.id}
                             />
                           }
-                          label={item.enabled ? '通知已启用' : '通知已停用'}
+                          label={item.enabled ? t('webhooks.switchEnabled') : t('webhooks.switchDisabled')}
                         />
 
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
@@ -450,7 +463,7 @@ export default function WebhookManagementPage() {
                             onClick={() => openEditDialog(item)}
                             sx={{ width: { xs: '100%', sm: 'auto' } }}
                           >
-                            编辑
+                            {t('webhooks.edit')}
                           </Button>
                           <Button
                             variant="outlined"
@@ -460,7 +473,7 @@ export default function WebhookManagementPage() {
                             disabled={submitting || testingId === item.id || !item.id}
                             sx={{ width: { xs: '100%', sm: 'auto' } }}
                           >
-                            发送测试
+                            {t('webhooks.test')}
                           </Button>
                           <Button
                             variant="outlined"
@@ -470,7 +483,7 @@ export default function WebhookManagementPage() {
                             disabled={submitting || testingId === item.id}
                             sx={{ width: { xs: '100%', sm: 'auto' } }}
                           >
-                            删除
+                            {t('webhooks.delete')}
                           </Button>
                         </Stack>
                       </Stack>
@@ -484,46 +497,46 @@ export default function WebhookManagementPage() {
       </Stack>
 
       <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="md" fullWidth fullScreen={isMobile}>
-        <DialogTitle>{form.id ? '编辑 Webhook' : '新增 Webhook'}</DialogTitle>
+        <DialogTitle>{form.id ? t('webhooks.editWebhook') : t('webhooks.createWebhook')}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2.5} sx={{ pt: 1 }}>
             <Alert severity="info" variant="outlined">
-              使用独立名称区分不同通知渠道会更清晰，例如“错误告警”、“安全通知”或“订阅更新”。保存成功后可回到列表里单独发送测试消息。
+              {t('webhooks.dialog.infoAlert')}
             </Alert>
 
             <TextField
               fullWidth
-              label="Webhook 名称"
+              label={t('webhooks.dialog.nameLabel')}
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              placeholder="例如：错误告警"
-              helperText="可选，未填写时列表会显示默认名称。"
+              placeholder={t('webhooks.dialog.namePlaceholder')}
+              helperText={t('webhooks.dialog.nameHelperText')}
             />
 
             <FormControlLabel
               control={
                 <Switch checked={form.enabled} onChange={(event) => setForm((prev) => ({ ...prev, enabled: event.target.checked }))} />
               }
-              label={form.enabled ? '保存后立即启用' : '先保存为停用状态'}
+              label={form.enabled ? t('webhooks.dialog.enableNow') : t('webhooks.dialog.enableLater')}
             />
 
             <TextField
               fullWidth
               required
-              label="Webhook URL"
+              label={t('webhooks.dialog.urlLabel')}
               value={form.url}
               onChange={(event) => setForm((prev) => ({ ...prev, url: event.target.value }))}
               placeholder="https://example.com/webhook"
-              helperText="支持在 URL 中使用模板变量，例如 {{title}}、{{message}}、{{event}}。"
+              helperText={t('webhooks.dialog.urlHelperText')}
             />
 
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormControl fullWidth>
-                  <InputLabel>请求方法</InputLabel>
+                  <InputLabel>{t('webhooks.dialog.methodLabel')}</InputLabel>
                   <Select
                     value={form.method}
-                    label="请求方法"
+                    label={t('webhooks.dialog.methodLabel')}
                     onChange={(event) => setForm((prev) => ({ ...prev, method: event.target.value }))}
                   >
                     <MenuItem value="POST">POST</MenuItem>
@@ -534,10 +547,10 @@ export default function WebhookManagementPage() {
               </Grid>
               <Grid size={{ xs: 12, sm: 8 }}>
                 <FormControl fullWidth>
-                  <InputLabel>Content-Type</InputLabel>
+                  <InputLabel>{t('webhooks.dialog.contentTypeLabel')}</InputLabel>
                   <Select
                     value={form.contentType}
-                    label="Content-Type"
+                    label={t('webhooks.dialog.contentTypeLabel')}
                     onChange={(event) => setForm((prev) => ({ ...prev, contentType: event.target.value }))}
                   >
                     <MenuItem value="application/json">application/json</MenuItem>
@@ -552,18 +565,18 @@ export default function WebhookManagementPage() {
               fullWidth
               multiline
               minRows={4}
-              label="请求头（JSON，可选）"
+              label={t('webhooks.dialog.headersInputLabel')}
               value={form.headers}
               onChange={(event) => setForm((prev) => ({ ...prev, headers: event.target.value }))}
               placeholder={'{\n  "Authorization": "Bearer token"\n}'}
-              helperText="填写 JSON 请求头，适合放鉴权信息或渠道标识。"
+              helperText={t('webhooks.dialog.headersHelperText')}
             />
 
             <TextField
               fullWidth
               multiline
               minRows={6}
-              label="请求体模板"
+              label={t('webhooks.dialog.bodyInputLabel')}
               value={form.body}
               onChange={(event) => setForm((prev) => ({ ...prev, body: event.target.value }))}
               placeholder={
@@ -571,26 +584,27 @@ export default function WebhookManagementPage() {
                   ? '{\n  "title": "{{title}}",\n  "message": "{{message}}"\n}'
                   : '{{title}} - {{message}}'
               }
-              helperText="当 Content-Type 为 JSON 时，这里建议填写合法 JSON。"
+              helperText={t('webhooks.dialog.bodyHelperText')}
             />
 
             <Alert severity="info" variant="outlined">
-              支持变量：{'{{title}}'}、{'{{message}}'}、{'{{event}}'}、{'{{eventName}}'}、{'{{category}}'}、{'{{severity}}'}、{'{{time}}'}、
-              {'{{json .}}'}
+              {t('webhooks.dialog.variablesAlert', {
+                variables: '{{title}}、{{message}}、{{event}}、{{eventName}}、{{category}}、{{severity}}、{{time}}、{{json .}}'
+              })}
             </Alert>
 
             <NotificationEventSelector
               value={form.eventKeys}
               eventOptions={eventOptions}
               disabled={submitting}
-              description="为当前 Webhook 勾选自动触发的业务事件。测试发送不会受这里的选择影响。"
+              description={t('webhooks.dialog.eventSelectorDesc')}
               onChange={(eventKeys) => setForm((prev) => ({ ...prev, eventKeys }))}
             />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={closeDialog} disabled={submitting} color="inherit">
-            取消
+            {t('common.cancel')}
           </Button>
           <Button
             variant="contained"
@@ -598,7 +612,7 @@ export default function WebhookManagementPage() {
             disabled={submitting}
             startIcon={submitting ? <CircularProgress size={16} /> : <SaveIcon />}
           >
-            {form.id ? '保存修改' : '创建 Webhook'}
+            {form.id ? t('webhooks.dialog.save') : t('webhooks.dialog.create')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -611,18 +625,18 @@ export default function WebhookManagementPage() {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>删除 Webhook</DialogTitle>
+        <DialogTitle>{t('webhooks.deleteWebhook')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
-            确定删除 {deleteTarget?.name || deleteTarget?.url || '这个 Webhook'} 吗？删除后无法恢复。
+            {t('webhooks.deleteConfirm', { name: deleteTarget?.name || deleteTarget?.url || 'Webhook' })}
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteTarget(null)} disabled={submitting} color="inherit">
-            取消
+            {t('common.cancel')}
           </Button>
           <Button variant="contained" color="error" onClick={handleDelete} disabled={submitting} startIcon={<DeleteIcon />}>
-            确认删除
+            {t('webhooks.confirmDelete')}
           </Button>
         </DialogActions>
       </Dialog>

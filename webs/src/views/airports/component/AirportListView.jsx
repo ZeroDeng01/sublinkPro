@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
@@ -56,6 +57,7 @@ export default function AirportListView({
   nodeCheckProfiles
 }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const palette = theme.vars?.palette || theme.palette;
   const { isDark } = useResolvedColorScheme();
 
@@ -164,7 +166,7 @@ export default function AirportListView({
     if (!airport.fetchUsageInfo) {
       return (
         <Typography variant="caption" color="text.disabled">
-          未开启
+          {t('airports.list.usage.disabledShort')}
         </Typography>
       );
     }
@@ -172,7 +174,7 @@ export default function AirportListView({
     if (airport.usageTotal === -1) {
       return (
         <Typography variant="caption" color="error.main">
-          获取失败
+          {t('airports.list.usage.failedShort')}
         </Typography>
       );
     }
@@ -180,7 +182,7 @@ export default function AirportListView({
     if (!airport.usageTotal || airport.usageTotal === 0) {
       return (
         <Typography variant="caption" color="text.disabled">
-          待获取
+          {t('airports.list.usage.pending')}
         </Typography>
       );
     }
@@ -211,7 +213,7 @@ export default function AirportListView({
             }}
           >
             {formatExpireTime(airport.usageExpire)}
-            {isUrgent && ` (${Math.max(0, Math.ceil(daysLeft))}天)`}
+            {isUrgent && ` (${t('airports.list.usage.daysLeft', { count: Math.max(0, Math.ceil(daysLeft)) })})`}
           </Typography>
         </Box>
       );
@@ -259,7 +261,7 @@ export default function AirportListView({
     if (!hasData) {
       return (
         <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-          暂未测试
+          {t('airports.list.speed.untested')}
         </Typography>
       );
     }
@@ -347,7 +349,7 @@ export default function AirportListView({
     return (
       <Box sx={{ py: 6, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          暂无机场数据，点击上方"添加机场"按钮添加
+          {t('airports.list.empty.addAirport')}
         </Typography>
       </Box>
     );
@@ -360,24 +362,24 @@ export default function AirportListView({
           <TableHead sx={tableHeadSx}>
             <TableRow>
               <TableCell sx={{ width: 48 }} align="center" padding="checkbox">
-                选择
+                {t('airports.table.columns.select')}
               </TableCell>
-              <TableCell sx={{ width: '17%', minWidth: 160 }}>机场</TableCell>
+              <TableCell sx={{ width: '17%', minWidth: 160 }}>{t('airports.table.columns.airport')}</TableCell>
               <TableCell sx={{ width: '6%' }} align="center">
-                状态
+                {t('common.status')}
               </TableCell>
               <TableCell sx={{ width: '6%' }} align="center">
-                节点
+                {t('airports.table.columns.nodes')}
               </TableCell>
-              <TableCell sx={{ width: '9%', minWidth: 96 }}>调度</TableCell>
-              <TableCell sx={{ width: '14%', minWidth: 158 }}>运行时间</TableCell>
-              <TableCell sx={{ width: '17%', minWidth: 145 }}>用量</TableCell>
-              <TableCell sx={{ width: '10%', minWidth: 100 }}>测速</TableCell>
+              <TableCell sx={{ width: '9%', minWidth: 96 }}>{t('airports.table.columns.schedule')}</TableCell>
+              <TableCell sx={{ width: '14%', minWidth: 158 }}>{t('airports.table.columns.runTime')}</TableCell>
+              <TableCell sx={{ width: '17%', minWidth: 145 }}>{t('airports.table.columns.usage')}</TableCell>
+              <TableCell sx={{ width: '10%', minWidth: 100 }}>{t('airports.table.columns.speedTest')}</TableCell>
               <TableCell sx={{ width: '8%', minWidth: 90 }} align="center">
-                更新后检测
+                {t('airports.list.updateAfterDetect.title')}
               </TableCell>
               <TableCell sx={{ width: 188 }} align="center">
-                操作
+                {t('airports.table.columns.actions')}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -422,7 +424,12 @@ export default function AirportListView({
 
                   {/* 状态 */}
                   <TableCell align="center">
-                    <Chip label={airport.enabled ? '启用' : '禁用'} variant="filled" size="small" sx={getStatusChipSx(airport.enabled)} />
+                    <Chip
+                      label={airport.enabled ? t('common.enabled') : t('common.disabled')}
+                      variant="filled"
+                      size="small"
+                      sx={getStatusChipSx(airport.enabled)}
+                    />
                   </TableCell>
 
                   {/* 节点数 */}
@@ -457,10 +464,10 @@ export default function AirportListView({
                   <TableCell>
                     <Box sx={{ minWidth: 0 }}>
                       <Typography variant="caption" sx={{ fontSize: '0.64rem', color: 'text.secondary', display: 'block' }}>
-                        上次: {formatDateTime(airport.lastRunTime)}
+                        {t('airports.table.lastRunCompact', { time: formatDateTime(airport.lastRunTime) })}
                       </Typography>
                       <Typography variant="caption" sx={{ fontSize: '0.64rem', color: 'text.secondary', display: 'block' }}>
-                        下次: {formatDateTime(airport.nextRunTime)}
+                        {t('airports.table.nextRunCompact', { time: formatDateTime(airport.nextRunTime) })}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -492,7 +499,7 @@ export default function AirportListView({
                           />
                         ) : (
                           <Chip
-                            label="策略已删除"
+                            label={t('airports.list.updateAfterDetect.deletedProfile')}
                             size="small"
                             sx={{
                               height: 20,
@@ -510,7 +517,7 @@ export default function AirportListView({
                             {chip}
                             {airport.updateAfterDetectChangedOnly && (
                               <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1 }}>
-                                仅变更节点
+                                {t('airports.list.updateAfterDetect.changedOnly')}
                               </Typography>
                             )}
                           </Stack>
@@ -527,10 +534,10 @@ export default function AirportListView({
                   <TableCell align="center">
                     <Stack spacing={0.45} alignItems="center">
                       <Stack direction="row" spacing={0.4} justifyContent="center" useFlexGap>
-                        <Tooltip title="查看节点" arrow>
+                        <Tooltip title={t('airports.list.actions.viewNodes')} arrow>
                           <IconButton
                             size="small"
-                            aria-label="查看节点"
+                            aria-label={t('airports.list.actions.viewNodes')}
                             onClick={() => onOpenNodes(airport)}
                             sx={{
                               width: 28,
@@ -543,10 +550,10 @@ export default function AirportListView({
                             <LanIcon sx={{ fontSize: 15 }} />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="快速检测" arrow>
+                        <Tooltip title={t('airports.list.actions.quickCheck')} arrow>
                           <IconButton
                             size="small"
-                            aria-label="快速检测"
+                            aria-label={t('airports.list.actions.quickCheck')}
                             onClick={() => onQuickCheck(airport)}
                             sx={{
                               width: 28,
@@ -559,10 +566,10 @@ export default function AirportListView({
                             <SpeedIcon sx={{ fontSize: 15 }} />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="立即拉取" arrow>
+                        <Tooltip title={t('airports.list.actions.pullNow')} arrow>
                           <IconButton
                             size="small"
-                            aria-label="立即拉取"
+                            aria-label={t('airports.list.actions.pullNow')}
                             onClick={() => onPull(airport)}
                             sx={{
                               width: 28,
@@ -576,10 +583,10 @@ export default function AirportListView({
                           </IconButton>
                         </Tooltip>
                         {airport.fetchUsageInfo && (
-                          <Tooltip title="刷新用量" arrow>
+                          <Tooltip title={t('airports.list.actions.refreshUsage')} arrow>
                             <IconButton
                               size="small"
-                              aria-label="刷新用量"
+                              aria-label={t('airports.list.actions.refreshUsage')}
                               onClick={() => onRefreshUsage(airport)}
                               sx={{
                                 width: 28,
@@ -595,10 +602,10 @@ export default function AirportListView({
                         )}
                       </Stack>
                       <Stack direction="row" spacing={0.4} justifyContent="center" useFlexGap>
-                        <Tooltip title="复制订阅" arrow>
+                        <Tooltip title={t('airports.list.actions.copySubscription')} arrow>
                           <IconButton
                             size="small"
-                            aria-label="复制订阅"
+                            aria-label={t('airports.list.actions.copySubscription')}
                             onClick={() => handleCopyUrl(airport)}
                             sx={{
                               width: 28,
@@ -611,10 +618,10 @@ export default function AirportListView({
                             <ContentCopyIcon sx={{ fontSize: 14 }} />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="编辑" arrow>
+                        <Tooltip title={t('common.edit')} arrow>
                           <IconButton
                             size="small"
-                            aria-label="编辑"
+                            aria-label={t('common.edit')}
                             onClick={() => onEdit(airport)}
                             sx={{
                               width: 28,
@@ -627,10 +634,10 @@ export default function AirportListView({
                             <EditIcon sx={{ fontSize: 14 }} />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="删除" arrow>
+                        <Tooltip title={t('common.delete')} arrow>
                           <IconButton
                             size="small"
-                            aria-label="删除"
+                            aria-label={t('common.delete')}
                             onClick={() => onDelete(airport)}
                             sx={{
                               width: 28,
@@ -661,7 +668,7 @@ export default function AirportListView({
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert severity="success" variant="standard" sx={{ width: '100%' }}>
-          已复制「{copyTip.name}」的订阅地址
+          {t('airports.list.messages.copiedSubscriptionUrl', { name: copyTip.name })}
         </Alert>
       </Snackbar>
     </>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
@@ -35,10 +36,6 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
 
-/**
- * 移动端订阅卡片组件
- * 优化触摸交互：常用操作使用大按钮，其余放入更多菜单
- */
 export default function SubscriptionMobileCard({
   subscriptions,
   expandedRows,
@@ -66,6 +63,7 @@ export default function SubscriptionMobileCard({
   onBatchSort,
   onBatchMove
 }) {
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
     theme,
@@ -73,7 +71,6 @@ export default function SubscriptionMobileCard({
   );
   const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
 
-  // 更多菜单状态
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [menuSubId, setMenuSubId] = useState(null);
 
@@ -202,7 +199,6 @@ export default function SubscriptionMobileCard({
             >
               <Box p={2}>
                 <Stack spacing={1.25}>
-                  {/* 头部：订阅名称和展开按钮 */}
                   <Stack
                     direction="row"
                     justifyContent="space-between"
@@ -214,7 +210,7 @@ export default function SubscriptionMobileCard({
                       <Chip label={sub.Name} sx={[...getSubscriptionNameChipSx(theme), { minWidth: 0, flexShrink: 1 }]} />
                       {isSorting && (
                         <Chip
-                          label="排序中"
+                          label={t('subscriptions.mobileCard.sorting')}
                           size="small"
                           sx={{
                             flexShrink: 0,
@@ -236,7 +232,6 @@ export default function SubscriptionMobileCard({
                     </IconButton>
                   </Stack>
 
-                  {/* 统计信息 */}
                   <Box
                     sx={{
                       px: 1.25,
@@ -250,18 +245,25 @@ export default function SubscriptionMobileCard({
                   >
                     <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap alignItems="center" justifyContent="space-between">
                       <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-                        <Chip label={`${sub.Nodes?.length || 0} 个节点`} size="small" sx={getInfoChipSx(palette.success.main)} />
-                        <Chip label={`${sub.Groups?.length || 0} 个分组`} size="small" sx={getInfoChipSx(palette.warning.main)} />
+                        <Chip
+                          label={t('subscriptions.mobileCard.nodeCount', { count: sub.Nodes?.length || 0 })}
+                          size="small"
+                          sx={getInfoChipSx(palette.success.main)}
+                        />
+                        <Chip
+                          label={t('subscriptions.mobileCard.groupCount', { count: sub.Groups?.length || 0 })}
+                          size="small"
+                          sx={getInfoChipSx(palette.warning.main)}
+                        />
                       </Stack>
                       <Typography variant="caption" sx={{ color: tertiaryText }}>
-                        轻触头部展开更多内容
+                        {t('subscriptions.mobileCard.expandHint')}
                       </Typography>
                     </Stack>
                   </Box>
 
                   <Divider sx={{ borderColor: withAlpha(palette.divider, isDark ? 0.7 : 1) }} />
 
-                  {/* 操作区域 - 移动端优化 */}
                   <Box
                     sx={{
                       px: 1.25,
@@ -274,7 +276,6 @@ export default function SubscriptionMobileCard({
                     }}
                   >
                     {isSorting ? (
-                      // 排序模式：显示确认/取消按钮
                       <Stack direction="row" spacing={1} justifyContent="flex-end">
                         <Button
                           variant="outlined"
@@ -296,7 +297,7 @@ export default function SubscriptionMobileCard({
                             }
                           }}
                         >
-                          取消
+                          {t('common.cancel')}
                         </Button>
                         <Button
                           variant="contained"
@@ -315,19 +316,16 @@ export default function SubscriptionMobileCard({
                             }
                           }}
                         >
-                          确认排序
+                          {t('subscriptions.mobileCard.confirmSort')}
                         </Button>
                       </Stack>
                     ) : (
-                      // 正常模式：显示操作按钮
                       <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                         <Typography variant="caption" sx={{ color: tertiaryText, fontWeight: 500 }}>
                           {sub.CreateDate}
                         </Typography>
 
-                        {/* 快捷操作按钮 - 使用较大的图标 */}
                         <Stack direction="row" spacing={0.75} alignItems="center">
-                          {/* 预览 - 常用 */}
                           <IconButton
                             size="medium"
                             onClick={(e) => {
@@ -339,7 +337,6 @@ export default function SubscriptionMobileCard({
                             <VisibilityIcon />
                           </IconButton>
 
-                          {/* 客户端链接 - 常用 */}
                           <IconButton
                             size="medium"
                             onClick={(e) => {
@@ -351,7 +348,6 @@ export default function SubscriptionMobileCard({
                             <QrCode2Icon />
                           </IconButton>
 
-                          {/* 编辑 - 常用 */}
                           <IconButton
                             size="medium"
                             onClick={(e) => {
@@ -363,7 +359,6 @@ export default function SubscriptionMobileCard({
                             <EditIcon />
                           </IconButton>
 
-                          {/* 更多操作菜单 */}
                           <IconButton size="medium" onClick={(e) => handleOpenMenu(e, sub.ID)} sx={getActionIconSx()}>
                             <MoreVertIcon />
                           </IconButton>
@@ -372,7 +367,6 @@ export default function SubscriptionMobileCard({
                     )}
                   </Box>
 
-                  {/* 可展开内容 */}
                   <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                     <Box sx={{ pt: 0.25 }}>
                       <Box
@@ -428,7 +422,6 @@ export default function SubscriptionMobileCard({
         })}
       </Stack>
 
-      {/* 更多操作菜单 - 共享单个 Menu 组件 */}
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
@@ -469,7 +462,7 @@ export default function SubscriptionMobileCard({
           <ListItemIcon>
             <HistoryIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>访问记录</ListItemText>
+          <ListItemText>{t('subscriptions.table.tooltips.accessLogs')}</ListItemText>
         </MenuItem>
 
         <MenuItem
@@ -482,7 +475,7 @@ export default function SubscriptionMobileCard({
           <ListItemIcon>
             <AccountTreeIcon fontSize="small" color="warning" />
           </ListItemIcon>
-          <ListItemText>链式代理</ListItemText>
+          <ListItemText>{t('subscriptions.table.tooltips.chainProxy')}</ListItemText>
         </MenuItem>
 
         <MenuItem
@@ -495,7 +488,7 @@ export default function SubscriptionMobileCard({
           <ListItemIcon>
             <SortIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>排序节点</ListItemText>
+          <ListItemText>{t('subscriptions.mobileCard.sortNodes')}</ListItemText>
         </MenuItem>
 
         <MenuItem
@@ -508,7 +501,7 @@ export default function SubscriptionMobileCard({
           <ListItemIcon>
             <ContentCopyIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>复制订阅</ListItemText>
+          <ListItemText>{t('subscriptions.page.confirm.copyTitle')}</ListItemText>
         </MenuItem>
 
         <Divider />
@@ -533,7 +526,7 @@ export default function SubscriptionMobileCard({
           <ListItemIcon>
             <DeleteIcon fontSize="small" color="error" />
           </ListItemIcon>
-          <ListItemText>删除</ListItemText>
+          <ListItemText>{t('common.delete')}</ListItemText>
         </MenuItem>
       </Menu>
     </>

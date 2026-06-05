@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -12,7 +13,6 @@ import MenuItem from '@mui/material/MenuItem';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
-// Paper 组件已改为 Box
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
@@ -29,23 +29,18 @@ import {
   isNodeConditionSelectField
 } from '../../../utils/nodeConditionOptions';
 
-/**
- * 通用条件构建器组件
- * 用于构建 AND/OR 组合的条件表达式
- */
-export default function ConditionBuilder({ value, onChange, fields = [], operators = [], title = '条件配置' }) {
+export default function ConditionBuilder({ value, onChange, fields = [], operators = [], title }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getChainProxyThemeTokens(theme, isDark);
   const fieldControlSx = getChainProxyFieldControlSx(tokens);
   const logicToggleSx = getChainProxyToggleButtonGroupSx(tokens);
   const removeButtonSx = getChainProxyIconButtonSx(tokens, theme.palette.error.main);
   const palette = tokens.palette;
-  // 初始化条件数据
   const [logic, setLogic] = useState(value?.logic || 'and');
   const [conditions, setConditions] = useState(value?.conditions || []);
 
-  // 当外部 value 变化时更新内部状态
   useEffect(() => {
     if (value) {
       setLogic(value.logic || 'and');
@@ -53,7 +48,6 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
     }
   }, [value]);
 
-  // 通知父组件数据变化
   const notifyChange = (newLogic, newConditions) => {
     onChange?.({
       logic: newLogic,
@@ -61,7 +55,6 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
     });
   };
 
-  // 切换逻辑运算符
   const handleLogicChange = (_event, newLogic) => {
     if (newLogic !== null) {
       setLogic(newLogic);
@@ -69,26 +62,22 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
     }
   };
 
-  // 添加条件
   const handleAddCondition = () => {
     const newConditions = [...conditions, { field: fields[0]?.value || '', operator: 'contains', value: '' }];
     setConditions(newConditions);
     notifyChange(logic, newConditions);
   };
 
-  // 删除条件
   const handleRemoveCondition = (index) => {
     const newConditions = conditions.filter((_, i) => i !== index);
     setConditions(newConditions);
     notifyChange(logic, newConditions);
   };
 
-  // 更新条件字段
   const handleConditionChange = (index, field, newValue) => {
     const newConditions = [...conditions];
     newConditions[index] = { ...newConditions[index], [field]: newValue };
 
-    // 如果改变了字段，需要重置操作符和值以避免不兼容
     if (field === 'field') {
       const nextFieldMeta = getNodeConditionFieldMeta(newValue);
       const isSelectField = isNodeConditionSelectField(newValue);
@@ -116,7 +105,6 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
     notifyChange(logic, newConditions);
   };
 
-  // 获取字段对应的操作符列表
   const getOperatorsForField = (fieldValue) => {
     const fieldMeta = getNodeConditionFieldMeta(fieldValue);
     if (Array.isArray(fieldMeta?.operators) && fieldMeta.operators.length > 0) {
@@ -128,7 +116,6 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
     if (isNodeConditionNumericField(fieldValue)) {
       return operators;
     }
-    // 文本字段只支持字符串操作符
     return operators.filter((op) => ['equals', 'not_equals', 'contains', 'not_contains', 'regex'].includes(op.value));
   };
 
@@ -145,18 +132,16 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
       }}
     >
       <Stack spacing={2}>
-        {/* 标题和逻辑切换 */}
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
           <Typography variant="subtitle2" color={tokens.secondaryText}>
-            {title}
+            {title || t('subscriptions.conditions.title')}
           </Typography>
           <ToggleButtonGroup value={logic} exclusive onChange={handleLogicChange} size="small" sx={logicToggleSx}>
-            <ToggleButton value="and">全部满足 (AND)</ToggleButton>
-            <ToggleButton value="or">满足任一 (OR)</ToggleButton>
+            <ToggleButton value="and">{t('subscriptions.conditions.logic.and')}</ToggleButton>
+            <ToggleButton value="or">{t('subscriptions.conditions.logic.or')}</ToggleButton>
           </ToggleButtonGroup>
         </Stack>
 
-        {/* 条件列表 */}
         {conditions.map((condition, index) => (
           <Stack
             key={index}
@@ -173,22 +158,30 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
             }}
           >
             <FormControl size="small" sx={{ minWidth: 100, ...fieldControlSx }}>
-              <InputLabel color="primary">字段</InputLabel>
-              <Select value={condition.field} label="字段" onChange={(e) => handleConditionChange(index, 'field', e.target.value)}>
+              <InputLabel color="primary">{t('subscriptions.conditions.field')}</InputLabel>
+              <Select
+                value={condition.field}
+                label={t('subscriptions.conditions.field')}
+                onChange={(e) => handleConditionChange(index, 'field', e.target.value)}
+              >
                 {fields.map((field) => (
                   <MenuItem key={field.value} value={field.value}>
-                    {field.label}
+                    {field.labelKey ? t(field.labelKey, field.label) : field.label}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
 
             <FormControl size="small" sx={{ minWidth: 90, ...fieldControlSx }}>
-              <InputLabel color="primary">操作</InputLabel>
-              <Select value={condition.operator} label="操作" onChange={(e) => handleConditionChange(index, 'operator', e.target.value)}>
+              <InputLabel color="primary">{t('subscriptions.conditions.operator')}</InputLabel>
+              <Select
+                value={condition.operator}
+                label={t('subscriptions.conditions.operator')}
+                onChange={(e) => handleConditionChange(index, 'operator', e.target.value)}
+              >
                 {getOperatorsForField(condition.field).map((op) => (
                   <MenuItem key={op.value} value={op.value}>
-                    {op.label}
+                    {op.labelKey ? t(op.labelKey, op.label) : op.label}
                   </MenuItem>
                 ))}
               </Select>
@@ -196,11 +189,15 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
 
             {getNodeConditionValueOptions(condition.field) ? (
               <FormControl size="small" sx={{ flex: 1, minWidth: 100, ...fieldControlSx }}>
-                <InputLabel color="primary">值</InputLabel>
-                <Select value={condition.value} label="值" onChange={(e) => handleConditionChange(index, 'value', e.target.value)}>
+                <InputLabel color="primary">{t('subscriptions.conditions.value')}</InputLabel>
+                <Select
+                  value={condition.value}
+                  label={t('subscriptions.conditions.value')}
+                  onChange={(e) => handleConditionChange(index, 'value', e.target.value)}
+                >
                   {getNodeConditionValueOptions(condition.field).map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {opt.labelKey ? t(opt.labelKey, opt.label) : opt.label}
                     </MenuItem>
                   ))}
                 </Select>
@@ -208,7 +205,7 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
             ) : (
               <TextField
                 size="small"
-                label="值"
+                label={t('subscriptions.conditions.value')}
                 value={condition.value}
                 onChange={(e) => handleConditionChange(index, 'value', e.target.value)}
                 type={isNodeConditionNumericField(condition.field) ? 'number' : 'text'}
@@ -226,7 +223,6 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
           </Stack>
         ))}
 
-        {/* 添加条件按钮 */}
         <Button
           startIcon={<AddIcon />}
           size="small"
@@ -244,13 +240,12 @@ export default function ConditionBuilder({ value, onChange, fields = [], operato
           }}
           variant="outlined"
         >
-          添加条件
+          {t('subscriptions.conditions.add')}
         </Button>
 
-        {/* 空状态提示 */}
         {conditions.length === 0 && (
           <Typography variant="body2" color={tokens.secondaryText} sx={{ fontStyle: 'italic' }}>
-            尚未添加任何条件
+            {t('subscriptions.conditions.empty')}
           </Typography>
         )}
       </Stack>

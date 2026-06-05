@@ -1,19 +1,19 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { darken, lighten, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
-import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
-import Button from '@mui/material/Button';
-import ButtonGroup from '@mui/material/ButtonGroup';
+import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import TextField from '@mui/material/TextField';
-import Alert from '@mui/material/Alert';
+import ButtonGroup from '@mui/material/ButtonGroup';
+import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
 import Fade from '@mui/material/Fade';
+import TextField from '@mui/material/TextField';
+import Paper from '@mui/material/Paper';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -21,66 +21,73 @@ import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import CircularProgress from '@mui/material/CircularProgress';
-import Divider from '@mui/material/Divider';
+import Alert from '@mui/material/Alert';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import { getTagGroups } from 'api/tags';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
-import { getFraudScoreIcon } from 'utils/fraudScore';
-import { getDelayIcon, getSpeedIcon } from 'utils/nodeMetricIcons';
 import { withAlpha } from '../../../utils/colorUtils';
 import { getReadableTextTokens, getSurfaceTokens } from '../../../themes/surfaceTokens';
 import { getUnlockRenameVariables } from 'views/nodes/utils';
 
-// 将国家ISO代码转换为国旗emoji
-const isoToFlag = (isoCode) => {
-  if (!isoCode || typeof isoCode !== 'string') {
-    return '🏳️'; // 未知国旗使用白旗
-  }
-  const code = isoCode.toUpperCase().trim();
-  if (code.length !== 2) {
-    return '🏳️';
-  }
-  // TW使用中国国旗
-  const finalCode = code === 'TW' ? 'CN' : code;
-  try {
-    const codePoints = [...finalCode].map((char) => 0x1f1e6 + char.charCodeAt(0) - 65);
-    return String.fromCodePoint(...codePoints);
-  } catch {
-    return '🏳️';
-  }
-};
-
-// 可用变量定义
 const AVAILABLE_VARIABLES = [
-  { key: '$Protocol', label: '协议', color: '#9c27b0', description: '协议类型 (VMess/VLESS等)' },
-  { key: '$LinkCountry', label: '国家', color: '#2196f3', description: '落地IP国家代码' },
-  { key: '$Flag', label: '国旗', color: '#f44336', description: '落地IP国旗' },
-  { key: '$Name', label: '备注', color: '#4caf50', description: '系统备注名称' },
-  { key: '$LinkName', label: '原名', color: '#ff9800', description: '原始节点名称' },
-  { key: '$SpeedIcon', label: '速度图标', color: '#ec407a', description: '按速度结果输出图标 (🟢🟡🔴/❌⏱️⛔️)' },
-  { key: '$Speed', label: '速度', color: '#e91e63', description: '下载速度' },
-  { key: '$DelayIcon', label: '延迟图标', color: '#26c6da', description: '按延迟结果输出图标 (🟢🟡🔴/❌⏱️⛔️)' },
-  { key: '$Delay', label: '延迟', color: '#00bcd4', description: '延迟时间' },
-  { key: '$IpType', label: 'IP类型', color: '#3f51b5', description: 'IP类型 (原生IP/广播IP)' },
-  { key: '$Residential', label: '住宅属性', color: '#009688', description: '住宅属性 (住宅IP/机房IP)' },
-  { key: '$FraudScoreIcon', label: '欺诈图标', color: '#ff7043', description: '按欺诈评分输出风险图标 (⚪🟢🟡🟠🔴⚫/⛔️)' },
-  { key: '$FraudScore', label: '欺诈评分', color: '#ff5722', description: 'IP欺诈评分' },
-  { key: '$Group', label: '分组', color: '#795548', description: '分组名称' },
-  { key: '$Source', label: '来源', color: '#607d8b', description: '节点来源' },
-  { key: '$Index', label: '序号', color: '#9e9e9e', description: '节点序号' },
-  { key: '$Tags', label: '标签', color: '#673ab7', description: '所有标签(竖线｜分隔)' },
-  { key: '$TagGroup', label: '标签组', color: '#8bc34a', description: '指定标签组中的标签(点击选择标签组)' }
+  { key: '$Protocol', labelKey: 'subscriptions.rename.vars.protocol', color: '#9c27b0', descKey: 'subscriptions.rename.vars.protocolDesc' },
+  {
+    key: '$LinkCountry',
+    labelKey: 'subscriptions.rename.vars.country',
+    color: '#2196f3',
+    descKey: 'subscriptions.rename.vars.countryDesc'
+  },
+  { key: '$Flag', labelKey: 'subscriptions.rename.vars.flag', color: '#f44336', descKey: 'subscriptions.rename.vars.flagDesc' },
+  { key: '$Name', labelKey: 'subscriptions.rename.vars.name', color: '#4caf50', descKey: 'subscriptions.rename.vars.nameDesc' },
+  { key: '$LinkName', labelKey: 'subscriptions.rename.vars.linkName', color: '#ff9800', descKey: 'subscriptions.rename.vars.linkNameDesc' },
+  {
+    key: '$SpeedIcon',
+    labelKey: 'subscriptions.rename.vars.speedIcon',
+    color: '#ec407a',
+    descKey: 'subscriptions.rename.vars.speedIconDesc'
+  },
+  { key: '$Speed', labelKey: 'subscriptions.rename.vars.speed', color: '#e91e63', descKey: 'subscriptions.rename.vars.speedDesc' },
+  {
+    key: '$DelayIcon',
+    labelKey: 'subscriptions.rename.vars.delayIcon',
+    color: '#26c6da',
+    descKey: 'subscriptions.rename.vars.delayIconDesc'
+  },
+  { key: '$Delay', labelKey: 'subscriptions.rename.vars.delay', color: '#00bcd4', descKey: 'subscriptions.rename.vars.delayDesc' },
+  { key: '$IpType', labelKey: 'subscriptions.rename.vars.ipType', color: '#3f51b5', descKey: 'subscriptions.rename.vars.ipTypeDesc' },
+  {
+    key: '$Residential',
+    labelKey: 'subscriptions.rename.vars.residential',
+    color: '#009688',
+    descKey: 'subscriptions.rename.vars.residentialDesc'
+  },
+  {
+    key: '$FraudScoreIcon',
+    labelKey: 'subscriptions.rename.vars.fraudScoreIcon',
+    color: '#ff7043',
+    descKey: 'subscriptions.rename.vars.fraudScoreIconDesc'
+  },
+  {
+    key: '$FraudScore',
+    labelKey: 'subscriptions.rename.vars.fraudScore',
+    color: '#ff5722',
+    descKey: 'subscriptions.rename.vars.fraudScoreDesc'
+  },
+  { key: '$Group', labelKey: 'subscriptions.rename.vars.group', color: '#795548', descKey: 'subscriptions.rename.vars.groupDesc' },
+  { key: '$Source', labelKey: 'subscriptions.rename.vars.source', color: '#607d8b', descKey: 'subscriptions.rename.vars.sourceDesc' },
+  { key: '$Index', labelKey: 'subscriptions.rename.vars.index', color: '#9e9e9e', descKey: 'subscriptions.rename.vars.indexDesc' },
+  { key: '$Tags', labelKey: 'subscriptions.rename.vars.tags', color: '#673ab7', descKey: 'subscriptions.rename.vars.tagsDesc' },
+  { key: '$TagGroup', labelKey: 'subscriptions.rename.vars.tagGroup', color: '#8bc34a', descKey: 'subscriptions.rename.vars.tagGroupDesc' }
 ];
 
-// 快捷分隔符
 const QUICK_SEPARATORS = [
   { key: '-', label: '-' },
   { key: '_', label: '_' },
   { key: '|', label: '|' },
-  { key: ' ', label: '空格' },
+  { key: ' ', labelKey: 'common.space' },
   { key: '[', label: '[' },
   { key: ']', label: ']' },
   { key: '(', label: '(' },
@@ -109,30 +116,28 @@ const getStableAccentFromKey = (key, palette) => {
   return palette[hash % palette.length];
 };
 
-// 预览用的示例数据
 const PREVIEW_DATA = {
-  $Name: '香港节点-备注',
-  $LinkName: '香港01',
-  $LinkCountry: 'HK',
-  $Flag: isoToFlag('HK'),
-  $SpeedIcon: getSpeedIcon(1.5, 'success'),
-  $Speed: '1.50MB/s',
-  $DelayIcon: getDelayIcon(125, 'success'),
-  $Delay: '125ms',
-  $IpType: '原生IP',
-  $Residential: '住宅IP',
-  $FraudScoreIcon: getFraudScoreIcon(12, 'success'),
-  $FraudScore: '12',
-  $Unlock: 'Netflix-解锁-US-+2',
-  $Group: 'Premium',
-  $Source: '机场A',
-  $Index: '1',
   $Protocol: 'VMess',
-  $Tags: '速度优秀|香港节点'
+  $LinkCountry: 'HK',
+  $Flag: '🇭🇰',
+  $Name: 'HK-Node-Remark',
+  $LinkName: 'HK-01',
+  $SpeedIcon: '🟢',
+  $Speed: '12.5MB/s',
+  $DelayIcon: '🟡',
+  $Delay: '125ms',
+  $IpType: 'Native',
+  $Residential: 'Residential',
+  $FraudScoreIcon: '🟢',
+  $FraudScore: '15',
+  $Unlock: 'Netflix-US',
+  $Group: 'VIP',
+  $Source: 'ProviderA',
+  $Index: '01',
+  $Tags: 'Fast|HK'
 };
 
 /**
- * 解析规则字符串为元素数组
  */
 const parseRule = (rule) => {
   if (!rule) return [];
@@ -140,7 +145,6 @@ const parseRule = (rule) => {
   const items = [];
   let id = 0;
 
-  // 匹配普通变量和 $TagGroup(xxx) 格式
   const varRegex =
     /\$(Name|LinkName|LinkCountry|Flag|SpeedIcon|Speed|DelayIcon|Delay|IpType|Residential|FraudScoreIcon|FraudScore|Unlock\([^)]+\)|Unlock|Group|Source|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
 
@@ -148,17 +152,14 @@ const parseRule = (rule) => {
   let lastIndex = 0;
 
   while ((match = varRegex.exec(rule)) !== null) {
-    // 添加变量前的文本（分隔符）
     if (match.index > lastIndex) {
       const sep = rule.substring(lastIndex, match.index);
       items.push({ id: `sep-${id++}`, type: 'separator', value: sep });
     }
-    // 添加变量
     items.push({ id: `var-${id++}`, type: 'variable', value: match[0] });
     lastIndex = match.index + match[0].length;
   }
 
-  // 添加剩余文本
   if (lastIndex < rule.length) {
     items.push({ id: `sep-${id++}`, type: 'separator', value: rule.substring(lastIndex) });
   }
@@ -167,16 +168,15 @@ const parseRule = (rule) => {
 };
 
 /**
- * 将元素数组转换为规则字符串
  */
 const buildRule = (items) => {
   return items.map((item) => item.value).join('');
 };
 
 /**
- * 节点命名规则拖拽构建器
  */
 export default function NodeRenameBuilder({ value, onChange }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { isDark } = useResolvedColorScheme();
@@ -239,7 +239,6 @@ export default function NodeRenameBuilder({ value, onChange }) {
   const [customSeparator, setCustomSeparator] = useState('');
   const [idCounter, setIdCounter] = useState(0);
 
-  // 标签组选择弹窗状态
   const [tagGroupDialogOpen, setTagGroupDialogOpen] = useState(false);
   const [tagGroups, setTagGroups] = useState([]);
   const [tagGroupsLoading, setTagGroupsLoading] = useState(false);
@@ -265,9 +264,9 @@ export default function NodeRenameBuilder({ value, onChange }) {
   );
   const variableSections = useMemo(
     () => [
-      { key: 'basic', label: '基础变量' },
-      { key: 'quality', label: '质量变量' },
-      { key: 'unlock', label: '解锁变量' }
+      { key: 'basic', labelKey: 'subscriptions.rename.categories.basic' },
+      { key: 'quality', labelKey: 'subscriptions.rename.categories.quality' },
+      { key: 'unlock', labelKey: 'subscriptions.rename.categories.unlock' }
     ],
     []
   );
@@ -321,7 +320,6 @@ export default function NodeRenameBuilder({ value, onChange }) {
     }
   };
 
-  // 初始化：从传入的 value 解析规则
   useEffect(() => {
     const items = parseRule(value);
     setRuleItems(items);
@@ -329,7 +327,6 @@ export default function NodeRenameBuilder({ value, onChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 同步规则到父组件
   const syncRule = useCallback(
     (items) => {
       const rule = buildRule(items);
@@ -338,7 +335,6 @@ export default function NodeRenameBuilder({ value, onChange }) {
     [onChange]
   );
 
-  // 打开标签组选择弹窗
   const openTagGroupDialog = async () => {
     setTagGroupDialogOpen(true);
     setTagGroupsLoading(true);
@@ -346,14 +342,13 @@ export default function NodeRenameBuilder({ value, onChange }) {
       const res = await getTagGroups();
       setTagGroups(res.data || []);
     } catch (error) {
-      console.error('获取标签组失败:', error);
+      console.error('Failed to get tag groups:', error);
       setTagGroups([]);
     } finally {
       setTagGroupsLoading(false);
     }
   };
 
-  // 选择标签组
   const handleSelectTagGroup = (groupName) => {
     const varValue = `$TagGroup(${groupName})`;
     const newItem = { id: `var-${idCounter}`, type: 'variable', value: varValue };
@@ -364,9 +359,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
     setTagGroupDialogOpen(false);
   };
 
-  // 添加变量
   const handleAddVariable = (varKey) => {
-    // $TagGroup 需要打开选择弹窗
     if (varKey === '$TagGroup') {
       openTagGroupDialog();
       return;
@@ -378,7 +371,6 @@ export default function NodeRenameBuilder({ value, onChange }) {
     syncRule(newItems);
   };
 
-  // 添加分隔符
   const handleAddSeparator = (sep) => {
     if (!sep) return;
     const newItem = { id: `sep-${idCounter}`, type: 'separator', value: sep };
@@ -389,20 +381,17 @@ export default function NodeRenameBuilder({ value, onChange }) {
     setCustomSeparator('');
   };
 
-  // 删除元素
   const handleRemoveItem = (itemId) => {
     const newItems = ruleItems.filter((item) => item.id !== itemId);
     setRuleItems(newItems);
     syncRule(newItems);
   };
 
-  // 清空所有
   const handleClearAll = () => {
     setRuleItems([]);
     syncRule([]);
   };
 
-  // 拖拽结束
   const onDragEnd = (result) => {
     if (!result.destination) return;
 
@@ -414,7 +403,6 @@ export default function NodeRenameBuilder({ value, onChange }) {
     syncRule(items);
   };
 
-  // 获取变量的颜色
   const getVariableColor = (varKey) => {
     const variable = varKey.startsWith('$TagGroup(')
       ? availableVariables.find((v) => v.key === '$TagGroup')
@@ -422,33 +410,29 @@ export default function NodeRenameBuilder({ value, onChange }) {
     return variable?.color || getSectionAccent(variable?.section);
   };
 
-  // 获取变量的标签
   const getVariableLabel = (varKey) => {
-    // 处理 $TagGroup(xxx) 格式 - 显示为 "标签组:xxx"
     const tagGroupMatch = varKey.match(/\$TagGroup\(([^)]+)\)/);
     if (tagGroupMatch) {
-      return `标签组:${tagGroupMatch[1]}`;
+      return `${t('subscriptions.rename.vars.tagGroup')}:${tagGroupMatch[1]}`;
     }
     const variable = availableVariables.find((v) => v.key === varKey);
-    return variable?.label || varKey;
+    return variable?.labelKey ? t(variable.labelKey) : variable?.label || varKey;
   };
 
   const getVariableTone = (varKey) => getAccentTone(getVariableColor(varKey));
 
-  // 生成预览
   const preview = ruleItems
     .map((item) => {
       if (item.type === 'variable') {
-        // 处理 $TagGroup(xxx) - 预览使用示例标签名
         const tagGroupMatch = item.value.match(/\$TagGroup\(([^)]+)\)/);
         if (tagGroupMatch) {
-          return '速度优秀'; // 示例标签名
+          return 'Fast';
         }
         if (item.value === '$Unlock') {
           return PREVIEW_DATA.$Unlock;
         }
         if (item.value.startsWith('$Unlock(')) {
-          return PREVIEW_DATA[item.value] || '解锁-US';
+          return PREVIEW_DATA[item.value] || 'Unlock-US';
         }
         return PREVIEW_DATA[item.value] || item.value;
       }
@@ -463,26 +447,24 @@ export default function NodeRenameBuilder({ value, onChange }) {
 
   return (
     <Box>
-      {/* 可用变量区 */}
       <Paper elevation={0} sx={sectionPaperSx}>
         <Typography variant="subtitle2" sx={sectionHeaderSx}>
-          🏷️ 可用变量 (点击添加)
+          🏷️ {t('subscriptions.rename.availableVars')}
         </Typography>
-        <Stack spacing={1.5}>
-          {variableSections.map((section, sectionIndex) => {
-            const sectionVariables = availableVariables.filter((item) => item.section === section.key);
+        <Stack spacing={2.5}>
+          {variableSections.map((section) => {
+            const sectionVariables = availableVariables.filter((v) => v.section === section.key);
             if (sectionVariables.length === 0) return null;
             return (
               <Box key={section.key}>
-                {sectionIndex > 0 && <Divider sx={{ mb: 1.5, borderColor: subtleDivider }} />}
-                <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 700, color: secondaryText }}>
-                  {section.label}
+                <Typography variant="caption" sx={{ color: secondaryText, fontWeight: 700, mb: 1, display: 'block' }}>
+                  {t(section.labelKey)}
                 </Typography>
                 <Stack direction="row" flexWrap="wrap" gap={1}>
                   {sectionVariables.map((variable) => (
-                    <Tooltip key={variable.key} title={variable.description} arrow placement="top">
+                    <Tooltip key={variable.key} title={variable.descKey ? t(variable.descKey) : variable.description} arrow placement="top">
                       <Chip
-                        label={`${variable.label} ${variable.key}`}
+                        label={`${variable.labelKey ? t(variable.labelKey) : variable.label} ${variable.key}`}
                         onClick={() => handleAddVariable(variable.key)}
                         sx={buildSectionChipSx(getVariableColor(variable.key))}
                       />
@@ -495,10 +477,9 @@ export default function NodeRenameBuilder({ value, onChange }) {
         </Stack>
       </Paper>
 
-      {/* 分隔符快捷按钮 */}
       <Paper elevation={0} sx={sectionPaperSx}>
         <Typography variant="subtitle2" sx={sectionHeaderSx}>
-          ✂️ 分隔符
+          ✂️ {t('subscriptions.rename.separators')}
         </Typography>
         <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
           <ButtonGroup
@@ -523,14 +504,14 @@ export default function NodeRenameBuilder({ value, onChange }) {
           >
             {QUICK_SEPARATORS.map((sep) => (
               <Button key={sep.key} onClick={() => handleAddSeparator(sep.key)}>
-                {sep.label}
+                {sep.labelKey ? t(sep.labelKey) : sep.label}
               </Button>
             ))}
           </ButtonGroup>
           <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: isMobile ? 0 : 1, mt: isMobile ? 1 : 0 }}>
             <TextField
               size="small"
-              placeholder="自定义"
+              placeholder={t('common.custom')}
               value={customSeparator}
               onChange={(e) => setCustomSeparator(e.target.value)}
               sx={{ width: 90, ...outlinedInputSx }}
@@ -561,7 +542,6 @@ export default function NodeRenameBuilder({ value, onChange }) {
         </Stack>
       </Paper>
 
-      {/* 规则构建区 */}
       <Paper
         elevation={0}
         sx={{
@@ -579,10 +559,10 @@ export default function NodeRenameBuilder({ value, onChange }) {
       >
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 700, color: secondaryText }}>
-            📝 命名规则 (拖拽排序)
+            📝 {t('subscriptions.rename.namingRule')}
           </Typography>
           {ruleItems.length > 0 && (
-            <Tooltip title="清空所有">
+            <Tooltip title={t('common.clearAll')}>
               <IconButton
                 size="small"
                 color="error"
@@ -636,7 +616,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
                       width: '100%'
                     }}
                   >
-                    点击上方变量和分隔符添加到这里
+                    {t('subscriptions.rename.clickToAdd')}
                   </Typography>
                 ) : (
                   ruleItems.map((item, index) => (
@@ -700,7 +680,6 @@ export default function NodeRenameBuilder({ value, onChange }) {
         </DragDropContext>
       </Paper>
 
-      {/* 实时预览 */}
       {ruleItems.length > 0 && (
         <Fade in>
           <Alert
@@ -722,7 +701,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
           >
             <Stack direction="row" alignItems="center" spacing={1}>
               <Typography variant="body2" fontWeight={600}>
-                预览：
+                {t('common.preview')}:
               </Typography>
               <Typography
                 variant="body2"
@@ -738,7 +717,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
                   wordBreak: 'break-all'
                 }}
               >
-                {preview || '(空)'}
+                {preview || `(${t('common.empty')})`}
               </Typography>
             </Stack>
             {qualityVariableKeys.size > 0 && (
@@ -771,7 +750,6 @@ export default function NodeRenameBuilder({ value, onChange }) {
           </Alert>
         </Fade>
       )}
-      {/* 标签组选择弹窗 */}
       <Dialog
         open={tagGroupDialogOpen}
         onClose={() => setTagGroupDialogOpen(false)}
@@ -799,7 +777,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
             borderColor: panelBorder
           }}
         >
-          选择标签组
+          {t('subscriptions.rename.selectTagGroup')}
         </DialogTitle>
         <DialogContent sx={{ pt: 1.5, bgcolor: 'transparent' }}>
           {tagGroupsLoading ? (
@@ -830,7 +808,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
                 boxShadow: insetHighlight
               }}
             >
-              <Typography sx={{ color: secondaryText }}>暂无标签组，请先在标签管理中创建标签组</Typography>
+              <Typography sx={{ color: secondaryText }}>{t('subscriptions.rename.noTagGroup')}</Typography>
             </Box>
           ) : (
             <List

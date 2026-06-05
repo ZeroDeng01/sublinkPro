@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme, alpha, keyframes } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Fab from '@mui/material/Fab';
@@ -84,16 +85,16 @@ const glowPulse = keyframes`
 
 // ==============================|| TIME FORMATTING HELPER ||============================== //
 
-const formatTime = (ms) => {
+const formatTime = (ms, t) => {
   if (ms < 0) return '--';
   const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}秒`;
+  if (seconds < 60) return t('tasks.time.seconds', { count: seconds });
   const minutes = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  if (minutes < 60) return `${minutes}分${secs}秒`;
+  if (minutes < 60) return t('tasks.time.minutesSeconds', { minutes, seconds: secs });
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  return `${hours}时${mins}分`;
+  return t('tasks.time.hoursMinutes', { hours, minutes: mins });
 };
 
 // ==============================|| POSITION STORAGE HELPERS ||============================== //
@@ -124,6 +125,7 @@ const savePosition = (position) => {
 // ==============================|| FAB TASK ITEM ||============================== //
 
 const FabTaskItem = ({ task, currentTime, theme, tokens }) => {
+  const { t } = useTranslation();
   const progress = useMemo(() => {
     if (!task.total || task.total === 0) return 0;
     return Math.round((task.current / task.total) * 100);
@@ -131,7 +133,7 @@ const FabTaskItem = ({ task, currentTime, theme, tokens }) => {
   }, [task.current, task.total]);
 
   const taskConfig = useMemo(() => {
-    const meta = getTaskTypeMeta(task.taskType);
+    const meta = getTaskTypeMeta(task.taskType, t);
     const iconMap = {
       speed_test: SpeedIcon,
       sub_update: CloudSyncIcon,
@@ -144,7 +146,7 @@ const FabTaskItem = ({ task, currentTime, theme, tokens }) => {
       label: meta.label,
       accentColor: meta.color
     };
-  }, [task.taskType]);
+  }, [task.taskType, t]);
 
   const Icon = taskConfig.icon;
   const isCompleted = task.status === 'completed';
@@ -155,17 +157,17 @@ const FabTaskItem = ({ task, currentTime, theme, tokens }) => {
 
     const elapsed = currentTime - task.startTime;
     const progressRatio = task.total > 0 ? task.current / task.total : 0;
-    const elapsedStr = formatTime(elapsed);
+    const elapsedStr = formatTime(elapsed, t);
 
     let remainingStr = null;
     if (progressRatio > 0.05 && progressRatio < 1) {
       const remaining = (elapsed / progressRatio) * (1 - progressRatio);
-      remainingStr = formatTime(remaining);
+      remainingStr = formatTime(remaining, t);
     }
 
     return { elapsedStr, remainingStr };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task.startTime, task.current, task.total, currentTime, isCompleted, isError]);
+  }, [task.startTime, task.current, task.total, currentTime, isCompleted, isError, t]);
 
   const resultDisplay = useMemo(() => {
     if (!task.result) return null;
@@ -173,24 +175,24 @@ const FabTaskItem = ({ task, currentTime, theme, tokens }) => {
     if (task.taskType === 'speed_test' && task.result.speed !== undefined) {
       const speed = task.result.speed;
       const latency = task.result.latency;
-      if (speed === -1) return '测速失败';
-      if (speed === 0) return latency > 0 ? `延迟 ${latency}ms` : null;
+      if (speed === -1) return t('tasks.result.speedTestFailed');
+      if (speed === 0) return latency > 0 ? t('tasks.result.latency', { latency }) : null;
       return `${speed.toFixed(2)} MB/s | ${latency}ms`;
     }
 
     if (task.taskType === 'sub_update') {
       const { added, exists, deleted } = task.result;
       const parts = [];
-      if (added !== undefined) parts.push(`新增 ${added}`);
-      if (exists !== undefined) parts.push(`已存在 ${exists}`);
-      if (deleted !== undefined) parts.push(`删除 ${deleted}`);
+      if (added !== undefined) parts.push(t('tasks.result.added', { count: added }));
+      if (exists !== undefined) parts.push(t('tasks.result.exists', { count: exists }));
+      if (deleted !== undefined) parts.push(t('tasks.result.deleted', { count: deleted }));
       return parts.length > 0 ? parts.join(' · ') : null;
     }
 
     if (task.taskType === 'tag_rule') {
       const { matchedCount, totalCount } = task.result;
       if (matchedCount !== undefined && totalCount !== undefined) {
-        return `匹配 ${matchedCount} / ${totalCount} 节点`;
+        return t('tasks.result.matchedNodes', { matched: matchedCount, total: totalCount });
       }
     }
 
@@ -199,13 +201,15 @@ const FabTaskItem = ({ task, currentTime, theme, tokens }) => {
       const importedKinds = Object.values(imported).filter((count) => Number(count) > 0).length;
       const warnings = task.result.warnings?.length || 0;
       if (importedKinds > 0) {
-        return warnings > 0 ? `导入 ${importedKinds} 类数据 · ${warnings} 条警告` : `导入 ${importedKinds} 类数据`;
+        return warnings > 0
+          ? `${t('tasks.result.importedKinds', { count: importedKinds })} · ${t('tasks.result.warnings', { count: warnings })}`
+          : t('tasks.result.importedKinds', { count: importedKinds });
       }
-      if (warnings > 0) return `${warnings} 条警告`;
+      if (warnings > 0) return t('tasks.result.warnings', { count: warnings });
     }
 
     return null;
-  }, [task.result, task.taskType]);
+  }, [task.result, task.taskType, t]);
 
   return (
     <Box
@@ -303,7 +307,7 @@ const FabTaskItem = ({ task, currentTime, theme, tokens }) => {
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  {isCompleted ? '完成' : isError ? '失败' : `${progress}%`}
+                  {isCompleted ? t('tasks.shortStatus.completed') : isError ? t('tasks.shortStatus.error') : `${progress}%`}
                 </Typography>
               </Box>
 
@@ -320,7 +324,7 @@ const FabTaskItem = ({ task, currentTime, theme, tokens }) => {
                     mb: 0.25
                   }}
                 >
-                  正在处理: {task.currentItem}
+                  {t('tasks.processingItem', { item: task.currentItem })}
                 </Typography>
               )}
 
@@ -367,7 +371,7 @@ const FabTaskItem = ({ task, currentTime, theme, tokens }) => {
                             fontSize: '0.65rem'
                           }}
                         >
-                          · 剩余 ~{timeInfo.remainingStr}
+                          {t('tasks.remainingApprox', { time: timeInfo.remainingStr })}
                         </Typography>
                       )}
                     </Box>
@@ -398,6 +402,7 @@ const FabTaskItem = ({ task, currentTime, theme, tokens }) => {
 // ==============================|| TASK PROGRESS FAB ||============================== //
 
 const TaskProgressFab = () => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const tokens = getTaskCenterTokens(theme, isDark);
@@ -659,10 +664,10 @@ const TaskProgressFab = () => {
                     <Typography sx={{ fontSize: '0.85rem', color: 'inherit' }}>⏳</Typography>
                   </Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '0.9rem', color: tokens.primaryText }}>
-                    任务进度
+                    {t('tasks.progressTitle')}
                   </Typography>
                   <Chip
-                    label={`${taskList.length} 个任务`}
+                    label={t('tasks.taskCount', { count: taskList.length })}
                     size="small"
                     sx={{
                       height: 20,

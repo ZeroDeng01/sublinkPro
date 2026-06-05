@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
@@ -51,6 +52,7 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import MainCard from 'ui-component/cards/MainCard';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getHosts, addHost, updateHost, deleteHost, batchDeleteHosts, exportHosts, syncHosts, pinHost } from 'api/hosts';
+import { formatDateTime } from 'i18n/locales';
 
 import HostSettingsDialog from './component/HostSettingsDialog';
 import ConfirmDialog from 'components/ConfirmDialog';
@@ -60,6 +62,7 @@ import IPDetailsDialog from 'components/IPDetailsDialog';
 
 export default function HostManagement() {
   const theme = useTheme();
+  const { i18n, t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -114,7 +117,7 @@ export default function HostManagement() {
       // 成功（code === 200 时返回，否则被拦截器 reject）
       setHosts(res.data || []);
     } catch (error) {
-      showMessage(error.message || '获取 Host 列表失败', 'error');
+      showMessage(error.message || t('hosts.messages.loadFailed'), 'error');
     } finally {
       if (showRefreshing) setRefreshing(false);
     }
@@ -129,7 +132,7 @@ export default function HostManagement() {
       setTextContent(text);
       setOriginalText(text);
     } catch (error) {
-      showMessage(error.message || '加载文本内容失败', 'error');
+      showMessage(error.message || t('hosts.messages.loadTextFailed'), 'error');
     }
   };
 
@@ -159,9 +162,9 @@ export default function HostManagement() {
       } else {
         await loadTextContent();
       }
-      showMessage('刷新成功');
+      showMessage(t('hosts.messages.refreshSuccess'));
     } catch (error) {
-      showMessage(error.message || '刷新失败', 'error');
+      showMessage(error.message || t('hosts.messages.refreshFailed'), 'error');
     } finally {
       setRefreshing(false);
     }
@@ -191,36 +194,36 @@ export default function HostManagement() {
   };
 
   const handleDelete = async (host) => {
-    openConfirm('确定删除', `确定删除 "${host.hostname}" 吗？`, async () => {
+    openConfirm(t('hosts.confirm.deleteTitle'), t('hosts.confirm.deleteOne', { hostname: host.hostname }), async () => {
       try {
         await deleteHost(host.id);
         // 成功（code === 200 时返回，否则被拦截器 reject）
-        showMessage('删除成功');
+        showMessage(t('hosts.messages.deleteSuccess'));
         fetchHosts();
       } catch (error) {
-        showMessage(error.message || '删除失败', 'error');
+        showMessage(error.message || t('hosts.messages.deleteFailed'), 'error');
       }
     });
   };
 
   const handleBatchDelete = async () => {
     if (selectedIds.length === 0) return;
-    openConfirm('批量删除', `确定删除选中的 ${selectedIds.length} 条记录吗？`, async () => {
+    openConfirm(t('hosts.confirm.batchDeleteTitle'), t('hosts.confirm.batchDelete', { count: selectedIds.length }), async () => {
       try {
         await batchDeleteHosts(selectedIds);
         // 成功（code === 200 时返回，否则被拦截器 reject）
-        showMessage('批量删除成功');
+        showMessage(t('hosts.messages.batchDeleteSuccess'));
         setSelectedIds([]);
         fetchHosts();
       } catch (error) {
-        showMessage(error.message || '批量删除失败', 'error');
+        showMessage(error.message || t('hosts.messages.batchDeleteFailed'), 'error');
       }
     });
   };
 
   const handleSave = async () => {
     if (!formData.hostname || !formData.ip) {
-      showMessage('域名和 IP 不能为空', 'error');
+      showMessage(t('hosts.messages.required'), 'error');
       return;
     }
     try {
@@ -230,11 +233,11 @@ export default function HostManagement() {
         await addHost(formData);
       }
       // 成功（code === 200 时返回，否则被拦截器 reject）
-      showMessage(editingHost ? '更新成功' : '添加成功');
+      showMessage(editingHost ? t('hosts.messages.updateSuccess') : t('hosts.messages.addSuccess'));
       setDialogOpen(false);
       fetchHosts();
     } catch (error) {
-      showMessage(error.message || '操作失败', 'error');
+      showMessage(error.message || t('hosts.messages.operationFailed'), 'error');
     }
   };
 
@@ -260,25 +263,25 @@ export default function HostManagement() {
     try {
       await pinHost(host.id, newPinned);
       // 成功（code === 200 时返回，否则被拦截器 reject）
-      showMessage(newPinned ? '已固定' : '已取消固定');
+      showMessage(newPinned ? t('hosts.messages.pinned') : t('hosts.messages.unpinned'));
       fetchHosts();
     } catch (error) {
-      showMessage(error.message || '操作失败', 'error');
+      showMessage(error.message || t('hosts.messages.operationFailed'), 'error');
     }
   };
 
   // 格式化过期时间显示
   const formatExpireTime = (host) => {
-    if (host.pinned) return '已固定';
-    if (!host.expireAt) return '永不过期';
+    if (host.pinned) return t('hosts.expire.pinned');
+    if (!host.expireAt) return t('hosts.expire.never');
     try {
       const expireDate = new Date(host.expireAt);
       const now = new Date();
-      if (expireDate <= now) return '已过期';
+      if (expireDate <= now) return t('hosts.expire.expired');
       const diffHours = Math.ceil((expireDate - now) / (1000 * 60 * 60));
-      if (diffHours <= 24) return `${diffHours}小时后过期`;
+      if (diffHours <= 24) return t('hosts.expire.hours', { count: diffHours });
       const diffDays = Math.ceil(diffHours / 24);
-      return `${diffDays}天后过期`;
+      return t('hosts.expire.days', { count: diffDays });
     } catch {
       return '-';
     }
@@ -305,12 +308,12 @@ export default function HostManagement() {
       const res = await syncHosts(textContent);
       // 成功（code === 200 时返回，否则被拦截器 reject）
       const { added, updated, deleted } = res.data || {};
-      showMessage(`同步成功：新增 ${added || 0}，更新 ${updated || 0}，删除 ${deleted || 0}`);
+      showMessage(t('hosts.messages.syncSuccess', { added: added || 0, updated: updated || 0, deleted: deleted || 0 }));
       setOriginalText(textContent);
       // 刷新列表以同步状态
       fetchHosts();
     } catch (error) {
-      showMessage(error.message || '同步失败', 'error');
+      showMessage(error.message || t('hosts.messages.syncFailed'), 'error');
     } finally {
       setSyncing(false);
     }
@@ -318,12 +321,12 @@ export default function HostManagement() {
 
   const handleTextReset = () => {
     setTextContent(originalText);
-    showMessage('已还原');
+    showMessage(t('hosts.messages.restored'));
   };
 
   const handleCopyText = () => {
     navigator.clipboard.writeText(textContent).then(() => {
-      showMessage('已复制到剪贴板');
+      showMessage(t('hosts.messages.copied'));
     });
   };
 
@@ -332,18 +335,15 @@ export default function HostManagement() {
   // 格式化日期
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleString('zh-CN', {
+    return (
+      formatDateTime(dateStr, i18n.resolvedLanguage || i18n.language, {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit'
-      });
-    } catch {
-      return dateStr;
-    }
+      }) || dateStr
+    );
   };
 
   // 移动端 Host 卡片
@@ -389,12 +389,12 @@ export default function HostManagement() {
 
             {/* 操作按钮 */}
             <Stack direction="row" spacing={0} sx={{ mt: -0.5, mr: -1 }}>
-              <Tooltip title="编辑">
+              <Tooltip title={t('hosts.actions.edit')}>
                 <IconButton size="small" onClick={() => handleEdit(host)}>
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="删除">
+              <Tooltip title={t('hosts.actions.delete')}>
                 <IconButton size="small" color="error" onClick={() => handleDelete(host)}>
                   <DeleteIcon fontSize="small" />
                 </IconButton>
@@ -457,7 +457,7 @@ export default function HostManagement() {
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Box />
               <Typography variant="caption" color="text.disabled">
-                更新于 {formatDate(host.updatedAt)}
+                {t('hosts.updatedAt', { date: formatDate(host.updatedAt) })}
               </Typography>
             </Stack>
           </Box>
@@ -467,7 +467,7 @@ export default function HostManagement() {
   );
 
   return (
-    <MainCard title="Host 管理">
+    <MainCard title={t('hosts.title')}>
       {/* 顶部工具栏 */}
       <Box sx={{ mb: 2 }}>
         <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" flexWrap="wrap" sx={{ gap: 1 }}>
@@ -494,24 +494,30 @@ export default function HostManagement() {
           >
             <ToggleButton value="table">
               <TableViewIcon sx={{ mr: 0.5, fontSize: isMobile ? '1rem' : '1.25rem' }} />
-              表单模式
+              {t('hosts.mode.form')}
             </ToggleButton>
             <ToggleButton value="text">
               <CodeIcon sx={{ mr: 0.5, fontSize: isMobile ? '1rem' : '1.25rem' }} />
-              文本模式
+              {t('hosts.mode.text')}
             </ToggleButton>
           </ToggleButtonGroup>
 
           <Stack direction="row" spacing={1} alignItems="center">
             {hosts.length > 0 && (
-              <Chip label={`总数: ${hosts.length}`} size="small" variant="outlined" color="primary" sx={{ mr: 1, fontWeight: 500 }} />
+              <Chip
+                label={t('hosts.total', { count: hosts.length })}
+                size="small"
+                variant="outlined"
+                color="primary"
+                sx={{ mr: 1, fontWeight: 500 }}
+              />
             )}
-            <Tooltip title="模块设置">
+            <Tooltip title={t('hosts.actions.settings')}>
               <IconButton onClick={() => setSettingsOpen(true)} color="primary" size="small">
                 <SettingsIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title="刷新">
+            <Tooltip title={t('hosts.actions.refresh')}>
               <IconButton onClick={handleRefresh} disabled={refreshing} color="primary" size="small">
                 {refreshing ? <CircularProgress size={18} /> : <RefreshIcon />}
               </IconButton>
@@ -539,7 +545,7 @@ export default function HostManagement() {
           {/* 搜索和操作栏 */}
           <Box sx={{ mb: 2, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
             <TextField
-              placeholder="搜索域名、IP、备注..."
+              placeholder={t('hosts.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               size="small"
@@ -562,11 +568,11 @@ export default function HostManagement() {
             <Stack direction="row" spacing={1}>
               {selectedIds.length > 0 && (
                 <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleBatchDelete} size="small">
-                  删除 ({selectedIds.length})
+                  {t('hosts.actions.delete')} ({selectedIds.length})
                 </Button>
               )}
               <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd} size={isMobile ? 'small' : 'medium'}>
-                添加
+                {t('hosts.actions.add')}
               </Button>
             </Stack>
           </Box>
@@ -574,7 +580,7 @@ export default function HostManagement() {
           {/* 搜索结果统计 */}
           {search && (
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              找到 {filteredHosts.length} 条匹配结果
+              {t('hosts.matched', { count: filteredHosts.length })}
             </Typography>
           )}
 
@@ -590,7 +596,7 @@ export default function HostManagement() {
                     onChange={handleSelectAll}
                   />
                   <Typography variant="body2" color="text.secondary">
-                    全选
+                    {t('hosts.selectAll')}
                   </Typography>
                 </Box>
               )}
@@ -599,7 +605,7 @@ export default function HostManagement() {
               ))}
               {filteredHosts.length === 0 && (
                 <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-                  {hosts.length === 0 ? '暂无 Host 记录，点击"添加"创建' : '没有找到匹配的结果'}
+                  {hosts.length === 0 ? t('hosts.empty') : t('hosts.noMatch')}
                 </Typography>
               )}
             </Box>
@@ -616,13 +622,13 @@ export default function HostManagement() {
                         onChange={handleSelectAll}
                       />
                     </TableCell>
-                    <TableCell>域名</TableCell>
-                    <TableCell>IP 地址</TableCell>
-                    <TableCell>来源</TableCell>
-                    <TableCell>备注</TableCell>
-                    <TableCell>状态</TableCell>
-                    <TableCell>更新时间</TableCell>
-                    <TableCell align="right">操作</TableCell>
+                    <TableCell>{t('hosts.fields.hostname')}</TableCell>
+                    <TableCell>{t('hosts.fields.ip')}</TableCell>
+                    <TableCell>{t('hosts.fields.source')}</TableCell>
+                    <TableCell>{t('hosts.fields.remark')}</TableCell>
+                    <TableCell>{t('hosts.fields.status')}</TableCell>
+                    <TableCell>{t('hosts.fields.updatedAt')}</TableCell>
+                    <TableCell align="right">{t('hosts.fields.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -689,7 +695,7 @@ export default function HostManagement() {
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
-                        <Tooltip title={host.pinned ? '取消固定' : '固定 (pin住的host不受过期时间影响)'}>
+                        <Tooltip title={host.pinned ? t('hosts.actions.unpin') : t('hosts.actions.pin')}>
                           <IconButton size="small" onClick={() => handlePinHost(host)} color={host.pinned ? 'warning' : 'default'}>
                             {host.pinned ? <PushPinIcon fontSize="small" /> : <PushPinOutlinedIcon fontSize="small" />}
                           </IconButton>
@@ -706,9 +712,7 @@ export default function HostManagement() {
                   {filteredHosts.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                        <Typography color="text.secondary">
-                          {hosts.length === 0 ? '暂无 Host 记录，点击"添加"创建' : '没有找到匹配的结果'}
-                        </Typography>
+                        <Typography color="text.secondary">{hosts.length === 0 ? t('hosts.empty') : t('hosts.noMatch')}</Typography>
                       </TableCell>
                     </TableRow>
                   )}
@@ -723,7 +727,7 @@ export default function HostManagement() {
       {viewMode === 'text' && (
         <Box>
           <Alert severity="info" sx={{ mb: 2 }}>
-            每行一条记录，格式：<code>域名 IP</code> 或 <code>域名 IP # 备注</code>。保存后将与数据库同步（新增、修改、删除）。
+            <Trans i18nKey="hosts.textMode.description" components={{ code: <code /> }} />
           </Alert>
 
           <TextField
@@ -732,7 +736,7 @@ export default function HostManagement() {
             rows={isMobile ? 12 : 18}
             value={textContent}
             onChange={(e) => setTextContent(e.target.value)}
-            placeholder={`# 示例格式：\nexample.com 192.168.1.1\napi.example.com 192.168.1.2 # API 服务器`}
+            placeholder={t('hosts.textMode.placeholder')}
             sx={{
               mb: 2,
               '& .MuiInputBase-root': {
@@ -754,7 +758,7 @@ export default function HostManagement() {
                 fullWidth={isMobile}
                 size={isMobile ? 'medium' : 'medium'}
               >
-                保存同步
+                {t('hosts.actions.saveSync')}
               </Button>
               <Button
                 variant="outlined"
@@ -763,17 +767,17 @@ export default function HostManagement() {
                 disabled={!hasTextChanged}
                 size={isMobile ? 'medium' : 'medium'}
               >
-                还原
+                {t('hosts.actions.restore')}
               </Button>
               <Button variant="text" startIcon={<ContentCopyIcon />} onClick={handleCopyText} size={isMobile ? 'medium' : 'medium'}>
-                复制
+                {t('hosts.actions.copy')}
               </Button>
             </Stack>
           </Stack>
 
           {hasTextChanged && (
             <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>
-              * 内容已修改，请保存同步
+              {t('hosts.textMode.changed')}
             </Typography>
           )}
         </Box>
@@ -781,38 +785,38 @@ export default function HostManagement() {
 
       {/* 添加/编辑对话框 */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingHost ? '编辑 Host' : '添加 Host'}</DialogTitle>
+        <DialogTitle>{editingHost ? t('hosts.dialog.editTitle') : t('hosts.dialog.addTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2}>
             <TextField
-              label="域名"
+              label={t('hosts.fields.hostname')}
               value={formData.hostname}
               onChange={(e) => setFormData({ ...formData, hostname: e.target.value })}
               fullWidth
               placeholder="example.com"
               disabled={!!editingHost}
-              helperText={editingHost ? '域名不可修改' : ''}
+              helperText={editingHost ? t('hosts.dialog.hostnameDisabled') : ''}
             />
             <TextField
-              label="IP 地址"
+              label={t('hosts.fields.ip')}
               value={formData.ip}
               onChange={(e) => setFormData({ ...formData, ip: e.target.value })}
               fullWidth
               placeholder="192.168.1.1"
             />
             <TextField
-              label="备注"
+              label={t('hosts.fields.remark')}
               value={formData.remark}
               onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
               fullWidth
-              placeholder="可选"
+              placeholder={t('hosts.dialog.remarkPlaceholder')}
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>取消</Button>
+          <Button onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
           <Button variant="contained" onClick={handleSave}>
-            {editingHost ? '保存' : '添加'}
+            {editingHost ? t('hosts.actions.save') : t('hosts.actions.add')}
           </Button>
         </DialogActions>
       </Dialog>

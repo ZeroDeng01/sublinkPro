@@ -10,6 +10,7 @@ import ProfileSection from './ProfileSection';
 import NotificationSection from './NotificationSection';
 import DonationSection from './DonationSection';
 import ThemeModeSection from './ThemeModeSection';
+import LanguageSection from './LanguageSection';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getHeaderTriggerTokens } from './headerPopoverTokens';
 import { donationConfig } from 'config/donation';
@@ -79,6 +80,8 @@ export default function Header() {
 
       {/* notification */}
       <NotificationSection />
+
+      <LanguageSection />
 
       <ThemeModeSection />
 

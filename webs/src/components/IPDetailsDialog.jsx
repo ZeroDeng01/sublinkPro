@@ -14,6 +14,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import Tooltip from '@mui/material/Tooltip';
+import { Trans, useTranslation } from 'react-i18next';
 
 // icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -91,6 +92,7 @@ const cacheIPInfo = (ip, data) => {
  * 通过第三方API查询IP详细信息，支持缓存避免重复请求
  */
 export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [ipInfo, setIpInfo] = useState(null);
@@ -144,11 +146,11 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
       setIpInfo(ipData);
     } catch (err) {
       // 业务错误或网络错误都通过 err.message 获取
-      setError(err.message || '查询IP信息失败');
+      setError(err.message || t('components.ipDetails.messages.queryFailed'));
     } finally {
       setLoading(false);
     }
-  }, [ip]);
+  }, [ip, t]);
 
   useEffect(() => {
     if (open && ip) {
@@ -177,13 +179,13 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
       <DialogTitle sx={{ m: 0, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Stack direction="row" spacing={1} alignItems="center">
           <PublicIcon color="primary" />
-          <Typography variant="h6">IP 详情</Typography>
+          <Typography variant="h6">{t('components.ipDetails.title')}</Typography>
           {/* 缓存状态指示 */}
           {fromCache && ipInfo && (
-            <Tooltip title="数据来自缓存，点击刷新获取最新信息">
+            <Tooltip title={t('components.ipDetails.cacheTooltip')}>
               <Chip
                 icon={<CachedIcon sx={{ fontSize: '14px !important' }} />}
-                label="已缓存"
+                label={t('components.ipDetails.cached')}
                 size="small"
                 variant="outlined"
                 color="success"
@@ -204,7 +206,7 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
             </Tooltip>
           )}
         </Stack>
-        <IconButton aria-label="close" onClick={onClose} size="small">
+        <IconButton aria-label={t('common.close')} onClick={onClose} size="small">
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -214,11 +216,12 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
         <Box sx={{ mb: 2, p: 1.5, bgcolor: 'info.lighter', borderRadius: 1, border: '1px solid', borderColor: 'info.light' }}>
           <Typography variant="caption" color="info.main" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <span>ℹ️</span>
-            IP信息由{' '}
-            <Link href="http://ip-api.com" target="_blank" rel="noopener noreferrer" sx={{ fontWeight: 'bold' }}>
-              ip-api.com
-            </Link>{' '}
-            提供（免费服务，数据仅供参考）
+            <Trans
+              i18nKey="components.ipDetails.sourceNotice"
+              components={{
+                link: <Link href="http://ip-api.com" target="_blank" rel="noopener noreferrer" sx={{ fontWeight: 'bold' }} />
+              }}
+            />
           </Typography>
         </Box>
 
@@ -241,7 +244,7 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
                 {ip || '-'}
               </Typography>
             </Stack>
-            <IconButton size="small" onClick={handleCopy} title="复制IP">
+            <IconButton size="small" onClick={handleCopy} title={t('components.ipDetails.copyIp')}>
               <ContentCopyIcon fontSize="small" />
             </IconButton>
           </Stack>
@@ -261,7 +264,7 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
               {error}
             </Typography>
             <Link href={`https://ipinfo.io/${ip}`} target="_blank" rel="noopener noreferrer" sx={{ fontSize: '0.875rem' }}>
-              在 ipinfo.io 查看 →
+              {t('components.ipDetails.links.viewOnIpinfo')}
             </Link>
           </Box>
         )}
@@ -274,14 +277,14 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <LocationOnIcon color="secondary" fontSize="small" />
                 <Typography variant="subtitle2" color="textSecondary">
-                  位置信息
+                  {t('components.ipDetails.sections.location')}
                 </Typography>
               </Stack>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Chip label={ipInfo.country || '未知'} size="small" color="primary" variant="outlined" />
-                <Chip label={ipInfo.regionName || ipInfo.region || '未知'} size="small" variant="outlined" />
-                <Chip label={ipInfo.city || '未知'} size="small" variant="outlined" />
-                {ipInfo.zip && <Chip label={`邮编: ${ipInfo.zip}`} size="small" variant="outlined" />}
+                <Chip label={ipInfo.country || t('common.unknown')} size="small" color="primary" variant="outlined" />
+                <Chip label={ipInfo.regionName || ipInfo.region || t('common.unknown')} size="small" variant="outlined" />
+                <Chip label={ipInfo.city || t('common.unknown')} size="small" variant="outlined" />
+                {ipInfo.zip && <Chip label={t('components.ipDetails.fields.zip', { zip: ipInfo.zip })} size="small" variant="outlined" />}
               </Stack>
             </Box>
 
@@ -290,7 +293,7 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 <BusinessIcon color="info" fontSize="small" />
                 <Typography variant="subtitle2" color="textSecondary">
-                  运营商信息
+                  {t('components.ipDetails.sections.provider')}
                 </Typography>
               </Stack>
               <Stack spacing={0.5}>
@@ -301,7 +304,7 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
                 )}
                 {ipInfo.org && (
                   <Typography variant="body2">
-                    <strong>组织:</strong> {ipInfo.org}
+                    <strong>{t('components.ipDetails.fields.organization')}:</strong> {ipInfo.org}
                   </Typography>
                 )}
                 {ipInfo.as && (
@@ -316,17 +319,17 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
             {(ipInfo.timezone || (ipInfo.lat && ipInfo.lon)) && (
               <Box>
                 <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1 }}>
-                  其他信息
+                  {t('components.ipDetails.sections.other')}
                 </Typography>
                 <Stack spacing={0.5}>
                   {ipInfo.timezone && (
                     <Typography variant="body2">
-                      <strong>时区:</strong> {ipInfo.timezone}
+                      <strong>{t('components.ipDetails.fields.timezone')}:</strong> {ipInfo.timezone}
                     </Typography>
                   )}
                   {ipInfo.lat && ipInfo.lon && (
                     <Typography variant="body2">
-                      <strong>坐标:</strong> {ipInfo.lat}, {ipInfo.lon}
+                      <strong>{t('components.ipDetails.fields.coordinates')}:</strong> {ipInfo.lat}, {ipInfo.lon}
                     </Typography>
                   )}
                 </Stack>
@@ -337,13 +340,13 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
             <Box sx={{ pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
               <Stack direction="row" spacing={2}>
                 <Link href={`https://ipinfo.io/${ip}`} target="_blank" rel="noopener noreferrer" sx={{ fontSize: '0.75rem' }}>
-                  ipinfo.io 详情 →
+                  {t('components.ipDetails.links.ipinfoDetails')}
                 </Link>
                 <Link href={`https://bgp.he.net/ip/${ip}`} target="_blank" rel="noopener noreferrer" sx={{ fontSize: '0.75rem' }}>
-                  BGP 查询 →
+                  {t('components.ipDetails.links.bgpLookup')}
                 </Link>
                 <Link href={`https://ippure.com/?ip=${ip}`} target="_blank" rel="noopener noreferrer" sx={{ fontSize: '0.75rem' }}>
-                  IP Pure 详情 →
+                  {t('components.ipDetails.links.ipPureDetails')}
                 </Link>
               </Stack>
             </Box>

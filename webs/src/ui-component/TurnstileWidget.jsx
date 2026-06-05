@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { getTurnstileLanguage } from 'i18n/locales';
 
 // Cloudflare Turnstile 脚本 URL
 const TURNSTILE_SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
@@ -16,6 +18,7 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
   { siteKey, onVerify, onError, onExpire, onLoad, showSuccessMessage = true },
   ref
 ) {
+  const { t, i18n } = useTranslation();
   const widgetIdRef = useRef(null);
   const renderedRef = useRef(false);
   const [containerEl, setContainerEl] = useState(null);
@@ -126,7 +129,7 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
           if (callbacksRef.current.onExpire) callbacksRef.current.onExpire();
         },
         theme: 'auto',
-        language: 'zh-CN'
+        language: getTurnstileLanguage(i18n.resolvedLanguage || i18n.language)
       });
       renderedRef.current = true;
       // 触发加载完成回调
@@ -147,7 +150,7 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
         }
       }
     };
-  }, [scriptReady, containerEl, siteKey]);
+  }, [scriptReady, containerEl, siteKey, i18n.resolvedLanguage, i18n.language]);
 
   // 验证通过
   if (isVerified && showSuccessMessage) {
@@ -155,7 +158,7 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 1.5, gap: 0.5 }}>
         <CheckCircleOutlineIcon color="success" fontSize="small" />
         <Typography variant="body2" color="success.main" fontWeight={500}>
-          人机验证已通过
+          {t('turnstile.widgetSuccess')}
         </Typography>
       </Box>
     );
@@ -171,7 +174,7 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 2 }}>
         <Typography variant="body2" color="error.main">
-          人机验证加载失败，请刷新页面重试
+          {t('turnstile.widgetError')}
         </Typography>
       </Box>
     );
@@ -184,7 +187,7 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CircularProgress size={20} />
           <Typography variant="body2" color="text.secondary">
-            正在加载人机验证...
+            {t('turnstile.widgetLoading')}
           </Typography>
         </Box>
       ) : (

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Grid from '@mui/material/Grid';
@@ -17,60 +18,25 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from 'utils/colorUtils';
 import MainCard from 'ui-component/cards/MainCard';
 
-const copyByLocale = {
-  en: {
-    title: 'THEME MODE',
-    options: {
-      system: {
-        label: 'System',
-        description: 'Follow your OS appearance automatically.'
-      },
-      light: {
-        label: 'Light',
-        description: 'Use the bright workspace color scheme.'
-      },
-      dark: {
-        label: 'Dark',
-        description: 'Use the dark workspace color scheme.'
-      }
-    }
-  },
-  zh: {
-    title: '主题模式',
-    options: {
-      system: {
-        label: '跟随系统',
-        description: '自动跟随当前设备的外观设置。'
-      },
-      light: {
-        label: '浅色模式',
-        description: '使用明亮的工作区配色。'
-      },
-      dark: {
-        label: '深色模式',
-        description: '使用深色的工作区配色。'
-      }
-    }
-  }
-};
-
 const modeIcons = {
   system: SettingsBrightnessOutlinedIcon,
   light: LightModeOutlinedIcon,
   dark: DarkModeOutlinedIcon
 };
 
-export default function ThemeModeSelector({ locale = 'en', title, description, sx }) {
+export default function ThemeModeSelector({ title, description, sx }) {
   const theme = useTheme();
   const { mode, setMode } = useColorScheme();
   const { isDark } = useResolvedColorScheme();
+  const { t } = useTranslation();
   const palette = theme.vars?.palette || theme.palette;
-  const content = copyByLocale[locale] || copyByLocale.en;
   const selectedMode = mode || DEFAULT_THEME_MODE;
-  const resolvedTitle = title === undefined ? content.title : title;
+  const resolvedTitle = title === undefined ? t('theme.title') : title;
+
   const options = ['system', 'light', 'dark'].map((value) => ({
     value,
-    ...content.options[value],
+    label: t(`theme.${value}`),
+    description: t(`theme.${value}Desc`),
     icon: modeIcons[value]
   }));
 
@@ -146,7 +112,6 @@ export default function ThemeModeSelector({ locale = 'en', title, description, s
 }
 
 ThemeModeSelector.propTypes = {
-  locale: PropTypes.oneOf(['en', 'zh']),
   title: PropTypes.node,
   description: PropTypes.node,
   sx: PropTypes.object

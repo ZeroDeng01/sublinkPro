@@ -7,6 +7,7 @@ import TextField from '@mui/material/TextField';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 可搜索的节点选择组件
@@ -19,14 +20,15 @@ export default function SearchableNodeSelect({
   onChange,
   displayField = 'Name',
   valueField = 'Link',
-  label = '选择节点',
-  placeholder = '搜索节点...',
+  label,
+  placeholder,
   helperText = '',
   freeSolo = false,
   limit = 50,
   disabled = false,
   ...props
 }) {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState('');
 
   // 获取初始显示的节点（前N个）
@@ -116,7 +118,7 @@ export default function SearchableNodeSelect({
         }
         return option[valueField] === value[valueField];
       }}
-      noOptionsText={inputValue ? '未找到匹配的节点' : '输入关键词搜索节点'}
+      noOptionsText={inputValue ? t('components.searchableNodeSelect.noMatch') : t('components.searchableNodeSelect.searchPrompt')}
       ListboxProps={{
         sx: {
           maxHeight: 300,
@@ -136,10 +138,10 @@ export default function SearchableNodeSelect({
             <Box component="li" {...props} key={option.ID || option[valueField]}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                 <Typography variant="body2" noWrap sx={{ maxWidth: '60%' }}>
-                  {option[displayField] || '未知'}
+                  {option[displayField] || t('common.unknown')}
                 </Typography>
                 <Typography variant="caption" color="textSecondary" sx={{ ml: 2 }}>
-                  {option.Group || '未分组'}
+                  {option.Group || t('components.searchableNodeSelect.ungrouped')}
                 </Typography>
               </Box>
             </Box>
@@ -156,7 +158,7 @@ export default function SearchableNodeSelect({
                 }}
               >
                 <Typography variant="caption" color="primary" sx={{ fontWeight: 500 }}>
-                  💡 还有 {hiddenCount} 个节点未显示，请输入关键词搜索
+                  {t('components.searchableNodeSelect.hiddenHint', { count: hiddenCount })}
                 </Typography>
               </Box>
             )}
@@ -166,13 +168,13 @@ export default function SearchableNodeSelect({
       renderInput={(params) => (
         <TextField
           {...params}
-          label={label}
-          placeholder={placeholder}
+          label={label || t('components.searchableNodeSelect.label')}
+          placeholder={placeholder || t('components.searchableNodeSelect.placeholder')}
           helperText={
             helperText ||
             (hasMoreNodes ? (
               <Typography component="span" variant="caption" color="primary" sx={{ fontWeight: 500 }}>
-                ⚠️ 仅显示前 {limit} 个节点（共 {nodes.length} 个），输入关键词搜索更多
+                {t('components.searchableNodeSelect.limitHint', { limit, total: nodes.length })}
               </Typography>
             ) : (
               ''

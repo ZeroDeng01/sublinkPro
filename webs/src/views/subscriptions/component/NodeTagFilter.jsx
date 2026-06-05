@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 import Autocomplete from '@mui/material/Autocomplete';
@@ -22,6 +23,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import BlockIcon from '@mui/icons-material/Block';
 
 export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistValue, onWhitelistChange, onBlacklistChange }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
@@ -158,13 +160,13 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
         <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0, flex: 1 }}>
           <LocalOfferIcon color="primary" fontSize="small" />
           <Typography variant="subtitle2" fontWeight={600} sx={{ color: primaryText }}>
-            节点标签过滤
+            {t('subscriptions.nodeTagFilter.title')}
           </Typography>
           {hasAnyRules && (
             <Chip
               size="small"
               variant="outlined"
-              label={`白 ${whitelistTags.length} / 黑 ${blacklistTags.length}`}
+              label={t('subscriptions.nodeTagFilter.summary', { whitelist: whitelistTags.length, blacklist: blacklistTags.length })}
               sx={{
                 height: 22,
                 color: tertiaryText,
@@ -183,13 +185,12 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
         <Box sx={{ px: 2.25, py: 2.25, bgcolor: dialogSurface, backgroundImage: contentSurface }}>
           <Stack spacing={2.25}>
             <Typography variant="body2" sx={{ color: secondaryText }}>
-              直接复用节点标签体系控制订阅输出，适合把已有标签规则接到白名单和黑名单过滤上。
+              {t('subscriptions.nodeTagFilter.description')}
             </Typography>
 
             <Alert variant="outlined" severity="info" sx={infoAlertSx}>
               <Typography variant="body2" sx={{ color: secondaryText }}>
-                按节点标签过滤。<strong>黑名单优先级高于白名单</strong>
-                ：匹配黑名单标签的节点会被排除，然后必须匹配白名单标签的节点才会保留。
+                <Trans i18nKey="subscriptions.nodeTagFilter.priorityHint" components={{ strong: <strong /> }} />
               </Typography>
             </Alert>
 
@@ -198,7 +199,7 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
                 <Stack direction="row" alignItems="center" spacing={1}>
                   <CheckCircleOutlineIcon color="success" fontSize="small" />
                   <Typography variant="subtitle2" fontWeight={600} sx={{ color: theme.palette.success.main }}>
-                    白名单标签
+                    {t('subscriptions.nodeTagFilter.whitelist')}
                   </Typography>
                 </Stack>
                 <Autocomplete
@@ -225,10 +226,12 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
                     })
                   }
                   renderOption={renderOption}
-                  renderInput={(params) => <TextField {...params} placeholder="选择白名单标签（节点必须包含其中一个标签）" size="small" />}
+                  renderInput={(params) => (
+                    <TextField {...params} placeholder={t('subscriptions.nodeTagFilter.whitelistPlaceholder')} size="small" />
+                  )}
                 />
                 <Typography variant="caption" sx={{ color: secondaryText }}>
-                  节点必须包含白名单中的至少一个标签才会被保留。
+                  {t('subscriptions.nodeTagFilter.whitelistHelper')}
                 </Typography>
               </Stack>
             </Box>
@@ -238,7 +241,7 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
                 <Stack direction="row" alignItems="center" spacing={1}>
                   <BlockIcon color="error" fontSize="small" />
                   <Typography variant="subtitle2" fontWeight={600} sx={{ color: theme.palette.error.main }}>
-                    黑名单标签
+                    {t('subscriptions.nodeTagFilter.blacklist')}
                   </Typography>
                 </Stack>
                 <Autocomplete
@@ -266,11 +269,11 @@ export default function NodeTagFilter({ tagOptions, whitelistValue, blacklistVal
                   }
                   renderOption={renderOption}
                   renderInput={(params) => (
-                    <TextField {...params} placeholder="选择黑名单标签（包含这些标签的节点将被排除）" size="small" />
+                    <TextField {...params} placeholder={t('subscriptions.nodeTagFilter.blacklistPlaceholder')} size="small" />
                   )}
                 />
                 <Typography variant="caption" sx={{ color: secondaryText }}>
-                  包含黑名单标签的节点会被排除。
+                  {t('subscriptions.nodeTagFilter.blacklistHelper')}
                 </Typography>
               </Stack>
             </Box>
