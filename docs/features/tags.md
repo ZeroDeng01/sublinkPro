@@ -1,120 +1,123 @@
-# 智能标签系统
+English | [简体中文](tags.zh-CN.md)
 
-SublinkPro 的自动标签系统是本项目最强大的功能之一，让节点管理从「手动编辑」升级为「规则驱动」。
+# Smart Tag System
+
+SublinkPro's automatic tag system is one of its most powerful features. It upgrades node management from “manual editing” to “rule driven”.
 
 ---
 
-## 💡 核心优势
+## 💡 Core Benefits
 
-| 优势 | 说明 |
+| Benefit | Description |
 |:---|:---|
-| **🚫 零代码筛选** | 通过标签规则给节点打标签后，订阅可直接使用标签进行复杂条件筛选，**无需编写任何代码或脚本** |
-| **🔄 动态自动化** | 标签随节点状态自动更新，例如测速后延迟变高的节点会自动从「低延迟」标签中移除 |
-| **📊 多维度分类** | 支持按延迟、速度、国家、协议、来源、节点名、IP 质量等多种条件组合打标签 |
-| **🎛️ 灵活运算符** | 支持等于、包含、大于、小于、正则匹配等丰富的条件运算符 |
-| **♻️ 互斥组管理** | 同一互斥组内的标签自动替换，确保节点分类唯一且清晰 |
+| **🚫 No code filtering** | After tag rules apply tags to nodes, subscriptions can use tags for complex filtering with **no code or scripts required** |
+| **🔄 Dynamic automation** | Tags update automatically with node state, for example high latency nodes are removed from a “low latency” tag after tests |
+| **📊 Multi dimensional classification** | Combine conditions such as latency, speed, country, protocol, source, node name, and IP quality |
+| **🎛️ Flexible operators** | Supports equals, contains, greater than, less than, regex match, and more |
+| **♻️ Mutually exclusive groups** | Tags in the same exclusive group replace each other automatically, keeping node classification unique and clear |
 
 ---
 
-## 📋 使用场景示例
+## 📋 Example Use Cases
 
-```
-场景一：按延迟分级
-├── 规则：延迟 < 100ms → 标签「⚡极速」
-├── 规则：延迟 100-300ms → 标签「✅正常」
-└── 规则：延迟 > 300ms → 标签「🐌较慢」
+```text
+Case 1: Grade by latency
+├── Rule: latency < 100ms -> tag “⚡Fastest”
+├── Rule: latency 100-300ms -> tag “✅Normal”
+└── Rule: latency > 300ms -> tag “🐌Slow”
 
-场景二：按地区分类
-├── 规则：国家 = 香港 → 标签「🇭🇰香港」
-├── 规则：国家 = 日本 → 标签「🇯🇵日本」
-└── 规则：国家 = 美国 → 标签「🇺🇸美国」
+Case 2: Classify by region
+├── Rule: country = Hong Kong -> tag “🇭🇰Hong Kong”
+├── Rule: country = Japan -> tag “🇯🇵Japan”
+└── Rule: country = United States -> tag “🇺🇸United States”
 
-场景三：按 IP 质量分层
-├── 规则：住宅属性 = 住宅IP → 标签「🏠住宅」
-├── 规则：IP 类型 = 原生IP → 标签「🌐原生」
-└── 规则：欺诈评分 <= 30 → 标签「✅低风险」
+Case 3: Layer by IP quality
+├── Rule: residential attribute = residential IP -> tag “🏠Residential”
+├── Rule: IP type = native IP -> tag “🌐Native”
+└── Rule: fraud score <= 30 -> tag “✅Low risk”
 
-场景四：订阅筛选（无需编码！）
-├── 订阅A：标签白名单 = 「⚡极速」「🇭🇰香港」→ 只返回香港极速节点
-└── 订阅B：标签黑名单 = 「🐌较慢」→ 排除所有慢速节点
+Case 4: Subscription filtering, no code
+├── Subscription A: tag allowlist = “⚡Fastest” “🇭🇰Hong Kong” -> only fast Hong Kong nodes
+└── Subscription B: tag blocklist = “🐌Slow” -> exclude all slow nodes
 ```
 
 ---
 
-## 标签互斥组
+## Mutually Exclusive Tag Groups
 
 > [!TIP]
-> **标签互斥组使用场景**：创建「优秀」、「良好」、「差」三个标签并设为同组「速度评级」，测速时节点只会保留最新的评级，避免标签堆积。
+> **Use case**: Create “Excellent”, “Good”, and “Poor” tags in the same group “Speed rating”. After speed tests, a node keeps only the latest rating, preventing tag buildup.
 
-互斥组确保同一组内的标签在同一节点上只保留一个。当新标签被匹配时，同组的旧标签会被自动移除。
+Exclusive groups ensure that only one tag from the same group remains on a node. When a new tag matches, old tags in the same group are removed automatically.
 
-**适用场景：**
-- 速度评级（优/良/差）
-- 延迟分级（极速/正常/较慢）
-- 稳定性评级（稳定/不稳定）
+**Suitable for:**
+
+- Speed rating, excellent / good / poor
+- Latency level, fastest / normal / slow
+- Stability rating, stable / unstable
 
 ---
 
-## 标签规则配置
+## Tag Rule Configuration
 
-在「标签管理」页面，您可以为每个标签设置自动匹配规则：
+On the “Tag Management” page, each tag can have automatic matching rules.
 
-### 支持的条件字段
+### Supported condition fields
 
-| 字段 | 说明 |
+| Field | Description |
 |:---|:---|
-| 节点名称 | 节点的显示名称 |
-| 国家/地区 | 节点的落地位置 |
-| 协议类型 | ss/ssr/vmess/vless/trojan 等 |
-| 延迟(ms) | 节点延迟测试结果 |
-| 速度(MB/s) | 节点速度测试结果 |
-| 欺诈评分 | 0-100，分值越低风险越低 |
-| IP 类型 | 原生IP / 广播IP / 未检测 |
-| 住宅属性 | 住宅IP / 机房IP / 未检测 |
-| 解锁 Provider | 节点主解锁项对应的服务，如 Netflix / OpenAI / Gemini |
-| 解锁状态 | 解锁 / 部分 / 直连 / 受限 / 不支持 / 未知 / 异常 / 未测 |
-| 解锁关键词 | 在解锁结果中按 Provider、状态、地区、原因、细节做模糊匹配 |
-| 解锁摘要 | 节点的紧凑解锁摘要，适合做字符串匹配 |
-| 来源机场 | 节点所属的机场订阅 |
+| Node name | Node display name |
+| Country/region | Node landing location |
+| Protocol type | ss/ssr/vmess/vless/trojan and others |
+| Latency, ms | Node latency test result |
+| Speed, MB/s | Node speed test result |
+| Fraud score | 0-100, lower is lower risk |
+| IP type | Native IP / broadcast IP / untested |
+| Residential attribute | Residential IP / data center IP / untested |
+| Unlock Provider | Service for the node's primary unlock result, such as Netflix / OpenAI / Gemini |
+| Unlock status | Available / partial / reachable / restricted / unsupported / unknown / error / untested |
+| Unlock keyword | Fuzzy match Provider, status, region, reason, and details in unlock results |
+| Unlock summary | Compact node unlock summary, useful for string matching |
+| Source airport | Airport subscription that owns the node |
 
 > [!NOTE]
-> `解锁 Provider` 和 `解锁状态` 的可选值由后端动态下发。新增 unlock checker 后，标签规则中的相关下拉选项会自动更新，无需前端再手动补枚举。
+> Values for `Unlock Provider` and `Unlock status` are delivered dynamically by the backend. After adding an unlock checker, related dropdown options in tag rules update automatically without adding frontend enums manually.
 
-### 支持的运算符
+### Supported operators
 
-| 运算符 | 说明 |
+| Operator | Description |
 |:---|:---|
-| 等于 | 精确匹配 |
-| 不等于 | 排除匹配 |
-| 包含 | 部分匹配（字符串） |
-| 不包含 | 排除部分匹配 |
-| 大于 | 数值比较 |
-| 小于 | 数值比较 |
-| 正则匹配 | 使用正则表达式 |
-| 大于等于 | 数值比较 |
-| 小于等于 | 数值比较 |
+| Equals | Exact match |
+| Not equals | Exclude exact match |
+| Contains | Partial string match |
+| Does not contain | Exclude partial match |
+| Greater than | Numeric comparison |
+| Less than | Numeric comparison |
+| Regex match | Use a regular expression |
+| Greater than or equal | Numeric comparison |
+| Less than or equal | Numeric comparison |
 
 > [!TIP]
-> **枚举字段建议**：`IP 类型` 和 `住宅属性` 属于枚举字段，推荐使用「等于 / 不等于」进行匹配；`欺诈评分` 则适合使用大于、小于、大于等于、小于等于进行分层。
+> **Enum field advice**: `IP type` and `Residential attribute` are enum fields. Prefer equals / not equals. `Fraud score` is better suited for greater than, less than, greater than or equal, and less than or equal.
 
-### 典型规则示例
+### Typical rule examples
 
-| 目标标签 | 推荐条件 |
+| Target tag | Recommended condition |
 |:---|:---|
-| `低风险` | 欺诈评分 `<= 30` |
-| `住宅` | 住宅属性 `= 住宅IP` |
-| `原生` | IP 类型 `= 原生IP` |
-| `待补测` | IP 类型 `= 未检测` |
-| `OpenAI解锁` | 解锁 Provider `= openai` 且 解锁状态 `= 解锁` |
-| `AI直连` | 解锁关键词 `包含 Gemini` 或 `包含 OpenAI` |
+| `Low risk` | Fraud score `<= 30` |
+| `Residential` | Residential attribute `= Residential IP` |
+| `Native` | IP type `= Native IP` |
+| `Needs retest` | IP type `= Untested` |
+| `OpenAI available` | Unlock Provider `= openai` and unlock status `= available` |
+| `AI reachable` | Unlock keyword `contains Gemini` or `contains OpenAI` |
 
 ---
 
-## 订阅中使用标签
+## Use Tags in Subscriptions
 
-创建订阅时，可以设置：
+When creating a subscription, you can set:
 
-- **标签白名单**：只包含拥有指定标签的节点
-- **标签黑名单**：排除拥有指定标签的节点
+- **Tag allowlist**: include only nodes with specified tags
+- **Tag blocklist**: exclude nodes with specified tags
 
-白名单和黑名单可以组合使用，系统会先应用白名单筛选，再排除黑名单中的节点。
+Allowlist and blocklist can be combined. The system applies the allowlist first, then excludes blocklisted nodes.

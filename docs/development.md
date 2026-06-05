@@ -1,96 +1,98 @@
-# 开发指南
+English | [简体中文](development.zh-CN.md)
 
-欢迎参与 SublinkPro 的开发。本指南聚焦于：
+# Development Guide
 
-- 如何在本地跑通前后端开发环境
-- 生产构建链路实际是什么
-- 哪些文件/目录是高价值入口
-- 解锁检测相关扩展点在哪里
+Welcome to SublinkPro development. This guide focuses on:
+
+- How to run the backend and frontend locally
+- What the production build flow actually does
+- Which files and directories are high value entry points
+- Where unlock check extension points live
 
 ---
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```text
 sublinkPro/
 ├── api/                     # HTTP API / controller
-├── models/                  # 数据模型、持久化、迁移
-├── services/                # 业务服务与后台子系统
-│   ├── scheduler/           # 定时任务与任务调度
-│   ├── mihomo/              # mihomo 集成（测速、DNS、Host、代理出站等）
-│   └── unlock/              # 解锁检测注册表、运行时、checker
-├── routers/                 # 路由注册
-├── node/                    # 订阅与协议解析/转换逻辑
-├── utils/                   # 通用工具函数
-├── database/                # 数据库连接与方言支持
-├── cache/                   # 缓存层
-├── dto/                     # DTO / 表单结构
-├── webs/                    # React + Vite 前端
+├── models/                  # Data models, persistence, migrations
+├── services/                # Business services and background subsystems
+│   ├── scheduler/           # Scheduled tasks and task scheduler
+│   ├── mihomo/              # mihomo integration, speed test, DNS, Host, proxied outbound
+│   └── unlock/              # Unlock registry, runtime, checker modules
+├── routers/                 # Route registration
+├── node/                    # Subscription and protocol parsing/conversion
+├── utils/                   # Shared helpers
+├── database/                # Database connection and dialect support
+├── cache/                   # Cache layer
+├── dto/                     # DTO / form structures
+├── webs/                    # React + Vite frontend
 │   └── src/
-│       ├── api/            # 前端请求边界
-│       ├── views/          # 页面级功能
-│       ├── components/     # 公共组件
-│       ├── utils/          # 前端通用工具
-│       ├── themes/         # 主题与 MUI overrides
-│       └── routes/         # 路由定义
-├── template/                # 模板文件
-├── docs/                    # 文档
-├── static/                  # 生产构建时前端产物放置目录
-├── main.go                  # 应用入口
-├── Dockerfile               # Docker 构建
+│       ├── api/            # Frontend request boundary
+│       ├── views/          # Page level features
+│       ├── components/     # Shared components
+│       ├── utils/          # Frontend helpers
+│       ├── themes/         # Theme and MUI overrides
+│       └── routes/         # Route definitions
+├── template/                # Template files
+├── docs/                    # Documentation
+├── static/                  # Frontend build assets for production builds
+├── main.go                  # Application entry
+├── Dockerfile               # Docker build
 └── README.md
 ```
 
 ---
 
-## 🔧 技术栈
+## 🔧 Tech Stack
 
-| 层级 | 技术 |
+| Layer | Technology |
 |:---|:---|
-| 后端框架 | Go + Gin |
+| Backend framework | Go + Gin |
 | ORM | GORM |
-| 数据库 | SQLite（默认）/ MySQL / PostgreSQL |
-| 前端框架 | React 19 + Vite |
+| Database | SQLite, default / MySQL / PostgreSQL |
+| Frontend framework | React 19 + Vite |
 | UI | Material UI |
-| 前端包管理 | Yarn 4 |
-| 调度 | robfig/cron |
+| Frontend package manager | Yarn 4 |
+| Scheduler | robfig/cron |
 
 ---
 
-## 💻 本地开发
+## 💻 Local Development
 
-### 1. 克隆项目
+### 1. Clone the project
 
 ```bash
 git clone https://github.com/ZeroDeng01/sublinkPro.git
 cd sublinkPro
 ```
 
-### 2. 后端开发
+### 2. Backend development
 
-建议使用 **Go 1.26.3** 或更高版本，与仓库、Docker 和 CI 保持一致。
+Go **1.26.3** or newer is recommended, matching the repository, Docker, and CI.
 
 ```bash
 go mod download
 go run main.go
 ```
 
-默认后端监听 `:8000`。
+The backend listens on `:8000` by default.
 
-### 3. 前端开发
+### 3. Frontend development
 
-在 `webs/` 下执行：
+Run under `webs/`:
 
 ```bash
 yarn install
 yarn run start
 ```
 
-Vite 默认开发端口为 `3000`，并通过 `/api` 代理后端请求。
+The default Vite dev port is `3000`, with `/api` proxied to the backend.
 
-### 4. 前端校验
+### 4. Frontend validation
 
-在 `webs/` 下执行：
+Run under `webs/`:
 
 ```bash
 yarn run lint
@@ -99,14 +101,14 @@ yarn run lint:fix
 yarn run prettier
 ```
 
-前端开发完成后必须至少运行 `yarn run lint`；涉及构建产物、资源路径、路由、base-path 或生产集成时，还必须运行 `yarn run build`。
+After frontend changes, run at least `yarn run lint`. Also run `yarn run build` when build output, asset paths, routing, base path behavior, or production integration is affected.
 
 > [!NOTE]
-> 当前仓库**没有权威的前端 `test` 或 `typecheck` 脚本**。不要在文档或自动化里发明不存在的校验流程。
+> This repository has **no authoritative frontend `test` or `typecheck` script**. Don't invent validation flows in docs or automation.
 
-### 5. 后端校验
+### 5. Backend validation
 
-后端开发完成后，Go 文件必须通过 `gofmt` 格式化，并运行 `golangci-lint` 静态检查与相关测试：
+After backend changes, Go files must be formatted with `gofmt`, and `golangci-lint` plus related tests must run:
 
 ```bash
 gofmt -w <changed-go-files>
@@ -114,177 +116,177 @@ golangci-lint run
 go test ./...
 ```
 
-新增或修改关键业务逻辑、接口契约、权限判断、配置语义、迁移、调度任务、mihomo 集成、协议解析或数据转换时，应同步补充或更新对应 Go 测试。GitHub 发布构建会在构建二进制前运行 `golangci-lint` 和全仓 `go test ./...`。
+When adding or changing key business logic, API contracts, permission checks, configuration semantics, migrations, scheduled tasks, mihomo integration, protocol parsing, or data conversion, add or update matching Go tests. The GitHub release build runs `golangci-lint` and full repository `go test ./...` before building binaries.
 
-### 6. PR 自动检查
+### 6. PR automated checks
 
-`.github/workflows/pr-checks.yml` 会在 PR 打开、重新打开或标记 ready for review 时自动运行，用于快速判断 PR 是否满足基础质量要求。后续修复提交不会自动重复消耗 Actions；PR 作者本人或仓库管理员确认修复完成后，可在 PR 评论 `/recheck` 手动触发新一轮检查。
+`.github/workflows/pr-checks.yml` runs automatically when a PR is opened, reopened, or marked ready for review. It gives a quick baseline quality signal. Later fix commits do not automatically consume Actions again. After fixes are ready, the PR author or a repository admin can comment `/recheck` on the PR to trigger another round.
 
-- 后端：`golangci-lint`、`go test ./...`
-- 前端：`yarn run lint`、`yarn run build`
+- Backend: `golangci-lint`, `go test ./...`
+- Frontend: `yarn run lint`, `yarn run build`
 
-每个检查 job 会写入 GitHub Step Summary，展示对应检查项是通过还是失败，方便作者和 reviewer 快速判断哪些工作已经完成、哪些还需要修复。
+Each check job writes to the GitHub Step Summary, showing pass or failure status for each item so authors and reviewers can see what is done and what still needs work.
 
-### 7. 普通后端构建
+### 7. Normal backend build
 
 ```bash
 go build -o sublinkpro main.go
 ```
 
-这适合开发环境或快速本地编译，不代表生产嵌入构建。
+This is useful for development or a quick local compile. It is not the production embedded build.
 
-### 8. 生产构建（实际流程）
+### 8. Production build, actual flow
 
-生产构建是两阶段；本地执行生产风格构建前，应先完成前端 lint / build 和后端格式、lint、测试校验：
+Production build has two stages. Before running a production style local build, finish frontend lint/build and backend format/lint/tests first:
 
 ```bash
-# 1) 前端 lint 与构建
+# 1) Frontend lint and build
 cd webs
 yarn run lint
 yarn run build
 
-# 2) 后端格式、lint 与测试
+# 2) Backend format, lint, and tests
 cd ..
 gofmt -w <changed-go-files>
 golangci-lint run
 go test ./...
 
-# 3) 准备生产静态资源
+# 3) Prepare production static assets
 rm -rf static && mkdir -p static
 cp -R webs/dist/. static/
 
-# 4) 构建生产后端（嵌入前端资源）
+# 4) Build production backend with embedded frontend assets
 CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
 ```
 
 > [!IMPORTANT]
-> 如果你修改了前端资源路径、PWA 资产、base-path、嵌入逻辑或静态资源服务方式，必须同时验证：
-> 
-> - `webs` 本地开发模式
-> - 前端 build 产物
-> - `static/` 复制后的生产嵌入构建
+> If you change frontend asset paths, PWA assets, base path behavior, embedding logic, or static file serving, verify all of these:
+>
+> - `webs` local development mode
+> - Frontend build output
+> - Production embedded build after copying assets into `static/`
 
 ---
 
-## 🧭 关键运行时约定
+## 🧭 Key Runtime Conventions
 
-### 路径边界
+### Path boundaries
 
-- 前端 UI：`/` 或 `SUBLINK_WEB_BASE_PATH` 指定的路径
-- API：始终在 `/api/*`
-- 订阅/分享：始终在 `/c/*`
+- Frontend UI: `/` or the path set by `SUBLINK_WEB_BASE_PATH`
+- API: always under `/api/*`
+- Subscription/share access: always under `/c/*`
 
-`SUBLINK_WEB_BASE_PATH` 只影响 Web UI，不影响 API 和订阅获取路径。
+`SUBLINK_WEB_BASE_PATH` affects only the Web UI. It does not affect API or subscription fetch paths.
 
-### 运行时目录
+### Runtime directories
 
-这些目录属于运行时状态，请谨慎处理：
+These directories contain runtime state. Handle them carefully:
 
 - `db/`
 - `logs/`
 - `template/`
 - `out/`
 
-其中：
+Where:
 
-- `db/`：数据库、配置文件、GeoIP 等本地数据
-- `template/`：模板文件
-- `logs/`：运行日志
+- `db/`: database, config files, GeoIP, and other local data
+- `template/`: template files
+- `logs/`: runtime logs
 
 ---
 
-## 🔍 高价值入口文件
+## 🔍 High Value Entry Files
 
-| 模块 | 文件 | 说明 |
+| Module | File | Notes |
 |:---|:---|:---|
-| 节点测速 | `services/scheduler/speedtest_task.go` | 延迟、速度、质量、解锁检测主流程 |
-| 解锁检测 | `services/unlock/*.go` | Provider registry / runtime / orchestrator / checkers |
-| 标签规则 | `services/tag_service.go` | 自动标签规则执行 |
-| 订阅生成 | `api/clients.go` | 订阅输出与节点筛选、rename |
-| 链式代理 | `api/subscription_chain.go` / `models/subscription_chain_rule.go` | 订阅链式代理规则与条件选节点 |
-| Host 管理 | `models/host.go` | Host 映射、批量写入、缓存管理 |
-| DNS 解析 | `services/mihomo/dns_resolver.go` | 自定义 DNS 与代理解析 |
-| 数据迁移 | `models/db_migrate.go` | 数据库迁移脚本 |
+| Node speed tests | `services/scheduler/speedtest_task.go` | Main flow for latency, speed, quality, and unlock checks |
+| Unlock checks | `services/unlock/*.go` | Provider registry / runtime / orchestrator / checkers |
+| Tag rules | `services/tag_service.go` | Automatic tag rule execution |
+| Subscription generation | `api/clients.go` | Subscription output, node filtering, rename |
+| Chain proxy | `api/subscription_chain.go` / `models/subscription_chain_rule.go` | Subscription chain proxy rules and condition based node selection |
+| Host management | `models/host.go` | Host mappings, batch writes, cache management |
+| DNS resolution | `services/mihomo/dns_resolver.go` | Custom DNS and proxy based resolution |
+| Data migration | `models/db_migrate.go` | Database migration scripts |
 
 ---
 
-## 🔌 新增协议接入指南
+## 🔌 Protocol Extension Guide
 
-当前协议系统已经重构为**自注册 + 能力接口**模式。目标是：
+The protocol system has been refactored into a **self registration + capability interface** model. The goal is:
 
-> 新增一种协议时，开发者只需要在 `node/protocol/` 下增加一个协议文件，在这个文件里实现协议本身、导出能力，并完成注册。
+> When adding a protocol, a developer should only need to add one protocol file under `node/protocol/`, implement the protocol, export capabilities, and register it.
 
-### 协议扩展入口
+### Protocol extension entry point
 
-建议直接参考：
+Use these as references:
 
-- `node/protocol/protocol_demo.go`：标准示例协议
-- 任意真实协议文件，如：
+- `node/protocol/protocol_demo.go`: standard sample protocol
+- Real protocol files such as:
   - `node/protocol/vmess.go`
   - `node/protocol/ss.go`
   - `node/protocol/http.go`
 
-### 当前协议体系结构
+### Current protocol architecture
 
-中心能力位于 `node/protocol/protocol_meta.go`：
+Core capabilities live in `node/protocol/protocol_meta.go`:
 
-- `Protocol`：核心协议规范
-- `ProxyCapable`：支持 Clash Proxy 结构体转换
-- `SurgeCapable`：支持 Surge 行导出
-- `SupportsClient(...)`：声明协议对 Clash / mihomo / v2ray / Surge 等客户端的订阅输出兼容性
-- `MustRegisterProtocol(...)`：协议注册入口
+- `Protocol`: core protocol specification
+- `ProxyCapable`: supports conversion to Clash Proxy structs
+- `SurgeCapable`: supports Surge line export
+- `SupportsClient(...)`: declares subscription output compatibility for Clash / mihomo / v2ray / Surge and other clients
+- `MustRegisterProtocol(...)`: protocol registration entry point
 
-新增协议后，以下链路会自动接入，不需要再去额外补 switch：
+After adding a protocol, these flows are connected automatically without adding extra switches:
 
-- 协议识别（alias / scheme）
-- 节点 raw 解析
-- 节点 raw 字段更新
-- 节点 identity 提取（名称 / host / port / address）
-- 去重字段读取
-- 节点链接重命名
-- `LinkToProxy` 分发
-- `EncodeSurge` 分发
-- `EncodeProxyLink` 分发
-- v2ray raw 输出兼容性过滤（通过协议文件内声明的客户端支持能力）
-- 协议 UI 元数据输出
+- Protocol recognition, alias / scheme
+- Node raw parsing
+- Node raw field updates
+- Node identity extraction, name / host / port / address
+- Deduplication field reads
+- Node link renaming
+- `LinkToProxy` dispatch
+- `EncodeSurge` dispatch
+- `EncodeProxyLink` dispatch
+- v2ray raw output compatibility filtering, through client support declared in the protocol file
+- Protocol UI metadata output
 
-### 新增协议的推荐步骤
+### Recommended steps for adding a protocol
 
-1. 在 `node/protocol/` 新增一个协议文件，例如：
+1. Add a protocol file under `node/protocol/`, for example:
 
    ```text
    node/protocol/myprotocol.go
    ```
 
-2. 定义协议结构体。
+2. Define the protocol struct.
 
-   结构体字段会作为默认 UI 字段元数据来源，因此命名要稳定、清晰。
+   Struct fields are the default source for UI field metadata, so names should be stable and clear.
 
-3. 实现协议链接的 `Decode` / `Encode`。
+3. Implement link `Decode` / `Encode`.
 
-   至少要保证：
+   At minimum:
 
    - `DecodeXxxURL(string) (Xxx, error)`
    - `EncodeXxxURL(Xxx) string`
 
-4. 如果需要从 Clash Proxy 反推链接，补 `ConvertProxyToXxx(proxy Proxy) Xxx`。
+4. If you need to convert back from Clash Proxy to a link, add `ConvertProxyToXxx(proxy Proxy) Xxx`.
 
-5. 如果协议支持 Clash 导出，在同一文件中实现 `buildXxxProxy(link Urls, config OutputConfig)`。
+5. If the protocol supports Clash export, implement `buildXxxProxy(link Urls, config OutputConfig)` in the same file.
 
-6. 如果协议支持 Surge 导出，在同一文件中实现 `buildXxxSurgeLine(link string, config OutputConfig)`。
+6. If the protocol supports Surge export, implement `buildXxxSurgeLine(link string, config OutputConfig)` in the same file.
 
-7. 在同一个文件里 `init()` 自注册。
+7. Self register in `init()` in the same file.
 
-8. 在协议文件内声明客户端兼容性；默认规则如下：
+8. Declare client compatibility in the protocol file. Defaults are:
 
-   - `newProtocolSpec(...)` 默认支持 `ClientV2ray`。
-   - `newProxyProtocolSpec(...)` 默认支持 `ClientClash`、`ClientMihomo`、`ClientV2ray`。
-   - `newProxySurgeProtocolSpec(...)` 默认支持 `ClientClash`、`ClientMihomo`、`ClientV2ray`、`ClientSurge`。
-   - 如果协议只适合部分客户端，在 `base` 上调用 `WithClientSupport(...)` 覆盖默认值，例如 Mieru 只声明 `ClientClash` 与 `ClientMihomo`，因此 v2ray / Surge 输出会跳过它。
+   - `newProtocolSpec(...)` supports `ClientV2ray` by default.
+   - `newProxyProtocolSpec(...)` supports `ClientClash`, `ClientMihomo`, and `ClientV2ray` by default.
+   - `newProxySurgeProtocolSpec(...)` supports `ClientClash`, `ClientMihomo`, `ClientV2ray`, and `ClientSurge` by default.
+   - If the protocol is suitable for only some clients, call `WithClientSupport(...)` on `base` to override defaults. For example, Mieru declares only `ClientClash` and `ClientMihomo`, so v2ray / Surge output skips it.
 
-   可用客户端常量当前包括：`ClientClash`、`ClientMihomo`、`ClientV2ray`、`ClientSurge`。新增客户端渲染器前，不要只在 `api/clients.go` 写协议特例，应先让协议注册文件声明支持关系。
+   Available client constants currently include `ClientClash`, `ClientMihomo`, `ClientV2ray`, and `ClientSurge`. Before adding a new client renderer, don't add protocol special cases only in `api/clients.go`; first let protocol registration files declare support relationships.
 
-### 标准注册模板
+### Standard registration template
 
 ```go
 func init() {
@@ -301,10 +303,10 @@ func init() {
         func(p MyProtocol) LinkIdentity {
             return buildIdentity("myprotocol", p.Name, p.Server, utils.GetPortString(p.Port))
         },
-        // 可选：手工字段 schema，若不传则从结构体反射生成
+        // Optional: manual field schema. If omitted, reflection generates it from the struct.
     )
 
-    // 可选：覆盖客户端兼容性；不写则使用构造器默认值。
+    // Optional: override client compatibility. If omitted, constructor defaults are used.
     // base = base.WithClientSupport(ClientClash, ClientMihomo)
 
     MustRegisterProtocol(newProxySurgeProtocolSpec(
@@ -320,114 +322,114 @@ func init() {
 }
 ```
 
-如果协议只支持 Clash，不支持 Surge，可以使用：
+If the protocol supports Clash but not Surge, use:
 
 ```go
 MustRegisterProtocol(newProxyProtocolSpec(...))
 ```
 
-如果协议只是演示协议、只需要解析和 UI 元数据，也可以只注册 `newProtocolSpec(...)`。
+If the protocol is only a demo protocol and needs only parsing plus UI metadata, registering only `newProtocolSpec(...)` is also fine.
 
-如果协议有不适合完整 Decode / Import 的额外分享链接前缀，但仍需要参与客户端兼容性判断，可以使用 `WithClientSupportAliases(...)` 增加“仅兼容性检测”的 alias。这样不会把该前缀注册成完整协议解析入口；例如 Mieru 对 `mierus://` 只用于判断 v2ray 不应输出，并不会声明已支持官方 `mierus://` 分享链接的逐字段解析。
+If a protocol has extra share link prefixes that are not suitable for full Decode / Import, but still need to participate in client compatibility checks, use `WithClientSupportAliases(...)` to add aliases for compatibility checks only. This does not register that prefix as a full parser entry. For example, Mieru uses `mierus://` only to decide that v2ray should not output it. It does not claim full field by field parsing support for the official `mierus://` share link.
 
-### VLESS XHTTP 映射约定
+### VLESS XHTTP mapping conventions
 
-当前仓库对 `vless + xhttp` 的处理遵循以下约定：
+This repository handles `vless + xhttp` with these rules:
 
-- URL 顶层字段：
-  - `type=xhttp` → Clash / mihomo `network: xhttp`
-  - `encryption` → Clash / mihomo 顶层 `encryption`
-  - `path` → `xhttp-opts.path`
-  - `host` → `xhttp-opts.host`
-  - `mode` → `xhttp-opts.mode`
-  - `extra` → 先解码 JSON，再映射到 `xhttp-opts`
-- `extra` 当前已支持的字段：
-  - `headers` → `xhttp-opts.headers`
-  - `noGRPCHeader` → `xhttp-opts.no-grpc-header`
-  - `xPaddingBytes` → `xhttp-opts.x-padding-bytes`
-  - `downloadSettings` → `xhttp-opts.download-settings`
-- `downloadSettings` 中当前已支持的常见子字段包括：
-  - `path`、`host`、`headers`、`server`、`port`、`tls`、`alpn`
-  - `skipCertVerify` → `skip-cert-verify`
-  - `clientFingerprint` → `client-fingerprint`
-  - `privateKey` → `private-key`
-  - `realityOpts` → `reality-opts`
-  - `echOpts` → `ech-opts`
+- Top level URL fields:
+  - `type=xhttp` maps to Clash / mihomo `network: xhttp`
+  - `encryption` maps to top level Clash / mihomo `encryption`
+  - `path` maps to `xhttp-opts.path`
+  - `host` maps to `xhttp-opts.host`
+  - `mode` maps to `xhttp-opts.mode`
+  - `extra` is decoded as JSON first, then mapped to `xhttp-opts`
+- Supported fields inside `extra`:
+  - `headers` maps to `xhttp-opts.headers`
+  - `noGRPCHeader` maps to `xhttp-opts.no-grpc-header`
+  - `xPaddingBytes` maps to `xhttp-opts.x-padding-bytes`
+  - `downloadSettings` maps to `xhttp-opts.download-settings`
+- Common supported subfields inside `downloadSettings` include:
+  - `path`, `host`, `headers`, `server`, `port`, `tls`, `alpn`
+  - `skipCertVerify` maps to `skip-cert-verify`
+  - `clientFingerprint` maps to `client-fingerprint`
+  - `privateKey` maps to `private-key`
+  - `realityOpts` maps to `reality-opts`
+  - `echOpts` maps to `ech-opts`
 
-需要特别区分两类 ECH 语义：
+Two ECH meanings must be kept separate:
 
-- VLESS URL 顶层 `ech=...` 对应的是 Xray/VLESS 的 `echConfigList` 语义，不是所有写法都能与 mihomo `ech-opts` 无损互转。
-- 当 `ech` 是固定 **base64 ECHConfig** 时，会映射到顶层 `ech-opts.enable: true` + `ech-opts.config`。
-- 当 `ech` 是 Xray 的 DNS / URI 风格（如 `domain+https://...`）时，只会按 mihomo 可表达的能力做最佳努力映射：保留 `enable: true`，并在可识别时写入 `query-server-name`；其中 resolver URI 本身不会被保留。
-- 当节点来自 **Clash/mihomo YAML 导入链路**（包括机场订阅中的 Clash YAML 与手动 Clash YAML 导入）时，如果只有顶层 `ech-opts.query-server-name` 可恢复，系统会在写入 `Node.Link` 前按本地兼容规则重建为 `ech=<query-server-name>+https://dns.alidns.com/dns-query`。
-- `extra.downloadSettings.echOpts` 只用于 `xhttp` 的嵌套下载设置映射，会转换成 mihomo `xhttp-opts.download-settings.ech-opts`。
-- 顶层 `ech` 与 `extra.downloadSettings.echOpts` 都会映射到各自层级的 `ech-opts`，但两者不会互相合并或覆盖。
+- Top level VLESS URL `ech=...` corresponds to Xray/VLESS `echConfigList` semantics. Not every form can round trip losslessly with mihomo `ech-opts`.
+- When `ech` is a fixed **base64 ECHConfig**, it maps to top level `ech-opts.enable: true` + `ech-opts.config`.
+- When `ech` is Xray DNS / URI style, such as `domain+https://...`, it is mapped on a best effort basis to what mihomo can express. `enable: true` is preserved, and `query-server-name` is written when recognizable. The resolver URI itself is not preserved.
+- When a node comes from the **Clash/mihomo YAML import flow**, including Clash YAML airport subscriptions and manual Clash YAML import, and only top level `ech-opts.query-server-name` can be restored, the system rebuilds it before writing `Node.Link` as `ech=<query-server-name>+https://dns.alidns.com/dns-query` using local compatibility rules.
+- `extra.downloadSettings.echOpts` is used only for nested `xhttp` download settings and maps to mihomo `xhttp-opts.download-settings.ech-opts`.
+- Top level `ech` and `extra.downloadSettings.echOpts` each map to their own `ech-opts` level. They are not merged or overwritten with each other.
 
-实现时需要注意：
+Implementation notes:
 
-- `xhttp` 只允许出现在 VLESS 上，不要复用到其他协议。
-- 不要把 `xhttp` 静默降级成 `http`、`h2`、`grpc`。
-- 用户在订阅设置中勾选“跳过证书验证”后，会通过 `OutputConfig.Cert` 强制覆盖输出配置；对于 `xhttp`，这条规则同时作用于顶层 `skip-cert-verify` 和 `download-settings.skip-cert-verify`。
+- `xhttp` is allowed only on VLESS. Don't reuse it for other protocols.
+- Don't silently downgrade `xhttp` to `http`, `h2`, or `grpc`.
+- When users enable “skip certificate verification” in subscription settings, `OutputConfig.Cert` force overrides output configuration. For `xhttp`, this applies to both top level `skip-cert-verify` and `download-settings.skip-cert-verify`.
 
-### 字段元数据说明
+### Field metadata
 
-`newProtocolSpec(...)` 最后可以追加 `FieldMeta`，用于驱动前端字段展示：
+`newProtocolSpec(...)` can take optional `FieldMeta` entries at the end to drive frontend field display:
 
-- `Name`：字段名
-- `Label`：显示名称
-- `Type`：`string` / `int` / `bool`
-- `Group`：分组，如 `basic` / `auth` / `transport` / `tls` / `advanced`
-- `Description`：字段说明
-- `Placeholder`：输入占位提示
-- `Options`：枚举选项
-- `Advanced`：是否为高级字段
-- `Secret`：是否为敏感字段
-- `Multiline`：是否建议多行显示
+- `Name`: field name
+- `Label`: display label
+- `Type`: `string` / `int` / `bool`
+- `Group`: group, such as `basic` / `auth` / `transport` / `tls` / `advanced`
+- `Description`: field description
+- `Placeholder`: placeholder text
+- `Options`: enum options
+- `Advanced`: whether this is an advanced field
+- `Secret`: whether this is sensitive
+- `Multiline`: whether multiline display is recommended
 
-如果不传 `FieldMeta`，系统会回退到结构体反射元数据，这样可以做到“最少接入”。
+If `FieldMeta` is omitted, the system falls back to struct reflection metadata, which enables minimal integration.
 
-### 什么时候还需要改协议文件之外的地方？
+### When do you need changes outside the protocol file?
 
-理想目标是：**只改协议文件并注册即可。**
+The ideal target is: **only add and register the protocol file.**
 
-当前还保留少量“协议外工作”，但它们不属于协议核心接入：
+A small amount of “outside protocol” work still remains, but it is not core protocol integration:
 
-- 补该协议的单元测试
-- 如需对外说明，更新 README / docs 的支持矩阵
-- 如需更好的前端交互，再补字段元数据（仍可写在协议文件内）
+- Add unit tests for the protocol
+- Update README / docs support matrix if public docs need it
+- Add better field metadata for frontend interaction, still in the protocol file when possible
 
-正常情况下，你不应该再去改：
+Normally you should no longer change:
 
-- `node/protocol/clash.go` 的协议分发
-- `node/protocol/surge.go` 的协议分发
-- `node/sub.go` 的链接生成 switch
-- `api/node.go` 的协议判断
-- `api/node_raw.go` 的名称提取 switch
+- Protocol dispatch in `node/protocol/clash.go`
+- Protocol dispatch in `node/protocol/surge.go`
+- Link generation switches in `node/sub.go`
+- Protocol detection in `api/node.go`
+- Name extraction switches in `api/node_raw.go`
 
-如果你发现新增协议还需要改这些地方，说明抽象出现了倒退，应优先修抽象而不是继续补 case。
+If adding a protocol still requires changes there, the abstraction has regressed. Fix the abstraction before adding more cases.
 
-### ProtocolDemo 的用途
+### Purpose of ProtocolDemo
 
-`node/protocol/protocol_demo.go` 不是生产协议，而是协议扩展模板。
+`node/protocol/protocol_demo.go` is not a production protocol. It is a protocol extension template.
 
-它展示了：
+It shows:
 
-- 如何定义协议结构体
-- 如何实现 Decode / Encode
-- 如何补 `LinkIdentity`
-- 如何声明字段元数据
-- 如何实现 Clash / Surge 导出能力
-- 如何在一个文件里完成注册
+- How to define a protocol struct
+- How to implement Decode / Encode
+- How to add `LinkIdentity`
+- How to declare field metadata
+- How to implement Clash / Surge export capabilities
+- How to complete registration in one file
 
-新增真实协议时，建议直接复制 `ProtocolDemo` 的结构再改造成你的协议，而不是从零拼装。
+When adding a real protocol, it is recommended to copy the `ProtocolDemo` structure and adapt it, instead of building everything from scratch.
 
 ---
 
-## ⏰ 定时任务开发指南
+## ⏰ Scheduled Task Development Guide
 
-SublinkPro 使用模块化定时任务系统，基于 `robfig/cron`。
+SublinkPro uses a modular scheduled task system based on `robfig/cron`.
 
-### 目录结构
+### Directory structure
 
 ```text
 services/scheduler/
@@ -441,14 +443,14 @@ services/scheduler/
 └── bridge.go
 ```
 
-### 添加新任务的基本步骤
+### Basic steps for adding a task
 
-1. 在 `job_ids.go` 定义任务 ID
-2. 在 `services/scheduler/` 新增任务文件
-3. 在 `manager.go` 的加载逻辑里接入
-4. 如有前端任务进度需求，接入 `TaskManager`
+1. Define the task ID in `job_ids.go`.
+2. Add a task file under `services/scheduler/`.
+3. Wire it into the loading logic in `manager.go`.
+4. If the frontend needs task progress, connect it to `TaskManager`.
 
-### 带进度报告的任务
+### Task with progress reporting
 
 ```go
 func ExecuteYourTaskWithProgress() {
@@ -488,11 +490,11 @@ func ExecuteYourTaskWithProgress() {
 
 ---
 
-## 🌍 解锁检测扩展指南
+## 🌍 Unlock Check Extension Guide
 
-解锁检测沿用节点检测 / 测速策略链路，不额外起一套独立任务系统。
+Unlock checks reuse the node check / speed test strategy flow. They don't start a separate task system.
 
-### 关键文件
+### Key files
 
 - `api/node_check.go`
 - `models/node_check_profile.go`
@@ -505,17 +507,17 @@ func ExecuteYourTaskWithProgress() {
 - `services/unlock/orchestrator.go`
 - `services/unlock/checker_*.go`
 
-### 设计原则
+### Design principles
 
-- 每个 Provider 一个独立 Checker
-- 统一 registry / orchestrator
-- 共享 runtime（代理 HTTP client、timeout、落地国家）
-- 统一结果结构：`models.UnlockProviderResult`
+- One independent Checker per Provider
+- Unified registry / orchestrator
+- Shared runtime, including proxy HTTP client, timeout, and landing country
+- Unified result structure: `models.UnlockProviderResult`
 
-### 新增一个 Provider
+### Add a Provider
 
-1. 新增 `services/unlock/checker_<provider>.go`
-2. 实现：
+1. Add `services/unlock/checker_<provider>.go`.
+2. Implement:
 
 ```go
 type UnlockChecker interface {
@@ -525,88 +527,88 @@ type UnlockChecker interface {
 }
 ```
 
-3. 在 `init()` 中注册 `RegisterUnlockChecker(...)`
-4. 在 checker 内同时声明 Provider 元数据（展示名、分类、rename 变量等）
-5. 如新增了新的状态语义，在 `services/unlock/meta.go` 中补充状态元数据
-6. 更新 `docs/features/unlock-check.md`（仅在文档需要列举当前内置 Provider 时）
+3. Register it with `RegisterUnlockChecker(...)` in `init()`.
+4. Declare Provider metadata in the checker, including display name, category, rename variables, and related fields.
+5. If new status semantics are added, add status metadata in `services/unlock/meta.go`.
+6. Update `docs/features/unlock-check.md` only when the docs need to list the current built in Providers.
 
 > [!IMPORTANT]
-> 当前前端的节点筛选、标签规则、链式代理条件、订阅编辑中的 unlock 选项都通过后端元数据动态消费。
-> 正常情况下，新增一个 checker **不需要**再去前端补 Provider / 状态枚举，也不需要手动同步多个页面的选项列表。
+> The current frontend node filters, tag rules, chain proxy conditions, and unlock options in subscription editing all consume backend metadata dynamically.
+> Normally, adding one checker **does not** require adding Provider or status enums to the frontend or manually syncing option lists across multiple pages.
 
-### 命名构建器变量
+### Rename builder variables
 
-推荐使用 provider-specific 形式：
+Provider specific forms are recommended:
 
 - `$Unlock(gemini)`
 - `$Unlock(openai)`
 - `$Unlock(netflix)`
 
-这些变量通过后端元数据动态下发。
+These variables are delivered dynamically through backend metadata.
 
-### 多条件解锁筛选
+### Multi condition unlock filtering
 
-当前节点列表与订阅过滤都支持多条规则。
+Node lists and subscription filters currently support multiple rules.
 
-- 一条规则内部：AND
-- 多条规则之间：OR / AND 可选
-- 没有规则：表示不启用解锁筛选
+- Inside one rule: AND
+- Between multiple rules: OR / AND, user selectable
+- No rules: unlock filtering is disabled
 
-### Tag / Chain 规则中的解锁条件
+### Unlock conditions in Tag / Chain rules
 
-当前 Tag 自动规则和 Chain 规则都已支持：
+Current automatic Tag rules and Chain rules support:
 
 - `unlock_provider`
 - `unlock_status`
 - `unlock_keyword`
 - `unlock_result`
 
-推荐优先使用 `unlock_provider` 和 `unlock_status` 做精确匹配；`unlock_keyword` 适合做模糊搜索。
+Prefer `unlock_provider` and `unlock_status` for exact matches. `unlock_keyword` is better for fuzzy search.
 
-这些字段的 schema、可用操作符、枚举值来源现在都由后端统一下发：
+Schemas, operators, and enum values for these fields are all delivered by the backend:
 
-- `unlock_provider` → 动态读取已注册 checker 的 Provider 列表
-- `unlock_status` → 动态读取后端状态元数据
-- `unlock_keyword` / `unlock_result` → 作为文本字段处理
+- `unlock_provider` reads the list of registered checker Providers dynamically
+- `unlock_status` reads backend status metadata dynamically
+- `unlock_keyword` / `unlock_result` are treated as text fields
 
-### 解锁检测并行执行
+### Parallel unlock checks
 
-当前单个节点内多个 Provider 检测由 `services/unlock/orchestrator.go` 做**受控并行**。
+Multiple Provider checks for a single node are run with **controlled parallelism** in `services/unlock/orchestrator.go`.
 
-- 每个节点内部：多 Provider 并行
-- 使用小规模并发上限
-- 结果顺序保持稳定
+- Inside each node: multiple Providers run in parallel
+- A small concurrency limit is used
+- Result order stays stable
 
 ---
 
-## 🕐 Cron 表达式格式
+## 🕐 Cron Expression Format
 
-本项目使用 5 字段 Cron 格式（不含秒）：
+This project uses a 5 field Cron format, without seconds:
 
-| 字段 | 取值范围 | 说明 |
+| Field | Range | Description |
 |:---|:---|:---|
-| 分钟 | 0-59 | 每小时的第几分钟 |
-| 小时 | 0-23 | 每天的第几小时 |
-| 日 | 1-31 | 每月的第几天 |
-| 月 | 1-12 | 每年的第几月 |
-| 周 | 0-6 | 每周的第几天（0=周日） |
+| Minute | 0-59 | Minute of the hour |
+| Hour | 0-23 | Hour of the day |
+| Day | 1-31 | Day of the month |
+| Month | 1-12 | Month of the year |
+| Weekday | 0-6 | Day of the week, 0=Sunday |
 
-常用示例：
+Common examples:
 
-| 表达式 | 说明 |
+| Expression | Description |
 |:---|:---|
-| `*/5 * * * *` | 每 5 分钟 |
-| `0 */2 * * *` | 每 2 小时 |
-| `30 8 * * *` | 每天 8:30 |
-| `0 0 * * 0` | 每周日 00:00 |
-| `0 2 1 * *` | 每月 1 日 02:00 |
+| `*/5 * * * *` | Every 5 minutes |
+| `0 */2 * * *` | Every 2 hours |
+| `30 8 * * *` | Every day at 08:30 |
+| `0 0 * * 0` | Every Sunday at 00:00 |
+| `0 2 1 * *` | Every month on day 1 at 02:00 |
 
 ---
 
-## 💡 开发建议
+## 💡 Development Advice
 
-1. 任务应尽量幂等
-2. 长任务支持取消 (`ctx.Done()`)
-3. 修改配置语义时同步更新文档
-4. 前端命令、生产构建流程优先以 `webs/package.json`、CI、Dockerfile 为准
-5. 不要在文档中发明仓库里不存在的命令
+1. Tasks should be idempotent when possible.
+2. Long running tasks should support cancellation through `ctx.Done()`.
+3. Update docs when configuration semantics change.
+4. Frontend commands and production build flow should follow `webs/package.json`, CI, and Dockerfile first.
+5. Don't document commands that don't exist in the repository.

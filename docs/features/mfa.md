@@ -1,113 +1,115 @@
-# TOTP 双重验证（MFA）
+English | [简体中文](mfa.zh-CN.md)
 
-SublinkPro 支持基于 TOTP 的双重验证，用于提升后台账户安全性。
+# TOTP Multi Factor Authentication, MFA
 
-## 使用流程
+SublinkPro supports TOTP based multi factor authentication to improve admin account security.
 
-### 1. 启用 TOTP
+## Usage Flow
 
-进入：
+### 1. Enable TOTP
 
-`设置 -> 个人设置 -> 安全设置`
+Open:
 
-个人设置页面当前分为两个子板块：
+`Settings -> Personal Settings -> Security Settings`
 
-- **基本资料**：修改用户名和昵称
-- **安全设置**：管理 TOTP、恢复码和其他安全相关操作
+The Personal Settings page currently has two sections:
 
-密码修改不再与资料表单混在同一页中，而是通过页面顶部的 **“修改密码”** 按钮打开独立弹窗完成。
+- **Basic Profile**: change username and nickname
+- **Security Settings**: manage TOTP, recovery codes, and other security related operations
 
-然后按以下步骤完成：
+Password changes are no longer mixed into the profile form. Use the **Change Password** button at the top of the page to open a separate dialog.
 
-1. 进入 `安全设置`
-2. 输入当前密码
-3. 使用身份验证器 App 扫描二维码
-4. 输入当前 6 位动态验证码
-5. 保存系统生成的恢复码
+Then complete these steps:
 
-支持的身份验证器包括：
+1. Open `Security Settings`.
+2. Enter the current password.
+3. Scan the QR code with an authenticator app.
+4. Enter the current 6 digit dynamic code.
+5. Save the generated recovery codes.
+
+Supported authenticators include:
 
 - Google Authenticator
 - Microsoft Authenticator
 - 1Password
 - Aegis
-- 其他兼容标准 TOTP 的应用
+- Other apps compatible with standard TOTP
 
-### 2. 登录时验证
+### 2. Verify during login
 
-启用后，登录分两步：
+After enabling TOTP, login has two steps:
 
-1. 用户名 + 密码 + 验证码
-2. TOTP 动态验证码，或恢复码
+1. Username + password + CAPTCHA
+2. TOTP dynamic code or recovery code
 
-如果无法访问身份验证器，可以改用恢复码完成登录。
+If you cannot access the authenticator, use a recovery code to sign in.
 
-## 恢复码
+## Recovery Codes
 
-恢复码用于身份验证器丢失、手机损坏或临时无法访问时的应急登录。
+Recovery codes are for emergency login when the authenticator is lost, the phone is broken, or temporary access is unavailable.
 
-注意事项：
+Notes:
 
-- 每个恢复码只能使用一次
-- 恢复码仅在 **TOTP 正式启用后** 才可用于登录
-- 重新生成恢复码后，旧恢复码立即失效
-- 推荐将恢复码打印或离线保存
+- Each recovery code can be used once.
+- Recovery codes can be used for login only **after TOTP is fully enabled**.
+- Old recovery codes become invalid immediately after regeneration.
+- Printing or storing recovery codes offline is recommended.
 
-## 敏感操作的二次确认
+## Second Confirmation for Sensitive Operations
 
-当账户已启用 TOTP 时，下列操作需要再次输入当前动态验证码：
+When TOTP is enabled on an account, these operations require the current dynamic code again:
 
-- 修改密码
-- 修改用户名或昵称
-- 关闭 TOTP
-- 重新生成恢复码
-- 重新绑定 TOTP
+- Change password
+- Change username or nickname
+- Disable TOTP
+- Regenerate recovery codes
+- Rebind TOTP
 
-其中：
+Where:
 
-- **修改用户名 / 昵称** 在 `基本资料` 中完成
-- **修改密码** 通过顶部按钮打开弹窗完成
-- **TOTP 相关操作** 在 `安全设置` 中完成
+- **Username / nickname changes** are done in `Basic Profile`.
+- **Password changes** use the top button and separate dialog.
+- **TOTP operations** are done in `Security Settings`.
 
-这样做的目的是避免“已经拿到登录态的人”直接修改账号安全设置。
+This prevents someone who already has a login session from directly changing account security settings.
 
-## 丢失身份验证器怎么办
+## What if the Authenticator Is Lost
 
-推荐按以下顺序恢复访问：
+Recommended recovery order:
 
-1. **优先使用恢复码登录**
-2. 登录后重新绑定 TOTP，并重新保存新的恢复码
-3. 如果恢复码也丢失，再联系运维使用受限应急重置流程
+1. **Use a recovery code first**.
+2. After signing in, rebind TOTP and save new recovery codes.
+3. If recovery codes are also lost, contact operations staff to use the restricted emergency reset flow.
 
-## 运维应急重置
+## Operations Emergency Reset
 
-SublinkPro 提供受限的 break-glass 机制，而不是全局 MFA 绕过。
+SublinkPro provides a restricted break glass mechanism, not a global MFA bypass.
 
-### 前提
+### Prerequisite
 
-运维需要在环境变量中设置：
+Operations staff must set this environment variable:
 
 ```bash
 SUBLINK_MFA_RESET_SECRET=your-break-glass-secret
 ```
 
-### 特点
+### Characteristics
 
-- 仅环境变量生效
-- 令牌应带过期时间
-- 重置时仍然需要目标用户的账号密码
-- 只清除该账号的 TOTP，不提供直接登录能力
+- Environment variable only
+- Tokens should have expiration times
+- Reset still requires the target user's username and password
+- Only clears TOTP for that account, with no direct login capability
 
-### 适用场景
+### Suitable scenarios
 
-- 用户丢失身份验证器
-- 用户没有可用恢复码
-- 运维需要协助恢复访问
+- User lost the authenticator
+- User has no usable recovery code
+- Operations staff need to help restore access
 
-## 安全建议
+## Security Advice
 
-- 为所有管理员账户启用 TOTP
-- 使用 Cloudflare Turnstile 作为首选登录验证码模式
-- 妥善保管 `SUBLINK_JWT_SECRET`、`SUBLINK_API_ENCRYPTION_KEY` 和 `SUBLINK_MFA_RESET_SECRET`
-- 不要把恢复码保存在浏览器明文笔记、聊天记录或和账号密码同一处
-- 运维完成应急重置后，建议尽快轮换 `SUBLINK_MFA_RESET_SECRET`
+- Enable TOTP for every admin account.
+- Use Cloudflare Turnstile as the preferred login CAPTCHA mode.
+- Protect `SUBLINK_JWT_SECRET`, `SUBLINK_API_ENCRYPTION_KEY`, and `SUBLINK_MFA_RESET_SECRET`.
+- Don't store recovery codes in plaintext browser notes, chats, or the same place as the account password.
+- After emergency reset work is done, rotate `SUBLINK_MFA_RESET_SECRET` as soon as possible.

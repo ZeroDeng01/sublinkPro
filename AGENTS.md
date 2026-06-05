@@ -789,15 +789,24 @@ If you change any of the following, update docs in the same work when appropriat
 Relevant docs include:
 
 - `README.md`
+- `README.zh-CN.md`
 - `docs/development.md`
+- `docs/development.zh-CN.md`
 - `docs/configuration.md`
+- `docs/configuration.zh-CN.md`
 - `docs/installation.md`
+- `docs/installation.zh-CN.md`
 - `docs/features/*`
+- `docs/features/*.zh-CN.md`
 
 - 文档同步不是可选收尾步骤，而是变更完成条件的一部分。只要代码改动改变了行为、接口、字段、页面文案、用户流程、命令、配置、部署、迁移或安全语义，就必须在同一工作中同步更新相应文档。  
   Documentation sync is not an optional finishing step; it is part of the definition of done. If a code change alters behavior, APIs, fields, page copy, user flows, commands, configuration, deployment, migration, or security semantics, the relevant documentation must be updated in the same piece of work.
+- 文档现在同时维护英文 canonical 版本和简体中文 `*.zh-CN.md` 版本；凡是需要更新 `README.md`、`docs/*.md` 或 `docs/features/*.md` 的变更，必须同步更新对应的 `README.zh-CN.md`、`docs/*.zh-CN.md` 或 `docs/features/*.zh-CN.md`，并保持语言切换和相对链接一致。
+  Documentation is now maintained in both canonical English files and Simplified Chinese `*.zh-CN.md` files; any change that updates `README.md`, `docs/*.md`, or `docs/features/*.md` must also update the matching `README.zh-CN.md`, `docs/*.zh-CN.md`, or `docs/features/*.zh-CN.md`, keeping language switches and relative links consistent.
 - 不允许出现“代码已经修改，但 `README.md`、`docs/` 或功能说明仍保留旧语义”的交付状态；如果确认无需更新文档，也应在变更说明中明确写明原因。  
   Do not leave the project in a state where code has changed but `README.md`, `docs/`, or feature documentation still describes the old behavior; if no doc update is needed, explicitly state why.
+- 不允许只更新一种语言的文档后交付；如果某个变更确实只影响其中一种语言（例如修正翻译措辞），交付说明必须明确写出另一种语言已检查且无需修改。
+  Do not ship documentation updates in only one language; if a change truly affects only one language, such as wording in a translation, the delivery summary must state that the other language was checked and does not need changes.
 
 ## 15. 安全提示 / Safety notes
 

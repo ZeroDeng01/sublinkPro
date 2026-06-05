@@ -1,258 +1,260 @@
-# AI 模板编辑
+English | [简体中文](template-ai.zh-CN.md)
 
-SublinkPro 提供了一个面向模板编辑器的 **AI 辅助改写工作流**：您可以用自然语言描述想要的调整方向，让系统生成候选草稿，再通过编辑模式与对比模式完成审阅、应用和回退。
+# AI Template Editing
 
-这是一个强调 **人工可见、人工确认、可回退** 的特色功能。AI 负责给出候选方案，是否真正写入模板仍由您自己决定。
+SublinkPro provides an **AI assisted rewrite workflow** for the template editor. Describe the changes you want in natural language, let the system generate a candidate draft, then review, apply, or roll back through edit and diff views.
+
+This feature emphasizes **human visibility, human confirmation, and rollback**. AI produces a candidate. You decide whether it is written into the template.
 
 ---
 
-## ✨ 核心功能
+## ✨ Core Features
 
-| 功能 | 说明 |
+| Feature | Description |
 |:---|:---|
-| **🧠 自然语言改模板** | 直接输入「想怎么改」，AI 会基于当前模板生成候选草稿 |
-| **🪟 编辑器内浮动命令栏** | AI 指令输入框悬浮在代码编辑区上方，不会打断正常编辑流程 |
-| **🔍 编辑 / 对比双视图** | 可在普通编辑视图与左右对比视图之间切换，像查看代码变更一样审阅 AI 结果 |
-| **✅ 本地应用** | AI 草稿不会自动覆盖当前内容，点击“应用”后才会写入编辑器 |
-| **↩️ 本地回退** | 对 AI 结果不满意时，可回退到最近一次应用前的编辑器内容 |
-| **⚙️ 系统级设置接入** | 模板 AI 使用系统中的设置 -> AI 助手配置作为生成入口 |
+| **🧠 Natural language template edits** | Type what you want to change, and AI generates a candidate draft based on the current template |
+| **🪟 Floating command bar in editor** | The AI instruction box floats above the code editor without interrupting normal editing |
+| **🔍 Edit / diff views** | Switch between normal editing and side by side diff review, like reviewing code changes |
+| **✅ Local apply** | AI drafts never overwrite current content automatically. They enter the editor only after you click “Apply” |
+| **↩️ Local rollback** | If the AI result is not satisfactory, roll back to the editor content from before the latest apply |
+| **⚙️ System settings integration** | Template AI uses `Settings -> AI Assistant` as its generation configuration entry |
 
 ---
 
-## 🧭 适用场景
+## 🧭 Suitable Use Cases
 
-AI 模板编辑特别适合下面这些任务：
+AI template editing is useful for:
 
-- 为现有模板补充新的代理组、规则段或注释
-- 在不大改整体结构的前提下，优化模板可读性
-- 把口语化思路快速变成一版可审阅的候选模板
-- 先生成再对比，减少手工改 YAML / INI 的成本
+- Adding new proxy groups, rule sections, or comments to an existing template
+- Improving readability without changing the whole structure
+- Turning an informal idea into a reviewable template draft
+- Generating first, then comparing, to reduce manual YAML / INI editing cost
 
-它更适合“**在已有模板基础上改写**”，而不是完全替代您的审阅过程。
+It is better for “**rewriting from an existing template**” than for replacing your review process.
 
 ---
 
-## 🚀 开始前需要准备什么
+## 🚀 What to Prepare First
 
-要使用模板 AI，您需要先完成 AI 助手设置。
+To use Template AI, finish AI Assistant setup first.
 
-进入：
+Open:
 
-`设置 -> AI 助手`
+`Settings -> AI Assistant`
 
-至少需要完成这些配置：
+At minimum, configure:
 
 - **Base URL**
-- **模型名称**
+- **Model name**
 - **API Key**
 
-可选的 **Max Tokens** 默认值为 `400000`；如果在设置页填写 `0`，系统会使用该服务端默认值。
+Optional **Max Tokens** defaults to `400000`. If you enter `0` on the settings page, the server default is used.
 
 > [!IMPORTANT]
-> 当前 AI 助手**仅支持提供 `/responses` endpoint 的服务**。如果某个服务只支持 `/chat/completions` 或其他兼容层，而不支持 `/responses`，则无法用于本项目的 AI 模板编辑与连接测试。
+> The current AI Assistant **only supports services that provide a `/responses` endpoint**. If a service supports only `/chat/completions` or another compatibility layer, but not `/responses`, it cannot be used for AI template editing or connection tests in this project.
 
 > [!TIP]
-> 模板编辑器中的 AI 功能使用的是 `设置 -> AI 助手` 中保存的系统级配置。建议先完成配置并测试连接，再回到模板编辑器生成草稿。
+> The AI feature in the template editor uses the system level configuration saved in `Settings -> AI Assistant`. Configure it and test the connection first, then return to the template editor to generate drafts.
 
-如果模板页提示：
+If the template page shows:
 
-- `AI 助手当前不可用`
-- `AI 设置不完整`
+- `AI Assistant is currently unavailable`
+- `AI settings are incomplete`
 
-请前往：
+Open:
 
-`设置 -> AI 助手`
+`Settings -> AI Assistant`
 
-检查是否已启用 AI，并确认 Base URL、模型名称和 API Key 已正确填写。
+Check that AI is enabled and that Base URL, model name, and API Key are filled correctly.
 
-同时请确认该 Base URL 对应的 AI 服务实际支持 `/responses` endpoint；仅有传统 `chat/completions` 能力的接口当前不可用。
+Also confirm that the AI service behind the Base URL actually supports the `/responses` endpoint. Interfaces that only provide traditional `chat/completions` are currently unavailable.
 
 ---
 
-## 📝 使用流程
+## 📝 Usage Flow
 
-### 1. 打开模板编辑器
+### 1. Open the template editor
 
-进入模板管理页面后，您可以：
+From the template management page, you can:
 
-- 新建模板
-- 编辑已有模板
+- Create a new template
+- Edit an existing template
 
-在编辑器中先准备一份基础模板内容，再输入 AI 指令会更稳定。
+Prepare a base template in the editor before entering AI instructions for more stable results.
 
-### 2. 输入 AI 指令
+### 2. Enter AI instructions
 
-在编辑器上方的浮动 AI 命令栏中，用自然语言描述您希望的改动。
+Use natural language in the floating AI command bar above the editor to describe the change you want.
 
-例如：
+Examples:
 
-- `保留现有结构，增加一个自动选择香港节点的策略组`
-- `不要移除注释，帮我把规则段整理得更清晰`
-- `将这份模板改得更适合常规 Clash 使用场景`
+- `Keep the existing structure and add an auto select policy group for Hong Kong nodes`
+- `Do not remove comments. Help me make the rules section clearer`
+- `Make this template more suitable for a normal Clash use case`
 
-### 3. 生成候选草稿
+### 3. Generate a candidate draft
 
-点击 **生成** 后，系统会基于：
+After clicking **Generate**, the system uses:
 
-- 当前模板内容
-- 当前分类（如 Clash / Surge）
-- 当前规则来源及相关配置
-- 您输入的 AI 指令
+- Current template content
+- Current category, such as Clash / Surge
+- Current rule source and related configuration
+- Your AI instruction
 
-生成一份候选草稿。
+It generates a candidate draft.
 
-生成成功后，编辑器会自动进入 **对比模式**，方便您直接查看改动前后差异。
+After generation succeeds, the editor enters **diff mode** automatically so you can review changes directly.
 
 > [!NOTE]
-> 生成过程中，AI 命令输入框会被临时禁用，避免在同一次生成尚未完成时继续修改指令，造成状态混乱。
+> During generation, the AI command input is temporarily disabled to prevent instruction changes during the same generation and avoid inconsistent state.
 
 ---
 
-## 🔍 如何审阅 AI 结果
+## 🔍 How to Review AI Results
 
-模板编辑器支持两种主视图：
+The template editor supports two main views.
 
-### 编辑模式
+### Edit mode
 
-- 用于直接修改当前模板内容
-- 适合做最终手工微调
-- 只有在编辑模式下才能保存模板
+- Used to edit the current template content directly
+- Suitable for final manual adjustments
+- Templates can be saved only in edit mode
 
-### 对比模式
+### Diff mode
 
-- 左侧显示生成前的原始模板
-- 右侧显示 AI 生成的候选草稿
-- 适合像查看代码变更一样快速确认改动
+- Left side shows the original template before generation
+- Right side shows the AI generated candidate draft
+- Suitable for quickly reviewing changes like code diffs
 
-如果您只是想判断 AI 有没有改对，优先看 **对比模式**。
+If you only want to judge whether AI made the right change, start with **diff mode**.
 
-如果您已经决定采纳这次生成结果，再点击 **应用** 将草稿写回编辑器。
+If you decide to accept the generated result, click **Apply** to write the draft back into the editor.
 
 ---
 
-## ✅ 应用与回退
+## ✅ Apply and Rollback
 
-### 应用
+### Apply
 
-点击浮动命令栏中的 **对勾按钮**，会把当前 AI 候选草稿写入编辑器。
+Click the **check button** in the floating command bar to write the current AI candidate draft into the editor.
 
-应用后的特点：
+After applying:
 
-- 编辑器正文会变成 AI 草稿内容
-- 您可以继续手工修改
-- 之后可以正常保存模板
+- Editor content becomes the AI draft
+- You can continue manual editing
+- You can save the template normally afterward
 
-### 回退
+### Rollback
 
-如果刚刚应用了 AI 草稿，但又想回到应用前的内容，可以点击 **回退按钮**。
+If you just applied an AI draft and want to return to the content from before applying, click the **rollback button**.
 
-回退后的特点：
+After rollback:
 
-- 仅恢复最近一次本地应用前的编辑器内容
-- 不影响其他模板
-- 适合快速试错
+- Only the editor content from before the latest local apply is restored
+- Other templates are unaffected
+- This is useful for quick trial and error
 
 > [!IMPORTANT]
-> AI 草稿不会在生成后自动写入模板。只有您点击“应用”之后，候选内容才会进入编辑器正文。
+> AI drafts are not written into templates automatically after generation. Candidate content enters the editor only after you click “Apply”.
 
 ---
 
-## 💡 实用提示
+## 💡 Practical Tips
 
-### 1. 先给 AI 一个明确边界
+### 1. Give AI clear boundaries first
 
-比起简单说“帮我优化”，更推荐说明：
+Instead of simply saying “optimize this”, describe:
 
-- 要保留什么
-- 想新增什么
-- 哪些段落不要碰
+- What should be kept
+- What should be added
+- Which sections should not be touched
 
-例如：
+Example:
 
-`保留现有注释和节点占位结构，只新增一个手动切换的日本策略组。`
+`Keep the existing comments and node placeholder structure. Only add one manual switching policy group for Japan.`
 
-### 2. 复杂模板建议分步改
+### 2. Split complex templates into steps
 
-如果模板较长，建议把需求拆成多次生成：
+For long templates, split the request into multiple generations:
 
-1. 先调整策略组
-2. 再整理规则段
-3. 最后优化注释或命名
+1. Adjust policy groups first.
+2. Then organize rule sections.
+3. Finally improve comments or naming.
 
-这样更容易审阅，也更容易回退。
+This makes review easier and rollback safer.
 
-### 3. 先对比，再应用
+### 3. Compare before applying
 
-推荐顺序是：
+Recommended order:
 
-1. 输入指令
-2. 生成
-3. 在对比模式确认差异
-4. 应用到编辑器
-5. 手工微调并保存
+1. Enter instruction.
+2. Generate.
+3. Review differences in diff mode.
+4. Apply to the editor.
+5. Manually adjust and save.
 
-这也是当前最稳妥、最符合这个功能设计的使用方式。
+This is the safest flow and matches the feature design.
 
 ---
 
-## 🛠️ 常见问题
+## 🛠️ FAQ
 
-### 生成时报“AI 助手当前不可用”
+### Generation reports “AI Assistant is currently unavailable”
 
-说明当前系统中的 AI 助手尚未启用。
+The AI Assistant is not enabled in the current system.
 
-请前往：
+Open:
 
-`设置 -> AI 助手`
+`Settings -> AI Assistant`
 
-启用 AI 助手并保存设置。
+Enable AI Assistant and save settings.
 
-### 生成时报“AI 设置不完整”
+### Generation reports “AI settings are incomplete”
 
-通常说明下列配置至少有一项缺失：
+Usually at least one of these settings is missing:
 
 - Base URL
-- 模型名称
+- Model name
 - API Key
 
-请前往：
+Open:
 
-`设置 -> AI 助手`
+`Settings -> AI Assistant`
 
-完成配置后再回来生成。
+Complete configuration, then return to generation.
 
-### 为什么我不能直接保存对比结果？
+### Why can't I save the diff result directly?
 
-因为 **对比模式** 是只读审阅视图，不是最终编辑态。
+Because **diff mode** is a read only review view, not the final editing state.
 
-请先点击 **应用**，把候选内容写回编辑器，再切回编辑模式保存。
+Click **Apply** first to write candidate content back into the editor, then switch to edit mode and save.
 
-### 为什么草稿会失效？
+### Why does a draft become invalid?
 
-如果您在生成后又修改了：
+If you change any of these after generation:
 
-- 模板正文
-- 文件名
-- 分类
-- 规则来源
-- 代理下载相关配置
+- Template body
+- File name
+- Category
+- Rule source
+- Proxy download related configuration
 
-那么当前 AI 草稿就可能不再对应最新上下文，需要重新生成。
+The current AI draft may no longer match the latest context and should be generated again.
 
-### 回退按钮为什么不可用？
+### Why is the rollback button unavailable?
 
-回退只针对**最近一次本地应用 AI 草稿**。
+Rollback applies only to the **latest local apply of an AI draft**.
 
-如果您还没有点击过“应用”，或者已经清除了这次本地快照，就不会有可回退内容。
+If you have not clicked “Apply”, or if the local snapshot has been cleared, there is nothing to roll back.
 
 ---
 
-## 🔐 安全与使用建议
+## 🔐 Security and Usage Advice
 
-- 把 AI 生成结果当作“候选方案”，而不是最终答案
-- 生成后优先查看对比，再决定是否应用
-- 对关键模板建议保留原始版本，逐步调整
-- 如果结果方向不对，优先修改指令重新生成，而不是在错误草稿上继续堆叠修改
+- Treat AI output as a “candidate”, not the final answer.
+- Review diffs first after generation, then decide whether to apply.
+- Keep original versions of important templates and adjust gradually.
+- If the result goes in the wrong direction, change the instruction and regenerate instead of stacking edits on a bad draft.
 
 > [!TIP]
-> 最理想的使用方式不是“让 AI 一次生成最终模板”，而是“让 AI 先给出一版高质量草稿，然后由您快速审阅、应用并微调”。这样效率最高，也最安全。
+> The ideal use is not “let AI generate the final template in one shot”. It is “let AI produce a strong draft, then quickly review, apply, and fine tune it yourself”. This is both efficient and safer.

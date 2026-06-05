@@ -1,20 +1,22 @@
-# 解锁检测
+English | [简体中文](unlock-check.zh-CN.md)
 
-SublinkPro 现在支持在节点检测流程中附带执行 **流媒体 / AI 服务可用区检测**。
+# Unlock Checks
 
-这个功能不是单独起一套任务系统，而是直接挂在现有的 **节点检测 / 测速策略** 上执行：
+SublinkPro now supports **streaming / AI service availability checks** as part of the node check flow.
 
-- 选择节点范围
-- 执行延迟 / 速度检测
-- 可选检测落地国家、IP 质量
-- 可选检测解锁情况
-- 将结果直接写回节点信息，并在前端节点列表、详情面板、任务中心中展示
+This feature does not start a separate task system. It runs directly inside the existing **node check / speed test profile** flow:
+
+- Choose node range
+- Run latency / speed checks
+- Optionally check landing country and IP quality
+- Optionally check unlock availability
+- Write results directly back to node information, and display them in the frontend node list, details panel, and Task Center
 
 ---
 
-## 当前内置检查项
+## Current Built In Checks
 
-首批内置 Provider：
+First built in Providers:
 
 - Netflix
 - Disney+
@@ -24,179 +26,179 @@ SublinkPro 现在支持在节点检测流程中附带执行 **流媒体 / AI 服
 - Claude
 
 > [!NOTE]
-> 当前内置 Provider 会尽量采用与主流解锁检测脚本一致的服务级探针：例如 OpenAI 会分别检查 Web / iOS 入口，Disney+ 会走设备、令牌与地区 GraphQL 探针，YouTube Premium、Gemini、Claude、Netflix 也会读取对应页面或最终跳转中的可用性标记。
+> Current built in Providers try to use service level probes consistent with mainstream unlock check scripts. For example, OpenAI checks Web and iOS entries separately, Disney+ uses device, token, and region GraphQL probes, while YouTube Premium, Gemini, Claude, and Netflix read availability markers from the relevant pages or final redirects.
 >
-> 上面的列表表示**当前内置** Provider，而不是前端或规则系统中的固定枚举。新增 checker 后，相关 Provider 选择器和 unlock 条件会通过后端元数据自动更新。
+> The list above means **currently built in** Providers, not fixed frontend or rule system enums. After adding a checker, related Provider selectors and unlock conditions update automatically through backend metadata.
 
 ---
 
-## 使用方式
+## Usage
 
-进入：
+Open:
 
-`节点检测 -> 新建 / 编辑策略`
+`Node Check -> New / Edit Profile`
 
-在策略中可开启：
+In the profile, enable:
 
-- **解锁检测**
-- 选择需要检测的 Provider 列表
+- **Unlock check**
+- The Provider list to check
 
-如果不手动选择 Provider，则系统会按后端注册的默认 Provider 集合执行。
+If no Providers are selected manually, the system runs the backend registered default Provider set.
 
-执行后，结果会显示在：
+After execution, results appear in:
 
-- 节点列表
-- 节点卡片
-- 节点详情面板
-- 任务进度面板
-- 任务中心历史记录
+- Node list
+- Node card
+- Node details panel
+- Task progress panel
+- Task Center history
 
 ---
 
-## 解锁筛选规则
+## Unlock Filter Rules
 
-节点列表和订阅过滤现在都支持 **多条解锁筛选规则**。
+Node lists and subscription filters now support **multiple unlock filter rules**.
 
-每条规则包含：
+Each rule contains:
 
 - `Provider`
-- `状态`
-- `关键词`
+- `Status`
+- `Keyword`
 
-匹配语义如下：
+Matching semantics:
 
-- **同一条规则内部**：按 **AND** 生效
-- **多条规则之间**：可按 **OR** 或 **AND** 生效
+- **Inside one rule**: **AND**
+- **Between multiple rules**: user selectable **OR** or **AND**
 
-也就是说：
+That means:
 
-- 一条规则：`Gemini + 解锁 + US`
-  - 表示同一条解锁结果必须同时满足这三个条件
-- 多条规则：
-  - `Gemini + 解锁`
-  - `YouTube Premium + 解锁`
-  - 在 OR 模式下：满足其中任意一条即可通过筛选
-  - 在 AND 模式下：需要同时满足全部规则
+- One rule: `Gemini + available + US`
+  - The same unlock result must satisfy all three conditions
+- Multiple rules:
+  - `Gemini + available`
+  - `YouTube Premium + available`
+  - In OR mode: matching any one rule passes
+  - In AND mode: all rules must be satisfied
 
-如果用户没有新增任何解锁规则，则表示 **不启用解锁筛选**。
-
----
-
-## 命名与展示建议
-
-解锁信息可以参与节点重命名，但推荐优先使用 **紧凑摘要**，而不是把所有平台结果完整展开到名称里。
-
-推荐：
-
-- `$Unlock(provider)`：按具体 Provider 输出紧凑结果，例如 `$Unlock(openai)` → `解锁-US`
-- `$Unlock`：主解锁摘要，例如 `Netflix-解锁-US-+2`
-
-不建议把多个平台的详细结果全部拼进节点名称，否则会导致名称过长、难读、难搜索。
-
-这适合以下场景：
-
-- 想找“Gemini 解锁”的节点
-- 想找“Gemini 解锁 或 YouTube Premium 解锁”的节点
-- 想找“Claude 解锁且带 US 关键词”的节点
+If the user has not added unlock rules, **unlock filtering is disabled**.
 
 ---
 
-## 结果语义
+## Naming and Display Advice
 
-单个 Provider 的结果采用统一结构，核心字段包括：
+Unlock information can be used in node renaming, but the **compact summary** is recommended instead of expanding every platform result into the node name.
 
-- `provider`：Provider 标识
-- `status`：检测结果状态
-- `region`：检测得到的地区（如果适用）
-- `reason`：失败 / 受限原因
-- `detail`：额外说明
+Recommended:
 
-当前常见状态：
+- `$Unlock(provider)`: output compact result for a specific Provider, for example `$Unlock(openai)` -> `Available-US`
+- `$Unlock`: primary unlock summary, for example `Netflix-Available-US-+2`
 
-| 状态 | 含义 |
+Putting detailed results for many platforms into node names is not recommended, because names become too long, hard to read, and hard to search.
+
+This is useful when you want to find:
+
+- Nodes where “Gemini is available”
+- Nodes where “Gemini is available or YouTube Premium is available”
+- Nodes where “Claude is available and contains keyword US”
+
+---
+
+## Result Semantics
+
+Each Provider result uses a unified structure. Core fields include:
+
+- `provider`: Provider identifier
+- `status`: check result status
+- `region`: detected region, if applicable
+- `reason`: failure / restriction reason
+- `detail`: extra notes
+
+Common current statuses:
+
+| Status | Meaning |
 |:---|:---|
-| `available` | 明确可用 |
-| `partial` | 部分，例如仅 Originals |
-| `reachable` | 直连，可访问入口但不代表完整能力 |
-| `restricted` | 受限，当前地区或出口被限制 |
-| `unsupported` | 不支持，当前地区不在官方支持范围 |
-| `error` | 异常，本轮检测失败 |
-| `unknown` | 无法可靠判断 |
+| `available` | Clearly available |
+| `partial` | Partial, such as Originals Only |
+| `reachable` | Entry is reachable, but this does not mean full capability |
+| `restricted` | Restricted, current region or exit is blocked |
+| `unsupported` | Unsupported, current region is outside official support |
+| `error` | Error, this check failed |
+| `unknown` | Cannot be judged reliably |
 
 > [!IMPORTANT]
-> `reachable` 与 `available` 不完全等价。
-> 
-> Provider 返回 `available` 时表示检测到了该服务对应的解锁标记或 API 可用性结果；`reachable` 仅表示入口可达，不应视为完整解锁。
-> Gemini 检测会进一步读取页面内的功能可用性标记；只有出现明确可用标记时才判定为 `available`，未找到该标记时按 `restricted` 处理，避免把地域受限但仍返回 HTTP 成功的页面误判为“解锁”。
-> OpenAI 的 `partial` 表示上游检测语义中的“Only Available with Web Browser”或“Only Available with Mobile APP”；Disney+ 的 `partial` 表示该地区处于 `Available Soon` 状态；Netflix 的 `partial` 表示 Originals Only。
+> `reachable` and `available` are not equivalent.
+>
+> `available` means the Provider specific unlock marker or API availability result was detected. `reachable` only means the entry point is reachable and should not be treated as full unlock.
+> Gemini checks additionally read page level feature availability markers. Only explicit availability markers are treated as `available`. If the marker is absent, the result is treated as `restricted`, preventing region limited pages that still return HTTP success from being misclassified as “available”.
+> OpenAI `partial` means “Only Available with Web Browser” or “Only Available with Mobile APP” in upstream check semantics. Disney+ `partial` means that region is `Available Soon`. Netflix `partial` means Originals Only.
 
 ---
 
-## 架构设计
+## Architecture
 
-该功能采用 **注册表 + 独立 Checker 模块 + 总调度器** 的结构。
+The feature uses a **registry + independent Checker modules + orchestrator** structure.
 
-### 1. 调度层
+### 1. Scheduling layer
 
-节点检测仍由现有链路负责：
+Node checks are still handled by the existing flow:
 
 - `api/node_check.go`
 - `models/node_check_profile.go`
 - `services/scheduler/speedtest_config.go`
 - `services/scheduler/speedtest_task.go`
 
-这些文件负责：
+These files:
 
-- 保存策略配置
-- 将配置转为运行时参数
-- 决定何时执行解锁检测
-- 将结果写回节点与任务结果
+- Save profile configuration
+- Convert configuration into runtime parameters
+- Decide when to run unlock checks
+- Write results back to nodes and task results
 
-### 2. 解锁子系统
+### 2. Unlock subsystem
 
-解锁检测核心位于：
+Unlock check core files:
 
 - `services/unlock/registry.go`
 - `services/unlock/runtime.go`
 - `services/unlock/orchestrator.go`
 - `services/unlock/checker_*.go`
 
-其中：
+Where:
 
-- **registry**：注册并解析 Checker
-- **runtime**：提供共享 HTTP client、timeout、落地国家等运行时上下文
-- **orchestrator**：按策略选择 Provider，统一调度执行并生成结果汇总
-- **checker 文件**：每个 Provider 单独维护自己的探测逻辑
+- **registry**: registers and resolves Checkers
+- **runtime**: provides shared HTTP client, timeout, landing country, and other runtime context
+- **orchestrator**: selects Providers by profile, runs checks through one path, and produces result summaries
+- **checker files**: each Provider maintains its own probe logic
 
-### 3. 数据层
+### 3. Data layer
 
-节点侧以统一结构保存结果：
+Node side results are stored in a unified structure:
 
 - `models/unlock.go`
 - `models/node.go`
 
-当前节点会保存：
+Current nodes store:
 
 - `unlockSummary`
 - `unlockCheckAt`
 
-这样后续新增 Provider 时，不需要给 `Node` 再增加一列字段。
+This means adding Providers later does not require adding another column to `Node`.
 
 ---
 
-## 如何新增一个解锁检查项
+## How to Add an Unlock Checker
 
-这是本功能最核心的可维护性目标：
+This feature's main maintainability goal is:
 
-> **新增一个 Provider，应尽量只需要：新增 checker 文件 + 注册 + provider 元数据声明。**
+> **Adding a Provider should usually require only: add checker file + register + declare provider metadata.**
 
-### 步骤 1：新增 checker 文件
+### Step 1: Add checker file
 
-在 `services/unlock/` 下新增一个类似文件：
+Add a file under `services/unlock/`, such as:
 
 `unlock_checker_example.go`
 
-实现统一接口：
+Implement the unified interface:
 
 ```go
 type UnlockChecker interface {
@@ -206,7 +208,7 @@ type UnlockChecker interface {
 }
 ```
 
-同时建议在 checker 中实现对应的元数据方法，让后端自动下发展示信息和 rename 变量：
+It is also recommended to implement metadata methods in the checker so the backend can deliver display information and rename variables automatically:
 
 ```go
 type UnlockCheckerMeta interface {
@@ -218,23 +220,23 @@ type UnlockCheckerRenameMeta interface {
 }
 ```
 
-### 步骤 2：实现 `Check`
+### Step 2: Implement `Check`
 
-在 `Check(runtime UnlockRuntime)` 中：
+Inside `Check(runtime UnlockRuntime)`:
 
-- 使用共享运行时中的代理 HTTP client
-- 执行该 Provider 自己的低成本探测
-- 返回统一的 `models.UnlockProviderResult`
+- Use the shared proxy HTTP client from runtime
+- Run the Provider's own low cost probe
+- Return unified `models.UnlockProviderResult`
 
-不要：
+Don't:
 
-- 直接操作数据库
-- 直接依赖 scheduler / task manager
-- 在 checker 内关心别的 Provider 的逻辑
+- Operate on the database directly
+- Depend directly on scheduler / task manager
+- Handle logic for other Providers inside a checker
 
-### 步骤 3：注册 checker
+### Step 3: Register checker
 
-在新文件中通过 `init()` 调用注册：
+Call registration in `init()` in the new file:
 
 ```go
 func init() {
@@ -242,67 +244,67 @@ func init() {
 }
 ```
 
-### 步骤 4：前端展示与规则系统
+### Step 4: Frontend display and rule system
 
-正常情况下，不需要再去前端手动补 Provider / 状态枚举。
+Normally, you don't need to manually add Provider or status enums to the frontend.
 
-当前这些位置都会通过后端元数据动态消费 unlock 信息：
+These places consume unlock information dynamically through backend metadata:
 
-- 节点检测策略里的 Provider 选择器
-- 节点页面解锁筛选
-- 订阅编辑中的 unlock 过滤规则
-- 标签规则里的 unlock 条件
-- 链式代理里的 unlock 条件
-- 节点重命名中的 `$Unlock(provider)` 变量列表
+- Provider selector in node check profiles
+- Unlock filter on the node page
+- Unlock filter rules in subscription editing
+- Unlock conditions in tag rules
+- Unlock conditions in chain proxy
+- `$Unlock(provider)` variable list in node renaming
 
-也就是说，**新增 checker 后，只要后端元数据完整，下游 UI 会自动更新。**
+In other words, **after adding a checker, downstream UI updates automatically as long as backend metadata is complete**.
 
-只有在以下场景才需要额外前端改动：
+Extra frontend changes are needed only when:
 
-- 你新增了全新的 unlock 条件字段，而不是新增 Provider
-- 你希望为某个 Provider 做额外的专属视觉呈现，而不仅仅是普通枚举选项
+- You add a brand new unlock condition field, not just a Provider
+- You want special visual presentation for one Provider beyond normal enum options
 
-### 步骤 5：文档同步
+### Step 5: Documentation sync
 
-新增 Provider 后，应按需同步更新：
+After adding a Provider, update as needed:
 
-- 本文档中的“当前内置检查项”（如果你希望文档反映最新内置 Provider）
-- `README.md` 中的功能说明（通常不需要逐个 Provider 更新）
-- `docs/development.md` 中的开发说明（如果扩展方式本身变化）
+- “Current Built In Checks” in this document, if you want docs to reflect the latest built in Providers
+- Feature description in `README.md`, usually no need to list each Provider
+- Development notes in `docs/development.md`, if the extension mechanism itself changes
 
 > [!TIP]
-> 如果只是新增一个普通 checker，而没有改变扩展机制，通常不需要再更新多个前端文档来同步枚举，因为运行时选择器会自动读取后端元数据。
+> If you only add a normal checker without changing the extension mechanism, you usually don't need to update multiple frontend docs for enum sync, because runtime selectors read backend metadata automatically.
 
 ---
 
-## 维护约束建议
+## Maintenance Constraints
 
-为了让这个子系统长期可维护，建议遵守以下规则：
+To keep this subsystem maintainable, follow these rules:
 
-1. **每个 Provider 只维护自己的逻辑**
-2. **共享逻辑放在 runtime / orchestrator，不要在 checker 之间复制**
-3. **不要把 Provider dispatch 再改回集中式 switch**
-4. **结果结构尽量稳定，避免前后端反复改字段**
-5. **优先低成本探测，避免浏览器自动化和高资源脚本依赖**
+1. **Each Provider owns only its own logic**.
+2. **Shared logic belongs in runtime / orchestrator. Don't copy it between checkers**.
+3. **Don't turn Provider dispatch back into a central switch**.
+4. **Keep result structures stable and avoid repeated frontend/backend field churn**.
+5. **Prefer low cost probes and avoid browser automation or high resource script dependencies**.
 
 ---
 
-## 适用边界
+## Scope
 
-这个功能适合：
+This feature is suitable for:
 
-- 批量筛选节点的地区能力
-- 判断流媒体 / AI 服务是否大概率可用
-- 给订阅筛选、节点运营、标签规则提供补充依据
-- 在订阅过滤里按解锁结果筛选节点
-- 在节点命名规则中插入解锁结果摘要
+- Batch filtering nodes by regional capability
+- Estimating whether streaming / AI services are likely available
+- Adding extra signals for subscription filtering, node operations, and tag rules
+- Filtering nodes by unlock result in subscriptions
+- Adding unlock summaries to node names
 
-这个功能暂时不追求：
+This feature currently does not aim for:
 
-- 完全模拟真实登录后业务态
-- 对所有平台做到 100% 精准
-- 通过复杂反爬绕过手段来提高命中率
+- Perfectly simulating real signed in business state
+- 100% accuracy for every platform
+- Complex anti bot bypass techniques to improve hit rate
 
-首版目标是：
+The first version's goal is:
 
-**可维护、可扩展、可批量运行、可稳定展示。**
+**Maintainable, extensible, batch runnable, and stable to display.**

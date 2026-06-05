@@ -1,63 +1,65 @@
-# Host 映射管理
+English | [简体中文](host.zh-CN.md)
 
-自定义 Host 映射功能，类似于系统 hosts 文件，可为指定域名设置固定 IP 地址。
+# Host Mapping Management
+
+Custom Host mappings work like a system hosts file, letting you assign fixed IP addresses to specific domains.
 
 ---
 
-## 核心特点
+## Core Features
 
-| 特点 | 说明 |
+| Feature | Description |
 |:---|:---|
-| **全局生效** | Host 映射在测速、导入订阅、Telegram 机器人等所有代理相关操作中自动生效 |
-| **订阅地址替换** | 订阅可开启「替换服务器地址为 Host」，将节点域名自动替换为已配置的 Host IP |
-| **DNS 服务器** | 支持自定义 DNS 服务器（DoH、UDP），可选择是否通过代理节点解析 |
-| **测速持久化** | 测速时自动将 DNS 解析结果保存为 Host 映射，避免重复解析 |
-| **文本编辑模式** | 支持类 hosts 文件格式批量编辑，每行 `域名 IP # 备注` |
-| **有效期管理** | 自动创建的 Host 可设置有效期，过期自动清理 |
-| **固定功能 (Pin)** | 重要 Host 可固定，避免被过期清理 |
+| **Global effect** | Host mappings automatically apply to speed tests, subscription imports, Telegram Bot operations, and other proxy related flows |
+| **Subscription address replacement** | Subscriptions can enable “replace server address with Host”, automatically replacing node domains with configured Host IPs |
+| **DNS servers** | Supports custom DNS servers, including DoH and UDP, with optional proxy node resolution |
+| **Speed test persistence** | DNS results from speed tests can be saved as Host mappings to avoid repeated resolution |
+| **Text edit mode** | Supports hosts file like batch editing, one line per entry: `domain IP # note` |
+| **Expiration management** | Automatically created Hosts can have expiration times and be cleaned up after expiry |
+| **Pin** | Important Hosts can be pinned so they are not removed by expiration cleanup |
 
 ---
 
-## 📝 使用场景
+## 📝 Use Cases
 
-```
-场景一：CDN 优选
-├── 将 CF 节点域名映射到优选 IP
-└── 测速后自动保存最佳解析结果
+```text
+Case 1: CDN preferred IPs
+├── Map Cloudflare node domains to preferred IPs
+└── Save the best resolved result automatically after speed tests
 
-场景二：DNS 污染绕过
-├── 手动设置被污染域名的正确 IP
-└── 所有代理操作使用正确解析
+Case 2: DNS pollution bypass
+├── Manually set the correct IP for polluted domains
+└── Use the correct resolution in all proxy operations
 
-场景三：批量导入
-├── 使用文本模式一次性编辑多条映射
-└── 格式：example.com 192.168.1.1 # 备注
+Case 3: Batch import
+├── Edit many mappings at once in text mode
+└── Format: example.com 192.168.1.1 # note
 ```
 
 ---
 
-## 测速 Host 持久化
+## Speed Test Host Persistence
 
 > [!TIP]
-> **测速 Host 持久化**：开启后，测速时会自动将代理节点的域名与解析到的 IP 保存到 Host 表。推荐配合有效期设置使用，避免 Host 数据无限增长。
+> **Speed test Host persistence**: When enabled, speed tests automatically save proxy node domains and their resolved IPs into the Host table. Use it with expiration settings to avoid unbounded Host data growth.
 
 ---
 
-## DNS 代理设置
+## DNS Proxy Settings
 
 > [!NOTE]
-> **DNS 代理设置**：可配置 DNS 解析是否通过代理，支持自动选择可用代理或手动指定代理节点。适用于解析被墙域名的场景。
+> **DNS proxy settings**: Configure whether DNS resolution goes through a proxy. You can auto select an available proxy or manually specify a proxy node. This is useful for resolving blocked domains.
 
 ---
 
-## 文本编辑格式
+## Text Edit Format
 
-使用文本模式批量编辑时，格式如下：
+Use this format in text mode batch editing:
 
-```
-# 这是注释行
+```text
+# This is a comment line
 example.com 192.168.1.1
-cdn.example.com 192.168.1.2 # 备注信息
+cdn.example.com 192.168.1.2 # note
 ```
 
-每行一条记录，格式为：`域名 IP [# 备注]`
+Each line is one record: `domain IP [# note]`.

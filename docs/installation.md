@@ -1,24 +1,26 @@
-# 安装部署指南
+English | [简体中文](installation.zh-CN.md)
 
-本文档介绍 SublinkPro 的完整安装、更新和卸载方法。
+# Installation Guide
+
+This document explains how to install, update, and uninstall SublinkPro.
 
 ---
 
-## 📦 Docker Compose 运行（推荐）
+## 📦 Run with Docker Compose, recommended
 
 > [!TIP]
-> **推荐使用 Docker Compose 部署**，便于管理配置、升级和维护。
+> **Docker Compose is recommended** because it makes configuration, upgrades, and maintenance easier.
 
 > [!IMPORTANT]
-> `db/`、`template/`、`logs/` 属于运行时持久化目录，请在升级和迁移时保留。
+> `db/`, `template/`, and `logs/` are runtime persistence directories. Keep them during upgrades and migrations.
 
-创建 `docker-compose.yml` 文件：
+Create `docker-compose.yml`:
 
 ```yaml
 services:
   sublinkpro:
-    # image: zerodeng/sublink-pro:dev # 开发版（功能尝鲜使用）
-    image: zerodeng/sublink-pro # 稳定版
+    # image: zerodeng/sublink-pro:dev # Development version, for trying new features
+    image: zerodeng/sublink-pro # Stable version
     container_name: sublinkpro
     ports:
       - "8000:8000"
@@ -29,11 +31,11 @@ services:
     restart: unless-stopped
 ```
 
-如需通过 Cloudflare Tunnel 暴露服务，可在启动后进入 **用户中心 -> Cloudflare Tunnel** 填写 token 并启动；启用自动连接后会随服务启动连接 Tunnel。完整步骤见 [Cloudflare Tunnel 远程访问](features/cloudflare-tunnel.md)。
+To expose the service through Cloudflare Tunnel, start the instance first, then open **User Center -> Cloudflare Tunnel**, enter the token, and start it. When auto connect is enabled, the Tunnel connects when the service starts. See [Cloudflare Tunnel remote access](features/cloudflare-tunnel.md) for the full flow.
 
-官方 Docker 镜像已内置 `cloudflared`，非 Docker 部署则需要先按 Cloudflare 官方文档安装 `cloudflared`。
+The official Docker image includes `cloudflared`. Non Docker deployments need `cloudflared` installed first according to Cloudflare's official documentation.
 
-启动服务：
+Start the service:
 
 ```bash
 docker-compose up -d
@@ -41,10 +43,10 @@ docker-compose up -d
 
 ---
 
-## 🐳 Docker 运行
+## 🐳 Run with Docker
 
 <details>
-<summary><b>稳定版</b></summary>
+<summary><b>Stable version</b></summary>
 
 ```bash
 docker run --name sublinkpro -p 8000:8000 \
@@ -57,7 +59,7 @@ docker run --name sublinkpro -p 8000:8000 \
 </details>
 
 <details>
-<summary><b>开发版（功能尝鲜）</b></summary>
+<summary><b>Development version, for trying new features</b></summary>
 
 ```bash
 docker run --name sublinkpro -p 8000:8000 \
@@ -71,90 +73,91 @@ docker run --name sublinkpro -p 8000:8000 \
 
 ---
 
-## 📝 一键安装/更新脚本
+## 📝 One Line Install or Update Script
 
 ```bash
 sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)"
 ```
 
 > [!NOTE]
-> 安装脚本支持以下功能：
-> - **全新安装**：首次安装时自动完成所有配置
-> - **更新程序**：检测到已安装时，可选择更新（保留所有数据）
-> - **重新安装**：可选择是否保留现有数据
-> - **恢复安装**：检测到旧数据时，可选择恢复安装
+> The install script supports:
+> - **Fresh install**: completes all setup automatically on first install
+> - **Update**: detects an existing install and updates the program while keeping data
+> - **Reinstall**: lets you choose whether to keep existing data
+> - **Restore install**: detects old data and lets you restore it
 
 ---
 
-## 🗑️ 一键卸载脚本
+## 🗑️ One Line Uninstall Script
 
 ```bash
 sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/uninstall.sh)"
 ```
 
 > [!NOTE]
-> 卸载脚本会询问是否保留数据目录（db、logs、template），选择保留可用于后续重新安装时恢复数据。
+> The uninstall script asks whether to keep the data directories, including db, logs, and template. Keeping them allows later reinstalls to restore data.
 
 ---
 
-## 🔄 项目更新
+## 🔄 Project Updates
 
-### 📝 一键脚本更新
+### 📝 Update with the one line script
 
-如果您使用一键脚本安装，可以再次运行安装脚本进行更新：
+If you installed with the one line script, run the install script again to update:
 
 ```bash
 sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)"
 ```
 
-脚本会自动检测已安装的版本，并提供以下选项：
-- **更新程序**：保留所有数据，仅更新程序文件
-- **重新安装**：可选择是否保留数据
+The script detects the installed version and provides these options:
 
-### 📦 Docker Compose 手动更新
+- **Update program**: keep all data and update program files only
+- **Reinstall**: choose whether to keep data
+
+### 📦 Manual Docker Compose update
 
 ```bash
-# 进入 docker-compose.yml 所在目录
+# Enter the directory containing docker-compose.yml
 cd /path/to/your/sublinkpro
 
-# 拉取最新镜像
+# Pull the latest image
 docker-compose pull
 
-# 重新创建并启动容器
+# Recreate and start the container
 docker-compose up -d
 
-# （可选）清理旧镜像
+# Optional: clean old images
 docker image prune -f
 ```
 
-### 🐳 Docker 手动更新
+### 🐳 Manual Docker update
 
 ```bash
-# 停止并删除旧容器
+# Stop and remove the old container
 docker stop sublinkpro
 docker rm sublinkpro
 
-# 拉取最新镜像
+# Pull the latest image
 docker pull zerodeng/sublink-pro
 
-# 重新启动容器（使用与安装时相同的参数）
+# Start the container again with the same parameters used during installation
 docker run --name sublinkpro -p 8000:8000 \
   -v $PWD/db:/app/db \
   -v $PWD/template:/app/template \
   -v $PWD/logs:/app/logs \
   -d zerodeng/sublink-pro
 
-# （可选）清理旧镜像
+# Optional: clean old images
 docker image prune -f
 ```
 
 ---
 
-## 🤖 Watchtower 自动更新
+## 🤖 Automatic Updates with Watchtower
 
-Watchtower 是一个可以自动更新 Docker 容器的工具，非常适合希望保持项目始终最新的用户。
+Watchtower automatically updates Docker containers. It is useful if you want the project to stay current.
 
-### 方式一：独立运行 Watchtower
+### Option 1: Run Watchtower separately
 
 ```bash
 docker run -d \
@@ -167,13 +170,13 @@ docker run -d \
 ```
 
 > [!NOTE]
-> - `--cleanup`：更新后自动清理旧镜像
-> - `--interval 86400`：每 24 小时检查一次更新（单位：秒）
-> - 最后的 `sublinkpro` 是要监控更新的容器名称，不指定则监控所有容器
+> - `--cleanup`: remove old images after updates
+> - `--interval 86400`: check for updates every 24 hours, in seconds
+> - The final `sublinkpro` is the container name to monitor. If omitted, all containers are monitored.
 
-### 方式二：集成到 Docker Compose
+### Option 2: Add Watchtower to Docker Compose
 
-在您的 `docker-compose.yml` 中添加 Watchtower 服务：
+Add the Watchtower service to your `docker-compose.yml`:
 
 ```yaml
 services:
@@ -198,12 +201,10 @@ services:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=86400
     restart: unless-stopped
-    command: sublinkpro  # 只监控 sublinkpro 容器
+    command: sublinkpro  # Only monitor the sublinkpro container
 ```
 
 > [!TIP]
-> **Watchtower 高级配置**：
-> - 可以设置 `WATCHTOWER_NOTIFICATIONS` 环境变量来配置更新通知（支持邮件、Slack、Gotify 等）
-> - 更多配置请参考 [Watchtower 官方文档](https://containrrr.dev/watchtower/)
-
-
+> **Advanced Watchtower configuration**:
+> - Set `WATCHTOWER_NOTIFICATIONS` to configure update notifications, including email, Slack, Gotify, and others
+> - See the [official Watchtower documentation](https://containrrr.dev/watchtower/) for more settings
