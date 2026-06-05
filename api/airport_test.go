@@ -82,30 +82,31 @@ func TestAirportAddPersistsUpdateAfterDetectSettings(t *testing.T) {
 	setupAirportAPITestDB(t)
 
 	addBody := map[string]any{
-		"name":                       "机场A",
-		"url":                        "https://example.com/subscription",
-		"cronExpr":                   "0 */12 * * *",
-		"enabled":                    false,
-		"group":                      "默认组",
-		"downloadWithProxy":          false,
-		"proxyLink":                  "",
-		"userAgent":                  "",
-		"requestHeaders":             []map[string]string{},
-		"fetchUsageInfo":             false,
-		"skipTLSVerify":              false,
-		"updateAfterDetect":          true,
-		"updateAfterDetectProfileId": 7,
-		"remark":                     "",
-		"logo":                       "",
-		"nodeNameWhitelist":          "",
-		"nodeNameBlacklist":          "",
-		"protocolWhitelist":          "",
-		"protocolBlacklist":          "",
-		"nodeNamePreprocess":         "",
-		"deduplicationRule":          "",
-		"nodeNameUniquify":           false,
-		"nodeNamePrefix":             "",
-		"nodeNameIntraUniquify":      false,
+		"name":                         "机场A",
+		"url":                          "https://example.com/subscription",
+		"cronExpr":                     "0 */12 * * *",
+		"enabled":                      false,
+		"group":                        "默认组",
+		"downloadWithProxy":            false,
+		"proxyLink":                    "",
+		"userAgent":                    "",
+		"requestHeaders":               []map[string]string{},
+		"fetchUsageInfo":               false,
+		"skipTLSVerify":                false,
+		"updateAfterDetect":            true,
+		"updateAfterDetectProfileId":   7,
+		"updateAfterDetectChangedOnly": true,
+		"remark":                       "",
+		"logo":                         "",
+		"nodeNameWhitelist":            "",
+		"nodeNameBlacklist":            "",
+		"protocolWhitelist":            "",
+		"protocolBlacklist":            "",
+		"nodeNamePreprocess":           "",
+		"deduplicationRule":            "",
+		"nodeNameUniquify":             false,
+		"nodeNamePrefix":               "",
+		"nodeNameIntraUniquify":        false,
 	}
 
 	addRecorder := performAirportJSONRequest(t, AirportAdd, http.MethodPost, "/api/v1/airports", addBody)
@@ -126,5 +127,8 @@ func TestAirportAddPersistsUpdateAfterDetectSettings(t *testing.T) {
 	}
 	if stored.UpdateAfterDetectProfileID != 7 {
 		t.Fatalf("expected update_after_detect_profile_id = 7 after add, got %d", stored.UpdateAfterDetectProfileID)
+	}
+	if !stored.UpdateAfterDetectChangedOnly {
+		t.Fatal("expected update_after_detect_changed_only to be stored as true after add")
 	}
 }

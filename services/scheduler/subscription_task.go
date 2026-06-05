@@ -90,34 +90,51 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 		profileID := airport.UpdateAfterDetectProfileID
 		changedOnly := airport.UpdateAfterDetectChangedOnly
 		go func(airportID int, airportName string, nodeCheckProfileID int, changedNodeIDs []int, changedOnly bool) {
-			var nodeIDs []int
+			nodeIDs, shouldRun, listErr := resolveUpdateAfterDetectNodeIDs(airportID, changedNodeIDs, changedOnly)
+			if listErr != nil {
+				utils.Warn("获取机场节点失败，跳过更新后检测 - ID: %d, Error: %v", airportID, listErr)
+				return
+			}
+			if !shouldRun {
+				if changedOnly {
+					utils.Info("机场 [%s] 开启了仅检测变化/新增节点，但本次更新没有变化/新增节点，跳过更新后检测", airportName)
+				} else {
+					utils.Warn("机场 [%s] 更新后检测已启用，但没有可检测节点", airportName)
+				}
+				return
+			}
 
-			if changedOnly && len(changedNodeIDs) > 0 {
-				nodeIDs = changedNodeIDs
+			if changedOnly {
 				utils.Info("机场 [%s] 订阅更新完成，仅检测 %d 个变化/新增节点，策略 ID: %d", airportName, len(nodeIDs), nodeCheckProfileID)
 			} else {
-				updatedNodes, listErr := models.ListBySourceID(airportID)
-				if listErr != nil {
-					utils.Warn("获取机场节点失败，跳过更新后检测 - ID: %d, Error: %v", airportID, listErr)
-					return
-				}
-				if len(updatedNodes) == 0 {
-					utils.Warn("机场 [%s] 更新后检测已启用，但没有可检测节点", airportName)
-					return
-				}
-
-				nodeIDs = make([]int, 0, len(updatedNodes))
-				for _, n := range updatedNodes {
-					nodeIDs = append(nodeIDs, n.ID)
-				}
-
-				if changedOnly {
-					utils.Info("机场 [%s] 开启了仅检测变化节点，但本次更新没有变化/新增节点，将检测全部 %d 个节点", airportName, len(nodeIDs))
-				}
 				utils.Info("机场 [%s] 订阅更新完成，立即执行节点检测策略 ID: %d", airportName, nodeCheckProfileID)
 			}
 
 			ExecuteNodeCheckWithProfile(nodeCheckProfileID, nodeIDs, models.TaskTriggerAirportUpdate)
 		}(id, subName, profileID, changedNodeIDs, changedOnly)
 	}
+}
+
+// resolveUpdateAfterDetectNodeIDs 解析更新后检测的目标节点；仅检测变化节点时，空变更代表跳过检测而不是回退到全机场。
+func resolveUpdateAfterDetectNodeIDs(airportID int, changedNodeIDs []int, changedOnly bool) ([]int, bool, error) {
+	if changedOnly {
+		if len(changedNodeIDs) == 0 {
+			return nil, false, nil
+		}
+		return changedNodeIDs, true, nil
+	}
+
+	updatedNodes, err := models.ListBySourceID(airportID)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(updatedNodes) == 0 {
+		return nil, false, nil
+	}
+
+	nodeIDs := make([]int, 0, len(updatedNodes))
+	for _, n := range updatedNodes {
+		nodeIDs = append(nodeIDs, n.ID)
+	}
+	return nodeIDs, true, nil
 }

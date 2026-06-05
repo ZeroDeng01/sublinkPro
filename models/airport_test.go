@@ -51,14 +51,15 @@ func TestAirportUpdatePersistsUpdateAfterDetectSettings(t *testing.T) {
 	setupAirportTestDB(t)
 
 	airport := &Airport{
-		Name:                       "机场A",
-		URL:                        "https://example.com/subscription",
-		CronExpr:                   "0 */12 * * *",
-		Enabled:                    false,
-		Group:                      "默认组",
-		RequestHeaders:             AirportRequestHeaders{},
-		UpdateAfterDetect:          true,
-		UpdateAfterDetectProfileID: 7,
+		Name:                         "机场A",
+		URL:                          "https://example.com/subscription",
+		CronExpr:                     "0 */12 * * *",
+		Enabled:                      false,
+		Group:                        "默认组",
+		RequestHeaders:               AirportRequestHeaders{},
+		UpdateAfterDetect:            true,
+		UpdateAfterDetectProfileID:   7,
+		UpdateAfterDetectChangedOnly: true,
 	}
 
 	if err := airport.Add(); err != nil {
@@ -71,6 +72,7 @@ func TestAirportUpdatePersistsUpdateAfterDetectSettings(t *testing.T) {
 	airport.Group = "更新组"
 	airport.UpdateAfterDetect = false
 	airport.UpdateAfterDetectProfileID = 0
+	airport.UpdateAfterDetectChangedOnly = false
 
 	if err := airport.Update(); err != nil {
 		t.Fatalf("update airport: %v", err)
@@ -86,5 +88,8 @@ func TestAirportUpdatePersistsUpdateAfterDetectSettings(t *testing.T) {
 	}
 	if stored.UpdateAfterDetectProfileID != 0 {
 		t.Fatalf("expected update_after_detect_profile_id = 0 after update, got %d", stored.UpdateAfterDetectProfileID)
+	}
+	if stored.UpdateAfterDetectChangedOnly {
+		t.Fatal("expected update_after_detect_changed_only to persist false after update")
 	}
 }
