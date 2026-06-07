@@ -325,9 +325,9 @@
 
 /* ========== 详情面板 ========== */
 .node-detail-panel {
-  position: fixed;
-  z-index: 99999;
-  min-width: 360px;
+  position: absolute;
+  z-index: 20;
+  min-width: 0;
   max-width: 480px;
   max-height: 70vh;
   display: flex;
@@ -575,10 +575,7 @@
   }
 
   .node-detail-panel {
-    min-width: 280px;
-    max-width: 90vw;
+    max-width: none;
     max-height: 60vh;
-    left: 5vw !important;
-    right: 5vw !important;
   }
 }

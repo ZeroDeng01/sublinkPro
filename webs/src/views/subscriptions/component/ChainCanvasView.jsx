@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, memo, useCallback } from 'react';
+import { useState, useMemo, useEffect, memo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import Box from '@mui/material/Box';
@@ -75,29 +75,37 @@ const NodeDetailPanel = memo(({ data, position, onClose }) => {
   const { t } = useTranslation();
   const theme = useTheme();
   const hasNodes = data.nodes && data.nodes.length > 0;
-  const panelRef = useState(null);
+  const panelRef = useRef(null);
 
   const safePosition = useMemo(() => {
-    const panelWidth = 400;
+    const bounds = position.bounds || { width: window.innerWidth, height: window.innerHeight };
+    const isNarrow = bounds.width <= 768;
+    const panelWidth = isNarrow ? Math.max(280, bounds.width - 40) : Math.min(400, Math.max(280, bounds.width - 40));
     const panelHeight = Math.min(500, 100 + (data.nodes?.length || 0) * 36);
     const padding = 20;
 
     let x = position.x;
     let y = position.y;
 
-    if (x + panelWidth > window.innerWidth - padding) {
-      x = position.x - panelWidth - 20;
+    if (isNarrow) {
+      x = padding;
+    } else if (x + panelWidth > bounds.width - padding) {
+      x = (position.left ?? position.x) - panelWidth - 10;
     }
 
-    if (y + panelHeight > window.innerHeight - padding) {
-      y = window.innerHeight - panelHeight - padding;
+    if (x < padding) {
+      x = padding;
+    }
+
+    if (y + panelHeight > bounds.height - padding) {
+      y = bounds.height - panelHeight - padding;
     }
 
     if (y < padding) {
       y = padding;
     }
 
-    return { x, y };
+    return { x, y, width: panelWidth };
   }, [position, data.nodes?.length]);
 
   const handleClick = (e) => {
@@ -110,7 +118,8 @@ const NodeDetailPanel = memo(({ data, position, onClose }) => {
       className="node-detail-panel"
       style={{
         left: safePosition.x,
-        top: safePosition.y
+        top: safePosition.y,
+        width: safePosition.width
       }}
       onClick={handleClick}
       onMouseDown={handleClick}
@@ -203,7 +212,7 @@ const ProxyNode = memo(({ data }) => {
       e.stopPropagation();
       if (data.onShowDetail) {
         const rect = e.currentTarget.getBoundingClientRect();
-        data.onShowDetail(data, { x: rect.right + 10, y: rect.top });
+        data.onShowDetail(data, { x: rect.right + 10, y: rect.top, left: rect.left });
       }
     },
     [data]
@@ -237,7 +246,7 @@ const TargetNode = memo(({ data }) => {
       e.stopPropagation();
       if (data.onShowDetail) {
         const rect = e.currentTarget.getBoundingClientRect();
-        data.onShowDetail(data, { x: rect.right + 10, y: rect.top });
+        data.onShowDetail(data, { x: rect.right + 10, y: rect.top, left: rect.left });
       }
     },
     [data]
@@ -331,11 +340,30 @@ export default function ChainCanvasView({ rules = [], fullscreen = false }) {
   const tokens = getChainProxyThemeTokens(theme, isDark);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const canvasRef = useRef(null);
 
   const [detailPanel, setDetailPanel] = useState(null);
 
   const handleShowDetail = useCallback((nodeData, position) => {
-    setDetailPanel({ data: nodeData, position });
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+
+    if (!canvasRect) {
+      setDetailPanel({ data: nodeData, position });
+      return;
+    }
+
+    setDetailPanel({
+      data: nodeData,
+      position: {
+        x: position.x - canvasRect.left,
+        y: position.y - canvasRect.top,
+        left: position.left - canvasRect.left,
+        bounds: {
+          width: canvasRect.width,
+          height: canvasRect.height
+        }
+      }
+    });
   }, []);
 
   const handleCloseDetail = useCallback(() => {
@@ -509,6 +537,7 @@ export default function ChainCanvasView({ rules = [], fullscreen = false }) {
   return (
     <Box
       className={`chain-canvas-container ${fullscreen ? 'fullscreen' : ''}`}
+      ref={canvasRef}
       sx={{
         ...getChainProxyCanvasCssVars(tokens)
       }}
