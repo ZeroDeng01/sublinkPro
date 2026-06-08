@@ -145,7 +145,8 @@
     "saveSuccess": "Save successful",
     "saveFailed": "Save failed",
     "status": "Status",
-    "space": "Space"
+    "space": "Space",
+    "settings": "Settings"
   },
   "airports": {
     "title": "Airport Management",

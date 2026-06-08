@@ -145,7 +145,8 @@
     "saveSuccess": "保存成功",
     "saveFailed": "保存失败",
     "status": "状态",
-    "space": "空格"
+    "space": "空格",
+    "settings": "设置"
   },
   "airports": {
     "title": "机场管理",

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -6,6 +6,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
+import Popover from '@mui/material/Popover';
 import { alpha, useColorScheme, useTheme } from '@mui/material/styles';
 
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
@@ -39,6 +40,9 @@ function LoginFloatingControls() {
   const selectedMode = mode || DEFAULT_THEME_MODE;
   const currentLanguage = normalizeLanguage(i18n.resolvedLanguage || i18n.language);
 
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+
   const switchTokens = useMemo(
     () => ({
       surface: isDark ? alpha(theme.palette.common.white, 0.045) : alpha(theme.palette.background.default, 0.88),
@@ -54,49 +58,10 @@ function LoginFloatingControls() {
     [isDark, theme]
   );
 
-  const controlGroupSx = {
-    p: 0.375,
-    borderRadius: 999,
-    display: 'flex',
-    gap: 0.375,
-    bgcolor: switchTokens.surface,
-    border: '1px solid',
-    borderColor: switchTokens.border,
-    boxShadow: switchTokens.shadow,
-    backdropFilter: 'blur(16px)',
-    WebkitBackdropFilter: 'blur(16px)'
-  };
-
-  const controlButtonSx = (selected) => ({
-    minWidth: { xs: 36, sm: 74 },
-    height: 34,
-    px: { xs: 0, sm: 1 },
-    border: '1px solid',
-    borderColor: selected ? switchTokens.selectedBorder : 'transparent',
-    borderRadius: 999,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 0.75,
-    color: selected ? switchTokens.selectedText : switchTokens.text,
-    bgcolor: selected ? switchTokens.selected : 'transparent',
-    cursor: 'pointer',
-    font: 'inherit',
-    transition: theme.transitions.create(['background-color', 'border-color', 'color', 'transform'], {
-      duration: theme.transitions.duration.shorter
-    }),
-    '&:hover': {
-      bgcolor: selected ? switchTokens.selected : switchTokens.hover,
-      color: selected ? switchTokens.selectedText : switchTokens.hoverText
-    },
-    '&:focus-visible': {
-      outline: `2px solid ${alpha(theme.palette.primary.main, 0.48)}`,
-      outlineOffset: 2
-    },
-    '&:active': {
-      transform: 'scale(0.97)'
-    }
-  });
+  const CurrentThemeIcon = useMemo(() => {
+    const option = themeModeOptions.find((o) => o.value === selectedMode);
+    return option ? option.icon : SettingsBrightnessOutlinedIcon;
+  }, [selectedMode]);
 
   return (
     <Box
@@ -107,66 +72,200 @@ function LoginFloatingControls() {
         zIndex: 1200,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'flex-end',
-        gap: 1
+        alignItems: 'flex-end'
       }}
     >
-      <Box component="nav" aria-label={t('language.title')} sx={controlGroupSx}>
-        {LANGUAGE_OPTIONS.map((item) => {
-          const selected = currentLanguage === item.value;
+      <Tooltip title={t('common.settings')}>
+        <Box
+          component="button"
+          type="button"
+          aria-label={t('common.settings')}
+          onClick={(e) => setAnchorEl(e.currentTarget)}
+          sx={{
+            p: 0.5,
+            px: { xs: 1.5, sm: 2 },
+            minHeight: 34,
+            borderRadius: 999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: { xs: 1, sm: 1.5 },
+            bgcolor: switchTokens.surface,
+            border: '1px solid',
+            borderColor: open ? switchTokens.selectedBorder : switchTokens.border,
+            boxShadow: switchTokens.shadow,
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            color: open ? switchTokens.selectedText : switchTokens.text,
+            cursor: 'pointer',
+            font: 'inherit',
+            transition: theme.transitions.create(['background-color', 'border-color', 'color', 'transform'], {
+              duration: theme.transitions.duration.shorter
+            }),
+            '&:hover': {
+              bgcolor: open ? switchTokens.surface : switchTokens.hover,
+              color: open ? switchTokens.selectedText : switchTokens.hoverText
+            },
+            '&:focus-visible': {
+              outline: `2px solid ${alpha(theme.palette.primary.main, 0.48)}`,
+              outlineOffset: 2
+            },
+            '&:active': {
+              transform: 'scale(0.97)'
+            }
+          }}
+        >
+          <TranslateIcon fontSize="small" />
+          <Typography component="span" variant="caption" sx={{ fontWeight: 600, lineHeight: 1 }}>
+            {t(`language.${currentLanguage}Short`)}
+          </Typography>
+          <Box sx={{ width: '1px', height: 16, bgcolor: switchTokens.border }} />
+          <CurrentThemeIcon fontSize="small" />
+          <Typography component="span" variant="caption" sx={{ display: { xs: 'none', sm: 'inline' }, fontWeight: 600, lineHeight: 1 }}>
+            {t(`theme.${selectedMode}Short`)}
+          </Typography>
+        </Box>
+      </Tooltip>
 
-          return (
-            <Tooltip key={item.value} title={t(`language.${item.value}`)}>
-              <Box
-                component="button"
-                type="button"
-                aria-pressed={selected}
-                aria-label={t(`language.${item.value}`)}
-                onClick={() => i18n.changeLanguage(normalizeLanguage(item.value))}
-                sx={controlButtonSx(selected)}
-              >
-                {selected ? <CheckIcon fontSize="small" /> : <TranslateIcon fontSize="small" />}
-                <Typography
-                  component="span"
-                  variant="caption"
-                  sx={{ display: { xs: 'none', sm: 'inline' }, fontWeight: selected ? 700 : 600, lineHeight: 1 }}
-                >
-                  {t(`language.${item.value}Short`)}
-                </Typography>
-              </Box>
-            </Tooltip>
-          );
-        })}
-      </Box>
+      <Popover
+        open={open}
+        anchorEl={anchorEl}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right'
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right'
+        }}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 1.5,
+              minWidth: { xs: 240, sm: 260 },
+              p: 2,
+              borderRadius: 3,
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+              boxShadow: theme.shadows[8],
+              border: '1px solid',
+              borderColor: 'divider'
+            }
+          }
+        }}
+      >
+        <Stack spacing={2.5}>
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
+              {t('theme.title')}
+            </Typography>
+            <Stack spacing={0.5}>
+              {themeModeOptions.map((item) => {
+                const selected = selectedMode === item.value;
+                const Icon = item.icon;
 
-      <Box component="nav" aria-label={t('theme.title')} sx={controlGroupSx}>
-        {themeModeOptions.map((item) => {
-          const selected = selectedMode === item.value;
-          const Icon = item.icon;
+                return (
+                  <Box
+                    key={item.value}
+                    component="button"
+                    type="button"
+                    aria-pressed={selected}
+                    aria-label={t(`theme.${item.value}`)}
+                    onClick={() => setMode(item.value)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      p: 1,
+                      px: 1.5,
+                      borderRadius: 1.5,
+                      border: '1px solid',
+                      borderColor: selected ? switchTokens.selectedBorder : 'transparent',
+                      bgcolor: selected ? switchTokens.selected : 'transparent',
+                      color: selected ? switchTokens.selectedText : switchTokens.text,
+                      cursor: 'pointer',
+                      font: 'inherit',
+                      transition: theme.transitions.create(['background-color', 'border-color', 'color'], {
+                        duration: theme.transitions.duration.shorter
+                      }),
+                      '&:hover': {
+                        bgcolor: selected ? switchTokens.selected : switchTokens.hover,
+                        color: selected ? switchTokens.selectedText : switchTokens.hoverText
+                      },
+                      '&:focus-visible': {
+                        outline: `2px solid ${alpha(theme.palette.primary.main, 0.48)}`,
+                        outlineOffset: 2
+                      }
+                    }}
+                  >
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                      <Icon fontSize="small" />
+                      <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 500, fontFamily: 'inherit' }}>
+                        {t(`theme.${item.value}`)}
+                      </Typography>
+                    </Stack>
+                    {selected && <CheckIcon fontSize="small" />}
+                  </Box>
+                );
+              })}
+            </Stack>
+          </Box>
 
-          return (
-            <Tooltip key={item.value} title={t(`theme.${item.value}`)}>
-              <Box
-                component="button"
-                type="button"
-                aria-pressed={selected}
-                aria-label={t(`theme.${item.value}`)}
-                onClick={() => setMode(item.value)}
-                sx={controlButtonSx(selected)}
-              >
-                <Icon fontSize="small" />
-                <Typography
-                  component="span"
-                  variant="caption"
-                  sx={{ display: { xs: 'none', sm: 'inline' }, fontWeight: selected ? 700 : 600, lineHeight: 1 }}
-                >
-                  {t(`theme.${item.value}Short`)}
-                </Typography>
-              </Box>
-            </Tooltip>
-          );
-        })}
-      </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
+              {t('language.title')}
+            </Typography>
+            <Stack spacing={0.5}>
+              {LANGUAGE_OPTIONS.map((item) => {
+                const selected = currentLanguage === item.value;
+
+                return (
+                  <Box
+                    key={item.value}
+                    component="button"
+                    type="button"
+                    aria-pressed={selected}
+                    aria-label={t(`language.${item.value}`)}
+                    onClick={() => i18n.changeLanguage(normalizeLanguage(item.value))}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      p: 1,
+                      px: 1.5,
+                      borderRadius: 1.5,
+                      border: '1px solid',
+                      borderColor: selected ? switchTokens.selectedBorder : 'transparent',
+                      bgcolor: selected ? switchTokens.selected : 'transparent',
+                      color: selected ? switchTokens.selectedText : switchTokens.text,
+                      cursor: 'pointer',
+                      font: 'inherit',
+                      transition: theme.transitions.create(['background-color', 'border-color', 'color'], {
+                        duration: theme.transitions.duration.shorter
+                      }),
+                      '&:hover': {
+                        bgcolor: selected ? switchTokens.selected : switchTokens.hover,
+                        color: selected ? switchTokens.selectedText : switchTokens.hoverText
+                      },
+                      '&:focus-visible': {
+                        outline: `2px solid ${alpha(theme.palette.primary.main, 0.48)}`,
+                        outlineOffset: 2
+                      }
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 500, fontFamily: 'inherit' }}>
+                      {t(`language.${item.value}`)}
+                    </Typography>
+                    {selected && <CheckIcon fontSize="small" />}
+                  </Box>
+                );
+              })}
+            </Stack>
+          </Box>
+        </Stack>
+      </Popover>
     </Box>
   );
 }
