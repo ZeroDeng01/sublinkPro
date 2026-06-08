@@ -55,8 +55,7 @@ func GetWebhookConfig(id uint) (*WebhookConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	config := webhookModelToConfig(*webhook)
-	return &config, nil
+	return new(webhookModelToConfig(*webhook)), nil
 }
 
 func CreateWebhookConfig(config *WebhookConfig) (*WebhookConfig, error) {
@@ -64,8 +63,7 @@ func CreateWebhookConfig(config *WebhookConfig) (*WebhookConfig, error) {
 	if err := model.Add(); err != nil {
 		return nil, err
 	}
-	created := webhookModelToConfig(model)
-	return &created, nil
+	return new(webhookModelToConfig(model)), nil
 }
 
 func UpdateWebhookConfig(config *WebhookConfig) (*WebhookConfig, error) {
@@ -77,8 +75,7 @@ func UpdateWebhookConfig(config *WebhookConfig) (*WebhookConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := webhookModelToConfig(*updated)
-	return &result, nil
+	return new(webhookModelToConfig(*updated)), nil
 }
 
 func DeleteWebhookConfig(id uint) error {

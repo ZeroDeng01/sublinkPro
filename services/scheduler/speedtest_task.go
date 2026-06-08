@@ -922,8 +922,7 @@ func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.Ta
 	RunSpeedTestWithConfig(nodes, trigger, profile.Name, config)
 
 	// 更新策略的上次执行时间（保留现有的下次执行时间）
-	now := time.Now()
-	if err := profile.UpdateLastRunTime(&now); err != nil {
+	if err := profile.UpdateLastRunTime(new(time.Now())); err != nil {
 		utils.Warn("更新策略执行时间失败: %v", err)
 	}
 }

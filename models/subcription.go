@@ -633,9 +633,8 @@ func (sub *Subcription) GetSub(clientType string) error {
 
 	// 添加直接选择的节点
 	for _, item := range directNodeItems {
-		node := item.Node
 		mixedItems = append(mixedItems, MixedItem{
-			Node:    &node,
+			Node:    new(item.Node),
 			Sort:    item.Sort,
 			IsGroup: false,
 		})

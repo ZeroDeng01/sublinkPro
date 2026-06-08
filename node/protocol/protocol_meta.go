@@ -835,8 +835,7 @@ func GetProtocolMeta(name string) *ProtocolMeta {
 	normalized := normalizeProtocolName(name)
 	for i := range protocolMetaCache {
 		if protocolMetaCache[i].Name == normalized {
-			meta := protocolMetaCache[i]
-			return &meta
+			return new(protocolMetaCache[i])
 		}
 	}
 	return nil

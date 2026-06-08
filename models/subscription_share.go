@@ -85,8 +85,7 @@ func normalizeOptionalTime(value *time.Time) *time.Time {
 	if value == nil || value.IsZero() {
 		return nil
 	}
-	normalized := *value
-	return &normalized
+	return new(*value)
 }
 
 func (s *SubscriptionShare) normalizeOptionalFields() {
@@ -266,12 +265,11 @@ func (s *SubscriptionShare) RecordAccess() {
 		return
 	}
 
-	now := time.Now()
 	if err := database.DB.Model(&SubscriptionShare{}).
 		Where("id = ?", s.ID).
 		Updates(map[string]any{
 			"access_count":   gorm.Expr("access_count + ?", 1),
-			"last_access_at": &now,
+			"last_access_at": new(time.Now()),
 		}).Error; err != nil {
 		utils.Warn("记录订阅分享访问失败: %v", err)
 		return

@@ -75,8 +75,7 @@ func AirportList(c *gin.Context) {
 
 	// 解析启用状态筛选
 	if enabledStr := c.Query("enabled"); enabledStr != "" {
-		enabled := enabledStr == "true"
-		filter.Enabled = &enabled
+		filter.Enabled = new(enabledStr == "true")
 	}
 
 	// 分页查询（带筛选）

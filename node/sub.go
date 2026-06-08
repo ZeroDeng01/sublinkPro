@@ -1056,8 +1056,7 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	}
 	airport.SuccessCount = addSuccessCount + skipCount
 	// 当前时间
-	now := time.Now()
-	airport.LastRunTime = &now
+	airport.LastRunTime = new(time.Now())
 	err1 := airport.Update()
 	if err1 != nil {
 		return nil, err1

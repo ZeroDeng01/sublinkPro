@@ -362,8 +362,7 @@ func isMissingDatabaseError(dialect string, err error) bool {
 
 	switch dialect {
 	case DialectMySQL:
-		var mysqlErr *mysqlcfg.MySQLError
-		if errors.As(err, &mysqlErr) {
+		if mysqlErr, ok := errors.AsType[*mysqlcfg.MySQLError](err); ok {
 			return mysqlErr.Number == 1049
 		}
 		return strings.Contains(err.Error(), "Unknown database")

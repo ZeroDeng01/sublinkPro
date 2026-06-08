@@ -117,8 +117,7 @@ func TestWebhookByID(c *gin.Context) {
 		return
 	}
 
-	now := time.Now()
-	config.LastTestAt = &now
+	config.LastTestAt = new(time.Now())
 	if _, err := notifications.UpdateWebhookConfig(config); err != nil {
 		utils.FailWithMsg(c, "更新测试时间失败: "+err.Error())
 		return

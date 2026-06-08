@@ -142,9 +142,8 @@ func expireClientSubscriptionShare(t *testing.T, token string) {
 		t.Fatalf("find share %s: %v", token, err)
 	}
 
-	expiredAt := time.Now().Add(-time.Hour)
 	share.ExpireType = models.ExpireTypeDateTime
-	share.ExpireAt = &expiredAt
+	share.ExpireAt = new(time.Now().Add(-time.Hour))
 	if err := share.Update(); err != nil {
 		t.Fatalf("expire share %s: %v", token, err)
 	}

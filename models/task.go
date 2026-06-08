@@ -148,8 +148,7 @@ func (t *Task) UpdateStatus(status TaskStatus, message string) error {
 	t.Status = status
 	t.Message = message
 	if status == TaskStatusCompleted || status == TaskStatusCancelled || status == TaskStatusError {
-		now := time.Now()
-		t.CompletedAt = &now
+		t.CompletedAt = new(time.Now())
 	}
 	err := database.DB.Model(t).Select("Status", "Message", "CompletedAt", "UpdatedAt").Updates(t).Error
 	if err != nil {

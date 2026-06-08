@@ -1708,8 +1708,7 @@ func GetBestProxyNode() (*Node, error) {
 	var bestNode *Node
 	for _, n := range nodes {
 		if bestNode == nil || n.DelayTime < bestNode.DelayTime {
-			nodeCopy := n
-			bestNode = &nodeCopy
+			bestNode = new(n)
 		}
 	}
 
@@ -2127,8 +2126,7 @@ func GetFastestSpeedNode() *Node {
 	var fastest *Node
 	for _, n := range nodes {
 		if fastest == nil || n.Speed > fastest.Speed {
-			nodeCopy := n
-			fastest = &nodeCopy
+			fastest = new(n)
 		}
 	}
 	return fastest
@@ -2143,8 +2141,7 @@ func GetLowestDelayNode() *Node {
 	var lowest *Node
 	for _, n := range nodes {
 		if lowest == nil || n.DelayTime < lowest.DelayTime {
-			nodeCopy := n
-			lowest = &nodeCopy
+			lowest = new(n)
 		}
 	}
 	return lowest

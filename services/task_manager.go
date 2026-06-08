@@ -141,8 +141,7 @@ func (tm *TaskManager) CompleteTask(taskID string, message string, result any) e
 	running.Task.Status = models.TaskStatusCompleted
 	running.Task.Message = message
 	running.Task.Progress = running.Task.Total
-	now := time.Now()
-	running.Task.CompletedAt = &now
+	running.Task.CompletedAt = new(time.Now())
 
 	// 设置结果
 	if result != nil {
@@ -191,8 +190,7 @@ func (tm *TaskManager) FailTask(taskID string, errMsg string) error {
 	// 更新状态
 	running.Task.Status = models.TaskStatusError
 	running.Task.Message = errMsg
-	now := time.Now()
-	running.Task.CompletedAt = &now
+	running.Task.CompletedAt = new(time.Now())
 
 	// 同步最终状态到数据库（任务结束时一次性写入）
 	if err := running.Task.SyncFinalStatus(); err != nil {
@@ -239,16 +237,14 @@ func (tm *TaskManager) CancelTask(taskID string) error {
 		// 更新数据库状态
 		task.Status = models.TaskStatusCancelled
 		task.Message = "用户取消"
-		now := time.Now()
-		task.CompletedAt = &now
+		task.CompletedAt = new(time.Now())
 		return task.SyncFinalStatus()
 	}
 
 	// 更新状态
 	running.Task.Status = models.TaskStatusCancelled
 	running.Task.Message = "用户取消"
-	now := time.Now()
-	running.Task.CompletedAt = &now
+	running.Task.CompletedAt = new(time.Now())
 
 	// 同步最终状态到数据库（任务结束时一次性写入）
 	if err := running.Task.SyncFinalStatus(); err != nil {

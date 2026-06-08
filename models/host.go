@@ -445,8 +445,7 @@ func upsertSingleHost(h Host) error {
 	h = sanitizeHostForStorage(h)
 	existingHosts := hostCache.GetByIndex("hostname", h.Hostname)
 	if len(existingHosts) > 0 {
-		existing := existingHosts[0]
-		return database.DB.Model(&existing).Updates(map[string]any{
+		return database.DB.Model(new(existingHosts[0])).Updates(map[string]any{
 			"ip":         h.IP,
 			"remark":     h.Remark,
 			"source":     h.Source,
@@ -598,8 +597,7 @@ func CalculateExpireTime() *time.Time {
 	if hours <= 0 {
 		return nil
 	}
-	expireAt := time.Now().Add(time.Duration(hours) * time.Hour)
-	return &expireAt
+	return new(time.Now().Add(time.Duration(hours) * time.Hour))
 }
 
 // MigrateHostExpireFields 执行 Host 有效期字段迁移
