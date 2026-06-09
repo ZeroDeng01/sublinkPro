@@ -13,6 +13,7 @@ import (
 	"sublink/models"
 	"sublink/node"
 	"sublink/node/protocol"
+	"sublink/services/substore"
 	"sublink/utils"
 	"sync"
 	"time"
@@ -54,6 +55,11 @@ type preparedClientResponse struct {
 type resolvedPreparedResponse struct {
 	Subscription models.Subcription
 	SubName      string
+}
+
+type mihomoBridgeOutput struct {
+	Body     []byte
+	Resolved resolvedPreparedResponse
 }
 
 const syntheticClashTemplate = `port: 7890
@@ -187,9 +193,12 @@ func prepareClientResponse(c *gin.Context, clientType, token string) (preparedCl
 }
 
 func resolveSubscriptionClient(c *gin.Context) string {
-	clientIndex := c.Query("client")
+	clientIndex := strings.ToLower(strings.TrimSpace(c.Query("client")))
 	switch clientIndex {
-	case "clash", "surge", "v2ray":
+	case "clash", "mihomo", "surge", "v2ray", "uri", "v2ray-uri":
+		return clientIndex
+	}
+	if substore.IsSupportedTarget(clientIndex) {
 		return clientIndex
 	}
 
@@ -208,11 +217,17 @@ func resolveSubscriptionClient(c *gin.Context) string {
 
 func dispatchPreparedClientResponse(c *gin.Context, prepared preparedClientResponse) {
 	switch prepared.ClientType {
-	case "clash":
+	case "clash", "mihomo":
 		renderPreparedClash(c, prepared)
 	case "surge":
 		renderPreparedSurge(c, prepared)
+	case "uri", "v2ray-uri":
+		renderPreparedConvertedClient(c, prepared)
 	default:
+		if substore.IsSupportedTarget(prepared.ClientType) {
+			renderPreparedConvertedClient(c, prepared)
+			return
+		}
 		renderPreparedV2ray(c, prepared)
 	}
 }
@@ -310,7 +325,11 @@ func writeSyntheticTemplateFile(pattern, content string) (string, error) {
 
 func buildPreparedResponseFromSubscription(sub models.Subcription, clientType string, shareID int) (preparedClientResponse, bool) {
 	preparedSub := sub
-	if err := preparedSub.GetSub(clientType); err != nil {
+	materializeClientType := clientType
+	if substore.IsSupportedTarget(clientType) || clientType == "uri" || clientType == "v2ray-uri" || clientType == "mihomo" {
+		materializeClientType = "clash"
+	}
+	if err := preparedSub.GetSub(materializeClientType); err != nil {
 		return preparedClientResponse{}, false
 	}
 	return preparedClientResponse{
@@ -598,7 +617,11 @@ func GetClash(c *gin.Context) {
 }
 
 func renderPreparedClash(c *gin.Context, prepared preparedClientResponse) {
-	resolved, shouldWriteBody := prepareRendererResponse(c, prepared)
+	bridge, shouldWriteBody, ok := buildPreparedMihomoYAML(c, prepared)
+	if !ok {
+		return
+	}
+	resolved := bridge.Resolved
 	subName := resolved.SubName
 	filename := fmt.Sprintf("%s.yaml", subName)
 	encodedFilename := url.QueryEscape(filename)
@@ -606,6 +629,16 @@ func renderPreparedClash(c *gin.Context, prepared preparedClientResponse) {
 	c.Writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if !shouldWriteBody {
 		return
+	}
+	_, _ = c.Writer.WriteString(string(bridge.Body))
+}
+
+func buildPreparedMihomoYAML(c *gin.Context, prepared preparedClientResponse) (mihomoBridgeOutput, bool, bool) {
+	clashPrepared := prepared
+	clashPrepared.ClientType = "clash"
+	resolved, shouldWriteBody := prepareRendererResponse(c, clashPrepared)
+	if !shouldWriteBody {
+		return mihomoBridgeOutput{Resolved: resolved}, false, true
 	}
 	sub := resolved.Subscription
 	var urls []protocol.Urls
@@ -709,7 +742,7 @@ func renderPreparedClash(c *gin.Context, prepared preparedClientResponse) {
 	err := json.Unmarshal([]byte(sub.Config), &configs)
 	if err != nil {
 		_, _ = c.Writer.WriteString("配置读取错误")
-		return
+		return mihomoBridgeOutput{}, false, false
 	}
 
 	// 如果启用 Host 替换，填充 HostMap
@@ -739,7 +772,7 @@ func renderPreparedClash(c *gin.Context, prepared preparedClientResponse) {
 	DecodeClash, err := protocol.EncodeClash(urls, configs)
 	if err != nil {
 		_, _ = c.Writer.WriteString(err.Error())
-		return
+		return mihomoBridgeOutput{}, false, false
 	}
 	// 执行脚本
 	for _, script := range sub.ScriptsWithSort {
@@ -750,7 +783,45 @@ func renderPreparedClash(c *gin.Context, prepared preparedClientResponse) {
 		}
 		DecodeClash = []byte(res)
 	}
-	_, _ = c.Writer.WriteString(string(DecodeClash))
+	return mihomoBridgeOutput{Body: DecodeClash, Resolved: resolved}, true, true
+}
+
+func renderPreparedConvertedClient(c *gin.Context, prepared preparedClientResponse) {
+	bridge, shouldWriteBody, ok := buildPreparedMihomoYAML(c, prepared)
+	if !ok {
+		return
+	}
+	filename := fmt.Sprintf("%s.%s", bridge.Resolved.SubName, extensionForConvertedClient(prepared.ClientType))
+	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+url.QueryEscape(filename))
+	if !shouldWriteBody {
+		return
+	}
+	subStoreConfig, _ := substore.EffectiveConfig()
+	client, err := substore.NewClient(subStoreConfig)
+	if err != nil {
+		c.String(http.StatusServiceUnavailable, "Sub-Store sidecar is not configured")
+		return
+	}
+	converted, err := client.Convert(c.Request.Context(), string(bridge.Body), prepared.ClientType)
+	if err != nil {
+		c.String(http.StatusBadGateway, "Sub-Store conversion failed: %s", err.Error())
+		return
+	}
+	c.Writer.Header().Set("Content-Type", converted.ContentType)
+	_, _ = c.Writer.WriteString(converted.Body)
+}
+
+func extensionForConvertedClient(clientType string) string {
+	switch strings.ToLower(strings.TrimSpace(clientType)) {
+	case "json", "singbox", "sing-box":
+		return "json"
+	case "uri", "v2ray-uri":
+		return "txt"
+	case "stash", "mihomo", "clashmeta", "clash-meta", "egern":
+		return "yaml"
+	default:
+		return "conf"
+	}
 }
 
 func GetSurge(c *gin.Context) {

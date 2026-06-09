@@ -509,6 +509,7 @@
       "telegram": "Telegram bot",
       "nodeDedup": "Node deduplication",
       "aiAssistant": "AI Assistant",
+      "subStore": "Sub-Store",
       "dataMigration": "Data migration"
     },
     "telegramPanel": {
@@ -854,6 +855,57 @@
         "stopFailed": "Stop failed: {{message}}",
         "tokenRemoved": "Cloudflare Tunnel token cleared",
         "removeFailed": "Clear failed: {{message}}"
+      }
+    },
+      "subStore": {
+        "subheader": "Manage the external Sub-Store sidecar used for expanded subscription output formats.",
+        "alerts": {
+          "sidecar": "SublinkPro sends mihomo/Clash bridge YAML to an external Sub-Store service. Native clash, mihomo, surge, and v2ray output remain handled locally. These settings are managed only from this page."
+        },
+        "status": {
+          "title": "Effective status",
+          "configured": "Ready for conversion",
+          "notConfigured": "Not configured",
+          "enabled": "Enabled",
+          "disabled": "Disabled",
+          "targets": "Enabled output targets: {{count}}"
+        },
+        "form": {
+          "enabled": "Use Sub-Store for expanded output formats",
+          "disabled": "Do not use Sub-Store conversion",
+          "baseUrl": "Sub-Store base URL",
+          "baseUrlHelper": "Use a private network or loopback URL when possible.",
+          "timeoutSeconds": "Request timeout (seconds)",
+          "timeoutHelper": "Saved on this page and used by server-side conversion requests.",
+          "maxResponseBytes": "Maximum response bytes",
+          "maxResponseHelper": "Saved on this page to limit Sub-Store response size.",
+          "allowedTargets": "Allowed output targets",
+          "allowedTargetsHelper": "Only selected expanded targets appear in subscription share links and can be converted by /c.",
+          "bridgeNote": "Expanded outputs convert proxy nodes only. Clash strategy groups, rules, DNS sections, and other full configuration sections are not preserved by the Sub-Store one-shot parser."
+        },
+      "actions": {
+        "refresh": "Refresh settings",
+        "save": "Save settings",
+        "saving": "Saving...",
+        "test": "Test connection",
+        "testing": "Testing..."
+      },
+      "messages": {
+        "loadFailed": "Failed to load Sub-Store settings: {{message}}",
+        "saved": "Sub-Store settings saved",
+        "saveFailed": "Save failed: {{message}}",
+        "testSuccess": "Sub-Store test succeeded for {{target}} ({{bytes}} bytes returned)",
+        "testFailed": "Sub-Store test failed: {{message}}"
+      },
+      "api": {
+        "loaded": "Sub-Store settings loaded",
+        "invalidRequest": "Invalid request parameters",
+        "saved": "Sub-Store settings saved",
+        "saveFailed": "Failed to save Sub-Store settings: {{message}}",
+        "invalidSettings": "Invalid Sub-Store settings: {{message}}",
+        "notConfigured": "Sub-Store is not configured: {{message}}",
+        "testSucceeded": "Sub-Store test succeeded for {{target}} ({{bytes}} bytes returned)",
+        "testFailed": "Sub-Store test failed: {{message}}"
       }
     }
   },
@@ -2138,7 +2190,20 @@
       "detailSubtitle": "Choose a client address to copy directly or generate a QR code.",
       "logsTitle": "Access Logs - {{name}}",
       "clients": {
-        "auto": "Auto detect"
+        "auto": "Auto detect",
+        "clash": "Clash",
+        "mihomo": "Mihomo",
+        "surge": "Surge",
+        "v2ray": "V2Ray",
+        "loon": "Loon",
+        "egern": "Egern",
+        "stash": "Stash",
+        "surfboard": "Surfboard",
+        "shadowrocket": "Shadowrocket",
+        "quantumultX": "Quantumult X",
+        "singBox": "sing-box",
+        "uri": "URI",
+        "json": "JSON"
       },
       "actions": {
         "accessLogs": "Access logs",

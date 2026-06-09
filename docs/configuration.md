@@ -47,6 +47,16 @@ SublinkPro supports several configuration methods. Priority from highest to lowe
 
 ---
 
+## Sub-Store Sidecar Conversion
+
+SublinkPro can use an external Sub-Store backend as an optional sidecar for additional subscription output formats. Native `clash`/`mihomo`, `surge`, and `v2ray` links stay handled by SublinkPro. Expanded targets such as `loon`, `egern`, `stash`, `surfboard`, `shadowrocket`, `quanx`, `sing-box`, `uri`, and `json` first generate SublinkPro's mihomo/Clash bridge YAML, then send the proxy list to Sub-Store's `/api/proxy/parse` endpoint.
+
+Sign in and open **User Center -> Sub-Store** to enable the sidecar, set its base URL, adjust timeout/response limits, choose allowed targets, and test the connection. Sub-Store settings are page-managed only; this integration is not configured through environment variables or `config.yaml` keys.
+
+Keep the Sub-Store service on a private network or loopback address. SublinkPro does not embed or vendor Sub-Store code; the sidecar is a separate service boundary because Sub-Store is a Node project with GPL/AGPL licensing considerations. The one-shot parser converts proxy nodes and does not preserve full Clash strategy groups, rules, or DNS sections.
+
+---
+
 ## Cloudflare Tunnel
 
 The **Cloudflare Tunnel** tab in User Center can host the local `cloudflared` process and connect the current SublinkPro instance to a remotely managed Tunnel in Cloudflare Zero Trust.

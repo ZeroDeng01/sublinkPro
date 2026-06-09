@@ -17,6 +17,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import StorageIcon from '@mui/icons-material/Storage';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
+import ExtensionIcon from '@mui/icons-material/Extension';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -27,6 +28,7 @@ import NodeDedupSettings from './components/NodeDedupSettings';
 import DatabaseMigrationSettings from './components/DatabaseMigrationSettings';
 import AIAssistantSettings from './components/AIAssistantSettings';
 import CloudflareTunnelSettings from './components/CloudflareTunnelSettings';
+import SubStoreSettings from './components/SubStoreSettings';
 
 // ==============================|| Tab Panel ||============================== //
 
@@ -101,7 +103,8 @@ export default function UserSettings() {
           <Tab icon={<TuneIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.nodeDedup')} {...a11yProps(3)} />
           <Tab icon={<PsychologyIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.aiAssistant')} {...a11yProps(4)} />
           <Tab icon={<CloudQueueIcon sx={{ mr: 1 }} />} iconPosition="start" label="Cloudflare Tunnel" {...a11yProps(5)} />
-          <Tab icon={<StorageIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.dataMigration')} {...a11yProps(6)} />
+          <Tab icon={<ExtensionIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.subStore')} {...a11yProps(6)} />
+          <Tab icon={<StorageIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.dataMigration')} {...a11yProps(7)} />
         </Tabs>
       </Box>
 
@@ -130,6 +133,10 @@ export default function UserSettings() {
       </TabPanel>
 
       <TabPanel value={tabValue} index={6}>
+        <SubStoreSettings showMessage={showMessage} />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={7}>
         <DatabaseMigrationSettings showMessage={showMessage} />
       </TabPanel>
 

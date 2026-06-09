@@ -31,6 +31,32 @@ services:
     restart: unless-stopped
 ```
 
+如需扩展更多订阅输出格式，可选部署 Sub-Store sidecar：
+
+```yaml
+services:
+  sublinkpro:
+    image: zerodeng/sublink-pro
+    container_name: sublinkpro
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./db:/app/db"
+      - "./template:/app/template"
+      - "./logs:/app/logs"
+    restart: unless-stopped
+
+  substore:
+    image: xream/sub-store
+    container_name: substore
+    environment:
+      - SUB_STORE_BACKEND_API_PORT=3000
+      - SUB_STORE_BODY_JSON_LIMIT=10mb
+    restart: unless-stopped
+```
+
+建议把 Sub-Store 服务仅保留在 Compose 内部网络中，不要直接暴露端口。两个容器启动后，请登录后台进入 **用户中心 -> Sub-Store**，启用 sidecar、填写类似 `http://substore:3000` 的 Base URL、选择允许的输出目标并测试连接。Sub-Store 集成只通过该页面管理，不使用环境变量。
+
 如需通过 Cloudflare Tunnel 暴露服务，可在启动后进入 **用户中心 -> Cloudflare Tunnel** 填写 token 并启动；启用自动连接后会随服务启动连接 Tunnel。完整步骤见 [Cloudflare Tunnel 远程访问](features/cloudflare-tunnel.zh-CN.md)。
 
 官方 Docker 镜像已内置 `cloudflared`，非 Docker 部署则需要先按 Cloudflare 官方文档安装 `cloudflared`。
@@ -207,5 +233,3 @@ services:
 > **Watchtower 高级配置**：
 > - 可以设置 `WATCHTOWER_NOTIFICATIONS` 环境变量来配置更新通知（支持邮件、Slack、Gotify 等）
 > - 更多配置请参考 [Watchtower 官方文档](https://containrrr.dev/watchtower/)
-
-

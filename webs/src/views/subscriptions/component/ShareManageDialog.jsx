@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -34,7 +34,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import HistoryIcon from '@mui/icons-material/History';
 
 import { getShares, createShare, updateShare, deleteShare, getShareLogs, refreshShareToken } from '../../../api/shares';
-import { getSystemDomain } from '../../../api/settings';
+import { getSubStoreSettings, getSystemDomain } from '../../../api/settings';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
@@ -46,6 +46,25 @@ import ConfirmDialog from './ConfirmDialog';
 const EXPIRE_TYPE_NEVER = 0;
 const EXPIRE_TYPE_DAYS = 1;
 const EXPIRE_TYPE_DATETIME = 2;
+
+const NATIVE_CLIENT_LINKS = [
+  { key: 'clash', client: 'clash' },
+  { key: 'mihomo', client: 'mihomo' },
+  { key: 'surge', client: 'surge' },
+  { key: 'v2ray', client: 'v2ray' }
+];
+
+const EXPANDED_CLIENT_LINKS = [
+  { key: 'loon', client: 'loon' },
+  { key: 'egern', client: 'egern' },
+  { key: 'stash', client: 'stash' },
+  { key: 'surfboard', client: 'surfboard' },
+  { key: 'shadowrocket', client: 'shadowrocket' },
+  { key: 'quantumultX', client: 'quanx' },
+  { key: 'singBox', client: 'sing-box' },
+  { key: 'uri', client: 'uri' },
+  { key: 'json', client: 'json' }
+];
 
 /**
  */
@@ -64,6 +83,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   const [loading, setLoading] = useState(false);
 
   const [systemDomainConfig, setSystemDomainConfig] = useState('');
+  const [subStoreTargets, setSubStoreTargets] = useState([]);
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailShare, setDetailShare] = useState(null);
@@ -122,12 +142,25 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     }
   }, [subscription?.ID]);
 
+  const fetchSubStoreTargets = useCallback(async () => {
+    try {
+      const res = await getSubStoreSettings();
+      const settings = res.data || {};
+      const enabled = Boolean(settings.enabled?.value);
+      setSubStoreTargets(settings.configured && enabled ? settings.allowedTargets?.value || [] : []);
+    } catch (error) {
+      console.error('Failed to get Sub-Store settings:', error);
+      setSubStoreTargets([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (open && subscription?.ID) {
       fetchSystemDomain();
       fetchShares();
+      fetchSubStoreTargets();
     }
-  }, [open, subscription?.ID, fetchShares]);
+  }, [open, subscription?.ID, fetchShares, fetchSubStoreTargets]);
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -462,13 +495,21 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     );
   };
 
+  const visibleClientLinks = useMemo(() => {
+    const allowedTargets = new Set(subStoreTargets);
+    return [...NATIVE_CLIENT_LINKS, ...EXPANDED_CLIENT_LINKS.filter((item) => allowedTargets.has(item.client))];
+  }, [subStoreTargets]);
+
   const detailClientUrls = detailShare
-    ? {
-        [t('subscriptions.share.clients.auto')]: `${getServerUrl()}/c/?token=${detailShare.token}`,
-        Clash: `${getServerUrl()}/c/?token=${detailShare.token}&client=clash`,
-        Surge: `${getServerUrl()}/c/?token=${detailShare.token}&client=surge`,
-        V2ray: `${getServerUrl()}/c/?token=${detailShare.token}&client=v2ray`
-      }
+    ? visibleClientLinks.reduce(
+        (urls, item) => ({
+          ...urls,
+          [t(`subscriptions.share.clients.${item.key}`)]: `${getServerUrl()}/c/?token=${detailShare.token}&client=${item.client}`
+        }),
+        {
+          [t('subscriptions.share.clients.auto')]: `${getServerUrl()}/c/?token=${detailShare.token}`
+        }
+      )
     : {};
 
   return (

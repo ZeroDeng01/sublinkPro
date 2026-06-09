@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -59,6 +60,7 @@ func setupClientsAPITestDB(t *testing.T) {
 		&models.SubscriptionShare{},
 		&models.SubscriptionChainRule{},
 		&models.Script{},
+		&models.SystemSetting{},
 	); err != nil {
 		t.Fatalf("auto migrate clients api tables: %v", err)
 	}
@@ -81,6 +83,9 @@ func setupClientsAPITestDB(t *testing.T) {
 	}
 	if err := models.InitScriptCache(); err != nil {
 		t.Fatalf("init script cache: %v", err)
+	}
+	if err := models.InitSettingCache(); err != nil {
+		t.Fatalf("init setting cache: %v", err)
 	}
 
 	t.Cleanup(func() {
@@ -218,6 +223,25 @@ func writeTestSurgeTemplateWithManagedConfig(t *testing.T) string {
 	}
 
 	return file.Name()
+}
+
+func saveSubStoreSettings(t *testing.T, baseURL string, allowedTargets []string) {
+	t.Helper()
+	if err := models.SetSetting("substore_enabled", "true"); err != nil {
+		t.Fatalf("set substore enabled: %v", err)
+	}
+	if err := models.SetSetting("substore_base_url", baseURL); err != nil {
+		t.Fatalf("set substore base url: %v", err)
+	}
+	if err := models.SetSetting("substore_timeout_seconds", "1"); err != nil {
+		t.Fatalf("set substore timeout: %v", err)
+	}
+	if err := models.SetSetting("substore_allowed_targets", strings.Join(allowedTargets, ",")); err != nil {
+		t.Fatalf("set substore targets: %v", err)
+	}
+	if err := models.SetSetting("substore_max_response_bytes", "1048576"); err != nil {
+		t.Fatalf("set substore max response bytes: %v", err)
+	}
 }
 
 func performClientRequest(t *testing.T, method, path string) *httptest.ResponseRecorder {
@@ -702,6 +726,131 @@ func TestGetClientInvalidShareReturnsSyntheticV2rayNode(t *testing.T) {
 	}
 	if got := recorder.Header().Get("subscription-userinfo"); got == "" {
 		t.Fatal("expected subscription-userinfo header for invalid v2ray share")
+	}
+}
+
+func TestGetClientExpandedTargetRequiresConfiguredSubStore(t *testing.T) {
+	setupClientsAPITestDB(t)
+	clashTemplatePath := writeTestClashTemplate(t)
+	surgeTemplatePath := writeTestSurgeTemplate(t)
+	createClientSubscriptionFixture(t, clashTemplatePath, surgeTemplatePath, "expanded-sub", "expanded-token", "Expanded Node")
+
+	recorder := performClientRequest(t, http.MethodGet, "/c/?token=expanded-token&client=loon")
+
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 when Sub-Store is not configured, got %d body=%q", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "Sub-Store sidecar is not configured") {
+		t.Fatalf("expected Sub-Store configuration error, got %q", recorder.Body.String())
+	}
+}
+
+func TestGetClientExpandedTargetUsesDatabaseSubStoreSettings(t *testing.T) {
+	setupClientsAPITestDB(t)
+	clashTemplatePath := writeTestClashTemplate(t)
+	surgeTemplatePath := writeTestSurgeTemplate(t)
+	createClientSubscriptionFixture(t, clashTemplatePath, surgeTemplatePath, "database-substore-sub", "database-substore-token", "Database SubStore Node")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/proxy/parse" {
+			t.Fatalf("unexpected Sub-Store path: %s", r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"status":"success","data":{"par_res":"database settings converted output"}}`))
+	}))
+	t.Cleanup(server.Close)
+
+	if err := models.SetSetting("substore_enabled", "true"); err != nil {
+		t.Fatalf("set substore enabled: %v", err)
+	}
+	if err := models.SetSetting("substore_base_url", server.URL); err != nil {
+		t.Fatalf("set substore base url: %v", err)
+	}
+	if err := models.SetSetting("substore_allowed_targets", "loon"); err != nil {
+		t.Fatalf("set substore targets: %v", err)
+	}
+
+	recorder := performClientRequest(t, http.MethodGet, "/c/?token=database-substore-token&client=loon")
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%q", recorder.Code, recorder.Body.String())
+	}
+	if recorder.Body.String() != "database settings converted output" {
+		t.Fatalf("unexpected converted body: %q", recorder.Body.String())
+	}
+}
+
+func TestGetClientExpandedTargetUsesMihomoBridgeAndSubStore(t *testing.T) {
+	setupClientsAPITestDB(t)
+	clashTemplatePath := writeTestClashTemplate(t)
+	surgeTemplatePath := writeTestSurgeTemplate(t)
+	createClientSubscriptionFixture(t, clashTemplatePath, surgeTemplatePath, "expanded-sub", "expanded-token", "Expanded Node")
+
+	var received struct {
+		Data   string `json:"data"`
+		Client string `json:"client"`
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/proxy/parse" {
+			t.Fatalf("unexpected Sub-Store path: %s", r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&received); err != nil {
+			t.Fatalf("decode Sub-Store request: %v", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"success","data":{"par_res":"loon converted output"}}`))
+	}))
+	defer server.Close()
+	saveSubStoreSettings(t, server.URL, []string{"loon"})
+
+	recorder := performClientRequest(t, http.MethodGet, "/c/?token=expanded-token&client=loon")
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200 from converted subscription, got %d body=%q", recorder.Code, recorder.Body.String())
+	}
+	if recorder.Body.String() != "loon converted output" {
+		t.Fatalf("unexpected converted body: %q", recorder.Body.String())
+	}
+	if received.Client != "Loon" {
+		t.Fatalf("expected Sub-Store target Loon, got %q", received.Client)
+	}
+	if !strings.Contains(received.Data, "proxies:") || !strings.Contains(received.Data, "name: Expanded Node") {
+		t.Fatalf("expected generated mihomo YAML bridge, got %q", received.Data)
+	}
+	if got := recorder.Header().Get("Content-Type"); got != "text/plain; charset=utf-8" {
+		t.Fatalf("unexpected converted content type: %q", got)
+	}
+	if !strings.Contains(recorder.Header().Get("Content-Disposition"), "expanded-sub.conf") {
+		t.Fatalf("unexpected content disposition: %q", recorder.Header().Get("Content-Disposition"))
+	}
+}
+
+func TestGetClientExpandedTargetMapsQuanxToQX(t *testing.T) {
+	setupClientsAPITestDB(t)
+	clashTemplatePath := writeTestClashTemplate(t)
+	surgeTemplatePath := writeTestSurgeTemplate(t)
+	createClientSubscriptionFixture(t, clashTemplatePath, surgeTemplatePath, "quanx-sub", "quanx-token", "Quanx Node")
+
+	var target string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Client string `json:"client"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode Sub-Store request: %v", err)
+		}
+		target = req.Client
+		_, _ = w.Write([]byte(`{"status":"success","data":{"par_res":"qx converted output"}}`))
+	}))
+	defer server.Close()
+	saveSubStoreSettings(t, server.URL, []string{"quanx"})
+
+	recorder := performClientRequest(t, http.MethodGet, "/c/?token=quanx-token&client=quanx")
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200 from converted subscription, got %d body=%q", recorder.Code, recorder.Body.String())
+	}
+	if target != "QX" {
+		t.Fatalf("expected Sub-Store target QX, got %q", target)
 	}
 }
 

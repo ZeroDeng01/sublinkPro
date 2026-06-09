@@ -509,6 +509,7 @@
       "telegram": "Telegram 机器人",
       "nodeDedup": "节点去重",
       "aiAssistant": "AI 助手",
+      "subStore": "Sub-Store",
       "dataMigration": "数据迁移"
     },
     "telegramPanel": {
@@ -854,6 +855,57 @@
         "stopFailed": "停止失败: {{message}}",
         "tokenRemoved": "Cloudflare Tunnel token 已清除",
         "removeFailed": "清除失败: {{message}}"
+      }
+    },
+      "subStore": {
+        "subheader": "管理用于扩展订阅输出格式的外部 Sub-Store sidecar。",
+        "alerts": {
+          "sidecar": "SublinkPro 会将 mihomo/Clash 桥接 YAML 发送到外部 Sub-Store 服务。原生 clash、mihomo、surge 和 v2ray 输出仍由本项目本地处理。这些设置只通过当前页面管理。"
+        },
+        "status": {
+          "title": "当前生效状态",
+          "configured": "已可用于转换",
+          "notConfigured": "尚未完成配置",
+          "enabled": "已启用",
+          "disabled": "未启用",
+          "targets": "已启用输出目标：{{count}} 个"
+        },
+        "form": {
+          "enabled": "使用 Sub-Store 生成扩展输出格式",
+          "disabled": "不使用 Sub-Store 转换",
+          "baseUrl": "Sub-Store Base URL",
+          "baseUrlHelper": "建议使用内网或 loopback 地址。",
+          "timeoutSeconds": "请求超时（秒）",
+          "timeoutHelper": "保存于当前页面，并用于服务端转换请求。",
+          "maxResponseBytes": "最大响应字节数",
+          "maxResponseHelper": "保存于当前页面，用于限制 Sub-Store 响应体大小。",
+          "allowedTargets": "允许的输出目标",
+          "allowedTargetsHelper": "只有选中的扩展目标会出现在订阅分享链接中，并允许通过 /c 转换。",
+          "bridgeNote": "扩展输出只转换代理节点。Clash 策略组、规则、DNS 与其他完整配置段不会被 Sub-Store 的一次性解析接口保留。"
+        },
+      "actions": {
+        "refresh": "刷新设置",
+        "save": "保存设置",
+        "saving": "保存中...",
+        "test": "测试连接",
+        "testing": "测试中..."
+      },
+      "messages": {
+        "loadFailed": "获取 Sub-Store 设置失败: {{message}}",
+        "saved": "Sub-Store 设置已保存",
+        "saveFailed": "保存失败: {{message}}",
+        "testSuccess": "Sub-Store 测试成功，目标 {{target}} 返回 {{bytes}} 字节",
+        "testFailed": "Sub-Store 测试失败: {{message}}"
+      },
+      "api": {
+        "loaded": "Sub-Store 设置已加载",
+        "invalidRequest": "请求参数无效",
+        "saved": "Sub-Store 设置已保存",
+        "saveFailed": "保存 Sub-Store 设置失败: {{message}}",
+        "invalidSettings": "Sub-Store 设置无效: {{message}}",
+        "notConfigured": "Sub-Store 未配置: {{message}}",
+        "testSucceeded": "Sub-Store 测试成功，目标 {{target}} 返回 {{bytes}} 字节",
+        "testFailed": "Sub-Store 测试失败: {{message}}"
       }
     }
   },
@@ -2138,7 +2190,20 @@
       "detailSubtitle": "选择需要的客户端地址，可直接复制或生成二维码",
       "logsTitle": "访问日志 - {{name}}",
       "clients": {
-        "auto": "自动识别"
+        "auto": "自动识别",
+        "clash": "Clash",
+        "mihomo": "Mihomo",
+        "surge": "Surge",
+        "v2ray": "V2Ray",
+        "loon": "Loon",
+        "egern": "Egern",
+        "stash": "Stash",
+        "surfboard": "Surfboard",
+        "shadowrocket": "Shadowrocket",
+        "quantumultX": "Quantumult X",
+        "singBox": "sing-box",
+        "uri": "URI",
+        "json": "JSON"
       },
       "actions": {
         "accessLogs": "访问日志",

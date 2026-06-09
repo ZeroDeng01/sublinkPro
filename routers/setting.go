@@ -47,6 +47,11 @@ func Settings(r *gin.Engine) {
 		SettingsGroup.POST("/cloudflared/stop", middlewares.DemoModeRestrict, api.StopCloudflared)
 		SettingsGroup.DELETE("/cloudflared/token", middlewares.DemoModeRestrict, api.RemoveCloudflaredToken)
 
+		// Sub-Store sidecar 设置
+		SettingsGroup.GET("/substore", api.GetSubStoreSettings)
+		SettingsGroup.POST("/substore", middlewares.DemoModeRestrict, api.UpdateSubStoreSettings)
+		SettingsGroup.POST("/substore/test", middlewares.DemoModeRestrict, api.TestSubStoreSettings)
+
 		// 数据库迁移
 		SettingsGroup.POST("/database-migration/import", middlewares.DemoModeRestrict, api.ImportDatabaseMigration)
 	}

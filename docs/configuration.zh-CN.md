@@ -47,6 +47,16 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 
 ---
 
+## Sub-Store Sidecar 转换
+
+SublinkPro 可以使用外部 Sub-Store 后端作为可选 sidecar，为订阅分享提供更多客户端输出格式。原生 `clash`/`mihomo`、`surge`、`v2ray` 仍由 SublinkPro 自己生成；`loon`、`egern`、`stash`、`surfboard`、`shadowrocket`、`quanx`、`sing-box`、`uri`、`json` 等扩展目标会先生成 SublinkPro 的 mihomo/Clash 桥接 YAML，再把代理节点列表发送到 Sub-Store 的 `/api/proxy/parse` 接口转换。
+
+请登录后台，在 **用户中心 -> Sub-Store** 中启用 sidecar、填写 Base URL、调整超时和响应体上限、选择允许的目标客户端，并直接测试连接。Sub-Store 设置只通过页面管理；本集成不通过环境变量或 `config.yaml` 配置项设置。
+
+请把 Sub-Store 服务限制在私有网络或 loopback 地址。SublinkPro 不内嵌、不复制、不 vendor Sub-Store 代码；由于 Sub-Store 是 Node 项目且存在 GPL/AGPL 许可边界，sidecar 是独立服务边界。当前一站式 parser 只转换代理节点，不保留完整 Clash 策略组、规则或 DNS 配置段。
+
+---
+
 ## Cloudflare Tunnel
 
 用户中心的 **Cloudflare Tunnel** 标签页可以托管本机 `cloudflared` 进程，将当前 SublinkPro 实例连接到 Cloudflare Zero Trust 中的 remotely-managed Tunnel。

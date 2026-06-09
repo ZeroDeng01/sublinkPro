@@ -156,6 +156,29 @@ export function removeCloudflaredToken() {
   });
 }
 
+export function getSubStoreSettings() {
+  return request({
+    url: '/v1/settings/substore',
+    method: 'get'
+  });
+}
+
+export function updateSubStoreSettings(data) {
+  return request({
+    url: '/v1/settings/substore',
+    method: 'post',
+    data
+  });
+}
+
+export function testSubStoreSettings(data) {
+  return request({
+    url: '/v1/settings/substore/test',
+    method: 'post',
+    data
+  });
+}
+
 // 导入 SQLite 备份/数据库
 export function importDatabaseMigration(formData) {
   return request({
