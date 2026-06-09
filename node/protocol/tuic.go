@@ -263,7 +263,7 @@ func buildTuicSurgeLine(link string, config OutputConfig) (string, string, error
 	skipCert := config.Cert || tuic.Insecure == 1
 	line := fmt.Sprintf("%s = tuic, %s, %d, token=%s, udp-relay=%t, skip-cert-verify=%t", tuic.Name, server, utils.GetPortInt(tuic.Port), tuic.Token, true, skipCert)
 	if tuic.Version == 5 {
-		line = fmt.Sprintf("%s = tuic, %s, %d, uuid=%s, password=%s, udp-relay=%t, skip-cert-verify=%t", tuic.Name, server, utils.GetPortInt(tuic.Port), tuic.Uuid, tuic.Password, true, skipCert)
+		line = fmt.Sprintf("%s = tuic, %s, %d, uuid=%s, password=%s, udp-relay=%t, skip-cert-verify=%t ,version=%s", tuic.Name, server, utils.GetPortInt(tuic.Port), tuic.Uuid, tuic.Password, true, skipCert, strconv.Itoa(tuic.Version))
 	}
 	return line, tuic.Name, nil
 }
