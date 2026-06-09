@@ -361,6 +361,33 @@ func TestResolveClashDialerProxyPrefersChainTargetOverStoredName(t *testing.T) {
 	}
 }
 
+func TestBuildSurgeRenamedNodeLinkUsesQualityStatusFields(t *testing.T) {
+	utils.SetProtocolLinkFuncs(protocol.GetProtocolLabelFromLink, protocol.RenameNodeLink)
+	t.Cleanup(func() {
+		utils.SetProtocolLinkFuncs(nil, nil)
+	})
+
+	node := models.Node{
+		Name:          "origin-name",
+		LinkName:      "origin-name",
+		Link:          "ss://YWVzLTEyOC1nY206cGFzc0BleGFtcGxlLmNvbTo0NDM=#origin-name",
+		LinkCountry:   "US",
+		Source:        "[BK]",
+		Speed:         1.25,
+		SpeedStatus:   "success",
+		IsResidential: false,
+		IsBroadcast:   false,
+		FraudScore:    8,
+		QualityStatus: "success",
+	}
+
+	got := buildSurgeRenamedNodeLink(node, node.LinkName, "$Source$Flag$LinkCountry|$Residential|$IpType|$FraudScoreIcon$Speed-$Index", node.Link, 7)
+
+	if !strings.Contains(got, "%5BBK%5D%F0%9F%87%BA%F0%9F%87%B8US%7C%E6%9C%BA%E6%88%BFIP%7C%E5%8E%9F%E7%94%9FIP%7C%E2%9A%AA1.25MB/s-7") {
+		t.Fatalf("expected surge renamed link to include quality fields, got %q", got)
+	}
+}
+
 func TestBuildDialerProxyNameMapIgnoresAmbiguousAliases(t *testing.T) {
 	nodes := []models.Node{
 		{ID: 1, Name: "same-old-name", LinkName: "same-old-name"},

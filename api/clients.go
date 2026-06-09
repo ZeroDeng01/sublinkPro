@@ -423,31 +423,11 @@ func resolveClashDialerProxy(node models.Node, finalNodeName string, chainNodeDi
 	return normalizeDialerProxyName(dialerProxy, dialerProxyNameMap)
 }
 
-func buildSurgeRenameInfo(node models.Node, processedLinkName, link string, index int) utils.NodeInfo {
-	return utils.NodeInfo{
-		Name:          node.EffectiveName(),
-		LinkName:      processedLinkName,
-		LinkCountry:   node.LinkCountry,
-		Speed:         node.Speed,
-		SpeedStatus:   node.SpeedStatus,
-		DelayTime:     node.DelayTime,
-		DelayStatus:   node.DelayStatus,
-		Group:         node.Group,
-		Source:        node.Source,
-		Index:         index,
-		Protocol:      protocol.GetProtocolFromLink(link),
-		Tags:          node.Tags,
-		IsBroadcast:   node.IsBroadcast,
-		IsResidential: node.IsResidential,
-		FraudScore:    node.FraudScore,
-	}
-}
-
 func buildSurgeRenamedNodeLink(node models.Node, processedLinkName, nodeNameRule, link string, index int) string {
 	if nodeNameRule == "" {
 		return utils.RenameNodeLink(link, node.EffectiveName())
 	}
-	newName := utils.RenameNode(nodeNameRule, buildSurgeRenameInfo(node, processedLinkName, link, index))
+	newName := utils.RenameNode(nodeNameRule, models.BuildNodeRenameInfo(node, processedLinkName, protocol.GetProtocolFromLink(link), index))
 	return utils.RenameNodeLink(link, newName)
 }
 
