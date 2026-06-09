@@ -392,12 +392,12 @@ func addDialerProxyNameAlias(aliasToFinal map[string]string, conflicts map[strin
 func buildDialerProxyNameMap(nodes []models.Node, nodeNameMap map[int]string) map[string]string {
 	aliasToFinal := make(map[string]string)
 	conflicts := make(map[string]bool)
-	for _, node := range nodes {
-		finalName := nodeNameMap[node.ID]
+	for _, n := range nodes {
+		finalName := nodeNameMap[n.ID]
 		addDialerProxyNameAlias(aliasToFinal, conflicts, finalName, finalName)
-		addDialerProxyNameAlias(aliasToFinal, conflicts, node.EffectiveName(), finalName)
-		addDialerProxyNameAlias(aliasToFinal, conflicts, node.Name, finalName)
-		addDialerProxyNameAlias(aliasToFinal, conflicts, node.LinkName, finalName)
+		addDialerProxyNameAlias(aliasToFinal, conflicts, n.EffectiveName(), finalName)
+		addDialerProxyNameAlias(aliasToFinal, conflicts, n.Name, finalName)
+		addDialerProxyNameAlias(aliasToFinal, conflicts, n.LinkName, finalName)
 	}
 	return aliasToFinal
 }
@@ -421,14 +421,6 @@ func resolveClashDialerProxy(node models.Node, finalNodeName string, chainNodeDi
 		dialerProxy = targetDialer
 	}
 	return normalizeDialerProxyName(dialerProxy, dialerProxyNameMap)
-}
-
-func buildSurgeRenamedNodeLink(node models.Node, processedLinkName, nodeNameRule, link string, index int) string {
-	if nodeNameRule == "" {
-		return utils.RenameNodeLink(link, node.EffectiveName())
-	}
-	newName := utils.RenameNode(nodeNameRule, models.BuildNodeRenameInfo(node, processedLinkName, protocol.GetProtocolFromLink(link), index))
-	return utils.RenameNodeLink(link, newName)
 }
 
 func prepareRendererResponse(c *gin.Context, prepared preparedClientResponse) (resolvedPreparedResponse, bool) {
@@ -796,13 +788,13 @@ func renderPreparedSurge(c *gin.Context, prepared preparedClientResponse) {
 		// 应用预处理规则到 LinkName
 		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
 		// 应用重命名规则
-		nodeLink := buildSurgeRenamedNodeLink(v, processedLinkName, sub.NodeNameRule, v.Link, idx+1)
+		nodeLink := buildRenamedNodeLink(v, processedLinkName, sub.NodeNameRule, v.Link, idx+1)
 		switch {
 		// 如果包含多条节点
 		case strings.Contains(v.Link, ","):
 			links := strings.Split(v.Link, ",")
 			for i, link := range links {
-				links[i] = buildSurgeRenamedNodeLink(v, processedLinkName, sub.NodeNameRule, link, idx+1)
+				links[i] = buildRenamedNodeLink(v, processedLinkName, sub.NodeNameRule, link, idx+1)
 			}
 			urls = append(urls, links...)
 			continue
