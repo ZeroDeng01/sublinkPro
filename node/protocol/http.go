@@ -243,7 +243,13 @@ func buildHTTPProxySurgeLine(link string, config OutputConfig) (string, string, 
 		return "", "", err
 	}
 
-	line := fmt.Sprintf("%s = %s, %s, %d, username=%s, password=%s", httpProxy.Name, httpProxyScheme(httpProxy.TLS), httpProxy.Server, utils.GetPortInt(httpProxy.Port), httpProxy.Username, httpProxy.Password)
+	line := fmt.Sprintf("%s = %s, %s, %d", httpProxy.Name, httpProxyScheme(httpProxy.TLS), httpProxy.Server, utils.GetPortInt(httpProxy.Port))
+	if httpProxy.Username != "" {
+		line = fmt.Sprintf("%s, username=%s", line, httpProxy.Username)
+	}
+	if httpProxy.Password != "" {
+		line = fmt.Sprintf("%s, password=%s", line, httpProxy.Password)
+	}
 	if httpProxy.TLS {
 		skipCert := config.Cert || httpProxy.SkipCertVerify
 		line = fmt.Sprintf("%s, skip-cert-verify=%t", line, skipCert)
