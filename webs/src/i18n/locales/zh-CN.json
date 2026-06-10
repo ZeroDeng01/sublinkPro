@@ -864,22 +864,27 @@
         },
         "status": {
           "title": "当前生效状态",
+          "connection": "连接配置",
+          "conversion": "转换开关",
+          "shareAvailability": "扩展目标分享",
           "configured": "已可用于转换",
           "notConfigured": "尚未完成配置",
           "enabled": "已启用",
           "disabled": "未启用",
-          "targets": "已启用输出目标：{{count}} 个"
+          "available": "可用于分享",
+          "unavailable": "不可用于分享",
+          "targets": "已选择扩展目标：{{count}} 个"
         },
         "form": {
-          "enabled": "使用 Sub-Store 生成扩展输出格式",
-          "disabled": "不使用 Sub-Store 转换",
+          "conversionSwitch": "启用 Sub-Store 转换",
           "baseUrl": "Sub-Store Base URL",
           "baseUrlHelper": "建议使用内网或 loopback 地址。",
           "timeoutSeconds": "请求超时（秒）",
           "timeoutHelper": "保存于当前页面，并用于服务端转换请求。",
-          "maxResponseBytes": "最大响应字节数",
-          "maxResponseHelper": "保存于当前页面，用于限制 Sub-Store 响应体大小。",
+          "maxResponseKib": "最大响应大小 (KiB)",
+          "maxResponseHelper": "保存于当前页面，用于限制 Sub-Store 响应体大小。例如，8192 KiB 等于 8 MiB。",
           "allowedTargets": "允许的输出目标",
+          "selectedTargetsSummary": "已选择 {{count}} 个扩展目标",
           "allowedTargetsHelper": "只有选中的扩展目标会出现在订阅分享链接中，并允许通过 /c 转换。",
           "bridgeNote": "扩展输出只转换代理节点。Clash 策略组、规则、DNS 与其他完整配置段不会被 Sub-Store 的一次性解析接口保留。"
         },

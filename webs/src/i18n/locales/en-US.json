@@ -864,22 +864,27 @@
         },
         "status": {
           "title": "Effective status",
+          "connection": "Connection configuration",
+          "conversion": "Sub-Store conversion",
+          "shareAvailability": "Expanded targets share",
           "configured": "Ready for conversion",
           "notConfigured": "Not configured",
           "enabled": "Enabled",
           "disabled": "Disabled",
-          "targets": "Enabled output targets: {{count}}"
+          "available": "Available",
+          "unavailable": "Unavailable",
+          "targets": "Selected expanded targets: {{count}}"
         },
         "form": {
-          "enabled": "Use Sub-Store for expanded output formats",
-          "disabled": "Do not use Sub-Store conversion",
+          "conversionSwitch": "Enable Sub-Store conversion",
           "baseUrl": "Sub-Store base URL",
           "baseUrlHelper": "Use a private network or loopback URL when possible.",
           "timeoutSeconds": "Request timeout (seconds)",
           "timeoutHelper": "Saved on this page and used by server-side conversion requests.",
-          "maxResponseBytes": "Maximum response bytes",
-          "maxResponseHelper": "Saved on this page to limit Sub-Store response size.",
+          "maxResponseKib": "Max Response Size (KiB)",
+          "maxResponseHelper": "Maximum allowed response size in KiB. For example, 8192 KiB equals 8 MiB.",
           "allowedTargets": "Allowed output targets",
+          "selectedTargetsSummary": "{{count}} expanded targets selected",
           "allowedTargetsHelper": "Only selected expanded targets appear in subscription share links and can be converted by /c.",
           "bridgeNote": "Expanded outputs convert proxy nodes only. Clash strategy groups, rules, DNS sections, and other full configuration sections are not preserved by the Sub-Store one-shot parser."
         },

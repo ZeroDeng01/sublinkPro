@@ -32,6 +32,8 @@ import ScienceIcon from '@mui/icons-material/Science';
 
 import { getSubStoreSettings, testSubStoreSettings, updateSubStoreSettings } from 'api/settings';
 
+const BYTES_PER_KIB = 1024;
+
 const defaultSettings = {
   configured: false,
   supportedTargets: [],
@@ -74,7 +76,7 @@ export default function SubStoreSettings({ showMessage }) {
     baseUrl: '',
     timeoutSeconds: 10,
     allowedTargets: [],
-    maxResponseBytes: 8388608
+    maxResponseKib: Math.round(8388608 / BYTES_PER_KIB)
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -84,12 +86,13 @@ export default function SubStoreSettings({ showMessage }) {
 
   const syncForm = useCallback((nextSettings) => {
     setSettings({ ...defaultSettings, ...nextSettings });
+    const bytes = fieldValue(nextSettings.maxResponseBytes, 8388608);
     setForm({
       enabled: fieldValue(nextSettings.enabled, false),
       baseUrl: fieldValue(nextSettings.baseUrl, ''),
       timeoutSeconds: fieldValue(nextSettings.timeoutSeconds, 10),
       allowedTargets: fieldValue(nextSettings.allowedTargets, []),
-      maxResponseBytes: fieldValue(nextSettings.maxResponseBytes, 8388608)
+      maxResponseKib: Math.round(bytes / BYTES_PER_KIB)
     });
   }, []);
 
@@ -122,7 +125,7 @@ export default function SubStoreSettings({ showMessage }) {
       baseUrl: form.baseUrl.trim(),
       timeoutSeconds: Number(form.timeoutSeconds) || 0,
       allowedTargets: form.allowedTargets,
-      maxResponseBytes: Number(form.maxResponseBytes) || 0
+      maxResponseBytes: (Number(form.maxResponseKib) || 0) * BYTES_PER_KIB
     }),
     [form]
   );
@@ -160,6 +163,12 @@ export default function SubStoreSettings({ showMessage }) {
   };
 
   const targetLabel = (target) => targetLabels[target] || target;
+  const renderSelectedTargets = (selected) => {
+    if (selected.length > 3) {
+      return t('settings.subStore.form.selectedTargetsSummary', { count: selected.length });
+    }
+    return selected.map(targetLabel).join(', ');
+  };
 
   return (
     <Card variant="outlined">
@@ -199,23 +208,48 @@ export default function SubStoreSettings({ showMessage }) {
             <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2, bgcolor: 'background.default' }}>
               <Stack spacing={1.5}>
                 <Typography variant="subtitle2">{t('settings.subStore.status.title')}</Typography>
-                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                  <Chip
-                    size="small"
-                    color={settings.configured ? 'success' : 'default'}
-                    variant="outlined"
-                    label={settings.configured ? t('settings.subStore.status.configured') : t('settings.subStore.status.notConfigured')}
-                  />
-                  <Chip
-                    size="small"
-                    color={form.enabled ? 'info' : 'default'}
-                    variant="outlined"
-                    label={form.enabled ? t('settings.subStore.status.enabled') : t('settings.subStore.status.disabled')}
-                  />
+                <Stack spacing={1}>
+                  <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 140 }}>
+                      {t('settings.subStore.status.connection')}
+                    </Typography>
+                    <Chip
+                      size="small"
+                      color={settings.configured ? 'success' : 'default'}
+                      variant="outlined"
+                      label={settings.configured ? t('settings.subStore.status.configured') : t('settings.subStore.status.notConfigured')}
+                    />
+                  </Stack>
+                  <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 140 }}>
+                      {t('settings.subStore.status.conversion')}
+                    </Typography>
+                    <Chip
+                      size="small"
+                      color={form.enabled ? 'info' : 'default'}
+                      variant="outlined"
+                      label={form.enabled ? t('settings.subStore.status.enabled') : t('settings.subStore.status.disabled')}
+                    />
+                  </Stack>
+                  <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 140 }}>
+                      {t('settings.subStore.status.shareAvailability')}
+                    </Typography>
+                    <Chip
+                      size="small"
+                      color={settings.configured && form.enabled && form.allowedTargets.length > 0 ? 'primary' : 'default'}
+                      variant="outlined"
+                      label={
+                        settings.configured && form.enabled && form.allowedTargets.length > 0
+                          ? t('settings.subStore.status.available')
+                          : t('settings.subStore.status.unavailable')
+                      }
+                    />
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: { xs: 0, sm: 1 } }}>
+                      {t('settings.subStore.status.targets', { count: form.allowedTargets.length })}
+                    </Typography>
+                  </Stack>
                 </Stack>
-                <Typography variant="body2" color="text.secondary">
-                  {t('settings.subStore.status.targets', { count: form.allowedTargets.length })}
-                </Typography>
               </Stack>
             </Box>
 
@@ -224,7 +258,7 @@ export default function SubStoreSettings({ showMessage }) {
               control={
                 <Switch checked={form.enabled} onChange={(event) => setForm((prev) => ({ ...prev, enabled: event.target.checked }))} />
               }
-              label={form.enabled ? t('settings.subStore.form.enabled') : t('settings.subStore.form.disabled')}
+              label={t('settings.subStore.form.conversionSwitch')}
             />
 
             <TextField
@@ -249,9 +283,9 @@ export default function SubStoreSettings({ showMessage }) {
               <TextField
                 fullWidth
                 type="number"
-                label={t('settings.subStore.form.maxResponseBytes')}
-                value={form.maxResponseBytes}
-                onChange={(event) => setForm((prev) => ({ ...prev, maxResponseBytes: event.target.value }))}
+                label={t('settings.subStore.form.maxResponseKib')}
+                value={form.maxResponseKib}
+                onChange={(event) => setForm((prev) => ({ ...prev, maxResponseKib: event.target.value }))}
                 helperText={t('settings.subStore.form.maxResponseHelper')}
                 slotProps={{ htmlInput: { min: 1 } }}
               />
@@ -265,7 +299,14 @@ export default function SubStoreSettings({ showMessage }) {
                 value={form.allowedTargets}
                 onChange={(event) => setForm((prev) => ({ ...prev, allowedTargets: event.target.value }))}
                 input={<OutlinedInput label={t('settings.subStore.form.allowedTargets')} />}
-                renderValue={(selected) => selected.map(targetLabel).join(', ')}
+                renderValue={renderSelectedTargets}
+                sx={{
+                  '& .MuiSelect-select': {
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }
+                }}
               >
                 {supportedTargets.map((target) => (
                   <MenuItem key={target} value={target}>
