@@ -373,25 +373,70 @@ func applyPreparedResponseMode(prepared preparedClientResponse) resolvedPrepared
 	}
 }
 
-func buildRenamedNodeLink(node models.Node, processedLinkName, nodeNameRule, link string, index int) string {
+// buildNodeExportName 计算节点导出到客户端时使用的最终名称。
+// 原来在 buildRenamedNodeLink 内部直接计算并写回链接；现在先拆出名称计算，
+// 让导出阶段可以先做全局唯一化，再用同一个最终名称重写链接和代理组引用。
+// 这里只保留现有命名规则语义：无模板时使用节点有效名，有模板时按模板渲染。
+func buildNodeExportName(node models.Node, processedLinkName, nodeNameRule, link string, index int) string {
 	if nodeNameRule == "" {
-		return utils.RenameNodeLink(link, node.EffectiveName())
+		return node.EffectiveName()
 	}
-	newName := utils.RenameNode(nodeNameRule, models.BuildNodeRenameInfo(node, processedLinkName, protocol.GetProtocolFromLink(link), index))
+	return utils.RenameNode(nodeNameRule, models.BuildNodeRenameInfo(node, processedLinkName, protocol.GetProtocolFromLink(link), index))
+}
+
+func buildRenamedNodeLink(node models.Node, processedLinkName, nodeNameRule, link string, index int) string {
+	newName := buildNodeExportName(node, processedLinkName, nodeNameRule, link, index)
 	return utils.RenameNodeLink(link, newName)
 }
 
+// uniqueClientProxyName 为客户端导出的代理名称做最终去重。
+// Clash 和 Surge 都使用代理名称做组引用，重名会导致后续引用落到错误节点。
+func uniqueClientProxyName(baseName string, usedNames map[string]int) string {
+	baseName = strings.TrimSpace(baseName)
+	if baseName == "" {
+		baseName = "未命名节点"
+	}
+	if usedNames[baseName] == 0 {
+		usedNames[baseName] = 1
+		return baseName
+	}
+
+	for suffix := usedNames[baseName] + 1; ; suffix++ {
+		candidate := fmt.Sprintf("%s-%d", baseName, suffix)
+		if usedNames[candidate] == 0 {
+			usedNames[baseName] = suffix
+			usedNames[candidate] = 1
+			return candidate
+		}
+	}
+}
+
+// buildClashNodeNameMap 预先计算每个节点最终可引用的唯一代理名称。
+// 后续节点链接重命名、代理组和 dialer-proxy 都复用这张表，保证引用名称一致。
+// 这里替代原先各处临时计算名称的写法，避免同名节点在不同导出环节得到不一致的后缀。
 func buildClashNodeNameMap(sub models.Subcription) map[int]string {
 	nodeNameMap := make(map[int]string)
+	usedNames := make(map[string]int)
 	for idx, v := range sub.Nodes {
 		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
-		finalName := v.EffectiveName()
-		if sub.NodeNameRule != "" {
-			finalName = utils.RenameNode(sub.NodeNameRule, models.BuildNodeRenameInfo(v, processedLinkName, protocol.GetProtocolFromLink(v.Link), idx+1))
-		}
-		nodeNameMap[v.ID] = finalName
+		finalName := buildNodeExportName(v, processedLinkName, sub.NodeNameRule, v.Link, idx+1)
+		nodeNameMap[v.ID] = uniqueClientProxyName(finalName, usedNames)
 	}
 	return nodeNameMap
+}
+
+// buildUsedClientProxyNames 将已分配的客户端代理名称转为占用表。
+// 多 URL 节点拆分后还会追加多条代理，需要基于已有名称继续分配后缀。
+func buildUsedClientProxyNames(nodeNameMap map[int]string) map[string]int {
+	usedNames := make(map[string]int, len(nodeNameMap))
+	for _, name := range nodeNameMap {
+		trimmedName := strings.TrimSpace(name)
+		if trimmedName == "" {
+			continue
+		}
+		usedNames[trimmedName] = 1
+	}
+	return usedNames
 }
 
 func addDialerProxyNameAlias(aliasToFinal map[string]string, conflicts map[string]bool, alias, finalName string) {
@@ -687,16 +732,17 @@ func buildPreparedMihomoYAML(c *gin.Context, prepared preparedClientResponse) (m
 		utils.Debug("[ChainProxy] 收集完成: 目标节点=%d, 中间节点=%d", len(targetNodeDialerMap), len(chainNodeDialerMap))
 	}
 
-	// ========== 第二阶段：遍历节点生成配置 ==========
-	for idx, v := range sub.Nodes {
-		// 应用预处理规则到 LinkName
-		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
-		// 应用重命名规则
-		nodeLink := buildRenamedNodeLink(v, processedLinkName, sub.NodeNameRule, v.Link, idx+1)
+	// Clash 多 URL 节点会展开成多条 proxy，展开后的名称也必须参与全局去重。
+	clashURLNameCounters := make(map[int]int)
+	clashURLUsedNames := buildUsedClientProxyNames(nodeNameMap)
 
+	// ========== 第二阶段：遍历节点生成配置 ==========
+	for _, v := range sub.Nodes {
 		// 计算 dialer-proxy（链式代理规则）
 		// 优先级：中间节点映射 > 目标节点映射 > 节点自身设置
 		finalNodeName := nodeNameMap[v.ID]
+		// 使用已唯一化的名称重写链接，确保 proxy.name 与代理组、dialer-proxy 引用一致。
+		nodeLink := utils.RenameNodeLink(v.Link, finalNodeName)
 		dialerProxy := resolveClashDialerProxy(v, finalNodeName, chainNodeDialerMap, targetNodeDialerMap, dialerProxyNameMap)
 
 		switch {
@@ -704,7 +750,13 @@ func buildPreparedMihomoYAML(c *gin.Context, prepared preparedClientResponse) (m
 		case strings.Contains(v.Link, ","):
 			links := strings.Split(v.Link, ",")
 			for i, link := range links {
-				renamedLink := buildRenamedNodeLink(v, processedLinkName, sub.NodeNameRule, link, idx+1)
+				clashURLNameCounters[v.ID]++
+				linkName := finalNodeName
+				if clashURLNameCounters[v.ID] > 1 {
+					// 第一条使用节点主名称，后续拆分链接在完整名称末尾追加 -2、-3 等后缀。
+					linkName = uniqueClientProxyName(finalNodeName, clashURLUsedNames)
+				}
+				renamedLink := utils.RenameNodeLink(link, linkName)
 				links[i] = renamedLink
 				urls = append(urls, protocol.Urls{
 					Url:             renamedLink,
@@ -855,17 +907,28 @@ func renderPreparedSurge(c *gin.Context, prepared preparedClientResponse) {
 	}
 	sub := resolved.Subscription
 	urls := []string{}
-	for idx, v := range sub.Nodes {
-		// 应用预处理规则到 LinkName
-		processedLinkName := utils.PreprocessNodeName(sub.NodeNamePreprocess, v.LinkName)
-		// 应用重命名规则
-		nodeLink := buildRenamedNodeLink(v, processedLinkName, sub.NodeNameRule, v.Link, idx+1)
+
+	// Surge 的 [Proxy] 名称同样需要全局唯一，否则代理组引用会出现歧义。
+	nodeNameMap := buildClashNodeNameMap(sub)
+	surgeURLNameCounters := make(map[int]int)
+	surgeURLUsedNames := buildUsedClientProxyNames(nodeNameMap)
+
+	for _, v := range sub.Nodes {
+		finalNodeName := nodeNameMap[v.ID]
+		// Surge 的 [Proxy] 左侧名称来自链接名称，也要复用已唯一化结果。
+		nodeLink := utils.RenameNodeLink(v.Link, finalNodeName)
 		switch {
 		// 如果包含多条节点
 		case strings.Contains(v.Link, ","):
 			links := strings.Split(v.Link, ",")
 			for i, link := range links {
-				links[i] = buildRenamedNodeLink(v, processedLinkName, sub.NodeNameRule, link, idx+1)
+				surgeURLNameCounters[v.ID]++
+				linkName := finalNodeName
+				if surgeURLNameCounters[v.ID] > 1 {
+					// 第一条使用节点主名称，后续拆分链接在完整名称末尾追加 -2、-3 等后缀。
+					linkName = uniqueClientProxyName(finalNodeName, surgeURLUsedNames)
+				}
+				links[i] = utils.RenameNodeLink(link, linkName)
 			}
 			urls = append(urls, links...)
 			continue

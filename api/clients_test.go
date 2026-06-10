@@ -19,6 +19,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
+	"gopkg.in/yaml.v3"
 	"gorm.io/gorm"
 )
 
@@ -255,6 +256,114 @@ func performClientRequest(t *testing.T, method, path string) *httptest.ResponseR
 	return recorder
 }
 
+// clashProxyNamesFromBody 从 Clash YAML 输出中提取最终 proxy.name。
+// 这些名称是客户端真实引用的结果，比只测内部命名函数更接近导出行为。
+func clashProxyNamesFromBody(t *testing.T, body []byte) []string {
+	t.Helper()
+
+	var config struct {
+		Proxies []struct {
+			Name string `yaml:"name"`
+		} `yaml:"proxies"`
+	}
+	if err := yaml.Unmarshal(body, &config); err != nil {
+		t.Fatalf("parse clash output: %v\n%s", err, string(body))
+	}
+
+	names := make([]string, 0, len(config.Proxies))
+	for _, proxy := range config.Proxies {
+		names = append(names, proxy.Name)
+	}
+	return names
+}
+
+// surgeProxyNamesFromBody 从 Surge [Proxy] section 提取代理名称。
+// 只读取等号左侧名称，避免把 [Proxy Group] 中的组名误判为节点代理。
+func surgeProxyNamesFromBody(body string) []string {
+	lines := strings.Split(body, "\n")
+	inProxySection := false
+	names := []string{}
+
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmedLine, "[") && strings.HasSuffix(trimmedLine, "]") {
+			inProxySection = trimmedLine == "[Proxy]"
+			continue
+		}
+		if !inProxySection || trimmedLine == "" || strings.HasPrefix(trimmedLine, "#") {
+			continue
+		}
+
+		parts := strings.SplitN(trimmedLine, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		names = append(names, strings.TrimSpace(parts[0]))
+	}
+
+	return names
+}
+
+func testClientProxyNameNodes(splitFirst bool) []models.Node {
+	firstLink := "ss://YWVzLTEyOC1nY206cGFzc0BleGFtcGxlLmNvbTo0NDM=#first"
+	if splitFirst {
+		firstLink = strings.Join([]string{
+			"ss://YWVzLTEyOC1nY206cGFzc0BleGFtcGxlLmNvbTo0NDM=#first-a",
+			"ss://YWVzLTEyOC1nY206cGFzc0BleGFtcGxlLm9yZzo0NDM=#first-b",
+		}, ",")
+	}
+
+	return []models.Node{
+		{ID: 1, Name: "first", LinkName: "first", Link: firstLink, Protocol: "ss", Source: "source-a"},
+		{
+			ID:       2,
+			Name:     "second",
+			LinkName: "second",
+			Link:     "ss://YWVzLTEyOC1nY206cGFzc0BleGFtcGxlLm5ldDo0NDM=#second",
+			Protocol: "ss",
+			Source:   "source-a",
+		},
+	}
+}
+
+func renderPreparedClientProxyNames(t *testing.T, clientType string, nodes []models.Node) []string {
+	t.Helper()
+	setupClientsAPITestDB(t)
+	utils.SetProtocolLinkFuncs(protocol.GetProtocolLabelFromLink, protocol.RenameNodeLink)
+	t.Cleanup(func() {
+		utils.SetProtocolLinkFuncs(nil, nil)
+	})
+
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	ginContext, _ := gin.CreateTestContext(recorder)
+	ginContext.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c/?client="+clientType, nil)
+
+	templatePath := writeTestClashTemplate(t)
+	config := `{"clash":"` + templatePath + `"}`
+	prepared := preparedClientResponse{
+		ClientType: clientType,
+		Mode:       clientResponseNormal,
+		SubName:    "duplicate-name-sub",
+		Subscription: models.Subcription{
+			Name:                  "duplicate-name-sub",
+			Config:                config,
+			RefreshUsageOnRequest: false,
+			NodeNameRule:          "$Source",
+			Nodes:                 nodes,
+		},
+	}
+	if clientType == "surge" {
+		templatePath = writeTestSurgeTemplate(t)
+		prepared.Subscription.Config = `{"surge":"` + templatePath + `"}`
+		renderPreparedSurge(ginContext, prepared)
+		return surgeProxyNamesFromBody(recorder.Body.String())
+	}
+
+	renderPreparedClash(ginContext, prepared)
+	return clashProxyNamesFromBody(t, recorder.Body.Bytes())
+}
+
 func TestRenderPreparedV2raySkipsProtocolUnsupportedLinks(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	recorder := httptest.NewRecorder()
@@ -366,6 +475,53 @@ func TestResolveClashDialerProxyNormalizesStoredNameWithSubscriptionRule(t *test
 
 	if got != want {
 		t.Fatalf("expected stored dialer-proxy to normalize to subscription final name, got %q want %q", got, want)
+	}
+}
+
+// TestBuildClashNodeNameMapMakesDuplicateNamesUnique 覆盖客户端代理名称重名兜底。
+// 当多个节点按同一来源或模板渲染成同名时，后续节点应追加 -2、-3，避免客户端引用冲突。
+func TestBuildClashNodeNameMapMakesDuplicateNamesUnique(t *testing.T) {
+	sub := models.Subcription{
+		NodeNameRule: "$Source",
+		Nodes: []models.Node{
+			{ID: 1, Name: "first", LinkName: "first", Source: "source-a"},
+			{ID: 2, Name: "second", LinkName: "second", Source: "source-a"},
+			{ID: 3, Name: "third", LinkName: "third", Source: "source-a"},
+		},
+	}
+
+	nodeNameMap := buildClashNodeNameMap(sub)
+
+	if got := nodeNameMap[1]; got != "source-a" {
+		t.Fatalf("first name = %q, want source-a", got)
+	}
+	if got := nodeNameMap[2]; got != "source-a-2" {
+		t.Fatalf("second name = %q, want source-a-2", got)
+	}
+	if got := nodeNameMap[3]; got != "source-a-3" {
+		t.Fatalf("third name = %q, want source-a-3", got)
+	}
+}
+
+// TestBuildClashNodeNameMapKeepsDialerProxyAliasesAligned 确认去重后的名称仍能解析 dialer-proxy。
+// 链式代理或手工 dialer-proxy 可能保存旧名称，导出时必须映射到最终唯一 proxy.name。
+func TestBuildClashNodeNameMapKeepsDialerProxyAliasesAligned(t *testing.T) {
+	nodes := []models.Node{
+		{ID: 1, Name: "front-a", LinkName: "front-a", Source: "source-a"},
+		{ID: 2, Name: "front-b", LinkName: "front-b", Source: "source-a"},
+		{ID: 3, Name: "target", LinkName: "target", DialerProxyName: "front-b"},
+	}
+	sub := models.Subcription{
+		NodeNameRule: "$Source",
+		Nodes:        nodes,
+	}
+
+	nodeNameMap := buildClashNodeNameMap(sub)
+	dialerProxyNameMap := buildDialerProxyNameMap(nodes, nodeNameMap)
+	got := resolveClashDialerProxy(nodes[2], nodeNameMap[nodes[2].ID], nil, nil, dialerProxyNameMap)
+
+	if got != "source-a-2" {
+		t.Fatalf("expected dialer-proxy alias to resolve to unique final name, got %q", got)
 	}
 }
 
@@ -612,6 +768,31 @@ func TestRenderPreparedClashSetsProfileUpdateIntervalHeader(t *testing.T) {
 
 			if got := recorder.Header().Get("profile-update-interval"); got != tt.wantHeader {
 				t.Fatalf("expected profile-update-interval %q, got %q", tt.wantHeader, got)
+			}
+		})
+	}
+}
+
+// TestRenderPreparedClientMakesDuplicateProxyNamesUnique 从完整客户端输出验证代理名称唯一性。
+// Clash 和 Surge 都按名称引用代理，重复名称会让分组、规则或 dialer-proxy 出现歧义。
+func TestRenderPreparedClientMakesDuplicateProxyNamesUnique(t *testing.T) {
+	tests := []struct {
+		name       string
+		clientType string
+		splitFirst bool
+		wantNames  []string
+	}{
+		{name: "clash duplicate", clientType: "clash", wantNames: []string{"source-a", "source-a-2"}},
+		{name: "clash split", clientType: "clash", splitFirst: true, wantNames: []string{"source-a", "source-a-3", "source-a-2"}},
+		{name: "surge duplicate", clientType: "surge", wantNames: []string{"source-a", "source-a-2"}},
+		{name: "surge split", clientType: "surge", splitFirst: true, wantNames: []string{"source-a", "source-a-3", "source-a-2"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			names := renderPreparedClientProxyNames(t, tt.clientType, testClientProxyNameNodes(tt.splitFirst))
+			if strings.Join(names, ",") != strings.Join(tt.wantNames, ",") {
+				t.Fatalf("proxy names = %v, want %v", names, tt.wantNames)
 			}
 		})
 	}
