@@ -590,7 +590,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       <ClientUrlsDialog
         open={detailOpen}
         title={detailShare?.name || t('subscriptions.share.detailTitle')}
-        subtitle={t('subscriptions.share.detailSubtitle')}
         legacy={Boolean(detailShare?.is_legacy)}
         clientUrls={detailClientUrls}
         onClose={() => setDetailOpen(false)}

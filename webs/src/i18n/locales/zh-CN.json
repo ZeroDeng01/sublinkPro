@@ -2192,7 +2192,6 @@
       "cardMeta": "{{expire}} · 访问 {{count}} 次",
       "empty": "暂无分享链接，点击“新增”创建第一个分享",
       "detailTitle": "分享链接",
-      "detailSubtitle": "选择需要的客户端地址，可直接复制或生成二维码",
       "logsTitle": "访问日志 - {{name}}",
       "clients": {
         "auto": "自动识别",

@@ -17,7 +17,7 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
 
-export default function ClientUrlsDialog({ open, title, subtitle = '', legacy = false, clientUrls, onClose, onQrCode, onCopy }) {
+export default function ClientUrlsDialog({ open, title, legacy = false, clientUrls, onClose, onQrCode, onCopy }) {
   const theme = useTheme();
   const { t } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -99,16 +99,12 @@ export default function ClientUrlsDialog({ open, title, subtitle = '', legacy = 
       <DialogContent
         sx={{
           px: 2.5,
-          py: 2,
+          pt: 2.5,
+          pb: 2.5,
           bgcolor: dialogSurface
         }}
       >
-        <Stack spacing={1.5}>
-          {subtitle ? (
-            <Typography variant="body2" sx={{ color: secondaryText }}>
-              {subtitle}
-            </Typography>
-          ) : null}
+        <Stack spacing={1.5} sx={{ mt: 1 }}>
           {Object.entries(clientUrls).map(([name, url]) => {
             const resolvedUrl = url;
 

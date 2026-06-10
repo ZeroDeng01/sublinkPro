@@ -2192,7 +2192,6 @@
       "cardMeta": "{{expire}} · {{count}} visits",
       "empty": "No share links yet. Click “Add” to create the first share.",
       "detailTitle": "Share link",
-      "detailSubtitle": "Choose a client address to copy directly or generate a QR code.",
       "logsTitle": "Access Logs - {{name}}",
       "clients": {
         "auto": "Auto detect",
