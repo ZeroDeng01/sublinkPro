@@ -326,7 +326,7 @@ func testClientProxyNameNodes(splitFirst bool) []models.Node {
 	}
 }
 
-func renderPreparedClientProxyNames(t *testing.T, clientType string, nodes []models.Node) []string {
+func renderPreparedClientProxyNames(t *testing.T, clientType string, nodeNameRule string, nodes []models.Node) []string {
 	t.Helper()
 	setupClientsAPITestDB(t)
 	utils.SetProtocolLinkFuncs(protocol.GetProtocolLabelFromLink, protocol.RenameNodeLink)
@@ -349,7 +349,7 @@ func renderPreparedClientProxyNames(t *testing.T, clientType string, nodes []mod
 			Name:                  "duplicate-name-sub",
 			Config:                config,
 			RefreshUsageOnRequest: false,
-			NodeNameRule:          "$Source",
+			NodeNameRule:          nodeNameRule,
 			Nodes:                 nodes,
 		},
 	}
@@ -425,6 +425,37 @@ func TestRenderPreparedV2raySkipsProtocolUnsupportedLinks(t *testing.T) {
 	}
 }
 
+func TestRenderPreparedV2rayUsesDuplicateIndexVariable(t *testing.T) {
+	utils.SetProtocolLinkFuncs(protocol.GetProtocolLabelFromLink, protocol.RenameNodeLink)
+	t.Cleanup(func() {
+		utils.SetProtocolLinkFuncs(nil, nil)
+	})
+
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	ginContext, _ := gin.CreateTestContext(recorder)
+	ginContext.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c/?client=v2ray", nil)
+
+	renderPreparedV2ray(ginContext, preparedClientResponse{
+		ClientType: "v2ray",
+		Mode:       clientResponseNormal,
+		SubName:    "duplicate-name-sub",
+		Subscription: models.Subcription{
+			Name:                  "duplicate-name-sub",
+			RefreshUsageOnRequest: false,
+			NodeNameRule:          "$Source$DuplicateIndex",
+			Nodes:                 testClientProxyNameNodes(false),
+		},
+	})
+
+	decoded := utils.Base64Decode(recorder.Body.String())
+	for _, want := range []string{"#source-a", "#source-a1"} {
+		if !strings.Contains(decoded, want) {
+			t.Fatalf("v2ray output missing renamed node %q: %s", want, decoded)
+		}
+	}
+}
+
 func TestShouldSkipV2rayLinkUsesProtocolClientSupport(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -478,9 +509,7 @@ func TestResolveClashDialerProxyNormalizesStoredNameWithSubscriptionRule(t *test
 	}
 }
 
-// TestBuildClashNodeNameMapMakesDuplicateNamesUnique 覆盖客户端代理名称重名兜底。
-// 当多个节点按同一来源或模板渲染成同名时，后续节点应追加 -2、-3，避免客户端引用冲突。
-func TestBuildClashNodeNameMapMakesDuplicateNamesUnique(t *testing.T) {
+func TestBuildClashNodeNameMapKeepsDuplicateNamesWithoutDuplicateIndexVariable(t *testing.T) {
 	sub := models.Subcription{
 		NodeNameRule: "$Source",
 		Nodes: []models.Node{
@@ -495,15 +524,38 @@ func TestBuildClashNodeNameMapMakesDuplicateNamesUnique(t *testing.T) {
 	if got := nodeNameMap[1]; got != "source-a" {
 		t.Fatalf("first name = %q, want source-a", got)
 	}
-	if got := nodeNameMap[2]; got != "source-a-2" {
-		t.Fatalf("second name = %q, want source-a-2", got)
+	if got := nodeNameMap[2]; got != "source-a" {
+		t.Fatalf("second name = %q, want source-a", got)
 	}
-	if got := nodeNameMap[3]; got != "source-a-3" {
-		t.Fatalf("third name = %q, want source-a-3", got)
+	if got := nodeNameMap[3]; got != "source-a" {
+		t.Fatalf("third name = %q, want source-a", got)
 	}
 }
 
-// TestBuildClashNodeNameMapKeepsDialerProxyAliasesAligned 确认去重后的名称仍能解析 dialer-proxy。
+func TestBuildClashNodeNameMapUsesDuplicateIndexVariable(t *testing.T) {
+	sub := models.Subcription{
+		NodeNameRule: "$Source$DuplicateIndex",
+		Nodes: []models.Node{
+			{ID: 1, Name: "first", LinkName: "first", Source: "source-a"},
+			{ID: 2, Name: "second", LinkName: "second", Source: "source-a"},
+			{ID: 3, Name: "third", LinkName: "third", Source: "source-a"},
+		},
+	}
+
+	nodeNameMap := buildClashNodeNameMap(sub)
+
+	if got := nodeNameMap[1]; got != "source-a" {
+		t.Fatalf("first name = %q, want source-a", got)
+	}
+	if got := nodeNameMap[2]; got != "source-a1" {
+		t.Fatalf("second name = %q, want source-a1", got)
+	}
+	if got := nodeNameMap[3]; got != "source-a2" {
+		t.Fatalf("third name = %q, want source-a2", got)
+	}
+}
+
+// TestBuildClashNodeNameMapKeepsDialerProxyAliasesAligned 确认变量编号后的名称仍能解析 dialer-proxy。
 // 链式代理或手工 dialer-proxy 可能保存旧名称，导出时必须映射到最终唯一 proxy.name。
 func TestBuildClashNodeNameMapKeepsDialerProxyAliasesAligned(t *testing.T) {
 	nodes := []models.Node{
@@ -512,7 +564,7 @@ func TestBuildClashNodeNameMapKeepsDialerProxyAliasesAligned(t *testing.T) {
 		{ID: 3, Name: "target", LinkName: "target", DialerProxyName: "front-b"},
 	}
 	sub := models.Subcription{
-		NodeNameRule: "$Source",
+		NodeNameRule: "$Source$DuplicateIndex",
 		Nodes:        nodes,
 	}
 
@@ -520,7 +572,7 @@ func TestBuildClashNodeNameMapKeepsDialerProxyAliasesAligned(t *testing.T) {
 	dialerProxyNameMap := buildDialerProxyNameMap(nodes, nodeNameMap)
 	got := resolveClashDialerProxy(nodes[2], nodeNameMap[nodes[2].ID], nil, nil, dialerProxyNameMap)
 
-	if got != "source-a-2" {
+	if got != "source-a1" {
 		t.Fatalf("expected dialer-proxy alias to resolve to unique final name, got %q", got)
 	}
 }
@@ -773,24 +825,45 @@ func TestRenderPreparedClashSetsProfileUpdateIntervalHeader(t *testing.T) {
 	}
 }
 
-// TestRenderPreparedClientMakesDuplicateProxyNamesUnique 从完整客户端输出验证代理名称唯一性。
-// Clash 和 Surge 都按名称引用代理，重复名称会让分组、规则或 dialer-proxy 出现歧义。
-func TestRenderPreparedClientMakesDuplicateProxyNamesUnique(t *testing.T) {
+func TestRenderPreparedClientKeepsDuplicateProxyNamesWithoutDuplicateIndexVariable(t *testing.T) {
 	tests := []struct {
 		name       string
 		clientType string
 		splitFirst bool
 		wantNames  []string
 	}{
-		{name: "clash duplicate", clientType: "clash", wantNames: []string{"source-a", "source-a-2"}},
-		{name: "clash split", clientType: "clash", splitFirst: true, wantNames: []string{"source-a", "source-a-3", "source-a-2"}},
-		{name: "surge duplicate", clientType: "surge", wantNames: []string{"source-a", "source-a-2"}},
-		{name: "surge split", clientType: "surge", splitFirst: true, wantNames: []string{"source-a", "source-a-3", "source-a-2"}},
+		{name: "clash duplicate", clientType: "clash", wantNames: []string{"source-a", "source-a"}},
+		{name: "clash split", clientType: "clash", splitFirst: true, wantNames: []string{"source-a", "source-a", "source-a"}},
+		{name: "surge duplicate", clientType: "surge", wantNames: []string{"source-a", "source-a"}},
+		{name: "surge split", clientType: "surge", splitFirst: true, wantNames: []string{"source-a", "source-a", "source-a"}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			names := renderPreparedClientProxyNames(t, tt.clientType, testClientProxyNameNodes(tt.splitFirst))
+			names := renderPreparedClientProxyNames(t, tt.clientType, "$Source", testClientProxyNameNodes(tt.splitFirst))
+			if strings.Join(names, ",") != strings.Join(tt.wantNames, ",") {
+				t.Fatalf("proxy names = %v, want %v", names, tt.wantNames)
+			}
+		})
+	}
+}
+
+func TestRenderPreparedClientUsesDuplicateIndexVariableForDuplicateProxyNames(t *testing.T) {
+	tests := []struct {
+		name       string
+		clientType string
+		splitFirst bool
+		wantNames  []string
+	}{
+		{name: "clash duplicate", clientType: "clash", wantNames: []string{"source-a", "source-a1"}},
+		{name: "clash split", clientType: "clash", splitFirst: true, wantNames: []string{"source-a", "source-a1", "source-a2"}},
+		{name: "surge duplicate", clientType: "surge", wantNames: []string{"source-a", "source-a1"}},
+		{name: "surge split", clientType: "surge", splitFirst: true, wantNames: []string{"source-a", "source-a1", "source-a2"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			names := renderPreparedClientProxyNames(t, tt.clientType, "$Source$DuplicateIndex", testClientProxyNameNodes(tt.splitFirst))
 			if strings.Join(names, ",") != strings.Join(tt.wantNames, ",") {
 				t.Fatalf("proxy names = %v, want %v", names, tt.wantNames)
 			}

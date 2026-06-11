@@ -478,7 +478,7 @@ func BuildUnlockRenameValue(raw string, provider string) string {
 	return strings.Join(parts, "-")
 }
 
-func BuildNodeRenameInfo(node Node, processedLinkName string, protocol string, index int) utils.NodeInfo {
+func BuildNodeRenameInfo(node Node, processedLinkName string, protocol string, index int, duplicateIndex int) utils.NodeInfo {
 	summary := ParseUnlockSummary(node.UnlockSummary)
 	primaryUnlockStatus := "未检测"
 	primaryUnlockLabel := "未检测"
@@ -491,27 +491,28 @@ func BuildNodeRenameInfo(node Node, processedLinkName string, protocol string, i
 	}
 
 	return utils.NodeInfo{
-		Name:          node.EffectiveName(),
-		LinkName:      processedLinkName,
-		LinkCountry:   node.LinkCountry,
-		Speed:         node.Speed,
-		SpeedStatus:   node.SpeedStatus,
-		DelayTime:     node.DelayTime,
-		DelayStatus:   node.DelayStatus,
-		Group:         node.Group,
-		Source:        node.Source,
-		Index:         index,
-		Protocol:      protocol,
-		Tags:          node.Tags,
-		IsBroadcast:   node.IsBroadcast,
-		IsResidential: node.IsResidential,
-		FraudScore:    node.FraudScore,
-		QualityStatus: node.QualityStatus,
-		QualityFamily: node.QualityFamily,
-		UnlockRaw:     node.UnlockSummary,
-		UnlockSummary: BuildUnlockRenameValue(node.UnlockSummary, ""),
-		UnlockStatus:  primaryUnlockStatus,
-		UnlockLabel:   primaryUnlockLabel,
-		UnlockRegion:  primaryUnlockRegion,
+		Name:           node.EffectiveName(),
+		LinkName:       processedLinkName,
+		LinkCountry:    node.LinkCountry,
+		Speed:          node.Speed,
+		SpeedStatus:    node.SpeedStatus,
+		DelayTime:      node.DelayTime,
+		DelayStatus:    node.DelayStatus,
+		Group:          node.Group,
+		Source:         node.Source,
+		Index:          index,
+		DuplicateIndex: duplicateIndex,
+		Protocol:       protocol,
+		Tags:           node.Tags,
+		IsBroadcast:    node.IsBroadcast,
+		IsResidential:  node.IsResidential,
+		FraudScore:     node.FraudScore,
+		QualityStatus:  node.QualityStatus,
+		QualityFamily:  node.QualityFamily,
+		UnlockRaw:      node.UnlockSummary,
+		UnlockSummary:  BuildUnlockRenameValue(node.UnlockSummary, ""),
+		UnlockStatus:   primaryUnlockStatus,
+		UnlockLabel:    primaryUnlockLabel,
+		UnlockRegion:   primaryUnlockRegion,
 	}
 }

@@ -79,6 +79,12 @@ const AVAILABLE_VARIABLES = [
   { key: '$Group', labelKey: 'subscriptions.rename.vars.group', color: '#795548', descKey: 'subscriptions.rename.vars.groupDesc' },
   { key: '$Source', labelKey: 'subscriptions.rename.vars.source', color: '#607d8b', descKey: 'subscriptions.rename.vars.sourceDesc' },
   { key: '$Index', labelKey: 'subscriptions.rename.vars.index', color: '#9e9e9e', descKey: 'subscriptions.rename.vars.indexDesc' },
+  {
+    key: '$DuplicateIndex',
+    labelKey: 'subscriptions.rename.vars.duplicateIndex',
+    color: '#78909c',
+    descKey: 'subscriptions.rename.vars.duplicateIndexDesc'
+  },
   { key: '$Tags', labelKey: 'subscriptions.rename.vars.tags', color: '#673ab7', descKey: 'subscriptions.rename.vars.tagsDesc' },
   { key: '$TagGroup', labelKey: 'subscriptions.rename.vars.tagGroup', color: '#8bc34a', descKey: 'subscriptions.rename.vars.tagGroupDesc' }
 ];
@@ -134,6 +140,7 @@ const PREVIEW_DATA = {
   $Group: 'VIP',
   $Source: 'ProviderA',
   $Index: '01',
+  $DuplicateIndex: '1',
   $Tags: 'Fast|HK'
 };
 
@@ -146,7 +153,7 @@ const parseRule = (rule) => {
   let id = 0;
 
   const varRegex =
-    /\$(Name|LinkName|LinkCountry|Flag|SpeedIcon|Speed|DelayIcon|Delay|IpType|Residential|FraudScoreIcon|FraudScore|Unlock\([^)]+\)|Unlock|Group|Source|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
+    /\$(Name|LinkName|LinkCountry|Flag|SpeedIcon|Speed|DelayIcon|Delay|IpType|Residential|FraudScoreIcon|FraudScore|Unlock\([^)]+\)|Unlock|Group|Source|DuplicateIndex|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
 
   let match;
   let lastIndex = 0;

@@ -105,6 +105,7 @@ const previewNodeName = (rule) => {
     .replace(/\$Delay/g, '125ms')
     .replace(/\$Group/g, 'Premium')
     .replace(/\$Source/g, 'Airport A')
+    .replace(/\$DuplicateIndex/g, '1')
     .replace(/\$Index/g, '1')
     .replace(/\$Protocol/g, 'VMess')
     .replace(/\$Tags/g, 'Fast|Hong Kong');
@@ -1175,8 +1176,9 @@ export default function SubscriptionFormDialog({
                           <br />• <code>$DelayIcon</code> - {t('subscriptions.form.nameProcessing.varDelayIcon')} &nbsp;&nbsp; •{' '}
                           <code>$Group</code> - {t('subscriptions.form.nameProcessing.varGroup')}
                           <br />• <code>$Source</code> - {t('subscriptions.form.nameProcessing.varSource')} &nbsp;&nbsp; •{' '}
-                          <code>$Index</code> - {t('subscriptions.form.nameProcessing.varIndex')} &nbsp;&nbsp; • <code>$Protocol</code> -{' '}
-                          {t('subscriptions.form.nameProcessing.varProtocol')}
+                          <code>$Index</code> - {t('subscriptions.form.nameProcessing.varIndex')}
+                          <br />• <code>$DuplicateIndex</code> - {t('subscriptions.form.nameProcessing.varDuplicateIndex')} &nbsp;&nbsp; •{' '}
+                          <code>$Protocol</code> - {t('subscriptions.form.nameProcessing.varProtocol')}
                           <br />• <code>$IpType</code> - {t('subscriptions.form.nameProcessing.varIpType')} &nbsp;&nbsp; •{' '}
                           <code>$Residential</code> -{t('subscriptions.form.nameProcessing.varResidential')}
                           <br />• <code>$FraudScore</code> - {t('subscriptions.form.nameProcessing.varFraudScore')} &nbsp;&nbsp; •{' '}
