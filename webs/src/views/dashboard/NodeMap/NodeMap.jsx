@@ -7,6 +7,7 @@ import { Box, Card, Typography, CircularProgress } from '@mui/material';
 import worldJson from 'assets/world.json';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from 'utils/colorUtils';
+import { isoToFlag } from 'utils/countryDisplay';
 import { COUNTRY_COORDINATES, COUNTRY_NAME_MAP } from './countryData';
 
 // Register standard world map
@@ -14,15 +15,7 @@ echarts.registerMap('world', worldJson);
 
 // Helper: Get Flag Emoji from Country Code
 const getFlagEmoji = (countryCode) => {
-  if (!countryCode) return '';
-  // Special case for Taiwan -> China flag as requested
-  if (countryCode.toUpperCase() === 'TW') return '🇨🇳'; // CN Flag
-
-  const codePoints = countryCode
-    .toUpperCase()
-    .split('')
-    .map((char) => 127397 + char.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
+  return isoToFlag(countryCode);
 };
 
 // Helper: Attempt to find country code by name (case insensitive)

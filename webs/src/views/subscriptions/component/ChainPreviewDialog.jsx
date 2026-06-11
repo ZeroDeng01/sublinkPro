@@ -40,6 +40,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 
 import ChainCanvasView from './ChainCanvasView';
 import { getChainProxyIconButtonSx, getChainProxyThemeTokens } from './chainProxyTheme';
+import { COUNTRY_FALLBACK_EMOJI, isoToFlag } from '../../../utils/countryDisplay';
 
 const pulseAnimation = keyframes`
   0%, 100% {
@@ -53,10 +54,7 @@ const pulseAnimation = keyframes`
 `;
 
 const getCountryFlag = (code) => {
-  if (!code) return '🌐';
-  const codeUpper = code.toUpperCase();
-  const offset = 127397;
-  return [...codeUpper].map((c) => String.fromCodePoint(c.charCodeAt(0) + offset)).join('');
+  return isoToFlag(code, COUNTRY_FALLBACK_EMOJI);
 };
 
 const getTypeColor = (type, palette) => {

@@ -33,7 +33,7 @@ import NodeProtocolChip from './NodeProtocolChip';
 // utils
 import {
   formatDateTime,
-  formatCountry,
+  getCountryDisplay,
   getDelayDisplay,
   getFraudScoreDisplay,
   getIpTypeDisplay,
@@ -266,11 +266,17 @@ export default function NodeTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  {node.LinkCountry ? (
-                    <Chip label={formatCountry(node.LinkCountry)} color="secondary" variant="outlined" size="small" />
-                  ) : (
-                    '-'
-                  )}
+                  {(() => {
+                    const countryDisplay = getCountryDisplay(node.LinkCountry, { unknownLabel: t('common.unknown') });
+                    return (
+                      <Chip
+                        label={countryDisplay.text}
+                        color={countryDisplay.isUnknown ? 'default' : 'secondary'}
+                        variant="outlined"
+                        size="small"
+                      />
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
                   <Stack spacing={0.75} sx={{ minWidth: 0 }}>

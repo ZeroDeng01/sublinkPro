@@ -29,11 +29,11 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 // utils
 import {
   createEmptyUnlockRule,
+  formatCountry,
   formatUnlockProviderLabel,
   getUnlockProviderOptions,
   getUnlockRuleModeOptions,
   getUnlockStatusOptions,
-  isoToFlag,
   QUALITY_STATUS_OPTIONS,
   STATUS_OPTIONS
 } from '../utils';
@@ -251,19 +251,19 @@ export default function NodeFilters({
           value={countryFilter}
           onChange={(_, newValue) => setCountryFilter(newValue)}
           sx={{ minWidth: 150, ...fieldControlSx }}
-          getOptionLabel={(option) => `${isoToFlag(option)} ${option}`}
+          getOptionLabel={(option) => formatCountry(option)}
           renderOption={(props, option) => {
             const { key, ...otherProps } = props;
             return (
               <li key={key} {...otherProps}>
-                {isoToFlag(option)} {option}
+                {formatCountry(option)}
               </li>
             );
           }}
           renderTags={(value, getTagProps) =>
             value.map((option, index) => {
               const { key, ...tagProps } = getTagProps({ index });
-              return <Chip key={key} label={`${isoToFlag(option)} ${option}`} size="small" {...tagProps} />;
+              return <Chip key={key} label={formatCountry(option)} size="small" {...tagProps} />;
             })
           }
           renderInput={(params) => (

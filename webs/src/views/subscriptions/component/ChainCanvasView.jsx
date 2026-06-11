@@ -24,12 +24,10 @@ import BlockIcon from '@mui/icons-material/Block';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CloseIcon from '@mui/icons-material/Close';
 import { getChainProxyCanvasCssVars, getChainProxyThemeTokens } from './chainProxyTheme';
+import { COUNTRY_FALLBACK_EMOJI, isoToFlag } from '../../../utils/countryDisplay';
 
 const getCountryFlag = (code) => {
-  if (!code) return '🌐';
-  const codeUpper = code.toUpperCase();
-  const offset = 127397;
-  return [...codeUpper].map((c) => String.fromCodePoint(c.charCodeAt(0) + offset)).join('');
+  return isoToFlag(code, COUNTRY_FALLBACK_EMOJI);
 };
 
 const getTypeLabel = (type, t) => {

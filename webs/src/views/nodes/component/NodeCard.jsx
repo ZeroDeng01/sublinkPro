@@ -24,7 +24,7 @@ import {
   getQualityStatusDisplay,
   getResidentialDisplay,
   getSpeedDisplay,
-  formatCountry
+  getCountryDisplay
 } from '../utils';
 import { getNodePanelSx, getNodeTagChipSx, getNodeThemeTokens } from '../nodeTheme';
 
@@ -37,6 +37,7 @@ export default function NodeCard({ node, isSelected, tagColorMap, protocolMeta, 
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
+  const countryDisplay = getCountryDisplay(node.LinkCountry, { unknownLabel: t('common.unknown') });
   const unlockDisplay = getNodeUnlockSummaryDisplay(node, { limit: 2 });
   const effectiveName = node.EffectiveName || node.Name || node.LinkName;
   const secondaryName = node.NameMode === 'remark' ? node.LinkName : node.Name;
@@ -65,12 +66,7 @@ export default function NodeCard({ node, isSelected, tagColorMap, protocolMeta, 
       <Box p={2}>
         <Box sx={{ position: 'relative', mb: 1.5, pr: 10 }}>
           <Box sx={{ position: 'absolute', top: 0, right: 0 }}>
-            <Chip
-              label={node.LinkCountry ? formatCountry(node.LinkCountry) : t('nodes.mobile.unknownCountry')}
-              color={node.LinkCountry ? 'secondary' : 'default'}
-              variant="outlined"
-              size="small"
-            />
+            <Chip label={countryDisplay.text} color={countryDisplay.isUnknown ? 'default' : 'secondary'} variant="outlined" size="small" />
           </Box>
           <Stack direction="row" alignItems="flex-start" sx={{ minWidth: 0 }}>
             <Checkbox

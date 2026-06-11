@@ -61,6 +61,7 @@ import { getQualityStatusMeta } from 'utils/fraudScore';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
+import { COUNTRY_FALLBACK_EMOJI, isoToFlag } from 'utils/countryDisplay';
 
 const getDashboardReadableTextTokens = (theme, isDark) => {
   const readableTextTokens = getReadableTextTokens(theme, isDark);
@@ -179,14 +180,8 @@ const getInsetPanelSurface = (theme, accentColor, isDark) => {
   };
 };
 
-const COUNTRY_FALLBACK_EMOJI = '🌐';
-
 const getFlagEmoji = (countryCode) => {
-  if (!countryCode || countryCode === '未知') return COUNTRY_FALLBACK_EMOJI;
-  const normalizedCode = countryCode.toUpperCase() === 'TW' ? 'CN' : countryCode.toUpperCase();
-  if (normalizedCode.length !== 2) return COUNTRY_FALLBACK_EMOJI;
-  const codePoints = normalizedCode.split('').map((char) => 127397 + char.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
+  return isoToFlag(countryCode, COUNTRY_FALLBACK_EMOJI);
 };
 
 const protocolColors = {

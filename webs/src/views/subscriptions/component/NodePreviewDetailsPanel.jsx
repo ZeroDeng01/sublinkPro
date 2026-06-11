@@ -22,6 +22,7 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from '../../../utils/colorUtils';
 import { getReadableTextTokens, getSurfaceTokens } from '../../../themes/surfaceTokens';
 import { getProtocolPresentation } from '../../../utils/protocolPresentation';
+import { getCountryDisplay } from '../../../utils/countryDisplay';
 import { getNodeDisplayName } from 'utils/nodeDisplayName';
 
 import CloseIcon from '@mui/icons-material/Close';
@@ -65,6 +66,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
 
   const displayName = getNodeDisplayName(node);
   const protocolInfo = getProtocolPresentation(node.Protocol);
+  const countryDisplay = getCountryDisplay(node.LinkCountry, { unknownLabel: t('common.unknown') });
   const protocolColor = protocolInfo.color || palette.primary.main;
 
   const copyToClipboard = async (text, label) => {
@@ -173,7 +175,7 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
                 flexShrink: 0
               }}
             >
-              <Typography sx={{ fontSize: 30, lineHeight: 1 }}>{node.CountryFlag || '🌐'}</Typography>
+              <Typography sx={{ fontSize: 30, lineHeight: 1 }}>{countryDisplay.flag}</Typography>
             </Box>
             <Box sx={{ flex: 1, minWidth: 0, pr: 4 }}>
               <Typography sx={{ color: primaryText, fontWeight: 700, fontSize: 16, lineHeight: 1.3, wordBreak: 'break-word' }}>

@@ -49,7 +49,7 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 // utils
 import {
   formatDateTime,
-  formatCountry,
+  getCountryDisplay,
   getDelayDisplay,
   getFraudScoreDisplay,
   getIpTypeDisplay,
@@ -188,6 +188,7 @@ export default function NodeDetailsPanel({
 
   const delayDisplay = getDelayDisplay(node.DelayTime, node.DelayStatus);
   const speedDisplay = getSpeedDisplay(node.Speed, node.SpeedStatus);
+  const countryDisplay = getCountryDisplay(node.LinkCountry, { unknownLabel: t('common.unknown') });
   const protocolInfo = getProtocolInfo(node.Link, protocolMeta);
   const ipTypeDisplay = getIpTypeDisplay(node.IsBroadcast, node.QualityStatus, node.QualityFamily);
   const residentialDisplay = getResidentialDisplay(node.IsResidential, node.QualityStatus, node.QualityFamily);
@@ -514,11 +515,7 @@ export default function NodeDetailsPanel({
         </Accordion>
 
         <List disablePadding sx={{ mt: 1, mb: 3 }}>
-          <DetailItem
-            icon={<PublicIcon fontSize="small" />}
-            label={t('nodes.details.labels.countryRegion')}
-            value={node.LinkCountry ? formatCountry(node.LinkCountry) : '-'}
-          />
+          <DetailItem icon={<PublicIcon fontSize="small" />} label={t('nodes.details.labels.countryRegion')} value={countryDisplay.text} />
           {node.LandingIP && (
             <DetailItem
               icon={<RouterIcon fontSize="small" />}

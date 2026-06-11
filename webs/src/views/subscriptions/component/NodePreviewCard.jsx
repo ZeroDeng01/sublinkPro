@@ -9,6 +9,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getProtocolPresentation } from '../../../utils/protocolPresentation';
 import { withAlpha } from '../../../utils/colorUtils';
+import { getCountryDisplay } from '../../../utils/countryDisplay';
 import { getNodeDisplayName } from 'utils/nodeDisplayName';
 
 import { useTranslation } from 'react-i18next';
@@ -54,6 +55,7 @@ export default function NodePreviewCard({ node, onClick }) {
   const speedDisplay = getSpeedDisplay(node.Speed, node.SpeedStatus, t);
   const displayName = getNodeDisplayName(node);
   const protocolInfo = getProtocolPresentation(node.Protocol);
+  const countryDisplay = getCountryDisplay(node.LinkCountry, { unknownLabel: t('common.unknown') });
   const protocolColor = protocolInfo.color || theme.palette.primary.main;
   const footerBackground = isDark ? withAlpha(palette.background.default, 0.92) : withAlpha(palette.background.default, 0.88);
   const footerBorderColor = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
@@ -216,19 +218,24 @@ export default function NodePreviewCard({ node, onClick }) {
 
         <Box sx={{ flex: 1 }} />
 
-        <Stack direction="row" alignItems="center" spacing={0.25} className="country-flag" sx={{ transition: 'all 0.3s ease' }}>
-          <Typography sx={{ fontSize: 12, lineHeight: 1 }}>{node.CountryFlag || '🌐'}</Typography>
-          {node.LinkCountry && (
-            <Typography
-              sx={{
-                color: 'text.secondary',
-                fontSize: 8,
-                fontWeight: 700
-              }}
-            >
-              {node.LinkCountry}
-            </Typography>
-          )}
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={0.25}
+          className="country-flag"
+          sx={{ transition: 'all 0.3s ease', minWidth: 0, flexShrink: 0 }}
+        >
+          <Typography sx={{ fontSize: 12, lineHeight: 1 }}>{countryDisplay.flag}</Typography>
+          <Typography
+            sx={{
+              color: 'text.secondary',
+              fontSize: 8,
+              fontWeight: 700,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {countryDisplay.label}
+          </Typography>
         </Stack>
       </Box>
     </Box>
@@ -245,7 +252,6 @@ NodePreviewCard.propTypes = {
     NameMode: PropTypes.string,
     PreviewLink: PropTypes.string,
     Protocol: PropTypes.string,
-    CountryFlag: PropTypes.string,
     LinkCountry: PropTypes.string,
     DelayTime: PropTypes.number,
     DelayStatus: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),

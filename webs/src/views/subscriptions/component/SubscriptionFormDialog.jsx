@@ -56,6 +56,7 @@ import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
 import { getFraudScoreIcon, QUALITY_STATUS_OPTIONS } from 'utils/fraudScore';
 import { getDelayIcon, getSpeedIcon } from 'utils/nodeMetricIcons';
+import { formatCountry } from 'utils/countryDisplay';
 import {
   formatUnlockProviderLabel,
   getNodeUnlockSummaryDisplay,
@@ -65,19 +66,6 @@ import {
   getUnlockStatusOptions,
   createEmptyUnlockRule
 } from 'views/nodes/utils';
-
-const isoToFlag = (isoCode) => {
-  if (!isoCode || isoCode.length !== 2) return '';
-  const code = isoCode.toUpperCase() === 'TW' ? 'CN' : isoCode.toUpperCase();
-  const codePoints = code.split('').map((char) => 0x1f1e6 + char.charCodeAt(0) - 65);
-  return String.fromCodePoint(...codePoints);
-};
-
-const formatCountry = (linkCountry) => {
-  if (!linkCountry) return '';
-  const flag = isoToFlag(linkCountry);
-  return flag ? `${flag}${linkCountry}` : linkCountry;
-};
 
 const normalizeCountryCode = (value) => (typeof value === 'string' ? value.trim().toUpperCase() : '');
 

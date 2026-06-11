@@ -1,5 +1,10 @@
 import i18n from 'i18n';
 import { getFraudScoreLevel, getQualityStatusMeta, QUALITY_STATUS, QUALITY_STATUS_OPTIONS } from 'utils/fraudScore';
+import {
+  formatCountry as formatCountryDisplay,
+  getCountryDisplay as getCountryDisplayInfo,
+  isoToFlag as isoCodeToFlag
+} from 'utils/countryDisplay';
 
 const translate = (key, defaultValue, options = {}) => i18n.t(key, { defaultValue, ...options });
 
@@ -704,22 +709,13 @@ export const formatDateTime = (dateTimeString) => {
 };
 
 // ISO国家代码转换为国旗emoji
-export const isoToFlag = (isoCode) => {
-  if (!isoCode || isoCode.length !== 2) return '';
-  isoCode = isoCode.toUpperCase() === 'TW' ? 'CN' : isoCode;
-  const codePoints = isoCode
-    .toUpperCase()
-    .split('')
-    .map((char) => 127397 + char.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
-};
+export const isoToFlag = isoCodeToFlag;
 
 // 格式化国家显示 (国旗emoji + 代码)
-export const formatCountry = (linkCountry) => {
-  if (!linkCountry) return '';
-  const flag = isoToFlag(linkCountry);
-  return flag ? `${flag} ${linkCountry}` : linkCountry;
-};
+export const formatCountry = formatCountryDisplay;
+
+// 获取国家显示信息，包含未知国家回退
+export const getCountryDisplay = getCountryDisplayInfo;
 
 // Cron 表达式验证
 export const validateCronExpression = (cron) => {
