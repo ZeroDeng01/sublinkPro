@@ -43,6 +43,7 @@ Example openers:
 - **"Import an airport"**
 - **"Edit the 'ACL4SSR' template to block ads"**
 - **"Show dashboard stats"**
+- **"How does the smart tag system work?"** → the assistant fetches and explains the relevant documentation
 - **"I don't have SublinkPro yet — help me set it up"** → the assistant guides you through deploying it (see Deploy below)
 
 Under the hood the assistant calls the SublinkPro REST API with curl (or the optional Python helper). Authentication and API quirks are handled for you.
@@ -84,8 +85,34 @@ When the user asks "what can you do", "help", or seems unsure where to start, pr
 - **Tags** — list tags, create rules, apply tagging
 - **Tasks** — view running/finished tasks (speed tests etc.), stop a task
 - **Dashboard** — node/subscription counts, fastest node, country/protocol stats, system stats
+- **Documentation & help** — explain features, configuration, installation, or troubleshooting by fetching the project's official docs (smart tags, speed tests, chain proxy, MFA, etc.)
 - **Deploy / install SublinkPro** — stand up a new instance via docker, docker-compose, or the install script, locally or on a remote host (see the Deploy workflow below)
 - **Manage an instance** — check status / view logs, update to the latest version, or uninstall
+
+---
+
+## Documentation & Help
+
+When the user asks how a feature works, how to configure something, what a feature does, or how to troubleshoot — fetch the project's official documentation from GitHub and answer from it. **Do not invent or paraphrase from memory.** The documentation is always current and authoritative.
+
+**How to use the docs:**
+
+1. Match the user's question to a topic in `reference/docs.md` (the documentation map).
+2. Fetch the relevant doc's raw URL from GitHub using your web-fetch capability.
+3. Read it and answer in the user's language — summarize and quote the doc directly.
+4. Cite the human-readable GitHub page URL so the user can read the full doc themselves.
+5. If you can't fetch the doc (offline / no web access), tell the user and give them the GitHub link to read it themselves — never fabricate the content.
+
+**Topics covered:** installation & configuration, smart tags, speed tests, unlock checks, chain proxy, AI template editing, airport management, subscription sharing, host management, Cloudflare Tunnel, Telegram bot, MFA, script support, development guide, protocol extensions, internationalization.
+
+**When docs don't solve the problem:**
+
+If the documentation can't answer the user's question, or they've tried the documented solution and it still doesn't work, guide them to escalate:
+
+- **Submit a GitHub issue:** [https://github.com/ZeroDeng01/sublinkPro/issues](https://github.com/ZeroDeng01/sublinkPro/issues) — for bug reports, feature requests, or questions the docs don't cover.
+- **Contact the author via Telegram:** [https://t.me/SublinkPro_ChatMeBot](https://t.me/SublinkPro_ChatMeBot) — for real-time help or urgent issues.
+
+Phrase it like: "The docs cover X but your specific case (Y) isn't documented. I'd recommend opening a GitHub issue at [link] or reaching out to the author on Telegram at [link] — they can help diagnose this."
 
 ---
 
