@@ -2829,7 +2829,10 @@
     }
   },
   "skill": {
-    "downloadTooltip": "Download AI Skill"
+    "downloadTooltip": "Download AI Skill",
+    "downloadDialogTitle": "Download AI Skill",
+    "downloadDialogMessage": "Do you want to download the SublinkPro AI skill package? This file contains custom skill configurations for Claude Code.",
+    "downloading": "Downloading..."
   },
   "donation": {
     "title": "Support the project",

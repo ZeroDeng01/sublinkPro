@@ -86,7 +86,7 @@ export default function LanguageSection() {
 
   return (
     <>
-      <Box sx={{ ml: 2 }}>
+      <Box sx={{ ml: { xs: 1, md: 2 } }}>
         <Tooltip title={currentLangLabel}>
           <Avatar
             ref={anchorRef}

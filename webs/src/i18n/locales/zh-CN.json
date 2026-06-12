@@ -2829,7 +2829,10 @@
     }
   },
   "skill": {
-    "downloadTooltip": "下载 AI 技能包（Skill）"
+    "downloadTooltip": "下载 AI 技能包（Skill）",
+    "downloadDialogTitle": "下载 AI 技能包（Skill）",
+    "downloadDialogMessage": "确认要下载 SublinkPro AI 技能包（Skill）吗？该文件包含 Claude Code 的自定义技能配置。",
+    "downloading": "下载中..."
   },
   "donation": {
     "title": "支持项目",

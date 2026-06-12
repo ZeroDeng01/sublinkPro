@@ -79,14 +79,18 @@ export default function Header() {
       {/* donation */}
       <DonationSection />
 
-      {/* AI skill download */}
-      <SkillDownloadSection />
+      {/* AI skill download - desktop only */}
+      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+        <SkillDownloadSection />
+      </Box>
 
       {/* notification */}
       <NotificationSection />
 
+      {/* language */}
       <LanguageSection />
 
+      {/* theme mode */}
       <ThemeModeSection />
 
       {/* profile */}

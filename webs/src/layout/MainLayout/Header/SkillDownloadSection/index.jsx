@@ -6,6 +6,12 @@ import { useTheme } from '@mui/material/styles';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
 
 // icons
 import { IconRobot } from '@tabler/icons-react';
@@ -20,6 +26,7 @@ export default function SkillDownloadSection() {
   const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const [loading, setLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const accentColor = theme.palette.primary.main;
   const { triggerColor, triggerSurface, triggerBorder, activeSurface, activeBorder } = getHeaderTriggerTokens(theme, isDark, accentColor, {
@@ -28,7 +35,12 @@ export default function SkillDownloadSection() {
     activeColor: accentColor
   });
 
-  const handleDownload = async () => {
+  const handleClick = () => {
+    setDialogOpen(true);
+  };
+
+  const handleConfirm = async () => {
+    setDialogOpen(false);
     if (loading) {
       return;
     }
@@ -71,32 +83,62 @@ export default function SkillDownloadSection() {
     }
   };
 
+  const handleCancel = () => {
+    setDialogOpen(false);
+  };
+
   return (
-    <Box sx={{ ml: 2 }}>
-      <Tooltip title={t('skill.downloadTooltip')}>
-        <Avatar
-          variant="rounded"
-          sx={{
-            ...theme.typography.commonAvatar,
-            ...theme.typography.mediumAvatar,
-            transition: 'all .2s ease-in-out',
-            color: triggerColor,
-            background: triggerSurface,
-            border: '1px solid',
-            borderColor: triggerBorder,
-            cursor: 'pointer',
-            '&:hover, &:focus-visible': {
+    <>
+      <Box sx={{ ml: 2 }}>
+        <Tooltip title={t('skill.downloadTooltip')}>
+          <Avatar
+            variant="rounded"
+            sx={{
+              ...theme.typography.commonAvatar,
+              ...theme.typography.mediumAvatar,
+              transition: 'all .2s ease-in-out',
               color: triggerColor,
-              background: activeSurface,
-              borderColor: activeBorder
-            }
-          }}
-          onClick={handleDownload}
-          aria-label={t('skill.downloadTooltip')}
-        >
-          <IconRobot stroke={1.5} size="20px" />
-        </Avatar>
-      </Tooltip>
-    </Box>
+              background: triggerSurface,
+              border: '1px solid',
+              borderColor: triggerBorder,
+              cursor: 'pointer',
+              '&:hover, &:focus-visible': {
+                color: triggerColor,
+                background: activeSurface,
+                borderColor: activeBorder
+              }
+            }}
+            onClick={handleClick}
+            aria-label={t('skill.downloadTooltip')}
+          >
+            <IconRobot stroke={1.5} size="20px" />
+          </Avatar>
+        </Tooltip>
+      </Box>
+
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCancel}
+        aria-labelledby="skill-download-dialog-title"
+        aria-describedby="skill-download-dialog-description"
+      >
+        <DialogTitle id="skill-download-dialog-title">
+          {t('skill.downloadDialogTitle')}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="skill-download-dialog-description">
+            {t('skill.downloadDialogMessage')}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancel} color="inherit">
+            {t('common.cancel')}
+          </Button>
+          <Button onClick={handleConfirm} variant="contained" color="primary" autoFocus disabled={loading}>
+            {loading ? t('skill.downloading') : t('common.confirm')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }

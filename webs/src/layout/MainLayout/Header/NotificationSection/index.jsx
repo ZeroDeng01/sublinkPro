@@ -166,7 +166,7 @@ export default function NotificationSection() {
 
   return (
     <>
-      <Box sx={{ ml: 2 }}>
+      <Box sx={{ ml: { xs: 1, md: 2 } }}>
         <Tooltip title={t('notifications.title')}>
           <Badge badgeContent={unreadCount} color="error" max={99}>
             <Avatar

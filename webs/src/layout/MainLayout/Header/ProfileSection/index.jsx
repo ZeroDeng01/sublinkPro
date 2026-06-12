@@ -307,7 +307,7 @@ export default function ProfileSection() {
       <Chip
         slotProps={{ label: { sx: { lineHeight: 0 } } }}
         sx={{
-          ml: 2,
+          ml: { xs: 1, md: 2 },
           height: '48px',
           alignItems: 'center',
           borderRadius: '27px',

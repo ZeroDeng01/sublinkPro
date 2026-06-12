@@ -76,7 +76,7 @@ export default function ThemeModeSection() {
 
   return (
     <>
-      <Box sx={{ ml: 2 }}>
+      <Box sx={{ ml: { xs: 1, md: 2 } }}>
         <Tooltip title={`${t('theme.title')}: ${currentLabel}`}>
           <Avatar
             ref={anchorRef}

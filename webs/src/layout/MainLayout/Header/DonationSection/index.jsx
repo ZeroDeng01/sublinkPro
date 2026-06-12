@@ -60,7 +60,7 @@ export default function DonationSection() {
 
   return (
     <>
-      <Box sx={{ ml: 2 }}>
+      <Box sx={{ ml: { xs: 1, md: 2 } }}>
         <Tooltip title={t('donation.tooltip')}>
           <Avatar
             variant="rounded"
