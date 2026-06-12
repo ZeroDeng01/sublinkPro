@@ -2828,6 +2828,9 @@
       }
     }
   },
+  "skill": {
+    "downloadTooltip": "Download AI Skill"
+  },
   "donation": {
     "title": "Support the project",
     "tooltip": "Support the project",

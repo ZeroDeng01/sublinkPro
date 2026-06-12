@@ -41,6 +41,8 @@ Important architectural boundaries:
   `webs/src/api/`: the frontend API boundary.
 - `webs/src/views/`：前端页面级功能。  
   `webs/src/views/`: page-level frontend features.
+- `skill-sublinkpro/`：面向用户的 AI agent 技能（可移植 `SKILL.md` 格式，不绑定特定厂商，任何兼容的 AI agent / 客户端均可使用），通过 `X-API-Key` 调用 `/api/v1/*` REST API；它是 API 契约的外部消费者，其 `reference/api.md` 是 REST API 的镜像文档。  
+  `skill-sublinkpro/`: a user-facing AI agent skill (portable `SKILL.md` format, vendor-neutral and usable by any compatible AI agent/client), calling the `/api/v1/*` REST API via `X-API-Key`; it is an external consumer of the API contract, and its `reference/api.md` mirrors the REST API.
 
 ## 2. 事实来源 / Source of truth
 
@@ -509,6 +511,8 @@ If you touch routing, auth, asset paths, or page refresh behavior, inspect both 
 
 - 任何影响前后端契约、接口字段、路由、鉴权、页面流程、base-path、静态资源、任务结果展示或配置语义的改动，都必须在**同一工作**中同步检查并更新相关前端、后端与文档，不能只改其中一层。  
   Any change affecting the frontend-backend contract, API fields, routing, auth, page flows, base-path, static assets, task result presentation, or configuration semantics must be checked and updated across the relevant frontend, backend, and documentation **within the same piece of work**; do not change only one layer.
+- Web 前端不是 `/api/v1/*` 的唯一消费者：`skill-sublinkpro/` 也直接消费同一套 REST API。任何新增、删除、改名或修改 `/api/v1/*`（及 `/c/*`）路由、请求字段、内容类型（form vs JSON）、鉴权方式、响应结构或业务码的改动，都必须同步更新 `skill-sublinkpro/reference/api.md`，必要时更新 `skill-sublinkpro/SKILL.md` 与 `skill-sublinkpro/scripts/sublink.py`，保证 skill 与系统接口同步。  
+  The web frontend is not the only consumer of `/api/v1/*`: `skill-sublinkpro/` also consumes the same REST API directly. Any change that adds, removes, renames, or modifies `/api/v1/*` (and `/c/*`) routes, request fields, content type (form vs JSON), auth behavior, response shapes, or business codes must also update `skill-sublinkpro/reference/api.md`, and when relevant `skill-sublinkpro/SKILL.md` and `skill-sublinkpro/scripts/sublink.py`, so the skill stays in sync with the system's API.
 - 严禁出现“只改后端但前端请求/展示未同步”或“只改前端但后端接口/权限/数据结构未核对”的情况；如果确认另一层无需修改，也应在变更说明中明确写明已检查且无需同步调整。  
   Do not leave the repo in a state where backend changes are not reflected in frontend requests/UI, or frontend changes are made without checking backend APIs, permissions, and data structures; if another layer truly needs no changes, explicitly state that it was checked and no sync update was required.
 
@@ -846,6 +850,7 @@ If you change any of the following, update docs in the same work when appropriat
 - 迁移行为 / Migration behavior
 - MFA / 认证 / 安全敏感操作 / MFA, auth, or security-sensitive operations
 - `docs/features/` 中描述的用户功能流程 / User-facing feature workflows described under `docs/features/`
+- `/api/v1/*` 或 `/c/*` 的路由、请求字段、内容类型、鉴权、响应结构或业务码 / `/api/v1/*` or `/c/*` routes, request fields, content type, auth, response shapes, or business codes
 
 常见相关文档：  
 Relevant docs include:
@@ -860,6 +865,7 @@ Relevant docs include:
 - `docs/installation.zh-CN.md`
 - `docs/features/*`
 - `docs/features/*.zh-CN.md`
+- `skill-sublinkpro/SKILL.md`、`skill-sublinkpro/reference/api.md`、`skill-sublinkpro/reference/deploy.md`、`skill-sublinkpro/README.md`、`skill-sublinkpro/README.zh-CN.md`
 
 - 文档同步不是可选收尾步骤，而是变更完成条件的一部分。只要代码改动改变了行为、接口、字段、页面文案、用户流程、命令、配置、部署、迁移或安全语义，就必须在同一工作中同步更新相应文档。  
   Documentation sync is not an optional finishing step; it is part of the definition of done. If a code change alters behavior, APIs, fields, page copy, user flows, commands, configuration, deployment, migration, or security semantics, the relevant documentation must be updated in the same piece of work.
@@ -869,6 +875,12 @@ Relevant docs include:
   Do not leave the project in a state where code has changed but `README.md`, `docs/`, or feature documentation still describes the old behavior; if no doc update is needed, explicitly state why.
 - 不允许只更新一种语言的文档后交付；如果某个变更确实只影响其中一种语言（例如修正翻译措辞），交付说明必须明确写出另一种语言已检查且无需修改。
   Do not ship documentation updates in only one language; if a change truly affects only one language, such as wording in a translation, the delivery summary must state that the other language was checked and does not need changes.
+- `skill-sublinkpro/` 是面向用户的 AI agent 技能（采用可移植的 `SKILL.md` 格式，不绑定特定厂商，任何兼容的 AI agent / 客户端均可使用），通过 `X-API-Key` 调用本系统 REST API，是 API 契约在前端之外的第三个消费者。凡是改动 `/api/v1/*` 或 `/c/*` 的路由、请求字段、内容类型（form vs JSON）、鉴权方式、响应结构或业务码，都必须在同一工作中同步更新 `skill-sublinkpro/reference/api.md`（端点目录）以及受影响的 `SKILL.md` 工作流说明；新增端点或功能时，也应评估是否需要在 skill 中补充对应用法。skill README 改动需同步英文与 `*.zh-CN.md` 两个版本。
+  `skill-sublinkpro/` is a user-facing AI agent skill (portable, vendor-neutral `SKILL.md` format usable by any compatible AI agent/client) that drives this system's REST API via `X-API-Key`; it is the third consumer of the API contract beyond the frontend. Whenever you change `/api/v1/*` or `/c/*` routes, request fields, content type (form vs JSON), auth, response shapes, or business codes, you must update `skill-sublinkpro/reference/api.md` (the endpoint catalog) and any affected `SKILL.md` workflow guidance in the same work; when adding endpoints or features, evaluate whether the skill needs matching usage. Skill README changes must update both the English and `*.zh-CN.md` versions.
+- 除 API 契约外，skill 还内置了**部署/安装与配置引导**（`skill-sublinkpro/reference/deploy.md`）。凡是改动部署方式或配置语义，都必须在同一工作中同步更新该文件，使其与真实行为一致。具体包括：`install.sh` / `uninstall.sh` 的流程或命令、`Dockerfile`、`docker-compose.example.yml`、`config.example.yaml`、镜像名 `zerodeng/sublink-pro`、默认端口、数据目录（`./db ./template ./logs`）、默认账号、以及任何 `SUBLINK_*` 环境变量或 `config.yaml` 字段的新增/改名/删除/默认值变化。deploy.md 中的命令与变量必须能逐条对应到这些事实来源，不得保留已过时的安装步骤或配置项。
+  Beyond the API contract, the skill also embeds **deployment/install and configuration guidance** (`skill-sublinkpro/reference/deploy.md`). Whenever you change a deployment method or configuration semantics, you must update that file in the same work so it matches real behavior. This includes: the flow or commands in `install.sh` / `uninstall.sh`, `Dockerfile`, `docker-compose.example.yml`, `config.example.yaml`, the image name `zerodeng/sublink-pro`, the default port, the data directories (`./db ./template ./logs`), the default credentials, and any addition/rename/removal/default change of a `SUBLINK_*` environment variable or `config.yaml` field. Every command and variable in deploy.md must trace back to these sources of truth; do not leave outdated install steps or config options behind.
+- `skill-sublinkpro/` 整个目录会通过 `//go:embed skill-sublinkpro`（声明于 `main.go`）打包进 Go 二进制，并由登录受限的 `/api/v1/skill/download`（`routers/skill.go` + `api/skill.go`，运行时即时打 zip）下发，Web UI 顶栏的下载图标（`webs/src/layout/MainLayout/Header/SkillDownloadSection`）触发下载。因此：① 该目录必须始终保持可被 `//go:embed` 嵌入（不要引入嵌入无法处理的内容，注意默认 `//go:embed` 会跳过点文件/下划线开头文件）；② 下载端点必须保持登录受限（`middlewares.AuthToken`），不要改成匿名开放；③ 顶栏图标的提示文案是用户可见文本，新增/修改须同步 `en-US.json` 与 `zh-CN.json` 两个 locale。skill 内容更新后无需改构建流程——`go build` 会自动嵌入最新源文件，zip 在运行时生成，始终与嵌入内容一致。
+  The entire `skill-sublinkpro/` directory is bundled into the Go binary via `//go:embed skill-sublinkpro` (declared in `main.go`) and served by the login-gated `/api/v1/skill/download` endpoint (`routers/skill.go` + `api/skill.go`, zipped on-the-fly at runtime), triggered by the download icon in the web UI top bar (`webs/src/layout/MainLayout/Header/SkillDownloadSection`). Therefore: (1) the directory must remain embeddable by `//go:embed` (don't add content embed can't handle; note plain `//go:embed` skips dotfiles and underscore-prefixed files); (2) the download endpoint must stay login-gated (`middlewares.AuthToken`) — do not make it anonymous; (3) the top-bar icon's tooltip is user-visible text, so additions/changes must update both `en-US.json` and `zh-CN.json`. No build change is needed when skill content changes — `go build` re-embeds the latest source files automatically and the zip is generated at runtime, always matching the embedded content.
 
 ## 15. 安全提示 / Safety notes
 

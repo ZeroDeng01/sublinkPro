@@ -37,6 +37,7 @@ sublinkPro/
 │       └── routes/         # Route definitions
 ├── template/                # Template files
 ├── docs/                    # Documentation
+├── skill-sublinkpro/        # AI agent skill: AI interface over the REST API (portable SKILL.md format, user-facing, distributable)
 ├── static/                  # Frontend build assets for production builds
 ├── main.go                  # Application entry
 ├── Dockerfile               # Docker build

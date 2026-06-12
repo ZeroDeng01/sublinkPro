@@ -71,6 +71,7 @@
 | 📜 **脚本系统** | 节点过滤、内容后处理、多脚本链式执行 | [📖](docs/script_support.zh-CN.md) |
 | 🔔 **Webhooks** | 支持 PushDeer、Bark、钉钉、方糖等多平台通知 | [📖](docs/configuration.zh-CN.md) |
 | 🔐 **安全特性** | Token 授权、API Key、IP 黑/白名单、访问日志 | [📖](docs/configuration.zh-CN.md) |
+| 🦾 **AI agent 技能** | 通过 REST API 用自然语言驱动整个系统——添加节点、创建与分享订阅、管理机场与模板。采用可移植的 `SKILL.md` 格式，任何兼容的 AI agent 均可使用 | [📖](skill-sublinkpro/README.zh-CN.md) |
 
 ---
 

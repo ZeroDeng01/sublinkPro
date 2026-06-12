@@ -2828,6 +2828,9 @@
       }
     }
   },
+  "skill": {
+    "downloadTooltip": "下载 AI 技能包（Skill）"
+  },
   "donation": {
     "title": "支持项目",
     "tooltip": "支持项目",

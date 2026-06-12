@@ -37,6 +37,7 @@ sublinkPro/
 │       └── routes/         # 路由定义
 ├── template/                # 模板文件
 ├── docs/                    # 文档
+├── skill-sublinkpro/        # AI agent 技能：基于 REST API 的 AI 操作接口（可移植 SKILL.md 格式、面向用户、可分发）
 ├── static/                  # 生产构建时前端产物放置目录
 ├── main.go                  # 应用入口
 ├── Dockerfile               # Docker 构建

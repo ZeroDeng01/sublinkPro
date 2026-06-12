@@ -42,6 +42,9 @@ var Template embed.FS
 //go:embed VERSION
 var versionFile embed.FS
 
+//go:embed skill-sublinkpro
+var SkillFS embed.FS
+
 var version string
 
 // getContentType 根据文件扩展名返回对应的 MIME 类型
@@ -627,6 +630,7 @@ func Run() {
 	routers.Templates(r)
 	routers.Version(r, version)
 	routers.Backup(r)
+	routers.Skill(r, SkillFS)
 	routers.Script(r)
 	routers.SSE(r)
 	routers.Settings(r)
