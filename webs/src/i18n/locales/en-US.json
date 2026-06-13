@@ -3110,6 +3110,12 @@
       "importedKinds": "{{count}} item types imported",
       "warnings": "{{count}} warnings"
     },
+    "summary": {
+      "active": "{{count}} active",
+      "completed": "{{count}} completed",
+      "failed": "{{count}} failed",
+      "cancelled": "{{count}} cancelled"
+    },
     "clearHistory": {
       "title": "Clear Task History",
       "description": "Clear completed, failed, or cancelled task history before the selected time.",

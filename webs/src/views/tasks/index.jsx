@@ -18,6 +18,7 @@ import IconButton from '@mui/material/IconButton';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import LinearProgress from '@mui/material/LinearProgress';
+import Collapse from '@mui/material/Collapse';
 import Alert from '@mui/material/Alert';
 import Grid from '@mui/material/Grid';
 import Tooltip from '@mui/material/Tooltip';
@@ -51,6 +52,8 @@ import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import StopIcon from '@mui/icons-material/Stop';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import MainCard from 'ui-component/cards/MainCard';
 import { getTasks, getTaskStats, stopTask, clearTaskHistory } from 'api/tasks';
@@ -590,6 +593,28 @@ export default function TaskList() {
   const [warningsDialogOpen, setWarningsDialogOpen] = useState(false);
   const [warningsTask, setWarningsTask] = useState(null);
 
+  // Manage realtime progress expanded/collapsed state with localStorage persistence
+  const [isProgressExpanded, setIsProgressExpanded] = useState(() => {
+    try {
+      const saved = localStorage.getItem('taskRealtimeProgressExpanded');
+      return saved ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleProgress = useCallback(() => {
+    setIsProgressExpanded((prev) => {
+      const newState = !prev;
+      try {
+        localStorage.setItem('taskRealtimeProgressExpanded', JSON.stringify(newState));
+      } catch {
+        // Ignore localStorage errors
+      }
+      return newState;
+    });
+  }, []);
+
   const { taskList: runningTasks, stopTask: stopRunningTask, isTaskStopping, registerOnComplete, unregisterOnComplete } = useTaskProgress();
 
   const runningTasksWithUnlock = useMemo(
@@ -823,68 +848,121 @@ export default function TaskList() {
             borderRadius: 2.5
           }}
         >
-          <CardContent sx={{ py: 2 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, color: tokens.primaryText }}>
-              {t('tasks.realtimeProgress')}
-            </Typography>
-            {runningTasksWithUnlock.map((task) => (
-              <Box key={task.taskId} sx={{ mb: 2, '&:last-child': { mb: 0 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TypeChip type={task.taskType} theme={theme} tokens={tokens} />
-                    <Typography variant="body2" noWrap sx={{ maxWidth: isMobile ? 120 : 300, color: tokens.primaryText }}>
-                      {task.currentItem || t('tasks.processing')}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="caption" sx={{ color: tokens.secondaryText }}>
-                      {task.current}/{task.total}
-                    </Typography>
-                    {task.taskType === 'speed_test' && (
-                      <IconButton
-                        size="small"
-                        onClick={() => stopRunningTask(task.taskId)}
-                        disabled={isTaskStopping(task.taskId)}
-                        sx={{
-                          bgcolor: alpha(theme.palette.error.main, tokens.isDark ? 0.14 : 0.06),
-                          border: '1px solid',
-                          borderColor: alpha(theme.palette.error.main, tokens.isDark ? 0.24 : 0.16),
-                          '&:hover': {
-                            bgcolor: alpha(theme.palette.error.main, tokens.isDark ? 0.2 : 0.1)
-                          }
-                        }}
-                      >
-                        <StopIcon fontSize="small" color="error" />
-                      </IconButton>
-                    )}
-                  </Box>
-                </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={task.total > 0 ? (task.current / task.total) * 100 : 0}
-                  sx={getTaskProgressSx(tokens, getTaskTypeMeta(task.taskType).color)}
+          <CardContent sx={{ py: 2, pb: isProgressExpanded ? 2 : 1.5 }}>
+            {/* Collapsible Header */}
+            <Box
+              onClick={handleToggleProgress}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                mb: isProgressExpanded ? 1.5 : 0,
+                cursor: 'pointer',
+                borderRadius: 1.5,
+                p: 0.75,
+                mx: -0.75,
+                transition: 'background-color 0.2s',
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.primary.main, isDark ? 0.08 : 0.04)
+                }
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: tokens.primaryText }}>
+                  {t('tasks.realtimeProgress')}
+                </Typography>
+                <Chip
+                  label={runningTasks.length}
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.7rem',
+                    fontWeight: 500,
+                    bgcolor: alpha(theme.palette.primary.main, isDark ? 0.12 : 0.08),
+                    color: theme.palette.primary.main,
+                    border: '1px solid',
+                    borderColor: alpha(theme.palette.primary.main, isDark ? 0.2 : 0.15)
+                  }}
                 />
-                {task.unlockSummary && (
-                  <Tooltip title={renderUnlockDetails(task.unlockSummary)} arrow placement="top-start">
-                    <Typography variant="caption" color="info.main" sx={{ mt: 0.5, display: 'block', fontWeight: 600 }}>
-                      {task.unlockSummary.text}
-                    </Typography>
-                  </Tooltip>
-                )}
-                {/* Traffic Display for Running Task */}
-                {task.traffic?.totalFormatted && (
-                  <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography variant="caption" sx={{ color: tokens.secondaryText }}>
-                      {t('tasks.fields.realtimeTraffic')}:
-                    </Typography>
-                    <Typography variant="caption" fontWeight={500} color="primary.main">
-                      {task.traffic.totalFormatted}
-                    </Typography>
-                    {/* Note: Running task usually doesn't have breakdown yet or it's partial, so no detail dialog here usually */}
-                  </Box>
+              </Box>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  transition: 'transform 0.2s'
+                }}
+              >
+                {isProgressExpanded ? (
+                  <ExpandMoreIcon sx={{ color: tokens.secondaryText, fontSize: 22 }} />
+                ) : (
+                  <ChevronRightIcon sx={{ color: tokens.secondaryText, fontSize: 22 }} />
                 )}
               </Box>
-            ))}
+            </Box>
+
+            {/* Task List */}
+            <Collapse in={isProgressExpanded} timeout={300}>
+              <Box>
+                {runningTasksWithUnlock.map((task) => (
+                  <Box key={task.taskId} sx={{ mb: 2, '&:last-child': { mb: 0 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TypeChip type={task.taskType} theme={theme} tokens={tokens} />
+                        <Typography variant="body2" noWrap sx={{ maxWidth: isMobile ? 120 : 300, color: tokens.primaryText }}>
+                          {task.currentItem || t('tasks.processing')}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="caption" sx={{ color: tokens.secondaryText }}>
+                          {task.current}/{task.total}
+                        </Typography>
+                        {task.taskType === 'speed_test' && (
+                          <IconButton
+                            size="small"
+                            onClick={() => stopRunningTask(task.taskId)}
+                            disabled={isTaskStopping(task.taskId)}
+                            sx={{
+                              bgcolor: alpha(theme.palette.error.main, tokens.isDark ? 0.14 : 0.06),
+                              border: '1px solid',
+                              borderColor: alpha(theme.palette.error.main, tokens.isDark ? 0.24 : 0.16),
+                              '&:hover': {
+                                bgcolor: alpha(theme.palette.error.main, tokens.isDark ? 0.2 : 0.1)
+                              }
+                            }}
+                          >
+                            <StopIcon fontSize="small" color="error" />
+                          </IconButton>
+                        )}
+                      </Box>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={task.total > 0 ? (task.current / task.total) * 100 : 0}
+                      sx={getTaskProgressSx(tokens, getTaskTypeMeta(task.taskType).color)}
+                    />
+                    {task.unlockSummary && (
+                      <Tooltip title={renderUnlockDetails(task.unlockSummary)} arrow placement="top-start">
+                        <Typography variant="caption" color="info.main" sx={{ mt: 0.5, display: 'block', fontWeight: 600 }}>
+                          {task.unlockSummary.text}
+                        </Typography>
+                      </Tooltip>
+                    )}
+                    {/* Traffic Display for Running Task */}
+                    {task.traffic?.totalFormatted && (
+                      <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="caption" sx={{ color: tokens.secondaryText }}>
+                          {t('tasks.fields.realtimeTraffic')}:
+                        </Typography>
+                        <Typography variant="caption" fontWeight={500} color="primary.main">
+                          {task.traffic.totalFormatted}
+                        </Typography>
+                        {/* Note: Running task usually doesn't have breakdown yet or it's partial, so no detail dialog here usually */}
+                      </Box>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            </Collapse>
           </CardContent>
         </Card>
       )}

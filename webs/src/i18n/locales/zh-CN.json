@@ -3110,6 +3110,12 @@
       "importedKinds": "已导入 {{count}} 类数据",
       "warnings": "{{count}} 条警告"
     },
+    "summary": {
+      "active": "{{count}} 个进行中",
+      "completed": "{{count}} 个完成",
+      "failed": "{{count}} 个失败",
+      "cancelled": "{{count}} 个已取消"
+    },
     "clearHistory": {
       "title": "清理任务历史",
       "description": "清理指定时间之前已完成、失败或取消的任务历史。",

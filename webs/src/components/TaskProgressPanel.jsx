@@ -20,6 +20,8 @@ import ErrorIcon from '@mui/icons-material/Error';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import StopIcon from '@mui/icons-material/Stop';
 import CancelIcon from '@mui/icons-material/Cancel';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
@@ -432,9 +434,39 @@ const TaskProgressPanel = () => {
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
   const tokens = getTaskCenterTokens(theme, isDark);
-  const { primaryText: primaryTextColor } = tokens;
+  const { primaryText: primaryTextColor, secondaryText: secondaryTextColor } = tokens;
   const { taskList, hasActiveTasks, stopTask, isTaskStopping } = useTaskProgress();
   const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Manage expanded/collapsed state with localStorage persistence
+  const [isExpanded, setIsExpanded] = useState(() => {
+    try {
+      const saved = localStorage.getItem('taskProgressPanelExpanded');
+      return saved ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  // Toggle expanded state and persist to localStorage
+  const handleToggleExpand = () => {
+    const newState = !isExpanded;
+    setIsExpanded(newState);
+    try {
+      localStorage.setItem('taskProgressPanelExpanded', JSON.stringify(newState));
+    } catch {
+      // Ignore localStorage errors
+    }
+  };
+
+  // Calculate task summary statistics
+  const taskSummary = useMemo(() => {
+    const active = taskList.filter((t) => t.status !== 'completed' && t.status !== 'error' && t.status !== 'cancelled').length;
+    const completed = taskList.filter((t) => t.status === 'completed').length;
+    const failed = taskList.filter((t) => t.status === 'error').length;
+    const cancelled = taskList.filter((t) => t.status === 'cancelled').length;
+    return { active, completed, failed, cancelled };
+  }, [taskList]);
 
   // Update currentTime every second when there are active tasks
   useEffect(() => {
@@ -462,8 +494,25 @@ const TaskProgressPanel = () => {
           }
         }}
       >
-        <CardContent sx={{ p: 2.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+        <CardContent sx={{ p: 2.5, pb: isExpanded ? 2.5 : 2 }}>
+          {/* Collapsible Header */}
+          <Box
+            onClick={handleToggleExpand}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              mb: isExpanded ? 2 : 0,
+              cursor: 'pointer',
+              borderRadius: 2,
+              p: 1,
+              mx: -1,
+              transition: 'background-color 0.2s',
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, isDark ? 0.08 : 0.04)
+              }
+            }}
+          >
             <Box
               sx={{
                 ...getTaskIconBoxSx(theme, tokens, TASK_CLUSTER_ACCENT),
@@ -487,19 +536,113 @@ const TaskProgressPanel = () => {
                 ...getTaskChipSx(theme, tokens, TASK_CLUSTER_ACCENT)
               }}
             />
+
+            {/* Task Summary when collapsed */}
+            {!isExpanded && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', flex: 1 }}>
+                {taskSummary.active > 0 && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: theme.palette.info.main,
+                      fontSize: '0.75rem',
+                      fontWeight: 500
+                    }}
+                  >
+                    {t('tasks.summary.active', { count: taskSummary.active })}
+                  </Typography>
+                )}
+                {taskSummary.completed > 0 && (
+                  <>
+                    {taskSummary.active > 0 && (
+                      <Typography variant="caption" sx={{ color: secondaryTextColor }}>
+                        ·
+                      </Typography>
+                    )}
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: theme.palette.success.main,
+                        fontSize: '0.75rem',
+                        fontWeight: 500
+                      }}
+                    >
+                      {t('tasks.summary.completed', { count: taskSummary.completed })}
+                    </Typography>
+                  </>
+                )}
+                {taskSummary.failed > 0 && (
+                  <>
+                    {(taskSummary.active > 0 || taskSummary.completed > 0) && (
+                      <Typography variant="caption" sx={{ color: secondaryTextColor }}>
+                        ·
+                      </Typography>
+                    )}
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: theme.palette.error.main,
+                        fontSize: '0.75rem',
+                        fontWeight: 500
+                      }}
+                    >
+                      {t('tasks.summary.failed', { count: taskSummary.failed })}
+                    </Typography>
+                  </>
+                )}
+                {taskSummary.cancelled > 0 && (
+                  <>
+                    {(taskSummary.active > 0 || taskSummary.completed > 0 || taskSummary.failed > 0) && (
+                      <Typography variant="caption" sx={{ color: secondaryTextColor }}>
+                        ·
+                      </Typography>
+                    )}
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: theme.palette.warning.main,
+                        fontSize: '0.75rem',
+                        fontWeight: 500
+                      }}
+                    >
+                      {t('tasks.summary.cancelled', { count: taskSummary.cancelled })}
+                    </Typography>
+                  </>
+                )}
+              </Box>
+            )}
+
+            {/* Expand/Collapse Icon */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                ml: 'auto',
+                transition: 'transform 0.2s'
+              }}
+            >
+              {isExpanded ? (
+                <ExpandMoreIcon sx={{ color: secondaryTextColor, fontSize: 24 }} />
+              ) : (
+                <ChevronRightIcon sx={{ color: secondaryTextColor, fontSize: 24 }} />
+              )}
+            </Box>
           </Box>
 
-          <Box>
-            {taskList.map((task) => (
-              <TaskProgressItem
-                key={task.taskId}
-                task={task}
-                currentTime={currentTime}
-                onStopTask={stopTask}
-                isStopping={isTaskStopping(task.taskId)}
-              />
-            ))}
-          </Box>
+          {/* Task List */}
+          <Collapse in={isExpanded} timeout={300}>
+            <Box>
+              {taskList.map((task) => (
+                <TaskProgressItem
+                  key={task.taskId}
+                  task={task}
+                  currentTime={currentTime}
+                  onStopTask={stopTask}
+                  isStopping={isTaskStopping(task.taskId)}
+                />
+              ))}
+            </Box>
+          </Collapse>
         </CardContent>
       </Card>
     </Collapse>
