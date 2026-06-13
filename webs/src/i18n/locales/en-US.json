@@ -1159,7 +1159,8 @@
         "airports": "Airport Management",
         "airportsShort": "Airports",
         "checkSettings": "Check Settings",
-        "batchCheck": "Batch Check"
+        "batchCheck": "Batch Check",
+        "resetColumnWidths": "Reset Column Widths"
       },
       "confirm": {
         "deleteTitle": "Delete Node",
@@ -1198,7 +1199,8 @@
         "speedTaskStarted": "Speed test task started in the background. Refresh later to view results.",
         "speedTaskFailed": "Failed to start speed test task",
         "selectCheckRequired": "Select nodes to check",
-        "selectedAll": "Selected all {{count}} matching nodes"
+        "selectedAll": "Selected all {{count}} matching nodes",
+        "columnWidthsReset": "Column widths reset"
       }
     },
     "dialog": {

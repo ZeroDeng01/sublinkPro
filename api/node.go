@@ -179,7 +179,17 @@ func buildNodeFilterFromQuery(c *gin.Context) models.NodeFilter {
 		filter.IPType = "native"
 	}
 
-	if filter.SortBy != "" && filter.SortBy != "delay" && filter.SortBy != "speed" {
+	// 验证排序字段
+	validSortFields := map[string]bool{
+		"delay":    true,
+		"speed":    true,
+		"name":     true,
+		"protocol": true,
+		"group":    true,
+		"source":   true,
+		"country":  true,
+	}
+	if filter.SortBy != "" && !validSortFields[filter.SortBy] {
 		filter.SortBy = ""
 	}
 

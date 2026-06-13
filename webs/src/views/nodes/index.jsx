@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Snackbar from '@mui/material/Snackbar';
@@ -71,6 +72,21 @@ import {
 
 // utils
 import { buildUnlockRulesPayload, setUnlockMeta, SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS } from './utils';
+
+// 列宽默认配置
+const DEFAULT_COLUMN_WIDTHS = {
+  checkbox: 48,
+  remark: 180,
+  protocol: 92,
+  group: 120,
+  source: 120,
+  tags: 120,
+  country: 80,
+  delay: 130,
+  speed: 130,
+  ipFeatures: 240,
+  actions: 120
+};
 
 // ==============================|| 节点管理 ||============================== //
 
@@ -179,6 +195,28 @@ export default function NodeList() {
   // 排序
   const [sortBy, setSortBy] = useState(''); // 'delay' | 'speed' | ''
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
+
+  // 列宽配置
+  const [columnWidths, setColumnWidths] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nodes_columnWidths');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 迁移旧格式：将delaySpeed拆分为delay和speed
+        if (parsed.delaySpeed && !parsed.delay && !parsed.speed) {
+          const halfWidth = Math.floor(parsed.delaySpeed / 2);
+          parsed.delay = halfWidth;
+          parsed.speed = halfWidth;
+          delete parsed.delaySpeed;
+        }
+        return { ...DEFAULT_COLUMN_WIDTHS, ...parsed };
+      }
+      return DEFAULT_COLUMN_WIDTHS;
+    } catch (error) {
+      console.error('Failed to load column widths:', error);
+      return DEFAULT_COLUMN_WIDTHS;
+    }
+  });
 
   // 分页
   const [page, setPage] = useState(0);
@@ -1036,6 +1074,31 @@ export default function NodeList() {
     }
   };
 
+  // 列宽调整处理
+  const handleColumnResize = useCallback((columnKey, newWidth) => {
+    setColumnWidths((prev) => {
+      const updated = { ...prev, [columnKey]: newWidth };
+      try {
+        localStorage.setItem('nodes_columnWidths', JSON.stringify(updated));
+      } catch (error) {
+        console.error('Failed to save column widths:', error);
+      }
+      return updated;
+    });
+  }, []);
+
+  // 重置列宽
+  const handleResetColumnWidths = useCallback(() => {
+    setColumnWidths(DEFAULT_COLUMN_WIDTHS);
+    try {
+      localStorage.removeItem('nodes_columnWidths');
+      showMessage(t('nodes.page.messages.columnWidthsReset'));
+    } catch (error) {
+      console.error('Failed to reset column widths:', error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <MainCard
       title={t('nodes.page.title')}
@@ -1176,6 +1239,15 @@ export default function NodeList() {
         onRemoveTag={handleBatchRemoveTag}
       />
 
+      {/* 桌面端表格工具栏 */}
+      {!matchDownMd && (
+        <Box sx={{ mb: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button size="small" variant="text" onClick={handleResetColumnWidths}>
+            {t('nodes.page.actions.resetColumnWidths')}
+          </Button>
+        </Box>
+      )}
+
       {/* 节点列表 */}
       {matchDownMd ? (
         <NodeMobileList
@@ -1201,6 +1273,7 @@ export default function NodeList() {
           sortOrder={sortOrder}
           tagColorMap={tagColorMap}
           protocolMeta={protocolMeta}
+          columnWidths={columnWidths}
           onSelectAll={handleSelectAll}
           onSelect={handleSelectNode}
           onSort={handleSort}
@@ -1212,6 +1285,7 @@ export default function NodeList() {
             setDetailsNode(node);
             setDetailsPanelOpen(true);
           }}
+          onColumnResize={handleColumnResize}
         />
       )}
 

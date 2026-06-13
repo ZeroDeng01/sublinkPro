@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useState, useEffect, useCallback } from 'react';
 
 // material-ui
 import { alpha, useTheme } from '@mui/material/styles';
@@ -55,19 +56,89 @@ export default function NodeTable({
   sortOrder,
   tagColorMap,
   protocolMeta,
+  columnWidths,
   onSelect,
   onSort,
   onSpeedTest,
   onCopy,
   onEdit,
   onDelete,
-  onViewDetails
+  onViewDetails,
+  onColumnResize
 }) {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
   const isSelected = (node) => selectedNodes.some((n) => n.ID === node.ID);
+
+  // 列宽调整状态
+  const [resizing, setResizing] = useState(null);
+
+  // 表格总宽度（各列宽度之和），用于 table-layout: fixed 模式
+  const totalWidth = Object.values(columnWidths).reduce((sum, w) => sum + (Number(w) || 0), 0);
+
+  // 开始调整列宽
+  const handleResizeStart = useCallback((e, columnKey) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizing({
+      columnKey,
+      startX: e.clientX,
+      startWidth: columnWidths[columnKey]
+    });
+  }, [columnWidths]);
+
+  // 处理鼠标移动和释放
+  useEffect(() => {
+    if (!resizing) return;
+
+    const handleMouseMove = (e) => {
+      const delta = e.clientX - resizing.startX;
+      const newWidth = Math.max(60, resizing.startWidth + delta);
+      onColumnResize(resizing.columnKey, newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setResizing(null);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [resizing, onColumnResize]);
+
+  // 调整手柄组件
+  const ResizeHandle = ({ columnKey }) => (
+    <Box
+      sx={{
+        position: 'absolute',
+        right: -2,
+        top: 0,
+        bottom: 0,
+        width: 4,
+        cursor: 'col-resize',
+        zIndex: 2,
+        '&:hover': {
+          bgcolor: 'primary.main',
+          opacity: 0.5
+        },
+        '&:active': {
+          bgcolor: 'primary.main',
+          opacity: 0.7
+        }
+      }}
+      onMouseDown={(e) => handleResizeStart(e, columnKey)}
+    />
+  );
 
   const getTableRowSx = (selected = false) => ({
     bgcolor: selected ? tokens.selectedSurface : 'transparent',
@@ -101,13 +172,19 @@ export default function NodeTable({
       <Table
         size="small"
         sx={{
-          minWidth: 900,
+          tableLayout: 'fixed',
           width: '100%',
+          minWidth: Math.max(totalWidth, 900),
           '& .MuiTableCell-root': {
             px: 0.75,
             py: 0.75,
             whiteSpace: 'nowrap',
-            verticalAlign: 'middle'
+            verticalAlign: 'middle',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          },
+          '& .MuiTableCell-root.actions-cell': {
+            overflow: 'visible'
           },
           '& .MuiTableCell-paddingCheckbox': { px: 0.5, py: 0.5, verticalAlign: 'middle' },
           '& .MuiTableCell-paddingCheckbox .MuiCheckbox-root': { p: 0.5, display: 'flex', alignItems: 'center' },
@@ -128,33 +205,92 @@ export default function NodeTable({
           }}
         >
           <TableRow>
-            <TableCell padding="checkbox" />
-            <TableCell sx={{ minWidth: 132 }}>{t('nodes.table.remark')}</TableCell>
-            <TableCell sx={{ minWidth: 76, whiteSpace: 'nowrap' }}>{t('nodes.table.protocol')}</TableCell>
-            <TableCell sx={{ minWidth: 88 }}>{t('nodes.table.group')}</TableCell>
-            <TableCell sx={{ minWidth: 88 }}>{t('nodes.table.source')}</TableCell>
-            <TableCell sx={{ minWidth: 92, whiteSpace: 'nowrap' }}>{t('nodes.table.tags')}</TableCell>
-            <TableCell sx={{ minWidth: 64, whiteSpace: 'nowrap' }}>{t('nodes.table.country')}</TableCell>
-            <TableCell sx={{ minWidth: 168 }} sortDirection={sortBy === 'delay' || sortBy === 'speed' ? sortOrder : false}>
-              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ whiteSpace: 'nowrap' }}>
-                <TableSortLabel
-                  active={sortBy === 'delay'}
-                  direction={sortBy === 'delay' ? sortOrder : 'asc'}
-                  onClick={() => onSort('delay')}
-                >
-                  {t('nodes.table.delay')}
-                </TableSortLabel>
-                <TableSortLabel
-                  active={sortBy === 'speed'}
-                  direction={sortBy === 'speed' ? sortOrder : 'asc'}
-                  onClick={() => onSort('speed')}
-                >
-                  {t('nodes.table.speed')}
-                </TableSortLabel>
-              </Stack>
+            <TableCell padding="checkbox" sx={{ width: columnWidths.checkbox, position: 'relative' }} />
+            <TableCell sx={{ width: columnWidths.remark, minWidth: 60, position: 'relative' }}>
+              <TableSortLabel
+                active={sortBy === 'name'}
+                direction={sortBy === 'name' ? sortOrder : 'asc'}
+                onClick={() => onSort('name')}
+              >
+                {t('nodes.table.remark')}
+              </TableSortLabel>
+              <ResizeHandle columnKey="remark" />
             </TableCell>
-            <TableCell sx={{ minWidth: 128, whiteSpace: 'nowrap' }}>{t('nodes.table.ipFeatures')}</TableCell>
-            <TableCell align="right" sx={{ minWidth: 104, pr: 0.5 }}>
+            <TableCell sx={{ width: columnWidths.protocol, minWidth: 60, whiteSpace: 'nowrap', position: 'relative' }}>
+              <TableSortLabel
+                active={sortBy === 'protocol'}
+                direction={sortBy === 'protocol' ? sortOrder : 'asc'}
+                onClick={() => onSort('protocol')}
+              >
+                {t('nodes.table.protocol')}
+              </TableSortLabel>
+              <ResizeHandle columnKey="protocol" />
+            </TableCell>
+            <TableCell sx={{ width: columnWidths.group, minWidth: 60, position: 'relative' }}>
+              <TableSortLabel
+                active={sortBy === 'group'}
+                direction={sortBy === 'group' ? sortOrder : 'asc'}
+                onClick={() => onSort('group')}
+              >
+                {t('nodes.table.group')}
+              </TableSortLabel>
+              <ResizeHandle columnKey="group" />
+            </TableCell>
+            <TableCell sx={{ width: columnWidths.source, minWidth: 60, position: 'relative' }}>
+              <TableSortLabel
+                active={sortBy === 'source'}
+                direction={sortBy === 'source' ? sortOrder : 'asc'}
+                onClick={() => onSort('source')}
+              >
+                {t('nodes.table.source')}
+              </TableSortLabel>
+              <ResizeHandle columnKey="source" />
+            </TableCell>
+            <TableCell sx={{ width: columnWidths.tags, minWidth: 60, whiteSpace: 'nowrap', position: 'relative' }}>
+              {t('nodes.table.tags')}
+              <ResizeHandle columnKey="tags" />
+            </TableCell>
+            <TableCell sx={{ width: columnWidths.country, minWidth: 60, whiteSpace: 'nowrap', position: 'relative' }}>
+              <TableSortLabel
+                active={sortBy === 'country'}
+                direction={sortBy === 'country' ? sortOrder : 'asc'}
+                onClick={() => onSort('country')}
+              >
+                {t('nodes.table.country')}
+              </TableSortLabel>
+              <ResizeHandle columnKey="country" />
+            </TableCell>
+            <TableCell
+              sx={{ width: columnWidths.delay, minWidth: 120, position: 'relative' }}
+              sortDirection={sortBy === 'delay' ? sortOrder : false}
+            >
+              <TableSortLabel
+                active={sortBy === 'delay'}
+                direction={sortBy === 'delay' ? sortOrder : 'asc'}
+                onClick={() => onSort('delay')}
+              >
+                {t('nodes.table.delay')}
+              </TableSortLabel>
+              <ResizeHandle columnKey="delay" />
+            </TableCell>
+            <TableCell
+              sx={{ width: columnWidths.speed, minWidth: 120, position: 'relative' }}
+              sortDirection={sortBy === 'speed' ? sortOrder : false}
+            >
+              <TableSortLabel
+                active={sortBy === 'speed'}
+                direction={sortBy === 'speed' ? sortOrder : 'asc'}
+                onClick={() => onSort('speed')}
+              >
+                {t('nodes.table.speed')}
+              </TableSortLabel>
+              <ResizeHandle columnKey="speed" />
+            </TableCell>
+            <TableCell sx={{ width: columnWidths.ipFeatures, minWidth: 180, whiteSpace: 'nowrap', position: 'relative' }}>
+              {t('nodes.table.ipFeatures')}
+              <ResizeHandle columnKey="ipFeatures" />
+            </TableCell>
+            <TableCell align="right" sx={{ width: columnWidths.actions, minWidth: 60, pr: 0.5, position: 'relative' }}>
               {t('nodes.table.actions')}
             </TableCell>
           </TableRow>
@@ -182,7 +318,7 @@ export default function NodeTable({
                 </TableCell>
                 <TableCell>
                   <Tooltip title={effectiveName}>
-                    <Stack spacing={0.25} sx={{ maxWidth: '180px' }}>
+                    <Stack spacing={0.25} sx={{ width: '100%' }}>
                       <Typography
                         variant="body2"
                         fontWeight="medium"
@@ -205,7 +341,7 @@ export default function NodeTable({
                   </Tooltip>
                 </TableCell>
                 <TableCell>
-                  <NodeProtocolChip link={node.Link} protocolMeta={protocolMeta} maxWidth={92} />
+                  <NodeProtocolChip link={node.Link} protocolMeta={protocolMeta} maxWidth="100%" />
                 </TableCell>
                 <TableCell>
                   {node.Group ? (
@@ -215,7 +351,7 @@ export default function NodeTable({
                         color="warning"
                         variant="outlined"
                         size="small"
-                        sx={{ maxWidth: '104px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                        sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
                       />
                     </Tooltip>
                   ) : (
@@ -232,7 +368,7 @@ export default function NodeTable({
                         color="info"
                         variant="outlined"
                         size="small"
-                        sx={{ maxWidth: '104px', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                        sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
                       />
                     </Tooltip>
                   ) : (
@@ -243,7 +379,7 @@ export default function NodeTable({
                 </TableCell>
                 <TableCell>
                   {node.Tags ? (
-                    <Box sx={{ display: 'flex', gap: 0.375, flexWrap: 'wrap', maxWidth: 180 }}>
+                    <Box sx={{ display: 'flex', gap: 0.375, flexWrap: 'wrap', width: '100%' }}>
                       {node.Tags.split(',')
                         .filter((t) => t.trim())
                         .map((tag, idx) => {
@@ -279,40 +415,70 @@ export default function NodeTable({
                   })()}
                 </TableCell>
                 <TableCell>
-                  <Stack spacing={0.75} sx={{ minWidth: 0 }}>
-                    <Stack direction="row" spacing={0.75} alignItems="flex-start" flexWrap="wrap" useFlexGap>
-                      <Box>
-                        {(() => {
-                          const d = getDelayDisplay(node.DelayTime, node.DelayStatus);
-                          return <Chip label={d.label} color={d.color} variant={d.variant} size="small" />;
-                        })()}
-                        {node.LatencyCheckAt && (
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ display: 'block', fontSize: '10px', mt: 0.25, lineHeight: 1.2 }}
-                          >
-                            {formatDateTime(node.LatencyCheckAt)}
-                          </Typography>
-                        )}
-                      </Box>
-                      <Box>
-                        {(() => {
-                          const s = getSpeedDisplay(node.Speed, node.SpeedStatus);
-                          return <Chip label={s.label} color={s.color} variant={s.variant} size="small" />;
-                        })()}
-                        {node.SpeedCheckAt && node.Speed > 0 && (
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ display: 'block', fontSize: '10px', mt: 0.25, lineHeight: 1.2 }}
-                          >
-                            {formatDateTime(node.SpeedCheckAt)}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Stack>
-                  </Stack>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, alignItems: 'flex-start' }}>
+                    {(() => {
+                      const d = getDelayDisplay(node.DelayTime, node.DelayStatus);
+                      return (
+                        <Chip
+                          label={d.label}
+                          color={d.color}
+                          variant={d.variant}
+                          size="small"
+                          sx={{ maxWidth: 'fit-content' }}
+                        />
+                      );
+                    })()}
+                    {node.LatencyCheckAt && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          display: 'block',
+                          fontSize: '10px',
+                          mt: 0.25,
+                          lineHeight: 1.2,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {formatDateTime(node.LatencyCheckAt)}
+                      </Typography>
+                    )}
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, alignItems: 'flex-start' }}>
+                    {(() => {
+                      const s = getSpeedDisplay(node.Speed, node.SpeedStatus);
+                      return (
+                        <Chip
+                          label={s.label}
+                          color={s.color}
+                          variant={s.variant}
+                          size="small"
+                          sx={{ maxWidth: 'fit-content' }}
+                        />
+                      );
+                    })()}
+                    {node.SpeedCheckAt && node.Speed > 0 && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          display: 'block',
+                          fontSize: '10px',
+                          mt: 0.25,
+                          lineHeight: 1.2,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {formatDateTime(node.SpeedCheckAt)}
+                      </Typography>
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell>
                   {(() => {
@@ -331,7 +497,7 @@ export default function NodeTable({
                       residentialDisplay.label === fraudScoreDisplay.label;
 
                     return (
-                      <Box sx={{ display: 'flex', gap: 0.375, flexWrap: 'wrap', minWidth: 0, maxWidth: 160 }}>
+                      <Box sx={{ display: 'flex', gap: 0.375, flexWrap: 'wrap', minWidth: 0, maxWidth: '100%' }}>
                         {isUntested ? (
                           <Chip label={t('nodes.table.untested')} color="default" variant="outlined" size="small" />
                         ) : shouldMergeQualityTags ? (
@@ -438,7 +604,7 @@ export default function NodeTable({
                     );
                   })()}
                 </TableCell>
-                <TableCell align="right" sx={{ pr: 0.5 }}>
+                <TableCell align="right" className="actions-cell" sx={{ pr: 0.5 }}>
                   <Tooltip title={t('nodes.table.speedTest')}>
                     <IconButton size="small" onClick={() => onSpeedTest(node)}>
                       <SpeedIcon fontSize="small" />
@@ -476,11 +642,13 @@ NodeTable.propTypes = {
   sortOrder: PropTypes.string.isRequired,
   tagColorMap: PropTypes.object,
   protocolMeta: PropTypes.array,
+  columnWidths: PropTypes.object.isRequired,
   onSelect: PropTypes.func.isRequired,
   onSort: PropTypes.func.isRequired,
   onSpeedTest: PropTypes.func.isRequired,
   onCopy: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
-  onViewDetails: PropTypes.func.isRequired
+  onViewDetails: PropTypes.func.isRequired,
+  onColumnResize: PropTypes.func.isRequired
 };

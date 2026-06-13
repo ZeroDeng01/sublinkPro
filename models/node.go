@@ -1347,6 +1347,66 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 					return nodes[i].Speed > nodes[j].Speed
 				}
 				return nodes[i].Speed < nodes[j].Speed
+			case "name":
+				aName := nodes[i].EffectiveName()
+				bName := nodes[j].EffectiveName()
+				if filter.SortOrder == "desc" {
+					return aName > bName
+				}
+				return aName < bName
+			case "protocol":
+				aProtocol := nodes[i].Protocol
+				bProtocol := nodes[j].Protocol
+				if aProtocol == bProtocol {
+					return nodes[i].ID < nodes[j].ID
+				}
+				if filter.SortOrder == "desc" {
+					return aProtocol > bProtocol
+				}
+				return aProtocol < bProtocol
+			case "group":
+				aEmpty := nodes[i].Group == ""
+				bEmpty := nodes[j].Group == ""
+				if aEmpty && bEmpty {
+					return nodes[i].ID < nodes[j].ID
+				}
+				// 空值根据排序方向决定位置
+				if aEmpty {
+					return filter.SortOrder != "desc"
+				}
+				if bEmpty {
+					return filter.SortOrder == "desc"
+				}
+				if filter.SortOrder == "desc" {
+					return nodes[i].Group > nodes[j].Group
+				}
+				return nodes[i].Group < nodes[j].Group
+			case "source":
+				aSource := nodes[i].Source
+				bSource := nodes[j].Source
+				if aSource == "" {
+					aSource = "manual"
+				}
+				if bSource == "" {
+					bSource = "manual"
+				}
+				if aSource == bSource {
+					return nodes[i].ID < nodes[j].ID
+				}
+				if filter.SortOrder == "desc" {
+					return aSource > bSource
+				}
+				return aSource < bSource
+			case "country":
+				aCountry := nodes[i].LinkCountry
+				bCountry := nodes[j].LinkCountry
+				if aCountry == bCountry {
+					return nodes[i].ID < nodes[j].ID
+				}
+				if filter.SortOrder == "desc" {
+					return aCountry > bCountry
+				}
+				return aCountry < bCountry
 			default:
 				return nodes[i].ID < nodes[j].ID
 			}

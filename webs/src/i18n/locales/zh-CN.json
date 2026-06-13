@@ -1159,7 +1159,8 @@
         "airports": "机场管理",
         "airportsShort": "机场",
         "checkSettings": "检测设置",
-        "batchCheck": "批量检测"
+        "batchCheck": "批量检测",
+        "resetColumnWidths": "重置列宽"
       },
       "confirm": {
         "deleteTitle": "删除节点",
@@ -1198,7 +1199,8 @@
         "speedTaskStarted": "测速任务已在后台启动，请稍后刷新查看结果",
         "speedTaskFailed": "启动测速任务失败",
         "selectCheckRequired": "请选择要检测的节点",
-        "selectedAll": "已选择所有符合条件的 {{count}} 个节点"
+        "selectedAll": "已选择所有符合条件的 {{count}} 个节点",
+        "columnWidthsReset": "列宽已重置为默认值"
       }
     },
     "dialog": {
