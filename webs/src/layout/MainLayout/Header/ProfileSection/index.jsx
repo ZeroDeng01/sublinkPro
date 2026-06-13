@@ -36,7 +36,7 @@ import { getHeaderPopoverTokens, getHeaderTriggerTokens } from '../headerPopover
 import { withAlpha } from 'utils/colorUtils';
 
 // assets
-import { IconLogout, IconUser, IconKey, IconDatabaseExport, IconSettings, IconDatabaseOff, IconWorld } from '@tabler/icons-react';
+import { IconLogout, IconKey, IconDatabaseExport, IconSettings, IconDatabaseOff, IconWorld } from '@tabler/icons-react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import Backdrop from '@mui/material/Backdrop';
@@ -193,7 +193,7 @@ export default function ProfileSection() {
 
   const handlePersonalCenter = () => {
     setOpen(false);
-    navigate('/settings');
+    navigate('/system/settings');
   };
 
   const handleApiKeys = () => {
@@ -494,7 +494,7 @@ export default function ProfileSection() {
                         </ListItemButton>
                         <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={handlePersonalCenter}>
                           <ListItemIcon>
-                            <IconUser stroke={1.5} size="20px" />
+                            <IconSettings stroke={1.5} size="20px" />
                           </ListItemIcon>
                           <ListItemText
                             primaryTypographyProps={{ component: 'div' }}

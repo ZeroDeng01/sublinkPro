@@ -110,7 +110,8 @@
       "hosts": "Host 管理",
       "webhooks": "Webhook 管理",
       "monitor": "系统监控",
-      "userCenter": "个人中心"
+      "userCenter": "个人中心",
+      "appSettings": "应用设置"
     }
   },
   "common": {
@@ -2876,7 +2877,7 @@
       "user": "普通用户"
     },
     "actions": {
-      "personalCenter": "个人中心",
+      "personalCenter": "应用设置",
       "apiKeys": "API 密钥",
       "backup": "系统备份",
       "geoip": "GeoIP 设置",

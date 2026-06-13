@@ -1181,7 +1181,7 @@ export default function TemplateList() {
                   size="small"
                   variant="text"
                   disabled={aiGenerating}
-                  onClick={() => navigate('/settings?tab=ai')}
+                  onClick={() => navigate('/system/settings?tab=ai')}
                   sx={{
                     flexShrink: 0,
                     minWidth: 'auto',
@@ -1445,7 +1445,7 @@ export default function TemplateList() {
                 variant="caption"
                 onClick={(event) => {
                   event.stopPropagation();
-                  navigate('/settings?tab=ai');
+                  navigate('/system/settings?tab=ai');
                 }}
                 sx={{ color: aiPromptPrimaryLight, fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}
               >

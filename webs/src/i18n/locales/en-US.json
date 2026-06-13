@@ -109,8 +109,9 @@
       "tasks": "Tasks",
       "hosts": "Host",
       "webhooks": "Webhooks",
-      "monitor": "System Monitor",
-      "userCenter": "User Center"
+      "monitor": "Monitor",
+      "userCenter": "User Center",
+      "appSettings": "Settings"
     }
   },
   "common": {
@@ -2876,7 +2877,7 @@
       "user": "User"
     },
     "actions": {
-      "personalCenter": "User Center",
+      "personalCenter": "Application Settings",
       "apiKeys": "API Keys",
       "backup": "System Backup",
       "geoip": "GeoIP Settings",

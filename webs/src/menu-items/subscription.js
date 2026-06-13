@@ -162,11 +162,11 @@ const system = {
       breadcrumbs: true
     },
     {
-      id: 'user',
-      title: 'User Center',
-      titleKey: 'navigation.items.userCenter',
+      id: 'app-settings',
+      title: 'Application Settings',
+      titleKey: 'navigation.items.appSettings',
       type: 'item',
-      url: '/settings',
+      url: '/system/settings',
       icon: IconSettings,
       breadcrumbs: true
     }

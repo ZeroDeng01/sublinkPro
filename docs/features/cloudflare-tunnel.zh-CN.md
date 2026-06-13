@@ -292,7 +292,7 @@ Service URL:     localhost:8000
 ## 第四步：在 SublinkPro 启动 Tunnel
 
 1. 登录 SublinkPro 管理界面。
-2. 进入右上角头像菜单中的 **个人中心**。
+2. 进入右上角头像菜单中的 **应用设置**。
 3. 打开 **Cloudflare Tunnel** 标签页。
 4. 在 **Cloudflare Tunnel Token** 输入框中粘贴 token 或 Cloudflare 安装命令。
 5. 点击 **保存配置**。

@@ -94,13 +94,13 @@ const MainRoutes = {
     },
     {
       path: 'settings',
-      element: <UserSettings />
+      element: <Navigate to="/system/settings" replace />
     },
     {
       path: 'system',
       children: [
         {
-          path: 'user',
+          path: 'settings',
           element: <UserSettings />
         },
         {

@@ -67,7 +67,7 @@ After installation, run:
 cloudflared version
 ```
 
-If the version prints successfully, return to SublinkPro **User Center -> Cloudflare Tunnel** and start it.
+If the version prints successfully, return to SublinkPro **Application Settings -> Cloudflare Tunnel** and start it.
 
 ### macOS
 
@@ -292,7 +292,7 @@ Save after configuration. Cloudflare automatically creates the DNS record for th
 ## Step 4: Start the Tunnel in SublinkPro
 
 1. Sign in to the SublinkPro admin UI.
-2. Open **User Center** from the avatar menu in the upper right.
+2. Open **Application Settings** from the avatar menu in the upper right.
 3. Open the **Cloudflare Tunnel** tab.
 4. Paste the token or Cloudflare install command into **Cloudflare Tunnel Token**.
 5. Click **Save Configuration**.
