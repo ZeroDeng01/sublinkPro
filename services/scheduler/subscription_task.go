@@ -49,6 +49,15 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 		ctx = context.Background() // 降级情况下使用 Background context
 	} else {
 		reporter = NewTaskManagerReporter(tm, task.ID)
+
+		// 添加全局 panic 保护
+		defer func() {
+			if r := recover(); r != nil {
+				utils.Error("订阅任务执行发生 panic: %v, 任务ID: %s, 订阅名称: %s, URL: %s", r, task.ID, subName, url)
+				reporter.ReportFail(fmt.Sprintf("任务异常崩溃: %v", r))
+			}
+		}()
+
 		// 在调用前快速检查任务是否已被取消
 		select {
 		case <-ctx.Done():

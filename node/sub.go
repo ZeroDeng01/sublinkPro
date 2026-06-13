@@ -688,16 +688,17 @@ func LoadClashConfigFromURLWithReporter(ctx context.Context, id int, urlStr stri
 		return nil, nil, parseErr
 	}
 
-	changedNodeIDs, err := scheduleClashToNodeLinks(id, config.Proxies, subName, reporter, usageInfo)
+	changedNodeIDs, err := scheduleClashToNodeLinks(ctx, id, config.Proxies, subName, reporter, usageInfo)
 	return changedNodeIDs, usageInfo, err
 }
 
 // scheduleClashToNodeLinks 将 Clash 代理配置转换为节点链接并保存到数据库
+// ctx: context 用于任务取消和超时控制
 // id: 订阅ID
 // proxys: 代理节点列表
 // subName: 订阅名称
 // usageInfo: 订阅用量信息 (可选)
-func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, reporter TaskReporter, usageInfo *UsageInfo) ([]int, error) {
+func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Proxy, subName string, reporter TaskReporter, usageInfo *UsageInfo) ([]int, error) {
 	if reporter == nil {
 		reporter = &NoOpTaskReporter{}
 	}
@@ -851,6 +852,15 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 
 	// 2. 遍历新获取的节点，插入或更新
 	for proxyIndex, proxy := range proxys {
+		// 定期检查任务是否已取消或超时（每处理一个节点检查一次）
+		select {
+		case <-ctx.Done():
+			utils.Warn("任务在处理节点时被取消或超时，已处理 %d/%d 个节点", processedCount, len(proxys))
+			reporter.ReportFail("任务执行超时或被取消")
+			return nil, fmt.Errorf("任务已取消或超时")
+		default:
+		}
+
 		utils.Info("💾准备存储节点【%s】", proxy.Name)
 		var Node models.Node
 
@@ -1017,6 +1027,15 @@ func scheduleClashToNodeLinks(id int, proxys []protocol.Proxy, subName string, r
 	// 4. 批量写入数据库（一次性操作，减少数据库I/O）
 	// 批量添加新节点
 	if len(nodesToAdd) > 0 {
+		// 检查任务是否已取消或超时（批量操作前检查）
+		select {
+		case <-ctx.Done():
+			utils.Warn("任务在批量添加节点前被取消或超时")
+			reporter.ReportFail("任务执行超时或被取消")
+			return nil, fmt.Errorf("任务已取消或超时")
+		default:
+		}
+
 		if err := models.BatchAddNodes(nodesToAdd); err != nil {
 			utils.Error("❌批量添加节点失败：%v", err)
 			// 重置计数，因为添加失败

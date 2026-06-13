@@ -79,15 +79,18 @@ export default function NodeTable({
   const totalWidth = Object.values(columnWidths).reduce((sum, w) => sum + (Number(w) || 0), 0);
 
   // 开始调整列宽
-  const handleResizeStart = useCallback((e, columnKey) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setResizing({
-      columnKey,
-      startX: e.clientX,
-      startWidth: columnWidths[columnKey]
-    });
-  }, [columnWidths]);
+  const handleResizeStart = useCallback(
+    (e, columnKey) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setResizing({
+        columnKey,
+        startX: e.clientX,
+        startWidth: columnWidths[columnKey]
+      });
+    },
+    [columnWidths]
+  );
 
   // 处理鼠标移动和释放
   useEffect(() => {
@@ -207,11 +210,7 @@ export default function NodeTable({
           <TableRow>
             <TableCell padding="checkbox" sx={{ width: columnWidths.checkbox, position: 'relative' }} />
             <TableCell sx={{ width: columnWidths.remark, minWidth: 60, position: 'relative' }}>
-              <TableSortLabel
-                active={sortBy === 'name'}
-                direction={sortBy === 'name' ? sortOrder : 'asc'}
-                onClick={() => onSort('name')}
-              >
+              <TableSortLabel active={sortBy === 'name'} direction={sortBy === 'name' ? sortOrder : 'asc'} onClick={() => onSort('name')}>
                 {t('nodes.table.remark')}
               </TableSortLabel>
               <ResizeHandle columnKey="remark" />
@@ -418,15 +417,7 @@ export default function NodeTable({
                   <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, alignItems: 'flex-start' }}>
                     {(() => {
                       const d = getDelayDisplay(node.DelayTime, node.DelayStatus);
-                      return (
-                        <Chip
-                          label={d.label}
-                          color={d.color}
-                          variant={d.variant}
-                          size="small"
-                          sx={{ maxWidth: 'fit-content' }}
-                        />
-                      );
+                      return <Chip label={d.label} color={d.color} variant={d.variant} size="small" sx={{ maxWidth: 'fit-content' }} />;
                     })()}
                     {node.LatencyCheckAt && (
                       <Typography
@@ -451,15 +442,7 @@ export default function NodeTable({
                   <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, alignItems: 'flex-start' }}>
                     {(() => {
                       const s = getSpeedDisplay(node.Speed, node.SpeedStatus);
-                      return (
-                        <Chip
-                          label={s.label}
-                          color={s.color}
-                          variant={s.variant}
-                          size="small"
-                          sx={{ maxWidth: 'fit-content' }}
-                        />
-                      );
+                      return <Chip label={s.label} color={s.color} variant={s.variant} size="small" sx={{ maxWidth: 'fit-content' }} />;
                     })()}
                     {node.SpeedCheckAt && node.Speed > 0 && (
                       <Typography

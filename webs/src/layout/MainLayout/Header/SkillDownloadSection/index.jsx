@@ -122,13 +122,9 @@ export default function SkillDownloadSection() {
         aria-labelledby="skill-download-dialog-title"
         aria-describedby="skill-download-dialog-description"
       >
-        <DialogTitle id="skill-download-dialog-title">
-          {t('skill.downloadDialogTitle')}
-        </DialogTitle>
+        <DialogTitle id="skill-download-dialog-title">{t('skill.downloadDialogTitle')}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="skill-download-dialog-description">
-            {t('skill.downloadDialogMessage')}
-          </DialogContentText>
+          <DialogContentText id="skill-download-dialog-description">{t('skill.downloadDialogMessage')}</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCancel} color="inherit">

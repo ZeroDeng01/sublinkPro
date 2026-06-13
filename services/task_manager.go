@@ -66,8 +66,12 @@ func (tm *TaskManager) CreateTask(taskType models.TaskType, name string, trigger
 		return nil, nil, err
 	}
 
-	// 创建可取消的 context
-	ctx, cancel := context.WithCancel(context.Background())
+	// 所有任务统一使用 24 小时超时（全局最大时长）
+	// 实际的超时控制由僵尸任务检测器根据任务类型细分管理
+	timeout := 24 * time.Hour
+
+	// 创建带超时的可取消 context
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 	// 注册到运行中任务
 	tm.runningTasks[task.ID] = &RunningTask{
@@ -80,7 +84,7 @@ func (tm *TaskManager) CreateTask(taskType models.TaskType, name string, trigger
 	// 广播任务开始
 	tm.broadcastProgress(task, "started")
 
-	utils.Info("任务创建成功: ID=%s, Type=%s, Name=%s, Trigger=%s", task.ID, task.Type, task.Name, task.Trigger)
+	utils.Info("任务创建成功: ID=%s, Type=%s, Name=%s, Trigger=%s, Timeout=%v", task.ID, task.Type, task.Name, task.Trigger, timeout)
 
 	return task, ctx, nil
 }
@@ -410,7 +414,65 @@ func InitTaskManager() {
 		}
 	}()
 
+	// 启动僵尸任务检测器
+	go tm.startZombieTaskDetector()
+
 	_ = tm // 确保初始化
+}
+
+// startZombieTaskDetector 启动僵尸任务检测器
+func (tm *TaskManager) startZombieTaskDetector() {
+	ticker := time.NewTicker(1 * time.Minute) // 每分钟检查一次
+	defer ticker.Stop()
+
+	utils.Info("僵尸任务检测器已启动")
+
+	for range ticker.C {
+		tm.detectAndCleanZombieTasks()
+	}
+}
+
+// detectAndCleanZombieTasks 检测并清理僵尸任务
+func (tm *TaskManager) detectAndCleanZombieTasks() {
+	tm.mutex.RLock()
+	now := time.Now()
+	var zombieTasks []struct {
+		ID       string
+		Type     models.TaskType
+		Name     string
+		Duration time.Duration
+	}
+
+	// 所有任务统一的最大运行时长：24 小时
+	maxDuration := 24 * time.Hour
+
+	for taskID, taskInfo := range tm.runningTasks {
+		// 检查任务是否超过 24 小时
+		duration := now.Sub(taskInfo.StartTime)
+		if duration > maxDuration {
+			zombieTasks = append(zombieTasks, struct {
+				ID       string
+				Type     models.TaskType
+				Name     string
+				Duration time.Duration
+			}{
+				ID:       taskID,
+				Type:     taskInfo.Task.Type,
+				Name:     taskInfo.Task.Name,
+				Duration: duration,
+			})
+		}
+	}
+	tm.mutex.RUnlock()
+
+	// 清理僵尸任务
+	for _, zombie := range zombieTasks {
+		utils.Warn("检测到僵尸任务（运行超过24小时）: ID=%s, Type=%s, Name=%s, 运行时长=%v",
+			zombie.ID, zombie.Type, zombie.Name, zombie.Duration)
+		if err := tm.FailTask(zombie.ID, "任务执行超时（超过24小时），自动标记为失败"); err != nil {
+			utils.Error("标记僵尸任务失败时出错: task_id=%s, error=%v", zombie.ID, err)
+		}
+	}
 }
 
 // CancelTask 取消任务的包装函数
