@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"context"
 	"fmt"
 	"sublink/models"
 	"sublink/node"
@@ -39,17 +40,25 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 
 	// 创建 TaskManager 任务和报告器
 	tm := getTaskManager()
-	task, _, createErr := tm.CreateTask(models.TaskTypeSubUpdate, subName, trigger, 0)
+	task, ctx, createErr := tm.CreateTask(models.TaskTypeSubUpdate, subName, trigger, 0)
 
 	var reporter node.TaskReporter
 	if createErr != nil {
 		utils.Warn("创建订阅更新任务失败: %v，将使用降级模式", createErr)
-		reporter = nil // 使用 nil，将在 sub.go 中降级为 NoOpTaskReporter
+		reporter = nil             // 使用 nil，将在 sub.go 中降级为 NoOpTaskReporter
+		ctx = context.Background() // 降级情况下使用 Background context
 	} else {
 		reporter = NewTaskManagerReporter(tm, task.ID)
+		// 在调用前快速检查任务是否已被取消
+		select {
+		case <-ctx.Done():
+			utils.Info("任务在执行前已被取消: %s", subName)
+			return
+		default:
+		}
 	}
 
-	changedNodeIDs, usageInfo, err := node.LoadClashConfigFromURLWithReporter(id, url, subName, downloadWithProxy, proxyLink, userAgent, requestHeaders, reporter, fetchUsageInfo, skipTLSVerify)
+	changedNodeIDs, usageInfo, err := node.LoadClashConfigFromURLWithReporter(ctx, id, url, subName, downloadWithProxy, proxyLink, userAgent, requestHeaders, reporter, fetchUsageInfo, skipTLSVerify)
 	if err != nil {
 		// 仅在失败时发送通知，成功通知由 node/sub.go 中的 scheduleClashToNodeLinks 发送
 		// 这样可以避免重复通知，且成功通知包含更详细的节点统计信息

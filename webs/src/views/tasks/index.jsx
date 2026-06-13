@@ -1094,7 +1094,7 @@ export default function TaskList() {
                 <TaskMobileCard
                   task={task}
                   onStop={handleStopTask}
-                  canStop={task.status === 'running' && task.type === 'speed_test'}
+                  canStop={task.status === 'running' && (task.type === 'speed_test' || task.type === 'sub_update')}
                   theme={theme}
                   tokens={tokens}
                 />
@@ -1296,7 +1296,7 @@ export default function TaskList() {
                         </TableCell>
                         {hasStoppableTasks && (
                           <TableCell>
-                            {task.status === 'running' && task.type === 'speed_test' && (
+                            {task.status === 'running' && (task.type === 'speed_test' || task.type === 'sub_update') && (
                               <Tooltip title={t('tasks.actions.stop')}>
                                 <IconButton
                                   size="small"

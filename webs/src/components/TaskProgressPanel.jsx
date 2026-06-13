@@ -80,7 +80,7 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
       icon: iconMap[task.taskType] || CloudSyncIcon,
       label: meta.label,
       accentColor: meta.color,
-      canStop: task.taskType === 'speed_test'
+      canStop: task.taskType === 'speed_test' || task.taskType === 'sub_update'
     };
   }, [task.taskType, t]);
 

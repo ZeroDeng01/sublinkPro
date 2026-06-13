@@ -214,7 +214,7 @@ func isTLSError(err error) bool {
 // proxyLink: 代理链接 (可选)
 // userAgent: 请求的 User-Agent (可选，默认 Clash)
 func LoadClashConfigFromURL(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string) (*UsageInfo, error) {
-	_, usageInfo, err := LoadClashConfigFromURLWithReporter(id, urlStr, subName, downloadWithProxy, proxyLink, userAgent, nil, nil, false, true)
+	_, usageInfo, err := LoadClashConfigFromURLWithReporter(context.TODO(), id, urlStr, subName, downloadWithProxy, proxyLink, userAgent, nil, nil, false, true)
 	return usageInfo, err
 }
 
@@ -506,7 +506,14 @@ func parseClashConfigData(ctx context.Context, client *http.Client, rootSubscrip
 // reporter: 任务进度报告器，用于TaskManager集成
 // fetchUsageInfo: 是否获取用量信息
 // skipTLSVerify: 是否跳过TLS证书验证
-func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string, requestHeaders models.AirportRequestHeaders, reporter TaskReporter, fetchUsageInfo bool, skipTLSVerify bool) ([]int, *UsageInfo, error) {
+func LoadClashConfigFromURLWithReporter(ctx context.Context, id int, urlStr string, subName string, downloadWithProxy bool, proxyLink string, userAgent string, requestHeaders models.AirportRequestHeaders, reporter TaskReporter, fetchUsageInfo bool, skipTLSVerify bool) ([]int, *UsageInfo, error) {
+	// 检查任务是否已被取消
+	select {
+	case <-ctx.Done():
+		return nil, nil, fmt.Errorf("任务已取消")
+	default:
+	}
+
 	// 创建 HTTP 客户端，配置 TLS
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -570,8 +577,8 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 		}
 	}
 
-	// 创建请求并设置 User-Agent
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, urlStr, nil)
+	// 创建请求并设置 User-Agent（使用传入的 context）
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
 		utils.Error("URL %s，创建请求失败:  %v", urlStr, err)
 		return nil, nil, err
@@ -648,7 +655,15 @@ func LoadClashConfigFromURLWithReporter(id int, urlStr string, subName string, d
 		})
 		return nil, nil, err
 	}
-	config, errYaml, providerErr := parseClashConfigData(context.Background(), client, urlStr, data, userAgent, requestHeaders)
+
+	// 检查任务是否在解析前被取消
+	select {
+	case <-ctx.Done():
+		return nil, nil, fmt.Errorf("任务已取消")
+	default:
+	}
+
+	config, errYaml, providerErr := parseClashConfigData(ctx, client, urlStr, data, userAgent, requestHeaders)
 
 	if len(config.Proxies) == 0 {
 		parseErr := fmt.Errorf("解析失败 or 未找到节点")
