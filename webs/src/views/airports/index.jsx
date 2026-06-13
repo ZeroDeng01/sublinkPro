@@ -22,7 +22,6 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
 // icons
@@ -586,57 +585,96 @@ export default function AirportList() {
     });
   };
 
-  // 批量拉取所有机场
+  // 批量拉取机场
   const handlePullAll = async () => {
-    // 这里不要用当前页 airports 来统计启用数量：列表是分页的，会导致误判“没有已启用机场”
-    // 使用后端分页接口返回的 total 作为全量启用机场数（仅用于提示/确认）
-    let enabledTotal = null;
-    try {
-      const res = await getAirports({ page: 1, pageSize: 1, enabled: true });
-      if (typeof res.data?.total === 'number') {
-        enabledTotal = res.data.total;
-      }
-    } catch (error) {
-      console.error('获取已启用机场数量失败:', error);
-      enabledTotal = null;
-    }
+    const hasSelection = selectedAirportIds.length > 0;
 
-    if (enabledTotal === 0) {
-      showMessage(t('airports.page.messages.noEnabledAirports'), 'warning');
-      return;
-    }
+    if (hasSelection) {
+      // 模式1：拉取选中的机场
+      const selectedCount = selectedAirportIds.length;
+      const confirmContent = t('airports.page.confirm.pullSelectedContentWithCount', { count: selectedCount });
 
-    const confirmContent =
-      typeof enabledTotal === 'number'
-        ? t('airports.page.confirm.pullAllContentWithCount', { count: enabledTotal })
-        : t('airports.page.confirm.pullAllContent');
+      openConfirm(t('airports.page.confirm.pullSelectedTitle'), confirmContent, async () => {
+        try {
+          const res = await pullAllAirports(selectedAirportIds);
+          const count = res.data?.count;
 
-    openConfirm(t('airports.page.confirm.pullAllTitle'), confirmContent, async () => {
-      try {
-        const res = await pullAllAirports();
-        const count = res.data?.count;
-
-        if (typeof count === 'number') {
-          if (count > 0) {
-            showMessage(t('airports.page.messages.pullAllSubmittedWithCount', { count }));
-          } else {
-            showMessage(t('airports.page.messages.noEnabledAirports'), 'warning');
+          if (typeof count === 'number') {
+            if (count > 0) {
+              showMessage(t('airports.page.messages.pullSelectedSubmittedWithCount', { count }));
+              // 清空选择状态，提升用户体验
+              setSelectedAirportIds([]);
+            } else {
+              showMessage(t('airports.page.messages.noValidAirports'), 'warning');
+            }
+            return;
           }
-          return;
-        }
 
-        // 兼容后端返回 OkWithMsg 的场景（data 为空）
-        if (res.msg && res.msg !== '操作成功') {
-          showMessage(res.msg, 'warning');
-          return;
-        }
+          // 兼容后端返回 OkWithMsg 的场景（data 为空）
+          if (res.msg && res.msg !== '操作成功') {
+            showMessage(res.msg, 'warning');
+            return;
+          }
 
-        showMessage(t('airports.page.messages.pullAllSubmitted'));
+          showMessage(t('airports.page.messages.pullSelectedSubmitted'));
+          setSelectedAirportIds([]);
+        } catch (error) {
+          console.error('批量拉取失败:', error);
+          showMessage(error.message || t('airports.page.messages.pullSelectedFailed'), 'error');
+        }
+      });
+    } else {
+      // 模式2：拉取所有已启用的机场
+      // 这里不要用当前页 airports 来统计启用数量：列表是分页的，会导致误判”没有已启用机场”
+      // 使用后端分页接口返回的 total 作为全量启用机场数（仅用于提示/确认）
+      let enabledTotal = null;
+      try {
+        const res = await getAirports({ page: 1, pageSize: 1, enabled: true });
+        if (typeof res.data?.total === 'number') {
+          enabledTotal = res.data.total;
+        }
       } catch (error) {
-        console.error('批量拉取失败:', error);
-        showMessage(error.message || t('airports.page.messages.pullAllFailed'), 'error');
+        console.error('获取已启用机场数量失败:', error);
+        enabledTotal = null;
       }
-    });
+
+      if (enabledTotal === 0) {
+        showMessage(t('airports.page.messages.noEnabledAirports'), 'warning');
+        return;
+      }
+
+      const confirmContent =
+        typeof enabledTotal === 'number'
+          ? t('airports.page.confirm.pullAllContentWithCount', { count: enabledTotal })
+          : t('airports.page.confirm.pullAllContent');
+
+      openConfirm(t('airports.page.confirm.pullAllTitle'), confirmContent, async () => {
+        try {
+          const res = await pullAllAirports();
+          const count = res.data?.count;
+
+          if (typeof count === 'number') {
+            if (count > 0) {
+              showMessage(t('airports.page.messages.pullAllSubmittedWithCount', { count }));
+            } else {
+              showMessage(t('airports.page.messages.noEnabledAirports'), 'warning');
+            }
+            return;
+          }
+
+          // 兼容后端返回 OkWithMsg 的场景（data 为空）
+          if (res.msg && res.msg !== '操作成功') {
+            showMessage(res.msg, 'warning');
+            return;
+          }
+
+          showMessage(t('airports.page.messages.pullAllSubmitted'));
+        } catch (error) {
+          console.error('批量拉取失败:', error);
+          showMessage(error.message || t('airports.page.messages.pullAllFailed'), 'error');
+        }
+      });
+    }
   };
 
   // 刷新用量信息
@@ -892,11 +930,6 @@ export default function AirportList() {
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
             {t('airports.page.actions.addAirport')}
           </Button>
-          <Tooltip title={t('airports.page.actions.pullAllTooltip')} arrow>
-            <IconButton onClick={handlePullAll} color="primary">
-              <CloudSyncIcon />
-            </IconButton>
-          </Tooltip>
           <IconButton onClick={handleRefresh} disabled={loading}>
             <RefreshIcon
               sx={
@@ -1047,6 +1080,27 @@ export default function AirportList() {
                 >
                   {t('airports.page.actions.clearSelection')}
                 </Button>
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  startIcon={<CloudSyncIcon />}
+                  onClick={handlePullAll}
+                  sx={{
+                    ...selectionActionButtonBaseSx,
+                    gridColumn: '1 / -1',
+                    borderColor: withAlpha(palette.primary.main, isDark ? 0.4 : 0.3),
+                    bgcolor: isDark ? withAlpha(palette.primary.main, 0.08) : withAlpha(palette.primary.main, 0.04),
+                    color: isDark ? palette.primary.light : palette.primary.main,
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: withAlpha(palette.primary.main, isDark ? 0.5 : 0.4),
+                      bgcolor: isDark ? withAlpha(palette.primary.main, 0.12) : withAlpha(palette.primary.main, 0.08)
+                    }
+                  }}
+                >
+                  {t('airports.page.actions.pullAllShort')}
+                </Button>
               </Box>
             </Stack>
           ) : (
@@ -1103,6 +1157,25 @@ export default function AirportList() {
                   sx={batchActionButtonSx}
                 >
                   {t('airports.page.actions.batchSettings')}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<CloudSyncIcon />}
+                  onClick={handlePullAll}
+                  sx={{
+                    ...selectionActionButtonBaseSx,
+                    borderColor: withAlpha(palette.primary.main, isDark ? 0.4 : 0.3),
+                    bgcolor: isDark ? withAlpha(palette.primary.main, 0.08) : withAlpha(palette.primary.main, 0.04),
+                    color: isDark ? palette.primary.light : palette.primary.main,
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: withAlpha(palette.primary.main, isDark ? 0.5 : 0.4),
+                      bgcolor: isDark ? withAlpha(palette.primary.main, 0.12) : withAlpha(palette.primary.main, 0.08)
+                    }
+                  }}
+                >
+                  {t('airports.page.actions.pullAll')}
                 </Button>
               </Stack>
             </Stack>

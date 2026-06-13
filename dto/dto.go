@@ -70,6 +70,11 @@ type AirportBatchUpdateRequest struct {
 	CronExpr      string `json:"cronExpr"`
 }
 
+// AirportPullAllRequest 机场批量拉取请求体结构（可选）
+type AirportPullAllRequest struct {
+	IDs []int `json:"ids"` // 可选：要拉取的机场ID列表，为空时拉取所有已启用的机场
+}
+
 // BatchSortRequest 批量排序请求
 type BatchSortRequest struct {
 	ID        int    `json:"ID" binding:"required"`        // 订阅ID

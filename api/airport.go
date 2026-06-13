@@ -429,27 +429,58 @@ func AirportPull(c *gin.Context) {
 	utils.OkWithMsg(c, "任务已提交，请稍后刷新查看结果")
 }
 
-// AirportPullAll 批量拉取所有已启用机场的订阅
+// AirportPullAll 批量拉取机场订阅
+// 支持两种模式：
+// 1. 提供 ids 参数：拉取指定的机场（不论启用状态）
+// 2. 不提供 ids 参数：拉取所有已启用的机场
 func AirportPullAll(c *gin.Context) {
-	airportModel := models.Airport{}
-	airports, err := airportModel.List()
-	if err != nil {
-		utils.FailWithMsg(c, "获取机场列表失败")
+	var req dto.AirportPullAllRequest
+	// 尝试解析请求体，如果没有请求体或解析失败，req.IDs 为 nil/empty
+	_ = c.ShouldBindJSON(&req)
+
+	var airportsToProcess []models.Airport
+
+	if len(req.IDs) > 0 {
+		// 模式1：拉取指定的机场（用户明确选择，不论启用状态）
+		for _, id := range req.IDs {
+			airport, err := models.GetAirportByID(id)
+			if err != nil {
+				// 跳过不存在的机场，继续处理其他机场
+				utils.Warn("机场 ID %d 不存在，已跳过", id)
+				continue
+			}
+			airportsToProcess = append(airportsToProcess, *airport)
+		}
+	} else {
+		// 模式2：拉取所有已启用的机场
+		airportModel := models.Airport{}
+		allAirports, err := airportModel.List()
+		if err != nil {
+			utils.FailWithMsg(c, "获取机场列表失败")
+			return
+		}
+
+		for _, airport := range allAirports {
+			if airport.Enabled {
+				airportsToProcess = append(airportsToProcess, airport)
+			}
+		}
+	}
+
+	if len(airportsToProcess) == 0 {
+		if len(req.IDs) > 0 {
+			utils.OkWithMsg(c, "没有找到有效的机场")
+		} else {
+			utils.OkWithMsg(c, "没有已启用的机场")
+		}
 		return
 	}
 
+	// 提交拉取任务
 	count := 0
-	for _, airport := range airports {
-		if !airport.Enabled {
-			continue
-		}
+	for _, airport := range airportsToProcess {
 		go scheduler.ExecuteSubscriptionTaskWithTrigger(airport.ID, airport.URL, airport.Name, models.TaskTriggerManual)
 		count++
-	}
-
-	if count == 0 {
-		utils.OkWithMsg(c, "没有已启用的机场")
-		return
 	}
 
 	utils.OkWithData(c, map[string]any{
