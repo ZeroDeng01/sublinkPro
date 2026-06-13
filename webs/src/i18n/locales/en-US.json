@@ -50,7 +50,9 @@
       "unauthorized": "Unauthorized access",
       "serverError": "Server error",
       "operationFailed": "Operation failed",
-      "notification": "Notification"
+      "notification": "Notification",
+      "sessionExpiredSSE": "Session expired, please log in again",
+      "authErrorSSE": "Authentication failed"
     }
   },
   "turnstile": {

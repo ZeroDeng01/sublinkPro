@@ -50,7 +50,9 @@
       "unauthorized": "未授权访问",
       "serverError": "服务器错误",
       "operationFailed": "操作失败",
-      "notification": "通知"
+      "notification": "通知",
+      "sessionExpiredSSE": "会话已过期，请重新登录",
+      "authErrorSSE": "认证失败"
     }
   },
   "turnstile": {

@@ -65,13 +65,24 @@ func AuthToken(c *gin.Context) {
 	token = strings.ReplaceAll(token, "Bearer ", "")
 	mc, err := ParseToken(token)
 	if err != nil {
+		// 对SSE请求特殊处理：发送认证失败事件
+		if strings.HasSuffix(c.Request.URL.Path, "/api/sse") {
+			sendSSEAuthError(c, err.Error())
+			return
+		}
 		utils.Forbidden(c, err.Error())
 		c.Abort()
 		return
 	}
 	// 验证凭证签名，用于检测密码或用户名是否已变更
 	if !models.VerifyCredentialSign(mc.Username, mc.CredentialSign) {
-		utils.Forbidden(c, "登录已过期，请重新登录")
+		errMsg := "登录已过期，请重新登录"
+		// 对SSE请求特殊处理：发送认证失败事件
+		if strings.HasSuffix(c.Request.URL.Path, "/api/sse") {
+			sendSSEAuthError(c, errMsg)
+			return
+		}
+		utils.Forbidden(c, errMsg)
 		c.Abort()
 		return
 	}
@@ -92,6 +103,27 @@ func ParseToken(tokenString string) (*JwtClaims, error) {
 		return claims, nil
 	}
 	return nil, errors.New("invalid token")
+}
+
+// sendSSEAuthError 向SSE客户端发送认证失败事件
+// 用于在SSE连接认证失败时，先发送一个auth_error事件，让客户端可以正确处理登出
+func sendSSEAuthError(c *gin.Context, message string) {
+	// 设置SSE响应头
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+
+	// 构造认证失败事件数据
+	eventData := fmt.Sprintf(`{"message":"%s","code":"AUTH_EXPIRED"}`, message)
+	sseMessage := fmt.Sprintf("event: auth_error\ndata: %s\n\n", eventData)
+
+	// 发送事件
+	_, _ = c.Writer.WriteString(sseMessage)
+	c.Writer.Flush()
+
+	// 终止请求处理
+	c.Abort()
 }
 
 func validApiKey(apiKey string) (string, bool, error) {

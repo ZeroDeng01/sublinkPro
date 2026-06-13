@@ -164,6 +164,40 @@ export function AuthProvider({ children }) {
       resetHeartbeat();
     });
 
+    // 监听认证失败事件
+    eventSource.addEventListener('auth_error', (event) => {
+      console.error('SSE 认证失败:', event.data);
+
+      try {
+        const errorData = JSON.parse(event.data);
+        console.error('认证错误详情:', errorData.message, errorData.code);
+      } catch {
+        // JSON解析失败，使用原始消息
+        console.error('认证失败（原始消息）:', event.data);
+      }
+
+      // 关闭SSE连接
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (heartbeatTimeout) clearTimeout(heartbeatTimeout);
+
+      // 清理token并跳转到登录页
+      localStorage.removeItem('accessToken');
+      setUser(null);
+      setIsAuthenticated(false);
+
+      // 使用window.location.href确保完全刷新（与request.js保持一致）
+      const basePath = window.__SUBLINK_CONFIG__?.basePath || import.meta.env.VITE_APP_BASE_NAME || '/';
+      const loginPath = basePath.replace(/\/+$/, '') + '/login';
+
+      if (window.location.pathname !== loginPath) {
+        window.location.href = loginPath;
+      }
+    });
+
     const appendNotification = (data) => {
       const parsedTimestamp = data.time ? new Date(data.time.replace(' ', 'T')) : new Date();
       const timestamp = Number.isNaN(parsedTimestamp.getTime()) ? new Date() : parsedTimestamp;
