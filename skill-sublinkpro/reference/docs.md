@@ -46,6 +46,8 @@ suffix for Chinese.
 |---|---|
 | Install methods (Docker, docker-compose, one-line script), updates, Watchtower auto-update | `docs/installation.md` |
 | Environment variables, command-line flags, config precedence, CAPTCHA modes | `docs/configuration.md` |
+| Build process, production build, Docker build, CI/CD, troubleshooting | `docs/build-and-deployment.md` |
+| Security best practices, default credentials, sensitive config, MFA, Docker security | `docs/security-guidelines.md` |
 
 > For deploying *through the skill* (guided, conversational), also see this skill's
 > own `reference/deploy.md`. Use `docs/installation.md` + `docs/configuration.md`
@@ -70,9 +72,16 @@ suffix for Chinese.
 ### For developers
 | User asks about | Doc path |
 |---|---|
-| Project structure, local dev, scheduled-task dev | `docs/development.md` |
+| Project structure, local dev, scheduled-task dev, commenting standards, testing standards | `docs/development.md` |
+| Build process, production build, Docker build, CI/CD pipeline, build troubleshooting | `docs/build-and-deployment.md` |
+| Common development patterns — add backend feature, scheduled task, mihomo changes, deployment changes | `docs/practical-recipes.md` |
 | Protocol extension guide (add a protocol, register capabilities, field metadata) | `docs/development.md` (section "Protocol Extension Guide") |
 | Internationalization (i18n) contract and how translations are maintained | `docs/internationalization.md` |
+| Frontend theme adaptation rules (light/dark mode, surface layering, coverage) | `docs/frontend-theme-guidelines.md` |
+| Security best practices, credentials, sensitive config, MFA, incident response | `docs/security-guidelines.md` |
+| Contribution workflow, branch conventions, PR process, cross-layer sync requirements | `CONTRIBUTING.md` |
+| Code of Conduct | `CODE_OF_CONDUCT.md` |
+| Architectural guidance, tech stack, mihomo integration, cross-layer contracts | `AGENTS.md` |
 
 ## Notes & guardrails
 

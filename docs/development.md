@@ -613,3 +613,130 @@ Common examples:
 3. Update docs when configuration semantics change.
 4. Frontend commands and production build flow should follow `webs/package.json`, CI, and Dockerfile first.
 5. Don't document commands that don't exist in the repository.
+
+---
+
+## 📝 Commenting Standards
+
+Clear, maintainable comments are part of good engineering practice, but comments should explain intent, constraints, and boundaries rather than restating the code.
+
+### When to Add Comments
+
+Add necessary comments when adding or changing:
+
+- Key business logic
+- Cross-layer contracts
+- Complex condition branches
+- Scheduled tasks
+- Migrations
+- Concurrency flows
+- Caching strategies
+- mihomo integrations
+- Auth/security logic
+- Configuration precedence
+- Non-obvious algorithms
+
+### Comment Language
+
+Comments should primarily use Chinese. Keep English terms when they refer to:
+
+- Upstream libraries
+- Protocol fields
+- Standard terminology
+- Public API names
+- Concepts that must match English documentation
+
+### Comment Maintenance
+
+- Update nearby comments when changing code
+- Avoid comments that describe old behavior, fields, constraints, or flows
+- Don't add noisy comments just to increase comment count
+- Comments must not hide design problems
+- For TODOs, FIXMEs, temporary compatibility logic, or known limitations, document the reason, trigger condition, and follow-up direction
+
+### Go Comment Requirements
+
+- Exported packages, types, functions, methods, interfaces, constants, and variables should follow Go documentation conventions
+- Package comments should live in `doc.go` or an appropriate package file header
+- Non-exported but business-critical functions, struct fields, state enums, migration steps, and goroutine lifecycles should have concise Chinese comments
+- Error-handling comments should explain business semantics or recovery strategy
+- Comments should remain tidy under `gofmt`
+
+### Frontend Comment Requirements
+
+- React components, hooks, API wrappers, complex `useMemo` / `useEffect` logic, permission checks, responsive layout branches, theme helpers, and cross-component data flow should have Chinese comments when their intent is not obvious
+- Avoid piling comments inside JSX; prefer extracting complex conditions into named variables or small components
+- Theme and style comments should explain semantic layering, light/dark differences, or relationship to existing patterns
+- Comments in the frontend API layer must stay aligned with backend API semantics
+- Temporary UI constraints, browser compatibility behavior, mobile-specific handling, and accessibility tradeoffs must explain their reason
+
+---
+
+## 🧪 Testing Standards
+
+Clear, maintainable tests and predictable test file organization are basic requirements for code quality. Tests should verify real behavior and boundaries rather than implementation details or fragile coverage-only cases.
+
+### When to Add Tests
+
+Add or update Go tests when adding or changing:
+
+- Backend key business logic
+- API contracts
+- Permission checks
+- Configuration semantics
+- Migrations
+- Scheduled jobs
+- mihomo integrations
+- Protocol parsing
+- Data transformations
+
+### Test Naming
+
+Test names should describe the scenario and expected outcome. Avoid names like `TestSuccess`, `TestError`, or `should work` that do not express business intent.
+
+### Test Coverage
+
+- Cover happy paths, boundaries, error paths, and permission/configuration differences
+- Don't test only the easiest happy path
+- Test data should be local, readable, minimal, and expressed through helpers or fixtures
+- Tests must be isolated from each other
+- Assertions should explicitly verify important outputs, state changes, side effects, and error semantics
+
+### Test Maintenance
+
+- When fixing a bug, write a regression test that reproduces the issue before changing implementation
+- Never delete, skip, or weaken failing tests to hide problems
+- Reuse existing test style, fixtures, mocks, or helpers when they exist
+- Don't document hypothetical test frameworks or CI flows that are not wired into the repo
+
+### Go Test Requirements
+
+- Go test files must use the `_test.go` suffix and live in the same package directory as the code under test
+- Go test functions should follow standard names: `TestXxx`, `BenchmarkXxx`, `FuzzXxx`, and `ExampleXxx`
+- Prefer table-driven tests for multiple inputs, boundaries, and error cases
+- Test helpers should call `t.Helper()`
+- Temporary directories and files should prefer `t.TempDir()`
+- Cleanup should be registered with `t.Cleanup()`
+- Tests involving time, randomness, network, databases, filesystems, or goroutines should explicitly control dependencies
+- HTTP handler tests should prefer `httptest` with explicit request/response assertions
+- Database tests should use isolated test databases, transactions, or temporary storage
+- Concurrency tests should not rely on `time.Sleep` to guess timing
+
+### Frontend Test Boundaries
+
+This repository does not require frontend tests by default. Frontend quality is primarily guarded by lint, build, manual interaction checks, and light/dark/responsive verification.
+
+Add or update frontend tests only when:
+
+- Explicitly requested
+- A frontend test framework is later wired into the repo
+- The touched module already has frontend tests
+
+If frontend tests are written:
+
+- Test files should keep traceable names to the code under test
+- Prefer `*.test.jsx`, `*.test.js`, `*.spec.jsx`, or `*.spec.js`
+- Place tests near the component/hook/helper
+- Test from user-observable behavior
+- Verify text, roles, state changes, interaction results, error messages, and loading/empty/disabled states
+- Don't assert internal state or fragile MUI-generated class names
