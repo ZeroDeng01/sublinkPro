@@ -24,6 +24,7 @@ First built in Providers:
 - OpenAI
 - Gemini
 - Claude
+- Bahamut Anime
 
 > [!NOTE]
 > Current built in Providers try to use service level probes consistent with mainstream unlock check scripts. For example, OpenAI checks Web and iOS entries separately, Disney+ uses device, token, and region GraphQL probes, while YouTube Premium, Gemini, Claude, and Netflix read availability markers from the relevant pages or final redirects.
