@@ -21,7 +21,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           # cache: 'yarn' # Disabled to prevent using system Yarn v1 which conflicts with Corepack Yarn v4
 
       - name: Enable Corepack

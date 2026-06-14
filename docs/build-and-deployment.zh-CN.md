@@ -49,7 +49,7 @@ yarn run build
 ### 前置条件
 
 - Go 1.26.3 或更新版本
-- Node.js 22
+- Node.js 24
 - Yarn 4（通过 corepack）
 
 ### 生产构建详细步骤

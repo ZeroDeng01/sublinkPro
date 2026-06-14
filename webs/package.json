@@ -2,6 +2,9 @@
   "name": "sublinkpro-web",
   "version": "5.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "dependencies": {
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",

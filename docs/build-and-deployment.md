@@ -49,7 +49,7 @@ Build output goes to `webs/dist/`.
 ### Prerequisites
 
 - Go 1.26.3 or newer
-- Node.js 22
+- Node.js 24
 - Yarn 4 (via corepack)
 
 ### Step-by-Step Production Build
