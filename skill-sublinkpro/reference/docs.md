@@ -73,6 +73,7 @@ suffix for Chinese.
 | User asks about | Doc path |
 |---|---|
 | Project structure, local dev, scheduled-task dev, commenting standards, testing standards | `docs/development.md` |
+| Complete development workflow — task understanding to commit, mandatory post-dev validation | `docs/development-workflow.md` |
 | Build process, production build, Docker build, CI/CD pipeline, build troubleshooting | `docs/build-and-deployment.md` |
 | Common development patterns — add backend feature, scheduled task, mihomo changes, deployment changes | `docs/practical-recipes.md` |
 | Protocol extension guide (add a protocol, register capabilities, field metadata) | `docs/development.md` (section "Protocol Extension Guide") |

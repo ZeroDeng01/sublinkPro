@@ -9,14 +9,16 @@ This repository uses a structured agent skills system for operational checklists
 ```
 .agents/
 └── skills/
-    ├── theme-check/
-    │   └── SKILL.md                # Theme adaptation checklist
-    ├── cross-layer-sync/
-    │   └── SKILL.md                # Cross-layer synchronization guide
+    ├── post-dev-workflow/
+    │   └── SKILL.md                # MANDATORY post-development workflow
     ├── pre-commit-check/
     │   └── SKILL.md                # Pre-commit validation checklist
-    └── doc-sync-check/
-        └── SKILL.md                # Documentation sync checklist
+    ├── cross-layer-sync/
+    │   └── SKILL.md                # Cross-layer synchronization guide
+    ├── doc-sync-check/
+    │   └── SKILL.md                # Documentation sync checklist
+    └── theme-check/
+        └── SKILL.md                # Theme adaptation checklist
 ```
 
 ## Accessing Skills
@@ -29,7 +31,67 @@ Different agent systems access skills through symlinks:
 
 ## Available Skills
 
-### 1. Theme Check (`theme-check/SKILL.md`)
+### 1. Post-Development Workflow (`post-dev-workflow/SKILL.md`) ⭐ MANDATORY
+
+**Use when**: After completing ANY code change (backend, frontend, or both)
+
+**CRITICAL FOR AI AGENTS**: This is the master workflow that MUST be automatically triggered after every code change. It orchestrates all validation, synchronization, and documentation phases.
+
+**Covers**:
+- Phase 1: Code validation (lint, format, build, test)
+- Phase 2: Cross-layer sync check (if applicable)
+- Phase 3: Documentation sync check (if applicable)
+- Phase 4: Test execution (if applicable)
+- Phase 5: Change summary preparation
+
+**Exit criteria**: All phases pass, work is ready to commit
+
+**Relationship to other skills**: This skill orchestrates and invokes the other skills (pre-commit-check, cross-layer-sync, doc-sync-check) as needed. It is the single entry point for "code complete" workflow.
+
+### 2. Pre-Commit Check (`pre-commit-check/SKILL.md`)
+
+**Use when**: Before every commit or PR (also invoked automatically by post-dev-workflow Phase 1)
+
+**Covers**:
+- Backend validation (gofmt, golangci-lint, go test)
+- Frontend validation (yarn lint, yarn build)
+- i18n validation
+- Theme changes validation
+- Cross-layer validation
+- Git commit checklist
+
+**Exit criteria**: All validation commands pass, staging is clean
+
+### 3. Cross-Layer Sync (`cross-layer-sync/SKILL.md`)
+
+**Use when**: Changes affect multiple layers (backend ↔ frontend ↔ docs) (also invoked automatically by post-dev-workflow Phase 2)
+
+**Covers**:
+- Backend → Frontend sync
+- Frontend → Backend sync
+- Configuration sync
+- Documentation sync
+- API contract updates
+- Skill API reference updates
+
+**Exit criteria**: All impacted layers synchronized, verification complete
+
+### 4. Doc Sync Check (`doc-sync-check/SKILL.md`)
+
+**Use when**: Code changes affect documentation (also invoked automatically by post-dev-workflow Phase 3)
+
+**Covers**:
+- Feature documentation
+- Configuration documentation
+- API documentation
+- Installation/deployment docs
+- Developer documentation
+- Bilingual consistency
+- Documentation map updates
+
+**Exit criteria**: All docs updated, both languages synchronized, links verified
+
+### 5. Theme Check (`theme-check/SKILL.md`)
 
 **Use when**: Modifying any UI colors, surfaces, dialogs, panels, or theme infrastructure
 
@@ -44,61 +106,57 @@ Different agent systems access skills through symlinks:
 
 **Exit criteria**: Both modes tested, all variants checked, delivery summary complete
 
-### 2. Cross-Layer Sync (`cross-layer-sync/SKILL.md`)
-
-**Use when**: Changes affect multiple layers (backend ↔ frontend ↔ docs)
-
-**Covers**:
-- Backend → Frontend sync
-- Frontend → Backend sync
-- Configuration sync
-- Documentation sync
-- API contract updates
-- Skill API reference updates
-
-**Exit criteria**: All impacted layers synchronized, verification complete
-
-### 3. Pre-Commit Check (`pre-commit-check/SKILL.md`)
-
-**Use when**: Before every commit or PR
-
-**Covers**:
-- Backend validation (gofmt, golangci-lint, go test)
-- Frontend validation (yarn lint, yarn build)
-- i18n validation
-- Theme changes validation
-- Cross-layer validation
-- Git commit checklist
-
-**Exit criteria**: All validation commands pass, staging is clean
-
-### 4. Doc Sync Check (`doc-sync-check/SKILL.md`)
-
-**Use when**: Code changes affect documentation
-
-**Covers**:
-- Feature documentation
-- Configuration documentation
-- API documentation
-- Installation/deployment docs
-- Developer documentation
-- Bilingual consistency
-- Documentation map updates
-
-**Exit criteria**: All docs updated, both languages synchronized, links verified
-
 ## How to Use Skills
 
 ### For AI Agents
 
-When working on a task that matches a skill's domain:
+**CRITICAL**: The `post-dev-workflow` skill is MANDATORY and must be automatically triggered after completing ANY code change. It is the master workflow that orchestrates all other skills.
 
-1. **Identify the relevant skill** based on the task type
-2. **Read the skill file** to understand requirements
-3. **Follow the checklist** systematically
-4. **Document completion** in your change summary
+#### Automatic Workflow (Post-Development)
+
+After completing code changes:
+
+1. **Automatically invoke** `.agents/skills/post-dev-workflow/SKILL.md`
+2. The post-dev-workflow will **automatically orchestrate**:
+   - Phase 1: Code validation (pre-commit-check)
+   - Phase 2: Cross-layer sync (if applicable)
+   - Phase 3: Documentation sync (if applicable)
+   - Phase 4: Test execution (if applicable)
+   - Phase 5: Change summary preparation
+3. **Report results** to the user
+4. **Only declare work complete** when all phases pass
 
 Example flow:
+```
+Code changes complete
+    ↓
+Automatically invoke: .agents/skills/post-dev-workflow/SKILL.md
+    ↓
+Run Phase 1: Code Validation
+    → Backend: gofmt ✅, golangci-lint ✅, go test ✅
+    → Frontend: yarn lint ✅, yarn build ✅
+    ↓
+Run Phase 2: Cross-Layer Sync (backend API changed)
+    → Frontend updated ✅
+    → skill-sublinkpro/reference/api.md updated ✅
+    ↓
+Run Phase 3: Documentation Sync
+    → docs/configuration.md + .zh-CN.md updated ✅
+    ↓
+Run Phase 4: Test Execution
+    → Added tests for new logic ✅
+    → All tests passing ✅
+    ↓
+Run Phase 5: Change Summary
+    → Commit message prepared ✅
+    ↓
+Report to user: "Work is ready to commit"
+```
+
+#### Manual Skill Invocation (Special Cases)
+
+For specialized tasks, you may also invoke individual skills directly:
+
 ```
 Task: Update theme colors for dark mode
 → Invoke: .agents/skills/theme-check/SKILL.md
@@ -106,6 +164,8 @@ Task: Update theme colors for dark mode
 → Verify: All checklist items complete
 → Document: What was checked, what patterns were used
 ```
+
+But even after specialized skills, you must still run the post-dev-workflow before declaring work complete.
 
 ### For Human Contributors
 
@@ -160,6 +220,7 @@ To add a new skill:
 - Project structure
 - Key integration points
 - Source of truth hierarchy
+- **MANDATORY post-development workflow instruction for AI agents**
 
 **Skills** contain:
 - Operational checklists
@@ -168,6 +229,8 @@ To add a new skill:
 - Detailed verification steps
 
 Think of AGENTS.md as "why and what" (principles), and skills as "how" (procedures).
+
+**The post-dev-workflow skill** bridges the two: it's mandated by AGENTS.md and implemented as a skill that orchestrates all other skills.
 
 ## Benefits
 

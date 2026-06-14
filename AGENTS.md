@@ -2,6 +2,67 @@
 
 This file provides AI and human contributors with a high-level architectural guide and navigation map for SublinkPro.
 
+---
+
+## 0. MANDATORY: Post-Development Workflow for AI Agents
+
+**CRITICAL INSTRUCTION FOR AI AGENTS**: After completing ANY code change, you MUST automatically run the post-development workflow before declaring work "complete". This is NOT optional.
+
+### Workflow Overview
+
+```
+Code Change Complete
+    ↓
+Automatically invoke: .agents/skills/post-dev-workflow/SKILL.md
+    ↓
+Phase 1: Code Validation (lint, format, build, test)
+    ↓
+Phase 2: Cross-Layer Sync Check (if multi-layer change)
+    ↓
+Phase 3: Documentation Sync Check (if behavior/API/config changed)
+    ↓
+Phase 4: Test Execution (if key logic changed)
+    ↓
+Phase 5: Change Summary (prepare commit message)
+    ↓
+Report Results to User
+    ↓
+Ready to Commit (only if all phases pass)
+```
+
+### When to Trigger
+
+**Always** trigger after:
+- Backend code changes (any `.go` file)
+- Frontend code changes (any file in `webs/`)
+- Configuration changes
+- Documentation changes that affect code behavior
+- Any combination of the above
+
+### What "Complete" Means
+
+Work is NOT complete until:
+- ✅ All validation passes (lint, format, build, test)
+- ✅ Cross-layer synchronization verified (if applicable)
+- ✅ Documentation updated (if applicable)
+- ✅ Tests added/updated (if applicable)
+- ✅ Change summary prepared
+
+**Do not declare work "done" or "finished" until the post-development workflow completes successfully.**
+
+### Detailed Workflow
+
+See `.agents/skills/post-dev-workflow/SKILL.md` for:
+- Complete phase-by-phase workflow
+- Validation commands for each layer
+- Cross-layer sync requirements
+- Documentation sync requirements
+- Test execution guidelines
+- Change summary format
+- Exit criteria
+
+---
+
 ## 1. Project Shape
 
 **Architecture**: Single full-stack application (not a monorepo)
@@ -106,12 +167,15 @@ See `CONTRIBUTING.md` for:
 
 For task-specific validation procedures, see `.agents/skills/`:
 
-- **theme-check** - UI theme adaptation checklist
+- **post-dev-workflow** - **MANDATORY** automated workflow after completing ANY code change (AI agents must run this)
+- **pre-commit-check** - Pre-commit validation steps (subset of post-dev-workflow)
 - **cross-layer-sync** - Multi-layer synchronization guide
-- **pre-commit-check** - Pre-commit validation steps
 - **doc-sync-check** - Documentation sync requirements
+- **theme-check** - UI theme adaptation checklist
 
 Skills are reusable checklists for operational tasks. See `.agents/README.md` for details.
+
+**For AI agents**: The `post-dev-workflow` skill is the master workflow that orchestrates all other skills. It must be invoked automatically after every code change.
 
 ## 7. Core Architectural Principles
 
