@@ -34,6 +34,10 @@ func Settings(r *gin.Engine) {
 		SettingsGroup.GET("/node-dedup", api.GetNodeDedupConfig)
 		SettingsGroup.POST("/node-dedup", middlewares.DemoModeRestrict, api.UpdateNodeDedupConfig)
 
+		// 全局节点处理规则配置
+		SettingsGroup.GET("/global-node-processing", api.GetGlobalNodeProcessingConfig)
+		SettingsGroup.POST("/global-node-processing", middlewares.DemoModeRestrict, api.UpdateGlobalNodeProcessingConfig)
+
 		// AI 助手设置
 		SettingsGroup.GET("/ai-assistant", api.UserGetAISettings)
 		SettingsGroup.POST("/ai-assistant/models", middlewares.DemoModeRestrict, api.UserListAIModels)

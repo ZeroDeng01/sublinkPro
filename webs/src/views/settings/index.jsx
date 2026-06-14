@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 
 // material-ui
 import Box from '@mui/material/Box';
@@ -14,6 +14,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import LanguageIcon from '@mui/icons-material/Language';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import TuneIcon from '@mui/icons-material/Tune';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import StorageIcon from '@mui/icons-material/Storage';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
@@ -25,6 +26,7 @@ import ProfileSettings from './components/ProfileSettings';
 import SubscriptionAddressSettings from './components/SubscriptionAddressSettings';
 import TelegramSettings from './components/TelegramSettings';
 import NodeDedupSettings from './components/NodeDedupSettings';
+import GlobalNodeProcessingSettings from './components/GlobalNodeProcessingSettings';
 import DatabaseMigrationSettings from './components/DatabaseMigrationSettings';
 import AIAssistantSettings from './components/AIAssistantSettings';
 import CloudflareTunnelSettings from './components/CloudflareTunnelSettings';
@@ -51,10 +53,28 @@ function a11yProps(index) {
 
 export default function UserSettings() {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
-  const [tabValue, setTabValue] = useState(() => (searchParams.get('tab') === 'ai' ? 4 : 0));
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const [tabValue, setTabValue] = useState(() => {
+    // 只在首次加载时读取 URL 参数
+    const tab = searchParams.get('tab');
+    if (tab === 'ai') return 5;
+    if (tab === 'globalNodeProcessing') return 4;
+    // 或者从 location.state 读取
+    if (location.state?.targetTab === 'globalNodeProcessing') return 4;
+    if (location.state?.targetTab === 'ai') return 5;
+    return 0;
+  });
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  // 首次加载后清除 URL 参数，避免刷新时又跳回来
+  useEffect(() => {
+    if (searchParams.has('tab')) {
+      // 清除 URL 参数，但不改变标签状态
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleTabChange = (_event, newValue) => {
     setTabValue(newValue);
@@ -68,8 +88,24 @@ export default function UserSettings() {
     setSnackbar((prev) => ({ ...prev, open: false }));
   }, []);
 
+  // 获取当前标签页的标题
+  const getCurrentTabTitle = () => {
+    const tabTitles = [
+      t('settings.tabs.profile'),
+      t('settings.tabs.subscriptionAddress'),
+      t('settings.tabs.telegram'),
+      t('settings.tabs.nodeDedup'),
+      t('settings.tabs.globalNodeProcessing'),
+      t('settings.tabs.aiAssistant'),
+      'Cloudflare Tunnel',
+      t('settings.tabs.subStore'),
+      t('settings.tabs.dataMigration')
+    ];
+    return tabTitles[tabValue] || t('settings.title');
+  };
+
   return (
-    <MainCard title={t('settings.title')}>
+    <MainCard title={getCurrentTabTitle()}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs
           value={tabValue}
@@ -101,10 +137,16 @@ export default function UserSettings() {
             {...a11yProps(2)}
           />
           <Tab icon={<TuneIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.nodeDedup')} {...a11yProps(3)} />
-          <Tab icon={<PsychologyIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.aiAssistant')} {...a11yProps(4)} />
-          <Tab icon={<CloudQueueIcon sx={{ mr: 1 }} />} iconPosition="start" label="Cloudflare Tunnel" {...a11yProps(5)} />
-          <Tab icon={<ExtensionIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.subStore')} {...a11yProps(6)} />
-          <Tab icon={<StorageIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.dataMigration')} {...a11yProps(7)} />
+          <Tab
+            icon={<FilterAltIcon sx={{ mr: 1 }} />}
+            iconPosition="start"
+            label={t('settings.tabs.globalNodeProcessing')}
+            {...a11yProps(4)}
+          />
+          <Tab icon={<PsychologyIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.aiAssistant')} {...a11yProps(5)} />
+          <Tab icon={<CloudQueueIcon sx={{ mr: 1 }} />} iconPosition="start" label="Cloudflare Tunnel" {...a11yProps(6)} />
+          <Tab icon={<ExtensionIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.subStore')} {...a11yProps(7)} />
+          <Tab icon={<StorageIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.dataMigration')} {...a11yProps(8)} />
         </Tabs>
       </Box>
 
@@ -125,18 +167,22 @@ export default function UserSettings() {
       </TabPanel>
 
       <TabPanel value={tabValue} index={4}>
-        <AIAssistantSettings showMessage={showMessage} loading={loading} setLoading={setLoading} />
+        <GlobalNodeProcessingSettings showMessage={showMessage} />
       </TabPanel>
 
       <TabPanel value={tabValue} index={5}>
-        <CloudflareTunnelSettings showMessage={showMessage} />
+        <AIAssistantSettings showMessage={showMessage} loading={loading} setLoading={setLoading} />
       </TabPanel>
 
       <TabPanel value={tabValue} index={6}>
-        <SubStoreSettings showMessage={showMessage} />
+        <CloudflareTunnelSettings showMessage={showMessage} />
       </TabPanel>
 
       <TabPanel value={tabValue} index={7}>
+        <SubStoreSettings showMessage={showMessage} />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={8}>
         <DatabaseMigrationSettings showMessage={showMessage} />
       </TabPanel>
 

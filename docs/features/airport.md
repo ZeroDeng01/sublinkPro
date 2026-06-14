@@ -69,6 +69,27 @@ This gives a direct overview of airport usage.
 
 After “post update check” is enabled, checks are triggered only when the current airport subscription updates successfully. The check range is limited to nodes from this airport's latest update. It does not wait for the node check profile's own schedule, and it does not expand to nodes from other airports. If “only check changed and new nodes” is enabled, SublinkPro checks only nodes that were added or updated during this fetch; when there are no added or updated nodes, it skips the post update check instead of falling back to all airport nodes. Node check tasks triggered by this feature are marked as “airport update” in Task Center, so they can be distinguished from “manual” and “scheduled” triggers.
 
+### Node processing: filters and rename rules
+
+In “Node Processing, applied during fetch” inside the airport edit dialog, you can configure:
+
+- **Node name filters**: whitelist and blacklist rules to filter nodes by name (text match or regex).
+- **Protocol filters**: whitelist and blacklist to filter nodes by protocol type (ss, vmess, trojan, etc.).
+- **Node name preprocessing**: rename rules to transform node names (text replacement or regex).
+- **Deduplication rules**: custom deduplication logic to remove duplicate nodes within the same airport.
+
+**Global node processing rules**: In addition to airport-specific rules, you can configure global rules in “Settings → Global Node Processing”. Global rules apply to all airports and stack with airport-specific rules:
+
+- **Rule application order**: Global filters → Airport filters → Deduplication → Global rename → Airport rename → Name uniqueness
+- **Filter stacking**: Global and airport blacklists/whitelists are merged.
+- **Rename stacking**: Global rename rules apply first, then airport rename rules.
+
+Notes:
+
+- All node processing rules take effect **when fetching subscriptions**. After changes, refetch the airport to apply them to existing nodes.
+- Filtered nodes are not stored in the database.
+- Global rules can be accessed from the airport management page via the “Global Rules” button in the toolbar.
+
 ### Node processing: unique names
 
 In “Node Processing, applied during fetch” inside the airport edit dialog, you can configure unique node names:

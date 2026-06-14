@@ -153,6 +153,9 @@
   },
   "airports": {
     "title": "机场管理",
+    "actions": {
+      "globalRules": "全局规则"
+    },
     "page": {
       "actions": {
         "addAirport": "添加机场",
@@ -326,7 +329,8 @@
         "changedOnlyDescription": "开启后仅检测本次更新中配置变化或新增的节点，不检测已有节点"
       },
       "nodeProcessing": {
-        "alert": "以下规则在拉取订阅时立即生效，过滤的节点不会存储到数据库"
+        "alert": "以下规则在拉取订阅时立即生效，过滤的节点不会存储到数据库",
+        "globalRulesLink": "全局节点处理规则"
       }
     },
     "list": {
@@ -512,6 +516,15 @@
       "saveFailed": "保存失败"
     }
   },
+  "globalNodeProcessing": {
+    "title": "全局节点处理规则",
+    "subheader": "这些规则将应用于所有机场，与机场特定规则叠加生效",
+    "info": "全局规则与机场特定规则<strong>叠加生效</strong>。过滤规则：两者的黑名单和白名单会合并。重命名规则：先应用全局规则，再应用机场规则。",
+    "messages": {
+      "saveSuccess": "全局节点处理配置保存成功",
+      "saveFailed": "保存全局节点处理配置失败"
+    }
+  },
   "settings": {
     "title": "用户中心",
     "tabs": {
@@ -519,6 +532,7 @@
       "subscriptionAddress": "订阅地址设置",
       "telegram": "Telegram 机器人",
       "nodeDedup": "节点去重",
+      "globalNodeProcessing": "全局节点处理",
       "aiAssistant": "AI 助手",
       "subStore": "Sub-Store",
       "dataMigration": "数据迁移"

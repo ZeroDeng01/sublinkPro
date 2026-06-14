@@ -153,6 +153,9 @@
   },
   "airports": {
     "title": "Airport Management",
+    "actions": {
+      "globalRules": "Global Rules"
+    },
     "page": {
       "actions": {
         "addAirport": "Add Airport",
@@ -326,7 +329,8 @@
         "changedOnlyDescription": "When enabled, only nodes changed or added in this update are checked. Existing nodes are skipped."
       },
       "nodeProcessing": {
-        "alert": "The following rules take effect immediately when pulling subscriptions. Filtered nodes are not stored in the database."
+        "alert": "The following rules take effect immediately when pulling subscriptions. Filtered nodes are not stored in the database.",
+        "globalRulesLink": "global node processing rules"
       }
     },
     "list": {
@@ -512,6 +516,15 @@
       "saveFailed": "Save failed"
     }
   },
+  "globalNodeProcessing": {
+    "title": "Global Node Processing Rules",
+    "subheader": "These rules apply to all airports and stack with airport-specific rules",
+    "info": "Global rules and airport-specific rules <strong>stack together</strong>. Filter rules: blacklists and whitelists from both are merged. Rename rules: global rules apply first, then airport rules.",
+    "messages": {
+      "saveSuccess": "Global node processing config saved successfully",
+      "saveFailed": "Failed to save global node processing config"
+    }
+  },
   "settings": {
     "title": "User Center",
     "tabs": {
@@ -519,6 +532,7 @@
       "subscriptionAddress": "Subscription address",
       "telegram": "Telegram bot",
       "nodeDedup": "Node deduplication",
+      "globalNodeProcessing": "Global node processing",
       "aiAssistant": "AI Assistant",
       "subStore": "Sub-Store",
       "dataMigration": "Data migration"

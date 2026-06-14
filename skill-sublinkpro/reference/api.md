@@ -463,6 +463,8 @@ Base: `/api/v1/settings` (write bodies are JSON unless noted; most writes are de
 
 **Node dedup:** **GET** `/settings/node-dedup` · **POST** `/settings/node-dedup`
 
+**Global node processing:** **GET** `/settings/global-node-processing` · **POST** `/settings/global-node-processing` (`{nodeNameWhitelist, nodeNameBlacklist, protocolWhitelist, protocolBlacklist, nodeNamePreprocess}`)
+
 **Telegram:** **GET** `/settings/telegram` · **POST** `/settings/telegram` · **POST** `/settings/telegram/test` · **GET** `/settings/telegram/status` · **POST** `/settings/telegram/reconnect`
 
 **Cloudflared:** **GET** `/settings/cloudflared` · **POST** `/settings/cloudflared` · **POST** `/settings/cloudflared/start` · **POST** `/settings/cloudflared/stop` · **DELETE** `/settings/cloudflared/token`

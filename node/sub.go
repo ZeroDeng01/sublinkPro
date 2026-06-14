@@ -723,20 +723,56 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 		utils.Error("获取机场 %s 的Group失败:  %v", subName, err)
 	}
 
-	// 应用机场节点过滤和重命名规则
+	// 1. 读取全局节点处理配置
+	globalWhitelist, _ := models.GetSetting("global_node_name_whitelist")
+	globalBlacklist, _ := models.GetSetting("global_node_name_blacklist")
+	globalProtocolWhitelist, _ := models.GetSetting("global_protocol_whitelist")
+	globalProtocolBlacklist, _ := models.GetSetting("global_protocol_blacklist")
+	globalPreprocess, _ := models.GetSetting("global_node_name_preprocess")
+
+	// 2. 构造全局配置的虚拟 Airport 对象
+	globalAirport := &models.Airport{
+		NodeNameWhitelist:  globalWhitelist,
+		NodeNameBlacklist:  globalBlacklist,
+		ProtocolWhitelist:  globalProtocolWhitelist,
+		ProtocolBlacklist:  globalProtocolBlacklist,
+		NodeNamePreprocess: globalPreprocess,
+	}
+
+	// 3. 先应用全局过滤规则
+	if globalWhitelist != "" || globalBlacklist != "" ||
+		globalProtocolWhitelist != "" || globalProtocolBlacklist != "" {
+		originalCount := len(proxys)
+		proxys = applyAirportNodeFilter(globalAirport, proxys)
+		if len(proxys) < originalCount {
+			utils.Info("🌐全局过滤后节点数量：%d（原始：%d，过滤掉：%d）",
+				len(proxys), originalCount, originalCount-len(proxys))
+		}
+	}
+
+	// 4. 再应用机场特定过滤规则
 	if airport != nil {
 		originalCount := len(proxys)
 		proxys = applyAirportNodeFilter(airport, proxys)
 		if len(proxys) < originalCount {
-			utils.Info("📦订阅【%s】过滤后节点数量：%d（原始：%d，过滤掉：%d）", subName, len(proxys), originalCount, originalCount-len(proxys))
+			utils.Info("📦机场【%s】过滤后节点数量：%d（原始：%d，过滤掉：%d）", subName, len(proxys), originalCount, originalCount-len(proxys))
 		}
 		// 应用高级去重规则
 		beforeDedup := len(proxys)
 		proxys = applyAirportDeduplication(airport, proxys)
 		if len(proxys) < beforeDedup {
-			utils.Info("🔄订阅【%s】去重后节点数量：%d（去重前：%d，去重掉：%d）", subName, len(proxys), beforeDedup, beforeDedup-len(proxys))
+			utils.Info("🔄机场【%s】去重后节点数量：%d（去重前：%d，去重掉：%d）", subName, len(proxys), beforeDedup, beforeDedup-len(proxys))
 		}
-		//节点重命名
+	}
+
+	// 5. 先应用全局重命名规则
+	if globalPreprocess != "" {
+		proxys = applyAirportNodeRename(globalAirport, proxys)
+		utils.Info("🌐应用全局节点名称预处理规则")
+	}
+
+	// 6. 再应用机场特定重命名规则
+	if airport != nil {
 		proxys = applyAirportNodeRename(airport, proxys)
 		// 节点名称唯一化（先添加机场标识前缀，机场内编号在后续去重判断完成后再应用）
 		proxys = applyAirportNodeNamePrefix(airport, proxys)

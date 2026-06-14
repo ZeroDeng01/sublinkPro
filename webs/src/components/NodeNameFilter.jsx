@@ -57,7 +57,12 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
       } catch {
         setWhitelistRules([]);
       }
+    } else {
+      setWhitelistRules([]);
     }
+  }, [whitelistValue]);
+
+  useEffect(() => {
     if (blacklistValue) {
       try {
         const parsed = JSON.parse(blacklistValue);
@@ -72,9 +77,10 @@ export default function NodeNameFilter({ whitelistValue, blacklistValue, onWhite
       } catch {
         setBlacklistRules([]);
       }
+    } else {
+      setBlacklistRules([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [blacklistValue]);
 
   const syncWhitelistRules = useCallback(
     (newRules) => {

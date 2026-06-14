@@ -62,9 +62,10 @@ export default function NodeNamePreprocessor({ value, onChange }) {
       } catch {
         setRules([]);
       }
+    } else {
+      setRules([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [value]);
 
   const syncRules = useCallback(
     (newRules) => {

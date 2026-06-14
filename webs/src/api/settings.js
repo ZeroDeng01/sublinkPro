@@ -88,6 +88,23 @@ export function updateNodeDedupConfig(data) {
   });
 }
 
+// 获取全局节点处理配置
+export function getGlobalNodeProcessingConfig() {
+  return request({
+    url: '/v1/settings/global-node-processing',
+    method: 'get'
+  });
+}
+
+// 保存全局节点处理配置
+export function updateGlobalNodeProcessingConfig(data) {
+  return request({
+    url: '/v1/settings/global-node-processing',
+    method: 'post',
+    data
+  });
+}
+
 export function getAISettings() {
   return request({
     url: '/v1/settings/ai-assistant',

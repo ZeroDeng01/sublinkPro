@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 import { useTheme } from '@mui/material/styles';
 import Alert from '@mui/material/Alert';
@@ -13,6 +14,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
+import Link from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -21,6 +23,7 @@ import Typography from '@mui/material/Typography';
 
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import InfoIcon from '@mui/icons-material/Info';
 
 import SearchableNodeSelect from 'components/SearchableNodeSelect';
 import CronExpressionGenerator from 'components/CronExpressionGenerator';
@@ -74,6 +77,7 @@ export default function AirportFormDialog({
 }) {
   const theme = useTheme();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { isDark } = useResolvedColorScheme();
   const { palette, dialogSurface, dialogSurfaceGradient, mutedPanelSurface, nestedPanelSurface, panelBorder } = getSurfaceTokens(
     theme,
@@ -581,8 +585,21 @@ export default function AirportFormDialog({
             titleColor={primaryText}
           >
             <Stack spacing={2}>
-              <Alert severity="info" icon={false}>
-                <Typography variant="caption">{t('airports.form.nodeProcessing.alert')}</Typography>
+              <Alert severity="info" icon={<InfoIcon />}>
+                <Typography variant="caption">
+                  {t('airports.form.nodeProcessing.alert')}{' '}
+                  <Link
+                    component="button"
+                    variant="caption"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate('/system/settings', { state: { targetTab: 'globalNodeProcessing' } });
+                    }}
+                    sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    {t('airports.form.nodeProcessing.globalRulesLink')}
+                  </Link>
+                </Typography>
               </Alert>
               <NodeNameFilter
                 whitelistValue={airportForm.nodeNameWhitelist || ''}

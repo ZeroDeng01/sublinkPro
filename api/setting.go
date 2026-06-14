@@ -96,3 +96,60 @@ func UpdateNodeDedupConfig(c *gin.Context) {
 	}
 	utils.OkWithMsg(c, "保存成功")
 }
+
+// GetGlobalNodeProcessingConfig 获取全局节点处理配置
+func GetGlobalNodeProcessingConfig(c *gin.Context) {
+	whitelist, _ := models.GetSetting("global_node_name_whitelist")
+	blacklist, _ := models.GetSetting("global_node_name_blacklist")
+	protocolWhitelist, _ := models.GetSetting("global_protocol_whitelist")
+	protocolBlacklist, _ := models.GetSetting("global_protocol_blacklist")
+	preprocess, _ := models.GetSetting("global_node_name_preprocess")
+
+	utils.OkDetailed(c, "获取成功", gin.H{
+		"nodeNameWhitelist":  whitelist,
+		"nodeNameBlacklist":  blacklist,
+		"protocolWhitelist":  protocolWhitelist,
+		"protocolBlacklist":  protocolBlacklist,
+		"nodeNamePreprocess": preprocess,
+	})
+}
+
+// UpdateGlobalNodeProcessingConfig 更新全局节点处理配置
+func UpdateGlobalNodeProcessingConfig(c *gin.Context) {
+	var req struct {
+		NodeNameWhitelist  string `json:"nodeNameWhitelist"`
+		NodeNameBlacklist  string `json:"nodeNameBlacklist"`
+		ProtocolWhitelist  string `json:"protocolWhitelist"`
+		ProtocolBlacklist  string `json:"protocolBlacklist"`
+		NodeNamePreprocess string `json:"nodeNamePreprocess"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+
+	// 保存配置
+	if err := models.SetSetting("global_node_name_whitelist", req.NodeNameWhitelist); err != nil {
+		utils.FailWithMsg(c, "保存全局节点名称白名单失败: "+err.Error())
+		return
+	}
+	if err := models.SetSetting("global_node_name_blacklist", req.NodeNameBlacklist); err != nil {
+		utils.FailWithMsg(c, "保存全局节点名称黑名单失败: "+err.Error())
+		return
+	}
+	if err := models.SetSetting("global_protocol_whitelist", req.ProtocolWhitelist); err != nil {
+		utils.FailWithMsg(c, "保存全局协议白名单失败: "+err.Error())
+		return
+	}
+	if err := models.SetSetting("global_protocol_blacklist", req.ProtocolBlacklist); err != nil {
+		utils.FailWithMsg(c, "保存全局协议黑名单失败: "+err.Error())
+		return
+	}
+	if err := models.SetSetting("global_node_name_preprocess", req.NodeNamePreprocess); err != nil {
+		utils.FailWithMsg(c, "保存全局节点名称预处理规则失败: "+err.Error())
+		return
+	}
+
+	utils.OkWithMsg(c, "保存成功")
+}

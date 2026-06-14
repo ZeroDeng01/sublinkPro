@@ -28,6 +28,7 @@ import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SettingsIcon from '@mui/icons-material/Settings';
 import TuneIcon from '@mui/icons-material/Tune';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import ViewListIcon from '@mui/icons-material/ViewList';
@@ -995,6 +996,20 @@ export default function AirportList() {
             }}
           >
             {t('airports.page.actions.search')}
+          </Button>
+          <Box sx={{ flex: 1 }} />
+          {/* 全局规则快捷入口 */}
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<SettingsIcon />}
+            onClick={() => navigate('/system/settings', { state: { targetTab: 'globalNodeProcessing' } })}
+            sx={{
+              borderStyle: 'dashed',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {t('airports.actions.globalRules')}
           </Button>
         </Stack>
       </Box>
