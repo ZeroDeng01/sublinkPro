@@ -17,8 +17,12 @@ This repository uses a structured agent skills system for operational checklists
     │   └── SKILL.md                # Cross-layer synchronization guide
     ├── doc-sync-check/
     │   └── SKILL.md                # Documentation sync checklist
-    └── theme-check/
-        └── SKILL.md                # Theme adaptation checklist
+    ├── theme-check/
+    │   └── SKILL.md                # Theme adaptation checklist
+    ├── security-review/
+    │   └── SKILL.md                # Security review checklist
+    └── performance-check/
+        └── SKILL.md                # Performance check checklist
 ```
 
 ## Accessing Skills
@@ -105,6 +109,41 @@ Different agent systems access skills through symlinks:
 - Reference pattern usage
 
 **Exit criteria**: Both modes tested, all variants checked, delivery summary complete
+
+### 6. Security Review (`security-review/SKILL.md`)
+
+**Use when**: Making changes to authentication, authorization, sensitive data handling, or security-critical features
+
+**Covers**:
+- Authentication & authorization checks
+- MFA (Multi-Factor Authentication) security
+- Sensitive data handling (passwords, tokens, API keys)
+- Input validation & sanitization (SQL injection, XSS, path traversal)
+- Database security (parameterized queries, mass assignment)
+- API security (CORS, rate limiting, error handling)
+- Cryptography (strong algorithms, secure random)
+- File upload/download security
+- Session management
+- Dependency security scanning
+
+**Exit criteria**: All security checks pass, no sensitive data exposed, security linters pass, security implications documented
+
+### 7. Performance Check (`performance-check/SKILL.md`)
+
+**Use when**: Making changes that may impact performance, scalability, or resource usage
+
+**Covers**:
+- Database query optimization (N+1 problems, indexes, pagination)
+- API response optimization (DTOs, compression, caching)
+- Frontend rendering optimization (memo, virtualization, debouncing)
+- Caching strategy (cache keys, TTL, invalidation)
+- Concurrency & parallelization (goroutines, race conditions)
+- Memory management (leaks, allocations, streaming)
+- Network optimization (connection pooling, timeouts)
+- Algorithm complexity (time/space complexity)
+- Performance testing (benchmarks, load tests, Lighthouse)
+
+**Exit criteria**: No N+1 queries, large lists paginated/virtualized, benchmark tests pass, performance implications documented
 
 ## How to Use Skills
 

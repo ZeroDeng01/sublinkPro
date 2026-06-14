@@ -99,6 +99,10 @@ yarn run prettier
 
 **Trigger condition**: Changes affect multiple layers (backend + frontend, or code + docs, or code + config)
 
+**Additional checks**: For security-critical or performance-sensitive changes, invoke specialized skills:
+- **Security changes**: Also invoke `.agents/skills/security-review/SKILL.md`
+- **Performance-critical changes**: Also invoke `.agents/skills/performance-check/SKILL.md`
+
 ### Quick checklist
 
 Use `.agents/skills/cross-layer-sync/SKILL.md` for detailed verification.
@@ -192,8 +196,16 @@ Skip only if:
 - [ ] Fixed a bug (add regression test)
 
 **Frontend tests**:
-- Currently optional (no frontend test framework wired in)
-- Only add if explicitly requested or if module already has tests
+- [ ] Added or changed utility functions in `webs/src/utils/`
+- [ ] Added or changed complex components with business logic
+- [ ] Added or changed API client functions in `webs/src/api/`
+- [ ] Fixed a bug (add regression test)
+
+**Note**: Test framework is now configured with Vitest. Run tests with:
+```bash
+cd webs
+yarn test
+```
 
 ### Test requirements
 
@@ -201,6 +213,11 @@ Skip only if:
 # Backend: run relevant tests
 go test ./services/scheduler/...  # Example: if scheduler changed
 go test ./...                     # Full suite if time permits
+
+# Frontend: run relevant tests
+cd webs
+yarn test                         # Run all tests
+yarn test --run                   # Run without watch mode
 ```
 
 **Test quality**:
@@ -503,7 +520,7 @@ After running this workflow, report to the user:
 
 ### Phase 1: Code Validation ✅
 - Backend: gofmt ✅, golangci-lint ✅, go test ✅
-- Frontend: yarn lint ✅, yarn build ✅
+- Frontend: yarn lint ✅, yarn build ✅, yarn test ✅
 
 ### Phase 2: Cross-Layer Sync ✅
 - Backend API changed → Frontend updated ✅
@@ -554,6 +571,8 @@ Fixing now...
 - `.agents/skills/cross-layer-sync/SKILL.md` - Detailed cross-layer synchronization guide
 - `.agents/skills/doc-sync-check/SKILL.md` - Detailed documentation sync guide
 - `.agents/skills/theme-check/SKILL.md` - Theme-specific validation (when UI colors/surfaces changed)
+- `.agents/skills/security-review/SKILL.md` - Security review checklist (for auth/sensitive data changes)
+- `.agents/skills/performance-check/SKILL.md` - Performance review checklist (for optimization work)
 
 ---
 

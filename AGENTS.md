@@ -172,6 +172,8 @@ For task-specific validation procedures, see `.agents/skills/`:
 - **cross-layer-sync** - Multi-layer synchronization guide
 - **doc-sync-check** - Documentation sync requirements
 - **theme-check** - UI theme adaptation checklist
+- **security-review** - Security review for authentication, authorization, sensitive data changes
+- **performance-check** - Performance review for optimization, scalability, resource usage
 
 Skills are reusable checklists for operational tasks. See `.agents/README.md` for details.
 

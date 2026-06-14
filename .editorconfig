@@ -1,0 +1,47 @@
+# EditorConfig 统一编辑器配置
+# https://editorconfig.org
+
+# 顶级配置文件，不再向上查找
+root = true
+
+# 所有文件的默认配置
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Go 文件使用 tab 缩进（Go 官方规范）
+[*.go]
+indent_style = tab
+indent_size = 4
+
+# Makefile 必须使用 tab
+[Makefile]
+indent_style = tab
+
+# Markdown 文件保留尾随空格（用于换行）
+[*.md]
+trim_trailing_whitespace = false
+
+# YAML 文件使用 2 空格缩进
+[*.{yml,yaml}]
+indent_size = 2
+
+# JSON 文件使用 2 空格缩进
+[*.json]
+indent_size = 2
+
+# Shell 脚本使用 2 空格缩进
+[*.sh]
+indent_size = 2
+
+# Python 文件使用 4 空格缩进
+[*.py]
+indent_size = 4
+
+# 批处理文件使用 CRLF（Windows 要求）
+[*.{bat,cmd}]
+end_of_line = crlf

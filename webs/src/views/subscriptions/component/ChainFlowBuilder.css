@@ -1,220 +1,218 @@
 .chain-flow-container {
-    width: 100%;
-    height: 450px;
-    background: var(--flow-bg);
-    border-radius: 12px;
-    overflow: hidden;
-    position: relative;
-    border: 1px solid var(--flow-border);
+  width: 100%;
+  height: 450px;
+  background: var(--flow-bg);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--flow-border);
 }
 
 .chain-flow-container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image:
-        linear-gradient(var(--flow-grid) 1px, transparent 1px),
-        linear-gradient(90deg, var(--flow-grid) 1px, transparent 1px);
-    background-size: 36px 36px;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.45;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: linear-gradient(var(--flow-grid) 1px, transparent 1px), linear-gradient(90deg, var(--flow-grid) 1px, transparent 1px);
+  background-size: 36px 36px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.45;
 }
 
 .chain-flow-container::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(180deg, transparent 0%, var(--flow-overlay) 100%);
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.8;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, transparent 0%, var(--flow-overlay) 100%);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.8;
 }
 
 .chain-flow-container .react-flow {
-    background: transparent !important;
+  background: transparent !important;
 }
 
 .chain-flow-container .react-flow__background {
-    display: none;
+  display: none;
 }
 
 .chain-flow-container .react-flow__controls {
-    background: var(--flow-surface-strong);
-    border: 1px solid var(--flow-border);
-    border-radius: 8px;
-    box-shadow: 0 8px 18px -14px var(--flow-shadow);
-    bottom: 50px !important;
-    left: 10px !important;
+  background: var(--flow-surface-strong);
+  border: 1px solid var(--flow-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 18px -14px var(--flow-shadow);
+  bottom: 50px !important;
+  left: 10px !important;
 }
 
 .chain-flow-container .react-flow__controls-button {
-    background: transparent;
-    border-bottom: 1px solid var(--flow-border-muted);
-    fill: var(--flow-muted);
-    transition: all 0.2s ease;
+  background: transparent;
+  border-bottom: 1px solid var(--flow-border-muted);
+  fill: var(--flow-muted);
+  transition: all 0.2s ease;
 }
 
 .chain-flow-container .react-flow__controls-button:hover {
-    background: var(--flow-hover);
-    fill: var(--flow-primary);
+  background: var(--flow-hover);
+  fill: var(--flow-primary);
 }
 
 .chain-flow-container .react-flow__controls-button:last-child {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 .chain-flow-container .react-flow__handle {
-    width: 8px;
-    height: 8px;
-    background: var(--flow-handle);
-    border: 2px solid var(--flow-handle-border);
-    box-shadow: 0 0 0 2px var(--flow-handle-shadow);
+  width: 8px;
+  height: 8px;
+  background: var(--flow-handle);
+  border: 2px solid var(--flow-handle-border);
+  box-shadow: 0 0 0 2px var(--flow-handle-shadow);
 }
 
 .chain-flow-panel {
-    background: var(--flow-panel-bg);
-    border-left: 1px solid var(--flow-border);
-    box-shadow: -4px 0 16px var(--flow-shadow);
-    backdrop-filter: blur(10px);
+  background: var(--flow-panel-bg);
+  border-left: 1px solid var(--flow-border);
+  box-shadow: -4px 0 16px var(--flow-shadow);
+  backdrop-filter: blur(10px);
 }
 
 .chain-flow-panel .panel-title {
-    color: var(--flow-text);
-    font-weight: 600;
+  color: var(--flow-text);
+  font-weight: 600;
 }
 
 .chain-flow-panel .MuiFormLabel-root {
-    color: var(--flow-muted);
+  color: var(--flow-muted);
 }
 
 .chain-flow-panel .MuiFormLabel-root.Mui-focused {
-    color: var(--flow-primary);
+  color: var(--flow-primary);
 }
 
 .chain-flow-panel .MuiInputLabel-root {
-    color: var(--flow-muted);
+  color: var(--flow-muted);
 }
 
 .chain-flow-panel .MuiOutlinedInput-root {
-    background: var(--flow-panel-input-bg);
-    border-radius: 8px;
-    box-shadow: inset 0 1px 0 var(--flow-panel-input-highlight);
+  background: var(--flow-panel-input-bg);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--flow-panel-input-highlight);
 }
 
 .chain-flow-panel .MuiChip-root,
 .chain-flow-panel .MuiToggleButton-root {
-    background: var(--flow-panel-input-bg);
-    color: var(--flow-text);
-    border-color: var(--flow-border-muted);
+  background: var(--flow-panel-input-bg);
+  color: var(--flow-text);
+  border-color: var(--flow-border-muted);
 }
 
 .chain-flow-panel .MuiChip-root .MuiChip-label,
 .chain-flow-panel .MuiChip-root .MuiChip-icon,
 .chain-flow-panel .MuiChip-root .MuiChip-deleteIcon {
-    color: inherit;
+  color: inherit;
 }
 
 .chain-flow-panel .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
-    border-color: var(--flow-border);
+  border-color: var(--flow-border);
 }
 
 .chain-flow-panel .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
-    border-color: var(--flow-primary);
+  border-color: var(--flow-primary);
 }
 
 .chain-flow-panel .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
-    border-color: var(--flow-primary);
+  border-color: var(--flow-primary);
 }
 
 .chain-flow-panel .MuiOutlinedInput-root.Mui-focused {
-    background: var(--flow-panel-input-bg-active);
+  background: var(--flow-panel-input-bg-active);
 }
 
 .chain-flow-panel .MuiInputBase-input {
-    color: var(--flow-text);
+  color: var(--flow-text);
 }
 
 .chain-flow-panel .MuiSelect-icon {
-    color: var(--flow-muted);
+  color: var(--flow-muted);
 }
 
 .chain-flow-panel .MuiFormHelperText-root {
-    color: var(--flow-muted);
+  color: var(--flow-muted);
 }
 
 .chain-flow-panel .MuiDivider-root {
-    border-color: var(--flow-panel-border-soft);
+  border-color: var(--flow-panel-border-soft);
 }
 
 .chain-flow-panel .MuiToggleButton-root:hover {
-    background: var(--flow-hover);
+  background: var(--flow-hover);
 }
 
 .chain-flow-panel .MuiToggleButton-root.Mui-selected,
 .chain-flow-panel .MuiToggleButton-root.Mui-selected:hover {
-    background: var(--flow-hover);
-    color: var(--flow-primary);
-    border-color: var(--flow-primary);
+  background: var(--flow-hover);
+  color: var(--flow-primary);
+  border-color: var(--flow-primary);
 }
 
 .chain-flow-panel .MuiAutocomplete-popupIndicator,
 .chain-flow-panel .MuiAutocomplete-clearIndicator {
-    color: var(--flow-muted);
+  color: var(--flow-muted);
 }
 
 .chain-flow-panel .MuiButton-contained {
-    background: var(--flow-panel-button-bg);
-    color: var(--flow-primary-contrast);
-    box-shadow: none;
+  background: var(--flow-panel-button-bg);
+  color: var(--flow-primary-contrast);
+  box-shadow: none;
 }
 
 .chain-flow-panel .MuiButton-contained:hover {
-    background: var(--flow-panel-button-bg-hover);
+  background: var(--flow-panel-button-bg-hover);
 }
 
 .chain-flow-toolbar {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .chain-flow-toolbar .MuiButton-root {
-    background: var(--flow-toolbar-bg);
-    border: 1px solid var(--flow-border);
-    color: var(--flow-text);
-    box-shadow: 0 6px 16px -14px var(--flow-shadow);
+  background: var(--flow-toolbar-bg);
+  border: 1px solid var(--flow-border);
+  color: var(--flow-text);
+  box-shadow: 0 6px 16px -14px var(--flow-shadow);
 }
 
 .chain-flow-toolbar .MuiButton-root:hover {
-    background: var(--flow-hover);
-    border-color: var(--flow-primary);
+  background: var(--flow-hover);
+  border-color: var(--flow-primary);
 }
 
 .chain-flow-toolbar .MuiButton-root.Mui-disabled {
-    color: var(--flow-muted);
-    border-color: var(--flow-border-muted);
+  color: var(--flow-muted);
+  border-color: var(--flow-border-muted);
 }
 
 .chain-flow-hint {
-    position: absolute;
-    bottom: 16px;
-    left: 60px;
-    z-index: 10;
-    color: var(--flow-muted);
-    font-size: 12px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: var(--flow-toolbar-bg);
-    border: 1px solid var(--flow-border-muted);
+  position: absolute;
+  bottom: 16px;
+  left: 60px;
+  z-index: 10;
+  color: var(--flow-muted);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--flow-toolbar-bg);
+  border: 1px solid var(--flow-border-muted);
 }
