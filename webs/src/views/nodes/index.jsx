@@ -85,7 +85,7 @@ const DEFAULT_COLUMN_WIDTHS = {
   delay: 130,
   speed: 130,
   ipFeatures: 240,
-  actions: 120
+  actions: 140
 };
 
 // ==============================|| 节点管理 ||============================== //
