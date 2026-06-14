@@ -7302,7 +7302,7 @@ __metadata:
     react-markdown: "npm:^10.1.0"
     react-router: "npm:7.17.0"
     react-router-dom: "npm:7.17.0"
-    sass: "npm:1.99.0"
+    sass: "npm:1.101.0"
     simplebar-react: "npm:3.3.2"
     swr: "npm:2.4.1"
     vite: "npm:8.0.16"
