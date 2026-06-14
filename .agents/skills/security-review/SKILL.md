@@ -1,6 +1,12 @@
-# Security Review Skill
+---
+name: security-review
+description: "Security review checklist for authentication, authorization, and sensitive data handling. Use when changing auth, MFA, secrets, input validation, or security-critical features. Not for general code review."
+version: "2.0.0"
+author: "SublinkPro Team"
+user-invocable: true
+---
 
-## Purpose
+# Security Review Skill
 
 This skill provides a comprehensive security review checklist for code changes that involve authentication, authorization, sensitive data handling, or security-critical features.
 
@@ -29,34 +35,13 @@ This skill provides a comprehensive security review checklist for code changes t
 - [ ] **Token validation**: Are JWT/API tokens properly validated (signature, expiration, issuer)?
 - [ ] **Session security**: Are sessions properly managed (timeout, secure flags, HttpOnly)?
 
-**Example violations**:
-```go
-// ❌ BAD: No authentication check
-func GetUserData(c *gin.Context) {
-    userID := c.Param("id")
-    user := models.GetUser(userID)
-    c.JSON(200, user)
-}
+**Detailed guide**: `references/authentication-guide.md` (includes code examples)
 
-// ✅ GOOD: Authentication and authorization
-func GetUserData(c *gin.Context) {
-    currentUser := middlewares.GetCurrentUser(c)
-    if currentUser == nil {
-        c.JSON(401, gin.H{"error": "Unauthorized"})
-        return
-    }
-    
-    userID := c.Param("id")
-    // Users can only access their own data, admins can access any
-    if userID != currentUser.ID && !currentUser.IsAdmin {
-        c.JSON(403, gin.H{"error": "Forbidden"})
-        return
-    }
-    
-    user := models.GetUser(userID)
-    c.JSON(200, user)
-}
-```
+**Relevant files**:
+- `api/auth.go`
+- `api/auth_mfa.go`
+- `middlewares/auth.go`
+- `middlewares/mfa.go`
 
 ---
 
@@ -68,6 +53,8 @@ func GetUserData(c *gin.Context) {
 - [ ] **Backup codes security**: Are backup codes securely generated and stored?
 - [ ] **TOTP secret protection**: Are TOTP secrets encrypted at rest?
 - [ ] **Rate limiting**: Is there rate limiting on MFA verification attempts?
+
+**Detailed guide**: `references/mfa-guide.md`
 
 **Relevant files**:
 - `api/auth_mfa.go`
@@ -85,41 +72,7 @@ func GetUserData(c *gin.Context) {
 - [ ] **Secrets in transit**: Are sensitive data transmitted over HTTPS only?
 - [ ] **Secrets in database**: Are secrets encrypted at rest (API keys, tokens)?
 
-**Example violations**:
-```go
-// ❌ BAD: Password in plain text
-user := &models.User{
-    Username: req.Username,
-    Password: req.Password, // Plain text!
-}
-
-// ✅ GOOD: Password hashed
-hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-if err != nil {
-    return err
-}
-user := &models.User{
-    Username: req.Username,
-    Password: string(hashedPassword),
-}
-```
-
-```go
-// ❌ BAD: Exposing sensitive fields
-type UserResponse struct {
-    ID       uint   `json:"id"`
-    Username string `json:"username"`
-    Password string `json:"password"` // Never expose this!
-    APIKey   string `json:"api_key"`  // Never expose this!
-}
-
-// ✅ GOOD: Exclude sensitive fields
-type UserResponse struct {
-    ID       uint   `json:"id"`
-    Username string `json:"username"`
-    // Password and APIKey intentionally omitted
-}
-```
+**Detailed guide**: `references/sensitive-data-guide.md` (includes code examples)
 
 ---
 
@@ -134,41 +87,7 @@ type UserResponse struct {
 - [ ] **Length validation**: Are input lengths limited to prevent DoS?
 - [ ] **Whitelist validation**: Are inputs validated against allowed values?
 
-**Example violations**:
-```go
-// ❌ BAD: SQL injection vulnerability
-query := "SELECT * FROM users WHERE username = '" + username + "'"
-db.Raw(query).Scan(&user)
-
-// ✅ GOOD: Parameterized query
-db.Where("username = ?", username).First(&user)
-```
-
-```go
-// ❌ BAD: Path traversal vulnerability
-filePath := filepath.Join("/uploads", c.Param("filename"))
-file, _ := os.Open(filePath)
-
-// ✅ GOOD: Validate path
-filename := filepath.Base(c.Param("filename")) // Remove directory components
-filePath := filepath.Join("/uploads", filename)
-if !strings.HasPrefix(filePath, "/uploads/") {
-    return errors.New("invalid path")
-}
-file, _ := os.Open(filePath)
-```
-
-**Frontend XSS prevention**:
-```jsx
-{/* ❌ BAD: Unsafe HTML injection */}
-<div dangerouslySetInnerHTML={{__html: userInput}} />
-
-{/* ✅ GOOD: React auto-escapes */}
-<div>{userInput}</div>
-
-{/* ✅ GOOD: Sanitize if HTML is needed */}
-<div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(userInput)}} />
-```
+**Detailed guide**: `references/input-validation-guide.md` (includes code examples)
 
 ---
 
@@ -181,24 +100,7 @@ file, _ := os.Open(filePath)
 - [ ] **Permission checks before queries**: Is authorization checked before database access?
 - [ ] **Transactions for critical ops**: Are multi-step operations wrapped in transactions?
 
-**Example violations**:
-```go
-// ❌ BAD: Mass assignment vulnerability
-var user models.User
-c.BindJSON(&user) // User can set any field, including IsAdmin!
-db.Save(&user)
-
-// ✅ GOOD: Explicit field assignment
-var req struct {
-    Username string `json:"username"`
-    Email    string `json:"email"`
-}
-c.BindJSON(&req)
-user.Username = req.Username
-user.Email = req.Email
-// IsAdmin cannot be modified by user
-db.Save(&user)
-```
+**Detailed guide**: `references/database-security-guide.md` (includes code examples)
 
 ---
 
@@ -212,36 +114,7 @@ db.Save(&user)
 - [ ] **Content-Type validation**: Are Content-Type headers validated?
 - [ ] **Error information leakage**: Do error messages avoid exposing internal details?
 
-**Example violations**:
-```go
-// ❌ BAD: CORS allows all origins
-router.Use(cors.New(cors.Config{
-    AllowOrigins: []string{"*"},
-    AllowCredentials: true,
-}))
-
-// ✅ GOOD: CORS restricted to specific origins
-router.Use(cors.New(cors.Config{
-    AllowOrigins: []string{
-        "https://example.com",
-        "https://app.example.com",
-    },
-    AllowCredentials: true,
-}))
-```
-
-```go
-// ❌ BAD: Exposing internal error details
-if err != nil {
-    c.JSON(500, gin.H{"error": err.Error()}) // May leak stack trace, DB schema, etc.
-}
-
-// ✅ GOOD: Generic error message
-if err != nil {
-    log.Error("Internal error: ", err)
-    c.JSON(500, gin.H{"error": "Internal server error"})
-}
-```
+**Detailed guide**: `references/api-security-guide.md` (includes code examples)
 
 ---
 
@@ -254,28 +127,7 @@ if err != nil {
 - [ ] **Secure random generation**: Is `crypto/rand` used (not `math/rand`)?
 - [ ] **IV/Salt usage**: Are IVs/salts unique per encryption/hash?
 
-**Example violations**:
-```go
-// ❌ BAD: Weak hash for passwords
-import "crypto/md5"
-hash := md5.Sum([]byte(password))
-
-// ✅ GOOD: Strong hash for passwords
-import "golang.org/x/crypto/bcrypt"
-hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-```
-
-```go
-// ❌ BAD: Insecure random
-import "math/rand"
-token := rand.Intn(999999)
-
-// ✅ GOOD: Cryptographically secure random
-import "crypto/rand"
-b := make([]byte, 32)
-rand.Read(b)
-token := hex.EncodeToString(b)
-```
+**Detailed guide**: `references/cryptography-guide.md` (includes code examples)
 
 ---
 
@@ -289,36 +141,7 @@ token := hex.EncodeToString(b)
 - [ ] **Storage location**: Are files stored outside the web root?
 - [ ] **Download authorization**: Is authorization checked before file download?
 
-**Example violations**:
-```go
-// ❌ BAD: No file type validation
-file, _ := c.FormFile("upload")
-c.SaveUploadedFile(file, "/uploads/"+file.Filename)
-
-// ✅ GOOD: Validate file type and sanitize filename
-file, _ := c.FormFile("upload")
-
-// Check file size
-if file.Size > 10*1024*1024 { // 10MB limit
-    return errors.New("file too large")
-}
-
-// Check file type by content
-fileHeader, _ := file.Open()
-defer fileHeader.Close()
-buffer := make([]byte, 512)
-fileHeader.Read(buffer)
-contentType := http.DetectContentType(buffer)
-if contentType != "image/png" && contentType != "image/jpeg" {
-    return errors.New("invalid file type")
-}
-
-// Sanitize filename
-safeFilename := filepath.Base(file.Filename)
-safeFilename = strings.ReplaceAll(safeFilename, "..", "")
-newPath := filepath.Join("/uploads", uuid.New().String()+filepath.Ext(safeFilename))
-c.SaveUploadedFile(file, newPath)
-```
+**Detailed guide**: `references/file-security-guide.md` (includes code examples)
 
 ---
 
@@ -331,18 +154,7 @@ c.SaveUploadedFile(file, newPath)
 - [ ] **Session regeneration**: Are session IDs regenerated after login?
 - [ ] **Logout functionality**: Does logout properly invalidate the session?
 
-**Example configuration**:
-```go
-// ✅ GOOD: Secure session configuration
-store := cookie.NewStore([]byte(secretKey))
-store.Options(sessions.Options{
-    Path:     "/",
-    MaxAge:   3600, // 1 hour
-    HttpOnly: true,
-    Secure:   true, // HTTPS only
-    SameSite: http.SameSiteStrictMode,
-})
-```
+**Detailed guide**: `references/session-management-guide.md` (includes code examples)
 
 ---
 
@@ -354,12 +166,11 @@ store.Options(sessions.Options{
 - [ ] **Minimal dependencies**: Are only necessary dependencies included?
 - [ ] **License compliance**: Are dependency licenses compatible with project license?
 
-**Tools**:
+**Detailed guide**: `references/dependency-security-guide.md`
+
+**Scan commands**:
 ```bash
 # Go: Check for known vulnerabilities
-go list -json -m all | nancy sleuth
-
-# Or use govulncheck (official Go tool)
 govulncheck ./...
 
 # Frontend: Check npm dependencies
@@ -371,17 +182,10 @@ cd webs && yarn audit
 ## Security Review Process
 
 ### Step 1: Identify Security-Sensitive Changes
-Review the diff and identify if the change involves:
-- Authentication/authorization logic
-- Sensitive data handling
-- User input processing
-- Database queries
-- API endpoints
-- File operations
-- Cryptographic operations
+Review the diff and identify if the change involves authentication, sensitive data, user input, database queries, API endpoints, file operations, or cryptographic operations.
 
 ### Step 2: Apply Relevant Checklists
-Go through the relevant sections above and verify each item.
+Go through the relevant sections above and verify each item. Consult detailed guides in `references/` for in-depth coverage.
 
 ### Step 3: Test Security Controls
 - [ ] **Manual testing**: Try to bypass security controls
@@ -409,32 +213,10 @@ If the change has security implications:
 
 ## Common Security Anti-Patterns
 
-### ❌ Trusting User Input
-```go
-// Never trust user input directly
-userID := c.Query("user_id") // Can be manipulated!
-db.Where("id = ?", userID).First(&user) // But parameterized query is safe
-```
-
-### ❌ Security by Obscurity
-```go
-// Don't hide security behind obscure endpoints
-router.GET("/admin_secret_panel_xyz", adminHandler) // Still needs proper auth!
-```
-
-### ❌ Client-Side Validation Only
-```jsx
-// Never rely on frontend validation alone
-<input type="number" min="0" max="100" /> // Can be bypassed!
-// Always validate on backend too
-```
-
-### ❌ Logging Sensitive Data
-```go
-// Never log sensitive data
-log.Info("User login: ", username, password) // ❌ Password exposed!
-log.Info("User login: ", username) // ✅ No sensitive data
-```
+- **Trusting user input**: Never trust user input directly; always validate and sanitize
+- **Security by obscurity**: Obscure endpoints still need proper authentication
+- **Client-side validation only**: Always validate on backend; frontend validation can be bypassed
+- **Logging sensitive data**: Never log passwords, tokens, or API keys
 
 ---
 
@@ -453,9 +235,8 @@ Before completing the security review:
 
 ## References
 
-- `docs/security-guidelines.md` - Project security guidelines
-- `api/auth.go`, `api/auth_mfa.go` - Authentication implementation
-- `middlewares/auth.go`, `middlewares/mfa.go` - Auth middleware
-- OWASP Top 10: https://owasp.org/www-project-top-ten/
-- Go Security Best Practices: https://github.com/securego/gosec
-- React Security Best Practices: https://cheatsheetseries.owasp.org/cheatsheets/React_Security_Cheat_Sheet.html
+- **Project security guidelines**: `docs/security-guidelines.md`
+- **Detailed guides with code examples**: `references/*.md`
+- **OWASP Top 10**: https://owasp.org/www-project-top-ten/
+- **Go Security Best Practices**: https://github.com/securego/gosec
+- **React Security**: https://cheatsheetseries.owasp.org/cheatsheets/React_Security_Cheat_Sheet.html

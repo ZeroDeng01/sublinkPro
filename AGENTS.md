@@ -167,15 +167,15 @@ See `CONTRIBUTING.md` for:
 
 For task-specific validation procedures, see `.agents/skills/`:
 
-- **post-dev-workflow** - **MANDATORY** automated workflow after completing ANY code change (AI agents must run this)
-- **pre-commit-check** - Pre-commit validation steps (subset of post-dev-workflow)
-- **cross-layer-sync** - Multi-layer synchronization guide
-- **doc-sync-check** - Documentation sync requirements
-- **theme-check** - UI theme adaptation checklist
-- **security-review** - Security review for authentication, authorization, sensitive data changes
-- **performance-check** - Performance review for optimization, scalability, resource usage
+- **post-dev-workflow** - Mandatory post-development workflow orchestrating validation, synchronization, and testing phases (automatically invoked by AI agents)
+- **pre-commit-check** - Pre-commit validation checklist for linting, formatting, building, and testing
+- **cross-layer-sync** - Cross-layer synchronization guide for backend, frontend, and documentation changes
+- **doc-sync-check** - Documentation synchronization checklist for API, configuration, and feature changes
+- **theme-check** - Theme adaptation checklist for light/dark mode and UI component changes
+- **security-review** - Security review checklist for authentication, authorization, and sensitive data handling
+- **performance-check** - Performance review checklist for optimization, scalability, and resource usage
 
-Skills are reusable checklists for operational tasks. See `.agents/README.md` for details.
+Skills follow the official Claude Code skill specification - freeform markdown with optional frontmatter. Each skill includes metadata indicating whether it's user-invocable or workflow-invoked.
 
 **For AI agents**: The `post-dev-workflow` skill is the master workflow that orchestrates all other skills. It must be invoked automatically after every code change.
 
@@ -279,7 +279,6 @@ Start here when changing behavior:
 ### For AI agents
 - `AGENTS.md` (this file) - Architectural overview and navigation
 - `.agents/skills/` - Task-specific validation procedures
-- `.agents/README.md` - Skills system documentation
 
 ## 11. Configuration Precedence
 

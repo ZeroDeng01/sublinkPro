@@ -1,12 +1,18 @@
+---
+name: post-dev-workflow
+description: "Mandatory post-development workflow orchestrating validation, synchronization, and testing phases. Automatically invoked by AI agents after code changes. Not for manual use."
+version: "1.0.0"
+author: "SublinkPro Team"
+user-invocable: false
+---
+
 # Post-Development Workflow Skill
 
 **MANDATORY** automated workflow to run after completing ANY code change, before declaring work "complete".
 
-## Purpose
+---
 
-This skill ensures that every code change goes through a complete validation, synchronization, and documentation pipeline before being considered "done". It prevents incomplete work, missing documentation, and broken cross-layer contracts.
-
-## When to use this skill
+## When to Use This Skill
 
 **ALWAYS** use this skill when:
 - Any code change is complete (backend, frontend, or both)
@@ -15,6 +21,8 @@ This skill ensures that every code change goes through a complete validation, sy
 - Before creating or updating a pull request
 
 **This is NOT optional for AI agents.** If an AI agent completes development without running this workflow, the work is incomplete.
+
+---
 
 ## Workflow Phases
 
@@ -40,41 +48,30 @@ Ready to Commit
 
 ## Phase 1: Code Validation
 
-### Backend changes
+Run validation commands for all changed layers.
 
-Run from repository root:
+### Backend Changes
 
 ```bash
-# Format changed Go files
-gofmt -w <changed-files>
-
-# Lint
-golangci-lint run
-
-# Test (run relevant tests, or full suite if time permits)
-go test ./...
+gofmt -w <changed-files>    # Format
+golangci-lint run           # Lint
+go test ./...               # Test
 ```
 
 **Required exit criteria**:
 - [ ] `gofmt` produces no further changes
 - [ ] `golangci-lint run` exits with status 0
-- [ ] Relevant `go test` passes (or full `go test ./...` if possible)
+- [ ] Relevant `go test` passes
 
-### Frontend changes
-
-Run from `webs/` directory:
+### Frontend Changes
 
 ```bash
 cd webs
-
-# Lint (always required)
-yarn run lint
-
-# Build (required if routing, assets, build config, or production integration affected)
-yarn run build
+yarn run lint               # Always required
+yarn run build              # If routing/assets/build affected
 ```
 
-**Optional auto-fix** (run if lint fails):
+**Optional auto-fix**:
 ```bash
 yarn run lint:fix
 yarn run prettier
@@ -83,31 +80,24 @@ yarn run prettier
 **Required exit criteria**:
 - [ ] `yarn run lint` exits with status 0
 - [ ] `yarn run build` succeeds (if applicable)
-- [ ] No console errors during build
 
-### When Phase 1 fails
+### When Phase 1 Fails
 
-**DO NOT proceed to Phase 2** until all validation passes. Fix issues first:
-- Format errors → run auto-formatters
-- Lint errors → fix code or adjust rules if justified
-- Build errors → fix imports, paths, or config
-- Test failures → fix the actual issue, don't skip tests
+**DO NOT proceed to Phase 2** until all validation passes. Fix issues first.
+
+**Detailed validation commands and troubleshooting**: See `references/validation-commands.md`
 
 ---
 
 ## Phase 2: Cross-Layer Synchronization Check
 
-**Trigger condition**: Changes affect multiple layers (backend + frontend, or code + docs, or code + config)
+**Trigger condition**: Changes affect multiple layers (backend + frontend, code + docs, code + config)
 
 **Additional checks**: For security-critical or performance-sensitive changes, invoke specialized skills:
 - **Security changes**: Also invoke `.agents/skills/security-review/SKILL.md`
 - **Performance-critical changes**: Also invoke `.agents/skills/performance-check/SKILL.md`
 
-### Quick checklist
-
-Use `.agents/skills/cross-layer-sync/SKILL.md` for detailed verification.
-
-**Common cross-layer patterns**:
+### Quick Checklist
 
 | Change Type | Must Also Update |
 |---|---|
@@ -121,17 +111,13 @@ Use `.agents/skills/cross-layer-sync/SKILL.md` for detailed verification.
 - [ ] All impacted layers identified
 - [ ] All impacted layers synchronized
 - [ ] Verification commands run for each layer
-- [ ] Documented which layers were checked (even if no changes needed)
+- [ ] Documented which layers were checked
 
-### When to skip Phase 2
+### When to Skip Phase 2
 
-Skip only if the change is truly isolated to one layer:
-- Pure documentation changes (no code affected)
-- Internal refactoring with no contract changes
-- Backend-only logic with no API/config/frontend impact
-- Frontend-only UI polish with no API/behavior changes
+Skip only if the change is truly isolated to one layer. **Document the skip reason** in your change summary.
 
-**Document the skip reason** in your change summary.
+**Detailed cross-layer sync patterns and verification**: See `references/cross-layer-sync-rules.md`
 
 ---
 
@@ -139,11 +125,7 @@ Skip only if the change is truly isolated to one layer:
 
 **Trigger condition**: Changes affect user-visible behavior, APIs, configuration, deployment, or developer workflows
 
-### Quick checklist
-
-Use `.agents/skills/doc-sync-check/SKILL.md` for detailed verification.
-
-**What needs documentation updates**:
+### Quick Checklist
 
 | Change Type | Docs to Update |
 |---|---|
@@ -153,8 +135,6 @@ Use `.agents/skills/doc-sync-check/SKILL.md` for detailed verification.
 | Deployment | `docs/installation.md` + `.zh-CN.md`, `skill-sublinkpro/reference/deploy.md` |
 | Developer workflow | `docs/development.md` + `.zh-CN.md`, `CONTRIBUTING.md` + `.zh-CN.md` |
 | Architecture | `AGENTS.md` |
-| New protocol | `docs/features/*.md`, protocol support matrix |
-| New unlock provider | Usually no doc change (dynamically registered) |
 
 **Bilingual requirement**:
 - [ ] Both English (`.md`) and Chinese (`.zh-CN.md`) versions updated
@@ -168,7 +148,7 @@ Use `.agents/skills/doc-sync-check/SKILL.md` for detailed verification.
 - [ ] Code examples accurate and tested
 - [ ] Documentation map updated (`skill-sublinkpro/reference/docs.md`) if new docs added
 
-### When to skip Phase 3
+### When to Skip Phase 3
 
 Skip only if:
 - Pure internal refactoring (no user-visible changes)
@@ -177,13 +157,15 @@ Skip only if:
 
 **Document the skip reason** in your change summary.
 
+**Detailed documentation sync patterns and templates**: See `references/documentation-sync-rules.md`
+
 ---
 
 ## Phase 4: Test Execution
 
 **Trigger condition**: Changes affect key business logic, APIs, permissions, configuration semantics, migrations, scheduled tasks, mihomo integrations, protocol parsing, or data transformations
 
-### What needs tests
+### What Needs Tests
 
 **Backend tests required when**:
 - [ ] Added or changed business logic in `services/`
@@ -192,7 +174,6 @@ Skip only if:
 - [ ] Added or changed database migration in `models/db_migrate.go`
 - [ ] Added or changed scheduled task in `services/scheduler/`
 - [ ] Added or changed protocol in `node/protocol/`
-- [ ] Added or changed unlock checker in `services/unlock/`
 - [ ] Fixed a bug (add regression test)
 
 **Frontend tests**:
@@ -201,20 +182,14 @@ Skip only if:
 - [ ] Added or changed API client functions in `webs/src/api/`
 - [ ] Fixed a bug (add regression test)
 
-**Note**: Test framework is now configured with Vitest. Run tests with:
-```bash
-cd webs
-yarn test
-```
-
-### Test requirements
+### Test Requirements
 
 ```bash
 # Backend: run relevant tests
 go test ./services/scheduler/...  # Example: if scheduler changed
 go test ./...                     # Full suite if time permits
 
-# Frontend: run relevant tests
+# Frontend: run tests with Vitest
 cd webs
 yarn test                         # Run all tests
 yarn test --run                   # Run without watch mode
@@ -231,7 +206,7 @@ yarn test --run                   # Run without watch mode
 - [ ] All tests pass
 - [ ] Coverage is reasonable for the changed area
 
-### When to skip Phase 4
+### When to Skip Phase 4
 
 Skip only if:
 - Pure documentation changes
@@ -246,9 +221,7 @@ Skip only if:
 
 Prepare a comprehensive summary of what was done, why, and how it was validated.
 
-### Commit message format
-
-Use semantic commit prefixes:
+### Commit Message Format
 
 ```
 <type>(<scope>): <subject>
@@ -258,26 +231,16 @@ Use semantic commit prefixes:
 <footer>
 ```
 
-**Type**:
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation only
-- `refactor:` - Code refactoring
-- `test:` - Test additions/updates
-- `chore:` - Build, deps, tooling
+**Type**: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`, `perf`
 
-**Scope**: Component area (e.g., `airports`, `auth`, `theme`, `i18n`, `scheduler`, `unlock`)
+**Scope**: Component area (e.g., `airports`, `auth`, `theme`, `i18n`, `scheduler`)
 
-**Subject**: Concise description (≤72 chars if possible)
-
-**Body** (optional): More details, why the change was needed, what approach was taken
-
-**Footer** (optional): Related issues, breaking changes
+**Subject**: Concise description (≤72 chars, imperative mood, no period)
 
 ### Examples
 
 ```
-feat(airports): support batch subscription updates
+feat(airports): add batch subscription update
 
 Added batch update dialog with progress tracking.
 Users can now select multiple airports and update them in parallel.
@@ -294,14 +257,7 @@ Added retry logic for transient network errors.
 Fixes #456
 ```
 
-```
-docs(i18n): update internationalization requirements
-
-Clarified frontend i18n key naming conventions.
-Added examples for backend i18nKey + i18nParams usage.
-```
-
-### Change summary checklist
+### Change Summary Checklist
 
 Document in your summary:
 
@@ -321,108 +277,12 @@ Document in your summary:
 - [ ] Which documentation was updated
 - [ ] Manual testing performed (if applicable)
 
-**Layers not changed** (if cross-layer check performed):
-- [ ] Document which layers were checked but didn't need changes
-- [ ] Brief reason why no sync was needed
-
 **Breaking changes** (if any):
 - [ ] What breaks
 - [ ] Migration path for users
 - [ ] Configuration changes required
 
----
-
-## Complete Workflow Example
-
-### Scenario: Adding a new API endpoint for batch airport updates
-
-#### Phase 1: Code Validation
-
-```bash
-# Backend
-gofmt -w api/clients.go services/subscription_service.go
-golangci-lint run
-go test ./api/... ./services/...
-
-# Frontend
-cd webs
-yarn run lint
-yarn run build
-```
-
-**Result**: All validation passes ✅
-
-#### Phase 2: Cross-Layer Sync
-
-**Layers affected**:
-- ✅ Backend: `api/clients.go`, `services/subscription_service.go`
-- ✅ Frontend: `webs/src/api/airports.js`, `webs/src/views/airports/AirportBatchUpdateDialog.jsx`
-- ✅ i18n: Added `zh-CN` and `en-US` translations for batch update dialog
-- ⚠️ Config: Not affected (no new config options)
-
-**Verification**:
-- Backend lint, test passed
-- Frontend lint, build passed
-- Both languages added
-
-**Result**: Cross-layer sync complete ✅
-
-#### Phase 3: Documentation Sync
-
-**Docs updated**:
-- ✅ `skill-sublinkpro/reference/api.md` - Added `POST /api/v1/airports/batch-update` endpoint
-- ⚠️ `docs/features/` - No user-facing docs needed (feature accessed through UI only)
-- ⚠️ `README.md` - No change (not a headline feature)
-
-**Bilingual**: API reference is English-only (technical docs)
-
-**Result**: Documentation sync complete ✅
-
-#### Phase 4: Test Execution
-
-**Tests added**:
-- ✅ `api/clients_test.go` - Added `TestBatchUpdateAirports` (happy path, partial failure, all failure cases)
-- ✅ `services/subscription_service_test.go` - Added batch update logic tests
-
-**Test run**:
-```bash
-go test ./api/... ./services/...
-# PASS
-```
-
-**Result**: Tests added and passing ✅
-
-#### Phase 5: Change Summary
-
-**Commit message**:
-```
-feat(airports): support batch subscription updates
-
-Added batch update dialog with progress tracking and parallel execution.
-Users can select multiple airports and update them concurrently.
-
-Backend:
-- Added POST /api/v1/airports/batch-update endpoint
-- Added batch update logic in subscription service
-- Added concurrent update with error collection
-
-Frontend:
-- Added AirportBatchUpdateDialog component
-- Added progress tracking UI
-- Added i18n for both zh-CN and en-US
-
-Tests:
-- Added API handler tests for batch update
-- Added service layer tests for parallel execution
-- Covered happy path, partial failure, and full failure cases
-
-Docs:
-- Updated skill-sublinkpro/reference/api.md with new endpoint
-
-Closes #789
-```
-
-**Result**: Change summary prepared ✅
+**Detailed commit message guide and templates**: See `references/commit-message-guide.md` and `assets/commit-template.txt`
 
 ---
 
@@ -438,31 +298,6 @@ Before declaring work "complete", verify:
 - [ ] **Git staging**: Only intended files staged (no secrets, no runtime data)
 - [ ] **Bilingual**: Both English and Chinese docs updated (if docs changed)
 - [ ] **No shortcuts**: No skipped validation, no "will fix later" items
-
----
-
-## Anti-Patterns to Avoid
-
-❌ **Skipping validation** because "it's a small change"
-- Small changes still need lint/format/test
-
-❌ **Updating only English docs** and forgetting Chinese versions
-- Both languages must be updated together
-
-❌ **Changing backend API without updating frontend**
-- Cross-layer sync is mandatory
-
-❌ **Declaring work "done" without running this workflow**
-- This workflow IS part of "done"
-
-❌ **Running validation but not fixing failures**
-- All validation must pass before proceeding
-
-❌ **Updating code without updating documentation**
-- Documentation is part of the deliverable
-
-❌ **Committing without a proper change summary**
-- Reviewers and future maintainers need context
 
 ---
 
@@ -491,7 +326,7 @@ Before declaring work "complete", verify:
 
 This workflow should be **automatically triggered** after completing code development, without waiting for user prompt.
 
-### Triggering logic
+### Triggering Logic
 
 ```
 IF code_change_complete:
@@ -511,7 +346,7 @@ IF code_change_complete:
         FIX failures and re-run
 ```
 
-### Reporting format
+### Reporting Format
 
 After running this workflow, report to the user:
 
@@ -520,7 +355,7 @@ After running this workflow, report to the user:
 
 ### Phase 1: Code Validation ✅
 - Backend: gofmt ✅, golangci-lint ✅, go test ✅
-- Frontend: yarn lint ✅, yarn build ✅, yarn test ✅
+- Frontend: yarn lint ✅, yarn build ✅
 
 ### Phase 2: Cross-Layer Sync ✅
 - Backend API changed → Frontend updated ✅
@@ -543,7 +378,7 @@ After running this workflow, report to the user:
 
 Suggested commit:
 ```
-feat(config): add new database connection pooling option
+feat(config): add database connection pooling option
 
 ...
 ```
@@ -556,12 +391,34 @@ Or if failures occurred:
 
 ### Phase 1: Code Validation ❌
 - Frontend lint failed: 3 errors in AirportDialog.jsx
-  - Line 45: Unused variable 'temp'
-  - Line 67: Missing key prop in map
-  - Line 89: Console.log left in code
 
 Fixing now...
 ```
+
+---
+
+## Anti-Patterns to Avoid
+
+❌ **Skipping validation** because "it's a small change"
+- Small changes still need lint/format/test
+
+❌ **Updating only English docs** and forgetting Chinese versions
+- Both languages must be updated together
+
+❌ **Changing backend API without updating frontend**
+- Cross-layer sync is mandatory
+
+❌ **Declaring work "done" without running this workflow**
+- This workflow IS part of "done"
+
+❌ **Running validation but not fixing failures**
+- All validation must pass before proceeding
+
+❌ **Updating code without updating documentation**
+- Documentation is part of the deliverable
+
+❌ **Committing without a proper change summary**
+- Reviewers and future maintainers need context
 
 ---
 
@@ -573,6 +430,18 @@ Fixing now...
 - `.agents/skills/theme-check/SKILL.md` - Theme-specific validation (when UI colors/surfaces changed)
 - `.agents/skills/security-review/SKILL.md` - Security review checklist (for auth/sensitive data changes)
 - `.agents/skills/performance-check/SKILL.md` - Performance review checklist (for optimization work)
+
+---
+
+## Reference Documentation
+
+Detailed information extracted to separate files for maintainability:
+
+- **`references/validation-commands.md`** - Complete validation command reference, troubleshooting, and quality standards
+- **`references/cross-layer-sync-rules.md`** - Detailed cross-layer synchronization patterns, verification commands, and special cases
+- **`references/documentation-sync-rules.md`** - Documentation synchronization requirements, templates, and bilingual standards
+- **`references/commit-message-guide.md`** - Commit message format, examples, and best practices
+- **`assets/commit-template.txt`** - Commit message template for git config
 
 ---
 

@@ -1,3 +1,11 @@
+---
+name: cross-layer-sync
+description: "Cross-layer synchronization guide for backend, frontend, and documentation changes. Invoked by post-dev-workflow when changes affect multiple layers. Not for direct user invocation."
+version: "1.0.0"
+author: "SublinkPro Team"
+user-invocable: false
+---
+
 # Cross-Layer Synchronization Check Skill
 
 Checklist for ensuring all impacted layers are updated together when changes affect multiple parts of the application.

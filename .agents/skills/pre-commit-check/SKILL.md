@@ -1,3 +1,11 @@
+---
+name: pre-commit-check
+description: "Pre-commit validation checklist for linting, formatting, building, and testing. Use before every commit or PR. Not for post-development workflow orchestration."
+version: "1.0.0"
+author: "SublinkPro Team"
+user-invocable: true
+---
+
 # Pre-Commit Check Skill
 
 Validation checklist to run before committing code changes.

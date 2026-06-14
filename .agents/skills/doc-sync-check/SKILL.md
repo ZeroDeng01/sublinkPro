@@ -1,3 +1,11 @@
+---
+name: doc-sync-check
+description: "Documentation synchronization checklist for API, configuration, and feature changes. Invoked by post-dev-workflow when code affects documentation. Not for direct user invocation."
+version: "1.0.0"
+author: "SublinkPro Team"
+user-invocable: false
+---
+
 # Documentation Sync Check Skill
 
 Checklist for ensuring documentation stays synchronized with code changes.

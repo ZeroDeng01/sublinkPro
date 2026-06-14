@@ -1,0 +1,17 @@
+<type>(<scope>): <subject>
+
+## What changed
+-
+
+## Why
+-
+
+## How validated
+- Backend:
+- Frontend:
+- Cross-layer sync:
+- Documentation:
+- Tests:
+
+## Related
+Closes #

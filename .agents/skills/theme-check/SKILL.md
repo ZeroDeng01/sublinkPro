@@ -1,3 +1,11 @@
+---
+name: theme-check
+description: "Theme adaptation checklist for light/dark mode and UI component changes. Use when modifying colors, surfaces, dialogs, or theme infrastructure. Not for simple text changes."
+version: "1.0.0"
+author: "SublinkPro Team"
+user-invocable: true
+---
+
 # Theme Check Skill
 
 Comprehensive checklist for frontend theme adaptation changes.
