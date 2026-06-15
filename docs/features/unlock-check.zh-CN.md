@@ -24,6 +24,7 @@ SublinkPro 现在支持在节点检测流程中附带执行 **流媒体 / AI 服
 - OpenAI
 - Gemini
 - Claude
+- 巴哈姆特动画疯
 
 > [!NOTE]
 > 当前内置 Provider 会尽量采用与主流解锁检测脚本一致的服务级探针：例如 OpenAI 会分别检查 Web / iOS 入口，Disney+ 会走设备、令牌与地区 GraphQL 探针，YouTube Premium、Gemini、Claude、Netflix 也会读取对应页面或最终跳转中的可用性标记。

@@ -21,6 +21,7 @@ const (
 	UnlockProviderOpenAI    = "openai"
 	UnlockProviderGemini    = "gemini"
 	UnlockProviderClaude    = "claude"
+	UnlockProviderBahamut   = "bahamut"
 	UnlockStatusUntested    = "untested"
 	UnlockStatusAvailable   = "available"
 	UnlockStatusPartial     = "partial"
@@ -292,6 +293,8 @@ func defaultUnlockProviderMetaResolver(provider string) UnlockProviderMeta {
 		return UnlockProviderMeta{Value: UnlockProviderGemini, Label: "Gemini", Description: "检测 Google Gemini 服务地区可访问性", Category: "ai"}
 	case UnlockProviderClaude:
 		return UnlockProviderMeta{Value: UnlockProviderClaude, Label: "Claude", Description: "检测 Anthropic Claude 服务地区可访问性", Category: "ai"}
+	case UnlockProviderBahamut:
+		return UnlockProviderMeta{Value: UnlockProviderBahamut, Label: "Bahamut Anime", Description: "检测巴哈姆特动画疯（ani.gamer.com.tw）地区可访问性", Category: "streaming"}
 	default:
 		key := NormalizeUnlockProvider(provider)
 		return UnlockProviderMeta{Value: key, Label: provider, Category: "custom"}
