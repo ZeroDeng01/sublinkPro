@@ -16,8 +16,8 @@ import (
 const (
 	bahamutProbeBodyLimit = 32 * 1024
 	bahamutTraceBodyLimit = 8 * 1024
-	bahamutDefaultTimeout = 20 * time.Second
-	bahamutRetryDeadline  = 30 * time.Second
+	bahamutDefaultTimeout = 15 * time.Second
+	bahamutRetryDeadline  = 50 * time.Second
 	// bahamutAdID 是巴哈姆特 token.php 接口固定的广告位参数
 	bahamutAdID = "89422"
 	// bahamutLenientSn 是入口探针动画 SN：港澳台 IP 均可获取 token，通过即表示在巴哈姆特服务区
@@ -48,8 +48,7 @@ func (bahamutAnimeUnlockChecker) RenameVariableMeta() models.UnlockRenameVariabl
 }
 
 // Check 执行巴哈姆特动画疯解锁检测。
-// 巴哈姆特需要 cookie jar 维持 deviceid→token 的 session 关联，
-// 因此 checker 自建 client（复用 runtime 的代理 Transport，但独立 session 策略）。
+// Transport 复用 runtime（必须走节点代理），cookie jar 独立（维持 deviceid→token session）。
 func (bahamutAnimeUnlockChecker) Check(runtime UnlockRuntime) models.UnlockProviderResult {
 	client := bahamutClient(runtime)
 	headers := bahamutHeaders()
@@ -85,10 +84,10 @@ func (bahamutAnimeUnlockChecker) Check(runtime UnlockRuntime) models.UnlockProvi
 		return evaluateBahamutUnlockProbe(runtime, deviceIDResp, lenientResp, strictResp, nil)
 	}
 
-	// 入口通过但台湾探针未通过：查 trace 拿港澳台具体 region
-	traceBody, _ := bahamutFetchBody(client, "https://ani.gamer.com.tw/cdn-cgi/trace", headers, bahamutTraceBodyLimit)
+	// 入口通过但台湾探针未通过：查 trace 拿港澳台具体 region（可选，失败不影响整体可用性判定）
+	traceBody, traceErr := bahamutFetchBody(client, "https://ani.gamer.com.tw/cdn-cgi/trace", headers, bahamutTraceBodyLimit)
 	var traceResp *unlockHTTPResponse
-	if len(traceBody) > 0 {
+	if traceErr == nil && len(traceBody) > 0 {
 		traceResp = &unlockHTTPResponse{RawBody: string(traceBody)}
 	}
 	return evaluateBahamutUnlockProbe(runtime, deviceIDResp, lenientResp, strictResp, traceResp)
@@ -116,13 +115,13 @@ func evaluateBahamutUnlockProbe(runtime UnlockRuntime, deviceIDResp, lenientResp
 		return models.UnlockProviderResult{Provider: models.UnlockProviderBahamut, Status: models.UnlockStatusAvailable, Region: "TW"}
 	}
 
-	// 入口通过但台湾探针未通过：港澳台可用，从 trace 拿 region
+	// 入口通过但台湾探针未通过：港澳台可用，从 trace 拿精确 region
 	region := ""
 	if traceResp != nil {
 		region = evaluateBahamutRegion(traceResp.RawBody)
 	}
 	if region == "" {
-		// trace 失败时按原始实现降级为 partial，避免误报精确地区
+		// trace 失败或返回无效地区码时降级为 partial，避免误报精确地区
 		return models.UnlockProviderResult{Provider: models.UnlockProviderBahamut, Status: models.UnlockStatusPartial, Region: runtime.LandingCountry, Detail: "primary_token_only"}
 	}
 	return models.UnlockProviderResult{Provider: models.UnlockProviderBahamut, Status: models.UnlockStatusAvailable, Region: region}
@@ -173,9 +172,8 @@ func evaluateBahamutRegion(rawBody string) string {
 	return ""
 }
 
-// bahamutClient 构造巴哈姆特专属 HTTP client。
-// Transport 复用 runtime 的代理拨号路径（必须共享，走节点代理），
-// 但 cookie jar 和 redirect 策略独立——deviceid→token 的 session 关联需要 cookie 维持。
+// bahamutClient 构造独立 client 用于 session 管理。
+// Transport 复用 runtime（必须走节点代理），cookie jar 独立（维持 deviceid→token session）。
 func bahamutClient(runtime UnlockRuntime) *http.Client {
 	jar, _ := cookiejar.New(nil)
 	timeout := runtime.Timeout
