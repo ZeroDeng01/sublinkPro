@@ -2276,7 +2276,9 @@
         "expireDays": "Expiration days",
         "expireTime": "Expiration time",
         "enabled": "Enable this share"
-      }
+      },
+      "noResults": "No results found for your search",
+      "searchPlaceholder": "Search by name, token, or share link..."
     },
     "form": {
       "title": {
@@ -2835,21 +2837,34 @@
       "bandwagonhost": {
         "title": "BandwagonHost",
         "description": "Premium routes with multiple data centers and CN2 GIA options.",
-        "highlights": ["Multiple VPS locations", "CN2 GIA route options", "High-quality route servers"],
+        "highlights": [
+          "Multiple VPS locations",
+          "CN2 GIA route options",
+          "High-quality route servers"
+        ],
         "ctaLabel": "View plans",
         "tag": "VPS recommended"
       },
       "vultr": {
         "title": "Vultr",
         "description": "Many regions with hourly billing and flexible IP or region changes.",
-        "highlights": ["Many regions", "Hourly billing", "Low-cost stable plans", "IPv6-only options"],
+        "highlights": [
+          "Many regions",
+          "Hourly billing",
+          "Low-cost stable plans",
+          "IPv6-only options"
+        ],
         "ctaLabel": "View plans",
         "tag": "VPS"
       },
       "aliyun": {
         "title": "Aliyun",
         "description": "99 RMB per year server offers for new purchase and renewal.",
-        "highlights": ["China-based deployment and testing", "99 RMB/year new purchase and renewal", "Discount coupons available"],
+        "highlights": [
+          "China-based deployment and testing",
+          "99 RMB/year new purchase and renewal",
+          "Discount coupons available"
+        ],
         "ctaLabel": "View offers",
         "tag": "Cloud service"
       }

@@ -81,6 +81,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [systemDomainConfig, setSystemDomainConfig] = useState('');
   const [subStoreTargets, setSubStoreTargets] = useState([]);
@@ -319,6 +320,19 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     return false;
   };
 
+  const filteredShares = useMemo(() => {
+    if (!searchQuery.trim()) return shares;
+
+    const query = searchQuery.toLowerCase().trim();
+    return shares.filter((share) => {
+      const name = (share.name || '').toLowerCase();
+      const token = (share.token || '').toLowerCase();
+      const shareLink = `${getServerUrl()}/c/?token=${share.token}`.toLowerCase();
+
+      return name.includes(query) || token.includes(query) || shareLink.includes(query);
+    });
+  }, [shares, searchQuery, getServerUrl]);
+
   const getDialogPaperSx = (fullScreen = false) => ({
     borderRadius: fullScreen ? 0 : 3,
     overflow: 'hidden',
@@ -536,16 +550,33 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
             boxShadow: `inset 0 -1px 0 ${withAlpha(palette.divider, 0.4)}`
           }}
         >
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Typography variant="h6">{t('subscriptions.share.title', { name: subscription?.Name })}</Typography>
-            <Stack direction="row" spacing={1}>
-              <IconButton size="small" onClick={fetchShares} disabled={loading} sx={iconButtonBaseSx}>
-                <RefreshIcon fontSize="small" />
-              </IconButton>
-              <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAdd}>
-                {t('common.add')}
-              </Button>
+          <Stack spacing={1.5}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Typography variant="h6">{t('subscriptions.share.title', { name: subscription?.Name })}</Typography>
+              <Stack direction="row" spacing={1}>
+                <IconButton size="small" onClick={fetchShares} disabled={loading} sx={iconButtonBaseSx}>
+                  <RefreshIcon fontSize="small" />
+                </IconButton>
+                <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAdd}>
+                  {t('common.add')}
+                </Button>
+              </Stack>
             </Stack>
+            <TextField
+              size="small"
+              fullWidth
+              placeholder={t('subscriptions.share.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: nestedPanelSurface,
+                  '&:hover': {
+                    bgcolor: withAlpha(palette.primary.main, isDark ? 0.08 : 0.04)
+                  }
+                }
+              }}
+            />
           </Stack>
         </DialogTitle>
 
@@ -573,9 +604,21 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
             >
               {t('subscriptions.share.empty')}
             </Alert>
+          ) : filteredShares.length === 0 ? (
+            <Alert
+              variant="outlined"
+              severity="info"
+              sx={{
+                mt: 1.5,
+                bgcolor: withAlpha(palette.info.main, isDark ? 0.12 : 0.05),
+                borderColor: withAlpha(palette.info.main, isDark ? 0.3 : 0.18)
+              }}
+            >
+              {t('subscriptions.share.noResults')}
+            </Alert>
           ) : (
             <Stack spacing={1.5} sx={{ mt: 1.5 }}>
-              {shares.map((share) => renderShareCard(share))}
+              {filteredShares.map((share) => renderShareCard(share))}
             </Stack>
           )}
         </DialogContent>

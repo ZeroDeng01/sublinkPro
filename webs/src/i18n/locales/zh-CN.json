@@ -2276,7 +2276,9 @@
         "expireDays": "过期天数",
         "expireTime": "过期时间",
         "enabled": "启用此分享"
-      }
+      },
+      "noResults": "未找到符合搜索条件的分享",
+      "searchPlaceholder": "通过名称、Token 或分享链接搜索..."
     },
     "form": {
       "title": {
@@ -2835,21 +2837,34 @@
       "bandwagonhost": {
         "title": "BandwagonHost",
         "description": "优质线路，提供多个数据中心和 CN2 GIA 选项。",
-        "highlights": ["多个 VPS 机房", "CN2 GIA 线路选项", "高质量线路服务器"],
+        "highlights": [
+          "多个 VPS 机房",
+          "CN2 GIA 线路选项",
+          "高质量线路服务器"
+        ],
         "ctaLabel": "查看套餐",
         "tag": "VPS 推荐"
       },
       "vultr": {
         "title": "Vultr",
         "description": "多地区可选，支持小时计费，并可灵活更换 IP 或区域。",
-        "highlights": ["多地区", "小时计费", "低成本稳定套餐", "IPv6-only 选项"],
+        "highlights": [
+          "多地区",
+          "小时计费",
+          "低成本稳定套餐",
+          "IPv6-only 选项"
+        ],
         "ctaLabel": "查看套餐",
         "tag": "VPS"
       },
       "aliyun": {
         "title": "阿里云",
         "description": "新购与续费同价的 99 元/年服务器优惠。",
-        "highlights": ["适合国内部署和测试", "新购续费 99 元/年", "可用优惠券"],
+        "highlights": [
+          "适合国内部署和测试",
+          "新购续费 99 元/年",
+          "可用优惠券"
+        ],
         "ctaLabel": "查看优惠",
         "tag": "云服务"
       }
