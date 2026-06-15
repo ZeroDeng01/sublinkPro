@@ -6,6 +6,28 @@ on:
       - 'v*'
     branches:
       - '**'
+    paths-ignore:
+      # 文档文件（不包括 skill-sublinkpro，它会被嵌入到二进制文件中）
+      - '*.md'
+      - 'docs/**'
+      # AI 代理配置和私有文档
+      - '.agents/**'
+      - '.claude/**'
+      - '.codex/**'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - 'GEMINI.md'
+      - 'CONTRIBUTING.md'
+      # 编辑器/IDE 配置
+      - '.vscode/**'
+      - '.idea/**'
+      - '.editorconfig'
+      # Git 配置
+      - '.gitignore'
+      - '.gitattributes'
+      # 许可证文件
+      - 'LICENSE'
+      - 'COPYING'
 
 permissions:
   contents: write
