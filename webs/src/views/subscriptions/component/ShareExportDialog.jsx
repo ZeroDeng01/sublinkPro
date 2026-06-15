@@ -80,7 +80,7 @@ export default function ShareExportDialog({ open, onClose, selectedShares, serve
     const links = generatedLinks.join('\n');
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     const clientLabel = selectedClientType === 'auto' ? 'auto' : selectedClientType;
-    const filename = `share_links_${clientLabel}_${selectedShares.length}_${timestamp}.txt`;
+    const filename = `sublinkpro_${clientLabel}_${selectedShares.length}_${timestamp}.txt`;
 
     // Create blob with UTF-8 BOM
     const blob = new Blob(['﻿' + links], {

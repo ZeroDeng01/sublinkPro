@@ -210,12 +210,18 @@ func GetSharesBySubscriptionID(subID int, keyword ...string) []SubscriptionShare
 	shares := subscriptionShareCache.GetByIndex("subscriptionID", strconv.Itoa(subID))
 
 	// 如果提供了搜索关键词，进行过滤
+	// 规则：名称使用模糊搜索，token使用精确匹配
 	if len(keyword) > 0 && keyword[0] != "" {
-		kw := strings.ToLower(keyword[0])
+		kw := keyword[0]
+		kwLower := strings.ToLower(kw)
 		filtered := make([]SubscriptionShare, 0)
 		for _, share := range shares {
-			if strings.Contains(strings.ToLower(share.Name), kw) ||
-				strings.Contains(strings.ToLower(share.Token), kw) {
+			// 名称：模糊搜索（不区分大小写）
+			nameMatch := strings.Contains(strings.ToLower(share.Name), kwLower)
+			// Token：精确匹配（区分大小写）
+			tokenMatch := share.Token == kw
+
+			if nameMatch || tokenMatch {
 				filtered = append(filtered, share)
 			}
 		}
@@ -231,12 +237,17 @@ func GetSharesBySubscriptionIDPaginated(subID, page, pageSize int, keyword strin
 	allShares := subscriptionShareCache.GetByIndex("subscriptionID", strconv.Itoa(subID))
 
 	// 如果提供了搜索关键词，进行过滤
+	// 规则：名称使用模糊搜索，token使用精确匹配
 	if keyword != "" {
-		kw := strings.ToLower(keyword)
+		kwLower := strings.ToLower(keyword)
 		filtered := make([]SubscriptionShare, 0)
 		for _, share := range allShares {
-			if strings.Contains(strings.ToLower(share.Name), kw) ||
-				strings.Contains(strings.ToLower(share.Token), kw) {
+			// 名称：模糊搜索（不区分大小写）
+			nameMatch := strings.Contains(strings.ToLower(share.Name), kwLower)
+			// Token：精确匹配（区分大小写）
+			tokenMatch := share.Token == keyword
+
+			if nameMatch || tokenMatch {
 				filtered = append(filtered, share)
 			}
 		}

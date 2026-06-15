@@ -526,6 +526,36 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   // 搜索处理（防抖后调用后端API）
   const searchTimeoutRef = useRef(null);
 
+  /**
+   * 从URL中提取token参数
+   * @param {string} input - 用户输入
+   * @returns {string} - 提取的token或原始输入
+   */
+  const extractTokenFromInput = (input) => {
+    if (!input || typeof input !== 'string') return input;
+
+    const trimmed = input.trim();
+
+    // 检测是否为URL（包含协议或域名模式）
+    try {
+      // 尝试作为完整URL解析
+      const url = new URL(trimmed);
+      const token = url.searchParams.get('token');
+      if (token) {
+        return token;
+      }
+    } catch {
+      // 不是完整URL，尝试检测是否包含查询参数
+      const tokenMatch = trimmed.match(/[?&]token=([^&\s]+)/);
+      if (tokenMatch && tokenMatch[1]) {
+        return tokenMatch[1];
+      }
+    }
+
+    // 如果不是URL或未找到token，返回原始输入（用于名称模糊搜索）
+    return trimmed;
+  };
+
   const handleSearchChange = useCallback(
     (value) => {
       setSearchQuery(value);
@@ -534,7 +564,9 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         clearTimeout(searchTimeoutRef.current);
       }
       searchTimeoutRef.current = setTimeout(() => {
-        fetchShares(value, true); // isSearch = true，使用 searching 状态而非 loading
+        // 尝试从输入中提取token（如果是链接）
+        const searchKeyword = extractTokenFromInput(value);
+        fetchShares(searchKeyword, true); // isSearch = true，使用 searching 状态而非 loading
         setSelectedShares([]); // 搜索时清空选择
       }, 500);
     },

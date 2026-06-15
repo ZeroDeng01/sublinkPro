@@ -38,11 +38,11 @@ type ShareBatchDeleteReq struct {
 
 // ShareBatchUpdateReq 批量更新分享请求
 type ShareBatchUpdateReq struct {
-	IDs        []int   `json:"ids" binding:"required,min=1"`
-	Enabled    *bool   `json:"enabled"`    // 指针允许 null
-	ExpireType *int    `json:"expire_type"`
-	ExpireDays *int    `json:"expire_days"`
-	ExpireAt   string  `json:"expire_at"`
+	IDs        []int  `json:"ids" binding:"required,min=1"`
+	Enabled    *bool  `json:"enabled"` // 指针允许 null
+	ExpireType *int   `json:"expire_type"`
+	ExpireDays *int   `json:"expire_days"`
+	ExpireAt   string `json:"expire_at"`
 }
 
 // ShareCreateReq 创建分享请求
