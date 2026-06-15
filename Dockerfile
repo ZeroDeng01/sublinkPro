@@ -31,6 +31,7 @@ RUN CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
 # 3. 运行镜像
 FROM alpine:latest
 ARG TARGETARCH
+ARG TARGETVARIANT
 WORKDIR /app
 
 # ============================================
@@ -61,11 +62,18 @@ RUN apk add --no-cache tzdata ca-certificates curl && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     echo "Asia/Shanghai" > /etc/timezone && \
     arch="${TARGETARCH:-$(uname -m)}" && \
+    variant="${TARGETVARIANT:-}" && \
     case "$arch" in \
       amd64|x86_64) cloudflared_arch="amd64" ;; \
       arm64|aarch64) cloudflared_arch="arm64" ;; \
+      arm) cloudflared_arch="arm" ;; \
+      armv7*|armv6*) cloudflared_arch="arm" ;; \
+      386|i386|i686) cloudflared_arch="386" ;; \
       *) echo "unsupported cloudflared architecture: $arch" >&2; exit 1 ;; \
     esac && \
+    if [ "$arch" = "arm" ] && [ -n "$variant" ] && [ "$variant" != "v7" ]; then \
+      echo "unsupported cloudflared ARM variant: $variant" >&2; exit 1; \
+    fi && \
     curl -fsSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${cloudflared_arch}" -o /usr/local/bin/cloudflared && \
     chmod +x /usr/local/bin/cloudflared && \
     cloudflared version

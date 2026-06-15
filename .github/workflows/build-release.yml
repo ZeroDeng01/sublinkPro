@@ -126,9 +126,22 @@ jobs:
             goarch: arm64
             output: sublinkPro-linux-arm64
             upx: true
+          - goos: linux
+            goarch: arm
+            goarm: 7
+            output: sublinkPro-linux-armv7
+            upx: true
+          - goos: linux
+            goarch: 386
+            output: sublinkPro-linux-x86
+            upx: true
           - goos: windows
             goarch: amd64
             output: sublinkPro-windows-amd64.exe
+            upx: false
+          - goos: windows
+            goarch: 386
+            output: sublinkPro-windows-x86.exe
             upx: false
           - goos: darwin
             goarch: amd64
@@ -169,6 +182,10 @@ jobs:
         run: |
           mkdir -p build
           echo "Building ${{ matrix.output }} for ${{ matrix.goos }}/${{ matrix.goarch }}..."
+          if [ -n "${{ matrix.goarm }}" ]; then
+            export GOARM="${{ matrix.goarm }}"
+            echo "Using GOARM=${GOARM}"
+          fi
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
             go build -tags=prod -ldflags="-s -w" -o build/${{ matrix.output }} .
           echo "Build completed. Binary size:"
@@ -217,7 +234,10 @@ jobs:
           REQUIRED_FILES=(
             "sublinkPro-linux-amd64"
             "sublinkPro-linux-arm64"
+            "sublinkPro-linux-armv7"
+            "sublinkPro-linux-x86"
             "sublinkPro-windows-amd64.exe"
+            "sublinkPro-windows-x86.exe"
             "sublinkPro-darwin-amd64"
             "sublinkPro-darwin-arm64"
           )
@@ -286,7 +306,10 @@ jobs:
           echo "### 📦 发布文件:" >> changelog.md
           echo "- \`sublinkPro-linux-amd64\` - Linux x64" >> changelog.md
           echo "- \`sublinkPro-linux-arm64\` - Linux ARM64" >> changelog.md
+          echo "- \`sublinkPro-linux-armv7\` - Linux ARMv7 (32-bit)" >> changelog.md
+          echo "- \`sublinkPro-linux-x86\` - Linux x86 (32-bit)" >> changelog.md
           echo "- \`sublinkPro-windows-amd64.exe\` - Windows x64" >> changelog.md
+          echo "- \`sublinkPro-windows-x86.exe\` - Windows x86 (32-bit)" >> changelog.md
           echo "- \`sublinkPro-darwin-amd64\` - macOS x64" >> changelog.md
           echo "- \`sublinkPro-darwin-arm64\` - macOS ARM64 (Apple Silicon)" >> changelog.md
 
@@ -299,7 +322,10 @@ jobs:
           files: |
             build/sublinkPro-linux-amd64
             build/sublinkPro-linux-arm64
+            build/sublinkPro-linux-armv7
+            build/sublinkPro-linux-x86
             build/sublinkPro-windows-amd64.exe
+            build/sublinkPro-windows-x86.exe
             build/sublinkPro-darwin-amd64
             build/sublinkPro-darwin-arm64
           draft: false
@@ -343,7 +369,7 @@ jobs:
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             # 带 tag 的推送：使用 tag 版本号 + latest
             TAG=${GITHUB_REF#refs/tags/}
-            docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64 \
+            docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64,linux/arm/v7,linux/386 \
               -f Dockerfile.ci \
               -t zerodeng/sublink-pro:${TAG} \
               -t zerodeng/sublink-pro:latest \
@@ -357,7 +383,7 @@ jobs:
               # 将分支名中的 / 替换为 - 以兼容 Docker tag 格式
               DOCKER_TAG=${BRANCH//\//-}
             fi
-            docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64 \
+            docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64,linux/arm/v7,linux/386 \
               -f Dockerfile.ci \
               -t zerodeng/sublink-pro:${DOCKER_TAG} \
               --push .

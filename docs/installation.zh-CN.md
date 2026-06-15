@@ -111,6 +111,7 @@ sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/
 > - **更新程序**：检测到已安装时，可选择更新（保留所有数据）
 > - **重新安装**：可选择是否保留现有数据
 > - **恢复安装**：检测到旧数据时，可选择恢复安装
+> - **支持架构**：Linux x64、Linux ARM64、Linux ARMv7 32 位、Linux x86 32 位
 
 ---
 

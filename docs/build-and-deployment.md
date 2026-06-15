@@ -218,9 +218,14 @@ To manually re-trigger checks, comment `/recheck` on the PR.
 ### Binary Artifacts
 
 Production builds generate:
-- `sublinkPro` - Linux amd64 binary
-- `sublinkPro-arm64` - Linux arm64 binary
-- `sublinkPro-darwin` - macOS binary (optional)
+- `sublinkPro-linux-amd64` - Linux x64 binary
+- `sublinkPro-linux-arm64` - Linux ARM64 binary
+- `sublinkPro-linux-armv7` - Linux ARMv7 32-bit binary
+- `sublinkPro-linux-x86` - Linux x86 32-bit binary
+- `sublinkPro-windows-amd64.exe` - Windows x64 binary
+- `sublinkPro-windows-x86.exe` - Windows x86 32-bit binary
+- `sublinkPro-darwin-amd64` - macOS x64 binary
+- `sublinkPro-darwin-arm64` - macOS ARM64 binary
 
 ### Docker Images
 

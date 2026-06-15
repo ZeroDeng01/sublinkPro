@@ -77,6 +77,8 @@ detect_machine_type() {
     case "$machine_type" in
         x86_64) file_name="sublinkPro-linux-amd64" ;;
         aarch64) file_name="sublinkPro-linux-arm64" ;;
+        armv7l|armv7*) file_name="sublinkPro-linux-armv7" ;;
+        i386|i686) file_name="sublinkPro-linux-x86" ;;
         *) print_error "不支持的机器类型: $machine_type"; exit 1 ;;
     esac
 }

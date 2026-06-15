@@ -35,7 +35,7 @@ host will run SublinkPro (local shell, or via `ssh user@host '...'` for remote):
 docker --version              # is Docker installed?
 docker compose version        # v2 compose plugin (preferred)
 docker-compose version        # v1 standalone compose (older hosts)
-uname -m                      # arch: x86_64 -> amd64, aarch64 -> arm64
+uname -m                      # arch: x86_64 -> amd64, aarch64 -> arm64, armv7l -> armv7, i386/i686 -> x86
 id -u                         # 0 means root (the install script requires root)
 ```
 

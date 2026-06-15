@@ -111,6 +111,7 @@ sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/
 > - **Update**: detects an existing install and updates the program while keeping data
 > - **Reinstall**: lets you choose whether to keep existing data
 > - **Restore install**: detects old data and lets you restore it
+> - **Architectures**: Linux x64, Linux ARM64, Linux ARMv7 32-bit, and Linux x86 32-bit
 
 ---
 

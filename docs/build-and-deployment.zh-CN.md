@@ -218,9 +218,14 @@ docker-compose up -d
 ### 二进制产物
 
 生产构建生成：
-- `sublinkPro` - Linux amd64 二进制文件
-- `sublinkPro-arm64` - Linux arm64 二进制文件
-- `sublinkPro-darwin` - macOS 二进制文件（可选）
+- `sublinkPro-linux-amd64` - Linux x64 二进制文件
+- `sublinkPro-linux-arm64` - Linux ARM64 二进制文件
+- `sublinkPro-linux-armv7` - Linux ARMv7 32 位二进制文件
+- `sublinkPro-linux-x86` - Linux x86 32 位二进制文件
+- `sublinkPro-windows-amd64.exe` - Windows x64 二进制文件
+- `sublinkPro-windows-x86.exe` - Windows x86 32 位二进制文件
+- `sublinkPro-darwin-amd64` - macOS x64 二进制文件
+- `sublinkPro-darwin-arm64` - macOS ARM64 二进制文件
 
 ### Docker 镜像
 
