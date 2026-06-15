@@ -263,7 +263,19 @@ export default function NodeFilters({
           renderTags={(value, getTagProps) =>
             value.map((option, index) => {
               const { key, ...tagProps } = getTagProps({ index });
-              return <Chip key={key} label={formatCountry(option)} size="small" {...tagProps} />;
+              return (
+                <Chip
+                  key={key}
+                  label={formatCountry(option)}
+                  size="small"
+                  sx={{
+                    ...getNodeColorChipSx(theme, tokens, theme.palette.primary.main, { deletable: true }),
+                    bgcolor: tokens.isDark ? withAlpha(theme.palette.primary.main, 0.12) : undefined,
+                    borderColor: tokens.isDark ? withAlpha(theme.palette.primary.main, 0.3) : undefined
+                  }}
+                  {...tagProps}
+                />
+              );
             })
           }
           renderInput={(params) => (
@@ -307,7 +319,11 @@ export default function NodeFilters({
                   key={key}
                   label={option.name || option}
                   size="small"
-                  sx={getNodeColorChipSx(theme, tokens, option.color || theme.palette.primary.main, { deletable: true })}
+                  sx={{
+                    ...getNodeColorChipSx(theme, tokens, option.color || theme.palette.primary.main, { deletable: true }),
+                    bgcolor: tokens.isDark ? withAlpha(option.color || theme.palette.primary.main, 0.12) : undefined,
+                    borderColor: tokens.isDark ? withAlpha(option.color || theme.palette.primary.main, 0.3) : undefined
+                  }}
                   {...tagProps}
                 />
               );

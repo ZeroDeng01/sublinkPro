@@ -665,9 +665,34 @@ export default function SubscriptionFormDialog({
                           onChange={(e, newValue) => setNodeCountryFilter(newValue)}
                           getOptionLabel={(option) => formatCountry(option)}
                           renderInput={(params) => (
-                            <TextField {...params} label={t('subscriptions.form.nodeSelection.nodeCountryFilter')} />
+                            <TextField
+                              {...params}
+                              label={t('subscriptions.form.nodeSelection.nodeCountryFilter')}
+                              sx={{
+                                '& .MuiInputBase-root': {
+                                  paddingRight: '65px !important'
+                                }
+                              }}
+                            />
                           )}
                           renderOption={(props, option) => <li {...props}>{formatCountry(option)}</li>}
+                          renderTags={(value, getTagProps) =>
+                            value.map((option, index) => {
+                              const { key, ...tagProps } = getTagProps({ index });
+                              return (
+                                <Chip
+                                  key={key}
+                                  label={formatCountry(option)}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: isDark ? withAlpha(palette.primary.main, 0.12) : undefined,
+                                    borderColor: isDark ? withAlpha(palette.primary.main, 0.3) : undefined
+                                  }}
+                                  {...tagProps}
+                                />
+                              );
+                            })
+                          }
                           limitTags={2}
                         />
                       </Grid>

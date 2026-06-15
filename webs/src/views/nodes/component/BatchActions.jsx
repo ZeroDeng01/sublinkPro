@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ClearIcon from '@mui/icons-material/Clear';
 import { getNodeActionButtonSx, getNodeThemeTokens } from '../nodeTheme';
+import { withAlpha } from 'utils/colorUtils';
 
 /**
  * 批量操作栏
@@ -79,8 +80,16 @@ export default function BatchActions({
       <Chip
         label={t('nodes.batch.selectedCount', { count: selectedCount })}
         size="small"
-        sx={{ fontWeight: 600 }}
-        color={hasSelection ? 'primary' : 'default'}
+        sx={{
+          fontWeight: 600,
+          ...(hasSelection && {
+            bgcolor: isDark ? withAlpha(tokens.palette.primary.main, 0.18) : tokens.palette.primary.main,
+            color: isDark ? tokens.palette.primary.light : tokens.palette.primary.contrastText,
+            border: '1px solid',
+            borderColor: withAlpha(tokens.palette.primary.main, isDark ? 0.34 : 0.2)
+          })
+        }}
+        color={hasSelection ? undefined : 'default'}
       />
 
       {/* 清除选择按钮 */}

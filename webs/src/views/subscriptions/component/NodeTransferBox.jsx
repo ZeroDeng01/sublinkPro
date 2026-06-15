@@ -21,6 +21,7 @@ import Grid from '@mui/material/Grid';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Fade from '@mui/material/Fade';
+import Tooltip from '@mui/material/Tooltip';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from '../../../utils/colorUtils';
@@ -352,6 +353,10 @@ export default function NodeTransferBox({
                   size="small"
                   color="primary"
                   variant="outlined"
+                  sx={{
+                    bgcolor: isDark ? withAlpha(palette.primary.main, 0.12) : undefined,
+                    borderColor: isDark ? withAlpha(palette.primary.main, 0.3) : undefined
+                  }}
                 />
               </Stack>
               <List dense sx={{ pt: 0, ...listSurfaceSx, p: 1 }}>
@@ -375,22 +380,25 @@ export default function NodeTransferBox({
                         size="small"
                       />
                     </ListItemIcon>
-                    <ListItemText
-                      primary={node.Name}
-                      secondary={
-                        <Chip
-                          label={node.Group || t('nodes.table.ungrouped')}
-                          size="small"
-                          variant="outlined"
-                          sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
-                        />
-                      }
-                      primaryTypographyProps={{
-                        noWrap: true,
-                        fontWeight: 500,
-                        sx: { maxWidth: 'calc(100% - 60px)' }
-                      }}
-                    />
+                    <Tooltip title={node.Name} placement="top" arrow>
+                      <ListItemText
+                        primary={node.Name}
+                        secondary={
+                          <Chip
+                            label={node.Group || t('nodes.table.ungrouped')}
+                            size="small"
+                            variant="outlined"
+                            sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
+                          />
+                        }
+                        primaryTypographyProps={{
+                          noWrap: true,
+                          fontWeight: 500,
+                          sx: { maxWidth: '200px' }
+                        }}
+                        sx={{ maxWidth: '200px' }}
+                      />
+                    </Tooltip>
                   </ListItem>
                 ))}
               </List>
@@ -458,7 +466,15 @@ export default function NodeTransferBox({
                     </Typography>
                   }
                 />
-                <Chip label={t('subscriptions.transfer.selectedChip', { count: selectedNodes.length })} size="small" color="success" />
+                <Chip
+                  label={t('subscriptions.transfer.selectedChip', { count: selectedNodes.length })}
+                  size="small"
+                  color="success"
+                  sx={{
+                    bgcolor: isDark ? withAlpha(palette.success.main, 0.12) : undefined,
+                    borderColor: isDark ? withAlpha(palette.success.main, 0.3) : undefined
+                  }}
+                />
               </Stack>
               <List dense sx={{ pt: 0, ...listSurfaceSx, p: 1 }}>
                 {filteredSelectedNodes.map((node) => (
@@ -482,23 +498,26 @@ export default function NodeTransferBox({
                         color="error"
                       />
                     </ListItemIcon>
-                    <ListItemText
-                      primary={node.Name}
-                      secondary={
-                        <Chip
-                          label={node.Group || t('nodes.table.ungrouped')}
-                          size="small"
-                          color="success"
-                          variant="outlined"
-                          sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
-                        />
-                      }
-                      primaryTypographyProps={{
-                        noWrap: true,
-                        fontWeight: 500,
-                        sx: { maxWidth: 'calc(100% - 60px)' }
-                      }}
-                    />
+                    <Tooltip title={node.Name} placement="top" arrow>
+                      <ListItemText
+                        primary={node.Name}
+                        secondary={
+                          <Chip
+                            label={node.Group || t('nodes.table.ungrouped')}
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                            sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
+                          />
+                        }
+                        primaryTypographyProps={{
+                          noWrap: true,
+                          fontWeight: 500,
+                          sx: { maxWidth: '200px' }
+                        }}
+                        sx={{ maxWidth: '200px' }}
+                      />
+                    </Tooltip>
                   </ListItem>
                 ))}
               </List>
@@ -569,6 +588,10 @@ export default function NodeTransferBox({
               }
               size="small"
               color="primary"
+              sx={{
+                bgcolor: isDark ? withAlpha(palette.primary.main, 0.12) : undefined,
+                borderColor: isDark ? withAlpha(palette.primary.main, 0.3) : undefined
+              }}
             />
           </Stack>
           <Box sx={{ flexGrow: 1, overflow: 'auto', pr: 1 }}>
@@ -587,19 +610,23 @@ export default function NodeTransferBox({
                   <ListItemIcon sx={{ minWidth: 32 }}>
                     <Checkbox edge="start" checked={checkedAvailable.includes(node.ID)} tabIndex={-1} disableRipple size="small" />
                   </ListItemIcon>
-                  <ListItemText
-                    primary={node.Name}
-                    secondary={node.Group}
-                    primaryTypographyProps={{
-                      noWrap: true,
-                      fontSize: '0.875rem',
-                      fontWeight: 500
-                    }}
-                    secondaryTypographyProps={{
-                      noWrap: true,
-                      fontSize: '0.75rem'
-                    }}
-                  />
+                  <Tooltip title={node.Name} placement="top" arrow>
+                    <ListItemText
+                      primary={node.Name}
+                      secondary={node.Group}
+                      primaryTypographyProps={{
+                        noWrap: true,
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        sx: { maxWidth: '280px' }
+                      }}
+                      secondaryTypographyProps={{
+                        noWrap: true,
+                        fontSize: '0.75rem'
+                      }}
+                      sx={{ maxWidth: '280px' }}
+                    />
+                  </Tooltip>
                 </ListItem>
               ))}
               {availableNodesTotal > 100 && (
@@ -696,7 +723,15 @@ export default function NodeTransferBox({
                 {t('subscriptions.transfer.selectedTitle')}
               </Typography>
             </Stack>
-            <Chip label={selectedNodes.length} size="small" color="success" />
+            <Chip
+              label={selectedNodes.length}
+              size="small"
+              color="success"
+              sx={{
+                bgcolor: isDark ? withAlpha(palette.success.main, 0.12) : undefined,
+                borderColor: isDark ? withAlpha(palette.success.main, 0.3) : undefined
+              }}
+            />
           </Stack>
           <TextField
             fullWidth
@@ -736,19 +771,23 @@ export default function NodeTransferBox({
                       color="error"
                     />
                   </ListItemIcon>
-                  <ListItemText
-                    primary={node.Name}
-                    secondary={node.Group}
-                    primaryTypographyProps={{
-                      noWrap: true,
-                      fontSize: '0.875rem',
-                      fontWeight: 500
-                    }}
-                    secondaryTypographyProps={{
-                      noWrap: true,
-                      fontSize: '0.75rem'
-                    }}
-                  />
+                  <Tooltip title={node.Name} placement="top" arrow>
+                    <ListItemText
+                      primary={node.Name}
+                      secondary={node.Group}
+                      primaryTypographyProps={{
+                        noWrap: true,
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        sx: { maxWidth: '280px' }
+                      }}
+                      secondaryTypographyProps={{
+                        noWrap: true,
+                        fontSize: '0.75rem'
+                      }}
+                      sx={{ maxWidth: '280px' }}
+                    />
+                  </Tooltip>
                 </ListItem>
               ))}
             </List>
