@@ -9,6 +9,13 @@ sublink.exe
 .idea/
 static
 sublinkPro.exe
+
+# AI agent runtime and temporary files (DO NOT COMMIT)
+.claude/projects/
+.claude/sessions/
+.claude/plans/
+.claude/transcripts/
+
 /.sisyphus/
 /.playwright-mcp/
 /.omo/

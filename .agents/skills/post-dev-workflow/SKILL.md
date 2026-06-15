@@ -1,14 +1,20 @@
 ---
 name: post-dev-workflow
-description: "Mandatory post-development workflow orchestrating validation, synchronization, and testing phases. Automatically invoked by AI agents after code changes. Not for manual use."
-version: "1.0.0"
+description: "MANDATORY post-development workflow orchestrating validation, synchronization, and testing phases. Automatically invoked by AI agents after code changes. BLOCKING - work is incomplete without this."
+version: "2.0.0"
 author: "SublinkPro Team"
 user-invocable: false
+mandatory: true
+enforcement-level: "blocking"
 ---
 
 # Post-Development Workflow Skill
 
-**MANDATORY** automated workflow to run after completing ANY code change, before declaring work "complete".
+**🛑 MANDATORY AUTOMATED WORKFLOW 🛑**
+
+This workflow is **REQUIRED** after completing ANY code change, before declaring work "complete".
+
+**CRITICAL**: This workflow is a **PREREQUISITE** for committing. Do NOT proceed to commit without completing this workflow successfully.
 
 ---
 
@@ -292,6 +298,38 @@ Document in your summary:
 
 ---
 
+## Phase 6: Pre-Commit Final Validation (MANDATORY)
+
+**🛑 CRITICAL: This phase is MANDATORY before any git commit 🛑**
+
+After completing Phases 1-5, you **MUST** invoke the pre-commit-check skill to perform final validation before committing.
+
+### Why This Phase is Required
+
+Even though Phase 1 runs validation, you MUST re-run pre-commit-check because:
+- Files may have been modified since Phase 1
+- Additional changes may have been made during documentation/test updates
+- This ensures absolute consistency before commit
+- This is a hard requirement per AGENTS.md Section 0
+
+### Execution
+
+```bash
+# Before proceeding to git add/commit, invoke:
+.claude/skills/pre-commit-check/SKILL.md
+```
+
+The pre-commit-check skill will:
+1. Verify all changed files
+2. Re-run format/lint/test commands
+3. Verify git staging (no sensitive files, no runtime data)
+4. Prepare final commit message
+5. Stage changes for user verification
+
+**BLOCKING**: You cannot proceed to commit without successfully completing pre-commit-check.
+
+---
+
 ## Delivery Checklist
 
 Before declaring work "complete", verify:
@@ -301,6 +339,7 @@ Before declaring work "complete", verify:
 - [ ] **Phase 3**: Documentation updated (or skip reason documented)
 - [ ] **Phase 4**: Tests added/updated (or skip reason documented)
 - [ ] **Phase 5**: Change summary prepared
+- [ ] **Phase 6**: Pre-commit-check skill invoked and passed (MANDATORY)
 - [ ] **Git staging**: Only intended files staged (no secrets, no runtime data)
 - [ ] **Bilingual**: Both English and Chinese docs updated (if docs changed)
 - [ ] **No shortcuts**: No skipped validation, no "will fix later" items
@@ -316,6 +355,7 @@ Before declaring work "complete", verify:
 - Documentation updated (Phase 3)
 - Tests added/updated (Phase 4)
 - Change summary prepared (Phase 5)
+- **Pre-commit-check skill successfully completed (Phase 6)**
 - All deliverables documented
 - No unresolved validation failures
 - No "will fix later" items
@@ -327,6 +367,7 @@ Before declaring work "complete", verify:
 - Cross-layer changes not synchronized
 - Tests missing or failing
 - Change summary incomplete
+- **Pre-commit-check not invoked or failed**
 
 ---
 
@@ -347,6 +388,7 @@ IF code_change_complete:
     IF key_logic_changed:
         RUN Phase 4 (test execution)
     RUN Phase 5 (change summary)
+    🛑 RUN Phase 6 (pre-commit-check) - MANDATORY, NO EXCEPTIONS
     REPORT results to user
     IF all_phases_pass:
         STAGE changes (git add)
@@ -356,6 +398,21 @@ IF code_change_complete:
     ELSE:
         FIX failures and re-run
 ```
+
+### Critical Rule: Phase 6 is Non-Negotiable
+
+**Phase 6 (pre-commit-check) MUST be invoked before any git add/commit**, even if:
+- Phase 1 validation already passed
+- Changes seem minor
+- User requests to skip checks
+- You believe no additional validation is needed
+
+This double-validation ensures:
+1. No files changed after Phase 1
+2. Documentation/test updates didn't introduce issues
+3. Git staging is clean (no sensitive files)
+4. Commit message is properly formatted
+5. Compliance with AGENTS.md Section 0 requirements
 
 ### Reporting Format
 
@@ -382,6 +439,12 @@ After running this workflow, report to the user:
 
 ### Phase 5: Change Summary ✅
 - Commit message prepared ✅
+
+### Phase 6: Pre-Commit Final Validation ✅
+- All validations re-verified ✅
+- Git staging clean (no sensitive files) ✅
+- Only intended files staged ✅
+- Ready for commit ✅
 
 ---
 
@@ -424,6 +487,16 @@ Or if failures occurred:
 - Frontend lint failed: 3 errors in AirportDialog.jsx
 
 Fixing now...
+```
+
+Or if Phase 6 was skipped (THIS SHOULD NEVER HAPPEN):
+
+```
+## ❌ CRITICAL ERROR: Pre-Commit Validation Skipped
+
+Phase 6 (pre-commit-check) was not invoked. This is a MANDATORY step.
+
+Invoking pre-commit-check now...
 ```
 
 ---

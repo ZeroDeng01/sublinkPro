@@ -1,281 +1,403 @@
 ---
 name: pre-commit-check
-description: "Pre-commit validation checklist for linting, formatting, building, and testing. Use before every commit or PR. Not for post-development workflow orchestration."
-version: "1.0.0"
+description: "MANDATORY pre-commit validation executor. Runs all required checks before any commit. NOT optional - must be invoked before every git add/commit/PR."
+version: "2.0.0"
 author: "SublinkPro Team"
 user-invocable: true
+mandatory: true
+enforcement-level: "blocking"
 ---
 
 # Pre-Commit Check Skill
 
-Validation checklist to run before committing code changes.
+**🛑 MANDATORY VALIDATION EXECUTOR 🛑**
 
-## When to use this skill
+This skill is **NOT** a suggestion or checklist. It is a **MANDATORY EXECUTION REQUIREMENT**.
 
-Use this skill:
-- Before every commit
-- Before creating or updating a pull request
-- After completing any code changes
-- When PR checks fail and you need to know what to fix
+## Critical Rules
 
-## Prerequisites
+1. **Invoke this skill BEFORE any `git add`, `git commit`, or PR creation**
+2. **Execute ALL applicable validation commands**
+3. **Fix ALL failures before proceeding**
+4. **Document what was validated in commit message**
+5. **Stage changes only after validation passes**
+6. **Present to user for final verification (do NOT auto-commit)**
 
-- Changes are complete and ready to commit
-- You have tested the changes locally
-- You understand what layers your changes affect
+## When to Use This Skill
 
-## Quick Check Matrix
+**MANDATORY** invocation before:
+- Any `git add` command
+- Any `git commit` command
+- Any `gh pr create` or PR update command
+- Declaring work "complete", "done", or "finished"
+- User requests commit (even if they say "skip checks")
 
-| Changed Files | Must Run |
-|---|---|
-| Any Go files | `gofmt`, `golangci-lint`, relevant `go test` |
-| Any `webs/` frontend files | `yarn run lint` |
-| Routing, assets, build config | `yarn run build` |
-| i18n, theme, major UI | `yarn run lint` + `yarn run build` |
-| Documentation only | Manual link/consistency check |
+**This skill is BLOCKING** - you cannot proceed to commit without invoking it and ensuring all checks pass.
 
-## Backend Validation Checklist
+## Skill Execution Protocol
 
-### When Go files changed:
+When this skill is invoked, you **MUST** follow this exact sequence:
 
-#### Format check
+### Step 1: Identify Changed Files
+
 ```bash
-# From repo root
-gofmt -w <changed-go-files>
+git status --short
+git diff --name-only
+git diff --cached --name-only
 ```
-- [ ] All changed Go files formatted with `gofmt`
-- [ ] No format changes remain after running `gofmt -w`
 
-#### Linter
+Categorize changes:
+- [ ] Backend files (*.go)
+- [ ] Frontend files (webs/*)
+- [ ] Documentation files (*.md)
+- [ ] Configuration files (config.yaml, .env.example, etc.)
+- [ ] Mixed (multiple categories)
+
+### Step 2: Execute Backend Validation (if .go files changed)
+
+#### 2.1 Format Check
 ```bash
-# From repo root
+gofmt -l $(find . -name "*.go" -not -path "./vendor/*" -not -path "./webs/*" -not -path "./.git/*")
+```
+
+**If output is not empty**:
+```bash
+gofmt -w $(find . -name "*.go" -not -path "./vendor/*" -not -path "./webs/*" -not -path "./.git/*")
+```
+
+**Verify**:
+```bash
+gofmt -l $(find . -name "*.go" -not -path "./vendor/*" -not -path "./webs/*" -not -path "./.git/*")
+```
+
+**BLOCKING**: Must return empty output (all files formatted).
+
+#### 2.2 Lint Check
+```bash
 golangci-lint run
 ```
-- [ ] `golangci-lint run` passes with no errors
-- [ ] Fixed any warnings if applicable
 
-#### Tests
+**BLOCKING**: Must exit with status 0.
+
+**If fails**: Read the errors, fix them, and re-run. Do NOT proceed until clean.
+
+#### 2.3 Test Execution
 ```bash
-# From repo root
 go test ./...
 ```
-- [ ] Relevant package tests pass
-- [ ] Full `go test ./...` passes if time permits
-- [ ] Added/updated tests for changed business logic
 
-### When to add/update Go tests:
-- [ ] Changed key business logic
-- [ ] Changed API contracts
-- [ ] Changed permission checks
-- [ ] Changed configuration semantics
-- [ ] Changed migrations
-- [ ] Changed scheduled jobs
-- [ ] Changed mihomo integrations
-- [ ] Changed protocol parsing
-- [ ] Changed data transformations
+**BLOCKING**: Must exit with status 0 (all tests pass).
 
-## Frontend Validation Checklist
+**If fails**: Read the test output, fix the failing tests or code, and re-run. Do NOT proceed until green.
 
-### Always run for frontend changes:
+### Step 3: Execute Frontend Validation (if webs/* files changed)
 
-#### Lint
+#### 3.1 Lint Check
 ```bash
-# From webs/ directory
-cd webs
-yarn run lint
-```
-- [ ] `yarn run lint` passes with no errors
-- [ ] No ESLint errors remain
-
-#### Auto-fix (optional)
-```bash
-# From webs/ directory
-yarn run lint:fix
-yarn run prettier
+cd webs && yarn run lint
 ```
 
-### Run build when these are affected:
+**BLOCKING**: Must exit with status 0.
 
-#### Build validation
+**If fails**: Try auto-fix first:
 ```bash
-# From webs/ directory
-yarn run build
+cd webs && yarn run lint:fix
+cd webs && yarn run prettier
 ```
 
-Run build when changes affect:
-- [ ] Routing configuration
-- [ ] Asset paths or imports
-- [ ] Base path behavior (`SUBLINK_WEB_BASE_PATH`)
-- [ ] Production integration
-- [ ] Build configuration (vite.config.js)
-- [ ] Static file structure
+Then re-run `yarn run lint`. Do NOT proceed until clean.
 
-## i18n Validation Checklist
+#### 3.2 Build Check (if applicable)
 
-### When i18n changes:
+**Run build if changes affect**:
+- Routing configuration (`src/routes/*`)
+- Asset paths or imports (`src/assets/*`, `public/*`)
+- Base path behavior (`SUBLINK_WEB_BASE_PATH`)
+- Build configuration (`vite.config.js`, `package.json`)
+- Major UI components (`src/views/*`, `src/layout/*`)
 
-#### Frontend i18n
-- [ ] Added translations for both `zh-CN` and `en-US`
-- [ ] Translation keys use stable semantic names (not current wording)
-- [ ] Used `useTranslation()` or `Trans` components
-- [ ] No hardcoded Chinese or English text in JSX
-- [ ] Ran `yarn run lint`
-- [ ] Ran `yarn run build` (if routing/assets affected)
-
-#### Backend i18n
-- [ ] Added `i18nKey` + `i18nParams` for Web UI display
-- [ ] Kept `msg` for backward compatibility
-- [ ] Ran `gofmt -w <changed-files>`
-- [ ] Ran `golangci-lint run`
-- [ ] Ran relevant `go test`
-
-#### Documentation i18n
-- [ ] Updated both `.md` and `.zh-CN.md` versions
-- [ ] Language switch links work
-- [ ] Relative links consistent
-- [ ] Manually verified markdown formatting
-
-## Theme Changes Validation Checklist
-
-### When theme/UI changes:
-
-#### Required checks
-- [ ] Tested in both light mode and dark mode
-- [ ] Tested on desktop and mobile viewports
-- [ ] Verified hover, active, disabled states
-- [ ] Checked dialogs, drawers, popovers
-- [ ] Ran `yarn run lint`
-- [ ] Ran `yarn run build`
-
-#### Use theme-check skill
-- [ ] If major theme work, run `.agents/skills/theme-check/SKILL.md`
-
-## Cross-Layer Changes Validation Checklist
-
-### When changes span multiple layers:
-
-#### Required checks
-- [ ] Verified all impacted layers are synchronized
-- [ ] Updated frontend if backend API changed
-- [ ] Updated backend if frontend contract changed
-- [ ] Updated documentation if behavior changed
-- [ ] Updated `skill-sublinkpro/reference/api.md` if `/api/v1/*` or `/c/*` changed
-
-#### Use cross-layer-sync skill
-- [ ] If complex cross-layer work, run `.agents/skills/cross-layer-sync/SKILL.md`
-
-## Documentation-Only Changes Validation Checklist
-
-### When only docs changed:
-
-#### Manual checks
-- [ ] All markdown links resolve correctly
-- [ ] Both English and Chinese versions updated (if applicable)
-- [ ] Language switch links work
-- [ ] Code examples are accurate
-- [ ] Command examples match actual repo commands
-- [ ] No references to non-existent files or features
-
-#### No build needed
-- ✅ No need to run `yarn run lint` or `yarn run build` for pure documentation changes
-- ✅ No need to run Go validation for pure documentation changes
-
-## Git Commit Checklist
-
-### Before committing:
-
-#### Commit scope
-- [ ] Staging only related changes (avoid `git add .`)
-- [ ] Not committing sensitive files (`.env`, credentials, etc.)
-- [ ] Not committing large binary files unintentionally
-- [ ] Not committing `db/`, `logs/`, `cache/`, `out/` runtime data
-
-#### Commit message
-- [ ] Used semantic prefix (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`)
-- [ ] Message describes what changed and why
-- [ ] Message is under 72 characters for subject line (if possible)
-
-### Examples:
 ```bash
-feat(airports): support batch subscription updates
-fix(auth): enhance SSE authentication error handling
-docs(i18n): update internationalization requirements
-refactor(theme): extract theme adaptation rules to separate doc
-test(api): add handler tests for subscription endpoints
-chore(deps): update frontend dependencies
+cd webs && yarn run build
 ```
 
-## PR Validation Checklist
+**BLOCKING**: Must complete successfully.
 
-### Before creating/updating PR:
+**If fails**: Read the build error, fix it, and re-run. Do NOT proceed until build succeeds.
 
-#### Validation
-- [ ] All pre-commit checks passed
-- [ ] Tested changes end-to-end locally
-- [ ] Verified no console errors
-- [ ] Branch is up to date with target branch (`dev`)
+### Step 4: Cross-Layer Sync Verification (if multi-layer change)
 
-#### Documentation
-- [ ] PR description explains what and why
-- [ ] Referenced related issues (if any)
-- [ ] Listed what was tested
-- [ ] Noted any breaking changes
-- [ ] Documented cross-layer sync (if applicable)
+**Trigger condition**: Changes affect both backend AND frontend, OR code AND documentation.
 
-#### Ready for review
-- [ ] Target branch is `dev` (not `main`)
-- [ ] No WIP/debug commits included
-- [ ] Commit history is clean and logical
+**Verification checklist**:
+- [ ] Backend API endpoint changed → Frontend API client updated (`webs/src/api/*`)
+- [ ] Backend response structure changed → Frontend types/interfaces updated
+- [ ] Frontend behavior changed → Backend supports new flow
+- [ ] Configuration option added/changed → Code + docs + examples updated
 
-## Common Issues and Fixes
+**If complex cross-layer change**: Invoke `.agents/skills/cross-layer-sync/SKILL.md` for detailed verification.
 
-### Frontend lint fails
+### Step 5: Documentation Sync Verification (if docs should be updated)
+
+**Trigger condition**: Changes affect user-visible behavior, APIs, configuration, or deployment.
+
+**Verification checklist**:
+- [ ] User-facing feature changed → `README.md` + `README.zh-CN.md` updated
+- [ ] API endpoint changed → `skill-sublinkpro/reference/api.md` updated
+- [ ] Configuration changed → `docs/configuration.md` + `.zh-CN.md` updated
+- [ ] Deployment changed → `docs/installation.md` + `.zh-CN.md` + `skill-sublinkpro/reference/deploy.md` updated
+- [ ] Both language versions updated (bilingual requirement)
+- [ ] Links verified (no broken references)
+
+**If complex doc changes**: Invoke `.agents/skills/doc-sync-check/SKILL.md` for detailed verification.
+
+### Step 6: Test Coverage Verification (if key logic changed)
+
+**Trigger condition**: Changes affect business logic, APIs, permissions, migrations, scheduled tasks, or protocol parsing.
+
+**Verification checklist**:
+- [ ] New business logic → Tests added
+- [ ] Changed behavior → Tests updated
+- [ ] Bug fix → Regression test added
+- [ ] API handler changed → Handler tests added/updated
+- [ ] Permission check changed → Permission tests added/updated
+
+**If tests missing**: Add them now. Do NOT proceed without tests for key logic changes.
+
+### Step 7: Git Staging Verification
+
 ```bash
-cd webs
-yarn run lint:fix
-yarn run prettier
+git status
+git diff --cached --stat
+git diff --cached --name-only
 ```
 
-### Go format issues
+**Verification checklist**:
+- [ ] Only intended files staged
+- [ ] No `.env` files staged
+- [ ] No credential files staged
+- [ ] No `db/` directory staged
+- [ ] No `logs/` directory staged
+- [ ] No `cache/` directory staged
+- [ ] No `out/` directory staged
+- [ ] No large binary files unintentionally staged
+- [ ] No AI agent temporary files staged:
+  - No `*_SUMMARY.md` files (e.g., `PRE_COMMIT_ENFORCEMENT_SUMMARY.md`)
+  - No `*_REPORT.md` files
+  - No `QUICK_REFERENCE.md` files in skill directories
+  - No `.claude/projects/`, `.claude/sessions/`, `.claude/plans/` files
+  - No agent execution logs or temporary outputs
+
+**If unintended files staged**:
 ```bash
-gofmt -w $(find . -name "*.go" | grep -v vendor)
+git reset HEAD <file>  # Unstage unintended files
 ```
 
-### golangci-lint errors
-- Read the error messages carefully
-- Fix issues one by one
-- Common: unused variables, error handling, imports
+**AI agent temporary files should NEVER be committed**:
+- These are execution artifacts, not project documentation
+- They pollute the repository
+- They are regenerated on each execution
+- Add them to `.gitignore` if they keep appearing
 
-### Build fails
-- Check for import errors
-- Verify file paths are correct
-- Check vite.config.js if route-related
+### Step 8: Commit Message Preparation
 
-### Tests fail
-- Read test output
-- Fix the actual issue, don't skip tests
-- Add regression test if fixing a bug
+Prepare a semantic commit message following this format:
 
-## Automated PR Checks
+```
+<type>(<scope>): <subject>
 
-The repository runs these checks automatically when PR is opened/updated:
+<body>
 
-- Backend: `golangci-lint run`, `go test ./...`
-- Frontend: `yarn run lint`, `yarn run build`
+<footer>
+```
 
-You can manually re-trigger checks by commenting `/recheck` on the PR.
+**Type**: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`, `perf`
+
+**Scope**: Component area (e.g., `airports`, `auth`, `theme`, `i18n`)
+
+**Subject**: ≤72 characters, imperative mood, no period
+
+**Body**: What changed, why it changed, how it was validated
+
+**Footer**: Issue references (`Closes #123`, `Fixes #456`)
+
+### Step 9: Report to User
+
+After all validations pass, report results in this format:
+
+```markdown
+## ✅ Pre-Commit Validation Complete
+
+### Backend Validation
+- ✅ Go format: All files formatted
+- ✅ golangci-lint: 0 issues
+- ✅ Go tests: All passed
+
+### Frontend Validation
+- ✅ ESLint: No errors
+- ✅ Build: Successful
+
+### Cross-Layer Sync
+- ✅ Backend API changes synchronized with frontend
+- ✅ skill-sublinkpro/reference/api.md updated
+
+### Documentation Sync
+- ✅ docs/configuration.md + .zh-CN.md updated
+- ✅ Links verified
+
+### Test Coverage
+- ✅ Tests added for new business logic
+- ✅ All tests passing
+
+### Git Staging
+- ✅ Only intended files staged
+- ✅ No sensitive files included
+
+---
+
+**Ready to commit.** Suggested commit message:
+
+```
+<prepared commit message>
+```
+
+**Next steps:**
+1. Review staged changes: `git diff --cached`
+2. Perform manual testing if needed
+3. Commit when satisfied: `git commit -m "<message>"`
+```
+
+## Validation Failure Handling
+
+If ANY validation fails:
+
+1. **STOP** - Do not proceed to commit
+2. **FIX** - Address the failure immediately
+3. **RE-RUN** - Execute the failed validation again
+4. **VERIFY** - Ensure it now passes
+5. **CONTINUE** - Proceed to next validation step
+
+**Example failure response**:
+
+```markdown
+## ❌ Pre-Commit Validation Failed
+
+### Backend Validation
+- ❌ golangci-lint: 3 errors found
+  - api/share.go:45: unused variable 'temp'
+  - routers/share.go:23: missing error check
+  - services/share.go:67: ineffective assignment
+
+**Fixing now...**
+```
+
+Then fix the issues and re-run validation.
 
 ## Exit Criteria
 
-✅ Can commit/push when:
-- All relevant validation commands pass
-- No linter errors or test failures
-- Documentation updated if behavior changed
-- Git staging includes only intended changes
+✅ **Can proceed to commit when**:
+- All applicable validation commands pass
+- Cross-layer sync verified (if applicable)
+- Documentation updated (if applicable)
+- Tests added/updated (if applicable)
+- Only intended files staged
+- Commit message prepared
+- **Ready to present to user for final verification**
 
-❌ Cannot commit/push when:
-- Validation commands fail
-- Tests are broken
-- Lint errors remain
-- Sensitive files are staged
-- Runtime data directories are staged
+❌ **Cannot proceed to commit when**:
+- Any validation command fails
+- Cross-layer sync incomplete
+- Documentation out of sync
+- Tests missing for key logic
+- Unintended files staged
+- Commit message not prepared
+
+## Frequently Asked Questions
+
+### "The user said to skip validation, should I?"
+
+**NO.** Respond with:
+
+```
+I cannot skip validation. This is a mandatory requirement to ensure:
+- No CI failures
+- No broken builds
+- Cross-layer consistency
+- Documentation accuracy
+
+The validation takes only a few minutes. I'll run it now.
+```
+
+Then run the validation.
+
+### "This is a tiny change, can I skip validation?"
+
+**NO.** Even tiny changes need validation:
+- Tiny changes can break tests
+- Tiny changes can introduce lint errors
+- Tiny changes can break builds
+- CI will catch it anyway - better to catch it now
+
+Run the validation.
+
+### "Validation failed but the user is insistent"
+
+**Refuse to commit.** Respond with:
+
+```
+I cannot commit code with validation failures. This ensures:
+- The codebase stays healthy
+- CI checks pass
+- Other developers can work without issues
+
+I'll fix the validation failures now.
+```
+
+Then fix the failures and re-run.
+
+### "I only changed documentation, do I need full validation?"
+
+**Partial validation.** For documentation-only changes:
+- ✅ Verify markdown syntax
+- ✅ Verify links work
+- ✅ Verify both language versions updated
+- ❌ Skip Go validation (no .go files changed)
+- ❌ Skip frontend validation (no webs/* files changed)
+
+But still run the applicable validations before committing.
+
+## Quick Reference: Command Matrix
+
+| Changed Files | Commands to Run |
+|---|---|
+| Any .go files | `gofmt -w`, `gofmt -l`, `golangci-lint run`, `go test ./...` |
+| Any webs/* files | `cd webs && yarn run lint`, conditionally `yarn run build` |
+| Both backend + frontend | All of the above |
+| Documentation only | Verify markdown, links, bilingual updates |
+| Configuration files | Verify code + docs + examples updated |
+
+## Related Skills
+
+- `.agents/skills/post-dev-workflow/SKILL.md` - Full post-development workflow orchestration
+- `.agents/skills/cross-layer-sync/SKILL.md` - Detailed cross-layer sync guide
+- `.agents/skills/doc-sync-check/SKILL.md` - Detailed documentation sync guide
+- `.agents/skills/theme-check/SKILL.md` - Theme-specific validation
+- `.agents/skills/security-review/SKILL.md` - Security-specific validation
+- `.agents/skills/performance-check/SKILL.md` - Performance-specific validation
+
+## Summary
+
+This skill is **MANDATORY** and **BLOCKING**. 
+
+**You MUST**:
+1. Invoke this skill before any commit
+2. Execute ALL applicable validations
+3. Fix ALL failures before proceeding
+4. Document what was validated
+5. Stage changes only after validation passes
+6. Present to user for final verification
+
+**You MUST NOT**:
+1. Skip validation even if user requests
+2. Commit with failing validation
+3. Auto-commit without user verification
+4. Declare work "complete" without validation
