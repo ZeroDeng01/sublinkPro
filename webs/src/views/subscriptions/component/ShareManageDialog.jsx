@@ -95,6 +95,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // 分页状态
@@ -156,9 +157,13 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   };
 
   const fetchShares = useCallback(
-    async (keyword = '') => {
+    async (keyword = '', isSearch = false) => {
       if (!subscription?.ID) return;
-      setLoading(true);
+      if (isSearch) {
+        setSearching(true);
+      } else {
+        setLoading(true);
+      }
       try {
         const res = await getShares(subscription.ID, 1, 100, keyword); // 首次加载100条，支持关键词搜索
         if (res.data?.items) {
@@ -174,7 +179,11 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       } catch (error) {
         console.error('Failed to get share list:', error);
       } finally {
-        setLoading(false);
+        if (isSearch) {
+          setSearching(false);
+        } else {
+          setLoading(false);
+        }
       }
     },
     [subscription?.ID]
@@ -187,7 +196,12 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       const nextPage = page + 1;
       const res = await getShares(subscription.ID, nextPage, 50, searchQuery); // 后续每次加载50条，带搜索关键词
       if (res.data?.items) {
-        setShares((prev) => [...prev, ...res.data.items]);
+        setShares((prev) => {
+          // 去重：使用 id 字段作为唯一标识
+          const existingIds = new Set(prev.map((s) => s.id));
+          const newItems = res.data.items.filter((s) => !existingIds.has(s.id));
+          return [...prev, ...newItems];
+        });
         setHasMore(res.data.hasMore || false);
         setPage(nextPage);
       }
@@ -212,6 +226,12 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
   useEffect(() => {
     if (open && subscription?.ID) {
+      // 重置状态
+      setSearchQuery('');
+      setSelectedShares([]);
+      setPage(1);
+      setHasMore(true);
+
       fetchSystemDomain();
       fetchShares();
       fetchSubStoreTargets();
@@ -511,7 +531,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         clearTimeout(searchTimeoutRef.current);
       }
       searchTimeoutRef.current = setTimeout(() => {
-        fetchShares(value);
+        fetchShares(value, true); // isSearch = true，使用 searching 状态而非 loading
         setSelectedShares([]); // 搜索时清空选择
       }, 500);
     },
@@ -754,13 +774,22 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
             <Stack direction="row" alignItems="center" justifyContent="space-between">
               <Typography variant="h6">{t('subscriptions.share.title', { name: subscription?.Name })}</Typography>
               <Stack direction="row" spacing={1}>
-                <IconButton size="small" onClick={fetchShares} disabled={loading} sx={iconButtonBaseSx}>
+                <IconButton size="small" onClick={() => fetchShares(searchQuery)} disabled={loading} sx={iconButtonBaseSx}>
                   <RefreshIcon fontSize="small" />
                 </IconButton>
                 <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAdd}>
                   {t('subscriptions.share.addSingle')}
                 </Button>
-                <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => setBatchCreateOpen(true)}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedShares([]);
+                    setBatchCreateOpen(true);
+                  }}
+                >
                   {t('subscriptions.share.batch.create')}
                 </Button>
               </Stack>
@@ -833,7 +862,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                 borderColor: withAlpha(palette.info.main, isDark ? 0.3 : 0.18)
               }}
             >
-              {t('subscriptions.share.empty')}
+              {searching ? t('subscriptions.share.searching') : t('subscriptions.share.empty')}
             </Alert>
           ) : filteredShares.length === 0 ? (
             <Alert
@@ -848,7 +877,26 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
               {t('subscriptions.share.noResults')}
             </Alert>
           ) : (
-            <Stack spacing={1.5} sx={{ mt: 1.5 }}>
+            <Stack spacing={1.5} sx={{ mt: 1.5, position: 'relative' }}>
+              {searching && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: withAlpha(dialogSurface, 0.8),
+                    zIndex: 1,
+                    borderRadius: 1
+                  }}
+                >
+                  <CircularProgress size={32} />
+                </Box>
+              )}
               {filteredShares.map((share) => (
                 <React.Fragment key={share.id}>{renderShareCard(share)}</React.Fragment>
               ))}

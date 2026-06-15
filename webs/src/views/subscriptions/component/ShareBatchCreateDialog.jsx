@@ -37,13 +37,18 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
 
   const [errors, setErrors] = useState({});
 
-  // 初始化基础名称为订阅名称
+  // 打开对话框时重置表单并初始化基础名称
   useEffect(() => {
-    if (open && subscription?.Name) {
-      setFormData((prev) => ({
-        ...prev,
-        baseName: subscription.Name
-      }));
+    if (open) {
+      setFormData({
+        baseName: subscription?.Name || '',
+        count: 10,
+        expireType: EXPIRE_TYPE_NEVER,
+        expireDays: 30,
+        expireAt: '',
+        enabled: true
+      });
+      setErrors({});
     }
   }, [open, subscription]);
 
