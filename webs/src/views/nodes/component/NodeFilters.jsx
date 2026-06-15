@@ -38,6 +38,7 @@ import {
   STATUS_OPTIONS
 } from '../utils';
 import { getNodeActionButtonSx, getNodeColorChipSx, getNodeFieldControlSx, getNodeThemeTokens } from '../nodeTheme';
+import { withAlpha } from 'utils/colorUtils';
 
 const UNGROUPED_GROUP_VALUE = '\u672a\u5206\u7ec4';
 
