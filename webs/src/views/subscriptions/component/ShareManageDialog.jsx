@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -32,8 +32,20 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import LinkIcon from '@mui/icons-material/Link';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import HistoryIcon from '@mui/icons-material/History';
+import Checkbox from '@mui/material/Checkbox';
+import Divider from '@mui/material/Divider';
 
-import { getShares, createShare, updateShare, deleteShare, getShareLogs, refreshShareToken } from '../../../api/shares';
+import {
+  getShares,
+  createShare,
+  updateShare,
+  deleteShare,
+  getShareLogs,
+  refreshShareToken,
+  batchCreateShares,
+  batchDeleteShares,
+  batchUpdateShares
+} from '../../../api/shares';
 import { getSubStoreSettings, getSystemDomain } from '../../../api/settings';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
@@ -42,6 +54,8 @@ import AccessLogsDialog from './AccessLogsDialog';
 import ClientUrlsDialog from './ClientUrlsDialog';
 import QrCodeDialog from './QrCodeDialog';
 import ConfirmDialog from './ConfirmDialog';
+import ShareBatchCreateDialog from './ShareBatchCreateDialog';
+import ShareBatchUpdateDialog from './ShareBatchUpdateDialog';
 
 const EXPIRE_TYPE_NEVER = 0;
 const EXPIRE_TYPE_DAYS = 1;
@@ -82,6 +96,17 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // 分页状态
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // 批量操作状态
+  const [selectedShares, setSelectedShares] = useState([]);
+  const [batchCreateOpen, setBatchCreateOpen] = useState(false);
+  const [batchUpdateOpen, setBatchUpdateOpen] = useState(false);
+  const [batchUpdateMode, setBatchUpdateMode] = useState('expire'); // 'expire' or 'enabled'
 
   const [systemDomainConfig, setSystemDomainConfig] = useState('');
   const [subStoreTargets, setSubStoreTargets] = useState([]);
@@ -130,18 +155,48 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     }
   };
 
-  const fetchShares = useCallback(async () => {
-    if (!subscription?.ID) return;
-    setLoading(true);
+  const fetchShares = useCallback(
+    async (keyword = '') => {
+      if (!subscription?.ID) return;
+      setLoading(true);
+      try {
+        const res = await getShares(subscription.ID, 1, 100, keyword); // 首次加载100条，支持关键词搜索
+        if (res.data?.items) {
+          // 分页响应
+          setShares(res.data.items);
+          setHasMore(res.data.hasMore || false);
+          setPage(1);
+        } else {
+          // 兼容旧版本响应（返回所有数据）
+          setShares(res.data || []);
+          setHasMore(false);
+        }
+      } catch (error) {
+        console.error('Failed to get share list:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [subscription?.ID]
+  );
+
+  const loadMoreShares = useCallback(async () => {
+    if (loadingMore || !hasMore || !subscription?.ID) return;
+    setLoadingMore(true);
     try {
-      const res = await getShares(subscription.ID);
-      setShares(res.data || []);
+      const nextPage = page + 1;
+      const res = await getShares(subscription.ID, nextPage, 50, searchQuery); // 后续每次加载50条，带搜索关键词
+      if (res.data?.items) {
+        setShares((prev) => [...prev, ...res.data.items]);
+        setHasMore(res.data.hasMore || false);
+        setPage(nextPage);
+      }
     } catch (error) {
-      console.error('Failed to get share list:', error);
+      console.error('Failed to load more shares:', error);
     } finally {
-      setLoading(false);
+      setLoadingMore(false);
     }
-  }, [subscription?.ID]);
+  }, [loadingMore, hasMore, subscription?.ID, page, searchQuery]);
 
   const fetchSubStoreTargets = useCallback(async () => {
     try {
@@ -291,6 +346,129 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     setQrOpen(true);
   };
 
+  // 批量操作处理函数
+  const handleBatchCreate = async (data) => {
+    try {
+      await batchCreateShares(subscription.ID, data);
+      showMessage?.(t('subscriptions.share.batch.createSuccess'), 'success');
+      fetchShares();
+      setSelectedShares([]);
+      setBatchCreateOpen(false);
+    } catch (error) {
+      console.error('Failed to batch create:', error);
+      showMessage?.(error.response?.data?.msg || t('subscriptions.share.batch.createError'), 'error');
+    }
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedShares.length === 0) {
+      showMessage?.(t('subscriptions.share.batch.noSelection'), 'warning');
+      return;
+    }
+
+    setConfirmInfo({
+      title: t('subscriptions.share.batch.deleteTitle'),
+      content: t('subscriptions.share.batch.deleteConfirm', { count: selectedShares.length }),
+      onConfirm: async () => {
+        try {
+          await batchDeleteShares(selectedShares);
+          showMessage?.(t('subscriptions.share.batch.deleteSuccess'), 'success');
+          fetchShares();
+          setSelectedShares([]);
+        } catch (error) {
+          console.error('Failed to batch delete:', error);
+          showMessage?.(error.response?.data?.msg || t('subscriptions.share.batch.deleteError'), 'error');
+        }
+        setConfirmOpen(false);
+      }
+    });
+    setConfirmOpen(true);
+  };
+
+  const handleBatchUpdateExpire = () => {
+    if (selectedShares.length === 0) {
+      showMessage?.(t('subscriptions.share.batch.noSelection'), 'warning');
+      return;
+    }
+    setBatchUpdateMode('expire');
+    setBatchUpdateOpen(true);
+  };
+
+  const handleBatchToggleEnabled = () => {
+    if (selectedShares.length === 0) {
+      showMessage?.(t('subscriptions.share.batch.noSelection'), 'warning');
+      return;
+    }
+    setBatchUpdateMode('enabled');
+    setBatchUpdateOpen(true);
+  };
+
+  const handleBatchUpdate = async (data) => {
+    try {
+      const updates = {};
+
+      if (batchUpdateMode === 'expire') {
+        updates.expire_type = data.expireType;
+        updates.expire_days = data.expireDays;
+        updates.expire_at = data.expireAt;
+      } else if (batchUpdateMode === 'enabled') {
+        if (data.action === 'enable') {
+          updates.enabled = true;
+        } else if (data.action === 'disable') {
+          updates.enabled = false;
+        } else if (data.action === 'toggle') {
+          // 反转状态需要分别处理每个分享
+          const enableIds = [];
+          const disableIds = [];
+          selectedShares.forEach((id) => {
+            const share = shares.find((s) => s.id === id);
+            if (share) {
+              if (share.enabled) {
+                disableIds.push(id);
+              } else {
+                enableIds.push(id);
+              }
+            }
+          });
+
+          if (enableIds.length > 0) {
+            await batchUpdateShares(enableIds, { enabled: true });
+          }
+          if (disableIds.length > 0) {
+            await batchUpdateShares(disableIds, { enabled: false });
+          }
+
+          showMessage?.(t('subscriptions.share.batch.updateSuccess'), 'success');
+          fetchShares();
+          setSelectedShares([]);
+          setBatchUpdateOpen(false);
+          return;
+        }
+      }
+
+      await batchUpdateShares(selectedShares, updates);
+      showMessage?.(t('subscriptions.share.batch.updateSuccess'), 'success');
+      fetchShares();
+      setSelectedShares([]);
+      setBatchUpdateOpen(false);
+    } catch (error) {
+      console.error('Failed to batch update:', error);
+      showMessage?.(error.response?.data?.msg || t('subscriptions.share.batch.updateError'), 'error');
+    }
+  };
+
+  const handleSelectAll = () => {
+    setSelectedShares(filteredShares.map((s) => s.id));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedShares([]);
+  };
+
+  const handleToggleShare = (shareId) => {
+    setSelectedShares((prev) => (prev.includes(shareId) ? prev.filter((id) => id !== shareId) : [...prev, shareId]));
+  };
+
   const getExpireText = (share) => {
     if (!share.enabled) return t('common.disabled');
     switch (share.expire_type) {
@@ -320,18 +498,33 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     return false;
   };
 
-  const filteredShares = useMemo(() => {
-    if (!searchQuery.trim()) return shares;
+  const filteredShares = useMemo(() => shares, [shares]);
 
-    const query = searchQuery.toLowerCase().trim();
-    return shares.filter((share) => {
-      const name = (share.name || '').toLowerCase();
-      const token = (share.token || '').toLowerCase();
-      const shareLink = `${getServerUrl()}/c/?token=${share.token}`.toLowerCase();
+  // 搜索处理（防抖后调用后端API）
+  const searchTimeoutRef = useRef(null);
 
-      return name.includes(query) || token.includes(query) || shareLink.includes(query);
-    });
-  }, [shares, searchQuery, getServerUrl]);
+  const handleSearchChange = useCallback(
+    (value) => {
+      setSearchQuery(value);
+      // 防抖后重新获取数据
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      searchTimeoutRef.current = setTimeout(() => {
+        fetchShares(value);
+        setSelectedShares([]); // 搜索时清空选择
+      }, 500);
+    },
+    [fetchShares]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const getDialogPaperSx = (fullScreen = false) => ({
     borderRadius: fullScreen ? 0 : 3,
@@ -391,7 +584,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
     return (
       <Card
-        key={share.id}
         sx={{
           borderRadius: 2.5,
           bgcolor: accentSurface,
@@ -411,6 +603,14 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       >
         <CardContent sx={{ px: 2, py: 1.75, '&:last-child': { pb: 1.75 } }}>
           <Stack direction="row" alignItems="center" spacing={1.25}>
+            {/* 复选框 */}
+            <Checkbox
+              checked={selectedShares.includes(share.id)}
+              onChange={() => handleToggleShare(share.id)}
+              onClick={(e) => e.stopPropagation()}
+              sx={{ p: 0 }}
+            />
+
             <Box
               onClick={() => handleOpenDetail(share)}
               sx={{
@@ -558,16 +758,47 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                   <RefreshIcon fontSize="small" />
                 </IconButton>
                 <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAdd}>
-                  {t('common.add')}
+                  {t('subscriptions.share.addSingle')}
+                </Button>
+                <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => setBatchCreateOpen(true)}>
+                  {t('subscriptions.share.batch.create')}
                 </Button>
               </Stack>
             </Stack>
+
+            {/* 批量操作工具栏 */}
+            {selectedShares.length > 0 && (
+              <Box sx={{ p: 1.5, bgcolor: 'action.selected', borderRadius: 1 }}>
+                <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                  <Typography variant="body2" sx={{ color: primaryText }}>
+                    {t('subscriptions.share.batch.selectedCount', { count: selectedShares.length })}
+                  </Typography>
+                  <Button size="small" onClick={handleSelectAll}>
+                    {t('subscriptions.share.batch.selectAll')}
+                  </Button>
+                  <Button size="small" onClick={handleClearSelection}>
+                    {t('subscriptions.share.batch.clearSelection')}
+                  </Button>
+                  <Divider orientation="vertical" flexItem />
+                  <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={handleBatchDelete}>
+                    {t('subscriptions.share.batch.delete')}
+                  </Button>
+                  <Button size="small" onClick={handleBatchUpdateExpire}>
+                    {t('subscriptions.share.batch.updateExpire')}
+                  </Button>
+                  <Button size="small" onClick={handleBatchToggleEnabled}>
+                    {t('subscriptions.share.batch.toggleEnabled')}
+                  </Button>
+                </Stack>
+              </Box>
+            )}
+
             <TextField
               size="small"
               fullWidth
               placeholder={t('subscriptions.share.searchPlaceholder')}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   bgcolor: nestedPanelSurface,
@@ -618,7 +849,43 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
             </Alert>
           ) : (
             <Stack spacing={1.5} sx={{ mt: 1.5 }}>
-              {filteredShares.map((share) => renderShareCard(share))}
+              {filteredShares.map((share) => (
+                <React.Fragment key={share.id}>{renderShareCard(share)}</React.Fragment>
+              ))}
+
+              {/* 无限滚动加载指示器 */}
+              {hasMore && (
+                <Box
+                  ref={(el) => {
+                    if (!el || !hasMore) return;
+                    const observer = new IntersectionObserver(
+                      (entries) => {
+                        if (entries[0].isIntersecting) {
+                          loadMoreShares();
+                        }
+                      },
+                      { threshold: 0.1 }
+                    );
+                    observer.observe(el);
+                    return () => observer.disconnect();
+                  }}
+                  sx={{ textAlign: 'center', py: 2 }}
+                >
+                  {loadingMore ? (
+                    <CircularProgress size={24} />
+                  ) : (
+                    <Typography variant="body2" color="textSecondary">
+                      {t('subscriptions.share.loadMore')}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
+              {!hasMore && shares.length > 0 && (
+                <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 2 }}>
+                  {t('subscriptions.share.noMore')}
+                </Typography>
+              )}
             </Stack>
           )}
         </DialogContent>
@@ -752,6 +1019,22 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         content={confirmInfo.content}
         onClose={() => setConfirmOpen(false)}
         onConfirm={confirmInfo.onConfirm}
+      />
+
+      <ShareBatchCreateDialog
+        open={batchCreateOpen}
+        subscription={subscription}
+        existingNames={shares.map((s) => s.name)}
+        onClose={() => setBatchCreateOpen(false)}
+        onSubmit={handleBatchCreate}
+      />
+
+      <ShareBatchUpdateDialog
+        open={batchUpdateOpen}
+        mode={batchUpdateMode}
+        shares={shares.filter((s) => selectedShares.includes(s.id))}
+        onClose={() => setBatchUpdateOpen(false)}
+        onSubmit={handleBatchUpdate}
       />
     </>
   );

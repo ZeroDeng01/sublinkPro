@@ -17,6 +17,8 @@ export { default as NodePreviewCard } from './NodePreviewCard';
 export { default as NodePreviewDialog } from './NodePreviewDialog';
 export { default as NodePreviewDetailsPanel } from './NodePreviewDetailsPanel';
 export { default as ShareManageDialog } from './ShareManageDialog';
+export { default as ShareBatchCreateDialog } from './ShareBatchCreateDialog';
+export { default as ShareBatchUpdateDialog } from './ShareBatchUpdateDialog';
 export { default as GroupSortDialog } from './GroupSortDialog';
 export { default as ChainProxyDialog } from './ChainProxyDialog';
 export { default as ChainRuleEditor } from './ChainRuleEditor';

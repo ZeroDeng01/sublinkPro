@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
+	"strings"
 	"sublink/cache"
 	"sublink/database"
 	"sublink/utils"
@@ -205,8 +206,57 @@ func GetSubscriptionShareByToken(token string) (*SubscriptionShare, error) {
 }
 
 // GetSharesBySubscriptionID 获取订阅的所有分享
-func GetSharesBySubscriptionID(subID int) []SubscriptionShare {
-	return subscriptionShareCache.GetByIndex("subscriptionID", strconv.Itoa(subID))
+func GetSharesBySubscriptionID(subID int, keyword ...string) []SubscriptionShare {
+	shares := subscriptionShareCache.GetByIndex("subscriptionID", strconv.Itoa(subID))
+
+	// 如果提供了搜索关键词，进行过滤
+	if len(keyword) > 0 && keyword[0] != "" {
+		kw := strings.ToLower(keyword[0])
+		filtered := make([]SubscriptionShare, 0)
+		for _, share := range shares {
+			if strings.Contains(strings.ToLower(share.Name), kw) ||
+				strings.Contains(strings.ToLower(share.Token), kw) {
+				filtered = append(filtered, share)
+			}
+		}
+		return filtered
+	}
+
+	return shares
+}
+
+// GetSharesBySubscriptionIDPaginated 获取订阅的分享列表（分页，支持搜索）
+func GetSharesBySubscriptionIDPaginated(subID, page, pageSize int, keyword string) ([]SubscriptionShare, int, error) {
+	// 先从缓存获取该订阅的所有分享
+	allShares := subscriptionShareCache.GetByIndex("subscriptionID", strconv.Itoa(subID))
+
+	// 如果提供了搜索关键词，进行过滤
+	if keyword != "" {
+		kw := strings.ToLower(keyword)
+		filtered := make([]SubscriptionShare, 0)
+		for _, share := range allShares {
+			if strings.Contains(strings.ToLower(share.Name), kw) ||
+				strings.Contains(strings.ToLower(share.Token), kw) {
+				filtered = append(filtered, share)
+			}
+		}
+		allShares = filtered
+	}
+
+	total := len(allShares)
+
+	// 计算分页
+	offset := (page - 1) * pageSize
+	if offset >= total {
+		return []SubscriptionShare{}, total, nil
+	}
+
+	end := offset + pageSize
+	if end > total {
+		end = total
+	}
+
+	return allShares[offset:end], total, nil
 }
 
 // GetDefaultShareForSubscription 获取订阅的默认分享链接
