@@ -2290,6 +2290,7 @@
         "deleteConfirm": "Delete {{count}} shares?",
         "updateExpire": "Batch Update Expiration",
         "toggleEnabled": "Batch Toggle Status",
+        "export": "Export Links",
         "baseName": "Base name",
         "baseNameRequired": "Please enter base name",
         "count": "Count",
@@ -2318,6 +2319,20 @@
         "affectedShares": "Affected shares",
         "legacyWarning": "Includes default share links, proceed with caution",
         "noSelection": "Please select shares to operate on"
+      },
+      "exportDialog": {
+        "title": "Batch Export Share Links",
+        "selectFormat": "Select Link Format",
+        "formatAuto": "Auto-detect (Default)",
+        "formatClash": "Clash",
+        "formatMihomo": "Mihomo",
+        "formatSurge": "Surge",
+        "formatV2ray": "V2ray",
+        "expandedClients": "Expanded Clients",
+        "preview": "Link Preview",
+        "count": "{{count}} links",
+        "download": "Download",
+        "filename": "Filename: {{filename}}"
       },
       "addSingle": "Add Single",
       "loadMore": "Load more",

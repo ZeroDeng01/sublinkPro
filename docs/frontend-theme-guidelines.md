@@ -98,6 +98,58 @@ When performing theme adaptation in this repo, follow this sequence by default a
 
 5. **Document coverage before delivery**: Explicitly state which pages/modules/overlays/mobile entry points were covered, which existing repo patterns were reused, and which similar instances were checked but did not need changes.
 
+## Dialog Content Spacing Pattern (MANDATORY)
+
+**Problem**: Content in dialogs often appears cramped against the title area, creating poor visual hierarchy.
+
+**Solution**: Use margin-top on the first child container instead of padding-top on DialogContent.
+
+### Correct Pattern
+
+```jsx
+<DialogContent sx={{ px: 2.5, bgcolor: dialogSurface }}>
+  <Stack spacing={3} sx={{ mt: 2 }}>
+    {/* Dialog content */}
+  </Stack>
+</DialogContent>
+```
+
+### Incorrect Patterns (DO NOT USE)
+
+```jsx
+// ❌ Using pt on DialogContent - gets overridden by MUI defaults
+<DialogContent sx={{ px: 2.5, pt: 3, bgcolor: dialogSurface }}>
+  <Stack spacing={3}>
+    {/* Content appears cramped */}
+  </Stack>
+</DialogContent>
+
+// ❌ Using py on DialogContent - inconsistent with project patterns
+<DialogContent sx={{ px: 2.5, py: 3, bgcolor: dialogSurface }}>
+  <Stack spacing={3}>
+    {/* Content appears cramped */}
+  </Stack>
+</DialogContent>
+```
+
+### Reference Examples
+
+Good examples to follow:
+- `ShareBatchCreateDialog.jsx` - Uses `<Stack spacing={3} sx={{ mt: 1 }}>`
+- `ShareBatchUpdateDialog.jsx` - Uses `<Stack spacing={3} sx={{ mt: 1 }}>`
+- `SubscriptionFormDialog.jsx` - Uses proper margin-top patterns
+
+### Guidelines
+
+1. **Always use `mt` on the first child container** (Stack, Box, etc.) inside DialogContent
+2. **Do not use `pt` or `py` on DialogContent** to create title spacing - it will be overridden
+3. **Standard margin-top values**:
+   - `mt: 1` (8px) - Minimal spacing for compact dialogs
+   - `mt: 2` (16px) - Standard spacing for most dialogs (recommended)
+   - `mt: 3` (24px) - Extra spacing for important dialogs with lots of content
+4. **Keep horizontal padding consistent**: Use `px: 2.5` on DialogContent (matches DialogTitle)
+5. **Bottom spacing**: Usually handled by DialogContent's default bottom padding - no need to override
+
 If you do not have time to inspect a module's desktop, mobile, dialog/drawer, overlay, and detail-panel variants together, do not claim the module is "theme-adapted"; mark it explicitly as partial coverage instead.
 
 ## Theme-Related Definition of Done

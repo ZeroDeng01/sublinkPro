@@ -2290,6 +2290,7 @@
         "deleteConfirm": "确定要删除 {{count}} 个分享吗？",
         "updateExpire": "批量更新过期设置",
         "toggleEnabled": "批量切换状态",
+        "export": "导出链接",
         "baseName": "基础名称",
         "baseNameRequired": "请输入基础名称",
         "count": "数量",
@@ -2318,6 +2319,20 @@
         "affectedShares": "受影响的分享",
         "legacyWarning": "包含默认分享链接，请谨慎操作",
         "noSelection": "请先选择要操作的分享"
+      },
+      "exportDialog": {
+        "title": "批量导出分享链接",
+        "selectFormat": "选择链接格式",
+        "formatAuto": "自动检测（默认）",
+        "formatClash": "Clash",
+        "formatMihomo": "Mihomo",
+        "formatSurge": "Surge",
+        "formatV2ray": "V2ray",
+        "expandedClients": "扩展客户端",
+        "preview": "链接预览",
+        "count": "{{count}} 个链接",
+        "download": "下载",
+        "filename": "文件名：{{filename}}"
       },
       "addSingle": "添加单个",
       "loadMore": "加载更多",

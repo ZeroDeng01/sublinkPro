@@ -32,6 +32,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import LinkIcon from '@mui/icons-material/Link';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import HistoryIcon from '@mui/icons-material/History';
+import DownloadIcon from '@mui/icons-material/Download';
 import Checkbox from '@mui/material/Checkbox';
 import Divider from '@mui/material/Divider';
 
@@ -56,6 +57,7 @@ import QrCodeDialog from './QrCodeDialog';
 import ConfirmDialog from './ConfirmDialog';
 import ShareBatchCreateDialog from './ShareBatchCreateDialog';
 import ShareBatchUpdateDialog from './ShareBatchUpdateDialog';
+import ShareExportDialog from './ShareExportDialog';
 
 const EXPIRE_TYPE_NEVER = 0;
 const EXPIRE_TYPE_DAYS = 1;
@@ -108,6 +110,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   const [batchCreateOpen, setBatchCreateOpen] = useState(false);
   const [batchUpdateOpen, setBatchUpdateOpen] = useState(false);
   const [batchUpdateMode, setBatchUpdateMode] = useState('expire'); // 'expire' or 'enabled'
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   const [systemDomainConfig, setSystemDomainConfig] = useState('');
   const [subStoreTargets, setSubStoreTargets] = useState([]);
@@ -818,6 +821,9 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                   <Button size="small" onClick={handleBatchToggleEnabled}>
                     {t('subscriptions.share.batch.toggleEnabled')}
                   </Button>
+                  <Button size="small" startIcon={<DownloadIcon />} onClick={() => setExportDialogOpen(true)}>
+                    {t('subscriptions.share.batch.export')}
+                  </Button>
                 </Stack>
               </Box>
             )}
@@ -1083,6 +1089,14 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         shares={shares.filter((s) => selectedShares.includes(s.id))}
         onClose={() => setBatchUpdateOpen(false)}
         onSubmit={handleBatchUpdate}
+      />
+
+      <ShareExportDialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        selectedShares={shares.filter((s) => selectedShares.includes(s.id))}
+        serverUrl={getServerUrl()}
+        subStoreTargets={subStoreTargets}
       />
     </>
   );
