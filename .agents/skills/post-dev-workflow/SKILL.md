@@ -41,7 +41,13 @@ Development Complete
     ↓
 5. Change Summary (prepare commit message and PR description)
     ↓
-Ready to Commit
+Stage Changes (git add)
+    ↓
+Present Summary to User
+    ↓
+User Verifies/Tests
+    ↓
+User Commits When Ready
 ```
 
 ---
@@ -298,6 +304,7 @@ Before declaring work "complete", verify:
 - [ ] **Git staging**: Only intended files staged (no secrets, no runtime data)
 - [ ] **Bilingual**: Both English and Chinese docs updated (if docs changed)
 - [ ] **No shortcuts**: No skipped validation, no "will fix later" items
+- [ ] **User verification**: Changes staged and ready for user manual testing/verification
 
 ---
 
@@ -312,6 +319,7 @@ Before declaring work "complete", verify:
 - All deliverables documented
 - No unresolved validation failures
 - No "will fix later" items
+- **Changes staged and ready for user verification** (DO NOT auto-commit)
 
 ❌ **Cannot declare work complete when**:
 - Validation commands fail
@@ -341,7 +349,10 @@ IF code_change_complete:
     RUN Phase 5 (change summary)
     REPORT results to user
     IF all_phases_pass:
-        DECLARE work complete
+        STAGE changes (git add)
+        PRESENT summary to user
+        WAIT for user verification/testing
+        DO NOT auto-commit
     ELSE:
         FIX failures and re-run
 ```
@@ -374,14 +385,34 @@ After running this workflow, report to the user:
 
 ---
 
-**Work is ready to commit.**
+**Changes staged and ready for your verification.**
 
-Suggested commit:
+Suggested commit message:
 ```
 feat(config): add database connection pooling option
 
-...
+Added new configuration options for database connection pooling:
+- `DB_MAX_OPEN_CONNS`: Maximum open connections (default: 25)
+- `DB_MAX_IDLE_CONNS`: Maximum idle connections (default: 5)
+- `DB_CONN_MAX_LIFETIME`: Connection max lifetime (default: 5m)
+
+Cross-layer sync:
+- Updated backend config parsing
+- Updated frontend config display
+- Updated English and Chinese documentation
+
+Validation:
+- All tests passing
+- golangci-lint clean
+- Manual testing: connection pooling working as expected
+
+Closes #123
 ```
+
+**Next steps:**
+1. Review the changes with `git diff --cached`
+2. Perform manual testing if needed
+3. Commit when ready: `git commit` (message already prepared above)
 ```
 
 Or if failures occurred:
@@ -416,6 +447,9 @@ Fixing now...
 
 ❌ **Updating code without updating documentation**
 - Documentation is part of the deliverable
+
+❌ **Auto-committing without user verification**
+- Stage changes and let user verify/test before committing
 
 ❌ **Committing without a proper change summary**
 - Reviewers and future maintainers need context
@@ -453,6 +487,15 @@ This workflow is also useful for manual development:
 2. Go through each phase sequentially
 3. Check off items as you complete them
 4. Don't skip phases unless justified
-5. Document your validation in your commit message
+5. Stage your changes with `git add`
+6. Review staged changes with `git diff --cached`
+7. Perform manual testing/verification as needed
+8. Commit when satisfied: `git commit` (use the prepared message as template)
 
 This ensures consistent quality across all contributions, whether from AI or humans.
+
+**Note**: AI agents will stage changes and prepare commit messages, but will NOT auto-commit. This allows you to:
+- Review the staged changes
+- Perform manual testing
+- Make additional adjustments if needed
+- Commit only when you're satisfied with the changes
