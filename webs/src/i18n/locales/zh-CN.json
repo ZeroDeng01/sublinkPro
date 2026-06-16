@@ -110,6 +110,7 @@
       "accessKeys": "API 密钥",
       "tasks": "任务管理",
       "hosts": "Host 管理",
+      "countryRules": "国家规则",
       "webhooks": "Webhook 管理",
       "monitor": "系统监控",
       "userCenter": "个人中心",
@@ -152,6 +153,30 @@
     "space": "空格",
     "settings": "设置",
     "more": "更多"
+  },
+  "countryRules": {
+    "mode": {
+      "form": "表单模式",
+      "text": "文本模式"
+    },
+    "textMode": {
+      "description": "文本模式允许批量编辑国家规则。格式：<code>国家代码 国家名称 优先级 启用状态 正则表达式</code>（空格分隔），每行一条规则。保存同步时将与数据库全量同步（增删改）。",
+      "placeholder": "# 国家规则配置\n# 格式：国家代码 国家名称 优先级 启用状态 正则表达式\n# 示例：CN 中国 100 true (?i)(中国|china|cn)\n\nCN 中国 100 true (?i)(中国|china|cn)\nUS 美国 90 true (?i)(美国|united states|usa|us)\nHK 香港 95 true (?i)(香港|hong kong|hk)",
+      "changed": "内容已修改，请保存同步"
+    },
+    "actions": {
+      "saveSync": "保存同步",
+      "restore": "还原",
+      "copy": "复制"
+    },
+    "messages": {
+      "loadFailed": "加载国家规则失败",
+      "loadTextFailed": "加载文本内容失败",
+      "syncSuccess": "同步成功：新增 {{added}} 条，更新 {{updated}} 条，删除 {{deleted}} 条",
+      "syncFailed": "同步失败",
+      "restored": "已还原到原始内容",
+      "copied": "已复制到剪贴板"
+    }
   },
   "airports": {
     "title": "机场管理",
@@ -247,6 +272,7 @@
         "schedule": "定时更新",
         "request": "请求设置",
         "advanced": "高级选项",
+        "countryAutoFill": "国家自动填充",
         "nodeProcessing": "节点处理（拉取时生效）"
       },
       "fields": {
@@ -329,6 +355,13 @@
         "selectProfile": "请选择策略",
         "changedOnly": "只检测变化的节点和新节点",
         "changedOnlyDescription": "开启后仅检测本次更新中配置变化或新增的节点，不检测已有节点"
+      },
+      "countryFill": {
+        "autoFill": "新节点自动填充国家",
+        "autoFillDescription": "拉取节点时自动从节点名称解析并填充国家代码",
+        "backfill": "回填现存节点国家",
+        "backfillDescription": "拉取时也为该机场已存在的节点解析并填充国家代码",
+        "alert": "国家信息从节点名称中的国家关键词或 Emoji 旗帜解析而来，根据系统配置的国家规则进行匹配"
       },
       "nodeProcessing": {
         "alert": "以下规则在拉取订阅时立即生效，过滤的节点不会存储到数据库",
@@ -537,7 +570,8 @@
       "globalNodeProcessing": "全局节点处理",
       "aiAssistant": "AI 助手",
       "subStore": "Sub-Store",
-      "dataMigration": "数据迁移"
+      "dataMigration": "数据迁移",
+      "countryRules": "国家规则"
     },
     "telegramPanel": {
       "title": "Telegram 机器人",
@@ -828,6 +862,121 @@
         "confirmRequired": "请先确认本次导入会覆盖当前实例数据",
         "started": "迁移任务已启动，可在右下角进度面板或任务中心查看进度",
         "startFailed": "启动迁移任务失败"
+      }
+    },
+    "countryRulesPanel": {
+      "title": "国家规则配置",
+      "subheader": "配置国家检测规则，用于自动填充节点国家信息。",
+      "description": "配置国家规则后，在机场高级选项中启用「国家自动填充」功能，拉取节点时将自动从节点名称解析并填充国家代码。规则按优先级从高到低匹配，匹配到第一个规则即停止。",
+      "table": {
+        "countryCode": "国家代码",
+        "countryName": "国家名称",
+        "pattern": "匹配模式",
+        "patternType": "匹配类型",
+        "priority": "优先级",
+        "status": "状态",
+        "actions": "操作"
+      },
+      "patternTypes": {
+        "string": "字符串",
+        "regex": "正则"
+      },
+      "status": {
+        "enabled": "启用",
+        "disabled": "禁用"
+      },
+      "dialog": {
+        "titleAdd": "添加规则",
+        "titleEdit": "编辑规则",
+        "countryCode": "国家代码",
+        "countryCodePlaceholder": "如: CN, US, HK",
+        "countryName": "国家名称",
+        "countryNamePlaceholder": "如: 中国, 美国, 香港",
+        "pattern": "匹配模式",
+        "patternPlaceholder": "字符串: 香港|HK|Hong Kong  正则: ^.*香港.*$",
+        "patternType": "匹配类型",
+        "patternTypeString": "字符串匹配",
+        "patternTypeRegex": "正则表达式",
+        "stringHelper": "多个关键词用「|」分隔，不区分大小写",
+        "regexHelper": "使用正则表达式匹配节点名称",
+        "priority": "优先级",
+        "priorityHelper": "数字越大优先级越高，相同优先级按创建时间排序 (0-1000)",
+        "enabled": "启用规则",
+        "testSection": "测试规则",
+        "testNodeName": "测试节点名称",
+        "testNodePlaceholder": "输入节点名称测试匹配",
+        "testButton": "测试",
+        "testMatched": "✓ 匹配成功",
+        "testNotMatched": "✗ 未匹配"
+      },
+      "deleteDialog": {
+        "title": "确认删除",
+        "content": "确定要删除这条规则吗？此操作不可撤销。"
+      },
+      "actions": {
+        "addRule": "添加规则",
+        "edit": "编辑",
+        "delete": "删除",
+        "save": "保存",
+        "cancel": "取消"
+      },
+      "messages": {
+        "loadFailed": "加载国家规则失败",
+        "saveSuccess": "规则保存成功",
+        "saveFailed": "保存规则失败",
+        "deleteSuccess": "规则删除成功",
+        "deleteFailed": "删除规则失败",
+        "testFailed": "测试失败",
+        "incompleteData": "请填写完整信息",
+        "testNameRequired": "请输入测试节点名称",
+        "countryCodeExists": "国家代码已存在"
+      },
+      "empty": {
+        "noRules": "暂无规则"
+      },
+      "batch": {
+        "button": "批量操作",
+        "title": "批量导入/替换规则",
+        "mode": {
+          "import": "导入",
+          "importDesc": "添加新规则，跳过已存在的国家代码",
+          "replace": "替换",
+          "replaceDesc": "删除所有现有规则并导入新规则"
+        },
+        "format": {
+          "title": "格式说明",
+          "description": "每行一条规则，字段用空格分隔：",
+          "example": "国家代码 国家名称 匹配模式 [优先级] [状态]\n示例：\nHK 香港 HK|Hong Kong|香港 100 enabled\nUS 美国 US|United States|America 90 disabled"
+        },
+        "textField": {
+          "placeholder": "输入规则，每行一条...\n示例：\nHK 香港 HK|Hong Kong|香港 100 enabled\nCN 中国 CN|China|中国 100 enabled"
+        },
+        "stats": {
+          "title": "解析统计",
+          "totalLines": "总行数",
+          "validRules": "有效规则",
+          "comments": "注释行",
+          "errors": "错误"
+        },
+        "errors": {
+          "title": "发现 {{count}} 个错误",
+          "lineError": "第 {{line}} 行：{{message}}",
+          "moreErrors": "...以及其他 {{count}} 个错误",
+          "insufficientFields": "字段不足（至少需要 3 个字段）",
+          "invalidCountryCode": "国家代码无效（必须是 2 个大写字母）",
+          "invalidRegex": "正则表达式无效"
+        },
+        "actions": {
+          "cancel": "取消",
+          "clear": "清空",
+          "example": "加载示例",
+          "confirm": "确认"
+        },
+        "messages": {
+          "confirmReplace": "替换模式将删除所有现有规则，确定继续吗？",
+          "success": "{{mode}}完成：已导入 {{count}} 条规则",
+          "failed": "批量操作失败"
+        }
       }
     },
     "cloudflareTunnel": {

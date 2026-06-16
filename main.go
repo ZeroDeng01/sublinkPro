@@ -477,6 +477,9 @@ func Run() {
 	if err := models.InitAirportCache(); err != nil {
 		utils.Error("加载机场到缓存失败: %v", err)
 	}
+	if err := models.InitCountryRuleCache(); err != nil {
+		utils.Error("加载国家规则到缓存失败: %v", err)
+	}
 	if err := models.InitGroupAirportSortCache(); err != nil {
 		utils.Error("加载分组机场排序到缓存失败: %v", err)
 	}
@@ -642,6 +645,7 @@ func Run() {
 	routers.Airport(r)
 	routers.GroupSort(r)
 	routers.NodeCheck(r)
+	routers.CountryRule(r)
 
 	// 处理前端路由 (SPA History Mode) 和静态文件
 	// 必须在所有 backend 路由注册之后注册

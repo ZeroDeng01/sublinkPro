@@ -3,6 +3,7 @@ package models
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -109,6 +110,7 @@ func RunMigrations() error {
 		{name: "Airport", model: &Airport{}},
 		{name: "GroupAirportSort", model: &GroupAirportSort{}},
 		{name: "NodeCheckProfile", model: &NodeCheckProfile{}},
+		{name: "CountryRule", model: &CountryRule{}},
 	}
 
 	for _, table := range baseTables {
@@ -231,6 +233,31 @@ func RunMigrations() error {
 		return nil
 	}); err != nil {
 		utils.Error("执行迁移 0033_make_node_names_unique 失败: %v", err)
+	}
+
+	// 0034_add_airport_country_fill_columns - 添加机场国家自动填充字段
+	if err := database.RunCustomMigration("0034_add_airport_country_fill_columns", func() error {
+		if !db.Migrator().HasColumn(&Airport{}, "AutoFillCountry") {
+			if err := db.Migrator().AddColumn(&Airport{}, "AutoFillCountry"); err != nil {
+				return err
+			}
+		}
+		if !db.Migrator().HasColumn(&Airport{}, "BackfillExistingCountry") {
+			if err := db.Migrator().AddColumn(&Airport{}, "BackfillExistingCountry"); err != nil {
+				return err
+			}
+		}
+		utils.Info("已添加机场国家自动填充字段")
+		return nil
+	}); err != nil {
+		utils.Error("执行迁移 0034_add_airport_country_fill_columns 失败: %v", err)
+	}
+
+	// 0035_seed_default_country_rules - 添加默认国家规则
+	if err := database.RunCustomMigration("0035_seed_default_country_rules", func() error {
+		return seedDefaultCountryRules(db)
+	}); err != nil {
+		utils.Error("执行迁移 0035_seed_default_country_rules 失败: %v", err)
 	}
 
 	if err := database.RunCustomMigration("0024_migrate_legacy_webhook_settings", func() error {
@@ -1095,6 +1122,89 @@ DIRECT = direct
 	// 设置初始化标志为 true
 	database.IsInitialized = true
 	utils.Info("数据库初始化成功")
+	return nil
+}
+
+// seedDefaultCountryRules 添加默认国家规则
+func seedDefaultCountryRules(db *gorm.DB) error {
+	utils.Info("开始添加默认国家规则")
+
+	defaultRules := []CountryRule{
+		// 常见地区 - 使用正则表达式
+		{CountryCode: "HK", CountryName: "香港", Pattern: "香港|HK|Hong Kong|🇭🇰", Priority: 0, Enabled: true},
+		{CountryCode: "TW", CountryName: "台湾", Pattern: "台湾|TW|Taiwan|臺灣|🇹🇼", Priority: 0, Enabled: true},
+		{CountryCode: "JP", CountryName: "日本", Pattern: "日本|JP|Japan|东京|大阪|Tokyo|Osaka|🇯🇵", Priority: 0, Enabled: true},
+		{CountryCode: "SG", CountryName: "新加坡", Pattern: "新加坡|SG|Singapore|狮城|🇸🇬", Priority: 0, Enabled: true},
+		{CountryCode: "US", CountryName: "美国", Pattern: "美国|US|USA|United States|洛杉矶|硅谷|圣何塞|西雅图|芝加哥|Los Angeles|Silicon Valley|Seattle|Chicago|🇺🇸", Priority: 0, Enabled: true},
+		{CountryCode: "KR", CountryName: "韩国", Pattern: "韩国|KR|Korea|首尔|Seoul|🇰🇷", Priority: 0, Enabled: true},
+
+		// 其他亚洲地区
+		{CountryCode: "MY", CountryName: "马来西亚", Pattern: "马来西亚|MY|Malaysia|🇲🇾", Priority: 0, Enabled: true},
+		{CountryCode: "TH", CountryName: "泰国", Pattern: "泰国|TH|Thailand|曼谷|Bangkok|🇹🇭", Priority: 0, Enabled: true},
+		{CountryCode: "PH", CountryName: "菲律宾", Pattern: "菲律宾|PH|Philippines|🇵🇭", Priority: 0, Enabled: true},
+		{CountryCode: "VN", CountryName: "越南", Pattern: "越南|VN|Vietnam|🇻🇳", Priority: 0, Enabled: true},
+		{CountryCode: "IN", CountryName: "印度", Pattern: "印度|IN|India|孟买|Mumbai|🇮🇳", Priority: 0, Enabled: true},
+
+		// 欧洲地区
+		{CountryCode: "GB", CountryName: "英国", Pattern: "英国|GB|UK|United Kingdom|伦敦|London|🇬🇧", Priority: 0, Enabled: true},
+		{CountryCode: "DE", CountryName: "德国", Pattern: "德国|DE|Germany|法兰克福|Frankfurt|🇩🇪", Priority: 0, Enabled: true},
+		{CountryCode: "FR", CountryName: "法国", Pattern: "法国|FR|France|巴黎|Paris|🇫🇷", Priority: 0, Enabled: true},
+		{CountryCode: "NL", CountryName: "荷兰", Pattern: "荷兰|NL|Netherlands|阿姆斯特丹|Amsterdam|🇳🇱", Priority: 0, Enabled: true},
+		{CountryCode: "RU", CountryName: "俄罗斯", Pattern: "俄罗斯|RU|Russia|莫斯科|Moscow|🇷🇺", Priority: 0, Enabled: true},
+
+		// 美洲其他地区
+		{CountryCode: "CA", CountryName: "加拿大", Pattern: "加拿大|CA|Canada|🇨🇦", Priority: 0, Enabled: true},
+		{CountryCode: "BR", CountryName: "巴西", Pattern: "巴西|BR|Brazil|🇧🇷", Priority: 0, Enabled: true},
+		{CountryCode: "AR", CountryName: "阿根廷", Pattern: "阿根廷|AR|Argentina|🇦🇷", Priority: 0, Enabled: true},
+
+		// 大洋洲
+		{CountryCode: "AU", CountryName: "澳大利亚", Pattern: "澳大利亚|澳洲|AU|Australia|悉尼|墨尔本|Sydney|Melbourne|🇦🇺", Priority: 0, Enabled: true},
+		{CountryCode: "NZ", CountryName: "新西兰", Pattern: "新西兰|NZ|New Zealand|🇳🇿", Priority: 0, Enabled: true},
+
+		// 中东
+		{CountryCode: "TR", CountryName: "土耳其", Pattern: "土耳其|TR|Turkey|🇹🇷", Priority: 0, Enabled: true},
+		{CountryCode: "AE", CountryName: "阿联酋", Pattern: "阿联酋|UAE|迪拜|Dubai|🇦🇪", Priority: 0, Enabled: true},
+
+		// 中国大陆
+		{CountryCode: "CN", CountryName: "中国", Pattern: "中国|CN|China|大陆|Mainland", Priority: 0, Enabled: true},
+
+		// 其他欧洲国家
+		{CountryCode: "IT", CountryName: "意大利", Pattern: "意大利|IT|Italy|🇮🇹", Priority: 0, Enabled: true},
+		{CountryCode: "ES", CountryName: "西班牙", Pattern: "西班牙|ES|Spain|🇪🇸", Priority: 0, Enabled: true},
+		{CountryCode: "SE", CountryName: "瑞典", Pattern: "瑞典|SE|Sweden|🇸🇪", Priority: 0, Enabled: true},
+		{CountryCode: "CH", CountryName: "瑞士", Pattern: "瑞士|CH|Switzerland|🇨🇭", Priority: 0, Enabled: true},
+		{CountryCode: "PL", CountryName: "波兰", Pattern: "波兰|PL|Poland|🇵🇱", Priority: 0, Enabled: true},
+	}
+
+	addedCount := 0
+	for _, rule := range defaultRules {
+		// 检查是否已存在相同的规则（基于国家代码和匹配模式）
+		var exists CountryRule
+		err := db.Where("country_code = ? AND pattern = ?",
+			rule.CountryCode, rule.Pattern).First(&exists).Error
+
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				// 规则不存在，创建新规则
+				if err := db.Create(&rule).Error; err != nil {
+					utils.Warn("添加默认国家规则失败 [%s - %s]: %v", rule.CountryCode, rule.CountryName, err)
+					continue
+				}
+				addedCount++
+			} else {
+				// 其他数据库错误
+				utils.Warn("查询国家规则失败 [%s]: %v", rule.CountryCode, err)
+			}
+		}
+		// 规则已存在，跳过
+	}
+
+	if addedCount > 0 {
+		utils.Info("成功添加 %d 条默认国家规则", addedCount)
+	} else {
+		utils.Info("默认国家规则已存在，无需添加")
+	}
+
 	return nil
 }
 

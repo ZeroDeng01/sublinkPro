@@ -110,6 +110,7 @@
       "accessKeys": "API Keys",
       "tasks": "Tasks",
       "hosts": "Host",
+      "countryRules": "Country Rules",
       "webhooks": "Webhooks",
       "monitor": "Monitor",
       "userCenter": "User Center",
@@ -152,6 +153,30 @@
     "space": "Space",
     "settings": "Settings",
     "more": "More"
+  },
+  "countryRules": {
+    "mode": {
+      "form": "Form Mode",
+      "text": "Text Mode"
+    },
+    "textMode": {
+      "description": "Text mode allows batch editing of country rules. Format: <code>countryCode countryName priority enabled pattern</code> (space-separated), one rule per line. Saving will synchronize with the database (add, update, delete).",
+      "placeholder": "# Country Rules Configuration\n# Format: countryCode countryName priority enabled pattern\n# Example: CN China 100 true (?i)(中国|china|cn)\n\nCN China 100 true (?i)(中国|china|cn)\nUS United_States 90 true (?i)(美国|united states|usa|us)\nHK Hong_Kong 95 true (?i)(香港|hong kong|hk)",
+      "changed": "Content has been modified, please save to sync"
+    },
+    "actions": {
+      "saveSync": "Save & Sync",
+      "restore": "Restore",
+      "copy": "Copy"
+    },
+    "messages": {
+      "loadFailed": "Failed to load country rules",
+      "loadTextFailed": "Failed to load text content",
+      "syncSuccess": "Sync successful: {{added}} added, {{updated}} updated, {{deleted}} deleted",
+      "syncFailed": "Sync failed",
+      "restored": "Restored to original content",
+      "copied": "Copied to clipboard"
+    }
   },
   "airports": {
     "title": "Airport Management",
@@ -247,6 +272,7 @@
         "schedule": "Scheduled Update",
         "request": "Request Settings",
         "advanced": "Advanced Options",
+        "countryAutoFill": "Country Auto-Fill",
         "nodeProcessing": "Node Processing (applies during pull)"
       },
       "fields": {
@@ -329,6 +355,13 @@
         "selectProfile": "Select a strategy",
         "changedOnly": "Check only changed and new nodes",
         "changedOnlyDescription": "When enabled, only nodes changed or added in this update are checked. Existing nodes are skipped."
+      },
+      "countryFill": {
+        "autoFill": "Auto-fill country for new nodes",
+        "autoFillDescription": "Automatically parse and fill country code from node names when pulling nodes",
+        "backfill": "Backfill country for existing nodes",
+        "backfillDescription": "Also parse and fill country code for this airport's existing nodes when pulling",
+        "alert": "Country information is parsed from country keywords or emoji flags in node names, matched according to system-configured country rules"
       },
       "nodeProcessing": {
         "alert": "The following rules take effect immediately when pulling subscriptions. Filtered nodes are not stored in the database.",
@@ -537,7 +570,8 @@
       "globalNodeProcessing": "Global node processing",
       "aiAssistant": "AI Assistant",
       "subStore": "Sub-Store",
-      "dataMigration": "Data migration"
+      "dataMigration": "Data migration",
+      "countryRules": "Country Rules"
     },
     "telegramPanel": {
       "title": "Telegram Bot",
@@ -828,6 +862,121 @@
         "confirmRequired": "Confirm that this import will overwrite current instance data first",
         "started": "Migration task started. You can track progress in the lower-right progress panel or Task Center.",
         "startFailed": "Failed to start migration task"
+      }
+    },
+    "countryRulesPanel": {
+      "title": "Country Rules Configuration",
+      "subheader": "Configure country detection rules for auto-filling node countries.",
+      "description": "After configuring country rules, enable 'Country Auto-fill' in airport advanced options. When pulling nodes, the system will automatically parse and fill country codes from node names. Rules are matched from highest to lowest priority, stopping at the first match.",
+      "table": {
+        "countryCode": "Country Code",
+        "countryName": "Country Name",
+        "pattern": "Match Pattern",
+        "patternType": "Match Type",
+        "priority": "Priority",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "patternTypes": {
+        "string": "String",
+        "regex": "Regex"
+      },
+      "status": {
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "dialog": {
+        "titleAdd": "Add Rule",
+        "titleEdit": "Edit Rule",
+        "countryCode": "Country Code",
+        "countryCodePlaceholder": "e.g., CN, US, HK",
+        "countryName": "Country Name",
+        "countryNamePlaceholder": "e.g., China, United States, Hong Kong",
+        "pattern": "Match Pattern",
+        "patternPlaceholder": "String: Hong Kong|HK|Hong  Regex: ^.*Hong Kong.*$",
+        "patternType": "Match Type",
+        "patternTypeString": "String Match",
+        "patternTypeRegex": "Regular Expression",
+        "stringHelper": "Multiple keywords separated by '|', case-insensitive",
+        "regexHelper": "Use regular expression to match node names",
+        "priority": "Priority",
+        "priorityHelper": "Higher number = higher priority, same priority sorted by creation time (0-1000)",
+        "enabled": "Enable Rule",
+        "testSection": "Test Rule",
+        "testNodeName": "Test Node Name",
+        "testNodePlaceholder": "Enter node name to test matching",
+        "testButton": "Test",
+        "testMatched": "✓ Matched",
+        "testNotMatched": "✗ Not Matched"
+      },
+      "deleteDialog": {
+        "title": "Confirm Delete",
+        "content": "Are you sure you want to delete this rule? This action cannot be undone."
+      },
+      "actions": {
+        "addRule": "Add Rule",
+        "edit": "Edit",
+        "delete": "Delete",
+        "save": "Save",
+        "cancel": "Cancel"
+      },
+      "messages": {
+        "loadFailed": "Failed to load country rules",
+        "saveSuccess": "Rule saved successfully",
+        "saveFailed": "Failed to save rule",
+        "deleteSuccess": "Rule deleted successfully",
+        "deleteFailed": "Failed to delete rule",
+        "testFailed": "Test failed",
+        "incompleteData": "Please fill in all required fields",
+        "testNameRequired": "Please enter test node name",
+        "countryCodeExists": "Country code already exists"
+      },
+      "empty": {
+        "noRules": "No rules yet"
+      },
+      "batch": {
+        "button": "Batch Operations",
+        "title": "Batch Import/Replace Rules",
+        "mode": {
+          "import": "Import",
+          "importDesc": "Add new rules, skip existing country codes",
+          "replace": "Replace",
+          "replaceDesc": "Delete all existing rules and import new ones"
+        },
+        "format": {
+          "title": "Format Description",
+          "description": "One rule per line, fields separated by spaces:",
+          "example": "CountryCode CountryName Pattern [Priority] [Status]\nExample:\nHK Hong Kong HK|Hong Kong|香港 100 enabled\nUS USA US|United States|America 90 disabled"
+        },
+        "textField": {
+          "placeholder": "Enter rules, one per line...\nExample:\nHK Hong Kong HK|Hong Kong|香港 100 enabled\nCN China CN|China|中国 100 enabled"
+        },
+        "stats": {
+          "title": "Parse Statistics",
+          "totalLines": "Total Lines",
+          "validRules": "Valid Rules",
+          "comments": "Comments",
+          "errors": "Errors"
+        },
+        "errors": {
+          "title": "{{count}} errors found",
+          "lineError": "Line {{line}}: {{message}}",
+          "moreErrors": "...and {{count}} more errors",
+          "insufficientFields": "Insufficient fields (need at least 3)",
+          "invalidCountryCode": "Invalid country code (must be 2 uppercase letters)",
+          "invalidRegex": "Invalid regular expression"
+        },
+        "actions": {
+          "cancel": "Cancel",
+          "clear": "Clear",
+          "example": "Load Example",
+          "confirm": "Confirm"
+        },
+        "messages": {
+          "confirmReplace": "Replace mode will delete all existing rules. Continue?",
+          "success": "{{mode}} completed: imported {{count}} rules",
+          "failed": "Batch operation failed"
+        }
       }
     },
     "cloudflareTunnel": {

@@ -21,6 +21,7 @@ const SystemMonitor = Loadable(lazy(() => import('views/monitor')));
 const TagList = Loadable(lazy(() => import('views/tags')));
 const TaskList = Loadable(lazy(() => import('views/tasks')));
 const HostList = Loadable(lazy(() => import('views/hosts')));
+const CountryRulesPage = Loadable(lazy(() => import('views/country-rules')));
 const WebhookList = Loadable(lazy(() => import('views/webhooks')));
 const AirportList = Loadable(lazy(() => import('views/airports')));
 const NodeCheckList = Loadable(lazy(() => import('views/node-check')));
@@ -114,6 +115,10 @@ const MainRoutes = {
         {
           path: 'hosts',
           element: <HostList />
+        },
+        {
+          path: 'country-rules',
+          element: <CountryRulesPage />
         },
         {
           path: 'webhooks',

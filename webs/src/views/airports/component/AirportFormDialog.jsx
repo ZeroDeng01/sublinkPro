@@ -578,6 +578,56 @@ export default function AirportFormDialog({
             </Stack>
           </AirportDialogSection>
 
+          {/* 国家自动填充 */}
+          <AirportDialogSection
+            title={t('airports.form.sections.countryAutoFill')}
+            surface={nestedPanelSurface}
+            borderColor={panelBorder}
+            titleColor={primaryText}
+          >
+            <Stack spacing={1}>
+              <Box>
+                <Box sx={controlRowSx}>
+                  <Box>
+                    <Typography variant="body2" sx={{ color: primaryText }}>
+                      {t('airports.form.countryFill.autoFill')}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: secondaryText }}>
+                      {t('airports.form.countryFill.autoFillDescription')}
+                    </Typography>
+                  </Box>
+                  <Switch
+                    checked={airportForm.autoFillCountry || false}
+                    onChange={(e) => setAirportForm({ ...airportForm, autoFillCountry: e.target.checked })}
+                  />
+                </Box>
+              </Box>
+
+              <Divider sx={{ my: 0.5, borderColor: panelBorder }} />
+
+              <Box>
+                <Box sx={controlRowSx}>
+                  <Box>
+                    <Typography variant="body2" sx={{ color: primaryText }}>
+                      {t('airports.form.countryFill.backfill')}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: secondaryText }}>
+                      {t('airports.form.countryFill.backfillDescription')}
+                    </Typography>
+                  </Box>
+                  <Switch
+                    checked={airportForm.backfillExistingCountry || false}
+                    onChange={(e) => setAirportForm({ ...airportForm, backfillExistingCountry: e.target.checked })}
+                  />
+                </Box>
+              </Box>
+
+              <Alert severity="info" sx={{ mt: 1 }} icon={false}>
+                <Typography variant="caption">{t('airports.form.countryFill.alert')}</Typography>
+              </Alert>
+            </Stack>
+          </AirportDialogSection>
+
           <AirportDialogSection
             title={t('airports.form.sections.nodeProcessing')}
             surface={nestedPanelSurface}
@@ -692,7 +742,9 @@ AirportFormDialog.propTypes = {
     deduplicationRule: PropTypes.string,
     nodeNameUniquify: PropTypes.bool,
     nodeNamePrefix: PropTypes.string,
-    nodeNameIntraUniquify: PropTypes.bool
+    nodeNameIntraUniquify: PropTypes.bool,
+    autoFillCountry: PropTypes.bool,
+    backfillExistingCountry: PropTypes.bool
   }).isRequired,
   setAirportForm: PropTypes.func.isRequired,
   groupOptions: PropTypes.array.isRequired,

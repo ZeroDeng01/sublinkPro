@@ -205,6 +205,8 @@ func AirportAdd(c *gin.Context) {
 		NodeNameUniquify:             req.NodeNameUniquify,
 		NodeNamePrefix:               req.NodeNamePrefix,
 		NodeNameIntraUniquify:        req.NodeNameIntraUniquify,
+		AutoFillCountry:              req.AutoFillCountry,
+		BackfillExistingCountry:      req.BackfillExistingCountry,
 	}
 
 	// 检查是否重复
@@ -303,6 +305,8 @@ func AirportUpdate(c *gin.Context) {
 	existing.NodeNameUniquify = req.NodeNameUniquify
 	existing.NodeNamePrefix = req.NodeNamePrefix
 	existing.NodeNameIntraUniquify = req.NodeNameIntraUniquify
+	existing.AutoFillCountry = req.AutoFillCountry
+	existing.BackfillExistingCountry = req.BackfillExistingCountry
 
 	if err := existing.Update(); err != nil {
 		utils.FailWithMsg(c, "更新失败: "+err.Error())

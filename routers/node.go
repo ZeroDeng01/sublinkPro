@@ -18,6 +18,7 @@ func Nodes(r *gin.Engine) {
 		NodesGroup.POST("/batch-update-dialer-proxy", api.NodeBatchUpdateDialerProxy)
 		NodesGroup.POST("/batch-update-source", api.NodeBatchUpdateSource)
 		NodesGroup.POST("/batch-update-country", api.NodeBatchUpdateCountry)
+		NodesGroup.POST("/batch-fill-country", api.NodeBatchFillCountry)
 		NodesGroup.GET("/get", api.NodeGet)
 		NodesGroup.GET("/selector", api.NodeSelector)
 		NodesGroup.GET("/selector/by-ids", api.NodeSelectorByIDs)

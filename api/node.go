@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"sublink/database"
 	"sublink/models"
 	"sublink/node"
 	"sublink/node/protocol"
@@ -806,6 +807,52 @@ func NodeBatchUpdateCountry(c *gin.Context) {
 		return
 	}
 	utils.OkWithMsg(c, "批量更新国家代码成功")
+}
+
+// NodeBatchFillCountry 批量填充节点国家信息
+func NodeBatchFillCountry(c *gin.Context) {
+	var req struct {
+		AirportID int  `json:"airportId"` // 可选,指定机场
+		OnlyEmpty bool `json:"onlyEmpty"` // 只填充国家为空的节点
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "参数错误")
+		return
+	}
+
+	// 构建查询条件
+	query := database.DB.Model(&models.Node{})
+	if req.AirportID > 0 {
+		query = query.Where("source_id = ?", req.AirportID)
+	}
+	if req.OnlyEmpty {
+		query = query.Where("link_country IS NULL OR link_country = ''")
+	}
+
+	var nodes []models.Node
+	if err := query.Find(&nodes).Error; err != nil {
+		utils.FailWithMsg(c, "查询节点失败")
+		return
+	}
+
+	updated := 0
+	for i := range nodes {
+		if req.OnlyEmpty && nodes[i].LinkCountry != "" {
+			continue
+		}
+		if country := models.ParseCountryFromNodeName(nodes[i].Name); country != "" {
+			nodes[i].LinkCountry = country
+			if err := database.DB.Model(&nodes[i]).Update("link_country", country).Error; err == nil {
+				updated++
+			}
+		}
+	}
+
+	utils.OkDetailed(c, "批量填充完成", gin.H{
+		"total":   len(nodes),
+		"updated": updated,
+	})
 }
 
 // 获取所有分组列表

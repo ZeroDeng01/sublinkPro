@@ -160,6 +160,8 @@ const createAirportFormState = (overrides = {}) => ({
   nodeNameUniquify: false,
   nodeNamePrefix: '',
   nodeNameIntraUniquify: false,
+  autoFillCountry: false,
+  backfillExistingCountry: false,
   ...overrides
 });
 
@@ -190,7 +192,7 @@ export default function AirportList() {
       if (normalizeStr(before[key]) !== normalizeStr(after[key])) return true;
     }
 
-    const boolKeys = ['nodeNameUniquify', 'nodeNameIntraUniquify'];
+    const boolKeys = ['nodeNameUniquify', 'nodeNameIntraUniquify', 'autoFillCountry', 'backfillExistingCountry'];
     for (const key of boolKeys) {
       if (!!before[key] !== !!after[key]) return true;
     }
@@ -538,7 +540,9 @@ export default function AirportList() {
       deduplicationRule: airport.deduplicationRule || '',
       nodeNameUniquify: airport.nodeNameUniquify || false,
       nodeNamePrefix: airport.nodeNamePrefix || '',
-      nodeNameIntraUniquify: airport.nodeNameIntraUniquify || false
+      nodeNameIntraUniquify: airport.nodeNameIntraUniquify || false,
+      autoFillCountry: airport.autoFillCountry || false,
+      backfillExistingCountry: airport.backfillExistingCountry || false
     });
     setIsEdit(true);
     setAirportForm(editForm);

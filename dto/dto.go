@@ -59,6 +59,9 @@ type AirportRequest struct {
 	NodeNameUniquify      bool   `json:"nodeNameUniquify"`      // 是否开启节点名称唯一化
 	NodeNamePrefix        string `json:"nodeNamePrefix"`        // 自定义名称前缀（可选）
 	NodeNameIntraUniquify bool   `json:"nodeNameIntraUniquify"` // 是否开启机场内节点名称唯一化
+	// 国家自动填充（拉取时生效）
+	AutoFillCountry         bool `json:"autoFillCountry"`         // 新节点自动填充国家
+	BackfillExistingCountry bool `json:"backfillExistingCountry"` // 回填现存节点国家
 }
 
 // AirportBatchUpdateRequest 机场批量更新请求体结构

@@ -107,6 +107,9 @@ type Airport struct {
 	NodeNameUniquify      bool   `gorm:"default:false" json:"nodeNameUniquify"`      // 是否开启节点名称唯一化
 	NodeNamePrefix        string `json:"nodeNamePrefix"`                             // 自定义名称前缀（可选）
 	NodeNameIntraUniquify bool   `gorm:"default:false" json:"nodeNameIntraUniquify"` // 是否开启机场内节点名称唯一化
+	// 国家自动填充（拉取时生效）
+	AutoFillCountry         bool `gorm:"default:false" json:"autoFillCountry"`         // 新节点自动填充国家
+	BackfillExistingCountry bool `gorm:"default:false" json:"backfillExistingCountry"` // 回填现存节点国家
 }
 
 // TableName 指定表名
@@ -157,6 +160,7 @@ func (a *Airport) Update() error {
 		"FetchUsageInfo", "SkipTLSVerify", "UpdateAfterDetect", "UpdateAfterDetectProfileID", "UpdateAfterDetectChangedOnly", "Remark", "Logo",
 		"NodeNameWhitelist", "NodeNameBlacklist", "ProtocolWhitelist", "ProtocolBlacklist", "NodeNamePreprocess",
 		"DeduplicationRule", "NodeNameUniquify", "NodeNamePrefix", "NodeNameIntraUniquify",
+		"AutoFillCountry", "BackfillExistingCountry",
 	).Updates(a).Error
 	if err != nil {
 		return err

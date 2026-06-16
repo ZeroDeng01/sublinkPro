@@ -934,6 +934,14 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 		Node.Protocol = proxy.Type
 		Node.ContentHash = contentHash
 
+		// 国家自动填充（新节点）
+		if airport != nil && airport.AutoFillCountry && Node.LinkCountry == "" {
+			if country := models.ParseCountryFromNodeName(proxy.Name); country != "" {
+				Node.LinkCountry = country
+				utils.Debug("🌍 新节点【%s】自动填充国家: %s", proxy.Name, country)
+			}
+		}
+
 		// 记录本次获取到的节点 ContentHash
 		currentHashes[contentHash] = true
 
@@ -968,9 +976,25 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 				} else {
 					// 普通节点：用 hash 匹配，检查名称或链接是否变化
 					existingNode := existingNodeByContentHash[contentHash]
-					if existingNode.LinkName != proxy.Name || existingNode.Link != link || existingNode.SourceSort != Node.SourceSort {
+					// 国家回填检查（现存节点）
+					needsCountryBackfill := false
+					if airport != nil && airport.BackfillExistingCountry && existingNode.LinkCountry == "" {
+						if country := models.ParseCountryFromNodeName(proxy.Name); country != "" {
+							Node.LinkCountry = country
+							needsCountryBackfill = true
+							utils.Debug("🌍 现存节点【%s】回填国家: %s", proxy.Name, country)
+						}
+					}
+
+					if existingNode.LinkName != proxy.Name || existingNode.Link != link || existingNode.SourceSort != Node.SourceSort || needsCountryBackfill {
 						nodesToUpdate = append(nodesToUpdate, models.BuildNodeInfoUpdate(existingNode, proxy.Name, link, Node.SourceSort))
 						updateCount++
+						// 如果需要回填国家，单独更新国家字段（这是额外操作，失败不影响主流程）
+						if needsCountryBackfill {
+							if err := models.UpdateNodeFields(existingNode.ID, map[string]any{"link_country": Node.LinkCountry}); err != nil {
+								utils.Warn("回填节点【%s】国家失败: %v", proxy.Name, err)
+							}
+						}
 						nodeStatus = "updated"
 						utils.Info("✏️ 节点【%s】原始名称/链接/顺序已变更，将更新 [旧原始名称: %s]", proxy.Name, existingNode.LinkName)
 					} else {

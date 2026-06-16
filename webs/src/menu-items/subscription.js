@@ -9,7 +9,8 @@ import {
   IconTags,
   IconListCheck,
   IconWorld,
-  IconPlane
+  IconPlane,
+  IconFlag
 } from '@tabler/icons-react';
 
 // ==============================|| SUBSCRIPTION MENU ITEMS ||============================== //
@@ -141,6 +142,15 @@ const system = {
       type: 'item',
       url: '/system/hosts',
       icon: IconWorld,
+      breadcrumbs: true
+    },
+    {
+      id: 'country-rules',
+      title: 'Country Rules',
+      titleKey: 'navigation.items.countryRules',
+      type: 'item',
+      url: '/system/country-rules',
+      icon: IconFlag,
       breadcrumbs: true
     },
     {
