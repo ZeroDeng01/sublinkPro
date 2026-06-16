@@ -140,6 +140,70 @@ func TestAnyTLSOutputConfigForcesUDPAndSkipCert(t *testing.T) {
 	assertEqualBool(t, "ForcedSkipCert", true, proxy.Skip_cert_verify)
 }
 
+func TestAnyTLSSurgeLineIncludesSupportedFields(t *testing.T) {
+	link := EncodeAnyTLSURL(AnyTLS{
+		Name:           "AnyTLS-Surge",
+		Server:         "example.com",
+		Port:           443,
+		Password:       "password",
+		SNI:            "sni.example.com",
+		SkipCertVerify: true,
+		Fingerprint:    "16dac3717024eb319093d1c95290c14adc850e2814b2208d11c7b7a436923859",
+	})
+
+	line, name, err := buildAnyTLSSurgeLine(link, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildAnyTLSSurgeLine 失败: %v", err)
+	}
+
+	assertEqualString(t, "SurgeName", "AnyTLS-Surge", name)
+	assertContains(t, "SurgeType", line, "AnyTLS-Surge = anytls, example.com, 443")
+	assertContains(t, "SurgePassword", line, "password=password")
+	assertContains(t, "SurgeSNI", line, "sni=sni.example.com")
+	assertContains(t, "SurgeSkipCert", line, "skip-cert-verify=true")
+	assertContains(t, "SurgeFingerprint", line, "server-cert-fingerprint-sha256=16dac3717024eb319093d1c95290c14adc850e2814b2208d11c7b7a436923859")
+}
+
+func TestAnyTLSSurgeLineRejectsInvalidCertificateFingerprint(t *testing.T) {
+	link := "anytls://password@example.com:443/?fingerprint=abc%2Cskip-cert-verify%3Dtrue#AnyTLS-Surge"
+
+	line, _, err := buildAnyTLSSurgeLine(link, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildAnyTLSSurgeLine 失败: %v", err)
+	}
+	if strings.Contains(line, "server-cert-fingerprint-sha256=") {
+		t.Fatalf("非法证书指纹不应输出到 Surge 行: %s", line)
+	}
+	if strings.Contains(line, "abc,skip-cert-verify=true") {
+		t.Fatalf("Surge 行不应包含注入后的参数片段: %s", line)
+	}
+}
+
+func TestAnyTLSProtocolSupportsSurgeExport(t *testing.T) {
+	link := EncodeAnyTLSURL(AnyTLS{
+		Name:     "AnyTLS-Surge-Registry",
+		Server:   "example.com",
+		Port:     443,
+		Password: "password",
+	})
+
+	protocol := detectProtocol(link)
+	if protocol == nil {
+		t.Fatal("未识别 AnyTLS 协议")
+	}
+	surgeCapable, ok := protocol.(SurgeCapable)
+	if !ok {
+		t.Fatal("AnyTLS 协议应支持 Surge 导出")
+	}
+	line, name, err := surgeCapable.ToSurgeLine(link, OutputConfig{})
+	if err != nil {
+		t.Fatalf("AnyTLS Surge 导出失败: %v", err)
+	}
+
+	assertEqualString(t, "SurgeName", "AnyTLS-Surge-Registry", name)
+	assertContains(t, "SurgeType", line, " = anytls, ")
+}
+
 func TestAnyTLSOwnUDPAndSkipCertPreservedWithoutOutputConfig(t *testing.T) {
 	link := EncodeAnyTLSURL(AnyTLS{
 		Name:           "AnyTLS-Self",
