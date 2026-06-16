@@ -137,6 +137,7 @@
     "saving": "保存中...",
     "save": "保存",
     "none": "无",
+    "notSelected": "未选择",
     "open": "打开",
     "linkAddress": "链接地址",
     "custom": "自定义",
@@ -2676,6 +2677,11 @@
         "value": "值",
         "regexPlaceholder": "正则表达式",
         "example": "示例：国家代码 等于 CN，匹配所有中国节点",
+        "unlockProvider": "Provider",
+        "unlockStatus": "状态",
+        "unlockKeyword": "关键词(可选)",
+        "unlockKeywordPlaceholder": "用于筛选特定服务或区域",
+        "unlockConditionHint": "至少配置 Provider 或状态其中一项",
         "logic": {
           "and": "全部满足 (AND)",
           "or": "任一满足 (OR)"
@@ -2843,6 +2849,7 @@
       "delayTime": "延迟 (ms)",
       "fraudScore": "欺诈评分",
       "qualityStatus": "质量状态",
+      "unlockCondition": "解锁情况",
       "unlockProvider": "解锁 Provider",
       "unlockStatus": "解锁状态",
       "unlockKeyword": "解锁关键词",

@@ -28,6 +28,8 @@ import Card from '@mui/material/Card';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 
+// project imports
+import UnlockConditionInput from './UnlockConditionInput';
 import {
   getNodeConditionFieldMeta,
   getNodeConditionFields,
@@ -35,6 +37,7 @@ import {
   isNodeConditionNumericField,
   isNodeConditionSelectField
 } from '../../../utils/nodeConditionOptions';
+import { UNLOCK_CONDITION_FIELD, convertBackendToUI, convertUIToBackend } from '../../../utils/unlockConditionConverter';
 
 const operators = [
   { value: 'equals', labelKey: 'tags.dialog.rule.operators.equals', type: 'string' },
@@ -69,7 +72,11 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
       try {
         const parsed = JSON.parse(editingRule.conditions || '{}');
         setLogic(parsed.logic || 'and');
-        setConditions(parsed.conditions?.length > 0 ? parsed.conditions : [{ field: 'link_country', operator: 'equals', value: '' }]);
+        // 转换后端格式到UI格式（合并解锁字段）
+        const backendConditions =
+          parsed.conditions?.length > 0 ? parsed.conditions : [{ field: 'link_country', operator: 'equals', value: '' }];
+        const uiConditions = convertBackendToUI(backendConditions);
+        setConditions(uiConditions);
       } catch {
         setLogic('and');
         setConditions([{ field: 'link_country', operator: 'equals', value: '' }]);
@@ -96,17 +103,34 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
 
   const handleConditionChange = (index, key, value) => {
     const newConditions = [...conditions];
+    const previousField = newConditions[index].field;
     newConditions[index][key] = value;
 
     if (key === 'field') {
       const isNumeric = isNodeConditionNumericField(value);
       const isSelectField = isNodeConditionSelectField(value);
-      const currentOp = newConditions[index].operator;
       const fieldMeta = getNodeConditionFieldMeta(value);
       const allowedOperators = fieldMeta?.operators || [];
+      const currentOp = newConditions[index].operator;
       const opInfo = operators.find((o) => o.value === currentOp);
 
-      if (isSelectField) {
+      // 从解锁情况切换到其他字段，或从其他字段切换到解锁情况时，需要重置 value
+      const wasPreviousUnlock = previousField === UNLOCK_CONDITION_FIELD;
+      const isCurrentUnlock = value === UNLOCK_CONDITION_FIELD;
+
+      // 处理解锁情况虚拟字段
+      if (isCurrentUnlock) {
+        newConditions[index].operator = 'equals';
+        newConditions[index].value = {
+          provider: '',
+          status: '',
+          keyword: '',
+          providerOperator: 'equals',
+          statusOperator: 'equals',
+          keywordOperator: 'contains'
+        };
+      } else if (wasPreviousUnlock || isSelectField) {
+        // 从解锁情况切换出来，或切换到下拉字段，重置为空字符串
         if (!allowedOperators.includes(currentOp)) {
           newConditions[index].operator = allowedOperators[0] || 'equals';
         }
@@ -121,9 +145,38 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
     setConditions(newConditions);
   };
 
+  // 处理解锁情况复合值的变化
+  const handleUnlockConditionChange = (index, subField, subValue) => {
+    const newConditions = [...conditions];
+    if (!newConditions[index].value || typeof newConditions[index].value !== 'object') {
+      newConditions[index].value = {
+        provider: '',
+        status: '',
+        keyword: '',
+        providerOperator: 'equals',
+        statusOperator: 'equals',
+        keywordOperator: 'contains'
+      };
+    }
+    // subField 为 'value' 时，subValue 是整个对象
+    if (subField === 'value') {
+      newConditions[index].value = subValue;
+    } else {
+      newConditions[index].value = {
+        ...newConditions[index].value,
+        [subField]: subValue
+      };
+    }
+    setConditions(newConditions);
+  };
+
   const handleSave = () => {
     if (!name.trim() || !tagName) return;
-    const conditionsJson = JSON.stringify({ logic, conditions });
+
+    // 转换UI格式到后端格式（展开解锁条件）
+    const backendConditions = convertUIToBackend(conditions);
+    const conditionsJson = JSON.stringify({ logic, conditions: backendConditions });
+
     onSave({
       name: name.trim(),
       tagName: tagName,
@@ -147,6 +200,11 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
       return operators;
     }
     return operators.filter((o) => o.type === 'string');
+  };
+
+  const getVisibleFields = () => {
+    const hiddenFields = ['unlock_provider', 'unlock_status', 'unlock_keyword'];
+    return getNodeConditionFields().filter((f) => !f.hidden && !hiddenFields.includes(f.value));
   };
 
   return (
@@ -239,7 +297,7 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
                         label={t('tags.dialog.rule.field')}
                         onChange={(e) => handleConditionChange(index, 'field', e.target.value)}
                       >
-                        {getNodeConditionFields().map((f) => (
+                        {getVisibleFields().map((f) => (
                           <MenuItem key={f.value} value={f.value}>
                             {f.labelKey ? t(f.labelKey, f.label) : f.label}
                           </MenuItem>
@@ -252,6 +310,7 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
                         value={cond.operator}
                         label={t('tags.dialog.rule.operator')}
                         onChange={(e) => handleConditionChange(index, 'operator', e.target.value)}
+                        disabled={cond.field === UNLOCK_CONDITION_FIELD}
                       >
                         {getAvailableOperators(cond.field).map((op) => (
                           <MenuItem key={op.value} value={op.value}>
@@ -260,7 +319,13 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
                         ))}
                       </Select>
                     </FormControl>
-                    {getNodeConditionValueOptions(cond.field) ? (
+                    {cond.field === UNLOCK_CONDITION_FIELD ? (
+                      <UnlockConditionInput
+                        value={cond.value}
+                        onChange={(newValue) => handleUnlockConditionChange(index, 'value', newValue)}
+                        isMobile={true}
+                      />
+                    ) : getNodeConditionValueOptions(cond.field) ? (
                       <FormControl size="small" fullWidth>
                         <InputLabel>{t('tags.dialog.rule.value')}</InputLabel>
                         <Select
@@ -297,7 +362,7 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
                       label={t('tags.dialog.rule.field')}
                       onChange={(e) => handleConditionChange(index, 'field', e.target.value)}
                     >
-                      {getNodeConditionFields().map((f) => (
+                      {getVisibleFields().map((f) => (
                         <MenuItem key={f.value} value={f.value}>
                           {f.labelKey ? t(f.labelKey, f.label) : f.label}
                         </MenuItem>
@@ -310,6 +375,7 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
                       value={cond.operator}
                       label={t('tags.dialog.rule.operator')}
                       onChange={(e) => handleConditionChange(index, 'operator', e.target.value)}
+                      disabled={cond.field === UNLOCK_CONDITION_FIELD}
                     >
                       {getAvailableOperators(cond.field).map((op) => (
                         <MenuItem key={op.value} value={op.value}>
@@ -318,7 +384,13 @@ export default function RuleDialog({ open, onClose, onSave, editingRule, tags })
                       ))}
                     </Select>
                   </FormControl>
-                  {getNodeConditionValueOptions(cond.field) ? (
+                  {cond.field === UNLOCK_CONDITION_FIELD ? (
+                    <UnlockConditionInput
+                      value={cond.value}
+                      onChange={(newValue) => handleUnlockConditionChange(index, 'value', newValue)}
+                      isMobile={false}
+                    />
+                  ) : getNodeConditionValueOptions(cond.field) ? (
                     <FormControl size="small" sx={{ minWidth: 140 }}>
                       <InputLabel>{t('tags.dialog.rule.value')}</InputLabel>
                       <Select

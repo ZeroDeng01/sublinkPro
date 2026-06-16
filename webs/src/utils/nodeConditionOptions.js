@@ -17,9 +17,10 @@ export const NODE_CONDITION_FIELDS = [
   { value: 'delay_time', label: 'Delay (ms)', labelKey: 'nodeConditions.fields.delayTime' },
   { value: 'fraud_score', label: 'Fraud score', labelKey: 'nodeConditions.fields.fraudScore' },
   { value: 'quality_status', label: 'Quality status', labelKey: 'nodeConditions.fields.qualityStatus' },
-  { value: 'unlock_provider', label: 'Unlock provider', labelKey: 'nodeConditions.fields.unlockProvider' },
-  { value: 'unlock_status', label: 'Unlock status', labelKey: 'nodeConditions.fields.unlockStatus' },
-  { value: 'unlock_keyword', label: 'Unlock keyword', labelKey: 'nodeConditions.fields.unlockKeyword' },
+  { value: 'unlock_condition', label: 'Unlock condition', labelKey: 'nodeConditions.fields.unlockCondition', isVirtual: true },
+  { value: 'unlock_provider', label: 'Unlock provider', labelKey: 'nodeConditions.fields.unlockProvider', hidden: true },
+  { value: 'unlock_status', label: 'Unlock status', labelKey: 'nodeConditions.fields.unlockStatus', hidden: true },
+  { value: 'unlock_keyword', label: 'Unlock keyword', labelKey: 'nodeConditions.fields.unlockKeyword', hidden: true },
   { value: 'unlock_result', label: 'Unlock summary', labelKey: 'nodeConditions.fields.unlockResult' },
   { value: 'ip_type', label: 'IP type', labelKey: 'nodeConditions.fields.ipType' },
   { value: 'residential_type', label: 'Residential attribute', labelKey: 'nodeConditions.fields.residentialType' },
@@ -73,6 +74,16 @@ export const NODE_CONDITION_VALUE_OPTIONS = {
 const resolveFallbackFieldMeta = (field) => {
   if (!field) return null;
 
+  if (field === 'unlock_condition') {
+    return {
+      ...STATIC_FIELD_META_MAP[field],
+      dataType: 'composite',
+      inputType: 'unlock_composite',
+      isVirtual: true,
+      operators: ['equals']
+    };
+  }
+
   if (field === 'unlock_status') {
     return { ...STATIC_FIELD_META_MAP[field], dataType: 'enum', inputType: 'select', optionSource: 'unlockStatuses' };
   }
@@ -104,7 +115,27 @@ export const getNodeConditionFieldMeta = (field) => {
 
 export const getNodeConditionFields = () => {
   const dynamicFields = getNodeConditionFieldMetas();
-  return dynamicFields.length > 0 ? dynamicFields : NODE_CONDITION_FIELDS;
+  const baseFields = dynamicFields.length > 0 ? dynamicFields : NODE_CONDITION_FIELDS;
+
+  // 确保包含 unlock_condition 虚拟字段，并过滤掉被标记为 hidden 的独立解锁字段
+  const hasUnlockCondition = baseFields.some((f) => f.value === 'unlock_condition');
+
+  if (!hasUnlockCondition) {
+    // 找到 quality_status 的位置，在其后插入 unlock_condition
+    const qualityStatusIndex = baseFields.findIndex((f) => f.value === 'quality_status');
+    const unlockConditionField = NODE_CONDITION_FIELDS.find((f) => f.value === 'unlock_condition');
+
+    if (qualityStatusIndex >= 0 && unlockConditionField) {
+      const fieldsWithVirtual = [
+        ...baseFields.slice(0, qualityStatusIndex + 1),
+        unlockConditionField,
+        ...baseFields.slice(qualityStatusIndex + 1)
+      ];
+      return fieldsWithVirtual;
+    }
+  }
+
+  return baseFields;
 };
 
 export const getNodeConditionValueOptions = (field) => {

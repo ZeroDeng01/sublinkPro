@@ -357,6 +357,11 @@ func (tc *TagConditions) EvaluateNode(node Node) bool {
 
 // evaluateCondition 评估单个条件
 func evaluateCondition(node Node, cond TagCondition) bool {
+	// 解锁字段需要特殊处理：检查所有 providers 而不仅仅是第一个
+	if cond.Field == "unlock_provider" || cond.Field == "unlock_status" {
+		return evaluateUnlockCondition(node, cond)
+	}
+
 	fieldValue := getNodeFieldValue(node, cond.Field)
 	compareValue := cond.Value
 
@@ -388,6 +393,77 @@ func evaluateCondition(node Node, cond TagCondition) bool {
 	default:
 		return false
 	}
+}
+
+// evaluateUnlockCondition 评估解锁相关条件
+// 需要遍历所有 providers 进行匹配，而不仅仅是第一个
+func evaluateUnlockCondition(node Node, cond TagCondition) bool {
+	summary := ParseUnlockSummary(node.UnlockSummary)
+	compareValue := fmt.Sprintf("%v", cond.Value)
+
+	if cond.Field == "unlock_provider" {
+		// 检查是否有任何 provider 匹配
+		targetProvider := NormalizeUnlockProvider(compareValue)
+		if targetProvider == "" {
+			return false
+		}
+
+		for _, result := range summary.Providers {
+			providerKey := NormalizeUnlockProvider(result.Provider)
+			match := false
+
+			switch cond.Operator {
+			case "equals":
+				match = providerKey == targetProvider
+			case "not_equals":
+				match = providerKey != targetProvider
+			case "contains":
+				match = strings.Contains(strings.ToLower(result.Provider), strings.ToLower(compareValue))
+			case "not_contains":
+				match = !strings.Contains(strings.ToLower(result.Provider), strings.ToLower(compareValue))
+			}
+
+			if match {
+				return true
+			}
+		}
+		return false
+	}
+
+	if cond.Field == "unlock_status" {
+		// 检查是否有任何 provider 的状态匹配
+		targetStatus := NormalizeUnlockStatus(compareValue)
+		if targetStatus == "" {
+			// 如果规范化后为空，尝试直接匹配原始值
+			targetStatus = strings.TrimSpace(compareValue)
+		}
+
+		for _, result := range summary.Providers {
+			statusKey := NormalizeUnlockStatus(result.Status)
+			if statusKey == "" {
+				statusKey = strings.TrimSpace(result.Status)
+			}
+
+			match := false
+			switch cond.Operator {
+			case "equals":
+				match = statusKey == targetStatus
+			case "not_equals":
+				match = statusKey != targetStatus
+			case "contains":
+				match = strings.Contains(strings.ToLower(result.Status), strings.ToLower(compareValue))
+			case "not_contains":
+				match = !strings.Contains(strings.ToLower(result.Status), strings.ToLower(compareValue))
+			}
+
+			if match {
+				return true
+			}
+		}
+		return false
+	}
+
+	return false
 }
 
 // getNodeFieldValue 获取节点字段值

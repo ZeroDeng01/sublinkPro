@@ -137,6 +137,7 @@
     "saving": "Saving...",
     "save": "Save",
     "none": "None",
+    "notSelected": "Not selected",
     "open": "Open",
     "linkAddress": "Link Address",
     "custom": "Custom",
@@ -2676,6 +2677,11 @@
         "value": "Value",
         "regexPlaceholder": "Regular expression",
         "example": "Example: country code equals CN, matching all China nodes",
+        "unlockProvider": "Provider",
+        "unlockStatus": "Status",
+        "unlockKeyword": "Keyword (Optional)",
+        "unlockKeywordPlaceholder": "Filter by specific service or region",
+        "unlockConditionHint": "Configure at least Provider or Status",
         "logic": {
           "and": "Match all (AND)",
           "or": "Match any (OR)"
@@ -2843,6 +2849,7 @@
       "delayTime": "Delay (ms)",
       "fraudScore": "Fraud score",
       "qualityStatus": "Quality status",
+      "unlockCondition": "Unlock condition",
       "unlockProvider": "Unlock provider",
       "unlockStatus": "Unlock status",
       "unlockKeyword": "Unlock keyword",
