@@ -1401,9 +1401,14 @@
       "actions": {
         "runNow": "Check now",
         "copyLink": "Copy link",
+        "editProtocol": "Protocol",
         "edit": "Edit",
         "delete": "Delete"
       }
+    },
+    "rawProtocolDialog": {
+      "title": "Protocol Parameters",
+      "subtitle": "Node"
     },
     "rawInfo": {
       "groups": {
@@ -1740,6 +1745,7 @@
       "untested": "Untested",
       "speedTest": "Test",
       "copyLink": "Copy link",
+      "editProtocol": "Protocol",
       "edit": "Edit",
       "delete": "Delete"
     },

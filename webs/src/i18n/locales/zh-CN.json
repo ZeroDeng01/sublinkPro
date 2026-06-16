@@ -1401,9 +1401,14 @@
       "actions": {
         "runNow": "立即检测",
         "copyLink": "复制链接",
+        "editProtocol": "协议参数",
         "edit": "编辑",
         "delete": "删除"
       }
+    },
+    "rawProtocolDialog": {
+      "title": "协议参数",
+      "subtitle": "节点"
     },
     "rawInfo": {
       "groups": {
@@ -1740,6 +1745,7 @@
       "untested": "未检测",
       "speedTest": "检测",
       "copyLink": "复制链接",
+      "editProtocol": "协议参数",
       "edit": "编辑",
       "delete": "删除"
     },

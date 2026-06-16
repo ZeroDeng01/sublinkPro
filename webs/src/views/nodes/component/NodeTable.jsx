@@ -27,6 +27,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import SpeedIcon from '@mui/icons-material/Speed';
+import TuneIcon from '@mui/icons-material/Tune';
 
 // project imports
 import NodeProtocolChip from './NodeProtocolChip';
@@ -64,7 +65,8 @@ export default function NodeTable({
   onEdit,
   onDelete,
   onViewDetails,
-  onColumnResize
+  onColumnResize,
+  onOpenRawProtocol
 }) {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -754,6 +756,17 @@ export default function NodeTable({
                     <Tooltip title={t('nodes.table.copyLink')}>
                       <IconButton size="small" onClick={() => onCopy(node.Link)}>
                         <ContentCopyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={t('nodes.table.editProtocol')}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenRawProtocol?.(node);
+                        }}
+                      >
+                        <TuneIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title={t('nodes.table.edit')}>

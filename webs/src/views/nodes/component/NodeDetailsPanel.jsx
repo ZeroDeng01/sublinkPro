@@ -1,13 +1,9 @@
 import PropTypes from 'prop-types';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import Accordion from '@mui/material/Accordion';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import AccordionDetails from '@mui/material/AccordionDetails';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -26,6 +22,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import TuneIcon from '@mui/icons-material/Tune';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PublicIcon from '@mui/icons-material/Public';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -36,9 +33,6 @@ import FilterVintageIcon from '@mui/icons-material/FilterVintage';
 import VpnLockIcon from '@mui/icons-material/VpnLock';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
-
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import CodeIcon from '@mui/icons-material/Code';
 
 // dialog
 import Dialog from '@mui/material/Dialog';
@@ -61,7 +55,6 @@ import {
 import { resolveProtocolPresentationFromLink } from 'utils/protocolPresentation';
 
 // components
-import NodeRawInfoEditor from './NodeRawInfoEditor';
 import {
   getNodeActionButtonSx,
   getNodeDialogPaperSx,
@@ -175,14 +168,14 @@ export default function NodeDetailsPanel({
   onDelete,
   onIPClick,
   onNodeUpdate,
-  showMessage
+  showMessage,
+  onOpenRawProtocol
 }) {
   const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { isDark } = useResolvedColorScheme();
   const tokens = getNodeThemeTokens(theme, isDark);
-  const [rawInfoExpanded, setRawInfoExpanded] = useState(false);
 
   if (!node) return null;
 
@@ -478,42 +471,6 @@ export default function NodeDetailsPanel({
           )}
         </List>
 
-        {/* 原始协议信息区域 */}
-        <Accordion
-          expanded={rawInfoExpanded}
-          onChange={() => setRawInfoExpanded(!rawInfoExpanded)}
-          disableGutters
-          elevation={0}
-          sx={{
-            bgcolor: tokens.nestedPanelSurface,
-            '&:before': { display: 'none' },
-            border: '1px solid',
-            borderColor: tokens.softBorder,
-            borderRadius: 3,
-            mb: 5,
-            overflow: 'hidden'
-          }}
-        >
-          <AccordionSummary
-            expandIcon={<ExpandMoreIcon />}
-            sx={{
-              minHeight: 48,
-              bgcolor: tokens.toolbarSurface,
-              '& .MuiAccordionSummary-content': { my: 1 }
-            }}
-          >
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <CodeIcon fontSize="small" color="primary" />
-              <Typography variant="subtitle2" fontWeight={600}>
-                {t('nodes.details.rawProtocolInfo')}
-              </Typography>
-            </Stack>
-          </AccordionSummary>
-          <AccordionDetails sx={{ pt: 0 }}>
-            <NodeRawInfoEditor node={node} protocolMeta={protocolMeta} onUpdate={onNodeUpdate} showMessage={showMessage} />
-          </AccordionDetails>
-        </Accordion>
-
         <List disablePadding sx={{ mt: 1, mb: 3 }}>
           <DetailItem icon={<PublicIcon fontSize="small" />} label={t('nodes.details.labels.countryRegion')} value={countryDisplay.text} />
           {node.LandingIP && (
@@ -677,6 +634,23 @@ export default function NodeDetailsPanel({
           </IconButton>
         </Tooltip>
 
+        <Tooltip title={t('nodes.details.actions.editProtocol')}>
+          <IconButton
+            onClick={() => {
+              onOpenRawProtocol?.(node);
+            }}
+            color="warning"
+            sx={{
+              borderRadius: 3,
+              width: 48,
+              height: 48,
+              ...getNodeIconButtonSx(theme, tokens, tokens.palette.warning.main)
+            }}
+          >
+            <TuneIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
         <Tooltip title={t('nodes.details.actions.edit')}>
           <IconButton
             onClick={() => {
@@ -778,5 +752,6 @@ NodeDetailsPanel.propTypes = {
   onDelete: PropTypes.func.isRequired,
   onIPClick: PropTypes.func,
   onNodeUpdate: PropTypes.func, // 节点更新后的回调
-  showMessage: PropTypes.func // 消息提示函数
+  showMessage: PropTypes.func, // 消息提示函数
+  onOpenRawProtocol: PropTypes.func // 打开原始协议对话框
 };

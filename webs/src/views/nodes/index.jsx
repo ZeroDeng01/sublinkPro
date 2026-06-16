@@ -64,6 +64,7 @@ import {
   BatchCountryDialog,
   NodeAddResultDialog,
   NodeDetailsPanel,
+  NodeRawProtocolDialog,
   NodeFilters,
   BatchActions,
   NodeMobileList,
@@ -175,6 +176,10 @@ export default function NodeList() {
   // 添加结果汇总弹窗
   const [addResultDialogOpen, setAddResultDialogOpen] = useState(false);
   const [addResult, setAddResult] = useState(null);
+
+  // 原始协议对话框
+  const [rawProtocolDialogOpen, setRawProtocolDialogOpen] = useState(false);
+  const [rawProtocolNode, setRawProtocolNode] = useState(null);
 
   // 过滤器
   const [searchQuery, setSearchQuery] = useState('');
@@ -675,6 +680,20 @@ export default function NodeList() {
       tags: nodeTags
     });
     setNodeDialogOpen(true);
+  };
+
+  const handleOpenRawProtocol = (node) => {
+    setRawProtocolNode(node);
+    setRawProtocolDialogOpen(true);
+  };
+
+  const handleCloseRawProtocol = () => {
+    setRawProtocolDialogOpen(false);
+    setRawProtocolNode(null);
+  };
+
+  const handleRawProtocolUpdate = () => {
+    loadNodes(); // 刷新节点列表
   };
 
   const handleDeleteNode = async (node) => {
@@ -1286,6 +1305,7 @@ export default function NodeList() {
             setDetailsPanelOpen(true);
           }}
           onColumnResize={handleColumnResize}
+          onOpenRawProtocol={handleOpenRawProtocol}
         />
       )}
 
@@ -1444,6 +1464,17 @@ export default function NodeList() {
           // 节点原始信息更新后刷新列表
           fetchNodes(getCurrentFilters());
         }}
+        showMessage={showMessage}
+        onOpenRawProtocol={handleOpenRawProtocol}
+      />
+
+      {/* 原始协议对话框 */}
+      <NodeRawProtocolDialog
+        open={rawProtocolDialogOpen}
+        node={rawProtocolNode}
+        protocolMeta={protocolMeta}
+        onClose={handleCloseRawProtocol}
+        onUpdate={handleRawProtocolUpdate}
         showMessage={showMessage}
       />
 
