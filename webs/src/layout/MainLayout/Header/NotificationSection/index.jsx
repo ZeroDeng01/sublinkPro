@@ -62,8 +62,6 @@ export default function NotificationSection() {
     popoverSurfaceAccent,
     popoverBorder,
     popoverInsetShadow,
-    headerSurface,
-    headerDivider,
     mutedText,
     listItemHover,
     selectedSurface,
@@ -226,10 +224,16 @@ export default function NotificationSection() {
                       boxShadow: popoverInsetShadow
                     }}
                   >
-                    <Stack sx={{ gap: 2 }}>
+                    <Stack>
                       <Stack
                         direction="row"
-                        sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 2, px: 2, bgcolor: headerSurface }}
+                        sx={{
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          pt: 2,
+                          pb: 1.5,
+                          px: 2
+                        }}
                       >
                         <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
                           <Typography variant="subtitle1">{t('notifications.messages')}</Typography>
@@ -260,20 +264,33 @@ export default function NotificationSection() {
                           </Button>
                         )}
                       </Stack>
-                      <Divider sx={{ borderColor: headerDivider }} />
+                      <Divider sx={{ borderColor: popoverBorder, opacity: 0.5 }} />
                       <Box
                         sx={{
                           height: 'auto',
                           maxHeight: 'calc(100vh - 250px)',
                           overflowY: 'auto',
                           overflowX: 'hidden',
-                          '&::-webkit-scrollbar': { width: 5 }
+                          '&::-webkit-scrollbar': {
+                            width: 6
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            bgcolor: 'transparent'
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            bgcolor: withAlpha(theme.palette.text.primary, isDark ? 0.2 : 0.15),
+                            borderRadius: '3px',
+                            '&:hover': {
+                              bgcolor: withAlpha(theme.palette.text.primary, isDark ? 0.3 : 0.25)
+                            }
+                          }
                         }}
                       >
                         {notifications.length > 0 ? (
                           <List sx={{ py: 0 }}>
-                            {notifications.map((notification) => {
+                            {notifications.map((notification, index) => {
                               const isRead = readIds.has(notification.id);
+                              const isLast = index === notifications.length - 1;
                               return (
                                 <ListItem
                                   key={notification.id}
@@ -282,11 +299,12 @@ export default function NotificationSection() {
                                     py: 1.5,
                                     px: 2,
                                     bgcolor: isRead ? 'transparent' : selectedSurface,
-                                    borderBottom: `1px solid ${popoverBorder}`,
+                                    borderBottom: isLast ? 'none' : `1px solid ${withAlpha(popoverBorder, 0.5)}`,
                                     cursor: 'pointer',
-                                    transition: 'background-color 0.2s',
+                                    transition: 'all 0.2s ease-in-out',
                                     '&:hover': {
-                                      bgcolor: isRead ? listItemHover : selectedHoverSurface
+                                      bgcolor: isRead ? listItemHover : selectedHoverSurface,
+                                      transform: 'translateX(2px)'
                                     }
                                   }}
                                   onClick={() => handleMarkAsRead(notification.id)}
@@ -388,13 +406,25 @@ export default function NotificationSection() {
                       </Box>
                     </Stack>
                     {notifications.length > 0 && (
-                      <CardActions sx={{ p: 1.25, justifyContent: 'center', borderTop: `1px solid ${popoverBorder}` }}>
+                      <CardActions
+                        sx={{
+                          p: 1.25,
+                          justifyContent: 'center',
+                          borderTop: `1px solid ${withAlpha(popoverBorder, 0.5)}`
+                        }}
+                      >
                         <Button
                           size="small"
                           color="error"
                           startIcon={<IconTrash size={16} />}
                           onClick={handleClearAll}
-                          sx={{ textTransform: 'none' }}
+                          sx={{
+                            textTransform: 'none',
+                            transition: 'all 0.2s ease-in-out',
+                            '&:hover': {
+                              transform: 'scale(1.05)'
+                            }
+                          }}
                         >
                           {t('notifications.clearAll')}
                         </Button>
