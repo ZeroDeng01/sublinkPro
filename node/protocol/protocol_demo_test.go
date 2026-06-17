@@ -49,6 +49,7 @@ func TestProtocolDemoRegistryMetadata(t *testing.T) {
 	meta := GetProtocolMeta("protocoldemo")
 	if meta == nil {
 		t.Fatal("GetProtocolMeta(protocoldemo) returned nil")
+		return
 	}
 	if meta.Label != "ProtocolDemo" {
 		t.Fatalf("label = %q, want %q", meta.Label, "ProtocolDemo")

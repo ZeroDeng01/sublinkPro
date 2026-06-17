@@ -142,6 +142,7 @@ func TestMieruRegistryMetadata(t *testing.T) {
 	meta := GetProtocolMeta("mieru")
 	if meta == nil {
 		t.Fatal("GetProtocolMeta(mieru) returned nil")
+		return
 	}
 	assertEqualString(t, "Label", "Mieru", meta.Label)
 

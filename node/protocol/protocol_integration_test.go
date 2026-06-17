@@ -598,6 +598,7 @@ func TestHTTPProtocolIntegration(t *testing.T) {
 		meta := GetProtocolMeta("http")
 		if meta == nil {
 			t.Fatal("HTTP协议元数据未找到")
+			return
 		}
 
 		assertEqualString(t, "ProtocolName", "http", meta.Name)
@@ -610,6 +611,7 @@ func TestHTTPProtocolIntegration(t *testing.T) {
 		meta := GetProtocolMeta("https")
 		if meta == nil {
 			t.Fatal("HTTPS协议元数据未找到")
+			return
 		}
 
 		assertEqualString(t, "ProtocolName", "https", meta.Name)
