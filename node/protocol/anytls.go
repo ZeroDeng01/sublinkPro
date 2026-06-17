@@ -27,9 +27,10 @@ func init() {
 		FieldMeta{Name: "IdleSessionTimeout", Label: "空闲会话超时时间", Type: "int", Group: "transport", Advanced: true},
 		FieldMeta{Name: "MinIdleSession", Label: "最小空闲会话数", Type: "int", Group: "transport", Advanced: true},
 	)
-	MustRegisterProtocol(newProxyProtocolSpec(base, buildAnyTLSProxy, func(proxy Proxy) bool {
+	// AnyTLS 原本只支持 Clash/mihomo 导出；这里补充 Surge 导出能力，让 Surge 订阅不会跳过 AnyTLS 节点。
+	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildAnyTLSProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "anytls")
-	}, ConvertProxyToAnyTLS, EncodeAnyTLSURL))
+	}, ConvertProxyToAnyTLS, EncodeAnyTLSURL, buildAnyTLSSurgeLine))
 }
 
 type AnyTLS struct {
@@ -174,4 +175,23 @@ func buildAnyTLSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	skipCert := config.Cert || anyTLS.SkipCertVerify
 	udp := config.Udp || anyTLS.UDP
 	return Proxy{Name: anyTLS.Name, Type: "anytls", Server: anyTLS.Server, Port: FlexPort(utils.GetPortInt(anyTLS.Port)), Password: anyTLS.Password, Skip_cert_verify: skipCert, Sni: anyTLS.SNI, Alpn: anyTLS.ALPN, Client_fingerprint: anyTLS.ClientFingerprint, Fingerprint: anyTLS.Fingerprint, Udp: udp, AnyTLSIdleCheck: anyTLS.IdleSessionCheckInterval, AnyTLSIdleTimeout: anyTLS.IdleSessionTimeout, AnyTLSMinIdle: anyTLS.MinIdleSession, Dialer_proxy: link.DialerProxyName}, nil
+}
+
+// buildAnyTLSSurgeLine 将 AnyTLS 链接转换为 Surge 节点行。
+// Surge 侧只输出当前可映射的核心字段；mihomo 专属的空闲会话池参数不写入 Surge 配置，避免生成无效参数。
+func buildAnyTLSSurgeLine(link string, config OutputConfig) (string, string, error) {
+	anyTLS, err := DecodeAnyTLSURL(link)
+	if err != nil {
+		return "", "", err
+	}
+	server := replaceSurgeHost(anyTLS.Server, config)
+	skipCert := config.Cert || anyTLS.SkipCertVerify
+	line := fmt.Sprintf("%s = anytls, %s, %d, password=%s, skip-cert-verify=%t", anyTLS.Name, server, utils.GetPortInt(anyTLS.Port), anyTLS.Password, skipCert)
+	if anyTLS.SNI != "" {
+		line = fmt.Sprintf("%s, sni=%s", line, anyTLS.SNI)
+	}
+	if anyTLS.Fingerprint != "" {
+		line = fmt.Sprintf("%s, server-cert-fingerprint-sha256=%s", line, anyTLS.Fingerprint)
+	}
+	return line, anyTLS.Name, nil
 }
