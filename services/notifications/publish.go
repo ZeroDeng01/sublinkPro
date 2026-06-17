@@ -19,6 +19,20 @@ const webhookDispatchConcurrency = 4
 
 var telegramSender func(eventKey string, payload Payload)
 
+// AsyncDispatcher 负责异步处理单个通知事件（如 webhook、telegram 推送）。
+type AsyncDispatcher func(eventKey string, payload Payload)
+
+// asyncDispatchers 保存已注册的异步派发器，应用启动时通过 RegisterAsyncDispatcher
+// 注入（见 main.go）。未注册任何派发器时，Publish 仅做内存内 SSE 广播，不会触发
+// 任何外部 IO 或数据库访问——这使得不接线通知传输的运行上下文（如测试、CLI 子命令）
+// 天然惰性，无需额外开关。
+var asyncDispatchers []AsyncDispatcher
+
+// RegisterAsyncDispatcher 注册一个异步通知派发器，通常在应用启动时调用。
+func RegisterAsyncDispatcher(dispatcher AsyncDispatcher) {
+	asyncDispatchers = append(asyncDispatchers, dispatcher)
+}
+
 func RegisterTelegramSender(sender func(eventKey string, payload Payload)) {
 	telegramSender = sender
 }
@@ -27,8 +41,9 @@ func Publish(eventKey string, payload Payload) {
 	enrichedPayload := FillPayloadMeta(eventKey, payload)
 
 	sse.GetSSEBroker().BroadcastJSONEvent("notification", enrichedPayload)
-	go TriggerWebhook(eventKey, enrichedPayload)
-	go TriggerTelegram(eventKey, enrichedPayload)
+	for _, dispatch := range asyncDispatchers {
+		go dispatch(eventKey, enrichedPayload)
+	}
 }
 
 func TriggerWebhook(eventKey string, payload Payload) {

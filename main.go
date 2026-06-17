@@ -562,6 +562,10 @@ func Run() {
 	services.InitTelegramWrapper()
 	notifications.RegisterTelegramSender(telegram.SendNotification)
 
+	// 注册异步通知派发器（webhook / telegram），启动后 Publish 才会触发外部推送
+	notifications.RegisterAsyncDispatcher(notifications.TriggerWebhook)
+	notifications.RegisterAsyncDispatcher(notifications.TriggerTelegram)
+
 	// 从数据库加载定时任务（演示模式下跳过）
 	if !models.IsDemoMode() && sch != nil {
 		err := sch.LoadFromDatabase()

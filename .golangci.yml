@@ -90,6 +90,7 @@ linters:
             - "**/*.go"
             - "!**/database/*.go"
             - "!**/database/**/*.go"
+            - "!**/internal/testutil/*.go"
             - "!**/*_test.go"
           deny:
             - pkg: gorm.io/driver/mysql

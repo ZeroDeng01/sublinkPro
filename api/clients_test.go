@@ -18,9 +18,7 @@ import (
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
 	"gopkg.in/yaml.v3"
-	"gorm.io/gorm"
 )
 
 const testClashTemplate = `port: 7890
@@ -47,10 +45,7 @@ func setupClientsAPITestDB(t *testing.T) {
 	oldInitialized := database.IsInitialized
 	oldHook := testGetClientAfterResolveSubscriptionNameHook
 
-	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "clients_api_test")), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open test db: %v", err)
-	}
+	db := testutil.OpenMemoryDB(t, "clients_api_test")
 
 	if err := db.AutoMigrate(
 		&models.Subcription{},

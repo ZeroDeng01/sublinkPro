@@ -12,8 +12,6 @@ import (
 	"sublink/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
 )
 
 type apiJSONResponse struct {
@@ -29,10 +27,7 @@ func setupSettingAPITestDB(t *testing.T) {
 	oldDialect := database.Dialect
 	oldInitialized := database.IsInitialized
 
-	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "setting_api_test")), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open test db: %v", err)
-	}
+	db := testutil.OpenMemoryDB(t, "setting_api_test")
 	if err := db.AutoMigrate(&models.SystemSetting{}); err != nil {
 		t.Fatalf("auto migrate system_settings: %v", err)
 	}

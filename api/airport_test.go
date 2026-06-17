@@ -13,8 +13,6 @@ import (
 	"sublink/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
 )
 
 func setupAirportAPITestDB(t *testing.T) {
@@ -24,10 +22,7 @@ func setupAirportAPITestDB(t *testing.T) {
 	oldDialect := database.Dialect
 	oldInitialized := database.IsInitialized
 
-	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "airport_api_test")), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open test db: %v", err)
-	}
+	db := testutil.OpenMemoryDB(t, "airport_api_test")
 	if err := db.AutoMigrate(&models.Airport{}); err != nil {
 		t.Fatalf("auto migrate airports: %v", err)
 	}

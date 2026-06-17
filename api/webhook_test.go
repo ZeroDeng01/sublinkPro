@@ -14,8 +14,6 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
 )
 
 type testAPIResponse struct {
@@ -31,10 +29,7 @@ func setupWebhookAPITestDB(t *testing.T) {
 	oldDialect := database.Dialect
 	oldInitialized := database.IsInitialized
 
-	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "webhook_api_test")), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open test db: %v", err)
-	}
+	db := testutil.OpenMemoryDB(t, "webhook_api_test")
 	if err := db.AutoMigrate(&models.SystemSetting{}, &models.Webhook{}); err != nil {
 		t.Fatalf("auto migrate webhook tables: %v", err)
 	}

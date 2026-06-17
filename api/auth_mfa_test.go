@@ -21,8 +21,6 @@ import (
 	"sublink/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
 )
 
 func setupAuthMFATestDB(t *testing.T) {
@@ -33,10 +31,7 @@ func setupAuthMFATestDB(t *testing.T) {
 	oldInitialized := database.IsInitialized
 	oldCfg := *config.Get()
 
-	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "auth_mfa_test")), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open test db: %v", err)
-	}
+	db := testutil.OpenMemoryDB(t, "auth_mfa_test")
 	if err := db.AutoMigrate(&models.User{}, &models.MFALoginChallenge{}); err != nil {
 		t.Fatalf("auto migrate users: %v", err)
 	}

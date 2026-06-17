@@ -11,9 +11,6 @@ import (
 	"sublink/database"
 	"sublink/internal/testutil"
 	"sublink/models"
-
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
 )
 
 func setupTemplateAPITestDB(t *testing.T) {
@@ -24,10 +21,7 @@ func setupTemplateAPITestDB(t *testing.T) {
 	oldInitialized := database.IsInitialized
 	oldBaseTemplateDir := baseTemplateDir
 
-	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "template_api_test")), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open test db: %v", err)
-	}
+	db := testutil.OpenMemoryDB(t, "template_api_test")
 	if err := db.AutoMigrate(&models.Template{}); err != nil {
 		t.Fatalf("auto migrate templates: %v", err)
 	}

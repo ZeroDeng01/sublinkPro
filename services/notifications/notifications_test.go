@@ -355,8 +355,12 @@ func TestPublishBroadcastsSSEAndSelectedTelegram(t *testing.T) {
 	setupNotificationTestDB(t)
 	drainSSENotifier()
 	oldSender := telegramSender
+	oldDispatchers := asyncDispatchers
+	asyncDispatchers = nil
+	RegisterAsyncDispatcher(TriggerTelegram)
 	defer func() {
 		telegramSender = oldSender
+		asyncDispatchers = oldDispatchers
 		drainSSENotifier()
 	}()
 	if err := SaveTelegramEventKeys([]string{"security.user_login"}); err != nil {

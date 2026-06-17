@@ -15,8 +15,6 @@ import (
 	"sublink/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
 )
 
 // setupTestRouter 设置测试路由
@@ -66,10 +64,7 @@ func setupTestDBForAPI(t *testing.T) {
 	oldInitialized := database.IsInitialized
 
 	// 创建独立的测试数据库
-	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "country_rule_api_test")), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open test db: %v", err)
-	}
+	db := testutil.OpenMemoryDB(t, "country_rule_api_test")
 
 	// 运行迁移
 	if err := db.AutoMigrate(&models.CountryRule{}); err != nil {
@@ -149,12 +144,19 @@ func TestListCountryRules(t *testing.T) {
 		t.Errorf("Expected code 200, got %v", response["code"])
 	}
 
-	data, ok := response["data"].([]any)
+	data, ok := response["data"].(map[string]any)
 	if !ok {
-		t.Fatalf("Expected data to be []any, got %T", response["data"])
+		t.Fatalf("Expected data to be map[string]any, got %T", response["data"])
 	}
-	if len(data) != 2 {
-		t.Errorf("Expected 2 rules, got %d", len(data))
+	items, ok := data["items"].([]any)
+	if !ok {
+		t.Fatalf("Expected data.items to be []any, got %T", data["items"])
+	}
+	if len(items) != 2 {
+		t.Errorf("Expected 2 rules, got %d", len(items))
+	}
+	if total, ok := data["total"].(float64); !ok || int(total) != 2 {
+		t.Errorf("Expected total 2, got %v", data["total"])
 	}
 }
 

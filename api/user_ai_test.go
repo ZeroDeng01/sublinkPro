@@ -10,8 +10,6 @@ import (
 	"sublink/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
 )
 
 func setupUserAPITestDB(t *testing.T) {
@@ -21,10 +19,7 @@ func setupUserAPITestDB(t *testing.T) {
 	oldInitialized := database.IsInitialized
 	oldCfg := *config.Get()
 
-	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "user_ai_api_test")), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open test db: %v", err)
-	}
+	db := testutil.OpenMemoryDB(t, "user_ai_api_test")
 	if err := db.AutoMigrate(&models.User{}, &models.MFALoginChallenge{}, &models.SystemSetting{}); err != nil {
 		t.Fatalf("auto migrate users: %v", err)
 	}
