@@ -1131,49 +1131,73 @@ func seedDefaultCountryRules(db *gorm.DB) error {
 
 	defaultRules := []CountryRule{
 		// 常见地区 - 使用正则表达式
-		{CountryCode: "HK", CountryName: "香港", Pattern: "香港|HK|Hong Kong|🇭🇰", Priority: 0, Enabled: true},
-		{CountryCode: "TW", CountryName: "台湾", Pattern: "台湾|TW|Taiwan|臺灣|🇹🇼", Priority: 0, Enabled: true},
-		{CountryCode: "JP", CountryName: "日本", Pattern: "日本|JP|Japan|东京|大阪|Tokyo|Osaka|🇯🇵", Priority: 0, Enabled: true},
-		{CountryCode: "SG", CountryName: "新加坡", Pattern: "新加坡|SG|Singapore|狮城|🇸🇬", Priority: 0, Enabled: true},
-		{CountryCode: "US", CountryName: "美国", Pattern: "美国|US|USA|United States|洛杉矶|硅谷|圣何塞|西雅图|芝加哥|Los Angeles|Silicon Valley|Seattle|Chicago|🇺🇸", Priority: 0, Enabled: true},
-		{CountryCode: "KR", CountryName: "韩国", Pattern: "韩国|KR|Korea|首尔|Seoul|🇰🇷", Priority: 0, Enabled: true},
+		{CountryCode: "HK", CountryName: "香港", Pattern: "(?i)香港|HK|Hong Kong|🇭🇰", Priority: 0, Enabled: true},
+		{CountryCode: "TW", CountryName: "台湾", Pattern: "(?i)台湾|TW|Taiwan|臺灣|🇹🇼", Priority: 0, Enabled: true},
+		{CountryCode: "JP", CountryName: "日本", Pattern: "(?i)日本|JP|Japan|东京|Tokyo|大阪|Osaka|京都|Kyoto|名古屋|Nagoya|横滨|Yokohama|福冈|Fukuoka|札幌|Sapporo|神户|Kobe|🇯🇵", Priority: 0, Enabled: true},
+		{CountryCode: "SG", CountryName: "新加坡", Pattern: "(?i)新加坡|SG|Singapore|狮城|🇸🇬", Priority: 0, Enabled: true},
+		{CountryCode: "US", CountryName: "美国", Pattern: "(?i)美国|US|USA|United States|洛杉矶|Los Angeles|LA|纽约|New York|NYC|旧金山|San Francisco|硅谷|Silicon Valley|西雅图|Seattle|芝加哥|Chicago|达拉斯|Dallas|迈阿密|Miami|华盛顿|Washington DC|波士顿|Boston|丹佛|Denver|亚特兰大|Atlanta|🇺🇸", Priority: 0, Enabled: true},
+		{CountryCode: "KR", CountryName: "韩国", Pattern: "(?i)韩国|KR|Korea|首尔|Seoul|🇰🇷", Priority: 0, Enabled: true},
 
 		// 其他亚洲地区
-		{CountryCode: "MY", CountryName: "马来西亚", Pattern: "马来西亚|MY|Malaysia|🇲🇾", Priority: 0, Enabled: true},
-		{CountryCode: "TH", CountryName: "泰国", Pattern: "泰国|TH|Thailand|曼谷|Bangkok|🇹🇭", Priority: 0, Enabled: true},
-		{CountryCode: "PH", CountryName: "菲律宾", Pattern: "菲律宾|PH|Philippines|🇵🇭", Priority: 0, Enabled: true},
-		{CountryCode: "VN", CountryName: "越南", Pattern: "越南|VN|Vietnam|🇻🇳", Priority: 0, Enabled: true},
-		{CountryCode: "IN", CountryName: "印度", Pattern: "印度|IN|India|孟买|Mumbai|🇮🇳", Priority: 0, Enabled: true},
+		{CountryCode: "MY", CountryName: "马来西亚", Pattern: "(?i)马来西亚|MY|Malaysia|🇲🇾", Priority: 0, Enabled: true},
+		{CountryCode: "TH", CountryName: "泰国", Pattern: "(?i)泰国|TH|Thailand|曼谷|Bangkok|🇹🇭", Priority: 0, Enabled: true},
+		{CountryCode: "PH", CountryName: "菲律宾", Pattern: "(?i)菲律宾|PH|Philippines|🇵🇭", Priority: 0, Enabled: true},
+		{CountryCode: "VN", CountryName: "越南", Pattern: "(?i)越南|VN|Vietnam|🇻🇳", Priority: 0, Enabled: true},
+		{CountryCode: "IN", CountryName: "印度", Pattern: "(?i)印度|IN|India|孟买|Mumbai|🇮🇳", Priority: 0, Enabled: true},
+		{CountryCode: "ID", CountryName: "印度尼西亚", Pattern: "(?i)印度尼西亚|ID|Indonesia|印尼|雅加达|Jakarta|🇮🇩", Priority: 0, Enabled: true},
+		{CountryCode: "BD", CountryName: "孟加拉国", Pattern: "(?i)孟加拉国|BD|Bangladesh|孟加拉|达卡|Dhaka|🇧🇩", Priority: 0, Enabled: true},
+		{CountryCode: "PK", CountryName: "巴基斯坦", Pattern: "(?i)巴基斯坦|PK|Pakistan|巴铁|卡拉奇|Karachi|伊斯兰堡|Islamabad|🇵🇰", Priority: 0, Enabled: true},
+		{CountryCode: "MO", CountryName: "澳门", Pattern: "(?i)澳门|MO|Macao|Macau|🇲🇴", Priority: 0, Enabled: true},
 
 		// 欧洲地区
-		{CountryCode: "GB", CountryName: "英国", Pattern: "英国|GB|UK|United Kingdom|伦敦|London|🇬🇧", Priority: 0, Enabled: true},
-		{CountryCode: "DE", CountryName: "德国", Pattern: "德国|DE|Germany|法兰克福|Frankfurt|🇩🇪", Priority: 0, Enabled: true},
-		{CountryCode: "FR", CountryName: "法国", Pattern: "法国|FR|France|巴黎|Paris|🇫🇷", Priority: 0, Enabled: true},
-		{CountryCode: "NL", CountryName: "荷兰", Pattern: "荷兰|NL|Netherlands|阿姆斯特丹|Amsterdam|🇳🇱", Priority: 0, Enabled: true},
-		{CountryCode: "RU", CountryName: "俄罗斯", Pattern: "俄罗斯|RU|Russia|莫斯科|Moscow|🇷🇺", Priority: 0, Enabled: true},
+		{CountryCode: "GB", CountryName: "英国", Pattern: "(?i)英国|GB|UK|United Kingdom|伦敦|London|🇬🇧", Priority: 0, Enabled: true},
+		{CountryCode: "DE", CountryName: "德国", Pattern: "(?i)德国|DE|Germany|法兰克福|Frankfurt|🇩🇪", Priority: 0, Enabled: true},
+		{CountryCode: "FR", CountryName: "法国", Pattern: "(?i)法国|FR|France|巴黎|Paris|🇫🇷", Priority: 0, Enabled: true},
+		{CountryCode: "NL", CountryName: "荷兰", Pattern: "(?i)荷兰|NL|Netherlands|阿姆斯特丹|Amsterdam|🇳🇱", Priority: 0, Enabled: true},
+		{CountryCode: "RU", CountryName: "俄罗斯", Pattern: "(?i)俄罗斯|RU|Russia|莫斯科|Moscow|🇷🇺", Priority: 0, Enabled: true},
 
 		// 美洲其他地区
-		{CountryCode: "CA", CountryName: "加拿大", Pattern: "加拿大|CA|Canada|🇨🇦", Priority: 0, Enabled: true},
-		{CountryCode: "BR", CountryName: "巴西", Pattern: "巴西|BR|Brazil|🇧🇷", Priority: 0, Enabled: true},
-		{CountryCode: "AR", CountryName: "阿根廷", Pattern: "阿根廷|AR|Argentina|🇦🇷", Priority: 0, Enabled: true},
+		{CountryCode: "CA", CountryName: "加拿大", Pattern: "(?i)加拿大|CA|Canada|🇨🇦", Priority: 0, Enabled: true},
+		{CountryCode: "BR", CountryName: "巴西", Pattern: "(?i)巴西|BR|Brazil|🇧🇷", Priority: 0, Enabled: true},
+		{CountryCode: "AR", CountryName: "阿根廷", Pattern: "(?i)阿根廷|AR|Argentina|🇦🇷", Priority: 0, Enabled: true},
+		{CountryCode: "MX", CountryName: "墨西哥", Pattern: "(?i)墨西哥|MX|Mexico|墨城|Mexico City|🇲🇽", Priority: 0, Enabled: true},
+		{CountryCode: "CL", CountryName: "智利", Pattern: "(?i)智利|CL|Chile|圣地亚哥|Santiago|🇨🇱", Priority: 0, Enabled: true},
+		{CountryCode: "CO", CountryName: "哥伦比亚", Pattern: "(?i)哥伦比亚|CO|Colombia|波哥大|Bogota|🇨🇴", Priority: 0, Enabled: true},
 
 		// 大洋洲
-		{CountryCode: "AU", CountryName: "澳大利亚", Pattern: "澳大利亚|澳洲|AU|Australia|悉尼|墨尔本|Sydney|Melbourne|🇦🇺", Priority: 0, Enabled: true},
-		{CountryCode: "NZ", CountryName: "新西兰", Pattern: "新西兰|NZ|New Zealand|🇳🇿", Priority: 0, Enabled: true},
+		{CountryCode: "AU", CountryName: "澳大利亚", Pattern: "(?i)澳大利亚|澳洲|AU|Australia|悉尼|墨尔本|Sydney|Melbourne|🇦🇺", Priority: 0, Enabled: true},
+		{CountryCode: "NZ", CountryName: "新西兰", Pattern: "(?i)新西兰|NZ|New Zealand|🇳🇿", Priority: 0, Enabled: true},
 
 		// 中东
-		{CountryCode: "TR", CountryName: "土耳其", Pattern: "土耳其|TR|Turkey|🇹🇷", Priority: 0, Enabled: true},
-		{CountryCode: "AE", CountryName: "阿联酋", Pattern: "阿联酋|UAE|迪拜|Dubai|🇦🇪", Priority: 0, Enabled: true},
+		{CountryCode: "TR", CountryName: "土耳其", Pattern: "(?i)土耳其|TR|Turkey|🇹🇷", Priority: 0, Enabled: true},
+		{CountryCode: "AE", CountryName: "阿联酋", Pattern: "(?i)阿联酋|UAE|迪拜|Dubai|🇦🇪", Priority: 0, Enabled: true},
+		{CountryCode: "IL", CountryName: "以色列", Pattern: "(?i)以色列|IL|Israel|特拉维夫|Tel Aviv|耶路撒冷|Jerusalem|🇮🇱", Priority: 0, Enabled: true},
+		{CountryCode: "SA", CountryName: "沙特阿拉伯", Pattern: "(?i)沙特阿拉伯|沙特|SA|Saudi Arabia|Saudi|利雅得|Riyadh|🇸🇦", Priority: 0, Enabled: true},
 
 		// 中国大陆
-		{CountryCode: "CN", CountryName: "中国", Pattern: "中国|CN|China|大陆|Mainland", Priority: 0, Enabled: true},
+		{CountryCode: "CN", CountryName: "中国", Pattern: "(?i)中国|CN|China|大陆|Mainland", Priority: 0, Enabled: true},
+
+		// 非洲地区
+		{CountryCode: "ZA", CountryName: "南非", Pattern: "(?i)南非|ZA|South Africa|约翰内斯堡|Johannesburg|开普敦|Cape Town|🇿🇦", Priority: 0, Enabled: true},
+		{CountryCode: "EG", CountryName: "埃及", Pattern: "(?i)埃及|EG|Egypt|开罗|Cairo|🇪🇬", Priority: 0, Enabled: true},
 
 		// 其他欧洲国家
-		{CountryCode: "IT", CountryName: "意大利", Pattern: "意大利|IT|Italy|🇮🇹", Priority: 0, Enabled: true},
-		{CountryCode: "ES", CountryName: "西班牙", Pattern: "西班牙|ES|Spain|🇪🇸", Priority: 0, Enabled: true},
-		{CountryCode: "SE", CountryName: "瑞典", Pattern: "瑞典|SE|Sweden|🇸🇪", Priority: 0, Enabled: true},
-		{CountryCode: "CH", CountryName: "瑞士", Pattern: "瑞士|CH|Switzerland|🇨🇭", Priority: 0, Enabled: true},
-		{CountryCode: "PL", CountryName: "波兰", Pattern: "波兰|PL|Poland|🇵🇱", Priority: 0, Enabled: true},
+		{CountryCode: "IT", CountryName: "意大利", Pattern: "(?i)意大利|IT|Italy|🇮🇹", Priority: 0, Enabled: true},
+		{CountryCode: "ES", CountryName: "西班牙", Pattern: "(?i)西班牙|ES|Spain|🇪🇸", Priority: 0, Enabled: true},
+		{CountryCode: "SE", CountryName: "瑞典", Pattern: "(?i)瑞典|SE|Sweden|🇸🇪", Priority: 0, Enabled: true},
+		{CountryCode: "CH", CountryName: "瑞士", Pattern: "(?i)瑞士|CH|Switzerland|🇨🇭", Priority: 0, Enabled: true},
+		{CountryCode: "PL", CountryName: "波兰", Pattern: "(?i)波兰|PL|Poland|🇵🇱", Priority: 0, Enabled: true},
+		{CountryCode: "PT", CountryName: "葡萄牙", Pattern: "(?i)葡萄牙|PT|Portugal|里斯本|Lisbon|🇵🇹", Priority: 0, Enabled: true},
+		{CountryCode: "IE", CountryName: "爱尔兰", Pattern: "(?i)爱尔兰|IE|Ireland|都柏林|Dublin|🇮🇪", Priority: 0, Enabled: true},
+		{CountryCode: "NO", CountryName: "挪威", Pattern: "(?i)挪威|NO|Norway|奥斯陆|Oslo|🇳🇴", Priority: 0, Enabled: true},
+		{CountryCode: "FI", CountryName: "芬兰", Pattern: "(?i)芬兰|FI|Finland|赫尔辛基|Helsinki|🇫🇮", Priority: 0, Enabled: true},
+		{CountryCode: "DK", CountryName: "丹麦", Pattern: "(?i)丹麦|DK|Denmark|哥本哈根|Copenhagen|🇩🇰", Priority: 0, Enabled: true},
+		{CountryCode: "AT", CountryName: "奥地利", Pattern: "(?i)奥地利|AT|Austria|维也纳|Vienna|🇦🇹", Priority: 0, Enabled: true},
+		{CountryCode: "BE", CountryName: "比利时", Pattern: "(?i)比利时|BE|Belgium|布鲁塞尔|Brussels|🇧🇪", Priority: 0, Enabled: true},
+		{CountryCode: "GR", CountryName: "希腊", Pattern: "(?i)希腊|GR|Greece|雅典|Athens|🇬🇷", Priority: 0, Enabled: true},
+		{CountryCode: "CZ", CountryName: "捷克", Pattern: "(?i)捷克|CZ|Czech|Czechia|布拉格|Prague|🇨🇿", Priority: 0, Enabled: true},
+		{CountryCode: "RO", CountryName: "罗马尼亚", Pattern: "(?i)罗马尼亚|RO|Romania|布加勒斯特|Bucharest|🇷🇴", Priority: 0, Enabled: true},
+		{CountryCode: "UA", CountryName: "乌克兰", Pattern: "(?i)乌克兰|UA|Ukraine|基辅|Kiev|Kyiv|🇺🇦", Priority: 0, Enabled: true},
 	}
 
 	addedCount := 0
@@ -1205,45 +1229,5 @@ func seedDefaultCountryRules(db *gorm.DB) error {
 		utils.Info("默认国家规则已存在，无需添加")
 	}
 
-	return nil
-}
-
-// Rollback0014_migrate_subcription_node_to_id_v2 回滚迁移 0014
-// 此函数需要手动调用，用于出现问题时回滚
-func Rollback0014_migrate_subcription_node_to_id_v2() error {
-	db := database.DB
-	if db == nil {
-		return fmt.Errorf("数据库未初始化")
-	}
-
-	utils.Info("开始回滚 SubcriptionNode 表迁移...")
-
-	// 检查备份表是否存在
-	var count int64
-	if db.Migrator().HasTable("subcription_nodes_backup") {
-		count = 1
-	}
-	if count == 0 {
-		return fmt.Errorf("备份表 subcription_nodes_backup 不存在，无法回滚")
-	}
-
-	// 1. 删除当前表
-	if db.Migrator().HasTable("subcription_nodes") {
-		if err := db.Migrator().DropTable("subcription_nodes"); err != nil {
-			return fmt.Errorf("删除当前表失败: %w", err)
-		}
-	}
-
-	// 2. 从备份恢复
-	if err := db.Migrator().RenameTable("subcription_nodes_backup", "subcription_nodes"); err != nil {
-		return fmt.Errorf("从备份恢复失败: %w", err)
-	}
-
-	// 3. 删除迁移记录
-	if err := db.Delete(&database.Migration{}, "id = ?", "0014_migrate_subcription_node_to_id_v2").Error; err != nil {
-		utils.Warn("删除迁移记录失败: %v", err)
-	}
-
-	utils.Info("回滚完成，已恢复到原表结构")
 	return nil
 }
