@@ -320,7 +320,7 @@ func TestExportCountryRulesToText_MultipleRules(t *testing.T) {
 	if cnIndex == -1 || usIndex == -1 || jpIndex == -1 {
 		t.Error("Not all rules found in export")
 	}
-	if !(cnIndex < usIndex && usIndex < jpIndex) {
+	if cnIndex >= usIndex || usIndex >= jpIndex {
 		t.Errorf("Rules not sorted by priority: CN at %d, US at %d, JP at %d", cnIndex, usIndex, jpIndex)
 	}
 }

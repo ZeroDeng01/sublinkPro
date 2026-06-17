@@ -71,7 +71,7 @@ cd sublinkPro
 
 ### 2. Backend development
 
-Go **1.26.3** or newer is recommended, matching the repository, Docker, and CI.
+Go **1.26.4** or newer is recommended, matching the repository, Docker, and CI.
 
 ```bash
 go mod download

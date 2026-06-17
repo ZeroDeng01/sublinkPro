@@ -71,7 +71,7 @@ cd sublinkPro
 
 ### 2. 后端开发
 
-建议使用 **Go 1.26.3** 或更高版本，与仓库、Docker 和 CI 保持一致。
+建议使用 **Go 1.26.4** 或更高版本，与仓库、Docker 和 CI 保持一致。
 
 ```bash
 go mod download

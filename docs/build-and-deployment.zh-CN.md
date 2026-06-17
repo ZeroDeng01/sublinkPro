@@ -48,7 +48,7 @@ yarn run build
 
 ### 前置条件
 
-- Go 1.26.3 或更新版本
+- Go 1.26.4 或更新版本
 - Node.js 24
 - Yarn 4（通过 corepack）
 
@@ -133,7 +133,7 @@ Dockerfile 遵循以下流程：
 
 2. **后端阶段**：
    ```dockerfile
-   FROM golang:1.26.3 as backend-builder
+   FROM golang:1.26.4 as backend-builder
    WORKDIR /app
    COPY . .
    COPY --from=frontend-builder /app/webs/dist ./static
@@ -168,7 +168,7 @@ docker-compose up -d
 1. **设置**：
    - 检出代码
    - 设置 Node.js 22
-   - 设置 Go 1.26.3
+   - 设置 Go 1.26.4
    - 启用 corepack
 
 2. **前端构建**：

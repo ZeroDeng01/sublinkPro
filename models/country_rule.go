@@ -27,13 +27,13 @@ const (
 // 用于从节点名称解析国家代码
 type CountryRule struct {
 	ID          int       `gorm:"primaryKey;autoIncrement" json:"id"`
-	CountryCode string    `gorm:"size:10;not null;index" json:"countryCode"` // 国家代码 (如 CN, US, HK)
-	CountryName string    `gorm:"size:100;not null" json:"countryName"`      // 国家名称 (如 中国, 美国, 香港)
-	Pattern     string    `gorm:"type:text;not null" json:"pattern"`         // 匹配模式
-	Enabled     bool      `gorm:"default:true;index" json:"enabled"`         // 是否启用
-	Priority    int       `gorm:"default:0;index" json:"priority"`           // 优先级 (数字越大越优先，默认0)
-	CreatedAt   time.Time `gorm:"autoCreateTime" json:"createdAt"`           // 创建时间
-	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updatedAt"`           // 更新时间
+	CountryCode string    `gorm:"size:10;not null;uniqueIndex" json:"countryCode"` // 国家代码 (如 CN, US, HK)
+	CountryName string    `gorm:"size:100;not null" json:"countryName"`            // 国家名称 (如 中国, 美国, 香港)
+	Pattern     string    `gorm:"type:text;not null" json:"pattern"`               // 匹配模式
+	Enabled     bool      `gorm:"default:true;index" json:"enabled"`               // 是否启用
+	Priority    int       `gorm:"default:0;index" json:"priority"`                 // 优先级 (数字越大越优先，默认0)
+	CreatedAt   time.Time `gorm:"autoCreateTime" json:"createdAt"`                 // 创建时间
+	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updatedAt"`                 // 更新时间
 }
 
 // TableName 指定表名
@@ -138,6 +138,14 @@ func (r *CountryRule) Add() error {
 
 	// 标准化数据
 	r.normalize()
+
+	// 检查是否存在重复的国家代码
+	var existing CountryRule
+	if err := database.DB.Where("country_code = ?", r.CountryCode).First(&existing).Error; err == nil {
+		return fmt.Errorf("国家代码 %s 已存在", r.CountryCode)
+	} else if err != gorm.ErrRecordNotFound {
+		return err
+	}
 
 	// 写入数据库 - 明确指定所有字段以避免 GORM 默认值问题
 	if err := database.DB.Select("CountryCode", "CountryName", "Pattern", "Priority", "Enabled").Create(r).Error; err != nil {

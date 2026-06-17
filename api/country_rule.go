@@ -61,7 +61,7 @@ func CreateCountryRule(c *gin.Context) {
 	// 添加规则（包含验证和重复检查）
 	if err := rule.Add(); err != nil {
 		// Check if it's a duplicate key error
-		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "duplicate") {
+		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "已存在") {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"code":    400,
 				"message": "国家代码已存在",

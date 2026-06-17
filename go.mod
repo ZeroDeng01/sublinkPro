@@ -1,6 +1,6 @@
 module sublink
 
-go 1.26.3
+go 1.26.4
 
 require (
 	github.com/dop251/goja v0.0.0-20260607120635-348e6bea910d

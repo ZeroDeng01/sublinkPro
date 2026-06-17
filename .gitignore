@@ -9,6 +9,7 @@ sublink.exe
 .idea/
 static
 sublinkPro.exe
+/sublink
 
 # AI agent runtime and temporary files (DO NOT COMMIT)
 .claude/projects/
@@ -20,3 +21,4 @@ sublinkPro.exe
 /.playwright-mcp/
 /.omo/
 /docs/superpowers/
+

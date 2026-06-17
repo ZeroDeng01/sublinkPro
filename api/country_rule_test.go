@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -129,7 +130,7 @@ func TestListCountryRules(t *testing.T) {
 	createTestRuleForAPI(t, "US", "美国", "美国|USA?|US", 90)
 
 	// 发送请求
-	req, _ := http.NewRequest("GET", "/api/v1/country-rules", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), "GET", "/api/v1/country-rules", nil)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
@@ -138,16 +139,20 @@ func TestListCountryRules(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.Code)
 	}
 
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(resp.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
 
-	if response["code"].(float64) != 200 {
+	code, ok := response["code"].(float64)
+	if !ok || code != 200 {
 		t.Errorf("Expected code 200, got %v", response["code"])
 	}
 
-	data := response["data"].([]interface{})
+	data, ok := response["data"].([]any)
+	if !ok {
+		t.Fatalf("Expected data to be []any, got %T", response["data"])
+	}
 	if len(data) != 2 {
 		t.Errorf("Expected 2 rules, got %d", len(data))
 	}
@@ -160,7 +165,7 @@ func TestCreateCountryRule(t *testing.T) {
 	router := setupTestRouter()
 
 	// 准备请求数据
-	ruleData := map[string]interface{}{
+	ruleData := map[string]any{
 		"countryCode": "CN",
 		"countryName": "中国",
 		"pattern":     "中国|China|CN",
@@ -170,7 +175,7 @@ func TestCreateCountryRule(t *testing.T) {
 	body, _ := json.Marshal(ruleData)
 
 	// 发送请求
-	req, _ := http.NewRequest("POST", "/api/v1/country-rules", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/country-rules", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -180,12 +185,13 @@ func TestCreateCountryRule(t *testing.T) {
 		t.Errorf("Expected status 200, got %d, body: %s", resp.Code, resp.Body.String())
 	}
 
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(resp.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
 
-	if response["code"].(float64) != 200 {
+	code, ok := response["code"].(float64)
+	if !ok || code != 200 {
 		t.Errorf("Expected code 200, got %v", response["code"])
 	}
 
@@ -207,7 +213,7 @@ func TestCreateCountryRule_DuplicateCode(t *testing.T) {
 	createTestRuleForAPI(t, "CN", "中国", "中国|China|CN", 100)
 
 	// 尝试创建重复的国家代码
-	ruleData := map[string]interface{}{
+	ruleData := map[string]any{
 		"countryCode": "CN",
 		"countryName": "中国2",
 		"pattern":     "中国2|China2|CN2",
@@ -217,7 +223,7 @@ func TestCreateCountryRule_DuplicateCode(t *testing.T) {
 	body, _ := json.Marshal(ruleData)
 
 	// 发送请求
-	req, _ := http.NewRequest("POST", "/api/v1/country-rules", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/country-rules", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -227,12 +233,13 @@ func TestCreateCountryRule_DuplicateCode(t *testing.T) {
 		t.Errorf("Expected status 400, got %d", resp.Code)
 	}
 
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(resp.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
 
-	if response["code"].(float64) != 400 {
+	code, ok := response["code"].(float64)
+	if !ok || code != 400 {
 		t.Errorf("Expected code 400, got %v", response["code"])
 	}
 }
@@ -244,7 +251,7 @@ func TestCreateCountryRule_InvalidData(t *testing.T) {
 	router := setupTestRouter()
 
 	// 准备无效数据（空国家代码）
-	ruleData := map[string]interface{}{
+	ruleData := map[string]any{
 		"countryCode": "",
 		"countryName": "中国",
 		"pattern":     "中国|China|CN",
@@ -254,7 +261,7 @@ func TestCreateCountryRule_InvalidData(t *testing.T) {
 	body, _ := json.Marshal(ruleData)
 
 	// 发送请求
-	req, _ := http.NewRequest("POST", "/api/v1/country-rules", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/country-rules", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -275,7 +282,7 @@ func TestUpdateCountryRule(t *testing.T) {
 	rule := createTestRuleForAPI(t, "CN", "中国", "中国|China|CN", 100)
 
 	// 准备更新数据
-	updateData := map[string]interface{}{
+	updateData := map[string]any{
 		"countryCode": "CN",
 		"countryName": "中国更新",
 		"pattern":     "中国|China|CN|🇨🇳",
@@ -285,7 +292,7 @@ func TestUpdateCountryRule(t *testing.T) {
 	body, _ := json.Marshal(updateData)
 
 	// 发送请求
-	req, _ := http.NewRequest("PUT", "/api/v1/country-rules/"+strconv.Itoa(rule.ID), bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "PUT", "/api/v1/country-rules/"+strconv.Itoa(rule.ID), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -313,7 +320,7 @@ func TestUpdateCountryRule_InvalidID(t *testing.T) {
 	router := setupTestRouter()
 
 	// 准备更新数据
-	updateData := map[string]interface{}{
+	updateData := map[string]any{
 		"countryCode": "CN",
 		"countryName": "中国",
 		"pattern":     "中国|China|CN",
@@ -323,7 +330,7 @@ func TestUpdateCountryRule_InvalidID(t *testing.T) {
 	body, _ := json.Marshal(updateData)
 
 	// 发送请求（使用不存在的 ID）
-	req, _ := http.NewRequest("PUT", "/api/v1/country-rules/99999", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "PUT", "/api/v1/country-rules/99999", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -344,7 +351,7 @@ func TestDeleteCountryRule(t *testing.T) {
 	rule := createTestRuleForAPI(t, "CN", "中国", "中国|China|CN", 100)
 
 	// 发送请求
-	req, _ := http.NewRequest("DELETE", "/api/v1/country-rules/"+strconv.Itoa(rule.ID), nil)
+	req, _ := http.NewRequestWithContext(context.Background(), "DELETE", "/api/v1/country-rules/"+strconv.Itoa(rule.ID), nil)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
@@ -368,7 +375,7 @@ func TestDeleteCountryRule_InvalidID(t *testing.T) {
 	router := setupTestRouter()
 
 	// 发送请求（使用不存在的 ID）
-	req, _ := http.NewRequest("DELETE", "/api/v1/country-rules/99999", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), "DELETE", "/api/v1/country-rules/99999", nil)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
@@ -385,14 +392,14 @@ func TestTestCountryRule(t *testing.T) {
 	router := setupTestRouter()
 
 	// 准备测试数据
-	testData := map[string]interface{}{
+	testData := map[string]any{
 		"pattern":  "(?i)(香港|HK|Hong\\s*Kong)",
 		"testName": "Hong Kong Server 01",
 	}
 	body, _ := json.Marshal(testData)
 
 	// 发送请求
-	req, _ := http.NewRequest("POST", "/api/v1/country-rules/test", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/country-rules/test", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -402,13 +409,20 @@ func TestTestCountryRule(t *testing.T) {
 		t.Errorf("Expected status 200, got %d, body: %s", resp.Code, resp.Body.String())
 	}
 
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(resp.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
 
-	data := response["data"].(map[string]interface{})
-	if !data["matched"].(bool) {
+	data, ok := response["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected data to be map[string]any, got %T", response["data"])
+	}
+	matched, ok := data["matched"].(bool)
+	if !ok {
+		t.Fatalf("Expected matched to be bool, got %T", data["matched"])
+	}
+	if !matched {
 		t.Error("Expected pattern to match")
 	}
 }
@@ -420,14 +434,14 @@ func TestTestCountryRule_InvalidPattern(t *testing.T) {
 	router := setupTestRouter()
 
 	// 准备测试数据（无效正则）
-	testData := map[string]interface{}{
+	testData := map[string]any{
 		"pattern":  "[invalid(regex",
 		"testName": "Test Name",
 	}
 	body, _ := json.Marshal(testData)
 
 	// 发送请求
-	req, _ := http.NewRequest("POST", "/api/v1/country-rules/test", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/country-rules/test", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -449,7 +463,7 @@ func TestBatchTestCountryRules(t *testing.T) {
 	createTestRuleForAPI(t, "US", "美国", "(?i)(美国|USA?|US)", 90)
 
 	// 准备测试数据
-	testData := map[string]interface{}{
+	testData := map[string]any{
 		"nodeNames": []string{
 			"Hong Kong Server 01",
 			"US Node 02",
@@ -459,7 +473,7 @@ func TestBatchTestCountryRules(t *testing.T) {
 	body, _ := json.Marshal(testData)
 
 	// 发送请求
-	req, _ := http.NewRequest("POST", "/api/v1/country-rules/batch-test", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/country-rules/batch-test", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -469,40 +483,76 @@ func TestBatchTestCountryRules(t *testing.T) {
 		t.Errorf("Expected status 200, got %d, body: %s", resp.Code, resp.Body.String())
 	}
 
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(resp.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
 
-	data := response["data"].([]interface{})
+	data, ok := response["data"].([]any)
+	if !ok {
+		t.Fatalf("Expected data to be []any, got %T", response["data"])
+	}
 	if len(data) != 3 {
 		t.Errorf("Expected 3 results, got %d", len(data))
 	}
 
 	// 验证第一个结果（香港）
-	result1 := data[0].(map[string]interface{})
-	if result1["country"].(string) != "HK" {
-		t.Errorf("Expected country 'HK', got %v", result1["country"])
+	result1, ok := data[0].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected result1 to be map[string]any, got %T", data[0])
 	}
-	if !result1["matched"].(bool) {
+	country1, ok := result1["country"].(string)
+	if !ok {
+		t.Fatalf("Expected country to be string, got %T", result1["country"])
+	}
+	if country1 != "HK" {
+		t.Errorf("Expected country 'HK', got %v", country1)
+	}
+	matched1, ok := result1["matched"].(bool)
+	if !ok {
+		t.Fatalf("Expected matched to be bool, got %T", result1["matched"])
+	}
+	if !matched1 {
 		t.Error("Expected first node to match")
 	}
 
 	// 验证第二个结果（美国）
-	result2 := data[1].(map[string]interface{})
-	if result2["country"].(string) != "US" {
-		t.Errorf("Expected country 'US', got %v", result2["country"])
+	result2, ok := data[1].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected result2 to be map[string]any, got %T", data[1])
 	}
-	if !result2["matched"].(bool) {
+	country2, ok := result2["country"].(string)
+	if !ok {
+		t.Fatalf("Expected country to be string, got %T", result2["country"])
+	}
+	if country2 != "US" {
+		t.Errorf("Expected country 'US', got %v", country2)
+	}
+	matched2, ok := result2["matched"].(bool)
+	if !ok {
+		t.Fatalf("Expected matched to be bool, got %T", result2["matched"])
+	}
+	if !matched2 {
 		t.Error("Expected second node to match")
 	}
 
 	// 验证第三个结果（未匹配）
-	result3 := data[2].(map[string]interface{})
-	if result3["country"].(string) != "" {
-		t.Errorf("Expected country to be empty, got %v", result3["country"])
+	result3, ok := data[2].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected result3 to be map[string]any, got %T", data[2])
 	}
-	if result3["matched"].(bool) {
+	country3, ok := result3["country"].(string)
+	if !ok {
+		t.Fatalf("Expected country to be string, got %T", result3["country"])
+	}
+	if country3 != "" {
+		t.Errorf("Expected country to be empty, got %v", country3)
+	}
+	matched3, ok := result3["matched"].(bool)
+	if !ok {
+		t.Fatalf("Expected matched to be bool, got %T", result3["matched"])
+	}
+	if matched3 {
 		t.Error("Expected third node not to match")
 	}
 }
@@ -514,9 +564,9 @@ func TestBatchCountryRules_ImportMode(t *testing.T) {
 	router := setupTestRouter()
 
 	// 准备批量导入数据
-	batchData := map[string]interface{}{
+	batchData := map[string]any{
 		"mode": "import",
-		"rules": []map[string]interface{}{
+		"rules": []map[string]any{
 			{
 				"countryCode": "CN",
 				"countryName": "中国",
@@ -536,7 +586,7 @@ func TestBatchCountryRules_ImportMode(t *testing.T) {
 	body, _ := json.Marshal(batchData)
 
 	// 发送请求
-	req, _ := http.NewRequest("POST", "/api/v1/country-rules/batch", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/country-rules/batch", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -546,14 +596,21 @@ func TestBatchCountryRules_ImportMode(t *testing.T) {
 		t.Errorf("Expected status 200, got %d, body: %s", resp.Code, resp.Body.String())
 	}
 
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(resp.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
 
-	data := response["data"].(map[string]interface{})
-	if data["imported"].(float64) != 2 {
-		t.Errorf("Expected 2 imported, got %v", data["imported"])
+	data, ok := response["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected data to be map[string]any, got %T", response["data"])
+	}
+	imported, ok := data["imported"].(float64)
+	if !ok {
+		t.Fatalf("Expected imported to be float64, got %T", data["imported"])
+	}
+	if imported != 2 {
+		t.Errorf("Expected 2 imported, got %v", imported)
 	}
 
 	// 验证数据已保存
@@ -574,9 +631,9 @@ func TestBatchCountryRules_ReplaceMode(t *testing.T) {
 	createTestRuleForAPI(t, "JP", "日本", "日本|Japan|JP", 80)
 
 	// 准备批量覆盖数据
-	batchData := map[string]interface{}{
+	batchData := map[string]any{
 		"mode": "replace",
-		"rules": []map[string]interface{}{
+		"rules": []map[string]any{
 			{
 				"countryCode": "CN",
 				"countryName": "中国",
@@ -589,7 +646,7 @@ func TestBatchCountryRules_ReplaceMode(t *testing.T) {
 	body, _ := json.Marshal(batchData)
 
 	// 发送请求
-	req, _ := http.NewRequest("POST", "/api/v1/country-rules/batch", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/country-rules/batch", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -624,7 +681,7 @@ func TestExportCountryRules(t *testing.T) {
 	createTestRuleForAPI(t, "US", "美国", "美国|USA?|US", 90)
 
 	// 发送请求
-	req, _ := http.NewRequest("GET", "/api/v1/country-rules/export", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), "GET", "/api/v1/country-rules/export", nil)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
@@ -633,13 +690,19 @@ func TestExportCountryRules(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.Code)
 	}
 
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(resp.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
 
-	data := response["data"].(map[string]interface{})
-	text := data["text"].(string)
+	data, ok := response["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected data to be map[string]any, got %T", response["data"])
+	}
+	text, ok := data["text"].(string)
+	if !ok {
+		t.Fatalf("Expected text to be string, got %T", data["text"])
+	}
 
 	// 验证导出的文本包含规则
 	if text == "" {
@@ -657,14 +720,14 @@ func TestSyncCountryRules(t *testing.T) {
 	router := setupTestRouter()
 
 	// 准备同步数据
-	syncData := map[string]interface{}{
+	syncData := map[string]any{
 		"text": `CN 中国 100 true 中国|China|CN
 US 美国 90 true 美国|USA?|US`,
 	}
 	body, _ := json.Marshal(syncData)
 
 	// 发送请求
-	req, _ := http.NewRequest("POST", "/api/v1/country-rules/sync", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/country-rules/sync", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -674,14 +737,21 @@ US 美国 90 true 美国|USA?|US`,
 		t.Errorf("Expected status 200, got %d, body: %s", resp.Code, resp.Body.String())
 	}
 
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(resp.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
 
-	data := response["data"].(map[string]interface{})
-	if data["added"].(float64) != 2 {
-		t.Errorf("Expected 2 added, got %v", data["added"])
+	data, ok := response["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected data to be map[string]any, got %T", response["data"])
+	}
+	added, ok := data["added"].(float64)
+	if !ok {
+		t.Fatalf("Expected added to be float64, got %T", data["added"])
+	}
+	if added != 2 {
+		t.Errorf("Expected 2 added, got %v", added)
 	}
 
 	// 验证数据已同步
@@ -699,13 +769,13 @@ func TestSyncCountryRules_InvalidText(t *testing.T) {
 	router := setupTestRouter()
 
 	// 准备无效的同步数据
-	syncData := map[string]interface{}{
+	syncData := map[string]any{
 		"text": `CN 中国 abc true 中国|China|CN`,
 	}
 	body, _ := json.Marshal(syncData)
 
 	// 发送请求
-	req, _ := http.NewRequest("POST", "/api/v1/country-rules/sync", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/country-rules/sync", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -730,14 +800,14 @@ func TestSyncCountryRules_ComplexRegex(t *testing.T) {
 	router := setupTestRouter()
 
 	// 准备包含复杂正则的同步数据
-	syncData := map[string]interface{}{
+	syncData := map[string]any{
 		"text": `HK 香港 100 true (?i)(香港|HK|Hong\s*Kong)
 US 美国 90 true (?i)(美国|USA?|United\s*States)`,
 	}
 	body, _ := json.Marshal(syncData)
 
 	// 发送请求
-	req, _ := http.NewRequest("POST", "/api/v1/country-rules/sync", bytes.NewBuffer(body))
+	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/country-rules/sync", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)

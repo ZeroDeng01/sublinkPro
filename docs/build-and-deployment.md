@@ -48,7 +48,7 @@ Build output goes to `webs/dist/`.
 
 ### Prerequisites
 
-- Go 1.26.3 or newer
+- Go 1.26.4 or newer
 - Node.js 24
 - Yarn 4 (via corepack)
 
@@ -133,7 +133,7 @@ The Dockerfile follows this flow:
 
 2. **Backend stage**:
    ```dockerfile
-   FROM golang:1.26.3 as backend-builder
+   FROM golang:1.26.4 as backend-builder
    WORKDIR /app
    COPY . .
    COPY --from=frontend-builder /app/webs/dist ./static
@@ -168,7 +168,7 @@ The repository uses `.github/workflows/build-release.yml` for automated builds.
 1. **Setup**:
    - Checkout code
    - Setup Node.js 22
-   - Setup Go 1.26.3
+   - Setup Go 1.26.4
    - Enable corepack
 
 2. **Frontend Build**:
