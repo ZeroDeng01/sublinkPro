@@ -423,24 +423,17 @@ export default function AuthLogin() {
             {t('auth.mfa.backBtn')}
           </Button>
           <AnimateButton>
-            <Button color="secondary" fullWidth size="large" type="submit" variant="contained" disabled={loading}>
-              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
-                <Box
-                  component="span"
-                  sx={{
-                    width: 20,
-                    height: 20,
-                    mr: 1,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: loading ? 'visible' : 'hidden'
-                  }}
-                >
-                  <CircularProgress size={20} color="inherit" />
-                </Box>
-                <Box component="span">{loading ? t('auth.mfa.verifying') : t('auth.mfa.verifyBtn')}</Box>
-              </Box>
+            <Button
+              color="secondary"
+              fullWidth
+              size="large"
+              type="submit"
+              variant="contained"
+              disabled={loading}
+              sx={{ position: 'relative' }}
+            >
+              {loading && <CircularProgress size={20} color="inherit" sx={{ position: 'absolute', left: 16 }} />}
+              {loading ? t('auth.mfa.verifying') : t('auth.mfa.verifyBtn')}
             </Button>
           </AnimateButton>
         </Stack>
@@ -512,24 +505,17 @@ export default function AuthLogin() {
 
       <Box sx={{ mt: 1 }}>
         <AnimateButton>
-          <Button color="secondary" fullWidth size="large" type="submit" variant="contained" disabled={loading}>
-            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
-              <Box
-                component="span"
-                sx={{
-                  width: 20,
-                  height: 20,
-                  mr: 1,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: loading ? 'visible' : 'hidden'
-                }}
-              >
-                <CircularProgress size={20} color="inherit" />
-              </Box>
-              <Box component="span">{loading ? t('auth.login.loggingIn') : t('auth.login.loginBtn')}</Box>
-            </Box>
+          <Button
+            color="secondary"
+            fullWidth
+            size="large"
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            sx={{ position: 'relative' }}
+          >
+            {loading && <CircularProgress size={20} color="inherit" sx={{ position: 'absolute', left: 16 }} />}
+            {loading ? t('auth.login.loggingIn') : t('auth.login.loginBtn')}
           </Button>
         </AnimateButton>
       </Box>
