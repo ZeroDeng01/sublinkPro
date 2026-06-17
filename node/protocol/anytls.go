@@ -27,7 +27,6 @@ func init() {
 		FieldMeta{Name: "IdleSessionTimeout", Label: "空闲会话超时时间", Type: "int", Group: "transport", Advanced: true},
 		FieldMeta{Name: "MinIdleSession", Label: "最小空闲会话数", Type: "int", Group: "transport", Advanced: true},
 	)
-	// AnyTLS 原本只支持 Clash/mihomo 导出；这里补充 Surge 导出能力，让 Surge 订阅不会跳过 AnyTLS 节点。
 	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildAnyTLSProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "anytls")
 	}, ConvertProxyToAnyTLS, EncodeAnyTLSURL, buildAnyTLSSurgeLine))
