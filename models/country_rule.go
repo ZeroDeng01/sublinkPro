@@ -252,6 +252,56 @@ func (r *CountryRule) List() ([]CountryRule, error) {
 	return rules, nil
 }
 
+// ListWithFilter 获取国家规则列表（支持搜索和分页）
+func (r *CountryRule) ListWithFilter(page, pageSize int, keyword string) ([]CountryRule, int64, error) {
+	countryRuleCacheMu.RLock()
+	defer countryRuleCacheMu.RUnlock()
+
+	// 1. 从缓存获取所有规则（按优先级排序）
+	allRules := countryRuleCache.GetAllSorted(func(a, b CountryRule) bool {
+		// 按优先级降序，优先级相同时按ID升序
+		if a.Priority != b.Priority {
+			return a.Priority > b.Priority
+		}
+		return a.ID < b.ID
+	})
+
+	// 2. 应用搜索过滤（支持国家代码和名称）
+	var filtered []CountryRule
+	if keyword != "" {
+		kwLower := strings.ToLower(keyword)
+		for _, rule := range allRules {
+			codeMatch := strings.Contains(strings.ToLower(rule.CountryCode), kwLower)
+			nameMatch := strings.Contains(strings.ToLower(rule.CountryName), kwLower)
+			if codeMatch || nameMatch {
+				filtered = append(filtered, rule)
+			}
+		}
+	} else {
+		filtered = allRules
+	}
+
+	// 3. 获取过滤后的总数
+	total := int64(len(filtered))
+
+	// 4. 应用分页
+	if page <= 0 || pageSize <= 0 {
+		return filtered, total, nil // 不分页返回全部
+	}
+
+	offset := (page - 1) * pageSize
+	if offset >= len(filtered) {
+		return []CountryRule{}, total, nil
+	}
+
+	end := offset + pageSize
+	if end > len(filtered) {
+		end = len(filtered)
+	}
+
+	return filtered[offset:end], total, nil
+}
+
 // GetByID 根据ID获取国家规则
 func (r *CountryRule) GetByID() error {
 	countryRuleCacheMu.RLock()

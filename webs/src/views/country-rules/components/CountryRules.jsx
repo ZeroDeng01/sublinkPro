@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import PropTypes from 'prop-types';
 
 // material-ui
@@ -30,6 +30,7 @@ import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import InputAdornment from '@mui/material/InputAdornment';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
@@ -42,6 +43,7 @@ import CodeIcon from '@mui/icons-material/Code';
 import SaveIcon from '@mui/icons-material/Save';
 import UndoIcon from '@mui/icons-material/Undo';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import SearchIcon from '@mui/icons-material/Search';
 
 // project imports
 import {
@@ -53,6 +55,7 @@ import {
   exportCountryRules,
   syncCountryRules
 } from 'api/countryRules';
+import Pagination from 'components/Pagination';
 import { withAlpha } from 'utils/colorUtils';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
@@ -84,6 +87,7 @@ const CountryRules = ({ showMessage }) => {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
+  const palette = theme.vars?.palette || theme.palette;
 
   // 模式切换：table（表单模式）或 text（文本编辑模式）
   const [viewMode, setViewMode] = useState('table');
@@ -96,6 +100,17 @@ const CountryRules = ({ showMessage }) => {
   const [deleteId, setDeleteId] = useState(null);
   const [orderBy, setOrderBy] = useState('priority');
   const [order, setOrder] = useState('desc');
+
+  // 分页状态
+  const [page, setPage] = useState(0); // 0-indexed for MUI
+  const [rowsPerPage, setRowsPerPage] = useState(() => {
+    const saved = localStorage.getItem('country_rules_rowsPerPage');
+    return saved ? parseInt(saved, 10) : 20;
+  });
+  const [totalItems, setTotalItems] = useState(0);
+
+  // 搜索状态
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -122,17 +137,37 @@ const CountryRules = ({ showMessage }) => {
   const [syncing, setSyncing] = useState(false);
 
   // Load rules list
-  const loadRules = async () => {
-    setLoading(true);
-    try {
-      const response = await getCountryRules();
-      setRules(response.data || []);
-    } catch {
-      showMessage(t('countryRules.messages.loadFailed'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadRules = useCallback(
+    async (options = {}) => {
+      const { page: p, pageSize: ps, keyword: kw } = options;
+      setLoading(true);
+      try {
+        const params = {
+          page: p !== undefined ? p : page + 1, // 后端是 1-indexed
+          pageSize: ps !== undefined ? ps : rowsPerPage
+        };
+        const keyword = kw !== undefined ? kw : searchKeyword;
+        if (keyword) {
+          params.keyword = keyword;
+        }
+
+        const response = await getCountryRules(params);
+        if (response.data?.items) {
+          setRules(response.data.items);
+          setTotalItems(response.data.total || 0);
+        } else {
+          // 兼容旧格式（无分页）
+          setRules(response.data || []);
+          setTotalItems((response.data || []).length);
+        }
+      } catch {
+        showMessage(t('countryRules.messages.loadFailed'), 'error');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [page, rowsPerPage, searchKeyword, showMessage, t]
+  );
 
   // 加载文本内容
   const loadTextContent = async () => {
@@ -151,6 +186,17 @@ const CountryRules = ({ showMessage }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 搜索触发（实时搜索，带防抖）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(0); // 搜索时重置到第一页
+      loadRules({ page: 1, pageSize: rowsPerPage, keyword: searchKeyword });
+    }, 300); // 300ms 防抖
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchKeyword]);
+
   // 切换到文本模式时加载内容
   useEffect(() => {
     if (viewMode === 'text') {
@@ -166,10 +212,27 @@ const CountryRules = ({ showMessage }) => {
     setOrderBy(property);
   };
 
-  // Sort comparator
+  // Sort comparator (仅用于客户端排序显示，后端已按优先级排序)
   const getComparator = (order, orderBy) => {
     return order === 'desc' ? (a, b) => (b[orderBy] < a[orderBy] ? -1 : 1) : (a, b) => (a[orderBy] < b[orderBy] ? -1 : 1);
   };
+
+  // 获取状态 Chip 样式（统一为机场列表样式）
+  const getStatusChipSx = (enabled) => ({
+    height: 20,
+    fontSize: '0.7rem',
+    fontWeight: 600,
+    color: enabled ? (isDark ? palette.success.light : palette.success.dark) : palette.text.secondary,
+    bgcolor: enabled
+      ? alpha(theme.palette.success.main, isDark ? 0.18 : 0.12)
+      : isDark
+        ? 'background.default'
+        : alpha(theme.palette.grey[500], 0.08),
+    border: `1px solid ${enabled ? alpha(theme.palette.success.main, isDark ? 0.34 : 0.18) : alpha(theme.palette.divider, isDark ? 0.56 : 0.24)}`,
+    '& .MuiChip-label': {
+      px: 1
+    }
+  });
 
   // Validate country code uniqueness
   const validateCountryCode = (code, editingId) => {
@@ -368,7 +431,7 @@ const CountryRules = ({ showMessage }) => {
         <Box sx={{ display: 'flex', gap: 1 }}>
           {viewMode === 'table' && (
             <>
-              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={loadRules}>
+              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => loadRules()}>
                 {t('common.refresh')}
               </Button>
               <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>
@@ -390,6 +453,25 @@ const CountryRules = ({ showMessage }) => {
           <Alert severity="info" sx={{ mb: 2 }}>
             <Typography component="div" variant="body2" dangerouslySetInnerHTML={{ __html: t('settings.countryRulesPanel.description') }} />
           </Alert>
+
+          {/* 搜索框 */}
+          <Box sx={{ mb: 2 }}>
+            <TextField
+              size="small"
+              label={t('countryRules.search.label')}
+              placeholder={t('countryRules.search.placeholder')}
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              sx={{ minWidth: 250 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                )
+              }}
+            />
+          </Box>
 
           <TableContainer component={Paper}>
             <Table>
@@ -502,19 +584,7 @@ const CountryRules = ({ showMessage }) => {
                             rule.enabled ? t('settings.countryRulesPanel.status.enabled') : t('settings.countryRulesPanel.status.disabled')
                           }
                           size="small"
-                          sx={
-                            rule.enabled
-                              ? {
-                                  backgroundColor: theme.palette.success.main,
-                                  color: theme.palette.success.contrastText,
-                                  fontWeight: 500
-                                }
-                              : {
-                                  backgroundColor: theme.palette.action.disabledBackground,
-                                  color: theme.palette.text.secondary,
-                                  fontWeight: 400
-                                }
-                          }
+                          sx={getStatusChipSx(rule.enabled)}
                         />
                       </TableCell>
                       <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
@@ -542,6 +612,27 @@ const CountryRules = ({ showMessage }) => {
               </TableBody>
             </Table>
           </TableContainer>
+
+          {/* 分页组件 */}
+          <Box sx={{ mt: 2 }}>
+            <Pagination
+              page={page}
+              pageSize={rowsPerPage}
+              totalItems={totalItems}
+              onPageChange={(e, newPage) => {
+                setPage(newPage);
+                loadRules({ page: newPage + 1, pageSize: rowsPerPage, keyword: searchKeyword });
+              }}
+              onPageSizeChange={(e) => {
+                const newValue = parseInt(e.target.value, 10);
+                setRowsPerPage(newValue);
+                localStorage.setItem('country_rules_rowsPerPage', newValue);
+                setPage(0);
+                loadRules({ page: 1, pageSize: newValue, keyword: searchKeyword });
+              }}
+              pageSizeOptions={[10, 20, 50, 100]}
+            />
+          </Box>
         </>
       )}
 

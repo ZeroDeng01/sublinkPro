@@ -176,6 +176,10 @@
       "syncFailed": "同步失败",
       "restored": "已还原到原始内容",
       "copied": "已复制到剪贴板"
+    },
+    "search": {
+      "label": "搜索",
+      "placeholder": "搜索国家代码或名称"
     }
   },
   "airports": {

@@ -5,10 +5,11 @@ import request from './request';
  */
 
 // 获取国家规则列表
-export const getCountryRules = () => {
+export const getCountryRules = (params) => {
   return request({
     url: '/v1/country-rules',
-    method: 'get'
+    method: 'get',
+    params
   });
 };
 

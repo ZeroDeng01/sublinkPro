@@ -176,6 +176,10 @@
       "syncFailed": "Sync failed",
       "restored": "Restored to original content",
       "copied": "Copied to clipboard"
+    },
+    "search": {
+      "label": "Search",
+      "placeholder": "Search country code or name"
     }
   },
   "airports": {

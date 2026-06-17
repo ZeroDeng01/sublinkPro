@@ -13,15 +13,36 @@ import (
 
 // ListCountryRules 获取国家规则列表
 // @Summary 获取国家规则列表
-// @Description 获取所有国家规则，按优先级降序排列
+// @Description 获取所有国家规则，按优先级降序排列，支持搜索和分页
 // @Tags 国家规则
 // @Accept json
 // @Produce json
-// @Success 200 {object} gin.H{"code": 200, "data": []models.CountryRule}
+// @Param page query int false "页码（从1开始，不传则返回全部）"
+// @Param pageSize query int false "每页条数（不传则返回全部）"
+// @Param keyword query string false "搜索关键字（支持国家代码和名称）"
+// @Success 200 {object} gin.H{"code": 200, "data": gin.H{"items": []models.CountryRule, "total": int64, "page": int, "pageSize": int, "totalPages": int}}
 // @Router /api/v1/country-rules [get]
 func ListCountryRules(c *gin.Context) {
+	// 解析分页参数（1-indexed）
+	page := 0
+	pageSize := 0
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if pageSizeStr := c.Query("pageSize"); pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 {
+			pageSize = ps
+		}
+	}
+
+	// 解析搜索关键字
+	keyword := strings.TrimSpace(c.Query("keyword"))
+
+	// 调用数据层
 	var rule models.CountryRule
-	rules, err := rule.List()
+	rules, total, err := rule.ListWithFilter(page, pageSize, keyword)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
@@ -31,10 +52,22 @@ func ListCountryRules(c *gin.Context) {
 		return
 	}
 
+	// 构建响应
+	totalPages := 0
+	if pageSize > 0 {
+		totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "success",
-		"data":    rules,
+		"data": gin.H{
+			"items":      rules,
+			"total":      total,
+			"page":       page,
+			"pageSize":   pageSize,
+			"totalPages": totalPages,
+		},
 	})
 }
 
