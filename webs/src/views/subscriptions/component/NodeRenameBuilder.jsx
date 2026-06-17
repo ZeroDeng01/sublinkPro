@@ -40,6 +40,12 @@ const AVAILABLE_VARIABLES = [
     color: '#2196f3',
     descKey: 'subscriptions.rename.vars.countryDesc'
   },
+  {
+    key: '$LinkCountryName',
+    labelKey: 'subscriptions.rename.vars.countryName',
+    color: '#1976d2',
+    descKey: 'subscriptions.rename.vars.countryNameDesc'
+  },
   { key: '$Flag', labelKey: 'subscriptions.rename.vars.flag', color: '#f44336', descKey: 'subscriptions.rename.vars.flagDesc' },
   { key: '$Name', labelKey: 'subscriptions.rename.vars.name', color: '#4caf50', descKey: 'subscriptions.rename.vars.nameDesc' },
   { key: '$LinkName', labelKey: 'subscriptions.rename.vars.linkName', color: '#ff9800', descKey: 'subscriptions.rename.vars.linkNameDesc' },
@@ -125,6 +131,7 @@ const getStableAccentFromKey = (key, palette) => {
 const PREVIEW_DATA = {
   $Protocol: 'VMess',
   $LinkCountry: 'HK',
+  $LinkCountryName: '香港',
   $Flag: '🇭🇰',
   $Name: 'HK-Node-Remark',
   $LinkName: 'HK-01',

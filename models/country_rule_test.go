@@ -283,6 +283,95 @@ func TestCountryRuleNormalize(t *testing.T) {
 
 // ========== 文本导出功能测试 ==========
 
+func TestGetCountryNameByCode(t *testing.T) {
+	setupTestDB(t)
+	defer cleanupTestDB(t)
+
+	// 添加测试规则
+	rules := []CountryRule{
+		{
+			CountryCode: "CN",
+			CountryName: "中国",
+			Pattern:     "(?i)(中国|china|cn)",
+			Priority:    100,
+			Enabled:     true,
+		},
+		{
+			CountryCode: "HK",
+			CountryName: "香港",
+			Pattern:     "(?i)(香港|hong kong|hk)",
+			Priority:    90,
+			Enabled:     true,
+		},
+		{
+			CountryCode: "US",
+			CountryName: "美国",
+			Pattern:     "(?i)(美国|united states|usa|us)",
+			Priority:    80,
+			Enabled:     true,
+		},
+	}
+
+	for _, rule := range rules {
+		if err := rule.Add(); err != nil {
+			t.Fatalf("Failed to add rule %s: %v", rule.CountryCode, err)
+		}
+	}
+
+	tests := []struct {
+		name     string
+		code     string
+		expected string
+	}{
+		{
+			name:     "有匹配的国家代码 - HK",
+			code:     "HK",
+			expected: "香港",
+		},
+		{
+			name:     "有匹配的国家代码 - CN",
+			code:     "CN",
+			expected: "中国",
+		},
+		{
+			name:     "有匹配的国家代码 - US",
+			code:     "US",
+			expected: "美国",
+		},
+		{
+			name:     "小写国家代码会自动转大写 - hk",
+			code:     "hk",
+			expected: "香港",
+		},
+		{
+			name:     "混合大小写 - Hk",
+			code:     "Hk",
+			expected: "香港",
+		},
+		{
+			name:     "没有匹配的国家代码 - XX",
+			code:     "XX",
+			expected: "",
+		},
+		{
+			name:     "空字符串",
+			code:     "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetCountryNameByCode(tt.code)
+			if result != tt.expected {
+				t.Errorf("GetCountryNameByCode(%q) = %q, expected %q", tt.code, result, tt.expected)
+			}
+		})
+	}
+}
+
+// ========== 文本导出功能测试 ==========
+
 func TestExportCountryRulesToText_Empty(t *testing.T) {
 	setupTestDB(t)
 	defer cleanupTestDB(t)

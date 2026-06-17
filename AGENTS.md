@@ -196,6 +196,62 @@ If you're a human reading this:
 
 ---
 
+## 0.1. CRITICAL: DO NOT POLLUTE PROJECT WITH TEMPORARY FILES
+
+**⚠️ ABSOLUTE PROHIBITION ⚠️**
+
+AI agents are **FORBIDDEN** from creating ANY temporary or documentation files in the project directory during development, debugging, or explanation.
+
+### Prohibited Actions
+
+❌ **DO NOT create ANY of the following in the project directory:**
+- Documentation files: `*.md` (except when explicitly requested by user to update existing docs)
+- Summary files: `SUMMARY.md`, `IMPLEMENTATION_*.md`, `FEATURE_*.md`, `TEST_*.md`, etc.
+- Temporary test files: `test_*.go`, `test_*.js`, `debug_*.py`, etc.
+- Debug output files: `output.txt`, `result.json`, `debug.log`, etc.
+- Notes or scratch files: `notes.txt`, `TODO.md`, `scratch.py`, etc.
+- ANY file with names like: `QUICK_REFERENCE.md`, `REPORT.md`, etc.
+
+### Allowed Locations for Temporary Files
+
+✅ **ONLY use these locations for temporary/test files:**
+- `/tmp/` directory (preferred for all temporary files)
+- System temp directories
+
+### Examples
+
+**❌ WRONG - DO NOT DO THIS:**
+```bash
+# Creating summary in project root - FORBIDDEN
+echo "# Summary" > IMPLEMENTATION_SUMMARY.md
+
+# Creating test file in project - FORBIDDEN  
+cat > test_feature.go << 'EOF'
+```
+
+**✅ CORRECT - Do this instead:**
+```bash
+# Use /tmp/ for temporary files
+echo "# Summary" > /tmp/implementation_summary.md
+
+# Use /tmp/ for test files
+cat > /tmp/test_feature.go << 'EOF'
+```
+
+### Clean Up After Yourself
+
+- If you accidentally create files in the project directory, DELETE them immediately
+- Use `rm -f <file>` to remove any temporary files you created
+- Check with `ls -la` before finishing to ensure no pollution
+
+### Violation Consequences
+
+Creating temporary files in the project directory is **UNACCEPTABLE** and shows lack of respect for the codebase.
+
+**DO NOT make this mistake.**
+
+---
+
 ## 1. Project Shape
 
 **Architecture**: Single full-stack application (not a monorepo)

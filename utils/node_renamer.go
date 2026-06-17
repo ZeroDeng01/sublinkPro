@@ -88,29 +88,30 @@ func replaceTagGroupVariables(rule string, nodeTags string) string {
 
 // NodeInfo 节点信息结构体，用于重命名
 type NodeInfo struct {
-	Name           string  // 系统节点备注名称
-	LinkName       string  // 节点原始名称（来自订阅源）
-	LinkCountry    string  // 落地IP国家代码
-	Speed          float64 // 速度 (MB/s)
-	SpeedStatus    string  // 速度状态: untested/success/timeout/error
-	DelayTime      int     // 延迟 (ms)
-	DelayStatus    string  // 延迟状态: untested/success/timeout/error
-	Group          string  // 分组
-	Source         string  // 来源（手动添加/订阅名称）
-	Index          int     // 序号 (从1开始)
-	DuplicateIndex int     // 同名序号索引（0=首个同名，1=第二个同名）
-	Protocol       string  // 协议类型
-	Tags           string  // 节点标签（逗号分隔）
-	IsBroadcast    bool    // IP来源：true=广播 false=原生
-	IsResidential  bool    // 是否住宅IP
-	FraudScore     int     // 欺诈评分（0-100，-1=未检测）
-	QualityStatus  string
-	QualityFamily  string
-	UnlockRaw      string
-	UnlockSummary  string
-	UnlockStatus   string
-	UnlockLabel    string
-	UnlockRegion   string
+	Name            string  // 系统节点备注名称
+	LinkName        string  // 节点原始名称（来自订阅源）
+	LinkCountry     string  // 落地IP国家代码
+	LinkCountryName string  // 落地IP国家名称（从国家规则匹配，如果未匹配则为空）
+	Speed           float64 // 速度 (MB/s)
+	SpeedStatus     string  // 速度状态: untested/success/timeout/error
+	DelayTime       int     // 延迟 (ms)
+	DelayStatus     string  // 延迟状态: untested/success/timeout/error
+	Group           string  // 分组
+	Source          string  // 来源（手动添加/订阅名称）
+	Index           int     // 序号 (从1开始)
+	DuplicateIndex  int     // 同名序号索引（0=首个同名，1=第二个同名）
+	Protocol        string  // 协议类型
+	Tags            string  // 节点标签（逗号分隔）
+	IsBroadcast     bool    // IP来源：true=广播 false=原生
+	IsResidential   bool    // 是否住宅IP
+	FraudScore      int     // 欺诈评分（0-100，-1=未检测）
+	QualityStatus   string
+	QualityFamily   string
+	UnlockRaw       string
+	UnlockSummary   string
+	UnlockStatus    string
+	UnlockLabel     string
+	UnlockRegion    string
 }
 
 const (
@@ -380,6 +381,13 @@ func RenameNode(rule string, info NodeInfo) string {
 	if linkCountry == "" {
 		linkCountry = "未知"
 	}
+
+	// 国家名称：如果有则使用，否则回退到国家代码
+	linkCountryName := info.LinkCountryName
+	if linkCountryName == "" {
+		linkCountryName = linkCountry
+	}
+
 	// 如果来源为manual则替换为手动
 	linkSource := info.Source
 	if linkSource == "manual" {
@@ -408,6 +416,7 @@ func RenameNode(rule string, info NodeInfo) string {
 	}
 	// 按变量名长度降序排列，长的变量名优先替换
 	replacements := []replacement{
+		{"$LinkCountryName", linkCountryName}, // 国家名称优先（比 $LinkCountry 更长）
 		{"$LinkCountry", linkCountry},
 		{"$Residential", func() string {
 			if info.QualityStatus != qualityStatusSuccess {

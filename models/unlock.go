@@ -493,29 +493,36 @@ func BuildNodeRenameInfo(node Node, processedLinkName string, protocol string, i
 		primaryUnlockRegion = result.Region
 	}
 
+	// 根据节点的国家代码获取国家名称
+	linkCountryName := ""
+	if node.LinkCountry != "" {
+		linkCountryName = GetCountryNameByCode(node.LinkCountry)
+	}
+
 	return utils.NodeInfo{
-		Name:           node.EffectiveName(),
-		LinkName:       processedLinkName,
-		LinkCountry:    node.LinkCountry,
-		Speed:          node.Speed,
-		SpeedStatus:    node.SpeedStatus,
-		DelayTime:      node.DelayTime,
-		DelayStatus:    node.DelayStatus,
-		Group:          node.Group,
-		Source:         node.Source,
-		Index:          index,
-		DuplicateIndex: duplicateIndex,
-		Protocol:       protocol,
-		Tags:           node.Tags,
-		IsBroadcast:    node.IsBroadcast,
-		IsResidential:  node.IsResidential,
-		FraudScore:     node.FraudScore,
-		QualityStatus:  node.QualityStatus,
-		QualityFamily:  node.QualityFamily,
-		UnlockRaw:      node.UnlockSummary,
-		UnlockSummary:  BuildUnlockRenameValue(node.UnlockSummary, ""),
-		UnlockStatus:   primaryUnlockStatus,
-		UnlockLabel:    primaryUnlockLabel,
-		UnlockRegion:   primaryUnlockRegion,
+		Name:            node.EffectiveName(),
+		LinkName:        processedLinkName,
+		LinkCountry:     node.LinkCountry,
+		LinkCountryName: linkCountryName,
+		Speed:           node.Speed,
+		SpeedStatus:     node.SpeedStatus,
+		DelayTime:       node.DelayTime,
+		DelayStatus:     node.DelayStatus,
+		Group:           node.Group,
+		Source:          node.Source,
+		Index:           index,
+		DuplicateIndex:  duplicateIndex,
+		Protocol:        protocol,
+		Tags:            node.Tags,
+		IsBroadcast:     node.IsBroadcast,
+		IsResidential:   node.IsResidential,
+		FraudScore:      node.FraudScore,
+		QualityStatus:   node.QualityStatus,
+		QualityFamily:   node.QualityFamily,
+		UnlockRaw:       node.UnlockSummary,
+		UnlockSummary:   BuildUnlockRenameValue(node.UnlockSummary, ""),
+		UnlockStatus:    primaryUnlockStatus,
+		UnlockLabel:     primaryUnlockLabel,
+		UnlockRegion:    primaryUnlockRegion,
 	}
 }

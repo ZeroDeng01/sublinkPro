@@ -388,7 +388,7 @@ const CountryRules = ({ showMessage }) => {
       {viewMode === 'table' && (
         <>
           <Alert severity="info" sx={{ mb: 2 }}>
-            {t('settings.countryRulesPanel.description')}
+            <Typography component="div" variant="body2" dangerouslySetInnerHTML={{ __html: t('settings.countryRulesPanel.description') }} />
           </Alert>
 
           <TableContainer component={Paper}>

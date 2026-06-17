@@ -355,6 +355,27 @@ func ParseCountryFromNodeName(nodeName string) string {
 	return ""
 }
 
+// GetCountryNameByCode 根据国家代码获取国家名称
+// 从国家规则缓存中查找匹配的国家代码，返回对应的国家名称
+// 如果未找到匹配的规则，返回空字符串
+func GetCountryNameByCode(countryCode string) string {
+	if countryCode == "" {
+		return ""
+	}
+
+	countryRuleCacheMu.RLock()
+	defer countryRuleCacheMu.RUnlock()
+
+	// 使用索引快速查找
+	rules := countryRuleCache.GetByIndex("countryCode", strings.ToUpper(countryCode))
+	if len(rules) > 0 {
+		// 如果有多个匹配（理论上不应该，因为 countryCode 有唯一索引），返回第一个
+		return rules[0].CountryName
+	}
+
+	return ""
+}
+
 // TestPattern 测试匹配模式（静态方法，用于API测试）
 func TestPattern(pattern, testName string) (bool, error) {
 	if pattern == "" || testName == "" {

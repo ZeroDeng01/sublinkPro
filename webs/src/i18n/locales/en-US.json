@@ -867,7 +867,7 @@
     "countryRulesPanel": {
       "title": "Country Rules Configuration",
       "subheader": "Configure country detection rules for auto-filling node countries.",
-      "description": "After configuring country rules, enable 'Country Auto-fill' in airport advanced options. When pulling nodes, the system will automatically parse and fill country codes from node names. Rules are matched from highest to lowest priority, stopping at the first match.",
+      "description": "Country rules are used in the following scenarios:<br/>1. <strong>Node Country Auto-fill</strong>: Enable 'Country Auto-fill' in airport advanced options. When pulling nodes, the system will automatically parse and fill country codes from node names.<br/>2. <strong>Node Naming Rules</strong>: When using the <code>$LinkCountryName</code> variable, it will look up the country name based on the country code (e.g., HK → Hong Kong).<br/>3. <strong>Country Statistics & Display</strong>: Provide accurate country information in node lists, node maps, and other features.<br/><br/>Rules are matched from highest to lowest priority, stopping at the first match.",
       "table": {
         "countryCode": "Country Code",
         "countryName": "Country Name",
@@ -2016,6 +2016,8 @@
         "protocolDesc": "Protocol type (VMess/VLESS, etc.)",
         "country": "Country",
         "countryDesc": "Landing IP country code",
+        "countryName": "Country name",
+        "countryNameDesc": "Landing IP country name (from country rules, shows code if not matched)",
         "flag": "Flag",
         "flagDesc": "Landing IP flag",
         "name": "Remark",

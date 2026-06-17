@@ -867,7 +867,7 @@
     "countryRulesPanel": {
       "title": "国家规则配置",
       "subheader": "配置国家检测规则，用于自动填充节点国家信息。",
-      "description": "配置国家规则后，在机场高级选项中启用「国家自动填充」功能，拉取节点时将自动从节点名称解析并填充国家代码。规则按优先级从高到低匹配，匹配到第一个规则即停止。",
+      "description": "国家规则用于以下场景：<br/>1. <strong>节点国家自动填充</strong>：在机场高级选项中启用「国家自动填充」功能，拉取节点时将自动从节点名称解析并填充国家代码。<br/>2. <strong>节点命名规则</strong>：使用 <code>$LinkCountryName</code> 变量时，将根据国家代码查找对应的国家名称（如 HK → 香港）。<br/>3. <strong>国家统计与展示</strong>：在节点列表、节点地图等功能中提供准确的国家信息。<br/><br/>规则按优先级从高到低匹配，匹配到第一个规则即停止。",
       "table": {
         "countryCode": "国家代码",
         "countryName": "国家名称",
@@ -2016,6 +2016,8 @@
         "protocolDesc": "协议类型 (VMess/VLESS等)",
         "country": "国家",
         "countryDesc": "落地IP国家代码",
+        "countryName": "国家名称",
+        "countryNameDesc": "落地IP国家名称（从国家规则匹配，未匹配则显示代码）",
         "flag": "国旗",
         "flagDesc": "落地IP国旗",
         "name": "备注",
