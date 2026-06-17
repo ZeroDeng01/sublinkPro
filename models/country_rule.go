@@ -147,8 +147,20 @@ func (r *CountryRule) Add() error {
 		return err
 	}
 
-	// 写入数据库 - 明确指定所有字段以避免 GORM 默认值问题
-	if err := database.DB.Select("CountryCode", "CountryName", "Pattern", "Priority", "Enabled").Create(r).Error; err != nil {
+	// 写入数据库 - 使用 map 避免 GORM 跳过零值（特别是 Enabled=false 的情况）
+	// GORM v2 会跳过结构体的零值字段，即使使用 Select() 也无效
+	if err := database.DB.Model(&CountryRule{}).Create(map[string]any{
+		"CountryCode": r.CountryCode,
+		"CountryName": r.CountryName,
+		"Pattern":     r.Pattern,
+		"Priority":    r.Priority,
+		"Enabled":     r.Enabled,
+	}).Error; err != nil {
+		return err
+	}
+
+	// 从数据库读取完整记录（包含自动生成的ID和时间戳）
+	if err := database.DB.Where("country_code = ?", r.CountryCode).First(r).Error; err != nil {
 		return err
 	}
 
@@ -470,12 +482,29 @@ func SyncCountryRulesFromText(text string) (added, updated, deleted int, err err
 			newRule.CreatedAt = time.Now()
 			newRule.UpdatedAt = time.Now()
 
-			if err := tx.Create(&newRule).Error; err != nil {
+			// 使用 map 来避免 GORM 跳过零值（特别是 Enabled=false 的情况）
+			// GORM v2 会跳过结构体的零值字段，即使使用 Select() 也无效
+			if err := tx.Model(&CountryRule{}).Create(map[string]any{
+				"CountryCode": newRule.CountryCode,
+				"CountryName": newRule.CountryName,
+				"Pattern":     newRule.Pattern,
+				"Priority":    newRule.Priority,
+				"Enabled":     newRule.Enabled,
+				"CreatedAt":   newRule.CreatedAt,
+				"UpdatedAt":   newRule.UpdatedAt,
+			}).Error; err != nil {
 				tx.Rollback()
 				return 0, 0, 0, err
 			}
 
-			cacheUpdates = append(cacheUpdates, cacheUpdate{"set", newRule})
+			// 从数据库读取完整记录（包含自动生成的ID）
+			var created CountryRule
+			if err := tx.Where("country_code = ?", newRule.CountryCode).First(&created).Error; err != nil {
+				tx.Rollback()
+				return 0, 0, 0, err
+			}
+
+			cacheUpdates = append(cacheUpdates, cacheUpdate{"set", created})
 			added++
 		}
 	}

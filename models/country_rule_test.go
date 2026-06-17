@@ -220,6 +220,45 @@ func TestCountryRuleValidation(t *testing.T) {
 	}
 }
 
+func TestCountryRuleAdd_DisabledRule(t *testing.T) {
+	setupTestDB(t)
+	defer cleanupTestDB(t)
+
+	// 创建禁用的规则
+	rule := &CountryRule{
+		CountryCode: "TEST",
+		CountryName: "测试",
+		Pattern:     "test",
+		Priority:    50,
+		Enabled:     false,
+	}
+
+	if err := rule.Add(); err != nil {
+		t.Fatalf("Failed to add disabled rule: %v", err)
+	}
+
+	// 从数据库验证
+	var dbRule CountryRule
+	if err := database.DB.Where("country_code = ?", "TEST").First(&dbRule).Error; err != nil {
+		t.Fatalf("Failed to query rule: %v", err)
+	}
+
+	if dbRule.Enabled {
+		t.Errorf("Expected rule to be disabled, but it is enabled")
+	}
+
+	// 从缓存验证
+	var cacheRule CountryRule
+	cacheRule.ID = rule.ID
+	if err := cacheRule.GetByID(); err != nil {
+		t.Fatalf("Failed to get rule from cache: %v", err)
+	}
+
+	if cacheRule.Enabled {
+		t.Errorf("Expected cached rule to be disabled, but it is enabled")
+	}
+}
+
 func TestCountryRuleNormalize(t *testing.T) {
 	rule := CountryRule{
 		CountryCode: " us ",
@@ -341,7 +380,6 @@ func TestExportCountryRulesToText_SpecialCharacters(t *testing.T) {
 }
 
 func TestExportCountryRulesToText_DisabledRule(t *testing.T) {
-	t.Skip("Skipping disabled rule test - cache behavior needs investigation")
 
 	setupTestDB(t)
 	defer cleanupTestDB(t)
