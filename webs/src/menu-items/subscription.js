@@ -10,7 +10,8 @@ import {
   IconListCheck,
   IconWorld,
   IconPlane,
-  IconFlag
+  IconFlag,
+  IconRefreshDot
 } from '@tabler/icons-react';
 
 // ==============================|| SUBSCRIPTION MENU ITEMS ||============================== //
@@ -183,4 +184,22 @@ const system = {
   ]
 };
 
-export { subscription, script, accesskey, system };
+const changelog = {
+  id: 'changelog-group',
+  title: 'Changelog',
+  titleKey: 'navigation.groups.changelog',
+  type: 'group',
+  children: [
+    {
+      id: 'changelog',
+      title: 'Changelog',
+      titleKey: 'navigation.items.changelog',
+      type: 'item',
+      url: '/system/updates',
+      icon: IconRefreshDot,
+      breadcrumbs: true
+    }
+  ]
+};
+
+export { subscription, script, accesskey, system, changelog };

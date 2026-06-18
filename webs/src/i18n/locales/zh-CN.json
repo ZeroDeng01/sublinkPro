@@ -95,7 +95,8 @@
       "subscription": "订阅管理",
       "script": "脚本管理",
       "accessKey": "API 密钥",
-      "system": "系统设置"
+      "system": "系统设置",
+      "changelog": "更新日志"
     },
     "items": {
       "dashboard": "仪表盘",
@@ -113,6 +114,7 @@
       "countryRules": "国家规则",
       "webhooks": "Webhook 管理",
       "monitor": "系统监控",
+      "changelog": "更新日志",
       "userCenter": "个人中心",
       "appSettings": "应用设置"
     }

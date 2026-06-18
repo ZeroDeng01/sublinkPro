@@ -18,6 +18,7 @@ const ScriptList = Loadable(lazy(() => import('views/scripts')));
 const AccessKeyList = Loadable(lazy(() => import('views/accesskeys')));
 const UserSettings = Loadable(lazy(() => import('views/settings')));
 const SystemMonitor = Loadable(lazy(() => import('views/monitor')));
+const SystemUpdates = Loadable(lazy(() => import('views/system-updates')));
 const TagList = Loadable(lazy(() => import('views/tags')));
 const TaskList = Loadable(lazy(() => import('views/tasks')));
 const HostList = Loadable(lazy(() => import('views/hosts')));
@@ -107,6 +108,10 @@ const MainRoutes = {
         {
           path: 'monitor',
           element: <SystemMonitor />
+        },
+        {
+          path: 'updates',
+          element: <SystemUpdates />
         },
         {
           path: 'tasks',

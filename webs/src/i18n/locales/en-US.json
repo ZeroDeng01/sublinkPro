@@ -95,7 +95,8 @@
       "subscription": "Subscription Management",
       "script": "Script Management",
       "accessKey": "API Keys",
-      "system": "System Settings"
+      "system": "System Settings",
+      "changelog": "Changelog"
     },
     "items": {
       "dashboard": "Dashboard",
@@ -113,6 +114,7 @@
       "countryRules": "Country Rules",
       "webhooks": "Webhooks",
       "monitor": "Monitor",
+      "changelog": "Changelog",
       "userCenter": "User Center",
       "appSettings": "Settings"
     }
