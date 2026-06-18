@@ -8,6 +8,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
+import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -20,7 +21,7 @@ import CloseIcon from '@mui/icons-material/Close';
 // project imports
 import NodeRawInfoEditor from './NodeRawInfoEditor';
 import { resolveProtocolPresentationFromLink } from 'utils/protocolPresentation';
-import { getNodeColorChipSx, getNodeThemeTokens } from '../nodeTheme';
+import { getNodeColorChipSx, getNodeDialogPaperSx, getNodeThemeTokens } from '../nodeTheme';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // Slide transition for mobile
@@ -54,7 +55,8 @@ export default function NodeRawProtocolDialog({ open, node, protocolMeta, onClos
       TransitionComponent={isMobile ? SlideTransition : undefined}
       PaperProps={{
         sx: {
-          borderRadius: isMobile ? 0 : 2,
+          ...getNodeDialogPaperSx(theme, tokens, protocolColor),
+          borderRadius: isMobile ? 0 : 3,
           maxHeight: isMobile ? '100%' : 'calc(100vh - 64px)'
         }
       }}
@@ -62,10 +64,11 @@ export default function NodeRawProtocolDialog({ open, node, protocolMeta, onClos
       <DialogTitle
         sx={{
           pb: 2,
-          pt: isMobile ? 2 : 3,
-          px: 3,
+          pt: { xs: 2, sm: 3 },
+          px: { xs: 2, sm: 3 },
           borderBottom: '1px solid',
-          borderColor: 'divider'
+          borderColor: tokens.softBorder,
+          bgcolor: tokens.toolbarSurface
         }}
       >
         <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -80,9 +83,14 @@ export default function NodeRawProtocolDialog({ open, node, protocolMeta, onClos
             size="small"
             aria-label={t('common.close')}
             sx={{
-              color: 'text.secondary',
+              color: tokens.secondaryText,
+              bgcolor: tokens.fieldSurface,
+              border: '1px solid',
+              borderColor: tokens.subtleBorder,
               '&:hover': {
-                bgcolor: 'action.hover'
+                color: tokens.primaryText,
+                bgcolor: tokens.hoverSurface,
+                borderColor: tokens.selectedBorder
               }
             }}
           >
@@ -93,16 +101,18 @@ export default function NodeRawProtocolDialog({ open, node, protocolMeta, onClos
           {t('nodes.rawProtocolDialog.subtitle')}: {node.EffectiveName || node.Name || node.LinkName}
         </Typography>
       </DialogTitle>
-      <DialogContent sx={{ p: 3, pt: 4 }}>
-        <NodeRawInfoEditor
-          node={node}
-          protocolMeta={protocolMeta}
-          onUpdate={() => {
-            onUpdate?.();
-            onClose();
-          }}
-          showMessage={showMessage}
-        />
+      <DialogContent sx={{ px: { xs: 2, sm: 3 }, bgcolor: tokens.dialogSurface }}>
+        <Box sx={{ mt: 2, mb: { xs: 1, sm: 2 } }}>
+          <NodeRawInfoEditor
+            node={node}
+            protocolMeta={protocolMeta}
+            onUpdate={() => {
+              onUpdate?.();
+              onClose();
+            }}
+            showMessage={showMessage}
+          />
+        </Box>
       </DialogContent>
     </Dialog>
   );

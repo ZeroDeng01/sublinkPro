@@ -693,7 +693,7 @@ export default function NodeList() {
   };
 
   const handleRawProtocolUpdate = () => {
-    loadNodes(); // 刷新节点列表
+    handleRefresh();
   };
 
   const handleDeleteNode = async (node) => {

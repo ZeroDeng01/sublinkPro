@@ -12,7 +12,6 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -39,7 +38,8 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 // api
 import { parseNodeLink, updateNodeRawInfo } from '../../../api/nodes';
 import { buildFieldMetaMap, getFieldGroupKey } from '../../../utils/protocolPresentation';
-import { getNodeColorChipSx, getNodeFieldControlSx, getNodeThemeTokens } from '../nodeTheme';
+import { getNodeFieldControlSx, getNodeThemeTokens } from '../nodeTheme';
+import { withAlpha } from '../../../utils/colorUtils';
 
 /**
  * 字段分组配置
@@ -102,7 +102,7 @@ const getFieldLabel = (fieldName, fieldMeta) => {
 /**
  * 渲染字段输入控件
  */
-const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled, fieldSx }) => {
+const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled, fieldSx, tokens }) => {
   const { t } = useTranslation();
   const [showSecret, setShowSecret] = useState(false);
   const fieldType = fieldMeta?.type || 'string';
@@ -114,17 +114,51 @@ const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled, fieldSx }
   // 布尔类型使用开关
   if (fieldType === 'bool') {
     return (
-      <FormControlLabel
-        control={
-          <Switch
-            checked={value === true || value === 'true'}
-            onChange={(e) => onChange(fieldName, e.target.checked)}
-            disabled={disabled}
-          />
-        }
-        label={label}
-        sx={{ ml: 0 }}
-      />
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          p: 1.5,
+          px: 2,
+          minHeight: 52,
+          borderRadius: 1.5,
+          bgcolor: tokens?.fieldSurface || 'background.paper',
+          border: '1px solid',
+          borderColor: value === true || value === 'true' ? tokens?.selectedBorder : tokens?.softBorder,
+          transition: 'all 0.2s ease',
+          ...(value === true || value === 'true'
+            ? {
+                bgcolor: tokens?.selectedSurface || 'action.selected'
+              }
+            : {}),
+          ...fieldSx,
+          '& .MuiOutlinedInput-root': undefined
+        }}
+      >
+        <Box sx={{ pr: 2 }}>
+          <Typography variant="body2" fontWeight={600} color={tokens?.primaryText || 'text.primary'}>
+            {label}
+          </Typography>
+          {helperText && (
+            <Typography
+              variant="caption"
+              color={tokens?.tertiaryText || 'text.secondary'}
+              display="block"
+              sx={{ mt: 0.5, lineHeight: 1.2 }}
+            >
+              {helperText}
+            </Typography>
+          )}
+        </Box>
+        <Switch
+          checked={value === true || value === 'true'}
+          onChange={(e) => onChange(fieldName, e.target.checked)}
+          disabled={disabled}
+          color="primary"
+          sx={{ ml: 'auto', mr: -1 }}
+        />
+      </Box>
     );
   }
 
@@ -142,6 +176,7 @@ const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled, fieldSx }
         variant="outlined"
         placeholder={placeholder}
         helperText={helperText}
+        slotProps={{ inputLabel: { shrink: true } }}
         sx={fieldSx}
       />
     );
@@ -187,15 +222,32 @@ const FieldInput = ({ fieldName, fieldMeta, value, onChange, disabled, fieldSx }
       helperText={helperText}
       multiline={multiline}
       maxRows={3}
+      slotProps={{ inputLabel: { shrink: true } }}
       sx={fieldSx}
       InputProps={
         fieldMeta?.secret
           ? {
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton edge="end" size="small" onClick={() => setShowSecret((prev) => !prev)} disabled={disabled}>
-                    {showSecret ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
-                  </IconButton>
+                  <Tooltip title={t('auth.login.togglePassword')} placement="top">
+                    <Box component="span" sx={{ display: 'inline-flex' }}>
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        onClick={() => setShowSecret((prev) => !prev)}
+                        disabled={disabled}
+                        sx={{
+                          color: showSecret ? 'primary.main' : tokens?.secondaryText || 'text.secondary',
+                          bgcolor: showSecret ? tokens?.selectedSurface || 'action.selected' : 'transparent',
+                          '&:hover': {
+                            bgcolor: showSecret ? tokens?.selectedHoverSurface : tokens?.hoverSurface
+                          }
+                        }}
+                      >
+                        {showSecret ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                      </IconButton>
+                    </Box>
+                  </Tooltip>
                 </InputAdornment>
               )
             }
@@ -211,7 +263,8 @@ FieldInput.propTypes = {
   value: PropTypes.any,
   onChange: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
-  fieldSx: PropTypes.object
+  fieldSx: PropTypes.object,
+  tokens: PropTypes.object
 };
 
 /**
@@ -377,17 +430,10 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
   return (
     <Box>
       {/* 头部：协议类型和编辑按钮 */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Chip
-            label={currentProtocolMeta?.label || parsedInfo.protocol}
-            size="small"
-            sx={getNodeColorChipSx(theme, tokens, currentProtocolMeta?.color || theme.palette.primary.main)}
-          />
-          <Typography variant="caption" color="text.secondary">
-            {t('nodes.rawInfo.fieldCount', { count: Object.keys(editedFields).length })}
-          </Typography>
-        </Stack>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+        <Typography variant="caption" sx={{ color: tokens.secondaryText, fontWeight: 600 }}>
+          {t('nodes.rawInfo.fieldCount', { count: Object.keys(editedFields).length })}
+        </Typography>
 
         <Tooltip title={editMode ? t('nodes.rawInfo.viewMode') : t('nodes.rawInfo.editMode')}>
           <IconButton
@@ -418,52 +464,112 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
               bgcolor: tokens.nestedPanelSurface,
               '&:before': { display: 'none' },
               border: '1px solid',
-              borderColor: tokens.softBorder,
+              borderColor: expandedGroups.includes(groupKey) ? tokens.selectedBorder : tokens.softBorder,
               borderRadius: 2,
-              mb: 1,
-              overflow: 'hidden'
+              mb: 1.5,
+              overflow: 'hidden',
+              transition: 'all 0.2s ease',
+              ...(expandedGroups.includes(groupKey) && {
+                boxShadow: tokens.isDark
+                  ? `0 4px 16px ${withAlpha(theme.palette.common.black, 0.2)}`
+                  : `0 4px 12px ${withAlpha(theme.palette.common.black, 0.04)}`
+              })
             }}
           >
             <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
+              expandIcon={
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: tokens.fieldSurface,
+                    borderRadius: '50%',
+                    width: 28,
+                    height: 28,
+                    border: '1px solid',
+                    borderColor: tokens.subtleBorder,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: tokens.hoverSurface,
+                      color: 'primary.main',
+                      borderColor: tokens.selectedBorder
+                    }
+                  }}
+                >
+                  <ExpandMoreIcon fontSize="small" />
+                </Box>
+              }
               sx={{
-                minHeight: 52,
-                bgcolor: tokens.toolbarSurface,
+                minHeight: 56,
+                bgcolor: expandedGroups.includes(groupKey) ? tokens.hoverSurface : tokens.toolbarSurface,
+                borderBottom: expandedGroups.includes(groupKey) ? '1px solid' : 'none',
+                borderColor: tokens.softBorder,
+                transition: 'background-color 0.2s ease',
+                '&:hover': {
+                  bgcolor: expandedGroups.includes(groupKey) ? tokens.hoverSurface : tokens.fieldSurfaceActive
+                },
                 '&.Mui-expanded': {
-                  minHeight: 52
+                  minHeight: 56
                 },
                 '& .MuiAccordionSummary-content, & .MuiAccordionSummary-content.Mui-expanded': {
-                  my: 1.25,
+                  my: 1.5,
                   alignItems: 'center'
                 }
               }}
             >
-              <Stack direction="row" alignItems="center" spacing={1}>
-                {groupConfig.icon}
-                <Typography variant="subtitle2" fontWeight={600}>
+              <Stack direction="row" alignItems="center" spacing={1.5} sx={{ width: '100%' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: expandedGroups.includes(groupKey) ? 'primary.main' : tokens.secondaryText,
+                    bgcolor: expandedGroups.includes(groupKey) ? tokens.selectedSurface : tokens.fieldSurface,
+                    borderRadius: 1.5,
+                    width: 32,
+                    height: 32,
+                    border: '1px solid',
+                    borderColor: expandedGroups.includes(groupKey) ? tokens.selectedBorder : tokens.softBorder,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {groupConfig.icon}
+                </Box>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={600}
+                  sx={{
+                    flexGrow: 1,
+                    color: expandedGroups.includes(groupKey) ? tokens.primaryText : tokens.secondaryText,
+                    transition: 'color 0.2s ease'
+                  }}
+                >
                   {t(groupConfig.labelKey)}
                 </Typography>
                 <Chip
                   label={fields.length}
                   size="small"
                   sx={{
-                    height: 20,
-                    fontSize: 11,
-                    bgcolor: tokens.fieldSurface,
-                    color: tokens.primaryText,
+                    height: 22,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    bgcolor: expandedGroups.includes(groupKey) ? 'primary.main' : tokens.fieldSurface,
+                    color: expandedGroups.includes(groupKey) ? theme.palette.primary.contrastText : tokens.primaryText,
                     border: '1px solid',
-                    borderColor: tokens.subtleBorder
+                    borderColor: expandedGroups.includes(groupKey) ? 'primary.main' : tokens.subtleBorder,
+                    transition: 'all 0.2s ease'
                   }}
                 />
               </Stack>
             </AccordionSummary>
-            <AccordionDetails sx={{ pt: 2.75, pb: 1.5 }}>
-              <Stack
-                spacing={isMobile ? 2 : 1.5}
+            <AccordionDetails sx={{ px: { xs: 2, sm: 2.5 }, pt: { xs: 2, sm: 2.5 }, pb: { xs: 2.25, sm: 3 }, bgcolor: tokens.cardSurface }}>
+              <Box
                 sx={{
-                  '& > :first-of-type': {
-                    mt: 0.5
-                  }
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: fields.length > 2 ? 'repeat(2, 1fr)' : '1fr' },
+                  gap: { xs: 2, sm: 2.5 },
+                  alignItems: 'start'
                 }}
               >
                 {fields.map((fieldName) => (
@@ -475,10 +581,11 @@ export default function NodeRawInfoEditor({ node, protocolMeta, onUpdate, showMe
                       onChange={handleFieldChange}
                       disabled={!editMode}
                       fieldSx={fieldControlSx}
+                      tokens={tokens}
                     />
                   </Box>
                 ))}
-              </Stack>
+              </Box>
             </AccordionDetails>
           </Accordion>
         );
