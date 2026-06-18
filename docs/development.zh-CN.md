@@ -46,6 +46,24 @@ sublinkPro/
 
 ---
 
+## 🧩 前端组件放置规则
+
+前端组件必须放在能体现其归属的位置。不要因为某个 import 路径方便，就把组件随意放到不相关目录里。
+
+- 跨页面复用、与具体页面无关的组件放在 `webs/src/components/`。
+- 只服务于某个功能或页面的组件，放在 `webs/src/views/<feature>/component/` 或 `webs/src/views/<feature>/components/` 下，并沿用该功能已有的目录命名。
+- `webs/src/views/<feature>/index.jsx` 这类页面入口应主要负责页面组合、数据加载和功能编排，不要堆放可独立拆分的复杂组件。
+- 不要从无关页面导出 feature-local 组件给其他页面使用。如果另一个页面也需要它，应先移动到 `webs/src/components/` 或更合适的共享模块。
+- 新增共享组件前，先检查附近功能目录、`webs/src/components/` 和 `webs/src/ui-component/` 是否已有类似模式。
+
+示例：
+
+- 多个页面都会用到的通用状态面板，应放在 `webs/src/components/`。
+- 只服务于机场管理的弹窗，应放在 `webs/src/views/airports/component/`。
+- 只服务于新的 `system-updates` 页面时，面板应放在 `webs/src/views/system-updates/components/`；只有明确需要跨页面复用时，才上移到 `webs/src/components/`。
+
+---
+
 ## 🔧 技术栈
 
 | 层级 | 技术 |

@@ -196,15 +196,17 @@ If you're a human reading this:
 
 ---
 
-## 0.1. CRITICAL: DO NOT POLLUTE PROJECT WITH TEMPORARY FILES
+## 0.1. CRITICAL: USE PROJECT-LOCAL `.agents/.tmp/` FOR TEMPORARY FILES
 
 **⚠️ ABSOLUTE PROHIBITION ⚠️**
 
-AI agents are **FORBIDDEN** from creating ANY temporary or documentation files in the project directory during development, debugging, or explanation.
+AI agents are **FORBIDDEN** from creating temporary, debug, scratch, or generated explanation files anywhere in the repository except the project-local `.agents/.tmp/` directory.
+
+Do **not** write agent work files to the operating system temp directory. For this project, `/tmp`, `/var/tmp`, and other system temp locations are not allowed for agent debugging, scratch work, temporary tests, logs, screenshots, reports, or intermediate outputs.
 
 ### Prohibited Actions
 
-❌ **DO NOT create ANY of the following in the project directory:**
+❌ **DO NOT create ANY of the following outside `.agents/.tmp/`:**
 - Documentation files: `*.md` (except when explicitly requested by user to update existing docs)
 - Summary files: `SUMMARY.md`, `IMPLEMENTATION_*.md`, `FEATURE_*.md`, `TEST_*.md`, etc.
 - Temporary test files: `test_*.go`, `test_*.js`, `debug_*.py`, etc.
@@ -214,9 +216,10 @@ AI agents are **FORBIDDEN** from creating ANY temporary or documentation files i
 
 ### Allowed Locations for Temporary Files
 
-✅ **ONLY use these locations for temporary/test files:**
-- `/tmp/` directory (preferred for all temporary files)
-- System temp directories
+✅ **ONLY use this location for agent temporary/test/debug files:**
+- `.agents/.tmp/` at the repository root
+
+Create `.agents/.tmp/` if it does not exist, keep any contents disposable, and remove files when they are no longer needed. `.agents/.tmp/` is ignored by git and must never be used for source code, documentation deliverables, configuration, or assets that need to ship.
 
 ### Examples
 
@@ -227,26 +230,30 @@ echo "# Summary" > IMPLEMENTATION_SUMMARY.md
 
 # Creating test file in project - FORBIDDEN  
 cat > test_feature.go << 'EOF'
+
+# Using system temp directories - FORBIDDEN for this project
+cat > /tmp/test_feature.go << 'EOF'
 ```
 
 **✅ CORRECT - Do this instead:**
 ```bash
-# Use /tmp/ for temporary files
-echo "# Summary" > /tmp/implementation_summary.md
+# Use project-local .tmp/ for temporary files
+mkdir -p .tmp
+echo "# Summary" > .agents/.tmp/implementation_summary.md
 
-# Use /tmp/ for test files
-cat > /tmp/test_feature.go << 'EOF'
+# Use project-local .tmp/ for test files
+cat > .agents/.tmp/test_feature.go << 'EOF'
 ```
 
 ### Clean Up After Yourself
 
-- If you accidentally create files in the project directory, DELETE them immediately
+- If you accidentally create temporary files outside `.agents/.tmp/`, DELETE them immediately
 - Use `rm -f <file>` to remove any temporary files you created
-- Check with `ls -la` before finishing to ensure no pollution
+- Check `git status --short` before finishing to ensure no temporary files are tracked or visible outside `.agents/.tmp/`
 
 ### Violation Consequences
 
-Creating temporary files in the project directory is **UNACCEPTABLE** and shows lack of respect for the codebase.
+Creating temporary files outside `.agents/.tmp/`, or using system temp directories for this project, is **UNACCEPTABLE** and shows lack of respect for the codebase.
 
 **DO NOT make this mistake.**
 
@@ -272,6 +279,7 @@ Creating temporary files in the project directory is **UNACCEPTABLE** and shows 
 - `node/` - Subscription and protocol parsing
 - `webs/src/api/` - Frontend request boundary
 - `webs/src/views/` - Page-level features
+- `webs/src/components/` - Shared frontend components; feature-local components must stay under their owning `webs/src/views/<feature>/component(s)/` directory unless intentionally shared
 - `skill-sublinkpro/` - User-facing AI agent skill (portable SKILL.md format, consumes REST API via X-API-Key)
 
 ## 2. Source of Truth

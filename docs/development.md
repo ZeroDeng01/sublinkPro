@@ -46,6 +46,24 @@ sublinkPro/
 
 ---
 
+## 🧩 Frontend Component Placement
+
+Frontend components must live where their ownership is clear. Do not place components randomly just because an import path is convenient.
+
+- Put cross-page or layout-independent reusable components in `webs/src/components/`.
+- Put feature/page-specific components next to their feature under `webs/src/views/<feature>/component/` or `webs/src/views/<feature>/components/`, following the existing folder name used by that feature.
+- Keep page entry files such as `webs/src/views/<feature>/index.jsx` focused on page composition, data loading, and feature orchestration.
+- Do not export feature-local components from unrelated pages. If a component is needed by a different page, move it to `webs/src/components/` or a more appropriate shared module first.
+- Before adding a new shared component, check whether the same pattern already exists in nearby feature folders, `webs/src/components/`, or `webs/src/ui-component/`.
+
+Examples:
+
+- A reusable status panel used by multiple pages belongs in `webs/src/components/`.
+- A dialog used only by airport management belongs under `webs/src/views/airports/component/`.
+- A panel used only by a new `system-updates` page belongs under `webs/src/views/system-updates/components/` unless it is intentionally shared elsewhere.
+
+---
+
 ## 🔧 Tech Stack
 
 | Layer | Technology |
