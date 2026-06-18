@@ -73,6 +73,44 @@ Case 3: Access tracking
 - When a client fetches Clash config through a subscription link, the response header includes `profile-update-interval`, in hours.
 - When a client fetches Surge config, `interval` in `#!MANAGED-CONFIG` is converted to seconds automatically according to the setting.
 
+## Node Naming Variables
+
+`NodeNameRule` controls the node name rendered in subscription output. If it is empty, SublinkPro keeps the node's effective name. Variables are replaced when the subscription is generated, so values such as speed, delay, country, tags, and unlock status reflect the node data currently stored in the system.
+
+Common variables:
+
+| Variable | Meaning |
+|:---|:---|
+| `$Name` | Effective node name, based on the node's selected name mode |
+| `$LinkName` | Original upstream node name |
+| `$LinkCountry` | Node country code, such as `HK` or `US`; empty country values render as `未知` |
+| `$LinkCountryName` | Country name resolved from `Settings -> Country Rules` by `$LinkCountry`; falls back to the country code when no country-rule name exists |
+| `$Flag` | Flag emoji generated from the country code |
+| `$Group` | Node group; empty group values render as `未分组` |
+| `$Source` | Node source; manual nodes render as `手动` |
+| `$Protocol` | Protocol type |
+| `$Index` | Output sequence number |
+| `$DuplicateIndex` | Duplicate-name index; empty for the first occurrence, then `1`, `2`, `3`, and so on |
+| `$Tags` | All node tags, joined with `|` |
+| `$TagGroup(name)` | The node tag from the named tag group, when present |
+| `$Speed`, `$SpeedIcon` | Download speed text and speed status icon |
+| `$Delay`, `$DelayIcon` | Latency text and latency status icon |
+| `$IpType`, `$Residential` | IP quality labels such as native/broadcast and residential/datacenter |
+| `$FraudScore`, `$FraudScoreIcon` | Fraud score and fraud score icon |
+| `$Unlock` | Unlock summary |
+| `$Unlock(provider)` | Unlock result for a specific provider key, such as `$Unlock(netflix)` |
+| `$UnlockStatus`, `$UnlockLabel`, `$UnlockRegion` | Detailed unlock status fields when available |
+
+Country-name logic depends on the node's stored country code. For example, if a node has `$LinkCountry = HK` and the `HK` country rule name is `香港`, `$LinkCountryName` becomes `香港`; if the country code has no matching country rule, `$LinkCountryName` renders as `HK`. To change displayed country names in naming rules, update the country name in `Settings -> Country Rules`.
+
+Example rule:
+
+```text
+[$Flag] $LinkCountryName - $LinkName $DuplicateIndex
+```
+
+For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] 香港 - Premium 01`. If another output node resolves to the same name, `$DuplicateIndex` can add a suffix value for later duplicates.
+
 ## Mieru Output Notes
 
 - Mieru currently supports Clash/mihomo output only. `/c?client=clash` outputs mihomo YAML fields including `type: mieru`, `server`, `port` or `port-range`, `transport`, `username`, `password`, and optional `multiplexing`, `traffic-pattern`, and chain proxy `dialer-proxy`.

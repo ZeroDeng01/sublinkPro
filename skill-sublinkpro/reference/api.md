@@ -160,7 +160,8 @@ Base: `/api/v1/nodes`
 - **POST** `/nodes/batch-update-group` — `{"ids":[...], "group":"US"}`
 - **POST** `/nodes/batch-update-dialer-proxy` — `{"ids":[...], "dialerProxyName":"..."}`
 - **POST** `/nodes/batch-update-source` — `{"ids":[...], "source":"..."}`
-- **POST** `/nodes/batch-update-country` — `{"ids":[...], "country":"US"}`
+- **POST** `/nodes/batch-update-country` — `{"ids":[...], "country":"US"}` manually assigns the same country code to selected nodes. Empty `country` clears the country marker.
+- **POST** `/nodes/batch-fill-country` — **JSON** `{"airportId":123, "onlyEmpty":true}` fills node countries from enabled country rules by matching each node name. `airportId` is optional; when omitted, it scans all nodes. This is rule-based filling of empty/missing country values, not landing-IP detection. Use `/nodes/batch-update-country` when you already know the exact country code to set.
 
 ### List / Get Nodes
 **GET** `/nodes/get` — query filters (all lowerCamel): `search`, `group`, `source`, `protocol`, `maxDelay`, `minSpeed`, `sortBy`, `sortOrder`, `page`, `pageSize`, array filters `countries[]`, `tags[]`. Returns `{items, total, page, pageSize, totalPages}` when paginated.
@@ -244,6 +245,16 @@ Base: `/api/v1/subcription` (note the spelling — missing the second "s").
 ### Metadata helpers
 - **GET** `/subcription/protocol-meta`
 - **GET** `/subcription/node-fields-meta`
+
+### NodeNameRule variables
+`NodeNameRule` is evaluated when subscription output names are rendered. Country-related variables are based on the node's stored country code:
+
+- `$LinkCountry` — country code, such as `HK` or `US`; empty values render as `未知`.
+- `$LinkCountryName` — country name looked up from Country Rules by `$LinkCountry`; falls back to the code when no matching country-rule name exists.
+- `$Flag` — flag emoji generated from the country code.
+- `$DuplicateIndex` — empty for the first duplicate-name occurrence, then `1`, `2`, `3`, and so on.
+
+Other supported variables include `$Name`, `$LinkName`, `$Group`, `$Source`, `$Protocol`, `$Index`, `$Tags`, `$TagGroup(name)`, speed/delay variables, IP quality variables, and unlock variables such as `$Unlock` and `$Unlock(netflix)`.
 
 ### Chain Proxy Rules (all under a subscription id; bodies are JSON)
 - **GET** `/subcription/{id}/chain-rules` — list
@@ -338,13 +349,59 @@ Base: `/api/v1/airports` (all write bodies are JSON)
 
 - **GET** `/airports` (query: `?page=1&pageSize=20`) — list
 - **GET** `/airports/{id}` — one
-- **POST** `/airports` — **JSON** create. Key fields (see `dto.AirportRequest`): `name`(required), `url`(required, valid URL), `cronExpr`(required), `enabled`, `group`, `downloadWithProxy`, `proxyLink`, `userAgent`, `fetchUsageInfo`, `skipTLSVerify`, plus filter/rename/dedup fields (`nodeNameWhitelist`, `nodeNameBlacklist`, `protocolWhitelist`, `protocolBlacklist`, `nodeNamePreprocess`, `deduplicationRule`, `nodeNameUniquify`, ...).
+- **POST** `/airports` — **JSON** create. Key fields (see `dto.AirportRequest`): `name`(required), `url`(required, valid URL), `cronExpr`(required), `enabled`, `group`, `downloadWithProxy`, `proxyLink`, `userAgent`, `fetchUsageInfo`, `skipTLSVerify`, plus filter/rename/dedup fields (`nodeNameWhitelist`, `nodeNameBlacklist`, `protocolWhitelist`, `protocolBlacklist`, `nodeNamePreprocess`, `deduplicationRule`, `nodeNameUniquify`, ...), and country-fill fields (`autoFillCountry`, `backfillExistingCountry`).
 - **PUT** `/airports/{id}` — **JSON** update (same schema)
 - **POST** `/airports/batch-update` — **JSON** `{ids:[...], applyGroup, group, applySchedule, cronExpr}`
 - **DELETE** `/airports/{id}` (query: `?deleteNodes=false`)
 - **POST** `/airports/pull-all` — pull all enabled airports now
 - **POST** `/airports/{id}/pull` — pull one now
 - **POST** `/airports/{id}/refresh-usage`
+
+Country-fill fields apply during airport pulls and use Country Rules against upstream node names:
+
+- `autoFillCountry`: fills the country code for newly imported nodes whose country is empty.
+- `backfillExistingCountry`: fills the country code for existing nodes from the same airport whose country is still empty.
+
+Neither field overwrites an existing country code, and neither performs landing-IP detection.
+
+---
+
+## Country Rules
+
+Base: `/api/v1/country-rules`
+
+Country Rules define how SublinkPro parses country codes from node names and how it resolves country names for naming variables. Enabled rules are regex-based, sorted by `priority` descending, and matching stops at the first rule that matches the node name.
+
+Fields:
+
+| Field | Meaning |
+|:---|:---|
+| `countryCode` | Country code stored on the node, usually ISO-style codes such as `HK`, `US`, `JP` |
+| `countryName` | Display name used by `$LinkCountryName` and country-related UI |
+| `pattern` | Regular expression matched against the node name; use `(?i)` for case-insensitive patterns |
+| `priority` | Integer priority from `0` to `1000`; higher numbers match first |
+| `enabled` | Whether the rule participates in matching |
+
+Endpoints:
+
+- **GET** `/country-rules` — list rules. Query supports `page`, `pageSize`, and `keyword`.
+- **POST** `/country-rules` — **JSON** create, for example `{"countryCode":"HK","countryName":"香港","pattern":"(?i)香港|HK|Hong Kong|🇭🇰","priority":100,"enabled":true}`.
+- **PUT** `/country-rules/{id}` — **JSON** update.
+- **DELETE** `/country-rules/{id}` — delete.
+- **POST** `/country-rules/test` — **JSON** test one pattern against one node name, for example `{"pattern":"(?i)香港|HK","testName":"HK Premium 01"}`.
+- **POST** `/country-rules/batch-test` — **JSON** test enabled rules against multiple node names.
+- **POST** `/country-rules/batch` — **JSON** import or replace rule lists.
+- **GET** `/country-rules/export` — export all country rules as text.
+- **POST** `/country-rules/sync` — **JSON** full sync from text, `{"text":"..."}`.
+
+Text export/sync format is one rule per line:
+
+```text
+countryCode countryName priority enabled pattern
+HK 香港 100 true (?i)香港|HK|Hong Kong|🇭🇰
+```
+
+Use Country Rules together with airport `autoFillCountry` / `backfillExistingCountry`, `/nodes/batch-fill-country`, and subscription `NodeNameRule` variables such as `$LinkCountryName`.
 
 ---
 

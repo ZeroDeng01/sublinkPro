@@ -104,6 +104,23 @@ Notes:
 - Within airport sequence numbering can be enabled alone. In that case, no airport prefix is added, and only same airport duplicates get numeric suffixes.
 - Numbering is calculated **per duplicate name group**, not as one continuous sequence for the whole airport. For example, duplicated `HK` nodes become `HK-1`, `HK-2`, while duplicated `US` nodes start separately from `US-1`.
 
+### Node processing: country pre auto-fill and backfill
+
+Airport advanced options include two country fill switches. They use the country rules configured in `Settings -> Country Rules` to read country keywords, city names, country codes, or flag emoji from the upstream node name, then write the matched country code to the node.
+
+- **Auto-fill country for new nodes**: when an airport is fetched, newly imported nodes with an empty country field are matched against enabled country rules. If a rule matches the upstream node name, the node stores that rule's country code, such as `HK`, `US`, or `JP`.
+- **Backfill country for existing nodes**: when an airport is fetched, existing nodes from the same airport that still have an empty country field are also matched against the current upstream node name. This is useful after enabling country rules on an airport that already has nodes.
+
+Country fill is name-based rule matching, not landing-IP detection. It does not dial the node, test the exit IP, or overwrite a country code that already exists. If no enabled country rule matches the node name, the country field stays empty.
+
+Recommended usage:
+
+1. Open `Settings -> Country Rules` and confirm the default rules cover the node names used by your airports. Add or adjust regex patterns when a provider uses custom names.
+2. Enable **Auto-fill country for new nodes** on airports where future imported nodes should get country codes automatically.
+3. Enable **Backfill country for existing nodes** when old nodes from the same airport already exist without country codes, then fetch the airport once. You can disable it afterward if you only needed a one-time fill.
+
+Example: if the `HK` country rule pattern matches `香港`, `HK`, `Hong Kong`, or the Hong Kong flag emoji, a node named `香港 01` or `HK Premium 01` will be stored with country code `HK` during airport fetch.
+
 ### Node names and remarks
 
 Nodes fetched from airports store two names:

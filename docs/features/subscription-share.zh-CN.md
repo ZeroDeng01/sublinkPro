@@ -73,6 +73,44 @@
 - 当客户端通过订阅链接获取 Clash 配置时，响应头会带上 `profile-update-interval`，单位为小时。
 - 当客户端获取 Surge 配置时，`#!MANAGED-CONFIG` 中的 `interval` 会按设置自动换算为秒。
 
+## 节点命名变量
+
+`NodeNameRule` 控制订阅输出时的节点名称。留空时，SublinkPro 会保留节点的实际使用名称。变量会在生成订阅时替换，因此速度、延迟、国家、标签、解锁状态等值都来自系统当前保存的节点数据。
+
+常用变量：
+
+| 变量 | 含义 |
+|:---|:---|
+| `$Name` | 节点实际使用名称，取决于节点的名称模式 |
+| `$LinkName` | 上游原始节点名称 |
+| `$LinkCountry` | 节点国家代码，例如 `HK`、`US`；国家为空时显示 `未知` |
+| `$LinkCountryName` | 根据 `$LinkCountry` 到「应用设置 -> 国家规则」中查找得到的国家名称；没有对应国家规则名称时回退为国家代码 |
+| `$Flag` | 根据国家代码生成的国旗 Emoji |
+| `$Group` | 节点分组；分组为空时显示 `未分组` |
+| `$Source` | 节点来源；手动节点显示为 `手动` |
+| `$Protocol` | 协议类型 |
+| `$Index` | 输出序号 |
+| `$DuplicateIndex` | 重名序号；第一次出现为空，后续依次为 `1`、`2`、`3` 等 |
+| `$Tags` | 节点所有标签，使用 `|` 连接 |
+| `$TagGroup(name)` | 节点在指定标签组中的标签，存在时才输出 |
+| `$Speed`、`$SpeedIcon` | 下载速度文本和速度状态图标 |
+| `$Delay`、`$DelayIcon` | 延迟文本和延迟状态图标 |
+| `$IpType`、`$Residential` | IP 质量标签，例如原生/广播、住宅/机房 |
+| `$FraudScore`、`$FraudScoreIcon` | 欺诈评分和欺诈评分图标 |
+| `$Unlock` | 解锁摘要 |
+| `$Unlock(provider)` | 指定服务商的解锁结果，例如 `$Unlock(netflix)` |
+| `$UnlockStatus`、`$UnlockLabel`、`$UnlockRegion` | 可用时输出更细的解锁状态字段 |
+
+国家名称逻辑依赖节点已经保存的国家代码。例如节点的 `$LinkCountry = HK`，并且 `HK` 国家规则的国家名称是 `香港`，那么 `$LinkCountryName` 会输出 `香港`；如果这个国家代码没有对应国家规则，则 `$LinkCountryName` 会输出 `HK`。如果希望调整命名规则中的国家名称，请修改「应用设置 -> 国家规则」里的国家名称。
+
+示例规则：
+
+```text
+[$Flag] $LinkCountryName - $LinkName $DuplicateIndex
+```
+
+对于名为 `Premium 01` 的香港节点，输出可能是 `[🇭🇰] 香港 - Premium 01`。如果后续节点生成了同名结果，`$DuplicateIndex` 可以为后续重名节点追加序号。
+
 ## Mieru 输出说明
 
 - Mieru 当前仅支持 Clash/mihomo 输出；`/c?client=clash` 会按 mihomo YAML 字段输出 `type: mieru`、`server`、`port` 或 `port-range`、`transport`、`username`、`password`，并保留可选的 `multiplexing`、`traffic-pattern` 与链式代理 `dialer-proxy`。
