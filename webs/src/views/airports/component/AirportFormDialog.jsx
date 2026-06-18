@@ -598,7 +598,14 @@ export default function AirportFormDialog({
                   </Box>
                   <Switch
                     checked={airportForm.autoFillCountry || false}
-                    onChange={(e) => setAirportForm({ ...airportForm, autoFillCountry: e.target.checked })}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setAirportForm({
+                        ...airportForm,
+                        autoFillCountry: checked,
+                        ...(checked ? {} : { backfillExistingCountry: false })
+                      });
+                    }}
                   />
                 </Box>
               </Box>
@@ -617,7 +624,14 @@ export default function AirportFormDialog({
                   </Box>
                   <Switch
                     checked={airportForm.backfillExistingCountry || false}
-                    onChange={(e) => setAirportForm({ ...airportForm, backfillExistingCountry: e.target.checked })}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setAirportForm({
+                        ...airportForm,
+                        backfillExistingCountry: checked,
+                        ...(checked ? { autoFillCountry: true } : {})
+                      });
+                    }}
                   />
                 </Box>
               </Box>

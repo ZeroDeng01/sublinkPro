@@ -885,6 +885,24 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 
 	// 批量收集：需要更新名称/链接的节点列表
 	nodesToUpdate := make([]models.NodeInfoUpdate, 0)
+	countryBackfilledNodeIDs := make([]int, 0)
+
+	backfillExistingNodeCountry := func(existingNode models.Node, nodeName string) bool {
+		if airport == nil || !airport.BackfillExistingCountry || existingNode.LinkCountry != "" {
+			return false
+		}
+		country := models.ParseCountryFromNodeName(nodeName)
+		if country == "" {
+			return false
+		}
+		if err := models.UpdateNodeFields(existingNode.ID, map[string]any{"link_country": country}); err != nil {
+			utils.Warn("回填节点【%s】国家失败: %v", nodeName, err)
+			return false
+		}
+		countryBackfilledNodeIDs = append(countryBackfilledNodeIDs, existingNode.ID)
+		utils.Debug("🌍 现存节点【%s】回填国家: %s", nodeName, country)
+		return true
+	}
 
 	// 2. 遍历新获取的节点，插入或更新
 	for proxyIndex, proxy := range proxys {
@@ -956,12 +974,15 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 				if infoNodeHashes[contentHash] {
 					// 信息节点：用名称精确匹配（同 hash 对应多个已有节点）
 					if existingByName, nameExists := existingInfoNodeNames[contentHash][proxy.Name]; nameExists {
+						backfilledCountry := backfillExistingNodeCountry(existingByName, proxy.Name)
 						// 该名称的信息节点已存在，检查链接或顺序是否变化
 						if existingByName.LinkName != proxy.Name || existingByName.Link != link || existingByName.SourceSort != Node.SourceSort {
 							nodesToUpdate = append(nodesToUpdate, models.BuildNodeInfoUpdate(existingByName, proxy.Name, link, Node.SourceSort))
 							updateCount++
 							nodeStatus = "updated"
 							utils.Info("✏️ 信息节点【%s】链接/顺序已变更，将更新", proxy.Name)
+						} else if backfilledCountry {
+							nodeStatus = "updated"
 						} else {
 							utils.Debug("⏭️ 信息节点【%s】在本机场已存在，跳过", proxy.Name)
 						}
@@ -976,27 +997,15 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 				} else {
 					// 普通节点：用 hash 匹配，检查名称或链接是否变化
 					existingNode := existingNodeByContentHash[contentHash]
-					// 国家回填检查（现存节点）
-					needsCountryBackfill := false
-					if airport != nil && airport.BackfillExistingCountry && existingNode.LinkCountry == "" {
-						if country := models.ParseCountryFromNodeName(proxy.Name); country != "" {
-							Node.LinkCountry = country
-							needsCountryBackfill = true
-							utils.Debug("🌍 现存节点【%s】回填国家: %s", proxy.Name, country)
-						}
-					}
+					backfilledCountry := backfillExistingNodeCountry(existingNode, proxy.Name)
 
-					if existingNode.LinkName != proxy.Name || existingNode.Link != link || existingNode.SourceSort != Node.SourceSort || needsCountryBackfill {
+					if existingNode.LinkName != proxy.Name || existingNode.Link != link || existingNode.SourceSort != Node.SourceSort {
 						nodesToUpdate = append(nodesToUpdate, models.BuildNodeInfoUpdate(existingNode, proxy.Name, link, Node.SourceSort))
 						updateCount++
-						// 如果需要回填国家，单独更新国家字段（这是额外操作，失败不影响主流程）
-						if needsCountryBackfill {
-							if err := models.UpdateNodeFields(existingNode.ID, map[string]any{"link_country": Node.LinkCountry}); err != nil {
-								utils.Warn("回填节点【%s】国家失败: %v", proxy.Name, err)
-							}
-						}
 						nodeStatus = "updated"
 						utils.Info("✏️ 节点【%s】原始名称/链接/顺序已变更，将更新 [旧原始名称: %s]", proxy.Name, existingNode.LinkName)
+					} else if backfilledCountry {
+						nodeStatus = "updated"
 					} else {
 						utils.Debug("⏭️ 节点【%s】在本机场已存在，跳过", proxy.Name)
 					}
@@ -1141,6 +1150,7 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 			changedNodeIDs = append(changedNodeIDs, u.ID)
 		}
 	}
+	changedNodeIDs = append(changedNodeIDs, countryBackfilledNodeIDs...)
 
 	// 重新查找机场以获取最新信息并更新成功次数
 	airport, err = models.GetAirportByID(id)

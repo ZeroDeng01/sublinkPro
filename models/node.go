@@ -456,6 +456,9 @@ func UpdateNodeFields(id int, updates map[string]any) error {
 		if nameMode, ok := updates["name_mode"].(string); ok {
 			cachedNode.NameMode = NormalizeNodeNameMode(nameMode)
 		}
+		if linkCountry, ok := updates["link_country"].(string); ok {
+			cachedNode.LinkCountry = linkCountry
+		}
 		cachedNode.EffectiveNameValue = cachedNode.EffectiveName()
 		nodeCache.Set(id, cachedNode)
 	}

@@ -93,3 +93,40 @@ func TestAirportUpdatePersistsUpdateAfterDetectSettings(t *testing.T) {
 		t.Fatal("expected update_after_detect_changed_only to persist false after update")
 	}
 }
+
+func TestAirportBackfillCountryImpliesAutoFillCountryOnSave(t *testing.T) {
+	setupAirportTestDB(t)
+
+	airport := &Airport{
+		Name:                    "回填机场",
+		URL:                     "https://example.com/subscription",
+		CronExpr:                "0 */12 * * *",
+		BackfillExistingCountry: true,
+		AutoFillCountry:         false,
+	}
+	if err := airport.Add(); err != nil {
+		t.Fatalf("add airport: %v", err)
+	}
+
+	var stored Airport
+	if err := database.DB.First(&stored, airport.ID).Error; err != nil {
+		t.Fatalf("reload airport after add: %v", err)
+	}
+	if !stored.AutoFillCountry {
+		t.Fatal("expected auto_fill_country to be true when backfill_existing_country is true after add")
+	}
+
+	stored.AutoFillCountry = false
+	stored.BackfillExistingCountry = true
+	if err := stored.Update(); err != nil {
+		t.Fatalf("update airport: %v", err)
+	}
+
+	var updated Airport
+	if err := database.DB.First(&updated, airport.ID).Error; err != nil {
+		t.Fatalf("reload airport after update: %v", err)
+	}
+	if !updated.AutoFillCountry {
+		t.Fatal("expected auto_fill_country to be true when backfill_existing_country is true after update")
+	}
+}

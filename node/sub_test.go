@@ -8,11 +8,15 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sublink/database"
+	"sublink/internal/testutil"
 	"sublink/models"
 	"sublink/node/protocol"
 	"testing"
 
+	"github.com/glebarez/sqlite"
 	"gopkg.in/yaml.v3"
+	"gorm.io/gorm"
 )
 
 func TestGenerateProxyLinkReconstructsDNSStyleECH(t *testing.T) {
@@ -677,4 +681,152 @@ func TestGenerateProxyLinkRoundTripsMieruClashYAML(t *testing.T) {
 	if decoded.TrafficPattern != "dGVzdA==" {
 		t.Fatalf("traffic pattern = %q, want dGVzdA==", decoded.TrafficPattern)
 	}
+}
+
+func TestScheduleClashToNodeLinksBackfillsEveryExistingEmptyCountryNode(t *testing.T) {
+	setupSubscriptionCountryBackfillTestDB(t)
+
+	airport := &models.Airport{
+		Name:                    "回填机场",
+		URL:                     "https://example.com/sub.yaml",
+		CronExpr:                "0 */12 * * *",
+		Enabled:                 true,
+		Group:                   "默认组",
+		BackfillExistingCountry: true,
+	}
+	if err := airport.Add(); err != nil {
+		t.Fatalf("add airport: %v", err)
+	}
+	createCountryBackfillRule(t, "HK", "香港", "香港|HK")
+	createCountryBackfillRule(t, "JP", "日本", "日本|JP")
+
+	ordinaryProxy := protocol.Proxy{Name: "HK 普通节点", Type: "trojan", Server: "ordinary.example.com", Port: 443, Password: "secret-ordinary"}
+	infoHKProxy := protocol.Proxy{Name: "HK 到期时间", Type: "trojan", Server: "info.example.com", Port: 443, Password: "secret-info"}
+	infoJPProxy := protocol.Proxy{Name: "JP 剩余流量", Type: "trojan", Server: "info.example.com", Port: 443, Password: "secret-info"}
+	keptCountryProxy := protocol.Proxy{Name: "JP 已有国家", Type: "trojan", Server: "kept.example.com", Port: 443, Password: "secret-kept"}
+
+	ordinary := createExistingSubscriptionNode(t, airport.ID, airport.Name, ordinaryProxy, "", 1)
+	infoHK := createExistingSubscriptionNode(t, airport.ID, airport.Name, infoHKProxy, "", 2)
+	infoJP := createExistingSubscriptionNode(t, airport.ID, airport.Name, infoJPProxy, "", 3)
+	keptCountry := createExistingSubscriptionNode(t, airport.ID, airport.Name, keptCountryProxy, "US", 4)
+
+	_, err := scheduleClashToNodeLinks(context.Background(), airport.ID, []protocol.Proxy{
+		ordinaryProxy,
+		infoHKProxy,
+		infoJPProxy,
+		keptCountryProxy,
+	}, airport.Name, nil, nil)
+	if err != nil {
+		t.Fatalf("schedule clash nodes: %v", err)
+	}
+
+	assertNodeCountry(t, ordinary.ID, "HK")
+	assertNodeCountry(t, infoHK.ID, "HK")
+	assertNodeCountry(t, infoJP.ID, "JP")
+	assertNodeCountry(t, keptCountry.ID, "US")
+	assertCachedNodeCountry(t, airport.ID, ordinary.ID, "HK")
+	assertCachedNodeCountry(t, airport.ID, infoHK.ID, "HK")
+	assertCachedNodeCountry(t, airport.ID, infoJP.ID, "JP")
+}
+
+func setupSubscriptionCountryBackfillTestDB(t *testing.T) {
+	t.Helper()
+
+	oldDB := database.DB
+	oldDialect := database.Dialect
+	oldInitialized := database.IsInitialized
+
+	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "subscription_country_backfill_test")), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open test db: %v", err)
+	}
+	if err := db.AutoMigrate(&models.Airport{}, &models.Node{}, &models.CountryRule{}, &models.SystemSetting{}); err != nil {
+		t.Fatalf("auto migrate test db: %v", err)
+	}
+
+	database.DB = db
+	database.Dialect = database.DialectSQLite
+	database.IsInitialized = false
+	if err := models.InitAirportCache(); err != nil {
+		t.Fatalf("init airport cache: %v", err)
+	}
+	if err := models.InitNodeCache(); err != nil {
+		t.Fatalf("init node cache: %v", err)
+	}
+	if err := models.InitCountryRuleCache(); err != nil {
+		t.Fatalf("init country rule cache: %v", err)
+	}
+	if err := models.InitSettingCache(); err != nil {
+		t.Fatalf("init setting cache: %v", err)
+	}
+
+	t.Cleanup(func() {
+		database.DB = oldDB
+		database.Dialect = oldDialect
+		database.IsInitialized = oldInitialized
+		testutil.CloseDB(t, db)
+	})
+}
+
+func createCountryBackfillRule(t *testing.T, code string, name string, pattern string) {
+	t.Helper()
+	rule := &models.CountryRule{CountryCode: code, CountryName: name, Pattern: pattern, Priority: 100, Enabled: true}
+	if err := rule.Add(); err != nil {
+		t.Fatalf("add country rule %s: %v", code, err)
+	}
+}
+
+func createExistingSubscriptionNode(t *testing.T, sourceID int, source string, proxy protocol.Proxy, country string, sourceSort int) models.Node {
+	t.Helper()
+	link := GenerateProxyLink(proxy)
+	if link == "" {
+		t.Fatalf("generate link for %s", proxy.Name)
+	}
+	node := models.Node{
+		Name:        proxy.Name,
+		LinkName:    proxy.Name,
+		NameMode:    models.NodeNameModeLink,
+		Link:        link,
+		LinkAddress: proxy.Server + ":" + strconv.Itoa(int(proxy.Port)),
+		LinkHost:    proxy.Server,
+		LinkPort:    strconv.Itoa(int(proxy.Port)),
+		LinkCountry: country,
+		Protocol:    proxy.Type,
+		Source:      source,
+		SourceID:    sourceID,
+		SourceSort:  sourceSort,
+		ContentHash: protocol.GenerateProxyContentHash(proxy),
+	}
+	if err := node.Add(); err != nil {
+		t.Fatalf("add existing node %s: %v", proxy.Name, err)
+	}
+	return node
+}
+
+func assertNodeCountry(t *testing.T, id int, want string) {
+	t.Helper()
+	var node models.Node
+	if err := database.DB.First(&node, id).Error; err != nil {
+		t.Fatalf("load node %d: %v", id, err)
+	}
+	if node.LinkCountry != want {
+		t.Fatalf("node %s country = %q, want %q", node.Name, node.LinkCountry, want)
+	}
+}
+
+func assertCachedNodeCountry(t *testing.T, sourceID int, nodeID int, want string) {
+	t.Helper()
+	nodes, err := models.ListBySourceID(sourceID)
+	if err != nil {
+		t.Fatalf("list cached nodes: %v", err)
+	}
+	for _, node := range nodes {
+		if node.ID == nodeID {
+			if node.LinkCountry != want {
+				t.Fatalf("cached node %s country = %q, want %q", node.Name, node.LinkCountry, want)
+			}
+			return
+		}
+	}
+	t.Fatalf("cached node %d not found", nodeID)
 }

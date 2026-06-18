@@ -143,6 +143,7 @@ func InitAirportCache() error {
 
 // Add 添加机场 (Write-Through)
 func (a *Airport) Add() error {
+	a.normalizeCountryFillSettings()
 	err := database.DB.Create(a).Error
 	if err != nil {
 		return err
@@ -153,6 +154,7 @@ func (a *Airport) Add() error {
 
 // Update 更新机场 (Write-Through)
 func (a *Airport) Update() error {
+	a.normalizeCountryFillSettings()
 	err := database.DB.Model(a).Select(
 		"Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime",
 		"SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent",
@@ -171,6 +173,12 @@ func (a *Airport) Update() error {
 		airportCache.Set(a.ID, updated)
 	}
 	return nil
+}
+
+func (a *Airport) normalizeCountryFillSettings() {
+	if a.BackfillExistingCountry {
+		a.AutoFillCountry = true
+	}
 }
 
 // Find 查找机场是否重复（按URL或名称）

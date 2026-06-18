@@ -109,7 +109,7 @@ Notes:
 Airport advanced options include two country fill switches. They use the country rules configured in `Settings -> Country Rules` to read country keywords, city names, country codes, or flag emoji from the upstream node name, then write the matched country code to the node.
 
 - **Auto-fill country for new nodes**: when an airport is fetched, newly imported nodes with an empty country field are matched against enabled country rules. If a rule matches the upstream node name, the node stores that rule's country code, such as `HK`, `US`, or `JP`.
-- **Backfill country for existing nodes**: when an airport is fetched, existing nodes from the same airport that still have an empty country field are also matched against the current upstream node name. This is useful after enabling country rules on an airport that already has nodes.
+- **Backfill country for existing nodes**: when an airport is fetched, every existing node from the same airport that still has an empty country field is matched against the current upstream node name, including nodes that otherwise do not need a name, link, or order update. This is useful after enabling country rules on an airport that already has nodes. Enabling this option also enables **Auto-fill country for new nodes**.
 
 Country fill is name-based rule matching, not landing-IP detection. It does not dial the node, test the exit IP, or overwrite a country code that already exists. If no enabled country rule matches the node name, the country field stays empty.
 
@@ -117,7 +117,7 @@ Recommended usage:
 
 1. Open `Settings -> Country Rules` and confirm the default rules cover the node names used by your airports. Add or adjust regex patterns when a provider uses custom names.
 2. Enable **Auto-fill country for new nodes** on airports where future imported nodes should get country codes automatically.
-3. Enable **Backfill country for existing nodes** when old nodes from the same airport already exist without country codes, then fetch the airport once. You can disable it afterward if you only needed a one-time fill.
+3. Enable **Backfill country for existing nodes** when old nodes from the same airport already exist without country codes. The Web UI will turn on new-node auto-fill at the same time. Fetch the airport once; you can disable backfill afterward if you only needed a one-time fill.
 
 Example: if the `HK` country rule pattern matches `香港`, `HK`, `Hong Kong`, or the Hong Kong flag emoji, a node named `香港 01` or `HK Premium 01` will be stored with country code `HK` during airport fetch.
 

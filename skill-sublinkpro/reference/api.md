@@ -360,7 +360,7 @@ Base: `/api/v1/airports` (all write bodies are JSON)
 Country-fill fields apply during airport pulls and use Country Rules against upstream node names:
 
 - `autoFillCountry`: fills the country code for newly imported nodes whose country is empty.
-- `backfillExistingCountry`: fills the country code for existing nodes from the same airport whose country is still empty.
+- `backfillExistingCountry`: fills the country code for every existing node from the same airport whose country is still empty, including nodes that otherwise do not need a name/link/order update. Saving an airport with `backfillExistingCountry:true` also persists `autoFillCountry:true`.
 
 Neither field overwrites an existing country code, and neither performs landing-IP detection.
 
