@@ -1148,6 +1148,7 @@ func seedDefaultCountryRules(db *gorm.DB) error {
 		{CountryCode: "BD", CountryName: "孟加拉国", Pattern: "(?i)孟加拉国|BD|Bangladesh|孟加拉|达卡|Dhaka|🇧🇩", Priority: 0, Enabled: true},
 		{CountryCode: "PK", CountryName: "巴基斯坦", Pattern: "(?i)巴基斯坦|PK|Pakistan|巴铁|卡拉奇|Karachi|伊斯兰堡|Islamabad|🇵🇰", Priority: 0, Enabled: true},
 		{CountryCode: "MO", CountryName: "澳门", Pattern: "(?i)澳门|MO|Macao|Macau|🇲🇴", Priority: 0, Enabled: true},
+		{CountryCode: "KZ", CountryName: "哈萨克斯坦", Pattern: "(?i)哈萨克斯坦|KZ|Kazakhstan|哈萨克|阿拉木图|Almaty|🇰🇿", Priority: 0, Enabled: true},
 
 		// 欧洲地区
 		{CountryCode: "GB", CountryName: "英国", Pattern: "(?i)英国|GB|UK|United Kingdom|伦敦|London|🇬🇧", Priority: 0, Enabled: true},
@@ -1173,6 +1174,8 @@ func seedDefaultCountryRules(db *gorm.DB) error {
 		{CountryCode: "AE", CountryName: "阿联酋", Pattern: "(?i)阿联酋|UAE|迪拜|Dubai|🇦🇪", Priority: 0, Enabled: true},
 		{CountryCode: "IL", CountryName: "以色列", Pattern: "(?i)以色列|IL|Israel|特拉维夫|Tel Aviv|耶路撒冷|Jerusalem|🇮🇱", Priority: 0, Enabled: true},
 		{CountryCode: "SA", CountryName: "沙特阿拉伯", Pattern: "(?i)沙特阿拉伯|沙特|SA|Saudi Arabia|Saudi|利雅得|Riyadh|🇸🇦", Priority: 0, Enabled: true},
+		{CountryCode: "QA", CountryName: "卡塔尔", Pattern: "(?i)卡塔尔|QA|Qatar|多哈|Doha|🇶🇦", Priority: 0, Enabled: true},
+		{CountryCode: "KW", CountryName: "科威特", Pattern: "(?i)科威特|KW|Kuwait|🇰🇼", Priority: 0, Enabled: true},
 
 		// 中国大陆
 		{CountryCode: "CN", CountryName: "中国", Pattern: "(?i)中国|CN|China|大陆|Mainland", Priority: 0, Enabled: true},
@@ -1180,6 +1183,8 @@ func seedDefaultCountryRules(db *gorm.DB) error {
 		// 非洲地区
 		{CountryCode: "ZA", CountryName: "南非", Pattern: "(?i)南非|ZA|South Africa|约翰内斯堡|Johannesburg|开普敦|Cape Town|🇿🇦", Priority: 0, Enabled: true},
 		{CountryCode: "EG", CountryName: "埃及", Pattern: "(?i)埃及|EG|Egypt|开罗|Cairo|🇪🇬", Priority: 0, Enabled: true},
+		{CountryCode: "NG", CountryName: "尼日利亚", Pattern: "(?i)尼日利亚|NG|Nigeria|拉各斯|Lagos|🇳🇬", Priority: 0, Enabled: true},
+		{CountryCode: "KE", CountryName: "肯尼亚", Pattern: "(?i)肯尼亚|KE|Kenya|内罗毕|Nairobi|🇰🇪", Priority: 0, Enabled: true},
 
 		// 其他欧洲国家
 		{CountryCode: "IT", CountryName: "意大利", Pattern: "(?i)意大利|IT|Italy|🇮🇹", Priority: 0, Enabled: true},
@@ -1198,6 +1203,20 @@ func seedDefaultCountryRules(db *gorm.DB) error {
 		{CountryCode: "CZ", CountryName: "捷克", Pattern: "(?i)捷克|CZ|Czech|Czechia|布拉格|Prague|🇨🇿", Priority: 0, Enabled: true},
 		{CountryCode: "RO", CountryName: "罗马尼亚", Pattern: "(?i)罗马尼亚|RO|Romania|布加勒斯特|Bucharest|🇷🇴", Priority: 0, Enabled: true},
 		{CountryCode: "UA", CountryName: "乌克兰", Pattern: "(?i)乌克兰|UA|Ukraine|基辅|Kiev|Kyiv|🇺🇦", Priority: 0, Enabled: true},
+		{CountryCode: "HU", CountryName: "匈牙利", Pattern: "(?i)匈牙利|HU|Hungary|布达佩斯|Budapest|🇭🇺", Priority: 0, Enabled: true},
+		{CountryCode: "HR", CountryName: "克罗地亚", Pattern: "(?i)克罗地亚|HR|Croatia|萨格勒布|Zagreb|🇭🇷", Priority: 0, Enabled: true},
+		{CountryCode: "RS", CountryName: "塞尔维亚", Pattern: "(?i)塞尔维亚|RS|Serbia|贝尔格莱德|Belgrade|🇷🇸", Priority: 0, Enabled: true},
+		{CountryCode: "BG", CountryName: "保加利亚", Pattern: "(?i)保加利亚|BG|Bulgaria|索非亚|Sofia|🇧🇬", Priority: 0, Enabled: true},
+		{CountryCode: "SK", CountryName: "斯洛伐克", Pattern: "(?i)斯洛伐克|SK|Slovakia|布拉迪斯拉发|Bratislava|🇸🇰", Priority: 0, Enabled: true},
+		{CountryCode: "SI", CountryName: "斯洛文尼亚", Pattern: "(?i)斯洛文尼亚|SI|Slovenia|卢布尔雅那|Ljubljana|🇸🇮", Priority: 0, Enabled: true},
+		{CountryCode: "LU", CountryName: "卢森堡", Pattern: "(?i)卢森堡|LU|Luxembourg|🇱🇺", Priority: 0, Enabled: true},
+		// IS 代码段用大写边界限定，避免误匹配 Paris/Bristol/Island 等含 "is" 的名称
+		{CountryCode: "IS", CountryName: "冰岛", Pattern: `(?i)冰岛|Iceland|雷克雅未克|Reykjavik|🇮🇸|(?:^|[^a-zA-Z])(?-i:IS)(?:[^a-zA-Z]|$)`, Priority: 0, Enabled: true},
+
+		// 波罗的海地区
+		{CountryCode: "EE", CountryName: "爱沙尼亚", Pattern: "(?i)爱沙尼亚|EE|Estonia|塔林|Tallinn|🇪🇪", Priority: 0, Enabled: true},
+		{CountryCode: "LV", CountryName: "拉脱维亚", Pattern: "(?i)拉脱维亚|LV|Latvia|里加|Riga|🇱🇻", Priority: 0, Enabled: true},
+		{CountryCode: "LT", CountryName: "立陶宛", Pattern: "(?i)立陶宛|LT|Lithuania|维尔纽斯|Vilnius|🇱🇹", Priority: 0, Enabled: true},
 	}
 
 	addedCount := 0
