@@ -16,8 +16,13 @@ import (
 const (
 	bahamutProbeBodyLimit = 32 * 1024
 	bahamutTraceBodyLimit = 8 * 1024
-	bahamutDefaultTimeout = 15 * time.Second
-	bahamutRetryDeadline  = 50 * time.Second
+	// bahamutDefaultTimeout 与 runtime.go 全局默认对齐：解锁检测对慢节点不需要宽裕兜底，
+	// 慢节点即使解锁成功用户也不会选用，超时即判为不解锁是正确的产品语义。
+	bahamutDefaultTimeout = 5 * time.Second
+	// bahamutRetryDeadline 控制整体上界：仅给 token.php CDN 偶发 5xx 留 1 次额外重试机会，
+	// 不再做长时间兜底。最多 2 次请求 × 5s 超时 = 10s 上界。
+	bahamutRetryDeadline = 10 * time.Second
+	bahamutMaxAttempts   = 2
 	// bahamutAdID 是巴哈姆特 token.php 接口固定的广告位参数
 	bahamutAdID = "89422"
 	// bahamutLenientSn 是入口探针动画 SN：港澳台 IP 均可获取 token，通过即表示在巴哈姆特服务区
@@ -174,10 +179,11 @@ func evaluateBahamutRegion(rawBody string) string {
 
 // bahamutClient 构造独立 client 用于 session 管理。
 // Transport 复用 runtime（必须走节点代理），cookie jar 独立（维持 deviceid→token session）。
+// Timeout 优先采纳 runtime.Timeout（已对齐全局解锁检测语义），仅在缺失时回退到默认值。
 func bahamutClient(runtime UnlockRuntime) *http.Client {
 	jar, _ := cookiejar.New(nil)
 	timeout := runtime.Timeout
-	if timeout <= 0 || timeout < bahamutDefaultTimeout {
+	if timeout <= 0 {
 		timeout = bahamutDefaultTimeout
 	}
 	return &http.Client{
@@ -189,7 +195,8 @@ func bahamutClient(runtime UnlockRuntime) *http.Client {
 }
 
 // bahamutFetchBody 执行 GET 请求并返回受限的 body。
-// 重试 3 次（参考项目语义），遇到 no such host / timeout 立即停止。
+// 最多重试 1 次（仅为容忍 token.php CDN 偶发 5xx），整体受 bahamutRetryDeadline 约束。
+// 遇到 DNS/超时/连接拒绝/TLS 握手等明确不可恢复错误立即停止重试。
 func bahamutFetchBody(client *http.Client, target string, headers map[string]string, bodyLimit int64) ([]byte, error) {
 	if bodyLimit <= 0 {
 		bodyLimit = bahamutProbeBodyLimit
@@ -201,7 +208,7 @@ func bahamutFetchBody(client *http.Client, target string, headers map[string]str
 
 	var lastErr error
 	deadline := time.Now().Add(bahamutRetryDeadline)
-	for i := 0; i < 3; i++ {
+	for i := 0; i < bahamutMaxAttempts; i++ {
 		if time.Now().After(deadline) {
 			break
 		}
@@ -238,12 +245,30 @@ func bahamutFetchBodyOnce(client *http.Client, target string, headers map[string
 	return io.ReadAll(io.LimitReader(resp.Body, bodyLimit))
 }
 
+// bahamutShouldStopRetry 判断错误是否属于"重试也不会更好"的不可恢复类。
+// 仅 token.php 的 CDN 5xx 这类瞬时错误才值得重试，其余一律短路返回。
 func bahamutShouldStopRetry(err error) bool {
 	if err == nil {
 		return false
 	}
 	errText := strings.ToLower(err.Error())
-	return strings.Contains(errText, "no such host") || strings.Contains(errText, "timeout")
+	stopKeywords := []string{
+		"no such host",
+		"timeout",
+		"deadline exceeded",
+		"connection refused",
+		"connection reset",
+		"tls",
+		"x509",
+		"certificate",
+		"proxy",
+	}
+	for _, kw := range stopKeywords {
+		if strings.Contains(errText, kw) {
+			return true
+		}
+	}
+	return false
 }
 
 func bahamutTokenURL(sn, deviceID string) string {
