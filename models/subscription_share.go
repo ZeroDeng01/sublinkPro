@@ -9,6 +9,7 @@ import (
 	"sublink/cache"
 	"sublink/database"
 	"sublink/utils"
+	"sync"
 	"time"
 
 	"gorm.io/gorm"
@@ -320,13 +321,29 @@ func (s *SubscriptionShare) IsExpired() bool {
 	}
 }
 
+// accessRecordWG 跟踪在飞的异步访问统计写入，便于测试拆库前与服务优雅关闭时等待其完成。
+var accessRecordWG sync.WaitGroup
+
+// WaitForPendingAccessRecords 阻塞直到所有异步访问统计写入完成。
+// 测试在重置/关闭 database.DB 前调用；服务优雅关闭时亦可调用以避免丢失访问计数。
+func WaitForPendingAccessRecords() {
+	accessRecordWG.Wait()
+}
+
 // RecordAccess 记录一次访问，并使用数据库原子自增避免并发访问丢失计数。
 func (s *SubscriptionShare) RecordAccess() {
 	if s == nil || s.ID <= 0 {
 		return
 	}
 
-	if err := database.DB.Model(&SubscriptionShare{}).
+	// 只读取一次全局句柄：异步 goroutine 可能与测试/关闭流程并发，
+	// 若全局 database.DB 中途被重置为 nil，直接跳过，避免空指针解引用。
+	db := database.DB
+	if db == nil {
+		return
+	}
+
+	if err := db.Model(&SubscriptionShare{}).
 		Where("id = ?", s.ID).
 		Updates(map[string]any{
 			"access_count":   gorm.Expr("access_count + ?", 1),
@@ -337,7 +354,7 @@ func (s *SubscriptionShare) RecordAccess() {
 	}
 
 	var updated SubscriptionShare
-	if err := database.DB.First(&updated, s.ID).Error; err != nil {
+	if err := db.First(&updated, s.ID).Error; err != nil {
 		utils.Warn("刷新订阅分享访问缓存失败: %v", err)
 		return
 	}
@@ -352,7 +369,9 @@ func (s *SubscriptionShare) RecordAccessAsync() {
 	}
 
 	shareID := s.ID
+	accessRecordWG.Add(1)
 	go func() {
+		defer accessRecordWG.Done()
 		share := SubscriptionShare{ID: shareID}
 		share.RecordAccess()
 	}()

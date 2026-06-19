@@ -40,6 +40,8 @@ func setupSubscriptionShareTestDB(t *testing.T) {
 	resetSubscriptionShareCacheForTest()
 
 	t.Cleanup(func() {
+		// 等待在飞的异步访问统计写入完成，避免其在拆库/重置缓存后并发读写全局状态。
+		WaitForPendingAccessRecords()
 		database.DB = oldDB
 		database.Dialect = oldDialect
 		database.IsInitialized = oldInitialized
