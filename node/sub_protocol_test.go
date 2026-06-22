@@ -171,3 +171,31 @@ func proxyNames(proxies []protocol.Proxy) []string {
 	}
 	return names
 }
+
+// TestApplyAirportDeduplicationDistinguishesHTTPAndHTTPS 验证机场协议去重能区分 HTTP/HTTPS。
+// 回归 Issue #232 同源问题：HTTPS 节点的 proxy.Type 为 "http"，若直接用 proxy.Type 作为
+// 协议名，会匹配不到按 "https" 配置的去重规则，导致 HTTPS 节点无法去重。
+func TestApplyAirportDeduplicationDistinguishesHTTPAndHTTPS(t *testing.T) {
+	// 每组两个节点字段完全相同（仅名称不同），按 Server+Port 去重后各应只剩 1 个。
+	proxies := []protocol.Proxy{
+		{Name: "http-a", Type: "http", Server: "plain.example.com", Port: 8080, Tls: false},
+		{Name: "http-b", Type: "http", Server: "plain.example.com", Port: 8080, Tls: false},
+		{Name: "https-a", Type: "http", Server: "secure.example.com", Port: 8443, Tls: true},
+		{Name: "https-b", Type: "http", Server: "secure.example.com", Port: 8443, Tls: true},
+	}
+
+	airport := &models.Airport{
+		DeduplicationRule: `{"mode":"protocol","protocolRules":{"http":["Server","Port"],"https":["Server","Port"]}}`,
+	}
+
+	got := applyAirportDeduplication(airport, proxies)
+
+	// 期望：HTTP 组去重为 1 个，HTTPS 组去重为 1 个，共 2 个。
+	gotProtoCount := map[string]int{}
+	for _, p := range got {
+		gotProtoCount[proxyProtocolName(p)]++
+	}
+	if gotProtoCount["http"] != 1 || gotProtoCount["https"] != 1 {
+		t.Fatalf("去重结果 = %v (按协议统计 %v), 期望 http=1 https=1", proxyNames(got), gotProtoCount)
+	}
+}

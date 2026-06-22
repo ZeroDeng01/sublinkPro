@@ -1347,7 +1347,7 @@ func applyAirportDeduplication(airport *models.Airport, proxys []protocol.Proxy)
 	var result []protocol.Proxy
 
 	for _, proxy := range proxys {
-		protoType := strings.ToLower(proxy.Type)
+		protoType := proxyProtocolName(proxy)
 		fields, exists := config.ProtocolRules[protoType]
 		if !exists || len(fields) == 0 {
 			// 该协议未配置去重规则，保留节点
