@@ -2750,10 +2750,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"apexcharts@npm:5.15.0":
-  version: 5.15.0
-  resolution: "apexcharts@npm:5.15.0"
-  checksum: 10c0/3d14d93d559df4e0c51e8fd2e392c9b59a6d1f92ea0434a88977c85fde6fffe6aa266cf278bfb9755ec6461e37f6ce6b150870e6ca764269fb80ce80956d9367
+"apexcharts@npm:5.15.2":
+  version: 5.15.2
+  resolution: "apexcharts@npm:5.15.2"
+  checksum: 10c0/276a666eaa417080a8d073ff417c56f2be1cd9459cf38062b68ea4819cccdee27a483629e9ef4af35d5e478a3f010533aadf552b4c04c8bea821ea7aa04fc9fd
   languageName: node
   linkType: hard
 
@@ -6409,21 +6409,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-router-dom@npm:7.17.0":
-  version: 7.17.0
-  resolution: "react-router-dom@npm:7.17.0"
+"react-router-dom@npm:7.18.0":
+  version: 7.18.0
+  resolution: "react-router-dom@npm:7.18.0"
   dependencies:
-    react-router: "npm:7.17.0"
+    react-router: "npm:7.18.0"
   peerDependencies:
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10c0/60fc4022bccf2fb17b0d8ae8e7c4bda866ca9bf2d45edf0bcbefc854e97fa8971a589b6b77b984a19abecb718faffde357c829d9a22a7913790d608cc7433714
+  checksum: 10c0/035303f4d14680bf5356ab20e40889fc7bac281f59399c34b8fd0ed884e2f8e9e1b17ce7e668cad5e8bc1b428fe32a33d97509947568a23f4271e0392501304c
   languageName: node
   linkType: hard
 
-"react-router@npm:7.17.0":
-  version: 7.17.0
-  resolution: "react-router@npm:7.17.0"
+"react-router@npm:7.18.0":
+  version: 7.18.0
+  resolution: "react-router@npm:7.18.0"
   dependencies:
     cookie: "npm:^1.0.1"
     set-cookie-parser: "npm:^2.6.0"
@@ -6433,7 +6433,7 @@ __metadata:
   peerDependenciesMeta:
     react-dom:
       optional: true
-  checksum: 10c0/dfa9b0182edba6fab14ef5ac297b292068e71e05bf7e07c6b45fe073d77002089e8e164542364232a8bbb0c7d3ec47b57b78db3984c4383e12308f2d31ad404a
+  checksum: 10c0/7ab6c6dc7efdc14092486d63f55b04f9e3ef269fdec8c695a513f69e55d02a9beab8f637a13396952815d85accf16e7db2d65d9cbb68def13c349be82ceb5aee
   languageName: node
   linkType: hard
 
@@ -7275,7 +7275,7 @@ __metadata:
     "@types/react": "npm:19.2.17"
     "@vitejs/plugin-react": "npm:5.2.0"
     "@xyflow/react": "npm:^12.11.0"
-    apexcharts: "npm:5.15.0"
+    apexcharts: "npm:5.15.2"
     axios: "npm:1.18.0"
     echarts: "npm:^6.0.0"
     eslint: "npm:9.39.4"
@@ -7300,8 +7300,8 @@ __metadata:
     react-dom: "npm:19.2.7"
     react-i18next: "npm:^17.0.8"
     react-markdown: "npm:^10.1.0"
-    react-router: "npm:7.17.0"
-    react-router-dom: "npm:7.17.0"
+    react-router: "npm:7.18.0"
+    react-router-dom: "npm:7.18.0"
     sass: "npm:1.101.0"
     simplebar-react: "npm:3.3.2"
     swr: "npm:2.4.1"
