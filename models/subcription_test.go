@@ -11,6 +11,62 @@ import (
 	"gorm.io/gorm"
 )
 
+func TestSubcriptionApplyFiltersDistinguishesHTTPAndHTTPSProtocols(t *testing.T) {
+	nodes := []Node{
+		{Name: "plain-http", Link: "http://user:pass@example.com:8080#plain-http", Protocol: "http"},
+		{Name: "secure-https", Link: "https://user:pass@example.com:8443#secure-https", Protocol: "https"},
+	}
+
+	tests := []struct {
+		name string
+		sub  Subcription
+		want []string
+	}{
+		{
+			name: "http whitelist keeps only HTTP nodes",
+			sub:  Subcription{ProtocolWhitelist: "http", Nodes: append([]Node(nil), nodes...)},
+			want: []string{"plain-http"},
+		},
+		{
+			name: "https whitelist keeps only HTTPS nodes",
+			sub:  Subcription{ProtocolWhitelist: "https", Nodes: append([]Node(nil), nodes...)},
+			want: []string{"secure-https"},
+		},
+		{
+			name: "http blacklist removes only HTTP nodes",
+			sub:  Subcription{ProtocolBlacklist: "http", Nodes: append([]Node(nil), nodes...)},
+			want: []string{"secure-https"},
+		},
+		{
+			name: "https blacklist removes only HTTPS nodes",
+			sub:  Subcription{ProtocolBlacklist: "https", Nodes: append([]Node(nil), nodes...)},
+			want: []string{"plain-http"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.sub.ApplyFilters(tt.sub.Nodes)
+			if len(got) != len(tt.want) {
+				t.Fatalf("filtered nodes = %v, want names %v", nodeNames(got), tt.want)
+			}
+			for i, node := range got {
+				if node.Name != tt.want[i] {
+					t.Fatalf("filtered nodes = %v, want names %v", nodeNames(got), tt.want)
+				}
+			}
+		})
+	}
+}
+
+func nodeNames(nodes []Node) []string {
+	names := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		names = append(names, node.Name)
+	}
+	return names
+}
+
 func resetSubcriptionCacheForTest() {
 	subcriptionCache = cache.NewMapCache(func(s Subcription) int { return s.ID })
 	subcriptionCache.AddIndex("name", func(s Subcription) string { return s.Name })

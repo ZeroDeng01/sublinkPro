@@ -514,7 +514,7 @@ func NodeAdd(c *gin.Context) {
 				n.LinkAddress = proxy.Server + ":" + n.LinkPort
 				n.DialerProxyName = dialerProxyName
 				n.Group = group
-				n.Protocol = proxy.Type
+				n.Protocol = protocol.GetProtocolFromLink(proxyLink)
 
 				// 生成 ContentHash
 				contentHash := protocol.GenerateProxyContentHash(proxy)

@@ -949,7 +949,7 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 		if airport != nil {
 			Node.Group = airport.Group
 		}
-		Node.Protocol = proxy.Type
+		Node.Protocol = protocol.GetProtocolFromLink(link)
 		Node.ContentHash = contentHash
 
 		// 国家自动填充（新节点）
@@ -1268,7 +1268,7 @@ func applyAirportNodeFilter(airport *models.Airport, proxys []protocol.Proxy) []
 	result := make([]protocol.Proxy, 0, len(proxys))
 	for _, proxy := range proxys {
 		nodeName := strings.TrimSpace(proxy.Name)
-		nodeProto := strings.ToLower(proxy.Type)
+		nodeProto := proxyProtocolName(proxy)
 
 		// 1. 名称黑名单检查（优先级最高）
 		if hasNameBlacklist && utils.MatchesNodeNameFilter(airport.NodeNameBlacklist, nodeName) {
@@ -1294,6 +1294,14 @@ func applyAirportNodeFilter(airport *models.Airport, proxys []protocol.Proxy) []
 	}
 
 	return result
+}
+
+func proxyProtocolName(proxy protocol.Proxy) string {
+	proxyType := strings.ToLower(strings.TrimSpace(proxy.Type))
+	if proxyType == "http" && proxy.Tls {
+		return "https"
+	}
+	return proxyType
 }
 
 // applyAirportNodeRename 应用机场节点重命名规则

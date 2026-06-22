@@ -70,6 +70,49 @@ func migrateLegacyUserAISettingsToSystemSettings() error {
 	return nil
 }
 
+func repairHTTPHTTPSNodeProtocolFromLink(db *gorm.DB) error {
+	type nodeProtocolRow struct {
+		ID       int
+		Link     string
+		Protocol string
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		var nodes []nodeProtocolRow
+		if err := tx.Model(&Node{}).
+			Select("id", "link", "protocol").
+			Where("link LIKE ? OR link LIKE ?", "http://%", "https://%").
+			Find(&nodes).Error; err != nil {
+			return fmt.Errorf("查询 HTTP/HTTPS 节点失败: %w", err)
+		}
+
+		protoGroups := make(map[string][]int)
+		for _, node := range nodes {
+			wantProtocol := protocol.GetProtocolFromLink(node.Link)
+			if wantProtocol != "http" && wantProtocol != "https" {
+				continue
+			}
+			if strings.EqualFold(strings.TrimSpace(node.Protocol), wantProtocol) {
+				continue
+			}
+			protoGroups[wantProtocol] = append(protoGroups[wantProtocol], node.ID)
+		}
+
+		updatedCount := 0
+		for protoType, ids := range protoGroups {
+			if err := tx.Model(&Node{}).Where("id IN ?", ids).Update("protocol", protoType).Error; err != nil {
+				return fmt.Errorf("批量修复协议类型 %s 失败: %w", protoType, err)
+			}
+			updatedCount += len(ids)
+		}
+
+		if updatedCount > 0 {
+			utils.Info("已修复 %d 个 HTTP/HTTPS 节点协议字段", updatedCount)
+		}
+		return nil
+	})
+}
+
 // RunMigrations 执行所有数据库迁移
 // 此函数必须在 database.Init() 之后调用
 func RunMigrations() error {
@@ -258,6 +301,12 @@ func RunMigrations() error {
 		return seedDefaultCountryRules(db)
 	}); err != nil {
 		utils.Error("执行迁移 0035_seed_default_country_rules 失败: %v", err)
+	}
+
+	if err := database.RunCustomMigration("0036_repair_http_https_node_protocol", func() error {
+		return repairHTTPHTTPSNodeProtocolFromLink(db)
+	}); err != nil {
+		utils.Error("执行迁移 0036_repair_http_https_node_protocol 失败: %v", err)
 	}
 
 	if err := database.RunCustomMigration("0024_migrate_legacy_webhook_settings", func() error {
