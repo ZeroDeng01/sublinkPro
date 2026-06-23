@@ -2098,7 +2098,10 @@
         "distributionSummary": "{{countries}} 个国家/地区 · {{ips}} 个 IP",
         "countryDistribution": "落地国家分布",
         "countryCount": "{{count}} 个国家/地区",
-        "countryDistributionMeta": "{{nodes}} 节点 · {{ips}} IP · {{percent}}%",
+        "sortByNodes": "按节点",
+        "sortByIps": "按 IP",
+        "countryDistributionMetaByNodes": "{{nodes}} 节点 · {{ips}} IP · {{percent}}%",
+        "countryDistributionMetaByIps": "{{ips}} IP · {{nodes}} 节点 · {{percent}}%",
         "noCountryData": "暂无国家/地区数据"
       }
     },

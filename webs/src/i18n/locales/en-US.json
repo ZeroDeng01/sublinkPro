@@ -2098,7 +2098,10 @@
         "distributionSummary": "{{countries}} countries/regions · {{ips}} IPs",
         "countryDistribution": "Landing country distribution",
         "countryCount": "{{count}} countries/regions",
-        "countryDistributionMeta": "{{nodes}} nodes · {{ips}} IPs · {{percent}}%",
+        "sortByNodes": "By nodes",
+        "sortByIps": "By IPs",
+        "countryDistributionMetaByNodes": "{{nodes}} nodes · {{ips}} IPs · {{percent}}%",
+        "countryDistributionMetaByIps": "{{ips}} IPs · {{nodes}} nodes · {{percent}}%",
         "noCountryData": "No country/region data"
       }
     },
