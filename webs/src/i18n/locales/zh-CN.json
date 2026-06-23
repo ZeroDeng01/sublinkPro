@@ -2093,7 +2093,13 @@
         "delayPassed": "延迟通过",
         "speedPassed": "速度通过",
         "lowestDelay": "最低延迟",
-        "highestSpeed": "最高速度"
+        "highestSpeed": "最高速度",
+        "distributionTitle": "节点分布",
+        "distributionSummary": "{{countries}} 个国家/地区 · {{ips}} 个 IP",
+        "countryDistribution": "落地国家分布",
+        "countryCount": "{{count}} 个国家/地区",
+        "countryDistributionMeta": "{{nodes}} 节点 · {{ips}} IP · {{percent}}%",
+        "noCountryData": "暂无国家/地区数据"
       }
     },
     "nodeTagFilter": {

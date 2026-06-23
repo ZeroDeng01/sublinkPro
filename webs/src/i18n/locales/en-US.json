@@ -2093,7 +2093,13 @@
         "delayPassed": "Delay passed",
         "speedPassed": "Speed passed",
         "lowestDelay": "Lowest delay",
-        "highestSpeed": "Highest speed"
+        "highestSpeed": "Highest speed",
+        "distributionTitle": "Node distribution",
+        "distributionSummary": "{{countries}} countries/regions · {{ips}} IPs",
+        "countryDistribution": "Landing country distribution",
+        "countryCount": "{{count}} countries/regions",
+        "countryDistributionMeta": "{{nodes}} nodes · {{ips}} IPs · {{percent}}%",
+        "noCountryData": "No country/region data"
       }
     },
     "nodeTagFilter": {
