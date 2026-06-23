@@ -628,10 +628,14 @@
       "title": "AI 助手设置",
       "subheader": "配置模板编辑器使用的系统级 AI 助手。",
       "alerts": {
-        "systemConfig": "模板编辑器中的 AI 助手会使用这里的系统级配置。当前仅支持提供“/responses endpoint”的 AI 服务。"
+        "systemConfig": "模板编辑器中的 AI 助手会使用这里的系统级配置。可选择 Responses API 或标准 Chat Completions API。"
       },
       "enableTitle": "启用系统 AI 助手",
-      "providerType": "当前接口类型：Responses API（仅支持 `/responses` endpoint）。",
+      "providerType": "当前接口类型：{{type}}。",
+      "requestTypes": {
+        "responses": "Responses API（/responses）",
+        "chatCompletions": "Chat Completions API（/chat/completions）"
+      },
       "status": {
         "configured": "已保存连接参数",
         "notConfigured": "尚未完成配置",
@@ -640,7 +644,9 @@
         "hidden": "已隐藏"
       },
       "fields": {
-        "baseUrlHelper": "需为可用的 Responses API 根地址，并且服务端必须支持 `/responses` endpoint。",
+        "requestType": "接口类型",
+        "requestTypeHelper": "根据服务端能力选择请求接口；保存后模板 AI 会按此设置调用。",
+        "baseUrlHelper": "需为可用的 AI API 根地址，系统会按所选接口类型拼接 `/responses` 或 `/chat/completions`。",
         "replaceApiKey": "替换 API Key（留空则保留已保存密钥）",
         "model": "模型",
         "modelHelperFetched": "可从已获取模型中选择，也可手动输入。",
@@ -2961,6 +2967,17 @@
         "output": "输出",
         "cache": "缓存"
       },
+      "progress": {
+        "starting": "正在启动 AI 编辑会话...",
+        "sessionCreated": "编辑会话已创建，正在生成操作...",
+        "streaming": "正在根据 AI 输出生成操作...",
+        "operationsReady": "操作已生成，正在构建服务端预览...",
+        "validating": "正在校验服务端预览...",
+        "warning": "预览已生成，请先检查警告。",
+        "previewReady": "服务端预览已可供检查。",
+        "completed": "预览生成已完成。",
+        "accepted": "预览已接受到编辑器，请确认后保存。"
+      },
       "status": {
         "generating": "正在基于当前编辑器内容生成草稿。",
         "outdated": "当前内容或配置已变化，请重新生成新的草稿。",
@@ -2981,6 +2998,7 @@
         "canRevert": "可回退上次接受",
         "unsavedTemplate": "未保存模板"
       },
+      "moreWarnings": "+{{count}} 条更多警告",
       "messages": {
         "promptRequired": "请输入 AI 指令",
         "generated": "AI 草稿已生成，可切换并停留在并排对比模式",
@@ -2991,6 +3009,8 @@
         "alreadyApplied": "当前编辑器内容已经与 AI 候选结果一致",
         "outdatedAccept": "模板内容或配置已变化，请重新生成或重新校验候选内容后再接受到编辑器",
         "accepted": "AI 草稿已写入编辑器，可继续编辑或直接保存",
+        "noPreviewToDiscard": "没有可丢弃的 AI 预览。",
+        "discarded": "AI 预览已丢弃，编辑器内容未改变。",
         "noRevert": "没有可回退的本地接受记录",
         "reverted": "已恢复最近一次接受 AI 候选前的编辑器内容",
         "diffSaveBlocked": "当前处于 AI 对比模式，请先返回编辑模式后再保存"
@@ -2998,8 +3018,31 @@
       "aria": {
         "expandCommand": "展开 AI 指令工具条",
         "collapseCommand": "收起 AI 指令工具条",
+        "acceptPreview": "将 AI 预览接受到编辑器",
+        "discardPreview": "丢弃 AI 预览",
         "collapseDisabledPrompt": "收起 AI 助手启用提示",
         "viewDisabledPrompt": "查看 AI 助手启用提示"
+      },
+      "errorCodes": {
+        "AI_EDIT_STALE_BASE": "磁盘上的模板内容已变化，请重新生成预览后再接受。",
+        "AI_EDIT_SESSION_EXPIRED": "AI 编辑会话已过期，请重新生成预览。",
+        "AI_EDIT_SESSION_NOT_FOUND": "未找到 AI 编辑会话，请重新生成预览。",
+        "AI_EDIT_SESSION_LIMIT": "活跃的 AI 编辑会话过多，请丢弃旧预览后重试。",
+        "AI_EDIT_INVALID_OPERATION": "AI 编辑操作无效。",
+        "AI_EDIT_EMPTY_OPERATIONS": "AI 未返回任何编辑操作。",
+        "AI_EDIT_MALFORMED_OUTPUT": "AI 返回内容格式错误，无法解析。",
+        "AI_EDIT_LEGACY_OUTPUT": "AI 返回了旧版整篇模板内容，而不是编辑操作。",
+        "AI_EDIT_LEGACY_REMOVED": "旧版整篇模板 AI 接口已移除，请使用编辑会话预览。",
+        "AI_EDIT_VALIDATION_FAILED": "预览未通过模板校验，请查看校验详情后重新生成。",
+        "PATCH_NO_MATCH": "AI 编辑操作未能在当前模板中找到目标文本。",
+        "PATCH_AMBIGUOUS_MATCH": "AI 编辑操作匹配到重复模板文本，请用更具体的指令重新生成。",
+        "PATCH_EMPTY_TARGET": "AI 编辑操作的目标为空。",
+        "PATCH_NOOP": "AI 编辑操作不会改变模板。",
+        "PATCH_INVALID_INSERT_POSITION": "AI 插入操作使用了无效位置。",
+        "PATCH_INVALID_MATCH_MODE": "AI 编辑操作使用了不支持的匹配模式。全量匹配模式仅支持替换和删除。"
+      },
+      "warningCodes": {
+        "AI_EDIT_AMBIGUOUS_TARGET": "请求的编辑目标不明确，请仔细检查生成的操作。"
       }
     }
   },

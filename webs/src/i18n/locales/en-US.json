@@ -628,10 +628,14 @@
       "title": "AI Assistant Settings",
       "subheader": "Configure the system AI assistant used by the template editor.",
       "alerts": {
-        "systemConfig": "The template editor's AI assistant uses this system-level configuration. Currently only AI services that provide a /responses endpoint are supported."
+        "systemConfig": "The template editor's AI assistant uses this system-level configuration. You can choose Responses API or the standard Chat Completions API."
       },
       "enableTitle": "Enable system AI assistant",
-      "providerType": "Current interface type: Responses API (only `/responses` endpoint is supported).",
+      "providerType": "Current interface type: {{type}}.",
+      "requestTypes": {
+        "responses": "Responses API (/responses)",
+        "chatCompletions": "Chat Completions API (/chat/completions)"
+      },
       "status": {
         "configured": "Connection parameters saved",
         "notConfigured": "Configuration incomplete",
@@ -640,7 +644,9 @@
         "hidden": "Hidden"
       },
       "fields": {
-        "baseUrlHelper": "Must be a usable Responses API base URL, and the server must support the `/responses` endpoint.",
+        "requestType": "Interface type",
+        "requestTypeHelper": "Choose the request interface supported by your service. Template AI uses this setting after saving.",
+        "baseUrlHelper": "Must be a usable AI API base URL. The server appends `/responses` or `/chat/completions` based on the selected interface type.",
         "replaceApiKey": "Replace API Key (leave blank to keep the saved key)",
         "model": "Model",
         "modelHelperFetched": "Choose from fetched models or enter one manually.",
@@ -2961,6 +2967,17 @@
         "output": "Output",
         "cache": "Cache"
       },
+      "progress": {
+        "starting": "Starting AI edit session...",
+        "sessionCreated": "Edit session created. Generating operations...",
+        "streaming": "Generating operations from AI output...",
+        "operationsReady": "Operations ready. Building server preview...",
+        "validating": "Validating server preview...",
+        "warning": "Preview is ready with warnings to review.",
+        "previewReady": "Server preview is ready for review.",
+        "completed": "Preview generation completed.",
+        "accepted": "Preview accepted into the editor. Save when ready."
+      },
       "status": {
         "generating": "Generating a draft based on the current editor content.",
         "outdated": "Current content or configuration changed. Generate a new draft again.",
@@ -2981,6 +2998,7 @@
         "canRevert": "Can revert last accept",
         "unsavedTemplate": "Unsaved template"
       },
+      "moreWarnings": "+{{count}} more warning(s)",
       "messages": {
         "promptRequired": "Please enter an AI instruction",
         "generated": "AI draft generated. You can switch to side-by-side compare mode.",
@@ -2991,6 +3009,8 @@
         "alreadyApplied": "The current editor content already matches the AI candidate",
         "outdatedAccept": "Template content or configuration changed. Regenerate or revalidate the candidate before accepting it into the editor.",
         "accepted": "AI draft written to the editor. You can keep editing or save directly.",
+        "noPreviewToDiscard": "No AI preview to discard.",
+        "discarded": "AI preview discarded. Editor content was not changed.",
         "noRevert": "No local accept snapshot to revert",
         "reverted": "Restored the editor content from before the most recent AI candidate accept",
         "diffSaveBlocked": "Currently in AI compare mode. Return to edit mode before saving."
@@ -2998,8 +3018,31 @@
       "aria": {
         "expandCommand": "Expand AI instruction toolbar",
         "collapseCommand": "Collapse AI instruction toolbar",
+        "acceptPreview": "Accept AI preview into editor",
+        "discardPreview": "Discard AI preview",
         "collapseDisabledPrompt": "Collapse AI Assistant enablement prompt",
         "viewDisabledPrompt": "View AI Assistant enablement prompt"
+      },
+      "errorCodes": {
+        "AI_EDIT_STALE_BASE": "Template content changed on disk. Regenerate the preview before accepting it.",
+        "AI_EDIT_SESSION_EXPIRED": "The AI edit session expired. Generate a new preview.",
+        "AI_EDIT_SESSION_NOT_FOUND": "The AI edit session was not found. Generate a new preview.",
+        "AI_EDIT_SESSION_LIMIT": "Too many active AI edit sessions. Discard an old preview and try again.",
+        "AI_EDIT_INVALID_OPERATION": "The AI edit operation is invalid.",
+        "AI_EDIT_EMPTY_OPERATIONS": "The AI returned no edit operations.",
+        "AI_EDIT_MALFORMED_OUTPUT": "The AI returned malformed output that could not be parsed.",
+        "AI_EDIT_LEGACY_OUTPUT": "The AI returned legacy full-template output instead of edit operations.",
+        "AI_EDIT_LEGACY_REMOVED": "Legacy full-template AI endpoints have been removed. Use edit-session preview instead.",
+        "AI_EDIT_VALIDATION_FAILED": "The preview failed template validation. Regenerate after reviewing the validation details.",
+        "PATCH_NO_MATCH": "An AI edit operation could not find its target text in the current template.",
+        "PATCH_AMBIGUOUS_MATCH": "An AI edit operation matched duplicate template text. Regenerate with a more specific instruction.",
+        "PATCH_EMPTY_TARGET": "An AI edit operation had an empty target.",
+        "PATCH_NOOP": "An AI edit operation would not change the template.",
+        "PATCH_INVALID_INSERT_POSITION": "An AI insert operation used an invalid position.",
+        "PATCH_INVALID_MATCH_MODE": "An AI edit operation used an unsupported match mode. All-match mode is only supported for replace and delete."
+      },
+      "warningCodes": {
+        "AI_EDIT_AMBIGUOUS_TARGET": "The requested edit target was ambiguous. Review the generated operations carefully."
       }
     }
   },

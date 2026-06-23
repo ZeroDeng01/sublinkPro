@@ -12,6 +12,7 @@ import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Grid from '@mui/material/Grid';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
@@ -25,6 +26,11 @@ import ScienceIcon from '@mui/icons-material/Science';
 import { getAISettings, listAIModels, testAISettings, updateAISettings } from 'api/settings';
 
 const DEFAULT_AI_MAX_TOKENS = 400000;
+
+const AI_REQUEST_TYPES = [
+  { value: 'responses', labelKey: 'settings.aiAssistantPanel.requestTypes.responses' },
+  { value: 'chat_completions', labelKey: 'settings.aiAssistantPanel.requestTypes.chatCompletions' }
+];
 
 const dedupeModelOptions = (models = [], currentModel = '') => {
   const seen = new Set();
@@ -68,6 +74,7 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
     hasKey: false,
     configured: false,
     providerType: 'openai_compatible',
+    requestType: 'responses',
     temperature: 0.2,
     maxTokens: DEFAULT_AI_MAX_TOKENS
   });
@@ -90,6 +97,7 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
       hasKey: Boolean(data.hasKey),
       configured: Boolean(data.configured),
       providerType: data.providerType || 'openai_compatible',
+      requestType: data.requestType || 'responses',
       temperature: data.temperature ?? 0.2,
       maxTokens: data.maxTokens ?? DEFAULT_AI_MAX_TOKENS
     }));
@@ -147,6 +155,7 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
     enabled: aiForm.enabled,
     baseUrl: aiForm.baseUrl.trim(),
     model: aiForm.model.trim(),
+    requestType: aiForm.requestType,
     apiKey: aiForm.apiKey.trim(),
     temperature: aiForm.temperature === '' ? 0.2 : Number(aiForm.temperature),
     maxTokens: aiForm.maxTokens === '' ? 0 : Number(aiForm.maxTokens),
@@ -286,6 +295,9 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
   };
 
   const aiUsageText = formatAIUsage(aiTestResult?.usage);
+  const selectedRequestTypeLabel = t(
+    AI_REQUEST_TYPES.find((type) => type.value === aiForm.requestType)?.labelKey || 'settings.aiAssistantPanel.requestTypes.responses'
+  );
 
   return (
     <Card variant="outlined">
@@ -315,9 +327,24 @@ export default function AIAssistantSettings({ showMessage, loading, setLoading }
                 <Box>
                   <Typography variant="subtitle2">{t('settings.aiAssistantPanel.enableTitle')}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {t('settings.aiAssistantPanel.providerType')}
+                    {t('settings.aiAssistantPanel.providerType', { type: selectedRequestTypeLabel })}
                   </Typography>
                 </Box>
+
+                <TextField
+                  select
+                  fullWidth
+                  label={t('settings.aiAssistantPanel.fields.requestType')}
+                  value={aiForm.requestType}
+                  onChange={(e) => setAIField('requestType', e.target.value)}
+                  helperText={t('settings.aiAssistantPanel.fields.requestTypeHelper')}
+                >
+                  {AI_REQUEST_TYPES.map((type) => (
+                    <MenuItem key={type.value} value={type.value}>
+                      {t(type.labelKey)}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                   <Chip

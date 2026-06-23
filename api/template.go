@@ -2,6 +2,7 @@ package api
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,9 +14,9 @@ import (
 	"sublink/cache"
 	"sublink/database"
 	"sublink/models"
-	"sublink/services"
 	"sublink/services/ai"
 	"sublink/utils"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,6 +30,10 @@ type Temp struct {
 	ProxyLink        string `json:"proxyLink"`
 	EnableIncludeAll bool   `json:"enableIncludeAll"`
 	CreateDate       string `json:"create_date"`
+}
+
+type TemplateEditSessionAcceptRequest struct {
+	CurrentText string `json:"currentText"`
 }
 
 // 定义允许操作的基础目录
@@ -575,27 +580,52 @@ type TemplateAIGenerateRequest struct {
 	EnableIncludeAll bool   `json:"enableIncludeAll"`
 }
 
-type TemplateAIValidateRequest struct {
-	Filename      string `json:"filename"`
-	Category      string `json:"category"`
-	OriginalText  string `json:"originalText"`
-	CandidateText string `json:"candidateText"`
-	RuleSource    string `json:"ruleSource"`
+type templateEditSessionPayload struct {
+	SessionID          string                       `json:"sessionId"`
+	Status             ai.TemplateEditSessionStatus `json:"status"`
+	Filename           string                       `json:"filename,omitempty"`
+	Category           string                       `json:"category,omitempty"`
+	BaseHash           string                       `json:"baseHash"`
+	CandidateHash      string                       `json:"candidateHash"`
+	CandidateText      string                       `json:"candidateText"`
+	Operations         []ai.TemplateEditOperation   `json:"operations"`
+	Validation         ai.ValidationResult          `json:"validation"`
+	WarningFingerprint string                       `json:"warningFingerprint"`
+	CreatedAt          any                          `json:"createdAt,omitempty"`
+	ExpiresAt          any                          `json:"expiresAt"`
+	LastError          string                       `json:"lastError,omitempty"`
 }
 
-type TemplateAIApplyRequest struct {
-	Filename         string `json:"filename"`
-	OldName          string `json:"oldName"`
-	Category         string `json:"category"`
-	CandidateText    string `json:"candidateText"`
-	RevisionHash     string `json:"revisionHash"`
-	RuleSource       string `json:"ruleSource"`
-	UseProxy         bool   `json:"useProxy"`
-	ProxyLink        string `json:"proxyLink"`
-	EnableIncludeAll bool   `json:"enableIncludeAll"`
+var templateEditSessionCleanupStarter = startTemplateEditSessionCleanup
+
+var templateEditSessions = newTemplateEditSessionStoreRuntime()
+
+func newTemplateEditSessionStoreRuntime() *ai.TemplateEditSessionStore {
+	store := newTemplateEditSessionStoreFromEnv()
+	templateEditSessionCleanupStarter(store)
+	return store
 }
 
-func GenerateTemplateAICandidate(c *gin.Context) {
+func startTemplateEditSessionCleanup(store *ai.TemplateEditSessionStore) {
+	go store.StartCleanup(context.Background())
+}
+
+func newTemplateEditSessionStoreFromEnv() *ai.TemplateEditSessionStore {
+	options := []ai.TemplateEditSessionStoreOption{}
+	if ai.IsTemplateEditMockProviderAllowed() {
+		if ttlSeconds, err := strconv.Atoi(strings.TrimSpace(os.Getenv("SUBLINK_TEMPLATE_EDIT_SESSION_TTL_SECONDS"))); err == nil && ttlSeconds > 0 && ttlSeconds <= 3600 {
+			options = append(options, ai.WithTemplateEditSessionTTL(time.Duration(ttlSeconds)*time.Second))
+		}
+	}
+	return ai.NewTemplateEditSessionStore(options...)
+}
+
+const (
+	templateEditLegacyRemovedCode = "AI_EDIT_LEGACY_REMOVED"
+	templateEditStaleBaseCode     = "AI_EDIT_STALE_BASE"
+)
+
+func StartTemplateAIEditSessionStream(c *gin.Context) {
 	var req TemplateAIGenerateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithMsg(c, "参数错误: "+err.Error())
@@ -612,42 +642,22 @@ func GenerateTemplateAICandidate(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := ai.GenerateCandidate(c.Request.Context(), user, ai.GenerateRequest{
-		Filename:         req.Filename,
-		Category:         req.Category,
-		CurrentText:      req.CurrentText,
-		UserPrompt:       req.UserPrompt,
-		RuleSource:       req.RuleSource,
-		UseProxy:         req.UseProxy,
-		ProxyLink:        req.ProxyLink,
-		EnableIncludeAll: req.EnableIncludeAll,
+	ownerKey := ai.TemplateEditSessionOwnerKey(user)
+	if ownerKey == "" {
+		utils.FailWithData(c, "无法确定当前用户", gin.H{"code": string(ai.TemplateEditInvalidOperation), "message": "template edit session requires an owner"})
+		return
+	}
+	baseHash := ai.BuildRevisionHash(req.CurrentText)
+	session, err := templateEditSessions.Create(ai.TemplateEditSessionCreateInput{
+		OwnerKey: ownerKey,
+		Filename: req.Filename,
+		Category: req.Category,
+		BaseHash: baseHash,
+		BaseText: req.CurrentText,
+		Status:   ai.TemplateEditSessionCreated,
 	})
 	if err != nil {
-		utils.FailWithMsg(c, "AI 生成失败: "+err.Error())
-		return
-	}
-	usedBy, err := getTemplateUsageSubscriptions(req.Filename)
-	if err == nil {
-		result.Validation.Subscriptions = usedBy
-	}
-	utils.OkDetailed(c, "AI 生成成功", result)
-}
-
-func GenerateTemplateAICandidateStream(c *gin.Context) {
-	var req TemplateAIGenerateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误: "+err.Error())
-		return
-	}
-	if strings.TrimSpace(req.Category) == "" {
-		req.Category = "clash"
-	}
-	if strings.TrimSpace(req.UserPrompt) == "" {
-		utils.FailWithMsg(c, "请输入 AI 指令")
-		return
-	}
-	user, ok := requireCurrentUser(c)
-	if !ok {
+		respondTemplateEditError(c, err)
 		return
 	}
 
@@ -678,6 +688,18 @@ func GenerateTemplateAICandidateStream(c *gin.Context) {
 		flusher.Flush()
 		return nil
 	}
+	writeErrorEvent := func(err error) {
+		_ = writeEvent("template.edit.error", templateEditErrorPayload(err))
+	}
+
+	_ = writeEvent("template.edit.session.created", templateEditSessionResponse(session))
+	if _, err := templateEditSessions.UpdateForOwner(ownerKey, session.SessionID, func(current *ai.TemplateEditSession) error {
+		current.Status = ai.TemplateEditSessionStreaming
+		return nil
+	}); err != nil {
+		writeErrorEvent(err)
+		return
+	}
 
 	result, err := ai.GenerateCandidateStream(c.Request.Context(), user, ai.GenerateRequest{
 		Filename:         req.Filename,
@@ -689,86 +711,239 @@ func GenerateTemplateAICandidateStream(c *gin.Context) {
 		ProxyLink:        req.ProxyLink,
 		EnableIncludeAll: req.EnableIncludeAll,
 	}, func(event ai.ResponsesEvent) error {
-		return writeEvent(event.Event, event.Data)
+		payload, ok := templateEditModelDeltaPayload(event)
+		if !ok {
+			return nil
+		}
+		return writeEvent("template.edit.model.delta", payload)
 	})
 	if err != nil {
-		_ = writeEvent("error", gin.H{"message": "AI 生成失败: " + err.Error()})
+		_, _ = templateEditSessions.UpdateForOwner(ownerKey, session.SessionID, func(current *ai.TemplateEditSession) error {
+			current.Status = ai.TemplateEditSessionFailed
+			current.LastError = err.Error()
+			return nil
+		})
+		writeErrorEvent(err)
 		return
 	}
-	usedBy, usageErr := getTemplateUsageSubscriptions(req.Filename)
-	if usageErr == nil {
-		result.Validation.Subscriptions = usedBy
+	session, err = templateEditSessions.UpdateForOwner(ownerKey, session.SessionID, func(current *ai.TemplateEditSession) error {
+		current.Status = ai.TemplateEditSessionOperationsReady
+		current.Operations = result.Operations
+		return nil
+	})
+	if err != nil {
+		writeErrorEvent(err)
+		return
 	}
-	_ = writeEvent("template.final", result)
-}
+	_ = writeEvent("template.edit.operations.ready", gin.H{
+		"sessionId":  session.SessionID,
+		"operations": result.Operations,
+		"summary":    result.Summary,
+		"warnings":   result.Warnings,
+	})
 
-func ValidateTemplateAICandidate(c *gin.Context) {
-	var req TemplateAIValidateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误: "+err.Error())
+	session, err = templateEditSessions.UpdateForOwner(ownerKey, session.SessionID, func(current *ai.TemplateEditSession) error {
+		current.Status = ai.TemplateEditSessionValidating
+		return nil
+	})
+	if err != nil {
+		writeErrorEvent(err)
 		return
 	}
-	result := services.ValidateTemplateCandidate(services.TemplateValidationInput{
-		Category:      req.Category,
-		OriginalText:  req.OriginalText,
-		CandidateText: req.CandidateText,
-		RuleSource:    req.RuleSource,
-	})
-	if usedBy, err := getTemplateUsageSubscriptions(req.Filename); err == nil {
-		result.Subscriptions = usedBy
-	}
-	utils.OkDetailed(c, "校验完成", result)
-}
+	_ = writeEvent("template.edit.preview.validating", gin.H{"sessionId": session.SessionID, "baseHash": baseHash})
 
-func ApplyTemplateAICandidate(c *gin.Context) {
-	var req TemplateAIApplyRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误: "+err.Error())
-		return
-	}
-	if req.Filename == "" || req.CandidateText == "" {
-		utils.FailWithMsg(c, "文件名或候选模板不能为空")
-		return
-	}
-	oldname := strings.TrimSpace(req.OldName)
-	if oldname == "" {
-		oldname = req.Filename
-	}
-	fullPath, err := safeFilePath(oldname)
-	if err != nil {
-		utils.FailWithMsg(c, "文件名非法: "+err.Error())
-		return
-	}
-	currentBytes, err := os.ReadFile(fullPath)
-	if err != nil {
-		utils.FailWithMsg(c, "读取当前模板失败: "+err.Error())
-		return
-	}
-	currentText := string(currentBytes)
-	if ai.BuildRevisionHash(currentText) != strings.TrimSpace(req.RevisionHash) {
-		utils.FailWithMsg(c, "模板已被其他修改更新，请重新生成候选内容")
-		return
-	}
-	validation := services.ValidateTemplateCandidate(services.TemplateValidationInput{
-		Category:      req.Category,
-		OriginalText:  currentText,
-		CandidateText: req.CandidateText,
-		RuleSource:    req.RuleSource,
-	})
-	if !validation.Valid {
-		utils.FailWithData(c, "候选模板未通过校验", validation)
-		return
-	}
-	if err := writeTemplateFileAndMeta(req.Filename, oldname, req.CandidateText, req.Category, req.RuleSource, req.UseProxy, req.ProxyLink, req.EnableIncludeAll); err != nil {
-		utils.FailWithMsg(c, "应用 AI 修改失败: "+err.Error())
-		return
-	}
 	usedBy, _ := getTemplateUsageSubscriptions(req.Filename)
-	utils.OkDetailed(c, "AI 修改已应用", gin.H{
-		"subscriptions": usedBy,
-		"count":         len(usedBy),
-		"revisionHash":  ai.BuildRevisionHash(req.CandidateText),
+	preview, err := ai.BuildTemplateEditPreviewCandidate(ai.TemplateEditPreviewInput{
+		Category:      req.Category,
+		BaseText:      req.CurrentText,
+		BaseHash:      baseHash,
+		Operations:    result.Operations,
+		RuleSource:    req.RuleSource,
+		Subscriptions: usedBy,
 	})
+	if err != nil {
+		_, _ = templateEditSessions.UpdateForOwner(ownerKey, session.SessionID, func(current *ai.TemplateEditSession) error {
+			current.Status = ai.TemplateEditSessionFailed
+			current.Validation = preview.Validation
+			current.LastError = err.Error()
+			return nil
+		})
+		writeErrorEvent(err)
+		return
+	}
+
+	session, err = templateEditSessions.UpdateForOwner(ownerKey, session.SessionID, func(current *ai.TemplateEditSession) error {
+		current.Status = ai.TemplateEditSessionPreviewReady
+		current.CandidateText = preview.CandidateText
+		current.Operations = preview.Operations
+		current.Validation = preview.Validation
+		current.WarningFingerprint = preview.WarningFingerprint
+		return nil
+	})
+	if err != nil {
+		writeErrorEvent(err)
+		return
+	}
+	if len(session.Validation.Warnings) > 0 {
+		_ = writeEvent("template.edit.warning", gin.H{
+			"sessionId":          session.SessionID,
+			"warnings":           session.Validation.Warnings,
+			"warningFingerprint": session.WarningFingerprint,
+		})
+	}
+	previewPayload := templateEditSessionResponse(session)
+	_ = writeEvent("template.edit.preview.ready", previewPayload)
+	_ = writeEvent("template.edit.completed", previewPayload)
+}
+
+func GetTemplateAIEditSession(c *gin.Context) {
+	user, ok := requireCurrentUser(c)
+	if !ok {
+		return
+	}
+	session, err := templateEditSessions.GetForOwner(ai.TemplateEditSessionOwnerKey(user), c.Param("sessionId"))
+	if err != nil {
+		respondTemplateEditError(c, err)
+		return
+	}
+	utils.OkDetailed(c, "ok", templateEditSessionResponse(session))
+}
+
+func AcceptTemplateAIEditSession(c *gin.Context) {
+	user, ok := requireCurrentUser(c)
+	if !ok {
+		return
+	}
+	ownerKey := ai.TemplateEditSessionOwnerKey(user)
+	session, err := templateEditSessions.GetForOwner(ownerKey, c.Param("sessionId"))
+	if err != nil {
+		respondTemplateEditError(c, err)
+		return
+	}
+	if session.Status != ai.TemplateEditSessionPreviewReady {
+		respondTemplateEditError(c, ai.NewTemplateEditError(ai.TemplateEditInvalidOperation, "template edit session preview is not ready"))
+		return
+	}
+	var req TemplateEditSessionAcceptRequest
+	if c.Request.ContentLength != 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			respondTemplateEditError(c, ai.NewTemplateEditError(ai.TemplateEditInvalidOperation, "template edit accept request is invalid"))
+			return
+		}
+	}
+	fullPath, err := safeFilePath(session.Filename)
+	if err != nil {
+		respondTemplateEditError(c, ai.NewTemplateEditError(ai.TemplateEditInvalidOperation, "template filename is invalid"))
+		return
+	}
+	clientBaseMatches := strings.TrimSpace(req.CurrentText) != "" && ai.BuildRevisionHash(req.CurrentText) == session.BaseHash
+	if !clientBaseMatches {
+		currentBytes, err := os.ReadFile(fullPath)
+		if err != nil {
+			utils.FailWithMsg(c, "读取当前模板失败: "+err.Error())
+			return
+		}
+		if ai.BuildRevisionHash(string(currentBytes)) != session.BaseHash {
+			respondTemplateEditCode(c, templateEditStaleBaseCode, "模板已被其他修改更新，请重新生成候选内容")
+			return
+		}
+	}
+	if err := ai.ValidateTemplateEditAccept(ai.TemplateEditAcceptValidationInput{
+		Validation: session.Validation,
+	}); err != nil {
+		respondTemplateEditError(c, err)
+		return
+	}
+	session, err = templateEditSessions.UpdateForOwner(ownerKey, session.SessionID, func(current *ai.TemplateEditSession) error {
+		current.Status = ai.TemplateEditSessionAccepted
+		return nil
+	})
+	if err != nil {
+		respondTemplateEditError(c, err)
+		return
+	}
+	utils.OkDetailed(c, "AI 修改预览已接受", gin.H{
+		"sessionId":     session.SessionID,
+		"candidateText": session.CandidateText,
+		"candidateHash": ai.BuildRevisionHash(session.CandidateText),
+		"validation":    session.Validation,
+	})
+}
+
+func DiscardTemplateAIEditSession(c *gin.Context) {
+	user, ok := requireCurrentUser(c)
+	if !ok {
+		return
+	}
+	session, err := templateEditSessions.DiscardForOwner(ai.TemplateEditSessionOwnerKey(user), c.Param("sessionId"))
+	if err != nil {
+		respondTemplateEditError(c, err)
+		return
+	}
+	utils.OkDetailed(c, "AI 修改会话已丢弃", templateEditSessionResponse(session))
+}
+
+func TemplateAILegacyRemoved(c *gin.Context) {
+	c.JSON(http.StatusGone, gin.H{
+		"code":    templateEditLegacyRemovedCode,
+		"message": "Legacy full-template AI endpoints have been removed. Use /api/v1/template/ai/edit-sessions/*.",
+	})
+}
+
+func templateEditSessionResponse(session ai.TemplateEditSession) templateEditSessionPayload {
+	return templateEditSessionPayload{
+		SessionID:          session.SessionID,
+		Status:             session.Status,
+		Filename:           session.Filename,
+		Category:           session.Category,
+		BaseHash:           session.BaseHash,
+		CandidateHash:      ai.BuildRevisionHash(session.CandidateText),
+		CandidateText:      session.CandidateText,
+		Operations:         session.Operations,
+		Validation:         session.Validation,
+		WarningFingerprint: session.WarningFingerprint,
+		CreatedAt:          session.CreatedAt,
+		ExpiresAt:          session.ExpiresAt,
+		LastError:          session.LastError,
+	}
+}
+
+func templateEditModelDeltaPayload(event ai.ResponsesEvent) (gin.H, bool) {
+	if len(event.Data) == 0 {
+		return nil, false
+	}
+	var payload struct {
+		Delta string `json:"delta"`
+	}
+	if err := json.Unmarshal(event.Data, &payload); err != nil || payload.Delta == "" {
+		return nil, false
+	}
+	return gin.H{"delta": payload.Delta}, true
+}
+
+func respondTemplateEditError(c *gin.Context, err error) {
+	payload := templateEditErrorPayload(err)
+	message, _ := payload["message"].(string)
+	utils.FailWithData(c, message, payload)
+}
+
+func respondTemplateEditCode(c *gin.Context, code string, message string) {
+	utils.FailWithData(c, message, gin.H{"code": code, "message": message})
+}
+
+func templateEditErrorPayload(err error) gin.H {
+	if err == nil {
+		return gin.H{"code": string(ai.TemplateEditInvalidOperation), "message": "template edit failed"}
+	}
+	var editErr *ai.TemplateEditError
+	if errors.As(err, &editErr) {
+		return gin.H{"code": string(editErr.Code), "message": editErr.Message}
+	}
+	var patchErr *ai.PatchError
+	if errors.As(err, &patchErr) {
+		return gin.H{"code": string(patchErr.Code), "message": patchErr.Message, "operationIndex": patchErr.OperationIndex}
+	}
+	return gin.H{"code": string(ai.TemplateEditInvalidOperation), "message": err.Error()}
 }
 
 // ACL4SSRPreset ACL4SSR 规则预设

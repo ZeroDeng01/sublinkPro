@@ -60,7 +60,7 @@ suffix for Chinese.
 | Speed-test system — two-stage tests, latency/speed, IP quality & unlock checks, tuning | `docs/features/speedtest.md` |
 | Unlock checks — streaming & AI availability, Provider architecture, extensions | `docs/features/unlock-check.md` |
 | Chain proxy — Dialer-Proxy, condition-based node selection, config flow | `docs/features/chain-proxy.md` |
-| AI template editing — generate drafts, diff review, apply/rollback | `docs/features/template-ai.md` |
+| AI template editing, operation sessions, server preview validation, read-only diff review, validation warnings, accept into editor, normal save | `docs/features/template-ai.md` |
 | Airport management — import, scheduled updates, traffic monitoring | `docs/features/airport.md` |
 | Subscription sharing — multiple links, expiration policies, access stats | `docs/features/subscription-share.md` |
 | Host management — domain mappings, DNS, CDN preferred IPs | `docs/features/host.md` |

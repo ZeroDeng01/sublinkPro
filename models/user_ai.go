@@ -17,6 +17,11 @@ import (
 const userAISecretVersion = "v1"
 const defaultSystemAIMaxTokens = 400000
 
+const (
+	SystemAIRequestTypeResponses       = "responses"
+	SystemAIRequestTypeChatCompletions = "chat_completions"
+)
+
 type UserAISettings struct {
 	Enabled         bool              `json:"enabled"`
 	BaseURL         string            `json:"baseUrl"`
@@ -27,6 +32,7 @@ type UserAISettings struct {
 	MaxTokens       int               `json:"maxTokens"`
 	ExtraHeaders    map[string]string `json:"extraHeaders,omitempty"`
 	ProviderType    string            `json:"providerType"`
+	RequestType     string            `json:"requestType"`
 	Configured      bool              `json:"configured"`
 	RawAPIKey       string            `json:"-"`
 	ExtraHeadersRaw string            `json:"-"`
@@ -40,7 +46,17 @@ const (
 	systemAITemperatureKey  = "ai_temperature"
 	systemAIMaxTokensKey    = "ai_max_tokens"
 	systemAIExtraHeadersKey = "ai_extra_headers"
+	systemAIRequestTypeKey  = "ai_request_type"
 )
+
+func NormalizeSystemAIRequestType(value string) string {
+	switch strings.TrimSpace(value) {
+	case SystemAIRequestTypeChatCompletions:
+		return SystemAIRequestTypeChatCompletions
+	default:
+		return SystemAIRequestTypeResponses
+	}
+}
 
 func userAIEncryptionKey() ([]byte, error) {
 	keyMaterial := strings.TrimSpace(config.GetAPIEncryptionKey())
@@ -162,6 +178,7 @@ func GetSystemAISettings() (UserAISettings, error) {
 		Temperature:  parseSystemAIFloat(systemAITemperatureKey, 0.2),
 		MaxTokens:    parseSystemAIInt(systemAIMaxTokensKey, defaultSystemAIMaxTokens),
 		ProviderType: "openai_compatible",
+		RequestType:  NormalizeSystemAIRequestType(getSystemSettingValue(systemAIRequestTypeKey)),
 	}
 	if settings.MaxTokens <= 0 {
 		settings.MaxTokens = defaultSystemAIMaxTokens
@@ -203,6 +220,9 @@ func UpdateSystemAISettings(input UserAISettings) error {
 		return err
 	}
 	if err := SetSetting(systemAIExtraHeadersKey, strings.TrimSpace(input.ExtraHeadersRaw)); err != nil {
+		return err
+	}
+	if err := SetSetting(systemAIRequestTypeKey, NormalizeSystemAIRequestType(input.RequestType)); err != nil {
 		return err
 	}
 	if strings.TrimSpace(input.RawAPIKey) == "" {

@@ -341,6 +341,7 @@ func UserUpdateAISettings(c *gin.Context) {
 		Enabled      bool              `json:"enabled"`
 		BaseURL      string            `json:"baseUrl"`
 		Model        string            `json:"model"`
+		RequestType  string            `json:"requestType"`
 		APIKey       string            `json:"apiKey"`
 		Temperature  float64           `json:"temperature"`
 		MaxTokens    int               `json:"maxTokens"`
@@ -399,6 +400,7 @@ func UserUpdateAISettings(c *gin.Context) {
 		Enabled:         req.Enabled,
 		BaseURL:         validatedBaseURL,
 		Model:           strings.TrimSpace(req.Model),
+		RequestType:     models.NormalizeSystemAIRequestType(req.RequestType),
 		RawAPIKey:       strings.TrimSpace(req.APIKey),
 		Temperature:     req.Temperature,
 		MaxTokens:       req.MaxTokens,
@@ -424,6 +426,7 @@ func UserTestAISettings(c *gin.Context) {
 	type testAISettingsRequest struct {
 		BaseURL      string            `json:"baseUrl"`
 		Model        string            `json:"model"`
+		RequestType  string            `json:"requestType"`
 		APIKey       string            `json:"apiKey"`
 		Temperature  *float64          `json:"temperature"`
 		MaxTokens    *int              `json:"maxTokens"`
@@ -454,6 +457,10 @@ func UserTestAISettings(c *gin.Context) {
 	if model == "" && usingSavedBaseURL {
 		model = current.Model
 	}
+	requestType := models.NormalizeSystemAIRequestType(req.RequestType)
+	if strings.TrimSpace(req.RequestType) == "" && usingSavedBaseURL {
+		requestType = current.RequestType
+	}
 	apiKey := strings.TrimSpace(req.APIKey)
 	if apiKey == "" && usingSavedBaseURL {
 		apiKey = current.RawAPIKey
@@ -481,6 +488,7 @@ func UserTestAISettings(c *gin.Context) {
 		BaseURL:      baseURL,
 		APIKey:       apiKey,
 		Model:        model,
+		RequestType:  requestType,
 		Temperature:  temperature,
 		MaxTokens:    maxTokens,
 		ExtraHeaders: extraHeaders,

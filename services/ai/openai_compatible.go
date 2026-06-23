@@ -9,7 +9,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sublink/utils"
 	"time"
@@ -19,6 +21,7 @@ type ClientConfig struct {
 	BaseURL      string
 	APIKey       string
 	Model        string
+	RequestType  string
 	Temperature  float64
 	MaxTokens    int
 	ExtraHeaders map[string]string
@@ -57,11 +60,16 @@ type responsesRequest struct {
 }
 
 type chatCompletionRequest struct {
-	Model       string    `json:"model"`
-	Messages    []Message `json:"messages"`
-	Temperature float64   `json:"temperature,omitempty"`
-	MaxTokens   int       `json:"max_tokens,omitempty"`
-	Stream      bool      `json:"stream"`
+	Model         string                       `json:"model"`
+	Messages      []Message                    `json:"messages"`
+	Temperature   float64                      `json:"temperature,omitempty"`
+	MaxTokens     int                          `json:"max_tokens,omitempty"`
+	Stream        bool                         `json:"stream"`
+	StreamOptions *chatCompletionStreamOptions `json:"stream_options,omitempty"`
+}
+
+type chatCompletionStreamOptions struct {
+	IncludeUsage bool `json:"include_usage"`
 }
 
 type chatCompletionResponse struct {
@@ -75,10 +83,21 @@ type chatCompletionResponse struct {
 	Usage map[string]any `json:"usage"`
 }
 
+type chatCompletionStreamChunk struct {
+	Choices []struct {
+		Delta struct {
+			Content string `json:"content"`
+		} `json:"delta"`
+		FinishReason string `json:"finish_reason"`
+	} `json:"choices"`
+	Usage map[string]any `json:"usage"`
+}
+
 type Client struct {
 	baseURL      string
 	apiKey       string
 	model        string
+	requestType  string
 	temperature  float64
 	maxTokens    int
 	extraHeaders map[string]string
@@ -96,6 +115,13 @@ type TestResult struct {
 
 const connectionTestMaxTokens = 16
 
+const TemplateEditMockBaseURL = "mock://template-ai-edit"
+
+const (
+	RequestTypeResponses       = "responses"
+	RequestTypeChatCompletions = "chat_completions"
+)
+
 type modelsResponse struct {
 	Data []struct {
 		ID string `json:"id"`
@@ -106,6 +132,15 @@ func NormalizeBaseURL(raw string) (string, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
 		return "", nil
+	}
+	if trimmed == TemplateEditMockBaseURL {
+		if !IsTemplateEditMockProviderAllowed() {
+			return "", NewTemplateEditError(TemplateEditMockProviderUnavailable, "mock://template-ai-edit is available only in development or test mode")
+		}
+		return trimmed, nil
+	}
+	if strings.HasPrefix(strings.ToLower(trimmed), "mock:") {
+		return "", NewTemplateEditError(TemplateEditMockProviderUnavailable, "mock AI Base URL must exactly equal mock://template-ai-edit")
 	}
 	parsed, err := url.Parse(trimmed)
 	if err != nil {
@@ -119,6 +154,31 @@ func NormalizeBaseURL(raw string) (string, error) {
 	}
 	parsed.Path = strings.TrimRight(parsed.Path, "/")
 	return parsed.String(), nil
+}
+
+func IsTemplateEditMockProviderAllowed() bool {
+	for _, value := range []string{os.Getenv("APP_ENV"), os.Getenv("GO_ENV"), os.Getenv("NODE_ENV"), os.Getenv("GIN_MODE")} {
+		normalized := strings.ToLower(strings.TrimSpace(value))
+		if normalized == "" {
+			continue
+		}
+		if strings.Contains(normalized, "prod") || normalized == "release" {
+			return false
+		}
+		if strings.Contains(normalized, "development") || normalized == "dev" || strings.Contains(normalized, "test") {
+			return true
+		}
+	}
+	return strings.HasSuffix(os.Args[0], ".test")
+}
+
+func NormalizeRequestType(value string) string {
+	switch strings.TrimSpace(value) {
+	case RequestTypeChatCompletions:
+		return RequestTypeChatCompletions
+	default:
+		return RequestTypeResponses
+	}
 }
 
 func NewClient(cfg ClientConfig) (*Client, error) {
@@ -142,6 +202,7 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 		baseURL:      baseURL,
 		apiKey:       strings.TrimSpace(cfg.APIKey),
 		model:        strings.TrimSpace(cfg.Model),
+		requestType:  NormalizeRequestType(cfg.RequestType),
 		temperature:  cfg.Temperature,
 		maxTokens:    cfg.MaxTokens,
 		extraHeaders: cfg.ExtraHeaders,
@@ -261,6 +322,9 @@ func (c *Client) newJSONRequest(ctx context.Context, method string, endpoint str
 }
 
 func (c *Client) CreateChatCompletion(ctx context.Context, messages []Message) (string, string, map[string]any, error) {
+	if c.baseURL == TemplateEditMockBaseURL {
+		return streamTemplateEditMockOutput(ctx, messages, nil)
+	}
 	endpoint, err := c.endpointURL()
 	if err != nil {
 		return "", "", nil, err
@@ -304,7 +368,129 @@ func (c *Client) CreateChatCompletion(ctx context.Context, messages []Message) (
 	return content, parsed.Choices[0].FinishReason, parsed.Usage, nil
 }
 
+func (c *Client) StreamChatCompletions(ctx context.Context, messages []Message, onEvent func(ResponsesEvent) error) (string, string, map[string]any, error) {
+	if c.baseURL == TemplateEditMockBaseURL {
+		return streamTemplateEditMockOutput(ctx, messages, onEvent)
+	}
+	endpoint, err := c.endpointURL()
+	if err != nil {
+		return "", "", nil, err
+	}
+	payload := chatCompletionRequest{
+		Model:       c.model,
+		Messages:    messages,
+		Temperature: c.temperature,
+		MaxTokens:   c.maxTokens,
+		Stream:      true,
+		StreamOptions: &chatCompletionStreamOptions{
+			IncludeUsage: true,
+		},
+	}
+	req, err := c.newJSONRequest(ctx, http.MethodPost, endpoint, payload)
+	if err != nil {
+		return "", "", nil, err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	resp, err := c.streamingHTTPClient().Do(req)
+	if err != nil {
+		return "", "", nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		responseBody, _ := io.ReadAll(resp.Body)
+		debugLogAIResponse(endpoint, resp.StatusCode, responseBody)
+		return "", "", nil, fmt.Errorf("AI /chat/completions 返回 HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))
+	}
+	utils.Debug("AI upstream chat stream connected: url=%s status=%d", endpoint, resp.StatusCode)
+
+	reader := bufio.NewReader(resp.Body)
+	var eventName string
+	var dataLines []string
+	var builder strings.Builder
+	finishReason := ""
+	var usage map[string]any
+
+	flushEvent := func() error {
+		if eventName == "" && len(dataLines) == 0 {
+			return nil
+		}
+		if eventName == "" {
+			eventName = "message"
+		}
+		dataText := strings.Join(dataLines, "\n")
+		trimmedData := strings.TrimSpace(dataText)
+		debugLogAIStreamEvent(eventName, trimmedData)
+		if trimmedData == "[DONE]" {
+			eventName = ""
+			dataLines = nil
+			return nil
+		}
+
+		var chunk chatCompletionStreamChunk
+		if trimmedData != "" {
+			if err := json.Unmarshal([]byte(trimmedData), &chunk); err != nil {
+				return fmt.Errorf("AI /chat/completions 流解析失败: %w", err)
+			}
+		}
+		if len(chunk.Usage) > 0 {
+			usage = chunk.Usage
+		}
+		for _, choice := range chunk.Choices {
+			if strings.TrimSpace(choice.FinishReason) != "" {
+				finishReason = strings.TrimSpace(choice.FinishReason)
+			}
+			if choice.Delta.Content == "" {
+				continue
+			}
+			builder.WriteString(choice.Delta.Content)
+			if onEvent != nil {
+				payload, err := json.Marshal(map[string]string{"delta": choice.Delta.Content})
+				if err != nil {
+					return err
+				}
+				if err := onEvent(ResponsesEvent{Event: "response.output_text.delta", Data: json.RawMessage(payload)}); err != nil {
+					return err
+				}
+			}
+		}
+		eventName = ""
+		dataLines = nil
+		return nil
+	}
+
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return builder.String(), finishReason, usage, err
+		}
+		trimmedLine := strings.TrimRight(line, "\r\n")
+		if trimmedLine == "" {
+			if err := flushEvent(); err != nil {
+				return builder.String(), finishReason, usage, err
+			}
+		} else if strings.HasPrefix(trimmedLine, "event:") {
+			eventName = strings.TrimSpace(strings.TrimPrefix(trimmedLine, "event:"))
+		} else if strings.HasPrefix(trimmedLine, "data:") {
+			dataLines = append(dataLines, strings.TrimSpace(strings.TrimPrefix(trimmedLine, "data:")))
+		}
+		if err == io.EOF {
+			break
+		}
+	}
+	if err := flushEvent(); err != nil {
+		return builder.String(), finishReason, usage, err
+	}
+	content := strings.TrimSpace(builder.String())
+	if content == "" {
+		return "", finishReason, usage, fmt.Errorf("AI /chat/completions 流未返回有效内容")
+	}
+	return content, finishReason, usage, nil
+}
+
 func (c *Client) StreamResponses(ctx context.Context, messages []Message, onEvent func(ResponsesEvent) error) (string, string, map[string]any, error) {
+	if c.baseURL == TemplateEditMockBaseURL {
+		return streamTemplateEditMockOutput(ctx, messages, onEvent)
+	}
 	endpoint, err := c.responsesEndpointURL()
 	if err != nil {
 		return "", "", nil, err
@@ -432,16 +618,35 @@ func (c *Client) StreamResponses(ctx context.Context, messages []Message, onEven
 }
 
 func (c *Client) TestConnection(ctx context.Context) (*TestResult, error) {
+	if c.baseURL == TemplateEditMockBaseURL {
+		return &TestResult{
+			Message:      "template AI edit mock provider ready",
+			Model:        c.model,
+			BaseURL:      c.baseURL,
+			LatencyMs:    0,
+			Usage:        map[string]any{"mock": true},
+			FinishReason: "mock",
+		}, nil
+	}
 	start := time.Now()
 	testClient := *c
 	testClient.maxTokens = connectionTestMaxTokens
 	if c.maxTokens > 0 && c.maxTokens < connectionTestMaxTokens {
 		testClient.maxTokens = c.maxTokens
 	}
-	content, finishReason, usage, err := testClient.StreamResponses(ctx, []Message{{
+	messages := []Message{{
 		Role:    "user",
 		Content: "hi",
-	}}, nil)
+	}}
+	var content string
+	var finishReason string
+	var usage map[string]any
+	var err error
+	if testClient.requestType == RequestTypeChatCompletions {
+		content, finishReason, usage, err = testClient.StreamChatCompletions(ctx, messages, nil)
+	} else {
+		content, finishReason, usage, err = testClient.StreamResponses(ctx, messages, nil)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -462,6 +667,9 @@ func DiscoverModels(ctx context.Context, cfg ClientConfig) ([]string, error) {
 	}
 	if strings.TrimSpace(baseURL) == "" {
 		return nil, fmt.Errorf("AI Base URL 不能为空")
+	}
+	if baseURL == TemplateEditMockBaseURL {
+		return []string{"template-ai-edit-mock"}, nil
 	}
 	endpoint, err := buildModelsEndpointURL(baseURL)
 	if err != nil {
@@ -510,4 +718,16 @@ func DiscoverModels(ctx context.Context, cfg ClientConfig) ([]string, error) {
 		models = append(models, modelID)
 	}
 	return models, nil
+}
+
+func templateEditMockStreamDelay() time.Duration {
+	value := strings.TrimSpace(os.Getenv("SUBLINK_TEMPLATE_AI_MOCK_STREAM_DELAY_MS"))
+	if value == "" {
+		return 0
+	}
+	millis, err := strconv.Atoi(value)
+	if err != nil || millis <= 0 || millis > 5000 {
+		return 0
+	}
+	return time.Duration(millis) * time.Millisecond
 }

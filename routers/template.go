@@ -18,10 +18,14 @@ func Templates(r *gin.Engine) {
 		TempsGroup.POST("/update", api.UpdateTemp)
 		TempsGroup.GET("/presets", api.GetACL4SSRPresets)
 		TempsGroup.POST("/convert", api.ConvertRules)
-		TempsGroup.POST("/ai/generate", api.GenerateTemplateAICandidate)
-		TempsGroup.POST("/ai/generate-stream", api.GenerateTemplateAICandidateStream)
-		TempsGroup.POST("/ai/validate", api.ValidateTemplateAICandidate)
-		TempsGroup.POST("/ai/apply", api.ApplyTemplateAICandidate)
+		TempsGroup.POST("/ai/edit-sessions/stream", api.StartTemplateAIEditSessionStream)
+		TempsGroup.GET("/ai/edit-sessions/:sessionId", api.GetTemplateAIEditSession)
+		TempsGroup.POST("/ai/edit-sessions/:sessionId/accept", api.AcceptTemplateAIEditSession)
+		TempsGroup.POST("/ai/edit-sessions/:sessionId/discard", api.DiscardTemplateAIEditSession)
+		TempsGroup.POST("/ai/generate", api.TemplateAILegacyRemoved)
+		TempsGroup.POST("/ai/generate-stream", api.TemplateAILegacyRemoved)
+		TempsGroup.POST("/ai/validate", api.TemplateAILegacyRemoved)
+		TempsGroup.POST("/ai/apply", api.TemplateAILegacyRemoved)
 	}
 
 }

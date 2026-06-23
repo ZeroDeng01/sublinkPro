@@ -149,3 +149,84 @@ func TestConnectionKeepsSmallerConfiguredMaxTokens(t *testing.T) {
 		t.Fatalf("test connection: %v", err)
 	}
 }
+
+func TestConnectionUsesChatCompletionsWhenConfigured(t *testing.T) {
+	t.Helper()
+
+	type requestPayload struct {
+		Model         string    `json:"model"`
+		Messages      []Message `json:"messages"`
+		MaxTokens     int       `json:"max_tokens"`
+		Stream        bool      `json:"stream"`
+		StreamOptions struct {
+			IncludeUsage bool `json:"include_usage"`
+		} `json:"stream_options"`
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/chat/completions" {
+			t.Fatalf("expected /v1/chat/completions, got %s", r.URL.Path)
+		}
+		if got := r.Header.Get("Accept"); got != "text/event-stream" {
+			t.Fatalf("unexpected accept header: %q", got)
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read request body: %v", err)
+		}
+		defer func() { _ = r.Body.Close() }()
+
+		var payload requestPayload
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("unmarshal request payload: %v", err)
+		}
+		if payload.Model != "gpt-test" {
+			t.Fatalf("unexpected model: %q", payload.Model)
+		}
+		if payload.MaxTokens != connectionTestMaxTokens {
+			t.Fatalf("expected capped max tokens %d, got %d", connectionTestMaxTokens, payload.MaxTokens)
+		}
+		if !payload.Stream {
+			t.Fatal("expected stream=true")
+		}
+		if !payload.StreamOptions.IncludeUsage {
+			t.Fatal("expected include_usage=true")
+		}
+		if len(payload.Messages) != 1 || payload.Messages[0].Role != "user" || payload.Messages[0].Content != "hi" {
+			t.Fatalf("unexpected messages: %#v", payload.Messages)
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"hello\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\" chat\"},\"finish_reason\":\"stop\"}],\"usage\":{\"completion_tokens\":2}}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(ClientConfig{
+		BaseURL:     server.URL + "/v1",
+		APIKey:      "sk-test",
+		Model:       "gpt-test",
+		RequestType: RequestTypeChatCompletions,
+		Temperature: 0.2,
+		MaxTokens:   1200,
+	})
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+
+	result, err := client.TestConnection(context.Background())
+	if err != nil {
+		t.Fatalf("test connection: %v", err)
+	}
+	if result.Message != "hello chat" {
+		t.Fatalf("expected hello chat, got %q", result.Message)
+	}
+	if result.FinishReason != "stop" {
+		t.Fatalf("expected stop finish reason, got %q", result.FinishReason)
+	}
+	if result.Usage["completion_tokens"] != float64(2) {
+		t.Fatalf("expected completion_tokens=2, got %#v", result.Usage["completion_tokens"])
+	}
+}

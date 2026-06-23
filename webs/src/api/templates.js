@@ -68,39 +68,65 @@ async function buildStreamResponseError(response) {
   return createStreamRequestError(message, response, data);
 }
 
+function decorateTemplateAIError(error, data) {
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    if (Object.prototype.hasOwnProperty.call(data, 'code')) {
+      error.code = data.code;
+    }
+    if (Object.prototype.hasOwnProperty.call(data, 'message')) {
+      error.message = data.message || error.message;
+    }
+    if (Object.prototype.hasOwnProperty.call(data, 'operationIndex')) {
+      error.operationIndex = data.operationIndex;
+    }
+    if (Object.prototype.hasOwnProperty.call(data, 'validation')) {
+      error.validation = data.validation;
+    }
+  }
+
+  return error;
+}
+
 function dispatchTemplateAIStreamEvent(parsedEvent, handlers, setFinalPayload) {
   const { event, data } = parsedEvent;
 
   switch (event) {
-    case 'response.created':
-      handlers.onStart?.(data);
+    case 'template.edit.session.created':
+      handlers.onSessionCreated?.(data);
       break;
-    case 'response.output_text.delta':
+    case 'template.edit.model.delta':
       handlers.onDelta?.(data);
       break;
-    case 'response.completed':
-      handlers.onComplete?.(data);
+    case 'template.edit.operations.ready':
+      handlers.onOperationsReady?.(data);
       break;
-    case 'response.failed':
-      handlers.onError?.(data);
-      throw createStreamRequestError(data?.message || data?.error?.message || 'AI 生成失败', null, data);
-    case 'template.final':
+    case 'template.edit.preview.validating':
+      handlers.onPreviewValidating?.(data);
+      break;
+    case 'template.edit.preview.ready':
       setFinalPayload(data);
-      handlers.onFinal?.(data);
+      handlers.onPreviewReady?.(data);
       break;
-    case 'error': {
+    case 'template.edit.warning':
+      handlers.onWarning?.(data);
+      break;
+    case 'template.edit.completed':
+      setFinalPayload(data);
+      handlers.onCompleted?.(data);
+      break;
+    case 'template.edit.error': {
       handlers.onError?.(data);
-      const message = data?.message || data?.msg || (typeof data === 'string' ? data : 'AI 生成失败');
-      throw createStreamRequestError(message, null, data);
+      const message = data?.message || data?.msg || 'AI 生成失败';
+      throw decorateTemplateAIError(createStreamRequestError(message, null, data), data);
     }
     default:
       break;
   }
 }
 
-export async function generateTemplateAICandidateStream(data, handlers = {}) {
+export async function streamTemplateAIEditSession(data, handlers = {}) {
   const token = localStorage.getItem('accessToken');
-  const response = await fetch('/api/v1/template/ai/generate-stream', {
+  const response = await fetch('/api/v1/template/ai/edit-sessions/stream', {
     method: 'POST',
     headers: {
       Accept: 'text/event-stream',
@@ -168,6 +194,28 @@ export async function generateTemplateAICandidateStream(data, handlers = {}) {
   }
 
   return finalPayload;
+}
+
+export function getTemplateAIEditSession(sessionId) {
+  return request({
+    url: `/v1/template/ai/edit-sessions/${sessionId}`,
+    method: 'get'
+  });
+}
+
+export function acceptTemplateAIEditSession(sessionId, data = {}) {
+  return request({
+    url: `/v1/template/ai/edit-sessions/${sessionId}/accept`,
+    method: 'post',
+    data: data.currentText !== undefined ? { currentText: data.currentText } : {}
+  });
+}
+
+export function discardTemplateAIEditSession(sessionId) {
+  return request({
+    url: `/v1/template/ai/edit-sessions/${sessionId}/discard`,
+    method: 'post'
+  });
 }
 
 // 获取模板列表（支持分页参数）
@@ -255,30 +303,6 @@ export function getACL4SSRPresets() {
 export function convertRules(data) {
   return request({
     url: '/v1/template/convert',
-    method: 'post',
-    data
-  });
-}
-
-export function generateTemplateAICandidate(data) {
-  return request({
-    url: '/v1/template/ai/generate',
-    method: 'post',
-    data
-  });
-}
-
-export function validateTemplateAICandidate(data) {
-  return request({
-    url: '/v1/template/ai/validate',
-    method: 'post',
-    data
-  });
-}
-
-export function applyTemplateAICandidate(data) {
-  return request({
-    url: '/v1/template/ai/apply',
     method: 'post',
     data
   });

@@ -61,24 +61,36 @@ import {
   getTemplateUsage,
   getACL4SSRPresets,
   convertRules,
-  generateTemplateAICandidateStream
+  streamTemplateAIEditSession,
+  acceptTemplateAIEditSession,
+  discardTemplateAIEditSession
 } from 'api/templates';
 import { getAISettings, getBaseTemplates, updateBaseTemplate } from 'api/settings';
 import { getNodes } from 'api/nodes';
 import { withAlpha } from 'utils/colorUtils';
+import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // Monaco Editor
 import Editor, { DiffEditor } from '@monaco-editor/react';
 
 const createEmptyTemplateAIAssistant = () => ({
+  sessionId: '',
+  status: 'idle',
+  sourceText: '',
+  candidateText: '',
+  operations: [],
+  validation: null,
+  warningFingerprint: '',
+  expiresAt: '',
+  error: '',
+  progressText: '',
+  modelDeltaText: '',
   summary: '',
   warnings: [],
-  candidateText: '',
-  revisionHash: '',
-  validation: null,
+  baseHash: '',
+  candidateHash: '',
   finishReason: '',
   usage: null,
-  sourceText: '',
   sourceFilename: '',
   sourceCategory: '',
   sourceRuleSource: '',
@@ -89,15 +101,63 @@ const createEmptyTemplateAIAssistant = () => ({
 
 const normalizeMessages = (messages) => (Array.isArray(messages) ? messages.filter(Boolean) : []);
 
-const JSON_ESCAPE_CHAR_MAP = {
-  '"': '"',
-  '\\': '\\',
-  '/': '/',
-  b: '\b',
-  f: '\f',
-  n: '\n',
-  r: '\r',
-  t: '\t'
+const TEMPLATE_AI_DIAGNOSTIC_CODE_PATTERN = /^(AI_EDIT|PATCH)_[A-Z_]+$/;
+
+const getTemplateAIDiagnosticCode = (value) => {
+  const code = typeof value === 'string' ? value.trim() : '';
+  return TEMPLATE_AI_DIAGNOSTIC_CODE_PATTERN.test(code) ? code : '';
+};
+
+const translateTemplateAIDiagnostic = (t, code, namespace = 'errorCodes') => {
+  const diagnosticCode = getTemplateAIDiagnosticCode(code);
+
+  if (!diagnosticCode) {
+    return '';
+  }
+
+  const namespacedKey = `templates.ai.${namespace}.${diagnosticCode}`;
+  const fallbackKey = `templates.ai.errorCodes.${diagnosticCode}`;
+  const translatedMessage = t(namespacedKey);
+  const message = translatedMessage === namespacedKey ? t(fallbackKey) : translatedMessage;
+
+  return message && message !== fallbackKey ? `${message} (${diagnosticCode})` : diagnosticCode;
+};
+
+const extractTemplateAIErrorPayload = (error) => {
+  const responseData = error?.response?.data;
+  const nestedResponseData = responseData?.data;
+  const errorData = error?.data;
+  const nestedErrorData = errorData?.data;
+
+  if (nestedResponseData && typeof nestedResponseData === 'object' && !Array.isArray(nestedResponseData)) {
+    return nestedResponseData;
+  }
+
+  if (responseData && typeof responseData === 'object' && !Array.isArray(responseData)) {
+    return responseData;
+  }
+
+  if (nestedErrorData && typeof nestedErrorData === 'object' && !Array.isArray(nestedErrorData)) {
+    return nestedErrorData;
+  }
+
+  if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
+    return errorData;
+  }
+
+  return error && typeof error === 'object' ? error : null;
+};
+
+const getTemplateAIErrorMessage = (t, error) => {
+  const payload = extractTemplateAIErrorPayload(error);
+  const code = getTemplateAIDiagnosticCode(payload?.code || error?.code);
+  const translatedDiagnostic = translateTemplateAIDiagnostic(t, code);
+
+  if (translatedDiagnostic) {
+    return translatedDiagnostic;
+  }
+
+  return payload?.message || payload?.msg || error?.message || t('templates.ai.messages.generateFailed');
 };
 
 const AI_SETUP_ERROR_MARKERS = [
@@ -115,16 +175,51 @@ const createTemplateAISourceSnapshot = (formData, useProxy, proxyLink) => ({
   sourceEnableIncludeAll: formData.enableIncludeAll
 });
 
-const buildTemplateAIAssistantState = (payload, sourceSnapshot, fallbackCandidateText = '') => ({
-  summary: payload?.summary || '',
-  warnings: normalizeMessages(payload?.warnings),
-  candidateText: payload?.candidateText || fallbackCandidateText,
-  revisionHash: payload?.revisionHash || '',
-  validation: payload?.validation || null,
-  finishReason: payload?.finishReason || '',
-  usage: payload?.usage || null,
-  ...sourceSnapshot
-});
+const normalizeTemplateAIValidation = (validation) => {
+  if (!validation || typeof validation !== 'object' || Array.isArray(validation)) {
+    return null;
+  }
+
+  return {
+    ...validation,
+    errors: normalizeMessages(validation.errors),
+    warnings: normalizeMessages(validation.warnings)
+  };
+};
+
+const hasPayloadField = (payload, field) =>
+  Boolean(payload && typeof payload === 'object' && !Array.isArray(payload) && Object.prototype.hasOwnProperty.call(payload, field));
+
+const buildTemplateAIAssistantState = (payload, sourceSnapshot, previousState = {}) => {
+  const validation = hasPayloadField(payload, 'validation')
+    ? normalizeTemplateAIValidation(payload.validation)
+    : previousState.validation || null;
+  const warningFingerprint = hasPayloadField(payload, 'warningFingerprint')
+    ? payload.warningFingerprint || ''
+    : previousState.warningFingerprint || '';
+
+  return {
+    ...previousState,
+    ...sourceSnapshot,
+    sessionId: payload?.sessionId || previousState.sessionId || '',
+    status: payload?.status || previousState.status || 'idle',
+    sourceText: sourceSnapshot?.sourceText ?? previousState.sourceText ?? '',
+    candidateText: hasPayloadField(payload, 'candidateText') ? payload.candidateText || '' : previousState.candidateText || '',
+    operations: Array.isArray(payload?.operations) ? payload.operations : previousState.operations || [],
+    validation,
+    warningFingerprint,
+    expiresAt: payload?.expiresAt || previousState.expiresAt || '',
+    error: payload?.lastError || payload?.message || previousState.error || '',
+    progressText: payload?.progressText || previousState.progressText || '',
+    modelDeltaText: previousState.modelDeltaText || '',
+    summary: payload?.summary || previousState.summary || '',
+    warnings: normalizeMessages(payload?.warnings || previousState.warnings),
+    baseHash: payload?.baseHash || previousState.baseHash || '',
+    candidateHash: payload?.candidateHash || previousState.candidateHash || '',
+    finishReason: payload?.finishReason || previousState.finishReason || '',
+    usage: payload?.usage || previousState.usage || null
+  };
+};
 
 const extractResponseUsage = (eventData) => {
   if (!eventData || typeof eventData !== 'object' || Array.isArray(eventData)) {
@@ -198,70 +293,28 @@ const buildTemplateAIUsageItems = (usage, t) => {
   ].filter(Boolean);
 };
 
-const decodePartialJSONString = (value, startIndex) => {
-  let decoded = '';
-
-  for (let index = startIndex; index < value.length; index += 1) {
-    const currentChar = value[index];
-
-    if (currentChar === '"') {
-      break;
-    }
-
-    if (currentChar !== '\\') {
-      decoded += currentChar;
-      continue;
-    }
-
-    if (index + 1 >= value.length) {
-      break;
-    }
-
-    const nextChar = value[index + 1];
-
-    if (nextChar === 'u') {
-      const unicodeHex = value.slice(index + 2, index + 6);
-      if (unicodeHex.length < 4 || !/^[0-9a-fA-F]{4}$/.test(unicodeHex)) {
-        break;
-      }
-      decoded += String.fromCharCode(parseInt(unicodeHex, 16));
-      index += 5;
-      continue;
-    }
-
-    decoded += JSON_ESCAPE_CHAR_MAP[nextChar] ?? nextChar;
-    index += 1;
-  }
-
-  return decoded;
-};
-
-const extractCandidatePreviewFromStream = (streamBuffer) => {
-  if (!streamBuffer) {
-    return '';
-  }
-
-  const keyMatch = /"candidateText"\s*:\s*"/.exec(streamBuffer);
-  if (!keyMatch) {
-    return '';
-  }
-
-  return decodePartialJSONString(streamBuffer, keyMatch.index + keyMatch[0].length);
-};
-
 export default function TemplateList() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const { isDark } = useResolvedColorScheme();
   const palette = theme.vars?.palette || theme.palette;
-  const isDark = theme.palette.mode === 'dark';
   const aiPromptPrimaryLight = theme.palette.primary.light;
   const aiPromptPrimaryMain = theme.palette.primary.main;
   const aiPromptSurface = theme.palette.grey[900];
   const aiPromptCollapsedSurface = theme.palette.grey[800];
+  const aiPanelTextPrimary = isDark ? withAlpha(palette.text.dark || theme.palette.common.white, 0.94) : palette.text.primary;
+  const aiPanelTextSecondary = isDark ? withAlpha(palette.text.dark || theme.palette.common.white, 0.78) : palette.text.secondary;
+  const aiPanelSurface = isDark ? withAlpha(palette.background.default, 0.94) : withAlpha(palette.background.paper, 0.96);
+  const aiPanelBorder = isDark ? withAlpha(palette.divider, 0.82) : withAlpha(palette.divider, 0.9);
+  const aiPanelSoftShadow = isDark
+    ? `0 16px 36px ${alpha(theme.palette.common.black, 0.34)}, inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}`
+    : `0 12px 30px ${alpha(theme.palette.common.black, 0.16)}`;
+  const aiNeutralChipSurface = isDark ? withAlpha(palette.background.paper, 0.62) : withAlpha(palette.background.default, 0.92);
+  const aiNeutralChipBorder = isDark ? withAlpha(palette.divider, 0.78) : withAlpha(palette.divider, 0.86);
+  const aiWarningText = isDark ? alpha(theme.palette.warning.light, 0.96) : palette.warning.contrastText || palette.text.primary;
   const navigate = useNavigate();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
   const aiGenerationAbortRef = useRef(null);
-  const aiStreamBufferRef = useRef('');
 
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -278,7 +331,8 @@ export default function TemplateList() {
   const [aiGenerating, setAIGenerating] = useState(false);
   const [aiAssistant, setAIAssistant] = useState(createEmptyTemplateAIAssistant);
   const [aiGenerationError, setAIGenerationError] = useState('');
-  const [aiLocalAcceptSnapshot, setAILocalAcceptSnapshot] = useState(null);
+  const [aiPreviewAccepting, setAIPreviewAccepting] = useState(false);
+  const [aiPreviewDiscarding, setAIPreviewDiscarding] = useState(false);
   const [isAIEnabled, setIsAIEnabled] = useState(false);
   const [aiCommandOpen, setAICommandOpen] = useState(false);
   const [aiDisabledPromptOpen, setAIDisabledPromptOpen] = useState(false);
@@ -319,7 +373,6 @@ export default function TemplateList() {
       aiGenerationAbortRef.current.abort();
       aiGenerationAbortRef.current = null;
     }
-    aiStreamBufferRef.current = '';
   };
 
   const resetTemplateAIAssistant = () => {
@@ -330,7 +383,6 @@ export default function TemplateList() {
     setAIAssistant(createEmptyTemplateAIAssistant());
     setAIGenerationError('');
     setAIGenerating(false);
-    setAILocalAcceptSnapshot(null);
   };
 
   const handleConfirmClose = () => {
@@ -473,20 +525,19 @@ export default function TemplateList() {
     const sourceSnapshot = createTemplateAISourceSnapshot(formData, useProxy, proxyLink);
     const controller = new AbortController();
     aiGenerationAbortRef.current = controller;
-    aiStreamBufferRef.current = '';
-    let latestCandidatePreview = '';
 
     setAIGenerating(true);
     setAIGenerationError('');
     setTemplateEditorMode('edit');
-    setAILocalAcceptSnapshot(null);
     setAIAssistant({
       ...createEmptyTemplateAIAssistant(),
-      ...sourceSnapshot
+      ...sourceSnapshot,
+      status: 'starting',
+      progressText: t('templates.ai.progress.starting')
     });
 
     try {
-      const data = await generateTemplateAICandidateStream(
+      const data = await streamTemplateAIEditSession(
         {
           filename: formData.filename.trim(),
           category: formData.category,
@@ -499,8 +550,18 @@ export default function TemplateList() {
         },
         {
           signal: controller.signal,
-          onStart: () => {
-            aiStreamBufferRef.current = '';
+          onSessionCreated: (eventData) => {
+            setAIAssistant((prev) =>
+              buildTemplateAIAssistantState(
+                {
+                  ...eventData,
+                  status: eventData?.status || 'created',
+                  progressText: t('templates.ai.progress.sessionCreated')
+                },
+                sourceSnapshot,
+                prev
+              )
+            );
           },
           onDelta: (eventData) => {
             const deltaText = typeof eventData === 'string' ? eventData : eventData?.delta || '';
@@ -508,39 +569,103 @@ export default function TemplateList() {
               return;
             }
 
-            aiStreamBufferRef.current += deltaText;
-            const nextCandidatePreview = extractCandidatePreviewFromStream(aiStreamBufferRef.current);
-            latestCandidatePreview = nextCandidatePreview || latestCandidatePreview;
-
             setAIAssistant((prev) => ({
               ...prev,
-              candidateText: nextCandidatePreview || prev.candidateText
+              status: 'streaming',
+              progressText: t('templates.ai.progress.streaming'),
+              modelDeltaText: `${prev.modelDeltaText || ''}${deltaText}`.slice(-12000)
             }));
           },
-          onComplete: (eventData) => {
+          onOperationsReady: (eventData) => {
+            setAIAssistant((prev) =>
+              buildTemplateAIAssistantState(
+                {
+                  ...eventData,
+                  status: eventData?.status || 'operations_ready',
+                  progressText: t('templates.ai.progress.operationsReady')
+                },
+                sourceSnapshot,
+                prev
+              )
+            );
+          },
+          onPreviewValidating: (eventData) => {
+            setAIAssistant((prev) =>
+              buildTemplateAIAssistantState(
+                {
+                  ...eventData,
+                  status: eventData?.status || 'validating',
+                  progressText: t('templates.ai.progress.validating')
+                },
+                sourceSnapshot,
+                prev
+              )
+            );
+          },
+          onWarning: (eventData) => {
+            setAIAssistant((prev) =>
+              buildTemplateAIAssistantState(
+                {
+                  ...eventData,
+                  status: eventData?.status || prev.status || 'validating',
+                  progressText: t('templates.ai.progress.warning')
+                },
+                sourceSnapshot,
+                prev
+              )
+            );
+          },
+          onPreviewReady: (eventData) => {
+            setAIAssistant((prev) =>
+              buildTemplateAIAssistantState(
+                {
+                  ...eventData,
+                  progressText: t('templates.ai.progress.previewReady')
+                },
+                sourceSnapshot,
+                prev
+              )
+            );
+          },
+          onCompleted: (eventData) => {
             if (!eventData || typeof eventData !== 'object') {
               return;
             }
+
+            setAIAssistant((prev) =>
+              buildTemplateAIAssistantState(
+                {
+                  ...eventData,
+                  finishReason: extractResponseFinishReason(eventData) || eventData.finishReason,
+                  usage: extractResponseUsage(eventData) || eventData.usage,
+                  progressText: t('templates.ai.progress.completed')
+                },
+                sourceSnapshot,
+                prev
+              )
+            );
+          },
+          onError: (eventData) => {
+            const errorMessage = getTemplateAIErrorMessage(t, eventData);
             setAIAssistant((prev) => ({
               ...prev,
-              finishReason: extractResponseFinishReason(eventData) || prev.finishReason,
-              usage: extractResponseUsage(eventData) || prev.usage,
-              candidateText: latestCandidatePreview || prev.candidateText
+              status: 'failed',
+              error: errorMessage,
+              progressText: errorMessage
             }));
-          },
-          onFinal: (eventData) => {
-            if (!eventData || typeof eventData !== 'object') {
-              return;
-            }
-
-            const nextAssistantState = buildTemplateAIAssistantState(eventData, sourceSnapshot, latestCandidatePreview);
-            latestCandidatePreview = nextAssistantState.candidateText;
-            setAIAssistant(nextAssistantState);
           }
         }
       );
 
-      const finalAssistantState = buildTemplateAIAssistantState(data, sourceSnapshot, latestCandidatePreview);
+      const finalAssistantState = buildTemplateAIAssistantState(
+        {
+          ...data,
+          progressText: t('templates.ai.progress.completed')
+        },
+        sourceSnapshot,
+        createEmptyTemplateAIAssistant()
+      );
+      setAIAssistant((prev) => buildTemplateAIAssistantState(finalAssistantState, sourceSnapshot, prev));
       setAIGenerationError('');
 
       if (finalAssistantState.candidateText) {
@@ -554,11 +679,17 @@ export default function TemplateList() {
         return;
       }
 
-      const errorMessage = error.response?.data?.message || error.message || t('templates.ai.messages.generateFailed');
+      const errorMessage = getTemplateAIErrorMessage(t, error);
       const friendlyErrorMessage = AI_SETUP_ERROR_MARKERS.some((marker) => errorMessage.includes(marker))
         ? t('templates.ai.messages.setupUnavailable')
         : errorMessage;
       setAIGenerationError(errorMessage);
+      setAIAssistant((prev) => ({
+        ...prev,
+        status: 'failed',
+        error: errorMessage,
+        progressText: errorMessage
+      }));
       showMessage(friendlyErrorMessage, 'error');
     } finally {
       if (aiGenerationAbortRef.current === controller) {
@@ -582,8 +713,15 @@ export default function TemplateList() {
   const canReviewAICandidate = Boolean(aiAssistant.candidateText) && !aiCandidateOutdated && !aiCandidateMatchesEditor;
   const isDiffMode = templateEditorMode === 'diff';
   const showDiffReview = isDiffMode && canReviewAICandidate;
-  const canAcceptAICandidateLocally = Boolean(aiAssistant.candidateText) && !aiCandidateOutdated && !aiCandidateMatchesEditor;
-  const canRevertLocalAIAccept = Boolean(aiLocalAcceptSnapshot);
+  const aiPreviewBusy = aiGenerating || aiPreviewAccepting || aiPreviewDiscarding;
+  const isAIPreviewAccepted = aiAssistant.status === 'accepted';
+  const canAcceptAIPreview =
+    Boolean(aiAssistant.sessionId && aiAssistant.candidateText) &&
+    !isAIPreviewAccepted &&
+    !aiCandidateOutdated &&
+    !aiCandidateMatchesEditor;
+  const canDiscardAIPreview =
+    !isAIPreviewAccepted && Boolean(aiAssistant.sessionId || aiAssistant.candidateText || aiAssistant.operations.length > 0);
   const canSwitchToDiffMode = canReviewAICandidate;
 
   useEffect(() => {
@@ -592,8 +730,8 @@ export default function TemplateList() {
     }
   }, [templateEditorMode, canSwitchToDiffMode, isAIEnabled]);
 
-  const handleAcceptAICandidateLocally = () => {
-    if (!aiAssistant.candidateText) {
+  const handleAcceptAIPreview = async () => {
+    if (!aiAssistant.candidateText || !aiAssistant.sessionId) {
       showMessage(t('templates.ai.messages.generateFirst'), 'warning');
       return;
     }
@@ -608,28 +746,66 @@ export default function TemplateList() {
       return;
     }
 
-    setAILocalAcceptSnapshot({ text: formData.text });
-    setTemplateEditorMode('edit');
-    setFormData((prev) => ({
-      ...prev,
-      text: aiAssistant.candidateText
-    }));
-    showMessage(t('templates.ai.messages.accepted'));
+    setAIPreviewAccepting(true);
+    try {
+      const response = await acceptTemplateAIEditSession(aiAssistant.sessionId, { currentText: formData.text });
+      const acceptedPayload = response.data || response;
+      const acceptedCandidateText = acceptedPayload?.candidateText || '';
+
+      if (!acceptedCandidateText) {
+        showMessage(t('templates.ai.messages.emptyCandidate'), 'warning');
+        return;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        text: acceptedCandidateText
+      }));
+      setTemplateEditorMode('edit');
+      setAIAssistant((prev) => ({
+        ...prev,
+        status: 'accepted',
+        candidateText: acceptedCandidateText,
+        candidateHash: acceptedPayload?.candidateHash || prev.candidateHash,
+        validation: normalizeTemplateAIValidation(acceptedPayload?.validation) || prev.validation,
+        error: '',
+        progressText: t('templates.ai.progress.accepted')
+      }));
+      showMessage(t('templates.ai.messages.accepted'));
+    } catch (error) {
+      const errorMessage = getTemplateAIErrorMessage(t, error);
+      setAIAssistant((prev) => ({
+        ...prev,
+        error: errorMessage,
+        progressText: errorMessage
+      }));
+      showMessage(errorMessage, 'error');
+    } finally {
+      setAIPreviewAccepting(false);
+    }
   };
 
-  const handleRevertLastLocalAIAccept = () => {
-    if (!aiLocalAcceptSnapshot) {
-      showMessage(t('templates.ai.messages.noRevert'), 'warning');
+  const handleDiscardAIPreview = async () => {
+    const sessionId = aiAssistant.sessionId;
+    if (!sessionId && !aiAssistant.candidateText) {
+      showMessage(t('templates.ai.messages.noPreviewToDiscard'), 'warning');
       return;
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      text: aiLocalAcceptSnapshot.text || ''
-    }));
-    setTemplateEditorMode('edit');
-    setAILocalAcceptSnapshot(null);
-    showMessage(t('templates.ai.messages.reverted'));
+    setAIPreviewDiscarding(true);
+    try {
+      if (sessionId) {
+        await discardTemplateAIEditSession(sessionId);
+      }
+      showMessage(t('templates.ai.messages.discarded'));
+    } catch (error) {
+      const errorMessage = getTemplateAIErrorMessage(t, error);
+      showMessage(errorMessage, 'error');
+    } finally {
+      setTemplateEditorMode('edit');
+      setAIAssistant(createEmptyTemplateAIAssistant());
+      setAIPreviewDiscarding(false);
+    }
   };
 
   const handleConvertTemplate = async (expand) => {
@@ -773,36 +949,74 @@ export default function TemplateList() {
 
   const isEditMode = templateEditorMode === 'edit';
 
-  const aiStatusText = aiGenerating
-    ? t('templates.ai.status.generating')
-    : aiGenerationError
-      ? aiGenerationError
-      : aiCandidateOutdated
-        ? t('templates.ai.status.outdated')
-        : !isEdit && aiAssistant.candidateText
-          ? t('templates.ai.status.unsavedTemplate')
-          : showDiffReview
-            ? t('templates.ai.status.diffReadonly')
-            : aiCandidateMatchesEditor
-              ? t('templates.ai.status.applied')
-              : canRevertLocalAIAccept
-                ? t('templates.ai.status.revertAvailable')
+  const aiStatusText = aiGenerationError
+    ? aiGenerationError
+    : aiAssistant.error
+      ? aiAssistant.error
+      : aiAssistant.progressText
+        ? aiAssistant.progressText
+        : aiCandidateOutdated
+          ? t('templates.ai.status.outdated')
+          : !isEdit && aiAssistant.candidateText
+            ? t('templates.ai.status.unsavedTemplate')
+            : showDiffReview
+              ? t('templates.ai.status.diffReadonly')
+              : aiCandidateMatchesEditor
+                ? t('templates.ai.status.applied')
                 : aiAssistant.candidateText
                   ? t('templates.ai.status.ready')
                   : t('templates.ai.status.prompt');
-  const aiStatusColor = aiGenerationError
-    ? 'error.main'
-    : aiCandidateOutdated
-      ? 'warning.main'
-      : showDiffReview
-        ? alpha(theme.palette.common.white, 0.92)
-        : aiCandidateMatchesEditor
-          ? 'success.main'
-          : alpha(theme.palette.common.white, 0.88);
+  const aiStatusColor =
+    aiGenerationError || aiAssistant.error
+      ? isDark
+        ? withAlpha(palette.error.light, 0.96)
+        : palette.error.dark
+      : aiCandidateOutdated
+        ? aiWarningText
+        : showDiffReview
+          ? aiPanelTextPrimary
+          : aiCandidateMatchesEditor
+            ? isDark
+              ? withAlpha(palette.success.light, 0.94)
+              : palette.success.dark
+            : aiPanelTextSecondary;
   const isAISetupIssue = AI_SETUP_ERROR_MARKERS.some((marker) => aiGenerationError.includes(marker));
   const aiSetupGuidanceText = isAISetupIssue ? t('templates.ai.setupGuidance') : '';
   const aiFriendlyGenerationError = isAISetupIssue ? t('templates.ai.setupUnavailable') : aiGenerationError;
   const aiUsageItems = buildTemplateAIUsageItems(aiAssistant.usage, t);
+
+  const getAISemanticChipSx = (tone = 'neutral') => {
+    if (tone === 'neutral') {
+      return {
+        bgcolor: aiNeutralChipSurface,
+        color: aiPanelTextPrimary,
+        borderColor: aiNeutralChipBorder,
+        '& .MuiChip-label': {
+          fontWeight: 600
+        }
+      };
+    }
+
+    const tonePalette = theme.palette[tone] || palette[tone] || theme.palette.primary;
+    const toneText =
+      tone === 'warning'
+        ? aiWarningText
+        : isDark
+          ? withAlpha(tonePalette.light || tonePalette.main, 0.94)
+          : tonePalette.dark || tonePalette.main;
+
+    return {
+      bgcolor: withAlpha(tonePalette.main, isDark ? 0.18 : 0.09),
+      color: toneText,
+      borderColor: withAlpha(tonePalette.main, isDark ? 0.36 : 0.22),
+      '& .MuiChip-icon': {
+        color: 'inherit'
+      },
+      '& .MuiChip-label': {
+        fontWeight: 600
+      }
+    };
+  };
 
   const configureTemplateMonacoTheme = (monaco) => {
     monaco.editor.defineTheme('template-ai-editor', {
@@ -814,82 +1028,6 @@ export default function TemplateList() {
       }
     });
   };
-
-  const aiStateChips = (
-    <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-      <Chip
-        size="small"
-        variant="filled"
-        label={isEditMode ? t('templates.ai.mode.edit') : t('templates.ai.mode.diff')}
-        color={isEditMode ? 'primary' : 'default'}
-        sx={{
-          color: 'common.white',
-          bgcolor: isEditMode ? undefined : alpha(theme.palette.common.white, 0.14),
-          '& .MuiChip-label': {
-            fontWeight: 600
-          }
-        }}
-      />
-      {aiGenerating ? (
-        <Chip
-          size="small"
-          variant="outlined"
-          color="primary"
-          label={t('templates.ai.statusChip.generating')}
-          sx={{ color: 'common.white' }}
-        />
-      ) : null}
-      {!aiGenerating ? (
-        <Chip
-          size="small"
-          variant="outlined"
-          color={
-            aiGenerationError
-              ? 'error'
-              : aiCandidateOutdated
-                ? 'warning'
-                : aiCandidateMatchesEditor
-                  ? 'success'
-                  : aiAssistant.candidateText
-                    ? 'info'
-                    : 'default'
-          }
-          label={
-            aiGenerationError
-              ? t('templates.ai.statusChip.failed')
-              : aiCandidateOutdated
-                ? t('templates.ai.statusChip.outdated')
-                : aiCandidateMatchesEditor
-                  ? t('templates.ai.statusChip.applied')
-                  : aiAssistant.candidateText
-                    ? t('templates.ai.statusChip.ready')
-                    : t('templates.ai.statusChip.notGenerated')
-          }
-          sx={{
-            color:
-              aiGenerationError || aiCandidateOutdated || aiCandidateMatchesEditor || aiAssistant.candidateText
-                ? 'common.white'
-                : alpha(theme.palette.common.white, 0.92),
-            borderColor:
-              !aiGenerationError && !aiCandidateOutdated && !aiCandidateMatchesEditor && !aiAssistant.candidateText
-                ? alpha(theme.palette.common.white, 0.22)
-                : undefined
-          }}
-        />
-      ) : null}
-      {canRevertLocalAIAccept ? (
-        <Chip size="small" variant="outlined" color="info" label={t('templates.ai.statusChip.canRevert')} sx={{ color: 'common.white' }} />
-      ) : null}
-      {!isEdit && aiAssistant.candidateText ? (
-        <Chip
-          size="small"
-          variant="outlined"
-          label={t('templates.ai.statusChip.unsavedTemplate')}
-          sx={{ color: 'common.white', borderColor: alpha(theme.palette.common.white, 0.22) }}
-        />
-      ) : null}
-    </Stack>
-  );
 
   const renderAIControlPanel = ({ compact = false, minimal = false } = {}) => {
     if (!isAIEnabled) return null;
@@ -1048,13 +1186,13 @@ export default function TemplateList() {
                   }
                 : undefined
             }
-            disabled={aiCommandOpen && aiGenerating}
+            disabled={aiCommandOpen && aiPreviewBusy}
             disableRipple={!aiCommandOpen}
             sx={{
               width: aiCommandOpen ? 32 : 36,
               height: aiCommandOpen ? 32 : 36,
               flexShrink: 0,
-              color: aiCommandOpen ? alpha(theme.palette.common.white, aiGenerating ? 0.48 : 0.94) : alpha(aiPromptPrimaryLight, 0.95),
+              color: aiCommandOpen ? alpha(theme.palette.common.white, aiPreviewBusy ? 0.48 : 0.94) : alpha(aiPromptPrimaryLight, 0.95),
               transition: theme.transitions.create(['width', 'height', 'color', 'background-color']),
               '&:hover': aiCommandOpen
                 ? {
@@ -1077,9 +1215,9 @@ export default function TemplateList() {
                 size="small"
                 value={aiPrompt}
                 onChange={(e) => setAIPrompt(e.target.value)}
-                disabled={aiGenerating}
+                disabled={aiPreviewBusy}
                 placeholder={t('templates.ai.promptPlaceholder')}
-                inputProps={{ 'aria-label': t('templates.ai.promptAria') }}
+                slotProps={{ htmlInput: { 'aria-label': t('templates.ai.promptAria') } }}
                 sx={{
                   minWidth: 0,
                   '& .MuiOutlinedInput-root': {
@@ -1118,7 +1256,7 @@ export default function TemplateList() {
                 variant="contained"
                 size="small"
                 startIcon={aiGenerating ? <CircularProgress size={16} sx={{ color: 'common.white' }} /> : <AutoAwesomeIcon />}
-                disabled={aiGenerating}
+                disabled={aiPreviewBusy}
                 onClick={handleGenerateWithAI}
                 sx={{
                   flexShrink: 0,
@@ -1136,14 +1274,15 @@ export default function TemplateList() {
               </Button>
               <IconButton
                 size="small"
-                disabled={!canAcceptAICandidateLocally || aiGenerating}
-                onClick={handleAcceptAICandidateLocally}
+                aria-label={t('templates.ai.aria.acceptPreview')}
+                disabled={!canAcceptAIPreview || aiPreviewBusy}
+                onClick={handleAcceptAIPreview}
                 sx={{
                   flexShrink: 0,
                   borderRadius: 1,
                   bgcolor: alpha(theme.palette.common.white, 0.06),
                   color:
-                    canAcceptAICandidateLocally && !aiGenerating
+                    canAcceptAIPreview && !aiPreviewBusy
                       ? alpha(theme.palette.common.white, 0.96)
                       : alpha(theme.palette.common.white, 0.42),
                   '&.Mui-disabled': {
@@ -1154,33 +1293,32 @@ export default function TemplateList() {
               >
                 <CheckIcon fontSize="small" />
               </IconButton>
-              {isEditMode ? (
-                <IconButton
-                  size="small"
-                  disabled={!canRevertLocalAIAccept || aiGenerating}
-                  onClick={handleRevertLastLocalAIAccept}
-                  sx={{
-                    flexShrink: 0,
-                    borderRadius: 1,
-                    bgcolor: alpha(theme.palette.common.white, 0.06),
-                    color:
-                      canRevertLocalAIAccept && !aiGenerating
-                        ? alpha(theme.palette.common.white, 0.92)
-                        : alpha(theme.palette.common.white, 0.4),
-                    '&.Mui-disabled': {
-                      bgcolor: alpha(theme.palette.common.white, 0.04),
-                      color: alpha(theme.palette.common.white, 0.32)
-                    }
-                  }}
-                >
-                  <UndoIcon fontSize="small" />
-                </IconButton>
-              ) : null}
+              <IconButton
+                size="small"
+                aria-label={t('templates.ai.aria.discardPreview')}
+                disabled={!canDiscardAIPreview || aiPreviewBusy}
+                onClick={handleDiscardAIPreview}
+                sx={{
+                  flexShrink: 0,
+                  borderRadius: 1,
+                  bgcolor: alpha(theme.palette.common.white, 0.06),
+                  color:
+                    canDiscardAIPreview && !aiPreviewBusy
+                      ? alpha(theme.palette.common.white, 0.92)
+                      : alpha(theme.palette.common.white, 0.4),
+                  '&.Mui-disabled': {
+                    bgcolor: alpha(theme.palette.common.white, 0.04),
+                    color: alpha(theme.palette.common.white, 0.32)
+                  }
+                }}
+              >
+                <UndoIcon fontSize="small" />
+              </IconButton>
               {isAISetupIssue ? (
                 <Button
                   size="small"
                   variant="text"
-                  disabled={aiGenerating}
+                  disabled={aiPreviewBusy}
                   onClick={() => navigate('/system/settings', { state: { targetTab: 'ai' } })}
                   sx={{
                     flexShrink: 0,
@@ -1310,30 +1448,30 @@ export default function TemplateList() {
             px: 1.25,
             py: 0.75,
             borderRadius: 1,
-            bgcolor: alpha(theme.palette.grey[900], 0.76),
+            bgcolor: aiPanelSurface,
+            backgroundImage: isDark ? `linear-gradient(180deg, ${alpha(theme.palette.common.white, 0.035)} 0%, transparent 100%)` : 'none',
             backdropFilter: 'blur(8px)',
             border: 1,
-            borderColor: alpha(theme.palette.common.white, 0.12),
-            boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.22)}`,
+            borderColor: aiPanelBorder,
+            boxShadow: aiPanelSoftShadow,
             zIndex: 5,
-            pointerEvents: 'none'
+            pointerEvents: 'auto'
           }}
         >
           <Stack spacing={0.75} sx={{ minWidth: 0 }}>
-            {aiStateChips}
             <Typography
               variant="caption"
               sx={{
-                color: aiCandidateMatchesEditor ? 'common.white' : isAISetupIssue ? alpha(theme.palette.common.white, 0.94) : aiStatusColor,
+                color: aiCandidateMatchesEditor ? aiPanelTextPrimary : isAISetupIssue ? aiPanelTextPrimary : aiStatusColor,
                 display: 'block',
                 lineHeight: 1.45,
-                textShadow: aiCandidateMatchesEditor ? `0 1px 2px ${alpha(theme.palette.common.black, 0.45)}` : 'none'
+                textShadow: 'none'
               }}
             >
               {isAISetupIssue ? aiFriendlyGenerationError : aiStatusText}
             </Typography>
             {isAISetupIssue ? (
-              <Typography variant="caption" sx={{ color: alpha(theme.palette.common.white, 0.76), display: 'block', lineHeight: 1.4 }}>
+              <Typography variant="caption" sx={{ color: aiPanelTextSecondary, display: 'block', lineHeight: 1.4 }}>
                 {aiSetupGuidanceText}
               </Typography>
             ) : null}
@@ -1346,9 +1484,7 @@ export default function TemplateList() {
                     variant="outlined"
                     label={`${item.label} ${item.value}`}
                     sx={{
-                      color: alpha(theme.palette.common.white, 0.92),
-                      borderColor: alpha(theme.palette.common.white, 0.18),
-                      bgcolor: alpha(theme.palette.common.white, 0.04),
+                      ...getAISemanticChipSx('primary'),
                       '& .MuiChip-label': {
                         px: 1,
                         fontWeight: 500
@@ -1619,17 +1755,19 @@ export default function TemplateList() {
         maxWidth={editorFullscreen ? false : 'lg'}
         fullWidth
         fullScreen={editorFullscreen}
-        PaperProps={{
-          sx: editorFullscreen
-            ? {
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-                height: '100vh',
-                maxHeight: '100vh',
-                m: 0
-              }
-            : undefined
+        slotProps={{
+          paper: {
+            sx: editorFullscreen
+              ? {
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  height: '100vh',
+                  maxHeight: '100vh',
+                  m: 0
+                }
+              : undefined
+          }
         }}
       >
         <DialogTitle

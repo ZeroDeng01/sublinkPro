@@ -32,7 +32,7 @@ func TestUserGetAISettingsMasksStoredKey(t *testing.T) {
 	if err := user.Create(); err != nil {
 		t.Fatalf("create user: %v", err)
 	}
-	if err := user.UpdateAISettings(UserAISettings{Enabled: true, BaseURL: "https://api.example.com/v1", Model: "gpt-test", RawAPIKey: "sk-test-1234567890", Temperature: 0.2, MaxTokens: 500}); err != nil {
+	if err := user.UpdateAISettings(UserAISettings{Enabled: true, BaseURL: "https://api.example.com/v1", Model: "gpt-test", RequestType: SystemAIRequestTypeChatCompletions, RawAPIKey: "sk-test-1234567890", Temperature: 0.2, MaxTokens: 500}); err != nil {
 		t.Fatalf("update ai settings: %v", err)
 	}
 	settings, err := user.GetAISettings()
@@ -47,6 +47,9 @@ func TestUserGetAISettingsMasksStoredKey(t *testing.T) {
 	}
 	if settings.RawAPIKey != "sk-test-1234567890" {
 		t.Fatalf("expected decrypted raw key, got %q", settings.RawAPIKey)
+	}
+	if settings.RequestType != SystemAIRequestTypeChatCompletions {
+		t.Fatalf("expected chat completions request type, got %q", settings.RequestType)
 	}
 }
 

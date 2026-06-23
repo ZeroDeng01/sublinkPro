@@ -61,7 +61,7 @@ English | [简体中文](README.zh-CN.md)
 | 🏷️ **Smart tag system** | Automatic rule based tagging, no code filtering, IP quality conditions | [📖](docs/features/tags.md) |
 | ⚡ **Professional speed test system** | Two stage tests, smart latency measurement, IP quality and unlock checks | [📖](docs/features/speedtest.md) |
 | 🔗 **Chain proxy** | Native Dialer-Proxy support, visual configuration, IP quality based node selection | [📖](docs/features/chain-proxy.md) |
-| 🤖 **AI template editing** | Generate template drafts from natural language, review with edit and diff views, apply or roll back locally | [📖](docs/features/template-ai.md) |
+| 🤖 **AI template editing** | Generate operation based previews from natural language, review read-only diffs, accept into the editor, then save normally | [📖](docs/features/template-ai.md) |
 | ✈️ **Airport management** | Multi format import, scheduled updates, traffic monitoring, one click full refresh | [📖](docs/features/airport.md) |
 | 🗂️ **Group ordering** | Drag airport priority within a group to control node order in subscription output | [📖](docs/development.md) |
 | 📋 **Subscription sharing** | Multiple links, expiration policies, access statistics | [📖](docs/features/subscription-share.md) |
@@ -160,7 +160,7 @@ If your earlier instance used SQLite and you now want to migrate to MySQL or Pos
 | [⚡ Speed test system](docs/features/speedtest.md) | Test design, IP quality checks, unlock checks, parameter tuning |
 | [🌍 Unlock checks](docs/features/unlock-check.md) | Streaming and AI availability checks, Provider architecture, extensions |
 | [🔗 Chain proxy](docs/features/chain-proxy.md) | Dialer-Proxy, condition based node selection, configuration flow |
-| [🤖 AI template editing](docs/features/template-ai.md) | AI generated template drafts, edit and diff review, local apply and rollback |
+| [🤖 AI template editing](docs/features/template-ai.md) | Operation based previews, read-only diff review, accept into editor, normal save |
 | [✈️ Airport management](docs/features/airport.md) | Subscription import, scheduled updates, traffic monitoring |
 | [📋 Subscription sharing](docs/features/subscription-share.md) | Multiple links, expiration policies, access statistics |
 | [🌐 Host management](docs/features/host.md) | Domain mappings, DNS configuration, speed test persistence |
