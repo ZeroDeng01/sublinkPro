@@ -258,13 +258,16 @@ export default function NodePreviewDialog({ open, loading, data, tagColorMap, on
   const [ipDialogOpen, setIpDialogOpen] = useState(false);
   const [selectedIP, setSelectedIP] = useState('');
   const [displayCount, setDisplayCount] = useState(BATCH_SIZE);
-  const [statsExpanded, setStatsExpanded] = useState(true);
-  const [distributionExpanded, setDistributionExpanded] = useState(true);
+  const [statsExpanded, setStatsExpanded] = useState(false);
+  const [distributionExpanded, setDistributionExpanded] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setDisplayCount(BATCH_SIZE);
       setSearchText('');
+    } else {
+      setStatsExpanded(false);
+      setDistributionExpanded(false);
     }
   }, [open]);
 
