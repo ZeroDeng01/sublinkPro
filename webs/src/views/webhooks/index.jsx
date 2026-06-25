@@ -119,6 +119,8 @@ export default function WebhookManagementPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [form, setForm] = useState(createDefaultForm());
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const palette = theme.vars?.palette || theme.palette;
+  const isDark = theme.palette.mode === 'dark';
 
   const showMessage = useCallback((message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -143,6 +145,21 @@ export default function WebhookManagementPage() {
   }, [fetchWebhooks]);
 
   const enabledCount = useMemo(() => items.filter((item) => item.enabled).length, [items]);
+  const getStatusChipSx = (enabled) => ({
+    height: 20,
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    color: enabled ? (isDark ? palette.success.light : palette.success.dark) : palette.text.secondary,
+    bgcolor: enabled
+      ? alpha(theme.palette.success.main, isDark ? 0.18 : 0.12)
+      : isDark
+        ? 'background.default'
+        : alpha(theme.palette.grey[500], 0.08),
+    border: `1px solid ${enabled ? alpha(theme.palette.success.main, isDark ? 0.34 : 0.18) : alpha(theme.palette.divider, isDark ? 0.56 : 0.24)}`,
+    '& .MuiChip-label': {
+      px: 1
+    }
+  });
 
   const openCreateDialog = () => {
     setForm(createDefaultForm());
@@ -402,8 +419,9 @@ export default function WebhookManagementPage() {
                         <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                           <Chip
                             size="small"
-                            color={item.enabled ? 'success' : 'default'}
+                            variant="filled"
                             label={item.enabled ? t('webhooks.statusEnabled') : t('webhooks.statusDisabled')}
+                            sx={getStatusChipSx(item.enabled)}
                           />
                           <Chip size="small" variant="outlined" label={item.method} />
                           <Chip size="small" variant="outlined" label={item.contentType} />

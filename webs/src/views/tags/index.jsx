@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
 // material-ui
@@ -84,6 +84,8 @@ export default function TagManagement() {
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
   const [editingTag, setEditingTag] = useState(null);
   const [editingRule, setEditingRule] = useState(null);
+  const palette = theme.vars?.palette || theme.palette;
+  const isDark = theme.palette.mode === 'dark';
 
   // Search/Filter states
   const [tagSearch, setTagSearch] = useState('');
@@ -265,6 +267,21 @@ export default function TagManagement() {
     triggerType === 'subscription_update' ? t('tags.trigger.subscriptionUpdate') : t('tags.trigger.speedTest');
 
   const getStatusLabel = (enabled) => (enabled ? t('tags.status.enabled') : t('tags.status.disabled'));
+  const getStatusChipSx = (enabled) => ({
+    height: 20,
+    fontSize: isMobile ? '0.72rem' : '0.7rem',
+    fontWeight: 600,
+    color: enabled ? (isDark ? palette.success.light : palette.success.dark) : palette.text.secondary,
+    bgcolor: enabled
+      ? alpha(theme.palette.success.main, isDark ? 0.18 : 0.12)
+      : isDark
+        ? 'background.default'
+        : alpha(theme.palette.grey[500], 0.08),
+    border: `1px solid ${enabled ? alpha(theme.palette.success.main, isDark ? 0.34 : 0.18) : alpha(theme.palette.divider, isDark ? 0.56 : 0.24)}`,
+    '& .MuiChip-label': {
+      px: 1
+    }
+  });
 
   // 过滤标签
   const filteredTags = tags.filter((tag) => {
@@ -355,7 +372,7 @@ export default function TagManagement() {
                 </Typography>
               )}
               <Chip label={getTriggerLabel(rule.triggerType)} size="small" variant="outlined" />
-              <Chip label={getStatusLabel(rule.enabled)} size="small" color={rule.enabled ? 'success' : 'default'} />
+              <Chip label={getStatusLabel(rule.enabled)} size="small" variant="filled" sx={getStatusChipSx(rule.enabled)} />
             </Stack>
           </Stack>
         </CardContent>
@@ -646,7 +663,7 @@ export default function TagManagement() {
                         </TableCell>
                         <TableCell>{getTriggerLabel(rule.triggerType)}</TableCell>
                         <TableCell>
-                          <Chip label={getStatusLabel(rule.enabled)} size="small" color={rule.enabled ? 'success' : 'default'} />
+                          <Chip label={getStatusLabel(rule.enabled)} size="small" variant="filled" sx={getStatusChipSx(rule.enabled)} />
                         </TableCell>
                         <TableCell align="right">
                           <IconButton size="small" onClick={() => handleTriggerRule(rule)} title={t('tags.actions.execute')}>
