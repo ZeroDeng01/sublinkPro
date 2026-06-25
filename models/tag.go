@@ -331,28 +331,189 @@ func (tc *TagConditions) EvaluateNode(node Node) bool {
 		return false
 	}
 
-	results := make([]bool, len(tc.Conditions))
-	for i, cond := range tc.Conditions {
-		results[i] = evaluateCondition(node, cond)
-	}
-
-	// 根据逻辑运算符合并结果
-	if tc.Logic == "or" {
-		for _, r := range results {
-			if r {
+	logic := strings.ToLower(strings.TrimSpace(tc.Logic))
+	if logic == "or" {
+		for i := 0; i < len(tc.Conditions); {
+			matched, next := evaluateConditionUnit(node, tc.Conditions, i)
+			if matched {
 				return true
 			}
+			i = next
 		}
 		return false
 	}
 
-	// 默认 AND 逻辑
-	for _, r := range results {
-		if !r {
+	for i := 0; i < len(tc.Conditions); {
+		matched, next := evaluateConditionUnit(node, tc.Conditions, i)
+		if !matched {
 			return false
 		}
+		i = next
 	}
 	return true
+}
+
+func evaluateConditionUnit(node Node, conditions []TagCondition, index int) (bool, int) {
+	if shouldStartUnlockConditionGroup(conditions, index) {
+		group, next := collectUnlockConditionGroup(conditions, index)
+		return evaluateUnlockConditionGroup(node, group), next
+	}
+	return evaluateCondition(node, conditions[index]), index + 1
+}
+
+func shouldStartUnlockConditionGroup(conditions []TagCondition, index int) bool {
+	if index < 0 || index >= len(conditions) {
+		return false
+	}
+	switch conditions[index].Field {
+	case "unlock_provider", "unlock_status":
+		return true
+	case "unlock_keyword":
+		group, _ := collectUnlockConditionGroup(conditions, index)
+		for _, cond := range group {
+			if cond.Field == "unlock_provider" || cond.Field == "unlock_status" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func collectUnlockConditionGroup(conditions []TagCondition, start int) ([]TagCondition, int) {
+	group := make([]TagCondition, 0, 3)
+	seen := make(map[string]bool, 3)
+	for i := start; i < len(conditions); i++ {
+		field := conditions[i].Field
+		if !isGroupedUnlockConditionField(field) || seen[field] {
+			break
+		}
+		group = append(group, conditions[i])
+		seen[field] = true
+	}
+	return group, start + len(group)
+}
+
+func isGroupedUnlockConditionField(field string) bool {
+	return field == "unlock_provider" || field == "unlock_status" || field == "unlock_keyword"
+}
+
+func evaluateUnlockConditionGroup(node Node, group []TagCondition) bool {
+	if len(group) == 0 {
+		return false
+	}
+	if len(group) == 1 && group[0].Field == "unlock_keyword" {
+		return evaluateCondition(node, group[0])
+	}
+
+	summary := ParseUnlockSummary(node.UnlockSummary)
+	for _, result := range summary.Providers {
+		matched := true
+		for _, cond := range group {
+			if !evaluateUnlockProviderResultCondition(result, cond) {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
+}
+
+func evaluateUnlockProviderResultCondition(result UnlockProviderResult, cond TagCondition) bool {
+	compareValue := fmt.Sprintf("%v", cond.Value)
+
+	switch cond.Field {
+	case "unlock_provider":
+		return matchUnlockProviderCondition(result.Provider, cond.Operator, compareValue)
+	case "unlock_status":
+		return matchUnlockStatusCondition(result.Status, cond.Operator, compareValue)
+	case "unlock_keyword":
+		return matchTextCondition(buildUnlockResultSearchText(result), cond.Operator, compareValue)
+	default:
+		return false
+	}
+}
+
+func matchUnlockProviderCondition(provider string, operator string, compareValue string) bool {
+	targetProvider := NormalizeUnlockProvider(compareValue)
+	if targetProvider == "" {
+		return false
+	}
+	providerKey := NormalizeUnlockProvider(provider)
+
+	switch operator {
+	case "equals":
+		return providerKey == targetProvider
+	case "not_equals":
+		return providerKey != targetProvider
+	case "contains":
+		return strings.Contains(strings.ToLower(provider), strings.ToLower(compareValue))
+	case "not_contains":
+		return !strings.Contains(strings.ToLower(provider), strings.ToLower(compareValue))
+	default:
+		return false
+	}
+}
+
+func matchUnlockStatusCondition(status string, operator string, compareValue string) bool {
+	targetStatus := NormalizeUnlockStatus(compareValue)
+	if targetStatus == "" {
+		targetStatus = strings.TrimSpace(compareValue)
+	}
+	statusKey := NormalizeUnlockStatus(status)
+	if statusKey == "" {
+		statusKey = strings.TrimSpace(status)
+	}
+
+	switch operator {
+	case "equals":
+		return statusKey == targetStatus
+	case "not_equals":
+		return statusKey != targetStatus
+	case "contains":
+		return strings.Contains(strings.ToLower(status), strings.ToLower(compareValue))
+	case "not_contains":
+		return !strings.Contains(strings.ToLower(status), strings.ToLower(compareValue))
+	default:
+		return false
+	}
+}
+
+func buildUnlockResultSearchText(result UnlockProviderResult) string {
+	providerMeta := GetUnlockProviderMeta(result.Provider)
+	return strings.Join([]string{
+		providerMeta.Label,
+		result.Provider,
+		result.Status,
+		GetUnlockStatusLabel(result.Status),
+		result.Region,
+		result.Reason,
+		result.Detail,
+	}, " ")
+}
+
+func matchTextCondition(fieldValue string, operator string, compareValue string) bool {
+	switch operator {
+	case "equals":
+		return fieldValue == compareValue
+	case "not_equals":
+		return fieldValue != compareValue
+	case "contains":
+		return strings.Contains(strings.ToLower(fieldValue), strings.ToLower(compareValue))
+	case "not_contains":
+		return !strings.Contains(strings.ToLower(fieldValue), strings.ToLower(compareValue))
+	case "regex":
+		re, err := regexp.Compile(compareValue)
+		if err != nil {
+			utils.Error("正则表达式编译失败: %s, error: %v", compareValue, err)
+			return false
+		}
+		return re.MatchString(fieldValue)
+	default:
+		return false
+	}
 }
 
 // evaluateCondition 评估单个条件

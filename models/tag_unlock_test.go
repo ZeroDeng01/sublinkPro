@@ -172,8 +172,7 @@ func TestEvaluateUnlockCondition_MultipleProviders(t *testing.T) {
 }
 
 // TestEvaluateUnlockCondition_CombinedConditions 测试组合条件（AND逻辑）
-// 注意：当前实现是独立匹配，即provider和status条件独立评估
-// 只要节点中存在匹配的provider AND 存在匹配的status（可以是不同的provider），就认为匹配
+// 解锁 provider/status/keyword 条件会按连续的 UI 行组合，并要求同一个 provider 结果满足整组条件。
 func TestEvaluateUnlockCondition_CombinedConditions(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -215,11 +214,11 @@ func TestEvaluateUnlockCondition_CombinedConditions(t *testing.T) {
 			reason:   "节点有Netflix且有restricted状态",
 		},
 		{
-			name: "OpenAI受限-也会匹配（独立匹配逻辑）",
+			name: "OpenAI受限-不应该匹配",
 			unlockSummary: `{"providers":[
-				{"provider":"Netflix","status":"restricted","region":"CN"},
-				{"provider":"OpenAI","status":"available","region":"US"}
-			]}`,
+					{"provider":"Netflix","status":"restricted","region":"CN"},
+					{"provider":"OpenAI","status":"available","region":"US"}
+				]}`,
 			conditions: TagConditions{
 				Logic: "and",
 				Conditions: []TagCondition{
@@ -227,8 +226,8 @@ func TestEvaluateUnlockCondition_CombinedConditions(t *testing.T) {
 					{Field: "unlock_status", Operator: "equals", Value: "restricted"},
 				},
 			},
-			expected: true,
-			reason:   "节点有OpenAI（满足第一个条件）且有restricted状态（Netflix，满足第二个条件）",
+			expected: false,
+			reason:   "restricted状态属于Netflix，不属于OpenAI",
 		},
 		{
 			name: "Disney可用-不应该匹配",
@@ -287,6 +286,92 @@ func TestEvaluateUnlockCondition_CombinedConditions(t *testing.T) {
 				t.Errorf("EvaluateNode() = %v, expected %v, reason: %s", result, tt.expected, tt.reason)
 			}
 		})
+	}
+}
+
+func TestEvaluateUnlockCondition_GroupedUnlockRowsIssue234(t *testing.T) {
+	conditions := TagConditions{
+		Logic: "and",
+		Conditions: []TagCondition{
+			{Field: "unlock_provider", Operator: "equals", Value: "Gemini"},
+			{Field: "unlock_status", Operator: "equals", Value: "available"},
+			{Field: "unlock_provider", Operator: "equals", Value: "OpenAI"},
+			{Field: "unlock_status", Operator: "equals", Value: "available"},
+		},
+	}
+
+	tests := []struct {
+		name          string
+		unlockSummary string
+		expected      bool
+	}{
+		{
+			name: "Gemini和OpenAI都解锁时匹配",
+			unlockSummary: `{"providers":[
+				{"provider":"gemini","status":"available","region":"SG"},
+				{"provider":"openai","status":"available","region":"SG"}
+			]}`,
+			expected: true,
+		},
+		{
+			name: "Gemini受限但OpenAI解锁时不匹配",
+			unlockSummary: `{"providers":[
+				{"provider":"gemini","status":"restricted","region":"RO"},
+				{"provider":"openai","status":"available","region":"RO"}
+			]}`,
+			expected: false,
+		},
+		{
+			name: "Gemini受限且OpenAI错误时不被隐藏的解锁结果误匹配",
+			unlockSummary: `{"providers":[
+				{"provider":"gemini","status":"restricted","region":"SG"},
+				{"provider":"openai","status":"error","region":"SG"},
+				{"provider":"youtube_premium","status":"available","region":"SG"}
+			]}`,
+			expected: false,
+		},
+		{
+			name: "Gemini解锁但OpenAI部分可用时不匹配",
+			unlockSummary: `{"providers":[
+				{"provider":"gemini","status":"available","region":"US"},
+				{"provider":"openai","status":"partial","region":"US"}
+			]}`,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node := Node{UnlockSummary: tt.unlockSummary}
+			result := conditions.EvaluateNode(node)
+			if result != tt.expected {
+				t.Errorf("EvaluateNode() = %v, expected %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestEvaluateUnlockCondition_GroupedUnlockRowsORLogic(t *testing.T) {
+	conditions := TagConditions{
+		Logic: "or",
+		Conditions: []TagCondition{
+			{Field: "unlock_provider", Operator: "equals", Value: "Gemini"},
+			{Field: "unlock_status", Operator: "equals", Value: "available"},
+			{Field: "unlock_provider", Operator: "equals", Value: "OpenAI"},
+			{Field: "unlock_status", Operator: "equals", Value: "available"},
+		},
+	}
+
+	node := Node{
+		UnlockSummary: `{"providers":[
+			{"provider":"gemini","status":"restricted","region":"SG"},
+			{"provider":"openai","status":"error","region":"SG"},
+			{"provider":"youtube_premium","status":"available","region":"SG"}
+		]}`,
+	}
+
+	if conditions.EvaluateNode(node) {
+		t.Fatal("EvaluateNode() = true, expected false")
 	}
 }
 
