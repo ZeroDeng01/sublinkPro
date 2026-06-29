@@ -6205,12 +6205,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:3.8.4":
-  version: 3.8.4
-  resolution: "prettier@npm:3.8.4"
+"prettier@npm:3.9.1":
+  version: 3.9.1
+  resolution: "prettier@npm:3.9.1"
   bin:
     prettier: bin/prettier.cjs
-  checksum: 10c0/b90a0cbe75b88ac0af9c13fe0f359bd19926fabccd88483227b21f71f0c1cc42da056fc1ac3a361e665577c568371d5ccfb2c62c31c8a1186f8d1bd531a063e9
+  checksum: 10c0/036bd6dadad577356440945deb3271668c6b6e4094e2873ffa54e14131c21915d4eefad94f53d21a08776aa1c0f5a40dcb01151c2af753f9596e15f5e97fad9d
   languageName: node
   linkType: hard
 
@@ -7292,7 +7292,7 @@ __metadata:
     material-ui-popup-state: "npm:5.3.7"
     md5: "npm:^2.3.0"
     monaco-editor: "npm:^0.55.1"
-    prettier: "npm:3.8.4"
+    prettier: "npm:3.9.1"
     qrcode.react: "npm:^4.2.0"
     react: "npm:19.2.7"
     react-apexcharts: "npm:1.9.0"
