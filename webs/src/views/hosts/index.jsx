@@ -787,7 +787,7 @@ export default function HostManagement() {
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editingHost ? t('hosts.dialog.editTitle') : t('hosts.dialog.addTitle')}</DialogTitle>
         <DialogContent>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ pt: 1 }}>
             <TextField
               label={t('hosts.fields.hostname')}
               value={formData.hostname}
