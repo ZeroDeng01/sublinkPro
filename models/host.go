@@ -82,6 +82,8 @@ func InitHostCache() error {
 
 // Add 添加 Host (Write-Through)
 func (h *Host) Add() error {
+	*h = sanitizeHostForStorage(*h)
+
 	// 检查 hostname 是否已存在
 	if hosts := hostCache.GetByIndex("hostname", h.Hostname); len(hosts) > 0 {
 		return fmt.Errorf("hostname '%s' 已存在", h.Hostname)
@@ -98,6 +100,8 @@ func (h *Host) Add() error {
 
 // Update 更新 Host (Write-Through)
 func (h *Host) Update() error {
+	*h = sanitizeHostForStorage(*h)
+
 	// 检查 hostname 是否与其他记录冲突
 	if hosts := hostCache.GetByIndex("hostname", h.Hostname); len(hosts) > 0 {
 		for _, existing := range hosts {
@@ -151,6 +155,7 @@ func GetHostByID(id int) (*Host, error) {
 
 // GetByHostname 根据 hostname 获取 Host
 func GetHostByHostname(hostname string) (*Host, error) {
+	hostname = normalizeHostHostname(hostname)
 	if hosts := hostCache.GetByIndex("hostname", hostname); len(hosts) > 0 {
 		return &hosts[0], nil
 	}
@@ -320,6 +325,7 @@ func parseHostText(text string) []Host {
 			host.Remark = strings.TrimSpace(matches[3])
 		}
 		host.Source = "手动导入"
+		host = sanitizeHostForStorage(host)
 
 		// 简单验证
 		if host.Hostname != "" && host.IP != "" {
@@ -398,6 +404,7 @@ func BatchUpsertHosts(mappings []HostMappingInfo) (int, error) {
 	}
 
 	// 分块处理，避免SQLite变量限制
+	hosts = NormalizeHostsForStorage(hosts)
 	chunks := chunkHosts(hosts, database.BatchSize)
 
 	for _, chunk := range chunks {
@@ -457,11 +464,37 @@ func upsertSingleHost(h Host) error {
 }
 
 func sanitizeHostForStorage(h Host) Host {
-	h.Hostname = strings.TrimSpace(strings.ToValidUTF8(h.Hostname, "�"))
+	h.Hostname = normalizeHostHostname(h.Hostname)
 	h.IP = strings.TrimSpace(strings.ToValidUTF8(h.IP, "�"))
 	h.Remark = strings.TrimSpace(strings.ToValidUTF8(h.Remark, "�"))
 	h.Source = strings.TrimSpace(strings.ToValidUTF8(h.Source, "�"))
 	return h
+}
+
+func normalizeHostHostname(hostname string) string {
+	return strings.ToLower(strings.TrimSpace(strings.ToValidUTF8(hostname, "�")))
+}
+
+// NormalizeHostsForStorage sanitizes Host records and keeps the first row per normalized hostname.
+func NormalizeHostsForStorage(hosts []Host) []Host {
+	if len(hosts) == 0 {
+		return nil
+	}
+
+	normalized := make([]Host, 0, len(hosts))
+	seen := make(map[string]struct{}, len(hosts))
+	for _, host := range hosts {
+		host = sanitizeHostForStorage(host)
+		if host.Hostname == "" {
+			continue
+		}
+		if _, exists := seen[host.Hostname]; exists {
+			continue
+		}
+		seen[host.Hostname] = struct{}{}
+		normalized = append(normalized, host)
+	}
+	return normalized
 }
 
 // reloadHostCache 重新加载Host缓存

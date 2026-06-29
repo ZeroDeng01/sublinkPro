@@ -1206,6 +1206,7 @@ func importHosts(state *databaseMigrationState) error {
 	for i := range hosts {
 		normalizeOptionalTimePtr(&hosts[i].ExpireAt)
 	}
+	hosts = models.NormalizeHostsForStorage(hosts)
 	if err := insertRecords(state.tx, hosts); err != nil {
 		return fmt.Errorf("导入 Host 失败: %w", err)
 	}

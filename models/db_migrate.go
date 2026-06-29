@@ -35,6 +35,54 @@ func legacyUserAISettingsShouldMigrate() bool {
 		strings.TrimSpace(apiKey) == ""
 }
 
+func normalizeHostnamesAndDeduplicate(db *gorm.DB) error {
+	if db == nil || !db.Migrator().HasTable(&Host{}) {
+		return nil
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		var hosts []Host
+		if err := tx.Order("id ASC").Find(&hosts).Error; err != nil {
+			return fmt.Errorf("查询 Host 失败: %w", err)
+		}
+
+		seen := make(map[string]struct{}, len(hosts))
+		duplicateIDs := make([]int, 0)
+		hostsToUpdate := make([]Host, 0, len(hosts))
+		for _, host := range hosts {
+			originalHostname := host.Hostname
+			normalizedHostname := normalizeHostHostname(host.Hostname)
+			if normalizedHostname == "" {
+				duplicateIDs = append(duplicateIDs, host.ID)
+				continue
+			}
+			if _, exists := seen[normalizedHostname]; exists {
+				duplicateIDs = append(duplicateIDs, host.ID)
+				continue
+			}
+			seen[normalizedHostname] = struct{}{}
+			host.Hostname = normalizedHostname
+			if originalHostname != normalizedHostname {
+				hostsToUpdate = append(hostsToUpdate, host)
+			}
+		}
+
+		if len(duplicateIDs) > 0 {
+			if err := tx.Where("id IN ?", duplicateIDs).Delete(&Host{}).Error; err != nil {
+				return fmt.Errorf("删除重复 Host 失败: %w", err)
+			}
+		}
+
+		for _, host := range hostsToUpdate {
+			if err := tx.Model(&Host{}).Where("id = ?", host.ID).Update("hostname", host.Hostname).Error; err != nil {
+				return fmt.Errorf("更新 Host hostname 失败(id=%d): %w", host.ID, err)
+			}
+		}
+
+		return nil
+	})
+}
+
 func migrateLegacyUserAISettingsToSystemSettings() error {
 	if database.DB == nil || !legacyUserAISettingsShouldMigrate() {
 		return nil
@@ -307,6 +355,12 @@ func RunMigrations() error {
 		return repairHTTPHTTPSNodeProtocolFromLink(db)
 	}); err != nil {
 		utils.Error("执行迁移 0036_repair_http_https_node_protocol 失败: %v", err)
+	}
+
+	if err := database.RunCustomMigration("0037_normalize_host_hostnames", func() error {
+		return normalizeHostnamesAndDeduplicate(db)
+	}); err != nil {
+		utils.Error("执行迁移 0037_normalize_host_hostnames 失败: %v", err)
 	}
 
 	if err := database.RunCustomMigration("0024_migrate_legacy_webhook_settings", func() error {
