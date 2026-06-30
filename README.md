@@ -45,7 +45,7 @@ English | [简体中文](README.zh-CN.md)
 - 🎨 **Frontend framework**: Based on [Berry Free React Material UI Admin Template](https://github.com/codedthemes/berry-free-react-admin-template)
 - ⚡ **Backend stack**: Go + Gin + Gorm
 - 🔐 **Default account**: `admin` / `123456`, change it immediately after installation
-- 💻 **Demo**: [https://demo.sublink.us.kg](https://demo.sublink.us.kg), username: admin, password: 123456
+- 💻 **Demo**: [https://demo.sublinkpro.dpdns.org/](https://demo.sublinkpro.dpdns.org/), username: admin, password: 123456
 
 > [!WARNING]
 > ⚠️ This project is not database compatible with the original projects. Don't mix their databases.
