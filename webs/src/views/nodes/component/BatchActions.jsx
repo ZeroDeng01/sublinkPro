@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 // icons
 import DeleteIcon from '@mui/icons-material/Delete';
 import ClearIcon from '@mui/icons-material/Clear';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { getNodeActionButtonSx, getNodeThemeTokens } from '../nodeTheme';
 import { withAlpha } from 'utils/colorUtils';
 
@@ -30,6 +31,7 @@ export default function BatchActions({
   onSource,
   onCountry,
   onDialerProxy,
+  onExport,
   onTag,
   onRemoveTag
 }) {
@@ -118,6 +120,17 @@ export default function BatchActions({
         size="small"
         color="primary"
         variant="outlined"
+        startIcon={<FileDownloadIcon />}
+        onClick={onExport}
+        disabled={!hasSelection}
+        sx={getNodeActionButtonSx(theme, tokens, tokens.palette.primary.main)}
+      >
+        {t('nodes.batch.exportLinks')}
+      </Button>
+      <Button
+        size="small"
+        color="primary"
+        variant="outlined"
         onClick={onGroup}
         disabled={!hasSelection}
         sx={getNodeActionButtonSx(theme, tokens, tokens.palette.warning.main)}
@@ -188,6 +201,7 @@ BatchActions.propTypes = {
   onSource: PropTypes.func.isRequired,
   onCountry: PropTypes.func.isRequired,
   onDialerProxy: PropTypes.func.isRequired,
+  onExport: PropTypes.func.isRequired,
   onTag: PropTypes.func.isRequired,
   onRemoveTag: PropTypes.func.isRequired
 };

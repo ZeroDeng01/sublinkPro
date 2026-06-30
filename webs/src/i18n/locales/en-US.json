@@ -1388,7 +1388,11 @@
         "speedTaskFailed": "Failed to start speed test task",
         "selectCheckRequired": "Select nodes to check",
         "selectedAll": "Selected all {{count}} matching nodes",
-        "columnWidthsReset": "Column widths reset"
+        "columnWidthsReset": "Column widths reset",
+        "selectExportRequired": "Select nodes to export",
+        "exportLinksSuccess": "Exported {{count}} node links",
+        "exportLinksEmpty": "No exportable node links in the current selection",
+        "exportLinksFailed": "Failed to export node links"
       }
     },
     "dialog": {
@@ -1821,6 +1825,7 @@
       "changeSource": "Change source",
       "changeCountry": "Change country",
       "changeDialerProxy": "Change dialer proxy",
+      "exportLinks": "Export links",
       "setTags": "Set tags",
       "removeTags": "Remove tags",
       "groupDialog": {

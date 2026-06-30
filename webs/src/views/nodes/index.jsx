@@ -565,6 +565,37 @@ export default function NodeList() {
     pageSize: rowsPerPage
   });
 
+  const buildNodeListParams = (filters, pagination = {}) => {
+    const params = {};
+    if (filters.search) params.search = filters.search;
+    if (filters.group) params.group = filters.group;
+    if (filters.source) params.source = filters.source;
+    if (filters.maxDelay) params.maxDelay = filters.maxDelay;
+    if (filters.minSpeed) params.minSpeed = filters.minSpeed;
+    if (filters.maxFraudScore) params.maxFraudScore = filters.maxFraudScore;
+    if (filters.speedStatus) params.speedStatus = filters.speedStatus;
+    if (filters.delayStatus) params.delayStatus = filters.delayStatus;
+    if (filters.protocol) params.protocol = filters.protocol;
+    if (filters.residentialType) params.residentialType = filters.residentialType;
+    if (filters.ipType) params.ipType = filters.ipType;
+    if (filters.qualityStatus) params.qualityStatus = filters.qualityStatus;
+    if (filters.unlockRules?.some((rule) => rule.provider || rule.status || rule.keyword)) {
+      params.unlockRules = buildUnlockRulesPayload(filters.unlockRules);
+      params.unlockRuleMode = filters.unlockRuleMode || 'or';
+    }
+    if (filters.countries && filters.countries.length > 0) {
+      params['countries[]'] = filters.countries;
+    }
+    if (filters.tags && filters.tags.length > 0) {
+      params['tags[]'] = filters.tags.map((tag) => tag.name || tag);
+    }
+    if (filters.sortBy) params.sortBy = filters.sortBy;
+    if (filters.sortOrder) params.sortOrder = filters.sortOrder;
+    if (pagination.page !== undefined) params.page = pagination.page;
+    if (pagination.pageSize !== undefined) params.pageSize = pagination.pageSize;
+    return params;
+  };
+
   // 刷新下拉框选项数据
   const refreshFilterOptions = useCallback(() => {
     // 刷新国家选项
@@ -731,6 +762,45 @@ export default function NodeList() {
         }
       }
     );
+  };
+
+  const handleBatchExport = async () => {
+    if (selectedNodes.length === 0) {
+      showMessage(t('nodes.page.messages.selectExportRequired'), 'warning');
+      return;
+    }
+
+    try {
+      let exportNodes = selectedNodes;
+      if (selectedNodes.some((node) => !node.Link)) {
+        const selectedIds = new Set(selectedNodes.map((node) => node.ID));
+        const response = await getNodes(buildNodeListParams(getCurrentFilters(), { page: 1, pageSize: selectedNodes.length }));
+        const allNodes = response.data?.items !== undefined ? response.data.items || [] : response.data || [];
+        exportNodes = allNodes.filter((node) => selectedIds.has(node.ID));
+      }
+
+      const links = exportNodes
+        .flatMap((node) => (node.Link || '').split(','))
+        .map((link) => link.trim())
+        .filter(Boolean);
+
+      if (links.length === 0) {
+        showMessage(t('nodes.page.messages.exportLinksEmpty'), 'warning');
+        return;
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const blob = new Blob(['\ufeff' + links.join('\n')], { type: 'text/plain;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `sublinkpro_nodes_${links.length}_${timestamp}.txt`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      showMessage(t('nodes.page.messages.exportLinksSuccess', { count: links.length }));
+    } catch (error) {
+      console.error(error);
+      showMessage(error.message || t('nodes.page.messages.exportLinksFailed'), 'error');
+    }
   };
 
   // 批量修改分组
@@ -1254,6 +1324,7 @@ export default function NodeList() {
         onSource={handleBatchSource}
         onCountry={handleBatchCountry}
         onDialerProxy={handleBatchDialerProxy}
+        onExport={handleBatchExport}
         onTag={handleBatchTag}
         onRemoveTag={handleBatchRemoveTag}
       />

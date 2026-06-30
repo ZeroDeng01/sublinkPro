@@ -1388,7 +1388,11 @@
         "speedTaskFailed": "启动测速任务失败",
         "selectCheckRequired": "请选择要检测的节点",
         "selectedAll": "已选择所有符合条件的 {{count}} 个节点",
-        "columnWidthsReset": "列宽已重置为默认值"
+        "columnWidthsReset": "列宽已重置为默认值",
+        "selectExportRequired": "请选择要导出的节点",
+        "exportLinksSuccess": "已导出 {{count}} 条节点链接",
+        "exportLinksEmpty": "当前选择中没有可导出的节点链接",
+        "exportLinksFailed": "导出节点链接失败"
       }
     },
     "dialog": {
@@ -1821,6 +1825,7 @@
       "changeSource": "修改来源",
       "changeCountry": "修改国家",
       "changeDialerProxy": "修改前置代理",
+      "exportLinks": "导出链接",
       "setTags": "设置标签",
       "removeTags": "删除标签",
       "groupDialog": {
