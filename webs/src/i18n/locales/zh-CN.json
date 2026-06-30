@@ -2718,6 +2718,31 @@
       "hours": "{{count}}小时后过期",
       "days": "{{count}}天后过期"
     },
+    "settings": {
+      "title": "Host 模块设置",
+      "persistHost": "持久化 Host",
+      "persistHostHint": "启用后自动保存测速解析结果",
+      "expireHours": "过期小时数",
+      "hours": "小时",
+      "neverExpire": "（永不过期）",
+      "dnsTitle": "DNS 解析设置",
+      "dnsServer": "DNS 服务器",
+      "dnsPlaceholder": "请选择或输入 DNS 服务器",
+      "dnsHelper": "用于解析 Host 记录中的域名",
+      "dnsUseProxy": "通过代理查询 DNS",
+      "proxyStrategy": "代理策略",
+      "strategy": {
+        "auto": "自动",
+        "manual": "手动",
+        "autoHint": "自动选择可用节点进行 DNS 查询。",
+        "manualHint": "使用指定节点进行 DNS 查询。"
+      },
+      "proxyNode": "代理节点",
+      "messages": {
+        "loadFailed": "加载 Host 设置失败",
+        "saveFailed": "保存 Host 设置失败"
+      }
+    },
     "messages": {
       "loadFailed": "获取 Host 列表失败",
       "loadTextFailed": "加载文本内容失败",

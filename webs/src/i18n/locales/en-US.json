@@ -2718,6 +2718,31 @@
       "hours": "Expires in {{count}} hours",
       "days": "Expires in {{count}} days"
     },
+    "settings": {
+      "title": "Host Module Settings",
+      "persistHost": "Persist Host",
+      "persistHostHint": "Automatically save speed-test DNS results when enabled",
+      "expireHours": "Expiration hours",
+      "hours": "hours",
+      "neverExpire": "(never expires)",
+      "dnsTitle": "DNS Resolution Settings",
+      "dnsServer": "DNS server",
+      "dnsPlaceholder": "Select or enter a DNS server",
+      "dnsHelper": "Used to resolve domains in Host records",
+      "dnsUseProxy": "Query DNS through proxy",
+      "proxyStrategy": "Proxy strategy",
+      "strategy": {
+        "auto": "Auto",
+        "manual": "Manual",
+        "autoHint": "Automatically select an available node for DNS queries.",
+        "manualHint": "Use the selected node for DNS queries."
+      },
+      "proxyNode": "Proxy node",
+      "messages": {
+        "loadFailed": "Failed to load Host settings",
+        "saveFailed": "Failed to save Host settings"
+      }
+    },
     "messages": {
       "loadFailed": "Failed to load Host list",
       "loadTextFailed": "Failed to load text content",

@@ -170,17 +170,23 @@ export default function HostSettingsDialog({ open, onClose }) {
                   }
                 />
 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <TextField
-                    label={t('hosts.settings.expireHours')}
-                    type="number"
-                    size="small"
-                    value={settings.expire_hours}
-                    disabled={!settings.persist_host}
-                    onChange={(e) => updateField('expire_hours', Math.max(0, parseInt(e.target.value) || 0))}
-                    sx={{ width: isMobile ? 120 : 100 }}
-                    InputProps={{ inputProps: { min: 0 } }}
-                  />
+                <Box
+                  sx={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: 1, width: isMobile ? '100%' : 'auto', minWidth: 0 }}
+                >
+                  <Stack spacing={0.75} sx={{ flex: '1 1 180px', minWidth: 180, maxWidth: isMobile ? '100%' : 220 }}>
+                    <Typography variant="caption" color="textSecondary" sx={{ lineHeight: 1.2, fontWeight: 500 }}>
+                      {t('hosts.settings.expireHours')}
+                    </Typography>
+                    <TextField
+                      aria-label={t('hosts.settings.expireHours')}
+                      type="number"
+                      size="small"
+                      value={settings.expire_hours}
+                      disabled={!settings.persist_host}
+                      onChange={(e) => updateField('expire_hours', Math.max(0, parseInt(e.target.value) || 0))}
+                      slotProps={{ htmlInput: { min: 0 } }}
+                    />
+                  </Stack>
                   <Typography variant="body2" color="textSecondary">
                     {t('hosts.settings.hours')} {settings.expire_hours === 0 && t('hosts.settings.neverExpire')}
                   </Typography>
@@ -207,7 +213,7 @@ export default function HostSettingsDialog({ open, onClose }) {
                     return option.label ? `${option.label} (${option.value})` : option.value || '';
                   }}
                   value={settings.dns_presets?.find((p) => p.value === settings.dns_server) || settings.dns_server}
-                  onInputChange={(event, newInputValue, reason) => {
+                  onInputChange={(_, newInputValue, reason) => {
                     if (reason === 'input') {
                       updateField('dns_server', newInputValue);
                     }
@@ -215,7 +221,7 @@ export default function HostSettingsDialog({ open, onClose }) {
                       updateField('dns_server', '');
                     }
                   }}
-                  onChange={(event, newValue) => {
+                  onChange={(_, newValue) => {
                     const val = typeof newValue === 'string' ? newValue : newValue?.value || '';
                     updateField('dns_server', val);
                   }}
@@ -258,7 +264,7 @@ export default function HostSettingsDialog({ open, onClose }) {
                           <ToggleButtonGroup
                             value={settings.dns_proxy_strategy}
                             exclusive
-                            onChange={(e, val) => {
+                            onChange={(_, val) => {
                               if (!val) return;
                               updateField('dns_proxy_strategy', val);
                               if (val === 'manual') fetchNodes();
