@@ -127,7 +127,7 @@ jobs:
       gotest: ${{ steps.backend-summary.outputs.gotest }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ${{ needs.prepare-pr-check.outputs.checkout_repository }}
           ref: ${{ needs.prepare-pr-check.outputs.checkout_ref }}
@@ -187,7 +187,7 @@ jobs:
       build: ${{ steps.frontend-summary.outputs.build }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ${{ needs.prepare-pr-check.outputs.checkout_repository }}
           ref: ${{ needs.prepare-pr-check.outputs.checkout_ref }}
