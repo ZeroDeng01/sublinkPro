@@ -56,7 +56,7 @@ jobs:
           echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
 
       - name: Cache dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
