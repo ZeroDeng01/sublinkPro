@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // material-ui
@@ -10,11 +10,16 @@ import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
 import Tooltip from '@mui/material/Tooltip';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import CircularProgress from '@mui/material/CircularProgress';
 
 // icons
 import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CategoryIcon from '@mui/icons-material/Category';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -43,6 +48,7 @@ import {
 import { getTemplates } from 'api/templates';
 import { getScripts } from 'api/scripts';
 import { getTags } from 'api/tags';
+import { getShares } from 'api/shares';
 import { buildUnlockRulesPayload, normalizeUnlockRules, setUnlockMeta } from 'views/nodes/utils';
 import { getRegisteredProtocolNames } from 'utils/protocolPresentation';
 import { getNodeDisplayName } from 'utils/nodeDisplayName';
@@ -200,6 +206,11 @@ export default function SubscriptionList() {
     return saved ? parseInt(saved, 10) : 10;
   });
   const [totalItems, setTotalItems] = useState(0);
+  const [subscriptionSearch, setSubscriptionSearch] = useState('');
+  const [shareSearchResults, setShareSearchResults] = useState([]);
+  const [shareSearching, setShareSearching] = useState(false);
+  const [shareSearchActive, setShareSearchActive] = useState(false);
+  const shareSearchRequestRef = useRef(0);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -255,10 +266,51 @@ export default function SubscriptionList() {
     }
   }, [buildSelectorParams, hydrateSelectedNodeMap]);
 
+  const extractShareSearchKeyword = useCallback((input) => {
+    const trimmed = input.trim();
+    if (!trimmed) return '';
+
+    const tokenMatch = trimmed.match(/[?&]token=([^&\s]+)/);
+    if (tokenMatch?.[1]) return tokenMatch[1];
+
+    const pathTokenMatch = trimmed.match(/(?:^|\/)c\/([^/?&#\s]+)/);
+    return pathTokenMatch?.[1] || trimmed;
+  }, []);
+
+  const isShareLookupQuery = useCallback((input) => {
+    const trimmed = input.trim();
+    if (!trimmed) return false;
+    if (/^https?:\/\//i.test(trimmed) || trimmed.includes('/c/') || /[?&]token=/.test(trimmed)) return true;
+    return /^[A-Za-z0-9_-]{8,}$/.test(trimmed);
+  }, []);
+
+  const normalizeSubscriptionResponse = useCallback((response) => {
+    if (response.data && response.data.items !== undefined) {
+      return response.data.items || [];
+    }
+    return response.data || [];
+  }, []);
+
+  const fetchAllSubscriptionsForSearch = useCallback(async () => {
+    if (totalItems <= subscriptions.length) return subscriptions;
+    const response = await getSubscriptions({ page: 1, pageSize: Math.max(totalItems, rowsPerPage) });
+    return normalizeSubscriptionResponse(response);
+  }, [normalizeSubscriptionResponse, rowsPerPage, subscriptions, totalItems]);
+
   const refreshNodeSelector = useCallback(() => {
     if (!dialogOpen || formData.selectionMode === 'groups') return;
     void fetchNodeSelector();
   }, [dialogOpen, fetchNodeSelector, formData.selectionMode]);
+
+  const trimmedSubscriptionSearch = subscriptionSearch.trim();
+
+  const nameFilteredSubscriptions = useMemo(() => {
+    if (!trimmedSubscriptionSearch) return subscriptions;
+    const keyword = trimmedSubscriptionSearch.toLowerCase();
+    return subscriptions.filter((sub) => (sub.Name || '').toLowerCase().includes(keyword));
+  }, [subscriptions, trimmedSubscriptionSearch]);
+
+  const displayedSubscriptions = trimmedSubscriptionSearch && shareSearchActive ? shareSearchResults : nameFilteredSubscriptions;
 
   const fetchSelectedNodeDetails = useCallback(
     async (ids) => {
@@ -358,9 +410,72 @@ export default function SubscriptionList() {
     refreshNodeSelector();
   }, [refreshNodeSelector, nodeGroupFilter, nodeSourceFilter, nodeSearchQuery, nodeCountryFilter, formData.selectedNodes]);
 
-  const showMessage = (message, severity = 'success') => {
+  const showMessage = useCallback((message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
-  };
+  }, []);
+
+  useEffect(() => {
+    const query = subscriptionSearch.trim();
+    const requestId = shareSearchRequestRef.current + 1;
+    shareSearchRequestRef.current = requestId;
+
+    if (!query) {
+      setShareSearchActive(false);
+      setShareSearchResults([]);
+      setShareSearching(false);
+      return undefined;
+    }
+
+    const shouldSearchShares = isShareLookupQuery(query) || nameFilteredSubscriptions.length === 0;
+    if (!shouldSearchShares) {
+      setShareSearchActive(false);
+      setShareSearchResults([]);
+      setShareSearching(false);
+      return undefined;
+    }
+
+    setShareSearchActive(true);
+    setShareSearchResults([]);
+    setShareSearching(true);
+
+    const timeoutId = window.setTimeout(async () => {
+      const keyword = extractShareSearchKeyword(query);
+      try {
+        const allSubscriptions = await fetchAllSubscriptionsForSearch();
+        const checks = await Promise.all(
+          allSubscriptions.map(async (sub) => {
+            const response = await getShares(sub.ID, 1, 100, keyword);
+            const shares = response.data?.items || response.data || [];
+            return shares.length > 0 ? sub : null;
+          })
+        );
+
+        if (shareSearchRequestRef.current === requestId) {
+          setShareSearchResults(checks.filter(Boolean));
+        }
+      } catch (error) {
+        console.error(error);
+        if (shareSearchRequestRef.current === requestId) {
+          showMessage(error.message || t('subscriptions.page.messages.shareSearchFailed'), 'error');
+          setShareSearchResults([]);
+        }
+      } finally {
+        if (shareSearchRequestRef.current === requestId) {
+          setShareSearching(false);
+        }
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    extractShareSearchKeyword,
+    fetchAllSubscriptionsForSearch,
+    isShareLookupQuery,
+    nameFilteredSubscriptions.length,
+    showMessage,
+    subscriptionSearch,
+    t
+  ]);
 
   const copyToClipboard = async (text) => {
     try {
@@ -1020,9 +1135,39 @@ export default function SubscriptionList() {
         </Stack>
       )}
 
+      <Stack spacing={1} sx={{ mb: 2 }}>
+        <TextField
+          size="small"
+          fullWidth={matchDownMd}
+          label={t('subscriptions.page.search.label')}
+          placeholder={t('subscriptions.page.search.placeholder')}
+          value={subscriptionSearch}
+          onChange={(event) => setSubscriptionSearch(event.target.value)}
+          sx={{ width: { xs: '100%', md: 460 } }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" fontSize="small" />
+              </InputAdornment>
+            ),
+            endAdornment: trimmedSubscriptionSearch && (
+              <InputAdornment position="end">
+                {shareSearching ? (
+                  <CircularProgress size={18} />
+                ) : (
+                  <IconButton size="small" onClick={() => setSubscriptionSearch('')} edge="end" aria-label={t('common.clear')}>
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </InputAdornment>
+            )
+          }}
+        />
+      </Stack>
+
       {matchDownMd ? (
         <SubscriptionMobileCard
-          subscriptions={subscriptions}
+          subscriptions={displayedSubscriptions}
           page={page}
           rowsPerPage={rowsPerPage}
           expandedRows={expandedRows}
@@ -1052,7 +1197,7 @@ export default function SubscriptionList() {
         />
       ) : (
         <SubscriptionTable
-          subscriptions={subscriptions}
+          subscriptions={displayedSubscriptions}
           page={page}
           rowsPerPage={rowsPerPage}
           expandedRows={expandedRows}
@@ -1081,23 +1226,25 @@ export default function SubscriptionList() {
         />
       )}
 
-      <Pagination
-        page={page}
-        pageSize={rowsPerPage}
-        totalItems={totalItems}
-        onPageChange={(e, newPage) => {
-          setPage(newPage);
-          fetchSubscriptions(newPage, rowsPerPage);
-        }}
-        onPageSizeChange={(e) => {
-          const newValue = parseInt(e.target.value, 10);
-          setRowsPerPage(newValue);
-          localStorage.setItem('subscriptions_rowsPerPage', newValue);
-          setPage(0);
-          fetchSubscriptions(0, newValue);
-        }}
-        pageSizeOptions={[10, 20, 50, 100]}
-      />
+      {!trimmedSubscriptionSearch && (
+        <Pagination
+          page={page}
+          pageSize={rowsPerPage}
+          totalItems={totalItems}
+          onPageChange={(e, newPage) => {
+            setPage(newPage);
+            fetchSubscriptions(newPage, rowsPerPage);
+          }}
+          onPageSizeChange={(e) => {
+            const newValue = parseInt(e.target.value, 10);
+            setRowsPerPage(newValue);
+            localStorage.setItem('subscriptions_rowsPerPage', newValue);
+            setPage(0);
+            fetchSubscriptions(0, newValue);
+          }}
+          pageSizeOptions={[10, 20, 50, 100]}
+        />
+      )}
 
       {/* 添加/编辑对话框 */}
       <SubscriptionFormDialog

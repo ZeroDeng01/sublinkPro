@@ -2134,6 +2134,10 @@
         "groupSort": "Group sort",
         "addSubscription": "Add subscription"
       },
+      "search": {
+        "label": "Search subscriptions",
+        "placeholder": "Search name, share link, or token"
+      },
       "confirm": {
         "deleteTitle": "Delete Subscription",
         "deleteOne": "Delete subscription \"{{name}}\"?",
@@ -2157,7 +2161,8 @@
         "sortCancelled": "Sort cancelled",
         "batchSortSuccess": "Batch sort succeeded",
         "batchSortFailed": "Batch sort failed",
-        "movedItems": "Moved {{count}} items to position {{position}}"
+        "movedItems": "Moved {{count}} items to position {{position}}",
+        "shareSearchFailed": "Failed to search share links"
       }
     },
     "table": {

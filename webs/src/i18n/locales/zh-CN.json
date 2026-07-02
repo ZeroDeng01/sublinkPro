@@ -2134,6 +2134,10 @@
         "groupSort": "分组排序",
         "addSubscription": "添加订阅"
       },
+      "search": {
+        "label": "搜索订阅",
+        "placeholder": "搜索订阅名称、分享链接或 Token"
+      },
       "confirm": {
         "deleteTitle": "删除订阅",
         "deleteOne": "确定要删除订阅 \"{{name}}\" 吗？",
@@ -2157,7 +2161,8 @@
         "sortCancelled": "已取消排序",
         "batchSortSuccess": "批量排序成功",
         "batchSortFailed": "批量排序失败",
-        "movedItems": "已移动 {{count}} 项到位置 {{position}}"
+        "movedItems": "已移动 {{count}} 项到位置 {{position}}",
+        "shareSearchFailed": "搜索分享链接失败"
       }
     },
     "table": {
