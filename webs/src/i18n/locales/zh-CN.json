@@ -2189,7 +2189,28 @@
       "lastVisit": "最近访问",
       "count": "{{count}} 次",
       "total": "共 {{count}} 条",
+      "filteredTotal": "{{filtered}} / {{total}} 条",
       "unknownSource": "未知来源",
+      "search": {
+        "label": "搜索访问记录",
+        "placeholder": "搜索 IP 或来源地区",
+        "clear": "清除搜索",
+        "empty": "没有找到匹配的访问记录"
+      },
+      "sort": {
+        "field": "排序方式",
+        "direction": "排序方向",
+        "ascending": "升序",
+        "descending": "降序",
+        "ascShort": "升序",
+        "descShort": "降序",
+        "fields": {
+          "ip": "IP 地址",
+          "region": "来源地区",
+          "count": "访问次数",
+          "date": "访问时间"
+        }
+      },
       "empty": "暂无访问记录"
     },
     "conditions": {
