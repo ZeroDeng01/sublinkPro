@@ -20,7 +20,7 @@ type ShareListReq struct {
 	PageSize  int    `form:"pageSize"`  // 可选，每页数量
 	Keyword   string `form:"keyword"`   // 可选，搜索关键词
 	IPFilter  string `form:"ipFilter"`  // 可选，按IP筛选
-	SortBy    string `form:"sortBy"`    // 可选，排序字段(如: access_count)
+	SortBy    string `form:"sortBy"`    // 可选，排序字段(如: access_count, name)
 	SortOrder string `form:"sortOrder"` // 可选，排序方向(asc/desc)
 }
 

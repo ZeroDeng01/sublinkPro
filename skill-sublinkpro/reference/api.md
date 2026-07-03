@@ -273,7 +273,7 @@ Other supported variables include `$Name`, `$LinkName`, `$Group`, `$Source`, `$P
 Base: `/api/v1/shares`
 
 ### Get Shares (for a subscription)
-**GET** `/shares/get` (query: `?subId=123`) — `subId` is **required**.
+**GET** `/shares/get` (query: `?subId=123`) — `subId` is **required**. Optional paginated filters: `page`, `pageSize`, `keyword`, `ipFilter`, `sortBy`, `sortOrder`. `sortBy` accepts `access_count` or natural numeric-aware `name`; `sortOrder` accepts `asc` or `desc`.
 
 ### Add Share
 **POST** `/shares/add` — **JSON**

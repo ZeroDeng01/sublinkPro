@@ -63,6 +63,7 @@ import ShareExportDialog from './ShareExportDialog';
 const EXPIRE_TYPE_NEVER = 0;
 const EXPIRE_TYPE_DAYS = 1;
 const EXPIRE_TYPE_DATETIME = 2;
+const SHARE_PAGE_SIZE = 50;
 
 const NATIVE_CLIENT_LINKS = [
   { key: 'clash', client: 'clash' },
@@ -83,8 +84,6 @@ const EXPANDED_CLIENT_LINKS = [
   { key: 'json', client: 'json' }
 ];
 
-/**
- */
 export default function ShareManageDialog({ open, subscription, onClose, showMessage }) {
   const theme = useTheme();
   const { t, i18n } = useTranslation();
@@ -99,6 +98,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // 排序和筛选状态
@@ -146,6 +146,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmInfo, setConfirmInfo] = useState({ title: '', content: '', onConfirm: null });
+  const dialogContentRef = useRef(null);
 
   const getServerUrl = useCallback(() => {
     if (systemDomainConfig) {
@@ -183,7 +184,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         const actualSortBy = customSortBy !== null ? customSortBy : sortBy;
         const actualSortOrder = customSortOrder !== null ? customSortOrder : sortOrder;
 
-        const res = await getShares(subscription.ID, 1, 100, keywordValue, ipFilterValue, actualSortBy, actualSortOrder);
+        const res = await getShares(subscription.ID, 1, SHARE_PAGE_SIZE, keywordValue, ipFilterValue, actualSortBy, actualSortOrder);
         if (res.data?.items) {
           // 分页响应
           setShares(res.data.items);
@@ -214,7 +215,15 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     try {
       const nextPage = page + 1;
       const isIP = isIPAddress(searchQuery);
-      const res = await getShares(subscription.ID, nextPage, 50, isIP ? '' : searchQuery, isIP ? searchQuery : ipFilter, sortBy, sortOrder);
+      const res = await getShares(
+        subscription.ID,
+        nextPage,
+        SHARE_PAGE_SIZE,
+        isIP ? '' : searchQuery,
+        isIP ? searchQuery : ipFilter,
+        sortBy,
+        sortOrder
+      );
       if (res.data?.items) {
         setShares((prev) => [...prev, ...res.data.items]);
         setHasMore(res.data.hasMore || false);
@@ -230,19 +239,19 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   const handleSort = (field) => {
     let newSortBy = sortBy;
     let newSortOrder = sortOrder;
+    const defaultSortOrder = field === 'name' ? 'asc' : 'desc';
 
     if (sortBy === field) {
-      // 循环切换: 降序 -> 升序 -> 不排序
-      if (sortOrder === 'desc') {
+      if (sortOrder === defaultSortOrder) {
         newSortBy = field;
-        newSortOrder = 'asc';
-      } else if (sortOrder === 'asc') {
+        newSortOrder = defaultSortOrder === 'asc' ? 'desc' : 'asc';
+      } else {
         newSortBy = '';
         newSortOrder = 'desc';
       }
     } else {
       newSortBy = field;
-      newSortOrder = 'desc'; // 默认降序
+      newSortOrder = defaultSortOrder;
     }
 
     // 先更新状态
@@ -602,7 +611,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
    * @param {string} input - 用户输入
    * @returns {string} - 提取的token或原始输入
    */
-  const extractTokenFromInput = (input) => {
+  const extractTokenFromInput = useCallback((input) => {
     if (!input || typeof input !== 'string') return input;
 
     const trimmed = input.trim();
@@ -625,7 +634,24 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
     // 如果不是URL或未找到token，返回原始输入（用于名称模糊搜索）
     return trimmed;
-  };
+  }, []);
+
+  const handleManualRefresh = useCallback(async () => {
+    const scrollTop = dialogContentRef.current?.scrollTop || 0;
+    const searchKeyword = extractTokenFromInput(searchQuery);
+
+    setRefreshing(true);
+    try {
+      await fetchShares(searchKeyword, true);
+      requestAnimationFrame(() => {
+        if (dialogContentRef.current) {
+          dialogContentRef.current.scrollTop = scrollTop;
+        }
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [extractTokenFromInput, fetchShares, searchQuery]);
 
   const handleSearchChange = useCallback(
     (value) => {
@@ -641,7 +667,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         setSelectedShares([]); // 搜索时清空选择
       }, 500);
     },
-    [fetchShares]
+    [extractTokenFromInput, fetchShares]
   );
 
   useEffect(() => {
@@ -880,8 +906,8 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
             <Stack direction="row" alignItems="center" justifyContent="space-between">
               <Typography variant="h6">{t('subscriptions.share.title', { name: subscription?.Name })}</Typography>
               <Stack direction="row" spacing={1}>
-                <IconButton size="small" onClick={() => fetchShares(searchQuery)} disabled={loading} sx={iconButtonBaseSx}>
-                  <RefreshIcon fontSize="small" />
+                <IconButton size="small" onClick={handleManualRefresh} disabled={loading || searching || refreshing} sx={iconButtonBaseSx}>
+                  {refreshing ? <CircularProgress size={18} /> : <RefreshIcon fontSize="small" />}
                 </IconButton>
                 <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleAdd}>
                   {t('subscriptions.share.addSingle')}
@@ -962,41 +988,56 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                 <Typography variant="caption" sx={{ color: secondaryText, fontSize: '0.8rem' }}>
                   {t('subscriptions.share.sortLabel')}:
                 </Typography>
-                <Button
-                  size="small"
-                  startIcon={<SortIcon />}
-                  onClick={() => handleSort('access_count')}
-                  sx={{
-                    minWidth: 'auto',
-                    px: 1.5,
-                    py: 0.5,
-                    fontSize: '0.75rem',
-                    textTransform: 'none',
-                    color: sortBy === 'access_count' ? palette.primary.main : secondaryText,
-                    bgcolor: sortBy === 'access_count' ? withAlpha(palette.primary.main, isDark ? 0.16 : 0.08) : nestedPanelSurface,
-                    border: '1px solid',
-                    borderColor: sortBy === 'access_count' ? withAlpha(palette.primary.main, isDark ? 0.38 : 0.22) : panelBorder,
-                    '&:hover': {
-                      bgcolor:
-                        sortBy === 'access_count'
-                          ? withAlpha(palette.primary.main, isDark ? 0.22 : 0.12)
-                          : withAlpha(palette.primary.main, isDark ? 0.08 : 0.04),
-                      borderColor: withAlpha(palette.primary.main, isDark ? 0.42 : 0.28)
-                    }
-                  }}
-                >
-                  {sortBy === 'access_count'
-                    ? sortOrder === 'desc'
-                      ? t('subscriptions.share.sortDesc')
-                      : t('subscriptions.share.sortAsc')
-                    : t('subscriptions.share.sortNone')}
-                </Button>
+                {['access_count', 'name'].map((field) => {
+                  const active = sortBy === field;
+                  const labelKey =
+                    field === 'access_count'
+                      ? active
+                        ? sortOrder === 'desc'
+                          ? 'sort.accessCountDesc'
+                          : 'sort.accessCountAsc'
+                        : 'sort.accessCount'
+                      : active
+                        ? sortOrder === 'desc'
+                          ? 'sort.nameDesc'
+                          : 'sort.nameAsc'
+                        : 'sort.name';
+
+                  return (
+                    <Button
+                      key={field}
+                      size="small"
+                      startIcon={<SortIcon />}
+                      onClick={() => handleSort(field)}
+                      sx={{
+                        minWidth: 'auto',
+                        px: 1.5,
+                        py: 0.5,
+                        fontSize: '0.75rem',
+                        textTransform: 'none',
+                        color: active ? palette.primary.main : secondaryText,
+                        bgcolor: active ? withAlpha(palette.primary.main, isDark ? 0.16 : 0.08) : nestedPanelSurface,
+                        border: '1px solid',
+                        borderColor: active ? withAlpha(palette.primary.main, isDark ? 0.38 : 0.22) : panelBorder,
+                        '&:hover': {
+                          bgcolor: active
+                            ? withAlpha(palette.primary.main, isDark ? 0.22 : 0.12)
+                            : withAlpha(palette.primary.main, isDark ? 0.08 : 0.04),
+                          borderColor: withAlpha(palette.primary.main, isDark ? 0.42 : 0.28)
+                        }
+                      }}
+                    >
+                      {t(`subscriptions.share.${labelKey}`)}
+                    </Button>
+                  );
+                })}
               </Box>
             )}
           </Stack>
         </DialogTitle>
 
         <DialogContent
+          ref={dialogContentRef}
           sx={{
             px: 2.5,
             pt: 2.5,

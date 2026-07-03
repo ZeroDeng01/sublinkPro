@@ -2552,7 +2552,15 @@
       "sortLabel": "排序",
       "sortNone": "访问次数",
       "sortDesc": "访问次数 ↓",
-      "sortAsc": "访问次数 ↑"
+      "sortAsc": "访问次数 ↑",
+      "sort": {
+        "accessCount": "访问次数",
+        "accessCountDesc": "访问次数 ↓",
+        "accessCountAsc": "访问次数 ↑",
+        "name": "名称",
+        "nameAsc": "名称 ↑",
+        "nameDesc": "名称 ↓"
+      }
     },
     "form": {
       "title": {

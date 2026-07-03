@@ -2552,7 +2552,15 @@
       "sortLabel": "Sort",
       "sortNone": "Access count",
       "sortDesc": "Access count ↓",
-      "sortAsc": "Access count ↑"
+      "sortAsc": "Access count ↑",
+      "sort": {
+        "accessCount": "Access count",
+        "accessCountDesc": "Access count ↓",
+        "accessCountAsc": "Access count ↑",
+        "name": "Name",
+        "nameAsc": "Name ↑",
+        "nameDesc": "Name ↓"
+      }
     },
     "form": {
       "title": {

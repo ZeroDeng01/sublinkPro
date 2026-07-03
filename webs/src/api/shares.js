@@ -7,7 +7,7 @@ import request from './request';
  * @param {number} pageSize 每页数量（可选，用于分页）
  * @param {string} keyword 搜索关键词（可选）
  * @param {string} ipFilter IP地址筛选（可选）
- * @param {string} sortBy 排序字段（可选，如: access_count）
+ * @param {string} sortBy 排序字段（可选，如: access_count, name）
  * @param {string} sortOrder 排序方向（可选，asc/desc）
  */
 export function getShares(subId, page, pageSize, keyword, ipFilter, sortBy, sortOrder) {
