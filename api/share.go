@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,10 +15,13 @@ import (
 
 // ShareListReq 获取分享列表请求
 type ShareListReq struct {
-	SubID    int    `form:"subId" binding:"required"`
-	Page     int    `form:"page"`     // 可选，分页页码
-	PageSize int    `form:"pageSize"` // 可选，每页数量
-	Keyword  string `form:"keyword"`  // 可选，搜索关键词
+	SubID     int    `form:"subId" binding:"required"`
+	Page      int    `form:"page"`      // 可选，分页页码
+	PageSize  int    `form:"pageSize"`  // 可选，每页数量
+	Keyword   string `form:"keyword"`   // 可选，搜索关键词
+	IPFilter  string `form:"ipFilter"`  // 可选，按IP筛选
+	SortBy    string `form:"sortBy"`    // 可选，排序字段(如: access_count)
+	SortOrder string `form:"sortOrder"` // 可选，排序方向(asc/desc)
 }
 
 // ShareBatchCreateReq 批量创建分享请求
@@ -89,7 +93,7 @@ func parseShareExpireAt(expireType int, raw string) (*time.Time, error) {
 	return &parsed, nil
 }
 
-// ShareGet 获取订阅的所有分享列表（支持分页和搜索）
+// ShareGet 获取订阅的所有分享列表（支持分页、搜索、IP筛选、排序）
 func ShareGet(c *gin.Context) {
 	var req ShareListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -97,9 +101,19 @@ func ShareGet(c *gin.Context) {
 		return
 	}
 
+	// 如果提供了IP筛选，验证IP格式
+	if req.IPFilter != "" {
+		ip := net.ParseIP(req.IPFilter)
+		if ip == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "无效的IP地址"})
+			return
+		}
+	}
+
 	// 如果提供了分页参数，返回分页数据
 	if req.Page > 0 && req.PageSize > 0 {
-		shares, total, err := models.GetSharesBySubscriptionIDPaginated(req.SubID, req.Page, req.PageSize, req.Keyword)
+		shares, total, err := models.GetSharesBySubscriptionIDPaginated(
+			req.SubID, req.Page, req.PageSize, req.Keyword, req.IPFilter, req.SortBy, req.SortOrder)
 		if err != nil {
 			utils.Error("获取分享列表失败: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "获取分享列表失败"})

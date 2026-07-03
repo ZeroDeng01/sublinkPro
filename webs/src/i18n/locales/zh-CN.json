@@ -2548,7 +2548,11 @@
       "loadMore": "加载更多",
       "noMore": "没有更多分享",
       "noResults": "未找到符合搜索条件的分享",
-      "searchPlaceholder": "通过名称、Token 或分享链接搜索..."
+      "searchPlaceholder": "通过名称、Token、IP地址或分享链接搜索...",
+      "sortLabel": "排序",
+      "sortNone": "访问次数",
+      "sortDesc": "访问次数 ↓",
+      "sortAsc": "访问次数 ↑"
     },
     "form": {
       "title": {
