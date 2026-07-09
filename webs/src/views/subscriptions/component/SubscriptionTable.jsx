@@ -93,7 +93,11 @@ export default function SubscriptionTable({
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">
-                    {t('subscriptions.table.nodeGroupCount', { nodes: sub.Nodes?.length || 0, groups: sub.Groups?.length || 0 })}
+                    {t('subscriptions.table.nodeGroupAirportCount', {
+                      nodes: sub.Nodes?.length || 0,
+                      groups: sub.Groups?.length || 0,
+                      airports: sub.Airports?.length || 0
+                    })}
                   </Typography>
                 </TableCell>
                 <TableCell>{sub.CreateDate}</TableCell>
@@ -184,8 +188,22 @@ export default function SubscriptionTable({
                                 color="success"
                                 onClick={() => onCopyToClipboard(item.Link)}
                               />
+                            ) : item._type === 'airport' ? (
+                              <Chip
+                                key={item._type + item.ID}
+                                label={t('subscriptions.sort.airportLabel', { name: item.Name })}
+                                size="small"
+                                variant="outlined"
+                                color="info"
+                              />
                             ) : (
-                              <Chip key={item._type + idx} label={`📁 ${item.Name}`} size="small" variant="outlined" color="warning" />
+                              <Chip
+                                key={item._type + idx}
+                                label={t('subscriptions.sort.groupLabel', { name: item.Name })}
+                                size="small"
+                                variant="outlined"
+                                color="warning"
+                              />
                             )
                           )}
                         </Stack>

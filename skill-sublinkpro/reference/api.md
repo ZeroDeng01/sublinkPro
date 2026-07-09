@@ -199,16 +199,16 @@ Base: `/api/v1/subcription` (note the spelling — missing the second "s").
 
 ### Add Subscription
 **POST** `/subcription/add` — **form**
-- **Required:** `name` AND at least one of `nodeIds` (comma-separated node IDs) or `groups` (comma-separated group names).
+- **Required:** `name` AND at least one of `nodeIds` (comma-separated node IDs), `groups` (comma-separated group names), or `airports` (comma-separated airport IDs).
 - Output template: `config` = a template **filename** (the `file` value from `GET /template/get`, e.g. `clash.yaml`); empty = raw node list.
-- Other optional form fields (UpperCamel): `scripts` (comma-separated script IDs), `IPWhitelist`, `IPBlacklist`, `DelayTime`, `MinSpeed`, `CountryWhitelist`, `CountryBlacklist`, `NodeNameRule`, `NodeNamePreprocess`, `NodeNameWhitelist`, `NodeNameBlacklist`, `TagWhitelist`, `TagBlacklist`, `ProtocolWhitelist`, `ProtocolBlacklist`, `DeduplicationRule`, `RefreshUsageOnRequest`, `UpdateInterval`, `MaxFraudScore`, `OnlyResidential`, `OnlyNative`, `ResidentialType`, `IPType`, `QualityStatus`, `UnlockProvider`, `UnlockStatus`, `UnlockKeyword`, `UnlockRules`, `UnlockRuleMode`.
+- Other optional form fields (UpperCamel unless noted): `airports` (comma-separated airport IDs), `scripts` (comma-separated script IDs), `IPWhitelist`, `IPBlacklist`, `DelayTime`, `MinSpeed`, `CountryWhitelist`, `CountryBlacklist`, `NodeNameRule`, `NodeNamePreprocess`, `NodeNameWhitelist`, `NodeNameBlacklist`, `TagWhitelist`, `TagBlacklist`, `ProtocolWhitelist`, `ProtocolBlacklist`, `DeduplicationRule`, `RefreshUsageOnRequest`, `UpdateInterval`, `MaxFraudScore`, `OnlyResidential`, `OnlyNative`, `ResidentialType`, `IPType`, `QualityStatus`, `UnlockProvider`, `UnlockStatus`, `UnlockKeyword`, `UnlockRules`, `UnlockRuleMode`.
 - Name must be unique (duplicate → `订阅名称不能重复`).
 
 ### Update Subscription
 **POST** `/subcription/update` — **form**, located by `oldname` (current name). Same field set as add, plus `oldname`.
 
 ### Get Subscriptions
-**GET** `/subcription/get` (query: `?page=1&pageSize=20`). Paginated → `{items, total, ...}`; without paging → array.
+**GET** `/subcription/get` (query: `?page=1&pageSize=20`). Paginated → `{items, total, ...}`; without paging → array. Each subscription includes ordered `Nodes`, `Groups`, `Airports`, and `Scripts` relation arrays when present.
 
 ### Delete Subscription
 **DELETE** `/subcription/delete` (query: `?id=123`)
@@ -217,7 +217,7 @@ Base: `/api/v1/subcription` (note the spelling — missing the second "s").
 **POST** `/subcription/copy` (query: `?id=123`)
 
 ### Sort Nodes
-**POST** `/subcription/sort` — **JSON** `{"ID":123, "NodeSort":[{"ID":1,"Name":"...","Sort":0,"IsGroup":false}, ...]}`
+**POST** `/subcription/sort` — **JSON** `{"ID":123, "NodeSort":[{"ID":1,"Name":"...","Sort":0,"IsGroup":false,"IsAirport":false}, ...]}`. Airport sort items use the airport ID and `"IsAirport":true`; group sort items use `Name` and `"IsGroup":true`.
 
 ### Batch Sort
 **POST** `/subcription/batch-sort` — **JSON** `{"ID":123, "sortBy":"delay", "sortOrder":"asc"}` (`sortBy`: source|name|protocol|delay|speed|country)
@@ -229,6 +229,7 @@ Base: `/api/v1/subcription` (note the spelling — missing the second "s").
   "SubscriptionID": 123,            // either preview a saved sub by id...
   "NodeIDs": [1,2,3], "NodeSorts": [0,1,2],   // ...or preview an unsaved form
   "Groups": ["US"], "GroupSorts": [0],
+  "AirportIDs": [10], "AirportSorts": [2],
   "Scripts": [1],
   "DelayTime": 300, "MinSpeed": 5,
   "CountryWhitelist": "", "CountryBlacklist": "",

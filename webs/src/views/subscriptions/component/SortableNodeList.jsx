@@ -138,10 +138,16 @@ export default function SortableNodeList({
               }}
             >
               {items.map((item, index) => {
-                const isSelected = selectedItems.includes(item.Name);
-                const itemAccentColor = item.IsGroup ? palette.warning.main : palette.success.main;
+                const itemKey = item.SortKey || item.Name;
+                const isSelected = selectedItems.includes(itemKey);
+                const itemAccentColor = item.IsAirport ? palette.info.main : item.IsGroup ? palette.warning.main : palette.success.main;
+                const itemLabel = item.IsAirport
+                  ? t('subscriptions.sort.airportLabel', { name: item.Name })
+                  : item.IsGroup
+                    ? t('subscriptions.sort.groupLabel', { name: item.Name })
+                    : item.Name;
                 return (
-                  <Draggable key={item.Name} draggableId={item.Name} index={index}>
+                  <Draggable key={itemKey} draggableId={itemKey} index={index}>
                     {(provided, snapshot) => (
                       <ListItem
                         ref={provided.innerRef}
@@ -168,12 +174,12 @@ export default function SortableNodeList({
                         <Checkbox
                           size="small"
                           checked={isSelected}
-                          onChange={() => onToggleSelect && onToggleSelect(item.Name)}
+                          onChange={() => onToggleSelect && onToggleSelect(itemKey)}
                           sx={{ p: 0.5, mr: 0.75 }}
                         />
                         <DragIndicatorIcon sx={{ mr: 1, color: secondaryText, flexShrink: 0 }} />
                         <Chip
-                          label={item.IsGroup ? t('subscriptions.sort.groupLabel', { name: item.Name }) : item.Name}
+                          label={itemLabel}
                           variant="outlined"
                           size="small"
                           sx={{

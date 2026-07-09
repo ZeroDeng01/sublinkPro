@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"sublink/dto"
@@ -70,6 +71,23 @@ func parseSubscriptionUpdateInterval(raw string) int {
 	return int(interval)
 }
 
+func parseCommaSeparatedIntIDs(raw string) ([]int, error) {
+	parts := strings.Split(raw, ",")
+	ids := make([]int, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		id, err := strconv.Atoi(part)
+		if err != nil || id <= 0 {
+			return nil, fmt.Errorf("invalid id %q", part)
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
 func SubTotal(c *gin.Context) {
 	var Sub models.Subcription
 	subs, err := Sub.List()
@@ -136,6 +154,7 @@ func SubAdd(c *gin.Context) {
 	config := c.PostForm("config")
 	nodeIds := c.PostForm("nodeIds") // 改为接收节点ID列表
 	groups := c.PostForm("groups")   // 新增：分组列表
+	airports := c.PostForm("airports")
 	scripts := c.PostForm("scripts") // 新增：脚本列表
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
@@ -176,8 +195,8 @@ func SubAdd(c *gin.Context) {
 		ipType = "native"
 	}
 
-	if name == "" || (nodeIds == "" && groups == "") {
-		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
+	if name == "" || (nodeIds == "" && groups == "" && airports == "") {
+		utils.FailWithMsg(c, "订阅名称不能为空，且节点、分组或机场至少选择一项")
 		return
 	}
 	if ipWhitelist != "" {
@@ -285,6 +304,23 @@ func SubAdd(c *gin.Context) {
 		}
 	}
 
+	airportIDs, err := parseCommaSeparatedIntIDs(airports)
+	if err != nil {
+		utils.FailWithMsg(c, "机场ID格式有误")
+		return
+	}
+	if airports != "" && len(airportIDs) == 0 {
+		utils.FailWithMsg(c, "机场ID不能为空")
+		return
+	}
+	if len(airportIDs) > 0 {
+		err = sub.AddAirports(airportIDs)
+		if err != nil {
+			utils.FailWithMsg(c, err.Error())
+			return
+		}
+	}
+
 	// 添加脚本关系
 	if scripts != "" {
 		scriptIDs := make([]int, 0)
@@ -319,6 +355,7 @@ func SubUpdate(c *gin.Context) {
 	config := c.PostForm("config")
 	nodeIds := c.PostForm("nodeIds") // 改为接收节点ID列表
 	groups := c.PostForm("groups")   // 新增：分组列表
+	airports := c.PostForm("airports")
 	scripts := c.PostForm("scripts") // 新增：脚本列表
 	ipWhitelist := c.PostForm("IPWhitelist")
 	ipBlacklist := c.PostForm("IPBlacklist")
@@ -359,8 +396,8 @@ func SubUpdate(c *gin.Context) {
 		ipType = "native"
 	}
 
-	if name == "" || (nodeIds == "" && groups == "") {
-		utils.FailWithMsg(c, "订阅名称不能为空，且节点或分组至少选择一项")
+	if name == "" || (nodeIds == "" && groups == "" && airports == "") {
+		utils.FailWithMsg(c, "订阅名称不能为空，且节点、分组或机场至少选择一项")
 		return
 	}
 	if ipWhitelist != "" {
@@ -471,6 +508,21 @@ func SubUpdate(c *gin.Context) {
 	} else {
 		err = sub.UpdateGroups([]string{})
 	}
+	if err != nil {
+		utils.FailWithMsg(c, err.Error())
+		return
+	}
+
+	airportIDs, err := parseCommaSeparatedIntIDs(airports)
+	if err != nil {
+		utils.FailWithMsg(c, "机场ID格式有误")
+		return
+	}
+	if airports != "" && len(airportIDs) == 0 {
+		utils.FailWithMsg(c, "机场ID不能为空")
+		return
+	}
+	err = sub.UpdateAirports(airportIDs)
 	if err != nil {
 		utils.FailWithMsg(c, err.Error())
 		return

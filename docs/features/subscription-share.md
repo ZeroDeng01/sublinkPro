@@ -73,6 +73,13 @@ Case 3: Access tracking
 - When a client fetches Clash config through a subscription link, the response header includes `profile-update-interval`, in hours.
 - When a client fetches Surge config, `interval` in `#!MANAGED-CONFIG` is converted to seconds automatically according to the setting.
 
+## Node Selection Sources
+
+- Manual node selection stores the selected node IDs. The output keeps those specific nodes until the subscription is edited.
+- Dynamic group selection stores group names and resolves the current nodes in those groups whenever the subscription is generated.
+- Dynamic airport selection stores airport IDs and resolves the current nodes imported from those airports whenever the subscription is generated.
+- Mixed mode can combine manual nodes, dynamic groups, and dynamic airports. Output order follows the configured sort order, and duplicate effective node names keep the first occurrence.
+
 ## Node Naming Variables
 
 `NodeNameRule` controls the node name rendered in subscription output. If it is empty, SublinkPro keeps the node's effective name. Variables are replaced when the subscription is generated, so values such as speed, delay, country, tags, and unlock status reflect the node data currently stored in the system.

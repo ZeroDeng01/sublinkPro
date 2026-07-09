@@ -1,6 +1,8 @@
 package models
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"sublink/cache"
@@ -78,6 +80,8 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 	oldDB := database.DB
 	oldDialect := database.Dialect
 	oldInitialized := database.IsInitialized
+	oldNodeCache := nodeCache
+	oldAirportCache := airportCache
 	oldSubcriptionCache := subcriptionCache
 	oldSubscriptionShareCache := subscriptionShareCache
 
@@ -87,9 +91,13 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 	}
 	if err := db.AutoMigrate(
 		&Subcription{},
+		&Node{},
+		&Airport{},
 		&SubcriptionNode{},
 		&SubcriptionGroup{},
+		&SubcriptionAirport{},
 		&SubcriptionScript{},
+		&Script{},
 		&SubscriptionShare{},
 		&SubscriptionChainRule{},
 	); err != nil {
@@ -99,6 +107,8 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 	database.DB = db
 	database.Dialect = database.DialectSQLite
 	database.IsInitialized = true
+	resetNodeCacheForTest()
+	resetAirportCacheForTest()
 	resetSubcriptionCacheForTest()
 	resetSubscriptionShareCacheForTest()
 
@@ -106,10 +116,40 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 		database.DB = oldDB
 		database.Dialect = oldDialect
 		database.IsInitialized = oldInitialized
+		nodeCache = oldNodeCache
+		airportCache = oldAirportCache
 		subcriptionCache = oldSubcriptionCache
 		subscriptionShareCache = oldSubscriptionShareCache
 		testutil.CloseDB(t, db)
 	})
+}
+
+func createSubcriptionTestAirport(t *testing.T, name string) Airport {
+	t.Helper()
+	airport := Airport{
+		Name:     name,
+		URL:      "https://example.com/" + name,
+		CronExpr: "0 0 * * *",
+		Enabled:  true,
+	}
+	if err := airport.Add(); err != nil {
+		t.Fatalf("add airport %q: %v", name, err)
+	}
+	return airport
+}
+
+func createSubcriptionTestNode(t *testing.T, node Node) Node {
+	t.Helper()
+	if node.Link == "" {
+		node.Link = "ss://" + node.Name
+	}
+	if node.Protocol == "" {
+		node.Protocol = "ss"
+	}
+	if err := node.Add(); err != nil {
+		t.Fatalf("add node %q: %v", node.Name, err)
+	}
+	return node
 }
 
 func TestSubcriptionCopyPreservesUpdateInterval(t *testing.T) {
@@ -133,4 +173,188 @@ func TestSubcriptionCopyPreservesUpdateInterval(t *testing.T) {
 	if copySub.UpdateInterval != sub.UpdateInterval {
 		t.Fatalf("expected copied UpdateInterval %d, got %d", sub.UpdateInterval, copySub.UpdateInterval)
 	}
+}
+
+func TestSubcriptionAirportOnlyResolvesCurrentAirportNodes(t *testing.T) {
+	setupSubcriptionCopyTestDB(t)
+
+	airport := createSubcriptionTestAirport(t, "airport-dynamic")
+	createSubcriptionTestNode(t, Node{Name: "airport-dynamic-b", LinkName: "airport-dynamic-b", Source: airport.Name, SourceID: airport.ID, SourceSort: 2})
+	createSubcriptionTestNode(t, Node{Name: "airport-dynamic-a", LinkName: "airport-dynamic-a", Source: airport.Name, SourceID: airport.ID, SourceSort: 1})
+
+	sub := &Subcription{Name: "airport-only", RefreshUsageOnRequest: true}
+	if err := sub.Add(); err != nil {
+		t.Fatalf("add subscription: %v", err)
+	}
+	if err := sub.AddAirports([]int{airport.ID}); err != nil {
+		t.Fatalf("add airport relation: %v", err)
+	}
+
+	if err := sub.GetSub("clash"); err != nil {
+		t.Fatalf("get subscription: %v", err)
+	}
+	if got, want := nodeNames(sub.Nodes), []string{"airport-dynamic-a", "airport-dynamic-b"}; !sameStrings(got, want) {
+		t.Fatalf("nodes = %v, want %v", got, want)
+	}
+
+	createSubcriptionTestNode(t, Node{Name: "airport-dynamic-c", LinkName: "airport-dynamic-c", Source: airport.Name, SourceID: airport.ID, SourceSort: 3})
+	if err := sub.GetSub("clash"); err != nil {
+		t.Fatalf("get subscription after adding airport node: %v", err)
+	}
+	if got, want := nodeNames(sub.Nodes), []string{"airport-dynamic-a", "airport-dynamic-b", "airport-dynamic-c"}; !sameStrings(got, want) {
+		t.Fatalf("nodes = %v, want %v", got, want)
+	}
+}
+
+func TestSubcriptionMixedDirectGroupAirportDedupesAndOrders(t *testing.T) {
+	setupSubcriptionCopyTestDB(t)
+
+	airport := createSubcriptionTestAirport(t, "airport-mixed")
+	direct := createSubcriptionTestNode(t, Node{Name: "mixed-direct", LinkName: "mixed-direct", Source: "manual"})
+	createSubcriptionTestNode(t, Node{Name: "mixed-group-first", LinkName: "mixed-group-first", Source: "manual", Group: "mixed-group"})
+	createSubcriptionTestNode(t, Node{Name: "mixed-shared", LinkName: "mixed-shared", Source: "manual", Group: "mixed-group"})
+	createSubcriptionTestNode(t, Node{Name: "mixed-airport-only", LinkName: "mixed-airport-only", Source: airport.Name, SourceID: airport.ID, SourceSort: 1})
+	createSubcriptionTestNode(t, Node{Name: "mixed-airport-shared", LinkName: "mixed-shared", Source: airport.Name, SourceID: airport.ID, SourceSort: 2})
+
+	sub := &Subcription{Name: "mixed-sub", RefreshUsageOnRequest: true}
+	if err := sub.Add(); err != nil {
+		t.Fatalf("add subscription: %v", err)
+	}
+	if err := database.DB.Create(&SubcriptionNode{SubcriptionID: sub.ID, NodeID: direct.ID, Sort: 1}).Error; err != nil {
+		t.Fatalf("add node relation: %v", err)
+	}
+	if err := database.DB.Create(&SubcriptionGroup{SubcriptionID: sub.ID, GroupName: "mixed-group", Sort: 0}).Error; err != nil {
+		t.Fatalf("add group relation: %v", err)
+	}
+	if err := database.DB.Create(&SubcriptionAirport{SubcriptionID: sub.ID, AirportID: airport.ID, Sort: 2}).Error; err != nil {
+		t.Fatalf("add airport relation: %v", err)
+	}
+
+	if err := sub.GetSub("clash"); err != nil {
+		t.Fatalf("get subscription: %v", err)
+	}
+	if got, want := nodeNames(sub.Nodes), []string{"mixed-group-first", "mixed-shared", "mixed-direct", "mixed-airport-only"}; !sameStrings(got, want) {
+		t.Fatalf("nodes = %v, want %v", got, want)
+	}
+}
+
+func TestSubcriptionCopyPreservesAirportRelations(t *testing.T) {
+	setupSubcriptionCopyTestDB(t)
+
+	airport := createSubcriptionTestAirport(t, "airport-copy")
+	sub := &Subcription{Name: "airport-copy-sub", RefreshUsageOnRequest: true}
+	if err := sub.Add(); err != nil {
+		t.Fatalf("add subscription: %v", err)
+	}
+	if err := database.DB.Create(&SubcriptionAirport{SubcriptionID: sub.ID, AirportID: airport.ID, Sort: 7}).Error; err != nil {
+		t.Fatalf("add airport relation: %v", err)
+	}
+
+	copySub, err := sub.Copy()
+	if err != nil {
+		t.Fatalf("copy subscription: %v", err)
+	}
+
+	var relation SubcriptionAirport
+	if err := database.DB.Where("subcription_id = ? AND airport_id = ?", copySub.ID, airport.ID).First(&relation).Error; err != nil {
+		t.Fatalf("find copied airport relation: %v", err)
+	}
+	if relation.Sort != 7 {
+		t.Fatalf("copied airport sort = %d, want 7", relation.Sort)
+	}
+}
+
+func TestSubcriptionDeleteCleansAirportRelations(t *testing.T) {
+	setupSubcriptionCopyTestDB(t)
+
+	airport := createSubcriptionTestAirport(t, "airport-delete")
+	sub := &Subcription{Name: "airport-delete-sub", RefreshUsageOnRequest: true}
+	if err := sub.Add(); err != nil {
+		t.Fatalf("add subscription: %v", err)
+	}
+	if err := sub.AddAirports([]int{airport.ID}); err != nil {
+		t.Fatalf("add airport relation: %v", err)
+	}
+	if err := sub.Del(); err != nil {
+		t.Fatalf("delete subscription: %v", err)
+	}
+
+	var count int64
+	if err := database.DB.Model(&SubcriptionAirport{}).Where("subcription_id = ?", sub.ID).Count(&count).Error; err != nil {
+		t.Fatalf("count airport relations: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("airport relation count = %d, want 0", count)
+	}
+}
+
+func TestSubcriptionListIncludesAirportRelationWithSort(t *testing.T) {
+	setupSubcriptionCopyTestDB(t)
+
+	airport := createSubcriptionTestAirport(t, "airport-list")
+	sub := &Subcription{Name: "airport-list-sub", RefreshUsageOnRequest: true}
+	if err := sub.Add(); err != nil {
+		t.Fatalf("add subscription: %v", err)
+	}
+	if err := database.DB.Create(&SubcriptionAirport{SubcriptionID: sub.ID, AirportID: airport.ID, Sort: 5}).Error; err != nil {
+		t.Fatalf("add airport relation: %v", err)
+	}
+
+	subs, err := sub.List()
+	if err != nil {
+		t.Fatalf("list subscriptions: %v", err)
+	}
+	if len(subs) != 1 {
+		t.Fatalf("subscription count = %d, want 1", len(subs))
+	}
+	if len(subs[0].AirportsWithSort) != 1 {
+		t.Fatalf("airport relation count = %d, want 1", len(subs[0].AirportsWithSort))
+	}
+	gotAirport := subs[0].AirportsWithSort[0]
+	if gotAirport.ID != airport.ID || gotAirport.Sort != 5 {
+		t.Fatalf("airport relation = {id:%d sort:%d}, want {id:%d sort:5}", gotAirport.ID, gotAirport.Sort, airport.ID)
+	}
+
+	payload, err := json.Marshal(subs[0].AirportsWithSort)
+	if err != nil {
+		t.Fatalf("marshal airport relation: %v", err)
+	}
+	serialized := string(payload)
+	for _, forbidden := range []string{"url", "proxyLink", "requestHeaders"} {
+		if strings.Contains(serialized, forbidden) {
+			t.Fatalf("airport relation leaked %q in JSON: %s", forbidden, serialized)
+		}
+	}
+}
+
+func TestSubcriptionAddAirportsRejectsMissingAirport(t *testing.T) {
+	setupSubcriptionCopyTestDB(t)
+
+	sub := &Subcription{Name: "missing-airport-sub", RefreshUsageOnRequest: true}
+	if err := sub.Add(); err != nil {
+		t.Fatalf("add subscription: %v", err)
+	}
+	if err := sub.AddAirports([]int{404}); err == nil {
+		t.Fatal("expected missing airport relation to be rejected")
+	}
+
+	var count int64
+	if err := database.DB.Model(&SubcriptionAirport{}).Where("subcription_id = ?", sub.ID).Count(&count).Error; err != nil {
+		t.Fatalf("count airport relations: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("airport relation count = %d, want 0", count)
+	}
+}
+
+func sameStrings(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			return false
+		}
+	}
+	return true
 }

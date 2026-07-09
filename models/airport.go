@@ -300,6 +300,9 @@ func (a *Airport) Del() error {
 	if err != nil {
 		return err
 	}
+	if err := database.DB.Where("airport_id = ?", a.ID).Delete(&SubcriptionAirport{}).Error; err != nil {
+		return err
+	}
 	airportCache.Delete(a.ID)
 	// 级联清理该机场在分组排序表中的记录
 	CleanupAirportSortRecords(a.ID)

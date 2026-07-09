@@ -18,10 +18,12 @@ type PreviewRequest struct {
 	SubscriptionID int `json:"SubscriptionID"`
 
 	// 以下字段用于表单预览（未保存的订阅）
-	NodeIDs            []int    `json:"NodeIDs"`           // 选中的节点ID列表（带排序）
-	NodeSorts          []int    `json:"NodeSorts"`         // 节点对应的排序值
-	Groups             []string `json:"Groups"`            // 选中的分组列表
-	GroupSorts         []int    `json:"GroupSorts"`        // 分组对应的排序值
+	NodeIDs            []int    `json:"NodeIDs"`    // 选中的节点ID列表（带排序）
+	NodeSorts          []int    `json:"NodeSorts"`  // 节点对应的排序值
+	Groups             []string `json:"Groups"`     // 选中的分组列表
+	GroupSorts         []int    `json:"GroupSorts"` // 分组对应的排序值
+	AirportIDs         []int    `json:"AirportIDs"`
+	AirportSorts       []int    `json:"AirportSorts"`
 	Scripts            []int    `json:"Scripts"`           // 选中的脚本ID列表
 	DelayTime          int      `json:"DelayTime"`         // 最大延迟过滤
 	MinSpeed           float64  `json:"MinSpeed"`          // 最小速度过滤
@@ -232,10 +234,11 @@ func previewFormSubscription(req PreviewRequest) (*models.PreviewResult, error) 
 func buildNodesWithMixedSort(req PreviewRequest) []models.Node {
 	// 定义混合排序项
 	type MixedItem struct {
-		Node    *models.Node
-		Group   string
-		Sort    int
-		IsGroup bool
+		Node      *models.Node
+		Group     string
+		AirportID int
+		Sort      int
+		Kind      string
 	}
 
 	var mixedItems []MixedItem
@@ -249,9 +252,9 @@ func buildNodesWithMixedSort(req PreviewRequest) []models.Node {
 					sortVal = req.NodeSorts[i]
 				}
 				mixedItems = append(mixedItems, MixedItem{
-					Node:    node,
-					Sort:    sortVal,
-					IsGroup: false,
+					Node: node,
+					Sort: sortVal,
+					Kind: "node",
 				})
 			}
 		}
@@ -275,9 +278,9 @@ func buildNodesWithMixedSort(req PreviewRequest) []models.Node {
 
 			if ok && node != nil {
 				mixedItems = append(mixedItems, MixedItem{
-					Node:    node,
-					Sort:    i, // 旧版本没有排序信息，使用索引
-					IsGroup: false,
+					Node: node,
+					Sort: i, // 旧版本没有排序信息，使用索引
+					Kind: "node",
 				})
 			}
 		}
@@ -291,14 +294,27 @@ func buildNodesWithMixedSort(req PreviewRequest) []models.Node {
 				sortVal = req.GroupSorts[i]
 			}
 			mixedItems = append(mixedItems, MixedItem{
-				Group:   groupName,
-				Sort:    sortVal,
-				IsGroup: true,
+				Group: groupName,
+				Sort:  sortVal,
+				Kind:  "group",
 			})
 		}
 	}
 
-	// 验证至少有节点或分组
+	if len(req.AirportIDs) > 0 {
+		for i, airportID := range req.AirportIDs {
+			sortVal := len(mixedItems) + i
+			if i < len(req.AirportSorts) {
+				sortVal = req.AirportSorts[i]
+			}
+			mixedItems = append(mixedItems, MixedItem{
+				AirportID: airportID,
+				Sort:      sortVal,
+				Kind:      "airport",
+			})
+		}
+	}
+
 	if len(mixedItems) == 0 {
 		return nil
 	}
@@ -310,14 +326,25 @@ func buildNodesWithMixedSort(req PreviewRequest) []models.Node {
 
 	// 获取分组节点映射
 	groupNodeMap := make(map[string][]models.Node)
+	airportNodeMap := make(map[int][]models.Node)
 	for _, item := range mixedItems {
-		if item.IsGroup {
+		switch item.Kind {
+		case "group":
 			var groupNodes []models.Node
 			node := &models.Node{}
 			groupNodes, _ = node.ListByGroups([]string{item.Group})
 			airportSortMap := models.GetGroupAirportSortMap(item.Group)
 			groupNodes = models.SortNodesByAirport(groupNodes, airportSortMap)
 			groupNodeMap[item.Group] = groupNodes
+		case "airport":
+			airportNodes, err := models.ListNodesByAirportID(item.AirportID)
+			if err != nil {
+				continue
+			}
+			sort.Slice(airportNodes, func(i, j int) bool {
+				return airportNodes[i].ID < airportNodes[j].ID
+			})
+			airportNodeMap[item.AirportID] = models.SortNodesByAirport(airportNodes, map[int]int{item.AirportID: 0})
 		}
 	}
 
@@ -326,7 +353,8 @@ func buildNodesWithMixedSort(req PreviewRequest) []models.Node {
 	var result []models.Node
 
 	for _, item := range mixedItems {
-		if item.IsGroup {
+		switch item.Kind {
+		case "group":
 			// 添加分组中的所有节点
 			if nodes, exists := groupNodeMap[item.Group]; exists {
 				for _, node := range nodes {
@@ -337,7 +365,17 @@ func buildNodesWithMixedSort(req PreviewRequest) []models.Node {
 					}
 				}
 			}
-		} else {
+		case "airport":
+			if nodes, exists := airportNodeMap[item.AirportID]; exists {
+				for _, node := range nodes {
+					nameKey := node.EffectiveName()
+					if !nodeMap[nameKey] {
+						result = append(result, node)
+						nodeMap[nameKey] = true
+					}
+				}
+			}
+		default:
 			// 添加单个节点
 			if item.Node != nil && !nodeMap[item.Node.EffectiveName()] {
 				result = append(result, *item.Node)

@@ -255,6 +255,11 @@ export default function SubscriptionMobileCard({
                           size="small"
                           sx={getInfoChipSx(palette.warning.main)}
                         />
+                        <Chip
+                          label={t('subscriptions.mobileCard.airportCount', { count: sub.Airports?.length || 0 })}
+                          size="small"
+                          sx={getInfoChipSx(palette.info.main)}
+                        />
                       </Stack>
                       <Typography variant="caption" sx={{ color: tertiaryText }}>
                         {t('subscriptions.mobileCard.expandHint')}
@@ -401,10 +406,17 @@ export default function SubscriptionMobileCard({
                                   onClick={() => onCopyToClipboard(item.Link)}
                                   sx={getInfoChipSx(palette.success.main, true)}
                                 />
+                              ) : item._type === 'airport' ? (
+                                <Chip
+                                  key={item._type + item.ID}
+                                  label={t('subscriptions.sort.airportLabel', { name: item.Name })}
+                                  size="small"
+                                  sx={getInfoChipSx(palette.info.main)}
+                                />
                               ) : (
                                 <Chip
                                   key={item._type + idx}
-                                  label={`📁 ${item.Name}`}
+                                  label={t('subscriptions.sort.groupLabel', { name: item.Name })}
                                   size="small"
                                   sx={getInfoChipSx(palette.warning.main)}
                                 />

@@ -52,6 +52,7 @@ func setupClientsAPITestDB(t *testing.T) {
 		&models.Node{},
 		&models.SubcriptionNode{},
 		&models.SubcriptionGroup{},
+		&models.SubcriptionAirport{},
 		&models.SubcriptionScript{},
 		&models.SubscriptionShare{},
 		&models.SubscriptionChainRule{},

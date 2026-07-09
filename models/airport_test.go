@@ -29,7 +29,7 @@ func setupAirportTestDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
-	if err := db.AutoMigrate(&Airport{}); err != nil {
+	if err := db.AutoMigrate(&Airport{}, &SubcriptionAirport{}, &GroupAirportSort{}); err != nil {
 		t.Fatalf("auto migrate airports: %v", err)
 	}
 
@@ -45,6 +45,35 @@ func setupAirportTestDB(t *testing.T) {
 		resetAirportCacheForTest()
 		testutil.CloseDB(t, db)
 	})
+}
+
+func TestAirportDeleteCleansSubscriptionAirportRelations(t *testing.T) {
+	setupAirportTestDB(t)
+
+	airport := &Airport{
+		Name:     "relation-cleanup-airport",
+		URL:      "https://example.com/subscription",
+		CronExpr: "0 */12 * * *",
+		Enabled:  true,
+	}
+	if err := airport.Add(); err != nil {
+		t.Fatalf("add airport: %v", err)
+	}
+	if err := database.DB.Create(&SubcriptionAirport{SubcriptionID: 9, AirportID: airport.ID, Sort: 3}).Error; err != nil {
+		t.Fatalf("add subscription airport relation: %v", err)
+	}
+
+	if err := airport.Del(); err != nil {
+		t.Fatalf("delete airport: %v", err)
+	}
+
+	var count int64
+	if err := database.DB.Model(&SubcriptionAirport{}).Where("airport_id = ?", airport.ID).Count(&count).Error; err != nil {
+		t.Fatalf("count subscription airport relations: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("subscription airport relation count = %d, want 0", count)
+	}
 }
 
 func TestAirportUpdatePersistsUpdateAfterDetectSettings(t *testing.T) {

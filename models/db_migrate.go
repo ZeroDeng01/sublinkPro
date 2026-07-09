@@ -189,6 +189,7 @@ func RunMigrations() error {
 		{name: "Webhook", model: &Webhook{}},
 		{name: "Script", model: &Script{}},
 		{name: "SubcriptionGroup", model: &SubcriptionGroup{}},
+		{name: "SubcriptionAirport", model: &SubcriptionAirport{}},
 		{name: "SubcriptionScript", model: &SubcriptionScript{}},
 		{name: "Template", model: &Template{}},
 		{name: "Tag", model: &Tag{}},

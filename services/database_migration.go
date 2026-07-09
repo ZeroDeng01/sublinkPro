@@ -322,6 +322,13 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 			return err
 		}
 
+		if err := importSubscriptionAirports(state); err != nil {
+			return err
+		}
+		if err := reportStep(fmt.Sprintf("订阅机场关联导入完成，共 %d 条", state.result.Imported["subcription_airports"]), nil); err != nil {
+			return err
+		}
+
 		if err := importGroupAirportSorts(state); err != nil {
 			return err
 		}
@@ -623,6 +630,7 @@ func clearTargetBusinessData(tx *gorm.DB) error {
 		&models.SubscriptionChainRule{},
 		&models.GroupAirportSort{},
 		&models.SubcriptionNode{},
+		&models.SubcriptionAirport{},
 		&models.SubcriptionScript{},
 		&models.SubcriptionGroup{},
 		&models.TagRule{},
@@ -866,6 +874,21 @@ func importSubscriptionGroups(state *databaseMigrationState) error {
 		return fmt.Errorf("导入订阅分组失败: %w", err)
 	}
 	state.result.Imported["subcription_groups"] = len(groups)
+	return nil
+}
+
+func importSubscriptionAirports(state *databaseMigrationState) error {
+	if !state.source.Migrator().HasTable(&models.SubcriptionAirport{}) {
+		return nil
+	}
+	var records []models.SubcriptionAirport
+	if err := state.source.Find(&records).Error; err != nil {
+		return fmt.Errorf("读取源订阅机场关联失败: %w", err)
+	}
+	if err := insertRecords(state.tx, records); err != nil {
+		return fmt.Errorf("导入订阅机场关联失败: %w", err)
+	}
+	state.result.Imported["subcription_airports"] = len(records)
 	return nil
 }
 
