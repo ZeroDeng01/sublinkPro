@@ -315,7 +315,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ steps.changelog.outputs.current_tag }}
+          tag_name: ${{ github.ref_name }}
           name: Release ${{ steps.changelog.outputs.current_tag }}
           body_path: changelog.md
           files: |
