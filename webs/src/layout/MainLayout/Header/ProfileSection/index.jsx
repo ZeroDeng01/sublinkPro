@@ -44,25 +44,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import request from 'api/request';
 import GeoIPSettingsDialog from 'views/settings/components/GeoIPSettingsDialog';
 
-// ==============================|| 问候语计算 ||============================== //
-
-const getGreetingKey = () => {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 9) {
-    return 'profile.greeting.earlyMorning';
-  } else if (hour >= 9 && hour < 12) {
-    return 'profile.greeting.morning';
-  } else if (hour >= 12 && hour < 14) {
-    return 'profile.greeting.noon';
-  } else if (hour >= 14 && hour < 18) {
-    return 'profile.greeting.afternoon';
-  } else if (hour >= 18 && hour < 23) {
-    return 'profile.greeting.evening';
-  } else {
-    return 'profile.greeting.lateNight';
-  }
-};
-
 const getProfileMenuTokens = (theme, isDark) => {
   const {
     palette,
@@ -117,7 +98,6 @@ export default function ProfileSection() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [geoipDialogOpen, setGeoipDialogOpen] = useState(false);
   const anchorRef = useRef(null);
-  const greeting = t(getGreetingKey());
   const { isDark } = useResolvedColorScheme();
   const {
     palette,
@@ -397,9 +377,6 @@ export default function ProfileSection() {
                     >
                       <Stack>
                         <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
-                          <Typography variant="h4" sx={{ color: primaryText }}>
-                            {greeting}，
-                          </Typography>
                           <Typography component="span" variant="h4" sx={{ fontWeight: 600, color: emphasizedText }}>
                             {user?.nickname || user?.username || t('profile.userFallback')}
                           </Typography>
