@@ -167,12 +167,16 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   };
 
   const fetchShares = useCallback(
-    async (keyword = '', isSearch = false, customSortBy = null, customSortOrder = null) => {
+    async (keyword = '', isSearch = false, customSortBy = null, customSortOrder = null, silent = false) => {
       if (!subscription?.ID) return;
-      if (isSearch) {
-        setSearching(true);
-      } else {
-        setLoading(true);
+      // silent 模式用于手动刷新：不显示 loading 骨架或 searching 遮罩，
+      // 仅由调用方（刷新按钮图标）提供加载反馈，数据在底层静默更新。
+      if (!silent) {
+        if (isSearch) {
+          setSearching(true);
+        } else {
+          setLoading(true);
+        }
       }
       try {
         // 检测是否为IP地址
@@ -199,10 +203,12 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       } catch (error) {
         console.error('Failed to get share list:', error);
       } finally {
-        if (isSearch) {
-          setSearching(false);
-        } else {
-          setLoading(false);
+        if (!silent) {
+          if (isSearch) {
+            setSearching(false);
+          } else {
+            setLoading(false);
+          }
         }
       }
     },
@@ -642,7 +648,8 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
 
     setRefreshing(true);
     try {
-      await fetchShares(searchKeyword, true);
+      // silent=true：不触发列表遮罩/骨架，仅右上角刷新图标转圈，数据静默更新
+      await fetchShares(searchKeyword, true, null, null, true);
       requestAnimationFrame(() => {
         if (dialogContentRef.current) {
           dialogContentRef.current.scrollTop = scrollTop;

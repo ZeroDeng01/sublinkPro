@@ -10,7 +10,7 @@ SublinkPro 提供了完善的机场订阅管理功能，不仅能将订阅转换
 
 | 功能 | 说明 |
 |:---|:---|
-| **📥 多格式导入** | 支持 Clash/mihomo、V2Ray 订阅格式的自动解析与导入；Mieru 仅支持 Clash/mihomo YAML |
+| **📥 多格式导入** | 支持 Clash/mihomo、V2Ray 订阅格式的自动解析与导入；Mieru 与 Snell 仅支持 Clash/mihomo YAML |
 | **⏱️ 智能定时更新** | 内置 Crontab 级调度器，支持按时间间隔或 Cron 表达式自动更新订阅，确保节点时刻在线 |
 | **📊 流量用量监控** | 自动解析订阅返回的 `Subscription-Userinfo` 头，直观展示**已用上传**、**已用下载**、**总流量**及**过期时间** |
 | **🚀 立即更新机制** | 支持一键「立即拉取」，配合实时回调机制，无需刷新页面即可看到最新的流量数据和节点列表 |
@@ -41,6 +41,12 @@ SublinkPro 提供了完善的机场订阅管理功能，不仅能将订阅转换
 - 机场订阅导入支持 Clash/mihomo YAML 中的 `type: mieru` 节点，并保留 mihomo 官方字段：`server`、`port` 或 `port-range`、`transport`、`username`、`password`、`multiplexing`、`traffic-pattern`。
 - Mieru 官方存在 `mieru://` / `mierus://` 分享链接，但未定义适合 SublinkPro 原始编辑器逐字段修改的通用 URL schema。系统保存节点时使用内部可编辑形态 `mieru://username:password@server:port?...#name`，端口范围使用 `portRange=2090-2099`，用于 Clash/mihomo YAML 导入后的回写与后续导出。
 - Mieru 不会输出到 v2ray 或 Surge；这些客户端当前不在 SublinkPro 的 Mieru 支持范围内。
+
+### Snell 兼容说明
+
+- 机场订阅导入支持 Clash/mihomo YAML 中的 `type: snell` 节点，并保留 mihomo 官方字段：`server`、`port`、`psk`、`version`、`udp`、`obfs-opts`（`mode`、`host`）以及通用连接层选项 `tfo`、`mptcp`、`interface-name`、`routing-mark`、`ip-version`。
+- Snell 没有官方分享链接方案。系统保存节点时使用内部可编辑形态 `snell://server:port?psk=...&version=...&obfs=...&obfs-host=...#name`，用于 Clash/mihomo YAML 导入后的回写、Surge 输出与后续导出。
+- Snell 仅输出到 Clash/mihomo 与 Surge；v2ray 当前不在 SublinkPro 的 Snell 支持范围内。
 
 ---
 

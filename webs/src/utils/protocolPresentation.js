@@ -16,6 +16,7 @@ const FALLBACK_PROTOCOL_META = [
   { name: 'mieru', label: 'Mieru', color: '#5f6caf', icon: 'M', prefixes: ['mieru://'] },
   { name: 'naiveproxy', label: 'NaiveProxy', color: '#5d4037', icon: 'N', prefixes: ['naiveproxy://', 'naive://'] },
   { name: 'anytls', label: 'AnyTLS', color: '#20a84c', icon: 'A', prefixes: ['anytls://'] },
+  { name: 'snell', label: 'Snell', color: '#00897b', icon: 'S', prefixes: ['snell://'] },
   { name: 'socks5', label: 'SOCKS5', color: '#116ea4', icon: 'S', prefixes: ['socks5://'] },
   { name: 'socks', label: 'SOCKS', color: '#dd4984', icon: 'S', prefixes: ['socks://'] },
   { name: 'http', label: 'HTTP', color: '#0288d1', icon: 'H', prefixes: ['http://'] },

@@ -124,6 +124,12 @@
 - Mieru 官方存在 `mieru://` / `mierus://` 分享链接，但官方文档未定义适合逐字段编辑的通用 URL schema。SublinkPro 内部使用 `mieru://username:password@server:port?...#name` 作为原始编辑和 Clash/mihomo 导入回写格式；需要端口范围时使用 `portRange=2090-2099`，不写 `port`。
 - `/c?client=v2ray` 与 Surge 当前不支持 Mieru；SublinkPro 会跳过 Mieru 节点，不会把 `mieru://` 链接写入 v2ray base64，也不会生成 Surge 配置。
 
+## Snell 输出说明
+
+- Snell 支持 Clash/mihomo 与 Surge 输出。`/c?client=clash` 会按 mihomo YAML 字段输出 `type: snell`、`server`、`port`、`psk`，并保留可选的 `version`、`udp` 与 `obfs-opts`（`mode` / `host`）、通用连接层选项（`tfo`、`mptcp`、`interface-name`、`routing-mark`、`ip-version`）以及链式代理 `dialer-proxy`；`/c?client=surge` 会输出 `snell, server, port, psk=...`，并按需追加 `version`、`obfs`、`obfs-host`、`tfo` 与 `udp-relay`（`mptcp`、`interface-name`、`routing-mark`、`ip-version` 为 mihomo 专属，Surge 无对应字段不输出）。
+- Snell 官方没有定义通用的分享链接方案，mihomo 以 Clash YAML 字段描述 Snell。SublinkPro 内部使用 `snell://server:port?psk=...&version=...&obfs=...&obfs-host=...#name` 作为原始编辑和 Clash/mihomo、Surge 导入回写格式；`version` 默认为 mihomo 的 Snell v1，取值范围为 1/2/3。
+- `/c?client=v2ray` 当前不支持 Snell；SublinkPro 会跳过 Snell 节点，不会把 `snell://` 链接写入 v2ray base64。
+
 ## VLESS XHTTP 输出说明
 
 - 当订阅中的节点为 VLESS 且传输层为 `xhttp` 时，`/c?client=clash` 会输出 `network: xhttp` 与 `xhttp-opts`。

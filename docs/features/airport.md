@@ -10,7 +10,7 @@ SublinkPro provides complete airport subscription management. It can convert sub
 
 | Feature | Description |
 |:---|:---|
-| **📥 Multi format import** | Automatically parses and imports Clash/mihomo and V2Ray subscription formats. Mieru supports Clash/mihomo YAML only |
+| **📥 Multi format import** | Automatically parses and imports Clash/mihomo and V2Ray subscription formats. Mieru and Snell support Clash/mihomo YAML only |
 | **⏱️ Smart scheduled updates** | Built in Crontab level scheduler, with interval or Cron expression updates, keeping nodes fresh |
 | **📊 Traffic usage monitoring** | Parses the `Subscription-Userinfo` response header and shows **used upload**, **used download**, **total traffic**, and **expiration time** |
 | **🚀 Update now** | One click “fetch now” plus real time callbacks, so latest traffic data and node lists appear without refreshing the page |
@@ -41,6 +41,12 @@ SublinkPro provides complete airport subscription management. It can convert sub
 - Airport subscription import supports `type: mieru` nodes in Clash/mihomo YAML, preserving official mihomo fields: `server`, `port` or `port-range`, `transport`, `username`, `password`, `multiplexing`, and `traffic-pattern`.
 - Official Mieru has `mieru://` and `mierus://` share links, but does not define a general URL schema suitable for field by field editing in the SublinkPro raw editor. When saving nodes, the system uses an internal editable form, `mieru://username:password@server:port?...#name`, with port ranges written as `portRange=2090-2099`, for Clash/mihomo YAML import write back and later export.
 - Mieru is not output to v2ray or Surge. Those clients are currently outside SublinkPro's Mieru support scope.
+
+### Snell compatibility
+
+- Airport subscription import supports `type: snell` nodes in Clash/mihomo YAML, preserving official mihomo fields: `server`, `port`, `psk`, `version`, `udp`, `obfs-opts` (`mode`, `host`), and the shared connection-layer options `tfo`, `mptcp`, `interface-name`, `routing-mark`, and `ip-version`.
+- Snell has no official share-link schema. When saving nodes, the system uses an internal editable form, `snell://server:port?psk=...&version=...&obfs=...&obfs-host=...#name`, for Clash/mihomo YAML import write back, Surge output, and later export.
+- Snell is output to Clash/mihomo and Surge only. v2ray is currently outside SublinkPro's Snell support scope.
 
 ---
 
