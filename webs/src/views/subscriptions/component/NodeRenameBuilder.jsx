@@ -151,6 +151,29 @@ const PREVIEW_DATA = {
   $Tags: 'Fast|HK'
 };
 
+// 预设分隔符字符集合，用于反序列化时将连续的预设分隔符拆分为独立标签
+const QUICK_SEPARATOR_CHARS = new Set(QUICK_SEPARATORS.map((sep) => sep.key));
+
+// 将一段分隔符文本拆分为多个 token：每个预设分隔符字符独立成项，
+// 其余连续的自定义字符合并为一个项（保留形如 "Name" 的自定义分隔符）
+const splitSeparatorText = (text) => {
+  const tokens = [];
+  let buffer = '';
+  for (const ch of text) {
+    if (QUICK_SEPARATOR_CHARS.has(ch)) {
+      if (buffer) {
+        tokens.push(buffer);
+        buffer = '';
+      }
+      tokens.push(ch);
+    } else {
+      buffer += ch;
+    }
+  }
+  if (buffer) tokens.push(buffer);
+  return tokens;
+};
+
 /**
  */
 const parseRule = (rule) => {
@@ -158,6 +181,12 @@ const parseRule = (rule) => {
 
   const items = [];
   let id = 0;
+
+  const pushSeparators = (text) => {
+    for (const token of splitSeparatorText(text)) {
+      items.push({ id: `sep-${id++}`, type: 'separator', value: token });
+    }
+  };
 
   const varRegex =
     /\$(Name|LinkName|LinkCountry|Flag|SpeedIcon|Speed|DelayIcon|Delay|IpType|Residential|FraudScoreIcon|FraudScore|Unlock\([^)]+\)|Unlock|Group|Source|DuplicateIndex|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
@@ -167,15 +196,14 @@ const parseRule = (rule) => {
 
   while ((match = varRegex.exec(rule)) !== null) {
     if (match.index > lastIndex) {
-      const sep = rule.substring(lastIndex, match.index);
-      items.push({ id: `sep-${id++}`, type: 'separator', value: sep });
+      pushSeparators(rule.substring(lastIndex, match.index));
     }
     items.push({ id: `var-${id++}`, type: 'variable', value: match[0] });
     lastIndex = match.index + match[0].length;
   }
 
   if (lastIndex < rule.length) {
-    items.push({ id: `sep-${id++}`, type: 'separator', value: rule.substring(lastIndex) });
+    pushSeparators(rule.substring(lastIndex));
   }
 
   return items;
