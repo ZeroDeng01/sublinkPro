@@ -31,6 +31,7 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from '../../../utils/colorUtils';
 import { getReadableTextTokens, getSurfaceTokens } from '../../../themes/surfaceTokens';
 import { getUnlockRenameVariables } from 'views/nodes/utils';
+import { parseNodeRenameRule } from './nodeRenameRuleUtils';
 
 const AVAILABLE_VARIABLES = [
   { key: '$Protocol', labelKey: 'subscriptions.rename.vars.protocol', color: '#9c27b0', descKey: 'subscriptions.rename.vars.protocolDesc' },
@@ -149,64 +150,6 @@ const PREVIEW_DATA = {
   $Index: '01',
   $DuplicateIndex: '1',
   $Tags: 'Fast|HK'
-};
-
-// 预设分隔符字符集合，用于反序列化时将连续的预设分隔符拆分为独立标签
-const QUICK_SEPARATOR_CHARS = new Set(QUICK_SEPARATORS.map((sep) => sep.key));
-
-// 将一段分隔符文本拆分为多个 token：每个预设分隔符字符独立成项，
-// 其余连续的自定义字符合并为一个项（保留形如 "Name" 的自定义分隔符）
-const splitSeparatorText = (text) => {
-  const tokens = [];
-  let buffer = '';
-  for (const ch of text) {
-    if (QUICK_SEPARATOR_CHARS.has(ch)) {
-      if (buffer) {
-        tokens.push(buffer);
-        buffer = '';
-      }
-      tokens.push(ch);
-    } else {
-      buffer += ch;
-    }
-  }
-  if (buffer) tokens.push(buffer);
-  return tokens;
-};
-
-/**
- */
-const parseRule = (rule) => {
-  if (!rule) return [];
-
-  const items = [];
-  let id = 0;
-
-  const pushSeparators = (text) => {
-    for (const token of splitSeparatorText(text)) {
-      items.push({ id: `sep-${id++}`, type: 'separator', value: token });
-    }
-  };
-
-  const varRegex =
-    /\$(Name|LinkName|LinkCountry|Flag|SpeedIcon|Speed|DelayIcon|Delay|IpType|Residential|FraudScoreIcon|FraudScore|Unlock\([^)]+\)|Unlock|Group|Source|DuplicateIndex|Index|Protocol|Tags|TagGroup\([^)]+\))/g;
-
-  let match;
-  let lastIndex = 0;
-
-  while ((match = varRegex.exec(rule)) !== null) {
-    if (match.index > lastIndex) {
-      pushSeparators(rule.substring(lastIndex, match.index));
-    }
-    items.push({ id: `var-${id++}`, type: 'variable', value: match[0] });
-    lastIndex = match.index + match[0].length;
-  }
-
-  if (lastIndex < rule.length) {
-    pushSeparators(rule.substring(lastIndex));
-  }
-
-  return items;
 };
 
 /**
@@ -363,7 +306,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
   };
 
   useEffect(() => {
-    const items = parseRule(value);
+    const items = parseNodeRenameRule(value);
     setRuleItems(items);
     setIdCounter(items.length + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -481,11 +424,6 @@ export default function NodeRenameBuilder({ value, onChange }) {
       return item.value;
     })
     .join('');
-
-  const qualityVariableKeys = useMemo(
-    () => new Set(availableVariables.filter((item) => item.section === 'quality').map((item) => item.key)),
-    [availableVariables]
-  );
 
   return (
     <Box>
@@ -762,33 +700,6 @@ export default function NodeRenameBuilder({ value, onChange }) {
                 {preview || `(${t('common.empty')})`}
               </Typography>
             </Stack>
-            {qualityVariableKeys.size > 0 && (
-              <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0.75} sx={{ mt: 1.25 }}>
-                {availableVariables
-                  .filter((variable) => variable.section === 'quality')
-                  .map((variable) => {
-                    const tone = getVariableTone(variable.key);
-                    return (
-                      <Chip
-                        key={variable.key}
-                        label={variable.label}
-                        size="small"
-                        sx={{
-                          height: 22,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          bgcolor: tone.subtleSurface,
-                          color: tone.textColor,
-                          border: '1px solid',
-                          borderColor: tone.softBorder,
-                          boxShadow: insetHighlight,
-                          '& .MuiChip-label': { px: 0.9 }
-                        }}
-                      />
-                    );
-                  })}
-              </Stack>
-            )}
           </Alert>
         </Fade>
       )}
