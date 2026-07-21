@@ -44,6 +44,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 import NodeRenameBuilder from './NodeRenameBuilder';
+import { previewSubscriptionNodeName } from './nodeRenameRuleUtils';
 import NodeNamePreprocessor from 'components/NodeNamePreprocessor';
 import NodeNameFilter from 'components/NodeNameFilter';
 import NodeTagFilter from './NodeTagFilter';
@@ -72,31 +73,6 @@ const normalizeCountryCode = (value) => (typeof value === 'string' ? value.trim(
 const normalizeCountryCodeList = (values) => {
   if (!Array.isArray(values)) return [];
   return Array.from(new Set(values.map((value) => normalizeCountryCode(value)).filter(Boolean)));
-};
-
-const previewNodeName = (rule) => {
-  if (!rule) return '';
-  let result = rule.replace(/\$TagGroup\([^)]+\)/g, 'Fast');
-  return result
-    .replace(/\$Name/g, 'Hong Kong node remark')
-    .replace(/\$Flag/g, '🇭🇰')
-    .replace(/\$SpeedIcon/g, getSpeedIcon(1.5, 'success'))
-    .replace(/\$DelayIcon/g, getDelayIcon(125, 'success'))
-    .replace(/\$IpType/g, 'Native IP')
-    .replace(/\$Residential/g, 'Residential IP')
-    .replace(/\$FraudScoreIcon/g, getFraudScoreIcon(12, 'success'))
-    .replace(/\$FraudScore/g, '12')
-    .replace(/\$Unlock\([^)]+\)/g, 'Unlock-US')
-    .replace(/\$LinkName/g, 'HongKong01')
-    .replace(/\$LinkCountry/g, 'HK')
-    .replace(/\$Speed/g, '1.50MB/s')
-    .replace(/\$Delay/g, '125ms')
-    .replace(/\$Group/g, 'Premium')
-    .replace(/\$Source/g, 'Airport A')
-    .replace(/\$DuplicateIndex/g, '1')
-    .replace(/\$Index/g, '1')
-    .replace(/\$Protocol/g, 'VMess')
-    .replace(/\$Tags/g, 'Fast|Hong Kong');
 };
 
 const hasPreprocessRules = (value) => {
@@ -1262,7 +1238,12 @@ export default function SubscriptionFormDialog({
                       {formData.nodeNameRule && (
                         <Alert variant={'standard'} severity="info" sx={{ mt: 1 }}>
                           <Typography variant="body2">
-                            <strong>{t('subscriptions.form.nameProcessing.preview')}</strong> {previewNodeName(formData.nodeNameRule)}
+                            <strong>{t('subscriptions.form.nameProcessing.preview')}</strong>{' '}
+                            {previewSubscriptionNodeName(formData.nodeNameRule, {
+                              speedIcon: getSpeedIcon(1.5, 'success'),
+                              delayIcon: getDelayIcon(125, 'success'),
+                              fraudScoreIcon: getFraudScoreIcon(12, 'success')
+                            })}
                           </Typography>
                         </Alert>
                       )}
