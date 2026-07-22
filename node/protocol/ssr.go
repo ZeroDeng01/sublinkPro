@@ -29,7 +29,7 @@ func init() {
 
 // ssr格式编码输出
 // EncodeSSRURL 将 SSR 结构编码为 ssr:// 链接。
-// 当前实现只输出仓库内已落地支持的查询字段，其余可选参数不会在这里补写。
+// 当前实现输出节点名称、协议参数与混淆参数，其余可选参数不会在这里补写。
 func EncodeSSRURL(s Ssr) string {
 	/*编码格式
 	ssr://base64(host:port:protocol:method:obfs:base64(password)/?obfsparam=base64(obfsparam)&protoparam=base64(protoparam)&remarks=base64(remarks)&group=base64(group))
@@ -49,6 +49,11 @@ func EncodeSSRURL(s Ssr) string {
 		queryParts = append(queryParts, "obfsparam="+utils.Base64Encode(s.Qurey.Obfsparam))
 	}
 
+	// protoparam 参与部分 SSR 协议的握手认证，非空时必须保留
+	if s.Qurey.Protoparam != "" {
+		queryParts = append(queryParts, "protoparam="+utils.Base64Encode(s.Qurey.Protoparam))
+	}
+
 	param := fmt.Sprintf("%s:%s:%s:%s:%s:%s/?%s",
 		s.Server,
 		utils.GetPortString(s.Port),
@@ -61,7 +66,7 @@ func EncodeSSRURL(s Ssr) string {
 	return "ssr://" + utils.Base64Encode(param)
 }
 
-// DecodeSSRURL 解析 SSR 链接，并按当前实现提取 remarks 与 obfsparam 等已支持字段。
+// DecodeSSRURL 解析 SSR 链接，并提取 remarks、obfsparam 与 protoparam。
 // 该解析流程依赖既有编码格式，对未覆盖的扩展参数会保持忽略。
 func DecodeSSRURL(s string) (Ssr, error) {
 	/*解析格式
@@ -74,7 +79,7 @@ func DecodeSSRURL(s string) (Ssr, error) {
 	}
 	s = parts[0] + utils.Base64Decode(parts[1])
 	// 检查是否包含"/?" 如果有就是有备注信息
-	var remarks, obfsparam string
+	var remarks, obfsparam, protoparam string
 	if strings.Contains(s, "/?") {
 		// 解析备注信息
 		query := strings.Split(s, "/?")[1]
@@ -96,10 +101,12 @@ func DecodeSSRURL(s string) (Ssr, error) {
 		}
 		remarks = utils.Base64Decode(paramMap["remarks"])
 		obfsparam = utils.Base64Decode(paramMap["obfsparam"])
+		protoparam = utils.Base64Decode(paramMap["protoparam"])
 		defer func() {
 			if utils.CheckEnvironment() {
 				fmt.Println("remarks", remarks)
 				fmt.Println("obfsparam", obfsparam)
+				fmt.Println("protoparam", protoparam)
 			}
 		}()
 	}
@@ -134,8 +141,9 @@ func DecodeSSRURL(s string) (Ssr, error) {
 		Obfs:     obfs,
 		Password: password,
 		Qurey: Ssrquery{
-			Obfsparam: obfsparam,
-			Remarks:   remarks,
+			Obfsparam:  obfsparam,
+			Protoparam: protoparam,
+			Remarks:    remarks,
 		},
 		Type: "ssr",
 	}, nil
@@ -152,8 +160,9 @@ type Ssr struct {
 	Type     string
 }
 type Ssrquery struct {
-	Obfsparam string
-	Remarks   string
+	Obfsparam  string
+	Protoparam string
+	Remarks    string
 }
 
 // ConvertProxyToSsr 将 Proxy 结构体转换为 Ssr 结构体
@@ -167,8 +176,9 @@ func ConvertProxyToSsr(proxy Proxy) Ssr {
 		Obfs:     proxy.Obfs,
 		Password: proxy.Password,
 		Qurey: Ssrquery{
-			Obfsparam: proxy.Obfs_password,
-			Remarks:   proxy.Name,
+			Obfsparam:  proxy.ObfsParam,
+			Protoparam: proxy.ProtocolParam,
+			Remarks:    proxy.Name,
 		},
 		Type: "ssr",
 	}
@@ -183,5 +193,5 @@ func buildSSRProxy(link Urls, config OutputConfig) (Proxy, error) {
 	if ssr.Qurey.Remarks == "" {
 		ssr.Qurey.Remarks = fmt.Sprintf("%s:%s", ssr.Server, utils.GetPortString(ssr.Port))
 	}
-	return Proxy{Name: ssr.Qurey.Remarks, Type: "ssr", Server: ssr.Server, Port: FlexPort(utils.GetPortInt(ssr.Port)), Cipher: ssr.Method, Password: ssr.Password, Obfs: ssr.Obfs, Obfs_password: ssr.Qurey.Obfsparam, Protocol: ssr.Protocol, Udp: config.Udp, Skip_cert_verify: config.Cert, Dialer_proxy: link.DialerProxyName}, nil
+	return Proxy{Name: ssr.Qurey.Remarks, Type: "ssr", Server: ssr.Server, Port: FlexPort(utils.GetPortInt(ssr.Port)), Cipher: ssr.Method, Password: ssr.Password, Obfs: ssr.Obfs, ObfsParam: ssr.Qurey.Obfsparam, Protocol: ssr.Protocol, ProtocolParam: ssr.Qurey.Protoparam, Udp: config.Udp, Skip_cert_verify: config.Cert, Dialer_proxy: link.DialerProxyName}, nil
 }

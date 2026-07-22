@@ -161,6 +161,8 @@ type Proxy struct {
 	Psk                   string         `yaml:"psk,omitempty"`                         // Snell 预共享密钥
 	Obfs_opts             map[string]any `yaml:"obfs-opts,omitempty"`                   // Snell 混淆选项 (mode/host)
 	Protocol              string         `yaml:"protocol,omitempty"`                    // SSR 协议
+	ProtocolParam         string         `yaml:"protocol-param,omitempty"`              // SSR 协议参数
+	ObfsParam             string         `yaml:"obfs-param,omitempty"`                  // SSR 混淆参数
 	Uuid                  string         `yaml:"uuid,omitempty"`                        // UUID (VMess/VLESS)
 	Peer                  string         `yaml:"peer,omitempty"`                        // Peer (Hysteria)
 	Congestion_controller string         `yaml:"congestion-controller,omitempty"`       // 拥塞控制 (Tuic)
