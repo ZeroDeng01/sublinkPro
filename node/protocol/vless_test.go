@@ -14,15 +14,17 @@ func TestVlessEncodeDecode(t *testing.T) {
 		Server: "example.com",
 		Port:   443,
 		Query: VLESSQuery{
-			Security:    "tls",
-			Encryption:  "none",
-			Type:        "ws",
-			Host:        "cdn.example.com",
-			Path:        "/vless",
-			Sni:         "sni.example.com",
-			Fp:          "chrome",
-			Fingerprint: "16dac3717024eb319093d1c95290c14adc850e2814b2208d11c7b7a436923859",
-			Alpn:        []string{"h2", "http/1.1"},
+			Security:            "tls",
+			Encryption:          "none",
+			Type:                "ws",
+			Host:                "cdn.example.com",
+			Path:                "/vless",
+			Sni:                 "sni.example.com",
+			Fp:                  "chrome",
+			Fingerprint:         "16dac3717024eb319093d1c95290c14adc850e2814b2208d11c7b7a436923859",
+			Alpn:                []string{"h2", "http/1.1"},
+			HttpUpgrade:         1,
+			HttpUpgradeFastOpen: 1,
 		},
 	}
 
@@ -47,6 +49,8 @@ func TestVlessEncodeDecode(t *testing.T) {
 	assertEqualString(t, "Query.Sni", original.Query.Sni, decoded.Query.Sni)
 	assertEqualString(t, "Query.Fingerprint", original.Query.Fingerprint, decoded.Query.Fingerprint)
 	assertEqualString(t, "Query.Path", original.Query.Path, decoded.Query.Path)
+	assertEqualInt(t, "Query.HttpUpgrade", original.Query.HttpUpgrade, decoded.Query.HttpUpgrade)
+	assertEqualInt(t, "Query.HttpUpgradeFastOpen", original.Query.HttpUpgradeFastOpen, decoded.Query.HttpUpgradeFastOpen)
 
 	t.Logf("✓ VLESS 编解码测试通过，名称: %s", decoded.Name)
 }

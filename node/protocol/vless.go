@@ -215,6 +215,13 @@ func EncodeVLESSURL(v VLESS) string {
 	if v.Query.EarlyDataHeader != "" {
 		q.Set("eh", v.Query.EarlyDataHeader)
 	}
+	// 保留 HTTP Upgrade 扩展，避免 Mihomo 配置经 VLESS URI 往返转换后退化为普通 WebSocket。
+	if v.Query.HttpUpgrade == 1 {
+		q.Set("httpUpgrade", "1")
+	}
+	if v.Query.HttpUpgradeFastOpen == 1 {
+		q.Set("httpUpgradeFastOpen", "1")
+	}
 
 	// http传输层参数
 	if v.Query.Method != "" {
