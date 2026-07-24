@@ -1070,37 +1070,81 @@ func (sub *Subcription) IPlogUpdate() error {
 
 // 删除订阅（硬删除，Write-Through）
 func (sub *Subcription) Del() error {
+	tx := database.DB.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	var subLogs []SubLogs
+	if err := tx.Where("subcription_id = ?", sub.ID).Find(&subLogs).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	var subscriptionShares []SubscriptionShare
+	if err := tx.Where("subscription_id = ?", sub.ID).Find(&subscriptionShares).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	var chainRules []SubscriptionChainRule
+	if err := tx.Where("subscription_id = ?", sub.ID).Find(&chainRules).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Where("subcription_id = ?", sub.ID).Delete(&SubLogs{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
 	// 先删除关联的节点关系
-	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionNode{}).Error; err != nil {
+	if err := tx.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionNode{}).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 	// 删除关联的分组关系
-	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionGroup{}).Error; err != nil {
+	if err := tx.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionGroup{}).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
-	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionAirport{}).Error; err != nil {
+	if err := tx.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionAirport{}).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 	// 删除关联的脚本关系
-	if err := database.DB.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionScript{}).Error; err != nil {
+	if err := tx.Where("subcription_id = ?", sub.ID).Delete(&SubcriptionScript{}).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 	// 删除关联的订阅分享
-	if err := database.DB.Where("subscription_id = ?", sub.ID).Delete(&SubscriptionShare{}).Error; err != nil {
+	if err := tx.Where("subscription_id = ?", sub.ID).Delete(&SubscriptionShare{}).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	// 删除关联的链式代理规则
-	if err := DeleteChainRulesBySubscriptionID(sub.ID); err != nil {
+	if err := tx.Where("subscription_id = ?", sub.ID).Delete(&SubscriptionChainRule{}).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 	// 硬删除订阅本身（Unscoped 绕过软删除）
-	err := database.DB.Unscoped().Delete(sub).Error
-	if err != nil {
+	if err := tx.Unscoped().Delete(sub).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
 	// 从缓存中删除
 	subcriptionCache.Delete(sub.ID)
+	for _, subLog := range subLogs {
+		subLogsCache.Delete(subLog.ID)
+	}
+	for _, subscriptionShare := range subscriptionShares {
+		subscriptionShareCache.Delete(subscriptionShare.ID)
+	}
+	for _, chainRule := range chainRules {
+		chainRuleCache.Delete(chainRule.ID)
+	}
 	return nil
 }
 

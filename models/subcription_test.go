@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -74,6 +75,17 @@ func resetSubcriptionCacheForTest() {
 	subcriptionCache.AddIndex("name", func(s Subcription) string { return s.Name })
 }
 
+func resetSubLogsCacheForTest() {
+	subLogsCache = cache.NewMapCache(func(sl SubLogs) int { return sl.ID })
+	subLogsCache.AddIndex("subcriptionID", func(sl SubLogs) string { return strconv.Itoa(sl.SubcriptionID) })
+	subLogsCache.AddIndex("shareID", func(sl SubLogs) string { return strconv.Itoa(sl.ShareID) })
+}
+
+func resetChainRuleCacheForTest() {
+	chainRuleCache = cache.NewMapCache(func(r SubscriptionChainRule) int { return r.ID })
+	chainRuleCache.AddIndex("subscriptionId", func(r SubscriptionChainRule) string { return strconv.Itoa(r.SubscriptionID) })
+}
+
 func setupSubcriptionCopyTestDB(t *testing.T) {
 	t.Helper()
 
@@ -83,7 +95,9 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 	oldNodeCache := nodeCache
 	oldAirportCache := airportCache
 	oldSubcriptionCache := subcriptionCache
+	oldSubLogsCache := subLogsCache
 	oldSubscriptionShareCache := subscriptionShareCache
+	oldChainRuleCache := chainRuleCache
 
 	db, err := gorm.Open(sqlite.Open(testutil.UniqueMemoryDSN(t, "subcription_copy_test")), &gorm.Config{})
 	if err != nil {
@@ -91,6 +105,7 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 	}
 	if err := db.AutoMigrate(
 		&Subcription{},
+		&SubLogs{},
 		&Node{},
 		&Airport{},
 		&SubcriptionNode{},
@@ -103,6 +118,9 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 	); err != nil {
 		t.Fatalf("auto migrate subscription copy tables: %v", err)
 	}
+	if err := db.Exec("PRAGMA foreign_keys = ON").Error; err != nil {
+		t.Fatalf("enable SQLite foreign keys: %v", err)
+	}
 
 	database.DB = db
 	database.Dialect = database.DialectSQLite
@@ -110,7 +128,9 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 	resetNodeCacheForTest()
 	resetAirportCacheForTest()
 	resetSubcriptionCacheForTest()
+	resetSubLogsCacheForTest()
 	resetSubscriptionShareCacheForTest()
+	resetChainRuleCacheForTest()
 
 	t.Cleanup(func() {
 		database.DB = oldDB
@@ -119,7 +139,9 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 		nodeCache = oldNodeCache
 		airportCache = oldAirportCache
 		subcriptionCache = oldSubcriptionCache
+		subLogsCache = oldSubLogsCache
 		subscriptionShareCache = oldSubscriptionShareCache
+		chainRuleCache = oldChainRuleCache
 		testutil.CloseDB(t, db)
 	})
 }
@@ -285,6 +307,88 @@ func TestSubcriptionDeleteCleansAirportRelations(t *testing.T) {
 	}
 	if count != 0 {
 		t.Fatalf("airport relation count = %d, want 0", count)
+	}
+}
+
+func TestSubcriptionDeleteCleansSubLogs(t *testing.T) {
+	setupSubcriptionCopyTestDB(t)
+
+	sub := &Subcription{Name: "sub-log-delete-sub", RefreshUsageOnRequest: true}
+	if err := sub.Add(); err != nil {
+		t.Fatalf("add subscription: %v", err)
+	}
+	for _, ip := range []string{"192.0.2.1", "192.0.2.2"} {
+		if err := (&SubLogs{IP: ip, SubcriptionID: sub.ID}).Add(); err != nil {
+			t.Fatalf("add subscription log %q: %v", ip, err)
+		}
+	}
+	if count := len(GetSubLogsBySubcriptionID(sub.ID)); count != 2 {
+		t.Fatalf("cached subscription log count = %d, want 2", count)
+	}
+	share := &SubscriptionShare{
+		SubscriptionID: sub.ID,
+		Name:           "delete-share",
+		Token:          "delete-share-token",
+		ExpireType:     ExpireTypeNever,
+		Enabled:        true,
+	}
+	if err := share.Add(); err != nil {
+		t.Fatalf("add subscription share: %v", err)
+	}
+	if count := len(GetSharesBySubscriptionID(sub.ID)); count != 1 {
+		t.Fatalf("cached subscription share count = %d, want 1", count)
+	}
+	chainRule := &SubscriptionChainRule{SubscriptionID: sub.ID, Name: "delete-chain-rule", Enabled: true}
+	if err := chainRule.Add(); err != nil {
+		t.Fatalf("add subscription chain rule: %v", err)
+	}
+	if count := len(GetChainRulesBySubscriptionID(sub.ID)); count != 1 {
+		t.Fatalf("cached subscription chain rule count = %d, want 1", count)
+	}
+
+	if err := sub.Del(); err != nil {
+		t.Fatalf("delete subscription: %v", err)
+	}
+
+	var subscriptionCount int64
+	if err := database.DB.Unscoped().Model(&Subcription{}).Where("id = ?", sub.ID).Count(&subscriptionCount).Error; err != nil {
+		t.Fatalf("count subscriptions: %v", err)
+	}
+	if subscriptionCount != 0 {
+		t.Fatalf("subscription count = %d, want 0", subscriptionCount)
+	}
+
+	var subLogCount int64
+	if err := database.DB.Model(&SubLogs{}).Where("subcription_id = ?", sub.ID).Count(&subLogCount).Error; err != nil {
+		t.Fatalf("count subscription logs: %v", err)
+	}
+	if subLogCount != 0 {
+		t.Fatalf("subscription log count = %d, want 0", subLogCount)
+	}
+	if count := len(GetSubLogsBySubcriptionID(sub.ID)); count != 0 {
+		t.Fatalf("cached subscription log count = %d, want 0", count)
+	}
+
+	var subscriptionShareCount int64
+	if err := database.DB.Model(&SubscriptionShare{}).Where("subscription_id = ?", sub.ID).Count(&subscriptionShareCount).Error; err != nil {
+		t.Fatalf("count subscription shares: %v", err)
+	}
+	if subscriptionShareCount != 0 {
+		t.Fatalf("subscription share count = %d, want 0", subscriptionShareCount)
+	}
+	if count := len(GetSharesBySubscriptionID(sub.ID)); count != 0 {
+		t.Fatalf("cached subscription share count = %d, want 0", count)
+	}
+
+	var chainRuleCount int64
+	if err := database.DB.Model(&SubscriptionChainRule{}).Where("subscription_id = ?", sub.ID).Count(&chainRuleCount).Error; err != nil {
+		t.Fatalf("count subscription chain rules: %v", err)
+	}
+	if chainRuleCount != 0 {
+		t.Fatalf("subscription chain rule count = %d, want 0", chainRuleCount)
+	}
+	if count := len(GetChainRulesBySubscriptionID(sub.ID)); count != 0 {
+		t.Fatalf("cached subscription chain rule count = %d, want 0", count)
 	}
 }
 
