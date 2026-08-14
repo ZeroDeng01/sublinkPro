@@ -173,3 +173,213 @@ func TestHY2IPv6RawUpdatePreservesBracketedAuthority(t *testing.T) {
 	}
 	assertEqualString(t, "Address", "[2001:db8::3]:22000", identity.Address)
 }
+
+func TestHY2SurgeLinePortHopping(t *testing.T) {
+	link := EncodeHY2URL(HY2{
+		Name:     "Surge-HY2-Hop",
+		Host:     "example.com",
+		Port:     443,
+		Password: "pw",
+		MPort:    "10000-20000",
+	})
+
+	line, name, err := buildHY2SurgeLine(link, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2SurgeLine 失败: %v", err)
+	}
+	assertEqualString(t, "SurgeName", "Surge-HY2-Hop", name)
+	assertContains(t, "SurgeType", line, "Surge-HY2-Hop = hysteria2, example.com, 443")
+	assertContains(t, "PortHopping", line, "port-hopping=10000-20000")
+}
+
+func TestHY2SurgeLineNoPortHoppingWhenMPortEmpty(t *testing.T) {
+	link := EncodeHY2URL(HY2{
+		Name:     "Surge-HY2-Plain",
+		Host:     "example.com",
+		Port:     443,
+		Password: "pw",
+	})
+
+	line, _, err := buildHY2SurgeLine(link, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2SurgeLine 失败: %v", err)
+	}
+	assertContains(t, "SurgeType", line, "Surge-HY2-Plain = hysteria2, example.com, 443")
+	if strings.Contains(line, "port-hopping") {
+		t.Errorf("无 mport 时不应输出 port-hopping, 实际: %s", line)
+	}
+}
+
+// TestHY2SurgeLinePortZeroUsesMportFirstPort 覆盖相邻 codex 审核指出的 P1：
+// 原始链接携带 :0（实际端口由 mport 提供）时，Surge 主端口必须取 mport 首段作占位，
+// 否则输出 "port = 0" 会被 Surge 判为 "The value of port is invalid"。
+func TestHY2SurgeLinePortZeroUsesMportFirstPort(t *testing.T) {
+	line, name, err := buildHY2SurgeLine("hy2://pw@example.com:0?mport=10000-20000,30000#Surge-Zero", OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2SurgeLine 失败: %v", err)
+	}
+	assertEqualString(t, "SurgeName", "Surge-Zero", name)
+	assertContains(t, "SurgeMainPort", line, " = hysteria2, example.com, 10000,")
+	assertContains(t, "PortHopping", line, "port-hopping=10000-20000;30000")
+}
+
+// TestHY2SurgeLineMportSeparatorToSemicolon 覆盖审核指出的 P1：
+// mport 多段以逗号分隔（10000-20000,30000），Surge 的 port-hopping 要求分号；
+// 直接透传逗号会让 Surge 将后续段解析成独立无效参数。
+func TestHY2SurgeLineMportSeparatorToSemicolon(t *testing.T) {
+	line, _, err := buildHY2SurgeLine("hy2://pw@example.com:443?mport=20000-30000,40000#Surge-Sep", OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2SurgeLine 失败: %v", err)
+	}
+	if strings.Contains(line, ",40000") {
+		t.Errorf("mport 多段逗号分隔应转换为分号, 实际: %s", line)
+	}
+	assertContains(t, "PortHopping", line, "port-hopping=20000-30000;40000")
+}
+
+func TestHY2SurgeLineMportNormalizesMihomoSyntax(t *testing.T) {
+	testCases := []struct {
+		name string
+		link string
+		want string
+	}{
+		{
+			name: "端口段空白",
+			link: "hy2://pw@example.com:443?mport=%2010000-20000%2C%2030000%20#Surge-Space",
+			want: "port-hopping=10000-20000;30000",
+		},
+		{
+			name: "斜杠分隔",
+			link: "hy2://pw@example.com:443?mport=10000-20000%2F30000#Surge-Slash",
+			want: "port-hopping=10000-20000;30000",
+		},
+		{
+			name: "范围端点空白",
+			link: "hy2://pw@example.com:443?mport=10000%20-%2020000%2F%2030000#Surge-Range-Space",
+			want: "port-hopping=10000-20000;30000",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			line, _, err := buildHY2SurgeLine(tc.link, OutputConfig{})
+			if err != nil {
+				t.Fatalf("buildHY2SurgeLine 失败: %v", err)
+			}
+			assertContains(t, "PortHopping", line, tc.want)
+		})
+	}
+}
+
+func TestHY2SurgeLineMportRejectsSemicolonInput(t *testing.T) {
+	line, _, err := buildHY2SurgeLine("hy2://pw@example.com:443?mport=10000-20000%3B30000#Surge-Semicolon", OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2SurgeLine 失败: %v", err)
+	}
+	if strings.Contains(line, "port-hopping") {
+		t.Errorf("mihomo mport 源输入不接受分号, 实际: %s", line)
+	}
+}
+
+// TestHY2SurgeLinePortZeroNoMportFallback443 覆盖主端口无效且无端口跳跃时回退默认端口 443。
+func TestHY2SurgeLinePortZeroNoMportFallback443(t *testing.T) {
+	line, _, err := buildHY2SurgeLine("hy2://pw@example.com:0#Surge-Fallback", OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2SurgeLine 失败: %v", err)
+	}
+	assertContains(t, "SurgeMainPort", line, " = hysteria2, example.com, 443,")
+	if strings.Contains(line, "port-hopping") {
+		t.Errorf("无 mport 时不应输出 port-hopping, 实际: %s", line)
+	}
+}
+
+// TestHY2SurgeLineMportRejectsInjection 覆盖相邻 codex 复核提出的 P2：
+// mport 白名单校验——URL 解码出的控制字符/换行等非法字符混入 mport 时丢弃整段，
+// 既不输出 port-hopping 也不把注入内容拼进生成的 Surge profile。
+func TestHY2SurgeLineMportRejectsInjection(t *testing.T) {
+	line, _, err := buildHY2SurgeLine("hy2://pw@example.com:443?mport=443%0A[Rule]%0AFINAL%2CDIRECT#Surge-Inject", OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2SurgeLine 失败: %v", err)
+	}
+	if strings.Contains(line, "port-hopping") {
+		t.Errorf("非法 mport 不应输出 port-hopping, 实际: %s", line)
+	}
+	if strings.Contains(line, "[Rule]") || strings.Contains(line, "\n") {
+		t.Errorf("非法 mport 不应注入 Surge 行, 实际: %s", line)
+	}
+}
+
+// TestHY2SurgeLineMportRangeOrderAndBound 覆盖 codex 三轮复核提出的 P2：
+// mport 语义校验——降序范围、端口 0、超 65535 等端口段 Surge 判 "port-hopping is invalid"，
+// 应整段丢弃不输出，避免生成无法加载的 profile。
+func TestHY2SurgeLineMportRangeOrderAndBound(t *testing.T) {
+	badMports := []string{"5000-4000", "0", "70000", "10000-20000,0", "10000-20000,300000"}
+	for _, mport := range badMports {
+		link := "hy2://pw@example.com:443?mport=" + mport + "#Surge-BadRange"
+		line, _, err := buildHY2SurgeLine(link, OutputConfig{})
+		if err != nil {
+			t.Fatalf("buildHY2SurgeLine 失败 (%s): %v", mport, err)
+		}
+		if strings.Contains(line, "port-hopping") {
+			t.Errorf("非法范围 mport=%q 不应输出 port-hopping, 实际: %s", mport, line)
+		}
+	}
+}
+
+func TestHY2SurgeLineInvalidMainPortFallback(t *testing.T) {
+	testCases := []struct {
+		name        string
+		link        string
+		wantPort    string
+		wantHopping string
+	}{
+		{
+			name:        "超界主端口取 mport 首段",
+			link:        "hy2://pw@example.com:70000?mport=10000-20000,30000#Surge-HighPort",
+			wantPort:    " = hysteria2, example.com, 10000,",
+			wantHopping: "port-hopping=10000-20000;30000",
+		},
+		{
+			name:     "超界主端口无 mport 回退 443",
+			link:     "hy2://pw@example.com:70000#Surge-HighPortFallback",
+			wantPort: " = hysteria2, example.com, 443,",
+		},
+		{
+			name:     "零端口加非法 mport 回退 443",
+			link:     "hy2://pw@example.com:0?mport=70000#Surge-InvalidMportFallback",
+			wantPort: " = hysteria2, example.com, 443,",
+		},
+		{
+			name:        "缺省主端口沿用协议默认 443",
+			link:        "hy2://pw@example.com?mport=10000-20000#Surge-MissingPort",
+			wantPort:    " = hysteria2, example.com, 443,",
+			wantHopping: "port-hopping=10000-20000",
+		},
+		{
+			name: "Encode 过滤零值 mport 后回退 443",
+			link: EncodeHY2URL(HY2{
+				Name:     "Surge-Encoded-Zero",
+				Host:     "example.com",
+				Port:     0,
+				Password: "pw",
+				MPort:    "0",
+			}),
+			wantPort: " = hysteria2, example.com, 443,",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			line, _, err := buildHY2SurgeLine(tc.link, OutputConfig{})
+			if err != nil {
+				t.Fatalf("buildHY2SurgeLine 失败: %v", err)
+			}
+			assertContains(t, "SurgeMainPort", line, tc.wantPort)
+			if tc.wantHopping != "" {
+				assertContains(t, "PortHopping", line, tc.wantHopping)
+			} else if strings.Contains(line, "port-hopping") {
+				t.Errorf("无合法 mport 时不应输出 port-hopping, 实际: %s", line)
+			}
+		})
+	}
+}
