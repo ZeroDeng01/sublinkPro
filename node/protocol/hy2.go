@@ -232,12 +232,98 @@ func buildHY2SurgeLine(link string, config OutputConfig) (string, string, error)
 	}
 	server := replaceSurgeHost(hy2.Host, config)
 	skipCert := config.Cert || hy2.Insecure == 1
-	line := fmt.Sprintf("%s = hysteria2, %s, %d, password=%s, udp-relay=%t, skip-cert-verify=%t", hy2.Name, server, utils.GetPortInt(hy2.Port), hy2.Password, true, skipCert)
+	port := utils.GetPortInt(hy2.Port)
+	// 端口跳跃：hy2:// 的 mport 透传为 Surge hysteria2 的 port-hopping。
+	// 先统一做白名单校验并规范化分隔符；非法或空串则本行不输出 port-hopping。
+	mphop := surgePortHopping(hy2.MPort)
+	// 主端口必须为 1-65535：显式 :0 或越界值会被 Surge 判为
+	// "The value of port is invalid"。此时若配置了合法端口跳跃则取 mport 首段作占位端口，
+	// 否则回退 443（与协议层 hysteria2 无端口时的默认端口一致）。
+	if port < 1 || port > 65535 {
+		if mphop != "" {
+			port = mportFirstPort(mphop)
+		}
+		if port < 1 || port > 65535 {
+			port = 443
+		}
+	}
+	line := fmt.Sprintf("%s = hysteria2, %s, %d, password=%s, udp-relay=%t, skip-cert-verify=%t", hy2.Name, server, port, hy2.Password, true, skipCert)
 	if hy2.Sni != "" {
 		line = fmt.Sprintf("%s, sni=%s", line, hy2.Sni)
 	}
 	if hy2.Fingerprint != "" {
 		line = fmt.Sprintf("%s, server-cert-fingerprint-sha256=%s", line, hy2.Fingerprint)
 	}
+	// 端口跳跃已在上方校验并规范化（mphop），非空才输出。
+	if mphop != "" {
+		line = fmt.Sprintf("%s, port-hopping=%s", line, mphop)
+	}
 	return line, hy2.Name, nil
+}
+
+// surgePortHopping 将 Hysteria2/mihomo 的 mport 端口跳跃串规范化为 Surge 语法。
+// mihomo 允许逗号或斜杠分隔多个端口段，并容忍端口段周围空白；这里先统一为
+// 规范端口/范围列表，再用 Surge 要求的分号连接。分号不是 mihomo 源语法，
+// 含分号或其他非法内容时整段丢弃，避免将未校验文本拼入 Surge profile。
+func surgePortHopping(mport string) string {
+	mport = strings.TrimSpace(mport)
+	if mport == "" || strings.Contains(mport, ";") {
+		return ""
+	}
+	mport = strings.ReplaceAll(mport, "/", ",")
+
+	// 语义校验：每段端口/端点须在 1-65535 且范围 start<=end。Surge 对降序范围、
+	// 端口 0 或超界会判 "The value of port-hopping is invalid"，导致整个 profile 无法加载；
+	// 任一非法则该 mport 整体视为无效，不输出 port-hopping。
+	segments := strings.Split(mport, ",")
+	normalized := make([]string, 0, len(segments))
+	for _, seg := range segments {
+		value, ok := normalizePortRange(seg)
+		if !ok {
+			return ""
+		}
+		normalized = append(normalized, value)
+	}
+	return strings.Join(normalized, ";")
+}
+
+// normalizePortRange 校验并规范化单段端口跳跃：`port` 或 `port-port`。
+// 端点须在 1-65535 且 start<=end；端点周围空白与前导零会被清理。
+func normalizePortRange(seg string) (string, bool) {
+	parts := strings.Split(strings.TrimSpace(seg), "-")
+	if len(parts) < 1 || len(parts) > 2 {
+		return "", false
+	}
+	lo, ok := portBound(strings.TrimSpace(parts[0]))
+	if !ok {
+		return "", false
+	}
+	if len(parts) == 1 {
+		return strconv.Itoa(lo), true
+	}
+	hi, ok := portBound(strings.TrimSpace(parts[1]))
+	if !ok || lo > hi {
+		return "", false
+	}
+	return fmt.Sprintf("%d-%d", lo, hi), true
+}
+
+// portBound 解析单个端口/端点并在 1-65535 范围内返回。
+func portBound(s string) (int, bool) {
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 1 || n > 65535 {
+		return 0, false
+	}
+	return n, true
+}
+
+// mportFirstPort 从已规范化的 Surge port-hopping 中提取首段起始端口，
+// 供主端口无效时作占位主端口。解析失败返回 0，由调用方回退默认端口。
+func mportFirstPort(portHopping string) int {
+	firstSegment := strings.SplitN(portHopping, ";", 2)[0]
+	firstPort := strings.SplitN(firstSegment, "-", 2)[0]
+	if n, ok := portBound(firstPort); ok {
+		return n
+	}
+	return 0
 }
