@@ -218,7 +218,7 @@ If your earlier instance used SQLite and you now want to migrate to MySQL or Pos
 
 [//]: # (  <img src="https://repobeez.abhijithganesh.com/api/insert/ZeroDeng01/sublinkPro" alt="Repobeez" height="0" width="0" style="display: none"/>)
   
-  ![Star History Chart](https://api.star-history.com/svg?repos=ZeroDeng01/sublinkPro&type=Date)
+  ![Star History Chart](https://star-history.dera.page/svg?repos=ZeroDeng01/sublinkPro&type=Date)
 </div>
 
 ---
