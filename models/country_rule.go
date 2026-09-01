@@ -3,7 +3,6 @@ package models
 import (
 	"bufio"
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,6 +12,11 @@ import (
 	"sync"
 	"time"
 
+	// 使用 dlclark/regexp2 PCRE 引擎的 compat 适配器，API 与 Go 标准库 regexp 一致
+	// 替代 RE2 语法，以支持零宽断言等高级特性
+	// 如 (?<![A-Za-z])HK(?![A-Za-z]) 等在 mihomo 中可用的正则
+	// compat.Compile 不传 options 时，pattern 内联标志（如 (?i)）正常生效
+	regexp "github.com/dlclark/regexp2/v2/compat"
 	"gorm.io/gorm"
 )
 
