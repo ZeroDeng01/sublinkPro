@@ -84,7 +84,7 @@
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.1.1",
     "prettier": "3.9.6",
-    "sass": "1.102.0",
+    "sass": "1.103.1",
     "vite-plugin-pwa": "^1.2.0"
   },
   "packageManager": "yarn@4.10.3"
