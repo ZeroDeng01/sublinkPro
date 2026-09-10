@@ -93,6 +93,8 @@ func TestBatchUpdateNodeInfoBulkUpdatesFieldsAndPreservesRemarkNames(t *testing.
 		BuildNodeInfoUpdate(linkModeNode, "新名称A 'quoted'", "ss://new-a?name='quoted'", 11),
 		BuildNodeInfoUpdate(remarkNode, "新名称B", "trojan://new-b?password='secret'", 12),
 	}
+	updates[0].ClashExtra = "smux:\n  enabled: true\n"
+	updates[1].ClashExtra = "future-mihomo-option:\n  retries: 3\n"
 	count, err := BatchUpdateNodeInfo(updates)
 	if err != nil {
 		t.Fatalf("BatchUpdateNodeInfo() error = %v", err)
@@ -117,6 +119,9 @@ func TestBatchUpdateNodeInfoBulkUpdatesFieldsAndPreservesRemarkNames(t *testing.
 	if storedLinkMode.SourceSort != 11 {
 		t.Fatalf("link mode source_sort = %d, want 11", storedLinkMode.SourceSort)
 	}
+	if storedLinkMode.ClashExtra != updates[0].ClashExtra {
+		t.Fatalf("link mode ClashExtra = %q, want %q", storedLinkMode.ClashExtra, updates[0].ClashExtra)
+	}
 	if !storedLinkMode.UpdatedAt.After(originalTime) {
 		t.Fatalf("link mode updated_at = %v, want after %v", storedLinkMode.UpdatedAt, originalTime)
 	}
@@ -137,14 +142,17 @@ func TestBatchUpdateNodeInfoBulkUpdatesFieldsAndPreservesRemarkNames(t *testing.
 	if storedRemark.SourceSort != 12 {
 		t.Fatalf("remark source_sort = %d, want 12", storedRemark.SourceSort)
 	}
+	if storedRemark.ClashExtra != updates[1].ClashExtra {
+		t.Fatalf("remark ClashExtra = %q, want %q", storedRemark.ClashExtra, updates[1].ClashExtra)
+	}
 	if !storedRemark.UpdatedAt.After(originalTime) {
 		t.Fatalf("remark updated_at = %v, want after %v", storedRemark.UpdatedAt, originalTime)
 	}
 
-	if cached, ok := nodeCache.Get(linkModeNode.ID); !ok || cached.Name != storedLinkMode.Name || cached.LinkHash != storedLinkMode.LinkHash || cached.SourceSort != 11 || !cached.UpdatedAt.Equal(storedLinkMode.UpdatedAt) {
+	if cached, ok := nodeCache.Get(linkModeNode.ID); !ok || cached.Name != storedLinkMode.Name || cached.ClashExtra != updates[0].ClashExtra || cached.LinkHash != storedLinkMode.LinkHash || cached.SourceSort != 11 || !cached.UpdatedAt.Equal(storedLinkMode.UpdatedAt) {
 		t.Fatalf("link mode cache not updated after successful bulk update: %#v, ok=%v", cached, ok)
 	}
-	if cached, ok := nodeCache.Get(remarkNode.ID); !ok || cached.Name != "我的备注" || cached.LinkName != "新名称B" || cached.LinkHash != storedRemark.LinkHash || cached.SourceSort != 12 || !cached.UpdatedAt.Equal(storedRemark.UpdatedAt) {
+	if cached, ok := nodeCache.Get(remarkNode.ID); !ok || cached.Name != "我的备注" || cached.LinkName != "新名称B" || cached.ClashExtra != updates[1].ClashExtra || cached.LinkHash != storedRemark.LinkHash || cached.SourceSort != 12 || !cached.UpdatedAt.Equal(storedRemark.UpdatedAt) {
 		t.Fatalf("remark cache not updated after successful bulk update: %#v, ok=%v", cached, ok)
 	}
 }
@@ -160,6 +168,7 @@ func TestBatchUpdateNodeInfoFallsBackPerRowWhenBulkChunkFails(t *testing.T) {
 		BuildNodeInfoUpdate(failedNode, "会失败", conflictingNode.Link, 21),
 		BuildNodeInfoUpdate(successNode, "会成功", "ss://new-success", 22),
 	}
+	updates[1].ClashExtra = "smux:\n  padding: true\n"
 	count, err := BatchUpdateNodeInfo(updates)
 	if err != nil {
 		t.Fatalf("BatchUpdateNodeInfo() error = %v", err)
@@ -183,10 +192,10 @@ func TestBatchUpdateNodeInfoFallsBackPerRowWhenBulkChunkFails(t *testing.T) {
 	if err := database.DB.First(&storedSuccess, successNode.ID).Error; err != nil {
 		t.Fatalf("reload success node: %v", err)
 	}
-	if storedSuccess.Name != "会成功" || storedSuccess.LinkName != "会成功" || storedSuccess.Link != "ss://new-success" || storedSuccess.LinkHash != hashNodeLink("ss://new-success") || storedSuccess.SourceSort != 22 {
+	if storedSuccess.Name != "会成功" || storedSuccess.LinkName != "会成功" || storedSuccess.Link != "ss://new-success" || storedSuccess.ClashExtra != updates[1].ClashExtra || storedSuccess.LinkHash != hashNodeLink("ss://new-success") || storedSuccess.SourceSort != 22 {
 		t.Fatalf("successful fallback row not updated: %#v", storedSuccess)
 	}
-	if cached, ok := nodeCache.Get(successNode.ID); !ok || cached.Name != "会成功" || cached.Link != "ss://new-success" || cached.LinkHash != hashNodeLink("ss://new-success") || cached.SourceSort != 22 || !cached.UpdatedAt.Equal(storedSuccess.UpdatedAt) {
+	if cached, ok := nodeCache.Get(successNode.ID); !ok || cached.Name != "会成功" || cached.Link != "ss://new-success" || cached.ClashExtra != updates[1].ClashExtra || cached.LinkHash != hashNodeLink("ss://new-success") || cached.SourceSort != 22 || !cached.UpdatedAt.Equal(storedSuccess.UpdatedAt) {
 		t.Fatalf("successful fallback row cache not updated: %#v, ok=%v", cached, ok)
 	}
 }

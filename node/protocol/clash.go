@@ -195,6 +195,7 @@ type Proxy struct {
 	Http_opts       map[string]any `yaml:"http-opts,omitempty"`       // HTTP 传输层选项
 	XHTTP_opts      map[string]any `yaml:"xhttp-opts,omitempty"`
 	ECH_opts        map[string]any `yaml:"ech-opts,omitempty"`
+	ClashExtra      yaml.Node      `yaml:"-"` // 导入时未被模型识别的 Clash 顶层属性
 }
 
 func sanitizeCertificateFingerprint(fingerprint string) string {
@@ -225,6 +226,7 @@ type Config struct {
 type Urls struct {
 	Url             string
 	DialerProxyName string
+	ClashExtra      string
 }
 
 // 删除opts中的空值
@@ -343,7 +345,14 @@ func LinkToProxy(link Urls, config OutputConfig) (Proxy, error) {
 	if !ok {
 		return Proxy{}, fmt.Errorf("protocol %s does not support proxy export", protocol.Name())
 	}
-	return proxyCapable.ToProxy(link, config)
+	proxy, err := proxyCapable.ToProxy(link, config)
+	if err != nil {
+		return Proxy{}, err
+	}
+	if err := ApplyClashExtra(&proxy, link.ClashExtra); err != nil {
+		return Proxy{}, err
+	}
+	return proxy, nil
 }
 
 // EncodeClash 用于生成 Clash 配置文件

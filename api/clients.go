@@ -695,6 +695,7 @@ func buildPreparedMihomoYAML(c *gin.Context, prepared preparedClientResponse) (m
 	}
 
 	// ========== 第二阶段：遍历节点生成配置 ==========
+	preserveClashExtra := prepared.ClientType == "clash" || prepared.ClientType == "mihomo"
 	for idx, v := range sub.Nodes {
 		// 计算 dialer-proxy（链式代理规则）
 		// 优先级：中间节点映射 > 目标节点映射 > 节点自身设置
@@ -740,9 +741,14 @@ func buildPreparedMihomoYAML(c *gin.Context, prepared preparedClientResponse) (m
 			}
 		// 默认
 		default:
+			clashExtra := ""
+			if preserveClashExtra {
+				clashExtra = v.ClashExtra
+			}
 			urls = append(urls, protocol.Urls{
 				Url:             nodeLink,
 				DialerProxyName: dialerProxy,
+				ClashExtra:      clashExtra,
 			})
 		}
 	}
