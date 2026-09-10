@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -116,6 +118,114 @@ func TestGenerateProxyLinkDoesNotReconstructDisabledECH(t *testing.T) {
 	}
 	if strings.Contains(link, "ech=") {
 		t.Fatalf("禁用 ECH 时不应重建顶层 ech, 实际: %s", link)
+	}
+}
+
+// TestGenerateProxyLinkRetainsUnknownClashOptions verifies that a Clash import
+// persists unmodeled attributes only for a later Clash or Mihomo YAML export.
+func TestGenerateProxyLinkRetainsUnknownClashOptions(t *testing.T) {
+	const subscription = `proxies:
+  - name: "HK-CMHK-CF-02"
+    type: vless
+    server: edge.example.com
+    port: 443
+    udp: true
+    uuid: 12345678-1234-1234-1234-123456789abc
+    packet-encoding: xudp
+    tls: true
+    servername: cdn.example.com
+    client-fingerprint: chrome
+    skip-cert-verify: false
+    network: ws
+    ws-opts:
+      path: /websocket
+      headers:
+        Host: cdn.example.com
+      v2ray-http-upgrade: true
+    smux:
+      enabled: true
+      protocol: h2mux
+      max-connections: 4
+      min-streams: 4
+      statistic: false
+      only-tcp: false
+      padding: true
+    future-mihomo-option:
+      enabled: false
+      retries: 3
+      labels: [alpha, beta]
+`
+
+	var config ClashConfig
+	if err := yaml.Unmarshal([]byte(subscription), &config); err != nil {
+		t.Fatalf("parse Clash YAML: %v", err)
+	}
+	if len(config.Proxies) != 1 {
+		t.Fatalf("proxy count = %d, want 1", len(config.Proxies))
+	}
+
+	storedLink := GenerateProxyLink(config.Proxies[0])
+	if storedLink == "" {
+		t.Fatal("generate stored link")
+	}
+	if strings.Contains(storedLink, "smux") || strings.Contains(storedLink, "future-mihomo-option") {
+		t.Fatalf("non-Clash node link must not include retained properties: %s", storedLink)
+	}
+	clashExtra, err := protocol.EncodeClashExtra(config.Proxies[0])
+	if err != nil {
+		t.Fatalf("encode retained Clash attributes: %v", err)
+	}
+	if clashExtra == "" {
+		t.Fatal("unknown Clash attributes were not retained")
+	}
+	restoredProxy, err := protocol.LinkToProxy(protocol.Urls{Url: storedLink, ClashExtra: clashExtra}, protocol.OutputConfig{})
+	if err != nil {
+		t.Fatalf("restore Clash proxy from stored link: %v", err)
+	}
+	restoredExtra, err := protocol.EncodeClashExtra(restoredProxy)
+	if err != nil {
+		t.Fatalf("re-encode restored Clash attributes: %v", err)
+	}
+	if restoredExtra != clashExtra {
+		t.Fatalf("restored unknown Clash attributes = %q, want %q", restoredExtra, clashExtra)
+	}
+
+	templatePath := filepath.Join(t.TempDir(), "smux-preservation-template.yaml")
+	if err := os.WriteFile(templatePath, []byte("proxies: []\nproxy-groups: []\n"), 0o600); err != nil {
+		t.Fatalf("write Clash template: %v", err)
+	}
+	exportedYAML, err := protocol.EncodeClash([]protocol.Urls{{Url: storedLink, ClashExtra: clashExtra}}, protocol.OutputConfig{Clash: templatePath})
+	if err != nil {
+		t.Fatalf("export Clash YAML: %v", err)
+	}
+	var exported map[string]any
+	if err := yaml.Unmarshal(exportedYAML, &exported); err != nil {
+		t.Fatalf("parse exported Clash proxy: %v", err)
+	}
+	proxies, ok := exported["proxies"].([]any)
+	if !ok || len(proxies) != 1 {
+		t.Fatalf("exported proxy count = %#v, want one proxy", exported["proxies"])
+	}
+	exportedProxy, ok := proxies[0].(map[string]any)
+	if !ok {
+		t.Fatalf("exported proxy type = %T, want map", proxies[0])
+	}
+	var original map[string]any
+	if err := yaml.Unmarshal([]byte(subscription), &original); err != nil {
+		t.Fatalf("parse original Clash YAML: %v", err)
+	}
+	originalProxies, ok := original["proxies"].([]any)
+	if !ok || len(originalProxies) != 1 {
+		t.Fatalf("original proxy count = %#v, want one proxy", original["proxies"])
+	}
+	originalProxy, ok := originalProxies[0].(map[string]any)
+	if !ok {
+		t.Fatalf("original proxy type = %T, want map", originalProxies[0])
+	}
+	for _, key := range []string{"smux", "future-mihomo-option"} {
+		if !reflect.DeepEqual(exportedProxy[key], originalProxy[key]) {
+			t.Fatalf("exported %s = %#v, want %#v", key, exportedProxy[key], originalProxy[key])
+		}
 	}
 }
 

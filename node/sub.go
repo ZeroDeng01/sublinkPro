@@ -935,8 +935,14 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 			utils.Warn("节点【%s】生成链接失败，跳过", proxy.Name)
 			continue
 		}
+		clashExtra, err := protocol.EncodeClashExtra(proxy)
+		if err != nil {
+			utils.Warn("节点【%s】未知 Clash 属性序列化失败，跳过: %v", proxy.Name, err)
+			continue
+		}
 
 		Node.Link = link
+		Node.ClashExtra = clashExtra
 		Node.Name = proxy.Name
 		Node.LinkName = proxy.Name
 		Node.NameMode = models.NodeNameModeLink
@@ -976,8 +982,10 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 					if existingByName, nameExists := existingInfoNodeNames[contentHash][proxy.Name]; nameExists {
 						backfilledCountry := backfillExistingNodeCountry(existingByName, proxy.Name)
 						// 该名称的信息节点已存在，检查链接或顺序是否变化
-						if existingByName.LinkName != proxy.Name || existingByName.Link != link || existingByName.SourceSort != Node.SourceSort {
-							nodesToUpdate = append(nodesToUpdate, models.BuildNodeInfoUpdate(existingByName, proxy.Name, link, Node.SourceSort))
+						if existingByName.LinkName != proxy.Name || existingByName.Link != link || existingByName.ClashExtra != Node.ClashExtra || existingByName.SourceSort != Node.SourceSort {
+							update := models.BuildNodeInfoUpdate(existingByName, proxy.Name, link, Node.SourceSort)
+							update.ClashExtra = Node.ClashExtra
+							nodesToUpdate = append(nodesToUpdate, update)
 							updateCount++
 							nodeStatus = "updated"
 							utils.Info("✏️ 信息节点【%s】链接/顺序已变更，将更新", proxy.Name)
@@ -999,8 +1007,10 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 					existingNode := existingNodeByContentHash[contentHash]
 					backfilledCountry := backfillExistingNodeCountry(existingNode, proxy.Name)
 
-					if existingNode.LinkName != proxy.Name || existingNode.Link != link || existingNode.SourceSort != Node.SourceSort {
-						nodesToUpdate = append(nodesToUpdate, models.BuildNodeInfoUpdate(existingNode, proxy.Name, link, Node.SourceSort))
+					if existingNode.LinkName != proxy.Name || existingNode.Link != link || existingNode.ClashExtra != Node.ClashExtra || existingNode.SourceSort != Node.SourceSort {
+						update := models.BuildNodeInfoUpdate(existingNode, proxy.Name, link, Node.SourceSort)
+						update.ClashExtra = Node.ClashExtra
+						nodesToUpdate = append(nodesToUpdate, update)
 						updateCount++
 						nodeStatus = "updated"
 						utils.Info("✏️ 节点【%s】原始名称/链接/顺序已变更，将更新 [旧原始名称: %s]", proxy.Name, existingNode.LinkName)

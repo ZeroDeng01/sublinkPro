@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -184,7 +185,7 @@ func writeTestClashTemplate(t *testing.T) string {
 		t.Fatalf("close clash template: %v", err)
 	}
 
-	return file.Name()
+	return filepath.ToSlash(file.Name())
 }
 
 func writeTestSurgeTemplate(t *testing.T) string {
@@ -202,7 +203,7 @@ func writeTestSurgeTemplate(t *testing.T) string {
 		t.Fatalf("close surge template: %v", err)
 	}
 
-	return file.Name()
+	return filepath.ToSlash(file.Name())
 }
 
 func writeTestSurgeTemplateWithManagedConfig(t *testing.T) string {
@@ -221,7 +222,7 @@ func writeTestSurgeTemplateWithManagedConfig(t *testing.T) string {
 		t.Fatalf("close surge managed template: %v", err)
 	}
 
-	return file.Name()
+	return filepath.ToSlash(file.Name())
 }
 
 func saveSubStoreSettings(t *testing.T, baseURL string, allowedTargets []string) {
@@ -818,6 +819,77 @@ func TestRenderPreparedClashSetsProfileUpdateIntervalHeader(t *testing.T) {
 
 			if got := recorder.Header().Get("profile-update-interval"); got != tt.wantHeader {
 				t.Fatalf("expected profile-update-interval %q, got %q", tt.wantHeader, got)
+			}
+		})
+	}
+}
+
+// TestBuildPreparedMihomoYAMLPreservesExtraOnlyForClash verifies that retained
+// Clash attributes are restored for Clash output but omitted from conversion inputs.
+func TestBuildPreparedMihomoYAMLPreservesExtraOnlyForClash(t *testing.T) {
+	setupClientsAPITestDB(t)
+	templatePath := writeTestClashTemplate(t)
+	config, err := json.Marshal(map[string]string{"clash": filepath.ToSlash(templatePath)})
+	if err != nil {
+		t.Fatalf("marshal subscription config: %v", err)
+	}
+	link := protocol.EncodeSSURL(protocol.Ss{
+		Name:   "clash-extra-node",
+		Server: "edge.example.com",
+		Port:   443,
+		Param: protocol.Param{
+			Cipher:   "aes-256-gcm",
+			Password: "password",
+		},
+	})
+
+	for _, tt := range []struct {
+		clientType string
+		wantExtra  bool
+	}{
+		{clientType: "clash", wantExtra: true},
+		{clientType: "singbox", wantExtra: false},
+	} {
+		t.Run(tt.clientType, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			recorder := httptest.NewRecorder()
+			ginContext, _ := gin.CreateTestContext(recorder)
+			ginContext.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c/", nil)
+			bridge, _, ok := buildPreparedMihomoYAML(ginContext, preparedClientResponse{
+				ClientType: tt.clientType,
+				Mode:       clientResponseNormal,
+				SubName:    "clash-extra-sub",
+				Subscription: models.Subcription{
+					Name:                  "clash-extra-sub",
+					Config:                string(config),
+					RefreshUsageOnRequest: false,
+					Nodes: []models.Node{{
+						ID:         1,
+						Name:       "clash-extra-node",
+						LinkName:   "clash-extra-node",
+						Link:       link,
+						ClashExtra: "smux:\n  enabled: true\n  protocol: h2mux\n",
+					}},
+				},
+			})
+			if !ok {
+				t.Fatal("build prepared Mihomo YAML failed")
+			}
+			var output map[string]any
+			if err := yaml.Unmarshal(bridge.Body, &output); err != nil {
+				t.Fatalf("parse prepared YAML: %v", err)
+			}
+			proxies, ok := output["proxies"].([]any)
+			if !ok || len(proxies) != 1 {
+				t.Fatalf("prepared proxy count = %#v, want one proxy", output["proxies"])
+			}
+			proxy, ok := proxies[0].(map[string]any)
+			if !ok {
+				t.Fatalf("prepared proxy type = %T, want map", proxies[0])
+			}
+			_, hasExtra := proxy["smux"]
+			if hasExtra != tt.wantExtra {
+				t.Fatalf("smux in %s bridge = %v, want %v", tt.clientType, hasExtra, tt.wantExtra)
 			}
 		})
 	}

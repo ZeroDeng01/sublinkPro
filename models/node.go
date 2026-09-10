@@ -24,6 +24,7 @@ import (
 type Node struct {
 	ID                 int    `gorm:"primaryKey"`
 	Link               string //出站代理原始连接
+	ClashExtra         string `gorm:"type:text" json:"-"` // 仅供 Clash/Mihomo 导出恢复的未知节点属性
 	LinkHash           string `gorm:"size:64;uniqueIndex" json:"-"`
 	Name               string //系统内节点备注名称
 	LinkName           string //节点原始名称
@@ -447,6 +448,9 @@ func UpdateNodeFields(id int, updates map[string]any) error {
 			cachedNode.Link = link
 			cachedNode.LinkHash = hashNodeLink(link)
 		}
+		if clashExtra, ok := updates["clash_extra"].(string); ok {
+			cachedNode.ClashExtra = clashExtra
+		}
 		if linkName, ok := updates["link_name"].(string); ok {
 			cachedNode.LinkName = linkName
 		}
@@ -491,7 +495,7 @@ func (node *Node) Update() error {
 	node.syncLinkHash()
 	node.UpdatedAt = time.Now()
 	// Write-Through: 先写数据库
-	err := database.DB.Model(node).Select("Name", "NameMode", "Link", "LinkHash", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "LinkCountry", "Protocol", "ContentHash", "UpdatedAt").Updates(node).Error
+	err := database.DB.Model(node).Select("Name", "NameMode", "Link", "ClashExtra", "LinkHash", "DialerProxyName", "Group", "LinkName", "LinkAddress", "LinkHost", "LinkPort", "LinkCountry", "Protocol", "ContentHash", "UpdatedAt").Updates(node).Error
 	if err != nil {
 		return err
 	}
@@ -500,6 +504,7 @@ func (node *Node) Update() error {
 		cachedNode.Name = node.Name
 		cachedNode.NameMode = node.NameMode
 		cachedNode.Link = node.Link
+		cachedNode.ClashExtra = node.ClashExtra
 		cachedNode.LinkHash = node.LinkHash
 		cachedNode.DialerProxyName = node.DialerProxyName
 		cachedNode.Group = node.Group
@@ -1836,6 +1841,7 @@ type NodeInfoUpdate struct {
 	Name            string
 	LinkName        string
 	Link            string
+	ClashExtra      string
 	SourceSort      int
 	Source          string
 	CurrentName     string
@@ -1889,6 +1895,7 @@ type nodeInfoUpdatePlan struct {
 	SyncName   bool
 	LinkName   string
 	Link       string
+	ClashExtra string
 	LinkHash   string
 	SourceSort int
 	UpdatedAt  time.Time
@@ -2009,6 +2016,7 @@ func prepareNodeInfoUpdatePlan(update NodeInfoUpdate, nameState *nodeInfoNameSta
 		SyncName:   syncName,
 		LinkName:   update.LinkName,
 		Link:       update.Link,
+		ClashExtra: update.ClashExtra,
 		LinkHash:   hashNodeLink(update.Link),
 		SourceSort: update.SourceSort,
 		UpdatedAt:  updatedAt,
@@ -2053,6 +2061,7 @@ func tryBatchUpdateNodeInfoWithCaseWhen(plans []nodeInfoUpdatePlan) (int, error)
 
 	appendCaseColumn("link_name", func(plan nodeInfoUpdatePlan) any { return plan.LinkName })
 	appendCaseColumn("link", func(plan nodeInfoUpdatePlan) any { return plan.Link })
+	appendCaseColumn("clash_extra", func(plan nodeInfoUpdatePlan) any { return plan.ClashExtra })
 	appendCaseColumn("link_hash", func(plan nodeInfoUpdatePlan) any { return plan.LinkHash })
 	appendCaseColumn("source_sort", func(plan nodeInfoUpdatePlan) any { return plan.SourceSort })
 	if hasSyncedNodeInfoName(plans) {
@@ -2125,6 +2134,7 @@ func updateNodeInfoCache(plan nodeInfoUpdatePlan) {
 		}
 		cachedNode.LinkName = plan.LinkName
 		cachedNode.Link = plan.Link
+		cachedNode.ClashExtra = plan.ClashExtra
 		cachedNode.LinkHash = plan.LinkHash
 		cachedNode.SourceSort = plan.SourceSort
 		cachedNode.UpdatedAt = plan.UpdatedAt
@@ -2141,6 +2151,7 @@ func fallbackToIndividualNodeInfoUpdate(updates []NodeInfoUpdate) int {
 		fields := map[string]any{
 			"link_name":   plan.LinkName,
 			"link":        plan.Link,
+			"clash_extra": plan.ClashExtra,
 			"link_hash":   plan.LinkHash,
 			"source_sort": plan.SourceSort,
 			"updated_at":  plan.UpdatedAt,

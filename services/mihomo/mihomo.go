@@ -34,8 +34,52 @@ func SetIPv6(enable bool) {
 	resolver.DisableIPv6 = !enable
 }
 
+// mockTunnel implements constant.Tunnel and proxydialer.Tunnel for dialer support in speed tests
+// It provides a minimal tunnel context for proxydialer.NewByName to look up dialer proxies
+type mockTunnel struct {
+	proxies map[string]constant.Proxy
+}
+
+// HandleTCPConn implements constant.Tunnel
+func (t *mockTunnel) HandleTCPConn(conn net.Conn, metadata *constant.Metadata) {
+	_ = conn.Close()
+}
+
+// HandleUDPPacket implements constant.Tunnel
+func (t *mockTunnel) HandleUDPPacket(packet constant.UDPPacket, metadata *constant.Metadata) {
+	packet.Drop()
+}
+
+// NatTable implements constant.Tunnel
+func (t *mockTunnel) NatTable() constant.NatTable {
+	return nil
+}
+
+// Proxies implements proxydialer.Tunnel - required for proxydialer.NewByName
+func (t *mockTunnel) Proxies() map[string]constant.Proxy {
+	return t.proxies
+}
+
 // GetMihomoAdapter creates a Mihomo Proxy Adapter from a node link
 func GetMihomoAdapter(nodeLink string) (constant.Proxy, error) {
+	return getMihomoAdapterWithContext(nodeLink, nil, "")
+}
+
+// GetMihomoAdapterWithDialer creates a Mihomo Proxy Adapter with dialer proxy support
+// dialerName: name of the dialer proxy to use (matches node.EffectiveName())
+// dialerLink: link of the dialer proxy node
+func GetMihomoAdapterWithDialer(nodeLink, dialerName, dialerLink string) (constant.Proxy, error) {
+	return getMihomoAdapterWithContext(nodeLink, &dialerInfo{Name: dialerName, Link: dialerLink}, dialerName)
+}
+
+// dialerInfo holds dialer proxy information
+type dialerInfo struct {
+	Name string
+	Link string
+}
+
+// getMihomoAdapterWithContext creates a Mihomo Proxy Adapter with optional dialer context
+func getMihomoAdapterWithContext(nodeLink string, dialer *dialerInfo, dialerProxyName string) (constant.Proxy, error) {
 	// 1. Parse node link to Proxy struct
 	// We use a default OutputConfig as we only need the proxy connection info
 	outputConfig := protocol.OutputConfig{
@@ -70,10 +114,59 @@ func GetMihomoAdapter(nodeLink string) (constant.Proxy, error) {
 		return nil, fmt.Errorf("unmarshal proxy map error: %v", err)
 	}
 
-	// 3. Create Mihomo Proxy Adapter
-	proxyAdapter, err := adapter.ParseProxy(proxyMap)
-	if err != nil {
-		return nil, fmt.Errorf("create mihomo adapter error: %v", err)
+	// 3. Build proxy map with dialer support if provided
+	var proxyAdapter constant.Proxy
+	if dialer != nil && dialer.Name != "" && dialer.Link != "" {
+		// Parse dialer node to build proxy map
+		dialerProxyStruct, err := protocol.LinkToProxy(protocol.Urls{Url: dialer.Link}, outputConfig)
+		if err != nil {
+			return nil, fmt.Errorf("parse dialer link error: %v", err)
+		}
+
+		dialerYamlBytes, err := yaml.Marshal(dialerProxyStruct)
+		if err != nil {
+			return nil, fmt.Errorf("marshal dialer proxy error: %v", err)
+		}
+
+		var dialerProxyMap map[string]any
+		err = yaml.Unmarshal(dialerYamlBytes, &dialerProxyMap)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal dialer proxy map error: %v", err)
+		}
+
+		// Ensure dialer has a name for proxydialer.NewByName lookup
+		if name, ok := dialerProxyMap["name"].(string); !ok || name == "" {
+			dialerProxyMap["name"] = dialer.Name
+		}
+
+		// Build proxy map: dialer + test node
+		proxies := make(map[string]constant.Proxy)
+		// Create dialer proxy adapter first
+		dialerAdapter, err := adapter.ParseProxy(dialerProxyMap)
+		if err != nil {
+			return nil, fmt.Errorf("create dialer adapter error: %v", err)
+		}
+		proxies[dialer.Name] = adapter.NewProxy(dialerAdapter)
+
+		// Create mock tunnel with dialer in proxy map
+		mockTunnel := &mockTunnel{proxies: proxies}
+
+		// Add dialer-proxy field to test node if dialerProxyName specified
+		if dialerProxyName != "" {
+			proxyMap["dialer-proxy"] = dialerProxyName
+		}
+
+		// Parse test node with tunnel context
+		proxyAdapter, err = adapter.ParseProxy(proxyMap, adapter.WithTunnelForAPI(mockTunnel))
+		if err != nil {
+			return nil, fmt.Errorf("create proxy adapter with dialer error: %v", err)
+		}
+	} else {
+		// 4. Create Mihomo Proxy Adapter (without dialer)
+		proxyAdapter, err = adapter.ParseProxy(proxyMap)
+		if err != nil {
+			return nil, fmt.Errorf("create mihomo adapter error: %v", err)
+		}
 	}
 	return proxyAdapter, nil
 }
@@ -118,6 +211,8 @@ func MihomoDelayWithAdapter(proxyAdapter constant.Proxy, testUrl string, timeout
 // landingIPUrl: IP查询服务URL，空则使用默认值 https://api.ipify.org
 // detectQuality: 是否检测 IP 质量
 // qualityURL: 质量查询服务 URL，空则使用默认值 https://my.123169.xyz/v1/info
+// dialerName: 前置代理节点名称（对应 node.EffectiveName()）
+// dialerLink: 前置代理节点链接
 // 返回: latency(ms), landingIP(若未检测或失败则为空), quality(若未检测或失败则为nil), error
 func MihomoDelayTest(
 	nodeLink string,
@@ -128,6 +223,8 @@ func MihomoDelayTest(
 	landingIPUrl string,
 	detectQuality bool,
 	qualityURL string,
+	dialerName string,
+	dialerLink string,
 ) (latency int, landingIP string, quality *QualityCheckResult, err error) {
 	// Recover from any panics
 	defer func() {
@@ -143,8 +240,13 @@ func MihomoDelayTest(
 		testUrl = "http://cp.cloudflare.com/generate_204"
 	}
 
-	// 创建 adapter
-	proxyAdapter, err := GetMihomoAdapter(nodeLink)
+	// 创建 adapter（支持 dialer）
+	var proxyAdapter constant.Proxy
+	if dialerName != "" && dialerLink != "" {
+		proxyAdapter, err = GetMihomoAdapterWithDialer(nodeLink, dialerName, dialerLink)
+	} else {
+		proxyAdapter, err = GetMihomoAdapter(nodeLink)
+	}
 	if err != nil {
 		return 0, "", nil, err
 	}
@@ -175,6 +277,8 @@ func MihomoDelayTest(
 // qualityURL: 质量查询服务 URL，空则使用默认值 https://my.123169.xyz/v1/info
 // speedRecordMode: 速度记录模式 "average"=平均速度, "peak"=峰值速度
 // peakSampleInterval: 峰值采样间隔（毫秒），仅在peak模式下生效，范围50-200
+// dialerName: 前置代理节点名称（对应 node.EffectiveName()）
+// dialerLink: 前置代理节点链接
 // 返回: speed(MB/s), latency(ms), bytesDownloaded, landingIP(若未检测或失败则为空), quality(若未检测或失败则为nil), error
 func MihomoSpeedTest(
 	nodeLink string,
@@ -186,6 +290,8 @@ func MihomoSpeedTest(
 	qualityURL string,
 	speedRecordMode string,
 	peakSampleInterval int,
+	dialerName string,
+	dialerLink string,
 ) (speed float64, latency int, bytesDownloaded int64, landingIP string, quality *QualityCheckResult, err error) {
 	// Recover from any panics and return error with zero values
 	defer func() {
@@ -209,7 +315,13 @@ func MihomoSpeedTest(
 		peakSampleInterval = 200
 	}
 
-	proxyAdapter, err := GetMihomoAdapter(nodeLink)
+	// 创建 adapter（支持 dialer）
+	var proxyAdapter constant.Proxy
+	if dialerName != "" && dialerLink != "" {
+		proxyAdapter, err = GetMihomoAdapterWithDialer(nodeLink, dialerName, dialerLink)
+	} else {
+		proxyAdapter, err = GetMihomoAdapter(nodeLink)
+	}
 	if err != nil {
 		return 0, 0, 0, "", nil, err
 	}

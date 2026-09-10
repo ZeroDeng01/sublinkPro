@@ -262,6 +262,18 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 			// TCP模式下需要检测IP（因为没有速度测试阶段），mihomo模式在速度阶段检测
 			detectIPInLatency := detectCountry && speedTestMode == "tcp"
 			detectQualityInLatency := detectQuality && speedTestMode == "tcp"
+
+			// 准备 dialer 参数（如果节点配置了前置代理）
+			dialerName := ""
+			dialerLink := ""
+			if n.DialerProxyName != "" {
+				// 查找 dialer 节点（按名称或 LinkName）
+				if dialerNode, found := models.GetNodeByName(n.DialerProxyName); found && dialerNode != nil {
+					dialerName = dialerNode.EffectiveName()
+					dialerLink = dialerNode.Link
+				}
+			}
+
 			latency, landingIP, qualityInfo, err := mihomo.MihomoDelayTest(
 				n.Link,
 				latencyTestUrl,
@@ -271,6 +283,8 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 				landingIPUrl,
 				detectQualityInLatency,
 				qualityCheckURL,
+				dialerName,
+				dialerLink,
 			)
 
 			mu.Lock()
@@ -521,6 +535,17 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 				}
 
 				// 速度测试（延迟已在阶段一获取，同时可选检测落地IP）
+				// 准备 dialer 参数（如果节点配置了前置代理）
+				dialerName := ""
+				dialerLink := ""
+				if result.node.DialerProxyName != "" {
+					// 查找 dialer 节点（按名称或 LinkName）
+					if dialerNode, found := models.GetNodeByName(result.node.DialerProxyName); found && dialerNode != nil {
+						dialerName = dialerNode.EffectiveName()
+						dialerLink = dialerNode.Link
+					}
+				}
+
 				speed, _, bytesDownloaded, landingIP, qualityInfo, err := mihomo.MihomoSpeedTest(
 					result.node.Link,
 					speedTestUrl,
@@ -531,6 +556,8 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					qualityCheckURL,
 					speedRecordMode,
 					peakSampleInterval,
+					dialerName,
+					dialerLink,
 				)
 
 				mu.Lock()
