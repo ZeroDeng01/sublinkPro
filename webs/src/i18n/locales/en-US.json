@@ -576,6 +576,7 @@
       "globalNodeProcessing": "Global node processing",
       "aiAssistant": "AI Assistant",
       "subStore": "Sub-Store",
+      "backup": "Backup",
       "dataMigration": "Data migration",
       "countryRules": "Country Rules"
     },
@@ -1043,6 +1044,99 @@
         "stopFailed": "Stop failed: {{message}}",
         "tokenRemoved": "Cloudflare Tunnel token cleared",
         "removeFailed": "Clear failed: {{message}}"
+      }
+    },
+    "backup": {
+      "title": "System Backup and WebDAV",
+      "subheader": "Upload system backups to WebDAV and restore this instance from a remote backup.",
+      "alerts": {
+        "sensitive": "Backups contain the database, templates, and potentially account data, access keys, and node private keys. Use only a trusted WebDAV service over HTTPS.",
+        "insecureHttp": "Plain HTTP is enabled. Backup data and WebDAV credentials will be transmitted without TLS; use this only on a trusted isolated network.",
+        "privateNetwork": "WebDAV access to loopback, private, or reserved addresses is enabled. Use this only for a trusted private NAS."
+      },
+      "status": {
+        "label": "Connection status",
+        "configured": "Configured",
+        "notConfigured": "Not configured",
+        "passwordSaved": "Password encrypted and saved"
+        ,"scheduleEnabled": "Scheduled backup enabled"
+      },
+      "form": {
+        "baseUrl": "WebDAV URL",
+        "baseUrlHelper": "Enter the WebDAV root URL without credentials, query parameters, or fragments.",
+        "username": "Username",
+        "password": "Password or app password",
+        "passwordHelper": "The password is encrypted with the instance API encryption key before storage.",
+        "passwordSavedHelper": "A password is saved. Leave this field empty to keep it unchanged.",
+        "clearPassword": "Clear the saved WebDAV password",
+        "remotePath": "Remote backup directory",
+        "remotePathHelper": "Missing directories are created when possible, for example SublinkPro/backups.",
+        "timeoutSeconds": "Request timeout (seconds)",
+        "allowInsecureHttp": "Allow insecure HTTP WebDAV",
+        "allowPrivateNetwork": "Allow private-network or local addresses"
+        ,"scheduleEnabled": "Enable scheduled backup",
+        "scheduleHelper": "Automatically create a system backup and upload it to WebDAV on a cron schedule. Scheduled backups currently support SQLite deployments only.",
+        "cronExpr": "Backup schedule"
+      },
+      "actions": {
+        "refreshSettings": "Refresh settings",
+        "save": "Save settings",
+        "saving": "Saving...",
+        "test": "Test connection",
+        "testing": "Testing...",
+        "upload": "Back up to WebDAV now",
+        "uploading": "Creating and uploading...",
+        "refreshFiles": "Refresh remote list",
+        "refreshing": "Refreshing...",
+        "restore": "Restore",
+        "cancel": "Cancel",
+        "confirmRestore": "Confirm restore",
+        "restoring": "Downloading..."
+      },
+      "files": {
+        "title": "Remote backups",
+        "empty": "No restorable ZIP backups were found in the remote directory."
+      },
+      "restore": {
+        "title": "Restore from WebDAV",
+        "warning": "This downloads {{name}} and overwrites business data and templates in the current instance. A restart may be required afterward.",
+        "includeAccessKeys": "Restore access keys",
+        "includeSubLogs": "Restore subscription access logs",
+        "confirm": "I backed up this instance and confirm overwriting the existing data"
+      },
+      "messages": {
+        "loadFailed": "Failed to load WebDAV settings: {{message}}",
+        "saved": "WebDAV settings saved",
+        "saveFailed": "Save failed: {{message}}",
+        "testSuccess": "WebDAV connection succeeded in {{latency}} ms",
+        "testFailed": "Connection test failed: {{message}}",
+        "uploadSuccess": "Backup {{name}} uploaded",
+        "uploadFailed": "Upload failed: {{message}}",
+        "listFailed": "Failed to list remote backups: {{message}}",
+        "restoreStarted": "The WebDAV backup was downloaded and the restore task started",
+        "restoreFailed": "Failed to start restore: {{message}}",
+        "restoreCompleted": "WebDAV backup restore completed",
+        "restoreTaskFailed": "WebDAV backup restore task failed"
+      },
+      "api": {
+        "adminRequired": "Only administrators can manage system backups",
+        "loaded": "WebDAV settings loaded",
+        "loadFailed": "Failed to load WebDAV settings: {{message}}",
+        "invalidRequest": "Invalid request parameters",
+        "invalidSettings": "Invalid WebDAV settings: {{message}}",
+        "saved": "WebDAV settings saved",
+        "saveFailed": "Failed to save WebDAV settings: {{message}}",
+        "notConfigured": "WebDAV is not configured: {{message}}",
+        "testSucceeded": "WebDAV connection test succeeded",
+        "testFailed": "WebDAV connection test failed: {{message}}",
+        "archiveFailed": "Failed to create system backup: {{message}}",
+        "sqliteOnly": "WebDAV system backup currently supports SQLite only",
+        "uploadSucceeded": "Backup {{name}} uploaded to WebDAV",
+        "uploadFailed": "Failed to upload WebDAV backup: {{message}}",
+        "listed": "WebDAV backup list loaded",
+        "listFailed": "Failed to list WebDAV backups: {{message}}",
+        "restoreStarted": "WebDAV restore task started",
+        "restoreFailed": "Failed to start WebDAV restore: {{message}}"
       }
     },
     "subStore": {
@@ -3194,34 +3288,21 @@
       "bandwagonhost": {
         "title": "BandwagonHost",
         "description": "Premium routes with multiple data centers and CN2 GIA options.",
-        "highlights": [
-          "Multiple VPS locations",
-          "CN2 GIA route options",
-          "High-quality route servers"
-        ],
+        "highlights": ["Multiple VPS locations", "CN2 GIA route options", "High-quality route servers"],
         "ctaLabel": "View plans",
         "tag": "VPS recommended"
       },
       "vultr": {
         "title": "Vultr",
         "description": "Many regions with hourly billing and flexible IP or region changes.",
-        "highlights": [
-          "Many regions",
-          "Hourly billing",
-          "Low-cost stable plans",
-          "IPv6-only options"
-        ],
+        "highlights": ["Many regions", "Hourly billing", "Low-cost stable plans", "IPv6-only options"],
         "ctaLabel": "View plans",
         "tag": "VPS"
       },
       "aliyun": {
         "title": "Aliyun",
         "description": "99 RMB per year server offers for new purchase and renewal.",
-        "highlights": [
-          "China-based deployment and testing",
-          "99 RMB/year new purchase and renewal",
-          "Discount coupons available"
-        ],
+        "highlights": ["China-based deployment and testing", "99 RMB/year new purchase and renewal", "Discount coupons available"],
         "ctaLabel": "View offers",
         "tag": "Cloud service"
       }
@@ -3466,6 +3547,7 @@
       "subUpdate": "Subscription update",
       "tagRule": "Tag rule",
       "dbMigration": "Database migration"
+      ,"webdavBackup": "WebDAV backup"
     },
     "trigger": {
       "manual": "Manual",

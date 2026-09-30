@@ -17,6 +17,7 @@ import (
 	"sublink/config"
 	"sublink/database"
 	"sublink/models"
+	backupservice "sublink/services/backup"
 	"sublink/services/mihomo"
 	"sublink/services/scheduler"
 	"sublink/services/telegram"
@@ -24,6 +25,12 @@ import (
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+)
+
+const (
+	maxMigrationZipEntries     = 10000
+	maxMigrationFileBytes      = int64(2 << 30)
+	maxMigrationExtractedBytes = int64(4 << 30)
 )
 
 var databaseMigrationRunning atomic.Bool
@@ -134,6 +141,15 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 	if err != nil {
 		return nil, fmt.Errorf("打开源 SQLite 数据库失败: %w", err)
 	}
+	sourceSQLDB, err := sourceDB.DB()
+	if err != nil {
+		return nil, fmt.Errorf("获取源 SQLite 连接失败: %w", err)
+	}
+	defer func() {
+		if closeErr := sourceSQLDB.Close(); closeErr != nil {
+			utils.Warn("关闭源 SQLite 连接失败: %v", closeErr)
+		}
+	}()
 
 	result := &DatabaseMigrationResult{
 		SourceName: originalName,
@@ -494,22 +510,48 @@ func looksLikeSQLiteFile(path string) bool {
 }
 
 func extractMigrationZip(zipPath string) (string, error) {
+	tempRoot, err := ensureDatabaseMigrationTempRoot()
+	if err != nil {
+		return "", err
+	}
+	return extractMigrationZipTo(zipPath, tempRoot)
+}
+
+func extractMigrationZipTo(zipPath, tempRoot string) (string, error) {
 	reader, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return "", fmt.Errorf("读取迁移压缩包失败: %w", err)
 	}
 	defer func() { _ = reader.Close() }()
 
-	tempRoot, err := ensureDatabaseMigrationTempRoot()
-	if err != nil {
-		return "", err
-	}
-
 	tempDir, err := os.MkdirTemp(tempRoot, "bundle-*")
 	if err != nil {
 		return "", fmt.Errorf("创建迁移临时目录失败: %w", err)
 	}
+	succeeded := false
+	defer func() {
+		if !succeeded {
+			_ = os.RemoveAll(tempDir)
+		}
+	}()
+	if len(reader.File) > maxMigrationZipEntries {
+		return "", fmt.Errorf("迁移压缩包文件数量超过 %d 个限制", maxMigrationZipEntries)
+	}
+	var declaredSize int64
+	for _, file := range reader.File {
+		if file.FileInfo().Mode()&os.ModeSymlink != 0 {
+			return "", fmt.Errorf("迁移压缩包包含不允许的符号链接: %s", file.Name)
+		}
+		if file.UncompressedSize64 > uint64(maxMigrationFileBytes) {
+			return "", fmt.Errorf("迁移压缩包文件超过 %d 字节限制: %s", maxMigrationFileBytes, file.Name)
+		}
+		if file.UncompressedSize64 > uint64(maxMigrationExtractedBytes-declaredSize) {
+			return "", fmt.Errorf("迁移压缩包解压后超过 %d 字节限制", maxMigrationExtractedBytes)
+		}
+		declaredSize += int64(file.UncompressedSize64)
+	}
 
+	var extractedSize int64
 	for _, file := range reader.File {
 		cleanName := filepath.Clean(filepath.FromSlash(file.Name))
 		if cleanName == "." || strings.HasPrefix(cleanName, "..") {
@@ -542,10 +584,17 @@ func extractMigrationZip(zipPath string) (string, error) {
 			return "", fmt.Errorf("创建迁移临时文件失败: %w", err)
 		}
 
-		if _, err := io.Copy(dst, src); err != nil {
+		written, copyErr := io.Copy(dst, io.LimitReader(src, maxMigrationFileBytes+1))
+		extractedSize += written
+		if copyErr != nil {
 			_ = dst.Close()
 			_ = src.Close()
-			return "", fmt.Errorf("解压迁移文件失败: %w", err)
+			return "", fmt.Errorf("解压迁移文件失败: %w", copyErr)
+		}
+		if written > maxMigrationFileBytes || extractedSize > maxMigrationExtractedBytes {
+			_ = dst.Close()
+			_ = src.Close()
+			return "", fmt.Errorf("迁移压缩包解压内容超过安全限制")
 		}
 
 		if err := dst.Close(); err != nil {
@@ -557,6 +606,7 @@ func extractMigrationZip(zipPath string) (string, error) {
 		}
 	}
 
+	succeeded = true
 	return tempDir, nil
 }
 
@@ -607,7 +657,7 @@ func checkDatabaseMigrationContext(ctx context.Context) error {
 
 func loadPreservedTargetSettings(tx *gorm.DB) (map[string]string, error) {
 	result := make(map[string]string)
-	for _, key := range []string{"jwt_secret", "cloudflared_enabled", "cloudflared_tunnel_token_encrypted"} {
+	for _, key := range preservedTargetSettingKeys() {
 		var setting models.SystemSetting
 		err := tx.Where(map[string]any{"key": key}).Take(&setting).Error
 		if err == nil {
@@ -711,13 +761,18 @@ func importSystemSettings(state *databaseMigrationState) error {
 	return nil
 }
 
+func preservedTargetSettingKeys() []string {
+	keys := []string{"jwt_secret", "api_encryption_key", "cloudflared_enabled", "cloudflared_tunnel_token_encrypted"}
+	return append(keys, backupservice.PreservedSettingKeys()...)
+}
+
 func shouldPreserveTargetSetting(key string) bool {
-	switch key {
-	case "jwt_secret", "cloudflared_enabled", "cloudflared_tunnel_token_encrypted":
-		return true
-	default:
-		return false
+	for _, preserved := range preservedTargetSettingKeys() {
+		if key == preserved {
+			return true
+		}
 	}
+	return false
 }
 
 func importWebhooks(state *databaseMigrationState) error {

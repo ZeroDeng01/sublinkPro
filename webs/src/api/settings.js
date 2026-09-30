@@ -207,3 +207,52 @@ export function importDatabaseMigration(formData) {
     }
   });
 }
+
+export function getWebDAVBackupSettings() {
+  return request({
+    url: '/v1/backup/webdav',
+    method: 'get'
+  });
+}
+
+export function updateWebDAVBackupSettings(data) {
+  return request({
+    url: '/v1/backup/webdav',
+    method: 'post',
+    data
+  });
+}
+
+export function testWebDAVBackup(data) {
+  return request({
+    url: '/v1/backup/webdav/test',
+    method: 'post',
+    data,
+    timeout: 0
+  });
+}
+
+export function uploadWebDAVBackup() {
+  return request({
+    url: '/v1/backup/webdav/upload',
+    method: 'post',
+    timeout: 0
+  });
+}
+
+export function listWebDAVBackups() {
+  return request({
+    url: '/v1/backup/webdav/files',
+    method: 'get',
+    timeout: 0
+  });
+}
+
+export function restoreWebDAVBackup(data) {
+  return request({
+    url: '/v1/backup/webdav/restore',
+    method: 'post',
+    data,
+    timeout: 0
+  });
+}

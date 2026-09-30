@@ -113,6 +113,7 @@ export SUBLINK_MFA_RESET_SECRET=$(vault kv get -field=mfa_secret secret/sublinkp
 **安全注意事项**：
 - 文件权限：`600`（仅所有者读写）
 - 定期备份
+- 仅将远程备份保存到可信的 HTTPS WebDAV 服务。系统备份可能包含账号数据、AccessKey、节点凭据和私钥。WebDAV 密码会加密保存，但 SublinkPro 不会对备份 ZIP 再进行额外加密。
 - 静态加密（文件系统级别）
 - 不推荐用于多实例部署
 

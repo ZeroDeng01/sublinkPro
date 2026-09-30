@@ -746,8 +746,18 @@ Base: `/api/v1/total`
 ### Version (public — no API key needed; ideal health check)
 **GET** `/api/v1/version`
 
-### Backup
-**GET** `/api/v1/backup/download` — download a backup (demo-restricted). (Import is via `POST /settings/database-migration/import`.)
+### Backup and WebDAV
+All endpoints below require an administrator account and are disabled in demo mode.
+
+- **GET** `/api/v1/backup/download` — download the current system backup ZIP.
+- **GET** `/api/v1/backup/webdav` — get WebDAV settings. The password is never returned; use `hasPassword` and `maskedPassword`.
+- **POST** `/api/v1/backup/webdav` — save JSON settings: `baseUrl`, `username`, optional `password` (empty preserves the saved password), `clearPassword` (explicitly removes it), `remotePath`, `timeoutSeconds`, `allowInsecureHttp`, `allowPrivateNetwork`, `scheduleEnabled`, and `cronExpr` (standard 5-field cron expression, required when scheduling is enabled). Saving reloads the schedule without a restart.
+- **POST** `/api/v1/backup/webdav/test` — test the submitted JSON settings without saving them.
+- **POST** `/api/v1/backup/webdav/upload` — generate the current backup ZIP and upload it using the saved settings.
+- **GET** `/api/v1/backup/webdav/files` — list up to 200 remote ZIP backups, newest first.
+- **POST** `/api/v1/backup/webdav/restore` — download and restore a remote ZIP. JSON fields: `filename`, `includeAccessKeys` (default `true`), `includeSubLogs` (default `false`). Returns `taskId`; follow the existing task APIs for progress.
+
+WebDAV restore reuses the database migration workflow and overwrites current business data. The current instance's JWT, Cloudflare Tunnel, and WebDAV settings are preserved. HTTPS is required unless `allowInsecureHttp` is explicitly enabled. Private, loopback, and reserved targets require `allowPrivateNetwork`. WebDAV backup creation is currently SQLite-only. Uploads and downloads are limited to 1 GiB.
 
 ### Server-Sent Events
 **GET** `/api/se` (query: `?token=<jwt>`) — SSE stream (auth-protected).

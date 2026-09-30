@@ -576,6 +576,7 @@
       "globalNodeProcessing": "全局节点处理",
       "aiAssistant": "AI 助手",
       "subStore": "Sub-Store",
+      "backup": "系统备份",
       "dataMigration": "数据迁移",
       "countryRules": "国家规则"
     },
@@ -1043,6 +1044,99 @@
         "stopFailed": "停止失败: {{message}}",
         "tokenRemoved": "Cloudflare Tunnel token 已清除",
         "removeFailed": "清除失败: {{message}}"
+      }
+    },
+    "backup": {
+      "title": "系统备份与 WebDAV",
+      "subheader": "将系统备份上传到 WebDAV，并从远程备份恢复当前实例。",
+      "alerts": {
+        "sensitive": "备份包含数据库、模板以及可能存在的账号、访问密钥和节点私钥。请仅使用可信的 WebDAV 服务并启用 HTTPS。",
+        "insecureHttp": "当前允许通过明文 HTTP 传输备份和 WebDAV 凭据，仅应在受信任的隔离内网中使用。",
+        "privateNetwork": "当前允许 WebDAV 连接到回环、私网或保留地址。仅在需要访问可信内网 NAS 时启用。"
+      },
+      "status": {
+        "label": "连接状态",
+        "configured": "已配置",
+        "notConfigured": "未配置",
+        "passwordSaved": "密码已加密保存",
+        "scheduleEnabled": "定时备份已启用"
+      },
+      "form": {
+        "baseUrl": "WebDAV 地址",
+        "baseUrlHelper": "填写 WebDAV 根地址，不要在 URL 中包含账号、查询参数或锚点。",
+        "username": "用户名",
+        "password": "密码或应用专用密码",
+        "passwordHelper": "密码会使用实例 API 加密密钥进行加密保存。",
+        "passwordSavedHelper": "密码已保存；留空不会修改现有密码。",
+        "clearPassword": "清除已保存的 WebDAV 密码",
+        "remotePath": "远程备份目录",
+        "remotePathHelper": "目录不存在时会尝试创建，例如 SublinkPro/backups。",
+        "timeoutSeconds": "请求超时（秒）",
+        "allowInsecureHttp": "允许不安全的 HTTP WebDAV",
+        "allowPrivateNetwork": "允许访问私有网络或本机地址"
+        ,"scheduleEnabled": "启用定时备份",
+        "scheduleHelper": "按 Cron 表达式自动生成系统备份并上传到 WebDAV。当前仅 SQLite 部署支持定时备份。",
+        "cronExpr": "备份计划"
+      },
+      "actions": {
+        "refreshSettings": "刷新设置",
+        "save": "保存设置",
+        "saving": "保存中...",
+        "test": "测试连接",
+        "testing": "测试中...",
+        "upload": "立即备份到 WebDAV",
+        "uploading": "正在生成并上传...",
+        "refreshFiles": "刷新远程列表",
+        "refreshing": "刷新中...",
+        "restore": "恢复",
+        "cancel": "取消",
+        "confirmRestore": "确认恢复",
+        "restoring": "正在下载..."
+      },
+      "files": {
+        "title": "远程备份",
+        "empty": "远程目录中没有可恢复的 ZIP 备份。"
+      },
+      "restore": {
+        "title": "从 WebDAV 恢复",
+        "warning": "将下载 {{name}} 并覆盖当前实例的业务数据和模板。操作完成后可能需要重启实例。",
+        "includeAccessKeys": "恢复 AccessKey",
+        "includeSubLogs": "恢复订阅访问日志",
+        "confirm": "我已备份当前实例，并确认覆盖现有数据"
+      },
+      "messages": {
+        "loadFailed": "读取 WebDAV 设置失败: {{message}}",
+        "saved": "WebDAV 设置已保存",
+        "saveFailed": "保存失败: {{message}}",
+        "testSuccess": "WebDAV 连接测试成功，耗时 {{latency}} ms",
+        "testFailed": "连接测试失败: {{message}}",
+        "uploadSuccess": "备份 {{name}} 已上传",
+        "uploadFailed": "上传失败: {{message}}",
+        "listFailed": "读取远程备份失败: {{message}}",
+        "restoreStarted": "WebDAV 备份已下载，恢复任务已启动",
+        "restoreFailed": "启动恢复失败: {{message}}",
+        "restoreCompleted": "WebDAV 备份恢复完成",
+        "restoreTaskFailed": "WebDAV 备份恢复任务失败"
+      },
+      "api": {
+        "adminRequired": "仅管理员可管理系统备份",
+        "loaded": "WebDAV 设置已加载",
+        "loadFailed": "读取 WebDAV 设置失败: {{message}}",
+        "invalidRequest": "请求参数无效",
+        "invalidSettings": "WebDAV 设置无效: {{message}}",
+        "saved": "WebDAV 设置已保存",
+        "saveFailed": "保存 WebDAV 设置失败: {{message}}",
+        "notConfigured": "WebDAV 未配置: {{message}}",
+        "testSucceeded": "WebDAV 连接测试成功",
+        "testFailed": "WebDAV 连接测试失败: {{message}}",
+        "archiveFailed": "创建系统备份失败: {{message}}",
+        "sqliteOnly": "WebDAV 系统备份当前仅支持 SQLite 数据库",
+        "uploadSucceeded": "备份 {{name}} 已上传到 WebDAV",
+        "uploadFailed": "上传 WebDAV 备份失败: {{message}}",
+        "listed": "WebDAV 备份列表已加载",
+        "listFailed": "读取 WebDAV 备份列表失败: {{message}}",
+        "restoreStarted": "WebDAV 恢复任务已启动",
+        "restoreFailed": "启动 WebDAV 恢复失败: {{message}}"
       }
     },
     "subStore": {
@@ -3194,34 +3288,21 @@
       "bandwagonhost": {
         "title": "BandwagonHost",
         "description": "优质线路，提供多个数据中心和 CN2 GIA 选项。",
-        "highlights": [
-          "多个 VPS 机房",
-          "CN2 GIA 线路选项",
-          "高质量线路服务器"
-        ],
+        "highlights": ["多个 VPS 机房", "CN2 GIA 线路选项", "高质量线路服务器"],
         "ctaLabel": "查看套餐",
         "tag": "VPS 推荐"
       },
       "vultr": {
         "title": "Vultr",
         "description": "多地区可选，支持小时计费，并可灵活更换 IP 或区域。",
-        "highlights": [
-          "多地区",
-          "小时计费",
-          "低成本稳定套餐",
-          "IPv6-only 选项"
-        ],
+        "highlights": ["多地区", "小时计费", "低成本稳定套餐", "IPv6-only 选项"],
         "ctaLabel": "查看套餐",
         "tag": "VPS"
       },
       "aliyun": {
         "title": "阿里云",
         "description": "新购与续费同价的 99 元/年服务器优惠。",
-        "highlights": [
-          "适合国内部署和测试",
-          "新购续费 99 元/年",
-          "可用优惠券"
-        ],
+        "highlights": ["适合国内部署和测试", "新购续费 99 元/年", "可用优惠券"],
         "ctaLabel": "查看优惠",
         "tag": "云服务"
       }
@@ -3466,6 +3547,7 @@
       "subUpdate": "订阅更新",
       "tagRule": "标签规则",
       "dbMigration": "数据迁移"
+      ,"webdavBackup": "WebDAV 备份"
     },
     "trigger": {
       "manual": "手动",
