@@ -130,6 +130,12 @@
 - Snell 官方没有定义通用的分享链接方案，mihomo 以 Clash YAML 字段描述 Snell。SublinkPro 内部使用 `snell://server:port?psk=...&version=...&obfs=...&obfs-host=...#name` 作为原始编辑和 Clash/mihomo、Surge 导入回写格式；`version` 默认为 mihomo 的 Snell v1，取值范围为 1/2/3。
 - `/c?client=v2ray` 当前不支持 Snell；SublinkPro 会跳过 Snell 节点，不会把 `snell://` 链接写入 v2ray base64。
 
+## OpenVPN 输出说明
+
+- OpenVPN 仅支持 Clash/mihomo 输出；`/c?client=clash` 会输出 `type: openvpn`，并保留导入的 Mihomo 字段，包括 PEM/密钥块、账号凭据、传输与加密选项、保活、IP 栈、DNS、通用连接层选项及链式代理 `dialer-proxy`。
+- SublinkPro 使用 `openvpn://server:port?...#name` 仅作为内部原始编辑与 Clash/mihomo 导入导出的往返格式；它不是 OpenVPN 官方分享链接，也不支持直接导入 `.ovpn` 文件。
+- `/c?client=v2ray` 与 Surge 会跳过 OpenVPN 节点。敏感密钥材料在内部链接中仅经过 URL 编码，并未加密。
+
 ## VLESS XHTTP 输出说明
 
 - 当订阅中的节点为 VLESS 且传输层为 `xhttp` 时，`/c?client=clash` 会输出 `network: xhttp` 与 `xhttp-opts`。
