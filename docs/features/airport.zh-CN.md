@@ -42,6 +42,12 @@ SublinkPro 提供了完善的机场订阅管理功能，不仅能将订阅转换
 - Mieru 官方存在 `mieru://` / `mierus://` 分享链接，但未定义适合 SublinkPro 原始编辑器逐字段修改的通用 URL schema。系统保存节点时使用内部可编辑形态 `mieru://username:password@server:port?...#name`，端口范围使用 `portRange=2090-2099`，用于 Clash/mihomo YAML 导入后的回写与后续导出。
 - Mieru 不会输出到 v2ray 或 Surge；这些客户端当前不在 SublinkPro 的 Mieru 支持范围内。
 
+### OpenVPN 兼容说明
+
+- 机场订阅导入支持 Clash/mihomo YAML 中的 `type: openvpn` 节点，并保留 Mihomo OpenVPN 字段，包括传输、加密与认证、证书和私钥块、TLS 静态密钥、账号凭据、保活、IP 栈、DNS 及通用连接层选项。
+- SublinkPro 会把节点保存为内部往返链接 `openvpn://server:port?...#name`。这不是 OpenVPN 官方分享链接格式，也不包含直接导入 `.ovpn` 文件的能力。
+- OpenVPN 仅输出到 Clash/mihomo；v2ray 与 Surge 输出会跳过该协议。证书和私钥内容在内部链接中仅经过 URL 编码，并未加密。
+
 ### Snell 兼容说明
 
 - 机场订阅导入支持 Clash/mihomo YAML 中的 `type: snell` 节点，并保留 mihomo 官方字段：`server`、`port`、`psk`、`version`、`udp`、`obfs-opts`（`mode`、`host`）以及通用连接层选项 `tfo`、`mptcp`、`interface-name`、`routing-mark`、`ip-version`。

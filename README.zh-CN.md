@@ -182,8 +182,8 @@ docker-compose up -d
 
 | 客户端 | 支持协议 |
 |:---|:---|
-| **v2ray** | base64 通用格式（不输出 Clash/mihomo 专属协议，如 Mieru、Snell） |
-| **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell |
+| **v2ray** | base64 通用格式（不输出 Clash/mihomo 专属协议，如 Mieru、Snell、OpenVPN） |
+| **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell, OpenVPN |
 | **surge** | ss, trojan, vmess, hy2, tuic, AnyTLS, Snell |
 
 > [!NOTE]
@@ -191,6 +191,9 @@ docker-compose up -d
 
 > [!NOTE]
 > Snell 当前仅支持 Clash/mihomo 与 Surge 输出。Snell 没有官方分享链接方案，SublinkPro 为原始编辑与 Clash/mihomo、Surge 导入回写使用内部可编辑形态：`snell://server:port?psk=xxx&version=3&obfs=http&obfs-host=xxx#name`。v2ray 当前不支持 Snell，订阅输出会跳过该协议而不是降级转换。
+
+> [!NOTE]
+> OpenVPN 支持导入和导出 Mihomo/Clash `proxies:` YAML 节点。SublinkPro 会将其保存为内部往返格式 `openvpn://server:port?...#name`；这不是 OpenVPN 官方分享链接规范，也不代表已支持直接导入 `.ovpn` 文件。证书与私钥会经过 URL 编码（并非加密）后保存在节点链接中，请保护数据库访问权限且不要分享该内部链接。
 
 ---
 
