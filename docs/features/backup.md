@@ -55,7 +55,7 @@ A remote restore first downloads the selected ZIP to the server's temporary migr
 - current business data is overwritten;
 - the template directory in the ZIP is restored;
 - restoring access keys and subscription access logs is optional;
-- the current instance's JWT, Cloudflare Tunnel, and WebDAV connection settings are preserved;
+- the current instance's JWT, encryption key, Cloudflare Tunnel, WebDAV settings, and SOCKS5 gateway configuration (including accounts, listeners, and routing profiles) are preserved;
 - an instance restart may be required afterward.
 
 Back up the current instance before restoring. Progress and results are available in the task center.

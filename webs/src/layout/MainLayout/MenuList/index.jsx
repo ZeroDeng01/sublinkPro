@@ -1,4 +1,4 @@
-import { Activity, memo, useState } from 'react';
+import { Activity, memo, useMemo, useState } from 'react';
 
 import Divider from '@mui/material/Divider';
 import List from '@mui/material/List';
@@ -11,25 +11,39 @@ import NavGroup from './NavGroup';
 import menuItems from 'menu-items';
 
 import { useGetMenuMaster } from 'api/menu';
+import { useAuth } from 'contexts/AuthContext';
 
 // ==============================|| SIDEBAR MENU LIST ||============================== //
 
+function filterMenuItemsByRole(items, isAdmin) {
+  return items
+    .filter((item) => isAdmin || !item.adminOnly)
+    .map((item) => {
+      if (!item.children) return item;
+      return { ...item, children: filterMenuItemsByRole(item.children, isAdmin) };
+    })
+    .filter((item) => !item.children || item.children.length > 0);
+}
+
 function MenuList() {
   const { menuMaster } = useGetMenuMaster();
+  const { user } = useAuth();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
+  const isAdmin = [user?.role, ...(user?.roles || [])].some((role) => String(role || '').toLowerCase() === 'admin');
+  const visibleMenuItems = useMemo(() => filterMenuItemsByRole(menuItems.items, isAdmin), [isAdmin]);
 
   const [selectedID, setSelectedID] = useState('');
 
   const lastItem = null;
 
-  let lastItemIndex = menuItems.items.length - 1;
+  let lastItemIndex = visibleMenuItems.length - 1;
   let remItems = [];
   let lastItemId;
 
-  if (lastItem && lastItem < menuItems.items.length) {
-    lastItemId = menuItems.items[lastItem - 1].id;
+  if (lastItem && lastItem < visibleMenuItems.length) {
+    lastItemId = visibleMenuItems[lastItem - 1].id;
     lastItemIndex = lastItem - 1;
-    remItems = menuItems.items.slice(lastItem - 1, menuItems.items.length).map((item) => ({
+    remItems = visibleMenuItems.slice(lastItem - 1, visibleMenuItems.length).map((item) => ({
       title: item.title,
       elements: item.children,
       icon: item.icon,
@@ -39,7 +53,7 @@ function MenuList() {
     }));
   }
 
-  const navItems = menuItems.items.slice(0, lastItemIndex + 1).map((item, index) => {
+  const navItems = visibleMenuItems.slice(0, lastItemIndex + 1).map((item, index) => {
     switch (item.type) {
       case 'group':
         if (item.url && item.id !== lastItemId) {
