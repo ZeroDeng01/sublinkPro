@@ -41,6 +41,7 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import StorageIcon from '@mui/icons-material/Storage';
+import BackupIcon from '@mui/icons-material/Backup';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -88,7 +89,8 @@ const TASK_TYPE_ICONS = {
   speed_test: SpeedIcon,
   sub_update: CloudSyncIcon,
   tag_rule: LocalOfferIcon,
-  db_migration: StorageIcon
+  db_migration: StorageIcon,
+  webdav_backup: BackupIcon
 };
 
 const TASK_TRIGGER_ICONS = {
@@ -1026,6 +1028,10 @@ export default function TaskList() {
             <MenuItem value="db_migration">
               <StorageIcon sx={{ fontSize: 16, mr: 1, color: getTaskTypeMeta('db_migration').color }} />
               {t('tasks.type.dbMigration')}
+            </MenuItem>
+            <MenuItem value="webdav_backup">
+              <BackupIcon sx={{ fontSize: 16, mr: 1, color: getTaskTypeMeta('webdav_backup').color }} />
+              {t('tasks.type.webdavBackup')}
             </MenuItem>
           </Select>
         </FormControl>

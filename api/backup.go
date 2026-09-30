@@ -1,162 +1,244 @@
 package api
 
 import (
-	"archive/zip"
+	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"sublink/config"
+	"sort"
+	"strings"
+	"time"
+
+	"sublink/database"
+	"sublink/models"
+	"sublink/services"
+	backupservice "sublink/services/backup"
+	"sublink/services/scheduler"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
 )
 
+type webDAVConfigRequest struct {
+	BaseURL             string `json:"baseUrl"`
+	Username            string `json:"username"`
+	Password            string `json:"password"`
+	ClearPassword       bool   `json:"clearPassword"`
+	RemotePath          string `json:"remotePath"`
+	TimeoutSeconds      int    `json:"timeoutSeconds"`
+	AllowInsecureHTTP   bool   `json:"allowInsecureHttp"`
+	AllowPrivateNetwork bool   `json:"allowPrivateNetwork"`
+	ScheduleEnabled     bool   `json:"scheduleEnabled"`
+	CronExpr            string `json:"cronExpr"`
+}
+
+type webDAVRestoreRequest struct {
+	Filename          string `json:"filename"`
+	IncludeSubLogs    bool   `json:"includeSubLogs"`
+	IncludeAccessKeys *bool  `json:"includeAccessKeys"`
+}
+
 func Backup(c *gin.Context) {
-	// 创建临时文件用于存储压缩包
-	tmpFile, err := os.CreateTemp("", "backup-*.zip")
-	if err != nil {
-		utils.FailWithMsg(c, "Failed to create temp file")
+	if !requireBackupAdmin(c) {
 		return
 	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }() // 确保函数退出时删除临时文件
-	defer func() { _ = tmpFile.Close() }()           // 确保函数退出时关闭临时文件
-
-	// 创建zip写入器
-	zipWriter := zip.NewWriter(tmpFile)
-	// defer zipWriter.Close() // 不在这里 defer，我们需要在发送文件前手动 Close
-
-	// 获取配置的数据库目录路径
-	dbPath := config.GetDBPath()
-
-	// 获取模板目录路径（基于当前工作目录）
-	templatePath := "template"
-	if cwd, err := os.Getwd(); err == nil {
-		templatePath = filepath.Join(cwd, "template")
-	}
-
-	// 备份目录配置：源路径 -> zip 内的目录名
-	type backupFolder struct {
-		sourcePath string // 实际文件系统路径
-		zipName    string // zip 中的目录名称
-	}
-	folders := []backupFolder{
-		{sourcePath: dbPath, zipName: "db"},
-		{sourcePath: templatePath, zipName: "template"},
-	}
-
-	// 遍历文件夹并添加到zip文件中
-	for _, folder := range folders {
-		baseDir := folder.sourcePath
-		zipPrefix := folder.zipName
-
-		// filepath.Walk 会遍历所有子文件和子目录
-		walkErr := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			// 跳过 GeoIP 数据库文件，该文件体积大且可重新下载
-			if !info.IsDir() && info.Name() == "GeoLite2-City.mmdb" {
-				return nil
-			}
-
-			// 计算相对路径
-			relPath, err := filepath.Rel(baseDir, path)
-			if err != nil {
-				return err
-			}
-
-			// 创建zip中的文件头
-			header, err := zip.FileInfoHeader(info)
-			if err != nil {
-				return err
-			}
-
-			// 构建 zip 中的路径：zipPrefix + 相对路径
-			if relPath == "." {
-				header.Name = zipPrefix
-			} else {
-				header.Name = filepath.ToSlash(filepath.Join(zipPrefix, relPath))
-			}
-
-			// 如果是目录，需要以/结尾
-			if info.IsDir() {
-				header.Name += "/"
-			} else {
-				// 设置压缩方法
-				header.Method = zip.Deflate
-			}
-
-			// 创建zip中的文件
-			writer, err := zipWriter.CreateHeader(header)
-			if err != nil {
-				return err
-			}
-
-			// 如果是文件，写入文件内容
-			if !info.IsDir() {
-				file, err := os.Open(path)
-				if err != nil {
-					return err // **[修正]** 只返回 error
-				}
-
-				// **[关键修正]** 不要使用 defer file.Close()！
-				// 立即复制并关闭文件，防止文件句柄泄露
-
-				_, err = io.Copy(writer, file)
-				closeErr := file.Close() // <--- 立即关闭
-
-				if err != nil {
-					return err // **[修正]** 只返回 error
-				}
-				if closeErr != nil {
-					return closeErr
-				}
-			}
-			return nil
-		})
-
-		// 在 Walk 循环结束后，统一检查错误
-		if walkErr != nil {
-			utils.FailWithMsg(c, "备份目录 '"+zipPrefix+"' 失败: "+walkErr.Error())
-			return
-		}
-	}
-
-	// **[关键修正]** 必须在发送文件 *之前* 关闭 zipWriter，
-	// 这样才能将 zip 的中央目录结构写入文件
-	err = zipWriter.Close()
+	archive, err := backupservice.CreateArchiveFile(c.Request.Context())
 	if err != nil {
-		utils.FailWithMsg(c, "Failed to close zip writer: "+err.Error())
+		utils.FailWithI18n(c, "创建备份失败: "+err.Error(), "settings.backup.api.archiveFailed", map[string]any{"message": err.Error()})
 		return
 	}
+	defer func() { _ = os.Remove(archive.Path) }()
 
-	// 确保临时文件已完全写入（可选，但在某些系统上更安全）
-	err = tmpFile.Sync()
+	file, err := os.Open(archive.Path)
 	if err != nil {
-		utils.FailWithMsg(c, "Failed to sync temp file: "+err.Error())
+		utils.FailWithI18n(c, "打开备份文件失败", "settings.backup.api.archiveFailed", map[string]any{"message": err.Error()})
 		return
 	}
+	defer func() { _ = file.Close() }()
 
-	// **[修正]** 在所有操作都成功后，再设置响应头
 	c.Header("Content-Type", "application/zip")
-	c.Header("Content-Disposition", "attachment; filename=sublink-pro-backup.zip")
+	c.Header("Content-Disposition", `attachment; filename="`+archive.Name+`"`)
+	c.Header("Content-Length", fmt.Sprintf("%d", archive.Size))
+	if _, err := io.Copy(c.Writer, file); err != nil {
+		return
+	}
+}
 
-	// 将文件指针重置到文件开头
-	_, err = tmpFile.Seek(0, 0)
+func GetWebDAVBackupSettings(c *gin.Context) {
+	if !requireBackupAdmin(c) {
+		return
+	}
+	cfg, err := backupservice.LoadConfig()
 	if err != nil {
-		utils.FailWithMsg(c, "Failed to seek temp file: "+err.Error())
+		utils.FailWithI18n(c, "读取 WebDAV 设置失败: "+err.Error(), "settings.backup.api.loadFailed", map[string]any{"message": err.Error()})
+		return
+	}
+	utils.OkDetailedI18n(c, "WebDAV 设置已加载", backupservice.ToPublicConfig(cfg), "settings.backup.api.loaded", nil)
+}
+
+func UpdateWebDAVBackupSettings(c *gin.Context) {
+	if !requireBackupAdmin(c) {
+		return
+	}
+	var req webDAVConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithI18n(c, "参数错误", "settings.backup.api.invalidRequest", nil)
+		return
+	}
+	cfg, err := backupservice.ResolveConfig(backupservice.ConfigUpdate(req))
+	if err != nil {
+		utils.FailWithI18n(c, "WebDAV 设置无效: "+err.Error(), "settings.backup.api.invalidSettings", map[string]any{"message": err.Error()})
+		return
+	}
+	if err := backupservice.SaveConfig(cfg); err != nil {
+		utils.FailWithI18n(c, "保存 WebDAV 设置失败: "+err.Error(), "settings.backup.api.saveFailed", map[string]any{"message": err.Error()})
+		return
+	}
+	if err := scheduler.GetSchedulerManager().UpdateWebDAVBackupJob(cfg.CronExpr, cfg.ScheduleEnabled && cfg.BaseURL != ""); err != nil {
+		utils.FailWithI18n(c, "保存 WebDAV 设置失败: "+err.Error(), "settings.backup.api.saveFailed", map[string]any{"message": err.Error()})
+		return
+	}
+	utils.OkDetailedI18n(c, "WebDAV 设置已保存", backupservice.ToPublicConfig(cfg), "settings.backup.api.saved", nil)
+}
+
+func TestWebDAVBackup(c *gin.Context) {
+	if !requireBackupAdmin(c) {
+		return
+	}
+	cfg, err := webDAVConfigFromRequest(c)
+	if err != nil {
+		utils.FailWithI18n(c, "WebDAV 设置无效: "+err.Error(), "settings.backup.api.invalidSettings", map[string]any{"message": err.Error()})
+		return
+	}
+	client, err := backupservice.NewClient(cfg)
+	if err != nil {
+		utils.FailWithI18n(c, "WebDAV 设置无效: "+err.Error(), "settings.backup.api.invalidSettings", map[string]any{"message": err.Error()})
+		return
+	}
+	started := time.Now()
+	if err := client.Test(c.Request.Context()); err != nil {
+		utils.FailWithI18n(c, "WebDAV 连接测试失败: "+err.Error(), "settings.backup.api.testFailed", map[string]any{"message": err.Error()})
+		return
+	}
+	utils.OkDetailedI18n(c, "WebDAV 连接测试成功", gin.H{"latencyMs": time.Since(started).Milliseconds()}, "settings.backup.api.testSucceeded", nil)
+}
+
+func UploadWebDAVBackup(c *gin.Context) {
+	if !requireBackupAdmin(c) {
+		return
+	}
+	if !database.IsSQLite() {
+		utils.FailWithI18n(c, "WebDAV 系统备份当前仅支持 SQLite 数据库", "settings.backup.api.sqliteOnly", nil)
+		return
+	}
+	cfg, err := backupservice.LoadConfig()
+	if err != nil {
+		utils.FailWithI18n(c, "读取 WebDAV 设置失败: "+err.Error(), "settings.backup.api.loadFailed", map[string]any{"message": err.Error()})
+		return
+	}
+	remote, err := backupservice.CreateAndUpload(c.Request.Context(), cfg)
+	if err != nil {
+		utils.FailWithI18n(c, "上传 WebDAV 备份失败: "+err.Error(), "settings.backup.api.uploadFailed", map[string]any{"message": err.Error()})
+		return
+	}
+	utils.OkDetailedI18n(c, "WebDAV 备份上传成功", remote, "settings.backup.api.uploadSucceeded", map[string]any{"name": remote.Name})
+}
+
+func ListWebDAVBackups(c *gin.Context) {
+	if !requireBackupAdmin(c) {
+		return
+	}
+	client, err := loadWebDAVClient()
+	if err != nil {
+		utils.FailWithI18n(c, "WebDAV 未配置: "+err.Error(), "settings.backup.api.notConfigured", map[string]any{"message": err.Error()})
+		return
+	}
+	files, err := client.List(c.Request.Context())
+	if err != nil {
+		utils.FailWithI18n(c, "读取 WebDAV 备份列表失败: "+err.Error(), "settings.backup.api.listFailed", map[string]any{"message": err.Error()})
+		return
+	}
+	sort.Slice(files, func(i, j int) bool { return files[i].ModifiedAt.After(files[j].ModifiedAt) })
+	if len(files) > 200 {
+		files = files[:200]
+	}
+	utils.OkDetailedI18n(c, "WebDAV 备份列表已加载", files, "settings.backup.api.listed", nil)
+}
+
+func RestoreWebDAVBackup(c *gin.Context) {
+	if !requireBackupAdmin(c) {
+		return
+	}
+	var req webDAVRestoreRequest
+	if err := c.ShouldBindJSON(&req); err != nil || strings.TrimSpace(req.Filename) == "" {
+		utils.FailWithI18n(c, "参数错误", "settings.backup.api.invalidRequest", nil)
+		return
+	}
+	client, err := loadWebDAVClient()
+	if err != nil {
+		utils.FailWithI18n(c, "WebDAV 未配置: "+err.Error(), "settings.backup.api.notConfigured", map[string]any{"message": err.Error()})
+		return
+	}
+	tempFile, err := createDatabaseMigrationUploadFile(".zip")
+	if err != nil {
+		utils.FailWithI18n(c, "创建恢复临时文件失败", "settings.backup.api.restoreFailed", map[string]any{"message": err.Error()})
+		return
+	}
+	tempPath := tempFile.Name()
+	cleanup := func() {
+		_ = tempFile.Close()
+		_ = os.Remove(tempPath)
+	}
+	if _, err := client.Download(c.Request.Context(), strings.TrimSpace(req.Filename), tempFile); err != nil {
+		cleanup()
+		utils.FailWithI18n(c, "下载 WebDAV 备份失败: "+err.Error(), "settings.backup.api.restoreFailed", map[string]any{"message": err.Error()})
+		return
+	}
+	if err := tempFile.Close(); err != nil {
+		_ = os.Remove(tempPath)
+		utils.FailWithI18n(c, "保存 WebDAV 备份失败", "settings.backup.api.restoreFailed", map[string]any{"message": err.Error()})
 		return
 	}
 
-	// 将文件内容发送给客户端
-	_, err = io.Copy(c.Writer, tmpFile)
+	includeAccessKeys := true
+	if req.IncludeAccessKeys != nil {
+		includeAccessKeys = *req.IncludeAccessKeys
+	}
+	options := services.DatabaseMigrationOptions{IncludeSubLogs: req.IncludeSubLogs, IncludeAccessKeys: includeAccessKeys}
+	task, ctx, err := services.GetTaskManager().CreateTask(models.TaskTypeDatabaseMigration, "WebDAV 恢复: "+req.Filename, models.TaskTriggerManual, 1)
 	if err != nil {
-		// 此时可能已经发送了部分响应，JSON 可能无效，但尽力而为
-		// utils.FailWithMsg(c, "Failed to send file to client: "+err.Error())
-		// Since headers might be sent, we can't cleanly send JSON. But let's leave it or log it.
-		// The original code tried to send JSON. I'll keep it consistent.
-		utils.FailWithMsg(c, "Failed to send file to client: "+err.Error())
+		_ = os.Remove(tempPath)
+		utils.FailWithI18n(c, "创建恢复任务失败: "+err.Error(), "settings.backup.api.restoreFailed", map[string]any{"message": err.Error()})
 		return
 	}
+	utils.OkDetailedI18n(c, "WebDAV 恢复任务已启动", gin.H{"taskId": task.ID}, "settings.backup.api.restoreStarted", nil)
+	go services.RunDatabaseMigrationTask(ctx, task.ID, tempPath, req.Filename, options)
+}
+
+func webDAVConfigFromRequest(c *gin.Context) (backupservice.Config, error) {
+	var req webDAVConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		return backupservice.Config{}, err
+	}
+	return backupservice.ResolveConfig(backupservice.ConfigUpdate(req))
+}
+
+func loadWebDAVClient() (*backupservice.Client, error) {
+	cfg, err := backupservice.LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+	return backupservice.NewClient(cfg)
+}
+
+func requireBackupAdmin(c *gin.Context) bool {
+	username, ok := currentUsernameFromContext(c)
+	if !ok {
+		return false
+	}
+	currentUser := &models.User{Username: username}
+	if err := currentUser.Find(); err != nil || !strings.EqualFold(currentUser.Role, "admin") {
+		utils.ForbiddenI18n(c, "仅管理员可管理系统备份", "settings.backup.api.adminRequired", nil)
+		return false
+	}
+	return true
 }

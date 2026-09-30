@@ -8,11 +8,16 @@ import (
 )
 
 func Backup(r *gin.Engine) {
-	BackupGroup := r.Group("/api/v1/backup")
-	BackupGroup.Use(middlewares.AuthToken)
+	backupGroup := r.Group("/api/v1/backup")
+	backupGroup.Use(middlewares.AuthToken)
 	{
-		// 演示模式下禁止备份
-		BackupGroup.GET("/download", middlewares.DemoModeRestrict, api.Backup)
+		// 系统备份和 WebDAV 操作均包含敏感数据，演示模式下全部禁用。
+		backupGroup.GET("/download", middlewares.DemoModeRestrict, api.Backup)
+		backupGroup.GET("/webdav", middlewares.DemoModeRestrict, api.GetWebDAVBackupSettings)
+		backupGroup.POST("/webdav", middlewares.DemoModeRestrict, api.UpdateWebDAVBackupSettings)
+		backupGroup.POST("/webdav/test", middlewares.DemoModeRestrict, api.TestWebDAVBackup)
+		backupGroup.POST("/webdav/upload", middlewares.DemoModeRestrict, api.UploadWebDAVBackup)
+		backupGroup.GET("/webdav/files", middlewares.DemoModeRestrict, api.ListWebDAVBackups)
+		backupGroup.POST("/webdav/restore", middlewares.DemoModeRestrict, api.RestoreWebDAVBackup)
 	}
-
 }

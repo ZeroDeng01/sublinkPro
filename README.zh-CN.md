@@ -67,6 +67,7 @@
 | 📋 **订阅分享** | 多链接管理、过期策略、访问统计 | [📖](docs/features/subscription-share.zh-CN.md) |
 | 🌐 **Host 管理** | 域名映射、DNS 配置、CDN 优选 | [📖](docs/features/host.zh-CN.md) |
 | ☁️ **Cloudflare Tunnel** | 无公网 IP 暴露管理界面、页面托管 cloudflared | [📖](docs/features/cloudflare-tunnel.zh-CN.md) |
+| 💾 **WebDAV 备份** | 加密保存 WebDAV 凭据，支持手动或定时上传系统备份、查看远程 ZIP 并从页面恢复 | [📖](docs/features/backup.zh-CN.md) |
 | 🤖 **Telegram Bot** | 远程测速、订阅管理、系统监控 | [📖](docs/features/telegram-bot.zh-CN.md) |
 | 📜 **脚本系统** | 节点过滤、内容后处理、多脚本链式执行 | [📖](docs/script_support.zh-CN.md) |
 | 🔔 **Webhooks** | 支持 PushDeer、Bark、钉钉、方糖等多平台通知 | [📖](docs/configuration.zh-CN.md) |

@@ -65,6 +65,7 @@ suffix for Chinese.
 | Subscription sharing — multiple links, expiration policies, access stats | `docs/features/subscription-share.md` |
 | Host management — domain mappings, DNS, CDN preferred IPs | `docs/features/host.md` |
 | Cloudflare Tunnel — create tunnel, token, public access | `docs/features/cloudflare-tunnel.md` |
+| System backup and WebDAV — configure, upload, list, restore, security boundaries | `docs/features/backup.md` |
 | Telegram Bot — command list, setup | `docs/features/telegram-bot.md` |
 | Multi-factor auth (MFA) — TOTP setup, recovery codes, emergency reset | `docs/features/mfa.md` |
 | Script support — node filtering, content post-processing, function reference | `docs/script_support.md` |

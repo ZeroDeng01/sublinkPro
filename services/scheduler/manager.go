@@ -104,6 +104,11 @@ func (sm *SchedulerManager) LoadFromDatabase() error {
 		utils.Error("创建Host过期清理任务失败: %v", err)
 	}
 
+	// 启动 WebDAV 定时备份任务
+	if err := sm.StartWebDAVBackupTask(); err != nil {
+		utils.Error("创建 WebDAV 定时备份任务失败: %v", err)
+	}
+
 	return nil
 }
 

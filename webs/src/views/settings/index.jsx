@@ -19,6 +19,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import ExtensionIcon from '@mui/icons-material/Extension';
+import BackupIcon from '@mui/icons-material/Backup';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -31,6 +32,8 @@ import DatabaseMigrationSettings from './components/DatabaseMigrationSettings';
 import AIAssistantSettings from './components/AIAssistantSettings';
 import CloudflareTunnelSettings from './components/CloudflareTunnelSettings';
 import SubStoreSettings from './components/SubStoreSettings';
+import BackupSettings from './components/BackupSettings';
+import { useAuth } from 'contexts/AuthContext';
 
 // ==============================|| Tab Panel ||============================== //
 
@@ -55,14 +58,18 @@ export default function UserSettings() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const { user } = useAuth();
+  const isAdmin = [user?.role, ...(user?.roles || [])].some((role) => String(role || '').toLowerCase() === 'admin');
   const [tabValue, setTabValue] = useState(() => {
     // 只在首次加载时读取 URL 参数
     const tab = searchParams.get('tab');
     if (tab === 'ai') return 5;
     if (tab === 'globalNodeProcessing') return 4;
+    if (tab === 'backup' && isAdmin) return 8;
     // 或者从 location.state 读取
     if (location.state?.targetTab === 'globalNodeProcessing') return 4;
     if (location.state?.targetTab === 'ai') return 5;
+    if (location.state?.targetTab === 'backup' && isAdmin) return 8;
     return 0;
   });
   const [loading, setLoading] = useState(false);
@@ -99,6 +106,7 @@ export default function UserSettings() {
       t('settings.tabs.aiAssistant'),
       'Cloudflare Tunnel',
       t('settings.tabs.subStore'),
+      t('settings.tabs.backup'),
       t('settings.tabs.dataMigration')
     ];
     return tabTitles[tabValue] || t('settings.title');
@@ -146,7 +154,14 @@ export default function UserSettings() {
           <Tab icon={<PsychologyIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.aiAssistant')} {...a11yProps(5)} />
           <Tab icon={<CloudQueueIcon sx={{ mr: 1 }} />} iconPosition="start" label="Cloudflare Tunnel" {...a11yProps(6)} />
           <Tab icon={<ExtensionIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.subStore')} {...a11yProps(7)} />
-          <Tab icon={<StorageIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.dataMigration')} {...a11yProps(8)} />
+          <Tab
+            icon={<BackupIcon sx={{ mr: 1 }} />}
+            iconPosition="start"
+            label={t('settings.tabs.backup')}
+            disabled={!isAdmin}
+            {...a11yProps(8)}
+          />
+          <Tab icon={<StorageIcon sx={{ mr: 1 }} />} iconPosition="start" label={t('settings.tabs.dataMigration')} {...a11yProps(9)} />
         </Tabs>
       </Box>
 
@@ -183,6 +198,10 @@ export default function UserSettings() {
       </TabPanel>
 
       <TabPanel value={tabValue} index={8}>
+        {isAdmin && <BackupSettings showMessage={showMessage} />}
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={9}>
         <DatabaseMigrationSettings showMessage={showMessage} />
       </TabPanel>
 
