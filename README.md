@@ -68,6 +68,7 @@ English | [简体中文](README.zh-CN.md)
 | 🌐 **Host management** | Domain mappings, DNS configuration, CDN preferred IPs | [📖](docs/features/host.md) |
 | ☁️ **Cloudflare Tunnel** | Expose the admin UI without a public IP, with cloudflared managed from the page | [📖](docs/features/cloudflare-tunnel.md) |
 | 💾 **WebDAV backup** | Encrypt WebDAV credentials, upload system backups on demand or by cron, list remote ZIP files, and restore from the page | [📖](docs/features/backup.md) |
+| 🔌 **SOCKS5 gateway** | TCP CONNECT gateway with independent accounts, multiple listeners, routing profiles, health-aware node selection and live monitoring | [📖](docs/features/socks5.md) |
 | 🤖 **Telegram Bot** | Remote speed tests, subscription management, system monitoring | [📖](docs/features/telegram-bot.md) |
 | 📜 **Script system** | Node filtering, content post processing, chained scripts | [📖](docs/script_support.md) |
 | 🔔 **Webhooks** | Supports PushDeer, Bark, DingTalk, ServerChan, and other notification platforms | [📖](docs/configuration.md) |

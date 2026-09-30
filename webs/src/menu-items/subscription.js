@@ -173,6 +173,16 @@ const system = {
       breadcrumbs: true
     },
     {
+      id: 'socks5-gateway',
+      title: 'SOCKS5 Gateway',
+      titleKey: 'navigation.items.socks5',
+      type: 'item',
+      url: '/system/socks5',
+      icon: IconNetwork,
+      breadcrumbs: true,
+      adminOnly: true
+    },
+    {
       id: 'app-settings',
       title: 'Application Settings',
       titleKey: 'navigation.items.appSettings',

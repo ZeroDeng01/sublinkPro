@@ -55,7 +55,7 @@ WebDAV 系统备份当前仅支持 SQLite。使用 MySQL 或 PostgreSQL 时，�
 - 覆盖当前业务数据；
 - 恢复 ZIP 中的模板目录；
 - 可选择是否恢复 AccessKey 和订阅访问日志；
-- 当前实例的 JWT、Cloudflare Tunnel 和 WebDAV 连接设置会保留；
+- 当前实例的 JWT、加密密钥、Cloudflare Tunnel、WebDAV 设置及 SOCKS5 网关配置（含账号、监听入口与路由 Profile）会保留；
 - 完成后可能需要重启实例。
 
 恢复前请先备份当前实例。任务进度和结果可在任务中心查看。
