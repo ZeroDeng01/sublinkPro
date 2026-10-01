@@ -26,6 +26,8 @@ type ShareListReq struct {
 
 // ShareBatchCreateReq 批量创建分享请求
 type ShareBatchCreateReq struct {
+	KaringOnly     *bool  `json:"karing_only"`
+	MaxDevices     *int   `json:"max_devices" binding:"omitempty,min=0,max=10000"`
 	SubscriptionID int    `json:"subscription_id" binding:"required"`
 	BaseName       string `json:"base_name" binding:"required"`
 	Count          int    `json:"count" binding:"required,min=1,max=100"`
@@ -42,6 +44,8 @@ type ShareBatchDeleteReq struct {
 
 // ShareBatchUpdateReq 批量更新分享请求
 type ShareBatchUpdateReq struct {
+	KaringOnly *bool  `json:"karing_only"`
+	MaxDevices *int   `json:"max_devices" binding:"omitempty,min=0,max=10000"`
 	IDs        []int  `json:"ids" binding:"required,min=1"`
 	Enabled    *bool  `json:"enabled"` // 指针允许 null
 	ExpireType *int   `json:"expire_type"`
@@ -51,6 +55,8 @@ type ShareBatchUpdateReq struct {
 
 // ShareCreateReq 创建分享请求
 type ShareCreateReq struct {
+	KaringOnly     *bool  `json:"karing_only"`
+	MaxDevices     *int   `json:"max_devices" binding:"omitempty,min=0,max=10000"`
 	SubscriptionID int    `json:"subscription_id" binding:"required"`
 	Name           string `json:"name"`
 	Token          string `json:"token"` // 可选，为空则自动生成
@@ -61,6 +67,8 @@ type ShareCreateReq struct {
 
 // ShareUpdateReq 更新分享请求
 type ShareUpdateReq struct {
+	KaringOnly *bool  `json:"karing_only"`
+	MaxDevices *int   `json:"max_devices" binding:"omitempty,min=0,max=10000"`
 	ID         int    `json:"id" binding:"required"`
 	Name       string `json:"name"`
 	Token      string `json:"token"`
@@ -120,6 +128,10 @@ func ShareGet(c *gin.Context) {
 			return
 		}
 
+		if err := models.PopulateShareDeviceCounts(shares); err != nil {
+			c.JSON(500, gin.H{"code": 500, "msg": "读取设备数量失败"})
+			return
+		}
 		totalPages := (total + req.PageSize - 1) / req.PageSize
 		hasMore := req.Page < totalPages
 
@@ -139,6 +151,10 @@ func ShareGet(c *gin.Context) {
 
 	// 不分页，返回所有分享（向后兼容，也支持搜索）
 	shares := models.GetSharesBySubscriptionID(req.SubID, req.Keyword)
+	if err := models.PopulateShareDeviceCounts(shares); err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "读取设备数量失败"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": shares})
 }
 
@@ -166,6 +182,10 @@ func ShareAdd(c *gin.Context) {
 		Enabled:        true,
 	}
 
+	if err := inheritShareDevicePolicy(share, req.KaringOnly, req.MaxDevices); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": err.Error()})
+		return
+	}
 	if err := share.Add(); err != nil {
 		utils.Error("创建分享失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": err.Error()})
@@ -204,7 +224,7 @@ func ShareUpdate(c *gin.Context) {
 	share.ExpireAt = expireAt
 	share.Enabled = req.Enabled
 
-	if err := share.Update(); err != nil {
+	if err := share.UpdateWithDevicePolicy(req.KaringOnly, req.MaxDevices); err != nil {
 		utils.Error("更新分享失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": err.Error()})
 		return
@@ -369,6 +389,10 @@ func ShareBatchAdd(c *gin.Context) {
 			IsLegacy:       false,
 		}
 
+		if err := inheritShareDevicePolicy(share, req.KaringOnly, req.MaxDevices); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": err.Error()})
+			return
+		}
 		if err := share.Add(); err != nil {
 			utils.Error("创建分享失败 [%s]: %v", name, err)
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -493,7 +517,7 @@ func ShareBatchUpdate(c *gin.Context) {
 			share.ExpireAt = expireAt
 		}
 
-		if err := share.Update(); err != nil {
+		if err := share.UpdateWithDevicePolicy(req.KaringOnly, req.MaxDevices); err != nil {
 			errors = append(errors, fmt.Sprintf("ID %d: %s", share.ID, err.Error()))
 		} else {
 			successCount++
@@ -501,8 +525,8 @@ func ShareBatchUpdate(c *gin.Context) {
 	}
 
 	if len(errors) > 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 200,
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code": 400,
 			"msg":  fmt.Sprintf("更新了 %d/%d 个分享，部分失败: %s", successCount, len(req.IDs), strings.Join(errors, "; ")),
 		})
 		return
@@ -512,4 +536,20 @@ func ShareBatchUpdate(c *gin.Context) {
 		"code": 200,
 		"msg":  fmt.Sprintf("成功更新 %d 个分享", successCount),
 	})
+}
+
+func inheritShareDevicePolicy(share *models.SubscriptionShare, only *bool, limit *int) error {
+	sub := models.Subcription{ID: share.SubscriptionID}
+	if err := sub.Find(); err != nil {
+		return err
+	}
+	share.KaringOnly = sub.DefaultKaringOnly
+	share.MaxDevices = sub.DefaultMaxDevices
+	if only != nil {
+		share.KaringOnly = *only
+	}
+	if limit != nil {
+		share.MaxDevices = *limit
+	}
+	return nil
 }

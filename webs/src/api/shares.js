@@ -111,7 +111,9 @@ export function batchCreateShares(subscriptionId, data) {
       expire_type: data.expireType,
       expire_days: data.expireDays,
       expire_at: data.expireAt,
-      enabled: data.enabled
+      enabled: data.enabled,
+      karing_only: data.karingOnly,
+      max_devices: data.maxDevices
     }
   });
 }
@@ -142,4 +144,14 @@ export function batchUpdateShares(ids, updates) {
       ...updates
     }
   });
+}
+
+export function getShareDevices(shareId) {
+  return request({ url: '/v1/shares/devices', method: 'get', params: { shareId } });
+}
+export function updateShareDevice(shareId, data) {
+  return request({ url: '/v1/shares/device-update', method: 'post', params: { shareId }, data });
+}
+export function resetShareDevices(shareId) {
+  return request({ url: '/v1/shares/devices-reset', method: 'post', params: { shareId } });
 }

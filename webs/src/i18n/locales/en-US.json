@@ -2801,6 +2801,32 @@
       "nodes": {
         "loading": "Loading nodes..."
       }
+    },
+    "devices": {
+      "karingOnly": "Karing only",
+      "defaultLimit": "Default device limit for new shares",
+      "limit": "Device limit",
+      "limitHelp": "Enter an integer from 0 to 10000; 0 means unlimited.",
+      "defaultsHelp": "Applies only to new shares. Each customer has separate slots; existing shares keep their settings.",
+      "importHelp": "Enable X-HWID when adding or editing the profile in Karing. The client must send a Karing UA; missing IDs are rejected. First import binds automatically; do not forward an unused link.",
+      "scopeHelp": "This limits subscription downloads, not copied nodes or forged device IDs. Revoking a device does not invalidate previously downloaded node credentials.",
+      "manage": "Manage devices",
+      "failed": "Device operation failed",
+      "empty": "No devices bound yet",
+      "revoked": "Revoked",
+      "active": "Bound",
+      "firstSeen": "First bound",
+      "lastSeen": "Last update",
+      "name": "Device note",
+      "restore": "Restore device",
+      "revoke": "Revoke device",
+      "restoreConfirm": "Restoring this device uses a slot and fails if the limit is full.",
+      "revokeConfirm": "Revoke this device and release its slot? Its ID will be denied until an administrator restores it.",
+      "reset": "Reset all devices",
+      "resetConfirm": "Revoke every registered device and rotate the share link? Old IDs remain revoked. Deliver the new link to the customer’s new device.",
+      "bound": "Devices {{count}} / {{limit}}",
+      "batch": "Batch device limits",
+      "batchHelp": "Set a separate device limit on each selected share; customer slots are not pooled."
     }
   },
   "hosts": {

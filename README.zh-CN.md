@@ -64,7 +64,7 @@
 | 🤖 **AI 模板编辑** | 用自然语言生成操作式预览，审阅只读对比，接受到编辑器后再正常保存 | [📖](docs/features/template-ai.zh-CN.md) |
 | ✈️ **机场管理** | 多格式导入、定时更新、流量监控、一键全量拉取 | [📖](docs/features/airport.zh-CN.md) |
 | 🗂️ **分组排序** | 分组内机场优先级拖拽排序，控制订阅输出中的节点顺序 | [📖](docs/development.zh-CN.md) |
-| 📋 **订阅分享** | 多链接管理、过期策略、访问统计 | [📖](docs/features/subscription-share.zh-CN.md) |
+| 📋 **订阅分享** | 多链接管理、过期策略、访问统计、Karing 分享设备限额 | [📖](docs/features/subscription-share.zh-CN.md) |
 | 🌐 **Host 管理** | 域名映射、DNS 配置、CDN 优选 | [📖](docs/features/host.zh-CN.md) |
 | ☁️ **Cloudflare Tunnel** | 无公网 IP 暴露管理界面、页面托管 cloudflared | [📖](docs/features/cloudflare-tunnel.zh-CN.md) |
 | 💾 **WebDAV 备份** | 加密保存 WebDAV 凭据，支持手动或定时上传系统备份、查看远程 ZIP 并从页面恢复 | [📖](docs/features/backup.zh-CN.md) |
@@ -163,7 +163,7 @@ docker-compose up -d
 | [🔗 链式代理](docs/features/chain-proxy.zh-CN.md) | Dialer-Proxy、条件选节点、配置流程 |
 | [🤖 AI 模板编辑](docs/features/template-ai.zh-CN.md) | 操作式预览、只读对比审阅、接受到编辑器、正常保存 |
 | [✈️ 机场管理](docs/features/airport.zh-CN.md) | 订阅导入、定时更新、流量监控 |
-| [📋 订阅分享](docs/features/subscription-share.zh-CN.md) | 多链接管理、过期策略、访问统计 |
+| [📋 订阅分享](docs/features/subscription-share.zh-CN.md) | 多链接管理、过期策略、访问统计、Karing 分享设备限额 |
 | [🌐 Host 管理](docs/features/host.zh-CN.md) | 域名映射、DNS 配置、测速持久化 |
 | [☁️ Cloudflare Tunnel](docs/features/cloudflare-tunnel.zh-CN.md) | 创建 Tunnel、获取 token、配置公网访问 |
 | [🤖 Telegram 机器人](docs/features/telegram-bot.zh-CN.md) | 命令列表、配置指南 |
