@@ -181,6 +181,11 @@ docker-compose up -d
 
 ## 📡 多协议支持
 
+Hysteria2 链接支持 `hy2://` 和 `hysteria2://`。使用 userpass 认证时，
+`hy2://user:pass@example.invalid:443` 与 `hy2://user%3Apass@example.invalid:443`
+都会保留完整的 `user:pass` 认证信息。认证信息中的保留字符应进行百分号编码；
+URI 各部分只解码一次，重新导出链接时也会保留其原始含义。
+
 | 客户端 | 支持协议 |
 |:---|:---|
 | **v2ray** | base64 通用格式（不输出 Clash/mihomo 专属协议，如 Mieru、Snell、OpenVPN） |
