@@ -179,6 +179,10 @@ docker image prune -f
 
 ---
 
+## 反向代理与订阅设备校验
+
+使用反向代理或自定义订阅转发服务时，请保留 `/c/` 上的 Karing 设备请求头，并在更新后检查公开订阅地址。详见[设备请求头转发与 HTTP 403 排查](features/subscription-share.zh-CN.md#反向代理与-http-403-排查)。
+
 ## 🤖 Watchtower 自动更新
 
 Watchtower 是一个可以自动更新 Docker 容器的工具，非常适合希望保持项目始终最新的用户。

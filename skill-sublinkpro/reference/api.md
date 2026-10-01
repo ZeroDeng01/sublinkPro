@@ -766,6 +766,8 @@ Subscription create/update multipart fields: `DefaultKaringOnly` (boolean) and `
 
 Share `/api/v1/shares/add`, `/batch-add`, `/update`, `/batch-update` accept optional JSON `karing_only` and `max_devices`. Omitted create fields inherit the parent subscription defaults; omitted update fields remain unchanged. Explicit false/0 is supported. Positive limits cannot be reduced below the active bound count. Share list items include `karing_only`, `max_devices`, and `device_count`.
 
+`/batch-update` commits each share independently. A partially failed batch returns HTTP 400 with `code: 400` and a message identifying successes and failures; successful updates remain committed. Refresh the share list after failure before retrying.
+
 All device management endpoints require the existing administrator/API-key authentication:
 
 | Method | Path | Parameters | Result |
@@ -779,3 +781,5 @@ Device fields: `id`, `share_id`, `name`, `os`, `model`, `revoked`, `created_at`,
 `GET /c/?token=...` requires a valid `X-HWID` header when `max_devices > 0`, and a Karing UA when `karing_only` is enabled. Query parameters cannot supply device identity. Bindings are allocated atomically only after successful generation. `HEAD /c/` validates access without allocating slots. Responses use `Cache-Control: private, no-store`.
 
 HTTP 403 JSON codes: `karing_required`, `hwid_required`, `hwid_invalid`, `device_revoked`, `device_limit_exceeded`, `share_unavailable`. HTTP 503 `device_check_unavailable` means validation failed; HTTP 502 `subscription_generation_failed` means no device was bound. Clients may show a generic HTTP failure rather than the server message. This limits downloads, not exported node use or forged device identifiers.
+
+Reverse proxies and subscription sidecars must preserve `User-Agent`, `X-HWID`, `X-Device-OS`, and `X-Device-Model` on `/c/`. Do not replace missing identities or normalize duplicate HWID headers into an accepted single identity. Validate header forwarding with a `HEAD` request through the public subscription URL; health checks on `/api/v1/version` cannot verify this path. See [subscription share troubleshooting](../../docs/features/subscription-share.md#reverse-proxies-and-http-403-troubleshooting).

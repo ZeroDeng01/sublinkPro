@@ -557,6 +557,8 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     } catch (error) {
       console.error('Failed to batch update:', error);
       showMessage?.(error.response?.data?.msg || t('subscriptions.share.batch.updateError'), 'error');
+      // A failed batch can still contain committed updates to other shares.
+      await fetchShares(searchQuery, false, null, null, true);
     }
   };
 

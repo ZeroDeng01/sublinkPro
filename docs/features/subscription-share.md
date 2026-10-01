@@ -151,6 +151,16 @@ Open Add configuration → Add configuration link, paste the share link, enable 
 
 The share list shows bound devices / limit. Manage devices lets administrators edit notes, revoke or restore installations. Revoking frees a slot but permanently denies that ID until restored; restoration requires capacity. Revoke excess devices before lowering a limit. Ordinary Token rotation preserves bindings. Reset all devices revokes all registered IDs and rotates the link; deliver the new link to the customer's new device.
 
+Batch updates apply each share independently. If a lower limit is rejected for one share, other shares can still be updated. The page refreshes the list after a partial failure; check the reported failures before retrying.
+
+### Reverse proxies and HTTP 403 troubleshooting
+
+Every proxy or custom subscription sidecar on `/c/` must preserve `User-Agent`, `X-HWID`, `X-Device-OS`, and `X-Device-Model`. A header allowlist that drops `X-HWID` causes `hwid_required` even when the client enabled it. Forward one original HWID value; never invent an ID, substitute an IP address, or collapse duplicate HWID headers into a valid single value. Do not cache subscription responses across devices.
+
+Verify the complete public subscription URL, not only `/api/v1/version` or the backend port. `HEAD` with a valid Karing UA and an available device identity should succeed without binding; the same request without `X-HWID` must return 403 when the device limit is enabled. If the limit is full, an unbound identity is also rejected.
+
+The response JSON distinguishes `hwid_required`, `device_limit_exceeded`, and `device_revoked`. Karing may instead show a generic `http statusCode: 403` and suggest changing the User-Agent. That text does not identify the server's reason. Check bound count / limit and the response code before changing settings. Changing server error text alone cannot replace the fixed dialog in iOS Karing 1.2.22.2502; retain the default Karing UA and enable X-HWID.
+
 ### Capability and verification boundaries
 
 This controls subscription downloads, not tamper-proof hardware authentication. It cannot prevent exported nodes, forged HWIDs, network sharing or use of previously downloaded credentials. Setting the limit to 0 disables HWID and revocation checks. `HEAD` does not allocate slots, and failed generation does not bind devices.

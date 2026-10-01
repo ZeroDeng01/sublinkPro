@@ -205,3 +205,66 @@ func TestShareDeviceAPIDefaultsAndManagement(t *testing.T) {
 }
 
 func jsonNumber(value int) string { encoded, _ := json.Marshal(value); return string(encoded) }
+
+func TestShareBatchDevicePolicyPartialFailure(t *testing.T) {
+	setupClientsAPITestDB(t)
+	shares := []*models.SubscriptionShare{
+		{Token: "batch-full", Enabled: true, KaringOnly: true, MaxDevices: 2},
+		{Token: "batch-empty", Enabled: true, KaringOnly: true, MaxDevices: 2},
+	}
+	for _, share := range shares {
+		if err := share.Add(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, hwid := range []string{"device-a", "device-b"} {
+		identity := models.ShareDeviceIdentity{UserAgent: realKaringWindowsUA, HWID: hwid}
+		if err := models.CheckShareDevice(shares[0].ID, shares[0].Token, identity, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	w := callShareJSON(t, ShareBatchUpdate, "/api/v1/shares/batch-update", gin.H{
+		"ids": []int{shares[0].ID, shares[1].ID}, "max_devices": 1, "karing_only": false,
+	})
+	if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "1/2") {
+		t.Fatalf("expected partial failure, got %d %s", w.Code, w.Body)
+	}
+	for i, share := range shares {
+		if err := share.Find(); err != nil {
+			t.Fatal(err)
+		}
+		if i == 0 && (share.MaxDevices != 2 || !share.KaringOnly) {
+			t.Fatal("failed share update must preserve its entire device policy")
+		}
+		if i == 1 && (share.MaxDevices != 1 || share.KaringOnly) {
+			t.Fatal("successful share update must persist despite the batch error")
+		}
+	}
+}
+
+func TestDeviceProtectedSubscriptionRejectsDuplicateHWID(t *testing.T) {
+	setupClientsAPITestDB(t)
+	createClientSubscriptionFixture(t, "", "", "duplicate-hwid", "duplicate-hwid-token", "private-node")
+	share, err := models.GetSubscriptionShareByToken("duplicate-hwid-token")
+	if err != nil {
+		t.Fatal(err)
+	}
+	on, limit := true, 1
+	if err := share.UpdateWithDevicePolicy(&on, &limit); err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/c/?token="+share.Token, nil)
+	c.Request.Header.Set("User-Agent", realKaringWindowsUA)
+	c.Request.Header.Add("X-HWID", "a")
+	c.Request.Header.Add("X-HWID", "b")
+	GetClient(c)
+	if w.Code != http.StatusForbidden || !strings.Contains(w.Body.String(), "hwid_required") {
+		t.Fatalf("ambiguous HWID was not rejected: %d %s", w.Code, w.Body)
+	}
+	devices, err := models.ListShareDevices(share.ID)
+	if err != nil || len(devices) != 0 {
+		t.Fatal("ambiguous HWID allocated a device slot")
+	}
+}
