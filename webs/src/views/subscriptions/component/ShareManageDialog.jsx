@@ -59,6 +59,9 @@ import ConfirmDialog from './ConfirmDialog';
 import ShareBatchCreateDialog from './ShareBatchCreateDialog';
 import ShareBatchUpdateDialog from './ShareBatchUpdateDialog';
 import ShareExportDialog from './ShareExportDialog';
+import DevicePolicyFields, { validDeviceLimit } from './DevicePolicyFields';
+import ShareDevicesDialog from './ShareDevicesDialog';
+import DevicesIcon from '@mui/icons-material/Devices';
 
 const EXPIRE_TYPE_NEVER = 0;
 const EXPIRE_TYPE_DAYS = 1;
@@ -96,6 +99,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
 
   const [shares, setShares] = useState([]);
+  const [deviceShare, setDeviceShare] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -132,7 +136,9 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     expire_type: EXPIRE_TYPE_NEVER,
     expire_days: 30,
     expire_at: '',
-    enabled: true
+    enabled: true,
+    karing_only: subscription?.DefaultKaringOnly ?? false,
+    max_devices: subscription?.DefaultMaxDevices ?? 0
   });
 
   const [qrOpen, setQrOpen] = useState(false);
@@ -322,7 +328,9 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       expire_type: EXPIRE_TYPE_NEVER,
       expire_days: 30,
       expire_at: '',
-      enabled: true
+      enabled: true,
+      karing_only: subscription?.DefaultKaringOnly ?? false,
+      max_devices: subscription?.DefaultMaxDevices ?? 0
     });
     setFormOpen(true);
   };
@@ -336,12 +344,18 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       expire_type: share.expire_type || EXPIRE_TYPE_NEVER,
       expire_days: share.expire_days || 30,
       expire_at: share.expire_at ? share.expire_at.substring(0, 16) : '',
-      enabled: share.enabled !== false
+      enabled: share.enabled !== false,
+      karing_only: share.karing_only ?? false,
+      max_devices: share.max_devices ?? 0
     });
     setFormOpen(true);
   };
 
   const handleSave = async () => {
+    if (!validDeviceLimit(formData.max_devices)) {
+      showMessage?.(t('subscriptions.devices.limitHelp'), 'error');
+      return;
+    }
     try {
       const data = {
         ...formData,
@@ -497,6 +511,9 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         updates.expire_type = data.expireType;
         updates.expire_days = data.expireDays;
         updates.expire_at = data.expireAt;
+      } else if (batchUpdateMode === 'devices') {
+        updates.karing_only = data.karingOnly;
+        updates.max_devices = data.maxDevices;
       } else if (batchUpdateMode === 'enabled') {
         if (data.action === 'enable') {
           updates.enabled = true;
@@ -808,10 +825,25 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                 </Stack>
                 <Typography variant="caption" sx={{ color: expired ? tertiaryText : secondaryText }}>
                   {t('subscriptions.share.cardMeta', { expire: getExpireText(share), count: share.access_count || 0 })}
+                  {' · '}
+                  {t('subscriptions.devices.bound', { count: share.device_count || 0, limit: share.max_devices || '∞' })}
+                  {share.karing_only ? ' · Karing' : ''}
                 </Typography>
               </Box>
             </Box>
             <Stack direction="row" spacing={0.5}>
+              <Tooltip title={t('subscriptions.devices.manage')}>
+                <IconButton
+                  size="small"
+                  sx={actionIconButtonSx}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeviceShare(share);
+                  }}
+                >
+                  <DevicesIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
               <Tooltip title={t('subscriptions.share.actions.accessLogs')}>
                 <IconButton size="small" onClick={(e) => handleViewLogs(share, e)} sx={actionIconButtonSx}>
                   <HistoryIcon fontSize="small" />
@@ -953,6 +985,15 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                   </Button>
                   <Button size="small" onClick={handleBatchUpdateExpire}>
                     {t('subscriptions.share.batch.updateExpire')}
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setBatchUpdateMode('devices');
+                      setBatchUpdateOpen(true);
+                    }}
+                  >
+                    {t('subscriptions.devices.batch')}
                   </Button>
                   <Button size="small" onClick={handleBatchToggleEnabled}>
                     {t('subscriptions.share.batch.toggleEnabled')}
@@ -1239,6 +1280,17 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
               />
             )}
 
+            <DevicePolicyFields
+              karingOnly={formData.karing_only}
+              maxDevices={formData.max_devices}
+              onChange={(patch) =>
+                setFormData({
+                  ...formData,
+                  ...(patch.karingOnly !== undefined ? { karing_only: patch.karingOnly } : {}),
+                  ...(patch.maxDevices !== undefined ? { max_devices: patch.maxDevices } : {})
+                })
+              }
+            />
             {editingShare && (
               <FormControlLabel
                 control={<Switch checked={formData.enabled} onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })} />}
@@ -1273,6 +1325,14 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         onConfirm={confirmInfo.onConfirm}
       />
 
+      <ShareDevicesDialog
+        share={deviceShare}
+        onClose={() => setDeviceShare(null)}
+        onChanged={() => {
+          fetchShares();
+          setDetailOpen(false);
+        }}
+      />
       <ShareBatchCreateDialog
         open={batchCreateOpen}
         subscription={subscription}
