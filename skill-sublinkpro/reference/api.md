@@ -709,6 +709,44 @@ Base: `/api/v1/settings` (write bodies are JSON unless noted; most writes are de
 
 **Sub-Store:** **GET** `/settings/substore` · **POST** `/settings/substore` · **POST** `/settings/substore/test`
 
+### SOCKS5 gateway
+
+All SOCKS5 endpoints require an authenticated administrator. Destructive `POST`/`DELETE` operations are restricted in demo mode.
+
+- **GET** `/api/v1/settings/socks5` — read public gateway settings. The plaintext password is never returned.
+- **POST** `/api/v1/settings/socks5` — save and apply JSON settings:
+  `enabled`, `listenAddress`, `port`, `username`, optional `password`, `clearPassword`, `nodeId`,
+  `selection` (`best`, `random`, `round_robin`, `smart`, or `specific`), `requireAuth`, `maxAttempts` (1-5),
+  `dialTimeoutSeconds` (1-120), `failureCooldownSeconds` (0-3600), `specificFallback`,
+  `maxConnections` (1-10000), `maxConnectionsPerClient` (1..maxConnections),
+  `idleTimeoutSeconds` (0-86400), `maxConnectionDurationSeconds` (0-604800), `healthCheckEnabled`,
+  `healthCheckIntervalSeconds` (10-3600), `healthCheckTimeoutSeconds` (1-30), and candidate-pool arrays
+  `candidateGroups`, `candidateSources`, `candidateProtocols`, `candidateCountries`, `stickySessionEnabled`,
+  `stickySessionMode` (`client_ip` or `username`), and `stickySessionTtlSeconds` (60-604800).
+  Candidate-pool fields combine with AND; values inside one field combine with OR. Empty arrays do not restrict the pool.
+  Optional fields may be omitted to preserve saved values for legacy clients. `0` disables either connection timeout.
+- **POST** `/api/v1/settings/socks5/stop` — stop the listener without changing saved settings.
+- **GET** `/api/v1/settings/socks5/status` — return `data.config`, `data.listeners`, aggregate `data.stats`, and `data.health`.
+- **GET/POST** `/api/v1/settings/socks5/listeners` — list or create listener endpoints (`id`, `enabled`, `listenAddress`, `port`, `defaultProfileId`, nullable `requireAuth`).
+- **PUT/DELETE** `/api/v1/settings/socks5/listeners/:id` — replace or delete a listener endpoint.
+- **GET/POST** `/api/v1/settings/socks5/accounts` — list or create independent credentials bound to routing profiles. Plaintext passwords are never returned.
+- **PUT/DELETE** `/api/v1/settings/socks5/accounts/:id` — replace or delete an independent account; an omitted/empty update password keeps the saved password.
+- **GET** `/api/v1/settings/socks5/profiles` — list the virtual `default` routing profile and saved custom profiles.
+- **POST** `/api/v1/settings/socks5/profiles` — create a custom routing profile with an independent candidate pool and routing settings.
+- **PUT** `/api/v1/settings/socks5/profiles/:id` — replace a custom profile.
+- **DELETE** `/api/v1/settings/socks5/profiles/:id` — delete a custom profile; the reserved `default` profile cannot be deleted.
+- **GET** `/api/v1/settings/socks5/routing` — return a server-paginated candidate-node runtime page. Pass `profileId` to inspect a specific profile. Supports `keyword`, `status`, `sortBy`, `sortOrder`, `page`, and `pageSize` (maximum `100`). Items include health state, latency source, active/success/failure counters, smart score, cooldown, and last-selection time.
+- **POST** `/api/v1/settings/socks5/routing/reset` — reset per-node historical counters without disconnecting active sessions.
+  Stats include `activeConnections`, `totalConnections`, `successfulConnections`, `failedConnections`, `uploadBytes`, and `downloadBytes`.
+  Health includes sweep timing/counts and per-node status, latency, consecutive failures, cooldown, and a bounded error message.
+- **POST** `/api/v1/settings/socks5/health/probe` — trigger an immediate administrator-only health sweep. Duplicate concurrent sweeps are not started.
+- **GET** `/api/v1/settings/socks5/connections` — return the current active connection array. Each item includes
+  `id`, `clientAddress`, `target`, `nodeName`, `profileId`, `profileName`, optional `account`, optional `listenerId`, `phase`, `startedAt`, `lastActivity`, `uploadBytes`, and `downloadBytes`.
+- **DELETE** `/api/v1/settings/socks5/connections/:id` — disconnect one active connection by ID.
+- **DELETE** `/api/v1/settings/socks5/connections` — disconnect all active connections.
+
+`data.config` uses the same public settings shape as the settings endpoint, including `hasPassword`, optional `maskedPassword`, `running`, and `boundAddress`; it never includes plaintext `password`. Omitting `password` preserves the saved password, while `clearPassword: true` clears it. Status counters, active connections, and in-memory sticky leases belong to the current gateway server lifetime and reset after stop/reapply. TCP CONNECT supports multiple listeners, independent profile-bound accounts, adapter reuse, pre-reply candidate retry, exponential failure cooldown, smart P2C load balancing, sticky sessions, connection limits, idle/duration timeouts, active health probing, and live monitoring. UDP ASSOCIATE and BIND are not implemented.
+
 **Database migration:** **POST** `/settings/database-migration/import` — **multipart/form-data** (upload a backup.zip / .db)
 
 **AI assistant (login-session only — reject API key with 403 by design):**
@@ -757,7 +795,7 @@ All endpoints below require an administrator account and are disabled in demo mo
 - **GET** `/api/v1/backup/webdav/files` — list up to 200 remote ZIP backups, newest first.
 - **POST** `/api/v1/backup/webdav/restore` — download and restore a remote ZIP. JSON fields: `filename`, `includeAccessKeys` (default `true`), `includeSubLogs` (default `false`). Returns `taskId`; follow the existing task APIs for progress.
 
-WebDAV restore reuses the database migration workflow and overwrites current business data. The current instance's JWT, Cloudflare Tunnel, and WebDAV settings are preserved. HTTPS is required unless `allowInsecureHttp` is explicitly enabled. Private, loopback, and reserved targets require `allowPrivateNetwork`. WebDAV backup creation is currently SQLite-only. Uploads and downloads are limited to 1 GiB.
+WebDAV restore reuses the database migration workflow and overwrites current business data. The current instance's JWT, encryption key, Cloudflare Tunnel, WebDAV settings, and SOCKS5 gateway configuration (accounts, listeners, routing profiles) are preserved. Restoring disconnects active SOCKS5 connections and reloads the gateway against the restored nodes. HTTPS is required unless `allowInsecureHttp` is explicitly enabled. Private, loopback, and reserved targets require `allowPrivateNetwork`. WebDAV backup creation is currently SQLite-only. Uploads and downloads are limited to 1 GiB.
 
 ### Server-Sent Events
 **GET** `/api/se` (query: `?token=<jwt>`) — SSE stream (auth-protected).

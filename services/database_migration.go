@@ -20,6 +20,7 @@ import (
 	backupservice "sublink/services/backup"
 	"sublink/services/mihomo"
 	"sublink/services/scheduler"
+	socks5service "sublink/services/socks5"
 	"sublink/services/telegram"
 	"sublink/utils"
 
@@ -763,7 +764,8 @@ func importSystemSettings(state *databaseMigrationState) error {
 
 func preservedTargetSettingKeys() []string {
 	keys := []string{"jwt_secret", "api_encryption_key", "cloudflared_enabled", "cloudflared_tunnel_token_encrypted"}
-	return append(keys, backupservice.PreservedSettingKeys()...)
+	keys = append(keys, backupservice.PreservedSettingKeys()...)
+	return append(keys, socks5service.PreservedSettingKeys()...)
 }
 
 func shouldPreserveTargetSetting(key string) bool {
@@ -1475,6 +1477,8 @@ func templateDirPath() string {
 }
 
 func reloadRuntimeStateAfterMigration() error {
+	// Existing sessions/adapters must not keep routing through pre-restore nodes.
+	socks5service.DefaultManager().Stop()
 	config.Load()
 
 	cache.InvalidateAllTemplateContent()
@@ -1517,6 +1521,12 @@ func reloadRuntimeStateAfterMigration() error {
 
 	if err := mihomo.SyncHostsFromDB(); err != nil {
 		utils.Warn("迁移后同步 Host 到 mihomo 失败: %v", err)
+	}
+
+	if !models.IsDemoMode() {
+		if err := socks5service.DefaultManager().StartFromSettings(); err != nil {
+			utils.Warn("迁移后重新加载 SOCKS5 网关失败，网关保持停用: %v", err)
+		}
 	}
 
 	telegramConfig, err := telegram.LoadConfig()
