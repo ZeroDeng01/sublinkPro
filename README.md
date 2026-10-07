@@ -182,6 +182,11 @@ If your earlier instance used SQLite and you now want to migrate to MySQL or Pos
 
 ## 📡 Multi Protocol Support
 
+Hysteria2 links support both `hy2://` and `hysteria2://`. For userpass authentication,
+`hy2://user:pass@example.invalid:443` and `hy2://user%3Apass@example.invalid:443`
+both preserve the complete `user:pass` credential. Percent-encode reserved characters
+in credentials; URI components are decoded once, including when links are re-exported.
+
 | Client | Supported protocols |
 |:---|:---|
 | **v2ray** | base64 common format, without Clash/mihomo specific protocols such as Mieru, Snell, and OpenVPN |
