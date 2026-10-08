@@ -67,6 +67,8 @@
 | 📋 **订阅分享** | 多链接管理、过期策略、访问统计 | [📖](docs/features/subscription-share.zh-CN.md) |
 | 🌐 **Host 管理** | 域名映射、DNS 配置、CDN 优选 | [📖](docs/features/host.zh-CN.md) |
 | ☁️ **Cloudflare Tunnel** | 无公网 IP 暴露管理界面、页面托管 cloudflared | [📖](docs/features/cloudflare-tunnel.zh-CN.md) |
+| 💾 **WebDAV 备份** | 加密保存 WebDAV 凭据，支持手动或定时上传系统备份、查看远程 ZIP 并从页面恢复 | [📖](docs/features/backup.zh-CN.md) |
+| 🔌 **SOCKS5 网关** | 支持独立账号、多监听入口、路由 Profile、健康感知节点选择与实时监控的 TCP CONNECT 网关 | [📖](docs/features/socks5.zh-CN.md) |
 | 🤖 **Telegram Bot** | 远程测速、订阅管理、系统监控 | [📖](docs/features/telegram-bot.zh-CN.md) |
 | 📜 **脚本系统** | 节点过滤、内容后处理、多脚本链式执行 | [📖](docs/script_support.zh-CN.md) |
 | 🔔 **Webhooks** | 支持 PushDeer、Bark、钉钉、方糖等多平台通知 | [📖](docs/configuration.zh-CN.md) |
@@ -180,10 +182,15 @@ docker-compose up -d
 
 ## 📡 多协议支持
 
+Hysteria2 链接支持 `hy2://` 和 `hysteria2://`。使用 userpass 认证时，
+`hy2://user:pass@example.invalid:443` 与 `hy2://user%3Apass@example.invalid:443`
+都会保留完整的 `user:pass` 认证信息。认证信息中的保留字符应进行百分号编码；
+URI 各部分只解码一次，重新导出链接时也会保留其原始含义。
+
 | 客户端 | 支持协议 |
 |:---|:---|
-| **v2ray** | base64 通用格式（不输出 Clash/mihomo 专属协议，如 Mieru、Snell） |
-| **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell |
+| **v2ray** | base64 通用格式（不输出 Clash/mihomo 专属协议，如 Mieru、Snell、OpenVPN） |
+| **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell, OpenVPN |
 | **surge** | ss, trojan, vmess, hy2, tuic, AnyTLS, Snell |
 
 > [!NOTE]
@@ -191,6 +198,9 @@ docker-compose up -d
 
 > [!NOTE]
 > Snell 当前仅支持 Clash/mihomo 与 Surge 输出。Snell 没有官方分享链接方案，SublinkPro 为原始编辑与 Clash/mihomo、Surge 导入回写使用内部可编辑形态：`snell://server:port?psk=xxx&version=3&obfs=http&obfs-host=xxx#name`。v2ray 当前不支持 Snell，订阅输出会跳过该协议而不是降级转换。
+
+> [!NOTE]
+> OpenVPN 支持导入和导出 Mihomo/Clash `proxies:` YAML 节点。SublinkPro 会将其保存为内部往返格式 `openvpn://server:port?...#name`；这不是 OpenVPN 官方分享链接规范，也不代表已支持直接导入 `.ovpn` 文件。证书与私钥会经过 URL 编码（并非加密）后保存在节点链接中，请保护数据库访问权限且不要分享该内部链接。
 
 ---
 

@@ -67,6 +67,8 @@ English | [简体中文](README.zh-CN.md)
 | 📋 **Subscription sharing** | Multiple links, expiration policies, access statistics | [📖](docs/features/subscription-share.md) |
 | 🌐 **Host management** | Domain mappings, DNS configuration, CDN preferred IPs | [📖](docs/features/host.md) |
 | ☁️ **Cloudflare Tunnel** | Expose the admin UI without a public IP, with cloudflared managed from the page | [📖](docs/features/cloudflare-tunnel.md) |
+| 💾 **WebDAV backup** | Encrypt WebDAV credentials, upload system backups on demand or by cron, list remote ZIP files, and restore from the page | [📖](docs/features/backup.md) |
+| 🔌 **SOCKS5 gateway** | TCP CONNECT gateway with independent accounts, multiple listeners, routing profiles, health-aware node selection and live monitoring | [📖](docs/features/socks5.md) |
 | 🤖 **Telegram Bot** | Remote speed tests, subscription management, system monitoring | [📖](docs/features/telegram-bot.md) |
 | 📜 **Script system** | Node filtering, content post processing, chained scripts | [📖](docs/script_support.md) |
 | 🔔 **Webhooks** | Supports PushDeer, Bark, DingTalk, ServerChan, and other notification platforms | [📖](docs/configuration.md) |
@@ -180,10 +182,15 @@ If your earlier instance used SQLite and you now want to migrate to MySQL or Pos
 
 ## 📡 Multi Protocol Support
 
+Hysteria2 links support both `hy2://` and `hysteria2://`. For userpass authentication,
+`hy2://user:pass@example.invalid:443` and `hy2://user%3Apass@example.invalid:443`
+both preserve the complete `user:pass` credential. Percent-encode reserved characters
+in credentials; URI components are decoded once, including when links are re-exported.
+
 | Client | Supported protocols |
 |:---|:---|
-| **v2ray** | base64 common format, without Clash/mihomo specific protocols such as Mieru and Snell |
-| **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell |
+| **v2ray** | base64 common format, without Clash/mihomo specific protocols such as Mieru, Snell, and OpenVPN |
+| **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell, OpenVPN |
 | **surge** | ss, trojan, vmess, hy2, tuic, AnyTLS, Snell |
 
 > [!NOTE]
@@ -191,6 +198,9 @@ If your earlier instance used SQLite and you now want to migrate to MySQL or Pos
 
 > [!NOTE]
 > Snell supports Clash/mihomo and Surge output only. Snell has no official share link schema, so SublinkPro uses an internal editable form for raw editing and Clash/mihomo/Surge import write back: `snell://server:port?psk=xxx&version=3&obfs=http&obfs-host=xxx#name`. v2ray does not support Snell in SublinkPro; subscription output skips it instead of converting it to a downgraded form.
+
+> [!NOTE]
+> OpenVPN supports importing and exporting Mihomo/Clash `proxies:` YAML entries. SublinkPro stores them in an internal round-trip form, `openvpn://server:port?...#name`; this is not an official OpenVPN share-link standard and does not add direct `.ovpn` file import. Certificate and private-key material is URL-encoded, not encrypted, in the stored node link, so protect database access and do not share the internal link.
 
 ---
 

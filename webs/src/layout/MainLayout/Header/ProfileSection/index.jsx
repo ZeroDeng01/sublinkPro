@@ -106,6 +106,7 @@ export default function ProfileSection() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const isAdmin = [user?.role, ...(user?.roles || [])].some((role) => String(role || '').toLowerCase() === 'admin');
   const {
     state: { borderRadius }
   } = useConfig();
@@ -405,7 +406,7 @@ export default function ProfileSection() {
                           </Typography>
                         </Stack>
                         <Typography variant="subtitle2" sx={{ color: mutedText }}>
-                          {user?.role === 'admin' ? t('profile.role.admin') : t('profile.role.user')}
+                          {isAdmin ? t('profile.role.admin') : t('profile.role.user')}
                         </Typography>
                       </Stack>
                       <Divider sx={{ my: 2, borderColor: withAlpha(palette.divider, isDark ? 0.7 : 1) }} />
@@ -501,15 +502,17 @@ export default function ProfileSection() {
                             primary={<Typography variant="body2">{t('profile.actions.personalCenter')}</Typography>}
                           />
                         </ListItemButton>
-                        <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={handleBackup}>
-                          <ListItemIcon>
-                            <IconDatabaseExport stroke={1.5} size="20px" />
-                          </ListItemIcon>
-                          <ListItemText
-                            primaryTypographyProps={{ component: 'div' }}
-                            primary={<Typography variant="body2">{t('profile.actions.backup')}</Typography>}
-                          />
-                        </ListItemButton>
+                        {isAdmin && (
+                          <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={handleBackup}>
+                            <ListItemIcon>
+                              <IconDatabaseExport stroke={1.5} size="20px" />
+                            </ListItemIcon>
+                            <ListItemText
+                              primaryTypographyProps={{ component: 'div' }}
+                              primary={<Typography variant="body2">{t('profile.actions.backup')}</Typography>}
+                            />
+                          </ListItemButton>
+                        )}
                         <ListItemButton sx={{ borderRadius: `${borderRadius}px` }} onClick={handleClearIPCache} disabled={ipCacheLoading}>
                           <ListItemIcon>
                             <IconDatabaseOff stroke={1.5} size="20px" />
