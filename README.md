@@ -64,7 +64,7 @@ English | [简体中文](README.zh-CN.md)
 | 🤖 **AI template editing** | Generate operation based previews from natural language, review read-only diffs, accept into the editor, then save normally | [📖](docs/features/template-ai.md) |
 | ✈️ **Airport management** | Multi format import, scheduled updates, traffic monitoring, one click full refresh | [📖](docs/features/airport.md) |
 | 🗂️ **Group ordering** | Drag airport priority within a group to control node order in subscription output | [📖](docs/development.md) |
-| 📋 **Subscription sharing** | Multiple links, expiration policies, access statistics | [📖](docs/features/subscription-share.md) |
+| 📋 **Subscription sharing** | Multiple links, expiration policies, access statistics, per-share Karing device limits | [📖](docs/features/subscription-share.md) |
 | 🌐 **Host management** | Domain mappings, DNS configuration, CDN preferred IPs | [📖](docs/features/host.md) |
 | ☁️ **Cloudflare Tunnel** | Expose the admin UI without a public IP, with cloudflared managed from the page | [📖](docs/features/cloudflare-tunnel.md) |
 | 💾 **WebDAV backup** | Encrypt WebDAV credentials, upload system backups on demand or by cron, list remote ZIP files, and restore from the page | [📖](docs/features/backup.md) |
@@ -164,7 +164,7 @@ If your earlier instance used SQLite and you now want to migrate to MySQL or Pos
 | [🔗 Chain proxy](docs/features/chain-proxy.md) | Dialer-Proxy, condition based node selection, configuration flow |
 | [🤖 AI template editing](docs/features/template-ai.md) | Operation based previews, read-only diff review, accept into editor, normal save |
 | [✈️ Airport management](docs/features/airport.md) | Subscription import, scheduled updates, traffic monitoring |
-| [📋 Subscription sharing](docs/features/subscription-share.md) | Multiple links, expiration policies, access statistics |
+| [📋 Subscription sharing](docs/features/subscription-share.md) | Multiple links, expiration policies, access statistics, per-share Karing device limits |
 | [🌐 Host management](docs/features/host.md) | Domain mappings, DNS configuration, speed test persistence |
 | [☁️ Cloudflare Tunnel](docs/features/cloudflare-tunnel.md) | Create a Tunnel, get a token, configure public access |
 | [🤖 Telegram Bot](docs/features/telegram-bot.md) | Command list and setup guide |

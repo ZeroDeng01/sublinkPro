@@ -144,3 +144,33 @@ For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] 香
 - When top level VLESS `ech` is Xray DNS / URI style, `/c?client=clash` outputs top level `ech-opts` within what mihomo can express. Recognizable query domains map to `query-server-name`.
 - In reverse, when a node comes from Clash/mihomo YAML import and only `ech-opts.query-server-name` can be restored, the system fills it before saving the node link as `ech=<query-server-name>+https://dns.alidns.com/dns-query` using local compatibility rules.
 - To avoid generating configurations that look valid but are semantically distorted, the system does not silently convert `xhttp` into `http`, `h2`, or `grpc`.
+
+## Karing device limits
+
+New subscriptions default to Karing-only access and one device per share. The administrator can set a limit from 0 to 10000; 0 means unlimited. New shares (including the default link and batch-created shares) inherit the subscription defaults, then maintain independent limits. Changing subscription defaults does not change existing shares. Existing subscriptions and shares remain unrestricted after migration until an administrator opts in.
+
+Create a separate share for each customer and set its annual expiry independently. The first successful download binds a device; subsequent updates with the same ID reuse its slot. A positive limit requires a valid `X-HWID` request header. IP addresses, user agents, models and URL parameters are not device identities. Karing-only shares additionally check the Karing UA. Missing IDs, revoked devices and full limits return HTTP 403 without nodes; database validation failure returns 503.
+
+### Importing in Karing
+
+Open Add configuration → Add configuration link, paste the share link, enable **X-HWID**, then save. Existing profiles must also enable this option in their edit screen. Keep the Karing UA sent by the client. Have the customer import first: forwarding an unused link may let another person claim the initial slot.
+
+The share list shows bound devices / limit. Manage devices lets administrators edit notes, revoke or restore installations. Revoking frees a slot but permanently denies that ID until restored; restoration requires capacity. Revoke excess devices before lowering a limit. Ordinary Token rotation preserves bindings. Reset all devices revokes all registered IDs and rotates the link; deliver the new link to the customer's new device.
+
+Batch updates apply each share independently. If a lower limit is rejected for one share, other shares can still be updated. The page refreshes the list after a partial failure; check the reported failures before retrying.
+
+### Reverse proxies and HTTP 403 troubleshooting
+
+Every proxy or custom subscription sidecar on `/c/` must preserve `User-Agent`, `X-HWID`, `X-Device-OS`, and `X-Device-Model`. A header allowlist that drops `X-HWID` causes `hwid_required` even when the client enabled it. Forward one original HWID value; never invent an ID, substitute an IP address, or collapse duplicate HWID headers into a valid single value. Do not cache subscription responses across devices.
+
+Verify the complete public subscription URL, not only `/api/v1/version` or the backend port. `HEAD` with a valid Karing UA and an available device identity should succeed without binding; the same request without `X-HWID` must return 403 when the device limit is enabled. If the limit is full, an unbound identity is also rejected.
+
+The response JSON distinguishes `hwid_required`, `device_limit_exceeded`, and `device_revoked`. Karing may instead show a generic `http statusCode: 403` and suggest changing the User-Agent. That text does not identify the server's reason. Check bound count / limit and the response code before changing settings. Changing server error text alone cannot replace the fixed dialog in iOS Karing 1.2.22.2502; retain the default Karing UA and enable X-HWID.
+
+### Capability and verification boundaries
+
+This controls subscription downloads, not tamper-proof hardware authentication. It cannot prevent exported nodes, forged HWIDs, network sharing or use of previously downloaded credentials. Setting the limit to 0 disables HWID and revocation checks. `HEAD` does not allocate slots, and failed generation does not bind devices.
+
+Real first-import and repeated manual-update requests were verified with Windows Karing 1.2.23+2606: enabling the option sends `X-HWID`, with a stable digest across those requests. The UA begins with `Karing/1.2.23.2606 platform/windows`. Automatic updates, app restarts, upgrades, network changes, backup restoration and physical Android, iOS/iPadOS, macOS, Linux and tvOS clients remain unverified. Simulated requests are not cross-platform validation. Reinstallation or backup restoration that changes the ID requires an administrator-assisted device replacement.
+
+An end-to-end Windows Karing request to the implemented backend successfully downloaded the subscription and registered the device. After administrator revocation, Karing displayed `download profile failed: http statusCode: 403`. The test device was then restored.

@@ -3095,6 +3095,32 @@
       "nodes": {
         "loading": "节点加载中..."
       }
+    },
+    "devices": {
+      "karingOnly": "仅允许 Karing",
+      "defaultLimit": "新分享默认设备上限",
+      "limit": "设备数量上限",
+      "limitHelp": "请输入 0–10000 的整数；0 表示不限设备数量。",
+      "defaultsHelp": "仅影响新创建的分享链接。每个客户独立计数，已有分享不会随默认值改变。",
+      "importHelp": "在 Karing「添加配置链接」或编辑配置中开启 X-HWID。客户端需发送 Karing UA；缺少标识会被拒绝。首次导入自动绑定，请勿提前转发链接。",
+      "scopeHelp": "此限制控制订阅下载，不保证阻止复制节点或伪造设备标识。撤销不影响已经下载的节点配置。",
+      "manage": "管理设备",
+      "failed": "设备操作失败",
+      "empty": "尚未绑定设备",
+      "revoked": "已撤销",
+      "active": "已绑定",
+      "firstSeen": "首次绑定",
+      "lastSeen": "最近更新",
+      "name": "设备备注",
+      "restore": "恢复设备",
+      "revoke": "撤销设备",
+      "restoreConfirm": "恢复此设备将占用一个名额；上限已满时无法恢复。",
+      "revokeConfirm": "撤销此设备并释放名额？该设备标识将被拒绝，直到管理员恢复。",
+      "reset": "全部换机重置",
+      "resetConfirm": "将撤销所有已登记设备并更换分享链接。原设备不能重新抢占；请将新链接交付给客户的新设备。",
+      "bound": "设备 {{count}} / {{limit}}",
+      "batch": "批量设置设备限制",
+      "batchHelp": "将为选中的分享分别设置设备上限；不会合并客户的设备名额。"
     }
   },
   "hosts": {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { validDeviceLimit } from './component/DevicePolicyFields';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -123,6 +124,8 @@ export default function SubscriptionList() {
     selectedGroups: [],
     selectedAirports: [],
     selectedScripts: [],
+    DefaultKaringOnly: true,
+    DefaultMaxDevices: 1,
     IPWhitelist: '',
     IPBlacklist: '',
     DelayTime: 0,
@@ -546,6 +549,8 @@ export default function SubscriptionList() {
       selectedGroups: [],
       selectedAirports: [],
       selectedScripts: [],
+      DefaultKaringOnly: true,
+      DefaultMaxDevices: 1,
       IPWhitelist: '',
       IPBlacklist: '',
       DelayTime: 0,
@@ -624,6 +629,8 @@ export default function SubscriptionList() {
       selectedGroups: groups,
       selectedAirports: airports,
       selectedScripts: scriptIds,
+      DefaultKaringOnly: sub.DefaultKaringOnly ?? false,
+      DefaultMaxDevices: sub.DefaultMaxDevices ?? 0,
       IPWhitelist: sub.IPWhitelist || '',
       IPBlacklist: sub.IPBlacklist || '',
       DelayTime: sub.DelayTime || 0,
@@ -696,6 +703,10 @@ export default function SubscriptionList() {
   };
 
   const handleSubmit = async () => {
+    if (!validDeviceLimit(formData.DefaultMaxDevices)) {
+      showMessage(t('subscriptions.devices.limitHelp'), 'error');
+      return;
+    }
     if (!formData.name.trim()) {
       showMessage(t('subscriptions.page.messages.nameRequired'), 'warning');
       return;
@@ -713,6 +724,8 @@ export default function SubscriptionList() {
       const requestData = {
         name: formData.name.trim(),
         config,
+        DefaultKaringOnly: formData.DefaultKaringOnly,
+        DefaultMaxDevices: Number(formData.DefaultMaxDevices),
         IPWhitelist: formData.IPWhitelist,
         IPBlacklist: formData.IPBlacklist,
         DelayTime: formData.DelayTime,
