@@ -40,7 +40,7 @@
     "react-router-dom": "7.18.4",
     "simplebar-react": "3.3.2",
     "swr": "2.5.1",
-    "vite": "8.3.1",
+    "vite": "8.3.2",
     "vite-jsconfig-paths": "2.0.1",
     "web-vitals": "5.3.0",
     "yup": "1.7.1"
@@ -83,8 +83,8 @@
     "eslint-plugin-prettier": "5.5.6",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.1.1",
-    "prettier": "3.9.8",
-    "sass": "1.104.1",
+    "prettier": "3.9.9",
+    "sass": "1.105.1",
     "vite-plugin-pwa": "^1.2.0"
   },
   "packageManager": "yarn@4.10.3"
