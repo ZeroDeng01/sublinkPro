@@ -26,6 +26,7 @@ func init() {
 		FieldMeta{Name: "Query.Fingerprint", Label: "证书指纹", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.SupportX25519MLKEM768", Label: "X25519MLKEM768", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 		FieldMeta{Name: "Query.Type", Label: "Network", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "grpc", "http", "h2", "xhttp", "quic"}},
 		FieldMeta{Name: "Query.Path", Label: "路径", Type: "string", Group: "transport", Placeholder: "/ws"},
@@ -82,6 +83,8 @@ type VLESSQuery struct {
 	HttpUpgradeFastOpen int    `json:"httpUpgradeFastOpen,omitempty"` // v2ray-http-upgrade-fast-open (0/1)
 	// 新增：http传输层参数
 	Method string `json:"method,omitempty"` // HTTP请求方法
+	// REALITY X25519MLKEM768 支持标记（1=启用，0=未设置/禁用）
+	SupportX25519MLKEM768 int `json:"supportX25519mlkem768,omitempty"`
 }
 
 // buildVLESSProxy 将 VLESS 链接转换为 Clash Proxy，并根据传输层选择唯一一组传输配置输出。
@@ -133,6 +136,9 @@ func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	xhttpOpts := buildVLESSXHTTPOpts(vless.Query)
 	applyVLESSXHTTPSkipCertOverride(xhttpOpts, config.Cert)
 	realityOpts := map[string]any{"public-key": vless.Query.Pbk, "short-id": vless.Query.Sid}
+	if shouldEnableX25519MLKEM768(vless.Query.SupportX25519MLKEM768, vless.Query.Fp, vless.Query.Pbk != "") {
+		realityOpts["support-x25519mlkem768"] = true
+	}
 	DeleteOpts(wsOpts)
 	DeleteOpts(h2Opts)
 	DeleteOpts(httpOpts)
@@ -226,6 +232,11 @@ func EncodeVLESSURL(v VLESS) string {
 	// http传输层参数
 	if v.Query.Method != "" {
 		q.Set("method", v.Query.Method)
+	}
+
+	// REALITY X25519MLKEM768 支持
+	if v.Query.SupportX25519MLKEM768 == 1 {
+		q.Set("support-x25519mlkem768", "1")
 	}
 
 	// 跳过证书验证
@@ -342,6 +353,12 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 		httpUpgradeFastOpen = 1
 	}
 
+	// 解析 support-x25519mlkem768 参数
+	supportX25519MLKEM768 := 0
+	if sx := u.Query().Get("support-x25519mlkem768"); sx == "1" || strings.EqualFold(sx, "true") {
+		supportX25519MLKEM768 = 1
+	}
+
 	// 解析 http 传输层参数
 	method := u.Query().Get("method")
 
@@ -385,30 +402,31 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 		Server: hostname,
 		Port:   port,
 		Query: VLESSQuery{
-			Security:            security,
-			Alpn:                alpn,
-			Sni:                 sni,
-			Ech:                 ech,
-			Fp:                  fp,
-			Fingerprint:         fingerprint,
-			Sid:                 sid,
-			Pbk:                 pbk,
-			Flow:                flow,
-			Encryption:          encryption,
-			Type:                types,
-			HeaderType:          headerType,
-			Path:                path,
-			Host:                host,
-			ServiceName:         serviceName,
-			Mode:                mode,
-			Extra:               extra,
-			AllowInsecure:       allowInsecure,
-			PacketEncoding:      packetEncoding,
-			MaxEarlyData:        maxEarlyData,
-			EarlyDataHeader:     earlyDataHeader,
-			HttpUpgrade:         httpUpgrade,
-			HttpUpgradeFastOpen: httpUpgradeFastOpen,
-			Method:              method,
+			Security:              security,
+			Alpn:                  alpn,
+			Sni:                   sni,
+			Ech:                   ech,
+			Fp:                    fp,
+			Fingerprint:           fingerprint,
+			Sid:                   sid,
+			Pbk:                   pbk,
+			Flow:                  flow,
+			Encryption:            encryption,
+			Type:                  types,
+			HeaderType:            headerType,
+			Path:                  path,
+			Host:                  host,
+			ServiceName:           serviceName,
+			Mode:                  mode,
+			Extra:                 extra,
+			AllowInsecure:         allowInsecure,
+			PacketEncoding:        packetEncoding,
+			MaxEarlyData:          maxEarlyData,
+			EarlyDataHeader:       earlyDataHeader,
+			HttpUpgrade:           httpUpgrade,
+			HttpUpgradeFastOpen:   httpUpgradeFastOpen,
+			Method:                method,
+			SupportX25519MLKEM768: supportX25519MLKEM768,
 		},
 	}, nil
 }
@@ -447,6 +465,9 @@ func ConvertProxyToVless(proxy Proxy) VLESS {
 		}
 		if sid, ok := proxy.Reality_opts["short-id"].(string); ok {
 			vless.Query.Sid = sid
+		}
+		if isTruthyConfigValue(proxy.Reality_opts["support-x25519mlkem768"]) {
+			vless.Query.SupportX25519MLKEM768 = 1
 		}
 	} else if proxy.Tls {
 		vless.Query.Security = "tls"

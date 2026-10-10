@@ -500,6 +500,76 @@ func TestVlessDNSStyleECHUsesBestEffortECHOpts(t *testing.T) {
 	assertEqualString(t, "RestoredTopLevelECH", "", restored.Query.Ech)
 }
 
+func TestVlessRealityX25519MLKEM768Explicit(t *testing.T) {
+	url := "vless://12345678-1234-1234-1234-123456789abc@example.com:443?encryption=none&security=reality&type=tcp&fp=firefox&pbk=test-public-key&sid=abcdef&support-x25519mlkem768=1#MLKEM节点"
+
+	decoded, err := DecodeVLESSURL(url)
+	if err != nil {
+		t.Fatalf("解码失败: %v", err)
+	}
+	assertEqualInt(t, "SupportX25519MLKEM768", 1, decoded.Query.SupportX25519MLKEM768)
+
+	proxy, err := buildVLESSProxy(Urls{Url: url}, OutputConfig{Udp: true})
+	if err != nil {
+		t.Fatalf("buildVLESSProxy 失败: %v", err)
+	}
+	sx, ok := proxy.Reality_opts["support-x25519mlkem768"].(bool)
+	if !ok || !sx {
+		t.Fatal("reality-opts 应包含 support-x25519mlkem768: true")
+	}
+
+	reEncoded := EncodeVLESSURL(decoded)
+	assertContains(t, "EncodedSupportX25519MLKEM768", reEncoded, "support-x25519mlkem768=1")
+}
+
+func TestVlessRealityX25519MLKEM768AutoInferChrome(t *testing.T) {
+	url := "vless://12345678-1234-1234-1234-123456789abc@example.com:443?encryption=none&security=reality&type=tcp&fp=chrome&pbk=test-public-key&sid=abcdef#Chrome自动推断"
+
+	proxy, err := buildVLESSProxy(Urls{Url: url}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildVLESSProxy 失败: %v", err)
+	}
+	sx, ok := proxy.Reality_opts["support-x25519mlkem768"].(bool)
+	if !ok || !sx {
+		t.Fatal("Chrome 指纹应自动推断 support-x25519mlkem768: true")
+	}
+}
+
+func TestVlessRealityX25519MLKEM768NoAutoInferFirefox(t *testing.T) {
+	url := "vless://12345678-1234-1234-1234-123456789abc@example.com:443?encryption=none&security=reality&type=tcp&fp=firefox&pbk=test-public-key&sid=abcdef#Firefox无自动推断"
+
+	proxy, err := buildVLESSProxy(Urls{Url: url}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildVLESSProxy 失败: %v", err)
+	}
+	if _, exists := proxy.Reality_opts["support-x25519mlkem768"]; exists {
+		t.Fatal("Firefox 指纹不应自动推断 support-x25519mlkem768")
+	}
+}
+
+func TestConvertProxyToVlessPreservesX25519MLKEM768(t *testing.T) {
+	proxy := Proxy{
+		Name:               "REALITY-MLKEM",
+		Type:               "vless",
+		Server:             "example.com",
+		Port:               443,
+		Uuid:               "12345678-1234-1234-1234-123456789abc",
+		Client_fingerprint: "chrome",
+		Reality_opts: map[string]any{
+			"public-key":             "test-public-key",
+			"short-id":               "abcdef",
+			"support-x25519mlkem768": true,
+		},
+	}
+
+	vless := ConvertProxyToVless(proxy)
+	assertEqualInt(t, "SupportX25519MLKEM768", 1, vless.Query.SupportX25519MLKEM768)
+	assertEqualString(t, "Security", "reality", vless.Query.Security)
+
+	encoded := EncodeVLESSURL(vless)
+	assertContains(t, "EncodedSupportX25519MLKEM768", encoded, "support-x25519mlkem768=1")
+}
+
 func TestLinkToProxy_VLESSXHTTPSkipCertFollowsSubscriptionConfig(t *testing.T) {
 	vless := VLESS{
 		Name:   "测试节点-VLESS-XHTTP-SkipCert",

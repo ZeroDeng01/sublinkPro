@@ -43,6 +43,7 @@ func init() {
 		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.SupportX25519MLKEM768", Label: "X25519MLKEM768", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 	)
 	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildTrojanProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "trojan")
@@ -82,8 +83,9 @@ type TrojanQuery struct {
 	MaxStreams          int      `json:"maxStreams,omitempty"`
 	Flow                string   `json:"flow,omitempty"`
 	// Reality 参数
-	Pbk string `json:"pbk,omitempty"` // Reality public-key
-	Sid string `json:"sid,omitempty"` // Reality short-id
+	Pbk                   string `json:"pbk,omitempty"` // Reality public-key
+	Sid                   string `json:"sid,omitempty"` // Reality short-id
+	SupportX25519MLKEM768 int    `json:"supportX25519mlkem768,omitempty"`
 }
 
 // EncodeTrojanURL 将 Trojan 结构编码为 trojan:// 链接。
@@ -176,6 +178,9 @@ func EncodeTrojanURL(t Trojan) string {
 	// Reality 参数支持
 	q.Set("pbk", t.Query.Pbk)
 	q.Set("sid", t.Query.Sid)
+	if t.Query.SupportX25519MLKEM768 == 1 {
+		q.Set("support-x25519mlkem768", "1")
+	}
 	// 检查query是否有空值，有的话删除
 	for k, v := range q {
 		if v[0] == "" {
@@ -250,6 +255,12 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 	minStreams := trojanURLInt(u.Query().Get("minStreams"))
 	maxStreams := trojanURLInt(u.Query().Get("maxStreams"))
 	flow := u.Query().Get("flow")
+	pbk := u.Query().Get("pbk")
+	sid := u.Query().Get("sid")
+	supportX25519MLKEM768 := 0
+	if sx := u.Query().Get("support-x25519mlkem768"); sx == "1" || strings.EqualFold(sx, "true") {
+		supportX25519MLKEM768 = 1
+	}
 	name := u.Fragment
 	// 如果没有设置name,则使用hostname:port
 	if name == "" {
@@ -283,29 +294,32 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 		Hostname: hostname,
 		Port:     port,
 		Query: TrojanQuery{
-			Peer:                peer,
-			Type:                types,
-			Path:                path,
-			Security:            security,
-			Fp:                  fp,
-			Fingerprint:         fingerprint,
-			AllowInsecure:       insecureVal,
-			Alpn:                alpn,
-			Sni:                 sni,
-			Host:                host,
-			Headers:             headers,
-			MaxEarlyData:        maxEarlyData,
-			EarlyDataHeader:     earlyDataHeader,
-			HttpUpgrade:         httpUpgrade,
-			HttpUpgradeFastOpen: httpUpgradeFastOpen,
-			ServiceName:         serviceName,
-			Mode:                mode,
-			GrpcUserAgent:       grpcUserAgent,
-			PingInterval:        pingInterval,
-			MaxConnections:      maxConnections,
-			MinStreams:          minStreams,
-			MaxStreams:          maxStreams,
-			Flow:                flow,
+			Peer:                  peer,
+			Type:                  types,
+			Path:                  path,
+			Security:              security,
+			Fp:                    fp,
+			Fingerprint:           fingerprint,
+			AllowInsecure:         insecureVal,
+			Alpn:                  alpn,
+			Sni:                   sni,
+			Host:                  host,
+			Headers:               headers,
+			MaxEarlyData:          maxEarlyData,
+			EarlyDataHeader:       earlyDataHeader,
+			HttpUpgrade:           httpUpgrade,
+			HttpUpgradeFastOpen:   httpUpgradeFastOpen,
+			ServiceName:           serviceName,
+			Mode:                  mode,
+			GrpcUserAgent:         grpcUserAgent,
+			PingInterval:          pingInterval,
+			MaxConnections:        maxConnections,
+			MinStreams:            minStreams,
+			MaxStreams:            maxStreams,
+			Flow:                  flow,
+			Pbk:                   pbk,
+			Sid:                   sid,
+			SupportX25519MLKEM768: supportX25519MLKEM768,
 		},
 		Name: name,
 		Type: "trojan",
@@ -351,11 +365,15 @@ func ConvertProxyToTrojan(proxy Proxy) Trojan {
 
 	// 处理 Reality 参数
 	if len(proxy.Reality_opts) > 0 {
+		trojan.Query.Security = "reality"
 		if pbk, ok := proxy.Reality_opts["public-key"].(string); ok {
 			trojan.Query.Pbk = pbk
 		}
 		if sid, ok := proxy.Reality_opts["short-id"].(string); ok {
 			trojan.Query.Sid = sid
+		}
+		if isTruthyConfigValue(proxy.Reality_opts["support-x25519mlkem768"]) {
+			trojan.Query.SupportX25519MLKEM768 = 1
 		}
 	}
 
@@ -379,7 +397,17 @@ func buildTrojanProxy(link Urls, config OutputConfig) (Proxy, error) {
 		grpcOpts = buildTrojanGRPCOpts(trojan.Query)
 	}
 	skipCert := config.Cert || trojan.Query.AllowInsecure == 1
-	return Proxy{Name: trojan.Name, Type: "trojan", Server: trojan.Hostname, Port: FlexPort(utils.GetPortInt(trojan.Port)), Password: trojan.Password, Client_fingerprint: trojan.Query.Fp, Fingerprint: trojan.Query.Fingerprint, Sni: trojan.Query.Sni, Network: trojanClashNetwork(trojan.Query.Type), Flow: trojan.Query.Flow, Alpn: trojan.Query.Alpn, Ws_opts: wsOpts, Grpc_opts: grpcOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
+	var realityOpts map[string]any
+	tls := trojan.Query.Security != "none" && trojan.Query.Security != ""
+	if trojan.Query.Pbk != "" {
+		realityOpts = map[string]any{"public-key": trojan.Query.Pbk, "short-id": trojan.Query.Sid}
+		if shouldEnableX25519MLKEM768(trojan.Query.SupportX25519MLKEM768, trojan.Query.Fp, true) {
+			realityOpts["support-x25519mlkem768"] = true
+		}
+		DeleteOpts(realityOpts)
+		tls = true
+	}
+	return Proxy{Name: trojan.Name, Type: "trojan", Server: trojan.Hostname, Port: FlexPort(utils.GetPortInt(trojan.Port)), Password: trojan.Password, Client_fingerprint: trojan.Query.Fp, Fingerprint: trojan.Query.Fingerprint, Sni: trojan.Query.Sni, Network: trojanClashNetwork(trojan.Query.Type), Flow: trojan.Query.Flow, Alpn: trojan.Query.Alpn, Ws_opts: wsOpts, Grpc_opts: grpcOpts, Reality_opts: realityOpts, Tls: tls, Udp: config.Udp, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
 }
 
 func buildTrojanWSOpts(query TrojanQuery) map[string]any {

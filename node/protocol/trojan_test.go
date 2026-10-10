@@ -439,6 +439,82 @@ func assertEquivalentTrojanURL(t *testing.T, got, want string) {
 	}
 }
 
+func TestTrojanRealityX25519MLKEM768RoundTrip(t *testing.T) {
+	original := Trojan{
+		Name:     "trojan-reality-mlkem",
+		Password: "password",
+		Hostname: "example.com",
+		Port:     443,
+		Query: TrojanQuery{
+			Security:              "reality",
+			Type:                  "tcp",
+			Fp:                    "chrome",
+			Sni:                   "www.microsoft.com",
+			Pbk:                   "test-public-key",
+			Sid:                   "abcdef",
+			SupportX25519MLKEM768: 1,
+		},
+	}
+
+	encoded := EncodeTrojanURL(original)
+	assertContains(t, "EncodedPbk", encoded, "pbk=test-public-key")
+	assertContains(t, "EncodedSid", encoded, "sid=abcdef")
+	assertContains(t, "EncodedSupportMLKEM", encoded, "support-x25519mlkem768=1")
+
+	decoded, err := DecodeTrojanURL(encoded)
+	if err != nil {
+		t.Fatalf("DecodeTrojanURL failed: %v", err)
+	}
+	assertEqualString(t, "Pbk", original.Query.Pbk, decoded.Query.Pbk)
+	assertEqualString(t, "Sid", original.Query.Sid, decoded.Query.Sid)
+	assertEqualInt(t, "SupportX25519MLKEM768", 1, decoded.Query.SupportX25519MLKEM768)
+
+	proxy, err := buildTrojanProxy(Urls{Url: encoded}, OutputConfig{Udp: true})
+	if err != nil {
+		t.Fatalf("buildTrojanProxy failed: %v", err)
+	}
+	if proxy.Reality_opts == nil {
+		t.Fatal("reality-opts 不应为空")
+	}
+	assertEqualString(t, "RealityPublicKey", "test-public-key", mustString(t, "RealityPublicKey", proxy.Reality_opts["public-key"]))
+	assertEqualString(t, "RealityShortID", "abcdef", mustString(t, "RealityShortID", proxy.Reality_opts["short-id"]))
+	sx, ok := proxy.Reality_opts["support-x25519mlkem768"].(bool)
+	if !ok || !sx {
+		t.Fatal("reality-opts 应包含 support-x25519mlkem768: true")
+	}
+
+	restored := ConvertProxyToTrojan(proxy)
+	assertEqualString(t, "RestoredPbk", original.Query.Pbk, restored.Query.Pbk)
+	assertEqualString(t, "RestoredSid", original.Query.Sid, restored.Query.Sid)
+	assertEqualInt(t, "RestoredSupportMLKEM", 1, restored.Query.SupportX25519MLKEM768)
+	assertEqualString(t, "RestoredSecurity", "reality", restored.Query.Security)
+}
+
+func TestTrojanRealityAutoInferChrome(t *testing.T) {
+	url := "trojan://password@example.com:443?security=reality&type=tcp&fp=chrome&sni=www.microsoft.com&pbk=test-public-key&sid=ab#TrojanChrome"
+
+	proxy, err := buildTrojanProxy(Urls{Url: url}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildTrojanProxy failed: %v", err)
+	}
+	sx, ok := proxy.Reality_opts["support-x25519mlkem768"].(bool)
+	if !ok || !sx {
+		t.Fatal("Chrome 指纹应自动推断 support-x25519mlkem768: true")
+	}
+}
+
+func TestTrojanRealityNoAutoInferFirefox(t *testing.T) {
+	url := "trojan://password@example.com:443?security=reality&type=tcp&fp=firefox&sni=www.microsoft.com&pbk=test-public-key&sid=ab#TrojanFirefox"
+
+	proxy, err := buildTrojanProxy(Urls{Url: url}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildTrojanProxy failed: %v", err)
+	}
+	if _, exists := proxy.Reality_opts["support-x25519mlkem768"]; exists {
+		t.Fatal("Firefox 指纹不应自动推断 support-x25519mlkem768")
+	}
+}
+
 func TestTrojanTCPDoesNotEmitTransportOptions(t *testing.T) {
 	proxy, err := buildTrojanProxy(Urls{Url: EncodeTrojanURL(Trojan{
 		Password: "password",
