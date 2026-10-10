@@ -299,6 +299,17 @@ func isTruthyConfigValue(value any) bool {
 	return false
 }
 
+// shouldEnableX25519MLKEM768 判断 REALITY 连接是否应启用 X25519MLKEM768 key share。
+// 当 URL 显式设置了该参数时直接使用，否则基于指纹自动推断：
+// Chrome (Auto) 的 uTLS 模拟器包含 X25519MLKEM768，与新版 Xray REALITY 服务端的默认策略兼容。
+// isReality 表示节点是否实际使用 REALITY（有 public-key），避免对普通 TLS 节点误触发。
+func shouldEnableX25519MLKEM768(explicit int, fingerprint string, isReality bool) bool {
+	if explicit == 1 {
+		return true
+	}
+	return isReality && strings.EqualFold(fingerprint, "chrome")
+}
+
 // shouldPreserveProxyGroup 判断代理组是否应保留模板原始语义，而不是在服务端展开成固定节点列表。
 func shouldPreserveProxyGroup(proxyGroup map[string]any) bool {
 	for _, field := range []string{"include-all", "include-all-proxies", "include-all-providers"} {
