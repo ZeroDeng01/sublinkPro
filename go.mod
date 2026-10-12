@@ -3,7 +3,7 @@ module sublink
 go 1.26.4
 
 require (
-	github.com/dlclark/regexp2/v2 v2.8.1
+	github.com/dlclark/regexp2/v2 v2.8.4
 	github.com/dop251/goja v0.0.0-20260607120635-348e6bea910d
 	github.com/gin-gonic/gin v1.12.0
 	github.com/glebarez/sqlite v1.11.0
