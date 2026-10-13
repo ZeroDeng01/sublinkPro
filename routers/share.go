@@ -12,6 +12,9 @@ func Share(r *gin.Engine) {
 	shareGroup := r.Group("/api/v1/shares")
 	shareGroup.Use(middlewares.AuthToken)
 	{
+		shareGroup.GET("/devices", api.ShareDevices)
+		shareGroup.POST("/device-update", api.ShareDeviceUpdate)
+		shareGroup.POST("/devices-reset", api.ShareDevicesReset)
 		shareGroup.GET("/get", api.ShareGet)                   // 获取订阅的所有分享（支持分页）
 		shareGroup.POST("/add", api.ShareAdd)                  // 创建新分享
 		shareGroup.POST("/update", api.ShareUpdate)            // 更新分享
