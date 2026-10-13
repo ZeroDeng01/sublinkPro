@@ -21,7 +21,7 @@ func TestEvaluateGeminiUnlockProbe(t *testing.T) {
 	}{
 		{
 			name:       "available marker",
-			response:   &unlockHTTPResponse{StatusCode: http.StatusOK, Body: "prefix 45631641,null,true suffix"},
+			response:   &unlockHTTPResponse{StatusCode: http.StatusOK, Body: "prefix \"45631641\\\":true suffix"},
 			wantStatus: models.UnlockStatusAvailable,
 		},
 		{
