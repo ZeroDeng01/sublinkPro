@@ -21,6 +21,7 @@ func init() {
 		FieldMeta{Name: "Net", Label: "传输层", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "http", "grpc", "h2", "quic"}},
 		FieldMeta{Name: "Path", Label: "路径", Type: "string", Group: "transport", Placeholder: "/ws"},
 		FieldMeta{Name: "Host", Label: "Host / WS Host", Type: "string", Group: "transport", Placeholder: "cdn.example.com"},
+		FieldMeta{Name: "Headers", Label: "WS Headers", Type: "string", Group: "transport", Multiline: true, Advanced: true},
 		FieldMeta{Name: "Type", Label: "Header Type", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Tls", Label: "TLS", Type: "string", Group: "tls", Options: []string{"", "tls", "none"}},
 		FieldMeta{Name: "Sni", Label: "SNI", Type: "string", Group: "tls", Placeholder: "server.example.com"},
@@ -49,6 +50,9 @@ type Vmess struct {
 	Tls  string `json:"tls,omitempty"`
 	Type string `json:"type,omitempty"`
 	V    string `json:"v,omitempty"`
+
+	// Headers 以 JSON 字符串保存 Host 以外的 WebSocket 请求头（如 User-Agent），避免 Clash 往返转换时丢失
+	Headers string `json:"headers,omitempty"`
 }
 
 // EncodeVmessURL 将 VMess 结构编码为标准 vmess:// base64 JSON 链接。
@@ -142,9 +146,11 @@ func ConvertProxyToVmess(proxy Proxy) Vmess {
 		if path, ok := proxy.Ws_opts["path"].(string); ok {
 			vmess.Path = path
 		}
-		if headers, ok := proxy.Ws_opts["headers"].(map[string]any); ok {
-			if host, ok := headers["Host"].(string); ok {
-				vmess.Host = host
+		headers := trojanHeadersFromValue(proxy.Ws_opts["headers"])
+		vmess.Host, headers = trojanHostAndExtraHeaders(headers)
+		if len(headers) > 0 {
+			if encoded, err := json.Marshal(headers); err == nil {
+				vmess.Headers = string(encoded)
 			}
 		}
 	}
@@ -176,7 +182,7 @@ func buildVMessProxy(link Urls, config OutputConfig) (Proxy, error) {
 	if vmess.Ps == "" {
 		vmess.Ps = fmt.Sprintf("%s:%s", vmess.Add, utils.GetPortString(vmess.Port))
 	}
-	wsOpts := map[string]any{"path": vmess.Path, "headers": map[string]any{"Host": vmess.Host}}
+	wsOpts := map[string]any{"path": vmess.Path, "headers": trojanWSHeaders(vmess.Headers, vmess.Host)}
 	DeleteOpts(wsOpts)
 	tls := vmess.Tls != "none" && vmess.Tls != ""
 	port, _ := convertToInt(vmess.Port)
