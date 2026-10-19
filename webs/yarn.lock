@@ -4537,15 +4537,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"i18next@npm:^26.4.2":
-  version: 26.4.2
-  resolution: "i18next@npm:26.4.2"
+"i18next@npm:^26.4.6":
+  version: 26.4.6
+  resolution: "i18next@npm:26.4.6"
   peerDependencies:
     typescript: ^5 || ^6 || ^7
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 10c0/f2c9613e03e09e56a84aee939d8fbe3442a58622915e11f97e47f9ab358dfa65be783230b37a21483152711f786fccfe697d7f5ea9269c54f16179dc59960e4b
+  checksum: 10c0/47c3577593ef63396163bd60abab5f5ab5638cb8a92e79a85307e7f5a9bbab8d7cb6a019ea7298c3c6eabb954e93be207822c508010d61a2ba938b80e1b1243e
   languageName: node
   linkType: hard
 
@@ -6303,20 +6303,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dom@npm:19.3.0":
-  version: 19.3.0
-  resolution: "react-dom@npm:19.3.0"
+"react-dom@npm:19.3.1":
+  version: 19.3.1
+  resolution: "react-dom@npm:19.3.1"
   dependencies:
     scheduler: "npm:^0.28.0"
   peerDependencies:
-    react: ^19.3.0
-  checksum: 10c0/c513044b724dd6bfe9500a9682d60973e7f8a48cffba00b6b16d3e910e27dcc459bf71bf0a5c33d7d62a3843ca30de1bd1e2098058aa4ed71f618a24b6061da5
+    react: ^19.3.1
+  checksum: 10c0/382700916313b2ebc46acee80642f300bb8601eac6a9e7fefade5b8b30e66b05bf3aaa56a3c964589fcd578d27b486e847470c2697d879264e766661ff49fac7
   languageName: node
   linkType: hard
 
-"react-i18next@npm:^17.0.16":
-  version: 17.0.16
-  resolution: "react-i18next@npm:17.0.16"
+"react-i18next@npm:^17.0.18":
+  version: 17.0.18
+  resolution: "react-i18next@npm:17.0.18"
   dependencies:
     "@babel/runtime": "npm:^7.29.7"
     html-parse-stringify: "npm:^4.0.1"
@@ -6332,7 +6332,7 @@ __metadata:
       optional: true
     typescript:
       optional: true
-  checksum: 10c0/4e5e1b6a79228532fb51140fbbb26d019fe48d0d600213b81ece5d66c4d3b99b94cf97c54cd6c49bb4af6ff8504baa8327397f9ddf264455ad3fa6ea114cffa2
+  checksum: 10c0/6f3dda628d09ba5009211fab0f053331f8019ef190833f89b7e37cbe2d280e00c48d6038d32f44426ba61ac6cb43b280053558186b3998b07cae8852e4f39d09
   languageName: node
   linkType: hard
 
@@ -6441,10 +6441,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:19.3.0":
-  version: 19.3.0
-  resolution: "react@npm:19.3.0"
-  checksum: 10c0/dd3099c3c43a7122bc01223bb26b0f8d5ba13cca569af6fb94a005fb54fa73223c9cb203bb226d40cfd49a82cbeef2e36ce84062a3a6d5b9fe8f4437694c7b52
+"react@npm:19.3.1":
+  version: 19.3.1
+  resolution: "react@npm:19.3.1"
+  checksum: 10c0/f0ed036d1223562c09c8347858ca712733ea6e27a30db709ee9c3f3f176d3e9e767afce735d59956addf3d030102e256bba82dea635fc1bdb0e01107e98fef10
   languageName: node
   linkType: hard
 
@@ -7281,7 +7281,7 @@ __metadata:
     eslint-plugin-react: "npm:7.37.5"
     eslint-plugin-react-hooks: "npm:7.1.1"
     framer-motion: "npm:12.43.0"
-    i18next: "npm:^26.4.2"
+    i18next: "npm:^26.4.6"
     i18next-browser-languagedetector: "npm:^8.2.1"
     i18next-resources-to-backend: "npm:^1.2.3"
     lodash-es: "npm:4.18.1"
@@ -7290,11 +7290,11 @@ __metadata:
     monaco-editor: "npm:^0.57.0"
     prettier: "npm:3.9.9"
     qrcode.react: "npm:^4.2.0"
-    react: "npm:19.3.0"
+    react: "npm:19.3.1"
     react-apexcharts: "npm:1.9.0"
     react-device-detect: "npm:2.2.3"
-    react-dom: "npm:19.3.0"
-    react-i18next: "npm:^17.0.16"
+    react-dom: "npm:19.3.1"
+    react-i18next: "npm:^17.0.18"
     react-markdown: "npm:^10.1.0"
     react-router: "npm:7.18.4"
     react-router-dom: "npm:7.18.4"
