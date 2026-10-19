@@ -96,7 +96,7 @@ func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	if vless.Name == "" {
 		vless.Name = fmt.Sprintf("%s:%s", vless.Server, utils.GetPortString(vless.Port))
 	}
-	wsOpts := map[string]any{"path": vless.Query.Path, "headers": trojanWSHeaders(vless.Query.Headers, vless.Query.Host)}
+	wsOpts := map[string]any{"path": vless.Query.Path, "headers": vlessWSHeaders(vless.Query.Headers, vless.Query.Host)}
 	if vless.Query.MaxEarlyData > 0 {
 		wsOpts["max-early-data"] = vless.Query.MaxEarlyData
 	}
@@ -464,8 +464,8 @@ func ConvertProxyToVless(proxy Proxy) VLESS {
 		if path, ok := proxy.Ws_opts["path"].(string); ok {
 			vless.Query.Path = path
 		}
-		headers := trojanHeadersFromValue(proxy.Ws_opts["headers"])
-		vless.Query.Host, headers = trojanHostAndExtraHeaders(headers)
+		headers := vlessHeadersFromValue(proxy.Ws_opts["headers"])
+		vless.Query.Host, headers = vlessHostAndExtraHeaders(headers)
 		if len(headers) > 0 {
 			if encoded, err := json.Marshal(headers); err == nil {
 				vless.Query.Headers = string(encoded)
@@ -809,4 +809,58 @@ func applyVLESSXHTTPSkipCertOverride(xhttpOpts map[string]any, forceSkipCert boo
 		return
 	}
 	downloadSettings["skip-cert-verify"] = true
+}
+
+// vlessWSHeaders 将 JSON 字符串保存的额外请求头与 Host 合并为 Clash ws-opts.headers
+func vlessWSHeaders(encoded, host string) map[string]any {
+	headers := map[string]any{}
+	if encoded != "" {
+		if err := json.Unmarshal([]byte(encoded), &headers); err != nil || headers == nil {
+			headers = map[string]any{}
+		}
+	}
+	if host != "" {
+		for key := range headers {
+			if strings.EqualFold(key, "host") {
+				delete(headers, key)
+			}
+		}
+		headers["Host"] = host
+	}
+	return headers
+}
+
+// vlessHeadersFromValue 将 Clash ws-opts.headers 统一转换为 map[string]any
+func vlessHeadersFromValue(value any) map[string]any {
+	switch headers := value.(type) {
+	case map[string]any:
+		return headers
+	case map[string]string:
+		converted := make(map[string]any, len(headers))
+		for key, header := range headers {
+			converted[key] = header
+		}
+		return converted
+	default:
+		return nil
+	}
+}
+
+// vlessHostAndExtraHeaders 拆分出 Host（大小写不敏感）与其余请求头
+func vlessHostAndExtraHeaders(headers map[string]any) (string, map[string]any) {
+	if len(headers) == 0 {
+		return "", nil
+	}
+	host := ""
+	extra := make(map[string]any, len(headers))
+	for key, value := range headers {
+		if strings.EqualFold(key, "host") {
+			if header, ok := value.(string); ok && header != "" && host == "" {
+				host = header
+				continue
+			}
+		}
+		extra[key] = value
+	}
+	return host, extra
 }
