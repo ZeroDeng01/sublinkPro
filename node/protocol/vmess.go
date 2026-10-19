@@ -21,6 +21,7 @@ func init() {
 		FieldMeta{Name: "Net", Label: "传输层", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "http", "grpc", "h2", "quic"}},
 		FieldMeta{Name: "Path", Label: "路径", Type: "string", Group: "transport", Placeholder: "/ws"},
 		FieldMeta{Name: "Host", Label: "Host / WS Host", Type: "string", Group: "transport", Placeholder: "cdn.example.com"},
+		FieldMeta{Name: "Headers", Label: "WS Headers", Type: "string", Group: "transport", Multiline: true, Advanced: true},
 		FieldMeta{Name: "Type", Label: "Header Type", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Tls", Label: "TLS", Type: "string", Group: "tls", Options: []string{"", "tls", "none"}},
 		FieldMeta{Name: "Sni", Label: "SNI", Type: "string", Group: "tls", Placeholder: "server.example.com"},
@@ -49,6 +50,9 @@ type Vmess struct {
 	Tls  string `json:"tls,omitempty"`
 	Type string `json:"type,omitempty"`
 	V    string `json:"v,omitempty"`
+
+	// Headers 以 JSON 字符串保存 Host 以外的 WebSocket 请求头（如 User-Agent），避免 Clash 往返转换时丢失
+	Headers string `json:"headers,omitempty"`
 }
 
 // EncodeVmessURL 将 VMess 结构编码为标准 vmess:// base64 JSON 链接。
@@ -142,9 +146,11 @@ func ConvertProxyToVmess(proxy Proxy) Vmess {
 		if path, ok := proxy.Ws_opts["path"].(string); ok {
 			vmess.Path = path
 		}
-		if headers, ok := proxy.Ws_opts["headers"].(map[string]any); ok {
-			if host, ok := headers["Host"].(string); ok {
-				vmess.Host = host
+		headers := vmessHeadersFromValue(proxy.Ws_opts["headers"])
+		vmess.Host, headers = vmessHostAndExtraHeaders(headers)
+		if len(headers) > 0 {
+			if encoded, err := json.Marshal(headers); err == nil {
+				vmess.Headers = string(encoded)
 			}
 		}
 	}
@@ -176,7 +182,7 @@ func buildVMessProxy(link Urls, config OutputConfig) (Proxy, error) {
 	if vmess.Ps == "" {
 		vmess.Ps = fmt.Sprintf("%s:%s", vmess.Add, utils.GetPortString(vmess.Port))
 	}
-	wsOpts := map[string]any{"path": vmess.Path, "headers": map[string]any{"Host": vmess.Host}}
+	wsOpts := map[string]any{"path": vmess.Path, "headers": vmessWSHeaders(vmess.Headers, vmess.Host)}
 	DeleteOpts(wsOpts)
 	tls := vmess.Tls != "none" && vmess.Tls != ""
 	port, _ := convertToInt(vmess.Port)
@@ -220,4 +226,58 @@ func buildVMessSurgeLine(link string, config OutputConfig) (string, string, erro
 		line = fmt.Sprintf("%s, sni=%s", line, vmess.Sni)
 	}
 	return line, vmess.Ps, nil
+}
+
+// vmessWSHeaders 将 JSON 字符串保存的额外请求头与 Host 合并为 Clash ws-opts.headers
+func vmessWSHeaders(encoded, host string) map[string]any {
+	headers := map[string]any{}
+	if encoded != "" {
+		if err := json.Unmarshal([]byte(encoded), &headers); err != nil || headers == nil {
+			headers = map[string]any{}
+		}
+	}
+	if host != "" {
+		for key := range headers {
+			if strings.EqualFold(key, "host") {
+				delete(headers, key)
+			}
+		}
+		headers["Host"] = host
+	}
+	return headers
+}
+
+// vmessHeadersFromValue 将 Clash ws-opts.headers 统一转换为 map[string]any
+func vmessHeadersFromValue(value any) map[string]any {
+	switch headers := value.(type) {
+	case map[string]any:
+		return headers
+	case map[string]string:
+		converted := make(map[string]any, len(headers))
+		for key, header := range headers {
+			converted[key] = header
+		}
+		return converted
+	default:
+		return nil
+	}
+}
+
+// vmessHostAndExtraHeaders 拆分出 Host（大小写不敏感）与其余请求头
+func vmessHostAndExtraHeaders(headers map[string]any) (string, map[string]any) {
+	if len(headers) == 0 {
+		return "", nil
+	}
+	host := ""
+	extra := make(map[string]any, len(headers))
+	for key, value := range headers {
+		if strings.EqualFold(key, "host") {
+			if header, ok := value.(string); ok && header != "" && host == "" {
+				host = header
+				continue
+			}
+		}
+		extra[key] = value
+	}
+	return host, extra
 }

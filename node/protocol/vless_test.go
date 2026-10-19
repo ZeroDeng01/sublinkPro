@@ -530,3 +530,38 @@ func TestLinkToProxy_VLESSXHTTPSkipCertFollowsSubscriptionConfig(t *testing.T) {
 	}
 	assertEqualBool(t, "DownloadSkipCertVerify", true, mustBool(t, "DownloadSkipCertVerify", downloadSettings["skip-cert-verify"]))
 }
+
+// TestVlessClashWSHeadersRoundTrip 验证 Clash ws-opts.headers 中 Host 以外的请求头（如 User-Agent）经链接往返后不丢失
+func TestVlessClashWSHeadersRoundTrip(t *testing.T) {
+	proxy := Proxy{
+		Name:    "vless-ws-ua",
+		Type:    "vless",
+		Server:  "example.com",
+		Port:    443,
+		Uuid:    "12345678-1234-1234-1234-123456789abc",
+		Network: "ws",
+		Tls:     true,
+		Ws_opts: map[string]any{
+			"path": "/1234",
+			"headers": map[string]any{
+				"Host":       "abc.com",
+				"User-Agent": "Mozilla/5.0 SublinkPro",
+			},
+		},
+	}
+
+	link := EncodeVLESSURL(ConvertProxyToVless(proxy))
+	decoded, err := DecodeVLESSURL(link)
+	if err != nil {
+		t.Fatalf("DecodeVLESSURL failed: %v", err)
+	}
+	assertEqualString(t, "Host", "abc.com", decoded.Query.Host)
+
+	out, err := LinkToProxy(Urls{Url: link}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("LinkToProxy failed: %v", err)
+	}
+	headers := mustMap(t, "Ws_opts headers", out.Ws_opts["headers"])
+	assertEqualString(t, "Host", "abc.com", mustString(t, "Host", headers["Host"]))
+	assertEqualString(t, "User-Agent", "Mozilla/5.0 SublinkPro", mustString(t, "User-Agent", headers["User-Agent"]))
+}
