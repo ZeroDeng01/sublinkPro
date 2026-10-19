@@ -1171,6 +1171,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@dual-bundle/import-meta-resolve@npm:^4.2.1":
+  version: 4.2.1
+  resolution: "@dual-bundle/import-meta-resolve@npm:4.2.1"
+  checksum: 10c0/8f1e572c14c4d20ea35734635085213abd13bd440c251309cf8ae5ed1082f6759cefa1c2c52a631f76859c57e26062f78a8cee4acc239c0edc87cd316a5d3b5b
+  languageName: node
+  linkType: hard
+
 "@emotion/babel-plugin@npm:^11.13.5":
   version: 11.13.5
   resolution: "@emotion/babel-plugin@npm:11.13.5"
@@ -3803,12 +3810,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-plugin-prettier@npm:5.5.6":
-  version: 5.5.6
-  resolution: "eslint-plugin-prettier@npm:5.5.6"
+"eslint-plugin-prettier@npm:5.5.7":
+  version: 5.5.7
+  resolution: "eslint-plugin-prettier@npm:5.5.7"
   dependencies:
     prettier-linter-helpers: "npm:^1.0.1"
-    synckit: "npm:^0.11.13"
+    synckit: "npm:^0.12.3"
   peerDependencies:
     "@types/eslint": ">=8.0.0"
     eslint: ">=8.0.0"
@@ -3819,7 +3826,7 @@ __metadata:
       optional: true
     eslint-config-prettier:
       optional: true
-  checksum: 10c0/af37126c947ff3e87ff1ea76408db8cb1c7da966ebdaba68c6dd5924da7eb1b43b1abc4796d753a97b1bc26ea94c5497093e6ab9f8588fffe558d5a554e19bbf
+  checksum: 10c0/76a1a99ace86471a320d99371cc34b0eee179f39bd383e46244b65b7b08b980b7a8e72f9d7eaaa74e92ede8032bf04ba0b05ba7c648c44a7c49d121df07eb58f
   languageName: node
   linkType: hard
 
@@ -6194,12 +6201,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:3.9.9":
-  version: 3.9.9
-  resolution: "prettier@npm:3.9.9"
+"prettier@npm:3.9.10":
+  version: 3.9.10
+  resolution: "prettier@npm:3.9.10"
   bin:
     prettier: bin/prettier.cjs
-  checksum: 10c0/d50ea2537b2ff7dbd5088a214f4d936484e55c665cea2185b477a55b0770be55f3b156a71f63a9a639def6b334667bb327139dc85f2a1041c0a34752cdc74647
+  checksum: 10c0/0b3531593aa6fb36ac6baf629cb058bda472c59a6938774f931fe55283a07c62e6f56e621b043a82d8a3e21fc284c08c34f9e539fc70072635f79b7bae1a1067
   languageName: node
   linkType: hard
 
@@ -6834,9 +6841,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sass@npm:1.105.1":
-  version: 1.105.1
-  resolution: "sass@npm:1.105.1"
+"sass@npm:1.105.2":
+  version: 1.105.2
+  resolution: "sass@npm:1.105.2"
   dependencies:
     "@parcel/watcher": "npm:^2.4.1"
     chokidar: "npm:^5.0.0"
@@ -6847,7 +6854,7 @@ __metadata:
       optional: true
   bin:
     sass: sass.js
-  checksum: 10c0/07246d9a9cc3c7974d28e03b394791c65d6a8f701d4ed2f130f5cb72ff3ef5626e5e66afb067348b2ae87011c52e18cd29f294025a6430851ee8617ef8c94f38
+  checksum: 10c0/2e219603b075559d834f8f56b03ed1b5d61a88b3fb85a92baef238a653242ef486bbe71f33daf9b8dd0f30b4f627c434e594e35591214b8b177d3b03ac24925c
   languageName: node
   linkType: hard
 
@@ -7277,7 +7284,7 @@ __metadata:
     eslint: "npm:9.39.5"
     eslint-config-prettier: "npm:10.1.8"
     eslint-plugin-jsx-a11y: "npm:6.10.2"
-    eslint-plugin-prettier: "npm:5.5.6"
+    eslint-plugin-prettier: "npm:5.5.7"
     eslint-plugin-react: "npm:7.37.5"
     eslint-plugin-react-hooks: "npm:7.1.1"
     framer-motion: "npm:12.43.0"
@@ -7288,7 +7295,7 @@ __metadata:
     material-ui-popup-state: "npm:5.3.7"
     md5: "npm:^2.3.0"
     monaco-editor: "npm:^0.57.0"
-    prettier: "npm:3.9.9"
+    prettier: "npm:3.9.10"
     qrcode.react: "npm:^4.2.0"
     react: "npm:19.3.0"
     react-apexcharts: "npm:1.9.0"
@@ -7298,7 +7305,7 @@ __metadata:
     react-markdown: "npm:^10.1.0"
     react-router: "npm:7.18.4"
     react-router-dom: "npm:7.18.4"
-    sass: "npm:1.105.1"
+    sass: "npm:1.105.2"
     simplebar-react: "npm:3.3.2"
     swr: "npm:2.5.1"
     vite: "npm:8.3.4"
@@ -7355,12 +7362,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"synckit@npm:^0.11.13":
-  version: 0.11.13
-  resolution: "synckit@npm:0.11.13"
+"synckit@npm:^0.12.3":
+  version: 0.12.3
+  resolution: "synckit@npm:0.12.3"
   dependencies:
+    "@dual-bundle/import-meta-resolve": "npm:^4.2.1"
     "@pkgr/core": "npm:^0.3.6"
-  checksum: 10c0/5a6c19f4f79045aaa7994106401bff6dbe7cca23a6d0a0723ff14eb8b1bebeb4a71729118f6914905598e304ea2fa13509885e11ba07d92e7cb68a06740cb328
+  checksum: 10c0/e7c3c5bd8272c55c0e108c296dbd0d326e9f22614227079b46ff7bd51c0970d810b222a3a14f5b0f1797d8af2c82058b9a927ac63a06219ead8535d271b382e1
   languageName: node
   linkType: hard
 
