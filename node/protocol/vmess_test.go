@@ -3,6 +3,8 @@ package protocol
 import (
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // TestVmessEncodeDecode 测试 VMess 编解码完整性
@@ -137,4 +139,44 @@ func TestVmessSpecialCharacters(t *testing.T) {
 			t.Logf("✓ 特殊字符测试通过: %s", name)
 		})
 	}
+}
+
+// TestVmessClashWSHeadersRoundTrip 验证 Clash ws-opts.headers 中 Host 以外的请求头（如 User-Agent）经链接往返后不丢失
+func TestVmessClashWSHeadersRoundTrip(t *testing.T) {
+	const ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+	const doc = `
+name: vmess-ws-ua
+type: vmess
+server: example.com
+port: 443
+uuid: 12345678-1234-1234-1234-123456789abc
+alterId: 0
+cipher: auto
+network: ws
+ws-opts:
+  path: /1234
+  headers:
+    Host: abc.com
+    User-Agent: ` + ua + `
+`
+	var proxy Proxy
+	if err := yaml.Unmarshal([]byte(doc), &proxy); err != nil {
+		t.Fatalf("yaml.Unmarshal failed: %v", err)
+	}
+
+	link := EncodeVmessURL(ConvertProxyToVmess(proxy))
+	decoded, err := DecodeVMESSURL(link)
+	if err != nil {
+		t.Fatalf("DecodeVMESSURL failed: %v", err)
+	}
+	assertEqualString(t, "Host", "abc.com", decoded.Host)
+
+	out, err := LinkToProxy(Urls{Url: link}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("LinkToProxy failed: %v", err)
+	}
+	assertEqualString(t, "Path", "/1234", mustString(t, "Path", out.Ws_opts["path"]))
+	headers := mustMap(t, "Ws_opts headers", out.Ws_opts["headers"])
+	assertEqualString(t, "Host", "abc.com", mustString(t, "Host", headers["Host"]))
+	assertEqualString(t, "User-Agent", ua, mustString(t, "User-Agent", headers["User-Agent"]))
 }
