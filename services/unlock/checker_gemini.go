@@ -45,7 +45,7 @@ func (geminiUnlockChecker) Check(runtime UnlockRuntime) models.UnlockProviderRes
 
 func evaluateGeminiUnlockProbe(runtime UnlockRuntime, resp *unlockHTTPResponse) models.UnlockProviderResult {
 	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
-		if strings.Contains(resp.Body, "\"45631641\\\":true") {
+		if strings.Contains(resp.Body, `\"45631641\":true`) || strings.Contains(resp.Body, `"45631641":true`) {
 			return models.UnlockProviderResult{Provider: models.UnlockProviderGemini, Status: models.UnlockStatusAvailable, Region: runtime.LandingCountry}
 		}
 		if containsAny(resp.Body, geminiRestrictedMarkers) {
