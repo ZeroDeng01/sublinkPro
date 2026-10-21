@@ -174,11 +174,11 @@ const system = {
       adminOnly: true
     },
     {
-      id: "monitor",
-      title: "System Monitor",
-      titleKey: "navigation.items.monitor",
-      type: "item",
-      url: "/system/monitor",
+      id: 'monitor',
+      title: 'System Monitor',
+      titleKey: 'navigation.items.monitor',
+      type: 'item',
+      url: '/system/monitor',
       icon: IconDeviceDesktopAnalytics,
       breadcrumbs: true
     },
