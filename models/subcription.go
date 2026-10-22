@@ -25,6 +25,8 @@ func init() {
 }
 
 type Subcription struct {
+	DefaultKaringOnly     bool `gorm:"default:false" json:"DefaultKaringOnly"`
+	DefaultMaxDevices     int  `gorm:"default:0" json:"DefaultMaxDevices"`
 	ID                    int
 	Name                  string
 	Config                string    `gorm:"embedded"`
@@ -258,9 +260,10 @@ func (sub *Subcription) AddScripts(scriptIDs []int) error {
 // 更新订阅 (Write-Through)
 func (sub *Subcription) Update() error {
 	updates := map[string]any{
-		"name":                     sub.Name,
-		"config":                   sub.Config,
-		"create_date":              sub.CreateDate,
+		"name":                sub.Name,
+		"config":              sub.Config,
+		"create_date":         sub.CreateDate,
+		"default_karing_only": sub.DefaultKaringOnly, "default_max_devices": sub.DefaultMaxDevices,
 		"ip_whitelist":             sub.IPWhitelist,
 		"ip_blacklist":             sub.IPBlacklist,
 		"delay_time":               sub.DelayTime,
@@ -1114,6 +1117,17 @@ func (sub *Subcription) Del() error {
 		tx.Rollback()
 		return err
 	}
+	// Delete devices under the same share-row locks used by admission.
+	for _, share := range subscriptionShares {
+		if _, err := lockShare(tx, share.ID); err != nil {
+			tx.Rollback()
+			return err
+		}
+		if err := tx.Where("share_id = ?", share.ID).Delete(&ShareDevice{}).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
 	// 删除关联的订阅分享
 	if err := tx.Where("subscription_id = ?", sub.ID).Delete(&SubscriptionShare{}).Error; err != nil {
 		tx.Rollback()
@@ -1153,6 +1167,7 @@ func (sub *Subcription) Del() error {
 func (sub *Subcription) Copy() (*Subcription, error) {
 	// 创建新订阅对象，复制所有配置字段
 	newSub := &Subcription{
+		DefaultKaringOnly: sub.DefaultKaringOnly, DefaultMaxDevices: sub.DefaultMaxDevices,
 		Name:                  sub.Name + "_复制",
 		Config:                sub.Config,
 		CreateDate:            time.Now().Format("2006-01-02 15:04:05"),

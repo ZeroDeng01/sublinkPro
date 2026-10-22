@@ -423,3 +423,7 @@ services:
 
 > [!NOTE]
 > 完整的 Docker Compose 模板请参考项目根目录的 `docker-compose.example.yml` 文件。
+
+### 分享设备默认限制
+
+`DefaultKaringOnly`（新订阅默认 true）和 `DefaultMaxDevices`（新订阅默认 1）存储于数据库，通过订阅表单管理。新分享继承为 `karing_only`、`max_devices`，之后独立修改；旧数据迁移为 false/0。无需新增环境变量或 YAML 配置。详见[订阅分享](features/subscription-share.zh-CN.md#karing-设备数量限制)。
