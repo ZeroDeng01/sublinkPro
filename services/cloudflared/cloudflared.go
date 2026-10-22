@@ -49,7 +49,7 @@ type Manager struct {
 	mu          sync.Mutex
 	cmd         *exec.Cmd
 	cancel      context.CancelFunc
-	done        chan error
+	done        chan struct{}
 	running     bool
 	stopping    bool
 	lastMessage string
@@ -217,7 +217,7 @@ func (m *Manager) start(token string, persist bool) error {
 
 	m.cmd = cmd
 	m.cancel = cancel
-	m.done = make(chan error, 1)
+	m.done = make(chan struct{})
 	m.running = true
 	m.stopping = false
 	m.lastMessage = "cloudflared 正在启动"
@@ -284,7 +284,7 @@ func (m *Manager) stop(disableAutostart bool) error {
 	}
 }
 
-func (m *Manager) wait(cmd *exec.Cmd, done chan error) {
+func (m *Manager) wait(cmd *exec.Cmd, done chan struct{}) {
 	err := cmd.Wait()
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -300,7 +300,6 @@ func (m *Manager) wait(cmd *exec.Cmd, done chan error) {
 		}
 		m.stopping = false
 	}
-	done <- err
 	close(done)
 }
 

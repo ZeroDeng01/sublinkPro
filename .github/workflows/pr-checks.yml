@@ -137,7 +137,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: '1.26.4'
+          go-version: '1.27.3'
           cache: true
           cache-dependency-path: go.sum
 
@@ -149,7 +149,7 @@ jobs:
         continue-on-error: true
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.12.2
+          version: v2.15.0
 
       - name: Run Go tests
         id: gotest
