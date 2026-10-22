@@ -37,7 +37,7 @@ First built in Providers:
 
 Open:
 
-`Node Check -> New / Edit Profile`
+`Detection center -> Detection plans -> New plan / Configure`
 
 In the profile, enable:
 
@@ -309,3 +309,24 @@ This feature currently does not aim for:
 The first version's goal is:
 
 **Maintainable, extensible, batch runnable, and stable to display.**
+
+---
+
+## Detection center: plans, jobs, history and results
+
+The **Detection center** separates four responsibilities:
+
+- **Detection plans** define connectivity/latency, optional download speed, exit IP/country, IP quality and metadata-driven AI/streaming modules. Request URLs, timeouts, concurrency, sampling and traffic settings remain under detailed settings. Latency is the baseline; download speed enables the existing Mihomo full-test mode. Single/selected-node checks still use the plan picker and explicit node IDs.
+- **Automatic jobs** reuse plans and select all nodes or an airport/source-group/tag intersection. Five-field Cron uses the server/container timezone; the generator preview uses browser time. Airport-update events check matching nodes only after that airport updates successfully.
+- **Run history** reuses existing `speed_test` task records, progress and stop actions. Names are not stable plan IDs. These are execution summaries, not per-node historical snapshots.
+- **Node results** show paginated **latest** check states, source airports, provider status/reason/detail and timestamps, with single-node rechecks. Raw proxy links and credentials are not included in this result response.
+
+For scheduled filtered jobs, select airports and enable **Update selected airports first**. Checks wait for all selected updates and automatic tagging before resolving the latest scope. Failure/cancellation stops the check. These pre-updates suppress post-update detection hooks to prevent recursion or duplicate checks within that orchestration.
+
+Each independent job prevents its own overlapping runs. Repeated manual starts fail, scheduled overlap skips, and airport events arriving during a run coalesce into one follow-up batch that rereads current enabled state and scope. This is **per-job** protection, not a global node lock. Other jobs and existing airport post-update checks remain independent; avoid duplicate paths for the same nodes. Empty selections never fall back to all nodes or the plan's legacy scope.
+
+Existing plan IDs, airport references, APIs and Telegram schedule toggles remain compatible. Old profile schedules appear as negative-ID **Compatibility jobs**, mapped rather than copied or registered twice. Edit Cron/groups/tags there; create an independent job to use another plan or pre-update airports. Deleting a compatibility job clears only its schedule, not its plan. Referenced plans cannot be deleted, including references from paused jobs or airports. Database restore preserves independent job and plan IDs; old backups clear stale target jobs.
+
+**Back up the database before upgrading**: the automatic-job table is migrated on startup. Saved results feed existing subscription filters without moving nodes or triggering a second check. Network probes do not establish account login or paid-model access; third-party IP risk is not an official platform score.
+
+OpenClash and other clients remain independent. Finish checks before their own subscription refresh, allowing a buffer based on node count/concurrency/timeouts. Fetches do not wait for unfinished jobs.

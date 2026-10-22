@@ -1443,7 +1443,7 @@ export default function NodeList() {
         onClose={() => setProfileSelectOpen(false)}
         nodeIds={profileSelectNodeIds}
         onSuccess={showMessage}
-        onOpenSettings={() => setProfilesDrawerOpen(true)}
+        onOpenSettings={() => navigate('/subscription/node-check')}
       />
 
       {/* 批量修改分组对话框 */}

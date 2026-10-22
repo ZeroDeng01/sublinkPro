@@ -58,6 +58,7 @@ English | [简体中文](README.zh-CN.md)
 
 | Feature | Description | Details |
 |:---|:---|:---:|
+| 🧭 **Detection center** | Reusable plans, scoped automatic jobs, run history and latest node results; scheduled/airport-update checks with single-node testing retained | [📖](docs/features/unlock-check.md#detection-center-plans-jobs-history-and-results) |
 | 🏷️ **Smart tag system** | Automatic rule based tagging, no code filtering, IP quality conditions | [📖](docs/features/tags.md) |
 | ⚡ **Professional speed test system** | Two stage tests, smart latency measurement, IP quality and unlock checks | [📖](docs/features/speedtest.md) |
 | 🔗 **Chain proxy** | Native Dialer-Proxy support, visual configuration, IP quality based node selection | [📖](docs/features/chain-proxy.md) |

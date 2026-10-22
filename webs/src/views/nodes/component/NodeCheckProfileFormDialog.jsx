@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // material-ui
@@ -34,13 +34,11 @@ import Checkbox from '@mui/material/Checkbox';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SpeedIcon from '@mui/icons-material/Speed';
-import TimerIcon from '@mui/icons-material/Timer';
 import TuneIcon from '@mui/icons-material/Tune';
 import DataUsageIcon from '@mui/icons-material/DataUsage';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 // project imports
-import CronExpressionGenerator from 'components/CronExpressionGenerator';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from 'utils/colorUtils';
 import { getNodeCheckStrategyThemeTokens } from '../nodeCheckTheme';
@@ -67,6 +65,7 @@ import {
  */
 function ConfigSection({ title, icon, children, defaultExpanded = true, helperText, themeTokens }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const contentId = useId();
   const { isDark, palette, panelBorder, sectionSurface, sectionHeaderSurface, sectionHoverSurface } = themeTokens;
 
   return (
@@ -82,9 +81,18 @@ function ConfigSection({ title, icon, children, defaultExpanded = true, helperTe
       }}
     >
       <Box
+        component="button"
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={contentId}
         onClick={() => setExpanded(!expanded)}
         sx={{
           display: 'flex',
+          border: 0,
+          width: '100%',
+          textAlign: 'left',
+          font: 'inherit',
+          color: 'text.primary',
           alignItems: 'center',
           justifyContent: 'space-between',
           p: 1.5,
@@ -103,7 +111,7 @@ function ConfigSection({ title, icon, children, defaultExpanded = true, helperTe
         </Box>
         {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
       </Box>
-      <Collapse in={expanded}>
+      <Collapse id={contentId} in={expanded}>
         <Divider sx={{ borderColor: panelBorder }} />
         <Box sx={{ p: 2 }}>
           {children}
@@ -130,7 +138,7 @@ ConfigSection.propTypes = {
 /**
  * 节点检测策略编辑表单对话框
  */
-export default function NodeCheckProfileFormDialog({ open, onClose, profile, groupOptions = [], tagOptions = [], onSuccess }) {
+export default function NodeCheckProfileFormDialog({ open, onClose, profile, onSuccess }) {
   const theme = useTheme();
   const { t } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -157,33 +165,23 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
     boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none'
   });
 
-  const autocompleteChipSx = {
-    '& .MuiAutocomplete-tag': {
-      bgcolor: isDark ? withAlpha(palette.primary.main, 0.16) : undefined,
-      color: isDark ? themeTokens.primaryText : undefined,
-      border: isDark ? '1px solid' : undefined,
-      borderColor: isDark ? withAlpha(palette.primary.main, 0.3) : undefined,
-      '& .MuiChip-deleteIcon': {
-        color: isDark ? withAlpha(palette.primary.main, 0.7) : undefined,
-        transition: 'color 0.2s',
-        '&:hover': {
-          color: isDark ? palette.primary.main : undefined
-        }
-      }
-    }
-  };
-
   // 表单状态
   const [form, setForm] = useState(() => createNodeCheckProfileFormState());
 
   const [submitting, setSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [unlockMetaLoading, setUnlockMetaLoading] = useState(false);
   const [unlockProviderQuery, setUnlockProviderQuery] = useState('');
+
+  const modeUrls = useRef({});
 
   // 初始化表单
   useEffect(() => {
     if (open) {
-      setForm(createNodeCheckProfileFormState(profile));
+      const initial = createNodeCheckProfileFormState(profile);
+      modeUrls.current = { [initial.mode]: initial.testUrl };
+      setForm(initial);
+      setSaveError('');
     }
   }, [open, profile]);
 
@@ -205,15 +203,6 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
     loadUnlockMeta();
   }, [open]);
 
-  useEffect(() => {
-    if (open && groupOptions && form.groups?.length > 0) {
-      const validGroups = form.groups.filter((g) => groupOptions.includes(g));
-      if (validGroups.length !== form.groups.length) {
-        setForm((prev) => ({ ...prev, groups: validGroups }));
-      }
-    }
-  }, [groupOptions, open, form.groups, setForm]);
-
   // 更新表单字段
   const updateForm = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -222,7 +211,10 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
   // 模式切换时更新默认URL
   const handleModeChange = (mode) => {
     const defaultUrl = mode === 'mihomo' ? SPEED_TEST_MIHOMO_OPTIONS[0]?.value : SPEED_TEST_TCP_OPTIONS[0]?.value;
-    setForm((prev) => ({ ...prev, mode, testUrl: defaultUrl }));
+    setForm((prev) => {
+      modeUrls.current[prev.mode] = prev.testUrl;
+      return { ...prev, mode, testUrl: modeUrls.current[mode] ?? defaultUrl };
+    });
   };
 
   // 提交表单
@@ -233,7 +225,12 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
 
     setSubmitting(true);
     try {
-      const data = buildNodeCheckProfilePayload(form);
+      // 方案编辑不再提交调度/范围字段，后端保留兼容任务的旧配置。
+      const { enabled, cronExpr, groups, tags, ...data } = buildNodeCheckProfilePayload(form);
+      void enabled;
+      void cronExpr;
+      void groups;
+      void tags;
 
       if (isEdit) {
         await updateNodeCheckProfile(profile.id, data);
@@ -243,7 +240,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
 
       onSuccess?.();
     } catch (error) {
-      console.error('保存失败:', error);
+      setSaveError(error.message || t('detectionCenter.saveFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -251,6 +248,34 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
 
   const urlOptions = form.mode === 'mihomo' ? SPEED_TEST_MIHOMO_OPTIONS : SPEED_TEST_TCP_OPTIONS;
   const unlockProviderOptions = getUnlockProviderOptions();
+
+  const selectedProviders = form.detectUnlock
+    ? form.unlockProviders.length
+      ? form.unlockProviders
+      : unlockProviderOptions.map((p) => p.value)
+    : [];
+  const categoryChoice = (category) => {
+    const keys = unlockProviderOptions.filter((p) => p.category === category).map((p) => p.value);
+    return {
+      key: category,
+      checked: keys.some((key) => selectedProviders.includes(key)),
+      indeterminate: keys.some((key) => selectedProviders.includes(key)) && !keys.every((key) => selectedProviders.includes(key)),
+      disabled: !keys.length || unlockMetaLoading,
+      change: (checked) =>
+        setForm((prev) => {
+          const next = checked ? [...new Set([...selectedProviders, ...keys])] : selectedProviders.filter((key) => !keys.includes(key));
+          return { ...prev, unlockProviders: next, detectUnlock: next.length > 0 };
+        })
+    };
+  };
+  const moduleChoices = [
+    { key: 'latency', checked: true, disabled: true },
+    { key: 'speed', checked: form.mode === 'mihomo', change: (checked) => handleModeChange(checked ? 'mihomo' : 'tcp') },
+    { key: 'exit', checked: form.detectCountry, change: (checked) => updateForm('detectCountry', checked) },
+    { key: 'quality', checked: form.detectQuality, change: (checked) => updateForm('detectQuality', checked) },
+    categoryChoice('ai'),
+    categoryChoice('streaming')
+  ];
 
   return (
     <Dialog
@@ -293,30 +318,55 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
           required
         />
 
-        {/* ========== 定时检测 ========== */}
-        <ConfigSection
-          title={t('nodes.nodeCheckProfiles.form.scheduleTitle')}
-          icon={<TimerIcon fontSize="small" color="action" />}
-          themeTokens={themeTokens}
-        >
-          <Stack spacing={2}>
-            <FormControlLabel
-              control={<Switch checked={form.enabled} onChange={(e) => updateForm('enabled', e.target.checked)} />}
-              label={t('nodes.nodeCheckProfiles.form.enableSchedule')}
-            />
-            {form.enabled && (
-              <CronExpressionGenerator
-                value={form.cronExpr}
-                onChange={(value) => updateForm('cronExpr', value)}
-                label={t('nodes.nodeCheckProfiles.form.cronExpression')}
+        {saveError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {saveError}
+          </Alert>
+        )}
+        <Alert severity="info" sx={{ mb: 2 }}>
+          {t('detectionCenter.planHelp')}
+        </Alert>
+        <Typography variant="subtitle1">{t('detectionCenter.modules')}</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1, my: 2 }}>
+          {moduleChoices.map((item) => (
+            <Paper
+              key={item.key}
+              variant="outlined"
+              sx={{
+                p: 1,
+                bgcolor: item.checked ? 'action.selected' : 'background.paper',
+                borderColor: item.checked ? 'primary.main' : 'divider'
+              }}
+            >
+              <FormControlLabel
+                sx={{ m: 0, alignItems: 'flex-start' }}
+                control={
+                  <Checkbox
+                    checked={item.checked}
+                    indeterminate={item.indeterminate}
+                    disabled={item.disabled || submitting}
+                    onChange={(_, checked) => item.change?.(checked)}
+                  />
+                }
+                label={
+                  <Box sx={{ pt: 0.5 }}>
+                    <Typography variant="body2">{t(`detectionCenter.module.${item.key}`)}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {t(`detectionCenter.moduleHelp.${item.key}`)}
+                    </Typography>
+                  </Box>
+                }
               />
-            )}
-          </Stack>
-        </ConfigSection>
-
+            </Paper>
+          ))}
+        </Box>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          {t('detectionCenter.probeWarning')}
+        </Alert>
         {/* ========== 测速模式 ========== */}
         <ConfigSection
-          title={t('nodes.nodeCheckProfiles.form.modeTitle')}
+          title={t('detectionCenter.requestSettings')}
+          defaultExpanded={false}
           icon={<SpeedIcon fontSize="small" color="action" />}
           themeTokens={themeTokens}
           helperText={
@@ -669,7 +719,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
         <ConfigSection
           title={t('nodes.nodeCheckProfiles.form.performanceTitle')}
           icon={<TuneIcon fontSize="small" color="action" />}
-          defaultExpanded={true}
+          defaultExpanded={false}
           themeTokens={themeTokens}
         >
           <Stack spacing={2}>
@@ -718,7 +768,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
             </Alert>
 
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -736,7 +786,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                   helperText={t('nodes.nodeCheckProfiles.form.dynamicHelper')}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -755,83 +805,6 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, gro
                 />
               </Grid>
             </Grid>
-          </Stack>
-        </ConfigSection>
-
-        {/* ========== 测速范围 ========== */}
-        <ConfigSection
-          title={t('nodes.nodeCheckProfiles.form.scopeTitle')}
-          icon={<DataUsageIcon fontSize="small" color="action" />}
-          defaultExpanded={false}
-          themeTokens={themeTokens}
-          helperText={t('nodes.nodeCheckProfiles.form.scopeHelper')}
-        >
-          <Stack spacing={2}>
-            <Autocomplete
-              multiple
-              size="small"
-              options={groupOptions}
-              value={form.groups}
-              onChange={(_, newValue) => updateForm('groups', newValue)}
-              sx={autocompleteChipSx}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={t('nodes.nodeCheckProfiles.form.groups')}
-                  placeholder={t('nodes.nodeCheckProfiles.form.groupsPlaceholder')}
-                />
-              )}
-            />
-            <Autocomplete
-              multiple
-              size="small"
-              options={tagOptions || []}
-              getOptionLabel={(option) => option.name || option}
-              value={form.tags.map((t) => tagOptions.find((tag) => tag.name === t) || { name: t })}
-              onChange={(_, newValue) =>
-                updateForm(
-                  'tags',
-                  newValue.map((t) => t.name || t)
-                )
-              }
-              isOptionEqualToValue={(option, value) => (option.name || option) === (value.name || value)}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const tagObj = (tagOptions || []).find((t) => t.name === (option.name || option));
-                  const { key, ...tagProps } = getTagProps({ index });
-                  return (
-                    <Chip
-                      key={key}
-                      label={option.name || option}
-                      size="small"
-                      sx={getTokenChipSx(tagObj?.color || palette.primary.main)}
-                      {...tagProps}
-                    />
-                  );
-                })
-              }
-              renderOption={(props, option) => (
-                <Box component="li" {...props} key={option.name}>
-                  <Box
-                    sx={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      backgroundColor: option.color || palette.primary.main,
-                      mr: 1
-                    }}
-                  />
-                  {option.name}
-                </Box>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={t('nodes.nodeCheckProfiles.form.tags')}
-                  placeholder={t('nodes.nodeCheckProfiles.form.tagsPlaceholder')}
-                />
-              )}
-            />
           </Stack>
         </ConfigSection>
 
@@ -913,7 +886,5 @@ NodeCheckProfileFormDialog.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   profile: PropTypes.object,
-  groupOptions: PropTypes.array,
-  tagOptions: PropTypes.array,
   onSuccess: PropTypes.func
 };
