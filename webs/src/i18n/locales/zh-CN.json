@@ -4324,7 +4324,7 @@
       "all": "全部节点",
       "filtered": "指定机场 / 分组 / 标签"
     },
-    "groups": "原分组",
+    "groups": "分组",
     "tags": "标签",
     "airports": "限定机场",
     "updateFirst": "检测前更新所选机场",

@@ -4324,7 +4324,7 @@
       "all": "All nodes",
       "filtered": "Selected airports / groups / tags"
     },
-    "groups": "Source groups",
+    "groups": "Groups",
     "tags": "Tags",
     "airports": "Restrict to airports",
     "updateFirst": "Update selected airports before checking",
