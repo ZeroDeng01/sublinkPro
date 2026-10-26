@@ -13,6 +13,7 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
+import CountryFlag from 'components/CountryFlag';
 import NodeProtocolChip from './NodeProtocolChip';
 
 // utils
@@ -66,7 +67,22 @@ export default function NodeCard({ node, isSelected, tagColorMap, protocolMeta, 
       <Box p={2}>
         <Box sx={{ position: 'relative', mb: 1.5, pr: 10 }}>
           <Box sx={{ position: 'absolute', top: 0, right: 0 }}>
-            <Chip label={countryDisplay.text} color={countryDisplay.isUnknown ? 'default' : 'secondary'} variant="outlined" size="small" />
+            <Chip
+              label={
+                countryDisplay.isUnknown ? (
+                  countryDisplay.text
+                ) : (
+                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                    <CountryFlag code={countryDisplay.code} height={11} />
+                    {countryDisplay.code}
+                  </Box>
+                )
+              }
+              color={countryDisplay.isUnknown ? 'default' : 'secondary'}
+              variant="outlined"
+              size="small"
+              sx={{ '& .MuiChip-label': { display: 'flex', alignItems: 'center', px: 1 } }}
+            />
           </Box>
           <Stack direction="row" alignItems="flex-start" sx={{ minWidth: 0 }}>
             <Checkbox

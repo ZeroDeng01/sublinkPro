@@ -1052,6 +1052,9 @@ func (node *Node) List() ([]Node, error) {
 	return nodes, nil
 }
 
+// UnknownCountryFilter 国家筛选的特殊值，用于匹配未识别国家的节点
+const UnknownCountryFilter = "__UNKNOWN__"
+
 type NodeFilter struct {
 	Search          string   // 搜索关键词（匹配节点名称或链接）
 	Group           string   // 分组过滤
@@ -1061,7 +1064,7 @@ type NodeFilter struct {
 	MinSpeed        float64  // 最低速度(MB/s)，只显示速度在此值以上的节点
 	SpeedStatus     string   // 速度状态过滤: untested, success, timeout, error
 	DelayStatus     string   // 延迟状态过滤: untested, success, timeout, error
-	Countries       []string // 国家代码过滤
+	Countries       []string // 国家代码过滤（特殊值 UnknownCountryFilter 匹配未识别国家的节点）
 	Tags            []string // 标签过滤（匹配任一标签的节点）
 	SortBy          string   // 排序字段: "delay" 或 "speed"
 	SortOrder       string   // 排序顺序: "asc" 或 "desc"
@@ -1245,9 +1248,11 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 			}
 		}
 
-		// 国家代码过滤
+		// 国家代码过滤（支持 UnknownCountryFilter 匹配空国家代码的节点）
 		if len(countryMap) > 0 {
-			if n.LinkCountry == "" || !countryMap[n.LinkCountry] {
+			countryMatched := n.LinkCountry != "" && countryMap[n.LinkCountry]
+			unknownMatched := strings.TrimSpace(n.LinkCountry) == "" && countryMap[UnknownCountryFilter]
+			if !countryMatched && !unknownMatched {
 				return false
 			}
 		}
@@ -2239,6 +2244,49 @@ func GetNodeCountryStats() map[string]int {
 		stats[country]++
 	}
 	return stats
+}
+
+// NodeCountryStat 按国家统计的节点数量，Country 为空表示未知地区
+type NodeCountryStat struct {
+	Country string `json:"country"`
+	Count   int    `json:"count"`
+}
+
+// GetFilteredCountryStats 按国家统计符合过滤条件的节点数量，返回按数量倒序排列的结果和节点总数
+func (node *Node) GetFilteredCountryStats(filter NodeFilter) ([]NodeCountryStat, int) {
+	// 统计结果与排序无关，避免无意义的排序开销
+	filter.SortBy = ""
+	filter.SortOrder = ""
+
+	nodes, err := node.ListWithFilters(filter)
+	if err != nil {
+		return []NodeCountryStat{}, 0
+	}
+
+	statsMap := make(map[string]int, len(nodes))
+	for _, n := range nodes {
+		statsMap[strings.TrimSpace(n.LinkCountry)]++
+	}
+
+	result := make([]NodeCountryStat, 0, len(statsMap))
+	for country, count := range statsMap {
+		result = append(result, NodeCountryStat{Country: country, Count: count})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Count != result[j].Count {
+			return result[i].Count > result[j].Count
+		}
+		// 未知地区始终排在最后，其余按国家代码排序
+		if result[i].Country == "" {
+			return false
+		}
+		if result[j].Country == "" {
+			return true
+		}
+		return result[i].Country < result[j].Country
+	})
+
+	return result, len(nodes)
 }
 
 func GetDashboardCountryStats() []CountryDashboardStat {

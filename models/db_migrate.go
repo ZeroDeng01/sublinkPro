@@ -13,6 +13,8 @@ import (
 	"sublink/utils"
 	"time"
 
+	// 与 country_rule.go 保持一致，支持零宽断言
+	regexp "github.com/dlclark/regexp2/v2/compat"
 	"gorm.io/gorm"
 )
 
@@ -363,6 +365,13 @@ func RunMigrations() error {
 		return normalizeHostnamesAndDeduplicate(db)
 	}); err != nil {
 		utils.Error("执行迁移 0037_normalize_host_hostnames 失败: %v", err)
+	}
+
+	// 0038_seed_extended_country_rules - 补充国家规则并升级中国大陆规则
+	if err := database.RunCustomMigration("0038_seed_extended_country_rules", func() error {
+		return seedExtendedCountryRules(db)
+	}); err != nil {
+		utils.Error("执行迁移 0038_seed_extended_country_rules 失败: %v", err)
 	}
 
 	if err := database.RunCustomMigration("0024_migrate_legacy_webhook_settings", func() error {
@@ -1354,4 +1363,156 @@ func seedDefaultCountryRules(db *gorm.DB) error {
 	}
 
 	return nil
+}
+
+// legacyChinaCountryRulePattern 0035 迁移写入的中国大陆默认规则，仅在用户未修改时升级
+const legacyChinaCountryRulePattern = "(?i)中国|CN|China|大陆|Mainland"
+
+// chinaCountryRulePattern 补充国旗与俄语关键词，覆盖更多机场命名
+const chinaCountryRulePattern = "(?i)中国|CN|China|大陆|Mainland|Китай|🇨🇳"
+
+// countryCodeToken 生成带边界的两字母国家代码匹配，避免 AM 命中 Amsterdam 这类误判
+func countryCodeToken(code string) string {
+	return `(?<![A-Za-z])` + code + `(?![A-Za-z])`
+}
+
+// newExtendedCountryRule 构造扩展国家规则：关键词 + 带边界的国家代码
+func newExtendedCountryRule(code, name, keywords string) CountryRule {
+	return CountryRule{
+		CountryCode: code,
+		CountryName: name,
+		Pattern:     "(?i)" + keywords + "|" + countryCodeToken(code),
+		Priority:    0,
+		Enabled:     true,
+	}
+}
+
+// extendedCountryRules 0038 迁移补充的国家规则
+func extendedCountryRules() []CountryRule {
+	return []CountryRule{
+		newExtendedCountryRule("BY", "白俄罗斯", "白俄罗斯|Belarus|Беларусь|🇧🇾"),
+		newExtendedCountryRule("TJ", "塔吉克斯坦", "塔吉克斯坦|Tajikistan|Таджикистан|🇹🇯"),
+		newExtendedCountryRule("AQ", "南极洲", "南极洲|南极|Antarctica|Антарктида|🇦🇶"),
+		newExtendedCountryRule("AL", "阿尔巴尼亚", "阿尔巴尼亚|Albania|Албания|🇦🇱"),
+		newExtendedCountryRule("MD", "摩尔多瓦", "摩尔多瓦|Moldova|Молдова|🇲🇩"),
+		newExtendedCountryRule("MK", "北马其顿", "北马其顿|马其顿|North Macedonia|Macedonia|Северная Македония|Македония|🇲🇰"),
+		newExtendedCountryRule("AM", "亚美尼亚", "亚美尼亚|Armenia|Армения|🇦🇲"),
+		newExtendedCountryRule("UZ", "乌兹别克斯坦", "乌兹别克斯坦|乌兹别克|Uzbekistan|Узбекистан|🇺🇿"),
+		newExtendedCountryRule("GE", "格鲁吉亚", "格鲁吉亚|Georgia|Грузия|🇬🇪"),
+		newExtendedCountryRule("BA", "波黑", "波黑|波斯尼亚|Bosnia|Босния|🇧🇦"),
+		newExtendedCountryRule("IQ", "伊拉克", "伊拉克|Iraq|Ирак|🇮🇶"),
+		newExtendedCountryRule("KH", "柬埔寨", "柬埔寨|Cambodia|Камбоджа|🇰🇭"),
+		newExtendedCountryRule("AZ", "阿塞拜疆", "阿塞拜疆|Azerbaijan|Азербайджан|🇦🇿"),
+		newExtendedCountryRule("BH", "巴林", "巴林|Bahrain|Бахрейн|🇧🇭"),
+		newExtendedCountryRule("MN", "蒙古", "蒙古|Mongolia|Монголия|🇲🇳"),
+		newExtendedCountryRule("CY", "塞浦路斯", "塞浦路斯|Cyprus|Кипр|🇨🇾"),
+		newExtendedCountryRule("KG", "吉尔吉斯斯坦", "吉尔吉斯斯坦|吉尔吉斯|Kyrgyzstan|Kirghizia|Киргизия|Кыргызстан|🇰🇬"),
+		newExtendedCountryRule("BN", "文莱", "文莱|Brunei|Бруней|🇧🇳"),
+		newExtendedCountryRule("LI", "列支敦士登", "列支敦士登|Liechtenstein|Лихтенштейн|🇱🇮"),
+		newExtendedCountryRule("LK", "斯里兰卡", "斯里兰卡|Sri Lanka|SriLanka|Шри-Ланка|🇱🇰"),
+		{
+			CountryCode: "SS",
+			CountryName: "南苏丹",
+			// 不使用 SS 代码，避免命中 Shadowsocks 等含 ss 的节点名称
+			Pattern:  "(?i)南苏丹|South Sudan|Южный Судан|🇸🇸",
+			Priority: 0,
+			Enabled:  true,
+		},
+	}
+}
+
+// seedExtendedCountryRules 补充 0035 未覆盖的国家规则，并升级中国大陆默认规则
+// 只按国家代码补充缺失项，不覆盖用户已自定义的规则；新增规则会回填国家为空的节点
+func seedExtendedCountryRules(db *gorm.DB) error {
+	addedRules := make([]CountryRule, 0, len(extendedCountryRules()))
+	for _, rule := range extendedCountryRules() {
+		var count int64
+		if err := db.Model(&CountryRule{}).Where("country_code = ?", rule.CountryCode).Count(&count).Error; err != nil {
+			return fmt.Errorf("查询国家规则失败 [%s]: %w", rule.CountryCode, err)
+		}
+		if count > 0 {
+			continue
+		}
+		if err := db.Create(&rule).Error; err != nil {
+			return fmt.Errorf("添加国家规则失败 [%s - %s]: %w", rule.CountryCode, rule.CountryName, err)
+		}
+		addedRules = append(addedRules, rule)
+	}
+	if len(addedRules) > 0 {
+		utils.Info("成功补充 %d 条国家规则", len(addedRules))
+	}
+
+	// 仅在匹配模式仍是 0035 默认值时升级，避免覆盖用户自定义规则
+	result := db.Model(&CountryRule{}).
+		Where("country_code = ? AND pattern = ?", "CN", legacyChinaCountryRulePattern).
+		Update("pattern", chinaCountryRulePattern)
+	if result.Error != nil {
+		return fmt.Errorf("升级中国大陆国家规则失败: %w", result.Error)
+	}
+	if result.RowsAffected > 0 {
+		utils.Info("已升级中国大陆国家规则匹配模式")
+		addedRules = append(addedRules, CountryRule{CountryCode: "CN", CountryName: "中国", Pattern: chinaCountryRulePattern})
+	}
+
+	if len(addedRules) > 0 && db.Migrator().HasTable(&Node{}) {
+		filled, err := backfillNodeCountries(db, addedRules)
+		if err != nil {
+			return err
+		}
+		if filled > 0 {
+			utils.Info("已按新增国家规则回填 %d 个节点的国家", filled)
+		}
+	}
+
+	return nil
+}
+
+// countryRuleMatcher 预编译的国家规则匹配器
+type countryRuleMatcher struct {
+	country string
+	pattern *regexp.Regexp
+}
+
+// backfillNodeCountries 用新增规则回填国家为空的节点，不覆盖已有国家值
+func backfillNodeCountries(db *gorm.DB, rules []CountryRule) (int, error) {
+	matchers := make([]countryRuleMatcher, 0, len(rules))
+	for _, rule := range rules {
+		re, err := regexp.Compile(rule.Pattern)
+		if err != nil {
+			continue
+		}
+		matchers = append(matchers, countryRuleMatcher{country: rule.CountryCode, pattern: re})
+	}
+	if len(matchers) == 0 {
+		return 0, nil
+	}
+
+	type nodeRow struct {
+		ID   int
+		Name string
+	}
+	var nodes []nodeRow
+	if err := db.Model(&Node{}).Select("id", "name").
+		Where("TRIM(COALESCE(link_country, '')) = ''").Find(&nodes).Error; err != nil {
+		return 0, fmt.Errorf("查询未识别国家的节点失败: %w", err)
+	}
+
+	countryIDs := make(map[string][]int)
+	for _, node := range nodes {
+		for _, matcher := range matchers {
+			if matcher.pattern.MatchString(node.Name) {
+				countryIDs[matcher.country] = append(countryIDs[matcher.country], node.ID)
+				break
+			}
+		}
+	}
+
+	filled := 0
+	for country, ids := range countryIDs {
+		if err := db.Model(&Node{}).Where("id IN ?", ids).Update("link_country", country).Error; err != nil {
+			return filled, fmt.Errorf("回填节点国家失败 [%s]: %w", country, err)
+		}
+		filled += len(ids)
+	}
+	return filled, nil
 }

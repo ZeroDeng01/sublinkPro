@@ -2355,6 +2355,11 @@
         "inactive": "当前未启用解锁筛选。点击下方按钮后再添加具体规则。",
         "addRule": "新增解锁规则"
       }
+    },
+    "countryStats": {
+      "title": "按国家统计节点",
+      "total": "节点总数：{{count}}",
+      "empty": "当前筛选条件下没有节点"
     }
   },
   "subscriptions": {
@@ -3007,6 +3012,15 @@
       },
       "nodeFilter": {
         "activeRules": "已启用 {{count}} 项规则",
+        "activeRulesWithLogic": "已启用 {{count}} 项规则 · {{logic}}",
+        "filterLogic": "筛选关系",
+        "filterLogicAndHelper": "节点需要同时满足所有已配置的筛选组。",
+        "filterLogicOrHelper": "节点只需满足任意一个已配置的筛选组。",
+        "filterLogicBlacklistHelper": "无论选择哪种关系，命中黑名单的节点都会被优先排除。",
+        "generalTitle": "通用限制",
+        "generalSummary": "已启用 {{count}} 项限制",
+        "countryTitle": "国家筛选",
+        "countrySummary": "白名单 {{whitelist}} / 黑名单 {{blacklist}}",
         "maxDelay": "最大延迟",
         "maxDelayHelper": "设置筛选节点的延迟阈值，0表示不限制",
         "minSpeed": "最小速度",

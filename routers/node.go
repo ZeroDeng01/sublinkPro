@@ -28,6 +28,7 @@ func Nodes(r *gin.Engine) {
 		NodesGroup.GET("/group-stats", api.NodeGroupStats)
 		NodesGroup.GET("/sources", api.GetSources)
 		NodesGroup.GET("/countries", api.GetNodeCountries)
+		NodesGroup.GET("/country-stats", api.NodeCountryStatsFiltered)
 		NodesGroup.GET("/ip-info", api.GetIPDetails)
 		NodesGroup.GET("/ip-cache/stats", api.GetIPCacheStats)
 		NodesGroup.DELETE("/ip-cache", api.ClearIPCache)

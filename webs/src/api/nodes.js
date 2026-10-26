@@ -126,6 +126,16 @@ export function getNodeCountries() {
   });
 }
 
+// 获取符合过滤条件的按国家统计节点数量
+// 返回 { items: [{ country, count }], total }
+export function getNodeCountryStats(params = {}) {
+  return request({
+    url: '/v1/nodes/country-stats',
+    method: 'get',
+    params
+  });
+}
+
 // 获取节点分组列表
 export function getNodeGroups() {
   return request({

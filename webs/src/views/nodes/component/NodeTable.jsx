@@ -30,6 +30,7 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import TuneIcon from '@mui/icons-material/Tune';
 
 // project imports
+import CountryFlag from 'components/CountryFlag';
 import NodeProtocolChip from './NodeProtocolChip';
 
 // utils
@@ -585,12 +586,21 @@ export default function NodeTable({
                   <TableCell>
                     {(() => {
                       const countryDisplay = getCountryDisplay(node.LinkCountry, { unknownLabel: t('common.unknown') });
+                      const countryLabel = countryDisplay.isUnknown ? (
+                        countryDisplay.text
+                      ) : (
+                        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                          <CountryFlag code={countryDisplay.code} height={11} />
+                          {countryDisplay.code}
+                        </Box>
+                      );
                       return (
                         <Chip
-                          label={countryDisplay.text}
+                          label={countryLabel}
                           color={countryDisplay.isUnknown ? 'default' : 'secondary'}
                           variant="outlined"
                           size="small"
+                          sx={{ '& .MuiChip-label': { display: 'flex', alignItems: 'center', px: 1 } }}
                         />
                       );
                     })()}

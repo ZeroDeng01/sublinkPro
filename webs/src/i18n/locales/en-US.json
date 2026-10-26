@@ -2355,6 +2355,11 @@
         "inactive": "Unlock filtering is currently disabled. Add a rule below to enable it.",
         "addRule": "Add unlock rule"
       }
+    },
+    "countryStats": {
+      "title": "Nodes by country",
+      "total": "Total nodes: {{count}}",
+      "empty": "No countries match the current filters"
     }
   },
   "subscriptions": {
@@ -3007,6 +3012,15 @@
       },
       "nodeFilter": {
         "activeRules": "{{count}} rules enabled",
+        "activeRulesWithLogic": "{{count}} rules · {{logic}}",
+        "filterLogic": "Filter relation",
+        "filterLogicAndHelper": "A node must match every configured filter group.",
+        "filterLogicOrHelper": "A node only needs to match one configured filter group.",
+        "filterLogicBlacklistHelper": "Blacklisted nodes are always excluded, regardless of the selected relation.",
+        "generalTitle": "General constraints",
+        "generalSummary": "{{count}} constraints enabled",
+        "countryTitle": "Country filter",
+        "countrySummary": "Whitelist {{whitelist}} / blacklist {{blacklist}}",
         "maxDelay": "Max Delay",
         "maxDelayHelper": "Set the latency threshold for filtering nodes. 0 means no limit.",
         "minSpeed": "Min Speed",

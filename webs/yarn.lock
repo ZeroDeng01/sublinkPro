@@ -4106,6 +4106,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"flag-icons@npm:7.6.0":
+  version: 7.6.0
+  resolution: "flag-icons@npm:7.6.0"
+  checksum: 10c0/f5b32155b903ed56ddd2d452166a27d6fff89e082ad1cd32c7891b6fe04b71f73ac2feffd06642173bd3d5fd7bf9a6a0e6b36539463d23b8d36031b135636de3
+  languageName: node
+  linkType: hard
+
 "flat-cache@npm:^4.0.0":
   version: 4.0.1
   resolution: "flat-cache@npm:4.0.1"
@@ -7287,6 +7294,7 @@ __metadata:
     eslint-plugin-prettier: "npm:5.5.7"
     eslint-plugin-react: "npm:7.37.5"
     eslint-plugin-react-hooks: "npm:7.1.1"
+    flag-icons: "npm:7.6.0"
     framer-motion: "npm:12.43.0"
     i18next: "npm:^26.5.6"
     i18next-browser-languagedetector: "npm:^8.2.1"

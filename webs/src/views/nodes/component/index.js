@@ -19,6 +19,7 @@ export { default as NodeDetailsPanel } from './NodeDetailsPanel';
 
 // List view components
 export { default as NodeFilters } from './NodeFilters';
+export { default as NodeCountryStats } from './NodeCountryStats';
 export { default as BatchActions } from './BatchActions';
 export { default as NodeCard } from './NodeCard';
 export { default as NodeMobileList } from './NodeMobileList';

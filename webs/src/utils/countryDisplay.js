@@ -3,6 +3,9 @@ const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/;
 
 export const COUNTRY_FALLBACK_EMOJI = String.fromCodePoint(0x1f310);
 
+// 国家筛选特殊值：匹配未识别国家的节点（与后端 models.UnknownCountryFilter 保持一致）
+export const UNKNOWN_COUNTRY_FILTER = '__UNKNOWN__';
+
 const UNKNOWN_COUNTRY_VALUES = new Set(['UNKNOWN', 'UNKNOWN COUNTRY', '未知', 'N/A', 'NA', '-', '--']);
 
 export const normalizeCountryCode = (value) => {

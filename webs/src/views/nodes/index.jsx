@@ -38,6 +38,7 @@ import {
   deleteNodesBatch,
   runSpeedTest,
   getNodeCountries,
+  getNodeCountryStats,
   getNodeGroups,
   getNodeSources,
   getNodeProtocols,
@@ -66,6 +67,7 @@ import {
   NodeDetailsPanel,
   NodeRawProtocolDialog,
   NodeFilters,
+  NodeCountryStats,
   BatchActions,
   NodeMobileList,
   NodeTable
@@ -87,6 +89,38 @@ const DEFAULT_COLUMN_WIDTHS = {
   speed: 130,
   ipFeatures: 240,
   actions: 140
+};
+
+// 根据筛选条件构建请求参数（节点列表与国家统计共用，保证筛选行为一致）
+const buildNodeListParams = (filters = {}, pagination = {}) => {
+  const params = {};
+  if (filters.search) params.search = filters.search;
+  if (filters.group) params.group = filters.group;
+  if (filters.source) params.source = filters.source;
+  if (filters.maxDelay) params.maxDelay = filters.maxDelay;
+  if (filters.minSpeed) params.minSpeed = filters.minSpeed;
+  if (filters.maxFraudScore) params.maxFraudScore = filters.maxFraudScore;
+  if (filters.speedStatus) params.speedStatus = filters.speedStatus;
+  if (filters.delayStatus) params.delayStatus = filters.delayStatus;
+  if (filters.protocol) params.protocol = filters.protocol;
+  if (filters.residentialType) params.residentialType = filters.residentialType;
+  if (filters.ipType) params.ipType = filters.ipType;
+  if (filters.qualityStatus) params.qualityStatus = filters.qualityStatus;
+  if (filters.unlockRules?.some((rule) => rule.provider || rule.status || rule.keyword)) {
+    params.unlockRules = buildUnlockRulesPayload(filters.unlockRules);
+    params.unlockRuleMode = filters.unlockRuleMode || 'or';
+  }
+  if (filters.countries && filters.countries.length > 0) {
+    params['countries[]'] = filters.countries;
+  }
+  if (filters.tags && filters.tags.length > 0) {
+    params['tags[]'] = filters.tags.map((tag) => tag.name || tag);
+  }
+  if (filters.sortBy) params.sortBy = filters.sortBy;
+  if (filters.sortOrder) params.sortOrder = filters.sortOrder;
+  if (pagination.page !== undefined) params.page = pagination.page;
+  if (pagination.pageSize !== undefined) params.pageSize = pagination.pageSize;
+  return params;
 };
 
 // ==============================|| 节点管理 ||============================== //
@@ -261,6 +295,8 @@ export default function NodeList() {
   // 国家筛选
   const [countryFilter, setCountryFilter] = useState([]);
   const [countryOptions, setCountryOptions] = useState([]);
+  // 国家统计（跟随当前筛选条件）
+  const [countryStats, setCountryStats] = useState({ items: [], total: 0 });
   // 从后端获取的分组和来源选项
   const [groupOptions, setGroupOptions] = useState([]);
   const [sourceOptions, setSourceOptions] = useState([]);
@@ -320,36 +356,11 @@ export default function NodeList() {
     async (filterParams = {}) => {
       setLoading(true);
       try {
-        // 构建过滤参数
-        const params = {};
-        if (filterParams.search) params.search = filterParams.search;
-        if (filterParams.group) params.group = filterParams.group;
-        if (filterParams.source) params.source = filterParams.source;
-        if (filterParams.maxDelay) params.maxDelay = filterParams.maxDelay;
-        if (filterParams.minSpeed) params.minSpeed = filterParams.minSpeed;
-        if (filterParams.maxFraudScore) params.maxFraudScore = filterParams.maxFraudScore;
-        if (filterParams.speedStatus) params.speedStatus = filterParams.speedStatus;
-        if (filterParams.delayStatus) params.delayStatus = filterParams.delayStatus;
-        if (filterParams.protocol) params.protocol = filterParams.protocol;
-        if (filterParams.residentialType) params.residentialType = filterParams.residentialType;
-        if (filterParams.ipType) params.ipType = filterParams.ipType;
-        if (filterParams.qualityStatus) params.qualityStatus = filterParams.qualityStatus;
-        if (filterParams.unlockRules?.some((rule) => rule.provider || rule.status || rule.keyword)) {
-          params.unlockRules = buildUnlockRulesPayload(filterParams.unlockRules);
-          params.unlockRuleMode = filterParams.unlockRuleMode || 'or';
-        }
-        if (filterParams.countries && filterParams.countries.length > 0) {
-          params['countries[]'] = filterParams.countries;
-        }
-        if (filterParams.tags && filterParams.tags.length > 0) {
-          params['tags[]'] = filterParams.tags.map((t) => t.name || t);
-        }
-        if (filterParams.sortBy) params.sortBy = filterParams.sortBy;
-        if (filterParams.sortOrder) params.sortOrder = filterParams.sortOrder;
-
         // 分页参数必须通过 filterParams 传递
-        params.page = (filterParams.page ?? 0) + 1; // 后端是1-indexed
-        params.pageSize = filterParams.pageSize ?? 20;
+        const params = buildNodeListParams(filterParams, {
+          page: (filterParams.page ?? 0) + 1, // 后端是1-indexed
+          pageSize: filterParams.pageSize ?? 20
+        });
 
         const response = await getNodes(params);
         // 处理分页响应
@@ -370,6 +381,28 @@ export default function NodeList() {
     },
     [t]
   );
+
+  // 获取当前筛选条件下的国家分布统计
+  // 面板本身充当国家筛选器：统计时忽略国家条件，避免选中国家后其余国家从面板中消失
+  const fetchCountryStats = useCallback(async (filterParams = {}) => {
+    try {
+      const params = buildNodeListParams(filterParams);
+      delete params['countries[]'];
+      const response = await getNodeCountryStats(params);
+      setCountryStats({
+        items: response.data?.items || [],
+        total: response.data?.total || 0
+      });
+    } catch (error) {
+      console.error('获取国家统计失败:', error);
+    }
+  }, []);
+
+  // 国家分布面板：点击国家标签切换国家筛选
+  const handleToggleCountry = useCallback((country) => {
+    if (!country) return;
+    setCountryFilter((prev) => (prev.includes(country) ? prev.filter((item) => item !== country) : [...prev, country]));
+  }, []);
 
   // 获取代理节点选项（用于订阅下载代理选择）
   const fetchProxyNodes = useCallback(async () => {
@@ -481,6 +514,7 @@ export default function NodeList() {
       };
       setPage(0); // 重置分页
       fetchNodes(filterParams);
+      fetchCountryStats(filterParams);
     }, 300); // 300ms 防抖延迟
 
     // 清理函数
@@ -509,6 +543,7 @@ export default function NodeList() {
     sortBy,
     sortOrder,
     fetchNodes,
+    fetchCountryStats,
     rowsPerPage
   ]);
 
@@ -565,37 +600,6 @@ export default function NodeList() {
     pageSize: rowsPerPage
   });
 
-  const buildNodeListParams = (filters, pagination = {}) => {
-    const params = {};
-    if (filters.search) params.search = filters.search;
-    if (filters.group) params.group = filters.group;
-    if (filters.source) params.source = filters.source;
-    if (filters.maxDelay) params.maxDelay = filters.maxDelay;
-    if (filters.minSpeed) params.minSpeed = filters.minSpeed;
-    if (filters.maxFraudScore) params.maxFraudScore = filters.maxFraudScore;
-    if (filters.speedStatus) params.speedStatus = filters.speedStatus;
-    if (filters.delayStatus) params.delayStatus = filters.delayStatus;
-    if (filters.protocol) params.protocol = filters.protocol;
-    if (filters.residentialType) params.residentialType = filters.residentialType;
-    if (filters.ipType) params.ipType = filters.ipType;
-    if (filters.qualityStatus) params.qualityStatus = filters.qualityStatus;
-    if (filters.unlockRules?.some((rule) => rule.provider || rule.status || rule.keyword)) {
-      params.unlockRules = buildUnlockRulesPayload(filters.unlockRules);
-      params.unlockRuleMode = filters.unlockRuleMode || 'or';
-    }
-    if (filters.countries && filters.countries.length > 0) {
-      params['countries[]'] = filters.countries;
-    }
-    if (filters.tags && filters.tags.length > 0) {
-      params['tags[]'] = filters.tags.map((tag) => tag.name || tag);
-    }
-    if (filters.sortBy) params.sortBy = filters.sortBy;
-    if (filters.sortOrder) params.sortOrder = filters.sortOrder;
-    if (pagination.page !== undefined) params.page = pagination.page;
-    if (pagination.pageSize !== undefined) params.pageSize = pagination.pageSize;
-    return params;
-  };
-
   // 刷新下拉框选项数据
   const refreshFilterOptions = useCallback(() => {
     // 刷新国家选项
@@ -638,10 +642,12 @@ export default function NodeList() {
 
   const handleRefresh = useCallback(() => {
     fetchNodes(getCurrentFilters());
+    fetchCountryStats(getCurrentFilters());
     refreshFilterOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     fetchNodes,
+    fetchCountryStats,
     refreshFilterOptions,
     searchQuery,
     groupFilter,
@@ -1311,6 +1317,14 @@ export default function NodeList() {
         tagOptions={tagOptions}
         protocolOptions={protocolOptions}
         onReset={resetFilters}
+      />
+
+      {/* 国家分布（跟随通用筛选条件，点击国家标签即可筛选） */}
+      <NodeCountryStats
+        items={countryStats.items}
+        total={countryStats.total}
+        activeCountries={countryFilter}
+        onToggleCountry={handleToggleCountry}
       />
 
       {/* 批量操作 */}

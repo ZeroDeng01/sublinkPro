@@ -33,6 +33,7 @@ type PreviewRequest struct {
 	TagBlacklist       string   `json:"TagBlacklist"`      // 标签黑名单
 	ProtocolWhitelist  string   `json:"ProtocolWhitelist"` // 协议白名单
 	ProtocolBlacklist  string   `json:"ProtocolBlacklist"` // 协议黑名单
+	FilterLogic        string   `json:"FilterLogic"`       // 筛选组合逻辑: and/or
 	NodeNameWhitelist  string   `json:"NodeNameWhitelist"` // 节点名称白名单
 	NodeNameBlacklist  string   `json:"NodeNameBlacklist"` // 节点名称黑名单
 	MaxFraudScore      int      `json:"MaxFraudScore"`     // 最大欺诈评分
@@ -160,6 +161,7 @@ func previewFormSubscription(req PreviewRequest) (*models.PreviewResult, error) 
 		TagBlacklist:       req.TagBlacklist,
 		ProtocolWhitelist:  req.ProtocolWhitelist,
 		ProtocolBlacklist:  req.ProtocolBlacklist,
+		FilterLogic:        models.NormalizeFilterLogic(req.FilterLogic),
 		NodeNameWhitelist:  req.NodeNameWhitelist,
 		NodeNameBlacklist:  req.NodeNameBlacklist,
 		MaxFraudScore:      req.MaxFraudScore,
