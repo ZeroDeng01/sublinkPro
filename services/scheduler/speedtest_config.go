@@ -47,7 +47,7 @@ type SpeedTestConfig struct {
 func SpeedTestConfigFromProfile(profile *models.NodeCheckProfile) *SpeedTestConfig {
 	// 超时时间转换
 	timeout := time.Duration(profile.Timeout) * time.Second
-	if timeout == 0 {
+	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}
 
@@ -79,6 +79,8 @@ func SpeedTestConfigFromProfile(profile *models.NodeCheckProfile) *SpeedTestConf
 	persistHostStr, _ := models.GetSetting("speed_test_persist_host")
 	persistHost := persistHostStr == "true"
 
+	latencyConcurrency := max(0, profile.LatencyConcurrency)
+	speedConcurrency := max(0, profile.SpeedConcurrency)
 	return &SpeedTestConfig{
 		SpeedTestURL:        profile.TestURL,
 		LatencyTestURL:      latencyURL,
@@ -86,8 +88,8 @@ func SpeedTestConfigFromProfile(profile *models.NodeCheckProfile) *SpeedTestConf
 		Mode:                profile.Mode,
 		DetectCountry:       profile.DetectCountry,
 		LandingIPURL:        landingIPURL,
-		LatencyConcurrency:  profile.LatencyConcurrency,
-		SpeedConcurrency:    profile.SpeedConcurrency,
+		LatencyConcurrency:  latencyConcurrency,
+		SpeedConcurrency:    speedConcurrency,
 		IncludeHandshake:    profile.IncludeHandshake,
 		SpeedRecordMode:     speedRecordMode,
 		PeakSampleInterval:  peakSampleInterval,
