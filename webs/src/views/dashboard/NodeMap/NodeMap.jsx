@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import * as echarts from 'echarts';
 // import 'echarts-gl'; // 3D Not needed for flat map
 import { alpha, useTheme } from '@mui/material/styles';
-import { Box, Card, Typography, CircularProgress } from '@mui/material';
+import { Autocomplete, Box, Card, Typography, CircularProgress, TextField } from '@mui/material';
 import worldJson from 'assets/world.json';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import { useLocalStorage } from 'hooks/useLocalStorage';
 import { withAlpha } from 'utils/colorUtils';
 import { isoToFlag } from 'utils/countryDisplay';
 import { COUNTRY_COORDINATES, COUNTRY_NAME_MAP } from './countryData';
@@ -35,8 +36,63 @@ const findCountryCode = (name) => {
   return null;
 };
 
+const LOCAL_REGION_STORAGE_KEY = 'nodeMapLocalRegion';
+const DEFAULT_LOCAL_REGION = 'CN';
+
+// world.json uses older English region names; map them where Intl.DisplayNames differs.
+const MAP_REGION_ALIASES = {
+  BA: 'Bosnia and Herz.',
+  CD: 'Dem. Rep. Congo',
+  CF: 'Central African Rep.',
+  CG: 'Congo',
+  CV: 'Cape Verde',
+  CZ: 'Czech Rep.',
+  DO: 'Dominican Rep.',
+  EH: 'W. Sahara',
+  FK: 'Falkland Is.',
+  FO: 'Faeroe Is.',
+  GS: 'S. Geo. and S. Sandw. Is.',
+  HM: 'Heard I. and McDonald Is.',
+  KR: 'Korea',
+  LA: 'Lao PDR',
+  LC: 'Saint Lucia',
+  MK: 'Macedonia',
+  MM: 'Myanmar',
+  MP: 'N. Mariana Is.',
+  PF: 'Fr. Polynesia',
+  SB: 'Solomon Is.',
+  SH: 'Saint Helena',
+  SS: 'S. Sudan',
+  ST: 'São Tomé and Principe',
+  SZ: 'Swaziland',
+  TC: 'Turks and Caicos Is.',
+  TR: 'Turkey',
+  TT: 'Trinidad and Tobago',
+  VI: 'U.S. Virgin Is.'
+};
+
+const WORLD_REGION_NAMES = new Set((worldJson.features || []).map((feature) => feature.properties?.name).filter(Boolean));
+
+const englishRegionDisplayNames = (() => {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' });
+  } catch {
+    return null;
+  }
+})();
+
+// Resolve the world.json region name for a country code (null when the map has no shape for it).
+const resolveMapRegionName = (countryCode) => {
+  if (!countryCode) return null;
+  if (Object.prototype.hasOwnProperty.call(MAP_REGION_ALIASES, countryCode)) {
+    return MAP_REGION_ALIASES[countryCode];
+  }
+  const displayName = englishRegionDisplayNames?.of(countryCode);
+  return displayName && WORLD_REGION_NAMES.has(displayName) ? displayName : null;
+};
+
 const NodeMap = ({ data = {}, loading = false }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const chartRef = useRef(null);
   const theme = useTheme();
   const { isDark } = useResolvedColorScheme();
@@ -66,16 +122,51 @@ const NodeMap = ({ data = {}, loading = false }) => {
   const mapAreaColor = isDark ? 'rgba(7, 28, 54, 0.94)' : alpha(theme.palette.background.paper, 0.88);
   const mapBorderColor = isDark ? alpha('#56d9ff', 0.24) : alpha(theme.palette.divider, 0.9);
   const mapEmphasisColor = isDark ? alpha('#31d7ff', 0.16) : alpha(theme.palette.primary.main, 0.12);
-  const chinaAreaColor = isDark ? alpha('#ffd166', 0.24) : alpha(theme.palette.warning.main, 0.14);
+  const targetAreaColor = isDark ? alpha('#ffd166', 0.24) : alpha(theme.palette.warning.main, 0.14);
   const lineTrailColor = isDark ? '#8df8ff' : theme.palette.common.white;
   const lineStrokeColor = isDark ? '#33ddff' : accentColor;
   const lineOpacity = isDark ? 0.62 : 0.4;
   const titleGlow = isDark ? alpha('#63f2ff', 0.42) : alpha(accentColor, 0.3);
   const coverageGlow = isDark ? alpha('#3ce6ff', 0.46) : alpha(accentColor, 0.4);
   const statusDotGlow = isDark ? alpha('#63f2ff', 0.58) : alpha(successColor, 0.65);
-  const targetLabelBackground = isDark ? 'rgba(8, 20, 40, 0.78)' : alpha(theme.palette.background.default, 0.72);
+  const targetLabelBackground = isDark ? 'rgba(8, 20, 40, 0.78)' : alpha(theme.palette.background.paper, 0.92);
   const darkNodeColor = '#52f7ff';
   const darkTargetColor = '#ffd166';
+
+  // Persisted local region used as the map hub
+  const { state: storedLocalRegion, setState: setStoredLocalRegion } = useLocalStorage(LOCAL_REGION_STORAGE_KEY, DEFAULT_LOCAL_REGION);
+  const storedRegionCode = typeof storedLocalRegion === 'string' ? storedLocalRegion.toUpperCase() : '';
+  const localRegion = COUNTRY_COORDINATES[storedRegionCode] ? storedRegionCode : DEFAULT_LOCAL_REGION;
+
+  const countryOptions = useMemo(() => {
+    let displayNames = null;
+    try {
+      displayNames = new Intl.DisplayNames([i18n.language], { type: 'region' });
+    } catch {
+      displayNames = null;
+    }
+
+    return Object.keys(COUNTRY_COORDINATES)
+      .map((code) => {
+        const name = displayNames?.of(code) || code;
+        return { code, name, label: `${getFlagEmoji(code)} ${name} (${code})` };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, i18n.language));
+  }, [i18n.language]);
+
+  const selectedCountryOption = useMemo(
+    () => countryOptions.find((option) => option.code === localRegion) || null,
+    [countryOptions, localRegion]
+  );
+
+  // Localized name of the hub region, used in the pin label/tooltip (flag emoji alone degrades to letters on some platforms)
+  const localRegionName = useMemo(() => {
+    try {
+      return new Intl.DisplayNames([i18n.language], { type: 'region' }).of(localRegion) || localRegion;
+    } catch {
+      return localRegion;
+    }
+  }, [i18n.language, localRegion]);
 
   // Reuse processLines logic if needed, but for 2D map we normally rely on the map json borders.
   // However, if we want custom glowing borders on top, we can keep using mapLines but transformed to 2D.
@@ -88,23 +179,9 @@ const NodeMap = ({ data = {}, loading = false }) => {
     let tPoint = null;
     let unk = 0;
     let max = 0;
-    const chinaCoords = COUNTRY_COORDINATES['CN'];
-
-    // Create Target Point (China)
-    if (chinaCoords) {
-      tPoint = {
-        name: 'CN',
-        value: [...chinaCoords, 0], // Flat coords
-        itemStyle: {
-          color: warningColor
-        },
-        rippleEffect: {
-          brushType: 'stroke',
-          scale: 4,
-          period: 4
-        }
-      };
-    }
+    // The local region itself is rendered as the target pin; keep its node count for the pin label
+    let localCount = 0;
+    const targetCoords = COUNTRY_COORDINATES[localRegion];
 
     Object.entries(data).forEach(([key, count]) => {
       const countryCode = findCountryCode(key);
@@ -117,9 +194,9 @@ const NodeMap = ({ data = {}, loading = false }) => {
       if (count > max) max = count;
       const coords = COUNTRY_COORDINATES[countryCode];
 
-      // Specific handling for China
-      if (countryCode === 'CN') {
-        // Just update label or target info if needed
+      // The local region is rendered as the target pin instead of a regular node point
+      if (countryCode === localRegion) {
+        localCount += count;
         return;
       }
 
@@ -132,10 +209,10 @@ const NodeMap = ({ data = {}, loading = false }) => {
         }
       });
 
-      // Flying Lines to China
-      if (chinaCoords) {
+      // Flying Lines to the local region
+      if (targetCoords) {
         lns.push({
-          coords: [coords, chinaCoords],
+          coords: [coords, targetCoords],
           lineStyle: {
             color: isDark ? darkNodeColor : accentSoft
           }
@@ -143,12 +220,29 @@ const NodeMap = ({ data = {}, loading = false }) => {
       }
     });
 
+    // Create the target point for the selected local region (value keeps the node count for the label/tooltip)
+    if (targetCoords) {
+      tPoint = {
+        name: localRegion,
+        value: [...targetCoords, localCount], // [lon, lat, count]
+        itemStyle: {
+          color: warningColor
+        },
+        rippleEffect: {
+          brushType: 'stroke',
+          scale: 4,
+          period: 4
+        }
+      };
+    }
+
     return { points: pts, lines: lns, targetPoint: tPoint, unknownCount: unk };
-  }, [data, accentColor, accentSoft, warningColor, isDark]);
+  }, [data, accentColor, accentSoft, warningColor, isDark, localRegion]);
   const coveredRegionCount = useMemo(
-    () => points.length + (Object.prototype.hasOwnProperty.call(data, 'CN') ? 1 : 0),
-    [data, points.length]
+    () => points.length + (Object.keys(data).some((key) => findCountryCode(key) === localRegion) ? 1 : 0),
+    [data, localRegion, points.length]
   );
+  const mapRegionName = resolveMapRegionName(localRegion);
 
   useEffect(() => {
     if (!chartRef.current || loading) return;
@@ -174,16 +268,24 @@ const NodeMap = ({ data = {}, loading = false }) => {
         formatter: (params) => {
           // const code = params.value && (params.value[3] || params.value[2]); // Unused
           // In 2D scatter: value is [lon, lat, count, code] -> index 3
-          // In Target: value is [lon, lat, 0] -> no code? target has name 'CN'
+          // In Target: value is [lon, lat, 0] -> no code; target has the local region name
 
           if (params.seriesType === 'lines') return ''; // No tooltip for lines
 
           // Target check
-          if (params.name === 'CN' || (params.data && params.data.name === 'CN')) {
+          if (params.name === localRegion || (params.data && params.data.name === localRegion)) {
+            const targetCount = (params.value && params.value[2]) || 0;
+            const countRow =
+              targetCount > 0
+                ? `<div style="margin-top:8px;font-size:12px;color:${readableSecondaryTextColor};display:flex;justify-content:space-between;width:120px">
+                     <span>${t('dashboard.nodeMap.nodeCount')}</span>
+                     <span style="color:${warningColor};font-weight:bold;font-family:monospace;font-size:14px">${targetCount}</span>
+                   </div>`
+                : '';
             return `<div style="display:flex;align-items:center;gap:12px">
-                             <span style="font-size:24px;line-height:1">🇨🇳</span>
-                              <span style="font-size:16px;font-weight:bold;color:${readablePrimaryTextColor}">CN (${t('dashboard.nodeMap.localRegion')})</span>
-                           </div>`;
+                             <span style="font-size:24px;line-height:1">${getFlagEmoji(localRegion)}</span>
+                              <span style="font-size:16px;font-weight:bold;color:${readablePrimaryTextColor}">${localRegionName} (${t('dashboard.nodeMap.localRegion')})</span>
+                           </div>${countRow}`;
           }
 
           const valCode = params.value && params.value[3];
@@ -221,14 +323,16 @@ const NodeMap = ({ data = {}, loading = false }) => {
             areaColor: mapEmphasisColor
           }
         },
-        regions: [
-          {
-            name: 'China',
-            itemStyle: {
-              areaColor: chinaAreaColor
-            }
-          }
-        ]
+        regions: mapRegionName
+          ? [
+              {
+                name: mapRegionName,
+                itemStyle: {
+                  areaColor: targetAreaColor
+                }
+              }
+            ]
+          : []
       },
       series: [
         // 1. Flying Lines
@@ -304,7 +408,7 @@ const NodeMap = ({ data = {}, loading = false }) => {
           },
           data: points
         },
-        // 4. Target Point (China)
+        // 4. Target Point (local region)
         ...(targetPoint
           ? [
               {
@@ -318,20 +422,30 @@ const NodeMap = ({ data = {}, loading = false }) => {
                   color: isDark ? darkTargetColor : warningColor
                 },
                 symbol: 'pin',
-                symbolSize: 20,
+                symbolSize: (val) => {
+                  const count = (val && val[2]) || 0;
+                  return count > 0 ? 20 + Math.min(12, Math.log2(count + 1) * 3) : 20;
+                },
                 itemStyle: {
                   color: isDark ? darkTargetColor : warningColor,
-                  shadowBlur: isDark ? 16 : 0,
-                  shadowColor: isDark ? alpha(darkTargetColor, 0.52) : 'transparent'
+                  borderColor: isDark ? alpha('#04101f', 0.9) : theme.palette.common.white,
+                  borderWidth: 1.5,
+                  shadowBlur: isDark ? 16 : 6,
+                  shadowColor: isDark ? alpha(darkTargetColor, 0.52) : alpha(warningColor, 0.45)
                 },
                 label: {
                   show: true,
-                  formatter: '🇨🇳 CN',
+                  formatter: (params) => {
+                    const count = (params.value && params.value[2]) || 0;
+                    return `${getFlagEmoji(localRegion)} ${localRegionName}${count > 0 ? ` · ${count}` : ''}`;
+                  },
                   position: 'top',
                   fontWeight: 'bold',
-                  color: isDark ? alpha('#ffe8a3', 0.98) : warningColor,
-                  fontSize: 14,
+                  color: isDark ? alpha('#ffe8a3', 0.98) : theme.palette.warning.dark,
+                  fontSize: 13,
                   backgroundColor: targetLabelBackground,
+                  borderColor: isDark ? alpha(darkTargetColor, 0.28) : alpha(warningColor, 0.35),
+                  borderWidth: 1,
                   padding: [4, 6],
                   borderRadius: 4
                 },
@@ -372,7 +486,10 @@ const NodeMap = ({ data = {}, loading = false }) => {
     mapAreaColor,
     mapBorderColor,
     mapEmphasisColor,
-    chinaAreaColor,
+    targetAreaColor,
+    localRegion,
+    mapRegionName,
+    localRegionName,
     lineTrailColor,
     lineStrokeColor,
     lineOpacity,
@@ -448,6 +565,43 @@ const NodeMap = ({ data = {}, loading = false }) => {
             >
               {t('dashboard.nodeMap.dataReference')}
             </Typography>
+          </Box>
+          <Box sx={{ pointerEvents: 'auto', width: 260, mt: 0.5 }}>
+            <Autocomplete
+              size="small"
+              disableClearable
+              options={countryOptions}
+              value={selectedCountryOption}
+              onChange={(_, option) => {
+                if (option) setStoredLocalRegion(option.code);
+              }}
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, value) => option.code === value.code}
+              filterOptions={(options, state) => {
+                const query = state.inputValue.trim().toLowerCase();
+                if (!query) return options;
+                return options.filter((option) => option.name.toLowerCase().includes(query) || option.code.toLowerCase().includes(query));
+              }}
+              slotProps={{ paper: { sx: { minWidth: 320 } } }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={t('dashboard.nodeMap.localRegion')}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      background: overlaySurface,
+                      backdropFilter: `blur(${isDark ? 10 : 4}px)`,
+                      '& fieldset': { borderColor: overlayBorderColor },
+                      '&:hover fieldset': { borderColor: accentColor },
+                      '&.Mui-focused fieldset': { borderColor: accentColor }
+                    },
+                    '& .MuiInputLabel-root': { color: readableSecondaryTextColor },
+                    '& .MuiInputLabel-root.Mui-focused': { color: accentColor },
+                    '& .MuiAutocomplete-input': { color: readablePrimaryTextColor }
+                  }}
+                />
+              )}
+            />
           </Box>
         </Box>
       </Box>
