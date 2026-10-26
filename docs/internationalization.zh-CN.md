@@ -8,9 +8,9 @@
 
 ## 范围
 
-- 首批支持语言为 `zh-CN` 和 `en-US`。
+- 支持语言为 `zh-CN`、`en-US` 和 `ru-RU`。
 - 当前 UI 大量文本以 `zh-CN` 为源语言。`en-US` 必须完整覆盖后，首轮国际化才算可用。
-- 新增前端可见文本时，必须在同一次变更中补齐首批两种语言。
+- 新增前端可见文本时，必须在同一次变更中补齐所有支持语言。
 - 后续新增语言时，必须沿用本文定义的命名空间布局、语言检测规则、MUI 映射和格式化 helper。
 
 SublinkPro 不使用 URL path 或 subdomain 做语言路由。`SUBLINK_WEB_BASE_PATH` 已经是 Web UI 的路由关注点，语言选择不能再引入新的路径前缀或基于域名的路由层。
@@ -29,6 +29,7 @@ webs/src/i18n/
 ├── locales.js
 └── locales/
     ├── en-US.json
+    ├── ru-RU.json
     └── zh-CN.json
 ```
 
@@ -65,6 +66,7 @@ Key 命名规则：
 
 - `zh`、`zh-CN`、`zh-Hans` 映射为 `zh-CN`。
 - `en`、`en-US`、`en-GB` 和其他英语变体映射为 `en-US`。
+- `ru`、`ru-RU` 和其他俄语变体映射为 `ru-RU`。
 
 不支持的语言在补齐翻译资源和 MUI locale 映射前，统一回退到 `zh-CN`。
 
@@ -78,6 +80,7 @@ MUI locale 配置必须由当前应用语言决定：
 |:---|:---|
 | `zh-CN` | `zhCN` |
 | `en-US` | `enUS` |
+| `ru-RU` | `ruRU` |
 
 该映射应集中在一个前端 helper 中，例如 `webs/src/i18n/muiLocale.js`，方便后续新增语言时只改一个入口。
 
@@ -128,7 +131,7 @@ MUI locale 配置必须由当前应用语言决定：
 新增未来语言时：
 
 1. 将 locale code 加入支持列表。
-2. 在 `webs/src/i18n/locales/<locale>.json` 增加完整资源文件，并保持与 `zh-CN`、`en-US` 相同的 key 结构。
+2. 在 `webs/src/i18n/locales/<locale>.json` 增加完整资源文件，并保持与现有 locale 相同的 key 结构。
 3. 按需补充浏览器语言归一化规则。
 4. 补充 MUI locale 映射。
 5. 确认该语言下日期、时间、数字、百分比和流量格式正确。

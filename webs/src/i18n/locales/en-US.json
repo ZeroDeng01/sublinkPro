@@ -87,7 +87,10 @@
     "zh-CNDesc": "切换到中文界面",
     "en-US": "English",
     "en-USShort": "EN",
-    "en-USDesc": "Switch to English interface"
+    "en-USDesc": "Switch to English interface",
+    "ru-RU": "Русский",
+    "ru-RUShort": "RU",
+    "ru-RUDesc": "Switch to Russian interface"
   },
   "navigation": {
     "groups": {

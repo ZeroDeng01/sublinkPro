@@ -1,0 +1,111 @@
+# Local compose file: builds the image from this checkout instead of pulling a release.
+#
+# Usage:
+#   docker compose -f docker-compose.local.yml up -d --build
+#   docker compose -f docker-compose.local.yml logs -f
+#   docker compose -f docker-compose.local.yml down
+#
+# Rebuild after code changes:
+#   docker compose -f docker-compose.local.yml up -d --build
+
+name: sublinkpro-local
+
+services:
+  sublinkpro:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sublinkpro-local:latest
+    container_name: sublinkpro-local
+
+    # Host port 7003 -> container port 8000 (SUBLINK_PORT below).
+    ports:
+      - "7003:8000"
+
+    # Persistent data: SQLite/config/GeoIP, template files (including rules), logs.
+    volumes:
+      - "./db:/app/db"
+      - "./logs:/app/logs"
+      - "./template:/app/template"
+
+    # All supported SUBLINK_* variables are listed below.
+    # Only SUBLINK_PORT is active; every other line is commented out and shows its default.
+    environment:
+      # Listening port inside the container; keep in sync with the target in "ports".
+      - SUBLINK_PORT=8000
+
+      # Database DSN (sqlite://, mysql://, postgres://); empty = SQLite at DB_PATH/sublink.db.
+      # - SUBLINK_DSN=sqlite:///app/db/sublink.db
+
+      # Directory for config.yaml, SQLite files and GeoIP.
+      # - SUBLINK_DB_PATH=./db
+
+      # Log directory.
+      # - SUBLINK_LOG_PATH=./logs
+
+      # Log level: debug, info, warn, error, fatal.
+      # - SUBLINK_LOG_LEVEL=info
+
+      # GeoIP database path; downloaded automatically when missing.
+      # - SUBLINK_GEOIP_PATH=./db/GeoLite2-City.mmdb
+
+      # JWT signing secret; generated and stored in the database when unset.
+      # - SUBLINK_JWT_SECRET=change-me-at-least-32-characters
+
+      # API encryption key for stored secrets and AccessKeys; generated when unset.
+      # Use the same value on several instances to reuse AccessKeys.
+      # - SUBLINK_API_ENCRYPTION_KEY=change-me-at-least-32-characters
+
+      # Emergency TOTP reset secret; environment only, never saved to config.
+      # - SUBLINK_MFA_RESET_SECRET=change-me
+
+      # Login token lifetime in days.
+      # - SUBLINK_EXPIRE_DAYS=14
+
+      # Login protection: failures before ban, counting window (minutes), ban duration (minutes).
+      # - SUBLINK_LOGIN_FAIL_COUNT=5
+      # - SUBLINK_LOGIN_FAIL_WINDOW=1
+      # - SUBLINK_LOGIN_BAN_DURATION=10
+
+      # CAPTCHA: 1=disabled, 2=image, 3=Cloudflare Turnstile.
+      # - SUBLINK_CAPTCHA_MODE=2
+
+      # Turnstile keys; required when CAPTCHA_MODE=3, otherwise the mode falls back to image.
+      # - SUBLINK_TURNSTILE_SITE_KEY=
+      # - SUBLINK_TURNSTILE_SECRET_KEY=
+      # Optional mihomo proxy link used for Turnstile verification.
+      # - SUBLINK_TURNSTILE_PROXY_LINK=
+
+      # Hide the admin UI behind a base path (empty = root).
+      # - SUBLINK_WEB_BASE_PATH=/admin
+
+      # Trusted reverse proxy IPs/CIDRs, comma separated.
+      # - SUBLINK_TRUSTED_PROXIES=127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10
+
+      # Initial admin password; used only when the admin account is created.
+      # - SUBLINK_ADMIN_PASSWORD=change-me
+
+      # Reset the admin password on every startup; remove after use (name is REST, not RESET).
+      # - SUBLINK_ADMIN_PASSWORD_REST=change-me
+
+      # Demo mode: in-memory database, schedulers and sensitive actions disabled.
+      # - SUBLINK_DEMO_MODE=true
+
+      # Experimental feature flags, comma separated (none required currently).
+      # - SUBLINK_FEATURE=
+
+      # AI template edit session TTL in seconds (1-3600, default 900).
+      # Only honored when the mock AI provider is enabled; release images set GIN_MODE=release.
+      # - SUBLINK_TEMPLATE_EDIT_SESSION_TTL_SECONDS=900
+
+      # Container timezone (image default: Asia/Shanghai).
+      # - TZ=Europe/Moscow
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/v1/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
