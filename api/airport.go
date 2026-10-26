@@ -209,9 +209,9 @@ func AirportAdd(c *gin.Context) {
 		BackfillExistingCountry:      req.BackfillExistingCountry,
 	}
 
-	// 检查是否重复
+	// 检查是否重复（名称唯一，或 URL + User-Agent 组合唯一）
 	if err := airport.Find(); err == nil {
-		utils.FailWithMsg(c, "机场已存在（名称或URL重复）")
+		utils.FailWithMsg(c, "机场已存在（名称或URL+User-Agent重复）")
 		return
 	}
 
@@ -269,13 +269,13 @@ func AirportUpdate(c *gin.Context) {
 		return
 	}
 
-	conflict, err := models.HasAirportIdentityConflict(id, req.Name, req.URL)
+	conflict, err := models.HasAirportIdentityConflict(id, req.Name, req.URL, req.UserAgent)
 	if err != nil {
 		utils.FailWithMsg(c, "更新失败")
 		return
 	}
 	if conflict {
-		utils.FailWithMsg(c, "机场已存在（名称或URL与其他机场重复）")
+		utils.FailWithMsg(c, "机场已存在（名称或URL+User-Agent与其他机场重复）")
 		return
 	}
 
