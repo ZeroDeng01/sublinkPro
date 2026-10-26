@@ -78,11 +78,24 @@ export default defineConfig(({ mode }) => {
           // 依赖升级后主入口包可能略超 3 MiB，保持预缓存覆盖并避免 CI 构建失败。
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           // 缓存静态资源（排除 html，因为后端会动态注入配置）
-          globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
+          // 旗帜 SVG 体积大且数量多，不进预缓存，改由运行时缓存按需获取
+          globPatterns: ['**/*.{js,css,ico,png,woff,woff2}'],
           // 导航请求使用 NetworkFirst 策略
           // 这样每次都会尝试从服务器获取最新的 index.html（带配置注入）
           navigateFallback: null, // 禁用默认的导航回退
           runtimeCaching: [
+            {
+              // 国家旗帜等 SVG 静态资源按需缓存（文件名带内容哈希，可长期缓存）
+              urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.endsWith('.svg'),
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'svg-assets-cache',
+                expiration: {
+                  maxEntries: 600,
+                  maxAgeSeconds: 60 * 60 * 24 * 365 // 1年
+                }
+              }
+            },
             {
               // 导航请求使用 NetworkFirst 策略
               urlPattern: ({ request }) => request.mode === 'navigate',

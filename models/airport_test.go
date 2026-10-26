@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"strconv"
 	"testing"
 
@@ -45,6 +46,82 @@ func setupAirportTestDB(t *testing.T) {
 		resetAirportCacheForTest()
 		testutil.CloseDB(t, db)
 	})
+}
+
+func TestAirportIdentityAllowsSameURLWithDifferentUserAgent(t *testing.T) {
+	setupAirportTestDB(t)
+
+	airport := &Airport{
+		Name:      "airport-clash",
+		URL:       "https://example.com/subscription",
+		UserAgent: "clash",
+	}
+	if err := airport.Add(); err != nil {
+		t.Fatalf("add airport: %v", err)
+	}
+
+	check := Airport{Name: "airport-v2ray", URL: airport.URL, UserAgent: "v2ray"}
+	if err := check.Find(); !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("expected no duplicate for same URL with different user agent, got %v", err)
+	}
+
+	check = Airport{Name: "airport-other", URL: airport.URL, UserAgent: "clash"}
+	if err := check.Find(); err != nil {
+		t.Fatalf("expected duplicate for same URL and user agent, got %v", err)
+	}
+	if check.ID != airport.ID {
+		t.Fatalf("duplicate returned id = %d, want %d", check.ID, airport.ID)
+	}
+}
+
+func TestAirportIdentityConflictIgnoresSelfOnUpdate(t *testing.T) {
+	setupAirportTestDB(t)
+
+	airport := &Airport{
+		Name:      "airport-a",
+		URL:       "https://example.com/a",
+		UserAgent: "clash",
+	}
+	if err := airport.Add(); err != nil {
+		t.Fatalf("add airport: %v", err)
+	}
+
+	conflict, err := HasAirportIdentityConflict(airport.ID, airport.Name, airport.URL, "v2ray")
+	if err != nil {
+		t.Fatalf("check identity conflict: %v", err)
+	}
+	if conflict {
+		t.Fatal("expected no conflict when only user agent changes for the same airport")
+	}
+
+	other := &Airport{Name: "airport-b", URL: airport.URL, UserAgent: "clash"}
+	if err := other.Add(); err != nil {
+		t.Fatalf("add airport b: %v", err)
+	}
+
+	conflict, err = HasAirportIdentityConflict(airport.ID, "airport-a2", airport.URL, "clash")
+	if err != nil {
+		t.Fatalf("check identity conflict: %v", err)
+	}
+	if !conflict {
+		t.Fatal("expected conflict with another airport sharing url and user agent")
+	}
+
+	conflict, err = HasAirportIdentityConflict(airport.ID, "airport-a2", airport.URL, "v2ray")
+	if err != nil {
+		t.Fatalf("check identity conflict: %v", err)
+	}
+	if conflict {
+		t.Fatal("expected no conflict when only the edited airport uses this user agent")
+	}
+
+	conflict, err = HasAirportIdentityConflict(other.ID, airport.Name, "https://example.com/other", "")
+	if err != nil {
+		t.Fatalf("check identity conflict: %v", err)
+	}
+	if !conflict {
+		t.Fatal("expected name conflict with another airport")
+	}
 }
 
 func TestAirportDeleteCleansSubscriptionAirportRelations(t *testing.T) {

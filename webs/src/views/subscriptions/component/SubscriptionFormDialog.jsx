@@ -25,6 +25,8 @@ import Tooltip from '@mui/material/Tooltip';
 import InputAdornment from '@mui/material/InputAdornment';
 import Grid from '@mui/material/Grid';
 import ButtonGroup from '@mui/material/ButtonGroup';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
@@ -48,10 +50,14 @@ import { previewSubscriptionNodeName } from './nodeRenameRuleUtils';
 import NodeNamePreprocessor from 'components/NodeNamePreprocessor';
 import NodeNameFilter from 'components/NodeNameFilter';
 import NodeTagFilter from './NodeTagFilter';
+import NodeCountryFilter from './NodeCountryFilter';
+import NodeFilterSection from './NodeFilterSection';
 import NodeProtocolFilter from 'components/NodeProtocolFilter';
 import NodeTransferBox from './NodeTransferBox';
 import DeduplicationConfig from './DeduplicationConfig';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import AltRouteIcon from '@mui/icons-material/AltRoute';
+import TuneIcon from '@mui/icons-material/Tune';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
@@ -143,8 +149,6 @@ export default function SubscriptionFormDialog({
     isDark
   );
   const { primaryText, secondaryText, tertiaryText } = getReadableTextTokens(theme, isDark);
-  const [countryWhitelistInput, setCountryWhitelistInput] = useState('');
-  const [countryBlacklistInput, setCountryBlacklistInput] = useState('');
 
   const [expandedPanels, setExpandedPanels] = useState({
     basic: true,
@@ -184,15 +188,6 @@ export default function SubscriptionFormDialog({
 
   const updateCountryFilterField = (field, values) => {
     setFormData({ ...formData, [field]: normalizeCountryCodeList(values) });
-  };
-
-  const handleCountryFilterKeyDown = (event, field, inputValue, setInputValue) => {
-    if (event.key !== 'Enter') return;
-    const normalizedInput = normalizeCountryCode(inputValue);
-    if (!normalizedInput) return;
-    event.preventDefault();
-    updateCountryFilterField(field, [...normalizeCountryCodeList(formData[field]), normalizedInput]);
-    setInputValue('');
   };
 
   useEffect(() => {
@@ -253,6 +248,18 @@ export default function SubscriptionFormDialog({
     return count;
   }, [formData, unlockRules]);
 
+  const generalFilterCount = useMemo(() => {
+    let count = 0;
+    if (formData.DelayTime > 0) count++;
+    if (formData.MinSpeed > 0) count++;
+    if (formData.MaxFraudScore > 0) count++;
+    if (formData.QualityStatus) count++;
+    if (formData.ResidentialType) count++;
+    if (formData.IPType) count++;
+    if (unlockRules.some((rule) => rule.provider || rule.status || rule.keyword)) count++;
+    return count;
+  }, [formData, unlockRules]);
+
   const updateUnlockRule = (index, patch) => {
     const nextRules = unlockRules.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule));
     setFormData({ ...formData, unlockRules: nextRules });
@@ -279,6 +286,23 @@ export default function SubscriptionFormDialog({
     display: 'block',
     mt: 1,
     color: secondaryText
+  };
+
+  const relationToggleSx = {
+    '& .MuiToggleButton-root': {
+      color: secondaryText,
+      bgcolor: nestedPanelSurface,
+      borderColor: panelBorder,
+      '&:hover': {
+        bgcolor: withAlpha(palette.primary.main, isDark ? 0.12 : 0.06),
+        borderColor: withAlpha(palette.primary.main, isDark ? 0.34 : 0.22)
+      },
+      '&.Mui-selected, &.Mui-selected:hover': {
+        color: isDark ? palette.primary.light : palette.primary.dark,
+        bgcolor: withAlpha(palette.primary.main, isDark ? 0.22 : 0.12),
+        borderColor: withAlpha(palette.primary.main, isDark ? 0.5 : 0.32)
+      }
+    }
   };
 
   const insetHighlight = isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.03)}` : 'none';
@@ -776,7 +800,10 @@ export default function SubscriptionFormDialog({
               {!expandedPanels.filter && filterRulesCount > 0 && (
                 <Chip
                   size="small"
-                  label={t('subscriptions.form.nodeFilter.activeRules', { count: filterRulesCount })}
+                  label={t('subscriptions.form.nodeFilter.activeRulesWithLogic', {
+                    count: filterRulesCount,
+                    logic: formData.FilterLogic === 'or' ? 'OR' : 'AND'
+                  })}
                   color="warning"
                   variant="outlined"
                   sx={{ ml: 1 }}
@@ -785,298 +812,292 @@ export default function SubscriptionFormDialog({
             </AccordionSummary>
             <AccordionDetails sx={accordionDetailsSx}>
               <Stack spacing={2.5}>
-                {/* Delay and Speed Filter */}
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label={t('subscriptions.form.nodeFilter.maxDelay')}
-                      type="text"
-                      inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                      value={formData.DelayTime}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d+$/.test(val)) {
-                          setFormData({ ...formData, DelayTime: val === '' ? '' : Number(val) });
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const val = Math.max(0, Number(e.target.value) || 0);
-                        setFormData({ ...formData, DelayTime: val });
-                      }}
-                      InputProps={{ endAdornment: <InputAdornment position="end">ms</InputAdornment> }}
-                      helperText={t('subscriptions.form.nodeFilter.maxDelayHelper')}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label={t('subscriptions.form.nodeFilter.minSpeed')}
-                      type="text"
-                      inputProps={{ inputMode: 'numeric', pattern: '[0-9]*\\.?[0-9]*' }}
-                      value={formData.MinSpeed}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                          setFormData({ ...formData, MinSpeed: val === '' ? '' : val });
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const val = Math.max(0, parseFloat(e.target.value) || 0);
-                        setFormData({ ...formData, MinSpeed: val });
-                      }}
-                      InputProps={{ endAdornment: <InputAdornment position="end">MB/s</InputAdornment> }}
-                      helperText={t('subscriptions.form.nodeFilter.minSpeedHelper')}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label={t('subscriptions.form.nodeFilter.maxFraudScore')}
-                      type="text"
-                      inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                      value={formData.MaxFraudScore}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d+$/.test(val)) {
-                          setFormData({ ...formData, MaxFraudScore: val === '' ? '' : Number(val) });
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const val = Math.max(0, Number(e.target.value) || 0);
-                        setFormData({ ...formData, MaxFraudScore: val });
-                      }}
-                      helperText={t('subscriptions.form.nodeFilter.maxFraudScoreHelper')}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>{t('subscriptions.form.nodeFilter.qualityStatus')}</InputLabel>
-                      <Select
-                        value={formData.QualityStatus || ''}
-                        label={t('subscriptions.form.nodeFilter.qualityStatus')}
-                        onChange={(e) => setFormData({ ...formData, QualityStatus: e.target.value })}
-                      >
-                        {QUALITY_STATUS_OPTIONS.map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <Typography variant="caption" sx={helperCaptionSx}>
-                      {t('subscriptions.form.nodeFilter.qualityStatusHelper')}
+                {/* 筛选组合逻辑 */}
+                <NodeFilterSection
+                  icon={<AltRouteIcon color="primary" fontSize="small" />}
+                  title={t('subscriptions.form.nodeFilter.filterLogic')}
+                  summary={formData.FilterLogic === 'or' ? 'OR' : 'AND'}
+                  defaultExpanded
+                >
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1.5}
+                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                    justifyContent="space-between"
+                    flexWrap="wrap"
+                    useFlexGap
+                  >
+                    <Typography variant="caption" sx={{ display: 'block', color: secondaryText }}>
+                      {formData.FilterLogic === 'or'
+                        ? t('subscriptions.form.nodeFilter.filterLogicOrHelper')
+                        : t('subscriptions.form.nodeFilter.filterLogicAndHelper')}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Stack spacing={1.5}>
-                      <Typography variant="subtitle2">{t('subscriptions.form.nodeFilter.unlockRules')}</Typography>
-                      <Alert severity="info" variant="outlined">
-                        {t('subscriptions.form.nodeFilter.unlockRulesDesc')}
-                      </Alert>
-                      <Grid container spacing={1.5} alignItems="center">
-                        <Grid item xs={12} md={4}>
-                          <FormControl fullWidth size="small">
-                            <InputLabel>{t('subscriptions.form.nodeFilter.ruleRelation')}</InputLabel>
-                            <Select
-                              value={formData.UnlockRuleMode || 'or'}
-                              label={t('subscriptions.form.nodeFilter.ruleRelation')}
-                              onChange={(e) => setFormData({ ...formData, UnlockRuleMode: e.target.value })}
-                            >
-                              {getUnlockRuleModeOptions().map((option) => (
-                                <MenuItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={12} md={8}>
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            {formData.UnlockRuleMode === 'and'
-                              ? t('subscriptions.form.nodeFilter.ruleRelationAnd')
-                              : t('subscriptions.form.nodeFilter.ruleRelationOr')}
-                          </Typography>
-                        </Grid>
-                      </Grid>
-                      {unlockRules.length > 0 ? (
-                        unlockRules.map((rule, index) => (
-                          <Grid container spacing={1.5} key={`unlock-rule-${index}`} alignItems="flex-start">
-                            <Grid item xs={12} md={4}>
-                              <Autocomplete
-                                options={unlockProviderOptions}
-                                value={unlockProviderOptions.find((item) => item.value === rule.provider) || null}
-                                onChange={(_, newValue) => updateUnlockRule(index, { provider: newValue?.value || '' })}
-                                getOptionLabel={(option) => option?.label || formatUnlockProviderLabel(option?.value || '')}
-                                renderOption={(props, option) => (
-                                  <li {...props} key={option.value}>
-                                    <Box>
-                                      <Typography variant="body2">{option.label}</Typography>
-                                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                        {option.description || option.value}
-                                      </Typography>
-                                    </Box>
-                                  </li>
-                                )}
-                                renderInput={(params) => (
-                                  <TextField {...params} label="Provider" helperText={t('subscriptions.form.nodeFilter.providerHelper')} />
-                                )}
-                              />
-                            </Grid>
-                            <Grid item xs={12} md={3}>
-                              <FormControl fullWidth>
-                                <InputLabel>{t('subscriptions.form.nodeFilter.status')}</InputLabel>
-                                <Select
-                                  value={rule.status || ''}
-                                  label={t('subscriptions.form.nodeFilter.status')}
-                                  onChange={(e) => updateUnlockRule(index, { status: e.target.value })}
-                                >
-                                  {getUnlockStatusOptions(true).map((option) => (
-                                    <MenuItem key={option.value || 'all'} value={option.value}>
-                                      {option.label}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                              <TextField
-                                fullWidth
-                                label={t('subscriptions.form.nodeFilter.keyword')}
-                                value={rule.keyword || ''}
-                                onChange={(e) => updateUnlockRule(index, { keyword: e.target.value })}
-                                helperText={t('subscriptions.form.nodeFilter.keywordHelper')}
-                              />
-                            </Grid>
-                            <Grid item xs={12} md={1}>
-                              <Button
-                                fullWidth
-                                color="error"
-                                variant="outlined"
-                                startIcon={<DeleteOutlineIcon />}
-                                onClick={() => removeUnlockRule(index)}
-                              >
-                                {t('subscriptions.form.nodeFilter.delete')}
-                              </Button>
-                            </Grid>
-                          </Grid>
-                        ))
-                      ) : (
+                    <ToggleButtonGroup
+                      size="small"
+                      exclusive
+                      value={formData.FilterLogic === 'or' ? 'or' : 'and'}
+                      onChange={(_, value) => {
+                        if (value) {
+                          setFormData({ ...formData, FilterLogic: value });
+                        }
+                      }}
+                      aria-label={t('subscriptions.form.nodeFilter.filterLogic')}
+                      sx={relationToggleSx}
+                    >
+                      <ToggleButton value="and">AND</ToggleButton>
+                      <ToggleButton value="or">OR</ToggleButton>
+                    </ToggleButtonGroup>
+                  </Stack>
+                  <Typography variant="caption" sx={{ display: 'block', mt: 1, color: tertiaryText }}>
+                    {t('subscriptions.form.nodeFilter.filterLogicBlacklistHelper')}
+                  </Typography>
+                </NodeFilterSection>
+
+                {/* 通用筛选限制 */}
+                <NodeFilterSection
+                  icon={<TuneIcon color="primary" fontSize="small" />}
+                  title={t('subscriptions.form.nodeFilter.generalTitle')}
+                  summary={generalFilterCount > 0 ? t('subscriptions.form.nodeFilter.generalSummary', { count: generalFilterCount }) : ''}
+                  defaultExpanded
+                >
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label={t('subscriptions.form.nodeFilter.maxDelay')}
+                        type="text"
+                        inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                        value={formData.DelayTime}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d+$/.test(val)) {
+                            setFormData({ ...formData, DelayTime: val === '' ? '' : Number(val) });
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const val = Math.max(0, Number(e.target.value) || 0);
+                          setFormData({ ...formData, DelayTime: val });
+                        }}
+                        InputProps={{ endAdornment: <InputAdornment position="end">ms</InputAdornment> }}
+                        helperText={t('subscriptions.form.nodeFilter.maxDelayHelper')}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label={t('subscriptions.form.nodeFilter.minSpeed')}
+                        type="text"
+                        inputProps={{ inputMode: 'numeric', pattern: '[0-9]*\\.?[0-9]*' }}
+                        value={formData.MinSpeed}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                            setFormData({ ...formData, MinSpeed: val === '' ? '' : val });
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const val = Math.max(0, parseFloat(e.target.value) || 0);
+                          setFormData({ ...formData, MinSpeed: val });
+                        }}
+                        InputProps={{ endAdornment: <InputAdornment position="end">MB/s</InputAdornment> }}
+                        helperText={t('subscriptions.form.nodeFilter.minSpeedHelper')}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label={t('subscriptions.form.nodeFilter.maxFraudScore')}
+                        type="text"
+                        inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                        value={formData.MaxFraudScore}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d+$/.test(val)) {
+                            setFormData({ ...formData, MaxFraudScore: val === '' ? '' : Number(val) });
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const val = Math.max(0, Number(e.target.value) || 0);
+                          setFormData({ ...formData, MaxFraudScore: val });
+                        }}
+                        helperText={t('subscriptions.form.nodeFilter.maxFraudScoreHelper')}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth>
+                        <InputLabel>{t('subscriptions.form.nodeFilter.qualityStatus')}</InputLabel>
+                        <Select
+                          value={formData.QualityStatus || ''}
+                          label={t('subscriptions.form.nodeFilter.qualityStatus')}
+                          onChange={(e) => setFormData({ ...formData, QualityStatus: e.target.value })}
+                        >
+                          {QUALITY_STATUS_OPTIONS.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                              {option.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Typography variant="caption" sx={helperCaptionSx}>
+                        {t('subscriptions.form.nodeFilter.qualityStatusHelper')}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth>
+                        <InputLabel>{t('subscriptions.form.nodeFilter.residential')}</InputLabel>
+                        <Select
+                          value={formData.ResidentialType || ''}
+                          label={t('subscriptions.form.nodeFilter.residential')}
+                          onChange={(e) => setFormData({ ...formData, ResidentialType: e.target.value })}
+                        >
+                          <MenuItem value="">{t('subscriptions.form.nodeFilter.all')}</MenuItem>
+                          <MenuItem value="residential">{t('subscriptions.form.nodeFilter.residentialIp')}</MenuItem>
+                          <MenuItem value="datacenter">{t('subscriptions.form.nodeFilter.datacenterIp')}</MenuItem>
+                          <MenuItem value="untested">{t('subscriptions.form.nodeFilter.untested')}</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <Typography variant="caption" sx={helperCaptionSx}>
+                        {t('subscriptions.form.nodeFilter.residentialHelper')}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth>
+                        <InputLabel>{t('subscriptions.form.nodeFilter.ipType')}</InputLabel>
+                        <Select
+                          value={formData.IPType || ''}
+                          label={t('subscriptions.form.nodeFilter.ipType')}
+                          onChange={(e) => setFormData({ ...formData, IPType: e.target.value })}
+                        >
+                          <MenuItem value="">{t('subscriptions.form.nodeFilter.all')}</MenuItem>
+                          <MenuItem value="native">{t('subscriptions.form.nodeFilter.nativeIp')}</MenuItem>
+                          <MenuItem value="broadcast">{t('subscriptions.form.nodeFilter.broadcastIp')}</MenuItem>
+                          <MenuItem value="untested">{t('subscriptions.form.nodeFilter.untested')}</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <Typography variant="caption" sx={helperCaptionSx}>
+                        {t('subscriptions.form.nodeFilter.ipTypeHelper')}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Stack spacing={1.5}>
+                        <Typography variant="subtitle2">{t('subscriptions.form.nodeFilter.unlockRules')}</Typography>
                         <Alert severity="info" variant="outlined">
-                          {t('subscriptions.form.nodeFilter.unlockInactive')}
+                          {t('subscriptions.form.nodeFilter.unlockRulesDesc')}
                         </Alert>
-                      )}
-                      <Box>
-                        <Button startIcon={<AddIcon />} variant="outlined" onClick={addUnlockRule}>
-                          {t('subscriptions.form.nodeFilter.addUnlockRule')}
-                        </Button>
-                      </Box>
-                    </Stack>
+                        <Grid container spacing={1.5} alignItems="center">
+                          <Grid item xs={12} md={4}>
+                            <FormControl fullWidth size="small">
+                              <InputLabel>{t('subscriptions.form.nodeFilter.ruleRelation')}</InputLabel>
+                              <Select
+                                value={formData.UnlockRuleMode || 'or'}
+                                label={t('subscriptions.form.nodeFilter.ruleRelation')}
+                                onChange={(e) => setFormData({ ...formData, UnlockRuleMode: e.target.value })}
+                              >
+                                {getUnlockRuleModeOptions().map((option) => (
+                                  <MenuItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} md={8}>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              {formData.UnlockRuleMode === 'and'
+                                ? t('subscriptions.form.nodeFilter.ruleRelationAnd')
+                                : t('subscriptions.form.nodeFilter.ruleRelationOr')}
+                            </Typography>
+                          </Grid>
+                        </Grid>
+                        {unlockRules.length > 0 ? (
+                          unlockRules.map((rule, index) => (
+                            <Grid container spacing={1.5} key={`unlock-rule-${index}`} alignItems="flex-start">
+                              <Grid item xs={12} md={4}>
+                                <Autocomplete
+                                  options={unlockProviderOptions}
+                                  value={unlockProviderOptions.find((item) => item.value === rule.provider) || null}
+                                  onChange={(_, newValue) => updateUnlockRule(index, { provider: newValue?.value || '' })}
+                                  getOptionLabel={(option) => option?.label || formatUnlockProviderLabel(option?.value || '')}
+                                  renderOption={(props, option) => (
+                                    <li {...props} key={option.value}>
+                                      <Box>
+                                        <Typography variant="body2">{option.label}</Typography>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                          {option.description || option.value}
+                                        </Typography>
+                                      </Box>
+                                    </li>
+                                  )}
+                                  renderInput={(params) => (
+                                    <TextField
+                                      {...params}
+                                      label="Provider"
+                                      helperText={t('subscriptions.form.nodeFilter.providerHelper')}
+                                    />
+                                  )}
+                                />
+                              </Grid>
+                              <Grid item xs={12} md={3}>
+                                <FormControl fullWidth>
+                                  <InputLabel>{t('subscriptions.form.nodeFilter.status')}</InputLabel>
+                                  <Select
+                                    value={rule.status || ''}
+                                    label={t('subscriptions.form.nodeFilter.status')}
+                                    onChange={(e) => updateUnlockRule(index, { status: e.target.value })}
+                                  >
+                                    {getUnlockStatusOptions(true).map((option) => (
+                                      <MenuItem key={option.value || 'all'} value={option.value}>
+                                        {option.label}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              </Grid>
+                              <Grid item xs={12} md={4}>
+                                <TextField
+                                  fullWidth
+                                  label={t('subscriptions.form.nodeFilter.keyword')}
+                                  value={rule.keyword || ''}
+                                  onChange={(e) => updateUnlockRule(index, { keyword: e.target.value })}
+                                  helperText={t('subscriptions.form.nodeFilter.keywordHelper')}
+                                />
+                              </Grid>
+                              <Grid item xs={12} md={1}>
+                                <Button
+                                  fullWidth
+                                  color="error"
+                                  variant="outlined"
+                                  startIcon={<DeleteOutlineIcon />}
+                                  onClick={() => removeUnlockRule(index)}
+                                >
+                                  {t('subscriptions.form.nodeFilter.delete')}
+                                </Button>
+                              </Grid>
+                            </Grid>
+                          ))
+                        ) : (
+                          <Alert severity="info" variant="outlined">
+                            {t('subscriptions.form.nodeFilter.unlockInactive')}
+                          </Alert>
+                        )}
+                        <Box>
+                          <Button startIcon={<AddIcon />} variant="outlined" onClick={addUnlockRule}>
+                            {t('subscriptions.form.nodeFilter.addUnlockRule')}
+                          </Button>
+                        </Box>
+                      </Stack>
+                    </Grid>
                   </Grid>
-                </Grid>
+                </NodeFilterSection>
 
                 {/* Landing IP Country Filter */}
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <Autocomplete
-                      multiple
-                      freeSolo
-                      options={normalizedCountryOptions}
-                      value={normalizedCountryWhitelist}
-                      inputValue={countryWhitelistInput}
-                      onInputChange={(event, newInputValue) => {
-                        void event;
-                        setCountryWhitelistInput(newInputValue);
-                      }}
-                      onChange={(event, newValue) => {
-                        void event;
-                        updateCountryFilterField('CountryWhitelist', newValue);
-                      }}
-                      getOptionLabel={(option) => formatCountry(normalizeCountryCode(option))}
-                      isOptionEqualToValue={(option, value) => normalizeCountryCode(option) === normalizeCountryCode(value)}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label={t('subscriptions.form.nodeFilter.countryWhitelist')}
-                          helperText={t('subscriptions.form.nodeFilter.countryWhitelistHelper')}
-                          onKeyDown={(event) =>
-                            handleCountryFilterKeyDown(event, 'CountryWhitelist', countryWhitelistInput, setCountryWhitelistInput)
-                          }
-                        />
-                      )}
-                      renderOption={(props, option) => <li {...props}>{formatCountry(normalizeCountryCode(option))}</li>}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Autocomplete
-                      multiple
-                      freeSolo
-                      options={normalizedCountryOptions}
-                      value={normalizedCountryBlacklist}
-                      inputValue={countryBlacklistInput}
-                      onInputChange={(event, newInputValue) => {
-                        void event;
-                        setCountryBlacklistInput(newInputValue);
-                      }}
-                      onChange={(event, newValue) => {
-                        void event;
-                        updateCountryFilterField('CountryBlacklist', newValue);
-                      }}
-                      getOptionLabel={(option) => formatCountry(normalizeCountryCode(option))}
-                      isOptionEqualToValue={(option, value) => normalizeCountryCode(option) === normalizeCountryCode(value)}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label={t('subscriptions.form.nodeFilter.countryBlacklist')}
-                          helperText={t('subscriptions.form.nodeFilter.countryWhitelistHelper')}
-                          onKeyDown={(event) =>
-                            handleCountryFilterKeyDown(event, 'CountryBlacklist', countryBlacklistInput, setCountryBlacklistInput)
-                          }
-                        />
-                      )}
-                      renderOption={(props, option) => <li {...props}>{formatCountry(normalizeCountryCode(option))}</li>}
-                    />
-                  </Grid>
-                </Grid>
-
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>{t('subscriptions.form.nodeFilter.residential')}</InputLabel>
-                      <Select
-                        value={formData.ResidentialType || ''}
-                        label={t('subscriptions.form.nodeFilter.residential')}
-                        onChange={(e) => setFormData({ ...formData, ResidentialType: e.target.value })}
-                      >
-                        <MenuItem value="">{t('subscriptions.form.nodeFilter.all')}</MenuItem>
-                        <MenuItem value="residential">{t('subscriptions.form.nodeFilter.residentialIp')}</MenuItem>
-                        <MenuItem value="datacenter">{t('subscriptions.form.nodeFilter.datacenterIp')}</MenuItem>
-                        <MenuItem value="untested">{t('subscriptions.form.nodeFilter.untested')}</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <Typography variant="caption" sx={helperCaptionSx}>
-                      {t('subscriptions.form.nodeFilter.residentialHelper')}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>{t('subscriptions.form.nodeFilter.ipType')}</InputLabel>
-                      <Select
-                        value={formData.IPType || ''}
-                        label={t('subscriptions.form.nodeFilter.ipType')}
-                        onChange={(e) => setFormData({ ...formData, IPType: e.target.value })}
-                      >
-                        <MenuItem value="">{t('subscriptions.form.nodeFilter.all')}</MenuItem>
-                        <MenuItem value="native">{t('subscriptions.form.nodeFilter.nativeIp')}</MenuItem>
-                        <MenuItem value="broadcast">{t('subscriptions.form.nodeFilter.broadcastIp')}</MenuItem>
-                        <MenuItem value="untested">{t('subscriptions.form.nodeFilter.untested')}</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <Typography variant="caption" sx={helperCaptionSx}>
-                      {t('subscriptions.form.nodeFilter.ipTypeHelper')}
-                    </Typography>
-                  </Grid>
-                </Grid>
+                <NodeCountryFilter
+                  countryOptions={normalizedCountryOptions}
+                  whitelistValue={normalizedCountryWhitelist}
+                  blacklistValue={normalizedCountryBlacklist}
+                  onWhitelistChange={(values) => updateCountryFilterField('CountryWhitelist', values)}
+                  onBlacklistChange={(values) => updateCountryFilterField('CountryBlacklist', values)}
+                />
 
                 {/* Node Tag Filter */}
                 <NodeTagFilter

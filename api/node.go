@@ -913,6 +913,17 @@ func NodeCountryStats(c *gin.Context) {
 	utils.OkDetailed(c, "获取国家统计成功", stats)
 }
 
+// NodeCountryStatsFiltered 获取符合过滤条件的按国家统计节点数量
+func NodeCountryStatsFiltered(c *gin.Context) {
+	var Node models.Node
+	filter := buildNodeFilterFromQuery(c)
+	items, total := Node.GetFilteredCountryStats(filter)
+	utils.OkDetailed(c, "获取国家统计成功", gin.H{
+		"items": items,
+		"total": total,
+	})
+}
+
 func DashboardCountryStats(c *gin.Context) {
 	stats := models.GetDashboardCountryStats()
 	utils.OkDetailed(c, "获取仪表盘国家统计成功", stats)

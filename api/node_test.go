@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -130,5 +131,72 @@ func TestNodeUpdatePreservesClashExtraWhenLinkUnchanged(t *testing.T) {
 				t.Fatalf("ClashExtra = %q, want %q", stored.ClashExtra, tt.wantExtra)
 			}
 		})
+	}
+}
+
+// TestNodeCountryStatsFilteredAppliesQueryFilters verifies that the filtered country
+// aggregation endpoint reuses the same query filters as the node list.
+func TestNodeCountryStatsFilteredAppliesQueryFilters(t *testing.T) {
+	setupNodeUpdateAPITestDB(t)
+
+	for _, item := range []struct {
+		name    string
+		link    string
+		country string
+		group   string
+	}{
+		{name: "us-1", link: "ss://us-1", country: "US", group: "Asia"},
+		{name: "us-2", link: "ss://us-2", country: "US", group: "Asia"},
+		{name: "de-1", link: "ss://de-1", country: "DE", group: "Asia"},
+		{name: "sg-1", link: "ss://sg-1", country: "SG", group: "Europe"},
+	} {
+		n := models.Node{
+			Name:        item.name,
+			LinkName:    item.name,
+			NameMode:    models.NodeNameModeLink,
+			Link:        item.link,
+			Protocol:    "ss",
+			Group:       item.group,
+			LinkCountry: item.country,
+		}
+		if err := n.Add(); err != nil {
+			t.Fatalf("add node %s: %v", item.name, err)
+		}
+	}
+
+	recorder := httptest.NewRecorder()
+	ginContext, _ := gin.CreateTestContext(recorder)
+	ginContext.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/nodes/country-stats?group=Asia", nil)
+
+	NodeCountryStatsFiltered(ginContext)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("stats status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			Items []models.NodeCountryStat `json:"items"`
+			Total int                      `json:"total"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode stats response: %v, body = %s", err, recorder.Body.String())
+	}
+	if body.Code != 200 {
+		t.Fatalf("stats code = %d, body = %s", body.Code, recorder.Body.String())
+	}
+	if body.Data.Total != 3 {
+		t.Fatalf("stats total = %d, want 3", body.Data.Total)
+	}
+	want := []models.NodeCountryStat{{Country: "US", Count: 2}, {Country: "DE", Count: 1}}
+	if len(body.Data.Items) != len(want) {
+		t.Fatalf("stats items = %+v, want %+v", body.Data.Items, want)
+	}
+	for i := range want {
+		if body.Data.Items[i] != want[i] {
+			t.Fatalf("stats items[%d] = %+v, want %+v", i, body.Data.Items[i], want[i])
+		}
 	}
 }

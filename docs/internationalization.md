@@ -8,9 +8,9 @@ This document defines the Wave 1 implementation contract for SublinkPro internat
 
 ## Scope
 
-- Initial supported locales are `zh-CN` and `en-US`.
+- Supported locales are `zh-CN`, `en-US`, and `ru-RU`.
 - `zh-CN` is the source language for much of the current UI. `en-US` must be complete before the rollout is considered usable.
-- New user-visible frontend text must be translated in both initial locales in the same change.
+- New user-visible frontend text must be translated in every supported locale in the same change.
 - Future locales must be added through the same namespace layout, detection rules, MUI mapping, and formatting helpers described here.
 
 SublinkPro doesn't use URL path or subdomain language routing. `SUBLINK_WEB_BASE_PATH` is already a routing concern for the Web UI, so locale selection must not add another path prefix or host based routing layer.
@@ -29,6 +29,7 @@ webs/src/i18n/
 ├── locales.js
 └── locales/
     ├── en-US.json
+    ├── ru-RU.json
     └── zh-CN.json
 ```
 
@@ -65,6 +66,7 @@ When matching browser languages, normalize aliases conservatively:
 
 - `zh`, `zh-CN`, `zh-Hans` map to `zh-CN`.
 - `en`, `en-US`, `en-GB`, and other English variants map to `en-US`.
+- `ru`, `ru-RU`, and other Russian variants map to `ru-RU`.
 
 Unsupported languages fall back to `zh-CN` until their translation resources and MUI locale mapping are added.
 
@@ -78,6 +80,7 @@ MUI locale configuration must be selected from the active app locale:
 |:---|:---|
 | `zh-CN` | `zhCN` |
 | `en-US` | `enUS` |
+| `ru-RU` | `ruRU` |
 
 Keep this mapping in one frontend helper, for example `webs/src/i18n/muiLocale.js`, so future locales are added in one place.
 
@@ -128,7 +131,7 @@ Backend-owned human text is still allowed when the backend is the product surfac
 To add a future locale:
 
 1. Add the locale code to the supported locale list.
-2. Add a complete resource file under `webs/src/i18n/locales/<locale>.json` with the same key structure as `zh-CN` and `en-US`.
+2. Add a complete resource file under `webs/src/i18n/locales/<locale>.json` with the same key structure as the existing locales.
 3. Add browser language normalization if needed.
 4. Add the MUI locale mapping.
 5. Confirm date, time, number, percentage, and traffic formatting for that locale.

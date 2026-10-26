@@ -3,7 +3,6 @@ package models
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -181,29 +180,60 @@ func (a *Airport) normalizeCountryFillSettings() {
 	}
 }
 
-// Find 查找机场是否重复（按URL或名称）
-func (a *Airport) Find() error {
-	// 先查缓存
-	results := airportCache.Filter(func(ap Airport) bool {
-		return ap.URL == a.URL || ap.Name == a.Name
-	})
-	if len(results) > 0 {
-		*a = results[0]
-		return nil
+// airportIdentityMatches 判断机场是否与给定名称或 URL+User-Agent 组合冲突。
+// 名称保持唯一；同一 URL 仅在 User-Agent 也相同时才视为重复。
+func airportIdentityMatches(ap Airport, name, url, userAgent string) bool {
+	if ap.Name == name {
+		return true
 	}
-	return database.DB.Where("url = ? or name = ?", a.URL, a.Name).First(a).Error
+	return ap.URL == url && strings.TrimSpace(ap.UserAgent) == userAgent
 }
 
-// HasAirportIdentityConflict 检查指定名称或 URL 是否已被其他机场使用。
-func HasAirportIdentityConflict(excludeID int, name, url string) (bool, error) {
-	checkAirport := Airport{Name: name, URL: url}
-	if err := checkAirport.Find(); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
+// loadForIdentityCheck 返回用于唯一性校验的机场列表（优先缓存，缓存为空时回退数据库）。
+func (a *Airport) loadForIdentityCheck() ([]Airport, error) {
+	if airportCache.Count() > 0 {
+		return airportCache.GetAll(), nil
+	}
+	var airports []Airport
+	if err := database.DB.Find(&airports).Error; err != nil {
+		return nil, err
+	}
+	return airports, nil
+}
+
+// Find 查找机场是否重复（名称唯一，或 URL + User-Agent 组合唯一）
+func (a *Airport) Find() error {
+	userAgent := strings.TrimSpace(a.UserAgent)
+	airports, err := a.loadForIdentityCheck()
+	if err != nil {
+		return err
+	}
+	for _, ap := range airports {
+		if airportIdentityMatches(ap, a.Name, a.URL, userAgent) {
+			*a = ap
+			return nil
 		}
+	}
+	return gorm.ErrRecordNotFound
+}
+
+// HasAirportIdentityConflict 检查指定名称或 URL+User-Agent 组合是否已被其他机场使用。
+func HasAirportIdentityConflict(excludeID int, name, url, userAgent string) (bool, error) {
+	checkAirport := Airport{Name: name, URL: url, UserAgent: userAgent}
+	airports, err := checkAirport.loadForIdentityCheck()
+	if err != nil {
 		return false, err
 	}
-	return checkAirport.ID != excludeID, nil
+	userAgent = strings.TrimSpace(userAgent)
+	for _, ap := range airports {
+		if ap.ID == excludeID {
+			continue
+		}
+		if airportIdentityMatches(ap, name, url, userAgent) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // List 获取所有机场

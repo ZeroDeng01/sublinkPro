@@ -164,7 +164,7 @@ Base: `/api/v1/nodes`
 - **POST** `/nodes/batch-fill-country` — **JSON** `{"airportId":123, "onlyEmpty":true}` fills node countries from enabled country rules by matching each node name. `airportId` is optional; when omitted, it scans all nodes. This is rule-based filling of empty/missing country values, not landing-IP detection. Use `/nodes/batch-update-country` when you already know the exact country code to set.
 
 ### List / Get Nodes
-**GET** `/nodes/get` — query filters (all lowerCamel): `search`, `group`, `source`, `protocol`, `maxDelay`, `minSpeed`, `sortBy`, `sortOrder`, `page`, `pageSize`, array filters `countries[]`, `tags[]`. Returns `{items, total, page, pageSize, totalPages}` when paginated.
+**GET** `/nodes/get` — query filters (all lowerCamel): `search`, `group`, `source`, `protocol`, `maxDelay`, `minSpeed`, `sortBy`, `sortOrder`, `page`, `pageSize`, array filters `countries[]`, `tags[]`. `countries[]` accepts ISO codes plus the special value `__UNKNOWN__` for nodes without a detected country. Returns `{items, total, page, pageSize, totalPages}` when paginated.
 
 ### Node Selector (compact picker list)
 **GET** `/nodes/selector` — same query filters as `/nodes/get`; returns `{items:[{ID, Name, Group, Source, LinkCountry, ...}], total, ...}`. Use this to present nodes as a numbered pick list.
@@ -179,6 +179,7 @@ Base: `/api/v1/nodes`
 - **GET** `/nodes/groups` — all group names
 - **GET** `/nodes/sources` — all sources
 - **GET** `/nodes/countries` — all country codes present
+- **GET** `/nodes/country-stats` — same filters as `/nodes/get` (paging and sorting are ignored); returns `{items:[{country, count}], total}` sorted by count descending. An empty `country` means unknown region.
 - **GET** `/nodes/protocols` — all protocols in use
 - **GET** `/nodes/group-stats` — per-group counts
 
@@ -201,7 +202,8 @@ Base: `/api/v1/subcription` (note the spelling — missing the second "s").
 **POST** `/subcription/add` — **form**
 - **Required:** `name` AND at least one of `nodeIds` (comma-separated node IDs), `groups` (comma-separated group names), or `airports` (comma-separated airport IDs).
 - Output template: `config` = a template **filename** (the `file` value from `GET /template/get`, e.g. `clash.yaml`); empty = raw node list.
-- Other optional form fields (UpperCamel unless noted): `airports` (comma-separated airport IDs), `scripts` (comma-separated script IDs), `IPWhitelist`, `IPBlacklist`, `DelayTime`, `MinSpeed`, `CountryWhitelist`, `CountryBlacklist`, `NodeNameRule`, `NodeNamePreprocess`, `NodeNameWhitelist`, `NodeNameBlacklist`, `TagWhitelist`, `TagBlacklist`, `ProtocolWhitelist`, `ProtocolBlacklist`, `DeduplicationRule`, `RefreshUsageOnRequest`, `UpdateInterval`, `MaxFraudScore`, `OnlyResidential`, `OnlyNative`, `ResidentialType`, `IPType`, `QualityStatus`, `UnlockProvider`, `UnlockStatus`, `UnlockKeyword`, `UnlockRules`, `UnlockRuleMode`.
+- Other optional form fields (UpperCamel unless noted): `airports` (comma-separated airport IDs), `scripts` (comma-separated script IDs), `IPWhitelist`, `IPBlacklist`, `DelayTime`, `MinSpeed`, `CountryWhitelist`, `CountryBlacklist`, `NodeNameRule`, `NodeNamePreprocess`, `NodeNameWhitelist`, `NodeNameBlacklist`, `TagWhitelist`, `TagBlacklist`, `ProtocolWhitelist`, `ProtocolBlacklist`, `FilterLogic`, `DeduplicationRule`, `RefreshUsageOnRequest`, `UpdateInterval`, `MaxFraudScore`, `OnlyResidential`, `OnlyNative`, `ResidentialType`, `IPType`, `QualityStatus`, `UnlockProvider`, `UnlockStatus`, `UnlockKeyword`, `UnlockRules`, `UnlockRuleMode`.
+- `FilterLogic` controls how configured filter groups combine: `and` (default) requires every group to match; `or` keeps a node when at least one group matches. Blacklists always exclude nodes regardless of this setting.
 - Name must be unique (duplicate → `订阅名称不能重复`).
 
 ### Update Subscription
@@ -235,6 +237,7 @@ Base: `/api/v1/subcription` (note the spelling — missing the second "s").
   "CountryWhitelist": "", "CountryBlacklist": "",
   "TagWhitelist": "", "TagBlacklist": "",
   "ProtocolWhitelist": "", "ProtocolBlacklist": "",
+  "FilterLogic": "and",
   "NodeNameWhitelist": "", "NodeNameBlacklist": "",
   "MaxFraudScore": 0, "OnlyResidential": false, "OnlyNative": false,
   "ResidentialType": "", "IPType": "", "QualityStatus": "",

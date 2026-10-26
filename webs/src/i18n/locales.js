@@ -1,10 +1,10 @@
-import { enUS, zhCN } from '@mui/material/locale';
+import { enUS, zhCN, ruRU } from '@mui/material/locale';
 
 export const DEFAULT_LANGUAGE = 'zh-CN';
 
-export const SUPPORTED_LANGUAGES = ['zh-CN', 'en-US'];
+export const SUPPORTED_LANGUAGES = ['zh-CN', 'en-US', 'ru-RU'];
 
-export const LANGUAGE_OPTIONS = [{ value: 'zh-CN' }, { value: 'en-US' }];
+export const LANGUAGE_OPTIONS = [{ value: 'zh-CN' }, { value: 'en-US' }, { value: 'ru-RU' }];
 
 export function normalizeLanguage(language) {
   const normalized = String(language || '').replace('_', '-');
@@ -18,15 +18,30 @@ export function normalizeLanguage(language) {
     return 'en-US';
   }
 
+  if (lower === 'ru' || lower.startsWith('ru-')) {
+    return 'ru-RU';
+  }
+
   return DEFAULT_LANGUAGE;
 }
 
 export function getMuiLocale(language) {
-  return normalizeLanguage(language) === 'zh-CN' ? zhCN : enUS;
+  switch (normalizeLanguage(language)) {
+    case 'zh-CN':
+      return zhCN;
+    case 'ru-RU':
+      return ruRU;
+    default:
+      return enUS;
+  }
 }
 
 export function getTurnstileLanguage(language) {
-  return normalizeLanguage(language) === 'zh-CN' ? 'zh-CN' : 'en-US';
+  const normalized = normalizeLanguage(language);
+  if (normalized === 'zh-CN') {
+    return 'zh-CN';
+  }
+  return normalized === 'ru-RU' ? 'ru' : 'en-US';
 }
 
 export function formatDateTime(value, language, options) {

@@ -172,6 +172,7 @@ func SubAdd(c *gin.Context) {
 	tagBlacklist := c.PostForm("TagBlacklist")
 	protocolWhitelist := c.PostForm("ProtocolWhitelist")
 	protocolBlacklist := c.PostForm("ProtocolBlacklist")
+	filterLogic := models.NormalizeFilterLogic(c.PostForm("FilterLogic"))
 	deduplicationRule := c.PostForm("DeduplicationRule")
 	refreshUsageOnRequestStr := c.PostForm("RefreshUsageOnRequest")
 	refreshUsageOnRequest := refreshUsageOnRequestStr != "false" // 默认为 true
@@ -264,6 +265,7 @@ func SubAdd(c *gin.Context) {
 	sub.TagBlacklist = tagBlacklist
 	sub.ProtocolWhitelist = protocolWhitelist
 	sub.ProtocolBlacklist = protocolBlacklist
+	sub.FilterLogic = filterLogic
 	sub.DeduplicationRule = deduplicationRule
 	sub.RefreshUsageOnRequest = refreshUsageOnRequest
 	sub.UpdateInterval = updateInterval
@@ -373,6 +375,7 @@ func SubUpdate(c *gin.Context) {
 	tagBlacklist := c.PostForm("TagBlacklist")
 	protocolWhitelist := c.PostForm("ProtocolWhitelist")
 	protocolBlacklist := c.PostForm("ProtocolBlacklist")
+	filterLogic := models.NormalizeFilterLogic(c.PostForm("FilterLogic"))
 	deduplicationRule := c.PostForm("DeduplicationRule")
 	refreshUsageOnRequestStr := c.PostForm("RefreshUsageOnRequest")
 	refreshUsageOnRequest := refreshUsageOnRequestStr != "false" // 默认为 true
@@ -475,6 +478,7 @@ func SubUpdate(c *gin.Context) {
 	sub.TagBlacklist = tagBlacklist
 	sub.ProtocolWhitelist = protocolWhitelist
 	sub.ProtocolBlacklist = protocolBlacklist
+	sub.FilterLogic = filterLogic
 	sub.DeduplicationRule = deduplicationRule
 	sub.RefreshUsageOnRequest = refreshUsageOnRequest
 	sub.UpdateInterval = updateInterval

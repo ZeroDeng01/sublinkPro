@@ -87,7 +87,10 @@
     "zh-CNDesc": "切换到中文界面",
     "en-US": "English",
     "en-USShort": "EN",
-    "en-USDesc": "Switch to English interface"
+    "en-USDesc": "Switch to English interface",
+    "ru-RU": "Русский",
+    "ru-RUShort": "RU",
+    "ru-RUDesc": "Switch to Russian interface"
   },
   "navigation": {
     "groups": {
@@ -2355,6 +2358,11 @@
         "inactive": "Unlock filtering is currently disabled. Add a rule below to enable it.",
         "addRule": "Add unlock rule"
       }
+    },
+    "countryStats": {
+      "title": "Nodes by country",
+      "total": "Total nodes: {{count}}",
+      "empty": "No countries match the current filters"
     }
   },
   "subscriptions": {
@@ -3007,6 +3015,15 @@
       },
       "nodeFilter": {
         "activeRules": "{{count}} rules enabled",
+        "activeRulesWithLogic": "{{count}} rules · {{logic}}",
+        "filterLogic": "Filter relation",
+        "filterLogicAndHelper": "A node must match every configured filter group.",
+        "filterLogicOrHelper": "A node only needs to match one configured filter group.",
+        "filterLogicBlacklistHelper": "Blacklisted nodes are always excluded, regardless of the selected relation.",
+        "generalTitle": "General constraints",
+        "generalSummary": "{{count}} constraints enabled",
+        "countryTitle": "Country filter",
+        "countrySummary": "Whitelist {{whitelist}} / blacklist {{blacklist}}",
         "maxDelay": "Max Delay",
         "maxDelayHelper": "Set the latency threshold for filtering nodes. 0 means no limit.",
         "minSpeed": "Min Speed",
@@ -3512,6 +3529,7 @@
   "nodeConditions": {
     "fields": {
       "name": "Remark",
+      "effectiveName": "Actual name",
       "linkName": "Original name",
       "linkCountry": "Country code",
       "protocol": "Protocol type",
@@ -3530,7 +3548,9 @@
       "residentialType": "Residential attribute",
       "speedStatus": "Speed status",
       "delayStatus": "Delay status",
+      "tags": "Tags",
       "linkAddress": "Address",
+      "linkHost": "Host",
       "linkPort": "Port",
       "dialerProxyName": "Dialer proxy",
       "link": "Node link"

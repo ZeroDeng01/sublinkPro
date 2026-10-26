@@ -29,7 +29,6 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 // utils
 import {
   createEmptyUnlockRule,
-  formatCountry,
   formatUnlockProviderLabel,
   getUnlockProviderOptions,
   getUnlockRuleModeOptions,
@@ -39,6 +38,8 @@ import {
 } from '../utils';
 import { getNodeActionButtonSx, getNodeColorChipSx, getNodeFieldControlSx, getNodeThemeTokens } from '../nodeTheme';
 import { withAlpha } from 'utils/colorUtils';
+import CountryFlag from 'components/CountryFlag';
+import { UNKNOWN_COUNTRY_FILTER } from 'utils/countryDisplay';
 
 const UNGROUPED_GROUP_VALUE = '\u672a\u5206\u7ec4';
 
@@ -91,6 +92,7 @@ export default function NodeFilters({
   const normalizedUnlockRules = Array.isArray(unlockRules) ? unlockRules : [];
   const [unlockExpanded, setUnlockExpanded] = useState(false);
   const allLabel = t('common.all');
+  const getCountryLabel = (option) => (option === UNKNOWN_COUNTRY_FILTER ? t('common.unknown') : option);
 
   const updateUnlockRule = (index, patch) => {
     setUnlockRules(normalizedUnlockRules.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule)));
@@ -252,12 +254,16 @@ export default function NodeFilters({
           value={countryFilter}
           onChange={(_, newValue) => setCountryFilter(newValue)}
           sx={{ minWidth: 150, ...fieldControlSx }}
-          getOptionLabel={(option) => formatCountry(option)}
+          getOptionLabel={getCountryLabel}
+          isOptionEqualToValue={(option, value) => option === value}
           renderOption={(props, option) => {
             const { key, ...otherProps } = props;
             return (
               <li key={key} {...otherProps}>
-                {formatCountry(option)}
+                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                  <CountryFlag code={option} height={12} />
+                  {getCountryLabel(option)}
+                </Stack>
               </li>
             );
           }}
@@ -267,12 +273,18 @@ export default function NodeFilters({
               return (
                 <Chip
                   key={key}
-                  label={formatCountry(option)}
+                  label={
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                      <CountryFlag code={option} height={11} />
+                      {getCountryLabel(option)}
+                    </Box>
+                  }
                   size="small"
                   sx={{
                     ...getNodeColorChipSx(theme, tokens, theme.palette.primary.main, { deletable: true }),
                     bgcolor: tokens.isDark ? withAlpha(theme.palette.primary.main, 0.12) : undefined,
-                    borderColor: tokens.isDark ? withAlpha(theme.palette.primary.main, 0.3) : undefined
+                    borderColor: tokens.isDark ? withAlpha(theme.palette.primary.main, 0.3) : undefined,
+                    '& .MuiChip-label': { display: 'flex', alignItems: 'center', px: 1 }
                   }}
                   {...tagProps}
                 />
