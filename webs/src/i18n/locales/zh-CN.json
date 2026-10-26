@@ -103,7 +103,7 @@
       "nodeMap": "节点地图",
       "airports": "机场管理",
       "nodes": "节点管理",
-      "nodeCheck": "节点检测",
+      "nodeCheck": "检测中心",
       "subscriptions": "订阅列表",
       "templates": "模板管理",
       "tags": "标签管理",
@@ -2305,12 +2305,12 @@
       "delete": "删除"
     },
     "profileSelect": {
-      "title": "选择检测策略",
+      "title": "选择检测方案",
       "selectedCount": "已选择 {{count}} 个节点",
       "empty": "暂无检测策略",
       "create": "创建策略",
       "scheduled": "定时启用",
-      "manage": "管理策略",
+      "manage": "检测中心",
       "start": "开始检测",
       "mode": {
         "full": "延迟+速度",
@@ -4285,5 +4285,61 @@
   },
   "pagination": {
     "rowsPerPage": "每页行数"
+  },
+  "detectionCenter": {
+    "title": "检测中心",
+    "tabs": {
+      "plans": "检测方案",
+      "jobs": "自动任务"
+    },
+    "newPlan": "新建方案",
+    "newJob": "新建任务",
+    "editJob": "编辑自动任务",
+    "plan": "检测方案",
+    "modules": "检测项目",
+    "module": {
+      "latency": "连通性与延迟",
+      "speed": "下载速度",
+      "exit": "出口 IP 与地区",
+      "quality": "IP 质量",
+      "ai": "AI 服务探测",
+      "streaming": "流媒体解锁"
+    },
+    "requestSettings": "高级设置",
+    "jobCount": "{{count}} 个自动任务",
+    "configure": "配置",
+    "run": "运行",
+    "runPlan": "手动运行 · {{name}}",
+    "jobName": "任务名称",
+    "autoEnabled": "启用任务",
+    "trigger": "执行方式",
+    "triggers": {
+      "scheduled": "定时检测",
+      "airport_update": "机场更新后检测"
+    },
+    "cron": "执行时间",
+    "timezone": "时区：{{timezone}}",
+    "scope": "检测范围",
+    "scopes": {
+      "all": "全部节点",
+      "filtered": "指定机场 / 分组 / 标签"
+    },
+    "groups": "原分组",
+    "tags": "标签",
+    "airports": "限定机场",
+    "updateFirst": "检测前更新所选机场",
+    "legacy": "原有定时任务",
+    "missingAirport": "机场已删除（{{id}}）",
+    "missingPlan": "方案不存在",
+    "noJobs": "暂无自动任务",
+    "runTimes": "上次执行：{{last}} · 下次执行：{{next}}",
+    "confirmDelete": "确认删除“{{name}}”？",
+    "deleted": "已删除",
+    "saveFailed": "保存失败",
+    "loadFailed": "加载失败，请重试",
+    "operationFailed": "操作失败",
+    "editPlan": "编辑检测方案",
+    "planName": "方案名称",
+    "emptyPlans": "暂无检测方案"
   }
 }

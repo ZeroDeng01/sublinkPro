@@ -23,7 +23,6 @@ import Typography from '@mui/material/Typography';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import ScheduleIcon from '@mui/icons-material/Schedule';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SpeedIcon from '@mui/icons-material/Speed';
 import TimerIcon from '@mui/icons-material/Timer';
@@ -32,7 +31,6 @@ import TimerIcon from '@mui/icons-material/Timer';
 import { getNodeCheckProfiles, runNodeCheck } from 'api/nodeCheck';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from 'utils/colorUtils';
-import { formatDateTime } from 'i18n/locales';
 import { getNodeCheckStrategyChipSx, getNodeCheckStrategyThemeTokens } from '../nodeCheckTheme';
 
 /**
@@ -42,7 +40,7 @@ import { getNodeCheckStrategyChipSx, getNodeCheckStrategyThemeTokens } from '../
 
 export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess, onOpenSettings }) {
   const theme = useTheme();
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const themeTokens = getNodeCheckStrategyThemeTokens(theme, isDark);
   const {
@@ -75,7 +73,7 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
       setProfiles(data);
       // 默认选中第一个
       if (data.length > 0) {
-        setSelectedProfileId((prev) => prev || data[0].id);
+        setSelectedProfileId((prev) => (data.some((item) => item.id === prev) ? prev : data[0].id));
       }
     } catch (error) {
       console.error('加载策略列表失败:', error);
@@ -106,16 +104,6 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
     } finally {
       setExecuting(false);
     }
-  };
-
-  const formatNextRunTime = (nextRunTime) => {
-    if (!nextRunTime) return null;
-    return formatDateTime(nextRunTime, i18n.resolvedLanguage || i18n.language, {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
 
   return (
@@ -241,14 +229,6 @@ export default function ProfileSelectDialog({ open, onClose, nodeIds, onSuccess,
                   }
                   secondary={
                     <Box component="span" sx={{ display: 'flex', flexDirection: 'row', gap: 1, mt: 0.5, alignItems: 'center' }}>
-                      {profile.enabled && (
-                        <>
-                          <ScheduleIcon sx={{ fontSize: 14, opacity: 0.6 }} />
-                          <Typography component="span" variant="caption" color="text.secondary">
-                            {formatNextRunTime(profile.nextRunTime) || t('nodes.profileSelect.scheduled')}
-                          </Typography>
-                        </>
-                      )}
                       {profile.timeout && (
                         <>
                           <TimerIcon sx={{ fontSize: 14, opacity: 0.6 }} />

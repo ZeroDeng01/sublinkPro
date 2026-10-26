@@ -644,9 +644,41 @@ Base: `/api/v1/node-check`
 - **GET** `/node-check/profiles/{id}`
 - **POST** `/node-check/profiles` — **JSON** create (demo-restricted)
 - **PUT** `/node-check/profiles/{id}` — **JSON** (demo-restricted)
-- **DELETE** `/node-check/profiles/{id}` (demo-restricted)
+- **DELETE** `/node-check/profiles/{id}` (demo-restricted); rejects independent-job and airport references, including paused automation. Clear/change references first.
 - **POST** `/node-check/profiles/{id}/run` — run a profile (demo-restricted)
-- **POST** `/node-check/run` — **JSON** `{"profileId":0, "nodeIds":[...]}` — general run entry (demo-restricted)
+- **POST** `/node-check/run` — **JSON** `{"profileId":1, "nodeIds":[...]}` (positive existing profile ID required) — general run entry (demo-restricted)
+
+### Detection-center jobs
+
+All endpoints use the same authenticated node-check route group; job writes/runs are demo-restricted.
+
+- **GET** `/node-check/jobs` → `{items, timezone}`. Positive IDs identify independent jobs; negative IDs map existing profile schedules directly (read-only `legacy: true`). No duplicate scheduler registration is made. Runtime view adds `running` and `nextRunTime` for independent jobs.
+- **POST** `/node-check/jobs` and **PUT** `/node-check/jobs/{id}` — JSON configuration below. PUT replaces all job configuration; runtime columns are not writable. `name` is at most 191 bytes, references must exist, and Cron is five-field server-local time. An invalid replacement does not remove the old schedule.
+- **DELETE** `/node-check/jobs/{id}` — independent running jobs must finish first. Deleting a negative-ID compatibility job clears the original profile schedule only, not the plan.
+- **POST** `/node-check/jobs/{id}/run` — manual execution can run paused jobs, but rejects overlapping independent job executions. Airport events arriving during a run are coalesced for a follow-up, using fresh configuration.
+
+Example independent job:
+
+```json
+{
+  "name": "Morning node check",
+  "profileId": 1,
+  "enabled": true,
+  "trigger": "scheduled",
+  "cronExpr": "30 5 * * *",
+  "scope": "filtered",
+  "airportIds": [3],
+  "groups": [],
+  "tags": [],
+  "updateBeforeCheck": true
+}
+```
+
+`trigger` is `scheduled` or `airport_update`. `scope` is `all` or `filtered`. All-node scope cannot contain hidden filters. Filtered scope requires a nonempty airport/group/tag constraint. Airport, group and tag constraints intersect. Pre-update requires explicitly selected airports and a scheduled trigger; all selected updates must succeed before scope resolution/checks. It suppresses the same updates' legacy detection hooks to avoid recursive/duplicate checks. Airport-event jobs only check matching nodes from the updated airport. Empty results skip rather than falling back to all nodes. Different jobs and legacy automation remain independent.
+
+Compatibility-job updates retain the original profile ID and support only scheduled trigger, source groups and tags; name follows the profile. Create an independent job for pre-update orchestration. Profile-only PUT can omit `enabled`, `cronExpr`, `groups` and `tags` without clearing compatibility scheduling/scope.
+
+`POST /node-check/run` additionally accepts `scope: "nodes"` (nonempty existing `nodeIds`), `scope: "all"`, or `scope: "filtered"` with nonempty `groups`/`tags`. Omitted scope preserves the legacy range behavior; the node UI always sends explicit selected-node scope. Results and task history remain on the existing node and task endpoints.
 
 ---
 
