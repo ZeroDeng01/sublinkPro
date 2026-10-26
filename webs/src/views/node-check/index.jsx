@@ -1,496 +1,432 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-// material-ui
-import { useTheme } from '@mui/material/styles';
-
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
-import Divider from '@mui/material/Divider';
-import IconButton from '@mui/material/IconButton';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
-import Stack from '@mui/material/Stack';
-import { formatDateTime } from 'i18n/locales';
-import Switch from '@mui/material/Switch';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-
-// icons
+import {
+  Alert,
+  Autocomplete,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  IconButton,
+  MenuItem,
+  Paper,
+  Snackbar,
+  Stack,
+  Switch,
+  Tab,
+  Tabs,
+  TextField,
+  Tooltip,
+  Typography
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import HistoryIcon from '@mui/icons-material/History';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import ScheduleIcon from '@mui/icons-material/Schedule';
-import SpeedIcon from '@mui/icons-material/Speed';
-import TimerIcon from '@mui/icons-material/Timer';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import LockOpenIcon from '@mui/icons-material/LockOpen';
-
-// project imports
 import MainCard from 'ui-component/cards/MainCard';
-import TaskProgressPanel from 'components/TaskProgressPanel';
-import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
-import { getNodeCheckStrategyChipSx, getNodeCheckStrategyThemeTokens } from 'views/nodes/nodeCheckTheme';
-
-// api
+import { useTaskProgress } from 'contexts/TaskProgressContext';
 import {
-  getNodeCheckMeta,
   getNodeCheckProfiles,
-  updateNodeCheckProfile,
+  getNodeCheckMeta,
   deleteNodeCheckProfile,
-  runNodeCheckWithProfile
+  getNodeCheckJobs,
+  saveNodeCheckJob,
+  deleteNodeCheckJob,
+  runNodeCheckJob,
+  runNodeCheckSelection
 } from 'api/nodeCheck';
 import { getNodeGroups } from 'api/nodes';
 import { getTags } from 'api/tags';
-
-// local components
+import { getAirports } from 'api/airports';
+import { formatDateTime } from 'i18n/locales';
+import { formatUnlockProvidersSummary, setUnlockMeta } from 'views/nodes/utils';
 import NodeCheckProfileFormDialog from 'views/nodes/component/NodeCheckProfileFormDialog';
+import CheckJobDialog from './components/CheckJobDialog';
 
-import { buildNodeCheckProfilePayload, formatUnlockProvidersSummary, setUnlockMeta } from 'views/nodes/utils';
+const listData = (response) => (Array.isArray(response?.data) ? response.data : response?.data?.items || []);
 
-// ==============================|| 节点检测策略管理 ||============================== //
-
+// 方案定义检测能力，任务定义编排；旧策略 ID 与单节点执行入口保持兼容。
 export default function NodeCheckList() {
-  const theme = useTheme();
   const { t, i18n } = useTranslation();
-  const { isDark } = useResolvedColorScheme();
-  const themeTokens = getNodeCheckStrategyThemeTokens(theme, isDark);
-  const {
-    cardSurface,
-    cardEnabledBorder,
-    cardIdleBorder,
-    cardHoverShadow,
-    primaryActionHoverSurface,
-    successActionHoverSurface,
-    errorActionHoverSurface
-  } = themeTokens;
-
+  const { registerOnComplete, unregisterOnComplete } = useTaskProgress();
+  const [tab, setTab] = useState('plans');
   const [profiles, setProfiles] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingProfile, setEditingProfile] = useState(null);
-  const [groupOptions, setGroupOptions] = useState([]);
-  const [tagOptions, setTagOptions] = useState([]);
-
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-
-  const showMessage = (message, severity = 'success') => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  // 加载策略列表
-  const loadProfiles = useCallback(async () => {
-    setLoading(true);
+  const [jobs, setJobs] = useState([]);
+  const [options, setOptions] = useState({ groups: [], tags: [], airports: [] });
+  const [timezone, setTimezone] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [planEditor, setPlanEditor] = useState(null);
+  const [jobEditor, setJobEditor] = useState(null);
+  const [runPlan, setRunPlan] = useState(null);
+  const [selection, setSelection] = useState({ scope: 'all', groups: [], tags: [] });
+  const [message, setMessage] = useState(null);
+  const notify = useCallback((text, severity = 'success') => setMessage({ text, severity }), []);
+  const load = useCallback(async () => {
+    setLoadError('');
     try {
-      const response = await getNodeCheckProfiles();
-      setProfiles(response.data || []);
-    } catch (error) {
-      console.error('加载策略列表失败:', error);
-      showMessage(t('nodes.nodeCheckProfiles.messages.loadFailed'), 'error');
+      const [p, j] = await Promise.all([getNodeCheckProfiles(), getNodeCheckJobs()]);
+      setProfiles(listData(p));
+      setJobs(j.data?.items || []);
+      setTimezone(j.data?.timezone || '');
+    } catch (err) {
+      setLoadError(err.message || t('detectionCenter.loadFailed'));
     } finally {
       setLoading(false);
     }
   }, [t]);
-
-  // 加载分组和标签选项
-  const loadOptions = useCallback(async () => {
-    try {
-      const [groupRes, tagRes, metaRes] = await Promise.all([getNodeGroups(), getTags(), getNodeCheckMeta()]);
-      setGroupOptions((groupRes.data || []).sort());
-      setTagOptions(tagRes.data || []);
-      setUnlockMeta(metaRes.data || {});
-    } catch (error) {
-      console.error('加载选项失败:', error);
-    }
-  }, []);
-
   useEffect(() => {
-    loadProfiles();
-    loadOptions();
-  }, [loadProfiles, loadOptions]);
-
-  // 切换启用状态
-  const handleToggleEnabled = async (profile) => {
+    load();
+  }, [load]);
+  useEffect(() => {
+    let active = true;
+    Promise.all([getNodeGroups(), getTags(), getAirports(), getNodeCheckMeta()])
+      .then(([groups, tags, airports, meta]) => {
+        if (!active) return;
+        setOptions({ groups: listData(groups), tags: listData(tags), airports: listData(airports) });
+        setUnlockMeta(meta.data || {});
+      })
+      .catch((err) => {
+        if (active) notify(err.message || t('detectionCenter.loadFailed'), 'error');
+      });
+    return () => {
+      active = false;
+    };
+  }, [notify, t]);
+  useEffect(() => {
+    const completed = (task) => {
+      if (['speed_test', 'sub_update'].includes(task.taskType)) {
+        load();
+      }
+    };
+    registerOnComplete(completed);
+    return () => unregisterOnComplete(completed);
+  }, [load, registerOnComplete, unregisterOnComplete]);
+  useEffect(() => {
+    if (!jobs.some((job) => job.running)) return;
+    const timer = setTimeout(load, 5000);
+    return () => clearTimeout(timer);
+  }, [jobs, load]);
+  const action = async (operation, text) => {
+    setBusy(true);
     try {
-      await updateNodeCheckProfile(profile.id, buildNodeCheckProfilePayload(profile, { enabled: !profile.enabled }));
-      loadProfiles();
-      showMessage(profile.enabled ? t('nodes.nodeCheckProfiles.messages.disabled') : t('nodes.nodeCheckProfiles.messages.enabled'));
-    } catch (error) {
-      console.error('切换状态失败:', error);
-      showMessage(t('nodes.nodeCheckProfiles.messages.operationFailed'), 'error');
+      await operation();
+      notify(text);
+      await load();
+    } catch (err) {
+      notify(err.message || t('detectionCenter.operationFailed'), 'error');
+    } finally {
+      setBusy(false);
     }
   };
-
-  // 删除策略
-  const handleDelete = async (profile) => {
-    if (!window.confirm(t('nodes.nodeCheckProfiles.confirmDelete', { name: profile.name }))) {
-      return;
-    }
-    try {
-      await deleteNodeCheckProfile(profile.id);
-      loadProfiles();
-      showMessage(t('nodes.nodeCheckProfiles.messages.deleteSuccess'));
-    } catch (error) {
-      console.error('删除失败:', error);
-      showMessage(error.message || t('nodes.nodeCheckProfiles.messages.deleteFailed'), 'error');
-    }
+  const date = (value) =>
+    !value || String(value).startsWith('0001-')
+      ? '—'
+      : formatDateTime(value, i18n.resolvedLanguage || i18n.language, { dateStyle: 'short', timeStyle: 'medium' }) || '—';
+  const modules = (p) => [
+    t('detectionCenter.module.latency'),
+    ...(p.mode === 'mihomo' ? [t('detectionCenter.module.speed')] : []),
+    ...(p.detectCountry ? [t('detectionCenter.module.exit')] : []),
+    ...(p.detectQuality ? [t('detectionCenter.module.quality')] : []),
+    ...(p.detectUnlock ? [formatUnlockProvidersSummary(p.unlockProviders, 3)] : [])
+  ];
+  const openRun = (p) => {
+    setRunPlan(p);
+    setSelection({ scope: 'all', groups: [], tags: [] });
   };
-
-  // 执行检测
-  const handleRun = async (profile) => {
-    try {
-      await runNodeCheckWithProfile(profile.id);
-      showMessage(t('nodes.nodeCheckProfiles.messages.started'));
-    } catch (error) {
-      console.error('执行检测失败:', error);
-      showMessage(error.message || t('nodes.nodeCheckProfiles.messages.executeFailed'), 'error');
-    }
+  const removePlan = (p) => {
+    if (window.confirm(t('detectionCenter.confirmDelete', { name: p.name })))
+      action(() => deleteNodeCheckProfile(p.id), t('detectionCenter.deleted'));
   };
-
-  // 编辑策略
-  const handleEdit = (profile) => {
-    setEditingProfile(profile);
-    setFormOpen(true);
+  const removeJob = (job) => {
+    if (window.confirm(t('detectionCenter.confirmDelete', { name: job.name })))
+      action(() => deleteNodeCheckJob(job.id), t('detectionCenter.deleted'));
   };
-
-  // 新增策略
-  const handleAdd = () => {
-    setEditingProfile(null);
-    setFormOpen(true);
+  const planSaved = () => {
+    setPlanEditor(null);
+    load();
+    notify(t('common.saveSuccess'));
   };
-
-  // 表单提交成功
-  const handleFormSuccess = () => {
-    setFormOpen(false);
-    setEditingProfile(null);
-    loadProfiles();
-    showMessage(editingProfile ? t('nodes.nodeCheckProfiles.messages.updateSuccess') : t('nodes.nodeCheckProfiles.messages.createSuccess'));
-  };
-
-  const formatTime = (timeStr) => {
-    if (!timeStr) return '-';
-    const date = new Date(timeStr);
-    // 检查是否是有效日期
-    if (isNaN(date.getTime())) return '-';
-    return formatDateTime(date, i18n.resolvedLanguage || i18n.language, {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   return (
     <MainCard
-      title={
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <SpeedIcon color="primary" />
-          <span>{t('nodes.nodeCheckProfiles.title')}</span>
-        </Box>
-      }
+      title={t('detectionCenter.title')}
       secondary={
         <Stack direction="row" spacing={1}>
           <Tooltip title={t('common.refresh')}>
-            <IconButton onClick={loadProfiles} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
+            <span>
+              <IconButton
+                aria-label={t('common.refresh')}
+                disabled={loading || busy}
+                onClick={() => {
+                  load();
+                }}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </span>
           </Tooltip>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
-            {t('nodes.nodeCheckProfiles.new')}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => (tab === 'plans' ? setPlanEditor({}) : setJobEditor({}))}
+            disabled={busy || (tab === 'jobs' && !profiles.length)}
+          >
+            {t(tab === 'plans' ? 'detectionCenter.newPlan' : 'detectionCenter.newJob')}
           </Button>
         </Stack>
       }
     >
-      {/* 任务进度面板 */}
-      <TaskProgressPanel />
-
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-          <CircularProgress />
-        </Box>
-      ) : profiles.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <SpeedIcon sx={{ fontSize: 64, opacity: 0.2, mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            {t('nodes.nodeCheckProfiles.empty')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {t('nodes.nodeCheckProfiles.description')}
-          </Typography>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
-            {t('nodes.nodeCheckProfiles.createFirst')}
-          </Button>
-        </Box>
-      ) : (
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, minmax(0, 1fr))',
-              md: 'repeat(2, minmax(0, 1fr))',
-              lg: 'repeat(3, minmax(0, 1fr))',
-              xl: 'repeat(4, minmax(0, 1fr))'
-            },
-            gap: 2,
-            mt: 2
-          }}
-        >
-          {profiles.map((profile) => (
-            <Card
-              key={profile.id}
-              variant="outlined"
-              sx={{
-                height: 200,
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-                borderColor: profile.enabled ? cardEnabledBorder : cardIdleBorder,
-                backgroundColor: cardSurface,
-                transition: 'all 0.2s',
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  transform: 'translateY(-2px)',
-                  boxShadow: cardHoverShadow
-                }
-              }}
-            >
-              <CardContent
-                sx={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  py: 1.5,
-                  px: 2,
-                  overflow: 'hidden',
-                  '&:last-child': { pb: 1.5 }
-                }}
-              >
-                {/* 标题行 */}
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    mb: 1,
-                    flexShrink: 0,
-                    minWidth: 0
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      columnGap: 0.75,
-                      rowGap: 0.75,
-                      flexWrap: 'wrap',
-                      minWidth: 0,
-                      flex: 1,
-                      overflow: 'hidden'
-                    }}
-                  >
-                    <Typography
-                      variant="subtitle1"
-                      fontWeight={600}
-                      sx={{
-                        minWidth: 0,
-                        flexShrink: 1,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {profile.name}
-                    </Typography>
-                    <Chip
-                      label={
-                        profile.mode === 'mihomo' ? t('nodes.nodeCheckProfiles.mode.full') : t('nodes.nodeCheckProfiles.mode.delayOnly')
-                      }
-                      size="small"
-                      sx={getNodeCheckStrategyChipSx(themeTokens, profile.mode === 'mihomo' ? 'success' : 'info')}
-                    />
-                    {profile.detectCountry && (
-                      <Chip
-                        label={t('nodes.nodeCheckProfiles.detect.country')}
-                        size="small"
-                        sx={getNodeCheckStrategyChipSx(themeTokens, 'neutral')}
-                      />
-                    )}
-                    {profile.detectQuality && (
-                      <Chip
-                        label={t('nodes.nodeCheckProfiles.detect.quality')}
-                        size="small"
-                        sx={getNodeCheckStrategyChipSx(themeTokens, 'warning')}
-                      />
-                    )}
-                    {profile.detectUnlock && (
-                      <Chip
-                        icon={<LockOpenIcon sx={{ fontSize: '12px !important' }} />}
-                        label={t('nodes.nodeCheckProfiles.detect.unlock', {
-                          suffix: profile.unlockProviders?.length ? ` · ${formatUnlockProvidersSummary(profile.unlockProviders, 1)}` : ''
-                        })}
-                        size="small"
-                        sx={getNodeCheckStrategyChipSx(themeTokens, 'info')}
-                      />
-                    )}
-                  </Box>
-                  <Switch
-                    size="small"
-                    checked={profile.enabled}
-                    onChange={() => handleToggleEnabled(profile)}
-                    sx={{ ml: 1, flexShrink: 0 }}
-                  />
-                </Box>
-
-                <Divider sx={{ mb: 1, flexShrink: 0 }} />
-
-                {/* 信息区 */}
-                <Box
-                  sx={{
-                    flex: 1,
-                    minHeight: 0,
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 0.5
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                    <TimerIcon sx={{ fontSize: 14, opacity: 0.6, flexShrink: 0 }} />
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                      {t('nodes.nodeCheckProfiles.timeout', { seconds: profile.timeout })}
-                    </Typography>
-                  </Box>
-
-                  {profile.enabled && profile.cronExpr && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                      <ScheduleIcon sx={{ fontSize: 14, opacity: 0.6, flexShrink: 0 }} />
-                      <Typography variant="caption" color="text.secondary" noWrap>
-                        {t('nodes.nodeCheckProfiles.schedule.next', { time: formatTime(profile.nextRunTime) })}
-                      </Typography>
-                    </Box>
-                  )}
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                    <HistoryIcon sx={{ fontSize: 14, opacity: 0.6, flexShrink: 0 }} />
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                      {t('nodes.nodeCheckProfiles.lastRun', { time: formatTime(profile.lastRunTime) })}
-                    </Typography>
-                  </Box>
-
-                  {(profile.groups || profile.tags) && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                      <FilterListIcon sx={{ fontSize: 14, opacity: 0.6, flexShrink: 0 }} />
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          minWidth: 0
-                        }}
-                      >
-                        {t('nodes.nodeCheckProfiles.scope', {
-                          groups: profile.groups || t('nodes.nodeCheckProfiles.allGroups'),
-                          tags: profile.tags ? t('nodes.nodeCheckProfiles.scopeTags', { tags: profile.tags }) : ''
-                        })}
-                      </Typography>
-                    </Box>
-                  )}
-
-                  {profile.detectUnlock && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                      <LockOpenIcon sx={{ fontSize: 14, opacity: 0.6, flexShrink: 0 }} />
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          minWidth: 0
-                        }}
-                      >
-                        {t('nodes.nodeCheckProfiles.unlockProviders', {
-                          providers: formatUnlockProvidersSummary(profile.unlockProviders, 2)
-                        })}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-
-                {/* 操作按钮 */}
-                <Stack direction="row" spacing={0.5} justifyContent="flex-end" sx={{ mt: 1, flexShrink: 0 }}>
-                  <Tooltip title={t('nodes.nodeCheckProfiles.runNow')}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleRun(profile)}
-                      sx={{
-                        color: 'success.main',
-                        '&:hover': { backgroundColor: successActionHoverSurface }
-                      }}
-                    >
-                      <PlayArrowIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={t('nodes.nodeCheckProfiles.edit')}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(profile)}
-                      sx={{ '&:hover': { backgroundColor: primaryActionHoverSurface } }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={t('nodes.nodeCheckProfiles.delete')}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(profile)}
-                      sx={{
-                        color: 'error.main',
-                        '&:hover': { backgroundColor: errorActionHoverSurface }
-                      }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-              </CardContent>
-            </Card>
-          ))}
-        </Box>
-      )}
-
-      {/* 策略编辑对话框 */}
-      <NodeCheckProfileFormDialog
-        open={formOpen}
-        onClose={() => {
-          setFormOpen(false);
-          setEditingProfile(null);
-        }}
-        profile={editingProfile}
-        groupOptions={groupOptions}
-        tagOptions={tagOptions}
-        onSuccess={handleFormSuccess}
-      />
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      <Tabs
+        value={tab}
+        onChange={(_, value) => setTab(value)}
+        variant="scrollable"
+        scrollButtons="auto"
+        aria-label={t('detectionCenter.title')}
+        sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
       >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant="standard">
-          {snackbar.message}
+        {['plans', 'jobs'].map((key) => (
+          <Tab
+            id={`check-tab-${key}`}
+            aria-controls={`check-panel-${key}`}
+            key={key}
+            value={key}
+            label={t(`detectionCenter.tabs.${key}`)}
+          />
+        ))}
+      </Tabs>
+      {loadError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {loadError}
+        </Alert>
+      )}
+      <Box role="tabpanel" id={`check-panel-${tab}`} aria-labelledby={`check-tab-${tab}`}>
+        {loading ? (
+          <Box sx={{ textAlign: 'center', py: 5 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            {tab === 'plans' && (
+              <>
+                <Paper variant="outlined" sx={{ overflow: 'hidden', bgcolor: 'background.paper' }}>
+                  {!profiles.length && (
+                    <Typography color="text.secondary" sx={{ p: 4, textAlign: 'center' }}>
+                      {t('detectionCenter.emptyPlans')}
+                    </Typography>
+                  )}
+                  {profiles.map((p) => (
+                    <Box
+                      key={p.id}
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(140px, 1fr) minmax(180px, 1.7fr) auto' },
+                        gap: 2,
+                        alignItems: 'center',
+                        p: 2.5,
+                        borderBottom: 1,
+                        borderColor: 'divider'
+                      }}
+                    >
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle1" sx={{ overflowWrap: 'anywhere' }}>
+                          {p.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('detectionCenter.jobCount', { count: jobs.filter((job) => job.profileId === p.id).length })} ·{' '}
+                          {t('nodes.nodeCheckProfiles.timeout', { seconds: p.timeout })}
+                        </Typography>
+                      </Box>
+                      <Stack direction="row" gap={0.75} flexWrap="wrap">
+                        {modules(p).map((label, index) => (
+                          <Chip size="small" key={`${label}-${index}`} label={label} color="primary" variant="outlined" />
+                        ))}
+                      </Stack>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Button onClick={() => setPlanEditor(p)} disabled={busy}>
+                          {t('detectionCenter.configure')}
+                        </Button>
+                        <Button variant="outlined" startIcon={<PlayArrowIcon />} onClick={() => openRun(p)} disabled={busy}>
+                          {t('detectionCenter.run')}
+                        </Button>
+                        <Tooltip title={t('common.delete')}>
+                          <span>
+                            <IconButton aria-label={t('common.delete')} color="error" onClick={() => removePlan(p)} disabled={busy}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Stack>
+                    </Box>
+                  ))}
+                </Paper>
+              </>
+            )}
+            {tab === 'jobs' && (
+              <Stack spacing={2}>
+                {jobs.length === 0 && (
+                  <Typography sx={{ p: 4, textAlign: 'center' }} color="text.secondary">
+                    {t('detectionCenter.noJobs')}
+                  </Typography>
+                )}
+                {jobs.map((job) => (
+                  <Paper variant="outlined" key={job.id} sx={{ p: 2.5, bgcolor: 'background.paper' }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1}>
+                      <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
+                        <Typography variant="subtitle1" sx={{ overflowWrap: 'anywhere' }}>
+                          {job.name}
+                        </Typography>
+                        {job.legacy && <Chip label={t('detectionCenter.legacy')} size="small" variant="outlined" />}
+                        {job.running && <Chip label={t('tasks.status.running')} size="small" color="info" />}
+                      </Stack>
+                      <FormControlLabel
+                        sx={{ mr: 0 }}
+                        label={t('detectionCenter.autoEnabled')}
+                        control={
+                          <Switch
+                            checked={job.enabled}
+                            disabled={busy}
+                            onChange={(_, enabled) => action(() => saveNodeCheckJob({ ...job, enabled }), t('common.saveSuccess'))}
+                          />
+                        }
+                      />
+                    </Stack>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2, my: 2 }}>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('detectionCenter.plan')}
+                        </Typography>
+                        <Typography>{profiles.find((p) => p.id === job.profileId)?.name || t('detectionCenter.missingPlan')}</Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('detectionCenter.scope')}
+                        </Typography>
+                        <Typography>{t(`detectionCenter.scopes.${job.scope}`)}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {[...(job.groups || []), ...(job.tags || [])].join(' · ')}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('detectionCenter.trigger')}
+                        </Typography>
+                        <Typography>{t(`detectionCenter.triggers.${job.trigger}`)}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {job.trigger === 'scheduled' ? job.cronExpr : '—'} · {timezone}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      {t('detectionCenter.runTimes', { last: date(job.lastRunTime), next: date(job.nextRunTime) })}
+                    </Typography>
+                    {job.lastError && (
+                      <Alert severity="warning" sx={{ mt: 1 }}>
+                        {job.lastError}
+                      </Alert>
+                    )}
+                    <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap">
+                      <Button startIcon={<EditIcon />} onClick={() => setJobEditor(job)} disabled={busy}>
+                        {t('common.edit')}
+                      </Button>
+                      <Button
+                        startIcon={<PlayArrowIcon />}
+                        onClick={() => action(() => runNodeCheckJob(job.id), t('nodes.nodeCheckProfiles.messages.started'))}
+                        disabled={busy || job.running}
+                      >
+                        {t('detectionCenter.run')}
+                      </Button>
+                      <Button color="error" onClick={() => removeJob(job)} disabled={busy || job.running}>
+                        {t('common.delete')}
+                      </Button>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            )}
+          </>
+        )}
+      </Box>
+      <NodeCheckProfileFormDialog
+        open={planEditor !== null}
+        profile={planEditor?.id ? planEditor : null}
+        onClose={() => setPlanEditor(null)}
+        onSuccess={planSaved}
+      />
+      {jobEditor && (
+        <CheckJobDialog
+          job={jobEditor}
+          profiles={profiles}
+          options={options}
+          timezone={timezone}
+          onClose={() => setJobEditor(null)}
+          onSaved={() => {
+            setJobEditor(null);
+            load();
+            notify(t('common.saveSuccess'));
+          }}
+        />
+      )}
+      <Dialog open={!!runPlan} onClose={busy ? undefined : () => setRunPlan(null)} fullWidth maxWidth="sm">
+        <DialogTitle>{t('detectionCenter.runPlan', { name: runPlan?.name })}</DialogTitle>
+        <DialogContent sx={{ px: 2.5 }}>
+          <Stack spacing={2} sx={{ mt: 2 }}>
+            <TextField
+              select
+              label={t('detectionCenter.scope')}
+              value={selection.scope}
+              onChange={(e) => setSelection((prev) => ({ ...prev, scope: e.target.value }))}
+            >
+              {['all', 'filtered'].map((key) => (
+                <MenuItem key={key} value={key}>
+                  {t(`detectionCenter.scopes.${key}`)}
+                </MenuItem>
+              ))}
+            </TextField>
+            {selection.scope === 'filtered' && (
+              <>
+                {['groups', 'tags'].map((key) => (
+                  <Autocomplete
+                    key={key}
+                    multiple
+                    freeSolo
+                    options={key === 'groups' ? options.groups : options.tags.map((tag) => tag.name || tag)}
+                    value={selection[key]}
+                    onChange={(_, value) => setSelection((prev) => ({ ...prev, [key]: value }))}
+                    renderInput={(params) => <TextField {...params} label={t(`detectionCenter.${key}`)} />}
+                  />
+                ))}
+              </>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={busy} onClick={() => setRunPlan(null)}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            disabled={busy || (selection.scope === 'filtered' && !selection.groups.length && !selection.tags.length)}
+            onClick={() =>
+              action(async () => {
+                await runNodeCheckSelection(runPlan.id, selection.scope === 'all' ? { scope: 'all' } : selection);
+                setRunPlan(null);
+              }, t('nodes.nodeCheckProfiles.messages.started'))
+            }
+          >
+            {t('detectionCenter.run')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar open={!!message} autoHideDuration={5000} onClose={() => setMessage(null)}>
+        <Alert severity={message?.severity || 'success'} onClose={() => setMessage(null)}>
+          {message?.text}
         </Alert>
       </Snackbar>
     </MainCard>

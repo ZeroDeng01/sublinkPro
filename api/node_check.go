@@ -163,6 +163,10 @@ func CreateNodeCheckProfile(c *gin.Context) {
 	profile.SetTags(req.Tags)
 	profile.SetUnlockProviders(models.NormalizeUnlockProviders(req.UnlockProviders))
 
+	if err := validateCheckProfileConfig(profile); err != nil {
+		utils.FailWithMsg(c, err.Error())
+		return
+	}
 	if err := profile.Add(); err != nil {
 		utils.FailWithMsg(c, "创建策略失败")
 		return
@@ -182,6 +186,8 @@ func CreateNodeCheckProfile(c *gin.Context) {
 // UpdateNodeCheckProfile 更新策略
 // PUT /api/v1/node-check/profiles/:id
 func UpdateNodeCheckProfile(c *gin.Context) {
+	nodeCheckConfigMu.Lock()
+	defer nodeCheckConfigMu.Unlock()
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil || id <= 0 {
@@ -190,30 +196,30 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	}
 
 	var req struct {
-		Name                string   `json:"name"`
-		Enabled             bool     `json:"enabled"`
-		CronExpr            string   `json:"cronExpr"`
-		Mode                string   `json:"mode"`
-		TestURL             string   `json:"testUrl"`
-		LatencyURL          string   `json:"latencyUrl"`
-		Timeout             int      `json:"timeout"`
-		Groups              []string `json:"groups"`
-		Tags                []string `json:"tags"`
-		LatencyConcurrency  int      `json:"latencyConcurrency"`
-		SpeedConcurrency    int      `json:"speedConcurrency"`
-		DetectCountry       bool     `json:"detectCountry"`
-		LandingIPURL        string   `json:"landingIpUrl"`
-		IncludeHandshake    *bool    `json:"includeHandshake"`
-		SpeedRecordMode     string   `json:"speedRecordMode"`
-		PeakSampleInterval  int      `json:"peakSampleInterval"`
-		TrafficByGroup      *bool    `json:"trafficByGroup"`
-		TrafficBySource     *bool    `json:"trafficBySource"`
-		TrafficByNode       *bool    `json:"trafficByNode"`
-		PreserveSpeedResult *bool    `json:"preserveSpeedResult"`
-		DetectQuality       bool     `json:"detectQuality"`
-		QualityCheckURL     string   `json:"qualityCheckUrl"`
-		DetectUnlock        bool     `json:"detectUnlock"`
-		UnlockProviders     []string `json:"unlockProviders"`
+		Name                string    `json:"name"`
+		Enabled             *bool     `json:"enabled"`
+		CronExpr            *string   `json:"cronExpr"`
+		Mode                string    `json:"mode"`
+		TestURL             string    `json:"testUrl"`
+		LatencyURL          string    `json:"latencyUrl"`
+		Timeout             int       `json:"timeout"`
+		Groups              *[]string `json:"groups"`
+		Tags                *[]string `json:"tags"`
+		LatencyConcurrency  int       `json:"latencyConcurrency"`
+		SpeedConcurrency    int       `json:"speedConcurrency"`
+		DetectCountry       bool      `json:"detectCountry"`
+		LandingIPURL        string    `json:"landingIpUrl"`
+		IncludeHandshake    *bool     `json:"includeHandshake"`
+		SpeedRecordMode     string    `json:"speedRecordMode"`
+		PeakSampleInterval  int       `json:"peakSampleInterval"`
+		TrafficByGroup      *bool     `json:"trafficByGroup"`
+		TrafficBySource     *bool     `json:"trafficBySource"`
+		TrafficByNode       *bool     `json:"trafficByNode"`
+		PreserveSpeedResult *bool     `json:"preserveSpeedResult"`
+		DetectQuality       bool      `json:"detectQuality"`
+		QualityCheckURL     string    `json:"qualityCheckUrl"`
+		DetectUnlock        bool      `json:"detectUnlock"`
+		UnlockProviders     []string  `json:"unlockProviders"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -237,8 +243,12 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	}
 
 	// 更新字段
-	profile.Enabled = req.Enabled
-	profile.CronExpr = req.CronExpr
+	if req.Enabled != nil {
+		profile.Enabled = *req.Enabled
+	}
+	if req.CronExpr != nil {
+		profile.CronExpr = *req.CronExpr
+	}
 	if req.Mode != "" {
 		profile.Mode = req.Mode
 	}
@@ -247,8 +257,12 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	if req.Timeout > 0 {
 		profile.Timeout = req.Timeout
 	}
-	profile.SetGroups(req.Groups)
-	profile.SetTags(req.Tags)
+	if req.Groups != nil {
+		profile.SetGroups(*req.Groups)
+	}
+	if req.Tags != nil {
+		profile.SetTags(*req.Tags)
+	}
 	profile.LatencyConcurrency = req.LatencyConcurrency
 	// speedConcurrency: 0=智能动态模式，>=0 的值都应保存
 	if req.SpeedConcurrency >= 0 {
@@ -282,6 +296,10 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	profile.DetectUnlock = req.DetectUnlock
 	profile.SetUnlockProviders(models.NormalizeUnlockProviders(req.UnlockProviders))
 
+	if err := validateCheckProfileConfig(*profile); err != nil {
+		utils.FailWithMsg(c, err.Error())
+		return
+	}
 	if err := profile.Update(); err != nil {
 		utils.FailWithMsg(c, "更新策略失败")
 		return
@@ -299,6 +317,8 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 // DeleteNodeCheckProfile 删除策略
 // DELETE /api/v1/node-check/profiles/:id
 func DeleteNodeCheckProfile(c *gin.Context) {
+	nodeCheckConfigMu.Lock()
+	defer nodeCheckConfigMu.Unlock()
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil || id <= 0 {
@@ -312,6 +332,13 @@ func DeleteNodeCheckProfile(c *gin.Context) {
 		return
 	}
 
+	if used, err := hasNodeCheckProfileDependents(id); err != nil {
+		utils.FailWithMsg(c, "检查自动任务或机场引用失败")
+		return
+	} else if used {
+		utils.FailWithMsg(c, "此方案被自动任务或机场引用，请先更换引用方案")
+		return
+	}
 	// 从调度器移除任务
 	sch := scheduler.GetSchedulerManager()
 	sch.RemoveNodeCheckProfileJob(profile.ID)
@@ -328,8 +355,11 @@ func DeleteNodeCheckProfile(c *gin.Context) {
 // POST /api/v1/node-check/run
 func RunNodeCheck(c *gin.Context) {
 	var req struct {
-		ProfileID int   `json:"profileId" binding:"required"` // 策略ID（必填）
-		NodeIDs   []int `json:"nodeIds"`                      // 节点ID列表（可选，空表示按策略范围执行）
+		ProfileID int      `json:"profileId" binding:"required"` // 策略ID（必填）
+		Scope     string   `json:"scope"`
+		Groups    []string `json:"groups"`
+		Tags      []string `json:"tags"`
+		NodeIDs   []int    `json:"nodeIds"` // 节点ID列表（可选，空表示按策略范围执行）
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -348,6 +378,70 @@ func RunNodeCheck(c *gin.Context) {
 		return
 	}
 
+	if req.Scope == "filtered" {
+		scope := models.NodeCheckJob{Name: "manual", ProfileID: req.ProfileID, Trigger: "airport_update", Scope: "filtered", Groups: req.Groups, Tags: req.Tags}
+		if err := scope.Validate(); err != nil {
+			utils.FailWithMsg(c, err.Error())
+			return
+		}
+	}
+	if req.Scope != "" {
+		if req.Scope == "nodes" {
+			if len(req.NodeIDs) == 0 {
+				utils.FailWithMsg(c, "请选择至少一个节点")
+				return
+			}
+		} else {
+			if req.Scope != "all" && req.Scope != "filtered" {
+				utils.FailWithMsg(c, "无效的检测范围")
+				return
+			}
+			if req.Scope == "filtered" && len(req.Groups) == 0 && len(req.Tags) == 0 {
+				utils.FailWithMsg(c, "筛选范围不能为空")
+				return
+			}
+			if req.Scope == "all" {
+				req.Groups = nil
+				req.Tags = nil
+			}
+			nodes, err := scheduler.ResolveNodeCheckJobNodes(models.NodeCheckJob{Scope: req.Scope, Groups: req.Groups, Tags: req.Tags}, nil)
+			if err != nil || len(nodes) == 0 {
+				utils.FailWithMsg(c, "当前范围没有可检测节点")
+				return
+			}
+			profile, err := models.GetNodeCheckProfileByID(req.ProfileID)
+			if err != nil {
+				utils.FailWithMsg(c, "检测方案已不存在")
+				return
+			}
+			go func() {
+				if err := scheduler.RunSpeedTestWithConfig(nodes, models.TaskTriggerManual, profile.Name, scheduler.SpeedTestConfigFromProfile(profile)); err != nil {
+					utils.Warn("手动检测失败: %v", err)
+				}
+			}()
+			utils.OkWithMsg(c, "节点检测任务已启动")
+			return
+		}
+	}
+	if len(req.NodeIDs) > 0 {
+		seen := make(map[int]bool, len(req.NodeIDs))
+		ids := make([]int, 0, len(req.NodeIDs))
+		for _, id := range req.NodeIDs {
+			if id <= 0 {
+				utils.FailWithMsg(c, "无效的节点ID")
+				return
+			}
+			if !seen[id] {
+				if _, ok := models.GetNodeByID(id); !ok {
+					utils.FailWithMsg(c, "选中的节点已不存在，请刷新后重试")
+					return
+				}
+				ids = append(ids, id)
+				seen[id] = true
+			}
+		}
+		req.NodeIDs = ids
+	}
 	// 使用指定策略执行（手动触发）
 	go scheduler.ExecuteNodeCheckWithProfile(req.ProfileID, req.NodeIDs, models.TaskTriggerManual)
 	utils.OkWithMsg(c, "节点检测任务已启动")

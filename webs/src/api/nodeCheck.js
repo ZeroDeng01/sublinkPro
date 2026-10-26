@@ -60,6 +60,7 @@ export function runNodeCheck(profileId, nodeIds) {
     method: 'post',
     data: {
       profileId: profileId || 0,
+      ...(Array.isArray(nodeIds) ? { scope: 'nodes' } : {}),
       nodeIds: nodeIds || []
     }
   });
@@ -72,3 +73,12 @@ export function runNodeCheckWithProfile(profileId) {
     method: 'post'
   });
 }
+
+// 独立任务的正 ID 与旧方案映射的负 ID 共用管理入口。
+export const getNodeCheckJobs = () => request({ url: '/v1/node-check/jobs', method: 'get' });
+export const saveNodeCheckJob = (job) =>
+  request({ url: `/v1/node-check/jobs${job.id ? `/${job.id}` : ''}`, method: job.id ? 'put' : 'post', data: job });
+export const deleteNodeCheckJob = (id) => request({ url: `/v1/node-check/jobs/${id}`, method: 'delete' });
+export const runNodeCheckJob = (id) => request({ url: `/v1/node-check/jobs/${id}/run`, method: 'post' });
+export const runNodeCheckSelection = (profileId, selection) =>
+  request({ url: '/v1/node-check/run', method: 'post', data: { profileId, ...selection } });
