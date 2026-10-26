@@ -8,6 +8,7 @@ import { QUALITY_STATUS_OPTIONS } from './fraudScore';
 
 export const NODE_CONDITION_FIELDS = [
   { value: 'name', label: 'Remark', labelKey: 'nodeConditions.fields.name' },
+  { value: 'effective_name', label: 'Actual name', labelKey: 'nodeConditions.fields.effectiveName' },
   { value: 'link_name', label: 'Original name', labelKey: 'nodeConditions.fields.linkName' },
   { value: 'link_country', label: 'Country code', labelKey: 'nodeConditions.fields.linkCountry' },
   { value: 'protocol', label: 'Protocol type', labelKey: 'nodeConditions.fields.protocol' },
@@ -26,12 +27,24 @@ export const NODE_CONDITION_FIELDS = [
   { value: 'residential_type', label: 'Residential attribute', labelKey: 'nodeConditions.fields.residentialType' },
   { value: 'speed_status', label: 'Speed status', labelKey: 'nodeConditions.fields.speedStatus' },
   { value: 'delay_status', label: 'Delay status', labelKey: 'nodeConditions.fields.delayStatus' },
+  { value: 'tags', label: 'Tags', labelKey: 'nodeConditions.fields.tags' },
   { value: 'link_address', label: 'Address', labelKey: 'nodeConditions.fields.linkAddress' },
-  { value: 'link_host', label: 'Host' },
+  { value: 'link_host', label: 'Host', labelKey: 'nodeConditions.fields.linkHost' },
   { value: 'link_port', label: 'Port', labelKey: 'nodeConditions.fields.linkPort' },
   { value: 'dialer_proxy_name', label: 'Dialer proxy', labelKey: 'nodeConditions.fields.dialerProxyName' },
   { value: 'link', label: 'Node link', labelKey: 'nodeConditions.fields.link' }
 ];
+
+const FIELD_LABEL_KEYS = NODE_CONDITION_FIELDS.reduce((acc, field) => {
+  if (field.labelKey) acc[field.value] = field.labelKey;
+  return acc;
+}, {});
+
+const withFieldLabelKey = (field) => {
+  if (!field || field.labelKey) return field;
+  const labelKey = FIELD_LABEL_KEYS[field.value];
+  return labelKey ? { ...field, labelKey } : field;
+};
 
 const STATIC_FIELD_META_MAP = NODE_CONDITION_FIELDS.reduce((acc, field) => {
   acc[field.value] = field;
@@ -110,12 +123,12 @@ const resolveFallbackFieldMeta = (field) => {
 
 export const getNodeConditionFieldMeta = (field) => {
   const dynamicMeta = getNodeConditionFieldMetas().find((item) => item?.value === field);
-  return dynamicMeta || resolveFallbackFieldMeta(field);
+  return dynamicMeta ? withFieldLabelKey(dynamicMeta) : resolveFallbackFieldMeta(field);
 };
 
 export const getNodeConditionFields = () => {
   const dynamicFields = getNodeConditionFieldMetas();
-  const baseFields = dynamicFields.length > 0 ? dynamicFields : NODE_CONDITION_FIELDS;
+  const baseFields = (dynamicFields.length > 0 ? dynamicFields : NODE_CONDITION_FIELDS).map(withFieldLabelKey);
 
   // 确保包含 unlock_condition 虚拟字段，并过滤掉被标记为 hidden 的独立解锁字段
   const hasUnlockCondition = baseFields.some((f) => f.value === 'unlock_condition');
@@ -142,6 +155,11 @@ export const getNodeConditionValueOptions = (field) => {
   const fieldMeta = getNodeConditionFieldMeta(field);
   if (!fieldMeta) {
     return null;
+  }
+
+  // 内置枚举字段统一使用前端本地化选项，避免使用后端返回的中文 label。
+  if (NODE_CONDITION_VALUE_OPTIONS[field]) {
+    return NODE_CONDITION_VALUE_OPTIONS[field];
   }
 
   if (fieldMeta.optionSource) {

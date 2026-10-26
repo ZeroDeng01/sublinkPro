@@ -3512,6 +3512,7 @@
   "nodeConditions": {
     "fields": {
       "name": "Remark",
+      "effectiveName": "Actual name",
       "linkName": "Original name",
       "linkCountry": "Country code",
       "protocol": "Protocol type",
@@ -3530,7 +3531,9 @@
       "residentialType": "Residential attribute",
       "speedStatus": "Speed status",
       "delayStatus": "Delay status",
+      "tags": "Tags",
       "linkAddress": "Address",
+      "linkHost": "Host",
       "linkPort": "Port",
       "dialerProxyName": "Dialer proxy",
       "link": "Node link"

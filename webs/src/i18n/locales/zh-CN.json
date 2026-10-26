@@ -3512,6 +3512,7 @@
   "nodeConditions": {
     "fields": {
       "name": "备注",
+      "effectiveName": "实际名称",
       "linkName": "原始名称",
       "linkCountry": "国家代码",
       "protocol": "协议类型",
@@ -3530,7 +3531,9 @@
       "residentialType": "住宅属性",
       "speedStatus": "速度状态",
       "delayStatus": "延迟状态",
+      "tags": "标签",
       "linkAddress": "地址",
+      "linkHost": "主机名",
       "linkPort": "端口",
       "dialerProxyName": "前置代理",
       "link": "节点链接"
