@@ -158,12 +158,6 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, onS
       }
     }
   });
-  const getAlertSx = (accent) => ({
-    color: isDark ? accent : palette.text.primary,
-    backgroundColor: withAlpha(accent, isDark ? 0.12 : 0.08),
-    border: `1px solid ${withAlpha(accent, isDark ? 0.28 : 0.16)}`,
-    boxShadow: isDark ? `inset 0 1px 0 ${withAlpha(palette.common.white, 0.04)}` : 'none'
-  });
 
   // 表单状态
   const [form, setForm] = useState(() => createNodeCheckProfileFormState());
@@ -302,7 +296,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, onS
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <SpeedIcon color="primary" />
-          <span>{isEdit ? t('nodes.nodeCheckProfiles.form.editTitle') : t('nodes.nodeCheckProfiles.form.createTitle')}</span>
+          <span>{isEdit ? t('detectionCenter.editPlan') : t('detectionCenter.newPlan')}</span>
         </Box>
       </DialogTitle>
 
@@ -310,7 +304,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, onS
         {/* 策略名称 - 增加上边距避免遮挡 */}
         <TextField
           fullWidth
-          label={t('nodes.nodeCheckProfiles.form.name')}
+          label={t('detectionCenter.planName')}
           value={form.name}
           onChange={(e) => updateForm('name', e.target.value)}
           placeholder={t('nodes.nodeCheckProfiles.form.namePlaceholder')}
@@ -323,9 +317,6 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, onS
             {saveError}
           </Alert>
         )}
-        <Alert severity="info" sx={{ mb: 2 }}>
-          {t('detectionCenter.planHelp')}
-        </Alert>
         <Typography variant="subtitle1">{t('detectionCenter.modules')}</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1, my: 2 }}>
           {moduleChoices.map((item) => (
@@ -351,18 +342,12 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, onS
                 label={
                   <Box sx={{ pt: 0.5 }}>
                     <Typography variant="body2">{t(`detectionCenter.module.${item.key}`)}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {t(`detectionCenter.moduleHelp.${item.key}`)}
-                    </Typography>
                   </Box>
                 }
               />
             </Paper>
           ))}
         </Box>
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {t('detectionCenter.probeWarning')}
-        </Alert>
         {/* ========== 测速模式 ========== */}
         <ConfigSection
           title={t('detectionCenter.requestSettings')}
@@ -628,9 +613,6 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, onS
             />
             {form.detectUnlock && (
               <Stack spacing={1.5}>
-                <Alert severity="warning" variant="outlined" sx={getAlertSx(palette.warning.main)}>
-                  {t('nodes.nodeCheckProfiles.form.unlockWarning')}
-                </Alert>
                 <Autocomplete
                   multiple
                   size="small"

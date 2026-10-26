@@ -80,6 +80,5 @@ export const saveNodeCheckJob = (job) =>
   request({ url: `/v1/node-check/jobs${job.id ? `/${job.id}` : ''}`, method: job.id ? 'put' : 'post', data: job });
 export const deleteNodeCheckJob = (id) => request({ url: `/v1/node-check/jobs/${id}`, method: 'delete' });
 export const runNodeCheckJob = (id) => request({ url: `/v1/node-check/jobs/${id}/run`, method: 'post' });
-export const getNodeCheckResults = (params, { signal } = {}) => request({ url: '/v1/node-check/results', method: 'get', params, signal });
 export const runNodeCheckSelection = (profileId, selection) =>
   request({ url: '/v1/node-check/run', method: 'post', data: { profileId, ...selection } });

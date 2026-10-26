@@ -152,47 +152,6 @@ func TestNodeCheckCenterEmptyExplicitNodesNeverLaunchAll(t *testing.T) {
 	}
 }
 
-func TestNodeCheckCenterResultsArePagedAndKeepSourceAirport(t *testing.T) {
-	setupPreviewAPITestDB(t)
-	airport := models.Airport{Name: "original-airport", URL: "https://example.invalid/sub"}
-	if err := airport.Add(); err != nil {
-		t.Fatal(err)
-	}
-	for _, name := range []string{"allowed", "other"} {
-		n := models.Node{Name: name, LinkName: name, Link: "ss://" + name, SourceID: airport.ID, Group: name, LinkCountry: "GB", DelayStatus: "success", DelayTime: 100}
-		if err := n.Add(); err != nil {
-			t.Fatal(err)
-		}
-	}
-	r := gin.New()
-	r.GET("/results", NodeCheckResults)
-	response := checkCenterRequest(t, r, http.MethodGet, "/results?page=1&pageSize=1", nil)
-	if bytes.Contains(response["data"], []byte(`"Link":`)) {
-		t.Fatal("results exposed raw proxy link")
-	}
-	var data struct {
-		Total int `json:"total"`
-		Items []struct {
-			AirportID   int         `json:"airportId"`
-			AirportName string      `json:"airportName"`
-			Node        models.Node `json:"node"`
-		} `json:"items"`
-	}
-	if err := json.Unmarshal(response["data"], &data); err != nil {
-		t.Fatal(err)
-	}
-	if data.Total != 2 || len(data.Items) != 1 || data.Items[0].AirportID != airport.ID || data.Items[0].AirportName != airport.Name || data.Items[0].Node.ID <= 0 {
-		t.Fatalf("first page=%+v", data)
-	}
-	response = checkCenterRequest(t, r, http.MethodGet, "/results?page=2&pageSize=1", nil)
-	if err := json.Unmarshal(response["data"], &data); err != nil {
-		t.Fatal(err)
-	}
-	if len(data.Items) != 1 || data.Items[0].AirportName != airport.Name {
-		t.Fatalf("second page source: %+v", data)
-	}
-}
-
 func TestNodeCheckCenterPausedLegacyJobStillValidatesScope(t *testing.T) {
 	setupPreviewAPITestDB(t)
 	p := models.NodeCheckProfile{Name: "paused-legacy", Mode: "tcp", Groups: "keep"}

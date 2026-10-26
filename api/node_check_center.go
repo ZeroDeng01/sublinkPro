@@ -233,59 +233,6 @@ func RunNodeCheckJob(c *gin.Context) {
 	utils.OkWithMsg(c, "节点检测任务已启动")
 }
 
-// nodeCheckResultNode 复用节点选择器字段，仅返回检测数据，不附带原始代理凭据。
-type nodeCheckResultNode struct {
-	models.NodeSelectorItem
-	LandingIP      string
-	DelayTime      int
-	Speed          float64
-	DelayStatus    string
-	SpeedStatus    string
-	LatencyCheckAt string
-	SpeedCheckAt   string
-	FraudScore     int
-	QualityStatus  string
-	QualityFamily  string
-}
-
-func buildNodeCheckResultNode(n models.Node) nodeCheckResultNode {
-	return nodeCheckResultNode{NodeSelectorItem: models.BuildNodeSelectorItem(n), LandingIP: n.LandingIP,
-		DelayTime: n.DelayTime, Speed: n.Speed, DelayStatus: n.DelayStatus, SpeedStatus: n.SpeedStatus,
-		LatencyCheckAt: n.LatencyCheckAt, SpeedCheckAt: n.SpeedCheckAt, FraudScore: n.FraudScore,
-		QualityStatus: n.QualityStatus, QualityFamily: n.QualityFamily}
-}
-
-// NodeCheckResults 只富化当前页；不把当前节点状态冒充某次任务历史快照。
-func NodeCheckResults(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("pageSize", "30"))
-	if page < 1 {
-		page = 1
-	}
-	if size < 1 || size > 100 {
-		size = 30
-	}
-	nodes, total, err := (&models.Node{}).ListWithFiltersPaginated(buildNodeFilterFromQuery(c), page, size)
-	if err != nil {
-		utils.FailWithMsg(c, "获取检测结果失败")
-		return
-	}
-	airports, err := (&models.Airport{}).List()
-	if err != nil {
-		utils.FailWithMsg(c, "获取机场失败")
-		return
-	}
-	airportNames := make(map[int]string, len(airports))
-	for _, a := range airports {
-		airportNames[a.ID] = a.Name
-	}
-	items := make([]gin.H, 0, len(nodes))
-	for _, n := range nodes {
-		items = append(items, gin.H{"node": buildNodeCheckResultNode(n), "airportId": n.SourceID, "airportName": airportNames[n.SourceID]})
-	}
-	utils.OkDetailed(c, "获取成功", gin.H{"items": items, "total": total, "page": page, "pageSize": size})
-}
-
 // hasNodeCheckProfileDependents 包含暂停任务和机场的引用，禁止删除后遗留悬空方案。
 func hasNodeCheckProfileDependents(id int) (bool, error) {
 	jobs, err := models.CountNodeCheckJobsForProfile(id)

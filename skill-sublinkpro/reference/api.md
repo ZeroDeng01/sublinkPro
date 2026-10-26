@@ -648,7 +648,7 @@ Base: `/api/v1/node-check`
 - **POST** `/node-check/profiles/{id}/run` — run a profile (demo-restricted)
 - **POST** `/node-check/run` — **JSON** `{"profileId":1, "nodeIds":[...]}` (positive existing profile ID required) — general run entry (demo-restricted)
 
-### Detection-center jobs and latest results
+### Detection-center jobs
 
 All endpoints use the same authenticated node-check route group; job writes/runs are demo-restricted.
 
@@ -656,7 +656,6 @@ All endpoints use the same authenticated node-check route group; job writes/runs
 - **POST** `/node-check/jobs` and **PUT** `/node-check/jobs/{id}` — JSON configuration below. PUT replaces all job configuration; runtime columns are not writable. `name` is at most 191 bytes, references must exist, and Cron is five-field server-local time. An invalid replacement does not remove the old schedule.
 - **DELETE** `/node-check/jobs/{id}` — independent running jobs must finish first. Deleting a negative-ID compatibility job clears the original profile schedule only, not the plan.
 - **POST** `/node-check/jobs/{id}/run` — manual execution can run paused jobs, but rejects overlapping independent job executions. Airport events arriving during a run are coalesced for a follow-up, using fresh configuration.
-- **GET** `/node-check/results?page=1&pageSize=30` — latest states, not per-run snapshots. Page size is bounded to 100. Supports existing node query filters, including `search`, `unlockProvider` and `unlockStatus`. Returns `{items:[{node,airportId,airportName}],total,page,pageSize}`. Node contains selector and detection fields, not raw proxy links/credentials. Nonzero airport ID with empty name means a deleted airport; zero means a manual node.
 
 Example independent job:
 
@@ -679,7 +678,7 @@ Example independent job:
 
 Compatibility-job updates retain the original profile ID and support only scheduled trigger, source groups and tags; name follows the profile. Create an independent job for pre-update orchestration. Profile-only PUT can omit `enabled`, `cronExpr`, `groups` and `tags` without clearing compatibility scheduling/scope.
 
-`POST /node-check/run` additionally accepts `scope: "nodes"` (nonempty existing `nodeIds`), `scope: "all"`, or `scope: "filtered"` with nonempty `groups`/`tags`. Omitted scope preserves the legacy range behavior; the node UI always sends explicit selected-node scope. Historical executions remain available through `/tasks?type=speed_test&page=1&pageSize=30`; names cannot reliably identify a profile and results are run summaries rather than historical node snapshots.
+`POST /node-check/run` additionally accepts `scope: "nodes"` (nonempty existing `nodeIds`), `scope: "all"`, or `scope: "filtered"` with nonempty `groups`/`tags`. Omitted scope preserves the legacy range behavior; the node UI always sends explicit selected-node scope. Results and task history remain on the existing node and task endpoints.
 
 ---
 

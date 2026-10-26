@@ -11,7 +11,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   FormControlLabel,
   IconButton,
   MenuItem,
@@ -31,7 +30,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import MainCard from 'ui-component/cards/MainCard';
-import TaskProgressPanel from 'components/TaskProgressPanel';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 import {
   getNodeCheckProfiles,
@@ -49,9 +47,7 @@ import { getAirports } from 'api/airports';
 import { formatDateTime } from 'i18n/locales';
 import { formatUnlockProvidersSummary, setUnlockMeta } from 'views/nodes/utils';
 import NodeCheckProfileFormDialog from 'views/nodes/component/NodeCheckProfileFormDialog';
-import ProfileSelectDialog from 'views/nodes/component/ProfileSelectDialog';
 import CheckJobDialog from './components/CheckJobDialog';
-import DetectionDataPanel from './components/DetectionDataPanel';
 
 const listData = (response) => (Array.isArray(response?.data) ? response.data : response?.data?.items || []);
 
@@ -71,8 +67,6 @@ export default function NodeCheckList() {
   const [jobEditor, setJobEditor] = useState(null);
   const [runPlan, setRunPlan] = useState(null);
   const [selection, setSelection] = useState({ scope: 'all', groups: [], tags: [] });
-  const [nodeIds, setNodeIds] = useState(null);
-  const [revision, setRevision] = useState(0);
   const [message, setMessage] = useState(null);
   const notify = useCallback((text, severity = 'success') => setMessage({ text, severity }), []);
   const load = useCallback(async () => {
@@ -98,7 +92,6 @@ export default function NodeCheckList() {
         if (!active) return;
         setOptions({ groups: listData(groups), tags: listData(tags), airports: listData(airports) });
         setUnlockMeta(meta.data || {});
-        setRevision((value) => value + 1);
       })
       .catch((err) => {
         if (active) notify(err.message || t('detectionCenter.loadFailed'), 'error');
@@ -111,7 +104,6 @@ export default function NodeCheckList() {
     const completed = (task) => {
       if (['speed_test', 'sub_update'].includes(task.taskType)) {
         load();
-        setRevision((value) => value + 1);
       }
     };
     registerOnComplete(completed);
@@ -128,7 +120,6 @@ export default function NodeCheckList() {
       await operation();
       notify(text);
       await load();
-      setRevision((value) => value + 1);
     } catch (err) {
       notify(err.message || t('detectionCenter.operationFailed'), 'error');
     } finally {
@@ -175,29 +166,23 @@ export default function NodeCheckList() {
                 disabled={loading || busy}
                 onClick={() => {
                   load();
-                  setRevision((value) => value + 1);
                 }}
               >
                 <RefreshIcon />
               </IconButton>
             </span>
           </Tooltip>
-          {['plans', 'jobs'].includes(tab) && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => (tab === 'plans' ? setPlanEditor({}) : setJobEditor({}))}
-              disabled={busy || (tab === 'jobs' && !profiles.length)}
-            >
-              {t(tab === 'plans' ? 'detectionCenter.newPlan' : 'detectionCenter.newJob')}
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => (tab === 'plans' ? setPlanEditor({}) : setJobEditor({}))}
+            disabled={busy || (tab === 'jobs' && !profiles.length)}
+          >
+            {t(tab === 'plans' ? 'detectionCenter.newPlan' : 'detectionCenter.newJob')}
+          </Button>
         </Stack>
       }
     >
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        {t('detectionCenter.description')}
-      </Typography>
       <Tabs
         value={tab}
         onChange={(_, value) => setTab(value)}
@@ -206,7 +191,7 @@ export default function NodeCheckList() {
         aria-label={t('detectionCenter.title')}
         sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
       >
-        {['plans', 'jobs', 'runs', 'results'].map((key) => (
+        {['plans', 'jobs'].map((key) => (
           <Tab
             id={`check-tab-${key}`}
             aria-controls={`check-panel-${key}`}
@@ -231,16 +216,9 @@ export default function NodeCheckList() {
             {tab === 'plans' && (
               <>
                 <Paper variant="outlined" sx={{ overflow: 'hidden', bgcolor: 'background.paper' }}>
-                  <Box sx={{ p: 2 }}>
-                    <Typography variant="h4">{t('detectionCenter.tabs.plans')}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      {t('detectionCenter.planHelp')}
-                    </Typography>
-                  </Box>
-                  <Divider />
                   {!profiles.length && (
                     <Typography color="text.secondary" sx={{ p: 4, textAlign: 'center' }}>
-                      {t('nodes.nodeCheckProfiles.empty')}
+                      {t('detectionCenter.emptyPlans')}
                     </Typography>
                   )}
                   {profiles.map((p) => (
@@ -288,14 +266,10 @@ export default function NodeCheckList() {
                     </Box>
                   ))}
                 </Paper>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
-                  {t('detectionCenter.planScheduleHint')}
-                </Typography>
               </>
             )}
             {tab === 'jobs' && (
               <Stack spacing={2}>
-                <Alert severity="info">{t('detectionCenter.flow')}</Alert>
                 {jobs.length === 0 && (
                   <Typography sx={{ p: 4, textAlign: 'center' }} color="text.secondary">
                     {t('detectionCenter.noJobs')}
@@ -334,9 +308,7 @@ export default function NodeCheckList() {
                         <Typography variant="caption" color="text.secondary">
                           {t('detectionCenter.scope')}
                         </Typography>
-                        <Typography>
-                          {t(`detectionCenter.scopes.${job.scope}`)}
-                        </Typography>
+                        <Typography>{t(`detectionCenter.scopes.${job.scope}`)}</Typography>
                         <Typography variant="caption" color="text.secondary">
                           {[...(job.groups || []), ...(job.tags || [])].join(' · ')}
                         </Typography>
@@ -376,13 +348,8 @@ export default function NodeCheckList() {
                     </Stack>
                   </Paper>
                 ))}
-                <Typography variant="caption" color="text.secondary">
-                  {t('detectionCenter.openClashHelp')}
-                </Typography>
               </Stack>
             )}
-            {tab === 'runs' && <TaskProgressPanel />}
-            {['runs', 'results'].includes(tab) && <DetectionDataPanel key={tab} kind={tab} revision={revision} onRun={setNodeIds} />}
           </>
         )}
       </Box>
@@ -406,16 +373,6 @@ export default function NodeCheckList() {
           }}
         />
       )}
-      <ProfileSelectDialog
-        open={nodeIds !== null}
-        nodeIds={nodeIds || []}
-        onClose={() => setNodeIds(null)}
-        onSuccess={notify}
-        onOpenSettings={() => {
-          setNodeIds(null);
-          setTab('plans');
-        }}
-      />
       <Dialog open={!!runPlan} onClose={busy ? undefined : () => setRunPlan(null)} fullWidth maxWidth="sm">
         <DialogTitle>{t('detectionCenter.runPlan', { name: runPlan?.name })}</DialogTitle>
         <DialogContent sx={{ px: 2.5 }}>
@@ -447,7 +404,6 @@ export default function NodeCheckList() {
                 ))}
               </>
             )}
-            <Alert severity="info">{t('detectionCenter.dynamicMembership')}</Alert>
           </Stack>
         </DialogContent>
         <DialogActions>

@@ -312,21 +312,16 @@ The first version's goal is:
 
 ---
 
-## Detection center: plans, jobs, history and results
+## Detection center
 
-The **Detection center** separates four responsibilities:
+The page provides **Detection plans** and **Automatic jobs**.
 
-- **Detection plans** define connectivity/latency, optional download speed, exit IP/country, IP quality and metadata-driven AI/streaming modules. Request URLs, timeouts, concurrency, sampling and traffic settings remain under detailed settings. Latency is the baseline; download speed enables the existing Mihomo full-test mode. Single/selected-node checks still use the plan picker and explicit node IDs.
-- **Automatic jobs** reuse plans and select all nodes or an airport/source-group/tag intersection. Five-field Cron uses the server/container timezone; the generator preview uses browser time. Airport-update events check matching nodes only after that airport updates successfully.
-- **Run history** reuses existing `speed_test` task records, progress and stop actions. Names are not stable plan IDs. These are execution summaries, not per-node historical snapshots.
-- **Node results** show paginated **latest** check states, source airports, provider status/reason/detail and timestamps, with single-node rechecks. Raw proxy links and credentials are not included in this result response.
+1. Create a plan, choose the checks to run, and adjust URLs, timeout and concurrency under **Advanced settings** as needed.
+2. Create an automatic job, select a plan and node scope, then choose a schedule or **After airport update**. Airport, source-group and tag selections intersect.
+3. Enable the job or run it manually. Scheduled filtered jobs can update the selected airports first; detection waits for all updates and automatic tagging to finish. A failed update stops the check.
 
-For scheduled filtered jobs, select airports and enable **Update selected airports first**. Checks wait for all selected updates and automatic tagging before resolving the latest scope. Failure/cancellation stops the check. These pre-updates suppress post-update detection hooks to prevent recursion or duplicate checks within that orchestration.
+Cron uses five fields and the server/container timezone. The browser preview uses browser time and supports a numeric subset; the server validates the saved expression. Each independent job prevents overlapping runs and coalesces airport-update events for one follow-up. Empty filtered selections never expand to all nodes.
 
-Each independent job prevents its own overlapping runs. Repeated manual starts fail, scheduled overlap skips, and airport events arriving during a run coalesce into one follow-up batch that rereads current enabled state and scope. This is **per-job** protection, not a global node lock. Other jobs and existing airport post-update checks remain independent; avoid duplicate paths for the same nodes. Empty selections never fall back to all nodes or the plan's legacy scope.
+Results stay on the existing **Nodes** page; progress and records remain in **Task Center**. Single/selected-node checks are still available from the node list.
 
-Existing plan IDs, airport references, APIs and Telegram schedule toggles remain compatible. Old profile schedules appear as negative-ID **Compatibility jobs**, mapped rather than copied or registered twice. Edit Cron/groups/tags there; create an independent job to use another plan or pre-update airports. Deleting a compatibility job clears only its schedule, not its plan. Referenced plans cannot be deleted, including references from paused jobs or airports. Database restore preserves independent job and plan IDs; old backups clear stale target jobs.
-
-**Back up the database before upgrading**: the automatic-job table is migrated on startup. Saved results feed existing subscription filters without moving nodes or triggering a second check. Network probes do not establish account login or paid-model access; third-party IP risk is not an official platform score.
-
-OpenClash and other clients remain independent. Finish checks before their own subscription refresh, allowing a buffer based on node count/concurrency/timeouts. Fetches do not wait for unfinished jobs.
+Old schedules are listed as **Existing schedules** and keep the original plan IDs. Deleting one clears its schedule, not its plan. Referenced plans cannot be deleted, even for paused jobs or airports. Database restore retains independent job/plan IDs and removes stale target jobs when restoring an old backup. Back up the database before upgrading; the job table is created automatically.
