@@ -266,3 +266,15 @@ func (p *NodeCheckProfile) SetUnlockProviders(providers []string) {
 	}
 	p.UnlockProviders = strings.Join(cleaned, ",")
 }
+
+// UpdateNextRunTime 仅推进兼容调度时间，不覆盖并发执行更新的上次运行记录。
+func (p *NodeCheckProfile) UpdateNextRunTime(next *time.Time) error {
+	if err := database.DB.Model(p).Update("NextRunTime", next).Error; err != nil {
+		return err
+	}
+	if cached, ok := nodeCheckProfileCache.Get(p.ID); ok {
+		cached.NextRunTime = next
+		nodeCheckProfileCache.Set(p.ID, cached)
+	}
+	return nil
+}

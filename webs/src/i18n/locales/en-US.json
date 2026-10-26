@@ -103,7 +103,7 @@
       "nodeMap": "Node Map",
       "airports": "Airport",
       "nodes": "Node",
-      "nodeCheck": "Node Check",
+      "nodeCheck": "Detection center",
       "subscriptions": "Subscriptions",
       "templates": "Templates",
       "tags": "Tags",
@@ -2305,12 +2305,12 @@
       "delete": "Delete"
     },
     "profileSelect": {
-      "title": "Select Check Strategy",
+      "title": "Select a detection plan",
       "selectedCount": "{{count}} nodes selected",
       "empty": "No check strategies yet",
       "create": "Create strategy",
       "scheduled": "Scheduled",
-      "manage": "Manage strategies",
+      "manage": "Detection center",
       "start": "Start check",
       "mode": {
         "full": "Delay + speed",
@@ -4285,5 +4285,61 @@
   },
   "pagination": {
     "rowsPerPage": "Rows per page"
+  },
+  "detectionCenter": {
+    "title": "Detection center",
+    "tabs": {
+      "plans": "Detection plans",
+      "jobs": "Automatic jobs"
+    },
+    "newPlan": "New plan",
+    "newJob": "New job",
+    "editJob": "Edit automatic job",
+    "plan": "Detection plan",
+    "modules": "Detection modules",
+    "module": {
+      "latency": "Connectivity and latency",
+      "speed": "Download speed",
+      "exit": "Exit IP and location",
+      "quality": "IP quality",
+      "ai": "AI service probes",
+      "streaming": "Streaming unlock"
+    },
+    "requestSettings": "Advanced settings",
+    "jobCount": "{{count}} automatic jobs",
+    "configure": "Configure",
+    "run": "Run",
+    "runPlan": "Manual run · {{name}}",
+    "jobName": "Job name",
+    "autoEnabled": "Enabled",
+    "trigger": "Run when",
+    "triggers": {
+      "scheduled": "Scheduled",
+      "airport_update": "After airport update"
+    },
+    "cron": "Schedule",
+    "timezone": "Timezone: {{timezone}}",
+    "scope": "Node scope",
+    "scopes": {
+      "all": "All nodes",
+      "filtered": "Selected airports / groups / tags"
+    },
+    "groups": "Groups",
+    "tags": "Tags",
+    "airports": "Restrict to airports",
+    "updateFirst": "Update selected airports before checking",
+    "legacy": "Existing schedule",
+    "missingAirport": "Deleted airport ({{id}})",
+    "missingPlan": "Plan missing",
+    "noJobs": "No automatic jobs",
+    "runTimes": "Last run: {{last}} · Next run: {{next}}",
+    "confirmDelete": "Delete “{{name}}”?",
+    "deleted": "Deleted",
+    "saveFailed": "Failed to save",
+    "loadFailed": "Failed to load. Please retry.",
+    "operationFailed": "Operation failed",
+    "editPlan": "Edit detection plan",
+    "planName": "Plan name",
+    "emptyPlans": "No detection plans"
   }
 }

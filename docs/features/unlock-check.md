@@ -37,7 +37,7 @@ First built in Providers:
 
 Open:
 
-`Node Check -> New / Edit Profile`
+`Detection center -> Detection plans -> New plan / Configure`
 
 In the profile, enable:
 
@@ -309,3 +309,19 @@ This feature currently does not aim for:
 The first version's goal is:
 
 **Maintainable, extensible, batch runnable, and stable to display.**
+
+---
+
+## Detection center
+
+The page provides **Detection plans** and **Automatic jobs**.
+
+1. Create a plan, choose the checks to run, and adjust URLs, timeout and concurrency under **Advanced settings** as needed.
+2. Create an automatic job, select a plan and node scope, then choose a schedule or **After airport update**. Airport, source-group and tag selections intersect.
+3. Enable the job or run it manually. Scheduled filtered jobs can update the selected airports first; detection waits for all updates and automatic tagging to finish. A failed update stops the check.
+
+Cron uses five fields and the server/container timezone. The browser preview uses browser time and supports a numeric subset; the server validates the saved expression. Each independent job prevents overlapping runs and coalesces airport-update events for one follow-up. Empty filtered selections never expand to all nodes.
+
+Results stay on the existing **Nodes** page; progress and records remain in **Task Center**. Single/selected-node checks are still available from the node list.
+
+Old schedules are listed as **Existing schedules** and keep the original plan IDs. Deleting one clears its schedule, not its plan. Referenced plans cannot be deleted, even for paused jobs or airports. Database restore retains independent job/plan IDs and removes stale target jobs when restoring an old backup. Back up the database before upgrading; the job table is created automatically.
