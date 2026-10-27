@@ -176,7 +176,9 @@ export default function Socks5Accounts({ showMessage, onChanged }) {
               label={t('settings.socks5.accounts.username')}
               value={form.username}
               onChange={(event) => setForm((previous) => ({ ...previous, username: event.target.value }))}
-              helperText={t('settings.socks5.accounts.usernameHelper')}
+              helperText={t(
+                form.username.includes(':') ? 'settings.socks5.form.httpUsernameWarning' : 'settings.socks5.accounts.usernameHelper'
+              )}
               error={form.username !== '' && !usernameValid}
             />
             <TextField
