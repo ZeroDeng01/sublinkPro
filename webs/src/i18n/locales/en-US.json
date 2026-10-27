@@ -1,4 +1,97 @@
 {
+  "smartGroups": {
+    "title": "Smart Groups",
+    "add": "Add group",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "refresh": "Refresh",
+    "name": "Group name",
+    "country": "Country codes",
+    "countryHint": "Search by country name or two-letter code, e.g. Philippines PH.",
+    "maxDelay": "Maximum latency (ms)",
+    "minSpeed": "Minimum speed (MB/s)",
+    "speedHint": "0 does not require download speed; a positive value requires a successful speed check.",
+    "maxAge": "Result freshness (hours)",
+    "zeroUnlimited": "0 means no limit",
+    "profile": "Detection plan",
+    "chooseProfile": "Select a detection plan first",
+    "check": "Check candidates",
+    "members": "View candidates",
+    "sourceGroup": "Source group",
+    "delay": "Latency",
+    "speed": "Speed",
+    "rule": "Latency ≤ {{delay}} ms · Speed ≥ {{speed}} MB/s · Freshness {{age}} hours",
+    "started": "Started checks for {{count}} candidates",
+    "confirmDelete": "Delete smart group “{{name}}”?",
+    "createSubscription": "Create subscription from group",
+    "subscriptionHint": "Use the current group members",
+    "loadFailed": "Failed to load smart groups",
+    "saveFailed": "Failed to save smart group",
+    "deleteFailed": "Failed to delete smart group",
+    "checkFailed": "Failed to start check",
+    "keyword": "Node-name keyword",
+    "keywordHint": "Matches the country condition OR this keyword; case-insensitive.",
+    "sourceGroups": "Source groups",
+    "sourceGroupsHint": "Empty includes all groups; selected groups further restrict candidates.",
+    "noCandidatesHint": "No matching nodes. Check country, name keyword and source-group filters.",
+    "nameInferred": "Country inferred from name",
+    "exclusions": {
+      "delayUnusable": "Latency not successful {{count}}",
+      "delayOverLimit": "Latency over limit {{count}}",
+      "delayStale": "Latency stale/missing time {{count}}",
+      "speedUnusable": "Speed not successful {{count}}",
+      "speedBelowMin": "Speed below minimum {{count}}",
+      "speedStale": "Speed stale/missing time {{count}}"
+    },
+    "checkOne": "Check node",
+    "close": "Close",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{page}} / {{total}}",
+    "tcpWarning": "This group has a minimum speed. Choose a plan with download-speed testing.",
+    "reasons": {
+      "delayUnusable": "Latency not successful",
+      "delayOverLimit": "Latency over limit",
+      "delayStale": "Latency stale/missing time",
+      "speedUnusable": "Speed not successful",
+      "speedBelowMin": "Speed below minimum",
+      "speedStale": "Speed stale/missing time"
+    },
+    "keywordAlternative": "Or name keyword",
+    "matchSources": {
+      "countryName": "Country matched in name",
+      "keyword": "Name keyword matched",
+      "landingCountry": "Stored country matched"
+    },
+    "sourceAirport": "Source airport",
+    "manualNode": "Manually added",
+    "deletedAirport": "Source airport deleted (#{{id}})",
+    "membersTitle": "Candidates and check results",
+    "candidatesCount": "{{count}} candidates",
+    "healthyCount": "{{count}} members",
+    "candidateList": "Candidate nodes",
+    "eligibleShort": "Included",
+    "excludedShort": "Excluded",
+    "loadingCandidates": "Loading candidates…",
+    "automaticChecks": "Automatic checks",
+    "defaultProfile": "Default detection plan",
+    "noDefaultProfile": "No default plan",
+    "scheduleEnabled": "Scheduled checks",
+    "cronExpr": "Schedule",
+    "scheduleTimezoneHint": "Timezone: {{timezone}} (preview uses browser time)",
+    "serverTimezone": "server local timezone",
+    "invalidCron": "Enter a valid 5-field Cron expression (minute hour day month weekday).",
+    "afterAirportUpdate": "Check after airport updates",
+    "scheduleSummary": "Scheduled: {{cron}}",
+    "lastTriggered": "Last check started",
+    "nextCheck": "Next check",
+    "notTriggered": "Not triggered yet",
+    "notScheduled": "Not scheduled",
+    "checkRunning": "Checking / queued",
+    "checkRunningHint": "A check is in progress. Please try again later."
+  },
   "auth": {
     "page": {
       "welcome": "Welcome back",
@@ -117,7 +210,8 @@
       "socks5": "SOCKS5 gateway",
       "changelog": "Changelog",
       "userCenter": "User Center",
-      "appSettings": "Settings"
+      "appSettings": "Settings",
+      "smartGroups": "Smart Groups"
     }
   },
   "common": {
@@ -2467,7 +2561,8 @@
       "airportCount": "{{count}} airports",
       "expandHint": "Tap the header to expand details",
       "confirmSort": "Confirm sort",
-      "sortNodes": "Sort nodes"
+      "sortNodes": "Sort nodes",
+      "smartGroupCount": "{{count}} smart groups"
     },
     "preview": {
       "timeout": "Timeout",
@@ -2557,12 +2652,12 @@
     },
     "table": {
       "name": "Subscription Name",
-      "nodesAndGroups": "Nodes / Groups / Airports",
+      "nodesAndGroups": "Nodes/groups/airports/smart groups",
       "createdAt": "Created At",
       "actions": "Actions",
       "sorting": "Sorting",
       "nodeGroupCount": "{{nodes}} nodes, {{groups}} groups",
-      "nodeGroupAirportCount": "{{nodes}} nodes, {{groups}} groups, {{airports}} airports",
+      "nodeGroupAirportCount": "{{nodes}} nodes, {{groups}} groups, {{airports}} airports, {{smartGroups}} smart groups",
       "tooltips": {
         "preview": "Preview nodes",
         "copy": "Copy this configuration as a new copy",
@@ -2984,14 +3079,14 @@
         "realtimeUsageTooltip": "When enabled, it will fetch the latest usage info (traffic, expiration time, etc.) in real time upon every subscription link access, which increases response time; when disabled, it uses cached data for faster response."
       },
       "nodeSelection": {
-        "summary": "{{nodeCount}} nodes / {{groupCount}} groups / {{airportCount}} airports",
+        "summary": "{{nodeCount}} nodes / {{groupCount}} groups / {{airportCount}} airports / {{smartGroupCount}} smart groups",
         "modeLabel": "Selection Mode",
         "modeManual": "Manual node selection",
-        "modeDynamic": "Dynamic groups or airports",
+        "modeDynamic": "Dynamic groups, airports or smart groups",
         "modeMixed": "Mixed mode",
-        "modeManualHelper": "Select specific nodes manually. Nodes will not update automatically with group changes.",
-        "modeDynamicHelper": "Select groups or airports to automatically include their nodes. Nodes update dynamically when groups or airports change.",
-        "modeMixedHelper": "Use manual nodes together with dynamic groups or airports.",
+        "modeManualHelper": "Choose individual nodes; selecting a smart group below automatically switches to dynamic or mixed mode.",
+        "modeDynamicHelper": "Resolve selected source groups, airports and smart groups when generating subscriptions.",
+        "modeMixedHelper": "Combine manual nodes with dynamic source groups, airports or smart groups.",
         "groupSelect": "Select Groups (Dynamic)",
         "groupSelectHelper": "Dynamic groups include all current and future nodes in the selected groups.",
         "groupOption": "{{name}} ({{count}} nodes)",
@@ -4322,9 +4417,10 @@
     "scope": "Node scope",
     "scopes": {
       "all": "All nodes",
-      "filtered": "Selected airports / groups / tags"
+      "filtered": "Selected airports / groups / tags",
+      "smart_group": "Smart-group candidates"
     },
-    "groups": "Groups",
+    "groups": "Source groups",
     "tags": "Tags",
     "airports": "Restrict to airports",
     "updateFirst": "Update selected airports before checking",
@@ -4340,6 +4436,7 @@
     "operationFailed": "Operation failed",
     "editPlan": "Edit detection plan",
     "planName": "Plan name",
-    "emptyPlans": "No detection plans"
+    "emptyPlans": "No detection plans",
+    "smartGroup": "Smart group"
   }
 }

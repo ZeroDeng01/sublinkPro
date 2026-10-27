@@ -105,6 +105,7 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 	}
 	if err := db.AutoMigrate(
 		&Subcription{},
+		&SmartGroup{},
 		&SubLogs{},
 		&Node{},
 		&Airport{},

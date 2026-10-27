@@ -113,6 +113,7 @@ func executeSubscriptionTask(id int, url string, subName string, trigger models.
 		return nil
 	}
 	go RunNodeCheckJobsAfterAirportUpdate(id)
+	go RunSmartGroupChecksAfterAirportUpdate(id)
 
 	// 订阅更新成功后，如机场开启“更新后检测”，则立即按指定策略补做一次机场内节点检测。
 	if airport != nil && airport.UpdateAfterDetect && airport.UpdateAfterDetectProfileID > 0 {

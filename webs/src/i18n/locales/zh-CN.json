@@ -1,4 +1,97 @@
 {
+  "smartGroups": {
+    "title": "智能分组",
+    "add": "新增分组",
+    "edit": "编辑",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消",
+    "refresh": "刷新",
+    "name": "分组名称",
+    "country": "国家代码",
+    "countryHint": "搜索国家名称或两位代码，如菲律宾 PH。",
+    "maxDelay": "最大延迟（ms）",
+    "minSpeed": "最低速度（MB/s）",
+    "speedHint": "0 不要求下载速度；大于 0 时还需通过下载测速。",
+    "maxAge": "结果有效期（小时）",
+    "zeroUnlimited": "0 表示不限制",
+    "profile": "检测方案",
+    "chooseProfile": "请先选择检测方案",
+    "check": "测速候选节点",
+    "members": "查看候选节点",
+    "sourceGroup": "原分组",
+    "delay": "延迟",
+    "speed": "速度",
+    "rule": "延迟 ≤ {{delay}} ms · 速度 ≥ {{speed}} MB/s · 有效期 {{age}} 小时",
+    "started": "已启动 {{count}} 个候选节点的检测",
+    "confirmDelete": "确定删除智能分组「{{name}}」？",
+    "createSubscription": "用此分组创建订阅",
+    "subscriptionHint": "使用当前已入组的节点",
+    "loadFailed": "加载智能分组失败",
+    "saveFailed": "保存智能分组失败",
+    "deleteFailed": "删除智能分组失败",
+    "checkFailed": "启动检测失败",
+    "keyword": "节点名称关键词",
+    "keywordHint": "与国家条件任选其一，不区分大小写。",
+    "sourceGroups": "原分组",
+    "sourceGroupsHint": "留空包含全部原分组；选择后还须符合原分组条件。",
+    "noCandidatesHint": "没有匹配节点，请检查国家、名称关键词和原分组条件。",
+    "nameInferred": "国家按名称推断",
+    "exclusions": {
+      "delayUnusable": "延迟未成功 {{count}}",
+      "delayOverLimit": "延迟超过上限 {{count}}",
+      "delayStale": "延迟结果过期/无时间 {{count}}",
+      "speedUnusable": "速度未成功 {{count}}",
+      "speedBelowMin": "速度低于下限 {{count}}",
+      "speedStale": "速度结果过期/无时间 {{count}}"
+    },
+    "checkOne": "测此节点",
+    "close": "关闭",
+    "previous": "上一页",
+    "next": "下一页",
+    "page": "第 {{page}} / {{total}} 页",
+    "tcpWarning": "此分组设置了最低速度，请选择含下载测速的检测方案。",
+    "reasons": {
+      "delayUnusable": "延迟未成功",
+      "delayOverLimit": "延迟超过上限",
+      "delayStale": "延迟结果过期/无时间",
+      "speedUnusable": "速度未成功",
+      "speedBelowMin": "速度低于下限",
+      "speedStale": "速度结果过期/无时间"
+    },
+    "keywordAlternative": "或名称关键词",
+    "matchSources": {
+      "countryName": "名称国家匹配",
+      "keyword": "名称关键词匹配",
+      "landingCountry": "已保存国家匹配"
+    },
+    "sourceAirport": "来源机场",
+    "manualNode": "手动节点",
+    "deletedAirport": "原机场已删除 (#{{id}})",
+    "membersTitle": "候选节点与检测结果",
+    "candidatesCount": "候选 {{count}}",
+    "healthyCount": "已入组 {{count}}",
+    "candidateList": "候选节点",
+    "eligibleShort": "已入组",
+    "excludedShort": "未入组",
+    "loadingCandidates": "正在加载候选节点…",
+    "automaticChecks": "自动检测",
+    "defaultProfile": "默认检测方案",
+    "noDefaultProfile": "不设置默认方案",
+    "scheduleEnabled": "定时检测",
+    "cronExpr": "执行时间",
+    "scheduleTimezoneHint": "时区：{{timezone}}（预览使用浏览器时区）",
+    "serverTimezone": "服务器本地时区",
+    "invalidCron": "请输入有效的五字段 Cron（分 时 日 月 星期）。",
+    "afterAirportUpdate": "机场更新后检测",
+    "scheduleSummary": "定时：{{cron}}",
+    "lastTriggered": "上次检测开始",
+    "nextCheck": "下次检测",
+    "notTriggered": "尚未触发",
+    "notScheduled": "未安排",
+    "checkRunning": "检测中 / 排队中",
+    "checkRunningHint": "正在检测，请稍后再试。"
+  },
   "auth": {
     "page": {
       "welcome": "欢迎回来",
@@ -117,7 +210,8 @@
       "socks5": "SOCKS5 网关",
       "changelog": "更新日志",
       "userCenter": "个人中心",
-      "appSettings": "应用设置"
+      "appSettings": "应用设置",
+      "smartGroups": "智能分组"
     }
   },
   "common": {
@@ -2467,7 +2561,8 @@
       "airportCount": "{{count}} 个机场",
       "expandHint": "轻触头部展开更多内容",
       "confirmSort": "确认排序",
-      "sortNodes": "排序节点"
+      "sortNodes": "排序节点",
+      "smartGroupCount": "{{count}} 个智能分组"
     },
     "preview": {
       "timeout": "超时",
@@ -2557,12 +2652,12 @@
     },
     "table": {
       "name": "订阅名称",
-      "nodesAndGroups": "节点/分组/机场",
+      "nodesAndGroups": "节点/分组/机场/智能分组",
       "createdAt": "创建时间",
       "actions": "操作",
       "sorting": "排序中",
       "nodeGroupCount": "{{nodes}} 个节点, {{groups}} 个分组",
-      "nodeGroupAirportCount": "{{nodes}} 个节点, {{groups}} 个分组, {{airports}} 个机场",
+      "nodeGroupAirportCount": "{{nodes}} 个节点, {{groups}} 个分组, {{airports}} 个机场, {{smartGroups}} 个智能分组",
       "tooltips": {
         "preview": "预览节点",
         "copy": "复制本配置为新副本",
@@ -2984,14 +3079,14 @@
         "realtimeUsageTooltip": "开启后每次访问订阅链接会实时获取最新用量信息（流量、到期时间等），但会增加响应时间；关闭后使用缓存数据，响应更快"
       },
       "nodeSelection": {
-        "summary": "{{nodeCount}} 节点 / {{groupCount}} 分组 / {{airportCount}} 机场",
+        "summary": "{{nodeCount}} 节点 / {{groupCount}} 分组 / {{airportCount}} 机场 / {{smartGroupCount}} 智能分组",
         "modeLabel": "选择模式",
         "modeManual": "手动选择节点",
-        "modeDynamic": "动态选择分组或机场",
+        "modeDynamic": "动态选择分组、机场或智能分组",
         "modeMixed": "混合模式",
-        "modeManualHelper": "手动选择具体节点，节点不会随分组变化自动更新",
-        "modeDynamicHelper": "选择分组或机场，自动包含对应节点，节点会随分组或机场变化动态更新",
-        "modeMixedHelper": "同时使用手动节点，并叠加动态分组或机场",
+        "modeManualHelper": "手动选择节点；也可直接选下方智能分组，自动切换为动态或混合模式。",
+        "modeDynamicHelper": "选择原分组、机场或智能分组，生成订阅时自动更新节点。",
+        "modeMixedHelper": "同时使用手动节点和动态的原分组、机场或智能分组。",
         "groupSelect": "选择分组（动态）",
         "groupSelectHelper": "动态分组会包含所选分组下当前和未来的节点",
         "groupOption": "{{name}} ({{count}} 个节点)",
@@ -4322,9 +4417,10 @@
     "scope": "检测范围",
     "scopes": {
       "all": "全部节点",
-      "filtered": "指定机场 / 分组 / 标签"
+      "filtered": "指定机场 / 分组 / 标签",
+      "smart_group": "智能分组候选节点"
     },
-    "groups": "分组",
+    "groups": "原分组",
     "tags": "标签",
     "airports": "限定机场",
     "updateFirst": "检测前更新所选机场",
@@ -4340,6 +4436,7 @@
     "operationFailed": "操作失败",
     "editPlan": "编辑检测方案",
     "planName": "方案名称",
-    "emptyPlans": "暂无检测方案"
+    "emptyPlans": "暂无检测方案",
+    "smartGroup": "智能分组"
   }
 }

@@ -35,6 +35,7 @@ type Subcription struct {
 	Groups                []string          `gorm:"-" json:"-"`      // 内部使用，不返回给前端
 	GroupsWithSort        []GroupWithSort   `gorm:"-" json:"Groups"` // 订阅关联的分组列表（带Sort）
 	AirportsWithSort      []AirportWithSort `gorm:"-" json:"Airports"`
+	SmartGroupIDs         string            `json:"SmartGroupIDs"`
 	Scripts               []Script          `gorm:"-" json:"-"` // 内部使用
 	ScriptsWithSort       []ScriptWithSort  `gorm:"-" json:"Scripts"`
 	IPWhitelist           string            `json:"IPWhitelist"`                               //IP白名单
@@ -289,6 +290,7 @@ func (sub *Subcription) Update() error {
 		"unlock_keyword":           sub.UnlockKeyword,
 		"unlock_rules":             sub.UnlockRules,
 		"unlock_rule_mode":         sub.UnlockRuleMode,
+		"smart_group_ids":          sub.SmartGroupIDs,
 	}
 	err := database.DB.Model(&Subcription{}).Where("id = ? or name = ?", sub.ID, sub.Name).Updates(updates).Error
 	if err != nil {
@@ -823,6 +825,25 @@ func (sub *Subcription) GetSub(clientType string) error {
 		}
 	}
 
+	// Smart groups are independent dynamic views and do not change source Node.Group.
+	for _, id := range ParseSmartGroupIDs(sub.SmartGroupIDs) {
+		group, err := GetSmartGroup(id)
+		if err != nil {
+			continue
+		} // A group deleted after subscription creation contributes no nodes.
+		members, err := group.Members()
+		if err != nil {
+			return err
+		}
+		for _, node := range members {
+			nameKey := node.EffectiveName()
+			if !nodeMap[nameKey] {
+				sub.Nodes = append(sub.Nodes, node)
+				nodeMap[nameKey] = true
+			}
+		}
+	}
+
 	// 调用共用的过滤方法
 	sub.Nodes = sub.ApplyFilters(sub.Nodes)
 
@@ -1173,6 +1194,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 		DeduplicationRule:     sub.DeduplicationRule,
 		RefreshUsageOnRequest: sub.RefreshUsageOnRequest,
 		UpdateInterval:        sub.UpdateInterval,
+		SmartGroupIDs:         sub.SmartGroupIDs,
 	}
 
 	// 使用事务确保数据一致性

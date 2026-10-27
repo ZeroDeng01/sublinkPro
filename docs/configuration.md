@@ -388,6 +388,12 @@ trusted_proxies: []
 
 ---
 
+## Smart-group automatic checks
+
+Per-group settings are database-backed, configured in **Subscriptions → Smart Groups → Edit → Automatic checks**, not `config.yaml`. Both switches default off, with no saved profile. Choose a profile, then optionally enable five-field Cron and/or airport-update linkage. Cron uses server/container local timezone: verify the server hint and next run, not only browser preview. Existing airport post-update checks are independent and may duplicate work. See [Smart groups](features/smart-groups.md) for semantics, queuing and external-refresh planning. No new application environment variables or OpenWrt integration.
+
+---
+
 ## Docker Deployment Example with Environment Variables
 
 ```yaml

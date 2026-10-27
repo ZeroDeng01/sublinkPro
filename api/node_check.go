@@ -2,6 +2,7 @@ package api
 
 import (
 	"strconv"
+	"sublink/database"
 	"sublink/models"
 	"sublink/services/scheduler"
 	"sublink/services/unlock"
@@ -296,6 +297,17 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	profile.DetectUnlock = req.DetectUnlock
 	profile.SetUnlockProviders(models.NormalizeUnlockProviders(req.UnlockProviders))
 
+	if profile.Mode == "tcp" {
+		var dependent int64
+		if err := database.DB.Model(&models.SmartGroup{}).Where("check_profile_id = ? AND min_speed > 0 AND (schedule_enabled = ? OR check_after_airport_update = ?)", id, true, true).Count(&dependent).Error; err != nil {
+			utils.FailWithMsg(c, "检查智能分组检测策略引用失败")
+			return
+		}
+		if dependent > 0 {
+			utils.FailWithMsg(c, "此策略被有下载速度要求的自动智能分组使用，不能改为 TCP 模式")
+			return
+		}
+	}
 	if err := validateCheckProfileConfig(*profile); err != nil {
 		utils.FailWithMsg(c, err.Error())
 		return
@@ -329,6 +341,16 @@ func DeleteNodeCheckProfile(c *gin.Context) {
 	profile, err := models.GetNodeCheckProfileByID(id)
 	if err != nil {
 		utils.FailWithMsg(c, "策略不存在")
+		return
+	}
+
+	var dependent int64
+	if err := database.DB.Model(&models.SmartGroup{}).Where("check_profile_id = ?", id).Count(&dependent).Error; err != nil {
+		utils.FailWithMsg(c, "检查智能分组检测策略引用失败")
+		return
+	}
+	if dependent > 0 {
+		utils.FailWithMsg(c, "此策略已被智能分组引用，请先更换智能分组的检测策略")
 		return
 	}
 

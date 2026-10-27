@@ -22,6 +22,7 @@ type NodeCheckJob struct {
 	AirportIDs        []int      `gorm:"serializer:json;type:text" json:"airportIds"`
 	Groups            []string   `gorm:"serializer:json;type:text" json:"groups"`
 	Tags              []string   `gorm:"serializer:json;type:text" json:"tags"`
+	SmartGroupID      int        `json:"smartGroupId"`
 	UpdateBeforeCheck bool       `json:"updateBeforeCheck"`
 	LastRunTime       *time.Time `json:"lastRunTime"`
 	LastError         string     `gorm:"type:text" json:"lastError"`
@@ -40,7 +41,7 @@ func (j *NodeCheckJob) Validate() error {
 	if j.Trigger != "scheduled" && j.Trigger != "airport_update" {
 		return fmt.Errorf("无效的触发方式")
 	}
-	if j.Scope != "all" && j.Scope != "filtered" {
+	if j.Scope != "all" && j.Scope != "filtered" && j.Scope != "smart_group" {
 		return fmt.Errorf("无效的检测范围")
 	}
 	if len(j.AirportIDs) > 128 || len(j.Groups) > 64 || len(j.Tags) > 64 {
@@ -58,11 +59,17 @@ func (j *NodeCheckJob) Validate() error {
 		}
 	}
 	j.AirportIDs = ids
-	if j.Scope == "all" && (len(j.AirportIDs) > 0 || len(j.Groups) > 0 || len(j.Tags) > 0) {
+	if j.Scope == "all" && (len(j.AirportIDs) > 0 || len(j.Groups) > 0 || len(j.Tags) > 0 || j.SmartGroupID > 0) {
 		return fmt.Errorf("全部节点范围不能包含隐藏筛选条件")
+	}
+	if j.Scope != "smart_group" && j.SmartGroupID != 0 {
+		return fmt.Errorf("当前检测范围不能包含智能分组条件")
 	}
 	if j.Scope == "filtered" && len(ids) == 0 && len(j.Groups) == 0 && len(j.Tags) == 0 {
 		return fmt.Errorf("筛选范围不能为空，请明确选择全部节点")
+	}
+	if j.Scope == "smart_group" && j.SmartGroupID <= 0 {
+		return fmt.Errorf("请选择智能分组")
 	}
 	if j.UpdateBeforeCheck && (j.Trigger != "scheduled" || len(ids) == 0) {
 		return fmt.Errorf("前置更新仅适用于定时任务，且必须指定机场")
@@ -106,7 +113,7 @@ func (j *NodeCheckJob) Save() error {
 	if j.ID == 0 {
 		return database.DB.Create(j).Error
 	}
-	return database.DB.Model(j).Select("Name", "ProfileID", "Enabled", "Trigger", "CronExpr", "Scope", "AirportIDs", "Groups", "Tags", "UpdateBeforeCheck").Updates(j).Error
+	return database.DB.Model(j).Select("Name", "ProfileID", "Enabled", "Trigger", "CronExpr", "Scope", "AirportIDs", "Groups", "Tags", "SmartGroupID", "UpdateBeforeCheck").Updates(j).Error
 }
 
 func (j *NodeCheckJob) Delete() error { return database.DB.Delete(j).Error }

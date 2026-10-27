@@ -204,6 +204,7 @@ func RunMigrations() error {
 		{name: "NodeCheckProfile", model: &NodeCheckProfile{}},
 		{name: "NodeCheckJob", model: &NodeCheckJob{}},
 		{name: "CountryRule", model: &CountryRule{}},
+		{name: "SmartGroup", model: &SmartGroup{}},
 	}
 
 	for _, table := range baseTables {

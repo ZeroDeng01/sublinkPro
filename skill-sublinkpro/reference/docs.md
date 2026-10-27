@@ -56,6 +56,7 @@ suffix for Chinese.
 ### Feature guides
 | User asks about | Doc path |
 |---|---|
+| Smart groups — country/name candidates, passing members, scheduled checks and dynamic subscriptions | `docs/features/smart-groups.md` / `docs/features/smart-groups.zh-CN.md` |
 | Smart tag system — rule-based auto-tagging, mutually-exclusive groups, IP quality conditions | `docs/features/tags.md` |
 | Speed-test system — two-stage tests, latency/speed, IP quality & unlock checks, tuning | `docs/features/speedtest.md` |
 | Unlock checks — streaming & AI availability, Provider architecture, extensions | `docs/features/unlock-check.md` |

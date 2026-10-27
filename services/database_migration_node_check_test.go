@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestDatabaseMigrationPreservesIndependentCheckJobsAndProfileIDs(t *testing.T) {
+func TestDatabaseMigrationPreservesIndependentCheckJobsAndCandidateGroupIDs(t *testing.T) {
 	for _, hasJobs := range []bool{true, false} {
 		name := "legacy"
 		if hasJobs {
@@ -18,7 +18,7 @@ func TestDatabaseMigrationPreservesIndependentCheckJobsAndProfileIDs(t *testing.
 			if err := source.AutoMigrate(&models.NodeCheckProfile{}); err != nil {
 				t.Fatal(err)
 			}
-			if err := target.AutoMigrate(&models.NodeCheckProfile{}, &models.NodeCheckJob{}); err != nil {
+			if err := target.AutoMigrate(&models.NodeCheckProfile{}, &models.NodeCheckJob{}, &models.SmartGroup{}); err != nil {
 				t.Fatal(err)
 			}
 			profile := models.NodeCheckProfile{ID: 7, Name: "restored-plan", Mode: "tcp"}
@@ -26,10 +26,13 @@ func TestDatabaseMigrationPreservesIndependentCheckJobsAndProfileIDs(t *testing.
 				t.Fatal(err)
 			}
 			if hasJobs {
-				if err := source.AutoMigrate(&models.NodeCheckJob{}); err != nil {
+				if err := source.AutoMigrate(&models.NodeCheckJob{}, &models.SmartGroup{}); err != nil {
 					t.Fatal(err)
 				}
-				if err := source.Create(&models.NodeCheckJob{ID: 11, Name: "restored-job", ProfileID: 7, Scope: "all", Trigger: "scheduled", CronExpr: "30 5 * * *", Enabled: true}).Error; err != nil {
+				if err := source.Create(&models.SmartGroup{ID: 9, Name: "restored-group", Countries: "GB", CheckProfileID: 7}).Error; err != nil {
+					t.Fatal(err)
+				}
+				if err := source.Create(&models.NodeCheckJob{ID: 11, Name: "restored-job", ProfileID: 7, Scope: "smart_group", SmartGroupID: 9, Trigger: "scheduled", CronExpr: "30 5 * * *", Enabled: true}).Error; err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -53,8 +56,12 @@ func TestDatabaseMigrationPreservesIndependentCheckJobsAndProfileIDs(t *testing.
 				}
 				return
 			}
-			if len(jobs) != 1 || jobs[0].ID != 11 || jobs[0].ProfileID != 7 {
+			if len(jobs) != 1 || jobs[0].ID != 11 || jobs[0].ProfileID != 7 || jobs[0].SmartGroupID != 9 {
 				t.Fatalf("job references=%+v", jobs)
+			}
+			var group models.SmartGroup
+			if err := target.First(&group, 9).Error; err != nil || group.Name != "restored-group" {
+				t.Fatalf("candidate group not restored: %+v,%v", group, err)
 			}
 		})
 	}

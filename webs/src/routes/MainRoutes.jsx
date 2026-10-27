@@ -26,6 +26,7 @@ const CountryRulesPage = Loadable(lazy(() => import('views/country-rules')));
 const WebhookList = Loadable(lazy(() => import('views/webhooks')));
 const AirportList = Loadable(lazy(() => import('views/airports')));
 const NodeCheckList = Loadable(lazy(() => import('views/node-check')));
+const SmartGroupsPage = Loadable(lazy(() => import('views/smart-groups')));
 const Socks5GatewayPage = Loadable(lazy(() => import('views/socks5')));
 // ==============================|| MAIN ROUTING ||==============================  //
 
@@ -68,6 +69,10 @@ const MainRoutes = {
         {
           path: 'node-check',
           element: <NodeCheckList />
+        },
+        {
+          path: 'smart-groups',
+          element: <SmartGroupsPage />
         },
         {
           path: 'subs',

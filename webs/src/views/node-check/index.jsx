@@ -30,7 +30,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import MainCard from 'ui-component/cards/MainCard';
-import { useTaskProgress } from 'contexts/TaskProgressContext';
+import { useTaskCompletion } from 'contexts/TaskProgressContext';
 import {
   getNodeCheckProfiles,
   getNodeCheckMeta,
@@ -44,6 +44,7 @@ import {
 import { getNodeGroups } from 'api/nodes';
 import { getTags } from 'api/tags';
 import { getAirports } from 'api/airports';
+import { getSmartGroups } from 'api/smartGroups';
 import { formatDateTime } from 'i18n/locales';
 import { formatUnlockProvidersSummary, setUnlockMeta } from 'views/nodes/utils';
 import NodeCheckProfileFormDialog from 'views/nodes/component/NodeCheckProfileFormDialog';
@@ -54,11 +55,11 @@ const listData = (response) => (Array.isArray(response?.data) ? response.data : 
 // 方案定义检测能力，任务定义编排；旧策略 ID 与单节点执行入口保持兼容。
 export default function NodeCheckList() {
   const { t, i18n } = useTranslation();
-  const { registerOnComplete, unregisterOnComplete } = useTaskProgress();
+  const { registerOnComplete, unregisterOnComplete } = useTaskCompletion();
   const [tab, setTab] = useState('plans');
   const [profiles, setProfiles] = useState([]);
   const [jobs, setJobs] = useState([]);
-  const [options, setOptions] = useState({ groups: [], tags: [], airports: [] });
+  const [options, setOptions] = useState({ groups: [], tags: [], airports: [], smartGroups: [] });
   const [timezone, setTimezone] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -87,10 +88,10 @@ export default function NodeCheckList() {
   }, [load]);
   useEffect(() => {
     let active = true;
-    Promise.all([getNodeGroups(), getTags(), getAirports(), getNodeCheckMeta()])
-      .then(([groups, tags, airports, meta]) => {
+    Promise.all([getNodeGroups(), getTags(), getAirports(), getSmartGroups(), getNodeCheckMeta()])
+      .then(([groups, tags, airports, smartGroups, meta]) => {
         if (!active) return;
-        setOptions({ groups: listData(groups), tags: listData(tags), airports: listData(airports) });
+        setOptions({ groups: listData(groups), tags: listData(tags), airports: listData(airports), smartGroups: listData(smartGroups) });
         setUnlockMeta(meta.data || {});
       })
       .catch((err) => {
@@ -308,7 +309,11 @@ export default function NodeCheckList() {
                         <Typography variant="caption" color="text.secondary">
                           {t('detectionCenter.scope')}
                         </Typography>
-                        <Typography>{t(`detectionCenter.scopes.${job.scope}`)}</Typography>
+                        <Typography>
+                          {job.scope === 'smart_group'
+                            ? options.smartGroups.find((g) => g.id === job.smartGroupId)?.name || t('detectionCenter.scopes.smart_group')
+                            : t(`detectionCenter.scopes.${job.scope}`)}
+                        </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {[...(job.groups || []), ...(job.tags || [])].join(' · ')}
                         </Typography>

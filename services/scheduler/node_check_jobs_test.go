@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strings"
 	"sublink/database"
-	"sublink/internal/testutil"
 	"sublink/models"
 	"sync"
 	"testing"
@@ -15,29 +14,11 @@ import (
 
 func setupNodeCheckJobTest(t *testing.T) models.NodeCheckProfile {
 	t.Helper()
-	oldDB, oldDialect, oldInitialized := database.DB, database.Dialect, database.IsInitialized
-	db := testutil.OpenMemoryDB(t, "node_check_job")
-	if err := db.AutoMigrate(&models.Node{}, &models.NodeCheckProfile{}, &models.NodeCheckJob{}, &models.Airport{}); err != nil {
+	profile := setupSmartGroupCheckTest(t)
+	if err := database.DB.AutoMigrate(&models.NodeCheckJob{}, &models.Airport{}); err != nil {
 		t.Fatal(err)
 	}
-	database.DB, database.Dialect, database.IsInitialized = db, database.DialectSQLite, true
-	for _, initCache := range []func() error{models.InitNodeCache, models.InitNodeCheckProfileCache, models.InitAirportCache} {
-		if err := initCache(); err != nil {
-			t.Fatal(err)
-		}
-	}
-	t.Cleanup(func() {
-		checkJobWorkers.Wait()
-		database.DB, database.Dialect, database.IsInitialized = oldDB, oldDialect, oldInitialized
-		if oldDB != nil {
-			_ = models.InitNodeCache()
-			_ = models.InitNodeCheckProfileCache()
-			_ = models.InitAirportCache()
-		}
-		testutil.CloseDB(t, db)
-	})
-	profile := models.NodeCheckProfile{Name: "check-job-plan", Mode: "tcp", Groups: "unrelated"}
-	if err := profile.Add(); err != nil {
+	if err := models.InitAirportCache(); err != nil {
 		t.Fatal(err)
 	}
 	oldRunner, oldUpdate := runCheckJobNodes, updateCheckJobAirport
@@ -46,10 +27,15 @@ func setupNodeCheckJobTest(t *testing.T) models.NodeCheckProfile {
 }
 
 func TestNodeCheckJobScopeDoesNotFallBackToProfileOrAllNodes(t *testing.T) {
-	setupNodeCheckJobTest(t)
-	a := addCheckJobNode(t, "job-gb-a", "GB", "a", 1)
-	addCheckJobNode(t, "job-us-b", "US", "b", 2)
-	job := models.NodeCheckJob{Scope: "filtered", Groups: []string{"a"}}
+	p := setupNodeCheckJobTest(t)
+	a := addSmartCheckNode(t, "job-gb-a", "GB", "a", 1)
+	addSmartCheckNode(t, "job-us-b", "US", "b", 2)
+	group := saveSmartCheckGroup(t, p, "job-candidates")
+	job := models.NodeCheckJob{Scope: "smart_group", SmartGroupID: group.ID}
+	filtered, err := ResolveNodeCheckJobNodes(models.NodeCheckJob{Scope: "filtered", Groups: []string{"a"}}, []int{1})
+	if err != nil || len(filtered) != 1 || filtered[0].ID != a.ID {
+		t.Fatalf("filtered airport intersection=%v,%v", filtered, err)
+	}
 	nodes, err := ResolveNodeCheckJobNodes(job, []int{1})
 	if err != nil || len(nodes) != 1 || nodes[0].ID != a.ID {
 		t.Fatalf("candidate airport intersection=%v,%v", nodes, err)
@@ -70,7 +56,7 @@ func TestNodeCheckJobScopeDoesNotFallBackToProfileOrAllNodes(t *testing.T) {
 
 func TestNodeCheckJobPreupdateMustFinishBeforeCheckingAndStopsOnFailure(t *testing.T) {
 	p := setupNodeCheckJobTest(t)
-	addCheckJobNode(t, "preupdate-node", "GB", "a", 1)
+	addSmartCheckNode(t, "preupdate-node", "GB", "a", 1)
 	job := models.NodeCheckJob{ProfileID: p.ID, Scope: "filtered", AirportIDs: []int{1, 2}, UpdateBeforeCheck: true}
 	order := []string{}
 	updateCheckJobAirport = func(id int) error {
@@ -118,7 +104,7 @@ func TestNodeCheckJobCoalescesAirportEventsAndRejectsOverlappingManualRun(t *tes
 	if err := airport.Add(); err != nil {
 		t.Fatal(err)
 	}
-	addCheckJobNode(t, "queued-job-node", "GB", "a", airport.ID)
+	addSmartCheckNode(t, "queued-job-node", "GB", "a", airport.ID)
 	job := models.NodeCheckJob{Name: "events", ProfileID: p.ID, Enabled: true, Trigger: "airport_update", Scope: "all"}
 	if err := job.Save(); err != nil {
 		t.Fatal(err)
@@ -163,7 +149,7 @@ func TestNodeCheckJobCoalescesAirportEventsAndRejectsOverlappingManualRun(t *tes
 
 func TestNodeCheckJobQueuedEventsRespectDisabledJob(t *testing.T) {
 	p := setupNodeCheckJobTest(t)
-	addCheckJobNode(t, "disable-queued-node", "GB", "a", 1)
+	addSmartCheckNode(t, "disable-queued-node", "GB", "a", 1)
 	job := models.NodeCheckJob{Name: "disable-events", ProfileID: p.ID, Enabled: true, Trigger: "airport_update", Scope: "all"}
 	if err := job.Save(); err != nil {
 		t.Fatal(err)
@@ -249,7 +235,7 @@ func TestLegacyCheckScheduleAdvancesNextTimeAfterTrigger(t *testing.T) {
 
 func TestSubscriptionUpdateTagsCompleteBeforeDetectionScopeContinues(t *testing.T) {
 	setupNodeCheckJobTest(t)
-	addCheckJobNode(t, "tag-boundary", "GB", "a", 1)
+	addSmartCheckNode(t, "tag-boundary", "GB", "a", 1)
 	old := autoTagRulesApplier
 	t.Cleanup(func() { autoTagRulesApplier = old })
 	entered, release, done := make(chan struct{}), make(chan struct{}), make(chan struct{})
@@ -277,13 +263,4 @@ func TestSubscriptionUpdateTagsCompleteBeforeDetectionScopeContinues(t *testing.
 	case <-time.After(3 * time.Second):
 		t.Fatal("tags did not complete")
 	}
-}
-
-func addCheckJobNode(t *testing.T, name, country, group string, sourceID int) models.Node {
-	t.Helper()
-	n := models.Node{Name: name, LinkName: name, Link: "ss://" + name, LinkCountry: country, Group: group, SourceID: sourceID, DelayStatus: "timeout"}
-	if err := n.Add(); err != nil {
-		t.Fatal(err)
-	}
-	return n
 }

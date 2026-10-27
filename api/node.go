@@ -855,7 +855,7 @@ func NodeBatchFillCountry(c *gin.Context) {
 		}
 		if country := models.ParseCountryFromNodeName(nodes[i].Name); country != "" {
 			nodes[i].LinkCountry = country
-			if err := database.DB.Model(&nodes[i]).Update("link_country", country).Error; err == nil {
+			if err := models.UpdateNodeFields(nodes[i].ID, map[string]any{"link_country": country}); err == nil {
 				updated++
 			}
 		}

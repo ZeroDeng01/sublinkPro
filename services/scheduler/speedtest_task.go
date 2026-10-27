@@ -892,6 +892,11 @@ applyTags:
 // nodeIDs: 指定节点ID列表（可选，为空则按策略范围执行）
 // trigger: 触发类型（手动/定时）
 func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.TaskTrigger) {
+	ExecuteNodeCheckWithProfileNamed(profileID, nodeIDs, trigger, "")
+}
+
+// ExecuteNodeCheckWithProfileNamed reuses check settings while giving group tasks a recognizable name.
+func ExecuteNodeCheckWithProfileNamed(profileID int, nodeIDs []int, trigger models.TaskTrigger, taskName string) {
 	utils.Info("开始执行节点检测，策略ID: %d, 触发类型: %s", profileID, trigger)
 
 	// 获取策略配置
@@ -952,7 +957,10 @@ func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.Ta
 	config := SpeedTestConfigFromProfile(profile)
 
 	// 执行检测（使用策略名称作为任务名，传递独立配置）
-	if err := RunSpeedTestWithConfig(nodes, trigger, profile.Name, config); err != nil {
+	if taskName == "" {
+		taskName = profile.Name
+	}
+	if err := RunSpeedTestWithConfig(nodes, trigger, taskName, config); err != nil {
 		utils.Warn("节点检测结束: %v", err)
 	}
 

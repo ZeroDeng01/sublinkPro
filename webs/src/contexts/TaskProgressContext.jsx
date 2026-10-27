@@ -5,6 +5,8 @@ import { stopTask as stopTaskApi } from 'api/tasks';
 // ==============================|| TASK PROGRESS CONTEXT ||============================== //
 
 const TaskProgressContext = createContext(null);
+// 仅订阅完成事件的页面不消费每条 SSE 进度，避免整页随进度重绘。
+const TaskCompletionContext = createContext(null);
 
 // Auto-cleanup completed tasks after this duration (ms)
 const COMPLETED_TASK_CLEANUP_DELAY = 3000;
@@ -205,7 +207,13 @@ export function TaskProgressProvider({ children }) {
     ]
   );
 
-  return <TaskProgressContext.Provider value={value}>{children}</TaskProgressContext.Provider>;
+  const completionValue = useMemo(() => ({ registerOnComplete, unregisterOnComplete }), [registerOnComplete, unregisterOnComplete]);
+
+  return (
+    <TaskCompletionContext.Provider value={completionValue}>
+      <TaskProgressContext.Provider value={value}>{children}</TaskProgressContext.Provider>
+    </TaskCompletionContext.Provider>
+  );
 }
 
 TaskProgressProvider.propTypes = { children: PropTypes.node };
@@ -217,6 +225,12 @@ export function useTaskProgress() {
   if (!context) {
     throw new Error('useTaskProgress 必须在 TaskProgressProvider 内部使用');
   }
+  return context;
+}
+
+export function useTaskCompletion() {
+  const context = useContext(TaskCompletionContext);
+  if (!context) throw new Error('useTaskCompletion 必须在 TaskProgressProvider 内部使用');
   return context;
 }
 

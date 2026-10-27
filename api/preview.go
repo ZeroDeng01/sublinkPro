@@ -23,6 +23,7 @@ type PreviewRequest struct {
 	Groups             []string `json:"Groups"`     // 选中的分组列表
 	GroupSorts         []int    `json:"GroupSorts"` // 分组对应的排序值
 	AirportIDs         []int    `json:"AirportIDs"`
+	SmartGroupIDs      []int    `json:"SmartGroupIDs"`
 	AirportSorts       []int    `json:"AirportSorts"`
 	Scripts            []int    `json:"Scripts"`           // 选中的脚本ID列表
 	DelayTime          int      `json:"DelayTime"`         // 最大延迟过滤
@@ -315,7 +316,7 @@ func buildNodesWithMixedSort(req PreviewRequest) []models.Node {
 		}
 	}
 
-	if len(mixedItems) == 0 {
+	if len(mixedItems) == 0 && len(req.SmartGroupIDs) == 0 {
 		return nil
 	}
 
@@ -384,5 +385,22 @@ func buildNodesWithMixedSort(req PreviewRequest) []models.Node {
 		}
 	}
 
+	for _, id := range req.SmartGroupIDs {
+		group, err := models.GetSmartGroup(id)
+		if err != nil {
+			continue
+		}
+		members, err := group.Members()
+		if err != nil {
+			continue
+		}
+		for _, node := range members {
+			nameKey := node.EffectiveName()
+			if !nodeMap[nameKey] {
+				result = append(result, node)
+				nodeMap[nameKey] = true
+			}
+		}
+	}
 	return result
 }

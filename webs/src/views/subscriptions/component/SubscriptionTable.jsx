@@ -96,7 +96,8 @@ export default function SubscriptionTable({
                     {t('subscriptions.table.nodeGroupAirportCount', {
                       nodes: sub.Nodes?.length || 0,
                       groups: sub.Groups?.length || 0,
-                      airports: sub.Airports?.length || 0
+                      airports: sub.Airports?.length || 0,
+                      smartGroups: (sub.SmartGroupIDs || '').split(',').filter(Boolean).length
                     })}
                   </Typography>
                 </TableCell>

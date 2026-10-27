@@ -152,6 +152,27 @@ func TestNodeCheckCenterEmptyExplicitNodesNeverLaunchAll(t *testing.T) {
 	}
 }
 
+func TestDeleteSmartGroupRejectsPausedDetectionJobReference(t *testing.T) {
+	setupPreviewAPITestDB(t)
+	group := models.SmartGroup{Name: "job-referenced", Countries: "GB"}
+	if err := database.DB.Create(&group).Error; err != nil {
+		t.Fatal(err)
+	}
+	job := models.NodeCheckJob{Name: "paused", ProfileID: 1, Scope: "smart_group", SmartGroupID: group.ID, Enabled: false}
+	if err := job.Save(); err != nil {
+		t.Fatal(err)
+	}
+	r := gin.New()
+	r.DELETE("/groups/:id", DeleteSmartGroup)
+	response := checkCenterRequest(t, r, http.MethodDelete, "/groups/"+strconv.Itoa(group.ID), nil)
+	if string(response["code"]) != "409" {
+		t.Fatalf("referenced group deletion=%s", response)
+	}
+	if _, err := models.GetSmartGroup(group.ID); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestNodeCheckCenterPausedLegacyJobStillValidatesScope(t *testing.T) {
 	setupPreviewAPITestDB(t)
 	p := models.NodeCheckProfile{Name: "paused-legacy", Mode: "tcp", Groups: "keep"}

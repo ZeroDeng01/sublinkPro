@@ -50,6 +50,15 @@ const subscription = {
       breadcrumbs: true
     },
     {
+      id: 'smart-groups',
+      title: 'Smart Groups',
+      titleKey: 'navigation.items.smartGroups',
+      type: 'item',
+      url: '/subscription/smart-groups',
+      icon: IconListCheck,
+      breadcrumbs: true
+    },
+    {
       id: 'subs',
       title: 'Subscriptions',
       titleKey: 'navigation.items.subscriptions',

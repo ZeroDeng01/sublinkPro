@@ -260,6 +260,13 @@ export default function SubscriptionMobileCard({
                           size="small"
                           sx={getInfoChipSx(palette.info.main)}
                         />
+                        <Chip
+                          label={t('subscriptions.mobileCard.smartGroupCount', {
+                            count: (sub.SmartGroupIDs || '').split(',').filter(Boolean).length
+                          })}
+                          size="small"
+                          sx={getInfoChipSx(palette.primary.main)}
+                        />
                       </Stack>
                       <Typography variant="caption" sx={{ color: tertiaryText }}>
                         {t('subscriptions.mobileCard.expandHint')}

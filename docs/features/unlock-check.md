@@ -317,7 +317,7 @@ The first version's goal is:
 The page provides **Detection plans** and **Automatic jobs**.
 
 1. Create a plan, choose the checks to run, and adjust URLs, timeout and concurrency under **Advanced settings** as needed.
-2. Create an automatic job, select a plan and node scope, then choose a schedule or **After airport update**. Airport, source-group and tag selections intersect.
+2. Create an automatic job, select a plan and node scope, then choose a schedule or **After airport update**. The scope can also target smart-group candidates (including untested/failed nodes); airport, source-group and tag selections further intersect that set.
 3. Enable the job or run it manually. Scheduled filtered jobs can update the selected airports first; detection waits for all updates and automatic tagging to finish. A failed update stops the check.
 
 Cron uses five fields and the server/container timezone. The browser preview uses browser time and supports a numeric subset; the server validates the saved expression. Each independent job prevents overlapping runs and coalesces airport-update events for one follow-up. Empty filtered selections never expand to all nodes.

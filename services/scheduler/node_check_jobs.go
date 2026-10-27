@@ -51,12 +51,27 @@ func ValidateNodeCheckJob(job *models.NodeCheckJob) error {
 			return fmt.Errorf("机场 %d 不存在", id)
 		}
 	}
+	if job.Scope == "smart_group" {
+		if _, err := models.GetSmartGroup(job.SmartGroupID); err != nil {
+			return fmt.Errorf("智能分组不存在")
+		}
+	}
 	return nil
 }
 
 // ResolveNodeCheckJobNodes 返回明确目标快照；空结果绝不回退到全库。
 func ResolveNodeCheckJobNodes(job models.NodeCheckJob, airportEvents []int) ([]models.Node, error) {
-	nodes, err := (&models.Node{}).ListWithFilters(models.NodeFilter{})
+	var nodes []models.Node
+	var err error
+	if job.Scope == "smart_group" {
+		var g models.SmartGroup
+		g, err = models.GetSmartGroup(job.SmartGroupID)
+		if err == nil {
+			nodes, err = g.Candidates()
+		}
+	} else {
+		nodes, err = (&models.Node{}).ListWithFilters(models.NodeFilter{})
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +209,7 @@ func executeNodeCheckJob(job models.NodeCheckJob, trigger models.TaskTrigger, ev
 	if err != nil {
 		return err
 	}
-	// 节点结果持久化后由现有订阅筛选读取，不再次启动检测。
+	// 节点结果持久化后，智能分组和订阅按当前规则动态求值，不再次启动检测。
 	return runCheckJobNodes(profile, nodes, trigger, job.Name)
 }
 

@@ -32,6 +32,7 @@ export default function CheckJobDialog({ job, profiles, options, timezone, onClo
     trigger: 'scheduled',
     cronExpr: '30 5 * * *',
     scope: 'all',
+    smartGroupId: '',
     updateBeforeCheck: false,
     ...job,
     airportIds: Array.isArray(job.airportIds) ? job.airportIds : [],
@@ -41,11 +42,12 @@ export default function CheckJobDialog({ job, profiles, options, timezone, onClo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
-  // 这里只检查五字段结构；月份/星期名称和单值步进等合法 Cron 由服务端校验，不能被预览器的数字语法限制。
+  // 五字段结构以外的 Cron 语法交由服务端校验；数字预览器不能阻止保存命名星期或单值步进。
   const invalid =
     !form.name.trim() ||
     !form.profileId ||
     (form.trigger === 'scheduled' && form.cronExpr.trim().split(/\s+/).length !== 5) ||
+    (form.scope === 'smart_group' && !form.smartGroupId) ||
     (form.scope === 'filtered' && !form.airportIds.length && !form.groups.length && !form.tags.length) ||
     (form.updateBeforeCheck && !form.airportIds.length);
   const save = async () => {
@@ -55,6 +57,7 @@ export default function CheckJobDialog({ job, profiles, options, timezone, onClo
       await saveNodeCheckJob({
         ...form,
         profileId: Number(form.profileId),
+        smartGroupId: form.scope === 'smart_group' ? Number(form.smartGroupId) : 0,
         ...(form.scope === 'all' ? { airportIds: [], groups: [], tags: [], updateBeforeCheck: false } : {})
       });
       onSaved();
@@ -141,7 +144,7 @@ export default function CheckJobDialog({ job, profiles, options, timezone, onClo
               }))
             }
           >
-            {['all', 'filtered'].map((key) => (
+            {['all', 'filtered', ...(!job.legacy ? ['smart_group'] : [])].map((key) => (
               <MenuItem key={key} value={key}>
                 {t(`detectionCenter.scopes.${key}`)}
               </MenuItem>
@@ -149,6 +152,20 @@ export default function CheckJobDialog({ job, profiles, options, timezone, onClo
           </TextField>
           {form.scope !== 'all' && (
             <>
+              {form.scope === 'smart_group' && (
+                <TextField
+                  select
+                  label={t('detectionCenter.smartGroup')}
+                  value={form.smartGroupId}
+                  onChange={(e) => update('smartGroupId', e.target.value)}
+                >
+                  {options.smartGroups.map((g) => (
+                    <MenuItem key={g.id} value={g.id}>
+                      {g.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
               {!job.legacy && (
                 <Autocomplete
                   multiple

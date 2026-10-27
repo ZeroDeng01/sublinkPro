@@ -99,6 +99,7 @@ export default function SubscriptionFormDialog({
   groupNodeCounts,
   allNodeTotal,
   groupOptions,
+  smartGroupOptions,
   airportOptions,
   sourceOptions,
   countryOptions,
@@ -550,13 +551,17 @@ export default function SubscriptionFormDialog({
                 {t('subscriptions.form.sections.nodeSelection')}
               </Typography>
               {!expandedPanels.nodes &&
-                (formData.selectedNodes.length > 0 || formData.selectedGroups.length > 0 || formData.selectedAirports.length > 0) && (
+                (formData.selectedNodes.length > 0 ||
+                  formData.selectedGroups.length > 0 ||
+                  formData.selectedAirports.length > 0 ||
+                  formData.selectedSmartGroups.length > 0) && (
                   <Chip
                     size="small"
                     label={t('subscriptions.form.nodeSelection.summary', {
                       nodeCount: formData.selectedNodes.length,
                       groupCount: formData.selectedGroups.length,
-                      airportCount: formData.selectedAirports.length
+                      airportCount: formData.selectedAirports.length,
+                      smartGroupCount: formData.selectedSmartGroups.length
                     })}
                     color="primary"
                     variant="outlined"
@@ -573,7 +578,11 @@ export default function SubscriptionFormDialog({
                     value={formData.selectionMode}
                     onChange={(e) => setFormData({ ...formData, selectionMode: e.target.value })}
                   >
-                    <FormControlLabel value="nodes" control={<Radio />} label={t('subscriptions.form.nodeSelection.modeManual')} />
+                    <FormControlLabel
+                      value="nodes"
+                      control={<Radio disabled={formData.selectedSmartGroups.length > 0} />}
+                      label={t('subscriptions.form.nodeSelection.modeManual')}
+                    />
                     <FormControlLabel value="groups" control={<Radio />} label={t('subscriptions.form.nodeSelection.modeDynamic')} />
                     <FormControlLabel value="mixed" control={<Radio />} label={t('subscriptions.form.nodeSelection.modeMixed')} />
                   </RadioGroup>
@@ -583,6 +592,31 @@ export default function SubscriptionFormDialog({
                     {formData.selectionMode === 'mixed' && t('subscriptions.form.nodeSelection.modeMixedHelper')}
                   </Typography>
                 </Box>
+
+                {/* Smart groups are visible in every mode so users can discover them without switching modes first. */}
+                <Autocomplete
+                  multiple
+                  options={smartGroupOptions || []}
+                  value={(smartGroupOptions || []).filter((group) => formData.selectedSmartGroups.includes(group.id))}
+                  onChange={(_event, values) =>
+                    setFormData({
+                      ...formData,
+                      selectedSmartGroups: values.map((group) => group.id),
+                      selectionMode:
+                        values.length > 0 && formData.selectionMode === 'nodes'
+                          ? formData.selectedNodes.length > 0
+                            ? 'mixed'
+                            : 'groups'
+                          : formData.selectionMode
+                    })
+                  }
+                  getOptionLabel={(option) => option.name || ''}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  sx={autocompleteChipSx}
+                  renderInput={(params) => (
+                    <TextField {...params} label={t('smartGroups.title')} helperText={t('smartGroups.subscriptionHint')} />
+                  )}
+                />
 
                 {/* Group Selection */}
                 {(formData.selectionMode === 'groups' || formData.selectionMode === 'mixed') && (
@@ -1340,7 +1374,10 @@ export default function SubscriptionFormDialog({
             onClick={onPreview}
             disabled={
               previewLoading ||
-              (formData.selectedNodes.length === 0 && formData.selectedGroups.length === 0 && formData.selectedAirports.length === 0)
+              (formData.selectedNodes.length === 0 &&
+                formData.selectedGroups.length === 0 &&
+                formData.selectedAirports.length === 0 &&
+                formData.selectedSmartGroups.length === 0)
             }
           >
             {previewLoading ? t('subscriptions.form.actions.previewLoading') : t('subscriptions.form.actions.previewNode')}

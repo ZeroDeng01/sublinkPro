@@ -12,7 +12,9 @@ func TestNodeCheckJobValidatesExplicitScopeAndSchedule(t *testing.T) {
 		{"valid", func(j *NodeCheckJob) {}, false},
 		{"empty-filter", func(j *NodeCheckJob) { j.Scope = "filtered" }, true},
 		{"hidden-filter-on-all", func(j *NodeCheckJob) { j.Groups = []string{"hidden"} }, true},
-		{"unsupported-scope", func(j *NodeCheckJob) { j.Scope = "smart_group" }, true},
+		{"hidden-smart-group", func(j *NodeCheckJob) { j.Scope = "filtered"; j.Groups = []string{"a"}; j.SmartGroupID = 1 }, true},
+		{"negative-smart-group", func(j *NodeCheckJob) { j.SmartGroupID = -1 }, true},
+		{"empty-candidates", func(j *NodeCheckJob) { j.Scope = "smart_group" }, true},
 		{"unknown-trigger", func(j *NodeCheckJob) { j.Trigger = "unknown" }, true},
 		{"six-field-cron", func(j *NodeCheckJob) { j.CronExpr = "0 30 5 * * *" }, true},
 		{"zero-step", func(j *NodeCheckJob) { j.CronExpr = "*/0 * * * *" }, true},
@@ -35,5 +37,16 @@ func TestNodeCheckJobValidatesExplicitScopeAndSchedule(t *testing.T) {
 				t.Fatalf("Validate()=%v invalid=%v", err, tc.invalid)
 			}
 		})
+	}
+}
+
+func TestSmartGroupCandidateMatcherIncludesSourceConstraint(t *testing.T) {
+	group := SmartGroup{Countries: "GB", SourceGroups: []string{"airport-a"}}
+	match := group.CandidateMatcher()
+	if got := match(Node{LinkCountry: "GB", Group: "airport-b"}); got != "" {
+		t.Fatalf("non-candidate matched: %s", got)
+	}
+	if got := match(Node{LinkCountry: "GB", Group: "AIRPORT-A"}); got != "landingCountry" {
+		t.Fatalf("candidate match = %s", got)
 	}
 }

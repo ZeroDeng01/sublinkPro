@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -35,6 +36,7 @@ import {
   previewSubscriptionNodes
 } from 'api/subscriptions';
 import { getNodeCheckMeta } from 'api/nodeCheck';
+import { getSmartGroups } from 'api/smartGroups';
 import {
   getNodeSelector,
   getNodeSelectorByIds,
@@ -74,6 +76,9 @@ import {
 export default function SubscriptionList() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const consumedSmartGroupRef = useRef(null);
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
 
   const [subscriptions, setSubscriptions] = useState([]);
@@ -122,6 +127,7 @@ export default function SubscriptionList() {
     selectedNodes: [],
     selectedGroups: [],
     selectedAirports: [],
+    selectedSmartGroups: [],
     selectedScripts: [],
     IPWhitelist: '',
     IPBlacklist: '',
@@ -217,6 +223,7 @@ export default function SubscriptionList() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const [groupOptions, setGroupOptions] = useState([]);
+  const [smartGroupOptions, setSmartGroupOptions] = useState([]);
   const [airportOptions, setAirportOptions] = useState([]);
   const [sourceOptions, setSourceOptions] = useState([]);
   const [tagOptions, setTagOptions] = useState([]);
@@ -423,6 +430,24 @@ export default function SubscriptionList() {
     }
   }, [normalizeAirportList]);
 
+  // Load smart-group choices independently: an unrelated options request must not hide them.
+  useEffect(() => {
+    let active = true;
+    getSmartGroups()
+      .then((response) => {
+        if (active) setSmartGroupOptions(response.data || []);
+      })
+      .catch((error) => {
+        if (active) {
+          console.error('Failed to load smart groups:', error);
+          setSnackbar({ open: true, message: error.message || t('smartGroups.loadFailed'), severity: 'error' });
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [t]);
+
   // 初始加载
   useEffect(() => {
     fetchSubscriptions(0, rowsPerPage);
@@ -531,7 +556,9 @@ export default function SubscriptionList() {
   };
 
   // === 订阅操作 ===
-  const handleAdd = () => {
+  const handleAdd = (smartGroupId = null) => {
+    const selectedSmartGroupId = Number(smartGroupId);
+    const hasSmartGroup = Number.isSafeInteger(selectedSmartGroupId) && selectedSmartGroupId > 0;
     setIsEdit(false);
     setCurrentSub(null);
     setFormData({
@@ -541,10 +568,11 @@ export default function SubscriptionList() {
       udp: false,
       cert: false,
       replaceServerWithHost: false,
-      selectionMode: 'nodes',
+      selectionMode: hasSmartGroup ? 'groups' : 'nodes',
       selectedNodes: [],
       selectedGroups: [],
       selectedAirports: [],
+      selectedSmartGroups: hasSmartGroup ? [selectedSmartGroupId] : [],
       selectedScripts: [],
       IPWhitelist: '',
       IPBlacklist: '',
@@ -587,6 +615,15 @@ export default function SubscriptionList() {
     refreshNodeSelector();
   };
 
+  // Optional deep link from Smart Groups opens a new subscription with that source preselected.
+  useEffect(() => {
+    const id = Number(new URLSearchParams(location.search).get('smartGroupId'));
+    if (!Number.isSafeInteger(id) || id <= 0 || consumedSmartGroupRef.current === id) return;
+    consumedSmartGroupRef.current = id;
+    handleAdd(id);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.search, location.pathname, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleEdit = (sub) => {
     setIsEdit(true);
     setCurrentSub(sub);
@@ -603,12 +640,16 @@ export default function SubscriptionList() {
     const nodes = sub.Nodes?.map((n) => n.ID) || [];
     const groups = (sub.Groups || []).map((g) => (typeof g === 'string' ? g : g.Name));
     const airports = (sub.Airports || []).map((airport) => getAirportId(airport)).filter((id) => Number.isInteger(id) && id > 0);
+    const smartGroups = (sub.SmartGroupIDs || '')
+      .split(',')
+      .map(Number)
+      .filter((id) => id > 0);
     const scriptIds = (sub.Scripts || []).map((s) => s.id);
 
     let mode = 'nodes';
-    if (nodes.length > 0 && (groups.length > 0 || airports.length > 0)) {
+    if (nodes.length > 0 && (groups.length > 0 || airports.length > 0 || smartGroups.length > 0)) {
       mode = 'mixed';
-    } else if (groups.length > 0 || airports.length > 0) {
+    } else if (groups.length > 0 || airports.length > 0 || smartGroups.length > 0) {
       mode = 'groups';
     }
 
@@ -623,6 +664,7 @@ export default function SubscriptionList() {
       selectedNodes: nodes,
       selectedGroups: groups,
       selectedAirports: airports,
+      selectedSmartGroups: smartGroups,
       selectedScripts: scriptIds,
       IPWhitelist: sub.IPWhitelist || '',
       IPBlacklist: sub.IPBlacklist || '',
@@ -748,14 +790,17 @@ export default function SubscriptionList() {
         requestData.nodeIds = formData.selectedNodes.join(',');
         requestData.groups = '';
         requestData.airports = '';
+        requestData.smartGroupIds = '';
       } else if (formData.selectionMode === 'groups') {
         requestData.nodeIds = '';
         requestData.groups = formData.selectedGroups.join(',');
         requestData.airports = formData.selectedAirports.join(',');
+        requestData.smartGroupIds = formData.selectedSmartGroups.join(',');
       } else {
         requestData.nodeIds = formData.selectedNodes.join(',');
         requestData.groups = formData.selectedGroups.join(',');
         requestData.airports = formData.selectedAirports.join(',');
+        requestData.smartGroupIds = formData.selectedSmartGroups.join(',');
       }
 
       if (isEdit) {
@@ -877,6 +922,7 @@ export default function SubscriptionList() {
         NodeIDs: formData.selectionMode !== 'groups' ? formData.selectedNodes : [],
         Groups: formData.selectionMode !== 'nodes' ? formData.selectedGroups : [],
         AirportIDs: formData.selectionMode !== 'nodes' ? formData.selectedAirports : [],
+        SmartGroupIDs: formData.selectionMode !== 'nodes' ? formData.selectedSmartGroups : [],
         Scripts: formData.selectedScripts || [],
         DelayTime: formData.DelayTime || 0,
         MinSpeed: formData.MinSpeed || 0,
@@ -1146,7 +1192,7 @@ export default function SubscriptionList() {
                 <CategoryIcon />
               </IconButton>
             </Tooltip>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleAdd()}>
               {t('common.add')}
             </Button>
           </Stack>
@@ -1155,7 +1201,7 @@ export default function SubscriptionList() {
             <Button variant="outlined" startIcon={<CategoryIcon />} onClick={() => setGroupSortOpen(true)}>
               {t('subscriptions.page.actions.groupSort')}
             </Button>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleAdd()}>
               {t('subscriptions.page.actions.addSubscription')}
             </Button>
             <IconButton onClick={() => fetchSubscriptions(page, rowsPerPage)} disabled={loading}>
@@ -1319,6 +1365,7 @@ export default function SubscriptionList() {
         groupNodeCounts={groupNodeCounts}
         allNodeTotal={allNodeTotal}
         groupOptions={groupOptions}
+        smartGroupOptions={smartGroupOptions}
         airportOptions={airportOptions}
         sourceOptions={sourceOptions}
         countryOptions={countryOptions}

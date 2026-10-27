@@ -655,6 +655,7 @@ func Run() {
 	routers.GroupSort(r)
 	routers.NodeCheck(r)
 	routers.CountryRule(r)
+	routers.SmartGroup(r)
 
 	// 处理前端路由 (SPA History Mode) 和静态文件
 	// 必须在所有 backend 路由注册之后注册
