@@ -114,7 +114,7 @@
       "countryRules": "Country Rules",
       "webhooks": "Webhooks",
       "monitor": "Monitor",
-      "socks5": "SOCKS5 gateway",
+      "socks5": "Proxy gateway",
       "changelog": "Changelog",
       "userCenter": "User Center",
       "appSettings": "Settings"
@@ -582,14 +582,14 @@
       "countryRules": "Country Rules"
     },
     "socks5": {
-      "title": "SOCKS5 gateway",
-      "subheader": "Expose selected SublinkPro nodes through one or more TCP SOCKS5 CONNECT listeners.",
+      "title": "Proxy gateway",
+      "subheader": "Share node pools and routing profiles across SOCKS5, HTTP and Mixed listeners.",
       "alerts": {
-        "security": "TCP CONNECT supports adapter reuse, retry, and failure cooldown. Non-loopback listeners require username/password authentication."
+        "security": "Non-loopback listeners require authentication. SOCKS5 and HTTP Basic do not encrypt credentials; use a trusted network or secure tunnel."
       },
       "status": {
         "running": "Running at {{address}}",
-        "stopped": "The SOCKS5 gateway is stopped"
+        "stopped": "The proxy gateway is stopped"
       },
       "monitor": {
         "probeNow": "Probe now",
@@ -615,7 +615,7 @@
           "cooling": "Cooling",
           "unknown": "Unknown"
         },
-        "title": "SOCKS5 runtime monitor",
+        "title": "Proxy runtime monitor",
         "subheader": "Refreshes every 3 seconds while this page is visible",
         "disconnectAll": "Disconnect all",
         "activeConnections": "Active {{count}}",
@@ -640,7 +640,7 @@
         "nodeSearchPlaceholder": "Name, ID, group, source, protocol, or country/region",
         "nodeStatusFilter": "Health status",
         "profileFilter": "Routing profile",
-        "routingStopped": "Start the SOCKS5 gateway to view candidate-node load and smart scores.",
+        "routingStopped": "Start the proxy gateway to view candidate-node load and smart scores.",
         "noRoutingData": "No node routing data matches the current filters.",
         "rowsPerPage": "Rows per page",
         "excludedFromRouting": "Excluded from routing",
@@ -659,15 +659,26 @@
           "failed": "Failed",
           "score": "Smart score",
           "lastSelected": "Last selected"
+        },
+        "protocols": {
+          "socks5": "SOCKS5",
+          "http": "HTTP",
+          "httpConnect": "HTTP CONNECT",
+          "mixed": "Mixed"
+        },
+        "phases": {
+          "handshake": "Connecting",
+          "connected": "Transferring",
+          "idle": "Waiting for request"
         }
       },
       "profiles": {
-        "title": "SOCKS5 routing profiles",
+        "title": "Proxy routing profiles",
         "subheader": "Give different business accounts independent candidate pools, routing strategies, retries, and sticky sessions.",
         "create": "New routing profile",
         "default": "Default profile",
-        "createTitle": "Create SOCKS5 routing profile",
-        "editTitle": "Edit SOCKS5 routing profile",
+        "createTitle": "Create proxy routing profile",
+        "editTitle": "Edit proxy routing profile",
         "id": "Profile ID",
         "idHelper": "1-32 lowercase letters, digits, underscores, or hyphens. The ID cannot be changed after creation.",
         "name": "Display name",
@@ -679,9 +690,9 @@
         "summary": "{{selection}} · {{candidates}} candidates · up to {{attempts}} attempts · {{filters}} filter values",
         "deleteConfirm": "Delete routing profile “{{name}}”? Existing connections stay open, but new connections cannot use it.",
         "messages": {
-          "created": "SOCKS5 routing profile created",
-          "updated": "SOCKS5 routing profile updated",
-          "deleted": "SOCKS5 routing profile deleted"
+          "created": "Proxy routing profile created",
+          "updated": "Proxy routing profile updated",
+          "deleted": "Proxy routing profile deleted"
         }
       },
       "form": {
@@ -691,7 +702,7 @@
         "healthCheckIntervalSecondsHelper": "Run a health sweep every 10-3600 seconds.",
         "healthCheckTimeoutSeconds": "Health check timeout (seconds)",
         "healthCheckTimeoutSecondsHelper": "Timeout for each node probe (1-30 seconds).",
-        "enabled": "Enable SOCKS5 gateway",
+        "enabled": "Enable proxy gateway",
         "listenAddress": "Listen address",
         "listenAddressHelper": "Use 127.0.0.1 for local-only access. Bind to 0.0.0.0 only when intentional.",
         "port": "Listen port",
@@ -747,11 +758,12 @@
         "stickySessionSpecificHelper": "Strict specific-node routing already fixes the outbound node, so sticky sessions are not needed.",
         "stickySessionMode": "Sticky key",
         "stickySessionModeClientIp": "Client IP",
-        "stickySessionModeUsername": "SOCKS5 username",
+        "stickySessionModeUsername": "Proxy username",
         "stickySessionTtlSeconds": "Sticky TTL (seconds)",
         "stickySessionTtlSecondsHelper": "Range: 60-604800 seconds. Each successful connection refreshes the TTL.",
         "stickySessionUsernameHelper": "Independent accounts use account affinity. Legacy profile-account usernames retain their existing affinity behavior.",
-        "stickySessionUsernameAuthRequired": "Username sticky mode requires SOCKS5 username/password authentication."
+        "stickySessionUsernameAuthRequired": "Username sticky mode requires proxy username/password authentication.",
+        "httpUsernameWarning": "This username contains a colon and is SOCKS5-only. Use a username without colons for HTTP/Mixed."
       },
       "actions": {
         "save": "Save settings",
@@ -761,72 +773,72 @@
         "stopping": "Stopping..."
       },
       "messages": {
-        "healthProbeStarted": "SOCKS5 node health probe started",
-        "healthProbeRunning": "A SOCKS5 node health probe is already running",
-        "runtimeStatsReset": "SOCKS5 node runtime statistics reset",
-        "loadFailed": "Failed to load SOCKS5 settings: {{message}}",
-        "saved": "SOCKS5 settings saved",
-        "saveFailed": "Failed to save SOCKS5 settings: {{message}}",
+        "healthProbeStarted": "Proxy node health probe started",
+        "healthProbeRunning": "A proxy node health probe is already running",
+        "runtimeStatsReset": "Proxy node runtime statistics reset",
+        "loadFailed": "Failed to load proxy gateway settings: {{message}}",
+        "saved": "Proxy gateway settings saved",
+        "saveFailed": "Failed to save proxy gateway settings: {{message}}",
         "authRequired": "Enter a username and password, or disable authentication.",
-        "stopped": "SOCKS5 gateway stopped",
-        "stopFailed": "Failed to stop SOCKS5 gateway: {{message}}"
+        "stopped": "Proxy gateway stopped",
+        "stopFailed": "Failed to stop proxy gateway: {{message}}"
       },
       "api": {
-        "healthProbeStarted": "SOCKS5 node health probe started",
-        "healthProbeRunning": "SOCKS5 node health probe is already running",
+        "healthProbeStarted": "Proxy node health probe started",
+        "healthProbeRunning": "Proxy node health probe is already running",
         "healthProbeUnavailable": "The SOCKS5 health probe could not start because the gateway is stopped",
-        "adminRequired": "Only administrators can manage the SOCKS5 gateway",
-        "loaded": "SOCKS5 settings loaded",
-        "loadFailed": "Failed to load SOCKS5 settings: {{message}}",
+        "adminRequired": "Only administrators can manage the proxy gateway",
+        "loaded": "Proxy gateway settings loaded",
+        "loadFailed": "Failed to load proxy gateway settings: {{message}}",
         "invalidRequest": "Invalid request parameters",
-        "invalidSettings": "Invalid SOCKS5 settings: {{message}}",
-        "saved": "SOCKS5 settings saved",
-        "startFailed": "Failed to start SOCKS5 gateway: {{message}}",
-        "stopped": "SOCKS5 gateway stopped",
-        "statusLoaded": "SOCKS5 status loaded",
-        "profilesLoaded": "SOCKS5 routing profiles loaded",
-        "profileLoadFailed": "Failed to load SOCKS5 routing profiles: {{message}}",
-        "profileSaveFailed": "Failed to save SOCKS5 routing profile: {{message}}",
-        "profileApplyFailed": "Failed to apply SOCKS5 routing profile: {{message}}",
-        "profileDeleteFailed": "Failed to delete SOCKS5 routing profile: {{message}}",
-        "profileCreated": "SOCKS5 routing profile created",
-        "profileUpdated": "SOCKS5 routing profile updated",
-        "profileDeleted": "SOCKS5 routing profile deleted",
-        "invalidProfile": "Invalid SOCKS5 routing profile ID",
-        "routingLoaded": "SOCKS5 node routing statistics loaded",
-        "routingLoadFailed": "Failed to load SOCKS5 node routing statistics: {{message}}",
-        "runtimeReset": "SOCKS5 node runtime statistics reset",
+        "invalidSettings": "Invalid proxy gateway settings: {{message}}",
+        "saved": "Proxy gateway settings saved",
+        "startFailed": "Failed to start proxy gateway: {{message}}",
+        "stopped": "Proxy gateway stopped",
+        "statusLoaded": "Proxy status loaded",
+        "profilesLoaded": "Proxy routing profiles loaded",
+        "profileLoadFailed": "Failed to load proxy routing profiles: {{message}}",
+        "profileSaveFailed": "Failed to save proxy routing profile: {{message}}",
+        "profileApplyFailed": "Failed to apply proxy routing profile: {{message}}",
+        "profileDeleteFailed": "Failed to delete proxy routing profile: {{message}}",
+        "profileCreated": "Proxy routing profile created",
+        "profileUpdated": "Proxy routing profile updated",
+        "profileDeleted": "Proxy routing profile deleted",
+        "invalidProfile": "Invalid proxy routing profile ID",
+        "routingLoaded": "Proxy node routing statistics loaded",
+        "routingLoadFailed": "Failed to load proxy node routing statistics: {{message}}",
+        "runtimeReset": "Proxy node runtime statistics reset",
         "connectionsLoaded": "SOCKS5 connections loaded",
         "connectionClosed": "SOCKS5 connection disconnected",
         "connectionsClosed": "All SOCKS5 connections disconnected",
         "invalidConnection": "Invalid connection ID",
         "connectionNotFound": "Connection not found",
-        "listenersLoaded": "SOCKS5 listeners loaded",
-        "listenerLoadFailed": "Failed to load SOCKS5 listeners: {{message}}",
-        "listenerSaveFailed": "Failed to save SOCKS5 listener: {{message}}",
-        "listenerApplyFailed": "Failed to apply SOCKS5 listener: {{message}}",
-        "listenerDeleteFailed": "Failed to delete SOCKS5 listener: {{message}}",
-        "listenerCreated": "SOCKS5 listener created",
-        "listenerUpdated": "SOCKS5 listener updated",
-        "listenerDeleted": "SOCKS5 listener deleted",
-        "invalidListener": "Invalid SOCKS5 listener ID",
-        "accountsLoaded": "SOCKS5 accounts loaded",
-        "accountLoadFailed": "Failed to load SOCKS5 accounts: {{message}}",
-        "accountSaveFailed": "Failed to save SOCKS5 account: {{message}}",
-        "accountApplyFailed": "Failed to apply SOCKS5 account: {{message}}",
-        "accountDeleteFailed": "Failed to delete SOCKS5 account: {{message}}",
-        "accountCreated": "SOCKS5 account created",
-        "accountUpdated": "SOCKS5 account updated",
-        "accountDeleted": "SOCKS5 account deleted",
-        "invalidAccount": "Invalid SOCKS5 account ID"
+        "listenersLoaded": "Proxy listeners loaded",
+        "listenerLoadFailed": "Failed to load proxy listeners: {{message}}",
+        "listenerSaveFailed": "Failed to save proxy listener: {{message}}",
+        "listenerApplyFailed": "Failed to apply proxy listener: {{message}}",
+        "listenerDeleteFailed": "Failed to delete proxy listener: {{message}}",
+        "listenerCreated": "Proxy listener created",
+        "listenerUpdated": "Proxy listener updated",
+        "listenerDeleted": "Proxy listener deleted",
+        "invalidListener": "Invalid proxy listener ID",
+        "accountsLoaded": "Proxy accounts loaded",
+        "accountLoadFailed": "Failed to load proxy accounts: {{message}}",
+        "accountSaveFailed": "Failed to save proxy account: {{message}}",
+        "accountApplyFailed": "Failed to apply proxy account: {{message}}",
+        "accountDeleteFailed": "Failed to delete proxy account: {{message}}",
+        "accountCreated": "Proxy account created",
+        "accountUpdated": "Proxy account updated",
+        "accountDeleted": "Proxy account deleted",
+        "invalidAccount": "Invalid proxy account ID"
       },
       "accounts": {
-        "title": "SOCKS5 accounts",
+        "title": "Proxy accounts",
         "subheader": "Create independent credentials and bind each account to a routing profile. Legacy gateway credentials remain supported.",
         "create": "New account",
         "empty": "No independent accounts yet.",
-        "createTitle": "Create SOCKS5 account",
-        "editTitle": "Edit SOCKS5 account",
+        "createTitle": "Create proxy account",
+        "editTitle": "Edit proxy account",
         "id": "Account ID",
         "idHelper": "1-32 lowercase letters, digits, underscores, or hyphens. The ID cannot be changed after creation.",
         "username": "Username",
@@ -838,20 +850,20 @@
         "passwordMissing": "Password is missing",
         "profile": "Routing profile",
         "enabled": "Enable this account",
-        "deleteConfirm": "Delete SOCKS5 account “{{username}}”? New connections using it will be rejected.",
+        "deleteConfirm": "Delete proxy account “{{username}}”? New connections using it will be rejected.",
         "messages": {
-          "created": "SOCKS5 account created",
-          "updated": "SOCKS5 account updated",
-          "deleted": "SOCKS5 account deleted"
+          "created": "Proxy account created",
+          "updated": "Proxy account updated",
+          "deleted": "Proxy account deleted"
         }
       },
       "listeners": {
-        "title": "SOCKS5 listeners",
+        "title": "Proxy listeners",
         "subheader": "Run multiple inbound addresses or ports and choose a default routing profile for each listener.",
         "create": "New listener",
         "empty": "No listeners configured.",
-        "createTitle": "Create SOCKS5 listener",
-        "editTitle": "Edit SOCKS5 listener",
+        "createTitle": "Create proxy listener",
+        "editTitle": "Edit proxy listener",
         "id": "Listener ID",
         "idHelper": "1-32 lowercase letters, digits, underscores, or hyphens. The ID cannot be changed after creation.",
         "address": "Listen address",
@@ -861,16 +873,23 @@
         "enabled": "Enable this listener",
         "running": "Running",
         "stopped": "Stopped",
-        "deleteConfirm": "Delete SOCKS5 listener “{{id}}”? Active connections on it will be closed.",
+        "deleteConfirm": "Delete proxy listener “{{id}}”? Active connections on it will be closed.",
         "auth": {
           "inherit": "Inherit gateway authentication",
           "required": "Require authentication",
           "disabled": "No authentication (loopback only)"
         },
         "messages": {
-          "created": "SOCKS5 listener created",
-          "updated": "SOCKS5 listener updated",
-          "deleted": "SOCKS5 listener deleted"
+          "created": "Proxy listener created",
+          "updated": "Proxy listener updated",
+          "deleted": "Proxy listener deleted"
+        },
+        "protocol": "Inbound protocol",
+        "protocolHelper": "HTTP supports plain requests and HTTPS CONNECT. Mixed accepts SOCKS5 and HTTP on one port.",
+        "protocols": {
+          "socks5": "SOCKS5",
+          "http": "HTTP",
+          "mixed": "Mixed (SOCKS5 + HTTP)"
         }
       }
     },

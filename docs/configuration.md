@@ -388,6 +388,12 @@ trusted_proxies: []
 
 ---
 
+## Proxy gateway inbound protocols
+
+Choose `socks5`, `http`, or `mixed` per entry in **Proxy gateway → Listeners**. Settings are persisted in the database; no new `config.yaml` key or environment variable is required. Old entries default to SOCKS5. Non-loopback listeners require authentication; Basic/SOCKS credentials are not encrypted in transit. See [Proxy gateway](features/socks5.md) for HTTP/CONNECT examples, compatibility and limits.
+
+---
+
 ## Docker Deployment Example with Environment Variables
 
 ```yaml
