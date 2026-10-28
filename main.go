@@ -25,6 +25,7 @@ import (
 	"sublink/services/mihomo"
 	"sublink/services/notifications"
 	"sublink/services/scheduler"
+	socks5service "sublink/services/socks5"
 	"sublink/services/sse"
 	"sublink/services/telegram"
 	"sublink/settings"
@@ -468,6 +469,9 @@ func Run() {
 	if err := models.InitSettingCache(); err != nil {
 		utils.Error("加载系统设置到缓存失败: %v", err)
 	}
+	if err := socks5service.DefaultManager().StartFromSettings(); err != nil {
+		utils.Warn("初始化 SOCKS5 服务失败: %v", err)
+	}
 	if err := models.InitUserCache(); err != nil {
 		utils.Error("加载用户到缓存失败: %v", err)
 	}
@@ -641,6 +645,7 @@ func Run() {
 	routers.Script(r)
 	routers.SSE(r)
 	routers.Settings(r)
+	routers.Socks5(r)
 	routers.Tag(r)
 	routers.Tasks(r)
 	routers.GeoIP(r)
@@ -754,6 +759,7 @@ func Run() {
 		if err := cloudflared.DefaultManager().Shutdown(); err != nil {
 			utils.Warn("停止 cloudflared 失败: %v", err)
 		}
+		socks5service.DefaultManager().Stop()
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := server.Shutdown(ctx); err != nil {

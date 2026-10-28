@@ -71,6 +71,10 @@ See the full guide at [Cloudflare Tunnel remote access](features/cloudflare-tunn
 
 ---
 
+## SOCKS5 gateway
+
+Administrators can enable the local TCP SOCKS5 CONNECT listener from the sidebar under **System Settings -> SOCKS5 gateway**. It is disabled by default and binds to `127.0.0.1:1080`; the password is encrypted with the API encryption key. Settings are stored in the database and are not configured through environment variables or `config.yaml`. The gateway supports multiple username-selected routing profiles, each using best-node, random-node, round-robin, smart P2C, or specific-node forwarding, candidate pools filtered by groups/sources/protocols/countries, configurable retry attempts, dial timeout, failed-node cooldown, optional specific-node fallback, connection limits, idle and duration limits, live connection monitoring, a server-paginated per-node load and smart-score table, active node health probes, and optional client-IP or username sticky sessions with a sliding TTL. Active probe results participate in routing: failed probes are skipped while alternatives exist, and best-node routing prioritizes measured probe latency. The original username selects the default profile; `username@profile` selects another profile, and `username@profile.account` provides account-scoped affinity. Non-loopback listeners require authentication. UDP is not supported.
+
 ## Command Line Flags
 
 ```bash

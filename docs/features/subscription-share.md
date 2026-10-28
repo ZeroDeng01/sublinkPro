@@ -130,6 +130,12 @@ For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] 香
 - Snell has no official general share-link schema; mihomo describes Snell with Clash YAML fields. SublinkPro internally uses `snell://server:port?psk=...&version=...&obfs=...&obfs-host=...#name` as the raw edit and Clash/mihomo, Surge import write back format. `version` defaults to mihomo's Snell v1 and accepts 1/2/3.
 - `/c?client=v2ray` currently does not support Snell. SublinkPro skips Snell nodes and does not write `snell://` links into v2ray base64.
 
+## OpenVPN Output Notes
+
+- OpenVPN supports Clash/mihomo output only. `/c?client=clash` writes `type: openvpn` and preserves the imported Mihomo fields, including PEM/key blocks, credentials, transport and cipher options, keepalive, IP stack, DNS, shared connection-layer options, and chain proxy `dialer-proxy`.
+- SublinkPro uses `openvpn://server:port?...#name` only as an internal raw-edit and Clash/mihomo import/export round-trip format. It is not an official OpenVPN share link and direct `.ovpn` import is not supported.
+- `/c?client=v2ray` and Surge skip OpenVPN nodes. Sensitive key material is URL-encoded, not encrypted, in the stored internal link.
+
 ## VLESS XHTTP Output Notes
 
 - When a subscription node is VLESS with `xhttp` transport, `/c?client=clash` outputs `network: xhttp` and `xhttp-opts`.

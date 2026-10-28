@@ -16,7 +16,7 @@ func setupPreviewAPITestDB(t *testing.T) {
 	oldInitialized := database.IsInitialized
 
 	db := testutil.OpenMemoryDB(t, "preview_api_test")
-	if err := db.AutoMigrate(&models.Airport{}, &models.Node{}); err != nil {
+	if err := db.AutoMigrate(&models.Airport{}, &models.Node{}, &models.NodeCheckProfile{}, &models.NodeCheckJob{}); err != nil {
 		t.Fatalf("auto migrate preview api tables: %v", err)
 	}
 
@@ -30,6 +30,10 @@ func setupPreviewAPITestDB(t *testing.T) {
 		t.Fatalf("init node cache: %v", err)
 	}
 
+	if err := models.InitNodeCheckProfileCache(); err != nil {
+		t.Fatal(err)
+	}
+
 	t.Cleanup(func() {
 		database.DB = oldDB
 		database.Dialect = oldDialect
@@ -37,6 +41,7 @@ func setupPreviewAPITestDB(t *testing.T) {
 		if oldDB != nil {
 			_ = models.InitAirportCache()
 			_ = models.InitNodeCache()
+			_ = models.InitNodeCheckProfileCache()
 		}
 		testutil.CloseDB(t, db)
 	})

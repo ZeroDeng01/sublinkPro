@@ -20,8 +20,13 @@ func TestEvaluateGeminiUnlockProbe(t *testing.T) {
 		wantReason string
 	}{
 		{
-			name:       "available marker",
-			response:   &unlockHTTPResponse{StatusCode: http.StatusOK, Body: "prefix 45631641,null,true suffix"},
+			name:       "available marker (escaped in inline JS)",
+			response:   &unlockHTTPResponse{StatusCode: http.StatusOK, Body: `prefix \"45631641\":true suffix`},
+			wantStatus: models.UnlockStatusAvailable,
+		},
+		{
+			name:       "available marker (unescaped JSON)",
+			response:   &unlockHTTPResponse{StatusCode: http.StatusOK, Body: `prefix "45631641":true suffix`},
 			wantStatus: models.UnlockStatusAvailable,
 		},
 		{

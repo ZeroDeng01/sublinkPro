@@ -16,6 +16,13 @@ func ExecuteSubscriptionTask(id int, url string, subName string) {
 
 // ExecuteSubscriptionTaskWithTrigger 执行订阅任务（带触发类型）
 func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trigger models.TaskTrigger) {
+	if err := executeSubscriptionTask(id, url, subName, trigger, true); err != nil {
+		utils.Warn("订阅任务失败: %v", err)
+	}
+}
+
+// executeSubscriptionTask 提供可等待、可抑制检测联动的前置更新边界。
+func executeSubscriptionTask(id int, url string, subName string, trigger models.TaskTrigger, followups bool) (runErr error) {
 	utils.Info("执行自动获取订阅任务 - ID: %d, Name: %s, URL: %s, Trigger: %s", id, subName, url, trigger)
 
 	// 获取最新的机场配置，以便使用最新的代理设置
@@ -54,7 +61,8 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 		defer func() {
 			if r := recover(); r != nil {
 				utils.Error("订阅任务执行发生 panic: %v, 任务ID: %s, 订阅名称: %s, URL: %s", r, task.ID, subName, url)
-				reporter.ReportFail(fmt.Sprintf("任务异常崩溃: %v", r))
+				runErr = fmt.Errorf("任务异常崩溃: %v", r)
+				reporter.ReportFail(runErr.Error())
 			}
 		}()
 
@@ -62,7 +70,7 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 		select {
 		case <-ctx.Done():
 			utils.Info("任务在执行前已被取消: %s", subName)
-			return
+			return ctx.Err()
 		default:
 		}
 	}
@@ -83,8 +91,11 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 				"status": "error",
 			},
 		})
-		return
+		return err
 	}
+
+	// 加载器已返回真实失败/取消错误；成功 ReportComplete 也会主动取消任务 context，
+	// 此处不能再据 ctx.Err() 否定成功，否则用量、标签及后续检测都会被跳过。
 
 	// 更新用量信息（如果开启了获取用量信息且成功获取到）
 	if fetchUsageInfo && usageInfo != nil && airport != nil {
@@ -95,13 +106,13 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 		}
 	}
 
-	// 订阅更新成功后，应用自动标签规则
-	go func() {
-		updatedNodes, err := models.ListBySourceID(id)
-		if err == nil && len(updatedNodes) > 0 {
-			applyAutoTagRules(updatedNodes, "subscription_update")
-		}
-	}()
+	// 标签属于节点更新边界，完成后才解析按标签筛选的自动检测范围。
+	applySubscriptionUpdateTags(id)
+
+	if !followups {
+		return nil
+	}
+	go RunNodeCheckJobsAfterAirportUpdate(id)
 
 	// 订阅更新成功后，如机场开启“更新后检测”，则立即按指定策略补做一次机场内节点检测。
 	if airport != nil && airport.UpdateAfterDetect && airport.UpdateAfterDetectProfileID > 0 {
@@ -131,6 +142,7 @@ func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trig
 			ExecuteNodeCheckWithProfile(nodeCheckProfileID, nodeIDs, models.TaskTriggerAirportUpdate)
 		}(id, subName, profileID, changedNodeIDs, changedOnly)
 	}
+	return nil
 }
 
 // resolveUpdateAfterDetectNodeIDs 解析更新后检测的目标节点；仅检测变化节点时，空变更代表跳过检测而不是回退到全机场。
@@ -155,4 +167,16 @@ func resolveUpdateAfterDetectNodeIDs(airportID int, changedNodeIDs []int, change
 		nodeIDs = append(nodeIDs, n.ID)
 	}
 	return nodeIDs, true, nil
+}
+
+// applySubscriptionUpdateTags 保证按标签检测不会漏掉本次更新刚分配标签的节点。
+func applySubscriptionUpdateTags(id int) {
+	nodes, err := models.ListBySourceID(id)
+	if err != nil {
+		utils.Warn("加载更新后标签节点失败: %v", err)
+		return
+	}
+	if len(nodes) > 0 {
+		applyAutoTagRules(nodes, "subscription_update")
+	}
 }

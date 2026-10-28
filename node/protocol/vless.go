@@ -30,6 +30,7 @@ func init() {
 		FieldMeta{Name: "Query.Type", Label: "Network", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "grpc", "http", "h2", "xhttp", "quic"}},
 		FieldMeta{Name: "Query.Path", Label: "路径", Type: "string", Group: "transport", Placeholder: "/ws"},
 		FieldMeta{Name: "Query.Host", Label: "Host", Type: "string", Group: "transport", Placeholder: "cdn.example.com"},
+		FieldMeta{Name: "Query.Headers", Label: "WS Headers", Type: "string", Group: "transport", Multiline: true, Advanced: true},
 		FieldMeta{Name: "Query.HeaderType", Label: "Header Type", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Query.ServiceName", Label: "gRPC Service Name", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Query.Mode", Label: "gRPC Mode", Type: "string", Group: "transport", Advanced: true},
@@ -69,6 +70,7 @@ type VLESSQuery struct {
 	HeaderType    string   `json:"headerType"`
 	Path          string   `json:"path"`
 	Host          string   `json:"host"`
+	Headers       string   `json:"headers,omitempty"` // Host 以外的 WebSocket 请求头（JSON 字符串），如 User-Agent
 	ServiceName   string   `json:"serviceName,omitempty"`
 	Mode          string   `json:"mode,omitempty"`
 	Extra         string   `json:"extra,omitempty"`
@@ -94,7 +96,7 @@ func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	if vless.Name == "" {
 		vless.Name = fmt.Sprintf("%s:%s", vless.Server, utils.GetPortString(vless.Port))
 	}
-	wsOpts := map[string]any{"path": vless.Query.Path, "headers": map[string]any{"Host": vless.Query.Host}}
+	wsOpts := map[string]any{"path": vless.Query.Path, "headers": vlessWSHeaders(vless.Query.Headers, vless.Query.Host)}
 	if vless.Query.MaxEarlyData > 0 {
 		wsOpts["max-early-data"] = vless.Query.MaxEarlyData
 	}
@@ -196,6 +198,7 @@ func EncodeVLESSURL(v VLESS) string {
 	// 传输层通用参数
 	q.Set("path", v.Query.Path)
 	q.Set("host", v.Query.Host)
+	q.Set("headers", v.Query.Headers)
 
 	// gRPC参数
 	if v.Query.ServiceName != "" {
@@ -301,6 +304,7 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 	ech := u.Query().Get("ech")
 	path := u.Query().Get("path")
 	host := u.Query().Get("host")
+	headers := u.Query().Get("headers")
 	serviceName := u.Query().Get("serviceName")
 	mode := u.Query().Get("mode")
 	extra := u.Query().Get("extra")
@@ -399,6 +403,7 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 			HeaderType:          headerType,
 			Path:                path,
 			Host:                host,
+			Headers:             headers,
 			ServiceName:         serviceName,
 			Mode:                mode,
 			Extra:               extra,
@@ -459,9 +464,11 @@ func ConvertProxyToVless(proxy Proxy) VLESS {
 		if path, ok := proxy.Ws_opts["path"].(string); ok {
 			vless.Query.Path = path
 		}
-		if headers, ok := proxy.Ws_opts["headers"].(map[string]any); ok {
-			if host, ok := headers["Host"].(string); ok {
-				vless.Query.Host = host
+		headers := vlessHeadersFromValue(proxy.Ws_opts["headers"])
+		vless.Query.Host, headers = vlessHostAndExtraHeaders(headers)
+		if len(headers) > 0 {
+			if encoded, err := json.Marshal(headers); err == nil {
+				vless.Query.Headers = string(encoded)
 			}
 		}
 		if ed, ok := proxy.Ws_opts["max-early-data"].(int); ok {
@@ -802,4 +809,58 @@ func applyVLESSXHTTPSkipCertOverride(xhttpOpts map[string]any, forceSkipCert boo
 		return
 	}
 	downloadSettings["skip-cert-verify"] = true
+}
+
+// vlessWSHeaders 将 JSON 字符串保存的额外请求头与 Host 合并为 Clash ws-opts.headers
+func vlessWSHeaders(encoded, host string) map[string]any {
+	headers := map[string]any{}
+	if encoded != "" {
+		if err := json.Unmarshal([]byte(encoded), &headers); err != nil || headers == nil {
+			headers = map[string]any{}
+		}
+	}
+	if host != "" {
+		for key := range headers {
+			if strings.EqualFold(key, "host") {
+				delete(headers, key)
+			}
+		}
+		headers["Host"] = host
+	}
+	return headers
+}
+
+// vlessHeadersFromValue 将 Clash ws-opts.headers 统一转换为 map[string]any
+func vlessHeadersFromValue(value any) map[string]any {
+	switch headers := value.(type) {
+	case map[string]any:
+		return headers
+	case map[string]string:
+		converted := make(map[string]any, len(headers))
+		for key, header := range headers {
+			converted[key] = header
+		}
+		return converted
+	default:
+		return nil
+	}
+}
+
+// vlessHostAndExtraHeaders 拆分出 Host（大小写不敏感）与其余请求头
+func vlessHostAndExtraHeaders(headers map[string]any) (string, map[string]any) {
+	if len(headers) == 0 {
+		return "", nil
+	}
+	host := ""
+	extra := make(map[string]any, len(headers))
+	for key, value := range headers {
+		if strings.EqualFold(key, "host") {
+			if header, ok := value.(string); ok && header != "" && host == "" {
+				host = header
+				continue
+			}
+		}
+		extra[key] = value
+	}
+	return host, extra
 }

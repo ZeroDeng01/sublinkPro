@@ -15,6 +15,7 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import StorageIcon from '@mui/icons-material/Storage';
+import BackupIcon from '@mui/icons-material/Backup';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -73,7 +74,8 @@ const TaskProgressItem = ({ task, currentTime, onStopTask, isStopping }) => {
       speed_test: SpeedIcon,
       sub_update: CloudSyncIcon,
       tag_rule: LocalOfferIcon,
-      db_migration: StorageIcon
+      db_migration: StorageIcon,
+      webdav_backup: BackupIcon
     };
 
     return {

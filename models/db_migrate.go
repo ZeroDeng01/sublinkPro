@@ -203,6 +203,7 @@ func RunMigrations() error {
 		{name: "Airport", model: &Airport{}},
 		{name: "GroupAirportSort", model: &GroupAirportSort{}},
 		{name: "NodeCheckProfile", model: &NodeCheckProfile{}},
+		{name: "NodeCheckJob", model: &NodeCheckJob{}},
 		{name: "CountryRule", model: &CountryRule{}},
 	}
 

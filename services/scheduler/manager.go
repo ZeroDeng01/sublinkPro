@@ -13,9 +13,10 @@ import (
 
 // SchedulerManager 定时任务管理器
 type SchedulerManager struct {
-	cron  *cron.Cron
-	jobs  map[int]cron.EntryID // 存储任务ID和cron EntryID的映射
-	mutex sync.RWMutex
+	cron          *cron.Cron
+	jobs          map[int]cron.EntryID // 存储任务ID和cron EntryID的映射
+	nodeCheckJobs map[int]cron.EntryID
+	mutex         sync.RWMutex
 }
 
 // 全局定时任务管理器实例
@@ -53,6 +54,10 @@ func (sm *SchedulerManager) ReloadFromDatabase() error {
 	for jobID, entryID := range sm.jobs {
 		sm.cron.Remove(entryID)
 		delete(sm.jobs, jobID)
+	}
+	for id, entryID := range sm.nodeCheckJobs {
+		sm.cron.Remove(entryID)
+		delete(sm.nodeCheckJobs, id)
 	}
 	sm.mutex.Unlock()
 
@@ -99,9 +104,18 @@ func (sm *SchedulerManager) LoadFromDatabase() error {
 		}
 	}
 
+	if err := sm.LoadNodeCheckJobs(); err != nil {
+		utils.Warn("加载独立检测任务失败: %v", err)
+	}
+
 	// 启动 Host 过期清理任务
 	if err := sm.StartHostCleanupTask(); err != nil {
 		utils.Error("创建Host过期清理任务失败: %v", err)
+	}
+
+	// 启动 WebDAV 定时备份任务
+	if err := sm.StartWebDAVBackupTask(); err != nil {
+		utils.Error("创建 WebDAV 定时备份任务失败: %v", err)
 	}
 
 	return nil
@@ -261,52 +275,7 @@ const nodeCheckJobIDOffset = 1000000
 
 // AddNodeCheckProfileJob 添加节点检测策略定时任务
 func (sm *SchedulerManager) AddNodeCheckProfileJob(profileID int, cronExpr string) error {
-	sm.mutex.Lock()
-	defer sm.mutex.Unlock()
-
-	// 使用偏移量区分机场任务和节点检测任务
-	jobID := nodeCheckJobIDOffset + profileID
-
-	// 清理Cron表达式
-	cleanCronExpr := cleanCronExpression(cronExpr)
-	if cleanCronExpr == "" {
-		return nil
-	}
-
-	// 如果任务已存在，先删除
-	if entryID, exists := sm.jobs[jobID]; exists {
-		sm.cron.Remove(entryID)
-		delete(sm.jobs, jobID)
-	}
-
-	// 添加新任务
-	entryID, err := sm.cron.AddFunc(cleanCronExpr, func() {
-		// 执行完成后记录本次运行时间
-		// 执行节点检测（定时触发）
-		ExecuteNodeCheckWithProfile(profileID, nil, models.TaskTriggerScheduled)
-
-		// 计算下次运行时间
-		nextTime := sm.getNextRunTime(cleanCronExpr)
-
-		// 更新数据库中的运行时间
-		sm.updateNodeCheckProfileRunTime(profileID, new(time.Now()), nextTime)
-	})
-
-	if err != nil {
-		utils.Error("添加节点检测定时任务失败 - ProfileID: %d, Cron: %s, Error: %v", profileID, cleanCronExpr, err)
-		return err
-	}
-
-	// 存储任务映射
-	sm.jobs[jobID] = entryID
-
-	// 计算并设置下次运行时间
-	nextTime := sm.getNextRunTime(cleanCronExpr)
-	sm.updateNodeCheckProfileRunTime(profileID, nil, nextTime)
-
-	utils.Info("成功添加节点检测定时任务 - ProfileID: %d, Cron: %s, 下次运行: %v", profileID, cleanCronExpr, nextTime)
-
-	return nil
+	return sm.UpdateNodeCheckProfileJob(profileID, cronExpr, true)
 }
 
 // RemoveNodeCheckProfileJob 删除节点检测策略定时任务
@@ -325,34 +294,41 @@ func (sm *SchedulerManager) RemoveNodeCheckProfileJob(profileID int) {
 
 // UpdateNodeCheckProfileJob 更新节点检测策略定时任务
 func (sm *SchedulerManager) UpdateNodeCheckProfileJob(profileID int, cronExpr string, enabled bool) error {
-	// 先删除旧任务
-	sm.RemoveNodeCheckProfileJob(profileID)
-
-	// 如果启用且有Cron表达式，添加新任务
-	if enabled && cronExpr != "" {
-		return sm.AddNodeCheckProfileJob(profileID, cronExpr)
-	}
-
-	// 如果禁用，清除下次运行时间
-	if !enabled {
-		sm.updateNodeCheckProfileRunTime(profileID, nil, nil)
-	}
-
-	return nil
-}
-
-// updateNodeCheckProfileRunTime 更新节点检测策略的运行时间
-func (sm *SchedulerManager) updateNodeCheckProfileRunTime(profileID int, lastRun, nextRun *time.Time) {
-	go func() {
-		profile, err := models.GetNodeCheckProfileByID(profileID)
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+	jobID := nodeCheckJobIDOffset + profileID
+	old, exists := sm.jobs[jobID]
+	clean := cleanCronExpression(cronExpr)
+	var next *time.Time
+	if enabled && clean != "" && !models.IsDemoMode() {
+		entry, err := sm.cron.AddFunc(clean, func() {
+			profile, err := models.GetNodeCheckProfileByID(profileID)
+			if err != nil || !profile.Enabled {
+				return
+			}
+			ExecuteNodeCheckWithProfile(profileID, nil, models.TaskTriggerScheduled)
+			latest, err := models.GetNodeCheckProfileByID(profileID)
+			if err == nil && latest.Enabled {
+				if err := latest.UpdateNextRunTime(sm.getNextRunTime(latest.CronExpr)); err != nil {
+					utils.Warn("推进检测计划时间失败: %v", err)
+				}
+			}
+		})
 		if err != nil {
-			utils.Error("获取节点检测策略失败 - ID: %d, Error: %v", profileID, err)
-			return
+			return err
 		}
-
-		err = profile.UpdateRunTime(lastRun, nextRun)
-		if err != nil {
-			utils.Error("更新节点检测策略运行时间失败 - ID: %d, Error: %v", profileID, err)
+		if exists {
+			sm.cron.Remove(old)
 		}
-	}()
+		sm.jobs[jobID] = entry
+		next = sm.getNextRunTime(clean)
+	} else if exists {
+		sm.cron.Remove(old)
+		delete(sm.jobs, jobID)
+	}
+	profile, err := models.GetNodeCheckProfileByID(profileID)
+	if err != nil {
+		return err
+	}
+	return profile.UpdateRunTime(profile.LastRunTime, next)
 }

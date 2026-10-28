@@ -13,6 +13,7 @@ const FALLBACK_PROTOCOL_META = [
   { name: 'hysteria2', label: 'Hysteria2', color: '#ef6c00', icon: 'H', prefixes: ['hysteria2://', 'hy2://'] },
   { name: 'tuic', label: 'TUIC', color: '#0277bd', icon: 'T', prefixes: ['tuic://'] },
   { name: 'wireguard', label: 'WireGuard', color: '#88171a', icon: 'W', prefixes: ['wg://', 'wireguard://'] },
+  { name: 'openvpn', label: 'OpenVPN', color: '#ea7e20', icon: 'O', prefixes: ['openvpn://'] },
   { name: 'mieru', label: 'Mieru', color: '#5f6caf', icon: 'M', prefixes: ['mieru://'] },
   { name: 'naiveproxy', label: 'NaiveProxy', color: '#5d4037', icon: 'N', prefixes: ['naiveproxy://', 'naive://'] },
   { name: 'anytls', label: 'AnyTLS', color: '#20a84c', icon: 'A', prefixes: ['anytls://'] },

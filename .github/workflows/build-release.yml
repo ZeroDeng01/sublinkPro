@@ -95,7 +95,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: '1.26.4'
+          go-version: '1.27.3'
           cache: true
           cache-dependency-path: go.sum
 
@@ -105,7 +105,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.12.2
+          version: v2.15.0
 
       - name: Run Go tests
         run: go test ./...
@@ -158,7 +158,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: '1.26.4'
+          go-version: '1.27.3'
           cache: true
           cache-dependency-path: go.sum
 
@@ -196,13 +196,13 @@ jobs:
         run: |
           # 安装 UPX
           sudo apt-get update && sudo apt-get install -y upx
-          
+
           echo "=== Original binary size ==="
           ls -lh build/${{ matrix.output }}
-          
+
           # 使用最佳压缩率压缩 Linux 二进制文件
           upx --best --lzma build/${{ matrix.output }} || true
-          
+
           echo "=== Compressed binary size ==="
           ls -lh build/${{ matrix.output }}
 
@@ -229,7 +229,7 @@ jobs:
         run: |
           echo "=== All binary files ==="
           ls -lh build/
-          
+
           # 验证所有必需的二进制文件都存在
           REQUIRED_FILES=(
             "sublinkPro-linux-amd64"
@@ -241,7 +241,7 @@ jobs:
             "sublinkPro-darwin-amd64"
             "sublinkPro-darwin-arm64"
           )
-          
+
           MISSING=0
           for file in "${REQUIRED_FILES[@]}"; do
             if [ ! -f "build/$file" ]; then
@@ -251,12 +251,12 @@ jobs:
               echo "OK: $file exists"
             fi
           done
-          
+
           if [ $MISSING -eq 1 ]; then
             echo "ERROR: Some required binaries are missing!"
             exit 1
           fi
-          
+
           echo "=== All binaries verified successfully ==="
 
       - name: Upload merged binaries
@@ -287,9 +287,9 @@ jobs:
         run: |
           CURRENT_TAG=${GITHUB_REF#refs/tags/}
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
-          
+
           echo "current_tag=$CURRENT_TAG" >> $GITHUB_OUTPUT
-          
+
           if [ -z "$PREVIOUS_TAG" ]; then
             echo "## 🎉 首次发布" > changelog.md
             echo "" >> changelog.md
@@ -301,7 +301,7 @@ jobs:
             echo "### 📝 提交记录:" >> changelog.md
             git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..$CURRENT_TAG >> changelog.md
           fi
-          
+
           echo "" >> changelog.md
           echo "### 📦 发布文件:" >> changelog.md
           echo "- \`sublinkPro-linux-amd64\` - Linux x64" >> changelog.md

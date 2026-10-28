@@ -207,3 +207,150 @@ export function importDatabaseMigration(formData) {
     }
   });
 }
+
+export function getWebDAVBackupSettings() {
+  return request({
+    url: '/v1/backup/webdav',
+    method: 'get'
+  });
+}
+
+export function updateWebDAVBackupSettings(data) {
+  return request({
+    url: '/v1/backup/webdav',
+    method: 'post',
+    data
+  });
+}
+
+export function testWebDAVBackup(data) {
+  return request({
+    url: '/v1/backup/webdav/test',
+    method: 'post',
+    data,
+    timeout: 0
+  });
+}
+
+export function uploadWebDAVBackup() {
+  return request({
+    url: '/v1/backup/webdav/upload',
+    method: 'post',
+    timeout: 0
+  });
+}
+
+export function listWebDAVBackups() {
+  return request({
+    url: '/v1/backup/webdav/files',
+    method: 'get',
+    timeout: 0
+  });
+}
+
+export function restoreWebDAVBackup(data) {
+  return request({
+    url: '/v1/backup/webdav/restore',
+    method: 'post',
+    data,
+    timeout: 0
+  });
+}
+
+export function getSocks5Settings() {
+  return request({
+    url: '/v1/settings/socks5',
+    method: 'get'
+  });
+}
+
+export function updateSocks5Settings(data) {
+  return request({
+    url: '/v1/settings/socks5',
+    method: 'post',
+    data
+  });
+}
+
+export function stopSocks5() {
+  return request({
+    url: '/v1/settings/socks5/stop',
+    method: 'post'
+  });
+}
+
+export function getSocks5Status() {
+  return request({ url: '/v1/settings/socks5/status', method: 'get' });
+}
+
+export function getSocks5Listeners() {
+  return request({ url: '/v1/settings/socks5/listeners', method: 'get' });
+}
+
+export function createSocks5Listener(data) {
+  return request({ url: '/v1/settings/socks5/listeners', method: 'post', data });
+}
+
+export function updateSocks5Listener(id, data) {
+  return request({ url: `/v1/settings/socks5/listeners/${encodeURIComponent(id)}`, method: 'put', data });
+}
+
+export function deleteSocks5Listener(id) {
+  return request({ url: `/v1/settings/socks5/listeners/${encodeURIComponent(id)}`, method: 'delete' });
+}
+
+export function getSocks5Accounts() {
+  return request({ url: '/v1/settings/socks5/accounts', method: 'get' });
+}
+
+export function createSocks5Account(data) {
+  return request({ url: '/v1/settings/socks5/accounts', method: 'post', data });
+}
+
+export function updateSocks5Account(id, data) {
+  return request({ url: `/v1/settings/socks5/accounts/${encodeURIComponent(id)}`, method: 'put', data });
+}
+
+export function deleteSocks5Account(id) {
+  return request({ url: `/v1/settings/socks5/accounts/${encodeURIComponent(id)}`, method: 'delete' });
+}
+
+export function getSocks5RoutingProfiles() {
+  return request({ url: '/v1/settings/socks5/profiles', method: 'get' });
+}
+
+export function createSocks5RoutingProfile(data) {
+  return request({ url: '/v1/settings/socks5/profiles', method: 'post', data });
+}
+
+export function updateSocks5RoutingProfile(id, data) {
+  return request({ url: `/v1/settings/socks5/profiles/${encodeURIComponent(id)}`, method: 'put', data });
+}
+
+export function deleteSocks5RoutingProfile(id) {
+  return request({ url: `/v1/settings/socks5/profiles/${encodeURIComponent(id)}`, method: 'delete' });
+}
+
+export function getSocks5RoutingSnapshot(params) {
+  return request({ url: '/v1/settings/socks5/routing', method: 'get', params });
+}
+
+export function resetSocks5RuntimeStats() {
+  return request({ url: '/v1/settings/socks5/routing/reset', method: 'post' });
+}
+
+export function getSocks5Connections() {
+  return request({ url: '/v1/settings/socks5/connections', method: 'get' });
+}
+
+export function closeSocks5Connection(id) {
+  return request({ url: `/v1/settings/socks5/connections/${encodeURIComponent(id)}`, method: 'delete' });
+}
+
+export function closeAllSocks5Connections() {
+  return request({ url: '/v1/settings/socks5/connections', method: 'delete' });
+}
+
+export function probeSocks5Health() {
+  return request({ url: '/v1/settings/socks5/health/probe', method: 'post' });
+}

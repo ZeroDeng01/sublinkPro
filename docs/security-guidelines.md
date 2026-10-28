@@ -113,6 +113,7 @@ export SUBLINK_MFA_RESET_SECRET=$(vault kv get -field=mfa_secret secret/sublinkp
 **Security considerations**:
 - File permissions: `600` (owner read/write only)
 - Backup regularly
+- Store remote backups only on a trusted HTTPS WebDAV service. System backups may contain account data, access keys, node credentials, and private keys. WebDAV passwords are encrypted at rest, but backup ZIP files are not additionally encrypted by SublinkPro.
 - Encrypt at rest (filesystem level)
 - Not recommended for multi-instance deployments
 

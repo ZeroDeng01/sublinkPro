@@ -6,6 +6,9 @@ const (
 	// JobIDHostCleanup Host过期清理任务ID
 	JobIDHostCleanup = -101
 
+	// JobIDWebDAVBackup WebDAV 定时备份任务ID
+	JobIDWebDAVBackup = -102
+
 	// 预留区间 -100 ~ -199 用于未来系统任务
 	// 新增系统任务时按顺序递减分配ID
 )

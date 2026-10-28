@@ -7,7 +7,8 @@ export const TASK_TYPE_META = {
   speed_test: { label: 'Speed test', labelKey: 'tasks.type.speedTest', color: '#10b981' },
   sub_update: { label: 'Subscription update', labelKey: 'tasks.type.subUpdate', color: '#6366f1' },
   tag_rule: { label: 'Tag rule', labelKey: 'tasks.type.tagRule', color: '#f59e0b' },
-  db_migration: { label: 'Database migration', labelKey: 'tasks.type.dbMigration', color: '#0284c7' }
+  db_migration: { label: 'Database migration', labelKey: 'tasks.type.dbMigration', color: '#0284c7' },
+  webdav_backup: { label: 'WebDAV backup', labelKey: 'tasks.type.webdavBackup', color: '#0f766e' }
 };
 
 export const TASK_TRIGGER_META = {

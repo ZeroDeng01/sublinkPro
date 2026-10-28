@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -41,6 +42,46 @@ func TestTuicEncodeDecode(t *testing.T) {
 	assertEqualString(t, "Sni", original.Sni, decoded.Sni)
 
 	t.Logf("✓ TUIC 编解码测试通过，名称: %s", decoded.Name)
+}
+
+// TestTuicInsecureParamUsesClientCompatibleName 验证跳过证书校验输出为客户端识别的 allow_insecure 参数。
+// 主流客户端（v2rayN、NekoBox 等）的 TUIC 链接均读取 allow_insecure，而非项目历史使用的非标准 insecure。
+func TestTuicInsecureParamUsesClientCompatibleName(t *testing.T) {
+	encoded := EncodeTuicURL(Tuic{
+		Name:     "自签证书节点",
+		Host:     "example.com",
+		Port:     443,
+		Uuid:     "12345678-1234-1234-1234-123456789abc",
+		Password: "test-tuic-password",
+		Insecure: 1,
+	})
+	parsed, err := url.Parse(encoded)
+	if err != nil {
+		t.Fatalf("解析编码结果失败: %v, 链接: %s", err, encoded)
+	}
+	if got := parsed.Query().Get("allow_insecure"); got != "1" {
+		t.Fatalf("allow_insecure = %q, want \"1\" (链接: %s)", got, encoded)
+	}
+	if got := parsed.Query().Get("insecure"); got != "" {
+		t.Fatalf("不应再输出非标准 insecure 参数, 实际: %q (链接: %s)", got, encoded)
+	}
+}
+
+// TestTuicDecodeAllowInsecure 验证解码兼容客户端使用的 allow_insecure，并保留对历史 insecure 的兼容。
+func TestTuicDecodeAllowInsecure(t *testing.T) {
+	allowInsecureLink := "tuic://12345678-1234-1234-1234-123456789abc:test-password@example.com:443?allow_insecure=1&sni=sni.example.com#allow_insecure节点"
+	decoded, err := DecodeTuicURL(allowInsecureLink)
+	if err != nil {
+		t.Fatalf("解码 allow_insecure 链接失败: %v", err)
+	}
+	assertEqualInt(t, "Insecure", 1, decoded.Insecure)
+
+	legacyLink := "tuic://12345678-1234-1234-1234-123456789abc:test-password@example.com:443?insecure=1#历史节点"
+	legacy, err := DecodeTuicURL(legacyLink)
+	if err != nil {
+		t.Fatalf("解码历史 insecure 链接失败: %v", err)
+	}
+	assertEqualInt(t, "Insecure(legacy)", 1, legacy.Insecure)
 }
 
 // TestTuicNameModification 测试 TUIC 名称修改

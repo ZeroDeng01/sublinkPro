@@ -13,6 +13,11 @@ func NodeCheck(r *gin.Engine) {
 	group.Use(middlewares.AuthToken)
 	{
 		group.GET("/meta", api.GetNodeCheckMeta)
+		group.GET("/jobs", api.ListNodeCheckJobs)
+		group.POST("/jobs", middlewares.DemoModeRestrict, api.SaveNodeCheckJob)
+		group.PUT("/jobs/:id", middlewares.DemoModeRestrict, api.SaveNodeCheckJob)
+		group.DELETE("/jobs/:id", middlewares.DemoModeRestrict, api.DeleteNodeCheckJob)
+		group.POST("/jobs/:id/run", middlewares.DemoModeRestrict, api.RunNodeCheckJob)
 
 		// 策略管理
 		group.GET("/profiles", api.ListNodeCheckProfiles)

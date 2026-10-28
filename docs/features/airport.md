@@ -42,6 +42,12 @@ SublinkPro provides complete airport subscription management. It can convert sub
 - Official Mieru has `mieru://` and `mierus://` share links, but does not define a general URL schema suitable for field by field editing in the SublinkPro raw editor. When saving nodes, the system uses an internal editable form, `mieru://username:password@server:port?...#name`, with port ranges written as `portRange=2090-2099`, for Clash/mihomo YAML import write back and later export.
 - Mieru is not output to v2ray or Surge. Those clients are currently outside SublinkPro's Mieru support scope.
 
+### OpenVPN compatibility
+
+- Airport subscription import supports `type: openvpn` nodes in Clash/mihomo YAML and preserves the Mihomo OpenVPN fields, including transport, cipher/auth, certificate and key blocks, TLS static keys, credentials, keepalive, IP stack, DNS, and shared connection-layer options.
+- SublinkPro stores the node as an internal `openvpn://server:port?...#name` round-trip link. It is not an official OpenVPN share-link format and direct `.ovpn` file import is not included.
+- OpenVPN is output to Clash/mihomo only. v2ray and Surge outputs skip it. Certificate and private-key content is URL-encoded, not encrypted, in the internal link.
+
 ### Snell compatibility
 
 - Airport subscription import supports `type: snell` nodes in Clash/mihomo YAML, preserving official mihomo fields: `server`, `port`, `psk`, `version`, `udp`, `obfs-opts` (`mode`, `host`), and the shared connection-layer options `tfo`, `mptcp`, `interface-name`, `routing-mark`, and `ip-version`.
