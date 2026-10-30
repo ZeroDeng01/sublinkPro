@@ -144,3 +144,7 @@ For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] 香
 - When top level VLESS `ech` is Xray DNS / URI style, `/c?client=clash` outputs top level `ech-opts` within what mihomo can express. Recognizable query domains map to `query-server-name`.
 - In reverse, when a node comes from Clash/mihomo YAML import and only `ech-opts.query-server-name` can be restored, the system fills it before saving the node link as `ech=<query-server-name>+https://dns.alidns.com/dns-query` using local compatibility rules.
 - To avoid generating configurations that look valid but are semantically distorted, the system does not silently convert `xhttp` into `http`, `h2`, or `grpc`.
+
+## VLESS REALITY compatibility
+
+Clash / mihomo YAML imports preserve `reality-opts.support-x25519mlkem768` through stored VLESS URLs and rebuilt proxies used for subscription output, latency checks, and speed tests. The URL parameter is `support-x25519mlkem768=true` or `false` (`1` / `0` are also accepted on input). Explicit `false` stays distinct from an unspecified value; empty or invalid URL values are treated as unspecified. Plain TLS nodes do not acquire REALITY options from this parameter. In the node field editor, choose `true`, `false`, or the empty selection to restore the upstream default.

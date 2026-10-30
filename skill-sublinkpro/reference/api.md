@@ -192,6 +192,11 @@ Base: `/api/v1/nodes`
 - **GET** `/nodes/raw-info` (query: `?id=123`)
 - **POST** `/nodes/update-raw` — **JSON** `{"nodeId":123, "fields":{...}}` (demo-restricted)
 
+### VLESS REALITY optional capability
+
+Subscription conversion preserves `reality-opts.support-x25519mlkem768` via the VLESS URL parameter `support-x25519mlkem768`. Values `true` and `false` remain distinct from omission. Node raw fields expose `Query.SupportX25519MLKEM768`; updates accept booleans or strings `"true"` / `"false"`, and `""` or `null` clears the override. Plain TLS output does not gain REALITY options from this parameter.
+
+
 ---
 
 ## Subscriptions
