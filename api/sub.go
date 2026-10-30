@@ -150,6 +150,11 @@ func SubGet(c *gin.Context) {
 // 添加节点
 func SubAdd(c *gin.Context) {
 	var sub models.Subcription
+	sub.DefaultKaringOnly = true
+	sub.DefaultMaxDevices = 1
+	if !parseSubscriptionDeviceDefaults(c, &sub) {
+		return
+	}
 	name := c.PostForm("name")
 	config := c.PostForm("config")
 	nodeIds := c.PostForm("nodeIds") // 改为接收节点ID列表
@@ -250,6 +255,9 @@ func SubAdd(c *gin.Context) {
 
 	sub.Config = config
 	sub.Name = name
+	if !parseSubscriptionDeviceDefaults(c, &sub) {
+		return
+	}
 	sub.IPWhitelist = ipWhitelist
 	sub.IPBlacklist = ipBlacklist
 	sub.DelayTime = delayTime
@@ -460,6 +468,9 @@ func SubUpdate(c *gin.Context) {
 				sub.Nodes = append(sub.Nodes, node)
 			}
 		}
+	}
+	if !parseSubscriptionDeviceDefaults(c, &sub) {
+		return
 	}
 	sub.IPWhitelist = ipWhitelist
 	sub.IPBlacklist = ipBlacklist
@@ -672,4 +683,24 @@ func GetNodeFieldsMeta(c *gin.Context) {
 		"fields":          models.GetNodeFieldsMeta(),
 		"conditionFields": models.GetNodeConditionFields(),
 	})
+}
+
+func parseSubscriptionDeviceDefaults(c *gin.Context, sub *models.Subcription) bool {
+	if raw, present := c.GetPostForm("DefaultMaxDevices"); present {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value < 0 || value > 10000 {
+			utils.FailWithMsg(c, "设备上限必须是 0 到 10000 之间的整数")
+			return false
+		}
+		sub.DefaultMaxDevices = value
+	}
+	if raw, present := c.GetPostForm("DefaultKaringOnly"); present {
+		value, err := strconv.ParseBool(raw)
+		if err != nil {
+			utils.FailWithMsg(c, "Karing 限制参数无效")
+			return false
+		}
+		sub.DefaultKaringOnly = value
+	}
+	return true
 }

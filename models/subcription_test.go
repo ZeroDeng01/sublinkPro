@@ -114,6 +114,7 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 		&SubcriptionScript{},
 		&Script{},
 		&SubscriptionShare{},
+		&ShareDevice{},
 		&SubscriptionChainRule{},
 	); err != nil {
 		t.Fatalf("auto migrate subscription copy tables: %v", err)

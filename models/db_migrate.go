@@ -198,6 +198,7 @@ func RunMigrations() error {
 		{name: "IPInfo", model: &IPInfo{}},
 		{name: "Host", model: &Host{}},
 		{name: "SubscriptionShare", model: &SubscriptionShare{}},
+		{name: "ShareDevice", model: &ShareDevice{}},
 		{name: "SubscriptionChainRule", model: &SubscriptionChainRule{}},
 		{name: "Airport", model: &Airport{}},
 		{name: "GroupAirportSort", model: &GroupAirportSort{}},
