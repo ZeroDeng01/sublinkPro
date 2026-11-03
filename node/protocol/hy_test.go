@@ -3,6 +3,8 @@ package protocol
 import (
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // TestHYEncodeDecode 测试 Hysteria 编解码完整性
@@ -382,4 +384,69 @@ func TestHY2SurgeLineInvalidMainPortFallback(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHY2ClashPortHoppingHopInterval(t *testing.T) {
+	// 1. 带 mport 但无显式 hop-interval：默认 30 秒
+	linkDefault := "hy2://pw@example.com:8443?mport=20000-40000#test-Default"
+	proxyDefault, err := buildHY2Proxy(Urls{Url: linkDefault}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2Proxy failed: %v", err)
+	}
+	assertEqualString(t, "Ports", "20000-40000", proxyDefault.Ports)
+	if proxyDefault.HopInterval != 30 {
+		t.Errorf("HopInterval = %d, want 30", proxyDefault.HopInterval)
+	}
+	outDefault, err := yaml.Marshal(proxyDefault)
+	if err != nil {
+		t.Fatalf("yaml.Marshal failed: %v", err)
+	}
+	assertContains(t, "YamlHopInterval", string(outDefault), "hop-interval: 30")
+	assertContains(t, "YamlPorts", string(outDefault), "ports: 20000-40000")
+
+	// 2. 带 mport 与显式 hop-interval=15
+	linkExplicit := "hy2://pw@example.com:8443?mport=20000-40000&hop-interval=15#test-Explicit"
+	proxyExplicit, err := buildHY2Proxy(Urls{Url: linkExplicit}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2Proxy failed: %v", err)
+	}
+	if proxyExplicit.HopInterval != 15 {
+		t.Errorf("HopInterval = %d, want 15", proxyExplicit.HopInterval)
+	}
+	outExplicit, err := yaml.Marshal(proxyExplicit)
+	if err != nil {
+		t.Fatalf("yaml.Marshal failed: %v", err)
+	}
+	assertContains(t, "YamlHopInterval", string(outExplicit), "hop-interval: 15")
+
+	// 3. 无 mport（单端口）：不输出 hop-interval
+	linkSingle := "hy2://pw@example.com:8443#test-Single"
+	proxySingle, err := buildHY2Proxy(Urls{Url: linkSingle}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("buildHY2Proxy failed: %v", err)
+	}
+	if proxySingle.HopInterval != 0 {
+		t.Errorf("HopInterval = %d, want 0", proxySingle.HopInterval)
+	}
+	outSingle, err := yaml.Marshal(proxySingle)
+	if err != nil {
+		t.Fatalf("yaml.Marshal failed: %v", err)
+	}
+	if strings.Contains(string(outSingle), "hop-interval") {
+		t.Errorf("无 mport 时不应输出 hop-interval, 实际: %s", string(outSingle))
+	}
+
+	// 4. 通过 ApplyClashExtra 覆盖 hop-interval
+	err = ApplyClashExtra(&proxyDefault, "hop-interval: 45")
+	if err != nil {
+		t.Fatalf("ApplyClashExtra failed: %v", err)
+	}
+	if proxyDefault.HopInterval != 45 {
+		t.Errorf("HopInterval after extra = %d, want 45", proxyDefault.HopInterval)
+	}
+	outExtra, err := yaml.Marshal(proxyDefault)
+	if err != nil {
+		t.Fatalf("yaml.Marshal failed: %v", err)
+	}
+	assertContains(t, "YamlHopInterval", string(outExtra), "hop-interval: 45")
 }
