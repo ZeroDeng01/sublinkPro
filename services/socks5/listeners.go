@@ -15,6 +15,9 @@ import (
 )
 
 const (
+	ProtocolSOCKS5   = "socks5"
+	ProtocolHTTP     = "http"
+	ProtocolMixed    = "mixed"
 	settingListeners = "socks5_listeners"
 	maxListeners     = 64
 )
@@ -24,9 +27,10 @@ var (
 	listenersMu       sync.Mutex
 )
 
-// ListenerSpec describes one SOCKS5 inbound endpoint. Authentication credentials
+// ListenerSpec describes one TCP proxy inbound endpoint. Authentication credentials
 // remain shared with the legacy gateway and the independent account store.
 type ListenerSpec struct {
+	Protocol         string `json:"protocol"`
 	ID               string `json:"id"`
 	Enabled          bool   `json:"enabled"`
 	ListenAddress    string `json:"listenAddress"`
@@ -43,12 +47,29 @@ type ListenerStatus struct {
 
 func legacyListener(base Config) ListenerSpec {
 	return ListenerSpec{
-		ID: defaultProfileID, Enabled: true, ListenAddress: base.ListenAddress,
+		ID: defaultProfileID, Protocol: ProtocolSOCKS5, Enabled: true, ListenAddress: base.ListenAddress,
 		Port: base.Port, DefaultProfileID: defaultProfileID,
 	}
 }
 
+func normalizeInboundProtocol(value string) (string, error) {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value == "" {
+		return ProtocolSOCKS5, nil
+	}
+	switch value {
+	case ProtocolSOCKS5, ProtocolHTTP, ProtocolMixed:
+		return value, nil
+	}
+	return "", errors.New("listener protocol must be socks5, http, or mixed")
+}
+
 func normalizeListener(base Config, input ListenerSpec) (ListenerSpec, error) {
+	protocol, err := normalizeInboundProtocol(input.Protocol)
+	if err != nil {
+		return input, err
+	}
+	input.Protocol = protocol
 	input.ID = strings.ToLower(strings.TrimSpace(input.ID))
 	input.ListenAddress = strings.TrimSpace(input.ListenAddress)
 	input.DefaultProfileID = strings.ToLower(strings.TrimSpace(input.DefaultProfileID))

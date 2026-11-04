@@ -39,6 +39,7 @@ type HY2 struct {
 	Host              string
 	Port              any
 	MPort             string
+	HopInterval       int
 	Insecure          int
 	Peer              string
 	Auth              string
@@ -71,6 +72,9 @@ func EncodeHY2URL(hy2 HY2) string {
 	q.Set("peer", hy2.Peer)
 	q.Set("auth", hy2.Auth)
 	q.Set("mport", hy2.MPort)
+	if hy2.HopInterval > 0 {
+		q.Set("hop-interval", strconv.Itoa(hy2.HopInterval))
+	}
 	q.Set("upmbps", strconv.Itoa(hy2.UpMbps))
 	q.Set("downmbps", strconv.Itoa(hy2.DownMbps))
 	q.Set("sni", hy2.Sni)
@@ -122,6 +126,10 @@ func DecodeHY2URL(s string) (HY2, error) {
 	downMbps, _ := strconv.Atoi(u.Query().Get("downmbps"))
 	alpns := u.Query().Get("alpn")
 	mport := u.Query().Get("mport")
+	hopInterval, _ := strconv.Atoi(u.Query().Get("hop-interval"))
+	if hopInterval <= 0 {
+		hopInterval, _ = strconv.Atoi(u.Query().Get("hop_interval"))
+	}
 	alpn := strings.Split(alpns, ",")
 	if alpns == "" {
 		alpn = nil
@@ -158,6 +166,7 @@ func DecodeHY2URL(s string) (HY2, error) {
 		Host:              server,
 		Port:              port,
 		MPort:             mport,
+		HopInterval:       hopInterval,
 		Insecure:          insecure,
 		Auth:              auth,
 		UpMbps:            upMbps,
@@ -180,6 +189,7 @@ func ConvertProxyToHy2(proxy Proxy) HY2 {
 		Host:              proxy.Server,
 		Port:              int(proxy.Port),
 		MPort:             proxy.Ports,
+		HopInterval:       proxy.HopInterval,
 		Auth:              proxy.Auth_str,
 		UpMbps:            int(proxy.Up),
 		DownMbps:          int(proxy.Down),
@@ -220,6 +230,11 @@ func buildHY2Proxy(link Urls, config OutputConfig) (Proxy, error) {
 	proxy := Proxy{Name: hy2.Name, Type: "hysteria2", Server: hy2.Host, Auth: hy2.Auth, Sni: hy2.Sni, Alpn: hy2.ALPN, Obfs: hy2.Obfs, Password: hy2.Password, Obfs_password: hy2.ObfsPassword, Client_fingerprint: hy2.ClientFingerprint, Fingerprint: hy2.Fingerprint, Up: Mbps(hy2.UpMbps), Down: Mbps(hy2.DownMbps), Up_Speed: Mbps(hy2.UpMbps), Down_Speed: Mbps(hy2.DownMbps), Udp: true, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}
 	if hy2.MPort != "" {
 		proxy.Ports = hy2.MPort
+		if hy2.HopInterval > 0 {
+			proxy.HopInterval = hy2.HopInterval
+		} else {
+			proxy.HopInterval = 30
+		}
 	} else {
 		proxy.Port = FlexPort(utils.GetPortInt(hy2.Port))
 	}

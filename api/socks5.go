@@ -365,12 +365,13 @@ func DeleteSocks5RoutingProfile(c *gin.Context) {
 }
 
 type socks5ListenerRequest struct {
-	ID               string `json:"id"`
-	Enabled          *bool  `json:"enabled"`
-	ListenAddress    string `json:"listenAddress"`
-	Port             int    `json:"port"`
-	DefaultProfileID string `json:"defaultProfileId"`
-	RequireAuth      *bool  `json:"requireAuth"`
+	Protocol         *string `json:"protocol"`
+	ID               string  `json:"id"`
+	Enabled          *bool   `json:"enabled"`
+	ListenAddress    string  `json:"listenAddress"`
+	Port             int     `json:"port"`
+	DefaultProfileID string  `json:"defaultProfileId"`
+	RequireAuth      *bool   `json:"requireAuth"`
 }
 
 func (req socks5ListenerRequest) listener(id string, defaultEnabled bool) socks5service.ListenerSpec {
@@ -381,8 +382,12 @@ func (req socks5ListenerRequest) listener(id string, defaultEnabled bool) socks5
 	if id == "" {
 		id = req.ID
 	}
+	protocol := socks5service.ProtocolSOCKS5
+	if req.Protocol != nil {
+		protocol = *req.Protocol
+	}
 	return socks5service.ListenerSpec{
-		ID: id, Enabled: enabled, ListenAddress: req.ListenAddress, Port: req.Port,
+		Protocol: protocol, ID: id, Enabled: enabled, ListenAddress: req.ListenAddress, Port: req.Port,
 		DefaultProfileID: req.DefaultProfileID, RequireAuth: req.RequireAuth,
 	}
 }
@@ -463,6 +468,11 @@ func UpdateSocks5Listener(c *gin.Context) {
 	for _, listener := range previous {
 		if strings.EqualFold(listener.ID, id) {
 			enabled = listener.Enabled
+			// An old client's PUT must not downgrade an HTTP/Mixed listener.
+			if req.Protocol == nil {
+				protocol := listener.Protocol
+				req.Protocol = &protocol
+			}
 			break
 		}
 	}

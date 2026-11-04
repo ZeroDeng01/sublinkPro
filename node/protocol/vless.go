@@ -25,6 +25,7 @@ func init() {
 		FieldMeta{Name: "Query.Fp", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Fingerprint", Label: "证书指纹", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.SupportX25519MLKEM768", Label: "Support X25519MLKEM768", Type: "string", Group: "tls", Advanced: true, Options: []string{"true", "false"}},
 		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 		FieldMeta{Name: "Query.Type", Label: "Network", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "grpc", "http", "h2", "xhttp", "quic"}},
@@ -56,25 +57,27 @@ type VLESS struct {
 	Query  VLESSQuery `json:"query"`
 }
 type VLESSQuery struct {
-	Security      string   `json:"security"`
-	Alpn          []string `json:"alpn"`
-	Sni           string   `json:"sni"`
-	Ech           string   `json:"ech,omitempty"`
-	Fp            string   `json:"fp"`
-	Fingerprint   string   `json:"fingerprint,omitempty"`
-	Sid           string   `json:"sid"`
-	Pbk           string   `json:"pbk"`
-	Flow          string   `json:"flow"`
-	Encryption    string   `json:"encryption"`
-	Type          string   `json:"type"`
-	HeaderType    string   `json:"headerType"`
-	Path          string   `json:"path"`
-	Host          string   `json:"host"`
-	Headers       string   `json:"headers,omitempty"` // Host 以外的 WebSocket 请求头（JSON 字符串），如 User-Agent
-	ServiceName   string   `json:"serviceName,omitempty"`
-	Mode          string   `json:"mode,omitempty"`
-	Extra         string   `json:"extra,omitempty"`
-	AllowInsecure int      `json:"allowInsecure,omitempty"` // 跳过证书验证
+	// nil preserves the upstream default; false explicitly disables this REALITY capability.
+	SupportX25519MLKEM768 *bool    `json:"supportX25519MLKEM768,omitempty"`
+	Security              string   `json:"security"`
+	Alpn                  []string `json:"alpn"`
+	Sni                   string   `json:"sni"`
+	Ech                   string   `json:"ech,omitempty"`
+	Fp                    string   `json:"fp"`
+	Fingerprint           string   `json:"fingerprint,omitempty"`
+	Sid                   string   `json:"sid"`
+	Pbk                   string   `json:"pbk"`
+	Flow                  string   `json:"flow"`
+	Encryption            string   `json:"encryption"`
+	Type                  string   `json:"type"`
+	HeaderType            string   `json:"headerType"`
+	Path                  string   `json:"path"`
+	Host                  string   `json:"host"`
+	Headers               string   `json:"headers,omitempty"` // Host 以外的 WebSocket 请求头（JSON 字符串），如 User-Agent
+	ServiceName           string   `json:"serviceName,omitempty"`
+	Mode                  string   `json:"mode,omitempty"`
+	Extra                 string   `json:"extra,omitempty"`
+	AllowInsecure         int      `json:"allowInsecure,omitempty"` // 跳过证书验证
 	// 新增：packet-encoding参数（xudp/packetaddr）
 	PacketEncoding string `json:"packetEncoding,omitempty"`
 	// 新增：ws传输层参数
@@ -141,6 +144,9 @@ func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	DeleteOpts(grpcOpts)
 	DeleteOpts(xhttpOpts)
 	DeleteOpts(realityOpts)
+	if vless.Query.Security == "reality" && vless.Query.SupportX25519MLKEM768 != nil {
+		realityOpts["support-x25519mlkem768"] = *vless.Query.SupportX25519MLKEM768
+	}
 	tls := vless.Query.Security != "" && vless.Query.Security != "none"
 	skipCert := config.Cert || vless.Query.AllowInsecure == 1
 	var finalWsOpts, finalH2Opts, finalHttpOpts, finalGrpcOpts, finalXHTTPOpts map[string]any
@@ -187,6 +193,9 @@ func EncodeVLESSURL(v VLESS) string {
 	// Reality参数
 	q.Set("pbk", v.Query.Pbk)
 	q.Set("sid", v.Query.Sid)
+	if v.Query.SupportX25519MLKEM768 != nil {
+		q.Set("support-x25519mlkem768", strconv.FormatBool(*v.Query.SupportX25519MLKEM768))
+	}
 
 	// VLESS特有参数
 	q.Set("flow", v.Query.Flow)
@@ -295,6 +304,10 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 	headerType := u.Query().Get("headerType")
 	pbk := u.Query().Get("pbk")
 	sid := u.Query().Get("sid")
+	var supportX25519MLKEM768 *bool
+	if value, err := strconv.ParseBool(u.Query().Get("support-x25519mlkem768")); err == nil {
+		supportX25519MLKEM768 = &value
+	}
 	fp := u.Query().Get("fp")
 	fingerprint := sanitizeCertificateFingerprint(u.Query().Get("pcs"))
 	if fingerprint == "" {
@@ -389,31 +402,32 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 		Server: hostname,
 		Port:   port,
 		Query: VLESSQuery{
-			Security:            security,
-			Alpn:                alpn,
-			Sni:                 sni,
-			Ech:                 ech,
-			Fp:                  fp,
-			Fingerprint:         fingerprint,
-			Sid:                 sid,
-			Pbk:                 pbk,
-			Flow:                flow,
-			Encryption:          encryption,
-			Type:                types,
-			HeaderType:          headerType,
-			Path:                path,
-			Host:                host,
-			Headers:             headers,
-			ServiceName:         serviceName,
-			Mode:                mode,
-			Extra:               extra,
-			AllowInsecure:       allowInsecure,
-			PacketEncoding:      packetEncoding,
-			MaxEarlyData:        maxEarlyData,
-			EarlyDataHeader:     earlyDataHeader,
-			HttpUpgrade:         httpUpgrade,
-			HttpUpgradeFastOpen: httpUpgradeFastOpen,
-			Method:              method,
+			SupportX25519MLKEM768: supportX25519MLKEM768,
+			Security:              security,
+			Alpn:                  alpn,
+			Sni:                   sni,
+			Ech:                   ech,
+			Fp:                    fp,
+			Fingerprint:           fingerprint,
+			Sid:                   sid,
+			Pbk:                   pbk,
+			Flow:                  flow,
+			Encryption:            encryption,
+			Type:                  types,
+			HeaderType:            headerType,
+			Path:                  path,
+			Host:                  host,
+			Headers:               headers,
+			ServiceName:           serviceName,
+			Mode:                  mode,
+			Extra:                 extra,
+			AllowInsecure:         allowInsecure,
+			PacketEncoding:        packetEncoding,
+			MaxEarlyData:          maxEarlyData,
+			EarlyDataHeader:       earlyDataHeader,
+			HttpUpgrade:           httpUpgrade,
+			HttpUpgradeFastOpen:   httpUpgradeFastOpen,
+			Method:                method,
 		},
 	}, nil
 }
@@ -447,6 +461,9 @@ func ConvertProxyToVless(proxy Proxy) VLESS {
 	// 处理 security 参数（TLS/Reality/none）
 	if len(proxy.Reality_opts) > 0 {
 		vless.Query.Security = "reality"
+		if value, ok := proxy.Reality_opts["support-x25519mlkem768"].(bool); ok {
+			vless.Query.SupportX25519MLKEM768 = &value
+		}
 		if pbk, ok := proxy.Reality_opts["public-key"].(string); ok {
 			vless.Query.Pbk = pbk
 		}

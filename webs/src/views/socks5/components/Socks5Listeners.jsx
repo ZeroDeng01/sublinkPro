@@ -31,6 +31,7 @@ import {
 
 const emptyListener = {
   id: '',
+  protocol: 'socks5',
   enabled: true,
   listenAddress: '127.0.0.1',
   port: 1080,
@@ -42,6 +43,7 @@ function listenerForm(listener) {
   return {
     ...emptyListener,
     ...(listener || {}),
+    protocol: listener?.protocol || 'socks5',
     requireAuthMode: listener?.requireAuth === true ? 'required' : listener?.requireAuth === false ? 'disabled' : 'inherit'
   };
 }
@@ -95,6 +97,7 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
     const payload = {
       id: form.id.trim().toLowerCase(),
       enabled: Boolean(form.enabled),
+      protocol: form.protocol,
       listenAddress: form.listenAddress.trim(),
       port: Number(form.port),
       defaultProfileId: form.defaultProfileId,
@@ -128,7 +131,12 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
 
   const idValid = /^[a-z0-9][a-z0-9_-]{0,31}$/.test(form.id.trim().toLowerCase());
   const invalid =
-    (!editingID && !idValid) || !form.listenAddress.trim() || Number(form.port) < 1 || Number(form.port) > 65535 || !form.defaultProfileId;
+    (!editingID && !idValid) ||
+    !form.listenAddress.trim() ||
+    Number(form.port) < 1 ||
+    Number(form.port) > 65535 ||
+    !form.defaultProfileId ||
+    !['socks5', 'http', 'mixed'].includes(form.protocol);
 
   return (
     <>
@@ -157,6 +165,11 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
                           size="small"
                           color={listener.running ? 'success' : 'default'}
                           label={t(listener.running ? 'settings.socks5.listeners.running' : 'settings.socks5.listeners.stopped')}
+                        />
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          label={t(`settings.socks5.listeners.protocols.${listener.protocol || 'socks5'}`)}
                         />
                         <Chip size="small" label={t(listener.enabled ? 'common.enabled' : 'common.disabled')} />
                         <Chip size="small" color="primary" variant="outlined" label={profile?.name || listener.defaultProfileId} />
@@ -187,7 +200,21 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
       <Dialog open={dialogOpen} onClose={() => !saving && setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t(editingID ? 'settings.socks5.listeners.editTitle' : 'settings.socks5.listeners.createTitle')}</DialogTitle>
         <DialogContent dividers>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              select
+              fullWidth
+              label={t('settings.socks5.listeners.protocol')}
+              value={form.protocol}
+              onChange={(event) => setForm((previous) => ({ ...previous, protocol: event.target.value }))}
+              helperText={t('settings.socks5.listeners.protocolHelper')}
+            >
+              {['socks5', 'http', 'mixed'].map((protocol) => (
+                <MenuItem key={protocol} value={protocol}>
+                  {t(`settings.socks5.listeners.protocols.${protocol}`)}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
               label={t('settings.socks5.listeners.id')}
               value={form.id}

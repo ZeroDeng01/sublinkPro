@@ -266,8 +266,12 @@ function Socks5Monitor({ showMessage }) {
                   {connection.listenerId ? ` · ${connection.listenerId}` : ''}
                 </Typography>
                 <Typography variant="caption">
-                  {connection.clientAddress} · {connection.phase} · ↑ {formatBytes(connection.uploadBytes ?? 0)} · ↓{' '}
-                  {formatBytes(connection.downloadBytes ?? 0)} ·{' '}
+                  {t(
+                    `settings.socks5.monitor.protocols.${connection.protocol === 'http' && connection.method === 'CONNECT' ? 'httpConnect' : connection.protocol || 'socks5'}`
+                  )}{' '}
+                  · {connection.clientAddress} ·{' '}
+                  {t(`settings.socks5.monitor.phases.${connection.phase}`, { defaultValue: connection.phase })} · ↑{' '}
+                  {formatBytes(connection.uploadBytes ?? 0)} · ↓ {formatBytes(connection.downloadBytes ?? 0)} ·{' '}
                   {t('settings.socks5.monitor.duration', { value: formatElapsed(connection.startedAt) })} ·{' '}
                   {t('settings.socks5.monitor.idle', { value: formatElapsed(connection.lastActivity) })}
                 </Typography>

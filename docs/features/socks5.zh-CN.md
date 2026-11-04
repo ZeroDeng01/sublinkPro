@@ -1,12 +1,13 @@
 [English](socks5.md) | 简体中文
 
-# SOCKS5 网关
+# 代理网关
 
-SublinkPro 可以将已保存的代理节点通过本地 SOCKS5 网关暴露出来。该功能与现有的 SOCKS5 节点导入/导出能力不同。
+SublinkPro 可以将已保存的代理节点通过本地 SOCKS5、HTTP 或 Mixed 监听入口暴露出来。该功能与现有的 SOCKS5 节点导入/导出能力不同。
 
 ## 当前包含
 
-- 仅支持 TCP `CONNECT`
+- 支持 SOCKS5 TCP `CONNECT`、HTTP/1.x 普通代理请求和 HTTPS `CONNECT` 隧道
+- Mixed 入口在同一 TCP 端口接收 SOCKS5 与 HTTP
 - 支持 IPv4、IPv6 和域名目标
 - 可选用户名/密码认证（默认启用）
 - 支持独立 SOCKS5 账号，每个账号拥有单独加密密码并直接绑定路由 Profile
@@ -40,7 +41,7 @@ SublinkPro 可以将已保存的代理节点通过本地 SOCKS5 网关暴露出�
 ## 配置
 
 1. 使用管理员账号登录。
-2. 从侧边栏打开 **系统设置 → SOCKS5 网关**。
+2. 从侧边栏打开 **系统设置 → 代理网关**。
 3. 本机使用请保持监听地址为 `127.0.0.1`。
 4. 选择端口（默认 `1080`）和节点选择策略。
 5. 可选按分组、来源、协议和国家/地区限制候选节点池；留空表示不限制。指定节点模式仅将这些条件用于失败回退候选。
@@ -68,6 +69,40 @@ curl --proxy socks5h://127.0.0.1:1080 \
 
 如果绑定到 `0.0.0.0` 或其他非回环地址，系统会强制要求认证。请只在防火墙或私有网络后开放，并使用强密码；后端会拒绝未认证的非回环监听，避免意外形成开放代理。
 
+## HTTP 与 Mixed 监听入口
+
+在**代理网关 → 监听入口**中新增或编辑条目，选择**入站协议**：
+
+- **SOCKS5**：保留原有行为。
+- **HTTP**：接收目标为完整 `http://` URL 的普通请求，以及 HTTPS `CONNECT` 隧道。同一长连接的每个请求都会重新认证、选路，不会因上次请求而把另一个网站或账号发到错误出口。
+- **Mixed**：同一端口接收两种协议；不要为相同地址和端口创建两条监听器。
+
+默认路由配置与认证策略仍按入口设置。旧默认入口继续使用 SOCKS5，也可通过监听入口列表编辑并保存其他协议。旧数据或新建请求缺失协议时默认 `socks5`；旧客户端更新入口时未传协议则保留当前选择，不会降级 HTTP/Mixed。未知协议值会拒绝保存。协议保存在原监听器 JSON 中，不需要新增环境变量或独立代理进程；原有 API/页面路径继续保留 `socks5`，以兼容已有客户端。
+
+假设已创建 `127.0.0.1:7890` 的 Mixed 入口：
+
+```bash
+# 通过 HTTP 代理访问普通 HTTP 与 HTTPS 网站
+curl --proxy http://127.0.0.1:7890 -U 'proxy:your-password' http://example.com
+curl --proxy http://127.0.0.1:7890 -U 'proxy:your-password' https://example.com
+# 同一端口也接受 SOCKS5
+curl --proxy socks5h://127.0.0.1:7890 -U 'proxy:your-password' https://example.com
+```
+
+使用 `HTTP_PROXY` / `HTTPS_PROXY` 的工具，两者的代理地址均填写 `http://127.0.0.1:7890`。HTTPS 网站通过 CONNECT 原样传输，不解密网站内容，也不代表代理入口本身启用了 TLS。HTTP Basic 与 SOCKS5 都不加密认证凭据，非本机入口应放在防火墙、可信内网或安全隧道后。用户名包含 `:` 的旧账号仍可用于 SOCKS5，但无法用 HTTP Basic 表达；HTTP/Mixed 客户端应换用不含冒号的账号。原 `username@profile[.account]` 语法和独立账号的路由规则在两种协议下一致；HTTP 认证失败返回 `407`，不会选取或拨号节点。
+
+自动切换节点仅发生在出站拨号阶段，尚未发送请求数据；POST/上传已开始或响应已部分发送后不会换节点重放。目标网站返回的 HTTP 错误状态不视为节点拨号失败。代理认证头只在本地消费，不转发给目标网站。暂不支持 Upgrade/WebSocket、HTTP/2 入站、UDP/BIND 或代理入口自身的 TLS。
+
+监控区分入口配置的 `mixed` 与连接实际使用的 SOCKS5/HTTP，并标明 CONNECT。连接上限及网关总计按客户端 TCP 连接计数，不按长连接请求次数累加；一条连接完成至少一次普通响应或成功建立隧道后计为成功，后续请求失败不会再次累计该 TCP 连接。逐节点统计按出站连接尝试计数。普通 HTTP 的流量统计为转发的请求/响应正文，隧道统计有效载荷，不包含认证或 HTTP 报头。长连接上的目标、路由配置和节点表示最近一次请求，`idle` 表示等待下一请求。断开、空闲/时长限制以及停止/重新应用设置也覆盖 HTTP 和 CONNECT 连接。底层传输支持半关闭时，隧道在一个方向结束后尽量传完反向数据；不支持时沿用双向关闭。
+
+### 监听入口界面
+
+以下使用合成 API 数据与虚构监听配置演示，不包含真实订阅或认证凭据。
+
+![SOCKS5、HTTP 与 Mixed 监听入口](../images/proxy-gateway/listeners.png)
+
+![手机深色模式下的 Mixed 入口编辑](../images/proxy-gateway/mixed-mobile-dark.png)
+
 ## 备份与恢复
 
 数据库迁移及 WebDAV 恢复会保留目标实例的 SOCKS5 网关配置、账号、监听入口与路由 Profile，避免导入由其他实例密钥加密的凭据或意外开放网络监听。恢复后会断开现有连接并重新加载网关；请按恢复后的节点检查节点 ID 和候选池。
@@ -82,7 +117,7 @@ curl --proxy socks5h://127.0.0.1:1080 \
 - `POST /api/v1/settings/socks5` — 保存并应用设置。JSON 字段包括 `enabled`、`listenAddress`、`port`、`username`、可选 `password`、`clearPassword`、`nodeId`、`selection`（`best`、`random`、`round_robin`、`smart` 或 `specific`）、`requireAuth`、`maxAttempts`（1-5）、`dialTimeoutSeconds`（1-120）、`failureCooldownSeconds`（0-3600）、`specificFallback`、`maxConnections`（1-10000）、`maxConnectionsPerClient`（1..maxConnections）、`idleTimeoutSeconds`（0-86400）、`maxConnectionDurationSeconds`（0-604800）、`healthCheckEnabled`、`healthCheckIntervalSeconds`（10-3600）、`healthCheckTimeoutSeconds`（1-30）、`candidateGroups`、`candidateSources`、`candidateProtocols`、`candidateCountries`、`stickySessionEnabled`、`stickySessionMode`（`client_ip` 或 `username`）和 `stickySessionTtlSeconds`（60-604800）。候选池字段均为字符串数组；不同字段之间为“且”，字段内多个值为“或”。可选字段均可省略，以兼容旧客户端并保留已保存值。
 - `POST /api/v1/settings/socks5/stop` — 停止监听，但不修改已保存设置。
 - `GET /api/v1/settings/socks5/status` — 返回 `data.config`、`data.listeners`、`data.stats` 和 `data.health`，包含监听器状态、聚合连接统计和健康信息。
-- `GET|POST /api/v1/settings/socks5/listeners` — 列出或创建监听器。字段包括 `id`、`enabled`、`listenAddress`、`port`、`defaultProfileId` 和可空的 `requireAuth`（null 表示继承网关设置）。
+- `GET|POST /api/v1/settings/socks5/listeners` — 列出或创建监听器。字段包括 `id`、`protocol`（`socks5` / `http` / `mixed`）、`enabled`、`listenAddress`、`port`、`defaultProfileId` 和可空的 `requireAuth`（null 表示继承网关设置）。
 - `PUT|DELETE /api/v1/settings/socks5/listeners/:id` — 覆盖更新或删除监听器。监听器 ID 和已启用的监听端点必须唯一；绑定失败时会回滚已保存的监听器列表。
 - `GET|POST /api/v1/settings/socks5/accounts` — 列出或创建独立账号。字段包括 `id`、`username`、`password`、`profileId` 和 `enabled`；响应只返回密码是否存在的元数据。
 - `PUT|DELETE /api/v1/settings/socks5/accounts/:id` — 覆盖更新或删除账号；更新时密码留空会保留已加密保存的密码。
@@ -93,7 +128,7 @@ curl --proxy socks5h://127.0.0.1:1080 \
 - `GET /api/v1/settings/socks5/routing` — 返回服务端分页的候选节点负载数据。查询参数包括 `profileId`、`keyword`、`status`（`healthy`、`unhealthy`、`checking`、`cooling` 或 `unknown`）、`sortBy`、`sortOrder`、`page` 和 `pageSize`（最大 `100`）。每项包含节点元数据、健康状态、延迟来源、活动/成功/失败计数、连续失败、智能评分、冷却时间和最近选择时间。
 - `POST /api/v1/settings/socks5/routing/reset` — 清空逐节点成功、失败和最近选择统计，但不主动断开现有连接。
 - `POST /api/v1/settings/socks5/health/probe` — 立即启动一轮节点健康探测；已有探测运行时不会重复启动。
-- `GET /api/v1/settings/socks5/connections` — 返回当前活动连接数组，每项包含 `id`、`clientAddress`、`target`、`nodeName`、`profileId`、`profileName`、可选 `account`、可选 `listenerId`、`phase`、`startedAt`、`lastActivity`、`uploadBytes` 和 `downloadBytes`。
+- `GET /api/v1/settings/socks5/connections` — 返回当前活动连接数组，每项包含 `id`、`clientAddress`、`target`、`nodeName`、`profileId`、`profileName`、可选 `account`、可选 `listenerId`、`protocol`（识别后为 `socks5` 或 `http`；识别前可能短暂为 `mixed` 或空）、可选 `method`（如 `CONNECT`）、`phase`、`startedAt`、`lastActivity`、`uploadBytes` 和 `downloadBytes`。
 - `DELETE /api/v1/settings/socks5/connections/:id` — 按连接 ID 断开一条活动连接。
 - `DELETE /api/v1/settings/socks5/connections` — 断开全部活动连接。
 
