@@ -1,6 +1,7 @@
 package models
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -917,5 +918,87 @@ func TestSyncCountryRulesFromText_EmptyText(t *testing.T) {
 	database.DB.Model(&CountryRule{}).Count(&count)
 	if count != 0 {
 		t.Errorf("Expected 0 rules in database, got %d", count)
+	}
+}
+
+// TestDefaultCountryRulesResolveExpectedCountry 校验内置默认规则对真实节点名的解析结果。
+// 历史上两字母国家码（US/IN/CO/TH/AR/LA 等）没有词边界，导致 Switzerland、Finland、
+// Russia、Australia 这类英文国家名被误判成美国/印度/哥伦比亚/泰国。
+func TestDefaultCountryRulesResolveExpectedCountry(t *testing.T) {
+	setupTestDB(t)
+	if err := seedDefaultCountryRules(database.DB); err != nil {
+		t.Fatalf("写入默认国家规则失败: %v", err)
+	}
+
+	var rules []CountryRule
+	if err := database.DB.Where("enabled = ?", true).Order("id ASC").Find(&rules).Error; err != nil {
+		t.Fatalf("读取默认国家规则失败: %v", err)
+	}
+	if len(rules) == 0 {
+		t.Fatal("默认国家规则为空")
+	}
+
+	tests := []struct {
+		name string
+		want string
+	}{
+		// 英文国家名包含 us/la/in/co/th/ar，不应被判成其他地区
+		// 前缀故意带 Co（Common-Co），旧规则里 (?i)CO 会命中这段，用来固定这类误判
+		{"[Common-Co]🇨🇭Switzerland Node 01", "CH"},
+		{"[Common-Co]🇫🇮Finland Node 02", "FI"},
+		{"[Common-Co]🇵🇱Poland Node 03", "PL"},
+		{"[Common-Co]🇷🇺Russia Node 04", "RU"},
+		{"[Common-Co]🇦🇺Australia Sydney 01", "AU"},
+		// 默认规则未收录列支敦士登/亚美尼亚，至少不能被误判成印度/阿根廷
+		{"[Common-Co]🇱🇮Liechtenstein Standard", ""},
+		{"[Common-Co]🇦🇲Armenia Standard", ""},
+		{"[Common-Co]🇮🇹Italy Line 01", "IT"},
+		{"[Common-Co]🇨🇿Czech Republic 01", "CZ"},
+		{"[Common-Co]🇬🇷Greece Line 02", "GR"},
+		{"[Common-Co]🇳🇴Norway Premium", "NO"},
+		{"[Common-Co]🇵🇹Portugal Direct", "PT"},
+		{"[Common-Co]🇸🇰Slovakia Line", "SK"},
+		{"[Common-Co]🇹🇷Turkey Fast", "TR"},
+		{"[Common-Co]🇱🇹Lithuania Vilnius", "LT"},
+		// 前缀本身也参与国家匹配（sub.go 先加 node_name_prefix 再解析国家），
+		// 这里固定住"前缀含 Se 不能命中瑞典"这条
+		{"[Remote-Se]🇱🇹Lithuania Vilnius", "LT"},
+		{"[Remote-Se]🇮🇹Italy Line 01", "IT"},
+		// 机场常见的独立国家码写法仍要被识别
+		{"US-001", "US"},
+		{"US_01", "US"},
+		{"[Relay]🇺🇸美国01-0.1倍", "US"},
+		{"IN-02", "IN"},
+		{"CO-01", "CO"},
+		{"TH 01", "TH"},
+		{"UK London", "GB"},
+	}
+
+	compiled := make([]struct {
+		code string
+		re   *regexp.Regexp
+	}, 0, len(rules))
+	for _, rule := range rules {
+		re, err := regexp.Compile(rule.Pattern)
+		if err != nil {
+			t.Fatalf("默认规则 %s 的正则无法编译: %v", rule.CountryCode, err)
+		}
+		compiled = append(compiled, struct {
+			code string
+			re   *regexp.Regexp
+		}{rule.CountryCode, re})
+	}
+
+	for _, tt := range tests {
+		got := ""
+		for _, rule := range compiled {
+			if rule.re.MatchString(tt.name) {
+				got = rule.code
+				break
+			}
+		}
+		if got != tt.want {
+			t.Errorf("节点名 %q 解析为 %q，期望 %q", tt.name, got, tt.want)
+		}
 	}
 }
