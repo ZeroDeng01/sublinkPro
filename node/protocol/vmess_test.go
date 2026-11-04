@@ -180,3 +180,44 @@ ws-opts:
 	assertEqualString(t, "Host", "abc.com", mustString(t, "Host", headers["Host"]))
 	assertEqualString(t, "User-Agent", ua, mustString(t, "User-Agent", headers["User-Agent"]))
 }
+
+func TestVmessGRPC(t *testing.T) {
+	doc := `
+name: vmess-grpc-test
+type: vmess
+server: example.com
+port: 8443
+uuid: 12345678-1234-1234-1234-123456789abc
+alterId: 0
+cipher: aes-128-gcm
+network: grpc
+tls: true
+servername: example.com
+grpc-opts:
+  grpc-service-name: test-service
+`
+	var proxy Proxy
+	if err := yaml.Unmarshal([]byte(doc), &proxy); err != nil {
+		t.Fatalf("yaml.Unmarshal failed: %v", err)
+	}
+
+	vmess := ConvertProxyToVmess(proxy)
+	assertEqualString(t, "Vmess.Path", "test-service", vmess.Path)
+	assertEqualString(t, "Vmess.Net", "grpc", vmess.Net)
+
+	link := EncodeVmessURL(vmess)
+	out, err := LinkToProxy(Urls{Url: link}, OutputConfig{})
+	if err != nil {
+		t.Fatalf("LinkToProxy failed: %v", err)
+	}
+	if out.Network != "grpc" {
+		t.Errorf("Network = %s, want grpc", out.Network)
+	}
+	if out.Ws_opts != nil {
+		t.Errorf("Ws_opts should be nil for grpc, got: %#v", out.Ws_opts)
+	}
+	if out.Grpc_opts == nil {
+		t.Fatalf("Grpc_opts should not be nil")
+	}
+	assertEqualString(t, "grpc-service-name", "test-service", mustString(t, "grpc-service-name", out.Grpc_opts["grpc-service-name"]))
+}

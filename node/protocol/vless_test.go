@@ -2,8 +2,12 @@ package protocol
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/url"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // TestVlessEncodeDecode 测试 VLESS 编解码完整性
@@ -564,4 +568,106 @@ func TestVlessClashWSHeadersRoundTrip(t *testing.T) {
 	headers := mustMap(t, "Ws_opts headers", out.Ws_opts["headers"])
 	assertEqualString(t, "Host", "abc.com", mustString(t, "Host", headers["Host"]))
 	assertEqualString(t, "User-Agent", "Mozilla/5.0 SublinkPro", mustString(t, "User-Agent", headers["User-Agent"]))
+}
+
+// Exercise the same YAML -> stored URL -> Proxy path used by imports and probes.
+func TestVLESSRealityMLKEMRoundTrip(t *testing.T) {
+	for _, state := range []string{"true", "false", ""} {
+		t.Run("state_"+state, func(t *testing.T) {
+			source := "name: reality\ntype: vless\nserver: example.com\nport: 443\nuuid: 12345678-1234-1234-1234-123456789abc\ntls: true\nclient-fingerprint: chrome\nreality-opts:\n  public-key: test-key\n  short-id: '01234567'\n"
+			if state != "" {
+				source += "  support-x25519mlkem768: " + state + "\n"
+			}
+			var original Proxy
+			if err := yaml.Unmarshal([]byte(source), &original); err != nil {
+				t.Fatal(err)
+			}
+			link := EncodeVLESSURL(ConvertProxyToVless(original))
+			u, err := url.Parse(link)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := u.Query().Get("support-x25519mlkem768"); got != state {
+				t.Fatalf("URL state = %q, want %q", got, state)
+			}
+			rebuilt, err := buildVLESSProxy(Urls{Url: link}, OutputConfig{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, present := rebuilt.Reality_opts["support-x25519mlkem768"]; present != (state != "") || (present && fmt.Sprint(got) != state) {
+				t.Fatalf("rebuilt state = %v, present=%v", got, present)
+			}
+			if rebuilt.Reality_opts["public-key"] != "test-key" || rebuilt.Reality_opts["short-id"] != "01234567" || rebuilt.Client_fingerprint != "chrome" {
+				t.Fatalf("other REALITY fields lost: %+v", rebuilt)
+			}
+			output, err := yaml.Marshal(rebuilt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if state != "" && !strings.Contains(string(output), "support-x25519mlkem768: "+state) {
+				t.Fatalf("YAML lost state: %s", output)
+			}
+		})
+	}
+}
+
+func TestVLESSRealityMLKEMURLValues(t *testing.T) {
+	for _, state := range []string{"true", "false", "1", "0", "", "invalid"} {
+		t.Run(state, func(t *testing.T) {
+			link := "vless://12345678-1234-1234-1234-123456789abc@example.com:443?security=reality&support-x25519mlkem768=" + state
+			decoded, err := DecodeVLESSURL(link)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantPresent := state != "" && state != "invalid"
+			if (decoded.Query.SupportX25519MLKEM768 != nil) != wantPresent {
+				t.Fatalf("unexpected optional bool: %v", decoded.Query.SupportX25519MLKEM768)
+			}
+			if wantPresent && *decoded.Query.SupportX25519MLKEM768 != (state == "true" || state == "1") {
+				t.Fatal("wrong boolean value")
+			}
+			for _, security := range []string{"tls", "none"} {
+				proxy, err := buildVLESSProxy(Urls{Url: strings.Replace(link, "security=reality", "security="+security, 1)}, OutputConfig{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(proxy.Reality_opts) != 0 {
+					t.Fatalf("%s acquired REALITY options: %v", security, proxy.Reality_opts)
+				}
+			}
+		})
+	}
+}
+
+func TestVLESSRealityMLKEMRawEditing(t *testing.T) {
+	const field = "Query.SupportX25519MLKEM768"
+	link := "vless://12345678-1234-1234-1234-123456789abc@example.com:443?security=reality"
+	for _, state := range []string{`true`, `false`, `"true"`, `"false"`, `""`, `null`} {
+		updated, err := UpdateNodeLinkFields(link, `{"`+field+`":`+state+`}`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		parsed, err := ParseNodeLink(updated)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := strings.Trim(state, `"`)
+		if state == "null" {
+			want = ""
+		}
+		if got, ok := parsed.Fields[field]; !ok || fmt.Sprint(got) != want {
+			t.Fatalf("raw %s = %v, present=%v", state, got, ok)
+		}
+		decoded, err := DecodeVLESSURL(updated)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := GetProtocolFieldValue(decoded, field); got != want {
+			t.Fatalf("field value = %q, want %q", got, want)
+		}
+		link = updated
+	}
+	if _, err := UpdateNodeLinkFields(link, `{"`+field+`":"invalid"}`); err == nil {
+		t.Fatal("expected invalid boolean error")
+	}
 }

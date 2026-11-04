@@ -1,12 +1,13 @@
 English | [简体中文](socks5.zh-CN.md)
 
-# SOCKS5 Gateway
+# Proxy Gateway
 
-SublinkPro can expose selected stored proxy nodes through a local SOCKS5 gateway. This is separate from the existing SOCKS5 node import/export support.
+SublinkPro can expose selected stored proxy nodes through local SOCKS5, HTTP, or Mixed listeners. This is separate from the existing SOCKS5 node import/export support.
 
 ## What is included
 
-- TCP `CONNECT` only
+- SOCKS5 TCP `CONNECT`, HTTP/1.x forward proxy requests and HTTPS `CONNECT` tunnels
+- Mixed listeners accept SOCKS5 and HTTP on the same TCP port
 - IPv4, IPv6, and domain targets
 - Optional username/password authentication (enabled by default)
 - Independent SOCKS5 accounts with separate encrypted passwords and direct routing-profile binding
@@ -40,7 +41,7 @@ UDP `ASSOCIATE` and `BIND` are not included yet. Sticky leases and per-node rout
 ## Configure
 
 1. Sign in as an administrator.
-2. Open **System Settings → SOCKS5 gateway** from the sidebar.
+2. Open **System Settings → Proxy gateway** from the sidebar.
 3. Keep **Listen address** as `127.0.0.1` for local-only access.
 4. Choose a port (default `1080`) and node selection strategy.
 5. Optionally restrict the candidate node pool by groups, sources, protocols, and countries/regions. Empty fields do not restrict the pool. Specific-node mode uses these filters only for fallback candidates.
@@ -68,6 +69,40 @@ curl --proxy socks5h://127.0.0.1:1080 \
 
 If you bind to `0.0.0.0` or another non-loopback address, authentication is mandatory. Expose the port only behind a firewall or private network and use a strong password. The backend rejects unauthenticated non-loopback listeners to prevent accidental open proxies.
 
+## HTTP and Mixed listeners
+
+In **Proxy gateway → Listeners**, add or edit an entry and choose **Inbound protocol**:
+
+- **SOCKS5** preserves existing behavior.
+- **HTTP** accepts absolute-form `http://` requests and HTTPS `CONNECT` tunnels. Each keep-alive request is independently authenticated and routed; different hosts/accounts do not reuse an earlier request's outbound connection.
+- **Mixed** accepts either protocol on one port. Do not create two listeners for the same address/port.
+
+Choose a default routing profile and authentication policy as before. The legacy/default entry starts as SOCKS5; editing it through the listener list can persist another protocol. Missing protocol on old stored entries or new API requests defaults to `socks5`; an old client's update that omits protocol preserves the existing selection. Unknown protocol values are rejected. Protocol settings are stored in the existing listener JSON; no new environment variable or independent proxy process is required. Existing API/page paths retain `socks5` for compatibility.
+
+For a Mixed listener configured on `127.0.0.1:7890`:
+
+```bash
+# Plain HTTP and HTTPS websites via the HTTP proxy
+curl --proxy http://127.0.0.1:7890 -U 'proxy:your-password' http://example.com
+curl --proxy http://127.0.0.1:7890 -U 'proxy:your-password' https://example.com
+# The same port also accepts SOCKS5
+curl --proxy socks5h://127.0.0.1:7890 -U 'proxy:your-password' https://example.com
+```
+
+For tools using `HTTP_PROXY`/`HTTPS_PROXY`, the proxy address is `http://127.0.0.1:7890` in both cases. HTTPS websites travel through CONNECT without decryption; this is not TLS on the proxy listener itself. HTTP Basic and SOCKS5 authentication do not encrypt credentials: keep non-loopback endpoints behind a firewall/private network or secure tunnel. Usernames containing `:` remain usable over SOCKS5 but cannot be represented by HTTP Basic; use a separate compatible account for HTTP/Mixed clients. `username@profile[.account]` and independent accounts use the same profile rules on both protocols. A failed HTTP authentication receives `407` and cannot select or dial a node.
+
+Retries only switch nodes during outbound dialing, before request bytes are sent. A POST/upload or a partially received response is never automatically replayed on another node; origin HTTP error status codes are not treated as node dial failures. Proxy authentication headers are consumed locally and never forwarded to the origin. Upgrades/WebSocket, HTTP/2 inbound, UDP/BIND, and TLS-encrypted proxy listeners are not supported.
+
+Monitoring distinguishes a listener's configured `mixed` mode from actual SOCKS5/HTTP sessions, including CONNECT. Active limits and gateway totals count client TCP connections, not keep-alive requests. A TCP connection is successful after at least one normal response or successful tunnel establishment; an unsuccessful later request does not count that same TCP connection again. Per-node counters reflect outbound connection attempts. For ordinary HTTP, byte counters measure forwarded request/response bodies; for tunnels they measure payload, not authentication/HTTP framing. On a keep-alive session, the target/profile/node describe its latest request; `idle` means waiting for the next request. Disconnect, idle/duration limits and stop/reapply cover HTTP and hijacked CONNECT sessions too. Clean tunnel half-close drains the reverse direction when the underlying transport supports it; unsupported transports retain full-close behavior.
+
+### Listener configuration screenshots
+
+The examples below use synthetic API data and fictional listener settings; they do not contain real subscriptions or credentials.
+
+![SOCKS5, HTTP and Mixed listeners](../images/proxy-gateway/listeners.png)
+
+![Mixed listener editor on mobile in dark mode](../images/proxy-gateway/mixed-mobile-dark.png)
+
 ## Backup and restore
 
 Database migration and WebDAV restore preserve the target instance's SOCKS5 configuration, accounts, listeners, and routing profiles. This avoids importing credentials encrypted with another instance's key or unexpectedly opening network listeners. Active connections are disconnected and gateway state is reloaded after restore; review node IDs and candidate pools against the restored nodes.
@@ -82,7 +117,7 @@ All endpoints below require an authenticated administrator. The destructive `POS
 - `POST /api/v1/settings/socks5` — save and apply settings. JSON fields include `enabled`, `listenAddress`, `port`, `username`, optional `password`, `clearPassword`, `nodeId`, `selection` (`best`, `random`, `round_robin`, `smart`, or `specific`), `requireAuth`, `maxAttempts` (1-5), `dialTimeoutSeconds` (1-120), `failureCooldownSeconds` (0-3600), `specificFallback`, `maxConnections` (1-10000), `maxConnectionsPerClient` (1..maxConnections), `idleTimeoutSeconds` (0-86400), `maxConnectionDurationSeconds` (0-604800), `healthCheckEnabled`, `healthCheckIntervalSeconds` (10-3600), `healthCheckTimeoutSeconds` (1-30), `candidateGroups`, `candidateSources`, `candidateProtocols`, `candidateCountries`, `stickySessionEnabled`, `stickySessionMode` (`client_ip` or `username`), and `stickySessionTtlSeconds` (60-604800). Candidate pool fields are string arrays; fields are combined with AND and values within each field use OR. Optional fields may be omitted to preserve saved values for legacy clients.
 - `POST /api/v1/settings/socks5/stop` — stop the listener without changing saved settings.
 - `GET /api/v1/settings/socks5/status` — return `data.config`, `data.listeners`, `data.stats`, and `data.health` with listener state, aggregate connection totals, sweep state, and health details.
-- `GET|POST /api/v1/settings/socks5/listeners` — list or create listeners. Listener fields are `id`, `enabled`, `listenAddress`, `port`, `defaultProfileId`, and nullable `requireAuth` (null inherits the gateway setting).
+- `GET|POST /api/v1/settings/socks5/listeners` — list or create listeners. Listener fields are `id`, `protocol` (`socks5`, `http`, or `mixed`), `enabled`, `listenAddress`, `port`, `defaultProfileId`, and nullable `requireAuth` (null inherits the gateway setting).
 - `PUT|DELETE /api/v1/settings/socks5/listeners/:id` — replace or delete a listener. Listener IDs and enabled endpoints must be unique. A failed bind rolls the saved listener list back.
 - `GET|POST /api/v1/settings/socks5/accounts` — list or create independent accounts. Account fields are `id`, `username`, `password`, `profileId`, and `enabled`; responses expose only password-presence metadata.
 - `PUT|DELETE /api/v1/settings/socks5/accounts/:id` — replace or delete an account. An empty update password retains the encrypted saved password.
@@ -93,7 +128,7 @@ All endpoints below require an authenticated administrator. The destructive `POS
 - `GET /api/v1/settings/socks5/routing` — return a server-paginated candidate-node load page. Query parameters are `profileId`, `keyword`, `status` (`healthy`, `unhealthy`, `checking`, `cooling`, or `unknown`), `sortBy`, `sortOrder`, `page`, and `pageSize` (maximum `100`). Items include node metadata, health state, latency source, active/success/failure counters, consecutive failures, smart score, cooldown, and last selection time.
 - `POST /api/v1/settings/socks5/routing/reset` — clear per-node success/failure/last-selection counters without disconnecting active sessions.
 - `POST /api/v1/settings/socks5/health/probe` — start an immediate health sweep. An already-running sweep is reused instead of starting a duplicate.
-- `GET /api/v1/settings/socks5/connections` — return the current active connection array. Each item includes `id`, `clientAddress`, `target`, `nodeName`, `profileId`, `profileName`, optional `account`, optional `listenerId`, `phase`, `startedAt`, `lastActivity`, `uploadBytes`, and `downloadBytes`.
+- `GET /api/v1/settings/socks5/connections` — return the current active connection array. Each item includes `id`, `clientAddress`, `target`, `nodeName`, `profileId`, `profileName`, optional `account`, optional `listenerId`, `protocol` (actual `socks5` or `http`; briefly `mixed` or empty before protocol identification), optional `method` (e.g. `CONNECT`), `phase`, `startedAt`, `lastActivity`, `uploadBytes`, and `downloadBytes`.
 - `DELETE /api/v1/settings/socks5/connections/:id` — disconnect one active connection by ID.
 - `DELETE /api/v1/settings/socks5/connections` — disconnect all active connections.
 
