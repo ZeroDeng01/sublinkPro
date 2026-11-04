@@ -389,6 +389,12 @@ trusted_proxies: []
 
 ---
 
+## 代理网关入站协议
+
+在**代理网关 → 监听入口**按入口选择 `socks5`、`http` 或 `mixed`，设置保存在数据库中，不新增 `config.yaml` 字段或环境变量。旧入口默认 SOCKS5。非本机监听必须认证，Basic/SOCKS 认证不提供传输加密。HTTP/CONNECT 示例、兼容行为及限制见[代理网关](features/socks5.zh-CN.md)。
+
+---
+
 ## Docker 部署示例（带环境变量）
 
 ```yaml

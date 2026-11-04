@@ -126,6 +126,7 @@ type Proxy struct {
 	Port                  FlexPort       `yaml:"port,omitempty"`                        // 服务器端口
 	PortRange             string         `yaml:"port-range,omitempty"`                  // 端口范围 (Mieru)
 	Ports                 string         `yaml:"ports,omitempty"`                       // hysteria2端口跳跃
+	HopInterval           int            `yaml:"hop-interval,omitempty"`                // hysteria2端口跳跃间隔 (秒)
 	Transport             string         `yaml:"transport,omitempty"`                   // 传输协议 (Mieru TCP/UDP)
 	Cipher                string         `yaml:"cipher,omitempty"`                      // 加密方式
 	Username              string         `yaml:"username,omitempty"`                    // 用户名 (socks5 等)

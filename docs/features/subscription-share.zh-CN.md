@@ -144,3 +144,7 @@
 - 当顶层 VLESS `ech` 为 Xray 的 DNS / URI 风格时，`/c?client=clash` 会按 mihomo 可表达的范围输出顶层 `ech-opts`，其中可识别的查询域名会映射到 `query-server-name`。
 - 反过来，当节点来源于 Clash/mihomo YAML 导入且只有 `ech-opts.query-server-name` 可恢复时，系统会在保存节点链接前按本地兼容规则补成 `ech=<query-server-name>+https://dns.alidns.com/dns-query`。
 - 为避免生成表面可用但实际失真的配置，系统不会把 `xhttp` 静默转换成 `http`、`h2` 或 `grpc`。
+
+## VLESS REALITY 兼容说明
+
+导入 Clash / mihomo YAML 时，`reality-opts.support-x25519mlkem768` 会经由内部存储的 VLESS URL 保留到订阅输出、延迟检测及下载测速使用的 Proxy。URL 参数为 `support-x25519mlkem768=true` 或 `false`（输入也接受 `1` / `0`）。显式 `false` 与未指定保持区分；空值或无效 URL 值视为未指定。普通 TLS 节点不会因该参数而新增 REALITY 配置。在节点字段编辑器中可选择 `true`、`false` 或空选项，空选项表示恢复上游默认行为。

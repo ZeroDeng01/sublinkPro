@@ -76,6 +76,13 @@ func extractFieldValuesRecursive(v reflect.Value, prefix string, fields map[stri
 		kind := fieldValue.Kind()
 
 		switch kind {
+		case reflect.Pointer:
+			if fieldValue.Type().Elem().Kind() == reflect.Bool {
+				fields[fieldName] = ""
+				if !fieldValue.IsNil() {
+					fields[fieldName] = fieldValue.Elem().Bool()
+				}
+			}
 		case reflect.String:
 			fields[fieldName] = fieldValue.String()
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -174,6 +181,20 @@ func setFieldValue(v reflect.Value, fieldPath string, value any) error {
 
 // setValueByKind 根据字段类型设置值
 func setValueByKind(field reflect.Value, value any) error {
+	if field.Kind() == reflect.Pointer && field.Type().Elem().Kind() == reflect.Bool {
+		if value == nil || value == "" {
+			field.SetZero()
+			return nil
+		}
+		parsed, err := strconv.ParseBool(fmt.Sprint(value))
+		if err != nil {
+			return fmt.Errorf("invalid optional boolean: %v", value)
+		}
+		ptr := reflect.New(field.Type().Elem())
+		ptr.Elem().SetBool(parsed)
+		field.Set(ptr)
+		return nil
+	}
 	if value == nil {
 		return nil
 	}

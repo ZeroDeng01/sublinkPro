@@ -436,3 +436,44 @@ func TestSocks5ProfileDeletionRejectsReferencedAccountOrListener(t *testing.T) {
 		t.Fatalf("listener-referenced profile was deleted: status=%d body=%s", remove.Code, remove.Body.String())
 	}
 }
+
+func TestSocks5ListenerProtocolCompatibility(t *testing.T) {
+	setupBackupAPITestDB(t)
+	socks5service.DefaultManager().Stop()
+	create := performSocks5JSONRequest(t, "admin", http.MethodPost, map[string]any{
+		"id": "http-proxy", "enabled": false, "protocol": "http", "listenAddress": "127.0.0.1", "port": 17890, "defaultProfileId": "default",
+	}, CreateSocks5Listener)
+	if !strings.Contains(create.Body.String(), `"protocol":"http"`) {
+		t.Fatalf("HTTP listener create: %s", create.Body.String())
+	}
+	params := gin.Params{{Key: "id", Value: "http-proxy"}}
+	// Old clients omit the new field during an otherwise full update.
+	update := performSocks5JSONRequestWithParams(t, "admin", http.MethodPut, map[string]any{
+		"enabled": false, "listenAddress": "127.0.0.1", "port": 17891, "defaultProfileId": "default",
+	}, params, UpdateSocks5Listener)
+	if !strings.Contains(update.Body.String(), `"protocol":"http"`) {
+		t.Fatalf("old PUT downgraded protocol: %s", update.Body.String())
+	}
+	bad := performSocks5JSONRequestWithParams(t, "admin", http.MethodPut, map[string]any{
+		"enabled": false, "protocol": "invalid", "listenAddress": "127.0.0.1", "port": 17891, "defaultProfileId": "default",
+	}, params, UpdateSocks5Listener)
+	if !strings.Contains(bad.Body.String(), "protocol must be") {
+		t.Fatalf("unknown protocol accepted: %s", bad.Body.String())
+	}
+	cfg, err := socks5service.LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	listeners, err := socks5service.LoadListeners(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, listener := range listeners {
+		if listener.ID == "default" && listener.Protocol != "socks5" {
+			t.Fatalf("legacy default changed: %+v", listener)
+		}
+		if listener.ID == "http-proxy" && listener.Protocol != "http" {
+			t.Fatalf("invalid PUT modified saved protocol: %+v", listener)
+		}
+	}
+}

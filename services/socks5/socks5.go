@@ -1,6 +1,7 @@
 package socks5
 
 import (
+	"bufio"
 	"context"
 	"crypto/subtle"
 	"encoding/json"
@@ -468,8 +469,9 @@ func ToPublicConfig(cfg Config, running bool, boundAddress string) PublicConfig 
 // DialFunc allows tests and future routing implementations to replace mihomo dialing.
 type DialFunc func(ctx context.Context, node models.Node, host string, port uint16) (net.Conn, error)
 
-// Server serves SOCKS5 CONNECT requests over a supplied listener.
+// Server serves TCP proxy requests over a supplied listener.
 type Server struct {
+	protocol         string
 	cfg              Config
 	listenerID       string
 	defaultProfileID string
@@ -490,10 +492,14 @@ type Server struct {
 }
 
 func NewServer(cfg Config, dial DialFunc) (*Server, error) {
-	return newServerForListener(cfg, dial, "", defaultProfileID)
+	return newServerForListener(cfg, dial, "", defaultProfileID, ProtocolSOCKS5)
 }
 
-func newServerForListener(cfg Config, dial DialFunc, listenerID, defaultProfile string) (*Server, error) {
+func newServerForListener(cfg Config, dial DialFunc, listenerID, defaultProfile, protocol string) (*Server, error) {
+	protocol, err := normalizeInboundProtocol(protocol)
+	if err != nil {
+		return nil, err
+	}
 	normalized, err := NormalizeConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -514,7 +520,7 @@ func newServerForListener(cfg Config, dial DialFunc, listenerID, defaultProfile 
 	}
 	registry := newSessionRegistry(normalized.MaxConnections, normalized.MaxConnectionsPerClient)
 	registry.setListenerID(listenerID)
-	server := &Server{cfg: normalized, listenerID: listenerID, defaultProfileID: defaultProfile, dial: dial, router: newNodeRouter(), profiles: profiles, accounts: accounts, registry: registry, closed: make(chan struct{})}
+	server := &Server{protocol: protocol, cfg: normalized, listenerID: listenerID, defaultProfileID: defaultProfile, dial: dial, router: newNodeRouter(), profiles: profiles, accounts: accounts, registry: registry, closed: make(chan struct{})}
 	if server.dial == nil {
 		server.pool = newAdapterPool(nil)
 		server.dial = server.dialWithPool
@@ -579,76 +585,123 @@ func (s *Server) serveConn(ctx context.Context, client net.Conn) {
 		}
 	}()
 	established := false
-	releaseRuntime := func() {}
 	defer func() {
-		releaseRuntime()
 		close(watchDone)
 		if !established {
 			s.registry.recordFailure()
 		}
+		session.close()
 		s.registry.remove(session.ID)
-		_ = client.Close()
 	}()
+	markEstablished := func() {
+		if !established {
+			established = true
+			s.registry.recordSuccess()
+		}
+	}
 	_ = client.SetDeadline(time.Now().Add(handshakeTimeout))
+	protocol := s.protocol
+	session.setInbound(protocol, "")
+	if protocol == ProtocolMixed {
+		reader := bufio.NewReader(client)
+		first, err := reader.Peek(1)
+		if err != nil {
+			return
+		}
+		if first[0] == 0x05 {
+			protocol = ProtocolSOCKS5
+		} else if isHTTPMethodByte(first[0]) {
+			protocol = ProtocolHTTP
+		} else {
+			return
+		}
+		client = &bufferedConn{Conn: client, reader: reader}
+	}
+	if protocol == ProtocolHTTP {
+		s.serveHTTPConn(ctx, session, client, markEstablished)
+		return
+	}
+	session.setInbound(ProtocolSOCKS5, "")
+	s.serveSOCKSConn(ctx, session, client, markEstablished)
+}
+
+func (s *Server) serveSOCKSConn(ctx context.Context, session *connectionInfo, client net.Conn, established func()) {
 	identity := defaultRoutingIdentity()
 	identity.ProfileID = s.defaultProfileID
 	if s.cfg.RequireAuth {
-		var authErr error
-		identity, authErr = s.authenticate(client)
-		if authErr != nil {
+		var err error
+		identity, err = s.authenticate(client)
+		if err != nil {
 			return
 		}
 	} else if err := negotiateNoAuth(client); err != nil {
 		return
 	}
-	profile, routingCfg, ok := s.profiles.resolve(identity.ProfileID)
-	if !ok {
-		_ = writeReply(client, 0x01)
-		return
-	}
-	identity.ProfileName = profile.Name
-	session.setRoutingIdentity(identity)
 	host, port, err := readConnectRequest(client)
 	if err != nil {
 		return
 	}
+	// Header/handshake timeout is independent from the configured per-node dial budget.
+	_ = client.SetDeadline(time.Time{})
+	upstream, release, err := s.dialTarget(ctx, session, identity, host, port, ProtocolSOCKS5)
+	if err != nil {
+		_ = client.SetWriteDeadline(time.Now().Add(handshakeTimeout))
+		_ = writeReply(client, 0x01)
+		return
+	}
+	defer release()
+	defer func() { _ = upstream.Close() }()
+	_ = client.SetWriteDeadline(time.Now().Add(handshakeTimeout))
+	if err := writeReply(client, 0x00); err != nil {
+		return
+	}
+	_ = client.SetDeadline(time.Time{})
+	established()
+	pumpWithSession(ctx, session, client, upstream, s.cfg.IdleTimeoutSeconds, s.cfg.MaxConnectionDurationSeconds)
+}
+
+// dialTarget is the single routing/retry/sticky/health path for every inbound.
+// Retries end before any application request bytes are written to an outbound.
+func (s *Server) dialTarget(ctx context.Context, session *connectionInfo, identity routingIdentity, host string, port uint16, protocol string) (net.Conn, func(), error) {
+	profile, routingCfg, ok := s.profiles.resolve(identity.ProfileID)
+	if !ok {
+		return nil, nil, errors.New("routing profile is unavailable")
+	}
+	identity.ProfileName = profile.Name
+	session.setRoutingIdentity(identity)
 	session.mu.Lock()
 	session.Target = net.JoinHostPort(host, strconv.Itoa(int(port)))
+	session.Phase = "handshake"
+	session.NodeName = ""
 	session.mu.Unlock()
 	affinityKey := routingProfileStickyKey(profile, routingCfg, identity, session.ClientAddress)
 	nodes, err := s.router.candidatesForScope(routingCfg, affinityKey, profile.ID)
 	if err != nil {
-		_ = writeReply(client, 0x01)
-		return
+		return nil, nil, err
 	}
-	var upstream net.Conn
+	ctx = context.WithValue(ctx, inboundProtocolKey{}, protocol)
 	for _, node := range nodes {
+		if ctx.Err() != nil {
+			return nil, nil, ctx.Err()
+		}
 		dialCtx, cancel := context.WithTimeout(ctx, time.Duration(routingCfg.DialTimeoutSeconds)*time.Second)
-		upstream, err = s.dial(dialCtx, node, host, port)
+		upstream, dialErr := s.dial(dialCtx, node, host, port)
 		cancel()
-		if err == nil {
+		if dialErr == nil && upstream != nil {
 			s.router.health.recordSuccess(node)
-			releaseRuntime = s.router.runtime.start(node)
+			release := s.router.runtime.start(node)
 			s.router.sticky.bind(affinityKey, node, time.Duration(routingCfg.StickySessionTTLSeconds)*time.Second)
 			session.setUpstream(upstream, node)
-			break
+			return upstream, release, nil
+		}
+		if dialErr == nil {
+			dialErr = errors.New("outbound returned no connection")
 		}
 		s.router.runtime.recordFailure(node)
-		s.router.health.recordFailureReason(node, time.Duration(routingCfg.FailureCooldownSeconds)*time.Second, s.sanitizeProbeError(node, err))
+		s.router.health.recordFailureReason(node, time.Duration(routingCfg.FailureCooldownSeconds)*time.Second, s.sanitizeProbeError(node, dialErr))
 	}
-	if upstream == nil {
-		s.router.sticky.remove(affinityKey)
-		_ = writeReply(client, 0x01)
-		return
-	}
-	defer func() { _ = upstream.Close() }()
-	_ = client.SetDeadline(time.Time{})
-	if err := writeReply(client, 0x00); err != nil {
-		return
-	}
-	established = true
-	s.registry.recordSuccess()
-	pumpWithSession(ctx, session, client, upstream, s.cfg.IdleTimeoutSeconds, s.cfg.MaxConnectionDurationSeconds)
+	s.router.sticky.remove(affinityKey)
+	return nil, nil, errors.New("no outbound node could connect")
 }
 
 func (s *Server) authenticate(conn net.Conn) (routingIdentity, error) {
@@ -692,44 +745,41 @@ func (s *Server) authenticate(conn net.Conn) (routingIdentity, error) {
 		return invalidIdentity, err
 	}
 
-	rawUsername := string(username)
-	if account, found, authenticated := s.accounts.authenticate(rawUsername, password); found {
-		profile, _, profileFound := s.profiles.resolve(account.ProfileID)
-		if !authenticated || !profileFound {
-			_, _ = conn.Write([]byte{0x01, 0x01})
-			return invalidIdentity, errors.New("invalid SOCKS5 credentials")
-		}
-		if _, err := conn.Write([]byte{0x01, 0x00}); err != nil {
-			return invalidIdentity, err
-		}
-		return routingIdentity{
-			RawUsername: rawUsername, ProfileID: profile.ID, ProfileName: profile.Name,
-			Account: account.Username, Extended: true,
-		}, nil
-	}
-
-	baseUsername := []byte(s.cfg.Username)
-	baseMatch := subtle.ConstantTimeCompare(username, baseUsername) == 1
-	extendedBaseMatch := len(username) > len(baseUsername)+1 && username[len(baseUsername)] == '@' &&
-		subtle.ConstantTimeCompare(username[:len(baseUsername)], baseUsername) == 1
-	profileID, account, extended, parsed := parseRoutingUsername(s.cfg.Username, rawUsername)
-	if parsed && !extended && profileID == defaultProfileID {
-		profileID = s.defaultProfileID
-	}
-	profile, _, profileFound := s.profiles.resolve(profileID)
-	usernameOK := (baseMatch || extendedBaseMatch) && parsed && profileFound
-	passwordOK := subtle.ConstantTimeCompare(password, []byte(s.cfg.Password)) == 1
-	if !usernameOK || !passwordOK {
+	identity, err := s.authenticateCredentials(string(username), password)
+	if err != nil {
 		_, _ = conn.Write([]byte{0x01, 0x01})
-		return invalidIdentity, errors.New("invalid SOCKS5 credentials")
+		return invalidIdentity, err
 	}
 	if _, err := conn.Write([]byte{0x01, 0x00}); err != nil {
 		return invalidIdentity, err
 	}
-	return routingIdentity{
-		RawUsername: rawUsername, ProfileID: profile.ID, ProfileName: profile.Name,
-		Account: account, Extended: extended,
-	}, nil
+	return identity, nil
+}
+
+// authenticateCredentials contains no protocol I/O. Exact independent accounts
+// take precedence and never fall through to legacy credentials on failure.
+func (s *Server) authenticateCredentials(rawUsername string, password []byte) (routingIdentity, error) {
+	invalid := routingIdentity{}
+	if account, found, authenticated := s.accounts.authenticate(rawUsername, password); found {
+		profile, _, ok := s.profiles.resolve(account.ProfileID)
+		if !authenticated || !ok {
+			return invalid, errors.New("invalid proxy credentials")
+		}
+		return routingIdentity{RawUsername: rawUsername, ProfileID: profile.ID, ProfileName: profile.Name, Account: account.Username, Extended: true}, nil
+	}
+	username := []byte(rawUsername)
+	baseUsername := []byte(s.cfg.Username)
+	baseMatch := subtle.ConstantTimeCompare(username, baseUsername) == 1
+	extendedBaseMatch := len(username) > len(baseUsername)+1 && username[len(baseUsername)] == '@' && subtle.ConstantTimeCompare(username[:len(baseUsername)], baseUsername) == 1
+	profileID, account, extended, parsed := parseRoutingUsername(s.cfg.Username, rawUsername)
+	if parsed && !extended && profileID == defaultProfileID {
+		profileID = s.defaultProfileID
+	}
+	profile, _, found := s.profiles.resolve(profileID)
+	if !baseMatch && !extendedBaseMatch || !parsed || !found || subtle.ConstantTimeCompare(password, []byte(s.cfg.Password)) != 1 {
+		return invalid, errors.New("invalid proxy credentials")
+	}
+	return routingIdentity{RawUsername: rawUsername, ProfileID: profile.ID, ProfileName: profile.Name, Account: account, Extended: extended}, nil
 }
 
 func negotiateNoAuth(conn net.Conn) error {
@@ -805,7 +855,11 @@ func (s *Server) dialWithPool(ctx context.Context, node models.Node, host string
 	if err != nil {
 		return nil, err
 	}
-	conn, err := adapter.DialContext(ctx, &constant.Metadata{NetWork: constant.TCP, Type: constant.SOCKS5, Host: host, DstPort: port})
+	inbound := constant.SOCKS5
+	if protocol, _ := ctx.Value(inboundProtocolKey{}).(string); protocol == ProtocolHTTP {
+		inbound = constant.HTTP
+	}
+	conn, err := adapter.DialContext(ctx, &constant.Metadata{NetWork: constant.TCP, Type: inbound, Host: host, DstPort: port})
 	if err != nil {
 		lease.release(true)
 		return nil, err
@@ -920,7 +974,7 @@ func (m *Manager) ApplyListeners(cfg Config, listeners []ListenerSpec) error {
 				prepared[spec.ID] = existing
 				continue
 			}
-			server, serverErr := newServerForListener(listenerCfg, dial, spec.ID, spec.DefaultProfileID)
+			server, serverErr := newServerForListener(listenerCfg, dial, spec.ID, spec.DefaultProfileID, spec.Protocol)
 			if serverErr != nil {
 				closeNewListenerRuntimes(prepared, old)
 				return serverErr
@@ -980,7 +1034,7 @@ func (m *Manager) restoreRuntime(id string, previous *listenerRuntime, dial Dial
 	if previous == nil {
 		return
 	}
-	server, err := newServerForListener(previous.cfg, dial, previous.spec.ID, previous.spec.DefaultProfileID)
+	server, err := newServerForListener(previous.cfg, dial, previous.spec.ID, previous.spec.DefaultProfileID, previous.spec.Protocol)
 	if err != nil {
 		return
 	}

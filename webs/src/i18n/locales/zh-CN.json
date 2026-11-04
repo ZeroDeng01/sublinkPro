@@ -114,7 +114,7 @@
       "countryRules": "国家规则",
       "webhooks": "Webhook 管理",
       "monitor": "系统监控",
-      "socks5": "SOCKS5 网关",
+      "socks5": "代理网关",
       "changelog": "更新日志",
       "userCenter": "个人中心",
       "appSettings": "应用设置"
@@ -582,14 +582,14 @@
       "countryRules": "国家规则"
     },
     "socks5": {
-      "title": "SOCKS5 网关",
-      "subheader": "通过一个或多个 TCP SOCKS5 CONNECT 监听入口转发到选定的 SublinkPro 节点。",
+      "title": "代理网关",
+      "subheader": "使用 SOCKS5、HTTP 或 Mixed 监听入口，共用节点池和路由配置。",
       "alerts": {
-        "security": "TCP CONNECT 已支持适配器复用、失败重试和节点冷却。非回环地址必须启用用户名/密码认证。"
+        "security": "非本机监听必须认证。SOCKS5 和 HTTP Basic 不加密凭据，请仅在可信内网或安全隧道内使用。"
       },
       "status": {
         "running": "运行中：{{address}}",
-        "stopped": "SOCKS5 网关已停止"
+        "stopped": "代理网关已停止"
       },
       "monitor": {
         "probeNow": "立即探测",
@@ -615,7 +615,7 @@
           "cooling": "冷却中",
           "unknown": "未知"
         },
-        "title": "SOCKS5 运行监控",
+        "title": "代理运行监控",
         "subheader": "页面可见时每 3 秒刷新",
         "disconnectAll": "全部断开",
         "activeConnections": "活动连接 {{count}}",
@@ -640,7 +640,7 @@
         "nodeSearchPlaceholder": "名称、ID、分组、来源、协议或国家/地区",
         "nodeStatusFilter": "健康状态",
         "profileFilter": "路由配置",
-        "routingStopped": "启动 SOCKS5 网关后将显示候选节点的实时负载和智能评分。",
+        "routingStopped": "启动代理网关后将显示候选节点的实时负载和智能评分。",
         "noRoutingData": "当前筛选条件下没有节点运行数据。",
         "rowsPerPage": "每页行数",
         "excludedFromRouting": "已排除选路",
@@ -659,15 +659,26 @@
           "failed": "失败",
           "score": "智能评分",
           "lastSelected": "最近选择"
+        },
+        "protocols": {
+          "socks5": "SOCKS5",
+          "http": "HTTP",
+          "httpConnect": "HTTP CONNECT",
+          "mixed": "Mixed"
+        },
+        "phases": {
+          "handshake": "建立连接",
+          "connected": "传输中",
+          "idle": "等待请求"
         }
       },
       "profiles": {
-        "title": "SOCKS5 路由配置",
+        "title": "代理路由配置",
         "subheader": "为不同业务账号配置独立的候选节点池、选路策略、重试和粘性会话。",
         "create": "新建路由配置",
         "default": "默认配置",
-        "createTitle": "新建 SOCKS5 路由配置",
-        "editTitle": "编辑 SOCKS5 路由配置",
+        "createTitle": "新建代理路由配置",
+        "editTitle": "编辑代理路由配置",
         "id": "配置 ID",
         "idHelper": "1-32 位小写字母、数字、下划线或连字符；创建后不可修改。",
         "name": "显示名称",
@@ -679,9 +690,9 @@
         "summary": "{{selection}} · {{candidates}} 个候选节点 · 最多 {{attempts}} 次尝试 · {{filters}} 个筛选值",
         "deleteConfirm": "确定删除路由配置“{{name}}”吗？已建立的连接不会被中断，新连接将无法继续使用它。",
         "messages": {
-          "created": "SOCKS5 路由配置已创建",
-          "updated": "SOCKS5 路由配置已更新",
-          "deleted": "SOCKS5 路由配置已删除"
+          "created": "代理路由配置已创建",
+          "updated": "代理路由配置已更新",
+          "deleted": "代理路由配置已删除"
         }
       },
       "form": {
@@ -691,7 +702,7 @@
         "healthCheckIntervalSecondsHelper": "每 10-3600 秒执行一轮节点健康探测。",
         "healthCheckTimeoutSeconds": "健康探测超时（秒）",
         "healthCheckTimeoutSecondsHelper": "每个节点的探测超时（1-30 秒）。",
-        "enabled": "启用 SOCKS5 网关",
+        "enabled": "启用代理网关",
         "listenAddress": "监听地址",
         "listenAddressHelper": "本机访问请使用 127.0.0.1。只有明确需要时才绑定 0.0.0.0。",
         "port": "监听端口",
@@ -747,11 +758,12 @@
         "stickySessionSpecificHelper": "严格指定节点模式已经固定出站节点，不需要粘性会话。",
         "stickySessionMode": "粘性键",
         "stickySessionModeClientIp": "客户端 IP",
-        "stickySessionModeUsername": "SOCKS5 用户名",
+        "stickySessionModeUsername": "代理用户名",
         "stickySessionTtlSeconds": "粘性有效期（秒）",
         "stickySessionTtlSecondsHelper": "范围 60-604800 秒；每次连接成功会刷新有效期。",
         "stickySessionUsernameHelper": "独立账号按账号保持粘性；旧版 Profile.Account 用户名继续沿用原有粘性规则。",
-        "stickySessionUsernameAuthRequired": "用户名粘性模式必须启用 SOCKS5 用户名/密码认证。"
+        "stickySessionUsernameAuthRequired": "用户名粘性模式必须启用代理用户名/密码认证。",
+        "httpUsernameWarning": "此用户名包含冒号，仅可用于 SOCKS5；HTTP/Mixed 请使用不含冒号的账号。"
       },
       "actions": {
         "save": "保存设置",
@@ -761,72 +773,72 @@
         "stopping": "停止中..."
       },
       "messages": {
-        "healthProbeStarted": "SOCKS5 节点健康探测已启动",
-        "healthProbeRunning": "SOCKS5 节点健康探测正在执行",
-        "runtimeStatsReset": "SOCKS5 节点运行统计已重置",
-        "loadFailed": "获取 SOCKS5 设置失败：{{message}}",
-        "saved": "SOCKS5 设置已保存",
-        "saveFailed": "保存 SOCKS5 设置失败：{{message}}",
+        "healthProbeStarted": "代理节点健康探测已启动",
+        "healthProbeRunning": "代理节点健康探测正在执行",
+        "runtimeStatsReset": "代理节点运行统计已重置",
+        "loadFailed": "获取代理网关设置失败：{{message}}",
+        "saved": "代理网关设置已保存",
+        "saveFailed": "保存代理网关设置失败：{{message}}",
         "authRequired": "请输入用户名和密码，或关闭认证。",
-        "stopped": "SOCKS5 网关已停止",
-        "stopFailed": "停止 SOCKS5 网关失败：{{message}}"
+        "stopped": "代理网关已停止",
+        "stopFailed": "停止代理网关失败：{{message}}"
       },
       "api": {
-        "healthProbeStarted": "SOCKS5 节点健康探测已启动",
-        "healthProbeRunning": "SOCKS5 节点健康探测正在执行",
+        "healthProbeStarted": "代理节点健康探测已启动",
+        "healthProbeRunning": "代理节点健康探测正在执行",
         "healthProbeUnavailable": "SOCKS5 健康探测无法启动，网关尚未运行",
-        "adminRequired": "仅管理员可管理 SOCKS5 网关",
-        "loaded": "SOCKS5 设置已加载",
-        "loadFailed": "读取 SOCKS5 设置失败：{{message}}",
+        "adminRequired": "仅管理员可管理代理网关",
+        "loaded": "代理网关设置已加载",
+        "loadFailed": "读取代理网关设置失败：{{message}}",
         "invalidRequest": "参数错误",
-        "invalidSettings": "SOCKS5 设置无效：{{message}}",
-        "saved": "SOCKS5 设置已保存",
-        "startFailed": "启动 SOCKS5 网关失败：{{message}}",
-        "stopped": "SOCKS5 网关已停止",
-        "statusLoaded": "SOCKS5 状态已加载",
-        "profilesLoaded": "SOCKS5 路由配置已加载",
-        "profileLoadFailed": "读取 SOCKS5 路由配置失败：{{message}}",
-        "profileSaveFailed": "保存 SOCKS5 路由配置失败：{{message}}",
-        "profileApplyFailed": "应用 SOCKS5 路由配置失败：{{message}}",
-        "profileDeleteFailed": "删除 SOCKS5 路由配置失败：{{message}}",
-        "profileCreated": "SOCKS5 路由配置已创建",
-        "profileUpdated": "SOCKS5 路由配置已更新",
-        "profileDeleted": "SOCKS5 路由配置已删除",
-        "invalidProfile": "SOCKS5 路由配置 ID 无效",
-        "routingLoaded": "SOCKS5 节点路由统计已加载",
-        "routingLoadFailed": "读取 SOCKS5 节点路由统计失败：{{message}}",
-        "runtimeReset": "SOCKS5 节点运行统计已重置",
+        "invalidSettings": "代理网关设置无效：{{message}}",
+        "saved": "代理网关设置已保存",
+        "startFailed": "启动代理网关失败：{{message}}",
+        "stopped": "代理网关已停止",
+        "statusLoaded": "代理状态已加载",
+        "profilesLoaded": "代理路由配置已加载",
+        "profileLoadFailed": "读取代理路由配置失败：{{message}}",
+        "profileSaveFailed": "保存代理路由配置失败：{{message}}",
+        "profileApplyFailed": "应用代理路由配置失败：{{message}}",
+        "profileDeleteFailed": "删除代理路由配置失败：{{message}}",
+        "profileCreated": "代理路由配置已创建",
+        "profileUpdated": "代理路由配置已更新",
+        "profileDeleted": "代理路由配置已删除",
+        "invalidProfile": "代理路由配置 ID 无效",
+        "routingLoaded": "代理节点路由统计已加载",
+        "routingLoadFailed": "读取代理节点路由统计失败：{{message}}",
+        "runtimeReset": "代理节点运行统计已重置",
         "connectionsLoaded": "SOCKS5 连接已加载",
         "connectionClosed": "SOCKS5 连接已断开",
         "connectionsClosed": "SOCKS5 连接已全部断开",
         "invalidConnection": "连接 ID 无效",
         "connectionNotFound": "连接不存在",
-        "listenersLoaded": "SOCKS5 监听器已加载",
-        "listenerLoadFailed": "读取 SOCKS5 监听器失败：{{message}}",
-        "listenerSaveFailed": "保存 SOCKS5 监听器失败：{{message}}",
-        "listenerApplyFailed": "应用 SOCKS5 监听器失败：{{message}}",
-        "listenerDeleteFailed": "删除 SOCKS5 监听器失败：{{message}}",
-        "listenerCreated": "SOCKS5 监听器已创建",
-        "listenerUpdated": "SOCKS5 监听器已更新",
-        "listenerDeleted": "SOCKS5 监听器已删除",
-        "invalidListener": "SOCKS5 监听器 ID 无效",
-        "accountsLoaded": "SOCKS5 账号已加载",
-        "accountLoadFailed": "读取 SOCKS5 账号失败：{{message}}",
-        "accountSaveFailed": "保存 SOCKS5 账号失败：{{message}}",
-        "accountApplyFailed": "应用 SOCKS5 账号失败：{{message}}",
-        "accountDeleteFailed": "删除 SOCKS5 账号失败：{{message}}",
-        "accountCreated": "SOCKS5 账号已创建",
-        "accountUpdated": "SOCKS5 账号已更新",
-        "accountDeleted": "SOCKS5 账号已删除",
-        "invalidAccount": "SOCKS5 账号 ID 无效"
+        "listenersLoaded": "代理监听器已加载",
+        "listenerLoadFailed": "读取代理监听器失败：{{message}}",
+        "listenerSaveFailed": "保存代理监听器失败：{{message}}",
+        "listenerApplyFailed": "应用代理监听器失败：{{message}}",
+        "listenerDeleteFailed": "删除代理监听器失败：{{message}}",
+        "listenerCreated": "代理监听器已创建",
+        "listenerUpdated": "代理监听器已更新",
+        "listenerDeleted": "代理监听器已删除",
+        "invalidListener": "代理监听器 ID 无效",
+        "accountsLoaded": "代理账号已加载",
+        "accountLoadFailed": "读取代理账号失败：{{message}}",
+        "accountSaveFailed": "保存代理账号失败：{{message}}",
+        "accountApplyFailed": "应用代理账号失败：{{message}}",
+        "accountDeleteFailed": "删除代理账号失败：{{message}}",
+        "accountCreated": "代理账号已创建",
+        "accountUpdated": "代理账号已更新",
+        "accountDeleted": "代理账号已删除",
+        "invalidAccount": "代理账号 ID 无效"
       },
       "accounts": {
-        "title": "SOCKS5 独立账号",
+        "title": "独立账号",
         "subheader": "为不同客户端创建独立用户名和密码，并绑定到指定路由配置；旧版网关凭据仍然兼容。",
         "create": "新建账号",
         "empty": "暂无独立账号。",
-        "createTitle": "新建 SOCKS5 账号",
-        "editTitle": "编辑 SOCKS5 账号",
+        "createTitle": "新建代理账号",
+        "editTitle": "编辑代理账号",
         "id": "账号 ID",
         "idHelper": "1-32 位小写字母、数字、下划线或连字符，创建后不可修改。",
         "username": "用户名",
@@ -838,20 +850,20 @@
         "passwordMissing": "尚未配置密码",
         "profile": "路由配置",
         "enabled": "启用此账号",
-        "deleteConfirm": "确认删除 SOCKS5 账号“{{username}}”？使用该账号的新连接将被拒绝。",
+        "deleteConfirm": "确认删除代理账号“{{username}}”？使用该账号的新连接将被拒绝。",
         "messages": {
-          "created": "SOCKS5 账号已创建",
-          "updated": "SOCKS5 账号已更新",
-          "deleted": "SOCKS5 账号已删除"
+          "created": "代理账号已创建",
+          "updated": "代理账号已更新",
+          "deleted": "代理账号已删除"
         }
       },
       "listeners": {
-        "title": "SOCKS5 监听入口",
+        "title": "代理监听入口",
         "subheader": "可同时运行多个监听地址或端口，并为每个入口指定默认路由配置。",
         "create": "新建监听器",
         "empty": "暂无监听器配置。",
-        "createTitle": "新建 SOCKS5 监听器",
-        "editTitle": "编辑 SOCKS5 监听器",
+        "createTitle": "新建代理监听器",
+        "editTitle": "编辑代理监听器",
         "id": "监听器 ID",
         "idHelper": "1-32 位小写字母、数字、下划线或连字符，创建后不可修改。",
         "address": "监听地址",
@@ -861,16 +873,23 @@
         "enabled": "启用此监听器",
         "running": "运行中",
         "stopped": "已停止",
-        "deleteConfirm": "确认删除 SOCKS5 监听器“{{id}}”？该入口上的活动连接会被关闭。",
+        "deleteConfirm": "确认删除代理监听器“{{id}}”？该入口上的活动连接会被关闭。",
         "auth": {
           "inherit": "继承网关认证设置",
           "required": "强制认证",
           "disabled": "不认证（仅允许回环地址）"
         },
         "messages": {
-          "created": "SOCKS5 监听器已创建",
-          "updated": "SOCKS5 监听器已更新",
-          "deleted": "SOCKS5 监听器已删除"
+          "created": "代理监听器已创建",
+          "updated": "代理监听器已更新",
+          "deleted": "代理监听器已删除"
+        },
+        "protocol": "入站协议",
+        "protocolHelper": "HTTP 支持普通请求和 HTTPS CONNECT；Mixed 在同一端口兼容 SOCKS5 与 HTTP。",
+        "protocols": {
+          "socks5": "SOCKS5",
+          "http": "HTTP",
+          "mixed": "Mixed（SOCKS5 + HTTP）"
         }
       }
     },
