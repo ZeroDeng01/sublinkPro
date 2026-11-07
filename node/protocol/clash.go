@@ -217,7 +217,8 @@ type Proxy struct {
 	Http_opts       map[string]any `yaml:"http-opts,omitempty"`       // HTTP 传输层选项
 	XHTTP_opts      map[string]any `yaml:"xhttp-opts,omitempty"`
 	ECH_opts        map[string]any `yaml:"ech-opts,omitempty"`
-	ClashExtra      yaml.Node      `yaml:"-"` // 导入时未被模型识别的 Clash 顶层属性
+	Fragment_opts   map[string]any `yaml:"fragment,omitempty"` // TLS ClientHello 分片（对应 Xray finalmask 的 tcp fragment）
+	ClashExtra      yaml.Node      `yaml:"-"`                  // 导入时未被模型识别的 Clash 顶层属性
 }
 
 func sanitizeCertificateFingerprint(fingerprint string) string {
