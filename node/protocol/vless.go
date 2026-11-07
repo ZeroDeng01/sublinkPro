@@ -164,8 +164,8 @@ func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	case "xhttp":
 		finalXHTTPOpts = xhttpOpts
 	}
-	echOpts := buildVLESSECHOpts(vless.Query.Ech)
-	fragmentOpts := buildVLESSFragmentOpts(vless.Query.Fm)
+	echOpts := buildECHOpts(vless.Query.Ech)
+	fragmentOpts := buildFinalMaskFragmentOpts(vless.Query.Fm)
 	return Proxy{Name: vless.Name, Type: "vless", Server: vless.Server, Port: FlexPort(utils.GetPortInt(vless.Port)), Servername: vless.Query.Sni, Uuid: vless.Uuid, Client_fingerprint: vless.Query.Fp, Fingerprint: vless.Query.Fingerprint, Network: vless.Query.Type, Flow: vless.Query.Flow, Encryption: vless.Query.Encryption, Alpn: vless.Query.Alpn, Packet_encoding: vless.Query.PacketEncoding, Ws_opts: finalWsOpts, H2_opts: finalH2Opts, Http_opts: finalHttpOpts, Grpc_opts: finalGrpcOpts, XHTTP_opts: finalXHTTPOpts, ECH_opts: echOpts, Fragment_opts: fragmentOpts, Reality_opts: realityOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Tls: tls, Dialer_proxy: link.DialerProxyName}, nil
 }
 
@@ -453,7 +453,7 @@ func ConvertProxyToVless(proxy Proxy) VLESS {
 		Port:   int(proxy.Port),
 		Query: VLESSQuery{
 			Sni:            proxy.Servername,
-			Ech:            buildVLESSECHQuery(proxy.ECH_opts),
+			Ech:            buildECHQuery(proxy.ECH_opts),
 			Fp:             proxy.Client_fingerprint,
 			Fingerprint:    sanitizeCertificateFingerprint(proxy.Fingerprint),
 			Flow:           proxy.Flow,
@@ -461,7 +461,7 @@ func ConvertProxyToVless(proxy Proxy) VLESS {
 			Alpn:           proxy.Alpn,
 			Type:           proxy.Network,
 			PacketEncoding: proxy.Packet_encoding,
-			Fm:             buildVLESSFragmentQuery(proxy.Fragment_opts),
+			Fm:             buildFinalMaskFragmentQuery(proxy.Fragment_opts),
 		},
 	}
 
@@ -614,7 +614,7 @@ func parseVLESSXHTTPExtra(extra string) map[string]any {
 	return normalizeVLESSXHTTPExtra(parsed)
 }
 
-func buildVLESSECHOpts(ech string) map[string]any {
+func buildECHOpts(ech string) map[string]any {
 	ech = strings.TrimSpace(ech)
 	if ech == "" {
 		return nil
@@ -639,7 +639,7 @@ func buildVLESSECHOpts(ech string) map[string]any {
 	return opts
 }
 
-func buildVLESSECHQuery(echOpts map[string]any) string {
+func buildECHQuery(echOpts map[string]any) string {
 	if len(echOpts) == 0 {
 		return ""
 	}
@@ -894,18 +894,18 @@ func vlessHostAndExtraHeaders(headers map[string]any) (string, map[string]any) {
 	return host, extra
 }
 
-// vlessFragmentPackets 是 mihomo 目前唯一实现的 ClientHello 分片模式。
-const vlessFragmentPackets = "tlshello"
+// finalMaskFragmentPackets 是 mihomo 目前唯一实现的 ClientHello 分片模式。
+const finalMaskFragmentPackets = "tlshello"
 
-// buildVLESSFragmentOpts 把链接里的 Xray finalmask 参数转换成 Clash 的 fragment 选项。
+// buildFinalMaskFragmentOpts 把链接里的 Xray finalmask 参数转换成 Clash 的 fragment 选项。
 // 只有 tcp 分片且模式为 tlshello 时才有对应实现，其余情况整体丢弃，
 // 这样不带 fm 的节点输出的配置和以前完全一致。
-func buildVLESSFragmentOpts(fm string) map[string]any {
-	settings, ok := parseVLESSFinalMaskFragment(fm)
+func buildFinalMaskFragmentOpts(fm string) map[string]any {
+	settings, ok := parseFinalMaskFragment(fm)
 	if !ok {
 		return nil
 	}
-	opts := map[string]any{"enabled": true, "packets": vlessFragmentPackets}
+	opts := map[string]any{"enabled": true, "packets": finalMaskFragmentPackets}
 	if settings.Length != "" {
 		opts["length"] = settings.Length
 	}
@@ -915,18 +915,18 @@ func buildVLESSFragmentOpts(fm string) map[string]any {
 	return opts
 }
 
-// buildVLESSFragmentQuery 是 buildVLESSFragmentOpts 的反向转换，用于重新生成分享链接。
-func buildVLESSFragmentQuery(fragmentOpts map[string]any) string {
+// buildFinalMaskFragmentQuery 是 buildFinalMaskFragmentOpts 的反向转换，用于重新生成分享链接。
+func buildFinalMaskFragmentQuery(fragmentOpts map[string]any) string {
 	if len(fragmentOpts) == 0 {
 		return ""
 	}
 	if enabled, ok := fragmentOpts["enabled"].(bool); ok && !enabled {
 		return ""
 	}
-	if packets, _ := fragmentOpts["packets"].(string); packets != "" && packets != vlessFragmentPackets {
+	if packets, _ := fragmentOpts["packets"].(string); packets != "" && packets != finalMaskFragmentPackets {
 		return ""
 	}
-	settings := map[string]any{"packets": vlessFragmentPackets}
+	settings := map[string]any{"packets": finalMaskFragmentPackets}
 	for _, key := range []string{"length", "delay"} {
 		if value, ok := fragmentOpts[key]; ok && value != nil {
 			settings[key] = fmt.Sprint(value)
@@ -941,36 +941,36 @@ func buildVLESSFragmentQuery(fragmentOpts map[string]any) string {
 	return string(encoded)
 }
 
-// vlessFinalMaskFragmentSettings 保存 finalmask 中 tcp fragment 的原始设置。
-type vlessFinalMaskFragmentSettings struct {
+// finalMaskFragmentSettings 保存 finalmask 中 tcp fragment 的原始设置。
+type finalMaskFragmentSettings struct {
 	Delay   string `json:"delay"`
 	Length  string `json:"length"`
 	Packets string `json:"packets"`
 }
 
-// parseVLESSFinalMaskFragment 取出 fm 里 tcp 分片的设置，解析失败或模式不支持时返回 false。
-func parseVLESSFinalMaskFragment(fm string) (vlessFinalMaskFragmentSettings, bool) {
+// parseFinalMaskFragment 取出 fm 里 tcp 分片的设置，解析失败或模式不支持时返回 false。
+func parseFinalMaskFragment(fm string) (finalMaskFragmentSettings, bool) {
 	fm = strings.TrimSpace(fm)
 	if fm == "" {
-		return vlessFinalMaskFragmentSettings{}, false
+		return finalMaskFragmentSettings{}, false
 	}
 	var finalMask struct {
 		TCP []struct {
-			Type     string                         `json:"type"`
-			Settings vlessFinalMaskFragmentSettings `json:"settings"`
+			Type     string                    `json:"type"`
+			Settings finalMaskFragmentSettings `json:"settings"`
 		} `json:"tcp"`
 	}
 	if err := json.Unmarshal([]byte(fm), &finalMask); err != nil {
-		return vlessFinalMaskFragmentSettings{}, false
+		return finalMaskFragmentSettings{}, false
 	}
 	for _, entry := range finalMask.TCP {
 		if entry.Type != "fragment" {
 			continue
 		}
-		if packets := strings.ToLower(entry.Settings.Packets); packets != "" && packets != vlessFragmentPackets {
-			return vlessFinalMaskFragmentSettings{}, false
+		if packets := strings.ToLower(entry.Settings.Packets); packets != "" && packets != finalMaskFragmentPackets {
+			return finalMaskFragmentSettings{}, false
 		}
 		return entry.Settings, true
 	}
-	return vlessFinalMaskFragmentSettings{}, false
+	return finalMaskFragmentSettings{}, false
 }

@@ -36,6 +36,7 @@ func init() {
 		FieldMeta{Name: "Query.Flow", Label: "Flow", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Query.Security", Label: "安全类型", Type: "string", Group: "tls", Options: []string{"tls", "reality"}, Advanced: true},
 		FieldMeta{Name: "Query.Sni", Label: "SNI", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Ech", Label: "ECH", Type: "string", Group: "tls", Advanced: true, Placeholder: "example.com+https://1.1.1.1/dns-query"},
 		FieldMeta{Name: "Query.Peer", Label: "Peer", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Alpn", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
 		FieldMeta{Name: "Query.Fp", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
@@ -43,6 +44,7 @@ func init() {
 		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Fm", Label: "FinalMask", Type: "string", Group: "tls", Advanced: true},
 	)
 	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildTrojanProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "trojan")
@@ -81,6 +83,9 @@ type TrojanQuery struct {
 	MinStreams          int      `json:"minStreams,omitempty"`
 	MaxStreams          int      `json:"maxStreams,omitempty"`
 	Flow                string   `json:"flow,omitempty"`
+	// ECH 与 finalmask 分片：与 VLESS 同源的 TLS 扩展，Mihomo 的 trojan 出站同样支持
+	Ech string `json:"ech,omitempty"`
+	Fm  string `json:"fm,omitempty"`
 	// Reality 参数
 	Pbk string `json:"pbk,omitempty"` // Reality public-key
 	Sid string `json:"sid,omitempty"` // Reality short-id
@@ -116,6 +121,10 @@ func EncodeTrojanURL(t Trojan) string {
 	q.Set("security", t.Query.Security)
 	q.Set("fp", t.Query.Fp)
 	q.Set("pcs", t.Query.Fingerprint)
+	// ech 与 fm 是 xray 链接里的 TLS 扩展，原样保留，避免往返后退化成普通 TLS
+	if t.Query.Ech != "" {
+		q.Set("ech", t.Query.Ech)
+	}
 	// alpn 参数支持
 	if len(t.Query.Alpn) > 0 {
 		q.Set("alpn", strings.Join(t.Query.Alpn, ","))
@@ -176,6 +185,9 @@ func EncodeTrojanURL(t Trojan) string {
 	// Reality 参数支持
 	q.Set("pbk", t.Query.Pbk)
 	q.Set("sid", t.Query.Sid)
+	if t.Query.Fm != "" {
+		q.Set("fm", t.Query.Fm)
+	}
 	// 检查query是否有空值，有的话删除
 	for k, v := range q {
 		if v[0] == "" {
@@ -196,7 +208,7 @@ func EncodeTrojanURL(t Trojan) string {
 }
 
 // DecodeTrojanURL 解析 Trojan 链接，并按当前约定补默认端口和默认备注字段。
-// 当前实现会提取后续导出链路已使用的查询参数，但不会还原全部扩展 TLS/Reality 字段。
+// 当前实现会提取后续导出链路已使用的查询参数，包括 Reality、ECH 与 finalmask 分片。
 func DecodeTrojanURL(s string) (Trojan, error) {
 	/*
 		trojan://password@hostname:port?peer=example.com&allowInsecure=0&sni=example.com
@@ -250,6 +262,10 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 	minStreams := trojanURLInt(u.Query().Get("minStreams"))
 	maxStreams := trojanURLInt(u.Query().Get("maxStreams"))
 	flow := u.Query().Get("flow")
+	pbk := u.Query().Get("pbk")
+	sid := u.Query().Get("sid")
+	ech := u.Query().Get("ech")
+	fm := u.Query().Get("fm")
 	name := u.Fragment
 	// 如果没有设置name,则使用hostname:port
 	if name == "" {
@@ -306,6 +322,10 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 			MinStreams:          minStreams,
 			MaxStreams:          maxStreams,
 			Flow:                flow,
+			Ech:                 ech,
+			Fm:                  fm,
+			Pbk:                 pbk,
+			Sid:                 sid,
 		},
 		Name: name,
 		Type: "trojan",
@@ -323,6 +343,8 @@ func ConvertProxyToTrojan(proxy Proxy) Trojan {
 		Flow:        proxy.Flow,
 		Alpn:        proxy.Alpn,
 		Peer:        proxy.Peer,
+		Ech:         buildECHQuery(proxy.ECH_opts),
+		Fm:          buildFinalMaskFragmentQuery(proxy.Fragment_opts),
 	}
 	trojan := Trojan{
 		Password: proxy.Password,
@@ -351,6 +373,7 @@ func ConvertProxyToTrojan(proxy Proxy) Trojan {
 
 	// 处理 Reality 参数
 	if len(proxy.Reality_opts) > 0 {
+		trojan.Query.Security = "reality"
 		if pbk, ok := proxy.Reality_opts["public-key"].(string); ok {
 			trojan.Query.Pbk = pbk
 		}
@@ -378,8 +401,13 @@ func buildTrojanProxy(link Urls, config OutputConfig) (Proxy, error) {
 	case "grpc":
 		grpcOpts = buildTrojanGRPCOpts(trojan.Query)
 	}
+	// pbk/sid 与 vless 一样转成 reality-opts；缺失时保持为空，不影响普通 trojan 节点
+	realityOpts := map[string]any{"public-key": trojan.Query.Pbk, "short-id": trojan.Query.Sid}
+	DeleteOpts(realityOpts)
 	skipCert := config.Cert || trojan.Query.AllowInsecure == 1
-	return Proxy{Name: trojan.Name, Type: "trojan", Server: trojan.Hostname, Port: FlexPort(utils.GetPortInt(trojan.Port)), Password: trojan.Password, Client_fingerprint: trojan.Query.Fp, Fingerprint: trojan.Query.Fingerprint, Sni: trojan.Query.Sni, Network: trojanClashNetwork(trojan.Query.Type), Flow: trojan.Query.Flow, Alpn: trojan.Query.Alpn, Ws_opts: wsOpts, Grpc_opts: grpcOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
+	echOpts := buildECHOpts(trojan.Query.Ech)
+	fragmentOpts := buildFinalMaskFragmentOpts(trojan.Query.Fm)
+	return Proxy{Name: trojan.Name, Type: "trojan", Server: trojan.Hostname, Port: FlexPort(utils.GetPortInt(trojan.Port)), Password: trojan.Password, Client_fingerprint: trojan.Query.Fp, Fingerprint: trojan.Query.Fingerprint, Sni: trojan.Query.Sni, Network: trojanClashNetwork(trojan.Query.Type), Flow: trojan.Query.Flow, Alpn: trojan.Query.Alpn, Ws_opts: wsOpts, Grpc_opts: grpcOpts, ECH_opts: echOpts, Fragment_opts: fragmentOpts, Reality_opts: realityOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
 }
 
 func buildTrojanWSOpts(query TrojanQuery) map[string]any {

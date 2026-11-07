@@ -99,10 +99,10 @@ func TestVLESSFragmentOtherModesAreDropped(t *testing.T) {
 }
 
 func TestClashFragmentComesBackAsFm(t *testing.T) {
-	query := buildVLESSFragmentQuery(map[string]any{
+	query := buildFinalMaskFragmentQuery(map[string]any{
 		"enabled": true, "packets": "tlshello", "length": "10-20", "delay": "0",
 	})
-	settings, ok := parseVLESSFinalMaskFragment(query)
+	settings, ok := parseFinalMaskFragment(query)
 	if !ok {
 		t.Fatalf("not parseable: %s", query)
 	}
