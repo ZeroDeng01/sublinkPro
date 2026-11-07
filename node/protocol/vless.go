@@ -87,6 +87,8 @@ type VLESSQuery struct {
 	HttpUpgradeFastOpen int    `json:"httpUpgradeFastOpen,omitempty"` // v2ray-http-upgrade-fast-open (0/1)
 	// 新增：http传输层参数
 	Method string `json:"method,omitempty"` // HTTP请求方法
+	// 新增：Xray finalmask 参数，原样保留 fm，仅 tcp 的 tlshello 分片会输出到 Clash 配置
+	Fm string `json:"fm,omitempty"`
 }
 
 // buildVLESSProxy 将 VLESS 链接转换为 Clash Proxy，并根据传输层选择唯一一组传输配置输出。
@@ -163,7 +165,8 @@ func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 		finalXHTTPOpts = xhttpOpts
 	}
 	echOpts := buildVLESSECHOpts(vless.Query.Ech)
-	return Proxy{Name: vless.Name, Type: "vless", Server: vless.Server, Port: FlexPort(utils.GetPortInt(vless.Port)), Servername: vless.Query.Sni, Uuid: vless.Uuid, Client_fingerprint: vless.Query.Fp, Fingerprint: vless.Query.Fingerprint, Network: vless.Query.Type, Flow: vless.Query.Flow, Encryption: vless.Query.Encryption, Alpn: vless.Query.Alpn, Packet_encoding: vless.Query.PacketEncoding, Ws_opts: finalWsOpts, H2_opts: finalH2Opts, Http_opts: finalHttpOpts, Grpc_opts: finalGrpcOpts, XHTTP_opts: finalXHTTPOpts, ECH_opts: echOpts, Reality_opts: realityOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Tls: tls, Dialer_proxy: link.DialerProxyName}, nil
+	fragmentOpts := buildVLESSFragmentOpts(vless.Query.Fm)
+	return Proxy{Name: vless.Name, Type: "vless", Server: vless.Server, Port: FlexPort(utils.GetPortInt(vless.Port)), Servername: vless.Query.Sni, Uuid: vless.Uuid, Client_fingerprint: vless.Query.Fp, Fingerprint: vless.Query.Fingerprint, Network: vless.Query.Type, Flow: vless.Query.Flow, Encryption: vless.Query.Encryption, Alpn: vless.Query.Alpn, Packet_encoding: vless.Query.PacketEncoding, Ws_opts: finalWsOpts, H2_opts: finalH2Opts, Http_opts: finalHttpOpts, Grpc_opts: finalGrpcOpts, XHTTP_opts: finalXHTTPOpts, ECH_opts: echOpts, Fragment_opts: fragmentOpts, Reality_opts: realityOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Tls: tls, Dialer_proxy: link.DialerProxyName}, nil
 }
 
 // EncodeVLESSURL 将 VLESS 结构编码为 v2ray 常见的明文 URL 形式。
@@ -202,6 +205,11 @@ func EncodeVLESSURL(v VLESS) string {
 	q.Set("headerType", v.Query.HeaderType)
 	if v.Query.PacketEncoding != "" {
 		q.Set("packetEncoding", v.Query.PacketEncoding)
+	}
+
+	// finalmask 分片参数：原样保留 fm，避免链接往返转换后退化为普通 TLS
+	if v.Query.Fm != "" {
+		q.Set("fm", v.Query.Fm)
 	}
 
 	// 传输层通用参数
@@ -321,6 +329,7 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 	serviceName := u.Query().Get("serviceName")
 	mode := u.Query().Get("mode")
 	extra := u.Query().Get("extra")
+	fm := u.Query().Get("fm")
 
 	// 解析 alpn 参数（逗号分隔）
 	alpns := u.Query().Get("alpn")
@@ -389,6 +398,7 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 		fmt.Println("serviceName:", serviceName)
 		fmt.Println("mode:", mode)
 		fmt.Println("packetEncoding:", packetEncoding)
+		fmt.Println("fm:", fm)
 		fmt.Println("maxEarlyData:", maxEarlyData)
 		fmt.Println("earlyDataHeader:", earlyDataHeader)
 		fmt.Println("httpUpgrade:", httpUpgrade)
@@ -428,6 +438,7 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 			HttpUpgrade:           httpUpgrade,
 			HttpUpgradeFastOpen:   httpUpgradeFastOpen,
 			Method:                method,
+			Fm:                    fm,
 		},
 	}, nil
 }
@@ -450,6 +461,7 @@ func ConvertProxyToVless(proxy Proxy) VLESS {
 			Alpn:           proxy.Alpn,
 			Type:           proxy.Network,
 			PacketEncoding: proxy.Packet_encoding,
+			Fm:             buildVLESSFragmentQuery(proxy.Fragment_opts),
 		},
 	}
 
@@ -880,4 +892,85 @@ func vlessHostAndExtraHeaders(headers map[string]any) (string, map[string]any) {
 		extra[key] = value
 	}
 	return host, extra
+}
+
+// vlessFragmentPackets 是 mihomo 目前唯一实现的 ClientHello 分片模式。
+const vlessFragmentPackets = "tlshello"
+
+// buildVLESSFragmentOpts 把链接里的 Xray finalmask 参数转换成 Clash 的 fragment 选项。
+// 只有 tcp 分片且模式为 tlshello 时才有对应实现，其余情况整体丢弃，
+// 这样不带 fm 的节点输出的配置和以前完全一致。
+func buildVLESSFragmentOpts(fm string) map[string]any {
+	settings, ok := parseVLESSFinalMaskFragment(fm)
+	if !ok {
+		return nil
+	}
+	opts := map[string]any{"enabled": true, "packets": vlessFragmentPackets}
+	if settings.Length != "" {
+		opts["length"] = settings.Length
+	}
+	if settings.Delay != "" {
+		opts["delay"] = settings.Delay
+	}
+	return opts
+}
+
+// buildVLESSFragmentQuery 是 buildVLESSFragmentOpts 的反向转换，用于重新生成分享链接。
+func buildVLESSFragmentQuery(fragmentOpts map[string]any) string {
+	if len(fragmentOpts) == 0 {
+		return ""
+	}
+	if enabled, ok := fragmentOpts["enabled"].(bool); ok && !enabled {
+		return ""
+	}
+	if packets, _ := fragmentOpts["packets"].(string); packets != "" && packets != vlessFragmentPackets {
+		return ""
+	}
+	settings := map[string]any{"packets": vlessFragmentPackets}
+	for _, key := range []string{"length", "delay"} {
+		if value, ok := fragmentOpts[key]; ok && value != nil {
+			settings[key] = fmt.Sprint(value)
+		}
+	}
+	encoded, err := json.Marshal(map[string]any{
+		"tcp": []any{map[string]any{"type": "fragment", "settings": settings}},
+	})
+	if err != nil {
+		return ""
+	}
+	return string(encoded)
+}
+
+// vlessFinalMaskFragmentSettings 保存 finalmask 中 tcp fragment 的原始设置。
+type vlessFinalMaskFragmentSettings struct {
+	Delay   string `json:"delay"`
+	Length  string `json:"length"`
+	Packets string `json:"packets"`
+}
+
+// parseVLESSFinalMaskFragment 取出 fm 里 tcp 分片的设置，解析失败或模式不支持时返回 false。
+func parseVLESSFinalMaskFragment(fm string) (vlessFinalMaskFragmentSettings, bool) {
+	fm = strings.TrimSpace(fm)
+	if fm == "" {
+		return vlessFinalMaskFragmentSettings{}, false
+	}
+	var finalMask struct {
+		TCP []struct {
+			Type     string                         `json:"type"`
+			Settings vlessFinalMaskFragmentSettings `json:"settings"`
+		} `json:"tcp"`
+	}
+	if err := json.Unmarshal([]byte(fm), &finalMask); err != nil {
+		return vlessFinalMaskFragmentSettings{}, false
+	}
+	for _, entry := range finalMask.TCP {
+		if entry.Type != "fragment" {
+			continue
+		}
+		if packets := strings.ToLower(entry.Settings.Packets); packets != "" && packets != vlessFragmentPackets {
+			return vlessFinalMaskFragmentSettings{}, false
+		}
+		return entry.Settings, true
+	}
+	return vlessFinalMaskFragmentSettings{}, false
 }
