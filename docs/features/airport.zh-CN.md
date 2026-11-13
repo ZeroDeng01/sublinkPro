@@ -17,6 +17,12 @@ SublinkPro 提供了完善的机场订阅管理功能，不仅能将订阅转换
 | **⚡ 更新后检测** | 机场可绑定节点检测策略，订阅更新成功后立即针对该机场节点执行检测 |
 | **🤖 Bot 集成管理** | 通过 Telegram Bot 可随时查询各订阅的剩余流量、到期时间，并支持远程触发更新任务 |
 
+### Clash / mihomo 布尔值兼容
+
+已识别的节点布尔字段（`udp`、`tls`、`skip-cert-verify`、`tfo`、`mptcp`、`disable-sni`、`remote-dns-resolve`）及策略组字段（`include-all`、`include-all-providers`）支持原生 YAML 布尔值，也兼容带引号的小写字符串 `"true"` / `"false"`。此规则适用于内联节点和 HTTP provider 导入，包括 YAML 别名及合并键。生成订阅时仍建议使用原生布尔值。
+
+节点名称、密码和未知扩展值保持原有字符串类型。其他无效的布尔值仍会报告解析错误，不会被静默转换。
+
 ### Clash / mihomo `proxy-providers` 兼容说明
 
 - 机场订阅导入支持 Clash / mihomo YAML 中的 `proxy-providers`，当顶层没有 `proxies` 但 provider 中包含节点时，也会展开并导入为普通节点。
