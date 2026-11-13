@@ -494,6 +494,7 @@ func containsIgnoreCase(s, substr string) bool {
 
 // AirportNodeStats 机场节点测速统计
 type AirportNodeStats struct {
+	HasTestedNodes    bool    `json:"hasTestedNodes"`    // 当前节点中是否存在延迟或速度检测记录（含失败）
 	DelayPassCount    int     `json:"delayPassCount"`    // 延迟测试通过数量
 	SpeedPassCount    int     `json:"speedPassCount"`    // 速度测试通过数量
 	LowestDelayNode   string  `json:"lowestDelayNode"`   // 延迟最低节点名称
@@ -517,6 +518,13 @@ func GetAirportNodeStats(airportID int) AirportNodeStats {
 
 	for i := range nodes {
 		node := &nodes[i]
+		// A failed check is still a check. Do not infer test history from pass counts.
+		// Terminal statuses also preserve evidence from records without timestamps.
+		if node.LatencyCheckAt != "" || node.SpeedCheckAt != "" ||
+			node.DelayStatus == "success" || node.DelayStatus == "timeout" || node.DelayStatus == "error" ||
+			node.SpeedStatus == "success" || node.SpeedStatus == "timeout" || node.SpeedStatus == "error" {
+			stats.HasTestedNodes = true
+		}
 
 		// 延迟测试通过：DelayStatus 为 success 且 DelayTime > 0
 		if node.DelayStatus == "success" && node.DelayTime > 0 {

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { getAirportTestState } from '../utils';
 import { useTranslation } from 'react-i18next';
 
 // material-ui
@@ -64,14 +65,14 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
   });
 
   // 检查是否有测试数据
-  const hasData = nodeStats && (nodeStats.delayPassCount > 0 || nodeStats.speedPassCount > 0);
+  const testState = getAirportTestState(nodeStats, nodeCount);
 
   // 紧凑模式（用于表格 Tooltip 触发区域）
   if (compact) {
-    if (!hasData) {
+    if (testState !== 'tested') {
       return (
         <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-          {t('airports.nodeStats.untested')}
+          {t(testState === 'empty' ? 'airports.nodeStats.noNodes' : 'airports.nodeStats.untested')}
         </Typography>
       );
     }
@@ -102,7 +103,7 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
   }
 
   // 完整展示模式（用于 Tooltip 内容和移动端卡片）
-  if (!hasData) {
+  if (testState !== 'tested') {
     return (
       <Box sx={shellSx}>
         <Box
@@ -115,11 +116,13 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
         >
           <HelpOutlineIcon sx={{ fontSize: 32, color: tertiaryText, mb: 1 }} />
           <Typography variant="body2" sx={{ color: secondaryText, fontWeight: 500 }}>
-            {t('airports.nodeStats.noDataTitle')}
+            {t(testState === 'empty' ? 'airports.nodeStats.noNodes' : 'airports.nodeStats.noDataTitle')}
           </Typography>
-          <Typography variant="caption" sx={{ color: tertiaryText }}>
-            {t('airports.nodeStats.noDataDescription')}
-          </Typography>
+          {testState !== 'empty' && (
+            <Typography variant="caption" sx={{ color: tertiaryText }}>
+              {t('airports.nodeStats.noDataDescription')}
+            </Typography>
+          )}
         </Box>
       </Box>
     );
@@ -234,6 +237,7 @@ export default function AirportNodeStatsCard({ nodeStats, nodeCount, compact = f
 
 AirportNodeStatsCard.propTypes = {
   nodeStats: PropTypes.shape({
+    hasTestedNodes: PropTypes.bool,
     delayPassCount: PropTypes.number,
     speedPassCount: PropTypes.number,
     lowestDelayNode: PropTypes.string,
