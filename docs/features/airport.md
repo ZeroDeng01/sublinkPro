@@ -23,6 +23,12 @@ Recognized node boolean fields (`udp`, `tls`, `skip-cert-verify`, `tfo`, `mptcp`
 
 Names, passwords and unknown extension values retain their original string types. Other invalid boolean values still produce a parsing error rather than being silently converted.
 
+### Node test summary
+
+The two numbers in the test column are **latency pass count / download speed pass count**, not success/failure counts. A current node's latency or speed check timestamp, or a terminal test status (`success`, `timeout`, `error`), is evidence of a check even when both pass counts are zero. Such airports show **0 / 0**; only airports without check records show **Not tested**. Airports with zero nodes show **No nodes**. A zero speed pass count does not by itself mean download tests ran: latency-only checks also leave this count at zero.
+
+These statistics summarize the airport's current nodes, not a completed run or permanent availability. They do not indicate that a task is running or that every node has been checked. Subscription updates retain results for retained nodes; newly imported/replaced nodes have no check history, and deleted nodes no longer contribute.
+
 ### Clash / mihomo `proxy-providers` compatibility
 
 - Airport subscription import supports `proxy-providers` in Clash / mihomo YAML. If top level `proxies` is missing but providers contain nodes, those provider nodes are expanded and imported as normal nodes.

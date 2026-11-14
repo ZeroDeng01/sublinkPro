@@ -533,7 +533,7 @@ There is no supported fallback that accepts AI-generated full-template `candidat
 
 Base: `/api/v1/airports` (all write bodies are JSON)
 
-- **GET** `/airports` (query: `?page=1&pageSize=20`) — list
+- **GET** `/airports` (query: `?page=1&pageSize=20`) — list. Each item includes `nodeStats.hasTestedNodes`: whether any current node has a latency/speed check timestamp or terminal status (`success`, `timeout`, `error`), including failed checks. `delayPassCount` / `speedPassCount` remain latency/download pass counts; `0 / 0` does not imply untested. This is current-node evidence, not task progress or run completion; removed nodes no longer contribute.
 - **GET** `/airports/{id}` — one
 - **POST** `/airports` — **JSON** create. Key fields (see `dto.AirportRequest`): `name`(required), `url`(required, valid URL), `cronExpr`(required), `enabled`, `group`, `downloadWithProxy`, `proxyLink`, `userAgent`, `fetchUsageInfo`, `skipTLSVerify`, plus filter/rename/dedup fields (`nodeNameWhitelist`, `nodeNameBlacklist`, `protocolWhitelist`, `protocolBlacklist`, `nodeNamePreprocess`, `deduplicationRule`, `nodeNameUniquify`, ...), and country-fill fields (`autoFillCountry`, `backfillExistingCountry`).
 - **PUT** `/airports/{id}` — **JSON** update (same schema)
