@@ -17,6 +17,12 @@ SublinkPro provides complete airport subscription management. It can convert sub
 | **⚡ Post update check** | Airports can bind node check profiles. After a subscription update succeeds, the airport's nodes can be checked immediately |
 | **🤖 Bot integration** | Telegram Bot can query remaining traffic, expiration time, and trigger update tasks remotely |
 
+### Node test summary
+
+The two numbers in the test column are **latency pass count / download speed pass count**, not success/failure counts. A current node's latency or speed check timestamp, or a terminal test status (`success`, `timeout`, `error`), is evidence of a check even when both pass counts are zero. Such airports show **0 / 0**; only airports without check records show **Not tested**. Airports with zero nodes show **No nodes**. A zero speed pass count does not by itself mean download tests ran: latency-only checks also leave this count at zero.
+
+These statistics summarize the airport's current nodes, not a completed run or permanent availability. They do not indicate that a task is running or that every node has been checked. Subscription updates retain results for retained nodes; newly imported/replaced nodes have no check history, and deleted nodes no longer contribute.
+
 ### Clash / mihomo `proxy-providers` compatibility
 
 - Airport subscription import supports `proxy-providers` in Clash / mihomo YAML. If top level `proxies` is missing but providers contain nodes, those provider nodes are expanded and imported as normal nodes.

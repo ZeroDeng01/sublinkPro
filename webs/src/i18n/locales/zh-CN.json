@@ -460,6 +460,7 @@
       }
     },
     "nodeStats": {
+      "noNodes": "无节点",
       "untested": "暂未测试",
       "delayPassed": "延迟通过",
       "speedPassed": "速度通过",

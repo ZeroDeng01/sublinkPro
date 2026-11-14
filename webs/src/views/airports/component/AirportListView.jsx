@@ -34,7 +34,7 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 // utils
-import { formatDateTime, formatBytes, formatExpireTime, getUsageColor } from '../utils';
+import { formatDateTime, formatBytes, formatExpireTime, getUsageColor, getAirportTestState } from '../utils';
 import { withAlpha } from 'utils/colorUtils';
 
 // local components
@@ -256,12 +256,12 @@ export default function AirportListView({
    * 渲染测速概览（紧凑版）
    */
   const renderSpeedCompact = (nodeStats, nodeCount) => {
-    const hasData = nodeStats && (nodeStats.delayPassCount > 0 || nodeStats.speedPassCount > 0);
+    const testState = getAirportTestState(nodeStats, nodeCount);
 
-    if (!hasData) {
+    if (testState !== 'tested') {
       return (
         <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-          {t('airports.list.speed.untested')}
+          {t(testState === 'empty' ? 'airports.nodeStats.noNodes' : 'airports.list.speed.untested')}
         </Typography>
       );
     }
