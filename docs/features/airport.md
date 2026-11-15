@@ -17,6 +17,12 @@ SublinkPro provides complete airport subscription management. It can convert sub
 | **⚡ Post update check** | Airports can bind node check profiles. After a subscription update succeeds, the airport's nodes can be checked immediately |
 | **🤖 Bot integration** | Telegram Bot can query remaining traffic, expiration time, and trigger update tasks remotely |
 
+### Clash / mihomo boolean compatibility
+
+Recognized node boolean fields (`udp`, `tls`, `skip-cert-verify`, `tfo`, `mptcp`, `disable-sni`, `remote-dns-resolve`) and group fields (`include-all`, `include-all-providers`) accept native YAML booleans or the quoted lowercase strings `"true"` / `"false"`. This applies to inline nodes and HTTP provider imports, including YAML aliases and merges. Prefer native booleans when generating subscriptions.
+
+Names, passwords and unknown extension values retain their original string types. Other invalid boolean values still produce a parsing error rather than being silently converted.
+
 ### Node test summary
 
 The two numbers in the test column are **latency pass count / download speed pass count**, not success/failure counts. A current node's latency or speed check timestamp, or a terminal test status (`success`, `timeout`, `error`), is evidence of a check even when both pass counts are zero. Such airports show **0 / 0**; only airports without check records show **Not tested**. Airports with zero nodes show **No nodes**. A zero speed pass count does not by itself mean download tests ran: latency-only checks also leave this count at zero.
