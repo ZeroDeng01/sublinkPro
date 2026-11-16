@@ -148,3 +148,11 @@
 ## VLESS REALITY 兼容说明
 
 导入 Clash / mihomo YAML 时，`reality-opts.support-x25519mlkem768` 会经由内部存储的 VLESS URL 保留到订阅输出、延迟检测及下载测速使用的 Proxy。URL 参数为 `support-x25519mlkem768=true` 或 `false`（输入也接受 `1` / `0`）。显式 `false` 与未指定保持区分；空值或无效 URL 值视为未指定。普通 TLS 节点不会因该参数而新增 REALITY 配置。在节点字段编辑器中可选择 `true`、`false` 或空选项，空选项表示恢复上游默认行为。
+
+## Surge 的 VLESS 支持
+
+`/c?client=surge` 可为 Surge iOS 6.0.0+ / Mac 6.12.0+ 导出 VLESS。支持 TCP/RAW、WebSocket、HTTPUpgrade、gRPC（TLS 或 REALITY）及 XHTTP/SplitHTTP。TLS、REALITY 密钥、Vision、VLESS Encryption、SNI、ALPN、证书指纹、传输请求头和受支持的 XHTTP extra/XMUX 参数会映射为 Surge 原生配置。订阅的 Host 替换及跳过证书校验设置同样生效。Surge 自动使用 XUDP。
+
+不支持的传输、ECH、TCP 请求头混淆、不兼容的 Vision/REALITY 组合及含 XHTTP `downloadSettings` 的节点会被跳过，也不会加入代理组。uTLS `fp` 和 REALITY `support-x25519mlkem768` 无对应的 Surge 参数，因此不输出；Surge 自行处理 ClientHello 和 ML-KEM 回退。
+
+参见 [Surge 官方 VLESS 文档](https://manual.nssurge.com/policies/vless.html)。

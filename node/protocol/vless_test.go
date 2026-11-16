@@ -671,3 +671,72 @@ func TestVLESSRealityMLKEMRawEditing(t *testing.T) {
 		t.Fatal("expected invalid boolean error")
 	}
 }
+
+func TestVLESSSurgeTransports(t *testing.T) {
+	for _, tc := range []struct {
+		name, query string
+		want        []string
+	}{
+		{"raw", "type=raw", []string{"vless, 1.2.3.4, 443", "username=550e8400-e29b-41d4-a716-446655440000"}},
+		{"tls", "security=tls&allowInsecure=1&alpn=h2,http/1.1&sni=sni.example.com", []string{"tls=true", "skip-cert-verify=true", `alpn="h2,http/1.1"`, "sni=sni.example.com"}},
+		{"reality", "security=reality&pbk=public-key&sid=0123&flow=xtls-rprx-vision", []string{"reality-public-key=public-key", "reality-short-id=0123", "flow=xtls-rprx-vision"}},
+		{"ws", "type=ws&security=tls&path=/ws&host=cdn.example.com&headers=" + url.QueryEscape(`{"User-Agent":"test"}`), []string{"ws=true", "ws-path=/ws", "ws-headers=Host:cdn.example.com|User-Agent:test"}},
+		{"upgrade", "type=httpupgrade&path=/up", []string{"ws=true", "ws-http-upgrade=true", "ws-path=/up"}},
+		{"upgrade flag", "type=ws&httpUpgrade=1", []string{"ws-http-upgrade=true"}},
+		{"grpc", "type=grpc&security=tls&serviceName=svc&mode=multi&authority=grpc.example.com", []string{"grpc=true", "grpc-service-name=svc", "grpc-mode=multi", "grpc-authority=grpc.example.com"}},
+		{"xhttp", "type=xhttp&security=reality&pbk=key&path=/x&host=cdn.example.com&mode=stream-one&extra=" + url.QueryEscape(`{"xPaddingBytes":"10-20","noGRPCHeader":false,"xmux":{"maxConcurrency":8},"headers":{"X-Token":"abc"}}`), []string{"xhttp=true", "xhttp-path=/x", "xhttp-host=cdn.example.com", "xhttp-mode=stream-one", "xhttp-padding-bytes=10-20", "xhttp-no-grpc-header=false", "xhttp-xmux-max-concurrency=8", "xhttp-headers=X-Token:abc"}},
+		{"encryption", "type=splithttp&encryption=mlkem768x25519plus.native.0rtt.key&flow=xtls-rprx-vision", []string{"xhttp=true", "encryption=mlkem768x25519plus.native.0rtt.key", "flow=xtls-rprx-vision"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			link := "vless://550e8400-e29b-41d4-a716-446655440000@example.com:443?" + tc.query + "#test"
+			p, ok := detectProtocol(link).(SurgeCapable)
+			if !ok {
+				t.Fatal("VLESS must advertise Surge capability")
+			}
+			line, name, err := p.ToSurgeLine(link, OutputConfig{ReplaceServerWithHost: true, HostMap: map[string]string{"example.com": "1.2.3.4"}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if name != "test" {
+				t.Fatalf("group name = %q", name)
+			}
+			for _, want := range tc.want {
+				if !strings.Contains(line, want) {
+					t.Errorf("missing %q in %s", want, line)
+				}
+			}
+			if strings.Contains(line, "udp-relay=") || strings.Contains(line, "vmess-aead") {
+				t.Fatalf("unexpected option: %s", line)
+			}
+		})
+	}
+}
+
+func TestVLESSSurgeRejectsUnsupportedSettings(t *testing.T) {
+	for _, query := range []string{
+		"type=quic", "type=h2", "type=http", "security=xtls", "ech=config",
+		"security=reality", "type=ws&security=reality&pbk=key", "type=grpc",
+		"type=grpc&security=tls&flow=xtls-rprx-vision", "flow=unknown", "flow=xtls-rprx-vision",
+		"type=ws&security=tls&flow=xtls-rprx-vision", "headerType=http",
+		"type=xhttp&mode=unknown", "type=xhttp&extra=invalid", "type=ws&headers=invalid",
+		"type=xhttp&extra=" + url.QueryEscape(`{"downloadSettings":{"address":"other.example.com"}}`),
+		"security=tls&sni=example.com%0Areject=direct",
+	} {
+		t.Run(query, func(t *testing.T) {
+			line, name, err := buildVLESSSurgeLine("vless://550e8400-e29b-41d4-a716-446655440000@example.com:443?"+query, OutputConfig{})
+			if err == nil || line != "" || name != "" {
+				t.Fatalf("expected rejection, got %q, %q, %v", line, name, err)
+			}
+		})
+	}
+}
+
+func TestVLESSSurgeCertificateOverride(t *testing.T) {
+	line, _, err := buildVLESSSurgeLine("vless://550e8400-e29b-41d4-a716-446655440000@[2001:db8::1]:443?security=tls", OutputConfig{Cert: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(line, "skip-cert-verify=true") || !strings.Contains(line, "2001:db8::1, 443") {
+		t.Fatal(line)
+	}
+}

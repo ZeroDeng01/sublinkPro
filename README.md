@@ -192,7 +192,7 @@ in credentials; URI components are decoded once, including when links are re-exp
 |:---|:---|
 | **v2ray** | base64 common format, without Clash/mihomo specific protocols such as Mieru, Snell, and OpenVPN |
 | **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell, OpenVPN |
-| **surge** | ss, trojan, vmess, hy2, tuic, AnyTLS, Snell |
+| **surge** | ss, trojan, vmess, VLESS, hy2, tuic, AnyTLS, Snell |
 
 > [!NOTE]
 > Mieru currently supports Clash/mihomo YAML import and export only. Official Mieru has `mieru://` and `mierus://` share links, but does not define a general URL schema suitable for field by field editing. For raw editing and Clash/mihomo import write back, SublinkPro uses an internal editable form: `mieru://username:password@server:port?...#name`, with port ranges written as `portRange=2090-2099`. v2ray and Surge don't support Mieru in SublinkPro. Subscription output skips that protocol instead of converting it to a downgraded form.

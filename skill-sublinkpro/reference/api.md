@@ -309,6 +309,7 @@ Base: `/api/v1/shares`
 ### Consume Subscription (the actual output a client fetches)
 **GET** `/c/` (query: `?token=<shareToken>&client=<idx>`)
 - Use `--raw` (this is NOT a JSON envelope — it's the rendered clash/v2ray/surge output).
+- `client=surge` includes VLESS (Surge iOS 6.0.0+ / Mac 6.12.0+): TCP/RAW, WS/HTTPUpgrade, TLS/REALITY, Vision, gRPC and XHTTP. Unsupported combinations, ECH and XHTTP `downloadSettings` are skipped. See [subscription compatibility](../../docs/features/subscription-share.md#vless-in-surge).
 - `token` is the **share token** (from `/shares/get` or `/shares/add`), NOT the API key.
 - Client type auto-detected from User-Agent, or force with `client`.
 

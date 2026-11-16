@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sublink/utils"
@@ -44,9 +45,9 @@ func init() {
 		FieldMeta{Name: "Query.HttpUpgradeFastOpen", Label: "HTTP Upgrade Fast Open", Type: "int", Group: "transport", Advanced: true, Options: []string{"0", "1"}},
 		FieldMeta{Name: "Query.Method", Label: "HTTP Method", Type: "string", Group: "transport", Advanced: true},
 	)
-	MustRegisterProtocol(newProxyProtocolSpec(base, buildVLESSProxy, func(proxy Proxy) bool {
+	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildVLESSProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "vless")
-	}, ConvertProxyToVless, EncodeVLESSURL))
+	}, ConvertProxyToVless, EncodeVLESSURL, buildVLESSSurgeLine))
 }
 
 type VLESS struct {
@@ -880,4 +881,175 @@ func vlessHostAndExtraHeaders(headers map[string]any) (string, map[string]any) {
 		extra[key] = value
 	}
 	return host, extra
+}
+
+// buildVLESSSurgeLine targets Surge iOS 6 / Mac 6.12 and rejects settings
+// that cannot be represented instead of silently changing the transport.
+func buildVLESSSurgeLine(link string, config OutputConfig) (string, string, error) {
+	v, err := DecodeVLESSURL(link)
+	if err != nil {
+		return "", "", err
+	}
+	q := v.Query
+	u, err := url.Parse(link)
+	if err != nil {
+		return "", "", err
+	}
+	network := strings.ToLower(q.Type)
+	security := strings.ToLower(q.Security)
+	if security != "" && security != "none" && security != "tls" && security != "reality" {
+		return "", "", fmt.Errorf("surge vless: unsupported security %q", security)
+	}
+	if q.Ech != "" || (q.HeaderType != "" && q.HeaderType != "none") {
+		return "", "", fmt.Errorf("surge vless: ECH and TCP header obfuscation are unsupported")
+	}
+	switch network {
+	case "", "tcp", "raw", "ws", "httpupgrade", "grpc", "xhttp", "splithttp":
+	default:
+		return "", "", fmt.Errorf("surge vless: unsupported transport %q", network)
+	}
+	ws := network == "ws" || network == "httpupgrade"
+	if security == "reality" && (q.Pbk == "" || ws) {
+		return "", "", fmt.Errorf("surge vless: REALITY requires a public key and RAW, gRPC or XHTTP")
+	}
+	if network == "grpc" && security != "tls" && security != "reality" {
+		return "", "", fmt.Errorf("surge vless: gRPC requires TLS or REALITY")
+	}
+	if q.Flow != "" {
+		if q.Flow != "xtls-rprx-vision" && q.Flow != "xtls-rprx-vision-udp443" {
+			return "", "", fmt.Errorf("surge vless: unsupported flow %q", q.Flow)
+		}
+		encrypted := q.Encryption != "" && q.Encryption != "none"
+		if network == "grpc" || (!encrypted && (ws || network == "xhttp" || network == "splithttp" || (security != "tls" && security != "reality"))) {
+			return "", "", fmt.Errorf("surge vless: incompatible Vision transport or security")
+		}
+	}
+	parts := []string{fmt.Sprintf("%s = vless, %s, %s", v.Name, replaceSurgeHost(v.Server, config), utils.GetPortString(v.Port))}
+	add := func(key, value string) {
+		if value != "" {
+			parts = append(parts, key+"="+surgeVLESSValue(value))
+		}
+	}
+	add("username", v.Uuid)
+	add("flow", q.Flow)
+	add("encryption", q.Encryption)
+	add("sni", q.Sni)
+	add("alpn", strings.Join(q.Alpn, ","))
+	switch security {
+	case "reality":
+		add("reality-public-key", q.Pbk)
+		add("reality-short-id", q.Sid)
+	case "tls":
+		add("tls", "true")
+		add("skip-cert-verify", strconv.FormatBool(config.Cert || q.AllowInsecure == 1))
+		add("server-cert-fingerprint-sha256", q.Fingerprint)
+		add("server-cert-verify-name", u.Query().Get("vcn"))
+	}
+	if ws {
+		add("ws", "true")
+		add("ws-path", q.Path)
+		if network == "httpupgrade" || q.HttpUpgrade == 1 {
+			add("ws-http-upgrade", "true")
+		}
+		headers := map[string]any{}
+		if q.Headers != "" {
+			if err := json.Unmarshal([]byte(q.Headers), &headers); err != nil {
+				return "", "", fmt.Errorf("surge vless: invalid WS headers: %w", err)
+			}
+		}
+		add("ws-headers", surgeVLESSHeaders(vlessWSHeaders(q.Headers, q.Host)))
+	}
+	if network == "grpc" {
+		add("grpc", "true")
+		add("grpc-service-name", q.ServiceName)
+		add("grpc-authority", u.Query().Get("authority"))
+		if q.Mode != "" && q.Mode != "gun" && q.Mode != "multi" {
+			return "", "", fmt.Errorf("surge vless: unsupported gRPC mode %q", q.Mode)
+		}
+		add("grpc-mode", q.Mode)
+	}
+	if network == "xhttp" || network == "splithttp" {
+		if err := appendSurgeVLESSXHTTP(q, add); err != nil {
+			return "", "", err
+		}
+	}
+	// VLESS always uses XUDP in Surge; udp-relay is not a VLESS parameter.
+	line := strings.Join(parts, ", ")
+	if strings.ContainsAny(line, "\r\n") {
+		return "", "", fmt.Errorf("surge vless: newline in proxy definition")
+	}
+	return line, v.Name, nil
+}
+
+func surgeVLESSValue(value string) string {
+	if strings.ContainsAny(value, ",\"\\") || strings.TrimSpace(value) != value {
+		return strconv.Quote(value)
+	}
+	return value
+}
+
+func surgeVLESSHeaders(headers map[string]any) string {
+	keys := make([]string, 0, len(headers))
+	for key := range headers {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	values := make([]string, 0, len(keys))
+	for _, key := range keys {
+		values = append(values, key+":"+fmt.Sprint(headers[key]))
+	}
+	return strings.Join(values, "|")
+}
+
+func appendSurgeVLESSXHTTP(q VLESSQuery, add func(string, string)) error {
+	if q.Mode != "" && q.Mode != "auto" && q.Mode != "stream-one" && q.Mode != "stream-up" && q.Mode != "packet-up" {
+		return fmt.Errorf("surge vless: unsupported XHTTP mode %q", q.Mode)
+	}
+	add("xhttp", "true")
+	add("xhttp-path", q.Path)
+	add("xhttp-host", q.Host)
+	add("xhttp-mode", q.Mode)
+	if strings.TrimSpace(q.Extra) == "" {
+		return nil
+	}
+	var extra map[string]any
+	if err := json.Unmarshal([]byte(q.Extra), &extra); err != nil {
+		return fmt.Errorf("surge vless: invalid XHTTP extra: %w", err)
+	}
+	if extra["downloadSettings"] != nil {
+		return fmt.Errorf("surge vless: XHTTP downloadSettings is unsupported")
+	}
+	if headers, ok := extra["headers"].(map[string]any); ok {
+		add("xhttp-headers", surgeVLESSHeaders(headers))
+	}
+	// Explicit mappings prevent arbitrary extra keys from becoming Surge options.
+	mapping := map[string]string{
+		"xPaddingBytes": "padding-bytes", "xPaddingObfsMode": "padding-obfs",
+		"xPaddingKey": "padding-key", "xPaddingHeader": "padding-header",
+		"xPaddingPlacement": "padding-placement", "xPaddingMethod": "padding-method",
+		"uplinkHTTPMethod": "uplink-method", "sessionIDPlacement": "session-placement",
+		"sessionIDKey": "session-key", "sessionIDTable": "session-table", "sessionIDLength": "session-length",
+		"seqPlacement": "seq-placement", "seqKey": "seq-key", "uplinkDataPlacement": "uplink-data-placement",
+		"uplinkDataKey": "uplink-data-key", "uplinkChunkSize": "uplink-chunk-size",
+		"noGRPCHeader": "no-grpc-header", "scMaxEachPostBytes": "max-each-post-bytes",
+		"scMinPostsIntervalMs": "min-posts-interval",
+	}
+	keys := make([]string, 0, len(mapping))
+	for key := range mapping {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		if value, ok := extra[key]; ok {
+			add("xhttp-"+mapping[key], fmt.Sprint(value))
+		}
+	}
+	if xmux, ok := extra["xmux"].(map[string]any); ok {
+		for _, pair := range [][2]string{{"maxConcurrency", "max-concurrency"}, {"maxConnections", "max-connections"}, {"cMaxReuseTimes", "max-reuse-times"}, {"hMaxRequestTimes", "max-request-times"}, {"hMaxReusableSecs", "max-reusable-secs"}, {"hKeepAlivePeriod", "keep-alive"}} {
+			if value, ok := xmux[pair[0]]; ok {
+				add("xhttp-xmux-"+pair[1], fmt.Sprint(value))
+			}
+		}
+	}
+	return nil
 }

@@ -148,3 +148,11 @@ For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] 香
 ## VLESS REALITY compatibility
 
 Clash / mihomo YAML imports preserve `reality-opts.support-x25519mlkem768` through stored VLESS URLs and rebuilt proxies used for subscription output, latency checks, and speed tests. The URL parameter is `support-x25519mlkem768=true` or `false` (`1` / `0` are also accepted on input). Explicit `false` stays distinct from an unspecified value; empty or invalid URL values are treated as unspecified. Plain TLS nodes do not acquire REALITY options from this parameter. In the node field editor, choose `true`, `false`, or the empty selection to restore the upstream default.
+
+## VLESS in Surge
+
+`/c?client=surge` exports VLESS for Surge iOS 6.0.0+ / Mac 6.12.0+. Supported transports are TCP/RAW, WebSocket, HTTPUpgrade, gRPC (TLS or REALITY), and XHTTP/SplitHTTP. TLS, REALITY keys, Vision, VLESS Encryption, SNI, ALPN, certificate pinning, transport headers and supported XHTTP extra/XMUX parameters are mapped to native Surge options. Host replacement and the subscription certificate override also apply. Surge uses XUDP automatically.
+
+Nodes with unsupported transports, ECH, TCP header obfuscation, incompatible Vision/REALITY settings or XHTTP `downloadSettings` are skipped, including their proxy group entries. The uTLS `fp` and REALITY `support-x25519mlkem768` options have no Surge equivalent and are omitted; Surge handles its own ClientHello and ML-KEM fallback.
+
+See the [official Surge VLESS reference](https://manual.nssurge.com/policies/vless.html).
