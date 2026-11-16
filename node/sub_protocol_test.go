@@ -1,6 +1,10 @@
 package node
 
 import (
+	"context"
+	"encoding/base64"
+	"net/http"
+	"strings"
 	"testing"
 
 	"sublink/models"
@@ -197,5 +201,59 @@ func TestApplyAirportDeduplicationDistinguishesHTTPAndHTTPS(t *testing.T) {
 	}
 	if gotProtoCount["http"] != 1 || gotProtoCount["https"] != 1 {
 		t.Fatalf("去重结果 = %v (按协议统计 %v), 期望 http=1 https=1", proxyNames(got), gotProtoCount)
+	}
+}
+
+func TestClashImportRealityExtensionsSurviveStoredLink(t *testing.T) {
+	source := "proxies:\n"
+	for _, scheme := range []string{"vless", "trojan"} {
+		source += "  - name: " + scheme + "\n    type: " + scheme + "\n    server: example.com\n    port: 443\n    uuid: 12345678-1234-1234-1234-123456789abc\n    password: test-password\n    reality-opts:\n      public-key: test-key\n      short-id: '0123'\n      spider-x: /crawl?x=1&y=2\n      mldsa65-verify: verify_-key\n"
+	}
+	config, yamlErr, providerErr := parseClashConfigData(context.Background(), http.DefaultClient, "https://example.invalid/sub", []byte(source), "", nil)
+	if yamlErr != nil || providerErr != nil || len(config.Proxies) != 2 {
+		t.Fatalf("import failed: YAML=%v provider=%v nodes=%d", yamlErr, providerErr, len(config.Proxies))
+	}
+	for _, proxy := range config.Proxies {
+		link := GenerateProxyLink(proxy)
+		updated, err := protocol.UpdateNodeLinkFields(link, `{"Name":"edited"}`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rebuilt, err := protocol.LinkToProxy(protocol.Urls{Url: updated}, protocol.OutputConfig{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rebuilt.Reality_opts["spider-x"] != "/crawl?x=1&y=2" || rebuilt.Reality_opts["mldsa65-verify"] != "verify_-key" {
+			t.Fatalf("%s lost imported extensions: %+v", proxy.Type, rebuilt.Reality_opts)
+		}
+		if !strings.Contains(updated, "pqv=") || !strings.Contains(updated, "spx=") {
+			t.Fatalf("stored URL lost extensions: %s", updated)
+		}
+	}
+}
+
+func TestRealityExtensionsPlainAndBase64SubscriptionImport(t *testing.T) {
+	const data = "vless://12345678-1234-1234-1234-123456789abc@example.com:443?security=reality&pbk=test-key&sid=0123&spx=%2Fcrawl%3Fx%3D1%26y%3D2&pqv=verify_-key#vless\n" +
+		"trojan://password@example.com:443?security=reality&pbk=test-key&sid=0123&spx=%2Fcrawl%3Fx%3D1%26y%3D2&pqv=verify_-key#trojan"
+	for _, source := range []string{data, base64.StdEncoding.EncodeToString([]byte(data))} {
+		proxies := parseSubscriptionLinkProxies([]byte(source))
+		if len(proxies) != 2 {
+			t.Fatalf("imported %d nodes, want 2", len(proxies))
+		}
+		for _, proxy := range proxies {
+			storedLink := GenerateProxyLink(proxy)
+			parsed, err := protocol.ParseNodeLink(storedLink)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if parsed.Fields["Query.SpiderX"] != "/crawl?x=1&y=2" || parsed.Fields["Query.Mldsa65Verify"] != "verify_-key" {
+				t.Fatalf("%s subscription lost extensions: %+v", proxy.Type, parsed.Fields)
+			}
+			originalHash := protocol.GenerateProxyContentHash(proxy)
+			proxy.Reality_opts["mldsa65-verify"] = "different-key"
+			if protocol.GenerateProxyContentHash(proxy) == originalHash {
+				t.Fatal("deduplication ignored REALITY verification key")
+			}
+		}
 	}
 }

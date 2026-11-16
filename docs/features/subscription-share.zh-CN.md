@@ -149,6 +149,12 @@
 
 导入 Clash / mihomo YAML 时，`reality-opts.support-x25519mlkem768` 会经由内部存储的 VLESS URL 保留到订阅输出、延迟检测及下载测速使用的 Proxy。URL 参数为 `support-x25519mlkem768=true` 或 `false`（输入也接受 `1` / `0`）。显式 `false` 与未指定保持区分；空值或无效 URL 值视为未指定。普通 TLS 节点不会因该参数而新增 REALITY 配置。在节点字段编辑器中可选择 `true`、`false` 或空选项，空选项表示恢复上游默认行为。
 
+VLESS、Trojan 分享链接中的 REALITY `spx`（`spiderX`，爬虫初始路径）和 `pqv`（`mldsa65Verify`，额外的 ML-DSA-65 证书签名验证公钥）会在解析、字段编辑和 URL 导出时保留。编辑器对应字段为 `Query.SpiderX`、`Query.Mldsa65Verify`；清空字段会移除对应 URL 参数。参数值采用 URL 编码，因此爬虫路径可以携带查询参数。
+
+Clash YAML 导入会将 `reality-opts.spider-x`、`reality-opts.mldsa65-verify` 映射到内部 URL，`/c?client=clash` 或 `mihomo` 再将其还原到 YAML，保持参数值不丢失。非空字段仅为 REALITY 节点输出，空字段省略。Trojan REALITY 导入时还会保留 `security=reality`、`pbk` 和 `sid`，支持完整往返。
+
+Xray 客户端（如 v2rayN、v2rayNG）使用 `/c?client=v2ray`，无需新增 `xray` 客户端类型。保留配置不代表内核新增了执行能力；当前上游 mihomo 没有对应验证能力，内部检测仍沿用现有行为；导出配置中的额外验证需由兼容内核执行。Surge 会跳过 `pqv` 非空的 VLESS REALITY 节点及 Trojan REALITY 节点；仅有爬虫参数 `spx` 时，Surge 输出会省略该参数。ML-DSA-65 签名验证与 `support-x25519mlkem768` 密钥交换选项相互独立。
+
 ## Surge 的 VLESS 支持
 
 `/c?client=surge` 可为 Surge iOS 6.0.0+ / Mac 6.12.0+ 导出 VLESS。支持 TCP/RAW、WebSocket、HTTPUpgrade、gRPC（TLS 或 REALITY）及 XHTTP/SplitHTTP。TLS、REALITY 密钥、Vision、VLESS Encryption、SNI、ALPN、证书指纹、传输请求头和受支持的 XHTTP extra/XMUX 参数会映射为 Surge 原生配置。订阅的 Host 替换及跳过证书校验设置同样生效。Surge 自动使用 XUDP。

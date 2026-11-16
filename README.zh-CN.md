@@ -194,6 +194,8 @@ URI 各部分只解码一次，重新导出链接时也会保留其原始含义�
 | **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell, OpenVPN |
 | **surge** | ss, trojan, vmess, VLESS, hy2, tuic, AnyTLS, Snell |
 
+> VLESS、Trojan REALITY 的 `spx` / `pqv` 支持分享链接、字段编辑及 Clash YAML 导入导出（对应 `spider-x` / `mldsa65-verify`）；Xray 客户端使用现有 `v2ray` 输出。实际执行需要兼容内核；Surge 会跳过无法表达的配置。参见 [REALITY 兼容说明](docs/features/subscription-share.zh-CN.md#vless-reality-兼容说明)。
+
 > [!NOTE]
 > Mieru 当前仅支持 Clash/mihomo YAML 导入与导出。Mieru 官方存在 `mieru://` / `mierus://` 分享链接，但未定义适合逐字段编辑的通用 URL schema；SublinkPro 为原始编辑与 Clash/mihomo 导入回写使用内部可编辑形态：`mieru://username:password@server:port?...#name`，端口范围使用 `portRange=2090-2099`。v2ray 与 Surge 当前不支持 Mieru，订阅输出会跳过该协议而不是降级转换。
 

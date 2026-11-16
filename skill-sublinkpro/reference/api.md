@@ -193,6 +193,8 @@ Base: `/api/v1/nodes`
 
 ### VLESS REALITY optional capability
 
+VLESS and Trojan URL parameters `spx` and `pqv` map to raw fields `Query.SpiderX` and `Query.Mldsa65Verify`. Both support string updates; an empty string clears the parameter. Parsing, editing, URL export and Clash YAML import/export preserve them as `reality-opts.spider-x` and `reality-opts.mldsa65-verify` for REALITY nodes. Xray consumers use `client=v2ray` (no separate `xray` client type). Configuration preservation does not imply core support; existing internal probe behavior is unchanged. Surge skips VLESS REALITY with nonempty `pqv` and all Trojan REALITY, and omits crawler-only `spx`. See [REALITY compatibility](../../docs/features/subscription-share.md#vless-reality-compatibility).
+
 Subscription conversion preserves `reality-opts.support-x25519mlkem768` via the VLESS URL parameter `support-x25519mlkem768`. Values `true` and `false` remain distinct from omission. Node raw fields expose `Query.SupportX25519MLKEM768`; updates accept booleans or strings `"true"` / `"false"`, and `""` or `null` clears the override. Plain TLS output does not gain REALITY options from this parameter.
 
 

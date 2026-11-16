@@ -43,6 +43,8 @@ func init() {
 		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.SpiderX", Label: "SpiderX", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Mldsa65Verify", Label: "ML-DSA-65 Verify", Type: "string", Group: "tls", Advanced: true, Multiline: true},
 	)
 	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildTrojanProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "trojan")
@@ -82,8 +84,10 @@ type TrojanQuery struct {
 	MaxStreams          int      `json:"maxStreams,omitempty"`
 	Flow                string   `json:"flow,omitempty"`
 	// Reality 参数
-	Pbk string `json:"pbk,omitempty"` // Reality public-key
-	Sid string `json:"sid,omitempty"` // Reality short-id
+	Pbk           string `json:"pbk,omitempty"` // Reality public-key
+	Sid           string `json:"sid,omitempty"` // Reality short-id
+	SpiderX       string `json:"spiderX,omitempty"`
+	Mldsa65Verify string `json:"mldsa65Verify,omitempty"`
 }
 
 // EncodeTrojanURL 将 Trojan 结构编码为 trojan:// 链接。
@@ -176,6 +180,8 @@ func EncodeTrojanURL(t Trojan) string {
 	// Reality 参数支持
 	q.Set("pbk", t.Query.Pbk)
 	q.Set("sid", t.Query.Sid)
+	q.Set("spx", t.Query.SpiderX)
+	q.Set("pqv", t.Query.Mldsa65Verify)
 	// 检查query是否有空值，有的话删除
 	for k, v := range q {
 		if v[0] == "" {
@@ -287,6 +293,10 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 			Type:                types,
 			Path:                path,
 			Security:            security,
+			Pbk:                 u.Query().Get("pbk"),
+			Sid:                 u.Query().Get("sid"),
+			SpiderX:             u.Query().Get("spx"),
+			Mldsa65Verify:       u.Query().Get("pqv"),
 			Fp:                  fp,
 			Fingerprint:         fingerprint,
 			AllowInsecure:       insecureVal,
@@ -351,11 +361,18 @@ func ConvertProxyToTrojan(proxy Proxy) Trojan {
 
 	// 处理 Reality 参数
 	if len(proxy.Reality_opts) > 0 {
+		trojan.Query.Security = "reality"
 		if pbk, ok := proxy.Reality_opts["public-key"].(string); ok {
 			trojan.Query.Pbk = pbk
 		}
 		if sid, ok := proxy.Reality_opts["short-id"].(string); ok {
 			trojan.Query.Sid = sid
+		}
+		if spiderX, ok := proxy.Reality_opts["spider-x"].(string); ok {
+			trojan.Query.SpiderX = spiderX
+		}
+		if verify, ok := proxy.Reality_opts["mldsa65-verify"].(string); ok {
+			trojan.Query.Mldsa65Verify = verify
 		}
 	}
 
@@ -379,7 +396,12 @@ func buildTrojanProxy(link Urls, config OutputConfig) (Proxy, error) {
 		grpcOpts = buildTrojanGRPCOpts(trojan.Query)
 	}
 	skipCert := config.Cert || trojan.Query.AllowInsecure == 1
-	return Proxy{Name: trojan.Name, Type: "trojan", Server: trojan.Hostname, Port: FlexPort(utils.GetPortInt(trojan.Port)), Password: trojan.Password, Client_fingerprint: trojan.Query.Fp, Fingerprint: trojan.Query.Fingerprint, Sni: trojan.Query.Sni, Network: trojanClashNetwork(trojan.Query.Type), Flow: trojan.Query.Flow, Alpn: trojan.Query.Alpn, Ws_opts: wsOpts, Grpc_opts: grpcOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
+	var realityOpts map[string]any
+	if trojan.Query.Security == "reality" {
+		realityOpts = map[string]any{"public-key": trojan.Query.Pbk, "short-id": trojan.Query.Sid, "spider-x": trojan.Query.SpiderX, "mldsa65-verify": trojan.Query.Mldsa65Verify}
+		DeleteOpts(realityOpts)
+	}
+	return Proxy{Name: trojan.Name, Type: "trojan", Server: trojan.Hostname, Port: FlexPort(utils.GetPortInt(trojan.Port)), Password: trojan.Password, Client_fingerprint: trojan.Query.Fp, Fingerprint: trojan.Query.Fingerprint, Sni: trojan.Query.Sni, Network: trojanClashNetwork(trojan.Query.Type), Flow: trojan.Query.Flow, Alpn: trojan.Query.Alpn, Ws_opts: wsOpts, Grpc_opts: grpcOpts, Reality_opts: realityOpts, Udp: config.Udp, Skip_cert_verify: skipCert, Dialer_proxy: link.DialerProxyName}, nil
 }
 
 func buildTrojanWSOpts(query TrojanQuery) map[string]any {
@@ -654,6 +676,9 @@ func buildTrojanSurgeLine(link string, config OutputConfig) (string, string, err
 	trojan, err := DecodeTrojanURL(link)
 	if err != nil {
 		return "", "", err
+	}
+	if strings.EqualFold(trojan.Query.Security, "reality") {
+		return "", "", fmt.Errorf("surge trojan: REALITY is unsupported")
 	}
 	server := replaceSurgeHost(trojan.Hostname, config)
 	skipCert := config.Cert || trojan.Query.AllowInsecure == 1

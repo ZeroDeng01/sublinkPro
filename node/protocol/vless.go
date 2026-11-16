@@ -28,6 +28,8 @@ func init() {
 		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.SupportX25519MLKEM768", Label: "Support X25519MLKEM768", Type: "string", Group: "tls", Advanced: true, Options: []string{"true", "false"}},
 		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.SpiderX", Label: "SpiderX", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Mldsa65Verify", Label: "ML-DSA-65 Verify", Type: "string", Group: "tls", Advanced: true, Multiline: true},
 		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 		FieldMeta{Name: "Query.Type", Label: "Network", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "grpc", "http", "h2", "xhttp", "quic"}},
 		FieldMeta{Name: "Query.Path", Label: "路径", Type: "string", Group: "transport", Placeholder: "/ws"},
@@ -68,6 +70,8 @@ type VLESSQuery struct {
 	Fingerprint           string   `json:"fingerprint,omitempty"`
 	Sid                   string   `json:"sid"`
 	Pbk                   string   `json:"pbk"`
+	SpiderX               string   `json:"spiderX,omitempty"`
+	Mldsa65Verify         string   `json:"mldsa65Verify,omitempty"`
 	Flow                  string   `json:"flow"`
 	Encryption            string   `json:"encryption"`
 	Type                  string   `json:"type"`
@@ -139,6 +143,10 @@ func buildVLESSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	xhttpOpts := buildVLESSXHTTPOpts(vless.Query)
 	applyVLESSXHTTPSkipCertOverride(xhttpOpts, config.Cert)
 	realityOpts := map[string]any{"public-key": vless.Query.Pbk, "short-id": vless.Query.Sid}
+	if vless.Query.Security == "reality" {
+		realityOpts["spider-x"] = vless.Query.SpiderX
+		realityOpts["mldsa65-verify"] = vless.Query.Mldsa65Verify
+	}
 	DeleteOpts(wsOpts)
 	DeleteOpts(h2Opts)
 	DeleteOpts(httpOpts)
@@ -194,6 +202,8 @@ func EncodeVLESSURL(v VLESS) string {
 	// Reality参数
 	q.Set("pbk", v.Query.Pbk)
 	q.Set("sid", v.Query.Sid)
+	q.Set("spx", v.Query.SpiderX)
+	q.Set("pqv", v.Query.Mldsa65Verify)
 	if v.Query.SupportX25519MLKEM768 != nil {
 		q.Set("support-x25519mlkem768", strconv.FormatBool(*v.Query.SupportX25519MLKEM768))
 	}
@@ -412,6 +422,8 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 			Fingerprint:           fingerprint,
 			Sid:                   sid,
 			Pbk:                   pbk,
+			SpiderX:               u.Query().Get("spx"),
+			Mldsa65Verify:         u.Query().Get("pqv"),
 			Flow:                  flow,
 			Encryption:            encryption,
 			Type:                  types,
@@ -470,6 +482,13 @@ func ConvertProxyToVless(proxy Proxy) VLESS {
 		}
 		if sid, ok := proxy.Reality_opts["short-id"].(string); ok {
 			vless.Query.Sid = sid
+		}
+		// Preserve extensions from compatible forks when importing YAML to a URL.
+		if spiderX, ok := proxy.Reality_opts["spider-x"].(string); ok {
+			vless.Query.SpiderX = spiderX
+		}
+		if verify, ok := proxy.Reality_opts["mldsa65-verify"].(string); ok {
+			vless.Query.Mldsa65Verify = verify
 		}
 	} else if proxy.Tls {
 		vless.Query.Security = "tls"
@@ -891,6 +910,9 @@ func buildVLESSSurgeLine(link string, config OutputConfig) (string, string, erro
 		return "", "", err
 	}
 	q := v.Query
+	if strings.EqualFold(q.Security, "reality") && q.Mldsa65Verify != "" {
+		return "", "", fmt.Errorf("surge vless: REALITY ML-DSA-65 verification is unsupported")
+	}
 	u, err := url.Parse(link)
 	if err != nil {
 		return "", "", err
