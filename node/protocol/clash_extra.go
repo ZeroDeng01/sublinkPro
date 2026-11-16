@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	"sublink/internal/yamlutil"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -20,7 +22,7 @@ var (
 func (p *Proxy) UnmarshalYAML(value *yaml.Node) error {
 	type proxyAlias Proxy
 	var decoded proxyAlias
-	if err := value.Decode(&decoded); err != nil {
+	if err := yamlutil.DecodeWithStringBools(value, &decoded); err != nil {
 		return err
 	}
 
