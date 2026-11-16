@@ -460,6 +460,7 @@
       }
     },
     "nodeStats": {
+      "noNodes": "No nodes",
       "untested": "Not tested yet",
       "delayPassed": "Delay passed",
       "speedPassed": "Speed passed",

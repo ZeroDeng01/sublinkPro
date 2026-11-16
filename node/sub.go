@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sublink/internal/yamlutil"
 	"sublink/models"
 	"sublink/node/protocol"
 	"sublink/services/mihomo"
@@ -140,6 +141,16 @@ type ClashProxyGroup struct {
 	Use                 []string `yaml:"use"`
 	IncludeAll          bool     `yaml:"include-all"`
 	IncludeAllProviders bool     `yaml:"include-all-providers"`
+}
+
+func (g *ClashProxyGroup) UnmarshalYAML(value *yaml.Node) error {
+	type groupAlias ClashProxyGroup
+	var decoded groupAlias
+	if err := yamlutil.DecodeWithStringBools(value, &decoded); err != nil {
+		return err
+	}
+	*g = ClashProxyGroup(decoded)
+	return nil
 }
 
 type namedClashProxyProvider struct {
