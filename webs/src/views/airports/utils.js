@@ -1,3 +1,10 @@
+// Counts describe passes, not whether a check has run. Keep support for older API responses.
+export const getAirportTestState = (nodeStats, nodeCount) => {
+  if (nodeCount === 0) return 'empty';
+  const hasTestData = nodeStats && (nodeStats.hasTestedNodes || nodeStats.delayPassCount > 0 || nodeStats.speedPassCount > 0);
+  return hasTestData ? 'tested' : 'untested';
+};
+
 // Cron 表达式验证
 export const validateCronExpression = (cron) => {
   if (!cron) return false;

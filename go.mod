@@ -3,19 +3,19 @@ module sublink
 go 1.27.3
 
 require (
-	github.com/dlclark/regexp2/v2 v2.12.0
+	github.com/dlclark/regexp2/v2 v2.13.0
 	github.com/dop251/goja v0.0.0-20260607120635-348e6bea910d
 	github.com/gin-gonic/gin v1.12.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-sql-driver/mysql v1.10.1
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.6.0
-	github.com/metacubex/mihomo v1.19.33
+	github.com/metacubex/mihomo v1.19.34
 	github.com/miekg/dns v1.1.73
 	github.com/mojocn/base64Captcha v1.3.8
 	github.com/oschwald/geoip2-golang/v2 v2.5.0
 	github.com/robfig/cron/v3 v3.0.1
-	golang.org/x/crypto v0.58.0
+	golang.org/x/crypto v0.59.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/postgres v1.6.3
@@ -37,8 +37,8 @@ require (
 	github.com/coreos/go-iptables v0.8.0 // indirect
 	github.com/dunglas/httpsfv v1.1.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/easytier/easytier/easytier-go v0.0.0-20260910071355-3d0c9c3ca5e2 // indirect
-	github.com/enfein/mieru/v3 v3.38.1 // indirect
+	github.com/easytier/easytier/easytier-go v0.0.0-20261111015056-2abb1676b475 // indirect
+	github.com/enfein/mieru/v3 v3.39.0 // indirect
 	github.com/ericlagergren/aegis v0.0.0-20250325060835-cd0defd64358 // indirect
 	github.com/ericlagergren/polyval v0.0.0-20230805202542-18692a1b76f9 // indirect
 	github.com/ericlagergren/siv v0.0.0-20220507050439-0b757b3aa5f1 // indirect
@@ -106,7 +106,7 @@ require (
 	github.com/metacubex/quic-go v0.61.1-0.20260727080200-2548683b76f4 // indirect
 	github.com/metacubex/randv2 v0.2.0 // indirect
 	github.com/metacubex/restls-client-go v0.1.9 // indirect
-	github.com/metacubex/sing v0.5.8 // indirect
+	github.com/metacubex/sing v0.5.9 // indirect
 	github.com/metacubex/sing-mux v0.3.12 // indirect
 	github.com/metacubex/sing-quic v0.0.0-20260904234848-1c242664697a // indirect
 	github.com/metacubex/sing-shadowsocks v0.2.13 // indirect
@@ -117,9 +117,9 @@ require (
 	github.com/metacubex/ssh v0.1.0 // indirect
 	github.com/metacubex/tailscale v0.0.0-20260821153257-ff0ecd818181 // indirect
 	github.com/metacubex/tailscale-wireguard-go v0.0.0-20260725073821-e61ab99cede2 // indirect
-	github.com/metacubex/tfo-go v0.0.0-20260623020846-376a77860b8c // indirect
+	github.com/metacubex/tfo-go v0.0.0-20261026151606-08d83ec08c84 // indirect
 	github.com/metacubex/tls v0.1.9 // indirect
-	github.com/metacubex/utls v1.8.8 // indirect
+	github.com/metacubex/utls v1.9.0-alpha.1 // indirect
 	github.com/metacubex/wazero v0.0.0-20260628025728-9ae6bdcf2a7d // indirect
 	github.com/metacubex/wireguard-go v0.0.0-20250820062549-a6cecdd7f57f // indirect
 	github.com/metacubex/yamux v0.0.0-20250918083631-dd5f17c0be49 // indirect
@@ -165,11 +165,11 @@ require (
 	golang.org/x/arch v0.27.0 // indirect
 	golang.org/x/exp v0.0.0-20260603202125-055de637280b // indirect
 	golang.org/x/image v0.41.0 // indirect
-	golang.org/x/net v0.60.0 // indirect
-	golang.org/x/sync v0.24.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/term v0.47.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sync v0.25.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	modernc.org/libc v1.73.0 // indirect

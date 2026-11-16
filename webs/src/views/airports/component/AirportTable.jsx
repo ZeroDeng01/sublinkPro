@@ -32,7 +32,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import EventIcon from '@mui/icons-material/Event';
 
 // utils
-import { formatDateTime, formatBytes, formatExpireTime, getUsageColor } from '../utils';
+import { formatDateTime, formatBytes, formatExpireTime, getUsageColor, getAirportTestState } from '../utils';
 
 // local components
 import AirportNodeStatsCard from './AirportNodeStatsCard';
@@ -277,12 +277,12 @@ export default function AirportTable({
    * 渲染测速概览信息（紧凑版）
    */
   const renderSpeedSummary = (nodeStats, nodeCount) => {
-    const hasData = nodeStats && (nodeStats.delayPassCount > 0 || nodeStats.speedPassCount > 0);
+    const testState = getAirportTestState(nodeStats, nodeCount);
 
-    if (!hasData) {
+    if (testState !== 'tested') {
       return (
         <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-          {t('airports.list.speed.untested')}
+          {t(testState === 'empty' ? 'airports.nodeStats.noNodes' : 'airports.list.speed.untested')}
         </Typography>
       );
     }
