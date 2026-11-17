@@ -16,6 +16,8 @@ const AuthContext = createContext(null);
 let eventSource = null;
 let heartbeatTimeout = null;
 let reconnectTimeout = null;
+// 标记是否已经成功建立过连接：重连时需要通知各上下文重新对账
+let sseConnectedBefore = false;
 
 function getPayloadData(payload) {
   return payload?.data || payload || {};
@@ -157,6 +159,11 @@ export function AuthProvider({ children }) {
     eventSource.onopen = () => {
       console.log('SSE 已连接');
       resetHeartbeat();
+      // 断线期间的任务进度事件已经丢失，通知监听方重新拉取对账
+      if (sseConnectedBefore) {
+        window.dispatchEvent(new CustomEvent('sse_reconnected'));
+      }
+      sseConnectedBefore = true;
     };
 
     eventSource.addEventListener('heartbeat', () => {

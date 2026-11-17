@@ -109,7 +109,18 @@ func (broker *SSEBroker) RemoveClient(clientChan chan []byte) {
 
 // Broadcast sends a message to all clients
 func (broker *SSEBroker) Broadcast(message string) {
-	broker.Notifier <- []byte(message)
+	broker.enqueue([]byte(message))
+}
+
+// enqueue 以非阻塞方式投递事件。
+// 调用方（如任务管理器）可能持有自己的互斥锁，阻塞式写入会在缓冲满时
+// 把整个任务生命周期（进度、完成、取消）一起卡死，因此满队列时直接丢弃。
+func (broker *SSEBroker) enqueue(message []byte) {
+	select {
+	case broker.Notifier <- message:
+	default:
+		utils.Debug("SSE 事件队列已满，丢弃一条事件")
+	}
 }
 
 // BroadcastJSONEvent sends structured JSON data to all SSE clients.
@@ -120,7 +131,7 @@ func (broker *SSEBroker) BroadcastJSONEvent(event string, payload any) {
 		return
 	}
 	msg := fmt.Sprintf("event: %s\ndata: %s\n\n", event, jsonData)
-	broker.Notifier <- []byte(msg)
+	broker.enqueue([]byte(msg))
 }
 
 // ProgressPayload defines the payload for progress updates.
@@ -151,5 +162,5 @@ func (broker *SSEBroker) BroadcastProgress(payload ProgressPayload) {
 		return
 	}
 	msg := fmt.Sprintf("event: task_progress\ndata: %s\n\n", jsonData)
-	broker.Notifier <- []byte(msg)
+	broker.enqueue([]byte(msg))
 }

@@ -80,3 +80,26 @@ func GetAirportUsageSparklines(c *gin.Context) {
 	}
 	utils.OkDetailed(c, "success", gin.H{"items": sparklines})
 }
+
+// GetAirportDailyUsage 获取按天统计的流量消耗。
+// airportId 省略时汇总全部机场；当天的消耗即报告中的 todayUsed。
+func GetAirportDailyUsage(c *gin.Context) {
+	days, _ := parseUsageHistoryParams(c)
+
+	airportID := 0
+	if raw := strings.TrimSpace(c.Query("airportId")); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value <= 0 {
+			utils.FailWithMsg(c, "invalid airportId")
+			return
+		}
+		airportID = value
+	}
+
+	report, err := models.GetAirportDailyUsage(days, airportID)
+	if err != nil {
+		utils.FailWithMsg(c, "failed to load daily usage: "+err.Error())
+		return
+	}
+	utils.OkDetailed(c, "success", report)
+}

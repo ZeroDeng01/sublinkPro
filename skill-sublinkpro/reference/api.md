@@ -272,7 +272,8 @@ Base: `/api/v1/subcription` (note the spelling — missing the second "s").
 ### Usage history
 Usage history is available per airport. Airports reused by several subscriptions keep a single counter (it comes from the airport's `Subscription-Userinfo`), so there is no separate per-subscription chart.
 
-- **GET** `/airports/usage-sparklines` (query: `?ids=1,2,3&days=14`, up to 500 IDs) returns `data.items[]` with `airportId`, `points[]`, `failed`, `updatedAt`.
+- **GET** `/airports/usage-sparklines` (query: `?ids=1,2,3&days=14`, up to 500 IDs) returns `data.items[]` with `airportId`, `points[]`, `failed`, `updatedAt`, and `todayUsed` (traffic consumed since local midnight, computed from snapshot deltas with the same rules as `usage-daily`).
+- **GET** `/airports/usage-daily` (query: `?days=14&airportId=0`) returns daily consumption for the period: `points[]` of `{date, upload, download, used}`, plus `todayUsed`, `rangeUsed`, `from`, `to`, and `retentionDays`. Each point is the delta between consecutive successful snapshots on that day; a counter reset (panel reset or plan change) counts the new value in full instead of producing a negative delta. Omit `airportId` (or send `0`) to aggregate every airport.
 - **GET** `/airports/{id}/usage-history` (query: `?days=30&granularity=auto`) returns a single airport history with `currentUpload`, `currentDownload`, `currentUsed`, `currentTotal`, and `currentExpire`.
 - `days` is clamped to the configured retention; `0` or a negative value means all retained data. `granularity` is `auto`, `refresh`, `hour`, or `day`. `auto` and `refresh` draw one point per stored snapshot so points follow the real refresh times; ranges holding more than 3000 snapshots are evenly downsampled (the newest point is always kept). `hour` and `day` aggregate explicitly.
 - Points are `{timestamp, capturedAt, upload, download, used, total, expire, failed, error}`. `timestamp` is milliseconds. `used` is `upload + download`. A failed refresh keeps the last known values and sets `failed: true`. The resolved granularity is returned in `granularity`, so clients can format `refresh` points with minutes. Sparklines are sampled down to 60 points per airport.
@@ -582,6 +583,7 @@ Base: `/api/v1/airports` (all write bodies are JSON)
 - **POST** `/airports/{id}/pull` — pull one now
 - **POST** `/airports/{id}/refresh-usage`
 - **GET** `/airports/usage-sparklines` (query: `?ids=1,2,3&days=14`) — batch sparkline data for up to 500 airports
+- **GET** `/airports/usage-daily` (query: `?days=14&airportId=0`) — daily traffic deltas, aggregated across airports unless `airportId` is set
 - **GET** `/airports/{id}/usage-history` (query: `?days=30&granularity=auto`) — per-airport traffic history, including failed refreshes
 
 Country-fill fields apply during airport pulls and use Country Rules against upstream node names:

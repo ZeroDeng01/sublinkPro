@@ -242,7 +242,13 @@ func (tm *TaskManager) CancelTask(taskID string) error {
 		task.Status = models.TaskStatusCancelled
 		task.Message = "用户取消"
 		task.CompletedAt = new(time.Now())
-		return task.SyncFinalStatus()
+		if err := task.SyncFinalStatus(); err != nil {
+			return err
+		}
+		// 内存中没有执行体，仍需广播，否则前端会一直显示执行中
+		tm.broadcastProgress(&task, "cancelled")
+		utils.Info("任务已取消（仅数据库状态）: ID=%s", taskID)
+		return nil
 	}
 
 	// 更新状态
@@ -432,46 +438,85 @@ func (tm *TaskManager) startZombieTaskDetector() {
 	}
 }
 
-// detectAndCleanZombieTasks 检测并清理僵尸任务
+// taskMaxRuntime 返回任务类型允许的最长运行时间。
+// 订阅更新是有界的短任务（HTTP 客户端自带 30 秒超时），不应跑满一天；
+// 测速、节点检测等批量任务仍沿用 24 小时上限。
+func taskMaxRuntime(taskType models.TaskType) time.Duration {
+	switch taskType {
+	case models.TaskTypeSubUpdate:
+		return 15 * time.Minute
+	default:
+		return 24 * time.Hour
+	}
+}
+
+// detectAndCleanZombieTasks 检测并清理僵尸任务：
+// 1. 内存中运行时长超过该类型上限的任务；
+// 2. 数据库中仍为 running、但内存里已不存在执行体的孤儿任务（协程异常退出、进程重启未清理）。
 func (tm *TaskManager) detectAndCleanZombieTasks() {
 	tm.mutex.RLock()
 	now := time.Now()
-	var zombieTasks []struct {
+	type zombieTask struct {
 		ID       string
 		Type     models.TaskType
 		Name     string
 		Duration time.Duration
+		Max      time.Duration
 	}
-
-	// 所有任务统一的最大运行时长：24 小时
-	maxDuration := 24 * time.Hour
+	zombieTasks := make([]zombieTask, 0)
+	// 记录内存中的任务 ID，供孤儿任务判断使用
+	inMemory := make(map[string]struct{}, len(tm.runningTasks))
 
 	for taskID, taskInfo := range tm.runningTasks {
-		// 检查任务是否超过 24 小时
+		inMemory[taskID] = struct{}{}
 		duration := now.Sub(taskInfo.StartTime)
-		if duration > maxDuration {
-			zombieTasks = append(zombieTasks, struct {
-				ID       string
-				Type     models.TaskType
-				Name     string
-				Duration time.Duration
-			}{
+		maxRuntime := taskMaxRuntime(taskInfo.Task.Type)
+		if duration > maxRuntime {
+			zombieTasks = append(zombieTasks, zombieTask{
 				ID:       taskID,
 				Type:     taskInfo.Task.Type,
 				Name:     taskInfo.Task.Name,
 				Duration: duration,
+				Max:      maxRuntime,
 			})
 		}
 	}
 	tm.mutex.RUnlock()
 
-	// 清理僵尸任务
+	// 清理内存中的超时任务
 	for _, zombie := range zombieTasks {
-		utils.Warn("检测到僵尸任务（运行超过24小时）: ID=%s, Type=%s, Name=%s, 运行时长=%v",
-			zombie.ID, zombie.Type, zombie.Name, zombie.Duration)
-		if err := tm.FailTask(zombie.ID, "任务执行超时（超过24小时），自动标记为失败"); err != nil {
+		utils.Warn("检测到僵尸任务（运行超过%s）: ID=%s, Type=%s, Name=%s, 运行时长=%v",
+			zombie.Max, zombie.ID, zombie.Type, zombie.Name, zombie.Duration)
+		if err := tm.FailTask(zombie.ID, fmt.Sprintf("任务执行超时（超过%s），自动标记为失败", zombie.Max)); err != nil {
 			utils.Error("标记僵尸任务失败时出错: task_id=%s, error=%v", zombie.ID, err)
 		}
+	}
+
+	tm.reconcileOrphanedRunningTasks(inMemory)
+}
+
+// orphanTaskGrace 孤儿任务的宽限期，避免与刚创建尚未登记到内存的任务重叠。
+const orphanTaskGrace = 2 * time.Minute
+
+// reconcileOrphanedRunningTasks 把数据库里残留的 running 任务标记为中断，
+// 否则它们会永远卡在“执行中”，既不会结束也无法取消。
+func (tm *TaskManager) reconcileOrphanedRunningTasks(inMemory map[string]struct{}) {
+	orphans, err := models.ListRunningTasksCreatedBefore(time.Now().Add(-orphanTaskGrace))
+	if err != nil {
+		utils.Error("查询孤儿任务失败: %v", err)
+		return
+	}
+
+	for i := range orphans {
+		if _, ok := inMemory[orphans[i].ID]; ok {
+			continue
+		}
+		if err := orphans[i].MarkTaskInterrupted("任务已中断（执行进程已退出或任务已过期）"); err != nil {
+			utils.Error("标记孤儿任务失败: task_id=%s, error=%v", orphans[i].ID, err)
+			continue
+		}
+		utils.Warn("已清理孤儿任务: ID=%s, Type=%s, Name=%s", orphans[i].ID, orphans[i].Type, orphans[i].Name)
+		tm.broadcastProgress(&orphans[i], "error")
 	}
 }
 

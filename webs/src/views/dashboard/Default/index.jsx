@@ -37,6 +37,7 @@ import SecurityIcon from '@mui/icons-material/Security';
 
 // project imports
 import TaskProgressPanel from 'components/TaskProgressPanel';
+import TrafficDailyCard from './TrafficDailyCard';
 import {
   getNodeTotal,
   getFastestSpeedNode,
@@ -1588,6 +1589,9 @@ export default function DashboardDefault() {
 
       {/* 机场流量概览卡片 */}
       <AirportUsageCard airports={airports} loading={loadingStats} />
+
+      {/* 每日流量消耗图表 */}
+      <TrafficDailyCard />
 
       <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 6 }}>

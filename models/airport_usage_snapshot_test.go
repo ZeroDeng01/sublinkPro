@@ -276,6 +276,46 @@ func TestGetAirportUsageSparklinesReturnsPointsForEachAirport(t *testing.T) {
 	}
 }
 
+func TestGetAirportUsageSparklinesReportsTodayUsed(t *testing.T) {
+	setupUsageSnapshotTestDB(t)
+	withBaseline := newUsageTestAirport(t, "sparkline-today-baseline")
+	noBaseline := newUsageTestAirport(t, "sparkline-today-no-baseline")
+
+	now := time.Date(2024, 1, 15, 12, 0, 0, 0, time.Local)
+	snapshots := []AirportUsageSnapshot{
+		// 当天零点前的最后一条成功快照作为基线
+		{AirportID: withBaseline.ID, Upload: 100, Download: 200, Total: 1000, CapturedAt: now.AddDate(0, 0, -1)},
+		{AirportID: withBaseline.ID, Upload: 100, Download: 250, Total: 1000, CapturedAt: now.Add(-2 * time.Hour)},
+		{AirportID: withBaseline.ID, Upload: 130, Download: 260, Total: 1000, CapturedAt: now.Add(-time.Hour)},
+		// 失败快照不参与今天消耗的计算
+		{AirportID: withBaseline.ID, Upload: 999, Download: 999, Total: 1000, Failed: true, CapturedAt: now.Add(-30 * time.Minute)},
+		// 没有历史基线：当天第一条成功快照只作为基线，从第二条开始累计
+		{AirportID: noBaseline.ID, Upload: 1, Download: 1, Total: 10, CapturedAt: now.Add(-3 * time.Hour)},
+		{AirportID: noBaseline.ID, Upload: 4, Download: 3, Total: 10, CapturedAt: now.Add(-time.Hour)},
+	}
+	if err := database.DB.Create(&snapshots).Error; err != nil {
+		t.Fatalf("create sparkline snapshots: %v", err)
+	}
+
+	sparklines, err := getAirportUsageSparklines([]int{withBaseline.ID, noBaseline.ID}, 14, now)
+	if err != nil {
+		t.Fatalf("get usage sparklines: %v", err)
+	}
+
+	todayUsed := make(map[int]int64, len(sparklines))
+	for _, sparkline := range sparklines {
+		todayUsed[sparkline.AirportID] = sparkline.TodayUsed
+	}
+	// 昨天基线(100,200) -> 10:00(100,250) 消耗 50，11:00(130,260) 再消耗 40
+	if got := todayUsed[withBaseline.ID]; got != 90 {
+		t.Fatalf("today used with baseline = %d, want 90", got)
+	}
+	// (1,1) -> (4,3)：上行 +3、下行 +2
+	if got := todayUsed[noBaseline.ID]; got != 5 {
+		t.Fatalf("today used without baseline = %d, want 5", got)
+	}
+}
+
 func TestGetAirportUsageHistoryAutoKeepsRefreshPoints(t *testing.T) {
 	setupUsageSnapshotTestDB(t)
 	airport := newUsageTestAirport(t, "history-refresh")

@@ -12,6 +12,16 @@ export function getAirportUsageSparklines(ids, params = {}) {
   });
 }
 
+// 获取按天统计的流量消耗；不传 airportId 时为全部机场汇总
+// @param {object} params - { days, airportId }
+export function getAirportUsageDaily(params = {}) {
+  return request({
+    url: '/v1/airports/usage-daily',
+    method: 'get',
+    params
+  });
+}
+
 // 获取单个机场的用量历史（图表数据）
 export function getAirportUsageHistory(id, params = {}) {
   return request({

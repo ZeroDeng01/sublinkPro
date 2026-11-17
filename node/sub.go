@@ -463,6 +463,11 @@ func parseClashProviderPayload(data []byte) ([]protocol.Proxy, error) {
 		return proxies, nil
 	}
 
+	// 部分面板的 provider 直接返回 Xray JSON，这里一并兼容
+	if xrayProxies := parseXraySubscriptionProxies(data); len(xrayProxies) > 0 {
+		return xrayProxies, nil
+	}
+
 	if errYaml != nil {
 		return nil, fmt.Errorf("YAML 解析失败且链接 fallback 未找到节点: %w", errYaml)
 	}
@@ -510,6 +515,11 @@ func parseClashConfigData(ctx context.Context, client *http.Client, rootSubscrip
 	// 如果 YAML 解析失败或没有代理节点，尝试 Base64/明文链接解析，兼容 V2Ray 订阅。
 	if errYaml != nil || len(config.Proxies) == 0 {
 		config.Proxies = append(config.Proxies, parseSubscriptionLinkProxies(data)...)
+	}
+
+	// 仍然没有节点时尝试 Xray JSON 订阅（Remnawave、Happ AI Mode 等面板）
+	if len(config.Proxies) == 0 {
+		config.Proxies = append(config.Proxies, parseXraySubscriptionProxies(data)...)
 	}
 
 	return config, errYaml, providerErr
@@ -672,6 +682,12 @@ func LoadClashConfigFromURLWithReporter(ctx context.Context, id int, urlStr stri
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		utils.Error("URL %s，读取Clash配置失败:  %v", urlStr, err)
+		// 面板可能用流式响应返回 Xray JSON，读超时时已收到的完整配置仍然可用
+		if xrayProxies := parseXraySubscriptionProxies(data); len(xrayProxies) > 0 {
+			utils.Warn("订阅【%s】响应读取未完成（%v），已从已收到的 JSON 片段恢复 %d 个节点", subName, err, len(xrayProxies))
+			changedNodeIDs, scheduleErr := scheduleClashToNodeLinks(ctx, id, xrayProxies, subName, reporter, usageInfo)
+			return changedNodeIDs, usageInfo, scheduleErr
+		}
 		// 发送读取失败通知
 		notifications.Publish("subscription.sync_failed", notifications.Payload{
 			Title:   "订阅更新失败",

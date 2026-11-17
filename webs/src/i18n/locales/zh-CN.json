@@ -433,6 +433,7 @@
       "nextRun": "下次运行",
       "usage": {
         "title": "用量信息",
+        "today": "今日",
         "disabled": "未开启用量获取",
         "disabledShort": "未开启",
         "failed": "用量获取失败",
@@ -687,6 +688,10 @@
         "invalidRange": "保留天数必须在 {{min}} - {{max}} 天之间"
       }
     }
+  },
+  "todayTraffic": {
+    "tooltip": "今日已用流量：{{used}}",
+    "loadFailed": "今日流量加载失败"
   },
   "settings": {
     "title": "用户中心",
@@ -1785,6 +1790,22 @@
         "lowUsageWarning": "流量不足警告",
         "allSufficient": "所有机场流量充足",
         "remain": "剩余"
+      },
+      "trafficDaily": {
+        "title": "每日流量",
+        "subtitle": "按订阅刷新快照统计的每日流量消耗",
+        "hint": "每根柱子代表当天相邻两次订阅刷新之间的流量增量。",
+        "today": "今天",
+        "rangeTotal": "所选区间",
+        "dailyAverage": "日均",
+        "days": "{{count}} 天",
+        "loading": "正在加载流量...",
+        "loadFailed": "每日流量加载失败",
+        "empty": "该区间暂无流量记录。",
+        "refresh": "刷新",
+        "series": {
+          "used": "已用"
+        }
       },
       "charts": {
         "countryDistribution": "节点国家分布",

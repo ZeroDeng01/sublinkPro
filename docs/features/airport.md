@@ -10,7 +10,7 @@ SublinkPro provides complete airport subscription management. It can convert sub
 
 | Feature | Description |
 |:---|:---|
-| **📥 Multi format import** | Automatically parses and imports Clash/mihomo and V2Ray subscription formats. Mieru and Snell support Clash/mihomo YAML only |
+| **📥 Multi format import** | Automatically parses and imports Clash/mihomo, V2Ray and Xray JSON subscription formats. Mieru and Snell support Clash/mihomo YAML only |
 | **⏱️ Smart scheduled updates** | Built in Crontab level scheduler, with interval or Cron expression updates, keeping nodes fresh |
 | **📊 Traffic usage monitoring** | Parses the `Subscription-Userinfo` response header and shows **used upload**, **used download**, **total traffic**, and **expiration time**, with a traffic history chart per airport |
 | **🚀 Update now** | One click “fetch now” plus real time callbacks, so latest traffic data and node lists appear without refreshing the page |
@@ -24,6 +24,15 @@ SublinkPro provides complete airport subscription management. It can convert sub
 - The system first expands providers referenced by `proxy-groups[].use`. If groups enable `include-all` / `include-all-providers`, or if no group references any provider, all HTTP providers are expanded in declared order.
 - Provider responses support standard YAML top level `proxies`. If a provider returns base64 or plaintext URI line lists, they are parsed with normal subscription link compatibility.
 - Local `file` providers, provider cache, scheduled health checks, full mihomo override semantics, and a provider's own `proxy` routing are not implemented. These runtime features should still be handled by Clash / mihomo clients.
+
+### Xray JSON subscription compatibility
+
+- Airport subscription import also understands Xray client configs (`{"outbounds": [...]}`) and the profile array form (`[{"remarks": "...", "outbounds": [...]}, ...]`) returned by Remnawave-family panels and Happ AI Mode subscriptions. The JSON branch runs only when YAML, `proxy-providers` and share-link parsing all find no nodes, so existing formats keep their current behavior.
+- Supported outbound protocols are `vless`, `vmess`, `trojan`, `shadowsocks`, `socks` and `http`. Control-plane outbounds such as `freedom`, `blackhole`, `dns` and `loopback` are ignored, and nodes whose transport has no share-link equivalent are skipped with a debug log instead of being silently downgraded.
+- TLS and Reality settings map to mihomo fields: `tlsSettings.serverName`, `allowInsecure`, `alpn`, `fingerprint`, and `realitySettings.publicKey`, `shortId`, `serverNames`. A Reality node without `fingerprint` gets `chrome`, so the generated config stays loadable.
+- Transports map to `ws`, `grpc`, `h2`, `http` (TCP plus HTTP header), `httpupgrade` and `xhttp` / `splithttp`. `kcp` and `quic` have no equivalent and are skipped. For `xhttp`, `mode`, `path`, `host`, `headers`, `noGRPCHeader`, `xPaddingBytes` and `downloadSettings` are carried over, including the flattened Happ layout where these keys sit directly under `xhttpSettings`.
+- Node names come from the outbound `tag`. Generic tags such as `proxy` or `out` and empty tags fall back to `address:port`. When a subscription returns several profiles, the profile `remarks` is used as a name prefix (`Германия - 1-de`) because different profiles usually describe the same nodes with different credentials, and duplicate names would make the generated Clash config invalid. Outbounds repeated with identical credentials across profiles are merged by content hash, so the node list does not multiply by the profile count.
+- If a panel streams the JSON response and the body never completes, the loader keeps the bytes it already received and imports complete profiles. When even the first profile is still incomplete, which is what a mid-body stall usually produces, every complete outbound inside it is restored instead of failing the whole update.
 
 ### VLESS / XHTTP compatibility
 
@@ -193,6 +202,7 @@ Usage fetching is enabled by default for all airports, including existing airpor
 Every successful airport refresh records a traffic snapshot in the `airport_usage_snapshots` table. Snapshots power the inline sparkline in the airport list and the zoomable history dialog.
 
 - **Inline sparkline**: airports with usage fetching enabled show a mini chart in the usage area of the airport table, list view, and mobile card.
+- **Today's usage on each card**: the usage area of the airport card, list row, and mobile card also shows the traffic consumed since local midnight (`Today`). It uses the same snapshot deltas as the daily traffic view and is returned as `todayUsed` by `GET /airports/usage-sparklines`, so it refreshes together with the sparkline.
 - **History dialog**: click the chart icon or the sparkline to open the full chart. Pick a range preset (1, 3, 7, 30, 90 days, or all retained data), switch between automatic (one point per refresh), hourly, and daily granularity, and zoom with the mouse wheel or the slider. The reset button returns to the full range. Hourly and daily views merge each clock hour or calendar day into a single point that keeps the last successful value of that period.
 - **Refresh markers**: every successful refresh is drawn as a blue dot on the curve and every failed one as a red dot, so the refresh cadence is visible at a glance. Dense ranges keep every marker and only shrink the dots.
 - **Windowed time axis**: the x-axis always spans the selected range, so sparse history only occupies the period it actually covers instead of being stretched across the full chart width. When recording started later than the range, the dialog shows the timestamp of the first snapshot.
@@ -201,6 +211,7 @@ Every successful airport refresh records a traffic snapshot in the `airport_usag
 - **Per-refresh points**: by default every stored snapshot is drawn as its own point, so the curve follows the real refresh times instead of being rounded to the hour. Very dense ranges are evenly sampled down to at most 3000 points (the newest point is always kept), and the sparkline keeps at most 60 points.
 - **Single sample**: when only one sample exists in the range, the chart marks it as a dot and tells you that the range contains a single sample.
 - **Per airport only**: usage counters come from the airport's `Subscription-Userinfo`, so the history belongs to the airport. Because airports are reused across subscriptions, there is no separate per-subscription chart.
+- **Daily traffic view**: the dashboard shows a **Traffic by Day** card with one bar per calendar day (7, 14, 30, and 90-day ranges, today highlighted) together with today's total, the range total, and the daily average. A compact badge next to the header logo shows the traffic consumed today across all airports. Both are calculated from the same snapshots: each day is the delta between consecutive successful snapshots, and a counter reset (panel reset or plan change) counts the new value in full instead of producing a negative delta. `GET /airports/usage-daily` exposes the same data.
 
 Recording rules:
 

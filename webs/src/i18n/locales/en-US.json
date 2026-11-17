@@ -433,6 +433,7 @@
       "nextRun": "Next run",
       "usage": {
         "title": "Usage information",
+        "today": "Today",
         "disabled": "Usage fetching is not enabled",
         "disabledShort": "Not enabled",
         "failed": "Usage fetch failed",
@@ -687,6 +688,10 @@
         "invalidRange": "Retention must be between {{min}} and {{max}} days"
       }
     }
+  },
+  "todayTraffic": {
+    "tooltip": "Traffic used today: {{used}}",
+    "loadFailed": "Failed to load today's traffic"
   },
   "settings": {
     "title": "User Center",
@@ -1785,6 +1790,22 @@
         "lowUsageWarning": "Low Usage Warning",
         "allSufficient": "All airports have sufficient usage",
         "remain": "Remain"
+      },
+      "trafficDaily": {
+        "title": "Traffic by Day",
+        "subtitle": "Daily consumption calculated from subscription refresh snapshots",
+        "hint": "Each bar is the traffic delta between consecutive subscription refreshes on that day.",
+        "today": "Today",
+        "rangeTotal": "Selected period",
+        "dailyAverage": "Daily average",
+        "days": "{{count}}d",
+        "loading": "Loading traffic...",
+        "loadFailed": "Failed to load daily traffic",
+        "empty": "No traffic recorded in this period yet.",
+        "refresh": "Refresh",
+        "series": {
+          "used": "Used"
+        }
       },
       "charts": {
         "countryDistribution": "Node Country Distribution",

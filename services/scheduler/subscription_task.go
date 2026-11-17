@@ -7,6 +7,7 @@ import (
 	"sublink/node"
 	"sublink/services/notifications"
 	"sublink/utils"
+	"time"
 )
 
 // ExecuteSubscriptionTask 执行订阅任务的具体业务逻辑
@@ -74,6 +75,12 @@ func executeSubscriptionTask(id int, url string, subName string, trigger models.
 		default:
 		}
 	}
+
+	// 兜底超时：上游 HTTP/代理层卡死时，任务不会长期停留在 running。
+	// 成功路径下 ReportComplete 也会主动取消 context，两者不冲突。
+	const subscriptionUpdateTimeout = 10 * time.Minute
+	ctx, cancel := context.WithTimeout(ctx, subscriptionUpdateTimeout)
+	defer cancel()
 
 	changedNodeIDs, usageInfo, err := node.LoadClashConfigFromURLWithReporter(ctx, id, url, subName, downloadWithProxy, proxyLink, userAgent, requestHeaders, reporter, fetchUsageInfo, skipTLSVerify)
 

@@ -359,6 +359,8 @@ export default function AirportMobileList({
                     }
 
                     const { upload, download, used, total, unlimited, percent, expire, daysLeft, expired } = usage;
+                    // 今日消耗由后端按当天快照差值累计，和用量历史图表同一口径
+                    const todayUsed = Number(usageSparklines?.[airport.id]?.todayUsed) || 0;
                     const color = getUsageColor(percent);
                     const isUrgent = !expired && daysLeft !== null && daysLeft <= 7;
                     const isWarning = !expired && !isUrgent && daysLeft !== null && daysLeft <= 30;
@@ -424,6 +426,14 @@ export default function AirportMobileList({
                             </Typography>
                             <Typography variant="body2" sx={{ color: secondaryText }}>
                               {formatBytes(download)}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="body2" sx={{ color: secondaryText }}>
+                              {t('airports.list.usage.today')}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: primaryText, fontWeight: 600 }}>
+                              {formatBytes(todayUsed)}
                             </Typography>
                           </Box>
                         </Box>

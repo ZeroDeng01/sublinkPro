@@ -603,17 +603,22 @@ func mergeClashProxyGroup(group *yaml.Node, proxiesNameList []string) {
 		utils.Error("代理组解析失败: %v", err)
 		return
 	}
-	// include-all、use/filter 等自动匹配组应保持模板原意，不能强行展开为固定节点列表。
-	if shouldPreserveProxyGroup(fields) {
-		return
-	}
+	// include-all、use/filter 等自动匹配组保持模板原意，不补全成员列表，
+	// 但显式写下的 __ALL_PROXIES__ 仍要就地展开，否则占位符会原样发给客户端。
+	preserve := shouldPreserveProxyGroup(fields)
 
 	proxiesNode := resolveYAMLAlias(yamlMappingValue(group, "proxies"))
 	switch {
 	case proxiesNode == nil:
+		if preserve {
+			return
+		}
 		proxiesNode = &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
 		yamlMappingSet(group, "proxies", proxiesNode)
 	case proxiesNode.Kind == yaml.ScalarNode && proxiesNode.Tag == "!!null":
+		if preserve {
+			return
+		}
 		// 模板写成 proxies: 后面留空时按空列表处理，与旧版行为一致
 		proxiesNode.Kind = yaml.SequenceNode
 		proxiesNode.Tag = "!!seq"
@@ -639,6 +644,9 @@ func mergeClashProxyGroup(group *yaml.Node, proxiesNameList []string) {
 		return
 	}
 
+	if preserve {
+		return
+	}
 	// 模板里已列出组引用的保持不变，只有空列表才追加所有节点
 	if len(proxiesNode.Content) > 0 {
 		return
