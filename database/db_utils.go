@@ -19,7 +19,7 @@ func WithTransaction(fn func(tx *gorm.DB) error) error {
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
-			utils.Error("事务执行时发生panic，已回滚: %v", r)
+			utils.Error("Panic during transaction; rolled back: %v", r)
 			panic(r) // re-throw panic after rollback
 		}
 	}()
@@ -46,7 +46,7 @@ func WithRetry(maxRetries int, delay time.Duration, fn func() error) error {
 		// Check if it's a retryable database lock/deadlock error
 		if isLockError(err) {
 			if i < maxRetries-1 {
-				utils.Warn("数据库锁冲突，第 %d 次重试，等待 %v...", i+1, delay)
+				utils.Warn("Database lock conflict; retry %d, waiting %v...", i+1, delay)
 				time.Sleep(delay)
 				delay *= 2 // exponential backoff
 				continue

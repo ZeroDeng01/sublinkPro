@@ -144,13 +144,13 @@ func NormalizeBaseURL(raw string) (string, error) {
 	}
 	parsed, err := url.Parse(trimmed)
 	if err != nil {
-		return "", fmt.Errorf("AI Base URL 无效")
+		return "", fmt.Errorf("invalid AI base URL")
 	}
 	if parsed.Scheme != "https" && parsed.Scheme != "http" {
-		return "", fmt.Errorf("AI Base URL 必须为 http 或 https")
+		return "", fmt.Errorf("AI base URL must use http or https")
 	}
 	if parsed.Host == "" {
-		return "", fmt.Errorf("AI Base URL 缺少主机")
+		return "", fmt.Errorf("AI base URL is missing a host")
 	}
 	parsed.Path = strings.TrimRight(parsed.Path, "/")
 	return parsed.String(), nil
@@ -187,16 +187,16 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 		return nil, err
 	}
 	if strings.TrimSpace(baseURL) == "" {
-		return nil, fmt.Errorf("AI Base URL 不能为空")
+		return nil, fmt.Errorf("AI base URL is required")
 	}
 	if strings.TrimSpace(cfg.Model) == "" {
-		return nil, fmt.Errorf("AI 模型不能为空")
+		return nil, fmt.Errorf("AI model is required")
 	}
 	if cfg.Temperature < 0 || cfg.Temperature > 2 {
-		return nil, fmt.Errorf("temperature 必须在 0 到 2 之间")
+		return nil, fmt.Errorf("temperature must be between 0 and 2")
 	}
 	if cfg.MaxTokens < 0 {
-		return nil, fmt.Errorf("max_tokens 不能小于 0")
+		return nil, fmt.Errorf("max_tokens cannot be negative")
 	}
 	return &Client{
 		baseURL:      baseURL,
@@ -351,19 +351,19 @@ func (c *Client) CreateChatCompletion(ctx context.Context, messages []Message) (
 	}
 	debugLogAIResponse(endpoint, resp.StatusCode, responseBody)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", "", nil, fmt.Errorf("AI 服务返回 HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))
+		return "", "", nil, fmt.Errorf("AI service returned HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))
 	}
 	var parsed chatCompletionResponse
 	if err := json.Unmarshal(responseBody, &parsed); err != nil {
-		return "", "", nil, fmt.Errorf("AI 响应解析失败: %w", err)
+		return "", "", nil, fmt.Errorf("failed to parse AI response: %w", err)
 	}
 	if len(parsed.Choices) == 0 {
-		return "", "", nil, fmt.Errorf("AI 响应缺少 choices")
+		return "", "", nil, fmt.Errorf("AI response is missing choices")
 	}
 	utils.Debug("AI upstream parsed usage: url=%s finish_reason=%s usage=%s", endpoint, parsed.Choices[0].FinishReason, mustMarshalLogJSON(parsed.Usage))
 	content := strings.TrimSpace(parsed.Choices[0].Message.Content)
 	if content == "" {
-		return "", parsed.Choices[0].FinishReason, parsed.Usage, fmt.Errorf("AI 响应内容为空")
+		return "", parsed.Choices[0].FinishReason, parsed.Usage, fmt.Errorf("AI response content is empty")
 	}
 	return content, parsed.Choices[0].FinishReason, parsed.Usage, nil
 }
@@ -399,7 +399,7 @@ func (c *Client) StreamChatCompletions(ctx context.Context, messages []Message, 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		responseBody, _ := io.ReadAll(resp.Body)
 		debugLogAIResponse(endpoint, resp.StatusCode, responseBody)
-		return "", "", nil, fmt.Errorf("AI /chat/completions 返回 HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))
+		return "", "", nil, fmt.Errorf("AI /chat/completions returned HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))
 	}
 	utils.Debug("AI upstream chat stream connected: url=%s status=%d", endpoint, resp.StatusCode)
 
@@ -429,7 +429,7 @@ func (c *Client) StreamChatCompletions(ctx context.Context, messages []Message, 
 		var chunk chatCompletionStreamChunk
 		if trimmedData != "" {
 			if err := json.Unmarshal([]byte(trimmedData), &chunk); err != nil {
-				return fmt.Errorf("AI /chat/completions 流解析失败: %w", err)
+				return fmt.Errorf("failed to parse AI /chat/completions stream: %w", err)
 			}
 		}
 		if len(chunk.Usage) > 0 {
@@ -482,7 +482,7 @@ func (c *Client) StreamChatCompletions(ctx context.Context, messages []Message, 
 	}
 	content := strings.TrimSpace(builder.String())
 	if content == "" {
-		return "", finishReason, usage, fmt.Errorf("AI /chat/completions 流未返回有效内容")
+		return "", finishReason, usage, fmt.Errorf("AI /chat/completions stream returned no valid content")
 	}
 	return content, finishReason, usage, nil
 }
@@ -525,7 +525,7 @@ func (c *Client) StreamResponses(ctx context.Context, messages []Message, onEven
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		responseBody, _ := io.ReadAll(resp.Body)
 		debugLogAIResponse(endpoint, resp.StatusCode, responseBody)
-		return "", "", nil, fmt.Errorf("AI /responses 返回 HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))
+		return "", "", nil, fmt.Errorf("AI /responses returned HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))
 	}
 	utils.Debug("AI upstream stream connected: url=%s status=%d", endpoint, resp.StatusCode)
 
@@ -612,7 +612,7 @@ func (c *Client) StreamResponses(ctx context.Context, messages []Message, onEven
 	}
 	content := strings.TrimSpace(builder.String())
 	if content == "" {
-		return "", finishReason, usage, fmt.Errorf("AI /responses 流未返回有效内容")
+		return "", finishReason, usage, fmt.Errorf("AI /responses stream returned no valid content")
 	}
 	return content, finishReason, usage, nil
 }
@@ -666,7 +666,7 @@ func DiscoverModels(ctx context.Context, cfg ClientConfig) ([]string, error) {
 		return nil, err
 	}
 	if strings.TrimSpace(baseURL) == "" {
-		return nil, fmt.Errorf("AI Base URL 不能为空")
+		return nil, fmt.Errorf("AI base URL is required")
 	}
 	if baseURL == TemplateEditMockBaseURL {
 		return []string{"template-ai-edit-mock"}, nil
@@ -698,11 +698,11 @@ func DiscoverModels(ctx context.Context, cfg ClientConfig) ([]string, error) {
 		return nil, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("AI /models 返回 HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))
+		return nil, fmt.Errorf("AI /models returned HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))
 	}
 	var parsed modelsResponse
 	if err := json.Unmarshal(responseBody, &parsed); err != nil {
-		return nil, fmt.Errorf("AI 模型列表解析失败: %w", err)
+		return nil, fmt.Errorf("failed to parse AI model list: %w", err)
 	}
 	seen := make(map[string]struct{}, len(parsed.Data))
 	models := make([]string, 0, len(parsed.Data))

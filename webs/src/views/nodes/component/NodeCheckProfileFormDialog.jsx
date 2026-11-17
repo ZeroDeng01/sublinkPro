@@ -383,7 +383,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, onS
               renderOption={(props, option) => (
                 <Box component="li" {...props} key={option.value}>
                   <Box>
-                    <Typography variant="body2">{option.label}</Typography>
+                    <Typography variant="body2">{option.labelKey ? t(option.labelKey, option.label) : option.label}</Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
                       {option.value}
                     </Typography>
@@ -423,7 +423,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, onS
                 renderOption={(props, option) => (
                   <Box component="li" {...props} key={option.value}>
                     <Box>
-                      <Typography variant="body2">{option.label}</Typography>
+                      <Typography variant="body2">{option.labelKey ? t(option.labelKey, option.label) : option.label}</Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
                         {option.value}
                       </Typography>
@@ -538,7 +538,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, onS
                 >
                   {LANDING_IP_URL_OPTIONS.map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {opt.labelKey ? t(opt.labelKey, opt.label) : opt.label}
                     </MenuItem>
                   ))}
                 </Select>
@@ -583,7 +583,7 @@ export default function NodeCheckProfileFormDialog({ open, onClose, profile, onS
                 renderOption={(props, option) => (
                   <Box component="li" {...props} key={option.value}>
                     <Box>
-                      <Typography variant="body2">{option.label}</Typography>
+                      <Typography variant="body2">{option.labelKey ? t(option.labelKey, option.label) : option.label}</Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
                         {option.value}
                       </Typography>

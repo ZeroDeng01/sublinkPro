@@ -894,7 +894,7 @@ export default function SubscriptionList() {
       await fetchSelectedNodeDetails(newNodes);
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '批量添加节点失败', 'error');
+      showMessage(error.message || 'Failed to add nodes in bulk', 'error');
     }
   };
 
@@ -943,7 +943,7 @@ export default function SubscriptionList() {
       setCheckedAvailable(response.data || []);
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '批量选择节点失败', 'error');
+      showMessage(error.message || 'Failed to select nodes in bulk', 'error');
     }
   };
 
@@ -997,7 +997,7 @@ export default function SubscriptionList() {
       setPreviewOpen(true);
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '预览请求失败', 'error');
+      showMessage(error.message || 'Preview request failed', 'error');
     } finally {
       setPreviewLoading(false);
     }
@@ -1018,7 +1018,7 @@ export default function SubscriptionList() {
       setPreviewOpen(true);
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '预览请求失败', 'error');
+      showMessage(error.message || 'Preview request failed', 'error');
     } finally {
       setPreviewLoading(false);
     }

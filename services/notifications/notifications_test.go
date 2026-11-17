@@ -94,8 +94,8 @@ func TestNormalizeEventKeysKeepsCatalogOrder(t *testing.T) {
 }
 
 func TestFillPayloadMetaUsesCatalogDefaults(t *testing.T) {
-	payload := FillPayloadMeta("security.user_login", Payload{Title: "登录成功"})
-	if payload.EventName != "用户登录" || payload.CategoryName != "安全审计" || payload.Severity != "info" || payload.Time == "" {
+	payload := FillPayloadMeta("security.user_login", Payload{Title: "login succeeded"})
+	if payload.EventName != "User login" || payload.CategoryName != "Security audit" || payload.Severity != "info" || payload.Time == "" {
 		t.Fatalf("unexpected payload meta: %+v", payload)
 	}
 }
@@ -380,8 +380,8 @@ func TestPublishBroadcastsSSEAndSelectedTelegram(t *testing.T) {
 	}
 	select {
 	case payload := <-telegramCalls:
-		if payload.EventName != "用户登录" {
-			t.Fatalf("expected telegram payload event name 用户登录, got %s", payload.EventName)
+		if payload.EventName != "User login" {
+			t.Fatalf("expected telegram payload event name User login, got %s", payload.EventName)
 		}
 	case <-time.After(time.Second):
 		t.Fatalf("expected telegram sender to be called")

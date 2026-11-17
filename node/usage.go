@@ -20,11 +20,11 @@ import (
 // 仅请求订阅地址获取 subscription-userinfo header，不解析节点内容
 func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 	if airport == nil {
-		return nil, fmt.Errorf("机场对象为空")
+		return nil, fmt.Errorf("airport is nil")
 	}
 
 	if !airport.FetchUsageInfo {
-		return nil, fmt.Errorf("机场未开启用量信息获取")
+		return nil, fmt.Errorf("usage fetching is not enabled for this airport")
 	}
 
 	client := &http.Client{
@@ -40,11 +40,11 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 
 		if airport.ProxyLink != "" {
 			proxyNodeLink = airport.ProxyLink
-			utils.Info("用量获取使用指定代理")
+			utils.Info("Usage fetch uses the specified proxy")
 		} else {
 			// 自动选择最佳代理
 			if bestNode, err := models.GetBestProxyNode(); err == nil && bestNode != nil {
-				utils.Info("用量获取自动选择代理节点: %s", bestNode.Name)
+				utils.Info("Usage fetch auto-selected proxy node: %s", bestNode.Name)
 				proxyNodeLink = bestNode.Link
 			}
 		}
@@ -52,7 +52,7 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 		if proxyNodeLink != "" {
 			proxyAdapter, err := mihomo.GetMihomoAdapter(proxyNodeLink)
 			if err != nil {
-				utils.Error("创建代理适配器失败: %v，将直接请求", err)
+				utils.Error("Failed to create proxy adapter: %v; requesting directly", err)
 			} else {
 				client.Transport = &http.Transport{
 					DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -96,7 +96,7 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 	var resp *http.Response
 	headReq, err := http.NewRequestWithContext(context.Background(), http.MethodHead, subscriptionURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %v", err)
+		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 	applyRequestHeaders(headReq, userAgent, requestHeaders)
 
@@ -107,20 +107,20 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 			_ = resp.Body.Close()
 		}
 		if err != nil {
-			utils.Debug("机场【%s】HEAD 请求失败: %v，尝试 GET 请求", airport.Name, err)
+			utils.Debug("Airport [%s] HEAD request failed: %v; trying GET", airport.Name, err)
 		} else {
-			utils.Debug("机场【%s】HEAD 请求返回状态码 %d，尝试 GET 请求", airport.Name, resp.StatusCode)
+			utils.Debug("Airport [%s] HEAD returned status %d; trying GET", airport.Name, resp.StatusCode)
 		}
 
 		getReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, subscriptionURL, nil)
 		if err != nil {
-			return nil, fmt.Errorf("创建请求失败: %v", err)
+			return nil, fmt.Errorf("failed to create request: %v", err)
 		}
 		applyRequestHeaders(getReq, userAgent, requestHeaders)
 
 		resp, err = client.Do(getReq)
 		if err != nil {
-			return nil, fmt.Errorf("请求机场失败: %v", err)
+			return nil, fmt.Errorf("airport request failed: %v", err)
 		}
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -128,17 +128,17 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 	// 解析 subscription-userinfo header
 	subUserInfo := resp.Header.Get("subscription-userinfo")
 	if subUserInfo == "" {
-		utils.Warn("机场【%s】未返回用量信息 header", airport.Name)
+		utils.Warn("Airport [%s] returned no usage header", airport.Name)
 		return FailedUsageInfo(), nil
 	}
 
 	usageInfo := ParseSubscriptionUserInfo(subUserInfo)
 	if usageInfo == nil {
-		utils.Warn("机场【%s】用量信息 header 解析失败", airport.Name)
+		utils.Warn("Airport [%s] failed to parse usage header", airport.Name)
 		return FailedUsageInfo(), nil
 	}
 
-	utils.Info("机场【%s】用量获取成功: 上传=%d, 下载=%d, 总量=%d, 过期=%d",
+	utils.Info("Airport [%s] usage fetched: upload=%d, download=%d, total=%d, expire=%d",
 		airport.Name, usageInfo.Upload, usageInfo.Download, usageInfo.Total, usageInfo.Expire)
 
 	return usageInfo, nil
@@ -149,15 +149,15 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 func UpdateAirportUsageInfo(airportID int) (*UsageInfo, error) {
 	airport, err := models.GetAirportByID(airportID)
 	if err != nil {
-		return nil, fmt.Errorf("获取机场失败: %v", err)
+		return nil, fmt.Errorf("failed to load airport: %v", err)
 	}
 
 	if airport == nil {
-		return nil, fmt.Errorf("机场不存在: %d", airportID)
+		return nil, fmt.Errorf("airport does not exist: %d", airportID)
 	}
 
 	if !airport.FetchUsageInfo {
-		return nil, fmt.Errorf("机场【%s】未开启用量信息获取", airport.Name)
+		return nil, fmt.Errorf("airport [%s] has usage fetching disabled", airport.Name)
 	}
 
 	usageInfo, err := FetchAirportUsageInfo(airport)
@@ -171,17 +171,17 @@ func UpdateAirportUsageInfo(airportID int) (*UsageInfo, error) {
 	if usageInfo != nil {
 		if usageInfo.Total < 0 {
 			if saveErr := airport.UpdateUsageInfoWithStatus(usageInfo.Upload, usageInfo.Download, usageInfo.Total, usageInfo.Expire, true, "Usage info unavailable"); saveErr != nil {
-				utils.Error("保存机场【%s】用量失败状态失败: %v", airport.Name, saveErr)
-				return usageInfo, fmt.Errorf("保存用量信息失败: %v", saveErr)
+				utils.Error("Failed to save usage failure state for airport [%s]: %v", airport.Name, saveErr)
+				return usageInfo, fmt.Errorf("failed to save usage info: %v", saveErr)
 			}
-			utils.Warn("机场【%s】未获取到用量信息，已记录失败点", airport.Name)
+			utils.Warn("Airport [%s] returned no usage info; failure point recorded", airport.Name)
 			return usageInfo, nil
 		}
 		if err := airport.UpdateUsageInfo(usageInfo.Upload, usageInfo.Download, usageInfo.Total, usageInfo.Expire); err != nil {
-			utils.Error("保存机场【%s】用量信息失败: %v", airport.Name, err)
-			return usageInfo, fmt.Errorf("保存用量信息失败: %v", err)
+			utils.Error("Failed to save usage info for airport [%s]: %v", airport.Name, err)
+			return usageInfo, fmt.Errorf("failed to save usage info: %v", err)
 		}
-		utils.Info("机场【%s】用量信息已保存", airport.Name)
+		utils.Info("Usage info saved for airport [%s]", airport.Name)
 	}
 
 	return usageInfo, nil
@@ -211,7 +211,7 @@ func BatchUpdateAirportUsage(airportIDs []int) map[int]*UsageResult {
 			if err != nil {
 				resultsMap.Store(airportID, &UsageResult{
 					AirportID: airportID,
-					Error:     fmt.Errorf("获取机场失败: %v", err),
+					Error:     fmt.Errorf("failed to load airport: %v", err),
 				})
 				return
 			}
@@ -219,7 +219,7 @@ func BatchUpdateAirportUsage(airportIDs []int) map[int]*UsageResult {
 			if airport == nil {
 				resultsMap.Store(airportID, &UsageResult{
 					AirportID: airportID,
-					Error:     fmt.Errorf("机场不存在"),
+					Error:     fmt.Errorf("airport does not exist"),
 				})
 				return
 			}
@@ -252,12 +252,12 @@ func BatchUpdateAirportUsage(airportIDs []int) map[int]*UsageResult {
 	resultsMap.Range(func(key, value any) bool {
 		airportID, ok := key.(int)
 		if !ok {
-			utils.Error("机场用量结果键类型异常: %T", key)
+			utils.Error("Unexpected airport usage result key type: %T", key)
 			return true
 		}
 		result, ok := value.(*UsageResult)
 		if !ok {
-			utils.Error("机场用量结果值类型异常: %T", value)
+			utils.Error("Unexpected airport usage result value type: %T", value)
 			return true
 		}
 		results[airportID] = result
@@ -279,7 +279,7 @@ func RefreshUsageForSubscriptionNodes(nodes []models.Node) {
 	}
 
 	if len(airportIDs) == 0 {
-		utils.Debug("没有需要刷新用量的机场")
+		utils.Debug("No airports need a usage refresh")
 		return
 	}
 
@@ -289,7 +289,7 @@ func RefreshUsageForSubscriptionNodes(nodes []models.Node) {
 		ids = append(ids, id)
 	}
 
-	utils.Info("开始刷新 %d 个机场的用量信息", len(ids))
+	utils.Info("Refreshing usage for %d airports", len(ids))
 
 	// 批量更新用量
 	results := BatchUpdateAirportUsage(ids)
@@ -301,7 +301,7 @@ func RefreshUsageForSubscriptionNodes(nodes []models.Node) {
 	for _, result := range results {
 		if result.Error != nil {
 			failCount++
-			utils.Error("机场【%s】用量刷新失败: %v", result.AirportName, result.Error)
+			utils.Error("Airport [%s] usage refresh failed: %v", result.AirportName, result.Error)
 		} else if result.UsageInfo != nil {
 			successCount++
 		} else {
@@ -309,5 +309,5 @@ func RefreshUsageForSubscriptionNodes(nodes []models.Node) {
 		}
 	}
 
-	utils.Info("用量刷新完成: 成功=%d, 失败=%d, 跳过=%d", successCount, failCount, skipCount)
+	utils.Info("Usage refresh finished: succeeded=%d, failed=%d, skipped=%d", successCount, failCount, skipCount)
 }

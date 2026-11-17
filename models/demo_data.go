@@ -13,7 +13,7 @@ func InitDemoData() {
 		return
 	}
 
-	utils.Info("🎭 初始化演示数据...")
+	utils.Info("🎭 Initializing demo data...")
 
 	// 创建演示用户
 	initDemoUser()
@@ -30,7 +30,7 @@ func InitDemoData() {
 	// 刷新缓存
 	refreshDemoCaches()
 
-	utils.Info("🎭 演示数据初始化完成")
+	utils.Info("🎭 Demo data initialized")
 }
 
 // initDemoUser 创建演示用户
@@ -39,12 +39,12 @@ func initDemoUser() {
 		Username: "admin",
 		Password: "123456",
 		Role:     "admin",
-		Nickname: "演示管理员",
+		Nickname: "Demo Admin",
 	}
 	if err := user.Create(); err != nil {
-		utils.Error("创建演示用户失败: %v", err)
+		utils.Error("Failed to create demo user: %v", err)
 	} else {
-		utils.Info("✓ 创建演示用户: admin")
+		utils.Info("✓ Created demo user: admin")
 	}
 }
 
@@ -53,15 +53,15 @@ func initDemoNodes() {
 	now := time.Now()
 	demoNodes := []Node{
 		{
-			Name:        "🇭🇰 香港-演示节点01",
-			LinkName:    "香港节点01",
-			Link:        "vmess://eyJhZGQiOiJkZW1vLWhvbmdrb25nMDEuZXhhbXBsZS5jb20iLCJhaWQiOiIwIiwiaG9zdCI6IiIsImlkIjoiMTIzNDU2NzgtMTIzNC0xMjM0LTEyMzQtMTIzNDU2Nzg5YWJjIiwibmV0IjoidGNwIiwicGF0aCI6IiIsInBvcnQiOiI0NDMiLCJwcyI6Iummmea4ry3mvJTnpLroioLngrkwMSIsInNjeSI6ImF1dG8iLCJzbmkiOiIiLCJ0bHMiOiJ0bHMiLCJ0eXBlIjoibm9uZSIsInYiOiIyIn0=",
+			Name:        "🇭🇰 Demo-HK-01",
+			LinkName:    "Demo-HK-01",
+			Link:        "vmess://eyJhZGQiOiJkZW1vLWhvbmdrb25nMDEuZXhhbXBsZS5jb20iLCJhaWQiOiIwIiwiaG9zdCI6IiIsImlkIjoiMTIzNDU2NzgtMTIzNC0xMjM0LTEyMzQtMTIzNDU2Nzg5YWJjIiwibmV0IjoidGNwIiwicGF0aCI6IiIsInBvcnQiOiI0NDMiLCJwcyI6IkRlbW8tSEstMDEiLCJzY3kiOiJhdXRvIiwic25pIjoiIiwidGxzIjoidGxzIiwidHlwZSI6Im5vbmUiLCJ2IjoiMiJ9",
 			LinkAddress: "demo-hongkong01.example.com:443",
 			LinkHost:    "demo-hongkong01.example.com",
 			LinkPort:    "443",
 			LinkCountry: "HK",
 			Source:      "demo",
-			Group:       "演示分组",
+			Group:       "Demo Group",
 			Speed:       25.6,
 			DelayTime:   45,
 			SpeedStatus: "success",
@@ -70,15 +70,15 @@ func initDemoNodes() {
 			UpdatedAt:   now,
 		},
 		{
-			Name:        "🇯🇵 日本-演示节点01",
-			LinkName:    "日本节点01",
-			Link:        "vmess://eyJhZGQiOiJkZW1vLWphcGFuMDEuZXhhbXBsZS5jb20iLCJhaWQiOiIwIiwiaG9zdCI6IiIsImlkIjoiMjM0NTY3ODktMjM0NS0yMzQ1LTIzNDUtMjM0NTY3ODlhYmNkIiwibmV0IjoidGNwIiwicGF0aCI6IiIsInBvcnQiOiI0NDMiLCJwcyI6IuaXpeacrC3mvJTnpLroioLngrkwMSIsInNjeSI6ImF1dG8iLCJzbmkiOiIiLCJ0bHMiOiJ0bHMiLCJ0eXBlIjoibm9uZSIsInYiOiIyIn0=",
+			Name:        "🇯🇵 Demo-JP-01",
+			LinkName:    "Demo-JP-01",
+			Link:        "vmess://eyJhZGQiOiJkZW1vLWphcGFuMDEuZXhhbXBsZS5jb20iLCJhaWQiOiIwIiwiaG9zdCI6IiIsImlkIjoiMjM0NTY3ODktMjM0NS0yMzQ1LTIzNDUtMjM0NTY3ODlhYmNkIiwibmV0IjoidGNwIiwicGF0aCI6IiIsInBvcnQiOiI0NDMiLCJwcyI6IkRlbW8tSlAtMDEiLCJzY3kiOiJhdXRvIiwic25pIjoiIiwidGxzIjoidGxzIiwidHlwZSI6Im5vbmUiLCJ2IjoiMiJ9",
 			LinkAddress: "demo-japan01.example.com:443",
 			LinkHost:    "demo-japan01.example.com",
 			LinkPort:    "443",
 			LinkCountry: "JP",
 			Source:      "demo",
-			Group:       "演示分组",
+			Group:       "Demo Group",
 			Speed:       32.1,
 			DelayTime:   68,
 			SpeedStatus: "success",
@@ -87,15 +87,15 @@ func initDemoNodes() {
 			UpdatedAt:   now,
 		},
 		{
-			Name:        "🇸🇬 新加坡-演示节点01",
-			LinkName:    "新加坡节点01",
-			Link:        "trojan://demo-password-sg@demo-singapore01.example.com:443?security=tls#🇸🇬 新加坡-演示节点01",
+			Name:        "🇸🇬 Demo-SG-01",
+			LinkName:    "Demo-SG-01",
+			Link:        "trojan://demo-password-sg@demo-singapore01.example.com:443?security=tls#🇸🇬 Demo-SG-01",
 			LinkAddress: "demo-singapore01.example.com:443",
 			LinkHost:    "demo-singapore01.example.com",
 			LinkPort:    "443",
 			LinkCountry: "SG",
 			Source:      "demo",
-			Group:       "演示分组",
+			Group:       "Demo Group",
 			Speed:       18.5,
 			DelayTime:   85,
 			SpeedStatus: "success",
@@ -104,15 +104,15 @@ func initDemoNodes() {
 			UpdatedAt:   now,
 		},
 		{
-			Name:        "🇺🇸 美国-演示节点01",
-			LinkName:    "美国节点01",
-			Link:        "ss://YWVzLTI1Ni1nY206ZGVtby1wYXNzd29yZC11c0BkZW1vLXVzYTAxLmV4YW1wbGUuY29tOjQ0Mw==#🇺🇸 美国-演示节点01",
+			Name:        "🇺🇸 Demo-US-01",
+			LinkName:    "Demo-US-01",
+			Link:        "ss://YWVzLTI1Ni1nY206ZGVtby1wYXNzd29yZC11c0BkZW1vLXVzYTAxLmV4YW1wbGUuY29tOjQ0Mw==#🇺🇸 Demo-US-01",
 			LinkAddress: "demo-usa01.example.com:443",
 			LinkHost:    "demo-usa01.example.com",
 			LinkPort:    "443",
 			LinkCountry: "US",
 			Source:      "demo",
-			Group:       "演示分组",
+			Group:       "Demo Group",
 			Speed:       15.2,
 			DelayTime:   180,
 			SpeedStatus: "success",
@@ -121,15 +121,15 @@ func initDemoNodes() {
 			UpdatedAt:   now,
 		},
 		{
-			Name:        "🇩🇪 德国-演示节点01",
-			LinkName:    "德国节点01",
-			Link:        "vless://abcdef12-3456-7890-abcd-ef1234567890@demo-germany01.example.com:443?encryption=none&security=tls&type=ws&host=demo-germany01.example.com&path=/demo#🇩🇪 德国-演示节点01",
+			Name:        "🇩🇪 Demo-DE-01",
+			LinkName:    "Demo-DE-01",
+			Link:        "vless://abcdef12-3456-7890-abcd-ef1234567890@demo-germany01.example.com:443?encryption=none&security=tls&type=ws&host=demo-germany01.example.com&path=/demo#🇩🇪 Demo-DE-01",
 			LinkAddress: "demo-germany01.example.com:443",
 			LinkHost:    "demo-germany01.example.com",
 			LinkPort:    "443",
 			LinkCountry: "DE",
 			Source:      "demo",
-			Group:       "欧洲节点",
+			Group:       "Europe Nodes",
 			Speed:       12.8,
 			DelayTime:   210,
 			SpeedStatus: "success",
@@ -138,15 +138,15 @@ func initDemoNodes() {
 			UpdatedAt:   now,
 		},
 		{
-			Name:        "🇬🇧 英国-演示节点01",
-			LinkName:    "英国节点01",
-			Link:        "hy2://demo-password-uk@demo-uk01.example.com:443?sni=demo-uk01.example.com#🇬🇧 英国-演示节点01",
+			Name:        "🇬🇧 Demo-UK-01",
+			LinkName:    "Demo-UK-01",
+			Link:        "hy2://demo-password-uk@demo-uk01.example.com:443?sni=demo-uk01.example.com#🇬🇧 Demo-UK-01",
 			LinkAddress: "demo-uk01.example.com:443",
 			LinkHost:    "demo-uk01.example.com",
 			LinkPort:    "443",
 			LinkCountry: "GB",
 			Source:      "demo",
-			Group:       "欧洲节点",
+			Group:       "Europe Nodes",
 			Speed:       0,
 			DelayTime:   0,
 			SpeedStatus: "untested",
@@ -155,15 +155,15 @@ func initDemoNodes() {
 			UpdatedAt:   now,
 		},
 		{
-			Name:        "🇰🇷 韩国-演示节点01",
-			LinkName:    "韩国节点01",
-			Link:        "vmess://eyJhZGQiOiJkZW1vLWtvcmVhMDEuZXhhbXBsZS5jb20iLCJhaWQiOiIwIiwiaG9zdCI6IiIsImlkIjoiMzQ1Njc4OTAtMzQ1Ni0zNDU2LTM0NTYtMzQ1Njc4OTBhYmNkIiwibmV0Ijoid3MiLCJwYXRoIjoiL2RlbW8iLCJwb3J0IjoiNDQzIiwicHMiOiLpn6nlm70t5ryU56S66IqC54K5MDEiLCJzY3kiOiJhdXRvIiwic25pIjoiIiwidGxzIjoidGxzIiwidHlwZSI6Im5vbmUiLCJ2IjoiMiJ9",
+			Name:        "🇰🇷 Demo-KR-01",
+			LinkName:    "Demo-KR-01",
+			Link:        "vmess://eyJhZGQiOiJkZW1vLWtvcmVhMDEuZXhhbXBsZS5jb20iLCJhaWQiOiIwIiwiaG9zdCI6IiIsImlkIjoiMzQ1Njc4OTAtMzQ1Ni0zNDU2LTM0NTYtMzQ1Njc4OTBhYmNkIiwibmV0Ijoid3MiLCJwYXRoIjoiL2RlbW8iLCJwb3J0IjoiNDQzIiwicHMiOiJEZW1vLUtSLTAxIiwic2N5IjoiYXV0byIsInNuaSI6IiIsInRscyI6InRscyIsInR5cGUiOiJub25lIiwidiI6IjIifQ==",
 			LinkAddress: "demo-korea01.example.com:443",
 			LinkHost:    "demo-korea01.example.com",
 			LinkPort:    "443",
 			LinkCountry: "KR",
 			Source:      "demo",
-			Group:       "演示分组",
+			Group:       "Demo Group",
 			Speed:       28.3,
 			DelayTime:   52,
 			SpeedStatus: "success",
@@ -172,15 +172,15 @@ func initDemoNodes() {
 			UpdatedAt:   now,
 		},
 		{
-			Name:        "🇹🇼 台湾-演示节点01",
-			LinkName:    "台湾节点01",
-			Link:        "trojan://demo-password-tw@demo-taiwan01.example.com:443?security=tls#🇹🇼 台湾-演示节点01",
+			Name:        "🇹🇼 Demo-TW-01",
+			LinkName:    "Demo-TW-01",
+			Link:        "trojan://demo-password-tw@demo-taiwan01.example.com:443?security=tls#🇹🇼 Demo-TW-01",
 			LinkAddress: "demo-taiwan01.example.com:443",
 			LinkHost:    "demo-taiwan01.example.com",
 			LinkPort:    "443",
 			LinkCountry: "TW",
 			Source:      "demo",
-			Group:       "演示分组",
+			Group:       "Demo Group",
 			Speed:       22.5,
 			DelayTime:   58,
 			SpeedStatus: "success",
@@ -192,9 +192,9 @@ func initDemoNodes() {
 
 	for i := range demoNodes {
 		if err := demoNodes[i].Add(); err != nil {
-			utils.Error("创建演示节点失败: %v", err)
+			utils.Error("Failed to create demo node: %v", err)
 		} else {
-			utils.Info("✓ 创建演示节点: %s", demoNodes[i].Name)
+			utils.Info("✓ Created demo node: %s", demoNodes[i].Name)
 		}
 	}
 }
@@ -202,17 +202,17 @@ func initDemoNodes() {
 // initDemoTags 创建演示标签
 func initDemoTags() {
 	demoTags := []Tag{
-		{Name: "高速节点", Color: "#4CAF50"},
-		{Name: "稳定节点", Color: "#2196F3"},
-		{Name: "流媒体", Color: "#FF9800"},
-		{Name: "游戏加速", Color: "#9C27B0"},
+		{Name: "Fast Nodes", Color: "#4CAF50"},
+		{Name: "Stable Nodes", Color: "#2196F3"},
+		{Name: "Streaming", Color: "#FF9800"},
+		{Name: "Gaming", Color: "#9C27B0"},
 	}
 
 	for i := range demoTags {
 		if err := demoTags[i].Add(); err != nil {
-			utils.Error("创建演示标签失败: %v", err)
+			utils.Error("Failed to create demo tag: %v", err)
 		} else {
-			utils.Info("✓ 创建演示标签: %s", demoTags[i].Name)
+			utils.Info("✓ Created demo tag: %s", demoTags[i].Name)
 		}
 	}
 }
@@ -224,49 +224,49 @@ func initDemoSubscriptions() {
 
 	// 创建一个基础订阅
 	sub := &Subcription{
-		Name:   "演示订阅-综合",
+		Name:   "Demo Subscription - Global",
 		Config: defaultConfig,
 	}
 	if err := sub.Add(); err != nil {
-		utils.Error("创建演示订阅失败: %v", err)
+		utils.Error("Failed to create demo subscription: %v", err)
 		return
 	}
 
 	// 添加分组关联
-	if err := sub.AddGroups([]string{"演示分组"}); err != nil {
-		utils.Error("添加订阅分组失败: %v", err)
+	if err := sub.AddGroups([]string{"Demo Group"}); err != nil {
+		utils.Error("Failed to add subscription group: %v", err)
 	}
 
-	utils.Info("✓ 创建演示订阅: %s", sub.Name)
+	utils.Info("✓ Created demo subscription: %s", sub.Name)
 
 	// 创建欧洲订阅
 	subEurope := &Subcription{
-		Name:   "演示订阅-欧洲",
+		Name:   "Demo Subscription - Europe",
 		Config: defaultConfig,
 	}
 	if err := subEurope.Add(); err != nil {
-		utils.Error("创建演示订阅失败: %v", err)
+		utils.Error("Failed to create demo subscription: %v", err)
 		return
 	}
 
-	if err := subEurope.AddGroups([]string{"欧洲节点"}); err != nil {
-		utils.Error("添加订阅分组失败: %v", err)
+	if err := subEurope.AddGroups([]string{"Europe Nodes"}); err != nil {
+		utils.Error("Failed to add subscription group: %v", err)
 	}
 
-	utils.Info("✓ 创建演示订阅: %s", subEurope.Name)
+	utils.Info("✓ Created demo subscription: %s", subEurope.Name)
 }
 
 // refreshDemoCaches 刷新演示数据相关的缓存
 func refreshDemoCaches() {
 	// 重新初始化缓存以确保演示数据被正确加载
 	if err := InitNodeCache(); err != nil {
-		utils.Error("刷新节点缓存失败: %v", err)
+		utils.Error("Failed to refresh node cache: %v", err)
 	}
 	if err := InitTagCache(); err != nil {
-		utils.Error("刷新标签缓存失败: %v", err)
+		utils.Error("Failed to refresh tag cache: %v", err)
 	}
 	if err := InitSubcriptionCache(); err != nil {
-		utils.Error("刷新订阅缓存失败: %v", err)
+		utils.Error("Failed to refresh subscription cache: %v", err)
 	}
 }
 
@@ -276,7 +276,7 @@ func ResetDemoData() {
 		return
 	}
 
-	utils.Info("🔄 重置演示数据...")
+	utils.Info("🔄 Resetting demo data...")
 
 	// 清空所有表
 	database.DB.Exec("DELETE FROM nodes")

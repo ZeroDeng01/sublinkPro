@@ -99,7 +99,7 @@ func nextTemplateVersionNumber(templateID int) (int, error) {
 // 版本号通过唯一索引保证不重复，冲突时重试。
 func AppendTemplateVersion(templateDir string, templateID int, content []byte, source, comment, author string) (*TemplateVersion, bool, error) {
 	if templateID <= 0 {
-		return nil, false, errors.New("模板ID无效")
+		return nil, false, errors.New("invalid template ID")
 	}
 	if source == "" {
 		source = TemplateVersionSourceSave
@@ -147,7 +147,7 @@ func AppendTemplateVersion(templateDir string, templateID int, content []byte, s
 	}
 
 	if lastErr == nil {
-		lastErr = errors.New("创建模板版本失败")
+		lastErr = errors.New("failed to create template version")
 	}
 	return nil, false, lastErr
 }
@@ -200,13 +200,13 @@ func FindTemplateVersion(templateID, version int) (*TemplateVersion, error) {
 // ReadTemplateVersionContent 读取版本快照内容
 func ReadTemplateVersionContent(templateDir string, version *TemplateVersion) ([]byte, error) {
 	if version == nil {
-		return nil, errors.New("版本不存在")
+		return nil, errors.New("version not found")
 	}
 	path := templateVersionFilePath(templateDir, version.TemplateID, version.Version)
 	content, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("版本快照文件不存在: %w", err)
+			return nil, fmt.Errorf("version snapshot file not found: %w", err)
 		}
 		return nil, err
 	}
@@ -291,6 +291,6 @@ func truncateTemplateVersionText(value string, limit int) string {
 // LogTemplateVersionError 记录版本操作错误但不影响主流程
 func LogTemplateVersionError(action string, err error) {
 	if err != nil {
-		utils.Error("模板版本%s失败: %v", action, err)
+		utils.Error("Template version %s failed: %v", action, err)
 	}
 }

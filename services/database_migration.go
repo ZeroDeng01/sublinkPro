@@ -84,13 +84,13 @@ func RunDatabaseMigrationTask(ctx context.Context, taskID, uploadPath, originalN
 
 	if databaseMigrationRunning.Swap(true) {
 		_ = os.Remove(uploadPath)
-		_ = tm.FailTask(taskID, "已有数据库迁移任务在运行，请稍后再试")
+		_ = tm.FailTask(taskID, "A database migration task is already running; try again later")
 		return
 	}
 	defer databaseMigrationRunning.Store(false)
 	defer func() {
 		if err := os.Remove(uploadPath); err != nil && !os.IsNotExist(err) {
-			utils.Warn("清理迁移上传文件失败: %v", err)
+			utils.Warn("Failed to clean up migration upload file: %v", err)
 		}
 	}()
 
@@ -102,16 +102,16 @@ func RunDatabaseMigrationTask(ctx context.Context, taskID, uploadPath, originalN
 	result, err := executeDatabaseMigration(ctx, taskID, uploadPath, originalName, options)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			utils.Warn("数据库迁移任务已取消: %s", taskID)
+			utils.Warn("Database migration task cancelled: %s", taskID)
 			return
 		}
 		_ = tm.FailTask(taskID, err.Error())
 		return
 	}
 
-	message := "数据库迁移完成"
+	message := "Database migration completed"
 	if len(result.Warnings) > 0 {
-		message = fmt.Sprintf("数据库迁移完成，但有 %d 条警告", len(result.Warnings))
+		message = fmt.Sprintf("Database migration completed with %d warnings", len(result.Warnings))
 	}
 	_ = tm.CompleteTask(taskID, message, result)
 }
@@ -119,7 +119,7 @@ func RunDatabaseMigrationTask(ctx context.Context, taskID, uploadPath, originalN
 func ensureDatabaseMigrationCanRun(currentTaskID string) error {
 	for _, task := range GetTaskManager().GetRunningTasksInfo() {
 		if task.ID != currentTaskID {
-			return fmt.Errorf("存在进行中的任务 %s，请等待其完成后再迁移", task.Name)
+			return fmt.Errorf("task %s is still running; wait for it to finish before migrating", task.Name)
 		}
 	}
 	return nil
@@ -133,22 +133,22 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 	if sourceBundle.CleanupDir != "" {
 		defer func() {
 			if cleanupErr := os.RemoveAll(sourceBundle.CleanupDir); cleanupErr != nil {
-				utils.Warn("清理迁移临时目录失败: %v", cleanupErr)
+				utils.Warn("Failed to clean up migration temp directory: %v", cleanupErr)
 			}
 		}()
 	}
 
 	sourceDB, err := database.OpenMigrationSourceSQLite(sourceBundle.DBPath)
 	if err != nil {
-		return nil, fmt.Errorf("打开源 SQLite 数据库失败: %w", err)
+		return nil, fmt.Errorf("failed to open source SQLite database: %w", err)
 	}
 	sourceSQLDB, err := sourceDB.DB()
 	if err != nil {
-		return nil, fmt.Errorf("获取源 SQLite 连接失败: %w", err)
+		return nil, fmt.Errorf("failed to get source SQLite connection: %w", err)
 	}
 	defer func() {
 		if closeErr := sourceSQLDB.Close(); closeErr != nil {
-			utils.Warn("关闭源 SQLite 连接失败: %v", closeErr)
+			utils.Warn("Failed to close source SQLite connection: %v", closeErr)
 		}
 	}()
 
@@ -161,7 +161,7 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 	}
 
 	if sourceBundle.TemplateDir == "" {
-		result.Warnings = append(result.Warnings, "未检测到模板目录；如果旧实例有自定义模板，请改用 backup.zip 导入")
+		result.Warnings = append(result.Warnings, "No template directory detected; if the old instance had custom templates, import via backup.zip instead")
 	}
 	if !options.IncludeAccessKeys {
 		result.Skipped = append(result.Skipped, "access_keys")
@@ -172,7 +172,7 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 
 	steps := buildDatabaseMigrationSteps(sourceBundle, options)
 	if err := GetTaskManager().UpdateTotal(taskID, len(steps)); err != nil {
-		utils.Warn("更新数据库迁移任务总步骤失败: %v", err)
+		utils.Warn("Failed to update total steps of the database migration task: %v", err)
 	}
 
 	step := 0
@@ -212,91 +212,91 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 		if err := clearTargetBusinessData(tx); err != nil {
 			return err
 		}
-		if err := reportStep("已清空目标业务数据", nil); err != nil {
+		if err := reportStep("Target business data cleared", nil); err != nil {
 			return err
 		}
 
 		if err := importUsers(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("用户导入完成，共 %d 条", state.result.Imported["users"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Users imported: %d", state.result.Imported["users"]), nil); err != nil {
 			return err
 		}
 
 		if err := importSystemSettings(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("系统设置导入完成，共 %d 条", state.result.Imported["system_settings"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("System settings imported: %d", state.result.Imported["system_settings"]), nil); err != nil {
 			return err
 		}
 
 		if err := importWebhooks(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("Webhook 导入完成，共 %d 条", state.result.Imported["webhooks"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Webhooks imported: %d", state.result.Imported["webhooks"]), nil); err != nil {
 			return err
 		}
 
 		if err := importScripts(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("脚本导入完成，共 %d 条", state.result.Imported["scripts"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Scripts imported: %d", state.result.Imported["scripts"]), nil); err != nil {
 			return err
 		}
 
 		if err := importTemplates(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("模板元数据导入完成，共 %d 条", state.result.Imported["templates"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Template metadata imported: %d", state.result.Imported["templates"]), nil); err != nil {
 			return err
 		}
 
 		if err := importNodes(state, ctx); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("节点导入完成，共 %d 条", state.result.Imported["nodes"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Nodes imported: %d", state.result.Imported["nodes"]), nil); err != nil {
 			return err
 		}
 
 		if err := importSubscriptions(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("订阅导入完成，共 %d 条", state.result.Imported["subcriptions"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Subscriptions imported: %d", state.result.Imported["subcriptions"]), nil); err != nil {
 			return err
 		}
 
 		if err := importSubscriptionGroups(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("订阅分组导入完成，共 %d 条", state.result.Imported["subcription_groups"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Subscription groups imported: %d", state.result.Imported["subcription_groups"]), nil); err != nil {
 			return err
 		}
 
 		if err := importSubscriptionScripts(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("订阅脚本关联导入完成，共 %d 条", state.result.Imported["subcription_scripts"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Subscription-script links imported: %d", state.result.Imported["subcription_scripts"]), nil); err != nil {
 			return err
 		}
 
 		if err := importSubscriptionNodes(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("订阅节点关联导入完成，共 %d 条", state.result.Imported["subcription_nodes"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Subscription-node links imported: %d", state.result.Imported["subcription_nodes"]), nil); err != nil {
 			return err
 		}
 
 		if err := importTags(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("标签导入完成，共 %d 条", state.result.Imported["tags"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Tags imported: %d", state.result.Imported["tags"]), nil); err != nil {
 			return err
 		}
 
 		if err := importTagRules(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("标签规则导入完成，共 %d 条", state.result.Imported["tag_rules"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Tag rules imported: %d", state.result.Imported["tag_rules"]), nil); err != nil {
 			return err
 		}
 
@@ -304,7 +304,7 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 			return err
 		}
 		if options.IncludeAccessKeys {
-			if err := reportStep(fmt.Sprintf("AccessKey 导入完成，共 %d 条", state.result.Imported["access_keys"]), nil); err != nil {
+			if err := reportStep(fmt.Sprintf("Access keys imported: %d", state.result.Imported["access_keys"]), nil); err != nil {
 				return err
 			}
 		}
@@ -312,7 +312,7 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 		if err := importSubscriptionShares(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("分享链接导入完成，共 %d 条", state.result.Imported["subscription_shares"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Share links imported: %d", state.result.Imported["subscription_shares"]), nil); err != nil {
 			return err
 		}
 
@@ -320,7 +320,7 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 			return err
 		}
 		if options.IncludeSubLogs {
-			if err := reportStep(fmt.Sprintf("访问日志导入完成，共 %d 条", state.result.Imported["sub_logs"]), nil); err != nil {
+			if err := reportStep(fmt.Sprintf("Access logs imported: %d", state.result.Imported["sub_logs"]), nil); err != nil {
 				return err
 			}
 		}
@@ -328,42 +328,42 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 		if err := importSubscriptionChainRules(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("链式代理规则导入完成，共 %d 条", state.result.Imported["subscription_chain_rules"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Chain proxy rules imported: %d", state.result.Imported["subscription_chain_rules"]), nil); err != nil {
 			return err
 		}
 
 		if err := importAirports(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("机场导入完成，共 %d 条", state.result.Imported["airports"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Airports imported: %d", state.result.Imported["airports"]), nil); err != nil {
 			return err
 		}
 
 		if err := importSubscriptionAirports(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("订阅机场关联导入完成，共 %d 条", state.result.Imported["subcription_airports"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Subscription-airport links imported: %d", state.result.Imported["subcription_airports"]), nil); err != nil {
 			return err
 		}
 
 		if err := importGroupAirportSorts(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("分组机场排序导入完成，共 %d 条", state.result.Imported["group_airport_sorts"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Group-airport sort orders imported: %d", state.result.Imported["group_airport_sorts"]), nil); err != nil {
 			return err
 		}
 
 		if err := importNodeCheckProfiles(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("节点检测策略导入完成，共 %d 条", state.result.Imported["node_check_profiles"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Node check profiles imported: %d", state.result.Imported["node_check_profiles"]), nil); err != nil {
 			return err
 		}
 
 		if err := importHosts(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("Host 导入完成，共 %d 条", state.result.Imported["hosts"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("Hosts imported: %d", state.result.Imported["hosts"]), nil); err != nil {
 			return err
 		}
 
@@ -375,19 +375,19 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 	if err := reseedTargetSequences(database.DB); err != nil {
 		return nil, err
 	}
-	if err := reportStep("自增序列已重置", nil); err != nil {
+	if err := reportStep("Auto-increment sequences reset", nil); err != nil {
 		return nil, err
 	}
 
 	if sourceBundle.TemplateDir != "" {
 		if err := restoreTemplateDirectory(sourceBundle.TemplateDir); err != nil {
-			result.Warnings = append(result.Warnings, "模板文件恢复失败: "+err.Error())
+			result.Warnings = append(result.Warnings, "Failed to restore template files: "+err.Error())
 		} else {
 			result.TemplatesRestored = true
 		}
-		label := "模板目录已恢复"
+		label := "Template directory restored"
 		if !result.TemplatesRestored {
-			label = "模板目录恢复失败，详情见任务警告"
+			label = "Failed to restore template directory; see task warnings for details"
 		}
 		if err := reportStep(label, nil); err != nil {
 			return nil, err
@@ -395,9 +395,9 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 	}
 
 	if err := reloadRuntimeStateAfterMigration(); err != nil {
-		return nil, fmt.Errorf("数据库数据已导入，但刷新运行时状态失败: %w；建议重启服务", err)
+		return nil, fmt.Errorf("database data imported, but refreshing runtime state failed: %w; restarting the service is recommended", err)
 	}
-	if err := reportStep("配置、缓存和定时任务已刷新", nil); err != nil {
+	if err := reportStep("Configuration, caches, and cron jobs refreshed", nil); err != nil {
 		return nil, err
 	}
 
@@ -406,45 +406,45 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 
 func buildDatabaseMigrationSteps(sourceBundle *databaseMigrationSource, options DatabaseMigrationOptions) []string {
 	steps := []string{
-		"清空目标业务数据",
-		"导入用户",
-		"导入系统设置",
-		"导入 Webhook",
-		"导入脚本",
-		"导入模板元数据",
-		"导入节点",
-		"导入订阅",
-		"导入订阅分组",
-		"导入订阅脚本关联",
-		"导入订阅节点关联",
-		"导入标签",
-		"导入标签规则",
+		"Clear target business data",
+		"Import users",
+		"Import system settings",
+		"Import webhooks",
+		"Import scripts",
+		"Import template metadata",
+		"Import nodes",
+		"Import subscriptions",
+		"Import subscription groups",
+		"Import subscription-script links",
+		"Import subscription-node links",
+		"Import tags",
+		"Import tag rules",
 	}
 
 	if options.IncludeAccessKeys {
-		steps = append(steps, "导入AccessKey")
+		steps = append(steps, "Import access keys")
 	}
 
-	steps = append(steps, "导入分享链接")
+	steps = append(steps, "Import share links")
 
 	if options.IncludeSubLogs {
-		steps = append(steps, "导入访问日志")
+		steps = append(steps, "Import access logs")
 	}
 
 	steps = append(steps,
-		"导入链式代理规则",
-		"导入机场",
-		"导入分组机场排序",
-		"导入节点检测策略",
-		"导入Host",
-		"重置自增序列",
+		"Import chain proxy rules",
+		"Import airports",
+		"Import group-airport sort orders",
+		"Import node check profiles",
+		"Import hosts",
+		"Reset auto-increment sequences",
 	)
 
 	if sourceBundle.TemplateDir != "" {
-		steps = append(steps, "恢复模板目录")
+		steps = append(steps, "Restore template directory")
 	}
 
-	steps = append(steps, "刷新运行时状态")
+	steps = append(steps, "Refresh runtime state")
 	return steps
 }
 
@@ -478,7 +478,7 @@ func prepareDatabaseMigrationSource(uploadPath string) (*databaseMigrationSource
 			SourceType: "sqlite_db",
 		}, nil
 	default:
-		return nil, fmt.Errorf("仅支持 SQLite 数据库文件或旧实例导出的 backup.zip")
+		return nil, fmt.Errorf("only a SQLite database file or a backup.zip exported from an old instance is supported")
 	}
 }
 
@@ -521,13 +521,13 @@ func extractMigrationZip(zipPath string) (string, error) {
 func extractMigrationZipTo(zipPath, tempRoot string) (string, error) {
 	reader, err := zip.OpenReader(zipPath)
 	if err != nil {
-		return "", fmt.Errorf("读取迁移压缩包失败: %w", err)
+		return "", fmt.Errorf("failed to read migration archive: %w", err)
 	}
 	defer func() { _ = reader.Close() }()
 
 	tempDir, err := os.MkdirTemp(tempRoot, "bundle-*")
 	if err != nil {
-		return "", fmt.Errorf("创建迁移临时目录失败: %w", err)
+		return "", fmt.Errorf("failed to create migration temp directory: %w", err)
 	}
 	succeeded := false
 	defer func() {
@@ -536,18 +536,18 @@ func extractMigrationZipTo(zipPath, tempRoot string) (string, error) {
 		}
 	}()
 	if len(reader.File) > maxMigrationZipEntries {
-		return "", fmt.Errorf("迁移压缩包文件数量超过 %d 个限制", maxMigrationZipEntries)
+		return "", fmt.Errorf("migration archive exceeds the %d file limit", maxMigrationZipEntries)
 	}
 	var declaredSize int64
 	for _, file := range reader.File {
 		if file.FileInfo().Mode()&os.ModeSymlink != 0 {
-			return "", fmt.Errorf("迁移压缩包包含不允许的符号链接: %s", file.Name)
+			return "", fmt.Errorf("migration archive contains a disallowed symbolic link: %s", file.Name)
 		}
 		if file.UncompressedSize64 > uint64(maxMigrationFileBytes) {
-			return "", fmt.Errorf("迁移压缩包文件超过 %d 字节限制: %s", maxMigrationFileBytes, file.Name)
+			return "", fmt.Errorf("migration archive file exceeds the %d byte limit: %s", maxMigrationFileBytes, file.Name)
 		}
 		if file.UncompressedSize64 > uint64(maxMigrationExtractedBytes-declaredSize) {
-			return "", fmt.Errorf("迁移压缩包解压后超过 %d 字节限制", maxMigrationExtractedBytes)
+			return "", fmt.Errorf("migration archive exceeds the %d byte extracted-size limit", maxMigrationExtractedBytes)
 		}
 		declaredSize += int64(file.UncompressedSize64)
 	}
@@ -556,33 +556,33 @@ func extractMigrationZipTo(zipPath, tempRoot string) (string, error) {
 	for _, file := range reader.File {
 		cleanName := filepath.Clean(filepath.FromSlash(file.Name))
 		if cleanName == "." || strings.HasPrefix(cleanName, "..") {
-			return "", fmt.Errorf("迁移压缩包包含非法路径: %s", file.Name)
+			return "", fmt.Errorf("migration archive contains an invalid path: %s", file.Name)
 		}
 		targetPath := filepath.Join(tempDir, cleanName)
 		if !strings.HasPrefix(targetPath, tempDir+string(os.PathSeparator)) && targetPath != tempDir {
-			return "", fmt.Errorf("迁移压缩包包含越界路径: %s", file.Name)
+			return "", fmt.Errorf("migration archive contains an out-of-bounds path: %s", file.Name)
 		}
 
 		if file.FileInfo().IsDir() {
 			if err := os.MkdirAll(targetPath, 0755); err != nil {
-				return "", fmt.Errorf("创建迁移目录失败: %w", err)
+				return "", fmt.Errorf("failed to create migration directory: %w", err)
 			}
 			continue
 		}
 
 		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-			return "", fmt.Errorf("创建迁移目录失败: %w", err)
+			return "", fmt.Errorf("failed to create migration directory: %w", err)
 		}
 
 		src, err := file.Open()
 		if err != nil {
-			return "", fmt.Errorf("读取迁移压缩包文件失败: %w", err)
+			return "", fmt.Errorf("failed to read migration archive file: %w", err)
 		}
 
 		dst, err := os.Create(targetPath)
 		if err != nil {
 			_ = src.Close()
-			return "", fmt.Errorf("创建迁移临时文件失败: %w", err)
+			return "", fmt.Errorf("failed to create migration temp file: %w", err)
 		}
 
 		written, copyErr := io.Copy(dst, io.LimitReader(src, maxMigrationFileBytes+1))
@@ -590,20 +590,20 @@ func extractMigrationZipTo(zipPath, tempRoot string) (string, error) {
 		if copyErr != nil {
 			_ = dst.Close()
 			_ = src.Close()
-			return "", fmt.Errorf("解压迁移文件失败: %w", copyErr)
+			return "", fmt.Errorf("failed to extract migration file: %w", copyErr)
 		}
 		if written > maxMigrationFileBytes || extractedSize > maxMigrationExtractedBytes {
 			_ = dst.Close()
 			_ = src.Close()
-			return "", fmt.Errorf("迁移压缩包解压内容超过安全限制")
+			return "", fmt.Errorf("migration archive extracted content exceeds the safety limit")
 		}
 
 		if err := dst.Close(); err != nil {
 			_ = src.Close()
-			return "", fmt.Errorf("保存迁移临时文件失败: %w", err)
+			return "", fmt.Errorf("failed to save migration temp file: %w", err)
 		}
 		if err := src.Close(); err != nil {
-			return "", fmt.Errorf("关闭迁移压缩包文件失败: %w", err)
+			return "", fmt.Errorf("failed to close migration archive file: %w", err)
 		}
 	}
 
@@ -614,14 +614,14 @@ func extractMigrationZipTo(zipPath, tempRoot string) (string, error) {
 func ensureDatabaseMigrationTempRoot() (string, error) {
 	tempRoot := filepath.Join(config.GetDBPath(), ".tmp", "database-migration")
 	if err := os.MkdirAll(tempRoot, 0755); err != nil {
-		return "", fmt.Errorf("创建迁移临时目录失败: %w", err)
+		return "", fmt.Errorf("failed to create migration temp directory: %w", err)
 	}
 	return tempRoot, nil
 }
 
 func findSQLiteDatabaseFile(root string) (string, error) {
 	if _, err := os.Stat(root); err != nil {
-		return "", fmt.Errorf("压缩包中未找到 db 目录")
+		return "", fmt.Errorf("no db directory found in the archive")
 	}
 
 	candidates := make([]string, 0)
@@ -642,7 +642,7 @@ func findSQLiteDatabaseFile(root string) (string, error) {
 		return "", err
 	}
 	if len(candidates) == 0 {
-		return "", fmt.Errorf("压缩包中未找到 SQLite 数据库文件")
+		return "", fmt.Errorf("no SQLite database file found in the archive")
 	}
 	return candidates[0], nil
 }
@@ -668,7 +668,7 @@ func loadPreservedTargetSettings(tx *gorm.DB) (map[string]string, error) {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			continue
 		}
-		return nil, fmt.Errorf("读取目标保留设置失败(%s): %w", key, err)
+		return nil, fmt.Errorf("failed to load preserved target settings (%s): %w", key, err)
 	}
 	return result, nil
 }
@@ -709,7 +709,7 @@ func clearTargetBusinessData(tx *gorm.DB) error {
 			continue
 		}
 		if err := tx.Exec("DELETE FROM " + quoteMigrationIdentifier(table)).Error; err != nil {
-			return fmt.Errorf("清空数据表 %s 失败: %w", table, err)
+			return fmt.Errorf("failed to clear table %s: %w", table, err)
 		}
 	}
 
@@ -722,10 +722,10 @@ func importUsers(state *databaseMigrationState) error {
 	}
 	var users []models.User
 	if err := state.source.Find(&users).Error; err != nil {
-		return fmt.Errorf("读取源用户失败: %w", err)
+		return fmt.Errorf("failed to read source users: %w", err)
 	}
 	if err := insertRecords(state.tx, users); err != nil {
-		return fmt.Errorf("导入用户失败: %w", err)
+		return fmt.Errorf("failed to import users: %w", err)
 	}
 	state.result.Imported["users"] = len(users)
 	return nil
@@ -735,7 +735,7 @@ func importSystemSettings(state *databaseMigrationState) error {
 	settings := make([]models.SystemSetting, 0)
 	if state.source.Migrator().HasTable(&models.SystemSetting{}) {
 		if err := state.source.Find(&settings).Error; err != nil {
-			return fmt.Errorf("读取源系统设置失败: %w", err)
+			return fmt.Errorf("failed to read source system settings: %w", err)
 		}
 	}
 
@@ -745,7 +745,7 @@ func importSystemSettings(state *databaseMigrationState) error {
 			continue
 		}
 		if len(setting.Key) > 191 {
-			return fmt.Errorf("系统设置键 %q 长度超过 191，无法迁移", setting.Key)
+			return fmt.Errorf("system setting key %q exceeds 191 characters and cannot be migrated", setting.Key)
 		}
 		filtered = append(filtered, setting)
 		state.importedSettings[setting.Key] = setting.Value
@@ -757,7 +757,7 @@ func importSystemSettings(state *databaseMigrationState) error {
 	}
 
 	if err := insertRecords(state.tx, filtered); err != nil {
-		return fmt.Errorf("导入系统设置失败: %w", err)
+		return fmt.Errorf("failed to import system settings: %w", err)
 	}
 	state.result.Imported["system_settings"] = len(filtered)
 	return nil
@@ -782,7 +782,7 @@ func importWebhooks(state *databaseMigrationState) error {
 	webhooks := make([]models.Webhook, 0)
 	if state.sourceHasWebhooks {
 		if err := state.source.Find(&webhooks).Error; err != nil {
-			return fmt.Errorf("读取源 Webhook 失败: %w", err)
+			return fmt.Errorf("failed to read source webhooks: %w", err)
 		}
 	} else {
 		legacyURL := strings.TrimSpace(state.importedSettings["webhook_url"])
@@ -798,7 +798,7 @@ func importWebhooks(state *databaseMigrationState) error {
 				contentType = "application/json"
 			}
 			webhooks = append(webhooks, models.Webhook{
-				Name:        "默认 Webhook",
+				Name:        "Default Webhook",
 				URL:         legacyURL,
 				Method:      method,
 				ContentType: contentType,
@@ -807,7 +807,7 @@ func importWebhooks(state *databaseMigrationState) error {
 				Enabled:     parseBool(state.importedSettings["webhook_enabled"], false),
 				EventKeys:   state.importedSettings["webhook_event_keys"],
 			})
-			state.result.Warnings = append(state.result.Warnings, "源备份未包含 Webhook 表，已根据旧版系统设置重建默认 Webhook")
+			state.result.Warnings = append(state.result.Warnings, "Source backup has no webhook table; a default webhook was rebuilt from legacy system settings")
 		}
 	}
 	for i := range webhooks {
@@ -815,7 +815,7 @@ func importWebhooks(state *databaseMigrationState) error {
 	}
 
 	if err := insertRecords(state.tx, webhooks); err != nil {
-		return fmt.Errorf("导入 Webhook 失败: %w", err)
+		return fmt.Errorf("failed to import webhooks: %w", err)
 	}
 	state.result.Imported["webhooks"] = len(webhooks)
 	return nil
@@ -827,10 +827,10 @@ func importScripts(state *databaseMigrationState) error {
 	}
 	var scripts []models.Script
 	if err := state.source.Find(&scripts).Error; err != nil {
-		return fmt.Errorf("读取源脚本失败: %w", err)
+		return fmt.Errorf("failed to read source scripts: %w", err)
 	}
 	if err := insertRecords(state.tx, scripts); err != nil {
-		return fmt.Errorf("导入脚本失败: %w", err)
+		return fmt.Errorf("failed to import scripts: %w", err)
 	}
 	state.result.Imported["scripts"] = len(scripts)
 	return nil
@@ -840,7 +840,7 @@ func importTemplates(state *databaseMigrationState) error {
 	templates := make([]models.Template, 0)
 	if state.sourceHasTemplates {
 		if err := state.source.Find(&templates).Error; err != nil {
-			return fmt.Errorf("读取源模板元数据失败: %w", err)
+			return fmt.Errorf("failed to read source template metadata: %w", err)
 		}
 	} else if state.sourceBundle.TemplateDir != "" {
 		var err error
@@ -849,18 +849,18 @@ func importTemplates(state *databaseMigrationState) error {
 			return err
 		}
 		if len(templates) > 0 {
-			state.result.Warnings = append(state.result.Warnings, "源备份未包含模板元数据表，已根据模板文件重建模板记录")
+			state.result.Warnings = append(state.result.Warnings, "Source backup has no template metadata table; template records were rebuilt from template files")
 		}
 	}
 
 	for _, template := range templates {
 		if len(template.Name) > 191 {
-			return fmt.Errorf("模板文件名 %q 长度超过 191，无法迁移", template.Name)
+			return fmt.Errorf("template file name %q exceeds 191 characters and cannot be migrated", template.Name)
 		}
 	}
 
 	if err := insertRecords(state.tx, templates); err != nil {
-		return fmt.Errorf("导入模板元数据失败: %w", err)
+		return fmt.Errorf("failed to import template metadata: %w", err)
 	}
 	state.result.Imported["templates"] = len(templates)
 	return nil
@@ -872,7 +872,7 @@ func importNodes(state *databaseMigrationState, ctx context.Context) error {
 	}
 	var nodes []models.Node
 	if err := state.source.Find(&nodes).Error; err != nil {
-		return fmt.Errorf("读取源节点失败: %w", err)
+		return fmt.Errorf("failed to read source nodes: %w", err)
 	}
 
 	for i := range nodes {
@@ -890,7 +890,7 @@ func importNodes(state *databaseMigrationState, ctx context.Context) error {
 	}
 
 	if err := insertRecords(state.tx, nodes); err != nil {
-		return fmt.Errorf("导入节点失败: %w", err)
+		return fmt.Errorf("failed to import nodes: %w", err)
 	}
 	state.result.Imported["nodes"] = len(nodes)
 	return nil
@@ -902,10 +902,10 @@ func importSubscriptions(state *databaseMigrationState) error {
 	}
 	var subs []models.Subcription
 	if err := state.source.Unscoped().Find(&subs).Error; err != nil {
-		return fmt.Errorf("读取源订阅失败: %w", err)
+		return fmt.Errorf("failed to read source subscriptions: %w", err)
 	}
 	if err := insertRecords(state.tx, subs); err != nil {
-		return fmt.Errorf("导入订阅失败: %w", err)
+		return fmt.Errorf("failed to import subscriptions: %w", err)
 	}
 	state.importedSubs = subs
 	for _, sub := range subs {
@@ -921,15 +921,15 @@ func importSubscriptionGroups(state *databaseMigrationState) error {
 	}
 	var groups []models.SubcriptionGroup
 	if err := state.source.Find(&groups).Error; err != nil {
-		return fmt.Errorf("读取源订阅分组失败: %w", err)
+		return fmt.Errorf("failed to read source subscription groups: %w", err)
 	}
 	for _, group := range groups {
 		if len(group.GroupName) > 191 {
-			return fmt.Errorf("分组名称 %q 长度超过 191，无法迁移", group.GroupName)
+			return fmt.Errorf("group name %q exceeds 191 characters and cannot be migrated", group.GroupName)
 		}
 	}
 	if err := insertRecords(state.tx, groups); err != nil {
-		return fmt.Errorf("导入订阅分组失败: %w", err)
+		return fmt.Errorf("failed to import subscription groups: %w", err)
 	}
 	state.result.Imported["subcription_groups"] = len(groups)
 	return nil
@@ -941,10 +941,10 @@ func importSubscriptionAirports(state *databaseMigrationState) error {
 	}
 	var records []models.SubcriptionAirport
 	if err := state.source.Find(&records).Error; err != nil {
-		return fmt.Errorf("读取源订阅机场关联失败: %w", err)
+		return fmt.Errorf("failed to read source subscription-airport links: %w", err)
 	}
 	if err := insertRecords(state.tx, records); err != nil {
-		return fmt.Errorf("导入订阅机场关联失败: %w", err)
+		return fmt.Errorf("failed to import subscription-airport links: %w", err)
 	}
 	state.result.Imported["subcription_airports"] = len(records)
 	return nil
@@ -956,10 +956,10 @@ func importSubscriptionScripts(state *databaseMigrationState) error {
 	}
 	var records []models.SubcriptionScript
 	if err := state.source.Find(&records).Error; err != nil {
-		return fmt.Errorf("读取源订阅脚本关联失败: %w", err)
+		return fmt.Errorf("failed to read source subscription-script links: %w", err)
 	}
 	if err := insertRecords(state.tx, records); err != nil {
-		return fmt.Errorf("导入订阅脚本关联失败: %w", err)
+		return fmt.Errorf("failed to import subscription-script links: %w", err)
 	}
 	state.result.Imported["subcription_scripts"] = len(records)
 	return nil
@@ -973,7 +973,7 @@ func importSubscriptionNodes(state *databaseMigrationState) error {
 	var records []models.SubcriptionNode
 	if state.source.Migrator().HasColumn("subcription_nodes", "node_id") {
 		if err := state.source.Table("subcription_nodes").Find(&records).Error; err != nil {
-			return fmt.Errorf("读取源订阅节点关联失败: %w", err)
+			return fmt.Errorf("failed to read source subscription-node links: %w", err)
 		}
 	} else if state.source.Migrator().HasColumn("subcription_nodes", "node_name") {
 		var legacyRecords []struct {
@@ -982,7 +982,7 @@ func importSubscriptionNodes(state *databaseMigrationState) error {
 			Sort          int
 		}
 		if err := state.source.Table("subcription_nodes").Find(&legacyRecords).Error; err != nil {
-			return fmt.Errorf("读取源旧版订阅节点关联失败: %w", err)
+			return fmt.Errorf("failed to read legacy subscription-node links: %w", err)
 		}
 		for _, legacy := range legacyRecords {
 			if _, ambiguous := state.ambiguousNodeNames[legacy.NodeName]; ambiguous {
@@ -1000,9 +1000,9 @@ func importSubscriptionNodes(state *databaseMigrationState) error {
 		}
 		if len(legacyRecords) > len(records) {
 			skippedCount := len(legacyRecords) - len(records)
-			warning := fmt.Sprintf("有 %d 条旧版订阅节点关联因找不到对应节点而被跳过", skippedCount)
+			warning := fmt.Sprintf("%d legacy subscription-node links skipped because the node was not found", skippedCount)
 			if len(state.ambiguousNodeNames) > 0 {
-				warning = fmt.Sprintf("有 %d 条旧版订阅节点关联因找不到对应节点或节点名称重复而被跳过", skippedCount)
+				warning = fmt.Sprintf("%d legacy subscription-node links skipped because the node was missing or its name was duplicated", skippedCount)
 			}
 			state.result.Warnings = append(state.result.Warnings, warning)
 		}
@@ -1011,7 +1011,7 @@ func importSubscriptionNodes(state *databaseMigrationState) error {
 	}
 
 	if err := insertRecords(state.tx, records); err != nil {
-		return fmt.Errorf("导入订阅节点关联失败: %w", err)
+		return fmt.Errorf("failed to import subscription-node links: %w", err)
 	}
 	state.result.Imported["subcription_nodes"] = len(records)
 	return nil
@@ -1023,10 +1023,10 @@ func importTags(state *databaseMigrationState) error {
 	}
 	var tags []models.Tag
 	if err := state.source.Find(&tags).Error; err != nil {
-		return fmt.Errorf("读取源标签失败: %w", err)
+		return fmt.Errorf("failed to read source tags: %w", err)
 	}
 	if err := insertRecords(state.tx, tags); err != nil {
-		return fmt.Errorf("导入标签失败: %w", err)
+		return fmt.Errorf("failed to import tags: %w", err)
 	}
 	state.result.Imported["tags"] = len(tags)
 	return nil
@@ -1038,10 +1038,10 @@ func importTagRules(state *databaseMigrationState) error {
 	}
 	var rules []models.TagRule
 	if err := state.source.Find(&rules).Error; err != nil {
-		return fmt.Errorf("读取源标签规则失败: %w", err)
+		return fmt.Errorf("failed to read source tag rules: %w", err)
 	}
 	if err := insertRecords(state.tx, rules); err != nil {
-		return fmt.Errorf("导入标签规则失败: %w", err)
+		return fmt.Errorf("failed to import tag rules: %w", err)
 	}
 	state.result.Imported["tag_rules"] = len(rules)
 	return nil
@@ -1056,13 +1056,13 @@ func importAccessKeys(state *databaseMigrationState) error {
 	}
 	var keys []models.AccessKey
 	if err := state.source.Find(&keys).Error; err != nil {
-		return fmt.Errorf("读取源 AccessKey 失败: %w", err)
+		return fmt.Errorf("failed to read source access keys: %w", err)
 	}
 	if err := insertRecords(state.tx, keys); err != nil {
-		return fmt.Errorf("导入 AccessKey 失败: %w", err)
+		return fmt.Errorf("failed to import access keys: %w", err)
 	}
 	if len(keys) > 0 {
-		state.result.Warnings = append(state.result.Warnings, "已导入 AccessKey。如旧 API Key 无法使用，请确认新实例的 API 加密密钥与旧实例一致，或手动重新生成")
+		state.result.Warnings = append(state.result.Warnings, "Access keys imported. If old API keys stop working, make sure the new instance uses the same API encryption key as the old one, or regenerate them manually")
 	}
 	state.result.Imported["access_keys"] = len(keys)
 	return nil
@@ -1073,7 +1073,7 @@ func importSubscriptionShares(state *databaseMigrationState) error {
 	if state.sourceHasShares {
 		var sourceShares []models.SubscriptionShare
 		if err := state.source.Find(&sourceShares).Error; err != nil {
-			return fmt.Errorf("读取源分享链接失败: %w", err)
+			return fmt.Errorf("failed to read source share links: %w", err)
 		}
 		skippedOrphans := 0
 		for i := range sourceShares {
@@ -1085,25 +1085,25 @@ func importSubscriptionShares(state *databaseMigrationState) error {
 			if sourceShares[i].Token == "" {
 				token, err := models.GenerateToken()
 				if err != nil {
-					return fmt.Errorf("生成分享 Token 失败: %w", err)
+					return fmt.Errorf("failed to generate share token: %w", err)
 				}
 				sourceShares[i].Token = token
 			}
 			shares = append(shares, sourceShares[i])
 		}
 		if skippedOrphans > 0 {
-			state.result.Warnings = append(state.result.Warnings, fmt.Sprintf("有 %d 条分享链接因引用不存在的订阅而被跳过", skippedOrphans))
+			state.result.Warnings = append(state.result.Warnings, fmt.Sprintf("%d share links skipped because they referenced missing subscriptions", skippedOrphans))
 		}
 	} else {
 		for _, sub := range state.importedSubs {
 			token, err := models.GenerateToken()
 			if err != nil {
-				return fmt.Errorf("生成默认分享 Token 失败: %w", err)
+				return fmt.Errorf("failed to generate default share token: %w", err)
 			}
 			share := models.SubscriptionShare{
 				SubscriptionID: sub.ID,
 				Token:          token,
-				Name:           "默认分享链接",
+				Name:           "Default share link",
 				ExpireType:     models.ExpireTypeNever,
 				IsLegacy:       true,
 				Enabled:        true,
@@ -1112,12 +1112,12 @@ func importSubscriptionShares(state *databaseMigrationState) error {
 			shares = append(shares, share)
 		}
 		if len(shares) > 0 {
-			state.result.Warnings = append(state.result.Warnings, "源备份未包含分享表，已为每个订阅生成默认分享链接")
+			state.result.Warnings = append(state.result.Warnings, "Source backup has no share table; default share links were generated for every subscription")
 		}
 	}
 
 	if err := insertRecords(state.tx, shares); err != nil {
-		return fmt.Errorf("导入分享链接失败: %w", err)
+		return fmt.Errorf("failed to import share links: %w", err)
 	}
 	for _, share := range shares {
 		state.importedShareIDs[share.ID] = struct{}{}
@@ -1135,7 +1135,7 @@ func importSubLogs(state *databaseMigrationState) error {
 	}
 	var logs []models.SubLogs
 	if err := state.source.Find(&logs).Error; err != nil {
-		return fmt.Errorf("读取源访问日志失败: %w", err)
+		return fmt.Errorf("failed to read source access logs: %w", err)
 	}
 	filteredLogs := make([]models.SubLogs, 0, len(logs))
 	skippedOrphans := 0
@@ -1154,13 +1154,13 @@ func importSubLogs(state *databaseMigrationState) error {
 		filteredLogs = append(filteredLogs, logs[i])
 	}
 	if skippedOrphans > 0 {
-		state.result.Warnings = append(state.result.Warnings, fmt.Sprintf("有 %d 条访问日志因引用不存在的订阅而被跳过", skippedOrphans))
+		state.result.Warnings = append(state.result.Warnings, fmt.Sprintf("%d access logs skipped because they referenced missing subscriptions", skippedOrphans))
 	}
 	if normalizedShareRefs > 0 {
-		state.result.Warnings = append(state.result.Warnings, fmt.Sprintf("有 %d 条访问日志因引用不存在的分享链接而被重置为订阅级日志", normalizedShareRefs))
+		state.result.Warnings = append(state.result.Warnings, fmt.Sprintf("%d access logs reset to subscription-level logs because they referenced missing share links", normalizedShareRefs))
 	}
 	if err := insertRecords(state.tx, filteredLogs); err != nil {
-		return fmt.Errorf("导入访问日志失败: %w", err)
+		return fmt.Errorf("failed to import access logs: %w", err)
 	}
 	state.result.Imported["sub_logs"] = len(filteredLogs)
 	return nil
@@ -1172,10 +1172,10 @@ func importSubscriptionChainRules(state *databaseMigrationState) error {
 	}
 	var rules []models.SubscriptionChainRule
 	if err := state.source.Find(&rules).Error; err != nil {
-		return fmt.Errorf("读取源链式代理规则失败: %w", err)
+		return fmt.Errorf("failed to read source chain proxy rules: %w", err)
 	}
 	if err := insertRecords(state.tx, rules); err != nil {
-		return fmt.Errorf("导入链式代理规则失败: %w", err)
+		return fmt.Errorf("failed to import chain proxy rules: %w", err)
 	}
 	state.result.Imported["subscription_chain_rules"] = len(rules)
 	return nil
@@ -1186,14 +1186,14 @@ func importAirports(state *databaseMigrationState) error {
 
 	if state.source.Migrator().HasTable(&models.Airport{}) {
 		if err := state.source.Find(&airports).Error; err != nil {
-			return fmt.Errorf("读取源机场失败: %w", err)
+			return fmt.Errorf("failed to read source airports: %w", err)
 		}
 	}
 
 	if len(airports) == 0 && state.source.Migrator().HasTable(&models.SubScheduler{}) {
 		var schedulers []models.SubScheduler
 		if err := state.source.Find(&schedulers).Error; err != nil {
-			return fmt.Errorf("读取源旧版订阅调度失败: %w", err)
+			return fmt.Errorf("failed to read legacy subscription schedules: %w", err)
 		}
 		for _, schedulerItem := range schedulers {
 			airports = append(airports, models.Airport{
@@ -1214,7 +1214,7 @@ func importAirports(state *databaseMigrationState) error {
 			})
 		}
 		if len(airports) > 0 {
-			state.result.Warnings = append(state.result.Warnings, "源备份使用旧版订阅调度表，已自动转换为机场数据")
+			state.result.Warnings = append(state.result.Warnings, "Source backup used legacy subscription schedules; converted to airports automatically")
 		}
 	}
 	for i := range airports {
@@ -1223,7 +1223,7 @@ func importAirports(state *databaseMigrationState) error {
 	}
 
 	if err := insertRecords(state.tx, airports); err != nil {
-		return fmt.Errorf("导入机场失败: %w", err)
+		return fmt.Errorf("failed to import airports: %w", err)
 	}
 	state.result.Imported["airports"] = len(airports)
 	return nil
@@ -1235,10 +1235,10 @@ func importGroupAirportSorts(state *databaseMigrationState) error {
 	}
 	var records []models.GroupAirportSort
 	if err := state.source.Find(&records).Error; err != nil {
-		return fmt.Errorf("读取源分组机场排序失败: %w", err)
+		return fmt.Errorf("failed to read source group-airport sort orders: %w", err)
 	}
 	if err := insertRecords(state.tx, records); err != nil {
-		return fmt.Errorf("导入分组机场排序失败: %w", err)
+		return fmt.Errorf("failed to import group-airport sort orders: %w", err)
 	}
 	state.result.Imported["group_airport_sorts"] = len(records)
 	return nil
@@ -1248,20 +1248,20 @@ func importNodeCheckProfiles(state *databaseMigrationState) error {
 	profiles := make([]models.NodeCheckProfile, 0)
 	if state.sourceHasProfiles {
 		if err := state.source.Find(&profiles).Error; err != nil {
-			return fmt.Errorf("读取源节点检测策略失败: %w", err)
+			return fmt.Errorf("failed to read source node check profiles: %w", err)
 		}
 	}
 
 	for _, profile := range profiles {
 		if len(profile.Name) > 191 {
-			return fmt.Errorf("节点检测策略名称 %q 长度超过 191，无法迁移", profile.Name)
+			return fmt.Errorf("node check profile name %q exceeds 191 characters and cannot be migrated", profile.Name)
 		}
 	}
 
 	if len(profiles) == 0 {
 		profiles = append(profiles, buildDefaultNodeCheckProfile(state.importedSettings))
 		if !state.sourceHasProfiles {
-			state.result.Warnings = append(state.result.Warnings, "源备份未包含节点检测策略，已根据现有测速配置生成默认策略")
+			state.result.Warnings = append(state.result.Warnings, "Source backup has no node check profiles; a default profile was generated from the existing speed test config")
 		}
 	}
 	for i := range profiles {
@@ -1270,7 +1270,7 @@ func importNodeCheckProfiles(state *databaseMigrationState) error {
 	}
 
 	if err := insertRecords(state.tx, profiles); err != nil {
-		return fmt.Errorf("导入节点检测策略失败: %w", err)
+		return fmt.Errorf("failed to import node check profiles: %w", err)
 	}
 	state.result.Imported["node_check_profiles"] = len(profiles)
 	// 独立任务与方案保留原 ID，恢复后继续引用同一方案。
@@ -1293,14 +1293,14 @@ func importHosts(state *databaseMigrationState) error {
 	}
 	var hosts []models.Host
 	if err := state.source.Find(&hosts).Error; err != nil {
-		return fmt.Errorf("读取源 Host 失败: %w", err)
+		return fmt.Errorf("failed to read source hosts: %w", err)
 	}
 	for i := range hosts {
 		normalizeOptionalTimePtr(&hosts[i].ExpireAt)
 	}
 	hosts = models.NormalizeHostsForStorage(hosts)
 	if err := insertRecords(state.tx, hosts); err != nil {
-		return fmt.Errorf("导入 Host 失败: %w", err)
+		return fmt.Errorf("failed to import hosts: %w", err)
 	}
 	state.result.Imported["hosts"] = len(hosts)
 	return nil
@@ -1316,7 +1316,7 @@ func insertRecords[T any](tx *gorm.DB, records []T) error {
 func buildTemplateMetadataFromDir(templateDir string) ([]models.Template, error) {
 	entries, err := os.ReadDir(templateDir)
 	if err != nil {
-		return nil, fmt.Errorf("读取模板目录失败: %w", err)
+		return nil, fmt.Errorf("failed to read template directory: %w", err)
 	}
 
 	templates := make([]models.Template, 0)
@@ -1375,7 +1375,7 @@ func buildDefaultNodeCheckProfile(settings map[string]string) models.NodeCheckPr
 	}
 
 	return models.NodeCheckProfile{
-		Name:               "默认策略",
+		Name:               "Default profile",
 		Enabled:            parseBool(settings["speed_test_enabled"], false),
 		CronExpr:           strings.TrimSpace(settings["speed_test_cron"]),
 		Mode:               mode,
@@ -1436,7 +1436,7 @@ func parseRangedInt(raw string, defaultValue, minValue, maxValue int) int {
 func restoreTemplateDirectory(sourceDir string) error {
 	targetDir := templateDirPath()
 	if err := os.RemoveAll(targetDir); err != nil {
-		return fmt.Errorf("清理目标模板目录失败: %w", err)
+		return fmt.Errorf("failed to clean up target template directory: %w", err)
 	}
 
 	return filepath.Walk(sourceDir, func(path string, info os.FileInfo, walkErr error) error {
@@ -1532,12 +1532,12 @@ func reloadRuntimeStateAfterMigration() error {
 	}
 
 	if err := mihomo.SyncHostsFromDB(); err != nil {
-		utils.Warn("迁移后同步 Host 到 mihomo 失败: %v", err)
+		utils.Warn("Failed to sync hosts to mihomo after migration: %v", err)
 	}
 
 	if !models.IsDemoMode() {
 		if err := socks5service.DefaultManager().StartFromSettings(); err != nil {
-			utils.Warn("迁移后重新加载 SOCKS5 网关失败，网关保持停用: %v", err)
+			utils.Warn("Failed to reload the SOCKS5 gateway after migration; the gateway remains disabled: %v", err)
 		}
 	}
 
@@ -1545,7 +1545,7 @@ func reloadRuntimeStateAfterMigration() error {
 	if err == nil {
 		if telegramConfig.Enabled && telegramConfig.BotToken != "" {
 			if err := telegram.Reconnect(); err != nil {
-				utils.Warn("迁移后重连 Telegram 机器人失败: %v", err)
+				utils.Warn("Failed to reconnect the Telegram bot after migration: %v", err)
 			}
 		} else {
 			telegram.StopBot()
@@ -1571,11 +1571,11 @@ func reseedMySQLAutoIncrement(tx *gorm.DB) error {
 		var maxID int64
 		query := fmt.Sprintf("SELECT COALESCE(MAX(id), 0) FROM %s", quoteMigrationIdentifier(table))
 		if err := tx.Raw(query).Scan(&maxID).Error; err != nil {
-			return fmt.Errorf("读取表 %s 最大ID失败: %w", table, err)
+			return fmt.Errorf("failed to read max ID of table %s: %w", table, err)
 		}
 		resetSQL := fmt.Sprintf("ALTER TABLE %s AUTO_INCREMENT = %d", quoteMigrationIdentifier(table), maxID+1)
 		if err := tx.Exec(resetSQL).Error; err != nil {
-			return fmt.Errorf("重置表 %s 自增值失败: %w", table, err)
+			return fmt.Errorf("failed to reset auto-increment value for table %s: %w", table, err)
 		}
 	}
 	return nil
@@ -1586,12 +1586,12 @@ func reseedPostgresSequences(tx *gorm.DB) error {
 		var maxID int64
 		query := fmt.Sprintf("SELECT COALESCE(MAX(id), 0) FROM %s", quoteMigrationIdentifier(table))
 		if err := tx.Raw(query).Scan(&maxID).Error; err != nil {
-			return fmt.Errorf("读取表 %s 最大ID失败: %w", table, err)
+			return fmt.Errorf("failed to read max ID of table %s: %w", table, err)
 		}
 
 		var sequenceName string
 		if err := tx.Raw("SELECT pg_get_serial_sequence(?, 'id')", table).Scan(&sequenceName).Error; err != nil {
-			return fmt.Errorf("查询表 %s 序列失败: %w", table, err)
+			return fmt.Errorf("failed to query sequence for table %s: %w", table, err)
 		}
 		if sequenceName == "" {
 			continue
@@ -1599,13 +1599,13 @@ func reseedPostgresSequences(tx *gorm.DB) error {
 
 		if maxID > 0 {
 			if err := tx.Exec("SELECT setval(?::regclass, ?, true)", sequenceName, maxID).Error; err != nil {
-				return fmt.Errorf("重置表 %s 序列失败: %w", table, err)
+				return fmt.Errorf("failed to reset sequence for table %s: %w", table, err)
 			}
 			continue
 		}
 
 		if err := tx.Exec("SELECT setval(?::regclass, 1, false)", sequenceName).Error; err != nil {
-			return fmt.Errorf("重置空表 %s 序列失败: %w", table, err)
+			return fmt.Errorf("failed to reset sequence for empty table %s: %w", table, err)
 		}
 	}
 	return nil

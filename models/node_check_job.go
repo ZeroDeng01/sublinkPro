@@ -32,25 +32,25 @@ type NodeCheckJob struct {
 func (j *NodeCheckJob) Validate() error {
 	j.Name = strings.TrimSpace(j.Name)
 	if j.Name == "" || len(j.Name) > 191 {
-		return fmt.Errorf("任务名称不能为空且不能超过191字节")
+		return fmt.Errorf("task name is required and cannot exceed 191 bytes")
 	}
 	if j.ProfileID <= 0 {
-		return fmt.Errorf("请选择检测方案")
+		return fmt.Errorf("select a check profile")
 	}
 	if j.Trigger != "scheduled" && j.Trigger != "airport_update" {
-		return fmt.Errorf("无效的触发方式")
+		return fmt.Errorf("invalid trigger type")
 	}
 	if j.Scope != "all" && j.Scope != "filtered" {
-		return fmt.Errorf("无效的检测范围")
+		return fmt.Errorf("invalid check scope")
 	}
 	if len(j.AirportIDs) > 128 || len(j.Groups) > 64 || len(j.Tags) > 64 {
-		return fmt.Errorf("检测范围选项过多")
+		return fmt.Errorf("too many check scope options")
 	}
 	seen := map[int]bool{}
 	ids := make([]int, 0, len(j.AirportIDs))
 	for _, id := range j.AirportIDs {
 		if id <= 0 {
-			return fmt.Errorf("无效的机场ID")
+			return fmt.Errorf("invalid airport ID")
 		}
 		if !seen[id] {
 			ids = append(ids, id)
@@ -59,30 +59,30 @@ func (j *NodeCheckJob) Validate() error {
 	}
 	j.AirportIDs = ids
 	if j.Scope == "all" && (len(j.AirportIDs) > 0 || len(j.Groups) > 0 || len(j.Tags) > 0) {
-		return fmt.Errorf("全部节点范围不能包含隐藏筛选条件")
+		return fmt.Errorf("the all-nodes scope cannot include hidden filters")
 	}
 	if j.Scope == "filtered" && len(ids) == 0 && len(j.Groups) == 0 && len(j.Tags) == 0 {
-		return fmt.Errorf("筛选范围不能为空，请明确选择全部节点")
+		return fmt.Errorf("the filter scope cannot be empty; explicitly select all nodes")
 	}
 	if j.UpdateBeforeCheck && (j.Trigger != "scheduled" || len(ids) == 0) {
-		return fmt.Errorf("前置更新仅适用于定时任务，且必须指定机场")
+		return fmt.Errorf("pre-update is only available for scheduled tasks and requires an airport")
 	}
 	j.CronExpr = strings.Join(strings.Fields(j.CronExpr), " ")
 	if len(j.CronExpr) > 191 {
-		return fmt.Errorf("cron 表达式过长")
+		return fmt.Errorf("cron expression is too long")
 	}
 	if j.Trigger == "scheduled" {
 		if len(strings.Fields(j.CronExpr)) != 5 {
-			return fmt.Errorf("cron 必须为五字段表达式")
+			return fmt.Errorf("cron must be a five-field expression")
 		}
 		if _, err := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow).Parse(j.CronExpr); err != nil {
-			return fmt.Errorf("cron 表达式无效: %w", err)
+			return fmt.Errorf("invalid cron expression: %w", err)
 		}
 	}
 	for _, list := range [][]string{j.Groups, j.Tags} {
 		for _, v := range list {
 			if strings.TrimSpace(v) == "" || len(v) > 191 {
-				return fmt.Errorf("分组或标签名称无效")
+				return fmt.Errorf("invalid group or tag name")
 			}
 		}
 	}

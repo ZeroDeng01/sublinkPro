@@ -31,10 +31,10 @@ func normalizeAirportRequestHeaders(headers []dto.AirportRequestHeader) (models.
 			continue
 		}
 		if key == "" {
-			return nil, errors.New("自定义 Header 的名称不能为空")
+			return nil, errors.New("custom header name cannot be empty")
 		}
 		if strings.EqualFold(key, "User-Agent") {
-			return nil, errors.New("User-Agent 请使用专用字段设置")
+			return nil, errors.New("use the dedicated field to set the User-Agent")
 		}
 
 		normalized = append(normalized, models.AirportRequestHeader{
@@ -98,7 +98,7 @@ func AirportList(c *gin.Context) {
 	if page > 0 && pageSize > 0 {
 		airports, total, err := new(models.Airport).ListWithFilter(page, pageSize, filter)
 		if err != nil {
-			utils.FailWithMsg(c, "获取机场列表失败: "+err.Error())
+			utils.FailWithMsg(c, "Failed to fetch airport list: "+err.Error())
 			return
 		}
 
@@ -119,7 +119,7 @@ func AirportList(c *gin.Context) {
 		if pageSize > 0 {
 			totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
 		}
-		utils.OkDetailed(c, "获取成功", gin.H{
+		utils.OkDetailed(c, "Fetched successfully", gin.H{
 			"items":      result,
 			"total":      total,
 			"page":       page,
@@ -132,7 +132,7 @@ func AirportList(c *gin.Context) {
 	// 不带分页，返回全部（但仍支持筛选）
 	airports, _, err := new(models.Airport).ListWithFilter(0, 0, filter)
 	if err != nil {
-		utils.FailWithMsg(c, "获取机场列表失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to fetch airport list: "+err.Error())
 		return
 	}
 
@@ -149,7 +149,7 @@ func AirportList(c *gin.Context) {
 		}
 	}
 
-	utils.OkDetailed(c, "获取成功", result)
+	utils.OkDetailed(c, "Fetched successfully", result)
 }
 
 // AirportGet 获取单个机场详情
@@ -157,13 +157,13 @@ func AirportGet(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 
 	airport, err := models.GetAirportByID(id)
 	if err != nil {
-		utils.FailWithMsg(c, "机场不存在")
+		utils.FailWithMsg(c, "Airport not found")
 		return
 	}
 
@@ -173,19 +173,19 @@ func AirportGet(c *gin.Context) {
 		airport.NodeCount = len(nodes)
 	}
 
-	utils.OkDetailed(c, "获取成功", airport)
+	utils.OkDetailed(c, "Fetched successfully", airport)
 }
 
 // AirportAdd 添加机场
 func AirportAdd(c *gin.Context) {
 	var req dto.AirportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid parameters: "+err.Error())
 		return
 	}
 
 	if !validateCron(req.CronExpr) {
-		utils.FailWithMsg(c, "Cron表达式格式错误")
+		utils.FailWithMsg(c, "Invalid cron expression format")
 		return
 	}
 
@@ -241,12 +241,12 @@ func AirportAdd(c *gin.Context) {
 
 	// 检查是否重复
 	if err := airport.Find(); err == nil {
-		utils.FailWithMsg(c, "机场已存在（名称或URL重复）")
+		utils.FailWithMsg(c, "Airport already exists (duplicate name or URL)")
 		return
 	}
 
 	if err := airport.Add(); err != nil {
-		utils.FailWithMsg(c, "添加失败: "+err.Error())
+		utils.FailWithMsg(c, "Add failed: "+err.Error())
 		return
 	}
 
@@ -263,7 +263,7 @@ func AirportAdd(c *gin.Context) {
 		go scheduler.ExecuteSubscriptionTaskWithTrigger(airport.ID, airport.URL, airport.Name, models.TaskTriggerManual)
 	}
 
-	utils.OkWithMsg(c, "添加成功")
+	utils.OkWithMsg(c, "Added successfully")
 }
 
 // AirportUpdate 更新机场
@@ -271,18 +271,18 @@ func AirportUpdate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 
 	var req dto.AirportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid parameters: "+err.Error())
 		return
 	}
 
 	if !validateCron(req.CronExpr) {
-		utils.FailWithMsg(c, "Cron表达式格式错误")
+		utils.FailWithMsg(c, "Invalid cron expression format")
 		return
 	}
 
@@ -302,17 +302,17 @@ func AirportUpdate(c *gin.Context) {
 	// 检查是否存在
 	existing, err := models.GetAirportByID(id)
 	if err != nil {
-		utils.FailWithMsg(c, "机场不存在")
+		utils.FailWithMsg(c, "Airport not found")
 		return
 	}
 
 	conflict, err := models.HasAirportIdentityConflict(id, req.Name, req.URL)
 	if err != nil {
-		utils.FailWithMsg(c, "更新失败")
+		utils.FailWithMsg(c, "Update failed")
 		return
 	}
 	if conflict {
-		utils.FailWithMsg(c, "机场已存在（名称或URL与其他机场重复）")
+		utils.FailWithMsg(c, "Airport already exists (name or URL duplicates another airport)")
 		return
 	}
 
@@ -353,47 +353,47 @@ func AirportUpdate(c *gin.Context) {
 	existing.BackfillExistingCountry = req.BackfillExistingCountry
 
 	if err := existing.Update(); err != nil {
-		utils.FailWithMsg(c, "更新失败: "+err.Error())
+		utils.FailWithMsg(c, "Update failed: "+err.Error())
 		return
 	}
 
 	// 同步更新关联节点的来源名称和分组
 	if err := models.UpdateNodesByAirportID(id, req.Name, req.Group); err != nil {
 		// 记录错误但不阻断流程
-		utils.Warn("更新关联节点失败: %v", err)
+		utils.Warn("Failed to update linked nodes: %v", err)
 	}
 
 	// 更新定时任务
 	sch := scheduler.GetSchedulerManager()
 	_ = sch.UpdateJob(id, req.CronExpr, req.Enabled, req.URL, req.Name)
 
-	utils.OkWithMsg(c, "更新成功")
+	utils.OkWithMsg(c, "Updated successfully")
 }
 
 // AirportBatchUpdate 批量更新机场的调度和分组
 func AirportBatchUpdate(c *gin.Context) {
 	var req dto.AirportBatchUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid parameters: "+err.Error())
 		return
 	}
 
 	if len(req.IDs) == 0 {
-		utils.FailWithMsg(c, "请选择要修改的机场")
+		utils.FailWithMsg(c, "Select airports to modify")
 		return
 	}
 	if !req.ApplyGroup && !req.ApplySchedule {
-		utils.FailWithMsg(c, "请至少选择一个要修改的字段")
+		utils.FailWithMsg(c, "Select at least one field to modify")
 		return
 	}
 	if req.ApplySchedule {
 		req.CronExpr = strings.TrimSpace(req.CronExpr)
 		if req.CronExpr == "" {
-			utils.FailWithMsg(c, "请输入Cron表达式")
+			utils.FailWithMsg(c, "Enter a cron expression")
 			return
 		}
 		if !validateCron(req.CronExpr) {
-			utils.FailWithMsg(c, "Cron表达式格式错误")
+			utils.FailWithMsg(c, "Invalid cron expression format")
 			return
 		}
 	}
@@ -405,7 +405,7 @@ func AirportBatchUpdate(c *gin.Context) {
 		CronExpr:      req.CronExpr,
 	})
 	if err != nil {
-		utils.FailWithMsg(c, "批量更新失败: "+err.Error())
+		utils.FailWithMsg(c, "Batch update failed: "+err.Error())
 		return
 	}
 
@@ -413,13 +413,13 @@ func AirportBatchUpdate(c *gin.Context) {
 		sch := scheduler.GetSchedulerManager()
 		for _, airport := range updatedAirports {
 			if err := sch.UpdateJob(airport.ID, airport.CronExpr, airport.Enabled, airport.URL, airport.Name); err != nil {
-				utils.FailWithMsg(c, "批量更新成功，但刷新调度失败: "+err.Error())
+				utils.FailWithMsg(c, "Batch update succeeded, but refreshing the schedule failed: "+err.Error())
 				return
 			}
 		}
 	}
 
-	utils.OkDetailed(c, "批量更新成功", gin.H{
+	utils.OkDetailed(c, "Batch update succeeded", gin.H{
 		"count": len(updatedAirports),
 	})
 }
@@ -476,20 +476,20 @@ func AirportPull(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 
 	airport, err := models.GetAirportByID(id)
 	if err != nil {
-		utils.FailWithMsg(c, "机场不存在")
+		utils.FailWithMsg(c, "Airport not found")
 		return
 	}
 
 	// 异步执行拉取任务
 	go scheduler.ExecuteSubscriptionTaskWithTrigger(airport.ID, airport.URL, airport.Name, models.TaskTriggerManual)
 
-	utils.OkWithMsg(c, "任务已提交，请稍后刷新查看结果")
+	utils.OkWithMsg(c, "Task submitted; refresh later to view the result")
 }
 
 // AirportPullAll 批量拉取机场订阅
@@ -509,7 +509,7 @@ func AirportPullAll(c *gin.Context) {
 			airport, err := models.GetAirportByID(id)
 			if err != nil {
 				// 跳过不存在的机场，继续处理其他机场
-				utils.Warn("机场 ID %d 不存在，已跳过", id)
+				utils.Warn("Airport ID %d does not exist; skipped", id)
 				continue
 			}
 			airportsToProcess = append(airportsToProcess, *airport)
@@ -519,7 +519,7 @@ func AirportPullAll(c *gin.Context) {
 		airportModel := models.Airport{}
 		allAirports, err := airportModel.List()
 		if err != nil {
-			utils.FailWithMsg(c, "获取机场列表失败")
+			utils.FailWithMsg(c, "Failed to fetch airport list")
 			return
 		}
 
@@ -532,9 +532,9 @@ func AirportPullAll(c *gin.Context) {
 
 	if len(airportsToProcess) == 0 {
 		if len(req.IDs) > 0 {
-			utils.OkWithMsg(c, "没有找到有效的机场")
+			utils.OkWithMsg(c, "No valid airports found")
 		} else {
-			utils.OkWithMsg(c, "没有已启用的机场")
+			utils.OkWithMsg(c, "No enabled airports")
 		}
 		return
 	}
@@ -547,7 +547,7 @@ func AirportPullAll(c *gin.Context) {
 	}
 
 	utils.OkWithData(c, map[string]any{
-		"message": "批量拉取任务已提交",
+		"message": "Batch fetch task submitted",
 		"count":   count,
 	})
 }

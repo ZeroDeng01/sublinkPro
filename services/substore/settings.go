@@ -158,18 +158,18 @@ func normalizeTargets(values []string) []string {
 func validateSettings(settings Settings) error {
 	if settings.Enabled {
 		if settings.BaseURL == "" {
-			return fmt.Errorf("Sub-Store base URL is required when enabled")
+			return fmt.Errorf("sub-Store base URL is required when enabled")
 		}
 		parsed, err := url.Parse(settings.BaseURL)
 		if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-			return fmt.Errorf("Sub-Store base URL must be an http or https URL")
+			return fmt.Errorf("sub-Store base URL must be an http or https URL")
 		}
 	}
 	if settings.TimeoutSeconds <= 0 {
-		return fmt.Errorf("Sub-Store timeout must be greater than 0")
+		return fmt.Errorf("sub-Store timeout must be greater than 0")
 	}
 	if settings.MaxResponseBytes <= 0 {
-		return fmt.Errorf("Sub-Store max response bytes must be greater than 0")
+		return fmt.Errorf("sub-Store max response bytes must be greater than 0")
 	}
 	return nil
 }

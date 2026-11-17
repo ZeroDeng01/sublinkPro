@@ -516,7 +516,7 @@ CalculateSpeed:
 	// 最小有效下载量校验（10KB），避免因下载量过小导致速度虚高
 	const minValidBytes int64 = 10 * 1024 // 10KB
 	if totalRead < minValidBytes {
-		return 0, latency, totalRead, "", nil, fmt.Errorf("下载量过小 (%d 字节 < %d 字节)，结果不可靠", totalRead, minValidBytes)
+		return 0, latency, totalRead, "", nil, fmt.Errorf("downloaded too little (%d bytes < %d bytes); result is unreliable", totalRead, minValidBytes)
 	}
 
 	// 根据模式选择返回值
@@ -588,13 +588,13 @@ func fetchLandingIPWithAdapter(proxyAdapter constant.Proxy, ipUrl string) string
 
 	req, err := http.NewRequestWithContext(ctx, "GET", ipUrl, nil)
 	if err != nil {
-		utils.Error("落地IP检测: 创建请求失败: %v", err)
+		utils.Error("Exit IP check: failed to create request: %v", err)
 		return ""
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		utils.Error("落地IP检测: 请求失败: %v (URL: %s)", err, ipUrl)
+		utils.Error("Exit IP check: request failed: %v (URL: %s)", err, ipUrl)
 		return ""
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -646,29 +646,29 @@ func fetchQuality(proxyAdapter constant.Proxy, qualityURL string) *QualityCheckR
 
 	req, err := http.NewRequestWithContext(ctx, "GET", qualityURL, nil)
 	if err != nil {
-		utils.Debug("节点质量检测: 创建请求失败: %v", err)
+		utils.Debug("Node quality check: failed to create request: %v", err)
 		return &QualityCheckResult{Status: models.QualityStatusFailed, Reason: err.Error()}
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		utils.Debug("节点质量检测: 请求失败: %v", err)
+		utils.Debug("Node quality check: request failed: %v", err)
 		return &QualityCheckResult{Status: models.QualityStatusFailed, Reason: err.Error()}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		utils.Debug("节点质量检测: 响应状态异常: %d", resp.StatusCode)
+		utils.Debug("Node quality check: unexpected response status: %d", resp.StatusCode)
 		return &QualityCheckResult{Status: models.QualityStatusFailed, Reason: fmt.Sprintf("status_%d", resp.StatusCode)}
 	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 2048))
 	if err != nil {
-		utils.Debug("节点质量检测: 读取响应失败: %v", err)
+		utils.Debug("Node quality check: failed to read response: %v", err)
 		return &QualityCheckResult{Status: models.QualityStatusFailed, Reason: err.Error()}
 	}
 
-	utils.Debug("节点质量检测: 响应: %s", string(body))
+	utils.Debug("Node quality check: response: %s", string(body))
 
 	var apiResp struct {
 		IP            string `json:"ip"`
@@ -677,7 +677,7 @@ func fetchQuality(proxyAdapter constant.Proxy, qualityURL string) *QualityCheckR
 		FraudScore    *int   `json:"fraudScore"`
 	}
 	if err := json.Unmarshal(body, &apiResp); err != nil {
-		utils.Debug("节点质量检测: 解析响应失败: %v", err)
+		utils.Debug("Node quality check: failed to parse response: %v", err)
 		return &QualityCheckResult{Status: models.QualityStatusFailed, Reason: "invalid_json"}
 	}
 
@@ -692,7 +692,7 @@ func fetchQuality(proxyAdapter constant.Proxy, qualityURL string) *QualityCheckR
 	}
 
 	if apiResp.IsBroadcast == nil || apiResp.IsResidential == nil || apiResp.FraudScore == nil {
-		utils.Debug("节点质量检测: 响应字段缺失")
+		utils.Debug("Node quality check: response fields are missing")
 		reason := "missing_quality_fields"
 		if qualityFamily == models.QualityFamilyIPv6 {
 			reason = "incomplete_ipv6_info"

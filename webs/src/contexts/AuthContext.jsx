@@ -97,7 +97,7 @@ function normalizeMfaChallenge(payload) {
       nestedMfa.recoveryCodesAvailable ??
       methods.includes('recovery_code')
     ),
-    message: data.msg || data.message || nestedMfa.message || i18n.t('auth.mfa.defaultMessage', '需要进行二次验证')
+    message: data.msg || data.message || nestedMfa.message || i18n.t('auth.mfa.defaultMessage', 'Two-factor verification is required')
   };
 }
 
@@ -211,7 +211,7 @@ export function AuthProvider({ children }) {
       const notification = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         type: data.severity || data.type || 'info',
-        title: data.title || data.eventName || i18n.t('auth.fallback.notification', '通知'),
+        title: data.title || data.eventName || i18n.t('auth.fallback.notification', 'Notification'),
         message: data.message || '',
         timestamp,
         eventKey: data.event || '',
@@ -253,7 +253,7 @@ export function AuthProvider({ children }) {
         const notification = {
           id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           type: data.type || 'info',
-          title: data.title || i18n.t('auth.fallback.notification', '通知'),
+          title: data.title || i18n.t('auth.fallback.notification', 'Notification'),
           message: data.message || JSON.stringify(data),
           timestamp: new Date(),
           eventKey: data.event || '',
@@ -366,7 +366,7 @@ export function AuthProvider({ children }) {
 
       return {
         success: false,
-        message: i18n.t('auth.login.noToken', '登录响应缺少访问令牌，请稍后重试')
+        message: i18n.t('auth.login.noToken', 'The login response did not include an access token. Please try again later.')
       };
     } catch (error) {
       console.error('登录失败:', error);
@@ -388,7 +388,7 @@ export function AuthProvider({ children }) {
       // 业务错误通过 error.message (来自后端 msg) 和 error.data 获取
       return {
         success: false,
-        message: error.message || i18n.t('auth.login.loginFailedDefault', '登录失败，请检查用户名、密码和验证码'),
+        message: error.message || i18n.t('auth.login.loginFailedDefault', 'Login failed. Check your username, password, and captcha.'),
         errorType: error.data?.data?.errorType || null
       };
     }
@@ -407,7 +407,7 @@ export function AuthProvider({ children }) {
       if (!tokenPayload) {
         return {
           success: false,
-          message: i18n.t('auth.mfa.noToken', '验证成功，但未收到访问令牌')
+          message: i18n.t('auth.mfa.noToken', 'Verification succeeded, but no access token was received.')
         };
       }
 
@@ -417,7 +417,8 @@ export function AuthProvider({ children }) {
       console.error('MFA 验证失败:', error);
       return {
         success: false,
-        message: error.message || i18n.t('auth.mfa.verifyFailedDefault', '验证失败，请检查验证码或恢复码后重试'),
+        message:
+          error.message || i18n.t('auth.mfa.verifyFailedDefault', 'Verification failed. Check the code or recovery code and try again.'),
         errorType: error.data?.data?.errorType || null
       };
     }
@@ -474,7 +475,7 @@ AuthProvider.propTypes = { children: PropTypes.node };
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth 必须在 AuthProvider 内部使用');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }

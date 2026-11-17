@@ -36,11 +36,11 @@ func ResultI18n(c *gin.Context, httpCode int, code int, msg string, data any, i1
 }
 
 func Ok(c *gin.Context) {
-	Result(c, http.StatusOK, SUCCESS, "操作成功", nil)
+	Result(c, http.StatusOK, SUCCESS, "Success", nil)
 }
 
 func OkWithData(c *gin.Context, data any) {
-	Result(c, http.StatusOK, SUCCESS, "操作成功", data)
+	Result(c, http.StatusOK, SUCCESS, "Success", data)
 }
 
 func OkWithMsg(c *gin.Context, msg string) {
@@ -56,7 +56,7 @@ func OkDetailedI18n(c *gin.Context, msg string, data any, i18nKey string, i18nPa
 }
 
 func Fail(c *gin.Context) {
-	Result(c, http.StatusOK, ERROR, "操作失败", nil)
+	Result(c, http.StatusOK, ERROR, "Operation failed", nil)
 }
 
 func FailWithMsg(c *gin.Context, msg string) {

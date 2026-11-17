@@ -16,7 +16,7 @@ import (
 func SyncHostsFromDB() error {
 	hosts := models.GetAllHosts()
 	if len(hosts) == 0 {
-		utils.Debug("无Host配置需要同步")
+		utils.Debug("No host entries to sync")
 		return nil
 	}
 
@@ -28,7 +28,7 @@ func SyncHostsFromDB() error {
 		// 解析IP地址
 		ip, err := netip.ParseAddr(h.IP)
 		if err != nil {
-			utils.Warn("解析Host IP失败: %s -> %s, 错误: %v", h.Hostname, h.IP, err)
+			utils.Warn("Failed to resolve host IP: %s -> %s, error: %v", h.Hostname, h.IP, err)
 			continue
 		}
 
@@ -40,20 +40,20 @@ func SyncHostsFromDB() error {
 
 		// 插入到trie（支持通配符格式：*.example.com, .example.com）
 		if err := newHosts.Insert(h.Hostname, hostValue); err != nil {
-			utils.Warn("插入Host失败: %s -> %s, 错误: %v", h.Hostname, h.IP, err)
+			utils.Warn("Failed to insert host: %s -> %s, error: %v", h.Hostname, h.IP, err)
 			continue
 		}
 		successCount++
 	}
 
 	if successCount == 0 {
-		utils.Debug("没有有效的Host配置被同步")
+		utils.Debug("No valid host entries were synced")
 		return nil
 	}
 
 	// 替换全局DefaultHosts
 	resolver.DefaultHosts = resolver.NewHosts(newHosts)
-	utils.Info("Host同步完成: 共 %d 条配置，成功 %d 条", len(hosts), successCount)
+	utils.Info("Host sync completed: %d entries, %d succeeded", len(hosts), successCount)
 
 	return nil
 }
@@ -61,5 +61,5 @@ func SyncHostsFromDB() error {
 // ClearHosts 清空mihomo的自定义Hosts配置
 func ClearHosts() {
 	resolver.DefaultHosts = resolver.NewHosts(trie.New[resolver.HostValue]())
-	utils.Debug("已清空mihomo Hosts配置")
+	utils.Debug("Cleared mihomo hosts configuration")
 }

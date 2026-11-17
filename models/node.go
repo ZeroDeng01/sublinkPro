@@ -205,7 +205,7 @@ func reserveNodeName(name string, reserved map[string]bool) string {
 func uniqueNodeNameWithBase(baseName string, excludeID int, reserved map[string]bool) string {
 	baseName = normalizeNodeRemarkName(baseName)
 	if baseName == "" {
-		baseName = "未命名节点"
+		baseName = "Unnamed node"
 	}
 	if !nodeNameReserved(baseName, excludeID, reserved) {
 		return reserveNodeName(baseName, reserved)
@@ -227,7 +227,7 @@ func GenerateUniqueNodeName(baseName string, excludeID int, reserved map[string]
 func GenerateUniqueNodeNameWithSource(baseName string, sourceName string, excludeID int, reserved map[string]bool) string {
 	baseName = normalizeNodeRemarkName(baseName)
 	if baseName == "" {
-		baseName = "未命名节点"
+		baseName = "Unnamed node"
 	}
 	if !nodeNameReserved(baseName, excludeID, reserved) {
 		return reserveNodeName(baseName, reserved)
@@ -1208,7 +1208,7 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 
 		// 分组过滤
 		if filter.Group != "" {
-			if filter.Group == "未分组" {
+			if filter.Group == "Ungrouped" || filter.Group == "未分组" {
 				if n.Group != "" {
 					return false
 				}
@@ -1222,7 +1222,7 @@ func (node *Node) ListWithFilters(filter NodeFilter) ([]Node, error) {
 
 		// 来源过滤
 		if filter.Source != "" {
-			if filter.Source == "手动添加" {
+			if filter.Source == "Manual" || filter.Source == "手动添加" {
 				if n.Source != "" && n.Source != "manual" {
 					return false
 				}
@@ -1947,7 +1947,7 @@ func (state *nodeInfoNameState) reserveNodeName(id int, name string) string {
 func (state *nodeInfoNameState) uniqueNodeNameWithBase(baseName string, excludeID int) string {
 	baseName = normalizeNodeRemarkName(baseName)
 	if baseName == "" {
-		baseName = "未命名节点"
+		baseName = "Unnamed node"
 	}
 	if !state.nameReserved(baseName, excludeID) {
 		return state.reserveNodeName(excludeID, baseName)
@@ -1963,7 +1963,7 @@ func (state *nodeInfoNameState) uniqueNodeNameWithBase(baseName string, excludeI
 func (state *nodeInfoNameState) uniqueNodeNameWithSource(baseName string, sourceName string, excludeID int) string {
 	baseName = normalizeNodeRemarkName(baseName)
 	if baseName == "" {
-		baseName = "未命名节点"
+		baseName = "Unnamed node"
 	}
 	if !state.nameReserved(baseName, excludeID) {
 		return state.reserveNodeName(excludeID, baseName)
@@ -2239,7 +2239,7 @@ func GetNodeCountryStats() map[string]int {
 	for _, n := range allNodes {
 		country := n.LinkCountry
 		if country == "" {
-			country = "未知"
+			country = "Unknown"
 		}
 		stats[country]++
 	}
@@ -2300,7 +2300,7 @@ func GetDashboardCountryStats() []CountryDashboardStat {
 	for _, n := range allNodes {
 		country := n.LinkCountry
 		if country == "" {
-			country = "未知"
+			country = "Unknown"
 		}
 
 		if _, exists := statsMap[country]; !exists {
@@ -2466,10 +2466,10 @@ func GetNodeTagStats() []TagStat {
 	// 构建结果，包含标签颜色
 	result := make([]TagStat, 0, len(tagCounts)+1)
 
-	// 先添加"无标签"统计
+	// 先添加"Untagged"统计
 	if noTagCount > 0 {
 		result = append(result, TagStat{
-			Name:  "无标签",
+			Name:  "Untagged",
 			Color: "#9e9e9e",
 			Count: noTagCount,
 		})
@@ -2501,14 +2501,14 @@ func getProtocolStatLabel(node Node) string {
 
 func getGroupStatLabel(node Node) string {
 	if node.Group == "" {
-		return "未分组"
+		return "Ungrouped"
 	}
 	return node.Group
 }
 
 func getSourceStatLabel(node Node) string {
 	if node.Source == "" || node.Source == "manual" {
-		return "手动添加"
+		return "Manual"
 	}
 	return node.Source
 }
@@ -2542,7 +2542,7 @@ func GetDashboardGroupedStats() DashboardGroupedStats {
 	groupStats := make(map[string]DashboardGroupedBucketStat)
 	sourceStats := make(map[string]DashboardGroupedBucketStat)
 	tagStatsMap := make(map[string]*TagStat)
-	noTagStat := &TagStat{Name: "无标签", Color: "#9e9e9e"}
+	noTagStat := &TagStat{Name: "Untagged", Color: "#9e9e9e"}
 
 	for _, node := range allNodes {
 		delayPass := isNodeDelayPass(node)
@@ -2612,28 +2612,28 @@ func GetDashboardQualityStats() DashboardQualityStats {
 	allNodes := nodeCache.GetAll()
 
 	ipStats := []DashboardCountStat{
-		{Key: "housing", Label: "住房IP", Count: 0},
-		{Key: "datacenter", Label: "机房IP", Count: 0},
-		{Key: "native", Label: "原生IP", Count: 0},
-		{Key: "broadcast", Label: "广播IP", Count: 0},
-		{Key: "other", Label: "其他", Count: 0},
+		{Key: "housing", Label: "Residential IP", Count: 0},
+		{Key: "datacenter", Label: "Datacenter IP", Count: 0},
+		{Key: "native", Label: "Native IP", Count: 0},
+		{Key: "broadcast", Label: "Broadcast IP", Count: 0},
+		{Key: "other", Label: "Other", Count: 0},
 	}
 
 	fraudStats := []DashboardFraudRangeStat{
-		{Key: "excellent-plus", Label: "极佳 (0-10)", Min: 0, Max: 10, Count: 0},
-		{Key: "excellent", Label: "优秀 (11-30)", Min: 11, Max: 30, Count: 0},
-		{Key: "good", Label: "良好 (31-50)", Min: 31, Max: 50, Count: 0},
-		{Key: "medium", Label: "中等 (51-70)", Min: 51, Max: 70, Count: 0},
-		{Key: "poor", Label: "差 (71-89)", Min: 71, Max: 89, Count: 0},
-		{Key: "very-poor", Label: "极差 (90+)", Min: 90, Max: 100, Count: 0},
+		{Key: "excellent-plus", Label: "Excellent+ (0-10)", Min: 0, Max: 10, Count: 0},
+		{Key: "excellent", Label: "Excellent (11-30)", Min: 11, Max: 30, Count: 0},
+		{Key: "good", Label: "Good (31-50)", Min: 31, Max: 50, Count: 0},
+		{Key: "medium", Label: "Medium (51-70)", Min: 51, Max: 70, Count: 0},
+		{Key: "poor", Label: "Poor (71-89)", Min: 71, Max: 89, Count: 0},
+		{Key: "very-poor", Label: "Very poor (90+)", Min: 90, Max: 100, Count: 0},
 	}
 
 	qualityStatus := []DashboardCountStat{
-		{Key: QualityStatusSuccess, Label: "完整结果", Count: 0},
-		{Key: QualityStatusPartial, Label: "信息不全", Count: 0},
-		{Key: QualityStatusFailed, Label: "检测失败", Count: 0},
-		{Key: QualityStatusDisabled, Label: "未启用", Count: 0},
-		{Key: QualityStatusUntested, Label: "未检测", Count: 0},
+		{Key: QualityStatusSuccess, Label: "Complete result", Count: 0},
+		{Key: QualityStatusPartial, Label: "Incomplete info", Count: 0},
+		{Key: QualityStatusFailed, Label: "Check failed", Count: 0},
+		{Key: QualityStatusDisabled, Label: "Disabled", Count: 0},
+		{Key: QualityStatusUntested, Label: "Untested", Count: 0},
 	}
 
 	findFraudBucketIndex := func(score int) int {
@@ -2709,7 +2709,7 @@ func GetNodeGroupStats() map[string]int {
 	for _, n := range allNodes {
 		group := n.Group
 		if group == "" {
-			group = "未分组"
+			group = "Ungrouped"
 		}
 		stats[group]++
 	}
@@ -2723,7 +2723,7 @@ func GetNodeSourceStats() map[string]int {
 	for _, n := range allNodes {
 		source := n.Source
 		if source == "" || source == "manual" {
-			source = "手动添加"
+			source = "Manual"
 		}
 		stats[source]++
 	}
@@ -2752,20 +2752,20 @@ func InitNodeFieldsMeta() {
 		"EffectiveNameValue": true,
 	}
 
-	// 字段中文标签映射
+	// 字段展示标签映射
 	labelMap := map[string]string{
-		"Name":            "备注",
-		"LinkName":        "原始名称",
-		"LinkAddress":     "完整地址",
-		"LinkHost":        "服务器地址",
-		"LinkPort":        "端口",
-		"LinkCountry":     "国家代码",
-		"LandingIP":       "落地IP",
-		"DialerProxyName": "前置代理",
-		"Source":          "来源",
-		"SourceID":        "来源ID",
-		"Group":           "分组",
-		"FraudScore":      "欺诈评分",
+		"Name":            "Remark",
+		"LinkName":        "Original name",
+		"LinkAddress":     "Full address",
+		"LinkHost":        "Server address",
+		"LinkPort":        "Port",
+		"LinkCountry":     "Country code",
+		"LandingIP":       "Exit IP",
+		"DialerProxyName": "Dialer proxy",
+		"Source":          "Source",
+		"SourceID":        "Source ID",
+		"Group":           "Group",
+		"FraudScore":      "Fraud score",
 	}
 
 	t := reflect.TypeOf(Node{})
@@ -2804,7 +2804,7 @@ func InitNodeFieldsMeta() {
 		})
 	}
 
-	utils.Info("节点字段元数据初始化完成，共 %d 个字段可用于去重", len(nodeFieldsMetaCache))
+	utils.Info("Node field metadata initialized with %d dedup-capable fields", len(nodeFieldsMetaCache))
 }
 
 // GetNodeFieldsMeta 获取缓存的节点字段元数据

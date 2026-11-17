@@ -9,18 +9,18 @@ import (
 func ResetUser(username string, password string) {
 	// 如果账号或者密码为空
 	if username == "" || password == "" {
-		utils.Error("账号或者密码不能为空")
+		utils.Error("Username or password cannot be empty")
 		return
 	}
 	if len(password) < 6 {
-		utils.Error("密码不能小于6位数")
+		utils.Error("Password must be at least 6 characters")
 		return
 	}
 	User := &models.User{}
 	// 获取所有用户
 	users, err := User.All()
 	if err != nil {
-		utils.Info("用户存在")
+		utils.Info("User exists")
 	}
 	// 遍历所有用户
 	for _, user := range users {
@@ -28,6 +28,6 @@ func ResetUser(username string, password string) {
 		_ = user.Del()
 	}
 
-	User = &models.User{Username: username, Password: password, Role: "admin", Nickname: "管理员"}
+	User = &models.User{Username: username, Password: password, Role: "admin", Nickname: "Admin"}
 	_ = User.Create()
 }

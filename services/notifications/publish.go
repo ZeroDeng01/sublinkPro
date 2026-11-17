@@ -49,7 +49,7 @@ func Publish(eventKey string, payload Payload) {
 func TriggerWebhook(eventKey string, payload Payload) {
 	configs, err := ListWebhookConfigs()
 	if err != nil {
-		utils.Warn("加载 Webhook 配置失败: %v", err)
+		utils.Warn("Failed to load webhook config: %v", err)
 		return
 	}
 	if len(configs) == 0 {
@@ -80,7 +80,7 @@ func TriggerWebhook(eventKey string, payload Payload) {
 				if name == "" {
 					name = fmt.Sprintf("#%d", cfg.ID)
 				}
-				utils.Warn("发送 Webhook[%s] 通知失败: %v", name, err)
+				utils.Warn("Failed to send webhook [%s] notification: %v", name, err)
 			}
 		}()
 	}
@@ -113,7 +113,7 @@ func SendWebhook(config *WebhookConfig, payload Payload) error {
 
 	req, err := http.NewRequestWithContext(context.Background(), method, urlStr, body)
 	if err != nil {
-		utils.Error("创建 Webhook 请求失败: %v", err)
+		utils.Error("Failed to create webhook request: %v", err)
 		return err
 	}
 
@@ -123,7 +123,7 @@ func SendWebhook(config *WebhookConfig, payload Payload) error {
 	if strings.TrimSpace(config.Headers) != "" {
 		var headers map[string]any
 		if err := json.Unmarshal([]byte(config.Headers), &headers); err != nil {
-			return fmt.Errorf("headers 不是有效的 JSON: %w", err)
+			return fmt.Errorf("headers is not valid JSON: %w", err)
 		}
 		for key, value := range headers {
 			req.Header.Set(key, fmt.Sprint(value))
@@ -133,13 +133,13 @@ func SendWebhook(config *WebhookConfig, payload Payload) error {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		utils.Error("发送 Webhook 失败: %v", err)
+		utils.Error("Failed to send webhook: %v", err)
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		utils.Warn("Webhook 发送失败，状态码: %d", resp.StatusCode)
+		utils.Warn("Webhook send failed, status code: %d", resp.StatusCode)
 		return fmt.Errorf("HTTP status %d", resp.StatusCode)
 	}
 
@@ -154,7 +154,7 @@ func TriggerTelegram(eventKey string, payload Payload) {
 
 	eventKeys, err := LoadTelegramEventKeys()
 	if err != nil {
-		utils.Warn("加载 Telegram 事件配置失败: %v", err)
+		utils.Warn("Failed to load Telegram event config: %v", err)
 		return
 	}
 	if !IsEventEnabled(eventKeys, eventKey) {

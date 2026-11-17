@@ -84,7 +84,7 @@ func (tm *TaskManager) CreateTask(taskType models.TaskType, name string, trigger
 	// 广播任务开始
 	tm.broadcastProgress(task, "started")
 
-	utils.Info("任务创建成功: ID=%s, Type=%s, Name=%s, Trigger=%s, Timeout=%v", task.ID, task.Type, task.Name, task.Trigger, timeout)
+	utils.Info("Task created: ID=%s, Type=%s, Name=%s, Trigger=%s, Timeout=%v", task.ID, task.Type, task.Name, task.Trigger, timeout)
 
 	return task, ctx, nil
 }
@@ -98,7 +98,7 @@ func (tm *TaskManager) UpdateProgress(taskID string, progress int, currentItem s
 
 	running, ok := tm.runningTasks[taskID]
 	if !ok {
-		return errors.New("任务不存在或已结束")
+		return errors.New("task does not exist or has already finished")
 	}
 
 	// 仅更新内存中的任务状态
@@ -119,7 +119,7 @@ func (tm *TaskManager) UpdateTotal(taskID string, total int) error {
 
 	running, ok := tm.runningTasks[taskID]
 	if !ok {
-		return errors.New("任务不存在或已结束")
+		return errors.New("task does not exist or has already finished")
 	}
 
 	// 仅更新内存中的任务总数
@@ -138,7 +138,7 @@ func (tm *TaskManager) CompleteTask(taskID string, message string, result any) e
 
 	running, ok := tm.runningTasks[taskID]
 	if !ok {
-		return errors.New("任务不存在或已结束")
+		return errors.New("task does not exist or has already finished")
 	}
 
 	// 更新状态
@@ -155,7 +155,7 @@ func (tm *TaskManager) CompleteTask(taskID string, message string, result any) e
 
 	// 同步最终状态到数据库（任务结束时一次性写入）
 	if err := running.Task.SyncFinalStatus(); err != nil {
-		utils.Error("同步任务最终状态失败: %v", err)
+		utils.Error("Failed to sync final task state: %v", err)
 	}
 
 	// 广播完成进度（前端用）
@@ -176,7 +176,7 @@ func (tm *TaskManager) CompleteTask(taskID string, message string, result any) e
 		tm.mutex.Unlock()
 	}()
 
-	utils.Info("任务完成: ID=%s, Message=%s", taskID, message)
+	utils.Info("Task completed: ID=%s, Message=%s", taskID, message)
 
 	return nil
 }
@@ -188,7 +188,7 @@ func (tm *TaskManager) FailTask(taskID string, errMsg string) error {
 
 	running, ok := tm.runningTasks[taskID]
 	if !ok {
-		return errors.New("任务不存在或已结束")
+		return errors.New("task does not exist or has already finished")
 	}
 
 	// 更新状态
@@ -198,7 +198,7 @@ func (tm *TaskManager) FailTask(taskID string, errMsg string) error {
 
 	// 同步最终状态到数据库（任务结束时一次性写入）
 	if err := running.Task.SyncFinalStatus(); err != nil {
-		utils.Error("同步任务最终状态失败: %v", err)
+		utils.Error("Failed to sync final task state: %v", err)
 	}
 
 	// 广播错误进度（前端用）
@@ -218,7 +218,7 @@ func (tm *TaskManager) FailTask(taskID string, errMsg string) error {
 		tm.mutex.Unlock()
 	}()
 
-	utils.Warn("任务失败: ID=%s, Error=%s", taskID, errMsg)
+	utils.Warn("Task failed: ID=%s, Error=%s", taskID, errMsg)
 
 	return nil
 }
@@ -233,32 +233,32 @@ func (tm *TaskManager) CancelTask(taskID string) error {
 		// 检查是否在数据库中存在且仍在运行
 		var task models.Task
 		if err := task.GetByID(taskID); err != nil {
-			return errors.New("任务不存在")
+			return errors.New("task not found")
 		}
 		if task.Status != models.TaskStatusRunning && task.Status != models.TaskStatusPending {
-			return errors.New("任务已结束，无法取消")
+			return errors.New("task already finished and cannot be cancelled")
 		}
 		// 更新数据库状态
 		task.Status = models.TaskStatusCancelled
-		task.Message = "用户取消"
+		task.Message = "Cancelled by user"
 		task.CompletedAt = new(time.Now())
 		if err := task.SyncFinalStatus(); err != nil {
 			return err
 		}
 		// 内存中没有执行体，仍需广播，否则前端会一直显示执行中
 		tm.broadcastProgress(&task, "cancelled")
-		utils.Info("任务已取消（仅数据库状态）: ID=%s", taskID)
+		utils.Info("Task cancelled (database state only): ID=%s", taskID)
 		return nil
 	}
 
 	// 更新状态
 	running.Task.Status = models.TaskStatusCancelled
-	running.Task.Message = "用户取消"
+	running.Task.Message = "Cancelled by user"
 	running.Task.CompletedAt = new(time.Now())
 
 	// 同步最终状态到数据库（任务结束时一次性写入）
 	if err := running.Task.SyncFinalStatus(); err != nil {
-		utils.Error("同步任务最终状态失败: %v", err)
+		utils.Error("Failed to sync final task state: %v", err)
 	}
 
 	// 广播取消
@@ -275,7 +275,7 @@ func (tm *TaskManager) CancelTask(taskID string) error {
 		tm.mutex.Unlock()
 	}()
 
-	utils.Info("任务已取消: ID=%s", taskID)
+	utils.Info("Task cancelled: ID=%s", taskID)
 
 	return nil
 }
@@ -386,37 +386,37 @@ func (tm *TaskManager) BroadcastEvent(task *models.Task, eventType string, data 
 func getTaskStatusTitle(status models.TaskStatus) string {
 	switch status {
 	case models.TaskStatusPending:
-		return "等待中"
+		return "Pending"
 	case models.TaskStatusRunning:
-		return "执行中"
+		return "Running"
 	case models.TaskStatusCompleted:
-		return "已完成"
+		return "Completed"
 	case models.TaskStatusCancelled:
-		return "已取消"
+		return "Cancelled"
 	case models.TaskStatusError:
-		return "执行失败"
+		return "Failed"
 	default:
-		return "未知"
+		return "Unknown"
 	}
 }
 
 // InitTaskManager 初始化任务管理器（服务启动时调用）
 func InitTaskManager() {
 	tm := GetTaskManager()
-	utils.Info("任务管理器初始化完成")
+	utils.Info("Task manager initialized")
 
 	// 将所有运行中的任务标记为错误（防止服务重启后状态不一致）
 	if err := models.MarkRunningTasksAsError(); err != nil {
-		utils.Error("标记运行中任务为错误失败: %v", err)
+		utils.Error("Failed to mark running tasks as failed: %v", err)
 	}
 
 	// 清理过期任务（保留最近30天）
 	go func() {
 		thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
 		if affected, err := models.CleanupOldTasks(thirtyDaysAgo); err != nil {
-			utils.Error("清理过期任务失败: %v", err)
+			utils.Error("Failed to clean up expired tasks: %v", err)
 		} else if affected > 0 {
-			utils.Info("已清理 %d 个过期任务", affected)
+			utils.Info("Cleaned up %d expired tasks", affected)
 		}
 	}()
 
@@ -431,7 +431,7 @@ func (tm *TaskManager) startZombieTaskDetector() {
 	ticker := time.NewTicker(1 * time.Minute) // 每分钟检查一次
 	defer ticker.Stop()
 
-	utils.Info("僵尸任务检测器已启动")
+	utils.Info("Zombie task detector started")
 
 	for range ticker.C {
 		tm.detectAndCleanZombieTasks()
@@ -485,10 +485,10 @@ func (tm *TaskManager) detectAndCleanZombieTasks() {
 
 	// 清理内存中的超时任务
 	for _, zombie := range zombieTasks {
-		utils.Warn("检测到僵尸任务（运行超过%s）: ID=%s, Type=%s, Name=%s, 运行时长=%v",
+		utils.Warn("Detected zombie task (running over %s): ID=%s, Type=%s, Name=%s, runtime=%v",
 			zombie.Max, zombie.ID, zombie.Type, zombie.Name, zombie.Duration)
-		if err := tm.FailTask(zombie.ID, fmt.Sprintf("任务执行超时（超过%s），自动标记为失败", zombie.Max)); err != nil {
-			utils.Error("标记僵尸任务失败时出错: task_id=%s, error=%v", zombie.ID, err)
+		if err := tm.FailTask(zombie.ID, fmt.Sprintf("Task timed out (exceeded %s) and was marked as failed automatically", zombie.Max)); err != nil {
+			utils.Error("Error while marking zombie task: task_id=%s, error=%v", zombie.ID, err)
 		}
 	}
 
@@ -503,7 +503,7 @@ const orphanTaskGrace = 2 * time.Minute
 func (tm *TaskManager) reconcileOrphanedRunningTasks(inMemory map[string]struct{}) {
 	orphans, err := models.ListRunningTasksCreatedBefore(time.Now().Add(-orphanTaskGrace))
 	if err != nil {
-		utils.Error("查询孤儿任务失败: %v", err)
+		utils.Error("Failed to query orphan tasks: %v", err)
 		return
 	}
 
@@ -511,11 +511,11 @@ func (tm *TaskManager) reconcileOrphanedRunningTasks(inMemory map[string]struct{
 		if _, ok := inMemory[orphans[i].ID]; ok {
 			continue
 		}
-		if err := orphans[i].MarkTaskInterrupted("任务已中断（执行进程已退出或任务已过期）"); err != nil {
-			utils.Error("标记孤儿任务失败: task_id=%s, error=%v", orphans[i].ID, err)
+		if err := orphans[i].MarkTaskInterrupted("Task interrupted (the running process exited or the task expired)"); err != nil {
+			utils.Error("Failed to mark orphan task: task_id=%s, error=%v", orphans[i].ID, err)
 			continue
 		}
-		utils.Warn("已清理孤儿任务: ID=%s, Type=%s, Name=%s", orphans[i].ID, orphans[i].Type, orphans[i].Name)
+		utils.Warn("Cleaned up orphan task: ID=%s, Type=%s, Name=%s", orphans[i].ID, orphans[i].Type, orphans[i].Name)
 		tm.broadcastProgress(&orphans[i], "error")
 	}
 }

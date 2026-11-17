@@ -20,7 +20,7 @@ func (netflixUnlockChecker) Key() string { return models.UnlockProviderNetflix }
 func (netflixUnlockChecker) Aliases() []string { return []string{"netflix"} }
 
 func (netflixUnlockChecker) Meta() models.UnlockProviderMeta {
-	return models.UnlockProviderMeta{Value: models.UnlockProviderNetflix, Label: "Netflix", Description: "检测是否支持完整区服或仅 Originals", Category: "streaming"}
+	return models.UnlockProviderMeta{Value: models.UnlockProviderNetflix, Label: "Netflix", Description: "Checks whether the full catalog or only Originals is supported", Category: "streaming"}
 }
 
 func (netflixUnlockChecker) RenameVariableMeta() models.UnlockRenameVariableMeta {

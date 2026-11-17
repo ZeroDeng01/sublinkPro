@@ -14,13 +14,13 @@ func init() {
 		newProtocolSpec("http", []string{"http://"}, "HTTP", "#0288d1", "H", HTTP{}, "Name", DecodeHTTPURL, EncodeHTTPURL, func(h HTTP) LinkIdentity {
 			return buildIdentity("http", h.Name, h.Server, utils.GetPortString(h.Port))
 		},
-			FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-			FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic"},
-			FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
-			FieldMeta{Name: "Username", Label: "用户名", Type: "string", Group: "auth", Advanced: true},
-			FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true, Advanced: true},
-			FieldMeta{Name: "TLS", Label: "启用 TLS", Type: "bool", Group: "tls"},
-			FieldMeta{Name: "SkipCertVerify", Label: "跳过证书校验", Type: "bool", Group: "tls", Advanced: true},
+			FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+			FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic"},
+			FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
+			FieldMeta{Name: "Username", Label: "Username", Type: "string", Group: "auth", Advanced: true},
+			FieldMeta{Name: "Password", Label: "Password", Type: "string", Group: "auth", Secret: true, Advanced: true},
+			FieldMeta{Name: "TLS", Label: "Enable TLS", Type: "bool", Group: "tls"},
+			FieldMeta{Name: "SkipCertVerify", Label: "Skip certificate verification", Type: "bool", Group: "tls", Advanced: true},
 			FieldMeta{Name: "SNI", Label: "SNI", Type: "string", Group: "tls", Advanced: true},
 		),
 		buildHTTPProxy,
@@ -33,13 +33,13 @@ func init() {
 		newProtocolSpec("https", []string{"https://"}, "HTTPS", "#0277bd", "H", HTTP{}, "Name", DecodeHTTPURL, EncodeHTTPURL, func(h HTTP) LinkIdentity {
 			return buildIdentity("https", h.Name, h.Server, utils.GetPortString(h.Port))
 		},
-			FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-			FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic"},
-			FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
-			FieldMeta{Name: "Username", Label: "用户名", Type: "string", Group: "auth", Advanced: true},
-			FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true, Advanced: true},
-			FieldMeta{Name: "TLS", Label: "启用 TLS", Type: "bool", Group: "tls"},
-			FieldMeta{Name: "SkipCertVerify", Label: "跳过证书校验", Type: "bool", Group: "tls", Advanced: true},
+			FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+			FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic"},
+			FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
+			FieldMeta{Name: "Username", Label: "Username", Type: "string", Group: "auth", Advanced: true},
+			FieldMeta{Name: "Password", Label: "Password", Type: "string", Group: "auth", Secret: true, Advanced: true},
+			FieldMeta{Name: "TLS", Label: "Enable TLS", Type: "bool", Group: "tls"},
+			FieldMeta{Name: "SkipCertVerify", Label: "Skip certificate verification", Type: "bool", Group: "tls", Advanced: true},
 			FieldMeta{Name: "SNI", Label: "SNI", Type: "string", Group: "tls", Advanced: true},
 		),
 		buildHTTPProxy,
@@ -114,7 +114,7 @@ func IsHTTPLink(link string) bool {
 // - https://username:password@server:port?skip-cert-verify=true&sni=example.com#name
 func DecodeHTTPURL(s string) (HTTP, error) {
 	if !strings.Contains(s, "http://") && !strings.Contains(s, "https://") {
-		return HTTP{}, fmt.Errorf("非http/https协议: %s", s)
+		return HTTP{}, fmt.Errorf("not an http/https link: %s", s)
 	}
 
 	u, err := url.Parse(s)
@@ -139,7 +139,7 @@ func DecodeHTTPURL(s string) (HTTP, error) {
 			host = u.Host
 			port = defaultHTTPProxyPort(u.Scheme == "https")
 		} else {
-			return HTTP{}, fmt.Errorf("SplitHostPort error: %v", err)
+			return HTTP{}, fmt.Errorf("splitHostPort error: %v", err)
 		}
 	}
 	httpProxy.Server = host

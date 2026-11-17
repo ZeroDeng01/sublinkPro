@@ -43,7 +43,7 @@ func templateAuthorFromContext(c *gin.Context) string {
 func parseTemplateVersionNumber(value string) (int, error) {
 	version, err := strconv.Atoi(strings.TrimSpace(value))
 	if err != nil || version <= 0 {
-		return 0, errors.New("版本号无效")
+		return 0, errors.New("invalid version number")
 	}
 	return version, nil
 }
@@ -52,17 +52,17 @@ func parseTemplateVersionNumber(value string) (int, error) {
 func findTemplateByFilename(filename string) (*models.Template, string, error) {
 	filename = strings.TrimSpace(filename)
 	if filename == "" {
-		return nil, "", errors.New("文件名不能为空")
+		return nil, "", errors.New("file name is required")
 	}
 	fullPath, err := safeFilePath(filename)
 	if err != nil {
-		return nil, "", fmt.Errorf("文件名非法: %w", err)
+		return nil, "", fmt.Errorf("invalid file name: %w", err)
 	}
 
 	var tmpl models.Template
 	if err := tmpl.FindByName(filename); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fullPath, errors.New("模板不存在")
+			return nil, fullPath, errors.New("template not found")
 		}
 		return nil, fullPath, err
 	}
@@ -80,12 +80,12 @@ func templateVersionTotalPages(total int64, pageSize int) int {
 func GetTemplateVersions(c *gin.Context) {
 	filename := strings.TrimSpace(c.Query("filename"))
 	if filename == "" {
-		utils.FailWithMsg(c, "文件名不能为空")
+		utils.FailWithMsg(c, "File name is required")
 		return
 	}
 	fullPath, err := safeFilePath(filename)
 	if err != nil {
-		utils.FailWithMsg(c, "文件名非法: "+err.Error())
+		utils.FailWithMsg(c, "Invalid file name: "+err.Error())
 		return
 	}
 
@@ -121,8 +121,8 @@ func GetTemplateVersions(c *gin.Context) {
 
 	versions, total, err := models.ListTemplateVersions(tmpl.ID, page, pageSize)
 	if err != nil {
-		utils.Error("读取模板版本列表失败: %v", err)
-		utils.FailWithMsg(c, "读取版本历史失败")
+		utils.Error("Failed to load template version list: %v", err)
+		utils.FailWithMsg(c, "Failed to read version history")
 		return
 	}
 
@@ -169,18 +169,18 @@ func GetTemplateVersion(c *gin.Context) {
 	version, err := models.FindTemplateVersion(tmpl.ID, versionNo)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.FailWithMsg(c, "版本不存在")
+			utils.FailWithMsg(c, "Version not found")
 			return
 		}
-		utils.Error("查询模板版本失败: %v", err)
-		utils.FailWithMsg(c, "读取版本失败")
+		utils.Error("Failed to query template version: %v", err)
+		utils.FailWithMsg(c, "Failed to read version")
 		return
 	}
 
 	content, err := models.ReadTemplateVersionContent(baseTemplateDir, version)
 	if err != nil {
-		utils.Error("读取模板版本内容失败: %v", err)
-		utils.FailWithMsg(c, "读取版本内容失败")
+		utils.Error("Failed to read template version content: %v", err)
+		utils.FailWithMsg(c, "Failed to read version content")
 		return
 	}
 
@@ -208,18 +208,18 @@ func DownloadTemplateVersion(c *gin.Context) {
 	version, err := models.FindTemplateVersion(tmpl.ID, versionNo)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.FailWithMsg(c, "版本不存在")
+			utils.FailWithMsg(c, "Version not found")
 			return
 		}
-		utils.Error("查询模板版本失败: %v", err)
-		utils.FailWithMsg(c, "读取版本失败")
+		utils.Error("Failed to query template version: %v", err)
+		utils.FailWithMsg(c, "Failed to read version")
 		return
 	}
 
 	content, err := models.ReadTemplateVersionContent(baseTemplateDir, version)
 	if err != nil {
-		utils.Error("读取模板版本内容失败: %v", err)
-		utils.FailWithMsg(c, "读取版本内容失败")
+		utils.Error("Failed to read template version content: %v", err)
+		utils.FailWithMsg(c, "Failed to read version content")
 		return
 	}
 
@@ -233,7 +233,7 @@ func GetTemplateVersionDiff(c *gin.Context) {
 	filename := strings.TrimSpace(c.Query("filename"))
 	fromNo, err := parseTemplateVersionNumber(c.Query("from"))
 	if err != nil {
-		utils.FailWithMsg(c, "起始版本号无效")
+		utils.FailWithMsg(c, "Invalid source version number")
 		return
 	}
 
@@ -241,7 +241,7 @@ func GetTemplateVersionDiff(c *gin.Context) {
 	if toStr := strings.TrimSpace(c.Query("to")); toStr != "" {
 		parsed, err := strconv.Atoi(toStr)
 		if err != nil || parsed < 0 {
-			utils.FailWithMsg(c, "目标版本号无效")
+			utils.FailWithMsg(c, "Invalid target version number")
 			return
 		}
 		toNo = parsed
@@ -256,17 +256,17 @@ func GetTemplateVersionDiff(c *gin.Context) {
 	fromVersion, err := models.FindTemplateVersion(tmpl.ID, fromNo)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.FailWithMsg(c, "起始版本不存在")
+			utils.FailWithMsg(c, "Source version does not exist")
 			return
 		}
-		utils.Error("查询模板版本失败: %v", err)
-		utils.FailWithMsg(c, "读取版本失败")
+		utils.Error("Failed to query template version: %v", err)
+		utils.FailWithMsg(c, "Failed to read version")
 		return
 	}
 	fromContent, err := models.ReadTemplateVersionContent(baseTemplateDir, fromVersion)
 	if err != nil {
-		utils.Error("读取模板版本内容失败: %v", err)
-		utils.FailWithMsg(c, "读取版本内容失败")
+		utils.Error("Failed to read template version content: %v", err)
+		utils.FailWithMsg(c, "Failed to read version content")
 		return
 	}
 
@@ -276,8 +276,8 @@ func GetTemplateVersionDiff(c *gin.Context) {
 	if toNo == 0 {
 		toContent, err = os.ReadFile(fullPath)
 		if err != nil {
-			utils.Error("读取当前模板内容失败: %v", err)
-			utils.FailWithMsg(c, "读取当前模板失败")
+			utils.Error("Failed to read current template content: %v", err)
+			utils.FailWithMsg(c, "Failed to read current template")
 			return
 		}
 		toLabel = filename + " (current)"
@@ -285,17 +285,17 @@ func GetTemplateVersionDiff(c *gin.Context) {
 		toVersion, err := models.FindTemplateVersion(tmpl.ID, toNo)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				utils.FailWithMsg(c, "目标版本不存在")
+				utils.FailWithMsg(c, "Target version does not exist")
 				return
 			}
-			utils.Error("查询模板版本失败: %v", err)
-			utils.FailWithMsg(c, "读取版本失败")
+			utils.Error("Failed to query template version: %v", err)
+			utils.FailWithMsg(c, "Failed to read version")
 			return
 		}
 		toContent, err = models.ReadTemplateVersionContent(baseTemplateDir, toVersion)
 		if err != nil {
-			utils.Error("读取模板版本内容失败: %v", err)
-			utils.FailWithMsg(c, "读取版本内容失败")
+			utils.Error("Failed to read template version content: %v", err)
+			utils.FailWithMsg(c, "Failed to read version content")
 			return
 		}
 		toLabel = fmt.Sprintf("%s v%d", filename, toNo)
@@ -312,8 +312,8 @@ func GetTemplateVersionDiff(c *gin.Context) {
 			Context:  3,
 		})
 		if err != nil {
-			utils.Error("生成版本差异失败: %v", err)
-			utils.FailWithMsg(c, "生成版本差异失败")
+			utils.Error("Failed to generate version diff: %v", err)
+			utils.FailWithMsg(c, "Failed to generate version diff")
 			return
 		}
 	}
@@ -353,18 +353,18 @@ func RestoreTemplateVersion(c *gin.Context) {
 	version, err := models.FindTemplateVersion(tmpl.ID, versionNo)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.FailWithMsg(c, "版本不存在")
+			utils.FailWithMsg(c, "Version not found")
 			return
 		}
-		utils.Error("查询模板版本失败: %v", err)
-		utils.FailWithMsg(c, "读取版本失败")
+		utils.Error("Failed to query template version: %v", err)
+		utils.FailWithMsg(c, "Failed to read version")
 		return
 	}
 
 	content, err := models.ReadTemplateVersionContent(baseTemplateDir, version)
 	if err != nil {
-		utils.Error("读取模板版本内容失败: %v", err)
-		utils.FailWithMsg(c, "读取版本内容失败")
+		utils.Error("Failed to read template version content: %v", err)
+		utils.FailWithMsg(c, "Failed to read version content")
 		return
 	}
 
@@ -373,8 +373,8 @@ func RestoreTemplateVersion(c *gin.Context) {
 		mode = info.Mode().Perm()
 	}
 	if err := os.WriteFile(fullPath, content, mode); err != nil {
-		utils.Error("恢复模板版本写入失败: %v", err)
-		utils.FailWithMsg(c, "恢复版本失败")
+		utils.Error("Failed to write restored template version: %v", err)
+		utils.FailWithMsg(c, "Failed to restore version")
 		return
 	}
 	cache.SetTemplateContent(filename, string(content))
@@ -391,12 +391,12 @@ func RestoreTemplateVersion(c *gin.Context) {
 		templateAuthorFromContext(c),
 	)
 	if err != nil {
-		models.LogTemplateVersionError("记录恢复版本", err)
+		models.LogTemplateVersionError("record restored version", err)
 		newVersion = nil
 		created = false
 	}
 
-	utils.OkDetailed(c, "恢复成功", gin.H{
+	utils.OkDetailed(c, "Restored successfully", gin.H{
 		"restoredVersion": versionNo,
 		"newVersion":      newVersion,
 		"created":         created,

@@ -17,7 +17,7 @@ func ScriptAdd(c *gin.Context) {
 		return
 	}
 	if data.Name == "" || data.Content == "" {
-		utils.FailWithMsg(c, "名称和内容不能为空")
+		utils.FailWithMsg(c, "Name and content are required")
 		return
 	}
 	if data.Version == "" {
@@ -25,7 +25,7 @@ func ScriptAdd(c *gin.Context) {
 	}
 
 	if data.CheckNameVersion() {
-		utils.FailWithMsg(c, "该名称和版本的脚本已存在")
+		utils.FailWithMsg(c, "A script with this name and version already exists")
 		return
 	}
 
@@ -33,7 +33,7 @@ func ScriptAdd(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkDetailed(c, "添加成功", data)
+	utils.OkDetailed(c, "Added successfully", data)
 }
 
 // ScriptDel 删除脚本
@@ -47,25 +47,25 @@ func ScriptDel(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkWithMsg(c, "删除成功")
+	utils.OkWithMsg(c, "Deleted successfully")
 }
 
 func GetScriptUsage(c *gin.Context) {
 	scriptIDStr := c.Query("id")
 	if scriptIDStr == "" {
-		utils.FailWithMsg(c, "脚本ID不能为空")
+		utils.FailWithMsg(c, "Script ID is required")
 		return
 	}
 
 	scriptID, err := strconv.Atoi(scriptIDStr)
 	if err != nil || scriptID <= 0 {
-		utils.FailWithMsg(c, "脚本ID非法")
+		utils.FailWithMsg(c, "Invalid script ID")
 		return
 	}
 
 	var subScripts []models.SubcriptionScript
 	if err := database.DB.Where("script_id = ?", scriptID).Find(&subScripts).Error; err != nil {
-		utils.FailWithMsg(c, "获取脚本使用情况失败")
+		utils.FailWithMsg(c, "Failed to fetch script usage")
 		return
 	}
 
@@ -84,7 +84,7 @@ func GetScriptUsage(c *gin.Context) {
 
 	var subs []models.Subcription
 	if err := database.DB.Where("id IN ?", subIDs).Find(&subs).Error; err != nil {
-		utils.FailWithMsg(c, "获取脚本使用情况失败")
+		utils.FailWithMsg(c, "Failed to fetch script usage")
 		return
 	}
 
@@ -107,14 +107,14 @@ func ScriptUpdate(c *gin.Context) {
 		return
 	}
 	if data.CheckNameVersion() {
-		utils.FailWithMsg(c, "该名称和版本的脚本已存在")
+		utils.FailWithMsg(c, "A script with this name and version already exists")
 		return
 	}
 	if err := data.Update(); err != nil {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkDetailed(c, "更新成功", data)
+	utils.OkDetailed(c, "Updated successfully", data)
 }
 
 // ScriptList 获取脚本列表
@@ -146,7 +146,7 @@ func ScriptList(c *gin.Context) {
 		if pageSize > 0 {
 			totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
 		}
-		utils.OkDetailed(c, "获取成功", gin.H{
+		utils.OkDetailed(c, "Fetched successfully", gin.H{
 			"items":      list,
 			"total":      total,
 			"page":       page,
@@ -162,5 +162,5 @@ func ScriptList(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkDetailed(c, "获取成功", list)
+	utils.OkDetailed(c, "Fetched successfully", list)
 }

@@ -46,18 +46,18 @@ func applyNodeQualityInfo(node *models.Node, quality *mihomo.QualityCheckResult)
 // 采用两阶段测试策略：阶段一并发测延迟，阶段二低并发测速度
 func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, profileName string, config *SpeedTestConfig) (runErr error) {
 	if len(nodes) == 0 {
-		utils.Warn("没有要检测的节点")
-		return fmt.Errorf("没有要检测的节点")
+		utils.Warn("No nodes to check")
+		return fmt.Errorf("no nodes to check")
 	}
 
 	totalNodes := len(nodes)
-	utils.Info("开始执行节点检测，总节点数: %d, 触发类型: %s, 策略: %s", totalNodes, trigger, profileName)
+	utils.Info("Starting node check: total nodes: %d, trigger: %s, profile: %s", totalNodes, trigger, profileName)
 
 	// 使用 TaskManager 创建任务
 	tm := getTaskManager()
 	task, ctx, err := tm.CreateTask(models.TaskTypeSpeedTest, profileName, trigger, totalNodes)
 	if err != nil {
-		utils.Error("创建检测任务失败: %v", err)
+		utils.Error("Failed to create check task: %v", err)
 		return err
 	}
 	taskID := task.ID
@@ -65,15 +65,15 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 	// 确保任务结束时清理
 	defer func() {
 		if r := recover(); r != nil {
-			utils.Error("测速任务执行过程中发生严重错误: %v", r)
-			runErr = fmt.Errorf("任务执行异常: %v", r)
+			utils.Error("Fatal error during speed test: %v", r)
+			runErr = fmt.Errorf("task crashed: %v", r)
 			_ = tm.FailTask(taskID, runErr.Error())
 		}
 	}()
 
 	// 检查是否已被取消
 	if ctx.Err() != nil {
-		utils.Info("任务已被取消: %s", taskID)
+		utils.Info("Task was cancelled: %s", taskID)
 		return ctx.Err()
 	}
 
@@ -140,7 +140,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 		latencyConcurrency = latencyController.GetCurrentConcurrency()
 	} else {
 		if latencyConcurrency > maxConcurrency {
-			utils.Warn("警告: 延迟并发数 %d 超过最大限制，已调整为 %d", latencyConcurrency, maxConcurrency)
+			utils.Warn("Warning: latency concurrency %d exceeds the limit; adjusted to %d", latencyConcurrency, maxConcurrency)
 			latencyConcurrency = maxConcurrency
 		}
 	}
@@ -160,7 +160,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 		// 硬性并发上限：速度测试不应超过32以避免带宽竞争
 		const maxSpeedConcurrency = 32
 		if speedConcurrency > maxSpeedConcurrency {
-			utils.Warn("警告: 速度并发数 %d 超过安全上限，已调整为 %d", speedConcurrency, maxSpeedConcurrency)
+			utils.Warn("Warning: speed concurrency %d exceeds the safe limit; adjusted to %d", speedConcurrency, maxSpeedConcurrency)
 			speedConcurrency = maxSpeedConcurrency
 		}
 	}
@@ -208,7 +208,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 	var hostMu sync.Mutex
 
 	// ========== 阶段一：延迟测试 ==========
-	utils.Info("阶段一：开始延迟测试，并发数: %d（动态: %v），UnifiedDelay: %v", latencyConcurrency, useAdaptiveLatency, !includeHandshake)
+	utils.Info("Phase 1: starting latency test, concurrency: %d (dynamic: %v), UnifiedDelay: %v", latencyConcurrency, useAdaptiveLatency, !includeHandshake)
 
 	// 固定并发模式的 semaphore（仅在非动态模式下使用）
 	var latencySem chan struct{}
@@ -224,7 +224,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 			mu.Lock()
 			cancelled = true
 			mu.Unlock()
-			utils.Debug("任务被取消，停止新的延迟测试")
+			utils.Debug("Task cancelled; stopping new latency tests")
 		default:
 		}
 
@@ -321,7 +321,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 				}
 				if err != nil {
 					failCount++
-					utils.Debug("节点 [%s] 延迟测试失败: %v", n.Name, err)
+					utils.Debug("Node [%s] latency test failed: %v", n.Name, err)
 					if !preserveSpeed {
 						n.Speed = -1
 						n.SpeedStatus = constants.StatusUntested // TCP模式不测速度
@@ -330,7 +330,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					n.DelayStatus = constants.StatusTimeout
 				} else {
 					successCount++
-					utils.Debug("节点 [%s] 延迟测试成功: %d ms", n.Name, latency)
+					utils.Debug("Node [%s] latency test succeeded: %d ms", n.Name, latency)
 					if !preserveSpeed {
 						n.Speed = 0 // TCP模式不测速度
 						n.SpeedStatus = constants.StatusUntested
@@ -344,7 +344,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 						countryCode, geoErr := geoip.GetCountryISOCode(landingIP)
 						if geoErr == nil && countryCode != "" {
 							n.LinkCountry = countryCode
-							utils.Debug("节点 [%s] 落地IP: %s, 国家: %s", n.Name, landingIP, countryCode)
+							utils.Debug("Node [%s] exit IP: %s, country: %s", n.Name, landingIP, countryCode)
 						}
 					}
 
@@ -428,20 +428,20 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 		}(i, node)
 	}
 	latencyWg.Wait()
-	utils.Info("阶段一完成：延迟测试结束")
+	utils.Info("Phase 1 complete: latency test finished")
 
 	// 检查是否被取消
 	if cancelled || ctx.Err() != nil {
-		utils.Info("任务被取消，跳过阶段二 (已完成: %d/%d)", completedCount, totalNodes)
-		_ = tm.UpdateProgress(taskID, int(completedCount), "已取消", nil)
+		utils.Info("Task cancelled; skipping phase 2 (completed: %d/%d)", completedCount, totalNodes)
+		_ = tm.UpdateProgress(taskID, int(completedCount), "Cancelled", nil)
 		// 任务已被 CancelTask 标记为取消，无需再次更新
-		runErr = fmt.Errorf("任务已取消")
+		runErr = fmt.Errorf("task cancelled")
 		goto applyTags
 	}
 
 	// ========== 阶段二：速度测试（仅 mihomo 模式）==========
 	if speedTestMode != "tcp" {
-		utils.Info("阶段二：开始速度测试，并发数: %d（动态: %v）", speedConcurrency, useAdaptiveSpeed)
+		utils.Info("Phase 2: starting speed test, concurrency: %d (dynamic: %v)", speedConcurrency, useAdaptiveSpeed)
 
 		// 重置进度计数器用于阶段二
 		completedCount = 0
@@ -460,7 +460,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 				mu.Lock()
 				cancelled = true
 				mu.Unlock()
-				utils.Debug("任务被取消，停止新的速度测试")
+				utils.Debug("Task cancelled; stopping new speed tests")
 			default:
 			}
 
@@ -579,7 +579,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					if trafficAcc.enableGroup {
 						group := result.node.Group
 						if group == "" {
-							group = "未分组"
+							group = "Ungrouped"
 						}
 						trafficAcc.groupBytes[group] += bytesDownloaded
 					}
@@ -588,7 +588,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					if trafficAcc.enableSource {
 						source := result.node.Source
 						if source == "" || source == "manual" {
-							source = "手动添加"
+							source = "Manual"
 						}
 						trafficAcc.sourceBytes[source] += bytesDownloaded
 					}
@@ -623,7 +623,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					if detectQuality {
 						resetNodeQualityInfo(&result.node)
 					}
-					utils.Debug("节点 [%s] 速度测试失败: %v (延迟: %d ms, 已下载: %s)", result.node.Name, err, result.latency, formatBytes(bytesDownloaded))
+					utils.Debug("Node [%s] speed test failed: %v (latency: %d ms, downloaded: %s)", result.node.Name, err, result.latency, formatBytes(bytesDownloaded))
 					result.node.Speed = -1
 					result.node.SpeedStatus = constants.StatusError
 					result.node.DelayTime = result.latency            // 保留延迟测试结果
@@ -639,7 +639,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 					if detectQuality {
 						applyNodeQualityInfo(&result.node, qualityInfo)
 					}
-					utils.Debug("节点 [%s] 测速成功: 速度 %.2f MB/s, 延迟 %d ms, 流量消耗: %s", result.node.Name, speed, result.latency, formatBytes(bytesDownloaded))
+					utils.Debug("Node [%s] speed test succeeded: %.2f MB/s, latency %d ms, traffic used: %s", result.node.Name, speed, result.latency, formatBytes(bytesDownloaded))
 					result.node.Speed = speed
 					result.node.SpeedStatus = constants.StatusSuccess
 					result.node.DelayTime = result.latency
@@ -656,7 +656,7 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 						countryCode, geoErr := geoip.GetCountryISOCode(landingIP)
 						if geoErr == nil && countryCode != "" {
 							result.node.LinkCountry = countryCode
-							utils.Debug("节点 [%s] 落地IP: %s, 国家: %s", result.node.Name, landingIP, countryCode)
+							utils.Debug("Node [%s] exit IP: %s, country: %s", result.node.Name, landingIP, countryCode)
 						}
 					}
 
@@ -734,24 +734,24 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 			}(nr)
 		}
 		speedWg.Wait()
-		utils.Info("阶段二完成：速度测试结束")
+		utils.Info("Phase 2 complete: speed test finished")
 	}
 
 	// 检查最终是否被取消
 	if cancelled || ctx.Err() != nil {
-		utils.Info("任务被取消")
-		runErr = fmt.Errorf("任务已取消")
+		utils.Info("Task cancelled")
+		runErr = fmt.Errorf("task cancelled")
 		goto applyTags
 	}
 
 	// 批量写入所有测速结果到数据库（一次性操作，减少数据库I/O）
 	if len(speedTestResults) > 0 {
 		if err := models.BatchUpdateSpeedResults(speedTestResults); err != nil {
-			utils.Error("批量更新测速结果失败: %v", err)
-			_ = tm.FailTask(taskID, "保存检测结果失败: "+err.Error())
+			utils.Error("Failed to batch update speed test results: %v", err)
+			_ = tm.FailTask(taskID, "Failed to save check results: "+err.Error())
 			return err
 		} else {
-			utils.Debug("批量更新测速结果成功，共 %d 条记录", len(speedTestResults))
+			utils.Debug("Batch updated %d speed test results", len(speedTestResults))
 		}
 	}
 
@@ -770,9 +770,9 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 		go func(mappings []models.HostMappingInfo) {
 			count, err := models.BatchUpsertHosts(mappings)
 			if err != nil {
-				utils.Error("批量保存Host映射失败: %v", err)
+				utils.Error("Failed to batch save Host mappings: %v", err)
 			} else if count > 0 {
-				utils.Info("测速Host持久化: 成功处理 %d 条", count)
+				utils.Info("Speed test Host persistence: processed %d entries", count)
 			}
 		}(uniqueHostMappings)
 	}
@@ -838,13 +838,13 @@ func RunSpeedTestWithConfig(nodes []models.Node, trigger models.TaskTrigger, pro
 			resultData["unlockProviders"] = unlockProviders
 			resultData["unlock"] = models.BuildUnlockAggregate(unlockSummaries, unlockProviders)
 		}
-		utils.Info("测速任务完成 - 总计: %d, 成功: %d, 失败: %d, 流量: %s", totalNodes, successCount, failCount, formatBytes(trafficTotal))
-		_ = tm.CompleteTask(taskID, fmt.Sprintf("测速完成 (成功: %d, 失败: %d, 流量: %s)", successCount, failCount, formatBytes(trafficTotal)), resultData)
+		utils.Info("Speed test completed - total: %d, succeeded: %d, failed: %d, traffic: %s", totalNodes, successCount, failCount, formatBytes(trafficTotal))
+		_ = tm.CompleteTask(taskID, fmt.Sprintf("Speed test completed (success: %d, failed: %d, traffic: %s)", successCount, failCount, formatBytes(trafficTotal)), resultData)
 
 		// 广播测速完成通知（让用户在通知中心看到）
 		notifications.Publish("task.speed_test_completed", notifications.Payload{
-			Title:   "节点测速完成",
-			Message: fmt.Sprintf("测速完成: 成功 %d 个, 失败 %d 个, 消耗流量 %s", successCount, failCount, formatBytes(trafficTotal)),
+			Title:   "Speed test completed",
+			Message: fmt.Sprintf("Speed test finished: %d succeeded, %d failed, traffic used %s", successCount, failCount, formatBytes(trafficTotal)),
 			Data: map[string]any{
 				"status":           "success",
 				"success":          successCount,
@@ -871,7 +871,7 @@ applyTags:
 		// 从数据库/缓存获取最新的节点数据
 		updatedNodes, err := models.GetNodesByIDs(testedNodeIDs)
 		if err != nil {
-			utils.Warn("获取测速节点最新数据失败: %v, 使用原始数据", err)
+			utils.Warn("Failed to load latest speed test data: %v; using raw data", err)
 			applyAutoTagRules(nodes, "speed_test")
 			return
 		}
@@ -892,12 +892,12 @@ applyTags:
 // nodeIDs: 指定节点ID列表（可选，为空则按策略范围执行）
 // trigger: 触发类型（手动/定时）
 func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.TaskTrigger) {
-	utils.Info("开始执行节点检测，策略ID: %d, 触发类型: %s", profileID, trigger)
+	utils.Info("Starting node check: profile ID: %d, trigger: %s", profileID, trigger)
 
 	// 获取策略配置
 	profile, err := models.GetNodeCheckProfileByID(profileID)
 	if err != nil {
-		utils.Error("获取节点检测策略失败: %v", err)
+		utils.Error("Failed to load check profile: %v", err)
 		return
 	}
 
@@ -921,7 +921,7 @@ func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.Ta
 		if len(groups) > 0 {
 			nodes, err = new(models.Node).ListByGroups(groups)
 			if err != nil {
-				utils.Error("获取分组节点失败: %v", err)
+				utils.Error("Failed to load group nodes: %v", err)
 				return
 			}
 			// 在分组基础上按标签过滤
@@ -931,20 +931,20 @@ func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.Ta
 		} else if len(tags) > 0 {
 			nodes, err = new(models.Node).ListByTags(tags)
 			if err != nil {
-				utils.Error("获取标签节点失败: %v", err)
+				utils.Error("Failed to load tag nodes: %v", err)
 				return
 			}
 		} else {
 			nodes, err = new(models.Node).List()
 			if err != nil {
-				utils.Error("获取节点列表失败: %v", err)
+				utils.Error("Failed to load node list: %v", err)
 				return
 			}
 		}
 	}
 
 	if len(nodes) == 0 {
-		utils.Warn("没有符合条件的节点")
+		utils.Warn("No matching nodes")
 		return
 	}
 
@@ -953,11 +953,11 @@ func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.Ta
 
 	// 执行检测（使用策略名称作为任务名，传递独立配置）
 	if err := RunSpeedTestWithConfig(nodes, trigger, profile.Name, config); err != nil {
-		utils.Warn("节点检测结束: %v", err)
+		utils.Warn("Node check finished: %v", err)
 	}
 
 	// 更新策略的上次执行时间（保留现有的下次执行时间）
 	if err := profile.UpdateLastRunTime(new(time.Now())); err != nil {
-		utils.Warn("更新策略执行时间失败: %v", err)
+		utils.Warn("Failed to update profile last-run time: %v", err)
 	}
 }

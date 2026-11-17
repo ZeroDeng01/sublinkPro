@@ -31,7 +31,7 @@ func (sm *SchedulerManager) UpdateWebDAVBackupJob(cronExpr string, enabled bool)
 	}
 
 	if !enabled {
-		utils.Info("WebDAV 定时备份任务已停用")
+		utils.Info("WebDAV scheduled backup is disabled")
 		return nil
 	}
 
@@ -44,31 +44,31 @@ func (sm *SchedulerManager) UpdateWebDAVBackupJob(cronExpr string, enabled bool)
 		ExecuteWebDAVBackupTask(models.TaskTriggerScheduled)
 	})
 	if err != nil {
-		utils.Error("添加 WebDAV 定时备份任务失败 - Cron: %s, Error: %v", cleanCronExpr, err)
+		utils.Error("Failed to add WebDAV scheduled backup - Cron: %s, Error: %v", cleanCronExpr, err)
 		return err
 	}
 
 	sm.jobs[JobIDWebDAVBackup] = entryID
-	utils.Info("成功添加 WebDAV 定时备份任务 - Cron: %s", cleanCronExpr)
+	utils.Info("Added WebDAV scheduled backup - Cron: %s", cleanCronExpr)
 	return nil
 }
 
 // ExecuteWebDAVBackupTask creates a system backup and uploads it to WebDAV.
 func ExecuteWebDAVBackupTask(trigger models.TaskTrigger) {
 	if !webdavBackupMu.TryLock() {
-		utils.Warn("WebDAV 定时备份仍在运行，跳过本次调度")
+		utils.Warn("WebDAV scheduled backup is still running; skipping this schedule")
 		return
 	}
 	defer webdavBackupMu.Unlock()
 
 	if !database.IsSQLite() {
-		utils.Warn("WebDAV 定时备份已跳过：当前数据库不是 SQLite")
+		utils.Warn("WebDAV scheduled backup skipped: the database is not SQLite")
 		return
 	}
 
 	cfg, err := backupservice.LoadConfig()
 	if err != nil {
-		utils.Error("读取 WebDAV 备份配置失败: %v", err)
+		utils.Error("Failed to load WebDAV backup config: %v", err)
 		return
 	}
 	if !cfg.ScheduleEnabled || cfg.BaseURL == "" {
@@ -76,20 +76,20 @@ func ExecuteWebDAVBackupTask(trigger models.TaskTrigger) {
 	}
 
 	tm := getTaskManager()
-	task, ctx, err := tm.CreateTask(models.TaskTypeWebDAVBackup, "WebDAV 定时备份", trigger, 2)
+	task, ctx, err := tm.CreateTask(models.TaskTypeWebDAVBackup, "WebDAV scheduled backup", trigger, 2)
 	if err != nil {
-		utils.Error("创建 WebDAV 定时备份任务失败: %v", err)
+		utils.Error("Failed to create WebDAV scheduled backup task: %v", err)
 		return
 	}
 
-	_ = tm.UpdateProgress(task.ID, 1, "正在创建并上传备份", nil)
+	_ = tm.UpdateProgress(task.ID, 1, "Creating and uploading backup", nil)
 	remote, err := backupservice.CreateAndUpload(ctx, cfg)
 	if err != nil {
-		utils.Error("WebDAV 定时备份失败: %v", err)
+		utils.Error("WebDAV scheduled backup failed: %v", err)
 		_ = tm.FailTask(task.ID, err.Error())
 		return
 	}
 
-	_ = tm.CompleteTask(task.ID, "备份已上传: "+remote.Name, remote)
-	utils.Info("WebDAV 定时备份完成: %s", remote.Name)
+	_ = tm.CompleteTask(task.ID, "Backup uploaded: "+remote.Name, remote)
+	utils.Info("WebDAV scheduled backup completed: %s", remote.Name)
 }

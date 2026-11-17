@@ -76,7 +76,7 @@ func parseShareExpireAt(expireType int, raw string) (*time.Time, error) {
 		return nil, nil
 	}
 	if raw == "" {
-		return nil, fmt.Errorf("指定时间过期时必须提供过期时间")
+		return nil, fmt.Errorf("an expiry time is required when expiring at a specific time")
 	}
 
 	parsed, err := time.Parse(time.RFC3339, raw)
@@ -85,7 +85,7 @@ func parseShareExpireAt(expireType int, raw string) (*time.Time, error) {
 		if err != nil {
 			parsed, err = time.ParseInLocation("2006-01-02T15:04", raw, time.Local)
 			if err != nil {
-				return nil, fmt.Errorf("过期时间格式错误")
+				return nil, fmt.Errorf("invalid expiry time format")
 			}
 		}
 	}
@@ -97,7 +97,7 @@ func parseShareExpireAt(expireType int, raw string) (*time.Time, error) {
 func ShareGet(c *gin.Context) {
 	var req ShareListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid parameters: " + err.Error()})
 		return
 	}
 
@@ -105,7 +105,7 @@ func ShareGet(c *gin.Context) {
 	if req.IPFilter != "" {
 		ip := net.ParseIP(req.IPFilter)
 		if ip == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "无效的IP地址"})
+			c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid IP address"})
 			return
 		}
 	}
@@ -115,8 +115,8 @@ func ShareGet(c *gin.Context) {
 		shares, total, err := models.GetSharesBySubscriptionIDPaginated(
 			req.SubID, req.Page, req.PageSize, req.Keyword, req.IPFilter, req.SortBy, req.SortOrder)
 		if err != nil {
-			utils.Error("获取分享列表失败: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "获取分享列表失败"})
+			utils.Error("Failed to load share list: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Failed to fetch share list"})
 			return
 		}
 
@@ -146,7 +146,7 @@ func ShareGet(c *gin.Context) {
 func ShareAdd(c *gin.Context) {
 	var req ShareCreateReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid parameters: " + err.Error()})
 		return
 	}
 
@@ -167,26 +167,26 @@ func ShareAdd(c *gin.Context) {
 	}
 
 	if err := share.Add(); err != nil {
-		utils.Error("创建分享失败: %v", err)
+		utils.Error("Failed to create share: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "创建成功", "data": share})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Created successfully", "data": share})
 }
 
 // ShareUpdate 更新分享设置
 func ShareUpdate(c *gin.Context) {
 	var req ShareUpdateReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid parameters: " + err.Error()})
 		return
 	}
 
 	// 获取现有分享
 	share := &models.SubscriptionShare{ID: req.ID}
 	if err := share.Find(); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "分享不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "Share not found"})
 		return
 	}
 
@@ -205,12 +205,12 @@ func ShareUpdate(c *gin.Context) {
 	share.Enabled = req.Enabled
 
 	if err := share.Update(); err != nil {
-		utils.Error("更新分享失败: %v", err)
+		utils.Error("Failed to update share: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "更新成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Updated successfully"})
 }
 
 // ShareDelete 删除分享
@@ -218,29 +218,29 @@ func ShareDelete(c *gin.Context) {
 	idStr := c.Query("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "无效的分享ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid share ID"})
 		return
 	}
 
 	share := &models.SubscriptionShare{ID: id}
 	if err := share.Find(); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "分享不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "Share not found"})
 		return
 	}
 
 	// 禁止删除默认分享链接
 	if share.IsLegacy {
-		c.JSON(http.StatusForbidden, gin.H{"code": 403, "msg": "默认分享链接不可删除，如链接泄漏请使用刷新Token功能"})
+		c.JSON(http.StatusForbidden, gin.H{"code": 403, "msg": "The default share link cannot be deleted; if it leaked, use the refresh token feature"})
 		return
 	}
 
 	if err := share.Delete(); err != nil {
-		utils.Error("删除分享失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "删除失败"})
+		utils.Error("Failed to delete share: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Delete failed"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "删除成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Deleted successfully"})
 }
 
 // ShareRefreshToken 刷新分享Token
@@ -248,31 +248,31 @@ func ShareRefreshToken(c *gin.Context) {
 	idStr := c.Query("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "无效的分享ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid share ID"})
 		return
 	}
 
 	share := &models.SubscriptionShare{ID: id}
 	if err := share.Find(); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "分享不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "Share not found"})
 		return
 	}
 
 	// 生成新Token
 	newToken, err := models.GenerateToken()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "生成Token失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Failed to generate token"})
 		return
 	}
 
 	share.Token = newToken
 	if err := share.Update(); err != nil {
-		utils.Error("刷新Token失败: %v", err)
+		utils.Error("Failed to refresh token: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Token已刷新", "data": gin.H{"token": newToken}})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Token refreshed", "data": gin.H{"token": newToken}})
 }
 
 // ShareLogs 获取分享的访问日志
@@ -280,7 +280,7 @@ func ShareLogs(c *gin.Context) {
 	shareIdStr := c.Query("shareId")
 	shareId, err := strconv.Atoi(shareIdStr)
 	if err != nil || shareId <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "无效的分享ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid share ID"})
 		return
 	}
 
@@ -292,7 +292,7 @@ func ShareLogs(c *gin.Context) {
 func ShareBatchAdd(c *gin.Context) {
 	var req ShareBatchCreateReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid parameters: " + err.Error()})
 		return
 	}
 
@@ -300,7 +300,7 @@ func ShareBatchAdd(c *gin.Context) {
 	var sub models.Subcription
 	sub.ID = req.SubscriptionID
 	if err := sub.Find(); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "订阅不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "Subscription not found"})
 		return
 	}
 
@@ -329,7 +329,7 @@ func ShareBatchAdd(c *gin.Context) {
 	if len(conflictNames) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code": 400,
-			"msg":  fmt.Sprintf("以下名称已存在: %s", strings.Join(conflictNames, ", ")),
+			"msg":  fmt.Sprintf("The following names already exist: %s", strings.Join(conflictNames, ", ")),
 		})
 		return
 	}
@@ -342,8 +342,8 @@ func ShareBatchAdd(c *gin.Context) {
 		// 生成唯一token
 		token, err := models.GenerateToken()
 		if err != nil {
-			utils.Error("生成Token失败: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "生成Token失败"})
+			utils.Error("Failed to generate token: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Failed to generate token"})
 			return
 		}
 
@@ -352,7 +352,7 @@ func ShareBatchAdd(c *gin.Context) {
 		for models.IsTokenExists(token, 0) && retries < 3 {
 			token, err = models.GenerateToken()
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "生成Token失败"})
+				c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Failed to generate token"})
 				return
 			}
 			retries++
@@ -370,10 +370,10 @@ func ShareBatchAdd(c *gin.Context) {
 		}
 
 		if err := share.Add(); err != nil {
-			utils.Error("创建分享失败 [%s]: %v", name, err)
+			utils.Error("Failed to create share [%s]: %v", name, err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"code": 500,
-				"msg":  fmt.Sprintf("创建分享失败: %s (%s)", name, err.Error()),
+				"msg":  fmt.Sprintf("Failed to create share: %s (%s)", name, err.Error()),
 			})
 			return
 		}
@@ -383,7 +383,7 @@ func ShareBatchAdd(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,
-		"msg":  fmt.Sprintf("成功创建 %d 个分享", len(createdShares)),
+		"msg":  fmt.Sprintf("Created %d shares", len(createdShares)),
 		"data": createdShares,
 	})
 }
@@ -392,7 +392,7 @@ func ShareBatchAdd(c *gin.Context) {
 func ShareBatchDelete(c *gin.Context) {
 	var req ShareBatchDeleteReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid parameters: " + err.Error()})
 		return
 	}
 
@@ -401,7 +401,7 @@ func ShareBatchDelete(c *gin.Context) {
 	for _, id := range req.IDs {
 		share := &models.SubscriptionShare{ID: id}
 		if err := share.Find(); err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": fmt.Sprintf("分享ID %d 不存在", id)})
+			c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": fmt.Sprintf("Share ID %d not found", id)})
 			return
 		}
 		if share.IsLegacy {
@@ -412,7 +412,7 @@ func ShareBatchDelete(c *gin.Context) {
 	if len(legacyNames) > 0 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"code": 403,
-			"msg":  fmt.Sprintf("以下默认分享链接不可删除: %s", strings.Join(legacyNames, ", ")),
+			"msg":  fmt.Sprintf("The following default share links cannot be deleted: %s", strings.Join(legacyNames, ", ")),
 		})
 		return
 	}
@@ -434,14 +434,14 @@ func ShareBatchDelete(c *gin.Context) {
 	if len(errors) > 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 200,
-			"msg":  fmt.Sprintf("删除了 %d/%d 个分享，部分失败: %s", successCount, len(req.IDs), strings.Join(errors, "; ")),
+			"msg":  fmt.Sprintf("Deleted %d of %d shares; failures: %s", successCount, len(req.IDs), strings.Join(errors, "; ")),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,
-		"msg":  fmt.Sprintf("成功删除 %d 个分享", successCount),
+		"msg":  fmt.Sprintf("Deleted %d shares", successCount),
 	})
 }
 
@@ -449,7 +449,7 @@ func ShareBatchDelete(c *gin.Context) {
 func ShareBatchUpdate(c *gin.Context) {
 	var req ShareBatchUpdateReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid parameters: " + err.Error()})
 		return
 	}
 
@@ -458,7 +458,7 @@ func ShareBatchUpdate(c *gin.Context) {
 	for _, id := range req.IDs {
 		share := &models.SubscriptionShare{ID: id}
 		if err := share.Find(); err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": fmt.Sprintf("分享ID %d 不存在", id)})
+			c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": fmt.Sprintf("Share ID %d not found", id)})
 			return
 		}
 		shares = append(shares, share)
@@ -503,13 +503,13 @@ func ShareBatchUpdate(c *gin.Context) {
 	if len(errors) > 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 200,
-			"msg":  fmt.Sprintf("更新了 %d/%d 个分享，部分失败: %s", successCount, len(req.IDs), strings.Join(errors, "; ")),
+			"msg":  fmt.Sprintf("Updated %d of %d shares; failures: %s", successCount, len(req.IDs), strings.Join(errors, "; ")),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 200,
-		"msg":  fmt.Sprintf("成功更新 %d 个分享", successCount),
+		"msg":  fmt.Sprintf("Updated %d shares", successCount),
 	})
 }

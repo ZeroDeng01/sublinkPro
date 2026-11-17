@@ -64,7 +64,7 @@ async function buildStreamResponseError(response) {
     data = parseStreamEventData(text) || text;
   }
 
-  const message = data?.message || data?.msg || `AI 生成失败 (${response.status})`;
+  const message = data?.message || data?.msg || `AI generation failed (${response.status})`;
   return createStreamRequestError(message, response, data);
 }
 
@@ -116,7 +116,7 @@ function dispatchTemplateAIStreamEvent(parsedEvent, handlers, setFinalPayload) {
       break;
     case 'template.edit.error': {
       handlers.onError?.(data);
-      const message = data?.message || data?.msg || 'AI 生成失败';
+      const message = data?.message || data?.msg || 'AI generation failed';
       throw decorateTemplateAIError(createStreamRequestError(message, null, data), data);
     }
     default:
@@ -147,7 +147,7 @@ export async function streamTemplateAIEditSession(data, handlers = {}) {
   }
 
   if (!response.body) {
-    throw new Error('AI 流式响应不可用');
+    throw new Error('AI streaming response is unavailable');
   }
 
   const reader = response.body.getReader();
@@ -190,7 +190,7 @@ export async function streamTemplateAIEditSession(data, handlers = {}) {
   }
 
   if (!finalPayload) {
-    throw new Error('AI 生成未返回最终结果');
+    throw new Error('AI generation did not return a final result');
   }
 
   return finalPayload;
@@ -352,7 +352,7 @@ export async function downloadTemplateVersion(data) {
       .text()
       .then((text) => JSON.parse(text))
       .catch(() => null);
-    throw new Error(payload?.msg || '下载失败');
+    throw new Error(payload?.msg || 'Download failed');
   }
 
   return blob;

@@ -154,7 +154,7 @@ func TestTagUpdateRejectsDuplicateName(t *testing.T) {
 	if response.Code == 200 {
 		t.Fatal("expected the rename to fail")
 	}
-	if !strings.Contains(response.Msg, "已存在") {
+	if !strings.Contains(response.Msg, "already exists") {
 		t.Fatalf("expected a duplicate-name error, got %q", response.Msg)
 	}
 
@@ -207,9 +207,9 @@ func TestTagAddRejectsInvalidNames(t *testing.T) {
 		name string
 		want string
 	}{
-		{"   ", "不能为空"},
-		{"a,b", "逗号"},
-		{strings.Repeat("长", models.TagNameMaxLength+1), "不能超过"},
+		{"   ", "required"},
+		{"a,b", "commas"},
+		{strings.Repeat("长", models.TagNameMaxLength+1), "exceed"},
 	}
 	for _, tc := range cases {
 		recorder := performJSONRequest(t, TagAdd, http.MethodPost, map[string]any{"name": tc.name})

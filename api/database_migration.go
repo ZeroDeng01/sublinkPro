@@ -23,24 +23,24 @@ func ImportDatabaseMigration(c *gin.Context) {
 
 	currentUser := &models.User{Username: username}
 	if err := currentUser.Find(); err != nil {
-		utils.Forbidden(c, "当前用户不存在")
+		utils.Forbidden(c, "Current user not found")
 		return
 	}
 	if !strings.EqualFold(currentUser.Role, "admin") {
-		utils.Forbidden(c, "仅管理员可执行数据库迁移")
+		utils.Forbidden(c, "Only administrators can run database migrations")
 		return
 	}
 
 	uploadedFile, err := c.FormFile("file")
 	if err != nil {
-		utils.FailWithMsg(c, "请上传 SQLite 数据库文件或 backup.zip")
+		utils.FailWithMsg(c, "Upload a SQLite database file or backup.zip")
 		return
 	}
 
 	fileExt := strings.ToLower(filepath.Ext(uploadedFile.Filename))
 	tempFile, err := createDatabaseMigrationUploadFile(fileExt)
 	if err != nil {
-		utils.FailWithMsg(c, "创建迁移临时文件失败")
+		utils.FailWithMsg(c, "Failed to create migration temp file")
 		return
 	}
 	tempPath := tempFile.Name()
@@ -49,7 +49,7 @@ func ImportDatabaseMigration(c *gin.Context) {
 	if err != nil {
 		_ = tempFile.Close()
 		_ = os.Remove(tempPath)
-		utils.FailWithMsg(c, "读取上传文件失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to read uploaded file: "+err.Error())
 		return
 	}
 
@@ -57,18 +57,18 @@ func ImportDatabaseMigration(c *gin.Context) {
 		_ = src.Close()
 		_ = tempFile.Close()
 		_ = os.Remove(tempPath)
-		utils.FailWithMsg(c, "保存迁移文件失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to save migration file: "+err.Error())
 		return
 	}
 	if err := src.Close(); err != nil {
 		_ = tempFile.Close()
 		_ = os.Remove(tempPath)
-		utils.FailWithMsg(c, "关闭上传文件失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to close uploaded file: "+err.Error())
 		return
 	}
 	if err := tempFile.Close(); err != nil {
 		_ = os.Remove(tempPath)
-		utils.FailWithMsg(c, "保存迁移文件失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to save migration file: "+err.Error())
 		return
 	}
 
@@ -80,17 +80,17 @@ func ImportDatabaseMigration(c *gin.Context) {
 		options.IncludeAccessKeys = parseFormBool(raw)
 	}
 
-	taskName := fmt.Sprintf("数据库迁移: %s", uploadedFile.Filename)
+	taskName := fmt.Sprintf("Database migration: %s", uploadedFile.Filename)
 	task, ctx, err := services.GetTaskManager().CreateTask(models.TaskTypeDatabaseMigration, taskName, models.TaskTriggerManual, 1)
 	if err != nil {
 		_ = os.Remove(tempPath)
-		utils.FailWithMsg(c, "创建迁移任务失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to create migration task: "+err.Error())
 		return
 	}
 
 	go services.RunDatabaseMigrationTask(ctx, task.ID, tempPath, uploadedFile.Filename, options)
 
-	utils.OkDetailed(c, "迁移任务已启动", gin.H{
+	utils.OkDetailed(c, "Migration task started", gin.H{
 		"taskId": task.ID,
 	})
 }

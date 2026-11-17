@@ -8,53 +8,83 @@ import {
 
 const translate = (key, defaultValue, options = {}) => i18n.t(key, { defaultValue, ...options });
 
-// Cron 表达式预设 - 包含友好的说明
-export const CRON_OPTIONS = [
-  { label: '每30分钟', value: '*/30 * * * *' },
-  { label: '每1小时', value: '0 * * * *' },
-  { label: '每6小时', value: '0 */6 * * *' },
-  { label: '每12小时', value: '0 */12 * * *' },
-  { label: '每天', value: '0 0 * * *' },
-  { label: '每周一', value: '0 0 * * 1' }
-];
-
 // 测速URL选项 - TCP模式 (204轻量)
 export const SPEED_TEST_TCP_OPTIONS = [
-  { label: 'Cloudflare (cp.cloudflare.com)', value: 'https://cp.cloudflare.com/generate_204' },
-  { label: 'Apple (captive.apple.com)', value: 'https://captive.apple.com/generate_204' },
-  { label: 'Gstatic (www.gstatic.com)', value: 'https://www.gstatic.com/generate_204' }
+  {
+    label: 'Cloudflare (cp.cloudflare.com)',
+    labelKey: 'nodes.speedTest.urlOptions.cloudflareCp',
+    value: 'https://cp.cloudflare.com/generate_204'
+  },
+  {
+    label: 'Apple (captive.apple.com)',
+    labelKey: 'nodes.speedTest.urlOptions.appleCaptive',
+    value: 'https://captive.apple.com/generate_204'
+  },
+  { label: 'Gstatic (www.gstatic.com)', labelKey: 'nodes.speedTest.urlOptions.gstatic', value: 'https://www.gstatic.com/generate_204' }
 ];
 
 // 测速URL选项 - Mihomo模式 (真速度测试用下载)
 export const SPEED_TEST_MIHOMO_OPTIONS = [
-  { label: '1MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=1000000' },
-  { label: '3MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=3000000' },
-  { label: '5MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=5000000' },
-  { label: '10MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=10000000' },
-  { label: '50MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=50000000' },
-  { label: '100MB (Cloudflare)', value: 'https://speed.cloudflare.com/__down?bytes=100000000' }
+  {
+    label: '1MB (Cloudflare)',
+    labelKey: 'nodes.speedTest.urlOptions.cloudflare1mb',
+    value: 'https://speed.cloudflare.com/__down?bytes=1000000'
+  },
+  {
+    label: '3MB (Cloudflare)',
+    labelKey: 'nodes.speedTest.urlOptions.cloudflare3mb',
+    value: 'https://speed.cloudflare.com/__down?bytes=3000000'
+  },
+  {
+    label: '5MB (Cloudflare)',
+    labelKey: 'nodes.speedTest.urlOptions.cloudflare5mb',
+    value: 'https://speed.cloudflare.com/__down?bytes=5000000'
+  },
+  {
+    label: '10MB (Cloudflare)',
+    labelKey: 'nodes.speedTest.urlOptions.cloudflare10mb',
+    value: 'https://speed.cloudflare.com/__down?bytes=10000000'
+  },
+  {
+    label: '50MB (Cloudflare)',
+    labelKey: 'nodes.speedTest.urlOptions.cloudflare50mb',
+    value: 'https://speed.cloudflare.com/__down?bytes=50000000'
+  },
+  {
+    label: '100MB (Cloudflare)',
+    labelKey: 'nodes.speedTest.urlOptions.cloudflare100mb',
+    value: 'https://speed.cloudflare.com/__down?bytes=100000000'
+  }
 ];
 
 // 延迟测试URL选项 (用于Mihomo模式的阶段一)
 export const LATENCY_TEST_URL_OPTIONS = [
-  { label: 'Cloudflare 204 (推荐)', value: 'https://cp.cloudflare.com/generate_204' },
-  { label: 'Apple 204', value: 'https://captive.apple.com/generate_204' },
-  { label: 'Gstatic 204', value: 'https://www.gstatic.com/generate_204' }
+  {
+    label: 'Cloudflare 204 (Recommended)',
+    labelKey: 'nodes.speedTest.urlOptions.cloudflare204Recommended',
+    value: 'https://cp.cloudflare.com/generate_204'
+  },
+  { label: 'Apple 204', labelKey: 'nodes.speedTest.urlOptions.apple204', value: 'https://captive.apple.com/generate_204' },
+  { label: 'Gstatic 204', labelKey: 'nodes.speedTest.urlOptions.gstatic204', value: 'https://www.gstatic.com/generate_204' }
 ];
 
 // 落地IP查询接口选项
 export const LANDING_IP_URL_OPTIONS = [
-  { label: 'ipify.org (推荐)', value: 'https://api.ipify.org' },
-  { label: 'ip.sb', value: 'https://api.ip.sb/ip' },
-  { label: 'ifconfig.me', value: 'https://ifconfig.me/ip' },
-  { label: 'icanhazip.com', value: 'https://icanhazip.com' },
-  { label: 'ipinfo.io', value: 'https://ipinfo.io/ip' }
+  { label: 'ipify.org (Recommended)', labelKey: 'nodes.speedTest.landingIp.options.ipifyRecommended', value: 'https://api.ipify.org' },
+  { label: 'ip.sb', labelKey: 'nodes.speedTest.landingIp.options.ipSb', value: 'https://api.ip.sb/ip' },
+  { label: 'ifconfig.me', labelKey: 'nodes.speedTest.landingIp.options.ifconfigMe', value: 'https://ifconfig.me/ip' },
+  { label: 'icanhazip.com', labelKey: 'nodes.speedTest.landingIp.options.icanhazip', value: 'https://icanhazip.com' },
+  { label: 'ipinfo.io', labelKey: 'nodes.speedTest.landingIp.options.ipinfo', value: 'https://ipinfo.io/ip' }
 ];
 
 // IP质量检测接口选项
 export const QUALITY_CHECK_URL_OPTIONS = [
-  { label: 'IPPure (推荐)', value: 'https://my.123169.xyz/v1/info' },
-  { label: 'IPPure', value: 'https://my.ippure.com/v1/info' }
+  {
+    label: 'IPPure (Recommended)',
+    labelKey: 'nodes.nodeCheckProfiles.form.qualityCheckOptions.ippureRecommended',
+    value: 'https://my.123169.xyz/v1/info'
+  },
+  { label: 'IPPure', labelKey: 'nodes.nodeCheckProfiles.form.qualityCheckOptions.ippure', value: 'https://my.ippure.com/v1/info' }
 ];
 
 const UNLOCK_PROVIDER_LABEL_MAP = {
@@ -74,7 +104,7 @@ const UNLOCK_PROVIDER_LABEL_MAP = {
   bbc_iplayer: 'BBC iPlayer',
   prime_video: 'Prime Video',
   amazon_prime: 'Prime Video',
-  bilibili_hk_mo_tw: 'Bilibili 港澳台',
+  bilibili_hk_mo_tw: 'Bilibili HK/MO/TW',
   bahamut: 'Bahamut',
   tvbanywhere: 'TVB Anywhere'
 };
@@ -307,7 +337,7 @@ export const formatUnlockProvidersSummary = (providers, limit = 2) => {
 
   const labels = normalizedProviders.slice(0, limit).map((provider) => formatUnlockProviderLabel(provider));
   const extraCount = normalizedProviders.length - labels.length;
-  return extraCount > 0 ? `${labels.join('、')} +${extraCount}` : labels.join('、');
+  return extraCount > 0 ? `${labels.join(', ')} +${extraCount}` : labels.join(', ');
 };
 
 const getLocalizedUnlockStatusLabel = (item) => {
@@ -676,15 +706,6 @@ export const getUnlockTaskResultText = (taskResult, limit = 2) => {
     summary: `${summary.summaryText}${summary.extraCount > 0 ? ` +${summary.extraCount}` : ''}`
   });
 };
-
-// User-Agent 预设选项
-export const USER_AGENT_OPTIONS = [
-  { label: '无 (空)', value: '' },
-  { label: 'clash.meta', value: 'clash.meta' },
-  { label: 'clash', value: 'clash' },
-  { label: 'v2ray', value: 'v2ray' },
-  { label: 'clash-verge/v1.5.1', value: 'clash-verge/v1.5.1' }
-];
 
 // 格式化日期时间
 export const formatDateTime = (dateTimeString) => {

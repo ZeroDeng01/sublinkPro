@@ -41,7 +41,7 @@ import { withAlpha } from 'utils/colorUtils';
 import CountryFlag from 'components/CountryFlag';
 import { UNKNOWN_COUNTRY_FILTER } from 'utils/countryDisplay';
 
-const UNGROUPED_GROUP_VALUE = '\u672a\u5206\u7ec4';
+const UNGROUPED_GROUP_VALUE = 'Ungrouped';
 
 export default function NodeFilters({
   searchQuery,

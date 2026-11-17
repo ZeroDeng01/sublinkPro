@@ -21,7 +21,7 @@ func (youTubePremiumUnlockChecker) Aliases() []string {
 }
 
 func (youTubePremiumUnlockChecker) Meta() models.UnlockProviderMeta {
-	return models.UnlockProviderMeta{Value: models.UnlockProviderYouTube, Label: "YouTube Premium", Description: "检测 YouTube Premium 是否属于支持地区", Category: "streaming"}
+	return models.UnlockProviderMeta{Value: models.UnlockProviderYouTube, Label: "YouTube Premium", Description: "Checks whether YouTube Premium is available in the exit region", Category: "streaming"}
 }
 
 func (youTubePremiumUnlockChecker) RenameVariableMeta() models.UnlockRenameVariableMeta {

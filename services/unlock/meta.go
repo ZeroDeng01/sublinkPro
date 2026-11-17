@@ -15,14 +15,14 @@ type UnlockCheckerRenameMeta interface {
 }
 
 var unlockStatusMetas = []models.UnlockStatusMeta{
-	{Value: models.UnlockStatusAvailable, Label: "解锁", ShortLabel: "解锁", Description: "可正常使用", Color: "success", Severity: "success"},
-	{Value: models.UnlockStatusPartial, Label: "部分", ShortLabel: "部分", Description: "仅部分能力可用", Color: "warning", Severity: "warning"},
-	{Value: models.UnlockStatusReachable, Label: "直连", ShortLabel: "直连", Description: "可以访问，但不代表完整能力可用", Color: "info", Severity: "info"},
-	{Value: models.UnlockStatusRestricted, Label: "受限", ShortLabel: "受限", Description: "当前地区或出口被限制", Color: "error", Severity: "error"},
-	{Value: models.UnlockStatusUnsupported, Label: "不支持", ShortLabel: "不支持", Description: "当前地区不在官方支持范围内", Color: "warning", Severity: "warning"},
-	{Value: models.UnlockStatusUnknown, Label: "未知", ShortLabel: "未知", Description: "当前无法稳定判断结果", Color: "default", Severity: "default"},
-	{Value: models.UnlockStatusError, Label: "异常", ShortLabel: "异常", Description: "本轮检测出现错误", Color: "error", Severity: "error"},
-	{Value: models.UnlockStatusUntested, Label: "未测", ShortLabel: "未测", Description: "尚未执行检测", Color: "default", Severity: "default"},
+	{Value: models.UnlockStatusAvailable, Label: "Unlocked", ShortLabel: "Unlocked", Description: "Available normally", Color: "success", Severity: "success"},
+	{Value: models.UnlockStatusPartial, Label: "Partial", ShortLabel: "Partial", Description: "Only some capabilities are available", Color: "warning", Severity: "warning"},
+	{Value: models.UnlockStatusReachable, Label: "Reachable", ShortLabel: "Reachable", Description: "Reachable, but not necessarily fully available", Color: "info", Severity: "info"},
+	{Value: models.UnlockStatusRestricted, Label: "Restricted", ShortLabel: "Restricted", Description: "The current region or exit is restricted", Color: "error", Severity: "error"},
+	{Value: models.UnlockStatusUnsupported, Label: "Unsupported", ShortLabel: "Unsupported", Description: "The current region is outside the officially supported range", Color: "warning", Severity: "warning"},
+	{Value: models.UnlockStatusUnknown, Label: "Unknown", ShortLabel: "Unknown", Description: "The result cannot be determined reliably", Color: "default", Severity: "default"},
+	{Value: models.UnlockStatusError, Label: "Error", ShortLabel: "Error", Description: "This check encountered an error", Color: "error", Severity: "error"},
+	{Value: models.UnlockStatusUntested, Label: "Untested", ShortLabel: "Untested", Description: "No check has been run yet", Color: "default", Severity: "default"},
 }
 
 var unlockStatusMetaByValue = buildUnlockStatusMetaIndex(unlockStatusMetas)
@@ -113,10 +113,10 @@ func buildUnlockRenameVariable(provider string) models.UnlockRenameVariableMeta 
 			}
 			if meta.Label == "" {
 				providerMeta := GetUnlockProviderMeta(provider)
-				meta.Label = providerMeta.Label + " 解锁"
+				meta.Label = providerMeta.Label + " Unlock"
 			}
 			if meta.Description == "" {
-				meta.Description = "输出该服务的紧凑解锁结果摘要，例如“解锁-US”或“受限”"
+				meta.Description = "Outputs a compact unlock summary for this service, e.g. “Unlocked-US” or “Restricted”"
 			}
 			return meta
 		}
@@ -124,8 +124,8 @@ func buildUnlockRenameVariable(provider string) models.UnlockRenameVariableMeta 
 	providerMeta := GetUnlockProviderMeta(provider)
 	return models.UnlockRenameVariableMeta{
 		Key:         fmt.Sprintf("$Unlock(%s)", provider),
-		Label:       providerMeta.Label + " 解锁",
-		Description: "输出该服务的紧凑解锁结果摘要，例如“解锁-US”或“受限”",
+		Label:       providerMeta.Label + " Unlock",
+		Description: "Outputs a compact unlock summary for this service, e.g. “Unlocked-US” or “Restricted”",
 		Provider:    provider,
 	}
 }

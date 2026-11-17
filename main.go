@@ -126,12 +126,12 @@ func Templateinit() {
 	// 检查目录是否创建
 	subFS, err := fs.Sub(Template, "template")
 	if err != nil {
-		utils.Error("加载内嵌模板失败: %v", err)
+		utils.Error("Failed to load embedded templates: %v", err)
 		return
 	}
 	entries, err := fs.ReadDir(subFS, ".")
 	if err != nil {
-		utils.Error("读取模板目录失败: %v", err)
+		utils.Error("Failed to read the template directory: %v", err)
 		return
 	}
 	// 创建template目录
@@ -139,7 +139,7 @@ func Templateinit() {
 	if os.IsNotExist(err) {
 		err = os.Mkdir("./template", 0666)
 		if err != nil {
-			utils.Error("创建模板目录失败: %v", err)
+			utils.Error("Failed to create the template directory: %v", err)
 			return
 		}
 	}
@@ -150,12 +150,12 @@ func Templateinit() {
 		if os.IsNotExist(err) {
 			data, err := fs.ReadFile(subFS, entry.Name())
 			if err != nil {
-				utils.Error("读取模板文件失败: %v", err)
+				utils.Error("Failed to read template files: %v", err)
 				continue
 			}
 			err = os.WriteFile("./template/"+entry.Name(), data, 0666)
 			if err != nil {
-				utils.Error("写入模板文件失败: %v", err)
+				utils.Error("Failed to write template files: %v", err)
 			}
 		}
 	}
@@ -163,7 +163,7 @@ func Templateinit() {
 	// 内嵌模板写入文件系统后，立即补齐缺失的模板元数据，
 	// 避免首次启动时因为迁移先于模板落盘而遗漏 surge.conf 的类别。
 	if err := models.MigrateTemplatesFromFiles("./template"); err != nil {
-		utils.Error("同步模板元数据失败: %v", err)
+		utils.Error("Failed to sync template metadata: %v", err)
 	}
 }
 
@@ -180,16 +180,16 @@ func main() {
 	)
 
 	// 全局参数
-	flag.BoolVar(&showVersion, "version", false, "显示版本号")
-	flag.BoolVar(&showVersion, "v", false, "显示版本号 (简写)")
-	flag.IntVar(&port, "port", 0, "服务端口 (覆盖配置文件和环境变量)")
-	flag.IntVar(&port, "p", 0, "服务端口 (简写)")
-	flag.StringVar(&dsn, "dsn", "", "数据库 DSN (支持 sqlite/mysql/postgres)")
-	flag.StringVar(&dbPath, "db", "", "本地数据目录 / SQLite 默认数据库目录")
-	flag.StringVar(&logPath, "log", "", "日志目录路径")
-	flag.StringVar(&logLevel, "log-level", "", "日志等级 (debug/info/warn/error/fatal)")
-	flag.StringVar(&configFile, "config", "", "配置文件名 (相对于本地数据目录)")
-	flag.StringVar(&configFile, "c", "", "配置文件名 (简写)")
+	flag.BoolVar(&showVersion, "version", false, "Show version")
+	flag.BoolVar(&showVersion, "v", false, "Show version (shorthand)")
+	flag.IntVar(&port, "port", 0, "Server port (overrides config file and environment variables)")
+	flag.IntVar(&port, "p", 0, "Server port (shorthand)")
+	flag.StringVar(&dsn, "dsn", "", "Database DSN (supports sqlite/mysql/postgres)")
+	flag.StringVar(&dbPath, "db", "", "Local data directory / default SQLite database directory")
+	flag.StringVar(&logPath, "log", "", "Log directory path")
+	flag.StringVar(&logLevel, "log-level", "", "Log level (debug/info/warn/error/fatal)")
+	flag.StringVar(&configFile, "config", "", "Config file name (relative to the local data directory)")
+	flag.StringVar(&configFile, "c", "", "Config file name (shorthand)")
 
 	// 获取版本号
 	version = "dev"
@@ -205,14 +205,14 @@ func main() {
 			// 用户设置子命令
 			settingCmd := flag.NewFlagSet("setting", flag.ExitOnError)
 			var username, password string
-			settingCmd.StringVar(&username, "username", "", "设置账号")
-			settingCmd.StringVar(&password, "password", "", "设置密码")
-			settingCmd.StringVar(&dsn, "dsn", "", "数据库 DSN (支持 sqlite/mysql/postgres)")
-			settingCmd.StringVar(&dbPath, "db", "", "本地数据目录 / SQLite 默认数据库目录")
-			settingCmd.StringVar(&logPath, "log", "", "日志目录路径")
-			settingCmd.StringVar(&logLevel, "log-level", "", "日志等级 (debug/info/warn/error/fatal)")
-			settingCmd.StringVar(&configFile, "config", "", "配置文件名")
-			settingCmd.StringVar(&configFile, "c", "", "配置文件名 (简写)")
+			settingCmd.StringVar(&username, "username", "", "Set the username")
+			settingCmd.StringVar(&password, "password", "", "Set the password")
+			settingCmd.StringVar(&dsn, "dsn", "", "Database DSN (supports sqlite/mysql/postgres)")
+			settingCmd.StringVar(&dbPath, "db", "", "Local data directory / default SQLite database directory")
+			settingCmd.StringVar(&logPath, "log", "", "Log directory path")
+			settingCmd.StringVar(&logLevel, "log-level", "", "Log level (debug/info/warn/error/fatal)")
+			settingCmd.StringVar(&configFile, "config", "", "Config file name")
+			settingCmd.StringVar(&configFile, "c", "", "Config file name (shorthand)")
 			if err := settingCmd.Parse(os.Args[2:]); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
@@ -224,21 +224,21 @@ func main() {
 				os.Exit(1)
 			}
 
-			utils.Info("重置用户: %s", username)
+			utils.Info("Reset user: %s", username)
 			settings.ResetUser(username, password)
 			return
 
 		case "run":
 			// 运行子命令
 			runCmd := flag.NewFlagSet("run", flag.ExitOnError)
-			runCmd.IntVar(&port, "port", 0, "服务端口")
-			runCmd.IntVar(&port, "p", 0, "服务端口 (简写)")
-			runCmd.StringVar(&dsn, "dsn", "", "数据库 DSN (支持 sqlite/mysql/postgres)")
-			runCmd.StringVar(&dbPath, "db", "", "本地数据目录 / SQLite 默认数据库目录")
-			runCmd.StringVar(&logPath, "log", "", "日志目录路径")
-			runCmd.StringVar(&logLevel, "log-level", "", "日志等级 (debug/info/warn/error/fatal)")
-			runCmd.StringVar(&configFile, "config", "", "配置文件名")
-			runCmd.StringVar(&configFile, "c", "", "配置文件名 (简写)")
+			runCmd.IntVar(&port, "port", 0, "Server port")
+			runCmd.IntVar(&port, "p", 0, "Server port (shorthand)")
+			runCmd.StringVar(&dsn, "dsn", "", "Database DSN (supports sqlite/mysql/postgres)")
+			runCmd.StringVar(&dbPath, "db", "", "Local data directory / default SQLite database directory")
+			runCmd.StringVar(&logPath, "log", "", "Log directory path")
+			runCmd.StringVar(&logLevel, "log-level", "", "Log level (debug/info/warn/error/fatal)")
+			runCmd.StringVar(&configFile, "config", "", "Config file name")
+			runCmd.StringVar(&configFile, "c", "", "Config file name (shorthand)")
 			if err := runCmd.Parse(os.Args[2:]); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
@@ -308,7 +308,7 @@ func initDatabase(dsn, dbPath, logPath, logLevel, configFile string, port int) e
 		return err
 	}
 	if database.DB == nil {
-		return fmt.Errorf("数据库初始化失败")
+		return fmt.Errorf("database initialization failed")
 	}
 
 	// 执行数据库迁移
@@ -331,7 +331,7 @@ func initDatabase(dsn, dbPath, logPath, logLevel, configFile string, port int) e
 func ensureDir(path string) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if err := os.MkdirAll(path, 0755); err != nil {
-			utils.Error("创建目录失败 %s: %v", path, err)
+			utils.Error("Failed to create directory %s: %v", path, err)
 		}
 	}
 }
@@ -398,16 +398,16 @@ func Run() {
 	// 演示模式启动提示
 	if models.IsDemoMode() {
 		utils.Info("🎭 ================================================")
-		utils.Info("🎭 系统正在演示模式下运行")
-		utils.Info("🎭 数据库: 内存模式（重启后数据丢失）")
-		utils.Info("🎭 定时任务: 已禁用")
-		utils.Info("🎭 敏感操作: 已禁用")
+		utils.Info("🎭 System is running in demo mode")
+		utils.Info("🎭 Database: in-memory mode (data is lost on restart)")
+		utils.Info("🎭 Scheduled tasks: disabled")
+		utils.Info("🎭 Sensitive operations: disabled")
 		utils.Info("🎭 ================================================")
 	}
 
 	// 打印版本信息
-	utils.Info("启动 SublinkPro 版本: %s", version)
-	utils.Info("日志等级: %s", utils.GetLogLevel())
+	utils.Info("Starting SublinkPro version: %s", version)
+	utils.Info("Log level: %s", utils.GetLogLevel())
 
 	// 初始化gin框架
 	r := gin.Default()
@@ -416,9 +416,9 @@ func Run() {
 		trustedProxies = nil
 	}
 	if err := r.SetTrustedProxies(trustedProxies); err != nil {
-		utils.Warn("设置 Gin trusted proxies 失败: %v", err)
+		utils.Warn("Failed to set Gin trusted proxies: %v", err)
 	} else if len(trustedProxies) == 0 {
-		utils.Warn("Gin trusted proxies 已禁用，客户端 IP 将直接使用连接源地址")
+		utils.Warn("Gin trusted proxies are disabled; client IP will use the connection source address")
 	} else {
 		utils.Info("Gin trusted proxies: %s", strings.Join(trustedProxies, ", "))
 	}
@@ -442,7 +442,7 @@ func Run() {
 
 	// 初始化 GeoIP 数据库
 	if err := geoip.InitGeoIP(); err != nil {
-		utils.Warn("初始化 GeoIP 数据库失败: %v", err)
+		utils.Warn("Failed to initialize the GeoIP database: %v", err)
 	}
 
 	// 如果 GeoIP 数据库不可用，异步尝试自动下载
@@ -464,68 +464,68 @@ func Run() {
 	}
 
 	if err := models.InitNodeCache(); err != nil {
-		utils.Error("加载节点到缓存失败: %v", err)
+		utils.Error("Failed to load nodes into cache: %v", err)
 	}
 	if err := models.InitSettingCache(); err != nil {
-		utils.Error("加载系统设置到缓存失败: %v", err)
+		utils.Error("Failed to load system settings into cache: %v", err)
 	}
 	if err := socks5service.DefaultManager().StartFromSettings(); err != nil {
-		utils.Warn("初始化 SOCKS5 服务失败: %v", err)
+		utils.Warn("Failed to initialize the SOCKS5 service: %v", err)
 	}
 	if err := models.InitUserCache(); err != nil {
-		utils.Error("加载用户到缓存失败: %v", err)
+		utils.Error("Failed to load users into cache: %v", err)
 	}
 	if err := models.InitScriptCache(); err != nil {
-		utils.Error("加载脚本到缓存失败: %v", err)
+		utils.Error("Failed to load scripts into cache: %v", err)
 	}
 	if err := models.InitAirportCache(); err != nil {
-		utils.Error("加载机场到缓存失败: %v", err)
+		utils.Error("Failed to load airports into cache: %v", err)
 	}
 	if err := models.InitCountryRuleCache(); err != nil {
-		utils.Error("加载国家规则到缓存失败: %v", err)
+		utils.Error("Failed to load country rules into cache: %v", err)
 	}
 	if err := models.InitGroupAirportSortCache(); err != nil {
-		utils.Error("加载分组机场排序到缓存失败: %v", err)
+		utils.Error("Failed to load group-airport order into cache: %v", err)
 	}
 	if err := models.InitAccessKeyCache(); err != nil {
-		utils.Error("加载AccessKey到缓存失败: %v", err)
+		utils.Error("Failed to load access keys into cache: %v", err)
 	}
 	if err := models.InitNodeCheckProfileCache(); err != nil {
-		utils.Error("加载节点检测策略到缓存失败: %v", err)
+		utils.Error("Failed to load check profiles into cache: %v", err)
 	}
 	if err := models.InitSubLogsCache(); err != nil {
-		utils.Error("加载订阅日志到缓存失败: %v", err)
+		utils.Error("Failed to load subscription logs into cache: %v", err)
 	}
 	if err := models.InitSubcriptionCache(); err != nil {
-		utils.Error("加载订阅到缓存失败: %v", err)
+		utils.Error("Failed to load subscriptions into cache: %v", err)
 	}
 	if err := models.InitTemplateCache(); err != nil {
-		utils.Error("加载模板到缓存失败: %v", err)
+		utils.Error("Failed to load templates into cache: %v", err)
 	}
 	// 初始化模板内容缓存
 	cache.InitTemplateContentCache()
 	if err := models.InitTagCache(); err != nil {
-		utils.Error("加载标签到缓存失败: %v", err)
+		utils.Error("Failed to load tags into cache: %v", err)
 	}
 	if err := models.InitTagRuleCache(); err != nil {
-		utils.Error("加载标签规则到缓存失败: %v", err)
+		utils.Error("Failed to load tag rules into cache: %v", err)
 	}
 	// 设置标签组标签查询回调（用于节点重命名的 $TagGroup(xxx) 变量）
 	utils.SetTagGroupTagsFunc(models.GetTagNamesByGroupName)
 	if err := models.InitTaskCache(); err != nil {
-		utils.Error("加载任务到缓存失败: %v", err)
+		utils.Error("Failed to load tasks into cache: %v", err)
 	}
 	if err := models.InitIPInfoCache(); err != nil {
-		utils.Error("加载IP信息到缓存失败: %v", err)
+		utils.Error("Failed to load IP info into cache: %v", err)
 	}
 	if err := models.InitHostCache(); err != nil {
-		utils.Error("加载Host到缓存失败: %v", err)
+		utils.Error("Failed to load hosts into cache: %v", err)
 	}
 	if err := models.InitSubscriptionShareCache(); err != nil {
-		utils.Error("加载订阅分享到缓存失败: %v", err)
+		utils.Error("Failed to load subscription shares into cache: %v", err)
 	}
 	if err := models.InitChainRuleCache(); err != nil {
-		utils.Error("加载链式代理规则到缓存失败: %v", err)
+		utils.Error("Failed to load chain proxy rules into cache: %v", err)
 	}
 
 	// 根据页面保存的配置自动启动 Cloudflare Tunnel。
@@ -535,12 +535,12 @@ func Run() {
 	// 这样所有使用代理的功能（测速、订阅导入、Telegram等）都遵循Host设置
 	models.RegisterHostChangeCallback(func() {
 		if err := mihomo.SyncHostsFromDB(); err != nil {
-			utils.Warn("Host变更同步到mihomo失败: %v", err)
+			utils.Warn("Failed to sync host changes to mihomo: %v", err)
 		}
 	})
 	// 首次同步Host配置到mihomo resolver
 	if err := mihomo.SyncHostsFromDB(); err != nil {
-		utils.Warn("初始化Host同步到mihomo失败: %v", err)
+		utils.Warn("Failed to initialize host sync to mihomo: %v", err)
 	}
 
 	// 初始化去重字段元数据缓存（通过反射扫描协议结构体和Node模型）
@@ -556,9 +556,9 @@ func Run() {
 
 	// 初始化 Telegram 机器人 (异步)
 	go func() {
-		utils.Debug("正在异步初始化 Telegram 机器人...")
+		utils.Debug("Initializing Telegram bot asynchronously...")
 		if err := telegram.InitBot(); err != nil {
-			utils.Warn("初始化 Telegram 机器人失败: %v", err)
+			utils.Warn("Failed to initialize the Telegram bot: %v", err)
 		}
 	}()
 
@@ -574,7 +574,7 @@ func Run() {
 	if !models.IsDemoMode() && sch != nil {
 		err := sch.LoadFromDatabase()
 		if err != nil {
-			utils.Error("加载定时任务失败: %v", err)
+			utils.Error("Failed to load scheduled tasks: %v", err)
 		}
 	}
 
@@ -587,7 +587,7 @@ func Run() {
 	// 获取前端基础路径配置
 	webBasePath := config.GetWebBasePath()
 	if webBasePath != "" {
-		utils.Info("前端基础路径: %s", webBasePath)
+		utils.Info("Frontend base path: %s", webBasePath)
 	}
 
 	// 设置静态资源路径
@@ -595,7 +595,7 @@ func Run() {
 	if StaticFiles != nil {
 		staticFiles, err := fs.Sub(StaticFiles, "static")
 		if err != nil {
-			utils.Error("加载静态文件失败: %v", err)
+			utils.Error("Failed to serve static files: %v", err)
 		} else {
 			// 创建注入配置的 index.html 处理函数
 			serveIndexHTML := func(c *gin.Context) {
@@ -756,20 +756,20 @@ func Run() {
 
 	go func() {
 		<-shutdownCtx.Done()
-		utils.Info("收到退出信号，正在停止后台服务")
+		utils.Info("Shutdown signal received; stopping background services")
 		if err := cloudflared.DefaultManager().Shutdown(); err != nil {
-			utils.Warn("停止 cloudflared 失败: %v", err)
+			utils.Warn("Failed to stop cloudflared: %v", err)
 		}
 		socks5service.DefaultManager().Stop()
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := server.Shutdown(ctx); err != nil {
-			utils.Warn("HTTP 服务关闭失败: %v", err)
+			utils.Warn("Failed to shut down the HTTP server: %v", err)
 		}
 	}()
 
 	// 启动服务
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		utils.Fatal("服务启动失败: %v", err)
+		utils.Fatal("Failed to start the server: %v", err)
 	}
 }

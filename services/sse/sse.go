@@ -119,7 +119,7 @@ func (broker *SSEBroker) enqueue(message []byte) {
 	select {
 	case broker.Notifier <- message:
 	default:
-		utils.Debug("SSE 事件队列已满，丢弃一条事件")
+		utils.Debug("SSE event queue is full; dropping one event")
 	}
 }
 

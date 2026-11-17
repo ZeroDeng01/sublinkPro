@@ -13,14 +13,14 @@ import (
 func GetTelegramConfig(c *gin.Context) {
 	config, err := telegram.LoadConfig()
 	if err != nil {
-		utils.FailWithMsg(c, "获取配置失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to fetch configuration: "+err.Error())
 		return
 	}
 
 	// 获取状态
 	status := telegram.GetStatus()
 
-	utils.OkDetailed(c, "获取成功", gin.H{
+	utils.OkDetailed(c, "Fetched successfully", gin.H{
 		"enabled":      config.Enabled,
 		"botToken":     config.BotToken,
 		"chatId":       config.ChatID,
@@ -47,7 +47,7 @@ func UpdateTelegramConfig(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 
@@ -62,7 +62,7 @@ func UpdateTelegramConfig(c *gin.Context) {
 
 	// 保存配置
 	if err := telegram.SaveConfig(config); err != nil {
-		utils.FailWithMsg(c, "保存配置失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to save configuration: "+err.Error())
 		return
 	}
 
@@ -70,7 +70,7 @@ func UpdateTelegramConfig(c *gin.Context) {
 	if config.Enabled && config.BotToken != "" {
 		telegram.StopBot()
 		if err := telegram.StartBot(config); err != nil {
-			utils.OkDetailed(c, "配置已保存，但启动机器人失败: "+err.Error(), gin.H{
+			utils.OkDetailed(c, "Configuration saved, but starting the bot failed: "+err.Error(), gin.H{
 				"saved":     true,
 				"connected": false,
 				"error":     err.Error(),
@@ -81,7 +81,7 @@ func UpdateTelegramConfig(c *gin.Context) {
 		telegram.StopBot()
 	}
 
-	utils.OkWithMsg(c, "保存成功")
+	utils.OkWithMsg(c, "Saved successfully")
 }
 
 // TestTelegramConnection 测试 Telegram 连接
@@ -94,7 +94,7 @@ func TestTelegramConnection(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请提供 Bot Token")
+		utils.FailWithMsg(c, "Provide a Bot Token")
 		return
 	}
 
@@ -109,28 +109,28 @@ func TestTelegramConnection(c *gin.Context) {
 	// 临时启动测试
 	testBot, err := telegram.CreateTestBot(config)
 	if err != nil {
-		utils.FailWithMsg(c, "连接失败: "+err.Error())
+		utils.FailWithMsg(c, "Connection failed: "+err.Error())
 		return
 	}
 
 	// 如果有 ChatID，发送测试消息
 	if req.ChatId != 0 {
-		if err := testBot.SendMessage(req.ChatId, "✅ Sublink Pro 连接测试成功！", ""); err != nil {
-			utils.OkDetailed(c, "连接成功，但发送测试消息失败", gin.H{
+		if err := testBot.SendMessage(req.ChatId, "✅ Sublink Pro connection test succeeded!", ""); err != nil {
+			utils.OkDetailed(c, "Connected, but failed to send the test message", gin.H{
 				"connected":   true,
 				"messageSent": false,
 				"error":       err.Error(),
 			})
 			return
 		}
-		utils.OkDetailed(c, "连接成功，测试消息已发送", gin.H{
+		utils.OkDetailed(c, "Connected; test message sent", gin.H{
 			"connected":   true,
 			"messageSent": true,
 		})
 		return
 	}
 
-	utils.OkDetailed(c, "连接成功", gin.H{
+	utils.OkDetailed(c, "Connected successfully", gin.H{
 		"connected":   true,
 		"messageSent": false,
 	})
@@ -145,11 +145,11 @@ func GetTelegramStatus(c *gin.Context) {
 // ReconnectTelegram 重新连接 Telegram
 func ReconnectTelegram(c *gin.Context) {
 	if err := telegram.Reconnect(); err != nil {
-		utils.FailWithMsg(c, "重连失败: "+err.Error())
+		utils.FailWithMsg(c, "Reconnect failed: "+err.Error())
 		return
 	}
 
-	utils.OkWithMsg(c, "重连成功")
+	utils.OkWithMsg(c, "Reconnected successfully")
 }
 
 // SendTelegramMessage 发送 Telegram 消息（用于测试）
@@ -160,13 +160,13 @@ func SendTelegramMessage(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请提供消息内容")
+		utils.FailWithMsg(c, "Provide message content")
 		return
 	}
 
 	bot := telegram.GetBot()
 	if bot == nil {
-		utils.FailWithMsg(c, "机器人未启动")
+		utils.FailWithMsg(c, "Bot is not running")
 		return
 	}
 
@@ -179,14 +179,14 @@ func SendTelegramMessage(c *gin.Context) {
 	}
 
 	if chatID == 0 {
-		utils.FailWithMsg(c, "未配置 Chat ID")
+		utils.FailWithMsg(c, "Chat ID is not configured")
 		return
 	}
 
 	if err := bot.SendMessage(chatID, req.Message, "Markdown"); err != nil {
-		utils.FailWithMsg(c, "发送失败: "+err.Error())
+		utils.FailWithMsg(c, "Send failed: "+err.Error())
 		return
 	}
 
-	utils.OkWithMsg(c, "发送成功")
+	utils.OkWithMsg(c, "Sent successfully")
 }

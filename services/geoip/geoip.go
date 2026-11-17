@@ -56,7 +56,7 @@ func loadDatabase() error {
 			Path:      path,
 			Available: false,
 		}
-		utils.Warn("GeoIP 数据库文件不存在: %s，相关功能将不可用", path)
+		utils.Warn("GeoIP database file not found: %s; related features will be unavailable", path)
 		return nil // 不返回错误，允许系统继续启动
 	}
 	if err != nil {
@@ -65,7 +65,7 @@ func loadDatabase() error {
 			Path:      path,
 			Available: false,
 		}
-		utils.Error("检查 GeoIP 数据库文件失败: %v", err)
+		utils.Error("Failed to check GeoIP database file: %v", err)
 		return nil
 	}
 
@@ -79,14 +79,14 @@ func loadDatabase() error {
 			ModTime:   fileInfo.ModTime(),
 			Available: false,
 		}
-		utils.Error("打开 GeoIP 数据库失败: %v", err)
+		utils.Error("Failed to open GeoIP database: %v", err)
 		return err
 	}
 
 	// 关闭旧的 reader
 	if geoIP != nil {
 		if err := geoIP.Close(); err != nil {
-			utils.Warn("关闭旧 GeoIP 数据库失败: %v", err)
+			utils.Warn("Failed to close old GeoIP database: %v", err)
 		}
 	}
 
@@ -99,7 +99,7 @@ func loadDatabase() error {
 		Available: true,
 	}
 
-	utils.Info("GeoIP 数据库加载成功: %s (%.2f MB)", path, float64(fileInfo.Size())/1024/1024)
+	utils.Info("GeoIP database loaded: %s (%.2f MB)", path, float64(fileInfo.Size())/1024/1024)
 	return nil
 }
 
@@ -158,7 +158,7 @@ func GetLocation(ipStr string) (string, error) {
 	defer mu.RUnlock()
 
 	if !available || geoIP == nil {
-		return "", fmt.Errorf("GeoIP 数据库不可用")
+		return "", fmt.Errorf("geoIP database is unavailable")
 	}
 
 	ip, err := netip.ParseAddr(ipStr)
@@ -221,17 +221,17 @@ func GetCountryISOCode(ipStr string) (string, error) {
 	defer mu.RUnlock()
 
 	if !available || geoIP == nil {
-		return "", fmt.Errorf("GeoIP 数据库不可用")
+		return "", fmt.Errorf("geoIP database is unavailable")
 	}
 
 	ip, err := netip.ParseAddr(ipStr)
 	if err != nil {
-		return "", fmt.Errorf("无效的 IP 地址: %s", ipStr)
+		return "", fmt.Errorf("invalid IP address: %s", ipStr)
 	}
 
 	geoCountry, err := geoIP.Country(ip)
 	if err != nil {
-		return "", fmt.Errorf("获取国家信息失败: %v", err)
+		return "", fmt.Errorf("failed to get country info: %v", err)
 	}
 	if geoCountry.Country.HasData() {
 		return geoCountry.Country.ISOCode, nil

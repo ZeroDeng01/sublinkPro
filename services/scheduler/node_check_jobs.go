@@ -44,11 +44,11 @@ func ValidateNodeCheckJob(job *models.NodeCheckJob) error {
 		return err
 	}
 	if _, err := models.GetNodeCheckProfileByID(job.ProfileID); err != nil {
-		return fmt.Errorf("检测方案不存在")
+		return fmt.Errorf("check profile not found")
 	}
 	for _, id := range job.AirportIDs {
 		if _, err := models.GetAirportByID(id); err != nil {
-			return fmt.Errorf("机场 %d 不存在", id)
+			return fmt.Errorf("airport %d not found", id)
 		}
 	}
 	return nil
@@ -89,19 +89,19 @@ func NodeCheckJobRunning(id int) bool {
 func StartNodeCheckJob(id int, trigger models.TaskTrigger, airportID int) error {
 	job, err := models.GetNodeCheckJob(id)
 	if err != nil {
-		return fmt.Errorf("任务不存在")
+		return fmt.Errorf("task not found")
 	}
 	if models.IsDemoMode() {
-		return fmt.Errorf("演示模式禁止执行检测")
+		return fmt.Errorf("checks are disabled in demo mode")
 	}
 	if trigger == models.TaskTriggerScheduled && job.Trigger != "scheduled" {
-		return fmt.Errorf("任务不接受定时触发")
+		return fmt.Errorf("task does not accept scheduled triggers")
 	}
 	if trigger != models.TaskTriggerManual && !job.Enabled {
-		return fmt.Errorf("任务已暂停")
+		return fmt.Errorf("task is paused")
 	}
 	if trigger == models.TaskTriggerAirportUpdate && (job.Trigger != "airport_update" || airportID <= 0) {
-		return fmt.Errorf("任务不接受此机场事件")
+		return fmt.Errorf("task does not accept this airport event")
 	}
 	if err := ValidateNodeCheckJob(&job); err != nil {
 		return err
@@ -114,7 +114,7 @@ func StartNodeCheckJob(id int, trigger models.TaskTrigger, airportID int) error 
 			return nil
 		}
 		checkJobRuns.Unlock()
-		return fmt.Errorf("任务正在运行，请勿重复启动")
+		return fmt.Errorf("task is already running; do not start it again")
 	}
 	owner := &nodeCheckJobRun{pending: make(map[int]bool)}
 	checkJobRuns.jobs[id] = owner
@@ -137,10 +137,10 @@ func runNodeCheckJobLoop(id int, trigger models.TaskTrigger, events []int, owner
 		}
 		checkJobRuns.Unlock()
 		if r := recover(); r != nil {
-			utils.Error("自动检测任务 %d 异常: %v", id, r)
+			utils.Error("Automatic check task %d panicked: %v", id, r)
 			job := models.NodeCheckJob{ID: id}
-			if err := job.RecordRun(fmt.Errorf("检测异常: %v", r)); err != nil {
-				utils.Warn("记录检测异常失败: %v", err)
+			if err := job.RecordRun(fmt.Errorf("check failed: %v", r)); err != nil {
+				utils.Warn("Failed to record check failure: %v", err)
 			}
 		}
 	}()
@@ -156,7 +156,7 @@ func runNodeCheckJobLoop(id int, trigger models.TaskTrigger, events []int, owner
 			err = executeNodeCheckJob(job, trigger, events)
 		}
 		if saveErr := job.RecordRun(err); saveErr != nil {
-			utils.Warn("记录自动检测任务失败: %v", saveErr)
+			utils.Warn("Failed to record automatic check task: %v", saveErr)
 		}
 		checkJobRuns.Lock()
 		running := checkJobRuns.jobs[id]
@@ -179,7 +179,7 @@ func executeNodeCheckJob(job models.NodeCheckJob, trigger models.TaskTrigger, ev
 	if job.UpdateBeforeCheck {
 		for _, id := range job.AirportIDs {
 			if err := updateCheckJobAirport(id); err != nil {
-				return fmt.Errorf("前置更新机场 %d 失败: %w", id, err)
+				return fmt.Errorf("pre-update of airport %d failed: %w", id, err)
 			}
 		}
 	}
@@ -188,7 +188,7 @@ func executeNodeCheckJob(job models.NodeCheckJob, trigger models.TaskTrigger, ev
 		return err
 	}
 	if len(nodes) == 0 {
-		return fmt.Errorf("本次范围内没有候选节点，已跳过检测")
+		return fmt.Errorf("no candidate nodes in scope; check skipped")
 	}
 	profile, err := models.GetNodeCheckProfileByID(job.ProfileID)
 	if err != nil {
@@ -204,13 +204,13 @@ func RunNodeCheckJobsAfterAirportUpdate(airportID int) {
 	}
 	jobs, err := models.ListNodeCheckJobs()
 	if err != nil {
-		utils.Warn("加载机场联动检测任务失败: %v", err)
+		utils.Warn("Failed to load airport-linked check tasks: %v", err)
 		return
 	}
 	for _, job := range jobs {
 		if job.Enabled && job.Trigger == "airport_update" && (len(job.AirportIDs) == 0 || slices.Contains(job.AirportIDs, airportID)) {
 			if err := StartNodeCheckJob(job.ID, models.TaskTriggerAirportUpdate, airportID); err != nil {
-				utils.Warn("启动机场联动检测失败: %v", err)
+				utils.Warn("Failed to start airport-linked check: %v", err)
 			}
 		}
 	}
@@ -233,7 +233,7 @@ func (sm *SchedulerManager) UpdateNodeCheckJobSchedule(job models.NodeCheckJob) 
 	}
 	entry, err := sm.cron.AddFunc(job.CronExpr, func() {
 		if err := StartNodeCheckJob(job.ID, models.TaskTriggerScheduled, 0); err != nil {
-			utils.Warn("自动检测任务跳过: %v", err)
+			utils.Warn("Automatic check task skipped: %v", err)
 		}
 	})
 	if err != nil {
@@ -271,7 +271,7 @@ func (sm *SchedulerManager) LoadNodeCheckJobs() error {
 	}
 	for _, job := range jobs {
 		if err := ValidateNodeCheckJob(&job); err != nil {
-			utils.Warn("自动检测任务 [%s] 无效: %v", job.Name, err)
+			utils.Warn("Automatic check task [%s] is invalid: %v", job.Name, err)
 			continue
 		}
 		if err := sm.UpdateNodeCheckJobSchedule(job); err != nil {

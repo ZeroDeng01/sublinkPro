@@ -12,7 +12,7 @@ func GetBaseTemplates(c *gin.Context) {
 	clashTemplate, _ := models.GetSetting("base_template_clash")
 	surgeTemplate, _ := models.GetSetting("base_template_surge")
 
-	utils.OkDetailed(c, "获取成功", gin.H{
+	utils.OkDetailed(c, "Fetched successfully", gin.H{
 		"clashTemplate": clashTemplate,
 		"surgeTemplate": surgeTemplate,
 	})
@@ -26,13 +26,13 @@ func UpdateBaseTemplate(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误：category 必须为 clash 或 surge")
+		utils.FailWithMsg(c, "Invalid parameters: category must be clash or surge")
 		return
 	}
 
 	key := "base_template_" + req.Category
 	if err := models.SetSetting(key, req.Content); err != nil {
-		utils.FailWithMsg(c, "保存模板失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to save template: "+err.Error())
 		return
 	}
 
@@ -40,7 +40,7 @@ func UpdateBaseTemplate(c *gin.Context) {
 	if req.Category == "surge" {
 		categoryName = "Surge"
 	}
-	utils.OkWithMsg(c, categoryName+" 基础模板保存成功")
+	utils.OkWithMsg(c, categoryName+" base templates saved")
 }
 
 // GetSystemDomain 获取系统域名配置
@@ -55,20 +55,20 @@ func UpdateSystemDomain(c *gin.Context) {
 		SystemDomain string `json:"systemDomain"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if err := models.SetSetting("system_domain", req.SystemDomain); err != nil {
-		utils.FailWithMsg(c, "保存失败: "+err.Error())
+		utils.FailWithMsg(c, "Save failed: "+err.Error())
 		return
 	}
-	utils.OkWithMsg(c, "保存成功")
+	utils.OkWithMsg(c, "Saved successfully")
 }
 
 // GetNodeDedupConfig 获取节点去重配置
 func GetNodeDedupConfig(c *gin.Context) {
 	crossAirportDedup, _ := models.GetSetting("cross_airport_dedup_enabled")
-	utils.OkDetailed(c, "获取成功", gin.H{
+	utils.OkDetailed(c, "Fetched successfully", gin.H{
 		"crossAirportDedupEnabled": crossAirportDedup != "false",
 	})
 }
@@ -79,11 +79,11 @@ func UpdateNodeDedupConfig(c *gin.Context) {
 		CrossAirportDedupEnabled *bool `json:"crossAirportDedupEnabled"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if req.CrossAirportDedupEnabled == nil {
-		utils.FailWithMsg(c, "缺少必填字段 crossAirportDedupEnabled")
+		utils.FailWithMsg(c, "Missing required field crossAirportDedupEnabled")
 		return
 	}
 	value := "true"
@@ -91,10 +91,10 @@ func UpdateNodeDedupConfig(c *gin.Context) {
 		value = "false"
 	}
 	if err := models.SetSetting("cross_airport_dedup_enabled", value); err != nil {
-		utils.FailWithMsg(c, "保存失败: "+err.Error())
+		utils.FailWithMsg(c, "Save failed: "+err.Error())
 		return
 	}
-	utils.OkWithMsg(c, "保存成功")
+	utils.OkWithMsg(c, "Saved successfully")
 }
 
 // GetGlobalNodeProcessingConfig 获取全局节点处理配置
@@ -105,7 +105,7 @@ func GetGlobalNodeProcessingConfig(c *gin.Context) {
 	protocolBlacklist, _ := models.GetSetting("global_protocol_blacklist")
 	preprocess, _ := models.GetSetting("global_node_name_preprocess")
 
-	utils.OkDetailed(c, "获取成功", gin.H{
+	utils.OkDetailed(c, "Fetched successfully", gin.H{
 		"nodeNameWhitelist":  whitelist,
 		"nodeNameBlacklist":  blacklist,
 		"protocolWhitelist":  protocolWhitelist,
@@ -125,33 +125,33 @@ func UpdateGlobalNodeProcessingConfig(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 
 	// 保存配置
 	if err := models.SetSetting("global_node_name_whitelist", req.NodeNameWhitelist); err != nil {
-		utils.FailWithMsg(c, "保存全局节点名称白名单失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to save global node name whitelist: "+err.Error())
 		return
 	}
 	if err := models.SetSetting("global_node_name_blacklist", req.NodeNameBlacklist); err != nil {
-		utils.FailWithMsg(c, "保存全局节点名称黑名单失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to save global node name blacklist: "+err.Error())
 		return
 	}
 	if err := models.SetSetting("global_protocol_whitelist", req.ProtocolWhitelist); err != nil {
-		utils.FailWithMsg(c, "保存全局协议白名单失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to save global protocol whitelist: "+err.Error())
 		return
 	}
 	if err := models.SetSetting("global_protocol_blacklist", req.ProtocolBlacklist); err != nil {
-		utils.FailWithMsg(c, "保存全局协议黑名单失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to save global protocol blacklist: "+err.Error())
 		return
 	}
 	if err := models.SetSetting("global_node_name_preprocess", req.NodeNamePreprocess); err != nil {
-		utils.FailWithMsg(c, "保存全局节点名称预处理规则失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to save global node name preprocessing rules: "+err.Error())
 		return
 	}
 
-	utils.OkWithMsg(c, "保存成功")
+	utils.OkWithMsg(c, "Saved successfully")
 }
 
 // GetUsageHistoryConfig 获取用量历史配置

@@ -36,14 +36,14 @@ func init() {
 
 // InitSubSchedulerCache 初始化订阅调度缓存
 func InitSubSchedulerCache() error {
-	utils.Info("开始加载订阅调度到缓存")
+	utils.Info("Loading subscription schedules into cache")
 	var schedulers []SubScheduler
 	if err := database.DB.Find(&schedulers).Error; err != nil {
 		return err
 	}
 
 	subSchedulerCache.LoadAll(schedulers)
-	utils.Info("订阅调度缓存初始化完成，共加载 %d 个调度任务", subSchedulerCache.Count())
+	utils.Info("Subscription schedule cache initialized with %d schedules", subSchedulerCache.Count())
 
 	cache.Manager.Register("subscheduler", subSchedulerCache)
 	return nil

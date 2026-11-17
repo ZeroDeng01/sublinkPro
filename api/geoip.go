@@ -82,13 +82,13 @@ func SaveGeoIPConfig(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误"})
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "Invalid parameters"})
 		return
 	}
 
 	// 保存配置
 	if err := models.SetSetting("geoip_download_url", req.DownloadURL); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "保存配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Failed to save configuration"})
 		return
 	}
 
@@ -97,16 +97,16 @@ func SaveGeoIPConfig(c *gin.Context) {
 		useProxyStr = "true"
 	}
 	if err := models.SetSetting("geoip_use_proxy", useProxyStr); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "保存配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Failed to save configuration"})
 		return
 	}
 
 	if err := models.SetSetting("geoip_proxy_link", req.ProxyLink); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "保存配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "Failed to save configuration"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "保存成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Saved successfully"})
 }
 
 // GetGeoIPStatus 获取 GeoIP 状态
@@ -151,7 +151,7 @@ func DownloadGeoIP(c *gin.Context) {
 	downloadMu.Lock()
 	if isDownloading {
 		downloadMu.Unlock()
-		c.JSON(http.StatusConflict, gin.H{"code": 409, "msg": "正在下载中，请稍候"})
+		c.JSON(http.StatusConflict, gin.H{"code": 409, "msg": "Download in progress, please wait"})
 		return
 	}
 	isDownloading = true
@@ -181,19 +181,19 @@ func DownloadGeoIP(c *gin.Context) {
 			downloadMu.Lock()
 			downloadError = err.Error()
 			downloadMu.Unlock()
-			utils.Error("下载 GeoIP 数据库失败: %v", err)
+			utils.Error("Failed to download GeoIP database: %v", err)
 			return
 		}
 
 		// 更新最后更新时间；失败不影响已下载数据库，但需要记录便于排查状态展示异常。
 		if err := models.SetSetting("geoip_last_update", time.Now().Format("2006-01-02 15:04:05")); err != nil {
-			utils.Error("更新 GeoIP 最后更新时间失败: %v", err)
+			utils.Error("Failed to update GeoIP last-updated time: %v", err)
 		}
 
 		// 重新加载数据库
 		if err := geoip.Reload(); err != nil {
 			downloadMu.Lock()
-			downloadError = "数据库加载失败: " + err.Error()
+			downloadError = "Failed to load database: " + err.Error()
 			downloadMu.Unlock()
 			return
 		}
@@ -202,10 +202,10 @@ func DownloadGeoIP(c *gin.Context) {
 		downloadProgress = 100
 		downloadMu.Unlock()
 
-		utils.Info("GeoIP 数据库下载并加载成功")
+		utils.Info("GeoIP database downloaded and loaded")
 	}()
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "开始下载"})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Download started"})
 }
 
 // StopGeoIPDownload 停止 GeoIP 数据库下载
@@ -213,7 +213,7 @@ func StopGeoIPDownload(c *gin.Context) {
 	downloadMu.Lock()
 	if !isDownloading {
 		downloadMu.Unlock()
-		c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "当前没有正在进行的下载任务"})
+		c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "No download task is currently running"})
 		return
 	}
 	// 发送停止信号
@@ -223,7 +223,7 @@ func StopGeoIPDownload(c *gin.Context) {
 	}
 	downloadMu.Unlock()
 
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "已发送停止信号"})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "Stop signal sent"})
 }
 
 // downloadGeoIPFile 下载 GeoIP 文件
@@ -233,38 +233,38 @@ func downloadGeoIPFile(url string, useProxy bool, proxyLink string) error {
 	// 确保目录存在
 	dir := filepath.Dir(targetPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("创建目录失败: %v", err)
+		return fmt.Errorf("failed to create directory: %v", err)
 	}
 
 	// 创建 HTTP 客户端
 	client, _, err := utils.CreateProxyHTTPClient(useProxy, proxyLink, 5*time.Minute)
 	if err != nil {
-		return fmt.Errorf("创建 HTTP 客户端失败: %v", err)
+		return fmt.Errorf("failed to create HTTP client: %v", err)
 	}
 
 	// 发起请求
-	utils.Info("开始下载 GeoIP 数据库: %s", url)
+	utils.Info("Starting GeoIP database download: %s", url)
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
-		return fmt.Errorf("创建请求失败: %v", err)
+		return fmt.Errorf("failed to create request: %v", err)
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; SublinkPro/1.0)")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("下载请求失败: %v", err)
+		return fmt.Errorf("download request failed: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("下载失败: HTTP %d", resp.StatusCode)
+		return fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
 	}
 
 	// 创建临时文件
 	tmpPath := targetPath + ".tmp"
 	file, err := os.Create(tmpPath)
 	if err != nil {
-		return fmt.Errorf("创建临时文件失败: %v", err)
+		return fmt.Errorf("failed to create temp file: %v", err)
 	}
 	defer func() {
 		_ = file.Close()
@@ -280,7 +280,7 @@ func downloadGeoIPFile(url string, useProxy bool, proxyLink string) error {
 		n, err := resp.Body.Read(buf)
 		if n > 0 {
 			if _, writeErr := file.Write(buf[:n]); writeErr != nil {
-				return fmt.Errorf("写入文件失败: %v", writeErr)
+				return fmt.Errorf("failed to write file: %v", writeErr)
 			}
 			downloaded += int64(n)
 
@@ -299,29 +299,29 @@ func downloadGeoIPFile(url string, useProxy bool, proxyLink string) error {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("读取响应失败: %v", err)
+			return fmt.Errorf("failed to read response: %v", err)
 		}
 	}
 
 	if err := file.Close(); err != nil {
-		return fmt.Errorf("关闭临时文件失败: %v", err)
+		return fmt.Errorf("failed to close temp file: %v", err)
 	}
 
 	// 验证文件大小
 	fileInfo, err := os.Stat(tmpPath)
 	if err != nil || fileInfo.Size() < 1024*1024 { // 文件至少 1MB
-		return fmt.Errorf("下载的文件无效，文件过小")
+		return fmt.Errorf("downloaded file is invalid or too small")
 	}
 
 	// 移动临时文件到目标位置
 	if err := os.Rename(tmpPath, targetPath); err != nil {
 		// 如果 rename 失败（跨设备），尝试复制
 		if copyErr := copyFile(tmpPath, targetPath); copyErr != nil {
-			return fmt.Errorf("保存文件失败: %v", copyErr)
+			return fmt.Errorf("failed to save file: %v", copyErr)
 		}
 	}
 
-	utils.Info("GeoIP 数据库下载完成: %s (%.2f MB)", targetPath, float64(fileInfo.Size())/1024/1024)
+	utils.Info("GeoIP database downloaded: %s (%.2f MB)", targetPath, float64(fileInfo.Size())/1024/1024)
 	return nil
 }
 
@@ -383,7 +383,7 @@ func AutoDownloadGeoIP() {
 	stopDownload = make(chan struct{})
 	downloadMu.Unlock()
 
-	utils.Info("[GeoIP] 数据库不存在，开始自动下载...")
+	utils.Info("[GeoIP] Database not found; starting automatic download...")
 
 	go func() {
 		defer func() {
@@ -407,22 +407,22 @@ func AutoDownloadGeoIP() {
 			downloadMu.Lock()
 			downloadError = err.Error()
 			downloadMu.Unlock()
-			utils.Error("[GeoIP] 自动下载失败: %v", err)
-			utils.Info("[GeoIP] 请在系统右上角菜单 -> GeoIP 数据库中手动配置下载")
+			utils.Error("[GeoIP] Automatic download failed: %v", err)
+			utils.Info("[GeoIP] Configure the download manually under the GeoIP database menu in the top-right corner")
 			return
 		}
 
 		// 更新最后更新时间；失败不影响已下载数据库，但需要记录便于排查状态展示异常。
 		if err := models.SetSetting("geoip_last_update", time.Now().Format("2006-01-02 15:04:05")); err != nil {
-			utils.Error("[GeoIP] 更新最后更新时间失败: %v", err)
+			utils.Error("[GeoIP] Failed to update last-updated time: %v", err)
 		}
 
 		// 重新加载数据库
 		if err := geoip.Reload(); err != nil {
 			downloadMu.Lock()
-			downloadError = "数据库加载失败: " + err.Error()
+			downloadError = "Failed to load database: " + err.Error()
 			downloadMu.Unlock()
-			utils.Error("[GeoIP] 数据库加载失败: %v", err)
+			utils.Error("[GeoIP] Failed to load database: %v", err)
 			return
 		}
 
@@ -430,7 +430,7 @@ func AutoDownloadGeoIP() {
 		downloadProgress = 100
 		downloadMu.Unlock()
 
-		utils.Info("[GeoIP] 数据库自动下载并加载成功")
+		utils.Info("[GeoIP] Database downloaded and loaded automatically")
 	}()
 }
 
@@ -441,18 +441,18 @@ func downloadGeoIPFileWithProgress(url string, useProxy bool, proxyLink string, 
 	// 确保目录存在
 	dir := filepath.Dir(targetPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("创建目录失败: %v", err)
+		return fmt.Errorf("failed to create directory: %v", err)
 	}
 
 	// 创建 HTTP 客户端
 	client, _, err := utils.CreateProxyHTTPClient(useProxy, proxyLink, 5*time.Minute)
 	if err != nil {
-		return fmt.Errorf("创建 HTTP 客户端失败: %v", err)
+		return fmt.Errorf("failed to create HTTP client: %v", err)
 	}
 
 	// 发起请求
 	if showConsoleProgress {
-		utils.Debug("[GeoIP] 下载地址: %s", url)
+		utils.Debug("[GeoIP] Download URL: %s", url)
 	}
 	downloadCtx, cancelDownload := context.WithCancel(context.Background())
 	defer cancelDownload()
@@ -472,28 +472,28 @@ func downloadGeoIPFileWithProgress(url string, useProxy bool, proxyLink string, 
 
 	req, err := http.NewRequestWithContext(downloadCtx, http.MethodGet, url, nil)
 	if err != nil {
-		return fmt.Errorf("创建请求失败: %v", err)
+		return fmt.Errorf("failed to create request: %v", err)
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; SublinkPro/1.0)")
 
 	resp, err := client.Do(req)
 	if err != nil {
 		if downloadCtx.Err() != nil {
-			return fmt.Errorf("下载已被用户停止")
+			return fmt.Errorf("download cancelled by user")
 		}
-		return fmt.Errorf("下载请求失败: %v", err)
+		return fmt.Errorf("download request failed: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("下载失败: HTTP %d", resp.StatusCode)
+		return fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
 	}
 
 	// 创建临时文件
 	tmpPath := targetPath + ".tmp"
 	file, err := os.Create(tmpPath)
 	if err != nil {
-		return fmt.Errorf("创建临时文件失败: %v", err)
+		return fmt.Errorf("failed to create temp file: %v", err)
 	}
 	defer func() {
 		_ = file.Close()
@@ -514,14 +514,14 @@ func downloadGeoIPFileWithProgress(url string, useProxy bool, proxyLink string, 
 
 		select {
 		case <-stop:
-			return fmt.Errorf("下载已被用户停止")
+			return fmt.Errorf("download cancelled by user")
 		default:
 		}
 
 		n, readErr := resp.Body.Read(buf)
 		if n > 0 {
 			if _, writeErr := file.Write(buf[:n]); writeErr != nil {
-				return fmt.Errorf("写入文件失败: %v", writeErr)
+				return fmt.Errorf("failed to write file: %v", writeErr)
 			}
 			downloaded += int64(n)
 
@@ -537,7 +537,7 @@ func downloadGeoIPFileWithProgress(url string, useProxy bool, proxyLink string, 
 
 				// 控制台进度显示（每 10% 显示一次）
 				if showConsoleProgress && progress/10 > lastPrintProgress/10 {
-					utils.Debug("[GeoIP] 下载进度: %d%% (%.1f MB / %.1f MB)",
+					utils.Debug("[GeoIP] Download progress: %d%% (%.1f MB / %.1f MB)",
 						progress,
 						float64(downloaded)/1024/1024,
 						float64(totalSize)/1024/1024)
@@ -550,32 +550,32 @@ func downloadGeoIPFileWithProgress(url string, useProxy bool, proxyLink string, 
 		}
 		if readErr != nil {
 			if downloadCtx.Err() != nil {
-				return fmt.Errorf("下载已被用户停止")
+				return fmt.Errorf("download cancelled by user")
 			}
-			return fmt.Errorf("读取响应失败: %v", readErr)
+			return fmt.Errorf("failed to read response: %v", readErr)
 		}
 	}
 
 	if err := file.Close(); err != nil {
-		return fmt.Errorf("关闭临时文件失败: %v", err)
+		return fmt.Errorf("failed to close temp file: %v", err)
 	}
 
 	// 验证文件大小
 	fileInfo, err := os.Stat(tmpPath)
 	if err != nil || fileInfo.Size() < 1024*1024 { // 文件至少 1MB
-		return fmt.Errorf("下载的文件无效，文件过小")
+		return fmt.Errorf("downloaded file is invalid or too small")
 	}
 
 	// 移动临时文件到目标位置
 	if err := os.Rename(tmpPath, targetPath); err != nil {
 		// 如果 rename 失败（跨设备），尝试复制
 		if copyErr := copyFile(tmpPath, targetPath); copyErr != nil {
-			return fmt.Errorf("保存文件失败: %v", copyErr)
+			return fmt.Errorf("failed to save file: %v", copyErr)
 		}
 	}
 
 	if showConsoleProgress {
-		utils.Info("[GeoIP] 下载完成: %s (%.2f MB)", targetPath, float64(fileInfo.Size())/1024/1024)
+		utils.Info("[GeoIP] Download complete: %s (%.2f MB)", targetPath, float64(fileInfo.Size())/1024/1024)
 	}
 	return nil
 }

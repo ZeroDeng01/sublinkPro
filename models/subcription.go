@@ -150,14 +150,14 @@ type NodeWithSort struct {
 
 // InitSubcriptionCache 初始化订阅缓存
 func InitSubcriptionCache() error {
-	utils.Info("开始加载订阅到缓存")
+	utils.Info("Loading subscriptions into cache")
 	var subs []Subcription
 	if err := database.DB.Find(&subs).Error; err != nil {
 		return err
 	}
 
 	subcriptionCache.LoadAll(subs)
-	utils.Info("订阅缓存初始化完成，共加载 %d 个订阅", subcriptionCache.Count())
+	utils.Info("Subscription cache initialized with %d subscriptions", subcriptionCache.Count())
 
 	cache.Manager.Register("subcription", subcriptionCache)
 	return nil
@@ -222,7 +222,7 @@ func ValidateAirportIDs(airportIDs []int) error {
 	uniqueIDs := make([]int, 0, len(airportIDs))
 	for _, airportID := range airportIDs {
 		if airportID <= 0 {
-			return fmt.Errorf("机场ID无效")
+			return fmt.Errorf("invalid airport ID")
 		}
 		if _, ok := seen[airportID]; ok {
 			continue
@@ -239,7 +239,7 @@ func ValidateAirportIDs(airportIDs []int) error {
 		return err
 	}
 	if count != int64(len(uniqueIDs)) {
-		return fmt.Errorf("部分机场不存在或已被删除")
+		return fmt.Errorf("some airports do not exist or have been deleted")
 	}
 	return nil
 }
@@ -1217,7 +1217,7 @@ func (sub *Subcription) Del() error {
 func (sub *Subcription) Copy() (*Subcription, error) {
 	// 创建新订阅对象，复制所有配置字段
 	newSub := &Subcription{
-		Name:                  sub.Name + "_复制",
+		Name:                  sub.Name + "_copy",
 		Description:           sub.Description,
 		Type:                  NormalizeSubcriptionType(sub.Type),
 		Config:                sub.Config,
@@ -1245,20 +1245,20 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 	// 使用事务确保数据一致性
 	tx := database.DB.Begin()
 	if tx.Error != nil {
-		return nil, fmt.Errorf("开启事务失败: %w", tx.Error)
+		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
 	}
 
 	// 创建新订阅
 	if err := tx.Create(newSub).Error; err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("创建订阅失败: %w", err)
+		return nil, fmt.Errorf("failed to create subscription: %w", err)
 	}
 
 	// 复制节点关联
 	var nodes []SubcriptionNode
 	if err := database.DB.Where("subcription_id = ?", sub.ID).Find(&nodes).Error; err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("查询节点关联失败: %w", err)
+		return nil, fmt.Errorf("failed to query node relations: %w", err)
 	}
 	for _, node := range nodes {
 		newNode := SubcriptionNode{
@@ -1268,7 +1268,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 		}
 		if err := tx.Create(&newNode).Error; err != nil {
 			tx.Rollback()
-			return nil, fmt.Errorf("复制节点关联失败: %w", err)
+			return nil, fmt.Errorf("failed to copy node relations: %w", err)
 		}
 	}
 
@@ -1276,7 +1276,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 	var groups []SubcriptionGroup
 	if err := database.DB.Where("subcription_id = ?", sub.ID).Find(&groups).Error; err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("查询分组关联失败: %w", err)
+		return nil, fmt.Errorf("failed to query group relations: %w", err)
 	}
 	for _, group := range groups {
 		newGroup := SubcriptionGroup{
@@ -1286,14 +1286,14 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 		}
 		if err := tx.Create(&newGroup).Error; err != nil {
 			tx.Rollback()
-			return nil, fmt.Errorf("复制分组关联失败: %w", err)
+			return nil, fmt.Errorf("failed to copy group relations: %w", err)
 		}
 	}
 
 	var airports []SubcriptionAirport
 	if err := database.DB.Where("subcription_id = ?", sub.ID).Find(&airports).Error; err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("查询机场关联失败: %w", err)
+		return nil, fmt.Errorf("failed to query airport relations: %w", err)
 	}
 	for _, airport := range airports {
 		newAirport := SubcriptionAirport{
@@ -1303,7 +1303,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 		}
 		if err := tx.Create(&newAirport).Error; err != nil {
 			tx.Rollback()
-			return nil, fmt.Errorf("复制机场关联失败: %w", err)
+			return nil, fmt.Errorf("failed to copy airport relations: %w", err)
 		}
 	}
 
@@ -1311,7 +1311,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 	var scripts []SubcriptionScript
 	if err := database.DB.Where("subcription_id = ?", sub.ID).Find(&scripts).Error; err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("查询脚本关联失败: %w", err)
+		return nil, fmt.Errorf("failed to query script relations: %w", err)
 	}
 	for _, script := range scripts {
 		newScript := SubcriptionScript{
@@ -1321,7 +1321,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 		}
 		if err := tx.Create(&newScript).Error; err != nil {
 			tx.Rollback()
-			return nil, fmt.Errorf("复制脚本关联失败: %w", err)
+			return nil, fmt.Errorf("failed to copy script relations: %w", err)
 		}
 	}
 
@@ -1338,7 +1338,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 		}
 		if err := tx.Create(&newRule).Error; err != nil {
 			tx.Rollback()
-			return nil, fmt.Errorf("复制链式代理规则失败: %w", err)
+			return nil, fmt.Errorf("failed to copy chain proxy rules: %w", err)
 		}
 		// 更新缓存
 		chainRuleCache.Set(newRule.ID, newRule)
@@ -1346,7 +1346,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("提交事务失败: %w", err)
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	// 更新缓存
@@ -1354,7 +1354,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 
 	// 为新订阅创建默认分享链接
 	if err := CreateDefaultShareForSubscription(newSub.ID); err != nil {
-		utils.Warn("创建默认分享链接失败: %v", err)
+		utils.Warn("Failed to create default share link: %v", err)
 	}
 
 	return newSub, nil
@@ -1363,7 +1363,7 @@ func (sub *Subcription) Copy() (*Subcription, error) {
 func (sub *Subcription) Sort(subNodeSort dto.SubcriptionNodeSortUpdate) error {
 	tx := database.DB.Begin()
 	if tx.Error != nil {
-		return fmt.Errorf("开启事务失败: %w", tx.Error)
+		return fmt.Errorf("failed to begin transaction: %w", tx.Error)
 	}
 
 	for _, item := range subNodeSort.NodeSort {
@@ -1378,7 +1378,7 @@ func (sub *Subcription) Sort(subNodeSort dto.SubcriptionNodeSortUpdate) error {
 
 			if err != nil {
 				tx.Rollback()
-				return fmt.Errorf("更新机场排序失败: %w", err)
+				return fmt.Errorf("failed to update airport order: %w", err)
 			}
 		} else if isGroup {
 			// 更新分组排序
@@ -1388,7 +1388,7 @@ func (sub *Subcription) Sort(subNodeSort dto.SubcriptionNodeSortUpdate) error {
 
 			if err != nil {
 				tx.Rollback()
-				return fmt.Errorf("更新分组排序失败: %w", err)
+				return fmt.Errorf("failed to update group order: %w", err)
 			}
 		} else {
 			// 更新节点排序
@@ -1398,13 +1398,13 @@ func (sub *Subcription) Sort(subNodeSort dto.SubcriptionNodeSortUpdate) error {
 
 			if err != nil {
 				tx.Rollback()
-				return fmt.Errorf("更新节点排序失败: %w", err)
+				return fmt.Errorf("failed to update node order: %w", err)
 			}
 		}
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("提交事务失败: %w", err)
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	return nil
 }
@@ -1425,7 +1425,7 @@ func (sub *Subcription) BatchSort(sortBy, sortOrder string) error {
 		Where("subcription_nodes.subcription_id = ?", sub.ID).
 		Scan(&subNodes).Error
 	if err != nil {
-		return fmt.Errorf("获取节点关联失败: %w", err)
+		return fmt.Errorf("failed to load node relations: %w", err)
 	}
 
 	if len(subNodes) == 0 {
@@ -1480,7 +1480,7 @@ func (sub *Subcription) BatchSort(sortBy, sortOrder string) error {
 	// 批量更新排序值
 	tx := database.DB.Begin()
 	if tx.Error != nil {
-		return fmt.Errorf("开启事务失败: %w", tx.Error)
+		return fmt.Errorf("failed to begin transaction: %w", tx.Error)
 	}
 
 	for idx, sn := range subNodes {
@@ -1489,12 +1489,12 @@ func (sub *Subcription) BatchSort(sortBy, sortOrder string) error {
 			Update("sort", idx).Error
 		if err != nil {
 			tx.Rollback()
-			return fmt.Errorf("更新节点排序失败: %w", err)
+			return fmt.Errorf("failed to update node order: %w", err)
 		}
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("提交事务失败: %w", err)
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil
@@ -1630,7 +1630,7 @@ func (sub *Subcription) ApplyNodeFilterScripts(nodes []Node, scripts []ScriptWit
 	result := nodes
 	nodesJSON, err := json.Marshal(nodesForFilterScript(result))
 	if err != nil {
-		utils.Error("序列化节点失败: %v", err)
+		utils.Error("Failed to serialize nodes: %v", err)
 		return nodes
 	}
 
@@ -1641,12 +1641,12 @@ func (sub *Subcription) ApplyNodeFilterScripts(nodes []Node, scripts []ScriptWit
 			if strings.Contains(err.Error(), "filterNode function not found") {
 				continue
 			}
-			utils.Error("节点过滤脚本执行失败: %v", err)
+			utils.Error("Node filter script failed: %v", err)
 			continue
 		}
 		var newNodes []Node
 		if err := json.Unmarshal(resJSON, &newNodes); err != nil {
-			utils.Error("反序列化过滤后节点失败: %v", err)
+			utils.Error("Failed to deserialize filtered nodes: %v", err)
 			continue
 		}
 		result = newNodes
@@ -1687,7 +1687,7 @@ func (sub *Subcription) ApplyDeduplication(nodes []Node) []Node {
 	// 解析去重配置
 	var config DeduplicationConfig
 	if err := json.Unmarshal([]byte(sub.DeduplicationRule), &config); err != nil {
-		utils.Warn("解析去重规则失败: %v", err)
+		utils.Warn("Failed to parse dedup rule: %v", err)
 		return nodes
 	}
 
@@ -1726,7 +1726,7 @@ func deduplicateByCommonFields(nodes []Node, fields []string) []Node {
 		}
 	}
 
-	utils.Info("通用字段去重: 原%d个 -> %d个", len(nodes), len(result))
+	utils.Info("Field dedup: %d -> %d nodes", len(nodes), len(result))
 	return result
 }
 
@@ -1776,7 +1776,7 @@ func deduplicateByProtocol(nodes []Node, protocolRules map[string][]string) []No
 		}
 	}
 
-	utils.Info("协议字段去重: 原%d个 -> %d个", len(nodes), len(result))
+	utils.Info("Protocol dedup: %d -> %d nodes", len(nodes), len(result))
 	return result
 }
 

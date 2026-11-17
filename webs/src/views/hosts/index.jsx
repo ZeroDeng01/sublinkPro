@@ -424,7 +424,7 @@ export default function HostManagement() {
                   label={host.source}
                   size="small"
                   variant="outlined"
-                  color={host.source === '手动添加' || host.source === '手动导入' ? 'default' : 'info'}
+                  color={['Manual', 'manual', '手动添加', '手动导入'].includes(host.source) ? 'default' : 'info'}
                   sx={{ height: 24, borderRadius: 1 }}
                 />
               )}
@@ -665,7 +665,7 @@ export default function HostManagement() {
                           label={host.source || '-'}
                           size="small"
                           variant="outlined"
-                          color={host.source === '手动添加' || host.source === '手动导入' ? 'default' : 'info'}
+                          color={['Manual', 'manual', '手动添加', '手动导入'].includes(host.source) ? 'default' : 'info'}
                           sx={{ height: 22, fontSize: '0.75rem' }}
                         />
                       </TableCell>

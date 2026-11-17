@@ -21,7 +21,7 @@ func TestProxyBandwidthYAMLUnmarshal(t *testing.T) {
 		{name: "bare string", yamlDoc: "up: \"30\"\n", wantUp: 30},
 		{name: "provider bare string pair", yamlDoc: "up: \"500\"\ndown: \"1000\"\n", wantUp: 500, wantDown: 1000},
 		{name: "mbps string", yamlDoc: "up: \"30 Mbps\"\n", wantUp: 30},
-		{name: "invalid suffix", yamlDoc: "up: \"30 bananas\"\n", wantErr: "无法解析带宽值"},
+		{name: "invalid suffix", yamlDoc: "up: \"30 bananas\"\n", wantErr: "cannot parse bandwidth value"},
 	}
 
 	for _, tt := range tests {

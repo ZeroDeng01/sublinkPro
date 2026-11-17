@@ -1842,6 +1842,8 @@
         "collapse": "收起",
         "availableIp": "可用IP",
         "nodes": "节点",
+        "ungrouped": "未分组",
+        "manualSource": "手动添加",
         "tagItem": "标签 {{index}}",
         "emptyCountry": "暂无国家统计数据",
         "emptyProtocol": "暂无协议统计数据",
@@ -2329,6 +2331,10 @@
         "detectQualityHint": "(优先尝试 IPv4，回退 IPv6；IPv6 可能仅返回部分风险信息)",
         "qualityCheckUrl": "质量检测接口",
         "qualityCheckUrlPlaceholder": "请选择或输入质量检测接口",
+        "qualityCheckOptions": {
+          "ippureRecommended": "IPPure (推荐)",
+          "ippure": "IPPure"
+        },
         "detectUnlock": "解锁检测",
         "detectUnlockHint": "(按 Provider 保存节点解锁结果)",
         "unlockWarning": "开启解锁检测会显著降低整批节点的检测速度，建议只在需要筛选流媒体或 AI 可用区时启用。",

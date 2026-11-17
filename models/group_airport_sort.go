@@ -28,7 +28,7 @@ func init() {
 
 // InitGroupAirportSortCache 初始化分组机场排序缓存
 func InitGroupAirportSortCache() error {
-	utils.Info("开始加载分组机场排序到缓存")
+	utils.Info("Loading group-airport order into cache")
 
 	var sorts []GroupAirportSort
 	if err := database.DB.Find(&sorts).Error; err != nil {
@@ -36,7 +36,7 @@ func InitGroupAirportSortCache() error {
 	}
 
 	groupAirportSortCache.LoadAll(sorts)
-	utils.Info("分组机场排序缓存初始化完成，共加载 %d 条记录", groupAirportSortCache.Count())
+	utils.Info("Group-airport order cache initialized with %d records", groupAirportSortCache.Count())
 
 	cache.Manager.Register("groupAirportSort", groupAirportSortCache)
 	return nil
@@ -94,12 +94,12 @@ func GetGroupDetail(groupName string) (*GroupDetailResponse, error) {
 	// 构建机场详情列表
 	airports := make([]GroupAirportDetail, 0, len(airportNodeCount))
 	for airportID, count := range airportNodeCount {
-		airportName := "手动添加"
+		airportName := "Manual"
 		if airportID > 0 {
 			if airport, ok := airportCache.Get(airportID); ok {
 				airportName = airport.Name
 			} else {
-				airportName = fmt.Sprintf("机场#%d(已删除)", airportID)
+				airportName = fmt.Sprintf("Airport #%d (deleted)", airportID)
 			}
 		}
 
@@ -150,7 +150,7 @@ type SaveGroupAirportSortsRequest struct {
 // SaveGroupAirportSorts 保存分组内机场排序（事务删旧 + 批量插新 + 更新缓存）
 func SaveGroupAirportSorts(groupName string, sorts []AirportSortItem) error {
 	if groupName == "" {
-		return fmt.Errorf("分组名称不能为空")
+		return fmt.Errorf("group name is required")
 	}
 
 	err := database.WithTransaction(func(tx *gorm.DB) error {
@@ -190,7 +190,7 @@ func SaveGroupAirportSorts(groupName string, sorts []AirportSortItem) error {
 	// 从数据库重新加载该分组的记录到缓存
 	var newRecords []GroupAirportSort
 	if err := database.DB.Where("group_name = ?", groupName).Find(&newRecords).Error; err != nil {
-		utils.Warn("重新加载分组 %s 的排序缓存失败: %v", groupName, err)
+		utils.Warn("Failed to reload the sort cache for group %s: %v", groupName, err)
 	} else {
 		for _, r := range newRecords {
 			groupAirportSortCache.Set(r.ID, r)
@@ -275,7 +275,7 @@ func CleanupAirportSortRecords(airportID int) {
 	}
 	// 从数据库删除
 	if err := database.DB.Where("airport_id = ?", airportID).Delete(&GroupAirportSort{}).Error; err != nil {
-		utils.Warn("清理机场 %d 的排序记录失败: %v", airportID, err)
+		utils.Warn("Failed to clear sort records for airport %d: %v", airportID, err)
 	}
 }
 
@@ -286,6 +286,6 @@ func CleanupGroupSortRecords(groupName string) {
 		groupAirportSortCache.Delete(entry.ID)
 	}
 	if err := database.DB.Where("group_name = ?", groupName).Delete(&GroupAirportSort{}).Error; err != nil {
-		utils.Warn("清理分组 %s 的排序记录失败: %v", groupName, err)
+		utils.Warn("Failed to clear sort records for group %s: %v", groupName, err)
 	}
 }

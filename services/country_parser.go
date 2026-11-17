@@ -60,7 +60,7 @@ func (s *CountryParserService) parseCountry(nodeName string) string {
 	// 按优先级顺序匹配规则
 	for _, rule := range rules {
 		if rule.MatchesNodeName(nodeName) {
-			utils.Debug("节点【%s】匹配规则【%s】，国家代码: %s", nodeName, rule.CountryName, rule.CountryCode)
+			utils.Debug("Node [%s] matched rule [%s], country code: %s", nodeName, rule.CountryName, rule.CountryCode)
 			return rule.CountryCode
 		}
 	}
@@ -84,7 +84,7 @@ func (s *CountryParserService) loadRules() {
 	s.cacheInitialized = true
 	s.rulesCacheMu.Unlock()
 
-	utils.Info("国家解析服务: 成功加载 %d 条启用的规则", len(rules))
+	utils.Info("Country parser: loaded %d enabled rules", len(rules))
 }
 
 // ReloadRules 重新加载规则（用于规则更新后刷新缓存）
@@ -121,7 +121,7 @@ func ApplyCountryAutoFillToNode(node *models.Node, autoFill bool, backfill bool)
 	if autoFill && node.LinkCountry == "" {
 		if country := models.ParseCountryFromNodeName(node.LinkName); country != "" {
 			node.LinkCountry = country
-			utils.Debug("🌍 节点【%s】自动填充国家: %s", node.LinkName, country)
+			utils.Debug("🌍 Auto-filled country for node [%s]: %s", node.LinkName, country)
 			return true
 		}
 	}
@@ -130,7 +130,7 @@ func ApplyCountryAutoFillToNode(node *models.Node, autoFill bool, backfill bool)
 	if backfill && node.ID > 0 && node.LinkCountry == "" {
 		if country := models.ParseCountryFromNodeName(node.LinkName); country != "" {
 			node.LinkCountry = country
-			utils.Debug("🌍 节点【%s】回填国家: %s", node.LinkName, country)
+			utils.Debug("🌍 Backfilled country for node [%s]: %s", node.LinkName, country)
 			return true
 		}
 	}
@@ -159,7 +159,7 @@ func BatchApplyCountryAutoFill(nodes *[]models.Node, autoFill bool, backfill boo
 	}
 
 	if filledCount > 0 {
-		utils.Info("批量国家填充完成: %d/%d 个节点", filledCount, len(*nodes))
+		utils.Info("Batch country fill completed: %d/%d nodes", filledCount, len(*nodes))
 	}
 
 	return filledCount

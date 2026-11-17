@@ -12,19 +12,19 @@ func init() {
 	base := newProtocolSpec("snell", []string{"snell://"}, "Snell", "#00897b", "S", Snell{}, "Name", DecodeSnellURL, EncodeSnellURL, func(s Snell) LinkIdentity {
 		return buildIdentity("snell", s.Name, s.Server, utils.GetPortString(s.Port))
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
 		FieldMeta{Name: "Psk", Label: "PSK", Type: "string", Group: "auth", Secret: true},
-		FieldMeta{Name: "Version", Label: "版本", Type: "int", Group: "basic", Options: []string{"1", "2", "3"}},
+		FieldMeta{Name: "Version", Label: "Version", Type: "int", Group: "basic", Options: []string{"1", "2", "3"}},
 		FieldMeta{Name: "UDP", Label: "UDP", Type: "bool", Group: "transport", Advanced: true},
-		FieldMeta{Name: "ObfsMode", Label: "混淆模式", Type: "string", Group: "transport", Advanced: true, Options: []string{"", "http", "tls"}},
-		FieldMeta{Name: "ObfsHost", Label: "混淆 Host", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "ObfsMode", Label: "Obfuscation mode", Type: "string", Group: "transport", Advanced: true, Options: []string{"", "http", "tls"}},
+		FieldMeta{Name: "ObfsHost", Label: "Obfuscation host", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Tfo", Label: "TCP Fast Open", Type: "bool", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Mptcp", Label: "MPTCP", Type: "bool", Group: "transport", Advanced: true},
-		FieldMeta{Name: "InterfaceName", Label: "绑定网卡", Type: "string", Group: "transport", Advanced: true},
-		FieldMeta{Name: "RoutingMark", Label: "路由标记", Type: "int", Group: "transport", Advanced: true},
-		FieldMeta{Name: "IPVersion", Label: "IP 版本", Type: "string", Group: "transport", Advanced: true, Options: []string{"", "dual", "ipv4", "ipv6", "ipv4-prefer", "ipv6-prefer"}},
+		FieldMeta{Name: "InterfaceName", Label: "Bind interface", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "RoutingMark", Label: "Routing mark", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "IPVersion", Label: "IP version", Type: "string", Group: "transport", Advanced: true, Options: []string{"", "dual", "ipv4", "ipv6", "ipv4-prefer", "ipv6-prefer"}},
 	).WithClientSupport(ClientClash, ClientMihomo, ClientSurge)
 	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildSnellProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "snell")
@@ -58,12 +58,12 @@ func DecodeSnellURL(s string) (Snell, error) {
 		return Snell{}, fmt.Errorf("url parse error: %v", err)
 	}
 	if strings.ToLower(u.Scheme) != "snell" {
-		return Snell{}, fmt.Errorf("非snell协议: %s", s)
+		return Snell{}, fmt.Errorf("not a snell link: %s", s)
 	}
 
 	server := u.Hostname()
 	if server == "" {
-		return Snell{}, fmt.Errorf("缺少服务器地址: %s", s)
+		return Snell{}, fmt.Errorf("missing server address: %s", s)
 	}
 
 	rawPort := u.Port()
@@ -71,7 +71,7 @@ func DecodeSnellURL(s string) (Snell, error) {
 	if rawPort != "" {
 		port, err = strconv.Atoi(rawPort)
 		if err != nil {
-			return Snell{}, fmt.Errorf("Snell port conversion failed: %w", err)
+			return Snell{}, fmt.Errorf("snell port conversion failed: %w", err)
 		}
 	}
 

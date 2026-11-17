@@ -23,7 +23,7 @@ func GetProtocolUIMeta(c *gin.Context) {
 func ParseNodeLinkAPI(c *gin.Context) {
 	link := c.Query("link")
 	if link == "" {
-		utils.FailWithMsg(c, "链接不能为空")
+		utils.FailWithMsg(c, "Link is required")
 		return
 	}
 
@@ -47,12 +47,12 @@ type UpdateNodeRawRequest struct {
 func UpdateNodeRawInfo(c *gin.Context) {
 	var req UpdateNodeRawRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误")
+		utils.FailWithMsg(c, "Invalid request parameters")
 		return
 	}
 
 	if req.NodeID <= 0 {
-		utils.FailWithMsg(c, "节点ID无效")
+		utils.FailWithMsg(c, "Invalid node ID")
 		return
 	}
 
@@ -60,14 +60,14 @@ func UpdateNodeRawInfo(c *gin.Context) {
 	var node models.Node
 	node.ID = req.NodeID
 	if err := node.GetByID(); err != nil {
-		utils.FailWithMsg(c, "节点不存在")
+		utils.FailWithMsg(c, "Node not found")
 		return
 	}
 
 	// 将字段转为 JSON
 	fieldsJSON, err := json.Marshal(req.Fields)
 	if err != nil {
-		utils.FailWithMsg(c, "字段序列化失败")
+		utils.FailWithMsg(c, "Failed to serialize fields")
 		return
 	}
 
@@ -80,18 +80,18 @@ func UpdateNodeRawInfo(c *gin.Context) {
 
 	conflictNode, conflict, err := models.FindNodeLinkConflict(newLink, req.NodeID)
 	if err != nil {
-		utils.FailWithMsg(c, "检查节点冲突失败")
+		utils.FailWithMsg(c, "Failed to check node conflicts")
 		return
 	}
 	if conflict {
-		utils.FailWithMsg(c, "已存在相同连接的节点: "+conflictNode.Name)
+		utils.FailWithMsg(c, "A node with the same connection already exists: "+conflictNode.Name)
 		return
 	}
 
 	// 解析新链接以获取可能更新的名称
 	newInfo, err := protocol.ParseNodeLink(newLink)
 	if err != nil {
-		utils.FailWithMsg(c, "解析新链接失败")
+		utils.FailWithMsg(c, "Failed to parse the new link")
 		return
 	}
 
@@ -112,10 +112,10 @@ func UpdateNodeRawInfo(c *gin.Context) {
 
 	if err := models.UpdateNodeFields(req.NodeID, updates); err != nil {
 		if errors.Is(err, models.ErrNodeNameExists) {
-			utils.FailWithMsg(c, "节点备注名称已存在，请换一个备注")
+			utils.FailWithMsg(c, "This node remark already exists; choose another one")
 			return
 		}
-		utils.FailWithMsg(c, "更新数据库失败")
+		utils.FailWithMsg(c, "Failed to update the database")
 		return
 	}
 
@@ -141,13 +141,13 @@ func UpdateNodeRawInfo(c *gin.Context) {
 func GetNodeRawInfo(c *gin.Context) {
 	idStr := c.Query("id")
 	if idStr == "" {
-		utils.FailWithMsg(c, "节点ID不能为空")
+		utils.FailWithMsg(c, "Node ID is required")
 		return
 	}
 
 	nodeID, err := strconv.Atoi(idStr)
 	if err != nil {
-		utils.FailWithMsg(c, "节点ID格式错误")
+		utils.FailWithMsg(c, "Invalid node ID format")
 		return
 	}
 
@@ -155,7 +155,7 @@ func GetNodeRawInfo(c *gin.Context) {
 	var node models.Node
 	node.ID = nodeID
 	if err := node.GetByID(); err != nil {
-		utils.FailWithMsg(c, "节点不存在")
+		utils.FailWithMsg(c, "Node not found")
 		return
 	}
 

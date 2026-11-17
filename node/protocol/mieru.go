@@ -16,15 +16,15 @@ func init() {
 		}
 		return buildIdentity("mieru", m.Name, m.Server, port)
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
-		FieldMeta{Name: "PortRange", Label: "端口范围", Type: "string", Group: "basic", Placeholder: "2090-2099", Advanced: true},
-		FieldMeta{Name: "Transport", Label: "传输协议", Type: "string", Group: "transport", Options: []string{"TCP", "UDP"}},
-		FieldMeta{Name: "Username", Label: "用户名", Type: "string", Group: "auth"},
-		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true},
-		FieldMeta{Name: "Multiplexing", Label: "多路复用", Type: "string", Group: "transport", Options: []string{"MULTIPLEXING_OFF", "MULTIPLEXING_LOW", "MULTIPLEXING_MIDDLE", "MULTIPLEXING_HIGH"}, Advanced: true},
-		FieldMeta{Name: "TrafficPattern", Label: "流量模式", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
+		FieldMeta{Name: "PortRange", Label: "Port range", Type: "string", Group: "basic", Placeholder: "2090-2099", Advanced: true},
+		FieldMeta{Name: "Transport", Label: "Transport protocol", Type: "string", Group: "transport", Options: []string{"TCP", "UDP"}},
+		FieldMeta{Name: "Username", Label: "Username", Type: "string", Group: "auth"},
+		FieldMeta{Name: "Password", Label: "Password", Type: "string", Group: "auth", Secret: true},
+		FieldMeta{Name: "Multiplexing", Label: "Multiplexing", Type: "string", Group: "transport", Options: []string{"MULTIPLEXING_OFF", "MULTIPLEXING_LOW", "MULTIPLEXING_MIDDLE", "MULTIPLEXING_HIGH"}, Advanced: true},
+		FieldMeta{Name: "TrafficPattern", Label: "Traffic mode", Type: "string", Group: "transport", Advanced: true},
 	).WithClientSupport(ClientClash, ClientMihomo).WithClientSupportAliases("mierus://")
 	MustRegisterProtocol(newProxyProtocolSpec(base, func(link Urls, _ OutputConfig) (Proxy, error) {
 		return buildMieruProxy(link)
@@ -54,12 +54,12 @@ func DecodeMieruURL(s string) (Mieru, error) {
 		return Mieru{}, fmt.Errorf("url parse error: %v", err)
 	}
 	if strings.ToLower(u.Scheme) != "mieru" {
-		return Mieru{}, fmt.Errorf("非mieru协议: %s", s)
+		return Mieru{}, fmt.Errorf("not a mieru link: %s", s)
 	}
 
 	server := u.Hostname()
 	if server == "" {
-		return Mieru{}, fmt.Errorf("缺少服务器地址: %s", s)
+		return Mieru{}, fmt.Errorf("missing server address: %s", s)
 	}
 
 	query := u.Query()
@@ -73,14 +73,14 @@ func DecodeMieruURL(s string) (Mieru, error) {
 	if rawPort != "" {
 		port, err = strconv.Atoi(rawPort)
 		if err != nil {
-			return Mieru{}, fmt.Errorf("Mieru port conversion failed: %w", err)
+			return Mieru{}, fmt.Errorf("mieru port conversion failed: %w", err)
 		}
 	}
 	if portRange != "" {
 		port = 0
 	}
 	if port == 0 && portRange == "" {
-		return Mieru{}, fmt.Errorf("缺少端口或端口范围: %s", s)
+		return Mieru{}, fmt.Errorf("missing port or port range: %s", s)
 	}
 
 	password, _ := u.User.Password()

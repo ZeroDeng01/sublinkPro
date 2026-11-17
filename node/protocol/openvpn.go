@@ -14,41 +14,41 @@ func init() {
 	base := newProtocolSpec("openvpn", []string{"openvpn://"}, "OpenVPN", "#ea7e20", "O", OpenVPN{}, "Name", DecodeOpenVPNURL, EncodeOpenVPNURL, func(o OpenVPN) LinkIdentity {
 		return buildIdentity("openvpn", o.Name, o.Server, strconv.Itoa(o.Port))
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
-		FieldMeta{Name: "Proto", Label: "传输协议", Type: "string", Group: "transport", Options: []string{"udp", "tcp"}},
-		FieldMeta{Name: "Dev", Label: "设备类型", Type: "string", Group: "transport", Options: []string{"tun"}, Advanced: true},
-		FieldMeta{Name: "Cipher", Label: "加密算法", Type: "string", Group: "transport"},
-		FieldMeta{Name: "DataCiphers", Label: "数据通道加密算法", Type: "string", Group: "transport", Advanced: true},
-		FieldMeta{Name: "DataCipherFallback", Label: "回退加密算法", Type: "string", Group: "transport", Advanced: true},
-		FieldMeta{Name: "Auth", Label: "认证摘要算法", Type: "string", Group: "auth"},
-		FieldMeta{Name: "CompLZO", Label: "LZO 压缩", Type: "string", Group: "transport", Advanced: true},
-		FieldMeta{Name: "Username", Label: "用户名", Type: "string", Group: "auth"},
-		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true},
-		FieldMeta{Name: "CA", Label: "CA 证书", Type: "string", Group: "tls", Multiline: true},
-		FieldMeta{Name: "Cert", Label: "客户端证书", Type: "string", Group: "tls", Multiline: true},
-		FieldMeta{Name: "Key", Label: "客户端私钥", Type: "string", Group: "tls", Secret: true, Multiline: true},
-		FieldMeta{Name: "TLSAuth", Label: "TLS Auth 密钥", Type: "string", Group: "tls", Secret: true, Multiline: true, Advanced: true},
-		FieldMeta{Name: "KeyDirection", Label: "密钥方向", Type: "string", Group: "tls", Options: []string{"0", "1"}, Advanced: true},
-		FieldMeta{Name: "TLSCrypt", Label: "TLS Crypt 密钥", Type: "string", Group: "tls", Secret: true, Multiline: true, Advanced: true},
-		FieldMeta{Name: "TLSCryptV2", Label: "TLS Crypt V2 密钥", Type: "string", Group: "tls", Secret: true, Multiline: true, Advanced: true},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
+		FieldMeta{Name: "Proto", Label: "Transport protocol", Type: "string", Group: "transport", Options: []string{"udp", "tcp"}},
+		FieldMeta{Name: "Dev", Label: "Device type", Type: "string", Group: "transport", Options: []string{"tun"}, Advanced: true},
+		FieldMeta{Name: "Cipher", Label: "Cipher", Type: "string", Group: "transport"},
+		FieldMeta{Name: "DataCiphers", Label: "Data channel cipher", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "DataCipherFallback", Label: "Fallback cipher", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Auth", Label: "Auth digest", Type: "string", Group: "auth"},
+		FieldMeta{Name: "CompLZO", Label: "LZO compression", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Username", Label: "Username", Type: "string", Group: "auth"},
+		FieldMeta{Name: "Password", Label: "Password", Type: "string", Group: "auth", Secret: true},
+		FieldMeta{Name: "CA", Label: "CA certificate", Type: "string", Group: "tls", Multiline: true},
+		FieldMeta{Name: "Cert", Label: "Client certificate", Type: "string", Group: "tls", Multiline: true},
+		FieldMeta{Name: "Key", Label: "Client private key", Type: "string", Group: "tls", Secret: true, Multiline: true},
+		FieldMeta{Name: "TLSAuth", Label: "TLS auth key", Type: "string", Group: "tls", Secret: true, Multiline: true, Advanced: true},
+		FieldMeta{Name: "KeyDirection", Label: "Key direction", Type: "string", Group: "tls", Options: []string{"0", "1"}, Advanced: true},
+		FieldMeta{Name: "TLSCrypt", Label: "TLS crypt key", Type: "string", Group: "tls", Secret: true, Multiline: true, Advanced: true},
+		FieldMeta{Name: "TLSCryptV2", Label: "TLS crypt v2 key", Type: "string", Group: "tls", Secret: true, Multiline: true, Advanced: true},
 		FieldMeta{Name: "PeerInfo", Label: "Peer Info", Type: "string", Group: "advanced", Advanced: true},
-		FieldMeta{Name: "Ping", Label: "Ping 间隔", Type: "int", Group: "advanced", Advanced: true},
-		FieldMeta{Name: "PingRestart", Label: "Ping 重连超时", Type: "int", Group: "advanced", Advanced: true},
-		FieldMeta{Name: "TranWindow", Label: "密钥转换窗口", Type: "int", Group: "advanced", Advanced: true},
-		FieldMeta{Name: "HandshakeTimeout", Label: "握手超时", Type: "int", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "Ping", Label: "Ping interval", Type: "int", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "PingRestart", Label: "Ping restart timeout", Type: "int", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "TranWindow", Label: "Key renegotiation window", Type: "int", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "HandshakeTimeout", Label: "Handshake timeout", Type: "int", Group: "advanced", Advanced: true},
 		FieldMeta{Name: "MTU", Label: "MTU", Type: "int", Group: "transport", Advanced: true},
-		FieldMeta{Name: "UDP", Label: "允许 UDP", Type: "bool", Group: "transport"},
+		FieldMeta{Name: "UDP", Label: "Allow UDP", Type: "bool", Group: "transport"},
 		FieldMeta{Name: "IPStack", Label: "IP Stack", Type: "string", Group: "advanced", Advanced: true},
-		FieldMeta{Name: "RemoteDNSResolve", Label: "远端 DNS 解析", Type: "bool", Group: "advanced", Advanced: true},
-		FieldMeta{Name: "DNS", Label: "DNS 服务器", Type: "string", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "RemoteDNSResolve", Label: "Remote DNS resolution", Type: "bool", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "DNS", Label: "DNS server", Type: "string", Group: "advanced", Advanced: true},
 		FieldMeta{Name: "TFO", Label: "TCP Fast Open", Type: "bool", Group: "advanced", Advanced: true},
 		FieldMeta{Name: "MPTCP", Label: "MPTCP", Type: "bool", Group: "advanced", Advanced: true},
-		FieldMeta{Name: "InterfaceName", Label: "本地网卡", Type: "string", Group: "advanced", Advanced: true},
-		FieldMeta{Name: "RoutingMark", Label: "路由标记", Type: "int", Group: "advanced", Advanced: true},
-		FieldMeta{Name: "IPVersion", Label: "IP 版本偏好", Type: "string", Group: "advanced", Advanced: true},
-		FieldMeta{Name: "DialerProxy", Label: "前置代理", Type: "string", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "InterfaceName", Label: "Local interface", Type: "string", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "RoutingMark", Label: "Routing mark", Type: "int", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "IPVersion", Label: "IP version preference", Type: "string", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "DialerProxy", Label: "Dialer proxy", Type: "string", Group: "advanced", Advanced: true},
 	).WithClientSupport(ClientClash, ClientMihomo)
 
 	MustRegisterProtocol(newProxyProtocolSpec(base, func(link Urls, _ OutputConfig) (Proxy, error) {
@@ -102,22 +102,22 @@ type OpenVPN struct {
 func DecodeOpenVPNURL(s string) (OpenVPN, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return OpenVPN{}, fmt.Errorf("OpenVPN URL 解析失败: %w", err)
+		return OpenVPN{}, fmt.Errorf("failed to parse OpenVPN URL: %w", err)
 	}
 	if strings.ToLower(u.Scheme) != "openvpn" {
-		return OpenVPN{}, fmt.Errorf("非OpenVPN协议")
+		return OpenVPN{}, fmt.Errorf("not an OpenVPN link")
 	}
 
 	server := u.Hostname()
 	if server == "" {
-		return OpenVPN{}, fmt.Errorf("OpenVPN 缺少服务器地址")
+		return OpenVPN{}, fmt.Errorf("openVPN server address is missing")
 	}
 
 	port := defaultOpenVPNPort
 	if rawPort := u.Port(); rawPort != "" {
 		port, err = strconv.Atoi(rawPort)
 		if err != nil || port <= 0 || port > 65535 {
-			return OpenVPN{}, fmt.Errorf("OpenVPN 端口无效: %q", rawPort)
+			return OpenVPN{}, fmt.Errorf("invalid OpenVPN port: %q", rawPort)
 		}
 	}
 
@@ -125,13 +125,13 @@ func DecodeOpenVPNURL(s string) (OpenVPN, error) {
 	peerInfo := map[string]string(nil)
 	if raw := q.Get("peer-info"); raw != "" {
 		if err := json.Unmarshal([]byte(raw), &peerInfo); err != nil {
-			return OpenVPN{}, fmt.Errorf("OpenVPN peer-info 解析失败: %w", err)
+			return OpenVPN{}, fmt.Errorf("failed to parse OpenVPN peer-info: %w", err)
 		}
 	}
 	ipStack := map[string]any(nil)
 	if raw := q.Get("ip-stack"); raw != "" {
 		if err := json.Unmarshal([]byte(raw), &ipStack); err != nil {
-			return OpenVPN{}, fmt.Errorf("OpenVPN ip-stack 解析失败: %w", err)
+			return OpenVPN{}, fmt.Errorf("failed to parse OpenVPN ip-stack: %w", err)
 		}
 	}
 
@@ -410,7 +410,7 @@ func openVPNQueryInt(q url.Values, key string) (int, error) {
 	}
 	value, err := strconv.Atoi(raw)
 	if err != nil {
-		return 0, fmt.Errorf("OpenVPN %s 参数无效: %w", key, err)
+		return 0, fmt.Errorf("invalid OpenVPN %s parameter: %w", key, err)
 	}
 	return value, nil
 }
@@ -433,7 +433,7 @@ func openVPNQueryBool(q url.Values, key string) (bool, error) {
 	}
 	value, err := strconv.ParseBool(raw)
 	if err != nil {
-		return false, fmt.Errorf("OpenVPN %s 参数无效: %w", key, err)
+		return false, fmt.Errorf("invalid OpenVPN %s parameter: %w", key, err)
 	}
 	return value, nil
 }

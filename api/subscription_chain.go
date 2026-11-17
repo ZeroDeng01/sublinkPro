@@ -22,16 +22,16 @@ func GetChainRules(c *gin.Context) {
 	subIDStr := c.Param("id")
 	subID, err := strconv.Atoi(subIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的订阅ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid subscription ID"})
 		return
 	}
 
 	rules := models.GetChainRulesBySubscriptionID(subID)
 
 	// 调试日志：记录返回的规则
-	utils.Debug("[ChainRule] 获取订阅 %d 的规则，共 %d 条", subID, len(rules))
+	utils.Debug("[ChainRule] Loaded %d rules for subscription %d", subID, len(rules))
 	for _, r := range rules {
-		utils.Debug("[ChainRule] 规则 ID=%d, Name=%s, ChainConfig=%s", r.ID, r.Name, r.ChainConfig)
+		utils.Debug("[ChainRule] Rule ID=%d, Name=%s, ChainConfig=%s", r.ID, r.Name, r.ChainConfig)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": rules})
@@ -42,13 +42,13 @@ func CreateChainRule(c *gin.Context) {
 	subIDStr := c.Param("id")
 	subID, err := strconv.Atoi(subIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的订阅ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid subscription ID"})
 		return
 	}
 
 	var rule models.SubscriptionChainRule
 	if err := c.ShouldBindJSON(&rule); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求数据格式错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload: " + err.Error()})
 		return
 	}
 
@@ -59,7 +59,7 @@ func CreateChainRule(c *gin.Context) {
 	rule.Sort = len(existingRules)
 
 	if err := rule.Add(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建规则失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create rule: " + err.Error()})
 		return
 	}
 
@@ -71,34 +71,34 @@ func UpdateChainRule(c *gin.Context) {
 	subIDStr := c.Param("id")
 	subID, err := strconv.Atoi(subIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的订阅ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid subscription ID"})
 		return
 	}
 
 	ruleIDStr := c.Param("ruleId")
 	ruleID, err := strconv.Atoi(ruleIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的规则ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid rule ID"})
 		return
 	}
 
 	// 获取现有规则
 	var existingRule models.SubscriptionChainRule
 	if err := existingRule.GetByID(ruleID); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "规则不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Rule not found"})
 		return
 	}
 
 	// 验证规则属于该订阅
 	if existingRule.SubscriptionID != subID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此规则"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not allowed to operate this rule"})
 		return
 	}
 
 	// 绑定更新数据
 	var updateData models.SubscriptionChainRule
 	if err := c.ShouldBindJSON(&updateData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求数据格式错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload: " + err.Error()})
 		return
 	}
 
@@ -109,16 +109,16 @@ func UpdateChainRule(c *gin.Context) {
 	existingRule.TargetConfig = updateData.TargetConfig
 
 	// 调试日志：记录更新的数据
-	utils.Debug("[ChainRule] 更新规则 ID=%d, 名称=%s", existingRule.ID, existingRule.Name)
+	utils.Debug("[ChainRule] Updating rule ID=%d, name=%s", existingRule.ID, existingRule.Name)
 	utils.Debug("[ChainRule] ChainConfig: %s", existingRule.ChainConfig)
 	utils.Debug("[ChainRule] TargetConfig: %s", existingRule.TargetConfig)
 
 	if err := existingRule.Update(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新规则失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update rule: " + err.Error()})
 		return
 	}
 
-	utils.Debug("[ChainRule] 规则更新成功，返回数据: ID=%d", existingRule.ID)
+	utils.Debug("[ChainRule] Rule updated; returning ID=%d", existingRule.ID)
 	c.JSON(http.StatusOK, gin.H{"data": existingRule})
 }
 
@@ -127,36 +127,36 @@ func DeleteChainRule(c *gin.Context) {
 	subIDStr := c.Param("id")
 	subID, err := strconv.Atoi(subIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的订阅ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid subscription ID"})
 		return
 	}
 
 	ruleIDStr := c.Param("ruleId")
 	ruleID, err := strconv.Atoi(ruleIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的规则ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid rule ID"})
 		return
 	}
 
 	// 获取现有规则
 	var existingRule models.SubscriptionChainRule
 	if err := existingRule.GetByID(ruleID); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "规则不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Rule not found"})
 		return
 	}
 
 	// 验证规则属于该订阅
 	if existingRule.SubscriptionID != subID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此规则"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not allowed to operate this rule"})
 		return
 	}
 
 	if err := existingRule.Delete(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除规则失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete rule: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	c.JSON(http.StatusOK, gin.H{"message": "Deleted successfully"})
 }
 
 // SortChainRules 批量排序链式代理规则
@@ -164,7 +164,7 @@ func SortChainRules(c *gin.Context) {
 	subIDStr := c.Param("id")
 	subID, err := strconv.Atoi(subIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的订阅ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid subscription ID"})
 		return
 	}
 
@@ -172,7 +172,7 @@ func SortChainRules(c *gin.Context) {
 		RuleIDs []int `json:"ruleIds"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求数据格式错误: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload: " + err.Error()})
 		return
 	}
 
@@ -180,21 +180,21 @@ func SortChainRules(c *gin.Context) {
 	for _, ruleID := range req.RuleIDs {
 		var rule models.SubscriptionChainRule
 		if err := rule.GetByID(ruleID); err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "规则不存在: " + strconv.Itoa(ruleID)})
+			c.JSON(http.StatusNotFound, gin.H{"error": "Rule not found: " + strconv.Itoa(ruleID)})
 			return
 		}
 		if rule.SubscriptionID != subID {
-			c.JSON(http.StatusForbidden, gin.H{"error": "无权操作规则: " + strconv.Itoa(ruleID)})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Not allowed to operate rule: " + strconv.Itoa(ruleID)})
 			return
 		}
 	}
 
 	if err := models.UpdateChainRulesSort(req.RuleIDs); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "排序失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Sorting failed: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "排序成功"})
+	c.JSON(http.StatusOK, gin.H{"message": "Sort order saved"})
 }
 
 // GetChainOptions 获取链式代理可用选项
@@ -203,7 +203,7 @@ func GetChainOptions(c *gin.Context) {
 	subIDStr := c.Param("id")
 	subID, err := strconv.Atoi(subIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的订阅ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid subscription ID"})
 		return
 	}
 
@@ -211,13 +211,13 @@ func GetChainOptions(c *gin.Context) {
 	var sub models.Subcription
 	sub.ID = subID
 	if err := sub.Find(); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "订阅不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Subscription not found"})
 		return
 	}
 
 	// 获取订阅关联的节点
 	if err := sub.GetSub("none"); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取订阅节点失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch subscription nodes: " + err.Error()})
 		return
 	}
 
@@ -250,23 +250,23 @@ func GetChainOptions(c *gin.Context) {
 
 	// 条件操作符列表
 	operators := []map[string]string{
-		{"value": "equals", "label": "等于"},
-		{"value": "not_equals", "label": "不等于"},
-		{"value": "contains", "label": "包含"},
-		{"value": "not_contains", "label": "不包含"},
-		{"value": "regex", "label": "正则匹配"},
-		{"value": "greater_than", "label": "大于"},
-		{"value": "less_than", "label": "小于"},
-		{"value": "greater_or_equal", "label": "大于等于"},
-		{"value": "less_or_equal", "label": "小于等于"},
+		{"value": "equals", "label": "Equals"},
+		{"value": "not_equals", "label": "Not equals"},
+		{"value": "contains", "label": "Contains"},
+		{"value": "not_contains", "label": "Does not contain"},
+		{"value": "regex", "label": "Matches regex"},
+		{"value": "greater_than", "label": "Greater than"},
+		{"value": "less_than", "label": "Less than"},
+		{"value": "greater_or_equal", "label": "Greater than or equal"},
+		{"value": "less_or_equal", "label": "Less than or equal"},
 	}
 
 	// 代理组类型
 	groupTypes := []map[string]string{
-		{"value": "select", "label": "手动选择 (select)"},
-		{"value": "url-test", "label": "自动测速 (url-test)"},
-		{"value": "fallback", "label": "故障转移 (fallback)"},
-		{"value": "load-balance", "label": "负载均衡 (load-balance)"},
+		{"value": "select", "label": "Manual select (select)"},
+		{"value": "url-test", "label": "Auto speed test (url-test)"},
+		{"value": "fallback", "label": "Fallback (fallback)"},
+		{"value": "load-balance", "label": "Load balance (load-balance)"},
 	}
 
 	// 从订阅配置中读取模板代理组列表
@@ -288,27 +288,27 @@ func ToggleChainRule(c *gin.Context) {
 	subIDStr := c.Param("id")
 	subID, err := strconv.Atoi(subIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的订阅ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid subscription ID"})
 		return
 	}
 
 	ruleIDStr := c.Param("ruleId")
 	ruleID, err := strconv.Atoi(ruleIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的规则ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid rule ID"})
 		return
 	}
 
 	// 获取现有规则
 	var existingRule models.SubscriptionChainRule
 	if err := existingRule.GetByID(ruleID); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "规则不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Rule not found"})
 		return
 	}
 
 	// 验证规则属于该订阅
 	if existingRule.SubscriptionID != subID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此规则"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not allowed to operate this rule"})
 		return
 	}
 
@@ -316,7 +316,7 @@ func ToggleChainRule(c *gin.Context) {
 	existingRule.Enabled = !existingRule.Enabled
 
 	if err := existingRule.Update(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新规则失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update rule: " + err.Error()})
 		return
 	}
 
@@ -472,7 +472,7 @@ func PreviewChainLinks(c *gin.Context) {
 	subIDStr := c.Param("id")
 	subID, err := strconv.Atoi(subIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的订阅ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid subscription ID"})
 		return
 	}
 
@@ -480,12 +480,12 @@ func PreviewChainLinks(c *gin.Context) {
 	var sub models.Subcription
 	sub.ID = subID
 	if err := sub.Find(); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "订阅不存在"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Subscription not found"})
 		return
 	}
 
 	if err := sub.GetSub("none"); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取订阅节点失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch subscription nodes: " + err.Error()})
 		return
 	}
 
@@ -618,9 +618,9 @@ func buildRulePreviewData(rule models.SubscriptionChainRule, nodes []models.Node
 			}
 			previewItem.Nodes = matchedNodes
 			if len(matchedNodes) > 0 {
-				previewItem.Name = matchedNodes[0].Name + " (动态)"
+				previewItem.Name = matchedNodes[0].Name + " (dynamic)"
 			} else {
-				previewItem.Name = "(无匹配节点)"
+				previewItem.Name = "(no matching nodes)"
 			}
 
 		case "specified_node":
@@ -630,7 +630,7 @@ func buildRulePreviewData(rule models.SubscriptionChainRule, nodes []models.Node
 					previewItem.Nodes = []ChainLinkPreviewNode{buildChainLinkPreviewNode(node)}
 				}
 			} else {
-				previewItem.Name = "(节点不存在)"
+				previewItem.Name = "(node not found)"
 			}
 		}
 
@@ -641,17 +641,17 @@ func buildRulePreviewData(rule models.SubscriptionChainRule, nodes []models.Node
 	// 解析目标配置
 	targetConfig, _ := rule.ParseTargetConfig()
 	data.TargetType = "all"
-	data.TargetInfo = "所有节点"
+	data.TargetInfo = "All nodes"
 	if targetConfig != nil {
 		data.TargetType = targetConfig.Type
 		switch targetConfig.Type {
 		case "all":
-			data.TargetInfo = "所有节点"
+			data.TargetInfo = "All nodes"
 			for _, node := range nodes {
 				data.TargetNodes = append(data.TargetNodes, buildChainLinkPreviewNode(node))
 			}
 		case "conditions":
-			data.TargetInfo = "符合条件的节点"
+			data.TargetInfo = "Matching nodes"
 			if targetConfig.Conditions != nil {
 				for _, node := range nodes {
 					if targetConfig.Conditions.EvaluateNode(node) {
@@ -666,7 +666,7 @@ func buildRulePreviewData(rule models.SubscriptionChainRule, nodes []models.Node
 					data.TargetNodes = []ChainLinkPreviewNode{buildChainLinkPreviewNode(node)}
 				}
 			} else {
-				data.TargetInfo = "(节点不存在)"
+				data.TargetInfo = "(node not found)"
 			}
 		}
 	}
@@ -704,7 +704,7 @@ func buildNodeMatchSummary(nodes []models.Node, rules []models.SubscriptionChain
 						if firstItem.NodeConditions != nil {
 							for _, n := range nodes {
 								if firstItem.NodeConditions.EvaluateNode(n) {
-									ms.EntryProxy = n.EffectiveName() + " (动态)"
+									ms.EntryProxy = n.EffectiveName() + " (dynamic)"
 									break
 								}
 							}

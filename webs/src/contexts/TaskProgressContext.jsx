@@ -310,7 +310,7 @@ TaskProgressProvider.propTypes = { children: PropTypes.node };
 export function useTaskProgress() {
   const context = useContext(TaskProgressContext);
   if (!context) {
-    throw new Error('useTaskProgress 必须在 TaskProgressProvider 内部使用');
+    throw new Error('useTaskProgress must be used within a TaskProgressProvider');
   }
   return context;
 }

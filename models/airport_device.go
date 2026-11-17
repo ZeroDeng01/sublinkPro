@@ -113,7 +113,7 @@ func backfillAirportDevicePresetFields(db *gorm.DB) error {
 
 	var airports []Airport
 	if err := db.Select("ID", "DeviceProfile", "DeviceOS", "OSVersion", "DeviceModel", "AppName").Find(&airports).Error; err != nil {
-		return fmt.Errorf("查询机场设备字段失败: %w", err)
+		return fmt.Errorf("failed to query airport device fields: %w", err)
 	}
 
 	updated := 0
@@ -139,12 +139,12 @@ func backfillAirportDevicePresetFields(db *gorm.DB) error {
 			continue
 		}
 		if err := db.Model(&Airport{}).Where("id = ?", airports[i].ID).Updates(updates).Error; err != nil {
-			return fmt.Errorf("回填机场设备字段失败(id=%d): %w", airports[i].ID, err)
+			return fmt.Errorf("failed to backfill airport device fields (id=%d): %w", airports[i].ID, err)
 		}
 		updated++
 	}
 	if updated > 0 {
-		utils.Info("已为 %d 个机场回填设备伪装字段", updated)
+		utils.Info("Backfilled device masquerade fields for %d airports", updated)
 	}
 	return nil
 }

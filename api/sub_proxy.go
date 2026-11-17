@@ -30,17 +30,17 @@ var relayedSubscriptionHeaders = []string{
 func normalizeProxySourceURL(raw string) (string, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
-		return "", fmt.Errorf("机场订阅地址不能为空")
+		return "", fmt.Errorf("airport subscription URL cannot be empty")
 	}
 	parsed, err := url.Parse(trimmed)
 	if err != nil {
-		return "", fmt.Errorf("机场订阅地址格式有误")
+		return "", fmt.Errorf("invalid airport subscription URL format")
 	}
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return "", fmt.Errorf("机场订阅地址仅支持 http/https")
+		return "", fmt.Errorf("airport subscription URL must use http/https")
 	}
 	if parsed.Host == "" {
-		return "", fmt.Errorf("机场订阅地址缺少主机名")
+		return "", fmt.Errorf("airport subscription URL is missing a host name")
 	}
 	return parsed.String(), nil
 }
@@ -64,22 +64,22 @@ func resolveProxyRelayUserAgent(c *gin.Context, airport *models.Airport) string 
 // 这样面板才能按客户端返回正确格式（Clash YAML、Happ/v2ray JSON 或 Base64 等）。
 func serveProxySubscription(c *gin.Context, sub models.Subcription) {
 	if sub.AirportID <= 0 {
-		utils.Warn("代理订阅【%s】未关联机场", sub.Name)
-		writeProxyRelayError(c, http.StatusBadGateway, "订阅未关联机场")
+		utils.Warn("Proxy subscription [%s] is not linked to an airport", sub.Name)
+		writeProxyRelayError(c, http.StatusBadGateway, "Subscription is not linked to an airport")
 		return
 	}
 
 	airport, err := models.GetAirportByID(sub.AirportID)
 	if err != nil {
-		utils.Warn("代理订阅【%s】关联的机场不存在 ID: %d: %v", sub.Name, sub.AirportID, err)
-		writeProxyRelayError(c, http.StatusBadGateway, "订阅关联的机场不存在")
+		utils.Warn("Proxy subscription [%s] references a missing airport ID: %d: %v", sub.Name, sub.AirportID, err)
+		writeProxyRelayError(c, http.StatusBadGateway, "The airport linked to this subscription does not exist")
 		return
 	}
 
 	sourceURL, err := normalizeProxySourceURL(airport.URL)
 	if err != nil {
-		utils.Warn("代理订阅【%s】机场【%s】订阅地址无效: %v", sub.Name, airport.Name, err)
-		writeProxyRelayError(c, http.StatusBadGateway, "机场订阅地址无效")
+		utils.Warn("Proxy subscription [%s] airport [%s] has an invalid subscription URL: %v", sub.Name, airport.Name, err)
+		writeProxyRelayError(c, http.StatusBadGateway, "Invalid airport subscription URL")
 		return
 	}
 
@@ -93,8 +93,8 @@ func serveProxySubscription(c *gin.Context, sub models.Subcription) {
 		airport.SkipTLSVerify,
 	)
 	if err != nil {
-		utils.Warn("代理订阅【%s】拉取机场【%s】订阅失败: %v", sub.Name, airport.Name, err)
-		writeProxyRelayError(c, http.StatusBadGateway, "拉取上游订阅失败")
+		utils.Warn("Proxy subscription [%s] failed to fetch airport [%s] subscription: %v", sub.Name, airport.Name, err)
+		writeProxyRelayError(c, http.StatusBadGateway, "Failed to fetch upstream subscription")
 		return
 	}
 
@@ -112,7 +112,7 @@ func serveProxySubscription(c *gin.Context, sub models.Subcription) {
 		return
 	}
 	if _, err := c.Writer.Write(raw.Body); err != nil {
-		utils.Warn("代理订阅【%s】写回响应失败: %v", sub.Name, err)
+		utils.Warn("Proxy subscription [%s] failed to write response: %v", sub.Name, err)
 	}
 }
 

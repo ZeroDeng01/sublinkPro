@@ -38,13 +38,13 @@ func (fp *FlexPort) UnmarshalYAML(value *yaml.Node) error {
 		}
 		intVal, err := strconv.Atoi(strVal)
 		if err != nil {
-			return fmt.Errorf("无法将端口 '%s' 转换为整数: %w", strVal, err)
+			return fmt.Errorf("cannot convert port '%s' to integer: %w", strVal, err)
 		}
 		*fp = FlexPort(intVal)
 		return nil
 	}
 
-	return fmt.Errorf("无法解析端口值")
+	return fmt.Errorf("cannot parse port value")
 }
 
 // MarshalYAML 实现 yaml.Marshaler 接口，始终输出为 int
@@ -80,7 +80,7 @@ func (m *Mbps) UnmarshalYAML(value *yaml.Node) error {
 
 	var strVal string
 	if err := value.Decode(&strVal); err != nil {
-		return fmt.Errorf("无法解析带宽值")
+		return fmt.Errorf("cannot parse bandwidth value")
 	}
 	strVal = strings.TrimSpace(strVal)
 	if strVal == "" {
@@ -93,11 +93,11 @@ func (m *Mbps) UnmarshalYAML(value *yaml.Node) error {
 	}
 	matches := bandwidthRatePattern.FindStringSubmatch(strVal)
 	if matches == nil {
-		return fmt.Errorf("无法解析带宽值 %q", strVal)
+		return fmt.Errorf("cannot parse bandwidth value %q", strVal)
 	}
 	base, err := strconv.Atoi(matches[1])
 	if err != nil {
-		return fmt.Errorf("无法将带宽值 %q 转换为整数: %w", strVal, err)
+		return fmt.Errorf("cannot convert bandwidth value %q to integer: %w", strVal, err)
 	}
 	switch strings.ToUpper(matches[2]) {
 	case "", "M":
@@ -110,9 +110,9 @@ func (m *Mbps) UnmarshalYAML(value *yaml.Node) error {
 		*m = Mbps(base * 1000 * 1000)
 		return nil
 	case "K":
-		return fmt.Errorf("带宽值 %q 使用了 Kbps 单位，无法无损转换为 Mbps", strVal)
+		return fmt.Errorf("bandwidth value %q uses Kbps units; lossless conversion to Mbps is not possible", strVal)
 	default:
-		return fmt.Errorf("无法解析带宽值 %q", strVal)
+		return fmt.Errorf("cannot parse bandwidth value %q", strVal)
 	}
 }
 
@@ -391,7 +391,7 @@ func EncodeClash(urls []Urls, config OutputConfig) ([]byte, error) {
 	for _, link := range urls {
 		proxy, err := LinkToProxy(link, config)
 		if err != nil {
-			utils.Error("链接转换失败: %s", err.Error())
+			utils.Error("link conversion failed: %s", err.Error())
 			continue
 		}
 		proxys = append(proxys, proxy)
@@ -556,7 +556,7 @@ func clashTemplateRoot(document *yaml.Node) (*yaml.Node, error) {
 	}
 	mapping := yamlMappingNode(document)
 	if mapping == nil {
-		return nil, fmt.Errorf("clash 模板必须是 YAML 映射")
+		return nil, fmt.Errorf("clash template must be a YAML mapping")
 	}
 	return mapping, nil
 }
@@ -600,7 +600,7 @@ func mergeClashProxyGroup(group *yaml.Node, proxiesNameList []string) {
 	}
 	var fields map[string]any
 	if err := group.Decode(&fields); err != nil {
-		utils.Error("代理组解析失败: %v", err)
+		utils.Error("failed to parse proxy groups: %v", err)
 		return
 	}
 	// include-all、use/filter 等自动匹配组保持模板原意，不补全成员列表，

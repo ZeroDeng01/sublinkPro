@@ -27,14 +27,14 @@ func init() {
 	base := newProtocolSpec("wireguard", []string{"wireguard://", "wg://"}, "WireGuard", "#88171a", "W", WireGuard{}, "Name", DecodeWireGuardURL, EncodeWireGuardURL, func(w WireGuard) LinkIdentity {
 		return buildIdentity("wireguard", w.Name, w.Server, utils.GetPortString(w.Port))
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
-		FieldMeta{Name: "PrivateKey", Label: "私钥", Type: "string", Group: "auth", Secret: true},
-		FieldMeta{Name: "PublicKey", Label: "公钥", Type: "string", Group: "auth", Advanced: true},
-		FieldMeta{Name: "PreSharedKey", Label: "预共享密钥", Type: "string", Group: "auth", Secret: true, Advanced: true},
-		FieldMeta{Name: "IP", Label: "IPv4 地址", Type: "string", Group: "transport", Placeholder: "10.0.0.2/32"},
-		FieldMeta{Name: "IPv6", Label: "IPv6 地址", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
+		FieldMeta{Name: "PrivateKey", Label: "Private key", Type: "string", Group: "auth", Secret: true},
+		FieldMeta{Name: "PublicKey", Label: "Public key", Type: "string", Group: "auth", Advanced: true},
+		FieldMeta{Name: "PreSharedKey", Label: "Preshared key", Type: "string", Group: "auth", Secret: true, Advanced: true},
+		FieldMeta{Name: "IP", Label: "IPv4 address", Type: "string", Group: "transport", Placeholder: "10.0.0.2/32"},
+		FieldMeta{Name: "IPv6", Label: "IPv6 address", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "MTU", Label: "MTU", Type: "int", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Reserved", Label: "Reserved", Type: "string", Group: "advanced", Advanced: true},
 	)
@@ -77,18 +77,18 @@ type WireGuard struct {
 func DecodeWireGuardURL(s string) (WireGuard, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return WireGuard{}, fmt.Errorf("解析失败的URL: %s", s)
+		return WireGuard{}, fmt.Errorf("failed to parse URL: %s", s)
 	}
 
 	scheme := strings.ToLower(u.Scheme)
 	if scheme != "wireguard" && scheme != "wg" {
-		return WireGuard{}, fmt.Errorf("非WireGuard协议: %s", s)
+		return WireGuard{}, fmt.Errorf("not a WireGuard link: %s", s)
 	}
 
 	// 提取私钥（URL 用户部分）
 	privateKey := u.User.Username()
 	if privateKey == "" {
-		return WireGuard{}, fmt.Errorf("缺少私钥: %s", s)
+		return WireGuard{}, fmt.Errorf("missing private key: %s", s)
 	}
 
 	// 服务器和端口
@@ -105,7 +105,7 @@ func DecodeWireGuardURL(s string) (WireGuard, error) {
 		publicKey = u.Query().Get("public-key")
 	}
 	if publicKey == "" {
-		return WireGuard{}, fmt.Errorf("缺少公钥: %s", s)
+		return WireGuard{}, fmt.Errorf("missing public key: %s", s)
 	}
 
 	// 预共享密钥（可选），兼容 presharedkey / pre-shared-key 两种写法
@@ -160,7 +160,7 @@ func DecodeWireGuardURL(s string) (WireGuard, error) {
 	}
 
 	if utils.CheckEnvironment() {
-		fmt.Println("WireGuard解析结果:")
+		fmt.Println("WireGuard parse result:")
 		fmt.Println("  name:", name)
 		fmt.Println("  server:", server)
 		fmt.Println("  port:", port)
@@ -261,7 +261,7 @@ func IsWireGuardConfig(input string) bool {
 // PublicKey = xxx
 func ParseWireGuardConfig(config string) (WireGuard, error) {
 	if !IsWireGuardConfig(config) {
-		return WireGuard{}, fmt.Errorf("不是有效的 WireGuard 配置文件")
+		return WireGuard{}, fmt.Errorf("not a valid WireGuard configuration file")
 	}
 
 	wg := WireGuard{}
@@ -334,13 +334,13 @@ func ParseWireGuardConfig(config string) (WireGuard, error) {
 
 	// 验证必要字段
 	if wg.PrivateKey == "" {
-		return WireGuard{}, fmt.Errorf("配置文件缺少 PrivateKey")
+		return WireGuard{}, fmt.Errorf("configuration file is missing PrivateKey")
 	}
 	if wg.PublicKey == "" {
-		return WireGuard{}, fmt.Errorf("配置文件缺少 PublicKey")
+		return WireGuard{}, fmt.Errorf("configuration file is missing PublicKey")
 	}
 	if wg.Server == "" {
-		return WireGuard{}, fmt.Errorf("配置文件缺少 Endpoint")
+		return WireGuard{}, fmt.Errorf("configuration file is missing Endpoint")
 	}
 
 	// 生成默认名称

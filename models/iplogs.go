@@ -28,14 +28,14 @@ func init() {
 
 // InitSubLogsCache 初始化订阅日志缓存
 func InitSubLogsCache() error {
-	utils.Info("开始加载订阅日志到缓存")
+	utils.Info("Loading subscription logs into cache")
 	var sublogs []SubLogs
 	if err := database.DB.Find(&sublogs).Error; err != nil {
 		return err
 	}
 
 	subLogsCache.LoadAll(sublogs)
-	utils.Info("订阅日志缓存初始化完成，共加载 %d 条记录", subLogsCache.Count())
+	utils.Info("Subscription log cache initialized with %d records", subLogsCache.Count())
 
 	cache.Manager.Register("sublogs", subLogsCache)
 	return nil

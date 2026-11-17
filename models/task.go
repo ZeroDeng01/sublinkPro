@@ -78,7 +78,7 @@ func init() {
 
 // InitTaskCache 初始化任务缓存
 func InitTaskCache() error {
-	utils.Info("开始加载任务到缓存")
+	utils.Info("Loading tasks into cache")
 	var tasks []Task
 	// 只加载最近7天的任务到缓存
 	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
@@ -87,7 +87,7 @@ func InitTaskCache() error {
 	}
 
 	taskCache.LoadAll(tasks)
-	utils.Info("任务缓存初始化完成，共加载 %d 个任务", taskCache.Count())
+	utils.Info("Task cache initialized with %d tasks", taskCache.Count())
 
 	cache.Manager.Register("task", taskCache)
 	return nil
@@ -293,7 +293,7 @@ func MarkRunningTasksAsError() error {
 	}
 
 	now := time.Now()
-	const message = "服务重启，任务被中断"
+	const message = "Service restarted, task interrupted"
 	if err := database.DB.Model(&Task{}).
 		Where("status = ?", TaskStatusRunning).
 		Updates(map[string]any{

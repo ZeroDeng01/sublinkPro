@@ -22,7 +22,7 @@ type Host struct {
 	Hostname  string     `json:"hostname" gorm:"size:255;uniqueIndex;not null"` // 域名
 	IP        string     `json:"ip" gorm:"size:45;not null"`                    // IP 地址 (支持 IPv6)
 	Remark    string     `json:"remark" gorm:"size:255"`                        // 备注
-	Source    string     `json:"source" gorm:"size:255;default:'手动添加'"`         // 来源: 手动添加/DNS服务器地址
+	Source    string     `json:"source" gorm:"size:255;default:'Manual'"`       // 来源: Manual/DNS服务器地址
 	ExpireAt  *time.Time `json:"expireAt" gorm:"index"`                         // 过期时间，nil 表示永不过期
 	Pinned    bool       `json:"pinned" gorm:"default:false"`                   // 是否固定，固定后不会被过期删除
 	CreatedAt time.Time  `json:"createdAt" gorm:"autoCreateTime"`
@@ -86,7 +86,7 @@ func (h *Host) Add() error {
 
 	// 检查 hostname 是否已存在
 	if hosts := hostCache.GetByIndex("hostname", h.Hostname); len(hosts) > 0 {
-		return fmt.Errorf("hostname '%s' 已存在", h.Hostname)
+		return fmt.Errorf("hostname '%s' already exists", h.Hostname)
 	}
 
 	err := database.DB.Create(h).Error
@@ -106,7 +106,7 @@ func (h *Host) Update() error {
 	if hosts := hostCache.GetByIndex("hostname", h.Hostname); len(hosts) > 0 {
 		for _, existing := range hosts {
 			if existing.ID != h.ID {
-				return fmt.Errorf("hostname '%s' 已被其他记录使用", h.Hostname)
+				return fmt.Errorf("hostname '%s' is already used by another record", h.Hostname)
 			}
 		}
 	}
@@ -159,7 +159,7 @@ func GetHostByHostname(hostname string) (*Host, error) {
 	if hosts := hostCache.GetByIndex("hostname", hostname); len(hosts) > 0 {
 		return &hosts[0], nil
 	}
-	return nil, fmt.Errorf("host '%s' 不存在", hostname)
+	return nil, fmt.Errorf("host '%s' not found", hostname)
 }
 
 // List 获取所有 Host 列表
@@ -324,7 +324,7 @@ func parseHostText(text string) []Host {
 		if len(matches) > 3 && matches[3] != "" {
 			host.Remark = strings.TrimSpace(matches[3])
 		}
-		host.Source = "手动导入"
+		host.Source = "Manual"
 		host = sanitizeHostForStorage(host)
 
 		// 简单验证
@@ -526,7 +526,7 @@ func chunkHosts(hosts []Host, size int) [][]Host {
 // formatHostRemark 生成友好的备注格式
 // 格式: [自动] 节点名称 | 分组:xxx | 来源:xxx
 func formatHostRemark(nodeName, group, source string) string {
-	parts := []string{"[自动]"}
+	parts := []string{"[Auto]"}
 	nodeName = strings.TrimSpace(strings.ToValidUTF8(nodeName, "�"))
 	group = strings.TrimSpace(strings.ToValidUTF8(group, "�"))
 	source = strings.TrimSpace(strings.ToValidUTF8(source, "�"))
@@ -540,11 +540,11 @@ func formatHostRemark(nodeName, group, source string) string {
 	}
 
 	if group != "" {
-		parts = append(parts, "分组:"+group)
+		parts = append(parts, "Group:"+group)
 	}
 
 	if source != "" {
-		parts = append(parts, "来源:"+source)
+		parts = append(parts, "Source:"+source)
 	}
 
 	return strings.Join(parts, " | ")
@@ -557,7 +557,7 @@ func formatHostRemark(nodeName, group, source string) string {
 func SetHostPinned(id int, pinned bool) error {
 	host, ok := hostCache.Get(id)
 	if !ok {
-		return fmt.Errorf("host ID %d 不存在", id)
+		return fmt.Errorf("host ID %d does not exist", id)
 	}
 
 	if err := database.DB.Model(&Host{}).Where("id = ?", id).Update("pinned", pinned).Error; err != nil {

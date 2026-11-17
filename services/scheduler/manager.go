@@ -39,13 +39,13 @@ func GetSchedulerManager() *SchedulerManager {
 // Start 启动定时任务管理器
 func (sm *SchedulerManager) Start() {
 	sm.cron.Start()
-	utils.Info("定时任务管理器已启动")
+	utils.Info("Scheduler manager started")
 }
 
 // Stop 停止定时任务管理器
 func (sm *SchedulerManager) Stop() {
 	sm.cron.Stop()
-	utils.Info("定时任务管理器已停止")
+	utils.Info("Scheduler manager stopped")
 }
 
 // ReloadFromDatabase 清空内存中的定时任务并重新从数据库加载。
@@ -69,7 +69,7 @@ func (sm *SchedulerManager) LoadFromDatabase() error {
 
 	airports, err := models.ListEnabledAirports()
 	if err != nil {
-		utils.Error("从数据库加载定时任务失败: %v", err)
+		utils.Error("Failed to load scheduled tasks from the database: %v", err)
 		return err
 	}
 	// 添加所有启用的任务
@@ -79,9 +79,9 @@ func (sm *SchedulerManager) LoadFromDatabase() error {
 		}, airport.ID, airport.URL, airport.Name)
 
 		if err != nil {
-			utils.Error("添加定时任务失败 - ID: %d, Error: %v", airport.ID, err)
+			utils.Error("Failed to add scheduled task - ID: %d, Error: %v", airport.ID, err)
 		} else {
-			utils.Info("成功添加定时任务 - ID: %d, Name: %s, Cron: %s",
+			utils.Info("Added scheduled task - ID: %d, Name: %s, Cron: %s",
 				airport.ID, airport.Name, airport.CronExpr)
 		}
 	}
@@ -89,33 +89,33 @@ func (sm *SchedulerManager) LoadFromDatabase() error {
 	// 加载节点检测策略定时任务
 	profiles, err := models.ListEnabledNodeCheckProfiles()
 	if err != nil {
-		utils.Error("从数据库加载节点检测策略定时任务失败: %v", err)
+		utils.Error("Failed to load check profile schedules from the database: %v", err)
 	} else {
 		for _, profile := range profiles {
 			if profile.CronExpr == "" {
 				continue
 			}
 			if err := sm.AddNodeCheckProfileJob(profile.ID, profile.CronExpr); err != nil {
-				utils.Error("添加节点检测定时任务失败 - ID: %d, Error: %v", profile.ID, err)
+				utils.Error("Failed to add check profile schedule - ID: %d, Error: %v", profile.ID, err)
 			} else {
-				utils.Info("成功添加节点检测定时任务 - ID: %d, Name: %s, Cron: %s",
+				utils.Info("Added check profile schedule - ID: %d, Name: %s, Cron: %s",
 					profile.ID, profile.Name, profile.CronExpr)
 			}
 		}
 	}
 
 	if err := sm.LoadNodeCheckJobs(); err != nil {
-		utils.Warn("加载独立检测任务失败: %v", err)
+		utils.Warn("Failed to load standalone check tasks: %v", err)
 	}
 
 	// 启动 Host 过期清理任务
 	if err := sm.StartHostCleanupTask(); err != nil {
-		utils.Error("创建Host过期清理任务失败: %v", err)
+		utils.Error("Failed to create Host expiry cleanup task: %v", err)
 	}
 
 	// 启动 WebDAV 定时备份任务
 	if err := sm.StartWebDAVBackupTask(); err != nil {
-		utils.Error("创建 WebDAV 定时备份任务失败: %v", err)
+		utils.Error("Failed to create WebDAV scheduled backup task: %v", err)
 	}
 
 	return nil
@@ -149,7 +149,7 @@ func (sm *SchedulerManager) AddJob(schedulerID int, cronExpr string, jobFunc fun
 	})
 
 	if err != nil {
-		utils.Error("添加定时任务失败 - ID: %d, Cron: %s, Error: %v", schedulerID, cleanCronExpr, err)
+		utils.Error("Failed to add scheduled task - ID: %d, Cron: %s, Error: %v", schedulerID, cleanCronExpr, err)
 		return err
 	}
 
@@ -160,7 +160,7 @@ func (sm *SchedulerManager) AddJob(schedulerID int, cronExpr string, jobFunc fun
 	nextTime := sm.getNextRunTime(cleanCronExpr)
 	sm.updateRunTime(schedulerID, nil, nextTime)
 
-	utils.Info("成功添加定时任务 - ID: %d, Cron: %s, 下次运行: %v", schedulerID, cleanCronExpr, nextTime)
+	utils.Info("Added scheduled task - ID: %d, Cron: %s, next run: %v", schedulerID, cleanCronExpr, nextTime)
 
 	return nil
 }
@@ -173,7 +173,7 @@ func (sm *SchedulerManager) RemoveJob(schedulerID int) {
 	if entryID, exists := sm.jobs[schedulerID]; exists {
 		sm.cron.Remove(entryID)
 		delete(sm.jobs, schedulerID)
-		utils.Info("成功删除定时任务 - ID: %d", schedulerID)
+		utils.Info("Removed scheduled task - ID: %d", schedulerID)
 	}
 }
 
@@ -205,7 +205,7 @@ func (sm *SchedulerManager) UpdateJob(schedulerID int, cronExpr string, enabled 
 		})
 
 		if err != nil {
-			utils.Error("更新定时任务失败 - ID: %d, Cron: %s, Error: %v", schedulerID, cleanCronExpr, err)
+			utils.Error("Failed to update scheduled task - ID: %d, Cron: %s, Error: %v", schedulerID, cleanCronExpr, err)
 			return err
 		}
 
@@ -215,11 +215,11 @@ func (sm *SchedulerManager) UpdateJob(schedulerID int, cronExpr string, enabled 
 		nextTime := sm.getNextRunTime(cleanCronExpr)
 		sm.updateRunTime(schedulerID, nil, nextTime)
 
-		utils.Info("成功更新定时任务 - ID: %d, Cron: %s, 下次运行: %v", schedulerID, cleanCronExpr, nextTime)
+		utils.Info("Updated scheduled task - ID: %d, Cron: %s, next run: %v", schedulerID, cleanCronExpr, nextTime)
 	} else {
 		// 如果禁用，清除下次运行时间
 		sm.updateRunTime(schedulerID, nil, nil)
-		utils.Info("任务已禁用 - ID: %d", schedulerID)
+		utils.Info("Task disabled - ID: %d", schedulerID)
 	}
 
 	return nil
@@ -243,7 +243,7 @@ func (sm *SchedulerManager) getNextRunTime(cronExpr string) *time.Time {
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	schedule, err := parser.Parse(cleanCronExpr)
 	if err != nil {
-		utils.Warn("解析Cron表达式失败: %s, Error: %v", cleanCronExpr, err)
+		utils.Warn("Failed to parse cron expression: %s, Error: %v", cleanCronExpr, err)
 		return nil
 	}
 
@@ -255,13 +255,13 @@ func (sm *SchedulerManager) updateRunTime(schedulerID int, lastRun, nextRun *tim
 	go func() {
 		airport, err := models.GetAirportByID(schedulerID)
 		if err != nil {
-			utils.Error("获取机场失败 - ID: %d, Error: %v", schedulerID, err)
+			utils.Error("Failed to load airport - ID: %d, Error: %v", schedulerID, err)
 			return
 		}
 
 		err = airport.UpdateRunTime(lastRun, nextRun)
 		if err != nil {
-			utils.Error("更新运行时间失败 - ID: %d, Error: %v", schedulerID, err)
+			utils.Error("Failed to update last-run time - ID: %d, Error: %v", schedulerID, err)
 		}
 	}()
 }
@@ -288,7 +288,7 @@ func (sm *SchedulerManager) RemoveNodeCheckProfileJob(profileID int) {
 	if entryID, exists := sm.jobs[jobID]; exists {
 		sm.cron.Remove(entryID)
 		delete(sm.jobs, jobID)
-		utils.Info("成功删除节点检测定时任务 - ProfileID: %d", profileID)
+		utils.Info("Removed check profile schedule - ProfileID: %d", profileID)
 	}
 }
 
@@ -310,7 +310,7 @@ func (sm *SchedulerManager) UpdateNodeCheckProfileJob(profileID int, cronExpr st
 			latest, err := models.GetNodeCheckProfileByID(profileID)
 			if err == nil && latest.Enabled {
 				if err := latest.UpdateNextRunTime(sm.getNextRunTime(latest.CronExpr)); err != nil {
-					utils.Warn("推进检测计划时间失败: %v", err)
+					utils.Warn("Failed to advance check plan time: %v", err)
 				}
 			}
 		})

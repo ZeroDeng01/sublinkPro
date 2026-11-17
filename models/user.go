@@ -52,14 +52,14 @@ func init() {
 
 // InitUserCache 初始化用户缓存
 func InitUserCache() error {
-	utils.Info("开始加载用户到缓存")
+	utils.Info("Loading users into cache")
 	var users []User
 	if err := database.DB.Find(&users).Error; err != nil {
 		return err
 	}
 
 	userCache.LoadAll(users)
-	utils.Info("用户缓存初始化完成，共加载 %d 个用户", userCache.Count())
+	utils.Info("User cache initialized with %d users", userCache.Count())
 
 	cache.Manager.Register("user", userCache)
 	return nil

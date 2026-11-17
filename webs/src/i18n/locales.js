@@ -1,6 +1,6 @@
 import { enUS, zhCN } from '@mui/material/locale';
 
-export const DEFAULT_LANGUAGE = 'zh-CN';
+export const DEFAULT_LANGUAGE = 'en-US';
 
 export const SUPPORTED_LANGUAGES = ['zh-CN', 'en-US'];
 

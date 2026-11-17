@@ -52,13 +52,13 @@ func AuthToken(c *gin.Context) {
 		token = c.Query("token")
 	}
 	if token == "" {
-		utils.Forbidden(c, "请求未携带token")
+		utils.Forbidden(c, "Missing token")
 		c.Abort()
 		return
 	}
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		utils.Forbidden(c, "token格式错误")
+		utils.Forbidden(c, "Malformed token")
 		c.Abort()
 		return
 	}
@@ -77,7 +77,7 @@ func AuthToken(c *gin.Context) {
 	}
 	// 验证凭证签名，用于检测密码或用户名是否已变更
 	if !models.VerifyCredentialSign(mc.Username, mc.CredentialSign) {
-		errMsg := "登录已过期，请重新登录"
+		errMsg := "Session expired; please sign in again"
 		// 对SSE请求特殊处理：发送认证失败事件
 		if strings.HasSuffix(c.Request.URL.Path, "/api/sse") {
 			sendSSEAuthError(c, errMsg)
@@ -132,7 +132,7 @@ func validApiKey(apiKey string, clientIP string) (string, bool, error) {
 	// 快速格式验证
 	parts := strings.Split(apiKey, "_")
 	if len(parts) != 3 {
-		return "", false, fmt.Errorf("API Key格式错误")
+		return "", false, fmt.Errorf("malformed API key")
 	}
 
 	encryptionKey := config.GetAPIEncryptionKey()
@@ -144,13 +144,13 @@ func validApiKey(apiKey string, clientIP string) (string, bool, error) {
 	// 解密用户ID
 	userID, err := utils.DecryptUserIDCompact(parts[1], []byte(encryptionKey))
 	if err != nil {
-		return "", false, fmt.Errorf("解密用户ID失败: %w", err)
+		return "", false, fmt.Errorf("failed to decrypt user ID: %w", err)
 	}
 
 	// 数据库查询
 	keys, err := models.FindValidAccessKeys(userID)
 	if err != nil {
-		return "", false, fmt.Errorf("查询Access Key失败: %w", err)
+		return "", false, fmt.Errorf("failed to look up access key: %w", err)
 	}
 
 	// bcrypt验证
@@ -162,5 +162,5 @@ func validApiKey(apiKey string, clientIP string) (string, bool, error) {
 		}
 	}
 
-	return "", false, fmt.Errorf("无效的API Key")
+	return "", false, fmt.Errorf("invalid API key")
 }

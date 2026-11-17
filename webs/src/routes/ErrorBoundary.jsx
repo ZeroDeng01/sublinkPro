@@ -1,4 +1,5 @@
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // project imports
 import ErrorPage from 'views/pages/errors/ErrorPage';
@@ -7,6 +8,7 @@ import ErrorPage from 'views/pages/errors/ErrorPage';
 
 export default function ErrorBoundary() {
   const error = useRouteError();
+  const { t } = useTranslation();
 
   if (isRouteErrorResponse(error)) {
     // Handle specific HTTP error codes
@@ -32,14 +34,10 @@ export default function ErrorBoundary() {
 
     // Handle other error codes with custom message
     return (
-      <ErrorPage
-        statusCode={error.status}
-        customTitle={`错误 ${error.status}`}
-        customDescription={error.statusText || '发生了未知错误，请稍后再试。'}
-      />
+      <ErrorPage statusCode={error.status} customTitle={t('errorPage.default.title')} customDescription={error.statusText || undefined} />
     );
   }
 
   // Handle non-HTTP errors (JavaScript errors, etc.)
-  return <ErrorPage statusCode={500} customTitle="应用程序错误" customDescription="应用程序遇到了问题，请刷新页面或稍后再试。" />;
+  return <ErrorPage statusCode={500} />;
 }

@@ -79,7 +79,7 @@ func LoadConfig() (Config, error) {
 	if encrypted != "" {
 		decrypted, err := models.DecryptUserAISecret(encrypted)
 		if err != nil {
-			return Config{}, fmt.Errorf("解密 WebDAV 密码失败: %w", err)
+			return Config{}, fmt.Errorf("failed to decrypt WebDAV password: %w", err)
 		}
 		password = decrypted
 	}
@@ -136,7 +136,7 @@ func SaveConfig(cfg Config) error {
 	if cfg.Password != "" {
 		encrypted, err = models.EncryptUserAISecret(cfg.Password)
 		if err != nil {
-			return fmt.Errorf("加密 WebDAV 密码失败: %w", err)
+			return fmt.Errorf("failed to encrypt WebDAV password: %w", err)
 		}
 	}
 	values := []struct{ key, value string }{
@@ -179,13 +179,13 @@ func normalizeAndValidateConfig(cfg Config, requireURL bool) (Config, error) {
 	cfg.Username = strings.TrimSpace(cfg.Username)
 	cfg.RemotePath = strings.Trim(strings.TrimSpace(cfg.RemotePath), "/")
 	if len(cfg.BaseURL) > 2048 {
-		return Config{}, errors.New("WebDAV 地址过长")
+		return Config{}, errors.New("WebDAV URL is too long")
 	}
 	if len(cfg.Username) > 512 || len(cfg.Password) > 4096 {
-		return Config{}, errors.New("WebDAV 凭据过长")
+		return Config{}, errors.New("WebDAV credentials are too long")
 	}
 	if len(cfg.RemotePath) > 512 {
-		return Config{}, errors.New("WebDAV 远程目录过长")
+		return Config{}, errors.New("WebDAV remote directory path is too long")
 	}
 	if cfg.RemotePath == "" {
 		cfg.RemotePath = defaultRemotePath
@@ -194,14 +194,14 @@ func normalizeAndValidateConfig(cfg Config, requireURL bool) (Config, error) {
 		cfg.TimeoutSeconds = defaultTimeoutSeconds
 	}
 	if cfg.TimeoutSeconds > maxTimeoutSeconds {
-		return Config{}, fmt.Errorf("WebDAV 超时时间不能超过 %d 秒", maxTimeoutSeconds)
+		return Config{}, fmt.Errorf("WebDAV timeout cannot exceed %d seconds", maxTimeoutSeconds)
 	}
 	if err := validateRemotePath(cfg.RemotePath); err != nil {
 		return Config{}, err
 	}
 	cfg.CronExpr = cleanCronExpression(cfg.CronExpr)
 	if cfg.ScheduleEnabled && cfg.CronExpr == "" {
-		return Config{}, errors.New("启用定时备份时必须填写 Cron 表达式")
+		return Config{}, errors.New("a cron expression is required when scheduled backups are enabled")
 	}
 	if cfg.CronExpr != "" {
 		if err := validateCronExpression(cfg.CronExpr); err != nil {
@@ -210,23 +210,23 @@ func normalizeAndValidateConfig(cfg Config, requireURL bool) (Config, error) {
 	}
 	if cfg.BaseURL == "" {
 		if requireURL {
-			return Config{}, errors.New("WebDAV 地址不能为空")
+			return Config{}, errors.New("WebDAV URL is required")
 		}
 		return cfg, nil
 	}
 	parsed, err := url.Parse(cfg.BaseURL)
 	if err != nil || parsed.Host == "" {
-		return Config{}, errors.New("WebDAV 地址无效")
+		return Config{}, errors.New("invalid WebDAV URL")
 	}
 	scheme := strings.ToLower(parsed.Scheme)
 	if scheme != "https" && scheme != "http" {
-		return Config{}, errors.New("WebDAV 地址仅支持 http 或 https")
+		return Config{}, errors.New("WebDAV URL must use http or https")
 	}
 	if scheme == "http" && !cfg.AllowInsecureHTTP {
-		return Config{}, errors.New("HTTP WebDAV 需要显式允许不安全连接")
+		return Config{}, errors.New("HTTP WebDAV requires explicitly allowing insecure connections")
 	}
 	if parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return Config{}, errors.New("WebDAV 地址不能包含账号、查询参数或锚点")
+		return Config{}, errors.New("WebDAV URL must not contain credentials, query parameters or fragments")
 	}
 	return cfg, nil
 }
@@ -234,7 +234,7 @@ func normalizeAndValidateConfig(cfg Config, requireURL bool) (Config, error) {
 func validateCronExpression(expr string) error {
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	if _, err := parser.Parse(expr); err != nil {
-		return fmt.Errorf("cron 表达式无效: %w", err)
+		return fmt.Errorf("invalid cron expression: %w", err)
 	}
 	return nil
 }
@@ -246,11 +246,11 @@ func cleanCronExpression(cronExpr string) string {
 
 func validateRemotePath(value string) error {
 	if strings.Contains(value, "\\") || strings.ContainsRune(value, '\x00') {
-		return errors.New("WebDAV 远程目录包含非法字符")
+		return errors.New("WebDAV remote directory contains invalid characters")
 	}
 	for _, segment := range strings.Split(value, "/") {
 		if segment == "" || segment == "." || segment == ".." {
-			return errors.New("WebDAV 远程目录无效")
+			return errors.New("invalid WebDAV remote directory")
 		}
 	}
 	return nil
@@ -263,7 +263,7 @@ func loadStoredPassword() (string, error) {
 	}
 	password, err := models.DecryptUserAISecret(encrypted)
 	if err != nil {
-		return "", fmt.Errorf("解密 WebDAV 密码失败: %w", err)
+		return "", fmt.Errorf("failed to decrypt WebDAV password: %w", err)
 	}
 	return password, nil
 }

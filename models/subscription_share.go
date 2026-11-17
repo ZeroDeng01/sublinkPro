@@ -51,14 +51,14 @@ func init() {
 
 // InitSubscriptionShareCache 初始化订阅分享缓存
 func InitSubscriptionShareCache() error {
-	utils.Info("开始加载订阅分享到缓存")
+	utils.Info("Loading subscription shares into cache")
 	var shares []SubscriptionShare
 	if err := database.DB.Find(&shares).Error; err != nil {
 		return err
 	}
 
 	subscriptionShareCache.LoadAll(shares)
-	utils.Info("订阅分享缓存初始化完成，共加载 %d 条记录", subscriptionShareCache.Count())
+	utils.Info("Subscription share cache initialized with %d records", subscriptionShareCache.Count())
 
 	cache.Manager.Register("subscription_shares", subscriptionShareCache)
 	return nil
@@ -171,7 +171,7 @@ func isASCIIDigit(value byte) bool {
 func CreateDefaultShareForSubscription(subscriptionID int) error {
 	share := &SubscriptionShare{
 		SubscriptionID: subscriptionID,
-		Name:           "默认分享链接",
+		Name:           "Default share link",
 		ExpireType:     ExpireTypeNever,
 		IsLegacy:       true,
 		Enabled:        true,
@@ -194,7 +194,7 @@ func (s *SubscriptionShare) Add() error {
 
 	// 检查 token 唯一性
 	if IsTokenExists(s.Token, 0) {
-		return fmt.Errorf("token 已被使用，请更换")
+		return fmt.Errorf("this token is already in use; choose another one")
 	}
 
 	err := database.DB.Create(s).Error
@@ -211,7 +211,7 @@ func (s *SubscriptionShare) Update() error {
 
 	// 检查 token 唯一性（排除自己）
 	if IsTokenExists(s.Token, s.ID) {
-		return fmt.Errorf("token 已被使用，请更换")
+		return fmt.Errorf("this token is already in use; choose another one")
 	}
 
 	err := database.DB.Model(s).Updates(map[string]any{
@@ -397,7 +397,7 @@ func GetSharesBySubscriptionIDPaginated(subID, page, pageSize int, keyword, ipFi
 func GetDefaultShareForSubscription(subID int) (*SubscriptionShare, error) {
 	shares := GetSharesBySubscriptionID(subID)
 	if len(shares) == 0 {
-		return nil, fmt.Errorf("该订阅没有分享链接")
+		return nil, fmt.Errorf("this subscription has no share links")
 	}
 
 	// 优先找 legacy 链接
@@ -414,7 +414,7 @@ func GetDefaultShareForSubscription(subID int) (*SubscriptionShare, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("该订阅没有可用的分享链接")
+	return nil, fmt.Errorf("this subscription has no available share links")
 }
 
 // IsExpired 检查分享是否已过期
@@ -470,13 +470,13 @@ func (s *SubscriptionShare) RecordAccess() {
 			"access_count":   gorm.Expr("access_count + ?", 1),
 			"last_access_at": new(time.Now()),
 		}).Error; err != nil {
-		utils.Warn("记录订阅分享访问失败: %v", err)
+		utils.Warn("Failed to record subscription share access: %v", err)
 		return
 	}
 
 	var updated SubscriptionShare
 	if err := db.First(&updated, s.ID).Error; err != nil {
-		utils.Warn("刷新订阅分享访问缓存失败: %v", err)
+		utils.Warn("Failed to refresh subscription share access cache: %v", err)
 		return
 	}
 	*s = updated

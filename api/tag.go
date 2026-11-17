@@ -17,7 +17,7 @@ func TagGet(c *gin.Context) {
 	var tag models.Tag
 	tags, err := tag.List()
 	if err != nil {
-		utils.FailWithMsg(c, "获取标签列表失败")
+		utils.FailWithMsg(c, "Failed to fetch tag list")
 		return
 	}
 	utils.OkWithData(c, tags)
@@ -27,7 +27,7 @@ func TagGet(c *gin.Context) {
 func TagAdd(c *gin.Context) {
 	var tag models.Tag
 	if err := c.ShouldBindJSON(&tag); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	tag.Name = strings.TrimSpace(tag.Name)
@@ -38,14 +38,14 @@ func TagAdd(c *gin.Context) {
 	}
 	// 检查标签是否已存在
 	if models.TagExists(tag.Name) {
-		utils.FailWithMsg(c, "标签名称已存在")
+		utils.FailWithMsg(c, "Tag name already exists")
 		return
 	}
 	if tag.Color == "" {
 		tag.Color = "#1976d2"
 	}
 	if err := tag.Add(); err != nil {
-		utils.FailWithMsg(c, "添加标签失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to add tag: "+err.Error())
 		return
 	}
 	utils.OkWithData(c, tag)
@@ -61,16 +61,16 @@ func TagUpdate(c *gin.Context) {
 		Description string `json:"description"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if req.Name == "" {
-		utils.FailWithMsg(c, "标签名称不能为空")
+		utils.FailWithMsg(c, "Tag name is required")
 		return
 	}
 	var tag models.Tag
 	if err := tag.GetByName(req.Name); err != nil {
-		utils.FailWithCode(c, 404, "标签不存在")
+		utils.FailWithCode(c, 404, "Tag not found")
 		return
 	}
 
@@ -90,17 +90,17 @@ func TagUpdate(c *gin.Context) {
 	}
 	tag.Description = req.Description
 	if err := tag.Update(); err != nil {
-		utils.FailWithMsg(c, "更新标签失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to update tag: "+err.Error())
 		return
 	}
 
 	if renaming {
 		oldName := tag.Name
 		if err := tag.Rename(newName); err != nil {
-			utils.FailWithMsg(c, "重命名标签失败: "+err.Error())
+			utils.FailWithMsg(c, "Failed to rename tag: "+err.Error())
 			return
 		}
-		utils.Info("标签已重命名: %s -> %s", oldName, newName)
+		utils.Info("Tag renamed: %s -> %s", oldName, newName)
 	}
 	utils.OkWithData(c, tag)
 }
@@ -109,16 +109,16 @@ func TagUpdate(c *gin.Context) {
 func TagDelete(c *gin.Context) {
 	name := c.Query("name")
 	if name == "" {
-		utils.FailWithMsg(c, "标签名称不能为空")
+		utils.FailWithMsg(c, "Tag name is required")
 		return
 	}
 	var tag models.Tag
 	if err := tag.GetByName(name); err != nil {
-		utils.FailWithCode(c, 404, "标签不存在")
+		utils.FailWithCode(c, 404, "Tag not found")
 		return
 	}
 	if err := tag.Delete(); err != nil {
-		utils.FailWithMsg(c, "删除标签失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to delete tag: "+err.Error())
 		return
 	}
 	utils.Ok(c)
@@ -137,7 +137,7 @@ func TagRuleGet(c *gin.Context) {
 	var rule models.TagRule
 	rules, err := rule.List()
 	if err != nil {
-		utils.FailWithMsg(c, "获取规则列表失败")
+		utils.FailWithMsg(c, "Failed to fetch rule list")
 		return
 	}
 	utils.OkWithData(c, rules)
@@ -147,31 +147,31 @@ func TagRuleGet(c *gin.Context) {
 func TagRuleAdd(c *gin.Context) {
 	var rule models.TagRule
 	if err := c.ShouldBindJSON(&rule); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if rule.Name == "" {
-		utils.FailWithMsg(c, "规则名称不能为空")
+		utils.FailWithMsg(c, "Rule name is required")
 		return
 	}
 	if rule.TagName == "" {
-		utils.FailWithMsg(c, "关联标签不能为空")
+		utils.FailWithMsg(c, "Associated tag is required")
 		return
 	}
 	// 验证标签是否存在
 	if !models.TagExists(rule.TagName) {
-		utils.FailWithMsg(c, "关联的标签不存在")
+		utils.FailWithMsg(c, "Associated tag not found")
 		return
 	}
 	// 验证条件格式
 	if rule.Conditions != "" {
 		if _, err := models.ParseConditions(rule.Conditions); err != nil {
-			utils.FailWithMsg(c, "条件格式错误: "+err.Error())
+			utils.FailWithMsg(c, "Invalid condition format: "+err.Error())
 			return
 		}
 	}
 	if err := rule.Add(); err != nil {
-		utils.FailWithMsg(c, "添加规则失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to add rule: "+err.Error())
 		return
 	}
 	utils.OkWithData(c, rule)
@@ -188,16 +188,16 @@ func TagRuleUpdate(c *gin.Context) {
 		Conditions  string `json:"conditions"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if req.ID == 0 {
-		utils.FailWithMsg(c, "规则ID不能为空")
+		utils.FailWithMsg(c, "Rule ID is required")
 		return
 	}
 	var rule models.TagRule
 	if err := rule.GetByID(req.ID); err != nil {
-		utils.FailWithMsg(c, "规则不存在")
+		utils.FailWithMsg(c, "Rule not found")
 		return
 	}
 	rule.TagName = req.TagName
@@ -207,18 +207,18 @@ func TagRuleUpdate(c *gin.Context) {
 	rule.Conditions = req.Conditions
 	// 验证标签是否存在
 	if rule.TagName != "" && !models.TagExists(rule.TagName) {
-		utils.FailWithMsg(c, "关联的标签不存在")
+		utils.FailWithMsg(c, "Associated tag not found")
 		return
 	}
 	// 验证条件格式
 	if rule.Conditions != "" {
 		if _, err := models.ParseConditions(rule.Conditions); err != nil {
-			utils.FailWithMsg(c, "条件格式错误: "+err.Error())
+			utils.FailWithMsg(c, "Invalid condition format: "+err.Error())
 			return
 		}
 	}
 	if err := rule.Update(); err != nil {
-		utils.FailWithMsg(c, "更新规则失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to update rule: "+err.Error())
 		return
 	}
 	utils.OkWithData(c, rule)
@@ -229,13 +229,13 @@ func TagRuleDelete(c *gin.Context) {
 	idStr := c.Query("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil || id == 0 {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	var rule models.TagRule
 	rule.ID = id
 	if err := rule.Delete(); err != nil {
-		utils.FailWithMsg(c, "删除规则失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to delete rule: "+err.Error())
 		return
 	}
 	utils.Ok(c)
@@ -246,15 +246,15 @@ func TagRuleTrigger(c *gin.Context) {
 	idStr := c.Query("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil || id == 0 {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	go func() {
 		if err := services.TriggerTagRule(id); err != nil {
-			utils.Error("触发标签规则失败: %v", err)
+			utils.Error("Failed to trigger tag rule: %v", err)
 		}
 	}()
-	utils.OkWithMsg(c, "规则已开始执行")
+	utils.OkWithMsg(c, "Rule execution started")
 }
 
 // ========== Node Tag API ==========
@@ -266,17 +266,17 @@ func NodeAddTag(c *gin.Context) {
 		TagName string `json:"tagName"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	var node models.Node
 	node.ID = req.NodeID
 	if err := node.GetByID(); err != nil {
-		utils.FailWithCode(c, 404, "节点不存在")
+		utils.FailWithCode(c, 404, "Node not found")
 		return
 	}
 	if err := node.AddTagByName(req.TagName); err != nil {
-		utils.FailWithMsg(c, "添加标签失败")
+		utils.FailWithMsg(c, "Failed to add tag")
 		return
 	}
 	utils.Ok(c)
@@ -289,17 +289,17 @@ func NodeRemoveTag(c *gin.Context) {
 		TagName string `json:"tagName"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	var node models.Node
 	node.ID = req.NodeID
 	if err := node.GetByID(); err != nil {
-		utils.FailWithCode(c, 404, "节点不存在")
+		utils.FailWithCode(c, 404, "Node not found")
 		return
 	}
 	if err := node.RemoveTagByName(req.TagName); err != nil {
-		utils.FailWithMsg(c, "移除标签失败")
+		utils.FailWithMsg(c, "Failed to remove tag")
 		return
 	}
 	utils.Ok(c)
@@ -312,11 +312,11 @@ func NodeBatchAddTag(c *gin.Context) {
 		TagName string `json:"tagName"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if err := models.BatchAddTagToNodes(req.NodeIDs, req.TagName); err != nil {
-		utils.FailWithMsg(c, "批量添加标签失败")
+		utils.FailWithMsg(c, "Failed to add tags in batch")
 		return
 	}
 	utils.Ok(c)
@@ -329,11 +329,11 @@ func NodeBatchSetTags(c *gin.Context) {
 		TagNames []string `json:"tagNames"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if err := models.BatchSetTagsForNodes(req.NodeIDs, req.TagNames); err != nil {
-		utils.FailWithMsg(c, "批量设置标签失败")
+		utils.FailWithMsg(c, "Failed to set tags in batch")
 		return
 	}
 	utils.Ok(c)
@@ -346,15 +346,15 @@ func NodeBatchRemoveTags(c *gin.Context) {
 		TagNames []string `json:"tagNames"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if len(req.TagNames) == 0 {
-		utils.FailWithMsg(c, "请选择要删除的标签")
+		utils.FailWithMsg(c, "Select tags to delete")
 		return
 	}
 	if err := models.BatchRemoveTagsFromNodes(req.NodeIDs, req.TagNames); err != nil {
-		utils.FailWithMsg(c, "批量移除标签失败")
+		utils.FailWithMsg(c, "Failed to remove tags in batch")
 		return
 	}
 	utils.Ok(c)
@@ -365,13 +365,13 @@ func GetNodeTags(c *gin.Context) {
 	nodeIDStr := c.Query("nodeId")
 	nodeID, err := strconv.Atoi(nodeIDStr)
 	if err != nil || nodeID == 0 {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	var node models.Node
 	node.ID = nodeID
 	if err := node.GetByID(); err != nil {
-		utils.FailWithCode(c, 404, "节点不存在")
+		utils.FailWithCode(c, 404, "Node not found")
 		return
 	}
 	tags := models.GetTagsByNode(node)

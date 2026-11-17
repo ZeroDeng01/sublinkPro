@@ -13,11 +13,11 @@ func init() {
 	base := newProtocolSpec("socks5", []string{"socks5://"}, "SOCKS5", "#116ea4", "S", Socks5{}, "Name", DecodeSocks5URL, EncodeSocks5URL, func(s Socks5) LinkIdentity {
 		return buildIdentity("socks5", s.Name, s.Server, utils.GetPortString(s.Port))
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
-		FieldMeta{Name: "Username", Label: "用户名", Type: "string", Group: "auth", Advanced: true},
-		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true, Advanced: true},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
+		FieldMeta{Name: "Username", Label: "Username", Type: "string", Group: "auth", Advanced: true},
+		FieldMeta{Name: "Password", Label: "Password", Type: "string", Group: "auth", Secret: true, Advanced: true},
 	)
 	MustRegisterProtocol(newProxyProtocolSpec(base, func(link Urls, _ OutputConfig) (Proxy, error) {
 		return buildSocks5Proxy(link)
@@ -37,7 +37,7 @@ type Socks5 struct {
 // DecodeSocks5URL 解析 socks5:// 链接，并提取认证信息、地址和节点名称。
 func DecodeSocks5URL(s string) (Socks5, error) {
 	if !strings.Contains(s, "socks5://") {
-		return Socks5{}, fmt.Errorf("非socks协议: %s", s)
+		return Socks5{}, fmt.Errorf("not a socks link: %s", s)
 	}
 
 	u, err := url.Parse(s)

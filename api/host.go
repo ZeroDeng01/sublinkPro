@@ -17,19 +17,19 @@ func HostAdd(c *gin.Context) {
 		return
 	}
 	if data.Hostname == "" || data.IP == "" {
-		utils.FailWithMsg(c, "域名和IP不能为空")
+		utils.FailWithMsg(c, "Domain and IP are required")
 		return
 	}
 
 	if data.Source == "" {
-		data.Source = "手动添加"
+		data.Source = "Manual"
 	}
 
 	if err := data.Add(); err != nil {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkDetailed(c, "添加成功", data)
+	utils.OkDetailed(c, "Added successfully", data)
 }
 
 // HostUpdate 更新 Host
@@ -40,11 +40,11 @@ func HostUpdate(c *gin.Context) {
 		return
 	}
 	if data.ID == 0 {
-		utils.FailWithMsg(c, "ID不能为空")
+		utils.FailWithMsg(c, "ID is required")
 		return
 	}
 	if data.Hostname == "" || data.IP == "" {
-		utils.FailWithMsg(c, "域名和IP不能为空")
+		utils.FailWithMsg(c, "Domain and IP are required")
 		return
 	}
 
@@ -52,19 +52,19 @@ func HostUpdate(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkDetailed(c, "更新成功", data)
+	utils.OkDetailed(c, "Updated successfully", data)
 }
 
 // HostDelete 删除单个 Host
 func HostDelete(c *gin.Context) {
 	idStr := c.Query("id")
 	if idStr == "" {
-		utils.FailWithMsg(c, "ID不能为空")
+		utils.FailWithMsg(c, "ID is required")
 		return
 	}
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		utils.FailWithMsg(c, "ID格式错误")
+		utils.FailWithMsg(c, "Invalid ID format")
 		return
 	}
 
@@ -73,7 +73,7 @@ func HostDelete(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkWithMsg(c, "删除成功")
+	utils.OkWithMsg(c, "Deleted successfully")
 }
 
 // HostBatchDelete 批量删除 Host
@@ -86,7 +86,7 @@ func HostBatchDelete(c *gin.Context) {
 		return
 	}
 	if len(req.IDs) == 0 {
-		utils.FailWithMsg(c, "请选择要删除的记录")
+		utils.FailWithMsg(c, "Select records to delete")
 		return
 	}
 
@@ -94,7 +94,7 @@ func HostBatchDelete(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkWithMsg(c, "批量删除成功")
+	utils.OkWithMsg(c, "Batch delete completed")
 }
 
 // HostList 获取 Host 列表
@@ -105,13 +105,13 @@ func HostList(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkDetailed(c, "获取成功", list)
+	utils.OkDetailed(c, "Fetched successfully", list)
 }
 
 // HostExport 导出所有 Host 为文本格式
 func HostExport(c *gin.Context) {
 	text := models.ExportHostsToText()
-	utils.OkDetailed(c, "导出成功", gin.H{
+	utils.OkDetailed(c, "Exported successfully", gin.H{
 		"text": text,
 	})
 }
@@ -132,7 +132,7 @@ func HostSync(c *gin.Context) {
 		return
 	}
 
-	utils.OkDetailed(c, "同步成功", gin.H{
+	utils.OkDetailed(c, "Synced successfully", gin.H{
 		"added":   added,
 		"updated": updated,
 		"deleted": deleted,
@@ -165,7 +165,7 @@ func GetHostSettings(c *gin.Context) {
 	// 获取有效期设置
 	expireHours := models.GetHostExpireHours()
 
-	utils.OkDetailed(c, "获取成功", gin.H{
+	utils.OkDetailed(c, "Fetched successfully", gin.H{
 		"persist_host":       persistHost,
 		"dns_server":         dnsServer,
 		"dns_use_proxy":      dnsUseProxy,
@@ -187,33 +187,33 @@ func UpdateHostSettings(c *gin.Context) {
 		ExpireHours      *int   `json:"expire_hours"`       // 有效期（小时），0表示永不过期
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 
 	if req.PersistHost != nil {
 		if err := models.SetSetting("speed_test_persist_host", strconv.FormatBool(*req.PersistHost)); err != nil {
-			utils.FailWithMsg(c, "保存持久化Host配置失败")
+			utils.FailWithMsg(c, "Failed to save persistent Host configuration")
 			return
 		}
 	}
 
 	// 总是保存 dns_server，即使为空
 	if err := models.SetSetting("dns_server", req.DNSServer); err != nil {
-		utils.FailWithMsg(c, "保存DNS服务器配置失败")
+		utils.FailWithMsg(c, "Failed to save DNS server configuration")
 		return
 	}
 
 	if req.DNSUseProxy != nil {
 		if err := models.SetSetting("dns_use_proxy", strconv.FormatBool(*req.DNSUseProxy)); err != nil {
-			utils.FailWithMsg(c, "保存DNS代理开关失败")
+			utils.FailWithMsg(c, "Failed to save DNS proxy toggle")
 			return
 		}
 	}
 
 	if req.DNSProxyStrategy != "" {
 		if err := models.SetSetting("dns_proxy_strategy", req.DNSProxyStrategy); err != nil {
-			utils.FailWithMsg(c, "保存DNS代理策略失败")
+			utils.FailWithMsg(c, "Failed to save DNS proxy strategy")
 			return
 		}
 	}
@@ -221,7 +221,7 @@ func UpdateHostSettings(c *gin.Context) {
 	if req.DNSProxyNodeID != 0 || req.DNSProxyStrategy == "manual" {
 		// 只有在 manual 模式下或确实传了 ID 时才保存
 		if err := models.SetSetting("dns_proxy_node_id", strconv.Itoa(req.DNSProxyNodeID)); err != nil {
-			utils.FailWithMsg(c, "保存DNS代理节点ID失败")
+			utils.FailWithMsg(c, "Failed to save DNS proxy node ID")
 			return
 		}
 	}
@@ -232,12 +232,12 @@ func UpdateHostSettings(c *gin.Context) {
 			hours = 0
 		}
 		if err := models.SetSetting("host_expire_hours", strconv.Itoa(hours)); err != nil {
-			utils.FailWithMsg(c, "保存有效期配置失败")
+			utils.FailWithMsg(c, "Failed to save validity configuration")
 			return
 		}
 	}
 
-	utils.OkWithMsg(c, "保存成功")
+	utils.OkWithMsg(c, "Saved successfully")
 }
 
 // HostSetPinned 设置 Host 的固定状态
@@ -247,11 +247,11 @@ func HostSetPinned(c *gin.Context) {
 		Pinned bool `json:"pinned"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if req.ID == 0 {
-		utils.FailWithMsg(c, "ID不能为空")
+		utils.FailWithMsg(c, "ID is required")
 		return
 	}
 
@@ -260,5 +260,5 @@ func HostSetPinned(c *gin.Context) {
 		return
 	}
 
-	utils.OkWithMsg(c, "设置成功")
+	utils.OkWithMsg(c, "Settings saved")
 }

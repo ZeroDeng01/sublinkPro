@@ -18,13 +18,13 @@ type happDecryptRequest struct {
 func HappDecrypt(c *gin.Context) {
 	var req happDecryptRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithI18n(c, "参数错误", "backend.common.invalidParams", nil)
+		utils.FailWithI18n(c, "Invalid parameters", "backend.common.invalidParams", nil)
 		return
 	}
 
 	link := strings.TrimSpace(req.Link)
 	if link == "" {
-		utils.FailWithI18n(c, "请输入 happ 链接", "backend.happ.linkRequired", nil)
+		utils.FailWithI18n(c, "Please enter a happ link", "backend.happ.linkRequired", nil)
 		return
 	}
 
@@ -34,7 +34,7 @@ func HappDecrypt(c *gin.Context) {
 		return
 	}
 
-	utils.OkDetailedI18n(c, "解密成功", gin.H{
+	utils.OkDetailedI18n(c, "Decrypted successfully", gin.H{
 		"url":        resolved,
 		"generation": happ.Generation(link),
 	}, "backend.happ.decryptSuccess", nil)
@@ -69,11 +69,11 @@ func happErrorKey(err error) string {
 func happErrorMessage(err error) string {
 	switch {
 	case errors.Is(err, happ.ErrNotALink):
-		return "不是有效的 happ 链接，链接需以 happ:// 开头"
+		return "Not a valid happ link; the link must start with happ://"
 	case errors.Is(err, happ.ErrUnsupported):
-		return "不支持的 happ 链接类型"
+		return "Unsupported happ link type"
 	default:
-		return "happ 链接解密失败，请确认链接完整且未过期"
+		return "Failed to decrypt happ link; make sure the link is complete and not expired"
 	}
 }
 

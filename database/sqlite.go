@@ -67,7 +67,7 @@ func Init() error {
 	db, info, err := openDatabase(rawDSN, newGormConfig())
 	if err != nil {
 		DB = nil
-		utils.Error("连接数据库失败: %v", err)
+		utils.Error("Failed to connect to the database: %v", err)
 		return err
 	}
 
@@ -75,7 +75,7 @@ func Init() error {
 
 	DB = db
 	Dialect = info.Dialect
-	utils.Info("数据库已初始化: driver=%s, dsn=%s", info.Dialect, info.RedactedDSN)
+	utils.Info("Database already initialized: driver=%s, dsn=%s", info.Dialect, info.RedactedDSN)
 	return nil
 }
 
@@ -116,7 +116,7 @@ func openDatabase(rawDSN string, gormConfig *gorm.Config) (*gorm.DB, *dbConnecti
 	if err != nil {
 		if info.BootstrapDialector != nil && isMissingDatabaseError(info.Dialect, err) {
 			if createErr := createDatabase(info, gormConfig); createErr != nil {
-				return nil, nil, fmt.Errorf("%w; 自动建库失败: %v", err, createErr)
+				return nil, nil, fmt.Errorf("%w; failed to create the database automatically: %v", err, createErr)
 			}
 			db, err = gorm.Open(info.Dialector, gormConfig)
 			if err == nil {
@@ -132,7 +132,7 @@ func openDatabase(rawDSN string, gormConfig *gorm.Config) (*gorm.DB, *dbConnecti
 func buildConnectionInfo(rawDSN string) (*dbConnectionInfo, error) {
 	rawDSN = strings.TrimSpace(rawDSN)
 	if rawDSN == "" {
-		return nil, fmt.Errorf("数据库 DSN 不能为空")
+		return nil, fmt.Errorf("database DSN is required")
 	}
 
 	switch {
@@ -143,7 +143,7 @@ func buildConnectionInfo(rawDSN string) (*dbConnectionInfo, error) {
 	case isSQLiteDSN(rawDSN):
 		return buildSQLiteConnectionInfo(rawDSN)
 	default:
-		return nil, fmt.Errorf("不支持的数据库 DSN: %s", rawDSN)
+		return nil, fmt.Errorf("unsupported database DSN: %s", rawDSN)
 	}
 }
 
@@ -218,7 +218,7 @@ func ensureSQLiteDir(driverDSN string) error {
 	}
 
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("创建 SQLite 目录失败: %w", err)
+		return fmt.Errorf("failed to create the SQLite directory: %w", err)
 	}
 	return nil
 }
@@ -226,7 +226,7 @@ func ensureSQLiteDir(driverDSN string) error {
 func buildMySQLConnectionInfo(rawDSN string) (*dbConnectionInfo, error) {
 	stripped := strings.TrimSpace(rawDSN[len("mysql://"):])
 	if stripped == "" {
-		return nil, fmt.Errorf("MySQL DSN 不能为空")
+		return nil, fmt.Errorf("mySQL DSN is required")
 	}
 
 	var (
@@ -237,16 +237,16 @@ func buildMySQLConnectionInfo(rawDSN string) (*dbConnectionInfo, error) {
 	if !strings.Contains(stripped, "@tcp(") && !strings.Contains(stripped, "@unix(") {
 		parsed, err := url.Parse(rawDSN)
 		if err != nil {
-			return nil, fmt.Errorf("解析 MySQL DSN 失败: %w", err)
+			return nil, fmt.Errorf("failed to parse MySQL DSN: %w", err)
 		}
 
 		if parsed.Host == "" {
-			return nil, fmt.Errorf("MySQL DSN 缺少主机地址")
+			return nil, fmt.Errorf("mySQL DSN is missing the host")
 		}
 
 		dbName := strings.TrimPrefix(parsed.Path, "/")
 		if dbName == "" {
-			return nil, fmt.Errorf("MySQL DSN 缺少数据库名")
+			return nil, fmt.Errorf("mySQL DSN is missing the database name")
 		}
 
 		cfg = mysqlcfg.NewConfig()
@@ -261,7 +261,7 @@ func buildMySQLConnectionInfo(rawDSN string) (*dbConnectionInfo, error) {
 		if parseTimeValue := params.Get("parseTime"); parseTimeValue != "" {
 			parseTime, err := strconv.ParseBool(parseTimeValue)
 			if err != nil {
-				return nil, fmt.Errorf("解析 MySQL DSN 参数 parseTime 失败: %w", err)
+				return nil, fmt.Errorf("failed to parse MySQL DSN parameter parseTime: %w", err)
 			}
 			cfg.ParseTime = parseTime
 			params.Del("parseTime")
@@ -272,7 +272,7 @@ func buildMySQLConnectionInfo(rawDSN string) (*dbConnectionInfo, error) {
 		if locValue := params.Get("loc"); locValue != "" {
 			location, err := time.LoadLocation(locValue)
 			if err != nil {
-				return nil, fmt.Errorf("解析 MySQL DSN 参数 loc 失败: %w", err)
+				return nil, fmt.Errorf("failed to parse MySQL DSN parameter loc: %w", err)
 			}
 			cfg.Loc = location
 			params.Del("loc")
@@ -295,10 +295,10 @@ func buildMySQLConnectionInfo(rawDSN string) (*dbConnectionInfo, error) {
 	} else {
 		cfg, err = mysqlcfg.ParseDSN(stripped)
 		if err != nil {
-			return nil, fmt.Errorf("解析 MySQL DSN 失败: %w", err)
+			return nil, fmt.Errorf("failed to parse MySQL DSN: %w", err)
 		}
 		if cfg.DBName == "" {
-			return nil, fmt.Errorf("MySQL DSN 缺少数据库名")
+			return nil, fmt.Errorf("mySQL DSN is missing the database name")
 		}
 		if !strings.Contains(stripped, "parseTime=") {
 			cfg.ParseTime = true
@@ -330,12 +330,12 @@ func buildMySQLConnectionInfo(rawDSN string) (*dbConnectionInfo, error) {
 func buildPostgresConnectionInfo(rawDSN string) (*dbConnectionInfo, error) {
 	parsed, err := url.Parse(rawDSN)
 	if err != nil {
-		return nil, fmt.Errorf("解析 PostgreSQL DSN 失败: %w", err)
+		return nil, fmt.Errorf("failed to parse PostgreSQL DSN: %w", err)
 	}
 
 	dbName := strings.TrimPrefix(parsed.Path, "/")
 	if dbName == "" {
-		return nil, fmt.Errorf("PostgreSQL DSN 缺少数据库名")
+		return nil, fmt.Errorf("postgreSQL DSN is missing the database name")
 	}
 
 	bootstrapURL := *parsed
@@ -376,7 +376,7 @@ func isMissingDatabaseError(dialect string, err error) bool {
 
 func createDatabase(info *dbConnectionInfo, gormConfig *gorm.Config) error {
 	if info.BootstrapDialector == nil || info.DBName == "" {
-		return fmt.Errorf("缺少自动建库所需的连接信息")
+		return fmt.Errorf("missing connection information required for automatic database creation")
 	}
 
 	adminDB, err := gorm.Open(info.BootstrapDialector, gormConfig)
@@ -392,7 +392,7 @@ func createDatabase(info *dbConnectionInfo, gormConfig *gorm.Config) error {
 		return err
 	}
 
-	utils.Info("数据库不存在，已自动创建: %s", info.DBName)
+	utils.Info("Database did not exist and was created automatically: %s", info.DBName)
 	return nil
 }
 
@@ -483,7 +483,7 @@ func newGormConfig() *gorm.Config {
 func configureConnectionPool(db *gorm.DB, dialect string) {
 	sqlDB, err := db.DB()
 	if err != nil {
-		utils.Error("获取底层数据库连接失败: %v", err)
+		utils.Error("Failed to get the underlying database connection: %v", err)
 		return
 	}
 
@@ -492,12 +492,12 @@ func configureConnectionPool(db *gorm.DB, dialect string) {
 		sqlDB.SetMaxIdleConns(10)
 		sqlDB.SetMaxOpenConns(100)
 		sqlDB.SetConnMaxLifetime(time.Hour)
-		utils.Info("SQLite 连接池配置完成: MaxIdle=10, MaxOpen=100, MaxLifetime=1h")
+		utils.Info("SQLite connection pool configured: MaxIdle=10, MaxOpen=100, MaxLifetime=1h")
 	default:
 		sqlDB.SetMaxIdleConns(10)
 		sqlDB.SetMaxOpenConns(100)
 		sqlDB.SetConnMaxLifetime(time.Hour)
-		utils.Info("数据库连接池配置完成: MaxIdle=10, MaxOpen=100, MaxLifetime=1h")
+		utils.Info("Database connection pool configured: MaxIdle=10, MaxOpen=100, MaxLifetime=1h")
 	}
 }
 
@@ -509,14 +509,14 @@ func initMemorySqlite() error {
 	// 连接数据库
 	db, err := gorm.Open(sqlite.Open(dsn), newGormConfig())
 	if err != nil {
-		utils.Error("连接内存数据库失败: %v", err)
+		utils.Error("Failed to connect to the in-memory database: %v", err)
 		return err
 	}
 
 	// 配置连接池 - 内存数据库需要保持连接活跃
 	sqlDB, err := db.DB()
 	if err != nil {
-		utils.Error("获取底层数据库连接失败: %v", err)
+		utils.Error("Failed to get the underlying database connection: %v", err)
 	} else {
 		sqlDB.SetMaxIdleConns(1)
 		sqlDB.SetMaxOpenConns(1)
@@ -525,6 +525,6 @@ func initMemorySqlite() error {
 
 	DB = db
 	Dialect = DialectSQLite
-	utils.Info("演示模式：使用内存数据库")
+	utils.Info("Demo mode: using an in-memory database")
 	return nil
 }

@@ -31,10 +31,10 @@ type TurnstileResponse struct {
 // proxyLink: 代理节点链接（mihomo 格式，为空则直连）
 func VerifyTurnstile(token, secretKey, remoteIP, proxyLink string) (bool, error) {
 	if token == "" {
-		return false, fmt.Errorf("turnstile token 为空")
+		return false, fmt.Errorf("turnstile token is empty")
 	}
 	if secretKey == "" {
-		return false, fmt.Errorf("turnstile secret key 未配置")
+		return false, fmt.Errorf("turnstile secret key is not configured")
 	}
 
 	// 构建请求数据
@@ -52,49 +52,49 @@ func VerifyTurnstile(token, secretKey, remoteIP, proxyLink string) (bool, error)
 
 	client, usedProxy, err := CreateProxyHTTPClient(useProxy, proxyLink, 30*time.Second)
 	if err != nil {
-		Error("创建 Turnstile HTTP 客户端失败: %v", err)
-		return false, fmt.Errorf("创建 HTTP 客户端失败: %v", err)
+		Error("Failed to create Turnstile HTTP client: %v", err)
+		return false, fmt.Errorf("failed to create HTTP client: %v", err)
 	}
 
 	if usedProxy != "" {
-		Debug("Turnstile 验证使用代理: %s", usedProxy)
+		Debug("Turnstile verification uses proxy: %s", usedProxy)
 	}
 
 	// 发送 POST 请求
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, TurnstileVerifyURL, strings.NewReader(formData.Encode()))
 	if err != nil {
-		Error("创建 Turnstile 验证请求失败: %v", err)
-		return false, fmt.Errorf("创建验证请求失败: %v", err)
+		Error("Failed to create Turnstile verification request: %v", err)
+		return false, fmt.Errorf("failed to create verification request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		Error("Turnstile 验证请求失败: %v", err)
-		return false, fmt.Errorf("验证请求失败: %v", err)
+		Error("Turnstile verification request failed: %v", err)
+		return false, fmt.Errorf("verification request failed: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		Error("读取 Turnstile 响应失败: %v", err)
-		return false, fmt.Errorf("读取响应失败: %v", err)
+		Error("Failed to read Turnstile response: %v", err)
+		return false, fmt.Errorf("failed to read response: %v", err)
 	}
 
 	// 解析响应
 	var result TurnstileResponse
 	if err := json.Unmarshal(body, &result); err != nil {
-		Error("解析 Turnstile 响应失败: %v, body: %s", err, string(body))
-		return false, fmt.Errorf("解析响应失败: %v", err)
+		Error("Failed to parse Turnstile response: %v, body: %s", err, string(body))
+		return false, fmt.Errorf("failed to parse response: %v", err)
 	}
 
 	// 检查验证结果
 	if !result.Success {
-		Warn("Turnstile 验证失败, 错误代码: %v", result.ErrorCodes)
+		Warn("Turnstile verification failed, error code: %v", result.ErrorCodes)
 		return false, nil
 	}
 
-	Debug("Turnstile 验证成功, hostname: %s, challenge_ts: %s", result.Hostname, result.ChallengeTs)
+	Debug("Turnstile verification succeeded, hostname: %s, challenge_ts: %s", result.Hostname, result.ChallengeTs)
 	return true, nil
 }

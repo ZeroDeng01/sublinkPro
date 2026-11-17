@@ -17,13 +17,13 @@ func GroupSortGroups(c *gin.Context) {
 func GroupSortDetail(c *gin.Context) {
 	groupName := c.Query("group")
 	if groupName == "" {
-		utils.FailWithMsg(c, "分组名称不能为空")
+		utils.FailWithMsg(c, "Group name is required")
 		return
 	}
 
 	detail, err := models.GetGroupDetail(groupName)
 	if err != nil {
-		utils.FailWithMsg(c, "获取分组详情失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to fetch group details: "+err.Error())
 		return
 	}
 
@@ -34,19 +34,19 @@ func GroupSortDetail(c *gin.Context) {
 func GroupSortSave(c *gin.Context) {
 	var req models.SaveGroupAirportSortsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 
 	if req.GroupName == "" {
-		utils.FailWithMsg(c, "分组名称不能为空")
+		utils.FailWithMsg(c, "Group name is required")
 		return
 	}
 
 	if err := models.SaveGroupAirportSorts(req.GroupName, req.AirportSorts); err != nil {
-		utils.FailWithMsg(c, "保存排序失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to save sort order: "+err.Error())
 		return
 	}
 
-	utils.OkWithMsg(c, "保存成功")
+	utils.OkWithMsg(c, "Saved successfully")
 }

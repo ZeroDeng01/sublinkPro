@@ -1842,6 +1842,8 @@
         "collapse": "Collapse",
         "availableIp": "Available IPs",
         "nodes": "Nodes",
+        "ungrouped": "Ungrouped",
+        "manualSource": "Manual",
         "tagItem": "Tag {{index}}",
         "emptyCountry": "No country stats data",
         "emptyProtocol": "No protocol stats data",
@@ -2329,6 +2331,10 @@
         "detectQualityHint": "(try IPv4 first, then fall back to IPv6; IPv6 may only return partial risk information)",
         "qualityCheckUrl": "Quality check endpoint",
         "qualityCheckUrlPlaceholder": "Select or enter a quality check endpoint",
+        "qualityCheckOptions": {
+          "ippureRecommended": "IPPure (recommended)",
+          "ippure": "IPPure"
+        },
         "detectUnlock": "Unlock check",
         "detectUnlockHint": "(save node unlock results by Provider)",
         "unlockWarning": "Enabling unlock checks can significantly slow down the whole batch. Enable it only when filtering streaming or AI availability regions.",

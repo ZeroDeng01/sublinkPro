@@ -238,7 +238,7 @@ func Load() *AppConfig {
 
 	globalConfig = cfg
 
-	log.Printf("配置加载完成: Port=%d, ExpireDays=%d, DBPath=%s, LogPath=%s",
+	log.Printf("Configuration loaded: Port=%d, ExpireDays=%d, DBPath=%s, LogPath=%s",
 		cfg.Port, cfg.ExpireDays, cfg.DBPath, cfg.LogPath)
 
 	return cfg
@@ -255,7 +255,7 @@ func LoadBootstrap() *AppConfig {
 	cfg := buildBaseConfigInternal(configPath)
 	globalConfig = cfg
 
-	log.Printf("基础配置加载完成: Port=%d, DBPath=%s, LogPath=%s, DSN=%t",
+	log.Printf("Base configuration loaded: Port=%d, DBPath=%s, LogPath=%s, DSN=%t",
 		cfg.Port, cfg.DBPath, cfg.LogPath, cfg.DSN != "")
 
 	return cfg
@@ -365,7 +365,7 @@ func GetCaptchaConfig() CaptchaConfig {
 			// 降级为传统验证码
 			cfg.Mode = CaptchaModeTraditional
 			cfg.Degraded = true
-			log.Printf("警告: Turnstile 配置不完整，降级为传统验证码")
+			log.Printf("Warning: Turnstile configuration is incomplete; falling back to the classic CAPTCHA")
 		}
 	default:
 		// 传统验证码
@@ -464,16 +464,16 @@ func loadFromFileInternal(cfg *AppConfig, configPath string) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("配置文件 %s 不存在，使用默认配置", configPath)
+			log.Printf("Config file %s does not exist; using defaults", configPath)
 		} else {
-			log.Printf("读取配置文件失败: %v", err)
+			log.Printf("Failed to read config file: %v", err)
 		}
 		return
 	}
 
 	fileCfg := &AppConfig{}
 	if err := yaml.Unmarshal(data, fileCfg); err != nil {
-		log.Printf("解析配置文件失败: %v", err)
+		log.Printf("Failed to parse config file: %v", err)
 		return
 	}
 
@@ -654,12 +654,12 @@ func handleSecretsInternal(cfg *AppConfig) {
 			// 只有当数据库值不同时才更新
 			if dbSecret != cfg.JwtSecret {
 				if err := secretSetterFunc("jwt_secret", cfg.JwtSecret); err != nil {
-					log.Printf("同步 JWT Secret 到数据库失败: %v", err)
+					log.Printf("Failed to sync JWT secret to the database: %v", err)
 				} else {
 					if envJwtSecret != "" {
-						log.Println("已将环境变量 SUBLINK_JWT_SECRET 同步到数据库")
+						log.Println("Synced SUBLINK_JWT_SECRET environment variable to the database")
 					} else {
-						log.Println("已将配置文件中的 JWT Secret 同步到数据库")
+						log.Println("Synced JWT secret from the config file to the database")
 					}
 				}
 			}
@@ -674,10 +674,10 @@ func handleSecretsInternal(cfg *AppConfig) {
 	// 如果仍然没有值，自动生成
 	if cfg.JwtSecret == "" {
 		cfg.JwtSecret = generateRandomKey(32)
-		log.Println("JWT Secret 未配置，已自动生成并保存到数据库")
+		log.Println("JWT secret was not configured; generated and saved to the database")
 		if secretSetterFunc != nil {
 			if err := secretSetterFunc("jwt_secret", cfg.JwtSecret); err != nil {
-				log.Printf("保存 JWT Secret 到数据库失败: %v", err)
+				log.Printf("Failed to save JWT secret to the database: %v", err)
 			}
 		}
 	}
@@ -697,12 +697,12 @@ func handleSecretsInternal(cfg *AppConfig) {
 			// 只有当数据库值不同时才更新
 			if dbKey != cfg.APIEncryptionKey {
 				if err := secretSetterFunc("api_encryption_key", cfg.APIEncryptionKey); err != nil {
-					log.Printf("同步 API 加密密钥到数据库失败: %v", err)
+					log.Printf("Failed to sync API encryption key to the database: %v", err)
 				} else {
 					if envApiKey != "" {
-						log.Println("已将环境变量 SUBLINK_API_ENCRYPTION_KEY 同步到数据库")
+						log.Println("Synced SUBLINK_API_ENCRYPTION_KEY environment variable to the database")
 					} else {
-						log.Println("已将配置文件中的 API 加密密钥同步到数据库")
+						log.Println("Synced API encryption key from the config file to the database")
 					}
 				}
 			}
@@ -717,12 +717,12 @@ func handleSecretsInternal(cfg *AppConfig) {
 	// 如果仍然没有值，自动生成
 	if cfg.APIEncryptionKey == "" {
 		cfg.APIEncryptionKey = generateRandomKey(32)
-		log.Println("API 加密密钥未配置，已自动生成")
+		log.Println("API encryption key was not configured; generated automatically")
 		if secretSetterFunc != nil {
 			if err := secretSetterFunc("api_encryption_key", cfg.APIEncryptionKey); err != nil {
-				log.Printf("保存 API 加密密钥到数据库失败: %v", err)
+				log.Printf("Failed to save API encryption key to the database: %v", err)
 			} else {
-				log.Println("API 加密密钥已保存到数据库")
+				log.Println("API encryption key saved to the database")
 			}
 		}
 	}
@@ -733,7 +733,7 @@ func generateRandomKey(length int) string {
 	bytes := make([]byte, length)
 	if _, err := rand.Read(bytes); err != nil {
 		// 如果随机数生成失败，使用备用方案
-		log.Printf("生成随机密钥失败: %v，使用备用方案", err)
+		log.Printf("Failed to generate a random key: %v; using the fallback", err)
 		return "fallback-key-please-change-" + strconv.FormatInt(int64(os.Getpid()), 16)
 	}
 	return hex.EncodeToString(bytes)
@@ -839,7 +839,7 @@ func MigrateFromOldConfig() bool {
 		// 检查数据库中是否已有值
 		if secretGetterFunc == nil || secretGetterFunc("jwt_secret") == "" {
 			if err := secretSetterFunc("jwt_secret", oldCfg.JwtSecret); err == nil {
-				log.Println("已将 JWT Secret 从配置文件迁移到数据库")
+				log.Println("Migrated JWT secret from the config file to the database")
 				migrated = true
 			}
 		}
@@ -849,7 +849,7 @@ func MigrateFromOldConfig() bool {
 	if oldCfg.APIEncryptionKey != "" && secretSetterFunc != nil {
 		if secretGetterFunc == nil || secretGetterFunc("api_encryption_key") == "" {
 			if err := secretSetterFunc("api_encryption_key", oldCfg.APIEncryptionKey); err == nil {
-				log.Println("已将 API 加密密钥从配置文件迁移到数据库")
+				log.Println("Migrated API encryption key from the config file to the database")
 				migrated = true
 			}
 		}

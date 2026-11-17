@@ -21,7 +21,7 @@ func (openAIUnlockChecker) Key() string { return models.UnlockProviderOpenAI }
 func (openAIUnlockChecker) Aliases() []string { return []string{"openai", "chatgpt"} }
 
 func (openAIUnlockChecker) Meta() models.UnlockProviderMeta {
-	return models.UnlockProviderMeta{Value: models.UnlockProviderOpenAI, Label: "OpenAI", Description: "检测 OpenAI / ChatGPT 服务地区可访问性", Category: "ai"}
+	return models.UnlockProviderMeta{Value: models.UnlockProviderOpenAI, Label: "OpenAI", Description: "Checks OpenAI / ChatGPT regional availability", Category: "ai"}
 }
 
 func (openAIUnlockChecker) RenameVariableMeta() models.UnlockRenameVariableMeta {

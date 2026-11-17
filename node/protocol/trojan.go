@@ -14,12 +14,12 @@ func init() {
 	base := newProtocolSpec("trojan", []string{"trojan://"}, "Trojan", "#d32f2f", "T", Trojan{}, "Name", DecodeTrojanURL, EncodeTrojanURL, func(t Trojan) LinkIdentity {
 		return buildIdentity("trojan", t.Name, t.Hostname, utils.GetPortString(t.Port))
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Hostname", Label: "服务器地址", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
-		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true},
-		FieldMeta{Name: "Query.Type", Label: "传输层", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "httpupgrade", "grpc"}},
-		FieldMeta{Name: "Query.Path", Label: "路径", Type: "string", Group: "transport", Placeholder: "/ws", Advanced: true},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Hostname", Label: "Server address", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
+		FieldMeta{Name: "Password", Label: "Password", Type: "string", Group: "auth", Secret: true},
+		FieldMeta{Name: "Query.Type", Label: "Transport", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "httpupgrade", "grpc"}},
+		FieldMeta{Name: "Query.Path", Label: "Path", Type: "string", Group: "transport", Placeholder: "/ws", Advanced: true},
 		FieldMeta{Name: "Query.Host", Label: "Host", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Query.Headers", Label: "Headers", Type: "string", Group: "transport", Multiline: true, Advanced: true},
 		FieldMeta{Name: "Query.MaxEarlyData", Label: "Early Data", Type: "int", Group: "transport", Advanced: true},
@@ -34,14 +34,14 @@ func init() {
 		FieldMeta{Name: "Query.MinStreams", Label: "gRPC Min Streams", Type: "int", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Query.MaxStreams", Label: "gRPC Max Streams", Type: "int", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Query.Flow", Label: "Flow", Type: "string", Group: "transport", Advanced: true},
-		FieldMeta{Name: "Query.Security", Label: "安全类型", Type: "string", Group: "tls", Options: []string{"tls", "reality"}, Advanced: true},
+		FieldMeta{Name: "Query.Security", Label: "Security type", Type: "string", Group: "tls", Options: []string{"tls", "reality"}, Advanced: true},
 		FieldMeta{Name: "Query.Sni", Label: "SNI", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Ech", Label: "ECH", Type: "string", Group: "tls", Advanced: true, Placeholder: "example.com+https://1.1.1.1/dns-query"},
 		FieldMeta{Name: "Query.Peer", Label: "Peer", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Alpn", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
-		FieldMeta{Name: "Query.Fp", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
-		FieldMeta{Name: "Query.Fingerprint", Label: "证书指纹", Type: "string", Group: "tls", Advanced: true},
-		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
+		FieldMeta{Name: "Query.Fp", Label: "Fingerprint", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Fingerprint", Label: "Certificate fingerprint", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.AllowInsecure", Label: "Skip certificate verification", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Fm", Label: "FinalMask", Type: "string", Group: "tls", Advanced: true},
@@ -215,10 +215,10 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 	*/
 	u, err := url.Parse(s)
 	if err != nil {
-		return Trojan{}, fmt.Errorf("url格式化失败:%s", s)
+		return Trojan{}, fmt.Errorf("failed to format URL: %s", s)
 	}
 	if u.Scheme != "trojan" {
-		return Trojan{}, fmt.Errorf("非trojan协议: %s", s)
+		return Trojan{}, fmt.Errorf("not a trojan link: %s", s)
 	}
 	password := u.User.Username()
 	hostname := u.Hostname()

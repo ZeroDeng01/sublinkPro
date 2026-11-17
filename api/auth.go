@@ -47,26 +47,26 @@ func GetCaptcha(c *gin.Context) {
 	switch captchaCfg.Mode {
 	case config.CaptchaModeDisabled:
 		// 关闭验证码，不需要返回验证码数据
-		utils.OkDetailedI18n(c, "验证码已关闭", response, "backend.auth.captcha.disabled", nil)
+		utils.OkDetailedI18n(c, "Captcha is disabled", response, "backend.auth.captcha.disabled", nil)
 		return
 
 	case config.CaptchaModeTurnstile:
 		// Turnstile 模式，返回 site key
 		response["turnstileSiteKey"] = captchaCfg.TurnstileSiteKey
-		utils.OkDetailedI18n(c, "获取 Turnstile 配置成功", response, "backend.auth.captcha.turnstileLoaded", nil)
+		utils.OkDetailedI18n(c, "Turnstile configuration loaded", response, "backend.auth.captcha.turnstileLoaded", nil)
 		return
 
 	default:
 		// 传统验证码模式
 		id, bs4, _, err := utils.GetCaptcha()
 		if err != nil {
-			utils.Error("获取验证码失败: %v", err)
-			utils.FailWithI18n(c, "获取验证码失败", "backend.auth.captcha.loadFailed", nil)
+			utils.Error("Failed to load captcha: %v", err)
+			utils.FailWithI18n(c, "Failed to load captcha", "backend.auth.captcha.loadFailed", nil)
 			return
 		}
 		response["captchaKey"] = id
 		response["captchaBase64"] = bs4
-		utils.OkDetailedI18n(c, "获取验证码成功", response, "backend.auth.captcha.loaded", nil)
+		utils.OkDetailedI18n(c, "Captcha loaded", response, "backend.auth.captcha.loaded", nil)
 	}
 }
 
@@ -82,7 +82,7 @@ func UserLogin(c *gin.Context) {
 	limiter := GetLoginLimiter()
 	if isBanned, banUntil := limiter.CheckBan(ip); isBanned {
 		minutes := int(time.Until(banUntil).Minutes()) + 1
-		utils.FailWithI18n(c, fmt.Sprintf("由于多次登录失败，IP已被封禁，请 %d 分钟后再试", minutes), "backend.auth.login.ipBanned", map[string]any{"minutes": minutes})
+		utils.FailWithI18n(c, fmt.Sprintf("Too many failed login attempts; this IP is blocked for %d minutes", minutes), "backend.auth.login.ipBanned", map[string]any{"minutes": minutes})
 		return
 	}
 
@@ -91,42 +91,42 @@ func UserLogin(c *gin.Context) {
 	switch captchaCfg.Mode {
 	case config.CaptchaModeDisabled:
 		// 关闭验证码，跳过验证
-		utils.Debug("验证码已关闭，跳过验证")
+		utils.Debug("Captcha disabled; skipping verification")
 
 	case config.CaptchaModeTurnstile:
 		// Turnstile 模式
 		turnstileToken := c.PostForm("turnstileToken")
 		if turnstileToken == "" {
-			utils.Warn("Turnstile 令牌为空")
-			utils.FailWithDataI18n(c, "请完成人机验证", gin.H{"errorType": "captcha"}, "backend.auth.login.turnstileRequired", nil)
+			utils.Warn("Turnstile token is empty")
+			utils.FailWithDataI18n(c, "Please complete the human verification", gin.H{"errorType": "captcha"}, "backend.auth.login.turnstileRequired", nil)
 			return
 		}
 		verified, err := utils.VerifyTurnstile(turnstileToken, config.GetTurnstileSecretKey(), ip, config.GetTurnstileProxyLink())
 		if err != nil {
-			utils.Error("Turnstile 验证出错: %v", err)
-			utils.FailWithDataI18n(c, "人机验证失败", gin.H{"errorType": "captcha"}, "backend.auth.login.turnstileFailed", nil)
+			utils.Error("Turnstile verification error: %v", err)
+			utils.FailWithDataI18n(c, "Human verification failed", gin.H{"errorType": "captcha"}, "backend.auth.login.turnstileFailed", nil)
 			return
 		}
 		if !verified {
-			utils.Warn("Turnstile 验证未通过")
-			utils.FailWithDataI18n(c, "人机验证未通过", gin.H{"errorType": "captcha"}, "backend.auth.login.turnstileRejected", nil)
+			utils.Warn("Turnstile verification rejected")
+			utils.FailWithDataI18n(c, "Human verification rejected", gin.H{"errorType": "captcha"}, "backend.auth.login.turnstileRejected", nil)
 			return
 		}
 
 	default:
 		// 传统验证码模式
 		if !utils.VerifyCaptcha(captchaKey, captchaCode) {
-			utils.Warn("验证码错误")
-			utils.FailWithDataI18n(c, "验证码错误", gin.H{"errorType": "captcha"}, "backend.auth.login.captchaInvalid", nil)
+			utils.Warn("Invalid captcha")
+			utils.FailWithDataI18n(c, "Invalid captcha", gin.H{"errorType": "captcha"}, "backend.auth.login.captchaInvalid", nil)
 			return
 		}
 	}
 	user := &models.User{Username: username, Password: password}
 	err := user.Verify()
 	if err != nil {
-		utils.Warn("账号或者密码错误: %v", err)
+		utils.Warn("Invalid username or password: %v", err)
 		limiter.RecordFailure(ip) // 记录失败
-		utils.FailWithDataI18n(c, "用户名或密码错误", gin.H{"errorType": "credentials"}, "backend.auth.login.invalidCredentials", nil)
+		utils.FailWithDataI18n(c, "Incorrect username or password", gin.H{"errorType": "credentials"}, "backend.auth.login.invalidCredentials", nil)
 		return
 	}
 	// 登录成功，清除失败记录
@@ -134,11 +134,11 @@ func UserLogin(c *gin.Context) {
 	if user.TOTPEnabled {
 		challengeToken, err := issuePendingMFAChallenge(user)
 		if err != nil {
-			utils.Error("生成 MFA 挑战失败: %v", err)
-			utils.FailWithI18n(c, "生成登录验证失败", "backend.auth.login.mfaChallengeFailed", nil)
+			utils.Error("Failed to create MFA challenge: %v", err)
+			utils.FailWithI18n(c, "Failed to create login challenge", "backend.auth.login.mfaChallengeFailed", nil)
 			return
 		}
-		utils.OkDetailedI18n(c, "需要进行二次验证", gin.H{
+		utils.OkDetailedI18n(c, "Two-factor verification required", gin.H{
 			"requiresMFA":    true,
 			"challengeToken": challengeToken,
 			"methods":        []string{"totp", "recovery_code"},
@@ -153,23 +153,23 @@ func UserLogin(c *gin.Context) {
 func UserOut(c *gin.Context) {
 	// 拿到jwt中的username
 	if _, Is := c.Get("username"); Is {
-		utils.OkDetailedI18n(c, "退出成功", nil, "backend.auth.logout.success", nil)
+		utils.OkDetailedI18n(c, "Logged out", nil, "backend.auth.logout.success", nil)
 	}
 }
 
 func notifyUserLogin(username, ip string) {
 	location, err := geoip.GetLocation(ip)
 	if err != nil {
-		location = "未知位置"
+		location = "Unknown location"
 	}
 	if location == "" {
-		location = "未知位置"
+		location = "Unknown location"
 	}
 	timeStr := time.Now().Format("2006-01-02 15:04:05")
 
 	payload := notifications.Payload{
-		Title:   "用户登录通知",
-		Message: fmt.Sprintf("用户 %s 已登录\nIP: %s (%s)\n时间: %s", username, ip, location, timeStr),
+		Title:   "User login notification",
+		Message: fmt.Sprintf("User %s signed in\nIP: %s (%s)\nTime: %s", username, ip, location, timeStr),
 		Data: map[string]any{
 			"username": username,
 			"ip":       ip,

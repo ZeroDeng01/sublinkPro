@@ -87,7 +87,7 @@ func InitLogger(logPath string, level string) {
 
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(logPath, 0755); err != nil {
-			log.Printf("创建日志目录失败: %v", err)
+			log.Printf("Failed to create log directory: %v", err)
 			return
 		}
 	}
@@ -97,7 +97,7 @@ func InitLogger(logPath string, level string) {
 	logFilePath := filepath.Join(logPath, t)
 	file, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		log.Printf("创建日志文件失败: %v", err)
+		log.Printf("Failed to create log file: %v", err)
 		return
 	}
 

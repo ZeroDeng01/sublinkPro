@@ -203,7 +203,7 @@ func parseXraySubscriptionProxies(data []byte) []protocol.Proxy {
 	}
 
 	if len(proxies) > 0 {
-		utils.Info("Xray JSON 订阅解析成功：配置 %d 个，节点 %d 个", len(profiles), len(proxies))
+		utils.Info("Xray JSON subscription parsed: %d configs, %d nodes", len(profiles), len(proxies))
 	}
 	if len(skipped) > 0 {
 		names := make([]string, 0, len(skipped))
@@ -211,7 +211,7 @@ func parseXraySubscriptionProxies(data []byte) []protocol.Proxy {
 			names = append(names, fmt.Sprintf("%s×%d", name, count))
 		}
 		sort.Strings(names)
-		utils.Debug("Xray JSON 订阅跳过不受支持的出站：%s", strings.Join(names, ", "))
+		utils.Debug("Xray JSON subscription skipped an unsupported outbound: %s", strings.Join(names, ", "))
 	}
 	return proxies
 }
@@ -231,12 +231,12 @@ func decodeXrayProfiles(data []byte) ([]xrayProfile, bool) {
 		}
 		// 流式响应可能在传输中被截断，尽量保留已经完整到达的配置对象。
 		if salvaged := decodeCompleteXrayProfiles(trimmed); len(salvaged) > 0 {
-			utils.Warn("Xray JSON 订阅响应不完整，已恢复 %d 个完整配置", len(salvaged))
+			utils.Warn("Xray JSON subscription response was incomplete; recovered %d complete configs", len(salvaged))
 			return salvaged, true
 		}
 		// 首个配置本身也未接收完整时，退一步保留其中已经完整的出站。
 		if outbounds := salvageXrayOutbounds(trimmed); len(outbounds) > 0 {
-			utils.Warn("Xray JSON 订阅响应不完整，已从首个配置恢复 %d 个出站", len(outbounds))
+			utils.Warn("Xray JSON subscription response was incomplete; recovered %d outbounds from the first config", len(outbounds))
 			return []xrayProfile{{Outbounds: outbounds}}, true
 		}
 		return nil, false
@@ -246,7 +246,7 @@ func decodeXrayProfiles(data []byte) ([]xrayProfile, bool) {
 			return []xrayProfile{profile}, true
 		}
 		if outbounds := salvageXrayOutbounds(trimmed); len(outbounds) > 0 {
-			utils.Warn("Xray JSON 订阅响应不完整，已恢复 %d 个出站", len(outbounds))
+			utils.Warn("Xray JSON subscription response was incomplete; recovered %d outbounds", len(outbounds))
 			return []xrayProfile{{Outbounds: outbounds}}, true
 		}
 		return nil, false
@@ -426,7 +426,7 @@ func xrayOutboundToProxy(outbound xrayOutbound, namePrefix string) (protocol.Pro
 
 	applyXrayTLSSettings(&proxy, stream)
 	if !applyXrayTransport(&proxy, stream) {
-		utils.Debug("Xray 节点【%s】使用了当前无法承载的传输层，已跳过（network=%s）", proxy.Name, stream.Network)
+		utils.Debug("Xray node [%s] uses a transport that is not supported yet; skipped (network=%s)", proxy.Name, stream.Network)
 		return protocol.Proxy{}, false
 	}
 	return proxy, true

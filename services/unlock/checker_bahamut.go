@@ -43,7 +43,7 @@ func (bahamutAnimeUnlockChecker) Meta() models.UnlockProviderMeta {
 	return models.UnlockProviderMeta{
 		Value:       models.UnlockProviderBahamut,
 		Label:       "Bahamut Anime",
-		Description: "检测巴哈姆特动画疯（ani.gamer.com.tw）地区可访问性",
+		Description: "Checks Bahamut Anime (ani.gamer.com.tw) regional availability",
 		Category:    "streaming",
 	}
 }

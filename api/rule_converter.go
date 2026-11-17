@@ -66,12 +66,12 @@ type ACLProxyGroup struct {
 func ConvertRules(c *gin.Context) {
 	var req ConvertRulesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid parameters: "+err.Error())
 		return
 	}
 
 	if req.RuleSource == "" {
-		utils.FailWithMsg(c, "请提供远程规则配置地址")
+		utils.FailWithMsg(c, "Provide a remote rule configuration URL")
 		return
 	}
 
@@ -82,7 +82,7 @@ func ConvertRules(c *gin.Context) {
 	// 检测模板类型与选择的类别是否匹配
 	templateType := detectTemplateType(req.Template)
 	if templateType != "" && templateType != req.Category {
-		utils.FailWithMsg(c, fmt.Sprintf("模板内容与选择的类别不匹配：检测到 %s 格式的模板，但选择的类别是 %s", templateType, req.Category))
+		utils.FailWithMsg(c, fmt.Sprintf("Template content does not match the selected category: detected %s template, but category is %s", templateType, req.Category))
 		return
 	}
 
@@ -94,7 +94,7 @@ func ConvertRules(c *gin.Context) {
 	// 获取远程 ACL 配置
 	aclContent, err := fetchRemoteContent(req.RuleSource, req.UseProxy, req.ProxyLink)
 	if err != nil {
-		utils.FailWithMsg(c, "获取远程配置失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to fetch remote configuration: "+err.Error())
 		return
 	}
 
@@ -112,7 +112,7 @@ func ConvertRules(c *gin.Context) {
 	}
 
 	if err != nil {
-		utils.FailWithMsg(c, "生成规则失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to generate rules: "+err.Error())
 		return
 	}
 
@@ -499,7 +499,7 @@ func expandRulesParallel(rulesets []ACLRuleset, useProxy bool, proxyLink string)
 				// 获取远程规则
 				content, err := fetchRemoteContent(source.URL, useProxy, proxyLink)
 				if err != nil {
-					utils.Error("获取规则失败 %s: %v", source.URL, err)
+					utils.Error("Failed to fetch rules %s: %v", source.URL, err)
 					results <- ruleResult{idx, rules}
 					return
 				}
@@ -990,7 +990,7 @@ func generateSurgeRules(rulesets []ACLRuleset, expand bool, useProxy bool, proxy
 				if strings.HasPrefix(source.SourceType, "clash-") {
 					content, err := fetchRemoteContent(source.URL, useProxy, proxyLink)
 					if err != nil {
-						utils.Error("获取规则失败 %s: %v", source.URL, err)
+						utils.Error("Failed to fetch rules %s: %v", source.URL, err)
 						continue
 					}
 					lines = append(lines, parseRemoteRulesForSurge(content, source, rs.Group)...)

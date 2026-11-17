@@ -54,7 +54,7 @@ func ConfigInit() {
 	// 确保数据库目录存在
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(dbPath, 0755); err != nil {
-			utils.Error("创建数据库目录失败: %v", err)
+			utils.Error("Failed to create the database directory: %v", err)
 		}
 	}
 
@@ -72,15 +72,15 @@ func ConfigInit() {
 
 		data, err := yaml.Marshal(&defaultConfig)
 		if err != nil {
-			utils.Error("生成默认配置文件失败: %v", err)
+			utils.Error("Failed to generate the default config file: %v", err)
 			return
 		}
 		data = []byte(configComment + string(data))
 		if err := os.WriteFile(configPath, data, 0644); err != nil {
-			utils.Error("写入默认配置文件失败: %v", err)
+			utils.Error("Failed to write the default config file: %v", err)
 			return
 		}
-		utils.Info("配置文件不存在，已创建默认配置文件: %s", configPath)
+		utils.Info("Config file did not exist; created a default config file: %s", configPath)
 	}
 }
 
@@ -140,6 +140,6 @@ func SetConfig(newCfg Config) {
 
 	// 保存到配置文件
 	if err := config.SaveToFile(); err != nil {
-		utils.Error("保存配置到文件失败: %v", err)
+		utils.Error("Failed to save the configuration to file: %v", err)
 	}
 }

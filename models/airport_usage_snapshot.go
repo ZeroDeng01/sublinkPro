@@ -210,7 +210,7 @@ func RecordAirportUsageSnapshot(airportID int, upload, download, total, expire i
 		CapturedAt: now,
 	}
 	if err := database.DB.Create(&snapshot).Error; err != nil {
-		utils.Warn("记录机场用量快照失败 ID: %d: %v", airportID, err)
+		utils.Warn("Failed to record airport usage snapshot ID %d: %v", airportID, err)
 		return
 	}
 	maybePruneUsageSnapshots()
@@ -232,7 +232,7 @@ func maybePruneUsageSnapshots() {
 		return
 	}
 	if err := PruneAirportUsageSnapshots(GetAirportUsageRetentionDays()); err != nil {
-		utils.Warn("清理机场用量历史失败: %v", err)
+		utils.Warn("Failed to clean up airport usage history: %v", err)
 	}
 }
 

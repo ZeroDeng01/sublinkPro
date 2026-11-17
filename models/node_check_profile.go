@@ -76,14 +76,14 @@ func init() {
 
 // InitNodeCheckProfileCache 初始化节点检测策略缓存
 func InitNodeCheckProfileCache() error {
-	utils.Info("开始加载节点检测策略到缓存")
+	utils.Info("Loading check profiles into cache")
 	var profiles []NodeCheckProfile
 	if err := database.DB.Find(&profiles).Error; err != nil {
 		return err
 	}
 
 	nodeCheckProfileCache.LoadAll(profiles)
-	utils.Info("节点检测策略缓存初始化完成，共加载 %d 个策略", nodeCheckProfileCache.Count())
+	utils.Info("Check profile cache initialized with %d profiles", nodeCheckProfileCache.Count())
 
 	cache.Manager.Register("node_check_profile", nodeCheckProfileCache)
 	return nil
