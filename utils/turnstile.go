@@ -55,6 +55,7 @@ func VerifyTurnstile(token, secretKey, remoteIP, proxyLink string) (bool, error)
 		Error("创建 Turnstile HTTP 客户端失败: %v", err)
 		return false, fmt.Errorf("创建 HTTP 客户端失败: %v", err)
 	}
+	defer CloseHTTPClient(client)
 
 	if usedProxy != "" {
 		Debug("Turnstile 验证使用代理: %s", usedProxy)

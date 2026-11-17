@@ -690,6 +690,15 @@ Comments should primarily use Chinese. Keep English terms when they refer to:
 
 ---
 
+## Resource Lifetimes
+
+- Temporary HTTP clients created by `utils.NewHTTPClientWithAdapter` have a private connection pool. Close response bodies first, then call `utils.CloseHTTPClient` on every return path.
+- `NewHTTPClientWithAdapter` borrows its adapter. The creator closes the adapter after all dependent clients finish; helpers accepting an existing adapter must leave it usable. `CreateProxyHTTPClient` owns adapters it creates, and `CloseHTTPClient` releases both the private pool and that adapter.
+- Long-lived clients, such as Telegram polling clients, retain their resources until shutdown. Shutdown cancels requests and releases the pool and owned adapter. Temporary Telegram test clients must also be stopped.
+- The task cache loads all database tasks at startup and retains tasks written during the process lifetime. It does not evict tasks based on age. Deleting task history from the database synchronously removes the same IDs and secondary indexes from the cache; concurrent updates must not restore deleted entries.
+
+---
+
 ## 🧪 Testing Standards
 
 Clear, maintainable tests and predictable test file organization are basic requirements for code quality. Tests should verify real behavior and boundaries rather than implementation details or fragile coverage-only cases.

@@ -5,10 +5,9 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
-	"net"
 	"net/http"
-	"strconv"
 	"strings"
+	"sublink/utils"
 	"time"
 
 	"github.com/metacubex/mihomo/constant"
@@ -42,30 +41,14 @@ func newUnlockRuntime(proxyAdapter constant.Proxy, timeout time.Duration, landin
 }
 
 func createUnlockHTTPClient(proxyAdapter constant.Proxy, timeout time.Duration) *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				h, pStr, splitErr := net.SplitHostPort(addr)
-				if splitErr != nil {
-					return nil, splitErr
-				}
-				pUint, parseErr := strconv.ParseUint(pStr, 10, 16)
-				if parseErr != nil {
-					return nil, parseErr
-				}
-				md := &constant.Metadata{Host: h, DstPort: uint16(pUint), Type: constant.HTTP}
-				return proxyAdapter.DialContext(ctx, md)
-			},
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- 解锁检测需要兼容目标站点的异常证书配置
-		},
-		Timeout: timeout,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 {
-				return http.ErrUseLastResponse
-			}
-			return nil
-		},
+	client := utils.NewHTTPClientWithAdapter(proxyAdapter, timeout, &tls.Config{InsecureSkipVerify: true}) // #nosec G402 -- 解锁检测需要兼容目标站点的异常证书配置
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 5 {
+			return http.ErrUseLastResponse
+		}
+		return nil
 	}
+	return client
 }
 
 func fetchUnlockProbe(runtime UnlockRuntime, target string, headers map[string]string) (*unlockHTTPResponse, error) {

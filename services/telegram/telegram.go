@@ -27,6 +27,9 @@ type TelegramBot struct {
 	UseProxy  bool
 	ProxyLink string
 
+	ctx           context.Context
+	cancel        context.CancelFunc
+	stopOnce      sync.Once
 	client        *http.Client
 	pollingActive bool
 	stopChan      chan struct{}
@@ -194,7 +197,10 @@ func StartBot(config *Config) error {
 		utils.Info("[Telegram] 使用代理连接: %s", usedProxy)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	bot := &TelegramBot{
+		ctx:       ctx,
+		cancel:    cancel,
 		Token:     config.BotToken,
 		ChatID:    config.ChatID,
 		UseProxy:  config.UseProxy,
@@ -206,6 +212,7 @@ func StartBot(config *Config) error {
 	// 验证 Token
 	if err := bot.validateToken(); err != nil {
 		bot.setError(err.Error())
+		bot.Stop()
 		return fmt.Errorf("验证 Token 失败: %v", err)
 	}
 
@@ -290,13 +297,19 @@ func (b *TelegramBot) SetCommands() error {
 
 // Stop 停止机器人
 func (b *TelegramBot) Stop() {
-	b.mutex.Lock()
-	if b.pollingActive {
-		close(b.stopChan)
+	b.stopOnce.Do(func() {
+		b.mutex.Lock()
+		if b.stopChan != nil {
+			close(b.stopChan)
+		}
 		b.pollingActive = false
-	}
-	b.connected = false
-	b.mutex.Unlock()
+		b.connected = false
+		b.mutex.Unlock()
+		if b.cancel != nil {
+			b.cancel()
+		}
+		utils.CloseHTTPClient(b.client)
+	})
 }
 
 // IsConnected 检查是否连接
@@ -334,6 +347,12 @@ func (b *TelegramBot) setError(err string) {
 // startPolling 启动长轮询
 func (b *TelegramBot) startPolling() {
 	b.mutex.Lock()
+	select {
+	case <-b.stopChan:
+		b.mutex.Unlock()
+		return
+	default:
+	}
 	b.pollingActive = true
 	b.mutex.Unlock()
 
@@ -356,10 +375,12 @@ func (b *TelegramBot) startPolling() {
 
 				if retryCount >= maxRetry {
 					utils.Warn("Telegram 连接失败次数过多，等待 30 秒后重试")
-					time.Sleep(30 * time.Second)
+					if !b.waitForPollingRetry(30 * time.Second) {
+						return
+					}
 					retryCount = 0
-				} else {
-					time.Sleep(time.Duration(retryCount) * time.Second)
+				} else if !b.waitForPollingRetry(time.Duration(retryCount) * time.Second) {
+					return
 				}
 				continue
 			}
@@ -372,6 +393,18 @@ func (b *TelegramBot) startPolling() {
 				b.updateOffset = update.UpdateID + 1
 			}
 		}
+	}
+}
+
+// 停止时打断重试等待，避免旧机器人在等待期间继续持有资源。
+func (b *TelegramBot) waitForPollingRetry(delay time.Duration) bool {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-b.stopChan:
+		return false
+	case <-timer.C:
+		return true
 	}
 }
 
@@ -486,6 +519,10 @@ func (b *TelegramBot) handleCallback(callback *CallbackQuery) {
 func (b *TelegramBot) apiRequest(method string, params map[string]any) ([]byte, error) {
 	url := TelegramAPIBase + b.Token + "/" + method
 
+	ctx := b.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	var req *http.Request
 	var err error
 
@@ -494,13 +531,13 @@ func (b *TelegramBot) apiRequest(method string, params map[string]any) ([]byte, 
 		if err != nil {
 			return nil, fmt.Errorf("序列化参数失败: %v", err)
 		}
-		req, err = http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewBuffer(jsonData))
+		req, err = http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
 			return nil, fmt.Errorf("创建请求失败: %v", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 	} else {
-		req, err = http.NewRequestWithContext(context.Background(), "GET", url, nil)
+		req, err = http.NewRequestWithContext(ctx, "GET", url, nil)
 		if err != nil {
 			return nil, fmt.Errorf("创建请求失败: %v", err)
 		}
@@ -637,7 +674,10 @@ func CreateTestBot(config *Config) (*TelegramBot, error) {
 		return nil, fmt.Errorf("创建 HTTP 客户端失败: %v", err)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	bot := &TelegramBot{
+		ctx:       ctx,
+		cancel:    cancel,
 		Token:     config.BotToken,
 		ChatID:    config.ChatID,
 		UseProxy:  config.UseProxy,
@@ -647,6 +687,7 @@ func CreateTestBot(config *Config) (*TelegramBot, error) {
 
 	// 验证 Token
 	if err := bot.validateToken(); err != nil {
+		bot.Stop()
 		return nil, fmt.Errorf("验证 Token 失败: %v", err)
 	}
 

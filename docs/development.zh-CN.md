@@ -690,6 +690,15 @@ type UnlockChecker interface {
 
 ---
 
+## 资源生命周期
+
+- `utils.NewHTTPClientWithAdapter` 创建的临时 HTTP 客户端拥有独立连接池。所有返回路径都应先关闭响应体，再调用 `utils.CloseHTTPClient`。
+- `NewHTTPClientWithAdapter` 仅借用 adapter。创建者应在所有依赖客户端结束后关闭 adapter；接收已有 adapter 的辅助函数必须保证其后续仍可使用。`CreateProxyHTTPClient` 拥有自己创建的 adapter，`CloseHTTPClient` 会一并释放独立连接池和该 adapter。
+- Telegram 轮询等长期客户端在停止时释放资源：先取消请求，再释放连接池及其拥有的 adapter。临时 Telegram 测试客户端同样必须停止。
+- 任务缓存启动时加载数据库中的全部任务，并保留本次运行期间写入的任务，不按时间主动淘汰。数据库删除任务历史时，同步移除缓存中的对应 ID 及二级索引；并发更新不得重新缓存已经删除的记录。
+
+---
+
 ## 🧪 测试规范
 
 规范、可维护的测试用例和清晰的测试文件组织是保证代码质量的基本要求。测试应验证真实业务行为和边界条件,而不是只覆盖实现细节或为了提高覆盖率而堆砌脆弱用例。

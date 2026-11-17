@@ -113,6 +113,8 @@ func TestTelegramConnection(c *gin.Context) {
 		return
 	}
 
+	defer testBot.Stop()
+
 	// 如果有 ChatID，发送测试消息
 	if req.ChatId != 0 {
 		if err := testBot.SendMessage(req.ChatId, "✅ Sublink Pro 连接测试成功！", ""); err != nil {
