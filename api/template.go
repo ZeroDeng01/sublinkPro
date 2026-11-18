@@ -509,9 +509,14 @@ func DelTemp(c *gin.Context) {
 		return
 	}
 
-	// 检查文件是否存在
+	// 文件可能已被外部删除（例如用户直接在挂载目录中删除默认模板），
+	// 这种情况下仍然清理模板元数据与历史版本，避免界面上留下无法删除的孤儿记录。
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		utils.FailWithMsg(c, "File not found")
+		cache.InvalidateTemplateContent(filename)
+		if err := deleteTemplateMetadata(filename); err != nil {
+			utils.Error("Failed to delete template metadata: %v", err)
+		}
+		utils.OkWithMsg(c, "Deleted successfully")
 		return
 	} else if err != nil {
 		utils.Error("Failed to check file existence: %v", err)
@@ -531,16 +536,26 @@ func DelTemp(c *gin.Context) {
 	cache.InvalidateTemplateContent(filename)
 
 	// 删除数据库记录
-	var tmpl models.Template
-	if err := tmpl.FindByName(filename); err == nil {
-		if err := tmpl.Delete(); err != nil {
-			utils.Error("Failed to delete template metadata: %v", err)
-		} else if err := models.DeleteTemplateVersions(baseTemplateDir, tmpl.ID); err != nil {
-			models.LogTemplateVersionError("delete history", err)
-		}
+	if err := deleteTemplateMetadata(filename); err != nil {
+		utils.Error("Failed to delete template metadata: %v", err)
 	}
 
 	utils.OkWithMsg(c, "Deleted successfully")
+}
+
+// deleteTemplateMetadata 删除模板的数据库记录及其历史版本。
+func deleteTemplateMetadata(filename string) error {
+	var tmpl models.Template
+	if err := tmpl.FindByName(filename); err != nil {
+		return nil
+	}
+	if err := tmpl.Delete(); err != nil {
+		return err
+	}
+	if err := models.DeleteTemplateVersions(baseTemplateDir, tmpl.ID); err != nil {
+		models.LogTemplateVersionError("delete history", err)
+	}
+	return nil
 }
 
 func normalizeTemplateUsageValue(value string) string {

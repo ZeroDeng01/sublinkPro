@@ -11,8 +11,8 @@ static
 sublinkPro.exe
 /sublink
 
-# 模板历史版本快照（运行时数据）
-template/.versions/
+# 运行时模板目录（挂载卷内容），默认模板源码在 template-defaults/
+template/
 
 # AI agent runtime and temporary files (DO NOT COMMIT)
 .claude/projects/

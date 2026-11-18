@@ -350,12 +350,22 @@ func getAirportUsageSparklines(airportIDs []int, days int, now time.Time) ([]Air
 	return sparklines, nil
 }
 
+// UsageDailyAirportUsage 单日消耗按机场拆分的明细，用于前端悬停提示。
+type UsageDailyAirportUsage struct {
+	AirportID   int    `json:"airportId"`
+	AirportName string `json:"airportName"`
+	Upload      int64  `json:"upload"`
+	Download    int64  `json:"download"`
+	Used        int64  `json:"used"`
+}
+
 // UsageDailyPoint 单日消耗的流量，由相邻两次快照的累计值差值得出。
 type UsageDailyPoint struct {
-	Date     string `json:"date"` // 本地日期 YYYY-MM-DD
-	Upload   int64  `json:"upload"`
-	Download int64  `json:"download"`
-	Used     int64  `json:"used"`
+	Date     string                   `json:"date"` // 本地日期 YYYY-MM-DD
+	Upload   int64                    `json:"upload"`
+	Download int64                    `json:"download"`
+	Used     int64                    `json:"used"`
+	Airports []UsageDailyAirportUsage `json:"airports,omitempty"` // 汇总查询时按机场拆分，按消耗降序
 }
 
 // AirportUsageDailyReport 按天统计的流量消耗。
@@ -404,7 +414,25 @@ func getAirportDailyUsage(days, airportID int, now time.Time) (*AirportUsageDail
 		return nil, err
 	}
 
+	var airportNames map[int]string
+	if airportID <= 0 {
+		ids := make([]int, 0, len(snapshots))
+		for _, snapshot := range snapshots {
+			ids = append(ids, snapshot.AirportID)
+		}
+		airports, err := ListAirportsByIDs(ids)
+		if err != nil {
+			return nil, err
+		}
+		airportNames = make(map[int]string, len(airports))
+		for _, airport := range airports {
+			airportNames[airport.ID] = airport.Name
+		}
+	}
+
 	daily := make(map[string]*UsageDailyPoint)
+	// 汇总模式下按天记录每家机场的贡献，供前端悬停提示展示明细。
+	perAirport := make(map[string]map[int]*UsageDailyAirportUsage)
 	lastValues := make(map[int]usageValues, len(baseline))
 	for id, values := range baseline {
 		lastValues[id] = values
@@ -441,6 +469,22 @@ func getAirportDailyUsage(days, airportID int, now time.Time) (*AirportUsageDail
 		point.Upload += uploadDelta
 		point.Download += downloadDelta
 		point.Used += uploadDelta + downloadDelta
+
+		if airportID <= 0 {
+			byAirport := perAirport[key]
+			if byAirport == nil {
+				byAirport = make(map[int]*UsageDailyAirportUsage)
+				perAirport[key] = byAirport
+			}
+			entry := byAirport[snapshot.AirportID]
+			if entry == nil {
+				entry = &UsageDailyAirportUsage{AirportID: snapshot.AirportID, AirportName: airportNames[snapshot.AirportID]}
+				byAirport[snapshot.AirportID] = entry
+			}
+			entry.Upload += uploadDelta
+			entry.Download += downloadDelta
+			entry.Used += uploadDelta + downloadDelta
+		}
 	}
 
 	endDay := startOfUsageDay(now)
@@ -448,6 +492,9 @@ func getAirportDailyUsage(days, airportID int, now time.Time) (*AirportUsageDail
 	for day := startOfUsageDay(from); !day.After(endDay); day = day.AddDate(0, 0, 1) {
 		key := day.Format("2006-01-02")
 		if point, ok := daily[key]; ok {
+			if entries := perAirport[key]; len(entries) > 0 {
+				point.Airports = sortUsageDailyAirports(entries)
+			}
 			points = append(points, *point)
 			continue
 		}
@@ -469,6 +516,25 @@ func getAirportDailyUsage(days, airportID int, now time.Time) (*AirportUsageDail
 		report.TodayUsed = points[len(points)-1].Used
 	}
 	return report, nil
+}
+
+// sortUsageDailyAirports 把单日机场明细整理成按消耗降序的切片。
+func sortUsageDailyAirports(entries map[int]*UsageDailyAirportUsage) []UsageDailyAirportUsage {
+	result := make([]UsageDailyAirportUsage, 0, len(entries))
+	for _, entry := range entries {
+		if entry.AirportName == "" {
+			// 机场已删除但快照还在保留期内时，用 ID 兜底展示。
+			entry.AirportName = fmt.Sprintf("#%d", entry.AirportID)
+		}
+		result = append(result, *entry)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Used == result[j].Used {
+			return result[i].AirportID < result[j].AirportID
+		}
+		return result[i].Used > result[j].Used
+	})
+	return result
 }
 
 // usageDelta 计算相邻两次快照的消耗增量。

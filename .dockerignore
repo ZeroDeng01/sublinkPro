@@ -4,6 +4,7 @@ webs/node_modules
 *.DS_Store
 db
 logs
+template
 README.md
 README.en-US.md
 docs

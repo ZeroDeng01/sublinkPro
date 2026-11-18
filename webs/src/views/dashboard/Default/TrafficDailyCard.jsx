@@ -152,6 +152,27 @@ export default function TrafficDailyCard() {
           t('usageHistory.tooltip.download')
         )}</span><span>${escapeHtml(formatBytes(point.download))}</span></div>`
       ];
+
+      // 汇总视图下按机场拆分当天消耗，悬停即可看到每家机场的贡献。
+      const breakdown = Array.isArray(point.airports) ? point.airports : [];
+      if (breakdown.length > 0) {
+        const airportRows = breakdown
+          .map(
+            (entry) =>
+              `<div style="display:flex;justify-content:space-between;gap:18px;padding:1px 0;"><span style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(
+                entry.airportName || `#${entry.airportId}`
+              )}</span><span style="font-variant-numeric:tabular-nums;">${escapeHtml(formatBytes(entry.used))}</span></div>`
+          )
+          .join('');
+        rows.push(
+          `<div style="margin-top:8px;padding-top:8px;border-top:1px solid ${escapeHtml(withAlpha(dividerColor, 0.7))};">` +
+            `<div style="font-size:11px;opacity:0.72;margin-bottom:3px;">${escapeHtml(
+              t('dashboard.default.trafficDaily.byAirport')
+            )}</div>` +
+            `<div style="max-height:180px;overflow:auto;">${airportRows}</div>` +
+            `</div>`
+        );
+      }
       return rows.join('');
     };
 
@@ -161,13 +182,14 @@ export default function TrafficDailyCard() {
       tooltip: {
         trigger: 'axis',
         confine: true,
+        enterable: true,
         axisPointer: { type: 'shadow', shadowStyle: { color: withAlpha(accent, isDark ? 0.12 : 0.06) } },
         backgroundColor: isDark ? withAlpha(paperColor, 0.97) : '#ffffff',
         borderColor: withAlpha(dividerColor, 0.9),
         borderWidth: 1,
         padding: [10, 12],
         textStyle: { color: withAlpha(axisTextColor, 1), fontSize: 12 },
-        extraCssText: 'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.18);',
+        extraCssText: 'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.18);max-width:320px;',
         formatter: tooltipFormatter
       },
       xAxis: {

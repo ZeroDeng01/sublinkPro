@@ -1804,6 +1804,7 @@
         "loadFailed": "Failed to load daily traffic",
         "empty": "No traffic recorded in this period yet.",
         "refresh": "Refresh",
+        "byAirport": "By airport",
         "series": {
           "used": "Used"
         }

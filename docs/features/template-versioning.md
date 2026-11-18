@@ -88,3 +88,5 @@ All routes require authentication and live under `/api/v1/template`.
 - Version history is per template, and renaming a template keeps its history because versions are keyed by template ID.
 - Template files created outside the UI (for example, copied into `template/`) get their first history entry the next time they are saved.
 - Snapshots contain template content only. Proxy links and other credentials are not duplicated into version records.
+- Built-in templates are written to `template/` only on a fresh installation (when the database is created for the first time). If you delete a built-in template later, the deletion is permanent: restarting the service does not restore the files.
+- Deleting a template whose file was already removed from `template/` still removes its metadata and version history.

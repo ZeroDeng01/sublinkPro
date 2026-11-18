@@ -37,7 +37,7 @@ import (
 	"github.com/metacubex/mihomo/constant"
 )
 
-//go:embed template
+//go:embed template-defaults
 var Template embed.FS
 
 //go:embed VERSION
@@ -122,9 +122,33 @@ func isRootStaticFile(path string) bool {
 }
 
 func Templateinit() {
-	// 设置template路径
-	// 检查目录是否创建
-	subFS, err := fs.Sub(Template, "template")
+	// 创建template目录
+	if _, err := os.Stat("./template"); os.IsNotExist(err) {
+		if err := os.MkdirAll("./template", 0755); err != nil {
+			utils.Error("Failed to create the template directory: %v", err)
+			return
+		}
+	}
+
+	// 默认模板只在全新安装时写入一次：已有安装中用户可能已经删除了默认模板，
+	// 每次启动都补写缺失文件会让删除过的模板反复出现。
+	if models.IsFreshDatabaseInstall() {
+		writeEmbeddedTemplates()
+	}
+
+	// 内嵌模板写入文件系统后，立即补齐缺失的模板元数据，
+	// 避免首次启动时因为迁移先于模板落盘而遗漏 surge.conf 的类别。
+	// 这里只同步磁盘上已有的模板文件，不会恢复被删除的文件。
+	if err := models.MigrateTemplatesFromFiles("./template"); err != nil {
+		utils.Error("Failed to sync template metadata: %v", err)
+	}
+}
+
+// writeEmbeddedTemplates 把内嵌的默认模板写入 template 目录，已存在的文件不覆盖。
+// 内嵌来源是仓库中的 template-defaults 目录，与运行时的 template 数据目录分开，
+// 这样用户在界面里删除默认模板后，源码目录仍然完整，不影响后续构建。
+func writeEmbeddedTemplates() {
+	subFS, err := fs.Sub(Template, "template-defaults")
 	if err != nil {
 		utils.Error("Failed to load embedded templates: %v", err)
 		return
@@ -134,36 +158,22 @@ func Templateinit() {
 		utils.Error("Failed to read the template directory: %v", err)
 		return
 	}
-	// 创建template目录
-	_, err = os.Stat("./template")
-	if os.IsNotExist(err) {
-		err = os.Mkdir("./template", 0666)
-		if err != nil {
-			utils.Error("Failed to create the template directory: %v", err)
-			return
-		}
-	}
-	// 写入默认模板
 	for _, entry := range entries {
-		_, err := os.Stat("./template/" + entry.Name())
-		// 如果文件不存在则写入默认模板
-		if os.IsNotExist(err) {
-			data, err := fs.ReadFile(subFS, entry.Name())
-			if err != nil {
-				utils.Error("Failed to read template files: %v", err)
-				continue
-			}
-			err = os.WriteFile("./template/"+entry.Name(), data, 0666)
-			if err != nil {
-				utils.Error("Failed to write template files: %v", err)
-			}
+		if entry.IsDir() {
+			continue
 		}
-	}
-
-	// 内嵌模板写入文件系统后，立即补齐缺失的模板元数据，
-	// 避免首次启动时因为迁移先于模板落盘而遗漏 surge.conf 的类别。
-	if err := models.MigrateTemplatesFromFiles("./template"); err != nil {
-		utils.Error("Failed to sync template metadata: %v", err)
+		targetPath := "./template/" + entry.Name()
+		if _, err := os.Stat(targetPath); !os.IsNotExist(err) {
+			continue
+		}
+		data, err := fs.ReadFile(subFS, entry.Name())
+		if err != nil {
+			utils.Error("Failed to read template files: %v", err)
+			continue
+		}
+		if err := os.WriteFile(targetPath, data, 0666); err != nil {
+			utils.Error("Failed to write template files: %v", err)
+		}
 	}
 }
 

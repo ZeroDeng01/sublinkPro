@@ -163,6 +163,21 @@ func repairHTTPHTTPSNodeProtocolFromLink(db *gorm.DB) error {
 	})
 }
 
+// freshDatabaseInstall 记录本次启动是否在空数据库上完成了首次初始化。
+var freshDatabaseInstall bool
+
+// IsFreshDatabaseInstall 报告本次启动是否是新数据库的首次初始化。
+// 只有全新安装需要写入默认模板等种子数据，已有安装重启时不再补写。
+func IsFreshDatabaseInstall() bool {
+	return freshDatabaseInstall
+}
+
+// isFreshDatabase 判断数据库是否尚未初始化（用户表还不存在）。
+// 必须在 AutoMigrate 建表前调用，建表之后就无法区分新库和旧库。
+func isFreshDatabase(db *gorm.DB) bool {
+	return db != nil && !db.Migrator().HasTable(&User{})
+}
+
 // RunMigrations 执行所有数据库迁移
 // 此函数必须在 database.Init() 之后调用
 func RunMigrations() error {
@@ -176,6 +191,9 @@ func RunMigrations() error {
 		utils.Info("数据库已经初始化，无需重复初始化")
 		return nil
 	}
+
+	// 在建表前记录本次是否为全新安装，供默认模板等一次性种子数据使用。
+	freshDatabaseInstall = isFreshDatabase(db)
 
 	baseTables := []struct {
 		name  string

@@ -1804,6 +1804,7 @@
         "loadFailed": "每日流量加载失败",
         "empty": "该区间暂无流量记录。",
         "refresh": "刷新",
+        "byAirport": "按机场",
         "series": {
           "used": "已用"
         }

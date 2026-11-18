@@ -382,6 +382,64 @@ func TestGetAirportUsageHistoryAutoCapsDensePoints(t *testing.T) {
 	}
 }
 
+func TestGetAirportDailyUsageBreaksDownByAirport(t *testing.T) {
+	setupUsageSnapshotTestDB(t)
+	alpha := newUsageTestAirport(t, "daily-alpha")
+	beta := newUsageTestAirport(t, "daily-beta")
+
+	now := time.Date(2026, 5, 20, 18, 0, 0, 0, time.Local)
+	dayStart := startOfUsageDay(now)
+	baselineAt := dayStart.AddDate(0, 0, -1).Add(-time.Hour)
+	snapshots := []AirportUsageSnapshot{
+		{AirportID: alpha.ID, Upload: 50, Download: 60, Total: 1000, CapturedAt: baselineAt},
+		{AirportID: beta.ID, Upload: 10, Download: 20, Total: 1000, CapturedAt: baselineAt},
+		{AirportID: alpha.ID, Upload: 150, Download: 260, Total: 1000, CapturedAt: dayStart.Add(2 * time.Hour)},
+		{AirportID: beta.ID, Upload: 12, Download: 26, Total: 1000, CapturedAt: dayStart.Add(2 * time.Hour)},
+		{AirportID: alpha.ID, Upload: 180, Download: 300, Total: 1000, CapturedAt: dayStart.Add(6 * time.Hour)},
+	}
+	if err := database.DB.Create(&snapshots).Error; err != nil {
+		t.Fatalf("create daily snapshots: %v", err)
+	}
+
+	report, err := getAirportDailyUsage(2, 0, now)
+	if err != nil {
+		t.Fatalf("get airport daily usage: %v", err)
+	}
+	if len(report.Points) != 2 {
+		t.Fatalf("daily points = %d, want 2", len(report.Points))
+	}
+
+	today := report.Points[len(report.Points)-1]
+	if today.Used != 378 {
+		t.Fatalf("today used = %d, want 378", today.Used)
+	}
+	if len(today.Airports) != 2 {
+		t.Fatalf("today airport breakdown = %d, want 2", len(today.Airports))
+	}
+	// 明细按消耗降序：alpha 贡献 370，beta 贡献 8。
+	if today.Airports[0].AirportName != "daily-alpha" || today.Airports[0].Used != 370 {
+		t.Fatalf("first breakdown entry = %+v, want daily-alpha with 370", today.Airports[0])
+	}
+	if today.Airports[0].Upload != 130 || today.Airports[0].Download != 240 {
+		t.Fatalf("alpha breakdown upload/download = %d/%d, want 130/240", today.Airports[0].Upload, today.Airports[0].Download)
+	}
+	if today.Airports[1].AirportName != "daily-beta" || today.Airports[1].Used != 8 {
+		t.Fatalf("second breakdown entry = %+v, want daily-beta with 8", today.Airports[1])
+	}
+	if len(report.Points[0].Airports) != 0 {
+		t.Fatalf("yesterday breakdown = %d, want 0", len(report.Points[0].Airports))
+	}
+
+	// 单机场报告不需要拆分明细。
+	single, err := getAirportDailyUsage(2, alpha.ID, now)
+	if err != nil {
+		t.Fatalf("get single airport daily usage: %v", err)
+	}
+	if last := single.Points[len(single.Points)-1]; len(last.Airports) != 0 {
+		t.Fatalf("single airport breakdown = %d, want 0", len(last.Airports))
+	}
+}
+
 func TestResolveUsageGranularityDefaultsToRefresh(t *testing.T) {
 	for _, value := range []string{"", UsageGranularityAuto, UsageGranularityRefresh, "unexpected"} {
 		if got := resolveUsageGranularity(value); got != UsageGranularityRefresh {

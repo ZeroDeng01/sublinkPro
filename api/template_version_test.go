@@ -367,3 +367,38 @@ func TestTemplateVersionDiffAgainstCurrentContent(t *testing.T) {
 		t.Fatalf("unexpected diff against current: %#v", payload)
 	}
 }
+
+func TestDelTempRemovesMetadataWhenFileAlreadyDeleted(t *testing.T) {
+	setupTemplateAPITestDB(t)
+	templateDir := t.TempDir()
+	baseTemplateDir = templateDir
+
+	if response := decodeAPIResponse(t, performTemplateFormRequest(t, AddTemp, url.Values{
+		"filename": {"clash.yaml"},
+		"text":     {"rules: []\n"},
+		"category": {"clash"},
+	})); response.Code != 200 {
+		t.Fatalf("add template failed: %s", response.Msg)
+	}
+
+	// 模拟文件被外部删除（例如用户直接在挂载目录中删除了默认模板），
+	// 此时界面上的删除操作仍应清理元数据与历史版本，而不是报错。
+	if err := os.Remove(filepath.Join(templateDir, "clash.yaml")); err != nil {
+		t.Fatalf("remove template file: %v", err)
+	}
+
+	response := decodeAPIResponse(t, performTemplateFormRequest(t, DelTemp, url.Values{
+		"filename": {"clash.yaml"},
+	}))
+	if response.Code != 200 {
+		t.Fatalf("delete template with missing file failed: %s", response.Msg)
+	}
+	if versions := loadTemplateVersionsForTest(t); len(versions) != 0 {
+		t.Fatalf("versions still present after delete: %#v", versions)
+	}
+
+	var tmpl models.Template
+	if err := tmpl.FindByName("clash.yaml"); err == nil {
+		t.Fatal("template metadata still present after delete")
+	}
+}
