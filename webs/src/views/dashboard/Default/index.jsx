@@ -188,6 +188,10 @@ const localizeDistributionKey = (key, t) => {
     return t('dashboard.default.charts.ungrouped');
   }
 
+  if (key === 'Untagged' || key === '未打标签') {
+    return t('dashboard.default.charts.untagged');
+  }
+
   if (key === 'Manual' || key === 'manual') {
     return t('dashboard.default.charts.manualSource');
   }
@@ -316,17 +320,21 @@ const normalizeTagStats = ({ tags = [], limit, t }) => {
   const total = tags.reduce((sum, item) => sum + getCountMetric(item), 0);
   const normalized = [...tags]
     .sort((a, b) => getCountMetric(b) - getCountMetric(a))
-    .map((tag, index) => ({
-      key: tag.key || tag.name || tag.label || `tag-${index}`,
-      label: getLabelStatValue(
+    .map((tag, index) => {
+      const label = getLabelStatValue(
         tag,
         tag.name || tag.key || (t ? t('dashboard.default.charts.tagItem', { index: index + 1 }) : `Tag ${index + 1}`)
-      ),
-      count: getCountMetric(tag),
-      delayPassCount: getDelayPassMetric(tag),
-      speedPassCount: getSpeedPassMetric(tag),
-      color: tag.color || '#ec4899'
-    }));
+      );
+
+      return {
+        key: tag.key || tag.name || tag.label || `tag-${index}`,
+        label: t ? localizeDistributionKey(label, t) : label,
+        count: getCountMetric(tag),
+        delayPassCount: getDelayPassMetric(tag),
+        speedPassCount: getSpeedPassMetric(tag),
+        color: tag.color || '#ec4899'
+      };
+    });
 
   return buildTopItems(normalized, total, limit, {}, t);
 };
@@ -1564,12 +1572,12 @@ export default function DashboardDefault() {
     () =>
       (qualityStats?.fraudScoreStats || []).map((item) => ({
         key: item.key,
-        label: item.label,
+        label: t(`dashboard.default.charts.fraudLevels.${item.key}`, item.label),
         count: item.count,
         color: fraudLevelColors[item.key] || '#f59e0b',
         percent: (qualityStats?.successTotal || 0) > 0 ? (item.count / qualityStats.successTotal) * 100 : 0
       })),
-    [qualityStats]
+    [qualityStats, t]
   );
 
   const groupedMetricStrip = (item) => [

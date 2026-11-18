@@ -1843,6 +1843,7 @@
         "availableIp": "可用IP",
         "nodes": "节点",
         "ungrouped": "未分组",
+        "untagged": "未打标签",
         "manualSource": "手动添加",
         "tagItem": "标签 {{index}}",
         "emptyCountry": "暂无国家统计数据",
@@ -1852,7 +1853,15 @@
         "emptySource": "暂无来源统计数据",
         "emptyQuality": "暂无质量状态统计数据",
         "emptyFraud": "暂无欺诈评分统计数据",
-        "emptyIp": "暂无 IP 质量统计数据"
+        "emptyIp": "暂无 IP 质量统计数据",
+        "fraudLevels": {
+          "excellent-plus": "极佳+ (0-10)",
+          "excellent": "优秀 (11-30)",
+          "good": "良好 (31-50)",
+          "medium": "中等 (51-70)",
+          "poor": "差 (71-89)",
+          "very-poor": "极差 (90+)"
+        }
       },
       "ipQuality": {
         "residential": "住宅属性",
@@ -2756,8 +2765,9 @@
       "createdAt": "创建时间",
       "actions": "操作",
       "sorting": "排序中",
-      "nodeGroupCount": "{{nodes}} 个节点, {{groups}} 个分组",
-      "nodeGroupAirportCount": "{{nodes}} 个节点, {{groups}} 个分组, {{airports}} 个机场",
+      "nodeCount": "{{count}} 个节点",
+      "groupCount": "{{count}} 个分组",
+      "airportCount": "{{count}} 个机场",
       "tooltips": {
         "preview": "预览节点",
         "copy": "复制本配置为新副本",

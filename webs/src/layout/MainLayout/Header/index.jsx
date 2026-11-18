@@ -82,8 +82,10 @@ export default function Header() {
       {/* spacer */}
       <Box sx={{ flexGrow: 1 }} />
 
-      {/* donation */}
-      <DonationSection />
+      {/* donation - desktop only */}
+      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+        <DonationSection />
+      </Box>
 
       {/* AI skill download - desktop only */}
       <Box sx={{ display: { xs: 'none', md: 'block' } }}>

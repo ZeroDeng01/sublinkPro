@@ -1235,6 +1235,20 @@ export default function SubscriptionList() {
                 </IconButton>
               </Tooltip>
             )}
+            <Tooltip title={t('common.refresh')}>
+              <IconButton onClick={() => fetchSubscriptions(page, rowsPerPage)} disabled={loading} size="small">
+                <RefreshIcon
+                  sx={
+                    loading
+                      ? {
+                          animation: 'spin 1s linear infinite',
+                          '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                        }
+                      : {}
+                  }
+                />
+              </IconButton>
+            </Tooltip>
             <Button variant="contained" startIcon={<AddIcon />} disableRipple onClick={activeTab === 'proxy' ? handleAddProxy : handleAdd}>
               {t('common.add')}
             </Button>
@@ -1267,23 +1281,6 @@ export default function SubscriptionList() {
         )
       }
     >
-      {matchDownMd && (
-        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-          <IconButton onClick={() => fetchSubscriptions(page, rowsPerPage)} disabled={loading} size="small">
-            <RefreshIcon
-              sx={
-                loading
-                  ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
-                  : {}
-              }
-            />
-          </IconButton>
-        </Stack>
-      )}
-
       <Tabs
         value={activeTab}
         onChange={handleTabChange}

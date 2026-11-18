@@ -137,11 +137,11 @@ export default function SubscriptionTable({
                     </Tooltip>
                   ) : (
                     <Typography variant="body2">
-                      {t('subscriptions.table.nodeGroupAirportCount', {
-                        nodes: sub.Nodes?.length || 0,
-                        groups: sub.Groups?.length || 0,
-                        airports: sub.Airports?.length || 0
-                      })}
+                      {[
+                        t('subscriptions.table.nodeCount', { count: sub.Nodes?.length || 0 }),
+                        t('subscriptions.table.groupCount', { count: sub.Groups?.length || 0 }),
+                        t('subscriptions.table.airportCount', { count: sub.Airports?.length || 0 })
+                      ].join(', ')}
                     </Typography>
                   )}
                 </TableCell>

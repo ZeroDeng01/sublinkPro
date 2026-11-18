@@ -104,7 +104,7 @@
       "nodeMap": "Node Map",
       "airports": "Airport",
       "nodes": "Node",
-      "nodeCheck": "Detection center",
+      "nodeCheck": "Detection",
       "subscriptions": "Subscriptions",
       "templates": "Templates",
       "tags": "Tags",
@@ -1843,6 +1843,7 @@
         "availableIp": "Available IPs",
         "nodes": "Nodes",
         "ungrouped": "Ungrouped",
+        "untagged": "Untagged",
         "manualSource": "Manual",
         "tagItem": "Tag {{index}}",
         "emptyCountry": "No country stats data",
@@ -1852,7 +1853,15 @@
         "emptySource": "No source stats data",
         "emptyQuality": "No quality status data",
         "emptyFraud": "No fraud score data",
-        "emptyIp": "No IP quality stats data"
+        "emptyIp": "No IP quality stats data",
+        "fraudLevels": {
+          "excellent-plus": "Excellent+ (0-10)",
+          "excellent": "Excellent (11-30)",
+          "good": "Good (31-50)",
+          "medium": "Medium (51-70)",
+          "poor": "Poor (71-89)",
+          "very-poor": "Very poor (90+)"
+        }
       },
       "ipQuality": {
         "residential": "Residential Properties",
@@ -2561,6 +2570,7 @@
       "noAirportsInGroup": "No airports in this group",
       "dragAirportHint": "Drag to adjust airport order. Airports placed earlier also output earlier in subscriptions.",
       "nodeCount": "{{count}} nodes",
+      "nodeCount_one": "{{count}} node",
       "messages": {
         "loadGroupsFailed": "Failed to load groups",
         "loadGroupDetailFailed": "Failed to load group details",
@@ -2649,8 +2659,11 @@
     "mobileCard": {
       "sorting": "Sorting",
       "nodeCount": "{{count}} nodes",
+      "nodeCount_one": "{{count}} node",
       "groupCount": "{{count}} groups",
+      "groupCount_one": "{{count}} group",
       "airportCount": "{{count}} airports",
+      "airportCount_one": "{{count}} airport",
       "expandHint": "Tap the header to expand details",
       "confirmSort": "Confirm sort",
       "sortNodes": "Sort nodes"
@@ -2756,8 +2769,12 @@
       "createdAt": "Created At",
       "actions": "Actions",
       "sorting": "Sorting",
-      "nodeGroupCount": "{{nodes}} nodes, {{groups}} groups",
-      "nodeGroupAirportCount": "{{nodes}} nodes, {{groups}} groups, {{airports}} airports",
+      "nodeCount": "{{count}} nodes",
+      "nodeCount_one": "{{count}} node",
+      "groupCount": "{{count}} groups",
+      "groupCount_one": "{{count}} group",
+      "airportCount": "{{count}} airports",
+      "airportCount_one": "{{count}} airport",
       "tooltips": {
         "preview": "Preview nodes",
         "copy": "Copy this configuration as a new copy",
