@@ -77,9 +77,9 @@ All JSON endpoints return:
 ```
 `code` lives in the body and is what matters — a failure can come back as HTTP 200 with `code:500`. Check `.code`, not the HTTP status.
 
-## Content-Type Trap (read this — it's the #1 cause of "参数错误" failures)
+## Content-Type Trap (read this — it's the #1 cause of "Invalid request parameters" failures)
 
-Endpoints are NOT consistent. Sending the wrong body shape produces `参数错误` / validation errors. The rule, verified per-endpoint below:
+Endpoints are NOT consistent. Sending the wrong body shape produces `Invalid request parameters` / validation errors. The rule, verified per-endpoint below:
 
 - **Form-encoded** (`--form`): auth login, node add/update, subscription add/update, template add/update/delete. These read `c.PostForm(...)`.
 - **JSON** (`--json`): access keys, **node batch operations**, **subscription preview**, subscription sort/batch-sort, chain rules, airports, tags, scripts, hosts, geoip, group-sort, node-check, settings, AI template endpoints. These use `c.ShouldBindJSON(...)`.
@@ -224,7 +224,7 @@ Base: `/api/v1/subcription` (note the spelling — missing the second "s").
 - Other optional form fields (UpperCamel unless noted): `airports` (comma-separated airport IDs), `scripts` (comma-separated script IDs), `IPWhitelist`, `IPBlacklist`, `DelayTime`, `MinSpeed`, `CountryWhitelist`, `CountryBlacklist`, `NodeNameRule`, `NodeNamePreprocess`, `NodeNameWhitelist`, `NodeNameBlacklist`, `TagWhitelist`, `TagBlacklist`, `ProtocolWhitelist`, `ProtocolBlacklist`, `DeduplicationRule`, `RefreshUsageOnRequest`, `UpdateInterval`, `MaxFraudScore`, `OnlyResidential`, `OnlyNative`, `ResidentialType`, `IPType`, `QualityStatus`, `UnlockProvider`, `UnlockStatus`, `UnlockKeyword`, `UnlockRules`, `UnlockRuleMode`, plus `description` (free-form note, up to 512 characters).
 - Proxy subscriptions store only `name` and `AirportID`; `IPWhitelist`/`IPBlacklist` and request settings are ignored, and any submitted IP lists are cleared on save.
 - Filter groups always combine with AND: a node must satisfy every configured group. Values inside one whitelist are alternatives, and a blacklist hit always excludes the node. (Collection only.)
-- Name must be unique (duplicate → `订阅名称不能重复`).
+- Name must be unique (duplicate → `Subscription name must be unique`).
 
 ### Update Subscription
 **POST** `/subcription/update` — **form**, located by `oldname` (current name). Same field set as add, plus `oldname`. Send `type` together with the source fields so a subscription keeps its kind. Omitting `description` keeps the stored value; sending an empty string clears it.
@@ -282,7 +282,7 @@ Usage history is available per airport. Airports reused by several subscriptions
 ### NodeNameRule variables
 `NodeNameRule` is evaluated when subscription output names are rendered. Country-related variables are based on the node's stored country code:
 
-- `$LinkCountry` — country code, such as `HK` or `US`; empty values render as `未知`.
+- `$LinkCountry` — country code, such as `HK` or `US`; empty values render as the localized "Unknown" label (node naming language).
 - `$LinkCountryName` — country name looked up from Country Rules by `$LinkCountry`; falls back to the code when no matching country-rule name exists.
 - `$Flag` — flag emoji generated from the country code.
 - `$DuplicateIndex` — empty for the first duplicate-name occurrence, then `1`, `2`, `3`, and so on.
@@ -640,10 +640,10 @@ Fields:
 Endpoints:
 
 - **GET** `/country-rules` — list rules. Query supports `page`, `pageSize`, and `keyword`.
-- **POST** `/country-rules` — **JSON** create, for example `{"countryCode":"HK","countryName":"香港","pattern":"(?i)香港|HK|Hong Kong|🇭🇰","priority":100,"enabled":true}`.
+- **POST** `/country-rules` — **JSON** create, for example `{"countryCode":"HK","countryName":"Hong Kong","pattern":"(?i)hong kong|hk|🇭🇰","priority":100,"enabled":true}`.
 - **PUT** `/country-rules/{id}` — **JSON** update.
 - **DELETE** `/country-rules/{id}` — delete.
-- **POST** `/country-rules/test` — **JSON** test one pattern against one node name, for example `{"pattern":"(?i)香港|HK","testName":"HK Premium 01"}`.
+- **POST** `/country-rules/test` — **JSON** test one pattern against one node name, for example `{"pattern":"(?i)hong kong|hk","testName":"HK Premium 01"}`.
 - **POST** `/country-rules/batch-test` — **JSON** test enabled rules against multiple node names.
 - **POST** `/country-rules/batch` — **JSON** import or replace rule lists.
 - **GET** `/country-rules/export` — export all country rules as text.
@@ -653,7 +653,7 @@ Text export/sync format is one rule per line:
 
 ```text
 countryCode countryName priority enabled pattern
-HK 香港 100 true (?i)香港|HK|Hong Kong|🇭🇰
+HK Hong Kong 100 true (?i)hong kong|hk|🇭🇰
 ```
 
 Use Country Rules together with airport `autoFillCountry` / `backfillExistingCountry`, `/nodes/batch-fill-country`, and subscription `NodeNameRule` variables such as `$LinkCountryName`.

@@ -235,13 +235,13 @@ Official steps: [Create a tunnel, dashboard](https://developers.cloudflare.com/c
 After saving the Tunnel, Cloudflare opens the connector install page and asks you to choose a runtime environment. The page shows an install command like:
 
 ```bash
-sudo cloudflared service install eyJhIjoi...省略...In0=
+sudo cloudflared service install eyJhIjoi...<truncated>...In0=
 ```
 
 Or on Windows:
 
 ```powershell
-cloudflared.exe service install eyJhIjoi...省略...In0=
+cloudflared.exe service install eyJhIjoi...<truncated>...In0=
 ```
 
 You can copy the whole command or only the final token. SublinkPro splits by whitespace and uses the final segment as the token, so all of these are accepted:

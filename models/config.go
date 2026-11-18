@@ -20,16 +20,16 @@ type Config struct {
 }
 
 // 配置文件注释
-var configComment = `# SublinkPro 配置文件
-# 敏感配置已存储在数据库中，此文件仅保存非敏感配置
-# 数据库可通过 dsn 配置，支持 sqlite/mysql/postgres
-# 如未配置 dsn，则默认使用 SQLite，并在 db_path 下创建 sublink.db
-# 可通过环境变量 SUBLINK_DSN 覆盖
-# 如需覆盖敏感配置，请使用环境变量：
-#   SUBLINK_JWT_SECRET - JWT签名密钥
-#   SUBLINK_API_ENCRYPTION_KEY - API加密密钥
+var configComment = `# SublinkPro configuration file
+# Sensitive settings live in the database; this file only holds non-sensitive values
+# The database is configured via dsn and supports sqlite/mysql/postgres
+# Without dsn, SQLite is used and sublink.db is created under db_path
+# Override the database with the SUBLINK_DSN environment variable
+# Override sensitive settings with environment variables:
+#   SUBLINK_JWT_SECRET - JWT signing secret
+#   SUBLINK_API_ENCRYPTION_KEY - API encryption key
 #
-# 配置优先级：命令行参数 > 环境变量 > 配置文件 > 数据库 > 默认值
+# Precedence: command-line flags > environment variables > config file > database > defaults
 `
 
 // InitSecretAccessors 初始化敏感配置访问器

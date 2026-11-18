@@ -166,7 +166,7 @@
     },
     "textMode": {
       "description": "Text mode allows batch editing of country rules. Format: <code>countryCode countryName priority enabled pattern</code> (space-separated), one rule per line. Saving will synchronize with the database (add, update, delete).",
-      "placeholder": "# Country Rules Configuration\n# Format: countryCode countryName priority enabled pattern\n# Example: CN China 100 true (?i)(中国|china|cn)\n\nCN China 100 true (?i)(中国|china|cn)\nUS United_States 90 true (?i)(美国|united states|usa|us)\nHK Hong_Kong 95 true (?i)(香港|hong kong|hk)",
+      "placeholder": "# Country Rules Configuration\n# Format: countryCode countryName priority enabled pattern\n# Example: CN China 100 true (?i)(china|cn|mainland)\n\nCN China 100 true (?i)(china|cn|mainland)\nUS United_States 90 true (?i)(united states|usa|us)\nHK Hong_Kong 95 true (?i)(hong kong|hk)",
       "changed": "Content has been modified, please save to sync"
     },
     "actions": {
@@ -1399,10 +1399,10 @@
         "format": {
           "title": "Format Description",
           "description": "One rule per line, fields separated by spaces:",
-          "example": "CountryCode CountryName Pattern [Priority] [Status]\nExample:\nHK Hong Kong HK|Hong Kong|香港 100 enabled\nUS USA US|United States|America 90 disabled"
+          "example": "CountryCode CountryName Pattern [Priority] [Status]\nExample:\nHK Hong Kong HK|Hong Kong 100 enabled\nUS USA US|United States|America 90 disabled"
         },
         "textField": {
-          "placeholder": "Enter rules, one per line...\nExample:\nHK Hong Kong HK|Hong Kong|香港 100 enabled\nCN China CN|China|中国 100 enabled"
+          "placeholder": "Enter rules, one per line...\nExample:\nHK Hong Kong HK|Hong Kong 100 enabled\nCN China CN|China 100 enabled"
         },
         "stats": {
           "title": "Parse Statistics",

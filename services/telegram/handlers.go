@@ -71,19 +71,19 @@ func (h *StartHandler) Command() string     { return "start" }
 func (h *StartHandler) Description() string { return "🚀 Get started" }
 
 func (h *StartHandler) Handle(bot *TelegramBot, message *Message) error {
-	text := `🚀 *欢迎使用 Sublink Pro 机器人*
+	text := `🚀 *Welcome to the Sublink Pro bot*
 
-您可以通过此机器人远程管理您的 Sublink Pro 系统。
+Manage your Sublink Pro system remotely with this bot.
 
-*可用功能：*
-• 📊 查看仪表盘统计数据
-• 🖥️ 查看系统监控信息
-• ⚡ 节点检测策略管理
-• 📋 管理订阅和节点
-• 🏷️ 执行标签规则
-• 📝 查看和管理任务
+*Available features:*
+• 📊 View dashboard statistics
+• 🖥️ View system monitoring
+• ⚡ Manage node check profiles
+• 📋 Manage subscriptions and nodes
+• 🏷️ Run tag rules
+• 📝 View and manage tasks
 
-使用 /help 查看详细命令列表`
+Use /help to see the full command list`
 
 	keyboard := [][]InlineKeyboardButton{
 		{NewInlineButton("📊 Stats", "stats"), NewInlineButton("🖥️ Monitor", "monitor")},
@@ -102,19 +102,19 @@ func (h *HelpHandler) Command() string     { return "help" }
 func (h *HelpHandler) Description() string { return "❓ Help" }
 
 func (h *HelpHandler) Handle(bot *TelegramBot, message *Message) error {
-	text := `❓ *命令帮助*
+	text := `❓ *Command help*
 
-/start - 🚀 开始使用
-/help - ❓ 帮助信息
-/stats - 📊 仪表盘统计
-/monitor - 🖥️ 系统监控
-/profiles - ⚡ 检测策略
-/subscriptions - 📋 订阅管理
-/nodes - 🌐 节点信息
-/tags - 🏷️ 标签规则
-/tasks - 📝 任务管理
+/start - 🚀 Get started
+/help - ❓ Help information
+/stats - 📊 Dashboard statistics
+/monitor - 🖥️ System monitoring
+/profiles - ⚡ Check profiles
+/subscriptions - 📋 Subscriptions
+/nodes - 🌐 Node information
+/tags - 🏷️ Tag rules
+/tasks - 📝 Tasks
 
-💡 *提示*：您也可以点击消息中的按钮进行快捷操作`
+💡 *Tip*: you can also tap the buttons in messages for quick actions`
 
 	return bot.SendMessage(message.Chat.ID, text, "Markdown")
 }
@@ -408,17 +408,17 @@ func (h *MonitorHandler) Handle(bot *TelegramBot, message *Message) error {
 	heapAllocMB := float64(stats.HeapAlloc) / 1024 / 1024
 	sysMB := float64(stats.Sys) / 1024 / 1024
 
-	text := fmt.Sprintf(`🖥️ *系统监控*
+	text := fmt.Sprintf(`🖥️ *System monitoring*
 
-*内存使用*
-├ 堆分配: %.2f MB
-├ 系统总: %.2f MB
-└ GC 次数: %d
+*Memory usage*
+├ Heap allocated: %.2f MB
+├ System total: %.2f MB
+└ GC runs: %d
 
-*运行状态*
+*Runtime*
 ├ Goroutines: %d
-├ CPU 核心: %d
-└ 运行时间: %d 秒`,
+├ CPU cores: %d
+└ Uptime: %d seconds`,
 		heapAllocMB,
 		sysMB,
 		stats.NumGC,
@@ -690,14 +690,14 @@ func (h *NodesHandler) Handle(bot *TelegramBot, message *Message) error {
 		fmt.Fprintf(&countryText, "├ %s: %d\n", cs.Country, cs.Count)
 	}
 
-	text := fmt.Sprintf(`🌐 *节点信息*
+	text := fmt.Sprintf(`🌐 *Node information*
 
-*节点概览*
-├ 总数量: %d
-├ 在线: %d
-└ 离线: %d
+*Node overview*
+├ Total: %d
+├ Online: %d
+└ Offline: %d
 
-*地区分布（前5）*
+*Regions (top 5)*
 %s`, total, onlineCount, total-onlineCount, countryText.String())
 
 	keyboard := [][]InlineKeyboardButton{

@@ -783,10 +783,10 @@ func SaveToFile() error {
 	}
 
 	// 生成 YAML 内容（包含注释）
-	comment := `# SublinkPro 配置文件
-# 敏感配置（jwt_secret, api_encryption_key）已存储在数据库中
-# 如需覆盖，请使用环境变量 SUBLINK_JWT_SECRET 和 SUBLINK_API_ENCRYPTION_KEY
-# 可选受限应急配置：仅支持环境变量 SUBLINK_MFA_RESET_SECRET，不会写入配置文件
+	comment := `# SublinkPro configuration file
+# Sensitive settings (jwt_secret, api_encryption_key) are stored in the database
+# Override them with the SUBLINK_JWT_SECRET and SUBLINK_API_ENCRYPTION_KEY environment variables
+# Restricted emergency override: only the SUBLINK_MFA_RESET_SECRET environment variable is supported, and it is never written to this file
 `
 	data, err := yaml.Marshal(saveCfg)
 	if err != nil {

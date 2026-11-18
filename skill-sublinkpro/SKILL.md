@@ -307,7 +307,7 @@ Full command reference: `reference/deploy.md`. Read it before running anything �
 | `$SUBLINK_API_KEY` is empty/unset | No API key configured | Walk them through creating one: web UI → sign in (`admin`/`123456` if fresh) → Settings → Access Keys → Create → copy → set the env var. |
 | curl connection error / no response (or the script prints "Could not reach...") | Server unreachable (wrong host/port, not running, firewall) | Run the checklist: is it running? right host/port? remote port exposed? Confirm with `GET /api/v1/version`. Offer to deploy or check container status. |
 | `code:403` (or HTTP 403) | Auth rejected | Key missing/wrong/expired, or base URL points at a different instance than the key. Re-create the key in the web UI. (Exception: `/settings/ai-assistant*` 403s by design with an API key — explain that's expected and not fixable via the key.) |
-| `code:500` with a `msg` | Server rejected the request | Read the `msg` (it's usually specific, e.g. "订阅名称不能重复"), explain it simply, and propose the correction (pick another name, fill the missing field, etc.). |
+| `code:500` with a `msg` | Server rejected the request | Read the `msg` (it's usually specific, e.g. "Subscription name must be unique"), explain it simply, and propose the correction (pick another name, fill the missing field, etc.). |
 | `code:400`/`code:404` | Bad/missing parameter or wrong path | Re-check required fields and the resource id (and the form-vs-JSON tag in `reference/api.md`); re-run discovery (GET) to get valid values, then retry. |
 | body isn't `{code,msg,data}` JSON | Hit a non-envelope endpoint (`/c/` output, SSE) | That's expected for those endpoints — read the body as-is; don't try to parse an envelope. |
 

@@ -24,24 +24,24 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 // ==============================|| BATCH EXAMPLE DATA ||============================== //
 
-const BATCH_EXAMPLE = `# 国家规则批量操作示例
-# 格式：国家代码 国家名称 匹配模式 [优先级] [状态]
+const BATCH_EXAMPLE = `# Country rules batch example
+# Format: countryCode countryName pattern [priority] [status]
 
-# 常见地区
-HK 香港 香港|HK|Hong Kong|🇭🇰 100 enabled
-TW 台湾 台湾|TW|Taiwan|臺灣|🇹🇼 100 enabled
-JP 日本 日本|JP|Japan|东京|大阪 90 enabled
-SG 新加坡 新加坡|SG|Singapore|狮城 90 enabled
-US 美国 "美国|US|USA|United States|洛杉矶" 80 enabled
+# Common regions
+HK Hong Kong Hong Kong|HK|🇭🇰 100 enabled
+TW Taiwan Taiwan|TW|Taipei 100 enabled
+JP Japan Japan|JP|Tokyo|Osaka 90 enabled
+SG Singapore Singapore|SG|Lion City 90 enabled
+US United States "United States|US|USA|America|Los Angeles" 80 enabled
 
-# 欧洲地区
-GB 英国 "英国|GB|UK|United Kingdom" 70 enabled
-DE 德国 德国|DE|Germany|法兰克福 70 enabled
-FR 法国 法国|FR|France|巴黎 70 disabled
+# Europe
+GB United Kingdom "United Kingdom|GB|UK|Britain" 70 enabled
+DE Germany Germany|DE|Frankfurt 70 enabled
+FR France France|FR|Paris 70 disabled
 
-# 可以省略优先级和状态（默认为0和enabled）
-CN 中国 中国|CN|China
-KR 韩国 韩国|KR|Korea|首尔`;
+# Priority and status are optional (default 0 and enabled)
+CN China China|CN
+KR South Korea South Korea|KR|Seoul`;
 
 // ==============================|| PARSE UTILITIES ||============================== //
 

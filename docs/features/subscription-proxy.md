@@ -76,11 +76,11 @@ Only headers that carry subscription metadata are forwarded:
 
 | Situation | Response |
 |:---|:---|
-| Subscription has no airport | `502` with `订阅未关联机场` |
-| Referenced airport no longer exists | `502` with `订阅关联的机场不存在` |
-| Airport subscription URL is missing or not HTTP(S) | `502` with `机场订阅地址无效` |
-| Upstream returns non-2xx | `502` with a generic `拉取上游订阅失败` body; the status code and reason are written to the server log |
-| Share expired | `410` with `订阅已过期` |
+| Subscription has no airport | `502` with `Subscription is not linked to an airport` |
+| Referenced airport no longer exists | `502` with `The airport linked to this subscription does not exist` |
+| Airport subscription URL is missing or not HTTP(S) | `502` with `Invalid airport subscription URL` |
+| Upstream returns non-2xx | `502` with a generic `Failed to fetch upstream subscription` body; the status code and reason are written to the server log |
+| Share expired | `410` with `Subscription expired` |
 | Upstream unreachable / timeout | `502` with the same generic body |
 | Body larger than 10 MiB | `502`; the read is bounded to protect server memory |
 
