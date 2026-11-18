@@ -3,6 +3,7 @@ package middlewares
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"sublink/config"
 	"sublink/models"
@@ -38,7 +39,11 @@ func AuthToken(c *gin.Context) {
 	if accessKey != "" {
 		username, bool, err := validApiKey(accessKey, c.ClientIP())
 		if err != nil || !bool {
-			utils.Forbidden(c, err.Error())
+			if err != nil {
+				// Keep decryption and lookup details in server logs, never in the response.
+				utils.Debug("API key authentication failed: %v", err)
+			}
+			utils.Forbidden(c, "Invalid API key")
 			c.Abort()
 			return
 		}
@@ -49,6 +54,13 @@ func AuthToken(c *gin.Context) {
 
 	token := c.Request.Header.Get("Authorization")
 	if token == "" {
+		// EventSource cannot set headers, so the SSE stream is the only endpoint
+		// that may authenticate with a query-string token.
+		if !isSSETokenRequest(c) {
+			utils.Forbidden(c, "Missing token")
+			c.Abort()
+			return
+		}
 		token = c.Query("token")
 	}
 	if token == "" {
@@ -66,12 +78,13 @@ func AuthToken(c *gin.Context) {
 	token = strings.ReplaceAll(token, "Bearer ", "")
 	mc, err := ParseToken(token)
 	if err != nil {
+		utils.Debug("JWT validation failed: %v", err)
 		// 对SSE请求特殊处理：发送认证失败事件
-		if strings.HasSuffix(c.Request.URL.Path, "/api/sse") {
-			sendSSEAuthError(c, err.Error())
+		if isSSETokenRequest(c) {
+			sendSSEAuthError(c, "Invalid or expired token")
 			return
 		}
-		utils.Forbidden(c, err.Error())
+		utils.Forbidden(c, "Invalid or expired token")
 		c.Abort()
 		return
 	}
@@ -79,7 +92,7 @@ func AuthToken(c *gin.Context) {
 	if !models.VerifyCredentialSign(mc.Username, mc.CredentialSign) {
 		errMsg := "Session expired; please sign in again"
 		// 对SSE请求特殊处理：发送认证失败事件
-		if strings.HasSuffix(c.Request.URL.Path, "/api/sse") {
+		if isSSETokenRequest(c) {
 			sendSSEAuthError(c, errMsg)
 			return
 		}
@@ -89,6 +102,12 @@ func AuthToken(c *gin.Context) {
 	}
 	c.Set("username", mc.Username)
 	c.Next()
+}
+
+// isSSETokenRequest reports whether the request targets the SSE stream.
+// Query-string tokens are limited to it because EventSource cannot set headers.
+func isSSETokenRequest(c *gin.Context) bool {
+	return c.Request.Method == http.MethodGet && strings.HasSuffix(c.Request.URL.Path, "/api/sse")
 }
 
 // ParseToken 解析JWT

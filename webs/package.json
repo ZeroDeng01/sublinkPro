@@ -88,5 +88,8 @@
     "sass": "1.107.0",
     "vite-plugin-pwa": "^1.2.0"
   },
+  "resolutions": {
+    "dompurify": "3.4.18"
+  },
   "packageManager": "yarn@4.10.3"
 }

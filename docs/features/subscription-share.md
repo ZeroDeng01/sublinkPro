@@ -56,6 +56,9 @@ Case 3: Access tracking
 > [!TIP]
 > **Default share**: After upgrade, the system automatically creates a “default” share link for each subscription, keeping old links available for a smooth upgrade.
 
+> [!IMPORTANT]
+> **Legacy token rotation**: Early versions derived default share tokens from `md5(subscription name)`, which made links predictable. On upgrade, migration `0044_rotate_predictable_share_tokens` automatically replaces such tokens with random ones. Links that used the old tokens stop working, so re-copy the affected share links from Share Management.
+
 > [!NOTE]
 > **Client compatibility**: Share links can detect client type automatically. Clash, Surge, V2ray, and other client formats can also be specified manually.
 

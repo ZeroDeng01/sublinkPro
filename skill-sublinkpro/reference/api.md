@@ -912,7 +912,7 @@ All endpoints below require an administrator account and are disabled in demo mo
 WebDAV restore reuses the database migration workflow and overwrites current business data. The current instance's JWT, encryption key, Cloudflare Tunnel, WebDAV settings, and SOCKS5 gateway configuration (accounts, listeners, routing profiles) are preserved. Restoring disconnects active SOCKS5 connections and reloads the gateway against the restored nodes. HTTPS is required unless `allowInsecureHttp` is explicitly enabled. Private, loopback, and reserved targets require `allowPrivateNetwork`. WebDAV backup creation is currently SQLite-only. Uploads and downloads are limited to 1 GiB.
 
 ### Server-Sent Events
-**GET** `/api/se` (query: `?token=<jwt>`) — SSE stream (auth-protected).
+**GET** `/api/sse` (query: `?token=<jwt>`) — SSE stream. This is the only endpoint that accepts a JWT in the query string (the browser `EventSource` API cannot set headers). All other endpoints require the token in the `Authorization` header or an `X-API-Key` header.
 
 ---
 

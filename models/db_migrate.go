@@ -448,6 +448,14 @@ func RunMigrations() error {
 		utils.Error("执行迁移 0043_localize_legacy_defaults 失败: %v", err)
 	}
 
+	// 0044_rotate_predictable_share_tokens - 0015 迁移用 md5(订阅名) 作为分享 token，
+	// 链接可被推导；这里改用 crypto/rand token（受影响的旧链接需要重新复制）。
+	if err := database.RunCustomMigration("0044_rotate_predictable_share_tokens", func() error {
+		return rotatePredictableShareTokens(db)
+	}); err != nil {
+		utils.Error("执行迁移 0044_rotate_predictable_share_tokens 失败: %v", err)
+	}
+
 	if err := database.RunCustomMigration("0024_migrate_legacy_webhook_settings", func() error {
 		legacyURL, _ := GetSetting("webhook_url")
 		legacyMethod, _ := GetSetting("webhook_method")
@@ -1681,5 +1689,56 @@ func localizeLegacyDefaults(db *gorm.DB) error {
 		}
 	}
 
+	return nil
+}
+
+// legacyShareTokenRow 用于迁移时读取分享链接的最小字段集。
+type legacyShareTokenRow struct {
+	ID             int
+	Token          string
+	SubscriptionID int
+}
+
+// rotatePredictableShareTokens 将 0015 迁移写入的 md5(订阅名) token 替换为
+// crypto/rand token，避免根据订阅名推导出分享链接。
+func rotatePredictableShareTokens(db *gorm.DB) error {
+	var shares []legacyShareTokenRow
+	if err := db.Model(&SubscriptionShare{}).
+		Select("id", "token", "subscription_id").
+		Find(&shares).Error; err != nil {
+		return fmt.Errorf("加载分享链接失败: %w", err)
+	}
+	if len(shares) == 0 {
+		return nil
+	}
+
+	var subs []Subcription
+	if err := db.Select("id", "name").Find(&subs).Error; err != nil {
+		return fmt.Errorf("加载订阅失败: %w", err)
+	}
+	names := make(map[int]string, len(subs))
+	for _, sub := range subs {
+		names[sub.ID] = sub.Name
+	}
+
+	rotated := 0
+	for _, share := range shares {
+		name := names[share.SubscriptionID]
+		if name == "" || share.Token != md5Hash(name) {
+			continue
+		}
+		token, err := GenerateToken()
+		if err != nil {
+			return fmt.Errorf("生成分享 token 失败: %w", err)
+		}
+		if err := db.Model(&SubscriptionShare{}).Where("id = ?", share.ID).Update("token", token).Error; err != nil {
+			return fmt.Errorf("更新分享 token 失败: %w", err)
+		}
+		rotated++
+	}
+
+	if rotated > 0 {
+		utils.Warn("Rotated %d predictable legacy share tokens; affected share links must be re-copied", rotated)
+	}
 	return nil
 }

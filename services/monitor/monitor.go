@@ -528,9 +528,9 @@ func FormatBytes(bytes uint64) string {
 
 func formatBytesValue(value float64, unit string) string {
 	if value == float64(int64(value)) {
-		return string(rune(int64(value))) + " " + unit
+		return strconv.FormatInt(int64(value), 10) + " " + unit
 	}
-	return string(rune(int64(value*100)/100)) + " " + unit
+	return strconv.FormatFloat(value, 'f', 2, 64) + " " + unit
 }
 
 // FormatDuration 将秒数转换为人类可读的时长格式
@@ -551,17 +551,17 @@ func FormatDuration(seconds int64) string {
 }
 
 func formatDurationString(days, hours, minutes int64) string {
-	return string(rune(days)) + "d" + string(rune(hours)) + "h" + string(rune(minutes)) + "m"
+	return strconv.FormatInt(days, 10) + "d" + strconv.FormatInt(hours, 10) + "h" + strconv.FormatInt(minutes, 10) + "m"
 }
 
 func formatHoursMinutes(hours, minutes, secs int64) string {
-	return string(rune(hours)) + "h" + string(rune(minutes)) + "m" + string(rune(secs)) + "s"
+	return strconv.FormatInt(hours, 10) + "h" + strconv.FormatInt(minutes, 10) + "m" + strconv.FormatInt(secs, 10) + "s"
 }
 
 func formatMinutesSeconds(minutes, secs int64) string {
-	return string(rune(minutes)) + "m" + string(rune(secs)) + "s"
+	return strconv.FormatInt(minutes, 10) + "m" + strconv.FormatInt(secs, 10) + "s"
 }
 
 func formatSeconds(secs int64) string {
-	return string(rune(secs)) + "s"
+	return strconv.FormatInt(secs, 10) + "s"
 }
