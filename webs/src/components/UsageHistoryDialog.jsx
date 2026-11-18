@@ -19,11 +19,14 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
+import ClearAllIcon from '@mui/icons-material/ClearAll';
 import CloseIcon from '@mui/icons-material/Close';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import InsightsIcon from '@mui/icons-material/Insights';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
 
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
@@ -99,6 +102,25 @@ const findClosestPoint = (points, timestamp) => {
   return closest;
 };
 
+const formatSignedBytes = (bytes, decimals = 2) => {
+  const value = Number(bytes) || 0;
+  if (value > 0) return `+${formatBytes(value, decimals)}`;
+  if (value < 0) return `-${formatBytes(-value, decimals)}`;
+  return formatBytes(0, decimals);
+};
+
+const formatDuration = (t, milliseconds) => {
+  const totalMinutes = Math.max(0, Math.round((Number(milliseconds) || 0) / 60000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+  if (days > 0) parts.push(t('usageHistory.compare.durationDays', { count: days }));
+  if (hours > 0) parts.push(t('usageHistory.compare.durationHours', { count: hours }));
+  if (days === 0 && minutes > 0) parts.push(t('usageHistory.compare.durationMinutes', { count: minutes }));
+  return parts.join(' ') || t('usageHistory.compare.durationMinutes', { count: 0 });
+};
+
 /**
  * 机场用量历史图表弹窗。
  */
@@ -126,11 +148,25 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
   const [data, setData] = useState(null);
   const [chartReady, setChartReady] = useState(false);
   const [chartFailed, setChartFailed] = useState(false);
+  // 图表选点：最多固定两个点，用于对比两点之间的流量差。
+  const [comparePicks, setComparePicks] = useState([]);
 
   const chartInstanceRef = useRef(null);
   const chartOptionRef = useRef(null);
+  // 当前已应用的数据对象：只改变 A/B 标记时保留缩放，数据窗口变化时才回到完整范围。
+  const chartDataRef = useRef(null);
+  const appliedDataRef = useRef(null);
   const chartInitFrameRef = useRef(0);
   const chartResizeObserverRef = useRef(null);
+  const pointsRef = useRef([]);
+  const pickPointRef = useRef(() => {});
+  const comparePointsRef = useRef([]);
+  const moveMarkerRef = useRef(() => {});
+  // 标记拖动状态：哪条虚线正在被拖动、拖动中合并到的下一帧、是否发生过拖动。
+  const markerDragRef = useRef(null);
+  const markerDragFrameRef = useRef(0);
+  const markerDragPendingRef = useRef(null);
+  const markerDraggedRef = useRef(false);
 
   // 每次打开或切换目标时回到最近一天，避免默认长窗口里数据集中在末端。
   useEffect(() => {
@@ -138,6 +174,11 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
     setRangeDays(DEFAULT_RANGE_DAYS);
     setGranularity('auto');
   }, [open, targetId]);
+
+  // 时间窗口、粒度或目标机场变化后旧的数据点已不存在，直接清空选点。
+  useEffect(() => {
+    setComparePicks([]);
+  }, [open, targetId, rangeDays, granularity]);
 
   useEffect(() => {
     if (!open || !targetId) return undefined;
@@ -167,15 +208,33 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
     };
   }, [open, targetId, rangeDays, granularity, t]);
 
-  // 应用最新图表配置；实例已销毁时静默跳过
+  // 应用最新图表配置；实例已销毁时静默跳过。
+  // 选项是整体替换（notMerge），所以要在替换前后手动搬运缩放窗口：
+  // 选点/拖动标记只更新标记，不应把用户已经缩放的区间拉回完整范围。
   const applyChartOption = useCallback(() => {
     const chart = chartInstanceRef.current;
     if (!chart || chart.isDisposed()) return;
     if (!chartOptionRef.current) {
       chart.clear();
+      appliedDataRef.current = null;
       return;
     }
+    const dataChanged = appliedDataRef.current !== chartDataRef.current;
+    appliedDataRef.current = chartDataRef.current;
+    let zoomWindow = null;
+    if (!dataChanged) {
+      const current = chart.getOption();
+      const zoom = Array.isArray(current.dataZoom) ? current.dataZoom[0] : null;
+      if (zoom && Number.isFinite(zoom.start) && Number.isFinite(zoom.end)) {
+        zoomWindow = { start: zoom.start, end: zoom.end };
+      }
+    }
     chart.setOption(chartOptionRef.current, true);
+    if (dataChanged) {
+      chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
+    } else if (zoomWindow && (zoomWindow.start > 0 || zoomWindow.end < 100)) {
+      chart.dispatchAction({ type: 'dataZoom', start: zoomWindow.start, end: zoomWindow.end });
+    }
     chart.resize();
   }, []);
 
@@ -197,6 +256,12 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
         if (!previous.isDisposed()) previous.dispose();
         setChartReady(false);
       }
+      if (markerDragFrameRef.current) {
+        cancelAnimationFrame(markerDragFrameRef.current);
+        markerDragFrameRef.current = 0;
+      }
+      markerDragRef.current = null;
+      markerDragPendingRef.current = null;
       if (!node) return;
 
       // 同一 DOM 上可能残留旧实例（例如关闭动画未结束时又重新打开），先释放
@@ -221,6 +286,78 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
           chartInstanceRef.current = chart;
           setChartFailed(false);
           setChartReady(true);
+          // 选点交互：点击空白处固定 A/B，按住虚线标记则拖动调整边界。
+          const zr = chart.getZr();
+          let pressedAt = null;
+          const markerPixelX = (timestamp) => {
+            const pixel = chart.convertToPixel({ gridIndex: 0 }, [Number(timestamp), 0]);
+            return Array.isArray(pixel) ? pixel[0] : NaN;
+          };
+          // 命中测试：鼠标距离某条虚线 7px 以内即视为要拖动它。
+          const hitMarker = (event) => {
+            const markers = comparePointsRef.current;
+            if (!markers.length) return null;
+            if (!chart.containPixel({ gridIndex: 0 }, [event.offsetX, event.offsetY])) return null;
+            for (let index = 0; index < markers.length; index += 1) {
+              const pixelX = markerPixelX(markers[index].timestamp);
+              if (Number.isFinite(pixelX) && Math.abs(event.offsetX - pixelX) <= 7) {
+                return index === 0 ? 'A' : 'B';
+              }
+            }
+            return null;
+          };
+          const flushMarkerDrag = () => {
+            markerDragFrameRef.current = 0;
+            const pending = markerDragPendingRef.current;
+            markerDragPendingRef.current = null;
+            if (pending) moveMarkerRef.current(pending.which, pending.timestamp);
+          };
+          // 拖动时按帧合并更新，避免密集数据点上每次 mousemove 都重绘整图。
+          const scheduleMarkerDrag = (which, timestamp) => {
+            markerDragPendingRef.current = { which, timestamp };
+            if (markerDragFrameRef.current) return;
+            markerDragFrameRef.current = requestAnimationFrame(flushMarkerDrag);
+          };
+          const finishMarkerDrag = () => {
+            if (!markerDragRef.current) return;
+            markerDragRef.current = null;
+            zr.setCursorStyle('default');
+          };
+          zr.on('mousedown', (event) => {
+            pressedAt = { x: event.offsetX, y: event.offsetY };
+            markerDraggedRef.current = false;
+            markerDragRef.current = hitMarker(event);
+            if (markerDragRef.current) {
+              markerDraggedRef.current = true;
+              zr.setCursorStyle('ew-resize');
+            }
+          });
+          zr.on('mousemove', (event) => {
+            if (markerDragRef.current) {
+              const converted = chart.convertFromPixel({ gridIndex: 0 }, [event.offsetX, event.offsetY]);
+              const closest = findClosestPoint(pointsRef.current, Array.isArray(converted) ? converted[0] : NaN);
+              if (closest) scheduleMarkerDrag(markerDragRef.current, closest.timestamp);
+              zr.setCursorStyle('ew-resize');
+              return;
+            }
+            // 悬停在标记附近时给出可拖动的光标提示。
+            zr.setCursorStyle(hitMarker(event) ? 'ew-resize' : 'default');
+          });
+          zr.on('mouseup', finishMarkerDrag);
+          zr.on('globalout', finishMarkerDrag);
+          zr.on('click', (event) => {
+            // 刚拖动过标记的那次松开不能当成一次新的选点。
+            if (markerDraggedRef.current) {
+              markerDraggedRef.current = false;
+              return;
+            }
+            if (pressedAt && Math.hypot(event.offsetX - pressedAt.x, event.offsetY - pressedAt.y) > 6) return;
+            const target = [event.offsetX, event.offsetY];
+            if (!chart.containPixel({ gridIndex: 0 }, target)) return;
+            const converted = chart.convertFromPixel({ gridIndex: 0 }, target);
+            const closest = findClosestPoint(pointsRef.current, Array.isArray(converted) ? converted[0] : NaN);
+            if (closest) pickPointRef.current(closest.timestamp);
+          });
           applyChartOption();
           if (typeof ResizeObserver !== 'undefined') {
             const observer = new ResizeObserver(() => {
@@ -251,6 +388,133 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
 
   const points = useMemo(() => data?.points || [], [data]);
   const failedPoints = useMemo(() => points.filter((point) => point.failed), [points]);
+
+  // 图表选点：第一次点击记为 A，第二次记为 B，再次点击重新开始。
+  const handlePickPoint = useCallback((timestamp) => {
+    setComparePicks((previous) => {
+      if (!previous.length) return [timestamp];
+      if (previous.length === 1) {
+        if (previous[0] === timestamp) return previous;
+        return [previous[0], timestamp];
+      }
+      return [timestamp];
+    });
+  }, []);
+
+  // 拖动标记：A 始终对应较早的点；拖过对方时自动交换，两个点重合时合并。
+  const handleMarkerMove = useCallback((which, timestamp) => {
+    setComparePicks((previous) => {
+      if (!previous.length) return previous;
+      const sorted = [...previous].sort((left, right) => left - right);
+      let next;
+      if (which === 'A') {
+        next = sorted.length === 1 ? [timestamp] : [timestamp, sorted[1]];
+      } else {
+        next = sorted.length < 2 ? sorted : [sorted[0], timestamp];
+      }
+      const normalized = [...new Set(next)].sort((left, right) => left - right);
+      if (normalized.length === previous.length && normalized.every((value, index) => value === previous[index])) {
+        return previous;
+      }
+      return normalized;
+    });
+  }, []);
+
+  useEffect(() => {
+    pointsRef.current = points;
+  }, [points]);
+
+  useEffect(() => {
+    pickPointRef.current = handlePickPoint;
+  }, [handlePickPoint]);
+
+  useEffect(() => {
+    moveMarkerRef.current = handleMarkerMove;
+  }, [handleMarkerMove]);
+
+  // 选点在当前数据里重新映射为真实数据点，并按时间先后排成 A、B。
+  const comparePoints = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    comparePicks.forEach((timestamp) => {
+      const point = findClosestPoint(points, timestamp);
+      if (!point || seen.has(point.timestamp)) return;
+      seen.add(point.timestamp);
+      result.push(point);
+    });
+    return result.sort((left, right) => left.timestamp - right.timestamp);
+  }, [comparePicks, points]);
+
+  useEffect(() => {
+    comparePointsRef.current = comparePoints;
+  }, [comparePoints]);
+
+  const compareStats = useMemo(() => {
+    if (comparePoints.length !== 2) return null;
+    const [from, to] = comparePoints;
+    return {
+      used: Number(to.used) - Number(from.used),
+      upload: Number(to.upload) - Number(from.upload),
+      download: Number(to.download) - Number(from.download)
+    };
+  }, [comparePoints]);
+
+  // 对比配色与图上的 A/B 标记保持一致：A 主色、B 强调色。
+  const compareAccentColor = chartPalette.warning?.main || chartPalette.error.main;
+
+  // 对比面板单元：先给流量差，再给上传/下载、间隔和两端时间。
+  // 颜色取图表调色板里的具体色值，面板背景会再做一层透明度叠加。
+  const compareCells = useMemo(() => {
+    if (!compareStats || comparePoints.length !== 2) return [];
+    const [from, to] = comparePoints;
+    const textColor = chartPalette.text.primary;
+    return [
+      {
+        key: 'used',
+        label: t('usageHistory.compare.used'),
+        value: formatSignedBytes(compareStats.used),
+        color: compareStats.used < 0 ? compareAccentColor : chartPalette.primary.main
+      },
+      {
+        key: 'upload',
+        label: t('usageHistory.compare.upload'),
+        value: formatSignedBytes(compareStats.upload),
+        color: textColor
+      },
+      {
+        key: 'download',
+        label: t('usageHistory.compare.download'),
+        value: formatSignedBytes(compareStats.download),
+        color: textColor
+      },
+      {
+        key: 'duration',
+        label: t('usageHistory.compare.duration'),
+        value: formatDuration(t, Number(to.timestamp) - Number(from.timestamp)),
+        color: textColor
+      },
+      {
+        key: 'pointA',
+        label: t('usageHistory.compare.pointA'),
+        value: formatPointTime(from.timestamp, 'refresh'),
+        title: formatFullTime(from.timestamp),
+        color: chartPalette.primary.main
+      },
+      {
+        key: 'pointB',
+        label: t('usageHistory.compare.pointB'),
+        value: formatPointTime(to.timestamp, 'refresh'),
+        title: formatFullTime(to.timestamp),
+        color: compareAccentColor
+      }
+    ];
+  }, [compareStats, comparePoints, compareAccentColor, chartPalette, t]);
+
+  const compareHintText = useMemo(() => {
+    if (comparePoints.length === 2) return t('usageHistory.compare.title');
+    if (comparePoints.length === 1) return t('usageHistory.compare.pickSecond');
+    return t('usageHistory.compare.hint');
+  }, [comparePoints, t]);
 
   // 数据起点明显晚于窗口起点时，提示实际开始记录的时间
   const historyStartsAt = useMemo(() => {
@@ -299,6 +563,7 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
 
     const primary = chartPalette.primary.main;
     const errorColor = chartPalette.error.main;
+    const compareAccent = compareAccentColor;
     const axisTextColor = chartPalette.text?.secondary || chartPalette.text?.primary || primary;
     const dividerColor = chartPalette.divider;
     const paperColor = chartPalette.background?.paper || '#ffffff';
@@ -346,6 +611,39 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
           ])
         },
         emphasis: { focus: 'series' },
+        // 选点标记：A 为较早的点，B 为较晚的点，两点之间填充对比色带。
+        markLine: comparePoints.length
+          ? {
+              silent: true,
+              animation: false,
+              symbol: ['none', 'none'],
+              data: comparePoints.map((point, index) => ({
+                xAxis: point.timestamp,
+                lineStyle: {
+                  type: 'dashed',
+                  width: 1,
+                  color: withAlpha(index === 0 ? primary : compareAccent, 0.85)
+                },
+                label: {
+                  show: true,
+                  position: 'insideEndTop',
+                  color: index === 0 ? primary : compareAccent,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  formatter: index === 0 ? t('usageHistory.compare.pointA') : t('usageHistory.compare.pointB')
+                }
+              }))
+            }
+          : undefined,
+        markArea:
+          comparePoints.length === 2
+            ? {
+                silent: true,
+                animation: false,
+                itemStyle: { color: withAlpha(primary, isDark ? 0.1 : 0.05) },
+                data: [[{ xAxis: comparePoints[0].timestamp }, { xAxis: comparePoints[1].timestamp }]]
+              }
+            : undefined,
         data: points.map((point) => [point.timestamp, Number(point.used) || 0])
       }
     ];
@@ -386,7 +684,7 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
     return {
       animationDuration: 280,
       color: [primary, errorColor],
-      grid: { left: 4, right: 12, top: hasLegend ? 34 : 16, bottom: 24, containLabel: true },
+      grid: { left: 4, right: 12, top: hasLegend ? 34 : 16, bottom: 26, containLabel: true },
       legend: hasLegend
         ? {
             top: 0,
@@ -473,22 +771,44 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
         },
         splitLine: { lineStyle: { color: withAlpha(dividerColor, 0.55), type: 'dashed' } }
       },
-      dataZoom: [{ type: 'inside', throttle: 60, zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: false }],
+      dataZoom: [
+        {
+          type: 'inside',
+          throttle: 60,
+          zoomOnMouseWheel: true,
+          // 拖动只用于移动 A/B 标记，平移交给缩放到选区的按钮完成。
+          moveOnMouseMove: false,
+          moveOnMouseWheel: false
+        }
+      ],
       series
     };
-  }, [data, chartPalette, isDark, granularity, points, failedPoints, t]);
+  }, [data, chartPalette, isDark, granularity, points, failedPoints, comparePoints, compareAccentColor, t]);
 
   // 应用配置：实例创建完成或配置变化时都重新应用一次
   useEffect(() => {
     chartOptionRef.current = chartOption;
+    chartDataRef.current = data;
     if (!chartReady) return;
     applyChartOption();
-  }, [chartReady, chartOption, i18n.resolvedLanguage, applyChartOption]);
+  }, [chartReady, chartOption, data, i18n.resolvedLanguage, applyChartOption]);
 
   const handleResetZoom = () => {
     const chart = chartInstanceRef.current;
     if (!chart) return;
     chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
+  };
+
+  // 把可视区间收进 A、B 两个标记之间；重置缩放回到完整范围。
+  const handleZoomToSelection = () => {
+    const chart = chartInstanceRef.current;
+    if (!chart || chart.isDisposed() || comparePoints.length !== 2) return;
+    const [from, to] = comparePoints;
+    chart.dispatchAction({
+      type: 'dataZoom',
+      startValue: Number(from.timestamp),
+      endValue: Number(to.timestamp)
+    });
   };
 
   const dialogPaperSx = {
@@ -765,6 +1085,74 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
               )}
             </Box>
           </Box>
+
+          {points.length > 1 && !overlayVisible && (
+            <Box sx={{ ...panelSx, px: { xs: 1, md: 1.25 }, py: 0.9 }}>
+              <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
+                <CompareArrowsIcon sx={{ fontSize: 16, color: tertiaryText, flexShrink: 0 }} />
+                <Typography variant="caption" sx={{ color: secondaryText, flex: 1, minWidth: 0 }}>
+                  {compareHintText}
+                </Typography>
+                {comparePoints.length === 2 && (
+                  <Tooltip title={t('usageHistory.compare.zoomToRange')} arrow>
+                    <IconButton
+                      size="small"
+                      onClick={handleZoomToSelection}
+                      aria-label={t('usageHistory.compare.zoomToRange')}
+                      sx={{ color: secondaryText, flexShrink: 0 }}
+                    >
+                      <ZoomInIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {comparePoints.length > 0 && (
+                  <Tooltip title={t('usageHistory.compare.clear')} arrow>
+                    <IconButton
+                      size="small"
+                      onClick={() => setComparePicks([])}
+                      aria-label={t('usageHistory.compare.clear')}
+                      sx={{ color: secondaryText, flexShrink: 0 }}
+                    >
+                      <ClearAllIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Stack>
+              {compareCells.length > 0 && (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? '104px' : '128px'}, 1fr))`,
+                    gap: 0.75,
+                    mt: 0.75
+                  }}
+                >
+                  {compareCells.map((cell) => (
+                    <Box
+                      key={cell.key}
+                      title={cell.title}
+                      sx={{
+                        minWidth: 0,
+                        px: 1,
+                        py: 0.6,
+                        borderRadius: 1.5,
+                        border: '1px solid',
+                        borderColor: withAlpha(cell.color, 0.24),
+                        bgcolor: withAlpha(cell.color, isDark ? 0.12 : 0.05)
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ color: tertiaryText, display: 'block', lineHeight: 1.3 }} noWrap>
+                        {cell.label}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: cell.color, fontWeight: 600, lineHeight: 1.3 }} noWrap>
+                        {cell.value}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Box>
+          )}
 
           {historyStartsAt && (
             <Typography variant="caption" sx={{ color: tertiaryText }}>

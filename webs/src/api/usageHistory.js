@@ -1,5 +1,9 @@
 import request from './request';
 
+// 浏览器时区偏移（分钟，与 Date.getTimezoneOffset() 一致），
+// 让后端按客户端本地自然日划分「今日」和按天统计。
+const clientTimezoneOffset = () => new Date().getTimezoneOffset();
+
 // 批量获取机场用量迷你图（列表卡片内联展示）
 // @param {number[]} ids - 机场ID列表
 // @param {object} params - { days, granularity }
@@ -8,7 +12,7 @@ export function getAirportUsageSparklines(ids, params = {}) {
   return request({
     url: '/v1/airports/usage-sparklines',
     method: 'get',
-    params: { ids: normalizedIds.join(','), ...params }
+    params: { ids: normalizedIds.join(','), tzOffset: clientTimezoneOffset(), ...params }
   });
 }
 
@@ -18,7 +22,7 @@ export function getAirportUsageDaily(params = {}) {
   return request({
     url: '/v1/airports/usage-daily',
     method: 'get',
-    params
+    params: { tzOffset: clientTimezoneOffset(), ...params }
   });
 }
 

@@ -301,12 +301,13 @@ func GetAirportUsageHistory(airportID, days int, granularity string) (*AirportUs
 }
 
 // GetAirportUsageSparklines 批量构建机场用量迷你图数据。
-func GetAirportUsageSparklines(airportIDs []int, days int) ([]AirportUsageSparkline, error) {
-	return getAirportUsageSparklines(airportIDs, days, time.Now())
+// loc 决定“今日”的自然日边界，nil 表示服务器本地时区。
+func GetAirportUsageSparklines(airportIDs []int, days int, loc *time.Location) ([]AirportUsageSparkline, error) {
+	return getAirportUsageSparklines(airportIDs, days, time.Now(), loc)
 }
 
 // getAirportUsageSparklines 是 GetAirportUsageSparklines 的可注入当前时间的实现，便于测试跨天边界。
-func getAirportUsageSparklines(airportIDs []int, days int, now time.Time) ([]AirportUsageSparkline, error) {
+func getAirportUsageSparklines(airportIDs []int, days int, now time.Time, loc *time.Location) ([]AirportUsageSparkline, error) {
 	ids := uniquePositiveIDs(airportIDs)
 	if len(ids) == 0 {
 		return []AirportUsageSparkline{}, nil
@@ -326,7 +327,7 @@ func getAirportUsageSparklines(airportIDs []int, days int, now time.Time) ([]Air
 	if err != nil {
 		return nil, err
 	}
-	todayUsedMap, err := loadUsageTodayUsed(ids, now)
+	todayUsedMap, err := loadUsageTodayUsed(ids, now, loc)
 	if err != nil {
 		return nil, err
 	}
@@ -381,15 +382,18 @@ type AirportUsageDailyReport struct {
 }
 
 // GetAirportDailyUsage 按天汇总实际消耗的流量。
-// 快照里存的是面板返回的累计值，所以用相邻两次成功快照的差值作为该时段消耗；
-// 计数器下降（面板重置、换套餐）时把新值整段计入当天，避免出现负数。
-// airportID <= 0 表示汇总全部机场。
-func GetAirportDailyUsage(days, airportID int) (*AirportUsageDailyReport, error) {
-	return getAirportDailyUsage(days, airportID, time.Now())
+// 快照里存的是面板返回的累计值，用高水位增长把累计值换算成每天消耗：
+// 面板短暂的异常回落不会重复累计，计数器重置（换套餐/清零）从零重新计入。
+// loc 决定“自然日”的边界，nil 表示服务器本地时区；airportID <= 0 表示汇总全部机场。
+func GetAirportDailyUsage(days, airportID int, loc *time.Location) (*AirportUsageDailyReport, error) {
+	return getAirportDailyUsage(days, airportID, time.Now(), loc)
 }
 
 // getAirportDailyUsage 是 GetAirportDailyUsage 的可注入当前时间的实现，便于测试跨天边界。
-func getAirportDailyUsage(days, airportID int, now time.Time) (*AirportUsageDailyReport, error) {
+func getAirportDailyUsage(days, airportID int, now time.Time, loc *time.Location) (*AirportUsageDailyReport, error) {
+	if loc == nil {
+		loc = time.Local
+	}
 	if airportID > 0 {
 		if _, err := GetAirportByID(airportID); err != nil {
 			return nil, err
@@ -399,7 +403,7 @@ func getAirportDailyUsage(days, airportID int, now time.Time) (*AirportUsageDail
 	retentionDays := GetAirportUsageRetentionDays()
 	days = NormalizeUsageHistoryDays(days, retentionDays)
 	// 按自然日对齐：返回的正好是最近 days 天的完整日桶（含今天）
-	from := startOfUsageDay(now).AddDate(0, 0, -(days - 1))
+	from := startOfUsageDayIn(now, loc).AddDate(0, 0, -(days - 1))
 
 	snapshots, err := loadUsageSnapshotsForDaily(from, now, airportID)
 	if err != nil {
@@ -433,63 +437,40 @@ func getAirportDailyUsage(days, airportID int, now time.Time) (*AirportUsageDail
 	daily := make(map[string]*UsageDailyPoint)
 	// 汇总模式下按天记录每家机场的贡献，供前端悬停提示展示明细。
 	perAirport := make(map[string]map[int]*UsageDailyAirportUsage)
-	lastValues := make(map[int]usageValues, len(baseline))
-	for id, values := range baseline {
-		lastValues[id] = values
-	}
 
-	for _, snapshot := range snapshots {
-		if snapshot.Failed {
-			continue
-		}
-		current := usageValues{
-			upload:   snapshot.Upload,
-			download: snapshot.Download,
-			total:    snapshot.Total,
-			expire:   snapshot.Expire,
-		}
-		previous, seen := lastValues[snapshot.AirportID]
-		lastValues[snapshot.AirportID] = current
-		if !seen {
-			// 窗口内首次见到该机场：没有基线就无法计算差值，从下一次快照开始累计。
-			continue
-		}
-
-		uploadDelta, downloadDelta := usageDelta(current, previous)
-		if uploadDelta == 0 && downloadDelta == 0 {
-			continue
-		}
-
-		key := snapshot.CapturedAt.In(time.Local).Format("2006-01-02")
-		point, ok := daily[key]
-		if !ok {
-			point = &UsageDailyPoint{Date: key}
-			daily[key] = point
-		}
-		point.Upload += uploadDelta
-		point.Download += downloadDelta
-		point.Used += uploadDelta + downloadDelta
-
-		if airportID <= 0 {
-			byAirport := perAirport[key]
-			if byAirport == nil {
-				byAirport = make(map[int]*UsageDailyAirportUsage)
-				perAirport[key] = byAirport
+	for sourceAirportID, samples := range groupUsageGrowthSamples(snapshots, baseline) {
+		for _, step := range computeUsageGrowth(samples) {
+			key := step.at.In(loc).Format("2006-01-02")
+			point, ok := daily[key]
+			if !ok {
+				point = &UsageDailyPoint{Date: key}
+				daily[key] = point
 			}
-			entry := byAirport[snapshot.AirportID]
-			if entry == nil {
-				entry = &UsageDailyAirportUsage{AirportID: snapshot.AirportID, AirportName: airportNames[snapshot.AirportID]}
-				byAirport[snapshot.AirportID] = entry
+			point.Upload += step.upload
+			point.Download += step.download
+			point.Used += step.upload + step.download
+
+			if airportID <= 0 {
+				byAirport := perAirport[key]
+				if byAirport == nil {
+					byAirport = make(map[int]*UsageDailyAirportUsage)
+					perAirport[key] = byAirport
+				}
+				entry := byAirport[sourceAirportID]
+				if entry == nil {
+					entry = &UsageDailyAirportUsage{AirportID: sourceAirportID, AirportName: airportNames[sourceAirportID]}
+					byAirport[sourceAirportID] = entry
+				}
+				entry.Upload += step.upload
+				entry.Download += step.download
+				entry.Used += step.upload + step.download
 			}
-			entry.Upload += uploadDelta
-			entry.Download += downloadDelta
-			entry.Used += uploadDelta + downloadDelta
 		}
 	}
 
-	endDay := startOfUsageDay(now)
+	endDay := startOfUsageDayIn(now, loc)
 	points := make([]UsageDailyPoint, 0, days+1)
-	for day := startOfUsageDay(from); !day.After(endDay); day = day.AddDate(0, 0, 1) {
+	for day := from; !day.After(endDay); day = day.AddDate(0, 0, 1) {
 		key := day.Format("2006-01-02")
 		if point, ok := daily[key]; ok {
 			if entries := perAirport[key]; len(entries) > 0 {
@@ -537,29 +518,136 @@ func sortUsageDailyAirports(entries map[int]*UsageDailyAirportUsage) []UsageDail
 	return result
 }
 
-// usageDelta 计算相邻两次快照的消耗增量。
-// 计数器下降（面板重置、换套餐）时把新值整段计入，避免出现负数。
-func usageDelta(current, previous usageValues) (upload, download int64) {
-	upload = current.upload - previous.upload
-	if upload < 0 {
-		upload = current.upload
+// usageGlitchRecoveryWindow 面板短暂回报异常值时，只要在该时间窗内回到旧高水位就忽略整段回落。
+const usageGlitchRecoveryWindow = 6 * time.Hour
+
+// usageGrowthSample 参与消耗统计的成功快照；基线样本只提供起始数值。
+type usageGrowthSample struct {
+	capturedAt time.Time
+	upload     int64
+	download   int64
+}
+
+// used 返回面板累计的已用流量总量。
+func (s usageGrowthSample) used() int64 {
+	return s.upload + s.download
+}
+
+// usageGrowthStep 一次已确认的消耗增长，按发生时间归属到自然日。
+type usageGrowthStep struct {
+	at       time.Time
+	upload   int64
+	download int64
+}
+
+// computeUsageGrowth 把按时间升序的成功快照转换成消耗增量序列。
+// 只跟踪 used 总量（upload+download）的高水位，避免上下行字段互换或单边缺失造成翻倍累计：
+//   - used 回落后在 usageGlitchRecoveryWindow 内回到旧高水位，视为面板短暂异常，整段忽略；
+//   - used 持续回落但仍接近旧高水位时，同样视为面板异常，保持高水位不变；
+//   - used 持续大幅回落视为计数器重置（换套餐、面板清零），新计数从零开始全额计入；
+//   - 高于高水位、但下一条成功快照回落到其下方的取值视为瞬时虚高，不计增长也不抬高水位。
+//
+// 首个样本没有基线时只作为起点，不产生增量。
+func computeUsageGrowth(samples []usageGrowthSample) []usageGrowthStep {
+	steps := make([]usageGrowthStep, 0, len(samples))
+	if len(samples) < 2 {
+		return steps
 	}
-	download = current.download - previous.download
-	if download < 0 {
-		download = current.download
+
+	peak := samples[0]
+	peakUsed := peak.used()
+
+	for i := 1; i < len(samples); i++ {
+		current := samples[i]
+		used := current.used()
+
+		if used >= peakUsed {
+			// 瞬时虚高：下一条成功快照回落到该取值下方，说明这次“增长”没有被面板确认。
+			if used > peakUsed && i+1 < len(samples) && samples[i+1].used() < used {
+				continue
+			}
+			uploadDelta := current.upload - peak.upload
+			downloadDelta := current.download - peak.download
+			if uploadDelta < 0 || downloadDelta < 0 {
+				// 上下行字段回绕或互换时，把总增量记到当前更大的分量上。
+				if current.upload >= current.download {
+					uploadDelta, downloadDelta = used-peakUsed, 0
+				} else {
+					uploadDelta, downloadDelta = 0, used-peakUsed
+				}
+			}
+			if uploadDelta+downloadDelta > 0 {
+				steps = append(steps, usageGrowthStep{at: current.capturedAt, upload: uploadDelta, download: downloadDelta})
+			}
+			peak = current
+			peakUsed = used
+			continue
+		}
+
+		// used 回落：短时间内回到旧高水位说明是面板异常，忽略。
+		if usageRecoversWithin(samples, i, peakUsed) {
+			continue
+		}
+		// 持续回落但仍接近旧高水位：更像面板异常而不是换套餐，保持高水位不变。
+		if used*2 >= peakUsed {
+			continue
+		}
+		// 计数器重置：新计数从零开始，全额计入该段消耗。
+		steps = append(steps, usageGrowthStep{at: current.capturedAt, upload: current.upload, download: current.download})
+		peak = current
+		peakUsed = used
 	}
-	return upload, download
+	return steps
+}
+
+// usageRecoversWithin 判断 start 之后的快照是否在容忍时间内重新回到 threshold 以上。
+func usageRecoversWithin(samples []usageGrowthSample, start int, threshold int64) bool {
+	anchor := samples[start].capturedAt
+	for i := start + 1; i < len(samples); i++ {
+		if samples[i].capturedAt.Sub(anchor) > usageGlitchRecoveryWindow {
+			return false
+		}
+		if samples[i].used() >= threshold {
+			return true
+		}
+	}
+	return false
+}
+
+// groupUsageGrowthSamples 按机场分组成功快照，并把基线样本拼到每组开头。
+func groupUsageGrowthSamples(snapshots []AirportUsageSnapshot, baseline map[int]usageValues) map[int][]usageGrowthSample {
+	grouped := make(map[int][]usageGrowthSample, len(baseline))
+	for id, values := range baseline {
+		grouped[id] = []usageGrowthSample{{upload: values.upload, download: values.download}}
+	}
+	for _, snapshot := range snapshots {
+		if snapshot.Failed {
+			continue
+		}
+		grouped[snapshot.AirportID] = append(grouped[snapshot.AirportID], usageGrowthSample{
+			capturedAt: snapshot.CapturedAt,
+			upload:     snapshot.Upload,
+			download:   snapshot.Download,
+		})
+	}
+	return grouped
 }
 
 // startOfUsageDay 返回本地时区的当天零点。
 func startOfUsageDay(value time.Time) time.Time {
-	local := value.In(time.Local)
-	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.Local)
+	return startOfUsageDayIn(value, time.Local)
+}
+
+// startOfUsageDayIn 返回指定时区的当天零点。
+func startOfUsageDayIn(value time.Time, loc *time.Location) time.Time {
+	local := value.In(loc)
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc)
 }
 
 // loadUsageSnapshotsForDaily 加载时间窗口内的快照，按机场与时间升序排列。
 func loadUsageSnapshotsForDaily(from, to time.Time, airportID int) ([]AirportUsageSnapshot, error) {
-	query := database.DB.Where("captured_at >= ? AND captured_at <= ?", from, to)
+	// 快照时间以服务器本地时区的文本形式存储，查询边界需要换回同一时区才能正确比较。
+	query := database.DB.Where("captured_at >= ? AND captured_at <= ?", from.In(time.Local), to.In(time.Local))
 	if airportID > 0 {
 		query = query.Where("airport_id = ?", airportID)
 	}
@@ -574,8 +662,9 @@ func loadUsageSnapshotsForDaily(from, to time.Time, airportID int) ([]AirportUsa
 // airportIDs 为空表示不限定机场。
 func loadUsageBaseline(from time.Time, airportIDs []int) (map[int]usageValues, error) {
 	baseline := make(map[int]usageValues)
+	bound := from.In(time.Local)
 
-	idQuery := database.DB.Model(&AirportUsageSnapshot{}).Where("captured_at < ?", from)
+	idQuery := database.DB.Model(&AirportUsageSnapshot{}).Where("captured_at < ?", bound)
 	if len(airportIDs) > 0 {
 		idQuery = idQuery.Where("airport_id IN ?", airportIDs)
 	}
@@ -586,7 +675,7 @@ func loadUsageBaseline(from time.Time, airportIDs []int) (map[int]usageValues, e
 
 	for _, id := range ids {
 		var snapshot AirportUsageSnapshot
-		err := database.DB.Where("airport_id = ? AND captured_at < ? AND failed = ?", id, from, false).
+		err := database.DB.Where("airport_id = ? AND captured_at < ? AND failed = ?", id, bound, false).
 			Order("captured_at DESC").Order("id DESC").First(&snapshot).Error
 		if err != nil {
 			continue
@@ -601,19 +690,22 @@ func loadUsageBaseline(from time.Time, airportIDs []int) (map[int]usageValues, e
 	return baseline, nil
 }
 
-// loadUsageTodayUsed 批量统计指定机场当天的消耗量。
-// 统计口径与按天报表一致：相邻两次成功快照的差值计入当天，
-// 基线取当天零点前的最后一条成功快照；没有基线时从当天第一条快照开始累计。
-func loadUsageTodayUsed(airportIDs []int, now time.Time) (map[int]int64, error) {
+// loadUsageTodayUsed 批量统计指定机场在 loc 时区当天的消耗量。
+// 统计口径与按天报表一致：以 used 总量高水位累计增长，短暂回落忽略、计数器重置从零计入；
+// 基线取当天零点前的最后一条成功快照；没有基线时从当天第一条成功快照开始累计。
+func loadUsageTodayUsed(airportIDs []int, now time.Time, loc *time.Location) (map[int]int64, error) {
 	result := make(map[int]int64, len(airportIDs))
 	if len(airportIDs) == 0 {
 		return result, nil
 	}
+	if loc == nil {
+		loc = time.Local
+	}
 
-	todayStart := startOfUsageDay(now)
+	todayStart := startOfUsageDayIn(now, loc)
 	var snapshots []AirportUsageSnapshot
 	if err := database.DB.
-		Where("airport_id IN ? AND captured_at >= ? AND captured_at <= ?", airportIDs, todayStart, now).
+		Where("airport_id IN ? AND captured_at >= ? AND captured_at <= ?", airportIDs, todayStart.In(time.Local), now.In(time.Local)).
 		Order("airport_id ASC").Order("captured_at ASC").Order("id ASC").
 		Find(&snapshots).Error; err != nil {
 		return nil, err
@@ -626,28 +718,12 @@ func loadUsageTodayUsed(airportIDs []int, now time.Time) (map[int]int64, error) 
 	if err != nil {
 		return nil, err
 	}
-	lastValues := make(map[int]usageValues, len(baseline))
-	for id, values := range baseline {
-		lastValues[id] = values
-	}
-
-	for _, snapshot := range snapshots {
-		if snapshot.Failed {
-			continue
+	for id, samples := range groupUsageGrowthSamples(snapshots, baseline) {
+		var total int64
+		for _, step := range computeUsageGrowth(samples) {
+			total += step.upload + step.download
 		}
-		current := usageValues{
-			upload:   snapshot.Upload,
-			download: snapshot.Download,
-			total:    snapshot.Total,
-			expire:   snapshot.Expire,
-		}
-		previous, seen := lastValues[snapshot.AirportID]
-		lastValues[snapshot.AirportID] = current
-		if !seen {
-			continue
-		}
-		uploadDelta, downloadDelta := usageDelta(current, previous)
-		result[snapshot.AirportID] += uploadDelta + downloadDelta
+		result[id] = total
 	}
 	return result, nil
 }

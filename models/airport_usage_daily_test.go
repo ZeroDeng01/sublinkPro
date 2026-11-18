@@ -49,7 +49,7 @@ func TestGetAirportDailyUsageComputesDailyDeltas(t *testing.T) {
 	addUsageSnapshot(t, airportB.ID, 10, 10, time.Date(2026, 11, 15, 10, 0, 0, 0, time.Local), false)
 	addUsageSnapshot(t, airportB.ID, 40, 20, time.Date(2026, 11, 17, 7, 0, 0, 0, time.Local), false)
 
-	report, err := getAirportDailyUsage(2, 0, now)
+	report, err := getAirportDailyUsage(2, 0, now, time.Local)
 	if err != nil {
 		t.Fatalf("daily usage: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestGetAirportDailyUsageHandlesCounterReset(t *testing.T) {
 	// 面板重置/换套餐：累计值变小，按新值全量计入当天，而不是出现负数。
 	addUsageSnapshot(t, airport.ID, 100, 200, time.Date(2026, 11, 17, 9, 0, 0, 0, time.Local), false)
 
-	report, err := getAirportDailyUsage(2, airport.ID, now)
+	report, err := getAirportDailyUsage(2, airport.ID, now, time.Local)
 	if err != nil {
 		t.Fatalf("daily usage: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestGetAirportDailyUsageSkipsFailedSnapshots(t *testing.T) {
 	addUsageSnapshot(t, airport.ID, 999999, 999999, time.Date(2026, 11, 16, 9, 0, 0, 0, time.Local), true)
 	addUsageSnapshot(t, airport.ID, 300, 300, time.Date(2026, 11, 17, 9, 0, 0, 0, time.Local), false)
 
-	report, err := getAirportDailyUsage(2, airport.ID, now)
+	report, err := getAirportDailyUsage(2, airport.ID, now, time.Local)
 	if err != nil {
 		t.Fatalf("daily usage: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestGetAirportDailyUsageFiltersSingleAirport(t *testing.T) {
 	addUsageSnapshot(t, airportB.ID, 0, 0, time.Date(2026, 11, 16, 9, 0, 0, 0, time.Local), false)
 	addUsageSnapshot(t, airportB.ID, 500, 500, time.Date(2026, 11, 17, 9, 0, 0, 0, time.Local), false)
 
-	report, err := getAirportDailyUsage(2, airportA.ID, now)
+	report, err := getAirportDailyUsage(2, airportA.ID, now, time.Local)
 	if err != nil {
 		t.Fatalf("daily usage: %v", err)
 	}

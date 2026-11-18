@@ -640,6 +640,22 @@
     "failureNotice": "{{count}} failed refresh(es) marked in red",
     "singleSample": "Only one sample in this range yet. New points appear after the next subscription refresh.",
     "historyStarts": "History collected since {{time}}. Earlier refreshes were not recorded.",
+    "compare": {
+      "hint": "Click the chart to pin two points, then drag the dashed markers to fine-tune the range.",
+      "pickSecond": "Point A pinned. Click another point to pin B, or drag the marker to adjust A.",
+      "title": "A → B traffic difference",
+      "zoomToRange": "Zoom to the A → B range",
+      "pointA": "A",
+      "pointB": "B",
+      "used": "Traffic",
+      "upload": "Upload",
+      "download": "Download",
+      "duration": "Interval",
+      "clear": "Clear pinned points",
+      "durationDays": "{{count}}d",
+      "durationHours": "{{count}}h",
+      "durationMinutes": "{{count}}min"
+    },
     "range": {
       "days": "{{count}}d",
       "all": "All"

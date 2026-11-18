@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sublink/models"
 	"sublink/utils"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,6 +19,20 @@ func parseUsageHistoryParams(c *gin.Context) (days int, granularity string) {
 		}
 	}
 	return days, strings.TrimSpace(c.Query("granularity"))
+}
+
+// parseUsageTZOffset 解析客户端时区偏移（分钟，与浏览器 Date.getTimezoneOffset() 一致），
+// 让“今日”与按天统计跟随客户端本地自然日。返回 nil 表示使用服务器本地时区。
+func parseUsageTZOffset(c *gin.Context) (*time.Location, error) {
+	raw := strings.TrimSpace(c.Query("tzOffset"))
+	if raw == "" {
+		return nil, nil
+	}
+	minutes, err := strconv.Atoi(raw)
+	if err != nil || minutes < -14*60 || minutes > 14*60 {
+		return nil, fmt.Errorf("invalid tzOffset: %s", raw)
+	}
+	return time.FixedZone("client", -minutes*60), nil
 }
 
 // parseAirportIDsQuery 解析逗号分隔的机场 ID 列表。
@@ -73,7 +88,12 @@ func GetAirportUsageSparklines(c *gin.Context) {
 	}
 
 	days, _ := parseUsageHistoryParams(c)
-	sparklines, err := models.GetAirportUsageSparklines(ids, days)
+	loc, err := parseUsageTZOffset(c)
+	if err != nil {
+		utils.FailWithMsg(c, "invalid params: "+err.Error())
+		return
+	}
+	sparklines, err := models.GetAirportUsageSparklines(ids, days, loc)
 	if err != nil {
 		utils.FailWithMsg(c, "failed to load usage sparklines: "+err.Error())
 		return
@@ -85,6 +105,11 @@ func GetAirportUsageSparklines(c *gin.Context) {
 // airportId 省略时汇总全部机场；当天的消耗即报告中的 todayUsed。
 func GetAirportDailyUsage(c *gin.Context) {
 	days, _ := parseUsageHistoryParams(c)
+	loc, err := parseUsageTZOffset(c)
+	if err != nil {
+		utils.FailWithMsg(c, "invalid params: "+err.Error())
+		return
+	}
 
 	airportID := 0
 	if raw := strings.TrimSpace(c.Query("airportId")); raw != "" {
@@ -96,7 +121,7 @@ func GetAirportDailyUsage(c *gin.Context) {
 		airportID = value
 	}
 
-	report, err := models.GetAirportDailyUsage(days, airportID)
+	report, err := models.GetAirportDailyUsage(days, airportID, loc)
 	if err != nil {
 		utils.FailWithMsg(c, "failed to load daily usage: "+err.Error())
 		return

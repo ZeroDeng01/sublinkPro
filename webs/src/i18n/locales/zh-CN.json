@@ -640,6 +640,22 @@
     "failureNotice": "{{count}} 次刷新失败已在图中标记为红色",
     "singleSample": "当前范围内只有一条采样，后续刷新会产生新的数据点。",
     "historyStarts": "历史记录自 {{time}} 开始，更早的刷新未记录。",
+    "compare": {
+      "hint": "点击图表可固定两个点；拖动虚线标记可以微调区间。",
+      "pickSecond": "已固定 A 点，再点击图上的另一个点设置 B，也可以拖动标记调整 A。",
+      "title": "A → B 流量差",
+      "zoomToRange": "放大到 A → B 区间",
+      "pointA": "A",
+      "pointB": "B",
+      "used": "流量",
+      "upload": "上传",
+      "download": "下载",
+      "duration": "间隔",
+      "clear": "清除选点",
+      "durationDays": "{{count}} 天",
+      "durationHours": "{{count}} 小时",
+      "durationMinutes": "{{count}} 分钟"
+    },
     "range": {
       "days": "{{count}} 天",
       "all": "全部"
