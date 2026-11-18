@@ -19,6 +19,7 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import CheckIcon from '@mui/icons-material/Check';
 
 import { LANGUAGE_OPTIONS, normalizeLanguage } from 'i18n/locales';
+import { getNodeNamingSettings, updateNodeNamingSettings } from 'api/settings';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getHeaderPopoverTokens, getHeaderTriggerTokens } from '../headerPopoverTokens';
 import MainCard from 'ui-component/cards/MainCard';
@@ -71,9 +72,32 @@ export default function LanguageSection() {
   };
 
   const handleLanguageChange = (lng) => {
-    i18n.changeLanguage(normalizeLanguage(lng));
+    const nextLanguage = normalizeLanguage(lng);
+    i18n.changeLanguage(nextLanguage);
     setOpen(false);
+    // Node names are rendered by the backend, so keep its naming language in sync.
+    updateNodeNamingSettings({ language: nextLanguage }).catch((error) => {
+      console.error('Failed to sync node naming language:', error);
+    });
   };
+
+  useEffect(() => {
+    let active = true;
+    getNodeNamingSettings()
+      .then((res) => {
+        const backendLanguage = normalizeLanguage(res?.data?.language);
+        if (active && backendLanguage !== currentLanguage) {
+          return updateNodeNamingSettings({ language: currentLanguage });
+        }
+        return null;
+      })
+      .catch((error) => {
+        console.error('Failed to load node naming language:', error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [currentLanguage]);
 
   const prevOpen = useRef(open);
 

@@ -263,7 +263,7 @@ func TestServeProxySubscriptionUpstreamFailureReturnsBadGateway(t *testing.T) {
 	if recorder.Code != http.StatusBadGateway {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadGateway)
 	}
-	if body := recorder.Body.String(); !strings.Contains(body, "拉取上游订阅失败") {
+	if body := recorder.Body.String(); !strings.Contains(body, "Failed to fetch upstream subscription") {
 		t.Fatalf("body = %q", body)
 	}
 }
@@ -277,7 +277,7 @@ func TestServeProxySubscriptionWithoutAirportReturnsBadGateway(t *testing.T) {
 	if recorder.Code != http.StatusBadGateway {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadGateway)
 	}
-	if body := recorder.Body.String(); !strings.Contains(body, "未关联机场") {
+	if body := recorder.Body.String(); !strings.Contains(body, "Subscription is not linked to an airport") {
 		t.Fatalf("body = %q", body)
 	}
 }
@@ -291,7 +291,7 @@ func TestServeProxySubscriptionMissingAirportReturnsBadGateway(t *testing.T) {
 	if recorder.Code != http.StatusBadGateway {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadGateway)
 	}
-	if body := recorder.Body.String(); !strings.Contains(body, "订阅关联的机场不存在") {
+	if body := recorder.Body.String(); !strings.Contains(body, "The airport linked to this subscription does not exist") {
 		t.Fatalf("body = %q", body)
 	}
 }
@@ -307,7 +307,7 @@ func TestServeProxySubscriptionInvalidAirportURLReturnsBadGateway(t *testing.T) 
 	if recorder.Code != http.StatusBadGateway {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadGateway)
 	}
-	if body := recorder.Body.String(); !strings.Contains(body, "机场订阅地址无效") {
+	if body := recorder.Body.String(); !strings.Contains(body, "Invalid airport subscription URL") {
 		t.Fatalf("body = %q", body)
 	}
 }

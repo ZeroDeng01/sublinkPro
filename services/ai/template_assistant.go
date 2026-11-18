@@ -146,7 +146,7 @@ Examples:
 {"summary":"Replace the final rule policy","warnings":[],"operations":[{"op":"replace","oldString":"  - MATCH,DIRECT","newString":"  - MATCH,Proxy","description":"Route unmatched traffic through Proxy"}]}
 {"summary":"Insert a domain rule before the final rule","warnings":[],"operations":[{"op":"insert","anchor":"  - MATCH,DIRECT","position":"before","newString":"  - DOMAIN-SUFFIX,example.com,Proxy\n","description":"Add example.com routing rule"}]}
 {"summary":"Delete an obsolete reject rule","warnings":[],"operations":[{"op":"delete","oldString":"  - DOMAIN-SUFFIX,ads.example,REJECT\n","description":"Remove obsolete ad rule"}]}
-{"summary":"Delete every USA node entry","warnings":[],"operations":[{"op":"delete","oldString":"      - 🇺🇸 美国节点\n","match":"all","description":"Remove every exact USA node entry because the user asked for all"}]}
+{"summary":"Delete every USA node entry","warnings":[],"operations":[{"op":"delete","oldString":"      - 🇺🇸 US node\n","match":"all","description":"Remove every exact USA node entry because the user asked for all"}]}
 
 Safety rules:
 - Use only exact text visible in currentTemplate or contextWindows for oldString and anchor.
@@ -404,10 +404,10 @@ func GenerateCandidateStream(ctx context.Context, user *models.User, req Generat
 		return nil, err
 	}
 	if !settings.Enabled {
-		return nil, fmt.Errorf("AI 助手未启用")
+		return nil, fmt.Errorf("AI assistant is not enabled")
 	}
 	if settings.BaseURL == "" || settings.Model == "" || settings.RawAPIKey == "" {
-		return nil, fmt.Errorf("AI 设置不完整，请先配置 Base URL、模型和 API Key")
+		return nil, fmt.Errorf("AI settings are incomplete; configure the base URL, model and API key first")
 	}
 	client, err := NewClient(ClientConfig{
 		BaseURL:      settings.BaseURL,
@@ -440,11 +440,11 @@ func GenerateCandidateStream(ctx context.Context, user *models.User, req Generat
 	}
 	output, err := ParseTemplateEditModelOutput(content)
 	if err != nil {
-		return nil, fmt.Errorf("AI 返回格式无效: %w", err)
+		return nil, fmt.Errorf("AI returned an invalid format: %w", err)
 	}
 	candidateText, patchResult, err := ApplyTemplateEditOperations(req.CurrentText, output.Operations)
 	if err != nil {
-		return nil, fmt.Errorf("AI 编辑操作无法应用: %w", err)
+		return nil, fmt.Errorf("AI edit operation could not be applied: %w", err)
 	}
 	validation := services.ValidateTemplateCandidate(services.TemplateValidationInput{
 		Category:      req.Category,

@@ -77,9 +77,9 @@ All JSON endpoints return:
 ```
 `code` lives in the body and is what matters — a failure can come back as HTTP 200 with `code:500`. Check `.code`, not the HTTP status.
 
-## Content-Type Trap (read this — it's the #1 cause of "参数错误" failures)
+## Content-Type Trap (read this — it's the #1 cause of "Invalid request parameters" failures)
 
-Endpoints are NOT consistent. Sending the wrong body shape produces `参数错误` / validation errors. The rule, verified per-endpoint below:
+Endpoints are NOT consistent. Sending the wrong body shape produces `Invalid request parameters` / validation errors. The rule, verified per-endpoint below:
 
 - **Form-encoded** (`--form`): auth login, node add/update, subscription add/update, template add/update/delete. These read `c.PostForm(...)`.
 - **JSON** (`--json`): access keys, **node batch operations**, **subscription preview**, subscription sort/batch-sort, chain rules, airports, tags, scripts, hosts, geoip, group-sort, node-check, settings, AI template endpoints. These use `c.ShouldBindJSON(...)`.
@@ -224,7 +224,7 @@ Base: `/api/v1/subcription` (note the spelling — missing the second "s").
 - Other optional form fields (UpperCamel unless noted): `airports` (comma-separated airport IDs), `scripts` (comma-separated script IDs), `IPWhitelist`, `IPBlacklist`, `DelayTime`, `MinSpeed`, `CountryWhitelist`, `CountryBlacklist`, `NodeNameRule`, `NodeNamePreprocess`, `NodeNameWhitelist`, `NodeNameBlacklist`, `TagWhitelist`, `TagBlacklist`, `ProtocolWhitelist`, `ProtocolBlacklist`, `DeduplicationRule`, `RefreshUsageOnRequest`, `UpdateInterval`, `MaxFraudScore`, `OnlyResidential`, `OnlyNative`, `ResidentialType`, `IPType`, `QualityStatus`, `UnlockProvider`, `UnlockStatus`, `UnlockKeyword`, `UnlockRules`, `UnlockRuleMode`, plus `description` (free-form note, up to 512 characters).
 - Proxy subscriptions store only `name` and `AirportID`; `IPWhitelist`/`IPBlacklist` and request settings are ignored, and any submitted IP lists are cleared on save.
 - Filter groups always combine with AND: a node must satisfy every configured group. Values inside one whitelist are alternatives, and a blacklist hit always excludes the node. (Collection only.)
-- Name must be unique (duplicate → `订阅名称不能重复`).
+- Name must be unique (duplicate → `Subscription name must be unique`).
 
 ### Update Subscription
 **POST** `/subcription/update` — **form**, located by `oldname` (current name). Same field set as add, plus `oldname`. Send `type` together with the source fields so a subscription keeps its kind. Omitting `description` keeps the stored value; sending an empty string clears it.
@@ -272,7 +272,8 @@ Base: `/api/v1/subcription` (note the spelling — missing the second "s").
 ### Usage history
 Usage history is available per airport. Airports reused by several subscriptions keep a single counter (it comes from the airport's `Subscription-Userinfo`), so there is no separate per-subscription chart.
 
-- **GET** `/airports/usage-sparklines` (query: `?ids=1,2,3&days=14`, up to 500 IDs) returns `data.items[]` with `airportId`, `points[]`, `failed`, `updatedAt`.
+- **GET** `/airports/usage-sparklines` (query: `?ids=1,2,3&days=14`, up to 500 IDs) returns `data.items[]` with `airportId`, `points[]`, `failed`, `updatedAt`, and `todayUsed` (traffic consumed since local midnight, computed from snapshot deltas with the same rules as `usage-daily`).
+- **GET** `/airports/usage-daily` (query: `?days=14&airportId=0`) returns daily consumption for the period: `points[]` of `{date, upload, download, used}`, plus `todayUsed`, `rangeUsed`, `from`, `to`, and `retentionDays`. Each point is the delta between consecutive successful snapshots on that day; a counter reset (panel reset or plan change) counts the new value in full instead of producing a negative delta. Omit `airportId` (or send `0`) to aggregate every airport; aggregated points also include `airports[]` with `{airportId, airportName, upload, download, used}` sorted by `used` descending (airports deleted while their snapshots are still retained appear as `#<id>`). Per-airport requests (`airportId > 0`) omit that breakdown.
 - **GET** `/airports/{id}/usage-history` (query: `?days=30&granularity=auto`) returns a single airport history with `currentUpload`, `currentDownload`, `currentUsed`, `currentTotal`, and `currentExpire`.
 - `days` is clamped to the configured retention; `0` or a negative value means all retained data. `granularity` is `auto`, `refresh`, `hour`, or `day`. `auto` and `refresh` draw one point per stored snapshot so points follow the real refresh times; ranges holding more than 3000 snapshots are evenly downsampled (the newest point is always kept). `hour` and `day` aggregate explicitly.
 - Points are `{timestamp, capturedAt, upload, download, used, total, expire, failed, error}`. `timestamp` is milliseconds. `used` is `upload + download`. A failed refresh keeps the last known values and sets `failed: true`. The resolved granularity is returned in `granularity`, so clients can format `refresh` points with minutes. Sparklines are sampled down to 60 points per airport.
@@ -281,7 +282,7 @@ Usage history is available per airport. Airports reused by several subscriptions
 ### NodeNameRule variables
 `NodeNameRule` is evaluated when subscription output names are rendered. Country-related variables are based on the node's stored country code:
 
-- `$LinkCountry` — country code, such as `HK` or `US`; empty values render as `未知`.
+- `$LinkCountry` — country code, such as `HK` or `US`; empty values render as the localized "Unknown" label (node naming language).
 - `$LinkCountryName` — country name looked up from Country Rules by `$LinkCountry`; falls back to the code when no matching country-rule name exists.
 - `$Flag` — flag emoji generated from the country code.
 - `$DuplicateIndex` — empty for the first duplicate-name occurrence, then `1`, `2`, `3`, and so on.
@@ -356,7 +357,7 @@ Base: `/api/v1/template`
 **POST** `/template/update` — **form**: `filename`, `oldname`, `text`, `description`, `category`, `ruleSource`, `useProxy`, `proxyLink`, `enableIncludeAll`, optional `comment`. Omitting `description` keeps the stored value; sending an empty string clears it.
 
 ### Delete Template
-**POST** `/template/delete` — **form**: `filename`. Also deletes the template's entire version history.
+**POST** `/template/delete` — **form**: `filename`. Also deletes the template's entire version history. If the template file has already been removed from disk, only metadata and version history are removed.
 
 ### Template Versions
 Every add/update creates a content version automatically; identical content is deduplicated against the latest version.
@@ -582,6 +583,7 @@ Base: `/api/v1/airports` (all write bodies are JSON)
 - **POST** `/airports/{id}/pull` — pull one now
 - **POST** `/airports/{id}/refresh-usage`
 - **GET** `/airports/usage-sparklines` (query: `?ids=1,2,3&days=14`) — batch sparkline data for up to 500 airports
+- **GET** `/airports/usage-daily` (query: `?days=14&airportId=0`) — daily traffic deltas, aggregated across airports unless `airportId` is set
 - **GET** `/airports/{id}/usage-history` (query: `?days=30&granularity=auto`) — per-airport traffic history, including failed refreshes
 
 Country-fill fields apply during airport pulls and use Country Rules against upstream node names:
@@ -638,10 +640,10 @@ Fields:
 Endpoints:
 
 - **GET** `/country-rules` — list rules. Query supports `page`, `pageSize`, and `keyword`.
-- **POST** `/country-rules` — **JSON** create, for example `{"countryCode":"HK","countryName":"香港","pattern":"(?i)香港|HK|Hong Kong|🇭🇰","priority":100,"enabled":true}`.
+- **POST** `/country-rules` — **JSON** create, for example `{"countryCode":"HK","countryName":"Hong Kong","pattern":"(?i)hong kong|hk|🇭🇰","priority":100,"enabled":true}`.
 - **PUT** `/country-rules/{id}` — **JSON** update.
 - **DELETE** `/country-rules/{id}` — delete.
-- **POST** `/country-rules/test` — **JSON** test one pattern against one node name, for example `{"pattern":"(?i)香港|HK","testName":"HK Premium 01"}`.
+- **POST** `/country-rules/test` — **JSON** test one pattern against one node name, for example `{"pattern":"(?i)hong kong|hk","testName":"HK Premium 01"}`.
 - **POST** `/country-rules/batch-test` — **JSON** test enabled rules against multiple node names.
 - **POST** `/country-rules/batch` — **JSON** import or replace rule lists.
 - **GET** `/country-rules/export` — export all country rules as text.
@@ -651,7 +653,7 @@ Text export/sync format is one rule per line:
 
 ```text
 countryCode countryName priority enabled pattern
-HK 香港 100 true (?i)香港|HK|Hong Kong|🇭🇰
+HK Hong Kong 100 true (?i)hong kong|hk|🇭🇰
 ```
 
 Use Country Rules together with airport `autoFillCountry` / `backfillExistingCountry`, `/nodes/batch-fill-country`, and subscription `NodeNameRule` variables such as `$LinkCountryName`.
@@ -807,6 +809,8 @@ Base: `/api/v1/settings` (write bodies are JSON unless noted; most writes are de
 
 **Usage history:** **GET** `/settings/usage-history` · **POST** `/settings/usage-history` (`{retentionDays}`, 1–3650, default 180)
 
+**Node naming language:** **GET** `/settings/node-naming` · **POST** `/settings/node-naming` (`{language}`, `en-US` or `zh-CN`). Controls the words rendered inside generated node names: rename-variable fallbacks (`Unknown`, `Ungrouped`, `Manual`), IP quality labels, quality-check placeholders, and unlock labels. Defaults to `en-US`; the web header language switcher updates it automatically.
+
 **Global node processing:** **GET** `/settings/global-node-processing` · **POST** `/settings/global-node-processing` (`{nodeNameWhitelist, nodeNameBlacklist, protocolWhitelist, protocolBlacklist, nodeNamePreprocess}`)
 
 **Telegram:** **GET** `/settings/telegram` · **POST** `/settings/telegram` · **POST** `/settings/telegram/test` · **GET** `/settings/telegram/status` · **POST** `/settings/telegram/reconnect`
@@ -908,7 +912,7 @@ All endpoints below require an administrator account and are disabled in demo mo
 WebDAV restore reuses the database migration workflow and overwrites current business data. The current instance's JWT, encryption key, Cloudflare Tunnel, WebDAV settings, and SOCKS5 gateway configuration (accounts, listeners, routing profiles) are preserved. Restoring disconnects active SOCKS5 connections and reloads the gateway against the restored nodes. HTTPS is required unless `allowInsecureHttp` is explicitly enabled. Private, loopback, and reserved targets require `allowPrivateNetwork`. WebDAV backup creation is currently SQLite-only. Uploads and downloads are limited to 1 GiB.
 
 ### Server-Sent Events
-**GET** `/api/se` (query: `?token=<jwt>`) — SSE stream (auth-protected).
+**GET** `/api/sse` (query: `?token=<jwt>`) — SSE stream. This is the only endpoint that accepts a JWT in the query string (the browser `EventSource` API cannot set headers). All other endpoints require the token in the `Authorization` header or an `X-API-Key` header.
 
 ---
 

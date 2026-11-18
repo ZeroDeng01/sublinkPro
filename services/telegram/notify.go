@@ -55,7 +55,7 @@ func SendNotification(eventKey string, payload notifications.Payload) {
 	}
 
 	if err := bot.SendMessage(bot.ChatID, text, "Markdown"); err != nil {
-		utils.Warn("发送 Telegram 通知失败: %v", err)
+		utils.Warn("Failed to send Telegram notification: %v", err)
 	}
 }
 
@@ -63,7 +63,7 @@ func SendNotification(eventKey string, payload notifications.Payload) {
 func formatSpeedTestNotification(payload notifications.Payload) string {
 	data, ok := payload.Data.(map[string]any)
 	if !ok {
-		return fmt.Sprintf("⚡ *测速完成*\n\n%s", escapeMd(payload.Message))
+		return fmt.Sprintf("⚡ *Speed test completed*\n\n%s", escapeMd(payload.Message))
 	}
 
 	successCount := getIntFromData(data, "success_count")
@@ -76,21 +76,21 @@ func formatSpeedTestNotification(payload notifications.Payload) string {
 	}
 	totalTraffic := getFloatFromData(data, "total_traffic_mb")
 
-	return fmt.Sprintf(`⚡ *测速任务完成*
+	return fmt.Sprintf(`⚡ *Speed test completed*
 
 %s
 
-*结果统计*
-├ ✅ 成功: %d
-├ ❌ 失败: %d
-└ 📊 流量: %.2f MB`, escapeMd(payload.Message), successCount, failCount, totalTraffic)
+*Results*
+├ ✅ Success: %d
+├ ❌ Failed: %d
+└ 📊 Traffic: %.2f MB`, escapeMd(payload.Message), successCount, failCount, totalTraffic)
 }
 
 // formatSubUpdateNotification 格式化订阅更新通知
 func formatSubUpdateNotification(payload notifications.Payload) string {
 	data, ok := payload.Data.(map[string]any)
 	if !ok {
-		return fmt.Sprintf("📋 *订阅更新*\n\n%s", escapeMd(payload.Message))
+		return fmt.Sprintf("📋 *Subscription update*\n\n%s", escapeMd(payload.Message))
 	}
 
 	status := getStringFromData(data, "status")
@@ -104,29 +104,29 @@ func formatSubUpdateNotification(payload notifications.Payload) string {
 		icon = "✅"
 	}
 
-	return fmt.Sprintf(`%s *订阅更新*
+	return fmt.Sprintf(`%s *Subscription update*
 
-*订阅*: %s
+*Subscription*: %s
 %s`, icon, escapeMd(name), escapeMd(payload.Message))
 }
 
 // formatTagRuleNotification 格式化标签规则通知
 func formatTagRuleNotification(payload notifications.Payload) string {
-	return fmt.Sprintf("🏷️ *标签规则执行完成*\n\n%s", escapeMd(payload.Message))
+	return fmt.Sprintf("🏷️ *Tag rule completed*\n\n%s", escapeMd(payload.Message))
 }
 
 func formatAutoTagNotification(payload notifications.Payload) string {
-	return fmt.Sprintf("🏷️ *自动标签完成*\n\n%s", escapeMd(payload.Message))
+	return fmt.Sprintf("🏷️ *Auto tagging completed*\n\n%s", escapeMd(payload.Message))
 }
 
 // formatTaskCompleteNotification 格式化任务完成通知
 func formatTaskCompleteNotification(payload notifications.Payload) string {
-	return fmt.Sprintf("✅ *任务完成*\n\n*%s*\n%s", escapeMd(payload.Title), escapeMd(payload.Message))
+	return fmt.Sprintf("✅ *Task completed*\n\n*%s*\n%s", escapeMd(payload.Title), escapeMd(payload.Message))
 }
 
 // formatTaskErrorNotification 格式化任务错误通知
 func formatTaskErrorNotification(payload notifications.Payload) string {
-	return fmt.Sprintf("❌ *任务失败*\n\n*%s*\n%s", escapeMd(payload.Title), escapeMd(payload.Message))
+	return fmt.Sprintf("❌ *Task failed*\n\n*%s*\n%s", escapeMd(payload.Title), escapeMd(payload.Message))
 }
 
 // formatGenericNotification 格式化通用通知

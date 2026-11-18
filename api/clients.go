@@ -66,7 +66,7 @@ type mihomoBridgeOutput struct {
 const syntheticClashTemplate = `port: 7890
 proxies: []
 proxy-groups:
-  - name: 节点选择
+  - name: Proxy
     type: select
     proxies: []
 `
@@ -76,7 +76,7 @@ const syntheticSurgeTemplate = `[General]
 [Proxy]
 
 [Proxy Group]
-节点选择 = select
+Proxy = select
 `
 
 var testGetClientAfterResolveSubscriptionNameHook func(*gin.Context)
@@ -117,7 +117,7 @@ func getResolvedSubscriptionName(c *gin.Context) (string, bool) {
 func resolvedSubscriptionNameOrWriteError(c *gin.Context) (string, bool) {
 	subName, ok := getResolvedSubscriptionName(c)
 	if !ok {
-		_, _ = c.Writer.WriteString("订阅名为空")
+		_, _ = c.Writer.WriteString("Subscription name is empty")
 		return "", false
 	}
 
@@ -128,7 +128,7 @@ func GetClient(c *gin.Context) {
 	// 获取协议头
 	token := c.Query("token")
 	if token == "" {
-		utils.Warn("token为空")
+		utils.Warn("Token is empty")
 		_, _ = c.Writer.WriteString("Not Found")
 		return
 	}
@@ -152,43 +152,43 @@ func GetClient(c *gin.Context) {
 func prepareClientResponse(c *gin.Context, clientType, token string) (preparedClientResponse, bool) {
 	share, err := models.GetSubscriptionShareByToken(token)
 	if err != nil {
-		utils.Warn("无效的分享token: %s", token)
-		return buildSyntheticFallbackResponse(clientType, "无效的分享链接"), true
+		utils.Warn("Invalid share token: %s", token)
+		return buildSyntheticFallbackResponse(clientType, "Invalid share link"), true
 	}
 
 	if share.IsExpired() {
-		utils.Warn("分享链接已过期: %s", token)
+		utils.Warn("Share link expired: %s", token)
 		var expiredSub models.Subcription
 		expiredSub.ID = share.SubscriptionID
 		if err := expiredSub.Find(); err != nil {
-			utils.Warn("过期分享关联订阅不存在: %d", share.SubscriptionID)
-			return buildSyntheticFallbackResponse(clientType, "订阅不存在"), true
+			utils.Warn("Subscription for expired share not found: %d", share.SubscriptionID)
+			return buildSyntheticFallbackResponse(clientType, "Subscription not found"), true
 		}
 		if expiredSub.IsProxy() {
-			writeProxyRelayError(c, http.StatusGone, "订阅已过期")
+			writeProxyRelayError(c, http.StatusGone, "Subscription expired")
 			return preparedClientResponse{}, false
 		}
-		return buildPreparedExpiredShareResponse(expiredSub, clientType, "订阅已过期", share.ID)
+		return buildPreparedExpiredShareResponse(expiredSub, clientType, "Subscription expired", share.ID)
 	}
 
 	var sub models.Subcription
 	sub.ID = share.SubscriptionID
 	if err := sub.Find(); err != nil {
-		utils.Warn("订阅不存在: %d", share.SubscriptionID)
-		return buildSyntheticFallbackResponse(clientType, "订阅不存在"), true
+		utils.Warn("Subscription not found: %d", share.SubscriptionID)
+		return buildSyntheticFallbackResponse(clientType, "Subscription not found"), true
 	}
 
 	// IP 黑白名单检查；代理订阅只转发上游内容，不做 IP 限制（历史数据可能残留名单）。
 	if !sub.IsProxy() {
 		if sub.IPBlacklist != "" && utils.IsIpInCidr(c.ClientIP(), sub.IPBlacklist) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"msg": "IP受限(IP已被加入黑名单)",
+				"msg": "IP blocked (this IP is on the blacklist)",
 			})
 			return preparedClientResponse{}, false
 		}
 		if sub.IPWhitelist != "" && !utils.IsIpInCidr(c.ClientIP(), sub.IPWhitelist) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"msg": "IP受限(您的IP不在允许访问列表)",
+				"msg": "IP blocked (your IP is not in the allowlist)",
 			})
 			return preparedClientResponse{}, false
 		}
@@ -232,7 +232,7 @@ func resolveSubscriptionClient(c *gin.Context) string {
 
 	userAgent := c.GetHeader("User-Agent")
 	if userAgent == "" {
-		fmt.Println("User-Agent为空")
+		fmt.Println("User-Agent is empty")
 	}
 	for _, client := range []string{"clash", "surge"} {
 		if strings.Contains(strings.ToLower(userAgent), strings.ToLower(client)) {
@@ -285,7 +285,7 @@ func dispatchPreparedClientResponse(c *gin.Context, prepared preparedClientRespo
 func buildSyntheticFallbackResponse(clientType, message string) preparedClientResponse {
 	config, err := buildSyntheticFallbackConfig()
 	if err != nil {
-		utils.Warn("构造 synthetic fallback 配置失败: %v", err)
+		utils.Warn("Failed to build synthetic fallback config: %v", err)
 	}
 	sub := models.Subcription{
 		Name:                  message,
@@ -326,7 +326,7 @@ func buildSyntheticErrorLink(message string) string {
 			Password: "placeholder",
 		},
 	})
-	return strings.Replace(link, "#"+url.QueryEscape(message), "#"+message, 1)
+	return strings.Replace(link, "#"+url.PathEscape(message), "#"+message, 1)
 }
 
 func buildSyntheticFallbackConfig() (string, error) {
@@ -557,12 +557,12 @@ func GetV2ray(c *gin.Context) {
 	var sub models.Subcription
 	sub.Name = subName
 	if err := sub.Find(); err != nil {
-		_, _ = c.Writer.WriteString("找不到这个订阅:" + subName)
+		_, _ = c.Writer.WriteString("Subscription not found: " + subName)
 		return
 	}
 	prepared, ok := buildPreparedResponseFromSubscription(sub, "v2ray", 0)
 	if !ok {
-		_, _ = c.Writer.WriteString("读取错误")
+		_, _ = c.Writer.WriteString("Read error")
 		return
 	}
 	renderPreparedV2ray(c, prepared)
@@ -661,12 +661,12 @@ func GetClash(c *gin.Context) {
 	var sub models.Subcription
 	sub.Name = subName
 	if err := sub.Find(); err != nil {
-		_, _ = c.Writer.WriteString("找不到这个订阅:" + subName)
+		_, _ = c.Writer.WriteString("Subscription not found: " + subName)
 		return
 	}
 	prepared, ok := buildPreparedResponseFromSubscription(sub, "clash", 0)
 	if !ok {
-		_, _ = c.Writer.WriteString("读取错误")
+		_, _ = c.Writer.WriteString("Read error")
 		return
 	}
 	renderPreparedClash(c, prepared)
@@ -741,7 +741,7 @@ func buildPreparedMihomoYAML(c *gin.Context, prepared preparedClientResponse) (m
 				}
 			}
 		}
-		utils.Debug("[ChainProxy] 收集完成: 目标节点=%d, 中间节点=%d", len(targetNodeDialerMap), len(chainNodeDialerMap))
+		utils.Debug("[ChainProxy] Collection complete: target nodes=%d, intermediate nodes=%d", len(targetNodeDialerMap), len(chainNodeDialerMap))
 	}
 
 	// ========== 第二阶段：遍历节点生成配置 ==========
@@ -776,7 +776,7 @@ func buildPreparedMihomoYAML(c *gin.Context, prepared preparedClientResponse) (m
 		case (strings.HasPrefix(v.Link, "http://") || strings.HasPrefix(v.Link, "https://")) && !protocol.IsHTTPLink(v.Link):
 			resp, err := getRemoteSubscription(c.Request.Context(), v.Link)
 			if err != nil {
-				utils.Error("获取包含链接失败: %v", err)
+				utils.Error("Failed to get include links: %v", err)
 				continue
 			}
 			defer func() { _ = resp.Body.Close() }()
@@ -806,7 +806,7 @@ func buildPreparedMihomoYAML(c *gin.Context, prepared preparedClientResponse) (m
 	var configs protocol.OutputConfig
 	err := json.Unmarshal([]byte(sub.Config), &configs)
 	if err != nil {
-		_, _ = c.Writer.WriteString("配置读取错误")
+		_, _ = c.Writer.WriteString("Configuration read error")
 		return mihomoBridgeOutput{}, false, false
 	}
 
@@ -897,12 +897,12 @@ func GetSurge(c *gin.Context) {
 	var sub models.Subcription
 	sub.Name = subName
 	if err := sub.Find(); err != nil {
-		_, _ = c.Writer.WriteString("找不到这个订阅:" + subName)
+		_, _ = c.Writer.WriteString("Subscription not found: " + subName)
 		return
 	}
 	prepared, ok := buildPreparedResponseFromSubscription(sub, "surge", 0)
 	if !ok {
-		_, _ = c.Writer.WriteString("读取错误")
+		_, _ = c.Writer.WriteString("Read error")
 		return
 	}
 	renderPreparedSurge(c, prepared)
@@ -962,7 +962,7 @@ func renderPreparedSurge(c *gin.Context, prepared preparedClientResponse) {
 	var configs protocol.OutputConfig
 	err := json.Unmarshal([]byte(sub.Config), &configs)
 	if err != nil {
-		_, _ = c.Writer.WriteString("配置读取错误")
+		_, _ = c.Writer.WriteString("Configuration read error")
 		return
 	}
 
@@ -1027,29 +1027,29 @@ func getSubscriptionUsage(nodes []models.Node) string {
 	var expire int64 = 0
 	now := time.Now().Unix()
 
-	utils.Debug("找到机场订阅数量: %d", len(airportIDs))
+	utils.Debug("Airport subscriptions found: %d", len(airportIDs))
 
 	for id := range airportIDs {
 		airport, err := models.GetAirportByID(id)
 		if err != nil {
-			utils.Warn("获取机场信息失败 %d: %v", id, err)
+			utils.Warn("Failed to get airport info %d: %v", id, err)
 			continue
 		}
 		if airport == nil {
-			utils.Warn("机场 %d 数据为空", id)
+			utils.Warn("Airport %d data is empty", id)
 			continue
 		}
 		if !airport.FetchUsageInfo {
-			utils.Debug("机场 %d 未开启获取流量信息", id)
+			utils.Debug("Airport %d does not have traffic info enabled", id)
 			continue
 		}
 		// 跳过已过期的机场
 		if airport.UsageExpire > 0 && airport.UsageExpire < now {
-			utils.Debug("机场 %d 已过期，跳过统计", id)
+			utils.Debug("Airport %d expired; skipping stats", id)
 			continue
 		}
 
-		utils.Debug("机场数据 %d usage: U=%d, D=%d, T=%d, E=%d", id, airport.UsageUpload, airport.UsageDownload, airport.UsageTotal, airport.UsageExpire)
+		utils.Debug("Airport data %d usage: U=%d, D=%d, T=%d, E=%d", id, airport.UsageUpload, airport.UsageDownload, airport.UsageTotal, airport.UsageExpire)
 
 		// 累加流量（忽略负数）
 		if airport.UsageUpload > 0 {
@@ -1071,6 +1071,6 @@ func getSubscriptionUsage(nodes []models.Node) string {
 	}
 
 	result := fmt.Sprintf("upload=%d; download=%d; total=%d; expire=%d", upload, download, total, expire)
-	utils.Debug("完成机场用量信息 subscription-userinfo构造: %s", result)
+	utils.Debug("Built airport usage subscription-userinfo: %s", result)
 	return result
 }

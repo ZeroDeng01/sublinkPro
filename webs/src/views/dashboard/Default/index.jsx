@@ -37,6 +37,7 @@ import SecurityIcon from '@mui/icons-material/Security';
 
 // project imports
 import TaskProgressPanel from 'components/TaskProgressPanel';
+import TrafficDailyCard from './TrafficDailyCard';
 import {
   getNodeTotal,
   getFastestSpeedNode,
@@ -174,12 +175,28 @@ const protocolColors = {
 };
 
 const fraudLevelColors = {
-  极佳: '#94a3b8',
-  优秀: '#22c55e',
-  良好: '#eab308',
-  中等: '#f97316',
-  差: '#ef4444',
-  极差: '#111827'
+  'excellent-plus': '#94a3b8',
+  excellent: '#22c55e',
+  good: '#eab308',
+  medium: '#f97316',
+  poor: '#ef4444',
+  'very-poor': '#111827'
+};
+
+const localizeDistributionKey = (key, t) => {
+  if (key === 'Ungrouped' || key === '未分组') {
+    return t('dashboard.default.charts.ungrouped');
+  }
+
+  if (key === 'Untagged' || key === '未打标签') {
+    return t('dashboard.default.charts.untagged');
+  }
+
+  if (key === 'Manual' || key === 'manual') {
+    return t('dashboard.default.charts.manualSource');
+  }
+
+  return key;
 };
 
 const qualityStatusColorMap = {
@@ -303,17 +320,21 @@ const normalizeTagStats = ({ tags = [], limit, t }) => {
   const total = tags.reduce((sum, item) => sum + getCountMetric(item), 0);
   const normalized = [...tags]
     .sort((a, b) => getCountMetric(b) - getCountMetric(a))
-    .map((tag, index) => ({
-      key: tag.key || tag.name || tag.label || `tag-${index}`,
-      label: getLabelStatValue(
+    .map((tag, index) => {
+      const label = getLabelStatValue(
         tag,
         tag.name || tag.key || (t ? t('dashboard.default.charts.tagItem', { index: index + 1 }) : `Tag ${index + 1}`)
-      ),
-      count: getCountMetric(tag),
-      delayPassCount: getDelayPassMetric(tag),
-      speedPassCount: getSpeedPassMetric(tag),
-      color: tag.color || '#ec4899'
-    }));
+      );
+
+      return {
+        key: tag.key || tag.name || tag.label || `tag-${index}`,
+        label: t ? localizeDistributionKey(label, t) : label,
+        count: getCountMetric(tag),
+        delayPassCount: getDelayPassMetric(tag),
+        speedPassCount: getSpeedPassMetric(tag),
+        color: tag.color || '#ec4899'
+      };
+    });
 
   return buildTopItems(normalized, total, limit, {}, t);
 };
@@ -1460,8 +1481,11 @@ export default function DashboardDefault() {
 
   const distributionLimit = isMobile ? 4 : 5;
   const countryStatsMap = useMemo(() => createCountryStatMap(countryStats), [countryStats]);
-  const unknownCountryStat = countryStatsMap['未知'] || null;
-  const countryDistributionSource = useMemo(() => countryStats.filter((item) => item.country !== '未知'), [countryStats]);
+  const unknownCountryStat = countryStatsMap['Unknown'] || countryStatsMap['未知'] || null;
+  const countryDistributionSource = useMemo(
+    () => countryStats.filter((item) => item.country !== 'Unknown' && item.country !== '未知'),
+    [countryStats]
+  );
 
   const countryDistribution = useMemo(
     () =>
@@ -1473,7 +1497,7 @@ export default function DashboardDefault() {
         getItemMeta: (country) => ({
           marker: getFlagEmoji(country),
           uniqueIpCount: countryStatsMap[country]?.uniqueIpCount || 0,
-          tooltip: `${t('dashboard.default.charts.nodes')} ${countryStatsMap[country]?.nodeCount || 0}，${t('dashboard.default.charts.availableIp')} ${countryStatsMap[country]?.uniqueIpCount || 0}`
+          tooltip: `${t('dashboard.default.charts.nodes')} ${countryStatsMap[country]?.nodeCount || 0}, ${t('dashboard.default.charts.availableIp')} ${countryStatsMap[country]?.uniqueIpCount || 0}`
         })
       }),
     [countryDistributionSource, countryStatsMap, distributionLimit, t]
@@ -1504,7 +1528,8 @@ export default function DashboardDefault() {
         entries: Object.entries(groupStats),
         limit: distributionLimit,
         defaultColor: '#8b5cf6',
-        t
+        t,
+        getItemMeta: (key) => ({ label: localizeDistributionKey(key, t) })
       }),
     [groupStats, distributionLimit, t]
   );
@@ -1515,7 +1540,8 @@ export default function DashboardDefault() {
         entries: Object.entries(sourceStats),
         limit: distributionLimit,
         defaultColor: '#f97316',
-        t
+        t,
+        getItemMeta: (key) => ({ label: localizeDistributionKey(key, t) })
       }),
     [sourceStats, distributionLimit, t]
   );
@@ -1546,12 +1572,12 @@ export default function DashboardDefault() {
     () =>
       (qualityStats?.fraudScoreStats || []).map((item) => ({
         key: item.key,
-        label: item.label,
+        label: t(`dashboard.default.charts.fraudLevels.${item.key}`, item.label),
         count: item.count,
-        color: fraudLevelColors[item.label.split(' ')[0]] || '#f59e0b',
+        color: fraudLevelColors[item.key] || '#f59e0b',
         percent: (qualityStats?.successTotal || 0) > 0 ? (item.count / qualityStats.successTotal) * 100 : 0
       })),
-    [qualityStats]
+    [qualityStats, t]
   );
 
   const groupedMetricStrip = (item) => [
@@ -1588,6 +1614,9 @@ export default function DashboardDefault() {
 
       {/* 机场流量概览卡片 */}
       <AirportUsageCard airports={airports} loading={loadingStats} />
+
+      {/* 每日流量消耗图表 */}
+      <TrafficDailyCard />
 
       <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 6 }}>

@@ -13,23 +13,23 @@ func init() {
 	base := newProtocolSpec("vless", []string{"vless://"}, "VLESS", "#7b1fa2", "V", VLESS{}, "Name", DecodeVLESSURL, EncodeVLESSURL, func(v VLESS) LinkIdentity {
 		return buildIdentity("vless", v.Name, v.Server, utils.GetPortString(v.Port))
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic", Placeholder: "例如：日本-01"},
-		FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic", Placeholder: "example.com"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic", Placeholder: "443"},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic", Placeholder: "e.g. JP-01"},
+		FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic", Placeholder: "example.com"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic", Placeholder: "443"},
 		FieldMeta{Name: "Uuid", Label: "UUID", Type: "string", Group: "auth", Placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"},
 		FieldMeta{Name: "Query.Flow", Label: "Flow", Type: "string", Group: "auth", Advanced: true},
-		FieldMeta{Name: "Query.Security", Label: "安全类型", Type: "string", Group: "tls", Options: []string{"none", "tls", "reality"}},
+		FieldMeta{Name: "Query.Security", Label: "Security type", Type: "string", Group: "tls", Options: []string{"none", "tls", "reality"}},
 		FieldMeta{Name: "Query.Sni", Label: "SNI", Type: "string", Group: "tls", Placeholder: "server.example.com"},
 		FieldMeta{Name: "Query.Ech", Label: "ECH", Type: "string", Group: "tls", Advanced: true, Placeholder: "example.com+https://1.1.1.1/dns-query"},
 		FieldMeta{Name: "Query.Alpn", Label: "ALPN", Type: "string", Group: "tls", Multiline: true, Advanced: true},
-		FieldMeta{Name: "Query.Fp", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
-		FieldMeta{Name: "Query.Fingerprint", Label: "证书指纹", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Fp", Label: "Fingerprint", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Query.Fingerprint", Label: "Certificate fingerprint", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.Sid", Label: "Short ID", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Query.SupportX25519MLKEM768", Label: "Support X25519MLKEM768", Type: "string", Group: "tls", Advanced: true, Options: []string{"true", "false"}},
 		FieldMeta{Name: "Query.Pbk", Label: "Public Key", Type: "string", Group: "tls", Advanced: true},
-		FieldMeta{Name: "Query.AllowInsecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
+		FieldMeta{Name: "Query.AllowInsecure", Label: "Skip certificate verification", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 		FieldMeta{Name: "Query.Type", Label: "Network", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "grpc", "http", "h2", "xhttp", "quic"}},
-		FieldMeta{Name: "Query.Path", Label: "路径", Type: "string", Group: "transport", Placeholder: "/ws"},
+		FieldMeta{Name: "Query.Path", Label: "Path", Type: "string", Group: "transport", Placeholder: "/ws"},
 		FieldMeta{Name: "Query.Host", Label: "Host", Type: "string", Group: "transport", Placeholder: "cdn.example.com"},
 		FieldMeta{Name: "Query.Headers", Label: "WS Headers", Type: "string", Group: "transport", Multiline: true, Advanced: true},
 		FieldMeta{Name: "Query.HeaderType", Label: "Header Type", Type: "string", Group: "transport", Advanced: true},
@@ -277,7 +277,7 @@ func EncodeVLESSURL(v VLESS) string {
 // 端口默认值会随 security 语义变化，且 packetEncoding 与 packet_encoding 两种写法都会被接受。
 func DecodeVLESSURL(s string) (VLESS, error) {
 	if !strings.HasPrefix(s, "vless://") {
-		return VLESS{}, fmt.Errorf("非vless协议: %s", s)
+		return VLESS{}, fmt.Errorf("not a vless link: %s", s)
 	}
 
 	// 直接解析URL（v2ray格式是明文URL，不需要base64解码）
@@ -288,8 +288,8 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 
 	uuid := u.User.Username()
 	if !utils.IsUUID(uuid) {
-		utils.Error("❌节点解析错误：%v  【节点：%s】", "UUID格式错误", s)
-		return VLESS{}, fmt.Errorf("uuid格式错误:%s", uuid)
+		utils.Error("❌ node parse error: %v [node: %s]", "invalid UUID format", s)
+		return VLESS{}, fmt.Errorf("invalid UUID format: %s", uuid)
 	}
 
 	// 处理服务器地址（支持IPv6格式[::1]）

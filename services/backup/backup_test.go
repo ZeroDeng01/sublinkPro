@@ -168,7 +168,7 @@ func TestWebDAVClientDoesNotFollowRedirects(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = client.Test(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "重定向") {
+	if err == nil || !strings.Contains(err.Error(), "redirect") {
 		t.Fatalf("expected redirect error, got %v", err)
 	}
 	if secondCalled {
@@ -266,7 +266,7 @@ func TestWebDAVBlocksPrivateTargetsByDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := client.Test(context.Background()); err == nil || !strings.Contains(err.Error(), "私有或保留地址") {
+	if err := client.Test(context.Background()); err == nil || !strings.Contains(err.Error(), "private or reserved") {
 		t.Fatalf("expected private target rejection, got %v", err)
 	}
 }

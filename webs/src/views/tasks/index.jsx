@@ -693,6 +693,16 @@ export default function TaskList() {
     return () => unregisterOnComplete(handleTaskComplete);
   }, [registerOnComplete, unregisterOnComplete, loadTasks, loadStats]);
 
+  // SSE 重连后补齐断线期间错过的任务状态变化
+  useEffect(() => {
+    const handleReconnected = () => {
+      loadTasks();
+      loadStats();
+    };
+    window.addEventListener('sse_reconnected', handleReconnected);
+    return () => window.removeEventListener('sse_reconnected', handleReconnected);
+  }, [loadTasks, loadStats]);
+
   // Handle stop task
   const handleStopTask = async (taskId) => {
     try {

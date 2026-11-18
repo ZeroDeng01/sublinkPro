@@ -132,7 +132,7 @@ const getStableAccentFromKey = (key, palette) => {
 const PREVIEW_DATA = {
   $Protocol: 'VMess',
   $LinkCountry: 'HK',
-  $LinkCountryName: '香港',
+  $LinkCountryName: 'Hong Kong',
   $Flag: '🇭🇰',
   $Name: 'HK-Node-Remark',
   $LinkName: 'HK-01',

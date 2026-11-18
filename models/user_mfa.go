@@ -112,7 +112,7 @@ func VerifyTOTPCode(secret, code string, now time.Time) bool {
 func encryptionKey() ([]byte, error) {
 	keyMaterial := strings.TrimSpace(config.GetAPIEncryptionKey())
 	if len(keyMaterial) < 32 {
-		return nil, fmt.Errorf("API_ENCRYPTION_KEY 未设置或长度不足，无法安全存储 TOTP 密钥")
+		return nil, fmt.Errorf("API_ENCRYPTION_KEY is missing or too short to store TOTP secrets securely")
 	}
 	sum := sha256.Sum256([]byte(keyMaterial))
 	return sum[:], nil
@@ -143,7 +143,7 @@ func EncryptTOTPSecret(secret string) (string, error) {
 func DecryptTOTPSecret(secret string) (string, error) {
 	parts := strings.SplitN(strings.TrimSpace(secret), ":", 2)
 	if len(parts) != 2 || parts[0] != totpEncryptionVersion {
-		return "", fmt.Errorf("不支持的 TOTP 密钥格式")
+		return "", fmt.Errorf("unsupported TOTP secret format")
 	}
 	key, err := encryptionKey()
 	if err != nil {
@@ -162,7 +162,7 @@ func DecryptTOTPSecret(secret string) (string, error) {
 		return "", err
 	}
 	if len(payload) < gcm.NonceSize() {
-		return "", fmt.Errorf("TOTP 密钥数据损坏")
+		return "", fmt.Errorf("TOTP secret data is corrupted")
 	}
 	nonce := payload[:gcm.NonceSize()]
 	ciphertext := payload[gcm.NonceSize():]
@@ -334,10 +334,10 @@ func (user *User) ConfirmTOTPEnrollment(code string, now time.Time) error {
 		return err
 	}
 	if pendingSecret == "" {
-		return fmt.Errorf("请先开始 TOTP 绑定")
+		return fmt.Errorf("start TOTP binding first")
 	}
 	if !VerifyTOTPCode(pendingSecret, code, now) {
-		return fmt.Errorf("验证码错误或已过期")
+		return fmt.Errorf("invalid or expired code")
 	}
 	updates := map[string]any{
 		"totp_enabled":                true,
@@ -364,24 +364,24 @@ func (user *User) VerifyTOTPChallenge(code string, now time.Time) error {
 		return err
 	}
 	if secret == "" || !user.TOTPEnabled {
-		return fmt.Errorf("用户未启用 TOTP")
+		return fmt.Errorf("TOTP is not enabled for this user")
 	}
 	if !VerifyTOTPCode(secret, code, now) {
-		return fmt.Errorf("验证码错误或已过期")
+		return fmt.Errorf("invalid or expired code")
 	}
 	return nil
 }
 
 func (user *User) UseRecoveryCode(code string) error {
 	if !user.TOTPEnabled {
-		return fmt.Errorf("恢复码不可用")
+		return fmt.Errorf("recovery code is not available")
 	}
 	codes, err := user.recoveryCodes()
 	if err != nil {
 		return err
 	}
 	if len(codes) == 0 {
-		return fmt.Errorf("恢复码不可用")
+		return fmt.Errorf("recovery code is not available")
 	}
 	normalized := normalizeRecoveryCode(code)
 	remaining := make([]TOTPRecoveryCode, 0, len(codes))
@@ -395,7 +395,7 @@ func (user *User) UseRecoveryCode(code string) error {
 		remaining = append(remaining, recoveryCode)
 	}
 	if !matched {
-		return fmt.Errorf("恢复码无效")
+		return fmt.Errorf("invalid recovery code")
 	}
 	encoded, err := marshalRecoveryCodes(remaining)
 	if err != nil {

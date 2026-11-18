@@ -17,7 +17,7 @@ func GetNodeCheckMeta(c *gin.Context) {
 		providerOptions = append(providerOptions, models.GetUnlockProviderMeta(provider))
 	}
 
-	utils.OkDetailed(c, "获取成功", gin.H{
+	utils.OkDetailed(c, "Fetched successfully", gin.H{
 		"unlockProviders":       providerOptions,
 		"unlockStatuses":        models.GetUnlockStatusMetas(),
 		"unlockRenameVariables": models.BuildUnlockRenameVariables(providerValues),
@@ -31,10 +31,10 @@ func ListNodeCheckProfiles(c *gin.Context) {
 	var profile models.NodeCheckProfile
 	profiles, err := profile.List()
 	if err != nil {
-		utils.FailWithMsg(c, "获取策略列表失败")
+		utils.FailWithMsg(c, "Failed to fetch profile list")
 		return
 	}
-	utils.OkDetailed(c, "获取成功", profiles)
+	utils.OkDetailed(c, "Fetched successfully", profiles)
 }
 
 // GetNodeCheckProfile 获取单个策略
@@ -43,16 +43,16 @@ func GetNodeCheckProfile(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil || id <= 0 {
-		utils.FailWithMsg(c, "无效的策略ID")
+		utils.FailWithMsg(c, "Invalid profile ID")
 		return
 	}
 
 	profile, err := models.GetNodeCheckProfileByID(id)
 	if err != nil {
-		utils.FailWithMsg(c, "策略不存在")
+		utils.FailWithMsg(c, "Profile not found")
 		return
 	}
-	utils.OkDetailed(c, "获取成功", profile)
+	utils.OkDetailed(c, "Fetched successfully", profile)
 }
 
 // CreateNodeCheckProfile 创建策略
@@ -86,13 +86,13 @@ func CreateNodeCheckProfile(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid parameters: "+err.Error())
 		return
 	}
 
 	// 检查名称是否重复
 	if existing, _ := models.FindNodeCheckProfileByName(req.Name); existing != nil {
-		utils.FailWithMsg(c, "策略名称已存在")
+		utils.FailWithMsg(c, "Profile name already exists")
 		return
 	}
 
@@ -168,7 +168,7 @@ func CreateNodeCheckProfile(c *gin.Context) {
 		return
 	}
 	if err := profile.Add(); err != nil {
-		utils.FailWithMsg(c, "创建策略失败")
+		utils.FailWithMsg(c, "Failed to create profile")
 		return
 	}
 
@@ -176,11 +176,11 @@ func CreateNodeCheckProfile(c *gin.Context) {
 	if profile.Enabled && profile.CronExpr != "" {
 		sch := scheduler.GetSchedulerManager()
 		if err := sch.AddNodeCheckProfileJob(profile.ID, profile.CronExpr); err != nil {
-			utils.Warn("注册节点检测定时任务失败: %v", err)
+			utils.Warn("Failed to register node-check cron job: %v", err)
 		}
 	}
 
-	utils.OkDetailed(c, "创建成功", profile)
+	utils.OkDetailed(c, "Created successfully", profile)
 }
 
 // UpdateNodeCheckProfile 更新策略
@@ -191,7 +191,7 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil || id <= 0 {
-		utils.FailWithMsg(c, "无效的策略ID")
+		utils.FailWithMsg(c, "Invalid profile ID")
 		return
 	}
 
@@ -223,20 +223,20 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 
 	profile, err := models.GetNodeCheckProfileByID(id)
 	if err != nil {
-		utils.FailWithMsg(c, "策略不存在")
+		utils.FailWithMsg(c, "Profile not found")
 		return
 	}
 
 	// 检查名称是否与其他策略重复
 	if req.Name != "" && req.Name != profile.Name {
 		if existing, _ := models.FindNodeCheckProfileByName(req.Name); existing != nil && existing.ID != id {
-			utils.FailWithMsg(c, "策略名称已存在")
+			utils.FailWithMsg(c, "Profile name already exists")
 			return
 		}
 		profile.Name = req.Name
@@ -301,17 +301,17 @@ func UpdateNodeCheckProfile(c *gin.Context) {
 		return
 	}
 	if err := profile.Update(); err != nil {
-		utils.FailWithMsg(c, "更新策略失败")
+		utils.FailWithMsg(c, "Failed to update profile")
 		return
 	}
 
 	// 更新调度器任务
 	sch := scheduler.GetSchedulerManager()
 	if err := sch.UpdateNodeCheckProfileJob(profile.ID, profile.CronExpr, profile.Enabled); err != nil {
-		utils.Warn("更新节点检测定时任务失败: %v", err)
+		utils.Warn("Failed to update node-check cron job: %v", err)
 	}
 
-	utils.OkDetailed(c, "更新成功", profile)
+	utils.OkDetailed(c, "Updated successfully", profile)
 }
 
 // DeleteNodeCheckProfile 删除策略
@@ -322,21 +322,21 @@ func DeleteNodeCheckProfile(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil || id <= 0 {
-		utils.FailWithMsg(c, "无效的策略ID")
+		utils.FailWithMsg(c, "Invalid profile ID")
 		return
 	}
 
 	profile, err := models.GetNodeCheckProfileByID(id)
 	if err != nil {
-		utils.FailWithMsg(c, "策略不存在")
+		utils.FailWithMsg(c, "Profile not found")
 		return
 	}
 
 	if used, err := hasNodeCheckProfileDependents(id); err != nil {
-		utils.FailWithMsg(c, "检查自动任务或机场引用失败")
+		utils.FailWithMsg(c, "Failed to check auto task or airport references")
 		return
 	} else if used {
-		utils.FailWithMsg(c, "此方案被自动任务或机场引用，请先更换引用方案")
+		utils.FailWithMsg(c, "This profile is referenced by automatic tasks or airports; switch those references first")
 		return
 	}
 	// 从调度器移除任务
@@ -344,11 +344,11 @@ func DeleteNodeCheckProfile(c *gin.Context) {
 	sch.RemoveNodeCheckProfileJob(profile.ID)
 
 	if err := profile.Del(); err != nil {
-		utils.FailWithMsg(c, "删除策略失败")
+		utils.FailWithMsg(c, "Failed to delete profile")
 		return
 	}
 
-	utils.OkWithMsg(c, "删除成功")
+	utils.OkWithMsg(c, "Deleted successfully")
 }
 
 // RunNodeCheck 执行节点检测
@@ -363,18 +363,18 @@ func RunNodeCheck(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误：必须指定检测策略")
+		utils.FailWithMsg(c, "Invalid parameters: a check profile is required")
 		return
 	}
 
 	if req.ProfileID <= 0 {
-		utils.FailWithMsg(c, "参数错误：必须指定有效的检测策略ID")
+		utils.FailWithMsg(c, "Invalid parameters: a valid check profile ID is required")
 		return
 	}
 
 	// 验证策略存在
 	if _, err := models.GetNodeCheckProfileByID(req.ProfileID); err != nil {
-		utils.FailWithMsg(c, "策略不存在")
+		utils.FailWithMsg(c, "Profile not found")
 		return
 	}
 
@@ -388,16 +388,16 @@ func RunNodeCheck(c *gin.Context) {
 	if req.Scope != "" {
 		if req.Scope == "nodes" {
 			if len(req.NodeIDs) == 0 {
-				utils.FailWithMsg(c, "请选择至少一个节点")
+				utils.FailWithMsg(c, "Select at least one node")
 				return
 			}
 		} else {
 			if req.Scope != "all" && req.Scope != "filtered" {
-				utils.FailWithMsg(c, "无效的检测范围")
+				utils.FailWithMsg(c, "Invalid check scope")
 				return
 			}
 			if req.Scope == "filtered" && len(req.Groups) == 0 && len(req.Tags) == 0 {
-				utils.FailWithMsg(c, "筛选范围不能为空")
+				utils.FailWithMsg(c, "Filter scope is required")
 				return
 			}
 			if req.Scope == "all" {
@@ -406,20 +406,20 @@ func RunNodeCheck(c *gin.Context) {
 			}
 			nodes, err := scheduler.ResolveNodeCheckJobNodes(models.NodeCheckJob{Scope: req.Scope, Groups: req.Groups, Tags: req.Tags}, nil)
 			if err != nil || len(nodes) == 0 {
-				utils.FailWithMsg(c, "当前范围没有可检测节点")
+				utils.FailWithMsg(c, "No checkable nodes in the current scope")
 				return
 			}
 			profile, err := models.GetNodeCheckProfileByID(req.ProfileID)
 			if err != nil {
-				utils.FailWithMsg(c, "检测方案已不存在")
+				utils.FailWithMsg(c, "Check profile no longer exists")
 				return
 			}
 			go func() {
 				if err := scheduler.RunSpeedTestWithConfig(nodes, models.TaskTriggerManual, profile.Name, scheduler.SpeedTestConfigFromProfile(profile)); err != nil {
-					utils.Warn("手动检测失败: %v", err)
+					utils.Warn("Manual check failed: %v", err)
 				}
 			}()
-			utils.OkWithMsg(c, "节点检测任务已启动")
+			utils.OkWithMsg(c, "Node check task started")
 			return
 		}
 	}
@@ -428,12 +428,12 @@ func RunNodeCheck(c *gin.Context) {
 		ids := make([]int, 0, len(req.NodeIDs))
 		for _, id := range req.NodeIDs {
 			if id <= 0 {
-				utils.FailWithMsg(c, "无效的节点ID")
+				utils.FailWithMsg(c, "Invalid node ID")
 				return
 			}
 			if !seen[id] {
 				if _, ok := models.GetNodeByID(id); !ok {
-					utils.FailWithMsg(c, "选中的节点已不存在，请刷新后重试")
+					utils.FailWithMsg(c, "Selected nodes no longer exist; refresh and try again")
 					return
 				}
 				ids = append(ids, id)
@@ -444,7 +444,7 @@ func RunNodeCheck(c *gin.Context) {
 	}
 	// 使用指定策略执行（手动触发）
 	go scheduler.ExecuteNodeCheckWithProfile(req.ProfileID, req.NodeIDs, models.TaskTriggerManual)
-	utils.OkWithMsg(c, "节点检测任务已启动")
+	utils.OkWithMsg(c, "Node check task started")
 }
 
 // RunNodeCheckWithProfile 使用指定策略执行节点检测
@@ -453,16 +453,16 @@ func RunNodeCheckWithProfile(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil || id <= 0 {
-		utils.FailWithMsg(c, "无效的策略ID")
+		utils.FailWithMsg(c, "Invalid profile ID")
 		return
 	}
 
 	// 验证策略存在
 	if _, err := models.GetNodeCheckProfileByID(id); err != nil {
-		utils.FailWithMsg(c, "策略不存在")
+		utils.FailWithMsg(c, "Profile not found")
 		return
 	}
 
 	go scheduler.ExecuteNodeCheckWithProfile(id, nil, models.TaskTriggerManual)
-	utils.OkWithMsg(c, "节点检测任务已启动")
+	utils.OkWithMsg(c, "Node check task started")
 }

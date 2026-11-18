@@ -14,19 +14,19 @@ func init() {
 	base := newProtocolSpec("ss", []string{"ss://"}, "SS", "#2e7d32", "S", Ss{}, "Name", DecodeSSURL, EncodeSSURL, func(s Ss) LinkIdentity {
 		return buildIdentity("ss", s.Name, s.Server, utils.GetPortString(s.Port))
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic", Placeholder: "例如：SS-01"},
-		FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic", Placeholder: "example.com"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic", Placeholder: "8388"},
-		FieldMeta{Name: "Param.Cipher", Label: "加密方式", Type: "string", Group: "transport", Options: []string{"aes-128-gcm", "aes-256-gcm", "chacha20-ietf-poly1305", "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm"}},
-		FieldMeta{Name: "Param.Password", Label: "密码", Type: "string", Group: "auth", Secret: true, Placeholder: "password"},
-		FieldMeta{Name: "Plugin.Name", Label: "插件类型", Type: "string", Group: "transport", Advanced: true, Options: []string{"", "obfs", "obfs-local", "simple-obfs", "v2ray-plugin", "shadow-tls", "restls", "kcptun"}},
-		FieldMeta{Name: "Plugin.Mode", Label: "插件模式", Type: "string", Group: "transport", Advanced: true},
-		FieldMeta{Name: "Plugin.Host", Label: "插件 Host", Type: "string", Group: "transport", Advanced: true},
-		FieldMeta{Name: "Plugin.Path", Label: "插件路径", Type: "string", Group: "transport", Advanced: true},
-		FieldMeta{Name: "Plugin.Tls", Label: "插件 TLS", Type: "bool", Group: "tls", Advanced: true},
-		FieldMeta{Name: "Plugin.Mux", Label: "插件 Mux", Type: "bool", Group: "advanced", Advanced: true},
-		FieldMeta{Name: "Plugin.Password", Label: "插件密码", Type: "string", Group: "auth", Secret: true, Advanced: true},
-		FieldMeta{Name: "Plugin.Version", Label: "插件版本", Type: "int", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic", Placeholder: "e.g. SS-01"},
+		FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic", Placeholder: "example.com"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic", Placeholder: "8388"},
+		FieldMeta{Name: "Param.Cipher", Label: "Cipher", Type: "string", Group: "transport", Options: []string{"aes-128-gcm", "aes-256-gcm", "chacha20-ietf-poly1305", "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm"}},
+		FieldMeta{Name: "Param.Password", Label: "Password", Type: "string", Group: "auth", Secret: true, Placeholder: "password"},
+		FieldMeta{Name: "Plugin.Name", Label: "Plugin type", Type: "string", Group: "transport", Advanced: true, Options: []string{"", "obfs", "obfs-local", "simple-obfs", "v2ray-plugin", "shadow-tls", "restls", "kcptun"}},
+		FieldMeta{Name: "Plugin.Mode", Label: "Plugin mode", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Plugin.Host", Label: "Plugin host", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Plugin.Path", Label: "Plugin path", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Plugin.Tls", Label: "Plugin TLS", Type: "bool", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Plugin.Mux", Label: "Plugin mux", Type: "bool", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "Plugin.Password", Label: "Plugin password", Type: "string", Group: "auth", Secret: true, Advanced: true},
+		FieldMeta{Name: "Plugin.Version", Label: "Plugin version", Type: "int", Group: "advanced", Advanced: true},
 	)
 	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildSSProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "ss")

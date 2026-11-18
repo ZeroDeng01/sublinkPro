@@ -47,24 +47,24 @@ func init() {
 	// 当您在项目根目录运行 `go run main.go` 时，这将是项目根目录
 	cwd, err := os.Getwd()
 	if err != nil {
-		utils.Fatal("无法获取当前工作目录: %v", err)
+		utils.Fatal("Failed to get current working directory: %v", err)
 	}
 
 	// 将 "template" 路径解析为相对于当前工作目录的绝对路径
 	absPath, err := filepath.Abs(filepath.Join(cwd, "template"))
 	if err != nil {
-		utils.Fatal("无法解析 template 目录的绝对路径: %v", err)
+		utils.Fatal("Failed to resolve the absolute path of the template directory: %v", err)
 	}
 	baseTemplateDir = absPath
-	utils.Info("基础模板目录已初始化为: %s (基于当前工作目录)", baseTemplateDir)
+	utils.Info("Base template directory initialized: %s (relative to the current working directory)", baseTemplateDir)
 	// === 修改点结束 ===
 
 	// 确保基础模板目录存在，如果不存在则创建
 	if _, err := os.Stat(baseTemplateDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(baseTemplateDir, 0755); err != nil {
-			utils.Fatal("无法创建基础模板目录 %s: %v", baseTemplateDir, err)
+			utils.Fatal("Failed to create base template directory %s: %v", baseTemplateDir, err)
 		}
-		utils.Info("已创建基础模板目录: %s", baseTemplateDir)
+		utils.Info("Base template directory created: %s", baseTemplateDir)
 	}
 }
 
@@ -78,12 +78,12 @@ func safeFilePath(filename string) (string, error) {
 	if strings.ContainsRune(cleanFilename, os.PathSeparator) ||
 		strings.ContainsRune(cleanFilename, '/') ||
 		strings.ContainsRune(cleanFilename, '\\') {
-		return "", errors.New("文件名不能包含路径分隔符")
+		return "", errors.New("file name cannot contain path separators")
 	}
 
 	// 3. 禁止使用特殊文件名（如 ".", "..", 或空字符串）。
 	if cleanFilename == "." || cleanFilename == ".." || cleanFilename == "" {
-		return "", errors.New("文件名无效或指向目录本身")
+		return "", errors.New("invalid file name or points to the directory itself")
 	}
 
 	// 4. 将基础目录（已是绝对路径）和清理后的文件名安全地连接起来。
@@ -98,17 +98,17 @@ func safeFilePath(filename string) (string, error) {
 	relPath, err := filepath.Rel(baseTemplateDir, finalCleanPath)
 	if err != nil {
 		// `filepath.Rel` 错误通常表示路径不兼容或发生异常，视为不安全。
-		return "", errors.New("路径处理错误: " + err.Error())
+		return "", errors.New("path handling error: " + err.Error())
 	}
 	if strings.HasPrefix(relPath, "..") {
 		// 如果相对路径以 ".." 开头，说明存在目录遍历企图。
-		return "", errors.New("检测到目录遍历尝试")
+		return "", errors.New("directory traversal attempt detected")
 	}
 
 	// 7. 确保最终路径不是 `baseTemplateDir` 本身（例如，如果用户传入 "."）。
 	// 这防止了将根目录本身作为“文件”进行操作。
 	if finalCleanPath == baseTemplateDir {
-		return "", errors.New("文件名无效或指向根目录本身")
+		return "", errors.New("invalid file name or points to the root directory itself")
 	}
 
 	return finalCleanPath, nil
@@ -118,8 +118,8 @@ func GetTempS(c *gin.Context) {
 	// 由于 init() 函数已经确保了 baseTemplateDir 的存在，这里无需再次检查和创建。
 	files, err := os.ReadDir(baseTemplateDir)
 	if err != nil {
-		utils.Error("读取模板目录失败: %v", err)
-		utils.FailWithMsg(c, "服务器错误：无法读取模板文件")
+		utils.Error("Failed to read template directory: %v", err)
+		utils.FailWithMsg(c, "Server error: failed to read template file")
 		return
 	}
 
@@ -134,13 +134,13 @@ func GetTempS(c *gin.Context) {
 		// 这可以防止通过符号链接（symlink）进行的目录遍历，从而避免信息泄露。
 		fullPathToRead, err := safeFilePath(file.Name())
 		if err != nil {
-			utils.Warn("跳过不安全或非法文件 (读取): %s, 错误: %v", file.Name(), err)
+			utils.Warn("Skipping unsafe or invalid file (read): %s, error: %v", file.Name(), err)
 			continue // 跳过不安全的文件
 		}
 
 		info, err := file.Info()
 		if err != nil {
-			utils.Warn("获取文件信息失败: %s, 错误: %v", file.Name(), err)
+			utils.Warn("Failed to stat file: %s, error: %v", file.Name(), err)
 			continue
 		}
 		modTime := info.ModTime().Format("2006-01-02 15:04:05")
@@ -153,7 +153,7 @@ func GetTempS(c *gin.Context) {
 			// 缓存未命中，从文件读取并写入缓存
 			textBytes, readErr := os.ReadFile(fullPathToRead)
 			if readErr != nil {
-				utils.Error("读取文件内容失败: %s, 错误: %v", fullPathToRead, readErr)
+				utils.Error("Failed to read file content: %s, error: %v", fullPathToRead, readErr)
 				continue // 跳过无法读取的文件
 			}
 			textContent = string(textBytes)
@@ -260,7 +260,7 @@ func UpdateTemp(c *gin.Context) {
 	comment := strings.TrimSpace(c.PostForm("comment"))
 
 	if filename == "" || oldname == "" || text == "" {
-		utils.FailWithMsg(c, "文件名或内容不能为空")
+		utils.FailWithMsg(c, "File name and content are required")
 		return
 	}
 
@@ -272,42 +272,42 @@ func UpdateTemp(c *gin.Context) {
 	// 验证旧文件名以防止目录遍历
 	oldFullPath, err := safeFilePath(oldname)
 	if err != nil {
-		utils.FailWithMsg(c, "旧文件名非法: "+err.Error())
+		utils.FailWithMsg(c, "Invalid old file name: "+err.Error())
 		return
 	}
 
 	// 验证新文件名以防止目录遍历
 	newFullPath, err := safeFilePath(filename)
 	if err != nil {
-		utils.FailWithMsg(c, "新文件名非法: "+err.Error())
+		utils.FailWithMsg(c, "Invalid new file name: "+err.Error())
 		return
 	}
 
 	// 检查旧文件是否存在
 	if _, err := os.Stat(oldFullPath); os.IsNotExist(err) {
-		utils.FailWithMsg(c, "旧文件不存在")
+		utils.FailWithMsg(c, "Old file does not exist")
 		return
 	} else if err != nil {
-		utils.Error("检查旧文件存在性失败: %v", err)
-		utils.FailWithMsg(c, "服务器错误：检查旧文件失败")
+		utils.Error("Failed to check whether the old file exists: %v", err)
+		utils.FailWithMsg(c, "Server error: failed to check the old file")
 		return
 	}
 
 	// 在覆盖前读取原始内容，用于首次保存历史时的基线版本
 	oldContent, readErr := os.ReadFile(oldFullPath)
 	if readErr != nil {
-		utils.Warn("读取模板原始内容失败，跳过基线版本: %v", readErr)
+		utils.Warn("Failed to read original template content; skipping baseline version: %v", readErr)
 		oldContent = nil
 	}
 
 	// 如果新旧文件名不同，则检查新文件是否已存在
 	if oldFullPath != newFullPath {
 		if _, err := os.Stat(newFullPath); err == nil {
-			utils.FailWithMsg(c, "新文件名已存在，请选择其他名称")
+			utils.FailWithMsg(c, "New file name already exists; choose another name")
 			return
 		} else if !os.IsNotExist(err) {
-			utils.Error("检查新文件存在性失败: %v", err)
-			utils.FailWithMsg(c, "服务器错误：检查新文件失败")
+			utils.Error("Failed to check whether the new file exists: %v", err)
+			utils.FailWithMsg(c, "Server error: failed to check the new file")
 			return
 		}
 	}
@@ -316,8 +316,8 @@ func UpdateTemp(c *gin.Context) {
 	if oldFullPath != newFullPath {
 		err = os.Rename(oldFullPath, newFullPath)
 		if err != nil {
-			utils.Error("文件改名失败: %v", err)
-			utils.FailWithMsg(c, "改名失败")
+			utils.Error("Failed to rename file: %v", err)
+			utils.FailWithMsg(c, "Rename failed")
 			return
 		}
 	}
@@ -325,8 +325,8 @@ func UpdateTemp(c *gin.Context) {
 	// 写入文件内容到新的安全路径
 	err = os.WriteFile(newFullPath, []byte(text), 0666)
 	if err != nil {
-		utils.Error("修改文件内容失败: %v", err)
-		utils.FailWithMsg(c, "修改失败")
+		utils.Error("Failed to modify file content: %v", err)
+		utils.FailWithMsg(c, "Modification failed")
 		return
 	}
 
@@ -351,7 +351,7 @@ func UpdateTemp(c *gin.Context) {
 			EnableIncludeAll: enableIncludeAll,
 		}
 		if err := tmpl.Add(); err != nil {
-			utils.Error("创建模板元数据失败: %v", err)
+			utils.Error("Failed to create template metadata: %v", err)
 		}
 	} else {
 		// 更新现有记录
@@ -365,25 +365,25 @@ func UpdateTemp(c *gin.Context) {
 		tmpl.ProxyLink = proxyLink
 		tmpl.EnableIncludeAll = enableIncludeAll
 		if err := tmpl.Update(); err != nil {
-			utils.Error("更新模板元数据失败: %v", err)
+			utils.Error("Failed to update template metadata: %v", err)
 		}
 	}
 
 	// 保存内容历史版本，首次保存时先记录改动前的基线内容
 	if tmpl.ID > 0 {
 		if err := models.EnsureTemplateBaseline(baseTemplateDir, tmpl.ID, oldContent, templateAuthorFromContext(c)); err != nil {
-			models.LogTemplateVersionError("保存基线", err)
+			models.LogTemplateVersionError("save baseline", err)
 		}
 		source := models.TemplateVersionSourceSave
 		if oldname != filename {
 			source = models.TemplateVersionSourceRename
 		}
 		if _, _, err := models.AppendTemplateVersion(baseTemplateDir, tmpl.ID, []byte(text), source, comment, templateAuthorFromContext(c)); err != nil {
-			models.LogTemplateVersionError("保存", err)
+			models.LogTemplateVersionError("save", err)
 		}
 	}
 
-	utils.OkWithMsg(c, "修改成功")
+	utils.OkWithMsg(c, "Modified successfully")
 }
 
 func writeTemplateFileAndMeta(filename, oldname, text, description, category, ruleSource string, useProxy bool, proxyLink string, enableIncludeAll bool) error {
@@ -392,44 +392,44 @@ func writeTemplateFileAndMeta(filename, oldname, text, description, category, ru
 	}
 	if _, err := os.Stat(baseTemplateDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(baseTemplateDir, 0755); err != nil {
-			return fmt.Errorf("无法创建模板目录: %w", err)
+			return fmt.Errorf("failed to create template directory: %w", err)
 		}
 	}
 	newFullPath, err := safeFilePath(filename)
 	if err != nil {
-		return fmt.Errorf("文件名非法: %w", err)
+		return fmt.Errorf("invalid file name: %w", err)
 	}
 	oldResolvedName := strings.TrimSpace(oldname)
 	if oldResolvedName == "" {
 		if _, err := os.Stat(newFullPath); err == nil {
-			return fmt.Errorf("文件已存在")
+			return fmt.Errorf("file already exists")
 		} else if !os.IsNotExist(err) {
-			return fmt.Errorf("检查文件失败: %w", err)
+			return fmt.Errorf("failed to check file: %w", err)
 		}
 	} else {
 		oldFullPath, err := safeFilePath(oldResolvedName)
 		if err != nil {
-			return fmt.Errorf("旧文件名非法: %w", err)
+			return fmt.Errorf("invalid old file name: %w", err)
 		}
 		if _, err := os.Stat(oldFullPath); os.IsNotExist(err) {
-			return fmt.Errorf("旧文件不存在")
+			return fmt.Errorf("old file does not exist")
 		} else if err != nil {
-			return fmt.Errorf("检查旧文件失败: %w", err)
+			return fmt.Errorf("failed to check old file: %w", err)
 		}
 		if oldFullPath != newFullPath {
 			if _, err := os.Stat(newFullPath); err == nil {
-				return fmt.Errorf("新文件名已存在，请选择其他名称")
+				return fmt.Errorf("new file name already exists; choose another name")
 			} else if !os.IsNotExist(err) {
-				return fmt.Errorf("检查新文件失败: %w", err)
+				return fmt.Errorf("failed to check new file: %w", err)
 			}
 			if err := os.Rename(oldFullPath, newFullPath); err != nil {
-				return fmt.Errorf("模板改名失败: %w", err)
+				return fmt.Errorf("failed to rename template: %w", err)
 			}
 			cache.InvalidateTemplateContent(oldResolvedName)
 		}
 	}
 	if err := os.WriteFile(newFullPath, []byte(text), 0666); err != nil {
-		return fmt.Errorf("写入模板失败: %w", err)
+		return fmt.Errorf("failed to write template: %w", err)
 	}
 	cache.SetTemplateContent(filename, text)
 	var tmpl models.Template
@@ -468,7 +468,7 @@ func AddTemp(c *gin.Context) {
 	comment := strings.TrimSpace(c.PostForm("comment"))
 
 	if filename == "" || text == "" {
-		utils.FailWithMsg(c, "文件名或内容不能为空")
+		utils.FailWithMsg(c, "File name and content are required")
 		return
 	}
 
@@ -478,7 +478,7 @@ func AddTemp(c *gin.Context) {
 	}
 
 	if err := writeTemplateFileAndMeta(filename, "", text, description, category, ruleSource, useProxy, proxyLink, enableIncludeAll); err != nil {
-		utils.Error("创建模板失败: %v", err)
+		utils.Error("Failed to create template: %v", err)
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
@@ -487,43 +487,48 @@ func AddTemp(c *gin.Context) {
 	var tmpl models.Template
 	if err := tmpl.FindByName(filename); err == nil {
 		if _, _, err := models.AppendTemplateVersion(baseTemplateDir, tmpl.ID, []byte(text), models.TemplateVersionSourceAdd, comment, templateAuthorFromContext(c)); err != nil {
-			models.LogTemplateVersionError("创建", err)
+			models.LogTemplateVersionError("create", err)
 		}
 	}
 
-	utils.OkWithMsg(c, "上传成功")
+	utils.OkWithMsg(c, "Uploaded successfully")
 }
 
 func DelTemp(c *gin.Context) {
 	filename := c.PostForm("filename")
 
 	if filename == "" {
-		utils.FailWithMsg(c, "文件名不能为空")
+		utils.FailWithMsg(c, "File name is required")
 		return
 	}
 
 	// 获取安全的文件路径
 	fullPath, err := safeFilePath(filename)
 	if err != nil {
-		utils.FailWithMsg(c, "文件名非法: "+err.Error())
+		utils.FailWithMsg(c, "Invalid file name: "+err.Error())
 		return
 	}
 
-	// 检查文件是否存在
+	// 文件可能已被外部删除（例如用户直接在挂载目录中删除默认模板），
+	// 这种情况下仍然清理模板元数据与历史版本，避免界面上留下无法删除的孤儿记录。
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		utils.FailWithMsg(c, "文件不存在")
+		cache.InvalidateTemplateContent(filename)
+		if err := deleteTemplateMetadata(filename); err != nil {
+			utils.Error("Failed to delete template metadata: %v", err)
+		}
+		utils.OkWithMsg(c, "Deleted successfully")
 		return
 	} else if err != nil {
-		utils.Error("检查文件存在性失败: %v", err)
-		utils.FailWithMsg(c, "服务器错误：检查文件失败")
+		utils.Error("Failed to check file existence: %v", err)
+		utils.FailWithMsg(c, "Server error: failed to check the file")
 		return
 	}
 
 	// 删除文件
 	err = os.Remove(fullPath)
 	if err != nil {
-		utils.Error("删除文件失败: %v", err)
-		utils.FailWithMsg(c, "删除失败")
+		utils.Error("Failed to delete file: %v", err)
+		utils.FailWithMsg(c, "Delete failed")
 		return
 	}
 
@@ -531,16 +536,26 @@ func DelTemp(c *gin.Context) {
 	cache.InvalidateTemplateContent(filename)
 
 	// 删除数据库记录
-	var tmpl models.Template
-	if err := tmpl.FindByName(filename); err == nil {
-		if err := tmpl.Delete(); err != nil {
-			utils.Error("删除模板元数据失败: %v", err)
-		} else if err := models.DeleteTemplateVersions(baseTemplateDir, tmpl.ID); err != nil {
-			models.LogTemplateVersionError("删除历史", err)
-		}
+	if err := deleteTemplateMetadata(filename); err != nil {
+		utils.Error("Failed to delete template metadata: %v", err)
 	}
 
-	utils.OkWithMsg(c, "删除成功")
+	utils.OkWithMsg(c, "Deleted successfully")
+}
+
+// deleteTemplateMetadata 删除模板的数据库记录及其历史版本。
+func deleteTemplateMetadata(filename string) error {
+	var tmpl models.Template
+	if err := tmpl.FindByName(filename); err != nil {
+		return nil
+	}
+	if err := tmpl.Delete(); err != nil {
+		return err
+	}
+	if err := models.DeleteTemplateVersions(baseTemplateDir, tmpl.ID); err != nil {
+		models.LogTemplateVersionError("delete history", err)
+	}
+	return nil
 }
 
 func normalizeTemplateUsageValue(value string) string {
@@ -600,13 +615,13 @@ func getTemplateUsageSubscriptions(filename string) ([]string, error) {
 func GetTemplateUsage(c *gin.Context) {
 	filename := c.Query("filename")
 	if filename == "" {
-		utils.FailWithMsg(c, "文件名不能为空")
+		utils.FailWithMsg(c, "File name is required")
 		return
 	}
 
 	usedBy, err := getTemplateUsageSubscriptions(filename)
 	if err != nil {
-		utils.FailWithMsg(c, "获取模板使用情况失败")
+		utils.FailWithMsg(c, "Failed to fetch template usage")
 		return
 	}
 
@@ -675,14 +690,14 @@ const (
 func StartTemplateAIEditSessionStream(c *gin.Context) {
 	var req TemplateAIGenerateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid parameters: "+err.Error())
 		return
 	}
 	if strings.TrimSpace(req.Category) == "" {
 		req.Category = "clash"
 	}
 	if strings.TrimSpace(req.UserPrompt) == "" {
-		utils.FailWithMsg(c, "请输入 AI 指令")
+		utils.FailWithMsg(c, "Enter an AI instruction")
 		return
 	}
 	user, ok := requireCurrentUser(c)
@@ -691,7 +706,7 @@ func StartTemplateAIEditSessionStream(c *gin.Context) {
 	}
 	ownerKey := ai.TemplateEditSessionOwnerKey(user)
 	if ownerKey == "" {
-		utils.FailWithData(c, "无法确定当前用户", gin.H{"code": string(ai.TemplateEditInvalidOperation), "message": "template edit session requires an owner"})
+		utils.FailWithData(c, "Unable to determine the current user", gin.H{"code": string(ai.TemplateEditInvalidOperation), "message": "template edit session requires an owner"})
 		return
 	}
 	baseHash := ai.BuildRevisionHash(req.CurrentText)
@@ -714,7 +729,7 @@ func StartTemplateAIEditSessionStream(c *gin.Context) {
 	c.Writer.Header().Set("X-Accel-Buffering", "no")
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
-		utils.FailWithMsg(c, "当前环境不支持流式响应")
+		utils.FailWithMsg(c, "Streaming responses are not supported in this environment")
 		return
 	}
 	writeEvent := func(event string, payload any) error {
@@ -887,11 +902,11 @@ func AcceptTemplateAIEditSession(c *gin.Context) {
 	if !clientBaseMatches {
 		currentBytes, err := os.ReadFile(fullPath)
 		if err != nil {
-			utils.FailWithMsg(c, "读取当前模板失败: "+err.Error())
+			utils.FailWithMsg(c, "Failed to read current template: "+err.Error())
 			return
 		}
 		if ai.BuildRevisionHash(string(currentBytes)) != session.BaseHash {
-			respondTemplateEditCode(c, templateEditStaleBaseCode, "模板已被其他修改更新，请重新生成候选内容")
+			respondTemplateEditCode(c, templateEditStaleBaseCode, "The template was updated by another change; regenerate the candidate content")
 			return
 		}
 	}
@@ -909,7 +924,7 @@ func AcceptTemplateAIEditSession(c *gin.Context) {
 		respondTemplateEditError(c, err)
 		return
 	}
-	utils.OkDetailed(c, "AI 修改预览已接受", gin.H{
+	utils.OkDetailed(c, "AI edit preview accepted", gin.H{
 		"sessionId":     session.SessionID,
 		"candidateText": session.CandidateText,
 		"candidateHash": ai.BuildRevisionHash(session.CandidateText),
@@ -927,7 +942,7 @@ func DiscardTemplateAIEditSession(c *gin.Context) {
 		respondTemplateEditError(c, err)
 		return
 	}
-	utils.OkDetailed(c, "AI 修改会话已丢弃", templateEditSessionResponse(session))
+	utils.OkDetailed(c, "AI edit session discarded", templateEditSessionResponse(session))
 }
 
 func TemplateAILegacyRemoved(c *gin.Context) {
@@ -1004,174 +1019,174 @@ type ACL4SSRPreset struct {
 func GetACL4SSRPresets(c *gin.Context) {
 	presets := []ACL4SSRPreset{
 		{
-			Name:  "无国家分组",
+			Name:  "No country groups",
 			URL:   "https://raw.githubusercontent.com/ZeroDeng01/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_NoCountry.ini",
-			Label: "不区分国家",
+			Label: "Country-agnostic",
 		},
 		{
 			Name:  "ACL4SSR",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR.ini",
-			Label: "标准版 - 典型分组",
+			Label: "Standard - Typical Groups",
 		},
 		{
 			Name:  "ACL4SSR_AdblockPlus",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_AdblockPlus.ini",
-			Label: "标准版 - 典型分组+去广告",
+			Label: "Standard - Typical Groups + Ad Block",
 		},
 		{
 			Name:  "ACL4SSR_BackCN",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_BackCN.ini",
-			Label: "回国版 - 回国专用",
+			Label: "China Return - China Routes Only",
 		},
 		{
 			Name:  "ACL4SSR_Mini",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Mini.ini",
-			Label: "精简版 - 少量分组",
+			Label: "Lite - Few Groups",
 		},
 		{
 			Name:  "ACL4SSR_Mini_Fallback",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Mini_Fallback.ini",
-			Label: "精简版 - 故障转移",
+			Label: "Lite - Fallback",
 		},
 		{
 			Name:  "ACL4SSR_Mini_MultiMode",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Mini_MultiMode.ini",
-			Label: "精简版 - 多模式 (自动/手动)",
+			Label: "Lite - Multi Mode (Auto/Manual)",
 		},
 		{
 			Name:  "ACL4SSR_Mini_NoAuto",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Mini_NoAuto.ini",
-			Label: "精简版 - 无自动测速",
+			Label: "Lite - No Auto Speed Test",
 		},
 		{
 			Name:  "ACL4SSR_NoApple",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_NoApple.ini",
-			Label: "无苹果 - 无苹果分流",
+			Label: "No Apple - No Apple Routing",
 		},
 		{
 			Name:  "ACL4SSR_NoAuto",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_NoAuto.ini",
-			Label: "无测速 - 无自动测速",
+			Label: "No Speed Test - No Auto Speed Test",
 		},
 		{
 			Name:  "ACL4SSR_NoAuto_NoApple",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_NoAuto_NoApple.ini",
-			Label: "无测速&苹果 - 无测速&无苹果分流",
+			Label: "No Speed Test & Apple - No Speed Test & No Apple Routing",
 		},
 		{
 			Name:  "ACL4SSR_NoAuto_NoApple_NoMicrosoft",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_NoAuto_NoApple_NoMicrosoft.ini",
-			Label: "无测速&苹果&微软 - 无测速&无苹果&无微软分流",
+			Label: "No Speed Test, Apple & Microsoft - No Speed Test, Apple & Microsoft Routing",
 		},
 		{
 			Name:  "ACL4SSR_NoMicrosoft",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_NoMicrosoft.ini",
-			Label: "无微软 - 无微软分流",
+			Label: "No Microsoft - No Microsoft Routing",
 		},
 		{
 			Name:  "ACL4SSR_Online",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini",
-			Label: "在线版 - 典型分组",
+			Label: "Online - Typical Groups",
 		},
 		{
 			Name:  "ACL4SSR_Online_AdblockPlus",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_AdblockPlus.ini",
-			Label: "在线版 - 典型分组+去广告",
+			Label: "Online - Typical Groups + Ad Block",
 		},
 		{
 			Name:  "ACL4SSR_Online_Full",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full.ini",
-			Label: "在线全分组 - 比较全",
+			Label: "Online Full Groups - Comprehensive",
 		},
 		{
 			Name:  "ACL4SSR_Online_Full_AdblockPlus",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_AdblockPlus.ini",
-			Label: "在线全分组 - 带广告拦截",
+			Label: "Online Full Groups - With Ad Blocking",
 		},
 		{
 			Name:  "ACL4SSR_Online_Full_Google",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_Google.ini",
-			Label: "在线全分组 - 谷歌分流",
+			Label: "Online Full Groups - Google Routing",
 		},
 		{
 			Name:  "ACL4SSR_Online_Full_MultiMode",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_MultiMode.ini",
-			Label: "在线全分组 - 多模式",
+			Label: "Online Full Groups - Multi Mode",
 		},
 		{
 			Name:  "ACL4SSR_Online_Full_Netflix",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_Netflix.ini",
-			Label: "在线全分组 - 奈飞分流",
+			Label: "Online Full Groups - Netflix Routing",
 		},
 		{
 			Name:  "ACL4SSR_Online_Full_NoAuto",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_NoAuto.ini",
-			Label: "在线全分组 - 无自动测速",
+			Label: "Online Full Groups - No Auto Speed Test",
 		},
 		{
 			Name:  "ACL4SSR_Online_Mini",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini.ini",
-			Label: "在线精简版 - 少量分组",
+			Label: "Online Lite - Few Groups",
 		},
 		{
 			Name:  "ACL4SSR_Online_Mini_AdblockPlus",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_AdblockPlus.ini",
-			Label: "在线精简版 - 带广告拦截",
+			Label: "Online Lite - With Ad Blocking",
 		},
 		{
 			Name:  "ACL4SSR_Online_Mini_Ai",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_Ai.ini",
-			Label: "在线精简版 - AI",
+			Label: "Online Lite - AI",
 		},
 		{
 			Name:  "ACL4SSR_Online_Mini_Fallback",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_Fallback.ini",
-			Label: "在线精简版 - 故障转移",
+			Label: "Online Lite - Fallback",
 		},
 		{
 			Name:  "ACL4SSR_Online_Mini_MultiCountry",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_MultiCountry.ini",
-			Label: "在线精简版 - 多国家",
+			Label: "Online Lite - Multi Country",
 		},
 		{
 			Name:  "ACL4SSR_Online_Mini_MultiMode",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_MultiMode.ini",
-			Label: "在线精简版 - 多模式",
+			Label: "Online Lite - Multi Mode",
 		},
 		{
 			Name:  "ACL4SSR_Online_Mini_NoAuto",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_NoAuto.ini",
-			Label: "在线精简版 - 无自动测速",
+			Label: "Online Lite - No Auto Speed Test",
 		},
 		{
 			Name:  "ACL4SSR_Online_MultiCountry",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_MultiCountry.ini",
-			Label: "在线版 - 多国家",
+			Label: "Online - Multi Country",
 		},
 		{
 			Name:  "ACL4SSR_Online_NoAuto",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_NoAuto.ini",
-			Label: "在线版 - 无自动测速",
+			Label: "Online - No Auto Speed Test",
 		},
 		{
 			Name:  "ACL4SSR_Online_NoReject",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_NoReject.ini",
-			Label: "在线版 - 无拒绝规则",
+			Label: "Online - No Reject Rules",
 		},
 		{
 			Name:  "ACL4SSR_WithChinaIp",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_WithChinaIp.ini",
-			Label: "特殊版 - 包含回国IP",
+			Label: "Special - Includes China Return IPs",
 		},
 		{
 			Name:  "ACL4SSR_WithChinaIp_WithGFW",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_WithChinaIp_WithGFW.ini",
-			Label: "特殊版 - 包含回国IP&GFW列表",
+			Label: "Special - Includes China Return IPs & GFW List",
 		},
 		{
 			Name:  "ACL4SSR_WithGFW",
 			URL:   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_WithGFW.ini",
-			Label: "特殊版 - 包含GFW列表",
+			Label: "Special - Includes GFW List",
 		},
 	}
 	utils.OkDetailed(c, "ok", presets)

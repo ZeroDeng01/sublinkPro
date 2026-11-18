@@ -52,29 +52,6 @@ import { SPEED_TEST_TCP_OPTIONS, SPEED_TEST_MIHOMO_OPTIONS, LATENCY_TEST_URL_OPT
 // hooks
 import { useState, useEffect } from 'react';
 
-const SPEED_TEST_URL_OPTION_LABEL_KEYS = {
-  'Cloudflare (cp.cloudflare.com)': 'cloudflareCp',
-  'Apple (captive.apple.com)': 'appleCaptive',
-  'Gstatic (www.gstatic.com)': 'gstatic',
-  '1MB (Cloudflare)': 'cloudflare1mb',
-  '3MB (Cloudflare)': 'cloudflare3mb',
-  '5MB (Cloudflare)': 'cloudflare5mb',
-  '10MB (Cloudflare)': 'cloudflare10mb',
-  '50MB (Cloudflare)': 'cloudflare50mb',
-  '100MB (Cloudflare)': 'cloudflare100mb',
-  'Cloudflare 204 (\u63a8\u8350)': 'cloudflare204Recommended',
-  'Apple 204': 'apple204',
-  'Gstatic 204': 'gstatic204'
-};
-
-const LANDING_IP_URL_OPTION_LABEL_KEYS = {
-  'ipify.org (\u63a8\u8350)': 'ipifyRecommended',
-  'ip.sb': 'ipSb',
-  'ifconfig.me': 'ifconfigMe',
-  'icanhazip.com': 'icanhazip',
-  'ipinfo.io': 'ipinfo'
-};
-
 /**
  * 配置区块组件 - 可折叠的设置分组
  */
@@ -281,14 +258,8 @@ export default function SpeedTestDialog({
       sx: { py: 0.5 }
     }
   };
-  const getSpeedTestUrlOptionLabel = (option) => {
-    const key = SPEED_TEST_URL_OPTION_LABEL_KEYS[option.label];
-    return key ? t(`nodes.speedTest.urlOptions.${key}`) : option.label;
-  };
-  const getLandingIpUrlOptionLabel = (option) => {
-    const key = LANDING_IP_URL_OPTION_LABEL_KEYS[option.label];
-    return key ? t(`nodes.speedTest.landingIp.options.${key}`) : option.label;
-  };
+  const getSpeedTestUrlOptionLabel = (option) => (option.labelKey ? t(option.labelKey, option.label) : option.label);
+  const getLandingIpUrlOptionLabel = (option) => (option.labelKey ? t(option.labelKey, option.label) : option.label);
 
   useEffect(() => {
     if (open && groupOptions && speedTestForm.groups?.length > 0) {

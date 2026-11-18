@@ -17,13 +17,13 @@ func TestFormatSpeedTestNotificationIncludesCountsAndTraffic(t *testing.T) {
 		},
 	})
 
-	if !strings.Contains(message, "成功: 3") {
+	if !strings.Contains(message, "Success: 3") {
 		t.Fatalf("expected success count in message, got %s", message)
 	}
-	if !strings.Contains(message, "失败: 1") {
+	if !strings.Contains(message, "Failed: 1") {
 		t.Fatalf("expected fail count in message, got %s", message)
 	}
-	if !strings.Contains(message, "流量: 12.50 MB") {
+	if !strings.Contains(message, "Traffic: 12.50 MB") {
 		t.Fatalf("expected traffic amount in message, got %s", message)
 	}
 }
@@ -38,13 +38,13 @@ func TestFormatSpeedTestNotificationSupportsStringFallbackFields(t *testing.T) {
 		},
 	})
 
-	if !strings.Contains(message, "成功: 64") {
+	if !strings.Contains(message, "Success: 64") {
 		t.Fatalf("expected success count in message, got %s", message)
 	}
-	if !strings.Contains(message, "失败: 103") {
+	if !strings.Contains(message, "Failed: 103") {
 		t.Fatalf("expected fail count in message, got %s", message)
 	}
-	if !strings.Contains(message, "流量: 58.86 MB") {
+	if !strings.Contains(message, "Traffic: 58.86 MB") {
 		t.Fatalf("expected traffic amount in message, got %s", message)
 	}
 }

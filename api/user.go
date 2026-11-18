@@ -28,9 +28,9 @@ func UserAdd(c *gin.Context) {
 	}
 	err := user.Create()
 	if err != nil {
-		utils.Error("创建用户失败: %v", err)
+		utils.Error("Failed to create user: %v", err)
 	}
-	utils.OkWithMsg(c, "创建用户成功")
+	utils.OkWithMsg(c, "User created")
 }
 
 // 获取用户信息
@@ -54,7 +54,7 @@ func UserMe(c *gin.Context) {
 		aiEnabled = aiSettings.Enabled
 		aiConfigured = aiSettings.Configured
 	}
-	utils.OkDetailed(c, "获取用户信息成功", gin.H{
+	utils.OkDetailed(c, "User info fetched successfully", gin.H{
 		"avatar": "",
 		"ai": gin.H{
 			"enabled":    aiEnabled,
@@ -83,7 +83,7 @@ func UserPages(c *gin.Context) {
 	user := &models.User{Username: username}
 	users, err := user.All()
 	if err != nil {
-		utils.Error("获取用户信息失败: %v", err)
+		utils.Error("Failed to get user info: %v", err)
 	}
 	list := []*User{}
 	for i := range users {
@@ -94,7 +94,7 @@ func UserPages(c *gin.Context) {
 			Avatar:   "",
 		})
 	}
-	utils.OkDetailed(c, "获取用户信息成功", gin.H{
+	utils.OkDetailed(c, "User info fetched successfully", gin.H{
 		"list": list,
 	})
 }
@@ -105,7 +105,7 @@ func UserSet(c *gin.Context) {
 	NewUsername := c.PostForm("username")
 	NewPassword := c.PostForm("password")
 	if NewUsername == "" || NewPassword == "" {
-		utils.FailWithMsg(c, "用户名或密码不能为空")
+		utils.FailWithMsg(c, "Username and password are required")
 		return
 	}
 	username, ok := currentUsernameFromContext(c)
@@ -116,7 +116,7 @@ func UserSet(c *gin.Context) {
 
 	// 先查找用户获取ID
 	if err := user.Find(); err != nil {
-		utils.FailWithMsg(c, "用户不存在")
+		utils.FailWithMsg(c, "User not found")
 		return
 	}
 
@@ -125,13 +125,13 @@ func UserSet(c *gin.Context) {
 		Password: NewPassword,
 	})
 	if err != nil {
-		utils.Error("修改密码失败: %v", err)
+		utils.Error("Failed to change password: %v", err)
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
 
 	// 修改成功
-	utils.OkWithMsg(c, "修改成功")
+	utils.OkWithMsg(c, "Modified successfully")
 }
 
 // 修改密码
@@ -145,19 +145,19 @@ func UserChangePassword(c *gin.Context) {
 
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 
 	// 验证两次密码是否一致
 	if req.NewPassword != req.ConfirmPassword {
-		utils.FailWithMsg(c, "两次密码输入不一致")
+		utils.FailWithMsg(c, "Passwords do not match")
 		return
 	}
 
 	// 验证密码长度
 	if len(req.NewPassword) < 6 {
-		utils.FailWithMsg(c, "密码长度不能小于6位")
+		utils.FailWithMsg(c, "Password must be at least 6 characters")
 		return
 	}
 
@@ -167,7 +167,7 @@ func UserChangePassword(c *gin.Context) {
 	}
 	user := &models.User{Username: username}
 	if err := user.Find(); err != nil {
-		utils.FailWithMsg(c, "用户不存在")
+		utils.FailWithMsg(c, "User not found")
 		return
 	}
 
@@ -179,12 +179,12 @@ func UserChangePassword(c *gin.Context) {
 	// 更新密码
 	updateUser := &models.User{Password: req.NewPassword}
 	if err := user.Set(updateUser); err != nil {
-		utils.Error("密码修改失败: %v", err)
-		utils.FailWithMsg(c, "密码修改失败")
+		utils.Error("Password change failed: %v", err)
+		utils.FailWithMsg(c, "Failed to change password")
 		return
 	}
 
-	utils.OkWithMsg(c, "密码修改成功")
+	utils.OkWithMsg(c, "Password changed")
 }
 
 // 更新个人资料（用户名、昵称）
@@ -198,13 +198,13 @@ func UserUpdateProfile(c *gin.Context) {
 
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 
 	// 验证用户名不能为空
 	if req.Username == "" {
-		utils.FailWithMsg(c, "用户名不能为空")
+		utils.FailWithMsg(c, "Username is required")
 		return
 	}
 
@@ -217,7 +217,7 @@ func UserUpdateProfile(c *gin.Context) {
 
 	// 查找用户获取ID
 	if err := user.Find(); err != nil {
-		utils.FailWithMsg(c, "用户不存在")
+		utils.FailWithMsg(c, "User not found")
 		return
 	}
 
@@ -233,19 +233,19 @@ func UserUpdateProfile(c *gin.Context) {
 	}
 
 	if err := database.DB.Where("username = ?", user.Username).Model(&models.User{}).Updates(updates).Error; err != nil {
-		utils.Error("个人资料更新失败: %v", err)
-		utils.FailWithMsg(c, "个人资料更新失败: "+err.Error())
+		utils.Error("Failed to update profile: %v", err)
+		utils.FailWithMsg(c, "Failed to update profile: "+err.Error())
 		return
 	}
 
-	utils.OkWithMsg(c, "个人资料更新成功")
+	utils.OkWithMsg(c, "Profile updated")
 }
 
 func requireSessionAuthForAISettings(c *gin.Context) bool {
 	if strings.TrimSpace(c.GetHeader("X-API-Key")) == "" {
 		return true
 	}
-	utils.Forbidden(c, "AI 助手设置仅支持登录会话访问")
+	utils.Forbidden(c, "AI assistant settings are only accessible from a login session")
 	return false
 }
 
@@ -272,11 +272,11 @@ func UserGetAISettings(c *gin.Context) {
 
 	settings, err := models.GetSystemAISettings()
 	if err != nil {
-		utils.FailWithMsg(c, "获取 AI 设置失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to fetch AI settings: "+err.Error())
 		return
 	}
 
-	utils.OkDetailed(c, "获取 AI 设置成功", settings)
+	utils.OkDetailed(c, "AI settings fetched", settings)
 }
 
 func UserListAIModels(c *gin.Context) {
@@ -292,13 +292,13 @@ func UserListAIModels(c *gin.Context) {
 
 	var req listAIModelsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 
 	current, err := models.GetSystemAISettings()
 	if err != nil {
-		utils.FailWithMsg(c, "读取当前 AI 设置失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to read current AI settings: "+err.Error())
 		return
 	}
 
@@ -325,11 +325,11 @@ func UserListAIModels(c *gin.Context) {
 		ExtraHeaders: extraHeaders,
 	})
 	if err != nil {
-		utils.FailWithMsg(c, "获取模型列表失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to fetch model list: "+err.Error())
 		return
 	}
 
-	utils.OkDetailed(c, "获取模型列表成功", gin.H{"models": modelsList})
+	utils.OkDetailed(c, "Model list fetched", gin.H{"models": modelsList})
 }
 
 func UserUpdateAISettings(c *gin.Context) {
@@ -350,13 +350,13 @@ func UserUpdateAISettings(c *gin.Context) {
 
 	var req updateAISettingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 
 	current, err := models.GetSystemAISettings()
 	if err != nil {
-		utils.FailWithMsg(c, "读取当前 AI 设置失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to read current AI settings: "+err.Error())
 		return
 	}
 
@@ -366,23 +366,23 @@ func UserUpdateAISettings(c *gin.Context) {
 		return
 	}
 	if req.Enabled && strings.TrimSpace(validatedBaseURL) == "" {
-		utils.FailWithMsg(c, "启用 AI 时 Base URL 不能为空")
+		utils.FailWithMsg(c, "Base URL is required when AI is enabled")
 		return
 	}
 	if req.Enabled && strings.TrimSpace(req.Model) == "" {
-		utils.FailWithMsg(c, "启用 AI 时模型不能为空")
+		utils.FailWithMsg(c, "Model is required when AI is enabled")
 		return
 	}
 	if req.Enabled && strings.TrimSpace(req.APIKey) == "" && !current.HasKey {
-		utils.FailWithMsg(c, "启用 AI 时请提供 API Key")
+		utils.FailWithMsg(c, "API Key is required when AI is enabled")
 		return
 	}
 	if req.Temperature < 0 || req.Temperature > 2 {
-		utils.FailWithMsg(c, "temperature 必须在 0 到 2 之间")
+		utils.FailWithMsg(c, "temperature must be between 0 and 2")
 		return
 	}
 	if req.MaxTokens < 0 {
-		utils.FailWithMsg(c, "maxTokens 不能小于 0")
+		utils.FailWithMsg(c, "maxTokens cannot be negative")
 		return
 	}
 
@@ -390,7 +390,7 @@ func UserUpdateAISettings(c *gin.Context) {
 	if len(req.ExtraHeaders) > 0 {
 		payload, err := json.Marshal(req.ExtraHeaders)
 		if err != nil {
-			utils.FailWithMsg(c, "额外请求头格式无效")
+			utils.FailWithMsg(c, "Invalid extra request headers format")
 			return
 		}
 		headersJSON = string(payload)
@@ -406,16 +406,16 @@ func UserUpdateAISettings(c *gin.Context) {
 		MaxTokens:       req.MaxTokens,
 		ExtraHeadersRaw: headersJSON,
 	}); err != nil {
-		utils.FailWithMsg(c, "保存 AI 设置失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to save AI settings: "+err.Error())
 		return
 	}
 
 	settings, err := models.GetSystemAISettings()
 	if err != nil {
-		utils.FailWithMsg(c, "读取 AI 设置失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to read AI settings: "+err.Error())
 		return
 	}
-	utils.OkDetailed(c, "AI 设置保存成功", settings)
+	utils.OkDetailed(c, "AI settings saved", settings)
 }
 
 func UserTestAISettings(c *gin.Context) {
@@ -435,13 +435,13 @@ func UserTestAISettings(c *gin.Context) {
 
 	var req testAISettingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 
 	current, err := models.GetSystemAISettings()
 	if err != nil {
-		utils.FailWithMsg(c, "读取当前 AI 设置失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to read current AI settings: "+err.Error())
 		return
 	}
 
@@ -494,15 +494,15 @@ func UserTestAISettings(c *gin.Context) {
 		ExtraHeaders: extraHeaders,
 	})
 	if err != nil {
-		utils.FailWithMsg(c, "AI 设置无效: "+err.Error())
+		utils.FailWithMsg(c, "Invalid AI settings: "+err.Error())
 		return
 	}
 
 	result, err := client.TestConnection(c.Request.Context())
 	if err != nil {
-		utils.FailWithMsg(c, "连接测试失败: "+err.Error())
+		utils.FailWithMsg(c, "Connection test failed: "+err.Error())
 		return
 	}
 
-	utils.OkDetailed(c, "连接测试成功", result)
+	utils.OkDetailed(c, "Connection test succeeded", result)
 }

@@ -7,6 +7,7 @@ import (
 	"sublink/node"
 	"sublink/services/notifications"
 	"sublink/utils"
+	"time"
 )
 
 // ExecuteSubscriptionTask 执行订阅任务的具体业务逻辑
@@ -17,13 +18,13 @@ func ExecuteSubscriptionTask(id int, url string, subName string) {
 // ExecuteSubscriptionTaskWithTrigger 执行订阅任务（带触发类型）
 func ExecuteSubscriptionTaskWithTrigger(id int, url string, subName string, trigger models.TaskTrigger) {
 	if err := executeSubscriptionTask(id, url, subName, trigger, true); err != nil {
-		utils.Warn("订阅任务失败: %v", err)
+		utils.Warn("Subscription task failed: %v", err)
 	}
 }
 
 // executeSubscriptionTask 提供可等待、可抑制检测联动的前置更新边界。
 func executeSubscriptionTask(id int, url string, subName string, trigger models.TaskTrigger, followups bool) (runErr error) {
-	utils.Info("执行自动获取订阅任务 - ID: %d, Name: %s, URL: %s, Trigger: %s", id, subName, url, trigger)
+	utils.Info("Running automatic subscription task - ID: %d, Name: %s, URL: %s, Trigger: %s", id, subName, url, trigger)
 
 	// 获取最新的机场配置，以便使用最新的代理设置
 	var downloadWithProxy bool
@@ -35,7 +36,7 @@ func executeSubscriptionTask(id int, url string, subName string, trigger models.
 
 	airport, err := models.GetAirportByID(id)
 	if err != nil {
-		utils.Warn("获取机场配置失败 ID: %d, 使用默认设置: %v", id, err)
+		utils.Warn("Failed to load airport config ID: %d; using defaults: %v", id, err)
 	} else {
 		downloadWithProxy = airport.DownloadWithProxy
 		proxyLink = airport.ProxyLink
@@ -51,7 +52,7 @@ func executeSubscriptionTask(id int, url string, subName string, trigger models.
 
 	var reporter node.TaskReporter
 	if createErr != nil {
-		utils.Warn("创建订阅更新任务失败: %v，将使用降级模式", createErr)
+		utils.Warn("Failed to create subscription update task: %v; falling back to degraded mode", createErr)
 		reporter = nil             // 使用 nil，将在 sub.go 中降级为 NoOpTaskReporter
 		ctx = context.Background() // 降级情况下使用 Background context
 	} else {
@@ -60,8 +61,8 @@ func executeSubscriptionTask(id int, url string, subName string, trigger models.
 		// 添加全局 panic 保护
 		defer func() {
 			if r := recover(); r != nil {
-				utils.Error("订阅任务执行发生 panic: %v, 任务ID: %s, 订阅名称: %s, URL: %s", r, task.ID, subName, url)
-				runErr = fmt.Errorf("任务异常崩溃: %v", r)
+				utils.Error("Subscription task panicked: %v, task ID: %s, subscription: %s, URL: %s", r, task.ID, subName, url)
+				runErr = fmt.Errorf("task crashed: %v", r)
 				reporter.ReportFail(runErr.Error())
 			}
 		}()
@@ -69,11 +70,17 @@ func executeSubscriptionTask(id int, url string, subName string, trigger models.
 		// 在调用前快速检查任务是否已被取消
 		select {
 		case <-ctx.Done():
-			utils.Info("任务在执行前已被取消: %s", subName)
+			utils.Info("Task was cancelled before execution: %s", subName)
 			return ctx.Err()
 		default:
 		}
 	}
+
+	// 兜底超时：上游 HTTP/代理层卡死时，任务不会长期停留在 running。
+	// 成功路径下 ReportComplete 也会主动取消 context，两者不冲突。
+	const subscriptionUpdateTimeout = 10 * time.Minute
+	ctx, cancel := context.WithTimeout(ctx, subscriptionUpdateTimeout)
+	defer cancel()
 
 	changedNodeIDs, usageInfo, err := node.LoadClashConfigFromURLWithReporter(ctx, id, url, subName, downloadWithProxy, proxyLink, userAgent, requestHeaders, reporter, fetchUsageInfo, skipTLSVerify)
 
@@ -88,8 +95,8 @@ func executeSubscriptionTask(id int, url string, subName string, trigger models.
 			reporter.ReportFail(err.Error())
 		}
 		notifications.Publish("subscription.sync_failed", notifications.Payload{
-			Title:   "订阅更新失败",
-			Message: fmt.Sprintf("订阅 [%s] 更新失败: %v", subName, err),
+			Title:   "Subscription update failed",
+			Message: fmt.Sprintf("Subscription [%s] update failed: %v", subName, err),
 			Data: map[string]any{
 				"id":     id,
 				"name":   subName,
@@ -117,22 +124,22 @@ func executeSubscriptionTask(id int, url string, subName string, trigger models.
 		go func(airportID int, airportName string, nodeCheckProfileID int, changedNodeIDs []int, changedOnly bool) {
 			nodeIDs, shouldRun, listErr := resolveUpdateAfterDetectNodeIDs(airportID, changedNodeIDs, changedOnly)
 			if listErr != nil {
-				utils.Warn("获取机场节点失败，跳过更新后检测 - ID: %d, Error: %v", airportID, listErr)
+				utils.Warn("Failed to load airport nodes; skipping post-update check - ID: %d, Error: %v", airportID, listErr)
 				return
 			}
 			if !shouldRun {
 				if changedOnly {
-					utils.Info("机场 [%s] 开启了仅检测变化/新增节点，但本次更新没有变化/新增节点，跳过更新后检测", airportName)
+					utils.Info("Airport [%s] only checks changed/new nodes, but this update produced none; skipping post-update check", airportName)
 				} else {
-					utils.Warn("机场 [%s] 更新后检测已启用，但没有可检测节点", airportName)
+					utils.Warn("Airport [%s] has post-update checks enabled but no nodes to check", airportName)
 				}
 				return
 			}
 
 			if changedOnly {
-				utils.Info("机场 [%s] 订阅更新完成，仅检测 %d 个变化/新增节点，策略 ID: %d", airportName, len(nodeIDs), nodeCheckProfileID)
+				utils.Info("Airport [%s] subscription updated; checking only %d changed/new nodes, profile ID: %d", airportName, len(nodeIDs), nodeCheckProfileID)
 			} else {
-				utils.Info("机场 [%s] 订阅更新完成，立即执行节点检测策略 ID: %d", airportName, nodeCheckProfileID)
+				utils.Info("Airport [%s] subscription updated; running node check profile ID: %d", airportName, nodeCheckProfileID)
 			}
 
 			ExecuteNodeCheckWithProfile(nodeCheckProfileID, nodeIDs, models.TaskTriggerAirportUpdate)
@@ -162,10 +169,10 @@ func persistSubscriptionUsage(airport *models.Airport, fetchUsageInfo bool, usag
 	if updateErr := airport.UpdateUsageInfoWithStatus(
 		usageInfo.Upload, usageInfo.Download, usageInfo.Total, usageInfo.Expire, parseErr != nil, reason,
 	); updateErr != nil {
-		utils.Warn("更新机场用量信息失败 ID: %d: %v", airport.ID, updateErr)
+		utils.Warn("Failed to update airport usage ID: %d: %v", airport.ID, updateErr)
 		return
 	}
-	utils.Info("成功更新机场 [%s] 用量信息", airport.Name)
+	utils.Info("Updated usage info for airport [%s]", airport.Name)
 }
 
 // resolveUpdateAfterDetectNodeIDs 解析更新后检测的目标节点；仅检测变化节点时，空变更代表跳过检测而不是回退到全机场。
@@ -196,7 +203,7 @@ func resolveUpdateAfterDetectNodeIDs(airportID int, changedNodeIDs []int, change
 func applySubscriptionUpdateTags(id int) {
 	nodes, err := models.ListBySourceID(id)
 	if err != nil {
-		utils.Warn("加载更新后标签节点失败: %v", err)
+		utils.Warn("Failed to load tagged nodes after update: %v", err)
 		return
 	}
 	if len(nodes) > 0 {

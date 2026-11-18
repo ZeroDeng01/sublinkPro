@@ -44,7 +44,7 @@ func ValidateTemplateCandidate(input TemplateValidationInput) TemplateValidation
 	result.DetectedType = detectedType
 	if detectedType != "" && trimmedCategory != "" && detectedType != trimmedCategory {
 		result.Valid = false
-		result.Errors = append(result.Errors, "模板内容与选择的类别不匹配")
+		result.Errors = append(result.Errors, "Template content does not match the selected category")
 	}
 	if trimmedCategory == "clash" {
 		if err := validateClash(input.CandidateText); err != nil {
@@ -63,12 +63,12 @@ func ValidateTemplateCandidate(input TemplateValidationInput) TemplateValidation
 			result.ProtectedTokensFound = append(result.ProtectedTokensFound, token)
 			if !strings.Contains(input.CandidateText, token) {
 				result.Valid = false
-				result.Errors = append(result.Errors, "候选模板移除了受保护语义: "+token)
+				result.Errors = append(result.Errors, "Candidate template removed protected semantics: "+token)
 			}
 		}
 	}
 	if strings.TrimSpace(input.RuleSource) != "" {
-		result.Warnings = append(result.Warnings, "该模板配置了规则源，后续执行规则转换时会覆盖部分生成区段")
+		result.Warnings = append(result.Warnings, "This template has a rule source; later rule conversion will overwrite parts of the generated sections")
 	}
 	return result
 }
@@ -91,7 +91,7 @@ func validateSurge(content string) error {
 		}
 	}
 	if !sections["[Proxy]"] {
-		return errString("Surge 模板缺少 [Proxy] section")
+		return errString("Surge template is missing the [Proxy] section")
 	}
 	return nil
 }
@@ -125,10 +125,10 @@ func PreviewProtectedGroupBehavior(category string, template string) []string {
 	}
 	var warnings []string
 	if strings.Contains(template, "__ALL_PROXIES__") {
-		warnings = append(warnings, "模板包含 __ALL_PROXIES__，运行时会替换为实际节点列表")
+		warnings = append(warnings, "Template contains __ALL_PROXIES__; it will be replaced with the actual node list at runtime")
 	}
 	if strings.Contains(template, "include-all") || strings.Contains(template, "include-all-proxies") || strings.Contains(template, "include-all-providers") {
-		warnings = append(warnings, "模板包含 include-all 相关语义，运行时会保留自动匹配组行为")
+		warnings = append(warnings, "Template contains include-all semantics; automatic group matching is preserved at runtime")
 	}
 	_ = protocol.Config{}
 	return warnings

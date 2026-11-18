@@ -31,7 +31,7 @@ type archiveFolder struct {
 func CreateArchiveFile(ctx context.Context) (Archive, error) {
 	tmpFile, err := os.CreateTemp("", "sublink-pro-backup-*.zip")
 	if err != nil {
-		return Archive{}, fmt.Errorf("创建备份临时文件失败: %w", err)
+		return Archive{}, fmt.Errorf("failed to create backup temp file: %w", err)
 	}
 	path := tmpFile.Name()
 	cleanup := func() {
@@ -55,16 +55,16 @@ func CreateArchiveFile(ctx context.Context) (Archive, error) {
 	}
 	if err := tmpFile.Sync(); err != nil {
 		cleanup()
-		return Archive{}, fmt.Errorf("同步备份文件失败: %w", err)
+		return Archive{}, fmt.Errorf("failed to sync backup file: %w", err)
 	}
 	info, err := tmpFile.Stat()
 	if err != nil {
 		cleanup()
-		return Archive{}, fmt.Errorf("读取备份文件信息失败: %w", err)
+		return Archive{}, fmt.Errorf("failed to read backup file info: %w", err)
 	}
 	if err := tmpFile.Close(); err != nil {
 		_ = os.Remove(path)
-		return Archive{}, fmt.Errorf("关闭备份文件失败: %w", err)
+		return Archive{}, fmt.Errorf("failed to close backup file: %w", err)
 	}
 
 	now := time.Now()
@@ -84,7 +84,7 @@ type archiveSizeWriter struct {
 
 func (writer *archiveSizeWriter) Write(data []byte) (int, error) {
 	if writer.Size+int64(len(data)) > writer.Max {
-		return 0, fmt.Errorf("备份压缩包超过 %d 字节限制", writer.Max)
+		return 0, fmt.Errorf("backup archive exceeds the %d byte limit", writer.Max)
 	}
 	written, err := writer.Writer.Write(data)
 	writer.Size += int64(written)
@@ -106,7 +106,7 @@ func writeArchive(ctx context.Context, dst io.Writer, folders []archiveFolder) e
 		}
 	}
 	if err := zipWriter.Close(); err != nil {
-		return fmt.Errorf("关闭 ZIP 写入器失败: %w", err)
+		return fmt.Errorf("failed to close ZIP writer: %w", err)
 	}
 	closed = true
 	return nil
@@ -115,7 +115,7 @@ func writeArchive(ctx context.Context, dst io.Writer, folders []archiveFolder) e
 func addFolder(ctx context.Context, zipWriter *zip.Writer, folder archiveFolder) error {
 	return filepath.Walk(folder.sourcePath, func(filePath string, info os.FileInfo, walkErr error) error {
 		if walkErr != nil {
-			return fmt.Errorf("读取备份目录 %s 失败: %w", folder.zipName, walkErr)
+			return fmt.Errorf("failed to read backup directory %s: %w", folder.zipName, walkErr)
 		}
 		select {
 		case <-ctx.Done():
@@ -124,7 +124,7 @@ func addFolder(ctx context.Context, zipWriter *zip.Writer, folder archiveFolder)
 		}
 
 		if info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("备份目录包含不允许的符号链接: %s", filePath)
+			return fmt.Errorf("backup directory contains a disallowed symbolic link: %s", filePath)
 		}
 		if !info.IsDir() && info.Name() == "GeoLite2-City.mmdb" {
 			return nil

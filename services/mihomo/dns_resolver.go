@@ -28,14 +28,14 @@ var DNSPresets = []struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
 }{
-	{"阿里DNS (DoH)", "https://dns.alidns.com/dns-query"},
-	{"腾讯DNSPod (DoH)", "https://doh.pub/dns-query"},
+	{"AliDNS (DoH)", "https://dns.alidns.com/dns-query"},
+	{"Tencent DNSPod (DoH)", "https://doh.pub/dns-query"},
 	{"Cloudflare (DoH)", "https://cloudflare-dns.com/dns-query"},
 	{"Google (DoH)", "https://dns.google/dns-query"},
 	{"Cloudflare IP (DoH)", "https://1.1.1.1/dns-query"},
 	{"Google IP(DoH)", "https://8.8.8.8/dns-query"},
-	{"阿里DNS", "223.5.5.5"},
-	{"腾讯DNS", "119.29.29.29"},
+	{"AliDNS", "223.5.5.5"},
+	{"Tencent DNS", "119.29.29.29"},
 	{"Cloudflare", "1.1.1.1"},
 	{"Google", "8.8.8.8"},
 }
@@ -56,7 +56,7 @@ func GetProxyServerFromLink(nodeLink string) HostInfo {
 
 	proxyStruct, err := protocol.LinkToProxy(protocol.Urls{Url: nodeLink}, outputConfig)
 	if err != nil {
-		utils.Warn("解析节点link失败: %v", err)
+		utils.Warn("Failed to parse node link: %v", err)
 		return HostInfo{}
 	}
 
@@ -83,13 +83,13 @@ func ResolveProxyHost(host string) (string, string) {
 
 	// 如果已经是IP地址，直接返回
 	if net.ParseIP(host) != nil {
-		return host, "IP地址"
+		return host, "IP address"
 	}
 
 	// 1. 先检查Host缓存是否已有（避免重复解析）
 	if cachedHost, err := models.GetHostByHostname(host); err == nil && cachedHost != nil {
-		utils.Debug("[DNS] %s -> %s (Host缓存)", host, cachedHost.IP)
-		return cachedHost.IP, "Host缓存"
+		utils.Debug("[DNS] %s -> %s (host cache)", host, cachedHost.IP)
+		return cachedHost.IP, "host cache"
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 增加超时时间以容纳代理连接
@@ -131,7 +131,7 @@ func ResolveProxyHost(host string) (string, string) {
 					node := &models.Node{ID: nodeID}
 					if err := node.GetByID(); err == nil {
 						proxyLink = node.Link
-						utils.Debug("[DNS] 使用手动指定代理节点: %s", node.Name)
+						utils.Debug("[DNS] Using manually specified proxy node: %s", node.Name)
 					}
 				}
 			} else {
@@ -140,13 +140,13 @@ func ResolveProxyHost(host string) (string, string) {
 					link, name, err := utils.GetBestProxyNodeFunc()
 					if err == nil && link != "" {
 						proxyLink = link
-						utils.Debug("[DNS] 自动选择最佳代理节点: %s", name)
+						utils.Debug("[DNS] Auto-selected best proxy node: %s", name)
 					}
 				}
 			}
 
 			if proxyLink == "" {
-				utils.Warn("[DNS]虽然开启了代理但未找到可用代理节点，将尝试直连DNS")
+				utils.Warn("[DNS] Proxy is enabled but no usable proxy node was found; trying direct DNS")
 				useProxy = false
 			}
 		}
@@ -154,9 +154,9 @@ func ResolveProxyHost(host string) (string, string) {
 		if ip := resolveWithCustomDNS(ctx, host, dnsServer, useProxy, proxyLink); ip != "" {
 			proxyInfo := ""
 			if useProxy {
-				proxyInfo = " (通过代理)"
+				proxyInfo = " (via proxy)"
 			}
-			utils.Info("[DNS] %s -> %s (服务器: %s%s)", host, ip, dnsServer, proxyInfo)
+			utils.Info("[DNS] %s -> %s (server: %s%s)", host, ip, dnsServer, proxyInfo)
 			return ip, dnsServer
 		}
 	}
@@ -165,14 +165,14 @@ func ResolveProxyHost(host string) (string, string) {
 	// 如果用户没有配置DNS服务器，或者配置的DNS解析失败，则回退到系统DNS
 	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 	if err != nil {
-		utils.Warn("[DNS] 所有解析方式失败: %s", host)
+		utils.Warn("[DNS] All resolution methods failed: %s", host)
 		return "", ""
 	}
 
 	if len(addrs) > 0 {
 		ip := addrs[0].IP.String()
-		utils.Info("[DNS] %s -> %s (系统DNS)", host, ip)
-		return ip, "系统DNS"
+		utils.Info("[DNS] %s -> %s (system DNS)", host, ip)
+		return ip, "system DNS"
 	}
 
 	return "", ""
@@ -204,14 +204,14 @@ func resolveWithDoH(ctx context.Context, host, dohServer string, useProxy bool, 
 	m.RecursionDesired = true
 	data, err := m.Pack()
 	if err != nil {
-		utils.Warn("[DNS] 打包DNS消息失败: %v", err)
+		utils.Warn("[DNS] Failed to pack DNS message: %v", err)
 		return ""
 	}
 
 	// 创建带代理的 Client
 	client, _, err := utils.CreateProxyHTTPClient(useProxy, proxyLink, 5*time.Second)
 	if err != nil {
-		utils.Warn("[DNS] 创建DoH代理客户端失败: %v", err)
+		utils.Warn("[DNS] Failed to create DoH proxy client: %v", err)
 		return ""
 	}
 
@@ -225,13 +225,13 @@ func resolveWithDoH(ctx context.Context, host, dohServer string, useProxy bool, 
 
 	resp, err := client.Do(req)
 	if err != nil {
-		utils.Warn("[DNS] DoH请求失败: %s, %v", dohServer, err)
+		utils.Warn("[DNS] DoH request failed: %s, %v", dohServer, err)
 		return ""
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		utils.Warn("[DNS] DoH响应状态码非200: %s, %d", dohServer, resp.StatusCode)
+		utils.Warn("[DNS] DoH response status is not 200: %s, %d", dohServer, resp.StatusCode)
 		return ""
 	}
 
@@ -243,7 +243,7 @@ func resolveWithDoH(ctx context.Context, host, dohServer string, useProxy bool, 
 	// 解析响应
 	rm := new(dns.Msg)
 	if err := rm.Unpack(body); err != nil {
-		utils.Warn("[DNS] 解析DoH响应失败: %v", err)
+		utils.Warn("[DNS] Failed to parse DoH response: %v", err)
 		return ""
 	}
 
@@ -256,7 +256,7 @@ func resolveWithDoH(ctx context.Context, host, dohServer string, useProxy bool, 
 		}
 	}
 
-	utils.Warn("[DNS] DoH未返回有效记录: %s", dohServer)
+	utils.Warn("[DNS] DoH returned no valid records: %s", dohServer)
 	return ""
 }
 
@@ -282,7 +282,7 @@ func resolveWithUDP(ctx context.Context, host, dnsServer string, useProxy bool, 
 
 	addrs, err := r.LookupIPAddr(ctx, host)
 	if err != nil {
-		utils.Debug("UDP DNS解析失败: %s -> %s, %v", host, dnsServer, err)
+		utils.Debug("UDP DNS resolution failed: %s -> %s, %v", host, dnsServer, err)
 		return ""
 	}
 

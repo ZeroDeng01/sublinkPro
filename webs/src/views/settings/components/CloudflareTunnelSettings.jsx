@@ -44,8 +44,8 @@ const defaultStatus = {
 };
 
 const cloudflareTunnelDocsUrl = 'https://github.com/FokySN1K/sublinkPro/blob/main/docs/features/cloudflare-tunnel.md';
-const cloudflaredInstallDocsUrl = `${cloudflareTunnelDocsUrl}#安装-cloudflared`;
-const cloudflareTunnelTokenDocsUrl = `${cloudflareTunnelDocsUrl}#第二步复制-tunnel-token`;
+const cloudflaredInstallDocsUrl = `${cloudflareTunnelDocsUrl}#install-cloudflared`;
+const cloudflareTunnelTokenDocsUrl = `${cloudflareTunnelDocsUrl}#step-2-copy-the-tunnel-token`;
 
 export default function CloudflareTunnelSettings({ showMessage }) {
   const { t } = useTranslation();

@@ -12,22 +12,22 @@ func init() {
 	base := newProtocolSpec("vmess", []string{"vmess://"}, "VMess", "#1976d2", "V", Vmess{}, "Ps", DecodeVMESSURL, EncodeVmessURL, func(v Vmess) LinkIdentity {
 		return buildIdentity("vmess", v.Ps, v.Host, utils.GetPortString(v.Port))
 	},
-		FieldMeta{Name: "Ps", Label: "节点名称", Type: "string", Group: "basic", Placeholder: "例如：香港-01"},
-		FieldMeta{Name: "Add", Label: "服务器地址", Type: "string", Group: "basic", Placeholder: "example.com"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic", Placeholder: "443"},
+		FieldMeta{Name: "Ps", Label: "Node name", Type: "string", Group: "basic", Placeholder: "e.g. HK-01"},
+		FieldMeta{Name: "Add", Label: "Server address", Type: "string", Group: "basic", Placeholder: "example.com"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic", Placeholder: "443"},
 		FieldMeta{Name: "Id", Label: "UUID", Type: "string", Group: "auth", Placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"},
 		FieldMeta{Name: "Aid", Label: "Alter ID", Type: "int", Group: "auth", Advanced: true},
-		FieldMeta{Name: "Scy", Label: "加密方式", Type: "string", Group: "transport", Options: []string{"auto", "aes-128-gcm", "aes-256-gcm", "chacha20-poly1305", "none"}},
-		FieldMeta{Name: "Net", Label: "传输层", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "http", "grpc", "h2", "quic"}},
-		FieldMeta{Name: "Path", Label: "路径", Type: "string", Group: "transport", Placeholder: "/ws"},
+		FieldMeta{Name: "Scy", Label: "Cipher", Type: "string", Group: "transport", Options: []string{"auto", "aes-128-gcm", "aes-256-gcm", "chacha20-poly1305", "none"}},
+		FieldMeta{Name: "Net", Label: "Transport", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "http", "grpc", "h2", "quic"}},
+		FieldMeta{Name: "Path", Label: "Path", Type: "string", Group: "transport", Placeholder: "/ws"},
 		FieldMeta{Name: "Host", Label: "Host / WS Host", Type: "string", Group: "transport", Placeholder: "cdn.example.com"},
 		FieldMeta{Name: "Headers", Label: "WS Headers", Type: "string", Group: "transport", Multiline: true, Advanced: true},
 		FieldMeta{Name: "Type", Label: "Header Type", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Tls", Label: "TLS", Type: "string", Group: "tls", Options: []string{"", "tls", "none"}},
 		FieldMeta{Name: "Sni", Label: "SNI", Type: "string", Group: "tls", Placeholder: "server.example.com"},
 		FieldMeta{Name: "Alpn", Label: "ALPN", Type: "string", Group: "tls", Advanced: true},
-		FieldMeta{Name: "Fp", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
-		FieldMeta{Name: "V", Label: "协议版本", Type: "string", Group: "advanced", Advanced: true},
+		FieldMeta{Name: "Fp", Label: "Fingerprint", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "V", Label: "Protocol version", Type: "string", Group: "advanced", Advanced: true},
 	)
 	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildVMessProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "vmess")
@@ -74,7 +74,7 @@ func EncodeVmessURL(v Vmess) string {
 // 这里会校验 UUID、兼容 IPv6 主机写法，并在缺少 cipher 或备注时填入当前约定的默认值。
 func DecodeVMESSURL(s string) (Vmess, error) {
 	if !strings.Contains(s, "vmess://") {
-		return Vmess{}, fmt.Errorf("非vmess协议:%s", s)
+		return Vmess{}, fmt.Errorf("not a vmess link: %s", s)
 	}
 	param := strings.Split(s, "://")[1]
 	param = utils.Base64Decode(strings.TrimSpace(param))
@@ -82,12 +82,12 @@ func DecodeVMESSURL(s string) (Vmess, error) {
 	var vmess Vmess
 	err := json.Unmarshal([]byte(param), &vmess)
 	if err != nil {
-		utils.Error("❌节点解析错误：%v  【节点：%s】", err, param)
-		return Vmess{}, fmt.Errorf("json格式化失败:%s", param)
+		utils.Error("❌ node parse error: %v [node: %s]", err, param)
+		return Vmess{}, fmt.Errorf("failed to format JSON: %s", param)
 	}
 	if !utils.IsUUID(vmess.Id) {
-		utils.Error("❌节点解析错误：%v  【节点：%s】", "UUID格式错误", param)
-		return Vmess{}, fmt.Errorf("uuid格式错误:%s", vmess.Id)
+		utils.Error("❌ node parse error: %v [node: %s]", "invalid UUID format", param)
+		return Vmess{}, fmt.Errorf("invalid UUID format: %s", vmess.Id)
 	}
 	vmess.Add = utils.UnwrapIPv6Host(vmess.Add)
 	if vmess.Scy == "" {
@@ -98,8 +98,8 @@ func DecodeVMESSURL(s string) (Vmess, error) {
 		vmess.Ps = vmess.Add + ":" + utils.GetPortString(vmess.Port)
 	}
 	if utils.CheckEnvironment() {
-		fmt.Println("服务器地址", vmess.Add)
-		fmt.Println("端口", vmess.Port)
+		fmt.Println("Server address", vmess.Add)
+		fmt.Println("Port", vmess.Port)
 		fmt.Println("path", vmess.Path)
 		fmt.Println("uuid", vmess.Id)
 		fmt.Println("alterId", vmess.Aid)
@@ -107,7 +107,7 @@ func DecodeVMESSURL(s string) (Vmess, error) {
 		fmt.Println("client-fingerprint", vmess.Fp)
 		fmt.Println("network", vmess.Net)
 		fmt.Println("tls", vmess.Tls)
-		fmt.Println("备注", vmess.Ps)
+		fmt.Println("Remark", vmess.Ps)
 	}
 	return vmess, nil
 }

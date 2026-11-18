@@ -61,7 +61,7 @@ func NormalizeSystemAIRequestType(value string) string {
 func userAIEncryptionKey() ([]byte, error) {
 	keyMaterial := strings.TrimSpace(config.GetAPIEncryptionKey())
 	if len(keyMaterial) < 32 {
-		return nil, fmt.Errorf("API_ENCRYPTION_KEY 未设置或长度不足，无法安全存储 AI 密钥")
+		return nil, fmt.Errorf("API_ENCRYPTION_KEY is missing or too short to store AI keys securely")
 	}
 	sum := sha256.Sum256([]byte(keyMaterial))
 	return sum[:], nil
@@ -98,7 +98,7 @@ func DecryptUserAISecret(secret string) (string, error) {
 	}
 	parts := strings.SplitN(strings.TrimSpace(secret), ":", 2)
 	if len(parts) != 2 || parts[0] != userAISecretVersion {
-		return "", fmt.Errorf("不支持的 AI 密钥格式")
+		return "", fmt.Errorf("unsupported AI key format")
 	}
 	key, err := userAIEncryptionKey()
 	if err != nil {
@@ -117,7 +117,7 @@ func DecryptUserAISecret(secret string) (string, error) {
 		return "", err
 	}
 	if len(payload) < gcm.NonceSize() {
-		return "", fmt.Errorf("AI 密钥数据损坏")
+		return "", fmt.Errorf("AI key data is corrupted")
 	}
 	nonce := payload[:gcm.NonceSize()]
 	ciphertext := payload[gcm.NonceSize():]

@@ -56,6 +56,9 @@ Case 3: Access tracking
 > [!TIP]
 > **Default share**: After upgrade, the system automatically creates a “default” share link for each subscription, keeping old links available for a smooth upgrade.
 
+> [!IMPORTANT]
+> **Legacy token rotation**: Early versions derived default share tokens from `md5(subscription name)`, which made links predictable. On upgrade, migration `0044_rotate_predictable_share_tokens` automatically replaces such tokens with random ones. Links that used the old tokens stop working, so re-copy the affected share links from Share Management.
+
 > [!NOTE]
 > **Client compatibility**: Share links can detect client type automatically. Clash, Surge, V2ray, and other client formats can also be specified manually.
 
@@ -92,17 +95,19 @@ Case 3: Access tracking
 
 `NodeNameRule` controls the node name rendered in subscription output. If it is empty, SublinkPro keeps the node's effective name. Variables are replaced when the subscription is generated, so values such as speed, delay, country, tags, and unlock status reflect the node data currently stored in the system.
 
+Fallback words such as `Unknown`, `Ungrouped`, `Manual`, `Residential`, and the unlock labels follow the **node name language** described below.
+
 Common variables:
 
 | Variable | Meaning |
 |:---|:---|
 | `$Name` | Effective node name, based on the node's selected name mode |
 | `$LinkName` | Original upstream node name |
-| `$LinkCountry` | Node country code, such as `HK` or `US`; empty country values render as `未知` |
-| `$LinkCountryName` | Country name resolved from `Settings -> Country Rules` by `$LinkCountry`; falls back to the country code when no country-rule name exists |
+| `$LinkCountry` | Node country code, such as `HK` or `US`; empty country values render as `Unknown` |
+| `$LinkCountryName` | Localized country name resolved from `Settings -> Country Rules` by `$LinkCountry`; falls back to the country code when no country-rule name exists |
 | `$Flag` | Flag emoji generated from the country code |
-| `$Group` | Node group; empty group values render as `未分组` |
-| `$Source` | Node source; manual nodes render as `手动` |
+| `$Group` | Node group; empty group values render as `Ungrouped` |
+| `$Source` | Node source; manual nodes render as `Manual` |
 | `$Protocol` | Protocol type |
 | `$Index` | Output sequence number |
 | `$DuplicateIndex` | Duplicate-name index; empty for the first occurrence, then `1`, `2`, `3`, and so on |
@@ -116,7 +121,11 @@ Common variables:
 | `$Unlock(provider)` | Unlock result for a specific provider key, such as `$Unlock(netflix)` |
 | `$UnlockStatus`, `$UnlockLabel`, `$UnlockRegion` | Detailed unlock status fields when available |
 
-Country-name logic depends on the node's stored country code. For example, if a node has `$LinkCountry = HK` and the `HK` country rule name is `香港`, `$LinkCountryName` becomes `香港`; if the country code has no matching country rule, `$LinkCountryName` renders as `HK`. To change displayed country names in naming rules, update the country name in `Settings -> Country Rules`.
+Country-name logic depends on the node's stored country code. For example, if a node has `$LinkCountry = HK` and the `HK` country rule name is `香港`, `$LinkCountryName` renders that name in the node name language: `Hong Kong` for `en-US` and `香港` for `zh-CN`. A country name you edited yourself in `Settings -> Country Rules` is always kept as written. If the country code has no matching country rule, `$LinkCountryName` falls back to the code itself, such as `HK`.
+
+### Node Name Language
+
+Node names are rendered on the server and shown inside client apps, so they do not follow the language of the browser tab alone. The header language switcher stores the choice as the node name language (API: `GET/POST /api/v1/settings/node-naming`). Supported values are `en-US` (default) and `zh-CN`, and they control the fallback words used by the rename variables, the IP quality labels, the quality-check placeholders, and the unlock labels.
 
 Example rule:
 
@@ -124,7 +133,7 @@ Example rule:
 [$Flag] $LinkCountryName - $LinkName $DuplicateIndex
 ```
 
-For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] 香港 - Premium 01`. If another output node resolves to the same name, `$DuplicateIndex` can add a suffix value for later duplicates.
+For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] Hong Kong - Premium 01`. If another output node resolves to the same name, `$DuplicateIndex` can add a suffix value for later duplicates.
 
 ## Mieru Output Notes
 

@@ -13,19 +13,19 @@ func init() {
 	base := newProtocolSpec("anytls", []string{"anytls://"}, "AnyTLS", "#20a84c", "A", AnyTLS{}, "Name", DecodeAnyTLSURL, EncodeAnyTLSURL, func(a AnyTLS) LinkIdentity {
 		return buildIdentity("anytls", a.Name, a.Server, utils.GetPortString(a.Port))
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
-		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
+		FieldMeta{Name: "Password", Label: "Password", Type: "string", Group: "auth", Secret: true},
 		FieldMeta{Name: "SNI", Label: "SNI", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "ALPN", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
-		FieldMeta{Name: "SkipCertVerify", Label: "跳过证书校验", Type: "bool", Group: "tls", Advanced: true},
-		FieldMeta{Name: "ClientFingerprint", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
-		FieldMeta{Name: "Fingerprint", Label: "证书指纹", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "SkipCertVerify", Label: "Skip certificate verification", Type: "bool", Group: "tls", Advanced: true},
+		FieldMeta{Name: "ClientFingerprint", Label: "Fingerprint", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Fingerprint", Label: "Certificate fingerprint", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "UDP", Label: "UDP", Type: "bool", Group: "transport", Advanced: true},
-		FieldMeta{Name: "IdleSessionCheckInterval", Label: "空闲会话检查间隔", Type: "int", Group: "transport", Advanced: true},
-		FieldMeta{Name: "IdleSessionTimeout", Label: "空闲会话超时时间", Type: "int", Group: "transport", Advanced: true},
-		FieldMeta{Name: "MinIdleSession", Label: "最小空闲会话数", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "IdleSessionCheckInterval", Label: "Idle session check interval", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "IdleSessionTimeout", Label: "Idle session timeout", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "MinIdleSession", Label: "Min idle sessions", Type: "int", Group: "transport", Advanced: true},
 	)
 	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildAnyTLSProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "anytls")
@@ -52,7 +52,7 @@ type AnyTLS struct {
 func DecodeAnyTLSURL(s string) (AnyTLS, error) {
 
 	if !strings.Contains(s, "anytls://") {
-		return AnyTLS{}, fmt.Errorf("非anytls协议: %s", s)
+		return AnyTLS{}, fmt.Errorf("not an anytls link: %s", s)
 	}
 
 	u, err := url.Parse(s)

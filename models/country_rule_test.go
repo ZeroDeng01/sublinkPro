@@ -380,10 +380,10 @@ func TestExportCountryRulesToText_Empty(t *testing.T) {
 	text := ExportCountryRulesToText()
 
 	// 验证包含注释头
-	if !strings.Contains(text, "# 国家规则配置") {
+	if !strings.Contains(text, "# Country rules") {
 		t.Error("Expected text to contain header comment")
 	}
-	if !strings.Contains(text, "# 格式：国家代码 国家名称 优先级 启用状态 正则表达式") {
+	if !strings.Contains(text, "# Format: country_code country_name priority enabled regex") {
 		t.Error("Expected text to contain format comment")
 	}
 }
@@ -607,7 +607,7 @@ func TestParseCountryRuleText_InvalidFieldCount(t *testing.T) {
 	if len(rules) != 0 {
 		t.Errorf("Expected 0 rules, got %d", len(rules))
 	}
-	if !strings.Contains(errors[0], "格式错误") {
+	if !strings.Contains(errors[0], "expected 5 space-separated fields") {
 		t.Errorf("Expected format error message, got: %s", errors[0])
 	}
 }
@@ -620,7 +620,7 @@ func TestParseCountryRuleText_InvalidPriority(t *testing.T) {
 	if len(errors) == 0 {
 		t.Error("Expected parsing error for invalid priority")
 	}
-	if !strings.Contains(errors[0], "优先级必须是整数") {
+	if !strings.Contains(errors[0], "priority must be an integer") {
 		t.Errorf("Expected priority error message, got: %s", errors[0])
 	}
 }
@@ -633,7 +633,7 @@ func TestParseCountryRuleText_PriorityOutOfRange(t *testing.T) {
 	if len(errors) == 0 {
 		t.Error("Expected parsing error for priority out of range")
 	}
-	if !strings.Contains(errors[0], "优先级必须在0-1000之间") {
+	if !strings.Contains(errors[0], "priority must be between 0 and 1000") {
 		t.Errorf("Expected priority range error message, got: %s", errors[0])
 	}
 }
@@ -646,7 +646,7 @@ func TestParseCountryRuleText_InvalidEnabled(t *testing.T) {
 	if len(errors) == 0 {
 		t.Error("Expected parsing error for invalid enabled value")
 	}
-	if !strings.Contains(errors[0], "启用状态必须是true/false或1/0") {
+	if !strings.Contains(errors[0], "enabled must be true/false or 1/0") {
 		t.Errorf("Expected enabled error message, got: %s", errors[0])
 	}
 }
@@ -659,7 +659,7 @@ func TestParseCountryRuleText_InvalidRegex(t *testing.T) {
 	if len(errors) == 0 {
 		t.Error("Expected parsing error for invalid regex")
 	}
-	if !strings.Contains(errors[0], "正则表达式编译失败") {
+	if !strings.Contains(errors[0], "failed to compile regular expression") {
 		t.Errorf("Expected regex error message, got: %s", errors[0])
 	}
 }
@@ -674,7 +674,7 @@ func TestParseCountryRuleText_EmptyCountryCode(t *testing.T) {
 		t.Error("Expected parsing error for empty country code")
 	}
 	// 接受两种可能的错误消息：字段数量错误或国家代码不能为空
-	hasError := strings.Contains(errors[0], "国家代码") || strings.Contains(errors[0], "格式错误")
+	hasError := strings.Contains(errors[0], "country code") || strings.Contains(errors[0], "expected 5")
 	if !hasError {
 		t.Errorf("Expected country code or format error message, got: %s", errors[0])
 	}
@@ -690,7 +690,7 @@ func TestParseCountryRuleText_EmptyCountryName(t *testing.T) {
 		t.Error("Expected parsing error for empty country name")
 	}
 	// 接受两种可能的错误消息：字段数量错误或国家名称不能为空
-	hasError := strings.Contains(errors[0], "国家名称") || strings.Contains(errors[0], "格式错误")
+	hasError := strings.Contains(errors[0], "country name") || strings.Contains(errors[0], "expected 5")
 	if !hasError {
 		t.Errorf("Expected country name or format error message, got: %s", errors[0])
 	}
@@ -875,7 +875,7 @@ func TestSyncCountryRulesFromText_ParseError(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for invalid text")
 	}
-	if !strings.Contains(err.Error(), "解析错误") {
+	if !strings.Contains(err.Error(), "parse error") {
 		t.Errorf("Expected parsing error message, got: %v", err)
 	}
 

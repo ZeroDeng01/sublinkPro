@@ -44,7 +44,7 @@ func InferTemplateCategory(fileName string) string {
 
 // InitTemplateCache 初始化模板缓存
 func InitTemplateCache() error {
-	utils.Info("开始加载模板到缓存")
+	utils.Info("Loading templates into cache")
 
 	// 添加 Name 二级索引
 	templateCache.AddIndex("name", func(t Template) string { return t.Name })
@@ -55,7 +55,7 @@ func InitTemplateCache() error {
 	}
 
 	templateCache.LoadAll(templates)
-	utils.Info("模板缓存初始化完成，共加载 %d 个模板", templateCache.Count())
+	utils.Info("Template cache initialized with %d templates", templateCache.Count())
 
 	cache.Manager.Register("template", templateCache)
 	return nil
@@ -147,7 +147,7 @@ func (t *Template) List() ([]Template, error) {
 func MigrateTemplatesFromFiles(templateDir string) error {
 	// 检查目录是否存在
 	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-		utils.Warn("模板目录不存在，跳过迁移: %s", templateDir)
+		utils.Warn("Template directory does not exist; skipping migration: %s", templateDir)
 		return nil
 	}
 
@@ -173,11 +173,11 @@ func MigrateTemplatesFromFiles(templateDir string) error {
 			if existing.Category == "" || (existing.Category != "clash" && existing.Category != "surge") {
 				existing.Category = category
 				if err := database.DB.Model(&existing).Update("category", category).Error; err != nil {
-					utils.Error("修复模板类别失败 %s: %v", fileName, err)
+					utils.Error("Failed to fix template category %s: %v", fileName, err)
 					continue
 				}
 				updatedCount++
-				utils.Info("已修复模板类别: %s (类别: %s)", fileName, category)
+				utils.Info("Fixed template category: %s (category: %s)", fileName, category)
 			}
 			continue
 		}
@@ -193,19 +193,19 @@ func MigrateTemplatesFromFiles(templateDir string) error {
 		}
 
 		if err := database.DB.Create(&template).Error; err != nil {
-			utils.Error("迁移模板失败 %s: %v", fileName, err)
+			utils.Error("Failed to migrate template %s: %v", fileName, err)
 			continue
 		}
 
 		migratedCount++
-		utils.Info("已迁移模板: %s (类别: %s)", fileName, category)
+		utils.Info("Migrated template: %s (category: %s)", fileName, category)
 	}
 
 	if migratedCount > 0 {
-		utils.Info("模板迁移完成，共迁移 %d 个模板", migratedCount)
+		utils.Info("Template migration completed; %d templates migrated", migratedCount)
 	}
 	if updatedCount > 0 {
-		utils.Info("模板类别修复完成，共修复 %d 个模板", updatedCount)
+		utils.Info("Template category fix completed; %d templates fixed", updatedCount)
 	}
 
 	return nil

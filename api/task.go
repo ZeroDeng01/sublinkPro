@@ -35,7 +35,7 @@ func GetTasks(c *gin.Context) {
 	// 获取任务列表
 	tasks, total, err := models.ListTasks(filter, page, pageSize)
 	if err != nil {
-		utils.FailWithMsg(c, "获取任务列表失败")
+		utils.FailWithMsg(c, "Failed to fetch task list")
 		return
 	}
 
@@ -62,7 +62,7 @@ func GetTasks(c *gin.Context) {
 		totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
 	}
 
-	utils.OkDetailed(c, "获取成功", gin.H{
+	utils.OkDetailed(c, "Fetched successfully", gin.H{
 		"items":      tasks,
 		"total":      total,
 		"page":       page,
@@ -75,13 +75,13 @@ func GetTasks(c *gin.Context) {
 func GetTask(c *gin.Context) {
 	taskID := c.Param("id")
 	if taskID == "" {
-		utils.FailWithMsg(c, "任务ID不能为空")
+		utils.FailWithMsg(c, "Task ID is required")
 		return
 	}
 
 	var task models.Task
 	if err := task.GetByID(taskID); err != nil {
-		utils.FailWithMsg(c, "任务不存在")
+		utils.FailWithMsg(c, "Task not found")
 		return
 	}
 
@@ -96,14 +96,14 @@ func GetTask(c *gin.Context) {
 		}
 	}
 
-	utils.OkDetailed(c, "获取成功", task)
+	utils.OkDetailed(c, "Fetched successfully", task)
 }
 
 // StopTask 停止任务
 func StopTask(c *gin.Context) {
 	taskID := c.Param("id")
 	if taskID == "" {
-		utils.FailWithMsg(c, "任务ID不能为空")
+		utils.FailWithMsg(c, "Task ID is required")
 		return
 	}
 
@@ -112,7 +112,7 @@ func StopTask(c *gin.Context) {
 		return
 	}
 
-	utils.OkWithMsg(c, "任务已停止")
+	utils.OkWithMsg(c, "Task stopped")
 }
 
 // GetTaskStats 获取任务统计
@@ -123,13 +123,13 @@ func GetTaskStats(c *gin.Context) {
 	runningTasks := services.GetTaskManager().GetRunningTasks()
 	stats["active"] = int64(len(runningTasks))
 
-	utils.OkDetailed(c, "获取成功", stats)
+	utils.OkDetailed(c, "Fetched successfully", stats)
 }
 
 // GetRunningTasks 获取运行中的任务
 func GetRunningTasks(c *gin.Context) {
 	runningTasks := services.GetTaskManager().GetRunningTasksInfo()
-	utils.OkDetailed(c, "获取成功", runningTasks)
+	utils.OkDetailed(c, "Fetched successfully", runningTasks)
 }
 
 // ClearTaskHistory 清理任务历史
@@ -152,7 +152,7 @@ func ClearTaskHistory(c *gin.Context) {
 			// 尝试其他格式
 			parsed, err = time.Parse("2006-01-02", req.Before)
 			if err != nil {
-				utils.FailWithMsg(c, "时间格式错误")
+				utils.FailWithMsg(c, "Invalid time format")
 				return
 			}
 		}
@@ -167,13 +167,13 @@ func ClearTaskHistory(c *gin.Context) {
 
 	affected, err := models.CleanupOldTasks(beforeTime)
 	if err != nil {
-		utils.FailWithMsg(c, "清理失败: "+err.Error())
+		utils.FailWithMsg(c, "Cleanup failed: "+err.Error())
 		return
 	}
 
-	message := "清理完成"
+	message := "Cleanup complete"
 	if clearAll {
-		message = "已清理全部历史记录"
+		message = "All history records cleared"
 	}
 
 	utils.OkDetailed(c, message, gin.H{
@@ -187,39 +187,39 @@ func ClearTaskHistory(c *gin.Context) {
 func GetTaskTrafficDetails(c *gin.Context) {
 	taskID := c.Param("id")
 	if taskID == "" {
-		utils.FailWithMsg(c, "任务ID不能为空")
+		utils.FailWithMsg(c, "Task ID is required")
 		return
 	}
 
 	// 获取任务
 	var task models.Task
 	if err := task.GetByID(taskID); err != nil {
-		utils.FailWithMsg(c, "任务不存在")
+		utils.FailWithMsg(c, "Task not found")
 		return
 	}
 
 	// 解析任务结果
 	if task.Result == "" {
-		utils.OkDetailed(c, "无流量数据", gin.H{"nodes": []any{}, "total": 0})
+		utils.OkDetailed(c, "No traffic data", gin.H{"nodes": []any{}, "total": 0})
 		return
 	}
 
 	var result map[string]any
 	if err := json.Unmarshal([]byte(task.Result), &result); err != nil {
-		utils.FailWithMsg(c, "解析任务结果失败")
+		utils.FailWithMsg(c, "Failed to parse task result")
 		return
 	}
 
 	trafficData, ok := result["traffic"].(map[string]any)
 	if !ok {
-		utils.OkDetailed(c, "无流量数据", gin.H{"nodes": []any{}, "total": 0})
+		utils.OkDetailed(c, "No traffic data", gin.H{"nodes": []any{}, "total": 0})
 		return
 	}
 
 	// 获取byNode数据
 	byNodeRaw, hasNodeData := trafficData["byNode"]
 	if !hasNodeData {
-		utils.OkDetailed(c, "未开启节点流量统计", gin.H{"nodes": []any{}, "total": 0, "enabled": false})
+		utils.OkDetailed(c, "Node traffic statistics are not enabled", gin.H{"nodes": []any{}, "total": 0, "enabled": false})
 		return
 	}
 
@@ -239,7 +239,7 @@ func GetTaskTrafficDetails(c *gin.Context) {
 	}
 
 	if len(byNode) == 0 {
-		utils.OkDetailed(c, "无节点流量数据", gin.H{"nodes": []any{}, "total": 0, "enabled": true})
+		utils.OkDetailed(c, "No node traffic data", gin.H{"nodes": []any{}, "total": 0, "enabled": true})
 		return
 	}
 
@@ -252,7 +252,7 @@ func GetTaskTrafficDetails(c *gin.Context) {
 	// 从数据库查询节点详情
 	nodes, err := models.GetNodesByIDs(nodeIDs)
 	if err != nil {
-		utils.FailWithMsg(c, "获取节点信息失败")
+		utils.FailWithMsg(c, "Failed to fetch node information")
 		return
 	}
 
@@ -302,7 +302,7 @@ func GetTaskTrafficDetails(c *gin.Context) {
 		// 来源过滤
 		sourceDisplay := node.Source
 		if sourceDisplay == "" || sourceDisplay == "manual" {
-			sourceDisplay = "手动添加"
+			sourceDisplay = "Manual"
 		}
 		if sourceFilter != "" && sourceDisplay != sourceFilter && node.Source != sourceFilter {
 			continue
@@ -346,7 +346,7 @@ func GetTaskTrafficDetails(c *gin.Context) {
 	}
 	pagedNodes := allNodes[start:end]
 
-	utils.OkDetailed(c, "获取成功", gin.H{
+	utils.OkDetailed(c, "Fetched successfully", gin.H{
 		"nodes":    pagedNodes,
 		"total":    total,
 		"page":     page,

@@ -451,7 +451,7 @@ func matchesCandidateGroup(group string, allowed []string) bool {
 		return true
 	}
 	for _, candidate := range allowed {
-		if (strings.EqualFold(candidate, candidateUngroupedValue) || candidate == "未分组") && strings.TrimSpace(group) == "" {
+		if (strings.EqualFold(candidate, candidateUngroupedValue) || candidate == "Ungrouped" || strings.EqualFold(candidate, "Ungrouped")) && strings.TrimSpace(group) == "" {
 			return true
 		}
 		if strings.EqualFold(group, candidate) {
@@ -466,7 +466,7 @@ func matchesCandidateSource(source string, allowed []string) bool {
 		return true
 	}
 	for _, candidate := range allowed {
-		if (candidate == "手动添加" || strings.EqualFold(candidate, "manual")) && (strings.TrimSpace(source) == "" || strings.EqualFold(source, "manual")) {
+		if (candidate == "Manual" || strings.EqualFold(candidate, "manual")) && (strings.TrimSpace(source) == "" || strings.EqualFold(source, "manual")) {
 			return true
 		}
 		if strings.EqualFold(source, candidate) {

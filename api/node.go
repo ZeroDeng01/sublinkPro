@@ -48,7 +48,7 @@ func normalizeUnlockStatus(value string) string {
 
 func failNodeNameConflict(c *gin.Context, err error) bool {
 	if errors.Is(err, models.ErrNodeNameExists) {
-		utils.FailWithMsg(c, "节点备注名称已存在，请换一个备注")
+		utils.FailWithMsg(c, "This node remark already exists; choose another one")
 		return true
 	}
 	return false
@@ -230,7 +230,7 @@ func NodeUpdadte(c *gin.Context) {
 	dialerProxyName := c.PostForm("dialerProxyName")
 	group := c.PostForm("group")
 	if link == "" {
-		utils.FailWithMsg(c, "节点链接不能为空")
+		utils.FailWithMsg(c, "Node link is required")
 		return
 	}
 	userProvidedName := strings.TrimSpace(name) != ""
@@ -255,7 +255,7 @@ func NodeUpdadte(c *gin.Context) {
 	if protocol.IsWireGuardConfig(link) {
 		wg, err := protocol.ParseWireGuardConfig(link)
 		if err != nil {
-			utils.FailWithMsg(c, "WireGuard 配置文件解析失败: "+err.Error())
+			utils.FailWithMsg(c, "Failed to parse WireGuard configuration: "+err.Error())
 			return
 		}
 		// 转换为 URL 格式
@@ -263,7 +263,7 @@ func NodeUpdadte(c *gin.Context) {
 	}
 	identity, err := protocol.ExtractLinkIdentity(link)
 	if err != nil {
-		utils.Error("解析节点链接失败: %v", err)
+		utils.Error("Failed to parse node link: %v", err)
 		return
 	}
 	Node.Name = name
@@ -273,7 +273,7 @@ func NodeUpdadte(c *gin.Context) {
 	if userProvidedName {
 		if err := models.EnsureNodeNameAvailable(Node.Name, Node.ID); err != nil {
 			if !failNodeNameConflict(c, err) {
-				utils.FailWithMsg(c, "检查节点备注名称失败")
+				utils.FailWithMsg(c, "Failed to check node remark")
 			}
 			return
 		}
@@ -318,13 +318,13 @@ func NodeUpdadte(c *gin.Context) {
 					// 构建详细的重复信息
 					source := dupNode.Source
 					if source == "" || source == "manual" {
-						source = "手动添加"
+						source = "Manual"
 					}
 					group := dupNode.Group
 					if group == "" {
-						group = "未分组"
+						group = "Ungrouped"
 					}
-					utils.FailWithMsg(c, "节点内容已存在，与以下节点重复：[来源: "+source+"] [分组: "+group+"] [名称: "+dupNode.Name+"]")
+					utils.FailWithMsg(c, "Node content already exists; duplicates: [source: "+source+"] [group: "+group+"] [name: "+dupNode.Name+"]")
 					return
 				}
 			}
@@ -336,7 +336,7 @@ func NodeUpdadte(c *gin.Context) {
 		if failNodeNameConflict(c, err) {
 			return
 		}
-		utils.FailWithMsg(c, "更新失败")
+		utils.FailWithMsg(c, "Update failed")
 		return
 	}
 
@@ -358,7 +358,7 @@ func NodeUpdadte(c *gin.Context) {
 		_ = Node.SetTagNames([]string{})
 	}
 
-	utils.OkWithMsg(c, "更新成功")
+	utils.OkWithMsg(c, "Updated successfully")
 }
 
 // 获取节点列表
@@ -477,7 +477,7 @@ func NodeAdd(c *gin.Context) {
 	dialerProxyName := c.PostForm("dialerProxyName")
 	group := c.PostForm("group")
 	if link == "" {
-		utils.FailWithMsg(c, "link  不能为空")
+		utils.FailWithMsg(c, "link is required")
 		return
 	}
 	userProvidedName := strings.TrimSpace(name) != ""
@@ -489,7 +489,7 @@ func NodeAdd(c *gin.Context) {
 	if protocol.IsWireGuardConfig(link) {
 		wg, err := protocol.ParseWireGuardConfig(link)
 		if err != nil {
-			utils.FailWithMsg(c, "WireGuard 配置文件解析失败: "+err.Error())
+			utils.FailWithMsg(c, "Failed to parse WireGuard configuration: "+err.Error())
 			return
 		}
 		// 转换为 URL 格式
@@ -510,7 +510,7 @@ func NodeAdd(c *gin.Context) {
 				}
 				clashExtra, extraErr := protocol.EncodeClashExtra(proxy)
 				if extraErr != nil {
-					utils.Warn("节点【%s】未知 Clash 属性序列化失败，跳过: %v", proxy.Name, extraErr)
+					utils.Warn("Node [%s] failed to serialize unknown Clash attributes; skipped: %v", proxy.Name, extraErr)
 					failedCount++
 					continue
 				}
@@ -552,23 +552,23 @@ func NodeAdd(c *gin.Context) {
 			}
 
 			if addedCount == 0 {
-				utils.FailWithMsg(c, "Clash YAML 解析成功但无法添加任何节点（可能全部重复或格式不支持）")
+				utils.FailWithMsg(c, "Clash YAML parsed successfully but no nodes could be added (all duplicates or unsupported format)")
 				return
 			}
-			utils.OkWithMsg(c, "Clash YAML 导入完成，成功添加 "+strconv.Itoa(addedCount)+" 个节点")
+			utils.OkWithMsg(c, "Clash YAML import finished, added "+strconv.Itoa(addedCount)+" nodes")
 			return
 		}
 	}
 
 	if !strings.Contains(link, "://") {
-		utils.FailWithMsg(c, "link 必须包含 :// 或者是有效的 WireGuard/Clash YAML 配置文件")
+		utils.FailWithMsg(c, "link must contain :// or be a valid WireGuard/Clash YAML configuration file")
 		return
 	}
 	Node.Name = name
 	Node.NameMode = nameMode
 	identity, err := protocol.ExtractLinkIdentity(link)
 	if err != nil {
-		utils.Error("解析节点链接失败: %v", err)
+		utils.Error("Failed to parse node link: %v", err)
 		return
 	}
 	if strings.TrimSpace(Node.Name) == "" {
@@ -577,7 +577,7 @@ func NodeAdd(c *gin.Context) {
 	if userProvidedName {
 		if err := models.EnsureNodeNameAvailable(Node.Name, 0); err != nil {
 			if !failNodeNameConflict(c, err) {
-				utils.FailWithMsg(c, "检查节点备注名称失败")
+				utils.FailWithMsg(c, "Failed to check node remark")
 			}
 			return
 		}
@@ -612,13 +612,13 @@ func NodeAdd(c *gin.Context) {
 				// 重复节点：返回成功响应 + 跳过标记，不终止添加流程
 				dupSource := existingNode.Source
 				if dupSource == "" || dupSource == "manual" {
-					dupSource = "手动添加"
+					dupSource = "Manual"
 				}
 				dupGroup := existingNode.Group
 				if dupGroup == "" {
-					dupGroup = "未分组"
+					dupGroup = "Ungrouped"
 				}
-				utils.OkDetailed(c, "节点重复已跳过", gin.H{
+				utils.OkDetailed(c, "Duplicate node skipped", gin.H{
 					"skipped": true,
 					"duplicateInfo": gin.H{
 						"name":         Node.Name,
@@ -637,7 +637,7 @@ func NodeAdd(c *gin.Context) {
 		if failNodeNameConflict(c, err) {
 			return
 		}
-		utils.FailWithMsg(c, "添加失败检查一下是否节点重复")
+		utils.FailWithMsg(c, "Add failed; check whether the node is a duplicate")
 		return
 	}
 
@@ -656,7 +656,7 @@ func NodeAdd(c *gin.Context) {
 		_ = Node.SetTagNames(validTagNames)
 	}
 
-	utils.OkWithMsg(c, "添加成功")
+	utils.OkWithMsg(c, "Added successfully")
 }
 
 // 删除节点
@@ -664,17 +664,17 @@ func NodeDel(c *gin.Context) {
 	var Node models.Node
 	id := c.Query("id")
 	if id == "" {
-		utils.FailWithMsg(c, "id 不能为空")
+		utils.FailWithMsg(c, "id is required")
 		return
 	}
 	x, _ := strconv.Atoi(id)
 	Node.ID = x
 	err := Node.Del()
 	if err != nil {
-		utils.FailWithMsg(c, "删除失败")
+		utils.FailWithMsg(c, "Delete failed")
 		return
 	}
-	utils.OkWithMsg(c, "删除成功")
+	utils.OkWithMsg(c, "Deleted successfully")
 }
 
 // 节点统计
@@ -682,7 +682,7 @@ func NodesTotal(c *gin.Context) {
 	var Node models.Node
 	nodes, err := Node.List()
 	if err != nil {
-		utils.FailWithMsg(c, "获取不到节点统计")
+		utils.FailWithMsg(c, "Unable to fetch node statistics")
 		return
 	}
 
@@ -702,7 +702,7 @@ func NodesTotal(c *gin.Context) {
 		}
 	}
 
-	utils.OkDetailed(c, "取得节点统计", gin.H{
+	utils.OkDetailed(c, "Node statistics fetched", gin.H{
 		"total":          total,
 		"available":      available,
 		"delayPassCount": delayPassCount,
@@ -716,19 +716,19 @@ func NodeBatchDel(c *gin.Context) {
 		IDs []int `json:"ids"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if len(req.IDs) == 0 {
-		utils.FailWithMsg(c, "请选择要删除的节点")
+		utils.FailWithMsg(c, "Select nodes to delete")
 		return
 	}
 	err := models.BatchDel(req.IDs)
 	if err != nil {
-		utils.FailWithMsg(c, "批量删除失败")
+		utils.FailWithMsg(c, "Batch delete failed")
 		return
 	}
-	utils.OkWithMsg(c, "批量删除成功")
+	utils.OkWithMsg(c, "Batch delete completed")
 }
 
 // NodeBatchUpdateGroup 批量更新节点分组
@@ -738,19 +738,19 @@ func NodeBatchUpdateGroup(c *gin.Context) {
 		Group string `json:"group"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if len(req.IDs) == 0 {
-		utils.FailWithMsg(c, "请选择要修改的节点")
+		utils.FailWithMsg(c, "Select nodes to modify")
 		return
 	}
 	err := models.BatchUpdateGroup(req.IDs, req.Group)
 	if err != nil {
-		utils.FailWithMsg(c, "批量更新分组失败")
+		utils.FailWithMsg(c, "Failed to update groups in batch")
 		return
 	}
-	utils.OkWithMsg(c, "批量更新分组成功")
+	utils.OkWithMsg(c, "Groups updated in batch")
 }
 
 // NodeBatchUpdateDialerProxy 批量更新节点前置代理
@@ -760,19 +760,19 @@ func NodeBatchUpdateDialerProxy(c *gin.Context) {
 		DialerProxyName string `json:"dialerProxyName"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if len(req.IDs) == 0 {
-		utils.FailWithMsg(c, "请选择要修改的节点")
+		utils.FailWithMsg(c, "Select nodes to modify")
 		return
 	}
 	err := models.BatchUpdateDialerProxy(req.IDs, req.DialerProxyName)
 	if err != nil {
-		utils.FailWithMsg(c, "批量更新前置代理失败")
+		utils.FailWithMsg(c, "Failed to update dialer proxies in batch")
 		return
 	}
-	utils.OkWithMsg(c, "批量更新前置代理成功")
+	utils.OkWithMsg(c, "Dialer proxies updated in batch")
 }
 
 // NodeBatchUpdateSource 批量更新节点来源
@@ -782,19 +782,19 @@ func NodeBatchUpdateSource(c *gin.Context) {
 		Source string `json:"source"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if len(req.IDs) == 0 {
-		utils.FailWithMsg(c, "请选择要修改的节点")
+		utils.FailWithMsg(c, "Select nodes to modify")
 		return
 	}
 	err := models.BatchUpdateSource(req.IDs, req.Source)
 	if err != nil {
-		utils.FailWithMsg(c, "批量更新来源失败")
+		utils.FailWithMsg(c, "Failed to update sources in batch")
 		return
 	}
-	utils.OkWithMsg(c, "批量更新来源成功")
+	utils.OkWithMsg(c, "Sources updated in batch")
 }
 
 // NodeBatchUpdateCountry 批量更新节点国家代码
@@ -804,21 +804,21 @@ func NodeBatchUpdateCountry(c *gin.Context) {
 		Country string `json:"country"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 	if len(req.IDs) == 0 {
-		utils.FailWithMsg(c, "请选择要修改的节点")
+		utils.FailWithMsg(c, "Select nodes to modify")
 		return
 	}
 	// 国家代码转大写，保持一致性
 	country := strings.ToUpper(strings.TrimSpace(req.Country))
 	err := models.BatchUpdateCountry(req.IDs, country)
 	if err != nil {
-		utils.FailWithMsg(c, "批量更新国家代码失败")
+		utils.FailWithMsg(c, "Failed to update country codes in batch")
 		return
 	}
-	utils.OkWithMsg(c, "批量更新国家代码成功")
+	utils.OkWithMsg(c, "Country codes updated in batch")
 }
 
 // NodeBatchFillCountry 批量填充节点国家信息
@@ -829,7 +829,7 @@ func NodeBatchFillCountry(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误")
+		utils.FailWithMsg(c, "Invalid parameters")
 		return
 	}
 
@@ -844,7 +844,7 @@ func NodeBatchFillCountry(c *gin.Context) {
 
 	var nodes []models.Node
 	if err := query.Find(&nodes).Error; err != nil {
-		utils.FailWithMsg(c, "查询节点失败")
+		utils.FailWithMsg(c, "Failed to query nodes")
 		return
 	}
 
@@ -861,7 +861,7 @@ func NodeBatchFillCountry(c *gin.Context) {
 		}
 	}
 
-	utils.OkDetailed(c, "批量填充完成", gin.H{
+	utils.OkDetailed(c, "Batch fill completed", gin.H{
 		"total":   len(nodes),
 		"updated": updated,
 	})
@@ -872,10 +872,10 @@ func GetGroups(c *gin.Context) {
 	var node models.Node
 	groups, err := node.GetAllGroups()
 	if err != nil {
-		utils.FailWithMsg(c, "获取分组列表失败")
+		utils.FailWithMsg(c, "Failed to fetch group list")
 		return
 	}
-	utils.OkDetailed(c, "获取分组列表成功", groups)
+	utils.OkDetailed(c, "Group list fetched", groups)
 }
 
 // GetSources 获取所有来源列表
@@ -883,34 +883,34 @@ func GetSources(c *gin.Context) {
 	var node models.Node
 	sources, err := node.GetAllSources()
 	if err != nil {
-		utils.FailWithMsg(c, "获取来源列表失败")
+		utils.FailWithMsg(c, "Failed to fetch source list")
 		return
 	}
-	utils.OkDetailed(c, "获取来源列表成功", sources)
+	utils.OkDetailed(c, "Source list fetched", sources)
 }
 
 // FastestSpeedNode 获取最快速度节点
 func FastestSpeedNode(c *gin.Context) {
 	node := models.GetFastestSpeedNode()
-	utils.OkDetailed(c, "获取最快速度节点成功", node)
+	utils.OkDetailed(c, "Fastest node fetched", node)
 }
 
 // LowestDelayNode 获取最低延迟节点
 func LowestDelayNode(c *gin.Context) {
 	node := models.GetLowestDelayNode()
-	utils.OkDetailed(c, "获取最低延迟节点成功", node)
+	utils.OkDetailed(c, "Lowest-latency node fetched", node)
 }
 
 // GetNodeCountries 获取所有节点的国家代码列表
 func GetNodeCountries(c *gin.Context) {
 	countries := models.GetAllCountries()
-	utils.OkDetailed(c, "获取国家代码成功", countries)
+	utils.OkDetailed(c, "Country code fetched", countries)
 }
 
 // NodeCountryStats 获取按国家统计的节点数量
 func NodeCountryStats(c *gin.Context) {
 	stats := models.GetNodeCountryStats()
-	utils.OkDetailed(c, "获取国家统计成功", stats)
+	utils.OkDetailed(c, "Country statistics fetched successfully", stats)
 }
 
 // NodeCountryStatsFiltered 获取符合过滤条件的按国家统计节点数量
@@ -918,7 +918,7 @@ func NodeCountryStatsFiltered(c *gin.Context) {
 	var Node models.Node
 	filter := buildNodeFilterFromQuery(c)
 	items, total := Node.GetFilteredCountryStats(filter)
-	utils.OkDetailed(c, "获取国家统计成功", gin.H{
+	utils.OkDetailed(c, "Country statistics fetched successfully", gin.H{
 		"items": items,
 		"total": total,
 	})
@@ -926,41 +926,41 @@ func NodeCountryStatsFiltered(c *gin.Context) {
 
 func DashboardCountryStats(c *gin.Context) {
 	stats := models.GetDashboardCountryStats()
-	utils.OkDetailed(c, "获取仪表盘国家统计成功", stats)
+	utils.OkDetailed(c, "Dashboard country statistics fetched", stats)
 }
 
 // NodeProtocolStats 获取按协议统计的节点数量
 func NodeProtocolStats(c *gin.Context) {
 	stats := models.GetNodeProtocolStats()
-	utils.OkDetailed(c, "获取协议统计成功", stats)
+	utils.OkDetailed(c, "Protocol statistics fetched", stats)
 }
 
 // NodeTagStats 获取按标签统计的节点数量
 func NodeTagStats(c *gin.Context) {
 	stats := models.GetNodeTagStats()
-	utils.OkDetailed(c, "获取标签统计成功", stats)
+	utils.OkDetailed(c, "Tag statistics fetched", stats)
 }
 
 // NodeGroupStats 获取按分组统计的节点数量
 func NodeGroupStats(c *gin.Context) {
 	stats := models.GetNodeGroupStats()
-	utils.OkDetailed(c, "获取分组统计成功", stats)
+	utils.OkDetailed(c, "Group statistics fetched", stats)
 }
 
 // NodeSourceStats 获取按来源统计的节点数量
 func NodeSourceStats(c *gin.Context) {
 	stats := models.GetNodeSourceStats()
-	utils.OkDetailed(c, "获取来源统计成功", stats)
+	utils.OkDetailed(c, "Source statistics fetched", stats)
 }
 
 func DashboardGroupedStats(c *gin.Context) {
 	stats := models.GetDashboardGroupedStats()
-	utils.OkDetailed(c, "获取仪表盘分组统计成功", stats)
+	utils.OkDetailed(c, "Dashboard grouped statistics fetched", stats)
 }
 
 func DashboardQualityStats(c *gin.Context) {
 	stats := models.GetDashboardQualityStats()
-	utils.OkDetailed(c, "获取仪表盘质量统计成功", stats)
+	utils.OkDetailed(c, "Dashboard quality statistics fetched", stats)
 }
 
 // GetIPDetails 获取IP详细信息
@@ -968,25 +968,25 @@ func DashboardQualityStats(c *gin.Context) {
 func GetIPDetails(c *gin.Context) {
 	ip := c.Query("ip")
 	if ip == "" {
-		utils.FailWithMsg(c, "IP地址不能为空")
+		utils.FailWithMsg(c, "IP address is required")
 		return
 	}
 
 	// 调用模型层获取IP信息（多级缓存）
 	ipInfo, err := models.GetIPInfo(ip)
 	if err != nil {
-		utils.FailWithMsg(c, "查询IP信息失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to query IP information: "+err.Error())
 		return
 	}
 
-	utils.OkDetailed(c, "获取成功", ipInfo)
+	utils.OkDetailed(c, "Fetched successfully", ipInfo)
 }
 
 // GetIPCacheStats 获取IP缓存统计
 // GET /api/v1/nodes/ip-cache/stats
 func GetIPCacheStats(c *gin.Context) {
 	count := models.GetIPInfoCount()
-	utils.OkDetailed(c, "获取成功", gin.H{
+	utils.OkDetailed(c, "Fetched successfully", gin.H{
 		"count": count,
 	})
 }
@@ -996,15 +996,15 @@ func GetIPCacheStats(c *gin.Context) {
 func ClearIPCache(c *gin.Context) {
 	err := models.ClearAllIPInfo()
 	if err != nil {
-		utils.FailWithMsg(c, "清除失败: "+err.Error())
+		utils.FailWithMsg(c, "Clear failed: "+err.Error())
 		return
 	}
-	utils.OkWithMsg(c, "IP缓存已清除")
+	utils.OkWithMsg(c, "IP cache cleared")
 }
 
 // GetNodeProtocols 获取所有使用中的协议类型列表（用于过滤器选项）
 // GET /api/v1/nodes/protocols
 func GetNodeProtocols(c *gin.Context) {
 	protocols := models.GetAllProtocols()
-	utils.OkDetailed(c, "获取协议列表成功", protocols)
+	utils.OkDetailed(c, "Protocol list fetched", protocols)
 }

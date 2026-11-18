@@ -202,10 +202,10 @@ func TestTagRenameRejectsInvalidNames(t *testing.T) {
 		name string
 		want string
 	}{
-		{"premium", "已存在"},
-		{"a,b", "逗号"},
-		{"   ", "不能为空"},
-		{strings.Repeat("长", TagNameMaxLength+1), "不能超过"},
+		{"premium", "already exists"},
+		{"a,b", "commas"},
+		{"   ", "required"},
+		{strings.Repeat("x", TagNameMaxLength+1), "exceed"},
 	}
 	for _, tc := range cases {
 		err := tag.Rename(tc.name)

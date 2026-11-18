@@ -193,12 +193,14 @@ func clashProxyGroupEdit(lines []string, group *yaml.Node, proxyNames []string) 
 	if groupType, _ := fields["type"].(string); strings.TrimSpace(groupType) == "relay" {
 		return clashTextEdit{}, false, true
 	}
-	if shouldPreserveProxyGroup(fields) {
-		return clashTextEdit{}, false, true
-	}
+	// 自动匹配组不能补全成员，但显式写下的 __ALL_PROXIES__ 仍要就地展开。
+	preserve := shouldPreserveProxyGroup(fields)
 
 	keyNode, valueNode, found := clashMappingKeyValue(group, "proxies")
 	if !found {
+		if preserve {
+			return clashTextEdit{}, false, true
+		}
 		groupIndent := group.Column - 1
 		itemLines, ok := clashNameItemLines(clashFillNames(proxyNames), groupIndent+2)
 		if !ok {
@@ -209,7 +211,7 @@ func clashProxyGroupEdit(lines []string, group *yaml.Node, proxyNames []string) 
 		return clashTextEdit{start: end, end: end, lines: replacement}, true, true
 	}
 
-	return clashProxyNamesEdit(lines, keyNode, valueNode, proxyNames)
+	return clashProxyNamesEdit(lines, keyNode, valueNode, proxyNames, !preserve)
 }
 
 // clashFillNames 返回填充空代理组时使用的节点名列表，空订阅回退到 DIRECT。
@@ -221,7 +223,8 @@ func clashFillNames(names []string) []string {
 }
 
 // clashProxyNamesEdit 用节点名替换单个代理组的 proxies 内容。
-func clashProxyNamesEdit(lines []string, keyNode, valueNode *yaml.Node, names []string) (clashTextEdit, bool, bool) {
+// fillEmpty=false 时只展开 __ALL_PROXIES__，缺失或空列表保持模板原样（自动匹配组）。
+func clashProxyNamesEdit(lines []string, keyNode, valueNode *yaml.Node, names []string, fillEmpty bool) (clashTextEdit, bool, bool) {
 	keyLine := keyNode.Line - 1
 	if keyLine < 0 || keyLine >= len(lines) {
 		return clashTextEdit{}, false, false
@@ -239,6 +242,9 @@ func clashProxyNamesEdit(lines []string, keyNode, valueNode *yaml.Node, names []
 	if resolved.Kind == yaml.ScalarNode {
 		if resolved.Tag != "!!null" {
 			return clashTextEdit{}, false, false
+		}
+		if !fillEmpty {
+			return clashTextEdit{}, false, true
 		}
 		itemLines, ok := clashNameItemLines(clashFillNames(names), itemIndent)
 		if !ok {
@@ -262,6 +268,9 @@ func clashProxyNamesEdit(lines []string, keyNode, valueNode *yaml.Node, names []
 
 	if resolved.Style&yaml.FlowStyle != 0 {
 		if len(resolved.Content) == 0 {
+			if !fillEmpty {
+				return clashTextEdit{}, false, true
+			}
 			itemLines, ok := clashNameItemLines(clashFillNames(names), itemIndent)
 			if !ok {
 				return clashTextEdit{}, false, false

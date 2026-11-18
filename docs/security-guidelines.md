@@ -291,6 +291,7 @@ server {
 **Authentication**:
 - All `/api/v1/*` endpoints require authentication
 - Use `X-API-Key` header or JWT token
+- JWT tokens are accepted in the query string only on `GET /api/sse`, because the browser `EventSource` API cannot send headers; all other endpoints require the `Authorization` header
 - Subscription endpoints `/c/*` use token-based auth
 
 **Rate limiting** (recommended):

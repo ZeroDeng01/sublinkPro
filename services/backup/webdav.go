@@ -72,7 +72,7 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 	baseURL, err := url.Parse(cfg.BaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("解析 WebDAV 地址失败: %w", err)
+		return nil, fmt.Errorf("failed to parse WebDAV URL: %w", err)
 	}
 	dialContext := safeDialContext(cfg.AllowPrivateNetwork)
 	transport := &http.Transport{
@@ -95,7 +95,7 @@ func NewClient(cfg Config) (*Client, error) {
 					// with a trailing slash. Do not convert MKCOL into GET.
 					return http.ErrUseLastResponse
 				}
-				return errors.New("WebDAV 重定向已被拒绝")
+				return errors.New("WebDAV redirect was rejected")
 			},
 		},
 	}, nil
@@ -109,18 +109,18 @@ func safeDialContext(allowPrivate bool) func(context.Context, string, string) (n
 		}
 		host, port, err := net.SplitHostPort(address)
 		if err != nil {
-			return nil, fmt.Errorf("解析 WebDAV 目标地址失败: %w", err)
+			return nil, fmt.Errorf("failed to parse WebDAV target URL: %w", err)
 		}
 		addresses, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 		if err != nil {
-			return nil, fmt.Errorf("解析 WebDAV 主机失败: %w", err)
+			return nil, fmt.Errorf("failed to resolve WebDAV host: %w", err)
 		}
 		if len(addresses) == 0 {
-			return nil, errors.New("WebDAV 主机没有可用地址")
+			return nil, errors.New("WebDAV host has no usable address")
 		}
 		for _, resolved := range addresses {
 			if !isPublicWebDAVIP(resolved.IP) {
-				return nil, fmt.Errorf("WebDAV 主机解析到私有或保留地址 %s；如需连接内网 NAS，请显式允许私有网络", resolved.IP)
+				return nil, fmt.Errorf("WebDAV host resolves to a private or reserved address %s; to connect to a LAN NAS, explicitly allow private networks", resolved.IP)
 			}
 		}
 		var lastErr error
@@ -159,7 +159,7 @@ func (c *Client) Test(ctx context.Context) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusMultiStatus {
-		return c.statusError(resp, "测试 WebDAV 连接")
+		return c.statusError(resp, "Testing WebDAV connection")
 	}
 	body, err := readLimited(resp.Body, maxWebDAVResponseBytes)
 	if err != nil {
@@ -170,14 +170,14 @@ func (c *Client) Test(ctx context.Context) error {
 	}
 	var result davMultiStatus
 	if err := xml.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("解析 WebDAV 连接测试响应失败: %w", err)
+		return fmt.Errorf("failed to parse WebDAV connection test response: %w", err)
 	}
 	for _, response := range result.Responses {
 		if response.successful() {
 			return nil
 		}
 	}
-	return errors.New("WebDAV 连接测试未返回可访问的目录")
+	return errors.New("WebDAV connection test did not return an accessible directory")
 }
 
 func (c *Client) EnsureDirectory(ctx context.Context) error {
@@ -195,16 +195,16 @@ func (c *Client) EnsureDirectory(ctx context.Context) error {
 			continue
 		}
 		if status == http.StatusConflict {
-			return fmt.Errorf("创建 WebDAV 目录失败，父目录不存在或无权限 (HTTP %d)", status)
+			return fmt.Errorf("failed to create WebDAV directory: parent missing or permission denied (HTTP %d)", status)
 		}
-		return fmt.Errorf("创建 WebDAV 目录失败 (HTTP %d)", status)
+		return fmt.Errorf("failed to create WebDAV directory (HTTP %d)", status)
 	}
 	return nil
 }
 
 func (c *Client) Upload(ctx context.Context, archive Archive) (RemoteFile, error) {
 	if archive.Size <= 0 || archive.Size > MaxBackupArchiveBytes {
-		return RemoteFile{}, fmt.Errorf("备份大小必须在 1 字节到 %d 字节之间", MaxBackupArchiveBytes)
+		return RemoteFile{}, fmt.Errorf("backup size must be between 1 and %d bytes", MaxBackupArchiveBytes)
 	}
 	if err := validateBackupFilename(archive.Name); err != nil {
 		return RemoteFile{}, err
@@ -224,7 +224,7 @@ func (c *Client) Upload(ctx context.Context, archive Archive) (RemoteFile, error
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return RemoteFile{}, c.statusError(resp, "上传 WebDAV 备份")
+		return RemoteFile{}, c.statusError(resp, "Uploading WebDAV backup")
 	}
 	return RemoteFile{Name: archive.Name, Size: archive.Size, ModifiedAt: archive.Modified}, nil
 }
@@ -236,7 +236,7 @@ func (c *Client) List(ctx context.Context) ([]RemoteFile, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusMultiStatus {
-		return nil, c.statusError(resp, "读取 WebDAV 备份列表")
+		return nil, c.statusError(resp, "Reading WebDAV backup list")
 	}
 	body, err := readLimited(resp.Body, maxWebDAVResponseBytes)
 	if err != nil {
@@ -244,7 +244,7 @@ func (c *Client) List(ctx context.Context) ([]RemoteFile, error) {
 	}
 	var result davMultiStatus
 	if err := xml.Unmarshal(body, &result); err != nil {
-		return nil, fmt.Errorf("解析 WebDAV 文件列表失败: %w", err)
+		return nil, fmt.Errorf("failed to parse WebDAV file list: %w", err)
 	}
 	files := make([]RemoteFile, 0, len(result.Responses))
 	for _, response := range result.Responses {
@@ -266,17 +266,17 @@ func (c *Client) Download(ctx context.Context, filename string, dst io.Writer) (
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return 0, c.statusError(resp, "下载 WebDAV 备份")
+		return 0, c.statusError(resp, "Downloading WebDAV backup")
 	}
 	if resp.ContentLength > MaxBackupArchiveBytes {
-		return 0, fmt.Errorf("远程备份超过 %d 字节限制", MaxBackupArchiveBytes)
+		return 0, fmt.Errorf("remote backup exceeds the %d byte limit", MaxBackupArchiveBytes)
 	}
 	written, err := io.Copy(dst, io.LimitReader(resp.Body, MaxBackupArchiveBytes+1))
 	if err != nil {
-		return written, fmt.Errorf("写入 WebDAV 备份失败: %w", err)
+		return written, fmt.Errorf("failed to write WebDAV backup: %w", err)
 	}
 	if written > MaxBackupArchiveBytes {
-		return written, fmt.Errorf("远程备份超过 %d 字节限制", MaxBackupArchiveBytes)
+		return written, fmt.Errorf("remote backup exceeds the %d byte limit", MaxBackupArchiveBytes)
 	}
 	return written, nil
 }
@@ -284,7 +284,7 @@ func (c *Client) Download(ctx context.Context, filename string, dst io.Writer) (
 func (c *Client) request(ctx context.Context, method, target string, body io.Reader, headers map[string]string, contentLength int64) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, target, body)
 	if err != nil {
-		return nil, fmt.Errorf("创建 WebDAV 请求失败: %w", err)
+		return nil, fmt.Errorf("failed to create WebDAV request: %w", err)
 	}
 	for key, value := range headers {
 		req.Header.Set(key, value)
@@ -297,7 +297,7 @@ func (c *Client) request(ctx context.Context, method, target string, body io.Rea
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("WebDAV 请求失败: %w", err)
+		return nil, fmt.Errorf("WebDAV request failed: %w", err)
 	}
 	return resp, nil
 }
@@ -306,13 +306,13 @@ func (c *Client) statusError(resp *http.Response, action string) error {
 	_, _ = readLimited(resp.Body, 4096)
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
-		return fmt.Errorf("%s失败：用户名或密码错误", action)
+		return fmt.Errorf("%s failed: invalid username or password", action)
 	case http.StatusForbidden:
-		return fmt.Errorf("%s失败：没有远程目录权限", action)
+		return fmt.Errorf("%s failed: no permission for the remote directory", action)
 	case http.StatusNotFound:
-		return fmt.Errorf("%s失败：远程路径不存在", action)
+		return fmt.Errorf("%s failed: remote path does not exist", action)
 	default:
-		return fmt.Errorf("%s失败 (HTTP %d)", action, resp.StatusCode)
+		return fmt.Errorf("%s failed (HTTP %d)", action, resp.StatusCode)
 	}
 }
 
@@ -361,10 +361,10 @@ func (c *Client) urlForSegments(segments ...string) string {
 
 func validateBackupFilename(filename string) error {
 	if filename == "" || filename != path.Base(filename) || strings.Contains(filename, "\\") || strings.ContainsRune(filename, '\x00') {
-		return errors.New("WebDAV 备份文件名无效")
+		return errors.New("invalid WebDAV backup file name")
 	}
 	if !strings.HasSuffix(strings.ToLower(filename), ".zip") {
-		return errors.New("仅支持 ZIP 备份文件")
+		return errors.New("only ZIP backup files are supported")
 	}
 	return nil
 }
@@ -375,7 +375,7 @@ func readLimited(reader io.Reader, limit int64) ([]byte, error) {
 		return nil, err
 	}
 	if int64(len(body)) > limit {
-		return nil, fmt.Errorf("WebDAV 响应超过 %d 字节限制", limit)
+		return nil, fmt.Errorf("WebDAV response exceeds the %d byte limit", limit)
 	}
 	return body, nil
 }
@@ -383,7 +383,7 @@ func readLimited(reader io.Reader, limit int64) ([]byte, error) {
 var openArchive = func(filePath string) (io.ReadCloser, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("打开备份文件失败: %w", err)
+		return nil, fmt.Errorf("failed to open backup file: %w", err)
 	}
 	return file, nil
 }

@@ -672,7 +672,7 @@ export default function AirportList() {
           }
 
           // 兼容后端返回 OkWithMsg 的场景（data 为空）
-          if (res.msg && res.msg !== '操作成功') {
+          if (res.msg && res.msg !== 'Success' && res.msg !== '操作成功') {
             showMessage(res.msg, 'warning');
             return;
           }
@@ -724,7 +724,7 @@ export default function AirportList() {
           }
 
           // 兼容后端返回 OkWithMsg 的场景（data 为空）
-          if (res.msg && res.msg !== '操作成功') {
+          if (res.msg && res.msg !== 'Success' && res.msg !== '操作成功') {
             showMessage(res.msg, 'warning');
             return;
           }

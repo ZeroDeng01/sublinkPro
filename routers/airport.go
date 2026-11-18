@@ -16,6 +16,7 @@ func Airport(r *gin.Engine) {
 		airportGroup.GET("", api.AirportList)
 		// 用量历史（静态路径需在 :id 之前注册）
 		airportGroup.GET("/usage-sparklines", api.GetAirportUsageSparklines)
+		airportGroup.GET("/usage-daily", api.GetAirportDailyUsage)
 		airportGroup.GET("/:id", api.AirportGet)
 		airportGroup.GET("/:id/usage-history", api.GetAirportUsageHistory)
 		// 增删改（演示模式下限制）

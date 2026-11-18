@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 
 // project imports
 import LogoSection from '../LogoSection';
+import TodayTrafficBadge from './TodayTrafficBadge';
 import ProfileSection from './ProfileSection';
 import NotificationSection from './NotificationSection';
 import DonationSection from './DonationSection';
@@ -73,11 +74,18 @@ export default function Header() {
         </Avatar>
       </Box>
 
+      {/* today's traffic badge */}
+      <Box sx={{ ml: 1, display: 'flex' }}>
+        <TodayTrafficBadge />
+      </Box>
+
       {/* spacer */}
       <Box sx={{ flexGrow: 1 }} />
 
-      {/* donation */}
-      <DonationSection />
+      {/* donation - desktop only */}
+      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+        <DonationSection />
+      </Box>
 
       {/* AI skill download - desktop only */}
       <Box sx={{ display: { xs: 'none', md: 'block' } }}>

@@ -26,7 +26,7 @@ func (m *CacheManager) Register(name string, cache any) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.caches[name] = cache
-	utils.Info("缓存模块注册成功: %s", name)
+	utils.Info("Cache module registered: %s", name)
 }
 
 // RegisterWithInit 注册模块缓存及其初始化函数
@@ -38,7 +38,7 @@ func (m *CacheManager) RegisterWithInit(name string, cache any, initFunc func() 
 	defer m.lock.Unlock()
 	m.caches[name] = cache
 	m.initializers[name] = initFunc
-	utils.Info("缓存模块注册成功（含初始化器）: %s", name)
+	utils.Info("Cache module registered (with initializer): %s", name)
 }
 
 // Get 获取指定模块的缓存
@@ -54,16 +54,16 @@ func (m *CacheManager) InitAll() error {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	utils.Info("开始初始化所有缓存模块...")
+	utils.Info("Initializing all cache modules...")
 	for name, initFunc := range m.initializers {
-		utils.Info("正在初始化缓存: %s", name)
+		utils.Info("Initializing cache: %s", name)
 		if err := initFunc(); err != nil {
-			utils.Error("缓存初始化失败 [%s]: %v", name, err)
+			utils.Error("Cache initialization failed [%s]: %v", name, err)
 			return err
 		}
-		utils.Info("缓存初始化成功: %s", name)
+		utils.Info("Cache initialized: %s", name)
 	}
-	utils.Info("所有缓存模块初始化完成")
+	utils.Info("All cache modules initialized")
 	return nil
 }
 

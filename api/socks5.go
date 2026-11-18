@@ -18,7 +18,7 @@ func requireSocks5Admin(c *gin.Context) bool {
 	}
 	user := &models.User{Username: username}
 	if err := user.Find(); err != nil || !strings.EqualFold(user.Role, "admin") {
-		utils.ForbiddenI18n(c, "仅管理员可管理 SOCKS5 服务", "settings.socks5.api.adminRequired", nil)
+		utils.ForbiddenI18n(c, "Only administrators can manage the SOCKS5 service", "settings.socks5.api.adminRequired", nil)
 		return false
 	}
 	return true
@@ -30,11 +30,11 @@ func GetSocks5Settings(c *gin.Context) {
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	running, bound := socks5service.DefaultManager().Status()
-	utils.OkDetailedI18n(c, "SOCKS5 设置已加载", socks5service.ToPublicConfig(cfg, running, bound), "settings.socks5.api.loaded", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 settings loaded", socks5service.ToPublicConfig(cfg, running, bound), "settings.socks5.api.loaded", nil)
 }
 
 func UpdateSocks5Settings(c *gin.Context) {
@@ -71,12 +71,12 @@ func UpdateSocks5Settings(c *gin.Context) {
 		StickySessionTTLSeconds      *int      `json:"stickySessionTtlSeconds"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithI18n(c, "参数错误", "settings.socks5.api.invalidRequest", nil)
+		utils.FailWithI18n(c, "Invalid parameters", "settings.socks5.api.invalidRequest", nil)
 		return
 	}
 	current, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	password := current.Password
@@ -191,15 +191,15 @@ func UpdateSocks5Settings(c *gin.Context) {
 		ClearPassword:                req.ClearPassword,
 	})
 	if err != nil {
-		utils.FailWithI18n(c, "SOCKS5 设置无效: "+err.Error(), "settings.socks5.api.invalidSettings", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Invalid SOCKS5 settings: "+err.Error(), "settings.socks5.api.invalidSettings", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DefaultManager().Apply(cfg); err != nil {
-		utils.FailWithI18n(c, "启动 SOCKS5 服务失败: "+err.Error(), "settings.socks5.api.startFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to start SOCKS5 service: "+err.Error(), "settings.socks5.api.startFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	running, bound := socks5service.DefaultManager().Status()
-	utils.OkDetailedI18n(c, "SOCKS5 设置已保存", socks5service.ToPublicConfig(cfg, running, bound), "settings.socks5.api.saved", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 settings saved", socks5service.ToPublicConfig(cfg, running, bound), "settings.socks5.api.saved", nil)
 }
 
 func StopSocks5(c *gin.Context) {
@@ -209,11 +209,11 @@ func StopSocks5(c *gin.Context) {
 	socks5service.DefaultManager().Stop()
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	running, bound := socks5service.DefaultManager().Status()
-	utils.OkDetailedI18n(c, "SOCKS5 服务已停止", socks5service.ToPublicConfig(cfg, running, bound), "settings.socks5.api.stopped", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 service stopped", socks5service.ToPublicConfig(cfg, running, bound), "settings.socks5.api.stopped", nil)
 }
 
 func GetSocks5Status(c *gin.Context) {
@@ -222,11 +222,11 @@ func GetSocks5Status(c *gin.Context) {
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	running, bound := socks5service.DefaultManager().Status()
-	utils.OkDetailedI18n(c, "SOCKS5 状态已加载", gin.H{"config": socks5service.ToPublicConfig(cfg, running, bound), "listeners": socks5service.DefaultManager().ListenerStatuses(), "stats": socks5service.DefaultManager().GatewaySnapshot(), "health": socks5service.DefaultManager().HealthSnapshot()}, "settings.socks5.api.statusLoaded", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 status loaded", gin.H{"config": socks5service.ToPublicConfig(cfg, running, bound), "listeners": socks5service.DefaultManager().ListenerStatuses(), "stats": socks5service.DefaultManager().GatewaySnapshot(), "health": socks5service.DefaultManager().HealthSnapshot()}, "settings.socks5.api.statusLoaded", nil)
 }
 
 type socks5RoutingProfileRequest struct {
@@ -271,15 +271,15 @@ func ListSocks5RoutingProfiles(c *gin.Context) {
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	profiles, err := socks5service.ListRoutingProfiles(cfg)
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 路由配置失败: "+err.Error(), "settings.socks5.api.profileLoadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 routing profiles: "+err.Error(), "settings.socks5.api.profileLoadFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 路由配置已加载", profiles, "settings.socks5.api.profilesLoaded", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 routing profiles loaded", profiles, "settings.socks5.api.profilesLoaded", nil)
 }
 
 func CreateSocks5RoutingProfile(c *gin.Context) {
@@ -288,24 +288,24 @@ func CreateSocks5RoutingProfile(c *gin.Context) {
 	}
 	var req socks5RoutingProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithI18n(c, "参数错误: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
+		utils.FailWithI18n(c, "Invalid parameters: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
 		return
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	profile, err := socks5service.CreateRoutingProfile(cfg, req.profile("", true))
 	if err != nil {
-		utils.FailWithI18n(c, "创建 SOCKS5 路由配置失败: "+err.Error(), "settings.socks5.api.profileSaveFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to create SOCKS5 routing profile: "+err.Error(), "settings.socks5.api.profileSaveFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DefaultManager().ReloadRoutingProfiles(); err != nil {
-		utils.FailWithI18n(c, "应用 SOCKS5 路由配置失败: "+err.Error(), "settings.socks5.api.profileApplyFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to apply SOCKS5 routing profile: "+err.Error(), "settings.socks5.api.profileApplyFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 路由配置已创建", profile, "settings.socks5.api.profileCreated", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 routing profile created", profile, "settings.socks5.api.profileCreated", nil)
 }
 
 func UpdateSocks5RoutingProfile(c *gin.Context) {
@@ -314,29 +314,29 @@ func UpdateSocks5RoutingProfile(c *gin.Context) {
 	}
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
-		utils.FailWithI18n(c, "SOCKS5 路由配置 ID 无效", "settings.socks5.api.invalidProfile", nil)
+		utils.FailWithI18n(c, "Invalid SOCKS5 routing profile ID", "settings.socks5.api.invalidProfile", nil)
 		return
 	}
 	var req socks5RoutingProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithI18n(c, "参数错误: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
+		utils.FailWithI18n(c, "Invalid parameters: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
 		return
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	profile, err := socks5service.UpdateRoutingProfile(cfg, id, req.profile(id, false))
 	if err != nil {
-		utils.FailWithI18n(c, "更新 SOCKS5 路由配置失败: "+err.Error(), "settings.socks5.api.profileSaveFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to update SOCKS5 routing profile: "+err.Error(), "settings.socks5.api.profileSaveFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DefaultManager().ReloadRoutingProfiles(); err != nil {
-		utils.FailWithI18n(c, "应用 SOCKS5 路由配置失败: "+err.Error(), "settings.socks5.api.profileApplyFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to apply SOCKS5 routing profile: "+err.Error(), "settings.socks5.api.profileApplyFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 路由配置已更新", profile, "settings.socks5.api.profileUpdated", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 routing profile updated", profile, "settings.socks5.api.profileUpdated", nil)
 }
 
 func DeleteSocks5RoutingProfile(c *gin.Context) {
@@ -345,23 +345,23 @@ func DeleteSocks5RoutingProfile(c *gin.Context) {
 	}
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
-		utils.FailWithI18n(c, "SOCKS5 路由配置 ID 无效", "settings.socks5.api.invalidProfile", nil)
+		utils.FailWithI18n(c, "Invalid SOCKS5 routing profile ID", "settings.socks5.api.invalidProfile", nil)
 		return
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DeleteRoutingProfile(cfg, id); err != nil {
-		utils.FailWithI18n(c, "删除 SOCKS5 路由配置失败: "+err.Error(), "settings.socks5.api.profileDeleteFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to delete SOCKS5 routing profile: "+err.Error(), "settings.socks5.api.profileDeleteFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DefaultManager().ReloadRoutingProfiles(); err != nil {
-		utils.FailWithI18n(c, "应用 SOCKS5 路由配置失败: "+err.Error(), "settings.socks5.api.profileApplyFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to apply SOCKS5 routing profile: "+err.Error(), "settings.socks5.api.profileApplyFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 路由配置已删除", nil, "settings.socks5.api.profileDeleted", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 routing profile deleted", nil, "settings.socks5.api.profileDeleted", nil)
 }
 
 type socks5ListenerRequest struct {
@@ -397,10 +397,10 @@ func ListSocks5Listeners(c *gin.Context) {
 		return
 	}
 	if _, err := socks5service.LoadConfig(); err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 监听器已加载", socks5service.DefaultManager().ListenerStatuses(), "settings.socks5.api.listenersLoaded", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 listeners loaded", socks5service.DefaultManager().ListenerStatuses(), "settings.socks5.api.listenersLoaded", nil)
 }
 
 func rollbackSocks5Listeners(cfg socks5service.Config, previous []socks5service.ListenerSpec) {
@@ -414,30 +414,30 @@ func CreateSocks5Listener(c *gin.Context) {
 	}
 	var req socks5ListenerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithI18n(c, "参数错误: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
+		utils.FailWithI18n(c, "Invalid parameters: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
 		return
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	previous, err := socks5service.LoadListeners(cfg)
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 监听器失败: "+err.Error(), "settings.socks5.api.listenerLoadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 listeners: "+err.Error(), "settings.socks5.api.listenerLoadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	listener, err := socks5service.CreateListener(cfg, req.listener("", true))
 	if err != nil {
-		utils.FailWithI18n(c, "创建 SOCKS5 监听器失败: "+err.Error(), "settings.socks5.api.listenerSaveFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to create SOCKS5 listener: "+err.Error(), "settings.socks5.api.listenerSaveFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DefaultManager().Apply(cfg); err != nil {
 		rollbackSocks5Listeners(cfg, previous)
-		utils.FailWithI18n(c, "应用 SOCKS5 监听器失败: "+err.Error(), "settings.socks5.api.listenerApplyFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to apply SOCKS5 listener: "+err.Error(), "settings.socks5.api.listenerApplyFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 监听器已创建", listener, "settings.socks5.api.listenerCreated", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 listener created", listener, "settings.socks5.api.listenerCreated", nil)
 }
 
 func UpdateSocks5Listener(c *gin.Context) {
@@ -446,22 +446,22 @@ func UpdateSocks5Listener(c *gin.Context) {
 	}
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
-		utils.FailWithI18n(c, "SOCKS5 监听器 ID 无效", "settings.socks5.api.invalidListener", nil)
+		utils.FailWithI18n(c, "Invalid SOCKS5 listener ID", "settings.socks5.api.invalidListener", nil)
 		return
 	}
 	var req socks5ListenerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithI18n(c, "参数错误: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
+		utils.FailWithI18n(c, "Invalid parameters: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
 		return
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	previous, err := socks5service.LoadListeners(cfg)
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 监听器失败: "+err.Error(), "settings.socks5.api.listenerLoadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 listeners: "+err.Error(), "settings.socks5.api.listenerLoadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	enabled := false
@@ -478,15 +478,15 @@ func UpdateSocks5Listener(c *gin.Context) {
 	}
 	listener, err := socks5service.UpdateListener(cfg, id, req.listener(id, enabled))
 	if err != nil {
-		utils.FailWithI18n(c, "更新 SOCKS5 监听器失败: "+err.Error(), "settings.socks5.api.listenerSaveFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to update SOCKS5 listener: "+err.Error(), "settings.socks5.api.listenerSaveFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DefaultManager().Apply(cfg); err != nil {
 		rollbackSocks5Listeners(cfg, previous)
-		utils.FailWithI18n(c, "应用 SOCKS5 监听器失败: "+err.Error(), "settings.socks5.api.listenerApplyFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to apply SOCKS5 listener: "+err.Error(), "settings.socks5.api.listenerApplyFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 监听器已更新", listener, "settings.socks5.api.listenerUpdated", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 listener updated", listener, "settings.socks5.api.listenerUpdated", nil)
 }
 
 func DeleteSocks5Listener(c *gin.Context) {
@@ -495,29 +495,29 @@ func DeleteSocks5Listener(c *gin.Context) {
 	}
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
-		utils.FailWithI18n(c, "SOCKS5 监听器 ID 无效", "settings.socks5.api.invalidListener", nil)
+		utils.FailWithI18n(c, "Invalid SOCKS5 listener ID", "settings.socks5.api.invalidListener", nil)
 		return
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	previous, err := socks5service.LoadListeners(cfg)
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 监听器失败: "+err.Error(), "settings.socks5.api.listenerLoadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 listeners: "+err.Error(), "settings.socks5.api.listenerLoadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DeleteListener(cfg, id); err != nil {
-		utils.FailWithI18n(c, "删除 SOCKS5 监听器失败: "+err.Error(), "settings.socks5.api.listenerDeleteFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to delete SOCKS5 listener: "+err.Error(), "settings.socks5.api.listenerDeleteFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DefaultManager().Apply(cfg); err != nil {
 		rollbackSocks5Listeners(cfg, previous)
-		utils.FailWithI18n(c, "应用 SOCKS5 监听器失败: "+err.Error(), "settings.socks5.api.listenerApplyFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to apply SOCKS5 listener: "+err.Error(), "settings.socks5.api.listenerApplyFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 监听器已删除", nil, "settings.socks5.api.listenerDeleted", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 listener deleted", nil, "settings.socks5.api.listenerDeleted", nil)
 }
 
 type socks5AccountRequest struct {
@@ -549,15 +549,15 @@ func ListSocks5Accounts(c *gin.Context) {
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	accounts, err := socks5service.ListAccounts(cfg)
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 账号失败: "+err.Error(), "settings.socks5.api.accountLoadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 accounts: "+err.Error(), "settings.socks5.api.accountLoadFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 账号已加载", accounts, "settings.socks5.api.accountsLoaded", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 accounts loaded", accounts, "settings.socks5.api.accountsLoaded", nil)
 }
 
 func CreateSocks5Account(c *gin.Context) {
@@ -566,24 +566,24 @@ func CreateSocks5Account(c *gin.Context) {
 	}
 	var req socks5AccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithI18n(c, "参数错误: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
+		utils.FailWithI18n(c, "Invalid parameters: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
 		return
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	account, err := socks5service.CreateAccount(cfg, req.account("", true))
 	if err != nil {
-		utils.FailWithI18n(c, "创建 SOCKS5 账号失败: "+err.Error(), "settings.socks5.api.accountSaveFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to create SOCKS5 account: "+err.Error(), "settings.socks5.api.accountSaveFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DefaultManager().ReloadAccounts(); err != nil {
-		utils.FailWithI18n(c, "应用 SOCKS5 账号失败: "+err.Error(), "settings.socks5.api.accountApplyFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to apply SOCKS5 account: "+err.Error(), "settings.socks5.api.accountApplyFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 账号已创建", account, "settings.socks5.api.accountCreated", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 account created", account, "settings.socks5.api.accountCreated", nil)
 }
 
 func UpdateSocks5Account(c *gin.Context) {
@@ -592,22 +592,22 @@ func UpdateSocks5Account(c *gin.Context) {
 	}
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
-		utils.FailWithI18n(c, "SOCKS5 账号 ID 无效", "settings.socks5.api.invalidAccount", nil)
+		utils.FailWithI18n(c, "Invalid SOCKS5 account ID", "settings.socks5.api.invalidAccount", nil)
 		return
 	}
 	var req socks5AccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithI18n(c, "参数错误: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
+		utils.FailWithI18n(c, "Invalid parameters: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
 		return
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	accounts, err := socks5service.ListAccounts(cfg)
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 账号失败: "+err.Error(), "settings.socks5.api.accountLoadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 accounts: "+err.Error(), "settings.socks5.api.accountLoadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	enabled := false
@@ -619,14 +619,14 @@ func UpdateSocks5Account(c *gin.Context) {
 	}
 	account, err := socks5service.UpdateAccount(cfg, id, req.account(id, enabled), req.ClearPassword)
 	if err != nil {
-		utils.FailWithI18n(c, "更新 SOCKS5 账号失败: "+err.Error(), "settings.socks5.api.accountSaveFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to update SOCKS5 account: "+err.Error(), "settings.socks5.api.accountSaveFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DefaultManager().ReloadAccounts(); err != nil {
-		utils.FailWithI18n(c, "应用 SOCKS5 账号失败: "+err.Error(), "settings.socks5.api.accountApplyFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to apply SOCKS5 account: "+err.Error(), "settings.socks5.api.accountApplyFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 账号已更新", account, "settings.socks5.api.accountUpdated", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 account updated", account, "settings.socks5.api.accountUpdated", nil)
 }
 
 func DeleteSocks5Account(c *gin.Context) {
@@ -635,23 +635,23 @@ func DeleteSocks5Account(c *gin.Context) {
 	}
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
-		utils.FailWithI18n(c, "SOCKS5 账号 ID 无效", "settings.socks5.api.invalidAccount", nil)
+		utils.FailWithI18n(c, "Invalid SOCKS5 account ID", "settings.socks5.api.invalidAccount", nil)
 		return
 	}
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 settings: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DeleteAccount(cfg, id); err != nil {
-		utils.FailWithI18n(c, "删除 SOCKS5 账号失败: "+err.Error(), "settings.socks5.api.accountDeleteFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to delete SOCKS5 account: "+err.Error(), "settings.socks5.api.accountDeleteFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	if err := socks5service.DefaultManager().ReloadAccounts(); err != nil {
-		utils.FailWithI18n(c, "应用 SOCKS5 账号失败: "+err.Error(), "settings.socks5.api.accountApplyFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to apply SOCKS5 account: "+err.Error(), "settings.socks5.api.accountApplyFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 账号已删除", nil, "settings.socks5.api.accountDeleted", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 account deleted", nil, "settings.socks5.api.accountDeleted", nil)
 }
 
 func GetSocks5RoutingSnapshot(c *gin.Context) {
@@ -665,10 +665,10 @@ func GetSocks5RoutingSnapshot(c *gin.Context) {
 		SortOrder: c.Query("sortOrder"), Page: page, PageSize: pageSize,
 	})
 	if err != nil {
-		utils.FailWithI18n(c, "读取 SOCKS5 节点路由统计失败: "+err.Error(), "settings.socks5.api.routingLoadFailed", map[string]any{"message": err.Error()})
+		utils.FailWithI18n(c, "Failed to load SOCKS5 node routing stats: "+err.Error(), "settings.socks5.api.routingLoadFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 节点路由统计已加载", snapshot, "settings.socks5.api.routingLoaded", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 node routing stats loaded", snapshot, "settings.socks5.api.routingLoaded", nil)
 }
 
 func ResetSocks5RuntimeStats(c *gin.Context) {
@@ -676,7 +676,7 @@ func ResetSocks5RuntimeStats(c *gin.Context) {
 		return
 	}
 	socks5service.DefaultManager().ResetNodeRuntimeStats()
-	utils.OkDetailedI18n(c, "SOCKS5 节点运行统计已重置", nil, "settings.socks5.api.runtimeReset", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 node runtime stats reset", nil, "settings.socks5.api.runtimeReset", nil)
 }
 
 func GetSocks5Connections(c *gin.Context) {
@@ -684,7 +684,7 @@ func GetSocks5Connections(c *gin.Context) {
 		return
 	}
 	connections := socks5service.DefaultManager().Connections()
-	utils.OkDetailedI18n(c, "SOCKS5 连接已加载", connections, "settings.socks5.api.connectionsLoaded", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 connections loaded", connections, "settings.socks5.api.connectionsLoaded", nil)
 }
 
 func DeleteSocks5Connection(c *gin.Context) {
@@ -693,14 +693,14 @@ func DeleteSocks5Connection(c *gin.Context) {
 	}
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 64 {
-		utils.FailWithI18n(c, "连接 ID 无效", "settings.socks5.api.invalidConnection", nil)
+		utils.FailWithI18n(c, "Invalid connection ID", "settings.socks5.api.invalidConnection", nil)
 		return
 	}
 	if !socks5service.DefaultManager().CloseConnection(id) {
-		utils.FailWithCodeI18n(c, http.StatusNotFound, "连接不存在", "settings.socks5.api.connectionNotFound", nil)
+		utils.FailWithCodeI18n(c, http.StatusNotFound, "Connection not found", "settings.socks5.api.connectionNotFound", nil)
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 连接已断开", nil, "settings.socks5.api.connectionClosed", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 connection closed", nil, "settings.socks5.api.connectionClosed", nil)
 }
 
 func DeleteSocks5Connections(c *gin.Context) {
@@ -708,7 +708,7 @@ func DeleteSocks5Connections(c *gin.Context) {
 		return
 	}
 	socks5service.DefaultManager().CloseAllConnections()
-	utils.OkDetailedI18n(c, "SOCKS5 连接已全部断开", nil, "settings.socks5.api.connectionsClosed", nil)
+	utils.OkDetailedI18n(c, "All SOCKS5 connections closed", nil, "settings.socks5.api.connectionsClosed", nil)
 }
 
 func ProbeSocks5Health(c *gin.Context) {
@@ -717,12 +717,12 @@ func ProbeSocks5Health(c *gin.Context) {
 	}
 	started, available := socks5service.DefaultManager().TriggerHealthProbe()
 	if !available {
-		utils.FailWithI18n(c, "SOCKS5 健康探测未启动，服务尚未运行", "settings.socks5.api.healthProbeUnavailable", nil)
+		utils.FailWithI18n(c, "SOCKS5 health probe unavailable; service is not running", "settings.socks5.api.healthProbeUnavailable", nil)
 		return
 	}
 	if !started {
-		utils.OkDetailedI18n(c, "SOCKS5 健康探测正在执行", gin.H{"started": false, "health": socks5service.DefaultManager().HealthSnapshot()}, "settings.socks5.api.healthProbeRunning", nil)
+		utils.OkDetailedI18n(c, "SOCKS5 health probe is already running", gin.H{"started": false, "health": socks5service.DefaultManager().HealthSnapshot()}, "settings.socks5.api.healthProbeRunning", nil)
 		return
 	}
-	utils.OkDetailedI18n(c, "SOCKS5 健康探测已启动", gin.H{"started": true, "health": socks5service.DefaultManager().HealthSnapshot()}, "settings.socks5.api.healthProbeStarted", nil)
+	utils.OkDetailedI18n(c, "SOCKS5 health probe started", gin.H{"started": true, "health": socks5service.DefaultManager().HealthSnapshot()}, "settings.socks5.api.healthProbeStarted", nil)
 }

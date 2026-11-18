@@ -25,17 +25,17 @@ type Webhook struct {
 
 func (w *Webhook) Add() error {
 	if database.DB == nil {
-		return fmt.Errorf("数据库未初始化")
+		return fmt.Errorf("database is not initialized")
 	}
 	return database.DB.Create(w).Error
 }
 
 func (w *Webhook) Update() error {
 	if database.DB == nil {
-		return fmt.Errorf("数据库未初始化")
+		return fmt.Errorf("database is not initialized")
 	}
 	if w.ID == 0 {
-		return fmt.Errorf("Webhook ID 不能为空")
+		return fmt.Errorf("Webhook ID is required")
 	}
 
 	updates := map[string]any{
@@ -56,17 +56,17 @@ func (w *Webhook) Update() error {
 
 func (w *Webhook) Delete() error {
 	if database.DB == nil {
-		return fmt.Errorf("数据库未初始化")
+		return fmt.Errorf("database is not initialized")
 	}
 	if w.ID == 0 {
-		return fmt.Errorf("Webhook ID 不能为空")
+		return fmt.Errorf("Webhook ID is required")
 	}
 	return database.DB.Delete(&Webhook{}, w.ID).Error
 }
 
 func GetWebhookByID(id uint) (*Webhook, error) {
 	if database.DB == nil {
-		return nil, fmt.Errorf("数据库未初始化")
+		return nil, fmt.Errorf("database is not initialized")
 	}
 
 	var webhook Webhook
@@ -78,7 +78,7 @@ func GetWebhookByID(id uint) (*Webhook, error) {
 
 func ListWebhooks() ([]Webhook, error) {
 	if database.DB == nil {
-		return nil, fmt.Errorf("数据库未初始化")
+		return nil, fmt.Errorf("database is not initialized")
 	}
 
 	var webhooks []Webhook

@@ -40,34 +40,34 @@ func CreateProxyHTTPClient(useProxy bool, proxyLink string, timeout time.Duratio
 	if proxyLink != "" {
 		// 使用指定的代理链接
 		proxyNodeLink = proxyLink
-		Info("使用指定代理下载")
+		Info("Downloading via the specified proxy")
 	} else if GetBestProxyNodeFunc != nil {
 		// 如果没有指定代理，尝试自动选择最佳代理
 		link, name, err := GetBestProxyNodeFunc()
 		if err == nil && link != "" {
-			Info("自动选择最佳代理节点: %s", name)
+			Info("Auto-selected best proxy node: %s", name)
 			proxyNodeLink = link
 		}
 	}
 
 	if proxyNodeLink == "" {
-		Warn("未找到可用代理，将直接下载")
+		Warn("No usable proxy found; downloading directly")
 		return client, "", nil
 	}
 
 	if GetMihomoAdapterFunc == nil {
-		Warn("Mihomo 适配器未初始化，将直接下载")
+		Warn("Mihomo adapter is not initialized; downloading directly")
 		return client, "", nil
 	}
 
 	// 使用 mihomo 内核创建代理适配器
 	proxyAdapter, err := GetMihomoAdapterFunc(proxyNodeLink)
 	if err != nil {
-		Error("创建 mihomo 代理适配器失败: %v，将直接下载", err)
+		Error("Failed to create mihomo proxy adapter: %v; downloading directly", err)
 		return client, "", nil
 	}
 
-	Info("使用 mihomo 内核代理下载")
+	Info("Downloading via the mihomo core proxy")
 	// 创建自定义 Transport，使用 mihomo adapter 进行代理连接
 	client.Transport = &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {

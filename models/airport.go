@@ -136,14 +136,14 @@ func init() {
 
 // InitAirportCache 初始化机场缓存
 func InitAirportCache() error {
-	utils.Info("开始加载机场数据到缓存")
+	utils.Info("Loading airports into cache")
 	var airports []Airport
 	if err := database.DB.Find(&airports).Error; err != nil {
 		return err
 	}
 
 	airportCache.LoadAll(airports)
-	utils.Info("机场缓存初始化完成，共加载 %d 个机场", airportCache.Count())
+	utils.Info("Airport cache initialized with %d airports", airportCache.Count())
 
 	cache.Manager.Register("airport", airportCache)
 	return nil
@@ -457,7 +457,7 @@ func BatchUpdateAirports(ids []int, params AirportBatchUpdateParams) ([]Airport,
 			return err
 		}
 		if len(airports) != len(uniqueIDs) {
-			return fmt.Errorf("部分机场不存在或已被删除")
+			return fmt.Errorf("some airports do not exist or have been deleted")
 		}
 
 		for _, airport := range airports {
@@ -523,7 +523,7 @@ func (a *Airport) UpdateUsageInfo(upload, download, total, expire int64) error {
 // 此时仍会尽量保留已解析到的用量数值，供图表标记红色失败点。
 func (a *Airport) UpdateUsageInfoWithStatus(upload, download, total, expire int64, failed bool, reason string) error {
 	if a == nil || a.ID <= 0 {
-		return fmt.Errorf("机场对象无效")
+		return fmt.Errorf("invalid airport")
 	}
 	if total < 0 {
 		failed = true

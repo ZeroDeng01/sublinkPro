@@ -28,7 +28,7 @@ func (disneyUnlockChecker) Aliases() []string {
 }
 
 func (disneyUnlockChecker) Meta() models.UnlockProviderMeta {
-	return models.UnlockProviderMeta{Value: models.UnlockProviderDisney, Label: "Disney+", Description: "检测 Disney+ 服务入口是否可访问及是否明显受限", Category: "streaming"}
+	return models.UnlockProviderMeta{Value: models.UnlockProviderDisney, Label: "Disney+", Description: "Checks whether the Disney+ entry point is reachable and clearly unrestricted", Category: "streaming"}
 }
 
 func (disneyUnlockChecker) RenameVariableMeta() models.UnlockRenameVariableMeta {

@@ -46,7 +46,7 @@ func ListCountryRules(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "获取国家规则列表失败",
+			"message": "Failed to load country rules",
 			"error":   err.Error(),
 		})
 		return
@@ -85,7 +85,7 @@ func CreateCountryRule(c *gin.Context) {
 	if err := c.ShouldBindJSON(&rule); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "请求参数错误",
+			"message": "Invalid request parameters",
 			"error":   err.Error(),
 		})
 		return
@@ -94,17 +94,17 @@ func CreateCountryRule(c *gin.Context) {
 	// 添加规则（包含验证和重复检查）
 	if err := rule.Add(); err != nil {
 		// Check if it's a duplicate key error
-		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "已存在") {
+		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "already exists") || strings.Contains(err.Error(), "已存在") {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"code":    400,
-				"message": "国家代码已存在",
+				"message": "Country code already exists",
 				"error":   "country code already exists",
 			})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建国家规则失败",
+			"message": "Failed to create country rule",
 			"error":   err.Error(),
 		})
 		return
@@ -112,7 +112,7 @@ func CreateCountryRule(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "创建成功",
+		"message": "Created successfully",
 		"data":    rule,
 	})
 }
@@ -133,7 +133,7 @@ func UpdateCountryRule(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "无效的规则ID",
+			"message": "Invalid rule ID",
 			"error":   err.Error(),
 		})
 		return
@@ -143,7 +143,7 @@ func UpdateCountryRule(c *gin.Context) {
 	if err := c.ShouldBindJSON(&rule); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "请求参数错误",
+			"message": "Invalid request parameters",
 			"error":   err.Error(),
 		})
 		return
@@ -157,7 +157,7 @@ func UpdateCountryRule(c *gin.Context) {
 	if err := database.DB.Where("country_code = ? AND id != ?", rule.CountryCode, id).First(&existingRule).Error; err == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "国家代码已被其他规则使用",
+			"message": "Country code is already used by another rule",
 			"error":   "country code already exists",
 		})
 		return
@@ -167,7 +167,7 @@ func UpdateCountryRule(c *gin.Context) {
 	if err := rule.Update(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "更新国家规则失败",
+			"message": "Failed to update country rule",
 			"error":   err.Error(),
 		})
 		return
@@ -175,7 +175,7 @@ func UpdateCountryRule(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "更新成功",
+		"message": "Updated successfully",
 		"data":    rule,
 	})
 }
@@ -187,7 +187,7 @@ func UpdateCountryRule(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "规则ID"
-// @Success 200 {object} gin.H{"code": 200, "message": "删除成功"}
+// @Success 200 {object} gin.H{"code": 200, "message": "Deleted successfully"}
 // @Router /api/v1/country-rules/{id} [delete]
 func DeleteCountryRule(c *gin.Context) {
 	idStr := c.Param("id")
@@ -195,7 +195,7 @@ func DeleteCountryRule(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "无效的规则ID",
+			"message": "Invalid rule ID",
 			"error":   err.Error(),
 		})
 		return
@@ -208,7 +208,7 @@ func DeleteCountryRule(c *gin.Context) {
 	if err := rule.Delete(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "删除国家规则失败",
+			"message": "Failed to delete country rule",
 			"error":   err.Error(),
 		})
 		return
@@ -216,7 +216,7 @@ func DeleteCountryRule(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "删除成功",
+		"message": "Deleted successfully",
 	})
 }
 
@@ -247,7 +247,7 @@ func TestCountryRule(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "请求参数错误",
+			"message": "Invalid request parameters",
 			"error":   err.Error(),
 		})
 		return
@@ -258,7 +258,7 @@ func TestCountryRule(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "测试失败",
+			"message": "Test failed",
 			"error":   err.Error(),
 		})
 		return
@@ -302,7 +302,7 @@ func BatchTestCountryRules(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "请求参数错误",
+			"message": "Invalid request parameters",
 			"error":   err.Error(),
 		})
 		return
@@ -370,7 +370,7 @@ func BatchCountryRules(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "请求参数错误",
+			"message": "Invalid request parameters",
 			"error":   err.Error(),
 		})
 		return
@@ -380,7 +380,7 @@ func BatchCountryRules(c *gin.Context) {
 	if len(req.Rules) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "规则列表不能为空",
+			"message": "Rule list cannot be empty",
 		})
 		return
 	}
@@ -399,7 +399,7 @@ func BatchCountryRules(c *gin.Context) {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"code":    500,
-				"message": "清空规则失败",
+				"message": "Failed to clear rules",
 				"error":   err.Error(),
 			})
 			return
@@ -432,7 +432,7 @@ func BatchCountryRules(c *gin.Context) {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"code":    500,
-				"message": "插入规则失败",
+				"message": "Failed to insert rules",
 				"error":   err.Error(),
 			})
 			return
@@ -444,7 +444,7 @@ func BatchCountryRules(c *gin.Context) {
 	if err := tx.Commit().Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "提交事务失败",
+			"message": "Failed to commit transaction",
 			"error":   err.Error(),
 		})
 		return
@@ -452,7 +452,7 @@ func BatchCountryRules(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "批量操作成功",
+		"message": "Batch operation succeeded",
 		"data": gin.H{
 			"imported": importCount,
 			"skipped":  skipCount,
@@ -473,7 +473,7 @@ func ExportCountryRules(c *gin.Context) {
 	text := models.ExportCountryRulesToText()
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "导出成功",
+		"message": "Exported successfully",
 		"data": gin.H{
 			"text": text,
 		},
@@ -499,7 +499,7 @@ func SyncCountryRules(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "请求参数错误",
+			"message": "Invalid request parameters",
 			"error":   err.Error(),
 		})
 		return
@@ -509,7 +509,7 @@ func SyncCountryRules(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "同步失败",
+			"message": "Sync failed",
 			"error":   err.Error(),
 		})
 		return
@@ -517,7 +517,7 @@ func SyncCountryRules(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "同步成功",
+		"message": "Synced successfully",
 		"data": gin.H{
 			"added":   added,
 			"updated": updated,

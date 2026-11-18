@@ -108,6 +108,7 @@ type AirportUsageSparkline struct {
 	Points    []UsageHistoryPoint `json:"points"`
 	Failed    bool                `json:"failed"`    // 最近一次刷新是否失败
 	UpdatedAt int64               `json:"updatedAt"` // 最近一次快照时间（毫秒）
+	TodayUsed int64               `json:"todayUsed"` // 本地时区当天已消耗流量（快照差值累计）
 }
 
 // usageValues 可继承的用量数值
@@ -209,7 +210,7 @@ func RecordAirportUsageSnapshot(airportID int, upload, download, total, expire i
 		CapturedAt: now,
 	}
 	if err := database.DB.Create(&snapshot).Error; err != nil {
-		utils.Warn("记录机场用量快照失败 ID: %d: %v", airportID, err)
+		utils.Warn("Failed to record airport usage snapshot ID %d: %v", airportID, err)
 		return
 	}
 	maybePruneUsageSnapshots()
@@ -231,7 +232,7 @@ func maybePruneUsageSnapshots() {
 		return
 	}
 	if err := PruneAirportUsageSnapshots(GetAirportUsageRetentionDays()); err != nil {
-		utils.Warn("清理机场用量历史失败: %v", err)
+		utils.Warn("Failed to clean up airport usage history: %v", err)
 	}
 }
 
@@ -301,6 +302,11 @@ func GetAirportUsageHistory(airportID, days int, granularity string) (*AirportUs
 
 // GetAirportUsageSparklines 批量构建机场用量迷你图数据。
 func GetAirportUsageSparklines(airportIDs []int, days int) ([]AirportUsageSparkline, error) {
+	return getAirportUsageSparklines(airportIDs, days, time.Now())
+}
+
+// getAirportUsageSparklines 是 GetAirportUsageSparklines 的可注入当前时间的实现，便于测试跨天边界。
+func getAirportUsageSparklines(airportIDs []int, days int, now time.Time) ([]AirportUsageSparkline, error) {
 	ids := uniquePositiveIDs(airportIDs)
 	if len(ids) == 0 {
 		return []AirportUsageSparkline{}, nil
@@ -314,9 +320,13 @@ func GetAirportUsageSparklines(airportIDs []int, days int) ([]AirportUsageSparkl
 	}
 	retentionDays := GetAirportUsageRetentionDays()
 	days = NormalizeUsageHistoryDays(days, retentionDays)
-	from := time.Now().AddDate(0, 0, -days)
+	from := now.AddDate(0, 0, -days)
 
 	snapshotMap, err := loadAirportUsageSnapshots(ids, from)
+	if err != nil {
+		return nil, err
+	}
+	todayUsedMap, err := loadUsageTodayUsed(ids, now)
 	if err != nil {
 		return nil, err
 	}
@@ -328,6 +338,7 @@ func GetAirportUsageSparklines(airportIDs []int, days int) ([]AirportUsageSparkl
 		sparkline := AirportUsageSparkline{
 			AirportID: airportID,
 			Points:    points,
+			TodayUsed: todayUsedMap[airportID],
 		}
 		if len(snapshots) > 0 {
 			last := snapshots[len(snapshots)-1]
@@ -337,6 +348,308 @@ func GetAirportUsageSparklines(airportIDs []int, days int) ([]AirportUsageSparkl
 		sparklines = append(sparklines, sparkline)
 	}
 	return sparklines, nil
+}
+
+// UsageDailyAirportUsage 单日消耗按机场拆分的明细，用于前端悬停提示。
+type UsageDailyAirportUsage struct {
+	AirportID   int    `json:"airportId"`
+	AirportName string `json:"airportName"`
+	Upload      int64  `json:"upload"`
+	Download    int64  `json:"download"`
+	Used        int64  `json:"used"`
+}
+
+// UsageDailyPoint 单日消耗的流量，由相邻两次快照的累计值差值得出。
+type UsageDailyPoint struct {
+	Date     string                   `json:"date"` // 本地日期 YYYY-MM-DD
+	Upload   int64                    `json:"upload"`
+	Download int64                    `json:"download"`
+	Used     int64                    `json:"used"`
+	Airports []UsageDailyAirportUsage `json:"airports,omitempty"` // 汇总查询时按机场拆分，按消耗降序
+}
+
+// AirportUsageDailyReport 按天统计的流量消耗。
+type AirportUsageDailyReport struct {
+	Days          int               `json:"days"`
+	From          time.Time         `json:"from"`
+	To            time.Time         `json:"to"`
+	RetentionDays int               `json:"retentionDays"`
+	AirportID     int               `json:"airportId"` // 0 表示汇总全部机场
+	Points        []UsageDailyPoint `json:"points"`
+	TodayUsed     int64             `json:"todayUsed"`
+	RangeUsed     int64             `json:"rangeUsed"`
+}
+
+// GetAirportDailyUsage 按天汇总实际消耗的流量。
+// 快照里存的是面板返回的累计值，所以用相邻两次成功快照的差值作为该时段消耗；
+// 计数器下降（面板重置、换套餐）时把新值整段计入当天，避免出现负数。
+// airportID <= 0 表示汇总全部机场。
+func GetAirportDailyUsage(days, airportID int) (*AirportUsageDailyReport, error) {
+	return getAirportDailyUsage(days, airportID, time.Now())
+}
+
+// getAirportDailyUsage 是 GetAirportDailyUsage 的可注入当前时间的实现，便于测试跨天边界。
+func getAirportDailyUsage(days, airportID int, now time.Time) (*AirportUsageDailyReport, error) {
+	if airportID > 0 {
+		if _, err := GetAirportByID(airportID); err != nil {
+			return nil, err
+		}
+	}
+
+	retentionDays := GetAirportUsageRetentionDays()
+	days = NormalizeUsageHistoryDays(days, retentionDays)
+	// 按自然日对齐：返回的正好是最近 days 天的完整日桶（含今天）
+	from := startOfUsageDay(now).AddDate(0, 0, -(days - 1))
+
+	snapshots, err := loadUsageSnapshotsForDaily(from, now, airportID)
+	if err != nil {
+		return nil, err
+	}
+	var baselineIDs []int
+	if airportID > 0 {
+		baselineIDs = []int{airportID}
+	}
+	baseline, err := loadUsageBaseline(from, baselineIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	var airportNames map[int]string
+	if airportID <= 0 {
+		ids := make([]int, 0, len(snapshots))
+		for _, snapshot := range snapshots {
+			ids = append(ids, snapshot.AirportID)
+		}
+		airports, err := ListAirportsByIDs(ids)
+		if err != nil {
+			return nil, err
+		}
+		airportNames = make(map[int]string, len(airports))
+		for _, airport := range airports {
+			airportNames[airport.ID] = airport.Name
+		}
+	}
+
+	daily := make(map[string]*UsageDailyPoint)
+	// 汇总模式下按天记录每家机场的贡献，供前端悬停提示展示明细。
+	perAirport := make(map[string]map[int]*UsageDailyAirportUsage)
+	lastValues := make(map[int]usageValues, len(baseline))
+	for id, values := range baseline {
+		lastValues[id] = values
+	}
+
+	for _, snapshot := range snapshots {
+		if snapshot.Failed {
+			continue
+		}
+		current := usageValues{
+			upload:   snapshot.Upload,
+			download: snapshot.Download,
+			total:    snapshot.Total,
+			expire:   snapshot.Expire,
+		}
+		previous, seen := lastValues[snapshot.AirportID]
+		lastValues[snapshot.AirportID] = current
+		if !seen {
+			// 窗口内首次见到该机场：没有基线就无法计算差值，从下一次快照开始累计。
+			continue
+		}
+
+		uploadDelta, downloadDelta := usageDelta(current, previous)
+		if uploadDelta == 0 && downloadDelta == 0 {
+			continue
+		}
+
+		key := snapshot.CapturedAt.In(time.Local).Format("2006-01-02")
+		point, ok := daily[key]
+		if !ok {
+			point = &UsageDailyPoint{Date: key}
+			daily[key] = point
+		}
+		point.Upload += uploadDelta
+		point.Download += downloadDelta
+		point.Used += uploadDelta + downloadDelta
+
+		if airportID <= 0 {
+			byAirport := perAirport[key]
+			if byAirport == nil {
+				byAirport = make(map[int]*UsageDailyAirportUsage)
+				perAirport[key] = byAirport
+			}
+			entry := byAirport[snapshot.AirportID]
+			if entry == nil {
+				entry = &UsageDailyAirportUsage{AirportID: snapshot.AirportID, AirportName: airportNames[snapshot.AirportID]}
+				byAirport[snapshot.AirportID] = entry
+			}
+			entry.Upload += uploadDelta
+			entry.Download += downloadDelta
+			entry.Used += uploadDelta + downloadDelta
+		}
+	}
+
+	endDay := startOfUsageDay(now)
+	points := make([]UsageDailyPoint, 0, days+1)
+	for day := startOfUsageDay(from); !day.After(endDay); day = day.AddDate(0, 0, 1) {
+		key := day.Format("2006-01-02")
+		if point, ok := daily[key]; ok {
+			if entries := perAirport[key]; len(entries) > 0 {
+				point.Airports = sortUsageDailyAirports(entries)
+			}
+			points = append(points, *point)
+			continue
+		}
+		points = append(points, UsageDailyPoint{Date: key})
+	}
+
+	report := &AirportUsageDailyReport{
+		Days:          days,
+		From:          from,
+		To:            now,
+		RetentionDays: retentionDays,
+		AirportID:     airportID,
+		Points:        points,
+	}
+	for _, point := range points {
+		report.RangeUsed += point.Used
+	}
+	if len(points) > 0 {
+		report.TodayUsed = points[len(points)-1].Used
+	}
+	return report, nil
+}
+
+// sortUsageDailyAirports 把单日机场明细整理成按消耗降序的切片。
+func sortUsageDailyAirports(entries map[int]*UsageDailyAirportUsage) []UsageDailyAirportUsage {
+	result := make([]UsageDailyAirportUsage, 0, len(entries))
+	for _, entry := range entries {
+		if entry.AirportName == "" {
+			// 机场已删除但快照还在保留期内时，用 ID 兜底展示。
+			entry.AirportName = fmt.Sprintf("#%d", entry.AirportID)
+		}
+		result = append(result, *entry)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Used == result[j].Used {
+			return result[i].AirportID < result[j].AirportID
+		}
+		return result[i].Used > result[j].Used
+	})
+	return result
+}
+
+// usageDelta 计算相邻两次快照的消耗增量。
+// 计数器下降（面板重置、换套餐）时把新值整段计入，避免出现负数。
+func usageDelta(current, previous usageValues) (upload, download int64) {
+	upload = current.upload - previous.upload
+	if upload < 0 {
+		upload = current.upload
+	}
+	download = current.download - previous.download
+	if download < 0 {
+		download = current.download
+	}
+	return upload, download
+}
+
+// startOfUsageDay 返回本地时区的当天零点。
+func startOfUsageDay(value time.Time) time.Time {
+	local := value.In(time.Local)
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.Local)
+}
+
+// loadUsageSnapshotsForDaily 加载时间窗口内的快照，按机场与时间升序排列。
+func loadUsageSnapshotsForDaily(from, to time.Time, airportID int) ([]AirportUsageSnapshot, error) {
+	query := database.DB.Where("captured_at >= ? AND captured_at <= ?", from, to)
+	if airportID > 0 {
+		query = query.Where("airport_id = ?", airportID)
+	}
+	var snapshots []AirportUsageSnapshot
+	if err := query.Order("airport_id ASC").Order("captured_at ASC").Order("id ASC").Find(&snapshots).Error; err != nil {
+		return nil, err
+	}
+	return snapshots, nil
+}
+
+// loadUsageBaseline 取每个机场在窗口开始前的最后一条成功快照，作为差值基线。
+// airportIDs 为空表示不限定机场。
+func loadUsageBaseline(from time.Time, airportIDs []int) (map[int]usageValues, error) {
+	baseline := make(map[int]usageValues)
+
+	idQuery := database.DB.Model(&AirportUsageSnapshot{}).Where("captured_at < ?", from)
+	if len(airportIDs) > 0 {
+		idQuery = idQuery.Where("airport_id IN ?", airportIDs)
+	}
+	var ids []int
+	if err := idQuery.Distinct("airport_id").Pluck("airport_id", &ids).Error; err != nil {
+		return nil, err
+	}
+
+	for _, id := range ids {
+		var snapshot AirportUsageSnapshot
+		err := database.DB.Where("airport_id = ? AND captured_at < ? AND failed = ?", id, from, false).
+			Order("captured_at DESC").Order("id DESC").First(&snapshot).Error
+		if err != nil {
+			continue
+		}
+		baseline[id] = usageValues{
+			upload:   snapshot.Upload,
+			download: snapshot.Download,
+			total:    snapshot.Total,
+			expire:   snapshot.Expire,
+		}
+	}
+	return baseline, nil
+}
+
+// loadUsageTodayUsed 批量统计指定机场当天的消耗量。
+// 统计口径与按天报表一致：相邻两次成功快照的差值计入当天，
+// 基线取当天零点前的最后一条成功快照；没有基线时从当天第一条快照开始累计。
+func loadUsageTodayUsed(airportIDs []int, now time.Time) (map[int]int64, error) {
+	result := make(map[int]int64, len(airportIDs))
+	if len(airportIDs) == 0 {
+		return result, nil
+	}
+
+	todayStart := startOfUsageDay(now)
+	var snapshots []AirportUsageSnapshot
+	if err := database.DB.
+		Where("airport_id IN ? AND captured_at >= ? AND captured_at <= ?", airportIDs, todayStart, now).
+		Order("airport_id ASC").Order("captured_at ASC").Order("id ASC").
+		Find(&snapshots).Error; err != nil {
+		return nil, err
+	}
+	if len(snapshots) == 0 {
+		return result, nil
+	}
+
+	baseline, err := loadUsageBaseline(todayStart, airportIDs)
+	if err != nil {
+		return nil, err
+	}
+	lastValues := make(map[int]usageValues, len(baseline))
+	for id, values := range baseline {
+		lastValues[id] = values
+	}
+
+	for _, snapshot := range snapshots {
+		if snapshot.Failed {
+			continue
+		}
+		current := usageValues{
+			upload:   snapshot.Upload,
+			download: snapshot.Download,
+			total:    snapshot.Total,
+			expire:   snapshot.Expire,
+		}
+		previous, seen := lastValues[snapshot.AirportID]
+		lastValues[snapshot.AirportID] = current
+		if !seen {
+			continue
+		}
+		uploadDelta, downloadDelta := usageDelta(current, previous)
+		result[snapshot.AirportID] += uploadDelta + downloadDelta
+	}
+	return result, nil
 }
 
 // loadAirportUsageSnapshots 批量加载指定时间范围内的快照，按机场分组。

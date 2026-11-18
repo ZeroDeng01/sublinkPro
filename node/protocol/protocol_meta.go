@@ -637,7 +637,7 @@ func ExtractNodeNameFromFields(protocolName string, fields map[string]any) strin
 func ExtractLinkIdentity(link string) (LinkIdentity, error) {
 	protocol := detectProtocol(link)
 	if protocol == nil {
-		return LinkIdentity{}, fmt.Errorf("不支持的协议类型")
+		return LinkIdentity{}, fmt.Errorf("unsupported protocol type")
 	}
 
 	decoded, err := protocol.DecodeLink(link)
@@ -660,7 +660,7 @@ func ExtractLinkIdentity(link string) (LinkIdentity, error) {
 func DecodeProtocolObject(link string) (any, string, error) {
 	protocol := detectProtocol(link)
 	if protocol == nil {
-		return nil, "", fmt.Errorf("不支持的协议类型")
+		return nil, "", fmt.Errorf("unsupported protocol type")
 	}
 
 	decoded, err := protocol.DecodeLink(link)
@@ -808,10 +808,10 @@ func GetProtocolLabel(name string) string {
 func GetProtocolLabelFromLink(link string) string {
 	protocolName := GetProtocolFromLink(link)
 	if protocolName == "unknown" {
-		return "未知"
+		return "Unknown"
 	}
 	if protocolName == "other" {
-		return "其他"
+		return "Other"
 	}
 	return GetProtocolLabel(protocolName)
 }

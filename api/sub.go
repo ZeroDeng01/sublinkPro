@@ -93,10 +93,10 @@ func SubTotal(c *gin.Context) {
 	subs, err := Sub.List()
 	count := len(subs)
 	if err != nil {
-		utils.FailWithMsg(c, "取得订阅总数失败")
+		utils.FailWithMsg(c, "Failed to fetch subscription count")
 		return
 	}
-	utils.OkDetailed(c, "取得订阅总数", count)
+	utils.OkDetailed(c, "Subscription count fetched", count)
 }
 
 // 获取订阅列表
@@ -122,14 +122,14 @@ func SubGet(c *gin.Context) {
 	if page > 0 && pageSize > 0 {
 		subs, total, err := Sub.ListPaginatedByType(subType, page, pageSize)
 		if err != nil {
-			utils.FailWithMsg(c, "获取订阅列表失败")
+			utils.FailWithMsg(c, "Failed to fetch subscription list")
 			return
 		}
 		totalPages := 0
 		if pageSize > 0 {
 			totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
 		}
-		utils.OkDetailed(c, "获取成功", gin.H{
+		utils.OkDetailed(c, "Fetched successfully", gin.H{
 			"items":      subs,
 			"total":      total,
 			"page":       page,
@@ -201,16 +201,16 @@ func SubAdd(c *gin.Context) {
 	airportID, _ := strconv.Atoi(strings.TrimSpace(c.PostForm("AirportID")))
 
 	if name == "" {
-		utils.FailWithMsg(c, "订阅名称不能为空")
+		utils.FailWithMsg(c, "Subscription name is required")
 		return
 	}
 	if subType == models.SubcriptionTypeProxy {
 		if airportID <= 0 {
-			utils.FailWithMsg(c, "请选择要原样转发的机场")
+			utils.FailWithMsg(c, "Select airports to forward as-is")
 			return
 		}
 		if _, err := models.GetAirportByID(airportID); err != nil {
-			utils.FailWithMsg(c, "所选机场不存在")
+			utils.FailWithMsg(c, "Selected airport not found")
 			return
 		}
 		// 代理订阅只转发机场上游内容，不参与 IP 黑白名单控制。
@@ -219,21 +219,21 @@ func SubAdd(c *gin.Context) {
 		// 聚合订阅不使用代理订阅的机场；避免类型切换时残留旧引用。
 		airportID = 0
 		if nodeIds == "" && groups == "" && airports == "" {
-			utils.FailWithMsg(c, "节点、分组或机场至少选择一项")
+			utils.FailWithMsg(c, "Select at least one node, group, or airport")
 			return
 		}
 	}
 	if ipWhitelist != "" {
 		ok := utils.IpFormatValidation(ipWhitelist)
 		if !ok {
-			utils.FailWithMsg(c, "IP白名单有误，请检查IP格式")
+			utils.FailWithMsg(c, "Invalid IP whitelist; check the IP format")
 			return
 		}
 	}
 	if ipBlacklist != "" {
 		ok := utils.IpFormatValidation(ipBlacklist)
 		if !ok {
-			utils.FailWithMsg(c, "IP黑名单有误，请检查IP格式")
+			utils.FailWithMsg(c, "Invalid IP blacklist; check the IP format")
 			return
 		}
 	}
@@ -242,7 +242,7 @@ func SubAdd(c *gin.Context) {
 	var checkSub models.Subcription
 	checkSub.Name = name
 	if err := checkSub.Find(); err == nil {
-		utils.FailWithMsg(c, "订阅名称不能重复")
+		utils.FailWithMsg(c, "Subscription name must be unique")
 		return
 	}
 
@@ -309,7 +309,7 @@ func SubAdd(c *gin.Context) {
 
 	err := sub.Add()
 	if err != nil {
-		utils.FailWithMsg(c, "添加失败")
+		utils.FailWithMsg(c, "Add failed")
 		return
 	}
 
@@ -333,11 +333,11 @@ func SubAdd(c *gin.Context) {
 
 	airportIDs, err := parseCommaSeparatedIntIDs(airports)
 	if err != nil {
-		utils.FailWithMsg(c, "机场ID格式有误")
+		utils.FailWithMsg(c, "Invalid airport ID format")
 		return
 	}
 	if airports != "" && len(airportIDs) == 0 {
-		utils.FailWithMsg(c, "机场ID不能为空")
+		utils.FailWithMsg(c, "Airport ID is required")
 		return
 	}
 	if len(airportIDs) > 0 {
@@ -368,10 +368,10 @@ func SubAdd(c *gin.Context) {
 
 	// 为新订阅创建默认分享链接
 	if err := models.CreateDefaultShareForSubscription(sub.ID); err != nil {
-		utils.Warn("创建默认分享链接失败: %v", err)
+		utils.Warn("Failed to create default share link: %v", err)
 	}
 
-	utils.OkWithMsg(c, "添加成功")
+	utils.OkWithMsg(c, "Added successfully")
 }
 
 // 更新节点
@@ -429,16 +429,16 @@ func SubUpdate(c *gin.Context) {
 	airportID, _ := strconv.Atoi(strings.TrimSpace(c.PostForm("AirportID")))
 
 	if name == "" {
-		utils.FailWithMsg(c, "订阅名称不能为空")
+		utils.FailWithMsg(c, "Subscription name is required")
 		return
 	}
 	if subType == models.SubcriptionTypeProxy {
 		if airportID <= 0 {
-			utils.FailWithMsg(c, "请选择要原样转发的机场")
+			utils.FailWithMsg(c, "Select airports to forward as-is")
 			return
 		}
 		if _, err := models.GetAirportByID(airportID); err != nil {
-			utils.FailWithMsg(c, "所选机场不存在")
+			utils.FailWithMsg(c, "Selected airport not found")
 			return
 		}
 		// 代理订阅只转发机场上游内容，不参与 IP 黑白名单控制。
@@ -447,21 +447,21 @@ func SubUpdate(c *gin.Context) {
 		// 聚合订阅不使用代理订阅的机场；避免类型切换时残留旧引用。
 		airportID = 0
 		if nodeIds == "" && groups == "" && airports == "" {
-			utils.FailWithMsg(c, "节点、分组或机场至少选择一项")
+			utils.FailWithMsg(c, "Select at least one node, group, or airport")
 			return
 		}
 	}
 	if ipWhitelist != "" {
 		ok := utils.IpFormatValidation(ipWhitelist)
 		if !ok {
-			utils.FailWithMsg(c, "IP白名单有误，请检查IP格式")
+			utils.FailWithMsg(c, "Invalid IP whitelist; check the IP format")
 			return
 		}
 	}
 	if ipBlacklist != "" {
 		ok := utils.IpFormatValidation(ipBlacklist)
 		if !ok {
-			utils.FailWithMsg(c, "IP黑名单有误，请检查IP格式")
+			utils.FailWithMsg(c, "Invalid IP blacklist; check the IP format")
 			return
 		}
 	}
@@ -471,7 +471,7 @@ func SubUpdate(c *gin.Context) {
 		var checkSub models.Subcription
 		checkSub.Name = name
 		if err := checkSub.Find(); err == nil {
-			utils.FailWithMsg(c, "订阅名称不能重复")
+			utils.FailWithMsg(c, "Subscription name must be unique")
 			return
 		}
 	}
@@ -547,7 +547,7 @@ func SubUpdate(c *gin.Context) {
 	sub.UnlockRuleMode = unlockRuleMode
 	err = sub.Update()
 	if err != nil {
-		utils.FailWithMsg(c, "更新失败")
+		utils.FailWithMsg(c, "Update failed")
 		return
 	}
 
@@ -571,11 +571,11 @@ func SubUpdate(c *gin.Context) {
 
 	airportIDs, err := parseCommaSeparatedIntIDs(airports)
 	if err != nil {
-		utils.FailWithMsg(c, "机场ID格式有误")
+		utils.FailWithMsg(c, "Invalid airport ID format")
 		return
 	}
 	if airports != "" && len(airportIDs) == 0 {
-		utils.FailWithMsg(c, "机场ID不能为空")
+		utils.FailWithMsg(c, "Airport ID is required")
 		return
 	}
 	err = sub.UpdateAirports(airportIDs)
@@ -602,7 +602,7 @@ func SubUpdate(c *gin.Context) {
 		return
 	}
 
-	utils.OkWithMsg(c, "更新成功")
+	utils.OkWithMsg(c, "Updated successfully")
 }
 
 // 删除节点
@@ -610,22 +610,22 @@ func SubDel(c *gin.Context) {
 	var sub models.Subcription
 	id := c.Query("id")
 	if id == "" {
-		utils.FailWithMsg(c, "id 不能为空")
+		utils.FailWithMsg(c, "id is required")
 		return
 	}
 	x, _ := strconv.Atoi(id)
 	sub.ID = x
 	err := sub.Find()
 	if err != nil {
-		utils.FailWithMsg(c, "查找失败")
+		utils.FailWithMsg(c, "Lookup failed")
 		return
 	}
 	err = sub.Del()
 	if err != nil {
-		utils.FailWithMsg(c, "删除失败")
+		utils.FailWithMsg(c, "Delete failed")
 		return
 	}
-	utils.OkWithMsg(c, "删除成功")
+	utils.OkWithMsg(c, "Deleted successfully")
 }
 
 // SubCopy 复制订阅
@@ -633,36 +633,36 @@ func SubCopy(c *gin.Context) {
 	var sub models.Subcription
 	id := c.Query("id")
 	if id == "" {
-		utils.FailWithMsg(c, "id 不能为空")
+		utils.FailWithMsg(c, "id is required")
 		return
 	}
 	x, err := strconv.Atoi(id)
 	if err != nil {
-		utils.FailWithMsg(c, "id 格式错误")
+		utils.FailWithMsg(c, "Invalid id format")
 		return
 	}
 	sub.ID = x
 	err = sub.Find()
 	if err != nil {
-		utils.FailWithMsg(c, "订阅不存在")
+		utils.FailWithMsg(c, "Subscription not found")
 		return
 	}
 
 	// 执行复制
 	newSub, err := sub.Copy()
 	if err != nil {
-		utils.FailWithMsg(c, "复制失败: "+err.Error())
+		utils.FailWithMsg(c, "Copy failed: "+err.Error())
 		return
 	}
 
-	utils.OkDetailed(c, "复制成功", newSub)
+	utils.OkDetailed(c, "Copied successfully", newSub)
 }
 
 func SubSort(c *gin.Context) {
 	var subNodeSort dto.SubcriptionNodeSortUpdate
 	err := c.BindJSON(&subNodeSort)
 	if err != nil {
-		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid parameters: "+err.Error())
 		return
 	}
 
@@ -674,14 +674,14 @@ func SubSort(c *gin.Context) {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkWithMsg(c, "更新排序成功")
+	utils.OkWithMsg(c, "Sort order updated")
 }
 
 // SubBatchSort 批量排序订阅节点
 func SubBatchSort(c *gin.Context) {
 	var req dto.BatchSortRequest
 	if err := c.BindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid parameters: "+err.Error())
 		return
 	}
 
@@ -691,20 +691,20 @@ func SubBatchSort(c *gin.Context) {
 		"delay": true, "speed": true, "country": true,
 	}
 	if !validSortBy[req.SortBy] {
-		utils.FailWithMsg(c, "无效的排序字段")
+		utils.FailWithMsg(c, "Invalid sort field")
 		return
 	}
 
 	// 验证排序方向
 	if req.SortOrder != "asc" && req.SortOrder != "desc" {
-		utils.FailWithMsg(c, "无效的排序方向")
+		utils.FailWithMsg(c, "Invalid sort direction")
 		return
 	}
 
 	var sub models.Subcription
 	sub.ID = req.ID
 	if err := sub.Find(); err != nil {
-		utils.FailWithMsg(c, "订阅不存在")
+		utils.FailWithMsg(c, "Subscription not found")
 		return
 	}
 
@@ -713,18 +713,18 @@ func SubBatchSort(c *gin.Context) {
 		return
 	}
 
-	utils.OkWithMsg(c, "批量排序成功")
+	utils.OkWithMsg(c, "Batch sort completed")
 }
 
 // GetProtocolMeta 获取协议元数据（协议列表及其可用字段）
 func GetProtocolMeta(c *gin.Context) {
 	meta := protocol.GetAllProtocolMeta()
-	utils.OkDetailed(c, "获取成功", meta)
+	utils.OkDetailed(c, "Fetched successfully", meta)
 }
 
 // GetNodeFieldsMeta 获取节点通用字段元数据
 func GetNodeFieldsMeta(c *gin.Context) {
-	utils.OkDetailed(c, "获取成功", gin.H{
+	utils.OkDetailed(c, "Fetched successfully", gin.H{
 		"fields":          models.GetNodeFieldsMeta(),
 		"conditionFields": models.GetNodeConditionFields(),
 	})

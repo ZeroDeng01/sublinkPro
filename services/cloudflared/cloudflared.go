@@ -90,7 +90,7 @@ func SaveEnabled(enabled bool) error {
 func SaveToken(token string) error {
 	trimmed := normalizeToken(token)
 	if trimmed == "" {
-		return errors.New("cloudflare tunnel token 不能为空")
+		return errors.New("tunnel token is required")
 	}
 	encrypted, err := models.EncryptUserAISecret(trimmed)
 	if err != nil {
@@ -108,14 +108,14 @@ func ClearToken() error {
 func AutoStart() {
 	config, err := LoadConfig()
 	if err != nil {
-		utils.Error("[cloudflared] 加载配置失败: %v", err)
+		utils.Error("[cloudflared] Failed to load config: %v", err)
 		return
 	}
 	if !config.Enabled || !config.HasToken {
 		return
 	}
 	if err := defaultManager.Start(""); err != nil {
-		utils.Error("[cloudflared] 自动启动失败: %v", err)
+		utils.Error("[cloudflared] Auto-start failed: %v", err)
 	}
 }
 
@@ -180,18 +180,18 @@ func (m *Manager) start(token string, persist bool) error {
 	}
 
 	if !config.HasToken || strings.TrimSpace(config.RawToken) == "" {
-		return errors.New("请先填写 Cloudflare Tunnel token")
+		return errors.New("fill in the Cloudflare Tunnel token first")
 	}
 
 	path, installed := lookupCloudflared()
 	if !installed {
-		return errors.New("未找到 cloudflared，请先安装 cloudflared 或使用内置 cloudflared 的 Docker 镜像")
+		return errors.New("cloudflared not found; install cloudflared or use a Docker image with cloudflared built in")
 	}
 
 	m.mu.Lock()
 	if m.cmd != nil || m.running {
 		m.mu.Unlock()
-		return errors.New("cloudflared 已在运行")
+		return errors.New("cloudflared is already running")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -220,7 +220,7 @@ func (m *Manager) start(token string, persist bool) error {
 	m.done = make(chan struct{})
 	m.running = true
 	m.stopping = false
-	m.lastMessage = "cloudflared 正在启动"
+	m.lastMessage = "cloudflared is starting"
 	m.lastError = ""
 	done := m.done
 	m.mu.Unlock()
@@ -250,7 +250,7 @@ func (m *Manager) stop(disableAutostart bool) error {
 
 	m.mu.Lock()
 	if m.cmd == nil || !m.running {
-		m.lastMessage = "cloudflared 未运行"
+		m.lastMessage = "cloudflared is not running"
 		m.mu.Unlock()
 		return nil
 	}
@@ -258,7 +258,7 @@ func (m *Manager) stop(disableAutostart bool) error {
 	done := m.done
 	cancel := m.cancel
 	m.stopping = true
-	m.lastMessage = "正在停止 cloudflared"
+	m.lastMessage = "Stopping cloudflared"
 	m.mu.Unlock()
 
 	if cmd.Process != nil {
@@ -294,9 +294,9 @@ func (m *Manager) wait(cmd *exec.Cmd, done chan struct{}) {
 		m.running = false
 		if err != nil && !m.stopping {
 			m.lastError = m.redact(truncateMessage(err.Error()))
-			m.lastMessage = "cloudflared 异常退出"
+			m.lastMessage = "cloudflared exited unexpectedly"
 		} else {
-			m.lastMessage = "cloudflared 已停止"
+			m.lastMessage = "cloudflared stopped"
 		}
 		m.stopping = false
 	}

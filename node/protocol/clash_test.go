@@ -21,7 +21,7 @@ func TestProxyBandwidthYAMLUnmarshal(t *testing.T) {
 		{name: "bare string", yamlDoc: "up: \"30\"\n", wantUp: 30},
 		{name: "provider bare string pair", yamlDoc: "up: \"500\"\ndown: \"1000\"\n", wantUp: 500, wantDown: 1000},
 		{name: "mbps string", yamlDoc: "up: \"30 Mbps\"\n", wantUp: 30},
-		{name: "invalid suffix", yamlDoc: "up: \"30 bananas\"\n", wantErr: "无法解析带宽值"},
+		{name: "invalid suffix", yamlDoc: "up: \"30 bananas\"\n", wantErr: "cannot parse bandwidth value"},
 	}
 
 	for _, tt := range tests {
@@ -815,6 +815,122 @@ proxy-groups:
 	}
 	if includeAllProviders, ok := thirdGroup["include-all-providers"].(bool); !ok || !includeAllProviders {
 		t.Fatalf("include-all-providers 丢失: %#v", thirdGroup["include-all-providers"])
+	}
+}
+
+// TestEncodeClashExpandsPlaceholderInFilterGroup 验证带 filter / include-all-proxies 的
+// 自动匹配组里显式写下的 __ALL_PROXIES__ 仍会就地展开，占位符不能原样发给客户端。
+func TestEncodeClashExpandsPlaceholderInFilterGroup(t *testing.T) {
+	templatePath := filepath.Join(t.TempDir(), "clash-filter-placeholder-template.yaml")
+	template := `proxies: ~
+proxy-groups:
+  - name: ChatGPT
+    type: select
+    include-all-proxies: true
+    filter: '(?i)ai-chatgpt'
+    exclude-filter: '(?i)ai-chatgpt-blocked'
+    proxies:
+      - DIRECT
+      - __ALL_PROXIES__
+  - name: Auto
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    include-all: true
+    filter: '(?i)hk'
+    proxies: []
+rules:
+  - MATCH,Auto
+`
+	if err := os.WriteFile(templatePath, []byte(template), 0o600); err != nil {
+		t.Fatalf("写入模板失败: %v", err)
+	}
+
+	data, err := DecodeClash(
+		[]Proxy{{Name: "Node-A", Type: "ss", Server: "example.com", Port: FlexPort(8388)}},
+		templatePath,
+	)
+	if err != nil {
+		t.Fatalf("DecodeClash 失败: %v", err)
+	}
+	output := string(data)
+
+	if strings.Contains(output, "__ALL_PROXIES__") {
+		t.Fatalf("占位符未被展开: %s", output)
+	}
+	// 占位符前后的成员与所在位置保持不变
+	assertContains(t, "占位符展开", output, "    proxies:\n      - DIRECT\n      - Node-A\n")
+	assertContains(t, "filter 保留", output, "    filter: '(?i)ai-chatgpt'\n")
+	// 自动匹配组本身不能补全成员
+	assertContains(t, "空列表保持原样", output, "    filter: '(?i)hk'\n    proxies: []\n")
+
+	var parsed struct {
+		ProxyGroups []struct {
+			Name              string   `yaml:"name"`
+			Proxies           []string `yaml:"proxies"`
+			IncludeAllProxies bool     `yaml:"include-all-proxies"`
+			IncludeAll        bool     `yaml:"include-all"`
+			Filter            string   `yaml:"filter"`
+		} `yaml:"proxy-groups"`
+	}
+	if err := yaml.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("输出不是合法 YAML: %v", err)
+	}
+	if len(parsed.ProxyGroups) != 2 {
+		t.Fatalf("代理组数量错误: %#v", parsed.ProxyGroups)
+	}
+	chatgpt := parsed.ProxyGroups[0]
+	if !chatgpt.IncludeAllProxies || chatgpt.Filter != "(?i)ai-chatgpt" {
+		t.Fatalf("自动匹配字段被改写: %#v", chatgpt)
+	}
+	if len(chatgpt.Proxies) != 2 || chatgpt.Proxies[0] != "DIRECT" || chatgpt.Proxies[1] != "Node-A" {
+		t.Fatalf("占位符展开结果错误: %#v", chatgpt.Proxies)
+	}
+	if auto := parsed.ProxyGroups[1]; !auto.IncludeAll || len(auto.Proxies) != 0 {
+		t.Fatalf("include-all 组被改写: %#v", auto)
+	}
+}
+
+// TestDecodeClashExpandsPlaceholderInFilterGroupFallback 用流式 proxy-groups 强制走
+// 节点树重编码路径，确认自动匹配组里的 __ALL_PROXIES__ 同样会被展开。
+func TestDecodeClashExpandsPlaceholderInFilterGroupFallback(t *testing.T) {
+	templatePath := filepath.Join(t.TempDir(), "clash-flow-groups-template.yaml")
+	template := "proxies: ~\nproxy-groups: [{name: ChatGPT, type: select, include-all-proxies: true, " +
+		"filter: '(?i)ai-chatgpt', proxies: [DIRECT, __ALL_PROXIES__]}]\nrules:\n  - MATCH,ChatGPT\n"
+	if err := os.WriteFile(templatePath, []byte(template), 0o600); err != nil {
+		t.Fatalf("写入模板失败: %v", err)
+	}
+
+	data, err := DecodeClash(
+		[]Proxy{{Name: "Node-A", Type: "ss", Server: "example.com", Port: FlexPort(8388)}},
+		templatePath,
+	)
+	if err != nil {
+		t.Fatalf("DecodeClash 失败: %v", err)
+	}
+	output := string(data)
+
+	if strings.Contains(output, "__ALL_PROXIES__") {
+		t.Fatalf("占位符未被展开: %s", output)
+	}
+
+	var parsed struct {
+		ProxyGroups []struct {
+			Proxies           []string `yaml:"proxies"`
+			IncludeAllProxies bool     `yaml:"include-all-proxies"`
+		} `yaml:"proxy-groups"`
+	}
+	if err := yaml.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("输出不是合法 YAML: %v", err)
+	}
+	if len(parsed.ProxyGroups) != 1 {
+		t.Fatalf("代理组数量错误: %#v", parsed.ProxyGroups)
+	}
+	group := parsed.ProxyGroups[0]
+	if !group.IncludeAllProxies {
+		t.Fatalf("include-all-proxies 丢失: %#v", group)
+	}
+	if len(group.Proxies) != 2 || group.Proxies[0] != "DIRECT" || group.Proxies[1] != "Node-A" {
+		t.Fatalf("占位符展开结果错误: %#v", group.Proxies)
 	}
 }
 

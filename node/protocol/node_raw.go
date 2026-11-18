@@ -17,18 +17,18 @@ type ParsedNodeInfo struct {
 // ParseNodeLink 解析节点链接，返回协议类型和所有字段的键值对
 func ParseNodeLink(link string) (*ParsedNodeInfo, error) {
 	if link == "" {
-		return nil, fmt.Errorf("链接不能为空")
+		return nil, fmt.Errorf("link cannot be empty")
 	}
 
 	protocol := detectProtocol(link)
 	if protocol == nil {
-		return nil, fmt.Errorf("不支持的协议类型")
+		return nil, fmt.Errorf("unsupported protocol type")
 	}
 
 	protoObj, err := protocol.DecodeLink(link)
 
 	if err != nil {
-		return nil, fmt.Errorf("解析链接失败: %w", err)
+		return nil, fmt.Errorf("failed to parse link: %w", err)
 	}
 
 	// 使用反射提取所有字段值
@@ -113,17 +113,17 @@ func extractFieldValuesRecursive(v reflect.Value, prefix string, fields map[stri
 // 返回更新后的链接
 func UpdateNodeLinkFields(link string, fieldsJSON string) (string, error) {
 	if link == "" {
-		return "", fmt.Errorf("链接不能为空")
+		return "", fmt.Errorf("link cannot be empty")
 	}
 
 	var fields map[string]any
 	if err := json.Unmarshal([]byte(fieldsJSON), &fields); err != nil {
-		return "", fmt.Errorf("解析字段JSON失败: %w", err)
+		return "", fmt.Errorf("failed to parse fields JSON: %w", err)
 	}
 
 	protocol := detectProtocol(link)
 	if protocol == nil {
-		return "", fmt.Errorf("不支持的协议类型")
+		return "", fmt.Errorf("unsupported protocol type")
 	}
 
 	decoded, err := protocol.DecodeLink(link)
@@ -139,7 +139,7 @@ func UpdateNodeLinkFields(link string, fieldsJSON string) (string, error) {
 	}
 
 	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
-		return "", fmt.Errorf("协议对象不可编辑")
+		return "", fmt.Errorf("protocol object is not editable")
 	}
 
 	editable := v.Elem()
@@ -161,14 +161,14 @@ func setFieldValue(v reflect.Value, fieldPath string, value any) error {
 	parts := strings.Split(fieldPath, ".")
 	for i, part := range parts {
 		if v.Kind() != reflect.Struct {
-			return fmt.Errorf("字段路径无效: %s", fieldPath)
+			return fmt.Errorf("invalid field path: %s", fieldPath)
 		}
 		field := v.FieldByName(part)
 		if !field.IsValid() {
-			return fmt.Errorf("字段不存在: %s", part)
+			return fmt.Errorf("field does not exist: %s", part)
 		}
 		if !field.CanSet() {
-			return fmt.Errorf("字段不可设置: %s", part)
+			return fmt.Errorf("field is not settable: %s", part)
 		}
 		if i == len(parts)-1 {
 			// 最后一级，设置值

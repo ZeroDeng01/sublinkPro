@@ -80,7 +80,7 @@ func init() {
 
 // InitChainRuleCache 初始化链式代理规则缓存
 func InitChainRuleCache() error {
-	utils.Info("开始加载链式代理规则到缓存")
+	utils.Info("Loading chain proxy rules into cache")
 
 	// 添加 SubscriptionID 二级索引
 	chainRuleCache.AddIndex("subscriptionId", func(r SubscriptionChainRule) string {
@@ -93,7 +93,7 @@ func InitChainRuleCache() error {
 	}
 
 	chainRuleCache.LoadAll(rules)
-	utils.Info("链式代理规则缓存初始化完成，共加载 %d 条规则", chainRuleCache.Count())
+	utils.Info("Chain proxy rule cache initialized with %d rules", chainRuleCache.Count())
 
 	cache.Manager.Register("chainRule", chainRuleCache)
 	return nil
@@ -222,7 +222,7 @@ func (r *SubscriptionChainRule) ParseTargetConfig() (*TargetConfig, error) {
 func (r *SubscriptionChainRule) MatchTargetCondition(node Node) bool {
 	target, err := r.ParseTargetConfig()
 	if err != nil {
-		utils.Error("解析目标条件失败: %v", err)
+		utils.Error("Failed to parse target conditions: %v", err)
 		return false
 	}
 
@@ -263,7 +263,7 @@ func (r *SubscriptionChainRule) ResolveProxyName(allNodes []Node, nodeNameMap ma
 	case "template_group":
 		// 模板代理组：直接使用组名
 		if entryItem.GroupName == "" {
-			return "", nil, fmt.Errorf("模板代理组名称不能为空")
+			return "", nil, fmt.Errorf("template proxy group name is required")
 		}
 		entryProxyName = entryItem.GroupName
 
@@ -272,7 +272,7 @@ func (r *SubscriptionChainRule) ResolveProxyName(allNodes []Node, nodeNameMap ma
 		entryProxyName = entryItem.GroupName
 		proxies := r.getMatchingNodeNames(allNodes, entryItem.NodeConditions, nodeNameMap)
 		if len(proxies) == 0 {
-			return "", nil, fmt.Errorf("自定义代理组 %s 没有匹配的节点", entryItem.GroupName)
+			return "", nil, fmt.Errorf("custom proxy group %s has no matching nodes", entryItem.GroupName)
 		}
 		group := CustomProxyGroup{
 			Name:          entryItem.GroupName,
@@ -287,10 +287,10 @@ func (r *SubscriptionChainRule) ResolveProxyName(allNodes []Node, nodeNameMap ma
 
 	case "dynamic_node":
 		// 动态条件节点：获取第一个匹配的节点名称
-		utils.Debug("[ChainRule] ResolveProxyName: 进入 dynamic_node 分支, SelectMode=%s", entryItem.SelectMode)
+		utils.Debug("[ChainRule] ResolveProxyName: entering dynamic_node branch, SelectMode=%s", entryItem.SelectMode)
 		proxyName := r.getFirstMatchingNodeName(allNodes, entryItem.NodeConditions, entryItem.SelectMode, nodeNameMap)
 		if proxyName == "" {
-			return "", nil, fmt.Errorf("动态条件没有匹配的节点")
+			return "", nil, fmt.Errorf("dynamic condition has no matching nodes")
 		}
 		entryProxyName = proxyName
 
@@ -299,11 +299,11 @@ func (r *SubscriptionChainRule) ResolveProxyName(allNodes []Node, nodeNameMap ma
 		if name, ok := nodeNameMap[entryItem.NodeID]; ok {
 			entryProxyName = name
 		} else {
-			return "", nil, fmt.Errorf("指定的节点 ID %d 不存在", entryItem.NodeID)
+			return "", nil, fmt.Errorf("specified node ID %d does not exist", entryItem.NodeID)
 		}
 
 	default:
-		return "", nil, fmt.Errorf("未知的代理类型: %s", entryItem.Type)
+		return "", nil, fmt.Errorf("unknown proxy type: %s", entryItem.Type)
 	}
 
 	return entryProxyName, customGroups, nil
@@ -337,14 +337,14 @@ func (r *SubscriptionChainRule) ResolveChainLinks(allNodes []Node, nodeNameMap m
 		switch item.Type {
 		case "template_group":
 			if item.GroupName == "" {
-				return nil, fmt.Errorf("链路第 %d 项：模板代理组名称不能为空", i+1)
+				return nil, fmt.Errorf("chain item %d: template proxy group name is required", i+1)
 			}
 			proxyName = item.GroupName
 			isGroup = true
 
 		case "custom_group":
 			if item.GroupName == "" {
-				return nil, fmt.Errorf("链路第 %d 项：自定义代理组名称不能为空", i+1)
+				return nil, fmt.Errorf("chain item %d: custom proxy group name is required", i+1)
 			}
 			proxyName = item.GroupName
 			isGroup = true
@@ -352,7 +352,7 @@ func (r *SubscriptionChainRule) ResolveChainLinks(allNodes []Node, nodeNameMap m
 			// 收集匹配的节点并生成自定义代理组
 			proxies := r.getMatchingNodeNames(allNodes, item.NodeConditions, nodeNameMap)
 			if len(proxies) == 0 {
-				utils.Warn("[ChainRule] 自定义代理组 %s 没有匹配的节点", item.GroupName)
+				utils.Warn("[ChainRule] Custom proxy group %s has no matching nodes", item.GroupName)
 			}
 			group := CustomProxyGroup{
 				Name:          item.GroupName,
@@ -370,14 +370,14 @@ func (r *SubscriptionChainRule) ResolveChainLinks(allNodes []Node, nodeNameMap m
 				for _, memberName := range proxies {
 					result.GroupMemberDialerMap[memberName] = prevProxyName
 				}
-				utils.Debug("[ChainRule] 中间节点自定义代理组 %s 内 %d 个节点设置 dialer-proxy=%s",
+				utils.Debug("[ChainRule] Set dialer-proxy=%s on %d nodes in intermediate custom group %s",
 					item.GroupName, len(proxies), prevProxyName)
 			}
 
 		case "dynamic_node":
 			proxyName = r.getFirstMatchingNodeName(allNodes, item.NodeConditions, item.SelectMode, nodeNameMap)
 			if proxyName == "" {
-				return nil, fmt.Errorf("链路第 %d 项：动态条件没有匹配的节点", i+1)
+				return nil, fmt.Errorf("chain item %d: dynamic condition has no matching nodes", i+1)
 			}
 			isGroup = false
 
@@ -385,12 +385,12 @@ func (r *SubscriptionChainRule) ResolveChainLinks(allNodes []Node, nodeNameMap m
 			if name, ok := nodeNameMap[item.NodeID]; ok {
 				proxyName = name
 			} else {
-				return nil, fmt.Errorf("链路第 %d 项：指定的节点 ID %d 不存在", i+1, item.NodeID)
+				return nil, fmt.Errorf("chain item %d: specified node ID %d does not exist", i+1, item.NodeID)
 			}
 			isGroup = false
 
 		default:
-			return nil, fmt.Errorf("链路第 %d 项：未知的代理类型 %s", i+1, item.Type)
+			return nil, fmt.Errorf("chain item %d: unknown proxy type %s", i+1, item.Type)
 		}
 
 		// 构建链路项
@@ -413,7 +413,7 @@ func (r *SubscriptionChainRule) ResolveChainLinks(allNodes []Node, nodeNameMap m
 		result.FinalDialer = result.Links[len(result.Links)-1].ProxyName
 	}
 
-	utils.Debug("[ChainRule] 解析链路完成: 共 %d 个节点, FinalDialer=%s", len(result.Links), result.FinalDialer)
+	utils.Debug("[ChainRule] Chain resolved: %d nodes in total, FinalDialer=%s", len(result.Links), result.FinalDialer)
 	return result, nil
 }
 
@@ -437,25 +437,25 @@ func (r *SubscriptionChainRule) getMatchingNodeNames(nodes []Node, conditions *T
 // getFirstMatchingNodeName 获取第一个匹配条件的节点名称
 func (r *SubscriptionChainRule) getFirstMatchingNodeName(nodes []Node, conditions *TagConditions, selectMode string, nameMap map[int]string) string {
 	if conditions == nil {
-		utils.Debug("[ChainRule] getFirstMatchingNodeName: conditions 为空")
+		utils.Debug("[ChainRule] getFirstMatchingNodeName: conditions are empty")
 		return ""
 	}
 
-	utils.Debug("[ChainRule] getFirstMatchingNodeName: 开始评估 %d 个节点, selectMode=%s", len(nodes), selectMode)
-	utils.Debug("[ChainRule] 条件: logic=%s, 条件数=%d", conditions.Logic, len(conditions.Conditions))
+	utils.Debug("[ChainRule] getFirstMatchingNodeName: evaluating %d nodes, selectMode=%s", len(nodes), selectMode)
+	utils.Debug("[ChainRule] Conditions: logic=%s, count=%d", conditions.Logic, len(conditions.Conditions))
 
 	var matchedNodes []Node
 	for _, node := range nodes {
 		if conditions.EvaluateNode(node) {
-			utils.Debug("[ChainRule] 节点 #%d (%s) 匹配条件", node.ID, node.Name)
+			utils.Debug("[ChainRule] Node #%d (%s) matches conditions", node.ID, node.Name)
 			matchedNodes = append(matchedNodes, node)
 		}
 	}
 
-	utils.Debug("[ChainRule] 匹配的节点数: %d", len(matchedNodes))
+	utils.Debug("[ChainRule] Matching nodes: %d", len(matchedNodes))
 
 	if len(matchedNodes) == 0 {
-		utils.Debug("[ChainRule] 没有匹配的节点，返回空")
+		utils.Debug("[ChainRule] No matching nodes; returning empty")
 		return ""
 	}
 
@@ -478,10 +478,10 @@ func (r *SubscriptionChainRule) getFirstMatchingNodeName(nodes []Node, condition
 	}
 
 	if name, ok := nameMap[selectedNode.ID]; ok {
-		utils.Debug("[ChainRule] 选中节点 #%d (%s), 返回名称: %s", selectedNode.ID, selectedNode.Name, name)
+		utils.Debug("[ChainRule] Selected node #%d (%s); returning name: %s", selectedNode.ID, selectedNode.Name, name)
 		return name
 	}
-	utils.Debug("[ChainRule] 选中节点 #%d 未在 nameMap 中找到", selectedNode.ID)
+	utils.Debug("[ChainRule] Selected node #%d not found in nameMap", selectedNode.ID)
 	return ""
 }
 
@@ -503,43 +503,43 @@ func ApplyChainRulesToNode(node Node, rules []SubscriptionChainRule, allNodes []
 // 返回值：完整链路解析结果（包含所有中间节点及其 dialer-proxy 设置）
 // 优先级：链式代理规则 > 节点自身的 DialerProxyName 设置
 func ApplyChainRulesToNodeV2(node Node, rules []SubscriptionChainRule, allNodes []Node, nodeNameMap map[int]string) *ChainLinkResult {
-	utils.Debug("[ChainRule] ApplyChainRulesToNodeV2: 节点 #%d (%s), 规则数=%d", node.ID, node.Name, len(rules))
+	utils.Debug("[ChainRule] ApplyChainRulesToNodeV2: node #%d (%s), rules=%d", node.ID, node.Name, len(rules))
 
 	// 按顺序匹配规则（链式代理规则优先级最高）
 	for _, rule := range rules {
 		if !rule.Enabled {
-			utils.Debug("[ChainRule] 规则 '%s' 未启用，跳过", rule.Name)
+			utils.Debug("[ChainRule] Rule '%s' is disabled; skipping", rule.Name)
 			continue
 		}
 
-		utils.Debug("[ChainRule] 检查规则 '%s' 是否匹配节点 #%d", rule.Name, node.ID)
+		utils.Debug("[ChainRule] Checking whether rule '%s' matches node #%d", rule.Name, node.ID)
 
 		if rule.MatchTargetCondition(node) {
-			utils.Debug("[ChainRule] 规则 '%s' 匹配成功，开始解析链路", rule.Name)
+			utils.Debug("[ChainRule] Rule '%s' matched; resolving chain", rule.Name)
 			chainResult, err := rule.ResolveChainLinks(allNodes, nodeNameMap)
 			if err != nil {
-				utils.Warn("规则 %s 解析失败: %v", rule.Name, err)
+				utils.Warn("Failed to resolve rule %s: %v", rule.Name, err)
 				continue
 			}
 			if chainResult != nil && chainResult.FinalDialer != "" {
-				utils.Debug("[ChainRule] 返回链路: %d 级, FinalDialer=%s (覆盖节点原 DialerProxyName='%s')",
+				utils.Debug("[ChainRule] Returning chain: %d levels, FinalDialer=%s (overrides node DialerProxyName='%s')",
 					len(chainResult.Links), chainResult.FinalDialer, node.DialerProxyName)
 				return chainResult
 			}
 		} else {
-			utils.Debug("[ChainRule] 规则 '%s' 不匹配节点 #%d", rule.Name, node.ID)
+			utils.Debug("[ChainRule] Rule '%s' does not match node #%d", rule.Name, node.ID)
 		}
 	}
 
 	// 如果没有规则匹配，使用节点自身的 DialerProxyName
 	if node.DialerProxyName != "" {
-		utils.Debug("[ChainRule] 没有规则匹配，使用节点自身 DialerProxyName='%s'", node.DialerProxyName)
+		utils.Debug("[ChainRule] No rule matched; using node DialerProxyName='%s'", node.DialerProxyName)
 		return &ChainLinkResult{
 			FinalDialer: node.DialerProxyName,
 		}
 	}
 
-	utils.Debug("[ChainRule] 没有规则匹配节点 #%d，无 dialer-proxy", node.ID)
+	utils.Debug("[ChainRule] No rule matched node #%d; no dialer-proxy", node.ID)
 	return nil
 }
 

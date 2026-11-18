@@ -65,7 +65,7 @@ export const previewSubscriptionNodeName = (rule, previewIcons) => {
     .replace(/\$FraudScore/g, '12')
     .replace(/\$Unlock\([^)]+\)/g, 'Unlock-US')
     .replace(/\$LinkName/g, 'HongKong01')
-    .replace(/\$LinkCountryName/g, '香港')
+    .replace(/\$LinkCountryName/g, 'Hong Kong')
     .replace(/\$LinkCountry/g, 'HK')
     .replace(/\$Speed/g, '1.50MB/s')
     .replace(/\$Delay/g, '125ms')

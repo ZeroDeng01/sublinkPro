@@ -894,7 +894,7 @@ export default function SubscriptionList() {
       await fetchSelectedNodeDetails(newNodes);
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '批量添加节点失败', 'error');
+      showMessage(error.message || 'Failed to add nodes in bulk', 'error');
     }
   };
 
@@ -943,7 +943,7 @@ export default function SubscriptionList() {
       setCheckedAvailable(response.data || []);
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '批量选择节点失败', 'error');
+      showMessage(error.message || 'Failed to select nodes in bulk', 'error');
     }
   };
 
@@ -997,7 +997,7 @@ export default function SubscriptionList() {
       setPreviewOpen(true);
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '预览请求失败', 'error');
+      showMessage(error.message || 'Preview request failed', 'error');
     } finally {
       setPreviewLoading(false);
     }
@@ -1018,7 +1018,7 @@ export default function SubscriptionList() {
       setPreviewOpen(true);
     } catch (error) {
       console.error(error);
-      showMessage(error.message || '预览请求失败', 'error');
+      showMessage(error.message || 'Preview request failed', 'error');
     } finally {
       setPreviewLoading(false);
     }
@@ -1235,6 +1235,20 @@ export default function SubscriptionList() {
                 </IconButton>
               </Tooltip>
             )}
+            <Tooltip title={t('common.refresh')}>
+              <IconButton onClick={() => fetchSubscriptions(page, rowsPerPage)} disabled={loading} size="small">
+                <RefreshIcon
+                  sx={
+                    loading
+                      ? {
+                          animation: 'spin 1s linear infinite',
+                          '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
+                        }
+                      : {}
+                  }
+                />
+              </IconButton>
+            </Tooltip>
             <Button variant="contained" startIcon={<AddIcon />} disableRipple onClick={activeTab === 'proxy' ? handleAddProxy : handleAdd}>
               {t('common.add')}
             </Button>
@@ -1267,23 +1281,6 @@ export default function SubscriptionList() {
         )
       }
     >
-      {matchDownMd && (
-        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-          <IconButton onClick={() => fetchSubscriptions(page, rowsPerPage)} disabled={loading} size="small">
-            <RefreshIcon
-              sx={
-                loading
-                  ? {
-                      animation: 'spin 1s linear infinite',
-                      '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } }
-                    }
-                  : {}
-              }
-            />
-          </IconButton>
-        </Stack>
-      )}
-
       <Tabs
         value={activeTab}
         onChange={handleTabChange}

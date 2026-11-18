@@ -24,10 +24,10 @@ func init() {
 // InitSettingCache 初始化设置缓存
 func InitSettingCache() error {
 	if database.DB == nil {
-		return fmt.Errorf("数据库未初始化")
+		return fmt.Errorf("database is not initialized")
 	}
 
-	utils.Info("开始加载系统设置到缓存")
+	utils.Info("Loading system settings into cache")
 	var settings []SystemSetting
 	if err := database.DB.Find(&settings).Error; err != nil {
 		return err
@@ -35,7 +35,7 @@ func InitSettingCache() error {
 
 	// 使用批量加载方式初始化缓存
 	settingCache.LoadAll(settings)
-	utils.Info("系统设置缓存初始化完成，共加载 %d 个设置", settingCache.Count())
+	utils.Info("System setting cache initialized with %d settings", settingCache.Count())
 
 	// 注册到缓存管理器
 	cache.Manager.Register("system_setting", settingCache)
@@ -50,7 +50,7 @@ func GetSetting(key string) (string, error) {
 	}
 
 	if database.DB == nil {
-		return "", fmt.Errorf("数据库未初始化")
+		return "", fmt.Errorf("database is not initialized")
 	}
 
 	// 缓存不存在，从数据库读取
@@ -68,7 +68,7 @@ func GetSetting(key string) (string, error) {
 // SetSetting 保存设置 (Write-Through)
 func SetSetting(key string, value string) error {
 	if database.DB == nil {
-		return fmt.Errorf("数据库未初始化")
+		return fmt.Errorf("database is not initialized")
 	}
 
 	setting := SystemSetting{

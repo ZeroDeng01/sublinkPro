@@ -25,7 +25,7 @@ func RunAutoMigrate(migrationID string, dst ...any) error {
 		// 已经执行过，跳过
 		return nil
 	}
-	utils.Info("执行数据库升级任务：%s", migrationID)
+	utils.Info("Running database upgrade task: %s", migrationID)
 	// 执行迁移
 	if err := DB.AutoMigrate(dst...); err != nil {
 		return err
@@ -53,7 +53,7 @@ func RunCustomMigration(migrationID string, action func() error) error {
 		// 已经执行过，跳过
 		return nil
 	}
-	utils.Info("执行数据库升级任务：%s", migrationID)
+	utils.Info("Running database upgrade task: %s", migrationID)
 
 	// 执行自定义迁移逻辑
 	if err := action(); err != nil {

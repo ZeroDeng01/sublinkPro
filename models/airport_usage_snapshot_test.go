@@ -276,6 +276,46 @@ func TestGetAirportUsageSparklinesReturnsPointsForEachAirport(t *testing.T) {
 	}
 }
 
+func TestGetAirportUsageSparklinesReportsTodayUsed(t *testing.T) {
+	setupUsageSnapshotTestDB(t)
+	withBaseline := newUsageTestAirport(t, "sparkline-today-baseline")
+	noBaseline := newUsageTestAirport(t, "sparkline-today-no-baseline")
+
+	now := time.Date(2024, 1, 15, 12, 0, 0, 0, time.Local)
+	snapshots := []AirportUsageSnapshot{
+		// 当天零点前的最后一条成功快照作为基线
+		{AirportID: withBaseline.ID, Upload: 100, Download: 200, Total: 1000, CapturedAt: now.AddDate(0, 0, -1)},
+		{AirportID: withBaseline.ID, Upload: 100, Download: 250, Total: 1000, CapturedAt: now.Add(-2 * time.Hour)},
+		{AirportID: withBaseline.ID, Upload: 130, Download: 260, Total: 1000, CapturedAt: now.Add(-time.Hour)},
+		// 失败快照不参与今天消耗的计算
+		{AirportID: withBaseline.ID, Upload: 999, Download: 999, Total: 1000, Failed: true, CapturedAt: now.Add(-30 * time.Minute)},
+		// 没有历史基线：当天第一条成功快照只作为基线，从第二条开始累计
+		{AirportID: noBaseline.ID, Upload: 1, Download: 1, Total: 10, CapturedAt: now.Add(-3 * time.Hour)},
+		{AirportID: noBaseline.ID, Upload: 4, Download: 3, Total: 10, CapturedAt: now.Add(-time.Hour)},
+	}
+	if err := database.DB.Create(&snapshots).Error; err != nil {
+		t.Fatalf("create sparkline snapshots: %v", err)
+	}
+
+	sparklines, err := getAirportUsageSparklines([]int{withBaseline.ID, noBaseline.ID}, 14, now)
+	if err != nil {
+		t.Fatalf("get usage sparklines: %v", err)
+	}
+
+	todayUsed := make(map[int]int64, len(sparklines))
+	for _, sparkline := range sparklines {
+		todayUsed[sparkline.AirportID] = sparkline.TodayUsed
+	}
+	// 昨天基线(100,200) -> 10:00(100,250) 消耗 50，11:00(130,260) 再消耗 40
+	if got := todayUsed[withBaseline.ID]; got != 90 {
+		t.Fatalf("today used with baseline = %d, want 90", got)
+	}
+	// (1,1) -> (4,3)：上行 +3、下行 +2
+	if got := todayUsed[noBaseline.ID]; got != 5 {
+		t.Fatalf("today used without baseline = %d, want 5", got)
+	}
+}
+
 func TestGetAirportUsageHistoryAutoKeepsRefreshPoints(t *testing.T) {
 	setupUsageSnapshotTestDB(t)
 	airport := newUsageTestAirport(t, "history-refresh")
@@ -339,6 +379,64 @@ func TestGetAirportUsageHistoryAutoCapsDensePoints(t *testing.T) {
 	last := history.Points[len(history.Points)-1]
 	if last.Timestamp != batch[len(batch)-1].CapturedAt.UnixMilli() {
 		t.Fatalf("last point timestamp = %d, want %d", last.Timestamp, batch[len(batch)-1].CapturedAt.UnixMilli())
+	}
+}
+
+func TestGetAirportDailyUsageBreaksDownByAirport(t *testing.T) {
+	setupUsageSnapshotTestDB(t)
+	alpha := newUsageTestAirport(t, "daily-alpha")
+	beta := newUsageTestAirport(t, "daily-beta")
+
+	now := time.Date(2026, 5, 20, 18, 0, 0, 0, time.Local)
+	dayStart := startOfUsageDay(now)
+	baselineAt := dayStart.AddDate(0, 0, -1).Add(-time.Hour)
+	snapshots := []AirportUsageSnapshot{
+		{AirportID: alpha.ID, Upload: 50, Download: 60, Total: 1000, CapturedAt: baselineAt},
+		{AirportID: beta.ID, Upload: 10, Download: 20, Total: 1000, CapturedAt: baselineAt},
+		{AirportID: alpha.ID, Upload: 150, Download: 260, Total: 1000, CapturedAt: dayStart.Add(2 * time.Hour)},
+		{AirportID: beta.ID, Upload: 12, Download: 26, Total: 1000, CapturedAt: dayStart.Add(2 * time.Hour)},
+		{AirportID: alpha.ID, Upload: 180, Download: 300, Total: 1000, CapturedAt: dayStart.Add(6 * time.Hour)},
+	}
+	if err := database.DB.Create(&snapshots).Error; err != nil {
+		t.Fatalf("create daily snapshots: %v", err)
+	}
+
+	report, err := getAirportDailyUsage(2, 0, now)
+	if err != nil {
+		t.Fatalf("get airport daily usage: %v", err)
+	}
+	if len(report.Points) != 2 {
+		t.Fatalf("daily points = %d, want 2", len(report.Points))
+	}
+
+	today := report.Points[len(report.Points)-1]
+	if today.Used != 378 {
+		t.Fatalf("today used = %d, want 378", today.Used)
+	}
+	if len(today.Airports) != 2 {
+		t.Fatalf("today airport breakdown = %d, want 2", len(today.Airports))
+	}
+	// 明细按消耗降序：alpha 贡献 370，beta 贡献 8。
+	if today.Airports[0].AirportName != "daily-alpha" || today.Airports[0].Used != 370 {
+		t.Fatalf("first breakdown entry = %+v, want daily-alpha with 370", today.Airports[0])
+	}
+	if today.Airports[0].Upload != 130 || today.Airports[0].Download != 240 {
+		t.Fatalf("alpha breakdown upload/download = %d/%d, want 130/240", today.Airports[0].Upload, today.Airports[0].Download)
+	}
+	if today.Airports[1].AirportName != "daily-beta" || today.Airports[1].Used != 8 {
+		t.Fatalf("second breakdown entry = %+v, want daily-beta with 8", today.Airports[1])
+	}
+	if len(report.Points[0].Airports) != 0 {
+		t.Fatalf("yesterday breakdown = %d, want 0", len(report.Points[0].Airports))
+	}
+
+	// 单机场报告不需要拆分明细。
+	single, err := getAirportDailyUsage(2, alpha.ID, now)
+	if err != nil {
+		t.Fatalf("get single airport daily usage: %v", err)
+	}
+	if last := single.Points[len(single.Points)-1]; len(last.Airports) != 0 {
+		t.Fatalf("single airport breakdown = %d, want 0", len(last.Airports))
 	}
 }
 

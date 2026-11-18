@@ -15,7 +15,7 @@ import (
 func GenerateAccessKey(c *gin.Context) {
 	var userAccessKey dto.UserAccessKey
 	if err := c.BindJSON(&userAccessKey); err != nil {
-		utils.FailWithI18n(c, "参数错误", "backend.common.invalidParams", nil)
+		utils.FailWithI18n(c, "Invalid parameters", "backend.common.invalidParams", nil)
 		return
 	}
 	description, ok := bindAccessKeyDescription(c, userAccessKey.Description)
@@ -25,7 +25,7 @@ func GenerateAccessKey(c *gin.Context) {
 	user := &models.User{Username: userAccessKey.UserName}
 	err := user.Find()
 	if err != nil {
-		utils.FailWithI18n(c, "用户不存在", "backend.user.notFound", nil)
+		utils.FailWithI18n(c, "User not found", "backend.user.notFound", nil)
 		return
 	}
 
@@ -38,17 +38,17 @@ func GenerateAccessKey(c *gin.Context) {
 
 	apiKey, err := accessKey.GenerateAPIKey()
 	if err != nil {
-		utils.Error("生成 API Key 失败: %v", err)
-		utils.FailWithI18n(c, "生成API Key失败", "backend.accessKeys.generateFailed", nil)
+		utils.Error("Failed to generate API key: %v", err)
+		utils.FailWithI18n(c, "Failed to generate API key", "backend.accessKeys.generateFailed", nil)
 		return
 	}
 	err = accessKey.Generate()
 	if err != nil {
-		utils.Error("生成 API Key 失败: %v", err)
-		utils.FailWithI18n(c, "生成API Key失败", "backend.accessKeys.generateFailed", nil)
+		utils.Error("Failed to generate API key: %v", err)
+		utils.FailWithI18n(c, "Failed to generate API key", "backend.accessKeys.generateFailed", nil)
 		return
 	}
-	utils.OkDetailedI18n(c, "API Key生成成功", map[string]string{
+	utils.OkDetailedI18n(c, "API key generated", map[string]string{
 		"accessKey": apiKey,
 	}, "backend.accessKeys.generateSuccess", nil)
 }
@@ -60,12 +60,12 @@ func bindAccessKeyDescription(c *gin.Context, raw string) (string, bool) {
 		return description, true
 	}
 	if errors.Is(err, models.ErrAccessKeyDescriptionTooLong) {
-		utils.FailWithI18n(c, "描述过长", "backend.accessKeys.descriptionTooLong", map[string]any{
+		utils.FailWithI18n(c, "Description is too long", "backend.accessKeys.descriptionTooLong", map[string]any{
 			"max": models.AccessKeyDescriptionMaxLength,
 		})
 		return "", false
 	}
-	utils.FailWithI18n(c, "描述不能为空", "backend.accessKeys.descriptionRequired", nil)
+	utils.FailWithI18n(c, "Description is required", "backend.accessKeys.descriptionRequired", nil)
 	return "", false
 }
 
@@ -73,7 +73,7 @@ func bindAccessKeyDescription(c *gin.Context, raw string) (string, bool) {
 func UpdateAccessKey(c *gin.Context) {
 	var req dto.UserAccessKeyUpdate
 	if err := c.BindJSON(&req); err != nil {
-		utils.FailWithI18n(c, "参数错误", "backend.common.invalidParams", nil)
+		utils.FailWithI18n(c, "Invalid parameters", "backend.common.invalidParams", nil)
 		return
 	}
 
@@ -85,52 +85,52 @@ func UpdateAccessKey(c *gin.Context) {
 	accessKey := &models.AccessKey{ID: req.ID}
 	if err := accessKey.Update(description, req.ExpiredAt); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.FailWithI18n(c, "Access Key不存在", "backend.accessKeys.notFound", nil)
+			utils.FailWithI18n(c, "Access key not found", "backend.accessKeys.notFound", nil)
 			return
 		}
-		utils.Error("更新 Access Key 失败: %v", err)
-		utils.FailWithI18n(c, "更新Access Key失败", "backend.accessKeys.updateFailed", nil)
+		utils.Error("Failed to update access key: %v", err)
+		utils.FailWithI18n(c, "Failed to update access key", "backend.accessKeys.updateFailed", nil)
 		return
 	}
 
-	utils.OkDetailedI18n(c, "更新Access Key成功", accessKey, "backend.accessKeys.updateSuccess", nil)
+	utils.OkDetailedI18n(c, "Access key updated", accessKey, "backend.accessKeys.updateSuccess", nil)
 }
 
 func DeleteAccessKey(c *gin.Context) {
 
 	accessKeyIDParam := c.Param("accessKeyId")
 	if accessKeyIDParam == "" {
-		utils.FailWithI18n(c, "缺少Access Key ID", "backend.accessKeys.missingAccessKeyID", nil)
+		utils.FailWithI18n(c, "Missing access key ID", "backend.accessKeys.missingAccessKeyID", nil)
 		return
 	}
 
 	var accessKey models.AccessKey
 	accessKeyID, err := strconv.Atoi(accessKeyIDParam)
 	if err != nil {
-		utils.FailWithI18n(c, "删除Access Key失败", "backend.accessKeys.deleteFailed", nil)
+		utils.FailWithI18n(c, "Failed to delete access key", "backend.accessKeys.deleteFailed", nil)
 		return
 	}
 	accessKey.ID = accessKeyID
 	err = accessKey.Delete()
 	if err != nil {
-		utils.FailWithI18n(c, "删除Access Key失败", "backend.accessKeys.deleteFailed", nil)
+		utils.FailWithI18n(c, "Failed to delete access key", "backend.accessKeys.deleteFailed", nil)
 		return
 	}
 
-	utils.OkDetailedI18n(c, "删除Access Key成功", nil, "backend.accessKeys.deleteSuccess", nil)
+	utils.OkDetailedI18n(c, "Access key deleted", nil, "backend.accessKeys.deleteSuccess", nil)
 
 }
 
 func GetAccessKey(c *gin.Context) {
 	userIDParam := c.Param("userId")
 	if userIDParam == "" {
-		utils.FailWithI18n(c, "缺少User ID", "backend.user.missingUserID", nil)
+		utils.FailWithI18n(c, "Missing user ID", "backend.user.missingUserID", nil)
 		return
 	}
 
 	userID, err := strconv.Atoi(userIDParam)
 	if err != nil {
-		utils.FailWithI18n(c, "查询Access Key失败", "backend.accessKeys.queryFailed", nil)
+		utils.FailWithI18n(c, "Failed to query access keys", "backend.accessKeys.queryFailed", nil)
 		return
 	}
 
@@ -152,14 +152,14 @@ func GetAccessKey(c *gin.Context) {
 	if page > 0 && pageSize > 0 {
 		accessKeys, total, err := models.FindValidAccessKeysPaginated(userID, page, pageSize)
 		if err != nil {
-			utils.FailWithI18n(c, "查询Access Key失败", "backend.accessKeys.queryFailed", nil)
+			utils.FailWithI18n(c, "Failed to query access keys", "backend.accessKeys.queryFailed", nil)
 			return
 		}
 		totalPages := 0
 		if pageSize > 0 {
 			totalPages = int((total + int64(pageSize) - 1) / int64(pageSize))
 		}
-		utils.OkDetailedI18n(c, "查询Access Key成功", gin.H{
+		utils.OkDetailedI18n(c, "Access keys retrieved", gin.H{
 			"items":      accessKeys,
 			"total":      total,
 			"page":       page,
@@ -172,8 +172,8 @@ func GetAccessKey(c *gin.Context) {
 	// 不带分页参数，返回全部（向后兼容）
 	accessKeys, err := models.FindValidAccessKeys(userID)
 	if err != nil {
-		utils.FailWithI18n(c, "查询Access Key失败", "backend.accessKeys.queryFailed", nil)
+		utils.FailWithI18n(c, "Failed to query access keys", "backend.accessKeys.queryFailed", nil)
 		return
 	}
-	utils.OkDetailedI18n(c, "查询Access Key成功", accessKeys, "backend.accessKeys.querySuccess", nil)
+	utils.OkDetailedI18n(c, "Access keys retrieved", accessKeys, "backend.accessKeys.querySuccess", nil)
 }

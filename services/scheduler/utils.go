@@ -43,10 +43,10 @@ func formatNodeDisplayItem(name, group, source string) string {
 		parts = append(parts, group)
 	}
 
-	// 来源处理：manual 显示为"手动添加"，空时不显示
+	// 来源处理：manual 显示为"Manual"，空时不显示
 	if source != "" {
 		if source == "manual" {
-			parts = append(parts, "手动添加")
+			parts = append(parts, "Manual")
 		} else {
 			parts = append(parts, source)
 		}

@@ -76,11 +76,11 @@
 
 | 场景 | 响应 |
 |:---|:---|
-| 订阅未关联机场 | `502`，响应体为 `订阅未关联机场` |
-| 关联的机场已不存在 | `502`，响应体为 `订阅关联的机场不存在` |
-| 机场订阅地址为空或不是 HTTP(S) | `502`，响应体为 `机场订阅地址无效` |
-| 上游返回非 2xx | `502`，响应体为通用的 `拉取上游订阅失败`；具体状态码与原因写入服务端日志 |
-| 分享已过期 | `410`，响应体为 `订阅已过期` |
+| 订阅未关联机场 | `502`，响应体为 `Subscription is not linked to an airport` |
+| 关联的机场已不存在 | `502`，响应体为 `The airport linked to this subscription does not exist` |
+| 机场订阅地址为空或不是 HTTP(S) | `502`，响应体为 `Invalid airport subscription URL` |
+| 上游返回非 2xx | `502`，响应体为通用的 `Failed to fetch upstream subscription`；具体状态码与原因写入服务端日志 |
+| 分享已过期 | `410`，响应体为 `Subscription expired` |
 | 上游不可达或超时 | `502`，响应体同样为通用提示 |
 | 响应体超过 10 MiB | `502`；读取有上限，避免占用过多服务端内存 |
 

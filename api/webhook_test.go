@@ -241,7 +241,7 @@ func TestTestWebhookByIDSendsConfiguredRequest(t *testing.T) {
 	if gotMethod != http.MethodPut {
 		t.Fatalf("expected method PUT, got %s", gotMethod)
 	}
-	if !strings.Contains(gotBody, "Sublink Pro Webhook 测试|test.webhook|info") {
+	if !strings.Contains(gotBody, "Sublink Pro webhook test|test.webhook|info") {
 		t.Fatalf("unexpected request body: %s", gotBody)
 	}
 }

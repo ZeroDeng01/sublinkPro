@@ -30,13 +30,13 @@ func init() {
 		func(p ProtocolDemo) LinkIdentity {
 			return buildIdentity("protocoldemo", p.Name, p.Server, utils.GetPortString(p.Port))
 		},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic", Placeholder: "例如：Demo 节点"},
-		FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic", Placeholder: "demo.example.com"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic", Placeholder: "443"},
-		FieldMeta{Name: "Token", Label: "令牌", Type: "string", Group: "auth", Secret: true, Placeholder: "demo-token"},
-		FieldMeta{Name: "Mode", Label: "传输模式", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "grpc"}},
-		FieldMeta{Name: "TLS", Label: "启用 TLS", Type: "bool", Group: "tls"},
-		FieldMeta{Name: "Insecure", Label: "跳过证书校验", Type: "bool", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic", Placeholder: "e.g. Demo node"},
+		FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic", Placeholder: "demo.example.com"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic", Placeholder: "443"},
+		FieldMeta{Name: "Token", Label: "Token", Type: "string", Group: "auth", Secret: true, Placeholder: "demo-token"},
+		FieldMeta{Name: "Mode", Label: "Transport mode", Type: "string", Group: "transport", Options: []string{"tcp", "ws", "grpc"}},
+		FieldMeta{Name: "TLS", Label: "Enable TLS", Type: "bool", Group: "tls"},
+		FieldMeta{Name: "Insecure", Label: "Skip certificate verification", Type: "bool", Group: "tls", Advanced: true},
 	)
 
 	MustRegisterProtocol(newProxySurgeProtocolSpec(

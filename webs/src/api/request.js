@@ -46,7 +46,7 @@ request.interceptors.response.use(
     // 检查业务逻辑错误码（后端返回 code 非 200 表示业务错误）
     if (data && typeof data.code === 'number' && data.code !== 200) {
       // 构造业务错误对象并 reject，让调用方的 catch 能够捕获
-      const error = new Error(resolveResponseMessage(data, 'auth.fallback.operationFailed', '操作失败'));
+      const error = new Error(resolveResponseMessage(data, 'auth.fallback.operationFailed', 'Operation failed'));
       error.response = response;
       error.code = data.code;
       error.data = data;
@@ -63,9 +63,9 @@ request.interceptors.response.use(
       // 401/403 - 清除 token 并跳转登录
       if ((status === 401 || status === 403) && !isAnonymousAuthRequest(requestConfig)) {
         if (status === 403) {
-          console.error(i18n.t('auth.fallback.noPermission', '没有权限访问该资源'));
+          console.error(i18n.t('auth.fallback.noPermission', 'No permission to access this resource'));
         } else {
-          console.error(i18n.t('auth.fallback.unauthorized', '未授权访问'));
+          console.error(i18n.t('auth.fallback.unauthorized', 'Unauthorized'));
         }
 
         localStorage.removeItem('accessToken');
@@ -80,7 +80,7 @@ request.interceptors.response.use(
 
       // 500 服务器错误
       if (status >= 500) {
-        console.error(i18n.t('auth.fallback.serverError', '服务器错误'));
+        console.error(i18n.t('auth.fallback.serverError', 'Server error'));
       }
     }
 

@@ -142,25 +142,25 @@ func buildRuntimeConfigSummary() RuntimeConfigSummary {
 	features := config.GetEnabledFeatures()
 
 	safeToShow := []RuntimeConfigItem{
-		{Label: "端口", Key: "port", Value: formatIntValue(cfg.Port, ""), ValueKey: intValueKey(cfg.Port, "plain"), ValueParams: intValueParams(cfg.Port), Env: "SUBLINK_PORT"},
-		{Label: "登录令牌有效期", Key: "expire_days", Value: formatIntValue(cfg.ExpireDays, "天"), ValueKey: intValueKey(cfg.ExpireDays, "days"), ValueParams: intValueParams(cfg.ExpireDays), Env: "SUBLINK_EXPIRE_DAYS"},
-		{Label: "登录失败次数限制", Key: "login_fail_count", Value: formatIntValue(cfg.LoginFailCount, "次"), ValueKey: intValueKey(cfg.LoginFailCount, "times"), ValueParams: intValueParams(cfg.LoginFailCount), Env: "SUBLINK_LOGIN_FAIL_COUNT"},
-		{Label: "登录失败统计窗口", Key: "login_fail_window", Value: formatIntValue(cfg.LoginFailWindow, "分钟"), ValueKey: intValueKey(cfg.LoginFailWindow, "minutes"), ValueParams: intValueParams(cfg.LoginFailWindow), Env: "SUBLINK_LOGIN_FAIL_WINDOW"},
-		{Label: "登录封禁时长", Key: "login_ban_duration", Value: formatIntValue(cfg.LoginBanDuration, "分钟"), ValueKey: intValueKey(cfg.LoginBanDuration, "minutes"), ValueParams: intValueParams(cfg.LoginBanDuration), Env: "SUBLINK_LOGIN_BAN_DURATION"},
-		{Label: "日志级别", Key: "log_level", Value: emptyFallback(strings.ToUpper(cfg.LogLevel), "未设置"), ValueKey: nonEmptyValueKey(cfg.LogLevel, "literal", "unset"), ValueParams: literalValueParams(strings.ToUpper(cfg.LogLevel)), Env: "SUBLINK_LOG_LEVEL"},
-		{Label: "验证码模式", Key: "captcha_mode", Value: formatCaptchaMode(captchaCfg), ValueKey: captchaModeValueKey(captchaCfg), Env: "SUBLINK_CAPTCHA_MODE"},
-		{Label: "可信代理规则", Key: "trusted_proxies", Value: formatTrustedProxies(cfg.TrustedProxies), ValueKey: trustedProxiesValueKey(cfg.TrustedProxies), ValueParams: countValueParams(len(cfg.TrustedProxies)), Env: "SUBLINK_TRUSTED_PROXIES"},
-		{Label: "功能开关", Key: "feature", Value: formatEnabledFeatures(features), ValueKey: enabledFeaturesValueKey(features), ValueParams: listValueParams(features), Env: "SUBLINK_FEATURE"},
+		{Label: "Port", Key: "port", Value: formatIntValue(cfg.Port, ""), ValueKey: intValueKey(cfg.Port, "plain"), ValueParams: intValueParams(cfg.Port), Env: "SUBLINK_PORT"},
+		{Label: "Login token TTL", Key: "expire_days", Value: formatIntValue(cfg.ExpireDays, "d"), ValueKey: intValueKey(cfg.ExpireDays, "days"), ValueParams: intValueParams(cfg.ExpireDays), Env: "SUBLINK_EXPIRE_DAYS"},
+		{Label: "Login failure limit", Key: "login_fail_count", Value: formatIntValue(cfg.LoginFailCount, "attempts"), ValueKey: intValueKey(cfg.LoginFailCount, "times"), ValueParams: intValueParams(cfg.LoginFailCount), Env: "SUBLINK_LOGIN_FAIL_COUNT"},
+		{Label: "Login failure window", Key: "login_fail_window", Value: formatIntValue(cfg.LoginFailWindow, "minutes"), ValueKey: intValueKey(cfg.LoginFailWindow, "minutes"), ValueParams: intValueParams(cfg.LoginFailWindow), Env: "SUBLINK_LOGIN_FAIL_WINDOW"},
+		{Label: "Login ban duration", Key: "login_ban_duration", Value: formatIntValue(cfg.LoginBanDuration, "minutes"), ValueKey: intValueKey(cfg.LoginBanDuration, "minutes"), ValueParams: intValueParams(cfg.LoginBanDuration), Env: "SUBLINK_LOGIN_BAN_DURATION"},
+		{Label: "Log level", Key: "log_level", Value: emptyFallback(strings.ToUpper(cfg.LogLevel), "Not set"), ValueKey: nonEmptyValueKey(cfg.LogLevel, "literal", "unset"), ValueParams: literalValueParams(strings.ToUpper(cfg.LogLevel)), Env: "SUBLINK_LOG_LEVEL"},
+		{Label: "Captcha mode", Key: "captcha_mode", Value: formatCaptchaMode(captchaCfg), ValueKey: captchaModeValueKey(captchaCfg), Env: "SUBLINK_CAPTCHA_MODE"},
+		{Label: "Trusted proxy rules", Key: "trusted_proxies", Value: formatTrustedProxies(cfg.TrustedProxies), ValueKey: trustedProxiesValueKey(cfg.TrustedProxies), ValueParams: countValueParams(len(cfg.TrustedProxies)), Env: "SUBLINK_TRUSTED_PROXIES"},
+		{Label: "Feature toggles", Key: "feature", Value: formatEnabledFeatures(features), ValueKey: enabledFeaturesValueKey(features), ValueParams: listValueParams(features), Env: "SUBLINK_FEATURE"},
 	}
 
 	maskedSummary := []RuntimeConfigItem{
-		{Label: "数据库连接", Key: "dsn", Value: summarizeDSN(cfg.DSN), ValueKey: dsnSummaryValueKey(cfg.DSN), ValueParams: dsnSummaryValueParams(cfg.DSN), Env: "SUBLINK_DSN"},
-		{Label: "本地数据目录", Key: "db_path", Value: summarizePathSetting(cfg.DBPath, config.DefaultDBPath), ValueKey: pathSettingValueKey(cfg.DBPath, config.DefaultDBPath), Env: "SUBLINK_DB_PATH"},
-		{Label: "日志目录路径", Key: "log_path", Value: summarizePathSetting(cfg.LogPath, config.DefaultLogPath), ValueKey: pathSettingValueKey(cfg.LogPath, config.DefaultLogPath), Env: "SUBLINK_LOG_PATH"},
-		{Label: "GeoIP 数据库", Key: "geoip_path", Value: summarizeOptionalPathSetting(cfg.GeoIPPath), ValueKey: optionalPathSettingValueKey(cfg.GeoIPPath), Env: "SUBLINK_GEOIP_PATH"},
-		{Label: "前端访问基础路径", Key: "web_base_path", Value: summarizeWebBasePath(cfg.WebBasePath), ValueKey: webBasePathValueKey(cfg.WebBasePath), Env: "SUBLINK_WEB_BASE_PATH"},
-		{Label: "Turnstile 站点密钥", Key: "turnstile_site_key", Value: configuredSummary(cfg.TurnstileSiteKey), ValueKey: configuredSummaryValueKey(cfg.TurnstileSiteKey), Env: "SUBLINK_TURNSTILE_SITE_KEY"},
-		{Label: "Turnstile 验证代理", Key: "turnstile_proxy_link", Value: configuredSummary(cfg.TurnstileProxyLink), ValueKey: configuredSummaryValueKey(cfg.TurnstileProxyLink), Env: "SUBLINK_TURNSTILE_PROXY_LINK"},
+		{Label: "Database connection", Key: "dsn", Value: summarizeDSN(cfg.DSN), ValueKey: dsnSummaryValueKey(cfg.DSN), ValueParams: dsnSummaryValueParams(cfg.DSN), Env: "SUBLINK_DSN"},
+		{Label: "Local data directory", Key: "db_path", Value: summarizePathSetting(cfg.DBPath, config.DefaultDBPath), ValueKey: pathSettingValueKey(cfg.DBPath, config.DefaultDBPath), Env: "SUBLINK_DB_PATH"},
+		{Label: "Log directory", Key: "log_path", Value: summarizePathSetting(cfg.LogPath, config.DefaultLogPath), ValueKey: pathSettingValueKey(cfg.LogPath, config.DefaultLogPath), Env: "SUBLINK_LOG_PATH"},
+		{Label: "GeoIP database", Key: "geoip_path", Value: summarizeOptionalPathSetting(cfg.GeoIPPath), ValueKey: optionalPathSettingValueKey(cfg.GeoIPPath), Env: "SUBLINK_GEOIP_PATH"},
+		{Label: "Frontend base path", Key: "web_base_path", Value: summarizeWebBasePath(cfg.WebBasePath), ValueKey: webBasePathValueKey(cfg.WebBasePath), Env: "SUBLINK_WEB_BASE_PATH"},
+		{Label: "Turnstile site key", Key: "turnstile_site_key", Value: configuredSummary(cfg.TurnstileSiteKey), ValueKey: configuredSummaryValueKey(cfg.TurnstileSiteKey), Env: "SUBLINK_TURNSTILE_SITE_KEY"},
+		{Label: "Turnstile verify proxy", Key: "turnstile_proxy_link", Value: configuredSummary(cfg.TurnstileProxyLink), ValueKey: configuredSummaryValueKey(cfg.TurnstileProxyLink), Env: "SUBLINK_TURNSTILE_PROXY_LINK"},
 	}
 
 	return RuntimeConfigSummary{SafeToShow: safeToShow, MaskedSummary: maskedSummary}
@@ -341,7 +341,7 @@ func parseSQLDSNSummary(dsn string) (string, string, string) {
 
 func formatIntValue(value int, unit string) string {
 	if value <= 0 {
-		return "未设置"
+		return "Not set"
 	}
 	if unit == "" {
 		return intToString(value)
@@ -363,79 +363,79 @@ func emptyFallback(value, fallback string) string {
 func formatCaptchaMode(cfg config.CaptchaConfig) string {
 	switch cfg.Mode {
 	case config.CaptchaModeDisabled:
-		return "关闭"
+		return "Off"
 	case config.CaptchaModeTurnstile:
 		return "Cloudflare Turnstile"
 	default:
 		if cfg.ConfiguredMode == config.CaptchaModeTurnstile && cfg.Degraded {
-			return "Cloudflare Turnstile（已降级为传统验证码）"
+			return "Cloudflare Turnstile (fell back to legacy captcha)"
 		}
-		return "传统验证码"
+		return "Legacy captcha"
 	}
 }
 
 func formatTrustedProxies(proxies []string) string {
 	if len(proxies) == 0 {
-		return "未启用"
+		return "Disabled"
 	}
-	return intToString(len(proxies)) + " 条规则"
+	return intToString(len(proxies)) + " rules"
 }
 
 func formatEnabledFeatures(features []string) string {
 	if len(features) == 0 {
-		return "未启用"
+		return "Disabled"
 	}
 	return strings.Join(features, "、")
 }
 
 func configuredSummary(value string) string {
 	if strings.TrimSpace(value) == "" {
-		return "未配置"
+		return "Not configured"
 	}
-	return "已配置"
+	return "Configured"
 }
 
 func summarizePathSetting(value, defaultValue string) string {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
-		return "默认路径"
+		return "Default path"
 	}
 	if strings.TrimSpace(defaultValue) != "" && trimmed == defaultValue {
-		return "默认路径"
+		return "Default path"
 	}
-	return "已自定义"
+	return "Customized"
 }
 
 func summarizeOptionalPathSetting(value string) string {
 	if strings.TrimSpace(value) == "" {
-		return "自动检测"
+		return "Auto-detect"
 	}
-	return "已自定义"
+	return "Customized"
 }
 
 func summarizeDSN(dsn string) string {
 	trimmed := strings.TrimSpace(dsn)
 	if trimmed == "" {
-		return "SQLite · 已配置"
+		return "SQLite · Configured"
 	}
 
 	lower := strings.ToLower(trimmed)
 	switch {
 	case strings.HasPrefix(lower, "sqlite"):
-		return "SQLite · 已配置"
+		return "SQLite · Configured"
 	case strings.HasPrefix(lower, "mysql://"):
 		return summarizeSQLDSN("MySQL", trimmed)
 	case strings.HasPrefix(lower, "postgres://") || strings.HasPrefix(lower, "postgresql://"):
 		return summarizeSQLDSN("PostgreSQL", trimmed)
 	default:
-		return "已配置（详情已隐藏）"
+		return "Configured (details hidden)"
 	}
 }
 
 func summarizeSQLDSN(kind, dsn string) string {
 	parts := strings.SplitN(dsn, "@", 2)
 	if len(parts) != 2 {
-		return kind + " · 已配置（详情已隐藏）"
+		return kind + " · Configured (details hidden)"
 	}
 
 	hostAndDB := parts[1]
@@ -452,19 +452,19 @@ func summarizeSQLDSN(kind, dsn string) string {
 	}
 
 	if host == "" && database == "" {
-		return kind + " · 已配置（详情已隐藏）"
+		return kind + " · Configured (details hidden)"
 	}
 	if database == "" || host == "" {
-		return kind + " · 已配置"
+		return kind + " · Configured"
 	}
 	return kind + " · " + host + " · " + database
 }
 
 func summarizeWebBasePath(basePath string) string {
 	if strings.TrimSpace(basePath) == "" {
-		return "根路径"
+		return "Root path"
 	}
-	return "已自定义"
+	return "Customized"
 }
 
 // calculateCPUUsage 计算进程CPU使用率
@@ -528,9 +528,9 @@ func FormatBytes(bytes uint64) string {
 
 func formatBytesValue(value float64, unit string) string {
 	if value == float64(int64(value)) {
-		return string(rune(int64(value))) + " " + unit
+		return strconv.FormatInt(int64(value), 10) + " " + unit
 	}
-	return string(rune(int64(value*100)/100)) + " " + unit
+	return strconv.FormatFloat(value, 'f', 2, 64) + " " + unit
 }
 
 // FormatDuration 将秒数转换为人类可读的时长格式
@@ -551,17 +551,17 @@ func FormatDuration(seconds int64) string {
 }
 
 func formatDurationString(days, hours, minutes int64) string {
-	return string(rune(days)) + "天" + string(rune(hours)) + "时" + string(rune(minutes)) + "分"
+	return strconv.FormatInt(days, 10) + "d" + strconv.FormatInt(hours, 10) + "h" + strconv.FormatInt(minutes, 10) + "m"
 }
 
 func formatHoursMinutes(hours, minutes, secs int64) string {
-	return string(rune(hours)) + "时" + string(rune(minutes)) + "分" + string(rune(secs)) + "秒"
+	return strconv.FormatInt(hours, 10) + "h" + strconv.FormatInt(minutes, 10) + "m" + strconv.FormatInt(secs, 10) + "s"
 }
 
 func formatMinutesSeconds(minutes, secs int64) string {
-	return string(rune(minutes)) + "分" + string(rune(secs)) + "秒"
+	return strconv.FormatInt(minutes, 10) + "m" + strconv.FormatInt(secs, 10) + "s"
 }
 
 func formatSeconds(secs int64) string {
-	return string(rune(secs)) + "秒"
+	return strconv.FormatInt(secs, 10) + "s"
 }

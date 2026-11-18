@@ -68,27 +68,27 @@ func init() {
 type StartHandler struct{}
 
 func (h *StartHandler) Command() string     { return "start" }
-func (h *StartHandler) Description() string { return "🚀 开始使用" }
+func (h *StartHandler) Description() string { return "🚀 Get started" }
 
 func (h *StartHandler) Handle(bot *TelegramBot, message *Message) error {
-	text := `🚀 *欢迎使用 Sublink Pro 机器人*
+	text := `🚀 *Welcome to the Sublink Pro bot*
 
-您可以通过此机器人远程管理您的 Sublink Pro 系统。
+Manage your Sublink Pro system remotely with this bot.
 
-*可用功能：*
-• 📊 查看仪表盘统计数据
-• 🖥️ 查看系统监控信息
-• ⚡ 节点检测策略管理
-• 📋 管理订阅和节点
-• 🏷️ 执行标签规则
-• 📝 查看和管理任务
+*Available features:*
+• 📊 View dashboard statistics
+• 🖥️ View system monitoring
+• ⚡ Manage node check profiles
+• 📋 Manage subscriptions and nodes
+• 🏷️ Run tag rules
+• 📝 View and manage tasks
 
-使用 /help 查看详细命令列表`
+Use /help to see the full command list`
 
 	keyboard := [][]InlineKeyboardButton{
-		{NewInlineButton("📊 统计", "stats"), NewInlineButton("🖥️ 监控", "monitor")},
-		{NewInlineButton("⚡ 检测策略", "profiles"), NewInlineButton("📋 订阅", "subscriptions")},
-		{NewInlineButton("❓ 帮助", "help")},
+		{NewInlineButton("📊 Stats", "stats"), NewInlineButton("🖥️ Monitor", "monitor")},
+		{NewInlineButton("⚡ Check profiles", "profiles"), NewInlineButton("📋 Subscriptions", "subscriptions")},
+		{NewInlineButton("❓ Help", "help")},
 	}
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text, "Markdown", keyboard)
@@ -99,22 +99,22 @@ func (h *StartHandler) Handle(bot *TelegramBot, message *Message) error {
 type HelpHandler struct{}
 
 func (h *HelpHandler) Command() string     { return "help" }
-func (h *HelpHandler) Description() string { return "❓ 帮助信息" }
+func (h *HelpHandler) Description() string { return "❓ Help" }
 
 func (h *HelpHandler) Handle(bot *TelegramBot, message *Message) error {
-	text := `❓ *命令帮助*
+	text := `❓ *Command help*
 
-/start - 🚀 开始使用
-/help - ❓ 帮助信息
-/stats - 📊 仪表盘统计
-/monitor - 🖥️ 系统监控
-/profiles - ⚡ 检测策略
-/subscriptions - 📋 订阅管理
-/nodes - 🌐 节点信息
-/tags - 🏷️ 标签规则
-/tasks - 📝 任务管理
+/start - 🚀 Get started
+/help - ❓ Help information
+/stats - 📊 Dashboard statistics
+/monitor - 🖥️ System monitoring
+/profiles - ⚡ Check profiles
+/subscriptions - 📋 Subscriptions
+/nodes - 🌐 Node information
+/tags - 🏷️ Tag rules
+/tasks - 📝 Tasks
 
-💡 *提示*：您也可以点击消息中的按钮进行快捷操作`
+💡 *Tip*: you can also tap the buttons in messages for quick actions`
 
 	return bot.SendMessage(message.Chat.ID, text, "Markdown")
 }
@@ -124,7 +124,7 @@ func (h *HelpHandler) Handle(bot *TelegramBot, message *Message) error {
 type StatsHandler struct{}
 
 func (h *StatsHandler) Command() string     { return "stats" }
-func (h *StatsHandler) Description() string { return "📊 仪表盘统计" }
+func (h *StatsHandler) Description() string { return "📊 Dashboard stats" }
 
 func (h *StatsHandler) Handle(bot *TelegramBot, message *Message) error {
 	// 获取节点统计（与 Web 端 NodesTotal API 完全一致）
@@ -155,27 +155,27 @@ func (h *StatsHandler) Handle(bot *TelegramBot, message *Message) error {
 
 	// 构建消息
 	var text strings.Builder
-	text.WriteString("📊 *仪表盘统计*\n\n")
+	text.WriteString("📊 *Dashboard stats*\n\n")
 
 	// 基础统计
-	fmt.Fprintf(&text, "📋 订阅: *%d*\n", subCount)
-	fmt.Fprintf(&text, "📦 节点: *%d* / %d\n\n", available, total)
+	fmt.Fprintf(&text, "📋 Subscriptions: *%d*\n", subCount)
+	fmt.Fprintf(&text, "📦 Nodes: *%d* / %d\n\n", available, total)
 
 	// 最快速度
 	if fastestNode != nil && fastestNode.Speed > 0 {
-		fmt.Fprintf(&text, "🚀 最快速度: *%.2f MB/s*\n", fastestNode.Speed)
+		fmt.Fprintf(&text, "🚀 Top speed: *%.2f MB/s*\n", fastestNode.Speed)
 		fmt.Fprintf(&text, "   └ %s\n\n", truncateName(fastestNode.Name, 25))
 	}
 
 	// 最低延迟
 	if lowestDelayNode != nil && lowestDelayNode.DelayTime > 0 {
-		fmt.Fprintf(&text, "⚡ 最低延迟: *%d ms*\n", lowestDelayNode.DelayTime)
+		fmt.Fprintf(&text, "⚡ Lowest latency: *%d ms*\n", lowestDelayNode.DelayTime)
 		fmt.Fprintf(&text, "   └ %s\n\n", truncateName(lowestDelayNode.Name, 25))
 	}
 
 	// 国家分布
 	if len(countryStats) > 0 {
-		text.WriteString("🌍 *国家分布*\n")
+		text.WriteString("🌍 *Countries*\n")
 		sortedCountries := sortMapByValue(countryStats)
 		for i, kv := range sortedCountries {
 			prefix := "├"
@@ -190,7 +190,7 @@ func (h *StatsHandler) Handle(bot *TelegramBot, message *Message) error {
 
 	// 协议分布
 	if len(protocolStats) > 0 {
-		text.WriteString("📡 *协议分布*\n")
+		text.WriteString("📡 *Protocols*\n")
 		sortedProtocols := sortMapByValue(protocolStats)
 		for i, kv := range sortedProtocols {
 			prefix := "├"
@@ -205,7 +205,7 @@ func (h *StatsHandler) Handle(bot *TelegramBot, message *Message) error {
 	// 标签分布
 	tagStats := models.GetNodeTagStats()
 	if len(tagStats) > 0 {
-		text.WriteString("🏷️ *标签分布*\n")
+		text.WriteString("🏷️ *Tags*\n")
 		// 排序标签统计
 		sort.Slice(tagStats, func(i, j int) bool {
 			return tagStats[i].Count > tagStats[j].Count
@@ -224,7 +224,7 @@ func (h *StatsHandler) Handle(bot *TelegramBot, message *Message) error {
 	buildAirportUsageOverview(&text)
 
 	keyboard := [][]InlineKeyboardButton{
-		{NewInlineButton("🔄 刷新", "stats")},
+		{NewInlineButton("🔄 Refresh", "stats")},
 	}
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text.String(), "Markdown", keyboard)
@@ -333,27 +333,27 @@ func buildAirportUsageOverview(text *strings.Builder) {
 	}
 
 	// 构建输出
-	text.WriteString("\n✈️ *机场流量概览*\n")
-	fmt.Fprintf(text, "├ 机场数量: %d 个\n", len(airportsWithUsage))
-	fmt.Fprintf(text, "├ 全局使用: %s / %s (%.1f%%)\n",
+	text.WriteString("\n✈️ *Airport traffic overview*\n")
+	fmt.Fprintf(text, "├ Airports: %d\n", len(airportsWithUsage))
+	fmt.Fprintf(text, "├ Global usage: %s / %s (%.1f%%)\n",
 		formatBytesLocal(totalUsed), formatBytesLocal(totalQuota), globalPercent)
 
 	if nearestExpireAirport != nil {
-		fmt.Fprintf(text, "├ 最近到期: %s\n", truncateName(nearestExpireAirport.Name, 15))
+		fmt.Fprintf(text, "├ Next expiry: %s\n", truncateName(nearestExpireAirport.Name, 15))
 		fmt.Fprintf(text, "│    └ %s\n", formatExpireTimeLocal(nearestExpireAirport.UsageExpire))
 	}
 
 	if len(lowUsageAirports) > 0 {
-		fmt.Fprintf(text, "└ ⚠️ 流量不足: %d 个\n", len(lowUsageAirports))
+		fmt.Fprintf(text, "└ ⚠️ Low traffic: %d\n", len(lowUsageAirports))
 		for i, a := range lowUsageAirports {
 			if i >= 3 { // 最多显示3个
-				fmt.Fprintf(text, "     └ ...等%d个\n", len(lowUsageAirports)-3)
+				fmt.Fprintf(text, "     └ ...and %d more\n", len(lowUsageAirports)-3)
 				break
 			}
 			fmt.Fprintf(text, "     %s %s\n", "├", truncateName(a.Name, 20))
 		}
 	} else {
-		text.WriteString("└ ✓ 所有机场流量充足\n")
+		text.WriteString("└ ✓ All airports have sufficient traffic\n")
 	}
 }
 
@@ -388,7 +388,7 @@ func formatBytesLocal(bytes int64) string {
 // formatExpireTimeLocal 格式化到期时间
 func formatExpireTimeLocal(timestamp int64) string {
 	if timestamp <= 0 {
-		return "未知"
+		return "Unknown"
 	}
 	t := time.Unix(timestamp, 0)
 	return t.Format("2006-01-02 15:04")
@@ -399,7 +399,7 @@ func formatExpireTimeLocal(timestamp int64) string {
 type MonitorHandler struct{}
 
 func (h *MonitorHandler) Command() string     { return "monitor" }
-func (h *MonitorHandler) Description() string { return "🖥️ 系统监控" }
+func (h *MonitorHandler) Description() string { return "🖥️ System monitor" }
 
 func (h *MonitorHandler) Handle(bot *TelegramBot, message *Message) error {
 	stats := monitor.GetSystemStats()
@@ -408,17 +408,17 @@ func (h *MonitorHandler) Handle(bot *TelegramBot, message *Message) error {
 	heapAllocMB := float64(stats.HeapAlloc) / 1024 / 1024
 	sysMB := float64(stats.Sys) / 1024 / 1024
 
-	text := fmt.Sprintf(`🖥️ *系统监控*
+	text := fmt.Sprintf(`🖥️ *System monitoring*
 
-*内存使用*
-├ 堆分配: %.2f MB
-├ 系统总: %.2f MB
-└ GC 次数: %d
+*Memory usage*
+├ Heap allocated: %.2f MB
+├ System total: %.2f MB
+└ GC runs: %d
 
-*运行状态*
+*Runtime*
 ├ Goroutines: %d
-├ CPU 核心: %d
-└ 运行时间: %d 秒`,
+├ CPU cores: %d
+└ Uptime: %d seconds`,
 		heapAllocMB,
 		sysMB,
 		stats.NumGC,
@@ -427,7 +427,7 @@ func (h *MonitorHandler) Handle(bot *TelegramBot, message *Message) error {
 		stats.Uptime)
 
 	keyboard := [][]InlineKeyboardButton{
-		{NewInlineButton("🔄 刷新", "monitor"), NewInlineButton("📊 统计", "stats")},
+		{NewInlineButton("🔄 Refresh", "monitor"), NewInlineButton("📊 Stats", "stats")},
 	}
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text, "Markdown", keyboard)
@@ -440,7 +440,7 @@ type ProfilesHandler struct{}
 const profilesPageSize = 8 // 每页显示策略数量
 
 func (h *ProfilesHandler) Command() string     { return "profiles" }
-func (h *ProfilesHandler) Description() string { return "⚡ 检测策略" }
+func (h *ProfilesHandler) Description() string { return "⚡ Check profiles" }
 
 func (h *ProfilesHandler) Handle(bot *TelegramBot, message *Message) error {
 	return h.HandleWithPage(bot, message, 0)
@@ -450,11 +450,11 @@ func (h *ProfilesHandler) Handle(bot *TelegramBot, message *Message) error {
 func (h *ProfilesHandler) HandleWithPage(bot *TelegramBot, message *Message, page int) error {
 	profiles, err := GetNodeCheckProfiles()
 	if err != nil {
-		return bot.SendMessage(message.Chat.ID, "❌ 获取策略列表失败: "+err.Error(), "")
+		return bot.SendMessage(message.Chat.ID, "❌ Failed to load profiles: "+err.Error(), "")
 	}
 
 	if len(profiles) == 0 {
-		text := "⚡ *检测策略*\n\n暂无检测策略，请在 Web 端创建。"
+		text := "⚡ *Check profiles*\n\nNo check profiles yet; create one in the web UI."
 		return bot.SendMessage(message.Chat.ID, text, "Markdown")
 	}
 
@@ -476,9 +476,9 @@ func (h *ProfilesHandler) HandleWithPage(bot *TelegramBot, message *Message, pag
 
 	var text strings.Builder
 	if totalPages > 1 {
-		fmt.Fprintf(&text, "⚡ *检测策略列表* (%d/%d 页)\n\n", page+1, totalPages)
+		fmt.Fprintf(&text, "⚡ *Check profiles* (%d/%d)\n\n", page+1, totalPages)
 	} else {
-		text.WriteString("⚡ *检测策略列表*\n\n")
+		text.WriteString("⚡ *Check profiles*\n\n")
 	}
 
 	var keyboard [][]InlineKeyboardButton
@@ -493,27 +493,27 @@ func (h *ProfilesHandler) HandleWithPage(bot *TelegramBot, message *Message, pag
 		}
 
 		// 模式显示（与Web端保持一致）
-		mode := "仅延迟测试"
+		mode := "Latency test only"
 		if p.Mode == "mihomo" {
-			mode = "延迟+速度测试"
+			mode = "Latency + speed test"
 		}
 
 		fmt.Fprintf(&text, "%s *%s*\n", status, p.Name)
-		fmt.Fprintf(&text, "   └ 模式: %s", mode)
+		fmt.Fprintf(&text, "   └ Mode: %s", mode)
 		if p.CronExpr != "" {
-			fmt.Fprintf(&text, " | 定时: `%s`", p.CronExpr)
+			fmt.Fprintf(&text, " | Schedule: `%s`", p.CronExpr)
 		}
 		text.WriteString("\n")
 
 		if p.LastRunTime != nil {
-			fmt.Fprintf(&text, "   └ 上次执行: %s\n", p.LastRunTime.Format("01-02 15:04"))
+			fmt.Fprintf(&text, "   └ Last run: %s\n", p.LastRunTime.Format("01-02 15:04"))
 		}
 		text.WriteString("\n")
 
 		// 操作按钮
 		keyboard = append(keyboard, []InlineKeyboardButton{
 			NewInlineButton("🔍 "+truncateName(p.Name, 10), fmt.Sprintf("profile_detail:%d", p.ID)),
-			NewInlineButton("▶️ 执行", fmt.Sprintf("profile_run:%d", p.ID)),
+			NewInlineButton("▶️ Run", fmt.Sprintf("profile_run:%d", p.ID)),
 		})
 	}
 
@@ -521,10 +521,10 @@ func (h *ProfilesHandler) HandleWithPage(bot *TelegramBot, message *Message, pag
 	if totalPages > 1 {
 		var navButtons []InlineKeyboardButton
 		if page > 0 {
-			navButtons = append(navButtons, NewInlineButton("⬅️ 上一页", fmt.Sprintf("profiles_page:%d", page-1)))
+			navButtons = append(navButtons, NewInlineButton("⬅️ Previous", fmt.Sprintf("profiles_page:%d", page-1)))
 		}
 		if page < totalPages-1 {
-			navButtons = append(navButtons, NewInlineButton("➡️ 下一页", fmt.Sprintf("profiles_page:%d", page+1)))
+			navButtons = append(navButtons, NewInlineButton("➡️ Next", fmt.Sprintf("profiles_page:%d", page+1)))
 		}
 		if len(navButtons) > 0 {
 			keyboard = append(keyboard, navButtons)
@@ -542,14 +542,14 @@ func (h *ProfilesHandler) HandleWithPage(bot *TelegramBot, message *Message, pag
 	}
 
 	if untestedCount > 0 {
-		fmt.Fprintf(&text, "\n📌 *未测速节点: %d*\n", untestedCount)
+		fmt.Fprintf(&text, "\n📌 *Untested nodes: %d*\n", untestedCount)
 		keyboard = append(keyboard, []InlineKeyboardButton{
-			NewInlineButton("🔍 选择策略检测未测速节点", "profile_select_untested"),
+			NewInlineButton("🔍 Test untested nodes", "profile_select_untested"),
 		})
 	}
 
 	keyboard = append(keyboard, []InlineKeyboardButton{
-		NewInlineButton("🔙 返回", "start"),
+		NewInlineButton("🔙 Back", "start"),
 	})
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text.String(), "Markdown", keyboard)
@@ -562,7 +562,7 @@ type SubscriptionsHandler struct{}
 const subscriptionsPageSize = 8 // 每页显示订阅数量
 
 func (h *SubscriptionsHandler) Command() string     { return "subscriptions" }
-func (h *SubscriptionsHandler) Description() string { return "📋 订阅管理" }
+func (h *SubscriptionsHandler) Description() string { return "📋 Subscriptions" }
 
 func (h *SubscriptionsHandler) Handle(bot *TelegramBot, message *Message) error {
 	return h.HandleWithPage(bot, message, 0)
@@ -573,11 +573,11 @@ func (h *SubscriptionsHandler) HandleWithPage(bot *TelegramBot, message *Message
 	var sub models.Subcription
 	subs, err := sub.List()
 	if err != nil {
-		return fmt.Errorf("获取订阅列表失败: %v", err)
+		return fmt.Errorf("failed to load subscription list: %v", err)
 	}
 
 	if len(subs) == 0 {
-		return bot.SendMessage(message.Chat.ID, "📋 暂无订阅", "")
+		return bot.SendMessage(message.Chat.ID, "📋 No subscriptions", "")
 	}
 
 	total := len(subs)
@@ -598,9 +598,9 @@ func (h *SubscriptionsHandler) HandleWithPage(bot *TelegramBot, message *Message
 
 	var text strings.Builder
 	if totalPages > 1 {
-		fmt.Fprintf(&text, "📋 *订阅列表* (%d/%d 页)\n\n", page+1, totalPages)
+		fmt.Fprintf(&text, "📋 *Subscriptions* (%d/%d)\n\n", page+1, totalPages)
 	} else {
-		text.WriteString("📋 *订阅列表*\n\n")
+		text.WriteString("📋 *Subscriptions*\n\n")
 	}
 
 	var keyboard [][]InlineKeyboardButton
@@ -613,7 +613,7 @@ func (h *SubscriptionsHandler) HandleWithPage(bot *TelegramBot, message *Message
 		groupCount := len(s.GroupsWithSort)
 
 		fmt.Fprintf(&text, "*%d. %s*\n", i+1, truncateName(s.Name, 20))
-		fmt.Fprintf(&text, "   └ %d 节点, %d 分组\n", nodeCount, groupCount)
+		fmt.Fprintf(&text, "   └ %d nodes, %d groups\n", nodeCount, groupCount)
 		if s.CreatedAt.Year() > 2000 {
 			fmt.Fprintf(&text, "   └ %s\n", s.CreatedAt.Format("2006-01-02"))
 		}
@@ -629,10 +629,10 @@ func (h *SubscriptionsHandler) HandleWithPage(bot *TelegramBot, message *Message
 	if totalPages > 1 {
 		var navButtons []InlineKeyboardButton
 		if page > 0 {
-			navButtons = append(navButtons, NewInlineButton("⬅️ 上一页", fmt.Sprintf("subscriptions_page:%d", page-1)))
+			navButtons = append(navButtons, NewInlineButton("⬅️ Previous", fmt.Sprintf("subscriptions_page:%d", page-1)))
 		}
 		if page < totalPages-1 {
-			navButtons = append(navButtons, NewInlineButton("➡️ 下一页", fmt.Sprintf("subscriptions_page:%d", page+1)))
+			navButtons = append(navButtons, NewInlineButton("➡️ Next", fmt.Sprintf("subscriptions_page:%d", page+1)))
 		}
 		if len(navButtons) > 0 {
 			keyboard = append(keyboard, navButtons)
@@ -640,7 +640,7 @@ func (h *SubscriptionsHandler) HandleWithPage(bot *TelegramBot, message *Message
 	}
 
 	keyboard = append(keyboard, []InlineKeyboardButton{
-		NewInlineButton("🔙 返回", "start"),
+		NewInlineButton("🔙 Back", "start"),
 	})
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text.String(), "Markdown", keyboard)
@@ -651,7 +651,7 @@ func (h *SubscriptionsHandler) HandleWithPage(bot *TelegramBot, message *Message
 type NodesHandler struct{}
 
 func (h *NodesHandler) Command() string     { return "nodes" }
-func (h *NodesHandler) Description() string { return "🌐 节点信息" }
+func (h *NodesHandler) Description() string { return "🌐 Nodes" }
 
 func (h *NodesHandler) Handle(bot *TelegramBot, message *Message) error {
 	var node models.Node
@@ -690,18 +690,18 @@ func (h *NodesHandler) Handle(bot *TelegramBot, message *Message) error {
 		fmt.Fprintf(&countryText, "├ %s: %d\n", cs.Country, cs.Count)
 	}
 
-	text := fmt.Sprintf(`🌐 *节点信息*
+	text := fmt.Sprintf(`🌐 *Node information*
 
-*节点概览*
-├ 总数量: %d
-├ 在线: %d
-└ 离线: %d
+*Node overview*
+├ Total: %d
+├ Online: %d
+└ Offline: %d
 
-*地区分布（前5）*
+*Regions (top 5)*
 %s`, total, onlineCount, total-onlineCount, countryText.String())
 
 	keyboard := [][]InlineKeyboardButton{
-		{NewInlineButton("🔄 刷新", "nodes"), NewInlineButton("⚡ 检测", "profiles")},
+		{NewInlineButton("🔄 Refresh", "nodes"), NewInlineButton("⚡ Check", "profiles")},
 	}
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text, "Markdown", keyboard)
@@ -714,7 +714,7 @@ type TagsHandler struct{}
 const tagsPageSize = 10 // 每页显示标签规则数量
 
 func (h *TagsHandler) Command() string     { return "tags" }
-func (h *TagsHandler) Description() string { return "🏷️ 标签规则" }
+func (h *TagsHandler) Description() string { return "🏷️ Tag rules" }
 
 func (h *TagsHandler) Handle(bot *TelegramBot, message *Message) error {
 	return h.HandleWithPage(bot, message, 0)
@@ -725,11 +725,11 @@ func (h *TagsHandler) HandleWithPage(bot *TelegramBot, message *Message, page in
 	var tagRule models.TagRule
 	rules, err := tagRule.List()
 	if err != nil {
-		return fmt.Errorf("获取标签规则失败: %v", err)
+		return fmt.Errorf("failed to load tag rules: %v", err)
 	}
 
 	if len(rules) == 0 {
-		return bot.SendMessage(message.Chat.ID, "🏷️ 暂无标签规则", "")
+		return bot.SendMessage(message.Chat.ID, "🏷️ No tag rules", "")
 	}
 
 	total := len(rules)
@@ -750,9 +750,9 @@ func (h *TagsHandler) HandleWithPage(bot *TelegramBot, message *Message, page in
 
 	var text strings.Builder
 	if totalPages > 1 {
-		fmt.Fprintf(&text, "🏷️ *标签规则* (%d/%d 页)\n\n", page+1, totalPages)
+		fmt.Fprintf(&text, "🏷️ *Tag rules* (%d/%d)\n\n", page+1, totalPages)
 	} else {
-		text.WriteString("🏷️ *标签规则*\n\n")
+		text.WriteString("🏷️ *Tag rules*\n\n")
 	}
 
 	var keyboard [][]InlineKeyboardButton
@@ -775,10 +775,10 @@ func (h *TagsHandler) HandleWithPage(bot *TelegramBot, message *Message, page in
 	if totalPages > 1 {
 		var navButtons []InlineKeyboardButton
 		if page > 0 {
-			navButtons = append(navButtons, NewInlineButton("⬅️ 上一页", fmt.Sprintf("tags_page:%d", page-1)))
+			navButtons = append(navButtons, NewInlineButton("⬅️ Previous", fmt.Sprintf("tags_page:%d", page-1)))
 		}
 		if page < totalPages-1 {
-			navButtons = append(navButtons, NewInlineButton("➡️ 下一页", fmt.Sprintf("tags_page:%d", page+1)))
+			navButtons = append(navButtons, NewInlineButton("➡️ Next", fmt.Sprintf("tags_page:%d", page+1)))
 		}
 		if len(navButtons) > 0 {
 			keyboard = append(keyboard, navButtons)
@@ -786,7 +786,7 @@ func (h *TagsHandler) HandleWithPage(bot *TelegramBot, message *Message, page in
 	}
 
 	keyboard = append(keyboard, []InlineKeyboardButton{
-		NewInlineButton("🔙 返回", "start"),
+		NewInlineButton("🔙 Back", "start"),
 	})
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text.String(), "Markdown", keyboard)
@@ -797,22 +797,22 @@ func (h *TagsHandler) HandleWithPage(bot *TelegramBot, message *Message, page in
 type TasksHandler struct{}
 
 func (h *TasksHandler) Command() string     { return "tasks" }
-func (h *TasksHandler) Description() string { return "📝 任务管理" }
+func (h *TasksHandler) Description() string { return "📝 Tasks" }
 
 func (h *TasksHandler) Handle(bot *TelegramBot, message *Message) error {
 	// 从服务层获取运行中任务（实时进度）
 	runningTasks := GetRunningTasksFromService()
 
 	if len(runningTasks) == 0 {
-		text := "📝 *任务管理*\n\n暂无正在运行的任务"
+		text := "📝 *Tasks*\n\nNo running tasks"
 		keyboard := [][]InlineKeyboardButton{
-			{NewInlineButton("🔄 刷新", "tasks")},
+			{NewInlineButton("🔄 Refresh", "tasks")},
 		}
 		return bot.SendMessageWithKeyboard(message.Chat.ID, text, "Markdown", keyboard)
 	}
 
 	var text strings.Builder
-	text.WriteString("📝 *正在运行的任务*\n\n")
+	text.WriteString("📝 *Running tasks*\n\n")
 
 	var keyboard [][]InlineKeyboardButton
 
@@ -823,27 +823,27 @@ func (h *TasksHandler) Handle(bot *TelegramBot, message *Message) error {
 		// 进度信息
 		if task.Total > 0 {
 			percent := float64(task.Progress) / float64(task.Total) * 100
-			fmt.Fprintf(&text, "├ 进度: %d/%d (%.0f%%)\n", task.Progress, task.Total, percent)
+			fmt.Fprintf(&text, "├ Progress: %d/%d (%.0f%%)\n", task.Progress, task.Total, percent)
 		}
 
 		// 当前处理项
 		if task.CurrentItem != "" {
-			fmt.Fprintf(&text, "├ 当前: %s\n", truncateName(task.CurrentItem, 30))
+			fmt.Fprintf(&text, "├ Current: %s\n", truncateName(task.CurrentItem, 30))
 		}
 
 		// 状态消息
 		if task.Message != "" {
-			fmt.Fprintf(&text, "└ 状态: %s\n", task.Message)
+			fmt.Fprintf(&text, "└ Status: %s\n", task.Message)
 		}
 		text.WriteString("\n")
 
 		keyboard = append(keyboard, []InlineKeyboardButton{
-			NewInlineButton("❌ 取消 "+truncateName(task.Name, 12), fmt.Sprintf("task_cancel:%s", task.ID)),
+			NewInlineButton("❌ Cancel "+truncateName(task.Name, 12), fmt.Sprintf("task_cancel:%s", task.ID)),
 		})
 	}
 
 	keyboard = append(keyboard, []InlineKeyboardButton{
-		NewInlineButton("🔄 刷新", "tasks"),
+		NewInlineButton("🔄 Refresh", "tasks"),
 	})
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text.String(), "Markdown", keyboard)
@@ -895,14 +895,14 @@ func GetNodeCheckProfiles() ([]models.NodeCheckProfile, error) {
 func PullSubscription(airportID int) error {
 	airport, err := models.GetAirportByID(airportID)
 	if err != nil {
-		return fmt.Errorf("获取机场失败: %v", err)
+		return fmt.Errorf("failed to load airport: %v", err)
 	}
 
 	// 通过包装器调用服务层
 	if servicesWrapper != nil {
 		go servicesWrapper.ExecuteSubscriptionTaskWithTrigger(airport.ID, airport.URL, airport.Name, models.TaskTriggerManual)
 	}
-	utils.Info("Telegram 触发机场更新: %s", airport.Name)
+	utils.Info("Telegram triggered airport update: %s", airport.Name)
 
 	return nil
 }
@@ -912,14 +912,14 @@ func ApplyAllTagRules() error {
 	var node models.Node
 	nodes, err := node.List()
 	if err != nil || len(nodes) == 0 {
-		return fmt.Errorf("没有节点")
+		return fmt.Errorf("no nodes")
 	}
 
 	// 通过包装器调用服务层
 	if servicesWrapper != nil {
 		go servicesWrapper.ApplyAutoTagRules(nodes, "telegram_manual")
 	}
-	utils.Info("Telegram 触发标签规则应用: %d 个节点", len(nodes))
+	utils.Info("Telegram triggered tag rule application: %d nodes", len(nodes))
 
 	return nil
 }
@@ -929,7 +929,7 @@ func CancelTask(taskID string) error {
 	if servicesWrapper != nil {
 		return servicesWrapper.CancelTask(taskID)
 	}
-	return fmt.Errorf("服务未初始化")
+	return fmt.Errorf("service is not initialized")
 }
 
 // ExecuteNodeCheckWithProfile 执行节点检测
@@ -938,7 +938,7 @@ func ExecuteNodeCheckWithProfile(profileID int, nodeIDs []int, trigger models.Ta
 		go servicesWrapper.ExecuteNodeCheckWithProfile(profileID, nodeIDs, trigger)
 		return nil
 	}
-	return fmt.Errorf("服务未初始化")
+	return fmt.Errorf("service is not initialized")
 }
 
 // ToggleProfileEnabled 开关策略定时执行
@@ -946,7 +946,7 @@ func ToggleProfileEnabled(profileID int) (bool, error) {
 	if servicesWrapper != nil {
 		return servicesWrapper.ToggleProfileEnabled(profileID)
 	}
-	return false, fmt.Errorf("服务未初始化")
+	return false, fmt.Errorf("service is not initialized")
 }
 
 // TriggerTagRule 执行指定标签规则
@@ -955,7 +955,7 @@ func TriggerTagRule(ruleID int) error {
 		go func() { _ = servicesWrapper.TriggerTagRule(ruleID) }()
 		return nil
 	}
-	return fmt.Errorf("服务未初始化")
+	return fmt.Errorf("service is not initialized")
 }
 
 // GetSubscriptionLink 获取订阅链接
@@ -965,7 +965,7 @@ func GetSubscriptionLink(subID int) (string, bool, error) {
 	sub.ID = subID
 	// 使用 Find 方法获取订阅详情（包括 Name）
 	if err := sub.Find(); err != nil {
-		return "", false, fmt.Errorf("获取订阅失败: %v", err)
+		return "", false, fmt.Errorf("failed to load subscription: %v", err)
 	}
 
 	// 获取系统域名设置
@@ -986,7 +986,7 @@ func GetSubscriptionLink(subID int) (string, bool, error) {
 	// 从分享表获取默认分享链接
 	share, err := models.GetDefaultShareForSubscription(subID)
 	if err != nil {
-		return "", false, fmt.Errorf("获取分享链接失败: %v", err)
+		return "", false, fmt.Errorf("failed to get share links: %v", err)
 	}
 
 	// 构建基础链接
@@ -1001,7 +1001,7 @@ type AirportsHandler struct{}
 const airportsPageSize = 8 // 每页显示机场数量
 
 func (h *AirportsHandler) Command() string     { return "airports" }
-func (h *AirportsHandler) Description() string { return "✈️ 机场管理" }
+func (h *AirportsHandler) Description() string { return "✈️ Airports" }
 
 func (h *AirportsHandler) Handle(bot *TelegramBot, message *Message) error {
 	return h.HandleWithPage(bot, message, 0)
@@ -1012,11 +1012,11 @@ func (h *AirportsHandler) HandleWithPage(bot *TelegramBot, message *Message, pag
 	var airport models.Airport
 	airports, err := airport.List()
 	if err != nil {
-		return fmt.Errorf("获取机场列表失败: %v", err)
+		return fmt.Errorf("failed to load airport list: %v", err)
 	}
 
 	if len(airports) == 0 {
-		return bot.SendMessage(message.Chat.ID, "✈️ 暂无机场", "")
+		return bot.SendMessage(message.Chat.ID, "✈️ No airports", "")
 	}
 
 	total := len(airports)
@@ -1037,7 +1037,7 @@ func (h *AirportsHandler) HandleWithPage(bot *TelegramBot, message *Message, pag
 	}
 
 	var text strings.Builder
-	fmt.Fprintf(&text, "✈️ *机场列表* (%d/%d 页)\n\n", page+1, totalPages)
+	fmt.Fprintf(&text, "✈️ *Airports* (%d/%d)\n\n", page+1, totalPages)
 
 	var keyboard [][]InlineKeyboardButton
 
@@ -1055,15 +1055,15 @@ func (h *AirportsHandler) HandleWithPage(bot *TelegramBot, message *Message, pag
 
 		fmt.Fprintf(&text, "%s *%s*\n", status, truncateName(ap.Name, 20))
 		fmt.Fprintf(&text, "   └ 🔗 %s\n", truncateName(ap.URL, 30))
-		fmt.Fprintf(&text, "   └ 📦 %d 个节点\n", nodeCount)
+		fmt.Fprintf(&text, "   └ 📦 %d nodes\n", nodeCount)
 		if ap.LastRunTime != nil {
-			fmt.Fprintf(&text, "   └ 🕒 上次更新: %s\n", ap.LastRunTime.Format("01-02 15:04"))
+			fmt.Fprintf(&text, "   └ 🕒 Last updated: %s\n", ap.LastRunTime.Format("01-02 15:04"))
 		}
 		text.WriteString("\n")
 
 		// 按钮
 		keyboard = append(keyboard, []InlineKeyboardButton{
-			NewInlineButton("⚙️ 管理 "+truncateName(ap.Name, 10), fmt.Sprintf("airport_detail:%d", ap.ID)),
+			NewInlineButton("⚙️ Manage "+truncateName(ap.Name, 10), fmt.Sprintf("airport_detail:%d", ap.ID)),
 		})
 	}
 
@@ -1071,10 +1071,10 @@ func (h *AirportsHandler) HandleWithPage(bot *TelegramBot, message *Message, pag
 	if totalPages > 1 {
 		var navButtons []InlineKeyboardButton
 		if page > 0 {
-			navButtons = append(navButtons, NewInlineButton("⬅️ 上一页", fmt.Sprintf("airports_page:%d", page-1)))
+			navButtons = append(navButtons, NewInlineButton("⬅️ Previous", fmt.Sprintf("airports_page:%d", page-1)))
 		}
 		if page < totalPages-1 {
-			navButtons = append(navButtons, NewInlineButton("➡️ 下一页", fmt.Sprintf("airports_page:%d", page+1)))
+			navButtons = append(navButtons, NewInlineButton("➡️ Next", fmt.Sprintf("airports_page:%d", page+1)))
 		}
 		if len(navButtons) > 0 {
 			keyboard = append(keyboard, navButtons)
@@ -1082,7 +1082,7 @@ func (h *AirportsHandler) HandleWithPage(bot *TelegramBot, message *Message, pag
 	}
 
 	keyboard = append(keyboard, []InlineKeyboardButton{
-		NewInlineButton("🔙 返回", "start"),
+		NewInlineButton("🔙 Back", "start"),
 	})
 
 	return bot.SendMessageWithKeyboard(message.Chat.ID, text.String(), "Markdown", keyboard)

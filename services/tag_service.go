@@ -20,15 +20,15 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 		return
 	}
 
-	utils.Info("开始应用自动标签规则: 触发类型=%s, 节点数=%d, 规则数=%d", triggerType, len(nodes), len(rules))
+	utils.Info("Applying automatic tag rules: trigger=%s, nodes=%d, rules=%d", triggerType, len(nodes), len(rules))
 
 	// 使用 TaskManager 创建任务（自动触发）
 	tm := GetTaskManager()
-	taskName := fmt.Sprintf("自动标签规则 (%s)", triggerType)
+	taskName := fmt.Sprintf("Auto tag rules (%s)", triggerType)
 	task, _, createErr := tm.CreateTask(models.TaskTypeTagRule, taskName, models.TaskTriggerScheduled, len(nodes))
 	var taskID string
 	if createErr != nil {
-		utils.Error("创建自动标签任务失败: %v，继续执行但不追踪任务", createErr)
+		utils.Error("Failed to create auto-tag task: %v; continuing without task tracking", createErr)
 	} else {
 		taskID = task.ID
 	}
@@ -43,7 +43,7 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 		// 解析条件
 		conditions, err := models.ParseConditions(rule.Conditions)
 		if err != nil {
-			utils.Error("规则 %s 条件解析失败: %v", rule.Name, err)
+			utils.Error("Failed to parse conditions for rule %s: %v", rule.Name, err)
 			continue
 		}
 
@@ -61,9 +61,9 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 
 		// 批量打标签 (使用标签名称)
 		if len(matchedNodeIDs) > 0 {
-			utils.Info("规则 [%s] 匹配 %d 个节点, 打标签: %s", rule.Name, len(matchedNodeIDs), rule.TagName)
+			utils.Info("Rule [%s] matched %d nodes; tagging: %s", rule.Name, len(matchedNodeIDs), rule.TagName)
 			if err := models.BatchAddTagToNodes(matchedNodeIDs, rule.TagName); err != nil {
-				utils.Error("批量打标签失败: %v", err)
+				utils.Error("Failed to batch add tags: %v", err)
 			} else {
 				taggedCount += len(matchedNodeIDs)
 			}
@@ -71,9 +71,9 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 
 		// 批量移除不满足条件的标签
 		if len(unmatchedNodeIDs) > 0 {
-			utils.Info("规则 [%s] 移除 %d 个不满足条件的节点标签: %s", rule.Name, len(unmatchedNodeIDs), rule.TagName)
+			utils.Info("Rule [%s] removed tags from %d nodes that no longer match: %s", rule.Name, len(unmatchedNodeIDs), rule.TagName)
 			if err := models.BatchRemoveTagFromNodes(unmatchedNodeIDs, rule.TagName); err != nil {
-				utils.Error("批量移除标签失败: %v", err)
+				utils.Error("Failed to batch remove tags: %v", err)
 			} else {
 				removedCount += len(unmatchedNodeIDs)
 			}
@@ -92,7 +92,7 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 
 	// 完成任务
 	if taskID != "" {
-		message := fmt.Sprintf("自动标签完成: 标记 %d 个节点, 移除 %d 个标签", taggedCount, removedCount)
+		message := fmt.Sprintf("Auto tagging completed: tagged %d nodes, removed %d tags", taggedCount, removedCount)
 		_ = tm.CompleteTask(taskID, message, map[string]any{
 			"taggedCount":  taggedCount,
 			"removedCount": removedCount,
@@ -102,14 +102,14 @@ func ApplyAutoTagRules(nodes []models.Node, triggerType string) {
 	}
 
 	if taggedCount > 0 || removedCount > 0 {
-		utils.Info("自动标签规则应用完成: 共标记 %d 个节点, 移除 %d 个标签", taggedCount, removedCount)
+		utils.Info("Auto tag rules applied: tagged %d nodes, removed %d tags", taggedCount, removedCount)
 		// 广播事件
 		notifications.Publish("task.auto_tag_completed", notifications.Payload{
-			Title:   "自动标签完成",
-			Message: fmt.Sprintf("自动标签规则【%s】应用完成，执行规则【%s】: 共标记 %d 个节点", triggerType, ruleNames, taggedCount),
+			Title:   "Auto tagging completed",
+			Message: fmt.Sprintf("Auto tag rules [%s] applied via rule [%s]: tagged %d nodes", triggerType, ruleNames, taggedCount),
 			Data: map[string]any{
 				"status":       "success",
-				"error":        fmt.Sprintf("自动标签规则【%s】应用完成: 共标记 %d 个节点", triggerType, taggedCount),
+				"error":        fmt.Sprintf("Auto tag rules [%s] applied: tagged %d nodes", triggerType, taggedCount),
 				"triggerType":  triggerType,
 				"taggedCount":  taggedCount,
 				"removedCount": removedCount,
@@ -141,7 +141,7 @@ func TriggerTagRule(ruleID int) error {
 	tm := GetTaskManager()
 	task, _, createErr := tm.CreateTask(models.TaskTypeTagRule, rule.Name, models.TaskTriggerManual, totalNodes)
 	if createErr != nil {
-		utils.Error("创建标签规则任务失败: %v", createErr)
+		utils.Error("Failed to create tag rule task: %v", createErr)
 		return createErr
 	}
 	taskID := task.ID
@@ -150,7 +150,7 @@ func TriggerTagRule(ruleID int) error {
 	conditions, err := models.ParseConditions(rule.Conditions)
 	if err != nil {
 		// 使用 TaskManager 报告失败
-		_ = tm.FailTask(taskID, fmt.Sprintf("规则条件解析失败: %v", err))
+		_ = tm.FailTask(taskID, fmt.Sprintf("Failed to parse rule conditions: %v", err))
 		return err
 	}
 
@@ -186,24 +186,24 @@ func TriggerTagRule(ruleID int) error {
 
 	if len(matchedNodeIDs) > 0 {
 		if err := models.BatchAddTagToNodes(matchedNodeIDs, rule.TagName); err != nil {
-			utils.Error("❌批量添加标签失败：%v", err)
+			utils.Error("❌Failed to batch add tags: %v", err)
 		} else {
 			matchedCount = len(matchedNodeIDs)
-			utils.Info("✅批量添加标签到 %d 个节点", matchedCount)
+			utils.Info("✅Batch added tags to %d nodes", matchedCount)
 		}
 	}
 
 	if len(unmatchedNodeIDs) > 0 {
 		if err := models.BatchRemoveTagFromNodes(unmatchedNodeIDs, rule.TagName); err != nil {
-			utils.Error("❌批量移除标签失败：%v", err)
+			utils.Error("❌Failed to batch remove tags: %v", err)
 		} else {
 			removedCount = len(unmatchedNodeIDs)
-			utils.Info("✅批量移除 %d 个节点的标签", removedCount)
+			utils.Info("✅Batch removed tags from %d nodes", removedCount)
 		}
 	}
 
 	// 使用 TaskManager 完成任务
-	_ = tm.CompleteTask(taskID, fmt.Sprintf("规则执行完成: 匹配 %d 个节点, 移除 %d 个节点标签", matchedCount, removedCount), map[string]any{
+	_ = tm.CompleteTask(taskID, fmt.Sprintf("Rule executed: matched %d nodes, removed tags from %d nodes", matchedCount, removedCount), map[string]any{
 		"matchedCount": matchedCount,
 		"removedCount": removedCount,
 		"totalCount":   totalNodes,
@@ -211,8 +211,8 @@ func TriggerTagRule(ruleID int) error {
 
 	// 广播通知消息，让用户在通知中心看到完成通知
 	notifications.Publish("task.tag_rule_completed", notifications.Payload{
-		Title:   "标签规则执行完成",
-		Message: fmt.Sprintf("规则【%s】执行完成: 匹配 %d 个节点, 移除 %d 个节点标签", rule.Name, matchedCount, removedCount),
+		Title:   "Tag rule completed",
+		Message: fmt.Sprintf("Rule [%s] finished: matched %d nodes, removed tags from %d nodes", rule.Name, matchedCount, removedCount),
 		Data: map[string]any{
 			"status":       "success",
 			"matchedCount": matchedCount,
@@ -221,6 +221,6 @@ func TriggerTagRule(ruleID int) error {
 		},
 	})
 
-	utils.Info("手动触发规则 [%s] 完成: 匹配 %d 个节点, 移除 %d 个节点标签", rule.Name, matchedCount, removedCount)
+	utils.Info("Manually triggered rule [%s] finished: matched %d nodes, removed tags from %d nodes", rule.Name, matchedCount, removedCount)
 	return nil
 }

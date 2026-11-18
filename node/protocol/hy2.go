@@ -12,22 +12,22 @@ func init() {
 	base := newProtocolSpec("hysteria2", []string{"hysteria2://", "hy2://"}, "Hysteria2", "#ef6c00", "H", HY2{}, "Name", DecodeHY2URL, EncodeHY2URL, func(h HY2) LinkIdentity {
 		return buildIdentity("hysteria2", h.Name, h.Host, utils.GetPortString(h.Port))
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Host", Label: "服务器地址", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
-		FieldMeta{Name: "MPort", Label: "端口跳跃", Type: "string", Group: "basic", Advanced: true},
-		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true},
-		FieldMeta{Name: "Auth", Label: "认证", Type: "string", Group: "auth", Secret: true, Advanced: true},
-		FieldMeta{Name: "UpMbps", Label: "上行 Mbps", Type: "int", Group: "transport", Advanced: true},
-		FieldMeta{Name: "DownMbps", Label: "下行 Mbps", Type: "int", Group: "transport", Advanced: true},
-		FieldMeta{Name: "Obfs", Label: "混淆类型", Type: "string", Group: "transport", Advanced: true},
-		FieldMeta{Name: "ObfsPassword", Label: "混淆密码", Type: "string", Group: "auth", Secret: true, Advanced: true},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Host", Label: "Server address", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
+		FieldMeta{Name: "MPort", Label: "Port hopping", Type: "string", Group: "basic", Advanced: true},
+		FieldMeta{Name: "Password", Label: "Password", Type: "string", Group: "auth", Secret: true},
+		FieldMeta{Name: "Auth", Label: "Authentication", Type: "string", Group: "auth", Secret: true, Advanced: true},
+		FieldMeta{Name: "UpMbps", Label: "Uplink Mbps", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "DownMbps", Label: "Downlink Mbps", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Obfs", Label: "Obfuscation type", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "ObfsPassword", Label: "Obfuscation password", Type: "string", Group: "auth", Secret: true, Advanced: true},
 		FieldMeta{Name: "Sni", Label: "SNI", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Peer", Label: "Peer", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "ALPN", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
-		FieldMeta{Name: "ClientFingerprint", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
-		FieldMeta{Name: "Fingerprint", Label: "证书指纹", Type: "string", Group: "tls", Advanced: true},
-		FieldMeta{Name: "Insecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
+		FieldMeta{Name: "ClientFingerprint", Label: "Fingerprint", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Fingerprint", Label: "Certificate fingerprint", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Insecure", Label: "Skip certificate verification", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 	)
 	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildHY2Proxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "hysteria2")
@@ -102,10 +102,10 @@ func EncodeHY2URL(hy2 HY2) string {
 func DecodeHY2URL(s string) (HY2, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return HY2{}, fmt.Errorf("解析失败的URL: %s,错误:%s", s, err)
+		return HY2{}, fmt.Errorf("failed to parse URL: %s, error: %s", s, err)
 	}
 	if u.Scheme != "hy2" && u.Scheme != "hysteria2" {
-		return HY2{}, fmt.Errorf("非hy2协议: %s", s)
+		return HY2{}, fmt.Errorf("not a hy2 link: %s", s)
 	}
 	password := u.User.Username()
 	if userPassword, hasPassword := u.User.Password(); hasPassword {

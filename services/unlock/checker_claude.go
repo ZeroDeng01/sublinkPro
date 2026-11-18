@@ -14,7 +14,7 @@ func (claudeUnlockChecker) Key() string { return models.UnlockProviderClaude }
 func (claudeUnlockChecker) Aliases() []string { return []string{"claude"} }
 
 func (claudeUnlockChecker) Meta() models.UnlockProviderMeta {
-	return models.UnlockProviderMeta{Value: models.UnlockProviderClaude, Label: "Claude", Description: "检测 Anthropic Claude 服务地区可访问性", Category: "ai"}
+	return models.UnlockProviderMeta{Value: models.UnlockProviderClaude, Label: "Claude", Description: "Checks Anthropic Claude regional availability", Category: "ai"}
 }
 
 func (claudeUnlockChecker) RenameVariableMeta() models.UnlockRenameVariableMeta {

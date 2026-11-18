@@ -433,6 +433,7 @@
       "nextRun": "下次运行",
       "usage": {
         "title": "用量信息",
+        "today": "今日",
         "disabled": "未开启用量获取",
         "disabledShort": "未开启",
         "failed": "用量获取失败",
@@ -631,6 +632,7 @@
     "loadFailed": "加载用量历史失败",
     "loading": "正在加载用量历史...",
     "empty": "暂无用量历史，下次刷新订阅后即可查看数据。",
+    "emptyWiden": "该时间窗口内没有刷新记录，请选择更长的时间范围查看历史快照。",
     "chartUnavailable": "图表渲染失败，请重新打开弹窗；如果持续失败，请查看浏览器控制台。",
     "openChart": "打开用量历史图表",
     "noDataShort": "暂无数据",
@@ -687,6 +689,10 @@
         "invalidRange": "保留天数必须在 {{min}} - {{max}} 天之间"
       }
     }
+  },
+  "todayTraffic": {
+    "tooltip": "今日已用流量：{{used}}",
+    "loadFailed": "今日流量加载失败"
   },
   "settings": {
     "title": "用户中心",
@@ -1786,6 +1792,23 @@
         "allSufficient": "所有机场流量充足",
         "remain": "剩余"
       },
+      "trafficDaily": {
+        "title": "每日流量",
+        "subtitle": "按订阅刷新快照统计的每日流量消耗",
+        "hint": "每根柱子代表当天相邻两次订阅刷新之间的流量增量。",
+        "today": "今天",
+        "rangeTotal": "所选区间",
+        "dailyAverage": "日均",
+        "days": "{{count}} 天",
+        "loading": "正在加载流量...",
+        "loadFailed": "每日流量加载失败",
+        "empty": "该区间暂无流量记录。",
+        "refresh": "刷新",
+        "byAirport": "按机场",
+        "series": {
+          "used": "已用"
+        }
+      },
       "charts": {
         "countryDistribution": "节点国家分布",
         "countryTooltip": "按节点落地国家聚合，仅比较真实地区分布；未知节点数量单独展示。",
@@ -1821,6 +1844,9 @@
         "collapse": "收起",
         "availableIp": "可用IP",
         "nodes": "节点",
+        "ungrouped": "未分组",
+        "untagged": "未打标签",
+        "manualSource": "手动添加",
         "tagItem": "标签 {{index}}",
         "emptyCountry": "暂无国家统计数据",
         "emptyProtocol": "暂无协议统计数据",
@@ -1829,7 +1855,15 @@
         "emptySource": "暂无来源统计数据",
         "emptyQuality": "暂无质量状态统计数据",
         "emptyFraud": "暂无欺诈评分统计数据",
-        "emptyIp": "暂无 IP 质量统计数据"
+        "emptyIp": "暂无 IP 质量统计数据",
+        "fraudLevels": {
+          "excellent-plus": "极佳+ (0-10)",
+          "excellent": "优秀 (11-30)",
+          "good": "良好 (31-50)",
+          "medium": "中等 (51-70)",
+          "poor": "差 (71-89)",
+          "very-poor": "极差 (90+)"
+        }
       },
       "ipQuality": {
         "residential": "住宅属性",
@@ -2308,6 +2342,10 @@
         "detectQualityHint": "(优先尝试 IPv4，回退 IPv6；IPv6 可能仅返回部分风险信息)",
         "qualityCheckUrl": "质量检测接口",
         "qualityCheckUrlPlaceholder": "请选择或输入质量检测接口",
+        "qualityCheckOptions": {
+          "ippureRecommended": "IPPure (推荐)",
+          "ippure": "IPPure"
+        },
         "detectUnlock": "解锁检测",
         "detectUnlockHint": "(按 Provider 保存节点解锁结果)",
         "unlockWarning": "开启解锁检测会显著降低整批节点的检测速度，建议只在需要筛选流媒体或 AI 可用区时启用。",
@@ -2729,8 +2767,9 @@
       "createdAt": "创建时间",
       "actions": "操作",
       "sorting": "排序中",
-      "nodeGroupCount": "{{nodes}} 个节点, {{groups}} 个分组",
-      "nodeGroupAirportCount": "{{nodes}} 个节点, {{groups}} 个分组, {{airports}} 个机场",
+      "nodeCount": "{{count}} 个节点",
+      "groupCount": "{{count}} 个分组",
+      "airportCount": "{{count}} 个机场",
       "tooltips": {
         "preview": "预览节点",
         "copy": "复制本配置为新副本",

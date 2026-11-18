@@ -78,7 +78,7 @@ func init() {
 
 // InitTaskCache 初始化任务缓存
 func InitTaskCache() error {
-	utils.Info("开始加载任务到缓存")
+	utils.Info("Loading tasks into cache")
 	var tasks []Task
 	// 只加载最近7天的任务到缓存
 	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
@@ -87,7 +87,7 @@ func InitTaskCache() error {
 	}
 
 	taskCache.LoadAll(tasks)
-	utils.Info("任务缓存初始化完成，共加载 %d 个任务", taskCache.Count())
+	utils.Info("Task cache initialized with %d tasks", taskCache.Count())
 
 	cache.Manager.Register("task", taskCache)
 	return nil
@@ -281,11 +281,53 @@ func GetTaskStats() map[string]int64 {
 }
 
 // MarkRunningTasksAsError 将所有运行中的任务标记为错误（用于服务重启时）
+// 同时回写缓存：GetByID/GetRunningTasks 优先读缓存，若只改数据库，
+// 重启前遗留的任务会在界面上永远保持“执行中”，且无法取消。
 func MarkRunningTasksAsError() error {
-	return database.DB.Model(&Task{}).
+	var running []Task
+	if err := database.DB.Where("status = ?", TaskStatusRunning).Find(&running).Error; err != nil {
+		return err
+	}
+	if len(running) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	const message = "Service restarted, task interrupted"
+	if err := database.DB.Model(&Task{}).
 		Where("status = ?", TaskStatusRunning).
 		Updates(map[string]any{
-			"status":  TaskStatusError,
-			"message": "服务重启，任务被中断",
-		}).Error
+			"status":       TaskStatusError,
+			"message":      message,
+			"completed_at": now,
+			"updated_at":   now,
+		}).Error; err != nil {
+		return err
+	}
+
+	for i := range running {
+		running[i].Status = TaskStatusError
+		running[i].Message = message
+		running[i].CompletedAt = &now
+		running[i].UpdatedAt = now
+		taskCache.Set(running[i].ID, running[i])
+	}
+	return nil
+}
+
+// ListRunningTasksCreatedBefore 查询创建时间早于指定时间、仍为运行中的任务。
+// 用于识别执行流程已经不在了、但数据库状态还停留在 running 的孤儿任务。
+func ListRunningTasksCreatedBefore(before time.Time) ([]Task, error) {
+	var tasks []Task
+	err := database.DB.Where("status = ? AND created_at < ?", TaskStatusRunning, before).Find(&tasks).Error
+	return tasks, err
+}
+
+// MarkTaskInterrupted 将任务标记为中断并同步缓存，用于清理没有对应执行体的孤儿任务。
+func (t *Task) MarkTaskInterrupted(message string) error {
+	now := time.Now()
+	t.Status = TaskStatusError
+	t.Message = message
+	t.CompletedAt = &now
+	return t.SyncFinalStatus()
 }

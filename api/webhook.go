@@ -25,11 +25,11 @@ type webhookRequest struct {
 func ListWebhooks(c *gin.Context) {
 	items, err := notifications.ListWebhookConfigs()
 	if err != nil {
-		utils.FailWithMsg(c, "获取 Webhook 列表失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to fetch webhook list: "+err.Error())
 		return
 	}
 
-	utils.OkDetailed(c, "获取成功", gin.H{
+	utils.OkDetailed(c, "Fetched successfully", gin.H{
 		"items":        items,
 		"eventOptions": notifications.EventCatalogForChannel(notifications.ChannelWebhook),
 	})
@@ -44,11 +44,11 @@ func CreateWebhook(c *gin.Context) {
 
 	created, err := notifications.CreateWebhookConfig(config)
 	if err != nil {
-		utils.FailWithMsg(c, "创建 Webhook 失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to create webhook: "+err.Error())
 		return
 	}
 
-	utils.OkDetailed(c, "创建成功", created)
+	utils.OkDetailed(c, "Created successfully", created)
 }
 
 func UpdateWebhook(c *gin.Context) {
@@ -66,11 +66,11 @@ func UpdateWebhook(c *gin.Context) {
 
 	updated, err := notifications.UpdateWebhookConfig(config)
 	if err != nil {
-		utils.FailWithMsg(c, "更新 Webhook 失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to update webhook: "+err.Error())
 		return
 	}
 
-	utils.OkDetailed(c, "更新成功", updated)
+	utils.OkDetailed(c, "Updated successfully", updated)
 }
 
 func DeleteWebhook(c *gin.Context) {
@@ -80,11 +80,11 @@ func DeleteWebhook(c *gin.Context) {
 	}
 
 	if err := notifications.DeleteWebhookConfig(id); err != nil {
-		utils.FailWithMsg(c, "删除 Webhook 失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to delete webhook: "+err.Error())
 		return
 	}
 
-	utils.OkWithMsg(c, "删除成功")
+	utils.OkWithMsg(c, "Deleted successfully")
 }
 
 func TestWebhookByID(c *gin.Context) {
@@ -95,35 +95,35 @@ func TestWebhookByID(c *gin.Context) {
 
 	config, err := notifications.GetWebhookConfig(id)
 	if err != nil {
-		utils.FailWithMsg(c, "获取 Webhook 失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to fetch webhook: "+err.Error())
 		return
 	}
 
 	payload := notifications.Payload{
 		Event:        "test.webhook",
-		EventName:    "Webhook 测试",
+		EventName:    "Webhook test",
 		Category:     "system",
-		CategoryName: "系统测试",
+		CategoryName: "System test",
 		Severity:     "info",
-		Title:        "Sublink Pro Webhook 测试",
-		Message:      "这是一条Sublink Pro测试消息，用于验证 Webhook 配置是否正确。",
+		Title:        "Sublink Pro webhook test",
+		Message:      "This is a Sublink Pro test message used to verify that the webhook configuration is correct.",
 		Data: map[string]any{
 			"test": true,
 		},
 	}
 
 	if err := notifications.SendWebhook(config, payload); err != nil {
-		utils.FailWithMsg(c, "测试失败: "+err.Error())
+		utils.FailWithMsg(c, "Test failed: "+err.Error())
 		return
 	}
 
 	config.LastTestAt = new(time.Now())
 	if _, err := notifications.UpdateWebhookConfig(config); err != nil {
-		utils.FailWithMsg(c, "更新测试时间失败: "+err.Error())
+		utils.FailWithMsg(c, "Failed to update test time: "+err.Error())
 		return
 	}
 
-	utils.OkWithMsg(c, "测试发送成功")
+	utils.OkWithMsg(c, "Test message sent")
 }
 
 func bindWebhookRequest(c *gin.Context) (*notifications.WebhookConfig, error) {
@@ -154,11 +154,11 @@ func normalizeWebhookRequestError(req webhookRequest) error {
 	if req.WebhookHeaders != "" {
 		var js map[string]any
 		if json.Unmarshal([]byte(req.WebhookHeaders), &js) != nil {
-			return &webhookValidationError{message: "Headers 必须是有效的 JSON 格式"}
+			return &webhookValidationError{message: "Headers must be valid JSON"}
 		}
 	}
 	if req.WebhookEnabled && strings.TrimSpace(req.WebhookUrl) == "" {
-		return &webhookValidationError{message: "启用 Webhook 时需填写 URL"}
+		return &webhookValidationError{message: "URL is required when the webhook is enabled"}
 	}
 	return nil
 }
@@ -174,7 +174,7 @@ func (e *webhookValidationError) Error() string {
 func parseWebhookID(c *gin.Context) (uint, bool) {
 	idValue, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || idValue == 0 {
-		utils.FailWithMsg(c, "Webhook ID 无效")
+		utils.FailWithMsg(c, "Invalid webhook ID")
 		return 0, false
 	}
 	return uint(idValue), true

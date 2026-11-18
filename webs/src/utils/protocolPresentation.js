@@ -131,7 +131,7 @@ export const resolveProtocolPresentationFromLink = (link, protocolMeta = []) => 
   if (!link || typeof link !== 'string') {
     return {
       value: '',
-      label: '未知',
+      label: 'Unknown',
       color: UNKNOWN_PROTOCOL_COLOR,
       icon: '?',
       prefixes: []
@@ -147,7 +147,7 @@ export const resolveProtocolPresentationFromLink = (link, protocolMeta = []) => 
 
   return {
     value: '',
-    label: '其他',
+    label: 'Other',
     color: OTHER_PROTOCOL_COLOR,
     icon: '?',
     prefixes: []

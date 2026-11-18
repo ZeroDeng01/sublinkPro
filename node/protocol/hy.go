@@ -12,16 +12,16 @@ func init() {
 	base := newProtocolSpec("hysteria", []string{"hysteria://", "hy://"}, "Hysteria", "#f9a825", "H", HY{}, "Name", DecodeHYURL, EncodeHYURL, func(h HY) LinkIdentity {
 		return buildIdentity("hysteria", h.Name, h.Host, utils.GetPortString(h.Port))
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Host", Label: "服务器地址", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
-		FieldMeta{Name: "Auth", Label: "认证", Type: "string", Group: "auth", Secret: true, Advanced: true},
-		FieldMeta{Name: "Protocol", Label: "协议", Type: "string", Group: "transport", Options: []string{"udp", "wechat-video", "faketcp"}},
-		FieldMeta{Name: "UpMbps", Label: "上行 Mbps", Type: "int", Group: "transport", Advanced: true},
-		FieldMeta{Name: "DownMbps", Label: "下行 Mbps", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Host", Label: "Server address", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
+		FieldMeta{Name: "Auth", Label: "Authentication", Type: "string", Group: "auth", Secret: true, Advanced: true},
+		FieldMeta{Name: "Protocol", Label: "Protocol", Type: "string", Group: "transport", Options: []string{"udp", "wechat-video", "faketcp"}},
+		FieldMeta{Name: "UpMbps", Label: "Uplink Mbps", Type: "int", Group: "transport", Advanced: true},
+		FieldMeta{Name: "DownMbps", Label: "Downlink Mbps", Type: "int", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Peer", Label: "Peer", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "ALPN", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
-		FieldMeta{Name: "Insecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
+		FieldMeta{Name: "Insecure", Label: "Skip certificate verification", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 	)
 	MustRegisterProtocol(newProxyProtocolSpec(base, buildHYProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "hysteria")
@@ -80,10 +80,10 @@ func EncodeHYURL(hy HY) string {
 func DecodeHYURL(s string) (HY, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return HY{}, fmt.Errorf("失败的URL: %s", s)
+		return HY{}, fmt.Errorf("invalid URL: %s", s)
 	}
 	if u.Scheme != "hy" && u.Scheme != "hysteria" {
-		return HY{}, fmt.Errorf("非hy协议: %s", s)
+		return HY{}, fmt.Errorf("not a hy link: %s", s)
 	}
 	server := u.Hostname()
 	rawPort := u.Port()

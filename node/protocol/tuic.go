@@ -12,21 +12,21 @@ func init() {
 	base := newProtocolSpec("tuic", []string{"tuic://"}, "TUIC", "#0277bd", "T", Tuic{}, "Name", DecodeTuicURL, EncodeTuicURL, func(t Tuic) LinkIdentity {
 		return buildIdentity("tuic", t.Name, t.Host, utils.GetPortString(t.Port))
 	},
-		FieldMeta{Name: "Name", Label: "节点名称", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Host", Label: "服务器地址", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
+		FieldMeta{Name: "Name", Label: "Node name", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Host", Label: "Server address", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
 		FieldMeta{Name: "Uuid", Label: "UUID", Type: "string", Group: "auth", Secret: true, Advanced: true},
-		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true, Advanced: true},
+		FieldMeta{Name: "Password", Label: "Password", Type: "string", Group: "auth", Secret: true, Advanced: true},
 		FieldMeta{Name: "Token", Label: "Token", Type: "string", Group: "auth", Secret: true, Advanced: true},
-		FieldMeta{Name: "Version", Label: "版本", Type: "int", Group: "transport", Options: []string{"4", "5"}},
-		FieldMeta{Name: "Congestion_control", Label: "拥塞控制", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Version", Label: "Version", Type: "int", Group: "transport", Options: []string{"4", "5"}},
+		FieldMeta{Name: "Congestion_control", Label: "Congestion control", Type: "string", Group: "transport", Advanced: true},
 		FieldMeta{Name: "Udp_relay_mode", Label: "UDP Relay Mode", Type: "string", Group: "transport", Advanced: true},
-		FieldMeta{Name: "Disable_sni", Label: "禁用 SNI", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
-		FieldMeta{Name: "Tls", Label: "启用 TLS", Type: "bool", Group: "tls"},
+		FieldMeta{Name: "Disable_sni", Label: "Disable SNI", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
+		FieldMeta{Name: "Tls", Label: "Enable TLS", Type: "bool", Group: "tls"},
 		FieldMeta{Name: "Sni", Label: "SNI", Type: "string", Group: "tls", Advanced: true},
 		FieldMeta{Name: "Alpn", Label: "ALPN", Type: "string", Group: "tls", Advanced: true, Multiline: true},
-		FieldMeta{Name: "ClientFingerprint", Label: "指纹", Type: "string", Group: "tls", Advanced: true},
-		FieldMeta{Name: "Insecure", Label: "跳过证书校验", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
+		FieldMeta{Name: "ClientFingerprint", Label: "Fingerprint", Type: "string", Group: "tls", Advanced: true},
+		FieldMeta{Name: "Insecure", Label: "Skip certificate verification", Type: "int", Group: "tls", Advanced: true, Options: []string{"0", "1"}},
 	)
 	MustRegisterProtocol(newProxySurgeProtocolSpec(base, buildTuicProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "tuic")
@@ -55,16 +55,16 @@ type Tuic struct {
 func DecodeTuicURL(s string) (Tuic, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return Tuic{}, fmt.Errorf("解析失败的URL: %s", s)
+		return Tuic{}, fmt.Errorf("failed to parse URL: %s", s)
 	}
 	if u.Scheme != "tuic" {
-		return Tuic{}, fmt.Errorf("非tuic协议: %s", s)
+		return Tuic{}, fmt.Errorf("not a tuic link: %s", s)
 	}
 
 	uuid := u.User.Username()
 	if !utils.IsUUID(uuid) {
-		utils.Error("❌节点解析错误：%v  【节点：%s】", "UUID格式错误", s)
-		return Tuic{}, fmt.Errorf("uuid格式错误:%s", uuid)
+		utils.Error("❌ node parse error: %v [node: %s]", "invalid UUID format", s)
+		return Tuic{}, fmt.Errorf("invalid UUID format: %s", uuid)
 	}
 	password, _ := u.User.Password()
 	// log.Println(password)

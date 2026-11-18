@@ -104,7 +104,7 @@
       "nodeMap": "Node Map",
       "airports": "Airport",
       "nodes": "Node",
-      "nodeCheck": "Detection center",
+      "nodeCheck": "Detection",
       "subscriptions": "Subscriptions",
       "templates": "Templates",
       "tags": "Tags",
@@ -166,7 +166,7 @@
     },
     "textMode": {
       "description": "Text mode allows batch editing of country rules. Format: <code>countryCode countryName priority enabled pattern</code> (space-separated), one rule per line. Saving will synchronize with the database (add, update, delete).",
-      "placeholder": "# Country Rules Configuration\n# Format: countryCode countryName priority enabled pattern\n# Example: CN China 100 true (?i)(中国|china|cn)\n\nCN China 100 true (?i)(中国|china|cn)\nUS United_States 90 true (?i)(美国|united states|usa|us)\nHK Hong_Kong 95 true (?i)(香港|hong kong|hk)",
+      "placeholder": "# Country Rules Configuration\n# Format: countryCode countryName priority enabled pattern\n# Example: CN China 100 true (?i)(china|cn|mainland)\n\nCN China 100 true (?i)(china|cn|mainland)\nUS United_States 90 true (?i)(united states|usa|us)\nHK Hong_Kong 95 true (?i)(hong kong|hk)",
       "changed": "Content has been modified, please save to sync"
     },
     "actions": {
@@ -433,6 +433,7 @@
       "nextRun": "Next run",
       "usage": {
         "title": "Usage information",
+        "today": "Today",
         "disabled": "Usage fetching is not enabled",
         "disabledShort": "Not enabled",
         "failed": "Usage fetch failed",
@@ -631,6 +632,7 @@
     "loadFailed": "Failed to load usage history",
     "loading": "Loading usage history...",
     "empty": "No usage history yet. Data appears after the next subscription refresh.",
+    "emptyWiden": "No refreshes in this window. Choose a wider range to see earlier snapshots.",
     "chartUnavailable": "The chart could not be rendered. Reopen the dialog; if it keeps failing, check the browser console.",
     "openChart": "Open usage history chart",
     "noDataShort": "No data",
@@ -687,6 +689,10 @@
         "invalidRange": "Retention must be between {{min}} and {{max}} days"
       }
     }
+  },
+  "todayTraffic": {
+    "tooltip": "Traffic used today: {{used}}",
+    "loadFailed": "Failed to load today's traffic"
   },
   "settings": {
     "title": "User Center",
@@ -1394,10 +1400,10 @@
         "format": {
           "title": "Format Description",
           "description": "One rule per line, fields separated by spaces:",
-          "example": "CountryCode CountryName Pattern [Priority] [Status]\nExample:\nHK Hong Kong HK|Hong Kong|香港 100 enabled\nUS USA US|United States|America 90 disabled"
+          "example": "CountryCode CountryName Pattern [Priority] [Status]\nExample:\nHK Hong Kong HK|Hong Kong 100 enabled\nUS USA US|United States|America 90 disabled"
         },
         "textField": {
-          "placeholder": "Enter rules, one per line...\nExample:\nHK Hong Kong HK|Hong Kong|香港 100 enabled\nCN China CN|China|中国 100 enabled"
+          "placeholder": "Enter rules, one per line...\nExample:\nHK Hong Kong HK|Hong Kong 100 enabled\nCN China CN|China 100 enabled"
         },
         "stats": {
           "title": "Parse Statistics",
@@ -1786,6 +1792,23 @@
         "allSufficient": "All airports have sufficient usage",
         "remain": "Remain"
       },
+      "trafficDaily": {
+        "title": "Traffic by Day",
+        "subtitle": "Daily consumption calculated from subscription refresh snapshots",
+        "hint": "Each bar is the traffic delta between consecutive subscription refreshes on that day.",
+        "today": "Today",
+        "rangeTotal": "Selected period",
+        "dailyAverage": "Daily average",
+        "days": "{{count}}d",
+        "loading": "Loading traffic...",
+        "loadFailed": "Failed to load daily traffic",
+        "empty": "No traffic recorded in this period yet.",
+        "refresh": "Refresh",
+        "byAirport": "By airport",
+        "series": {
+          "used": "Used"
+        }
+      },
       "charts": {
         "countryDistribution": "Node Country Distribution",
         "countryTooltip": "Grouped by node landing country, comparing real region distribution; unknown nodes shown separately.",
@@ -1821,6 +1844,9 @@
         "collapse": "Collapse",
         "availableIp": "Available IPs",
         "nodes": "Nodes",
+        "ungrouped": "Ungrouped",
+        "untagged": "Untagged",
+        "manualSource": "Manual",
         "tagItem": "Tag {{index}}",
         "emptyCountry": "No country stats data",
         "emptyProtocol": "No protocol stats data",
@@ -1829,7 +1855,15 @@
         "emptySource": "No source stats data",
         "emptyQuality": "No quality status data",
         "emptyFraud": "No fraud score data",
-        "emptyIp": "No IP quality stats data"
+        "emptyIp": "No IP quality stats data",
+        "fraudLevels": {
+          "excellent-plus": "Excellent+ (0-10)",
+          "excellent": "Excellent (11-30)",
+          "good": "Good (31-50)",
+          "medium": "Medium (51-70)",
+          "poor": "Poor (71-89)",
+          "very-poor": "Very poor (90+)"
+        }
       },
       "ipQuality": {
         "residential": "Residential Properties",
@@ -2308,6 +2342,10 @@
         "detectQualityHint": "(try IPv4 first, then fall back to IPv6; IPv6 may only return partial risk information)",
         "qualityCheckUrl": "Quality check endpoint",
         "qualityCheckUrlPlaceholder": "Select or enter a quality check endpoint",
+        "qualityCheckOptions": {
+          "ippureRecommended": "IPPure (recommended)",
+          "ippure": "IPPure"
+        },
         "detectUnlock": "Unlock check",
         "detectUnlockHint": "(save node unlock results by Provider)",
         "unlockWarning": "Enabling unlock checks can significantly slow down the whole batch. Enable it only when filtering streaming or AI availability regions.",
@@ -2534,6 +2572,7 @@
       "noAirportsInGroup": "No airports in this group",
       "dragAirportHint": "Drag to adjust airport order. Airports placed earlier also output earlier in subscriptions.",
       "nodeCount": "{{count}} nodes",
+      "nodeCount_one": "{{count}} node",
       "messages": {
         "loadGroupsFailed": "Failed to load groups",
         "loadGroupDetailFailed": "Failed to load group details",
@@ -2622,8 +2661,11 @@
     "mobileCard": {
       "sorting": "Sorting",
       "nodeCount": "{{count}} nodes",
+      "nodeCount_one": "{{count}} node",
       "groupCount": "{{count}} groups",
+      "groupCount_one": "{{count}} group",
       "airportCount": "{{count}} airports",
+      "airportCount_one": "{{count}} airport",
       "expandHint": "Tap the header to expand details",
       "confirmSort": "Confirm sort",
       "sortNodes": "Sort nodes"
@@ -2729,8 +2771,12 @@
       "createdAt": "Created At",
       "actions": "Actions",
       "sorting": "Sorting",
-      "nodeGroupCount": "{{nodes}} nodes, {{groups}} groups",
-      "nodeGroupAirportCount": "{{nodes}} nodes, {{groups}} groups, {{airports}} airports",
+      "nodeCount": "{{count}} nodes",
+      "nodeCount_one": "{{count}} node",
+      "groupCount": "{{count}} groups",
+      "groupCount_one": "{{count}} group",
+      "airportCount": "{{count}} airports",
+      "airportCount_one": "{{count}} airport",
       "tooltips": {
         "preview": "Preview nodes",
         "copy": "Copy this configuration as a new copy",

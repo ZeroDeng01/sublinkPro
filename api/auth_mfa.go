@@ -168,7 +168,7 @@ func requireCurrentUser(c *gin.Context) (*models.User, bool) {
 	}
 	user, err := models.FindUserByUsername(username)
 	if err != nil {
-		utils.FailWithMsg(c, "用户不存在")
+		utils.FailWithMsg(c, "User not found")
 		return nil, false
 	}
 	return user, true
@@ -181,11 +181,11 @@ func requirePasswordReauth(user *models.User, password string) error {
 
 func requireMFAReauth(user *models.User, password, code string) error {
 	if err := requirePasswordReauth(user, password); err != nil {
-		return fmt.Errorf("当前密码错误")
+		return fmt.Errorf("current password is incorrect")
 	}
 	if user.TOTPEnabled {
 		if err := user.VerifyTOTPChallenge(code, time.Now()); err != nil {
-			return fmt.Errorf("TOTP 验证失败")
+			return fmt.Errorf("TOTP verification failed")
 		}
 	}
 	return nil
@@ -194,12 +194,12 @@ func requireMFAReauth(user *models.User, password, code string) error {
 func respondLoginSuccess(c *gin.Context, user *models.User, ip string) {
 	token, err := GetToken(user)
 	if err != nil {
-		utils.Error("获取token失败: %v", err)
-		utils.FailWithI18n(c, "获取token失败", "backend.auth.login.tokenFailed", nil)
+		utils.Error("Failed to obtain token: %v", err)
+		utils.FailWithI18n(c, "Failed to obtain token", "backend.auth.login.tokenFailed", nil)
 		return
 	}
 	go notifyUserLogin(user.Username, ip)
-	utils.OkDetailedI18n(c, "登录成功", buildLoginSuccessData(token), "backend.auth.login.success", nil)
+	utils.OkDetailedI18n(c, "Login successful", buildLoginSuccessData(token), "backend.auth.login.success", nil)
 }
 
 func buildMFAStatus(user *models.User) MFAStatusResponse {
@@ -213,7 +213,7 @@ func buildMFAStatus(user *models.User) MFAStatusResponse {
 func signMFAResetToken(username string, expiresAt time.Time) (string, error) {
 	secret := strings.TrimSpace(config.GetMFAResetSecret())
 	if secret == "" {
-		return "", fmt.Errorf("MFA reset secret 未配置")
+		return "", fmt.Errorf("MFA reset secret is not configured")
 	}
 	payload := signedMFAResetToken{
 		Username: strings.ToLower(strings.TrimSpace(username)),
@@ -271,7 +271,7 @@ func GetMFAStatus(c *gin.Context) {
 	if !ok {
 		return
 	}
-	utils.OkDetailed(c, "获取 MFA 状态成功", buildMFAStatus(user))
+	utils.OkDetailed(c, "MFA status fetched successfully", buildMFAStatus(user))
 }
 
 func BeginTOTPEnrollment(c *gin.Context) {
@@ -281,7 +281,7 @@ func BeginTOTPEnrollment(c *gin.Context) {
 	}
 	var req beginTOTPEnrollmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 	if err := requireMFAReauth(user, req.Password, req.Code); err != nil {
@@ -290,11 +290,11 @@ func BeginTOTPEnrollment(c *gin.Context) {
 	}
 	secret, provisioningURI, recoveryCodes, err := user.BeginTOTPEnrollment()
 	if err != nil {
-		utils.Error("开始 TOTP 绑定失败: %v", err)
-		utils.FailWithMsg(c, "开始 TOTP 绑定失败")
+		utils.Error("Failed to start TOTP binding: %v", err)
+		utils.FailWithMsg(c, "Failed to start TOTP setup")
 		return
 	}
-	utils.OkDetailed(c, "TOTP 绑定准备完成", gin.H{
+	utils.OkDetailed(c, "TOTP setup is ready", gin.H{
 		"secret":            secret,
 		"provisioningUri":   provisioningURI,
 		"recoveryCodes":     recoveryCodes,
@@ -310,30 +310,30 @@ func ConfirmTOTPEnrollment(c *gin.Context) {
 	}
 	var req confirmTOTPEnrollmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 	if err := user.ConfirmTOTPEnrollment(req.Code, time.Now()); err != nil {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkDetailed(c, "TOTP 已启用", buildMFAStatus(user))
+	utils.OkDetailed(c, "TOTP enabled", buildMFAStatus(user))
 }
 
 func VerifyTOTPLogin(c *gin.Context) {
 	var req verifyMFARequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 	claims, challenge, err := parsePendingMFAChallenge(req.ChallengeToken)
 	if err != nil {
-		utils.FailWithData(c, "登录验证已过期或不可用，请重新输入用户名和密码", gin.H{"errorType": "mfa"})
+		utils.FailWithData(c, "Login verification expired or unavailable; please re-enter your username and password", gin.H{"errorType": "mfa"})
 		return
 	}
 	user, err := models.LoadUserForMFAChallenge(claims.Username)
 	if err != nil {
-		utils.FailWithData(c, "用户不存在", gin.H{"errorType": "credentials"})
+		utils.FailWithData(c, "User not found", gin.H{"errorType": "credentials"})
 		return
 	}
 	if err := user.VerifyTOTPChallenge(req.Code, time.Now()); err != nil {
@@ -342,7 +342,7 @@ func VerifyTOTPLogin(c *gin.Context) {
 		return
 	}
 	if err := consumeMFAChallenge(challenge); err != nil {
-		utils.FailWithData(c, "登录验证已失效，请重新登录", gin.H{"errorType": "mfa"})
+		utils.FailWithData(c, "Login verification has expired; please log in again", gin.H{"errorType": "mfa"})
 		return
 	}
 	respondLoginSuccess(c, user, c.ClientIP())
@@ -351,17 +351,17 @@ func VerifyTOTPLogin(c *gin.Context) {
 func VerifyRecoveryCodeLogin(c *gin.Context) {
 	var req recoveryMFARequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 	claims, challenge, err := parsePendingMFAChallenge(req.ChallengeToken)
 	if err != nil {
-		utils.FailWithData(c, "登录验证已过期或不可用，请重新输入用户名和密码", gin.H{"errorType": "mfa"})
+		utils.FailWithData(c, "Login verification expired or unavailable; please re-enter your username and password", gin.H{"errorType": "mfa"})
 		return
 	}
 	user, err := models.LoadUserForMFAChallenge(claims.Username)
 	if err != nil {
-		utils.FailWithData(c, "用户不存在", gin.H{"errorType": "credentials"})
+		utils.FailWithData(c, "User not found", gin.H{"errorType": "credentials"})
 		return
 	}
 	if err := user.UseRecoveryCode(req.RecoveryCode); err != nil {
@@ -370,7 +370,7 @@ func VerifyRecoveryCodeLogin(c *gin.Context) {
 		return
 	}
 	if err := consumeMFAChallenge(challenge); err != nil {
-		utils.FailWithData(c, "登录验证已失效，请重新登录", gin.H{"errorType": "mfa"})
+		utils.FailWithData(c, "Login verification has expired; please log in again", gin.H{"errorType": "mfa"})
 		return
 	}
 	respondLoginSuccess(c, user, c.ClientIP())
@@ -383,7 +383,7 @@ func DisableTOTP(c *gin.Context) {
 	}
 	var req disableTOTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 	if err := requireMFAReauth(user, req.Password, req.Code); err != nil {
@@ -391,11 +391,11 @@ func DisableTOTP(c *gin.Context) {
 		return
 	}
 	if err := user.DisableTOTP(); err != nil {
-		utils.Error("关闭 TOTP 失败: %v", err)
-		utils.FailWithMsg(c, "关闭 TOTP 失败")
+		utils.Error("Failed to disable TOTP: %v", err)
+		utils.FailWithMsg(c, "Failed to disable TOTP")
 		return
 	}
-	utils.OkDetailed(c, "TOTP 已关闭", buildMFAStatus(user))
+	utils.OkDetailed(c, "TOTP disabled", buildMFAStatus(user))
 }
 
 func RegenerateRecoveryCodes(c *gin.Context) {
@@ -405,7 +405,7 @@ func RegenerateRecoveryCodes(c *gin.Context) {
 	}
 	var req regenerateRecoveryCodesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 	if err := requireMFAReauth(user, req.Password, req.Code); err != nil {
@@ -413,16 +413,16 @@ func RegenerateRecoveryCodes(c *gin.Context) {
 		return
 	}
 	if !user.TOTPEnabled {
-		utils.FailWithMsg(c, "用户未启用 TOTP")
+		utils.FailWithMsg(c, "TOTP is not enabled for this user")
 		return
 	}
 	codes, err := user.RegenerateRecoveryCodes()
 	if err != nil {
-		utils.Error("重置恢复码失败: %v", err)
-		utils.FailWithMsg(c, "重置恢复码失败")
+		utils.Error("Failed to reset recovery codes: %v", err)
+		utils.FailWithMsg(c, "Failed to reset recovery codes")
 		return
 	}
-	utils.OkDetailed(c, "恢复码已重置", gin.H{
+	utils.OkDetailed(c, "Recovery codes reset", gin.H{
 		"recoveryCodes": codes,
 		"status":        buildMFAStatus(user),
 	})
@@ -431,7 +431,7 @@ func RegenerateRecoveryCodes(c *gin.Context) {
 func ResetTOTP(c *gin.Context) {
 	var req resetTOTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 	providedResetToken := strings.TrimSpace(req.ResetToken)
@@ -439,20 +439,20 @@ func ResetTOTP(c *gin.Context) {
 		providedResetToken = strings.TrimSpace(c.GetHeader(mfaResetHeader))
 	}
 	if !validateScopedMFAReset(req.Username, providedResetToken) {
-		utils.Forbidden(c, "MFA 重置令牌无效")
+		utils.Forbidden(c, "Invalid MFA reset token")
 		return
 	}
 	user := &models.User{Username: req.Username, Password: req.Password}
 	if err := user.Verify(); err != nil {
-		utils.FailWithData(c, "用户名或密码错误", gin.H{"errorType": "credentials"})
+		utils.FailWithData(c, "Incorrect username or password", gin.H{"errorType": "credentials"})
 		return
 	}
 	if err := user.DisableTOTP(); err != nil {
-		utils.Error("应急重置 TOTP 失败: %v", err)
-		utils.FailWithMsg(c, "重置 TOTP 失败")
+		utils.Error("Failed to emergency-reset TOTP: %v", err)
+		utils.FailWithMsg(c, "Failed to reset TOTP")
 		return
 	}
-	utils.OkWithMsg(c, "TOTP 已重置，请重新登录后重新绑定")
+	utils.OkWithMsg(c, "TOTP has been reset; log in again and re-bind")
 }
 
 func ReauthMFA(c *gin.Context) {
@@ -462,14 +462,14 @@ func ReauthMFA(c *gin.Context) {
 	}
 	var req reauthRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FailWithMsg(c, "请求参数错误: "+err.Error())
+		utils.FailWithMsg(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 	if err := requireMFAReauth(user, req.Password, req.Code); err != nil {
 		utils.FailWithMsg(c, err.Error())
 		return
 	}
-	utils.OkDetailed(c, "验证成功", buildMFAStatus(user))
+	utils.OkDetailed(c, "Verification successful", buildMFAStatus(user))
 }
 
 func GenerateScopedMFAResetToken(username string, expiresAt time.Time) (string, error) {

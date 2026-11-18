@@ -25,12 +25,12 @@ func (sm *SchedulerManager) StartHostCleanupTask() error {
 	})
 
 	if err != nil {
-		utils.Error("添加Host过期清理任务失败 - Cron: %s, Error: %v", hostCleanupCron, err)
+		utils.Error("Failed to add Host expiry cleanup task - Cron: %s, Error: %v", hostCleanupCron, err)
 		return err
 	}
 
 	sm.jobs[JobIDHostCleanup] = entryID
-	utils.Info("成功添加Host过期清理任务 - Cron: %s", hostCleanupCron)
+	utils.Info("Added Host expiry cleanup task - Cron: %s", hostCleanupCron)
 	return nil
 }
 
@@ -38,10 +38,10 @@ func (sm *SchedulerManager) StartHostCleanupTask() error {
 func ExecuteHostCleanupTask() {
 	deleted, err := models.CleanExpiredHosts()
 	if err != nil {
-		utils.Error("Host过期清理任务执行失败: %v", err)
+		utils.Error("Host expiry cleanup task failed: %v", err)
 		return
 	}
 	if deleted > 0 {
-		utils.Debug("Host过期清理完成，删除 %d 条记录", deleted)
+		utils.Debug("Host expiry cleanup finished; %d records deleted", deleted)
 	}
 }

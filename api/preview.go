@@ -61,7 +61,7 @@ func PreviewSubscriptionNodes(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code": 400,
-			"msg":  "请求参数解析失败: " + err.Error(),
+			"msg":  "Failed to parse request parameters: " + err.Error(),
 		})
 		return
 	}

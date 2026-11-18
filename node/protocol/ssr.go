@@ -12,15 +12,15 @@ func init() {
 	base := newProtocolSpec("ssr", []string{"ssr://"}, "SSR", "#e64a19", "R", Ssr{}, "Qurey.Remarks", DecodeSSRURL, EncodeSSRURL, func(s Ssr) LinkIdentity {
 		return buildIdentity("ssr", s.Qurey.Remarks, s.Server, utils.GetPortString(s.Port))
 	},
-		FieldMeta{Name: "Qurey.Remarks", Label: "节点名称", Type: "string", Group: "basic", Placeholder: "例如：SSR-01"},
-		FieldMeta{Name: "Server", Label: "服务器地址", Type: "string", Group: "basic"},
-		FieldMeta{Name: "Port", Label: "端口", Type: "int", Group: "basic"},
-		FieldMeta{Name: "Method", Label: "加密方式", Type: "string", Group: "transport"},
-		FieldMeta{Name: "Password", Label: "密码", Type: "string", Group: "auth", Secret: true},
-		FieldMeta{Name: "Protocol", Label: "协议", Type: "string", Group: "transport"},
-		FieldMeta{Name: "Obfs", Label: "混淆", Type: "string", Group: "transport"},
-		FieldMeta{Name: "Qurey.Obfsparam", Label: "混淆参数", Type: "string", Group: "transport", Advanced: true},
-		FieldMeta{Name: "Qurey.Protoparam", Label: "协议参数", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Qurey.Remarks", Label: "Node name", Type: "string", Group: "basic", Placeholder: "e.g. SSR-01"},
+		FieldMeta{Name: "Server", Label: "Server address", Type: "string", Group: "basic"},
+		FieldMeta{Name: "Port", Label: "Port", Type: "int", Group: "basic"},
+		FieldMeta{Name: "Method", Label: "Cipher", Type: "string", Group: "transport"},
+		FieldMeta{Name: "Password", Label: "Password", Type: "string", Group: "auth", Secret: true},
+		FieldMeta{Name: "Protocol", Label: "Protocol", Type: "string", Group: "transport"},
+		FieldMeta{Name: "Obfs", Label: "Obfuscation", Type: "string", Group: "transport"},
+		FieldMeta{Name: "Qurey.Obfsparam", Label: "Obfuscation parameters", Type: "string", Group: "transport", Advanced: true},
+		FieldMeta{Name: "Qurey.Protoparam", Label: "Protocol parameters", Type: "string", Group: "transport", Advanced: true},
 	)
 	MustRegisterProtocol(newProxyProtocolSpec(base, buildSSRProxy, func(proxy Proxy) bool {
 		return proxyTypeMatches(proxy, "ssr")
@@ -113,7 +113,7 @@ func DecodeSSRURL(s string) (Ssr, error) {
 	// 反着解析参数 怕有ipv6地址冒号混淆
 	param := strings.Split(s, ":")
 	if len(param) < 6 {
-		return Ssr{}, errors.New("长度没有6")
+		return Ssr{}, errors.New("invalid SSR payload length")
 	}
 	password := utils.Base64Decode(param[len(param)-1])
 	obfs := param[len(param)-2]

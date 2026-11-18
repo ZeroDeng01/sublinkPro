@@ -163,6 +163,21 @@ func repairHTTPHTTPSNodeProtocolFromLink(db *gorm.DB) error {
 	})
 }
 
+// freshDatabaseInstall 记录本次启动是否在空数据库上完成了首次初始化。
+var freshDatabaseInstall bool
+
+// IsFreshDatabaseInstall 报告本次启动是否是新数据库的首次初始化。
+// 只有全新安装需要写入默认模板等种子数据，已有安装重启时不再补写。
+func IsFreshDatabaseInstall() bool {
+	return freshDatabaseInstall
+}
+
+// isFreshDatabase 判断数据库是否尚未初始化（用户表还不存在）。
+// 必须在 AutoMigrate 建表前调用，建表之后就无法区分新库和旧库。
+func isFreshDatabase(db *gorm.DB) bool {
+	return db != nil && !db.Migrator().HasTable(&User{})
+}
+
 // RunMigrations 执行所有数据库迁移
 // 此函数必须在 database.Init() 之后调用
 func RunMigrations() error {
@@ -176,6 +191,9 @@ func RunMigrations() error {
 		utils.Info("数据库已经初始化，无需重复初始化")
 		return nil
 	}
+
+	// 在建表前记录本次是否为全新安装，供默认模板等一次性种子数据使用。
+	freshDatabaseInstall = isFreshDatabase(db)
 
 	baseTables := []struct {
 		name  string
@@ -440,6 +458,22 @@ func RunMigrations() error {
 		utils.Error("执行迁移 0042_enable_airport_usage_fetch 失败: %v", err)
 	}
 
+	// 0043_localize_legacy_defaults - 将历史版本写入的中文默认名称与任务消息迁移为英文，
+	// 避免英文界面下仍然显示中文的默认值。
+	if err := database.RunCustomMigration("0043_localize_legacy_defaults", func() error {
+		return localizeLegacyDefaults(db)
+	}); err != nil {
+		utils.Error("执行迁移 0043_localize_legacy_defaults 失败: %v", err)
+	}
+
+	// 0044_rotate_predictable_share_tokens - 0015 迁移用 md5(订阅名) 作为分享 token，
+	// 链接可被推导；这里改用 crypto/rand token（受影响的旧链接需要重新复制）。
+	if err := database.RunCustomMigration("0044_rotate_predictable_share_tokens", func() error {
+		return rotatePredictableShareTokens(db)
+	}); err != nil {
+		utils.Error("执行迁移 0044_rotate_predictable_share_tokens 失败: %v", err)
+	}
+
 	if err := database.RunCustomMigration("0024_migrate_legacy_webhook_settings", func() error {
 		legacyURL, _ := GetSetting("webhook_url")
 		legacyMethod, _ := GetSetting("webhook_method")
@@ -471,7 +505,7 @@ func RunMigrations() error {
 		}
 
 		config := Webhook{
-			Name:        "默认 Webhook",
+			Name:        "Default Webhook",
 			URL:         strings.TrimSpace(legacyURL),
 			Method:      method,
 			ContentType: contentType,
@@ -565,7 +599,7 @@ func RunMigrations() error {
 	// 0007_add_script_demo
 	if err := database.RunCustomMigration("0007_add_script_demo", func() error {
 		script := &Script{}
-		script.Name = "[系统DEMO]按测速结果筛选节点"
+		script.Name = "[DEMO] Filter nodes by speed result"
 		script.Content = "" +
 			"//修改节点列表\n/**\n * @param {Node[]} nodes\n * @param {string} clientType\n */\nfunction filterNode(nodes, clientType) {\n    let maxDelayTime = 250;//最大延迟 单位ms \n    let minSpeed = 1.5;//最小速度 单位MB/s\n    // nodes: 节点列表\n    // 数据结构如下\n    // [\n    //     {\n    //         \"ID\": 1,\n    //         \"Link\": \"vmess://4564564646\",\n    //         \"Name\": \"xx订阅_US-CDN-SSL\",\n    //         \"LinkName\": \"US-CDN-SSL\",\n    //         \"LinkAddress\": \"xxxxxxxxx.net:443\",\n    //         \"LinkHost\": \"xxxxxxxxx.net\",\n    //         \"LinkPort\": \"443\",\n    //         \"DialerProxyName\": \"\",\n    //         \"CreateDate\": \"\",\n    //         \"Source\": \"manual\",\n    //         \"SourceID\": 0,\n    //         \"Group\": \"自用\",\n    //         \"DelayTime\": 110,\n    //         \"Speed\": 10,\n    //         \"LastCheck\": \"2025-11-26 23:49:58\"\n    //     }\n    // ]\n    // clientType: 客户端类型\n    // 返回值: 修改后节点列表\n    let newNodes = [];\n    nodes.forEach(node => {\n        if(!node.Link.includes(\"://_\")){\n            //如果分组是机场或者自用的自建节点则忽略测速直接加入列表\n            if(node.Group.includes(\"机场\")||node.Group.includes(\"自建\")){\n                newNodes.push(rename(node));\n            }else{\n                //速度高或者延迟低都保留\n                if(node.DelayTime>0&&(node.DelayTime<maxDelayTime||node.Speed>=minSpeed)){\n                    newNodes.push(rename(node));\n                    console.log(\"✅节点：\"+node.Name +\"符合测速要求\");\n                }else{\n                    console.log(\"❌节点：\"+node.Name +\"不符合测速要求\");\n                }\n            }\n        }\n    });\n    return newNodes;\n}\n//修改订阅文件\n/**\n * @param {string} input\n * @param {string} clientType\n */\nfunction subMod( input, clientType) {\n    // input: 原始输入内容,不同客户端订阅文件也不一样\n    // clientType: 客户端类型\n    // 返回值: 修改后的内容字符串\n    return input; // 注意：此处示例仅为示意，实际应返回处理后的字符串\n}\n\n// 节点改名\nfunction rename(node){\n    if(node.Link.indexOf('#')!=-1&&node.Source!=='manual'){\n        var linkArr = node.Link.split('#')\n        node.Link = linkArr[0]+'#'+node.Source+\"_\"+linkArr[1]\n        return node\n    }\n\n    return node\n}"
 		script.Version = "1.0.0"
@@ -897,7 +931,7 @@ DIRECT = direct
 			share := SubscriptionShare{
 				SubscriptionID: sub.ID,
 				Token:          token,
-				Name:           "默认分享链接",
+				Name:           "Default share link",
 				ExpireType:     ExpireTypeNever, // 永不过期
 				IsLegacy:       true,
 				Enabled:        true,
@@ -1085,7 +1119,7 @@ DIRECT = direct
 
 		// 创建默认策略
 		defaultProfile := NodeCheckProfile{
-			Name:               "默认策略",
+			Name:               "Default profile",
 			Enabled:            enabled,
 			CronExpr:           cron,
 			Mode:               mode,
@@ -1277,7 +1311,7 @@ DIRECT = direct
 			Username: "admin",
 			Password: adminPassword,
 			Role:     "admin",
-			Nickname: "管理员",
+			Nickname: "Admin",
 		}
 		err = admin.Create()
 		if err != nil {
@@ -1581,4 +1615,148 @@ func backfillNodeCountries(db *gorm.DB, rules []CountryRule) (int, error) {
 		filled += len(ids)
 	}
 	return filled, nil
+}
+
+// legacyValueRename 描述一次默认值改名（表、列、旧值、新值）
+type legacyValueRename struct {
+	table  string
+	column string
+	from   string
+	to     string
+}
+
+// localizeLegacyDefaults 将历史版本写入的中文默认名称与任务消息改写为英文，
+// 仅精确匹配内置默认值，用户自建内容保持原样。
+func localizeLegacyDefaults(db *gorm.DB) error {
+	renames := []legacyValueRename{
+		{"webhooks", "name", "默认 Webhook", "Default Webhook"},
+		{"subscription_shares", "name", "默认分享链接", "Default share link"},
+		{"node_check_profiles", "name", "默认策略", "Default profile"},
+		{"users", "nickname", "管理员", "Admin"},
+		{"users", "nickname", "演示管理员", "Demo Admin"},
+		{"scripts", "name", "[系统DEMO]按测速结果筛选节点", "[DEMO] Filter nodes by speed result"},
+		{"hosts", "source", "手动添加", "Manual"},
+		{"hosts", "source", "手动导入", "Manual"},
+		{"tasks", "message", "用户取消", "Cancelled by user"},
+		{"tasks", "message", "已取消", "Cancelled"},
+		{"tasks", "message", "服务重启，任务被中断", "Service restarted, task interrupted"},
+		{"tasks", "message", "任务已中断（执行进程已退出或任务已过期）", "Task interrupted (the running process exited or the task expired)"},
+		{"tasks", "message", "已有数据库迁移任务在运行，请稍后再试", "A database migration task is already running; try again later"},
+	}
+
+	for _, rename := range renames {
+		if !db.Migrator().HasTable(rename.table) || !db.Migrator().HasColumn(rename.table, rename.column) {
+			continue
+		}
+		if err := db.Table(rename.table).
+			Where(rename.column+" = ?", rename.from).
+			Update(rename.column, rename.to).Error; err != nil {
+			return fmt.Errorf("本地化 %s.%s 失败: %w", rename.table, rename.column, err)
+		}
+	}
+
+	if !db.Migrator().HasTable("tasks") || !db.Migrator().HasColumn("tasks", "message") {
+		return nil
+	}
+
+	// 旧版任务消息由固定中文模板拼接而成，逐段替换即可覆盖历史记录。
+	messageFragments := [][2]string{
+		{"❌订阅【", "❌ Subscription ["},
+		{"✅订阅【", "✅ Subscription ["},
+		{"】TLS错误: ", "] TLS error: "},
+		{"】证书验证失败: ", "] certificate verification failed: "},
+		{"】请求失败: ", "] request failed: "},
+		{"】读取响应失败: ", "] failed to read response: "},
+		{"】解析失败或未找到节点", "] Parse failed or no nodes found"},
+		{"解析失败 or 未找到节点", "Parse failed or no nodes found"},
+		{"】节点同步完成，耗时 ", "] synced in "},
+		{"，总节点【", ", total nodes ["},
+		{"】个，成功处理【", "], processed ["},
+		{"】个，新增节点【", "], added ["},
+		{"】个，更新节点【", "], updated ["},
+		{"】个，已存在节点【", "], existing ["},
+		{"】个，删除失效【", "], removed stale ["},
+		{"】个", "]"},
+		{"任务异常: ", "Task panic: "},
+		{"订阅更新完成 (新增: ", "Subscription update completed (added: "},
+		{", 更新: ", ", updated: "},
+		{", 已存在: ", ", existing: "},
+		{", 删除: ", ", removed: "},
+		{"测速完成 (成功: ", "Speed test completed (success: "},
+		{", 失败: ", ", failed: "},
+		{", 流量: ", ", traffic: "},
+		{"测速完成: 成功 ", "Speed test completed: "},
+		{" 个, 失败 ", " succeeded, "},
+		{" 个, 消耗流量 ", " failed, traffic used "},
+		{"保存检测结果失败: ", "Failed to save check results: "},
+		{"正在创建并上传备份", "Creating and uploading backup"},
+		{"备份已上传: ", "Backup uploaded: "},
+		{"规则条件解析失败: ", "Failed to parse rule conditions: "},
+		{"规则执行完成: 匹配 ", "Rule executed: matched "},
+		{" 个节点, 移除 ", " nodes, removed tags from "},
+		{" 个节点标签", " nodes"},
+		{"任务执行超时（超过", "Task timed out (exceeded "},
+		{"），自动标记为失败", ") and was marked as failed automatically"},
+	}
+
+	for _, fragment := range messageFragments {
+		if err := db.Table("tasks").
+			Where("message LIKE ?", "%"+fragment[0]+"%").
+			Update("message", gorm.Expr("REPLACE(message, ?, ?)", fragment[0], fragment[1])).Error; err != nil {
+			return fmt.Errorf("重写任务消息 %q 失败: %w", fragment[0], err)
+		}
+	}
+
+	return nil
+}
+
+// legacyShareTokenRow 用于迁移时读取分享链接的最小字段集。
+type legacyShareTokenRow struct {
+	ID             int
+	Token          string
+	SubscriptionID int
+}
+
+// rotatePredictableShareTokens 将 0015 迁移写入的 md5(订阅名) token 替换为
+// crypto/rand token，避免根据订阅名推导出分享链接。
+func rotatePredictableShareTokens(db *gorm.DB) error {
+	var shares []legacyShareTokenRow
+	if err := db.Model(&SubscriptionShare{}).
+		Select("id", "token", "subscription_id").
+		Find(&shares).Error; err != nil {
+		return fmt.Errorf("加载分享链接失败: %w", err)
+	}
+	if len(shares) == 0 {
+		return nil
+	}
+
+	var subs []Subcription
+	if err := db.Select("id", "name").Find(&subs).Error; err != nil {
+		return fmt.Errorf("加载订阅失败: %w", err)
+	}
+	names := make(map[int]string, len(subs))
+	for _, sub := range subs {
+		names[sub.ID] = sub.Name
+	}
+
+	rotated := 0
+	for _, share := range shares {
+		name := names[share.SubscriptionID]
+		if name == "" || share.Token != md5Hash(name) {
+			continue
+		}
+		token, err := GenerateToken()
+		if err != nil {
+			return fmt.Errorf("生成分享 token 失败: %w", err)
+		}
+		if err := db.Model(&SubscriptionShare{}).Where("id = ?", share.ID).Update("token", token).Error; err != nil {
+			return fmt.Errorf("更新分享 token 失败: %w", err)
+		}
+		rotated++
+	}
+
+	if rotated > 0 {
+		utils.Warn("Rotated %d predictable legacy share tokens; affected share links must be re-copied", rotated)
+	}
+	return nil
 }

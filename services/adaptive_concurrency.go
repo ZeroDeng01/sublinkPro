@@ -297,12 +297,12 @@ func NewAdaptiveConcurrencyController(adaptiveType AdaptiveType, totalTasks int)
 	// 初始化条件变量（用于动态并发控制）
 	controller.cond = sync.NewCond(&controller.mu)
 
-	typeName := "延迟测试"
+	typeName := "Latency test"
 	if adaptiveType == AdaptiveTypeSpeed {
-		typeName = "速度测试"
+		typeName = "Speed test"
 	}
 
-	utils.Info("[动态并发] 初始化%s控制器: 并发=%d, 范围=[%d, %d], CPU核心=%d",
+	utils.Info("[Adaptive concurrency] Initialized %s controller: concurrency=%d, range=[%d, %d], CPU cores=%d",
 		typeName, initialC, minC, maxC, numCPU)
 
 	return controller
@@ -426,30 +426,30 @@ func (acc *AdaptiveConcurrencyController) MaybeAdjust() bool {
 	// 紧急降低：内存压力过大
 	if metrics.MemoryUsage > MemoryEmergencyThreshold {
 		newC = int(float64(currentC) * DecreaseEmergencyMultiplier)
-		reason = "内存压力过大"
+		reason = "Memory pressure is too high"
 	} else if goroutinePerCPU > GoroutineCriticalThreshold {
 		// 紧急降低：goroutine过多
 		newC = int(float64(currentC) * DecreaseEmergencyMultiplier)
-		reason = fmt.Sprintf("goroutine过多(%.0f/CPU)", goroutinePerCPU)
+		reason = fmt.Sprintf("too many goroutines (%.0f/CPU)", goroutinePerCPU)
 	} else if goroutinePerCPU > GoroutineHighThreshold {
 		// 适度降低：goroutine偏高
 		newC = int(float64(currentC) * DecreaseCPUMultiplier)
-		reason = fmt.Sprintf("goroutine偏高(%.0f/CPU)", goroutinePerCPU)
+		reason = fmt.Sprintf("goroutine count is high (%.0f/CPU)", goroutinePerCPU)
 	} else if metrics.CPUUsage > acc.targetCPUUsage+CPUHighThresholdOffset {
 		// 降低：CPU使用率过高
 		newC = int(float64(currentC) * DecreaseCPUMultiplier)
-		reason = "CPU使用率过高"
+		reason = "CPU usage is too high"
 	} else if metrics.MemoryUsage > acc.targetMemoryUsage {
 		// 降低：内存使用率偏高
 		newC = int(float64(currentC) * DecreaseMemoryMultiplier)
-		reason = "内存使用率偏高"
+		reason = "memory usage is high"
 	} else if goroutinePerCPU < GoroutineHighThreshold/2 &&
 		metrics.CPUUsage < acc.targetCPUUsage &&
 		metrics.MemoryUsage < acc.targetMemoryUsage &&
 		currentC < acc.maxConcurrency {
 		// 资源充足，可以提升
 		newC = int(float64(currentC) * IncreaseMultiplier)
-		reason = "系统资源充足，提升并发"
+		reason = "system resources are sufficient; increasing concurrency"
 	} else {
 		// 无需调整
 		return false
@@ -483,12 +483,12 @@ func (acc *AdaptiveConcurrencyController) MaybeAdjust() bool {
 	}
 	acc.adjustmentLog = append(acc.adjustmentLog, adjustment)
 
-	typeName := "延迟"
+	typeName := "Latency"
 	if acc.adaptiveType == AdaptiveTypeSpeed {
-		typeName = "速度"
+		typeName = "Speed"
 	}
 
-	utils.Info("[动态并发] %s测试调整: %d→%d (%s) [CPU: %.0f%%, 内存: %.0f%%, 成功率: %.0f%%]",
+	utils.Info("[Adaptive concurrency] %s test adjusted: %d→%d (%s) [CPU: %.0f%%, memory: %.0f%%, success rate: %.0f%%]",
 		typeName, currentC, newC, reason,
 		metrics.CPUUsage*100, metrics.MemoryUsage*100, successRate*100)
 
@@ -504,7 +504,7 @@ func (acc *AdaptiveConcurrencyController) MaybeAdjust() bool {
 // GetSummary 获取调整统计摘要
 func (acc *AdaptiveConcurrencyController) GetSummary() string {
 	if len(acc.adjustmentLog) == 0 {
-		return "无动态调整"
+		return "No dynamic adjustment"
 	}
 
 	var minC, maxC, sumC int
@@ -522,7 +522,7 @@ func (acc *AdaptiveConcurrencyController) GetSummary() string {
 	}
 
 	avgC := sumC / len(acc.adjustmentLog)
-	return fmt.Sprintf("调整次数: %d, 平均并发: %d, 范围: [%d, %d]",
+	return fmt.Sprintf("Adjustments: %d, average concurrency: %d, range: [%d, %d]",
 		len(acc.adjustmentLog), avgC, minC, maxC)
 }
 

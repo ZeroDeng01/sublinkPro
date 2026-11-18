@@ -188,6 +188,8 @@ export default function AirportTable({
     }
 
     const { upload, download, used, total, unlimited, percent, expire, daysLeft, expired } = usage;
+    // 今日消耗由后端按当天快照差值累计，和用量历史图表同一口径
+    const todayUsed = Number(usageSparklines?.[airport.id]?.todayUsed) || 0;
     const color = getUsageColor(percent);
     const isUrgent = !expired && daysLeft !== null && daysLeft <= 7;
     const isWarning = !expired && !isUrgent && daysLeft !== null && daysLeft <= 30;
@@ -251,6 +253,16 @@ export default function AirportTable({
               {formatBytes(download)}
             </Typography>
           </Box>
+        </Box>
+
+        {/* 今日已消耗 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {t('airports.list.usage.today')}
+          </Typography>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary' }}>
+            {formatBytes(todayUsed)}
+          </Typography>
         </Box>
 
         {/* 到期时间 / 剩余天数 */}

@@ -42,6 +42,10 @@ func Settings(r *gin.Engine) {
 		SettingsGroup.GET("/usage-history", api.GetUsageHistoryConfig)
 		SettingsGroup.POST("/usage-history", middlewares.DemoModeRestrict, api.UpdateUsageHistoryConfig)
 
+		// 节点命名语言
+		SettingsGroup.GET("/node-naming", api.GetNodeNamingSettings)
+		SettingsGroup.POST("/node-naming", middlewares.DemoModeRestrict, api.UpdateNodeNamingSettings)
+
 		// AI 助手设置
 		SettingsGroup.GET("/ai-assistant", api.UserGetAISettings)
 		SettingsGroup.POST("/ai-assistant/models", middlewares.DemoModeRestrict, api.UserListAIModels)

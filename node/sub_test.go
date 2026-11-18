@@ -373,7 +373,7 @@ func TestFetchClashProxyProviderRejectsInvalidURLScheme(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected invalid scheme error, got nil")
 	}
-	if !strings.Contains(err.Error(), "不受支持") {
+	if !strings.Contains(err.Error(), "not supported") {
 		t.Fatalf("invalid scheme error = %q, want unsupported scheme message", err.Error())
 	}
 }
@@ -388,7 +388,7 @@ func TestFetchClashProxyProviderRejectsInvalidRedirectScheme(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected invalid redirect scheme error, got nil")
 	}
-	if !strings.Contains(err.Error(), "ftp") || !strings.Contains(err.Error(), "不受支持") {
+	if !strings.Contains(err.Error(), "ftp") || !strings.Contains(err.Error(), "not supported") {
 		t.Fatalf("invalid redirect scheme error = %q, want unsupported ftp scheme message", err.Error())
 	}
 }
@@ -406,7 +406,7 @@ func TestFetchClashProxyProviderRejectsOversizedResponse(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected oversized provider response error, got nil")
 	}
-	if !strings.Contains(err.Error(), "超过大小限制") {
+	if !strings.Contains(err.Error(), "size limit") {
 		t.Fatalf("oversized response error = %q, want size limit message", err.Error())
 	}
 }
@@ -463,7 +463,7 @@ func TestExpandClashProxyProvidersRejectsTooManySelectedProviders(t *testing.T) 
 	if err == nil {
 		t.Fatal("expected selected provider count limit error, got nil")
 	}
-	if !strings.Contains(err.Error(), "数量过多") {
+	if !strings.Contains(err.Error(), "too many") {
 		t.Fatalf("provider count error = %q, want count limit message", err.Error())
 	}
 }

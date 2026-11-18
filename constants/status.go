@@ -15,10 +15,10 @@ const (
 // StatusLabels 状态显示文本（中文）
 // 用于后端日志或API响应
 var StatusLabels = map[string]string{
-	StatusUntested: "未测速",
-	StatusSuccess:  "成功",
-	StatusTimeout:  "超时",
-	StatusError:    "失败",
+	StatusUntested: "Untested",
+	StatusSuccess:  "Success",
+	StatusTimeout:  "Timeout",
+	StatusError:    "Failed",
 }
 
 // GetStatusLabel 获取状态的显示文本

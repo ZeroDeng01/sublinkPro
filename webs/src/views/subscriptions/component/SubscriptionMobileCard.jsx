@@ -375,8 +375,20 @@ export default function SubscriptionMobileCard({
                         </Button>
                       </Stack>
                     ) : (
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
-                        <Typography variant="caption" sx={{ color: tertiaryText, fontWeight: 500 }}>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        spacing={1}
+                        flexWrap="wrap"
+                        useFlexGap
+                        rowGap={0.5}
+                      >
+                        <Typography
+                          variant="caption"
+                          title={sub.CreateDate}
+                          sx={{ color: tertiaryText, fontWeight: 500, whiteSpace: 'nowrap' }}
+                        >
                           {sub.CreateDate}
                         </Typography>
 

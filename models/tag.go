@@ -63,7 +63,7 @@ func init() {
 
 // InitTagCache 初始化标签缓存
 func InitTagCache() error {
-	utils.Info("开始加载标签到缓存")
+	utils.Info("Loading tags into cache")
 
 	var tags []Tag
 	if err := database.DB.Find(&tags).Error; err != nil {
@@ -71,7 +71,7 @@ func InitTagCache() error {
 	}
 
 	tagCache.LoadAll(tags)
-	utils.Info("标签缓存初始化完成，共加载 %d 个标签", tagCache.Count())
+	utils.Info("Tag cache initialized with %d tags", tagCache.Count())
 
 	cache.Manager.Register("tag", tagCache)
 	return nil
@@ -79,7 +79,7 @@ func InitTagCache() error {
 
 // InitTagRuleCache 初始化标签规则缓存
 func InitTagRuleCache() error {
-	utils.Info("开始加载标签规则到缓存")
+	utils.Info("Loading tag rules into cache")
 
 	tagRuleCache.AddIndex("tagName", func(r TagRule) string { return r.TagName })
 	tagRuleCache.AddIndex("triggerType", func(r TagRule) string { return r.TriggerType })
@@ -90,7 +90,7 @@ func InitTagRuleCache() error {
 	}
 
 	tagRuleCache.LoadAll(rules)
-	utils.Info("标签规则缓存初始化完成，共加载 %d 个规则", tagRuleCache.Count())
+	utils.Info("Tag rule cache initialized with %d rules", tagRuleCache.Count())
 
 	cache.Manager.Register("tagRule", tagRuleCache)
 	return nil
@@ -133,13 +133,13 @@ const TagNameMaxLength = 100
 // 因此空名称、含逗号的名称与超长名称在新建和重命名时都必须拒绝。
 func ValidateTagName(name string) error {
 	if strings.TrimSpace(name) == "" {
-		return fmt.Errorf("标签名称不能为空")
+		return fmt.Errorf("tag name is required")
 	}
 	if strings.Contains(name, ",") {
-		return fmt.Errorf("标签名称不能包含逗号")
+		return fmt.Errorf("tag name cannot contain commas")
 	}
 	if utf8.RuneCountInString(name) > TagNameMaxLength {
-		return fmt.Errorf("标签名称不能超过 %d 个字符", TagNameMaxLength)
+		return fmt.Errorf("tag name cannot exceed %d characters", TagNameMaxLength)
 	}
 	return nil
 }
@@ -150,7 +150,7 @@ func ValidateTagRename(newName string) error {
 		return err
 	}
 	if TagExists(newName) {
-		return fmt.Errorf("标签名称已存在")
+		return fmt.Errorf("tag name already exists")
 	}
 	return nil
 }
@@ -746,7 +746,7 @@ func matchTextCondition(fieldValue string, operator string, compareValue string)
 	case "regex":
 		re, err := regexp.Compile(compareValue)
 		if err != nil {
-			utils.Error("正则表达式编译失败: %s, error: %v", compareValue, err)
+			utils.Error("Failed to compile regular expression: %s, error: %v", compareValue, err)
 			return false
 		}
 		return re.MatchString(fieldValue)
@@ -778,7 +778,7 @@ func evaluateCondition(node Node, cond TagCondition) bool {
 		pattern := fmt.Sprintf("%v", compareValue)
 		re, err := regexp.Compile(pattern)
 		if err != nil {
-			utils.Error("正则表达式编译失败: %s, error: %v", pattern, err)
+			utils.Error("Failed to compile regular expression: %s, error: %v", pattern, err)
 			return false
 		}
 		return re.MatchString(fmt.Sprintf("%v", fieldValue))
@@ -1094,7 +1094,7 @@ func ClearTagFromAllNodes(tagName string) {
 	_ = database.WithTransaction(func(tx *gorm.DB) error {
 		for newTagsString, ids := range resultGroups {
 			if err := tx.Model(&Node{}).Where("id IN ?", ids).Update("tags", newTagsString).Error; err != nil {
-				utils.Error("清除标签 %s 失败: %v", tagName, err)
+				utils.Error("Failed to clear tag %s: %v", tagName, err)
 				return err
 			}
 			// 更新缓存
@@ -1163,7 +1163,7 @@ func BatchAddTagToNodes(nodeIDs []int, tagName string) error {
 	return database.WithTransaction(func(tx *gorm.DB) error {
 		for newTagsString, ids := range resultGroups {
 			if err := tx.Model(&Node{}).Where("id IN ?", ids).Update("tags", newTagsString).Error; err != nil {
-				utils.Error("批量添加标签 %s 失败: %v", tagName, err)
+				utils.Error("Failed to batch add tag %s: %v", tagName, err)
 				return err
 			}
 			// 更新缓存
@@ -1224,7 +1224,7 @@ func BatchRemoveTagFromNodes(nodeIDs []int, tagName string) error {
 	return database.WithTransaction(func(tx *gorm.DB) error {
 		for newTagsString, ids := range resultGroups {
 			if err := tx.Model(&Node{}).Where("id IN ?", ids).Update("tags", newTagsString).Error; err != nil {
-				utils.Error("批量移除标签 %s 失败: %v", tagName, err)
+				utils.Error("Failed to batch remove tag %s: %v", tagName, err)
 				return err
 			}
 			// 更新缓存
@@ -1323,7 +1323,7 @@ func BatchRemoveTagsFromNodes(nodeIDs []int, tagNames []string) error {
 	return database.WithTransaction(func(tx *gorm.DB) error {
 		for newTagsString, ids := range resultGroups {
 			if err := tx.Model(&Node{}).Where("id IN ?", ids).Update("tags", newTagsString).Error; err != nil {
-				utils.Error("批量移除标签失败: %v", err)
+				utils.Error("Failed to batch remove tags: %v", err)
 				return err
 			}
 			// 更新缓存

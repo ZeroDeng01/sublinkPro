@@ -85,7 +85,7 @@ func connectionMonitor() {
 func checkAndStart() {
 	config, err := LoadConfig()
 	if err != nil {
-		utils.Error("[Telegram] 加载配置失败: %v", err)
+		utils.Error("[Telegram] Failed to load config: %v", err)
 		return
 	}
 
@@ -93,18 +93,18 @@ func checkAndStart() {
 	if !config.Enabled || config.BotToken == "" {
 		if GetBot() != nil {
 			StopBot()
-			utils.Info("[Telegram] 机器人已禁用，停止运行")
+			utils.Info("[Telegram] Bot is disabled; stopping")
 		}
 		return
 	}
 
 	// 如果启用但未运行，尝试启动
 	if GetBot() == nil {
-		utils.Info("[Telegram] 检测到机器人未运行，尝试启动...")
+		utils.Info("[Telegram] Bot is not running; attempting to start...")
 		if err := StartBot(config); err != nil {
-			utils.Error("[Telegram] 启动失败: %v", err)
+			utils.Error("[Telegram] Failed to start: %v", err)
 		} else {
-			utils.Info("[Telegram] 启动成功")
+			utils.Info("[Telegram] Started successfully")
 		}
 	}
 }
@@ -182,16 +182,16 @@ func StartBot(config *Config) error {
 	// 创建 HTTP 客户端（可能带代理）
 	client, usedProxy, err := utils.CreateProxyHTTPClient(config.UseProxy, config.ProxyLink, 60*time.Second)
 	if err != nil {
-		return fmt.Errorf("创建 HTTP 客户端失败: %v", err)
+		return fmt.Errorf("failed to create HTTP client: %v", err)
 	}
 
 	// Telegram 必须通过代理访问（国内用户），如果配置了代理但未能获取则返回错误
 	if config.UseProxy && usedProxy == "" {
-		return fmt.Errorf("配置了使用代理但未能获取代理链接，请确保已配置代理节点或有可用的测速通过节点")
+		return fmt.Errorf("proxy usage is enabled but no proxy link is available; configure a proxy node or make sure a node passes the speed test")
 	}
 
 	if config.UseProxy {
-		utils.Info("[Telegram] 使用代理连接: %s", usedProxy)
+		utils.Info("[Telegram] Using proxy connection: %s", usedProxy)
 	}
 
 	bot := &TelegramBot{
@@ -206,12 +206,12 @@ func StartBot(config *Config) error {
 	// 验证 Token
 	if err := bot.validateToken(); err != nil {
 		bot.setError(err.Error())
-		return fmt.Errorf("验证 Token 失败: %v", err)
+		return fmt.Errorf("failed to verify token: %v", err)
 	}
 
 	// 设置命令菜单
 	if err := bot.SetCommands(); err != nil {
-		utils.Warn("设置命令菜单失败: %v", err)
+		utils.Warn("Failed to set command menu: %v", err)
 	}
 
 	globalBot = bot
@@ -219,7 +219,7 @@ func StartBot(config *Config) error {
 	// 启动长轮询
 	go bot.startPolling()
 
-	utils.Info("Telegram 机器人已启动")
+	utils.Info("Telegram bot started")
 	return nil
 }
 
@@ -250,14 +250,14 @@ func (b *TelegramBot) validateToken() error {
 	}
 
 	if err := json.Unmarshal(resp, &result); err != nil {
-		return fmt.Errorf("解析响应失败: %v", err)
+		return fmt.Errorf("failed to parse response: %v", err)
 	}
 
 	if !result.OK {
-		return fmt.Errorf("token 无效")
+		return fmt.Errorf("invalid token")
 	}
 
-	utils.Info("Telegram 机器人验证成功: @%s", result.Result.Username)
+	utils.Info("Telegram bot verified: @%s", result.Result.Username)
 	b.mutex.Lock()
 	b.botUsername = result.Result.Username
 	b.botID = result.Result.ID
@@ -269,16 +269,16 @@ func (b *TelegramBot) validateToken() error {
 // SetCommands 设置机器人命令菜单
 func (b *TelegramBot) SetCommands() error {
 	commands := []map[string]string{
-		{"command": "start", "description": "🚀 开始使用"},
-		{"command": "help", "description": "❓ 帮助信息"},
-		{"command": "stats", "description": "📊 仪表盘统计"},
-		{"command": "monitor", "description": "🖥️ 系统监控"},
-		{"command": "profiles", "description": "⚡ 检测策略"},
-		{"command": "subscriptions", "description": "📋 订阅管理"},
-		{"command": "nodes", "description": "🌐 节点信息"},
-		{"command": "tags", "description": "🏷️ 标签规则"},
-		{"command": "tasks", "description": "📝 任务管理"},
-		{"command": "airports", "description": "✈️ 机场管理"},
+		{"command": "start", "description": "🚀 Get started"},
+		{"command": "help", "description": "❓ Help"},
+		{"command": "stats", "description": "📊 Dashboard stats"},
+		{"command": "monitor", "description": "🖥️ System monitor"},
+		{"command": "profiles", "description": "⚡ Check profiles"},
+		{"command": "subscriptions", "description": "📋 Subscriptions"},
+		{"command": "nodes", "description": "🌐 Nodes"},
+		{"command": "tags", "description": "🏷️ Tag rules"},
+		{"command": "tasks", "description": "📝 Tasks"},
+		{"command": "airports", "description": "✈️ Airports"},
 	}
 
 	_, err := b.apiRequest("setMyCommands", map[string]any{
@@ -337,7 +337,7 @@ func (b *TelegramBot) startPolling() {
 	b.pollingActive = true
 	b.mutex.Unlock()
 
-	utils.Info("Telegram 长轮询已启动")
+	utils.Info("Telegram long polling started")
 
 	retryCount := 0
 	maxRetry := 5
@@ -345,17 +345,17 @@ func (b *TelegramBot) startPolling() {
 	for {
 		select {
 		case <-b.stopChan:
-			utils.Info("Telegram 长轮询已停止")
+			utils.Info("Telegram long polling stopped")
 			return
 		default:
 			updates, err := b.getUpdates()
 			if err != nil {
 				retryCount++
 				b.setError(err.Error())
-				utils.Warn("获取更新失败 (%d/%d): %v", retryCount, maxRetry, err)
+				utils.Warn("Failed to get updates (%d/%d): %v", retryCount, maxRetry, err)
 
 				if retryCount >= maxRetry {
-					utils.Warn("Telegram 连接失败次数过多，等待 30 秒后重试")
+					utils.Warn("Too many Telegram connection failures; retrying in 30 seconds")
 					time.Sleep(30 * time.Second)
 					retryCount = 0
 				} else {
@@ -394,11 +394,11 @@ func (b *TelegramBot) getUpdates() ([]Update, error) {
 	}
 
 	if err := json.Unmarshal(resp, &result); err != nil {
-		return nil, fmt.Errorf("解析更新失败: %v", err)
+		return nil, fmt.Errorf("failed to parse update: %v", err)
 	}
 
 	if !result.OK {
-		return nil, fmt.Errorf("获取更新失败: %s", result.Description)
+		return nil, fmt.Errorf("failed to get updates: %s", result.Description)
 	}
 
 	return result.Result, nil
@@ -406,11 +406,11 @@ func (b *TelegramBot) getUpdates() ([]Update, error) {
 
 // handleUpdate 处理更新
 func (b *TelegramBot) handleUpdate(update Update) {
-	utils.Debug("[Telegram] 收到更新 ID: %d", update.UpdateID)
+	utils.Debug("[Telegram] Received update ID: %d", update.UpdateID)
 
 	// 处理消息
 	if update.Message != nil {
-		utils.Debug("[Telegram] 收到消息 - ChatID: %d, From: %s, Text: %s",
+		utils.Debug("[Telegram] Message received - ChatID: %d, From: %s, Text: %s",
 			update.Message.Chat.ID,
 			update.Message.From.Username,
 			update.Message.Text)
@@ -420,7 +420,7 @@ func (b *TelegramBot) handleUpdate(update Update) {
 
 	// 处理回调
 	if update.CallbackQuery != nil {
-		utils.Debug("[Telegram] 收到回调 - Data: %s", update.CallbackQuery.Data)
+		utils.Debug("[Telegram] Callback received - Data: %s", update.CallbackQuery.Data)
 		b.handleCallback(update.CallbackQuery)
 		return
 	}
@@ -428,11 +428,11 @@ func (b *TelegramBot) handleUpdate(update Update) {
 
 // handleMessage 处理消息
 func (b *TelegramBot) handleMessage(message *Message) {
-	utils.Debug("[Telegram] 处理消息 - ChatID: %d, 已配置ChatID: %d", message.Chat.ID, b.ChatID)
+	utils.Debug("[Telegram] Handling message - ChatID: %d, configured ChatID: %d", message.Chat.ID, b.ChatID)
 
 	// 验证 Chat ID（如果已配置）
 	if b.ChatID != 0 && message.Chat.ID != b.ChatID {
-		utils.Debug("[Telegram] 忽略来自未授权聊天的消息: %d (预期: %d)", message.Chat.ID, b.ChatID)
+		utils.Debug("[Telegram] Ignoring message from unauthorized chat: %d (expected: %d)", message.Chat.ID, b.ChatID)
 		return
 	}
 
@@ -440,7 +440,7 @@ func (b *TelegramBot) handleMessage(message *Message) {
 	if b.ChatID == 0 && strings.HasPrefix(message.Text, "/start") {
 		b.ChatID = message.Chat.ID
 		_ = models.SetSetting("telegram_chat_id", strconv.FormatInt(message.Chat.ID, 10))
-		utils.Info("[Telegram] 自动绑定 Chat ID: %d", message.Chat.ID)
+		utils.Info("[Telegram] Auto-bound Chat ID: %d", message.Chat.ID)
 	}
 
 	// 处理命令
@@ -449,20 +449,20 @@ func (b *TelegramBot) handleMessage(message *Message) {
 		command := strings.TrimPrefix(parts[0], "/")
 		command = strings.Split(command, "@")[0] // 移除 @botname
 
-		utils.Debug("[Telegram] 处理命令: /%s", command)
+		utils.Debug("[Telegram] Handling command: /%s", command)
 
 		handler := GetHandler(command)
 		if handler != nil {
-			utils.Debug("[Telegram] 找到处理器: %s", handler.Description())
+			utils.Debug("[Telegram] Handler found: %s", handler.Description())
 			if err := handler.Handle(b, message); err != nil {
-				utils.Warn("[Telegram] 处理命令 /%s 失败: %v", command, err)
-				_ = b.SendMessage(message.Chat.ID, "❌ 命令执行失败: "+err.Error(), "")
+				utils.Warn("[Telegram] Command /%s failed: %v", command, err)
+				_ = b.SendMessage(message.Chat.ID, "❌ Command failed: "+err.Error(), "")
 			} else {
-				utils.Debug("[Telegram] 命令 /%s 执行成功", command)
+				utils.Debug("[Telegram] Command /%s executed successfully", command)
 			}
 		} else {
-			utils.Debug("[Telegram] 未找到命令处理器: /%s", command)
-			_ = b.SendMessage(message.Chat.ID, "❓ 未知命令，使用 /help 查看帮助", "")
+			utils.Debug("[Telegram] No handler found for command: /%s", command)
+			_ = b.SendMessage(message.Chat.ID, "❓ Unknown command; use /help for help", "")
 		}
 	}
 }
@@ -475,7 +475,7 @@ func (b *TelegramBot) handleCallback(callback *CallbackQuery) {
 	}
 
 	if err := HandleCallbackQuery(b, callback); err != nil {
-		utils.Warn("处理回调失败: %v", err)
+		utils.Warn("Failed to handle callback: %v", err)
 	}
 
 	// 应答回调
@@ -492,29 +492,29 @@ func (b *TelegramBot) apiRequest(method string, params map[string]any) ([]byte, 
 	if params != nil {
 		jsonData, err := json.Marshal(params)
 		if err != nil {
-			return nil, fmt.Errorf("序列化参数失败: %v", err)
+			return nil, fmt.Errorf("failed to serialize parameters: %v", err)
 		}
 		req, err = http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
-			return nil, fmt.Errorf("创建请求失败: %v", err)
+			return nil, fmt.Errorf("failed to create request: %v", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 	} else {
 		req, err = http.NewRequestWithContext(context.Background(), "GET", url, nil)
 		if err != nil {
-			return nil, fmt.Errorf("创建请求失败: %v", err)
+			return nil, fmt.Errorf("failed to create request: %v", err)
 		}
 	}
 
 	resp, err := b.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("请求失败: %v", err)
+		return nil, fmt.Errorf("request failed: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %v", err)
+		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 
 	return body, nil
@@ -623,7 +623,7 @@ func Reconnect() error {
 	}
 
 	if !config.Enabled || config.BotToken == "" {
-		return fmt.Errorf("机器人未启用或未配置")
+		return fmt.Errorf("bot is not enabled or configured")
 	}
 
 	return StartBot(config)
@@ -634,7 +634,7 @@ func CreateTestBot(config *Config) (*TelegramBot, error) {
 	// 创建 HTTP 客户端（可能带代理）
 	client, _, err := utils.CreateProxyHTTPClient(config.UseProxy, config.ProxyLink, 30*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("创建 HTTP 客户端失败: %v", err)
+		return nil, fmt.Errorf("failed to create HTTP client: %v", err)
 	}
 
 	bot := &TelegramBot{
@@ -647,7 +647,7 @@ func CreateTestBot(config *Config) (*TelegramBot, error) {
 
 	// 验证 Token
 	if err := bot.validateToken(); err != nil {
-		return nil, fmt.Errorf("验证 Token 失败: %v", err)
+		return nil, fmt.Errorf("failed to verify token: %v", err)
 	}
 
 	return bot, nil

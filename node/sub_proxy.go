@@ -30,7 +30,7 @@ func FetchRawSubscription(ctx context.Context, sourceURL string, downloadWithPro
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, resolvedURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建上游订阅请求失败: %w", err)
+		return nil, fmt.Errorf("failed to create upstream subscription request: %w", err)
 	}
 	applyRequestHeaders(req, userAgent, requestHeaders)
 
@@ -41,15 +41,15 @@ func FetchRawSubscription(ctx context.Context, sourceURL string, downloadWithPro
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, fmt.Errorf("上游订阅返回状态码 %d", resp.StatusCode)
+		return nil, fmt.Errorf("upstream subscription returned status code %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxRawSubscriptionBytes+1))
 	if err != nil {
-		return nil, fmt.Errorf("读取上游订阅失败: %w", err)
+		return nil, fmt.Errorf("failed to read upstream subscription: %w", err)
 	}
 	if len(body) > maxRawSubscriptionBytes {
-		return nil, fmt.Errorf("上游订阅内容超过 %d 字节限制", maxRawSubscriptionBytes)
+		return nil, fmt.Errorf("upstream subscription content exceeds the %d byte limit", maxRawSubscriptionBytes)
 	}
 
 	return &RawSubscription{

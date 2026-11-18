@@ -51,7 +51,7 @@ func init() {
 
 // InitIPInfoCache 初始化IP信息缓存
 func InitIPInfoCache() error {
-	utils.Info("开始加载IP信息到缓存")
+	utils.Info("Loading IP info into cache")
 
 	// 只加载7天内的有效数据到缓存
 	var ipInfoList []IPInfo
@@ -61,7 +61,7 @@ func InitIPInfoCache() error {
 	}
 
 	ipInfoCache.LoadAll(ipInfoList)
-	utils.Info("IP信息缓存初始化完成，共加载 %d 条记录", ipInfoCache.Count())
+	utils.Info("IP info cache initialized with %d records", ipInfoCache.Count())
 
 	// 注册到缓存管理器
 	cache.Manager.Register("ipinfo", ipInfoCache)
@@ -85,14 +85,14 @@ func ClearAllIPInfo() error {
 	// 清除内存缓存
 	ipInfoCache.Clear()
 
-	utils.Info("已清除所有IP信息缓存")
+	utils.Info("Cleared all IP info cache")
 	return nil
 }
 
 // GetIPInfo 获取IP信息（多级缓存）
 func GetIPInfo(ip string) (*IPInfo, error) {
 	if ip == "" {
-		return nil, fmt.Errorf("IP地址不能为空")
+		return nil, fmt.Errorf("IP address is required")
 	}
 
 	// 1. 检查内存缓存
@@ -123,7 +123,7 @@ func GetIPInfo(ip string) (*IPInfo, error) {
 		done, ok := actual.(chan struct{})
 		if !ok {
 			ipInfoRequestLock.Delete(ip)
-			return nil, fmt.Errorf("IP信息请求锁状态异常")
+			return nil, fmt.Errorf("IP info request lock is in an unexpected state")
 		}
 		// 已有其他请求在处理，等待完成
 		<-done
@@ -131,7 +131,7 @@ func GetIPInfo(ip string) (*IPInfo, error) {
 		if info, ok := ipInfoCache.Get(ip); ok {
 			return &info, nil
 		}
-		return nil, fmt.Errorf("获取IP信息失败")
+		return nil, fmt.Errorf("failed to get IP info")
 	}
 	defer func() {
 		ipInfoRequestLock.Delete(ip)
@@ -168,12 +168,12 @@ func GetIPInfo(ip string) (*IPInfo, error) {
 			"provider":     info.Provider,
 			"updated_at":   info.UpdatedAt,
 		}).Error; err != nil {
-			utils.Error("更新IP信息失败: %v", err)
+			utils.Error("Failed to update IP info: %v", err)
 		}
 	} else {
 		// 插入新记录
 		if err := database.DB.Create(info).Error; err != nil {
-			utils.Error("保存IP信息失败: %v", err)
+			utils.Error("Failed to save IP info: %v", err)
 		}
 	}
 
@@ -213,27 +213,27 @@ func fetchIPInfoFromAPI(ip string) (*IPInfo, error) {
 
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建IP信息API请求失败: %w", err)
+		return nil, fmt.Errorf("failed to create IP info API request: %w", err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("请求IP信息API失败: %w", err)
+		return nil, fmt.Errorf("IP info API request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("读取API响应失败: %w", err)
+		return nil, fmt.Errorf("failed to read API response: %w", err)
 	}
 
 	var apiResp ipAPIResponse
 	if err := json.Unmarshal(body, &apiResp); err != nil {
-		return nil, fmt.Errorf("解析API响应失败: %w", err)
+		return nil, fmt.Errorf("failed to parse API response: %w", err)
 	}
 
 	if apiResp.Status != "success" {
-		return nil, fmt.Errorf("API返回错误: %s", apiResp.Message)
+		return nil, fmt.Errorf("API returned an error: %s", apiResp.Message)
 	}
 
 	// 转换为IPInfo结构
