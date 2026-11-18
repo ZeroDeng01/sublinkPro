@@ -105,6 +105,23 @@ export function updateGlobalNodeProcessingConfig(data) {
   });
 }
 
+// 获取节点命名语言设置
+export function getNodeNamingSettings() {
+  return request({
+    url: '/v1/settings/node-naming',
+    method: 'get'
+  });
+}
+
+// 保存节点命名语言设置
+export function updateNodeNamingSettings(data) {
+  return request({
+    url: '/v1/settings/node-naming',
+    method: 'post',
+    data
+  });
+}
+
 export function getAISettings() {
   return request({
     url: '/v1/settings/ai-assistant',

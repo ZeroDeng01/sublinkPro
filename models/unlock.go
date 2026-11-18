@@ -454,16 +454,23 @@ func MatchUnlockSummaryRulesWithMode(summary UnlockSummary, rules []UnlockFilter
 }
 
 func BuildUnlockRenameValue(raw string, provider string) string {
+	return BuildUnlockRenameValueWithLanguage(raw, provider, utils.CurrentNodeNameLanguage())
+}
+
+// BuildUnlockRenameValueWithLanguage renders the $Unlock summary in the given
+// node naming language.
+func BuildUnlockRenameValueWithLanguage(raw string, provider string, languageTag string) string {
+	notChecked := utils.NodeNameText(languageTag, utils.NodeNameTextNotChecked)
 	summary := ParseUnlockSummary(raw)
 	if len(summary.Providers) == 0 {
-		return "Not checked"
+		return notChecked
 	}
 	if provider != "" {
 		result, ok := GetUnlockResult(summary, provider)
 		if !ok {
-			return "Not checked"
+			return notChecked
 		}
-		parts := []string{GetUnlockStatusLabel(result.Status)}
+		parts := []string{utils.UnlockStatusText(languageTag, result.Status)}
 		if result.Region != "" {
 			parts = append(parts, result.Region)
 		}
@@ -471,7 +478,7 @@ func BuildUnlockRenameValue(raw string, provider string) string {
 	}
 	primary := summary.Providers[0]
 	providerMeta := GetUnlockProviderMeta(primary.Provider)
-	parts := []string{providerMeta.Label, GetUnlockStatusLabel(primary.Status)}
+	parts := []string{providerMeta.Label, utils.UnlockStatusText(languageTag, primary.Status)}
 	if primary.Region != "" {
 		parts = append(parts, primary.Region)
 	}
@@ -482,21 +489,22 @@ func BuildUnlockRenameValue(raw string, provider string) string {
 }
 
 func BuildNodeRenameInfo(node Node, processedLinkName string, protocol string, index int, duplicateIndex int) utils.NodeInfo {
+	languageTag := utils.CurrentNodeNameLanguage()
 	summary := ParseUnlockSummary(node.UnlockSummary)
 	primaryUnlockStatus := "Not checked"
-	primaryUnlockLabel := "Not checked"
+	primaryUnlockLabel := utils.NodeNameText(languageTag, utils.NodeNameTextNotChecked)
 	primaryUnlockRegion := ""
 	if len(summary.Providers) > 0 {
 		result := summary.Providers[0]
 		primaryUnlockStatus = result.Status
-		primaryUnlockLabel = GetUnlockStatusLabel(result.Status)
+		primaryUnlockLabel = utils.UnlockStatusText(languageTag, result.Status)
 		primaryUnlockRegion = result.Region
 	}
 
-	// 根据节点的国家代码获取国家名称
+	// 根据节点的国家代码获取国家名称，默认名称按当前命名语言渲染
 	linkCountryName := ""
 	if node.LinkCountry != "" {
-		linkCountryName = GetCountryNameByCode(node.LinkCountry)
+		linkCountryName = GetLocalizedCountryName(node.LinkCountry, languageTag)
 	}
 
 	return utils.NodeInfo{
@@ -520,7 +528,7 @@ func BuildNodeRenameInfo(node Node, processedLinkName string, protocol string, i
 		QualityStatus:   node.QualityStatus,
 		QualityFamily:   node.QualityFamily,
 		UnlockRaw:       node.UnlockSummary,
-		UnlockSummary:   BuildUnlockRenameValue(node.UnlockSummary, ""),
+		UnlockSummary:   BuildUnlockRenameValueWithLanguage(node.UnlockSummary, "", languageTag),
 		UnlockStatus:    primaryUnlockStatus,
 		UnlockLabel:     primaryUnlockLabel,
 		UnlockRegion:    primaryUnlockRegion,

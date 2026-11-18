@@ -369,17 +369,24 @@ func ISOToFlag(isoCode string) string {
 // rule: 命名规则，如 "$LinkCountry - $Name ($Speed)"
 // info: 节点信息
 // 返回重命名后的名称，如果rule为空则返回原始名称
+// 文案按当前节点命名语言输出，见 SetNodeNameLanguageProvider。
 func RenameNode(rule string, info NodeInfo) string {
+	return RenameNodeWithLanguage(rule, info, CurrentNodeNameLanguage())
+}
+
+// RenameNodeWithLanguage 按指定语言渲染节点名变量。
+// language 支持 en-US / zh-CN，其它取值回退为英语。
+func RenameNodeWithLanguage(rule string, info NodeInfo, language string) string {
 	if rule == "" {
 		return info.Name
 	}
 
 	result := rule
 
-	// 如果国家代码为空，使用"未知"
+	// 如果国家代码为空，使用未知
 	linkCountry := info.LinkCountry
 	if linkCountry == "" {
-		linkCountry = "未知"
+		linkCountry = NodeNameText(language, NodeNameTextUnknown)
 	}
 
 	// 国家名称：如果有则使用，否则回退到国家代码
@@ -391,13 +398,13 @@ func RenameNode(rule string, info NodeInfo) string {
 	// 如果来源为manual则替换为手动
 	linkSource := info.Source
 	if linkSource == "manual" {
-		linkSource = "手动"
+		linkSource = NodeNameText(language, NodeNameTextManual)
 	}
 
 	// 如果分组为空 则返回未分组
 	linkGroup := info.Group
 	if linkGroup == "" {
-		linkGroup = "未分组"
+		linkGroup = NodeNameText(language, NodeNameTextUngrouped)
 	}
 
 	// 处理标签
@@ -420,19 +427,19 @@ func RenameNode(rule string, info NodeInfo) string {
 		{"$LinkCountry", linkCountry},
 		{"$Residential", func() string {
 			if info.QualityStatus != qualityStatusSuccess {
-				return formatQualityText(info)
+				return formatQualityText(language, info)
 			}
 			if info.IsResidential {
-				return "住宅IP"
+				return NodeNameText(language, NodeNameTextResidential)
 			}
-			return "机房IP"
+			return NodeNameText(language, NodeNameTextDatacenter)
 		}()},
 		{"$SpeedIcon", FormatSpeedIcon(info.Speed, info.SpeedStatus)},
 		{"$DelayIcon", FormatDelayIcon(info.DelayTime, info.DelayStatus)},
 		{"$FraudScoreIcon", FormatFraudScoreIcon(info.FraudScore, info.QualityStatus)},
 		{"$FraudScore", func() string {
 			if info.QualityStatus != qualityStatusSuccess {
-				return formatQualityText(info)
+				return formatQualityText(language, info)
 			}
 			return fmt.Sprintf("%d", info.FraudScore)
 		}()},
@@ -445,12 +452,12 @@ func RenameNode(rule string, info NodeInfo) string {
 		{"$Unlock", info.UnlockSummary},
 		{"$IpType", func() string {
 			if info.QualityStatus != qualityStatusSuccess {
-				return formatQualityText(info)
+				return formatQualityText(language, info)
 			}
 			if info.IsBroadcast {
-				return "广播IP"
+				return NodeNameText(language, NodeNameTextBroadcast)
 			}
-			return "原生IP"
+			return NodeNameText(language, NodeNameTextNative)
 		}()},
 		{"$Source", linkSource},
 		{"$Speed", FormatSpeed(info.Speed)},
@@ -471,7 +478,7 @@ func RenameNode(rule string, info NodeInfo) string {
 		if provider == "" {
 			return ""
 		}
-		return buildProviderUnlockValue(info.UnlockRaw, provider)
+		return buildProviderUnlockValue(language, info.UnlockRaw, provider)
 	})
 
 	for _, r := range replacements {
@@ -500,27 +507,27 @@ func FormatDuplicateIndex(index int) string {
 	return fmt.Sprintf("%d", index)
 }
 
-func buildProviderUnlockValue(raw string, provider string) string {
+func buildProviderUnlockValue(language string, raw string, provider string) string {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
-		return "未检测"
+		return NodeNameText(language, NodeNameTextNotChecked)
 	}
 	var summary renameUnlockSummary
 	if err := json.Unmarshal([]byte(trimmed), &summary); err != nil {
-		return "未检测"
+		return NodeNameText(language, NodeNameTextNotChecked)
 	}
 	provider = normalizeUnlockProviderKey(provider)
 	for _, item := range summary.Providers {
 		if normalizeUnlockProviderKey(item.Provider) != provider {
 			continue
 		}
-		parts := []string{formatUnlockStatusLabel(item.Status)}
+		parts := []string{UnlockStatusText(language, item.Status)}
 		if item.Region != "" {
 			parts = append(parts, item.Region)
 		}
 		return strings.Join(parts, "-")
 	}
-	return "未检测"
+	return NodeNameText(language, NodeNameTextNotChecked)
 }
 
 func normalizeUnlockProviderKey(provider string) string {
@@ -528,27 +535,6 @@ func normalizeUnlockProviderKey(provider string) string {
 	key = strings.ReplaceAll(key, " ", "_")
 	key = strings.ReplaceAll(key, "-", "_")
 	return strings.Trim(key, "_")
-}
-
-func formatUnlockStatusLabel(status string) string {
-	switch strings.ToLower(strings.TrimSpace(status)) {
-	case "available":
-		return "解锁"
-	case "partial":
-		return "部分"
-	case "reachable":
-		return "直连"
-	case "restricted":
-		return "受限"
-	case "unsupported":
-		return "不支持"
-	case "error":
-		return "异常"
-	case "unknown":
-		return "未知"
-	default:
-		return "未测"
-	}
 }
 
 // FormatSpeed 格式化速度显示
@@ -577,7 +563,7 @@ func FormatDelay(delay int) string {
 // Deprecated: Use protocol.GetProtocolFromLink instead
 func GetProtocolFromLink(link string) string {
 	if link == "" {
-		return "未知"
+		return NodeNameText(CurrentNodeNameLanguage(), NodeNameTextUnknown)
 	}
 	if protocolLabelFromLinkFunc != nil {
 		label := protocolLabelFromLinkFunc(link)
@@ -586,7 +572,7 @@ func GetProtocolFromLink(link string) string {
 		}
 	}
 
-	return "其他"
+	return NodeNameText(CurrentNodeNameLanguage(), NodeNameTextOther)
 }
 
 // RenameNodeLink 重命名节点链接
@@ -606,20 +592,18 @@ func RenameNodeLink(link string, newName string) string {
 	return link
 }
 
-func formatQualityText(info NodeInfo) string {
+func formatQualityText(language string, info NodeInfo) string {
 	switch info.QualityStatus {
 	case qualityStatusPartial:
 		if info.QualityFamily == qualityFamilyIPv6 {
-			return "IPv6部分结果"
+			return NodeNameText(language, NodeNameTextQualityPartialIPv6)
 		}
-		return "部分结果"
+		return NodeNameText(language, NodeNameTextQualityPartial)
 	case qualityStatusFailed:
-		return "检测失败"
+		return NodeNameText(language, NodeNameTextQualityFailed)
 	case qualityStatusDisabled:
-		return "未启用"
-	case qualityStatusUntested, "":
-		return "未检测"
+		return NodeNameText(language, NodeNameTextQualityDisabled)
 	default:
-		return "未检测"
+		return NodeNameText(language, NodeNameTextNotChecked)
 	}
 }

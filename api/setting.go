@@ -189,3 +189,29 @@ func UpdateUsageHistoryConfig(c *gin.Context) {
 		"retentionDays": *req.RetentionDays,
 	})
 }
+
+// GetNodeNamingSettings returns the language used for generated node names.
+func GetNodeNamingSettings(c *gin.Context) {
+	utils.OkDetailed(c, "success", gin.H{
+		"language": models.GetNodeNameLanguage(),
+	})
+}
+
+// UpdateNodeNamingSettings persists the language used for generated node names.
+func UpdateNodeNamingSettings(c *gin.Context) {
+	var req struct {
+		Language string `json:"language"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.FailWithMsg(c, "invalid payload")
+		return
+	}
+	if err := models.SetNodeNameLanguage(req.Language); err != nil {
+		utils.FailWithMsg(c, "failed to save: "+err.Error())
+		return
+	}
+
+	utils.OkDetailed(c, "success", gin.H{
+		"language": models.GetNodeNameLanguage(),
+	})
+}

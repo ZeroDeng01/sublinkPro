@@ -809,6 +809,8 @@ Base: `/api/v1/settings` (write bodies are JSON unless noted; most writes are de
 
 **Usage history:** **GET** `/settings/usage-history` · **POST** `/settings/usage-history` (`{retentionDays}`, 1–3650, default 180)
 
+**Node naming language:** **GET** `/settings/node-naming` · **POST** `/settings/node-naming` (`{language}`, `en-US` or `zh-CN`). Controls the words rendered inside generated node names: rename-variable fallbacks (`Unknown`, `Ungrouped`, `Manual`), IP quality labels, quality-check placeholders, and unlock labels. Defaults to `en-US`; the web header language switcher updates it automatically.
+
 **Global node processing:** **GET** `/settings/global-node-processing` · **POST** `/settings/global-node-processing` (`{nodeNameWhitelist, nodeNameBlacklist, protocolWhitelist, protocolBlacklist, nodeNamePreprocess}`)
 
 **Telegram:** **GET** `/settings/telegram` · **POST** `/settings/telegram` · **POST** `/settings/telegram/test` · **GET** `/settings/telegram/status` · **POST** `/settings/telegram/reconnect`
