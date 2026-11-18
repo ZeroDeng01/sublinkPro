@@ -20,6 +20,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
 import CloseIcon from '@mui/icons-material/Close';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import InsightsIcon from '@mui/icons-material/Insights';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -31,7 +32,8 @@ import { getAirportUsageHistory } from 'api/usageHistory';
 
 // 时间范围预设（0 表示全部保留期，由后端归一化为保留天数）
 const RANGE_PRESETS = [1, 3, 7, 30, 90, 0];
-const DEFAULT_RANGE_DAYS = 30;
+// 默认只看最近一天：数据刚接入或刷新间隔较长时，长窗口会让曲线挤在末端。
+const DEFAULT_RANGE_DAYS = 1;
 const GRANULARITY_OPTIONS = ['auto', 'hour', 'day'];
 
 const formatBytes = (bytes, decimals = 2) => {
@@ -130,11 +132,12 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
   const chartInitFrameRef = useRef(0);
   const chartResizeObserverRef = useRef(null);
 
-  // 切换目标时重置筛选条件
+  // 每次打开或切换目标时回到最近一天，避免默认长窗口里数据集中在末端。
   useEffect(() => {
+    if (!open) return;
     setRangeDays(DEFAULT_RANGE_DAYS);
     setGranularity('auto');
-  }, [targetId]);
+  }, [open, targetId]);
 
   useEffect(() => {
     if (!open || !targetId) return undefined;
@@ -383,7 +386,7 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
     return {
       animationDuration: 280,
       color: [primary, errorColor],
-      grid: { left: 8, right: 20, top: hasLegend ? 38 : 18, bottom: 58, containLabel: true },
+      grid: { left: 4, right: 12, top: hasLegend ? 34 : 16, bottom: 24, containLabel: true },
       legend: hasLegend
         ? {
             top: 0,
@@ -470,31 +473,7 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
         },
         splitLine: { lineStyle: { color: withAlpha(dividerColor, 0.55), type: 'dashed' } }
       },
-      dataZoom: [
-        { type: 'inside', throttle: 60, zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: false },
-        {
-          type: 'slider',
-          height: 20,
-          bottom: 12,
-          left: 8,
-          right: 20,
-          borderColor: 'transparent',
-          backgroundColor: withAlpha(dividerColor, 0.16),
-          fillerColor: withAlpha(primary, 0.14),
-          handleStyle: { color: primary, borderColor: primary },
-          moveHandleSize: 0,
-          brushSelect: false,
-          dataBackground: {
-            lineStyle: { color: withAlpha(primary, 0.4), width: 1 },
-            areaStyle: { color: withAlpha(primary, 0.12) }
-          },
-          selectedDataBackground: {
-            lineStyle: { color: primary, width: 1.5 },
-            areaStyle: { color: withAlpha(primary, 0.22) }
-          },
-          textStyle: { color: withAlpha(axisTextColor, 0.8), fontSize: 10 }
-        }
-      ],
+      dataZoom: [{ type: 'inside', throttle: 60, zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: false }],
       series
     };
   }, [data, chartPalette, isDark, granularity, points, failedPoints, t]);
@@ -546,6 +525,15 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
   };
 
   const overlayVisible = loading || Boolean(error) || points.length === 0 || chartFailed;
+
+  // 空窗口提示：保留期长于当前窗口时，引导用户放宽时间范围。
+  const emptyText = useMemo(() => {
+    if (error) return error;
+    if (chartFailed) return t('usageHistory.chartUnavailable');
+    const retention = Number(data?.retentionDays) || 0;
+    if (retention > 0 && rangeDays > 0 && rangeDays < retention) return t('usageHistory.emptyWiden');
+    return t('usageHistory.empty');
+  }, [error, chartFailed, data, rangeDays, t]);
 
   const summaryChips = [];
   if (summary) {
@@ -624,9 +612,25 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
           )}
 
           {failedPoints.length > 0 && (
-            <Typography variant="caption" sx={{ color: chartPalette.error.main }}>
-              {t('usageHistory.failureNotice', { count: failedPoints.length })}
-            </Typography>
+            <Stack
+              direction="row"
+              spacing={0.75}
+              alignItems="center"
+              sx={{
+                alignSelf: 'flex-start',
+                px: 1.25,
+                py: 0.6,
+                borderRadius: 1.5,
+                border: '1px solid',
+                borderColor: withAlpha(chartPalette.error.main, 0.35),
+                bgcolor: withAlpha(chartPalette.error.main, isDark ? 0.14 : 0.06)
+              }}
+            >
+              <ErrorOutlineIcon sx={{ fontSize: 16, color: chartPalette.error.main }} />
+              <Typography variant="caption" sx={{ color: chartPalette.error.main }}>
+                {t('usageHistory.failureNotice', { count: failedPoints.length })}
+              </Typography>
+            </Stack>
           )}
 
           <Stack
@@ -723,41 +727,43 @@ function UsageHistoryDialog({ open, targetId, title, onClose }) {
             </Stack>
           </Stack>
 
-          <Box sx={{ position: 'relative' }}>
-            <Box ref={attachChart} sx={{ width: '100%', height: { xs: 260, md: 340 } }} />
-            {overlayVisible && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                  px: 2,
-                  textAlign: 'center',
-                  borderRadius: 2,
-                  bgcolor: withAlpha(chartPalette.background?.paper || '#ffffff', 0.86)
-                }}
-              >
-                {loading ? (
-                  <>
-                    <CircularProgress size={24} />
-                    <Typography variant="caption" sx={{ color: secondaryText }}>
-                      {t('usageHistory.loading')}
-                    </Typography>
-                  </>
-                ) : (
-                  <>
-                    <InsightsIcon sx={{ fontSize: 32, color: tertiaryText, opacity: 0.6 }} />
-                    <Typography variant="body2" sx={{ color: secondaryText }}>
-                      {error || (chartFailed ? t('usageHistory.chartUnavailable') : t('usageHistory.empty'))}
-                    </Typography>
-                  </>
-                )}
-              </Box>
-            )}
+          <Box sx={{ ...panelSx, p: { xs: 0.75, md: 1.25 } }}>
+            <Box sx={{ position: 'relative' }}>
+              <Box ref={attachChart} sx={{ width: '100%', height: { xs: 240, md: 330 } }} />
+              {overlayVisible && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1,
+                    px: 2,
+                    textAlign: 'center',
+                    borderRadius: 1.5,
+                    bgcolor: withAlpha(chartPalette.background?.paper || '#ffffff', 0.86)
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <CircularProgress size={24} />
+                      <Typography variant="caption" sx={{ color: secondaryText }}>
+                        {t('usageHistory.loading')}
+                      </Typography>
+                    </>
+                  ) : (
+                    <>
+                      <InsightsIcon sx={{ fontSize: 32, color: tertiaryText, opacity: 0.6 }} />
+                      <Typography variant="body2" sx={{ color: secondaryText }}>
+                        {emptyText}
+                      </Typography>
+                    </>
+                  )}
+                </Box>
+              )}
+            </Box>
           </Box>
 
           {historyStartsAt && (

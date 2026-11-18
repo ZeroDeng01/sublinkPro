@@ -632,6 +632,7 @@
     "loadFailed": "Failed to load usage history",
     "loading": "Loading usage history...",
     "empty": "No usage history yet. Data appears after the next subscription refresh.",
+    "emptyWiden": "No refreshes in this window. Choose a wider range to see earlier snapshots.",
     "chartUnavailable": "The chart could not be rendered. Reopen the dialog; if it keeps failing, check the browser console.",
     "openChart": "Open usage history chart",
     "noDataShort": "No data",
