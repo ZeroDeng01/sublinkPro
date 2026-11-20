@@ -44,6 +44,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 import NodeRenameBuilder from './NodeRenameBuilder';
+import DevicePolicyFields from './DevicePolicyFields';
 import { previewSubscriptionNodeName } from './nodeRenameRuleUtils';
 import NodeNamePreprocessor from 'components/NodeNamePreprocessor';
 import NodeNameFilter from 'components/NodeNameFilter';
@@ -485,6 +486,18 @@ export default function SubscriptionFormDialog({
                     )}
                   </Grid>
                   <Grid item xs={12} sm={6}>
+                    <DevicePolicyFields
+                      defaults
+                      karingOnly={formData.DefaultKaringOnly}
+                      maxDevices={formData.DefaultMaxDevices}
+                      onChange={(patch) =>
+                        setFormData({
+                          ...formData,
+                          ...(patch.karingOnly !== undefined ? { DefaultKaringOnly: patch.karingOnly } : {}),
+                          ...(patch.maxDevices !== undefined ? { DefaultMaxDevices: patch.maxDevices } : {})
+                        })
+                      }
+                    />
                     <TextField
                       fullWidth
                       label={t('subscriptions.form.basic.updateInterval')}

@@ -18,6 +18,8 @@ import RadioGroup from '@mui/material/RadioGroup';
 import Radio from '@mui/material/Radio';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
+import DevicePolicyFields, { validDeviceLimit } from './DevicePolicyFields';
+
 const EXPIRE_TYPE_NEVER = 0;
 const EXPIRE_TYPE_DAYS = 1;
 const EXPIRE_TYPE_DATETIME = 2;
@@ -31,6 +33,8 @@ export default function ShareBatchUpdateDialog({ open, mode, shares, onClose, on
     expireDays: 30,
     expireAt: '',
     // 启用状态
+    karingOnly: true,
+    maxDevices: 1,
     enableAction: 'enable' // 'enable' | 'disable' | 'toggle'
   });
 
@@ -51,6 +55,7 @@ export default function ShareBatchUpdateDialog({ open, mode, shares, onClose, on
 
   const validate = () => {
     const newErrors = {};
+    if (mode === 'devices' && !validDeviceLimit(formData.maxDevices)) newErrors.maxDevices = t('subscriptions.devices.limitHelp');
 
     if (mode === 'expire') {
       if (formData.expireType === EXPIRE_TYPE_DAYS && formData.expireDays <= 0) {
@@ -76,6 +81,8 @@ export default function ShareBatchUpdateDialog({ open, mode, shares, onClose, on
         expireAt: formData.expireAt
       };
       onSubmit(submitData);
+    } else if (mode === 'devices') {
+      onSubmit({ karingOnly: formData.karingOnly, maxDevices: formData.maxDevices });
     } else if (mode === 'enabled') {
       onSubmit({ action: formData.enableAction });
     }
@@ -86,6 +93,8 @@ export default function ShareBatchUpdateDialog({ open, mode, shares, onClose, on
       expireType: EXPIRE_TYPE_NEVER,
       expireDays: 30,
       expireAt: '',
+      karingOnly: true,
+      maxDevices: 1,
       enableAction: 'enable'
     });
     setErrors({});
@@ -99,15 +108,21 @@ export default function ShareBatchUpdateDialog({ open, mode, shares, onClose, on
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        {mode === 'expire' ? t('subscriptions.share.batch.updateExpire') : t('subscriptions.share.batch.toggleEnabled')}
+        {mode === 'devices'
+          ? t('subscriptions.devices.batch')
+          : mode === 'expire'
+            ? t('subscriptions.share.batch.updateExpire')
+            : t('subscriptions.share.batch.toggleEnabled')}
       </DialogTitle>
       <DialogContent>
         <Stack spacing={3} sx={{ mt: 1 }}>
           {/* 显示受影响的分享数量 */}
           <Alert severity="info">
-            {mode === 'expire'
-              ? t('subscriptions.share.batch.willUpdateExpire', { count: shares.length })
-              : t('subscriptions.share.batch.willUpdateEnabled', { count: shares.length })}
+            {mode === 'devices'
+              ? t('subscriptions.devices.batchHelp')
+              : mode === 'expire'
+                ? t('subscriptions.share.batch.willUpdateExpire', { count: shares.length })
+                : t('subscriptions.share.batch.willUpdateEnabled', { count: shares.length })}
           </Alert>
 
           {/* 受影响的分享列表 */}
@@ -124,6 +139,13 @@ export default function ShareBatchUpdateDialog({ open, mode, shares, onClose, on
           {/* Legacy 警告 */}
           {hasLegacy && <Alert severity="warning">{t('subscriptions.share.batch.legacyWarning')}</Alert>}
 
+          {mode === 'devices' && (
+            <DevicePolicyFields
+              karingOnly={formData.karingOnly}
+              maxDevices={formData.maxDevices}
+              onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
+            />
+          )}
           {/* 模式：更新过期设置 */}
           {mode === 'expire' && (
             <>

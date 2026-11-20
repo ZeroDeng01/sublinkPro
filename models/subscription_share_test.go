@@ -30,7 +30,7 @@ func setupSubscriptionShareTestDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
-	if err := db.AutoMigrate(&SubscriptionShare{}); err != nil {
+	if err := db.AutoMigrate(&SubscriptionShare{}, &ShareDevice{}); err != nil {
 		t.Fatalf("auto migrate subscription_shares: %v", err)
 	}
 

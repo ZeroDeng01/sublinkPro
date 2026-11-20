@@ -25,6 +25,10 @@ const (
 
 // SubscriptionShare 订阅分享表
 type SubscriptionShare struct {
+	KaringOnly     bool       `gorm:"default:false" json:"karing_only"`
+	MaxDevices     int        `gorm:"default:0" json:"max_devices"`
+	DeviceRevision int64      `gorm:"default:0" json:"-"`
+	DeviceCount    int        `gorm:"-" json:"device_count"`
 	ID             int        `gorm:"primaryKey" json:"id"`
 	SubscriptionID int        `gorm:"index" json:"subscription_id"`     // 关联订阅ID
 	Token          string     `gorm:"uniqueIndex;size:64" json:"token"` // 分享token（支持自定义或自动生成）
@@ -169,18 +173,25 @@ func isASCIIDigit(value byte) bool {
 // CreateDefaultShareForSubscription 为订阅创建默认分享链接
 // 创建一个永不过期、启用状态的默认分享链接，标记为 IsLegacy=true
 func CreateDefaultShareForSubscription(subscriptionID int) error {
+	var sub Subcription
+	if err := database.DB.First(&sub, subscriptionID).Error; err != nil {
+		return err
+	}
 	share := &SubscriptionShare{
 		SubscriptionID: subscriptionID,
-		Name:           "默认分享链接",
-		ExpireType:     ExpireTypeNever,
-		IsLegacy:       true,
-		Enabled:        true,
+		Name:           "默认分享链接", KaringOnly: sub.DefaultKaringOnly, MaxDevices: sub.DefaultMaxDevices,
+		ExpireType: ExpireTypeNever,
+		IsLegacy:   true,
+		Enabled:    true,
 	}
 	return share.Add()
 }
 
 // Add 添加分享 (Write-Through)
 func (s *SubscriptionShare) Add() error {
+	if err := validateDeviceLimit(s.MaxDevices); err != nil {
+		return err
+	}
 	s.normalizeOptionalFields()
 
 	// 如果没有提供 token，自动生成
@@ -206,7 +217,9 @@ func (s *SubscriptionShare) Add() error {
 }
 
 // Update 更新分享 (Write-Through)
-func (s *SubscriptionShare) Update() error {
+func (s *SubscriptionShare) Update() error { return s.UpdateWithDevicePolicy(nil, nil) }
+
+func (s *SubscriptionShare) UpdateWithDevicePolicy(karingOnly *bool, maxDevices *int) error {
 	s.normalizeOptionalFields()
 
 	// 检查 token 唯一性（排除自己）
@@ -214,14 +227,30 @@ func (s *SubscriptionShare) Update() error {
 		return fmt.Errorf("token 已被使用，请更换")
 	}
 
-	err := database.DB.Model(s).Updates(map[string]any{
-		"name":        s.Name,
-		"token":       s.Token,
-		"expire_type": s.ExpireType,
-		"expire_days": s.ExpireDays,
-		"expire_at":   s.ExpireAt,
-		"enabled":     s.Enabled,
-	}).Error
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		current, err := lockShare(tx, s.ID)
+		if err != nil {
+			return err
+		}
+		if karingOnly != nil {
+			current.KaringOnly = *karingOnly
+		}
+		if maxDevices != nil {
+			if err := checkDeviceLimit(tx, s.ID, *maxDevices); err != nil {
+				return err
+			}
+			current.MaxDevices = *maxDevices
+		}
+		return tx.Model(s).Updates(map[string]any{
+			"karing_only": current.KaringOnly, "max_devices": current.MaxDevices,
+			"name":        s.Name,
+			"token":       s.Token,
+			"expire_type": s.ExpireType,
+			"expire_days": s.ExpireDays,
+			"expire_at":   s.ExpireAt,
+			"enabled":     s.Enabled,
+		}).Error
+	})
 	if err != nil {
 		return err
 	}
@@ -236,7 +265,15 @@ func (s *SubscriptionShare) Update() error {
 
 // Delete 删除分享 (Write-Through)
 func (s *SubscriptionShare) Delete() error {
-	err := database.DB.Delete(s).Error
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		if _, err := lockShare(tx, s.ID); err != nil {
+			return err
+		}
+		if err := tx.Where("share_id = ?", s.ID).Delete(&ShareDevice{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(s).Error
+	})
 	if err != nil {
 		return err
 	}
@@ -246,20 +283,11 @@ func (s *SubscriptionShare) Delete() error {
 
 // Find 根据 ID 查找
 func (s *SubscriptionShare) Find() error {
-	if cached, ok := subscriptionShareCache.Get(s.ID); ok {
-		*s = cached
-		return nil
-	}
 	return database.DB.First(s, s.ID).Error
 }
 
 // GetByToken 根据 token 查找分享
 func GetSubscriptionShareByToken(token string) (*SubscriptionShare, error) {
-	shares := subscriptionShareCache.GetByIndex("token", token)
-	if len(shares) > 0 {
-		return &shares[0], nil
-	}
-	// 缓存未命中，从数据库查
 	var share SubscriptionShare
 	if err := database.DB.Where("token = ?", token).First(&share).Error; err != nil {
 		return nil, err
