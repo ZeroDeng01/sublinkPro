@@ -1492,3 +1492,88 @@ func TestGetClientConcurrentSurgeRequestsKeepSubscriptionScoped(t *testing.T) {
 		t.Fatalf("expected two hook invocations, got %d", callCount)
 	}
 }
+
+func TestRenderPreparedV2rayPreservesRealityExtensions(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const link = "vless://12345678-1234-1234-1234-123456789abc@example.com:443?security=reality&pbk=test-key&sid=0123&spx=%2Fcrawl%3Fx%3D1%26y%3D2&pqv=verify_-key#original"
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c?client=v2ray", nil)
+	prepared := preparedClientResponse{
+		ClientType: "v2ray", Mode: clientResponseNormal, SubName: "reality",
+		Subscription: models.Subcription{Name: "reality", Nodes: []models.Node{{Name: "renamed", LinkName: "renamed", Link: link, Protocol: "vless"}}},
+	}
+	renderPreparedV2ray(c, prepared)
+	decoded := strings.TrimSpace(utils.Base64Decode(recorder.Body.String()))
+	node, err := protocol.DecodeVLESSURL(decoded)
+	if err != nil {
+		t.Fatalf("invalid v2ray output: %v", err)
+	}
+	if node.Query.SpiderX != "/crawl?x=1&y=2" || node.Query.Mldsa65Verify != "verify_-key" {
+		t.Fatalf("v2ray lost REALITY extensions: %+v", node.Query)
+	}
+}
+
+func TestBuildPreparedMihomoYAMLPreservesRealityExtensions(t *testing.T) {
+	setupClientsAPITestDB(t)
+	templatePath := writeTestClashTemplate(t)
+	config, err := json.Marshal(map[string]string{"clash": filepath.ToSlash(templatePath)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, client := range []string{"clash", "mihomo"} {
+		t.Run(client, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c?client="+client, nil)
+			nodes := []models.Node{}
+			for i, scheme := range []string{"vless", "trojan"} {
+				user := "password"
+				if scheme == "vless" {
+					user = "12345678-1234-1234-1234-123456789abc"
+				}
+				link := scheme + "://" + user + "@example.com:443?security=reality&pbk=test-key&sid=0123&spx=%2Fcrawl%3Fx%3D1%26y%3D2&pqv=verify_-key"
+				nodes = append(nodes, models.Node{ID: i + 1, Name: scheme, LinkName: scheme, Link: link, Protocol: scheme})
+			}
+			prepared := preparedClientResponse{ClientType: client, Mode: clientResponseNormal, SubName: "reality", Subscription: models.Subcription{Name: "reality", Config: string(config), Nodes: nodes}}
+			bridge, _, ok := buildPreparedMihomoYAML(c, prepared)
+			if !ok {
+				t.Fatal("failed to render Clash YAML")
+			}
+			var output struct {
+				Proxies []protocol.Proxy `yaml:"proxies"`
+			}
+			if err := yaml.Unmarshal(bridge.Body, &output); err != nil {
+				t.Fatal(err)
+			}
+			if len(output.Proxies) != 2 {
+				t.Fatalf("extensions caused nodes to disappear: %s", bridge.Body)
+			}
+			for _, proxy := range output.Proxies {
+				if proxy.Reality_opts["spider-x"] != "/crawl?x=1&y=2" || proxy.Reality_opts["mldsa65-verify"] != "verify_-key" {
+					t.Fatalf("%s lost extensions: %+v", proxy.Type, proxy.Reality_opts)
+				}
+			}
+			// The same stored nodes must remain usable by the v2ray subscription renderer.
+			v2rec := httptest.NewRecorder()
+			v2c, _ := gin.CreateTestContext(v2rec)
+			v2c.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c?client=v2ray", nil)
+			prepared.ClientType = "v2ray"
+			renderPreparedV2ray(v2c, prepared)
+			links := strings.Split(strings.TrimSpace(utils.Base64Decode(v2rec.Body.String())), "\n")
+			if len(links) != 2 {
+				t.Fatalf("v2ray output count = %d", len(links))
+			}
+			for _, link := range links {
+				parsed, err := protocol.ParseNodeLink(link)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if parsed.Fields["Query.SpiderX"] != "/crawl?x=1&y=2" || parsed.Fields["Query.Mldsa65Verify"] != "verify_-key" {
+					t.Fatalf("v2ray lost fields: %+v", parsed.Fields)
+				}
+			}
+		})
+	}
+}

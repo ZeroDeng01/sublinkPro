@@ -419,6 +419,8 @@ func TestEncodeSurge(t *testing.T) {
 	output, err := EncodeSurge([]string{
 		EncodeSSURL(ss),
 		EncodeTrojanURL(trojan),
+		"vless://550e8400-e29b-41d4-a716-446655440000@vless.example.com:443?security=tls#Surge-VLESS",
+		"vless://550e8400-e29b-41d4-a716-446655440000@bad.example.com:443?type=quic#Unsupported-VLESS",
 	}, OutputConfig{
 		Surge:                 templatePath,
 		Udp:                   true,
@@ -434,6 +436,10 @@ func TestEncodeSurge(t *testing.T) {
 	assertContains(t, "Surge SS 节点", output, "Surge-SS = ss, 1.2.3.4, 8388")
 	assertContains(t, "Surge SS 插件", output, "obfs=http, obfs-host=bing.com")
 	assertContains(t, "Surge Trojan 节点", output, "Surge-Trojan = trojan, trojan.example.com, 443, password=password")
-	assertContains(t, "Surge 代理组", output, "Proxy = select, Surge-SS, Surge-Trojan")
-	assertContains(t, "Surge 自动组", output, "Auto = url-test, url=http://www.gstatic.com/generate_204, interval=300, Surge-SS, Surge-Trojan")
+	assertContains(t, "Surge VLESS", output, "Surge-VLESS = vless, vless.example.com, 443")
+	if strings.Contains(output, "Unsupported-VLESS") {
+		t.Fatal("unsupported VLESS must not enter proxies or groups")
+	}
+	assertContains(t, "Surge 代理组", output, "Proxy = select, Surge-SS, Surge-Trojan, Surge-VLESS")
+	assertContains(t, "Surge 自动组", output, "Auto = url-test, url=http://www.gstatic.com/generate_204, interval=300, Surge-SS, Surge-Trojan, Surge-VLESS")
 }

@@ -191,6 +191,13 @@ Base: `/api/v1/nodes`
 - **GET** `/nodes/raw-info` (query: `?id=123`)
 - **POST** `/nodes/update-raw` — **JSON** `{"nodeId":123, "fields":{...}}` (demo-restricted)
 
+### VLESS REALITY optional capability
+
+VLESS and Trojan URL parameters `spx` and `pqv` map to raw fields `Query.SpiderX` and `Query.Mldsa65Verify`. Both support string updates; an empty string clears the parameter. Parsing, editing, URL export and Clash YAML import/export preserve them as `reality-opts.spider-x` and `reality-opts.mldsa65-verify` for REALITY nodes. Xray consumers use `client=v2ray` (no separate `xray` client type). Configuration preservation does not imply core support; existing internal probe behavior is unchanged. Surge skips VLESS REALITY with nonempty `pqv` and all Trojan REALITY, and omits crawler-only `spx`. See [REALITY compatibility](../../docs/features/subscription-share.md#vless-reality-compatibility).
+
+Subscription conversion preserves `reality-opts.support-x25519mlkem768` via the VLESS URL parameter `support-x25519mlkem768`. Values `true` and `false` remain distinct from omission. Node raw fields expose `Query.SupportX25519MLKEM768`; updates accept booleans or strings `"true"` / `"false"`, and `""` or `null` clears the override. Plain TLS output does not gain REALITY options from this parameter.
+
+
 ---
 
 ## Subscriptions
@@ -304,6 +311,7 @@ Base: `/api/v1/shares`
 ### Consume Subscription (the actual output a client fetches)
 **GET** `/c/` (query: `?token=<shareToken>&client=<idx>`)
 - Use `--raw` (this is NOT a JSON envelope — it's the rendered clash/v2ray/surge output).
+- `client=surge` includes VLESS (Surge iOS 6.0.0+ / Mac 6.12.0+): TCP/RAW, WS/HTTPUpgrade, TLS/REALITY, Vision, gRPC and XHTTP. Unsupported combinations, ECH and XHTTP `downloadSettings` are skipped. See [subscription compatibility](../../docs/features/subscription-share.md#vless-in-surge).
 - `token` is the **share token** (from `/shares/get` or `/shares/add`), NOT the API key.
 - Client type auto-detected from User-Agent, or force with `client`.
 
@@ -528,7 +536,7 @@ There is no supported fallback that accepts AI-generated full-template `candidat
 
 Base: `/api/v1/airports` (all write bodies are JSON)
 
-- **GET** `/airports` (query: `?page=1&pageSize=20`) — list
+- **GET** `/airports` (query: `?page=1&pageSize=20`) — list. Each item includes `nodeStats.hasTestedNodes`: whether any current node has a latency/speed check timestamp or terminal status (`success`, `timeout`, `error`), including failed checks. `delayPassCount` / `speedPassCount` remain latency/download pass counts; `0 / 0` does not imply untested. This is current-node evidence, not task progress or run completion; removed nodes no longer contribute.
 - **GET** `/airports/{id}` — one
 - **POST** `/airports` — **JSON** create. Key fields (see `dto.AirportRequest`): `name`(required), `url`(required, valid URL), `cronExpr`(required), `enabled`, `group`, `downloadWithProxy`, `proxyLink`, `userAgent`, `fetchUsageInfo`, `skipTLSVerify`, plus filter/rename/dedup fields (`nodeNameWhitelist`, `nodeNameBlacklist`, `protocolWhitelist`, `protocolBlacklist`, `nodeNamePreprocess`, `deduplicationRule`, `nodeNameUniquify`, ...), and country-fill fields (`autoFillCountry`, `backfillExistingCountry`).
 - **PUT** `/airports/{id}` — **JSON** update (same schema)
@@ -741,7 +749,7 @@ Base: `/api/v1/settings` (write bodies are JSON unless noted; most writes are de
 
 **Sub-Store:** **GET** `/settings/substore` · **POST** `/settings/substore` · **POST** `/settings/substore/test`
 
-### SOCKS5 gateway
+### Proxy gateway (SOCKS5 / HTTP / Mixed)
 
 All SOCKS5 endpoints require an authenticated administrator. Destructive `POST`/`DELETE` operations are restricted in demo mode.
 
@@ -759,7 +767,7 @@ All SOCKS5 endpoints require an authenticated administrator. Destructive `POST`/
   Optional fields may be omitted to preserve saved values for legacy clients. `0` disables either connection timeout.
 - **POST** `/api/v1/settings/socks5/stop` — stop the listener without changing saved settings.
 - **GET** `/api/v1/settings/socks5/status` — return `data.config`, `data.listeners`, aggregate `data.stats`, and `data.health`.
-- **GET/POST** `/api/v1/settings/socks5/listeners` — list or create listener endpoints (`id`, `enabled`, `listenAddress`, `port`, `defaultProfileId`, nullable `requireAuth`).
+- **GET/POST** `/api/v1/settings/socks5/listeners` — list or create listener endpoints (`id`, `protocol`: `socks5|http|mixed`, `enabled`, `listenAddress`, `port`, `defaultProfileId`, nullable `requireAuth`).
 - **PUT/DELETE** `/api/v1/settings/socks5/listeners/:id` — replace or delete a listener endpoint.
 - **GET/POST** `/api/v1/settings/socks5/accounts` — list or create independent credentials bound to routing profiles. Plaintext passwords are never returned.
 - **PUT/DELETE** `/api/v1/settings/socks5/accounts/:id` — replace or delete an independent account; an omitted/empty update password keeps the saved password.
@@ -773,11 +781,15 @@ All SOCKS5 endpoints require an authenticated administrator. Destructive `POST`/
   Health includes sweep timing/counts and per-node status, latency, consecutive failures, cooldown, and a bounded error message.
 - **POST** `/api/v1/settings/socks5/health/probe` — trigger an immediate administrator-only health sweep. Duplicate concurrent sweeps are not started.
 - **GET** `/api/v1/settings/socks5/connections` — return the current active connection array. Each item includes
-  `id`, `clientAddress`, `target`, `nodeName`, `profileId`, `profileName`, optional `account`, optional `listenerId`, `phase`, `startedAt`, `lastActivity`, `uploadBytes`, and `downloadBytes`.
+  `id`, `clientAddress`, `target`, `nodeName`, `profileId`, `profileName`, optional `account`, optional `listenerId`, `protocol` (actual `socks5`/`http`; briefly `mixed` or empty before identification), optional `method` (e.g. `CONNECT`), `phase`, `startedAt`, `lastActivity`, `uploadBytes`, and `downloadBytes`.
 - **DELETE** `/api/v1/settings/socks5/connections/:id` — disconnect one active connection by ID.
 - **DELETE** `/api/v1/settings/socks5/connections` — disconnect all active connections.
 
 `data.config` uses the same public settings shape as the settings endpoint, including `hasPassword`, optional `maskedPassword`, `running`, and `boundAddress`; it never includes plaintext `password`. Omitting `password` preserves the saved password, while `clearPassword: true` clears it. Status counters, active connections, and in-memory sticky leases belong to the current gateway server lifetime and reset after stop/reapply. TCP CONNECT supports multiple listeners, independent profile-bound accounts, adapter reuse, pre-reply candidate retry, exponential failure cooldown, smart P2C load balancing, sticky sessions, connection limits, idle/duration timeouts, active health probing, and live monitoring. UDP ASSOCIATE and BIND are not implemented.
+
+Listener `protocol` is stored inside the existing listener JSON. Old entries and omitted create fields default to `socks5`; PUT with omitted protocol preserves its current value. Unknown values fail validation. The compatibility default endpoint remains SOCKS5 until explicitly edited through the listener API. This field is unrelated to outbound `candidateProtocols`. No top-level protocol setting, additional fixed service port, new environment variable, or external proxy process is required.
+
+HTTP supports absolute `http://` requests and HTTPS CONNECT (not inbound TLS/HTTP2/Upgrade). It consumes `Proxy-Authorization: Basic` using the same account/profile rules, returns 407 on failed authentication and never forwards proxy credentials to the origin. Usernames containing colons are SOCKS5-only. Each keep-alive request authenticates/routes anew, without cross-request upstream pooling; retries only cover dialing before request bytes. Non-loopback authentication restrictions apply to all modes. TCP counts remain per client connection; ordinary HTTP traffic counters measure forwarded bodies, tunnel counters measure payload. Connection metadata describes the current/latest request; `idle` means waiting for another request. Gateway controls cover HTTP and hijacked CONNECT lifetimes. See `docs/features/socks5.md` for curl and safety examples.
 
 **Database migration:** **POST** `/settings/database-migration/import` — **multipart/form-data** (upload a backup.zip / .db)
 
@@ -842,7 +854,7 @@ WebDAV restore reuses the database migration workflow and overwrites current bus
 
 ## Share device limits / 分享设备限制
 
-Subscription create/update multipart fields: `DefaultKaringOnly` (boolean) and `DefaultMaxDevices` (integer, 0–10000). Create defaults to true/1; omitted update fields preserve stored values. These are defaults for future shares, not a shared subscription-wide quota. Existing database records migrate to false/0.
+Subscription create/update multipart fields: `DefaultKaringOnly` (boolean) and `DefaultMaxDevices` (integer, 0–10000). Create defaults to false/0; omitted update fields preserve stored values. These are defaults for future shares, not a shared subscription-wide quota. Existing database records migrate to false/0.
 
 Share `/api/v1/shares/add`, `/batch-add`, `/update`, `/batch-update` accept optional JSON `karing_only` and `max_devices`. Omitted create fields inherit the parent subscription defaults; omitted update fields remain unchanged. Explicit false/0 is supported. Positive limits cannot be reduced below the active bound count. Share list items include `karing_only`, `max_devices`, and `device_count`.
 

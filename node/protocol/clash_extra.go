@@ -3,8 +3,11 @@ package protocol
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
+
+	"sublink/internal/yamlutil"
 
 	"gopkg.in/yaml.v3"
 )
@@ -19,7 +22,7 @@ var (
 func (p *Proxy) UnmarshalYAML(value *yaml.Node) error {
 	type proxyAlias Proxy
 	var decoded proxyAlias
-	if err := value.Decode(&decoded); err != nil {
+	if err := yamlutil.DecodeWithStringBools(value, &decoded); err != nil {
 		return err
 	}
 
@@ -100,6 +103,17 @@ func ApplyClashExtra(proxy *Proxy, encoded string) error {
 	mapping := yamlMappingNode(&document)
 	if mapping == nil {
 		return fmt.Errorf("retained Clash attributes must be a mapping")
+	}
+	for index := 0; index+1 < len(mapping.Content); index += 2 {
+		k := mapping.Content[index].Value
+		v := mapping.Content[index+1].Value
+		if k == "hop-interval" || k == "hop_interval" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 {
+				proxy.HopInterval = n
+			}
+		} else if k == "ports" && v != "" {
+			proxy.Ports = v
+		}
 	}
 	proxy.ClashExtra = cloneYAMLNode(mapping)
 	return nil

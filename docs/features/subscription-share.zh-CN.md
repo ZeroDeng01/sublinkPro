@@ -147,7 +147,7 @@
 
 ## Karing 设备数量限制
 
-新建订阅默认开启“仅允许 Karing”，默认设备上限为 1。可在后台设置 0–10000；0 表示不限设备数量。新建分享（包括默认链接、批量分享）继承订阅默认值，之后各自独立计数。修改订阅默认值不会修改已有分享。升级前已有的订阅与分享保持不限设备、不限制客户端，需管理员主动启用。
+新建订阅默认不限制客户端且设备数量不限（仅允许 Karing 为 false、设备上限为 0）。管理员可以按订阅或分享主动开启限制。可在后台设置 0–10000；0 表示不限设备数量。新建分享（包括默认链接、批量分享）继承订阅默认值，之后各自独立计数。修改订阅默认值不会修改已有分享。升级前已有的订阅与分享保持不限设备、不限制客户端，需管理员主动启用。
 
 建议每位客户创建一个独立分享，分别设置年费到期时间。新设备第一次成功下载时自动绑定；相同设备后续更新不重复占用名额。设备上限大于零时必须发送有效的 `X-HWID` 请求头，不支持用 IP、UA、型号或链接参数代替。开启“仅允许 Karing”时还会校验 Karing UA。超限、缺少标识或设备被撤销均返回 HTTP 403，不下发节点；数据库检查失败返回 503。
 
@@ -174,3 +174,21 @@
 Windows Karing 1.2.23+2606 已通过真实首次导入与多次手动更新请求验证：开启开关后发送 `X-HWID`，相同设备的摘要保持一致。其 UA 以 `Karing/1.2.23.2606 platform/windows` 开头。自动更新、应用重启、升级、网络切换、备份恢复，以及 Android、iOS/iPadOS、macOS、Linux、tvOS 等平台的实机兼容性尚未验证；不要将模拟请求测试视为全平台验证。重装或恢复备份若导致标识改变，需管理员办理换机。
 
 真实后端联调也已验证：Windows Karing 成功下载并登记设备；管理员撤销后，客户端显示 `更新失败:download profile failed: http statusCode: 403`。测试设备随后已恢复。
+
+## VLESS REALITY 兼容说明
+
+导入 Clash / mihomo YAML 时，`reality-opts.support-x25519mlkem768` 会经由内部存储的 VLESS URL 保留到订阅输出、延迟检测及下载测速使用的 Proxy。URL 参数为 `support-x25519mlkem768=true` 或 `false`（输入也接受 `1` / `0`）。显式 `false` 与未指定保持区分；空值或无效 URL 值视为未指定。普通 TLS 节点不会因该参数而新增 REALITY 配置。在节点字段编辑器中可选择 `true`、`false` 或空选项，空选项表示恢复上游默认行为。
+
+VLESS、Trojan 分享链接中的 REALITY `spx`（`spiderX`，爬虫初始路径）和 `pqv`（`mldsa65Verify`，额外的 ML-DSA-65 证书签名验证公钥）会在解析、字段编辑和 URL 导出时保留。编辑器对应字段为 `Query.SpiderX`、`Query.Mldsa65Verify`；清空字段会移除对应 URL 参数。参数值采用 URL 编码，因此爬虫路径可以携带查询参数。
+
+Clash YAML 导入会将 `reality-opts.spider-x`、`reality-opts.mldsa65-verify` 映射到内部 URL，`/c?client=clash` 或 `mihomo` 再将其还原到 YAML，保持参数值不丢失。非空字段仅为 REALITY 节点输出，空字段省略。Trojan REALITY 导入时还会保留 `security=reality`、`pbk` 和 `sid`，支持完整往返。
+
+Xray 客户端（如 v2rayN、v2rayNG）使用 `/c?client=v2ray`，无需新增 `xray` 客户端类型。保留配置不代表内核新增了执行能力；当前上游 mihomo 没有对应验证能力，内部检测仍沿用现有行为；导出配置中的额外验证需由兼容内核执行。Surge 会跳过 `pqv` 非空的 VLESS REALITY 节点及 Trojan REALITY 节点；仅有爬虫参数 `spx` 时，Surge 输出会省略该参数。ML-DSA-65 签名验证与 `support-x25519mlkem768` 密钥交换选项相互独立。
+
+## Surge 的 VLESS 支持
+
+`/c?client=surge` 可为 Surge iOS 6.0.0+ / Mac 6.12.0+ 导出 VLESS。支持 TCP/RAW、WebSocket、HTTPUpgrade、gRPC（TLS 或 REALITY）及 XHTTP/SplitHTTP。TLS、REALITY 密钥、Vision、VLESS Encryption、SNI、ALPN、证书指纹、传输请求头和受支持的 XHTTP extra/XMUX 参数会映射为 Surge 原生配置。订阅的 Host 替换及跳过证书校验设置同样生效。Surge 自动使用 XUDP。
+
+不支持的传输、ECH、TCP 请求头混淆、不兼容的 Vision/REALITY 组合及含 XHTTP `downloadSettings` 的节点会被跳过，也不会加入代理组。uTLS `fp` 和 REALITY `support-x25519mlkem768` 无对应的 Surge 参数，因此不输出；Surge 自行处理 ClientHello 和 ML-KEM 回退。
+
+参见 [Surge 官方 VLESS 文档](https://manual.nssurge.com/policies/vless.html)。

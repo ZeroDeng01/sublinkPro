@@ -4,16 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net"
 	"net/http"
-	"strconv"
 	"sublink/models"
 	"sublink/services/mihomo"
 	"sublink/utils"
 	"sync"
 	"time"
-
-	"github.com/metacubex/mihomo/constant"
 )
 
 // FetchAirportUsageInfo 独立获取单个机场的用量信息
@@ -27,12 +23,7 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 		return nil, fmt.Errorf("机场未开启用量信息获取")
 	}
 
-	client := &http.Client{
-		Timeout: 10 * time.Second, // 用量获取使用较短超时
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: airport.SkipTLSVerify},
-		},
-	}
+	client := utils.NewHTTPClientWithAdapter(nil, 10*time.Second, &tls.Config{InsecureSkipVerify: airport.SkipTLSVerify})
 
 	// 配置代理（如果启用）
 	if airport.DownloadWithProxy {
@@ -54,31 +45,13 @@ func FetchAirportUsageInfo(airport *models.Airport) (*UsageInfo, error) {
 			if err != nil {
 				utils.Error("创建代理适配器失败: %v，将直接请求", err)
 			} else {
-				client.Transport = &http.Transport{
-					DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-						host, portStr, splitErr := net.SplitHostPort(addr)
-						if splitErr != nil {
-							return nil, fmt.Errorf("split host port error: %v", splitErr)
-						}
-
-						portUint, parseErr := strconv.ParseUint(portStr, 10, 16)
-						if parseErr != nil {
-							return nil, fmt.Errorf("invalid port: %v", parseErr)
-						}
-
-						metadata := &constant.Metadata{
-							Host:    host,
-							DstPort: uint16(portUint),
-							Type:    constant.HTTP,
-						}
-
-						return proxyAdapter.DialContext(ctx, metadata)
-					},
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: airport.SkipTLSVerify},
-				}
+				defer func() { _ = proxyAdapter.Close() }()
+				client = utils.NewHTTPClientWithAdapter(proxyAdapter, 10*time.Second, &tls.Config{InsecureSkipVerify: airport.SkipTLSVerify})
 			}
 		}
 	}
+
+	defer utils.CloseHTTPClient(client)
 
 	// 设置通用 User-Agent
 	userAgent := "clash.meta"

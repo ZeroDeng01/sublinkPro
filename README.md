@@ -63,13 +63,13 @@ English | [简体中文](README.zh-CN.md)
 | ⚡ **Professional speed test system** | Two stage tests, smart latency measurement, IP quality and unlock checks | [📖](docs/features/speedtest.md) |
 | 🔗 **Chain proxy** | Native Dialer-Proxy support, visual configuration, IP quality based node selection | [📖](docs/features/chain-proxy.md) |
 | 🤖 **AI template editing** | Generate operation based previews from natural language, review read-only diffs, accept into the editor, then save normally | [📖](docs/features/template-ai.md) |
-| ✈️ **Airport management** | Multi format import, scheduled updates, traffic monitoring, one click full refresh | [📖](docs/features/airport.md) |
+| ✈️ **Airport management** | Multi format import, scheduled updates, traffic monitoring, node test summaries, one click full refresh | [📖](docs/features/airport.md) |
 | 🗂️ **Group ordering** | Drag airport priority within a group to control node order in subscription output | [📖](docs/development.md) |
 | 📋 **Subscription sharing** | Multiple links, expiration policies, access statistics, per-share Karing device limits | [📖](docs/features/subscription-share.md) |
 | 🌐 **Host management** | Domain mappings, DNS configuration, CDN preferred IPs | [📖](docs/features/host.md) |
 | ☁️ **Cloudflare Tunnel** | Expose the admin UI without a public IP, with cloudflared managed from the page | [📖](docs/features/cloudflare-tunnel.md) |
 | 💾 **WebDAV backup** | Encrypt WebDAV credentials, upload system backups on demand or by cron, list remote ZIP files, and restore from the page | [📖](docs/features/backup.md) |
-| 🔌 **SOCKS5 gateway** | TCP CONNECT gateway with independent accounts, multiple listeners, routing profiles, health-aware node selection and live monitoring | [📖](docs/features/socks5.md) |
+| 🔌 **Proxy gateway** | SOCKS5/HTTP/Mixed listeners with independent accounts, routing profiles, health-aware node selection and live monitoring | [📖](docs/features/socks5.md) |
 | 🤖 **Telegram Bot** | Remote speed tests, subscription management, system monitoring | [📖](docs/features/telegram-bot.md) |
 | 📜 **Script system** | Node filtering, content post processing, chained scripts | [📖](docs/script_support.md) |
 | 🔔 **Webhooks** | Supports PushDeer, Bark, DingTalk, ServerChan, and other notification platforms | [📖](docs/configuration.md) |
@@ -192,7 +192,9 @@ in credentials; URI components are decoded once, including when links are re-exp
 |:---|:---|
 | **v2ray** | base64 common format, without Clash/mihomo specific protocols such as Mieru, Snell, and OpenVPN |
 | **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell, OpenVPN |
-| **surge** | ss, trojan, vmess, hy2, tuic, AnyTLS, Snell |
+| **surge** | ss, trojan, vmess, VLESS, hy2, tuic, AnyTLS, Snell |
+
+> VLESS and Trojan REALITY `spx` / `pqv` parameters are preserved through share links, field editing and Clash YAML import/export (`spider-x` / `mldsa65-verify`). Xray clients use the existing `v2ray` output. Execution requires a compatible core; Surge skips settings it cannot represent. See [REALITY compatibility](docs/features/subscription-share.md#vless-reality-compatibility).
 
 > [!NOTE]
 > Mieru currently supports Clash/mihomo YAML import and export only. Official Mieru has `mieru://` and `mierus://` share links, but does not define a general URL schema suitable for field by field editing. For raw editing and Clash/mihomo import write back, SublinkPro uses an internal editable form: `mieru://username:password@server:port?...#name`, with port ranges written as `portRange=2090-2099`. v2ray and Surge don't support Mieru in SublinkPro. Subscription output skips that protocol instead of converting it to a downgraded form.

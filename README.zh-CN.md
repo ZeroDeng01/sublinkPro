@@ -63,13 +63,13 @@
 | ⚡ **专业测速系统** | 双阶段测试、智能延迟测量、支持 IP 质量检测与解锁检测 | [📖](docs/features/speedtest.zh-CN.md) |
 | 🔗 **链式代理** | Dialer-Proxy 原生支持、可视化配置、支持按 IP 质量选节点 | [📖](docs/features/chain-proxy.zh-CN.md) |
 | 🤖 **AI 模板编辑** | 用自然语言生成操作式预览，审阅只读对比，接受到编辑器后再正常保存 | [📖](docs/features/template-ai.zh-CN.md) |
-| ✈️ **机场管理** | 多格式导入、定时更新、流量监控、一键全量拉取 | [📖](docs/features/airport.zh-CN.md) |
+| ✈️ **机场管理** | 多格式导入、定时更新、流量监控、节点测试概览、一键全量拉取 | [📖](docs/features/airport.zh-CN.md) |
 | 🗂️ **分组排序** | 分组内机场优先级拖拽排序，控制订阅输出中的节点顺序 | [📖](docs/development.zh-CN.md) |
 | 📋 **订阅分享** | 多链接管理、过期策略、访问统计、Karing 分享设备限额 | [📖](docs/features/subscription-share.zh-CN.md) |
 | 🌐 **Host 管理** | 域名映射、DNS 配置、CDN 优选 | [📖](docs/features/host.zh-CN.md) |
 | ☁️ **Cloudflare Tunnel** | 无公网 IP 暴露管理界面、页面托管 cloudflared | [📖](docs/features/cloudflare-tunnel.zh-CN.md) |
 | 💾 **WebDAV 备份** | 加密保存 WebDAV 凭据，支持手动或定时上传系统备份、查看远程 ZIP 并从页面恢复 | [📖](docs/features/backup.zh-CN.md) |
-| 🔌 **SOCKS5 网关** | 支持独立账号、多监听入口、路由 Profile、健康感知节点选择与实时监控的 TCP CONNECT 网关 | [📖](docs/features/socks5.zh-CN.md) |
+| 🔌 **代理网关** | 支持 SOCKS5/HTTP/Mixed 入站、独立账号、多监听入口、路由 Profile、健康感知节点选择与实时监控 | [📖](docs/features/socks5.zh-CN.md) |
 | 🤖 **Telegram Bot** | 远程测速、订阅管理、系统监控 | [📖](docs/features/telegram-bot.zh-CN.md) |
 | 📜 **脚本系统** | 节点过滤、内容后处理、多脚本链式执行 | [📖](docs/script_support.zh-CN.md) |
 | 🔔 **Webhooks** | 支持 PushDeer、Bark、钉钉、方糖等多平台通知 | [📖](docs/configuration.zh-CN.md) |
@@ -192,7 +192,9 @@ URI 各部分只解码一次，重新导出链接时也会保留其原始含义�
 |:---|:---|
 | **v2ray** | base64 通用格式（不输出 Clash/mihomo 专属协议，如 Mieru、Snell、OpenVPN） |
 | **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell, OpenVPN |
-| **surge** | ss, trojan, vmess, hy2, tuic, AnyTLS, Snell |
+| **surge** | ss, trojan, vmess, VLESS, hy2, tuic, AnyTLS, Snell |
+
+> VLESS、Trojan REALITY 的 `spx` / `pqv` 支持分享链接、字段编辑及 Clash YAML 导入导出（对应 `spider-x` / `mldsa65-verify`）；Xray 客户端使用现有 `v2ray` 输出。实际执行需要兼容内核；Surge 会跳过无法表达的配置。参见 [REALITY 兼容说明](docs/features/subscription-share.zh-CN.md#vless-reality-兼容说明)。
 
 > [!NOTE]
 > Mieru 当前仅支持 Clash/mihomo YAML 导入与导出。Mieru 官方存在 `mieru://` / `mierus://` 分享链接，但未定义适合逐字段编辑的通用 URL schema；SublinkPro 为原始编辑与 Clash/mihomo 导入回写使用内部可编辑形态：`mieru://username:password@server:port?...#name`，端口范围使用 `portRange=2090-2099`。v2ray 与 Surge 当前不支持 Mieru，订阅输出会跳过该协议而不是降级转换。

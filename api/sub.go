@@ -150,8 +150,7 @@ func SubGet(c *gin.Context) {
 // 添加节点
 func SubAdd(c *gin.Context) {
 	var sub models.Subcription
-	sub.DefaultKaringOnly = true
-	sub.DefaultMaxDevices = 1
+	// Device limits and client restrictions are opt-in; preserve zero values.
 	if !parseSubscriptionDeviceDefaults(c, &sub) {
 		return
 	}

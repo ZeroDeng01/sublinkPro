@@ -155,6 +155,13 @@ func ConvertProxyToVmess(proxy Proxy) Vmess {
 		}
 	}
 
+	// 处理 grpc_opts
+	if len(proxy.Grpc_opts) > 0 {
+		if serviceName, ok := proxy.Grpc_opts["grpc-service-name"].(string); ok && serviceName != "" {
+			vmess.Path = serviceName
+		}
+	}
+
 	// 处理 Sni
 	if proxy.Sni != "" {
 		vmess.Sni = proxy.Sni
@@ -184,11 +191,17 @@ func buildVMessProxy(link Urls, config OutputConfig) (Proxy, error) {
 	}
 	wsOpts := map[string]any{"path": vmess.Path, "headers": vmessWSHeaders(vmess.Headers, vmess.Host)}
 	DeleteOpts(wsOpts)
+	var grpcOpts map[string]any
+	if vmess.Net == "grpc" {
+		grpcOpts = map[string]any{"grpc-service-name": vmess.Path}
+		DeleteOpts(grpcOpts)
+		wsOpts = nil
+	}
 	tls := vmess.Tls != "none" && vmess.Tls != ""
 	port, _ := convertToInt(vmess.Port)
 	aid, _ := convertToInt(vmess.Aid)
 	alpn := splitVMessALPN(vmess.Alpn)
-	return Proxy{Name: vmess.Ps, Type: "vmess", Server: vmess.Add, Port: FlexPort(port), Cipher: vmess.Scy, Uuid: vmess.Id, AlterId: strconv.Itoa(aid), Network: vmess.Net, Tls: tls, Servername: vmess.Sni, Alpn: alpn, Client_fingerprint: vmess.Fp, Ws_opts: wsOpts, Udp: config.Udp, Skip_cert_verify: config.Cert, Dialer_proxy: link.DialerProxyName}, nil
+	return Proxy{Name: vmess.Ps, Type: "vmess", Server: vmess.Add, Port: FlexPort(port), Cipher: vmess.Scy, Uuid: vmess.Id, AlterId: strconv.Itoa(aid), Network: vmess.Net, Tls: tls, Servername: vmess.Sni, Alpn: alpn, Client_fingerprint: vmess.Fp, Ws_opts: wsOpts, Grpc_opts: grpcOpts, Udp: config.Udp, Skip_cert_verify: config.Cert, Dialer_proxy: link.DialerProxyName}, nil
 }
 
 func splitVMessALPN(alpn string) []string {

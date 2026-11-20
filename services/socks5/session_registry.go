@@ -15,6 +15,8 @@ import (
 )
 
 type connectionInfo struct {
+	Protocol      string
+	Method        string
 	ID            string
 	ListenerID    string
 	ClientAddress string
@@ -52,6 +54,19 @@ func (c *connectionInfo) setUpstream(conn net.Conn, node models.Node) {
 	c.mu.Unlock()
 }
 
+func (c *connectionInfo) setInbound(protocol, method string) {
+	c.mu.Lock()
+	c.Protocol, c.Method = protocol, method
+	c.mu.Unlock()
+}
+
+func (c *connectionInfo) finishRequest() {
+	c.mu.Lock()
+	c.upstream = nil
+	c.Phase = "idle"
+	c.mu.Unlock()
+}
+
 func (c *connectionInfo) touch() {
 	c.mu.Lock()
 	c.LastActivity = time.Now()
@@ -79,7 +94,7 @@ func (c *connectionInfo) snapshot() ConnectionSnapshot {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return ConnectionSnapshot{
-		ID: c.ID, ListenerID: c.ListenerID, ClientAddress: c.ClientAddress, Target: c.Target, NodeName: c.NodeName,
+		Protocol: c.Protocol, Method: c.Method, ID: c.ID, ListenerID: c.ListenerID, ClientAddress: c.ClientAddress, Target: c.Target, NodeName: c.NodeName,
 		ProfileID: c.ProfileID, ProfileName: c.ProfileName, Account: c.Account,
 		Phase: c.Phase, StartedAt: c.StartedAt, LastActivity: c.LastActivity,
 		UploadBytes: c.UploadBytes.Load(), DownloadBytes: c.DownloadBytes.Load(),
@@ -87,6 +102,8 @@ func (c *connectionInfo) snapshot() ConnectionSnapshot {
 }
 
 type ConnectionSnapshot struct {
+	Protocol      string    `json:"protocol"`
+	Method        string    `json:"method,omitempty"`
 	ID            string    `json:"id"`
 	ListenerID    string    `json:"listenerId,omitempty"`
 	ClientAddress string    `json:"clientAddress"`
@@ -292,9 +309,13 @@ func pumpWithSession(ctx context.Context, session *connectionInfo, client, upstr
 	upstreamReader := &trafficConn{Conn: upstream, counter: &session.DownloadBytes, touch: session.touch}
 	clientWriter := &activityConn{Conn: client, touch: session.touch}
 
-	done := make(chan struct{}, 2)
-	go func() { _, _ = io.Copy(upstreamWriter, clientReader); done <- struct{}{} }()
-	go func() { _, _ = io.Copy(clientWriter, upstreamReader); done <- struct{}{} }()
+	type copyResult struct {
+		destination net.Conn
+		err         error
+	}
+	done := make(chan copyResult, 2)
+	go func() { _, err := io.Copy(upstreamWriter, clientReader); done <- copyResult{upstream, err} }()
+	go func() { _, err := io.Copy(clientWriter, upstreamReader); done <- copyResult{client, err} }()
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -307,9 +328,9 @@ func pumpWithSession(ctx context.Context, session *connectionInfo, client, upstr
 			continue
 		}
 		select {
-		case <-done:
+		case result := <-done:
 			completed++
-			if completed == 1 {
+			if completed == 1 && (result.err != nil || !closeWriteForTunnel(result.destination)) {
 				_ = client.Close()
 				_ = upstream.Close()
 			}
@@ -329,5 +350,25 @@ func pumpWithSession(ctx context.Context, session *connectionInfo, client, upstr
 				_ = upstream.Close()
 			}
 		}
+	}
+}
+
+// Drain the reverse direction after a clean EOF when the underlying adapter
+// supports half-close. Unsupported transports retain the previous full-close
+// behavior; cancellation and gateway timeouts always close both directions.
+func closeWriteForTunnel(conn net.Conn) bool {
+	switch c := conn.(type) {
+	case interface{ CloseWrite() error }:
+		return c.CloseWrite() == nil
+	case *bufferedConn:
+		return closeWriteForTunnel(c.Conn)
+	case *activityConn:
+		return closeWriteForTunnel(c.Conn)
+	case *trafficConn:
+		return closeWriteForTunnel(c.Conn)
+	case *pooledConn:
+		return closeWriteForTunnel(c.Conn)
+	default:
+		return false
 	}
 }

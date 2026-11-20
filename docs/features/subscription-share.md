@@ -147,7 +147,7 @@ For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] 香
 
 ## Karing device limits
 
-New subscriptions default to Karing-only access and one device per share. The administrator can set a limit from 0 to 10000; 0 means unlimited. New shares (including the default link and batch-created shares) inherit the subscription defaults, then maintain independent limits. Changing subscription defaults does not change existing shares. Existing subscriptions and shares remain unrestricted after migration until an administrator opts in.
+New subscriptions default to unrestricted clients and unlimited devices (Karing-only is false and the limit is 0). Administrators can opt in per subscription or share. The administrator can set a limit from 0 to 10000; 0 means unlimited. New shares (including the default link and batch-created shares) inherit the subscription defaults, then maintain independent limits. Changing subscription defaults does not change existing shares. Existing subscriptions and shares remain unrestricted after migration until an administrator opts in.
 
 Create a separate share for each customer and set its annual expiry independently. The first successful download binds a device; subsequent updates with the same ID reuse its slot. A positive limit requires a valid `X-HWID` request header. IP addresses, user agents, models and URL parameters are not device identities. Karing-only shares additionally check the Karing UA. Missing IDs, revoked devices and full limits return HTTP 403 without nodes; database validation failure returns 503.
 
@@ -174,3 +174,21 @@ This controls subscription downloads, not tamper-proof hardware authentication. 
 Real first-import and repeated manual-update requests were verified with Windows Karing 1.2.23+2606: enabling the option sends `X-HWID`, with a stable digest across those requests. The UA begins with `Karing/1.2.23.2606 platform/windows`. Automatic updates, app restarts, upgrades, network changes, backup restoration and physical Android, iOS/iPadOS, macOS, Linux and tvOS clients remain unverified. Simulated requests are not cross-platform validation. Reinstallation or backup restoration that changes the ID requires an administrator-assisted device replacement.
 
 An end-to-end Windows Karing request to the implemented backend successfully downloaded the subscription and registered the device. After administrator revocation, Karing displayed `download profile failed: http statusCode: 403`. The test device was then restored.
+
+## VLESS REALITY compatibility
+
+Clash / mihomo YAML imports preserve `reality-opts.support-x25519mlkem768` through stored VLESS URLs and rebuilt proxies used for subscription output, latency checks, and speed tests. The URL parameter is `support-x25519mlkem768=true` or `false` (`1` / `0` are also accepted on input). Explicit `false` stays distinct from an unspecified value; empty or invalid URL values are treated as unspecified. Plain TLS nodes do not acquire REALITY options from this parameter. In the node field editor, choose `true`, `false`, or the empty selection to restore the upstream default.
+
+VLESS and Trojan share links preserve REALITY `spx` (`spiderX`, crawler initial path) and `pqv` (`mldsa65Verify`, additional ML-DSA-65 certificate verification public key) through parsing, field editing and URL export. The editor exposes `Query.SpiderX` and `Query.Mldsa65Verify`; clearing a field removes its URL parameter. Values are URL-encoded, so crawler paths can include query parameters.
+
+Clash YAML imports map `reality-opts.spider-x` and `reality-opts.mldsa65-verify` to the stored URL, and `/c?client=clash` or `mihomo` maps them back to YAML without losing the values. Nonempty fields are emitted only for REALITY nodes; empty fields are omitted. Trojan REALITY imports also preserve `security=reality`, `pbk` and `sid` through this round trip.
+
+Use `/c?client=v2ray` for Xray clients such as v2rayN and v2rayNG; no separate `xray` client type is needed. Preserving configuration does not add execution support to a core. Current upstream mihomo has no corresponding verifier; the existing internal probe behavior is unchanged. Use a compatible core to execute and verify exported configurations. Surge skips VLESS REALITY nodes with nonempty `pqv` and skips Trojan REALITY nodes; crawler-only `spx` is omitted from Surge output. ML-DSA-65 verification is separate from the `support-x25519mlkem768` key-exchange option.
+
+## VLESS in Surge
+
+`/c?client=surge` exports VLESS for Surge iOS 6.0.0+ / Mac 6.12.0+. Supported transports are TCP/RAW, WebSocket, HTTPUpgrade, gRPC (TLS or REALITY), and XHTTP/SplitHTTP. TLS, REALITY keys, Vision, VLESS Encryption, SNI, ALPN, certificate pinning, transport headers and supported XHTTP extra/XMUX parameters are mapped to native Surge options. Host replacement and the subscription certificate override also apply. Surge uses XUDP automatically.
+
+Nodes with unsupported transports, ECH, TCP header obfuscation, incompatible Vision/REALITY settings or XHTTP `downloadSettings` are skipped, including their proxy group entries. The uTLS `fp` and REALITY `support-x25519mlkem768` options have no Surge equivalent and are omitted; Surge handles its own ClientHello and ML-KEM fallback.
+
+See the [official Surge VLESS reference](https://manual.nssurge.com/policies/vless.html).

@@ -2,8 +2,12 @@ package protocol
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/url"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // TestVlessEncodeDecode 测试 VLESS 编解码完整性
@@ -564,4 +568,392 @@ func TestVlessClashWSHeadersRoundTrip(t *testing.T) {
 	headers := mustMap(t, "Ws_opts headers", out.Ws_opts["headers"])
 	assertEqualString(t, "Host", "abc.com", mustString(t, "Host", headers["Host"]))
 	assertEqualString(t, "User-Agent", "Mozilla/5.0 SublinkPro", mustString(t, "User-Agent", headers["User-Agent"]))
+}
+
+// Exercise the same YAML -> stored URL -> Proxy path used by imports and probes.
+func TestVLESSRealityMLKEMRoundTrip(t *testing.T) {
+	for _, state := range []string{"true", "false", ""} {
+		t.Run("state_"+state, func(t *testing.T) {
+			source := "name: reality\ntype: vless\nserver: example.com\nport: 443\nuuid: 12345678-1234-1234-1234-123456789abc\ntls: true\nclient-fingerprint: chrome\nreality-opts:\n  public-key: test-key\n  short-id: '01234567'\n"
+			if state != "" {
+				source += "  support-x25519mlkem768: " + state + "\n"
+			}
+			var original Proxy
+			if err := yaml.Unmarshal([]byte(source), &original); err != nil {
+				t.Fatal(err)
+			}
+			link := EncodeVLESSURL(ConvertProxyToVless(original))
+			u, err := url.Parse(link)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := u.Query().Get("support-x25519mlkem768"); got != state {
+				t.Fatalf("URL state = %q, want %q", got, state)
+			}
+			rebuilt, err := buildVLESSProxy(Urls{Url: link}, OutputConfig{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, present := rebuilt.Reality_opts["support-x25519mlkem768"]; present != (state != "") || (present && fmt.Sprint(got) != state) {
+				t.Fatalf("rebuilt state = %v, present=%v", got, present)
+			}
+			if rebuilt.Reality_opts["public-key"] != "test-key" || rebuilt.Reality_opts["short-id"] != "01234567" || rebuilt.Client_fingerprint != "chrome" {
+				t.Fatalf("other REALITY fields lost: %+v", rebuilt)
+			}
+			output, err := yaml.Marshal(rebuilt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if state != "" && !strings.Contains(string(output), "support-x25519mlkem768: "+state) {
+				t.Fatalf("YAML lost state: %s", output)
+			}
+		})
+	}
+}
+
+func TestVLESSRealityMLKEMURLValues(t *testing.T) {
+	for _, state := range []string{"true", "false", "1", "0", "", "invalid"} {
+		t.Run(state, func(t *testing.T) {
+			link := "vless://12345678-1234-1234-1234-123456789abc@example.com:443?security=reality&support-x25519mlkem768=" + state
+			decoded, err := DecodeVLESSURL(link)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantPresent := state != "" && state != "invalid"
+			if (decoded.Query.SupportX25519MLKEM768 != nil) != wantPresent {
+				t.Fatalf("unexpected optional bool: %v", decoded.Query.SupportX25519MLKEM768)
+			}
+			if wantPresent && *decoded.Query.SupportX25519MLKEM768 != (state == "true" || state == "1") {
+				t.Fatal("wrong boolean value")
+			}
+			for _, security := range []string{"tls", "none"} {
+				proxy, err := buildVLESSProxy(Urls{Url: strings.Replace(link, "security=reality", "security="+security, 1)}, OutputConfig{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(proxy.Reality_opts) != 0 {
+					t.Fatalf("%s acquired REALITY options: %v", security, proxy.Reality_opts)
+				}
+			}
+		})
+	}
+}
+
+func TestVLESSRealityMLKEMRawEditing(t *testing.T) {
+	const field = "Query.SupportX25519MLKEM768"
+	link := "vless://12345678-1234-1234-1234-123456789abc@example.com:443?security=reality"
+	for _, state := range []string{`true`, `false`, `"true"`, `"false"`, `""`, `null`} {
+		updated, err := UpdateNodeLinkFields(link, `{"`+field+`":`+state+`}`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		parsed, err := ParseNodeLink(updated)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := strings.Trim(state, `"`)
+		if state == "null" {
+			want = ""
+		}
+		if got, ok := parsed.Fields[field]; !ok || fmt.Sprint(got) != want {
+			t.Fatalf("raw %s = %v, present=%v", state, got, ok)
+		}
+		decoded, err := DecodeVLESSURL(updated)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := GetProtocolFieldValue(decoded, field); got != want {
+			t.Fatalf("field value = %q, want %q", got, want)
+		}
+		link = updated
+	}
+	if _, err := UpdateNodeLinkFields(link, `{"`+field+`":"invalid"}`); err == nil {
+		t.Fatal("expected invalid boolean error")
+	}
+}
+
+func TestVLESSSurgeTransports(t *testing.T) {
+	for _, tc := range []struct {
+		name, query string
+		want        []string
+	}{
+		{"raw", "type=raw", []string{"vless, 1.2.3.4, 443", "username=550e8400-e29b-41d4-a716-446655440000"}},
+		{"tls", "security=tls&allowInsecure=1&alpn=h2,http/1.1&sni=sni.example.com", []string{"tls=true", "skip-cert-verify=true", `alpn="h2,http/1.1"`, "sni=sni.example.com"}},
+		{"reality", "security=reality&pbk=public-key&sid=0123&flow=xtls-rprx-vision", []string{"reality-public-key=public-key", "reality-short-id=0123", "flow=xtls-rprx-vision"}},
+		{"ws", "type=ws&security=tls&path=/ws&host=cdn.example.com&headers=" + url.QueryEscape(`{"User-Agent":"test"}`), []string{"ws=true", "ws-path=/ws", "ws-headers=Host:cdn.example.com|User-Agent:test"}},
+		{"upgrade", "type=httpupgrade&path=/up", []string{"ws=true", "ws-http-upgrade=true", "ws-path=/up"}},
+		{"upgrade flag", "type=ws&httpUpgrade=1", []string{"ws-http-upgrade=true"}},
+		{"grpc", "type=grpc&security=tls&serviceName=svc&mode=multi&authority=grpc.example.com", []string{"grpc=true", "grpc-service-name=svc", "grpc-mode=multi", "grpc-authority=grpc.example.com"}},
+		{"xhttp", "type=xhttp&security=reality&pbk=key&path=/x&host=cdn.example.com&mode=stream-one&extra=" + url.QueryEscape(`{"xPaddingBytes":"10-20","noGRPCHeader":false,"xmux":{"maxConcurrency":8},"headers":{"X-Token":"abc"}}`), []string{"xhttp=true", "xhttp-path=/x", "xhttp-host=cdn.example.com", "xhttp-mode=stream-one", "xhttp-padding-bytes=10-20", "xhttp-no-grpc-header=false", "xhttp-xmux-max-concurrency=8", "xhttp-headers=X-Token:abc"}},
+		{"encryption", "type=splithttp&encryption=mlkem768x25519plus.native.0rtt.key&flow=xtls-rprx-vision", []string{"xhttp=true", "encryption=mlkem768x25519plus.native.0rtt.key", "flow=xtls-rprx-vision"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			link := "vless://550e8400-e29b-41d4-a716-446655440000@example.com:443?" + tc.query + "#test"
+			p, ok := detectProtocol(link).(SurgeCapable)
+			if !ok {
+				t.Fatal("VLESS must advertise Surge capability")
+			}
+			line, name, err := p.ToSurgeLine(link, OutputConfig{ReplaceServerWithHost: true, HostMap: map[string]string{"example.com": "1.2.3.4"}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if name != "test" {
+				t.Fatalf("group name = %q", name)
+			}
+			for _, want := range tc.want {
+				if !strings.Contains(line, want) {
+					t.Errorf("missing %q in %s", want, line)
+				}
+			}
+			if strings.Contains(line, "udp-relay=") || strings.Contains(line, "vmess-aead") {
+				t.Fatalf("unexpected option: %s", line)
+			}
+		})
+	}
+}
+
+func TestVLESSSurgeRejectsUnsupportedSettings(t *testing.T) {
+	for _, query := range []string{
+		"type=quic", "type=h2", "type=http", "security=xtls", "ech=config",
+		"security=reality", "type=ws&security=reality&pbk=key", "type=grpc",
+		"type=grpc&security=tls&flow=xtls-rprx-vision", "flow=unknown", "flow=xtls-rprx-vision",
+		"type=ws&security=tls&flow=xtls-rprx-vision", "headerType=http",
+		"type=xhttp&mode=unknown", "type=xhttp&extra=invalid", "type=ws&headers=invalid",
+		"type=xhttp&extra=" + url.QueryEscape(`{"downloadSettings":{"address":"other.example.com"}}`),
+		"security=tls&sni=example.com%0Areject=direct",
+	} {
+		t.Run(query, func(t *testing.T) {
+			line, name, err := buildVLESSSurgeLine("vless://550e8400-e29b-41d4-a716-446655440000@example.com:443?"+query, OutputConfig{})
+			if err == nil || line != "" || name != "" {
+				t.Fatalf("expected rejection, got %q, %q, %v", line, name, err)
+			}
+		})
+	}
+}
+
+func TestVLESSSurgeCertificateOverride(t *testing.T) {
+	line, _, err := buildVLESSSurgeLine("vless://550e8400-e29b-41d4-a716-446655440000@[2001:db8::1]:443?security=tls", OutputConfig{Cert: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(line, "skip-cert-verify=true") || !strings.Contains(line, "2001:db8::1, 443") {
+		t.Fatal(line)
+	}
+}
+
+// REALITY extensions must survive editing without being confused with transport paths.
+func TestVLESSRealityExtensionsRoundTrip(t *testing.T) {
+	const base = "vless://12345678-1234-1234-1234-123456789abc@example.com:443?security=reality&type=tcp&path=%2Ftransport"
+	for _, query := range []string{"", "&spx=&pqv=", "&spx=%2Fsearch%3Fq%3Da%2Bb%26lang%3D%E4%B8%AD%E6%96%87&pqv=verify_-key"} {
+		t.Run(query, func(t *testing.T) {
+			link := base + query
+			original, err := url.Parse(link)
+			if err != nil {
+				t.Fatal(err)
+			}
+			decoded, err := DecodeVLESSURL(link)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if decoded.Query.SpiderX != original.Query().Get("spx") || decoded.Query.Mldsa65Verify != original.Query().Get("pqv") {
+				t.Fatalf("lost REALITY extensions: %+v", decoded.Query)
+			}
+			updated, err := UpdateNodeLinkFields(link, `{"Name":"renamed"}`)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rebuilt, err := url.Parse(updated)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, key := range []string{"spx", "pqv", "path"} {
+				if rebuilt.Query().Get(key) != original.Query().Get(key) {
+					t.Fatalf("%s changed on edit: %s", key, updated)
+				}
+			}
+			parsed, err := ParseNodeLink(updated)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for field, want := range map[string]string{"Query.SpiderX": decoded.Query.SpiderX, "Query.Mldsa65Verify": decoded.Query.Mldsa65Verify} {
+				if got, ok := parsed.Fields[field]; !ok || fmt.Sprint(got) != want {
+					t.Fatalf("%s = %v, present=%v, want %q", field, got, ok, want)
+				}
+			}
+		})
+	}
+	link, err := UpdateNodeLinkFields(base, `{"Query.SpiderX":"/crawl?x=1&y=2","Query.Mldsa65Verify":"verify_-key"}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodeVLESSURL(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Query.SpiderX != "/crawl?x=1&y=2" || decoded.Query.Mldsa65Verify != "verify_-key" {
+		t.Fatalf("extensions not editable: %+v", decoded.Query)
+	}
+	cleared, err := UpdateNodeLinkFields(link, `{"Query.SpiderX":"","Query.Mldsa65Verify":""}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := url.Parse(cleared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Query().Has("spx") || u.Query().Has("pqv") {
+		t.Fatalf("cleared extensions still emitted: %s", cleared)
+	}
+}
+
+func TestVLESSRealityExtensionsYAMLImport(t *testing.T) {
+	var proxy Proxy
+	err := yaml.Unmarshal([]byte("name: reality\ntype: vless\nserver: example.com\nport: 443\nuuid: 12345678-1234-1234-1234-123456789abc\nreality-opts:\n  public-key: test-key\n  short-id: '0123'\n  spider-x: /crawl\n  mldsa65-verify: verify_-key\n"), &proxy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	link, err := EncodeProxyLink(proxy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodeVLESSURL(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Query.Security != "reality" || decoded.Query.SpiderX != "/crawl" || decoded.Query.Mldsa65Verify != "verify_-key" {
+		t.Fatalf("lost imported extensions: %+v", decoded.Query)
+	}
+}
+
+func TestVLESSRealityVerificationUnsupportedTargets(t *testing.T) {
+	const base = "vless://12345678-1234-1234-1234-123456789abc@example.com:443?type=tcp&pbk=test-key&sid=0123"
+	for _, tc := range []struct {
+		name, query string
+		reject      bool
+	}{
+		{"verification", "&security=reality&pqv=verify_-key", true},
+		{"empty verification", "&security=reality&pqv=", false},
+		{"crawler only", "&security=reality&spx=%2Fcrawl", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := LinkToProxy(Urls{Url: base + tc.query}, OutputConfig{})
+			if err != nil {
+				t.Fatalf("Clash conversion must preserve extensions: %v", err)
+			}
+			_, _, err = buildVLESSSurgeLine(base+tc.query, OutputConfig{})
+			if (err != nil) != tc.reject {
+				t.Fatalf("surge error = %v, reject=%v", err, tc.reject)
+			}
+			if !SupportsClientForLink(base+tc.query, ClientV2ray) {
+				t.Fatal("v2ray must keep REALITY extensions")
+			}
+		})
+	}
+}
+
+func TestRealityExtensionsClashRoundTrip(t *testing.T) {
+	for _, scheme := range []string{"vless", "trojan"} {
+		for _, state := range []string{"populated", "empty", "absent"} {
+			t.Run(scheme+"/"+state, func(t *testing.T) {
+				user := "password"
+				if scheme == "vless" {
+					user = "12345678-1234-1234-1234-123456789abc"
+				}
+				link := scheme + "://" + user + "@example.com:443?security=reality&type=tcp&pbk=test-key&sid=0123&fp=chrome&sni=cover.example.com"
+				if state == "populated" {
+					link += "&spx=%2Fcrawl%3Fq%3Da%2Bb%26lang%3D%E4%B8%AD%E6%96%87&pqv=verify_-key"
+				}
+				if state == "empty" {
+					link += "&spx=&pqv="
+				}
+				edited, err := UpdateNodeLinkFields(link, `{"Name":"edited"}`)
+				if err != nil {
+					t.Fatal(err)
+				}
+				proxy, err := LinkToProxy(Urls{Url: edited}, OutputConfig{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				data, err := yaml.Marshal(proxy)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var imported Proxy
+				if err := yaml.Unmarshal(data, &imported); err != nil {
+					t.Fatal(err)
+				}
+				for key, want := range map[string]string{"public-key": "test-key", "short-id": "0123"} {
+					if imported.Reality_opts[key] != want {
+						t.Fatalf("%s lost: %+v", key, imported.Reality_opts)
+					}
+				}
+				for key, want := range map[string]string{"spider-x": "/crawl?q=a+b&lang=中文", "mldsa65-verify": "verify_-key"} {
+					value, present := imported.Reality_opts[key]
+					if present != (state == "populated") || (present && value != want) {
+						t.Fatalf("%s=%v present=%v state=%s", key, value, present, state)
+					}
+				}
+				rebuilt, err := EncodeProxyLink(imported)
+				if err != nil {
+					t.Fatal(err)
+				}
+				u, err := url.Parse(rebuilt)
+				if err != nil {
+					t.Fatal(err)
+				}
+				original, err := url.Parse(edited)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, key := range []string{"security", "pbk", "sid", "spx", "pqv", "sni", "fp"} {
+					if u.Query().Get(key) != original.Query().Get(key) {
+						t.Fatalf("%s changed through Clash: %s", key, rebuilt)
+					}
+				}
+				// Removing fields after a YAML import must remove them from the next YAML export.
+				cleared, err := UpdateNodeLinkFields(rebuilt, `{"Query.SpiderX":"","Query.Mldsa65Verify":""}`)
+				if err != nil {
+					t.Fatal(err)
+				}
+				cleanProxy, err := LinkToProxy(Urls{Url: cleared}, OutputConfig{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, ok := cleanProxy.Reality_opts["spider-x"]; ok {
+					t.Fatal("cleared crawler reappeared")
+				}
+				if _, ok := cleanProxy.Reality_opts["mldsa65-verify"]; ok {
+					t.Fatal("cleared verifier reappeared")
+				}
+			})
+		}
+	}
+}
+
+func TestRealityExtensionsDoNotEnableRealityOnTLS(t *testing.T) {
+	for _, link := range []string{
+		"vless://12345678-1234-1234-1234-123456789abc@example.com:443?security=tls&spx=%2Fcrawl&pqv=verify_-key",
+		"trojan://password@example.com:443?security=tls&spx=%2Fcrawl&pqv=verify_-key",
+	} {
+		proxy, err := LinkToProxy(Urls{Url: link}, OutputConfig{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(proxy.Reality_opts) != 0 {
+			t.Fatalf("plain TLS acquired REALITY options: %+v", proxy.Reality_opts)
+		}
+	}
+}
+
+func TestTrojanSurgeDoesNotDowngradeReality(t *testing.T) {
+	for _, security := range []string{"tls", "reality"} {
+		line, _, err := buildTrojanSurgeLine("trojan://password@example.com:443?security="+security+"&pbk=test-key&spx=%2Fcrawl&pqv=verify_-key", OutputConfig{})
+		if security == "reality" {
+			if err == nil || line != "" {
+				t.Fatalf("REALITY silently downgraded to TLS: %q, %v", line, err)
+			}
+		} else if err != nil || line == "" {
+			t.Fatalf("ordinary Trojan TLS rejected: %v", err)
+		}
+	}
 }

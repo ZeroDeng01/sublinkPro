@@ -6,8 +6,10 @@ import (
 	"sublink/cache"
 	"sublink/database"
 	"sublink/utils"
+	"sync"
 	"time"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -67,8 +69,11 @@ type TaskFilter struct {
 	Trigger string // 触发方式过滤
 }
 
-// taskCache 任务缓存（仅缓存最近的任务）
+// taskCache 全量缓存数据库任务及运行期间写入的任务，随数据库删除同步移除。
 var taskCache *cache.MapCache[string, Task]
+
+// 串行化持久化与缓存修改，避免清理后并发更新将已删除任务重新写回缓存。
+var taskCacheMu sync.Mutex
 
 func init() {
 	taskCache = cache.NewMapCache(func(t Task) string { return t.ID })
@@ -78,11 +83,11 @@ func init() {
 
 // InitTaskCache 初始化任务缓存
 func InitTaskCache() error {
+	taskCacheMu.Lock()
+	defer taskCacheMu.Unlock()
 	utils.Info("开始加载任务到缓存")
 	var tasks []Task
-	// 只加载最近7天的任务到缓存
-	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
-	if err := database.DB.Where("created_at > ?", sevenDaysAgo).Find(&tasks).Error; err != nil {
+	if err := database.DB.Find(&tasks).Error; err != nil {
 		return err
 	}
 
@@ -103,6 +108,8 @@ func GenerateTaskID(taskType TaskType) string {
 
 // Create 创建任务 (Write-Through)
 func (t *Task) Create() error {
+	taskCacheMu.Lock()
+	defer taskCacheMu.Unlock()
 	if t.ID == "" {
 		t.ID = GenerateTaskID(t.Type)
 	}
@@ -120,11 +127,16 @@ func (t *Task) Create() error {
 // Update 更新任务 (Write-Through)
 // 明确指定需要更新的字段以确保 Status 等字段能正确更新
 func (t *Task) Update() error {
-	err := database.DB.Model(t).Select(
+	taskCacheMu.Lock()
+	defer taskCacheMu.Unlock()
+	result := database.DB.Model(t).Select(
 		"Status", "Progress", "Total", "CurrentItem", "Message", "Result", "CompletedAt", "UpdatedAt",
-	).Updates(t).Error
-	if err != nil {
-		return err
+	).Updates(t)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil
 	}
 	taskCache.Set(t.ID, *t)
 	return nil
@@ -134,11 +146,16 @@ func (t *Task) Update() error {
 // 仅在任务结束时调用（完成/失败/取消），一次性同步所有终态字段
 // 包括：Status, Progress, Total, CurrentItem, Message, Result, CompletedAt
 func (t *Task) SyncFinalStatus() error {
-	err := database.DB.Model(t).Select(
+	taskCacheMu.Lock()
+	defer taskCacheMu.Unlock()
+	result := database.DB.Model(t).Select(
 		"Status", "Progress", "Total", "CurrentItem", "Message", "Result", "CompletedAt", "UpdatedAt",
-	).Updates(t).Error
-	if err != nil {
-		return err
+	).Updates(t)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil
 	}
 	taskCache.Set(t.ID, *t)
 	return nil
@@ -146,14 +163,19 @@ func (t *Task) SyncFinalStatus() error {
 
 // UpdateStatus 更新任务状态
 func (t *Task) UpdateStatus(status TaskStatus, message string) error {
+	taskCacheMu.Lock()
+	defer taskCacheMu.Unlock()
 	t.Status = status
 	t.Message = message
 	if status == TaskStatusCompleted || status == TaskStatusCancelled || status == TaskStatusError {
 		t.CompletedAt = new(time.Now())
 	}
-	err := database.DB.Model(t).Select("Status", "Message", "CompletedAt", "UpdatedAt").Updates(t).Error
-	if err != nil {
-		return err
+	result := database.DB.Model(t).Select("Status", "Message", "CompletedAt", "UpdatedAt").Updates(t)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil
 	}
 	taskCache.Set(t.ID, *t)
 	return nil
@@ -161,6 +183,8 @@ func (t *Task) UpdateStatus(status TaskStatus, message string) error {
 
 // SetResult 设置任务结果
 func (t *Task) SetResult(result any) error {
+	taskCacheMu.Lock()
+	defer taskCacheMu.Unlock()
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return err
@@ -171,6 +195,8 @@ func (t *Task) SetResult(result any) error {
 
 // GetByID 根据ID获取任务
 func (t *Task) GetByID(id string) error {
+	taskCacheMu.Lock()
+	defer taskCacheMu.Unlock()
 	if cached, ok := taskCache.Get(id); ok {
 		*t = cached
 		return nil
@@ -239,20 +265,26 @@ func GetPendingTasks() ([]Task, error) {
 
 // CleanupOldTasks 清理旧任务
 func CleanupOldTasks(before time.Time) (int64, error) {
-	result := database.DB.Where("created_at < ? AND status IN ?", before, []TaskStatus{TaskStatusCompleted, TaskStatusCancelled, TaskStatusError}).Delete(&Task{})
-	if result.Error != nil {
-		return 0, result.Error
+	taskCacheMu.Lock()
+	defer taskCacheMu.Unlock()
+	var ids []string
+	var affected int64
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		query := tx.Model(&Task{}).Where("created_at < ? AND status IN ?", before, []TaskStatus{TaskStatusCompleted, TaskStatusCancelled, TaskStatusError})
+		if err := query.Pluck("id", &ids).Error; err != nil {
+			return err
+		}
+		result := query.Delete(&Task{})
+		affected = result.RowsAffected
+		return result.Error
+	})
+	if err != nil {
+		return 0, err
 	}
-
-	// 只有当清理范围与缓存范围（7天内）有交集时才刷新缓存
-	// 缓存只保存最近7天的任务，如果清理的是7天之前的任务，则无需刷新
-	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
-	if result.RowsAffected > 0 && before.After(sevenDaysAgo) {
-		go func() {
-			_ = InitTaskCache()
-		}()
+	for _, id := range ids {
+		taskCache.Delete(id)
 	}
-	return result.RowsAffected, nil
+	return affected, nil
 }
 
 // GetTaskStats 获取任务统计

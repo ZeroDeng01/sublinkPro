@@ -753,6 +753,13 @@ func GetProtocolFieldValue(protoObj any, fieldPath string) string {
 		}
 	}
 
+	if v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return ""
+		}
+		v = v.Elem()
+	}
+
 	switch v.Kind() {
 	case reflect.String:
 		return v.String()

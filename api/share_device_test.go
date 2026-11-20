@@ -268,3 +268,55 @@ func TestDeviceProtectedSubscriptionRejectsDuplicateHWID(t *testing.T) {
 		t.Fatal("ambiguous HWID allocated a device slot")
 	}
 }
+
+func TestSubscriptionCreateDeviceLimitsAreOptIn(t *testing.T) {
+	setupClientsAPITestDB(t)
+	for _, tc := range []struct {
+		name      string
+		values    url.Values
+		wantOnly  bool
+		wantLimit int
+	}{
+		{"default-unrestricted", url.Values{}, false, 0},
+		{"explicit-device-limit", url.Values{"DefaultMaxDevices": {"1"}}, false, 1},
+		{"explicit-karing-only", url.Values{"DefaultKaringOnly": {"true"}, "DefaultMaxDevices": {"2"}}, true, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.values.Set("name", tc.name)
+			tc.values.Set("groups", "device-defaults")
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/subcription/add", strings.NewReader(tc.values.Encode()))
+			c.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			SubAdd(c)
+			var sub models.Subcription
+			if err := database.DB.Where("name = ?", tc.name).First(&sub).Error; err != nil {
+				t.Fatalf("create failed: %v response=%s", err, w.Body)
+			}
+			if sub.DefaultKaringOnly != tc.wantOnly || sub.DefaultMaxDevices != tc.wantLimit {
+				t.Fatalf("got default policy %v/%d, want %v/%d", sub.DefaultKaringOnly, sub.DefaultMaxDevices, tc.wantOnly, tc.wantLimit)
+			}
+			shares := models.GetSharesBySubscriptionID(sub.ID)
+			if len(shares) != 1 || shares[0].KaringOnly != tc.wantOnly || shares[0].MaxDevices != tc.wantLimit {
+				t.Fatal("default share must inherit explicitly chosen policy")
+			}
+		})
+	}
+}
+
+func TestDeviceLimitDoesNotRequireKaringWhenPolicyIsOff(t *testing.T) {
+	setupClientsAPITestDB(t)
+	createClientSubscriptionFixture(t, "", "", "generic-hwid", "generic-hwid-token", "private-node")
+	share, err := models.GetSubscriptionShareByToken("generic-hwid-token")
+	if err != nil {
+		t.Fatal(err)
+	}
+	off, limit := false, 1
+	if err := share.UpdateWithDevicePolicy(&off, &limit); err != nil {
+		t.Fatal(err)
+	}
+	w := deviceRequest("GET", "/c/?token="+share.Token+"&client=v2ray", "generic-device", "GenericClient/1.0")
+	if w.Code != http.StatusOK {
+		t.Fatalf("optional UA check denied generic client: %d %s", w.Code, w.Body)
+	}
+}

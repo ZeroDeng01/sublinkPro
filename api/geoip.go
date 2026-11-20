@@ -241,6 +241,7 @@ func downloadGeoIPFile(url string, useProxy bool, proxyLink string) error {
 	if err != nil {
 		return fmt.Errorf("创建 HTTP 客户端失败: %v", err)
 	}
+	defer utils.CloseHTTPClient(client)
 
 	// 发起请求
 	utils.Info("开始下载 GeoIP 数据库: %s", url)
@@ -449,6 +450,7 @@ func downloadGeoIPFileWithProgress(url string, useProxy bool, proxyLink string, 
 	if err != nil {
 		return fmt.Errorf("创建 HTTP 客户端失败: %v", err)
 	}
+	defer utils.CloseHTTPClient(client)
 
 	// 发起请求
 	if showConsoleProgress {

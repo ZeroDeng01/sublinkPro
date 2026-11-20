@@ -433,6 +433,7 @@ export default function Socks5Settings({ showMessage, onChanged }) {
                 <TextField
                   fullWidth
                   label={t('settings.socks5.form.username')}
+                  helperText={form.username.includes(':') ? t('settings.socks5.form.httpUsernameWarning') : ''}
                   value={form.username}
                   onChange={(event) => setForm((prev) => ({ ...prev, username: event.target.value }))}
                 />

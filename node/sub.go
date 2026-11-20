@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net"
 	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
+	"sublink/internal/yamlutil"
 	"sublink/models"
 	"sublink/node/protocol"
 	"sublink/services/mihomo"
@@ -21,7 +21,6 @@ import (
 	"sublink/utils"
 	"time"
 
-	"github.com/metacubex/mihomo/constant"
 	"gopkg.in/yaml.v3"
 )
 
@@ -140,6 +139,16 @@ type ClashProxyGroup struct {
 	Use                 []string `yaml:"use"`
 	IncludeAll          bool     `yaml:"include-all"`
 	IncludeAllProviders bool     `yaml:"include-all-providers"`
+}
+
+func (g *ClashProxyGroup) UnmarshalYAML(value *yaml.Node) error {
+	type groupAlias ClashProxyGroup
+	var decoded groupAlias
+	if err := yamlutil.DecodeWithStringBools(value, &decoded); err != nil {
+		return err
+	}
+	*g = ClashProxyGroup(decoded)
+	return nil
 }
 
 type namedClashProxyProvider struct {
@@ -515,12 +524,7 @@ func LoadClashConfigFromURLWithReporter(ctx context.Context, id int, urlStr stri
 	}
 
 	// 创建 HTTP 客户端，配置 TLS
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipTLSVerify},
-		},
-	}
+	client := utils.NewHTTPClientWithAdapter(nil, 30*time.Second, &tls.Config{InsecureSkipVerify: skipTLSVerify})
 
 	if downloadWithProxy {
 		var proxyNodeLink string
@@ -546,36 +550,15 @@ func LoadClashConfigFromURLWithReporter(ctx context.Context, id int, urlStr stri
 			} else {
 				utils.Info("使用 mihomo 内核代理下载订阅")
 				// 创建自定义 Transport，使用 mihomo adapter 进行代理连接
-				client.Transport = &http.Transport{
-					DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-						// 解析地址获取主机和端口
-						host, portStr, splitErr := net.SplitHostPort(addr)
-						if splitErr != nil {
-							return nil, fmt.Errorf("split host port error: %v", splitErr)
-						}
-
-						portUint, parseErr := strconv.ParseUint(portStr, 10, 16)
-						if parseErr != nil {
-							return nil, fmt.Errorf("invalid port: %v", parseErr)
-						}
-
-						// 创建 mihomo metadata
-						metadata := &constant.Metadata{
-							Host:    host,
-							DstPort: uint16(portUint),
-							Type:    constant.HTTP,
-						}
-
-						// 使用 mihomo adapter 建立连接
-						return proxyAdapter.DialContext(ctx, metadata)
-					},
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: skipTLSVerify},
-				}
+				defer func() { _ = proxyAdapter.Close() }()
+				client = utils.NewHTTPClientWithAdapter(proxyAdapter, 30*time.Second, &tls.Config{InsecureSkipVerify: skipTLSVerify})
 			}
 		} else {
 			utils.Warn("未找到可用代理，将直接下载")
 		}
 	}
+
+	defer utils.CloseHTTPClient(client)
 
 	// 创建请求并设置 User-Agent（使用传入的 context）
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
