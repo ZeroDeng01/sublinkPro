@@ -546,6 +546,8 @@ Base: `/api/v1/airports` (all write bodies are JSON)
 - **POST** `/airports/{id}/pull` — pull one now
 - **POST** `/airports/{id}/refresh-usage`
 
+Pull endpoints enqueue a task. A partial upstream response can import usable entries while retaining unmatched existing nodes, and the task result identifies the partial refresh. A failed database write rolls the refresh back. See [airport subscription management](../../docs/features/airport.md) for node preservation behavior.
+
 Country-fill fields apply during airport pulls and use Country Rules against upstream node names:
 
 - `autoFillCountry`: fills the country code for newly imported nodes whose country is empty.
