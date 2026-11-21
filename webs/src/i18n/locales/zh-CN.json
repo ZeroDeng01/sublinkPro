@@ -2926,6 +2926,8 @@
         "deleteError": "批量删除失败",
         "updateSuccess": "批量更新成功",
         "updateError": "批量更新失败",
+        "keepUnchanged": "保持原值",
+        "partialResult": "已更新 {{success}} 条分享，{{failed}} 条失败。仅保留失败条目供重试。",
         "preview": "预览",
         "totalCount": "总数",
         "nameConflict": "以下名称已存在",
@@ -3117,12 +3119,12 @@
       }
     },
     "devices": {
-      "karingOnly": "仅允许 Karing",
       "defaultLimit": "新分享默认设备上限",
-      "limit": "设备数量上限",
+      "limit": "分享链接设备限额",
+      "changeLimit": "修改设备限额",
       "limitHelp": "请输入 0–10000 的整数；0 表示不限设备数量。",
-      "defaultsHelp": "仅影响新创建的分享链接。每个客户独立计数，已有分享不会随默认值改变。",
-      "importHelp": "设置设备数量上限后，客户端需发送 X-HWID（Karing 可在添加或编辑配置时开启）；仅开启“仅允许 Karing”时才校验 Karing UA。首次成功下载自动绑定设备，请勿提前转发未使用的分享链接。",
+      "defaultsHelp": "仅影响新创建的分享链接。每条分享独立计数，已有分享不会随默认值改变。",
+      "importHelp": "设置正数设备限额后，客户端需发送 X-HWID。请开启客户端的设备标识选项，例如 Karing 的 X-HWID 开关。首次成功下载自动绑定；未绑定的链接提前转发可能被别人抢占名额。",
       "scopeHelp": "此限制控制订阅下载，不保证阻止复制节点或伪造设备标识。撤销不影响已经下载的节点配置。",
       "manage": "管理设备",
       "failed": "设备操作失败",
@@ -3139,8 +3141,8 @@
       "reset": "全部换机重置",
       "resetConfirm": "将撤销所有已登记设备并更换分享链接。原设备不能重新抢占；请将新链接交付给客户的新设备。",
       "bound": "设备 {{count}} / {{limit}}",
-      "batch": "批量设置设备限制",
-      "batchHelp": "将为选中的分享分别设置设备上限；不会合并客户的设备名额。"
+      "batch": "批量设置分享链接设备限额",
+      "batchHelp": "默认保持原值，请明确选择要修改的设置。每条分享独立计算设备限额，名额不共享。"
     }
   },
   "hosts": {

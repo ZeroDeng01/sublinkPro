@@ -2926,6 +2926,8 @@
         "deleteError": "Batch delete failed",
         "updateSuccess": "Batch updated successfully",
         "updateError": "Batch update failed",
+        "keepUnchanged": "Keep unchanged",
+        "partialResult": "{{success}} shares updated; {{failed}} failed. Only failed shares remain selected for retry.",
         "preview": "Preview",
         "totalCount": "Total",
         "nameConflict": "The following names already exist",
@@ -3117,12 +3119,12 @@
       }
     },
     "devices": {
-      "karingOnly": "Karing only",
       "defaultLimit": "Default device limit for new shares",
-      "limit": "Device limit",
+      "limit": "Share link device limit",
+      "changeLimit": "Change device limit",
       "limitHelp": "Enter an integer from 0 to 10000; 0 means unlimited.",
-      "defaultsHelp": "Applies only to new shares. Each customer has separate slots; existing shares keep their settings.",
-      "importHelp": "A positive device limit requires X-HWID (enable it when adding or editing a profile in Karing). A Karing UA is required only when Karing-only access is enabled. The first successful download binds the device; avoid forwarding unused share links.",
+      "defaultsHelp": "Applies only to new shares. Each share has separate slots; existing shares keep their settings.",
+      "importHelp": "A positive device limit requires a client that sends X-HWID. Enable device identification in the client, such as the X-HWID option in Karing. The first successful download binds the device; forwarding an unused link may let someone else claim a slot.",
       "scopeHelp": "This limits subscription downloads, not copied nodes or forged device IDs. Revoking a device does not invalidate previously downloaded node credentials.",
       "manage": "Manage devices",
       "failed": "Device operation failed",
@@ -3139,8 +3141,8 @@
       "reset": "Reset all devices",
       "resetConfirm": "Revoke every registered device and rotate the share link? Old IDs remain revoked. Deliver the new link to the customer’s new device.",
       "bound": "Devices {{count}} / {{limit}}",
-      "batch": "Batch device limits",
-      "batchHelp": "Set a separate device limit on each selected share; customer slots are not pooled."
+      "batch": "Batch share link device limits",
+      "batchHelp": "Settings stay unchanged until you choose a change. Each selected share has its own device limit; slots are not pooled."
     }
   },
   "hosts": {

@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,7 +19,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 const subscriptionNameContextKey = "resolvedSubscriptionName"
@@ -50,6 +48,7 @@ type preparedClientResponse struct {
 	Subscription     models.Subcription
 	SubName          string
 	ShareID          int
+	DeviceLimited    bool
 	FallbackName     string
 	FallbackIdentity fallbackIdentityPolicy
 }
@@ -145,7 +144,11 @@ func GetClient(c *gin.Context) {
 	}
 	c.Set("shareID", prepared.ShareID)
 	if prepared.ShareID > 0 && prepared.Mode == clientResponseNormal {
-		dispatchDeviceCheckedResponse(c, prepared, strings.ToLower(token))
+		if prepared.DeviceLimited {
+			dispatchDeviceCheckedResponse(c, prepared, strings.ToLower(token))
+		} else {
+			dispatchUnlimitedShareResponse(c, prepared, strings.ToLower(token))
+		}
 		return
 	}
 	dispatchPreparedClientResponse(c, prepared)
@@ -154,7 +157,7 @@ func GetClient(c *gin.Context) {
 func prepareClientResponse(c *gin.Context, clientType, token string) (preparedClientResponse, bool) {
 	share, err := models.GetSubscriptionShareByToken(token)
 	if err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
+		if !models.IsShareNotFoundError(err) {
 			writeShareAccessError(c, err)
 			return preparedClientResponse{}, false
 		}
@@ -164,7 +167,7 @@ func prepareClientResponse(c *gin.Context, clientType, token string) (preparedCl
 
 	if share.IsExpired() {
 		utils.Warn("分享链接已过期")
-		if share.KaringOnly || share.MaxDevices > 0 {
+		if share.MaxDevices > 0 {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"code": "share_unavailable", "msg": "分享已失效或已禁用"})
 			return preparedClientResponse{}, false
 		}
@@ -208,6 +211,7 @@ func prepareClientResponse(c *gin.Context, clientType, token string) (preparedCl
 	if !ok {
 		return preparedClientResponse{}, false
 	}
+	prepared.DeviceLimited = share.MaxDevices > 0
 	return prepared, true
 }
 

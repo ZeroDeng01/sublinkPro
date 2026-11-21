@@ -1,10 +1,13 @@
 package models
 
 import (
+	"database/sql"
 	"encoding/json"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"sublink/cache"
 	"sublink/database"
@@ -145,6 +148,116 @@ func setupSubcriptionCopyTestDB(t *testing.T) {
 		chainRuleCache = oldChainRuleCache
 		testutil.CloseDB(t, db)
 	})
+}
+
+func TestSubcriptionDeleteDoesNotResurrectSharesDuringCachePublication(t *testing.T) {
+	for _, publication := range []string{"refresh", "reload"} {
+		t.Run(publication, func(t *testing.T) {
+			setupSubcriptionCopyTestDB(t)
+			sub := &Subcription{Name: "delete-cache-publication-" + publication}
+			if err := sub.Add(); err != nil {
+				t.Fatal(err)
+			}
+			share := &SubscriptionShare{SubscriptionID: sub.ID, Enabled: true}
+			if err := share.Add(); err != nil {
+				t.Fatal(err)
+			}
+
+			readSnapshot := make(chan struct{})
+			resumePublication := make(chan struct{})
+			var pauseOnce, resumeOnce sync.Once
+			resume := func() { resumeOnce.Do(func() { close(resumePublication) }) }
+			defer resume()
+			callback := "test:pause_share_cache_publication"
+			if err := database.DB.Callback().Query().After("gorm:query").Register(callback, func(tx *gorm.DB) {
+				if _, inTransaction := tx.Statement.ConnPool.(*sql.Tx); inTransaction {
+					return
+				}
+				matches := false
+				switch loaded := tx.Statement.Dest.(type) {
+				case *SubscriptionShare:
+					matches = publication == "refresh" && loaded.ID == share.ID
+				case *[]SubscriptionShare:
+					matches = publication == "reload" && len(*loaded) == 1 && (*loaded)[0].ID == share.ID
+				}
+				if matches {
+					pauseOnce.Do(func() {
+						close(readSnapshot)
+						<-resumePublication
+					})
+				}
+			}); err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := database.DB.Callback().Query().Remove(callback); err != nil {
+					t.Error(err)
+				}
+			}()
+
+			published := make(chan error, 1)
+			go func() {
+				if publication == "reload" {
+					published <- InitSubscriptionShareCache()
+					return
+				}
+				_, err := refreshSubscriptionShareCache(share.ID)
+				published <- err
+			}()
+			select {
+			case <-readSnapshot:
+			case <-time.After(5 * time.Second):
+				t.Fatal("cache publication did not read its share snapshot")
+			}
+
+			deleted := make(chan error, 1)
+			go func() { deleted <- sub.Del() }()
+			// Observe the committed deletion before releasing the old snapshot.
+			// The fixed cache invalidation waits for its publication lock; the
+			// previous direct Delete returned early and the old Set resurrected it.
+			deadline := time.Now().Add(5 * time.Second)
+			for {
+				var count int64
+				if err := database.DB.Model(&SubscriptionShare{}).Where("id = ?", share.ID).Count(&count).Error; err == nil && count == 0 {
+					break
+				}
+				if time.Now().After(deadline) {
+					t.Fatal("subscription deletion did not commit")
+				}
+				time.Sleep(time.Millisecond)
+			}
+			deletedEarly := false
+			select {
+			case err := <-deleted:
+				if err != nil {
+					t.Fatalf("subscription deletion failed: %v", err)
+				}
+				deletedEarly = true
+			case <-time.After(100 * time.Millisecond):
+			}
+			resume()
+			pending := map[string]<-chan error{"cache publication": published}
+			if !deletedEarly {
+				pending["subscription deletion"] = deleted
+			}
+			for name, finished := range pending {
+				select {
+				case err := <-finished:
+					if err != nil {
+						t.Fatalf("%s failed: %v", name, err)
+					}
+				case <-time.After(5 * time.Second):
+					t.Fatalf("%s did not finish", name)
+				}
+			}
+			if deletedEarly {
+				t.Fatal("subscription deletion returned before the paused cache publication finished")
+			}
+			if _, cached := subscriptionShareCache.Get(share.ID); cached || len(GetSharesBySubscriptionID(sub.ID)) != 0 {
+				t.Fatal("cache publication resurrected a deleted share")
+			}
+		})
+	}
 }
 
 func createSubcriptionTestAirport(t *testing.T, name string) Airport {

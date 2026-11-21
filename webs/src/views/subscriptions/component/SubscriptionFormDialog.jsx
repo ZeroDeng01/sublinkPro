@@ -488,12 +488,10 @@ export default function SubscriptionFormDialog({
                   <Grid item xs={12} sm={6}>
                     <DevicePolicyFields
                       defaults
-                      karingOnly={formData.DefaultKaringOnly}
                       maxDevices={formData.DefaultMaxDevices}
                       onChange={(patch) =>
                         setFormData({
                           ...formData,
-                          ...(patch.karingOnly !== undefined ? { DefaultKaringOnly: patch.karingOnly } : {}),
                           ...(patch.maxDevices !== undefined ? { DefaultMaxDevices: patch.maxDevices } : {})
                         })
                       }

@@ -26,7 +26,6 @@ type ShareListReq struct {
 
 // ShareBatchCreateReq 批量创建分享请求
 type ShareBatchCreateReq struct {
-	KaringOnly     *bool  `json:"karing_only"`
 	MaxDevices     *int   `json:"max_devices" binding:"omitempty,min=0,max=10000"`
 	SubscriptionID int    `json:"subscription_id" binding:"required"`
 	BaseName       string `json:"base_name" binding:"required"`
@@ -44,18 +43,16 @@ type ShareBatchDeleteReq struct {
 
 // ShareBatchUpdateReq 批量更新分享请求
 type ShareBatchUpdateReq struct {
-	KaringOnly *bool  `json:"karing_only"`
-	MaxDevices *int   `json:"max_devices" binding:"omitempty,min=0,max=10000"`
-	IDs        []int  `json:"ids" binding:"required,min=1"`
-	Enabled    *bool  `json:"enabled"` // 指针允许 null
-	ExpireType *int   `json:"expire_type"`
-	ExpireDays *int   `json:"expire_days"`
-	ExpireAt   string `json:"expire_at"`
+	MaxDevices *int    `json:"max_devices" binding:"omitempty,min=0,max=10000"`
+	IDs        []int   `json:"ids" binding:"required,min=1"`
+	Enabled    *bool   `json:"enabled"` // 指针允许 null
+	ExpireType *int    `json:"expire_type"`
+	ExpireDays *int    `json:"expire_days"`
+	ExpireAt   *string `json:"expire_at"`
 }
 
 // ShareCreateReq 创建分享请求
 type ShareCreateReq struct {
-	KaringOnly     *bool  `json:"karing_only"`
 	MaxDevices     *int   `json:"max_devices" binding:"omitempty,min=0,max=10000"`
 	SubscriptionID int    `json:"subscription_id" binding:"required"`
 	Name           string `json:"name"`
@@ -67,15 +64,14 @@ type ShareCreateReq struct {
 
 // ShareUpdateReq 更新分享请求
 type ShareUpdateReq struct {
-	KaringOnly *bool  `json:"karing_only"`
-	MaxDevices *int   `json:"max_devices" binding:"omitempty,min=0,max=10000"`
-	ID         int    `json:"id" binding:"required"`
-	Name       string `json:"name"`
-	Token      string `json:"token"`
-	ExpireType int    `json:"expire_type"`
-	ExpireDays int    `json:"expire_days"`
-	ExpireAt   string `json:"expire_at"`
-	Enabled    bool   `json:"enabled"`
+	MaxDevices *int    `json:"max_devices" binding:"omitempty,min=0,max=10000"`
+	ID         int     `json:"id" binding:"required"`
+	Name       *string `json:"name"`
+	Token      *string `json:"token"`
+	ExpireType *int    `json:"expire_type"`
+	ExpireDays *int    `json:"expire_days"`
+	ExpireAt   *string `json:"expire_at"`
+	Enabled    *bool   `json:"enabled"`
 }
 
 func parseShareExpireAt(expireType int, raw string) (*time.Time, error) {
@@ -99,6 +95,30 @@ func parseShareExpireAt(expireType int, raw string) (*time.Time, error) {
 	}
 
 	return &parsed, nil
+}
+
+func addShareExpiryUpdates(updates map[string]any, expireType, expireDays *int, expireAt *string) error {
+	if expireDays != nil {
+		updates["expire_days"] = *expireDays
+	}
+	if expireType == nil && expireAt == nil {
+		return nil
+	}
+	typeToParse := models.ExpireTypeDateTime
+	if expireType != nil {
+		typeToParse = *expireType
+		updates["expire_type"] = *expireType
+	}
+	raw := ""
+	if expireAt != nil {
+		raw = *expireAt
+	}
+	parsed, err := parseShareExpireAt(typeToParse, raw)
+	if err != nil {
+		return err
+	}
+	updates["expire_at"] = parsed
+	return nil
 }
 
 // ShareGet 获取订阅的所有分享列表（支持分页、搜索、IP筛选、排序）
@@ -182,7 +202,7 @@ func ShareAdd(c *gin.Context) {
 		Enabled:        true,
 	}
 
-	if err := inheritShareDevicePolicy(share, req.KaringOnly, req.MaxDevices); err != nil {
+	if err := inheritShareDevicePolicy(share, req.MaxDevices); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": err.Error()})
 		return
 	}
@@ -210,21 +230,25 @@ func ShareUpdate(c *gin.Context) {
 		return
 	}
 
-	expireAt, err := parseShareExpireAt(req.ExpireType, req.ExpireAt)
-	if err != nil {
+	updates := map[string]any{}
+	if err := addShareExpiryUpdates(updates, req.ExpireType, req.ExpireDays, req.ExpireAt); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": err.Error()})
 		return
 	}
 
-	// 更新字段
-	share.Name = req.Name
-	share.Token = req.Token
-	share.ExpireType = req.ExpireType
-	share.ExpireDays = req.ExpireDays
-	share.ExpireAt = expireAt
-	share.Enabled = req.Enabled
-
-	if err := share.UpdateWithDevicePolicy(req.KaringOnly, req.MaxDevices); err != nil {
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+	if req.Token != nil {
+		updates["token"] = *req.Token
+	}
+	if req.Enabled != nil {
+		updates["enabled"] = *req.Enabled
+	}
+	if req.MaxDevices != nil {
+		updates["max_devices"] = *req.MaxDevices
+	}
+	if err := share.UpdateFields(updates); err != nil {
 		utils.Error("更新分享失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": err.Error()})
 		return
@@ -285,8 +309,7 @@ func ShareRefreshToken(c *gin.Context) {
 		return
 	}
 
-	share.Token = newToken
-	if err := share.Update(); err != nil {
+	if err := share.UpdateFields(map[string]any{"token": newToken}); err != nil {
 		utils.Error("刷新Token失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": err.Error()})
 		return
@@ -389,7 +412,7 @@ func ShareBatchAdd(c *gin.Context) {
 			IsLegacy:       false,
 		}
 
-		if err := inheritShareDevicePolicy(share, req.KaringOnly, req.MaxDevices); err != nil {
+		if err := inheritShareDevicePolicy(share, req.MaxDevices); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": err.Error()})
 			return
 		}
@@ -488,66 +511,63 @@ func ShareBatchUpdate(c *gin.Context) {
 		shares = append(shares, share)
 	}
 
-	// 解析过期时间（如果提供了ExpireType）
-	var expireAt *time.Time
-	if req.ExpireType != nil {
-		var err error
-		expireAt, err = parseShareExpireAt(*req.ExpireType, req.ExpireAt)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": err.Error()})
-			return
-		}
+	updates := map[string]any{}
+	if err := addShareExpiryUpdates(updates, req.ExpireType, req.ExpireDays, req.ExpireAt); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": err.Error()})
+		return
+	}
+	if req.Enabled != nil {
+		updates["enabled"] = *req.Enabled
+	}
+	if req.MaxDevices != nil {
+		updates["max_devices"] = *req.MaxDevices
 	}
 
 	// 批量更新
 	successCount := 0
 	var errors []string
+	results := make([]ShareBatchItemResult, 0, len(shares))
+	updatedIDs := make([]int, 0, len(shares))
 	for _, share := range shares {
-		// 只更新提供的字段
-		if req.Enabled != nil {
-			share.Enabled = *req.Enabled
-		}
-		if req.ExpireType != nil {
-			share.ExpireType = *req.ExpireType
-		}
-		if req.ExpireDays != nil {
-			share.ExpireDays = *req.ExpireDays
-		}
-		if expireAt != nil {
-			share.ExpireAt = expireAt
-		}
-
-		if err := share.UpdateWithDevicePolicy(req.KaringOnly, req.MaxDevices); err != nil {
+		result := ShareBatchItemResult{ID: share.ID}
+		if err := share.UpdateFields(updates); err != nil {
 			errors = append(errors, fmt.Sprintf("ID %d: %s", share.ID, err.Error()))
+			result.Error = err.Error()
 		} else {
 			successCount++
+			result.Success = true
+			updatedIDs = append(updatedIDs, share.ID)
 		}
+		results = append(results, result)
 	}
 
+	response := gin.H{
+		"code": 200, "msg": fmt.Sprintf("成功更新 %d 个分享", successCount),
+		"data": updatedIDs, "results": results,
+		"success_count": successCount, "failed_count": len(errors),
+	}
 	if len(errors) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code": 400,
-			"msg":  fmt.Sprintf("更新了 %d/%d 个分享，部分失败: %s", successCount, len(req.IDs), strings.Join(errors, "; ")),
-		})
+		response["code"] = 400
+		response["msg"] = fmt.Sprintf("更新了 %d/%d 个分享，部分失败: %s", successCount, len(req.IDs), strings.Join(errors, "; "))
+		c.JSON(http.StatusBadRequest, response)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
-		"msg":  fmt.Sprintf("成功更新 %d 个分享", successCount),
-	})
+	c.JSON(http.StatusOK, response)
 }
 
-func inheritShareDevicePolicy(share *models.SubscriptionShare, only *bool, limit *int) error {
+type ShareBatchItemResult struct {
+	ID      int    `json:"id"`
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
+}
+
+func inheritShareDevicePolicy(share *models.SubscriptionShare, limit *int) error {
 	sub := models.Subcription{ID: share.SubscriptionID}
 	if err := sub.Find(); err != nil {
 		return err
 	}
-	share.KaringOnly = sub.DefaultKaringOnly
 	share.MaxDevices = sub.DefaultMaxDevices
-	if only != nil {
-		share.KaringOnly = *only
-	}
 	if limit != nil {
 		share.MaxDevices = *limit
 	}

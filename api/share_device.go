@@ -12,7 +12,7 @@ import (
 )
 
 // subscriptionBuffer keeps headers and content private until device admission
-// succeeds. Existing renderers are buffered only on the public subscription route.
+// succeeds. Renderers are buffered only for device-limited public subscriptions.
 type subscriptionBuffer struct {
 	gin.ResponseWriter
 	header http.Header
@@ -32,8 +32,8 @@ func (w *subscriptionBuffer) Flush()                            {}
 
 func subscriptionDeviceIdentity(c *gin.Context) models.ShareDeviceIdentity {
 	identity := models.ShareDeviceIdentity{UserAgent: c.GetHeader("User-Agent"), HWID: c.GetHeader("X-HWID"), OS: c.GetHeader("X-Device-OS"), Model: c.GetHeader("X-Device-Model")}
-	if len(c.Request.Header.Values("X-HWID")) != 1 {
-		identity.HWID = ""
+	if len(c.Request.Header.Values("X-HWID")) > 1 {
+		identity.HWID = ","
 	}
 	return identity
 }
@@ -51,6 +51,92 @@ func writeShareAccessError(c *gin.Context, err error) {
 func writeSubscriptionContent(c *gin.Context, content string) {
 	c.Set("subscriptionContentReady", true)
 	_, _ = c.Writer.WriteString(content)
+}
+
+// unlimitedShareWriter streams the existing renderer output directly. Only
+// headers are held until the first write rechecks the share's current state.
+type unlimitedShareWriter struct {
+	gin.ResponseWriter
+	context *gin.Context
+	shareID int
+	token   string
+	header  http.Header
+	status  int
+	checked bool
+	err     error
+}
+
+func (w *unlimitedShareWriter) Header() http.Header { return w.header }
+func (w *unlimitedShareWriter) Status() int {
+	if w.err != nil {
+		return w.ResponseWriter.Status()
+	}
+	return w.status
+}
+func (w *unlimitedShareWriter) WriteHeader(status int) {
+	if !w.Written() {
+		w.status = status
+	}
+}
+func (w *unlimitedShareWriter) admit() bool {
+	if w.checked {
+		return w.err == nil
+	}
+	w.checked = true
+	bind := w.context.GetBool("subscriptionContentReady") && w.context.Request.Method != http.MethodHead
+	w.err = models.CheckShareDevice(w.shareID, w.token, subscriptionDeviceIdentity(w.context), bind)
+	if w.err != nil {
+		writer := w.context.Writer
+		w.context.Writer = w.ResponseWriter
+		writeShareAccessError(w.context, w.err)
+		w.context.Writer = writer
+		return false
+	}
+	for key, values := range w.header {
+		w.ResponseWriter.Header()[key] = values
+	}
+	w.ResponseWriter.WriteHeader(w.status)
+	return true
+}
+func (w *unlimitedShareWriter) WriteHeaderNow() {
+	if w.admit() {
+		w.ResponseWriter.WriteHeaderNow()
+	}
+}
+func (w *unlimitedShareWriter) Write(body []byte) (int, error) {
+	if !w.admit() {
+		return 0, w.err
+	}
+	if w.context.Request.Method == http.MethodHead {
+		w.ResponseWriter.WriteHeaderNow()
+		return len(body), nil
+	}
+	return w.ResponseWriter.Write(body)
+}
+func (w *unlimitedShareWriter) WriteString(body string) (int, error) {
+	if !w.admit() {
+		return 0, w.err
+	}
+	if w.context.Request.Method == http.MethodHead {
+		w.ResponseWriter.WriteHeaderNow()
+		return len(body), nil
+	}
+	return w.ResponseWriter.WriteString(body)
+}
+func (w *unlimitedShareWriter) Flush() {
+	w.WriteHeaderNow()
+	if w.err == nil {
+		w.ResponseWriter.Flush()
+	}
+}
+
+func dispatchUnlimitedShareResponse(c *gin.Context, prepared preparedClientResponse, token string) {
+	original := c.Writer
+	writer := &unlimitedShareWriter{ResponseWriter: original, context: c, shareID: prepared.ShareID, token: token, header: original.Header().Clone(), status: http.StatusOK}
+	c.Writer = writer
+	defer func() { c.Writer = original }()
+	dispatchPreparedClientResponse(c, prepared)
+	writer.WriteHeaderNow()
 }
 
 func dispatchDeviceCheckedResponse(c *gin.Context, prepared preparedClientResponse, token string) {

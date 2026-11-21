@@ -429,6 +429,6 @@ services:
 > [!NOTE]
 > For the full Docker Compose template, see `docker-compose.example.yml` in the project root.
 
-### Share device defaults
+### Share link device limit defaults
 
-Subscription defaults `DefaultKaringOnly` (new subscriptions: false) and `DefaultMaxDevices` (new subscriptions: 0) are stored in the database and managed in the subscription form. Each new share inherits these values as `karing_only` and `max_devices`; subsequent edits are independent. Existing records migrate to false/0. No environment variable or YAML setting is required. See [subscription sharing](features/subscription-share.md#karing-device-limits).
+Subscription default `DefaultMaxDevices` (new subscriptions: 0) is stored in the database and managed in the subscription form. Each new share inherits it as `max_devices`; subsequent edits are independent. Records created before this feature default to 0 (unlimited) on migration; configured limits remain unchanged. Positive limits require a client that sends `X-HWID`; no client-specific access restriction is applied. No environment variable or YAML setting is required. See [share link device limits](features/subscription-share.md#share-link-device-limits).

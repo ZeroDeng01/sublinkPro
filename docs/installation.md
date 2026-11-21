@@ -182,7 +182,7 @@ docker image prune -f
 
 ## Reverse proxies and subscription device checks
 
-For installations using a reverse proxy or custom subscription sidecar, preserve the Karing device request headers on `/c/` and check the public subscription URL after updates. See [device header forwarding and HTTP 403 troubleshooting](features/subscription-share.md#reverse-proxies-and-http-403-troubleshooting).
+For installations using a reverse proxy or custom subscription sidecar, preserve client device request headers on `/c/` and check the public subscription URL after updates. See [device header forwarding and HTTP 403 troubleshooting](features/subscription-share.md#reverse-proxies-and-http-403-troubleshooting).
 
 ## 🤖 Automatic Updates with Watchtower
 

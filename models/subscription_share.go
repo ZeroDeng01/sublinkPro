@@ -25,7 +25,6 @@ const (
 
 // SubscriptionShare 订阅分享表
 type SubscriptionShare struct {
-	KaringOnly     bool       `gorm:"default:false" json:"karing_only"`
 	MaxDevices     int        `gorm:"default:0" json:"max_devices"`
 	DeviceRevision int64      `gorm:"default:0" json:"-"`
 	DeviceCount    int        `gorm:"-" json:"device_count"`
@@ -47,6 +46,31 @@ type SubscriptionShare struct {
 // subscriptionShareCache 使用泛型缓存
 var subscriptionShareCache *cache.MapCache[int, SubscriptionShare]
 
+// Serialize reload-and-publish so an earlier writer cannot publish an older
+// snapshot after a later transaction has refreshed the cache.
+var subscriptionShareCacheRefreshMu sync.Mutex
+
+func refreshSubscriptionShareCache(id int) (*SubscriptionShare, error) {
+	return refreshSubscriptionShareCacheWithDB(database.DB, id)
+}
+
+func refreshSubscriptionShareCacheWithDB(db *gorm.DB, id int) (*SubscriptionShare, error) {
+	subscriptionShareCacheRefreshMu.Lock()
+	defer subscriptionShareCacheRefreshMu.Unlock()
+	var share SubscriptionShare
+	if err := db.First(&share, id).Error; err != nil {
+		return nil, err
+	}
+	subscriptionShareCache.Set(id, share)
+	return &share, nil
+}
+
+func invalidateSubscriptionShareCache(id int) {
+	subscriptionShareCacheRefreshMu.Lock()
+	defer subscriptionShareCacheRefreshMu.Unlock()
+	subscriptionShareCache.Delete(id)
+}
+
 func init() {
 	subscriptionShareCache = cache.NewMapCache(func(s SubscriptionShare) int { return s.ID })
 	subscriptionShareCache.AddIndex("token", func(s SubscriptionShare) string { return s.Token })
@@ -55,6 +79,8 @@ func init() {
 
 // InitSubscriptionShareCache 初始化订阅分享缓存
 func InitSubscriptionShareCache() error {
+	subscriptionShareCacheRefreshMu.Lock()
+	defer subscriptionShareCacheRefreshMu.Unlock()
 	utils.Info("开始加载订阅分享到缓存")
 	var shares []SubscriptionShare
 	if err := database.DB.Find(&shares).Error; err != nil {
@@ -179,10 +205,11 @@ func CreateDefaultShareForSubscription(subscriptionID int) error {
 	}
 	share := &SubscriptionShare{
 		SubscriptionID: subscriptionID,
-		Name:           "默认分享链接", KaringOnly: sub.DefaultKaringOnly, MaxDevices: sub.DefaultMaxDevices,
-		ExpireType: ExpireTypeNever,
-		IsLegacy:   true,
-		Enabled:    true,
+		Name:           "默认分享链接",
+		MaxDevices:     sub.DefaultMaxDevices,
+		ExpireType:     ExpireTypeNever,
+		IsLegacy:       true,
+		Enabled:        true,
 	}
 	return share.Add()
 }
@@ -212,54 +239,111 @@ func (s *SubscriptionShare) Add() error {
 	if err != nil {
 		return err
 	}
-	subscriptionShareCache.Set(s.ID, *s)
+	updated, err := refreshSubscriptionShareCache(s.ID)
+	if err != nil {
+		utils.Warn("分享已创建，但刷新缓存失败: %v", err)
+		invalidateSubscriptionShareCache(s.ID)
+		return nil
+	}
+	*s = *updated
 	return nil
 }
 
 // Update 更新分享 (Write-Through)
-func (s *SubscriptionShare) Update() error { return s.UpdateWithDevicePolicy(nil, nil) }
-
-func (s *SubscriptionShare) UpdateWithDevicePolicy(karingOnly *bool, maxDevices *int) error {
+func (s *SubscriptionShare) Update() error {
 	s.normalizeOptionalFields()
+	return s.UpdateFields(map[string]any{
+		"name": s.Name, "token": s.Token, "expire_type": s.ExpireType,
+		"expire_days": s.ExpireDays, "expire_at": s.ExpireAt, "enabled": s.Enabled,
+	})
+}
 
-	// 检查 token 唯一性（排除自己）
-	if IsTokenExists(s.Token, s.ID) {
-		return fmt.Errorf("token 已被使用，请更换")
+func (s *SubscriptionShare) UpdateWithDevicePolicy(maxDevices *int) error {
+	updates := map[string]any{}
+	if maxDevices != nil {
+		updates["max_devices"] = *maxDevices
 	}
+	return s.UpdateFields(updates)
+}
 
+// UpdateFields applies only explicitly selected fields to the current row. A
+// previously loaded share must never write its stale token back after a reset.
+func (s *SubscriptionShare) UpdateFields(fields map[string]any) error {
+	if len(fields) == 0 {
+		return nil
+	}
+	updates := make(map[string]any, len(fields))
+	for field, value := range fields {
+		switch field {
+		case "name", "token", "expire_type", "expire_days", "expire_at", "enabled", "max_devices":
+			updates[field] = value
+		default:
+			return fmt.Errorf("不支持更新字段: %s", field)
+		}
+	}
+	var updated SubscriptionShare
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
 		current, err := lockShare(tx, s.ID)
 		if err != nil {
 			return err
 		}
-		if karingOnly != nil {
-			current.KaringOnly = *karingOnly
-		}
-		if maxDevices != nil {
-			if err := checkDeviceLimit(tx, s.ID, *maxDevices); err != nil {
+		if token, supplied := updates["token"]; supplied {
+			var count int64
+			if err := tx.Model(&SubscriptionShare{}).Where("token = ? AND id <> ?", token, s.ID).Count(&count).Error; err != nil {
 				return err
 			}
-			current.MaxDevices = *maxDevices
+			if count > 0 {
+				return fmt.Errorf("token 已被使用，请更换")
+			}
 		}
-		return tx.Model(s).Updates(map[string]any{
-			"karing_only": current.KaringOnly, "max_devices": current.MaxDevices,
-			"name":        s.Name,
-			"token":       s.Token,
-			"expire_type": s.ExpireType,
-			"expire_days": s.ExpireDays,
-			"expire_at":   s.ExpireAt,
-			"enabled":     s.Enabled,
-		}).Error
+		if limit, supplied := updates["max_devices"]; supplied {
+			maxDevices, ok := limit.(int)
+			if !ok {
+				return fmt.Errorf("设备上限必须是整数")
+			}
+			if err := checkDeviceLimit(tx, s.ID, maxDevices); err != nil {
+				return err
+			}
+		}
+		expireType := current.ExpireType
+		if value, supplied := updates["expire_type"]; supplied {
+			var ok bool
+			expireType, ok = value.(int)
+			if !ok {
+				return fmt.Errorf("过期类型必须是整数")
+			}
+			if expireType != ExpireTypeDateTime {
+				updates["expire_at"] = nil
+			}
+		}
+		if value, supplied := updates["expire_at"]; supplied {
+			if expireType != ExpireTypeDateTime {
+				updates["expire_at"] = nil
+			} else if value != nil {
+				at, ok := value.(*time.Time)
+				if !ok {
+					return fmt.Errorf("过期时间格式错误")
+				}
+				updates["expire_at"] = normalizeOptionalTime(at)
+			}
+		}
+		if err := tx.Model(&SubscriptionShare{}).Where("id = ?", s.ID).Updates(updates).Error; err != nil {
+			return err
+		}
+		return tx.First(&updated, s.ID).Error
 	})
 	if err != nil {
 		return err
 	}
 
-	// 更新缓存
-	var updated SubscriptionShare
-	if err := database.DB.First(&updated, s.ID).Error; err == nil {
-		subscriptionShareCache.Set(updated.ID, updated)
+	fresh, err := refreshSubscriptionShareCache(updated.ID)
+	if err != nil {
+		utils.Warn("分享已更新，但刷新缓存失败: %v", err)
+		invalidateSubscriptionShareCache(updated.ID)
+		*s = updated
+		return nil
 	}
+	*s = *fresh
 	return nil
 }
 
@@ -277,13 +361,18 @@ func (s *SubscriptionShare) Delete() error {
 	if err != nil {
 		return err
 	}
-	subscriptionShareCache.Delete(s.ID)
+	invalidateSubscriptionShareCache(s.ID)
 	return nil
 }
 
 // Find 根据 ID 查找
 func (s *SubscriptionShare) Find() error {
-	return database.DB.First(s, s.ID).Error
+	var share SubscriptionShare
+	if err := database.DB.First(&share, s.ID).Error; err != nil {
+		return err
+	}
+	*s = share
+	return nil
 }
 
 // GetByToken 根据 token 查找分享
@@ -292,7 +381,6 @@ func GetSubscriptionShareByToken(token string) (*SubscriptionShare, error) {
 	if err := database.DB.Where("token = ?", token).First(&share).Error; err != nil {
 		return nil, err
 	}
-	subscriptionShareCache.Set(share.ID, share)
 	return &share, nil
 }
 
@@ -502,13 +590,12 @@ func (s *SubscriptionShare) RecordAccess() {
 		return
 	}
 
-	var updated SubscriptionShare
-	if err := db.First(&updated, s.ID).Error; err != nil {
+	updated, err := refreshSubscriptionShareCacheWithDB(db, s.ID)
+	if err != nil {
 		utils.Warn("刷新订阅分享访问缓存失败: %v", err)
 		return
 	}
-	*s = updated
-	subscriptionShareCache.Set(updated.ID, updated)
+	*s = *updated
 }
 
 // RecordAccessAsync 异步记录一次访问，避免订阅拉取热路径等待数据库写入。

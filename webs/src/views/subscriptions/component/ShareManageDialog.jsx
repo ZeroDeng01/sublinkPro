@@ -61,6 +61,7 @@ import ShareBatchUpdateDialog from './ShareBatchUpdateDialog';
 import ShareExportDialog from './ShareExportDialog';
 import DevicePolicyFields, { validDeviceLimit } from './DevicePolicyFields';
 import ShareDevicesDialog from './ShareDevicesDialog';
+import { buildShareUpdateData, buildShareBatchUpdates, resolveSelectedShares, runShareBatchUpdates } from './shareBatchUpdate';
 import DevicesIcon from '@mui/icons-material/Devices';
 
 const EXPIRE_TYPE_NEVER = 0;
@@ -120,6 +121,9 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
   const [batchCreateOpen, setBatchCreateOpen] = useState(false);
   const [batchUpdateOpen, setBatchUpdateOpen] = useState(false);
   const [batchUpdateMode, setBatchUpdateMode] = useState('expire'); // 'expire' or 'enabled'
+  const [batchResults, setBatchResults] = useState([]);
+  const [batchShareSnapshots, setBatchShareSnapshots] = useState([]);
+  const [batchBusy, setBatchBusy] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   const [systemDomainConfig, setSystemDomainConfig] = useState('');
@@ -137,7 +141,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     expire_days: 30,
     expire_at: '',
     enabled: true,
-    karing_only: subscription?.DefaultKaringOnly ?? false,
     max_devices: subscription?.DefaultMaxDevices ?? 0
   });
 
@@ -298,6 +301,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       // 重置状态
       setSearchQuery('');
       setSelectedShares([]);
+      setBatchShareSnapshots([]);
       setPage(1);
       setHasMore(true);
       setSortBy('');
@@ -329,7 +333,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       expire_days: 30,
       expire_at: '',
       enabled: true,
-      karing_only: subscription?.DefaultKaringOnly ?? false,
       max_devices: subscription?.DefaultMaxDevices ?? 0
     });
     setFormOpen(true);
@@ -345,7 +348,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       expire_days: share.expire_days || 30,
       expire_at: share.expire_at ? share.expire_at.substring(0, 16) : '',
       enabled: share.enabled !== false,
-      karing_only: share.karing_only ?? false,
       max_devices: share.max_devices ?? 0
     });
     setFormOpen(true);
@@ -357,13 +359,9 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       return;
     }
     try {
-      const data = {
-        ...formData,
-        subscription_id: subscription.ID
-      };
+      const data = buildShareUpdateData(formData, editingShare, subscription.ID);
 
       if (editingShare) {
-        data.id = editingShare.id;
         await updateShare(data);
         showMessage?.(t('subscriptions.share.messages.updateSuccess'), 'success');
       } else {
@@ -491,6 +489,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       return;
     }
     setBatchUpdateMode('expire');
+    setBatchResults([]);
     setBatchUpdateOpen(true);
   };
 
@@ -500,65 +499,40 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       return;
     }
     setBatchUpdateMode('enabled');
+    setBatchResults([]);
     setBatchUpdateOpen(true);
   };
 
   const handleBatchUpdate = async (data) => {
+    if (batchBusy) return;
+    const selected = resolveSelectedShares(selectedShares, shares, batchShareSnapshots);
+    const batches = buildShareBatchUpdates(batchUpdateMode, data, selectedShares, selected);
+    if (batches.length === 0) return;
+    // The list refresh reloads page 1; retain failed rows from later pages for retry.
+    setBatchShareSnapshots(selected);
+    setBatchBusy(true);
+    setBatchResults([]);
     try {
-      const updates = {};
-
-      if (batchUpdateMode === 'expire') {
-        updates.expire_type = data.expireType;
-        updates.expire_days = data.expireDays;
-        updates.expire_at = data.expireAt;
-      } else if (batchUpdateMode === 'devices') {
-        updates.karing_only = data.karingOnly;
-        updates.max_devices = data.maxDevices;
-      } else if (batchUpdateMode === 'enabled') {
-        if (data.action === 'enable') {
-          updates.enabled = true;
-        } else if (data.action === 'disable') {
-          updates.enabled = false;
-        } else if (data.action === 'toggle') {
-          // 反转状态需要分别处理每个分享
-          const enableIds = [];
-          const disableIds = [];
-          selectedShares.forEach((id) => {
-            const share = shares.find((s) => s.id === id);
-            if (share) {
-              if (share.enabled) {
-                disableIds.push(id);
-              } else {
-                enableIds.push(id);
-              }
-            }
-          });
-
-          if (enableIds.length > 0) {
-            await batchUpdateShares(enableIds, { enabled: true });
-          }
-          if (disableIds.length > 0) {
-            await batchUpdateShares(disableIds, { enabled: false });
-          }
-
-          showMessage?.(t('subscriptions.share.batch.updateSuccess'), 'success');
-          fetchShares();
-          setSelectedShares([]);
-          setBatchUpdateOpen(false);
-          return;
-        }
+      const results = await runShareBatchUpdates(batches, batchUpdateShares, t('subscriptions.share.batch.updateError'));
+      const failures = results.filter((result) => !result.success);
+      setBatchResults(results);
+      await fetchShares(extractTokenFromInput(searchQuery), false, null, null, true);
+      setSelectedShares(failures.map((result) => result.id));
+      if (failures.length > 0) {
+        showMessage?.(
+          t('subscriptions.share.batch.partialResult', { success: results.length - failures.length, failed: failures.length }),
+          'warning'
+        );
+      } else {
+        showMessage?.(t('subscriptions.share.batch.updateSuccess'), 'success');
+        setBatchUpdateOpen(false);
       }
-
-      await batchUpdateShares(selectedShares, updates);
-      showMessage?.(t('subscriptions.share.batch.updateSuccess'), 'success');
-      fetchShares();
-      setSelectedShares([]);
-      setBatchUpdateOpen(false);
     } catch (error) {
       console.error('Failed to batch update:', error);
       showMessage?.(error.response?.data?.msg || t('subscriptions.share.batch.updateError'), 'error');
-      // A failed batch can still contain committed updates to other shares.
-      await fetchShares(searchQuery, false, null, null, true);
+      await fetchShares(extractTokenFromInput(searchQuery), false, null, null, true);
+    } finally {
+      setBatchBusy(false);
     }
   };
 
@@ -829,7 +803,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                   {t('subscriptions.share.cardMeta', { expire: getExpireText(share), count: share.access_count || 0 })}
                   {' · '}
                   {t('subscriptions.devices.bound', { count: share.device_count || 0, limit: share.max_devices || '∞' })}
-                  {share.karing_only ? ' · Karing' : ''}
                 </Typography>
               </Box>
             </Box>
@@ -992,6 +965,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
                     size="small"
                     onClick={() => {
                       setBatchUpdateMode('devices');
+                      setBatchResults([]);
                       setBatchUpdateOpen(true);
                     }}
                   >
@@ -1283,12 +1257,10 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
             )}
 
             <DevicePolicyFields
-              karingOnly={formData.karing_only}
               maxDevices={formData.max_devices}
               onChange={(patch) =>
                 setFormData({
                   ...formData,
-                  ...(patch.karingOnly !== undefined ? { karing_only: patch.karingOnly } : {}),
                   ...(patch.maxDevices !== undefined ? { max_devices: patch.maxDevices } : {})
                 })
               }
@@ -1346,9 +1318,11 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
       <ShareBatchUpdateDialog
         open={batchUpdateOpen}
         mode={batchUpdateMode}
-        shares={shares.filter((s) => selectedShares.includes(s.id))}
+        shares={resolveSelectedShares(selectedShares, shares, batchShareSnapshots)}
         onClose={() => setBatchUpdateOpen(false)}
         onSubmit={handleBatchUpdate}
+        results={batchResults}
+        busy={batchBusy}
       />
 
       <ShareExportDialog

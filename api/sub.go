@@ -693,13 +693,5 @@ func parseSubscriptionDeviceDefaults(c *gin.Context, sub *models.Subcription) bo
 		}
 		sub.DefaultMaxDevices = value
 	}
-	if raw, present := c.GetPostForm("DefaultKaringOnly"); present {
-		value, err := strconv.ParseBool(raw)
-		if err != nil {
-			utils.FailWithMsg(c, "Karing 限制参数无效")
-			return false
-		}
-		sub.DefaultKaringOnly = value
-	}
 	return true
 }

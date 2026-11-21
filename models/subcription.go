@@ -25,8 +25,7 @@ func init() {
 }
 
 type Subcription struct {
-	DefaultKaringOnly     bool `gorm:"default:false" json:"DefaultKaringOnly"`
-	DefaultMaxDevices     int  `gorm:"default:0" json:"DefaultMaxDevices"`
+	DefaultMaxDevices     int `gorm:"default:0" json:"DefaultMaxDevices"`
 	ID                    int
 	Name                  string
 	Config                string    `gorm:"embedded"`
@@ -260,10 +259,10 @@ func (sub *Subcription) AddScripts(scriptIDs []int) error {
 // 更新订阅 (Write-Through)
 func (sub *Subcription) Update() error {
 	updates := map[string]any{
-		"name":                sub.Name,
-		"config":              sub.Config,
-		"create_date":         sub.CreateDate,
-		"default_karing_only": sub.DefaultKaringOnly, "default_max_devices": sub.DefaultMaxDevices,
+		"name":                     sub.Name,
+		"config":                   sub.Config,
+		"create_date":              sub.CreateDate,
+		"default_max_devices":      sub.DefaultMaxDevices,
 		"ip_whitelist":             sub.IPWhitelist,
 		"ip_blacklist":             sub.IPBlacklist,
 		"delay_time":               sub.DelayTime,
@@ -1154,7 +1153,7 @@ func (sub *Subcription) Del() error {
 		subLogsCache.Delete(subLog.ID)
 	}
 	for _, subscriptionShare := range subscriptionShares {
-		subscriptionShareCache.Delete(subscriptionShare.ID)
+		invalidateSubscriptionShareCache(subscriptionShare.ID)
 	}
 	for _, chainRule := range chainRules {
 		chainRuleCache.Delete(chainRule.ID)
@@ -1167,7 +1166,7 @@ func (sub *Subcription) Del() error {
 func (sub *Subcription) Copy() (*Subcription, error) {
 	// 创建新订阅对象，复制所有配置字段
 	newSub := &Subcription{
-		DefaultKaringOnly: sub.DefaultKaringOnly, DefaultMaxDevices: sub.DefaultMaxDevices,
+		DefaultMaxDevices:     sub.DefaultMaxDevices,
 		Name:                  sub.Name + "_复制",
 		Config:                sub.Config,
 		CreateDate:            time.Now().Format("2006-01-02 15:04:05"),

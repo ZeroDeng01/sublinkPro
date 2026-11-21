@@ -112,7 +112,6 @@ export function batchCreateShares(subscriptionId, data) {
       expire_days: data.expireDays,
       expire_at: data.expireAt,
       enabled: data.enabled,
-      karing_only: data.karingOnly,
       max_devices: data.maxDevices
     }
   });
@@ -133,7 +132,8 @@ export function batchDeleteShares(ids) {
 /**
  * 批量更新分享
  * @param {number[]} ids 分享ID数组
- * @param {object} updates 更新字段 { enabled?, expire_type?, expire_days?, expire_at? }
+ * @param {object} updates 更新字段 { enabled?, expire_type?, expire_days?, expire_at?, max_devices? }
+ * @returns {Promise<object>} 逐项 results 及 success_count/failed_count；部分失败通过 error.response.data 返回同一结构
  */
 export function batchUpdateShares(ids, updates) {
   return request({

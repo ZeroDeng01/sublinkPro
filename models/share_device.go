@@ -5,11 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
 	"sublink/database"
+	"sublink/utils"
 
 	"gorm.io/gorm"
 )
@@ -33,9 +33,9 @@ type ShareAccessError struct{ Code, Message string }
 
 func (e *ShareAccessError) Error() string { return e.Message }
 
-var karingAgent = regexp.MustCompile(`(?i)^Karing/[0-9]+(?:\.[0-9]+){2,3} platform/[a-z0-9_-]+(?:[;\s]|$)`)
-
 func deviceDenied(code, message string) error { return &ShareAccessError{Code: code, Message: message} }
+
+func IsShareNotFoundError(err error) bool { return errors.Is(err, gorm.ErrRecordNotFound) }
 
 // lockShare uses a write before any read. SQLite obtains its writer lock while
 // MySQL/PostgreSQL lock the share row. All device/policy mutations use this lock.
@@ -87,66 +87,85 @@ func checkDeviceLimit(tx *gorm.DB, shareID, limit int) error {
 // CheckShareDevice runs both before rendering and immediately before publishing
 // the finished response. Only the latter is allowed to allocate a device slot.
 func CheckShareDevice(id int, token string, identity ShareDeviceIdentity, bind bool) error {
+	var share SubscriptionShare
+	if err := database.DB.First(&share, id).Error; err != nil {
+		return err
+	}
+	if err := validateShareDeviceAccess(&share, token, identity); err != nil {
+		return err
+	}
+	// Unlimited downloads never need a device transaction or a revision write.
+	// A limited download rechecks the current policy under the admission lock.
+	if share.MaxDevices == 0 {
+		return nil
+	}
+	if !bind {
+		return checkShareDeviceAdmission(database.DB, &share, identity, false)
+	}
 	return database.DB.Transaction(func(tx *gorm.DB) error {
-		var share *SubscriptionShare
-		var err error
-		if bind {
-			share, err = lockShare(tx, id)
-		} else {
-			// Preflight is advisory; final admission always rechecks under the
-			// writer lock. Avoid a database write for every denied request/HEAD.
-			share = &SubscriptionShare{}
-			err = tx.First(share, id).Error
-		}
+		share, err := lockShare(tx, id)
 		if err != nil {
 			return err
 		}
-		if share.Token != token || share.IsExpired() {
-			return deviceDenied("share_unavailable", "分享已失效或已禁用")
-		}
-		if share.KaringOnly && !karingAgent.MatchString(identity.UserAgent) {
-			return deviceDenied("karing_required", "此分享仅允许 Karing 客户端")
+		if err := validateShareDeviceAccess(share, token, identity); err != nil {
+			return err
 		}
 		if share.MaxDevices == 0 {
 			return nil
 		}
-		if len(identity.HWID) == 0 || len(identity.HWID) > 512 || strings.TrimSpace(identity.HWID) != identity.HWID {
-			return deviceDenied("hwid_required", "缺少有效 X-HWID，请在 Karing 添加/编辑配置中开启 X-HWID")
-		}
-		for _, c := range identity.HWID {
-			if c < 33 || c > 126 {
-				return deviceDenied("hwid_invalid", "X-HWID 格式无效")
-			}
-		}
-		sum := sha256.Sum256([]byte(identity.HWID))
-		hash := hex.EncodeToString(sum[:])
-		var device ShareDevice
-		err = tx.Where("share_id = ? AND hw_id_hash = ?", id, hash).First(&device).Error
-		if err == nil {
-			if device.Revoked {
-				return deviceDenied("device_revoked", "此设备已被撤销，请联系管理员")
-			}
-			if bind {
-				return tx.Model(&device).Update("last_access_at", time.Now()).Error
-			}
-			return nil
-		}
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
-		}
-		count, err := activeDeviceCount(tx, id)
-		if err != nil {
-			return err
-		}
-		if count >= int64(share.MaxDevices) {
-			return deviceDenied("device_limit_exceeded", "设备数量已达上限，请联系管理员换机")
-		}
-		if !bind {
-			return nil
-		}
-		device = ShareDevice{ShareID: id, HWIDHash: hash, OS: truncateDeviceText(identity.OS, 100), Model: truncateDeviceText(identity.Model, 200), LastAccessAt: time.Now()}
-		return tx.Create(&device).Error
+		return checkShareDeviceAdmission(tx, share, identity, true)
 	})
+}
+
+func validateShareDeviceAccess(share *SubscriptionShare, token string, identity ShareDeviceIdentity) error {
+	if share.Token != token || share.IsExpired() {
+		return deviceDenied("share_unavailable", "分享已失效或已禁用")
+	}
+	if share.MaxDevices == 0 {
+		return nil
+	}
+	if len(identity.HWID) == 0 || len(identity.HWID) > 512 || strings.TrimSpace(identity.HWID) != identity.HWID {
+		return deviceDenied("hwid_required", "缺少有效 X-HWID，请使用支持此请求头的客户端并开启发送")
+	}
+	for _, c := range identity.HWID {
+		// Proxies may combine repeated header fields into a comma-separated value.
+		if c < 33 || c > 126 || c == ',' {
+			return deviceDenied("hwid_invalid", "X-HWID 格式无效，必须提供单个设备标识")
+		}
+	}
+	return nil
+}
+
+func checkShareDeviceAdmission(tx *gorm.DB, share *SubscriptionShare, identity ShareDeviceIdentity, bind bool) error {
+	id := share.ID
+	sum := sha256.Sum256([]byte(identity.HWID))
+	hash := hex.EncodeToString(sum[:])
+	var device ShareDevice
+	err := tx.Where("share_id = ? AND hw_id_hash = ?", id, hash).First(&device).Error
+	if err == nil {
+		if device.Revoked {
+			return deviceDenied("device_revoked", "此设备已被撤销，请联系管理员")
+		}
+		if bind {
+			return tx.Model(&device).Update("last_access_at", time.Now()).Error
+		}
+		return nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	count, err := activeDeviceCount(tx, id)
+	if err != nil {
+		return err
+	}
+	if count >= int64(share.MaxDevices) {
+		return deviceDenied("device_limit_exceeded", "设备数量已达上限，请联系管理员换机")
+	}
+	if !bind {
+		return nil
+	}
+	device = ShareDevice{ShareID: id, HWIDHash: hash, OS: truncateDeviceText(identity.OS, 100), Model: truncateDeviceText(identity.Model, 200), LastAccessAt: time.Now()}
+	return tx.Create(&device).Error
 }
 
 func truncateDeviceText(value string, maxLen int) string {
@@ -211,11 +230,10 @@ func ResetShareDevices(shareID int) (string, error) {
 		return tx.Model(&SubscriptionShare{}).Where("id = ?", shareID).Update("token", token).Error
 	})
 	if err == nil {
-		var share SubscriptionShare
-		if readErr := database.DB.First(&share, shareID).Error; readErr != nil {
-			return "", readErr
+		if _, cacheErr := refreshSubscriptionShareCache(shareID); cacheErr != nil {
+			invalidateSubscriptionShareCache(shareID)
+			utils.Warn("分享设备已重置，但刷新分享缓存失败: %v", cacheErr)
 		}
-		subscriptionShareCache.Set(shareID, share)
 	}
 	return token, err
 }

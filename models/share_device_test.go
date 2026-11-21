@@ -13,9 +13,11 @@ import (
 
 const testKaringUA = "Karing/1.2.23.2606 platform/windows;mihomo/1.19.28"
 
+var deviceShareTestSequence atomic.Uint64
+
 func newDeviceShare(t *testing.T, limit int) *SubscriptionShare {
 	t.Helper()
-	share := &SubscriptionShare{Token: fmt.Sprintf("device-test-%d", time.Now().UnixNano()), Enabled: true, KaringOnly: true, MaxDevices: limit}
+	share := &SubscriptionShare{Token: fmt.Sprintf("device-test-%d", deviceShareTestSequence.Add(1)), Enabled: true, MaxDevices: limit}
 	if err := share.Add(); err != nil {
 		t.Fatal(err)
 	}
@@ -71,14 +73,14 @@ func TestShareDeviceAdmissionLifecycle(t *testing.T) {
 	revoked = false
 	requireDeviceError(t, UpdateShareDevice(share.ID, devices[0].ID, &revoked, nil), "device_limit_exceeded")
 	two := 2
-	if err := share.UpdateWithDevicePolicy(nil, &two); err != nil {
+	if err := share.UpdateWithDevicePolicy(&two); err != nil {
 		t.Fatal(err)
 	}
 	if err := UpdateShareDevice(share.ID, devices[0].ID, &revoked, nil); err != nil {
 		t.Fatal(err)
 	}
 	one := 1
-	requireDeviceError(t, share.UpdateWithDevicePolicy(nil, &one), "device_limit_below_bound")
+	requireDeviceError(t, share.UpdateWithDevicePolicy(&one), "device_limit_below_bound")
 	oldToken := share.Token
 	newToken, err := ResetShareDevices(share.ID)
 	if err != nil {
@@ -110,12 +112,7 @@ func TestShareDeviceAdmissionLifecycle(t *testing.T) {
 func TestShareDeviceValidationAndIndependentPolicies(t *testing.T) {
 	setupSubscriptionShareTestDB(t)
 	share := newDeviceShare(t, 1)
-	for _, ua := range []string{"", "curl Karing/1.2.23.2606 platform/windows", "Karing", "notKaring/1.2.3 platform/windows"} {
-		identity := deviceIdentity("a")
-		identity.UserAgent = ua
-		requireDeviceError(t, CheckShareDevice(share.ID, share.Token, identity, true), "karing_required")
-	}
-	for _, id := range []string{"", " a", "a\n", string(make([]byte, 513))} {
+	for _, id := range []string{"", " a", "a\n", "a,b", "a, b", "a,", string(make([]byte, 513))} {
 		err := CheckShareDevice(share.ID, share.Token, deviceIdentity(id), true)
 		if err == nil {
 			t.Fatal("accepted invalid HWID")
@@ -129,15 +126,14 @@ func TestShareDeviceValidationAndIndependentPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 	unlimited := 0
-	if err := share.UpdateWithDevicePolicy(nil, &unlimited); err != nil {
+	if err := share.UpdateWithDevicePolicy(&unlimited); err != nil {
 		t.Fatal(err)
 	}
 	if err := CheckShareDevice(share.ID, share.Token, deviceIdentity(""), true); err != nil {
 		t.Fatal(err)
 	}
-	noKaring := false
 	one := 1
-	if err := other.UpdateWithDevicePolicy(&noKaring, &one); err != nil {
+	if err := other.UpdateWithDevicePolicy(&one); err != nil {
 		t.Fatal(err)
 	}
 	identity := deviceIdentity("b")
@@ -189,7 +185,6 @@ func TestShareDeviceTokenRefreshPreservesBindingAndPolicies(t *testing.T) {
 	share.Token = "rotated-test-token"
 	// Legacy update callers omit the new fields and must not erase them.
 	share.MaxDevices = 0
-	share.KaringOnly = false
 	if err := share.Update(); err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +192,7 @@ func TestShareDeviceTokenRefreshPreservesBindingAndPolicies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fresh.MaxDevices != 1 || !fresh.KaringOnly {
+	if fresh.MaxDevices != 1 {
 		t.Fatal("ordinary update erased policy")
 	}
 	requireDeviceError(t, CheckShareDevice(share.ID, oldToken, deviceIdentity("a"), true), "share_unavailable")
@@ -216,4 +211,35 @@ func TestShareDeviceTokenRefreshPreservesBindingAndPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 	requireDeviceError(t, CheckShareDevice(share.ID, share.Token, deviceIdentity("a"), true), "share_unavailable")
+}
+
+func TestUnlimitedShareDeviceCheckDoesNotWrite(t *testing.T) {
+	setupSubscriptionShareTestDB(t)
+	share := newDeviceShare(t, 0)
+	for _, bind := range []bool{false, true} {
+		if err := CheckShareDevice(share.ID, share.Token, ShareDeviceIdentity{}, bind); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var fresh SubscriptionShare
+	if err := database.DB.First(&fresh, share.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if fresh.DeviceRevision != 0 {
+		t.Fatalf("unlimited check wrote device revision: %d", fresh.DeviceRevision)
+	}
+	devices, err := ListShareDevices(share.ID)
+	if err != nil || len(devices) != 0 {
+		t.Fatalf("unlimited check allocated devices: %v %v", devices, err)
+	}
+}
+
+func TestShareDeviceAcceptsGenericClients(t *testing.T) {
+	setupSubscriptionShareTestDB(t)
+	for _, ua := range []string{"", "Happ", "v2RayTun", "Clash Mi", testKaringUA} {
+		share := newDeviceShare(t, 1)
+		if err := CheckShareDevice(share.ID, share.Token, ShareDeviceIdentity{UserAgent: ua, HWID: "single-device"}, true); err != nil {
+			t.Fatalf("client %q rejected: %v", ua, err)
+		}
+	}
 }

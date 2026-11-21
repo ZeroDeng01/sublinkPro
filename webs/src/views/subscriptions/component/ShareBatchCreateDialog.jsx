@@ -35,7 +35,6 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
     expireDays: 30,
     expireAt: '',
     enabled: true,
-    karingOnly: subscription?.DefaultKaringOnly ?? false,
     maxDevices: subscription?.DefaultMaxDevices ?? 0
   });
 
@@ -51,7 +50,6 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
         expireDays: 30,
         expireAt: '',
         enabled: true,
-        karingOnly: subscription?.DefaultKaringOnly ?? false,
         maxDevices: subscription?.DefaultMaxDevices ?? 0
       });
       setErrors({});
@@ -133,7 +131,6 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
       expireDays: formData.expireDays,
       expireAt: formData.expireAt,
       enabled: formData.enabled,
-      karingOnly: formData.karingOnly,
       maxDevices: formData.maxDevices
     };
 
@@ -148,7 +145,6 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
       expireDays: 30,
       expireAt: '',
       enabled: true,
-      karingOnly: subscription?.DefaultKaringOnly ?? false,
       maxDevices: subscription?.DefaultMaxDevices ?? 0
     });
     setErrors({});
@@ -160,11 +156,7 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
       <DialogTitle>{t('subscriptions.share.batch.createTitle')}</DialogTitle>
       <DialogContent>
         <Stack spacing={3} sx={{ mt: 1 }}>
-          <DevicePolicyFields
-            karingOnly={formData.karingOnly}
-            maxDevices={formData.maxDevices}
-            onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
-          />
+          <DevicePolicyFields maxDevices={formData.maxDevices} onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))} />
           {/* 基础设置 */}
           <TextField
             label={t('subscriptions.share.batch.baseName')}
