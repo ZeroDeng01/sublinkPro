@@ -291,6 +291,8 @@ For native (install-script) deployments: `systemctl status sublink`,
 
 ### Update / upgrade
 
+If `/c/` passes through a reverse proxy or custom subscription sidecar, preserve `User-Agent`, `X-HWID`, `X-Device-OS`, and `X-Device-Model`. Header allowlists must not strip the device identity or replace it with a fixed ID. Repeated HWID headers and comma-separated values produced by proxy merging are rejected. Do not cache subscription responses across devices. After updating, test `HEAD` on the public subscription URL with an allowed identity and without HWID; enabled share link device limits must reject the latter without allocating a slot. There is no client-brand restriction. See [share link device limit troubleshooting](../../docs/features/subscription-share.md#reverse-proxies-and-http-403-troubleshooting).
+
 docker-compose:
 
 ```bash
