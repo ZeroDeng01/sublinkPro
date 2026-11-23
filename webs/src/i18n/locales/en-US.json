@@ -2997,7 +2997,7 @@
         "surgeTemplateNone": "Not selected",
         "surgeTemplateHelper": "No available template detected. Please check if the Surge template exists.",
         "updateInterval": "Update Interval (Hours)",
-        "updateIntervalHelper": "When set to 0, it defaults to 1 day. Currently, besides surge, only a few clash clients support this parameter!",
+        "updateIntervalHelper": "0 means daily. Supported by Surge and a few Clash clients.",
         "forceUdp": "Force Enable UDP",
         "skipCertVerify": "Skip Cert Verification",
         "replaceHost": "Replace Server Address with Host",
@@ -3119,11 +3119,11 @@
       }
     },
     "devices": {
-      "defaultLimit": "Default device limit for new shares",
+      "defaultLimit": "New share device limit",
       "limit": "Share link device limit",
       "changeLimit": "Change device limit",
       "limitHelp": "Enter an integer from 0 to 10000; 0 means unlimited.",
-      "defaultsHelp": "Applies only to new shares. Each share has separate slots; existing shares keep their settings.",
+      "defaultsHelp": "0 means unlimited. Applies to new shares, each with its own limit.",
       "importHelp": "A positive device limit requires a client that sends X-HWID. Enable device identification in the client, such as the X-HWID option in Karing. The first successful download binds the device; forwarding an unused link may let someone else claim a slot.",
       "scopeHelp": "This limits subscription downloads, not copied nodes or forged device IDs. Revoking a device does not invalidate previously downloaded node credentials.",
       "manage": "Manage devices",

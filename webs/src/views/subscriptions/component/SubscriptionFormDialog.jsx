@@ -434,8 +434,8 @@ export default function SubscriptionFormDialog({
                 />
 
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl fullWidth size="small">
                       <InputLabel shrink>{t('subscriptions.form.basic.clashTemplate')}</InputLabel>
                       <Select
                         variant={'outlined'}
@@ -460,8 +460,8 @@ export default function SubscriptionFormDialog({
                       </Alert>
                     )}
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl fullWidth size="small">
                       <InputLabel shrink>{t('subscriptions.form.basic.surgeTemplate')}</InputLabel>
                       <Select
                         value={formData.surge}
@@ -485,7 +485,7 @@ export default function SubscriptionFormDialog({
                       </Alert>
                     )}
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <DevicePolicyFields
                       defaults
                       maxDevices={formData.DefaultMaxDevices}
@@ -496,8 +496,11 @@ export default function SubscriptionFormDialog({
                         })
                       }
                     />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <TextField
                       fullWidth
+                      size="small"
                       label={t('subscriptions.form.basic.updateInterval')}
                       type="text"
                       slotProps={{ htmlInput: { inputMode: 'numeric', pattern: '[0-9]*', max: 8760 } }}
@@ -515,6 +518,11 @@ export default function SubscriptionFormDialog({
                       helperText={t('subscriptions.form.basic.updateIntervalHelper')}
                     />
                   </Grid>
+                  {Number(formData.DefaultMaxDevices) > 0 && (
+                    <Grid size={12}>
+                      <Alert severity="info">{t('subscriptions.devices.importHelp')}</Alert>
+                    </Grid>
+                  )}
                 </Grid>
 
                 <Stack direction="row" spacing={2} flexWrap="wrap">
