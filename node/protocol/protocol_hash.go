@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"reflect"
 	"sort"
+
+	"gopkg.in/yaml.v3"
 )
 
 // HashFieldConfig 哈希字段配置
@@ -59,6 +61,12 @@ func extractProxyFields(proxy Proxy, ignoredFields map[string]bool) map[string]a
 		if ignoredFields[fieldName] {
 			continue
 		}
+		if fieldName == "ClashExtra" {
+			// Hash retained values, without yaml.Node source positions, comments or style.
+			// Keep the historical null value when there are no extra attributes.
+			result[fieldName] = hashClashExtra(&proxy.ClashExtra)
+			continue
+		}
 
 		fieldValue := v.Field(i)
 
@@ -72,6 +80,67 @@ func extractProxyFields(proxy Proxy, ignoredFields map[string]bool) map[string]a
 	}
 
 	return result
+}
+
+func hashClashExtra(extra *yaml.Node) any {
+	mapping := yamlMappingNode(extra)
+	if mapping == nil || len(mapping.Content) == 0 {
+		return nil
+	}
+	var value any
+	if err := mapping.Decode(&value); err == nil {
+		if encoded, err := json.Marshal(normalizeHashYAMLValue(value)); err == nil {
+			return json.RawMessage(encoded)
+		}
+	}
+	// Retained YAML can contain valid constructs Go cannot decode into JSON data,
+	// such as sequence keys. Keep those imports and hash their structure instead.
+	return hashYAMLStructure(mapping)
+}
+
+func hashYAMLStructure(node *yaml.Node) any {
+	switch node.Kind {
+	case yaml.MappingNode:
+		entries := make(map[string]any, len(node.Content)/2)
+		for i := 0; i+1 < len(node.Content); i += 2 {
+			key, _ := json.Marshal(hashYAMLStructure(node.Content[i]))
+			entries[string(key)] = hashYAMLStructure(node.Content[i+1])
+		}
+		return entries
+	case yaml.SequenceNode:
+		values := make([]any, len(node.Content))
+		for i, child := range node.Content {
+			values[i] = hashYAMLStructure(child)
+		}
+		return values
+	default:
+		return [3]any{node.Kind, node.Tag, node.Value}
+	}
+}
+
+func normalizeHashYAMLValue(value any) any {
+	switch value := value.(type) {
+	case map[string]any:
+		for key, child := range value {
+			value[key] = normalizeHashYAMLValue(child)
+		}
+	case map[any]any:
+		// JSON requires string keys. Preserve YAML key types in a deterministic encoding.
+		entries := make(map[string]any, len(value))
+		for key, child := range value {
+			encoded, err := json.Marshal(key)
+			if err != nil {
+				return value // Let the hash encoder reject unrepresentable data.
+			}
+			entries[string(encoded)] = normalizeHashYAMLValue(child)
+		}
+		return entries
+	case []any:
+		for i, child := range value {
+			value[i] = normalizeHashYAMLValue(child)
+		}
+	}
+	return value
 }
 
 // isZeroValue 检查字段是否为零值

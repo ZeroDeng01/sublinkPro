@@ -2926,6 +2926,8 @@
         "deleteError": "Batch delete failed",
         "updateSuccess": "Batch updated successfully",
         "updateError": "Batch update failed",
+        "keepUnchanged": "Keep unchanged",
+        "partialResult": "{{success}} shares updated; {{failed}} failed. Only failed shares remain selected for retry.",
         "preview": "Preview",
         "totalCount": "Total",
         "nameConflict": "The following names already exist",
@@ -3115,6 +3117,32 @@
       "nodes": {
         "loading": "Loading nodes..."
       }
+    },
+    "devices": {
+      "defaultLimit": "Default device limit for new shares",
+      "limit": "Share link device limit",
+      "changeLimit": "Change device limit",
+      "limitHelp": "Enter an integer from 0 to 10000; 0 means unlimited.",
+      "defaultsHelp": "Applies only to new shares. Each share has separate slots; existing shares keep their settings.",
+      "importHelp": "A positive device limit requires a client that sends X-HWID. Enable device identification in the client, such as the X-HWID option in Karing. The first successful download binds the device; forwarding an unused link may let someone else claim a slot.",
+      "scopeHelp": "This limits subscription downloads, not copied nodes or forged device IDs. Revoking a device does not invalidate previously downloaded node credentials.",
+      "manage": "Manage devices",
+      "failed": "Device operation failed",
+      "empty": "No devices bound yet",
+      "revoked": "Revoked",
+      "active": "Bound",
+      "firstSeen": "First bound",
+      "lastSeen": "Last update",
+      "name": "Device note",
+      "restore": "Restore device",
+      "revoke": "Revoke device",
+      "restoreConfirm": "Restoring this device uses a slot and fails if the limit is full.",
+      "revokeConfirm": "Revoke this device and release its slot? Its ID will be denied until an administrator restores it.",
+      "reset": "Reset all devices",
+      "resetConfirm": "Revoke every registered device and rotate the share link? Old IDs remain revoked. Deliver the new link to the customer’s new device.",
+      "bound": "Devices {{count}} / {{limit}}",
+      "batch": "Batch share link device limits",
+      "batchHelp": "Settings stay unchanged until you choose a change. Each selected share has its own device limit; slots are not pooled."
     }
   },
   "hosts": {

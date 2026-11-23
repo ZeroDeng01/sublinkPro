@@ -825,7 +825,7 @@ func TestScheduleClashToNodeLinksBackfillsEveryExistingEmptyCountryNode(t *testi
 		infoHKProxy,
 		infoJPProxy,
 		keptCountryProxy,
-	}, airport.Name, nil, nil)
+	}, airport.Name, nil, nil, false)
 	if err != nil {
 		t.Fatalf("schedule clash nodes: %v", err)
 	}
@@ -850,7 +850,7 @@ func setupSubscriptionCountryBackfillTestDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Airport{}, &models.Node{}, &models.CountryRule{}, &models.SystemSetting{}); err != nil {
+	if err := db.AutoMigrate(&models.Airport{}, &models.Node{}, &models.CountryRule{}, &models.SystemSetting{}, &models.SubcriptionNode{}); err != nil {
 		t.Fatalf("auto migrate test db: %v", err)
 	}
 

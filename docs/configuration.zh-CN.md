@@ -429,3 +429,7 @@ services:
 
 > [!NOTE]
 > 完整的 Docker Compose 模板请参考项目根目录的 `docker-compose.example.yml` 文件。
+
+### 分享链接设备限额默认值
+
+`DefaultMaxDevices`（新订阅默认 0）存储于数据库，通过订阅表单管理。新分享继承为 `max_devices`，之后独立修改；功能上线前的数据迁移时默认为 0（不限设备），已配置的限额保持原值。正数限额要求客户端发送 `X-HWID`，不限制客户端品牌。无需新增环境变量或 YAML 配置。详见[分享链接设备限额](features/subscription-share.zh-CN.md#分享链接设备限额)。

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net"
 	"net/http"
 	"net/url"
 	"sort"
@@ -22,7 +21,6 @@ import (
 	"sublink/utils"
 	"time"
 
-	"github.com/metacubex/mihomo/constant"
 	"gopkg.in/yaml.v3"
 )
 
@@ -129,6 +127,7 @@ type ClashConfig struct {
 	ProxyProviders     map[string]ClashProxyProvider `yaml:"proxy-providers"`
 	ProxyProviderOrder []string                      `yaml:"-"`
 	ProxyGroups        []ClashProxyGroup             `yaml:"proxy-groups"`
+	incompleteLinks    bool
 }
 
 type ClashProxyProvider struct {
@@ -254,7 +253,6 @@ func expandClashProxyProviders(ctx context.Context, client *http.Client, rootSub
 	}
 
 	rootHost := normalizedURLHost(rootSubscriptionURL)
-	initialProxyCount := len(config.Proxies)
 	providerErrors := make([]string, 0)
 	for _, item := range providers {
 		if len(item.Provider.Proxies) > 0 {
@@ -269,19 +267,19 @@ func expandClashProxyProviders(ctx context.Context, client *http.Client, rootSub
 
 		providerURL := strings.TrimSpace(item.Provider.URL)
 		if providerURL == "" {
+			providerErrors = append(providerErrors, fmt.Sprintf("%s: 缺少 URL", item.Name))
 			continue
 		}
 
 		providerProxies, err := fetchClashProxyProvider(ctx, client, item.Name, providerURL, rootHost, userAgent, requestHeaders)
+		config.Proxies = append(config.Proxies, providerProxies...)
 		if err != nil {
 			utils.Warn("proxy-provider【%s】获取或解析失败: %v", item.Name, err)
 			providerErrors = append(providerErrors, fmt.Sprintf("%s: %v", item.Name, err))
-			continue
 		}
-		config.Proxies = append(config.Proxies, providerProxies...)
 	}
 
-	if len(config.Proxies) == initialProxyCount && len(providerErrors) > 0 {
+	if len(providerErrors) > 0 {
 		return fmt.Errorf("proxy-providers 解析失败: %s", strings.Join(providerErrors, "; "))
 	}
 	return nil
@@ -392,7 +390,7 @@ func fetchClashProxyProvider(ctx context.Context, client *http.Client, providerN
 	}
 
 	proxies, err := parseClashProviderPayload(data)
-	if err != nil {
+	if err != nil && len(proxies) == 0 {
 		return nil, err
 	}
 	if len(proxies) == 0 {
@@ -400,7 +398,7 @@ func fetchClashProxyProvider(ctx context.Context, client *http.Client, providerN
 	}
 
 	utils.Info("proxy-provider【%s】导入节点数量：%d", providerName, len(proxies))
-	return proxies, nil
+	return proxies, err
 }
 
 func validateClashProviderURL(providerURL string) (*url.URL, error) {
@@ -456,8 +454,11 @@ func parseClashProviderPayload(data []byte) ([]protocol.Proxy, error) {
 		return config.Proxies, nil
 	}
 
-	proxies := parseSubscriptionLinkProxies(data)
+	proxies, incomplete := parseSubscriptionLinkProxies(data)
 	if len(proxies) > 0 {
+		if incomplete {
+			return proxies, fmt.Errorf("部分节点链接无法解析")
+		}
 		return proxies, nil
 	}
 
@@ -467,33 +468,36 @@ func parseClashProviderPayload(data []byte) ([]protocol.Proxy, error) {
 	return nil, fmt.Errorf("未找到节点")
 }
 
-func parseSubscriptionLinkProxies(data []byte) []protocol.Proxy {
+func parseSubscriptionLinkProxies(data []byte) ([]protocol.Proxy, bool) {
 	decodedBytes, errB64 := base64.StdEncoding.DecodeString(strings.TrimSpace(string(data)))
 	if errB64 != nil {
 		decodedBytes, errB64 = base64.RawStdEncoding.DecodeString(strings.TrimSpace(string(data)))
 	}
 	if errB64 == nil {
-		if proxies := parsePlainSubscriptionLinkProxies(decodedBytes); len(proxies) > 0 {
-			return proxies
+		if proxies, incomplete := parsePlainSubscriptionLinkProxies(decodedBytes); len(proxies) > 0 {
+			return proxies, incomplete
 		}
 	}
 	return parsePlainSubscriptionLinkProxies(data)
 }
 
-func parsePlainSubscriptionLinkProxies(data []byte) []protocol.Proxy {
+func parsePlainSubscriptionLinkProxies(data []byte) ([]protocol.Proxy, bool) {
 	proxies := make([]protocol.Proxy, 0)
+	incomplete := false
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if line == "" {
+		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
 		proxy, errP := protocol.LinkToProxy(protocol.Urls{Url: line}, protocol.OutputConfig{})
 		if errP == nil {
 			proxies = append(proxies, proxy)
+		} else {
+			incomplete = true
 		}
 	}
-	return proxies
+	return proxies, incomplete
 }
 
 func parseClashConfigData(ctx context.Context, client *http.Client, rootSubscriptionURL string, data []byte, userAgent string, requestHeaders models.AirportRequestHeaders) (ClashConfig, error, error) {
@@ -507,7 +511,9 @@ func parseClashConfigData(ctx context.Context, client *http.Client, rootSubscrip
 
 	// 如果 YAML 解析失败或没有代理节点，尝试 Base64/明文链接解析，兼容 V2Ray 订阅。
 	if errYaml != nil || len(config.Proxies) == 0 {
-		config.Proxies = append(config.Proxies, parseSubscriptionLinkProxies(data)...)
+		proxies, incomplete := parseSubscriptionLinkProxies(data)
+		config.Proxies = append(config.Proxies, proxies...)
+		config.incompleteLinks = incomplete
 	}
 
 	return config, errYaml, providerErr
@@ -526,12 +532,7 @@ func LoadClashConfigFromURLWithReporter(ctx context.Context, id int, urlStr stri
 	}
 
 	// 创建 HTTP 客户端，配置 TLS
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipTLSVerify},
-		},
-	}
+	client := utils.NewHTTPClientWithAdapter(nil, 30*time.Second, &tls.Config{InsecureSkipVerify: skipTLSVerify})
 
 	if downloadWithProxy {
 		var proxyNodeLink string
@@ -557,36 +558,15 @@ func LoadClashConfigFromURLWithReporter(ctx context.Context, id int, urlStr stri
 			} else {
 				utils.Info("使用 mihomo 内核代理下载订阅")
 				// 创建自定义 Transport，使用 mihomo adapter 进行代理连接
-				client.Transport = &http.Transport{
-					DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-						// 解析地址获取主机和端口
-						host, portStr, splitErr := net.SplitHostPort(addr)
-						if splitErr != nil {
-							return nil, fmt.Errorf("split host port error: %v", splitErr)
-						}
-
-						portUint, parseErr := strconv.ParseUint(portStr, 10, 16)
-						if parseErr != nil {
-							return nil, fmt.Errorf("invalid port: %v", parseErr)
-						}
-
-						// 创建 mihomo metadata
-						metadata := &constant.Metadata{
-							Host:    host,
-							DstPort: uint16(portUint),
-							Type:    constant.HTTP,
-						}
-
-						// 使用 mihomo adapter 建立连接
-						return proxyAdapter.DialContext(ctx, metadata)
-					},
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: skipTLSVerify},
-				}
+				defer func() { _ = proxyAdapter.Close() }()
+				client = utils.NewHTTPClientWithAdapter(proxyAdapter, 30*time.Second, &tls.Config{InsecureSkipVerify: skipTLSVerify})
 			}
 		} else {
 			utils.Warn("未找到可用代理，将直接下载")
 		}
 	}
+
+	defer utils.CloseHTTPClient(client)
 
 	// 创建请求并设置 User-Agent（使用传入的 context）
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
@@ -628,6 +608,9 @@ func LoadClashConfigFromURLWithReporter(ctx context.Context, id int, urlStr stri
 		return nil, nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, nil, fmt.Errorf("订阅请求返回 HTTP %d", resp.StatusCode)
+	}
 
 	// 解析用量信息（仅当开启获取用量信息时）
 	var usageInfo *UsageInfo
@@ -699,7 +682,7 @@ func LoadClashConfigFromURLWithReporter(ctx context.Context, id int, urlStr stri
 		return nil, nil, parseErr
 	}
 
-	changedNodeIDs, err := scheduleClashToNodeLinks(ctx, id, config.Proxies, subName, reporter, usageInfo)
+	changedNodeIDs, err := scheduleClashToNodeLinks(ctx, id, config.Proxies, subName, reporter, usageInfo, providerErr != nil || config.incompleteLinks)
 	return changedNodeIDs, usageInfo, err
 }
 
@@ -709,29 +692,22 @@ func LoadClashConfigFromURLWithReporter(ctx context.Context, id int, urlStr stri
 // proxys: 代理节点列表
 // subName: 订阅名称
 // usageInfo: 订阅用量信息 (可选)
-func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Proxy, subName string, reporter TaskReporter, usageInfo *UsageInfo) ([]int, error) {
+func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Proxy, subName string, reporter TaskReporter, usageInfo *UsageInfo, incomplete bool) (_ []int, runErr error) {
 	if reporter == nil {
 		reporter = &NoOpTaskReporter{}
 	}
 
-	addSuccessCount := 0
-	updateCount := 0 // 名称/链接已更新的节点数量
-	skipCount := 0   // 已存在的节点数量（跳过）
-	processedCount := 0
-	startTime := time.Now() // 记录开始时间用于计算耗时
+	startTime := time.Now()
 
-	// 确保任务结束时处理异常
 	defer func() {
 		if r := recover(); r != nil {
-			utils.Error("订阅更新任务执行过程中发生严重错误: %v", r)
-			reporter.ReportFail(fmt.Sprintf("任务异常: %v", r))
+			runErr = fmt.Errorf("订阅更新任务异常: %v", r)
 		}
 	}()
 
-	// 获取机场的Group信息
 	airport, err := models.GetAirportByID(id)
 	if err != nil {
-		utils.Error("获取机场 %s 的Group失败:  %v", subName, err)
+		return nil, err
 	}
 
 	// 1. 读取全局节点处理配置
@@ -789,409 +765,17 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 		proxys = applyAirportNodeNamePrefix(airport, proxys)
 	}
 
-	// 1. 获取该订阅当前在数据库中的所有节点
-	existingNodes, err := models.ListBySourceID(id)
+	result, err := syncAirportNodes(ctx, airport, subName, proxys, reporter, incomplete)
 	if err != nil {
-		utils.Info("获取订阅【%s】现有节点失败: %v", subName, err)
-		existingNodes = []models.Node{} // 确保后续逻辑不会panic
-	}
-
-	// 创建现有节点的映射表（以 ID 为键，用于删除判断时遍历）
-	existingNodeByID := make(map[int]models.Node)
-	for _, node := range existingNodes {
-		existingNodeByID[node.ID] = node
-	}
-
-	// 预扫描：统计本次拉取中每个 ContentHash 对应的名称集合（trim 后）
-	// 用于识别同 hash 多名称的信息节点（如"到期时间"、"剩余流量"），这类节点应放行入库且需要按名称粒度清理
-	currentNamesByHash := make(map[string]map[string]bool)
-	for _, p := range proxys {
-		name := strings.TrimSpace(p.Name)
-		p.Server = utils.WrapIPv6Host(p.Server)
-		ch := protocol.GenerateProxyContentHash(p)
-		if ch == "" {
-			continue
-		}
-		if currentNamesByHash[ch] == nil {
-			currentNamesByHash[ch] = make(map[string]bool)
-		}
-		currentNamesByHash[ch][name] = true
-	}
-
-	// 统计数据库中本机场已有节点的 hash→原始名称集合
-	// 解决“历史上是信息节点，但本次拉取只剩一个名称”时无法识别的问题（否则会导致残留无法清理/误更新）。
-	existingNamesByHash := make(map[string]map[string]bool)
-	for _, node := range existingNodes {
-		if node.ContentHash == "" {
-			continue
-		}
-		name := strings.TrimSpace(node.LinkName)
-		if name == "" {
-			name = strings.TrimSpace(node.Name)
-		}
-		if existingNamesByHash[node.ContentHash] == nil {
-			existingNamesByHash[node.ContentHash] = make(map[string]bool)
-		}
-		existingNamesByHash[node.ContentHash][name] = true
-	}
-
-	// 信息节点 hash 集合：本次拉取或数据库历史中，同一 hash 对应多个不同名称
-	infoNodeHashes := make(map[string]bool)
-	for ch, names := range currentNamesByHash {
-		if len(names) > 1 {
-			infoNodeHashes[ch] = true
-		}
-	}
-	for ch, names := range existingNamesByHash {
-		if len(names) > 1 {
-			infoNodeHashes[ch] = true
-		}
-	}
-
-	// 在基于原始名称完成同 hash 分类后，再对同机场内重名节点追加顺序编号，避免影响内容哈希去重语义。
-	proxys = applyAirportIntraNodeUniquify(airport, proxys)
-
-	// 创建现有节点的映射表（以 ContentHash 为键，用于同机场去重判断与更新）
-	existingNodeByContentHash := make(map[string]models.Node)
-	// 对信息节点 hash，按原始名称记录本机场已有节点（用户备注不会影响重新拉取匹配）
-	existingInfoNodeNames := make(map[string]map[string]models.Node)
-	for _, node := range existingNodes {
-		if node.ContentHash != "" {
-			existingNodeByContentHash[node.ContentHash] = node
-			// 如果该 hash 是信息节点，按名称建立索引
-			if infoNodeHashes[node.ContentHash] {
-				if existingInfoNodeNames[node.ContentHash] == nil {
-					existingInfoNodeNames[node.ContentHash] = make(map[string]models.Node)
-				}
-				name := strings.TrimSpace(node.LinkName)
-				if name == "" {
-					name = strings.TrimSpace(node.Name)
-				}
-				existingInfoNodeNames[node.ContentHash][name] = node
-			}
-		}
-	}
-
-	// 读取全局配置：是否启用跨机场去重（默认启用）
-	crossAirportDedupVal, _ := models.GetSetting("cross_airport_dedup_enabled")
-	enableCrossDedup := crossAirportDedupVal != "false"
-
-	var allNodeHashes map[string]bool
-	if enableCrossDedup {
-		allNodeHashes = models.GetAllNodeContentHashes()
-	} else {
-		allNodeHashes = models.GetNodeContentHashesBySourceID(id)
-	}
-
-	utils.Info("📄订阅【%s】获取到订阅数量【%d】，现有节点数量【%d】，哈希数量【%d】，跨机场去重【%v】", subName, len(proxys), len(existingNodes), len(allNodeHashes), enableCrossDedup)
-
-	// 更新任务总数（此时已知道需要处理的节点数量）
-	reporter.UpdateTotal(len(proxys))
-
-	// 记录本次获取到的节点 ContentHash（用于判断需要删除的节点）
-	currentHashes := make(map[string]bool)
-
-	// 批量收集：新增节点列表（稍后批量写入）
-	nodesToAdd := make([]models.Node, 0)
-
-	// 批量收集：需要更新名称/链接的节点列表
-	nodesToUpdate := make([]models.NodeInfoUpdate, 0)
-	countryBackfilledNodeIDs := make([]int, 0)
-
-	backfillExistingNodeCountry := func(existingNode models.Node, nodeName string) bool {
-		if airport == nil || !airport.BackfillExistingCountry || existingNode.LinkCountry != "" {
-			return false
-		}
-		country := models.ParseCountryFromNodeName(nodeName)
-		if country == "" {
-			return false
-		}
-		if err := models.UpdateNodeFields(existingNode.ID, map[string]any{"link_country": country}); err != nil {
-			utils.Warn("回填节点【%s】国家失败: %v", nodeName, err)
-			return false
-		}
-		countryBackfilledNodeIDs = append(countryBackfilledNodeIDs, existingNode.ID)
-		utils.Debug("🌍 现存节点【%s】回填国家: %s", nodeName, country)
-		return true
-	}
-
-	// 2. 遍历新获取的节点，插入或更新
-	for proxyIndex, proxy := range proxys {
-		// 定期检查任务是否已取消或超时（每处理一个节点检查一次）
-		select {
-		case <-ctx.Done():
-			utils.Warn("任务在处理节点时被取消或超时，已处理 %d/%d 个节点", processedCount, len(proxys))
-			reporter.ReportFail("任务执行超时或被取消")
-			return nil, fmt.Errorf("任务已取消或超时")
-		default:
-		}
-
-		utils.Info("💾准备存储节点【%s】", proxy.Name)
-		var Node models.Node
-
-		// 预处理：去除名称空格，处理 IPv6 地址
-		proxy.Name = strings.TrimSpace(proxy.Name)
-		proxy.Server = utils.WrapIPv6Host(proxy.Server)
-
-		// 计算节点内容哈希（用于全库去重）
-		contentHash := protocol.GenerateProxyContentHash(proxy)
-		if contentHash == "" {
-			utils.Warn("节点【%s】生成内容哈希失败，跳过", proxy.Name)
-			continue
-		}
-
-		// 使用公共函数生成节点链接
-		link := GenerateProxyLink(proxy)
-		if link == "" {
-			utils.Warn("节点【%s】生成链接失败，跳过", proxy.Name)
-			continue
-		}
-		clashExtra, err := protocol.EncodeClashExtra(proxy)
-		if err != nil {
-			utils.Warn("节点【%s】未知 Clash 属性序列化失败，跳过: %v", proxy.Name, err)
-			continue
-		}
-
-		Node.Link = link
-		Node.ClashExtra = clashExtra
-		Node.Name = proxy.Name
-		Node.LinkName = proxy.Name
-		Node.NameMode = models.NodeNameModeLink
-		Node.LinkAddress = proxy.Server + ":" + strconv.Itoa(int(proxy.Port))
-		Node.LinkHost = proxy.Server
-		Node.LinkPort = strconv.Itoa(int(proxy.Port))
-		Node.Source = subName
-		Node.SourceID = id
-		Node.SourceSort = proxyIndex + 1
-		if airport != nil {
-			Node.Group = airport.Group
-		}
-		Node.Protocol = protocol.GetProtocolFromLink(link)
-		Node.ContentHash = contentHash
-
-		// 国家自动填充（新节点）
-		if airport != nil && airport.AutoFillCountry && Node.LinkCountry == "" {
-			if country := models.ParseCountryFromNodeName(proxy.Name); country != "" {
-				Node.LinkCountry = country
-				utils.Debug("🌍 新节点【%s】自动填充国家: %s", proxy.Name, country)
-			}
-		}
-
-		// 记录本次获取到的节点 ContentHash
-		currentHashes[contentHash] = true
-
-		// 判断节点是否已存在（全库去重：使用 ContentHash 判断）
-		var nodeStatus string
-		if allNodeHashes[contentHash] {
-			skipCount++
-			nodeStatus = "skipped"
-			// 节点内容已存在 - 优先判断是否为本机场已存在节点
-			if _, ok := existingNodeByContentHash[contentHash]; ok {
-				// 属于本机场
-				if infoNodeHashes[contentHash] {
-					// 信息节点：用名称精确匹配（同 hash 对应多个已有节点）
-					if existingByName, nameExists := existingInfoNodeNames[contentHash][proxy.Name]; nameExists {
-						backfilledCountry := backfillExistingNodeCountry(existingByName, proxy.Name)
-						// 该名称的信息节点已存在，检查链接或顺序是否变化
-						if existingByName.LinkName != proxy.Name || existingByName.Link != link || existingByName.ClashExtra != Node.ClashExtra || existingByName.SourceSort != Node.SourceSort {
-							update := models.BuildNodeInfoUpdate(existingByName, proxy.Name, link, Node.SourceSort)
-							update.ClashExtra = Node.ClashExtra
-							nodesToUpdate = append(nodesToUpdate, update)
-							updateCount++
-							nodeStatus = "updated"
-							utils.Info("✏️ 信息节点【%s】链接/顺序已变更，将更新", proxy.Name)
-						} else if backfilledCountry {
-							nodeStatus = "updated"
-						} else {
-							utils.Debug("⏭️ 信息节点【%s】在本机场已存在，跳过", proxy.Name)
-						}
-					} else {
-						// 该名称的信息节点不存在（上游新增了一个信息节点），入库
-						nodesToAdd = append(nodesToAdd, Node)
-						skipCount--
-						addSuccessCount++
-						nodeStatus = "added"
-						utils.Info("📌 信息节点【%s】为新名称，允许入库", proxy.Name)
-					}
-				} else {
-					// 普通节点：用 hash 匹配，检查名称或链接是否变化
-					existingNode := existingNodeByContentHash[contentHash]
-					backfilledCountry := backfillExistingNodeCountry(existingNode, proxy.Name)
-
-					if existingNode.LinkName != proxy.Name || existingNode.Link != link || existingNode.ClashExtra != Node.ClashExtra || existingNode.SourceSort != Node.SourceSort {
-						update := models.BuildNodeInfoUpdate(existingNode, proxy.Name, link, Node.SourceSort)
-						update.ClashExtra = Node.ClashExtra
-						nodesToUpdate = append(nodesToUpdate, update)
-						updateCount++
-						nodeStatus = "updated"
-						utils.Info("✏️ 节点【%s】原始名称/链接/顺序已变更，将更新 [旧原始名称: %s]", proxy.Name, existingNode.LinkName)
-					} else if backfilledCountry {
-						nodeStatus = "updated"
-					} else {
-						utils.Debug("⏭️ 节点【%s】在本机场已存在，跳过", proxy.Name)
-					}
-				}
-			} else if enableCrossDedup {
-				// 跨机场去重开启：若全库已存在该内容，则跳过
-				if existingNode, exists := models.GetNodeByContentHash(contentHash); exists {
-					// 检查是否为同 hash 不同名的信息节点（预扫描已确定）
-					if infoNodeHashes[contentHash] {
-						nodesToAdd = append(nodesToAdd, Node)
-						skipCount--
-						addSuccessCount++
-						nodeStatus = "added"
-						utils.Info("📌 节点【%s】与已有节点配置相同但名称不同（信息节点），允许入库 [已有: %s]", proxy.Name, existingNode.Name)
-					} else {
-						utils.Warn("⚠️ 节点【%s】与其他机场重复，跳过 [现有节点: %s] [来源: %s] [分组: %s] [SourceID: %d]", proxy.Name, existingNode.Name, existingNode.Source, existingNode.Group, existingNode.SourceID)
-					}
-				} else {
-					// hash存在于allNodeHashes但缓存中找不到，说明是本次拉取中的内部重复
-					if infoNodeHashes[contentHash] {
-						nodesToAdd = append(nodesToAdd, Node)
-						skipCount--
-						addSuccessCount++
-						nodeStatus = "added"
-						allNodeHashes[contentHash] = true
-						utils.Info("📌 节点【%s】与本次拉取中其他节点配置相同但名称不同（信息节点），允许入库", proxy.Name)
-					} else {
-						hashData := protocol.NormalizeProxyForHash(proxy)
-						jsonBytes, _ := json.Marshal(hashData)
-						utils.Warn("🔄 节点【%s】与本次拉取中的其他节点重复（相同配置），跳过\n    HashData: %s", proxy.Name, string(jsonBytes))
-					}
-				}
-			} else {
-				// 跨机场去重关闭时 allNodeHashes 只包含本机场哈希；若此处找不到现有节点，说明是本次拉取内重复
-				if infoNodeHashes[contentHash] {
-					nodesToAdd = append(nodesToAdd, Node)
-					skipCount--
-					addSuccessCount++
-					nodeStatus = "added"
-					allNodeHashes[contentHash] = true
-					utils.Info("📌 节点【%s】与本次拉取中其他节点配置相同但名称不同（信息节点），允许入库", proxy.Name)
-				} else {
-					hashData := protocol.NormalizeProxyForHash(proxy)
-					jsonBytes, _ := json.Marshal(hashData)
-					utils.Warn("🔄 节点【%s】与本次拉取中的其他节点重复（相同配置），跳过\n    HashData: %s", proxy.Name, string(jsonBytes))
-				}
-			}
-		} else {
-			// 节点不存在，收集到待添加列表
-			nodesToAdd = append(nodesToAdd, Node)
-			addSuccessCount++
-			nodeStatus = "added"
-			// 将新节点的 hash 加入全库集合，避免本次拉取内的重复
-			allNodeHashes[contentHash] = true
-		}
-
-		// 更新进度（通过 reporter 报告）
-		processedCount++
-		reporter.ReportProgress(processedCount, proxy.Name, map[string]any{
-			"status":  nodeStatus,
-			"added":   addSuccessCount,
-			"skipped": skipCount,
-		})
-	}
-
-	// 3. 收集需要删除的节点ID（本次订阅没有获取到但数据库中存在的节点）
-	nodeIDsToDelete := make([]int, 0)
-	for nodeID, node := range existingNodeByID {
-		// 使用 ContentHash 判断节点是否在本次拉取中
-		if !currentHashes[node.ContentHash] {
-			nodeIDsToDelete = append(nodeIDsToDelete, nodeID)
-			continue
-		}
-
-		// 信息节点：hash 仍在，但需要按名称精细判断，避免名称变化/部分移除导致垃圾节点残留（数据膨胀）
-		if infoNodeHashes[node.ContentHash] {
-			currentNames := currentNamesByHash[node.ContentHash]
-			name := strings.TrimSpace(node.LinkName)
-			if name == "" {
-				name = strings.TrimSpace(node.Name)
-			}
-			if len(currentNames) == 0 || !currentNames[name] {
-				nodeIDsToDelete = append(nodeIDsToDelete, nodeID)
-			}
-		}
-	}
-
-	// 4. 批量写入数据库（一次性操作，减少数据库I/O）
-	// 批量添加新节点
-	if len(nodesToAdd) > 0 {
-		// 检查任务是否已取消或超时（批量操作前检查）
-		select {
-		case <-ctx.Done():
-			utils.Warn("任务在批量添加节点前被取消或超时")
-			reporter.ReportFail("任务执行超时或被取消")
-			return nil, fmt.Errorf("任务已取消或超时")
-		default:
-		}
-
-		if err := models.BatchAddNodes(nodesToAdd); err != nil {
-			utils.Error("❌批量添加节点失败：%v", err)
-			// 重置计数，因为添加失败
-			addSuccessCount = 0
-		} else {
-			utils.Info("✅批量添加 %d 个节点成功", len(nodesToAdd))
-		}
-	}
-
-	// 批量更新名称/链接已变更的节点
-	actualUpdateCount := 0
-	if len(nodesToUpdate) > 0 {
-		if cnt, err := models.BatchUpdateNodeInfo(nodesToUpdate); err != nil {
-			utils.Error("❌批量更新节点信息失败：%v", err)
-		} else {
-			actualUpdateCount = cnt
-			utils.Info("✏️批量更新 %d 个节点的名称/链接", actualUpdateCount)
-		}
-	}
-
-	// 批量删除失效节点
-	deleteCount := 0
-	if len(nodeIDsToDelete) > 0 {
-		if err := models.BatchDel(nodeIDsToDelete); err != nil {
-			utils.Error("❌批量删除节点失败：%v", err)
-		} else {
-			deleteCount = len(nodeIDsToDelete)
-			utils.Info("🗑️批量删除 %d 个失效节点", deleteCount)
-		}
-	}
-
-	utils.Info("✅订阅【%s】节点同步完成，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，更新节点【%d】个，已存在节点【%d】个，删除失效【%d】个", subName, len(proxys), addSuccessCount+skipCount, addSuccessCount, actualUpdateCount, skipCount, deleteCount)
-
-	// 收集变更和新增的节点ID（用于更新后仅检测变化节点的功能）
-	changedNodeIDs := make([]int, 0, addSuccessCount+actualUpdateCount)
-	for _, n := range nodesToAdd {
-		if n.ID > 0 {
-			changedNodeIDs = append(changedNodeIDs, n.ID)
-		}
-	}
-	for _, u := range nodesToUpdate {
-		if u.ID > 0 {
-			changedNodeIDs = append(changedNodeIDs, u.ID)
-		}
-	}
-	changedNodeIDs = append(changedNodeIDs, countryBackfilledNodeIDs...)
-
-	// 重新查找机场以获取最新信息并更新成功次数
-	airport, err = models.GetAirportByID(id)
-	if err != nil {
-		utils.Error("获取机场 %s 失败:  %v", subName, err)
 		return nil, err
 	}
-	airport.SuccessCount = addSuccessCount + skipCount
-	// 当前时间
-	airport.LastRunTime = new(time.Now())
-	err1 := airport.Update()
-	if err1 != nil {
-		return nil, err1
+	summary := fmt.Sprintf("新增: %d, 更新: %d, 已存在或跳过: %d, 删除: %d", result.added, result.updated, result.skipped, result.deleted)
+	if result.incomplete {
+		summary += "。本次获取或转换不完整，已保留未匹配的旧节点"
 	}
-	// 通过 reporter 报告任务完成
-	reporter.ReportComplete(fmt.Sprintf("订阅更新完成 (新增: %d, 更新: %d, 已存在: %d, 删除: %d)", addSuccessCount, actualUpdateCount, skipCount, deleteCount), map[string]any{
-		"added":   addSuccessCount,
-		"updated": actualUpdateCount,
-		"skipped": skipCount,
-		"deleted": deleteCount,
+	utils.Info("订阅【%s】节点同步完成，成功处理 %d 个节点，%s", subName, result.successCount, summary)
+	reporter.ReportComplete("订阅更新完成 ("+summary+")", map[string]any{
+		"added": result.added, "updated": result.updated, "skipped": result.skipped, "deleted": result.deleted,
 	})
 
 	// 触发webhook的完成事件
@@ -1219,7 +803,7 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 		"id":       id,
 		"name":     subName,
 		"status":   "success",
-		"success":  addSuccessCount + skipCount,
+		"success":  result.successCount,
 		"duration": duration.Milliseconds(),
 	}
 	if len(usageData) > 0 {
@@ -1228,11 +812,10 @@ func scheduleClashToNodeLinks(ctx context.Context, id int, proxys []protocol.Pro
 
 	notifications.Publish("subscription.sync_succeeded", notifications.Payload{
 		Title:   "订阅更新完成",
-		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，耗时 %s，总节点【%d】个，成功处理【%d】个，新增节点【%d】个，更新节点【%d】个，已存在节点【%d】个，删除失效【%d】个%s", subName, durationStr, len(proxys), addSuccessCount+skipCount, addSuccessCount, actualUpdateCount, skipCount, deleteCount, usageText),
+		Message: fmt.Sprintf("✅订阅【%s】节点同步完成，耗时 %s，总节点【%d】个，成功处理【%d】个，%s%s", subName, durationStr, len(proxys), result.successCount, summary, usageText),
 		Data:    nData,
 	})
-	return changedNodeIDs, nil
-
+	return result.changedIDs, nil
 }
 
 // formatDurationSub 格式化时长为人类可读字符串

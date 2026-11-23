@@ -236,7 +236,7 @@ func TestRealityExtensionsPlainAndBase64SubscriptionImport(t *testing.T) {
 	const data = "vless://12345678-1234-1234-1234-123456789abc@example.com:443?security=reality&pbk=test-key&sid=0123&spx=%2Fcrawl%3Fx%3D1%26y%3D2&pqv=verify_-key#vless\n" +
 		"trojan://password@example.com:443?security=reality&pbk=test-key&sid=0123&spx=%2Fcrawl%3Fx%3D1%26y%3D2&pqv=verify_-key#trojan"
 	for _, source := range []string{data, base64.StdEncoding.EncodeToString([]byte(data))} {
-		proxies := parseSubscriptionLinkProxies([]byte(source))
+		proxies, _ := parseSubscriptionLinkProxies([]byte(source))
 		if len(proxies) != 2 {
 			t.Fatalf("imported %d nodes, want 2", len(proxies))
 		}

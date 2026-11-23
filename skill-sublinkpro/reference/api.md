@@ -546,6 +546,8 @@ Base: `/api/v1/airports` (all write bodies are JSON)
 - **POST** `/airports/{id}/pull` — pull one now
 - **POST** `/airports/{id}/refresh-usage`
 
+Pull endpoints enqueue a task. A partial upstream response can import usable entries while retaining unmatched existing nodes, and the task result identifies the partial refresh. A failed database write rolls the refresh back. See [airport subscription management](../../docs/features/airport.md) for node preservation behavior.
+
 Country-fill fields apply during airport pulls and use Country Rules against upstream node names:
 
 - `autoFillCountry`: fills the country code for newly imported nodes whose country is empty.
@@ -851,3 +853,45 @@ WebDAV restore reuses the database migration workflow and overwrites current bus
 - **Demo mode:** write endpoints marked demo-restricted are blocked when the instance runs in demo mode.
 - **Pagination:** most list endpoints accept `?page=&pageSize=` and then return `{items, total, page, pageSize, totalPages}`.
 - **Content type is per-endpoint** — see the Content-Type Trap section above. When in doubt, match the exact entry here rather than guessing.
+
+## Share link device limits / 分享链接设备限额
+
+Subscription create/update multipart field: `DefaultMaxDevices` (integer, 0–10000). Create defaults to 0 (unlimited); omitted update fields preserve stored values. It is the default for future shares, not a shared subscription-wide quota. Records created before this feature default to 0 on migration; configured limits are preserved. There is no client-specific access restriction.
+
+Share `/api/v1/shares/add`, `/batch-add`, `/update`, `/batch-update` accept optional JSON `max_devices`. Omitted create fields inherit the parent subscription default; omitted update fields remain unchanged. Explicit 0 is supported. Positive limits cannot be reduced below the active bound count. Share list items include `max_devices` and `device_count`. Updates write only explicitly provided fields inside the share transaction; omit `token` when keeping the existing Token, including when changing a device limit.
+
+`/batch-update` commits each share independently. All-success responses retain HTTP 200 / `code: 200`; partially failed batches retain HTTP 400 / `code: 400` and the existing `msg`. Both include `data` (successful share IDs), `results` (one `{id, success, error?}` per requested share), `success_count` and `failed_count`. Successful updates remain committed. Refresh the share list and retry only failed IDs; an omitted field keeps its original value.
+
+Example of a partially failed batch:
+
+```json
+{
+  "code": 400,
+  "msg": "...",
+  "data": [12],
+  "success_count": 1,
+  "failed_count": 1,
+  "results": [
+    {"id": 12, "success": true},
+    {"id": 13, "success": false, "error": "..."}
+  ]
+}
+```
+
+All device management endpoints require the existing administrator/API-key authentication:
+
+| Method | Path | Parameters | Result |
+| --- | --- | --- | --- |
+| GET | `/api/v1/shares/devices` | query `shareId` | `data` array of devices |
+| POST | `/api/v1/shares/device-update` | query `shareId`; JSON `id`, optional `name` (max 100 characters), `revoked` | Updates note or revokes/restores a device |
+| POST | `/api/v1/shares/devices-reset` | query `shareId` | Revokes all IDs, rotates Token, returns `data.token` |
+
+Device fields: `id`, `share_id`, `name`, `os`, `model`, `revoked`, `created_at`, `last_access_at`. Raw HWIDs and their stored digests are never included. Restore consumes capacity; revoke frees capacity while retaining a deny record. Ordinary `/refresh` preserves bindings.
+
+`GET /c/?token=...` requires a valid, single `X-HWID` header when `max_devices > 0`, regardless of client brand. Query parameters cannot supply device identity. Bindings are allocated atomically only after successful generation. Unlimited shares use the ordinary download path without a device registration transaction. Token and share availability are rechecked before sending a response. `HEAD /c/` validates access without allocating slots. Responses use `Cache-Control: private, no-store`.
+
+HTTP 403 JSON codes: `hwid_required`, `hwid_invalid`, `device_revoked`, `device_limit_exceeded`, `share_unavailable`. HTTP 503 `device_check_unavailable` means validation failed; HTTP 502 `subscription_generation_failed` means no device was bound. Clients may show a generic HTTP failure rather than the server message. An unbound link forwarded early may have its slots claimed by someone else. Revocation affects only future downloads; already downloaded nodes remain usable. This does not prevent exported node use or forged device identifiers.
+
+Reverse proxies and subscription sidecars must preserve `User-Agent`, `X-HWID`, `X-Device-OS`, and `X-Device-Model` on `/c/`. Do not replace missing identities. Repeated HWID headers and comma-separated values produced by proxy merging are both rejected as `hwid_invalid`. Validate header forwarding with a `HEAD` request through the public subscription URL; health checks on `/api/v1/version` cannot verify this path. See [subscription share troubleshooting](../../docs/features/subscription-share.md#reverse-proxies-and-http-403-troubleshooting).
+
+Database migration and WebDAV restoration import bound and revoked devices together with their shares and clear target device records during replacement. Old backups without a device table remain supported and restore without device bindings.

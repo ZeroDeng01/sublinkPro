@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -14,6 +15,7 @@ import (
 	"sublink/models"
 	"sublink/node/protocol"
 	"sublink/utils"
+	"sync"
 	"time"
 
 	"github.com/metacubex/mihomo/adapter"
@@ -58,6 +60,19 @@ func (t *mockTunnel) NatTable() constant.NatTable {
 // Proxies implements proxydialer.Tunnel - required for proxydialer.NewByName
 func (t *mockTunnel) Proxies() map[string]constant.Proxy {
 	return t.proxies
+}
+
+// dialerProxy 统一拥有临时代理链中的两个 adapter，关闭时一并释放。
+type dialerProxy struct {
+	constant.Proxy
+	dialer   constant.Proxy
+	once     sync.Once
+	closeErr error
+}
+
+func (p *dialerProxy) Close() error {
+	p.once.Do(func() { p.closeErr = errors.Join(p.Proxy.Close(), p.dialer.Close()) })
+	return p.closeErr
 }
 
 // GetMihomoAdapter creates a Mihomo Proxy Adapter from a node link
@@ -159,8 +174,10 @@ func getMihomoAdapterWithContext(nodeLink string, dialer *dialerInfo, dialerProx
 		// Parse test node with tunnel context
 		proxyAdapter, err = adapter.ParseProxy(proxyMap, adapter.WithTunnelForAPI(mockTunnel))
 		if err != nil {
+			_ = dialerAdapter.Close()
 			return nil, fmt.Errorf("create proxy adapter with dialer error: %v", err)
 		}
+		proxyAdapter = &dialerProxy{Proxy: proxyAdapter, dialer: dialerAdapter}
 	} else {
 		// 4. Create Mihomo Proxy Adapter (without dialer)
 		proxyAdapter, err = adapter.ParseProxy(proxyMap)
@@ -250,6 +267,7 @@ func MihomoDelayTest(
 	if err != nil {
 		return 0, "", nil, err
 	}
+	defer func() { _ = proxyAdapter.Close() }()
 
 	// 执行延迟测试（使用 URLTest）
 	latency, err = MihomoDelayWithAdapter(proxyAdapter, testUrl, timeout, includeHandshake)
@@ -325,6 +343,7 @@ func MihomoSpeedTest(
 	if err != nil {
 		return 0, 0, 0, "", nil, err
 	}
+	defer func() { _ = proxyAdapter.Close() }()
 
 	// 4. Perform Speed Test
 	// We will try to download from testUrl
@@ -366,12 +385,7 @@ func MihomoSpeedTest(
 	if err != nil {
 		return 0, 0, 0, "", nil, fmt.Errorf("dial error: %v", err)
 	}
-	// Close connection asynchronously to avoid blocking if it hangs
-	defer func() {
-		go func() {
-			_ = conn.Close()
-		}()
-	}()
+	defer func() { _ = conn.Close() }()
 
 	// Calculate latency
 	latency = int(time.Since(start).Milliseconds())
@@ -379,39 +393,8 @@ func MihomoSpeedTest(
 	// We need to use the connection to send the request
 	// Better approach: Use http.Client with a custom Transport that uses the proxy adapter.
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				// Recover from panics in DialContext
-				defer func() {
-					if r := recover(); r != nil {
-						err = fmt.Errorf("panic in DialContext: %v", r)
-					}
-				}()
-
-				// Re-parse addr to get host and port for metadata
-				h, pStr, splitErr := net.SplitHostPort(addr)
-				if splitErr != nil {
-					return nil, fmt.Errorf("split host port error: %v", splitErr)
-				}
-
-				pUint, parseErr := strconv.ParseUint(pStr, 10, 16)
-				if parseErr != nil {
-					return nil, fmt.Errorf("invalid port string: %v", parseErr)
-				}
-				p := uint16(pUint)
-
-				md := &constant.Metadata{
-					Host:    h,
-					DstPort: p,
-					Type:    constant.HTTP,
-				}
-				return proxyAdapter.DialContext(ctx, md)
-			},
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- 代理环境下需要兼容自签或中间证书链
-		},
-		Timeout: timeout,
-	}
+	client := utils.NewHTTPClientWithAdapter(proxyAdapter, timeout, &tls.Config{InsecureSkipVerify: true}) // #nosec G402 -- 代理环境下需要兼容自签或中间证书链
+	defer utils.CloseHTTPClient(client)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, testUrl, nil)
 	if err != nil {
@@ -561,30 +544,8 @@ func fetchLandingIPWithAdapter(proxyAdapter constant.Proxy, ipUrl string) string
 	defer cancel()
 
 	// 复用proxyAdapter创建HTTP client
-	client := &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(dialCtx context.Context, network, addr string) (net.Conn, error) {
-				h, pStr, splitErr := net.SplitHostPort(addr)
-				if splitErr != nil {
-					return nil, splitErr
-				}
-
-				pUint, parseErr := strconv.ParseUint(pStr, 10, 16)
-				if parseErr != nil {
-					return nil, parseErr
-				}
-
-				md := &constant.Metadata{
-					Host:    h,
-					DstPort: uint16(pUint),
-					Type:    constant.HTTP,
-				}
-				return proxyAdapter.DialContext(dialCtx, md)
-			},
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- 代理环境下需要兼容自签或中间证书链
-		},
-		Timeout: 3 * time.Second,
-	}
+	client := utils.NewHTTPClientWithAdapter(proxyAdapter, 3*time.Second, &tls.Config{InsecureSkipVerify: true}) // #nosec G402 -- 代理环境下需要兼容自签或中间证书链
+	defer utils.CloseHTTPClient(client)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", ipUrl, nil)
 	if err != nil {
@@ -621,28 +582,8 @@ func fetchQuality(proxyAdapter constant.Proxy, qualityURL string) *QualityCheckR
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(dialCtx context.Context, network, addr string) (net.Conn, error) {
-				h, pStr, splitErr := net.SplitHostPort(addr)
-				if splitErr != nil {
-					return nil, splitErr
-				}
-				pUint, parseErr := strconv.ParseUint(pStr, 10, 16)
-				if parseErr != nil {
-					return nil, parseErr
-				}
-				md := &constant.Metadata{
-					Host:    h,
-					DstPort: uint16(pUint),
-					Type:    constant.HTTP,
-				}
-				return proxyAdapter.DialContext(dialCtx, md)
-			},
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- 代理环境下需要兼容自签或中间证书链
-		},
-		Timeout: 5 * time.Second,
-	}
+	client := utils.NewHTTPClientWithAdapter(proxyAdapter, 5*time.Second, &tls.Config{InsecureSkipVerify: true}) // #nosec G402 -- 代理环境下需要兼容自签或中间证书链
+	defer utils.CloseHTTPClient(client)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", qualityURL, nil)
 	if err != nil {

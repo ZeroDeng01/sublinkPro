@@ -214,6 +214,7 @@ func resolveWithDoH(ctx context.Context, host, dohServer string, useProxy bool, 
 		utils.Warn("[DNS] 创建DoH代理客户端失败: %v", err)
 		return ""
 	}
+	defer utils.CloseHTTPClient(client)
 
 	// 发送 POST 请求 (RFC 8484)
 	req, err := http.NewRequestWithContext(ctx, "POST", dohServer, bytes.NewReader(data))
