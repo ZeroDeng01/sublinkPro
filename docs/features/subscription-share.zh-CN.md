@@ -120,8 +120,9 @@
 
 ## Mieru 输出说明
 
-- Mieru 当前仅支持 Clash/mihomo 输出；`/c?client=clash` 会按 mihomo YAML 字段输出 `type: mieru`、`server`、`port` 或 `port-range`、`transport`、`username`、`password`，并保留可选的 `multiplexing`、`traffic-pattern` 与链式代理 `dialer-proxy`。
-- Mieru 官方存在 `mieru://` / `mierus://` 分享链接，但官方文档未定义适合逐字段编辑的通用 URL schema。SublinkPro 内部使用 `mieru://username:password@server:port?...#name` 作为原始编辑和 Clash/mihomo 导入回写格式；需要端口范围时使用 `portRange=2090-2099`，不写 `port`。
+- Clash/mihomo 订阅将 Mieru 节点输出为 YAML，支持 `server`、`port` 或 `port-range`、`transport`、登录凭据及可选的 `multiplexing`、`handshake-mode`、`traffic-pattern` 和 `dialer-proxy`。
+- 添加节点支持两种 [Mieru 官方格式](https://github.com/enfein/mieru/blob/v3.39.0/docs/client-install.zh_CN.md#分享客户端的设置)。`mieru://` 携带 Base64 编码的 Protobuf 客户端配置，`mierus://` 使用 `port=2090-2099&profile=default&protocol=TCP` 等参数。每条链接对应一个 SublinkPro 节点。Clash/mihomo 导出要求单服务器、单一传输协议，以及单端口或一个连续端口范围。同一协议下连续的端口绑定可合并为一个范围，无法满足这些条件的节点会跳过。编辑原始字段时会保留分享格式和其他绑定。
+- 应用启动升级时，会将可转换的旧版 SublinkPro 链接迁移为 `mierus://`，原节点 ID 保持不变。迁移日志会标明需要修正链接的节点。
 - `/c?client=v2ray` 与 Surge 当前不支持 Mieru；SublinkPro 会跳过 Mieru 节点，不会把 `mieru://` 链接写入 v2ray base64，也不会生成 Surge 配置。
 
 ## Snell 输出说明

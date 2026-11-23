@@ -161,6 +161,54 @@ func repairHTTPHTTPSNodeProtocolFromLink(db *gorm.DB) error {
 	})
 }
 
+// upgradeMieruNodeLinks converts old Mieru links and repairs their derived fields.
+func upgradeMieruNodeLinks(db *gorm.DB) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		var nodes []Node
+		return tx.Select("id", "link", "clash_extra").
+			Where("LOWER(link) LIKE ? OR LOWER(link) LIKE ?", "mieru://%", "mierus://%").
+			FindInBatches(&nodes, 200, func(batch *gorm.DB, _ int) error {
+				for _, node := range nodes {
+					link, extra := node.Link, node.ClashExtra
+					identity, err := protocol.ExtractLinkIdentity(link)
+					if err != nil {
+						link, extra, err = protocol.UpgradeLegacyMieruLink(link, extra)
+						if err == nil {
+							identity, err = protocol.ExtractLinkIdentity(link)
+						}
+					}
+					if err != nil {
+						utils.Warn("Mieru 节点 %d 的链接无法迁移", node.ID)
+						continue
+					}
+					linkHash := hashNodeLink(link)
+					if link != node.Link {
+						var conflicts int64
+						if err := batch.Model(&Node{}).Where("link_hash = ? AND id <> ?", linkHash, node.ID).Count(&conflicts).Error; err != nil {
+							return err
+						}
+						if conflicts > 0 {
+							utils.Warn("Mieru 节点 %d 的迁移链接与已有节点重复", node.ID)
+							continue
+						}
+					}
+
+					updates := map[string]any{
+						"link": link, "link_hash": linkHash, "clash_extra": extra, "protocol": identity.Protocol,
+						"link_name": identity.Name, "link_host": identity.Host, "link_port": identity.Port, "link_address": identity.Address,
+					}
+					if proxy, err := protocol.LinkToProxy(protocol.Urls{Url: link, ClashExtra: extra}, protocol.OutputConfig{}); err == nil {
+						updates["content_hash"] = protocol.GenerateProxyContentHash(proxy)
+					}
+					if err := batch.Model(&Node{}).Where("id = ? AND link = ?", node.ID, node.Link).UpdateColumns(updates).Error; err != nil {
+						return err
+					}
+				}
+				return nil
+			}).Error
+	})
+}
+
 // RunMigrations 执行所有数据库迁移
 // 此函数必须在 database.Init() 之后调用
 func RunMigrations() error {
@@ -1167,6 +1215,12 @@ DIRECT = direct
 		return nil
 	}); err != nil {
 		utils.Error("执行迁移 0022_fill_node_link_hash 失败: %v", err)
+	}
+
+	if err := database.RunCustomMigration("0038_migrate_mieru_node_links", func() error {
+		return upgradeMieruNodeLinks(db)
+	}); err != nil {
+		utils.Error("执行迁移 0038_migrate_mieru_node_links 失败: %v", err)
 	}
 
 	// 0023_normalize_subscription_share_timestamps - 清理分享表中的零时间/无效时间占位

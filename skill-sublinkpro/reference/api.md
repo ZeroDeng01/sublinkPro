@@ -144,6 +144,7 @@ Base: `/api/v1/nodes`
 **POST** `/nodes/add` — **form**
 - **Required:** `link` (proxy URI, WireGuard config text, or Clash YAML containing `proxies:`)
 - Optional: `name`, `nameMode` (`link` = use upstream name, `remark` = use custom `name`; `custom` is accepted as an alias of `remark`), `dialerProxyName`, `group`
+- Mieru accepts standard `mieru://` and simple `mierus://` share links. One share link adds one node. Clash/mihomo subscription export skips nodes whose bindings cannot be expressed as one server, one transport and one port or contiguous port range. Clash/mihomo YAML imports generate simple links.
 
 ### Update Node
 **POST** `/nodes/update` — **form**

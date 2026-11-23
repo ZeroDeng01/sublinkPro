@@ -120,8 +120,9 @@ For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] 香
 
 ## Mieru Output Notes
 
-- Mieru currently supports Clash/mihomo output only. `/c?client=clash` outputs mihomo YAML fields including `type: mieru`, `server`, `port` or `port-range`, `transport`, `username`, `password`, and optional `multiplexing`, `traffic-pattern`, and chain proxy `dialer-proxy`.
-- Official Mieru has `mieru://` and `mierus://` share links, but official docs do not define a general URL schema suitable for field by field editing. SublinkPro internally uses `mieru://username:password@server:port?...#name` as the raw edit and Clash/mihomo import write back format. When a port range is needed, use `portRange=2090-2099` and do not write `port`.
+- Clash/mihomo subscriptions render Mieru as YAML with `server`, `port` or `port-range`, `transport`, credentials, and optional `multiplexing`, `handshake-mode`, `traffic-pattern`, and `dialer-proxy`.
+- Adding nodes accepts both [official Mieru formats](https://github.com/enfein/mieru/blob/v3.39.0/docs/client-install.md#sharing-client-settings). `mieru://` carries a Base64 Protobuf client configuration. `mierus://` uses query parameters such as `port=2090-2099&profile=default&protocol=TCP`. Each link represents one SublinkPro node. Clash/mihomo export requires one server, one transport and a single port or one contiguous port range. Multiple bindings can form one range when they use the same transport and have no gaps. SublinkPro skips incompatible nodes. Raw edits preserve the input format and the other bindings.
+- The startup migration converts valid historical SublinkPro links to `mierus://` while preserving the node IDs. Migration logs identify records whose links need correction.
 - `/c?client=v2ray` and Surge currently do not support Mieru. SublinkPro skips Mieru nodes, does not write `mieru://` links into v2ray base64, and does not generate Surge config for them.
 
 ## Snell Output Notes

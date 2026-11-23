@@ -349,7 +349,7 @@ MustRegisterProtocol(newProxyProtocolSpec(...))
 
 If the protocol is only a demo protocol and needs only parsing plus UI metadata, registering only `newProtocolSpec(...)` is also fine.
 
-If a protocol has extra share link prefixes that are not suitable for full Decode / Import, but still need to participate in client compatibility checks, use `WithClientSupportAliases(...)` to add aliases for compatibility checks only. This does not register that prefix as a full parser entry. For example, Mieru uses `mierus://` only to decide that v2ray should not output it. It does not claim full field by field parsing support for the official `mierus://` share link.
+Register supported share prefixes as protocol aliases and handle their formats in the protocol implementation. Use `WithClientSupportAliases(...)` for prefixes used only in client compatibility checks.
 
 ### VLESS XHTTP mapping conventions
 

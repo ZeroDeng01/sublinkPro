@@ -197,7 +197,7 @@ in credentials; URI components are decoded once, including when links are re-exp
 > VLESS and Trojan REALITY `spx` / `pqv` parameters are preserved through share links, field editing and Clash YAML import/export (`spider-x` / `mldsa65-verify`). Xray clients use the existing `v2ray` output. Execution requires a compatible core; Surge skips settings it cannot represent. See [REALITY compatibility](docs/features/subscription-share.md#vless-reality-compatibility).
 
 > [!NOTE]
-> Mieru currently supports Clash/mihomo YAML import and export only. Official Mieru has `mieru://` and `mierus://` share links, but does not define a general URL schema suitable for field by field editing. For raw editing and Clash/mihomo import write back, SublinkPro uses an internal editable form: `mieru://username:password@server:port?...#name`, with port ranges written as `portRange=2090-2099`. v2ray and Surge don't support Mieru in SublinkPro. Subscription output skips that protocol instead of converting it to a downgraded form.
+> Mieru nodes can be imported from official standard (`mieru://`) and simple (`mierus://`) share links or Clash/mihomo YAML. Clash/mihomo subscriptions include Mieru nodes. See [Mieru compatibility](docs/features/subscription-share.md#mieru-output-notes).
 
 > [!NOTE]
 > Snell supports Clash/mihomo and Surge output only. Snell has no official share link schema, so SublinkPro uses an internal editable form for raw editing and Clash/mihomo/Surge import write back: `snell://server:port?psk=xxx&version=3&obfs=http&obfs-host=xxx#name`. v2ray does not support Snell in SublinkPro; subscription output skips it instead of converting it to a downgraded form.

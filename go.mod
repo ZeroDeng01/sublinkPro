@@ -5,6 +5,7 @@ go 1.27.3
 require (
 	github.com/dlclark/regexp2/v2 v2.13.1
 	github.com/dop251/goja v0.0.0-20260607120635-348e6bea910d
+	github.com/enfein/mieru/v3 v3.39.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-sql-driver/mysql v1.10.2
@@ -16,6 +17,7 @@ require (
 	github.com/oschwald/geoip2-golang/v2 v2.5.0
 	github.com/robfig/cron/v3 v3.0.1
 	golang.org/x/crypto v0.59.0
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/postgres v1.6.3
@@ -38,7 +40,6 @@ require (
 	github.com/dunglas/httpsfv v1.1.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/easytier/easytier/easytier-go v0.0.0-20261111015056-2abb1676b475 // indirect
-	github.com/enfein/mieru/v3 v3.39.0 // indirect
 	github.com/ericlagergren/aegis v0.0.0-20250325060835-cd0defd64358 // indirect
 	github.com/ericlagergren/polyval v0.0.0-20230805202542-18692a1b76f9 // indirect
 	github.com/ericlagergren/siv v0.0.0-20220507050439-0b757b3aa5f1 // indirect
@@ -171,7 +172,6 @@ require (
 	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 	modernc.org/libc v1.73.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect

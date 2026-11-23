@@ -763,7 +763,7 @@ func TestGenerateProxyLinkRoundTripsMieruClashYAML(t *testing.T) {
     username: user
     password: password
     multiplexing: MULTIPLEXING_LOW
-    traffic-pattern: dGVzdA==
+    traffic-pattern: CCo=
 `), &config); err != nil {
 		t.Fatalf("yaml unmarshal failed: %v", err)
 	}
@@ -788,8 +788,8 @@ func TestGenerateProxyLinkRoundTripsMieruClashYAML(t *testing.T) {
 	if decoded.Multiplexing != "MULTIPLEXING_LOW" {
 		t.Fatalf("multiplexing = %q, want MULTIPLEXING_LOW", decoded.Multiplexing)
 	}
-	if decoded.TrafficPattern != "dGVzdA==" {
-		t.Fatalf("traffic pattern = %q, want dGVzdA==", decoded.TrafficPattern)
+	if decoded.TrafficPattern != "CCo=" {
+		t.Fatalf("traffic pattern = %q, want CCo=", decoded.TrafficPattern)
 	}
 }
 

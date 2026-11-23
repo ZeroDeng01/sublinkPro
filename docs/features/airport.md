@@ -10,7 +10,7 @@ SublinkPro provides complete airport subscription management. It can convert sub
 
 | Feature | Description |
 |:---|:---|
-| **📥 Multi format import** | Automatically parses and imports Clash/mihomo and V2Ray subscription formats. Mieru and Snell support Clash/mihomo YAML only |
+| **📥 Multi format import** | Automatically parses Clash/mihomo and proxy-link subscriptions, including official Mieru share links |
 | **⏱️ Smart scheduled updates** | Built in Crontab level scheduler, with interval or Cron expression updates, keeping nodes fresh |
 | **📊 Traffic usage monitoring** | Parses the `Subscription-Userinfo` response header and shows **used upload**, **used download**, **total traffic**, and **expiration time** |
 | **🚀 Update now** | One click “fetch now” plus real time callbacks, so latest traffic data and node lists appear without refreshing the page |
@@ -56,8 +56,7 @@ If a selected HTTP provider fails or some entries cannot be converted, the refre
 
 ### Mieru compatibility
 
-- Airport subscription import supports `type: mieru` nodes in Clash/mihomo YAML, preserving official mihomo fields: `server`, `port` or `port-range`, `transport`, `username`, `password`, `multiplexing`, and `traffic-pattern`.
-- Official Mieru has `mieru://` and `mierus://` share links, but does not define a general URL schema suitable for field by field editing in the SublinkPro raw editor. When saving nodes, the system uses an internal editable form, `mieru://username:password@server:port?...#name`, with port ranges written as `portRange=2090-2099`, for Clash/mihomo YAML import write back and later export.
+- Airport subscriptions accept `type: mieru` in Clash/mihomo YAML and both official share-link formats in plaintext or Base64 node lists. Subscription import stores single-server Mieru nodes as official simple links (`mierus://`). See [Mieru output notes](subscription-share.md#mieru-output-notes).
 - Mieru is not output to v2ray or Surge. Those clients are currently outside SublinkPro's Mieru support scope.
 
 ### OpenVPN compatibility

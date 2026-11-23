@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sublink/cache"
@@ -133,6 +134,9 @@ type Proxy struct {
 	Password              string         `yaml:"password,omitempty"`                    // 密码
 	Multiplexing          string         `yaml:"multiplexing,omitempty"`                // Mieru 多路复用级别
 	TrafficPattern        string         `yaml:"traffic-pattern,omitempty"`             // Mieru 流量模式
+	HandshakeMode         string         `yaml:"handshake-mode,omitempty"`              // Mieru 握手模式
+	MieruMTU              int            `yaml:"-" json:"-"`                            // Mieru 分享链接的 MTU
+	MieruBindings         []MieruBinding `yaml:"-" json:"-"`                            // Mieru 分享链接的其他端口绑定
 	Client_fingerprint    string         `yaml:"client-fingerprint,omitempty"`          // 客户端指纹 (uTLS)
 	Fingerprint           string         `yaml:"fingerprint,omitempty"`                 // 服务端证书 SHA-256 指纹
 	Tfo                   bool           `yaml:"tfo,omitempty"`                         // TCP Fast Open
@@ -464,9 +468,15 @@ func DecodeClash(proxys []Proxy, yamlfile string, customGroups ...[]CustomProxyG
 	// 定义一个代理列表名字
 	ProxiesNameList := []string{}
 	// 添加新代理
+	skipped := make(map[string]bool)
 	for _, p := range proxys {
-		ProxiesNameList = append(ProxiesNameList, p.Name)
-		proxies = append(proxies, p)
+		outbound, ok := p.clashPortRange()
+		if !ok {
+			skipped[p.Name] = true
+			continue
+		}
+		ProxiesNameList = append(ProxiesNameList, outbound.Name)
+		proxies = append(proxies, outbound)
 	}
 	// proxies = append(proxies, newProxy)
 	config["proxies"] = proxies
@@ -481,10 +491,17 @@ func DecodeClash(proxys []Proxy, yamlfile string, customGroups ...[]CustomProxyG
 	if len(customGroups) > 0 && len(customGroups[0]) > 0 {
 		for _, cg := range customGroups[0] {
 			// 构建代理组 map
+			members := cg.Proxies
+			if len(skipped) > 0 {
+				members = slices.DeleteFunc(slices.Clone(members), func(name string) bool { return skipped[name] })
+				if len(cg.Proxies) > 0 && len(members) == 0 {
+					members = []string{"REJECT"}
+				}
+			}
 			groupMap := map[string]any{
 				"name":          cg.Name,
 				"type":          cg.Type,
-				"proxies":       cg.Proxies,
+				"proxies":       members,
 				"_custom_group": true, // 标记为自定义代理组，不追加所有节点
 			}
 
@@ -535,6 +552,17 @@ func DecodeClash(proxys []Proxy, yamlfile string, customGroups ...[]CustomProxyG
 		proxyGroup, ok := pg.(map[string]any)
 		if !ok {
 			continue
+		}
+
+		if members, ok := proxyGroup["proxies"].([]any); ok && len(skipped) > 0 {
+			filtered := slices.DeleteFunc(members, func(entry any) bool {
+				name, _ := entry.(string)
+				return skipped[name]
+			})
+			if len(members) > 0 && len(filtered) == 0 && !shouldPreserveProxyGroup(proxyGroup) {
+				filtered = []any{"REJECT"}
+			}
+			proxyGroup["proxies"] = filtered
 		}
 
 		// 链式代理不处理

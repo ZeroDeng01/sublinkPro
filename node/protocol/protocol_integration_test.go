@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"strings"
+	"sublink/utils"
 	"testing"
 )
 
@@ -229,8 +230,8 @@ func TestRawUpdateHostAuthorityAcrossProtocols(t *testing.T) {
 		{name: "WireGuard", fieldName: "Server", port: "51820", prefix: "@", makeLink: func(host string) string {
 			return "wireguard://test-private-key@" + expectedTestHostPort(host, "51820") + "?publickey=test-public-key&address=192.0.2.2%2F32#raw-wireguard-test"
 		}},
-		{name: "Mieru", fieldName: "Server", port: "2999", prefix: "@", makeLink: func(host string) string {
-			return "mieru://test-user:test-password@" + expectedTestHostPort(host, "2999") + "?transport=TCP#raw-mieru-test"
+		{name: "Mieru", fieldName: "Server", port: "2999", prefix: "", makeLink: func(host string) string {
+			return "mierus://test-user:test-password@" + utils.WrapIPv6Host(host) + "?port=2999&profile=raw-mieru-test&protocol=TCP"
 		}},
 	}
 

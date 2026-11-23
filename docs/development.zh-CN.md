@@ -349,7 +349,7 @@ MustRegisterProtocol(newProxyProtocolSpec(...))
 
 如果协议只是演示协议、只需要解析和 UI 元数据，也可以只注册 `newProtocolSpec(...)`。
 
-如果协议有不适合完整 Decode / Import 的额外分享链接前缀，但仍需要参与客户端兼容性判断，可以使用 `WithClientSupportAliases(...)` 增加“仅兼容性检测”的 alias。这样不会把该前缀注册成完整协议解析入口；例如 Mieru 对 `mierus://` 只用于判断 v2ray 不应输出，并不会声明已支持官方 `mierus://` 分享链接的逐字段解析。
+将支持的分享链接前缀注册为协议别名，由协议自身解析不同格式。`WithClientSupportAliases(...)` 可注册仅用于判断客户端兼容性的前缀。
 
 ### VLESS XHTTP 映射约定
 

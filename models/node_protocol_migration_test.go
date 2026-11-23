@@ -1,6 +1,8 @@
 package models
 
 import (
+	"strings"
+	"sublink/node/protocol"
 	"testing"
 
 	"sublink/database"
@@ -77,5 +79,48 @@ func TestRepairHTTPHTTPSNodeProtocolFromLinkCorrectsLegacyRows(t *testing.T) {
 		if node.Protocol != want {
 			t.Fatalf("node %s protocol = %q, want %q", name, node.Protocol, want)
 		}
+	}
+}
+
+func TestUpgradeMieruNodeLinksPreservesExistingRows(t *testing.T) {
+	db := setupNodeProtocolMigrationTestDB(t)
+
+	nodes := []Node{
+		{
+			Link: "mieru://user:pass@[2001:db8::1]?portRange=2000-2003&transport=UDP#node",
+			Name: "remark", NameMode: NodeNameModeRemark, Group: "group", Speed: 12,
+			ClashExtra: "handshake-mode: HANDSHAKE_NO_WAIT\n",
+		},
+		{Link: "mierus://user:pass@host.example?port=11211&profile=default&protocol=TCP", Name: "simple", Protocol: "other"},
+		{Link: "ss://opaque", Name: "unrelated", Protocol: "ss"},
+	}
+	for i := range nodes {
+		NormalizeNodeForImport(&nodes[i])
+	}
+	if err := db.Create(&nodes).Error; err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := upgradeMieruNodeLinks(db); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var after []Node
+	if err := db.Order("id").Find(&after).Error; err != nil || len(after) != len(nodes) {
+		t.Fatalf("got %d rows, err = %v", len(after), err)
+	}
+	legacy := after[0]
+	if legacy.ID != nodes[0].ID || legacy.Name != "remark" || legacy.Group != "group" || legacy.Speed != 12 ||
+		legacy.LinkHash == nodes[0].LinkHash || legacy.ContentHash == "" || legacy.ClashExtra != "" ||
+		legacy.Protocol != "mieru" || legacy.LinkPort != "2000-2003" || !strings.HasPrefix(legacy.Link, "mierus://") {
+		t.Fatal("migration did not preserve node metadata or regenerate derived fields")
+	}
+	info, err := protocol.DecodeMieruURL(legacy.Link)
+	if err != nil || info.HandshakeMode != "HANDSHAKE_NO_WAIT" {
+		t.Fatalf("legacy handshake setting was not migrated, err = %v", err)
+	}
+	if after[1].Link != nodes[1].Link || after[1].Protocol != "mieru" || after[2].Link != nodes[2].Link || after[2].Protocol != "ss" {
+		t.Fatal("migration did not preserve official and unrelated links")
 	}
 }
