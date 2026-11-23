@@ -447,6 +447,35 @@ func buildSSProxy(link Urls, config OutputConfig) (Proxy, error) {
 	return proxy, nil
 }
 
+// surgeSupportedSSCiphers 列出 Surge 官方文档及 Surge 6 支持的 Shadowsocks 加密方式。
+// 其余加密方式（如 2022-blake3-chacha20-poly1305、chacha20-poly1305 等）Surge 无法识别，
+// 导出后会导致整份配置校验失败，因此逐节点跳过而不是输出坏行。
+var surgeSupportedSSCiphers = map[string]struct{}{
+	// AEAD 2022
+	"2022-blake3-aes-128-gcm": {},
+	"2022-blake3-aes-256-gcm": {},
+	// AEAD
+	"aes-128-gcm":             {},
+	"aes-192-gcm":             {},
+	"aes-256-gcm":             {},
+	"chacha20-ietf-poly1305":  {},
+	"xchacha20-ietf-poly1305": {},
+	// Stream (legacy)
+	"rc4":           {},
+	"rc4-md5":       {},
+	"aes-128-cfb":   {},
+	"aes-192-cfb":   {},
+	"aes-256-cfb":   {},
+	"aes-128-ctr":   {},
+	"aes-192-ctr":   {},
+	"aes-256-ctr":   {},
+	"salsa20":       {},
+	"chacha20":      {},
+	"chacha20-ietf": {},
+	// None
+	"none": {},
+}
+
 // buildSSSurgeLine 将 SS 链接转换为 Surge 节点行。
 // 插件导出只覆盖当前实现识别的插件能力，其余插件会在 Surge 侧被有意省略。
 func buildSSSurgeLine(link string, config OutputConfig) (string, string, error) {
@@ -454,8 +483,12 @@ func buildSSSurgeLine(link string, config OutputConfig) (string, string, error) 
 	if err != nil {
 		return "", "", err
 	}
+	cipher := strings.ToLower(strings.TrimSpace(ss.Param.Cipher))
+	if _, supported := surgeSupportedSSCiphers[cipher]; !supported {
+		return "", "", fmt.Errorf("unsupported Shadowsocks cipher for Surge export: %s", ss.Param.Cipher)
+	}
 	server := replaceSurgeHost(ss.Server, config)
-	line := fmt.Sprintf("%s = ss, %s, %d, encrypt-method=%s, password=%s, udp-relay=%t", ss.Name, server, utils.GetPortInt(ss.Port), ss.Param.Cipher, ss.Param.Password, config.Udp)
+	line := fmt.Sprintf("%s = ss, %s, %d, encrypt-method=%s, password=%s, udp-relay=%t", ss.Name, server, utils.GetPortInt(ss.Port), cipher, ss.Param.Password, config.Udp)
 	if ss.Plugin.Name != "" {
 		line = appendSurgeSSPlugin(line, ss.Plugin)
 	}
