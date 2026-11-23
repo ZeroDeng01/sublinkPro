@@ -125,6 +125,13 @@
 - 应用启动升级时，会将可转换的旧版 SublinkPro 链接迁移为 `mierus://`，原节点 ID 保持不变。迁移日志会标明需要修正链接的节点。
 - `/c?client=v2ray` 与 Surge 当前不支持 Mieru；SublinkPro 会跳过 Mieru 节点，不会把 `mieru://` 链接写入 v2ray base64，也不会生成 Surge 配置。
 
+## Sudoku 支持
+
+- 添加节点时，可粘贴官方 `sudoku://` 短链，或包含 `type: sudoku` 节点的 Clash/mihomo YAML。可在节点原始信息中编辑服务器、密钥、编码和 HTTPMask 参数。
+- Clash/mihomo 订阅以 `type: sudoku` 输出节点，保留密钥、AEAD 算法、填充率（包括 `0`）、下行模式、编码表、多路复用及 HTTPMask 参数。导出时应用 UDP 和链式代理设置。节点测速由内置 Mihomo 适配器处理。参见 [Mihomo Sudoku 配置](https://wiki.metacubex.one/config/proxies/sudoku/)。
+- 请使用支持 Sudoku 的 Mihomo 客户端。内置的 v2ray 和 Surge 订阅输出会跳过 Sudoku 节点。
+- SublinkPro 将 YAML 导入保存为 `sudoku://` 时，会通过扩展字段记录填充率、`dialer-proxy` 等 Mihomo 配置。独立 Sudoku 客户端读取官方短链字段，对格式以外的设置采用自身默认值。参见 [官方短链格式](https://github.com/SUDOKU-ASCII/sudoku/blob/main/doc/README.md#short-link-format)。
+
 ## Snell 输出说明
 
 - Snell 支持 Clash/mihomo 与 Surge 输出。`/c?client=clash` 会按 mihomo YAML 字段输出 `type: snell`、`server`、`port`、`psk`，并保留可选的 `version`、`udp` 与 `obfs-opts`（`mode` / `host`）、通用连接层选项（`tfo`、`mptcp`、`interface-name`、`routing-mark`、`ip-version`）以及链式代理 `dialer-proxy`；`/c?client=surge` 会输出 `snell, server, port, psk=...`，并按需追加 `version`、`obfs`、`obfs-host`、`tfo` 与 `udp-relay`（`mptcp`、`interface-name`、`routing-mark`、`ip-version` 为 mihomo 专属，Surge 无对应字段不输出）。

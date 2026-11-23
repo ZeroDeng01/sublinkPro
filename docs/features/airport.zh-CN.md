@@ -10,7 +10,7 @@ SublinkPro 提供了完善的机场订阅管理功能，不仅能将订阅转换
 
 | 功能 | 说明 |
 |:---|:---|
-| **📥 多格式导入** | 自动解析 Clash/mihomo 配置及节点链接订阅，包括 Mieru 官方分享链接 |
+| **📥 多格式导入** | 自动解析 Clash/mihomo 配置及节点链接订阅，包括 Mieru 和 Sudoku 官方分享链接 |
 | **⏱️ 智能定时更新** | 内置 Crontab 级调度器，支持按时间间隔或 Cron 表达式自动更新订阅，确保节点时刻在线 |
 | **📊 流量用量监控** | 自动解析订阅返回的 `Subscription-Userinfo` 头，直观展示**已用上传**、**已用下载**、**总流量**及**过期时间** |
 | **🚀 立即更新机制** | 支持一键「立即拉取」，配合实时回调机制，无需刷新页面即可看到最新的流量数据和节点列表 |
@@ -58,6 +58,10 @@ YAML 排版、注释或节点顺序变化时，匹配到的节点会保留 ID、
 
 - 机场订阅支持 Clash/mihomo YAML 中的 `type: mieru` 节点，也支持明文或 Base64 节点列表中的两种官方分享链接。机场导入将单服务器的 Mieru 节点保存为官方简单链接（`mierus://`）。参见 [Mieru 输出说明](subscription-share.zh-CN.md#mieru-输出说明)。
 - Mieru 不会输出到 v2ray 或 Surge；这些客户端当前不在 SublinkPro 的 Mieru 支持范围内。
+
+### Sudoku 兼容说明
+
+机场订阅支持 Clash/mihomo YAML 中的 `type: sudoku` 节点，以及明文或 Base64 节点列表中的官方 `sudoku://` 短链。可在机场协议筛选中选择 `Sudoku`，只导入该协议的节点。参见 [Sudoku 支持](subscription-share.zh-CN.md#sudoku-支持)。
 
 ### OpenVPN 兼容说明
 

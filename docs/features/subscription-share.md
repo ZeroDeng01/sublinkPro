@@ -125,6 +125,13 @@ For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] 香
 - The startup migration converts valid historical SublinkPro links to `mierus://` while preserving the node IDs. Migration logs identify records whose links need correction.
 - `/c?client=v2ray` and Surge currently do not support Mieru. SublinkPro skips Mieru nodes, does not write `mieru://` links into v2ray base64, and does not generate Surge config for them.
 
+## Sudoku Support
+
+- To add a node, paste an official `sudoku://` short link or Clash/mihomo YAML containing a `type: sudoku` proxy. The raw node editor can change the endpoint, key, encoding and HTTPMask settings.
+- Clash/mihomo subscriptions export `type: sudoku` with the key, AEAD method, padding (including zero), downlink mode, table settings, multiplexing and HTTPMask options. UDP and chain proxy settings are applied during export. The built-in Mihomo adapter handles node testing. [Mihomo Sudoku options](https://wiki.metacubex.one/en/config/proxies/sudoku/)
+- Use a Mihomo-based client that supports Sudoku. The native v2ray and Surge subscription formats skip Sudoku nodes.
+- When SublinkPro stores a YAML import as `sudoku://`, it adds optional fields for Mihomo settings such as padding and `dialer-proxy`. Standalone Sudoku clients read the official short-link fields and apply their own defaults for settings outside that format. [Official short-link format](https://github.com/SUDOKU-ASCII/sudoku/blob/main/doc/README.md#short-link-format)
+
 ## Snell Output Notes
 
 - Snell supports Clash/mihomo and Surge output. `/c?client=clash` outputs mihomo YAML fields including `type: snell`, `server`, `port`, `psk`, plus optional `version`, `udp`, `obfs-opts` (`mode` / `host`), the shared connection-layer options `tfo`, `mptcp`, `interface-name`, `routing-mark`, `ip-version`, and chain proxy `dialer-proxy`. `/c?client=surge` outputs `snell, server, port, psk=...` and appends `version`, `obfs`, `obfs-host`, `udp-relay`, and `tfo` when present (the other mihomo-only connection-layer options have no Surge equivalent).

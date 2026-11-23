@@ -17,13 +17,29 @@ var (
 	proxyYAMLFields     map[string]struct{}
 )
 
+type proxyYAML Proxy
+
+// proxyYAMLCodec lets a registered protocol own additional Clash fields.
+type proxyYAMLCodec interface {
+	decodeProxyYAML(*yaml.Node, *Proxy) error
+	encodeProxyYAML(Proxy) any
+	proxyYAMLFieldNames() map[string]struct{}
+}
+
 // UnmarshalYAML decodes modeled proxy fields and retains every unknown
 // top-level Clash attribute for a subsequent Clash or Mihomo export.
 func (p *Proxy) UnmarshalYAML(value *yaml.Node) error {
-	type proxyAlias Proxy
-	var decoded proxyAlias
-	if err := yamlutil.DecodeWithStringBools(value, &decoded); err != nil {
+	var common proxyYAML
+	if err := yamlutil.DecodeWithStringBools(value, &common); err != nil {
 		return err
+	}
+	decoded := Proxy(common)
+	var protocolFields map[string]struct{}
+	if codec, ok := getProtocolByName(decoded.Type).(proxyYAMLCodec); ok {
+		if err := codec.decodeProxyYAML(value, &decoded); err != nil {
+			return err
+		}
+		protocolFields = codec.proxyYAMLFieldNames()
 	}
 
 	extra := cloneYAMLNode(value)
@@ -31,7 +47,7 @@ func (p *Proxy) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind == yaml.MappingNode {
 		for index := 0; index+1 < len(value.Content); index += 2 {
 			key := value.Content[index]
-			if _, known := knownProxyYAMLFields()[key.Value]; known {
+			if isKnownProxyYAMLField(key.Value, protocolFields) {
 				continue
 			}
 			clonedKey := cloneYAMLNode(key)
@@ -40,15 +56,20 @@ func (p *Proxy) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 	decoded.ClashExtra = extra
-	*p = Proxy(decoded)
+	*p = decoded
 	return nil
 }
 
 // MarshalYAML serializes modeled fields first, then reapplies retained
 // attributes that are still unknown to the current Proxy model.
 func (p Proxy) MarshalYAML() (any, error) {
-	type proxyAlias Proxy
-	encoded, err := yaml.Marshal(proxyAlias(p))
+	var fields any = proxyYAML(p)
+	var protocolFields map[string]struct{}
+	if codec, ok := getProtocolByName(p.Type).(proxyYAMLCodec); ok {
+		fields = codec.encodeProxyYAML(p)
+		protocolFields = codec.proxyYAMLFieldNames()
+	}
+	encoded, err := yaml.Marshal(fields)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +86,7 @@ func (p Proxy) MarshalYAML() (any, error) {
 	if extra := yamlMappingNode(&p.ClashExtra); extra != nil {
 		for index := 0; index+1 < len(extra.Content); index += 2 {
 			key := extra.Content[index]
-			if _, known := knownProxyYAMLFields()[key.Value]; known {
+			if isKnownProxyYAMLField(key.Value, protocolFields) {
 				continue
 			}
 			clonedKey := cloneYAMLNode(key)
@@ -119,20 +140,27 @@ func ApplyClashExtra(proxy *Proxy, encoded string) error {
 	return nil
 }
 
-// knownProxyYAMLFields builds the current model's YAML key set once, so newly
-// modeled fields automatically stop being treated as retained extras.
-func knownProxyYAMLFields() map[string]struct{} {
+// Modeled fields take precedence over retained attributes.
+func isKnownProxyYAMLField(key string, protocolFields map[string]struct{}) bool {
 	proxyYAMLFieldsOnce.Do(func() {
-		proxyYAMLFields = make(map[string]struct{})
-		proxyType := reflect.TypeOf(Proxy{})
-		for index := 0; index < proxyType.NumField(); index++ {
-			tag := strings.Split(proxyType.Field(index).Tag.Get("yaml"), ",")[0]
-			if tag != "" && tag != "-" {
-				proxyYAMLFields[tag] = struct{}{}
-			}
-		}
+		proxyYAMLFields = yamlFieldNames(reflect.TypeFor[Proxy]())
 	})
-	return proxyYAMLFields
+	if _, known := proxyYAMLFields[key]; known {
+		return true
+	}
+	_, known := protocolFields[key]
+	return known
+}
+
+func yamlFieldNames(structType reflect.Type) map[string]struct{} {
+	fields := make(map[string]struct{}, structType.NumField())
+	for index := 0; index < structType.NumField(); index++ {
+		tag, _, _ := strings.Cut(structType.Field(index).Tag.Get("yaml"), ",")
+		if tag != "" && tag != "-" {
+			fields[tag] = struct{}{}
+		}
+	}
+	return fields
 }
 
 // yamlMappingNode returns the mapping payload from a YAML document or mapping node.

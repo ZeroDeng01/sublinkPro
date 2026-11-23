@@ -193,6 +193,9 @@ type Proxy struct {
 	Allowed_ips    []string `yaml:"allowed-ips,omitempty"`    // 允许的 IP 段
 	Version        int      `yaml:"version,omitempty"`        // 版本
 	Token          string   `yaml:"token,omitempty"`          // Tuic 令牌v4
+
+	SudokuOptions *SudokuProxyOptions `yaml:"-" json:"-"`
+
 	// OpenVPN 特有字段
 	Proto                string            `yaml:"proto,omitempty"`                 // OpenVPN 传输协议 (tcp/udp)
 	Dev                  string            `yaml:"dev,omitempty"`                   // OpenVPN 设备类型（当前 Mihomo 支持 tun）
@@ -201,7 +204,7 @@ type Proxy struct {
 	Comp_lzo             string            `yaml:"comp-lzo,omitempty"`              // OpenVPN LZO 压缩模式
 	Ca                   string            `yaml:"ca,omitempty"`                    // OpenVPN CA 证书
 	Cert                 string            `yaml:"cert,omitempty"`                  // OpenVPN 客户端证书
-	Key                  string            `yaml:"key,omitempty"`                   // OpenVPN 客户端私钥
+	Key                  string            `yaml:"key,omitempty"`                   // OpenVPN / Sudoku 客户端密钥
 	Tls_auth             string            `yaml:"tls-auth,omitempty"`              // OpenVPN tls-auth 静态密钥
 	Key_direction        string            `yaml:"key-direction,omitempty"`         // OpenVPN 静态密钥方向
 	Tls_crypt            string            `yaml:"tls-crypt,omitempty"`             // OpenVPN tls-crypt 静态密钥

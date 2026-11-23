@@ -10,7 +10,7 @@ SublinkPro provides complete airport subscription management. It can convert sub
 
 | Feature | Description |
 |:---|:---|
-| **📥 Multi format import** | Automatically parses Clash/mihomo and proxy-link subscriptions, including official Mieru share links |
+| **📥 Multi format import** | Automatically parses Clash/mihomo and proxy-link subscriptions, including official Mieru and Sudoku share links |
 | **⏱️ Smart scheduled updates** | Built in Crontab level scheduler, with interval or Cron expression updates, keeping nodes fresh |
 | **📊 Traffic usage monitoring** | Parses the `Subscription-Userinfo` response header and shows **used upload**, **used download**, **total traffic**, and **expiration time** |
 | **🚀 Update now** | One click “fetch now” plus real time callbacks, so latest traffic data and node lists appear without refreshing the page |
@@ -58,6 +58,10 @@ If a selected HTTP provider fails or some entries cannot be converted, the refre
 
 - Airport subscriptions accept `type: mieru` in Clash/mihomo YAML and both official share-link formats in plaintext or Base64 node lists. Subscription import stores single-server Mieru nodes as official simple links (`mierus://`). See [Mieru output notes](subscription-share.md#mieru-output-notes).
 - Mieru is not output to v2ray or Surge. Those clients are currently outside SublinkPro's Mieru support scope.
+
+### Sudoku compatibility
+
+Airport subscriptions accept `type: sudoku` entries in Clash/mihomo YAML and official `sudoku://` short links in plaintext or Base64 node lists. Select `Sudoku` in the airport protocol filter to limit imports to those nodes. [Sudoku support](subscription-share.md#sudoku-support)
 
 ### OpenVPN compatibility
 

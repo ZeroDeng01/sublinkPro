@@ -305,6 +305,8 @@ CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
 
    可用客户端常量当前包括：`ClientClash`、`ClientMihomo`、`ClientV2ray`、`ClientSurge`。新增客户端渲染器前，不要只在 `api/clients.go` 写协议特例，应先让协议注册文件声明支持关系。
 
+协议特有的 Clash 字段映射和去重默认值应放在协议实现中。已注册的协议可实现 `proxyYAMLCodec` 来处理专属 YAML 字段，并在等效配置因导入格式而采用不同表示时实现 `proxyHashNormalizer`。共用逻辑通过注册表调用这些能力。
+
 ### 标准注册模板
 
 ```go

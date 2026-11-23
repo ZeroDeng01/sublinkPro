@@ -305,6 +305,8 @@ After adding a protocol, these flows are connected automatically without adding 
 
    Available client constants currently include `ClientClash`, `ClientMihomo`, `ClientV2ray`, and `ClientSurge`. Before adding a new client renderer, don't add protocol special cases only in `api/clients.go`; first let protocol registration files declare support relationships.
 
+Keep protocol-specific Clash field mappings and deduplication defaults in the protocol implementation. A registered protocol can implement `proxyYAMLCodec` to own its additional YAML fields and `proxyHashNormalizer` when equivalent settings use different representations across import formats. The shared handlers dispatch through the registry.
+
 ### Standard registration template
 
 ```go

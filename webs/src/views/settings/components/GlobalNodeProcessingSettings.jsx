@@ -16,10 +16,12 @@ import SaveIcon from '@mui/icons-material/Save';
 import TuneIcon from '@mui/icons-material/Tune';
 
 // project imports
+import { getProtocolUIMeta } from 'api/nodes';
 import { getGlobalNodeProcessingConfig, updateGlobalNodeProcessingConfig } from 'api/settings';
 import NodeNameFilter from 'components/NodeNameFilter';
 import NodeNamePreprocessor from 'components/NodeNamePreprocessor';
 import NodeProtocolFilter from 'components/NodeProtocolFilter';
+import { getRegisteredProtocolNames } from 'utils/protocolPresentation';
 
 // ==============================|| 全局节点处理设置 ||============================== //
 
@@ -33,12 +35,26 @@ export default function GlobalNodeProcessingSettings({ showMessage }) {
     nodeNamePreprocess: ''
   });
   const [saving, setSaving] = useState(false);
-  const [protocolOptions, setProtocolOptions] = useState([]);
+  const [protocolOptions, setProtocolOptions] = useState([
+    'ss',
+    'ssr',
+    'vmess',
+    'vless',
+    'trojan',
+    'hysteria',
+    'hysteria2',
+    'tuic',
+    'wireguard'
+  ]);
 
   useEffect(() => {
     fetchConfig();
-    // 获取协议选项（可以从 API 获取或使用静态列表）
-    setProtocolOptions(['ss', 'ssr', 'vmess', 'vless', 'trojan', 'hysteria', 'hysteria2', 'tuic', 'wireguard']);
+    getProtocolUIMeta()
+      .then(({ data }) => {
+        const registered = getRegisteredProtocolNames(data);
+        if (registered.length) setProtocolOptions(registered);
+      })
+      .catch((error) => console.error('获取协议列表失败:', error));
   }, []);
 
   const fetchConfig = async () => {

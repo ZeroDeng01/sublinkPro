@@ -1,6 +1,7 @@
 package mihomo
 
 import (
+	"encoding/base64"
 	"errors"
 	"io"
 	"net"
@@ -14,6 +15,19 @@ import (
 
 	"github.com/metacubex/mihomo/constant"
 )
+
+func TestGetMihomoAdapterSudoku(t *testing.T) {
+	const payload = `{"n":"Sudoku adapter","h":"2001:db8::1","p":443,"k":"example-key","e":"aes-128-gcm","a":"entropy","x":true,"hm":"ws","ht":true,"hx":"on","ts":["xpxvvpvv","vxpvxvvp"]}`
+	link := "sudoku://" + base64.RawURLEncoding.EncodeToString([]byte(payload))
+	adapter, err := GetMihomoAdapter(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = adapter.Close() })
+	if adapter.Type() != constant.Sudoku || adapter.Addr() != "[2001:db8::1]:443" || !adapter.SupportUDP() {
+		t.Fatalf("unexpected adapter: %v %s", adapter.Type(), adapter.Addr())
+	}
+}
 
 func TestSpeedTestEOFReleasesConnections(t *testing.T) {
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

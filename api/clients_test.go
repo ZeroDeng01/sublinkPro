@@ -464,6 +464,7 @@ func TestShouldSkipV2rayLinkUsesProtocolClientSupport(t *testing.T) {
 	}{
 		{name: "mieru unsupported", link: "mieru://user:password@mieru.example.com:2999?transport=TCP#m", skip: true},
 		{name: "mierus support alias unsupported", link: "mierus://official.example.com:2999?profile=raw#m", skip: true},
+		{name: "sudoku unsupported", link: protocol.EncodeSudokuURL(protocol.Sudoku{Server: "example.invalid", Port: 443, Key: "test-key"}), skip: true},
 		{name: "ss default supported", link: "ss://YWVzLTEyOC1nY206cGFzc0BleGFtcGxlLmNvbTo0NDM=#ss-node", skip: false},
 		{name: "unknown raw preserved", link: "unknown-protocol://example.com/raw#unknown", skip: false},
 	} {

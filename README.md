@@ -190,14 +190,16 @@ in credentials; URI components are decoded once, including when links are re-exp
 
 | Client | Supported protocols |
 |:---|:---|
-| **v2ray** | base64 common format, without Clash/mihomo specific protocols such as Mieru, Snell, and OpenVPN |
-| **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell, OpenVPN |
+| **v2ray** | base64 common format, without Clash/mihomo specific protocols such as Mieru, Snell, OpenVPN, and Sudoku |
+| **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell, OpenVPN, Sudoku |
 | **surge** | ss, trojan, vmess, VLESS, hy2, tuic, AnyTLS, Snell |
 
 > VLESS and Trojan REALITY `spx` / `pqv` parameters are preserved through share links, field editing and Clash YAML import/export (`spider-x` / `mldsa65-verify`). Xray clients use the existing `v2ray` output. Execution requires a compatible core; Surge skips settings it cannot represent. See [REALITY compatibility](docs/features/subscription-share.md#vless-reality-compatibility).
 
 > [!NOTE]
 > Mieru nodes can be imported from official standard (`mieru://`) and simple (`mierus://`) share links or Clash/mihomo YAML. Clash/mihomo subscriptions include Mieru nodes. See [Mieru compatibility](docs/features/subscription-share.md#mieru-output-notes).
+
+> Sudoku nodes can be imported from official `sudoku://` short links and Clash/mihomo YAML. Use a Mihomo-based client for exported Sudoku nodes. See [Sudoku support](docs/features/subscription-share.md#sudoku-support).
 
 > [!NOTE]
 > Snell supports Clash/mihomo and Surge output only. Snell has no official share link schema, so SublinkPro uses an internal editable form for raw editing and Clash/mihomo/Surge import write back: `snell://server:port?psk=xxx&version=3&obfs=http&obfs-host=xxx#name`. v2ray does not support Snell in SublinkPro; subscription output skips it instead of converting it to a downgraded form.

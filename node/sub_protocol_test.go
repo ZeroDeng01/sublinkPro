@@ -11,6 +11,27 @@ import (
 	"sublink/node/protocol"
 )
 
+func TestSudokuSubscriptionImport(t *testing.T) {
+	const payload = `{"n":"imported Sudoku","h":"sudoku.example","p":8443,"k":"sample-key","e":"aes-128-gcm","hd":true}`
+	link := "sudoku://" + base64.RawURLEncoding.EncodeToString([]byte(payload))
+	for format, data := range map[string]string{
+		"plain":  link + "\n",
+		"base64": base64.StdEncoding.EncodeToString([]byte(link + "\n")),
+	} {
+		t.Run(format, func(t *testing.T) {
+			proxies, incomplete := parseSubscriptionLinkProxies([]byte(data))
+			if incomplete || len(proxies) != 1 {
+				t.Fatalf("parsed %d nodes, incomplete = %t", len(proxies), incomplete)
+			}
+			stored := GenerateProxyLink(proxies[0])
+			node, err := protocol.DecodeSudokuURL(stored)
+			if err != nil || node.Name != "imported Sudoku" || node.Port != 8443 || !node.DisableHTTPMask || node.AEADMethod != "aes-128-gcm" {
+				t.Fatalf("Sudoku import lost node settings, decode error: %v", err)
+			}
+		})
+	}
+}
+
 // TestHTTPSProtocolDetection 测试 HTTP 和 HTTPS 协议识别
 // 验证修复 GitHub Issue #232：https 白名单无法正确过滤节点
 func TestHTTPSProtocolDetection(t *testing.T) {

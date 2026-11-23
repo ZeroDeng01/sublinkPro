@@ -16,6 +16,10 @@ type HashFieldConfig struct {
 	IgnoredFields map[string]bool
 }
 
+type proxyHashNormalizer interface {
+	normalizeProxyForHash(Proxy) Proxy
+}
+
 // defaultHashConfig 默认哈希配置（集中管理，便于扩展）
 // Type 字段参与哈希计算，可以自动区分不同协议
 var defaultHashConfig = HashFieldConfig{
@@ -32,6 +36,9 @@ var defaultHashConfig = HashFieldConfig{
 // 使用 SHA256 算法，返回 64 字符的十六进制字符串
 // 所有非忽略的非空字段都参与哈希计算，按字段名排序保证一致性
 func GenerateProxyContentHash(proxy Proxy) string {
+	if normalizer, ok := getProtocolByName(proxy.Type).(proxyHashNormalizer); ok {
+		proxy = normalizer.normalizeProxyForHash(proxy)
+	}
 	// 使用反射提取所有字段值
 	data := extractProxyFields(proxy, defaultHashConfig.IgnoredFields)
 
