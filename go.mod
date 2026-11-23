@@ -3,11 +3,11 @@ module sublink
 go 1.27.3
 
 require (
-	github.com/dlclark/regexp2/v2 v2.13.0
+	github.com/dlclark/regexp2/v2 v2.13.1
 	github.com/dop251/goja v0.0.0-20260607120635-348e6bea910d
 	github.com/gin-gonic/gin v1.12.0
 	github.com/glebarez/sqlite v1.11.0
-	github.com/go-sql-driver/mysql v1.10.1
+	github.com/go-sql-driver/mysql v1.10.2
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.6.0
 	github.com/metacubex/mihomo v1.19.34
