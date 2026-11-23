@@ -40,6 +40,7 @@ export default function SpecificNodeSelector({ value, onChange, disabled = false
   const [loadedCount, setLoadedCount] = useState(0);
   const requestRef = useRef(0);
   const loadingRef = useRef(false);
+  const attemptedNodeIDRef = useRef(0);
 
   const selectedNode = useMemo(() => nodes.find((node) => Number(node.ID) === Number(value)) || null, [nodes, value]);
   const hasMore = loadedCount < total;
@@ -60,16 +61,35 @@ export default function SpecificNodeSelector({ value, onChange, disabled = false
 
   useEffect(() => {
     const nodeID = Number(value);
-    if (!nodeID || nodes.some((node) => Number(node.ID) === nodeID)) return;
+    if (!nodeID) {
+      attemptedNodeIDRef.current = 0;
+      return;
+    }
+    if (nodes.some((node) => Number(node.ID) === nodeID)) {
+      attemptedNodeIDRef.current = nodeID;
+      return;
+    }
+    if (attemptedNodeIDRef.current === nodeID) return;
 
     let active = true;
+    let settled = false;
+    attemptedNodeIDRef.current = nodeID;
     getNodeSelectorByIds({ 'ids[]': [nodeID] })
       .then((response) => {
-        if (active) setNodes((current) => mergeNodes(current, response.data || []));
+        settled = true;
+        const incoming = response.data || [];
+        if (active && incoming.length > 0) {
+          setNodes((current) => mergeNodes(current, incoming));
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        settled = true;
+      });
     return () => {
       active = false;
+      if (!settled && attemptedNodeIDRef.current === nodeID) {
+        attemptedNodeIDRef.current = 0;
+      }
     };
   }, [nodes, value]);
 
