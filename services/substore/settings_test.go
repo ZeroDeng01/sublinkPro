@@ -2,6 +2,7 @@ package substore
 
 import (
 	"reflect"
+	"slices"
 	"sublink/database"
 	"sublink/internal/testutil"
 	"sublink/models"
@@ -69,6 +70,21 @@ func TestResolveEffectiveSettingsUsesDatabaseValues(t *testing.T) {
 	wantTargets := []string{"loon", "quanx"}
 	if !reflect.DeepEqual(effective.AllowedTargets.Value, wantTargets) {
 		t.Fatalf("unexpected targets: got %v want %v", effective.AllowedTargets.Value, wantTargets)
+	}
+}
+
+func TestResolveEffectiveSettingsIgnoresLegacyURITargets(t *testing.T) {
+	setupSubStoreSettingsTestDB(t)
+	if err := models.SetSetting(settingAllowedTargets, "loon,uri,v2ray-uri,v2rayuri,json"); err != nil {
+		t.Fatalf("set legacy targets: %v", err)
+	}
+
+	effective := ResolveEffectiveSettings()
+	if want := []string{"loon", "json"}; !slices.Equal(effective.AllowedTargets.Value, want) {
+		t.Fatalf("got allowed targets %v, want %v", effective.AllowedTargets.Value, want)
+	}
+	if slices.Contains(effective.SupportedTargets, "uri") {
+		t.Fatal("native URI must not be offered as a Sub-Store target")
 	}
 }
 

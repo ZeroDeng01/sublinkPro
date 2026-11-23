@@ -49,7 +49,7 @@ SublinkPro 支持多种配置方式，优先级从高到低为：
 
 ## Sub-Store Sidecar 转换
 
-SublinkPro 可以使用外部 Sub-Store 后端作为可选 sidecar，为订阅分享提供更多客户端输出格式。原生 `clash`/`mihomo`、`surge`、`v2ray` 仍由 SublinkPro 自己生成；`loon`、`egern`、`stash`、`surfboard`、`shadowrocket`、`quanx`、`sing-box`、`uri`、`json` 等扩展目标会先生成 SublinkPro 的 mihomo/Clash 桥接 YAML，再把代理节点列表发送到 Sub-Store 的 `/api/proxy/parse` 接口转换。
+SublinkPro 可以使用外部 Sub-Store 后端作为可选 sidecar，为订阅分享提供更多客户端输出格式。原生 `clash`/`mihomo`、`surge`、`v2ray` 和 `uri` 由 SublinkPro 直接生成。对于 `loon`、`egern`、`stash`、`surfboard`、`shadowrocket`、`quanx`、`sing-box`、`json` 等扩展目标，SublinkPro 会生成 mihomo/Clash 桥接 YAML，并发送到 Sub-Store 的 `/api/proxy/parse` 接口转换。旧版 Sub-Store 允许输出目标中的 `uri` 条目会自动忽略，因为 URI 已成为内置格式。
 
 请登录后台，在 **用户中心 -> Sub-Store** 中启用 sidecar、填写 Base URL、调整超时和响应体上限、选择允许的目标客户端，并直接测试连接。Sub-Store 设置只通过页面管理；本集成不通过环境变量或 `config.yaml` 配置项设置。
 

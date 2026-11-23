@@ -2967,6 +2967,7 @@
         "formatMihomo": "Mihomo",
         "formatSurge": "Surge",
         "formatV2ray": "V2ray",
+        "formatUri": "URI",
         "expandedClients": "扩展客户端",
         "preview": "链接预览",
         "count": "{{count}} 个链接",

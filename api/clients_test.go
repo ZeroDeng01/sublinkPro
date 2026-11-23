@@ -412,7 +412,7 @@ func TestRenderPreparedV2raySkipsProtocolUnsupportedLinks(t *testing.T) {
 		},
 	}
 
-	renderPreparedV2ray(ginContext, prepared)
+	renderPreparedLinkSubscription(ginContext, prepared)
 	decoded := utils.Base64Decode(recorder.Body.String())
 	if strings.Contains(decoded, "mieru://") || strings.Contains(decoded, "mierus://") {
 		t.Fatalf("v2ray output leaked mieru link: %s", decoded)
@@ -436,7 +436,7 @@ func TestRenderPreparedV2rayUsesDuplicateIndexVariable(t *testing.T) {
 	ginContext, _ := gin.CreateTestContext(recorder)
 	ginContext.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c/?client=v2ray", nil)
 
-	renderPreparedV2ray(ginContext, preparedClientResponse{
+	renderPreparedLinkSubscription(ginContext, preparedClientResponse{
 		ClientType: "v2ray",
 		Mode:       clientResponseNormal,
 		SubName:    "duplicate-name-sub",
@@ -1055,6 +1055,85 @@ func TestGetClientInvalidShareReturnsSyntheticV2rayNode(t *testing.T) {
 	}
 }
 
+func TestGetClientURIRendersNativeLinks(t *testing.T) {
+	setupClientsAPITestDB(t)
+
+	sub := models.Subcription{Name: "native-uri", NodeNameRule: "renamed-$Index"}
+	if err := sub.Add(); err != nil {
+		t.Fatalf("add subscription: %v", err)
+	}
+	const rawVLESS = "vless://1a2b3c4d-1234-1234-1234-1234567890ab@example.com:443?alpn=h2,http/1.1&futureOption=a%2Fb"
+	const rawOther = "future-proxy://secret@example.com:1234?mode=a,b#original"
+	const openVPN = "openvpn://example.com:1194?proto=udp"
+	sudokuLink := protocol.EncodeSudokuURL(protocol.Sudoku{Server: "example.com", Port: 443, Key: "test-key", Name: "sudoku"})
+	sudoku, err := protocol.DecodeSudokuURL(sudokuLink)
+	if err != nil {
+		t.Fatalf("decode Sudoku fixture: %v", err)
+	}
+	sub.Nodes = []models.Node{
+		{Name: "bundle", LinkName: "bundle", Link: rawVLESS + "#original," + rawOther, Protocol: "vless", Source: "manual"},
+		{Name: "snell", LinkName: "snell", Link: "snell://example.com:4443?psk=secret&version=3#snell", Protocol: "snell", Source: "manual"},
+		{Name: "openvpn", LinkName: "openvpn", Link: openVPN + "#openvpn", Protocol: "openvpn", Source: "manual"},
+		{Name: "sudoku", LinkName: "sudoku", Link: sudokuLink, Protocol: "sudoku", Source: "manual"},
+	}
+	for i := range sub.Nodes {
+		if err := sub.Nodes[i].Add(); err != nil {
+			t.Fatalf("add node: %v", err)
+		}
+	}
+	if err := sub.AddNode(); err != nil {
+		t.Fatalf("attach nodes: %v", err)
+	}
+	share := models.SubscriptionShare{SubscriptionID: sub.ID, Token: "native-uri-token", Name: "Native URI", Enabled: true}
+	if err := share.Add(); err != nil {
+		t.Fatalf("add share: %v", err)
+	}
+
+	sudoku.Name = "renamed-4"
+	wantBody := strings.Join([]string{
+		rawVLESS + "#renamed-1",
+		rawOther,
+		"snell://example.com:4443?psk=secret&version=3#renamed-2",
+		openVPN + "#renamed-3",
+		protocol.EncodeSudokuURL(sudoku),
+	}, "\n") + "\n"
+	for _, client := range []string{"uri", "v2ray-uri", "v2rayuri"} {
+		t.Run(client, func(t *testing.T) {
+			path := "/c/?token=native-uri-token&client=" + client
+			for _, method := range []string{http.MethodGet, http.MethodHead} {
+				rec := performClientRequest(t, method, path)
+				if rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "text/plain; charset=utf-8" {
+					t.Fatalf("%s: unexpected response %d, headers %v", method, rec.Code, rec.Header())
+				}
+				if !strings.Contains(rec.Header().Get("Content-Disposition"), "native-uri.txt") || rec.Header().Get("profile-title") != "native-uri" {
+					t.Fatalf("%s: missing subscription headers: %v", method, rec.Header())
+				}
+				want := wantBody
+				if method == http.MethodHead {
+					want = ""
+				}
+				if got := rec.Body.String(); got != want {
+					t.Fatalf("%s: got body %q, want %q", method, got, want)
+				}
+			}
+		})
+	}
+
+	v2ray := performClientRequest(t, http.MethodGet, "/c/?token=native-uri-token&client=v2ray")
+	if v2ray.Code != http.StatusOK {
+		t.Fatalf("V2Ray: unexpected response %d, body %q", v2ray.Code, v2ray.Body.String())
+	}
+	v2rayLinks := utils.Base64Decode(v2ray.Body.String())
+	if !strings.Contains(v2rayLinks, "vless://") {
+		t.Fatalf("V2Ray: missing supported link in %q", v2rayLinks)
+	}
+	for _, scheme := range []string{"snell://", "openvpn://", "sudoku://"} {
+		if strings.Contains(v2rayLinks, scheme) {
+			t.Fatalf("V2Ray: unexpected %s link in %q", scheme, v2rayLinks)
+		}
+	}
+}
+
 func TestGetClientExpandedTargetRequiresConfiguredSubStore(t *testing.T) {
 	setupClientsAPITestDB(t)
 	clashTemplatePath := writeTestClashTemplate(t)
@@ -1504,7 +1583,7 @@ func TestRenderPreparedV2rayPreservesRealityExtensions(t *testing.T) {
 		ClientType: "v2ray", Mode: clientResponseNormal, SubName: "reality",
 		Subscription: models.Subcription{Name: "reality", Nodes: []models.Node{{Name: "renamed", LinkName: "renamed", Link: link, Protocol: "vless"}}},
 	}
-	renderPreparedV2ray(c, prepared)
+	renderPreparedLinkSubscription(c, prepared)
 	decoded := strings.TrimSpace(utils.Base64Decode(recorder.Body.String()))
 	node, err := protocol.DecodeVLESSURL(decoded)
 	if err != nil {
@@ -1561,7 +1640,7 @@ func TestBuildPreparedMihomoYAMLPreservesRealityExtensions(t *testing.T) {
 			v2c, _ := gin.CreateTestContext(v2rec)
 			v2c.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c?client=v2ray", nil)
 			prepared.ClientType = "v2ray"
-			renderPreparedV2ray(v2c, prepared)
+			renderPreparedLinkSubscription(v2c, prepared)
 			links := strings.Split(strings.TrimSpace(utils.Base64Decode(v2rec.Body.String())), "\n")
 			if len(links) != 2 {
 				t.Fatalf("v2ray output count = %d", len(links))

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sublink/models"
@@ -80,6 +81,8 @@ const syntheticSurgeTemplate = `[General]
 `
 
 var testGetClientAfterResolveSubscriptionNameHook func(*gin.Context)
+
+var subscriptionURIPrefix = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.-]*://`)
 
 var (
 	syntheticTemplateOnce sync.Once
@@ -218,7 +221,9 @@ func prepareClientResponse(c *gin.Context, clientType, token string) (preparedCl
 func resolveSubscriptionClient(c *gin.Context) string {
 	clientIndex := strings.ToLower(strings.TrimSpace(c.Query("client")))
 	switch clientIndex {
-	case "clash", "mihomo", "surge", "v2ray", "uri", "v2ray-uri":
+	case "uri":
+		return "uri"
+	case "clash", "mihomo", "surge", "v2ray":
 		return clientIndex
 	}
 	if substore.IsSupportedTarget(clientIndex) {
@@ -235,7 +240,7 @@ func resolveSubscriptionClient(c *gin.Context) string {
 		}
 	}
 
-	return "v2ray"
+	return "uri"
 }
 
 func dispatchPreparedClientResponse(c *gin.Context, prepared preparedClientResponse) {
@@ -244,14 +249,14 @@ func dispatchPreparedClientResponse(c *gin.Context, prepared preparedClientRespo
 		renderPreparedClash(c, prepared)
 	case "surge":
 		renderPreparedSurge(c, prepared)
-	case "uri", "v2ray-uri":
-		renderPreparedConvertedClient(c, prepared)
+	case "uri":
+		renderPreparedLinkSubscription(c, prepared)
 	default:
 		if substore.IsSupportedTarget(prepared.ClientType) {
 			renderPreparedConvertedClient(c, prepared)
 			return
 		}
-		renderPreparedV2ray(c, prepared)
+		renderPreparedLinkSubscription(c, prepared)
 	}
 }
 
@@ -349,7 +354,7 @@ func writeSyntheticTemplateFile(pattern, content string) (string, error) {
 func buildPreparedResponseFromSubscription(sub models.Subcription, clientType string, shareID int) (preparedClientResponse, bool) {
 	preparedSub := sub
 	materializeClientType := clientType
-	if substore.IsSupportedTarget(clientType) || clientType == "uri" || clientType == "v2ray-uri" || clientType == "mihomo" {
+	if substore.IsSupportedTarget(clientType) || clientType == "mihomo" {
 		materializeClientType = "clash"
 	}
 	if err := preparedSub.GetSub(materializeClientType); err != nil {
@@ -474,7 +479,7 @@ func prepareRendererResponse(c *gin.Context, prepared preparedClientResponse) (r
 		node.RefreshUsageForSubscriptionNodes(sub.Nodes)
 	}
 	c.Writer.Header().Set("subscription-userinfo", getSubscriptionUsage(sub.Nodes))
-	if prepared.ClientType == "clash" {
+	if prepared.ClientType == "clash" || prepared.ClientType == "uri" {
 		c.Writer.Header().Set("profile-update-interval", strconv.Itoa(resolveSubscriptionUpdateIntervalHours(sub.UpdateInterval)))
 		c.Writer.Header().Set("profile-title", url.QueryEscape(resolved.SubName))
 	}
@@ -538,88 +543,121 @@ func GetV2ray(c *gin.Context) {
 		_, _ = c.Writer.WriteString("读取错误")
 		return
 	}
-	renderPreparedV2ray(c, prepared)
+	renderPreparedLinkSubscription(c, prepared)
 }
 
-func renderPreparedV2ray(c *gin.Context, prepared preparedClientResponse) {
+func renderPreparedLinkSubscription(c *gin.Context, prepared preparedClientResponse) {
 	resolved, shouldWriteBody := prepareRendererResponse(c, prepared)
-	subName := resolved.SubName
-	filename := fmt.Sprintf("%s.txt", subName)
-	encodedFilename := url.QueryEscape(filename)
-	c.Writer.Header().Set("Content-Disposition", "inline; filename*=utf-8''"+encodedFilename)
-	c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+	plainURI := prepared.ClientType == "uri"
+	c.Header("Content-Disposition", "inline; filename*=utf-8''"+url.QueryEscape(resolved.SubName+".txt"))
+	contentType := "text/html; charset=utf-8"
+	if plainURI {
+		contentType = "text/plain; charset=utf-8"
+	}
+	c.Header("Content-Type", contentType)
 	if !shouldWriteBody {
 		return
 	}
 	sub := resolved.Subscription
-	baselist := ""
+	var links strings.Builder
 	nodeNamePlan := buildClientNodeNamePlan(sub)
-
-	for idx, v := range sub.Nodes {
-		finalNodeName := nodeNamePlan.NodeNameAt(idx, v.ID)
-		nodeLink := utils.RenameNodeLink(v.Link, finalNodeName)
-		switch {
-		// 如果包含多条节点
-		case strings.Contains(v.Link, ","):
-			links := strings.Split(v.Link, ",")
-			splitNames := nodeNamePlan.SplitNamesAt(idx)
-			// 对每个链接应用节点名称模式和重命名规则。
-			for i, link := range links {
-				linkName := finalNodeName
-				if i < len(splitNames) && splitNames[i] != "" {
-					linkName = splitNames[i]
-				}
-				links[i] = utils.RenameNodeLink(link, linkName)
-			}
-			compatibleLinks := filterV2rayCompatibleLinks(links)
-			if len(compatibleLinks) > 0 {
-				baselist += strings.Join(compatibleLinks, "\n") + "\n"
-			}
-			continue
-		//如果是订阅转换（以 http:// 或 https:// 开头，但不是HTTP/HTTPS代理节点）
-		case (strings.HasPrefix(v.Link, "http://") || strings.HasPrefix(v.Link, "https://")) && !protocol.IsHTTPLink(v.Link):
-			resp, err := getRemoteSubscription(c.Request.Context(), v.Link)
-			if err != nil {
-				utils.Error("Error getting link: %v", err)
+	appendLink := func(link string) {
+		link = strings.TrimSpace(link)
+		if plainURI {
+			prefix := subscriptionURIPrefix.FindStringIndex(link)
+			if prefix == nil || prefix[1] == len(link) {
 				return
 			}
-			defer func() { _ = resp.Body.Close() }()
-			body, _ := io.ReadAll(resp.Body)
-			nodes := utils.Base64Decode(string(body))
-			compatibleLinks := filterV2rayCompatibleLinks(strings.Split(nodes, "\n"))
-			if len(compatibleLinks) > 0 {
-				baselist += strings.Join(compatibleLinks, "\n") + "\n"
+		} else if link == "" || shouldSkipV2rayLink(link) {
+			return
+		}
+		links.WriteString(link)
+		links.WriteByte('\n')
+	}
+
+	for idx, v := range sub.Nodes {
+		storedLinks := models.SplitNodeOutputLinks(v.Link)
+		if len(storedLinks) == 1 && isRemoteSubscriptionLink(v.Link) {
+			remoteLinks, err := readRemoteSubscriptionLinks(c.Request.Context(), v.Link, plainURI)
+			if err != nil {
+				utils.Error("获取包含链接失败: %v", err)
+				if plainURI {
+					continue
+				}
+				return
 			}
-		// 默认
-		default:
-			if shouldSkipV2rayLink(nodeLink) {
-				continue
+			for _, link := range remoteLinks {
+				appendLink(link)
 			}
-			baselist += nodeLink + "\n"
+			continue
+		}
+		finalNodeName := nodeNamePlan.NodeNameAt(idx, v.ID)
+		splitNames := nodeNamePlan.SplitNamesAt(idx)
+		for i, link := range storedLinks {
+			linkName := finalNodeName
+			if i < len(splitNames) && splitNames[i] != "" {
+				linkName = splitNames[i]
+			}
+			if plainURI {
+				if len(storedLinks) > 1 || linkName != v.LinkName {
+					link = renameSubscriptionURI(strings.TrimSpace(link), linkName)
+				}
+				appendLink(link)
+			} else {
+				appendLink(utils.RenameNodeLink(link, linkName))
+			}
 		}
 	}
-	// 执行脚本
+	body := links.String()
 	for _, script := range sub.ScriptsWithSort {
-		res, err := utils.RunScript(script.Content, baselist, "v2ray")
+		res, err := utils.RunScript(script.Content, body, prepared.ClientType)
 		if err != nil {
 			utils.Error("Script execution failed: %v", err)
 			continue
 		}
-		baselist = res
+		body = res
 	}
-	writeSubscriptionContent(c, utils.Base64Encode(baselist))
+	if !plainURI {
+		body = utils.Base64Encode(body)
+	}
+	writeSubscriptionContent(c, body)
 }
 
-func filterV2rayCompatibleLinks(links []string) []string {
-	filtered := make([]string, 0, len(links))
-	for _, link := range links {
-		link = strings.TrimSpace(link)
-		if link == "" || shouldSkipV2rayLink(link) {
-			continue
-		}
-		filtered = append(filtered, link)
+func isRemoteSubscriptionLink(link string) bool {
+	return (strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://")) && !protocol.IsHTTPLink(link)
+}
+
+func readRemoteSubscriptionLinks(ctx context.Context, link string, plainURI bool) ([]string, error) {
+	resp, err := getRemoteSubscription(ctx, link)
+	if err != nil {
+		return nil, err
 	}
-	return filtered
+	defer func() { _ = resp.Body.Close() }()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil && plainURI {
+		return nil, err
+	}
+	content := string(body)
+	if !plainURI || !strings.Contains(content, "://") {
+		content = utils.Base64Decode(content)
+	}
+	return strings.Split(content, "\n"), nil
+}
+
+func renameSubscriptionURI(link, name string) string {
+	if name == "" {
+		return link
+	}
+	switch protocol.GetProtocolFromLink(link) {
+	case "unknown", "other":
+		return link
+	case "vmess", "ssr", "sudoku", "mieru":
+		return protocol.RenameNodeLink(link, name)
+	default:
+		// Rewrite only the display name so transport parameters survive as stored.
+		base, _, _ := strings.Cut(link, "#")
+		return base + "#" + (&url.URL{Fragment: name}).EscapedFragment()
+	}
 }
 
 func shouldSkipV2rayLink(link string) bool {
@@ -727,10 +765,10 @@ func buildPreparedMihomoYAML(c *gin.Context, prepared preparedClientResponse) (m
 		nodeLink := utils.RenameNodeLink(v.Link, finalNodeName)
 		dialerProxy := resolveClashDialerProxy(v, finalNodeName, chainNodeDialerMap, targetNodeDialerMap, dialerProxyNameMap)
 
+		links := models.SplitNodeOutputLinks(v.Link)
 		switch {
 		// 如果包含多条节点
-		case strings.Contains(v.Link, ","):
-			links := strings.Split(v.Link, ",")
+		case len(links) > 1:
 			splitNames := nodeNamePlan.SplitNamesAt(idx)
 			for i, link := range links {
 				linkName := finalNodeName
@@ -746,7 +784,7 @@ func buildPreparedMihomoYAML(c *gin.Context, prepared preparedClientResponse) (m
 			}
 			continue
 		//如果是订阅转换（以 http:// 或 https:// 开头，但不是HTTP/HTTPS代理节点）
-		case (strings.HasPrefix(v.Link, "http://") || strings.HasPrefix(v.Link, "https://")) && !protocol.IsHTTPLink(v.Link):
+		case isRemoteSubscriptionLink(v.Link):
 			resp, err := getRemoteSubscription(c.Request.Context(), v.Link)
 			if err != nil {
 				utils.Error("获取包含链接失败: %v", err)
@@ -853,8 +891,6 @@ func extensionForConvertedClient(clientType string) string {
 	switch strings.ToLower(strings.TrimSpace(clientType)) {
 	case "json", "singbox", "sing-box":
 		return "json"
-	case "uri", "v2ray-uri":
-		return "txt"
 	case "stash", "mihomo", "clashmeta", "clash-meta", "egern":
 		return "yaml"
 	default:
@@ -900,10 +936,10 @@ func renderPreparedSurge(c *gin.Context, prepared preparedClientResponse) {
 		finalNodeName := nodeNamePlan.NodeNameAt(idx, v.ID)
 		// Surge 的 [Proxy] 左侧名称来自链接名称，也要复用最终名称。
 		nodeLink := utils.RenameNodeLink(v.Link, finalNodeName)
+		links := models.SplitNodeOutputLinks(v.Link)
 		switch {
 		// 如果包含多条节点
-		case strings.Contains(v.Link, ","):
-			links := strings.Split(v.Link, ",")
+		case len(links) > 1:
 			splitNames := nodeNamePlan.SplitNamesAt(idx)
 			for i, link := range links {
 				linkName := finalNodeName
@@ -915,7 +951,7 @@ func renderPreparedSurge(c *gin.Context, prepared preparedClientResponse) {
 			urls = append(urls, links...)
 			continue
 		//如果是订阅转换（以 http:// 或 https:// 开头，但不是HTTP/HTTPS代理节点）
-		case (strings.HasPrefix(v.Link, "http://") || strings.HasPrefix(v.Link, "https://")) && !protocol.IsHTTPLink(v.Link):
+		case isRemoteSubscriptionLink(v.Link):
 			resp, err := getRemoteSubscription(c.Request.Context(), v.Link)
 			if err != nil {
 				utils.Error("Error getting link: %v", err)

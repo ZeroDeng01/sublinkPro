@@ -2967,6 +2967,7 @@
         "formatMihomo": "Mihomo",
         "formatSurge": "Surge",
         "formatV2ray": "V2ray",
+        "formatUri": "URI",
         "expandedClients": "Expanded Clients",
         "preview": "Link Preview",
         "count": "{{count}} links",

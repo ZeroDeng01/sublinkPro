@@ -1,11 +1,14 @@
 package models
 
 import (
+	"regexp"
 	"strings"
 	"sublink/utils"
 )
 
 const duplicateIndexVariable = "$DuplicateIndex"
+
+var nodeOutputLinkSeparator = regexp.MustCompile(`,\s*[a-zA-Z][a-zA-Z0-9+.-]*://`)
 
 // NodeNamePlan records the final rendered names for subscription output.
 type NodeNamePlan struct {
@@ -39,7 +42,7 @@ func BuildNodeNamePlan(nodes []Node, nodeNamePreprocess string, nodeNameRule str
 
 	for nodeIndex, node := range nodes {
 		processedLinkName := utils.PreprocessNodeName(nodeNamePreprocess, node.LinkName)
-		links := splitNodeOutputLinks(node.Link)
+		links := SplitNodeOutputLinks(node.Link)
 		plan.SplitNames[nodeIndex] = make([]string, len(links))
 
 		for linkIndex, link := range links {
@@ -127,9 +130,16 @@ func (plan NodeNamePlan) setName(nodeIndex int, linkIndex int, nodeID int, name 
 	}
 }
 
-func splitNodeOutputLinks(link string) []string {
-	if strings.Contains(link, ",") {
-		return strings.Split(link, ",")
+// SplitNodeOutputLinks separates bundled links while preserving commas within each URI.
+func SplitNodeOutputLinks(link string) []string {
+	if !strings.Contains(link, ",") {
+		return []string{link}
 	}
-	return []string{link}
+	var links []string
+	start := 0
+	for _, separator := range nodeOutputLinkSeparator.FindAllStringIndex(link, -1) {
+		links = append(links, link[start:separator[0]])
+		start = separator[0] + 1
+	}
+	return append(links, link[start:])
 }

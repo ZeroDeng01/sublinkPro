@@ -43,7 +43,7 @@ type EffectiveSettings struct {
 }
 
 func SupportedTargets() []string {
-	return []string{"loon", "egern", "stash", "surfboard", "shadowrocket", "quanx", "sing-box", "uri", "json"}
+	return []string{"loon", "egern", "stash", "surfboard", "shadowrocket", "quanx", "sing-box", "json"}
 }
 
 func LoadSettings() Settings {

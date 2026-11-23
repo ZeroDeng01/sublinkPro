@@ -59,10 +59,11 @@ Case 3: Access tracking
 > [!NOTE]
 > **Client compatibility**: Share links can detect client type automatically. Clash, Surge, V2ray, and other client formats can also be specified manually.
 
-## Expanded Client Formats
+## Subscription Output Formats
 
-- Native outputs remain available through `/c?client=clash`, `/c?client=mihomo`, `/c?client=surge`, and `/c?client=v2ray`.
-- When **Application Settings -> Sub-Store** is enabled and targets are selected, share links can also request the selected expanded targets: `loon`, `egern`, `stash`, `surfboard`, `shadowrocket`, `quanx`, `sing-box`, `uri`, and `json`.
+- Built-in outputs include `clash`, `mihomo`, `surge`, `v2ray`, and `uri`.
+- Select **URI** in the share details or batch export. `/c/?token=<shareToken>&client=uri` returns the stored links of all nodes selected by the subscription's filtering, ordering and renaming rules, one link per line in UTF-8. It includes links for protocols that V2Ray skips, such as Snell, OpenVPN and Sudoku. Output and node filter scripts receive `uri` as the client type. Each importing app determines which links it supports, including any project-specific link formats.
+- When **Application Settings -> Sub-Store** is enabled and targets are selected, share links can also request the selected expanded targets: `loon`, `egern`, `stash`, `surfboard`, `shadowrocket`, `quanx`, `sing-box`, and `json`.
 - Expanded outputs use SublinkPro's mihomo/Clash YAML as the bridge format and call the external Sub-Store sidecar. The sidecar parser converts proxy nodes only; strategy groups, rules, DNS sections, and other full Clash configuration sections are not preserved in those expanded outputs.
 - If an expanded client is requested while the sidecar is not configured or the target is not selected in Application Settings, the request returns a clear error instead of silently falling back to V2ray.
 
@@ -140,8 +141,8 @@ For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] 香
 
 ## OpenVPN Output Notes
 
-- OpenVPN supports Clash/mihomo output only. `/c?client=clash` writes `type: openvpn` and preserves the imported Mihomo fields, including PEM/key blocks, credentials, transport and cipher options, keepalive, IP stack, DNS, shared connection-layer options, and chain proxy `dialer-proxy`.
-- SublinkPro uses `openvpn://server:port?...#name` only as an internal raw-edit and Clash/mihomo import/export round-trip format. It is not an official OpenVPN share link and direct `.ovpn` import is not supported.
+- `/c?client=clash` writes OpenVPN nodes as `type: openvpn` and preserves the imported Mihomo fields, including PEM/key blocks, credentials, transport and cipher options, keepalive, IP stack, DNS, shared connection-layer options, and chain proxy `dialer-proxy`.
+- SublinkPro stores OpenVPN nodes as `openvpn://server:port?...#name` for raw editing and Clash/mihomo round trips. The URI output includes this project-specific link format. Direct `.ovpn` import is not supported.
 - `/c?client=v2ray` and Surge skip OpenVPN nodes. Sensitive key material is URL-encoded, not encrypted, in the stored internal link.
 
 ## VLESS XHTTP Output Notes

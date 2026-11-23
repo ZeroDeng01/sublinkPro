@@ -73,30 +73,6 @@ func TestClientConvertMapsQuanxToQX(t *testing.T) {
 	}
 }
 
-func TestClientConvertAllowsV2rayURIWhenURIIsAllowed(t *testing.T) {
-	var target string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var req parseRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("decode request: %v", err)
-		}
-		target = req.Client
-		_, _ = w.Write([]byte(`{"status":"success","data":{"par_res":"uri output"}}`))
-	}))
-	defer server.Close()
-
-	client, err := NewClient(Config{BaseURL: server.URL, AllowedTargets: []string{"uri"}})
-	if err != nil {
-		t.Fatalf("new client: %v", err)
-	}
-	if _, err := client.Convert(context.Background(), "proxies: []", "v2ray-uri"); err != nil {
-		t.Fatalf("convert v2ray-uri with uri allowlist: %v", err)
-	}
-	if target != "URI" {
-		t.Fatalf("expected URI target, got %q", target)
-	}
-}
-
 func TestClientConvertRejectsDisabledTarget(t *testing.T) {
 	client, err := NewClient(Config{BaseURL: "http://127.0.0.1:1", AllowedTargets: []string{"loon"}})
 	if err != nil {

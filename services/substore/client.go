@@ -163,8 +163,6 @@ func ResolveTarget(target string) (string, bool) {
 		return "sing-box", true
 	case "json":
 		return "JSON", true
-	case "uri":
-		return "URI", true
 	}
 	return "", false
 }
@@ -180,8 +178,6 @@ func normalizeTargetKey(target string) string {
 
 func canonicalTargetKey(target string) string {
 	switch normalizeTargetKey(target) {
-	case "v2ray-uri", "v2rayuri":
-		return "uri"
 	case "singbox":
 		return "sing-box"
 	}

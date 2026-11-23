@@ -52,7 +52,6 @@ const targetLabels = {
   shadowrocket: 'Shadowrocket',
   quanx: 'Quantumult X',
   'sing-box': 'sing-box',
-  uri: 'URI',
   json: 'JSON'
 };
 

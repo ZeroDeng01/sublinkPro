@@ -139,6 +139,7 @@ service; keep it on the internal compose network and do **not** publish its port
 
 Sub-Store is then enabled in-app under **User Center -> Sub-Store** (base URL
 e.g. `http://substore:3000`), not via env vars.
+SublinkPro's `client=uri` subscription output is built in and available on all installations.
 
 ---
 

@@ -59,10 +59,11 @@
 > [!NOTE]
 > **客户端兼容**：分享链接支持自动识别客户端类型，也可手动指定 Clash、Surge、V2ray 等客户端格式。
 
-## 扩展客户端格式
+## 订阅输出格式
 
-- 原生输出仍通过 `/c?client=clash`、`/c?client=mihomo`、`/c?client=surge`、`/c?client=v2ray` 提供。
-- 在 **用户中心 -> Sub-Store** 启用 sidecar 并选择目标后，分享链接还可以请求已选中的扩展目标：`loon`、`egern`、`stash`、`surfboard`、`shadowrocket`、`quanx`、`sing-box`、`uri`、`json`。
+- 原生输出包括 `clash`、`mihomo`、`surge`、`v2ray` 和 `uri`。
+- 在分享详情或批量导出中选择 **URI**。`/c/?token=<shareToken>&client=uri` 应用订阅的筛选、排序和重命名规则，以 UTF-8 纯文本逐行返回所选节点保存的链接，包括 V2Ray 输出会跳过的 Snell、OpenVPN 和 Sudoku。节点过滤脚本和输出脚本收到的客户端类型为 `uri`。包含项目专用链接格式在内的各类链接，由导入客户端决定是否支持。
+- 在 **用户中心 -> Sub-Store** 启用 sidecar 并选择目标后，分享链接还可以请求已选中的扩展目标：`loon`、`egern`、`stash`、`surfboard`、`shadowrocket`、`quanx`、`sing-box`、`json`。
 - 扩展输出使用 SublinkPro 的 mihomo/Clash YAML 作为桥接格式，并调用外部 Sub-Store sidecar。sidecar parser 只转换代理节点，不保留策略组、规则、DNS 等完整 Clash 配置段。
 - 如果请求扩展客户端时未配置 sidecar，或目标未在用户中心选中，请求会返回明确错误，不会静默回退到 V2ray。
 
@@ -140,8 +141,8 @@
 
 ## OpenVPN 输出说明
 
-- OpenVPN 仅支持 Clash/mihomo 输出；`/c?client=clash` 会输出 `type: openvpn`，并保留导入的 Mihomo 字段，包括 PEM/密钥块、账号凭据、传输与加密选项、保活、IP 栈、DNS、通用连接层选项及链式代理 `dialer-proxy`。
-- SublinkPro 使用 `openvpn://server:port?...#name` 仅作为内部原始编辑与 Clash/mihomo 导入导出的往返格式；它不是 OpenVPN 官方分享链接，也不支持直接导入 `.ovpn` 文件。
+- `/c?client=clash` 会将 OpenVPN 节点输出为 `type: openvpn`，并保留导入的 Mihomo 字段，包括 PEM/密钥块、账号凭据、传输与加密选项、保活、IP 栈、DNS、通用连接层选项及链式代理 `dialer-proxy`。
+- SublinkPro 将 OpenVPN 节点保存为 `openvpn://server:port?...#name`，用于原始编辑与 Clash/mihomo 往返转换。URI 输出包含这种项目专用链接格式。暂不支持直接导入 `.ovpn` 文件。
 - `/c?client=v2ray` 与 Surge 会跳过 OpenVPN 节点。敏感密钥材料在内部链接中仅经过 URL 编码，并未加密。
 
 ## VLESS XHTTP 输出说明

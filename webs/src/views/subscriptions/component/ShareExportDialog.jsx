@@ -23,7 +23,8 @@ const NATIVE_CLIENT_LINKS = [
   { key: 'clash', client: 'clash' },
   { key: 'mihomo', client: 'mihomo' },
   { key: 'surge', client: 'surge' },
-  { key: 'v2ray', client: 'v2ray' }
+  { key: 'v2ray', client: 'v2ray' },
+  { key: 'uri', client: 'uri' }
 ];
 
 const EXPANDED_CLIENT_LINKS = [
@@ -34,7 +35,6 @@ const EXPANDED_CLIENT_LINKS = [
   { key: 'shadowrocket', client: 'shadowrocket' },
   { key: 'quantumultX', client: 'quanx' },
   { key: 'singBox', client: 'sing-box' },
-  { key: 'uri', client: 'uri' },
   { key: 'json', client: 'json' }
 ];
 
