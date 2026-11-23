@@ -1,6 +1,8 @@
 package models
 
 import (
+	"database/sql"
+	"errors"
 	"strconv"
 	"testing"
 	"time"
@@ -12,6 +14,61 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
+
+func TestSubscriptionShareCommittedWriteSurvivesCacheRefreshFailure(t *testing.T) {
+	for _, operation := range []string{"add", "update"} {
+		t.Run(operation, func(t *testing.T) {
+			setupSubscriptionShareTestDB(t)
+			share := &SubscriptionShare{Token: "cache-refresh-" + operation, Name: "original", Enabled: true, MaxDevices: 2}
+			if operation == "update" {
+				if err := share.Add(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			cacheFailure := errors.New("cache refresh failed")
+			callback := "test:fail_share_cache_refresh"
+			if err := database.DB.Callback().Query().Before("gorm:query").Register(callback, func(tx *gorm.DB) {
+				_, inTransaction := tx.Statement.ConnPool.(*sql.Tx)
+				_, shareQuery := tx.Statement.Dest.(*SubscriptionShare)
+				if !inTransaction && shareQuery {
+					_ = tx.AddError(cacheFailure)
+				}
+			}); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := database.DB.Callback().Query().Remove(callback); err != nil {
+					t.Error(err)
+				}
+			})
+			var err error
+			if operation == "add" {
+				err = share.Add()
+			} else {
+				err = share.UpdateFields(map[string]any{"max_devices": 1})
+			}
+			if err != nil {
+				t.Fatalf("committed %s was incorrectly reported as failed: %v", operation, err)
+			}
+			if _, cached := subscriptionShareCache.Get(share.ID); cached {
+				t.Fatal("cache refresh failure retained a potentially stale entry")
+			}
+			if err := database.DB.Callback().Query().Remove(callback); err != nil {
+				t.Fatal(err)
+			}
+			var stored SubscriptionShare
+			if err := database.DB.First(&stored, share.ID).Error; err != nil {
+				t.Fatal(err)
+			}
+			if stored.Token != share.Token || stored.Name != share.Name || stored.MaxDevices != share.MaxDevices {
+				t.Fatalf("successful write did not return its committed state: stored=%+v returned=%+v", stored, share)
+			}
+			if operation == "update" && stored.MaxDevices != 1 {
+				t.Fatal("requested update was not committed")
+			}
+		})
+	}
+}
 
 func resetSubscriptionShareCacheForTest() {
 	subscriptionShareCache = cache.NewMapCache(func(s SubscriptionShare) int { return s.ID })
@@ -30,7 +87,7 @@ func setupSubscriptionShareTestDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
-	if err := db.AutoMigrate(&SubscriptionShare{}); err != nil {
+	if err := db.AutoMigrate(&SubscriptionShare{}, &ShareDevice{}); err != nil {
 		t.Fatalf("auto migrate subscription_shares: %v", err)
 	}
 

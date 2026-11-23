@@ -5,9 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/metacubex/mihomo/constant"
@@ -25,7 +23,7 @@ var GetBestProxyNodeFunc func() (link string, name string, err error)
 // useProxy: 是否使用代理
 // proxyLink: 代理节点链接，为空时自动选择最佳代理
 // timeout: 请求超时时间
-// 返回: HTTP客户端, 使用的代理节点链接, 错误
+// 返回: HTTP客户端, 使用的代理节点链接, 错误。调用方必须在请求结束后调用 CloseHTTPClient。
 func CreateProxyHTTPClient(useProxy bool, proxyLink string, timeout time.Duration) (*http.Client, string, error) {
 	client := &http.Client{
 		Timeout: timeout,
@@ -68,32 +66,8 @@ func CreateProxyHTTPClient(useProxy bool, proxyLink string, timeout time.Duratio
 	}
 
 	Info("使用 mihomo 内核代理下载")
-	// 创建自定义 Transport，使用 mihomo adapter 进行代理连接
-	client.Transport = &http.Transport{
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			// 解析地址获取主机和端口
-			host, portStr, splitErr := net.SplitHostPort(addr)
-			if splitErr != nil {
-				return nil, fmt.Errorf("split host port error: %v", splitErr)
-			}
-
-			portUint, parseErr := strconv.ParseUint(portStr, 10, 16)
-			if parseErr != nil {
-				return nil, fmt.Errorf("invalid port: %v", parseErr)
-			}
-
-			// 创建 mihomo metadata
-			metadata := &constant.Metadata{
-				Host:    host,
-				DstPort: uint16(portUint),
-				Type:    constant.HTTP,
-			}
-
-			// 使用 mihomo adapter 建立连接
-			return proxyAdapter.DialContext(ctx, metadata)
-		},
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- 代理连接需要兼容上游节点的证书配置
-	}
+	transport := newHTTPTransportWithAdapter(proxyAdapter, &tls.Config{InsecureSkipVerify: true}) // #nosec G402 -- 代理连接需要兼容上游节点的证书配置
+	client.Transport = &ownedProxyTransport{Transport: transport, adapter: proxyAdapter}
 
 	return client, proxyNodeLink, nil
 }
@@ -110,6 +84,8 @@ func FetchWithProxy(url string, useProxy bool, proxyLink string, timeout time.Du
 	if err != nil {
 		return nil, err
 	}
+
+	defer CloseHTTPClient(client)
 
 	// 创建请求
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)

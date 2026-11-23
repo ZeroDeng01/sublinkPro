@@ -56,6 +56,7 @@ func setupClientsAPITestDB(t *testing.T) {
 		&models.SubcriptionAirport{},
 		&models.SubcriptionScript{},
 		&models.SubscriptionShare{},
+		&models.ShareDevice{},
 		&models.SubscriptionChainRule{},
 		&models.Script{},
 		&models.SystemSetting{},

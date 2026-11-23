@@ -48,6 +48,7 @@ type preparedClientResponse struct {
 	Subscription     models.Subcription
 	SubName          string
 	ShareID          int
+	DeviceLimited    bool
 	FallbackName     string
 	FallbackIdentity fallbackIdentityPolicy
 }
@@ -124,6 +125,7 @@ func resolvedSubscriptionNameOrWriteError(c *gin.Context) (string, bool) {
 }
 
 func GetClient(c *gin.Context) {
+	c.Header("Cache-Control", "private, no-store")
 	// 获取协议头
 	token := c.Query("token")
 	if token == "" {
@@ -141,18 +143,34 @@ func GetClient(c *gin.Context) {
 		testGetClientAfterResolveSubscriptionNameHook(c)
 	}
 	c.Set("shareID", prepared.ShareID)
+	if prepared.ShareID > 0 && prepared.Mode == clientResponseNormal {
+		if prepared.DeviceLimited {
+			dispatchDeviceCheckedResponse(c, prepared, strings.ToLower(token))
+		} else {
+			dispatchUnlimitedShareResponse(c, prepared, strings.ToLower(token))
+		}
+		return
+	}
 	dispatchPreparedClientResponse(c, prepared)
 }
 
 func prepareClientResponse(c *gin.Context, clientType, token string) (preparedClientResponse, bool) {
 	share, err := models.GetSubscriptionShareByToken(token)
 	if err != nil {
-		utils.Warn("无效的分享token: %s", token)
+		if !models.IsShareNotFoundError(err) {
+			writeShareAccessError(c, err)
+			return preparedClientResponse{}, false
+		}
+		utils.Warn("无效的分享链接")
 		return buildSyntheticFallbackResponse(clientType, "无效的分享链接"), true
 	}
 
 	if share.IsExpired() {
-		utils.Warn("分享链接已过期: %s", token)
+		utils.Warn("分享链接已过期")
+		if share.MaxDevices > 0 {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"code": "share_unavailable", "msg": "分享已失效或已禁用"})
+			return preparedClientResponse{}, false
+		}
 		var expiredSub models.Subcription
 		expiredSub.ID = share.SubscriptionID
 		if err := expiredSub.Find(); err != nil {
@@ -184,11 +202,16 @@ func prepareClientResponse(c *gin.Context, clientType, token string) (preparedCl
 	}
 
 	// 异步更新访问统计，避免订阅生成热路径等待数据库写入。
+	if err := models.CheckShareDevice(share.ID, token, subscriptionDeviceIdentity(c), false); err != nil {
+		writeShareAccessError(c, err)
+		return preparedClientResponse{}, false
+	}
 	share.RecordAccessAsync()
 	prepared, ok := buildPreparedResponseFromSubscription(sub, clientType, share.ID)
 	if !ok {
 		return preparedClientResponse{}, false
 	}
+	prepared.DeviceLimited = share.MaxDevices > 0
 	return prepared, true
 }
 
@@ -584,7 +607,7 @@ func renderPreparedV2ray(c *gin.Context, prepared preparedClientResponse) {
 		}
 		baselist = res
 	}
-	_, _ = c.Writer.WriteString(utils.Base64Encode(baselist))
+	writeSubscriptionContent(c, utils.Base64Encode(baselist))
 }
 
 func filterV2rayCompatibleLinks(links []string) []string {
@@ -636,7 +659,7 @@ func renderPreparedClash(c *gin.Context, prepared preparedClientResponse) {
 	if !shouldWriteBody {
 		return
 	}
-	_, _ = c.Writer.WriteString(string(bridge.Body))
+	writeSubscriptionContent(c, string(bridge.Body))
 }
 
 func buildPreparedMihomoYAML(c *gin.Context, prepared preparedClientResponse) (mihomoBridgeOutput, bool, bool) {
@@ -823,7 +846,7 @@ func renderPreparedConvertedClient(c *gin.Context, prepared preparedClientRespon
 		return
 	}
 	c.Writer.Header().Set("Content-Type", converted.ContentType)
-	_, _ = c.Writer.WriteString(converted.Body)
+	writeSubscriptionContent(c, converted.Body)
 }
 
 func extensionForConvertedClient(clientType string) string {
@@ -932,7 +955,7 @@ func renderPreparedSurge(c *gin.Context, prepared preparedClientResponse) {
 	// 如果包含头部更新信息
 	if strings.Contains(DecodeClash, "#!MANAGED-CONFIG") {
 		DecodeClash = withSurgeManagedConfigInterval(DecodeClash, resolveSubscriptionUpdateIntervalSeconds(sub.UpdateInterval))
-		_, _ = c.Writer.WriteString(DecodeClash)
+		writeSubscriptionContent(c, DecodeClash)
 		return
 	}
 	var domain string
@@ -961,7 +984,7 @@ func renderPreparedSurge(c *gin.Context, prepared preparedClientResponse) {
 		}
 		DecodeClash = res
 	}
-	_, _ = c.Writer.WriteString(interval + "\n" + DecodeClash)
+	writeSubscriptionContent(c, interval+"\n"+DecodeClash)
 }
 
 // getSubscriptionUsage 计算订阅的流量使用情况

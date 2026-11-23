@@ -312,7 +312,7 @@ func executeDatabaseMigration(ctx context.Context, taskID, uploadPath, originalN
 		if err := importSubscriptionShares(state); err != nil {
 			return err
 		}
-		if err := reportStep(fmt.Sprintf("分享链接导入完成，共 %d 条", state.result.Imported["subscription_shares"]), nil); err != nil {
+		if err := reportStep(fmt.Sprintf("分享链接导入完成，共 %d 条、设备 %d 条", state.result.Imported["subscription_shares"], state.result.Imported["share_devices"]), nil); err != nil {
 			return err
 		}
 
@@ -425,7 +425,7 @@ func buildDatabaseMigrationSteps(sourceBundle *databaseMigrationSource, options 
 		steps = append(steps, "导入AccessKey")
 	}
 
-	steps = append(steps, "导入分享链接")
+	steps = append(steps, "导入分享链接及设备状态")
 
 	if options.IncludeSubLogs {
 		steps = append(steps, "导入访问日志")
@@ -677,6 +677,7 @@ func clearTargetBusinessData(tx *gorm.DB) error {
 	modelsInDeleteOrder := []any{
 		&models.IPInfo{},
 		&models.SubLogs{},
+		&models.ShareDevice{},
 		&models.SubscriptionShare{},
 		&models.SubscriptionChainRule{},
 		&models.GroupAirportSort{},
@@ -1123,6 +1124,34 @@ func importSubscriptionShares(state *databaseMigrationState) error {
 		state.importedShareIDs[share.ID] = struct{}{}
 	}
 	state.result.Imported["subscription_shares"] = len(shares)
+	return importShareDevices(state)
+}
+
+// Device bindings belong to the imported shares, including their revoked state.
+// Older backups without the device table must still clear all target bindings.
+func importShareDevices(state *databaseMigrationState) error {
+	state.result.Imported["share_devices"] = 0
+	if !state.sourceHasShares || !state.source.Migrator().HasTable(&models.ShareDevice{}) {
+		return nil
+	}
+	var devices []models.ShareDevice
+	if err := state.source.Find(&devices).Error; err != nil {
+		return fmt.Errorf("读取源分享设备失败: %w", err)
+	}
+	filtered := make([]models.ShareDevice, 0, len(devices))
+	for _, device := range devices {
+		if _, ok := state.importedShareIDs[device.ShareID]; !ok {
+			continue
+		}
+		filtered = append(filtered, device)
+	}
+	if skipped := len(devices) - len(filtered); skipped > 0 {
+		state.result.Warnings = append(state.result.Warnings, fmt.Sprintf("有 %d 条设备记录因引用不存在的分享链接而被跳过", skipped))
+	}
+	if err := insertRecords(state.tx, filtered); err != nil {
+		return fmt.Errorf("导入分享设备失败: %w", err)
+	}
+	state.result.Imported["share_devices"] = len(filtered)
 	return nil
 }
 
@@ -1624,6 +1653,7 @@ func sequenceTables(tx *gorm.DB) []string {
 		&models.IPInfo{},
 		&models.Host{},
 		&models.SubscriptionShare{},
+		&models.ShareDevice{},
 		&models.SubscriptionChainRule{},
 		&models.Airport{},
 		&models.GroupAirportSort{},

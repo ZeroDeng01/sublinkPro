@@ -577,85 +577,6 @@ type SpeedTestResult struct {
 	UnlockCheckAt   string
 }
 
-// BatchAddNodes 批量添加节点（高效 + 容错）
-// 优化策略：
-// 1. 分块处理避免 SQLite 变量限制
-// 2. 使用 ON CONFLICT DO NOTHING 跳过已存在的节点
-// 3. 批量插入失败时，降级到逐条插入以保证容错性
-// 4. 单条失败只记录日志，不影响其他节点
-func BatchAddNodes(nodes []Node) error {
-	if len(nodes) == 0 {
-		return nil
-	}
-	reservedNames := make(map[string]bool, len(nodes))
-	for i := range nodes {
-		nodes[i].NormalizeNameModeDefaults()
-		nodes[i].Name = GenerateUniqueNodeNameWithSource(nodes[i].Name, nodes[i].Source, nodes[i].ID, reservedNames)
-	}
-
-	// 分块处理
-	chunks := chunkNodes(nodes, database.BatchSize)
-	insertedCount := 0
-
-	for chunkIdx, chunk := range chunks {
-		for i := range chunk {
-			chunk[i].NormalizeNameModeDefaults()
-			chunk[i].syncLinkHash()
-		}
-		// 尝试批量插入
-		result := database.DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "link_hash"}},
-			DoNothing: true,
-		}).Create(&chunk)
-
-		if result.Error != nil {
-			// 批量插入失败，降级到逐条插入
-			utils.Warn("分块 %d 批量插入失败，降级到逐条插入: %v", chunkIdx, result.Error)
-			individualInserted := fallbackToIndividualNodeInsert(chunk)
-			insertedCount += individualInserted
-		} else {
-			insertedCount += int(result.RowsAffected)
-			// 批量更新缓存（只更新成功插入的，有ID的节点）
-			for i := range chunk {
-				if chunk[i].ID > 0 {
-					nodeCache.Set(chunk[i].ID, chunk[i])
-				}
-			}
-		}
-	}
-
-	utils.Info("批量添加节点完成: 尝试 %d 个，实际插入 %d 个（跳过已存在）", len(nodes), insertedCount)
-	return nil
-}
-
-// fallbackToIndividualNodeInsert 降级到逐条插入节点（容错）
-func fallbackToIndividualNodeInsert(nodes []Node) int {
-	insertedCount := 0
-	for i := range nodes {
-		nodes[i].NormalizeNameModeDefaults()
-		nodes[i].syncLinkHash()
-		// 使用 ON CONFLICT DO NOTHING 跳过已存在的节点
-		result := database.DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "link_hash"}},
-			DoNothing: true,
-		}).Create(&nodes[i])
-
-		if result.Error != nil {
-			utils.Error("节点 [%s] 插入失败: %v", nodes[i].Name, result.Error)
-			continue
-		}
-
-		if result.RowsAffected > 0 {
-			insertedCount++
-			// 更新缓存
-			if nodes[i].ID > 0 {
-				nodeCache.Set(nodes[i].ID, nodes[i])
-			}
-		}
-	}
-	return insertedCount
-}
-
 // BatchUpdateSpeedResults 批量更新测速结果（高效 + 容错）
 // 优化策略：
 // 1. 分块处理避免 SQLite 变量限制和长时间锁定
@@ -1629,18 +1550,8 @@ func BatchDel(ids []int) error {
 
 	// 使用事务原子删除
 	err := database.WithTransaction(func(tx *gorm.DB) error {
-		// 先清除节点与订阅的关联关系
-		if len(ids) > 0 {
-			if err := tx.Exec("DELETE FROM subcription_nodes WHERE node_id IN ?", ids).Error; err != nil {
-				return err
-			}
-		}
-
-		// 删除节点
-		if err := tx.Where("id IN ?", ids).Delete(&Node{}).Error; err != nil {
-			return err
-		}
-		return nil
+		_, err := deleteNodeRows(tx, ids)
+		return err
 	})
 
 	if err != nil {
@@ -1652,6 +1563,14 @@ func BatchDel(ids []int) error {
 		nodeCache.Delete(id)
 	}
 	return nil
+}
+
+func deleteNodeRows(tx *gorm.DB, ids []int) (int64, error) {
+	if err := tx.Where("node_id IN ?", ids).Delete(&SubcriptionNode{}).Error; err != nil {
+		return 0, err
+	}
+	result := tx.Where("id IN ?", ids).Delete(&Node{})
+	return result.RowsAffected, result.Error
 }
 
 // BatchUpdateGroup 批量更新节点分组 - 使用事务保证原子性
@@ -1842,6 +1761,9 @@ type NodeInfoUpdate struct {
 	LinkName        string
 	Link            string
 	ClashExtra      string
+	ContentHash     string
+	BackfillCountry string
+	PreserveName    bool
 	SourceSort      int
 	Source          string
 	CurrentName     string
@@ -1856,6 +1778,7 @@ func BuildNodeInfoUpdate(existing Node, linkName string, link string, sourceSort
 		Name:            linkName,
 		LinkName:        linkName,
 		Link:            link,
+		ContentHash:     existing.ContentHash,
 		SourceSort:      sourceSort,
 		Source:          existing.Source,
 		CurrentName:     existing.Name,
@@ -1875,7 +1798,7 @@ func BatchUpdateNodeInfo(updates []NodeInfoUpdate) (int, error) {
 	chunks := chunkNodeInfoUpdates(updates, database.BatchSize)
 	for chunkIdx, chunk := range chunks {
 		plans := prepareNodeInfoUpdatePlans(chunk)
-		batchSuccess, batchErr := tryBatchUpdateNodeInfoWithCaseWhen(plans)
+		batchSuccess, batchErr := tryBatchUpdateNodeInfoWithCaseWhen(database.DB, plans)
 		if batchErr == nil {
 			successCount += batchSuccess
 			batchUpdateNodeInfoCache(plans)
@@ -1890,29 +1813,33 @@ func BatchUpdateNodeInfo(updates []NodeInfoUpdate) (int, error) {
 }
 
 type nodeInfoUpdatePlan struct {
-	ID         int
-	Name       string
-	SyncName   bool
-	LinkName   string
-	Link       string
-	ClashExtra string
-	LinkHash   string
-	SourceSort int
-	UpdatedAt  time.Time
+	ID              int
+	Name            string
+	SyncName        bool
+	LinkName        string
+	Link            string
+	ClashExtra      string
+	ContentHash     string
+	BackfillCountry string
+	LinkHash        string
+	SourceSort      int
+	UpdatedAt       time.Time
 }
 
 type nodeInfoNameState struct {
-	namesByID map[int]string
-	reserved  map[string]bool
+	namesByID  map[int]string
+	nameCounts map[string]int
+	reserved   map[string]bool
 }
 
 func newNodeInfoNameState() *nodeInfoNameState {
 	state := &nodeInfoNameState{
-		namesByID: make(map[int]string),
-		reserved:  make(map[string]bool),
+		namesByID:  make(map[int]string),
+		nameCounts: make(map[string]int),
+		reserved:   make(map[string]bool),
 	}
 	for _, node := range nodeCache.GetAll() {
-		state.namesByID[node.ID] = node.Name
+		state.setNodeName(node.ID, node.Name)
 	}
 	return state
 }
@@ -1925,16 +1852,17 @@ func (state *nodeInfoNameState) nameReserved(name string, excludeID int) bool {
 	if state.reserved[trimmedName] {
 		return true
 	}
-	for id, existingName := range state.namesByID {
-		if id != excludeID && normalizeNodeRemarkName(existingName) == trimmedName {
-			return true
-		}
+	count := state.nameCounts[trimmedName]
+	if state.namesByID[excludeID] == trimmedName {
+		count--
 	}
-	return false
+	return count > 0
 }
 
 func (state *nodeInfoNameState) reserveNodeName(id int, name string) string {
-	state.namesByID[id] = name
+	if id != 0 {
+		state.setNodeName(id, name)
+	}
 	state.reserved[name] = true
 	return name
 }
@@ -1971,7 +1899,12 @@ func (state *nodeInfoNameState) uniqueNodeNameWithSource(baseName string, source
 }
 
 func (state *nodeInfoNameState) setNodeName(id int, name string) {
-	state.namesByID[id] = name
+	if previous, ok := state.namesByID[id]; ok {
+		state.nameCounts[previous]--
+	}
+	trimmedName := normalizeNodeRemarkName(name)
+	state.namesByID[id] = trimmedName
+	state.nameCounts[trimmedName]++
 }
 
 func prepareNodeInfoUpdatePlans(updates []NodeInfoUpdate) []nodeInfoUpdatePlan {
@@ -1998,7 +1931,7 @@ func prepareNodeInfoUpdatePlan(update NodeInfoUpdate, nameState *nodeInfoNameSta
 		}
 	}
 
-	syncName := existing.ShouldSyncNameFromLink()
+	syncName := existing.ShouldSyncNameFromLink() && !update.PreserveName
 	newName := existing.NameAfterLinkNameUpdate(update.LinkName)
 	if syncName {
 		if nameState != nil {
@@ -2011,15 +1944,17 @@ func prepareNodeInfoUpdatePlan(update NodeInfoUpdate, nameState *nodeInfoNameSta
 	}
 
 	return nodeInfoUpdatePlan{
-		ID:         update.ID,
-		Name:       newName,
-		SyncName:   syncName,
-		LinkName:   update.LinkName,
-		Link:       update.Link,
-		ClashExtra: update.ClashExtra,
-		LinkHash:   hashNodeLink(update.Link),
-		SourceSort: update.SourceSort,
-		UpdatedAt:  updatedAt,
+		ID:              update.ID,
+		Name:            newName,
+		SyncName:        syncName,
+		LinkName:        update.LinkName,
+		Link:            update.Link,
+		ClashExtra:      update.ClashExtra,
+		ContentHash:     update.ContentHash,
+		BackfillCountry: update.BackfillCountry,
+		LinkHash:        hashNodeLink(update.Link),
+		SourceSort:      update.SourceSort,
+		UpdatedAt:       updatedAt,
 	}
 }
 
@@ -2030,7 +1965,7 @@ func currentDBTime() time.Time {
 	return time.Now()
 }
 
-func tryBatchUpdateNodeInfoWithCaseWhen(plans []nodeInfoUpdatePlan) (int, error) {
+func tryBatchUpdateNodeInfoWithCaseWhen(db *gorm.DB, plans []nodeInfoUpdatePlan) (int, error) {
 	if len(plans) == 0 {
 		return 0, nil
 	}
@@ -2062,6 +1997,13 @@ func tryBatchUpdateNodeInfoWithCaseWhen(plans []nodeInfoUpdatePlan) (int, error)
 	appendCaseColumn("link_name", func(plan nodeInfoUpdatePlan) any { return plan.LinkName })
 	appendCaseColumn("link", func(plan nodeInfoUpdatePlan) any { return plan.Link })
 	appendCaseColumn("clash_extra", func(plan nodeInfoUpdatePlan) any { return plan.ClashExtra })
+	appendCaseColumn("content_hash", func(plan nodeInfoUpdatePlan) any { return plan.ContentHash })
+	appendCaseColumn("link_country", func(plan nodeInfoUpdatePlan) any {
+		if plan.BackfillCountry == "" {
+			return gorm.Expr("link_country")
+		}
+		return gorm.Expr("COALESCE(NULLIF(link_country, ''), ?)", plan.BackfillCountry)
+	})
 	appendCaseColumn("link_hash", func(plan nodeInfoUpdatePlan) any { return plan.LinkHash })
 	appendCaseColumn("source_sort", func(plan nodeInfoUpdatePlan) any { return plan.SourceSort })
 	if hasSyncedNodeInfoName(plans) {
@@ -2091,7 +2033,7 @@ func tryBatchUpdateNodeInfoWithCaseWhen(plans []nodeInfoUpdatePlan) (int, error)
 	}
 	sb.WriteString(")")
 
-	result := database.DB.Exec(sb.String(), args...)
+	result := db.Exec(sb.String(), args...)
 	if result.Error != nil {
 		return 0, result.Error
 	}
@@ -2135,6 +2077,10 @@ func updateNodeInfoCache(plan nodeInfoUpdatePlan) {
 		cachedNode.LinkName = plan.LinkName
 		cachedNode.Link = plan.Link
 		cachedNode.ClashExtra = plan.ClashExtra
+		cachedNode.ContentHash = plan.ContentHash
+		if cachedNode.LinkCountry == "" {
+			cachedNode.LinkCountry = plan.BackfillCountry
+		}
 		cachedNode.LinkHash = plan.LinkHash
 		cachedNode.SourceSort = plan.SourceSort
 		cachedNode.UpdatedAt = plan.UpdatedAt
@@ -2149,15 +2095,19 @@ func fallbackToIndividualNodeInfoUpdate(updates []NodeInfoUpdate) int {
 	for _, update := range updates {
 		plan := prepareNodeInfoUpdatePlan(update, nil, currentDBTime())
 		fields := map[string]any{
-			"link_name":   plan.LinkName,
-			"link":        plan.Link,
-			"clash_extra": plan.ClashExtra,
-			"link_hash":   plan.LinkHash,
-			"source_sort": plan.SourceSort,
-			"updated_at":  plan.UpdatedAt,
+			"link_name":    plan.LinkName,
+			"link":         plan.Link,
+			"clash_extra":  plan.ClashExtra,
+			"content_hash": plan.ContentHash,
+			"link_hash":    plan.LinkHash,
+			"source_sort":  plan.SourceSort,
+			"updated_at":   plan.UpdatedAt,
 		}
 		if plan.SyncName {
 			fields["name"] = plan.Name
+		}
+		if plan.BackfillCountry != "" {
+			fields["link_country"] = gorm.Expr("COALESCE(NULLIF(link_country, ''), ?)", plan.BackfillCountry)
 		}
 
 		result := database.DB.Model(&Node{}).Where("id = ?", plan.ID).Updates(fields)

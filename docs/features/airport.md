@@ -29,6 +29,12 @@ The two numbers in the test column are **latency pass count / download speed pas
 
 These statistics summarize the airport's current nodes, not a completed run or permanent availability. They do not indicate that a task is running or that every node has been checked. Subscription updates retain results for retained nodes; newly imported/replaced nodes have no check history, and deleted nodes no longer contribute.
 
+### Subscription refresh and node preservation
+
+Changing YAML formatting, comments, or node order preserves matching node IDs, remarks, tags, test results, and direct subscription selections. This also applies to existing nodes whose links match on the first refresh after upgrading.
+
+If a selected HTTP provider fails or some entries cannot be converted, the refresh imports the usable nodes and keeps unmatched existing nodes. The task result indicates that the snapshot was incomplete. A refresh with no usable nodes fails and keeps existing nodes. A database write failure rolls back the refresh.
+
 ### Clash / mihomo `proxy-providers` compatibility
 
 - Airport subscription import supports `proxy-providers` in Clash / mihomo YAML. If top level `proxies` is missing but providers contain nodes, those provider nodes are expanded and imported as normal nodes.

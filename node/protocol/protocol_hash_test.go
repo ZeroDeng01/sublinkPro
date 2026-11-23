@@ -2,7 +2,50 @@ package protocol
 
 import (
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
+
+func TestGenerateProxyContentHashIgnoresYAMLFormatting(t *testing.T) {
+	decode := func(source string) Proxy {
+		t.Helper()
+		var proxy Proxy
+		if err := yaml.Unmarshal([]byte(source), &proxy); err != nil {
+			t.Fatal(err)
+		}
+		return proxy
+	}
+	const fields = "type: trojan\nserver: example.com\nport: 443\npassword: fixture\n"
+	plain := Proxy{Type: "trojan", Server: "example.com", Port: 443, Password: "fixture"}
+	if fromYAML := GenerateProxyContentHash(decode("\n# move the node\n" + fields)); fromYAML != GenerateProxyContentHash(plain) {
+		t.Fatalf("formatting changed the identity of a node with no extra fields: %s", fromYAML)
+	}
+	first := decode(fields + "extra-option: {alpha: 1, beta: [first, second]}\n")
+	formatted := decode("\n# move the node\n" + fields + "extra-option:\n  beta: ['first', 'second']\n  alpha: 1 # same value\n")
+	changed := decode(fields + "extra-option: {alpha: 2, beta: [first, second]}\n")
+	hash := GenerateProxyContentHash(first)
+	if hash == "" || hash != GenerateProxyContentHash(formatted) {
+		t.Fatal("positions, comments, style or key order affected the content hash")
+	}
+	if hash == GenerateProxyContentHash(changed) || hash == GenerateProxyContentHash(plain) {
+		t.Fatal("a retained option value did not affect the content hash")
+	}
+	encoded, err := EncodeClashExtra(formatted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ApplyClashExtra(&plain, encoded); err != nil {
+		t.Fatal(err)
+	}
+	if hash != GenerateProxyContentHash(plain) {
+		t.Fatal("restoring retained options changed their content hash")
+	}
+	complexKey := decode(fields + "extra-option: {? [first, second]: value}\n")
+	movedKey := decode("\n" + fields + "extra-option: {? [first, second]: value}\n")
+	if hash := GenerateProxyContentHash(complexKey); hash == "" || hash != GenerateProxyContentHash(movedKey) {
+		t.Fatal("a retained YAML sequence key must be supported without hashing its position")
+	}
+}
 
 // TestGenerateProxyContentHash_Basic 测试基本哈希生成
 func TestGenerateProxyContentHash_Basic(t *testing.T) {

@@ -18,6 +18,8 @@ import Checkbox from '@mui/material/Checkbox';
 import Alert from '@mui/material/Alert';
 import { useTheme } from '@mui/material/styles';
 
+import DevicePolicyFields, { validDeviceLimit } from './DevicePolicyFields';
+
 const EXPIRE_TYPE_NEVER = 0;
 const EXPIRE_TYPE_DAYS = 1;
 const EXPIRE_TYPE_DATETIME = 2;
@@ -32,7 +34,8 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
     expireType: EXPIRE_TYPE_NEVER,
     expireDays: 30,
     expireAt: '',
-    enabled: true
+    enabled: true,
+    maxDevices: subscription?.DefaultMaxDevices ?? 0
   });
 
   const [errors, setErrors] = useState({});
@@ -46,7 +49,8 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
         expireType: EXPIRE_TYPE_NEVER,
         expireDays: 30,
         expireAt: '',
-        enabled: true
+        enabled: true,
+        maxDevices: subscription?.DefaultMaxDevices ?? 0
       });
       setErrors({});
     }
@@ -91,6 +95,7 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
 
   const validate = () => {
     const newErrors = {};
+    if (!validDeviceLimit(formData.maxDevices)) newErrors.maxDevices = t('subscriptions.devices.limitHelp');
 
     if (!formData.baseName || formData.baseName.trim() === '') {
       newErrors.baseName = t('subscriptions.share.batch.baseNameRequired');
@@ -125,7 +130,8 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
       expireType: formData.expireType,
       expireDays: formData.expireDays,
       expireAt: formData.expireAt,
-      enabled: formData.enabled
+      enabled: formData.enabled,
+      maxDevices: formData.maxDevices
     };
 
     onSubmit(submitData);
@@ -138,7 +144,8 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
       expireType: EXPIRE_TYPE_NEVER,
       expireDays: 30,
       expireAt: '',
-      enabled: true
+      enabled: true,
+      maxDevices: subscription?.DefaultMaxDevices ?? 0
     });
     setErrors({});
     onClose();
@@ -149,6 +156,7 @@ export default function ShareBatchCreateDialog({ open, subscription, existingNam
       <DialogTitle>{t('subscriptions.share.batch.createTitle')}</DialogTitle>
       <DialogContent>
         <Stack spacing={3} sx={{ mt: 1 }}>
+          <DevicePolicyFields maxDevices={formData.maxDevices} onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))} />
           {/* 基础设置 */}
           <TextField
             label={t('subscriptions.share.batch.baseName')}

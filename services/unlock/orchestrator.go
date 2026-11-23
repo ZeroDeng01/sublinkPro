@@ -3,6 +3,7 @@ package unlock
 import (
 	"sublink/models"
 	"sublink/services/mihomo"
+	"sublink/utils"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ func CheckUnlock(nodeLink string, timeout time.Duration, landingCountry string, 
 	if err != nil {
 		return models.UnlockSummary{Providers: buildUnlockErrorResults(providers, err.Error())}
 	}
+	defer func() { _ = proxyAdapter.Close() }()
 	return CheckUnlockWithAdapter(proxyAdapter, timeout, landingCountry, providers)
 }
 
@@ -27,6 +29,7 @@ func CheckUnlockWithAdapter(proxyAdapter constant.Proxy, timeout time.Duration, 
 		return models.UnlockSummary{Providers: buildUnlockErrorResults(requestedProviders, "no_registered_unlock_provider")}
 	}
 	runtime := newUnlockRuntime(proxyAdapter, timeout, landingCountry)
+	defer utils.CloseHTTPClient(runtime.Client)
 	results := make([]models.UnlockProviderResult, len(providerList))
 	workerLimit := 3
 	if workerLimit > len(providerList) {
