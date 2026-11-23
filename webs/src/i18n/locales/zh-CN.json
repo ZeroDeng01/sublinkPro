@@ -1747,6 +1747,22 @@
     "common": {
       "unknownNode": "未知节点"
     },
+    "addResult": {
+      "title": "节点添加结果",
+      "stats": {
+        "added": "已添加 {{count}} 个",
+        "skipped": "已跳过 {{count}} 个",
+        "failed": "失败 {{count}} 个",
+        "total": "共 {{count}} 个"
+      },
+      "successAll": "已成功添加全部 {{count}} 个节点",
+      "skippedTitle": "已跳过的重复节点",
+      "unknownNode": "未知节点",
+      "duplicatePrefix": "重复节点：",
+      "sourceLabel": "来源：{{source}}",
+      "groupLabel": "分组：{{group}}",
+      "failedTitle": "添加失败的节点"
+    },
     "page": {
       "title": "节点管理",
       "actions": {

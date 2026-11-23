@@ -1747,6 +1747,22 @@
     "common": {
       "unknownNode": "Unknown node"
     },
+    "addResult": {
+      "title": "Node Addition Results",
+      "stats": {
+        "added": "Added: {{count}}",
+        "skipped": "Skipped: {{count}}",
+        "failed": "Failed: {{count}}",
+        "total": "Total: {{count}}"
+      },
+      "successAll": "All nodes added successfully ({{count}}).",
+      "skippedTitle": "Skipped duplicate nodes",
+      "unknownNode": "Unknown node",
+      "duplicatePrefix": "Duplicate of",
+      "sourceLabel": "Source: {{source}}",
+      "groupLabel": "Group: {{group}}",
+      "failedTitle": "Failed to add"
+    },
     "page": {
       "title": "Node Management",
       "actions": {
