@@ -54,6 +54,7 @@ import { getAirports } from 'api/airports';
 import { buildUnlockRulesPayload, normalizeUnlockRules, setUnlockMeta } from 'views/nodes/utils';
 import { getRegisteredProtocolNames } from 'utils/protocolPresentation';
 import { getNodeDisplayName } from 'utils/nodeDisplayName';
+import { copyText } from 'utils/clipboard';
 
 // components
 import {
@@ -503,31 +504,9 @@ export default function SubscriptionList() {
   ]);
 
   const copyToClipboard = async (text) => {
-    try {
-      // 优先使用现代 Clipboard API
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        showMessage(t('common.copied'));
-        return;
-      }
-      // 备用方案：使用传统的 execCommand
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      textArea.style.position = 'fixed';
-      textArea.style.left = '-999999px';
-      textArea.style.top = '-999999px';
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      const successful = document.execCommand('copy');
-      document.body.removeChild(textArea);
-      if (successful) {
-        showMessage(t('common.copied'));
-      } else {
-        showMessage(t('common.copyFailedManual'), 'error');
-      }
-    } catch (error) {
-      console.error('复制失败:', error);
+    if (await copyText(text)) {
+      showMessage(t('common.copied'));
+    } else {
       showMessage(t('common.copyFailedManual'), 'error');
     }
   };
@@ -1413,6 +1392,7 @@ export default function SubscriptionList() {
         open={shareDialogOpen}
         subscription={shareDialogSub}
         onClose={() => setShareDialogOpen(false)}
+        onCopy={copyToClipboard}
         showMessage={showMessage}
       />
 

@@ -51,6 +51,7 @@ import { getQualityStatusMeta } from 'utils/fraudScore';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
+import { copyText } from 'utils/clipboard';
 import { COUNTRY_FALLBACK_EMOJI, isoToFlag } from 'utils/countryDisplay';
 
 const getDashboardReadableTextTokens = (theme, isDark) => {
@@ -835,16 +836,10 @@ const PremiumStatCard = ({
   const surfaceSx = getCalmSurface(theme, accentColor || gradientColors[0], isDark);
   const hasNodePassStats = Boolean(nodePassStats);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (isNodeStat && copyLink && onCopy) {
-      navigator.clipboard
-        .writeText(copyLink)
-        .then(() => {
-          onCopy(true, 'success');
-        })
-        .catch(() => {
-          onCopy(false, 'error');
-        });
+      const copied = await copyText(copyLink);
+      onCopy(copied, copied ? 'success' : 'error');
     }
   };
 

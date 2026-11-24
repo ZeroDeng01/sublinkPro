@@ -24,6 +24,7 @@ import { getReadableTextTokens, getSurfaceTokens } from '../../../themes/surface
 import { getProtocolPresentation } from '../../../utils/protocolPresentation';
 import { getCountryDisplay } from '../../../utils/countryDisplay';
 import { getNodeDisplayName } from 'utils/nodeDisplayName';
+import { copyText } from 'utils/clipboard';
 
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -70,10 +71,9 @@ export default function NodePreviewDetailsPanel({ open, node, tagColorMap, onClo
   const protocolColor = protocolInfo.color || palette.primary.main;
 
   const copyToClipboard = async (text, label) => {
-    try {
-      await navigator.clipboard.writeText(text);
+    if (await copyText(text)) {
       setSnackbar({ open: true, message: t('subscriptions.previewDetails.messages.copied', { label }), severity: 'success' });
-    } catch {
+    } else {
       setSnackbar({ open: true, message: t('common.copyFailed'), severity: 'error' });
     }
   };

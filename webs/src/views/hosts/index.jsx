@@ -53,6 +53,7 @@ import MainCard from 'ui-component/cards/MainCard';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getHosts, addHost, updateHost, deleteHost, batchDeleteHosts, exportHosts, syncHosts, pinHost } from 'api/hosts';
 import { formatDateTime } from 'i18n/locales';
+import { copyText } from 'utils/clipboard';
 
 import HostSettingsDialog from './component/HostSettingsDialog';
 import ConfirmDialog from 'components/ConfirmDialog';
@@ -324,10 +325,12 @@ export default function HostManagement() {
     showMessage(t('hosts.messages.restored'));
   };
 
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(textContent).then(() => {
+  const handleCopyText = async () => {
+    if (await copyText(textContent)) {
       showMessage(t('hosts.messages.copied'));
-    });
+    } else {
+      showMessage(t('common.copyFailedManual'), 'error');
+    }
   };
 
   const hasTextChanged = textContent !== originalText;

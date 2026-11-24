@@ -41,6 +41,7 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 import { useAuth } from 'contexts/AuthContext';
+import { copyText } from 'utils/clipboard';
 import { changePassword, updateProfile } from 'api/user';
 import { QRCodeSVG } from 'qrcode.react';
 import { confirmTotpSetup, disableTotp, getTotpStatus, regenerateRecoveryCodes, setupTotp } from 'api/auth';
@@ -137,10 +138,9 @@ export default function ProfileSettings({ showMessage, loading, setLoading }) {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(value);
+    if (await copyText(value)) {
       showMessage(t('settings.profilePanel.messages.copied', { label }));
-    } catch {
+    } else {
       showMessage(t('settings.profilePanel.messages.copyFailed', { label }), 'warning');
     }
   };

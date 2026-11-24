@@ -43,6 +43,7 @@ import Pagination from 'components/Pagination';
 import { getAccessKeys, createAccessKey, deleteAccessKey } from 'api/accesskeys';
 import { useAuth } from 'contexts/AuthContext';
 import { formatDateTime } from 'i18n/locales';
+import { copyText } from 'utils/clipboard';
 
 // ==============================|| API 密钥管理 ||============================== //
 
@@ -174,9 +175,12 @@ export default function ApiKeyList() {
     }
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    showMessage(t('accessKeys.messages.copied'));
+  const copyToClipboard = async (text) => {
+    if (await copyText(text)) {
+      showMessage(t('accessKeys.messages.copied'));
+    } else {
+      showMessage(t('common.copyFailedManual'), 'error');
+    }
   };
 
   const formatDate = (dateStr) => {

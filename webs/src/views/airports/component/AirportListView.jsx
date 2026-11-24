@@ -1,15 +1,12 @@
-import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
-import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -54,6 +51,7 @@ export default function AirportListView({
   onOpenNodes,
   onQuickCheck,
   onRefreshUsage,
+  onCopyUrl,
   nodeCheckProfiles
 }) {
   const theme = useTheme();
@@ -126,20 +124,6 @@ export default function AirportListView({
       borderBottom: `1px solid ${palette.divider}`
     }
   });
-
-  // 复制提示状态
-  const [copyTip, setCopyTip] = useState({ open: false, name: '' });
-
-  // 复制订阅地址
-  const handleCopyUrl = async (airport) => {
-    try {
-      await navigator.clipboard.writeText(airport.url);
-      setCopyTip({ open: true, name: airport.name });
-      setTimeout(() => setCopyTip({ open: false, name: '' }), 2000);
-    } catch (err) {
-      console.error('复制失败:', err);
-    }
-  };
 
   /**
    * 根据延迟值获取颜色
@@ -606,7 +590,7 @@ export default function AirportListView({
                           <IconButton
                             size="small"
                             aria-label={t('airports.list.actions.copySubscription')}
-                            onClick={() => handleCopyUrl(airport)}
+                            onClick={() => onCopyUrl(airport)}
                             sx={{
                               width: 28,
                               height: 28,
@@ -659,18 +643,6 @@ export default function AirportListView({
           </TableBody>
         </Table>
       </TableContainer>
-
-      {/* 复制成功提示 */}
-      <Snackbar
-        open={copyTip.open}
-        autoHideDuration={2000}
-        onClose={() => setCopyTip({ open: false, name: '' })}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert severity="success" variant="standard" sx={{ width: '100%' }}>
-          {t('airports.list.messages.copiedSubscriptionUrl', { name: copyTip.name })}
-        </Alert>
-      </Snackbar>
     </>
   );
 }
@@ -685,6 +657,7 @@ AirportListView.propTypes = {
   onOpenNodes: PropTypes.func.isRequired,
   onQuickCheck: PropTypes.func.isRequired,
   onRefreshUsage: PropTypes.func,
+  onCopyUrl: PropTypes.func.isRequired,
   nodeCheckProfiles: PropTypes.array
 };
 

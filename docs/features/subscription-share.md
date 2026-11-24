@@ -18,6 +18,8 @@ The new subscription share management feature replaces the old single Token mode
 | **Token refresh** | Refresh Token with one click. Old links become invalid immediately |
 | **QR code generation** | Generate a QR code for each share link for easy mobile import |
 
+Use **Copy** next to a client URL or in its QR code dialog. If the browser does not allow automatic copying, select the displayed URL and copy it manually. This can depend on browser support when accessing the Web UI over a NAS's HTTP address.
+
 ---
 
 ## ⏰ Expiration Policies

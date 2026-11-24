@@ -54,6 +54,7 @@ import { getNodeGroups, getNodeIds, getNodes, getProtocolUIMeta } from 'api/node
 import ProfileSelectDialog from 'views/nodes/component/ProfileSelectDialog';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getRegisteredProtocolNames } from 'utils/protocolPresentation';
+import { copyText } from 'utils/clipboard';
 
 // local components
 import {
@@ -267,6 +268,14 @@ export default function AirportList() {
   const showMessage = useCallback((message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
   }, []);
+
+  const handleCopyUrl = async (airport) => {
+    if (await copyText(airport.url)) {
+      showMessage(t('airports.list.messages.copiedSubscriptionUrl', { name: airport.name }));
+    } else {
+      showMessage(t('common.copyFailedManual'), 'error');
+    }
+  };
 
   // 构建机场查询参数
   const buildAirportQueryParams = useCallback(
@@ -1214,6 +1223,7 @@ export default function AirportList() {
           onOpenNodes={handleOpenNodeManagement}
           onQuickCheck={handleQuickCheck}
           onRefreshUsage={handleRefreshUsage}
+          onCopyUrl={handleCopyUrl}
           nodeCheckProfiles={nodeCheckProfiles}
         />
       ) : viewMode === 'list' ? (
@@ -1227,6 +1237,7 @@ export default function AirportList() {
           onOpenNodes={handleOpenNodeManagement}
           onQuickCheck={handleQuickCheck}
           onRefreshUsage={handleRefreshUsage}
+          onCopyUrl={handleCopyUrl}
           nodeCheckProfiles={nodeCheckProfiles}
         />
       ) : (
@@ -1240,6 +1251,7 @@ export default function AirportList() {
           onOpenNodes={handleOpenNodeManagement}
           onQuickCheck={handleQuickCheck}
           onRefreshUsage={handleRefreshUsage}
+          onCopyUrl={handleCopyUrl}
           nodeCheckProfiles={nodeCheckProfiles}
         />
       )}
