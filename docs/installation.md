@@ -12,6 +12,8 @@ This document explains how to install, update, and uninstall SublinkPro.
 | Preview | Try changes published from `main` before the next stable release | The dated image listed in the Preview notes, for example `zerodeng/sublink-pro:preview-20261124-4a211cb` | `--preview` |
 | Development | Test the latest published builds from `dev` | `zerodeng/sublink-pro:dev` | Use the Docker image |
 
+The version card checks for updates in the installed build's channel. The **Changelog** page shows the 10 most recent stable releases. Older builds identified only by a commit hash need one manual update using their existing channel before automatic checks can identify it. [GitHub Releases](https://github.com/ZeroDeng01/sublinkPro/releases)
+
 ---
 
 ## 📦 Run with Docker Compose, recommended

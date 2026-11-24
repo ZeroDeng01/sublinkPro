@@ -171,7 +171,7 @@ The repository uses `.github/workflows/build-release.yml` for automated builds. 
 
 Preview uses a title such as `Preview 20261124-4a211cb`, with `preview-20261124-4a211cb` embedded in the binary and used for the Git and Docker tags. The date comes from the original push-triggered run in Asia/Shanghai. A retry reuses the tag, extending the short SHA if needed to resolve a collision. Preview notes list changes since the closest published Preview in the build's history, with the last stable tag as the initial baseline. Stable notes use the preceding `v*` tag. Both list the Docker image and platform binaries.
 
-Development builds embed `dev-<12-character SHA>`. The Docker publishing job updates the rolling `dev-image` Git tag inside the same serialized job after pushing `:dev`.
+Development builds embed `dev-<12-character SHA>`. The Docker publishing job updates the rolling `dev-image` Git tag inside the same serialized job after pushing `:dev`. The version card uses that tag to check for a published development update.
 
 The one-line installer defaults to stable. To install or update to a Preview, use `--preview`. [Installation guide](installation.md)
 

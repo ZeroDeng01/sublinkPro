@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
+import useSWR from 'swr';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
@@ -21,6 +22,7 @@ import BugReportIcon from '@mui/icons-material/BugReport';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 
 import MainCard from 'ui-component/cards/MainCard';
+import { GITHUB_RELEASES_API, RELEASE_REQUEST_OPTIONS, fetchReleaseData, getStableChangelog } from 'api/githubReleases';
 import { formatDateTime } from 'i18n/locales';
 import { donationConfig, affiliateRecommendationConfig } from 'config/donation';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
@@ -546,27 +548,8 @@ export const ReleaseLogPanel = () => {
   const theme = useTheme();
   const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
-  const [releases, setReleases] = useState([]);
-  const [loadingReleases, setLoadingReleases] = useState(true);
-
-  const fetchReleases = async () => {
-    try {
-      setLoadingReleases(true);
-      const response = await fetch('https://api.github.com/repos/ZeroDeng01/sublinkPro/releases?per_page=5');
-      if (!response.ok) throw new Error('Failed to fetch releases');
-      const data = await response.json();
-      setReleases(data);
-    } catch (error) {
-      console.error('获取发布日志失败:', error);
-      setReleases([]);
-    } finally {
-      setLoadingReleases(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchReleases();
-  }, []);
+  const { data, error, isLoading, isValidating, mutate } = useSWR(GITHUB_RELEASES_API, fetchReleaseData, RELEASE_REQUEST_OPTIONS);
+  const releases = useMemo(() => (data ? getStableChangelog(data) : []), [data]);
 
   return (
     <MainCard
@@ -595,8 +578,9 @@ export const ReleaseLogPanel = () => {
         <Tooltip title={t('dashboard.default.releases.refresh')} arrow>
           <Box component="span" sx={{ display: 'inline-block' }}>
             <IconButton
-              onClick={fetchReleases}
-              disabled={loadingReleases}
+              aria-label={t('dashboard.default.releases.refresh')}
+              onClick={() => void mutate()}
+              disabled={isValidating}
               sx={{
                 '&:hover': {
                   background: alpha(theme.palette.primary.main, 0.1)
@@ -617,7 +601,7 @@ export const ReleaseLogPanel = () => {
         }
       }}
     >
-      {loadingReleases ? (
+      {isLoading ? (
         <Box>
           {[1, 2, 3].map((i) => (
             <Box key={i} sx={{ mb: 2.5 }}>
@@ -640,9 +624,11 @@ export const ReleaseLogPanel = () => {
           <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
             {t('dashboard.default.releases.noReleases')}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {t('dashboard.default.releases.networkError')}
-          </Typography>
+          {error && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {t('dashboard.default.releases.networkError')}
+            </Typography>
+          )}
         </Box>
       )}
     </MainCard>

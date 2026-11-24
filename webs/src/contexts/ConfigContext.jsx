@@ -17,6 +17,7 @@ export const ConfigContext = createContext(undefined);
 export function ConfigProvider({ children }) {
   const { state, setState, setField, resetState } = useLocalStorage('berry-config-vite-js', config);
   const [version, setVersion] = useState('');
+  const [versionLoading, setVersionLoading] = useState(true);
   const [features, setFeatures] = useState([]);
 
   useEffect(() => {
@@ -35,6 +36,8 @@ export function ConfigProvider({ children }) {
         }
       } catch (error) {
         console.error('Failed to fetch version:', error);
+      } finally {
+        setVersionLoading(false);
       }
     };
     fetchVersion();
@@ -44,8 +47,8 @@ export function ConfigProvider({ children }) {
   const isFeatureEnabled = useCallback((featureName) => features.includes(featureName), [features]);
 
   const memoizedValue = useMemo(
-    () => ({ state, setState, setField, resetState, version, features, isFeatureEnabled }),
-    [state, setField, setState, resetState, version, features, isFeatureEnabled]
+    () => ({ state, setState, setField, resetState, version, versionLoading, features, isFeatureEnabled }),
+    [state, setField, setState, resetState, version, versionLoading, features, isFeatureEnabled]
   );
 
   return <ConfigContext.Provider value={memoizedValue}>{children}</ConfigContext.Provider>;

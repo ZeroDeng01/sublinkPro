@@ -1,5 +1,6 @@
-import { memo, useState, useEffect, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import useSWR from 'swr';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
@@ -19,13 +20,18 @@ import NewReleasesIcon from '@mui/icons-material/NewReleases';
 // project imports
 import useConfig from 'hooks/useConfig';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
+import {
+  DEV_IMAGE_URL,
+  GITHUB_RELEASES_URL,
+  GITHUB_URL,
+  RELEASE_REQUEST_OPTIONS,
+  fetchReleaseData,
+  getVersionChannel,
+  getVersionSource,
+  getVersionUpdate
+} from 'api/githubReleases';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
-
-// GitHub 仓库配置
-const GITHUB_REPO = 'ZeroDeng01/sublinkPro';
-const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
-const GITHUB_API_RELEASES = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
 // ==============================|| SIDEBAR - VERSION CARD ||============================== //
 
@@ -75,36 +81,24 @@ function MenuCard() {
   const { t } = useTranslation();
   const { isDark } = useResolvedColorScheme();
   const palette = theme.vars?.palette || theme.palette;
-  const { version } = useConfig();
-  const [latestVersion, setLatestVersion] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchLatestVersion = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(GITHUB_API_RELEASES);
-        if (res.ok) {
-          const data = await res.json();
-          setLatestVersion(data.tag_name || '');
-        }
-      } catch (error) {
-        console.error('获取版本信息失败:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLatestVersion();
-  }, []);
-
-  const currentVersion = version || 'dev';
-  const normalizedCurrentVersion = currentVersion.replace(/^v/, '');
-  const normalizedLatestVersion = latestVersion.replace(/^v/, '');
-  const hasLatestVersion = Boolean(normalizedLatestVersion);
-  const hasUpdate = hasLatestVersion && Boolean(normalizedCurrentVersion) && normalizedLatestVersion !== normalizedCurrentVersion;
-  const releasesPageHref = `${GITHUB_URL}/releases`;
-  const releaseHref = latestVersion ? `${GITHUB_URL}/releases/tag/${latestVersion}` : releasesPageHref;
+  const { version, versionLoading } = useConfig();
+  const channel = getVersionChannel(version);
+  const source = getVersionSource(version);
+  const { data, isLoading } = useSWR(source, fetchReleaseData, RELEASE_REQUEST_OPTIONS);
+  const loading = versionLoading || isLoading;
+  const { latestVersion, hasUpdate = false } = getVersionUpdate(version, data) || {};
+  const currentVersion = version || '—';
+  const versionLabel = channel
+    ? `${t('version.currentSystemVersion')} · ${t(`version.channel.${channel}`)}`
+    : t('version.currentSystemVersion');
+  const releasesPageHref = channel === 'stable' ? `${GITHUB_RELEASES_URL}/latest` : GITHUB_RELEASES_URL;
+  const releaseHref =
+    channel === 'dev'
+      ? DEV_IMAGE_URL
+      : latestVersion
+        ? `${GITHUB_RELEASES_URL}/tag/${encodeURIComponent(latestVersion)}`
+        : releasesPageHref;
+  const viewLabel = t(channel === 'dev' ? 'version.actions.image' : 'version.actions.releases');
 
   const versionStatus = useMemo(() => {
     if (loading) {
@@ -113,8 +107,8 @@ function MenuCard() {
         label: t('version.status.loading'),
         tone: 'info',
         hint: t('version.hint.loading'),
-        actionLabel: t('version.actions.releases'),
-        actionHref: releasesPageHref,
+        actionLabel: viewLabel,
+        actionHref: releaseHref,
         actionVariant: 'text'
       };
     }
@@ -124,21 +118,21 @@ function MenuCard() {
         key: 'update',
         label: t('version.status.update'),
         tone: 'warning',
-        hint: latestVersion ? t('version.hint.latest', { version: latestVersion }) : t('version.hint.updateAvailable'),
+        hint: t('version.hint.latest', { version: latestVersion }),
         actionLabel: t('version.actions.update'),
         actionHref: releaseHref,
         actionVariant: 'contained'
       };
     }
 
-    if (hasLatestVersion) {
+    if (latestVersion) {
       return {
         key: 'current',
         label: t('version.status.current'),
         tone: 'success',
-        hint: latestVersion ? t('version.hint.synced', { version: latestVersion }) : t('version.hint.noUpdate'),
-        actionLabel: t('version.actions.releases'),
-        actionHref: releasesPageHref,
+        hint: t('version.hint.noUpdate'),
+        actionLabel: viewLabel,
+        actionHref: releaseHref,
         actionVariant: 'text'
       };
     }
@@ -147,12 +141,12 @@ function MenuCard() {
       key: 'unknown',
       label: t('version.status.unknown'),
       tone: 'default',
-      hint: t('version.hint.manual'),
-      actionLabel: t('version.actions.releases'),
-      actionHref: releasesPageHref,
+      hint: t(source ? 'version.hint.checkUnavailable' : 'version.hint.channelUnavailable'),
+      actionLabel: viewLabel,
+      actionHref: releaseHref,
       actionVariant: 'text'
     };
-  }, [hasLatestVersion, hasUpdate, latestVersion, loading, releaseHref, releasesPageHref, t]);
+  }, [hasUpdate, latestVersion, loading, releaseHref, source, t, viewLabel]);
 
   const statusToneMap = {
     warning: isDark ? theme.palette.warning.main : theme.palette.warning.dark,
@@ -251,7 +245,7 @@ function MenuCard() {
                   SublinkPro
                 </Typography>
                 <Typography variant="caption" sx={{ display: 'block', color: mutedTextColor, mt: 0.15, lineHeight: 1.2 }}>
-                  {t('version.currentSystemVersion')}
+                  {versionLabel}
                 </Typography>
               </Box>
 

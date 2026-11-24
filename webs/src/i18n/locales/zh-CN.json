@@ -3743,21 +3743,26 @@
   "version": {
     "currentSystemVersion": "当前系统版本",
     "githubRepo": "GitHub 仓库",
+    "channel": {
+      "dev": "开发版",
+      "preview": "预发布",
+      "stable": "稳定版"
+    },
     "status": {
       "current": "当前版本",
       "loading": "检查中...",
-      "unknown": "未知",
+      "unknown": "无法确认更新",
       "update": "有新版本"
     },
     "hint": {
-      "latest": "已是最新版本",
+      "latest": "最新版本 {{version}}",
       "loading": "正在检查最新版本...",
-      "manual": "打开 GitHub 手动查看发布版本",
-      "noUpdate": "暂无更新",
-      "synced": "版本信息已同步",
-      "updateAvailable": "发现新版本"
+      "channelUnavailable": "当前构建的发布渠道无法确认",
+      "checkUnavailable": "暂时无法核对该渠道的更新",
+      "noUpdate": "该渠道暂无更新"
     },
     "actions": {
+      "image": "查看镜像",
       "releases": "查看发布版本",
       "update": "更新"
     }

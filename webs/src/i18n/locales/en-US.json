@@ -3743,21 +3743,26 @@
   "version": {
     "currentSystemVersion": "Current system version",
     "githubRepo": "GitHub repository",
+    "channel": {
+      "dev": "Development",
+      "preview": "Preview",
+      "stable": "Stable"
+    },
     "status": {
       "current": "Current",
       "loading": "Checking...",
-      "unknown": "Unknown",
+      "unknown": "Update status unavailable",
       "update": "Update available"
     },
     "hint": {
-      "latest": "Already on the latest version",
-      "loading": "Checking the latest release...",
-      "manual": "Open GitHub to check releases manually",
-      "noUpdate": "No update available",
-      "synced": "Version information is up to date",
-      "updateAvailable": "A new version is available"
+      "latest": "Latest version {{version}}",
+      "loading": "Checking for updates...",
+      "channelUnavailable": "This build has no identifiable release channel",
+      "checkUnavailable": "Could not verify updates for this channel",
+      "noUpdate": "No update available in this channel"
     },
     "actions": {
+      "image": "View image",
       "releases": "View releases",
       "update": "Update"
     }
