@@ -3,7 +3,7 @@ module sublink
 go 1.27.3
 
 require (
-	github.com/dlclark/regexp2/v2 v2.13.1
+	github.com/dlclark/regexp2/v2 v2.13.2
 	github.com/dop251/goja v0.0.0-20260607120635-348e6bea910d
 	github.com/enfein/mieru/v3 v3.39.0
 	github.com/gin-gonic/gin v1.12.0
@@ -17,7 +17,7 @@ require (
 	github.com/oschwald/geoip2-golang/v2 v2.5.0
 	github.com/robfig/cron/v3 v3.0.1
 	golang.org/x/crypto v0.59.0
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/postgres v1.6.3
