@@ -150,7 +150,7 @@ export default function ClientUrlsDialog({ open, title, legacy = false, clientUr
                   <Button variant="outlined" startIcon={<QrCodeIcon />} onClick={() => onQrCode(resolvedUrl, name)}>
                     {t('subscriptions.clientUrls.qrCode')}
                   </Button>
-                  <IconButton size="small" onClick={() => onCopy(resolvedUrl)} sx={actionButtonSx}>
+                  <IconButton aria-label={t('common.copy')} size="small" onClick={() => onCopy(resolvedUrl)} sx={actionButtonSx}>
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
                 </Stack>
