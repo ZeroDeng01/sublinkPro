@@ -57,6 +57,7 @@ import {
 } from 'api/countryRules';
 import Pagination from 'components/Pagination';
 import { withAlpha } from 'utils/colorUtils';
+import { copyText } from 'utils/clipboard';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 
 // ==============================|| UTILITY FUNCTIONS ||============================== //
@@ -380,10 +381,12 @@ const CountryRules = ({ showMessage }) => {
     showMessage(t('countryRules.messages.restored'));
   };
 
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(textContent).then(() => {
+  const handleCopyText = async () => {
+    if (await copyText(textContent)) {
       showMessage(t('countryRules.messages.copied'));
-    });
+    } else {
+      showMessage(t('common.copyFailedManual'), 'error');
+    }
   };
 
   const hasTextChanged = textContent !== originalText;
