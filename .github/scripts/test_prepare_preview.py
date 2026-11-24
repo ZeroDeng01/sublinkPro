@@ -78,8 +78,10 @@ class PreviewTagTests(unittest.TestCase):
 
     @patch.object(prepare_preview, "api")
     def test_published_preview_is_reused(self, api):
-        api.return_value = {"name": TAG, "draft": False, "prerelease": True}
-        self.assertTrue(prepare_preview.preview_is_published(TAG))
+        for title in (TAG, "Preview 20261124-274ad3e"):
+            with self.subTest(title=title):
+                api.return_value = {"name": title, "draft": False, "prerelease": True}
+                self.assertTrue(prepare_preview.preview_is_published(TAG))
 
 
 if __name__ == "__main__":

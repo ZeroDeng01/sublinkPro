@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 PREVIEW_TAG = re.compile(r"preview-[0-9]{8}-([0-9a-f]{7,40})")
 
 
-def api(path, *, data=None, allow_missing=False):
+def api(path, *, data=None, allow_missing=False, method=None):
     repository = f"{os.environ['GITHUB_API_URL']}/repos/{os.environ['GITHUB_REPOSITORY']}"
     request = Request(
         f"{repository}/{path}",
@@ -24,6 +24,7 @@ def api(path, *, data=None, allow_missing=False):
             "User-Agent": "sublinkpro-preview-release",
         },
         data=json.dumps(data).encode() if data is not None else None,
+        method=method,
     )
     try:
         with urlopen(request, timeout=30) as response:
@@ -85,9 +86,13 @@ def preview_is_published(tag):
     release = api(f"releases/tags/{tag}", allow_missing=True)
     if not release or release["draft"]:
         return False
-    if not release["prerelease"] or release["name"] != tag:
+    if not release["prerelease"] or release["name"] not in (tag, preview_title(tag)):
         raise RuntimeError(f"An incompatible release already exists for {tag}.")
     return True
+
+
+def preview_title(tag):
+    return f"Preview {tag.removeprefix('preview-')}"
 
 
 if __name__ == "__main__":

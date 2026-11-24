@@ -4,6 +4,14 @@
 
 本文档介绍 SublinkPro 的完整安装、更新和卸载方法。
 
+## 选择版本
+
+| 渠道 | 使用场景 | Docker 镜像 | Linux 一键脚本 |
+| --- | --- | --- | --- |
+| 稳定版 | 日常使用，推荐选择 | `zerodeng/sublink-pro:latest`，也可固定到 `:v1.3.0` 等版本 | 默认 |
+| 预发布 | 提前体验 `main` 已发布的改动 | 以预发布说明列出的日期标签为准，如 `zerodeng/sublink-pro:preview-20261124-4a211cb` | `--preview` |
+| 开发版 | 测试 `dev` 最新发布的构建 | `zerodeng/sublink-pro:dev` | 使用 Docker 镜像 |
+
 ---
 
 ## 📦 Docker Compose 运行（推荐）
@@ -20,7 +28,8 @@
 services:
   sublinkpro:
     # image: zerodeng/sublink-pro:dev # 开发版（功能尝鲜使用）
-    image: zerodeng/sublink-pro # 稳定版
+    # image: zerodeng/sublink-pro:preview-20261124-4a211cb # 预发布，以发布说明列出的标签为准
+    image: zerodeng/sublink-pro:latest # 稳定版
     container_name: sublinkpro
     ports:
       - "8000:8000"
@@ -146,6 +155,8 @@ sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/
 
 ### 📦 Docker Compose 手动更新
 
+预发布和固定版本的稳定版，先将 `image:` 改为发布说明列出的新标签，再执行以下命令。`:latest` 和 `:dev` 是滚动标签，直接使用现有 Compose 文件执行即可。
+
 ```bash
 # 进入 docker-compose.yml 所在目录
 cd /path/to/your/sublinkpro
@@ -161,6 +172,8 @@ docker image prune -f
 ```
 
 ### 🐳 Docker 手动更新
+
+以下示例沿用滚动稳定版镜像。其他渠道在拉取和启动时都填写所选镜像。
 
 ```bash
 # 停止并删除旧容器

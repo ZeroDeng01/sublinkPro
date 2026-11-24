@@ -4,6 +4,14 @@ English | [简体中文](installation.zh-CN.md)
 
 This document explains how to install, update, and uninstall SublinkPro.
 
+## Choose a version
+
+| Channel | When to use it | Docker image | Linux one-line installer |
+| --- | --- | --- | --- |
+| Stable | Recommended for regular use | `zerodeng/sublink-pro:latest` or a fixed version such as `:v1.3.0` | Default |
+| Preview | Try changes published from `main` before the next stable release | The dated image listed in the Preview notes, for example `zerodeng/sublink-pro:preview-20261124-4a211cb` | `--preview` |
+| Development | Test the latest published builds from `dev` | `zerodeng/sublink-pro:dev` | Use the Docker image |
+
 ---
 
 ## 📦 Run with Docker Compose, recommended
@@ -20,7 +28,8 @@ Create `docker-compose.yml`:
 services:
   sublinkpro:
     # image: zerodeng/sublink-pro:dev # Development version, for trying new features
-    image: zerodeng/sublink-pro # Stable version
+    # image: zerodeng/sublink-pro:preview-20261124-4a211cb # Preview, use the tag listed in its release notes
+    image: zerodeng/sublink-pro:latest # Stable version
     container_name: sublinkpro
     ports:
       - "8000:8000"
@@ -147,6 +156,8 @@ The script detects the installed version and provides these options:
 
 ### 📦 Manual Docker Compose update
 
+For a dated Preview or a pinned stable version, first set `image:` to the new tag listed in that release's notes. For the rolling `:latest` and `:dev` images, run the commands with your current Compose file.
+
 ```bash
 # Enter the directory containing docker-compose.yml
 cd /path/to/your/sublinkpro
@@ -162,6 +173,8 @@ docker image prune -f
 ```
 
 ### 🐳 Manual Docker update
+
+The example follows the rolling stable image. For another channel, use the chosen image in both the pull and run commands.
 
 ```bash
 # Stop and remove the old container

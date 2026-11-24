@@ -169,7 +169,11 @@ The repository uses `.github/workflows/build-release.yml` for automated builds. 
 | Preview | Push to `main` | `preview-YYYYMMDD-<7-character SHA>` | Pre-release with multi-platform binaries |
 | Stable | Push a `v*` tag | Version tag and `latest` | Full release with multi-platform binaries |
 
-The preview's Docker tag, Git tag, and release title are identical, for example `preview-20261124-274ad3e`. The date is taken from the original push-triggered run in Asia/Shanghai. A retry reuses the same tag for the commit. A short-SHA collision extends the SHA in the tag. Install scripts that use `/releases/latest` continue to select stable releases. Stable changelogs use the previous `v*` tag as their baseline.
+Preview uses a title such as `Preview 20261124-4a211cb`, with `preview-20261124-4a211cb` embedded in the binary and used for the Git and Docker tags. The date comes from the original push-triggered run in Asia/Shanghai. A retry reuses the tag, extending the short SHA if needed to resolve a collision. Preview notes list changes since the closest published Preview in the build's history, with the last stable tag as the initial baseline. Stable notes use the preceding `v*` tag. Both list the Docker image and platform binaries.
+
+Development builds embed `dev-<12-character SHA>`. The Docker publishing job updates the rolling `dev-image` Git tag inside the same serialized job after pushing `:dev`.
+
+The one-line installer defaults to stable. To install or update to a Preview, use `--preview`. [Installation guide](installation.md)
 
 Other branches run build validation. Preview and stable releases are published after the Docker image and binary artifacts are ready.
 

@@ -117,9 +117,34 @@ jobs:
       - name: Run Go tests
         run: go test ./...
 
+  prepare-preview:
+    if: github.ref == 'refs/heads/main'
+    needs: [build-frontend, backend-quality]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    outputs:
+      tag: ${{ steps.preview.outputs.tag }}
+      published: ${{ steps.preview.outputs.published }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Resolve preview tag and publication status
+        id: preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/prepare_preview.py
+
   # 使用矩阵策略并发构建不同架构的二进制文件
   build-go-binaries:
-    needs: [build-frontend, backend-quality]
+    needs: [build-frontend, backend-quality, prepare-preview]
+    if: >-
+      !cancelled() && needs.build-frontend.result == 'success' && needs.backend-quality.result == 'success' &&
+      (github.ref != 'refs/heads/main' || needs.prepare-preview.result == 'success')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false  # 允许其他架构继续构建，即使某个失败
@@ -176,14 +201,17 @@ jobs:
           path: static/
 
       - name: Write version to VERSION file
+        env:
+          PREVIEW_TAG: ${{ needs.prepare-preview.outputs.tag }}
         run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            TAG_NAME=${GITHUB_REF#refs/tags/}
-          else
-            TAG_NAME=$(git rev-parse --short HEAD)
-          fi
-          echo "$TAG_NAME" > VERSION
-          echo "Written version $TAG_NAME to VERSION file"
+          case "$GITHUB_REF" in
+            refs/tags/v*) VERSION="$GITHUB_REF_NAME" ;;
+            refs/heads/main) VERSION="${PREVIEW_TAG:?Missing reserved preview tag}" ;;
+            refs/heads/dev) VERSION="dev-${GITHUB_SHA:0:12}" ;;
+            *) VERSION=$(git rev-parse --short HEAD) ;;
+          esac
+          printf '%s\n' "$VERSION" > VERSION
+          printf 'Written version %s to VERSION file\n' "$VERSION"
 
       - name: Build Go binary for ${{ matrix.goos }}/${{ matrix.goarch }}
         run: |
@@ -284,28 +312,6 @@ jobs:
           DEV_SHA=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/dev" --jq '.object.sha')
           printf 'sha=%s\n' "$DEV_SHA" >> "$GITHUB_OUTPUT"
 
-  prepare-preview:
-    if: github.ref == 'refs/heads/main'
-    needs: merge-binaries
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: write
-    outputs:
-      tag: ${{ steps.preview.outputs.tag }}
-      published: ${{ steps.preview.outputs.published }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Resolve preview tag and publication status
-        id: preview
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 .github/scripts/prepare_preview.py
-
   release:
     needs: [merge-binaries, prepare-preview, build-docker]
     if: >-
@@ -331,51 +337,9 @@ jobs:
       - name: Generate changelog
         id: changelog
         env:
+          GH_TOKEN: ${{ github.token }}
           PREVIEW_TAG: ${{ needs.prepare-preview.outputs.tag }}
-        run: |
-          if [[ "$GITHUB_REF" == 'refs/heads/main' ]]; then
-            RELEASE_TAG="$PREVIEW_TAG"
-            RELEASE_TITLE="$PREVIEW_TAG"
-            DATE=${PREVIEW_TAG#preview-}
-            DATE=${DATE%%-*}
-            RELEASE_DATE="${DATE:0:4}-${DATE:4:2}-${DATE:6:2}"
-            {
-              echo '## 阶段性预发布 / Preview release'
-              printf '\n- 推送日期 / Push date (UTC+8): %s\n' "$RELEASE_DATE"
-              printf -- '- 提交 / Commit: [`%s`](%s/%s/commit/%s)\n' "${GITHUB_SHA:0:7}" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
-              printf -- '- Docker: `zerodeng/sublink-pro:%s`\n' "$PREVIEW_TAG"
-              printf -- '- [Actions](%s/%s/actions/runs/%s)\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
-            } > changelog.md
-          else
-            RELEASE_TAG="$GITHUB_REF_NAME"
-            RELEASE_TITLE="Release $RELEASE_TAG"
-            PREVIOUS_TAG=$(git describe --tags --match 'v*' --abbrev=0 HEAD~1 2>/dev/null || true)
-            if [[ -n "$PREVIOUS_TAG" ]]; then
-              printf '## 🚀 更新内容 (%s -> %s)\n\n' "$PREVIOUS_TAG" "$RELEASE_TAG" > changelog.md
-              echo '### 📝 提交记录:' >> changelog.md
-              git log --pretty=format:'- %s (%h)' "$PREVIOUS_TAG..HEAD" >> changelog.md
-            else
-              echo '## 🎉 首次发布' > changelog.md
-              printf '\n### 📝 所有提交:\n' >> changelog.md
-              git log --pretty=format:'- %s (%h)' >> changelog.md
-            fi
-          fi
-
-          {
-            printf 'tag=%s\n' "$RELEASE_TAG"
-            printf 'title=%s\n' "$RELEASE_TITLE"
-          } >> "$GITHUB_OUTPUT"
-
-          echo "" >> changelog.md
-          echo "### 📦 发布文件:" >> changelog.md
-          echo "- \`sublinkPro-linux-amd64\` - Linux x64" >> changelog.md
-          echo "- \`sublinkPro-linux-arm64\` - Linux ARM64" >> changelog.md
-          echo "- \`sublinkPro-linux-armv7\` - Linux ARMv7 (32-bit)" >> changelog.md
-          echo "- \`sublinkPro-linux-x86\` - Linux x86 (32-bit)" >> changelog.md
-          echo "- \`sublinkPro-windows-amd64.exe\` - Windows x64" >> changelog.md
-          echo "- \`sublinkPro-windows-x86.exe\` - Windows x86 (32-bit)" >> changelog.md
-          echo "- \`sublinkPro-darwin-amd64\` - macOS x64" >> changelog.md
-          echo "- \`sublinkPro-darwin-arm64\` - macOS ARM64 (Apple Silicon)" >> changelog.md
+        run: python3 .github/scripts/release_notes.py
 
       - name: Create Release
         id: github-release
@@ -416,6 +380,8 @@ jobs:
        (github.ref == 'refs/heads/main' && needs.prepare-preview.result == 'success' &&
         needs.prepare-preview.outputs.published == 'false'))
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     concurrency:
       group: ${{ github.ref == 'refs/heads/dev' && 'docker-dev' || format('docker-{0}', github.run_id) }}
       cancel-in-progress: false
@@ -474,3 +440,7 @@ jobs:
           esac
           docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64,linux/arm/v7,linux/386 \
             -f Dockerfile.ci --label "org.opencontainers.image.revision=$GITHUB_SHA" "${TAGS[@]}" --push .
+
+          if [[ "$GITHUB_REF" == refs/heads/dev ]]; then
+            python3 .github/scripts/publish_dev_ref.py
+          fi

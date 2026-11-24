@@ -60,7 +60,7 @@ docker run --name sublinkpro -p 8000:8000 \
   -d zerodeng/sublink-pro
 ```
 
-Development build: replace the image with `zerodeng/sublink-pro:dev`. For a preview, use the dated tag shown as the GitHub prerelease title, such as `zerodeng/sublink-pro:preview-20261124-274ad3e`.
+Use `zerodeng/sublink-pro:latest` for the rolling stable channel, a tag such as `:v1.3.0` to pin stable, or `zerodeng/sublink-pro:dev` for rolling development builds. For Preview, copy the image listed under **Docker 镜像** from the GitHub prerelease notes, such as `zerodeng/sublink-pro:preview-20261124-4a211cb`. To update a pinned image or Preview, change the configured tag before pulling and recreating the container.
 
 ---
 
