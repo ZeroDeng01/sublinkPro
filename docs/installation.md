@@ -4,6 +4,16 @@ English | [简体中文](installation.zh-CN.md)
 
 This document explains how to install, update, and uninstall SublinkPro.
 
+## Choose a version
+
+| Channel | When to use it | Docker image | Linux one-line installer |
+| --- | --- | --- | --- |
+| Stable | Recommended for regular use | `zerodeng/sublink-pro:latest` or a fixed version such as `:v1.3.0` | Default |
+| Preview | Try changes published from `main` before the next stable release | The timestamped image listed in the Preview notes, for example `zerodeng/sublink-pro:preview-20261124-171211123` | `--preview` |
+| Development | Test the latest published builds from `dev` | `zerodeng/sublink-pro:dev` | Use the Docker image |
+
+The version card checks stable and Preview builds for updates in their own channels. To update a development build, pull `:dev` and recreate the container. The **Changelog** page shows the 10 most recent stable releases. Older stable or Preview builds identified only by a commit hash need one manual update before automatic checks can identify their channel. [GitHub Releases](https://github.com/ZeroDeng01/sublinkPro/releases)
+
 ---
 
 ## 📦 Run with Docker Compose, recommended
@@ -20,7 +30,8 @@ Create `docker-compose.yml`:
 services:
   sublinkpro:
     # image: zerodeng/sublink-pro:dev # Development version, for trying new features
-    image: zerodeng/sublink-pro # Stable version
+    # image: zerodeng/sublink-pro:preview-20261124-171211123 # Preview, use the tag listed in its release notes
+    image: zerodeng/sublink-pro:latest # Stable version
     container_name: sublinkpro
     ports:
       - "8000:8000"
@@ -101,8 +112,16 @@ docker run --name sublinkpro -p 8000:8000 \
 
 ## 📝 One Line Install or Update Script
 
+Run the script as root on a supported Linux host. By default it installs the latest stable release.
+
 ```bash
 sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)"
+```
+
+Use `--preview` to install the latest published Preview with a binary for your Linux architecture.
+
+```bash
+sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)" -- --preview
 ```
 
 > [!NOTE]
@@ -130,11 +149,7 @@ sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/
 
 ### 📝 Update with the one line script
 
-If you installed with the one line script, run the install script again to update:
-
-```bash
-sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)"
-```
+Run the install command again to update. Use `--preview` each time you want to update to a Preview. The command without arguments selects the stable release.
 
 The script detects the installed version and provides these options:
 
@@ -142,6 +157,8 @@ The script detects the installed version and provides these options:
 - **Reinstall**: choose whether to keep data
 
 ### 📦 Manual Docker Compose update
+
+For a dated Preview or a pinned stable version, first set `image:` to the new tag listed in that release's notes. For the rolling `:latest` and `:dev` images, run the commands with your current Compose file.
 
 ```bash
 # Enter the directory containing docker-compose.yml
@@ -158,6 +175,8 @@ docker image prune -f
 ```
 
 ### 🐳 Manual Docker update
+
+The example follows the rolling stable image. For another channel, use the chosen image in both the pull and run commands.
 
 ```bash
 # Stop and remove the old container

@@ -14,7 +14,7 @@ main `SKILL.md`.
 
 ## Defaults & key facts
 
-- **Image:** `zerodeng/sublink-pro` (stable) or `zerodeng/sublink-pro:dev` (dev/preview builds).
+- **Images** include `zerodeng/sublink-pro` for stable releases, `zerodeng/sublink-pro:dev` for rolling development builds, and `zerodeng/sublink-pro:preview-YYYYMMDD-HHMMSSmmm` for main-branch prereleases. Copy the exact image from the prerelease notes.
 - **Port:** `8000` (web UI + API).
 - **Default login:** `admin` / `123456` — tell the user to change it immediately.
 - **Data directories** (persist across upgrades; removing them is destructive):
@@ -60,7 +60,7 @@ docker run --name sublinkpro -p 8000:8000 \
   -d zerodeng/sublink-pro
 ```
 
-Dev/preview build: replace the image with `zerodeng/sublink-pro:dev`.
+Use `zerodeng/sublink-pro:latest` for the rolling stable channel, a tag such as `:v1.3.0` to pin stable, or `zerodeng/sublink-pro:dev` for rolling development builds. For Preview, copy the image listed under **Docker 镜像** from the GitHub prerelease notes, such as `zerodeng/sublink-pro:preview-20261124-171211123`. To update a pinned image or Preview, change the configured tag before pulling and recreating the container.
 
 ---
 
@@ -145,8 +145,16 @@ SublinkPro's `client=uri` subscription output is built in and available on all i
 
 ## Method C — one-line install script (local, root, INTERACTIVE)
 
+The default command selects the latest stable release.
+
 ```bash
 sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)"
+```
+
+Use `--preview` for each install or update that should target the latest published Preview with a binary for the current Linux architecture.
+
+```bash
+sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)" -- --preview
 ```
 
 **Important:** this script is interactive (`read -r` menus) and must run as

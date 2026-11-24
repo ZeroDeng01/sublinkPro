@@ -163,6 +163,22 @@ docker-compose up -d
 
 仓库使用 `.github/workflows/build-release.yml` 进行自动化构建。推送到 `dependabot/**` 的提交会跳过此工作流。以 `dev` 为目标的 Dependabot PR 会运行 PR 检查，合并到 `dev` 后触发常规构建流程。
 
+| 渠道 | 触发 | Docker 镜像标签 | GitHub Release |
+| --- | --- | --- | --- |
+| 开发版 | 推送 `dev` | `dev` | 无 |
+| 预发布 | 推送 `main` | `preview-YYYYMMDD-HHMMSSmmm` | 附多平台二进制的预发布 |
+| 稳定版 | 推送 `v*` 标签 | 版本标签和 `latest` | 附多平台二进制的正式 Release |
+
+预发布标题使用 `Preview 20261124-171211123` 格式。二进制版本、Git 标签和 Docker 标签统一用 `preview-20261124-171211123`。工作流首次为提交分配标签时记录北京时间，最后三位是毫秒。重跑复用该提交已有的标签。时间标签已被其他提交占用时，工作流尝试下一毫秒。
+
+预发布按发布时间选择当前 Git 历史中的上一条公开 Release 作为起点，正式版和预发布都参与比较。当前历史首次发布时，日志覆盖全部提交。稳定版以此前的 `v*` 标签为起点。两类发布都会列出 Docker 镜像和各平台安装包。
+
+开发版内嵌版本号 `dev-<12 位 SHA>`，用于版本卡展示。升级开发版时，重新拉取滚动更新的 `:dev` 镜像并重建容器。构建如果已被更新的提交替代，就跳过镜像推送步骤。
+
+一键脚本默认选择稳定版。安装或更新到预发布时使用 `--preview`。[安装部署指南](installation.zh-CN.md)
+
+其他分支运行构建验证。预发布和稳定版会在 Docker 镜像及二进制产物就绪后发布。
+
 #### 工作流步骤
 
 1. **设置**：
@@ -192,10 +208,9 @@ docker-compose up -d
    CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
    ```
 
-5. **发布**（打 tag 时）：
-   - 创建 GitHub release
-   - 上传二进制产物
-   - 推送 Docker 镜像
+5. **发布**：
+   - 按上表推送对应渠道的 Docker 镜像
+   - 为预发布和稳定版附上二进制产物
 
 ### PR 检查
 

@@ -30,8 +30,15 @@ on:
       - 'COPYING'
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
+
+# Serialize attempts for the same preview commit and supersede old dev pushes.
+concurrency:
+  group: >-
+    ${{ github.ref == 'refs/heads/main' && format('preview-{0}', github.sha) ||
+        (github.ref == 'refs/heads/dev' && github.run_attempt == '1' && 'dev-release') ||
+        format('build-release-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.ref == 'refs/heads/dev' && github.run_attempt == '1' }}
 
 jobs:
   build-frontend:
@@ -110,9 +117,33 @@ jobs:
       - name: Run Go tests
         run: go test ./...
 
+  prepare-preview:
+    if: github.ref == 'refs/heads/main'
+    needs: [build-frontend, backend-quality]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.preview.outputs.tag }}
+      published: ${{ steps.preview.outputs.published }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Resolve preview tag and publication status
+        id: preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/prepare_preview.py
+
   # 使用矩阵策略并发构建不同架构的二进制文件
   build-go-binaries:
-    needs: [build-frontend, backend-quality]
+    needs: [build-frontend, backend-quality, prepare-preview]
+    if: >-
+      !cancelled() && needs.build-frontend.result == 'success' && needs.backend-quality.result == 'success' &&
+      (github.ref != 'refs/heads/main' || needs.prepare-preview.result == 'success')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false  # 允许其他架构继续构建，即使某个失败
@@ -169,14 +200,17 @@ jobs:
           path: static/
 
       - name: Write version to VERSION file
+        env:
+          PREVIEW_TAG: ${{ needs.prepare-preview.outputs.tag }}
         run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            TAG_NAME=${GITHUB_REF#refs/tags/}
-          else
-            TAG_NAME=$(git rev-parse --short HEAD)
-          fi
-          echo "$TAG_NAME" > VERSION
-          echo "Written version $TAG_NAME to VERSION file"
+          case "$GITHUB_REF" in
+            refs/tags/v*) VERSION="$GITHUB_REF_NAME" ;;
+            refs/heads/main) VERSION="${PREVIEW_TAG:?Missing reserved preview tag}" ;;
+            refs/heads/dev) VERSION="dev-${GITHUB_SHA:0:12}" ;;
+            *) VERSION=$(git rev-parse --short HEAD) ;;
+          esac
+          printf '%s\n' "$VERSION" > VERSION
+          printf 'Written version %s to VERSION file\n' "$VERSION"
 
       - name: Build Go binary for ${{ matrix.goos }}/${{ matrix.goarch }}
         run: |
@@ -216,7 +250,11 @@ jobs:
   # 合并所有架构的二进制文件
   merge-binaries:
     needs: build-go-binaries
+    # The optional prepare-preview job is skipped on dev and stable tags.
+    if: ${{ !cancelled() && needs.build-go-binaries.result == 'success' }}
     runs-on: ubuntu-latest
+    outputs:
+      dev_sha: ${{ steps.dev.outputs.sha }}
     steps:
       - name: Download all binary artifacts
         uses: actions/download-artifact@v8
@@ -266,15 +304,30 @@ jobs:
           path: build/
           retention-days: 1
 
+      - name: Read the current dev commit before queuing publication
+        id: dev
+        if: github.ref == 'refs/heads/dev'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DEV_SHA=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/dev" --jq '.object.sha')
+          printf 'sha=%s\n' "$DEV_SHA" >> "$GITHUB_OUTPUT"
+
   release:
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: merge-binaries
+    needs: [merge-binaries, prepare-preview, build-docker]
+    if: >-
+      !cancelled() && needs.merge-binaries.result == 'success' && needs.build-docker.result == 'success' &&
+      (github.ref_type == 'tag' || (github.ref == 'refs/heads/main' &&
+       needs.prepare-preview.outputs.published == 'false'))
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Download binary artifacts
         uses: actions/download-artifact@v8
@@ -284,40 +337,18 @@ jobs:
 
       - name: Generate changelog
         id: changelog
-        run: |
-          CURRENT_TAG=${GITHUB_REF#refs/tags/}
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
-
-          echo "current_tag=$CURRENT_TAG" >> $GITHUB_OUTPUT
-
-          if [ -z "$PREVIOUS_TAG" ]; then
-            echo "## 🎉 首次发布" > changelog.md
-            echo "" >> changelog.md
-            echo "### 📝 所有提交:" >> changelog.md
-            git log --pretty=format:"- %s (%h)" >> changelog.md
-          else
-            echo "## 🚀 更新内容 ($PREVIOUS_TAG -> $CURRENT_TAG)" > changelog.md
-            echo "" >> changelog.md
-            echo "### 📝 提交记录:" >> changelog.md
-            git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..$CURRENT_TAG >> changelog.md
-          fi
-
-          echo "" >> changelog.md
-          echo "### 📦 发布文件:" >> changelog.md
-          echo "- \`sublinkPro-linux-amd64\` - Linux x64" >> changelog.md
-          echo "- \`sublinkPro-linux-arm64\` - Linux ARM64" >> changelog.md
-          echo "- \`sublinkPro-linux-armv7\` - Linux ARMv7 (32-bit)" >> changelog.md
-          echo "- \`sublinkPro-linux-x86\` - Linux x86 (32-bit)" >> changelog.md
-          echo "- \`sublinkPro-windows-amd64.exe\` - Windows x64" >> changelog.md
-          echo "- \`sublinkPro-windows-x86.exe\` - Windows x86 (32-bit)" >> changelog.md
-          echo "- \`sublinkPro-darwin-amd64\` - macOS x64" >> changelog.md
-          echo "- \`sublinkPro-darwin-arm64\` - macOS ARM64 (Apple Silicon)" >> changelog.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_TAG: ${{ needs.prepare-preview.outputs.tag }}
+        run: python3 .github/scripts/release_notes.py
 
       - name: Create Release
+        id: github-release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ steps.changelog.outputs.current_tag }}
-          name: Release ${{ steps.changelog.outputs.current_tag }}
+          tag_name: ${{ steps.changelog.outputs.tag }}
+          name: ${{ steps.changelog.outputs.title }}
+          target_commitish: ${{ github.sha }}
           body_path: changelog.md
           files: |
             build/sublinkPro-linux-amd64
@@ -328,17 +359,36 @@ jobs:
             build/sublinkPro-windows-x86.exe
             build/sublinkPro-darwin-amd64
             build/sublinkPro-darwin-arm64
-          draft: false
-          prerelease: false
+          fail_on_unmatched_files: true
+          draft: ${{ github.ref == 'refs/heads/main' }}
+          prerelease: ${{ github.ref == 'refs/heads/main' }}
+          make_latest: ${{ github.ref == 'refs/heads/main' && 'false' || '' }}
+
+      - name: Publish preview after uploading all assets
+        if: github.ref == 'refs/heads/main'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ steps.github-release.outputs.id }}
+        run: |
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            --field draft=false --field prerelease=true --raw-field make_latest=false --jq '.html_url'
 
   build-docker:
-    needs: [build-frontend, merge-binaries]
+    needs: [build-frontend, merge-binaries, prepare-preview]
+    if: >-
+      !cancelled() && needs.build-frontend.result == 'success' && needs.merge-binaries.result == 'success' &&
+      ((github.ref == 'refs/heads/dev' && needs.merge-binaries.outputs.dev_sha == github.sha) || github.ref_type == 'tag' ||
+       (github.ref == 'refs/heads/main' && needs.prepare-preview.result == 'success' &&
+        needs.prepare-preview.outputs.published == 'false'))
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.ref == 'refs/heads/dev' && 'docker-dev' || format('docker-{0}', github.run_id) }}
+      cancel-in-progress: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Download frontend artifacts
         uses: actions/download-artifact@v8
@@ -365,26 +415,27 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and Push Multi-Arch Docker Image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_TAG: ${{ needs.prepare-preview.outputs.tag }}
         run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            # 带 tag 的推送：使用 tag 版本号 + latest
-            TAG=${GITHUB_REF#refs/tags/}
-            docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64,linux/arm/v7,linux/386 \
-              -f Dockerfile.ci \
-              -t zerodeng/sublink-pro:${TAG} \
-              -t zerodeng/sublink-pro:latest \
-              --push .
-          else
-            # 分支推送：dev 和 main 分支统一使用 dev 标签，其他分支使用分支名
-            BRANCH=${GITHUB_REF#refs/heads/}
-            if [[ "$BRANCH" == "dev" || "$BRANCH" == "main" ]]; then
-              DOCKER_TAG="dev"
-            else
-              # 将分支名中的 / 替换为 - 以兼容 Docker tag 格式
-              DOCKER_TAG=${BRANCH//\//-}
-            fi
-            docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64,linux/arm/v7,linux/386 \
-              -f Dockerfile.ci \
-              -t zerodeng/sublink-pro:${DOCKER_TAG} \
-              --push .
-          fi
+          IMAGE=zerodeng/sublink-pro
+          case "$GITHUB_REF" in
+            refs/heads/dev)
+              HEAD_SHA=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/dev" --jq '.object.sha')
+              if [[ "$HEAD_SHA" != "$GITHUB_SHA" ]]; then
+                echo 'A newer dev commit has superseded this build.'
+                exit 0
+              fi
+              TAGS=(-t "$IMAGE:dev")
+              ;;
+            refs/heads/main)
+              TAGS=(-t "$IMAGE:$PREVIEW_TAG")
+              ;;
+            refs/tags/v*)
+              TAGS=(-t "$IMAGE:$GITHUB_REF_NAME" -t "$IMAGE:latest")
+              ;;
+            *) exit 1 ;;
+          esac
+          docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64,linux/arm/v7,linux/386 \
+            -f Dockerfile.ci --label "org.opencontainers.image.revision=$GITHUB_SHA" "${TAGS[@]}" --push .

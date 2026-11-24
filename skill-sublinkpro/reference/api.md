@@ -833,6 +833,8 @@ Base: `/api/v1/total`
 ### Version (public — no API key needed; ideal health check)
 **GET** `/api/v1/version`
 
+The response includes `data.version` and `data.features`. Official builds identify their channel in `version` with a stable number such as `v1.3.0`, a prerelease tag such as `preview-20261124-171211123`, or a development build such as `dev-4a211cb23456`. Older prereleases use short-hash suffixes such as `preview-20261124-4a211cb`. Local and older builds can report an empty value, `dev`, or a plain commit hash.
+
 ### Backup and WebDAV
 All endpoints below require an administrator account and are disabled in demo mode.
 

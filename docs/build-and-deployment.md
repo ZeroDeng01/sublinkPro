@@ -163,6 +163,22 @@ docker-compose up -d
 
 The repository uses `.github/workflows/build-release.yml` for automated builds. Pushes to `dependabot/**` are excluded from this workflow. Dependabot PRs targeting `dev` run PR checks, and merging them into `dev` triggers the regular build pipeline.
 
+| Channel | Trigger | Docker image tag | GitHub Release |
+| --- | --- | --- | --- |
+| Development | Push to `dev` | `dev` | None |
+| Preview | Push to `main` | `preview-YYYYMMDD-HHMMSSmmm` | Pre-release with multi-platform binaries |
+| Stable | Push a `v*` tag | Version tag and `latest` | Full release with multi-platform binaries |
+
+Preview uses a title such as `Preview 20261124-171211123`, with `preview-20261124-171211123` embedded in the binary and used for the Git and Docker tags. The workflow records Asia/Shanghai time to the millisecond when it first assigns the tag to the commit. A retry reuses that commit's tag. If the timestamp already belongs to another commit, the workflow tries the next millisecond.
+
+Preview notes start from the most recently published GitHub release in the build's Git history. Both stable releases and prereleases qualify. If this is the first published release in that history, the notes cover the full history. Stable notes use the preceding `v*` tag. Both list the Docker image and platform binaries.
+
+Development builds embed `dev-<12-character SHA>` for display in the version card. Update a development deployment by pulling the rolling `:dev` image and recreating the container. A build superseded by a newer push skips the Docker push step.
+
+The one-line installer defaults to stable. To install or update to a Preview, use `--preview`. [Installation guide](installation.md)
+
+Other branches run build validation. Preview and stable releases are published after the Docker image and binary artifacts are ready.
+
 #### Workflow Steps
 
 1. **Setup**:
@@ -192,10 +208,9 @@ The repository uses `.github/workflows/build-release.yml` for automated builds. 
    CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
    ```
 
-5. **Release** (on tag):
-   - Create GitHub release
-   - Upload binary artifacts
-   - Push Docker images
+5. **Publication**:
+   - Publish the image for the channel in the table above
+   - Attach binary artifacts to preview and stable releases
 
 ### PR Checks
 

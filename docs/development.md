@@ -139,7 +139,7 @@ When adding or changing key business logic, API contracts, permission checks, co
 
 ### 6. PR automated checks
 
-PRs targeting `dev` run checks when opened, reopened, marked ready for review, or retargeted to `dev`. The bot comments on PRs targeting other branches and closes them. Change the base to `dev` and reopen the PR to run checks.
+PRs targeting `dev` run checks when opened, reopened, marked ready for review, or retargeted to `dev`. The bot comments on PRs targeting other branches and closes them. Use the same head branch to open a new PR against `dev`.
 
 - Backend: `go build ./...`, `golangci-lint`, `go test ./...`
 - Frontend: `yarn run lint`, `yarn run build`

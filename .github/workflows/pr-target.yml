@@ -36,9 +36,9 @@ jobs:
           body="$(cat <<'EOF'
           ### 请将 PR 的目标分支设为 `dev` / Please target `dev`
 
-          本仓库仅接受以 `dev` 为目标分支的 PR。请在 PR 页面点 **Edit**，将 **base** 改为 `dev`，然后重新打开此 PR。也可以新建一个以 `dev` 为目标的 PR。
+          本仓库仅接受以 `dev` 为目标分支的 PR。请使用同一个源分支新建 PR，并将 **base** 设为 `dev`。
 
-          This repository accepts PRs targeting `dev`. Use **Edit** to change the **base** branch to `dev`, then reopen this PR. You can also open a new PR against `dev`.
+          This repository accepts PRs targeting `dev`. Open a new PR from the same head branch and set the **base** branch to `dev`.
           EOF
           )"
           gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --raw-field body="$body" --jq '.html_url'
