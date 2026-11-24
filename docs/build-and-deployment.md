@@ -199,9 +199,10 @@ The repository uses `.github/workflows/build-release.yml` for automated builds.
 
 ### PR Checks
 
-`.github/workflows/pr-checks.yml` runs on PR open/reopen/ready-for-review:
+`.github/workflows/pr-checks.yml` runs when a PR targeting `dev` is opened, reopened, marked ready for review, or retargeted to `dev`:
 
 **Backend checks**:
+- `go build ./...`
 - `golangci-lint run`
 - `go test ./...`
 
@@ -209,7 +210,7 @@ The repository uses `.github/workflows/build-release.yml` for automated builds.
 - `yarn run lint`
 - `yarn run build`
 
-To manually re-trigger checks, comment `/recheck` on the PR.
+Automatic checks and `/recheck` both publish a detailed report in the PR conversation. See [PR automated checks](development.md#6-pr-automated-checks) for who can request a recheck and how the target branch is enforced.
 
 ---
 

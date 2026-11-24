@@ -139,12 +139,14 @@ When adding or changing key business logic, API contracts, permission checks, co
 
 ### 6. PR automated checks
 
-`.github/workflows/pr-checks.yml` runs automatically when a PR is opened, reopened, or marked ready for review. It gives a quick baseline quality signal. Later fix commits do not automatically consume Actions again. After fixes are ready, the PR author or a repository admin can comment `/recheck` on the PR to trigger another round.
+PRs targeting `dev` run checks when opened, reopened, marked ready for review, or retargeted to `dev`. The bot comments on PRs targeting other branches and closes them. Change the base to `dev` and reopen the PR to run checks.
 
-- Backend: `golangci-lint`, `go test ./...`
+- Backend: `go build ./...`, `golangci-lint`, `go test ./...`
 - Frontend: `yarn run lint`, `yarn run build`
 
-Each check job writes to the GitHub Step Summary, showing pass or failure status for each item so authors and reviewers can see what is done and what still needs work.
+After pushing fixes, the author or a repository administrator can leave a new comment with `/recheck` on its first line to check the latest commit. Fork authors can request a recheck after the automatic check for that PR has finished. For a fork awaiting approval, a maintainer can approve the automatic check or a repository administrator can comment `/recheck` to start one explicitly.
+
+Automatic checks and rechecks both publish a report in the PR conversation with the checked commit, individual results, and a link to the Actions logs. An Actions retry updates its existing report. If the head changed during the run, the report shows both commits. The report publisher, `/recheck` command, and target-branch guard run from workflow definitions on the default branch, `main`.
 
 ### 7. Normal backend build
 

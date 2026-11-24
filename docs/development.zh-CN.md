@@ -139,12 +139,14 @@ go test ./...
 
 ### 6. PR 自动检查
 
-`.github/workflows/pr-checks.yml` 会在 PR 打开、重新打开或标记 ready for review 时自动运行，用于快速判断 PR 是否满足基础质量要求。后续修复提交不会自动重复消耗 Actions；PR 作者本人或仓库管理员确认修复完成后，可在 PR 评论 `/recheck` 手动触发新一轮检查。
+目标为 `dev` 的 PR 在创建、重新打开、标记为可审查，或改为以 `dev` 为目标时会自动运行检查。对于指向其他分支的 PR，机器人会留言说明并关闭。将目标分支改为 `dev` 并重新打开 PR，即可运行检查。
 
-- 后端：`golangci-lint`、`go test ./...`
+- 后端：`go build ./...`、`golangci-lint`、`go test ./...`
 - 前端：`yarn run lint`、`yarn run build`
 
-每个检查 job 会写入 GitHub Step Summary，展示对应检查项是通过还是失败，方便作者和 reviewer 快速判断哪些工作已经完成、哪些还需要修复。
+推送修复后，PR 作者或仓库管理员可新增一条首行为 `/recheck` 的评论，检查最新提交。来自 fork 的 PR 作者可以在该 PR 的首轮检查结束后发起复查。若 fork 首轮仍待审批，维护者可以批准首轮检查，仓库管理员也可以评论 `/recheck` 明确触发检查。
+
+自动检查和复查都会在 PR 对话发布报告，列出被检查的提交、各项结果和 Actions 日志链接。在 Actions 重试同一次运行时会更新原报告。若检查期间 PR 的最新提交有变化，报告会同时列出两个提交。回评、`/recheck` 命令和目标分支守卫使用默认分支 `main` 上的工作流定义。
 
 ### 7. 普通后端构建
 

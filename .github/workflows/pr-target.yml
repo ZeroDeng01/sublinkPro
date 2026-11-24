@@ -1,0 +1,50 @@
+name: PR Target Branch
+
+on:
+  pull_request_target:
+    branches-ignore: [dev]
+    types: [opened, reopened, edited]
+
+permissions: {}
+
+jobs:
+  close-invalid-target:
+    name: Close PR targeting a branch other than dev
+    if: github.event.action != 'edited' || github.event.changes.base.ref.from != null
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    concurrency:
+      group: pr-target-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Explain and close pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          pr_endpoint="repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER"
+          open_target() {
+            gh api "$pr_endpoint" --jq 'if .state == "open" then .base.ref else "" end'
+          }
+
+          target="$(open_target)"
+          if [[ -z "$target" || "$target" == 'dev' ]]; then
+            exit 0
+          fi
+
+          body="$(cat <<'EOF'
+          ### 请将 PR 的目标分支设为 `dev` / Please target `dev`
+
+          本仓库仅接受以 `dev` 为目标分支的 PR。请在 PR 页面点 **Edit**，将 **base** 改为 `dev`，然后重新打开此 PR。也可以新建一个以 `dev` 为目标的 PR。
+
+          This repository accepts PRs targeting `dev`. Use **Edit** to change the **base** branch to `dev`, then reopen this PR. You can also open a new PR against `dev`.
+          EOF
+          )"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --raw-field body="$body" --jq '.html_url'
+
+          # Re-read the target in case the contributor corrected it during notification.
+          target="$(open_target)"
+          if [[ -n "$target" && "$target" != 'dev' ]]; then
+            gh api --method PATCH "$pr_endpoint" --raw-field state=closed --jq '.html_url'
+          fi

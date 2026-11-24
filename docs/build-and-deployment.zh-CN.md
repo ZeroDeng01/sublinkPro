@@ -199,9 +199,10 @@ docker-compose up -d
 
 ### PR 检查
 
-`.github/workflows/pr-checks.yml` 在 PR 打开/重新打开/标记为 ready-for-review 时运行：
+`.github/workflows/pr-checks.yml` 在目标为 `dev` 的 PR 创建、重新打开、标记为可审查，或改为以 `dev` 为目标时运行：
 
 **后端检查**：
+- `go build ./...`
 - `golangci-lint run`
 - `go test ./...`
 
@@ -209,7 +210,7 @@ docker-compose up -d
 - `yarn run lint`
 - `yarn run build`
 
-要手动重新触发检查，在 PR 中评论 `/recheck`。
+自动检查和 `/recheck` 都会在 PR 对话发布详细报告。复查权限和目标分支规则见 [PR 自动检查](development.zh-CN.md#6-pr-自动检查)。
 
 ---
 

@@ -351,7 +351,7 @@ git commit -m "feat(scope): description"
 
 ### Creating pull request
 
-**Target branch**: Always target `dev` (not `main`)
+Set the PR base branch to `dev`. The bot comments and closes PRs targeting other branches.
 
 **PR description should include**:
 
@@ -393,15 +393,15 @@ Before/After screenshots
 
 ### Automated PR checks
 
-`.github/workflows/pr-checks.yml` runs automatically when PR is opened:
+When a PR targeting `dev` opens, the repository runs these checks and posts the results in the PR conversation:
 
-- Backend: `golangci-lint run`, `go test ./...`
+- Backend: `go build ./...`, `golangci-lint run`, `go test ./...`
 - Frontend: `yarn run lint`, `yarn run build`
 
 **If checks fail**:
 1. Fix the issues
 2. Push the fix commits
-3. Comment `/recheck` on the PR to re-trigger checks
+3. As the author or a repository administrator, comment `/recheck` to check the latest commit and receive a new report. See [PR automated checks](development.md#6-pr-automated-checks) for the fork approval flow.
 
 ### Code review
 
