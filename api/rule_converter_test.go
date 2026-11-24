@@ -7,7 +7,46 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/dlclark/regexp2/v2/compat"
 )
+
+func TestSurgeMergedFiltersMatchLocalBackreferences(t *testing.T) {
+	group := parseProxyGroup("Region`select`"+`((EU|US)|GB)`+"`"+`(Cloud|(BCE|GCP)\2)`, "surge")
+	matcher := compat.MustCompile("^(?:" + group.Filter + ")$")
+	for _, name := range []string{"EU", "US", "GB", "Cloud", "BCEBCE", "GCPGCP"} {
+		if !matcher.MatchString(name) {
+			t.Errorf("%q should match %q", group.Filter, name)
+		}
+	}
+	for _, name := range []string{"BCE", "GCP", "BCEGCP", "GCPEU"} {
+		if matcher.MatchString(name) {
+			t.Errorf("%q should not match %q", group.Filter, name)
+		}
+	}
+}
+
+func TestMergeSurgeFiltersCaptureNumbering(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		filters []string
+		want    string
+	}{
+		{"successive references", []string{`(A)\1`, `(B)\1`, `(C)\1`}, `(?:(A)\1)|(?:(B)\2)|(?:(C)\3)`},
+		{"escaped and quoted parentheses", []string{`\(\Q((\1\E(X)`, `(A)\\1\1`}, `(?:\(\Q((\1\E(X))|(?:(A)\\1\2)`},
+		{"character classes", []string{`[[(]][^]()](X)`, `(A)\1`}, `(?:[[(]][^]()](X))|(?:(A)\2)`},
+		{"named capture and assertions", []string{`(?#()(?<tag>X)(?<=X)(?!Y)(?:Z)`, `(A)\1`}, `(?:(?#()(?<tag>X)(?<=X)(?!Y)(?:Z))|(?:(A)\2)`},
+		{"two digit reference", []string{`(X)`, `()()()()()()()()()(A)\10`}, `(?:(X))|(?:()()()()()()()()()(A)\11)`},
+		{"literal trailing digit", []string{`(X)(Y)`, `(Cloud|(BCE|GCP)\21)`}, `(?:(X)(Y))|(?:(Cloud|(BCE|GCP)\41))`},
+		{"forward reference", []string{`(X)`, `(?:\9|(a)(b)(c)(d)(e)(f)(g)(h)(i))+`}, `(?:(X))|(?:((?:\11|(a)(b)(c)(d)(e)(f)(g)(h)(i))+))`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := mergeRegexFilters(tc.filters, "surge"); got != tc.want {
+				t.Errorf("got  %s\nwant %s", got, tc.want)
+			}
+		})
+	}
+}
 
 func TestGenerateSurgeProxyGroupsPreservesFilter(t *testing.T) {
 	for _, filter := range []string{

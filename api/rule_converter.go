@@ -382,7 +382,14 @@ func mergeRegexFilters(filters []string, category string) string {
 		return filters[0]
 	}
 	if category == "surge" {
-		return "(?:" + strings.Join(filters, ")|(?:") + ")"
+		branches := make([]string, 0, len(filters))
+		captureOffset := 0
+		for _, filter := range filters {
+			branch, captures := rebaseSurgeBackreferences(filter, captureOffset)
+			branches = append(branches, branch)
+			captureOffset += captures
+		}
+		return "(?:" + strings.Join(branches, ")|(?:") + ")"
 	}
 	var allOptions []string
 	for _, f := range filters {
@@ -391,6 +398,85 @@ func mergeRegexFilters(filters []string, category string) string {
 		allOptions = append(allOptions, inner)
 	}
 	return "(" + strings.Join(allOptions, "|") + ")"
+}
+
+// rebaseSurgeBackreferences 将片段内的数字引用映射为合并后的组号, 并返回片段的捕获组数.
+// ICU 读入首位数字后, 仅在当前编号小于已打开的捕获组数时继续读下一位.
+// 只有一个前置组时, 片段开头的前向引用 \9 无法直接写成 \10 (会读作 \1 和 0).
+// 为这个分支增加一个捕获括号后, ICU 就可以完整读出 \11.
+func rebaseSurgeBackreferences(filter string, offset int) (string, int) {
+	var result strings.Builder
+	captures, classDepth, last := 0, 0, 0
+	for pos := 0; pos < len(filter); pos++ {
+		switch filter[pos] {
+		case '\\':
+			pos++
+			if pos == len(filter) {
+				break
+			}
+			if filter[pos] == 'Q' {
+				pos = surgeRegexTerminator(filter, pos+1, `\E`)
+				continue
+			}
+			if filter[pos] == 'c' {
+				pos++
+				continue
+			}
+			if classDepth != 0 || offset == 0 || filter[pos] < '1' || filter[pos] > '9' {
+				continue
+			}
+			result.WriteString(filter[last:pos])
+			ref := int(filter[pos] - '0')
+			if offset == 1 && captures == 0 && ref == 9 {
+				branch, count := rebaseSurgeBackreferences(filter, offset+1)
+				return "(" + branch + ")", count + 1
+			}
+			for ref < captures && pos+1 < len(filter) && filter[pos+1] >= '0' && filter[pos+1] <= '9' {
+				pos++
+				ref = ref*10 + int(filter[pos]-'0')
+			}
+			result.WriteString(strconv.Itoa(offset + ref))
+			last = pos + 1
+		case '[':
+			classDepth++
+			switch {
+			case strings.HasPrefix(filter[pos+1:], "^]"):
+				pos += 2
+			case strings.HasPrefix(filter[pos+1:], "]"):
+				pos++
+			}
+		case ']':
+			if classDepth > 0 {
+				classDepth--
+			}
+		case '(':
+			if classDepth != 0 {
+				continue
+			}
+			suffix := filter[pos+1:]
+			switch {
+			case strings.HasPrefix(suffix, "?#"):
+				pos = surgeRegexTerminator(filter, pos+3, ")")
+			case !strings.HasPrefix(suffix, "?"):
+				captures++
+			case strings.HasPrefix(suffix, "?<") && len(suffix) > 2 && suffix[2] != '=' && suffix[2] != '!':
+				captures++
+			}
+		}
+	}
+	if last == 0 {
+		return filter, captures
+	}
+	result.WriteString(filter[last:])
+	return result.String(), captures
+}
+
+func surgeRegexTerminator(filter string, start int, terminator string) int {
+	end := strings.Index(filter[start:], terminator)
+	if end < 0 {
+		return len(filter)
+	}
+	return start + end + len(terminator) - 1
 }
 
 // generateClashRules 生成 Clash 格式的规则
