@@ -166,10 +166,12 @@ The repository uses `.github/workflows/build-release.yml` for automated builds. 
 | Channel | Trigger | Docker image tag | GitHub Release |
 | --- | --- | --- | --- |
 | Development | Push to `dev` | `dev` | None |
-| Preview | Push to `main` | `preview-YYYYMMDD-HHMMSSmmm` | Pre-release with multi-platform binaries |
+| Preview | Push to `main` | `preview-YYYYMMDD-HHMMSSmmm` and `preview` | Pre-release with multi-platform binaries |
 | Stable | Push a `v*` tag | Version tag and `latest` | Full release with multi-platform binaries |
 
 Preview uses a title such as `Preview 20261124-171211123`, with `preview-20261124-171211123` embedded in the binary and used for the Git and Docker tags. The workflow records Asia/Shanghai time to the millisecond when it first assigns the tag to the commit. A retry reuses that commit's tag. If the timestamp already belongs to another commit, the workflow tries the next millisecond.
+
+After a Preview is published, the workflow points the rolling Docker tag `:preview` at the multi-platform image of the most recently published Preview. Use the timestamped tag to pin a specific build.
 
 Preview notes start from the most recently published GitHub release in the build's Git history. Both stable releases and prereleases qualify. If this is the first published release in that history, the notes cover the full history. Stable notes use the preceding `v*` tag. Both list the Docker image and platform binaries.
 

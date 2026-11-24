@@ -9,7 +9,7 @@ This document explains how to install, update, and uninstall SublinkPro.
 | Channel | When to use it | Docker image | Linux one-line installer |
 | --- | --- | --- | --- |
 | Stable | Recommended for regular use | `zerodeng/sublink-pro:latest` or a fixed version such as `:v1.3.0` | Default |
-| Preview | Try changes published from `main` before the next stable release | The timestamped image listed in the Preview notes, for example `zerodeng/sublink-pro:preview-20261124-171211123` | `--preview` |
+| Preview | Try changes published from `main` before the next stable release | `zerodeng/sublink-pro:preview` follows published previews. Pin an exact version with the `:preview-YYYYMMDD-HHMMSSmmm` tag from its release notes | `--preview` |
 | Development | Test the latest published builds from `dev` | `zerodeng/sublink-pro:dev` | Use the Docker image |
 
 The version card checks stable and Preview builds for updates in their own channels. To update a development build, pull `:dev` and recreate the container. The **Changelog** page shows the 10 most recent stable releases. Older stable or Preview builds identified only by a commit hash need one manual update before automatic checks can identify their channel. [GitHub Releases](https://github.com/ZeroDeng01/sublinkPro/releases)
@@ -30,7 +30,8 @@ Create `docker-compose.yml`:
 services:
   sublinkpro:
     # image: zerodeng/sublink-pro:dev # Development version, for trying new features
-    # image: zerodeng/sublink-pro:preview-20261124-171211123 # Preview, use the tag listed in its release notes
+    # image: zerodeng/sublink-pro:preview # Rolling Preview
+    # image: zerodeng/sublink-pro:preview-YYYYMMDD-HHMMSSmmm # Replace with a published Preview tag to pin it
     image: zerodeng/sublink-pro:latest # Stable version
     container_name: sublinkpro
     ports:
@@ -91,6 +92,19 @@ docker run --name sublinkpro -p 8000:8000 \
   -v $PWD/template:/app/template \
   -v $PWD/logs:/app/logs \
   -d zerodeng/sublink-pro
+```
+
+</details>
+
+<details>
+<summary><b>Preview</b></summary>
+
+```bash
+docker run --name sublinkpro -p 8000:8000 \
+  -v $PWD/db:/app/db \
+  -v $PWD/template:/app/template \
+  -v $PWD/logs:/app/logs \
+  -d zerodeng/sublink-pro:preview
 ```
 
 </details>
@@ -158,7 +172,7 @@ The script detects the installed version and provides these options:
 
 ### 📦 Manual Docker Compose update
 
-For a dated Preview or a pinned stable version, first set `image:` to the new tag listed in that release's notes. For the rolling `:latest` and `:dev` images, run the commands with your current Compose file.
+For a pinned Preview or stable version, first set `image:` to the new tag listed in that release's notes. For the rolling `:latest`, `:preview`, and `:dev` images, run the commands with your current Compose file.
 
 ```bash
 # Enter the directory containing docker-compose.yml
@@ -205,7 +219,7 @@ For installations using a reverse proxy or custom subscription sidecar, preserve
 
 ## 🤖 Automatic Updates with Watchtower
 
-Watchtower automatically updates Docker containers. It is useful if you want the project to stay current.
+Watchtower automatically updates Docker containers. Configure `zerodeng/sublink-pro:preview` to follow new Preview releases through Watchtower.
 
 ### Option 1: Run Watchtower separately
 

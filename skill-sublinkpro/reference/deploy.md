@@ -14,7 +14,7 @@ main `SKILL.md`.
 
 ## Defaults & key facts
 
-- **Images** include `zerodeng/sublink-pro` for stable releases, `zerodeng/sublink-pro:dev` for rolling development builds, and `zerodeng/sublink-pro:preview-YYYYMMDD-HHMMSSmmm` for main-branch prereleases. Copy the exact image from the prerelease notes.
+- **Images** include `zerodeng/sublink-pro:latest` for stable releases, `zerodeng/sublink-pro:dev` for rolling development builds, and `zerodeng/sublink-pro:preview` for rolling main-branch prereleases. To pin a Preview, copy its timestamped image tag from the prerelease notes.
 - **Port:** `8000` (web UI + API).
 - **Default login:** `admin` / `123456` — tell the user to change it immediately.
 - **Data directories** (persist across upgrades; removing them is destructive):
@@ -60,7 +60,7 @@ docker run --name sublinkpro -p 8000:8000 \
   -d zerodeng/sublink-pro
 ```
 
-Use `zerodeng/sublink-pro:latest` for the rolling stable channel, a tag such as `:v1.3.0` to pin stable, or `zerodeng/sublink-pro:dev` for rolling development builds. For Preview, copy the image listed under **Docker 镜像** from the GitHub prerelease notes, such as `zerodeng/sublink-pro:preview-20261124-171211123`. To update a pinned image or Preview, change the configured tag before pulling and recreating the container.
+Use `zerodeng/sublink-pro:latest` for rolling stable, a tag such as `:v1.3.0` to pin stable, `zerodeng/sublink-pro:dev` for rolling development builds, or `zerodeng/sublink-pro:preview` to follow published previews. To pin a Preview, copy the timestamped image listed under **Docker 镜像** in the GitHub prerelease notes.
 
 ---
 
@@ -299,6 +299,8 @@ For native (install-script) deployments: `systemctl status sublink`,
 `journalctl -u sublink` (or `rc-service sublink status` on Alpine).
 
 ### Update / upgrade
+
+Pull the configured image and recreate the container when using `:latest`, `:preview`, or `:dev`. For a pinned version, choose the new tag before pulling. The Docker commands below use the stable image as an example.
 
 If `/c/` passes through a reverse proxy or custom subscription sidecar, preserve `User-Agent`, `X-HWID`, `X-Device-OS`, and `X-Device-Model`. Header allowlists must not strip the device identity or replace it with a fixed ID. Repeated HWID headers and comma-separated values produced by proxy merging are rejected. Do not cache subscription responses across devices. After updating, test `HEAD` on the public subscription URL with an allowed identity and without HWID; enabled share link device limits must reject the latter without allocating a slot. There is no client-brand restriction. See [share link device limit troubleshooting](../../docs/features/subscription-share.md#reverse-proxies-and-http-403-troubleshooting).
 

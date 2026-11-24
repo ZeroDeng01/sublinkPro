@@ -16,3 +16,12 @@ class ReleaseWorkflowTests(unittest.TestCase):
             r"(?m)^    if:\s+(?:>-\s+)?(?:\$\{\{\s+)?!cancelled\(\)\s+&&\s+"
             r"needs\.build-go-binaries\.result\s+==\s+'success'(?:\s+\}\})?$",
         )
+
+    def test_rolling_preview_promotion_is_serialized_after_publication(self):
+        alias_job = re.search(r"^  publish-preview-alias:\n((?:    [^\n]*\n|\n)*)", WORKFLOW.read_text(), re.MULTILINE)
+        self.assertIsNotNone(alias_job)
+        config = alias_job[1]
+        self.assertIn("needs: [prepare-preview, release]", config)
+        self.assertIn("github.ref == 'refs/heads/main'", config)
+        self.assertIn("needs.release.result == 'success' || needs.prepare-preview.outputs.published == 'true'", config)
+        self.assertIn("group: docker-preview-alias\n      cancel-in-progress: false", config)

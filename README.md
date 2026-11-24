@@ -119,7 +119,7 @@ SQLite is used by default. To switch to MySQL or PostgreSQL, set the database co
 > Even when `SUBLINK_WEB_BASE_PATH` is configured to hide the admin UI entry, API paths (`/api/*`) and subscription or share paths (`/c/*`) stay at the root path. This is a project specific frontend and backend integration rule.
 
 > [!TIP]
-> For more install methods, including Docker, one line scripts, updates, and upgrades, see the [📦 Installation Guide](docs/installation.md).
+> Set the image to `zerodeng/sublink-pro:preview` to follow published Preview builds. For fixed tags, one-line installation, and upgrades, see the [📦 Installation Guide](docs/installation.md).
 
 > [!TIP]
 > The Docker image includes `cloudflared`. After signing in, open `User Center -> Cloudflare Tunnel`, enter the token, and start it. When auto connect is enabled, the Tunnel connects when the service starts.
