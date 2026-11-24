@@ -1,17 +1,14 @@
-import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
-import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
@@ -51,26 +48,13 @@ export default function AirportTable({
   onOpenNodes,
   onQuickCheck,
   onRefreshUsage,
+  onCopyUrl,
   nodeCheckProfiles
 }) {
   const theme = useTheme();
   const { t } = useTranslation();
   const palette = theme.vars?.palette || theme.palette;
   const { isDark } = useResolvedColorScheme();
-
-  // 复制提示状态
-  const [copyTip, setCopyTip] = useState({ open: false, name: '' });
-
-  // 复制订阅地址
-  const handleCopyUrl = async (airport) => {
-    try {
-      await navigator.clipboard.writeText(airport.url);
-      setCopyTip({ open: true, name: airport.name });
-      setTimeout(() => setCopyTip({ open: false, name: '' }), 2000);
-    } catch (err) {
-      console.error('复制失败:', err);
-    }
-  };
 
   const getProgressTrackColor = (percent) => alpha(getUsageColor(percent), isDark ? 0.22 : 0.12);
 
@@ -678,7 +662,7 @@ export default function AirportTable({
                         <IconButton
                           size="small"
                           aria-label={t('airports.list.actions.copySubscriptionUrl')}
-                          onClick={() => handleCopyUrl(airport)}
+                          onClick={() => onCopyUrl(airport)}
                           sx={{
                             bgcolor: alpha(theme.palette.secondary.main, 0.08),
                             color: theme.palette.secondary.main,
@@ -724,18 +708,6 @@ export default function AirportTable({
           );
         })}
       </Box>
-
-      {/* 复制成功提示 */}
-      <Snackbar
-        open={copyTip.open}
-        autoHideDuration={2000}
-        onClose={() => setCopyTip({ open: false, name: '' })}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert severity="success" variant="standard" sx={{ width: '100%' }}>
-          {t('airports.list.messages.copiedSubscriptionUrl', { name: copyTip.name })}
-        </Alert>
-      </Snackbar>
     </>
   );
 }
@@ -750,6 +722,7 @@ AirportTable.propTypes = {
   onOpenNodes: PropTypes.func.isRequired,
   onQuickCheck: PropTypes.func.isRequired,
   onRefreshUsage: PropTypes.func,
+  onCopyUrl: PropTypes.func.isRequired,
   nodeCheckProfiles: PropTypes.array
 };
 

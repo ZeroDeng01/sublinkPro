@@ -27,6 +27,7 @@ import { useTaskProgress } from 'contexts/TaskProgressContext';
 import ConfirmDialog from 'components/ConfirmDialog';
 import Pagination from 'components/Pagination';
 import IPDetailsDialog from 'components/IPDetailsDialog';
+import { copyText } from 'utils/clipboard';
 
 // api
 import {
@@ -516,9 +517,12 @@ export default function NodeList() {
     setSnackbar({ open: true, message, severity });
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    showMessage(t('common.copied'));
+  const copyToClipboard = async (text) => {
+    if (await copyText(text)) {
+      showMessage(t('common.copied'));
+    } else {
+      showMessage(t('common.copyFailedManual'), 'error');
+    }
   };
 
   const resetFilters = () => {
@@ -1514,7 +1518,7 @@ export default function NodeList() {
       />
 
       {/* IP详情弹窗 */}
-      <IPDetailsDialog open={ipDialogOpen} onClose={() => setIpDialogOpen(false)} ip={selectedIP} onCopy={copyToClipboard} />
+      <IPDetailsDialog open={ipDialogOpen} onClose={() => setIpDialogOpen(false)} ip={selectedIP} />
 
       {/* 节点详情面板 */}
       <NodeDetailsPanel

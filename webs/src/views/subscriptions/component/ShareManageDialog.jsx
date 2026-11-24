@@ -88,7 +88,7 @@ const EXPANDED_CLIENT_LINKS = [
   { key: 'json', client: 'json' }
 ];
 
-export default function ShareManageDialog({ open, subscription, onClose, showMessage }) {
+export default function ShareManageDialog({ open, subscription, onClose, onCopy, showMessage }) {
   const theme = useTheme();
   const { t, i18n } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -313,11 +313,6 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, subscription?.ID]);
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    showMessage?.(t('common.copied'), 'success');
-  };
 
   const handleOpenDetail = (share) => {
     setDetailShare(share);
@@ -1173,7 +1168,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         clientUrls={detailClientUrls}
         onClose={() => setDetailOpen(false)}
         onQrCode={handleQrCode}
-        onCopy={copyToClipboard}
+        onCopy={onCopy}
       />
 
       <Dialog
@@ -1289,7 +1284,7 @@ export default function ShareManageDialog({ open, subscription, onClose, showMes
         onClose={() => setLogsOpen(false)}
       />
 
-      <QrCodeDialog open={qrOpen} title={qrTitle} url={qrUrl} onClose={() => setQrOpen(false)} onCopy={copyToClipboard} />
+      <QrCodeDialog open={qrOpen} title={qrTitle} url={qrUrl} onClose={() => setQrOpen(false)} onCopy={onCopy} />
 
       <ConfirmDialog
         open={confirmOpen}

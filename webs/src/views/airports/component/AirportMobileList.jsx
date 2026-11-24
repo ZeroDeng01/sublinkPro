@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 
 // material-ui
 import { useTheme, alpha } from '@mui/material/styles';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -16,7 +15,6 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
@@ -56,6 +54,7 @@ export default function AirportMobileList({
   onOpenNodes,
   onQuickCheck,
   onRefreshUsage,
+  onCopyUrl,
   nodeCheckProfiles
 }) {
   const theme = useTheme();
@@ -68,8 +67,6 @@ export default function AirportMobileList({
     ? `linear-gradient(180deg, ${withAlpha(palette.primary.main, 0.12)} 0%, ${cardSurface} 100%)`
     : withAlpha(palette.primary.main, 0.04);
 
-  // 复制提示状态
-  const [copyTip, setCopyTip] = useState({ open: false, name: '' });
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [menuAirportId, setMenuAirportId] = useState(null);
 
@@ -78,17 +75,6 @@ export default function AirportMobileList({
     if (!profileId || profileId === 0) return null;
     const profile = nodeCheckProfiles.find((p) => p.id === profileId);
     return profile ? profile.name : null;
-  };
-
-  // 复制订阅地址
-  const handleCopyUrl = async (airport) => {
-    try {
-      await navigator.clipboard.writeText(airport.url);
-      setCopyTip({ open: true, name: airport.name });
-      setTimeout(() => setCopyTip({ open: false, name: '' }), 2000);
-    } catch (err) {
-      console.error('复制失败:', err);
-    }
   };
 
   const handleOpenMenu = (event, airportId) => {
@@ -538,7 +524,7 @@ export default function AirportMobileList({
                   </IconButton>
                   <IconButton
                     aria-label={t('airports.list.actions.copySubscriptionUrl')}
-                    onClick={() => handleCopyUrl(airport)}
+                    onClick={() => onCopyUrl(airport)}
                     sx={{
                       flexShrink: 0,
                       width: 40,
@@ -637,18 +623,6 @@ export default function AirportMobileList({
           <ListItemText>{t('common.delete')}</ListItemText>
         </MenuItem>
       </Menu>
-
-      {/* 复制成功提示 */}
-      <Snackbar
-        open={copyTip.open}
-        autoHideDuration={2000}
-        onClose={() => setCopyTip({ open: false, name: '' })}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert severity="success" variant="standard" sx={{ width: '100%' }}>
-          {t('airports.list.messages.copiedSubscriptionUrl', { name: copyTip.name })}
-        </Alert>
-      </Snackbar>
     </>
   );
 }
@@ -663,6 +637,7 @@ AirportMobileList.propTypes = {
   onOpenNodes: PropTypes.func.isRequired,
   onQuickCheck: PropTypes.func.isRequired,
   onRefreshUsage: PropTypes.func,
+  onCopyUrl: PropTypes.func.isRequired,
   nodeCheckProfiles: PropTypes.array
 };
 

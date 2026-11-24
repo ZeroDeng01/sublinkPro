@@ -14,7 +14,10 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import Tooltip from '@mui/material/Tooltip';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 import { Trans, useTranslation } from 'react-i18next';
+import { copyText } from 'utils/clipboard';
 
 // icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -91,12 +94,13 @@ const cacheIPInfo = (ip, data) => {
  * IP详情弹窗组件
  * 通过第三方API查询IP详细信息，支持缓存避免重复请求
  */
-export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
+export default function IPDetailsDialog({ open, onClose, ip }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [ipInfo, setIpInfo] = useState(null);
   const [fromCache, setFromCache] = useState(false);
+  const [copyResult, setCopyResult] = useState(null);
 
   const fetchIPDetails = useCallback(async () => {
     if (!ip) return;
@@ -158,10 +162,9 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
     }
   }, [open, ip, fetchIPDetails]);
 
-  const handleCopy = () => {
-    if (ip && onCopy) {
-      onCopy(ip);
-    }
+  const handleClose = () => {
+    setCopyResult(null);
+    onClose();
   };
 
   // 格式化IP显示（IPv6截断）
@@ -175,7 +178,7 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
   // };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ m: 0, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Stack direction="row" spacing={1} alignItems="center">
           <PublicIcon color="primary" />
@@ -206,7 +209,7 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
             </Tooltip>
           )}
         </Stack>
-        <IconButton aria-label={t('common.close')} onClick={onClose} size="small">
+        <IconButton aria-label={t('common.close')} onClick={handleClose} size="small">
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -244,7 +247,12 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
                 {ip || '-'}
               </Typography>
             </Stack>
-            <IconButton size="small" onClick={handleCopy} title={t('components.ipDetails.copyIp')}>
+            <IconButton
+              size="small"
+              onClick={async () => setCopyResult(await copyText(ip))}
+              disabled={!ip}
+              title={t('components.ipDetails.copyIp')}
+            >
               <ContentCopyIcon fontSize="small" />
             </IconButton>
           </Stack>
@@ -353,6 +361,14 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
           </Stack>
         )}
       </DialogContent>
+      <Snackbar
+        open={copyResult !== null}
+        autoHideDuration={3000}
+        onClose={() => setCopyResult(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity={copyResult ? 'success' : 'error'}>{t(copyResult ? 'common.copied' : 'common.copyFailedManual')}</Alert>
+      </Snackbar>
     </Dialog>
   );
 }
@@ -360,6 +376,5 @@ export default function IPDetailsDialog({ open, onClose, ip, onCopy }) {
 IPDetailsDialog.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  ip: PropTypes.string,
-  onCopy: PropTypes.func
+  ip: PropTypes.string
 };
