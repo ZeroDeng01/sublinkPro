@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 PREVIEW_TAG = re.compile(r"preview-[0-9]{8}-[0-9a-f]{7,40}")
 
 
-def api(path, *, data=None, allow_missing=False, method=None):
+def api(path, *, data=None, allow_missing=False):
     repository = f"{os.environ['GITHUB_API_URL']}/repos/{os.environ['GITHUB_REPOSITORY']}"
     request = Request(
         f"{repository}/{path}",
@@ -25,7 +25,6 @@ def api(path, *, data=None, allow_missing=False, method=None):
             "User-Agent": "sublinkpro-preview-release",
         },
         data=json.dumps(data).encode() if data is not None else None,
-        method=method,
     )
     try:
         with urlopen(request, timeout=30) as response:

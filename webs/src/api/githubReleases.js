@@ -5,7 +5,6 @@ export const DEV_IMAGE_URL = 'https://hub.docker.com/r/zerodeng/sublink-pro/tags
 
 const GITHUB_API = `https://api.github.com/repos/${GITHUB_REPO}`;
 export const GITHUB_RELEASES_API = `${GITHUB_API}/releases`;
-const DEV_REF_API = `${GITHUB_API}/git/ref/tags/dev-image`;
 const STABLE_RELEASE_API = `${GITHUB_RELEASES_API}/latest`;
 
 const STABLE_VERSION = /^v?([0-9]+)\.([0-9]+)\.([0-9]+)$/;
@@ -24,8 +23,6 @@ export function getVersionChannel(version) {
 
 export function getVersionSource(version) {
   switch (getVersionChannel(version)) {
-    case 'dev':
-      return version === 'dev' ? null : DEV_REF_API;
     case 'preview':
       return GITHUB_RELEASES_API;
     case 'stable':
@@ -91,12 +88,6 @@ export function getVersionUpdate(version, data) {
       const currentDate = PREVIEW_VERSION.exec(version)[1];
       if (!current && latestDate === currentDate) return null;
       return { latestVersion: latest.tag_name, hasUpdate: Boolean(current) || latestDate > currentDate };
-    }
-    case 'dev': {
-      const current = DEV_VERSION.exec(version)?.[1];
-      const sha = data.object?.sha;
-      if (!current || data.object?.type !== 'commit' || !/^[a-f0-9]{40}$/.test(sha)) return null;
-      return { latestVersion: `dev-${sha.slice(0, 12)}`, hasUpdate: !sha.startsWith(current) };
     }
     default:
       return null;

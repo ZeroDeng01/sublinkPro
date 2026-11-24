@@ -83,6 +83,7 @@ function MenuCard() {
   const palette = theme.vars?.palette || theme.palette;
   const { version, versionLoading } = useConfig();
   const channel = getVersionChannel(version);
+  const isDevelopment = channel === 'dev';
   const source = getVersionSource(version);
   const { data, isLoading } = useSWR(source, fetchReleaseData, RELEASE_REQUEST_OPTIONS);
   const loading = versionLoading || isLoading;
@@ -92,13 +93,10 @@ function MenuCard() {
     ? `${t('version.currentSystemVersion')} · ${t(`version.channel.${channel}`)}`
     : t('version.currentSystemVersion');
   const releasesPageHref = channel === 'stable' ? `${GITHUB_RELEASES_URL}/latest` : GITHUB_RELEASES_URL;
-  const releaseHref =
-    channel === 'dev'
-      ? DEV_IMAGE_URL
-      : latestVersion
-        ? `${GITHUB_RELEASES_URL}/tag/${encodeURIComponent(latestVersion)}`
-        : releasesPageHref;
-  const viewLabel = t(channel === 'dev' ? 'version.actions.image' : 'version.actions.releases');
+  const releaseHref = latestVersion ? `${GITHUB_RELEASES_URL}/tag/${encodeURIComponent(latestVersion)}` : releasesPageHref;
+  const viewLabel = t('version.actions.releases');
+  const projectHref = isDevelopment ? DEV_IMAGE_URL : GITHUB_URL;
+  const projectLabel = t(isDevelopment ? 'version.actions.image' : 'version.githubRepo');
 
   const versionStatus = useMemo(() => {
     if (loading) {
@@ -249,14 +247,14 @@ function MenuCard() {
                 </Typography>
               </Box>
 
-              <Tooltip title={t('version.githubRepo')}>
+              <Tooltip title={projectLabel}>
                 <IconButton
                   size="small"
                   component="a"
-                  href={GITHUB_URL}
+                  href={projectHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={t('version.githubRepo')}
+                  aria-label={projectLabel}
                   sx={{
                     p: 0.5,
                     color: iconButtonColor,
@@ -304,6 +302,7 @@ function MenuCard() {
         </Box>
 
         <Box
+          hidden={isDevelopment}
           sx={{
             mt: 0.8,
             p: 0.9,

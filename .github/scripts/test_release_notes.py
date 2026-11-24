@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import call, patch
 
-import publish_dev_ref
 import release_notes
 
 
@@ -9,7 +8,6 @@ PREVIEW = "preview-20261124-171211123"
 OLDER_PREVIEW = "preview-20261123-abcdef0"
 FAILED_PREVIEW = "preview-20261123-abcdef1"
 STABLE = "v1.3.1"
-SHA = "a" * 40
 
 
 def published_release(tag, time, *, draft=False):
@@ -72,18 +70,3 @@ class ReleaseNotesTests(unittest.TestCase):
         self.assertEqual(title, "Release v1.3.1")
         self.assertIn("zerodeng/sublink-pro:v1.3.1", body)
         self.assertIn("zerodeng/sublink-pro:latest", body)
-
-
-class DevelopmentPublicationTests(unittest.TestCase):
-    @patch.object(publish_dev_ref, "api", return_value=None)
-    def test_creates_marker_for_the_first_successful_dev_publish(self, api):
-        publish_dev_ref.record_dev_image(SHA)
-        self.assertEqual(api.call_args_list, [
-            call("git/ref/tags/dev-image", allow_missing=True),
-            call("git/refs", data={"ref": "refs/tags/dev-image", "sha": SHA}),
-        ])
-
-    @patch.object(publish_dev_ref, "api", return_value={"object": {"sha": "b" * 40}})
-    def test_advances_marker_for_a_new_dev_image(self, api):
-        publish_dev_ref.record_dev_image(SHA)
-        api.assert_called_with("git/refs/tags/dev-image", method="PATCH", data={"sha": SHA, "force": True})

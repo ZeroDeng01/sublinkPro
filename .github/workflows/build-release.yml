@@ -381,8 +381,6 @@ jobs:
        (github.ref == 'refs/heads/main' && needs.prepare-preview.result == 'success' &&
         needs.prepare-preview.outputs.published == 'false'))
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     concurrency:
       group: ${{ github.ref == 'refs/heads/dev' && 'docker-dev' || format('docker-{0}', github.run_id) }}
       cancel-in-progress: false
@@ -441,7 +439,3 @@ jobs:
           esac
           docker buildx build --no-cache --pull --platform linux/amd64,linux/arm64,linux/arm/v7,linux/386 \
             -f Dockerfile.ci --label "org.opencontainers.image.revision=$GITHUB_SHA" "${TAGS[@]}" --push .
-
-          if [[ "$GITHUB_REF" == refs/heads/dev ]]; then
-            python3 .github/scripts/publish_dev_ref.py
-          fi

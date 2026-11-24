@@ -10,13 +10,11 @@ const release = (tag_name, day, extra = {}) => ({
   ...extra
 });
 
-test('each installed channel selects its own source and an old raw SHA makes no request', () => {
+test('stable and preview builds select their release sources', () => {
   assert.equal(getVersionSource('v1.3.0'), `${GITHUB_RELEASES_API}/latest`);
   assert.equal(getVersionSource('preview-20261124-4a211cb'), GITHUB_RELEASES_API);
   assert.equal(getVersionSource('preview-20261124-171211123'), GITHUB_RELEASES_API);
-  assert.match(getVersionSource('dev-4a211cb00000'), /\/git\/ref\/tags\/dev-image$/);
   assert.equal(getVersionSource('4a211cb'), null);
-  assert.equal(getVersionSource('dev'), null);
 });
 
 test('stable compares numeric versions and ignores prereleases', () => {
@@ -41,11 +39,10 @@ test('preview finds a timestamped update for an older hash-based build on the sa
   assert.equal(getVersionUpdate('preview-20261124-aaaaaaa', releases), null);
 });
 
-test('development checks the published image commit', () => {
-  const ref = { object: { type: 'commit', sha: 'a'.repeat(40) } };
-  assert.deepEqual(getVersionUpdate('dev-4a211cb00000', ref), { latestVersion: 'dev-aaaaaaaaaaaa', hasUpdate: true });
-  assert.equal(getVersionUpdate('dev-aaaaaaaaaaaa', ref).hasUpdate, false);
-  assert.equal(getVersionUpdate('dev-aaaaaaaaaaaa', {}), null);
+test('development builds have no automatic update source', () => {
+  assert.equal(getVersionSource('dev'), null);
+  assert.equal(getVersionSource('dev-4a211cb00000'), null);
+  assert.equal(getVersionUpdate('dev-4a211cb00000', release('v1.4.0', 24)), null);
 });
 
 test('stable changelog fills ten slots after pagination and sorting by publication', async () => {
