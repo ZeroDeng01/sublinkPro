@@ -32,24 +32,29 @@ def nearest_tag(pattern, excluded, ref="HEAD"):
     return result.stdout.strip() if result.returncode == 0 else None
 
 
-def previous_preview(current_tag):
-    excluded = (current_tag,)
-    while tag := nearest_tag("preview-*", excluded):
-        if PREVIEW_TAG.fullmatch(tag):
-            release = api(f"releases/tags/{tag}", allow_missing=True)
-            if release and not release["draft"] and release["prerelease"]:
-                return tag
-        excluded = (*excluded, tag)
-    return None
+def previous_published_release(current_tag):
+    reachable_tags = set(git("for-each-ref", "--merged=HEAD", "--format=%(refname:strip=2)", "refs/tags").splitlines())
+    reachable_tags.discard(current_tag)
+    latest = ("", "")
+    page = 1
+    while reachable_tags:
+        releases = api(f"releases?per_page=100&page={page}")
+        for release in releases:
+            tag = release["tag_name"]
+            if tag in reachable_tags and not release["draft"] and release["published_at"]:
+                latest = max(latest, (release["published_at"], tag))
+        if len(releases) < 100:
+            break
+        page += 1
+    return latest[1] or None
 
 
 def release_notes(tag, preview):
     if preview and not PREVIEW_TAG.fullmatch(tag):
         raise ValueError("Expected the reserved preview tag.")
 
-    previous = previous_preview(tag) if preview else None
-    previous = previous or nearest_tag("v*", [tag], "HEAD" if preview else "HEAD^")
-    history = f"{previous}..HEAD" if previous else "HEAD"
+    previous = previous_published_release(tag) if preview else nearest_tag("v*", [tag], "HEAD^")
+    history = f"refs/tags/{previous}..HEAD" if previous else "HEAD"
     changes = git("log", "--format=- %s (%h)", history)
     title = preview_title(tag) if preview else f"Release {tag}"
     heading = "## 🚀 更新内容" if preview or previous else "## 🎉 首次发布"
