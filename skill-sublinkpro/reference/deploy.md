@@ -14,7 +14,7 @@ main `SKILL.md`.
 
 ## Defaults & key facts
 
-- **Image:** `zerodeng/sublink-pro` (stable) or `zerodeng/sublink-pro:dev` (dev/preview builds).
+- **Images:** `zerodeng/sublink-pro` for stable releases, `zerodeng/sublink-pro:dev` for rolling development builds, and `zerodeng/sublink-pro:preview-YYYYMMDD-<short-sha>` for main-branch prereleases. Use the exact tag shown as the prerelease title.
 - **Port:** `8000` (web UI + API).
 - **Default login:** `admin` / `123456` — tell the user to change it immediately.
 - **Data directories** (persist across upgrades; removing them is destructive):
@@ -60,7 +60,7 @@ docker run --name sublinkpro -p 8000:8000 \
   -d zerodeng/sublink-pro
 ```
 
-Dev/preview build: replace the image with `zerodeng/sublink-pro:dev`.
+Development build: replace the image with `zerodeng/sublink-pro:dev`. For a preview, use the dated tag shown as the GitHub prerelease title, such as `zerodeng/sublink-pro:preview-20261124-274ad3e`.
 
 ---
 

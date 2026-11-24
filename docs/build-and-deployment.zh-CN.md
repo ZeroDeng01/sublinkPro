@@ -163,6 +163,16 @@ docker-compose up -d
 
 仓库使用 `.github/workflows/build-release.yml` 进行自动化构建。推送到 `dependabot/**` 的提交会跳过此工作流。以 `dev` 为目标的 Dependabot PR 会运行 PR 检查，合并到 `dev` 后触发常规构建流程。
 
+| 渠道 | 触发 | Docker 镜像标签 | GitHub Release |
+| --- | --- | --- | --- |
+| 开发版 | 推送 `dev` | `dev` | 无 |
+| 预发布 | 推送 `main` | `preview-YYYYMMDD-<7 位 SHA>` | 附多平台二进制的预发布 |
+| 稳定版 | 推送 `v*` 标签 | 版本标签和 `latest` | 附多平台二进制的正式 Release |
+
+预发布的 Docker 标签、Git 标签和 Release 标题一致，例如 `preview-20261124-274ad3e`。日期取原推送触发工作流时的北京时间。重试会复用该提交的标签，短 SHA 冲突时会延长 SHA。通过 `/releases/latest` 获取版本的安装脚本继续安装稳定版。稳定版的变更记录以最近的 `v*` 标签为起点。
+
+其他分支运行构建验证。预发布和稳定版会在 Docker 镜像及二进制产物就绪后发布。
+
 #### 工作流步骤
 
 1. **设置**：
@@ -192,10 +202,9 @@ docker-compose up -d
    CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
    ```
 
-5. **发布**（打 tag 时）：
-   - 创建 GitHub release
-   - 上传二进制产物
-   - 推送 Docker 镜像
+5. **发布**：
+   - 按上表推送对应渠道的 Docker 镜像
+   - 为预发布和稳定版附上二进制产物
 
 ### PR 检查
 

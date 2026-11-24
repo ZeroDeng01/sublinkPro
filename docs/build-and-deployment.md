@@ -163,6 +163,16 @@ docker-compose up -d
 
 The repository uses `.github/workflows/build-release.yml` for automated builds. Pushes to `dependabot/**` are excluded from this workflow. Dependabot PRs targeting `dev` run PR checks, and merging them into `dev` triggers the regular build pipeline.
 
+| Channel | Trigger | Docker image tag | GitHub Release |
+| --- | --- | --- | --- |
+| Development | Push to `dev` | `dev` | None |
+| Preview | Push to `main` | `preview-YYYYMMDD-<7-character SHA>` | Pre-release with multi-platform binaries |
+| Stable | Push a `v*` tag | Version tag and `latest` | Full release with multi-platform binaries |
+
+The preview's Docker tag, Git tag, and release title are identical, for example `preview-20261124-274ad3e`. The date is taken from the original push-triggered run in Asia/Shanghai. A retry reuses the same tag for the commit. A short-SHA collision extends the SHA in the tag. Install scripts that use `/releases/latest` continue to select stable releases. Stable changelogs use the previous `v*` tag as their baseline.
+
+Other branches run build validation. Preview and stable releases are published after the Docker image and binary artifacts are ready.
+
 #### Workflow Steps
 
 1. **Setup**:
@@ -192,10 +202,9 @@ The repository uses `.github/workflows/build-release.yml` for automated builds. 
    CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
    ```
 
-5. **Release** (on tag):
-   - Create GitHub release
-   - Upload binary artifacts
-   - Push Docker images
+5. **Publication**:
+   - Publish the image for the channel in the table above
+   - Attach binary artifacts to preview and stable releases
 
 ### PR Checks
 
