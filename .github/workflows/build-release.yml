@@ -251,6 +251,8 @@ jobs:
   # 合并所有架构的二进制文件
   merge-binaries:
     needs: build-go-binaries
+    # The optional prepare-preview job is skipped on dev and stable tags.
+    if: ${{ !cancelled() && needs.build-go-binaries.result == 'success' }}
     runs-on: ubuntu-latest
     outputs:
       dev_sha: ${{ steps.dev.outputs.sha }}
