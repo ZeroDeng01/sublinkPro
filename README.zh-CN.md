@@ -119,7 +119,7 @@ docker-compose up -d
 > 即使配置了 `SUBLINK_WEB_BASE_PATH` 隐藏管理界面入口，API (`/api/*`) 与订阅/分享访问路径 (`/c/*`) 仍保持在根路径下，这是本项目特有的前后端集成行为。
 
 > [!TIP]
-> 更多安装方式（Docker、一键脚本、更新升级等）请参阅 [📦 安装部署指南](docs/installation.zh-CN.md)
+> 将镜像改为 `zerodeng/sublink-pro:preview` 可跟随已发布的预发布版本。固定版本、一键脚本和升级方式见 [📦 安装部署指南](docs/installation.zh-CN.md)。
 
 > [!TIP]
 > Docker 镜像已内置 `cloudflared`。登录后可在 `用户中心 -> Cloudflare Tunnel` 填写 token 并启动；启用自动连接后会随服务启动连接 Tunnel。

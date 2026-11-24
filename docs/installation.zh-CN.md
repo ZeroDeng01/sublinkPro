@@ -9,7 +9,7 @@
 | 渠道 | 使用场景 | Docker 镜像 | Linux 一键脚本 |
 | --- | --- | --- | --- |
 | 稳定版 | 日常使用，推荐选择 | `zerodeng/sublink-pro:latest`，也可固定到 `:v1.3.0` 等版本 | 默认 |
-| 预发布 | 提前体验 `main` 已发布的改动 | 以预发布说明列出的时间标签为准，如 `zerodeng/sublink-pro:preview-20261124-171211123` | `--preview` |
+| 预发布 | 提前体验 `main` 已发布的改动 | `zerodeng/sublink-pro:preview` 跟随最新预发布，也可使用发布说明中的 `:preview-YYYYMMDD-HHMMSSmmm` 时间标签固定版本 | `--preview` |
 | 开发版 | 测试 `dev` 最新发布的构建 | `zerodeng/sublink-pro:dev` | 使用 Docker 镜像 |
 
 稳定版和预发布的版本卡分别检查各自渠道的更新。开发版通过拉取 `:dev` 镜像并重建容器更新。**更新日志**页面显示最近 10 条正式发布。只显示提交哈希的旧稳定版或预发布需沿用原渠道手动更新一次，之后版本卡就能识别渠道。[GitHub Releases](https://github.com/ZeroDeng01/sublinkPro/releases)
@@ -30,7 +30,8 @@
 services:
   sublinkpro:
     # image: zerodeng/sublink-pro:dev # 开发版（功能尝鲜使用）
-    # image: zerodeng/sublink-pro:preview-20261124-171211123 # 预发布，以发布说明列出的标签为准
+    # image: zerodeng/sublink-pro:preview # 滚动预发布
+    # image: zerodeng/sublink-pro:preview-YYYYMMDD-HHMMSSmmm # 替换为已发布版本的时间标签
     image: zerodeng/sublink-pro:latest # 稳定版
     container_name: sublinkpro
     ports:
@@ -91,6 +92,19 @@ docker run --name sublinkpro -p 8000:8000 \
   -v $PWD/template:/app/template \
   -v $PWD/logs:/app/logs \
   -d zerodeng/sublink-pro
+```
+
+</details>
+
+<details>
+<summary><b>预发布</b></summary>
+
+```bash
+docker run --name sublinkpro -p 8000:8000 \
+  -v $PWD/db:/app/db \
+  -v $PWD/template:/app/template \
+  -v $PWD/logs:/app/logs \
+  -d zerodeng/sublink-pro:preview
 ```
 
 </details>
@@ -157,7 +171,7 @@ sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/
 
 ### 📦 Docker Compose 手动更新
 
-预发布和固定版本的稳定版，先将 `image:` 改为发布说明列出的新标签，再执行以下命令。`:latest` 和 `:dev` 是滚动标签，直接使用现有 Compose 文件执行即可。
+使用固定时间标签或稳定版版本标签时，先将 `image:` 改为发布说明列出的新标签，再执行以下命令。使用 `:latest`、`:preview` 或 `:dev` 滚动标签时，直接使用现有 Compose 文件执行即可。
 
 ```bash
 # 进入 docker-compose.yml 所在目录
@@ -204,7 +218,7 @@ docker image prune -f
 
 ## 🤖 Watchtower 自动更新
 
-Watchtower 是一个可以自动更新 Docker 容器的工具，非常适合希望保持项目始终最新的用户。
+Watchtower 可以自动更新 Docker 容器。将镜像设为 `zerodeng/sublink-pro:preview`，即可随 Watchtower 跟进新发布的预发布镜像。
 
 ### 方式一：独立运行 Watchtower
 

@@ -10,8 +10,8 @@ FAILED_PREVIEW = "preview-20261123-abcdef1"
 STABLE = "v1.3.1"
 
 
-def published_release(tag, time, *, draft=False):
-    return {"tag_name": tag, "published_at": f"2026-11-24T{time}:00Z", "draft": draft}
+def published_release(tag, time, *, draft=False, prerelease=False):
+    return {"tag_name": tag, "published_at": f"2026-11-24T{time}:00Z", "draft": draft, "prerelease": prerelease}
 
 
 class ReleaseNotesTests(unittest.TestCase):
@@ -38,6 +38,7 @@ class ReleaseNotesTests(unittest.TestCase):
         self.assertIn(f"{STABLE} → {PREVIEW}", body)
         self.assertIn("feat: useful change", body)
         self.assertIn(f"zerodeng/sublink-pro:{PREVIEW}", body)
+        self.assertIn("- `zerodeng/sublink-pro:preview`（滚动预发布镜像）", body)
         self.assertNotIn("zerodeng/sublink-pro:latest", body)
         self.assertNotIn("Actions", body)
         self.assertNotIn("推送日期", body)
@@ -70,3 +71,29 @@ class ReleaseNotesTests(unittest.TestCase):
         self.assertEqual(title, "Release v1.3.1")
         self.assertIn("zerodeng/sublink-pro:v1.3.1", body)
         self.assertIn("zerodeng/sublink-pro:latest", body)
+        self.assertNotIn("zerodeng/sublink-pro:preview", body)
+
+    @patch.object(release_notes, "api")
+    def test_rolling_preview_selects_latest_public_preview_across_unordered_pages(self, api):
+        first_page = [published_release(f"v1.2.{index}", "15:00") for index in range(99)]
+        first_page.append(published_release(OLDER_PREVIEW, "09:00", prerelease=True))
+        api.side_effect = [
+            first_page,
+            [
+                published_release(PREVIEW, "10:00", prerelease=True),
+                published_release(FAILED_PREVIEW, "14:00", draft=True, prerelease=True),
+                published_release("v2.0.0-rc.1", "13:00", prerelease=True),
+                published_release("preview-20261124-171211124", "12:00"),
+                {**published_release("preview-20261124-171211125", "11:00", prerelease=True), "published_at": None},
+            ],
+        ]
+
+        self.assertEqual(release_notes.latest_published_preview(), PREVIEW)
+        self.assertEqual(api.call_args_list, [
+            call("releases?per_page=100&page=1"),
+            call("releases?per_page=100&page=2"),
+        ])
+
+    @patch.object(release_notes, "api", return_value=[published_release(STABLE, "09:00")])
+    def test_rolling_preview_requires_a_public_preview(self, api):
+        self.assertIsNone(release_notes.latest_published_preview())
