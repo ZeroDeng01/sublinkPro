@@ -101,8 +101,16 @@ docker run --name sublinkpro -p 8000:8000 \
 
 ## 📝 One Line Install or Update Script
 
+Run the script as root on a supported Linux host. By default it installs the latest stable release.
+
 ```bash
 sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)"
+```
+
+Use `--preview` to install the latest published Preview with a binary for your Linux architecture.
+
+```bash
+sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)" -- --preview
 ```
 
 > [!NOTE]
@@ -130,11 +138,7 @@ sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/
 
 ### 📝 Update with the one line script
 
-If you installed with the one line script, run the install script again to update:
-
-```bash
-sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)"
-```
+Run the install command again to update. Use `--preview` each time you want to update to a Preview. The command without arguments selects the stable release.
 
 The script detects the installed version and provides these options:
 

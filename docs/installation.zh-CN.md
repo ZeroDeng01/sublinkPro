@@ -101,8 +101,16 @@ docker run --name sublinkpro -p 8000:8000 \
 
 ## 📝 一键安装/更新脚本
 
+在支持的 Linux 系统上以 root 身份运行。默认安装最新稳定版。
+
 ```bash
 sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)"
+```
+
+加上 `--preview`，安装最新已发布且提供当前 Linux 架构安装包的预发布版本。
+
+```bash
+sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)" -- --preview
 ```
 
 > [!NOTE]
@@ -130,11 +138,7 @@ sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/
 
 ### 📝 一键脚本更新
 
-如果您使用一键脚本安装，可以再次运行安装脚本进行更新：
-
-```bash
-sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)"
-```
+再次运行安装命令即可更新。更新到预发布时，每次都要带上 `--preview`。不带参数时，脚本选择稳定版。
 
 脚本会自动检测已安装的版本，并提供以下选项：
 - **更新程序**：保留所有数据，仅更新程序文件

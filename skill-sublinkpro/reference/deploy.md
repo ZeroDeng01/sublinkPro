@@ -145,8 +145,16 @@ SublinkPro's `client=uri` subscription output is built in and available on all i
 
 ## Method C — one-line install script (local, root, INTERACTIVE)
 
+The default command selects the latest stable release.
+
 ```bash
 sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)"
+```
+
+Use `--preview` for each install or update that should target the latest published Preview with a binary for the current Linux architecture.
+
+```bash
+sh -c "$(wget -qO- https://raw.githubusercontent.com/ZeroDeng01/sublinkPro/refs/heads/main/install.sh)" -- --preview
 ```
 
 **Important:** this script is interactive (`read -r` menus) and must run as
