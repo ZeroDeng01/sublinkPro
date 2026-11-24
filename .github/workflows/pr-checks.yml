@@ -2,129 +2,76 @@ name: PR Checks
 
 on:
   pull_request:
-    types:
-      - opened
-      - reopened
-      - ready_for_review
-    paths-ignore:
-      # 文档文件（不包括 skill-sublinkpro，它会被嵌入到二进制文件中）
-      - '*.md'
-      - 'docs/**'
-      # AI 代理配置和私有文档
-      - '.agents/**'
-      - '.claude/**'
-      - '.codex/**'
-      - 'AGENTS.md'
-      - 'CLAUDE.md'
-      - 'GEMINI.md'
-      - 'CONTRIBUTING.md'
-      # 编辑器/IDE 配置
-      - '.vscode/**'
-      - '.idea/**'
-      - '.editorconfig'
-      # Git 配置
-      - '.gitignore'
-      - '.gitattributes'
-      # 许可证文件
-      - 'LICENSE'
-      - 'COPYING'
+    branches: [dev]
+    types: [opened, reopened, ready_for_review, edited]
   issue_comment:
-    types:
-      - created
+    types: [created]
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: read
 
 jobs:
   prepare-pr-check:
     name: Prepare PR Check
-    if: github.event_name == 'pull_request' || (github.event_name == 'issue_comment' && github.event.issue.pull_request)
+    if: >-
+      (github.event_name == 'pull_request' && github.event.pull_request.state == 'open' &&
+        (github.event.action != 'edited' || github.event.changes.base.ref.from != null)) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+        github.event.issue.state == 'open' && startsWith(github.event.comment.body, '/recheck'))
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
     outputs:
-      should_run: ${{ steps.prepare.outputs.should_run }}
-      authorized: ${{ steps.prepare.outputs.authorized }}
-      checkout_repository: ${{ steps.prepare.outputs.checkout_repository }}
-      checkout_ref: ${{ steps.prepare.outputs.checkout_ref }}
-      pr_number: ${{ steps.prepare.outputs.pr_number }}
+      should_run: ${{ steps.automatic.outputs.should_run || steps.recheck.outputs.should_run }}
+      checkout_repository: ${{ steps.automatic.outputs.checkout_repository || steps.recheck.outputs.checkout_repository }}
+      checkout_ref: ${{ steps.automatic.outputs.checkout_ref || steps.recheck.outputs.checkout_ref }}
+      awaiting_approval: ${{ steps.recheck.outputs.awaiting_approval }}
     steps:
-      - name: Resolve PR context
-        id: prepare
+      - name: Resolve automatic check target
+        id: automatic
+        if: github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ -z "$HEAD_REPOSITORY" || -z "$HEAD_SHA" ]]; then
+            echo 'The pull request head is unavailable.'
+            exit 1
+          fi
+          {
+            echo 'should_run=true'
+            printf 'checkout_repository=%s\ncheckout_ref=%s\n' "$HEAD_REPOSITORY" "$HEAD_SHA"
+          } >> "$GITHUB_OUTPUT"
+          printf 'Checking PR #%s at `%s`.\n' "$PR_NUMBER" "$HEAD_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check out command handler from the default branch
+        if: github.event_name == 'issue_comment'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/scripts/pr_ci.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Authorize recheck and resolve commit
+        id: recheck
+        if: github.event_name == 'issue_comment'
         env:
           GH_TOKEN: ${{ github.token }}
-          EVENT_NAME: ${{ github.event_name }}
-          REPOSITORY: ${{ github.repository }}
-          ACTOR: ${{ github.actor }}
-          COMMENT_BODY: ${{ github.event.comment.body }}
-          COMMENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
-          COMMENT_IS_PR: ${{ github.event.issue.pull_request && 'true' || 'false' }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          echo "should_run=false" >> "$GITHUB_OUTPUT"
-          echo "authorized=false" >> "$GITHUB_OUTPUT"
-
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "authorized=true" >> "$GITHUB_OUTPUT"
-            echo "checkout_repository=$PR_HEAD_REPOSITORY" >> "$GITHUB_OUTPUT"
-            echo "checkout_ref=$PR_HEAD_SHA" >> "$GITHUB_OUTPUT"
-            echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ "$EVENT_NAME" != "issue_comment" ] || [ "$COMMENT_IS_PR" != "true" ]; then
-            exit 0
-          fi
-
-          command="$(printf '%s' "$COMMENT_BODY" | tr -d '\r' | head -n 1)"
-          if [ "$command" != "/recheck" ]; then
-            exit 0
-          fi
-
-          pr_author="$(gh api "repos/$REPOSITORY/pulls/$COMMENT_ISSUE_NUMBER" --jq '.user.login')"
-          checkout_repository="$(gh api "repos/$REPOSITORY/pulls/$COMMENT_ISSUE_NUMBER" --jq '.head.repo.full_name')"
-          checkout_ref="$(gh api "repos/$REPOSITORY/pulls/$COMMENT_ISSUE_NUMBER" --jq '.head.sha')"
-          actor_permission="$(gh api "repos/$REPOSITORY/collaborators/$ACTOR/permission" --jq '.permission' 2>/dev/null || echo "none")"
-
-          authorized=false
-          if [ "$ACTOR" = "$pr_author" ]; then
-            authorized=true
-          fi
-
-          if [ "$actor_permission" = "admin" ]; then
-            authorized=true
-          fi
-
-          echo "should_run=true" >> "$GITHUB_OUTPUT"
-          echo "authorized=$authorized" >> "$GITHUB_OUTPUT"
-          echo "checkout_repository=$checkout_repository" >> "$GITHUB_OUTPUT"
-          echo "checkout_ref=$checkout_ref" >> "$GITHUB_OUTPUT"
-          echo "pr_number=$COMMENT_ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
-
-      - name: Trigger summary
-        if: always()
-        run: |
-          echo "## PR Check Trigger" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Event: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- PR: #${{ steps.prepare.outputs.pr_number || github.event.issue.number || github.event.pull_request.number }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Should run: ${{ steps.prepare.outputs.should_run }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Authorized: ${{ steps.prepare.outputs.authorized }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Comment-triggered reruns require the PR author or a repository admin to comment \`/recheck\`." >> "$GITHUB_STEP_SUMMARY"
+        run: python3 .github/scripts/pr_ci.py prepare-recheck
 
   backend-checks:
     name: Backend Checks
     needs: prepare-pr-check
-    if: needs.prepare-pr-check.outputs.should_run == 'true' && needs.prepare-pr-check.outputs.authorized == 'true'
+    if: needs.prepare-pr-check.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     outputs:
-      golangci: ${{ steps.backend-summary.outputs.golangci }}
-      gotest: ${{ steps.backend-summary.outputs.gotest }}
+      build: ${{ steps.go-build.outcome }}
+      golangci: ${{ steps.golangci.outcome }}
+      gotest: ${{ steps.gotest.outcome }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -138,53 +85,54 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: '1.27.3'
-          cache: true
+          cache: ${{ github.event_name == 'pull_request' }}
           cache-dependency-path: go.sum
 
       - name: Download Go modules
+        id: go-modules
         run: go mod download
+
+      - name: Compile Go packages
+        id: go-build
+        run: go build ./...
 
       - name: Run golangci-lint
         id: golangci
-        continue-on-error: true
+        if: ${{ !cancelled() && steps.go-modules.outcome == 'success' }}
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.15.0
 
       - name: Run Go tests
         id: gotest
-        continue-on-error: true
+        if: ${{ !cancelled() && steps.go-modules.outcome == 'success' }}
         run: go test ./...
 
       - name: Backend check summary
-        id: backend-summary
-        if: always()
+        if: ${{ !cancelled() }}
+        env:
+          GO_BUILD: ${{ steps.go-build.outcome }}
+          GO_LINT: ${{ steps.golangci.outcome }}
+          GO_TEST: ${{ steps.gotest.outcome }}
         run: |
-          golangci_status="${{ steps.golangci.outcome }}"
-          gotest_status="${{ steps.gotest.outcome }}"
-
-          echo "golangci=$golangci_status" >> "$GITHUB_OUTPUT"
-          echo "gotest=$gotest_status" >> "$GITHUB_OUTPUT"
-
-          echo "## Backend Checks" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Check | Result |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| golangci-lint | $golangci_status |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| go test ./... | $gotest_status |" >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$golangci_status" != "success" ] || [ "$gotest_status" != "success" ]; then
-            exit 1
-          fi
+          {
+            printf '## Backend Checks\n\n| Check | Result |\n| --- | --- |\n'
+            printf '| go build ./... | %s |\n' "$GO_BUILD"
+            printf '| golangci-lint | %s |\n' "$GO_LINT"
+            printf '| go test ./... | %s |\n' "$GO_TEST"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   frontend-checks:
     name: Frontend Checks
     needs: prepare-pr-check
-    if: needs.prepare-pr-check.outputs.should_run == 'true' && needs.prepare-pr-check.outputs.authorized == 'true'
+    if: needs.prepare-pr-check.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webs
     outputs:
-      lint: ${{ steps.frontend-summary.outputs.lint }}
-      build: ${{ steps.frontend-summary.outputs.build }}
+      lint: ${{ steps.frontend-lint.outcome }}
+      build: ${{ steps.frontend-build.outcome }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -203,12 +151,12 @@ jobs:
         run: corepack enable
 
       - name: Get yarn cache directory path
+        if: github.event_name == 'pull_request'
         id: yarn-cache-dir-path
-        run: |
-          cd webs
-          echo "dir=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+        run: echo "dir=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
 
       - name: Cache dependencies
+        if: github.event_name == 'pull_request'
         uses: actions/cache@v6
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
@@ -217,41 +165,61 @@ jobs:
             ${{ runner.os }}-yarn-
 
       - name: Install frontend dependencies
-        run: |
-          cd webs
-          yarn install --immutable
+        id: frontend-dependencies
+        run: yarn install --immutable
 
       - name: Run frontend lint
         id: frontend-lint
-        continue-on-error: true
-        run: |
-          cd webs
-          yarn run lint
+        run: yarn run lint
 
       - name: Build frontend
         id: frontend-build
-        continue-on-error: true
-        run: |
-          cd webs
-          yarn run build
+        if: ${{ !cancelled() && steps.frontend-dependencies.outcome == 'success' }}
+        run: yarn run build
 
       - name: Frontend check summary
-        id: frontend-summary
-        if: always()
+        if: ${{ !cancelled() }}
+        working-directory: .
+        env:
+          FRONTEND_LINT: ${{ steps.frontend-lint.outcome }}
+          FRONTEND_BUILD: ${{ steps.frontend-build.outcome }}
         run: |
-          lint_status="${{ steps.frontend-lint.outcome }}"
-          build_status="${{ steps.frontend-build.outcome }}"
+          {
+            printf '## Frontend Checks\n\n| Check | Result |\n| --- | --- |\n'
+            printf '| yarn run lint | %s |\n' "$FRONTEND_LINT"
+            printf '| yarn run build | %s |\n' "$FRONTEND_BUILD"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-          echo "lint=$lint_status" >> "$GITHUB_OUTPUT"
-          echo "build=$build_status" >> "$GITHUB_OUTPUT"
+  report-recheck:
+    name: Post Recheck Result
+    needs: [prepare-pr-check, backend-checks, frontend-checks]
+    if: >-
+      always() && github.event_name == 'issue_comment' &&
+        (needs.prepare-pr-check.outputs.should_run == 'true' || needs.prepare-pr-check.outputs.awaiting_approval == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: write
+    steps:
+      - name: Check out reporter from the default branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/scripts/pr_ci.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
 
-          echo "## Frontend Checks" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Check | Result |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| yarn run lint | $lint_status |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| yarn run build | $build_status |" >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$lint_status" != "success" ] || [ "$build_status" != "success" ]; then
-            exit 1
-          fi
+      - name: Publish recheck report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AWAITING_APPROVAL: ${{ needs.prepare-pr-check.outputs.awaiting_approval }}
+          CHECKED_SHA: ${{ needs.prepare-pr-check.outputs.checkout_ref }}
+          BACKEND_RESULT: ${{ needs.backend-checks.result }}
+          GO_BUILD: ${{ needs.backend-checks.outputs.build }}
+          GO_LINT: ${{ needs.backend-checks.outputs.golangci }}
+          GO_TEST: ${{ needs.backend-checks.outputs.gotest }}
+          FRONTEND_RESULT: ${{ needs.frontend-checks.result }}
+          FRONTEND_LINT: ${{ needs.frontend-checks.outputs.lint }}
+          FRONTEND_BUILD: ${{ needs.frontend-checks.outputs.build }}
+        run: python3 .github/scripts/pr_ci.py report-recheck

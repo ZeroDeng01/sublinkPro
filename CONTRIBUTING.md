@@ -20,6 +20,8 @@ Thank you for your interest in contributing to SublinkPro! This guide will help 
 - `feature/*` - Feature branches
 - `fix/*` - Bug fix branches
 
+[Dependabot version update PRs](docs/development.md#dependabot) also target `dev`.
+
 ### Commit Messages
 
 Use semantic commit prefixes:
@@ -129,23 +131,18 @@ See [Internationalization Guide](docs/internationalization.md) for complete requ
 
 ## Pull Request Process
 
-1. **Ensure your PR targets `dev`** (not `main`)
+1. **Set the PR base branch to `dev`.** The bot explains and closes PRs targeting other branches.
 2. **Fill out the PR template** completely
 3. **Link related issues** if applicable
 4. **Verify all checks pass**:
    - Frontend: `yarn run lint` and `yarn run build`
-   - Backend: `golangci-lint run` and `go test ./...`
+   - Backend: `go build ./...`, `golangci-lint run`, and `go test ./...`
 5. **Request review** from maintainers
 6. **Address feedback** promptly
 
 ### PR Checks
 
-Automated checks run when PRs are opened, reopened, or marked ready for review:
-
-- Backend: `golangci-lint` and `go test ./...`
-- Frontend: `yarn run lint` and `yarn run build`
-
-To manually re-trigger checks, comment `/recheck` on your PR.
+New PRs targeting `dev` get an automatic check and a report in the PR conversation. After pushing fixes, the PR author or a repository administrator can comment `/recheck` to check the latest commit and receive a new report. A fork author can request a recheck once the automatic check has finished. See [PR automated checks](docs/development.md#6-pr-automated-checks) for the checks and approval flow.
 
 ## Documentation Updates
 

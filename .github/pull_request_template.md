@@ -53,6 +53,7 @@ Related to #
 - [ ] 后端检查已通过
 
   ```text
+  go build ./...
   golangci-lint run
   go test ./...
   ```
@@ -75,8 +76,8 @@ Related to #
 
 ```
 
-<!-- PR 检查结果请查看 GitHub Actions 状态。 -->
-<!-- Check PR results in GitHub Actions status. -->
+<!-- 请将目标分支设为 dev。自动检查和 /recheck 会把报告发布在 PR 对话中。 -->
+<!-- Target dev. Automatic checks and /recheck post reports in the PR conversation. -->
 
 ## 其他说明
 

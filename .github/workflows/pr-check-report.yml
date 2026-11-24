@@ -1,0 +1,35 @@
+name: PR Check Report
+
+on:
+  workflow_run:
+    workflows: [PR Checks]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  report-automatic:
+    name: Post Automatic PR Check Result
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      issues: write
+    concurrency:
+      group: pr-check-report-${{ github.event.workflow_run.id }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out reporter from the default branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/scripts/pr_ci.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Publish automatic check report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/pr_ci.py report-automatic

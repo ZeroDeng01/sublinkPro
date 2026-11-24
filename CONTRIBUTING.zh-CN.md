@@ -20,6 +20,8 @@
 - `feature/*` - 功能分支
 - `fix/*` - 修复分支
 
+[Dependabot 版本更新 PR](docs/development.zh-CN.md#dependabot) 也以 `dev` 为目标分支。
+
 ### 提交信息
 
 使用语义化提交前缀:
@@ -129,23 +131,18 @@ go test ./...            # 运行所有测试
 
 ## PR 流程
 
-1. **确保 PR 目标分支是 `dev`**(不是 `main`)
+1. **将 PR 目标分支设为 `dev`。** 机器人会留言说明并关闭指向其他分支的 PR。
 2. **完整填写 PR 模板**
 3. **关联相关 issue**(如果有)
 4. **验证所有检查通过**:
    - 前端:`yarn run lint` 和 `yarn run build`
-   - 后端:`golangci-lint run` 和 `go test ./...`
+   - 后端：`go build ./...`、`golangci-lint run` 和 `go test ./...`
 5. **请求 review**
 6. **及时处理反馈**
 
 ### PR 检查
 
-当 PR 打开、重新打开或标记为 ready for review 时会自动运行检查:
-
-- 后端:`golangci-lint` 和 `go test ./...`
-- 前端:`yarn run lint` 和 `yarn run build`
-
-如需手动重新触发检查,在 PR 中评论 `/recheck`。
+新建以 `dev` 为目标的 PR 时会自动运行检查，并在 PR 对话发布报告。推送修复后，PR 作者或仓库管理员可评论 `/recheck`，检查最新提交并获取新报告。来自 fork 的 PR 作者可以在首轮检查结束后发起复查。检查项和审批流程见 [PR 自动检查](docs/development.zh-CN.md#6-pr-自动检查)。
 
 ## 文档更新
 

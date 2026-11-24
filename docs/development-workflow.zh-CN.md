@@ -351,7 +351,7 @@ git commit -m "feat(scope): description"
 
 ### 创建拉取请求
 
-**目标分支**: 始终以 `dev` 为目标 (不是 `main`)
+将 PR 目标分支设为 `dev`。机器人会留言说明并关闭指向其他分支的 PR。
 
 **PR 描述应包括**:
 
@@ -393,15 +393,15 @@ Fixes #456
 
 ### 自动化 PR 检查
 
-`.github/workflows/pr-checks.yml` 在 PR 打开时自动运行:
+创建以 `dev` 为目标的 PR 时，仓库会运行以下检查，并在 PR 对话发布报告：
 
-- 后端: `golangci-lint run`, `go test ./...`
+- 后端：`go build ./...`、`golangci-lint run`、`go test ./...`
 - 前端: `yarn run lint`, `yarn run build`
 
 **如果检查失败**:
 1. 修复问题
 2. 推送修复提交
-3. 在 PR 上评论 `/recheck` 重新触发检查
+3. 由 PR 作者或仓库管理员评论 `/recheck`，检查最新提交并获取新报告。fork 审批流程见 [PR 自动检查](development.zh-CN.md#6-pr-自动检查)。
 
 ### 代码审查
 
