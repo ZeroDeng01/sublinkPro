@@ -161,7 +161,7 @@ docker-compose up -d
 
 ### GitHub Actions 工作流
 
-仓库使用 `.github/workflows/build-release.yml` 进行自动化构建。
+仓库使用 `.github/workflows/build-release.yml` 进行自动化构建。推送到 `dependabot/**` 的提交会跳过此工作流。以 `dev` 为目标的 Dependabot PR 会运行 PR 检查，合并到 `dev` 后触发常规构建流程。
 
 #### 工作流步骤
 

@@ -199,8 +199,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: write
+      pull-requests: write
     steps:
       - name: Check out reporter from the default branch
         uses: actions/checkout@v7

@@ -15,8 +15,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-      pull-requests: read
-      issues: write
+      pull-requests: write
     concurrency:
       group: pr-check-report-${{ github.event.workflow_run.id }}
       cancel-in-progress: false
