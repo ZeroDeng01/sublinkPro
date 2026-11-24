@@ -3,6 +3,7 @@ package socks5
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"strconv"
@@ -223,5 +224,203 @@ func TestManagerRunsMultipleListenersAndPreservesOldGenerationOnBindFailure(t *t
 			t.Fatalf("old listener %d was lost after failed apply: %v", port, err)
 		}
 		_ = conn.Close()
+	}
+}
+
+type stubAddrListener struct {
+	addr net.Addr
+}
+
+func (s *stubAddrListener) Accept() (net.Conn, error) { return nil, io.EOF }
+func (s *stubAddrListener) Close() error              { return nil }
+func (s *stubAddrListener) Addr() net.Addr            { return s.addr }
+
+func TestListenerEndpointMatchingAndConflictDetection(t *testing.T) {
+	cases := []struct {
+		name         string
+		existingSpec ListenerSpec
+		boundAddr    net.Addr
+		targetSpec   ListenerSpec
+		wantMatch    bool
+		wantConflict bool
+	}{
+		{
+			name:         "0.0.0.0 bound as dual-stack :: matches 0.0.0.0",
+			existingSpec: ListenerSpec{ID: "default", ListenAddress: "0.0.0.0", Port: 20000},
+			boundAddr:    &net.TCPAddr{IP: net.IPv6unspecified, Port: 20000},
+			targetSpec:   ListenerSpec{ID: "default", ListenAddress: "0.0.0.0", Port: 20000},
+			wantMatch:    true,
+			wantConflict: true,
+		},
+		{
+			name:         "0.0.0.0 bound with nil IP matches 0.0.0.0",
+			existingSpec: ListenerSpec{ID: "default", ListenAddress: "0.0.0.0", Port: 20000},
+			boundAddr:    &net.TCPAddr{Port: 20000},
+			targetSpec:   ListenerSpec{ID: "default", ListenAddress: "0.0.0.0", Port: 20000},
+			wantMatch:    true,
+			wantConflict: true,
+		},
+		{
+			name:         "bracketed :: matches :: bound addr",
+			existingSpec: ListenerSpec{ID: "default", ListenAddress: "::", Port: 20000},
+			boundAddr:    &net.TCPAddr{IP: net.IPv6unspecified, Port: 20000},
+			targetSpec:   ListenerSpec{ID: "default", ListenAddress: "[::]", Port: 20000},
+			wantMatch:    true,
+			wantConflict: true,
+		},
+		{
+			name:         "wildcard :: bound addr conflicts with 127.0.0.1 on same port",
+			existingSpec: ListenerSpec{ID: "default", ListenAddress: "0.0.0.0", Port: 20000},
+			boundAddr:    &net.TCPAddr{IP: net.IPv6unspecified, Port: 20000},
+			targetSpec:   ListenerSpec{ID: "default", ListenAddress: "127.0.0.1", Port: 20000},
+			wantMatch:    false,
+			wantConflict: true,
+		},
+		{
+			name:         "127.0.0.1 bound addr conflicts with 0.0.0.0 on same port",
+			existingSpec: ListenerSpec{ID: "default", ListenAddress: "127.0.0.1", Port: 20000},
+			boundAddr:    &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20000},
+			targetSpec:   ListenerSpec{ID: "default", ListenAddress: "0.0.0.0", Port: 20000},
+			wantMatch:    false,
+			wantConflict: true,
+		},
+		{
+			name:         "different port does not match or conflict",
+			existingSpec: ListenerSpec{ID: "default", ListenAddress: "127.0.0.1", Port: 20000},
+			boundAddr:    &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20000},
+			targetSpec:   ListenerSpec{ID: "default", ListenAddress: "127.0.0.1", Port: 20001},
+			wantMatch:    false,
+			wantConflict: false,
+		},
+		{
+			name:         "different non-wildcard IP on same port does not conflict",
+			existingSpec: ListenerSpec{ID: "default", ListenAddress: "127.0.0.1", Port: 20000},
+			boundAddr:    &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20000},
+			targetSpec:   ListenerSpec{ID: "default", ListenAddress: "192.0.2.10", Port: 20000},
+			wantMatch:    false,
+			wantConflict: false,
+		},
+		{
+			name:         "localhost bound as 127.0.0.1 matches localhost and conflicts with 127.0.0.1",
+			existingSpec: ListenerSpec{ID: "default", ListenAddress: "localhost", Port: 20000},
+			boundAddr:    &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20000},
+			targetSpec:   ListenerSpec{ID: "default", ListenAddress: "localhost", Port: 20000},
+			wantMatch:    true,
+			wantConflict: true,
+		},
+		{
+			name:         "localhost bound as 127.0.0.1 also matches explicit 127.0.0.1",
+			existingSpec: ListenerSpec{ID: "default", ListenAddress: "localhost", Port: 20000},
+			boundAddr:    &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20000},
+			targetSpec:   ListenerSpec{ID: "default", ListenAddress: "127.0.0.1", Port: 20000},
+			wantMatch:    true,
+			wantConflict: true,
+		},
+		{
+			name:         "127.0.0.1 bound conflicts with localhost target",
+			existingSpec: ListenerSpec{ID: "default", ListenAddress: "127.0.0.1", Port: 20000},
+			boundAddr:    &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20000},
+			targetSpec:   ListenerSpec{ID: "default", ListenAddress: "localhost", Port: 20000},
+			wantMatch:    false,
+			wantConflict: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			runtime := &listenerRuntime{
+				spec:     tc.existingSpec,
+				listener: &stubAddrListener{addr: tc.boundAddr},
+			}
+			if got := listenerMatchesEndpoint(runtime, tc.targetSpec); got != tc.wantMatch {
+				t.Fatalf("listenerMatchesEndpoint() = %v, want %v", got, tc.wantMatch)
+			}
+			if got := listenerConflictsWithEndpoint(runtime, tc.targetSpec); got != tc.wantConflict {
+				t.Fatalf("listenerConflictsWithEndpoint() = %v, want %v", got, tc.wantConflict)
+			}
+		})
+	}
+}
+
+func freeWildcardPort(t *testing.T) int {
+	t.Helper()
+	var listenConfig net.ListenConfig
+	listener, err := listenConfig.Listen(context.Background(), "tcp", "0.0.0.0:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr, ok := listener.Addr().(*net.TCPAddr)
+	if !ok {
+		_ = listener.Close()
+		t.Fatalf("unexpected listener address type %T", listener.Addr())
+	}
+	port := addr.Port
+	_ = listener.Close()
+	return port
+}
+
+func TestManagerHotReloadsWildcardListenerWithoutAddressInUse(t *testing.T) {
+	setupSocks5SettingsDB(t)
+	previous := listCandidateNodesFunc
+	listCandidateNodesFunc = func(cfg Config) ([]models.Node, error) {
+		if cfg.Selection == "specific" {
+			return nil, errors.New("configured SOCKS5 node was not found")
+		}
+		return []models.Node{{ID: 1, Link: "socks5://upstream:1080", Name: "best-node"}}, nil
+	}
+	t.Cleanup(func() { listCandidateNodesFunc = previous })
+
+	port := freeWildcardPort(t)
+	manager := &Manager{}
+	t.Cleanup(manager.Stop)
+
+	cfgSpecific := Config{
+		Enabled: true, ListenAddress: "0.0.0.0", Port: port, Username: "proxy", Password: "secret",
+		RequireAuth: true, Selection: "specific", NodeID: 999999,
+	}
+	if err := manager.Apply(cfgSpecific); err != nil {
+		t.Fatalf("initial apply failed: %v", err)
+	}
+	initialRuntimes := manager.runtimeSnapshot()
+	if len(initialRuntimes) != 1 {
+		t.Fatalf("expected 1 listener runtime, got %d", len(initialRuntimes))
+	}
+
+	// Re-applying identical wildcard config should reuse the existing runtime.
+	if err := manager.Apply(cfgSpecific); err != nil {
+		t.Fatalf("idempotent apply failed: %v", err)
+	}
+	reusedRuntimes := manager.runtimeSnapshot()
+	if len(reusedRuntimes) != 1 || reusedRuntimes[0] != initialRuntimes[0] {
+		t.Fatalf("expected unchanged wildcard listener runtime to be reused")
+	}
+
+	// Switching selection while keeping 0.0.0.0:port must replace the runtime cleanly.
+	cfgBest := cfgSpecific
+	cfgBest.Selection = "best"
+	cfgBest.NodeID = 0
+	if err := manager.Apply(cfgBest); err != nil {
+		t.Fatalf("hot reload on wildcard listener failed: %v", err)
+	}
+	reloadedRuntimes := manager.runtimeSnapshot()
+	if len(reloadedRuntimes) != 1 || reloadedRuntimes[0].cfg.Selection != "best" {
+		t.Fatalf("unexpected reloaded runtime config: %+v", reloadedRuntimes)
+	}
+	snapshot, err := manager.RoutingSnapshot(RoutingSnapshotQuery{ProfileID: defaultProfileID})
+	if err != nil {
+		t.Fatalf("routing snapshot after reload failed: %v", err)
+	}
+	if snapshot.Total != 1 || len(snapshot.Items) != 1 || snapshot.Items[0].NodeName != "best-node" {
+		t.Fatalf("unexpected routing snapshot after reload: %+v", snapshot)
+	}
+
+	// Switching between wildcard 0.0.0.0 and specific 127.0.0.1 on the same port must also rebind cleanly.
+	cfgLoopback := cfgBest
+	cfgLoopback.ListenAddress = "127.0.0.1"
+	if err := manager.Apply(cfgLoopback); err != nil {
+		t.Fatalf("switch wildcard -> loopback failed: %v", err)
+	}
+	if err := manager.Apply(cfgBest); err != nil {
+		t.Fatalf("switch loopback -> wildcard failed: %v", err)
 	}
 }

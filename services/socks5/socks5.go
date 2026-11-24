@@ -970,7 +970,7 @@ func (m *Manager) ApplyListeners(cfg Config, listeners []ListenerSpec) error {
 				return cfgErr
 			}
 			endpoint := net.JoinHostPort(spec.ListenAddress, strconv.Itoa(spec.Port))
-			if existing := old[spec.ID]; existing != nil && existing.listener != nil && existing.listener.Addr().String() == endpoint && configsEqual(existing.cfg, listenerCfg) && listenerSpecsEqual(existing.spec, spec) {
+			if existing := old[spec.ID]; listenerMatchesEndpoint(existing, spec) && configsEqual(existing.cfg, listenerCfg) && listenerSpecsEqual(existing.spec, spec) {
 				prepared[spec.ID] = existing
 				continue
 			}
@@ -983,7 +983,7 @@ func (m *Manager) ApplyListeners(cfg Config, listeners []ListenerSpec) error {
 			listener, listenErr := listenConfig.Listen(context.Background(), "tcp", endpoint)
 			if listenErr != nil {
 				existing := old[spec.ID]
-				if existing != nil && existing.listener != nil && existing.listener.Addr().String() == endpoint {
+				if listenerConflictsWithEndpoint(existing, spec) {
 					closeListenerRuntime(existing)
 					listener, listenErr = listenConfig.Listen(context.Background(), "tcp", endpoint)
 					if listenErr != nil {
@@ -1028,6 +1028,86 @@ func configsEqual(a, b Config) bool {
 
 func listenerSpecsEqual(a, b ListenerSpec) bool {
 	return reflect.DeepEqual(a, b)
+}
+
+// Dual-stack wildcard binds such as 0.0.0.0:port report a bound address of
+// [::]:port on Linux, so compare normalized host IPs and ports instead of raw strings.
+func listenerAddrHostPort(addr net.Addr) (string, int, bool) {
+	if addr == nil {
+		return "", 0, false
+	}
+	if tcpAddr, ok := addr.(*net.TCPAddr); ok {
+		if len(tcpAddr.IP) == 0 {
+			return "::", tcpAddr.Port, true
+		}
+		return tcpAddr.IP.String(), tcpAddr.Port, true
+	}
+	host, portText, err := net.SplitHostPort(addr.String())
+	if err != nil {
+		return "", 0, false
+	}
+	port, err := strconv.Atoi(portText)
+	if err != nil {
+		return "", 0, false
+	}
+	if strings.TrimSpace(host) == "" {
+		host = "::"
+	}
+	return host, port, true
+}
+
+func normalizeListenIP(host string) net.IP {
+	trimmed := strings.TrimSpace(host)
+	trimmed = strings.TrimPrefix(trimmed, "[")
+	trimmed = strings.TrimSuffix(trimmed, "]")
+	if zoneIndex := strings.IndexByte(trimmed, '%'); zoneIndex >= 0 {
+		trimmed = trimmed[:zoneIndex]
+	}
+	return net.ParseIP(trimmed)
+}
+
+func listenerMatchesEndpoint(existing *listenerRuntime, spec ListenerSpec) bool {
+	if existing == nil || existing.listener == nil {
+		return false
+	}
+	boundHost, boundPort, ok := listenerAddrHostPort(existing.listener.Addr())
+	if !ok || boundPort != spec.Port {
+		return false
+	}
+	if existing.spec.Port == spec.Port && strings.EqualFold(strings.TrimSpace(existing.spec.ListenAddress), strings.TrimSpace(spec.ListenAddress)) {
+		return true
+	}
+	boundIP := normalizeListenIP(boundHost)
+	wantIP := normalizeListenIP(spec.ListenAddress)
+	if boundIP != nil && wantIP != nil {
+		return boundIP.Equal(wantIP) || (boundIP.IsUnspecified() && wantIP.IsUnspecified())
+	}
+	return false
+}
+
+func listenerConflictsWithEndpoint(existing *listenerRuntime, spec ListenerSpec) bool {
+	if listenerMatchesEndpoint(existing, spec) {
+		return true
+	}
+	if existing == nil || existing.listener == nil {
+		return false
+	}
+	boundHost, boundPort, ok := listenerAddrHostPort(existing.listener.Addr())
+	if !ok || boundPort != spec.Port {
+		return false
+	}
+	boundIP := normalizeListenIP(boundHost)
+	wantIP := normalizeListenIP(spec.ListenAddress)
+	if (boundIP != nil && boundIP.IsUnspecified()) || (wantIP != nil && wantIP.IsUnspecified()) {
+		return true
+	}
+	if strings.EqualFold(strings.TrimSpace(spec.ListenAddress), "localhost") && boundIP != nil && boundIP.IsLoopback() {
+		return true
+	}
+	if strings.EqualFold(strings.TrimSpace(existing.spec.ListenAddress), "localhost") && wantIP != nil && wantIP.IsLoopback() {
+		return true
+	}
+	return false
 }
 
 func (m *Manager) restoreRuntime(id string, previous *listenerRuntime, dial DialFunc) {
