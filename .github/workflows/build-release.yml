@@ -4,8 +4,8 @@ on:
   push:
     tags:
       - 'v*'
-    branches:
-      - '**'
+    branches-ignore:
+      - 'dependabot/**'
     paths-ignore:
       # 文档文件（不包括 skill-sublinkpro，它会被嵌入到二进制文件中）
       - '*.md'

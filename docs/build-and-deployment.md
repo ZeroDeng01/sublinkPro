@@ -161,7 +161,7 @@ docker-compose up -d
 
 ### GitHub Actions Workflow
 
-The repository uses `.github/workflows/build-release.yml` for automated builds.
+The repository uses `.github/workflows/build-release.yml` for automated builds. Pushes to `dependabot/**` are excluded from this workflow. Dependabot PRs targeting `dev` run PR checks, and merging them into `dev` triggers the regular build pipeline.
 
 #### Workflow Steps
 
