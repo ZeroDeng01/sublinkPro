@@ -9,7 +9,7 @@
 | 渠道 | 使用场景 | Docker 镜像 | Linux 一键脚本 |
 | --- | --- | --- | --- |
 | 稳定版 | 日常使用，推荐选择 | `zerodeng/sublink-pro:latest`，也可固定到 `:v1.3.0` 等版本 | 默认 |
-| 预发布 | 提前体验 `main` 已发布的改动 | 以预发布说明列出的日期标签为准，如 `zerodeng/sublink-pro:preview-20261124-4a211cb` | `--preview` |
+| 预发布 | 提前体验 `main` 已发布的改动 | 以预发布说明列出的时间标签为准，如 `zerodeng/sublink-pro:preview-20261124-171211123` | `--preview` |
 | 开发版 | 测试 `dev` 最新发布的构建 | `zerodeng/sublink-pro:dev` | 使用 Docker 镜像 |
 
 系统版本卡按已安装版本所属渠道检查更新。**更新日志**页面显示最近 10 条正式发布。只显示提交哈希的旧构建需要先沿用原渠道手动更新一次，之后版本卡就能识别渠道。[GitHub Releases](https://github.com/ZeroDeng01/sublinkPro/releases)
@@ -30,7 +30,7 @@
 services:
   sublinkpro:
     # image: zerodeng/sublink-pro:dev # 开发版（功能尝鲜使用）
-    # image: zerodeng/sublink-pro:preview-20261124-4a211cb # 预发布，以发布说明列出的标签为准
+    # image: zerodeng/sublink-pro:preview-20261124-171211123 # 预发布，以发布说明列出的标签为准
     image: zerodeng/sublink-pro:latest # 稳定版
     container_name: sublinkpro
     ports:

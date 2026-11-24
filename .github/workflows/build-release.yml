@@ -122,7 +122,6 @@ jobs:
     needs: [build-frontend, backend-quality]
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       contents: write
     outputs:
       tag: ${{ steps.preview.outputs.tag }}

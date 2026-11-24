@@ -5,7 +5,7 @@ import publish_dev_ref
 import release_notes
 
 
-PREVIEW = "preview-20261124-4a211cb"
+PREVIEW = "preview-20261124-171211123"
 OLDER_PREVIEW = "preview-20261123-abcdef0"
 FAILED_PREVIEW = "preview-20261123-abcdef1"
 STABLE = "v1.3.1"
@@ -35,7 +35,7 @@ class ReleaseNotesTests(unittest.TestCase):
             call("for-each-ref", "--merged=HEAD", "--format=%(refname:strip=2)", "refs/tags"),
             call("log", "--format=- %s (%h)", f"refs/tags/{STABLE}..HEAD"),
         ])
-        self.assertEqual(title, "Preview 20261124-4a211cb")
+        self.assertEqual(title, "Preview 20261124-171211123")
         self.assertTrue(body.startswith("## 预发布\n"))
         self.assertIn(f"{STABLE} → {PREVIEW}", body)
         self.assertIn("feat: useful change", body)

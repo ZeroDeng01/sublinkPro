@@ -13,6 +13,7 @@ const release = (tag_name, day, extra = {}) => ({
 test('each installed channel selects its own source and an old raw SHA makes no request', () => {
   assert.equal(getVersionSource('v1.3.0'), `${GITHUB_RELEASES_API}/latest`);
   assert.equal(getVersionSource('preview-20261124-4a211cb'), GITHUB_RELEASES_API);
+  assert.equal(getVersionSource('preview-20261124-171211123'), GITHUB_RELEASES_API);
   assert.match(getVersionSource('dev-4a211cb00000'), /\/git\/ref\/tags\/dev-image$/);
   assert.equal(getVersionSource('4a211cb'), null);
   assert.equal(getVersionSource('dev'), null);
@@ -26,9 +27,9 @@ test('stable compares numeric versions and ignores prereleases', () => {
   assert.equal(getVersionUpdate('v1.9.9', { ...latest, prerelease: true }), null);
 });
 
-test('preview finds a newer same-day publication and ignores stable releases', () => {
+test('preview finds a timestamped update for an older hash-based build on the same day', () => {
   const current = 'preview-20261124-0000000';
-  const latest = 'preview-20261124-4a211cb';
+  const latest = 'preview-20261124-171211123';
   const releases = [
     release('v1.3.0', 25),
     release(latest, 24, { published_at: '2026-11-24T18:00:00Z', prerelease: true }),

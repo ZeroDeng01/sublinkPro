@@ -9,7 +9,7 @@ This document explains how to install, update, and uninstall SublinkPro.
 | Channel | When to use it | Docker image | Linux one-line installer |
 | --- | --- | --- | --- |
 | Stable | Recommended for regular use | `zerodeng/sublink-pro:latest` or a fixed version such as `:v1.3.0` | Default |
-| Preview | Try changes published from `main` before the next stable release | The dated image listed in the Preview notes, for example `zerodeng/sublink-pro:preview-20261124-4a211cb` | `--preview` |
+| Preview | Try changes published from `main` before the next stable release | The timestamped image listed in the Preview notes, for example `zerodeng/sublink-pro:preview-20261124-171211123` | `--preview` |
 | Development | Test the latest published builds from `dev` | `zerodeng/sublink-pro:dev` | Use the Docker image |
 
 The version card checks for updates in the installed build's channel. The **Changelog** page shows the 10 most recent stable releases. Older builds identified only by a commit hash need one manual update using their existing channel before automatic checks can identify it. [GitHub Releases](https://github.com/ZeroDeng01/sublinkPro/releases)
@@ -30,7 +30,7 @@ Create `docker-compose.yml`:
 services:
   sublinkpro:
     # image: zerodeng/sublink-pro:dev # Development version, for trying new features
-    # image: zerodeng/sublink-pro:preview-20261124-4a211cb # Preview, use the tag listed in its release notes
+    # image: zerodeng/sublink-pro:preview-20261124-171211123 # Preview, use the tag listed in its release notes
     image: zerodeng/sublink-pro:latest # Stable version
     container_name: sublinkpro
     ports:

@@ -1,6 +1,6 @@
 """Reserve the dated Git tag shared by a main-branch image and prerelease."""
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -10,7 +10,8 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 
-PREVIEW_TAG = re.compile(r"preview-[0-9]{8}-([0-9a-f]{7,40})")
+# Millisecond timestamps and legacy short hashes both fit the published tag shape.
+PREVIEW_TAG = re.compile(r"preview-[0-9]{8}-[0-9a-f]{7,40}")
 
 
 def api(path, *, data=None, allow_missing=False, method=None):
@@ -43,27 +44,20 @@ def tag_commit(ref):
     return target["sha"] if target["type"] == "commit" else None
 
 
-def release_date(run_id):
-    created_at = api(f"actions/runs/{run_id}")["created_at"]
-    return datetime.fromisoformat(created_at.replace("Z", "+00:00")).astimezone(
-        ZoneInfo("Asia/Shanghai")
-    ).strftime("%Y%m%d")
-
-
-def reserve_preview_tag(commit, run_id):
+def reserve_preview_tag(commit):
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("The preview release requires a full commit SHA.")
 
     refs = api("git/matching-refs/tags/preview-")
     tags = {ref["ref"].removeprefix("refs/tags/"): ref for ref in refs}
     for tag, ref in sorted(tags.items()):
-        match = PREVIEW_TAG.fullmatch(tag)
-        if match and commit.startswith(match[1]) and tag_commit(ref) == commit:
+        if PREVIEW_TAG.fullmatch(tag) and tag_commit(ref) == commit:
             return tag
 
-    date = release_date(run_id)
-    for length in range(7, len(commit) + 1):
-        tag = f"preview-{date}-{commit[:length]}"
+    timestamp = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Shanghai"))
+    while True:
+        tag = f"preview-{timestamp:%Y%m%d-%H%M%S}{timestamp.microsecond // 1000:03d}"
+        timestamp += timedelta(milliseconds=1)
         if tag in tags:
             continue
         try:
@@ -79,7 +73,6 @@ def reserve_preview_tag(commit, run_id):
             if tag_commit(occupied) != commit:
                 continue
         return tag
-    raise RuntimeError(f"No free preview tag for commit {commit}.")
 
 
 def preview_is_published(tag):
@@ -96,7 +89,7 @@ def preview_title(tag):
 
 
 if __name__ == "__main__":
-    tag = reserve_preview_tag(os.environ["GITHUB_SHA"], os.environ["GITHUB_RUN_ID"])
+    tag = reserve_preview_tag(os.environ["GITHUB_SHA"])
     published = str(preview_is_published(tag)).lower()
     with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
         print(f"tag={tag}", file=output)

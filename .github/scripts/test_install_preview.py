@@ -65,7 +65,7 @@ class InstallPreviewTests(unittest.TestCase):
 
     def test_selects_newest_published_preview_with_uploaded_asset_across_pages(self):
         stable = release("v1.3.0", 24, prerelease=False)
-        expected = "preview-20261123-abcdef01"
+        expected = "preview-20261123-171211123"
         first_page = [release("preview-20261122-abcdef0", 22)] + [stable] * 99
         second_page = [
             release("preview-20261128-abcdef0", 28, draft=True),
