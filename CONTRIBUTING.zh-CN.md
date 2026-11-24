@@ -20,6 +20,8 @@
 - `feature/*` - 功能分支
 - `fix/*` - 修复分支
 
+[Dependabot 版本更新 PR](docs/development.zh-CN.md#dependabot) 也以 `dev` 为目标分支。
+
 ### 提交信息
 
 使用语义化提交前缀:

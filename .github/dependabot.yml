@@ -7,6 +7,7 @@ updates:
   # Go 模块依赖
   - package-ecosystem: "gomod"
     directory: "/"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -38,6 +39,7 @@ updates:
   # npm/yarn 依赖（前端）
   - package-ecosystem: "npm"
     directory: "/webs"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -81,6 +83,7 @@ updates:
   # GitHub Actions 依赖
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "dev"
     schedule:
       interval: "monthly"
       day: "monday"

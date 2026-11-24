@@ -20,6 +20,8 @@ Thank you for your interest in contributing to SublinkPro! This guide will help 
 - `feature/*` - Feature branches
 - `fix/*` - Bug fix branches
 
+[Dependabot version update PRs](docs/development.md#dependabot) also target `dev`.
+
 ### Commit Messages
 
 Use semantic commit prefixes:

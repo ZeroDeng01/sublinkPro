@@ -187,6 +187,10 @@ CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
 
 ---
 
+## Dependabot
+
+Dependabot 检查 `dev` 分支上的 Go 模块、npm/Yarn 依赖和 GitHub Actions，并以 `dev` 为目标分支创建版本更新 PR。GitHub 从默认分支 `main` 读取 [`.github/dependabot.yml`](../.github/dependabot.yml)，配置变更进入 `main` 后才会生效。Dependabot 安全更新 PR 以默认分支为目标。
+
 ## 🧭 关键运行时约定
 
 ### 路径边界

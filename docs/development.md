@@ -187,6 +187,10 @@ CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
 
 ---
 
+## Dependabot
+
+Dependabot checks Go modules, npm/Yarn dependencies, and GitHub Actions on `dev` and opens version update PRs against `dev`. GitHub reads [`.github/dependabot.yml`](../.github/dependabot.yml) from the default branch (`main`), so changes to this configuration take effect once they reach `main`. Dependabot security update PRs target the default branch.
+
 ## 🧭 Key Runtime Conventions
 
 ### Path boundaries
