@@ -4,9 +4,9 @@ from unittest.mock import call, patch
 import release_notes
 
 
-PREVIEW = "preview-20261124-171211123"
-OLDER_PREVIEW = "preview-20261123-abcdef0"
-FAILED_PREVIEW = "preview-20261123-abcdef1"
+PREVIEW = "pre-261124171211"
+OLDER_PREVIEW = "pre-261123190000"
+FAILED_PREVIEW = "pre-261124171212"
 STABLE = "v1.3.1"
 
 
@@ -33,7 +33,7 @@ class ReleaseNotesTests(unittest.TestCase):
             call("for-each-ref", "--merged=HEAD", "--format=%(refname:strip=2)", "refs/tags"),
             call("log", "--format=- %s (%h)", f"refs/tags/{STABLE}..HEAD"),
         ])
-        self.assertEqual(title, "Preview 20261124-171211123")
+        self.assertEqual(title, PREVIEW)
         self.assertTrue(body.startswith("## 预发布\n"))
         self.assertIn(f"{STABLE} → {PREVIEW}", body)
         self.assertIn("feat: useful change", body)
@@ -83,8 +83,8 @@ class ReleaseNotesTests(unittest.TestCase):
                 published_release(PREVIEW, "10:00", prerelease=True),
                 published_release(FAILED_PREVIEW, "14:00", draft=True, prerelease=True),
                 published_release("v2.0.0-rc.1", "13:00", prerelease=True),
-                published_release("preview-20261124-171211124", "12:00"),
-                {**published_release("preview-20261124-171211125", "11:00", prerelease=True), "published_at": None},
+                published_release("pre-261124171213", "12:00"),
+                {**published_release("pre-261124171214", "11:00", prerelease=True), "published_at": None},
             ],
         ]
 

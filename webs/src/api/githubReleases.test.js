@@ -19,8 +19,7 @@ const release = (tag_name, day, extra = {}) => ({
 
 test('stable and preview builds select their release sources', () => {
   assert.equal(getVersionSource('v1.3.0'), `${GITHUB_RELEASES_API}/latest`);
-  assert.equal(getVersionSource('preview-20261124-4a211cb'), GITHUB_RELEASES_API);
-  assert.equal(getVersionSource('preview-20261124-171211123'), GITHUB_RELEASES_API);
+  assert.equal(getVersionSource('pre-261124171211'), GITHUB_RELEASES_API);
   assert.equal(getVersionSource('4a211cb'), null);
 });
 
@@ -32,9 +31,9 @@ test('stable compares numeric versions and ignores prereleases', () => {
   assert.equal(getVersionUpdate('v1.9.9', { ...latest, prerelease: true }), null);
 });
 
-test('preview finds a timestamped update for an older hash-based build on the same day', () => {
-  const current = 'preview-20261124-0000000';
-  const latest = 'preview-20261124-171211123';
+test('preview finds a newer publication on the same day and ignores stable releases', () => {
+  const current = 'pre-261124171210';
+  const latest = 'pre-261124171211';
   const releases = [
     release('v1.3.0', 25),
     release(latest, 24, { published_at: '2026-11-24T18:00:00Z', prerelease: true }),
@@ -42,8 +41,9 @@ test('preview finds a timestamped update for an older hash-based build on the sa
   ];
   assert.deepEqual(getVersionUpdate(current, releases), { latestVersion: latest, hasUpdate: true });
   assert.equal(getVersionUpdate(latest, releases).hasUpdate, false);
-  assert.equal(getVersionUpdate('preview-20261125-aaaaaaa', releases).hasUpdate, false);
-  assert.equal(getVersionUpdate('preview-20261124-aaaaaaa', releases), null);
+  assert.equal(getVersionUpdate('pre-261125000000', releases).hasUpdate, false);
+  assert.equal(getVersionUpdate('pre-261124171209', releases).hasUpdate, true);
+  assert.equal(getVersionUpdate('pre-261124171212', releases).hasUpdate, false);
 });
 
 test('development builds have no automatic update source', () => {
@@ -57,7 +57,9 @@ test('development builds have no automatic update source', () => {
 
 test('stable changelog fills ten slots after pagination and sorting by publication', async () => {
   const previews = Array.from({ length: 99 }, (_, index) =>
-    release(`preview-20261124-${String(index).padStart(7, '0')}`, 24, { prerelease: true })
+    release(`pre-26112417${String(Math.floor(index / 60)).padStart(2, '0')}${String(index % 60).padStart(2, '0')}`, 24, {
+      prerelease: true
+    })
   );
   const stable = Array.from({ length: 11 }, (_, index) => release(`v1.3.${index}`, index + 1));
   const draft = release('v2.0.0', 26, { draft: true });

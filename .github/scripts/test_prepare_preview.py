@@ -9,9 +9,8 @@ import prepare_preview
 
 COMMIT = "274ad3e415391cb3f3705fd5efcd65630bbb7f26"
 COLLISION = "274ad3e965391cb3f3705fd5efcd65630bbb7f26"
-TAG = "preview-20261124-003051123"
-NEXT_TAG = "preview-20261124-003051124"
-LEGACY_TAG = "preview-20261124-274ad3e"
+TAG = "pre-261124003051"
+NEXT_TAG = "pre-261124003052"
 NOW = datetime(2026, 11, 23, 16, 30, 51, 123456, tzinfo=timezone.utc)
 
 
@@ -25,28 +24,25 @@ class PreviewTagTests(unittest.TestCase):
         self.clock.now.return_value = NOW
 
     @patch.object(prepare_preview, "api")
-    def test_reserves_a_shanghai_timestamp_with_milliseconds_for_the_commit(self, api):
+    def test_reserves_a_compact_shanghai_timestamp_for_the_commit(self, api):
         api.side_effect = [[], tag_ref(TAG)]
 
         self.assertEqual(prepare_preview.reserve_preview_tag(COMMIT), TAG)
         self.clock.now.assert_called_once_with(timezone.utc)
         api.assert_has_calls([
-            call("git/matching-refs/tags/preview-"),
+            call("git/matching-refs/tags/pre-"),
             call("git/refs", data={"ref": f"refs/tags/{TAG}", "sha": COMMIT}),
         ])
 
     @patch.object(prepare_preview, "api")
     def test_retry_reuses_the_existing_tag_for_the_verified_commit(self, api):
-        for tag in (TAG, LEGACY_TAG):
-            with self.subTest(tag=tag):
-                api.reset_mock()
-                api.return_value = [tag_ref(tag)]
-                self.assertEqual(prepare_preview.reserve_preview_tag(COMMIT), tag)
-                api.assert_called_once_with("git/matching-refs/tags/preview-")
+        api.return_value = [tag_ref(TAG)]
+        self.assertEqual(prepare_preview.reserve_preview_tag(COMMIT), TAG)
+        api.assert_called_once_with("git/matching-refs/tags/pre-")
         self.clock.now.assert_not_called()
 
     @patch.object(prepare_preview, "api")
-    def test_uses_the_next_millisecond_if_timestamp_belongs_to_another_commit(self, api):
+    def test_uses_the_next_second_if_timestamp_belongs_to_another_commit(self, api):
         api.side_effect = [[tag_ref(TAG, COLLISION)], tag_ref(NEXT_TAG)]
 
         self.assertEqual(prepare_preview.reserve_preview_tag(COMMIT), NEXT_TAG)
@@ -55,8 +51,8 @@ class PreviewTagTests(unittest.TestCase):
     @patch.object(prepare_preview, "api")
     def test_timestamp_collision_advances_to_the_next_day_after_midnight(self, api):
         self.clock.now.return_value = datetime(2026, 11, 24, 15, 59, 59, 999000, tzinfo=timezone.utc)
-        next_day = "preview-20261125-000000000"
-        api.side_effect = [[tag_ref("preview-20261124-235959999", COLLISION)], tag_ref(next_day)]
+        next_day = "pre-261125000000"
+        api.side_effect = [[tag_ref("pre-261124235959", COLLISION)], tag_ref(next_day)]
 
         self.assertEqual(prepare_preview.reserve_preview_tag(COMMIT), next_day)
 
@@ -93,14 +89,8 @@ class PreviewTagTests(unittest.TestCase):
 
     @patch.object(prepare_preview, "api")
     def test_published_preview_is_reused(self, api):
-        for tag, title in (
-            (TAG, "Preview 20261124-003051123"),
-            (LEGACY_TAG, LEGACY_TAG),
-            (LEGACY_TAG, "Preview 20261124-274ad3e"),
-        ):
-            with self.subTest(tag=tag):
-                api.return_value = {"name": title, "draft": False, "prerelease": True}
-                self.assertTrue(prepare_preview.preview_is_published(tag))
+        api.return_value = {"name": TAG, "draft": False, "prerelease": True}
+        self.assertTrue(prepare_preview.preview_is_published(TAG))
 
 
 if __name__ == "__main__":

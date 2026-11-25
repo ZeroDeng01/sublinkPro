@@ -9,10 +9,10 @@ This document explains how to install, update, and uninstall SublinkPro.
 | Channel | When to use it | Docker image | Linux one-line installer |
 | --- | --- | --- | --- |
 | Stable | Recommended for regular use | `zerodeng/sublink-pro:latest` or a fixed version such as `:v1.3.0` | Default |
-| Preview | Try changes published from `main` before the next stable release | `zerodeng/sublink-pro:preview` follows published previews. Pin an exact version with the `:preview-YYYYMMDD-HHMMSSmmm` tag from its release notes | `--preview` |
+| Preview | Try changes published from `main` before the next stable release | `zerodeng/sublink-pro:preview` follows published previews. Pin an exact version with the `:pre-YYMMDDHHMMSS` tag from its release notes | `--preview` |
 | Development | Test the latest published builds from `dev` | `zerodeng/sublink-pro:dev` | Use the Docker image |
 
-The version card checks stable and Preview builds for updates in their own channels. To update a development build, pull `:dev` and recreate the container. The **Changelog** page shows the 10 most recent stable releases. Older stable or Preview builds identified only by a commit hash need one manual update before automatic checks can identify their channel. [GitHub Releases](https://github.com/ZeroDeng01/sublinkPro/releases)
+The version card checks stable and Preview builds for updates in their own channels. To update a development build, pull `:dev` and recreate the container. The **Changelog** page shows the 10 most recent stable releases. [GitHub Releases](https://github.com/ZeroDeng01/sublinkPro/releases)
 
 ---
 
@@ -31,7 +31,7 @@ services:
   sublinkpro:
     # image: zerodeng/sublink-pro:dev # Development version, for trying new features
     # image: zerodeng/sublink-pro:preview # Rolling Preview
-    # image: zerodeng/sublink-pro:preview-YYYYMMDD-HHMMSSmmm # Replace with a published Preview tag to pin it
+    # image: zerodeng/sublink-pro:pre-YYMMDDHHMMSS # Replace with a published Preview tag to pin it
     image: zerodeng/sublink-pro:latest # Stable version
     container_name: sublinkpro
     ports:

@@ -290,9 +290,7 @@ function MenuCard() {
                   color: emphasizedText,
                   fontWeight: 700,
                   lineHeight: 1.2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  overflowWrap: 'anywhere'
                 }}
               >
                 {currentVersion}
@@ -346,9 +344,7 @@ function MenuCard() {
                       mt: 0.2,
                       color: statusHintColor,
                       minWidth: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      overflowWrap: 'anywhere'
                     }}
                   >
                     {versionStatus.hint}

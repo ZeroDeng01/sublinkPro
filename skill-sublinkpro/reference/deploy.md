@@ -60,7 +60,7 @@ docker run --name sublinkpro -p 8000:8000 \
   -d zerodeng/sublink-pro
 ```
 
-Use `zerodeng/sublink-pro:latest` for rolling stable, a tag such as `:v1.3.0` to pin stable, `zerodeng/sublink-pro:dev` for rolling development builds, or `zerodeng/sublink-pro:preview` to follow published previews. To pin a Preview, copy the timestamped image listed under **Docker 镜像** in the GitHub prerelease notes.
+Use `zerodeng/sublink-pro:latest` for rolling stable, a tag such as `:v1.3.0` to pin stable, `zerodeng/sublink-pro:dev` for rolling development builds, or `zerodeng/sublink-pro:preview` to follow published previews. To pin a Preview, copy its `pre-YYMMDDHHMMSS` tag from **Docker 镜像** in the GitHub prerelease notes.
 
 ---
 

@@ -5,7 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from prepare_preview import PREVIEW_TAG, api, preview_title
+from prepare_preview import PREVIEW_TAG, api
 
 
 ASSETS = (
@@ -65,7 +65,7 @@ def release_notes(tag, preview):
     previous = previous_published_release(tag) if preview else nearest_tag("v*", [tag], "HEAD^")
     history = f"refs/tags/{previous}..HEAD" if previous else "HEAD"
     changes = git("log", "--format=- %s (%h)", history)
-    title = preview_title(tag) if preview else f"Release {tag}"
+    title = tag if preview else f"Release {tag}"
     heading = "## 🚀 更新内容" if preview or previous else "## 🎉 首次发布"
     if previous:
         heading += f" ({previous} → {tag})"

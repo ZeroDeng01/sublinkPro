@@ -90,12 +90,9 @@ preview_page() {
             next_token()
         }
 
-        function consider_preview(tag, published,    parts, candidate) {
-            if (tag !~ /^"preview-[0-9]+-[a-f0-9]+"$/ ||
+        function consider_preview(tag, published,    candidate) {
+            if (tag !~ /^"pre-[0-9]+"$/ || length(tag) != 18 ||
                 published !~ /^"[0-9-]+T[0-9:]+Z"$/ || length(published) != 22)
-                return
-            split(tag, parts, "-")
-            if (length(parts[2]) != 8 || length(parts[3]) < 8 || length(parts[3]) > 41)
                 return
             candidate = substr(published, 2, 20) " " substr(tag, 2, length(tag) - 2)
             if (candidate > best) best = candidate

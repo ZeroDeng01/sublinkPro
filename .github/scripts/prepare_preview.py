@@ -10,8 +10,7 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 
-# Millisecond timestamps and legacy short hashes both fit the published tag shape.
-PREVIEW_TAG = re.compile(r"preview-[0-9]{8}-[0-9a-f]{7,40}")
+PREVIEW_TAG = re.compile(r"pre-[0-9]{12}")
 
 
 def api(path, *, data=None, allow_missing=False):
@@ -47,7 +46,7 @@ def reserve_preview_tag(commit):
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("The preview release requires a full commit SHA.")
 
-    refs = api("git/matching-refs/tags/preview-")
+    refs = api("git/matching-refs/tags/pre-")
     tags = {ref["ref"].removeprefix("refs/tags/"): ref for ref in refs}
     for tag, ref in sorted(tags.items()):
         if PREVIEW_TAG.fullmatch(tag) and tag_commit(ref) == commit:
@@ -55,8 +54,8 @@ def reserve_preview_tag(commit):
 
     timestamp = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Shanghai"))
     while True:
-        tag = f"preview-{timestamp:%Y%m%d-%H%M%S}{timestamp.microsecond // 1000:03d}"
-        timestamp += timedelta(milliseconds=1)
+        tag = f"pre-{timestamp:%y%m%d%H%M%S}"
+        timestamp += timedelta(seconds=1)
         if tag in tags:
             continue
         try:
@@ -78,13 +77,9 @@ def preview_is_published(tag):
     release = api(f"releases/tags/{tag}", allow_missing=True)
     if not release or release["draft"]:
         return False
-    if not release["prerelease"] or release["name"] not in (tag, preview_title(tag)):
+    if not release["prerelease"] or release["name"] != tag:
         raise RuntimeError(f"An incompatible release already exists for {tag}.")
     return True
-
-
-def preview_title(tag):
-    return f"Preview {tag.removeprefix('preview-')}"
 
 
 if __name__ == "__main__":

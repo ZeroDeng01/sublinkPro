@@ -9,10 +9,10 @@
 | 渠道 | 使用场景 | Docker 镜像 | Linux 一键脚本 |
 | --- | --- | --- | --- |
 | 稳定版 | 日常使用，推荐选择 | `zerodeng/sublink-pro:latest`，也可固定到 `:v1.3.0` 等版本 | 默认 |
-| 预发布 | 提前体验 `main` 已发布的改动 | `zerodeng/sublink-pro:preview` 跟随最新预发布，也可使用发布说明中的 `:preview-YYYYMMDD-HHMMSSmmm` 时间标签固定版本 | `--preview` |
+| 预发布 | 提前体验 `main` 已发布的改动 | `zerodeng/sublink-pro:preview` 跟随最新预发布，也可使用发布说明中的 `:pre-YYMMDDHHMMSS` 时间标签固定版本 | `--preview` |
 | 开发版 | 测试 `dev` 最新发布的构建 | `zerodeng/sublink-pro:dev` | 使用 Docker 镜像 |
 
-稳定版和预发布的版本卡分别检查各自渠道的更新。开发版通过拉取 `:dev` 镜像并重建容器更新。**更新日志**页面显示最近 10 条正式发布。只显示提交哈希的旧稳定版或预发布需沿用原渠道手动更新一次，之后版本卡就能识别渠道。[GitHub Releases](https://github.com/ZeroDeng01/sublinkPro/releases)
+稳定版和预发布的版本卡分别检查各自渠道的更新。开发版通过拉取 `:dev` 镜像并重建容器更新。**更新日志**页面显示最近 10 条正式发布。[GitHub Releases](https://github.com/ZeroDeng01/sublinkPro/releases)
 
 ---
 
@@ -31,7 +31,7 @@ services:
   sublinkpro:
     # image: zerodeng/sublink-pro:dev # 开发版（功能尝鲜使用）
     # image: zerodeng/sublink-pro:preview # 滚动预发布
-    # image: zerodeng/sublink-pro:preview-YYYYMMDD-HHMMSSmmm # 替换为已发布版本的时间标签
+    # image: zerodeng/sublink-pro:pre-YYMMDDHHMMSS # 替换为已发布版本的时间标签
     image: zerodeng/sublink-pro:latest # 稳定版
     container_name: sublinkpro
     ports:

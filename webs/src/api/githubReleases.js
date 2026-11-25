@@ -8,7 +8,7 @@ export const GITHUB_RELEASES_API = `${GITHUB_API}/releases`;
 const STABLE_RELEASE_API = `${GITHUB_RELEASES_API}/latest`;
 
 const STABLE_VERSION = /^v?([0-9]+)\.([0-9]+)\.([0-9]+)$/;
-const PREVIEW_VERSION = /^preview-([0-9]{8})-[a-f0-9]{7,40}$/;
+const PREVIEW_VERSION = /^pre-[0-9]{12}$/;
 const DEV_VERSION = /^dev-([a-f0-9]{7,40})$/;
 const RELEASES_PER_PAGE = 100;
 
@@ -83,11 +83,8 @@ export function getVersionUpdate(version, data) {
       if (!latest) return null;
       if (latest.tag_name === version) return { latestVersion: version, hasUpdate: false };
 
-      const current = data.find((release) => release.prerelease === true && release.tag_name === version);
-      const latestDate = PREVIEW_VERSION.exec(latest.tag_name)[1];
-      const currentDate = PREVIEW_VERSION.exec(version)[1];
-      if (!current && latestDate === currentDate) return null;
-      return { latestVersion: latest.tag_name, hasUpdate: Boolean(current) || latestDate > currentDate };
+      const current = data.some((release) => release.prerelease === true && release.tag_name === version);
+      return { latestVersion: latest.tag_name, hasUpdate: current || latest.tag_name > version };
     }
     default:
       return null;

@@ -59,20 +59,20 @@ def select_release(*args, first_page=(), second_page=(), indent=None):
 
 class InstallPreviewTests(unittest.TestCase):
     def test_default_selects_stable_release(self):
-        result = select_release(first_page=[release("preview-20261124-abcdef0", 24)])
+        result = select_release(first_page=[release("pre-261124171211", 24)])
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "v1.3.0")
 
     def test_selects_newest_published_preview_with_uploaded_asset_across_pages(self):
         stable = release("v1.3.0", 24, prerelease=False)
-        expected = "preview-20261123-171211123"
-        first_page = [release("preview-20261122-abcdef0", 22)] + [stable] * 99
+        expected = "pre-261123171211"
+        first_page = [release("pre-261122171211", 22)] + [stable] * 99
         second_page = [
-            release("preview-20261128-abcdef0", 28, draft=True),
+            release("pre-261128171211", 28, draft=True),
             release("v1.4.0-rc.1", 27),
-            release("preview-20261126-abcdef0", 26, name="sublinkPro-linux-amd64"),
-            release("preview-20261125-abcdef0", 25, state="new"),
-            release("preview-20261124-abcdef0", 24, prerelease=False),
+            release("pre-261126171211", 26, name="sublinkPro-linux-amd64"),
+            release("pre-261125171211", 25, state="new"),
+            release("pre-261124171211", 24, prerelease=False),
             release(expected, 23),
         ]
         for indent in [None, 2]:
@@ -82,9 +82,9 @@ class InstallPreviewTests(unittest.TestCase):
                 self.assertEqual(result.stdout.strip(), expected)
 
     def test_ignores_release_notes_and_nested_metadata_when_selecting_assets(self):
-        expected = "preview-20261122-abcdef0"
+        expected = "pre-261122171211"
         fake_asset = {"name": ASSET, "state": "uploaded"}
-        metadata = release("preview-20261123-abcdef0", 23, name="sublinkPro-linux-amd64")
+        metadata = release("pre-261123171211", 23, name="sublinkPro-linux-amd64")
         metadata["body"] = '预发布\\notes\n"assets": [' + json.dumps(fake_asset) + ']'
         metadata["assets"][0]["uploader"] = fake_asset
         result = select_release("--preview", first_page=[metadata, release(expected, 22)])
@@ -95,7 +95,7 @@ class InstallPreviewTests(unittest.TestCase):
         result = run_installer(
             PREVIEW_STUBS + '\nmain "$@"',
             "--preview",
-            TEST_PAGE_ONE='[{"tag_name": "preview-20261124-abcdef0",}]',
+            TEST_PAGE_ONE='[{"tag_name": "pre-261124171211",}]',
         )
         self.assertEqual(result.returncode, 1)
         self.assertIn("无法解析 GitHub 发布列表", result.stdout)
@@ -113,7 +113,7 @@ class InstallPreviewTests(unittest.TestCase):
 
     def test_failed_download_preserves_running_service(self):
         result = run_installer(r'''
-latest_release=preview-20261124-abcdef0
+latest_release=pre-261124171211
 file_name=sublinkPro-linux-arm64
 mkdir() { :; }
 mktemp() { printf '%s\n' /dev/null; }

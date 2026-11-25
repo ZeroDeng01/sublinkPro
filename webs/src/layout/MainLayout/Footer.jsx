@@ -15,7 +15,7 @@ export default function Footer() {
 
   return (
     <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 3, mt: 'auto' }}>
-      <Typography variant="caption">
+      <Typography variant="caption" sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>
         &copy;{' '}
         <Typography
           component={RouterLink}
