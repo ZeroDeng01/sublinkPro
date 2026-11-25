@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { GITHUB_RELEASES_API, fetchReleaseData, getStableChangelog, getVersionSource, getVersionUpdate } from './githubReleases.js';
+import {
+  GITHUB_RELEASES_API,
+  fetchReleaseData,
+  getStableChangelog,
+  getVersionChannel,
+  getVersionSource,
+  getVersionUpdate
+} from './githubReleases.js';
 
 const release = (tag_name, day, extra = {}) => ({
   tag_name,
@@ -41,8 +48,11 @@ test('preview finds a timestamped update for an older hash-based build on the sa
 
 test('development builds have no automatic update source', () => {
   assert.equal(getVersionSource('dev'), null);
-  assert.equal(getVersionSource('dev-4a211cb00000'), null);
-  assert.equal(getVersionUpdate('dev-4a211cb00000', release('v1.4.0', 24)), null);
+  for (const version of ['dev-30c5f25', 'dev-30c5f25a7cf1']) {
+    assert.equal(getVersionChannel(version), 'dev');
+    assert.equal(getVersionSource(version), null);
+    assert.equal(getVersionUpdate(version, release('v1.4.0', 24)), null);
+  }
 });
 
 test('stable changelog fills ten slots after pagination and sorting by publication', async () => {

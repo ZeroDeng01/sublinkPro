@@ -206,7 +206,7 @@ jobs:
           case "$GITHUB_REF" in
             refs/tags/v*) VERSION="$GITHUB_REF_NAME" ;;
             refs/heads/main) VERSION="${PREVIEW_TAG:?Missing reserved preview tag}" ;;
-            refs/heads/dev) VERSION="dev-${GITHUB_SHA:0:12}" ;;
+            refs/heads/dev) VERSION="dev-${GITHUB_SHA:0:7}" ;;
             *) VERSION=$(git rev-parse --short HEAD) ;;
           esac
           printf '%s\n' "$VERSION" > VERSION

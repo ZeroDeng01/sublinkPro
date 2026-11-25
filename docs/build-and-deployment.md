@@ -175,7 +175,7 @@ After a Preview is published, the workflow points the rolling Docker tag `:previ
 
 Preview notes start from the most recently published GitHub release in the build's Git history. Both stable releases and prereleases qualify. If this is the first published release in that history, the notes cover the full history. Stable notes use the preceding `v*` tag. Both list the Docker image and platform binaries.
 
-Development builds embed `dev-<12-character SHA>` for display in the version card. Update a development deployment by pulling the rolling `:dev` image and recreating the container. A build superseded by a newer push skips the Docker push step.
+Development builds embed `dev-<7-character SHA>` for display in the version card. Update a development deployment by pulling the rolling `:dev` image and recreating the container. A build superseded by a newer push skips the Docker push step.
 
 The one-line installer defaults to stable. To install or update to a Preview, use `--preview`. [Installation guide](installation.md)
 
