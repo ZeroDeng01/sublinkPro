@@ -83,6 +83,7 @@ func TestUpdateSocks5SettingsPersistsAndMasksPassword(t *testing.T) {
 		"candidateSources":             []string{"airport-a"},
 		"candidateProtocols":           []string{"VLESS", "trojan"},
 		"candidateCountries":           []string{"jp", "US"},
+		"candidateTags":                []string{" Premium ", "Premium", "premium", "", "备用"},
 		"stickySessionEnabled":         true,
 		"stickySessionMode":            "client_ip",
 		"stickySessionTtlSeconds":      900,
@@ -99,6 +100,9 @@ func TestUpdateSocks5SettingsPersistsAndMasksPassword(t *testing.T) {
 	}
 	if !strings.Contains(body, `"candidateGroups":["premium","backup"]`) || !strings.Contains(body, `"candidateCountries":["JP","US"]`) {
 		t.Fatalf("response missing normalized candidate pool: %s", body)
+	}
+	if !strings.Contains(body, `"candidateTags":["Premium","premium","备用"]`) {
+		t.Fatalf("response missing normalized candidate tags: %s", body)
 	}
 	loaded, err := socks5service.LoadConfig()
 	if err != nil {
@@ -118,6 +122,9 @@ func TestUpdateSocks5SettingsPersistsAndMasksPassword(t *testing.T) {
 	}
 	if len(loaded.CandidateGroups) != 2 || loaded.CandidateGroups[0] != "premium" || loaded.CandidateSources[0] != "airport-a" || loaded.CandidateProtocols[0] != "vless" || loaded.CandidateCountries[0] != "JP" {
 		t.Fatalf("unexpected candidate pool settings: %+v", loaded)
+	}
+	if !reflect.DeepEqual(loaded.CandidateTags, []string{"Premium", "premium", "备用"}) {
+		t.Fatalf("unexpected stored candidate tags: %v", loaded.CandidateTags)
 	}
 	if !loaded.StickySessionEnabled || loaded.StickySessionMode != "client_ip" || loaded.StickySessionTTLSeconds != 900 {
 		t.Fatalf("unexpected sticky session settings: %+v", loaded)
@@ -161,6 +168,7 @@ func TestUpdateSocks5SettingsPreservesPhaseTwoFieldsForLegacyRequest(t *testing.
 		CandidateSources:           []string{"airport-a"},
 		CandidateProtocols:         []string{"vless"},
 		CandidateCountries:         []string{"JP"},
+		CandidateTags:              []string{"Premium"},
 		StickySessionEnabled:       true,
 		StickySessionMode:          "client_ip",
 		StickySessionTTLSeconds:    1200,
@@ -191,6 +199,9 @@ func TestUpdateSocks5SettingsPreservesPhaseTwoFieldsForLegacyRequest(t *testing.
 	if !reflect.DeepEqual(loaded.CandidateGroups, []string{"premium"}) || !reflect.DeepEqual(loaded.CandidateSources, []string{"airport-a"}) || !reflect.DeepEqual(loaded.CandidateProtocols, []string{"vless"}) || !reflect.DeepEqual(loaded.CandidateCountries, []string{"JP"}) {
 		t.Fatalf("legacy request overwrote candidate pool fields: %+v", loaded)
 	}
+	if !reflect.DeepEqual(loaded.CandidateTags, []string{"Premium"}) {
+		t.Fatalf("legacy request overwrote candidate tags: %v", loaded.CandidateTags)
+	}
 	if !loaded.StickySessionEnabled || loaded.StickySessionMode != "client_ip" || loaded.StickySessionTTLSeconds != 1200 {
 		t.Fatalf("legacy request overwrote sticky session fields: %+v", loaded)
 	}
@@ -206,6 +217,7 @@ func TestUpdateSocks5SettingsPreservesPhaseTwoFieldsForLegacyRequest(t *testing.
 		"candidateSources":     []string{},
 		"candidateProtocols":   []string{},
 		"candidateCountries":   []string{},
+		"candidateTags":        []string{},
 		"stickySessionEnabled": false,
 	}, UpdateSocks5Settings)
 	if clearRecorder.Code != http.StatusOK {
@@ -215,7 +227,7 @@ func TestUpdateSocks5SettingsPreservesPhaseTwoFieldsForLegacyRequest(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cleared.CandidateGroups) != 0 || len(cleared.CandidateSources) != 0 || len(cleared.CandidateProtocols) != 0 || len(cleared.CandidateCountries) != 0 {
+	if len(cleared.CandidateGroups) != 0 || len(cleared.CandidateSources) != 0 || len(cleared.CandidateProtocols) != 0 || len(cleared.CandidateCountries) != 0 || len(cleared.CandidateTags) != 0 {
 		t.Fatalf("explicit empty candidate pool did not clear settings: %+v", cleared)
 	}
 	if cleared.StickySessionEnabled {
@@ -367,18 +379,27 @@ func TestSocks5RoutingProfileCRUD(t *testing.T) {
 	setupBackupAPITestDB(t)
 	socks5service.DefaultManager().Stop()
 
+	legacy := performSocks5JSONRequest(t, "admin", http.MethodGet, nil, GetSocks5Settings)
+	if legacy.Code != http.StatusOK || !strings.Contains(legacy.Body.String(), `"candidateTags":[]`) {
+		t.Fatalf("settings without saved candidate tags status=%d body=%s", legacy.Code, legacy.Body.String())
+	}
+
 	create := performSocks5JSONRequest(t, "admin", http.MethodPost, map[string]any{
 		"id": "japan", "name": "Japan", "enabled": true, "selection": "smart",
 		"maxAttempts": 3, "dialTimeoutSeconds": 15, "failureCooldownSeconds": 30,
-		"candidateCountries": []string{"jp"}, "stickySessionEnabled": true, "stickySessionTtlSeconds": 900,
+		"candidateCountries": []string{"jp"}, "candidateTags": []string{"Premium"},
+		"stickySessionEnabled": true, "stickySessionTtlSeconds": 900,
 	}, CreateSocks5RoutingProfile)
-	if create.Code != http.StatusOK || !strings.Contains(create.Body.String(), `"id":"japan"`) {
+	if create.Code != http.StatusOK || !strings.Contains(create.Body.String(), `"id":"japan"`) || !strings.Contains(create.Body.String(), `"candidateTags":["Premium"]`) {
 		t.Fatalf("create profile status=%d body=%s", create.Code, create.Body.String())
 	}
 
 	list := performSocks5JSONRequest(t, "admin", http.MethodGet, nil, ListSocks5RoutingProfiles)
 	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), `"id":"default"`) || !strings.Contains(list.Body.String(), `"id":"japan"`) {
 		t.Fatalf("list profiles status=%d body=%s", list.Code, list.Body.String())
+	}
+	if !strings.Contains(list.Body.String(), `"candidateTags":["Premium"]`) {
+		t.Fatalf("list profiles missing saved candidate tags: %s", list.Body.String())
 	}
 
 	update := performSocks5JSONRequestWithParams(t, "admin", http.MethodPut, map[string]any{
@@ -388,6 +409,9 @@ func TestSocks5RoutingProfileCRUD(t *testing.T) {
 	}, gin.Params{{Key: "id", Value: "japan"}}, UpdateSocks5RoutingProfile)
 	if update.Code != http.StatusOK || !strings.Contains(update.Body.String(), `"name":"Japan Premium"`) || !strings.Contains(update.Body.String(), `"selection":"round_robin"`) {
 		t.Fatalf("update profile status=%d body=%s", update.Code, update.Body.String())
+	}
+	if !strings.Contains(update.Body.String(), `"candidateTags":[]`) {
+		t.Fatalf("profile replacement did not clear omitted candidate tags: %s", update.Body.String())
 	}
 
 	remove := performSocks5JSONRequestWithParams(t, "admin", http.MethodDelete, nil, gin.Params{{Key: "id", Value: "japan"}}, DeleteSocks5RoutingProfile)

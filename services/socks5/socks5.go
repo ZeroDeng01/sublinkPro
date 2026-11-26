@@ -47,6 +47,7 @@ const (
 	settingCandidateSources             = "socks5_candidate_sources"
 	settingCandidateProtocols           = "socks5_candidate_protocols"
 	settingCandidateCountries           = "socks5_candidate_countries"
+	settingCandidateTags                = "socks5_candidate_tags"
 	settingStickySessionEnabled         = "socks5_sticky_session_enabled"
 	settingStickySessionMode            = "socks5_sticky_session_mode"
 	settingStickySessionTTLSeconds      = "socks5_sticky_session_ttl_seconds"
@@ -93,6 +94,7 @@ type Config struct {
 	CandidateSources             []string
 	CandidateProtocols           []string
 	CandidateCountries           []string
+	CandidateTags                []string
 	StickySessionEnabled         bool
 	StickySessionMode            string
 	StickySessionTTLSeconds      int
@@ -125,6 +127,7 @@ type PublicConfig struct {
 	CandidateSources             []string `json:"candidateSources"`
 	CandidateProtocols           []string `json:"candidateProtocols"`
 	CandidateCountries           []string `json:"candidateCountries"`
+	CandidateTags                []string `json:"candidateTags"`
 	StickySessionEnabled         bool     `json:"stickySessionEnabled"`
 	StickySessionMode            string   `json:"stickySessionMode"`
 	StickySessionTTLSeconds      int      `json:"stickySessionTtlSeconds"`
@@ -221,6 +224,7 @@ func LoadConfig() (Config, error) {
 		settingCandidateSources:   &cfg.CandidateSources,
 		settingCandidateProtocols: &cfg.CandidateProtocols,
 		settingCandidateCountries: &cfg.CandidateCountries,
+		settingCandidateTags:      &cfg.CandidateTags,
 	} {
 		values, loadErr := loadStringListSetting(key)
 		if loadErr != nil {
@@ -337,13 +341,14 @@ func normalizeGatewayConfig(cfg Config) (Config, error) {
 	if cfg.StickySessionEnabled && cfg.StickySessionMode == "username" && !cfg.RequireAuth {
 		return cfg, errors.New("SOCKS5 username sticky sessions require authentication")
 	}
-	cfg.CandidateGroups = normalizeStringList(cfg.CandidateGroups, nil)
-	cfg.CandidateSources = normalizeStringList(cfg.CandidateSources, nil)
-	cfg.CandidateProtocols = normalizeStringList(cfg.CandidateProtocols, strings.ToLower)
-	cfg.CandidateCountries = normalizeStringList(cfg.CandidateCountries, strings.ToUpper)
+	cfg.CandidateGroups = normalizeStringList(cfg.CandidateGroups, nil, strings.ToLower)
+	cfg.CandidateSources = normalizeStringList(cfg.CandidateSources, nil, strings.ToLower)
+	cfg.CandidateProtocols = normalizeStringList(cfg.CandidateProtocols, strings.ToLower, strings.ToLower)
+	cfg.CandidateCountries = normalizeStringList(cfg.CandidateCountries, strings.ToUpper, strings.ToLower)
+	cfg.CandidateTags = normalizeStringList(cfg.CandidateTags, nil, nil)
 	for name, values := range map[string][]string{
 		"groups": cfg.CandidateGroups, "sources": cfg.CandidateSources,
-		"protocols": cfg.CandidateProtocols, "countries": cfg.CandidateCountries,
+		"protocols": cfg.CandidateProtocols, "countries": cfg.CandidateCountries, "tags": cfg.CandidateTags,
 	} {
 		if len(values) > 256 {
 			return cfg, fmt.Errorf("SOCKS5 candidate %s must contain at most 256 values", name)
@@ -357,7 +362,7 @@ func normalizeGatewayConfig(cfg Config) (Config, error) {
 	return cfg, nil
 }
 
-func normalizeStringList(values []string, transform func(string) string) []string {
+func normalizeStringList(values []string, transform, comparisonKey func(string) string) []string {
 	normalized := make([]string, 0, len(values))
 	seen := make(map[string]struct{}, len(values))
 	for _, value := range values {
@@ -368,7 +373,10 @@ func normalizeStringList(values []string, transform func(string) string) []strin
 		if value == "" {
 			continue
 		}
-		key := strings.ToLower(value)
+		key := value
+		if comparisonKey != nil {
+			key = comparisonKey(value)
+		}
 		if _, exists := seen[key]; exists {
 			continue
 		}
@@ -445,6 +453,7 @@ func SaveConfig(input Config) (Config, error) {
 		settingCandidateSources:             encodeStringListSetting(cfg.CandidateSources),
 		settingCandidateProtocols:           encodeStringListSetting(cfg.CandidateProtocols),
 		settingCandidateCountries:           encodeStringListSetting(cfg.CandidateCountries),
+		settingCandidateTags:                encodeStringListSetting(cfg.CandidateTags),
 		settingStickySessionEnabled:         strconv.FormatBool(cfg.StickySessionEnabled),
 		settingStickySessionMode:            cfg.StickySessionMode,
 		settingStickySessionTTLSeconds:      strconv.Itoa(cfg.StickySessionTTLSeconds),
@@ -484,6 +493,7 @@ func ToPublicConfig(cfg Config, running bool, boundAddress string) PublicConfig 
 		HealthCheckTimeoutSeconds: cfg.HealthCheckTimeoutSeconds,
 		CandidateGroups:           append([]string{}, cfg.CandidateGroups...), CandidateSources: append([]string{}, cfg.CandidateSources...),
 		CandidateProtocols: append([]string{}, cfg.CandidateProtocols...), CandidateCountries: append([]string{}, cfg.CandidateCountries...),
+		CandidateTags:        append([]string{}, cfg.CandidateTags...),
 		StickySessionEnabled: cfg.StickySessionEnabled, StickySessionMode: cfg.StickySessionMode,
 		StickySessionTTLSeconds: cfg.StickySessionTTLSeconds,
 		Running:                 running, BoundAddress: boundAddress,

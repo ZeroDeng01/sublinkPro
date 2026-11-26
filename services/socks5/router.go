@@ -443,7 +443,7 @@ func filterCandidatePool(nodes []models.Node, cfg Config) []models.Node {
 		}
 		filtered = append(filtered, node)
 	}
-	return filtered
+	return models.FilterNodesByTags(filtered, cfg.CandidateTags)
 }
 
 func matchesCandidateGroup(group string, allowed []string) bool {

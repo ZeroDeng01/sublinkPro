@@ -766,9 +766,10 @@ Proxy gateway management requires an authenticated administrator. Demo mode rest
   `maxConnections` (1-10000), `maxConnectionsPerClient` (1..maxConnections),
   `idleTimeoutSeconds` (0-86400), `maxConnectionDurationSeconds` (0-604800), `healthCheckEnabled`,
   `healthCheckIntervalSeconds` (10-3600), `healthCheckTimeoutSeconds` (1-30), and candidate-pool arrays
-  `candidateGroups`, `candidateSources`, `candidateProtocols`, `candidateCountries`, `stickySessionEnabled`,
+  `candidateGroups`, `candidateSources`, `candidateProtocols`, `candidateCountries`, `candidateTags`, `stickySessionEnabled`,
   `stickySessionMode` (`client_ip` or `username`), and `stickySessionTtlSeconds` (60-604800).
   Candidate-pool fields combine with AND; values inside one field combine with OR. Empty arrays do not restrict the pool.
+  `candidateTags` contains full, case-sensitive node tag names from `GET /api/v1/tags/list`.
   Optional fields may be omitted to preserve saved values for legacy clients. `0` disables either connection timeout.
   If applying the saved settings fails, the application error includes the latest saved public configuration in `data.settings`.
 - **POST** `/api/v1/proxy-gateway/start` — resume using saved settings. Both the gateway and at least one listener must be enabled.
@@ -780,8 +781,8 @@ Proxy gateway management requires an authenticated administrator. Demo mode rest
 - **GET/POST** `/api/v1/proxy-gateway/accounts` — list or create independent credentials bound to routing profiles. Plaintext passwords are never returned.
 - **PUT/DELETE** `/api/v1/proxy-gateway/accounts/:id` — replace or delete an independent account; an omitted/empty update password keeps the saved password.
 - **GET** `/api/v1/proxy-gateway/routing-profiles` — list the virtual `default` routing profile and saved custom profiles.
-- **POST** `/api/v1/proxy-gateway/routing-profiles` — create a custom routing profile with an independent candidate pool and routing settings.
-- **PUT** `/api/v1/proxy-gateway/routing-profiles/:id` — replace a custom profile.
+- **POST** `/api/v1/proxy-gateway/routing-profiles` — create a custom routing profile with an independent candidate pool and routing settings, including `candidateTags`.
+- **PUT** `/api/v1/proxy-gateway/routing-profiles/:id` — replace a custom profile. Omit `candidateTags` or pass `[]` to clear its tag filter.
 - **DELETE** `/api/v1/proxy-gateway/routing-profiles/:id` — delete a custom profile; the reserved `default` profile cannot be deleted.
 - **GET** `/api/v1/proxy-gateway/node-stats` — return a server-paginated page of candidate nodes. Omit `listenerId` to sum forwarding counts across running listeners, or pass an ID to scope them. Pass `allProfiles=true` to include candidates from all enabled profiles. Otherwise `profileId` selects the candidate pool and defaults to `default`. Counts cover all traffic to those nodes within the selected listeners. Supports `keyword`, `status`, `sortBy`, `sortOrder`, `page`, and `pageSize` (maximum `100`). Items include health state, latency source, active/success/failure counters, smart score, cooldown, and last-routed time. `healthListenerId` identifies the listener supplying health, latency, and smart score. `probeRunning` indicates an active sweep on any selected listener.
 - **POST** `/api/v1/proxy-gateway/stats/reset` — reset connection and traffic totals across running listeners while keeping live connections. Counts reflect traffic after the reset. Returns business code `409` if the gateway is stopped.

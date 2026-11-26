@@ -25,7 +25,8 @@ const defaultConfig = {
   candidateGroups: [],
   candidateSources: [],
   candidateProtocols: [],
-  candidateCountries: []
+  candidateCountries: [],
+  candidateTags: []
 };
 
 export function settingsDraft(settings) {
@@ -61,7 +62,8 @@ export function settingsPayload(form) {
     candidateGroups: Array.isArray(form.candidateGroups) ? form.candidateGroups : [],
     candidateSources: Array.isArray(form.candidateSources) ? form.candidateSources : [],
     candidateProtocols: Array.isArray(form.candidateProtocols) ? form.candidateProtocols : [],
-    candidateCountries: Array.isArray(form.candidateCountries) ? form.candidateCountries : []
+    candidateCountries: Array.isArray(form.candidateCountries) ? form.candidateCountries : [],
+    candidateTags: Array.isArray(form.candidateTags) ? form.candidateTags : []
   };
 }
 

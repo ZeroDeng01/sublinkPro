@@ -13,7 +13,7 @@ SublinkPro 可以将已保存的代理节点通过本地 SOCKS5、HTTP 或 Mixed
 - 支持独立 SOCKS5 账号，每个账号拥有单独加密密码并直接绑定路由 Profile
 - 支持多个监听地址/端口，监听器具有稳定 ID、默认路由 Profile 和可选认证策略覆盖
 - 支持最佳节点、随机节点、轮询节点、P2C 智能负载均衡或指定节点选择
-- 支持按多个分组、来源、协议和国家/地区组合过滤候选节点池；不同条件之间为“且”，同一条件内多个值为“或”
+- 支持按分组、来源、协议、国家/地区和节点标签组合过滤候选节点池。不同条件之间为“且”，同一条件内多个值为“或”。
 - 支持可选的内存粘性会话，可按客户端 IP 或已认证的 SOCKS5 用户名绑定，滑动 TTL 范围为 60-604800 秒
 - 支持多个路由 Profile，每个 Profile 可独立配置候选节点池、选路策略、重试、冷却和粘性会话
 - 支持按共享用户名选择路由策略：`username`、`username@profile` 或 `username@profile.account`
@@ -47,6 +47,8 @@ SublinkPro 可以将已保存的代理节点通过本地 SOCKS5、HTTP 或 Mixed
 5. 勾选**启用代理网关**并选择**保存并应用**。全局设置的草稿可跨标签编辑。入口、自定义策略和账号在各自的编辑弹窗保存后立即生效。
 6. 回到**概览**查看客户端接入信息。**临时停止**断开当前连接并保留启用设置，**恢复运行**使用已保存的配置重新监听。长期停用可关闭启用开关并保存。
 7. 在**运行监控**查看活动连接或节点负载。主动健康探测设置与立即探测操作位于节点负载视图。
+
+默认策略和自定义策略都可以在候选节点池选择系统**标签**。下拉框保持展开，可以连续选择，标签显示系统中为其配置的颜色。节点需要匹配任意一个选中标签的完整名称及大小写，并满足其他筛选条件。标签留空时不限制节点标签。指定节点失败回退开启时，标签条件应用于回退节点池。
 
 网关默认关闭。密码使用实例 API 加密密钥加密保存。设置响应仅返回 `hasPassword` 及（有密码时）`maskedPassword`，不会返回明文 `password`。省略 `password` 会保留已保存密码，`clearPassword: true` 会清除密码。
 
@@ -113,7 +115,7 @@ curl --proxy socks5h://127.0.0.1:7890 -U 'proxy:your-password' https://example.c
 旧 API 前缀 `/api/v1/settings/socks5` 已下线，调用会返回 `404`。配置读写请改用新前缀下的 `/settings`，原 `/profiles`、`/routing` 和 `/routing/reset` 分别迁移到 `/routing-profiles`、`/node-stats` 和 `/node-stats/reset`。启用状态由 `status.data.enabled` 提供，完整配置与节点健康明细分别从 `/settings` 和 `/health` 读取。
 
 - `GET /api/v1/proxy-gateway/settings` — 读取公开网关设置，不返回明文密码。
-- `POST /api/v1/proxy-gateway/settings` — 保存并应用设置。JSON 字段包括 `enabled`、`listenAddress`、`port`、`username`、可选 `password`、`clearPassword`、`nodeId`、`selection`（`best`、`random`、`round_robin`、`smart` 或 `specific`）、`requireAuth`、`maxAttempts`（1-5）、`dialTimeoutSeconds`（1-120）、`failureCooldownSeconds`（0-3600）、`specificFallback`、`maxConnections`（1-10000）、`maxConnectionsPerClient`（1..maxConnections）、`idleTimeoutSeconds`（0-86400）、`maxConnectionDurationSeconds`（0-604800）、`healthCheckEnabled`、`healthCheckIntervalSeconds`（10-3600）、`healthCheckTimeoutSeconds`（1-30）、`candidateGroups`、`candidateSources`、`candidateProtocols`、`candidateCountries`、`stickySessionEnabled`、`stickySessionMode`（`client_ip` 或 `username`）和 `stickySessionTtlSeconds`（60-604800）。候选池字段均为字符串数组；不同字段之间为“且”，字段内多个值为“或”。可选字段均可省略以保留已保存值。`listenAddress` 和 `port` 用于生成初始入口，已保存的监听入口请通过 `/listeners` 编辑。保存后应用失败时，业务错误响应的 `data.settings` 返回最新已保存的公开配置。
+- `POST /api/v1/proxy-gateway/settings` — 保存并应用设置。JSON 字段包括 `enabled`、`listenAddress`、`port`、`username`、可选 `password`、`clearPassword`、`nodeId`、`selection`（`best`、`random`、`round_robin`、`smart` 或 `specific`）、`requireAuth`、`maxAttempts`（1-5）、`dialTimeoutSeconds`（1-120）、`failureCooldownSeconds`（0-3600）、`specificFallback`、`maxConnections`（1-10000）、`maxConnectionsPerClient`（1..maxConnections）、`idleTimeoutSeconds`（0-86400）、`maxConnectionDurationSeconds`（0-604800）、`healthCheckEnabled`、`healthCheckIntervalSeconds`（10-3600）、`healthCheckTimeoutSeconds`（1-30）、`candidateGroups`、`candidateSources`、`candidateProtocols`、`candidateCountries`、`candidateTags`、`stickySessionEnabled`、`stickySessionMode`（`client_ip` 或 `username`）和 `stickySessionTtlSeconds`（60-604800）。候选池字段均为字符串数组；不同字段之间为“且”，字段内多个值为“或”。可选字段均可省略以保留已保存值。`listenAddress` 和 `port` 用于生成初始入口，已保存的监听入口请通过 `/listeners` 编辑。保存后应用失败时，业务错误响应的 `data.settings` 返回最新已保存的公开配置。
 - `POST /api/v1/proxy-gateway/start` — 使用已保存的配置恢复运行。网关须已启用，且至少有一个启用的监听入口。
 - `POST /api/v1/proxy-gateway/stop` — 停止监听并保留已保存的设置。两个操作均返回与状态接口相同的结构。
 - `GET /api/v1/proxy-gateway/status` — 返回 `data.enabled`、`data.running`、`data.listeners`、连接及流量汇总 `data.stats`、健康探测汇总 `data.health`。运行中的入口包含实际认证要求 `effectiveRequireAuth`。
@@ -123,7 +125,7 @@ curl --proxy socks5h://127.0.0.1:7890 -U 'proxy:your-password' https://example.c
 - `GET|POST /api/v1/proxy-gateway/accounts` — 列出或创建独立账号。字段包括 `id`、`username`、`password`、`profileId` 和 `enabled`；响应只返回密码是否存在的元数据。
 - `PUT|DELETE /api/v1/proxy-gateway/accounts/:id` — 覆盖更新或删除账号；更新时密码留空会保留已加密保存的密码。
 - `GET /api/v1/proxy-gateway/routing-profiles` — 返回虚拟 `default` 配置和已保存的自定义路由配置。
-- `POST /api/v1/proxy-gateway/routing-profiles` — 创建自定义路由配置。字段包括 `id`、`name`、`enabled`、`selection`、`nodeId`、重试/冷却参数、候选池数组和粘性设置。
+- `POST /api/v1/proxy-gateway/routing-profiles` — 创建自定义路由配置。字段包括 `id`、`name`、`enabled`、`selection`、`nodeId`、重试/冷却参数、候选池数组（含 `candidateTags`）和粘性设置。
 - `PUT /api/v1/proxy-gateway/routing-profiles/:id` — 覆盖更新自定义路由配置；保留的 `default` 配置由网关设置接口管理。
 - `DELETE /api/v1/proxy-gateway/routing-profiles/:id` — 删除自定义路由配置；已经建立的连接不会被主动中断。
 - `GET /api/v1/proxy-gateway/node-stats` — 返回服务端分页的候选节点负载数据。省略 `listenerId` 时汇总所有运行入口。用 `allProfiles=true` 查看全部启用策略的候选节点，或用 `profileId` 选择一个候选池（默认 `default`）。其他查询参数包括 `keyword`、`status`（`healthy`、`unhealthy`、`checking`、`cooling` 或 `unknown`）、`sortBy`、`sortOrder`、`page` 和 `pageSize`（最大 `100`）。每项包含节点元数据、健康状态、延迟来源、活动/成功/失败计数、连续失败、智能评分、冷却时间和最近选路时间。`healthListenerId` 标明健康状态、延迟和评分取自哪个入口。`probeRunning` 表示所选入口中是否有正在进行的探测。

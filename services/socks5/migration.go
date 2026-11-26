@@ -28,6 +28,7 @@ func PreservedSettingKeys() []string {
 		settingCandidateSources,
 		settingCandidateProtocols,
 		settingCandidateCountries,
+		settingCandidateTags,
 		settingStickySessionEnabled,
 		settingStickySessionMode,
 		settingStickySessionTTLSeconds,

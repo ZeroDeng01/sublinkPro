@@ -75,6 +75,7 @@ func UpdateSocks5Settings(c *gin.Context) {
 		CandidateSources             *[]string `json:"candidateSources"`
 		CandidateProtocols           *[]string `json:"candidateProtocols"`
 		CandidateCountries           *[]string `json:"candidateCountries"`
+		CandidateTags                *[]string `json:"candidateTags"`
 		StickySessionEnabled         *bool     `json:"stickySessionEnabled"`
 		StickySessionMode            *string   `json:"stickySessionMode"`
 		StickySessionTTLSeconds      *int      `json:"stickySessionTtlSeconds"`
@@ -158,6 +159,10 @@ func UpdateSocks5Settings(c *gin.Context) {
 	if req.CandidateCountries != nil {
 		candidateCountries = *req.CandidateCountries
 	}
+	candidateTags := current.CandidateTags
+	if req.CandidateTags != nil {
+		candidateTags = *req.CandidateTags
+	}
 	stickySessionEnabled := current.StickySessionEnabled
 	if req.StickySessionEnabled != nil {
 		stickySessionEnabled = *req.StickySessionEnabled
@@ -194,6 +199,7 @@ func UpdateSocks5Settings(c *gin.Context) {
 		CandidateSources:             candidateSources,
 		CandidateProtocols:           candidateProtocols,
 		CandidateCountries:           candidateCountries,
+		CandidateTags:                candidateTags,
 		StickySessionEnabled:         stickySessionEnabled,
 		StickySessionMode:            stickySessionMode,
 		StickySessionTTLSeconds:      stickySessionTTLSeconds,
@@ -310,6 +316,7 @@ type socks5RoutingProfileRequest struct {
 	CandidateSources        []string `json:"candidateSources"`
 	CandidateProtocols      []string `json:"candidateProtocols"`
 	CandidateCountries      []string `json:"candidateCountries"`
+	CandidateTags           []string `json:"candidateTags"`
 	StickySessionEnabled    bool     `json:"stickySessionEnabled"`
 	StickySessionTTLSeconds int      `json:"stickySessionTtlSeconds"`
 }
@@ -328,6 +335,7 @@ func (req socks5RoutingProfileRequest) profile(id string, defaultEnabled bool) s
 		FailureCooldownSeconds: req.FailureCooldownSeconds, SpecificFallback: req.SpecificFallback,
 		CandidateGroups: req.CandidateGroups, CandidateSources: req.CandidateSources,
 		CandidateProtocols: req.CandidateProtocols, CandidateCountries: req.CandidateCountries,
+		CandidateTags:        req.CandidateTags,
 		StickySessionEnabled: req.StickySessionEnabled, StickySessionTTLSeconds: req.StickySessionTTLSeconds,
 	}
 }

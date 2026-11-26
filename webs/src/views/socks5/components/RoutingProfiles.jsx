@@ -47,6 +47,7 @@ const emptyProfile = {
   candidateSources: [],
   candidateProtocols: [],
   candidateCountries: [],
+  candidateTags: [],
   stickySessionEnabled: true,
   stickySessionTtlSeconds: 1800
 };
@@ -121,6 +122,7 @@ export default function RoutingProfiles({ showMessage, onChanged }) {
       candidateSources: form.candidateSources || [],
       candidateProtocols: form.candidateProtocols || [],
       candidateCountries: form.candidateCountries || [],
+      candidateTags: form.candidateTags || [],
       stickySessionEnabled: Boolean(form.stickySessionEnabled),
       stickySessionTtlSeconds: Number(form.stickySessionTtlSeconds) || 1800
     };
@@ -218,7 +220,8 @@ export default function RoutingProfiles({ showMessage, onChanged }) {
                   ...(profile.candidateGroups || []),
                   ...(profile.candidateSources || []),
                   ...(profile.candidateProtocols || []),
-                  ...(profile.candidateCountries || [])
+                  ...(profile.candidateCountries || []),
+                  ...(profile.candidateTags || [])
                 ];
                 return (
                   <Box key={profile.id} sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1.5 }}>

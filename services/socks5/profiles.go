@@ -37,6 +37,7 @@ type RoutingProfile struct {
 	CandidateSources        []string `json:"candidateSources"`
 	CandidateProtocols      []string `json:"candidateProtocols"`
 	CandidateCountries      []string `json:"candidateCountries"`
+	CandidateTags           []string `json:"candidateTags"`
 	StickySessionEnabled    bool     `json:"stickySessionEnabled"`
 	StickySessionTTLSeconds int      `json:"stickySessionTtlSeconds"`
 	IsDefault               bool     `json:"isDefault"`
@@ -107,6 +108,7 @@ func defaultRoutingProfile(cfg Config) RoutingProfile {
 		FailureCooldownSeconds: cfg.FailureCooldownSeconds, SpecificFallback: cfg.SpecificFallback,
 		CandidateGroups: append([]string{}, cfg.CandidateGroups...), CandidateSources: append([]string{}, cfg.CandidateSources...),
 		CandidateProtocols: append([]string{}, cfg.CandidateProtocols...), CandidateCountries: append([]string{}, cfg.CandidateCountries...),
+		CandidateTags:        append([]string{}, cfg.CandidateTags...),
 		StickySessionEnabled: cfg.StickySessionEnabled, StickySessionTTLSeconds: cfg.StickySessionTTLSeconds, IsDefault: true,
 	}
 }
@@ -150,6 +152,7 @@ func normalizeRoutingProfile(base Config, profile RoutingProfile) (RoutingProfil
 	profile.CandidateSources = append([]string{}, normalized.CandidateSources...)
 	profile.CandidateProtocols = append([]string{}, normalized.CandidateProtocols...)
 	profile.CandidateCountries = append([]string{}, normalized.CandidateCountries...)
+	profile.CandidateTags = append([]string{}, normalized.CandidateTags...)
 	profile.StickySessionTTLSeconds = normalized.StickySessionTTLSeconds
 	profile.IsDefault = false
 	return profile, nil
@@ -167,6 +170,7 @@ func (profile RoutingProfile) apply(base Config) Config {
 	cfg.CandidateSources = append([]string{}, profile.CandidateSources...)
 	cfg.CandidateProtocols = append([]string{}, profile.CandidateProtocols...)
 	cfg.CandidateCountries = append([]string{}, profile.CandidateCountries...)
+	cfg.CandidateTags = append([]string{}, profile.CandidateTags...)
 	cfg.StickySessionEnabled = profile.StickySessionEnabled
 	cfg.StickySessionTTLSeconds = profile.StickySessionTTLSeconds
 	return cfg

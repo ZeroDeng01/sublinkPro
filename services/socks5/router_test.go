@@ -6,10 +6,12 @@ import (
 	"io"
 	"net"
 	"reflect"
+	"slices"
 	"sync"
 	"testing"
 	"time"
 
+	"sublink/database"
 	"sublink/models"
 )
 
@@ -72,6 +74,141 @@ func TestFilterCandidatePoolCombinesFields(t *testing.T) {
 	manual := filterCandidatePool([]models.Node{{ID: 7, Link: "g"}}, Config{CandidateGroups: []string{candidateUngroupedValue}, CandidateSources: []string{"manual"}})
 	if len(manual) != 1 {
 		t.Fatalf("ungrouped manual node did not match candidate pool: %+v", manual)
+	}
+}
+
+func TestFilterCandidatePoolMatchesAnyExactTag(t *testing.T) {
+	nodes := []models.Node{
+		{ID: 1, Link: "a", Group: "pool", Tags: "unrelated, Premium"},
+		{ID: 2, Link: "b", Group: "pool", Tags: "备用"},
+		{ID: 3, Link: "c", Group: "outside", Tags: "Premium"},
+		{ID: 4, Link: "d", Group: "pool", Tags: "premium, Premium Plus"},
+		{ID: 5, Link: "e", Group: "pool"},
+	}
+	for _, tc := range []struct {
+		name string
+		tags []string
+		want []int
+	}{
+		{name: "single tag", tags: []string{"Premium"}, want: []int{1}},
+		{name: "either tag and matching group", tags: []string{"Premium", "备用"}, want: []int{1, 2}},
+		{name: "no match", tags: []string{"missing"}},
+		{name: "cleared tags", tags: []string{}, want: []int{1, 2, 4, 5}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var ids []int
+			for _, node := range filterCandidatePool(nodes, Config{CandidateGroups: []string{"pool"}, CandidateTags: tc.tags}) {
+				ids = append(ids, node.ID)
+			}
+			if !slices.Equal(ids, tc.want) {
+				t.Fatalf("candidate IDs = %v, want %v", ids, tc.want)
+			}
+		})
+	}
+}
+
+func TestTagCandidatePoolsFollowNodeTagChanges(t *testing.T) {
+	setupSocks5SettingsDB(t)
+	db := database.DB
+	if err := db.AutoMigrate(&models.Node{}); err != nil {
+		t.Fatal(err)
+	}
+	nodes := []models.Node{
+		{ID: 1, Name: "Default", Link: "test://default", LinkHash: "tag-default", Tags: "default-tag"},
+		{ID: 2, Name: "Custom", Link: "test://custom", LinkHash: "tag-custom", Tags: "custom-tag"},
+		{ID: 3, Name: "Outside", Link: "test://outside", LinkHash: "tag-outside"},
+	}
+	if err := db.Create(&nodes).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := models.InitNodeCache(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := db.Delete(&models.Node{}, []int{1, 2, 3}).Error; err != nil {
+			t.Error(err)
+		}
+		if err := models.InitNodeCache(); err != nil {
+			t.Error(err)
+		}
+	})
+
+	base := testBaseConfig(t)
+	base.CandidateTags = []string{"default-tag"}
+	if _, err := CreateRoutingProfile(base, RoutingProfile{ID: "custom", Name: "Custom", Enabled: true, CandidateTags: []string{"custom-tag"}}); err != nil {
+		t.Fatal(err)
+	}
+	server, err := NewServer(base, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server.healthProbe = func(context.Context, models.Node, time.Duration) (int, error) { return 25, nil }
+
+	checkCandidates := func(cfg Config, want ...int) {
+		t.Helper()
+		candidates, err := server.router.candidates(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ids []int
+		for _, node := range candidates {
+			ids = append(ids, node.ID)
+		}
+		if !slices.Equal(ids, want) {
+			t.Fatalf("routed candidate IDs = %v, want %v", ids, want)
+		}
+	}
+	checkMonitoring := func(want ...int) {
+		t.Helper()
+		page, err := server.RoutingSnapshot(RoutingSnapshotQuery{AllProfiles: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var monitored []int
+		for _, item := range page.Items {
+			monitored = append(monitored, item.NodeID)
+		}
+		server.runHealthSweep(t.Context(), nil, false)
+		var probed []int
+		for _, node := range server.HealthSnapshot().Nodes {
+			probed = append(probed, node.NodeID)
+		}
+		slices.Sort(monitored)
+		slices.Sort(probed)
+		if !slices.Equal(monitored, want) || !slices.Equal(probed, want) {
+			t.Fatalf("monitored IDs = %v, probed IDs = %v, want %v", monitored, probed, want)
+		}
+	}
+	_, custom, ok := server.profiles.resolve("custom")
+	if !ok {
+		t.Fatal("custom routing profile unavailable")
+	}
+	checkCandidates(base, 1)
+	checkCandidates(custom, 2)
+	checkMonitoring(1, 2)
+
+	specific := base
+	specific.Selection, specific.NodeID, specific.MaxAttempts = "specific", 3, 3
+	checkCandidates(specific, 3)
+	specific.SpecificFallback = true
+	checkCandidates(specific, 3, 1)
+
+	if err := nodes[0].SetTagNames(nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := nodes[2].SetTagNames([]string{"custom-tag"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.router.candidates(base); err == nil {
+		t.Fatal("default strategy routed a node after its last matching tag was removed")
+	}
+	checkMonitoring(2, 3)
+	profiles, err := ListRoutingProfiles(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(profiles) != 2 || !profiles[0].IsDefault || profiles[0].CandidateCount != 0 || profiles[1].ID != "custom" || profiles[1].CandidateCount != 2 {
+		t.Fatalf("unexpected profile candidate counts: %+v", profiles)
 	}
 }
 
