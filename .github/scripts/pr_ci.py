@@ -20,6 +20,9 @@ CHECKS = {
         "Run frontend lint": ("前端 lint / `yarn run lint`", "FRONTEND_LINT"),
         "Build frontend": ("前端构建 / `yarn run build`", "FRONTEND_BUILD"),
     },
+    "Documentation Checks": {
+        "Validate documentation": ("文档校验 / Documentation", "DOCS_CHECK"),
+    },
 }
 STATUS_LABELS = {
     "success": "✅ 通过 / Passed",
@@ -245,7 +248,7 @@ def report_recheck(event):
                 "fork run, or a repository administrator can request a recheck.")
     else:
         results = {key: os.environ[key] for steps in CHECKS.values() for _, key in steps.values()}
-        job_results = {os.environ["BACKEND_RESULT"], os.environ["FRONTEND_RESULT"]}
+        job_results = {os.environ[key] for key in ("BACKEND_RESULT", "FRONTEND_RESULT", "DOCS_RESULT")}
         if "failure" in job_results:
             overall = "failure"
         elif job_results == {"success"}:

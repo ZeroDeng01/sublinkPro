@@ -58,23 +58,23 @@
 
 | 功能 | 说明 | 详情 |
 |:---|:---|:---:|
-| 🧭 **检测中心** | 管理检测方案与自动任务，支持指定节点范围、定时检测及机场更新后检测 | [📖](docs/features/unlock-check.zh-CN.md#检测中心) |
-| 🏷️ **智能标签系统** | 自动规则打标签、零代码筛选、支持 IP 质量条件 | [📖](docs/features/tags.zh-CN.md) |
-| ⚡ **专业测速系统** | 双阶段测试、智能延迟测量、支持 IP 质量检测与解锁检测 | [📖](docs/features/speedtest.zh-CN.md) |
-| 🔗 **链式代理** | Dialer-Proxy 原生支持、可视化配置、支持按 IP 质量选节点 | [📖](docs/features/chain-proxy.zh-CN.md) |
-| 🤖 **AI 模板编辑** | 用自然语言生成操作式预览，审阅只读对比，接受到编辑器后再正常保存 | [📖](docs/features/template-ai.zh-CN.md) |
-| ✈️ **机场管理** | 多格式导入、定时更新、流量监控、节点测试概览、一键全量拉取 | [📖](docs/features/airport.zh-CN.md) |
-| 🗂️ **分组排序** | 分组内机场优先级拖拽排序，控制订阅输出中的节点顺序 | [📖](docs/development.zh-CN.md) |
-| 📋 **订阅分享** | 多链接管理、过期策略、访问统计、分享链接设备限额 | [📖](docs/features/subscription-share.zh-CN.md) |
-| 🌐 **Host 管理** | 域名映射、DNS 配置、CDN 优选 | [📖](docs/features/host.zh-CN.md) |
-| ☁️ **Cloudflare Tunnel** | 无公网 IP 暴露管理界面、页面托管 cloudflared | [📖](docs/features/cloudflare-tunnel.zh-CN.md) |
-| 💾 **WebDAV 备份** | 加密保存 WebDAV 凭据，支持手动或定时上传系统备份、查看远程 ZIP 并从页面恢复 | [📖](docs/features/backup.zh-CN.md) |
-| 🔌 **代理网关** | 支持 SOCKS5/HTTP/Mixed 监听入口、独立账号、按用户名选策略、粘性会话、健康感知选路和实时统计 | [📖](docs/features/proxy-gateway.zh-CN.md) |
-| 🤖 **Telegram Bot** | 远程测速、订阅管理、系统监控 | [📖](docs/features/telegram-bot.zh-CN.md) |
-| 📜 **脚本系统** | 节点过滤、内容后处理、多脚本链式执行 | [📖](docs/script_support.zh-CN.md) |
-| 🔔 **Webhooks** | 支持 PushDeer、Bark、钉钉、方糖等多平台通知 | [📖](docs/configuration.zh-CN.md) |
-| 🔐 **安全特性** | Token 授权、API Key、IP 黑/白名单、访问日志 | [📖](docs/configuration.zh-CN.md) |
-| 🦾 **AI agent 技能** | 通过 REST API 用自然语言驱动整个系统——添加节点、创建与分享订阅、管理机场与模板。采用可移植的 `SKILL.md` 格式，任何兼容的 AI agent 均可使用 | [📖](skill-sublinkpro/README.zh-CN.md) |
+| 🧭 **检测中心** | 管理检测方案与自动任务，支持指定节点范围、定时检测及机场更新后检测 | [📖](docs/user/features/unlock-check.zh-CN.md#检测中心) |
+| 🏷️ **智能标签系统** | 自动规则打标签、零代码筛选、支持 IP 质量条件 | [📖](docs/user/features/tags.zh-CN.md) |
+| ⚡ **专业测速系统** | 双阶段测试、智能延迟测量、支持 IP 质量检测与解锁检测 | [📖](docs/user/features/speedtest.zh-CN.md) |
+| 🔗 **链式代理** | Dialer-Proxy 原生支持、可视化配置、支持按 IP 质量选节点 | [📖](docs/user/features/chain-proxy.zh-CN.md) |
+| 🤖 **AI 模板编辑** | 用自然语言生成操作式预览，审阅只读对比，接受到编辑器后再正常保存 | [📖](docs/user/features/template-ai.zh-CN.md) |
+| ✈️ **机场管理** | 多格式导入、定时更新、流量监控、节点测试概览、一键全量拉取 | [📖](docs/user/features/airport.zh-CN.md) |
+| 🗂️ **分组排序** | 分组内机场优先级拖拽排序，控制订阅输出中的节点顺序 | [📖](docs/user/features/subscription-share.zh-CN.md#调整分组内机场顺序) |
+| 📋 **订阅分享** | 多链接管理、过期策略、访问统计、分享链接设备限额 | [📖](docs/user/features/subscription-share.zh-CN.md) |
+| 🌐 **Host 管理** | 域名映射、DNS 配置、CDN 优选 | [📖](docs/user/features/host.zh-CN.md) |
+| ☁️ **Cloudflare Tunnel** | 无公网 IP 暴露管理界面、页面托管 cloudflared | [📖](docs/user/features/cloudflare-tunnel.zh-CN.md) |
+| 💾 **WebDAV 备份** | 加密保存 WebDAV 凭据，支持手动或定时上传系统备份、查看远程 ZIP 并从页面恢复 | [📖](docs/user/features/backup.zh-CN.md) |
+| 🔌 **代理网关** | 支持 SOCKS5/HTTP/Mixed 监听入口、独立账号、按用户名选策略、粘性会话、健康感知选路和实时统计 | [📖](docs/user/features/proxy-gateway.zh-CN.md) |
+| 🤖 **Telegram Bot** | 远程测速、订阅管理、系统监控 | [📖](docs/user/features/telegram-bot.zh-CN.md) |
+| 📜 **脚本系统** | 节点过滤、内容后处理、多脚本链式执行 | [📖](docs/user/features/script-support.zh-CN.md) |
+| 🔔 **Webhooks** | 支持 PushDeer、Bark、钉钉、方糖等多平台通知 | [📖](docs/user/configuration.zh-CN.md) |
+| 🔐 **安全特性** | Token 授权、API Key、IP 黑/白名单、访问日志 | [📖](docs/user/configuration.zh-CN.md) |
+| 🦾 **AI agent 技能** | 通过 REST API 用自然语言驱动整个系统——添加节点、创建与分享订阅、管理机场与模板。采用可移植的 `SKILL.md` 格式，任何兼容的 AI agent 均可使用 | [📖](skills/sublinkpro/README.zh-CN.md) |
 
 ---
 
@@ -108,18 +108,18 @@ services:
 启动服务：
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 访问 `http://localhost:8000`，使用默认账号 `admin` / `123456` 登录。
 
-默认使用 SQLite；如需切换到 MySQL 或 PostgreSQL，可通过 `SUBLINK_DSN`、配置文件 `dsn:` 或命令行 `--dsn` 指定数据库连接，示例见 [⚙️ 配置说明](docs/configuration.zh-CN.md)。
+默认使用 SQLite；如需切换到 MySQL 或 PostgreSQL，可通过 `SUBLINK_DSN`、配置文件 `dsn:` 或命令行 `--dsn` 指定数据库连接，示例见 [⚙️ 配置说明](docs/user/configuration.zh-CN.md)。
 
 > [!NOTE]
 > 即使配置了 `SUBLINK_WEB_BASE_PATH` 隐藏管理界面入口，API (`/api/*`) 与订阅/分享访问路径 (`/c/*`) 仍保持在根路径下，这是本项目特有的前后端集成行为。
 
 > [!TIP]
-> 将镜像改为 `zerodeng/sublink-pro:preview` 可跟随已发布的预发布版本。固定版本、一键脚本和升级方式见 [📦 安装部署指南](docs/installation.zh-CN.md)。
+> 将镜像改为 `zerodeng/sublink-pro:preview` 可跟随已发布的预发布版本。固定版本、一键脚本和升级方式见 [📦 安装部署指南](docs/user/installation.zh-CN.md)。
 
 > [!TIP]
 > Docker 镜像已内置 `cloudflared`。登录后可在 `用户中心 -> Cloudflare Tunnel` 填写 token 并启动；启用自动连接后会随服务启动连接 Tunnel。
@@ -148,36 +148,11 @@ docker-compose up -d
 
 ## 📖 文档导航
 
-### 🔧 安装与配置
+[完整文档目录](docs/README.zh-CN.md)
 
-| 文档 | 说明 |
-|:---|:---|
-| [📦 安装部署](docs/installation.zh-CN.md) | Docker、一键脚本、更新升级、Watchtower 自动更新 |
-| [⚙️ 配置说明](docs/configuration.zh-CN.md) | 环境变量、命令行参数、验证码配置 |
-
-### ✨ 功能详解
-
-| 文档 | 说明 |
-|:---|:---|
-| [🏷️ 智能标签系统](docs/features/tags.zh-CN.md) | 自动规则打标签、零代码筛选、IP 质量规则 |
-| [⚡ 测速系统](docs/features/speedtest.zh-CN.md) | 测速原理、IP 质量检测、解锁检测、参数配置 |
-| [🌍 解锁检测](docs/features/unlock-check.zh-CN.md) | 流媒体 / AI 可用区检测、Provider 架构、扩展方式 |
-| [🔗 链式代理](docs/features/chain-proxy.zh-CN.md) | Dialer-Proxy、条件选节点、配置流程 |
-| [🤖 AI 模板编辑](docs/features/template-ai.zh-CN.md) | 操作式预览、只读对比审阅、接受到编辑器、正常保存 |
-| [✈️ 机场管理](docs/features/airport.zh-CN.md) | 订阅导入、定时更新、流量监控 |
-| [📋 订阅分享](docs/features/subscription-share.zh-CN.md) | 多链接管理、过期策略、访问统计、分享链接设备限额 |
-| [🌐 Host 管理](docs/features/host.zh-CN.md) | 域名映射、DNS 配置、测速持久化 |
-| [☁️ Cloudflare Tunnel](docs/features/cloudflare-tunnel.zh-CN.md) | 创建 Tunnel、获取 token、配置公网访问 |
-| [🤖 Telegram 机器人](docs/features/telegram-bot.zh-CN.md) | 命令列表、配置指南 |
-| [📜 脚本功能](docs/script_support.zh-CN.md) | 节点过滤、内容后处理、函数参考 |
-| [🔐 双重验证（MFA）](docs/features/mfa.zh-CN.md) | TOTP 设置、恢复码、应急重置流程 |
-
-### 👨‍💻 开发者
-
-| 文档 | 说明 |
-|:---|:---|
-| [🛠️ 开发指南](docs/development.zh-CN.md) | 项目结构、本地开发、定时任务开发 |
-| [🔌 协议扩展指南](docs/development.zh-CN.md#-新增协议接入指南) | 如何新增协议、注册能力、字段元数据、ProtocolDemo 示例 |
+- [用户指南](docs/user/README.zh-CN.md) · 安装、配置和使用 SublinkPro
+- [开发指南](docs/development/README.zh-CN.md) · 本地开发、验证和贡献
+- [编码 Agent 指南](docs/agents/README.zh-CN.md) · 定位代码、项目规则和专项技能
 
 ---
 
@@ -195,12 +170,12 @@ URI 各部分只解码一次，重新导出链接时也会保留其原始含义�
 | **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell, OpenVPN, Sudoku |
 | **surge** | ss, trojan, vmess, VLESS, hy2, tuic, AnyTLS, Snell |
 
-> VLESS、Trojan REALITY 的 `spx` / `pqv` 支持分享链接、字段编辑及 Clash YAML 导入导出（对应 `spider-x` / `mldsa65-verify`）；Xray 客户端使用现有 `v2ray` 输出。实际执行需要兼容内核；Surge 会跳过无法表达的配置。参见 [REALITY 兼容说明](docs/features/subscription-share.zh-CN.md#vless-reality-兼容说明)。
+> VLESS、Trojan REALITY 的 `spx` / `pqv` 支持分享链接、字段编辑及 Clash YAML 导入导出（对应 `spider-x` / `mldsa65-verify`）；Xray 客户端使用现有 `v2ray` 输出。实际执行需要兼容内核；Surge 会跳过无法表达的配置。参见 [REALITY 兼容说明](docs/user/features/subscription-share.zh-CN.md#vless-reality-兼容说明)。
 
 > [!NOTE]
-> Mieru 节点支持从官方标准分享链接（`mieru://`）、简单分享链接（`mierus://`）及 Clash/mihomo YAML 导入。Clash/mihomo 订阅可输出 Mieru 节点。参见 [Mieru 兼容说明](docs/features/subscription-share.zh-CN.md#mieru-输出说明)。
+> Mieru 节点支持从官方标准分享链接（`mieru://`）、简单分享链接（`mierus://`）及 Clash/mihomo YAML 导入。Clash/mihomo 订阅可输出 Mieru 节点。参见 [Mieru 兼容说明](docs/user/features/subscription-share.zh-CN.md#mieru-输出说明)。
 
-> Sudoku 节点支持从官方 `sudoku://` 短链和 Clash/mihomo YAML 导入。请使用基于 Mihomo 的客户端加载导出的 Sudoku 节点。参见 [Sudoku 支持](docs/features/subscription-share.zh-CN.md#sudoku-支持)。
+> Sudoku 节点支持从官方 `sudoku://` 短链和 Clash/mihomo YAML 导入。请使用基于 Mihomo 的客户端加载导出的 Sudoku 节点。参见 [Sudoku 支持](docs/user/features/subscription-share.zh-CN.md#sudoku-支持)。
 
 > [!NOTE]
 > Snell 支持原生 Clash/mihomo 与 Surge 配置输出。SublinkPro 使用自有的可编辑链接格式 `snell://server:port?psk=xxx&version=3&obfs=http&obfs-host=xxx#name`，URI 输出会包含这种链接。v2ray 输出会跳过 Snell。
@@ -247,6 +222,8 @@ URI 各部分只解码一次，重新导出链接时也会保留其原始含义�
 - 🐛 提交 [Issue](https://github.com/ZeroDeng01/sublinkPro/issues) 反馈问题或建议
 - 🔧 提交 Pull Request 贡献代码
 - 📖 完善文档和使用教程
+
+参阅[贡献指南](CONTRIBUTING.zh-CN.md)、[安全政策](SECURITY.zh-CN.md)和 [MIT 许可](LICENSE)。
 
 ### 🌟 优质推荐
 

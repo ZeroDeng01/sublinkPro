@@ -1,9 +1,10 @@
 ---
 name: performance-check
 description: "Performance review checklist for optimization, scalability, and resource usage. Use when changes affect queries, APIs, rendering, caching, or algorithms. Not for simple config changes."
-version: "1.0.0"
-author: "SublinkPro Team"
 user-invocable: true
+metadata:
+  version: "1.0.0"
+  author: "SublinkPro Team"
 ---
 
 # Performance Check Skill

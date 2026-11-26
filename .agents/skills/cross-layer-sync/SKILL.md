@@ -1,9 +1,10 @@
 ---
 name: cross-layer-sync
 description: "Cross-layer synchronization guide for backend, frontend, and documentation changes. Invoked by post-dev-workflow when changes affect multiple layers. Not for direct user invocation."
-version: "1.0.0"
-author: "SublinkPro Team"
 user-invocable: false
+metadata:
+  version: "1.0.0"
+  author: "SublinkPro Team"
 ---
 
 # Cross-Layer Synchronization Check Skill
@@ -65,8 +66,8 @@ Before running this checklist:
 - [ ] Added i18n keys if needed (`webs/src/i18n/locales/`)
 
 #### Skill API (if `/api/v1/*` or `/c/*` changed)
-- [ ] Updated `skill-sublinkpro/reference/api.md` endpoint documentation
-- [ ] Updated `skill-sublinkpro/SKILL.md` workflow descriptions (if affected)
+- [ ] Updated `skills/sublinkpro/reference/api.md` endpoint documentation
+- [ ] Updated `skills/sublinkpro/SKILL.md` workflow descriptions (if affected)
 - [ ] Updated request/response examples
 - [ ] Updated error handling examples
 
@@ -98,10 +99,10 @@ Before running this checklist:
 ### When configuration changes affect:
 
 #### Environment variables
-- [ ] Updated `docs/configuration.md` + `.zh-CN.md`
+- [ ] Updated `docs/user/configuration.md` + `.zh-CN.md`
 - [ ] Updated `.env.example` or `config.example.yaml`
 - [ ] Updated Docker configuration examples
-- [ ] Updated deployment documentation (`skill-sublinkpro/reference/deploy.md`)
+- [ ] Updated deployment documentation (`skills/sublinkpro/reference/deploy.md`)
 - [ ] Updated code that reads the variable
 
 #### Default values
@@ -110,7 +111,7 @@ Before running this checklist:
 - [ ] Updated example files
 
 #### Config precedence
-- [ ] Updated `docs/configuration.md`
+- [ ] Updated `docs/user/configuration.md`
 - [ ] Verified new precedence order works correctly
 
 ## Documentation Sync Checklist
@@ -119,24 +120,24 @@ Before running this checklist:
 
 #### User-facing features
 - [ ] Updated `README.md` + `README.zh-CN.md` (if feature overview affected)
-- [ ] Updated relevant `docs/features/*.md` + `.zh-CN.md`
+- [ ] Updated relevant `docs/user/features/*.md` + `.zh-CN.md`
 - [ ] Updated screenshots/examples if needed
 
 #### Developer workflows
-- [ ] Updated `docs/development.md` + `.zh-CN.md`
+- [ ] Updated `docs/development/getting-started.md` + `.zh-CN.md`
 - [ ] Updated `CONTRIBUTING.md` + `.zh-CN.md` (if contribution flow affected)
 
 #### Configuration or deployment
-- [ ] Updated `docs/configuration.md` + `.zh-CN.md`
-- [ ] Updated `docs/installation.md` + `.zh-CN.md`
-- [ ] Updated `skill-sublinkpro/reference/deploy.md`
+- [ ] Updated `docs/user/configuration.md` + `.zh-CN.md`
+- [ ] Updated `docs/user/installation.md` + `.zh-CN.md`
+- [ ] Updated `skills/sublinkpro/reference/deploy.md`
 
 #### API contracts
-- [ ] Updated `skill-sublinkpro/reference/api.md`
+- [ ] Updated `skills/sublinkpro/reference/api.md`
 - [ ] Updated API examples and error codes
 
 #### Documentation map
-- [ ] Updated `skill-sublinkpro/reference/docs.md` if new docs added or paths changed
+- [ ] Updated `skills/sublinkpro/reference/docs.md` if new docs added or paths changed
 
 ### Bilingual consistency
 - [ ] Updated both English and `*.zh-CN.md` versions
@@ -172,7 +173,7 @@ If you've checked an impacted layer and confirmed it truly doesn't need changes,
 2. Frontend: Add API client function (`webs/src/api/`)
 3. Frontend: Add UI component/view (`webs/src/views/`)
 4. i18n: Add translations for UI text
-5. Docs: Update `skill-sublinkpro/reference/api.md`
+5. Docs: Update `skills/sublinkpro/reference/api.md`
 6. Tests: Add backend handler tests
 
 ### Changing a data model field
@@ -186,9 +187,9 @@ If you've checked an impacted layer and confirmed it truly doesn't need changes,
 ### Modifying configuration behavior
 1. Backend: Update config parsing
 2. Backend: Update runtime behavior
-3. Docs: Update `docs/configuration.md` + `.zh-CN.md`
+3. Docs: Update `docs/user/configuration.md` + `.zh-CN.md`
 4. Docs: Update example configs
-5. Docs: Update `skill-sublinkpro/reference/deploy.md`
+5. Docs: Update `skills/sublinkpro/reference/deploy.md`
 6. Tests: Add config validation tests
 
 ## Delivery Requirements

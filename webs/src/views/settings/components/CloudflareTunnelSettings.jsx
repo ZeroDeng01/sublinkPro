@@ -43,12 +43,15 @@ const defaultStatus = {
   commandLabel: 'cloudflared tunnel --no-autoupdate run'
 };
 
-const cloudflareTunnelDocsUrl = 'https://github.com/ZeroDeng01/sublinkPro/blob/main/docs/features/cloudflare-tunnel.md';
-const cloudflaredInstallDocsUrl = `${cloudflareTunnelDocsUrl}#安装-cloudflared`;
-const cloudflareTunnelTokenDocsUrl = `${cloudflareTunnelDocsUrl}#第二步复制-tunnel-token`;
-
 export default function CloudflareTunnelSettings({ showMessage }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isChinese = (i18n.resolvedLanguage || i18n.language) === 'zh-CN';
+  const cloudflaredInstallDocsUrl = isChinese
+    ? 'https://github.com/ZeroDeng01/sublinkPro/blob/main/docs/user/features/cloudflare-tunnel.zh-CN.md#安装-cloudflared'
+    : 'https://github.com/ZeroDeng01/sublinkPro/blob/main/docs/user/features/cloudflare-tunnel.md#install-cloudflared';
+  const cloudflareTunnelTokenDocsUrl = isChinese
+    ? 'https://github.com/ZeroDeng01/sublinkPro/blob/main/docs/user/features/cloudflare-tunnel.zh-CN.md#第二步复制-tunnel-token'
+    : 'https://github.com/ZeroDeng01/sublinkPro/blob/main/docs/user/features/cloudflare-tunnel.md#step-2-copy-the-tunnel-token';
   const [status, setStatus] = useState(defaultStatus);
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(true);

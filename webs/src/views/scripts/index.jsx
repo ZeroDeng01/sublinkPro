@@ -73,6 +73,10 @@ function subMod(input, clientType) {
 
 export default function ScriptList() {
   const { t, i18n } = useTranslation();
+  const scriptGuideUrl =
+    (i18n.resolvedLanguage || i18n.language) === 'zh-CN'
+      ? 'https://github.com/ZeroDeng01/sublinkPro/blob/main/docs/user/features/script-support.zh-CN.md'
+      : 'https://github.com/ZeroDeng01/sublinkPro/blob/main/docs/user/features/script-support.md';
   const theme = useTheme();
   const matchDownMd = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -241,12 +245,7 @@ export default function ScriptList() {
           </Button>
         ) : (
           <Stack direction="row" spacing={1} alignItems="center">
-            <Link
-              href="https://github.com/ZeroDeng01/sublinkPro/blob/main/docs/script_support.md"
-              target="_blank"
-              rel="noopener"
-              sx={{ display: 'flex', alignItems: 'center' }}
-            >
+            <Link href={scriptGuideUrl} target="_blank" rel="noopener" sx={{ display: 'flex', alignItems: 'center' }}>
               <HelpOutlineIcon sx={{ mr: 0.5 }} fontSize="small" />
               {t('scripts.actions.usageGuide')}
             </Link>
@@ -262,12 +261,7 @@ export default function ScriptList() {
     >
       {matchDownMd && (
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-          <Link
-            href="https://github.com/ZeroDeng01/sublinkPro/blob/main/docs/script_support.md"
-            target="_blank"
-            rel="noopener"
-            sx={{ display: 'flex', alignItems: 'center' }}
-          >
+          <Link href={scriptGuideUrl} target="_blank" rel="noopener" sx={{ display: 'flex', alignItems: 'center' }}>
             <HelpOutlineIcon sx={{ mr: 0.5 }} fontSize="small" />
             {t('scripts.actions.usageGuide')}
           </Link>

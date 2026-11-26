@@ -1,3 +1,5 @@
+English | [简体中文](CONTRIBUTING.zh-CN.md)
+
 # Contributing to SublinkPro
 
 Thank you for your interest in contributing to SublinkPro! This guide will help you get started.
@@ -5,7 +7,7 @@ Thank you for your interest in contributing to SublinkPro! This guide will help 
 ## Quick Start
 
 1. **Fork and clone** the repository
-2. **Set up your environment** - see [Development Guide](docs/development.md)
+2. **Set up your environment** - see [Development Guide](docs/development/getting-started.md)
 3. **Create a branch** from `dev` for your changes
 4. **Make your changes** following our guidelines below
 5. **Test your changes** - see [Testing](#testing)
@@ -20,7 +22,7 @@ Thank you for your interest in contributing to SublinkPro! This guide will help 
 - `feature/*` - Feature branches
 - `fix/*` - Bug fix branches
 
-[Dependabot version update PRs](docs/development.md#dependabot) also target `dev`.
+[Dependabot version update PRs](docs/development/getting-started.md#dependabot) also target `dev`.
 
 ### Commit Messages
 
@@ -51,7 +53,7 @@ If your backend change affects APIs, fields, permissions, response structures, r
 - ✅ Update frontend request layer (`webs/src/api/`)
 - ✅ Update frontend views (`webs/src/views/`)
 - ✅ Update documentation
-- ✅ Update skill API reference (`skill-sublinkpro/reference/api.md`)
+- ✅ Update skill API reference (`skills/sublinkpro/reference/api.md`)
 
 ### When Frontend Changes:
 
@@ -68,7 +70,7 @@ If your frontend change affects API dependencies, auth behavior, field semantics
 ### When Configuration Changes:
 
 - ✅ Update code, documentation, and example files together
-- ✅ Update `skill-sublinkpro/reference/deploy.md` if deployment-related
+- ✅ Update `skills/sublinkpro/reference/deploy.md` if deployment-related
 
 ## Testing
 
@@ -85,13 +87,16 @@ yarn run prettier      # Format code
 
 ### Backend
 
-Run from repository root:
+From the repository root, use `gofmt -w` on the changed Go files before running the checks below.
 
 ```bash
-gofmt -w <changed-files>    # Format changed Go files
 golangci-lint run           # Run linter
 go test ./...               # Run all tests
 ```
+
+### Documentation
+
+From the repository root, run `python3 .github/scripts/check_docs.py` to check bilingual links and paths.
 
 ### Theme Changes
 
@@ -100,7 +105,7 @@ When modifying frontend UI colors, surfaces, or visual elements:
 - ✅ Check both light and dark modes
 - ✅ Check desktop and mobile views
 - ✅ Check hover, active, disabled, and focus states
-- ✅ See [Frontend Theme Guidelines](docs/frontend-theme-guidelines.md) for comprehensive rules
+- ✅ See [Frontend Theme Guidelines](docs/development/frontend-theme-guidelines.md) for comprehensive rules
 
 ## Internationalization
 
@@ -111,7 +116,7 @@ This project maintains bilingual support (Chinese and English):
 - ✅ Backend responses for Web UI should include `i18nKey` + `i18nParams`
 - ✅ Update both English and Chinese documentation versions
 
-See [Internationalization Guide](docs/internationalization.md) for complete requirements.
+See [Internationalization Guide](docs/development/internationalization.md) for complete requirements.
 
 ## Code Quality Standards
 
@@ -120,14 +125,14 @@ See [Internationalization Guide](docs/internationalization.md) for complete requ
 - Add comments for complex business logic, cross-layer contracts, and non-obvious algorithms
 - Comments should explain intent and constraints, not restate code
 - Update comments when changing nearby code
-- See [Development Guide](docs/development.md) for detailed standards
+- See [Development Guide](docs/development/getting-started.md) for detailed standards
 
 ### Testing
 
 - Add or update tests when changing key business logic, APIs, or protocols
 - Test names should describe scenario and expected outcome
 - Tests must be isolated and not depend on execution order or external state
-- See [Development Guide](docs/development.md) for detailed standards
+- See [Development Guide](docs/development/getting-started.md) for detailed standards
 
 ## Pull Request Process
 
@@ -137,12 +142,13 @@ See [Internationalization Guide](docs/internationalization.md) for complete requ
 4. **Verify all checks pass**:
    - Frontend: `yarn run lint` and `yarn run build`
    - Backend: `go build ./...`, `golangci-lint run`, and `go test ./...`
+   - Documentation: `python3 .github/scripts/check_docs.py`
 5. **Request review** from maintainers
 6. **Address feedback** promptly
 
 ### PR Checks
 
-New PRs targeting `dev` get an automatic check and a report in the PR conversation. After pushing fixes, the PR author or a repository administrator can comment `/recheck` to check the latest commit and receive a new report. A fork author can request a recheck once the automatic check has finished. See [PR automated checks](docs/development.md#6-pr-automated-checks) for the checks and approval flow.
+New PRs targeting `dev` get an automatic check and a report in the PR conversation. After pushing fixes, the PR author or a repository administrator can comment `/recheck` to check the latest commit and receive a new report. A fork author can request a recheck once the automatic check has finished. See [PR automated checks](docs/development/getting-started.md#6-pr-automated-checks) for the checks and approval flow.
 
 ## Documentation Updates
 
@@ -150,7 +156,7 @@ When your change affects behavior visible to users or developers:
 
 - ✅ Update relevant files in `docs/`
 - ✅ Update `README.md` if appropriate
-- ✅ Update feature documentation in `docs/features/` if applicable
+- ✅ Update feature documentation in `docs/user/features/` if applicable
 - ✅ Keep bilingual consistency (English and `*.zh-CN.md`)
 
 ## Architecture Deep Dive
@@ -169,9 +175,9 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ## Getting Help
 
-- 📖 Read the [Development Guide](docs/development.md)
-- 🐛 Report bugs via [GitHub Issues](https://github.com/zerodeng/sublink-pro/issues)
-- 💬 Join discussions on [GitHub Discussions](https://github.com/zerodeng/sublink-pro/discussions)
+- 📖 Read the [Development Guide](docs/development/getting-started.md)
+- 🐛 Report bugs via [GitHub Issues](https://github.com/ZeroDeng01/sublinkPro/issues)
+- 💬 Join discussions on [GitHub Discussions](https://github.com/ZeroDeng01/sublinkPro/discussions)
 - 📱 Chat on Telegram: [SublinkPro Community](https://t.me/sublinkpro)
 
 ## License

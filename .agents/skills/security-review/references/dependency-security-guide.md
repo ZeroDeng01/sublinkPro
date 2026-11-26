@@ -74,8 +74,8 @@ require (
 ```json
 {
   "dependencies": {
-    "react": "19.0.0",      // Exact version (no ^, ~)
-    "react-dom": "19.0.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   }
 }
 ```

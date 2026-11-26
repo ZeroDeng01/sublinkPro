@@ -1,3 +1,5 @@
+[English](CONTRIBUTING.md) | 简体中文
+
 # 贡献指南
 
 感谢你对 SublinkPro 的关注!本指南将帮助你开始贡献。
@@ -5,7 +7,7 @@
 ## 快速开始
 
 1. **Fork 并克隆**仓库
-2. **设置开发环境** - 参考 [开发指南](docs/development.zh-CN.md)
+2. **设置开发环境** - 参考 [开发指南](docs/development/getting-started.zh-CN.md)
 3. **从 `dev` 分支创建**你的功能分支
 4. **进行修改**并遵循下面的规范
 5. **测试你的改动** - 参考 [测试](#测试)
@@ -20,7 +22,7 @@
 - `feature/*` - 功能分支
 - `fix/*` - 修复分支
 
-[Dependabot 版本更新 PR](docs/development.zh-CN.md#dependabot) 也以 `dev` 为目标分支。
+[Dependabot 版本更新 PR](docs/development/getting-started.zh-CN.md#dependabot) 也以 `dev` 为目标分支。
 
 ### 提交信息
 
@@ -51,7 +53,7 @@ docs(i18n): 更新国际化要求
 - ✅ 更新前端请求层(`webs/src/api/`)
 - ✅ 更新前端页面(`webs/src/views/`)
 - ✅ 更新文档
-- ✅ 更新 skill API 参考(`skill-sublinkpro/reference/api.md`)
+- ✅ 更新 skill API 参考(`skills/sublinkpro/reference/api.md`)
 
 ### 前端改动时:
 
@@ -68,7 +70,7 @@ docs(i18n): 更新国际化要求
 ### 配置改动时:
 
 - ✅ 同时更新代码、文档和示例文件
-- ✅ 如果涉及部署,更新 `skill-sublinkpro/reference/deploy.md`
+- ✅ 如果涉及部署,更新 `skills/sublinkpro/reference/deploy.md`
 
 ## 测试
 
@@ -85,13 +87,16 @@ yarn run prettier      # 格式化代码
 
 ### 后端
 
-在仓库根目录执行:
+在仓库根目录先用 `gofmt -w` 格式化改动的 Go 文件，再运行以下检查。
 
 ```bash
-gofmt -w <改动的文件>     # 格式化改动的 Go 文件
 golangci-lint run        # 运行 linter
 go test ./...            # 运行所有测试
 ```
+
+### 文档
+
+在仓库根目录运行 `python3 .github/scripts/check_docs.py`，检查双语链接和路径。
 
 ### 主题改动
 
@@ -100,7 +105,7 @@ go test ./...            # 运行所有测试
 - ✅ 检查浅色和深色模式
 - ✅ 检查桌面端和移动端视图
 - ✅ 检查 hover、active、disabled 和 focus 状态
-- ✅ 参考 [前端主题适配规范](docs/frontend-theme-guidelines.zh-CN.md) 查看完整规则
+- ✅ 参考 [前端主题适配规范](docs/development/frontend-theme-guidelines.zh-CN.md) 查看完整规则
 
 ## 国际化
 
@@ -111,7 +116,7 @@ go test ./...            # 运行所有测试
 - ✅ 后端为 Web UI 的响应应包含 `i18nKey` + `i18nParams`
 - ✅ 同时更新英文和中文文档版本
 
-参考 [国际化指南](docs/internationalization.zh-CN.md) 查看完整要求。
+参考 [国际化指南](docs/development/internationalization.zh-CN.md) 查看完整要求。
 
 ## 代码质量标准
 
@@ -120,14 +125,14 @@ go test ./...            # 运行所有测试
 - 为复杂业务逻辑、跨层契约和非显而易见的算法添加注释
 - 注释应解释意图和约束,而不是重复代码
 - 修改代码时同步更新附近注释
-- 参考 [开发指南](docs/development.zh-CN.md) 查看详细标准
+- 参考 [开发指南](docs/development/getting-started.zh-CN.md) 查看详细标准
 
 ### 测试规范
 
 - 修改关键业务逻辑、API 或协议时添加或更新测试
 - 测试名称应描述场景和期望结果
 - 测试必须相互隔离,不依赖执行顺序或外部状态
-- 参考 [开发指南](docs/development.zh-CN.md) 查看详细标准
+- 参考 [开发指南](docs/development/getting-started.zh-CN.md) 查看详细标准
 
 ## PR 流程
 
@@ -137,12 +142,13 @@ go test ./...            # 运行所有测试
 4. **验证所有检查通过**:
    - 前端:`yarn run lint` 和 `yarn run build`
    - 后端：`go build ./...`、`golangci-lint run` 和 `go test ./...`
+   - 文档：`python3 .github/scripts/check_docs.py`
 5. **请求 review**
 6. **及时处理反馈**
 
 ### PR 检查
 
-新建以 `dev` 为目标的 PR 时会自动运行检查，并在 PR 对话发布报告。推送修复后，PR 作者或仓库管理员可评论 `/recheck`，检查最新提交并获取新报告。来自 fork 的 PR 作者可以在首轮检查结束后发起复查。检查项和审批流程见 [PR 自动检查](docs/development.zh-CN.md#6-pr-自动检查)。
+新建以 `dev` 为目标的 PR 时会自动运行检查，并在 PR 对话发布报告。推送修复后，PR 作者或仓库管理员可评论 `/recheck`，检查最新提交并获取新报告。来自 fork 的 PR 作者可以在首轮检查结束后发起复查。检查项和审批流程见 [PR 自动检查](docs/development/getting-started.zh-CN.md#6-pr-自动检查)。
 
 ## 文档更新
 
@@ -150,7 +156,7 @@ go test ./...            # 运行所有测试
 
 - ✅ 更新 `docs/` 中的相关文件
 - ✅ 适当更新 `README.md`
-- ✅ 更新 `docs/features/` 中的功能文档(如适用)
+- ✅ 更新 `docs/user/features/` 中的功能文档(如适用)
 - ✅ 保持双语一致性(英文和 `*.zh-CN.md`)
 
 ## 架构深入
@@ -169,9 +175,9 @@ go test ./...            # 运行所有测试
 
 ## 获取帮助
 
-- 📖 阅读 [开发指南](docs/development.zh-CN.md)
-- 🐛 通过 [GitHub Issues](https://github.com/zerodeng/sublink-pro/issues) 报告问题
-- 💬 在 [GitHub Discussions](https://github.com/zerodeng/sublink-pro/discussions) 参与讨论
+- 📖 阅读 [开发指南](docs/development/getting-started.zh-CN.md)
+- 🐛 通过 [GitHub Issues](https://github.com/ZeroDeng01/sublinkPro/issues) 报告问题
+- 💬 在 [GitHub Discussions](https://github.com/ZeroDeng01/sublinkPro/discussions) 参与讨论
 - 📱 加入 Telegram: [SublinkPro 社区](https://t.me/sublinkpro)
 
 ## 许可证

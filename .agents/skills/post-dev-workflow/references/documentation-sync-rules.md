@@ -22,23 +22,23 @@ Documentation synchronization is **mandatory** when changes affect:
 
 | Change Type | Documentation to Update |
 |---|---|
-| New feature | `README.md` + `.zh-CN.md`, `docs/features/*.md` + `.zh-CN.md` |
-| Feature behavior changed | Relevant `docs/features/*.md` + `.zh-CN.md` |
+| New feature | `README.md` + `.zh-CN.md`, `docs/user/features/*.md` + `.zh-CN.md` |
+| Feature behavior changed | Relevant `docs/user/features/*.md` + `.zh-CN.md` |
 | Feature removed | Remove from docs, add deprecation/migration guide |
 | UI changed | Update screenshots in both language versions |
-| Installation method changed | `docs/installation.md` + `.zh-CN.md` |
-| Security recommendation changed | `docs/security-guidelines.md` + `.zh-CN.md` |
+| Installation method changed | `docs/user/installation.md` + `.zh-CN.md` |
+| Security recommendation changed | `docs/user/security-guidelines.md` + `.zh-CN.md` |
 
 ### API Documentation
 
 | Change Type | Documentation to Update |
 |---|---|
-| New `/api/v1/*` endpoint | `skill-sublinkpro/reference/api.md` |
-| New `/c/*` subscription endpoint | `skill-sublinkpro/reference/api.md` |
-| Endpoint path changed | `skill-sublinkpro/reference/api.md` |
-| Request/response structure changed | `skill-sublinkpro/reference/api.md` - Update examples |
-| Authentication changed | `skill-sublinkpro/reference/api.md` - Update auth section |
-| Error codes changed | `skill-sublinkpro/reference/api.md` - Update error reference |
+| New `/api/v1/*` endpoint | `skills/sublinkpro/reference/api.md` |
+| New `/c/*` subscription endpoint | `skills/sublinkpro/reference/api.md` |
+| Endpoint path changed | `skills/sublinkpro/reference/api.md` |
+| Request/response structure changed | `skills/sublinkpro/reference/api.md` - Update examples |
+| Authentication changed | `skills/sublinkpro/reference/api.md` - Update auth section |
+| Error codes changed | `skills/sublinkpro/reference/api.md` - Update error reference |
 
 **Note**: `skill-sublinkpro` is an AI agent skill that consumes the REST API. Keep API reference accurate for AI agent interactions.
 
@@ -46,33 +46,33 @@ Documentation synchronization is **mandatory** when changes affect:
 
 | Change Type | Documentation to Update |
 |---|---|
-| New config option | `docs/configuration.md` + `.zh-CN.md`, example configs, `skill-sublinkpro/reference/deploy.md` |
-| Config option changed | `docs/configuration.md` + `.zh-CN.md`, migration guide |
-| Environment variable added/changed | `docs/configuration.md` + `.zh-CN.md`, Dockerfile, docker-compose.yml |
-| Default value changed | `docs/configuration.md` + `.zh-CN.md`, release notes (breaking change) |
-| Config precedence changed | `docs/configuration.md` + `.zh-CN.md` |
+| New config option | `docs/user/configuration.md` + `.zh-CN.md`, example configs, `skills/sublinkpro/reference/deploy.md` |
+| Config option changed | `docs/user/configuration.md` + `.zh-CN.md`, migration guide |
+| Environment variable added/changed | `docs/user/configuration.md` + `.zh-CN.md`, Dockerfile, docker-compose.yml |
+| Default value changed | `docs/user/configuration.md` + `.zh-CN.md`, release notes (breaking change) |
+| Config precedence changed | `docs/user/configuration.md` + `.zh-CN.md` |
 
 ### Deployment Documentation
 
 | Change Type | Documentation to Update |
 |---|---|
-| Docker setup changed | `docs/installation.md` + `.zh-CN.md`, `skill-sublinkpro/reference/deploy.md` |
-| docker-compose config changed | `docs/installation.md` + `.zh-CN.md`, example docker-compose.yml |
-| One-line install script changed | `docs/installation.md` + `.zh-CN.md` |
-| Port/path changed | `docs/installation.md` + `.zh-CN.md`, `docs/configuration.md` + `.zh-CN.md` |
-| System requirements changed | `docs/installation.md` + `.zh-CN.md` |
-| Update procedure changed | `docs/installation.md` + `.zh-CN.md` |
+| Docker setup changed | `docs/user/installation.md` + `.zh-CN.md`, `skills/sublinkpro/reference/deploy.md` |
+| docker-compose config changed | `docs/user/installation.md` + `.zh-CN.md`, example docker-compose.yml |
+| One-line install script changed | `docs/user/installation.md` + `.zh-CN.md` |
+| Port/path changed | `docs/user/installation.md` + `.zh-CN.md`, `docs/user/configuration.md` + `.zh-CN.md` |
+| System requirements changed | `docs/user/installation.md` + `.zh-CN.md` |
+| Update procedure changed | `docs/user/installation.md` + `.zh-CN.md` |
 
 ### Developer Documentation
 
 | Change Type | Documentation to Update |
 |---|---|
-| Build process changed | `docs/development.md` + `.zh-CN.md`, `docs/build-and-deployment.md` + `.zh-CN.md` |
-| Development setup changed | `docs/development.md` + `.zh-CN.md` |
-| Testing requirements changed | `docs/development.md` + `.zh-CN.md`, `CONTRIBUTING.md` + `.zh-CN.md` |
-| Code standards changed | `docs/development.md` + `.zh-CN.md` |
+| Build process changed | `docs/development/getting-started.md` + `.zh-CN.md`, `docs/development/build-and-deployment.md` + `.zh-CN.md` |
+| Development setup changed | `docs/development/getting-started.md` + `.zh-CN.md` |
+| Testing requirements changed | `docs/development/getting-started.md` + `.zh-CN.md`, `CONTRIBUTING.md` + `.zh-CN.md` |
+| Code standards changed | `docs/development/getting-started.md` + `.zh-CN.md` |
 | PR process changed | `CONTRIBUTING.md` + `.zh-CN.md` |
-| New protocol extension pattern | `docs/development.md` + `.zh-CN.md`, `docs/practical-recipes.md` + `.zh-CN.md` |
+| New protocol extension pattern | `docs/development/getting-started.md` + `.zh-CN.md`, `docs/development/practical-recipes.md` + `.zh-CN.md` |
 
 ### Architecture Documentation
 
@@ -158,7 +158,7 @@ When adding new documentation files, update the documentation map:
 - [ ] Add new file to appropriate category (user/developer/agent docs)
 - [ ] Add brief description of file content
 
-**In `skill-sublinkpro/reference/docs.md`**:
+**In `skills/sublinkpro/reference/docs.md`**:
 - [ ] Add new file with path and description
 - [ ] Update category if needed
 
@@ -199,25 +199,13 @@ import { api } from './api';
 
 ### Testing Code Examples
 
-Before committing documentation:
-
-```bash
-# Extract and test code examples
-# Backend examples
-go run <example-code>
-
-# Frontend examples
-node -e "<example-code>"
-
-# Shell examples
-bash -c "<example-code>"
-```
+Check shell examples with `bash -n` or `sh -n`, using the interpreter named in the example. Run examples affected by the change from their documented working directory with test configuration. For Go and frontend examples, build or test through the repository entry point that exercises the example. Use a disposable environment for examples that change data or deployment state.
 
 ---
 
 ## Special Documentation Cases
 
-### API Reference (`skill-sublinkpro/reference/api.md`)
+### API Reference (`skills/sublinkpro/reference/api.md`)
 
 When updating API reference:
 
@@ -233,7 +221,7 @@ When updating API reference:
 - [ ] Provide response example
 
 **Template**:
-```markdown
+````markdown
 #### POST /api/v1/example
 
 **Authentication**: Required (X-API-Key)
@@ -248,8 +236,9 @@ When updating API reference:
 **Response** (200 OK):
 ```json
 {
-  "success": true,
-  "data": {...}
+  "code": 200,
+  "msg": "Success",
+  "data": {"field": "value"}
 }
 ```
 
@@ -265,9 +254,9 @@ curl -X POST http://localhost:8000/api/v1/example \
   -H "Content-Type: application/json" \
   -d '{"field":"value"}'
 ```
-```
+````
 
-### Configuration Reference (`docs/configuration.md`)
+### Configuration Reference (`docs/user/configuration.md`)
 
 When updating configuration reference:
 
@@ -302,7 +291,7 @@ export SUBLINK_OPTION_NAME=value
 ```
 ```
 
-### Feature Documentation (`docs/features/*.md`)
+### Feature Documentation (`docs/user/features/*.md`)
 
 When adding/updating feature documentation:
 

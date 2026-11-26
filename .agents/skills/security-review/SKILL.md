@@ -1,9 +1,10 @@
 ---
 name: security-review
 description: "Security review checklist for authentication, authorization, and sensitive data handling. Use when changing auth, MFA, secrets, input validation, or security-critical features. Not for general code review."
-version: "2.0.0"
-author: "SublinkPro Team"
 user-invocable: true
+metadata:
+  version: "2.0.0"
+  author: "SublinkPro Team"
 ---
 
 # Security Review Skill
@@ -205,7 +206,7 @@ yarn lint
 
 ### Step 4: Document Security Implications
 If the change has security implications:
-- [ ] Update `docs/security-guidelines.md` if introducing new security patterns
+- [ ] Update `docs/user/security-guidelines.md` if introducing new security patterns
 - [ ] Add security notes to PR description
 - [ ] Request security review from another team member for critical changes
 
@@ -235,7 +236,7 @@ Before completing the security review:
 
 ## References
 
-- **Project security guidelines**: `docs/security-guidelines.md`
+- **Project security guidelines**: `docs/user/security-guidelines.md`
 - **Detailed guides with code examples**: `references/*.md`
 - **OWASP Top 10**: https://owasp.org/www-project-top-ten/
 - **Go Security Best Practices**: https://github.com/securego/gosec

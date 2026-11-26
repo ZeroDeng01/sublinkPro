@@ -11,11 +11,10 @@ Run all commands from repository root.
 ### Format Check
 
 ```bash
-# Format changed Go files
-gofmt -w <changed-files>
+# Apply gofmt -w to the changed Go files before running these checks.
 
-# Format all Go files (if unsure which files changed)
-gofmt -w .
+# List formatting issues in the main Go packages
+gofmt -l api config models routers services
 ```
 
 **Expected result**: Files are formatted according to Go standards. Running `gofmt -w` again produces no changes.
@@ -117,33 +116,6 @@ yarn run build --sourcemap
 - Component internal changes (no props/exports changed)
 - Styling changes (CSS/MUI changes)
 
-### Test
-
-```bash
-cd webs
-
-# Run all tests
-yarn test
-
-# Run tests without watch mode
-yarn test --run
-
-# Run tests with coverage
-yarn test --coverage
-
-# Run specific test file
-yarn test src/utils/colorUtils.test.js
-```
-
-**Expected result**: All tests pass. Reasonable coverage for changed code.
-
-**Test patterns**:
-- Unit tests for utilities: `src/utils/*.test.js`
-- Component tests: `src/components/*.test.jsx`
-- API tests: `src/api/*.test.js`
-
----
-
 ## Validation Checklist
 
 ### Backend
@@ -158,7 +130,6 @@ yarn test src/utils/colorUtils.test.js
 
 - [ ] `yarn run lint` exits with status 0
 - [ ] `yarn run build` succeeds (if applicable)
-- [ ] `yarn test` passes (if tests exist)
 - [ ] No console.log/console.error left in code
 - [ ] No hardcoded strings (use i18next `t()` function)
 - [ ] Accessibility: ARIA labels, alt text, keyboard navigation
@@ -172,7 +143,7 @@ yarn test src/utils/colorUtils.test.js
 **Backend**:
 ```bash
 # Auto-fix format issues
-gofmt -w .
+gofmt -l api config models routers services
 ```
 
 **Frontend**:
@@ -241,7 +212,7 @@ go test -bench=. -benchmem ./...
 
 # Frontend: build size analysis
 cd webs
-yarn run build --analyze
+yarn run build
 ```
 
 See `.agents/skills/performance-check/SKILL.md` for detailed performance validation.
@@ -262,15 +233,16 @@ Minimum validation before committing:
 
 ```bash
 # Backend changes
-gofmt -w <changed-files>
+# Apply gofmt -w to the changed Go files first.
 golangci-lint run
 go test ./...
 
 # Frontend changes
-cd webs
-yarn run lint
-yarn run build  # if applicable
-yarn test       # if tests exist
+(cd webs && yarn run lint)
+(cd webs && yarn run build)  # if applicable
+
+# Documentation checks
+python3 .github/scripts/check_docs.py
 
 # Both
 git diff        # Review changes

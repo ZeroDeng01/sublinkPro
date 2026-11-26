@@ -43,7 +43,7 @@ var baseTemplateDir string
 func init() {
 	// === 修改点开始 ===
 	// 获取当前工作目录 (Current Working Directory)
-	// 当您在项目根目录运行 `go run main.go` 时，这将是项目根目录
+	// 当您在项目根目录运行 `go run .` 时，这将是项目根目录
 	cwd, err := os.Getwd()
 	if err != nil {
 		utils.Fatal("无法获取当前工作目录: %v", err)

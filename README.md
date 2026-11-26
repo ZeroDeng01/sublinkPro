@@ -58,23 +58,23 @@ English | [简体中文](README.zh-CN.md)
 
 | Feature | Description | Details |
 |:---|:---|:---:|
-| 🧭 **Detection center** | Reusable detection plans and automatic jobs with schedules, airport-update triggers and selected node scopes | [📖](docs/features/unlock-check.md#detection-center) |
-| 🏷️ **Smart tag system** | Automatic rule based tagging, no code filtering, IP quality conditions | [📖](docs/features/tags.md) |
-| ⚡ **Professional speed test system** | Two stage tests, smart latency measurement, IP quality and unlock checks | [📖](docs/features/speedtest.md) |
-| 🔗 **Chain proxy** | Native Dialer-Proxy support, visual configuration, IP quality based node selection | [📖](docs/features/chain-proxy.md) |
-| 🤖 **AI template editing** | Generate operation based previews from natural language, review read-only diffs, accept into the editor, then save normally | [📖](docs/features/template-ai.md) |
-| ✈️ **Airport management** | Multi format import, scheduled updates, traffic monitoring, node test summaries, one click full refresh | [📖](docs/features/airport.md) |
-| 🗂️ **Group ordering** | Drag airport priority within a group to control node order in subscription output | [📖](docs/development.md) |
-| 📋 **Subscription sharing** | Multiple links, expiration policies, access statistics, share link device limits | [📖](docs/features/subscription-share.md) |
-| 🌐 **Host management** | Domain mappings, DNS configuration, CDN preferred IPs | [📖](docs/features/host.md) |
-| ☁️ **Cloudflare Tunnel** | Expose the admin UI without a public IP, with cloudflared managed from the page | [📖](docs/features/cloudflare-tunnel.md) |
-| 💾 **WebDAV backup** | Encrypt WebDAV credentials, upload system backups on demand or by cron, list remote ZIP files, and restore from the page | [📖](docs/features/backup.md) |
-| 🔌 **Proxy gateway** | SOCKS5/HTTP/Mixed listeners with independent accounts, username-selected routing policies, sticky sessions, health-aware node selection, and live statistics | [📖](docs/features/proxy-gateway.md) |
-| 🤖 **Telegram Bot** | Remote speed tests, subscription management, system monitoring | [📖](docs/features/telegram-bot.md) |
-| 📜 **Script system** | Node filtering, content post processing, chained scripts | [📖](docs/script_support.md) |
-| 🔔 **Webhooks** | Supports PushDeer, Bark, DingTalk, ServerChan, and other notification platforms | [📖](docs/configuration.md) |
-| 🔐 **Security features** | Token authorization, API Key, IP allow and block lists, access logs | [📖](docs/configuration.md) |
-| 🦾 **AI agent skill** | Drive the whole system in natural language via the REST API — add nodes, build and share subscriptions, manage airports and templates. Portable `SKILL.md` format, works with any compatible AI agent | [📖](skill-sublinkpro/README.md) |
+| 🧭 **Detection center** | Reusable detection plans and automatic jobs with schedules, airport-update triggers and selected node scopes | [📖](docs/user/features/unlock-check.md#detection-center) |
+| 🏷️ **Smart tag system** | Automatic rule based tagging, no code filtering, IP quality conditions | [📖](docs/user/features/tags.md) |
+| ⚡ **Professional speed test system** | Two stage tests, smart latency measurement, IP quality and unlock checks | [📖](docs/user/features/speedtest.md) |
+| 🔗 **Chain proxy** | Native Dialer-Proxy support, visual configuration, IP quality based node selection | [📖](docs/user/features/chain-proxy.md) |
+| 🤖 **AI template editing** | Generate operation based previews from natural language, review read-only diffs, accept into the editor, then save normally | [📖](docs/user/features/template-ai.md) |
+| ✈️ **Airport management** | Multi format import, scheduled updates, traffic monitoring, node test summaries, one click full refresh | [📖](docs/user/features/airport.md) |
+| 🗂️ **Group ordering** | Drag airport priority within a group to control node order in subscription output | [📖](docs/user/features/subscription-share.md#order-airports-within-a-group) |
+| 📋 **Subscription sharing** | Multiple links, expiration policies, access statistics, share link device limits | [📖](docs/user/features/subscription-share.md) |
+| 🌐 **Host management** | Domain mappings, DNS configuration, CDN preferred IPs | [📖](docs/user/features/host.md) |
+| ☁️ **Cloudflare Tunnel** | Expose the admin UI without a public IP, with cloudflared managed from the page | [📖](docs/user/features/cloudflare-tunnel.md) |
+| 💾 **WebDAV backup** | Encrypt WebDAV credentials, upload system backups on demand or by cron, list remote ZIP files, and restore from the page | [📖](docs/user/features/backup.md) |
+| 🔌 **Proxy gateway** | SOCKS5/HTTP/Mixed listeners with independent accounts, username-selected routing policies, sticky sessions, health-aware node selection, and live statistics | [📖](docs/user/features/proxy-gateway.md) |
+| 🤖 **Telegram Bot** | Remote speed tests, subscription management, system monitoring | [📖](docs/user/features/telegram-bot.md) |
+| 📜 **Script system** | Node filtering, content post processing, chained scripts | [📖](docs/user/features/script-support.md) |
+| 🔔 **Webhooks** | Supports PushDeer, Bark, DingTalk, ServerChan, and other notification platforms | [📖](docs/user/configuration.md) |
+| 🔐 **Security features** | Token authorization, API Key, IP allow and block lists, access logs | [📖](docs/user/configuration.md) |
+| 🦾 **AI agent skill** | Drive the whole system in natural language via the REST API — add nodes, build and share subscriptions, manage airports and templates. Portable `SKILL.md` format, works with any compatible AI agent | [📖](skills/sublinkpro/README.md) |
 
 ---
 
@@ -108,18 +108,18 @@ services:
 Start the service:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 Open `http://localhost:8000` and sign in with `admin` / `123456`.
 
-SQLite is used by default. To switch to MySQL or PostgreSQL, set the database connection through `SUBLINK_DSN`, `dsn:` in the config file, or the `--dsn` command line flag. See [⚙️ Configuration](docs/configuration.md) for examples.
+SQLite is used by default. To switch to MySQL or PostgreSQL, set the database connection through `SUBLINK_DSN`, `dsn:` in the config file, or the `--dsn` command line flag. See [⚙️ Configuration](docs/user/configuration.md) for examples.
 
 > [!NOTE]
 > Even when `SUBLINK_WEB_BASE_PATH` is configured to hide the admin UI entry, API paths (`/api/*`) and subscription or share paths (`/c/*`) stay at the root path. This is a project specific frontend and backend integration rule.
 
 > [!TIP]
-> Set the image to `zerodeng/sublink-pro:preview` to follow published Preview builds. For fixed tags, one-line installation, and upgrades, see the [📦 Installation Guide](docs/installation.md).
+> Set the image to `zerodeng/sublink-pro:preview` to follow published Preview builds. For fixed tags, one-line installation, and upgrades, see the [📦 Installation Guide](docs/user/installation.md).
 
 > [!TIP]
 > The Docker image includes `cloudflared`. After signing in, open `User Center -> Cloudflare Tunnel`, enter the token, and start it. When auto connect is enabled, the Tunnel connects when the service starts.
@@ -148,36 +148,11 @@ If your earlier instance used SQLite and you now want to migrate to MySQL or Pos
 
 ## 📖 Documentation
 
-### 🔧 Installation and Configuration
+[Full documentation index](docs/README.md)
 
-| Document | Description |
-|:---|:---|
-| [📦 Installation](docs/installation.md) | Docker, one line scripts, updates, Watchtower automatic updates |
-| [⚙️ Configuration](docs/configuration.md) | Environment variables, command line flags, CAPTCHA configuration |
-
-### ✨ Feature Guides
-
-| Document | Description |
-|:---|:---|
-| [🏷️ Smart tag system](docs/features/tags.md) | Automatic rule based tagging, no code filtering, IP quality rules |
-| [⚡ Speed test system](docs/features/speedtest.md) | Test design, IP quality checks, unlock checks, parameter tuning |
-| [🌍 Unlock checks](docs/features/unlock-check.md) | Streaming and AI availability checks, Provider architecture, extensions |
-| [🔗 Chain proxy](docs/features/chain-proxy.md) | Dialer-Proxy, condition based node selection, configuration flow |
-| [🤖 AI template editing](docs/features/template-ai.md) | Operation based previews, read-only diff review, accept into editor, normal save |
-| [✈️ Airport management](docs/features/airport.md) | Subscription import, scheduled updates, traffic monitoring |
-| [📋 Subscription sharing](docs/features/subscription-share.md) | Multiple links, expiration policies, access statistics, share link device limits |
-| [🌐 Host management](docs/features/host.md) | Domain mappings, DNS configuration, speed test persistence |
-| [☁️ Cloudflare Tunnel](docs/features/cloudflare-tunnel.md) | Create a Tunnel, get a token, configure public access |
-| [🤖 Telegram Bot](docs/features/telegram-bot.md) | Command list and setup guide |
-| [📜 Script support](docs/script_support.md) | Node filtering, content post processing, function reference |
-| [🔐 Multi factor authentication, MFA](docs/features/mfa.md) | TOTP setup, recovery codes, emergency reset flow |
-
-### 👨‍💻 Developers
-
-| Document | Description |
-|:---|:---|
-| [🛠️ Development Guide](docs/development.md) | Project structure, local development, scheduled task development |
-| [🔌 Protocol Extension Guide](docs/development.md#-protocol-extension-guide) | Add a protocol, register capabilities, field metadata, ProtocolDemo example |
+- [User guide](docs/user/README.md) · Install, configure, and use SublinkPro
+- [Developer guide](docs/development/README.md) · Run locally, test changes, and contribute
+- [Coding agent guide](docs/agents/README.md) · Find implementation boundaries, rules, and skills
 
 ---
 
@@ -195,12 +170,12 @@ in credentials; URI components are decoded once, including when links are re-exp
 | **clash / mihomo** | ss, ssr, trojan, vmess, vless, hy, hy2, tuic, AnyTLS, Socks5, HTTP, HTTPS, Mieru, Snell, OpenVPN, Sudoku |
 | **surge** | ss, trojan, vmess, VLESS, hy2, tuic, AnyTLS, Snell |
 
-> VLESS and Trojan REALITY `spx` / `pqv` parameters are preserved through share links, field editing and Clash YAML import/export (`spider-x` / `mldsa65-verify`). Xray clients use the existing `v2ray` output. Execution requires a compatible core; Surge skips settings it cannot represent. See [REALITY compatibility](docs/features/subscription-share.md#vless-reality-compatibility).
+> VLESS and Trojan REALITY `spx` / `pqv` parameters are preserved through share links, field editing and Clash YAML import/export (`spider-x` / `mldsa65-verify`). Xray clients use the existing `v2ray` output. Execution requires a compatible core; Surge skips settings it cannot represent. See [REALITY compatibility](docs/user/features/subscription-share.md#vless-reality-compatibility).
 
 > [!NOTE]
-> Mieru nodes can be imported from official standard (`mieru://`) and simple (`mierus://`) share links or Clash/mihomo YAML. Clash/mihomo subscriptions include Mieru nodes. See [Mieru compatibility](docs/features/subscription-share.md#mieru-output-notes).
+> Mieru nodes can be imported from official standard (`mieru://`) and simple (`mierus://`) share links or Clash/mihomo YAML. Clash/mihomo subscriptions include Mieru nodes. See [Mieru compatibility](docs/user/features/subscription-share.md#mieru-output-notes).
 
-> Sudoku nodes can be imported from official `sudoku://` short links and Clash/mihomo YAML. Use a Mihomo-based client for exported Sudoku nodes. See [Sudoku support](docs/features/subscription-share.md#sudoku-support).
+> Sudoku nodes can be imported from official `sudoku://` short links and Clash/mihomo YAML. Use a Mihomo-based client for exported Sudoku nodes. See [Sudoku support](docs/user/features/subscription-share.md#sudoku-support).
 
 > [!NOTE]
 > Snell has native Clash/mihomo and Surge configuration output. SublinkPro uses its own editable link form for Snell, `snell://server:port?psk=xxx&version=3&obfs=http&obfs-host=xxx#name`, which appears in the URI output. The v2ray output skips Snell.
@@ -247,6 +222,8 @@ If this project helps you, you are welcome to:
 - 🐛 Open an [Issue](https://github.com/ZeroDeng01/sublinkPro/issues) for bugs or suggestions
 - 🔧 Submit a Pull Request
 - 📖 Improve the docs and tutorials
+
+See the [contribution guide](CONTRIBUTING.md), [security policy](SECURITY.md), and [MIT license](LICENSE).
 
 ### 🌟 Recommended services
 

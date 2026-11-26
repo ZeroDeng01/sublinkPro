@@ -8,6 +8,9 @@ body:
       value: |
         感谢您抽出时间填写此 Bug 报告！
         Thanks for taking the time to fill out this bug report!
+
+        Issue 是公开的。上传日志、截图或配置前，请遮盖令牌、订阅链接、密码以及个人信息。发现安全漏洞时，请先阅读[安全政策](https://github.com/ZeroDeng01/sublinkPro/blob/main/SECURITY.zh-CN.md)。
+        Issues are public. Redact tokens, subscription links, passwords, and personal information from logs, screenshots, and configuration. Consult the [security policy](https://github.com/ZeroDeng01/sublinkPro/blob/main/SECURITY.md) for vulnerability reports.
   - type: input
     id: version
     attributes:

@@ -39,7 +39,7 @@ export default function Footer() {
         </Link>
         <Link
           component={RouterLink}
-          to="https://github.com/ZeroDeng01/sublinkPro/blob/master/LICENSE"
+          to="https://github.com/ZeroDeng01/sublinkPro/blob/main/LICENSE"
           underline="hover"
           target="_blank"
           variant="caption"

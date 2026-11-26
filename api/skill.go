@@ -5,13 +5,13 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path/filepath"
+	"strings"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
 )
 
-// DownloadSkill 返回一个处理器，将嵌入的 skill-sublinkpro/ 目录即时打包为 zip 并下发。
+// DownloadSkill 返回一个处理器，将嵌入的 skills/sublinkpro/ 目录即时打包为 zip 并下发。
 // skillFS 由 main.go 通过 //go:embed 注入，避免 api 包反向 import main 包。
 func DownloadSkill(skillFS fs.FS) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -25,10 +25,8 @@ func DownloadSkill(skillFS fs.FS) gin.HandlerFunc {
 
 		zipWriter := zip.NewWriter(tmpFile)
 
-		// fs.WalkDir 产出的 path 自带 "skill-sublinkpro/" 前缀，直接作为 zip 内路径，
-		// 这样解压后即得到 skill-sublinkpro/ 目录，可直接放入 ~/.claude/skills/。
-		// 与 backup.go 保持一致（其 zip 根部保留 db/ 与 template/）。
-		walkErr := fs.WalkDir(skillFS, "skill-sublinkpro", func(path string, d fs.DirEntry, err error) error {
+		// 将 sublinkpro 保留为解压目录，使目录名与 SKILL.md 中的 name 一致。
+		walkErr := fs.WalkDir(skillFS, "skills/sublinkpro", func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -40,7 +38,7 @@ func DownloadSkill(skillFS fs.FS) gin.HandlerFunc {
 			if err != nil {
 				return err
 			}
-			header.Name = filepath.ToSlash(path)
+			header.Name = strings.TrimPrefix(path, "skills/")
 			if d.IsDir() {
 				header.Name += "/"
 			} else {

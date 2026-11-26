@@ -146,6 +146,20 @@ class ReportTests(unittest.TestCase):
         self.assertIn("/actions/runs/12/attempts/2", report)
         self.assertIn("#issuecomment-21", report)
 
+    @patch.dict(os.environ, GITHUB_REPOSITORY="example/project", GITHUB_SERVER_URL="https://github.com",
+                GITHUB_RUN_ID="12", GITHUB_RUN_ATTEMPT="1", AWAITING_APPROVAL="false", CHECKED_SHA=INITIAL_SHA,
+                BACKEND_RESULT="success", GO_BUILD="success", GO_LINT="success", GO_TEST="success",
+                FRONTEND_RESULT="success", FRONTEND_LINT="success", FRONTEND_BUILD="success",
+                DOCS_RESULT="failure", DOCS_CHECK="failure")
+    @patch.object(pr_ci, "publish_comment")
+    @patch.object(pr_ci, "api")
+    def test_recheck_reports_documentation_failure(self, api, publish):
+        api.return_value = pull_request()
+        pr_ci.report_recheck(recheck_event())
+        body = publish.call_args.args[3]
+        self.assertIn("复查 / PR recheck · ❌", body)
+        self.assertIn("Documentation | ❌", body)
+
     @patch.object(pr_ci, "api")
     def test_retry_updates_the_bot_comment_and_preserves_newer_attempts(self, api):
         previous = {"id": 777, "user": {"login": "github-actions[bot]"}, "body": "<!-- pr-check-report:12:1 -->\nOld"}
@@ -172,12 +186,14 @@ class ReportTests(unittest.TestCase):
     def test_automatic_report_preserves_step_failure_for_fork(self, api, publish):
         pr = pull_request()
         backend = {"name": "Backend Checks", "steps": [{"name": "Run Go tests", "conclusion": "failure"}]}
+        docs = {"name": "Documentation Checks", "steps": [{"name": "Validate documentation", "conclusion": "success"}]}
         prepare = {"name": pr_ci.PREPARE_JOB, "conclusion": "success"}
-        api.side_effect = [FIRST_CHECK, [{"jobs": [prepare, backend]}], [[pr]]]
+        api.side_effect = [FIRST_CHECK, [{"jobs": [prepare, backend, docs]}], [[pr]]]
         pr_ci.report_automatic({"workflow_run": FIRST_CHECK, "repository": BASE})
         number, run_id, attempt, body = publish.call_args.args
         self.assertEqual((number, run_id, attempt), (42, 12, 1))
         self.assertIn("`go test ./...` | ❌", body)
+        self.assertIn("Documentation | ✅", body)
         self.assertIn(pr_ci.fork_approval_marker(pr), body)
 
 

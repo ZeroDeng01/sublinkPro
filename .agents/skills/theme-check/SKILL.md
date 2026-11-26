@@ -1,9 +1,10 @@
 ---
 name: theme-check
 description: "Theme adaptation checklist for light/dark mode and UI component changes. Use when modifying colors, surfaces, dialogs, or theme infrastructure. Not for simple text changes."
-version: "1.0.0"
-author: "SublinkPro Team"
 user-invocable: true
+metadata:
+  version: "1.0.0"
+  author: "SublinkPro Team"
 ---
 
 # Theme Check Skill
@@ -21,7 +22,7 @@ Use this skill when:
 ## Prerequisites
 
 Before running this checklist:
-1. Read `docs/frontend-theme-guidelines.md` for complete theme rules
+1. Read `docs/development/frontend-theme-guidelines.md` for complete theme rules
 2. Identify the blast radius: page, module, shared component, or theme infrastructure
 3. Find reference patterns in the codebase (NodePreview*, Chain*, Airport* clusters)
 

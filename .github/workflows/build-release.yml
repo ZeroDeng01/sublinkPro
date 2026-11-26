@@ -7,7 +7,7 @@ on:
     branches-ignore:
       - 'dependabot/**'
     paths-ignore:
-      # 文档文件（不包括 skill-sublinkpro，它会被嵌入到二进制文件中）
+      # 文档文件（不包括 skills/sublinkpro，它会被嵌入到二进制文件中）
       - '*.md'
       - 'docs/**'
       # AI 代理配置和私有文档

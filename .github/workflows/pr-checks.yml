@@ -190,9 +190,28 @@ jobs:
             printf '| yarn run build | %s |\n' "$FRONTEND_BUILD"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  documentation-checks:
+    name: Documentation Checks
+    needs: prepare-pr-check
+    if: needs.prepare-pr-check.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      docs: ${{ steps.docs.outcome }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ needs.prepare-pr-check.outputs.checkout_repository }}
+          ref: ${{ needs.prepare-pr-check.outputs.checkout_ref }}
+          persist-credentials: false
+
+      - name: Validate documentation
+        id: docs
+        run: python3 .github/scripts/check_docs.py
+
   report-recheck:
     name: Post Recheck Result
-    needs: [prepare-pr-check, backend-checks, frontend-checks]
+    needs: [prepare-pr-check, backend-checks, frontend-checks, documentation-checks]
     if: >-
       always() && github.event_name == 'issue_comment' &&
         (needs.prepare-pr-check.outputs.should_run == 'true' || needs.prepare-pr-check.outputs.awaiting_approval == 'true')
@@ -221,4 +240,6 @@ jobs:
           FRONTEND_RESULT: ${{ needs.frontend-checks.result }}
           FRONTEND_LINT: ${{ needs.frontend-checks.outputs.lint }}
           FRONTEND_BUILD: ${{ needs.frontend-checks.outputs.build }}
+          DOCS_RESULT: ${{ needs.documentation-checks.result }}
+          DOCS_CHECK: ${{ needs.documentation-checks.outputs.docs }}
         run: python3 .github/scripts/pr_ci.py report-recheck

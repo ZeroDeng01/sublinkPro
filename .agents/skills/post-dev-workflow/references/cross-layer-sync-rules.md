@@ -30,7 +30,7 @@ Cross-layer synchronization is **mandatory** when changes affect multiple layers
 **Verification**:
 ```bash
 # Backend
-gofmt -w <changed-files>
+# Apply gofmt -w to the changed Go files first.
 golangci-lint run
 go test ./api/...
 
@@ -44,10 +44,10 @@ yarn run build
 
 | Backend Change | skill-sublinkpro Must Update |
 |---|---|
-| New `/api/v1/*` endpoint | `skill-sublinkpro/reference/api.md` - Document endpoint, params, response |
-| New `/c/*` subscription endpoint | `skill-sublinkpro/reference/api.md` - Document subscription flow |
-| Authentication flow changed | `skill-sublinkpro/reference/api.md` - Update auth section |
-| Response structure changed | `skill-sublinkpro/reference/api.md` - Update response examples |
+| New `/api/v1/*` endpoint | `skills/sublinkpro/reference/api.md` - Document endpoint, params, response |
+| New `/c/*` subscription endpoint | `skills/sublinkpro/reference/api.md` - Document subscription flow |
+| Authentication flow changed | `skills/sublinkpro/reference/api.md` - Update auth section |
+| Response structure changed | `skills/sublinkpro/reference/api.md` - Update response examples |
 
 **skill-sublinkpro is a REST API consumer skill. Any changes to public API endpoints must be reflected in the reference documentation.**
 
@@ -66,7 +66,7 @@ yarn run build
 
 | Config Change | Must Update |
 |---|---|
-| New config option | Code + `docs/configuration.md` + `.zh-CN.md` + example configs + `skill-sublinkpro/reference/deploy.md` |
+| New config option | Code + `docs/user/configuration.md` + `.zh-CN.md` + example configs + `skills/sublinkpro/reference/deploy.md` |
 | Config semantics changed | Code + docs (both languages) + migration guide |
 | Environment variable added | Code + docs + Dockerfile + docker-compose.yml |
 | Default value changed | Code + docs + release notes (breaking change) |
@@ -78,16 +78,16 @@ grep -r "NEW_CONFIG_KEY" .
 # Verify all locations updated
 
 # Docs
-ls docs/configuration*.md
-cat docs/configuration.md | grep -i "new config key"
-cat docs/configuration.zh-CN.md | grep -i "新配置项"
+ls docs/user/configuration*.md
+cat docs/user/configuration.md | grep -i "new config key"
+cat docs/user/configuration.zh-CN.md | grep -i "新配置项"
 ```
 
 ### User-Facing Feature → Documentation
 
 | Feature Change | Must Update |
 |---|---|
-| New feature added | `README.md` + `.zh-CN.md` + `docs/features/*.md` + `.zh-CN.md` |
+| New feature added | `README.md` + `.zh-CN.md` + `docs/user/features/*.md` + `.zh-CN.md` |
 | Feature behavior changed | Relevant feature docs (both languages) |
 | Feature removed | Remove from docs, add migration guide |
 | Screenshots needed | Update/add screenshots in both language versions |
@@ -102,11 +102,11 @@ cat docs/configuration.zh-CN.md | grep -i "新配置项"
 
 - [ ] Backend (`*.go`, `routers/`, `api/`, `services/`, `models/`)
 - [ ] Frontend (`webs/src/`)
-- [ ] Configuration (`docs/configuration.md`)
-- [ ] User documentation (`README.md`, `docs/features/`)
-- [ ] Developer documentation (`docs/development.md`, `CONTRIBUTING.md`)
-- [ ] skill-sublinkpro API reference (`skill-sublinkpro/reference/api.md`)
-- [ ] Deployment documentation (`docs/installation.md`, `skill-sublinkpro/reference/deploy.md`)
+- [ ] Configuration (`docs/user/configuration.md`)
+- [ ] User documentation (`README.md`, `docs/user/features/`)
+- [ ] Developer documentation (`docs/development/getting-started.md`, `CONTRIBUTING.md`)
+- [ ] skill-sublinkpro API reference (`skills/sublinkpro/reference/api.md`)
+- [ ] Deployment documentation (`docs/user/installation.md`, `skills/sublinkpro/reference/deploy.md`)
 - [ ] Build/CI configuration (`.github/workflows/`, `Dockerfile`)
 
 ### 2. Synchronize Each Layer
@@ -150,7 +150,7 @@ When adding or changing protocol support (`node/protocol/`):
 - [ ] Backend: Implement protocol parser
 - [ ] Backend: Add tests for protocol parsing
 - [ ] Frontend: Update protocol support matrix display (if user-visible)
-- [ ] Docs: Update `docs/features/` with protocol support (if new protocol)
+- [ ] Docs: Update `docs/user/features/` with protocol support (if new protocol)
 - [ ] Docs: Update protocol compatibility table
 
 **Verification**:
@@ -269,7 +269,6 @@ go test ./...
 cd webs
 yarn run lint
 yarn run build
-yarn test
 
 # Documentation
 # Manual review: Check all affected docs updated
@@ -287,11 +286,11 @@ grep -r "error.*:" api/ services/ | grep -v "i18nKey"
 
 # Check for API endpoint references
 grep -r "/api/v1/" webs/src/api/
-grep -r "/api/v1/" skill-sublinkpro/reference/api.md
+grep -r "/api/v1/" skills/sublinkpro/reference/api.md
 
 # Check for config references
 grep -r "viper.Get" . | grep -v "_test.go"
-grep -r "SUBLINK_" docs/configuration*.md
+grep -r "SUBLINK_" docs/user/configuration*.md
 ```
 
 ---

@@ -1,9 +1,10 @@
 ---
 name: doc-sync-check
 description: "Documentation synchronization checklist for API, configuration, and feature changes. Invoked by post-dev-workflow when code affects documentation. Not for direct user invocation."
-version: "1.0.0"
-author: "SublinkPro Team"
 user-invocable: false
+metadata:
+  version: "1.0.0"
+  author: "SublinkPro Team"
 ---
 
 # Documentation Sync Check Skill
@@ -35,13 +36,13 @@ Before running this checklist:
 
 | Change Type | Docs to Check |
 |---|---|
-| User-facing feature | `README.md` + `.zh-CN.md`, `docs/features/*.md` + `.zh-CN.md` |
-| Configuration option | `docs/configuration.md` + `.zh-CN.md`, example configs |
-| Installation/deployment | `docs/installation.md` + `.zh-CN.md`, `skill-sublinkpro/reference/deploy.md` |
-| API endpoint | `skill-sublinkpro/reference/api.md` |
-| Developer workflow | `docs/development.md` + `.zh-CN.md`, `CONTRIBUTING.md` + `.zh-CN.md` |
+| User-facing feature | `README.md` + `.zh-CN.md`, `docs/user/features/*.md` + `.zh-CN.md` |
+| Configuration option | `docs/user/configuration.md` + `.zh-CN.md`, example configs |
+| Installation/deployment | `docs/user/installation.md` + `.zh-CN.md`, `skills/sublinkpro/reference/deploy.md` |
+| API endpoint | `skills/sublinkpro/reference/api.md` |
+| Developer workflow | `docs/development/getting-started.md` + `.zh-CN.md`, `CONTRIBUTING.md` + `.zh-CN.md` |
 | Architecture/guidelines | `AGENTS.md` |
-| New documentation | `skill-sublinkpro/reference/docs.md` (documentation map) |
+| New documentation | `skills/sublinkpro/reference/docs.md` (documentation map) |
 
 ## Feature Documentation Checklist
 
@@ -54,7 +55,7 @@ Before running this checklist:
 - [ ] Updated screenshots/GIFs if UI changed significantly
 
 #### Feature docs
-- [ ] Updated relevant `docs/features/*.md` file
+- [ ] Updated relevant `docs/user/features/*.md` file
 - [ ] Updated corresponding `.zh-CN.md` file
 - [ ] Added new feature doc if new feature (both languages)
 - [ ] Updated examples and usage instructions
@@ -70,8 +71,8 @@ Before running this checklist:
 ### When configuration options change:
 
 #### Configuration guide
-- [ ] Updated `docs/configuration.md`
-- [ ] Updated `docs/configuration.zh-CN.md`
+- [ ] Updated `docs/user/configuration.md`
+- [ ] Updated `docs/user/configuration.zh-CN.md`
 - [ ] Documented new environment variables
 - [ ] Documented new config file options
 - [ ] Updated config precedence order (if changed)
@@ -83,7 +84,7 @@ Before running this checklist:
 - [ ] Updated `docker-compose.example.yml` (if Docker config changed)
 
 #### Deployment docs
-- [ ] Updated `skill-sublinkpro/reference/deploy.md` if deployment-related
+- [ ] Updated `skills/sublinkpro/reference/deploy.md` if deployment-related
 - [ ] Updated Docker/install instructions if needed
 
 ## API Documentation Checklist
@@ -91,7 +92,7 @@ Before running this checklist:
 ### When API endpoints change:
 
 #### Skill API reference
-- [ ] Updated `skill-sublinkpro/reference/api.md`
+- [ ] Updated `skills/sublinkpro/reference/api.md`
 - [ ] Documented new endpoints
 - [ ] Updated changed endpoints
 - [ ] Marked deprecated endpoints
@@ -100,28 +101,28 @@ Before running this checklist:
 - [ ] Updated authentication requirements
 
 #### Skill workflows
-- [ ] Updated `skill-sublinkpro/SKILL.md` if workflow affected
+- [ ] Updated `skills/sublinkpro/SKILL.md` if workflow affected
 - [ ] Updated usage examples
 - [ ] Updated error handling examples
 
 #### Skill README
-- [ ] Updated `skill-sublinkpro/README.md` if needed
-- [ ] Updated `skill-sublinkpro/README.zh-CN.md`
+- [ ] Updated `skills/sublinkpro/README.md` if needed
+- [ ] Updated `skills/sublinkpro/README.zh-CN.md`
 
 ## Installation/Deployment Documentation Checklist
 
 ### When installation or deployment changes:
 
 #### Installation guide
-- [ ] Updated `docs/installation.md`
-- [ ] Updated `docs/installation.zh-CN.md`
+- [ ] Updated `docs/user/installation.md`
+- [ ] Updated `docs/user/installation.zh-CN.md`
 - [ ] Updated Docker installation steps
 - [ ] Updated docker-compose instructions
 - [ ] Updated one-line script instructions
 - [ ] Updated update/upgrade instructions
 
 #### Deployment guide
-- [ ] Updated `skill-sublinkpro/reference/deploy.md`
+- [ ] Updated `skills/sublinkpro/reference/deploy.md`
 - [ ] Updated environment variable setup
 - [ ] Updated port mappings
 - [ ] Updated volume mounts
@@ -137,8 +138,8 @@ Before running this checklist:
 ### When developer workflows change:
 
 #### Development guide
-- [ ] Updated `docs/development.md`
-- [ ] Updated `docs/development.zh-CN.md`
+- [ ] Updated `docs/development/getting-started.md`
+- [ ] Updated `docs/development/getting-started.zh-CN.md`
 - [ ] Updated local setup instructions
 - [ ] Updated validation commands
 - [ ] Updated testing instructions
@@ -157,8 +158,8 @@ Before running this checklist:
 - [ ] Updated cross-layer sync requirements (if changed)
 
 #### Theme/i18n guidelines
-- [ ] Updated `docs/frontend-theme-guidelines.md` + `.zh-CN.md` (if theme rules changed)
-- [ ] Updated `docs/internationalization.md` + `.zh-CN.md` (if i18n rules changed)
+- [ ] Updated `docs/development/frontend-theme-guidelines.md` + `.zh-CN.md` (if theme rules changed)
+- [ ] Updated `docs/development/internationalization.md` + `.zh-CN.md` (if i18n rules changed)
 
 ## Bilingual Documentation Checklist
 
@@ -185,17 +186,17 @@ Before running this checklist:
 ### When documentation structure changes:
 
 #### Adding new docs
-- [ ] Added new doc path to `skill-sublinkpro/reference/docs.md`
+- [ ] Added new doc path to `skills/sublinkpro/reference/docs.md`
 - [ ] Added description/topic in the documentation map
 - [ ] Added both English and Chinese variants to map
 
 #### Renaming/moving docs
-- [ ] Updated path in `skill-sublinkpro/reference/docs.md`
+- [ ] Updated path in `skills/sublinkpro/reference/docs.md`
 - [ ] Updated all references in other docs
 - [ ] Verified old paths return 404 (on GitHub)
 
 #### Removing docs
-- [ ] Removed from `skill-sublinkpro/reference/docs.md`
+- [ ] Removed from `skills/sublinkpro/reference/docs.md`
 - [ ] Checked for incoming links from other docs
 - [ ] Redirected or updated incoming links
 
@@ -228,22 +229,22 @@ Before running this checklist:
 - `AGENTS.md` - AI agent architectural guide
 
 ### Core documentation
-- `docs/installation.md` / `.zh-CN.md` - Installation guide
-- `docs/configuration.md` / `.zh-CN.md` - Configuration reference
-- `docs/development.md` / `.zh-CN.md` - Developer guide
-- `docs/internationalization.md` / `.zh-CN.md` - i18n guidelines
-- `docs/frontend-theme-guidelines.md` / `.zh-CN.md` - Theme adaptation rules
+- `docs/user/installation.md` / `.zh-CN.md` - Installation guide
+- `docs/user/configuration.md` / `.zh-CN.md` - Configuration reference
+- `docs/development/getting-started.md` / `.zh-CN.md` - Developer guide
+- `docs/development/internationalization.md` / `.zh-CN.md` - i18n guidelines
+- `docs/development/frontend-theme-guidelines.md` / `.zh-CN.md` - Theme adaptation rules
 
 ### Feature documentation
-- `docs/features/*.md` / `.zh-CN.md` - Feature-specific guides
-- `docs/script_support.md` / `.zh-CN.md` - Script support documentation
+- `docs/user/features/*.md` / `.zh-CN.md` - Feature-specific guides
+- `docs/user/features/script-support.md` / `.zh-CN.md` - Script support documentation
 
 ### Skill documentation
-- `skill-sublinkpro/SKILL.md` - Skill definition
-- `skill-sublinkpro/README.md` / `.zh-CN.md` - Skill overview
-- `skill-sublinkpro/reference/api.md` - API reference
-- `skill-sublinkpro/reference/deploy.md` - Deployment guide
-- `skill-sublinkpro/reference/docs.md` - Documentation map
+- `skills/sublinkpro/SKILL.md` - Skill definition
+- `skills/sublinkpro/README.md` / `.zh-CN.md` - Skill overview
+- `skills/sublinkpro/reference/api.md` - API reference
+- `skills/sublinkpro/reference/deploy.md` - Deployment guide
+- `skills/sublinkpro/reference/docs.md` - Documentation map
 
 ## Verification Checklist
 

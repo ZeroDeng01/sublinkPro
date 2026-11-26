@@ -82,7 +82,7 @@ router.Use(gzip.Gzip(gzip.DefaultCompression))
 Standard pagination response format:
 ```json
 {
-  "data": [...],
+  "data": [{"id": 1}],
   "total": 1000,
   "page": 1,
   "pageSize": 50

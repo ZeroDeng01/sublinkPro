@@ -1,3 +1,5 @@
+English | [简体中文](CODE_OF_CONDUCT.zh-CN.md)
+
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge
@@ -36,7 +38,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project maintainers responsible for enforcement at the project's issue tracker or community channels. All complaints will be reviewed and investigated promptly and fairly.
+To report abuse, harassment, or other unacceptable behavior, ask the project maintainers to confirm a private channel before sharing details. If you ask in a public community space, keep the request limited to contact information. Maintainers will review and investigate reports promptly and fairly.
 
 All project maintainers are obligated to respect the privacy and security of the reporter of any incident.
 

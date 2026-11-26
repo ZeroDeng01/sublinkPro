@@ -43,7 +43,7 @@ var Template embed.FS
 //go:embed VERSION
 var versionFile embed.FS
 
-//go:embed skill-sublinkpro
+//go:embed skills/sublinkpro
 var SkillFS embed.FS
 
 var version string

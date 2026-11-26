@@ -153,7 +153,7 @@ Relates to #789
 ```
 BREAKING CHANGE: Database schema changed, requires migration.
 
-Run `docker-compose down && docker-compose up` to apply migration.
+Run `docker compose down && docker compose up` to apply migration.
 ```
 
 ### Co-authors
@@ -208,8 +208,8 @@ Frontend:
 - No changes (internal optimization)
 
 Documentation:
-- Updated docs/configuration.md + .zh-CN.md
-- Updated skill-sublinkpro/reference/deploy.md
+- Updated docs/user/configuration.md + .zh-CN.md
+- Updated skills/sublinkpro/reference/deploy.md
 - Added example in docker-compose.yml
 
 Tests:

@@ -1,0 +1,505 @@
+English | [简体中文](build-and-deployment.zh-CN.md)
+
+[Guide index](README.md)
+
+# Build and Deployment Guide
+
+This guide covers the build process, production deployment, and CI/CD workflows for SublinkPro.
+
+---
+
+## 🏗️ Build Architecture
+
+SublinkPro uses a **two-stage build process**:
+
+1. **Frontend build**: Compile React + Vite application to static assets
+2. **Backend build**: Compile Go application with embedded frontend assets
+
+This architecture allows the Go binary to serve both API and frontend from a single process.
+
+---
+
+## 💻 Local Development Build
+
+### Backend Build
+
+For local development or testing:
+
+```bash
+# From repository root
+go build -o sublinkpro .
+```
+
+This creates a development binary without embedded frontend assets.
+
+### Frontend Build
+
+For local frontend build:
+
+```bash
+# From webs/ directory
+cd webs
+yarn run build
+```
+
+Build output goes to `webs/dist/`.
+
+---
+
+## 🚀 Production Build
+
+### Prerequisites
+
+- Go 1.27.3 or newer
+- Node.js 24
+- Yarn 4 (via corepack)
+
+### Step-by-Step Production Build
+
+#### 1. Install Frontend Dependencies
+
+```bash
+cd webs
+corepack enable
+yarn install --immutable
+```
+
+#### 2. Lint and Build Frontend
+
+```bash
+cd webs
+yarn run lint
+yarn run build
+```
+
+This creates optimized static assets in `webs/dist/`.
+
+#### 3. Prepare Static Assets
+
+```bash
+# From repository root
+rm -rf static
+mkdir -p static
+cp -R webs/dist/. static/
+```
+
+The `static/` directory will be embedded into the Go binary.
+
+#### 4. Build Backend with Embedded Assets
+
+```bash
+# From repository root
+CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
+```
+
+**Build flags explained**:
+- `CGO_ENABLED=0` - Disable CGO for static linking
+- `-tags=prod` - Use production build tag (enables `//go:embed`)
+- `-ldflags="-s -w"` - Strip debug information to reduce binary size
+- `-o sublinkPro` - Output binary name
+
+#### 5. Verify Build
+
+```bash
+./sublinkPro --version
+```
+
+The binary should start and serve both API and frontend.
+
+---
+
+## 🐳 Docker Build
+
+### Standard Docker Build
+
+The `Dockerfile` implements the two-stage build automatically:
+
+```bash
+docker build -t sublinkpro:latest .
+```
+
+### Docker Build Process (Internal)
+
+The Dockerfile follows this flow:
+
+1. **Frontend stage**:
+   ```dockerfile
+   FROM node:24-alpine AS frontend-builder
+   WORKDIR /frontend
+   COPY webs ./webs
+   RUN corepack enable
+   RUN cd webs && yarn install && yarn run build
+   ```
+
+2. **Backend stage**:
+   ```dockerfile
+   FROM golang:1.27.3 as backend-builder
+   WORKDIR /app
+   COPY . .
+   COPY --from=frontend-builder /frontend/webs/dist ./static
+   RUN CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
+   ```
+
+3. **Runtime stage**:
+   ```dockerfile
+   FROM alpine:latest
+   COPY --from=backend-builder /app/sublinkPro /app/sublinkPro
+   EXPOSE 8000
+   CMD ["/app/sublinkPro"]
+   ```
+
+### Docker Compose Build
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+---
+
+## 🔄 CI/CD Pipeline
+
+### GitHub Actions Workflow
+
+The repository uses `.github/workflows/build-release.yml` for automated builds. Pushes to `dependabot/**` are excluded from this workflow. Dependabot PRs targeting `dev` run PR checks, and merging them into `dev` triggers the regular build pipeline.
+
+| Channel | Trigger | Docker image tag | GitHub Release |
+| --- | --- | --- | --- |
+| Development | Push to `dev` | `dev` | None |
+| Preview | Push to `main` | `pre-YYMMDDHHMMSS` and `preview` | Pre-release with multi-platform binaries |
+| Stable | Push a `v*` tag | Version tag and `latest` | Full release with multi-platform binaries |
+
+Preview uses the same version for the release title, binary, Git tag, and fixed Docker tag, such as `pre-261125093045`. The workflow records Asia/Shanghai time to the second with a two-digit year when it first assigns the tag to the commit. A retry reuses that commit's tag. If the timestamp already belongs to another commit, the workflow tries the next second.
+
+After a Preview is published, the workflow points the rolling Docker tag `:preview` at the multi-platform image of the most recently published Preview. Use the timestamped tag to pin a specific build.
+
+Preview notes start from the most recently published GitHub release in the build's Git history. Both stable releases and prereleases qualify. If this is the first published release in that history, the notes cover the full history. Stable notes use the preceding `v*` tag. Both list the Docker image and platform binaries.
+
+Development builds embed `dev-<7-character SHA>` for display in the version card. Update a development deployment by pulling the rolling `:dev` image and recreating the container. A build superseded by a newer push skips the Docker push step.
+
+The one-line installer defaults to stable. To install or update to a Preview, use `--preview`. [Installation guide](../user/installation.md)
+
+Other branches run build validation. Preview and stable releases are published after the Docker image and binary artifacts are ready.
+
+#### Workflow Steps
+
+1. **Setup**:
+   - Checkout code
+   - Setup Node.js 24
+   - Setup Go 1.27.3
+   - Enable corepack
+
+2. **Frontend Build**:
+   ```bash
+   cd webs
+   yarn install --immutable
+   yarn run lint
+   yarn run build
+   ```
+
+3. **Backend Validation**:
+   ```bash
+   gofmt -w .
+   golangci-lint run
+   go test ./...
+   ```
+
+4. **Production Build**:
+   ```bash
+   cp -R webs/dist ./static
+   CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
+   ```
+
+5. **Publication**:
+   - Publish the image for the channel in the table above
+   - Attach binary artifacts to preview and stable releases
+
+### PR Checks
+
+`.github/workflows/pr-checks.yml` runs when a PR targeting `dev` is opened, reopened, marked ready for review, or retargeted to `dev`:
+
+**Backend checks**:
+- `go build ./...`
+- `golangci-lint run`
+- `go test ./...`
+
+**Frontend checks**:
+- `yarn run lint`
+- `yarn run build`
+
+Automatic checks and `/recheck` both publish a detailed report in the PR conversation. See [PR automated checks](getting-started.md#6-pr-automated-checks) for who can request a recheck and how the target branch is enforced.
+
+---
+
+## 📦 Build Artifacts
+
+### Binary Artifacts
+
+Production builds generate:
+- `sublinkPro-linux-amd64` - Linux x64 binary
+- `sublinkPro-linux-arm64` - Linux ARM64 binary
+- `sublinkPro-linux-armv7` - Linux ARMv7 32-bit binary
+- `sublinkPro-linux-x86` - Linux x86 32-bit binary
+- `sublinkPro-windows-amd64.exe` - Windows x64 binary
+- `sublinkPro-windows-x86.exe` - Windows x86 32-bit binary
+- `sublinkPro-darwin-amd64` - macOS x64 binary
+- `sublinkPro-darwin-arm64` - macOS ARM64 binary
+
+### Docker Images
+
+Released images:
+- `zerodeng/sublink-pro:latest`
+- `zerodeng/sublink-pro:v{version}`
+
+### Release follow-up
+
+The [MIT license](../../LICENSE) notice needs to accompany standalone binaries and runtime images. Track adding the notice to both packaging paths and checking its presence in the published artifacts as a separate release change.
+
+---
+
+## 🔧 Build Modes
+
+### Development Mode
+
+**Characteristics**:
+- Frontend runs on Vite dev server (port 3000)
+- Backend runs separately (port 8000)
+- Hot reload enabled
+- Source maps available
+- No asset embedding
+
+**Start**:
+```bash
+# Terminal 1: Backend
+go run .
+
+# Terminal 2: Frontend
+cd webs && yarn run start
+```
+
+### Production Mode
+
+**Characteristics**:
+- Single binary serves both API and frontend
+- Frontend assets embedded in binary
+- Optimized and minified
+- No source maps
+- Static file serving from embedded FS
+
+**Build tag**: `-tags=prod`
+
+---
+
+## 🎯 Build Tag System
+
+### `prod` Tag
+
+Controls frontend asset embedding:
+
+**Without `-tags=prod`**:
+```go
+// Development: serves from filesystem
+http.FileServer(http.Dir("./webs/dist"))
+```
+
+**With `-tags=prod`**:
+```go
+//go:embed static
+var staticFS embed.FS
+
+// Production: serves from embedded FS
+http.FS(staticFS)
+```
+
+---
+
+## 🔍 Build Troubleshooting
+
+### Frontend Build Fails
+
+**Issue**: `yarn run build` fails with errors
+
+**Common causes**:
+- Outdated dependencies
+- Node version mismatch
+- TypeScript/ESLint errors
+
+**Solution**:
+```bash
+cd webs
+rm -rf node_modules .yarn/cache
+yarn install --immutable
+yarn run lint:fix
+yarn run build
+```
+
+### Backend Build Fails
+
+**Issue**: Go build fails with embed errors
+
+**Cause**: `static/` directory doesn't exist or is empty
+
+**Solution**:
+```bash
+# Ensure frontend is built first
+cd webs && yarn run build && cd ..
+
+# Prepare static directory
+rm -rf static
+mkdir -p static
+cp -R webs/dist/. static/
+
+# Then build backend
+go build -tags=prod -o sublinkPro
+```
+
+### Binary Too Large
+
+**Issue**: Binary size is unexpectedly large
+
+**Check**:
+- Using `-ldflags="-s -w"` to strip debug info?
+- Using `CGO_ENABLED=0` for static linking?
+- Frontend build is production-optimized?
+
+**Optimize**:
+```bash
+# Frontend optimization
+cd webs
+yarn run build  # Already optimized by Vite
+
+# Backend optimization
+CGO_ENABLED=0 go build -tags=prod -ldflags="-s -w" -o sublinkPro
+
+# Further compress (optional)
+upx --best sublinkPro
+```
+
+### Assets Not Loading
+
+**Issue**: Frontend assets return 404 in production
+
+**Causes**:
+1. Frontend not built before backend build
+2. `static/` directory not copied correctly
+3. Missing `-tags=prod` flag
+4. `SUBLINK_WEB_BASE_PATH` misconfigured
+
+**Debug**:
+```bash
+# Check if static directory exists and has content
+ls -la static/
+
+# Inspect the binary build settings, then use a running instance to verify asset serving
+go version -m sublinkPro
+
+# Check runtime logs for asset paths
+./sublinkPro 2>&1 | grep static
+```
+
+---
+
+## 🌐 Base Path Handling
+
+### SUBLINK_WEB_BASE_PATH
+
+This environment variable controls the Web UI routing prefix.
+
+**Example**:
+```bash
+SUBLINK_WEB_BASE_PATH=/sublink ./sublinkPro
+```
+
+**Effect**:
+- Web UI accessible at: `http://localhost:8000/sublink/`
+- API still at: `http://localhost:8000/api/*`
+- Subscription access still at: `http://localhost:8000/c/*`
+
+**Important**: Base path only affects Web UI routing, not API or subscription paths.
+
+### Build Considerations
+
+When changing base path behavior:
+1. Test in local development mode
+2. Test production build with embedded assets
+3. Verify all asset paths resolve correctly
+4. Test with different base path values
+
+---
+
+## 🔄 Incremental Build
+
+### When Frontend Changes
+
+```bash
+cd webs
+yarn run build
+cd ..
+rm -rf static
+cp -R webs/dist static
+go build -tags=prod -o sublinkPro
+```
+
+### When Backend Changes
+
+```bash
+# Frontend assets unchanged, just rebuild backend
+go build -tags=prod -o sublinkPro
+```
+
+---
+
+## 📊 Build Performance
+
+### Typical Build Times
+
+| Stage | Time | Notes |
+|---|---|---|
+| Frontend deps install | ~30s | Cached after first run |
+| Frontend lint | ~5s | |
+| Frontend build | ~15s | Vite optimization |
+| Backend test | ~20s | Full test suite |
+| Backend build | ~10s | With embed |
+| **Total** | **~80s** | Cold build |
+
+### Build Optimization Tips
+
+1. **Use build cache**:
+   ```bash
+   # Go build cache
+   go env GOCACHE
+   
+   # Yarn cache
+   yarn config get cacheFolder
+   ```
+
+2. **Parallel builds**:
+   ```bash
+   # Frontend and backend validation in parallel
+   (cd webs && yarn run lint) & golangci-lint run & wait
+   ```
+
+3. **Skip unnecessary steps** (development only):
+   ```bash
+   # Skip tests for quick rebuild
+   go build -tags=prod -o sublinkPro
+   ```
+
+---
+
+## 🎓 Related Documentation
+
+- **Local development**: See `development.md`
+- **Configuration**: See `configuration.md`
+- **Deployment**: See `installation.md`
+- **Docker compose**: See `skills/sublinkpro/reference/deploy.md`
+
+---
+
+## 📝 Notes
+
+- Always build frontend before backend in production
+- Use `-tags=prod` for production builds
+- Verify embedded assets after build changes
+- Test with real data before releasing
+- Check CI workflow for canonical build steps
