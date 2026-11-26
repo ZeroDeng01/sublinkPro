@@ -14,34 +14,48 @@ export default function Chip(theme) {
         root: {
           variants: [
             {
-              props: { variant: 'light' }, // Variant for light Chip
+              props: { variant: 'light' },
               style: ({ ownerState, theme }) => {
-                // Make sure color exists and is a key of palette
                 const colorKey = ownerState.color;
-                const paletteColor = theme.vars.palette[colorKey];
+                const palette = theme.vars.palette;
+                const paletteColor = palette[colorKey];
 
                 if (!paletteColor) return {};
 
+                const lightText = colorKey === 'warning' || colorKey === 'success' ? paletteColor.dark : paletteColor.main;
+                const lightBackgroundOpacity = { error: 0.25, success: 0.5 }[colorKey];
+                const lightBackground = lightBackgroundOpacity ? withAlpha(paletteColor.light, lightBackgroundOpacity) : paletteColor.light;
+                const darkText =
+                  { primary: palette.primary[200], secondary: palette.secondary[200], warning: palette.warning.main }[colorKey] ||
+                  paletteColor.light;
+
                 return {
-                  color: paletteColor.main,
-                  backgroundColor: paletteColor.light,
-
-                  ...(ownerState.color === 'error' && {
-                    backgroundColor: withAlpha(paletteColor.light, 0.25)
-                  }),
-                  ...(ownerState.color === 'success' && {
-                    backgroundColor: withAlpha(paletteColor.light, 0.5)
-                  }),
-                  ...((ownerState.color === 'warning' || ownerState.color === 'success') && {
-                    color: paletteColor.dark
-                  }),
-
+                  '--Chip-light-text': lightText,
+                  '--Chip-light-background': lightBackground,
+                  '--Chip-light-interactive-text': paletteColor.light,
+                  '--Chip-light-interactive-background': paletteColor.dark,
+                  '--Chip-light-focus-outline': 'none',
+                  color: 'var(--Chip-light-text)',
+                  backgroundColor: 'var(--Chip-light-background)',
                   '&.MuiChip-clickable': {
                     '&:hover': {
-                      color: paletteColor.light,
-                      backgroundColor: paletteColor.dark
+                      color: 'var(--Chip-light-interactive-text)',
+                      backgroundColor: 'var(--Chip-light-interactive-background)'
                     }
-                  }
+                  },
+                  '&.Mui-focusVisible': {
+                    backgroundColor: 'var(--Chip-light-interactive-background)',
+                    outline: 'var(--Chip-light-focus-outline)',
+                    outlineOffset: 2
+                  },
+                  // Keep color declarations at their usual specificity so local sx can override them.
+                  ...theme.applyStyles('dark', {
+                    '--Chip-light-text': darkText,
+                    '--Chip-light-background': withAlpha(paletteColor.main, 0.14),
+                    '--Chip-light-interactive-text': darkText,
+                    '--Chip-light-interactive-background': withAlpha(paletteColor.main, 0.22),
+                    '--Chip-light-focus-outline': `2px solid ${darkText}`
+                  })
                 };
               }
             },
