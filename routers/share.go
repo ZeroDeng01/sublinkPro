@@ -10,7 +10,7 @@ import (
 // Share 注册分享管理路由
 func Share(r *gin.Engine) {
 	shareGroup := r.Group("/api/v1/shares")
-	shareGroup.Use(middlewares.AuthToken)
+	shareGroup.Use(middlewares.AuthToken, middlewares.DemoModeRestrict)
 	{
 		shareGroup.GET("/devices", api.ShareDevices)
 		shareGroup.POST("/device-update", api.ShareDeviceUpdate)

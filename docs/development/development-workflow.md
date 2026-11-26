@@ -12,6 +12,16 @@ Start from the [development guide](getting-started.md) to find the entry point a
 
 Reuse related code and cover changes to business logic, permissions, migrations, protocols, or API behavior with tests. For UI changes, check both themes and desktop/mobile layouts, translate user-facing text, and follow the [theme rules](frontend-theme-guidelines.md) and [i18n guide](internationalization.md). Update the relevant English and Chinese docs in the same change.
 
+### Demo mode restrictions
+
+When adding or changing an API, review what an authenticated demo user could trigger, including side effects in background jobs. High-risk routes must register [`middlewares.DemoModeRestrict`](../../middlewares/demo_mode.go) after authentication and before the handler.
+
+- Changes to credentials or core instance data, including backup management, database imports, and restores.
+- Changes to instance-wide or deployment settings, such as the public URL or tunnel configuration, and starting or stopping services.
+- Exposure of sensitive data or use of the server's network access to reach caller-controlled destinations, such as remote rule conversion and configurable downloads.
+
+Evaluate what the handler actually does, including actions reachable through read endpoints. Test that an authenticated demo request is rejected before it writes data, sends an outbound request, or performs another restricted action. Verify the normal-mode workflow as well.
+
 ## 3. Validate locally
 
 | Scope | Commands |

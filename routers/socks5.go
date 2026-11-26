@@ -33,7 +33,7 @@ func ProxyGateway(r *gin.Engine) {
 		group.DELETE("/accounts/:id", middlewares.DemoModeRestrict, api.DeleteSocks5Account)
 		group.GET("/health", api.GetProxyGatewayHealth)
 		group.POST("/health/probe", middlewares.DemoModeRestrict, api.ProbeSocks5Health)
-		group.GET("/connections", api.GetSocks5Connections)
+		group.GET("/connections", middlewares.DemoModeRestrict, api.GetSocks5Connections)
 		group.DELETE("/connections", middlewares.DemoModeRestrict, api.DeleteSocks5Connections)
 		group.DELETE("/connections/:id", middlewares.DemoModeRestrict, api.DeleteSocks5Connection)
 	}

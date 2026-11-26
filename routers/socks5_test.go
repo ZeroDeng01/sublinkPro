@@ -32,7 +32,8 @@ func TestProxyGatewayRouteRegistration(t *testing.T) {
 		restricted := slices.ContainsFunc(handlers, func(name string) bool {
 			return strings.HasSuffix(name, ".DemoModeRestrict")
 		})
-		if restricted != (route.Method != http.MethodGet) {
+		wantRestricted := route.Method != http.MethodGet || route.Path == "/api/v1/proxy-gateway/connections"
+		if restricted != wantRestricted {
 			t.Errorf("unexpected demo-mode policy for %s %s", route.Method, path)
 		}
 	}

@@ -12,10 +12,10 @@ func GeoIP(r *gin.Engine) {
 	geoipGroup := r.Group("/api/v1/geoip")
 	geoipGroup.Use(middlewares.AuthToken)
 	{
-		geoipGroup.GET("/config", api.GetGeoIPConfig)
-		geoipGroup.PUT("/config", api.SaveGeoIPConfig)
+		geoipGroup.GET("/config", middlewares.DemoModeRestrict, api.GetGeoIPConfig)
+		geoipGroup.PUT("/config", middlewares.DemoModeRestrict, api.SaveGeoIPConfig)
 		geoipGroup.GET("/status", api.GetGeoIPStatus)
-		geoipGroup.POST("/download", api.DownloadGeoIP)
-		geoipGroup.POST("/stop", api.StopGeoIPDownload)
+		geoipGroup.POST("/download", middlewares.DemoModeRestrict, api.DownloadGeoIP)
+		geoipGroup.POST("/stop", middlewares.DemoModeRestrict, api.StopGeoIPDownload)
 	}
 }

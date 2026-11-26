@@ -137,6 +137,8 @@ Base: `/api/v1/users`
 
 Base: `/api/v1/nodes`
 
+Demo mode restricts node mutations, IP detail lookups, and clearing the IP cache.
+
 ### Add Node
 **POST** `/nodes/add` — **form**
 - **Required:** `link` (proxy URI, WireGuard config text, or Clash YAML containing `proxies:`)
@@ -202,6 +204,8 @@ Subscription conversion preserves `reality-opts.support-x25519mlkem768` via the 
 ## Subscriptions
 
 Base: `/api/v1/subcription` (note the spelling — missing the second "s").
+
+Demo mode restricts subscription and chain-rule mutations. Node and chain previews are available.
 
 ### Add Subscription
 **POST** `/subcription/add` — **form**
@@ -278,6 +282,8 @@ Other supported variables include `$Name`, `$LinkName`, `$Group`, `$Source`, `$P
 
 Base: `/api/v1/shares`
 
+All management endpoints under this base path are demo-restricted, including token and access-log reads.
+
 ### Get Shares (for a subscription)
 **GET** `/shares/get` (query: `?subId=123`) — `subId` is **required**. Optional paginated filters: `page`, `pageSize`, `keyword`, `ipFilter`, `sortBy`, `sortOrder`. `sortBy` accepts `access_count` or natural numeric-aware `name`; `sortOrder` accepts `asc` or `desc`.
 
@@ -319,6 +325,8 @@ Base: `/api/v1/shares`
 
 Base: `/api/v1/template`
 
+Demo mode restricts reading template contents, creating, updating, and deleting template files, converting rules, and using AI edit sessions.
+
 ### Get Templates
 **GET** `/template/get` (query: `?page=1&pageSize=20`) — returns each template's `file`, `text`, `category` (clash|surge), `ruleSource`, etc. The `file` value is what a subscription's `config` field references.
 
@@ -338,7 +346,7 @@ Base: `/api/v1/template`
 **GET** `/template/presets`
 
 ### Convert Rules
-**POST** `/template/convert` — **JSON**
+**POST** `/template/convert` — **JSON** (demo-restricted)
 
 ### AI Template Editing (edit sessions, all JSON; require the server's AI assistant to be configured in the web UI)
 
@@ -534,6 +542,8 @@ There is no supported fallback that accepts AI-generated full-template `candidat
 
 Base: `/api/v1/airports` (all write bodies are JSON)
 
+All airport endpoints are demo-restricted, including the list and detail reads.
+
 - **GET** `/airports` (query: `?page=1&pageSize=20`) — list. Each item includes `nodeStats.hasTestedNodes`: whether any current node has a latency/speed check timestamp or terminal status (`success`, `timeout`, `error`), including failed checks. `delayPassCount` / `speedPassCount` remain latency/download pass counts; `0 / 0` does not imply untested. This is current-node evidence, not task progress or run completion; removed nodes no longer contribute.
 - **GET** `/airports/{id}` — one
 - **POST** `/airports` — **JSON** create. Key fields (see `dto.AirportRequest`): `name`(required), `url`(required, valid URL), `cronExpr`(required), `enabled`, `group`, `downloadWithProxy`, `proxyLink`, `userAgent`, `fetchUsageInfo`, `skipTLSVerify`, plus filter/rename/dedup fields (`nodeNameWhitelist`, `nodeNameBlacklist`, `protocolWhitelist`, `protocolBlacklist`, `nodeNamePreprocess`, `deduplicationRule`, `nodeNameUniquify`, ...), and country-fill fields (`autoFillCountry`, `backfillExistingCountry`).
@@ -598,6 +608,8 @@ Use Country Rules together with airport `autoFillCountry` / `backfillExistingCou
 
 Base: `/api/v1/tags`
 
+Demo mode restricts changes to tags, tag rules, and node tag assignments, and running tag rules.
+
 - **GET** `/tags/list` — all tags
 - **POST** `/tags/add` — **JSON**
 - **POST** `/tags/update` — **JSON**
@@ -621,7 +633,7 @@ Base: `/api/v1/tags`
 
 Base: `/api/v1/script`
 
-- **GET** `/script/list` (query: `?page=1&pageSize=20`)
+- **GET** `/script/list` (query: `?page=1&pageSize=20`) (demo-restricted)
 - **POST** `/script/add` — **JSON** (demo-restricted)
 - **POST** `/script/update` — **JSON** (demo-restricted)
 - **DELETE** `/script/delete` — **JSON** (demo-restricted)
@@ -638,8 +650,8 @@ Base: `/api/v1/tasks`
 - **GET** `/tasks/running`
 - **GET** `/tasks/{id}`
 - **GET** `/tasks/{id}/traffic` (query: filters/paging)
-- **POST** `/tasks/{id}/stop`
-- **DELETE** `/tasks` — **JSON** body for clearing history
+- **POST** `/tasks/{id}/stop` (demo-restricted)
+- **DELETE** `/tasks` — **JSON** body for clearing history (demo-restricted)
 
 ---
 
@@ -694,6 +706,8 @@ Compatibility-job updates retain the original profile ID and support only schedu
 
 Base: `/api/v1/hosts`
 
+All Host and DNS endpoints under this base path are demo-restricted.
+
 - **GET** `/hosts/list`
 - **POST** `/hosts/add` — **JSON**
 - **POST** `/hosts/update` — **JSON**
@@ -711,11 +725,11 @@ Base: `/api/v1/hosts`
 
 Base: `/api/v1/geoip`
 
-- **GET** `/geoip/config`
-- **PUT** `/geoip/config` — **JSON**
+- **GET** `/geoip/config` (demo-restricted)
+- **PUT** `/geoip/config` — **JSON** (demo-restricted)
 - **GET** `/geoip/status`
-- **POST** `/geoip/download`
-- **POST** `/geoip/stop`
+- **POST** `/geoip/download` (demo-restricted)
+- **POST** `/geoip/stop` (demo-restricted)
 
 ---
 
@@ -725,13 +739,15 @@ Base: `/api/v1/group-sort`
 
 - **GET** `/group-sort/groups`
 - **GET** `/group-sort/detail` (query: `?group=<name>`)
-- **POST** `/group-sort/save` — **JSON** `{"groupName":"...", "airportSorts":[...]}`
+- **POST** `/group-sort/save` — **JSON** `{"groupName":"...", "airportSorts":[...]}` (demo-restricted)
 
 ---
 
 ## Settings
 
-Base: `/api/v1/settings` (write bodies are JSON unless noted; most writes are demo-restricted)
+Base: `/api/v1/settings` (write bodies are JSON unless noted).
+
+All writes are demo-restricted. Demo mode also restricts reads for webhooks, base templates, Telegram configuration and status, AI assistant settings, Cloudflared status, and Sub-Store settings.
 
 **Webhooks:** **GET** `/settings/webhooks` · **POST** `/settings/webhooks` · **PUT** `/settings/webhooks/{id}` · **DELETE** `/settings/webhooks/{id}` · **POST** `/settings/webhooks/{id}/test`
 
@@ -751,7 +767,7 @@ Base: `/api/v1/settings` (write bodies are JSON unless noted; most writes are de
 
 ### Proxy gateway (SOCKS5 / HTTP / Mixed)
 
-Proxy gateway management requires an authenticated administrator. Demo mode restricts all writes. The retired `/api/v1/settings/socks5` namespace returns `404`. Update clients to the new paths. The former `/profiles`, `/routing`, and `/routing/reset` move to `/routing-profiles`, `/node-stats`, and `/node-stats/reset` under the new prefix.
+Proxy gateway management requires an authenticated administrator. Demo mode restricts writes and the active connection list. The retired `/api/v1/settings/socks5` namespace returns `404`. Update clients to the new paths. The former `/profiles`, `/routing`, and `/routing/reset` move to `/routing-profiles`, `/node-stats`, and `/node-stats/reset` under the new prefix.
 
 - **GET** `/api/v1/proxy-gateway/settings` — read public gateway settings. The plaintext password is never returned.
 - **POST** `/api/v1/proxy-gateway/settings` — save and apply JSON settings:
@@ -803,7 +819,7 @@ HTTP supports absolute `http://` requests and HTTPS CONNECT (not inbound TLS/HTT
 - **POST** `/settings/ai-assistant/models`
 - **POST** `/settings/ai-assistant/test` (accepts the same provider fields and uses `requestType` to test `/responses` or streamed `/chat/completions`)
 
-> These four configure the stored AI provider key, so they only work in a logged-in web session. An API-key call always gets 403 here — that's expected, not a bug. Configure the AI assistant once in the web UI; afterwards `/template/ai/*` works with API-key auth.
+> These four AI settings endpoints require a logged-in web session. In normal mode, an API-key call to them returns HTTP 403. After configuring the AI assistant in the web UI, template AI edit sessions accept API-key authentication in normal mode.
 
 ---
 
@@ -818,7 +834,7 @@ Base: `/api/v1/total`
 - **GET** `/total/country-stats`
 - **GET** `/total/dashboard-country-stats`
 - **GET** `/total/protocol-stats`
-- **GET** `/total/system-stats`
+- **GET** `/total/system-stats` (demo-restricted)
 - **GET** `/total/tag-stats`
 - **GET** `/total/group-stats`
 - **GET** `/total/source-stats`
@@ -854,7 +870,7 @@ WebDAV restore reuses the database migration workflow and overwrites current bus
 
 ## Notes
 
-- **Demo mode:** write endpoints marked demo-restricted are blocked when the instance runs in demo mode.
+- **Demo mode** blocks authenticated requests to endpoints marked demo-restricted. These requests return HTTP 200 with JSON `code: 500` and a demo-mode error message.
 - **Pagination:** most list endpoints accept `?page=&pageSize=` and then return `{items, total, page, pageSize, totalPages}`.
 - **Content type is per-endpoint** — see the Content-Type Trap section above. When in doubt, match the exact entry here rather than guessing.
 

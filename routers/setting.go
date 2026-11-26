@@ -11,12 +11,12 @@ func Settings(r *gin.Engine) {
 	SettingsGroup := r.Group("/api/v1/settings")
 	SettingsGroup.Use(middlewares.AuthToken)
 	{
-		SettingsGroup.GET("/webhooks", api.ListWebhooks)
+		SettingsGroup.GET("/webhooks", middlewares.DemoModeRestrict, api.ListWebhooks)
 		SettingsGroup.POST("/webhooks", middlewares.DemoModeRestrict, api.CreateWebhook)
 		SettingsGroup.PUT("/webhooks/:id", middlewares.DemoModeRestrict, api.UpdateWebhook)
 		SettingsGroup.DELETE("/webhooks/:id", middlewares.DemoModeRestrict, api.DeleteWebhook)
 		SettingsGroup.POST("/webhooks/:id/test", middlewares.DemoModeRestrict, api.TestWebhookByID)
-		SettingsGroup.GET("/base-templates", api.GetBaseTemplates)
+		SettingsGroup.GET("/base-templates", middlewares.DemoModeRestrict, api.GetBaseTemplates)
 		SettingsGroup.POST("/base-templates", middlewares.DemoModeRestrict, api.UpdateBaseTemplate)
 
 		// 系统域名配置
@@ -24,10 +24,10 @@ func Settings(r *gin.Engine) {
 		SettingsGroup.POST("/system-domain", middlewares.DemoModeRestrict, api.UpdateSystemDomain)
 
 		// Telegram 机器人设置
-		SettingsGroup.GET("/telegram", api.GetTelegramConfig)
+		SettingsGroup.GET("/telegram", middlewares.DemoModeRestrict, api.GetTelegramConfig)
 		SettingsGroup.POST("/telegram", middlewares.DemoModeRestrict, api.UpdateTelegramConfig)
 		SettingsGroup.POST("/telegram/test", middlewares.DemoModeRestrict, api.TestTelegramConnection)
-		SettingsGroup.GET("/telegram/status", api.GetTelegramStatus)
+		SettingsGroup.GET("/telegram/status", middlewares.DemoModeRestrict, api.GetTelegramStatus)
 		SettingsGroup.POST("/telegram/reconnect", middlewares.DemoModeRestrict, api.ReconnectTelegram)
 
 		// 节点去重配置
@@ -39,20 +39,20 @@ func Settings(r *gin.Engine) {
 		SettingsGroup.POST("/global-node-processing", middlewares.DemoModeRestrict, api.UpdateGlobalNodeProcessingConfig)
 
 		// AI 助手设置
-		SettingsGroup.GET("/ai-assistant", api.UserGetAISettings)
+		SettingsGroup.GET("/ai-assistant", middlewares.DemoModeRestrict, api.UserGetAISettings)
 		SettingsGroup.POST("/ai-assistant/models", middlewares.DemoModeRestrict, api.UserListAIModels)
 		SettingsGroup.POST("/ai-assistant", middlewares.DemoModeRestrict, api.UserUpdateAISettings)
 		SettingsGroup.POST("/ai-assistant/test", middlewares.DemoModeRestrict, api.UserTestAISettings)
 
 		// Cloudflare Tunnel 设置
-		SettingsGroup.GET("/cloudflared", api.GetCloudflaredStatus)
+		SettingsGroup.GET("/cloudflared", middlewares.DemoModeRestrict, api.GetCloudflaredStatus)
 		SettingsGroup.POST("/cloudflared", middlewares.DemoModeRestrict, api.UpdateCloudflaredConfig)
 		SettingsGroup.POST("/cloudflared/start", middlewares.DemoModeRestrict, api.StartCloudflared)
 		SettingsGroup.POST("/cloudflared/stop", middlewares.DemoModeRestrict, api.StopCloudflared)
 		SettingsGroup.DELETE("/cloudflared/token", middlewares.DemoModeRestrict, api.RemoveCloudflaredToken)
 
 		// Sub-Store sidecar 设置
-		SettingsGroup.GET("/substore", api.GetSubStoreSettings)
+		SettingsGroup.GET("/substore", middlewares.DemoModeRestrict, api.GetSubStoreSettings)
 		SettingsGroup.POST("/substore", middlewares.DemoModeRestrict, api.UpdateSubStoreSettings)
 		SettingsGroup.POST("/substore/test", middlewares.DemoModeRestrict, api.TestSubStoreSettings)
 

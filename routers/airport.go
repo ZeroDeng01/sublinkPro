@@ -13,8 +13,8 @@ func Airport(r *gin.Engine) {
 	airportGroup.Use(middlewares.AuthToken)
 	{
 		// 列表和详情
-		airportGroup.GET("", api.AirportList)
-		airportGroup.GET("/:id", api.AirportGet)
+		airportGroup.GET("", middlewares.DemoModeRestrict, api.AirportList)
+		airportGroup.GET("/:id", middlewares.DemoModeRestrict, api.AirportGet)
 		// 增删改（演示模式下限制）
 		airportGroup.POST("", middlewares.DemoModeRestrict, api.AirportAdd)
 		airportGroup.POST("/batch-update", middlewares.DemoModeRestrict, api.AirportBatchUpdate)

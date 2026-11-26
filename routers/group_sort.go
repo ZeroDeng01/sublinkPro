@@ -13,6 +13,6 @@ func GroupSort(r *gin.Engine) {
 	{
 		groupSortGroup.GET("/groups", api.GroupSortGroups)
 		groupSortGroup.GET("/detail", api.GroupSortDetail)
-		groupSortGroup.POST("/save", api.GroupSortSave)
+		groupSortGroup.POST("/save", middlewares.DemoModeRestrict, api.GroupSortSave)
 	}
 }
